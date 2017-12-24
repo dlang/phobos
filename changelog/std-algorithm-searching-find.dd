@@ -1,0 +1,11 @@
+`std.algorithm.searching.find` returns a named tuple
+
+For variadic overloads $(REF find, std,algorithm,searching) will
+return a named tuple tuple instead of an anonymous tuple:
+
+---
+import std.algorithm.searching : find;
+auto t = find(a, 2, 4);
+assert(t.haystack ==  [4, 2, 3]);
+assert(t.needle == 2);
+---

@@ -2295,8 +2295,8 @@ forward range with elements comparable with elements in
 
 Returns:
 
-A tuple containing `haystack` positioned to match one of the
-needles and also the 1-based index of the matching element in
+A `Tuple!("haystack", "needle")` containing `haystack` positioned to match one of the
+needles and also `needle`, the 1-based index of the matching element in
 `needles` (0 if none of `needles` matched, 1 if `needles[0]`
 matched, 2 if `needles[1]` matched...). The first needle to be found
 will be the one that matches. If multiple needles are found at the
@@ -2320,7 +2320,7 @@ is considered to be 1.) The strategy used in searching several
 subranges at once maximizes cache usage by moving in `haystack` as
 few times as possible.
  */
-Tuple!(Range, size_t) find(alias pred = "a == b", Range, Ranges...)
+auto find(alias pred = "a == b", Range, Ranges...)
 (Range haystack, Ranges needles)
 if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
 {
@@ -2329,7 +2329,7 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
         size_t r = startsWith!pred(haystack, needles);
         if (r || haystack.empty)
         {
-            return tuple(haystack, r);
+            return tuple!("haystack", "needle")(haystack, r);
         }
     }
 }
@@ -2338,16 +2338,27 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
 @safe unittest
 {
     import std.typecons : tuple;
+
     int[] a = [ 1, 4, 2, 3 ];
+    // Non-variadic find (returns just the haystack)
     assert(find(a, 4) == [ 4, 2, 3 ]);
     assert(find(a, [ 1, 4 ]) == [ 1, 4, 2, 3 ]);
-    assert(find(a, [ 1, 3 ], 4) == tuple([ 4, 2, 3 ], 2));
+
+    // Variadic find (returns haystack + range)
+    auto t = find(a, 2, 4);
+    assert(t.haystack ==  [4, 2, 3]);
+    assert(t.needle == 2);
+
     // Mixed types allowed if comparable
+    assert(find(a, [ 1, 3 ], 4) == tuple([ 4, 2, 3 ], 2));
     assert(find(a, 5, [ 1.2, 3.5 ], 2.0) == tuple([ 2, 3 ], 3));
 }
 
+///
 @safe unittest
 {
+    import std.typecons : tuple;
+
     auto s1 = "Mary has a little lamb";
     assert(find(s1, "has a", "has an") == tuple("has a little lamb", 1));
     assert(find(s1, 't', "has a", "has an") == tuple("has a little lamb", 2));
