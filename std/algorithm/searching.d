@@ -1562,7 +1562,7 @@ if (isInputRange!InputRange &&
             }
         }
 
-        //Previous conditonal optimizations did not succeed. Fallback to
+        //Previous conditional optimizations did not succeed. Fallback to
         //unconditional implementations
         static if (isDefaultPred)
         {
