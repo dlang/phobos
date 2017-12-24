@@ -1,0 +1,23 @@
+`std.algorithm.searching.findSplit` returns a named tuple
+
+$(REF findSplit, std,algorithm,searching),
+$(REF findSplitBefore, std,algorithm,searching), and
+$(REF findSplitAfter, std,algorithm,searching)
+will return a named tuple instead of an anonymous tuple:
+
+---
+import std.algorithm.searching;
+auto a = "Carl Sagan Memorial Station";
+auto r = findSplit(a, " ");
+assert(r.pre == "Carl");
+assert(r.match == " ");
+assert(r.post == "Sagan Memorial Station");
+
+auto r1 = findSplitBefore(a, "Sagan");
+assert(r1.pre == "Carl ");
+assert(r1.post == "Sagan Memorial Station");
+
+auto r2 = findSplitAfter(a, "Sagan");
+assert(r2.pre == "Carl Sagan");
+assert(r2.post == " Memorial Station");
+---
