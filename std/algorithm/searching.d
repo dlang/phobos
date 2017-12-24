@@ -2781,9 +2781,6 @@ if (isForwardRange!R1 && ifTestable!(typeof(haystack.front), unaryFun!pred))
 
     s = "  ";
     assert(findSkip!isWhite(s) == 2);
-    import std.stdio;
-    s = "  ";
-    findSkip!isWhite(s).writeln;
 }
 
 @safe unittest
