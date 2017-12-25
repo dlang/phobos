@@ -332,6 +332,8 @@ import std.typecons; // : Flag, Yes, No;
     assert(nc[1..$].equal(["var"]));
     ----
 +/
+// See commentary at https://github.com/dlang/phobos/pull/5963
+deprecated(`use typeof(regex("foo"))`)
 public alias Regex(Char) = std.regex.internal.ir.Regex!(Char);
 
 /++
@@ -340,7 +342,12 @@ public alias Regex(Char) = std.regex.internal.ir.Regex!(Char);
 
     No longer used, kept as alias to Regex for backwards compatibility.
 +/
+// See commentary at https://github.com/dlang/phobos/pull/5963
+deprecated(`use typeof(ctRegex!("foo"))`)
 public alias StaticRegex = Regex;
+
+private alias _Regex(Char) = std.regex.internal.ir.Regex!(Char);
+private alias _StaticRegex = _Regex;
 
 /++
     Compile regular expression pattern for the later execution.
@@ -459,9 +466,13 @@ template ctRegexImpl(alias pattern, string flags=[])
 +/
 public enum ctRegex(alias pattern, alias flags=[]) = ctRegexImpl!(pattern, flags).wrapper;
 
-enum isRegexFor(RegEx, R) = is(Unqual!RegEx == Regex!(BasicElementOf!R)) || is(RegEx : const(Regex!(BasicElementOf!R)))
-     || is(Unqual!RegEx == StaticRegex!(BasicElementOf!R));
+enum isRegexFor(RegEx, R) = is(Unqual!RegEx == _Regex!(BasicElementOf!R)) || is(RegEx : const(_Regex!(BasicElementOf!R)))
+     || is(Unqual!RegEx == _StaticRegex!(BasicElementOf!R));
 
+/// Compatibility alias for _Captures
+// See commentary at https://github.com/dlang/phobos/pull/5963
+deprecated(`use typeof(matchOnce("", "").front)`)
+public alias Captures(R) = _Captures!R;
 
 /++
     $(D Captures) object contains submatches captured during a call
@@ -469,7 +480,7 @@ enum isRegexFor(RegEx, R) = is(Unqual!RegEx == Regex!(BasicElementOf!R)) || is(R
 
     First element of range is the whole match.
 +/
-@trusted public struct Captures(R)
+@trusted private struct _Captures(R)
 if (isSomeString!R)
 {//@trusted because of union inside
     alias DataIndex = size_t;
@@ -498,7 +509,7 @@ private:
         _f = 0;
     }
 
-    this(ref RegexMatch!R rmatch)
+    this(ref _RegexMatch!R rmatch)
     {
         _input = rmatch._input;
         _names = rmatch._engine.pattern.dict;
@@ -695,13 +706,18 @@ public:
     assert(!matchFirst("nothing", "something"));
 }
 
+/// Compatibility alias for _Captures
+// See commentary at https://github.com/dlang/phobos/pull/5963
+deprecated(`use typeof(match("", ""))`)
+public alias RegexMatch(R) = RegexMatch!R;
+
 /++
     A regex engine state, as returned by $(D match) family of functions.
 
     Effectively it's a forward range of Captures!R, produced
     by lazily searching for matches in a given input.
 +/
-@trusted public struct RegexMatch(R)
+@trusted private struct _RegexMatch(R)
 if (isSomeString!R)
 {
 private:
@@ -709,7 +725,7 @@ private:
     Matcher!Char _engine;
     const MatcherFactory!Char _factory;
     R _input;
-    Captures!R _captures;
+    _Captures!R _captures;
 
     this(RegEx)(R input, RegEx prog)
     {
@@ -719,7 +735,7 @@ private:
         else _factory = prog.factory;
         _engine = _factory.create(prog, input);
         assert(_engine.refCount == 1);
-        _captures = Captures!R(this);
+        _captures = _Captures!R(this);
         _captures._nMatch = _engine.match(_captures.matches);
     }
 
@@ -808,14 +824,14 @@ private @trusted auto matchOnce(RegEx, R)(R input, const RegEx prog)
     auto factory = prog.factory is null ? defaultFactory!Char(prog) : prog.factory;
     auto engine = factory.create(prog, input);
     scope(exit) factory.decRef(engine); // destroys the engine
-    auto captures = Captures!R(input, prog.ngroup, prog.dict);
+    auto captures = _Captures!R(input, prog.ngroup, prog.dict);
     captures._nMatch = engine.match(captures.matches);
     return captures;
 }
 
 private auto matchMany(RegEx, R)(R input, RegEx re) @safe
 {
-    return RegexMatch!R(input, re.withFlags(re.flags | RegexOption.global));
+    return _RegexMatch!R(input, re.withFlags(re.flags | RegexOption.global));
 }
 
 @system unittest
@@ -828,7 +844,7 @@ private auto matchMany(RegEx, R)(R input, RegEx re) @safe
 
 
 private enum isReplaceFunctor(alias fun, R) =
-    __traits(compiles, (Captures!R c) { fun(c); });
+    __traits(compiles, (_Captures!R c) { fun(c); });
 
 // the lowest level - just stuff replacements into the sink
 private @trusted void replaceCapturesInto(alias output, Sink, R, T)
@@ -917,14 +933,14 @@ if (isSomeString!R && isRegexFor!(RegEx, R))
 public auto match(R, RegEx)(R input, RegEx re)
 if (isSomeString!R && isRegexFor!(RegEx,R))
 {
-    return RegexMatch!(Unqual!(typeof(input)))(input, re);
+    return _RegexMatch!(Unqual!(typeof(input)))(input, re);
 }
 
 ///ditto
 public auto match(R, String)(R input, String re)
 if (isSomeString!R && isSomeString!String)
 {
-    return RegexMatch!(Unqual!(typeof(input)))(input, regex(re));
+    return _RegexMatch!(Unqual!(typeof(input)))(input, regex(re));
 }
 
 /++
@@ -1069,14 +1085,14 @@ if (isSomeString!R && isSomeString!String)
 public auto bmatch(R, RegEx)(R input, RegEx re)
 if (isSomeString!R && isRegexFor!(RegEx, R))
 {
-    return RegexMatch!(Unqual!(typeof(input)))(input, re);
+    return _RegexMatch!(Unqual!(typeof(input)))(input, re);
 }
 
 ///ditto
 public auto bmatch(R, String)(R input, String re)
 if (isSomeString!R && isSomeString!String)
 {
-    return RegexMatch!(Unqual!(typeof(input)))(input, regex(re));
+    return _RegexMatch!(Unqual!(typeof(input)))(input, regex(re));
 }
 
 // produces replacement string from format using captures for substitution
@@ -1330,7 +1346,7 @@ if (isSomeString!R && isRegexFor!(RegEx, R))
 ///
 @system unittest
 {
-    string baz(Captures!(string) m)
+    string baz(_Captures!(string) m)
     {
         import std.string : toUpper;
         return toUpper(m.hit);
@@ -1455,7 +1471,7 @@ Params:
 Returns:
     A lazy range of strings
 */
-public struct Splitter(Flag!"keepSeparators" keepSeparators = No.keepSeparators, Range, alias RegEx = Regex)
+public struct Splitter(Flag!"keepSeparators" keepSeparators = No.keepSeparators, Range, alias RegEx = _Regex)
 if (isSomeString!Range && isRegexFor!(RegEx, Range))
 {
 private:
