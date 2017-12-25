@@ -2743,8 +2743,21 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 
     if (isHex)
     {
+        /*
+         * The following algorithm consists of mainly 3 steps (and maybe should
+         * be refactored into functions accordingly)
+         * 1) Parse the textual input into msdec and exp variables:
+         *    input is 0xaaaaa...p+000... where aaaa is the mantissa in hex and
+         *    000 is the exponent in decimal format.
+         * 2) Rounding, ...
+         * 3) Convert msdec and exp into native real format
+         */
+
         int guard = 0;
-        int anydigits = 0;
+        // Used to enforce that any mantissa digits are present
+        bool anydigits = false;
+        // Number of mantissa digits (digit: base 16) we have processed,
+        // ignoring leading 0s
         uint ndigits = 0;
 
         p.popFront();
@@ -2753,14 +2766,23 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
             int i = p.front;
             while (isHexDigit(i))
             {
-                anydigits = 1;
+                anydigits = true;
+                /*
+                 * convert letter to binary representation: First clear bit
+                 * to convert lower space chars to upperspace, then -('A'-10)
+                 * converts letter A to 10, letter B to 11, ...
+                 */
                 i = isAlpha(i) ? ((i & ~0x20) - ('A' - 10)) : i - '0';
+                // 16*4 = 64: The max we can store in a long value
                 if (ndigits < 16)
                 {
+                    // base 16: Y = ... + y3*16^3 + y2*16^2 + y1*16^1 + y0*16^0
                     msdec = msdec * 16 + i;
+                    // ignore leading zeros
                     if (msdec)
                         ndigits++;
                 }
+                // All 64 bits of the long have been filled in now
                 else if (ndigits == 16)
                 {
                     while (msdec >= 0)
@@ -2813,6 +2835,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
             }
         }
 
+        // Have we seen any mantissa digits so far?
         enforce(anydigits, bailOut());
         enforce(!p.empty && (p.front == 'p' || p.front == 'P'),
                 bailOut("Floating point parsing: exponent is required"));
@@ -2876,8 +2899,8 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         {
             if (msdec)
             {
-                //Exponent bias + 52:
-                //After shifting 52 times left, exp must be 1
+                // Exponent bias + 52:
+                // After shifting 52 times left, exp must be 1
                 int e2 = 0x3FF + 52;
 
                 // right justify mantissa
@@ -2889,8 +2912,8 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
                     e2++;
                 }
 
-                //Have to shift one more time
-                //and do rounding
+                // Have to shift one more time
+                // and do rounding
                 if ((msdec & 0xFFE0_0000_0000_0000) != 0)
                 {
                     auto roundUp = (msdec & 0x1);
@@ -2900,9 +2923,9 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
                     if (roundUp)
                     {
                         msdec += 1;
-                        //If mantissa was 0b1111... and we added +1
-                        //the mantissa should be 0b10000 (think of implicit bit)
-                        //and the exponent increased
+                        // If mantissa was 0b1111... and we added +1
+                        // the mantissa should be 0b10000 (think of implicit bit)
+                        // and the exponent increased
                         if ((msdec & 0x0020_0000_0000_0000) != 0)
                         {
                             msdec = 0x0010_0000_0000_0000;
@@ -2923,7 +2946,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
                 // Stuff mantissa directly into double
                 // (first including implicit bit)
                 ()@trusted{ *cast(long *)&ldval = msdec; }();
-                //Store exponent, now overwriting implicit bit
+                // Store exponent, now overwriting implicit bit
                 ()@trusted{ *cast(long *)&ldval &= 0x000F_FFFF_FFFF_FFFF; }();
                 ()@trusted{ *cast(long *)&ldval |= ((e2 & 0xFFFUL) << 52); }();
 
