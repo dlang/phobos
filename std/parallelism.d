@@ -2812,22 +2812,23 @@ public:
         }
     }
 
-    /** Implements the homonym function (also known as $(D accumulate), $(D
-        compress), $(D inject), or $(D foldl)) present in various programming
-        languages of functional flavor.
+    /** Implements the homonym function (also known as `accumulate`, `compress`,
+        `inject`, or `foldl`) present in various programming languages of
+        functional flavor.
 
         This is functionally equivalent to $(LREF reduce) except the range
         parameter comes first and there is no need to use $(REF_ALTTEXT
-        $(D tuple),tuple,std,typecons) for multiple seeds.
+        `tuple`,tuple,std,typecons) for multiple seeds.
 
         Params:
             functions = One or more functions
 
         Returns:
-            The accumulated result as a single value for single function and as a tuple of values for multiple functions
+            The accumulated result as a single value for single function and as
+            a tuple of values for multiple functions
 
         See_Also:
-            $(LREF reduce)
+            Similar to $(REF _fold, std,algorithm,iteration), `fold` is a wrapper around $(LREF reduce).
     */
     template fold(functions...)
     {
@@ -2855,9 +2856,11 @@ public:
         }
 
         ///
+        version(StdUnittest)
         unittest
         {
-            auto result = taskPool.fold!"a+b"([1, 2, 3, 4]);
+            static int adder(int a, int b) { return a + b; }
+            auto result = taskPool.fold!adder([1, 2, 3, 4]);
             assert(result == 10);
         }
 
@@ -2883,9 +2886,13 @@ public:
         }
 
         ///
+        version(StdUnittest)
         unittest
         {
-            auto result = taskPool.fold!("a+b", "a*b")([1, 2, 3, 4], 0, 1);
+            static int adder     (int a, int b) { return a + b; }
+            static int multiplier(int a, int b) { return a * b; }
+
+            auto result = taskPool.fold!(adder, multiplier)([1, 2, 3, 4], 0, 1);
             assert(result[0] == 10);
             assert(result[1] == 24);
         }
@@ -2896,7 +2903,8 @@ public:
 
             Params:
                 range = The range of values to _fold over
-                args = One seed per function ($(D args[0..$-1])) and the work unit size ($(D args[$-1]))
+                args = One seed per function (`args[0..$-1]`) and the work unit
+                       size (`args[$-1]`)
         */
         auto fold(R, Args...)(R range, Args args)
         if (Args.length == functions.length + 1)
@@ -2915,14 +2923,20 @@ public:
         }
 
         ///
+        version(StdUnittest)
         unittest
         {
-                auto x = taskPool.fold!"a+b"([1, 2, 3, 4], 0, 20);                // Single function
-                assert(x == 10);
+            static int adder     (int a, int b) { return a + b; }
+            static int multiplier(int a, int b) { return a * b; }
 
-                auto y = taskPool.fold!("a+b", "a*b")([1, 2, 3, 4], 0, 1, 30);    // Multiple functions
-                assert(y[0] == 10);
-                assert(y[1] == 24);
+            // Single function produces single result
+            auto result = taskPool.fold!adder([1, 2, 3, 4], 0, 20);
+            assert(result == 10);
+
+            // Multiple functions produce a tuple of results
+            auto results = taskPool.fold!(adder, multiplier)([1, 2, 3, 4], 0, 1, 30);
+            assert(results[0] == 10);
+            assert(results[1] == 24);
         }
     }
 
@@ -3456,6 +3470,24 @@ public:
             }
         }
     }
+}
+
+version(StdUnittest)
+unittest
+{
+    import std.algorithm : sum;
+    import std.range : iota;
+    enum N = 100;
+    auto r = iota(1, N + 1);
+    const expected = r.sum();
+
+    static auto adder(int a, int b) {
+        return a + b;
+    }
+
+    assert(taskPool.fold!adder(r) == expected);
+    assert(taskPool.fold!adder(r, 0) == expected);
+    assert(taskPool.fold!adder(r, 0, 42) == expected);
 }
 
 /**
