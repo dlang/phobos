@@ -2872,7 +2872,79 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         enforce(ndigits, new ConvException("Error converting input"~
                         " to floating point"));
 
-        static if (real.mant_dig == 64)
+        import std.math : floatTraits, RealFormat;
+
+        static if (floatTraits!real.realFormat == RealFormat.ieeeQuadruple)
+        {
+            if (msdec)
+            {
+                /*
+                 * For quad precision, we currently allow max mantissa precision
+                 * of 64 bits, simply so we don't have to change the mantissa parser
+                 * in the code above. Feel free to adapt the parser to support full
+                 * 113 bit precision.
+                 */
+
+                // Exponent bias + 112:
+                // After shifting 112 times left, exp must be 1
+                int e2 = 0x3FFF + 112;
+
+                /*
+                 * left justify mantissa: The implicit bit (bit 112) must be 1
+                 * after this, (it is implicit and always defined as 1, so making
+                 * sure we end up with 1 at 112 means we adjust mantissa and eponent
+                 * to fit the ieee format)
+                 * For quadruple, this is especially fun as we have to use 2 longs
+                 * to store the mantissa and care about endianess...
+                 * quad_mant[0]               | quad_mant[1]
+                 * S.EEEEEEEEEEEEEEE.MMMMM .. | MMMMM .. 00000
+                 *                48       0  |
+                 */
+                ulong[2] quad_mant;
+                quad_mant[1] = msdec;
+                while ((quad_mant[0] & 0x0001_0000_0000_0000) == 0)
+                {
+                    // Shift high part one bit left
+                    quad_mant[0] <<= 1;
+                    // Transfer MSB from quad_mant[1] as new LSB
+                    quad_mant[0] |= (quad_mant[1] & 0x8000_0000_0000_0000) ? 0b1 : 0b0;
+                    // Now shift low part one bit left
+                    quad_mant[1] <<= 1;
+                    // Finally, decrease the exponent, as we increased the value
+                    // by shifting of the mantissa
+                    e2--;
+                }
+
+                ()@trusted {
+                    ulong* msw, lsw;
+                    version (LittleEndian)
+                    {
+                        lsw = &(cast(ulong*)&ldval)[0];
+                        msw = &(cast(ulong*)&ldval)[1];
+                    }
+                    else
+                    {
+                        msw = &(cast(ulong*)&ldval)[0];
+                        lsw = &(cast(ulong*)&ldval)[1];
+                    }
+
+                    // Stuff mantissa directly into double
+                    // (first including implicit bit)
+                    *msw = quad_mant[0];
+                    *lsw = quad_mant[1];
+
+                    // Store exponent, now overwriting implicit bit
+                    *msw &= 0x0000_FFFF_FFFF_FFFF;
+                    *msw |= ((e2 & 0xFFFFUL) << 48);
+                }();
+
+                import std.math : ldexp;
+
+                // Exponent is power of 2, not power of 10
+                ldval = ldexp(ldval, exp);
+            }
+        }
+        else static if (floatTraits!real.realFormat == RealFormat.ieeeExtended)
         {
             if (msdec)
             {
@@ -2895,7 +2967,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
                 ldval = ldexp(ldval,exp);
             }
         }
-        else static if (real.mant_dig == 53)
+        else static if (floatTraits!real.realFormat == RealFormat.ieeeDouble)
         {
             if (msdec)
             {
@@ -3265,15 +3337,20 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 {
     import core.stdc.errno;
     import core.stdc.stdlib;
+    import std.math : floatTraits, RealFormat;
 
     errno = 0;  // In case it was set by another unittest in a different module.
     struct longdouble
     {
-        static if (real.mant_dig == 64)
+        static if (floatTraits!real.realFormat == RealFormat.ieeeQuadruple)
+        {
+            ushort[8] value;
+        }
+        else static if (floatTraits!real.realFormat == RealFormat.ieeeExtended)
         {
             ushort[5] value;
         }
-        else static if (real.mant_dig == 53)
+        else static if (floatTraits!real.realFormat == RealFormat.ieeeDouble)
         {
             ushort[4] value;
         }
@@ -3287,9 +3364,12 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     longdouble x1;
     int i;
 
-    static if (real.mant_dig == 64)
+    static if (floatTraits!real.realFormat == RealFormat.ieeeQuadruple)
+        // Our parser is currently limited to ieeeExtended precision
         enum s = "0x1.FFFFFFFFFFFFFFFEp-16382";
-    else static if (real.mant_dig == 53)
+    else static if (floatTraits!real.realFormat == RealFormat.ieeeExtended)
+        enum s = "0x1.FFFFFFFFFFFFFFFEp-16382";
+    else static if (floatTraits!real.realFormat == RealFormat.ieeeDouble)
         enum s = "0x1.FFFFFFFFFFFFFFFEp-1000";
     else
         static assert(false, "Floating point format for real not supported");
@@ -3299,7 +3379,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     assert(s2.empty);
     x = *cast(longdouble *)&ld;
 
-    static if (real.mant_dig == 64)
+    static if (floatTraits!real.realFormat == RealFormat.ieeeExtended)
     {
         version (CRuntime_Microsoft)
             ld1 = 0x1.FFFFFFFFFFFFFFFEp-16382L; // strtold currently mapped to strtod
