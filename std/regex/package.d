@@ -356,7 +356,7 @@ public alias StaticRegex = Regex;
 
     Throws: $(D RegexException) if there were any errors during compilation.
 +/
-@trusted public auto regex(S)(S[] patterns, const(char)[] flags="")
+@trusted public Regex!(BasicElementOf!S) regex(S)(S[] patterns, const(char)[] flags="")
 if (isSomeString!(S))
 {
     import std.array : appender;
@@ -393,7 +393,7 @@ if (isSomeString!(S))
 }
 
 ///ditto
-@trusted public auto regex(S)(S pattern, const(char)[] flags="")
+@trusted public Regex!(BasicElementOf!S) regex(S)(S pattern, const(char)[] flags="")
 if (isSomeString!(S))
 {
     return regex([pattern], flags);
@@ -413,7 +413,7 @@ if (isSomeString!(S))
     assert(m.front[1] == "12");
 }
 
-public auto regexImpl(S)(S pattern, const(char)[] flags="")
+public Regex!(BasicElementOf!S) regexImpl(S)(S pattern, const(char)[] flags="")
 if (isSomeString!(S))
 {
     import std.regex.internal.parser : Parser, CodeGen;
@@ -764,7 +764,7 @@ public:
         assert(m.empty);
         ---
     +/
-    @property auto front()
+    @property inout(Captures!R) front() inout
     {
         return _captures;
     }
@@ -799,10 +799,10 @@ public:
     T opCast(T:bool)(){ return !empty; }
 
     /// Same as .front, provided for compatibility with original std.regex.
-    @property auto captures() inout { return _captures; }
+    @property inout(Captures!R) captures() inout { return _captures; }
 }
 
-private @trusted auto matchOnce(RegEx, R)(R input, const RegEx prog)
+private @trusted Captures!R matchOnce(RegEx, R)(R input, const RegEx prog)
 {
     alias Char = BasicElementOf!R;
     auto factory = prog.factory is null ? defaultFactory!Char(prog) : prog.factory;
@@ -813,7 +813,7 @@ private @trusted auto matchOnce(RegEx, R)(R input, const RegEx prog)
     return captures;
 }
 
-private auto matchMany(RegEx, R)(R input, RegEx re) @safe
+private RegexMatch!R matchMany(RegEx, R)(R input, RegEx re) @safe
 {
     return RegexMatch!R(input, re.withFlags(re.flags | RegexOption.global));
 }
@@ -914,17 +914,17 @@ if (isSomeString!R && isRegexFor!(RegEx, R))
     Returns: a $(D RegexMatch) object holding engine state after first match.
 +/
 
-public auto match(R, RegEx)(R input, RegEx re)
+public RegexMatch!(Unqual!R) match(R, RegEx)(R input, RegEx re)
 if (isSomeString!R && isRegexFor!(RegEx,R))
 {
-    return RegexMatch!(Unqual!(typeof(input)))(input, re);
+    return RegexMatch!(Unqual!R)(input, re);
 }
 
 ///ditto
-public auto match(R, String)(R input, String re)
+public RegexMatch!(Unqual!R) match(R, String)(R input, String re)
 if (isSomeString!R && isSomeString!String)
 {
-    return RegexMatch!(Unqual!(typeof(input)))(input, regex(re));
+    return RegexMatch!(Unqual!R)(input, regex(re));
 }
 
 /++
@@ -945,21 +945,21 @@ if (isSomeString!R && isSomeString!String)
     $(LREF Captures) containing the extent of a match together with all submatches
     if there was a match, otherwise an empty $(LREF Captures) object.
 +/
-public auto matchFirst(R, RegEx)(R input, RegEx re)
+public RegexMatch!R matchFirst(R, RegEx)(R input, RegEx re)
 if (isSomeString!R && isRegexFor!(RegEx, R))
 {
     return matchOnce(input, re);
 }
 
 ///ditto
-public auto matchFirst(R, String)(R input, String re)
+public RegexMatch!R matchFirst(R, String)(R input, String re)
 if (isSomeString!R && isSomeString!String)
 {
     return matchOnce(input, regex(re));
 }
 
 ///ditto
-public auto matchFirst(R, String)(R input, String[] re...)
+public RegexMatch!R matchFirst(R, String)(R input, String[] re...)
 if (isSomeString!R && isSomeString!String)
 {
     return matchOnce(input, regex(re));
@@ -1066,14 +1066,14 @@ if (isSomeString!R && isSomeString!String)
     state after first match.
 
 +/
-public auto bmatch(R, RegEx)(R input, RegEx re)
+public RegexMatch!(Unqual!R) bmatch(R, RegEx)(R input, RegEx re)
 if (isSomeString!R && isRegexFor!(RegEx, R))
 {
     return RegexMatch!(Unqual!(typeof(input)))(input, re);
 }
 
 ///ditto
-public auto bmatch(R, String)(R input, String re)
+public RegexMatch!(Unqual!R) bmatch(R, String)(R input, String re)
 if (isSomeString!R && isSomeString!String)
 {
     return RegexMatch!(Unqual!(typeof(input)))(input, regex(re));
