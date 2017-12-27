@@ -2867,32 +2867,21 @@ public:
         */
         auto fold(Args...)(Args args)
         {
-            import std.string : format;
             static assert(isInputRange!(Args[0]), "First argument must be an InputRange");
-            static assert(args.length == 1 ||                         // just the range
-                          args.length == 1 + functions.length ||      // range and seeds
-                          args.length == 1 + functions.length + 1,    // range, seeds, and workUnitSize
-                          format("Invalid number of arguments (%s): Should be an input range, %s optional seed(s)," ~
-                                 " and an optional work unit size", Args.length, functions.length));
 
-            auto range()
-            {
-                return args[0];
-            }
+            alias range = args[0];
 
             static if (Args.length == 1)
             {
                 // Just the range
                 return reduce!functions(range);
             }
-            else
+            else static if (Args.length == 1 + functions.length ||
+                            Args.length == 1 + functions.length + 1)
             {
                 static if (functions.length == 1)
                 {
-                    auto seeds()
-                    {
-                        return args[1];
-                    }
+                    alias seeds = args[1];
                 }
                 else
                 {
@@ -2914,10 +2903,12 @@ public:
                     static assert(isIntegral!(Args[$-1]), "Work unit size must be an integral type");
                     return reduce!functions(seeds, range, args[$-1]);
                 }
-                else
-                {
-                    static assert(0);
-                }
+            }
+            else
+            {
+                import std.conv : text;
+                static assert(0, "Invalid number of arguments (" ~ Args.length.text ~ "): Should be an input range, "
+                              ~ functions.length.text ~ " optional seed(s), and an optional work unit size.");
             }
         }
     }
@@ -2927,7 +2918,6 @@ public:
     // they would appear under the outer one. (We can't move this inside the
     // outer fold() template because then dmd runs out of memory possibly due to
     // recursive template instantiation, which is surprisingly not caught.)
-    version(StdUnittest)
     @system unittest
     {
         static int adder(int a, int b)
@@ -2953,6 +2943,7 @@ public:
         auto z = taskPool.fold!adder([1, 2, 3, 4], 0, 20);
         assert(z == 10);
     }
+
     /**
     Gets the index of the current thread relative to this $(D TaskPool).  Any
     thread not in this pool will receive an index of 0.  The worker threads in
@@ -3485,7 +3476,6 @@ public:
     }
 }
 
-version(StdUnittest)
 @system unittest
 {
     import std.algorithm.iteration : sum;
@@ -3501,8 +3491,15 @@ version(StdUnittest)
     auto r = iota(1, N + 1);
     const expected = r.sum();
 
+    // Just the range
     assert(taskPool.fold!adder(r) == expected);
+
+    // Range and seeds
     assert(taskPool.fold!adder(r, 0) == expected);
+    assert(taskPool.fold!(adder, adder)(r, 0, 0) == tuple(expected, expected));
+
+    // Range, seeds, and work unit size
+    assert(taskPool.fold!adder(r, 0, 42) == expected);
     assert(taskPool.fold!(adder, adder)(r, 0, 0, 42) == tuple(expected, expected));
 }
 
