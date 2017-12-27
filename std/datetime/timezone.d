@@ -1993,7 +1993,16 @@ public:
     }
 
 
-    version(Android)
+    version(TZDatabaseDir)
+    {
+        import std.string : strip;
+        /++
+            The default directory where the TZ Database files are. It's empty
+            for Windows, since Windows doesn't have them.
+          +/
+        enum defaultTZDatabaseDir = strip(import("TZDatabaseDirFile"));
+    }
+    else version(Android)
     {
         // Android concatenates all time zone data into a single file and stores it here.
         enum defaultTZDatabaseDir = "/system/usr/share/zoneinfo/";
