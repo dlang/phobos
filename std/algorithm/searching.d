@@ -2296,8 +2296,8 @@ forward range with elements comparable with elements in
 Returns:
 
 A tuple containing `haystack` positioned to match one of the
-needles and also the 1-based index of the matching element in $(D
-needles) (0 if none of `needles` matched, 1 if `needles[0]`
+needles and also the 1-based index of the matching element in
+`needles` (0 if none of `needles` matched, 1 if `needles[0]`
 matched, 2 if `needles[1]` matched...). The first needle to be found
 will be the one that matches. If multiple needles are found at the
 same spot in the range, then the shortest one is the one which matches
@@ -2306,11 +2306,11 @@ same spot in the range, then the shortest one is the one which matches
 matches).
 
 The relationship between `haystack` and `needles` simply means
-that one can e.g. search for individual `int`s or arrays of $(D
-int)s in an array of `int`s. In addition, if elements are
+that one can e.g. search for individual `int`s or arrays of
+`int`s in an array of `int`s. In addition, if elements are
 individually comparable, searches of heterogeneous types are allowed
-as well: a `double[]` can be searched for an `int` or a $(D
-short[]), and conversely a `long` can be searched for a `float`
+as well: a `double[]` can be searched for an `int` or a
+`short[]`, and conversely a `long` can be searched for a `float`
 or a `double[]`. This makes for efficient searches without the need
 to coerce one side of the comparison into the other's side type.
 
