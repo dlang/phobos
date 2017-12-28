@@ -4005,11 +4005,13 @@ string expandTilde(string inputPath) nothrow
 }
 
 
-version(unittest) import std.process : environment;
 @system unittest
 {
     version (Posix)
     {
+        import std.process : executeShell, environment;
+        import std.string : strip;
+
         // Retrieve the current home variable.
         auto oldHome = environment.get("HOME");
 
@@ -4032,20 +4034,13 @@ version(unittest) import std.process : environment;
         if (oldHome !is null) environment["HOME"] = oldHome;
         else environment.remove("HOME");
 
-        // Test user expansion for root, no /root on Android
-        version (OSX)
-        {
-            assert(expandTilde("~root") == "/var/root", expandTilde("~root"));
-            assert(expandTilde("~root/") == "/var/root/", expandTilde("~root/"));
-        }
-        else version (Android)
-        {
-        }
-        else
-        {
-            assert(expandTilde("~root") == "/root", expandTilde("~root"));
-            assert(expandTilde("~root/") == "/root/", expandTilde("~root/"));
-        }
+        immutable tildeUser = "~" ~ environment.get("USER");
+        immutable path = executeShell("echo " ~ tildeUser).output.strip();
+        immutable expTildeUser = expandTilde(tildeUser);
+        assert(expTildeUser == path, expTildeUser);
+        immutable expTildeUserSlash = expandTilde(tildeUser ~ "/");
+        assert(expTildeUserSlash == path ~ "/", expTildeUserSlash);
+
         assert(expandTilde("~Idontexist/hey") == "~Idontexist/hey");
     }
 }
