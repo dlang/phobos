@@ -1402,6 +1402,17 @@ if (!is(CommonType!(T1, T2) == void))
     auto b = uniform(0.0f, 1.0f, gen);
 }
 
+/// Create an array of random numbers using range functions and UFCS
+@safe unittest
+{
+    import std.array : array;
+    import std.range : generate, takeExactly;
+
+    int[] arr = generate!(() => uniform(0, 100)).takeExactly(10).array;
+    assert(arr.length == 10);
+    assert(arr[0] >= 0 && arr[0] < 100);
+}
+
 @safe unittest
 {
     MinstdRand0 gen;
