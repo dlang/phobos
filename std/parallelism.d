@@ -2920,27 +2920,18 @@ public:
     // recursive template instantiation, which is surprisingly not caught.)
     @system unittest
     {
-        static int adder(int a, int b)
-        {
-            return a + b;
-        }
-        static int multiplier(int a, int b)
-        {
-            return a * b;
-        }
-
         // Just the range
-        auto x = taskPool.fold!adder([1, 2, 3, 4]);
+        auto x = taskPool.fold!"a + b"([1, 2, 3, 4]);
         assert(x == 10);
 
         // The range and the seeds (0 and 1 below; also note multiple
         // functions in this example)
-        auto y = taskPool.fold!(adder, multiplier)([1, 2, 3, 4], 0, 1);
+        auto y = taskPool.fold!("a + b", "a * b")([1, 2, 3, 4], 0, 1);
         assert(y[0] == 10);
         assert(y[1] == 24);
 
         // The range, the seed (0), and the work unit size (20)
-        auto z = taskPool.fold!adder([1, 2, 3, 4], 0, 20);
+        auto z = taskPool.fold!"a + b"([1, 2, 3, 4], 0, 20);
         assert(z == 10);
     }
 
@@ -3482,25 +3473,20 @@ public:
     import std.range : iota;
     import std.typecons : tuple;
 
-    static int adder(int a, int b)
-    {
-        return a + b;
-    }
-
     enum N = 100;
     auto r = iota(1, N + 1);
     const expected = r.sum();
 
     // Just the range
-    assert(taskPool.fold!adder(r) == expected);
+    assert(taskPool.fold!"a + b"(r) == expected);
 
     // Range and seeds
-    assert(taskPool.fold!adder(r, 0) == expected);
-    assert(taskPool.fold!(adder, adder)(r, 0, 0) == tuple(expected, expected));
+    assert(taskPool.fold!"a + b"(r, 0) == expected);
+    assert(taskPool.fold!("a + b", "a + b")(r, 0, 0) == tuple(expected, expected));
 
     // Range, seeds, and work unit size
-    assert(taskPool.fold!adder(r, 0, 42) == expected);
-    assert(taskPool.fold!(adder, adder)(r, 0, 0, 42) == tuple(expected, expected));
+    assert(taskPool.fold!"a + b"(r, 0, 42) == expected);
+    assert(taskPool.fold!("a + b", "a + b")(r, 0, 0, 42) == tuple(expected, expected));
 }
 
 /**
