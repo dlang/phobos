@@ -707,7 +707,7 @@ if (isSomeString!R)
 private:
     alias Char = BasicElementOf!R;
     Matcher!Char _engine;
-    const MatcherFactory!Char _factory;
+    Rebindable!(const MatcherFactory!Char) _factory;
     R _input;
     Captures!R _captures;
 
@@ -826,6 +826,13 @@ private auto matchMany(RegEx, R)(R input, RegEx re) @safe
     assert("abc".matchOnce(re)[0] == "abc");
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=18135
+unittest
+{
+    static struct MapResult { RegexMatch!string m; }
+    MapResult m;
+    m = MapResult();
+}
 
 private enum isReplaceFunctor(alias fun, R) =
     __traits(compiles, (Captures!R c) { fun(c); });
