@@ -1899,7 +1899,7 @@ if (isSomeChar!T && !is(typeof(parse!T(value))) &&
     is(typeof(parse!dchar(value))))
 {
     import std.utf : encode;
-    
+
     immutable dchar codepoint = parse!dchar(value);
     if (!value.empty)
         throw new ConvException(convFormat("Cannot convert \"%s\" to %s because it " ~
