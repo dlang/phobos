@@ -1440,9 +1440,6 @@ private template validPredicates(E, less...)
 }
 
 /**
-`auto multiSort(Range)(Range r$D(
-    if (validPredicates!(ElementType!Range, less));)
-
 Sorts a range by multiple keys. The call $(D multiSort!("a.id < b.id",
 "a.date > b.date")(r)) sorts the range `r` by `id` ascending,
 and sorts elements that have the same `id` by `date`

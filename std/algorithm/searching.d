@@ -1477,11 +1477,6 @@ searched in.
 
 needle = The element searched for.
 
-Constraints:
-
-`isInputRange!InputRange && is(typeof(binaryFun!pred(haystack.front, needle$D(
-: bool)))
-
 Returns:
 
 `haystack` advanced such that the front element is the one searched for;
