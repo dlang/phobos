@@ -631,7 +631,7 @@ matching failure happens.
 Throws:
     An `Exception` if `S.length == 0` and `fmt` has format specifiers.
  */
-uint formattedRead(alias fmt, R, S...)(ref R r, auto ref S args)
+uint formattedRead(alias fmt, R, S...)(auto ref R r, auto ref S args)
 if (isSomeString!(typeof(fmt)))
 {
     alias e = checkFormatException!(fmt, S);
@@ -640,7 +640,7 @@ if (isSomeString!(typeof(fmt)))
 }
 
 /// ditto
-uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, auto ref S args)
+uint formattedRead(R, Char, S...)(auto ref R r, const(Char)[] fmt, auto ref S args)
 {
     import std.typecons : isTuple;
 
@@ -976,6 +976,18 @@ uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, auto ref S args)
     line = `{[hello=1]; [world=2]}`;
     formattedRead(line, "{%([%(%c%)=%s]%|; %)}", &aa3);
     assert(aa3 == ["hello":1, "world":2]);
+}
+
+// test rvalue using
+@system pure unittest
+{
+    string[int] aa1;
+    formattedRead!("%s")(`[1:"hello", 2:"world"]`, aa1);
+    assert(aa1 == [1:"hello", 2:"world"]);
+
+    int[string] aa2;
+    formattedRead(`{"hello"=1; "world"=2}`, "{%(%s=%s; %)}", aa2);
+    assert(aa2 == ["hello":1, "world":2]);
 }
 
 template FormatSpec(Char)
