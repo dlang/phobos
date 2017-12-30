@@ -2483,7 +2483,7 @@ Convenience function. Like find, but only returns whether or not the search
 was successful.
 
 See_Also:
-$(LREF among) for checking a value against multiple possibilities.
+$(REF among, std,algorithm,comparison) for checking a value against multiple possibilities.
  +/
 template canFind(alias pred="a == b")
 {
