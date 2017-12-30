@@ -527,14 +527,20 @@ enum real SQRT1_2 =    SQRT2/2;                               /** $(SQRT)$(HALF)
  * = hypot(z.re, z.im).
  */
 Num abs(Num)(Num x) @safe pure nothrow
-if (is(typeof(Num.init >= 0)) && is(typeof(-Num.init)) &&
+if ((is(typeof(Num.init >= 0)) && is(typeof(-Num.init)) ||
+    (is(Num == short) || is(Num == byte))) &&
     !(is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
     || is(Num* : const(ireal*))))
 {
     static if (isFloatingPoint!(Num))
         return fabs(x);
     else
-        return x >= 0 ? x : -x;
+    {
+        static if (is(Num == short) || is(Num == byte))
+            return x >= 0 ? x : cast(Num) -int(x);
+        else
+            return x >= 0 ? x : -x;
+    }
 }
 
 /// ditto
@@ -564,6 +570,14 @@ if (is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
     assert(abs(-56) == 56);
     assert(abs(2321312L)  == 2321312L);
     assert(abs(-1L+1i) == sqrt(2.0L));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    short s = -8;
+    byte b = -8;
+    assert(abs(s) == 8);
+    assert(abs(b) == 8);
 }
 
 @safe pure nothrow @nogc unittest
