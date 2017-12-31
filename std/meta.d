@@ -56,6 +56,7 @@
  *           $(LREF staticIsSorted)
  * ))
  * $(TR $(TD Template instantiation) $(TD
+ *           $(LREF apply)
  *           $(LREF ApplyLeft)
  *           $(LREF ApplyRight)
  *           $(LREF Instantiate)
@@ -1212,6 +1213,147 @@ template aliasSeqOf(alias range)
     {
         static assert(V == REF[I]);
     }
+}
+
+/**
+ * Applies the sequence of arguments `args` to the function or template `func`
+ * either as function or template arguments, at compile-time or at run-time
+ * (if CTFE is not possible).
+ *
+ * `apply` is most likely to be found used as a building block in higher-order
+ * templates and $(LREF AliasSeq) algorithms like $(LREF staticMap) which need
+ * to call or instantiate (as appropriate) functions or templates, passed as
+ * parameters.
+ *
+ * Params:
+ *      func  = function or template to call or instantiate
+ *      args = template / function arguments to `apply` to `fun`
+ *
+ * Returns:
+ *      An alias to `func(args)` or `func!args`
+ */
+template apply(alias func, args...)
+{
+    static if (__traits(compiles, { alias res = Alias!(func(args)); }))
+        // Evaluate `fun(args)` at compile-time and wrap the result
+        // in an `Alias`, so it can be used without special-casing
+        // in higher-order templates like `staticMap`.
+        alias apply = Alias!(func(args));
+
+    else static if (is(typeof(func(args))))
+        // `fun` is a regular callable, but we can't call it at compile-time.
+        // Delay the evaluation of `fun(args)` to run-time by wrapping it in a
+        // `@property` function.
+        @property auto ref apply() { return func(args); }
+
+    else static if (__traits(compiles, { alias res = Alias!(func!args); }))
+        // `fun` is a manifest constant (a.k.a. `enum`) template or a
+        // function template with no run-time parameters which can be evaulated
+        // at compile-time. Wrap the result in an `Alias`, so it can be aliased.
+        alias apply = Alias!(func!args);
+
+    else static if (__traits(compiles, { alias res = func!args; }))
+        // `fun` is template that yields an `AliasSeq`, or something that can't
+        // be wrapped with `Alias`.
+        alias apply = func!args;
+
+    else
+        static assert(0, "Cannot call / instantiate `" ~
+            __traits(identifier, func) ~ "` with arguments: `" ~
+            args.stringof ~ "`.");
+}
+
+/**
+ * `apply` can call regular functions with arguments known either at
+ * compile-time, or run-time:
+ */
+@safe pure nothrow @nogc
+unittest
+{
+    int add(int a, int b) { return a + b; }
+    enum int a = 2, b = 3;
+    enum int sum = apply!(add, a, b);
+    static assert(sum == 5);
+
+    int x = 2, y = 5;
+    int z = apply!((a, b) => a + b, x, y);
+    assert(z == 7);
+
+    // TODO: Show higher-order template example
+
+    // When `apply` is used to call functions it returns the result
+    // by reference (when possible):
+    static struct S { int x; }
+    static ref int getX(ref S s) { return s.x; }
+    static int inc(ref int x) { return ++x; }
+    auto s = S(41);
+    int theAnswer = apply!(inc, apply!(getX, s));
+    assert(theAnswer == 42);
+    assert(s.x == 42);
+}
+
+/**
+ * `apply` can also instantiate function templates with compile-time parameters
+ * and alias or call them:
+ */
+@safe nothrow @nogc
+unittest
+{
+    int mul(int a, int b)() { return a * b; }
+
+    enum product = apply!(mul, 2, 7);
+    static assert(product == 14);
+
+    static int counter = 0;
+    int offset(int x) { return 10 * ++counter + x; }
+    alias offset7 = apply!(offset, 7);
+
+    assert(offset7()         == 17);
+    assert(apply!(offset, 7) == 27);
+    assert(offset7()         == 37);
+}
+
+/// `apply` can instantiate manifest constant (a.k.a. `enum`) templates:
+@safe pure nothrow @nogc
+unittest
+{
+    enum ulong square(uint x) = x * x;
+    enum result = apply!(square, 3);
+    static assert(result == 9);
+}
+
+/**
+ * Two or more `apply` instances can be chained to provide the template and
+ * later the run-time arguments of a function template:
+ */
+@safe pure nothrow @nogc
+unittest
+{
+    static T[] transform(alias fun, T)(T[] arr)
+    {
+        foreach (ref e; arr)
+            e = fun(e);
+        return arr;
+    }
+
+    alias result = apply!(
+        apply!(transform, x => x * x, int),
+        [2, 3, 4, 5]);
+
+    static assert(result == [4, 9, 16, 25]);
+}
+
+/// `apply` can instantiate alias templates
+@safe pure nothrow @nogc
+unittest
+{
+    alias ArrayOf(T) = T[];
+    alias ArrayType = apply!(ArrayOf, int);
+    static assert(is(ArrayType == int[]));
+
+    import std.traits : CommonType;
+    alias Types = AliasSeq!(byte, short, int, long);
+    static assert(is(apply!(CommonType, Types) == long));
 }
 
 /**
