@@ -5,7 +5,7 @@ set -uexo pipefail
 HOST_DMD_VER=2.072.2 # same as in dmd/src/posix.mak
 DSCANNER_DMD_VER=2.077.0 # dscanner needs a more up-to-date version
 CURL_USER_AGENT="CirleCI $(curl --version | head -n 1)"
-DUB=${DUB:-$HOME/dlang/dub/dub}
+DUB=${DUB:-dub}
 N=2
 CIRCLE_NODE_INDEX=${CIRCLE_NODE_INDEX:-0}
 BUILD="debug"
@@ -127,6 +127,8 @@ coverage()
 # extract publictests and run them independently
 publictests()
 {
+    source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"
+
     # checkout a specific version of https://github.com/dlang/tools
     if [ ! -d ../tools ] ; then
         clone https://github.com/dlang/tools.git ../tools master
