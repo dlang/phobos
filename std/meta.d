@@ -1733,8 +1733,16 @@ if (stepSize != 0)
  * Params:
  *    Template = The template to instantiate.
  *    Params = The parameters with which to instantiate the template.
+ *
  * Returns:
  *    The instantiated template.
+ *
+ * See_Also: $(LREF apply)
+ *
+ * $(LREF apply) offers a superset of `Instantiate`'s functionality, but
+ * its use may not always be appropriate because it blurs the difference
+ * between template instantiation and compile-time or run-time function
+ * calling in generic code.
  */
 alias Instantiate(alias Template, Params...) = Template!Params;
 
