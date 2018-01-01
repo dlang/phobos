@@ -261,7 +261,6 @@ SRC_STD_C= \
 
 SRC_STD_WIN= \
 	std\windows\registry.d \
-	std\windows\iunknown.d \
 	std\windows\syserror.d \
 	std\windows\charset.d
 
