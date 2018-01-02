@@ -332,6 +332,8 @@ import std.typecons; // : Flag, Yes, No;
     assert(nc[1..$].equal(["var"]));
     ----
 +/
+// See commentary at https://github.com/dlang/phobos/pull/5963
+deprecated(`use typeof(regex("foo"))`)
 public alias Regex(Char) = std.regex.internal.ir.Regex!(Char);
 
 /++
@@ -340,7 +342,12 @@ public alias Regex(Char) = std.regex.internal.ir.Regex!(Char);
 
     No longer used, kept as alias to Regex for backwards compatibility.
 +/
+// See commentary at https://github.com/dlang/phobos/pull/5963
+deprecated(`use typeof(ctRegex!("foo"))`)
 public alias StaticRegex = Regex;
+
+private alias _Regex(Char) = std.regex.internal.ir.Regex!(Char);
+private alias _StaticRegex = _Regex;
 
 /++
     Compile regular expression pattern for the later execution.
@@ -459,17 +466,15 @@ template ctRegexImpl(alias pattern, string flags=[])
 +/
 public enum ctRegex(alias pattern, alias flags=[]) = ctRegexImpl!(pattern, flags).wrapper;
 
-enum isRegexFor(RegEx, R) = is(Unqual!RegEx == Regex!(BasicElementOf!R)) || is(RegEx : const(Regex!(BasicElementOf!R)))
-     || is(Unqual!RegEx == StaticRegex!(BasicElementOf!R));
+enum isRegexFor(RegEx, R) = is(Unqual!RegEx == _Regex!(BasicElementOf!R)) || is(RegEx : const(_Regex!(BasicElementOf!R)))
+     || is(Unqual!RegEx == _StaticRegex!(BasicElementOf!R));
 
+/// Compatibility alias for _Captures
+// See commentary at https://github.com/dlang/phobos/pull/5963
+deprecated(`use typeof(matchOnce("", "").front)`)
+public alias Captures(R) = _Captures!R;
 
-/++
-    $(D Captures) object contains submatches captured during a call
-    to $(D match) or iteration over $(D RegexMatch) range.
-
-    First element of range is the whole match.
-+/
-@trusted public struct Captures(R)
+@trusted private struct _Captures(R)
 if (isSomeString!R)
 {//@trusted because of union inside
     alias DataIndex = size_t;
@@ -498,7 +503,7 @@ private:
         _f = 0;
     }
 
-    this(ref RegexMatch!R rmatch)
+    this(ref _RegexMatch!R rmatch)
     {
         _input = rmatch._input;
         _names = rmatch._engine.pattern.dict;
@@ -557,57 +562,49 @@ public:
             }
         }
     }
-    ///Slice of input prior to the match.
+
     @property R pre()
     {
         return _nMatch == 0 ? _input[] : _input[0 .. matches[0].begin];
     }
 
-    ///Slice of input immediately after the match.
     @property R post()
     {
         return _nMatch == 0 ? _input[] : _input[matches[0].end .. $];
     }
 
-    ///Slice of matched portion of input.
     @property R hit()
     {
         assert(_nMatch, "attempted to get hit of an empty match");
         return _input[matches[0].begin .. matches[0].end];
     }
 
-    ///Range interface.
     @property R front()
     {
         assert(_nMatch, "attempted to get front of an empty match");
         return _input[matches[_f].begin .. matches[_f].end];
     }
 
-    ///ditto
     @property R back()
     {
         assert(_nMatch, "attempted to get back of an empty match");
         return _input[matches[_b - 1].begin .. matches[_b - 1].end];
     }
 
-    ///ditto
     void popFront()
     {
         assert(!empty);
         ++_f;
     }
 
-    ///ditto
     void popBack()
     {
         assert(!empty);
         --_b;
     }
 
-    ///ditto
     @property bool empty() const { return _nMatch == 0 || _f >= _b; }
 
-    ///ditto
     inout(R) opIndex()(size_t i) inout
     {
         assert(_f + i < _b,text("requested submatch number ", i," is out of range"));
@@ -616,49 +613,16 @@ public:
         return _input[matches[_f + i].begin .. matches[_f + i].end];
     }
 
-    /++
-        Explicit cast to bool.
-        Useful as a shorthand for !(x.empty) in if and assert statements.
-
-        ---
-        import std.regex;
-
-        assert(!matchFirst("nothing", "something"));
-        ---
-    +/
-
     @safe bool opCast(T:bool)() const nothrow { return _nMatch != 0; }
-
-    /++
-        Number of pattern matched counting, where 1 - the first pattern.
-        Returns 0 on no match.
-    +/
 
     @safe @property int whichPattern() const nothrow { return _nMatch; }
 
-    ///
     @system unittest
     {
         import std.regex;
         assert(matchFirst("abc", "[0-9]+", "[a-z]+").whichPattern == 2);
     }
 
-    /++
-        Lookup named submatch.
-
-        ---
-        import std.regex;
-        import std.range;
-
-        auto c = matchFirst("a = 42;", regex(`(?P<var>\w+)\s*=\s*(?P<value>\d+);`));
-        assert(c["var"] == "a");
-        assert(c["value"] == "42");
-        popFrontN(c, 2);
-        //named groups are unaffected by range primitives
-        assert(c["var"] =="a");
-        assert(c.front == "42");
-        ----
-    +/
     R opIndex(String)(String i) /*const*/ //@@@BUG@@@
         if (isSomeString!String)
     {
@@ -666,10 +630,8 @@ public:
         return _input[matches[index].begin .. matches[index].end];
     }
 
-    ///Number of matches in this object.
     @property size_t length() const { return _nMatch == 0 ? 0 : _b - _f;  }
 
-    ///A hook for compatibility with original std.regex.
     @property ref captures(){ return this; }
 }
 
@@ -695,13 +657,11 @@ public:
     assert(!matchFirst("nothing", "something"));
 }
 
-/++
-    A regex engine state, as returned by $(D match) family of functions.
+// See commentary at https://github.com/dlang/phobos/pull/5963
+deprecated(`use typeof(match("", ""))`)
+public alias RegexMatch(R) = RegexMatch!R;
 
-    Effectively it's a forward range of Captures!R, produced
-    by lazily searching for matches in a given input.
-+/
-@trusted public struct RegexMatch(R)
+@trusted private struct _RegexMatch(R)
 if (isSomeString!R)
 {
 private:
@@ -709,7 +669,7 @@ private:
     Matcher!Char _engine;
     Rebindable!(const MatcherFactory!Char) _factory;
     R _input;
-    Captures!R _captures;
+    _Captures!R _captures;
 
     this(RegEx)(R input, RegEx prog)
     {
@@ -719,7 +679,7 @@ private:
         else _factory = prog.factory;
         _engine = _factory.create(prog, input);
         assert(_engine.refCount == 1);
-        _captures = Captures!R(this);
+        _captures = _Captures!R(this);
         _captures._nMatch = _engine.match(_captures.matches);
     }
 
@@ -734,42 +694,26 @@ public:
         if (_engine) _factory.decRef(_engine);
     }
 
-    ///Shorthands for front.pre, front.post, front.hit.
     @property R pre()
     {
         return _captures.pre;
     }
 
-    ///ditto
     @property R post()
     {
         return _captures.post;
     }
 
-    ///ditto
     @property R hit()
     {
         return _captures.hit;
     }
 
-    /++
-        Functionality for processing subsequent matches of global regexes via range interface:
-        ---
-        import std.regex;
-        auto m = matchAll("Hello, world!", regex(`\w+`));
-        assert(m.front.hit == "Hello");
-        m.popFront();
-        assert(m.front.hit == "world");
-        m.popFront();
-        assert(m.empty);
-        ---
-    +/
     @property auto front()
     {
         return _captures;
     }
 
-    ///ditto
     void popFront()
     {
         import std.exception : enforce;
@@ -789,16 +733,12 @@ public:
         _captures._nMatch = _engine.match(_captures.matches);
     }
 
-    ///ditto
     auto save(){ return this; }
 
-    ///Test if this match object is empty.
     @property bool empty() const { return _captures._nMatch == 0; }
 
-    ///Same as !(x.empty), provided for its convenience  in conditional statements.
     T opCast(T:bool)(){ return !empty; }
 
-    /// Same as .front, provided for compatibility with original std.regex.
     @property auto captures() inout { return _captures; }
 }
 
@@ -808,14 +748,14 @@ private @trusted auto matchOnce(RegEx, R)(R input, const RegEx prog)
     auto factory = prog.factory is null ? defaultFactory!Char(prog) : prog.factory;
     auto engine = factory.create(prog, input);
     scope(exit) factory.decRef(engine); // destroys the engine
-    auto captures = Captures!R(input, prog.ngroup, prog.dict);
+    auto captures = _Captures!R(input, prog.ngroup, prog.dict);
     captures._nMatch = engine.match(captures.matches);
     return captures;
 }
 
 private auto matchMany(RegEx, R)(R input, RegEx re) @safe
 {
-    return RegexMatch!R(input, re.withFlags(re.flags | RegexOption.global));
+    return _RegexMatch!R(input, re.withFlags(re.flags | RegexOption.global));
 }
 
 @system unittest
@@ -835,7 +775,7 @@ unittest
 }
 
 private enum isReplaceFunctor(alias fun, R) =
-    __traits(compiles, (Captures!R c) { fun(c); });
+    __traits(compiles, (_Captures!R c) { fun(c); });
 
 // the lowest level - just stuff replacements into the sink
 private @trusted void replaceCapturesInto(alias output, Sink, R, T)
@@ -918,20 +858,48 @@ if (isSomeString!R && isRegexFor!(RegEx, R))
     matching scheme to use depends highly on the pattern kind and
     can done automatically on case by case basis.
 
-    Returns: a $(D RegexMatch) object holding engine state after first match.
+    Returns: a $(D RegexMatch) struct holding engine state after first match.
+
+    A RegexMatch is a forward range of captures, lazily evaluated. It offers the
+    following additional members:
+
+    $(UL
+      $(LI pre: shortcut for $(D .front.pre).)
+      $(LI post: shortcut for $(D .front.post).)
+      $(LI hit: shortcut for $(D .front.hit).)
+      $(LI captures: compatibility alias for previous versions of std.regex.)
+    )
+    
+    Each capture struct offers the following methods:
+
+    $(UL
+      $LI pre: the portion of the input before the current regex match.)
+      $(LI post: the portion of the input after the current regex match.)
+      $(LI hit: the portion of the input contained in the current regex match.)
+      $(LI whichPattern: the 1-based index of this match in relation to all
+           matches. Returns 0 if there are no matches.)
+      $(LI opIndex[somestring]: retrieve the contents of the named subgroup with
+           the given name. The 0th element is the implicit capture group for the
+           entire input regex.)
+      $(LI captures: compatibility alias for previous versions of std.regex.)
+      $(LI implicit boolean cast: true iff this represents a successful match.)
+    )
+
+    Additionally, a capture is a random access range over the subgroups it
+    contains. Again, the first element is the entire regex as one subgroup.
 +/
 
 public auto match(R, RegEx)(R input, RegEx re)
 if (isSomeString!R && isRegexFor!(RegEx,R))
 {
-    return RegexMatch!(Unqual!(typeof(input)))(input, re);
+    return _RegexMatch!(Unqual!(typeof(input)))(input, re);
 }
 
 ///ditto
 public auto match(R, String)(R input, String re)
 if (isSomeString!R && isSomeString!String)
 {
-    return RegexMatch!(Unqual!(typeof(input)))(input, regex(re));
+    return _RegexMatch!(Unqual!(typeof(input)))(input, regex(re));
 }
 
 /++
@@ -948,9 +916,25 @@ if (isSomeString!R && isSomeString!String)
         compiled native machine code. )
     )
 
-    Returns:
-    $(LREF Captures) containing the extent of a match together with all submatches
-    if there was a match, otherwise an empty $(LREF Captures) object.
+    Returns: a capture struct.
+
+    A capture struct offers the following methods:
+
+    $(UL
+      $LI pre: the portion of the input before the current regex match.)
+      $(LI post: the portion of the input after the current regex match.)
+      $(LI hit: the portion of the input contained in the current regex match.)
+      $(LI whichPattern: the 1-based index of this match in relation to all
+           matches. Returns 0 if there are no matches.)
+      $(LI opIndex[somestring]: retrieve the contents of the named subgroup with
+           the given name. The 0th element is the implicit capture group for the
+           entire input regex.)
+      $(LI captures: compatibility alias for previous versions of std.regex.)
+      $(LI boolean cast: true iff this represents a successful match.)
+    )
+
+    Additionally, a capture is a random access range over the subgroups it
+    contains. Again, the first element is the entire regex as one subgroup.
 +/
 public auto matchFirst(R, RegEx)(R input, RegEx re)
 if (isSomeString!R && isRegexFor!(RegEx, R))
@@ -1076,14 +1060,14 @@ if (isSomeString!R && isSomeString!String)
 public auto bmatch(R, RegEx)(R input, RegEx re)
 if (isSomeString!R && isRegexFor!(RegEx, R))
 {
-    return RegexMatch!(Unqual!(typeof(input)))(input, re);
+    return _RegexMatch!(Unqual!(typeof(input)))(input, re);
 }
 
 ///ditto
 public auto bmatch(R, String)(R input, String re)
 if (isSomeString!R && isSomeString!String)
 {
-    return RegexMatch!(Unqual!(typeof(input)))(input, regex(re));
+    return _RegexMatch!(Unqual!(typeof(input)))(input, regex(re));
 }
 
 // produces replacement string from format using captures for substitution
@@ -1337,7 +1321,7 @@ if (isSomeString!R && isRegexFor!(RegEx, R))
 ///
 @system unittest
 {
-    string baz(Captures!(string) m)
+    string baz(_Captures!(string) m)
     {
         import std.string : toUpper;
         return toUpper(m.hit);
@@ -1462,7 +1446,7 @@ Params:
 Returns:
     A lazy range of strings
 */
-public struct Splitter(Flag!"keepSeparators" keepSeparators = No.keepSeparators, Range, alias RegEx = Regex)
+public struct Splitter(Flag!"keepSeparators" keepSeparators = No.keepSeparators, Range, alias RegEx = _Regex)
 if (isSomeString!Range && isRegexFor!(RegEx, Range))
 {
 private:
