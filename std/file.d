@@ -281,11 +281,13 @@ private T cenforce(T)(T condition, const(char)[] name, const(FSChar)* namez,
 /********************************************
 Read entire contents of file $(D name) and returns it as an untyped
 array. If the file size is larger than $(D upTo), only $(D upTo)
-bytes are _read.
+bytes are _read. If an offset is passed, then the reading of the file
+starts at $(D offset).
 
 Params:
     name = string or range of characters representing the file _name
     upTo = if present, the maximum number of bytes to _read
+    offset = if present, the starting point of the reading
 
 Returns: Untyped array of bytes _read.
 
@@ -296,10 +298,30 @@ void[] read(R)(R name, size_t upTo = size_t.max)
 if (isInputRange!R && isSomeChar!(ElementEncodingType!R) && !isInfinite!R &&
     !isConvertibleToString!R)
 {
+    return read(name, 0, upTo);
+}
+
+/// ditto
+void[] read(R)(auto ref R name, size_t upTo = size_t.max)
+if (isConvertibleToString!R)
+{
+    return read!(StringTypeOf!R)(name, 0, upTo);
+}
+
+@safe unittest
+{
+    static assert(__traits(compiles, read(TestAliasedString(null))));
+}
+
+/// ditto
+void[] read(R)(R name, size_t offset, size_t upTo)
+if (isInputRange!R && isSomeChar!(ElementEncodingType!R) && !isInfinite!R &&
+    !isConvertibleToString!R)
+{
     static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
-        return readImpl(name, name.tempCString!FSChar(), upTo);
+        return readImpl(name, name.tempCString!FSChar(), upTo, offset);
     else
-        return readImpl(null, name.tempCString!FSChar(), upTo);
+        return readImpl(null, name.tempCString!FSChar(), upTo, offset);
 }
 
 ///
@@ -318,19 +340,27 @@ if (isInputRange!R && isSomeChar!(ElementEncodingType!R) && !isInfinite!R &&
     assert((cast(const(ubyte)[])read(deleteme)).length == 4);
 }
 
-/// ditto
-void[] read(R)(auto ref R name, size_t upTo = size_t.max)
-if (isConvertibleToString!R)
-{
-    return read!(StringTypeOf!R)(name, upTo);
-}
-
+///
 @safe unittest
 {
-    static assert(__traits(compiles, read(TestAliasedString(null))));
+    scope(exit)
+    {
+        assert(exists(deleteme));
+        remove(deleteme);
+    }
+
+    write(deleteme, "Read me"); // deleteme is the name of a temporary file
+    assert(read(deleteme, 5, 3) == "me");
+    version(Posix)
+    {
+        assert(read(deleteme, 100, 100) == []);
+        // test special files
+        auto s = read("/proc/sys/kernel/osrelease", 5, 10);
+        assert(s.length > 0);
+    }
 }
 
-version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez, size_t upTo = size_t.max) @trusted
+version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez, size_t upTo, size_t offset) @trusted
 {
     import core.memory : GC;
     import std.algorithm.comparison : min;
@@ -353,6 +383,8 @@ version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez
     stat_t statbuf = void;
     cenforce(fstat(fd, &statbuf) == 0, name, namez);
 
+    if (offset >= statbuf.st_size)
+        offset = to!size_t(statbuf.st_size + 1);
     immutable initialAlloc = min(upTo, to!size_t(statbuf.st_size
         ? min(statbuf.st_size + 1, maxInitialAlloc)
         : minInitialAlloc));
@@ -360,15 +392,27 @@ version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez
     scope(failure) GC.free(result.ptr);
     size_t size = 0;
 
-    for (;;)
+    if (offset == 0)
     {
-        immutable actual = core.sys.posix.unistd.read(fd, result.ptr + size,
-                min(result.length, upTo) - size);
+        for (;;)
+        {
+            immutable actual = core.sys.posix.unistd.read(fd, result.ptr + size,
+                    min(result.length, upTo) - size);
+            cenforce(actual != -1, name, namez);
+            if (actual == 0) break;
+            size += actual;
+            if (size >= upTo) break;
+            if (size < result.length) continue;
+            immutable newAlloc = size + sizeIncrement;
+            result = GC.realloc(result.ptr, newAlloc, GC.BlkAttr.NO_SCAN)[0 .. newAlloc];
+        }
+    }
+    else
+    {
+        immutable actual = core.sys.posix.unistd.pread(fd, result.ptr,
+                min(result.length, upTo), offset);
         cenforce(actual != -1, name, namez);
-        if (actual == 0) break;
         size += actual;
-        if (size >= upTo) break;
-        if (size < result.length) continue;
         immutable newAlloc = size + sizeIncrement;
         result = GC.realloc(result.ptr, newAlloc, GC.BlkAttr.NO_SCAN)[0 .. newAlloc];
     }
@@ -378,8 +422,7 @@ version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez
         : result[0 .. size];
 }
 
-
-version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* namez, size_t upTo = size_t.max) @safe
+version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* namez, size_t upTo, size_t offset) @safe
 {
     import core.memory : GC;
     import std.algorithm.comparison : min;
@@ -412,6 +455,7 @@ version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* nam
         ulong totalNumRead = 0;
         while (totalNumRead != nNumberOfBytesToRead)
         {
+            import std.stdio : writeln;
             const uint chunkSize = min(nNumberOfBytesToRead - totalNumRead, 0xffff_0000);
             DWORD numRead = void;
             const result = ReadFile(hFile, lpBuffer + totalNumRead, chunkSize, &numRead, null);
@@ -442,7 +486,17 @@ version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* nam
     }
 
     if (size)
+    {
+        if (offset != 0)
+        {
+            LARGE_INTEGER p;
+            p.QuadPart = offset;
+            () @trusted { SetFilePointerEx(h, p, null, FILE_BEGIN); } ();
+        }
+
         cenforce(trustedReadFile(h, &buf[0], size), name, namez);
+
+    }
     return buf[0 .. size];
 }
 
