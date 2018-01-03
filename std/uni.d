@@ -6187,7 +6187,7 @@ package dchar parseUniHex(Range)(ref Range str, size_t maxDigit)
     return val;
 }
 
-@system unittest //BUG canFind is system
+@safe unittest
 {
     import std.algorithm.searching : canFind;
     import std.exception : collectException;
@@ -9714,7 +9714,7 @@ if (isSomeString!S)
 }
 
 
-@system unittest //@@@BUG std.format is not @safe
+@safe unittest
 {
     static import std.ascii;
     import std.format : format;
@@ -9829,14 +9829,14 @@ dchar toUpper(dchar c)
 }
 
 ///
-@system unittest
+@safe unittest
 {
     import std.algorithm.iteration : map;
     import std.algorithm.mutation : copy;
     import std.array : appender;
 
     auto abuf = appender!(char[])();
-    "hello".map!toUpper.copy(&abuf);
+    "hello".map!toUpper.copy(abuf);
     assert(abuf.data == "HELLO");
 }
 
