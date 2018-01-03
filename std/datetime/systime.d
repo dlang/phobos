@@ -8192,17 +8192,16 @@ public:
         if (isSomeString!S)
     {
         import std.algorithm.searching : startsWith, find;
-        import std.conv : to;
         import std.string : strip;
 
-        auto dstr = to!dstring(strip(isoString));
-        immutable skipFirst = dstr.startsWith('+', '-') != 0;
+        auto str = strip(isoString);
+        immutable skipFirst = str.startsWith('+', '-') != 0;
 
-        auto found = (skipFirst ? dstr[1..$] : dstr).find('.', 'Z', '+', '-');
-        auto dateTimeStr = dstr[0 .. $ - found[0].length];
+        auto found = (skipFirst ? str[1 .. $] : str).find('.', 'Z', '+', '-');
+        auto dateTimeStr = str[0 .. $ - found[0].length];
 
-        dstring fracSecStr;
-        dstring zoneStr;
+        typeof(str) fracSecStr;
+        typeof(str) zoneStr;
 
         if (found[1] != 0)
         {
@@ -8460,19 +8459,18 @@ public:
         if (isSomeString!(S))
     {
         import std.algorithm.searching : countUntil, find;
-        import std.conv : to;
         import std.string : strip;
 
-        auto dstr = to!dstring(strip(isoExtString));
+        auto str = strip(isoExtString);
 
-        auto tIndex = dstr.countUntil('T');
+        auto tIndex = str.countUntil('T');
         enforce(tIndex != -1, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
 
-        auto found = dstr[tIndex + 1 .. $].find('.', 'Z', '+', '-');
-        auto dateTimeStr = dstr[0 .. $ - found[0].length];
+        auto found = str[tIndex + 1 .. $].find('.', 'Z', '+', '-');
+        auto dateTimeStr = str[0 .. $ - found[0].length];
 
-        dstring fracSecStr;
-        dstring zoneStr;
+        typeof(str) fracSecStr;
+        typeof(str) zoneStr;
 
         if (found[1] != 0)
         {
@@ -8703,19 +8701,18 @@ public:
         if (isSomeString!(S))
     {
         import std.algorithm.searching : countUntil, find;
-        import std.conv : to;
         import std.string : strip;
 
-        auto dstr = to!dstring(strip(simpleString));
+        auto str = strip(simpleString);
 
-        auto spaceIndex = dstr.countUntil(' ');
+        auto spaceIndex = str.countUntil(' ');
         enforce(spaceIndex != -1, new DateTimeException(format("Invalid Simple String: %s", simpleString)));
 
-        auto found = dstr[spaceIndex + 1 .. $].find('.', 'Z', '+', '-');
-        auto dateTimeStr = dstr[0 .. $ - found[0].length];
+        auto found = str[spaceIndex + 1 .. $].find('.', 'Z', '+', '-');
+        auto dateTimeStr = str[0 .. $ - found[0].length];
 
-        dstring fracSecStr;
-        dstring zoneStr;
+        typeof(str) fracSecStr;
+        typeof(str) zoneStr;
 
         if (found[1] != 0)
         {
