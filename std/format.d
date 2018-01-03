@@ -1735,10 +1735,22 @@ FormatSpec!Char singleSpec(Char)(Char[] fmt)
  * `toString` should have one of the following signatures:
  *
  * ---
- * const void toString(scope void delegate(const(char)[]) sink, FormatSpec fmt);
- * const void toString(scope void delegate(const(char)[]) sink, string fmt);
- * const void toString(scope void delegate(const(char)[]) sink);
- * const string toString();
+ * void toString(W)(ref W w, const ref FormatSpec fmt)
+ * void toString(W)(ref W w)
+ * string toString();
+ * ---
+ *
+ * Where `W` is an $(REF_ALTTEXT output range, isOutputRange, std,range,primitives)
+ * which accepts characters. The template type does not have to be called `W`.
+ *
+ * The following overloads are also accepted for legacy reasons or for use in virtual
+ * functions. It's recommended that any new code forgo these overloads if possible for
+ * speed and attribute acceptance reasons.
+ *
+ * ---
+ * void toString(scope void delegate(const(char)[]) sink, const ref FormatSpec fmt);
+ * void toString(scope void delegate(const(char)[]) sink, string fmt);
+ * void toString(scope void delegate(const(char)[]) sink);
  * ---
  *
  * For the class objects which have input range interface,
@@ -1756,7 +1768,7 @@ FormatSpec!Char singleSpec(Char)(Char[] fmt)
  * Otherwise, are formatted just as their type name.
  *
  * Params:
- *     w = The $(REF_ALTTEXT output _range, isOutputRange, std,_range,primitives) to write to.
+ *     w = The $(REF_ALTTEXT output range, isOutputRange, std,_range,primitives) to write to.
  *     val = The value to write.
  *     f = The $(REF FormatSpec, std, format) defining how to write the value.
  */
@@ -1917,13 +1929,52 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, const ref F
 }
 
 /**
- *  Formatting of a `struct` with a defined `toString`.
+ * Formatting a struct by defining a method `toString`, which takes an output
+ * range.
  *
- *  `formatValue` also allows to reuse existing format specifiers:
+ * It's recommended that any `toString` using $(REF_ALTTEXT output ranges, isOutputRange, std,range,primitives)
+ * use $(REF put, std,range,primitives) rather than use the `put` method of the range
+ * directly.
  */
 @safe unittest
 {
-   struct Point
+    import std.array : appender;
+    import std.range.primitives;
+
+    static struct Point
+    {
+        int x, y;
+
+        void toString(W)(ref W writer, const ref FormatSpec!char f)
+        if (isOutputRange!(W, char))
+        {
+            // std.range.primitives.put
+            put(writer, "(");
+            formatValue(writer, x, f);
+            put(writer, ",");
+            formatValue(writer, y, f);
+            put(writer, ")");
+        }
+    }
+
+    auto w = appender!string();
+    auto spec = singleSpec("%s");
+    auto p = Point(16, 11);
+
+    formatValue(w, p, spec);
+    assert(w.data == "(16,11)");
+}
+
+/**
+ * Another example of formatting a `struct` with a defined `toString`,
+ * this time using the `scope delegate` method.
+ *
+ * $(RED This method is now discouraged for non-virtual functions).
+ * If possible, please use the output range method instead.
+ */
+@safe unittest
+{
+   static struct Point
    {
        int x, y;
 
@@ -3455,12 +3506,31 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     formatTest(e2, "[A, B, C]");
 }
 
-template hasToString(T, Char)
+private template hasToString(T, Char)
 {
     static if (isPointer!T && !isAggregateType!T)
     {
         // X* does not have toString, even if X is aggregate type has toString.
         enum hasToString = 0;
+    }
+    else static if (is(typeof(
+        {T val = void; FormatSpec!Char f; static struct S {void put(Char s){}}
+        S s; val.toString(s, f);
+        // force toString to take output range by ref
+        static assert(ParameterStorageClassTuple!(T.toString!(S))[0] == ParameterStorageClass.ref_);
+        static assert(ParameterStorageClassTuple!(T.toString!(S))[1] == ParameterStorageClass.ref_);
+        static assert(is(Parameters!(T.toString!(S))[1] == const));}
+    )))
+    {
+        enum hasToString = 6;
+    }
+    else static if (is(typeof(
+        {T val = void; static struct S {void put(Char s){}}
+        S s; val.toString(s);
+        static assert(ParameterStorageClassTuple!(T.toString!(S))[0] == ParameterStorageClass.ref_);}
+    )))
+    {
+        enum hasToString = 5;
     }
     else static if (is(typeof({ T val = void; FormatSpec!Char f; val.toString((const(char)[] s){}, f); })))
     {
@@ -3484,11 +3554,59 @@ template hasToString(T, Char)
     }
 }
 
+@safe unittest
+{
+    static struct A
+    {
+        void toString(Writer)(ref Writer w) if (isOutputRange!(Writer, string)) {}
+    }
+    static struct B
+    {
+        void toString(scope void delegate(const(char)[]) sink, FormatSpec!char fmt) {}
+    }
+    static struct C
+    {
+        void toString(scope void delegate(const(char)[]) sink, string fmt) {}
+    }
+    static struct D
+    {
+        void toString(scope void delegate(const(char)[]) sink) {}
+    }
+    static struct E
+    {
+        string toString() {return "";}
+    }
+    static struct F
+    {
+        void toString(Writer)(ref Writer w, const ref FormatSpec!char fmt) if (isOutputRange!(Writer, string)) {}
+    }
+
+    static assert(hasToString!(A, char) == 5);
+    static assert(hasToString!(B, char) == 4);
+    static assert(hasToString!(C, char) == 3);
+    static assert(hasToString!(D, char) == 2);
+    static assert(hasToString!(E, char) == 1);
+    static assert(hasToString!(F, char) == 6);
+}
+
 // object formatting with toString
 private void formatObject(Writer, T, Char)(ref Writer w, ref T val, const ref FormatSpec!Char f)
 if (hasToString!(T, Char))
 {
-    static if (is(typeof(val.toString((const(char)[] s){}, f))))
+    enum overload = hasToString!(T, Char);
+
+    static if (overload == 6)
+    {
+        val.toString(w, f);
+    }
+    else static if (overload == 5)
+    {
+        val.toString(w);
+    }
+    // not using the overload enum to not break badly defined toString overloads
+    // e.g. defining the FormatSpec as ref and not const ref led this function
+    // to ignore that toString overload
+    else static if (is(typeof(val.toString((const(char)[] s){}, f))))
     {
         val.toString((const(char)[] s) { put(w, s); }, f);
     }
@@ -3505,12 +3623,14 @@ if (hasToString!(T, Char))
         put(w, val.toString());
     }
     else
+    {
         static assert(0);
+    }
 }
 
 void enforceValidFormatSpec(T, Char)(const ref FormatSpec!Char f)
 {
-    static if (!isInputRange!T && hasToString!(T, Char) != 4)
+    static if (!isInputRange!T && hasToString!(T, Char) < 4)
     {
         enforceFmt(f.spec == 's',
             "Expected '%s' format specifier for type '" ~ T.stringof ~ "'");
