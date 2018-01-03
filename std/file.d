@@ -336,6 +336,7 @@ version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez
     import std.algorithm.comparison : min;
     import std.array : uninitializedArray;
     import std.conv : to;
+    import std.experimental.checkedint : checked;
 
     // A few internal configuration parameters {
     enum size_t
@@ -359,8 +360,7 @@ version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez
     void[] result = uninitializedArray!(ubyte[])(initialAlloc);
     scope(failure) GC.free(result.ptr);
 
-    import std.experimental.checkedint;
-    auto size = checked!Abort(cast(size_t)0);
+    auto size = checked(size_t(0));
 
     for (;;)
     {
@@ -2655,7 +2655,7 @@ version(Windows) string getcwd()
         3. the buffer (lpBuffer) is not large enough: the required size of
     the buffer, in characters, including the null-terminating character.
     */
-    version (unittest)
+    version (StdUnittest)
         enum BUF_SIZE = 10;     // trigger reallocation code
     else
         enum BUF_SIZE = 4096;   // enough for most common case
