@@ -915,7 +915,7 @@ public:
     }
 
     /// ditto
-    void toString(scope void delegate(const(char)[]) sink, ref FormatSpec!char f) const
+    void toString(scope void delegate(const(char)[]) sink, const ref FormatSpec!char f) const
     {
         immutable hex = (f.spec == 'x' || f.spec == 'X');
         if (!(f.spec == 's' || f.spec == 'd' || f.spec =='o' || hex))
