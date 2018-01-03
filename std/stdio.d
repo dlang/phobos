@@ -252,7 +252,7 @@ version(HAS_GETDELIM) extern(C) nothrow @nogc
 }
 
 //------------------------------------------------------------------------------
-struct ByRecord(Fields...)
+private struct ByRecordImpl(Fields...)
 {
 private:
     import std.typecons : Tuple;
@@ -307,9 +307,17 @@ public:
     }
 }
 
+// @@@DEPRECATED_2019-01@@@
+deprecated("Use .byRecord")
+struct ByRecord(Fields...)
+{
+    ByRecordImpl!Fields payload;
+    alias payload this;
+}
+
 template byRecord(Fields...)
 {
-    ByRecord!(Fields) byRecord(File f, string format)
+    auto byRecord(File f, string format)
     {
         return typeof(return)(f, format);
     }
@@ -2067,7 +2075,7 @@ Range that reads one line at a time.  Returned by $(LREF byLine).
 
 Allows to directly use range operations on lines of a file.
 */
-    struct ByLine(Char, Terminator)
+    private struct ByLineImpl(Char, Terminator)
     {
     private:
         import std.typecons : RefCounted, RefCountedAutoInitialize;
@@ -2170,6 +2178,14 @@ Allows to directly use range operations on lines of a file.
         }
     }
 
+    // @@@DEPRECATED_2019-01@@@
+    deprecated("Use .byLine")
+    struct ByLine(Char, Terminator)
+    {
+        ByLineImpl!(Char, Terminator) payload;
+        alias payload this;
+    }
+
 /**
 Returns an input range set up to read from the file handle one line
 at a time.
@@ -2235,7 +2251,7 @@ the contents may well have changed).
             Terminator terminator = '\n')
     if (isScalarType!Terminator)
     {
-        return ByLine!(Char, Terminator)(this, keepTerminator, terminator);
+        return ByLineImpl!(Char, Terminator)(this, keepTerminator, terminator);
     }
 
 /// ditto
@@ -2243,7 +2259,7 @@ the contents may well have changed).
             (KeepTerminator keepTerminator, Terminator terminator)
     if (is(Unqual!(ElementEncodingType!Terminator) == Char))
     {
-        return ByLine!(Char, Terminator)(this, keepTerminator, terminator);
+        return ByLineImpl!(Char, Terminator)(this, keepTerminator, terminator);
     }
 
     @system unittest
@@ -2300,14 +2316,14 @@ the contents may well have changed).
 
     private struct ByLineCopyImpl(Char, Terminator)
     {
-        ByLine!(Unqual!Char, Terminator).Impl impl;
+        ByLineImpl!(Unqual!Char, Terminator).Impl impl;
         bool gotFront;
         Char[] line;
 
     public:
         this(File f, KeepTerminator kt, Terminator terminator)
         {
-            impl = ByLine!(Unqual!Char, Terminator).Impl(f, kt, terminator);
+            impl = ByLineImpl!(Unqual!Char, Terminator).Impl(f, kt, terminator);
         }
 
         @property bool empty()
@@ -2502,7 +2518,7 @@ $(REF readText, std,file)
 
         // bug 9599
         file.rewind();
-        File.ByLine!(char, char) fbl = file.byLine();
+        File.ByLineImpl!(char, char) fbl = file.byLine();
         auto fbl2 = fbl;
         assert(fbl.front == "1");
         assert(fbl.front is fbl2.front);
@@ -2554,9 +2570,9 @@ $(REF readText, std,file)
     */
     template byRecord(Fields...)
     {
-        ByRecord!(Fields) byRecord(string format)
+        auto byRecord(string format)
         {
-            return typeof(return)(this, format);
+            return ByRecordImpl!(Fields)(this, format);
         }
     }
 
@@ -2587,7 +2603,7 @@ $(REF readText, std,file)
     /*
      * Range that reads a chunk at a time.
      */
-    struct ByChunk
+    private struct ByChunkImpl
     {
     private:
         File    file_;
@@ -2646,6 +2662,14 @@ $(REF readText, std,file)
             }
             prime();
         }
+    }
+
+    // @@@DEPRECATED_2019-01@@@
+    deprecated("Use .byChunk")
+    struct ByChunk
+    {
+        ByChunkImpl payload;
+        alias payload this;
     }
 
 /**
@@ -2727,12 +2751,12 @@ $(D StdioException).
  */
     auto byChunk(size_t chunkSize)
     {
-        return ByChunk(this, chunkSize);
+        return ByChunkImpl(this, chunkSize);
     }
 /// Ditto
-    ByChunk byChunk(ubyte[] buffer)
+    auto byChunk(ubyte[] buffer)
     {
-        return ByChunk(this, buffer);
+        return ByChunkImpl(this, buffer);
     }
 
     @system unittest
