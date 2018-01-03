@@ -2781,7 +2781,7 @@ if (isFloatingPoint!T)
 }
 
 ///
-@system unittest
+@safe unittest
 {
     int exp;
     real mantissa = frexp(123.456L, exp);
@@ -3059,7 +3059,7 @@ if (isIntegral!T && isSigned!T)
 alias FP_ILOGB0   = core.stdc.math.FP_ILOGB0;
 alias FP_ILOGBNAN = core.stdc.math.FP_ILOGBNAN;
 
-@system nothrow @nogc unittest
+@safe nothrow @nogc unittest
 {
     import std.meta : AliasSeq;
     import std.typecons : Tuple;
@@ -3641,7 +3641,7 @@ real log2(real x) @safe pure nothrow @nogc
 }
 
 ///
-@system unittest
+@safe unittest
 {
     assert(approxEqual(log2(1024.0L), 10));
 }

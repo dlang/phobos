@@ -97,7 +97,7 @@ enum LetterCase : bool
 }
 
 ///
-@system unittest
+@safe unittest
 {
     import std.digest.hmac : hmac;
     import std.digest.digest : toHexString;

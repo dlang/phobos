@@ -184,7 +184,7 @@ if (isPointer!Range && isIterable!(PointerTarget!Range) && !isNarrowString!Range
     assert(b == a);
 }
 
-@system unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     struct Foo
@@ -252,9 +252,8 @@ if (isNarrowString!String)
     static assert(isRandomAccessRange!dstring == true);
 }
 
-@system unittest
+@safe unittest
 {
-    // @system due to array!string
     import std.conv : to;
 
     static struct TestArray { int x; string toString() @safe { return to!string(x); } }
@@ -271,7 +270,7 @@ if (isNarrowString!String)
 
     static struct OpApply
     {
-        int opApply(scope int delegate(ref int) dg)
+        int opApply(scope int delegate(ref int) @safe dg)
         {
             int res;
             foreach (i; 0 .. 10)
@@ -469,7 +468,7 @@ auto byPair(AA : Value[Key], Value, Key)(AA aa)
 }
 
 ///
-@system unittest
+@safe unittest
 {
     import std.algorithm.sorting : sort;
     import std.typecons : tuple, Tuple;
@@ -496,7 +495,7 @@ auto byPair(AA : Value[Key], Value, Key)(AA aa)
     ]);
 }
 
-@system unittest
+@safe unittest
 {
     import std.typecons : tuple, Tuple;
     import std.meta : AliasSeq;
@@ -521,7 +520,7 @@ auto byPair(AA : Value[Key], Value, Key)(AA aa)
 }
 
 // Issue 17711
-@system unittest
+@safe unittest
 {
     const(int[string]) aa = [ "abc": 123 ];
 
@@ -1964,7 +1963,7 @@ if (isInputRange!RoR &&
     assert(arr.join(',') == "apple,banana");
 }
 
-@system unittest
+@safe unittest
 {
     import std.algorithm;
     import std.conv : to;
@@ -3517,7 +3516,7 @@ unittest
     [tuple("A")].filter!(t => true).array; // error
 }
 
-@system unittest
+@safe unittest
 {
     import std.range;
     //Coverage for put(Range)
@@ -3531,12 +3530,21 @@ unittest
     auto a1 = Appender!(S1[])();
     auto a2 = Appender!(S2[])();
     auto au1 = Appender!(const(S1)[])();
-    auto au2 = Appender!(const(S2)[])();
     a1.put(S1().repeat().take(10));
     a2.put(S2().repeat().take(10));
     auto sc1 = const(S1)();
-    auto sc2 = const(S2)();
     au1.put(sc1.repeat().take(10));
+}
+
+@system unittest
+{
+    import std.range;
+    struct S2
+    {
+        void opAssign(S2){}
+    }
+    auto au2 = Appender!(const(S2)[])();
+    auto sc2 = const(S2)();
     au2.put(sc2.repeat().take(10));
 }
 

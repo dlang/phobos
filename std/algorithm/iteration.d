@@ -3003,7 +3003,7 @@ The number of seeds must be correspondingly increased.
     assert(rep[2 .. $] == "1, 2, 3, 4, 5", "["~rep[2 .. $]~"]");
 }
 
-@system unittest
+@safe unittest
 {
     import std.algorithm.comparison : max, min;
     import std.exception : assertThrown;
@@ -3015,7 +3015,7 @@ The number of seeds must be correspondingly increased.
     {
         bool actEmpty;
 
-        int opApply(scope int delegate(ref int) dg)
+        int opApply(scope int delegate(ref int) @safe dg)
         {
             int res;
             if (actEmpty) return res;
@@ -3079,11 +3079,11 @@ The number of seeds must be correspondingly increased.
     assert(r2 == tuple(3, 3));
 }
 
-@system unittest
+@safe unittest
 {
     static struct OpApply
     {
-        int opApply(int delegate(ref int) dg)
+        int opApply(int delegate(ref int) @safe dg)
         {
             int[] a = [1, 2, 3];
 

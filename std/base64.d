@@ -1766,12 +1766,11 @@ class Base64Exception : Exception
 }
 
 ///
-@system unittest
+@safe unittest
 {
     import std.exception : assertThrown;
     assertThrown!Base64Exception(Base64.decode("ab|c"));
 }
-
 
 @system unittest
 {
@@ -2039,7 +2038,7 @@ class Base64Exception : Exception
 }
 
 // Regression control for the output range ref bug in encode.
-@system unittest
+@safe unittest
 {
     struct InputRange
     {
@@ -2064,12 +2063,14 @@ class Base64Exception : Exception
     // Verify that any existing workaround that uses & still works.
     InputRange ir2;
     OutputRange or2;
-    assert(Base64.encode(ir2, &or2) == 8);
+    () @trusted {
+        assert(Base64.encode(ir2, &or2) == 8);
+    }();
     assert(or2.result == "Gis8TV1u");
 }
 
 // Regression control for the output range ref bug in decode.
-@system unittest
+@safe unittest
 {
     struct InputRange
     {
@@ -2094,6 +2095,8 @@ class Base64Exception : Exception
     // Verify that any existing workaround that uses & still works.
     InputRange ir2;
     OutputRange or2;
-    assert(Base64.decode(ir2, &or2) == 6);
+    () @trusted {
+        assert(Base64.decode(ir2, &or2) == 6);
+    }();
     assert(or2.result == [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e]);
 }
