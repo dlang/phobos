@@ -34,8 +34,8 @@ import std.traits;
 
 /** A struct representing an arbitrary precision integer.
  *
- * All arithmetic operations are supported, except unsigned shift right (>>>).
- * Bitwise operations (|, &, ^, ~) are supported, and behave as if BigInt was
+ * All arithmetic operations are supported, except unsigned shift right (`>>>`).
+ * Bitwise operations (`|`, `&`, `^`, `~`) are supported, and behave as if BigInt was
  * an infinite length 2's complement number.
  *
  * BigInt implements value semantics using copy-on-write. This means that
@@ -50,7 +50,7 @@ private:
     bool sign = false;
 public:
     /**
-     * Construct a BigInt from a decimal or hexadecimal string. The number must
+     * Construct a `BigInt` from a decimal or hexadecimal string. The number must
      * be in the form of a decimal or hex literal. It may have a leading `+`
      * or `-` sign, followed by `0x` or `0X` if hexadecimal. Underscores are
      * permitted in any location after the `0x` and/or the sign of the number.
@@ -144,7 +144,7 @@ public:
         assertThrown!ConvException(BigInt(r4));
     }
 
-    /// Construct a BigInt from a built-in integral type.
+    /// Construct a `BigInt` from a built-in integral type.
     this(T)(T x) pure nothrow if (isIntegral!T)
     {
         data = data.init; // @@@: Workaround for compiler bug
@@ -160,7 +160,7 @@ public:
         assert(bigData == BigInt("1_000_000_000_000"));
     }
 
-    /// Construct a BigInt from another BigInt.
+    /// Construct a `BigInt` from another `BigInt`.
     this(T)(T x) pure nothrow if (is(Unqual!T == BigInt))
     {
         opAssign(x);
@@ -209,7 +209,7 @@ public:
 
     /**
      * Implements assignment operators from built-in integers of the form
-     * $(D BigInt op= integer).
+     * `BigInt op= integer`.
      */
     BigInt opOpAssign(string op, T)(T y) pure nothrow
         if ((op=="+" || op=="-" || op=="*" || op=="/" || op=="%"
@@ -361,7 +361,7 @@ public:
     }
 
     /**
-     * Implements assignment operators of the form $(D BigInt op= BigInt).
+     * Implements assignment operators of the form `BigInt op= BigInt`.
      */
     BigInt opOpAssign(string op, T)(T y) pure nothrow
         if ((op=="+" || op== "-" || op=="*" || op=="|" || op=="&" || op=="^" || op=="/" || op=="%")
@@ -420,7 +420,7 @@ public:
     }
 
     /**
-     * Implements binary operators between BigInts.
+     * Implements binary operators between `BigInt`s.
      */
     BigInt opBinary(string op, T)(T y) pure nothrow const
         if ((op=="+" || op == "*" || op=="-" || op=="|" || op=="&" || op=="^" ||
@@ -441,7 +441,7 @@ public:
     }
 
     /**
-     * Implements binary operators between BigInt's and built-in integers.
+     * Implements binary operators between `BigInt`'s and built-in integers.
      */
     BigInt opBinary(string op, T)(T y) pure nothrow const
         if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="|" || op=="&" ||
@@ -521,7 +521,7 @@ public:
 
     /**
         Implements operators with built-in integers on the left-hand side and
-        BigInt on the right-hand side.
+        `BigInt` on the right-hand side.
      */
     BigInt opBinaryRight(string op, T)(T y) pure nothrow const
         if ((op=="+" || op=="*" || op=="|" || op=="&" || op=="^") && isIntegral!T)
@@ -589,7 +589,7 @@ public:
 
     // const unary operations
     /**
-        Implements BigInt unary operators.
+        Implements `BigInt` unary operators.
      */
     BigInt opUnary(string op)() pure nothrow const if (op=="+" || op=="-" || op=="~")
     {
@@ -634,7 +634,7 @@ public:
     }
 
     /**
-        Implements BigInt equality test with other BigInt's and built-in
+        Implements `BigInt` equality test with other `BigInt`'s and built-in
         integer types.
      */
     bool opEquals()(auto ref const BigInt y) const pure @nogc
@@ -666,7 +666,7 @@ public:
     }
 
     /**
-        Implements casting to bool.
+        Implements casting to `bool`.
      */
     T opCast(T:bool)() pure nothrow @nogc const
     {
@@ -769,9 +769,9 @@ public:
     }
 
     /**
-        Implements casting to/from qualified BigInt's.
+        Implements casting to/from qualified `BigInt`'s.
 
-        Warning: Casting to/from $(D const) or $(D immutable) may break type
+        Warning: Casting to/from `const` or `immutable` may break type
         system guarantees. Use with care.
      */
     T opCast(T)() pure nothrow @nogc const
@@ -792,7 +792,7 @@ public:
     // Note that this must appear before the other opCmp overloads, otherwise
     // DMD won't find it.
     /**
-        Implements 3-way comparisons of BigInt with BigInt or BigInt with
+        Implements 3-way comparisons of `BigInt` with `BigInt` or `BigInt` with
         built-in integers.
      */
     int opCmp(ref const BigInt y) pure nothrow @nogc const
@@ -833,8 +833,8 @@ public:
     }
 
     /**
-        Returns: The value of this BigInt as a long, or +/- long.max if outside
-        the representable range.
+        Returns: The value of this `BigInt` as a `long`, or `long.max`/`long.min`
+        if outside the representable range.
      */
     long toLong() @safe pure nothrow const @nogc
     {
@@ -853,7 +853,7 @@ public:
     }
 
     /**
-        Returns: The value of this BigInt as an int, or +/- int.max if outside
+        Returns: The value of this `BigInt` as an `int`, or `int.max`/`int.min` if outside
         the representable range.
      */
     int toInt() @safe pure nothrow @nogc const
@@ -877,21 +877,21 @@ public:
         assert(i == int.max);
     }
 
-    /// Number of significant uints which are used in storing this number.
-    /// The absolute value of this BigInt is always &lt; 2$(SUPERSCRIPT 32*uintLength)
+    /// Number of significant `uint`s which are used in storing this number.
+    /// The absolute value of this `BigInt` is always &lt; 2$(SUPERSCRIPT 32*uintLength)
     @property size_t uintLength() @safe pure nothrow @nogc const
     {
         return data.uintLength;
     }
 
-    /// Number of significant ulongs which are used in storing this number.
-    /// The absolute value of this BigInt is always &lt; 2$(SUPERSCRIPT 64*ulongLength)
+    /// Number of significant `ulong`s which are used in storing this number.
+    /// The absolute value of this `BigInt` is always &lt; 2$(SUPERSCRIPT 64*ulongLength)
     @property size_t ulongLength() @safe pure nothrow @nogc const
     {
         return data.ulongLength;
     }
 
-    /** Convert the BigInt to string, passing it to the given sink.
+    /** Convert the `BigInt` to `string`, passing it to the given sink.
      *
      * Params:
      *  sink = A delegate for accepting possibly piecewise segments of the
@@ -979,7 +979,7 @@ public:
     }
 
     /**
-        $(D toString) is rarely directly invoked; the usual way of using it is via
+        `toString` is rarely directly invoked; the usual way of using it is via
         $(REF format, std, format):
      */
     @system unittest
@@ -997,7 +997,7 @@ public:
 
     // Implement toHash so that BigInt works properly as an AA key.
     /**
-        Returns: A unique hash of the BigInt's value suitable for use in a hash
+        Returns: A unique hash of the `BigInt`'s value suitable for use in a hash
         table.
      */
     size_t toHash() const @safe nothrow
@@ -1006,7 +1006,7 @@ public:
     }
 
     /**
-        $(D toHash) is rarely directly invoked; it is implicitly used when
+        `toHash` is rarely directly invoked; it is implicitly used when
         BigInt is used as the key of an associative array.
      */
     @safe unittest
@@ -1076,10 +1076,10 @@ private:
 
 /**
 Params:
-    x = The $(D BigInt) to convert to a decimal $(D string).
+    x = The `BigInt` to convert to a decimal `string`.
 
 Returns:
-    A $(D string) that represents the $(D BigInt) as a decimal number.
+    A `string` that represents the `BigInt` as a decimal number.
 
 */
 string toDecimalString(const(BigInt) x) pure nothrow
@@ -1103,10 +1103,10 @@ string toDecimalString(const(BigInt) x) pure nothrow
 
 /**
 Params:
-    x = The $(D BigInt) to convert to a hexadecimal $(D string).
+    x = The `BigInt` to convert to a hexadecimal $(D string).
 
 Returns:
-    A $(D string) that represents the $(D BigInt) as a hexadecimal (base 16)
+    A `string` that represents the `BigInt` as a hexadecimal (base 16)
     number in upper case.
 
 */
