@@ -1909,13 +1909,13 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, const ref F
  *
  *  `formatValue` also allows to reuse existing format specifiers:
  */
-@system unittest
+@safe unittest
 {
    struct Point
    {
        int x, y;
 
-       void toString(scope void delegate(const(char)[]) sink,
+       void toString(scope void delegate(const(char)[]) @safe sink,
                      FormatSpec!char fmt) const
        {
            sink("(");

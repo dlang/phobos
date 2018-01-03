@@ -929,8 +929,7 @@ immutable(T[U]) assumeUnique(T, U)(ref T[U] array) pure nothrow
     assert(is(typeof(arr1) == immutable(int)[]) && arr == null);
 }
 
-// @@@BUG@@@
-version(none) @system unittest
+@system unittest
 {
     int[string] arr = ["a":1];
     auto arr1 = assumeUnique(arr);

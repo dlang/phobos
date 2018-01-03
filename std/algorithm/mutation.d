@@ -2104,7 +2104,7 @@ if (isBidirectionalRange!Range
             [ 1, 3, 3, 4, 5, 5, 6 ]);
 }
 
-@nogc @system unittest
+@nogc @safe unittest
 {
     // @nogc test
     int[10] arr = [0,1,2,3,4,5,6,7,8,9];
