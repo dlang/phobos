@@ -3187,9 +3187,9 @@ public:
     {
         import std.conv : to;
         import std.meta : AliasSeq;
-        foreach (C; AliasSeq!(char, wchar, dchar))
+        static foreach (C; AliasSeq!(char, wchar, dchar))
         {
-            foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
+            static foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
                 assert(DateTime.fromISOString(to!S("20121221T141516")) == DateTime(2012, 12, 21, 14, 15, 16));
         }
     }
@@ -3286,9 +3286,9 @@ public:
     {
         import std.conv : to;
         import std.meta : AliasSeq;
-        foreach (C; AliasSeq!(char, wchar, dchar))
+        static foreach (C; AliasSeq!(char, wchar, dchar))
         {
-            foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
+            static foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
                 assert(DateTime.fromISOExtString(to!S("2012-12-21T14:15:16")) == DateTime(2012, 12, 21, 14, 15, 16));
         }
     }
@@ -3389,9 +3389,9 @@ public:
     {
         import std.conv : to;
         import std.meta : AliasSeq;
-        foreach (C; AliasSeq!(char, wchar, dchar))
+        static foreach (C; AliasSeq!(char, wchar, dchar))
         {
-            foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
+            static foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
                 assert(DateTime.fromSimpleString(to!S("2012-Dec-21 14:15:16")) == DateTime(2012, 12, 21, 14, 15, 16));
         }
     }
@@ -7525,9 +7525,9 @@ public:
     {
         import std.conv : to;
         import std.meta : AliasSeq;
-        foreach (C; AliasSeq!(char, wchar, dchar))
+        static foreach (C; AliasSeq!(char, wchar, dchar))
         {
-            foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
+            static foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
                 assert(Date.fromISOString(to!S("20121221")) == Date(2012, 12, 21));
         }
     }
@@ -7666,9 +7666,9 @@ public:
     {
         import std.conv : to;
         import std.meta : AliasSeq;
-        foreach (C; AliasSeq!(char, wchar, dchar))
+        static foreach (C; AliasSeq!(char, wchar, dchar))
         {
-            foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
+            static foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
                 assert(Date.fromISOExtString(to!S("2012-12-21")) == Date(2012, 12, 21));
         }
     }
@@ -7804,9 +7804,9 @@ public:
     {
         import std.conv : to;
         import std.meta : AliasSeq;
-        foreach (C; AliasSeq!(char, wchar, dchar))
+        static foreach (C; AliasSeq!(char, wchar, dchar))
         {
-            foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
+            static foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
                 assert(Date.fromSimpleString(to!S("2012-Dec-21")) == Date(2012, 12, 21));
         }
     }
@@ -9087,9 +9087,9 @@ public:
     {
         import std.conv : to;
         import std.meta : AliasSeq;
-        foreach (C; AliasSeq!(char, wchar, dchar))
+        static foreach (C; AliasSeq!(char, wchar, dchar))
         {
-            foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
+            static foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
                 assert(TimeOfDay.fromISOString(to!S("141516")) == TimeOfDay(14, 15, 16));
         }
     }
@@ -9214,9 +9214,9 @@ public:
     {
         import std.conv : to;
         import std.meta : AliasSeq;
-        foreach (C; AliasSeq!(char, wchar, dchar))
+        static foreach (C; AliasSeq!(char, wchar, dchar))
         {
-            foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
+            static foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
                 assert(TimeOfDay.fromISOExtString(to!S("14:15:16")) == TimeOfDay(14, 15, 16));
         }
     }
@@ -9834,13 +9834,13 @@ private:
     import std.datetime.systime;
     import std.meta : AliasSeq;
 
-    foreach (TP; AliasSeq!(Date, DateTime, SysTime, TimeOfDay))
+    static foreach (TP; AliasSeq!(Date, DateTime, SysTime, TimeOfDay))
     {
         static assert(isTimePoint!(const TP), TP.stringof);
         static assert(isTimePoint!(immutable TP), TP.stringof);
     }
 
-    foreach (T; AliasSeq!(float, string, Duration, Interval!Date, PosInfInterval!Date, NegInfInterval!Date))
+    static foreach (T; AliasSeq!(float, string, Duration, Interval!Date, PosInfInterval!Date, NegInfInterval!Date))
         static assert(!isTimePoint!T, T.stringof);
 }
 

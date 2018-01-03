@@ -542,12 +542,12 @@ if (isNarrowString!R1 && isNarrowString!R2)
     assert(commonPrefix(cast(int[]) null, [1, 2, 3]).empty);
     assert(commonPrefix(cast(int[]) null, cast(int[]) null).empty);
 
-    foreach (S; AliasSeq!(char[], const(char)[], string,
+    static foreach (S; AliasSeq!(char[], const(char)[], string,
                           wchar[], const(wchar)[], wstring,
                           dchar[], const(dchar)[], dstring))
     {
-        foreach (T; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (T; AliasSeq!(string, wstring, dstring))
+        {
             assert(commonPrefix(to!S(""), to!T("")).empty);
             assert(commonPrefix(to!S(""), to!T("hello")).empty);
             assert(commonPrefix(to!S("hello"), to!T("")).empty);
@@ -567,7 +567,7 @@ if (isNarrowString!R1 && isNarrowString!R2)
                                 to!T("\U0010FFFF\U0010FFFB\U0010FFFE")) == to!S("\U0010FFFF\U0010FFFB"));
             assert(commonPrefix!"a != b"(to!S("Пиво"), to!T("онво")) == to!S("Пи"));
             assert(commonPrefix!"a != b"(to!S("онво"), to!T("Пиво")) == to!S("он"));
-        }();
+        }
 
         static assert(is(typeof(commonPrefix(to!S("Пиво"), filter!"true"("Пони"))) == S));
         assert(equal(commonPrefix(to!S("Пиво"), filter!"true"("Пони")), to!S("П")));
@@ -1180,7 +1180,7 @@ if (isInputRange!R &&
     import std.conv : to;
     import std.meta : AliasSeq;
 
-    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
+    static foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         assert(!endsWith(to!S("abc"), 'a'));
         assert(endsWith(to!S("abc"), 'a', 'c') == 2);
@@ -1188,8 +1188,8 @@ if (isInputRange!R &&
         assert(endsWith(to!S("abc"), 'x', 'n', 'c') == 3);
         assert(endsWith(to!S("abc\uFF28"), 'a', '\uFF28', 'c') == 2);
 
-        foreach (T; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (T; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
+        {
             //Lots of strings
             assert(endsWith(to!S("abc"), to!T("")));
             assert(!endsWith(to!S("abc"), to!T("a")));
@@ -1219,11 +1219,11 @@ if (isInputRange!R &&
             assert(endsWith(to!S("a"), T.init, "") == 1);
             assert(endsWith(to!S("a"), T.init, 'a') == 1);
             assert(endsWith(to!S("a"), 'a', T.init) == 2);
-        }();
+        }
     }
 
-    foreach (T; AliasSeq!(int, short))
-    {
+    static foreach (T; AliasSeq!(int, short))
+    {{
         immutable arr = cast(T[])[0, 1, 2, 3, 4, 5];
 
         //RA range
@@ -1254,7 +1254,7 @@ if (isInputRange!R &&
         //Non-default pred
         assert(endsWith!("a%10 == b%10")(arr, [14, 15]));
         assert(!endsWith!("a%10 == b%10")(arr, [15, 14]));
-    }
+    }}
 }
 
 /**
@@ -1700,9 +1700,9 @@ if (isInputRange!InputRange &&
 @safe pure unittest
 {
     import std.meta : AliasSeq;
-    foreach (R; AliasSeq!(string, wstring, dstring))
+    static foreach (R; AliasSeq!(string, wstring, dstring))
     {
-        foreach (E; AliasSeq!(char, wchar, dchar))
+        static foreach (E; AliasSeq!(char, wchar, dchar))
         {
             assert(find              ("hello world", 'w') == "world");
             assert(find!((a,b)=>a == b)("hello world", 'w') == "world");
@@ -1741,9 +1741,9 @@ if (isInputRange!InputRange &&
     {
         byte[]  sarr = [1, 2, 3, 4];
         ubyte[] uarr = [1, 2, 3, 4];
-        foreach (arr; AliasSeq!(sarr, uarr))
+        static foreach (arr; AliasSeq!(sarr, uarr))
         {
-            foreach (T; AliasSeq!(byte, ubyte, int, uint))
+            static foreach (T; AliasSeq!(byte, ubyte, int, uint))
             {
                 assert(find(arr, cast(T) 3) == arr[2 .. $]);
                 assert(find(arr, cast(T) 9) == arr[$ .. $]);
@@ -3374,8 +3374,8 @@ if (isInputRange!Range && !isInfinite!Range &&
     }
     static assert(!isAssignable!S3);
 
-    foreach (Type; AliasSeq!(S1, IS1, S2, IS2, S3))
-    {
+    static foreach (Type; AliasSeq!(S1, IS1, S2, IS2, S3))
+    {{
         static if (is(Type == immutable)) alias V = immutable int;
         else                              alias V = int;
         V one = 1, two = 2;
@@ -3384,7 +3384,7 @@ if (isInputRange!Range && !isInfinite!Range &&
         assert(minCount!"a.i < b.i"(r1) == tuple(Type(one), 2));
         assert(minCount!"a.i < b.i"(r2) == tuple(Type(one), 2));
         assert(one == 1 && two == 2);
-    }
+    }}
 }
 
 /**
@@ -4341,7 +4341,7 @@ if (isInputRange!R &&
     import std.meta : AliasSeq;
     import std.range;
 
-    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
+    static foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         assert(!startsWith(to!S("abc"), 'c'));
         assert(startsWith(to!S("abc"), 'a', 'c') == 1);
@@ -4349,8 +4349,8 @@ if (isInputRange!R &&
         assert(startsWith(to!S("abc"), 'x', 'n', 'a') == 3);
         assert(startsWith(to!S("\uFF28abc"), 'a', '\uFF28', 'c') == 2);
 
-        foreach (T; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (T; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
+        {
             //Lots of strings
             assert(startsWith(to!S("abc"), to!T("")));
             assert(startsWith(to!S("ab"), to!T("a")));
@@ -4383,7 +4383,7 @@ if (isInputRange!R &&
             assert(startsWith(to!S("a"), T.init, "") == 1);
             assert(startsWith(to!S("a"), T.init, 'a') == 1);
             assert(startsWith(to!S("a"), 'a', T.init) == 2);
-        }();
+        }
     }
 
     //Length but no RA
@@ -4391,8 +4391,8 @@ if (isInputRange!R &&
     assert(startsWith("abc".takeExactly(3), "abcd".takeExactly(3)));
     assert(startsWith("abc".takeExactly(3), "abcd".takeExactly(1)));
 
-    foreach (T; AliasSeq!(int, short))
-    {
+    static foreach (T; AliasSeq!(int, short))
+    {{
         immutable arr = cast(T[])[0, 1, 2, 3, 4, 5];
 
         //RA range
@@ -4423,7 +4423,7 @@ if (isInputRange!R &&
         //Non-default pred
         assert(startsWith!("a%10 == b%10")(arr, [10, 11]));
         assert(!startsWith!("a%10 == b%10")(arr, [10, 12]));
-    }
+    }}
 }
 
 /* (Not yet documented.)

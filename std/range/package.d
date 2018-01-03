@@ -2835,7 +2835,7 @@ pure @safe nothrow unittest
 
     import std.format : format;
 
-    foreach (range; AliasSeq!([1, 2, 3, 4, 5],
+    static foreach (range; AliasSeq!([1, 2, 3, 4, 5],
                              "hello world",
                              "hello world"w,
                              "hello world"d,
@@ -2849,7 +2849,7 @@ pure @safe nothrow unittest
         static assert(is(typeof(range) == typeof(takeNone(range))), typeof(range).stringof);
     }
 
-    foreach (range; AliasSeq!(NormalStruct([1, 2, 3]),
+    static foreach (range; AliasSeq!(NormalStruct([1, 2, 3]),
                              InitStruct([1, 2, 3])))
     {
         static assert(takeNone(range).empty, typeof(range).stringof);
@@ -5847,13 +5847,13 @@ pure @safe unittest
 
 
     // Issue 8920
-    foreach (Type; AliasSeq!(byte, ubyte, short, ushort,
+    static foreach (Type; AliasSeq!(byte, ubyte, short, ushort,
         int, uint, long, ulong))
-    {
+    {{
         Type val;
         foreach (i; iota(cast(Type) 0, cast(Type) 10)) { val++; }
         assert(val == 10);
-    }
+    }}
 }
 
 pure @safe nothrow unittest
@@ -5866,11 +5866,11 @@ pure @safe nothrow unittest
 @safe unittest
 {
     import std.meta : AliasSeq;
-    foreach (range; AliasSeq!(iota(2, 27, 4),
+    static foreach (range; AliasSeq!(iota(2, 27, 4),
                              iota(3, 9),
                              iota(2.7, 12.3, .1),
                              iota(3.2, 9.7)))
-    {
+    {{
         const cRange = range;
         const e = cRange.empty;
         const f = cRange.front;
@@ -5879,7 +5879,7 @@ pure @safe nothrow unittest
         const s1 = cRange[];
         const s2 = cRange[0 .. 3];
         const l = cRange.length;
-    }
+    }}
 }
 
 @system unittest
@@ -8497,8 +8497,8 @@ public:
         DummyRange!(ReturnBy.Value, Length.No, RangeType.Bidirectional)
     );
 
-    foreach (Range; AliasSeq!AllForwardDummyRanges)
-    {
+    static foreach (Range; AliasSeq!AllForwardDummyRanges)
+    {{
         Range r;
         assert(r.slide(1).equal!equal(
             [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]]
@@ -8519,15 +8519,15 @@ public:
         ));
 
         assert(r.slide!(No.withFewerElements)(15).empty);
-    }
+    }}
 
     alias BackwardsDummyRanges = AliasSeq!(
         DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random),
         DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random),
     );
 
-    foreach (Range; AliasSeq!BackwardsDummyRanges)
-    {
+    static foreach (Range; AliasSeq!BackwardsDummyRanges)
+    {{
         Range r;
         assert(r.slide(1).retro.equal!equal(
             [[10], [9], [8], [7], [6], [5], [4], [3], [2], [1]]
@@ -8565,7 +8565,7 @@ public:
                 auto slider = r.slide(windowSize, stepSize);
                 assert(slider.retro.retro.equal!equal(slider));
             }
-    }
+    }}
 
     assert(iota(1, 12).slide(2, 4)[0 .. 3].equal!equal([[1, 2], [5, 6], [9, 10]]));
     assert(iota(1, 12).slide(2, 4)[0 .. $].equal!equal([[1, 2], [5, 6], [9, 10]]));
@@ -8636,8 +8636,8 @@ public:
         SliceableRange!(T, Yes.withOpDollar, Yes.withInfiniteness),
     );
 
-    foreach (Range; AliasSeq!SliceableDummyRanges)
-    {
+    static foreach (Range; AliasSeq!SliceableDummyRanges)
+    {{
         Range r;
         r.arr = 10.iota.array; // for clarity
 
@@ -8654,7 +8654,7 @@ public:
         assert(s[0 .. 2].equal!equal([[0, 1], [1, 2]]));
 
         assert(r.slide(3)[1 .. 3].equal!equal([[1, 2, 3], [2, 3, 4]]));
-    }
+    }}
 
     alias SliceableDummyRangesWithoutInfinity = AliasSeq!(
         DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random, T),
@@ -8663,8 +8663,8 @@ public:
         SliceableRange!(T, Yes.withOpDollar, No.withInfiniteness),
     );
 
-    foreach (Range; AliasSeq!SliceableDummyRangesWithoutInfinity)
-    {
+    static foreach (Range; AliasSeq!SliceableDummyRangesWithoutInfinity)
+    {{
         static assert(hasSlicing!Range);
         static assert(hasLength!Range);
 
@@ -8684,7 +8684,7 @@ public:
         assert(r.slide(3).retro.equal!equal(
             [[7, 8, 9], [6, 7, 8], [5, 6, 7], [4, 5, 6], [3, 4, 5], [2, 3, 4], [1, 2, 3], [0, 1, 2]]
         ));
-    }
+    }}
 
     // separate checks for infinity
     auto infIndex = SliceableRange!(T, No.withOpDollar, Yes.withInfiniteness)([0, 1, 2, 3]);
@@ -9054,8 +9054,8 @@ if (!is(CommonType!Values == void) || Values.length == 0)
         ["one two", "one two three", "one two three four"];
     string[] joinedRange = joined;
 
-    foreach (argCount; AliasSeq!(2, 3, 4))
-    {
+    static foreach (argCount; 2 .. 5)
+    {{
         auto values = only(data[0 .. argCount]);
         alias Values = typeof(values);
         static assert(is(ElementType!Values == string));
@@ -9070,7 +9070,7 @@ if (!is(CommonType!Values == void) || Values.length == 0)
         assert(values[0 .. $].equal(values[0 .. values.length]));
         assert(values.joiner(" ").equal(joinedRange.front));
         joinedRange.popFront();
-    }
+    }}
 
     assert(saved.retro.equal(only(3, 2, 1)));
     assert(saved.length == 3);
@@ -9314,8 +9314,8 @@ pure @safe nothrow unittest
         }
     }
 
-    foreach (DummyType; AliasSeq!(AllDummyRanges, HasSlicing))
-    {
+    static foreach (DummyType; AliasSeq!(AllDummyRanges, HasSlicing))
+    {{
         alias R = typeof(enumerate(DummyType.init));
         static assert(isInputRange!R);
         static assert(isForwardRange!R == isForwardRange!DummyType);
@@ -9330,7 +9330,7 @@ pure @safe nothrow unittest
         }
 
         static assert(hasSlicing!R == hasSlicing!DummyType);
-    }
+    }}
 
     static immutable values = ["zero", "one", "two", "three"];
     auto enumerated = values[].enumerate();
@@ -9380,8 +9380,8 @@ pure @safe nothrow unittest
         assert(shifted.empty);
     }
 
-    foreach (T; AliasSeq!(ubyte, byte, uint, int))
-    {
+    static foreach (T; AliasSeq!(ubyte, byte, uint, int))
+    {{
         auto inf = 42.repeat().enumerate(T.max);
         alias Inf = typeof(inf);
         static assert(isInfinite!Inf);
@@ -9400,7 +9400,7 @@ pure @safe nothrow unittest
         assert(window.front == inf.front);
         window.popFront();
         assert(window.empty);
-    }
+    }}
 }
 
 pure @safe unittest
@@ -9408,8 +9408,8 @@ pure @safe unittest
     import std.algorithm.comparison : equal;
     import std.meta : AliasSeq;
     static immutable int[] values = [0, 1, 2, 3, 4];
-    foreach (T; AliasSeq!(ubyte, ushort, uint, ulong))
-    {
+    static foreach (T; AliasSeq!(ubyte, ushort, uint, ulong))
+    {{
         auto enumerated = values.enumerate!T();
         static assert(is(typeof(enumerated.front.index) == T));
         assert(enumerated.equal(values[].zip(values)));
@@ -9421,7 +9421,7 @@ pure @safe unittest
             static assert(is(typeof(enumerated.front.index) == T));
             assert(offsetEnumerated.equal(subset.zip(subset)));
         }
-    }
+    }}
 }
 
 version(none) // @@@BUG@@@ 10939
@@ -9450,7 +9450,7 @@ version(none) // @@@BUG@@@ 10939
         }
 
         SignedLengthRange svalues;
-        foreach (Enumerator; AliasSeq!(ubyte, byte, ushort, short, uint, int, ulong, long))
+        static foreach (Enumerator; AliasSeq!(ubyte, byte, ushort, short, uint, int, ulong, long))
         {
             assertThrown!RangeError(values[].enumerate!Enumerator(Enumerator.max));
             assertNotThrown!RangeError(values[].enumerate!Enumerator(Enumerator.max - values.length));
@@ -9461,7 +9461,7 @@ version(none) // @@@BUG@@@ 10939
             assertThrown!RangeError(svalues.enumerate!Enumerator(Enumerator.max - values.length + 1));
         }
 
-        foreach (Enumerator; AliasSeq!(byte, short, int))
+        static foreach (Enumerator; AliasSeq!(byte, short, int))
         {
             assertThrown!RangeError(repeat(0, uint.max).enumerate!Enumerator());
         }
@@ -11831,19 +11831,19 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
     auto result3 = txt.tee(asink3).array;
     assert(equal(txt, result3) && equal(result3, asink3));
 
-    foreach (CharType; AliasSeq!(char, wchar, dchar))
-    {
+    static foreach (CharType; AliasSeq!(char, wchar, dchar))
+    {{
         auto appSink = appender!(CharType[])();
         auto appResult = txt.tee(appSink).array;
         assert(equal(txt, appResult) && equal(appResult, appSink.data));
-    }
+    }}
 
-    foreach (StringType; AliasSeq!(string, wstring, dstring))
-    {
+    static foreach (StringType; AliasSeq!(string, wstring, dstring))
+    {{
         auto appSink = appender!StringType();
         auto appResult = txt.tee(appSink).array;
         assert(equal(txt, appResult) && equal(appResult, appSink.data));
-    }
+    }}
 }
 
 @safe unittest

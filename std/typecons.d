@@ -1638,8 +1638,8 @@ private template ReverseTupleSpecs(T...)
               inout V wv;   // OK <- NG
         inout const V wcv;  // OK <- NG
 
-        foreach (v1; AliasSeq!(mv, cv, iv, wv, wcv))
-        foreach (v2; AliasSeq!(mv, cv, iv, wv, wcv))
+        static foreach (v1; AliasSeq!(mv, cv, iv, wv, wcv))
+        static foreach (v2; AliasSeq!(mv, cv, iv, wv, wcv))
         {
             assert(!(v1 < v2));
         }
@@ -2167,7 +2167,7 @@ Rebindable!T rebindable(T)(Rebindable!T obj)
     immutable(char[]) s7654;
     Rebindable!(typeof(s7654)) r7654 = s7654;
 
-    foreach (T; AliasSeq!(char, wchar, char, int))
+    static foreach (T; AliasSeq!(char, wchar, char, int))
     {
         static assert(is(Rebindable!(immutable(T[])) == immutable(T)[]));
         static assert(is(Rebindable!(const(T[])) == const(T)[]));
@@ -2848,13 +2848,13 @@ auto nullable(T)(T t)
             ni = other.ni;
         }
     }
-    foreach (S; AliasSeq!(S1, S2))
-    {
+    static foreach (S; AliasSeq!(S1, S2))
+    {{
         S a;
         S b = a;
         S c;
         c = a;
-    }
+    }}
 }
 @system unittest
 {
@@ -3050,8 +3050,8 @@ Returns:
 // disable test until https://issues.dlang.org/show_bug.cgi?id=15316 gets fixed
 version (none) @system unittest
 {
-    foreach (T; AliasSeq!(float, double, real))
-    {
+    static foreach (T; AliasSeq!(float, double, real))
+    {{
         Nullable!(T, T.init) nf;
         //Initialized to "null" state
         assert(nf.isNull);
@@ -3062,7 +3062,7 @@ version (none) @system unittest
 
         nf.nullify();
         assert(nf.isNull);
-    }
+    }}
 }
 
 /**
@@ -3279,13 +3279,13 @@ auto nullable(alias nullValue, T)(T t)
             ni = other.ni;
         }
     }
-    foreach (S; AliasSeq!(S1, S2))
-    {
+    static foreach (S; AliasSeq!(S1, S2))
+    {{
         S a;
         S b = a;
         S c;
         c = a;
-    }
+    }}
 }
 @system unittest
 {
@@ -3588,13 +3588,13 @@ auto nullableRef(T)(T* t)
             ni = other.ni;
         }
     }
-    foreach (S; AliasSeq!(S1, S2))
-    {
+    static foreach (S; AliasSeq!(S1, S2))
+    {{
         S a;
         S b = a;
         S c;
         c = a;
-    }
+    }}
 }
 @system unittest
 {
@@ -6183,8 +6183,8 @@ mixin template Proxy(alias a)
         static immutable arr = [1,2,3];
     }
 
-    foreach (T; AliasSeq!(MyInt, const MyInt, immutable MyInt))
-    {
+    static foreach (T; AliasSeq!(MyInt, const MyInt, immutable MyInt))
+    {{
         T m = 10;
         static assert(!__traits(compiles, { int x = m; }));
         static assert(!__traits(compiles, { void func(int n){} func(m); }));
@@ -6216,7 +6216,7 @@ mixin template Proxy(alias a)
         static assert(T.init == int.init);
         static assert(T.str == "str");
         static assert(T.arr == [1,2,3]);
-    }
+    }}
 }
 @system unittest
 {
@@ -6228,8 +6228,8 @@ mixin template Proxy(alias a)
         this(immutable int[] arr) immutable { value = arr; }
     }
 
-    foreach (T; AliasSeq!(MyArray, const MyArray, immutable MyArray))
-    {
+    static foreach (T; AliasSeq!(MyArray, const MyArray, immutable MyArray))
+    {{
       static if (is(T == immutable) && !is(typeof({ T a = [1,2,3,4]; })))
         T a = [1,2,3,4].idup;   // workaround until qualified ctor is properly supported
       else
@@ -6256,7 +6256,7 @@ mixin template Proxy(alias a)
             a[]     *= 2;   assert(a == [8,4,4,2]);
             a[0 .. 2] /= 2;   assert(a == [4,2,4,2]);
         }
-    }
+    }}
 }
 @system unittest
 {
@@ -6536,11 +6536,11 @@ mixin template Proxy(alias a)
         assert(!(a>b));
         assert(!(a >= b));
     }
-    foreach (T1; AliasSeq!(MyFloatImpl, Typedef!float, Typedef!double,
+    static foreach (T1; AliasSeq!(MyFloatImpl, Typedef!float, Typedef!double,
         float, real, Typedef!int, int))
     {
-        foreach (T2; AliasSeq!(MyFloatImpl, Typedef!float))
-        {
+        static foreach (T2; AliasSeq!(MyFloatImpl, Typedef!float))
+        {{
             T1 a;
             T2 b;
 
@@ -6562,7 +6562,7 @@ mixin template Proxy(alias a)
             assert(a <= b);
             assert(!(a>b));
             assert(a >= b);
-        }
+        }}
     }
 }
 

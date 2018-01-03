@@ -526,15 +526,15 @@ alias MinstdRand = LinearCongruentialEngine!(uint, 48_271, 0, 2_147_483_647);
     assert(rnd.front == 399268537);
 
     // Check .save works
-    foreach (Type; std.meta.AliasSeq!(MinstdRand0, MinstdRand))
-    {
+    static foreach (Type; std.meta.AliasSeq!(MinstdRand0, MinstdRand))
+    {{
         auto rnd1 = Type(unpredictableSeed);
         auto rnd2 = rnd1.save;
         assert(rnd1 == rnd2);
         // Enable next test when RNGs are reference types
         version(none) { assert(rnd1 !is rnd2); }
         assert(rnd1.take(100).array() == rnd2.take(100).array());
-    }
+    }}
 }
 
 @safe unittest
@@ -963,15 +963,15 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
 {
     import std.range;
     // Check .save works
-    foreach (Type; std.meta.AliasSeq!(Mt19937, Mt19937_64))
-    {
+    static foreach (Type; std.meta.AliasSeq!(Mt19937, Mt19937_64))
+    {{
         auto gen1 = Type(unpredictableSeed);
         auto gen2 = gen1.save;
         assert(gen1 == gen2);  // Danger, Will Robinson -- no opEquals for MT
         // Enable next test when RNGs are reference types
         version(none) { assert(gen1 !is gen2); }
         assert(gen1.take(100).array() == gen2.take(100).array());
-    }
+    }}
 }
 
 @safe pure nothrow unittest //11690
@@ -987,14 +987,14 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
     ulong[] expected10kValue = [4123659995uL, 4123659995uL,
                                 51991688252792uL, 3031481165133029945uL];
 
-    foreach (i, R; std.meta.AliasSeq!(MT!(uint, 32), MT!(ulong, 32), MT!(ulong, 48), MT!(ulong, 64)))
-    {
+    static foreach (i, R; std.meta.AliasSeq!(MT!(uint, 32), MT!(ulong, 32), MT!(ulong, 48), MT!(ulong, 64)))
+    {{
         auto a = R();
         a.seed(a.defaultSeed); // checks that some alternative paths in `seed` are utilized
         assert(a.front == expectedFirstValue[i]);
         a.popFrontN(9999);
         assert(a.front == expected10kValue[i]);
-    }
+    }}
 }
 
 
@@ -1618,9 +1618,9 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
     auto c = uniform(0.0, 1.0);
     assert(0 <= c && c < 1);
 
-    foreach (T; std.meta.AliasSeq!(char, wchar, dchar, byte, ubyte, short, ushort,
+    static foreach (T; std.meta.AliasSeq!(char, wchar, dchar, byte, ubyte, short, ushort,
                           int, uint, long, ulong, float, double, real))
-    {
+    {{
         T lo = 0, hi = 100;
 
         // Try tests with each of the possible bounds
@@ -1668,19 +1668,19 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
                 assert(u <= T.max, "Upper bound violation for uniform!\"[]\" with " ~ T.stringof);
             }
         }
-    }
+    }}
 
     auto reproRng = Xorshift(239842);
 
-    foreach (T; std.meta.AliasSeq!(char, wchar, dchar, byte, ubyte, short,
+    static foreach (T; std.meta.AliasSeq!(char, wchar, dchar, byte, ubyte, short,
                           ushort, int, uint, long, ulong))
-    {
+    {{
         T lo = T.min + 10, hi = T.max - 10;
         T init = uniform(lo, hi, reproRng);
         size_t i = 50;
         while (--i && uniform(lo, hi, reproRng) == init) {}
         assert(i > 0);
-    }
+    }}
 
     {
         bool sawLB = false, sawUB = false;
@@ -1791,9 +1791,9 @@ if (!is(T == enum) && (isIntegral!T || isSomeChar!T))
 
 @safe unittest
 {
-    foreach (T; std.meta.AliasSeq!(char, wchar, dchar, byte, ubyte, short, ushort,
+    static foreach (T; std.meta.AliasSeq!(char, wchar, dchar, byte, ubyte, short, ushort,
                           int, uint, long, ulong))
-    {
+    {{
         T init = uniform!T();
         size_t i = 50;
         while (--i && uniform!T() == init) {}
@@ -1806,7 +1806,7 @@ if (!is(T == enum) && (isIntegral!T || isSomeChar!T))
             assert(T.min <= u, "Lower bound violation for uniform!" ~ T.stringof);
             assert(u <= T.max, "Upper bound violation for uniform!" ~ T.stringof);
         }
-    }
+    }}
 }
 
 /**
@@ -1939,11 +1939,11 @@ do
 @safe unittest
 {
     import std.meta;
-    foreach (UniformRNG; PseudoRngTypes)
-    {
+    static foreach (UniformRNG; PseudoRngTypes)
+    {{
 
-        foreach (T; std.meta.AliasSeq!(float, double, real))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (T; std.meta.AliasSeq!(float, double, real))
+        {{
             UniformRNG rng = UniformRNG(unpredictableSeed);
 
             auto a = uniform01();
@@ -1967,8 +1967,8 @@ do
             while (--i && uniform01!T(rng) == init) {}
             assert(i > 0);
             assert(i < 50);
-        }();
-    }
+        }}
+    }}
 }
 
 /**
@@ -2485,8 +2485,8 @@ if (isRandomAccessRange!Range)
     import std.conv;
     int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8 ];
     int[] c;
-    foreach (UniformRNG; std.meta.AliasSeq!(void, PseudoRngTypes))
-    {
+    static foreach (UniformRNG; std.meta.AliasSeq!(void, PseudoRngTypes))
+    {{
         static if (is(UniformRNG == void))
         {
             auto rc = randomCover(a);
@@ -2514,7 +2514,7 @@ if (isRandomAccessRange!Range)
         }
         sort(b);
         assert(a == b, text(b));
-    }
+    }}
 }
 
 @safe unittest

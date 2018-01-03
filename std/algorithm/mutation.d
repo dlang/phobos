@@ -528,14 +528,14 @@ $(HTTP sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
 {
     // Issue 13650
     import std.meta : AliasSeq;
-    foreach (Char; AliasSeq!(char, wchar, dchar))
-    {
+    static foreach (Char; AliasSeq!(char, wchar, dchar))
+    {{
         Char[3] a1 = "123";
         Char[6] a2 = "456789";
         assert(copy(a1[], a2[]) is a2[3..$]);
         assert(a1[] == "123");
         assert(a2[] == "123789");
-    }
+    }}
 }
 
 /**
@@ -972,7 +972,7 @@ if (is(Range == char[]) || is(Range == wchar[]))
     assert(!typeid(S3).initializer().ptr);
     assert( typeid(S4).initializer().ptr);
 
-    foreach (S; AliasSeq!(S1, S2, S3, S4))
+    static foreach (S; AliasSeq!(S1, S2, S3, S4))
     {
         //initializeAll
         {
@@ -2154,7 +2154,7 @@ if (isBidirectionalRange!Range
         assert(r.all!(e => all!(o => e < o[0] || e >= o[1])(offsets.only)));
     }
 
-    foreach (offsets; AliasSeq!(soffsets,doffsets,toffsets))
+    static foreach (offsets; AliasSeq!(soffsets,doffsets,toffsets))
     foreach (os; offsets)
     {
         int len = 5*os.length;

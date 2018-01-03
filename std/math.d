@@ -583,18 +583,18 @@ if (is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
 @safe pure nothrow @nogc unittest
 {
     import std.meta : AliasSeq;
-    foreach (T; AliasSeq!(float, double, real))
-    {
+    static foreach (T; AliasSeq!(float, double, real))
+    {{
         T f = 3;
         assert(abs(f) == f);
         assert(abs(-f) == f);
-    }
-    foreach (T; AliasSeq!(cfloat, cdouble, creal))
-    {
+    }}
+    static foreach (T; AliasSeq!(cfloat, cdouble, creal))
+    {{
         T f = -12+3i;
         assert(abs(f) == hypot(f.re, f.im));
         assert(abs(-f) == hypot(f.re, f.im));
-    }
+    }}
 }
 
 /***********************************
@@ -2810,8 +2810,8 @@ if (isFloatingPoint!T)
     import std.meta : AliasSeq;
     import std.typecons : tuple, Tuple;
 
-    foreach (T; AliasSeq!(real, double, float))
-    {
+    static foreach (T; AliasSeq!(real, double, float))
+    {{
         Tuple!(T, T, int)[] vals =     // x,frexp,exp
             [
              tuple(T(0.0),  T( 0.0 ), 0),
@@ -2861,21 +2861,21 @@ if (isFloatingPoint!T)
 
             }
         }
-    }
+    }}
 }
 
 @safe unittest
 {
     import std.meta : AliasSeq;
     void foo() {
-        foreach (T; AliasSeq!(real, double, float))
-        {
+        static foreach (T; AliasSeq!(real, double, float))
+        {{
             int exp;
             const T a = 1;
             immutable T b = 2;
             auto c = frexp(a, exp);
             auto d = frexp(b, exp);
-        }
+        }}
     }
 }
 
@@ -3063,8 +3063,8 @@ alias FP_ILOGBNAN = core.stdc.math.FP_ILOGBNAN;
 {
     import std.meta : AliasSeq;
     import std.typecons : Tuple;
-    foreach (F; AliasSeq!(float, double, real))
-    {
+    static foreach (F; AliasSeq!(float, double, real))
+    {{
         alias T = Tuple!(F, int);
         T[13] vals =   // x, ilogb(x)
         [
@@ -3087,7 +3087,7 @@ alias FP_ILOGBNAN = core.stdc.math.FP_ILOGBNAN;
         {
             assert(ilogb(elem[0]) == elem[1]);
         }
-    }
+    }}
 
     // min_normal and subnormals
     assert(ilogb(-float.min_normal) == -126);
@@ -3136,8 +3136,8 @@ float ldexp(float n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real)
 @nogc @safe pure nothrow unittest
 {
     import std.meta : AliasSeq;
-    foreach (T; AliasSeq!(float, double, real))
-    {
+    static foreach (T; AliasSeq!(float, double, real))
+    {{
         T r;
 
         r = ldexp(3.0L, 3);
@@ -3150,7 +3150,7 @@ float ldexp(float n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real)
         int exp = 3;
         r = ldexp(n, exp);
         assert(r == 24);
-    }
+    }}
 }
 
 @safe pure nothrow @nogc unittest
@@ -4260,8 +4260,8 @@ if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F)
 {
     import std.meta : AliasSeq;
 
-    foreach (F; AliasSeq!(real, double, float))
-    {
+    static foreach (F; AliasSeq!(real, double, float))
+    {{
         const maxL10 = cast(int) F.max.log10.floor;
         const maxR10 = pow(cast(F) 10, maxL10);
         assert((cast(F) 0.9L * maxR10).quantize!10(maxL10) ==  maxR10);
@@ -4273,7 +4273,7 @@ if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F)
         assert((-F.min_normal).quantize(F.max) == 0);
         assert(F.min_normal.quantize(F.min_normal) == F.min_normal);
         assert((-F.min_normal).quantize(F.min_normal) == -F.min_normal);
-    }
+    }}
 }
 
 /******************************************
@@ -4840,8 +4840,8 @@ version(D_HardFloat) @system unittest
         bool function() ieeeCheck;
     }
 
-    foreach (T; AliasSeq!(float, double, real))
-    {
+    static foreach (T; AliasSeq!(float, double, real))
+    {{
         T x; /* Needs to be here to trick -O. It would optimize away the
             calculations if x were local to the function literals. */
         auto tests = [
@@ -4873,7 +4873,7 @@ version(D_HardFloat) @system unittest
             test.action();
             assert(test.ieeeCheck());
         }
-    }
+    }}
 }
 
 version(X86_Any)
@@ -5278,8 +5278,8 @@ version(D_HardFloat) @system unittest // rounding
 {
     import std.meta : AliasSeq;
 
-    foreach (T; AliasSeq!(float, double, real))
-    {
+    static foreach (T; AliasSeq!(float, double, real))
+    {{
         FloatingPointControl fpctrl;
 
         fpctrl.rounding = FloatingPointControl.roundUp;
@@ -5311,7 +5311,7 @@ version(D_HardFloat) @system unittest // rounding
 
         assert(u > d);
         assert(z == u);
-    }
+    }}
 }
 
 
@@ -5374,8 +5374,8 @@ if (isFloatingPoint!(X))
 {
     import std.meta : AliasSeq;
 
-    foreach (T; AliasSeq!(float, double, real))
-    {
+    static foreach (T; AliasSeq!(float, double, real))
+    {{
         // CTFE-able tests
         assert(isNaN(T.init));
         assert(isNaN(-T.init));
@@ -5400,7 +5400,7 @@ if (isFloatingPoint!(X))
         f = cast(T) 53.6;
         assert(!isNaN(f));
         assert(!isNaN(-f));
-    }
+    }}
 }
 
 /*********************************
@@ -5550,12 +5550,12 @@ bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
 {
     import std.meta : AliasSeq;
 
-    foreach (T; AliasSeq!(float, double, real))
-    {
+    static foreach (T; AliasSeq!(float, double, real))
+    {{
         T f;
         for (f = 1.0; !isSubnormal(f); f /= 2)
             assert(f != 0);
-    }
+    }}
 }
 
 /*********************************
@@ -5773,10 +5773,10 @@ if (isIntegral!(X) && isFloatingPoint!(R))
 {
     import std.meta : AliasSeq;
 
-    foreach (X; AliasSeq!(float, double, real, int, long))
+    static foreach (X; AliasSeq!(float, double, real, int, long))
     {
-        foreach (Y; AliasSeq!(float, double, real))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (Y; AliasSeq!(float, double, real))
+        {{
             X x = 21;
             Y y = 23.8;
             Y e = void;
@@ -5801,7 +5801,7 @@ if (isIntegral!(X) && isFloatingPoint!(R))
                 e = copysign(X.nan, -y);
                 assert(isNaN(e) && signbit(e));
             }
-        }();
+        }}
     }
 }
 
@@ -7911,8 +7911,8 @@ if (isFloatingPoint!T)
 @safe unittest
 {
     import std.meta : AliasSeq;
-    foreach (T; AliasSeq!(float, double, real))
-    {
+    static foreach (T; AliasSeq!(float, double, real))
+    {{
         T[] values = [-cast(T) NaN(20), -cast(T) NaN(10), -T.nan, -T.infinity,
                       -T.max, -T.max / 2, T(-16.0), T(-1.0).nextDown,
                       T(-1.0), T(-1.0).nextUp,
@@ -7936,7 +7936,7 @@ if (isFloatingPoint!T)
             }
             assert(cmp(x, x) == 0);
         }
-    }
+    }}
 }
 
 private enum PowType
@@ -8076,8 +8076,8 @@ if (isFloatingPoint!T)
 {
     import std.meta : AliasSeq;
 
-    foreach (T; AliasSeq!(float, double, real))
-    {
+    static foreach (T; AliasSeq!(float, double, real))
+    {{
         enum T subNormal = T.min_normal / 2;
 
         static if (subNormal) assert(nextPow2(subNormal) == T.min_normal);
@@ -8101,7 +8101,7 @@ if (isFloatingPoint!T)
 
         assert(nextPow2(T.infinity) == T.infinity);
         assert(nextPow2(T.init).isNaN);
-    }
+    }}
 }
 
 @safe @nogc pure nothrow unittest // Issue 15973
@@ -8206,7 +8206,7 @@ if (isFloatingPoint!T)
 {
     import std.meta : AliasSeq;
 
-    foreach (T; AliasSeq!(float, double, real))
+    static foreach (T; AliasSeq!(float, double, real))
     {
         assert(truncPow2(T(0.0)) == 0.0);
 
@@ -8302,8 +8302,8 @@ if (isNumeric!X)
     immutable smallP7 = pow(7.0L, -35);
     immutable bigP7 = pow(7.0L, 30);
 
-    foreach (X; AliasSeq!(float, double, real))
-    {
+    static foreach (X; AliasSeq!(float, double, real))
+    {{
         immutable min_sub = X.min_normal * X.epsilon;
 
         foreach (x; [smallP2, min_sub, X.min_normal, .25L, 0.5L, 1.0L,
@@ -8318,10 +8318,10 @@ if (isNumeric!X)
             assert(!isPowerOf2(cast(X) x));
             assert(!isPowerOf2(cast(X)-x));
         }
-    }
+    }}
 
-    foreach (X; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
-    {
+    static foreach (X; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    {{
         foreach (x; [1, 2, 4, 8, (X.max >>> 1) + 1])
         {
             assert( isPowerOf2(cast(X) x));
@@ -8331,5 +8331,5 @@ if (isNumeric!X)
 
         foreach (x; [0, 3, 5, 13, 77, X.min, X.max])
             assert(!isPowerOf2(cast(X) x));
-    }
+    }}
 }

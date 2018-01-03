@@ -878,7 +878,7 @@ size_t replicateBits(size_t times, size_t bits)(size_t val) @safe pure nothrow @
     import std.range : iota;
     size_t m = 0b111;
     size_t m2 = 0b01;
-    foreach (i; AliasSeq!(1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
+    static foreach (i; AliasSeq!(1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
     {
         assert(replicateBits!(i, 3)(m)+1 == (1<<(3*i)));
         assert(replicateBits!(i, 2)(m2) == iota(0, i).map!"2^^(2*a)"().sum());
@@ -3457,8 +3457,8 @@ private:
         assert(u24 != u24_2);
     }
 
-    foreach (Policy; AliasSeq!(GcPolicy, ReallocPolicy))
-    {
+    static foreach (Policy; AliasSeq!(GcPolicy, ReallocPolicy))
+    {{
         alias Range = typeof(CowArray!Policy.init[]);
         alias U24A = CowArray!Policy;
         static assert(isForwardRange!Range);
@@ -3490,7 +3490,7 @@ private:
         copy(iota(10, 170, 2), r2[10 .. 90]);
         assert(equal(r2[], chain(iota(0, 10), iota(10, 170, 2), iota(90, 100)))
                , text(r2[]));
-    }
+    }}
 }
 
 version(unittest)
@@ -3738,8 +3738,8 @@ version(unittest)
     import std.conv : text;
     import std.typecons : tuple, Tuple;
 
-    foreach (CodeList; AliasSeq!(InversionList!(ReallocPolicy)))
-    {
+    static foreach (CodeList; AliasSeq!(InversionList!(ReallocPolicy)))
+    {{
         auto arr = "ABCDEFGHIJKLMabcdefghijklm"d;
         auto a = CodeList('A','N','a', 'n');
         assert(equal(a.byInterval,
@@ -3769,7 +3769,7 @@ version(unittest)
         }
         assert(equal(CodepointSet.init.byInterval, cast(Tuple!(uint, uint)[])[]));
         assert(equal(CodepointSet.init.byCodepoint, cast(dchar[])[]));
-    }
+    }}
 }
 
 //============================================================================
@@ -7236,8 +7236,8 @@ private static struct InputRangeString
     auto gReverse = reverse.byGrapheme;
     assert(gReverse.walkLength == 4);
 
-    foreach (text; AliasSeq!("noe\u0308l"c, "noe\u0308l"w, "noe\u0308l"d))
-    {
+    static foreach (text; AliasSeq!("noe\u0308l"c, "noe\u0308l"w, "noe\u0308l"d))
+    {{
         assert(text.walkLength == 5);
         static assert(isForwardRange!(typeof(text)));
 
@@ -7245,7 +7245,7 @@ private static struct InputRangeString
         static assert(isForwardRange!(typeof(gText)));
         assert(gText.walkLength == 4);
         assert(gText.array.retro.equal(gReverse));
-    }
+    }}
 
     auto nonForwardRange = InputRangeString("noe\u0308l").byGrapheme;
     static assert(!isForwardRange!(typeof(nonForwardRange)));
@@ -7976,11 +7976,11 @@ if (isForwardRange!S1 && isSomeChar!(ElementEncodingType!S1)
     import std.exception : assertCTFEable;
     assertCTFEable!(
     {
-    foreach (cfunc; AliasSeq!(icmp, sicmp))
-    {
-        foreach (S1; AliasSeq!(string, wstring, dstring))
-        foreach (S2; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+    static foreach (cfunc; AliasSeq!(icmp, sicmp))
+    {{
+        static foreach (S1; AliasSeq!(string, wstring, dstring))
+        static foreach (S2; AliasSeq!(string, wstring, dstring))
+        {
             assert(cfunc("".to!S1(), "".to!S2()) == 0);
             assert(cfunc("A".to!S1(), "".to!S2()) > 0);
             assert(cfunc("".to!S1(), "0".to!S2()) < 0);
@@ -7992,12 +7992,12 @@ if (isForwardRange!S1 && isSomeChar!(ElementEncodingType!S1)
             // Check example:
             assert(cfunc("Август".to!S1(), "авгусТ".to!S2()) == 0);
             assert(cfunc("ΌΎ".to!S1(), "όύ".to!S2()) == 0);
-        }();
+        }
         // check that the order is properly agnostic to the case
         auto strs = [ "Apple", "ORANGE",  "orAcle", "amp", "banana"];
         sort!((a,b) => cfunc(a,b) < 0)(strs);
         assert(strs == ["amp", "Apple",  "banana", "orAcle", "ORANGE"]);
-    }
+    }}
     assert(icmp("ßb", "ssa") > 0);
     // Check example:
     assert(icmp("Russland", "Rußland") == 0);
@@ -9941,8 +9941,8 @@ if (isSomeString!S)
         assert(upInp == trueUp,
             format(diff, cast(ubyte[]) s, cast(ubyte[]) upInp, cast(ubyte[]) trueUp));
     }
-    foreach (S; AliasSeq!(dstring, wstring, string))
-    {
+    static foreach (S; AliasSeq!(dstring, wstring, string))
+    {{
 
         S easy = "123";
         S good = "abCФеж";
@@ -9952,7 +9952,7 @@ if (isSomeString!S)
         S[] lower = ["123", "abcфеж", "\u0131\u023f\u03c9", "i\u0307\u1Fe2"];
         S[] upper = ["123", "ABCФЕЖ", "I\u2c7e\u2126", "\u0130\u03A5\u0308\u0300"];
 
-        foreach (val; AliasSeq!(easy, good))
+        foreach (val; [easy, good])
         {
             auto e = val.dup;
             auto g = e;
@@ -9978,7 +9978,7 @@ if (isSomeString!S)
             doTest(sample2, upper[k] ~ upper[j] ~ upper[i],
                 lower[k] ~ lower[j] ~ lower[i]);
         }
-    }
+    }}
 }
 
 

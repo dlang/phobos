@@ -1631,8 +1631,8 @@ void main()
         auto deleteme = testFilename();
         std.file.write(deleteme, "hello\nworld\n");
         scope(exit) std.file.remove(deleteme);
-        foreach (String; AliasSeq!(string, char[], wstring, wchar[], dstring, dchar[]))
-        {
+        static foreach (String; AliasSeq!(string, char[], wstring, wchar[], dstring, dchar[]))
+        {{
             auto witness = [ "hello\n", "world\n" ];
             auto f = File(deleteme);
             uint i = 0;
@@ -1643,7 +1643,7 @@ void main()
                 assert(equal(buf, witness[i++]));
             }
             assert(i == witness.length);
-        }
+        }}
     }
 
     @system unittest
@@ -1655,13 +1655,13 @@ void main()
         std.file.write(deleteme, "cześć \U0002000D");
         scope(exit) std.file.remove(deleteme);
         uint[] lengths = [12,8,7];
-        foreach (uint i, C; Tuple!(char, wchar, dchar).Types)
-        {
+        static foreach (uint i, C; Tuple!(char, wchar, dchar).Types)
+        {{
             immutable(C)[] witness = "cześć \U0002000D";
             auto buf = File(deleteme).readln!(immutable(C)[])();
             assert(buf.length == lengths[i]);
             assert(buf == witness);
-        }
+        }}
     }
 
 /**
@@ -2270,13 +2270,13 @@ the contents may well have changed).
         scope(success) std.file.remove(deleteme);
 
         import std.meta : AliasSeq;
-        foreach (T; AliasSeq!(char, wchar, dchar))
-        {
+        static foreach (T; AliasSeq!(char, wchar, dchar))
+        {{
             auto blc = File(deleteme).byLine!(T, T);
             assert(blc.front == "hi");
             // check front is cached
             assert(blc.front is blc.front);
-        }
+        }}
     }
 
     private struct ByLineCopy(Char, Terminator)
@@ -4092,18 +4092,18 @@ if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum) &&
     {
         readln();
         readln('\t');
-        foreach (String; AliasSeq!(string, char[], wstring, wchar[], dstring, dchar[]))
+        static foreach (String; AliasSeq!(string, char[], wstring, wchar[], dstring, dchar[]))
         {
             readln!String();
             readln!String('\t');
         }
-        foreach (String; AliasSeq!(char[], wchar[], dchar[]))
-        {
+        static foreach (String; AliasSeq!(char[], wchar[], dchar[]))
+        {{
             String buf;
             readln(buf);
             readln(buf, '\t');
             readln(buf, "<br />");
-        }
+        }}
     }
 }
 
@@ -4439,7 +4439,7 @@ struct lines
 
     }
 
-    foreach (T; AliasSeq!(ubyte[]))
+    static foreach (T; AliasSeq!(ubyte[]))
     {
         // test looping with a file with three lines, last without a newline
         // using a counter too this time
