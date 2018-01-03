@@ -764,7 +764,7 @@ public:
         assert(m.empty);
         ---
     +/
-    @property auto front()
+    @property inout(Captures!R) front() inout
     {
         return _captures;
     }
@@ -799,7 +799,7 @@ public:
     T opCast(T:bool)(){ return !empty; }
 
     /// Same as .front, provided for compatibility with original std.regex.
-    @property auto captures() inout { return _captures; }
+    @property inout(Captures!R) captures() inout { return _captures; }
 }
 
 private @trusted auto matchOnce(RegEx, R)(R input, const RegEx prog)
