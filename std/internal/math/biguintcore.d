@@ -144,7 +144,7 @@ public:
     }
 
     // The value at (cast(ulong[]) data)[n]
-    ulong peekUlong(int n) pure nothrow const @safe @nogc
+    ulong peekUlong(size_t n) pure nothrow const @safe @nogc
     {
         static if (BigDigit.sizeof == int.sizeof)
         {
@@ -156,7 +156,8 @@ public:
             return data[n];
         }
     }
-    uint peekUint(int n) pure nothrow const @safe @nogc
+
+    uint peekUint(size_t n) pure nothrow const @safe @nogc
     {
         static if (BigDigit.sizeof == int.sizeof)
         {
@@ -168,7 +169,7 @@ public:
             return (n & 1) ? cast(uint)(x >> 32) : cast(uint) x;
         }
     }
-public:
+
     ///
     void opAssign(Tulong)(Tulong u) pure nothrow @safe if (is (Tulong == ulong))
     {

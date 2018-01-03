@@ -1019,6 +1019,53 @@ public:
         assert(aa[BigInt(456)] == "def");
     }
 
+    /**
+     * Gets the nth number in the underlying representation that makes up the whole
+     * `BigInt`.
+     *
+     * Params:
+     *     T = the type to view the underlying representation as
+     *     n = The nth number to retrieve. Must be less than $(LREF ulongLength) or
+     *     $(LREF uintLength) with respect to `T`.
+     * Returns:
+     *     The nth `ulong` in the representation of this `BigInt`.
+     */
+    T getDigit(T = ulong)(size_t n) const
+    if (is(T == ulong) || is(T == uint))
+    {
+        static if (is(T == ulong))
+        {
+            assert(n < ulongLength(), "getDigit index out of bounds");
+            return data.peekUlong(n);
+        }
+        else
+        {
+            assert(n < uintLength(), "getDigit index out of bounds");
+            return data.peekUint(n);
+        }
+    }
+
+    ///
+    @system pure unittest
+    {
+        auto a = BigInt("1000");
+        assert(a.ulongLength() == 1);
+        assert(a.getDigit(0) == 1000);
+
+        assert(a.uintLength() == 1);
+        assert(a.getDigit!uint(0) == 1000);
+
+        auto b = BigInt("2_000_000_000_000_000_000_000_000_000");
+        assert(b.ulongLength() == 2);
+        assert(b.getDigit(0) == 4584946418820579328);
+        assert(b.getDigit(1) == 108420217);
+
+        assert(b.uintLength() == 3);
+        assert(b.getDigit!uint(0) == 3489660928);
+        assert(b.getDigit!uint(1) == 1067516025);
+        assert(b.getDigit!uint(2) == 108420217);
+    }
+
 private:
     void negate() @safe pure nothrow @nogc
     {
