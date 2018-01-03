@@ -4573,14 +4573,14 @@ if (isSomeChar!C)
 {
     import std.algorithm.comparison : equal;
     import std.meta : AliasSeq;
-    foreach (S; AliasSeq!(string, wstring, dstring))
-    {
+    static foreach (S; AliasSeq!(string, wstring, dstring))
+    {{
         import std.conv : to;
         S a = " a     bcd   ef gh ";
         assert(equal(splitter(a), [to!S("a"), to!S("bcd"), to!S("ef"), to!S("gh")]));
         a = "";
         assert(splitter(a).empty);
-    }
+    }}
 
     immutable string s = " a     bcd   ef gh ";
     assert(equal(splitter(s), ["a", "bcd", "ef", "gh"][]));

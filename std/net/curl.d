@@ -3303,12 +3303,11 @@ struct HTTP
 
 @system unittest // charset/Charset/CHARSET/...
 {
-    import std.meta : AliasSeq;
     import etc.c.curl;
 
-    foreach (c; AliasSeq!("charset", "Charset", "CHARSET", "CharSet", "charSet",
-        "ChArSeT", "cHaRsEt"))
-    {
+    static foreach (c; ["charset", "Charset", "CHARSET", "CharSet", "charSet",
+        "ChArSeT", "cHaRsEt"])
+    {{
         testServer.handle((s) {
             s.send("HTTP/1.1 200 OK\r\n"~
                 "Content-Length: 0\r\n"~
@@ -3338,7 +3337,7 @@ struct HTTP
         assert(code == CurlError.ok);
         code = http.getTiming(CurlInfo.appconnect_time, val);
         assert(code == CurlError.ok);
-    }
+    }}
 }
 
 /**

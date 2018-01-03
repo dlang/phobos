@@ -574,8 +574,8 @@ if (isSomeChar!Char)
     debug(uri) writeln(result);
 
     import std.meta : AliasSeq;
-    foreach (StringType; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
-    {
+    static foreach (StringType; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
+    {{
         import std.conv : to;
         StringType decoded1 = source.to!StringType;
         string encoded1 = encode(decoded1);
@@ -588,5 +588,5 @@ if (isSomeChar!Char)
         assert(encoded2 == target.to!StringType); // check that `encoded2` wasn't changed
         assert(decoded2 == source);
         assert(encoded2 == encode(decoded2).to!StringType);
-    }
+    }}
 }

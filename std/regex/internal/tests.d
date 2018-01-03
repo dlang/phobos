@@ -353,8 +353,8 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     void run_tests(alias matchFn)()
     {
         int i;
-        foreach (Char; AliasSeq!( char, wchar, dchar))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (Char; AliasSeq!( char, wchar, dchar))
+        {{
             alias String = immutable(Char)[];
             String produceExpected(M,Range)(auto ref M m, Range fmt)
             {
@@ -397,7 +397,7 @@ alias Sequence(int B, int E) = staticIota!(B, E);
                     }
                 }
             }
-        }();
+        }}
         debug(std_regex_test) writeln("!!! FReD bulk test done "~matchFn.stringof~" !!!");
     }
 
@@ -428,8 +428,8 @@ alias Sequence(int B, int E) = staticIota!(B, E);
         }
         else
             alias Tests = AliasSeq!(Sequence!(0, 30), Sequence!(235, tv.length-5));
-        foreach (a, v; Tests)
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (a, v; Tests)
+        {{
             enum tvd = tv[v];
             static if (tvd.result == "c")
             {
@@ -458,7 +458,7 @@ alias Sequence(int B, int E) = staticIota!(B, E);
                                 tvd.replace, " vs ", result);
                 }
             }
-        }();
+        }}
         debug(std_regex_test) writeln("!!! FReD C-T test done !!!");
     }
 
@@ -689,8 +689,8 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     {
         import std.uni : toUpper;
 
-        foreach (i, v; AliasSeq!(string, wstring, dstring))
-        {
+        static foreach (i, v; AliasSeq!(string, wstring, dstring))
+        {{
             auto baz(Cap)(Cap m)
             if (is(Cap == Captures!(Cap.String)))
             {
@@ -709,7 +709,7 @@ alias Sequence(int B, int E) = staticIota!(B, E);
             auto s = std.regex.replace!(baz!(Captures!(String)))(to!String("Strap a rocket engine on a chicken."),
                     regex(to!String("[ar]"), "g"));
             assert(s == "StRAp A Rocket engine on A chicken.");
-        }
+        }}
         debug(std_regex_test) writeln("!!! Replace test done "~matchFn.stringof~"  !!!");
     }
     test!(bmatch)();
@@ -787,13 +787,13 @@ alias Sequence(int B, int E) = staticIota!(B, E);
 @safe unittest
 {// bugzilla 7679
     import std.algorithm.comparison : equal;
-    foreach (S; AliasSeq!(string, wstring, dstring))
-    (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+    static foreach (S; AliasSeq!(string, wstring, dstring))
+    {{
         enum re = ctRegex!(to!S(r"\."));
         auto str = to!S("a.b");
         assert(equal(std.regex.splitter(str, re), [to!S("a"), to!S("b")]));
         assert(split(str, re) == [to!S("a"), to!S("b")]);
-    }();
+    }}
 }
 @safe unittest
 {//bugzilla 8203

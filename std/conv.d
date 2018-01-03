@@ -427,12 +427,12 @@ template to(T)
 @safe pure unittest
 {
     import std.exception;
-    foreach (T; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    static foreach (T; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         assertThrown!ConvException(to!T(" 0"));
         assertThrown!ConvException(to!T(" 0", 8));
     }
-    foreach (T; AliasSeq!(float, double, real))
+    static foreach (T; AliasSeq!(float, double, real))
     {
         assertThrown!ConvException(to!T(" 0"));
     }
@@ -499,13 +499,13 @@ if (isImplicitlyConvertible!(S, T) &&
 {
     import std.exception;
     // Conversion between same size
-    foreach (S; AliasSeq!(byte, short, int, long))
-    (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+    static foreach (S; AliasSeq!(byte, short, int, long))
+    {{
         alias U = Unsigned!S;
 
-        foreach (Sint; AliasSeq!(S, const S, immutable S))
-        foreach (Uint; AliasSeq!(U, const U, immutable U))
-        {
+        static foreach (Sint; AliasSeq!(S, const S, immutable S))
+        static foreach (Uint; AliasSeq!(U, const U, immutable U))
+        {{
             // positive overflow
             Uint un = Uint.max;
             assertThrown!ConvOverflowException(to!Sint(un),
@@ -515,53 +515,53 @@ if (isImplicitlyConvertible!(S, T) &&
             Sint sn = -1;
             assertThrown!ConvOverflowException(to!Uint(sn),
                 text(Sint.stringof, ' ', Uint.stringof, ' ', un));
-        }
-    }();
+        }}
+    }}
 
     // Conversion between different size
-    foreach (i, S1; AliasSeq!(byte, short, int, long))
-    foreach (   S2; AliasSeq!(byte, short, int, long)[i+1..$])
-    (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+    static foreach (i, S1; AliasSeq!(byte, short, int, long))
+    static foreach (   S2; AliasSeq!(byte, short, int, long)[i+1..$])
+    {{
         alias U1 = Unsigned!S1;
         alias U2 = Unsigned!S2;
 
         static assert(U1.sizeof < S2.sizeof);
 
         // small unsigned to big signed
-        foreach (Uint; AliasSeq!(U1, const U1, immutable U1))
-        foreach (Sint; AliasSeq!(S2, const S2, immutable S2))
-        {
+        static foreach (Uint; AliasSeq!(U1, const U1, immutable U1))
+        static foreach (Sint; AliasSeq!(S2, const S2, immutable S2))
+        {{
             Uint un = Uint.max;
             assertNotThrown(to!Sint(un));
             assert(to!Sint(un) == un);
-        }
+        }}
 
         // big unsigned to small signed
-        foreach (Uint; AliasSeq!(U2, const U2, immutable U2))
-        foreach (Sint; AliasSeq!(S1, const S1, immutable S1))
-        {
+        static foreach (Uint; AliasSeq!(U2, const U2, immutable U2))
+        static foreach (Sint; AliasSeq!(S1, const S1, immutable S1))
+        {{
             Uint un = Uint.max;
             assertThrown(to!Sint(un));
-        }
+        }}
 
         static assert(S1.sizeof < U2.sizeof);
 
         // small signed to big unsigned
-        foreach (Sint; AliasSeq!(S1, const S1, immutable S1))
-        foreach (Uint; AliasSeq!(U2, const U2, immutable U2))
-        {
+        static foreach (Sint; AliasSeq!(S1, const S1, immutable S1))
+        static foreach (Uint; AliasSeq!(U2, const U2, immutable U2))
+        {{
             Sint sn = -1;
             assertThrown!ConvOverflowException(to!Uint(sn));
-        }
+        }}
 
         // big signed to small unsigned
-        foreach (Sint; AliasSeq!(S2, const S2, immutable S2))
-        foreach (Uint; AliasSeq!(U1, const U1, immutable U1))
-        {
+        static foreach (Sint; AliasSeq!(S2, const S2, immutable S2))
+        static foreach (Uint; AliasSeq!(U1, const U1, immutable U1))
+        {{
             Sint sn = -1;
             assertThrown!ConvOverflowException(to!Uint(sn));
-        }
-    }();
+        }}
+    }}
 }
 
 /*
@@ -837,7 +837,7 @@ if (!isImplicitlyConvertible!(S, T) &&
 
     static foreach (m1; 0 .. 5) // enumerate modifiers
     static foreach (m2; 0 .. 5) // ditto
-    (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+    {{
         alias srcmod = AddModifier!m1;
         alias tgtmod = AddModifier!m2;
 
@@ -871,7 +871,7 @@ if (!isImplicitlyConvertible!(S, T) &&
             static assert(!is(typeof(to!(tgtmod!C)(srcmod!I.init))));   // I to C
             static assert(!is(typeof(to!(tgtmod!J)(srcmod!I.init))));   // I to J
         }
-    }();
+    }}
 }
 
 /**
@@ -993,7 +993,7 @@ if (!(isImplicitlyConvertible!(S, T) &&
 {
     void test1(T)(T lp, string cmp)
     {
-        foreach (e; AliasSeq!(char, wchar, dchar))
+        static foreach (e; AliasSeq!(char, wchar, dchar))
         {
             test2!(e[])(lp, cmp);
             test2!(const(e)[])(lp, cmp);
@@ -1006,12 +1006,12 @@ if (!(isImplicitlyConvertible!(S, T) &&
         assert(to!string(to!D(lp)) == cmp);
     }
 
-    foreach (e; AliasSeq!("Hello, world!", "Hello, world!"w, "Hello, world!"d))
+    static foreach (e; AliasSeq!("Hello, world!", "Hello, world!"w, "Hello, world!"d))
     {
         test1(e, "Hello, world!");
         test1(e.ptr, "Hello, world!");
     }
-    foreach (e; AliasSeq!("", ""w, ""d))
+    static foreach (e; AliasSeq!("", ""w, ""d))
     {
         test1(e, "");
         test1(e.ptr, "");
@@ -1176,14 +1176,14 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
     import std.exception;
     // Conversion representing integer values with string
 
-    foreach (Int; AliasSeq!(ubyte, ushort, uint, ulong))
+    static foreach (Int; AliasSeq!(ubyte, ushort, uint, ulong))
     {
         assert(to!string(Int(0)) == "0");
         assert(to!string(Int(9)) == "9");
         assert(to!string(Int(123)) == "123");
     }
 
-    foreach (Int; AliasSeq!(byte, short, int, long))
+    static foreach (Int; AliasSeq!(byte, short, int, long))
     {
         assert(to!string(Int(0)) == "0");
         assert(to!string(Int(9)) == "9");
@@ -1269,7 +1269,7 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
     enum EC : char { a = 'x', b = 'y' }
     enum ES : string { a = "aaa", b = "bbb" }
 
-    foreach (E; AliasSeq!(EB, EU, EI, EF, EC, ES))
+    static foreach (E; AliasSeq!(EB, EU, EI, EF, EC, ES))
     {
         assert(to! string(E.a) == "a"c);
         assert(to!wstring(E.a) == "a"w);
@@ -1297,23 +1297,23 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
     assert(to!string(E.doo) == "foo");
     assert(to!string(E.bar) == "bar");
 
-    foreach (S; AliasSeq!(string, wstring, dstring, const(char[]), const(wchar[]), const(dchar[])))
-    {
+    static foreach (S; AliasSeq!(string, wstring, dstring, const(char[]), const(wchar[]), const(dchar[])))
+    {{
         auto s1 = to!S(E.foo);
         auto s2 = to!S(E.foo);
         assert(s1 == s2);
         // ensure we don't allocate when it's unnecessary
         assert(s1 is s2);
-    }
+    }}
 
-    foreach (S; AliasSeq!(char[], wchar[], dchar[]))
-    {
+    static foreach (S; AliasSeq!(char[], wchar[], dchar[]))
+    {{
         auto s1 = to!S(E.foo);
         auto s2 = to!S(E.foo);
         assert(s1 == s2);
         // ensure each mutable array is unique
         assert(s1 !is s2);
-    }
+    }}
 }
 
 // ditto
@@ -1373,7 +1373,7 @@ do
 
 @safe pure nothrow unittest
 {
-    foreach (Int; AliasSeq!(uint, ulong))
+    static foreach (Int; AliasSeq!(uint, ulong))
     {
         assert(to!string(Int(16), 16) == "10");
         assert(to!string(Int(15), 2u) == "1111");
@@ -1383,7 +1383,7 @@ do
         assert(to!string(Int(0x1234AF), 16u, LetterCase.lower) == "1234af");
     }
 
-    foreach (Int; AliasSeq!(int, long))
+    static foreach (Int; AliasSeq!(int, long))
     {
         assert(to!string(Int(-10), 10u) == "-10");
     }
@@ -1853,12 +1853,12 @@ if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S) &&
 
 @safe pure unittest
 {
-    foreach (Str; AliasSeq!(string, wstring, dstring))
-    {
+    static foreach (Str; AliasSeq!(string, wstring, dstring))
+    {{
         Str a = "123";
         assert(to!int(a) == 123);
         assert(to!double(a) == 123);
-    }
+    }}
 
     // 6255
     auto n = to!int("FF", 16);
@@ -1995,7 +1995,7 @@ template roundTo(Target)
 {
     import std.exception;
     // boundary values
-    foreach (Int; AliasSeq!(byte, ubyte, short, ushort, int, uint))
+    static foreach (Int; AliasSeq!(byte, ubyte, short, ushort, int, uint))
     {
         assert(roundTo!Int(Int.min - 0.4L) == Int.min);
         assert(roundTo!Int(Int.max + 0.4L) == Int.max);
@@ -2259,7 +2259,7 @@ Lerr:
 
 @safe pure unittest
 {
-    foreach (Int; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    static foreach (Int; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         {
             assert(to!Int("0") == 0);
@@ -2354,74 +2354,75 @@ Lerr:
 @safe pure unittest
 {
     import std.exception;
+
+    immutable string[] errors =
+    [
+        "",
+        "-",
+        "+",
+        "-+",
+        " ",
+        " 0",
+        "0 ",
+        "- 0",
+        "1-",
+        "xx",
+        "123h",
+        "-+1",
+        "--1",
+        "+-1",
+        "++1",
+    ];
+
+    immutable string[] unsignedErrors =
+    [
+        "+5",
+        "-78",
+    ];
+
     // parsing error check
-    foreach (Int; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    static foreach (Int; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
-        {
-            immutable string[] errors1 =
-            [
-                "",
-                "-",
-                "+",
-                "-+",
-                " ",
-                " 0",
-                "0 ",
-                "- 0",
-                "1-",
-                "xx",
-                "123h",
-                "-+1",
-                "--1",
-                "+-1",
-                "++1",
-            ];
-            foreach (j, s; errors1)
-                assertThrown!ConvException(to!Int(s));
-        }
+        foreach (j, s; errors)
+            assertThrown!ConvException(to!Int(s));
 
         // parse!SomeUnsigned cannot parse head sign.
         static if (isUnsigned!Int)
         {
-            immutable string[] errors2 =
-            [
-                "+5",
-                "-78",
-            ];
-            foreach (j, s; errors2)
+            foreach (j, s; unsignedErrors)
                 assertThrown!ConvException(to!Int(s));
         }
     }
 
+    immutable string[] positiveOverflowErrors =
+    [
+        "128",                  // > byte.max
+        "256",                  // > ubyte.max
+        "32768",                // > short.max
+        "65536",                // > ushort.max
+        "2147483648",           // > int.max
+        "4294967296",           // > uint.max
+        "9223372036854775808",  // > long.max
+        "18446744073709551616", // > ulong.max
+    ];
     // positive overflow check
-    foreach (i, Int; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    static foreach (i, Int; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
-        immutable string[] errors =
-        [
-            "128",                  // > byte.max
-            "256",                  // > ubyte.max
-            "32768",                // > short.max
-            "65536",                // > ushort.max
-            "2147483648",           // > int.max
-            "4294967296",           // > uint.max
-            "9223372036854775808",  // > long.max
-            "18446744073709551616", // > ulong.max
-        ];
-        foreach (j, s; errors[i..$])
+        foreach (j, s; positiveOverflowErrors[i..$])
             assertThrown!ConvOverflowException(to!Int(s));
     }
 
+    immutable string[] negativeOverflowErrors =
+    [
+        "-129",                 // < byte.min
+        "-32769",               // < short.min
+        "-2147483649",          // < int.min
+        "-9223372036854775809", // < long.min
+    ];
     // negative overflow check
-    foreach (i, Int; AliasSeq!(byte, short, int, long))
+    static foreach (i, Int; AliasSeq!(byte, short, int, long))
     {
-        immutable string[] errors =
-        [
-            "-129",                 // < byte.min
-            "-32769",               // < short.min
-            "-2147483649",          // < int.min
-            "-9223372036854775809", // < long.min
-        ];
-        foreach (j, s; errors[i..$])
+        foreach (j, s; negativeOverflowErrors[i..$])
             assertThrown!ConvOverflowException(to!Int(s));
     }
 }
@@ -2659,7 +2660,7 @@ if (isSomeString!Source && !is(Source == enum) &&
     enum EC : char { a = 'a', b = 'b', c = 'c' }
     enum ES : string { a = "aaa", b = "bbb", c = "ccc" }
 
-    foreach (E; AliasSeq!(EB, EU, EI, EF, EC, ES))
+    static foreach (E; AliasSeq!(EB, EU, EI, EF, EC, ES))
     {
         assert(to!E("a"c) == E.a);
         assert(to!E("b"w) == E.b);
@@ -3148,7 +3149,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         return f;
     }
 
-    foreach (Float; AliasSeq!(float, double, real))
+    static foreach (Float; AliasSeq!(float, double, real))
     {
         assert(to!Float("123") == Literal!Float(123));
         assert(to!Float("+123") == Literal!Float(+123));
@@ -3417,10 +3418,10 @@ if (isSomeString!Source && !is(Source == enum) &&
 
 @safe pure unittest
 {
-    foreach (Str; AliasSeq!(string, wstring, dstring))
+    static foreach (Str; AliasSeq!(string, wstring, dstring))
     {
-        foreach (Char; AliasSeq!(char, wchar, dchar))
-        {
+        static foreach (Char; AliasSeq!(char, wchar, dchar))
+        {{
             static if (is(Unqual!Char == dchar) ||
                        Char.sizeof == ElementEncodingType!Str.sizeof)
             {
@@ -3428,7 +3429,7 @@ if (isSomeString!Source && !is(Source == enum) &&
                 assert(parse!Char(s) == 'a');
                 assert(s == "aa");
             }
-        }
+        }}
     }
 }
 
@@ -5713,28 +5714,28 @@ if (isIntegral!T)
 
 @safe unittest
 {
-    foreach (T; AliasSeq!(byte, ubyte))
+    static foreach (T; AliasSeq!(byte, ubyte))
     {
         static assert(is(typeof(unsigned(cast(T) 1)) == ubyte));
         static assert(is(typeof(unsigned(cast(const T) 1)) == ubyte));
         static assert(is(typeof(unsigned(cast(immutable T) 1)) == ubyte));
     }
 
-    foreach (T; AliasSeq!(short, ushort))
+    static foreach (T; AliasSeq!(short, ushort))
     {
         static assert(is(typeof(unsigned(cast(T) 1)) == ushort));
         static assert(is(typeof(unsigned(cast(const T) 1)) == ushort));
         static assert(is(typeof(unsigned(cast(immutable T) 1)) == ushort));
     }
 
-    foreach (T; AliasSeq!(int, uint))
+    static foreach (T; AliasSeq!(int, uint))
     {
         static assert(is(typeof(unsigned(cast(T) 1)) == uint));
         static assert(is(typeof(unsigned(cast(const T) 1)) == uint));
         static assert(is(typeof(unsigned(cast(immutable T) 1)) == uint));
     }
 
-    foreach (T; AliasSeq!(long, ulong))
+    static foreach (T; AliasSeq!(long, ulong))
     {
         static assert(is(typeof(unsigned(cast(T) 1)) == ulong));
         static assert(is(typeof(unsigned(cast(const T) 1)) == ulong));
@@ -5752,7 +5753,7 @@ if (isSomeChar!T)
 
 @safe unittest
 {
-    foreach (T; AliasSeq!(char, wchar, dchar))
+    static foreach (T; AliasSeq!(char, wchar, dchar))
     {
         static assert(is(typeof(unsigned(cast(T)'A')) == T));
         static assert(is(typeof(unsigned(cast(const T)'A')) == T));
@@ -5791,28 +5792,28 @@ if (isIntegral!T)
 
 @system unittest
 {
-    foreach (T; AliasSeq!(byte, ubyte))
+    static foreach (T; AliasSeq!(byte, ubyte))
     {
         static assert(is(typeof(signed(cast(T) 1)) == byte));
         static assert(is(typeof(signed(cast(const T) 1)) == byte));
         static assert(is(typeof(signed(cast(immutable T) 1)) == byte));
     }
 
-    foreach (T; AliasSeq!(short, ushort))
+    static foreach (T; AliasSeq!(short, ushort))
     {
         static assert(is(typeof(signed(cast(T) 1)) == short));
         static assert(is(typeof(signed(cast(const T) 1)) == short));
         static assert(is(typeof(signed(cast(immutable T) 1)) == short));
     }
 
-    foreach (T; AliasSeq!(int, uint))
+    static foreach (T; AliasSeq!(int, uint))
     {
         static assert(is(typeof(signed(cast(T) 1)) == int));
         static assert(is(typeof(signed(cast(const T) 1)) == int));
         static assert(is(typeof(signed(cast(immutable T) 1)) == int));
     }
 
-    foreach (T; AliasSeq!(long, ulong))
+    static foreach (T; AliasSeq!(long, ulong))
     {
         static assert(is(typeof(signed(cast(T) 1)) == long));
         static assert(is(typeof(signed(cast(const T) 1)) == long));

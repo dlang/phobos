@@ -333,11 +333,11 @@ if (isNarrowString!String)
         int i;
     }
 
-    foreach (T; AliasSeq!(S, const S, immutable S))
-    {
+    static foreach (T; AliasSeq!(S, const S, immutable S))
+    {{
         auto arr = [T(1), T(2), T(3), T(4)];
         assert(array(arr) == arr);
-    }
+    }}
 }
 
 @safe unittest
@@ -1188,10 +1188,10 @@ private template isInputRangeOrConvertible(E)
                 new AssertError("testStr failure 3", file, line));
     }
 
-    foreach (T; AliasSeq!(char, wchar, dchar,
+    static foreach (T; AliasSeq!(char, wchar, dchar,
         immutable(char), immutable(wchar), immutable(dchar)))
     {
-        foreach (U; AliasSeq!(char, wchar, dchar,
+        static foreach (U; AliasSeq!(char, wchar, dchar,
             immutable(char), immutable(wchar), immutable(dchar)))
         {
             testStr!(T[], U[])();
@@ -1335,8 +1335,8 @@ pure nothrow bool sameTail(T)(in T[] lhs, in T[] rhs)
 
 @safe pure nothrow unittest
 {
-    foreach (T; AliasSeq!(int[], const(int)[], immutable(int)[], const int[], immutable int[]))
-    {
+    static foreach (T; AliasSeq!(int[], const(int)[], immutable(int)[], const int[], immutable int[]))
+    {{
         T a = [1, 2, 3, 4, 5];
         T b = a;
         T c = a[1 .. $];
@@ -1358,7 +1358,7 @@ pure nothrow bool sameTail(T)(in T[] lhs, in T[] rhs)
         //verifies R-value compatibilty
         assert(a.sameHead(a[0 .. 0]));
         assert(a.sameTail(a[$ .. $]));
-    }
+    }}
 }
 
 /**
@@ -1429,8 +1429,8 @@ if (isInputRange!S && !isDynamicArray!S)
 {
     import std.conv : to;
 
-    foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
-    {
+    static foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
+    {{
         immutable S t = "abc";
 
         assert(replicate(to!S("1234"), 0) is null);
@@ -1440,7 +1440,7 @@ if (isInputRange!S && !isDynamicArray!S)
         assert(replicate(to!S("1"), 4) == "1111");
         assert(replicate(t, 3) == "abcabcabc");
         assert(replicate(cast(S) null, 4) is null);
-    }
+    }}
 }
 
 /++
@@ -1526,8 +1526,8 @@ if (isSomeString!S)
     static auto makeEntry(S)(string l, string[] r)
     {return tuple(l.to!S(), r.to!(S[])());}
 
-    foreach (S; AliasSeq!(string, wstring, dstring,))
-    {
+    static foreach (S; AliasSeq!(string, wstring, dstring,))
+    {{
         auto entries =
         [
             makeEntry!S("", []),
@@ -1542,7 +1542,7 @@ if (isSomeString!S)
         ];
         foreach (entry; entries)
             assert(entry[0].split() == entry[1], format("got: %s, expected: %s.", entry[0].split(), entry[1]));
-    }
+    }}
 
     //Just to test that an immutable is split-able
     immutable string s = " \t\npeter paul\tjerry \n";
@@ -1638,12 +1638,12 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(range.front))))
     import std.algorithm.comparison : cmp;
     import std.conv;
 
-    foreach (S; AliasSeq!(string, wstring, dstring,
+    static foreach (S; AliasSeq!(string, wstring, dstring,
                     immutable(string), immutable(wstring), immutable(dstring),
                     char[], wchar[], dchar[],
                     const(char)[], const(wchar)[], const(dchar)[],
                     const(char[]), immutable(char[])))
-    {
+    {{
         S s = to!S(",peter,paul,jerry,");
 
         auto words = split(s, ",");
@@ -1683,7 +1683,7 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(range.front))))
         words = split(s5, ",,");
         assert(words.length == 3);
         assert(cmp(words[0], "peter") == 0);
-    }
+    }}
 }
 
 /++
@@ -1928,36 +1928,36 @@ if (isInputRange!RoR &&
 {
     import std.conv : to;
 
-    foreach (T; AliasSeq!(string,wstring,dstring))
-    {
+    static foreach (T; AliasSeq!(string,wstring,dstring))
+    {{
         auto arr2 = "Здравствуй Мир Unicode".to!(T);
         auto arr = ["Здравствуй", "Мир", "Unicode"].to!(T[]);
         assert(join(arr) == "ЗдравствуйМирUnicode");
-        foreach (S; AliasSeq!(char,wchar,dchar))
-        {
+        static foreach (S; AliasSeq!(char,wchar,dchar))
+        {{
             auto jarr = arr.join(to!S(' '));
             static assert(is(typeof(jarr) == T));
             assert(jarr == arr2);
-        }
-        foreach (S; AliasSeq!(string,wstring,dstring))
-        {
+        }}
+        static foreach (S; AliasSeq!(string,wstring,dstring))
+        {{
             auto jarr = arr.join(to!S(" "));
             static assert(is(typeof(jarr) == T));
             assert(jarr == arr2);
-        }
-    }
+        }}
+    }}
 
-    foreach (T; AliasSeq!(string,wstring,dstring))
-    {
+    static foreach (T; AliasSeq!(string,wstring,dstring))
+    {{
         auto arr2 = "Здравствуй\u047CМир\u047CUnicode".to!(T);
         auto arr = ["Здравствуй", "Мир", "Unicode"].to!(T[]);
-        foreach (S; AliasSeq!(wchar,dchar))
-        {
+        static foreach (S; AliasSeq!(wchar,dchar))
+        {{
             auto jarr = arr.join(to!S('\u047C'));
             static assert(is(typeof(jarr) == T));
             assert(jarr == arr2);
-        }
-    }
+        }}
+    }}
 
     const string[] arr = ["apple", "banana"];
     assert(arr.join(',') == "apple,banana");
@@ -1969,8 +1969,8 @@ if (isInputRange!RoR &&
     import std.conv : to;
     import std.range;
 
-    foreach (R; AliasSeq!(string, wstring, dstring))
-    {
+    static foreach (R; AliasSeq!(string, wstring, dstring))
+    {{
         R word1 = "日本語";
         R word2 = "paul";
         R word3 = "jerry";
@@ -1986,8 +1986,8 @@ if (isInputRange!RoR &&
         auto filteredLenWordsArr = [filteredLenWord1, filteredLenWord2, filteredLenWord3];
         auto filteredWords    = filter!"true"(filteredWordsArr);
 
-        foreach (S; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (S; AliasSeq!(string, wstring, dstring))
+        {{
             assert(join(filteredWords, to!S(", ")) == "日本語, paul, jerry");
             assert(join(filteredWords, to!(ElementType!S)(',')) == "日本語,paul,jerry");
             assert(join(filteredWordsArr, to!(ElementType!(S))(',')) == "日本語,paul,jerry");
@@ -2021,7 +2021,7 @@ if (isInputRange!RoR &&
             assert(join(filteredLenWordsArr, filterComma) == "日本語, paul, jerry");
             assert(join(filter!"true"(words), filterComma) == "日本語, paul, jerry");
             assert(join(words, filterComma) == "日本語, paul, jerry");
-        }();
+        }}
 
         assert(join(filteredWords) == "日本語pauljerry");
         assert(join(filteredWordsArr) == "日本語pauljerry");
@@ -2047,7 +2047,7 @@ if (isInputRange!RoR &&
 
         assert(join(filter!"true"(cast(R[])[])).empty);
         assert(join(cast(R[])[]).empty);
-    }
+    }}
 
     assert(join([[1, 2], [41, 42]], [5, 6]) == [1, 2, 5, 6, 41, 42]);
     assert(join([[1, 2], [41, 42]], cast(int[])[]) == [1, 2, 41, 42]);
@@ -2190,10 +2190,10 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
     import std.algorithm.comparison : cmp;
     import std.conv : to;
 
-    foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
+    static foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
-        foreach (T; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (T; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
+        {{
             auto s = to!S("This is a foo foo list");
             auto from = to!T("foo");
             auto into = to!S("silly");
@@ -2209,7 +2209,7 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
             assert(i == 0);
 
             assert(replace(r, to!S("won't find this"), to!S("whatever")) is r);
-        }();
+        }}
     }
 
     immutable s = "This is a foo foo list";
@@ -2227,15 +2227,15 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
         this(C[] arr){ desired = arr; }
         void put(C[] part){ assert(skipOver(desired, part)); }
     }
-    foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
-    {
+    static foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
+    {{
         alias Char = ElementEncodingType!S;
         S s = to!S("yet another dummy text, yet another ...");
         S from = to!S("yet another");
         S into = to!S("some");
         replaceInto(CheckOutput!(Char)(to!S("some dummy text, some ..."))
                     , s, from, into);
-    }
+    }}
 }
 
 /++
@@ -2631,12 +2631,12 @@ if (isDynamicArray!(E[]) &&
     import std.algorithm.comparison : cmp;
     import std.conv : to;
 
-    foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
+    static foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
                           const(char[]), immutable(char[])))
     {
-        foreach (T; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
+        static foreach (T; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
                               const(char[]), immutable(char[])))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {{
             auto s = to!S("This is a foo foo list");
             auto s2 = to!S("Thüs is a ßöö foo list");
             auto from = to!T("foo");
@@ -2658,7 +2658,7 @@ if (isDynamicArray!(E[]) &&
             assert(cmp(r3, "This is a foo foo list") == 0);
 
             assert(replaceFirst(r3, to!T("won't find"), to!T("whatever")) is r3);
-        }();
+        }}
     }
 }
 
@@ -2744,12 +2744,12 @@ if (isDynamicArray!(E[]) &&
     import std.algorithm.comparison : cmp;
     import std.conv : to;
 
-    foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
+    static foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
                           const(char[]), immutable(char[])))
     {
-        foreach (T; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
+        static foreach (T; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
                               const(char[]), immutable(char[])))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {{
             auto s = to!S("This is a foo foo list");
             auto s2 = to!S("Thüs is a ßöö ßöö list");
             auto from = to!T("foo");
@@ -2771,7 +2771,7 @@ if (isDynamicArray!(E[]) &&
             assert(cmp(r3, "This is a foo foo list") == 0);
 
             assert(replaceLast(r3, to!T("won't find"), to!T("whatever")) is r3);
-        }();
+        }}
     }
 }
 
@@ -3393,7 +3393,7 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
     catch (Exception) assert(0);
 
     // Issue 5663 & 9725 tests
-    foreach (S; AliasSeq!(char[], const(char)[], string))
+    static foreach (S; AliasSeq!(char[], const(char)[], string))
     {
         {
             Appender!S app5663i;

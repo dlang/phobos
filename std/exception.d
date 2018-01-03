@@ -457,14 +457,12 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
 // purity and safety inference test
 @system unittest
 {
-    import std.meta : AliasSeq;
-
-    foreach (EncloseSafe; AliasSeq!(false, true))
-    foreach (EnclosePure; AliasSeq!(false, true))
+    static foreach (EncloseSafe; [false, true])
+    static foreach (EnclosePure; [false, true])
     {
-        foreach (BodySafe; AliasSeq!(false, true))
-        foreach (BodyPure; AliasSeq!(false, true))
-        {
+        static foreach (BodySafe; [false, true])
+        static foreach (BodyPure; [false, true])
+        {{
             enum code =
                 "delegate void() " ~
                 (EncloseSafe ? "@safe " : "") ~
@@ -485,7 +483,7 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
                         "code = ", code);
 
             static assert(__traits(compiles, mixin(code)()) == expect);
-        }
+        }}
     }
 }
 

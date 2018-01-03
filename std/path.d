@@ -3587,7 +3587,7 @@ unittest
     else static assert(0);
 
     import std.meta : AliasSeq;
-    foreach (T; AliasSeq!(char[], const(char)[], string, wchar[],
+    static foreach (T; AliasSeq!(char[], const(char)[], string, wchar[],
         const(wchar)[], wstring, dchar[], const(dchar)[], dstring))
     {
         foreach (fn; valid)

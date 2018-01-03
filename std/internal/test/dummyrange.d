@@ -540,7 +540,7 @@ if (is(T == TestFoo))
 
     import std.meta : AliasSeq;
 
-    foreach (S; AliasSeq!(uint, double, TestFoo))
+    static foreach (S; AliasSeq!(uint, double, TestFoo))
     {
         foreach (T; AllDummyRangesType!(S[]))
         {

@@ -1560,10 +1560,10 @@ unittest
     import std.conv : to;
     import std.meta : AliasSeq;
 
-    foreach (T1; AliasSeq!(BigInt, const(BigInt), immutable(BigInt)))
+    static foreach (T1; AliasSeq!(BigInt, const(BigInt), immutable(BigInt)))
     {
-        foreach (T2; AliasSeq!(BigInt, const(BigInt), immutable(BigInt)))
-        {
+        static foreach (T2; AliasSeq!(BigInt, const(BigInt), immutable(BigInt)))
+        {{
             T1 t1 = 2;
             T2 t2 = t1;
 
@@ -1578,7 +1578,7 @@ unittest
 
             assert(t2_2 == t1);
             assert(t2_2 == 2);
-        }
+        }}
     }
 
     BigInt n = 2;
@@ -1640,7 +1640,7 @@ unittest
     BigInt x3 = "123456789123456789123456789";
 
     import std.meta : AliasSeq;
-    foreach (T; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    static foreach (T; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         assert((x1 * T.max) / T.max == x1);
         assert((x2 * T.max) / T.max == x2);
@@ -1668,7 +1668,7 @@ unittest
 {
     BigInt x = 1;
     import std.meta : AliasSeq;
-    foreach (Int; AliasSeq!(byte, ubyte, short, ushort, int, uint))
+    static foreach (Int; AliasSeq!(byte, ubyte, short, ushort, int, uint))
     {
         assert(is(typeof(x % Int(1)) == int));
     }

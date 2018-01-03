@@ -97,14 +97,14 @@ public:
         assert(abs(norm1 - norm2) <= seconds(2));
 
         import std.meta : AliasSeq;
-        foreach (ct; AliasSeq!(ClockType.coarse, ClockType.precise, ClockType.second))
-        {
+        static foreach (ct; AliasSeq!(ClockType.coarse, ClockType.precise, ClockType.second))
+        {{
             scope(failure) writefln("ClockType.%s", ct);
             auto value1 = Clock.currTime!ct;
             auto value2 = Clock.currTime!ct(UTC());
             assert(value1 <= value2, format("%s %s", value1, value2));
             assert(abs(value1 - value2) <= seconds(2));
-        }
+        }}
     }
 
 
@@ -272,14 +272,14 @@ public:
         assert(norm1 <= norm2, format("%s %s", norm1, norm2));
         assert(abs(norm1 - norm2) <= limit);
 
-        foreach (ct; AliasSeq!(ClockType.coarse, ClockType.precise, ClockType.second))
-        {
+        static foreach (ct; AliasSeq!(ClockType.coarse, ClockType.precise, ClockType.second))
+        {{
             scope(failure) writefln("ClockType.%s", ct);
             auto value1 = Clock.currStdTime!ct;
             auto value2 = Clock.currStdTime!ct;
             assert(value1 <= value2, format("%s %s", value1, value2));
             assert(abs(value1 - value2) <= limit);
-        }
+        }}
     }
 
 
@@ -2120,7 +2120,7 @@ public:
         import std.meta : AliasSeq;
         import core.time;
         assert(SysTime(DateTime(1970, 1, 1), UTC()).toUnixTime() == 0);
-        foreach (units; AliasSeq!("hnsecs", "usecs", "msecs"))
+        static foreach (units; ["hnsecs", "usecs", "msecs"])
             assert(SysTime(DateTime(1970, 1, 1, 0, 0, 0), dur!units(1), UTC()).toUnixTime() == 0);
         assert(SysTime(DateTime(1970, 1, 1, 0, 0, 1), UTC()).toUnixTime() == 1);
         assert(SysTime(DateTime(1969, 12, 31, 23, 59, 59), hnsecs(9_999_999), UTC()).toUnixTime() == 0);
@@ -8408,9 +8408,9 @@ public:
     {
         import std.conv : to;
         import std.meta : AliasSeq;
-        foreach (C; AliasSeq!(char, wchar, dchar))
+        static foreach (C; AliasSeq!(char, wchar, dchar))
         {
-            foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
+            static foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
             {
                 assert(SysTime.fromISOString(to!S("20121221T141516Z")) ==
                        SysTime(DateTime(2012, 12, 21, 14, 15, 16), UTC()));
@@ -8651,9 +8651,9 @@ public:
         import core.time;
         import std.conv : to;
         import std.meta : AliasSeq;
-        foreach (C; AliasSeq!(char, wchar, dchar))
+        static foreach (C; AliasSeq!(char, wchar, dchar))
         {
-            foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
+            static foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
             {
                 assert(SysTime.fromISOExtString(to!S("2012-12-21T14:15:16Z")) ==
                        SysTime(DateTime(2012, 12, 21, 14, 15, 16), UTC()));
@@ -8897,9 +8897,9 @@ public:
         import core.time;
         import std.conv : to;
         import std.meta : AliasSeq;
-        foreach (C; AliasSeq!(char, wchar, dchar))
+        static foreach (C; AliasSeq!(char, wchar, dchar))
         {
-            foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
+            static foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
             {
                 assert(SysTime.fromSimpleString(to!S("2012-Dec-21 14:15:16Z")) ==
                        SysTime(DateTime(2012, 12, 21, 14, 15, 16), UTC()));
@@ -9841,11 +9841,11 @@ version(unittest) void testBadParse822(alias cr)(string str, size_t line = __LIN
         static auto start() { Rand3Letters retval; retval.popFront(); return retval; }
     }
 
-    foreach (cr; AliasSeq!(function(string a){return cast(char[]) a;},
+    static foreach (cr; AliasSeq!(function(string a){return cast(char[]) a;},
                            function(string a){return cast(ubyte[]) a;},
                            function(string a){return a;},
                            function(string a){return map!(b => cast(char) b)(a.representation);}))
-    (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+    {{
         scope(failure) writeln(typeof(cr).stringof);
         alias test = testParse822!cr;
         alias testBad = testBadParse822!cr;
@@ -10083,7 +10083,7 @@ version(unittest) void testBadParse822(alias cr)(string str, size_t line = __LIN
             testBad(cast(string) currStr);
             testBad((cast(string) currStr) ~ "                                    ");
         }
-    }();
+    }}
 }
 
 // Obsolete Format per section 4.3 of RFC 5322.
@@ -10107,11 +10107,11 @@ version(unittest) void testBadParse822(alias cr)(string str, size_t line = __LIN
     auto tooLate1 = SysTime(Date(10_000, 1, 1), UTC());
     auto tooLate2 = SysTime(DateTime(12_007, 12, 31, 12, 22, 19), UTC());
 
-    foreach (cr; AliasSeq!(function(string a){return cast(char[]) a;},
+    static foreach (cr; AliasSeq!(function(string a){return cast(char[]) a;},
                            function(string a){return cast(ubyte[]) a;},
                            function(string a){return a;},
                            function(string a){return map!(b => cast(char) b)(a.representation);}))
-    (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+    {{
         scope(failure) writeln(typeof(cr).stringof);
         alias test = testParse822!cr;
         {
@@ -10301,7 +10301,7 @@ version(unittest) void testBadParse822(alias cr)(string str, size_t line = __LIN
                 assert(collectExceptionMsg!DateTimeException(parseRFC822DateTime(value)) == tooShortMsg);
             }
         }
-    }();
+    }}
 }
 
 
@@ -10601,9 +10601,9 @@ if (isRandomAccessRange!R && hasSlicing!R && hasLength!R &&
     import std.stdio : writeln;
     import std.string : representation;
 
-    foreach (cr; AliasSeq!(function(string a){return cast(ubyte[]) a;},
+    static foreach (cr; AliasSeq!(function(string a){return cast(ubyte[]) a;},
                            function(string a){return map!(b => cast(char) b)(a.representation);}))
-    (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+    {
         scope(failure) writeln(typeof(cr).stringof);
 
         assert(_stripCFWS(cr("")).empty);
@@ -10691,7 +10691,7 @@ if (isRandomAccessRange!R && hasSlicing!R && hasLength!R &&
         assert(equal(_stripCFWS(cr(" \n (hello) \n (hello) \n \n hello")), cr("hello")));
         assert(equal(_stripCFWS(cr(" \n \n (hello)\t\n (hello) \n hello")), cr("hello")));
         assert(equal(_stripCFWS(cr(" \n\t\n\t(hello)\t\n (hello) \n hello")), cr("hello")));
-    }();
+    }
 }
 
 // This is so that we don't have to worry about std.conv.to throwing. It also
