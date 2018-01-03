@@ -4082,12 +4082,13 @@ if (isConvertibleToString!Range)
     assert(testAliasedString!centerJustifier("hello", 8));
 }
 
-@system unittest
+@safe unittest
 {
     static auto byFwdRange(dstring s)
     {
         static struct FRange
         {
+            @safe:
             dstring str;
             this(dstring s) { str = s; }
             @property bool empty() { return str.length == 0; }
@@ -4141,7 +4142,7 @@ if ((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
 }
 
 ///
-@system pure unittest
+@safe pure unittest
 {
     assert(detab(" \n\tx", 9) == " \n         x");
 }
@@ -4294,7 +4295,7 @@ if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
 }
 
 ///
-@system pure unittest
+@safe pure unittest
 {
     import std.array : array;
 
@@ -4312,7 +4313,7 @@ if (isConvertibleToString!Range)
     assert(testAliasedString!detabber(  "  ab\t asdf ", 8));
 }
 
-@system pure unittest
+@safe pure unittest
 {
     import std.algorithm.comparison : cmp;
     import std.conv : to;
@@ -4343,7 +4344,7 @@ if (isConvertibleToString!Range)
 }
 
 ///
-@system pure unittest
+@safe pure unittest
 {
     import std.array : array;
     import std.utf : byChar, byWchar;

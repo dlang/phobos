@@ -247,7 +247,7 @@ private:
 }
 
 ///
-@system unittest
+@safe unittest
 {
     static struct S
     {
@@ -371,7 +371,7 @@ private:
     assert(BarImpl.count == 0);
 }
 
-@system unittest
+@safe unittest
 {
     struct Foo
     {
@@ -2026,9 +2026,9 @@ template Rebindable(T)
 }
 
 ///Regular $(D const) object references cannot be reassigned.
-@system unittest
+@safe unittest
 {
-    class Widget { int x; int y() const { return x; } }
+    class Widget { int x; int y() @safe const { return x; } }
     const a = new Widget;
     // Fine
     a.y();
@@ -2042,9 +2042,9 @@ template Rebindable(T)
     However, $(D Rebindable!(Widget)) does allow reassignment,
     while otherwise behaving exactly like a $(D const Widget).
  */
-@system unittest
+@safe unittest
 {
-    class Widget { int x; int y() const { return x; } }
+    class Widget { int x; int y() const @safe { return x; } }
     auto a = Rebindable!(const Widget)(new Widget);
     // Fine
     a.y();
@@ -2481,7 +2481,7 @@ Returns:
     }
 
 ///
-@system unittest
+@safe unittest
 {
     Nullable!int ni;
     assert(ni.isNull);
@@ -3036,7 +3036,7 @@ Returns:
     }
 
 ///
-@system unittest
+@safe unittest
 {
     Nullable!(int, -1) ni;
     //Initialized to "null" state
@@ -3074,7 +3074,7 @@ Forces $(D this) to the null state.
     }
 
 ///
-@system unittest
+@safe unittest
 {
     Nullable!(int, -1) ni = 0;
     assert(!ni.isNull);

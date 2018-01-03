@@ -257,7 +257,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementType!R) ||
     }
 }
 
-@system unittest
+@safe unittest
 {
     import std.array;
     import std.utf : byDchar;
@@ -286,7 +286,7 @@ if (isBidirectionalRange!R && isSomeChar!(ElementType!R) ||
     }
 }
 
-@system unittest
+@safe unittest
 {
     import std.array;
     import std.utf : byDchar;
@@ -304,7 +304,7 @@ if (isBidirectionalRange!R && isSomeChar!(ElementType!R) ||
     return ltrimDirSeparators(rtrimDirSeparators(path));
 }
 
-@system unittest
+@safe unittest
 {
     import std.array;
     import std.utf : byDchar;
@@ -314,9 +314,6 @@ if (isBidirectionalRange!R && isSomeChar!(ElementType!R) ||
 
     assert(trimDirSeparators(MockBiRange!char("//abc//")).array == "abc");
 }
-
-
-
 
 /** This $(D enum) is used as a template argument to functions which
     compare file names, and determines whether the comparison is
@@ -636,7 +633,7 @@ if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementT
     assert(sa.dirName == "file/path/to");
 }
 
-@system unittest
+@safe unittest
 {
     static assert(dirName("dir/file") == "dir");
 
@@ -2805,7 +2802,7 @@ string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
 }
 
 ///
-@system unittest
+@safe unittest
 {
     assert(relativePath("foo") == "foo");
 
@@ -2828,7 +2825,7 @@ string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
     }
 }
 
-@system unittest
+@safe unittest
 {
     import std.exception;
     assert(relativePath("foo") == "foo");
@@ -2936,7 +2933,7 @@ if ((isNarrowString!R1 ||
 }
 
 ///
-@system unittest
+@safe unittest
 {
     import std.array;
     version (Posix)
@@ -2971,7 +2968,7 @@ if (isConvertibleToString!R1 || isConvertibleToString!R2)
     return asRelativePath!(cs, Types)(path, base);
 }
 
-@system unittest
+@safe unittest
 {
     import std.array;
     version (Posix)
@@ -2985,7 +2982,7 @@ if (isConvertibleToString!R1 || isConvertibleToString!R2)
     assert(asRelativePath("foo"d.byDchar, TestAliasedString("bar")).array == "foo");
 }
 
-@system unittest
+@safe unittest
 {
     import std.array, std.utf : bCU=byCodeUnit;
     version (Posix)
