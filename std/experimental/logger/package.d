@@ -3,7 +3,7 @@ Implements logging facilities.
 
 Copyright: Copyright Robert "burner" Schadek 2013 --
 License: <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
-Authors: $(WEB http://www.svs.informatik.uni-oldenburg.de/60865.html, Robert burner Schadek)
+Authors: $(HTTP www.svs.informatik.uni-oldenburg.de/60865.html, Robert burner Schadek)
 
 $(H3 Basic Logging)
 
@@ -20,7 +20,7 @@ void main() {
 }
 -------------
 This will print a message to the $(D stderr) device. The message will contain
-the filename, the linenumber, the name of the surrounding function, the time
+the filename, the line number, the name of the surrounding function, the time
 and the message.
 
 More complex log call can go along the lines like:
@@ -48,15 +48,17 @@ Individual $(D Logger) and the global log functions share commonly named
 functions to log data.
 
 The names of the functions are as follows:
-$(LI $(D log))
-$(LI $(D trace))
-$(LI $(D info))
-$(LI $(D warning))
-$(LI $(D critical))
-$(LI $(D fatal))
+$(UL
+    $(LI $(D log))
+    $(LI $(D trace))
+    $(LI $(D info))
+    $(LI $(D warning))
+    $(LI $(D critical))
+    $(LI $(D fatal))
+)
 The default $(D Logger) will by default log to $(D stderr) and has a default
 $(D LogLevel) of $(D LogLevel.all). The default Logger can be accessed by
-using the property called $(D sharedLog). This property a reference to the
+using the property called $(D sharedLog). This property is a reference to the
 current default $(D Logger). This reference can be used to assign a new
 default $(D Logger).
 -------------
@@ -68,11 +70,11 @@ required $(D Logger).
 
 $(H3 Logging Fundamentals)
 $(H4 LogLevel)
-The $(D LogLevel) of an log call can be defined in two ways. The first is by
-calling $(D log) and passing the $(D LogLevel) explicit as the first argument.
+The $(D LogLevel) of a log call can be defined in two ways. The first is by
+calling $(D log) and passing the $(D LogLevel) explicitly as the first argument.
 The second way of setting the $(D LogLevel) of a
 log call, is by calling either $(D trace), $(D info), $(D warning),
-$(D critical), or $(D fatal). The log call will than have the respective
+$(D critical), or $(D fatal). The log call will then have the respective
 $(D LogLevel). If no $(D LogLevel) is defined the log call will use the
 current $(D LogLevel) of the used $(D Logger). If data is logged with
 $(D LogLevel) $(D fatal) by default an $(D Error) will be thrown.
@@ -90,29 +92,30 @@ $(D bool).
 
 $(H4 Filtering Log Messages)
 Messages are logged if the $(D LogLevel) of the log message is greater than or
-equal to than the $(D LogLevel) of the used $(D Logger) and additionally if the
-$(D LogLevel) of the log message is greater equal to the global $(D LogLevel).
+equal to the $(D LogLevel) of the used $(D Logger) and additionally if the
+$(D LogLevel) of the log message is greater than or equal to the global $(D LogLevel).
 If a condition is passed into the log call, this condition must be true.
 
 The global $(D LogLevel) is accessible by using $(D globalLogLevel).
-To assign the $(D LogLevel) of a $(D Logger) use the $(D logLevel) property of
+To assign a $(D LogLevel) of a $(D Logger) use the $(D logLevel) property of
 the logger.
 
-$(H4 Printf Sytle Logging)
+$(H4 Printf Style Logging)
 If $(D printf)-style logging is needed add a $(B f) to the logging call, such as
-$(D myLogger.infof("Hello %s", "world");) or $(fatalf("errno %d", 1337))
-The additional $(B f) enables $(D printf)-style logging for call combinations of
-explicit $(D LogLevel) and conditional logging functions and methods.
+$(D myLogger.infof("Hello %s", "world");) or $(D fatalf("errno %d", 1337)).
+The additional $(B f) appended to the function name enables $(D printf)-style
+logging for all combinations of explicit $(D LogLevel) and conditional
+logging functions and methods.
 
 $(H4 Thread Local Redirection)
 Calls to the free standing log functions are not directly forwarded to the
 global $(D Logger) $(D sharedLog). Actually, a thread local $(D Logger) of
-type $(D StdForwardLogger) process the log call and then, by default, forward
+type $(D StdForwardLogger) processes the log call and then, by default, forwards
 the created $(D Logger.LogEntry) to the $(D sharedLog) $(D Logger).
-The thread local $(D Logger) is accessable by the $(D stdThreadLocalLog)
+The thread local $(D Logger) is accessible by the $(D stdThreadLocalLog)
 property. This property allows to assign user defined $(D Logger). The default
 $(D LogLevel) of the $(D stdThreadLocalLog) $(D Logger) is $(D LogLevel.all)
-and it will therefore forward all messaged to the $(D sharedLog) $(D Logger).
+and it will therefore forward all messages to the $(D sharedLog) $(D Logger).
 The $(D LogLevel) of the $(D stdThreadLocalLog) can be used to filter log
 calls before they reach the $(D sharedLog) $(D Logger).
 
@@ -123,9 +126,9 @@ method.
 -------------
 class MyCustomLogger : Logger
 {
-    this(string newName, LogLevel lv) @safe
+    this(LogLevel lv) @safe
     {
-        super(newName, lv);
+        super(lv);
     }
 
     override void writeLogMsg(ref LogEntry payload)
@@ -134,13 +137,13 @@ class MyCustomLogger : Logger
     }
 }
 
-auto logger = new MyCustomLogger();
-logger.log("Awesome log message");
+auto logger = new MyCustomLogger(LogLevel.info);
+logger.log("Awesome log message with LogLevel.info");
 -------------
 
 To gain more precise control over the logging process, additionally to
-overwriting the $(D writeLogMsg) method the methods $(D beginLogMsg),
-$(D logMsgPart) and $(D finishLogMsg) can be overwritten.
+overriding the $(D writeLogMsg) method the methods $(D beginLogMsg),
+$(D logMsgPart) and $(D finishLogMsg) can be overridden.
 
 $(H3 Compile Time Disabling of $(D Logger))
 In order to disable logging at compile time, pass $(D StdLoggerDisableLogging) as a
@@ -178,5 +181,5 @@ module std.experimental.logger;
 
 public import std.experimental.logger.core;
 public import std.experimental.logger.filelogger;
-public import std.experimental.logger.nulllogger;
 public import std.experimental.logger.multilogger;
+public import std.experimental.logger.nulllogger;

@@ -4,7 +4,7 @@
     Copyright: Copyright 2003-2004 by Matthew Wilson and Synesis Software
                Written by Matthew Wilson
 
-    License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+    License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
     Author:    Matthew Wilson, Kenji Hara
 
@@ -38,22 +38,21 @@
 module std.windows.registry;
 version (Windows):
 
-import std.array;
-import std.system : Endian, endian;
-import std.exception;
 import core.sys.windows.windows;
-import std.windows.syserror;
+import std.array;
 import std.conv;
-import std.utf : toUTF8, toUTF16;
-private import std.internal.windows.advapi32;
+import std.exception;
 import std.internal.cstring;
+import std.internal.windows.advapi32;
+import std.system : Endian, endian;
+import std.windows.syserror;
 
 //debug = winreg;
 debug(winreg) import std.stdio;
 
 private
 {
-    extern (Windows) int lstrlenW(LPCWSTR lpString);
+    import core.sys.windows.winbase : lstrlenW;
 
     void enforceSucc(LONG res, lazy string message, string fn = __FILE__, size_t ln = __LINE__)
     {
@@ -84,7 +83,7 @@ class Win32Exception : WindowsException
 
 version(unittest) import std.string : startsWith, endsWith;
 
-unittest
+@safe unittest
 {
     // Test that we can throw and catch one by its own type
     string message = "Test W1";
@@ -94,7 +93,7 @@ unittest
     assert(e.msg.startsWith(message));
 }
 
-unittest
+@system unittest
 {
     // ditto
     string message = "Test W2";
@@ -139,7 +138,7 @@ public:
     }
 }
 
-unittest
+@system unittest
 {
     // (i) Test that we can throw and catch one by its own type
     string message = "Test 1";
@@ -151,7 +150,7 @@ unittest
     assert(e.msg.startsWith(message));
 }
 
-unittest
+@safe unittest
 {
     // ditto
     string message = "Test 2";
@@ -224,27 +223,26 @@ enum REG_VALUE_TYPE : DWORD
 
 /* ************* private *************** */
 
-private
-{
-    enum DWORD DELETE                   =   0x00010000L;
-    enum DWORD READ_CONTROL             =   0x00020000L;
-    enum DWORD WRITE_DAC                =   0x00040000L;
-    enum DWORD WRITE_OWNER              =   0x00080000L;
-    enum DWORD SYNCHRONIZE              =   0x00100000L;
+import core.sys.windows.winnt :
+    DELETE                  ,
+    READ_CONTROL            ,
+    WRITE_DAC               ,
+    WRITE_OWNER             ,
+    SYNCHRONIZE             ,
 
-    enum DWORD STANDARD_RIGHTS_REQUIRED =   0x000F0000L;
+    STANDARD_RIGHTS_REQUIRED,
 
-    enum DWORD STANDARD_RIGHTS_READ     =   0x00020000L/* READ_CONTROL */;
-    enum DWORD STANDARD_RIGHTS_WRITE    =   0x00020000L/* READ_CONTROL */;
-    enum DWORD STANDARD_RIGHTS_EXECUTE  =   0x00020000L/* READ_CONTROL */;
+    STANDARD_RIGHTS_READ    ,
+    STANDARD_RIGHTS_WRITE   ,
+    STANDARD_RIGHTS_EXECUTE ,
 
-    enum DWORD STANDARD_RIGHTS_ALL      =   0x001F0000L;
+    STANDARD_RIGHTS_ALL     ,
 
-    enum DWORD SPECIFIC_RIGHTS_ALL      =   0x0000FFFFL;
+    SPECIFIC_RIGHTS_ALL     ;
 
-    enum DWORD REG_CREATED_NEW_KEY      =   0x00000001;
-    enum DWORD REG_OPENED_EXISTING_KEY  =   0x00000002;
-}
+import core.sys.windows.winreg :
+    REG_CREATED_NEW_KEY     ,
+    REG_OPENED_EXISTING_KEY ;
 
 // Returns samDesired but without WoW64 flags if not in WoW64 mode
 // for compatibility with Windows 2000
@@ -283,9 +281,9 @@ body
      * these hive keys is ignored, we'd rather not trust the Win32
      * API.
      */
-    if (cast(uint)hkey & 0x80000000)
+    if (cast(uint) hkey & 0x80000000)
     {
-        switch (cast(uint)hkey)
+        switch (cast(uint) hkey)
         {
             case HKEY_CLASSES_ROOT:
             case HKEY_CURRENT_USER:
@@ -377,9 +375,9 @@ in
 body
 {
     /* Can't duplicate standard keys, but don't need to, so can just return */
-    if (cast(uint)hkey & 0x80000000)
+    if (cast(uint) hkey & 0x80000000)
     {
-        switch (cast(uint)hkey)
+        switch (cast(uint) hkey)
         {
             case HKEY_CLASSES_ROOT:
             case HKEY_CURRENT_USER:
@@ -558,19 +556,19 @@ body
             if (wstr.length && wstr[$-1] == '\0')
                 wstr.length = wstr.length - 1;
             assert(wstr.length == 0 || wstr[$-1] != '\0');
-            value = toUTF8(wstr);
+            value = wstr.to!string;
             break;
 
         case REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN:
             version(LittleEndian)
                 value = to!string(u.dw);
             else
-                value = to!string(core.bitop.bswap(u.dw));
+                value = to!string(bswap(u.dw));
             break;
 
         case REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
             version(LittleEndian)
-                value = to!string(core.bitop.bswap(u.dw));
+                value = to!string(bswap(u.dw));
             else
                 value = to!string(u.dw);
             break;
@@ -624,7 +622,7 @@ body
     value.length = list.length;
     foreach (i, ref v; value)
     {
-        v = toUTF8(list[i]);
+        v = list[i].to!string;
     }
 }
 
@@ -651,12 +649,12 @@ body
             version(LittleEndian)
                 static assert(REG_VALUE_TYPE.REG_DWORD == REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN);
             else
-                value = core.bitop.bswap(value);
+                value = bswap(value);
             break;
 
         case REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
             version(LittleEndian)
-                value = core.bitop.bswap(value);
+                value = bswap(value);
             else
                 static assert(REG_VALUE_TYPE.REG_DWORD == REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN);
             break;
@@ -737,45 +735,47 @@ body
         "Value cannot be set: \"" ~ subKey ~ "\"");
 }
 
-private void regProcessNthKey(HKEY hkey, scope void delegate(scope LONG delegate(DWORD, out string)) dg)
+private void regProcessNthKey(Key key, scope void delegate(scope LONG delegate(DWORD, out string)) dg)
 {
     DWORD cSubKeys;
     DWORD cchSubKeyMaxLen;
 
-    immutable res = regGetNumSubKeys(hkey, cSubKeys, cchSubKeyMaxLen);
+    immutable res = regGetNumSubKeys(key.m_hkey, cSubKeys, cchSubKeyMaxLen);
     assert(res == ERROR_SUCCESS);
 
     wchar[] sName = new wchar[cchSubKeyMaxLen + 1];
 
+    // Capture `key` in the lambda to keep the object alive (and so its HKEY handle open).
     dg((DWORD index, out string name)
     {
         DWORD cchName;
-        immutable res = regEnumKeyName(hkey, index, sName, cchName);
+        immutable res = regEnumKeyName(key.m_hkey, index, sName, cchName);
         if (res == ERROR_SUCCESS)
         {
-            name = toUTF8(sName[0 .. cchName]);
+            name = sName[0 .. cchName].to!string;
         }
         return res;
     });
 }
 
-private void regProcessNthValue(HKEY hkey, scope void delegate(scope LONG delegate(DWORD, out string)) dg)
+private void regProcessNthValue(Key key, scope void delegate(scope LONG delegate(DWORD, out string)) dg)
 {
     DWORD cValues;
     DWORD cchValueMaxLen;
 
-    immutable res = regGetNumValues(hkey, cValues, cchValueMaxLen);
+    immutable res = regGetNumValues(key.m_hkey, cValues, cchValueMaxLen);
     assert(res == ERROR_SUCCESS);
 
     wchar[] sName = new wchar[cchValueMaxLen + 1];
 
+    // Capture `key` in the lambda to keep the object alive (and so its HKEY handle open).
     dg((DWORD index, out string name)
     {
         DWORD cchName;
-        immutable res = regEnumValueName(hkey, index, sName, cchName);
+        immutable res = regEnumValueName(key.m_hkey, index, sName, cchName);
         if (res == ERROR_SUCCESS)
         {
-            name = toUTF8(sName[0 .. cchName]);
+            name = sName[0 .. cchName].to!string;
         }
         return res;
     });
@@ -967,7 +967,7 @@ public:
         Params:
             name = The name of the key to delete. May not be $(D null).
      */
-    void deleteKey(string name, REGSAM access = cast(REGSAM)0)
+    void deleteKey(string name, REGSAM access = cast(REGSAM) 0)
     {
         enforce(!name.empty, new RegistryException("Key name is invalid"));
 
@@ -1099,7 +1099,7 @@ public:
         wstring[] data = new wstring[value.length+1];
         foreach (i, ref s; data[0..$-1])
         {
-            s = toUTF16(value[i]);
+            s = value[i].to!wstring;
         }
         data[$-1] = "\0";
         auto ws = std.array.join(data, "\0"w);
@@ -1236,7 +1236,7 @@ public:
             ExpandEnvironmentStringsW(srcTmp, newValue.ptr, to!DWORD(newValue.length)),
             "Failed to expand environment variables");
 
-        return toUTF8(newValue[0 .. count-1]); // remove trailing 0
+        return newValue[0 .. count-1].to!string; // remove trailing 0
     }
 
     /**
@@ -1291,12 +1291,6 @@ public:
         regQueryValue(m_key.m_hkey, m_name, value, m_type);
 
         return value;
-    }
-
-    deprecated("Please use value_QWORD instead.")
-    ulong value_QWORD_LITTLEENDIAN()
-    {
-        return value_QWORD;
     }
 
     /**
@@ -1396,7 +1390,7 @@ public:
     string getKeyName(size_t index)
     {
         string name;
-        regProcessNthKey(m_key.m_hkey, (scope LONG delegate(DWORD, out string) getName)
+        regProcessNthKey(m_key, (scope LONG delegate(DWORD, out string) getName)
         {
             enforceSucc(getName(to!DWORD(index), name), "Invalid key");
         });
@@ -1423,7 +1417,7 @@ public:
     int opApply(scope int delegate(ref string name) dg)
     {
         int result;
-        regProcessNthKey(m_key.m_hkey, (scope LONG delegate(DWORD, out string) getName)
+        regProcessNthKey(m_key, (scope LONG delegate(DWORD, out string) getName)
         {
             for (DWORD index = 0; !result; ++index)
             {
@@ -1493,7 +1487,7 @@ public:
     Key getKey(size_t index)
     {
         string name;
-        regProcessNthKey(m_key.m_hkey, (scope LONG delegate(DWORD, out string) getName)
+        regProcessNthKey(m_key, (scope LONG delegate(DWORD, out string) getName)
         {
             enforceSucc(getName(to!DWORD(index), name), "Invalid key");
         });
@@ -1520,7 +1514,7 @@ public:
     int opApply(scope int delegate(ref Key key) dg)
     {
         int result = 0;
-        regProcessNthKey(m_key.m_hkey, (scope LONG delegate(DWORD, out string) getName)
+        regProcessNthKey(m_key, (scope LONG delegate(DWORD, out string) getName)
         {
             for (DWORD index = 0; !result; ++index)
             {
@@ -1602,7 +1596,7 @@ public:
     string getValueName(size_t index)
     {
         string name;
-        regProcessNthValue(m_key.m_hkey, (scope LONG delegate(DWORD, out string) getName)
+        regProcessNthValue(m_key, (scope LONG delegate(DWORD, out string) getName)
         {
             enforceSucc(getName(to!DWORD(index), name), "Invalid value");
         });
@@ -1629,7 +1623,7 @@ public:
     int opApply(scope int delegate(ref string name) dg)
     {
         int result = 0;
-        regProcessNthValue(m_key.m_hkey, (scope LONG delegate(DWORD, out string) getName)
+        regProcessNthValue(m_key, (scope LONG delegate(DWORD, out string) getName)
         {
             for (DWORD index = 0; !result; ++index)
             {
@@ -1696,7 +1690,7 @@ public:
     Value getValue(size_t index)
     {
         string name;
-        regProcessNthValue(m_key.m_hkey, (scope LONG delegate(DWORD, out string) getName)
+        regProcessNthValue(m_key, (scope LONG delegate(DWORD, out string) getName)
         {
             enforceSucc(getName(to!DWORD(index), name), "Invalid value");
         });
@@ -1723,7 +1717,7 @@ public:
     int opApply(scope int delegate(ref Value value) dg)
     {
         int result = 0;
-        regProcessNthValue(m_key.m_hkey, (scope LONG delegate(DWORD, out string) getName)
+        regProcessNthValue(m_key, (scope LONG delegate(DWORD, out string) getName)
         {
             for (DWORD index = 0; !result; ++index)
             {
@@ -1745,7 +1739,7 @@ private:
 }
 
 
-unittest
+@system unittest
 {
     debug(winreg) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(winreg) writefln("std.windows.registry.unittest read");
@@ -1778,7 +1772,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     debug(winreg) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(winreg) writefln("std.windows.registry.unittest write");
@@ -1793,7 +1787,10 @@ unittest
     string unittestKeyName = "Temporary key for a D UnitTest which can be deleted afterwards";
     Key unittestKey = HKCU.createKey(unittestKeyName);
     assert(unittestKey);
-    Key cityKey = unittestKey.createKey("CityCollection using foreign names with umlauts and accents: \u00f6\u00e4\u00fc\u00d6\u00c4\u00dc\u00e0\u00e1\u00e2\u00df");
+    Key cityKey = unittestKey.createKey(
+        "CityCollection using foreign names with umlauts and accents: "
+        ~"\u00f6\u00e4\u00fc\u00d6\u00c4\u00dc\u00e0\u00e1\u00e2\u00df"
+    );
     cityKey.setValue("K\u00f6ln", "Germany"); // Cologne
     cityKey.setValue("\u041c\u0438\u043d\u0441\u043a", "Belarus"); // Minsk
     cityKey.setValue("\u5317\u4eac", "China"); // Bejing
@@ -1844,4 +1841,28 @@ unittest
 
     auto e = collectException!RegistryException(HKCU.getKey("cDhmxsX9K23a8Uf869uB"));
     assert(e.msg.endsWith(" (error 2)"));
+}
+
+@system unittest
+{
+    Key HKCU = Registry.currentUser;
+    assert(HKCU);
+
+    Key key = HKCU.getKey("Control Panel");
+    assert(key);
+    assert(key.keyCount >= 2);
+
+    // Make sure `key` isn't garbage-collected while iterating over it.
+    // Trigger a collection in the first iteration and check whether we
+    // make it successfully to the second iteration.
+    int i = 0;
+    foreach (name; key.keyNames)
+    {
+        if (i++ > 0)
+            break;
+
+        import core.memory;
+        GC.collect();
+    }
+    assert(i == 2);
 }

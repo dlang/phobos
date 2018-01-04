@@ -2,13 +2,14 @@
 Declarations for interfacing with the ODBC library.
 
 Adapted with minimal changes from the work of David L. Davis
-(refer to the $(WEB
-forum.dlang.org/thread/cfk7ql$(DOLLAR)1p4n$(DOLLAR)1@digitaldaemon.com#post-cfk7ql:241p4n:241:40digitaldaemon.com,
+(refer to the $(HTTP
+forum.dlang.org/post/cfk7ql$(DOLLAR)1p4n$(DOLLAR)1@digitaldaemon.com,
 original announcement)).
 
 `etc.c.odbc.sqlext.d` corresponds to the `sqlext.h` C header file.
 
-See_Also: $(LUCKY ODBC API Reference on MSN Online)
+See_Also: $(LINK2 https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/odbc-api-reference,
+          ODBC API Reference on MSN Online)
 */
 module etc.c.odbc.sqltypes;
 
@@ -18,59 +19,59 @@ extern (Windows):
 //alias void *HANDLE;
 
 //alias ubyte   SQLCHAR;
-alias char    SQLCHAR;
-alias byte    SQLSCHAR;
-alias ubyte   SQLDATE;
-alias ubyte   SQLDECIMAL;
-alias double  SQLDOUBLE;
-alias double  SQLFLOAT;
-alias int     SQLINTEGER;
-alias ushort  SQLUINTEGER;
-alias ubyte   SQLNUMERIC;
-alias float   SQLREAL;
-alias ubyte   SQLTIME;
-alias ubyte   SQLTIMESTAMP;
-alias ubyte   SQLVARCHAR;
-alias void *  SQLPOINTER;
-alias short   SQLSMALLINT;
-alias ushort  SQLUSMALLINT;
+alias SQLCHAR      = char;
+alias SQLSCHAR     = byte;
+alias SQLDATE      = ubyte;
+alias SQLDECIMAL   = ubyte;
+alias SQLDOUBLE    = double;
+alias SQLFLOAT     = double;
+alias SQLINTEGER   = int;
+alias SQLUINTEGER  = ushort;
+alias SQLNUMERIC   = ubyte;
+alias SQLREAL      = float;
+alias SQLTIME      = ubyte;
+alias SQLTIMESTAMP = ubyte;
+alias SQLVARCHAR   = ubyte;
+alias SQLPOINTER   = void*;
+alias SQLSMALLINT   = short;
+alias SQLUSMALLINT = ushort;
 
 // * function return type *
-alias SQLSMALLINT SQLRETURN;
+alias SQLRETURN = SQLSMALLINT;
 
 // * generic data structures *
-alias void *    SQLHANDLE;
-alias SQLHANDLE SQLHENV;
-alias SQLHANDLE SQLHDBC;
-alias SQLHANDLE SQLHSTMT;
-alias SQLHANDLE SQLHDESC;
+alias SQLHANDLE = void*;
+alias SQLHENV   = SQLHANDLE;
+alias SQLHDBC   = SQLHANDLE;
+alias SQLHSTMT  = SQLHANDLE;
+alias SQLHDESC  = SQLHANDLE;
 
 // * SQL portable types for C *
 //alias ubyte  UCHAR;  // std.c.windows.windows has this alias
 //alias char   UCHAR;
-alias byte   SCHAR;
+alias SCHAR   = byte;
 //alias SCHAR  SQLSCHAR;
-alias uint   DWORD;
-alias int    SDWORD;
-alias short  SWORD;
-alias uint   UDWORD;
-alias ushort UWORD;
-alias short  WORD;
+alias DWORD   = uint;
+alias SDWORD  = int;
+alias SWORD   = short;
+alias UDWORD  = uint ;
+alias UWORD   = ushort;
+alias WORD    = short;
 //alias UDWORD SQLUINTEGER;
-alias long   SLONG;
-alias short  SSHORT;
-alias ulong  ULONG;
-alias ushort USHORT;
-alias double SDOUBLE;
-alias double LDOUBLE;
-alias float  SFLOAT;
-alias void*  PTR;
-alias void*  HENV;
-alias void*  HDBC;
-alias void*  HSTMT;
-alias short  RETCODE;
-alias SQLPOINTER HWND;
-alias HWND   SQLHWND;
+alias SLONG   = long;
+alias SSHORT  = short;
+alias ULONG   = ulong;
+alias USHORT  = ushort;
+alias SDOUBLE = double;
+alias LDOUBLE = double;
+alias SFLOAT  = float;
+alias PTR     = void*;
+alias HENV    = void*;
+alias HDBC    = void*;
+alias HSTMT   = void*;
+alias RETCODE = short;
+alias HWND    = SQLPOINTER;
+alias SQLHWND = HWND;
 
 // * transfer types for DATE, TIME, TIMESTAMP *
 struct DATE_STRUCT
@@ -78,18 +79,18 @@ struct DATE_STRUCT
     SQLSMALLINT    year;
     SQLUSMALLINT   month;
     SQLUSMALLINT   day;
-};
+}
 
-alias DATE_STRUCT SQL_DATE_STRUCT;
+alias SQL_DATE_STRUCT = DATE_STRUCT;
 
 struct TIME_STRUCT
 {
     SQLUSMALLINT hour;
     SQLUSMALLINT minute;
     SQLUSMALLINT second;
-};
+}
 
-alias TIME_STRUCT SQL_TIME_STRUCT;
+alias SQL_TIME_STRUCT = TIME_STRUCT;
 
 struct TIMESTAMP_STRUCT
 {
@@ -100,9 +101,9 @@ struct TIMESTAMP_STRUCT
     SQLUSMALLINT   minute;
     SQLUSMALLINT   second;
     SQLUINTEGER    fraction;
-};
+}
 
-alias TIMESTAMP_STRUCT SQL_TIMESTAMP_STRUCT;
+alias SQL_TIMESTAMP_STRUCT = TIMESTAMP_STRUCT;
 
 /+
  ' enumerations for DATETIME_INTERVAL_SUBCODE values for interval data types
@@ -129,7 +130,7 @@ struct SQL_YEAR_MONTH_STRUCT
 {
     SQLUINTEGER year;
     SQLUINTEGER month;
-};
+}
 
 struct SQL_DAY_SECOND_STRUCT
 {
@@ -138,7 +139,7 @@ struct SQL_DAY_SECOND_STRUCT
     SQLUINTEGER minute;
     SQLUINTEGER second;
     SQLUINTEGER fraction;
-};
+}
 
 struct SQL_INTERVAL_STRUCT
 {
@@ -148,18 +149,18 @@ struct SQL_INTERVAL_STRUCT
     union  intval {
         SQL_YEAR_MONTH_STRUCT year_month;
         SQL_DAY_SECOND_STRUCT day_second;
-    };
-};
+    }
+}
 
 // * internal representation of numeric data type *
-const int SQL_MAX_NUMERIC_LEN =	16;
+const int SQL_MAX_NUMERIC_LEN = 16;
 struct SQL_NUMERIC_STRUCT
 {
     SQLCHAR  precision;
     SQLSCHAR scale;
     SQLCHAR  sign;    /* 1 if positive, 0 if negative */
     SQLCHAR[ SQL_MAX_NUMERIC_LEN ]  val;
-};
+}
 
 /* size is 16 */
 struct SQLGUID
@@ -168,17 +169,17 @@ struct SQLGUID
     WORD Data2;
     WORD Data3;
     ubyte[ 8 ] Data4;
-};
+}
 
-alias SQLGUID GUID;
-alias uint    BOOKMARK;
-alias ushort  SQLWCHAR;
+alias GUID     = SQLGUID;
+alias BOOKMARK = uint;
+alias SQLWCHAR = ushort;
 
 version( UNICODE )
 {
-alias SQLWCHAR SQLTCHAR;
+alias SQLTCHAR = SQLWCHAR;
 }
 else
 {
-alias SQLCHAR SQLTCHAR;
+alias SQLTCHAR = SQLCHAR;
 } // end version( UNICODE )

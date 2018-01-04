@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
-Networking client functionality as provided by $(WEB _curl.haxx.se/libcurl,
+Networking client functionality as provided by $(HTTP _curl.haxx.se/libcurl,
 libcurl). The libcurl library must be installed on the system in order to use
 this module.
 
@@ -58,18 +58,18 @@ upload("/tmp/downloaded-ftp-file", "ftp.digitalmars.com/sieve.ds");)
 uploads file from file system to URL.)
 )
 $(TR $(TDNW $(LREF get)) $(TD $(D
-get("dlang.org")) returns a string containing the dlang.org web page.)
+get("dlang.org")) returns a char[] containing the dlang.org web page.)
 )
 $(TR $(TDNW $(LREF put)) $(TD $(D
-put("dlang.org", "Hi")) returns a string containing
+put("dlang.org", "Hi")) returns a char[] containing
 the dlang.org web page. after a HTTP PUT of "hi")
 )
 $(TR $(TDNW $(LREF post)) $(TD $(D
-post("dlang.org", "Hi")) returns a string containing
+post("dlang.org", "Hi")) returns a char[] containing
 the dlang.org web page. after a HTTP POST of "hi")
 )
 $(TR $(TDNW $(LREF byLine)) $(TD $(D
-byLine("dlang.org")) returns a range of strings containing the
+byLine("dlang.org")) returns a range of char[] containing the
 dlang.org web page.)
 )
 $(TR $(TDNW $(LREF byChunk)) $(TD $(D
@@ -77,7 +77,7 @@ byChunk("dlang.org", 10)) returns a range of ubyte[10] containing the
 dlang.org web page.)
 )
 $(TR $(TDNW $(LREF byLineAsync)) $(TD $(D
-byLineAsync("dlang.org")) returns a range of strings containing the dlang.org web
+byLineAsync("dlang.org")) returns a range of char[] containing the dlang.org web
  page asynchronously.)
 )
 $(TR $(TDNW $(LREF byChunkAsync)) $(TD $(D
@@ -96,14 +96,14 @@ Example:
 ---
 import std.net.curl, std.stdio;
 
-// Return a string containing the content specified by an URL
-string content = get("dlang.org");
+// Return a char[] containing the content specified by a URL
+auto content = get("dlang.org");
 
-// Post data and return a string containing the content specified by an URL
-string content = post("mydomain.com/here.cgi", "post data");
+// Post data and return a char[] containing the content specified by a URL
+auto content = post("mydomain.com/here.cgi", ["name1" : "value1", "name2" : "value2"]);
 
 // Get content of file from ftp server
-string content = get("ftp.digitalmars.com/sieve.ds");
+auto content = get("ftp.digitalmars.com/sieve.ds");
 
 // Post and print out content line by line. The request is done in another thread.
 foreach (line; byLineAsync("dlang.org", "Post data"))
@@ -142,10 +142,10 @@ synchronous.
 Source: $(PHOBOSSRC std/net/_curl.d)
 
 Copyright: Copyright Jonas Drewsen 2011-2012
-License: $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License: $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors: Jonas Drewsen. Some of the SMTP code contributed by Jimmy Cao.
 
-Credits: The functionally is based on $(WEB _curl.haxx.se/libcurl, libcurl).
+Credits: The functionally is based on $(HTTP _curl.haxx.se/libcurl, libcurl).
          LibCurl is licensed under an MIT/X derivative license.
 */
 /*
@@ -158,19 +158,14 @@ module std.net.curl;
 
 import core.thread;
 import etc.c.curl;
-import std.algorithm;
-import std.array;
 import std.concurrency;
-import std.conv;
-import std.datetime;
 import std.encoding;
 import std.exception;
-import std.regex;
+import std.meta;
+import std.range.primitives;
 import std.socket : InternetAddress;
-import std.string;
 import std.traits;
 import std.typecons;
-import std.typetuple;
 
 import std.internal.cstring;
 
@@ -180,27 +175,142 @@ version(unittest)
 {
     // Run unit test with the PHOBOS_TEST_ALLOW_NET=1 set in order to
     // allow net traffic
-    import std.stdio;
     import std.range;
-    import std.process : environment;
-    import std.file : tempDir;
-    import std.path : buildPath;
+    import std.stdio;
 
-    // Source code for the test service is available at
-    // https://github.com/jcd/d-lang-testservice
-    enum testService = "d-lang.appspot.com";
+    import std.socket : Address, INADDR_LOOPBACK, Socket, TcpSocket;
 
-    enum testUrl1 = "http://"~testService~"/testUrl1";
-    enum testUrl2 = "http://"~testService~"/testUrl2";
-    // No anonymous DigitalMars FTP access as of 2015
-    //enum testUrl3 = "ftp://ftp.digitalmars.com/sieve.ds";
-    enum testUrl4 = testService~"/testUrl1";
-    enum testUrl5 = "http://"~testService~"/testUrl3";
+    private struct TestServer
+    {
+        string addr() { return _addr; }
+
+        void handle(void function(Socket s) dg)
+        {
+            tid.send(dg);
+        }
+
+    private:
+        string _addr;
+        Tid tid;
+
+        static void loop(shared TcpSocket listener)
+        {
+            try while (true)
+            {
+                void function(Socket) handler = void;
+                try
+                    handler = receiveOnly!(typeof(handler));
+                catch (OwnerTerminated)
+                    return;
+                handler((cast() listener).accept);
+            }
+            catch (Throwable e)
+            {
+                import core.stdc.stdlib : exit, EXIT_FAILURE;
+                stderr.writeln(e);
+                exit(EXIT_FAILURE); // Bugzilla 7018
+            }
+        }
+    }
+
+    private TestServer startServer()
+    {
+        auto sock = new TcpSocket;
+        sock.bind(new InternetAddress(INADDR_LOOPBACK, InternetAddress.PORT_ANY));
+        sock.listen(1);
+        auto addr = sock.localAddress.toString();
+        auto tid = spawn(&TestServer.loop, cast(shared) sock);
+        return TestServer(addr, tid);
+    }
+
+    private ref TestServer testServer()
+    {
+        __gshared TestServer server;
+        return initOnce!server(startServer());
+    }
+
+    private struct Request(T)
+    {
+        string hdrs;
+        immutable(T)[] bdy;
+    }
+
+    private Request!T recvReq(T=char)(Socket s)
+    {
+        import std.algorithm.comparison : min;
+        import std.algorithm.searching : find, canFind;
+        import std.conv : to;
+        import std.regex : ctRegex, matchFirst;
+
+        ubyte[1024] tmp=void;
+        ubyte[] buf;
+
+        while (true)
+        {
+            auto nbytes = s.receive(tmp[]);
+            assert(nbytes >= 0);
+
+            immutable beg = buf.length > 3 ? buf.length - 3 : 0;
+            buf ~= tmp[0 .. nbytes];
+            auto bdy = buf[beg .. $].find(cast(ubyte[])"\r\n\r\n");
+            if (bdy.empty)
+                continue;
+
+            auto hdrs = cast(string) buf[0 .. $ - bdy.length];
+            bdy.popFrontN(4);
+            // no support for chunked transfer-encoding
+            if (auto m = hdrs.matchFirst(ctRegex!(`Content-Length: ([0-9]+)`, "i")))
+            {
+                import std.uni : asUpperCase;
+                if (hdrs.asUpperCase.canFind("EXPECT: 100-CONTINUE"))
+                    s.send(httpContinue);
+
+                size_t remain = m.captures[1].to!size_t - bdy.length;
+                while (remain)
+                {
+                    nbytes = s.receive(tmp[0 .. min(remain, $)]);
+                    assert(nbytes >= 0);
+                    buf ~= tmp[0 .. nbytes];
+                    remain -= nbytes;
+                }
+            }
+            else
+            {
+                assert(bdy.empty);
+            }
+            bdy = buf[hdrs.length + 4 .. $];
+            return typeof(return)(hdrs, cast(immutable(T)[])bdy);
+        }
+    }
+
+    private string httpOK(string msg)
+    {
+        import std.conv : to;
+
+        return "HTTP/1.1 200 OK\r\n"~
+            "Content-Type: text/plain\r\n"~
+            "Content-Length: "~msg.length.to!string~"\r\n"~
+            "\r\n"~
+            msg;
+    }
+
+    private string httpOK()
+    {
+        return "HTTP/1.1 200 OK\r\n"~
+            "Content-Length: 0\r\n"~
+            "\r\n";
+    }
+
+    private string httpNotFound()
+    {
+        return "HTTP/1.1 404 Not Found\r\n"~
+            "Content-Length: 0\r\n"~
+            "\r\n";
+    }
+
+    private enum httpContinue = "HTTP/1.1 100 Continue\r\n\r\n";
 }
 version(StdDdoc) import std.stdio;
-
-version (Windows) pragma(lib, "curl");
-extern (C) void exit(int);
 
 // Default data timeout for Protocols
 private enum _defaultDataTimeout = dur!"minutes"(2);
@@ -250,9 +360,9 @@ CALLBACK_PARAMS = $(TABLE ,
   * // Guess connection type by looking at the URL
   * content = get!AutoProtocol("ftp://foo.com/file");
   * // and since AutoProtocol is default this is the same as
-  * connect = get("ftp://foo.com/file");
+  * content = get("ftp://foo.com/file");
   * // and will end up detecting FTP from the url and be the same as
-  * connect = get!FTP("ftp://foo.com/file");
+  * content = get!FTP("ftp://foo.com/file");
   * ---
   */
 struct AutoProtocol { }
@@ -260,6 +370,9 @@ struct AutoProtocol { }
 // Returns true if the url points to an FTP resource
 private bool isFTPUrl(const(char)[] url)
 {
+    import std.algorithm.searching : startsWith;
+    import std.uni : toLower;
+
     return startsWith(url.toLower(), "ftp://", "ftps://", "ftp.") != 0;
 }
 
@@ -285,7 +398,7 @@ private template isCurlConn(Conn)
  * ----
  */
 void download(Conn = AutoProtocol)(const(char)[] url, string saveToPath, Conn conn = Conn())
-    if (isCurlConn!Conn)
+if (isCurlConn!Conn)
 {
     static if (is(Conn : HTTP) || is(Conn : FTP))
     {
@@ -304,16 +417,22 @@ void download(Conn = AutoProtocol)(const(char)[] url, string saveToPath, Conn co
     }
 }
 
-unittest
+@system unittest
 {
-    if (!netAllowed()) return;
-    // No anonymous DigitalMars FTP access as of 2015
-    //download("ftp.digitalmars.com/sieve.ds", buildPath(tempDir(), "downloaded-ftp-file"));
-    auto fn = buildPath(tempDir(), "downloaded-http-file");
-    download("d-lang.appspot.com/testUrl1", fn);
-    assert(std.file.readText(fn) == "Hello world\n");
-    download!(HTTP)("d-lang.appspot.com/testUrl1", fn);
-    assert(std.file.readText(fn) == "Hello world\n");
+    import std.algorithm.searching : canFind;
+    static import std.file;
+
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
+    {
+        testServer.handle((s) {
+            assert(s.recvReq.hdrs.canFind("GET /"));
+            s.send(httpOK("Hello world"));
+        });
+        auto fn = std.file.deleteme;
+        scope (exit) std.file.remove(fn);
+        download(host, fn);
+        assert(std.file.readText(fn) == "Hello world");
+    }
 }
 
 /** Upload file from local files system using the HTTP or FTP protocol.
@@ -332,7 +451,7 @@ unittest
  * ----
  */
 void upload(Conn = AutoProtocol)(string loadFromPath, const(char)[] url, Conn conn = Conn())
-    if (isCurlConn!Conn)
+if (isCurlConn!Conn)
 {
     static if (is(Conn : HTTP))
     {
@@ -354,24 +473,34 @@ void upload(Conn = AutoProtocol)(string loadFromPath, const(char)[] url, Conn co
 
     static if (is(Conn : HTTP) || is(Conn : FTP))
     {
-        static import std.file;
-        void[] f;
-
-        conn.onSend = (void[] data)
-        {
-            f = std.file.read(loadFromPath);
-            return f.length;
-        };
-        conn.contentLength = f.length;
+        import std.stdio : File;
+        auto f = File(loadFromPath, "rb");
+        conn.onSend = buf => f.rawRead(buf).length;
+        immutable sz = f.size;
+        if (sz != ulong.max)
+            conn.contentLength = sz;
         conn.perform();
     }
 }
 
-unittest
+@system unittest
 {
-    if (!netAllowed()) return;
-    //    upload(buildPath(tempDir(), "downloaded-ftp-file"), "ftp.digitalmars.com/sieve.ds");
-    upload(buildPath(tempDir(), "downloaded-http-file"), "d-lang.appspot.com/testUrl2");
+    import std.algorithm.searching : canFind;
+    static import std.file;
+
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
+    {
+        auto fn = std.file.deleteme;
+        scope (exit) std.file.remove(fn);
+        std.file.write(fn, "upload data\n");
+        testServer.handle((s) {
+            auto req = s.recvReq;
+            assert(req.hdrs.canFind("PUT /path"));
+            assert(req.bdy.canFind("upload data"));
+            s.send(httpOK());
+        });
+        upload(fn, host ~ "/path");
+    }
 }
 
 /** HTTP/FTP get content.
@@ -390,7 +519,7 @@ unittest
  * Example:
  * ----
  * import std.net.curl;
- * string content = get("d-lang.appspot.com/testUrl2");
+ * auto content = get("d-lang.appspot.com/testUrl2");
  * ----
  *
  * Returns:
@@ -403,7 +532,7 @@ unittest
  * See_Also: $(LREF HTTP.Method)
  */
 T[] get(Conn = AutoProtocol, T = char)(const(char)[] url, Conn conn = Conn())
-    if ( isCurlConn!Conn && (is(T == char) || is(T == ubyte)) )
+if ( isCurlConn!Conn && (is(T == char) || is(T == ubyte)) )
 {
     static if (is(Conn : HTTP))
     {
@@ -424,42 +553,45 @@ T[] get(Conn = AutoProtocol, T = char)(const(char)[] url, Conn conn = Conn())
     }
 }
 
-unittest
+@system unittest
 {
-    if (!netAllowed()) return;
-    auto res = get(testUrl1);
-    assert(res == "Hello world\n",
-           "get!HTTP() returns unexpected content " ~ res);
-    res = get(testUrl4);
-    assert(res == "Hello world\n",
-           "get!HTTP() returns unexpected content: " ~ res);
-    // No anonymous DigitalMars FTP access as of 2015
-    //res = get(testUrl3);
-    //assert(res.startsWith("\r\n/* Eratosthenes Sieve prime number calculation. */"),
-    //       "get!FTP() returns unexpected content");
+    import std.algorithm.searching : canFind;
+
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
+    {
+        testServer.handle((s) {
+            assert(s.recvReq.hdrs.canFind("GET /path"));
+            s.send(httpOK("GETRESPONSE"));
+        });
+        auto res = get(host ~ "/path");
+        assert(res == "GETRESPONSE");
+    }
 }
 
 
 /** HTTP post content.
  *
  * Params:
- * url = resource to post to
- * postData = data to send as the body of the request. An array
- *            of an arbitrary type is accepted and will be cast to ubyte[]
- *            before sending it.
- * conn = connection to use e.g. FTP or HTTP. The default AutoProtocol will
- *        guess connection type and create a new instance for this call only.
+ *     url = resource to post to
+ *     postDict = data to send as the body of the request. An associative array
+ *                of $(D string) is accepted and will be encoded using
+ *                www-form-urlencoding
+ *     postData = data to send as the body of the request. An array
+ *                of an arbitrary type is accepted and will be cast to ubyte[]
+ *                before sending it.
+ *     conn = HTTP connection to use
+ *     T    = The template parameter $(D T) specifies the type to return. Possible values
+ *            are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]). If asking
+ *            for $(D char), content will be converted from the connection character set
+ *            (specified in HTTP response headers or FTP connection properties, both ISO-8859-1
+ *            by default) to UTF-8.
  *
- * The template parameter $(D T) specifies the type to return. Possible values
- * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]). If asking
- * for $(D char), content will be converted from the connection character set
- * (specified in HTTP response headers or FTP connection properties, both ISO-8859-1
- * by default) to UTF-8.
- *
- * Example:
+ * Examples:
  * ----
  * import std.net.curl;
- * string content = post("d-lang.appspot.com/testUrl2", [1,2,3,4]);
+ *
+ * auto content1 = post("d-lang.appspot.com/testUrl2", ["name1" : "value1", "name2" : "value2"]);
+ * auto content2 = post("d-lang.appspot.com/testUrl2", [1,2,3,4]);
  * ----
  *
  * Returns:
@@ -474,34 +606,62 @@ if (is(T == char) || is(T == ubyte))
     return _basicHTTP!(T)(url, postData, conn);
 }
 
-unittest
+@system unittest
 {
-    if (!netAllowed()) return;
+    import std.algorithm.searching : canFind;
 
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
-        string data = "Hello world";
-        auto res = post(testUrl2, data);
-        assert(res == data,
-               "post!HTTP() returns unexpected content " ~ res);
-    }
-
-    {
-        ubyte[] data;
-        foreach (n; 0..256)
-            data ~= cast(ubyte)n;
-        auto res = post!ubyte(testUrl2, data);
-        assert(res == data,
-               "post!HTTP() with binary data returns unexpected content (" ~ text(res.length) ~ " bytes)");
-    }
-
-    {
-        string data = "Hello world";
-        auto res = post(testUrl5, data);
-        assert(res == data,
-               "post!HTTP() returns unexpected content after redirect " ~ res);
+        testServer.handle((s) {
+            auto req = s.recvReq;
+            assert(req.hdrs.canFind("POST /path"));
+            assert(req.bdy.canFind("POSTBODY"));
+            s.send(httpOK("POSTRESPONSE"));
+        });
+        auto res = post(host ~ "/path", "POSTBODY");
+        assert(res == "POSTRESPONSE");
     }
 }
 
+@system unittest
+{
+    import std.algorithm.searching : canFind;
+
+    auto data = new ubyte[](256);
+    foreach (i, ref ub; data)
+        ub = cast(ubyte) i;
+
+    testServer.handle((s) {
+        auto req = s.recvReq!ubyte;
+        assert(req.bdy.canFind(cast(ubyte[])[0, 1, 2, 3, 4]));
+        assert(req.bdy.canFind(cast(ubyte[])[253, 254, 255]));
+        s.send(httpOK(cast(ubyte[])[17, 27, 35, 41]));
+    });
+    auto res = post!ubyte(testServer.addr, data);
+    assert(res == cast(ubyte[])[17, 27, 35, 41]);
+}
+
+/// ditto
+T[] post(T = char)(const(char)[] url, string[string] postDict, HTTP conn = HTTP())
+if (is(T == char) || is(T == ubyte))
+{
+    import std.uri : urlEncode;
+
+    return post(url, urlEncode(postDict), conn);
+}
+
+@system unittest
+{
+    foreach (host; [testServer.addr, "http://" ~ testServer.addr])
+    {
+        testServer.handle((s) {
+            auto req = s.recvReq!char;
+            s.send(httpOK(req.bdy));
+        });
+        auto res = post(host ~ "/path", ["name1" : "value1", "name2" : "value2"]);
+        assert(res == "name1=value1&name2=value2");
+    }
+}
 
 /** HTTP/FTP put content.
  *
@@ -522,7 +682,7 @@ unittest
  * Example:
  * ----
  * import std.net.curl;
- * string content = put("d-lang.appspot.com/testUrl2",
+ * auto content = put("d-lang.appspot.com/testUrl2",
  *                      "Putting this data");
  * ----
  *
@@ -533,7 +693,7 @@ unittest
  */
 T[] put(Conn = AutoProtocol, T = char, PutUnit)(const(char)[] url, const(PutUnit)[] putData,
                                                   Conn conn = Conn())
-    if ( isCurlConn!Conn && (is(T == char) || is(T == ubyte)) )
+if ( isCurlConn!Conn && (is(T == char) || is(T == ubyte)) )
 {
     static if (is(Conn : HTTP))
     {
@@ -553,17 +713,21 @@ T[] put(Conn = AutoProtocol, T = char, PutUnit)(const(char)[] url, const(PutUnit
     }
 }
 
-unittest
+@system unittest
 {
-    if (!netAllowed()) return;
-    auto res = put(testUrl2, "Hello world");
-    assert(res == "Hello world",
-           "put!HTTP() returns unexpected content " ~ res);
+    import std.algorithm.searching : canFind;
 
-    // TODO: need ftp server to test with
-    //    res = get(testUrl3);
-    //    assert(res.startsWith("\r\n/* Eratosthenes Sieve prime number calculation. */"),
-    //       "get!FTP() returns unexpected content");
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
+    {
+        testServer.handle((s) {
+            auto req = s.recvReq;
+            assert(req.hdrs.canFind("PUT /path"));
+            assert(req.bdy.canFind("PUTBODY"));
+            s.send(httpOK("PUTRESPONSE"));
+        });
+        auto res = put(host ~ "/path", "PUTBODY");
+        assert(res == "PUTRESPONSE");
+    }
 }
 
 
@@ -583,7 +747,7 @@ unittest
  * See_Also: $(LREF HTTP.Method)
  */
 void del(Conn = AutoProtocol)(const(char)[] url, Conn conn = Conn())
-    if (isCurlConn!Conn)
+if (isCurlConn!Conn)
 {
     static if (is(Conn : HTTP))
     {
@@ -592,6 +756,9 @@ void del(Conn = AutoProtocol)(const(char)[] url, Conn conn = Conn())
     }
     else static if (is(Conn : FTP))
     {
+        import std.algorithm.searching : findSplitAfter;
+        import std.conv : text;
+
         auto trimmed = url.findSplitAfter("ftp://")[1];
         auto t = trimmed.findSplitAfter("/");
         enum minDomainNameLength = 3;
@@ -613,10 +780,19 @@ void del(Conn = AutoProtocol)(const(char)[] url, Conn conn = Conn())
     }
 }
 
-unittest
+@system unittest
 {
-    if (!netAllowed()) return;
-    del(testUrl1);
+    import std.algorithm.searching : canFind;
+
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
+    {
+        testServer.handle((s) {
+            auto req = s.recvReq;
+            assert(req.hdrs.canFind("DELETE /path"));
+            s.send(httpOK());
+        });
+        del(host ~ "/path");
+    }
 }
 
 
@@ -624,22 +800,17 @@ unittest
  *
  * Params:
  * url = resource make a option call to
- * optionsData = options data to send as the body of the request. An array
- *               of an arbitrary type is accepted and will be cast to ubyte[]
- *               before sending it.
  * conn = connection to use e.g. FTP or HTTP. The default AutoProtocol will
  *        guess connection type and create a new instance for this call only.
  *
  * The template parameter $(D T) specifies the type to return. Possible values
  * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]).
- * Currently the HTTP RFC does not specify any usage of the optionsData and
- * for this reason the example below does not send optionsData to the server.
  *
  * Example:
  * ----
  * import std.net.curl;
  * auto http = HTTP();
- * options("d-lang.appspot.com/testUrl2", null, http);
+ * options("d-lang.appspot.com/testUrl2", http);
  * writeln("Allow set to " ~ http.responseHeaders["Allow"]);
  * ----
  *
@@ -648,29 +819,24 @@ unittest
  *
  * See_Also: $(LREF HTTP.Method)
  */
-T[] options(T = char, OptionsUnit)(const(char)[] url,
-                                   const(OptionsUnit)[] optionsData = null,
-                                   HTTP conn = HTTP())
+T[] options(T = char)(const(char)[] url, HTTP conn = HTTP())
 if (is(T == char) || is(T == ubyte))
 {
     conn.method = HTTP.Method.options;
-    return _basicHTTP!(T)(url, optionsData, conn);
+    return _basicHTTP!(T)(url, null, conn);
 }
 
-unittest
+@system unittest
 {
-    if (!netAllowed()) return;
-    auto res = options(testUrl2, "Hello world");
-    assert(res == "Hello world",
-           "options!HTTP() returns unexpected content " ~ res);
-}
+    import std.algorithm.searching : canFind;
 
-unittest
-{
-    if (!netAllowed()) return;
-    auto res = options(testUrl1, []);
-    assert(res == "Hello world\n",
-           "options!HTTP() returns unexpected content " ~ res);
+    testServer.handle((s) {
+        auto req = s.recvReq;
+        assert(req.hdrs.canFind("OPTIONS /path"));
+        s.send(httpOK("OPTIONSRESPONSE"));
+    });
+    auto res = options(testServer.addr ~ "/path");
+    assert(res == "OPTIONSRESPONSE");
 }
 
 
@@ -696,18 +862,23 @@ unittest
  * See_Also: $(LREF HTTP.Method)
  */
 T[] trace(T = char)(const(char)[] url, HTTP conn = HTTP())
-   if (is(T == char) || is(T == ubyte))
+if (is(T == char) || is(T == ubyte))
 {
     conn.method = HTTP.Method.trace;
     return _basicHTTP!(T)(url, cast(void[]) null, conn);
 }
 
-unittest
+@system unittest
 {
-    if (!netAllowed()) return;
-    auto res = trace(testUrl1);
-    assert(res == "Hello world\n",
-           "trace!HTTP() returns unexpected content " ~ res);
+    import std.algorithm.searching : canFind;
+
+    testServer.handle((s) {
+        auto req = s.recvReq;
+        assert(req.hdrs.canFind("TRACE /path"));
+        s.send(httpOK("TRACERESPONSE"));
+    });
+    auto res = trace(testServer.addr ~ "/path");
+    assert(res == "TRACERESPONSE");
 }
 
 
@@ -715,8 +886,7 @@ unittest
  *
  * Params:
  * url = resource make a connect to
- * conn = connection to use e.g. FTP or HTTP. The default AutoProtocol will
- *        guess connection type and create a new instance for this call only.
+ * conn = HTTP connection to use
  *
  * The template parameter $(D T) specifies the type to return. Possible values
  * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]).
@@ -733,19 +903,70 @@ unittest
  * See_Also: $(LREF HTTP.Method)
  */
 T[] connect(T = char)(const(char)[] url, HTTP conn = HTTP())
-   if (is(T == char) || is(T == ubyte))
+if (is(T == char) || is(T == ubyte))
 {
     conn.method = HTTP.Method.connect;
     return _basicHTTP!(T)(url, cast(void[]) null, conn);
 }
 
-unittest
+@system unittest
 {
-    // google appspot does not allow connect method.
-    //    if (!netAllowed()) return;
-    //    auto res = connect(testUrl1);
-    //    assert(res == "Hello world\n",
-    //           "connect!HTTP() returns unexpected content " ~ res);
+    import std.algorithm.searching : canFind;
+
+    testServer.handle((s) {
+        auto req = s.recvReq;
+        assert(req.hdrs.canFind("CONNECT /path"));
+        s.send(httpOK("CONNECTRESPONSE"));
+    });
+    auto res = connect(testServer.addr ~ "/path");
+    assert(res == "CONNECTRESPONSE");
+}
+
+
+/** HTTP patch content.
+ *
+ * Params:
+ * url = resource to patch
+ * patchData = data to send as the body of the request. An array
+ *           of an arbitrary type is accepted and will be cast to ubyte[]
+ *           before sending it.
+ * conn = HTTP connection to use
+ *
+ * The template parameter $(D T) specifies the type to return. Possible values
+ * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]).
+ *
+ * Example:
+ * ----
+ * auto http = HTTP();
+ * http.addRequestHeader("Content-Type", "application/json");
+ * auto content = patch("d-lang.appspot.com/testUrl2", `{"title": "Patched Title"}`, http);
+ * ----
+ *
+ * Returns:
+ * A T[] range containing the content of the resource pointed to by the URL.
+ *
+ * See_Also: $(LREF HTTP.Method)
+ */
+T[] patch(T = char, PatchUnit)(const(char)[] url, const(PatchUnit)[] patchData,
+                               HTTP conn = HTTP())
+if (is(T == char) || is(T == ubyte))
+{
+    conn.method = HTTP.Method.patch;
+    return _basicHTTP!(T)(url, patchData, conn);
+}
+
+@system unittest
+{
+    import std.algorithm.searching : canFind;
+
+    testServer.handle((s) {
+        auto req = s.recvReq;
+        assert(req.hdrs.canFind("PATCH /path"));
+        assert(req.bdy.canFind("PATCHBODY"));
+        s.send(httpOK("PATCHRESPONSE"));
+    });
+    auto res = patch(testServer.addr ~ "/path", "PATCHBODY");
+    assert(res == "PATCHRESPONSE");
 }
 
 
@@ -757,31 +978,38 @@ unittest
  */
 private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP client)
 {
+    import std.algorithm.comparison : min;
+    import std.format : format;
+
+    immutable doSend = sendData !is null &&
+        (client.method == HTTP.Method.post ||
+         client.method == HTTP.Method.put ||
+         client.method == HTTP.Method.patch);
+
     scope (exit)
     {
         client.onReceiveHeader = null;
         client.onReceiveStatusLine = null;
         client.onReceive = null;
 
-        if (sendData !is null &&
-            (client.method == HTTP.Method.post || client.method == HTTP.Method.put))
+        if (doSend)
         {
             client.onSend = null;
             client.handle.onSeek = null;
+            client.contentLength = 0;
         }
     }
     client.url = url;
     HTTP.StatusLine statusLine;
-    ubyte[] content;
-    string[string] headers;
+    import std.array : appender;
+    auto content = appender!(ubyte[])();
     client.onReceive = (ubyte[] data)
     {
         content ~= data;
         return data.length;
     };
 
-    if (sendData !is null &&
-        (client.method == HTTP.Method.post || client.method == HTTP.Method.put))
+    if (doSend)
     {
         client.contentLength = sendData.length;
         auto remainingData = sendData;
@@ -789,7 +1017,7 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
         {
             size_t minLen = min(buf.length, remainingData.length);
             if (minLen == 0) return 0;
-            buf[0..minLen] = remainingData[0..minLen];
+            buf[0 .. minLen] = remainingData[0 .. minLen];
             remainingData = remainingData[minLen..$];
             return minLen;
         };
@@ -798,7 +1026,7 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
             switch (mode)
             {
                 case CurlSeekPos.set:
-                    remainingData = sendData[cast(size_t)offset..$];
+                    remainingData = sendData[cast(size_t) offset..$];
                     return CurlSeek.ok;
                 default:
                     // As of curl 7.18.0, libcurl will not pass
@@ -811,39 +1039,83 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     client.onReceiveHeader = (in char[] key,
                               in char[] value)
     {
-        if (auto v = key in headers)
+        if (key == "content-length")
         {
-            *v ~= ", ";
-            *v ~= value;
+            import std.conv : to;
+            content.reserve(value.to!size_t);
         }
-        else
-            headers[key] = value.idup;
     };
     client.onReceiveStatusLine = (HTTP.StatusLine l) { statusLine = l; };
     client.perform();
-    enforce!CurlException(statusLine.code / 100 == 2,
-                            format("HTTP request returned status code %d (%s)",
-                                   statusLine.code, statusLine.reason));
+    enforce(statusLine.code / 100 == 2, new HTTPStatusException(statusLine.code,
+            format("HTTP request returned status code %d (%s)", statusLine.code, statusLine.reason)));
 
-    // Default charset defined in HTTP RFC
-    auto charset = "ISO-8859-1";
-    if (auto v = "content-type" in headers)
-    {
-        auto m = match(cast(char[]) (*v), regex("charset=([^;,]*)"));
-        if (!m.empty && m.captures.length > 1)
-        {
-            charset = m.captures[1].idup;
-        }
-    }
-
-    return _decodeContent!T(content, charset);
+    return _decodeContent!T(content.data, client.p.charset);
 }
 
-unittest
+@system unittest
 {
-    if (!netAllowed()) return;
-    auto e = collectException!CurlException(get(testUrl1 ~ "nonexisting"));
+    import std.algorithm.searching : canFind;
+
+    testServer.handle((s) {
+        auto req = s.recvReq;
+        assert(req.hdrs.canFind("GET /path"));
+        s.send(httpNotFound());
+    });
+    auto e = collectException!HTTPStatusException(get(testServer.addr ~ "/path"));
     assert(e.msg == "HTTP request returned status code 404 (Not Found)");
+    assert(e.status == 404);
+}
+
+// Bugzilla 14760 - content length must be reset after post
+@system unittest
+{
+    import std.algorithm.searching : canFind;
+
+    testServer.handle((s) {
+        auto req = s.recvReq;
+        assert(req.hdrs.canFind("POST /"));
+        assert(req.bdy.canFind("POSTBODY"));
+        s.send(httpOK("POSTRESPONSE"));
+
+        req = s.recvReq;
+        assert(req.hdrs.canFind("TRACE /"));
+        assert(req.bdy.empty);
+        s.blocking = false;
+        ubyte[6] buf = void;
+        assert(s.receive(buf[]) < 0);
+        s.send(httpOK("TRACERESPONSE"));
+    });
+    auto http = HTTP();
+    auto res = post(testServer.addr, "POSTBODY", http);
+    assert(res == "POSTRESPONSE");
+    res = trace(testServer.addr, http);
+    assert(res == "TRACERESPONSE");
+}
+
+@system unittest // charset detection and transcoding to T
+{
+    testServer.handle((s) {
+        s.send("HTTP/1.1 200 OK\r\n"~
+        "Content-Length: 4\r\n"~
+        "Content-Type: text/plain; charset=utf-8\r\n" ~
+        "\r\n" ~
+        "äbc");
+    });
+    auto client = HTTP();
+    auto result = _basicHTTP!char(testServer.addr, "", client);
+    assert(result == "äbc");
+
+    testServer.handle((s) {
+        s.send("HTTP/1.1 200 OK\r\n"~
+        "Content-Length: 3\r\n"~
+        "Content-Type: text/plain; charset=iso-8859-1\r\n" ~
+        "\r\n" ~
+        0xE4 ~ "bc");
+    });
+    client = HTTP();
+    result = _basicHTTP!char(testServer.addr, "", client);
+    assert(result == "äbc");
 }
 
 /*
@@ -854,6 +1126,8 @@ unittest
  */
 private auto _basicFTP(T)(const(char)[] url, const(void)[] sendData, FTP client)
 {
+    import std.algorithm.comparison : min;
+
     scope (exit)
     {
         client.onReceive = null;
@@ -880,7 +1154,7 @@ private auto _basicFTP(T)(const(char)[] url, const(void)[] sendData, FTP client)
         {
             size_t minLen = min(buf.length, sendData.length);
             if (minLen == 0) return 0;
-            buf[0..minLen] = sendData[0..minLen];
+            buf[0 .. minLen] = sendData[0 .. minLen];
             sendData = sendData[minLen..$];
             return minLen;
         };
@@ -902,6 +1176,8 @@ private auto _decodeContent(T)(ubyte[] content, string encoding)
     }
     else
     {
+        import std.format : format;
+
         // Optimally just return the utf8 encoded content
         if (encoding == "UTF-8")
             return cast(char[])(content);
@@ -967,7 +1243,7 @@ struct ByLineBuffer(Char)
  *
  * Params:
  * url = The url to receive content from
- * keepTerminator = KeepTerminator.yes signals that the line terminator should be
+ * keepTerminator = $(D Yes.keepTerminator) signals that the line terminator should be
  *                  returned as part of the lines in the range.
  * terminator = The character that terminates a line
  * conn = The connection to use e.g. HTTP or FTP.
@@ -976,7 +1252,7 @@ struct ByLineBuffer(Char)
  * A range of Char[] with the content of the resource pointer to by the URL
  */
 auto byLine(Conn = AutoProtocol, Terminator = char, Char = char)
-           (const(char)[] url, KeepTerminator keepTerminator = KeepTerminator.no,
+           (const(char)[] url, KeepTerminator keepTerminator = No.keepTerminator,
             Terminator terminator = '\n', Conn conn = Conn())
 if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
 {
@@ -1011,6 +1287,8 @@ if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
 
         void popFront()
         {
+            import std.algorithm.searching : findSplitAfter, findSplit;
+
             enforce!CurlException(currentValid, "Cannot call popFront() on empty range");
             if (lines.empty)
             {
@@ -1042,21 +1320,21 @@ if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
     }
 
     auto result = _getForRange!Char(url, conn);
-    return SyncLineInputRange(result, keepTerminator == KeepTerminator.yes, terminator);
+    return SyncLineInputRange(result, keepTerminator == Yes.keepTerminator, terminator);
 }
 
-unittest
+@system unittest
 {
-    if (!netAllowed()) return;
-    auto res = byLine(testUrl1);
-    auto line = res.front;
-    assert(line == "Hello world",
-           "byLine!HTTP() returns unexpected content: " ~ line);
+    import std.algorithm.comparison : equal;
 
-    auto res2 = byLine(testUrl1, KeepTerminator.no, '\n', HTTP());
-    line = res2.front;
-    assert(line == "Hello world",
-           "byLine!HTTP() returns unexpected content: " ~ line);
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
+    {
+        testServer.handle((s) {
+            auto req = s.recvReq;
+            s.send(httpOK("Line1\nLine2\nLine3"));
+        });
+        assert(byLine(host).equal(["Line1", "Line2", "Line3"]));
+    }
 }
 
 /** HTTP/FTP fetch content as a range of chunks.
@@ -1082,7 +1360,7 @@ unittest
  */
 auto byChunk(Conn = AutoProtocol)
             (const(char)[] url, size_t chunkSize = 1024, Conn conn = Conn())
-    if (isCurlConn!(Conn))
+if (isCurlConn!(Conn))
 {
     static struct SyncChunkInputRange
     {
@@ -1105,7 +1383,7 @@ auto byChunk(Conn = AutoProtocol)
         {
             size_t nextOffset = offset + chunkSize;
             if (nextOffset > _bytes.length) nextOffset = _bytes.length;
-            return _bytes[offset..nextOffset];
+            return _bytes[offset .. nextOffset];
         }
 
         @safe void popFront()
@@ -1119,19 +1397,18 @@ auto byChunk(Conn = AutoProtocol)
     return SyncChunkInputRange(result, chunkSize);
 }
 
-unittest
+@system unittest
 {
-    if (!netAllowed()) return;
+    import std.algorithm.comparison : equal;
 
-    auto res = byChunk(testUrl1);
-    auto line = res.front;
-    assert(line == cast(ubyte[])"Hello world\n",
-           "byLineAsync!HTTP() returns unexpected content " ~ to!string(line));
-
-    auto res2 = byChunk(testUrl1, 1024, HTTP());
-    line = res2.front;
-    assert(line == cast(ubyte[])"Hello world\n",
-           "byLineAsync!HTTP() returns unexpected content: " ~ to!string(line));
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
+    {
+        testServer.handle((s) {
+            auto req = s.recvReq;
+            s.send(httpOK(cast(ubyte[])[0, 1, 2, 3, 4, 5]));
+        });
+        assert(byChunk(host, 2).equal([[0, 1], [2, 3], [4, 5]]));
+    }
 }
 
 private T[] _getForRange(T,Conn)(const(char)[] url, Conn conn)
@@ -1168,6 +1445,7 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
 
     @property Unit[] front()
     {
+        import std.format : format;
         tryEnsureUnits();
         assert(state == State.gotUnits,
                format("Expected %s but got $s",
@@ -1177,6 +1455,7 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
 
     void popFront()
     {
+        import std.format : format;
         tryEnsureUnits();
         assert(state == State.gotUnits,
                format("Expected %s but got $s",
@@ -1192,6 +1471,8 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
     */
     bool wait(Duration d)
     {
+        import std.datetime.stopwatch : StopWatch;
+
         if (state == State.gotUnits)
             return true;
 
@@ -1272,12 +1553,10 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
     }
 }
 
-// Workaround bug #2458
-// It should really be defined inside the byLineAsync method.
-// Do not create instances of this struct since it will be
-// moved when the bug has been fixed.
+// @@@@BUG 15831@@@@
+// this should be inside byLineAsync
 // Range that reads one line at a time asynchronously.
-static struct AsyncLineInputRange(Char)
+private static struct AsyncLineInputRange(Char)
 {
     private Char[] line;
     mixin WorkerThreadProtocol!(Char, line);
@@ -1293,14 +1572,13 @@ static struct AsyncLineInputRange(Char)
         // Send buffers to other thread for it to use.  Since no mechanism is in
         // place for moving ownership a cast to shared is done here and casted
         // back to non-shared in the receiving end.
-        foreach (i ; 0..transmitBuffers)
+        foreach (i ; 0 .. transmitBuffers)
         {
             auto arr = new Char[](bufferSize);
             workerTid.send(cast(immutable(Char[]))arr);
         }
     }
 }
-
 
 /** HTTP/FTP fetch content as a range of lines asynchronously.
  *
@@ -1341,8 +1619,8 @@ static struct AsyncLineInputRange(Char)
  * // Get a line in a background thread and wait in
  * // main thread for 2 seconds for it to arrive.
  * auto range3 = byLineAsync("dlang.com");
- * if (range.wait(dur!"seconds"(2)))
- *     writeln(range.front);
+ * if (range3.wait(dur!"seconds"(2)))
+ *     writeln(range3.front);
  * else
  *     writeln("No line received after 2 seconds!");
  * ----
@@ -1350,7 +1628,7 @@ static struct AsyncLineInputRange(Char)
  * Params:
  * url = The url to receive content from
  * postData = Data to HTTP Post
- * keepTerminator = KeepTerminator.yes signals that the line terminator should be
+ * keepTerminator = $(D Yes.keepTerminator) signals that the line terminator should be
  *                  returned as part of the lines in the range.
  * terminator = The character that terminates a line
  * transmitBuffers = The number of lines buffered asynchronously
@@ -1362,10 +1640,10 @@ static struct AsyncLineInputRange(Char)
  */
 auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char, PostUnit)
             (const(char)[] url, const(PostUnit)[] postData,
-             KeepTerminator keepTerminator = KeepTerminator.no,
+             KeepTerminator keepTerminator = No.keepTerminator,
              Terminator terminator = '\n',
              size_t transmitBuffers = 10, Conn conn = Conn())
-    if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
+if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
 {
     static if (is(Conn : AutoProtocol))
     {
@@ -1383,7 +1661,7 @@ auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char, PostUnit)
         auto tid = spawn(&_spawnAsync!(Conn, Char, Terminator));
         tid.send(thisTid);
         tid.send(terminator);
-        tid.send(keepTerminator == KeepTerminator.yes);
+        tid.send(keepTerminator == Yes.keepTerminator);
 
         _asyncDuplicateConnection(url, conn, postData, tid);
 
@@ -1394,46 +1672,44 @@ auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char, PostUnit)
 
 /// ditto
 auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char)
-            (const(char)[] url, KeepTerminator keepTerminator = KeepTerminator.no,
+            (const(char)[] url, KeepTerminator keepTerminator = No.keepTerminator,
              Terminator terminator = '\n',
              size_t transmitBuffers = 10, Conn conn = Conn())
 {
     static if (is(Conn : AutoProtocol))
     {
         if (isFTPUrl(url))
-            return byLineAsync(url, cast(void[])null, keepTerminator,
+            return byLineAsync(url, cast(void[]) null, keepTerminator,
                                terminator, transmitBuffers, FTP());
         else
-            return byLineAsync(url, cast(void[])null, keepTerminator,
+            return byLineAsync(url, cast(void[]) null, keepTerminator,
                                terminator, transmitBuffers, HTTP());
     }
     else
     {
-        return byLineAsync(url, cast(void[])null, keepTerminator,
+        return byLineAsync(url, cast(void[]) null, keepTerminator,
                            terminator, transmitBuffers, conn);
     }
 }
 
-unittest
+@system unittest
 {
-    if (!netAllowed()) return;
-    auto res = byLineAsync(testUrl2, "Hello world");
-    auto line = res.front;
-    assert(line == "Hello world",
-           "byLineAsync!HTTP() returns unexpected content " ~ line);
-    res = byLineAsync(testUrl1);
-    line = res.front;
-    assert(line == "Hello world",
-           "byLineAsync!HTTP() returns unexpected content: " ~ line);
+    import std.algorithm.comparison : equal;
+
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
+    {
+        testServer.handle((s) {
+            auto req = s.recvReq;
+            s.send(httpOK("Line1\nLine2\nLine3"));
+        });
+        assert(byLineAsync(host).equal(["Line1", "Line2", "Line3"]));
+    }
 }
 
-
-// Workaround bug #2458
-// It should really be defined inside the byLineAsync method.
-// Do not create instances of this struct since it will be
-// moved when the bug has been fixed.
+// @@@@BUG 15831@@@@
+// this should be inside byLineAsync
 // Range that reads one chunk at a time asynchronously.
-static struct AsyncChunkInputRange
+private static struct AsyncChunkInputRange
 {
     private ubyte[] chunk;
     mixin WorkerThreadProtocol!(ubyte, chunk);
@@ -1449,7 +1725,7 @@ static struct AsyncChunkInputRange
         // Send buffers to other thread for it to use.  Since no mechanism is in
         // place for moving ownership a cast to shared is done here and a cast
         // back to non-shared in the receiving end.
-        foreach (i ; 0..transmitBuffers)
+        foreach (i ; 0 .. transmitBuffers)
         {
             ubyte[] arr = new ubyte[](chunkSize);
             workerTid.send(cast(immutable(ubyte[]))arr);
@@ -1496,8 +1772,8 @@ static struct AsyncChunkInputRange
  * // Get a line in a background thread and wait in
  * // main thread for 2 seconds for it to arrive.
  * auto range3 = byChunkAsync("dlang.com", 10);
- * if (range.wait(dur!"seconds"(2)))
- *     writeln(range.front);
+ * if (range3.wait(dur!"seconds"(2)))
+ *     writeln(range3.front);
  * else
  *     writeln("No chunk received after 2 seconds!");
  * ----
@@ -1517,7 +1793,7 @@ auto byChunkAsync(Conn = AutoProtocol, PostUnit)
            (const(char)[] url, const(PostUnit)[] postData,
             size_t chunkSize = 1024, size_t transmitBuffers = 10,
             Conn conn = Conn())
-    if (isCurlConn!(Conn))
+if (isCurlConn!(Conn))
 {
     static if (is(Conn : AutoProtocol))
     {
@@ -1546,35 +1822,36 @@ auto byChunkAsync(Conn = AutoProtocol)
            (const(char)[] url,
             size_t chunkSize = 1024, size_t transmitBuffers = 10,
             Conn conn = Conn())
-    if (isCurlConn!(Conn))
+if (isCurlConn!(Conn))
 {
     static if (is(Conn : AutoProtocol))
     {
         if (isFTPUrl(url))
-            return byChunkAsync(url, cast(void[])null, chunkSize,
+            return byChunkAsync(url, cast(void[]) null, chunkSize,
                                 transmitBuffers, FTP());
         else
-            return byChunkAsync(url, cast(void[])null, chunkSize,
+            return byChunkAsync(url, cast(void[]) null, chunkSize,
                                 transmitBuffers, HTTP());
     }
     else
     {
-        return byChunkAsync(url, cast(void[])null, chunkSize,
+        return byChunkAsync(url, cast(void[]) null, chunkSize,
                             transmitBuffers, conn);
     }
 }
 
-unittest
+@system unittest
 {
-    if (!netAllowed()) return;
-    auto res = byChunkAsync(testUrl2, "Hello world");
-    auto line = res.front;
-    assert(line == cast(ubyte[])"Hello world",
-           "byLineAsync!HTTP() returns unexpected content " ~ to!string(line));
-    res = byChunkAsync(testUrl1);
-    line = res.front;
-    assert(line == cast(ubyte[])"Hello world\n",
-           "byLineAsync!HTTP() returns unexpected content: " ~ to!string(line));
+    import std.algorithm.comparison : equal;
+
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
+    {
+        testServer.handle((s) {
+            auto req = s.recvReq;
+            s.send(httpOK(cast(ubyte[])[0, 1, 2, 3, 4, 5]));
+        });
+        assert(byChunkAsync(host, 2).equal([[0, 1], [2, 3], [4, 5]]));
+    }
 }
 
 
@@ -1610,14 +1887,14 @@ private void _asyncDuplicateConnection(Conn, PostData)
             connDup.handle.set(CurlOption.copypostfields,
                                cast(void*) postData.ptr);
         }
-        tid.send(cast(ulong)connDup.handle.handle);
+        tid.send(cast(ulong) connDup.handle.handle);
         tid.send(connDup.method);
     }
     else
     {
         enforce!CurlException(postData is null,
                                 "Cannot put ftp data using byLineAsync()");
-        tid.send(cast(ulong)connDup.handle.handle);
+        tid.send(cast(ulong) connDup.handle.handle);
         tid.send(HTTP.Method.undefined);
     }
     connDup.p.curl.handle = null; // make sure handle is not freed
@@ -1698,7 +1975,7 @@ private mixin template Protocol()
     // Network settings
 
     /** Proxy
-     *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy)
+     *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy)
      */
     @property void proxy(const(char)[] host)
     {
@@ -1706,7 +1983,7 @@ private mixin template Protocol()
     }
 
     /** Proxy port
-     *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXYPORT, _proxy_port)
+     *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXYPORT, _proxy_port)
      */
     @property void proxyPort(ushort port)
     {
@@ -1717,7 +1994,7 @@ private mixin template Protocol()
     alias CurlProxy = etc.c.curl.CurlProxy;
 
     /** Proxy type
-     *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
+     *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
      */
     @property void proxyType(CurlProxy type)
     {
@@ -1739,7 +2016,7 @@ private mixin template Protocol()
      * theprotocol.netInterface = [ 192, 168, 1, 32 ];
      * ----
      *
-     * See: $(XREF socket, InternetAddress)
+     * See: $(REF InternetAddress, std,socket)
      */
     @property void netInterface(const(char)[] i)
     {
@@ -1749,7 +2026,8 @@ private mixin template Protocol()
     /// ditto
     @property void netInterface(const(ubyte)[4] i)
     {
-        auto str = format("%d.%d.%d.%d", i[0], i[1], i[2], i[3]);
+        import std.format : format;
+        const str = format("%d.%d.%d.%d", i[0], i[1], i[2], i[3]);
         netInterface = str;
     }
 
@@ -1766,7 +2044,18 @@ private mixin template Protocol()
     */
     @property void localPort(ushort port)
     {
-        p.curl.set(CurlOption.localport, cast(long)port);
+        p.curl.set(CurlOption.localport, cast(long) port);
+    }
+
+    /**
+       Set the no proxy flag for the specified host names.
+       Params:
+       test = a list of comma host names that do not require
+              proxy to get reached
+    */
+    void setNoProxy(string hosts)
+    {
+        p.curl.set(CurlOption.noproxy, hosts);
     }
 
     /**
@@ -1778,11 +2067,11 @@ private mixin template Protocol()
     */
     @property void localPortRange(ushort range)
     {
-        p.curl.set(CurlOption.localportrange, cast(long)range);
+        p.curl.set(CurlOption.localportrange, cast(long) range);
     }
 
     /** Set the tcp no-delay socket option on or off.
-        See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTTCPNODELAY, nodelay)
+        See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTTCPNODELAY, nodelay)
     */
     @property void tcpNoDelay(bool on)
     {
@@ -1790,7 +2079,7 @@ private mixin template Protocol()
     }
 
     /** Sets whether SSL peer certificates should be verified.
-        See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTSSLVERIFYPEER, verifypeer)
+        See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTSSLVERIFYPEER, verifypeer)
     */
     @property void verifyPeer(bool on)
     {
@@ -1798,7 +2087,7 @@ private mixin template Protocol()
     }
 
     /** Sets whether the host within an SSL certificate should be verified.
-        See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTSSLVERIFYHOST, verifypeer)
+        See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTSSLVERIFYHOST, verifypeer)
     */
     @property void verifyHost(bool on)
     {
@@ -1823,21 +2112,30 @@ private mixin template Protocol()
     void setAuthentication(const(char)[] username, const(char)[] password,
                            const(char)[] domain = "")
     {
+        import std.format : format;
         if (!domain.empty)
             username = format("%s/%s", domain, username);
         p.curl.set(CurlOption.userpwd, format("%s:%s", username, password));
     }
 
-    unittest
+    @system unittest
     {
-        if (!netAllowed()) return;
-        auto http = HTTP("http://www.protected.com");
-        http.onReceiveHeader =
-            (in char[] key,
-             in char[] value) { /* writeln(key ~ ": " ~ value); */ };
+        import std.algorithm.searching : canFind;
+
+        testServer.handle((s) {
+            auto req = s.recvReq;
+            assert(req.hdrs.canFind("GET /"));
+            assert(req.hdrs.canFind("Basic dXNlcjpwYXNz"));
+            s.send(httpOK());
+        });
+
+        auto http = HTTP(testServer.addr);
         http.onReceive = (ubyte[] data) { return data.length; };
-        http.setAuthentication("myuser", "mypassword");
+        http.setAuthentication("user", "pass");
         http.perform();
+
+        // Bugzilla 17540
+        http.setNoProxy("www.example.com");
     }
 
     /**
@@ -1849,6 +2147,9 @@ private mixin template Protocol()
     */
     void setProxyAuthentication(const(char)[] username, const(char)[] password)
     {
+        import std.array : replace;
+        import std.format : format;
+
         p.curl.set(CurlOption.proxyuserpwd,
             format("%s:%s",
                 username.replace(":", "%3A"),
@@ -1876,10 +2177,10 @@ private mixin template Protocol()
      * auto client = HTTP("dlang.org");
      * client.onSend = delegate size_t(void[] data)
      * {
-     *     auto m = cast(void[])msg;
+     *     auto m = cast(void[]) msg;
      *     size_t length = m.length > data.length ? data.length : m.length;
      *     if (length == 0) return 0;
-     *     data[0..length] = m[0..length];
+     *     data[0 .. length] = m[0 .. length];
      *     msg = msg[length..$];
      *     return length;
      * };
@@ -1963,14 +2264,14 @@ decodeString(Char = char)(const(ubyte)[] data,
                           size_t maxChars = size_t.max)
 {
     Char[] res;
-    auto startLen = data.length;
+    immutable startLen = data.length;
     size_t charsDecoded = 0;
     while (data.length && charsDecoded < maxChars)
     {
-        dchar dc = scheme.safeDecode(data);
+        immutable dchar dc = scheme.safeDecode(data);
         if (dc == INVALID_SEQUENCE)
         {
-            return typeof(return)(size_t.max, cast(Char[])null);
+            return typeof(return)(size_t.max, cast(Char[]) null);
         }
         charsDecoded++;
         res ~= dc;
@@ -2001,19 +2302,19 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
                                                      EncodingScheme scheme,
                                                      Terminator terminator)
 {
-    auto startLen = src.length;
-    size_t charsDecoded = 0;
+    import std.algorithm.searching : endsWith;
+
     // if there is anything in the basesrc then try to decode that
     // first.
     if (basesrc.length != 0)
     {
         // Try to ensure 4 entries in the basesrc by copying from src.
-        auto blen = basesrc.length;
-        size_t len = (basesrc.length + src.length) >= 4 ?
+        immutable blen = basesrc.length;
+        immutable len = (basesrc.length + src.length) >= 4 ?
                      4 : basesrc.length + src.length;
         basesrc.length = len;
 
-        dchar dc = scheme.safeDecode(basesrc);
+        immutable dchar dc = scheme.safeDecode(basesrc);
         if (dc == INVALID_SEQUENCE)
         {
             enforce!CurlException(len != 4, "Invalid code sequence");
@@ -2026,7 +2327,7 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
 
     while (src.length)
     {
-        auto lsrc = src;
+        const lsrc = src;
         dchar dc = scheme.safeDecode(src);
         if (dc == INVALID_SEQUENCE)
         {
@@ -2067,10 +2368,10 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
   * http.contentLength = msg.length;
   * http.onSend = (void[] data)
   * {
-  *     auto m = cast(void[])msg;
+  *     auto m = cast(void[]) msg;
   *     size_t len = m.length > data.length ? data.length : m.length;
   *     if (len == 0) return len;
-  *     data[0..len] = m[0..len];
+  *     data[0 .. len] = m[0 .. len];
   *     msg = msg[len..$];
   *     return len;
   * };
@@ -2090,14 +2391,16 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
   * http.perform();
   * ---
   *
-  * See_Also: $(WEB www.ietf.org/rfc/rfc2616.txt, RFC2616)
+  * See_Also: $(_HTTP www.ietf.org/rfc/rfc2616.txt, RFC2616)
   *
   */
 struct HTTP
 {
     mixin Protocol;
 
-    /// Authentication method equal to $(ECXREF curl, CurlAuth)
+    import std.datetime.systime : SysTime;
+
+    /// Authentication method equal to $(REF CurlAuth, etc,c,curl)
     alias AuthMethod = CurlAuth;
 
     static private uint defaultMaxRedirects = 10;
@@ -2107,7 +2410,7 @@ struct HTTP
         ~this()
         {
             if (headersOut !is null)
-                curl_slist_free_all(headersOut);
+                Curl.curl.slist_free_all(headersOut);
             if (curl.handle !is null) // work around RefCounted/emplace bug
                 curl.shutdown();
         }
@@ -2123,9 +2426,14 @@ struct HTTP
         /// The HTTP method to use.
         Method method = Method.undefined;
 
-        @property void onReceiveHeader(void delegate(in char[] key,
+        @system @property void onReceiveHeader(void delegate(in char[] key,
                                                      in char[] value) callback)
         {
+            import std.algorithm.searching : startsWith;
+            import std.conv : to;
+            import std.regex : regex, match;
+            import std.uni : toLower;
+
             // Wrap incoming callback in order to separate http status line from
             // http headers.  On redirected requests there may be several such
             // status lines. The last one is the one recorded.
@@ -2141,10 +2449,9 @@ struct HTTP
                     }
                     if (header.startsWith("HTTP/"))
                     {
-                        string[string] empty;
-                        headersIn = empty; // clear
+                        headersIn.clear();
 
-                        auto m = match(header, regex(r"^HTTP/(\d+)\.(\d+) (\d+) (.*)$"));
+                        const m = match(header, regex(r"^HTTP/(\d+)\.(\d+) (\d+) (.*)$"));
                         if (m.empty)
                         {
                             // Invalid status line
@@ -2168,7 +2475,7 @@ struct HTTP
                     if (fieldName == "content-type")
                     {
                         auto mct = match(cast(char[]) m.captures[2],
-                                         regex("charset=([^;]*)"));
+                                         regex("charset=([^;]*)", "i"));
                         if (!mct.empty && mct.captures.length > 1)
                             charset = mct.captures[1].idup;
                     }
@@ -2177,7 +2484,7 @@ struct HTTP
                         callback(fieldName, m.captures[2]);
                     headersIn[fieldName] = m.captures[2].idup;
                 }
-                catch(UTFException e)
+                catch (UTFException e)
                 {
                     //munch it - a header should be all ASCII, any "wrong UTF" is broken header
                 }
@@ -2189,9 +2496,9 @@ struct HTTP
 
     private RefCounted!Impl p;
 
-    /** Time condition enumeration as an alias of $(ECXREF curl, CurlTimeCond)
+    /** Time condition enumeration as an alias of $(REF CurlTimeCond, etc,c,curl)
 
-        $(WEB www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.25, _RFC2616 Section 14.25)
+        $(HTTP www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.25, _RFC2616 Section 14.25)
     */
     alias TimeCond = CurlTimeCond;
 
@@ -2206,6 +2513,7 @@ struct HTTP
         return http;
     }
 
+    ///
     static HTTP opCall()
     {
         HTTP http;
@@ -2213,6 +2521,7 @@ struct HTTP
         return http;
     }
 
+    ///
     HTTP dup()
     {
         HTTP copy;
@@ -2222,7 +2531,7 @@ struct HTTP
         curl_slist* newlist = null;
         while (cur)
         {
-            newlist = curl_slist_append(newlist, cur.data);
+            newlist = Curl.curl.slist_append(newlist, cur.data);
             cur = cur.next;
         }
         copy.p.headersOut = newlist;
@@ -2242,7 +2551,6 @@ struct HTTP
         setUserAgent(HTTP.defaultUserAgent);
         dataTimeout = _defaultDataTimeout;
         onReceiveHeader = null;
-        version (unittest) verbose = true;
         verifyPeer = true;
         verifyHost = true;
     }
@@ -2257,45 +2565,61 @@ struct HTTP
        Params:
        throwOnError = whether to throw an exception or return a CurlCode on error
     */
-    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
+    CurlCode perform(ThrowOnError throwOnError = Yes.throwOnError)
     {
         p.status.reset();
 
+        CurlOption opt;
         final switch (p.method)
         {
         case Method.head:
             p.curl.set(CurlOption.nobody, 1L);
+            opt = CurlOption.nobody;
             break;
         case Method.undefined:
         case Method.get:
             p.curl.set(CurlOption.httpget, 1L);
+            opt = CurlOption.httpget;
             break;
         case Method.post:
             p.curl.set(CurlOption.post, 1L);
+            opt = CurlOption.post;
             break;
         case Method.put:
             p.curl.set(CurlOption.upload, 1L);
+            opt = CurlOption.upload;
             break;
         case Method.del:
             p.curl.set(CurlOption.customrequest, "DELETE");
+            opt = CurlOption.customrequest;
             break;
         case Method.options:
             p.curl.set(CurlOption.customrequest, "OPTIONS");
+            opt = CurlOption.customrequest;
             break;
         case Method.trace:
             p.curl.set(CurlOption.customrequest, "TRACE");
+            opt = CurlOption.customrequest;
             break;
         case Method.connect:
             p.curl.set(CurlOption.customrequest, "CONNECT");
+            opt = CurlOption.customrequest;
+            break;
+        case Method.patch:
+            p.curl.set(CurlOption.customrequest, "PATCH");
+            opt = CurlOption.customrequest;
             break;
         }
 
+        scope (exit) p.curl.clear(opt);
         return p.curl.perform(throwOnError);
     }
 
     /// The URL to specify the location of the resource.
     @property void url(const(char)[] url)
     {
+        import std.algorithm.searching : startsWith;
+        import std.uni : toLower;
         if (!startsWith(url.toLower(), "http://", "https://"))
             url = "http://" ~ url;
         p.curl.set(CurlOption.url, url);
@@ -2347,12 +2671,12 @@ struct HTTP
         // Network settings
 
         /** Proxy
-         *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy)
+         *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy)
          */
         @property void proxy(const(char)[] host);
 
         /** Proxy port
-         *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXYPORT, _proxy_port)
+         *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXYPORT, _proxy_port)
          */
         @property void proxyPort(ushort port);
 
@@ -2360,7 +2684,7 @@ struct HTTP
         alias CurlProxy = etc.c.curl.CurlProxy;
 
         /** Proxy type
-         *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
+         *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
          */
         @property void proxyType(CurlProxy type);
 
@@ -2376,7 +2700,7 @@ struct HTTP
          * theprotocol.netInterface = [ 192, 168, 1, 32 ];
          * ----
          *
-         * See: $(XREF socket, InternetAddress)
+         * See: $(REF InternetAddress, std,socket)
          */
         @property void netInterface(const(char)[] i);
 
@@ -2403,7 +2727,7 @@ struct HTTP
         @property void localPortRange(ushort range);
 
         /** Set the tcp no-delay socket option on or off.
-            See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTTCPNODELAY, nodelay)
+            See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTTCPNODELAY, nodelay)
         */
         @property void tcpNoDelay(bool on);
 
@@ -2454,10 +2778,10 @@ struct HTTP
          * auto client = HTTP("dlang.org");
          * client.onSend = delegate size_t(void[] data)
          * {
-         *     auto m = cast(void[])msg;
+         *     auto m = cast(void[]) msg;
          *     size_t length = m.length > data.length ? data.length : m.length;
          *     if (length == 0) return 0;
-         *     data[0..length] = m[0..length];
+         *     data[0 .. length] = m[0 .. length];
          *     msg = msg[length..$];
          *     return length;
          * };
@@ -2522,7 +2846,7 @@ struct HTTP
     void clearRequestHeaders()
     {
         if (p.headersOut !is null)
-            curl_slist_free_all(p.headersOut);
+            Curl.curl.slist_free_all(p.headersOut);
         p.headersOut = null;
         p.curl.clear(CurlOption.httpheader);
     }
@@ -2537,16 +2861,19 @@ struct HTTP
      * import std.net.curl;
      * auto client = HTTP();
      * client.addRequestHeader("X-Custom-ABC", "This is the custom value");
-     * string content = get("dlang.org", client);
+     * auto content = get("dlang.org", client);
      * ---
      */
     void addRequestHeader(const(char)[] name, const(char)[] value)
     {
+        import std.format : format;
+        import std.uni : icmp;
+
         if (icmp(name, "User-Agent") == 0)
             return setUserAgent(value);
         string nv = format("%s: %s", name, value);
-        p.headersOut = curl_slist_append(p.headersOut,
-                                         nv.tempCString().buffPtr);
+        p.headersOut = Curl.curl.slist_append(p.headersOut,
+                                              nv.tempCString().buffPtr);
         p.curl.set(CurlOption.httpheader, p.headersOut);
     }
 
@@ -2554,22 +2881,26 @@ struct HTTP
      * The default "User-Agent" value send with a request.
      * It has the form "Phobos-std.net.curl/$(I PHOBOS_VERSION) (libcurl/$(I CURL_VERSION))"
      */
-    static immutable string defaultUserAgent;
-
-    shared static this()
+    static string defaultUserAgent() @property
     {
         import std.compiler : version_major, version_minor;
+        import std.format : format, sformat;
 
         // http://curl.haxx.se/docs/versions.html
         enum fmt = "Phobos-std.net.curl/%d.%03d (libcurl/%d.%d.%d)";
         enum maxLen = fmt.length - "%d%03d%d%d%d".length + 10 + 10 + 3 + 3 + 3;
 
-        __gshared char[maxLen] buf = void;
+        static char[maxLen] buf = void;
+        static string userAgent;
 
-        auto curlVer = curl_version_info(CURLVERSION_NOW).version_num;
-        defaultUserAgent = cast(immutable)sformat(
-            buf, fmt, version_major, version_minor,
-            curlVer >> 16 & 0xFF, curlVer >> 8 & 0xFF, curlVer & 0xFF);
+        if (!userAgent.length)
+        {
+            auto curlVer = Curl.curl.version_info(CURLVERSION_NOW).version_num;
+            userAgent = cast(immutable) sformat(
+                buf, fmt, version_major, version_minor,
+                curlVer >> 16 & 0xFF, curlVer >> 8 & 0xFF, curlVer & 0xFF);
+        }
+        return userAgent;
     }
 
     /** Set the value of the user agent request header field.
@@ -2581,6 +2912,46 @@ struct HTTP
     void setUserAgent(const(char)[] userAgent)
     {
         p.curl.set(CurlOption.useragent, userAgent);
+    }
+
+    /**
+     * Get various timings defined in $(REF CurlInfo, etc, c, curl).
+     * The value is usable only if the return value is equal to $(D etc.c.curl.CurlError.ok).
+     *
+     * Params:
+     *      timing = one of the timings defined in $(REF CurlInfo, etc, c, curl).
+     *               The values are:
+     *               $(D etc.c.curl.CurlInfo.namelookup_time),
+     *               $(D etc.c.curl.CurlInfo.connect_time),
+     *               $(D etc.c.curl.CurlInfo.pretransfer_time),
+     *               $(D etc.c.curl.CurlInfo.starttransfer_time),
+     *               $(D etc.c.curl.CurlInfo.redirect_time),
+     *               $(D etc.c.curl.CurlInfo.appconnect_time),
+     *               $(D etc.c.curl.CurlInfo.total_time).
+     *      val    = the actual value of the inquired timing.
+     *
+     * Returns:
+     *      The return code of the operation. The value stored in val
+     *      should be used only if the return value is $(D etc.c.curl.CurlInfo.ok).
+     *
+     * Example:
+     * ---
+     * import std.net.curl;
+     * import etc.c.curl : CurlError, CurlInfo;
+     *
+     * auto client = HTTP("dlang.org");
+     * client.perform();
+     *
+     * double val;
+     * CurlCode code;
+     *
+     * code = http.getTiming(CurlInfo.namelookup_time, val);
+     * assert(code == CurlError.ok);
+     * ---
+     */
+    CurlCode getTiming(CurlInfo timing, ref double val)
+    {
+        return p.curl.getTiming(timing, val);
     }
 
     /** The headers read from a successful response.
@@ -2651,7 +3022,7 @@ struct HTTP
        cond =  $(D CurlTimeCond.{none,ifmodsince,ifunmodsince,lastmod})
        timestamp = Timestamp for the condition
 
-       $(WEB www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.25, _RFC2616 Section 14.25)
+       $(HTTP www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.25, _RFC2616 Section 14.25)
     */
     void setTimeCondition(HTTP.TimeCond cond, SysTime timestamp)
     {
@@ -2721,25 +3092,33 @@ struct HTTP
         // cannot use callback when specifying data directly so it is disabled here.
         p.curl.clear(CurlOption.readfunction);
         addRequestHeader("Content-Type", contentType);
-        p.curl.set(CurlOption.postfields, cast(void*)data.ptr);
+        p.curl.set(CurlOption.postfields, cast(void*) data.ptr);
         p.curl.set(CurlOption.postfieldsize, data.length);
         if (method == Method.undefined)
             method = Method.post;
     }
 
-    unittest
+    @system unittest
     {
-        if (!netAllowed()) return;
-        ubyte[] data;
-        foreach (n; 0..256)
-            data ~= cast(ubyte)n;
-        auto http = HTTP(testUrl2);
+        import std.algorithm.searching : canFind;
+
+        testServer.handle((s) {
+            auto req = s.recvReq!ubyte;
+            assert(req.hdrs.canFind("POST /path"));
+            assert(req.bdy.canFind(cast(ubyte[])[0, 1, 2, 3, 4]));
+            assert(req.bdy.canFind(cast(ubyte[])[253, 254, 255]));
+            s.send(httpOK(cast(ubyte[])[17, 27, 35, 41]));
+        });
+        auto data = new ubyte[](256);
+        foreach (i, ref ub; data)
+            ub = cast(ubyte) i;
+
+        auto http = HTTP(testServer.addr~"/path");
         http.postData = data;
-        ubyte[] result;
-        http.onReceive = (ubyte[] data) { result ~= data; return data.length; };
+        ubyte[] res;
+        http.onReceive = (data) { res ~= data; return data.length; };
         http.perform();
-        assert(data == result,
-               "HTTP POST with binary data returns unexpected content (" ~ text(result.length) ~ " bytes)");
+        assert(res == cast(ubyte[])[17, 27, 35, 41]);
     }
 
     /**
@@ -2779,23 +3158,28 @@ struct HTTP
     /**
        The content length in bytes when using request that has content
        e.g. POST/PUT and not using chunked transfer. Is set as the
-       "Content-Length" header.  Set to size_t.max to reset to chunked transfer.
+       "Content-Length" header.  Set to ulong.max to reset to chunked transfer.
     */
-    @property void contentLength(size_t len)
+    @property void contentLength(ulong len)
     {
+        import std.conv : to;
+
         CurlOption lenOpt;
 
         // Force post if necessary
-        if (p.method != Method.put && p.method != Method.post)
+        if (p.method != Method.put && p.method != Method.post &&
+            p.method != Method.patch)
             p.method = Method.post;
 
-        if (p.method == Method.put)
-            lenOpt = CurlOption.infilesize_large;
-        else
-            // post
+        if (p.method == Method.post || p.method == Method.patch)
             lenOpt = CurlOption.postfieldsize_large;
+        else
+            lenOpt = CurlOption.infilesize_large;
 
-        if (len == size_t.max)
+        if (size_t.max != ulong.max && len == size_t.max)
+            len = ulong.max; // check size_t.max for backwards compat, turn into error
+
+        if (len == ulong.max)
         {
             // HTTP 1.1 supports requests with no length header set.
             addRequestHeader("Transfer-Encoding", "chunked");
@@ -2803,7 +3187,7 @@ struct HTTP
         }
         else
         {
-            p.curl.set(lenOpt, len);
+            p.curl.set(lenOpt, to!curl_off_t(len));
         }
     }
 
@@ -2833,8 +3217,8 @@ struct HTTP
         }
     }
 
-    /** <a name="HTTP.Method"/ >The standard HTTP methods :
-     *  $(WEB www.w3.org/Protocols/rfc2616/rfc2616-sec5.html#sec5.1.1, _RFC2616 Section 5.1.1)
+    /** <a name="HTTP.Method"/>The standard HTTP methods :
+     *  $(HTTP www.w3.org/Protocols/rfc2616/rfc2616-sec5.html#sec5.1.1, _RFC2616 Section 5.1.1)
      */
     enum Method
     {
@@ -2846,7 +3230,8 @@ struct HTTP
         del,  ///
         options, ///
         trace,   ///
-        connect  ///
+        connect,  ///
+        patch, ///
     }
 
     /**
@@ -2872,8 +3257,9 @@ struct HTTP
         }
 
         ///
-        string toString()
+        string toString() const
         {
+            import std.format : format;
             return format("%s %s (%s.%s)",
                           code, reason, majorVersion, minorVersion);
         }
@@ -2881,10 +3267,49 @@ struct HTTP
 
 } // HTTP
 
+@system unittest // charset/Charset/CHARSET/...
+{
+    import std.meta : AliasSeq;
+
+    foreach (c; AliasSeq!("charset", "Charset", "CHARSET", "CharSet", "charSet",
+        "ChArSeT", "cHaRsEt"))
+    {
+        testServer.handle((s) {
+            s.send("HTTP/1.1 200 OK\r\n"~
+                "Content-Length: 0\r\n"~
+                "Content-Type: text/plain; " ~ c ~ "=foo\r\n" ~
+                "\r\n");
+        });
+
+        auto http = HTTP(testServer.addr);
+        http.perform();
+        assert(http.p.charset == "foo");
+
+        // Bugzilla 16736
+        double val;
+        CurlCode code;
+
+        code = http.getTiming(CurlInfo.total_time, val);
+        assert(code == CurlError.ok);
+        code = http.getTiming(CurlInfo.namelookup_time, val);
+        assert(code == CurlError.ok);
+        code = http.getTiming(CurlInfo.connect_time, val);
+        assert(code == CurlError.ok);
+        code = http.getTiming(CurlInfo.pretransfer_time, val);
+        assert(code == CurlError.ok);
+        code = http.getTiming(CurlInfo.starttransfer_time, val);
+        assert(code == CurlError.ok);
+        code = http.getTiming(CurlInfo.redirect_time, val);
+        assert(code == CurlError.ok);
+        code = http.getTiming(CurlInfo.appconnect_time, val);
+        assert(code == CurlError.ok);
+    }
+}
+
 /**
    FTP client functionality.
 
-   See_Also: $(WEB tools.ietf.org/html/rfc959, RFC959)
+   See_Also: $(HTTP tools.ietf.org/html/rfc959, RFC959)
 */
 struct FTP
 {
@@ -2896,7 +3321,7 @@ struct FTP
         ~this()
         {
             if (commands !is null)
-                curl_slist_free_all(commands);
+                Curl.curl.slist_free_all(commands);
             if (curl.handle !is null) // work around RefCounted/emplace bug
                 curl.shutdown();
         }
@@ -2918,6 +3343,7 @@ struct FTP
         return ftp;
     }
 
+    ///
     static FTP opCall()
     {
         FTP ftp;
@@ -2925,6 +3351,7 @@ struct FTP
         return ftp;
     }
 
+    ///
     FTP dup()
     {
         FTP copy = FTP();
@@ -2935,7 +3362,7 @@ struct FTP
         curl_slist* newlist = null;
         while (cur)
         {
-            newlist = curl_slist_append(newlist, cur.data);
+            newlist = Curl.curl.slist_append(newlist, cur.data);
             cur = cur.next;
         }
         copy.p.commands = newlist;
@@ -2949,7 +3376,6 @@ struct FTP
         p.curl.initialize();
         p.encoding = "ISO-8859-1";
         dataTimeout = _defaultDataTimeout;
-        version (unittest) verbose = true;
     }
 
     /**
@@ -2962,7 +3388,7 @@ struct FTP
        Params:
        throwOnError = whether to throw an exception or return a CurlCode on error
     */
-    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
+    CurlCode perform(ThrowOnError throwOnError = Yes.throwOnError)
     {
         return p.curl.perform(throwOnError);
     }
@@ -2970,6 +3396,9 @@ struct FTP
     /// The URL to specify the location of the resource.
     @property void url(const(char)[] url)
     {
+        import std.algorithm.searching : startsWith;
+        import std.uni : toLower;
+
         if (!startsWith(url.toLower(), "ftp://", "ftps://"))
             url = "ftp://" ~ url;
         p.curl.set(CurlOption.url, url);
@@ -3015,12 +3444,12 @@ struct FTP
         // Network settings
 
         /** Proxy
-         *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy)
+         *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy)
          */
         @property void proxy(const(char)[] host);
 
         /** Proxy port
-         *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXYPORT, _proxy_port)
+         *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXYPORT, _proxy_port)
          */
         @property void proxyPort(ushort port);
 
@@ -3028,7 +3457,7 @@ struct FTP
         alias CurlProxy = etc.c.curl.CurlProxy;
 
         /** Proxy type
-         *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
+         *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
          */
         @property void proxyType(CurlProxy type);
 
@@ -3044,7 +3473,7 @@ struct FTP
          * theprotocol.netInterface = [ 192, 168, 1, 32 ];
          * ----
          *
-         * See: $(XREF socket, InternetAddress)
+         * See: $(REF InternetAddress, std,socket)
          */
         @property void netInterface(const(char)[] i);
 
@@ -3071,7 +3500,7 @@ struct FTP
         @property void localPortRange(ushort range);
 
         /** Set the tcp no-delay socket option on or off.
-            See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTTCPNODELAY, nodelay)
+            See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTTCPNODELAY, nodelay)
         */
         @property void tcpNoDelay(bool on);
 
@@ -3151,7 +3580,7 @@ struct FTP
     void clearCommands()
     {
         if (p.commands !is null)
-            curl_slist_free_all(p.commands);
+            Curl.curl.slist_free_all(p.commands);
         p.commands = null;
         p.curl.clear(CurlOption.postquote);
     }
@@ -3172,8 +3601,8 @@ struct FTP
      */
     void addCommand(const(char)[] command)
     {
-        p.commands = curl_slist_append(p.commands,
-                                       command.tempCString().buffPtr);
+        p.commands = Curl.curl.slist_append(p.commands,
+                                            command.tempCString().buffPtr);
         p.curl.set(CurlOption.postquote, p.commands);
     }
 
@@ -3192,9 +3621,75 @@ struct FTP
     /**
        The content length in bytes of the ftp data.
     */
-    @property void contentLength(size_t len)
+    @property void contentLength(ulong len)
     {
-        p.curl.set(CurlOption.infilesize_large, len);
+        import std.conv : to;
+        p.curl.set(CurlOption.infilesize_large, to!curl_off_t(len));
+    }
+
+    /**
+     * Get various timings defined in $(REF CurlInfo, etc, c, curl).
+     * The value is usable only if the return value is equal to $(D etc.c.curl.CurlError.ok).
+     *
+     * Params:
+     *      timing = one of the timings defined in $(REF CurlInfo, etc, c, curl).
+     *               The values are:
+     *               $(D etc.c.curl.CurlInfo.namelookup_time),
+     *               $(D etc.c.curl.CurlInfo.connect_time),
+     *               $(D etc.c.curl.CurlInfo.pretransfer_time),
+     *               $(D etc.c.curl.CurlInfo.starttransfer_time),
+     *               $(D etc.c.curl.CurlInfo.redirect_time),
+     *               $(D etc.c.curl.CurlInfo.appconnect_time),
+     *               $(D etc.c.curl.CurlInfo.total_time).
+     *      val    = the actual value of the inquired timing.
+     *
+     * Returns:
+     *      The return code of the operation. The value stored in val
+     *      should be used only if the return value is $(D etc.c.curl.CurlInfo.ok).
+     *
+     * Example:
+     * ---
+     * import std.net.curl;
+     * import etc.c.curl : CurlError, CurlInfo;
+     *
+     * auto client = FTP();
+     * client.addCommand("RNFR my_file.txt");
+     * client.addCommand("RNTO my_renamed_file.txt");
+     * upload("my_file.txt", "ftp.digitalmars.com", client);
+     *
+     * double val;
+     * CurlCode code;
+     *
+     * code = http.getTiming(CurlInfo.namelookup_time, val);
+     * assert(code == CurlError.ok);
+     * ---
+     */
+    CurlCode getTiming(CurlInfo timing, ref double val)
+    {
+        return p.curl.getTiming(timing, val);
+    }
+
+    @system unittest
+    {
+        auto client = FTP();
+
+        double val;
+        CurlCode code;
+
+        code = client.getTiming(CurlInfo.total_time, val);
+        assert(code == CurlError.ok);
+        code = client.getTiming(CurlInfo.namelookup_time, val);
+        assert(code == CurlError.ok);
+        code = client.getTiming(CurlInfo.connect_time, val);
+        assert(code == CurlError.ok);
+        code = client.getTiming(CurlInfo.pretransfer_time, val);
+        assert(code == CurlError.ok);
+        code = client.getTiming(CurlInfo.starttransfer_time, val);
+        assert(code == CurlError.ok);
+        code = client.getTiming(CurlInfo.redirect_time, val);
+        assert(code == CurlError.ok);
+        code = client.getTiming(CurlInfo.appconnect_time, val);
+        assert(code == CurlError.ok);
     }
 }
 
@@ -3214,7 +3709,7 @@ struct FTP
   * smtp.perform();
   * ---
   *
-  * See_Also: $(WEB www.ietf.org/rfc/rfc2821.txt, RFC2821)
+  * See_Also: $(HTTP www.ietf.org/rfc/rfc2821.txt, RFC2821)
   */
 struct SMTP
 {
@@ -3231,6 +3726,8 @@ struct SMTP
 
         @property void message(string msg)
         {
+            import std.algorithm.comparison : min;
+
             auto _message = msg;
             /**
                 This delegate reads the message text and copies it.
@@ -3238,9 +3735,8 @@ struct SMTP
             curl.onSend = delegate size_t(void[] data)
             {
                 if (!msg.length) return 0;
-                auto m = cast(void[])msg;
                 size_t to_copy = min(data.length, _message.length);
-                data[0..to_copy] = (cast(void[])_message)[0..to_copy];
+                data[0 .. to_copy] = (cast(void[])_message)[0 .. to_copy];
                 _message = _message[to_copy..$];
                 return to_copy;
             };
@@ -3260,6 +3756,7 @@ struct SMTP
         return smtp;
     }
 
+    ///
     static SMTP opCall()
     {
         SMTP smtp;
@@ -3278,7 +3775,7 @@ struct SMTP
         curl_slist* newlist = null;
         while (cur)
         {
-            newlist = curl_slist_append(newlist, cur.data);
+            newlist = Curl.curl.slist_append(newlist, cur.data);
             cur = cur.next;
         }
         copy.p.commands = newlist;
@@ -3293,7 +3790,7 @@ struct SMTP
         Params:
         throwOnError = whether to throw an exception or return a CurlCode on error
     */
-    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
+    CurlCode perform(ThrowOnError throwOnError = Yes.throwOnError)
     {
         return p.curl.perform(throwOnError);
     }
@@ -3301,6 +3798,9 @@ struct SMTP
     /// The URL to specify the location of the resource.
     @property void url(const(char)[] url)
     {
+        import std.algorithm.searching : startsWith;
+        import std.uni : toLower;
+
         auto lowered = url.toLower();
 
         if (lowered.startsWith("smtps://"))
@@ -3364,12 +3864,12 @@ struct SMTP
         // Network settings
 
         /** Proxy
-         *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy)
+         *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy)
          */
         @property void proxy(const(char)[] host);
 
         /** Proxy port
-         *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXYPORT, _proxy_port)
+         *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXYPORT, _proxy_port)
          */
         @property void proxyPort(ushort port);
 
@@ -3377,7 +3877,7 @@ struct SMTP
         alias CurlProxy = etc.c.curl.CurlProxy;
 
         /** Proxy type
-         *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
+         *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
          */
         @property void proxyType(CurlProxy type);
 
@@ -3393,7 +3893,7 @@ struct SMTP
          * theprotocol.netInterface = [ 192, 168, 1, 32 ];
          * ----
          *
-         * See: $(XREF socket, InternetAddress)
+         * See: $(REF InternetAddress, std,socket)
          */
         @property void netInterface(const(char)[] i);
 
@@ -3420,7 +3920,7 @@ struct SMTP
         @property void localPortRange(ushort range);
 
         /** Set the tcp no-delay socket option on or off.
-            See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTTCPNODELAY, nodelay)
+            See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTTCPNODELAY, nodelay)
         */
         @property void tcpNoDelay(bool on);
 
@@ -3509,10 +4009,10 @@ struct SMTP
     {
         assert(!recipients.empty, "Recipient must not be empty");
         curl_slist* recipients_list = null;
-        foreach(recipient; recipients)
+        foreach (recipient; recipients)
         {
             recipients_list =
-                curl_slist_append(recipients_list,
+                Curl.curl.slist_append(recipients_list,
                                   recipient.tempCString().buffPtr);
         }
         p.curl.set(CurlOption.mail_rcpt, recipients_list);
@@ -3572,12 +4072,159 @@ class CurlTimeoutException : CurlException
     }
 }
 
-/// Equal to $(ECXREF curl, CURLcode)
+/++
+    Exception thrown on HTTP request failures, e.g. 404 Not Found.
++/
+class HTTPStatusException : CurlException
+{
+    /++
+        Params:
+            status = The HTTP status code.
+            msg  = The message for the exception.
+            file = The file where the exception occurred.
+            line = The line number where the exception occurred.
+            next = The previous exception in the chain of exceptions, if any.
+      +/
+    @safe pure nothrow
+    this(int status,
+         string msg,
+         string file = __FILE__,
+         size_t line = __LINE__,
+         Throwable next = null)
+    {
+        super(msg, file, line, next);
+        this.status = status;
+    }
+
+    immutable int status; /// The HTTP status code
+}
+
+/// Equal to $(REF CURLcode, etc,c,curl)
 alias CurlCode = CURLcode;
 
-import std.typecons : Flag;
+import std.typecons : Flag, Yes, No;
 /// Flag to specify whether or not an exception is thrown on error.
 alias ThrowOnError = Flag!"throwOnError";
+
+private struct CurlAPI
+{
+    static struct API
+    {
+    extern(C):
+        import core.stdc.config : c_long;
+        CURLcode function(c_long flags) global_init;
+        void function() global_cleanup;
+        curl_version_info_data * function(CURLversion) version_info;
+        CURL* function() easy_init;
+        CURLcode function(CURL *curl, CURLoption option,...) easy_setopt;
+        CURLcode function(CURL *curl) easy_perform;
+        CURLcode function(CURL *curl, CURLINFO info,...) easy_getinfo;
+        CURL* function(CURL *curl) easy_duphandle;
+        char* function(CURLcode) easy_strerror;
+        CURLcode function(CURL *handle, int bitmask) easy_pause;
+        void function(CURL *curl) easy_cleanup;
+        curl_slist* function(curl_slist *, char *) slist_append;
+        void function(curl_slist *) slist_free_all;
+    }
+    __gshared API _api;
+    __gshared void* _handle;
+
+    static ref API instance() @property
+    {
+        import std.concurrency : initOnce;
+        initOnce!_handle(loadAPI());
+        return _api;
+    }
+
+    static void* loadAPI()
+    {
+        version (Posix)
+        {
+            import core.sys.posix.dlfcn : dlsym, dlopen, dlclose, RTLD_LAZY;
+            alias loadSym = dlsym;
+        }
+        else version (Windows)
+        {
+            import core.sys.windows.windows : GetProcAddress, GetModuleHandleA,
+                LoadLibraryA;
+            alias loadSym = GetProcAddress;
+        }
+        else
+            static assert(0, "unimplemented");
+
+        void* handle;
+        version (Posix)
+            handle = dlopen(null, RTLD_LAZY);
+        else version (Windows)
+            handle = GetModuleHandleA(null);
+        assert(handle !is null);
+
+        // try to load curl from the executable to allow static linking
+        if (loadSym(handle, "curl_global_init") is null)
+        {
+            import std.format : format;
+            version (Posix)
+                dlclose(handle);
+
+            version (OSX)
+                static immutable names = ["libcurl.4.dylib"];
+            else version (Posix)
+            {
+                static immutable names = ["libcurl.so", "libcurl.so.4",
+                "libcurl-gnutls.so.4", "libcurl-nss.so.4", "libcurl.so.3"];
+            }
+            else version (Windows)
+                static immutable names = ["libcurl.dll", "curl.dll"];
+
+            foreach (name; names)
+            {
+                version (Posix)
+                    handle = dlopen(name.ptr, RTLD_LAZY);
+                else version (Windows)
+                    handle = LoadLibraryA(name.ptr);
+                if (handle !is null) break;
+            }
+
+            enforce!CurlException(handle !is null, "Failed to load curl, tried %(%s, %).".format(names));
+        }
+
+        foreach (i, FP; typeof(API.tupleof))
+        {
+            enum name = __traits(identifier, _api.tupleof[i]);
+            auto p = enforce!CurlException(loadSym(handle, "curl_"~name),
+                                           "Couldn't load curl_"~name~" from libcurl.");
+            _api.tupleof[i] = cast(FP) p;
+        }
+
+        enforce!CurlException(!_api.global_init(CurlGlobal.all),
+                              "Failed to initialize libcurl");
+
+        static extern(C) void cleanup()
+        {
+            if (_handle is null) return;
+            _api.global_cleanup();
+            version (Posix)
+            {
+                import core.sys.posix.dlfcn : dlclose;
+                dlclose(_handle);
+            }
+            else version (Windows)
+            {
+                import core.sys.windows.windows : FreeLibrary;
+                FreeLibrary(_handle);
+            }
+            else
+                static assert(0, "unimplemented");
+            _api = API.init;
+            _handle = null;
+        }
+
+        import core.stdc.stdlib : atexit;
+        atexit(&cleanup);
+
+        return handle;
+    }
+}
 
 /**
   Wrapper to provide a better interface to libcurl than using the plain C API.
@@ -3591,21 +4238,11 @@ alias ThrowOnError = Flag!"throwOnError";
 */
 struct Curl
 {
-    shared static this()
-    {
-        // initialize early to prevent thread races
-        enforce!CurlException(!curl_global_init(CurlGlobal.all),
-                                "Couldn't initialize libcurl");
-    }
-
-    shared static ~this()
-    {
-        curl_global_cleanup();
-    }
-
     alias OutData = void[];
     alias InData = ubyte[];
-    bool stopped;
+    private bool _stopped;
+
+    private static auto ref curl() @property { return CurlAPI.instance; }
 
     // A handle should not be used by two threads simultaneously
     private CURL* handle;
@@ -3628,10 +4265,16 @@ struct Curl
     void initialize()
     {
         enforce!CurlException(!handle, "Curl instance already initialized");
-        handle = curl_easy_init();
+        handle = curl.easy_init();
         enforce!CurlException(handle, "Curl instance couldn't be initialized");
-        stopped = false;
+        _stopped = false;
         set(CurlOption.nosignal, 1);
+    }
+
+    ///
+    @property bool stopped() const
+    {
+        return _stopped;
     }
 
     /**
@@ -3645,24 +4288,19 @@ struct Curl
     Curl dup()
     {
         Curl copy;
-        copy.handle = curl_easy_duphandle(handle);
-        copy.stopped = false;
+        copy.handle = curl.easy_duphandle(handle);
+        copy._stopped = false;
 
         with (CurlOption) {
-            auto tt = TypeTuple!(file, writefunction, writeheader,
-                                 headerfunction, infile,
-                                 readfunction, ioctldata, ioctlfunction,
-                                 seekdata, seekfunction, sockoptdata,
-                                 sockoptfunction, opensocketdata,
-                                 opensocketfunction, noprogress,
-                                 progressdata, progressfunction,
-                                 debugdata, debugfunction,
-                                 interleavedata,
-                                 interleavefunction, chunk_data,
-                                 chunk_bgn_function, chunk_end_function,
-                                 fnmatch_data, fnmatch_function,
-                                 cookiejar, postfields);
-            foreach(option; tt)
+            auto tt = AliasSeq!(file, writefunction, writeheader,
+                headerfunction, infile, readfunction, ioctldata, ioctlfunction,
+                seekdata, seekfunction, sockoptdata, sockoptfunction,
+                opensocketdata, opensocketfunction, progressdata,
+                progressfunction, debugdata, debugfunction, interleavedata,
+                interleavefunction, chunk_data, chunk_bgn_function,
+                chunk_end_function, fnmatch_data, fnmatch_function, cookiejar, postfields);
+
+            foreach (option; tt)
                 copy.clear(option);
         }
 
@@ -3709,10 +4347,11 @@ struct Curl
     private string errorString(CurlCode code)
     {
         import core.stdc.string : strlen;
+        import std.format : format;
 
-        auto msgZ = curl_easy_strerror(code);
+        auto msgZ = curl.easy_strerror(code);
         // doing the following (instead of just using std.conv.to!string) avoids 1 allocation
-        return format("%s on handle %s", msgZ[0 .. core.stdc.string.strlen(msgZ)], handle);
+        return format("%s on handle %s", msgZ[0 .. strlen(msgZ)], handle);
     }
 
     private void throwOnStopped(string message = null)
@@ -3729,8 +4368,8 @@ struct Curl
     void shutdown()
     {
         throwOnStopped();
-        stopped = true;
-        curl_easy_cleanup(this.handle);
+        _stopped = true;
+        curl.easy_cleanup(this.handle);
         this.handle = null;
     }
 
@@ -3740,7 +4379,7 @@ struct Curl
     void pause(bool sendingPaused, bool receivingPaused)
     {
         throwOnStopped();
-        _check(curl_easy_pause(this.handle,
+        _check(curl.easy_pause(this.handle,
                                (sendingPaused ? CurlPause.send_cont : CurlPause.send) |
                                (receivingPaused ? CurlPause.recv_cont : CurlPause.recv)));
     }
@@ -3748,64 +4387,62 @@ struct Curl
     /**
        Set a string curl option.
        Params:
-       option = A $(ECXREF curl, CurlOption) as found in the curl documentation
+       option = A $(REF CurlOption, etc,c,curl) as found in the curl documentation
        value = The string
     */
     void set(CurlOption option, const(char)[] value)
     {
         throwOnStopped();
-        _check(curl_easy_setopt(this.handle, option, value.tempCString().buffPtr));
+        _check(curl.easy_setopt(this.handle, option, value.tempCString().buffPtr));
     }
 
     /**
        Set a long curl option.
        Params:
-       option = A $(ECXREF curl, CurlOption) as found in the curl documentation
+       option = A $(REF CurlOption, etc,c,curl) as found in the curl documentation
        value = The long
     */
     void set(CurlOption option, long value)
     {
         throwOnStopped();
-        _check(curl_easy_setopt(this.handle, option, value));
+        _check(curl.easy_setopt(this.handle, option, value));
     }
 
     /**
        Set a void* curl option.
        Params:
-       option = A $(ECXREF curl, CurlOption) as found in the curl documentation
+       option = A $(REF CurlOption, etc,c,curl) as found in the curl documentation
        value = The pointer
     */
     void set(CurlOption option, void* value)
     {
         throwOnStopped();
-        _check(curl_easy_setopt(this.handle, option, value));
+        _check(curl.easy_setopt(this.handle, option, value));
     }
 
     /**
        Clear a pointer option.
        Params:
-       option = A $(ECXREF curl, CurlOption) as found in the curl documentation
+       option = A $(REF CurlOption, etc,c,curl) as found in the curl documentation
     */
     void clear(CurlOption option)
     {
         throwOnStopped();
-        _check(curl_easy_setopt(this.handle, option, null));
+        _check(curl.easy_setopt(this.handle, option, null));
     }
 
     /**
        Clear a pointer option. Does not raise an exception if the underlying
        libcurl does not support the option. Use sparingly.
        Params:
-       option = A $(ECXREF curl, CurlOption) as found in the curl documentation
+       option = A $(REF CurlOption, etc,c,curl) as found in the curl documentation
     */
     void clearIfSupported(CurlOption option)
     {
         throwOnStopped();
-        auto rval = curl_easy_setopt(this.handle, option, null);
-        if (rval != CurlError.unknown_telnet_option)
-        {
+        auto rval = curl.easy_setopt(this.handle, option, null);
+        if (rval != CurlError.unknown_option && rval != CurlError.not_built_in)
             _check(rval);
-        }
     }
 
     /**
@@ -3815,20 +4452,26 @@ struct Curl
        Params:
        throwOnError = whether to throw an exception or return a CurlCode on error
     */
-    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
+    CurlCode perform(ThrowOnError throwOnError = Yes.throwOnError)
     {
         throwOnStopped();
-        CurlCode code = curl_easy_perform(this.handle);
+        CurlCode code = curl.easy_perform(this.handle);
         if (throwOnError)
             _check(code);
         return code;
     }
 
-    // Explicitly undocumented. It will be removed in November 2015.
-    deprecated("Pass ThrowOnError.yes or .no instead of a boolean.")
-    CurlCode perform(bool throwOnError)
+    /**
+       Get the various timings like name lookup time, total time, connect time etc.
+       The timed category is passed through the timing parameter while the timing
+       value is stored at val. The value is usable only if res is equal to
+       $(D etc.c.curl.CurlError.ok).
+    */
+    CurlCode getTiming(CurlInfo timing, ref double val)
     {
-        return perform(cast(ThrowOnError)throwOnError);
+        CurlCode code;
+        code = curl.easy_getinfo(handle, timing, &val);
+        return code;
     }
 
     /**
@@ -3923,10 +4566,10 @@ struct Curl
       * string msg = "Hello world";
       * curl.onSend = (void[] data)
       * {
-      *     auto m = cast(void[])msg;
+      *     auto m = cast(void[]) msg;
       *     size_t length = m.length > data.length ? data.length : m.length;
       *     if (length == 0) return 0;
-      *     data[0..length] = m[0..length];
+      *     data[0 .. length] = m[0 .. length];
       *     msg = msg[length..$];
       *     return length;
       * };
@@ -3950,11 +4593,11 @@ struct Curl
       *
       * Params:
       * callback = the callback that receives a seek offset and a seek position
-      *            $(ECXREF curl, CurlSeekPos)
+      *            $(REF CurlSeekPos, etc,c,curl)
       *
       * Returns:
       * The callback returns the success state of the seeking
-      * $(ECXREF curl, CurlSeek)
+      * $(REF CurlSeek, etc,c,curl)
       *
       * Example:
       * ----
@@ -3987,7 +4630,7 @@ struct Curl
       *
       * Params:
       * callback = the callback that receives the socket and socket type
-      * $(ECXREF curl, CurlSockType)
+      * $(REF CurlSockType, etc,c,curl)
       *
       * Returns:
       * Return 0 from the callback to signal success, return 1 to signal error
@@ -4066,7 +4709,7 @@ struct Curl
     {
         auto b = cast(Curl*) ptr;
         if (b._onReceive != null)
-            return b._onReceive(cast(InData)(str[0..size*nmemb]));
+            return b._onReceive(cast(InData)(str[0 .. size*nmemb]));
         return size*nmemb;
     }
 
@@ -4074,8 +4717,10 @@ struct Curl
     size_t _receiveHeaderCallback(const char* str,
                                   size_t size, size_t nmemb, void* ptr)
     {
+        import std.string : chomp;
+
         auto b = cast(Curl*) ptr;
-        auto s = str[0..size*nmemb].chomp();
+        auto s = str[0 .. size*nmemb].chomp();
         if (b._onReceiveHeader != null)
             b._onReceiveHeader(s);
 
@@ -4086,7 +4731,7 @@ struct Curl
     size_t _sendCallback(char *str, size_t size, size_t nmemb, void *ptr)
     {
         Curl* b = cast(Curl*) ptr;
-        auto a = cast(void[]) str[0..size*nmemb];
+        auto a = cast(void[]) str[0 .. size*nmemb];
         if (b._onSend == null)
             return 0;
         return b._onSend(a);
@@ -4126,8 +4771,8 @@ struct Curl
             return 0;
 
         // return: 0 ok, 1 fail
-        return b._onProgress(cast(size_t)dltotal, cast(size_t)dlnow,
-                             cast(size_t)ultotal, cast(size_t)ulnow);
+        return b._onProgress(cast(size_t) dltotal, cast(size_t) dlnow,
+                             cast(size_t) ultotal, cast(size_t) ulnow);
     }
 
 }
@@ -4211,12 +4856,12 @@ private static size_t _receiveAsyncChunks(ubyte[] data, ref ubyte[] outdata,
             // them.
             receive((immutable(ubyte)[] buf)
                     {
-                        buffer = cast(ubyte[])buf;
+                        buffer = cast(ubyte[]) buf;
                         outdata = buffer[];
                     },
                     (bool flag) { aborted = true; }
                     );
-            if (aborted) return cast(size_t)0;
+            if (aborted) return cast(size_t) 0;
         }
         if (outdata.empty)
         {
@@ -4228,7 +4873,7 @@ private static size_t _receiveAsyncChunks(ubyte[] data, ref ubyte[] outdata,
         auto copyBytes = outdata.length < data.length ?
             outdata.length : data.length;
 
-        outdata[0..copyBytes] = data[0..copyBytes];
+        outdata[0 .. copyBytes] = data[0 .. copyBytes];
         outdata = outdata[copyBytes..$];
         data = data[copyBytes..$];
 
@@ -4261,6 +4906,7 @@ private static size_t _receiveAsyncLines(Terminator, Unit)
      ref Pool!(Unit[]) freeBuffers, ref Unit[] buffer,
      Tid fromTid, ref bool aborted)
 {
+    import std.format : format;
 
     immutable datalen = data.length;
 
@@ -4281,14 +4927,14 @@ private static size_t _receiveAsyncLines(Terminator, Unit)
             // reuse them.
             receive((immutable(Unit)[] buf)
                     {
-                        buffer = cast(Unit[])buf;
+                        buffer = cast(Unit[]) buf;
                         buffer.length = 0;
                         buffer.assumeSafeAppend();
                         bufferValid = true;
                     },
                     (bool flag) { aborted = true; }
                     );
-            if (aborted) return cast(size_t)0;
+            if (aborted) return cast(size_t) 0;
         }
         if (!bufferValid)
         {
@@ -4340,7 +4986,7 @@ private static size_t _receiveAsyncLines(Terminator, Unit)
         catch (CurlException ex)
         {
             prioritySend(fromTid, cast(immutable(CurlException))ex);
-            return cast(size_t)0;
+            return cast(size_t) 0;
         }
     }
     return datalen;
@@ -4374,8 +5020,8 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
     static if ( !is(Terminator == void))
     {
         // Only lines reading will receive a terminator
-        auto terminator = receiveOnly!Terminator();
-        auto keepTerminator = receiveOnly!bool();
+        const terminator = receiveOnly!Terminator();
+        const keepTerminator = receiveOnly!bool();
 
         // max number of bytes to carry over from an onReceive
         // callback. This is 4 because it is the max code units to
@@ -4390,7 +5036,7 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
     }
 
     // no move semantic available in std.concurrency ie. must use casting.
-    auto connDup = cast(CURL*)receiveOnly!ulong();
+    auto connDup = cast(CURL*) receiveOnly!ulong();
     auto client = Conn();
     client.p.curl.handle = connDup;
 
@@ -4429,7 +5075,7 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
     CurlCode code;
     try
     {
-        code = client.perform(ThrowOnError.no);
+        code = client.perform(No.throwOnError);
     }
     catch (Exception ex)
     {
@@ -4460,9 +5106,4 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
         _finalizeAsyncLines(bufferValid, buffer, fromTid);
 
     fromTid.send(thisTid, curlMessage(true)); // signal done
-}
-
-version (unittest) private auto netAllowed()
-{
-    return environment.get("PHOBOS_TEST_ALLOW_NET") != null;
 }

@@ -12,6 +12,9 @@ LIBFLAGS=/nologo
 LDFLAGS=/nologo
 O=.obj
 
+# do not preselect a C runtime (extracted from the line above to make the auto tester happy)
+CFLAGS=$(CFLAGS) /Zl
+
 # variables
 
 OBJS = adler32$(O) compress$(O) crc32$(O) deflate$(O) gzclose$(O) gzlib$(O) gzread$(O) \
