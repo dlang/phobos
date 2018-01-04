@@ -693,7 +693,7 @@ public:
         Throws: $(REF ConvOverflowException, std,conv) if the number exceeds
         the target type's range.
      */
-    T opCast(T:ulong)() /*pure*/ const
+    T opCast(T:ulong)() pure const
     {
         if (isUnsigned!T && sign)
             { /* throw */ }
@@ -716,8 +716,8 @@ public:
         import std.conv : ConvOverflowException;
         import std.string : format;
         throw new ConvOverflowException(
-            "BigInt(%d) cannot be represented as a %s"
-            .format(this, T.stringof));
+            "BigInt(%s) cannot be represented as a %s"
+            .format(this.toDecimalString, T.stringof));
     }
 
     ///
