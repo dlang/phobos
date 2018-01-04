@@ -2798,17 +2798,19 @@ in
 do
 {
     auto result = new T[s.length - slice.length + replacement.length];
-    immutable so = slice.ptr - s.ptr;
+    immutable so = &slice[0] - &s[0];
     result[0 .. so] = s[0 .. so];
     result[so .. so + replacement.length] = replacement[];
     result[so + replacement.length .. result.length] =
         s[so + slice.length .. s.length];
 
-    return cast(inout(T)[]) result;
+    return () @trusted inout {
+        return cast(inout(T)[]) result;
+    }();
 }
 
 ///
-@system unittest
+@safe unittest
 {
     auto a = [1, 2, 3, 4, 5];
     auto b = replaceSlice(a, a[1 .. 4], [0, 0, 0]);
@@ -2816,7 +2818,7 @@ do
     assert(b == [1, 0, 0, 0, 5]);
 }
 
-@system unittest
+@safe unittest
 {
     import std.algorithm.comparison : cmp;
 
