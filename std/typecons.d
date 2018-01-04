@@ -1189,11 +1189,12 @@ if (distinctFieldNames!(Specs))
              */
             void toString(DG)(scope DG sink) const
             {
-                toString(sink, FormatSpec!char());
+                auto f = FormatSpec!char();
+                toString(sink, f);
             }
 
             /// ditto
-            void toString(DG, Char)(scope DG sink, FormatSpec!Char fmt) const
+            void toString(DG, Char)(scope DG sink, const ref FormatSpec!Char fmt) const
             {
                 import std.format : formatElement, formattedWrite, FormatException;
                 if (fmt.nested)
@@ -2443,7 +2444,7 @@ Params:
     {
         import std.format : FormatSpec, formatValue;
         // Needs to be a template because of DMD @@BUG@@ 13737.
-        void toString()(scope void delegate(const(char)[]) sink, FormatSpec!char fmt)
+        void toString()(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt)
         {
             if (isNull)
             {
@@ -2456,7 +2457,7 @@ Params:
         }
 
         // Issue 14940
-        void toString()(scope void delegate(const(char)[]) @safe sink, FormatSpec!char fmt)
+        void toString()(scope void delegate(const(char)[]) @safe sink, const ref FormatSpec!char fmt)
         {
             if (isNull)
             {
@@ -2996,7 +2997,7 @@ Params:
     {
         import std.format : FormatSpec, formatValue;
         // Needs to be a template because of DMD @@BUG@@ 13737.
-        void toString()(scope void delegate(const(char)[]) sink, FormatSpec!char fmt)
+        void toString()(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt)
         {
             if (isNull)
             {
@@ -3350,7 +3351,7 @@ Params:
     {
         import std.format : FormatSpec, formatValue;
         // Needs to be a template because of DMD @@BUG@@ 13737.
-        void toString()(scope void delegate(const(char)[]) sink, FormatSpec!char fmt)
+        void toString()(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt)
         {
             if (isNull)
             {
