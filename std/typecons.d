@@ -1124,80 +1124,101 @@ if (distinctFieldNames!(Specs))
             return h;
         }
 
-        ///
-        template toString()
+        /**
+         * Converts to string.
+         *
+         * Returns:
+         *     The string representation of this `Tuple`.
+         */
+        string toString()() const
         {
-            /**
-             * Converts to string.
-             *
-             * Returns:
-             *     The string representation of this `Tuple`.
-             */
-            string toString()() const
-            {
-                import std.array : appender;
-                auto app = appender!string();
-                this.toString((const(char)[] chunk) => app ~= chunk);
-                return app.data;
-            }
+            // this is a template to allow attribute inference.
+            import std.array : appender;
+            auto app = appender!string();
+            this.toString((const(char)[] chunk) => app ~= chunk);
+            return app.data;
+        }
 
-            import std.format : FormatSpec;
+        import std.format : FormatSpec;
 
-            /**
-             * Formats `Tuple` with either `%s`, `%(inner%)` or `%(inner%|sep%)`.
-             *
-             * $(TABLE2 Formats supported by Tuple,
-             * $(THEAD Format, Description)
-             * $(TROW $(P `%s`), $(P Format like `Tuple!(types)(elements formatted with %s each)`.))
-             * $(TROW $(P `%(inner%)`), $(P The format `inner` is applied the expanded `Tuple`, so
-             *      it may contain as many formats as the `Tuple` has fields.))
-             * $(TROW $(P `%(inner%|sep%)`), $(P The format `inner` is one format, that is applied
-             *      on all fields of the `Tuple`. The inner format must be compatible to all
-             *      of them.)))
-             * ---
-             *  Tuple!(int, double)[3] tupList = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
-             *
-             *  // Default format
-             *  assert(format("%s", tuple("a", 1)) == `Tuple!(string, int)("a", 1)`);
-             *
-             *  // One Format for each individual component
-             *  assert(format("%(%#x v %.4f w %#x%)", tuple(1, 1.0, 10))         == `0x1 v 1.0000 w 0xa`);
-             *  assert(format(  "%#x v %.4f w %#x"  , tuple(1, 1.0, 10).expand)  == `0x1 v 1.0000 w 0xa`);
-             *
-             *  // One Format for all components
-             *  assert(format("%(>%s<%| & %)", tuple("abc", 1, 2.3, [4, 5])) == `>abc< & >1< & >2.3< & >[4, 5]<`);
-             *
-             *  // Array of Tuples
-             *  assert(format("%(%(f(%d) = %.1f%);  %)", tupList) == `f(1) = 1.0;  f(2) = 4.0;  f(3) = 9.0`);
-             *
-             *
-             *  // Error: %( %) missing.
-             *  assertThrown!FormatException(
-             *      format("%d, %f", tuple(1, 2.0)) == `1, 2.0`
-             *  );
-             *
-             *  // Error: %( %| %) missing.
-             *  assertThrown!FormatException(
-             *      format("%d", tuple(1, 2)) == `1, 2`
-             *  );
-             *
-             *  // Error: %d inadequate for double.
-             *  assertThrown!FormatException(
-             *      format("%(%d%|, %)", tuple(1, 2.0)) == `1, 2.0`
-             *  );
-             * ---
-             */
-            void toString(DG)(scope DG sink) const
-            {
-                toString(sink, FormatSpec!char());
-            }
+        /**
+         * Formats `Tuple` with either `%s`, `%t`, `%(inner%)` or `%(inner%|sep%)`.
+         *
+         * $(TABLE2 Formats supported by Tuple,
+         * $(THEAD Format, Description)
+         * $(TROW $(P `%s`), $(P Format like `Tuple!(types)(elements formatted with %s each)`.))
+         * $(TROW $(P `%t`), $(P Format like `(elements formatted with %s each)`.))
+         * $(TROW $(P `%(inner%)`), $(P The format `inner` is applied the expanded `Tuple`$(COMMA) so
+         *      it may contain as many formats as the `Tuple` has fields.))
+         * $(TROW $(P `%(inner%|sep%)`), $(P The format `inner` is one format$(COMMA) that is applied
+         *      on all fields of the `Tuple`. The inner format must be compatible to all
+         *      of them.)))
+         * ---
+         *  // Default format
+         *  assert(format("%s", tuple("a", 1)) == `Tuple!(string, int)("a", 1)`);
+         *
+         *  // Tuple format
+         *  assert(format("%t", tuple("a", 1)) == ("a", 1));
+         *
+         *  // Tuple format without escaping
+         *  assert(format("%-t", tuple("a", 1)) == (a, 1));
+         *
+         *  // One Format for each individual component (no escaping by default)
+         *  assert(format("%(%#x | %.4f : %#x = %s%)", tuple(1, 1.0, 10, "one"))         == `0x1 | 1.0000 : 0xa = one`);
+         *  assert(format(  "%#x | %.4f : %#x = %s"  , tuple(1, 1.0, 10, "one").expand)  == `0x1 | 1.0000 : 0xa = one`);
+         *
+         *  // One Format for all components
+         *  assert(format("%(>%s<%| & %)", tuple("abc", 1, 2.3, [4, 5])) == `>"abc"< & >1< & >2.3< & >[4, 5]<`);
+         *
+         *  // One Format for all components without escaping (cf. arrays)
+         *  assert(format("%-(>%s<%| & %)", tuple("abc", 1, 2.3, [4, 5])) == `>abc< & >1< & >2.3< & >[4, 5]<`);
+         *
+         *  // Array of Tuples
+         *  Tuple!(int, double)[3] tupList = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
+         *  assert(format("%(%(f(%d) = %.1f%);  %)", tupList) == `f(1) = 1.0;  f(2) = 4.0;  f(3) = 9.0`);
+         *
+         *
+         *  // Error: %( %) missing.
+         *  assertThrown!FormatException(
+         *      format("%d, %f", tuple(1, 2.0)) == `1, 2.0`
+         *  );
+         *
+         *  // Error: %( %| %) missing.
+         *  assertThrown!FormatException(
+         *      format("%d", tuple(1, 2)) == `1, 2`
+         *  );
+         *
+         *  // Error: %d inadequate for double
+         *  assertThrown!FormatException(
+         *      format("%(%d%|, %)", tuple(1, 2.0)) == `1, 2.0`
+         *  );
+         * ---
+         */
+        void toString(DG)(scope DG sink) const
+        {
+            toString(sink, FormatSpec!char());
+        }
 
-            /// ditto
-            void toString(DG, Char)(scope DG sink, FormatSpec!Char fmt) const
+        /// ditto
+        void toString(DG, Char)(scope DG sink, FormatSpec!Char fmt) const
+        {
+            import std.format : formatElement, formatValue, formattedWrite, FormatException;
+
+            switch (fmt.spec)
             {
-                import std.format : formatElement, formattedWrite, FormatException;
-                if (fmt.nested)
-                {
+                case 's':
+                    // fmt.spec remains unchanged because of being able to
+                    // destinguish it from '(' later.
+                    sink(Unqual!(typeof(this)).stringof ~ "(");
+                    goto case;
+
+                case 't':
+                    fmt.nested = "%s";
+                    fmt.sep = ", ";
+                    goto case;
+
+                case '(':
+                    assert(fmt.nested);
                     if (fmt.sep)
                     {
                         foreach (i, Type; Types)
@@ -1213,7 +1234,17 @@ if (distinctFieldNames!(Specs))
                             }
                             else
                             {
-                                formattedWrite(sink, fmt.nested, this.field[i]);
+                                auto nested = FormatSpec!Char(fmt.nested);
+                                nested.writeUpToNextSpec(sink);
+                                if (fmt.flDash)
+                                {
+                                    formatValue(sink, this.field[i], nested);
+                                }
+                                else
+                                {
+                                    formatElement(sink, this.field[i], nested);
+                                }
+                                nested.writeUpToNextSpec(sink);
                             }
                         }
                     }
@@ -1221,38 +1252,16 @@ if (distinctFieldNames!(Specs))
                     {
                         formattedWrite(sink, fmt.nested, staticMap!(sharedToString, this.expand));
                     }
-                }
-                else if (fmt.spec == 's')
-                {
-                    enum header = Unqual!(typeof(this)).stringof ~ "(",
-                         footer = ")",
-                         separator = ", ";
-                    sink(header);
-                    foreach (i, Type; Types)
-                    {
-                        static if (i > 0)
-                        {
-                            sink(separator);
-                        }
-                        // TODO: Change this once formatElement() works for shared objects.
-                        static if (is(Type == class) && is(Type == shared))
-                        {
-                            sink(Type.stringof);
-                        }
-                        else
-                        {
-                            FormatSpec!Char f;
-                            formatElement(sink, field[i], f);
-                        }
-                    }
-                    sink(footer);
-                }
-                else
-                {
+
+                    // see goto case.
+                    if (fmt.spec == 's') sink(")");
+
+                    break;
+
+                default:
                     throw new FormatException(
-                        "Expected '%s' or '%(...%)' or '%(...%|...%)' format specifier for type '" ~
+                        "Expected '%s' or '%t' or '%(...%)' or '%(...%|...%)' format specifier for type '" ~
                             Unqual!(typeof(this)).stringof ~ "', not '%" ~ fmt.spec ~ "'.");
-                }
             }
         }
     }
@@ -1782,19 +1791,27 @@ private template ReverseTupleSpecs(T...)
     // enum tupStr = tuple(1, 1.0).toString; // toString is *impure*.
     //static assert(tupStr == `Tuple!(int, double)(1, 1)`);
 
-    Tuple!(int, double)[3] tupList = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
-
     // Default format
     assert(format("%s", tuple("a", 1)) == `Tuple!(string, int)("a", 1)`);
 
-    // One Format for each individual component
-    assert(format("%(%#x v %.4f w %#x%)", tuple(1, 1.0, 10))         == `0x1 v 1.0000 w 0xa`);
-    assert(format(  "%#x v %.4f w %#x"  , tuple(1, 1.0, 10).expand)  == `0x1 v 1.0000 w 0xa`);
+    // Tuple format
+    assert(format("%t", tuple("a", 1)) == `"a", 1`);
+
+    // Tuple format without escaping
+    assert(format("%-t", tuple("a", 1)) == `a, 1`);
+
+    // One Format for each individual component (no escaping by default)
+    assert(format("%(%#x | %.4f : %#x = %s%)", tuple(1, 1.0, 10, "one"))         == `0x1 | 1.0000 : 0xa = one`);
+    assert(format(  "%#x | %.4f : %#x = %s"  , tuple(1, 1.0, 10, "one").expand)  == `0x1 | 1.0000 : 0xa = one`);
 
     // One Format for all components
-    assert(format("%(>%s<%| & %)", tuple("abc", 1, 2.3, [4, 5])) == `>abc< & >1< & >2.3< & >[4, 5]<`);
+    assert(format("%(>%s<%| & %)", tuple("abc", 1, 2.3, [4, 5])) == `>"abc"< & >1< & >2.3< & >[4, 5]<`);
+
+    // One Format for all components without escaping (cf. arrays)
+    assert(format("%-(>%s<%| & %)", tuple("abc", 1, 2.3, [4, 5])) == `>abc< & >1< & >2.3< & >[4, 5]<`);
 
     // Array of Tuples
+    Tuple!(int, double)[3] tupList = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
     assert(format("%(%(f(%d) = %.1f%);  %)", tupList) == `f(1) = 1.0;  f(2) = 4.0;  f(3) = 9.0`);
 
 
