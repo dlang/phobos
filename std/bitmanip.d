@@ -2231,8 +2231,7 @@ public:
      * $(LI $(B %b) which prints the bits as 8-bit byte packets)
      * separated with an underscore.
      */
-    void toString(scope void delegate(const(char)[]) sink,
-                  FormatSpec!char fmt) const
+    void toString(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt) const
     {
         switch (fmt.spec)
         {
