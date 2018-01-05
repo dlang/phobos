@@ -5495,11 +5495,11 @@ if (!is(T == class) && !(is(T == interface)))
             import core.exception : onOutOfMemoryError;
             import std.conv : emplace;
 
-            _store = cast(Impl*) pureMalloc(Impl.sizeof);
+            _store = (() @trusted => cast(Impl*) pureMalloc(Impl.sizeof))();
             if (_store is null)
                 onOutOfMemoryError();
             static if (hasIndirections!T)
-                pureGcAddRange(&_store._payload, T.sizeof);
+                (() @trusted => pureGcAddRange(&_store._payload, T.sizeof))();
             emplace(&_store._payload, args);
             _store._count = 1;
         }
@@ -5509,11 +5509,11 @@ if (!is(T == class) && !(is(T == interface)))
             import core.exception : onOutOfMemoryError;
             import core.stdc.string : memcpy, memset;
 
-            _store = cast(Impl*) pureMalloc(Impl.sizeof);
+            _store = (() @trusted => cast(Impl*) pureMalloc(Impl.sizeof))();
             if (_store is null)
                 onOutOfMemoryError();
             static if (hasIndirections!T)
-                pureGcAddRange(&_store._payload, T.sizeof);
+                (() @trusted => pureGcAddRange(&_store._payload, T.sizeof))();
 
             // Can't use std.algorithm.move(source, _store._payload)
             // here because it requires the target to be initialized.
@@ -5521,7 +5521,7 @@ if (!is(T == class) && !(is(T == interface)))
 
             // Can avoid destructing result.
             static if (hasElaborateAssign!T || !isAssignable!T)
-                memcpy(&_store._payload, &source, T.sizeof);
+                (() @trusted => memcpy(&_store._payload, &source, T.sizeof))();
             else
                 _store._payload = source;
 
@@ -5537,9 +5537,9 @@ if (!is(T == class) && !(is(T == interface)))
 
                 auto init = typeid(T).initializer();
                 if (init.ptr is null) // null ptr means initialize to 0s
-                    memset(&source, 0, sz);
+                    (() @trusted => memset(&source, 0, sz))();
                 else
-                    memcpy(&source, init.ptr, sz);
+                    (() @trusted => memcpy(&source, init.ptr, sz))();
             }
 
             _store._count = 1;
@@ -5626,17 +5626,17 @@ to deallocate the corresponding resource.
         .destroy(_refCounted._store._payload);
         static if (hasIndirections!T)
         {
-            pureGcRemoveRange(&_refCounted._store._payload);
+            (() @trusted => pureGcRemoveRange(&_refCounted._store._payload))();
         }
 
-        pureFree(_refCounted._store);
+        (() @trusted => pureFree(_refCounted._store))();
         _refCounted._store = null;
     }
 
 /**
 Assignment operators
  */
-    void opAssign(typeof(this) rhs)
+    void opAssign(typeof(this) rhs) @trusted
     {
         import std.algorithm.mutation : swap;
 
