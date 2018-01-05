@@ -1,7 +1,7 @@
 /**
 $(H2 Assembling Your Own Allocator)
 
-In addition to defining the interfaces above, this package also implements
+This package also implements
 untyped composable memory allocators. They are $(I untyped) because they deal
 exclusively in $(D void[]) and have no notion of what type the memory allocated
 would be destined for. They are $(I composable) because the included allocators
