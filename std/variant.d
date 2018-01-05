@@ -2,48 +2,13 @@
 
 /**
 This module implements a
-$(WEB erdani.org/publications/cuj-04-2002.html,discriminated union)
+$(HTTP erdani.org/publications/cuj-04-2002.html,discriminated union)
 type (a.k.a.
-$(WEB en.wikipedia.org/wiki/Tagged_union,tagged union),
-$(WEB en.wikipedia.org/wiki/Algebraic_data_type,algebraic type)).
+$(HTTP en.wikipedia.org/wiki/Tagged_union,tagged union),
+$(HTTP en.wikipedia.org/wiki/Algebraic_data_type,algebraic type)).
 Such types are useful
 for type-uniform binary interfaces, interfacing with scripting
 languages, and comfortable exploratory programming.
-
-Macros:
- WIKI = Phobos/StdVariant
-
-Synopsis:
-----
-Variant a; // Must assign before use, otherwise exception ensues
-// Initialize with an integer; make the type int
-Variant b = 42;
-assert(b.type == typeid(int));
-// Peek at the value
-assert(b.peek!(int) !is null && *b.peek!(int) == 42);
-// Automatically convert per language rules
-auto x = b.get!(real);
-// Assign any other type, including other variants
-a = b;
-a = 3.14;
-assert(a.type == typeid(double));
-// Implicit conversions work just as with built-in types
-assert(a < b);
-// Check for convertibility
-assert(!a.convertsTo!(int)); // double not convertible to int
-// Strings and all other arrays are supported
-a = "now I'm a string";
-assert(a == "now I'm a string");
-a = new int[42]; // can also assign arrays
-assert(a.length == 42);
-a[5] = 7;
-assert(a[5] == 7);
-// Can also assign class values
-class Foo {}
-auto foo = new Foo;
-a = foo;
-assert(*a.peek!(Foo) == foo); // and full type information is preserved
-----
 
 A $(LREF Variant) object can hold a value of any type, with very few
 restrictions (such as `shared` types and noncopyable types). Setting the value
@@ -62,14 +27,50 @@ Credits: Reviewed by Brad Roberts. Daniel Keep provided a detailed code review
 prompting the following improvements: (1) better support for arrays; (2) support
 for associative arrays; (3) friendlier behavior towards the garbage collector.
 Copyright: Copyright Andrei Alexandrescu 2007 - 2015.
-License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-Authors:   $(WEB erdani.org, Andrei Alexandrescu)
+License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+Authors:   $(HTTP erdani.org, Andrei Alexandrescu)
 Source:    $(PHOBOSSRC std/_variant.d)
 */
 module std.variant;
 
-import core.stdc.string, std.conv, std.exception, std.traits, std.typecons,
-    std.typetuple;
+import std.meta, std.traits, std.typecons;
+
+///
+@system unittest
+{
+    Variant a; // Must assign before use, otherwise exception ensues
+    // Initialize with an integer; make the type int
+    Variant b = 42;
+    assert(b.type == typeid(int));
+    // Peek at the value
+    assert(b.peek!(int) !is null && *b.peek!(int) == 42);
+    // Automatically convert per language rules
+    auto x = b.get!(real);
+
+    // Assign any other type, including other variants
+    a = b;
+    a = 3.14;
+    assert(a.type == typeid(double));
+    // Implicit conversions work just as with built-in types
+    assert(a < b);
+    // Check for convertibility
+    assert(!a.convertsTo!(int)); // double not convertible to int
+    // Strings and all other arrays are supported
+    a = "now I'm a string";
+    assert(a == "now I'm a string");
+
+    // can also assign arrays
+    a = new int[42];
+    assert(a.length == 42);
+    a[5] = 7;
+    assert(a[5] == 7);
+
+    // Can also assign class values
+    class Foo {}
+    auto foo = new Foo;
+    a = foo;
+    assert(*a.peek!(Foo) == foo); // and full type information is preserved
+}
 
 /++
     Gives the $(D sizeof) the largest type given.
@@ -87,27 +88,28 @@ template maxSize(T...)
     }
 }
 
-struct This;
-
-private template This2Variant(V, T...)
+///
+@safe unittest
 {
-    // Test if it compiles because right now type replacement does not work for
-    // functions involving local types.
-    static if (__traits(compiles, TypeTuple!(ReplaceType!(This, V, T))))
-        alias This2Variant = TypeTuple!(ReplaceType!(This, V, T));
-    else
-        alias This2Variant = TypeTuple!T;
+    static assert(maxSize!(int, long) == 8);
+    static assert(maxSize!(bool, byte) == 1);
+
+    struct Cat { int a, b, c; }
+    static assert(maxSize!(bool, Cat) == 12);
 }
 
+struct This;
+
+private alias This2Variant(V, T...) = AliasSeq!(ReplaceType!(This, V, T));
+
 /**
- * $(D VariantN) is a back-end type seldom used directly by user
- * code. Two commonly-used types using $(D VariantN) as
- * back-end are:
+ * Back-end type seldom used directly by user
+ * code. Two commonly-used types using $(D VariantN) are:
  *
- * $(OL $(LI $(B Algebraic): A closed discriminated union with a
+ * $(OL $(LI $(LREF Algebraic): A closed discriminated union with a
  * limited type universe (e.g., $(D Algebraic!(int, double,
  * string)) only accepts these three types and rejects anything
- * else).) $(LI $(B Variant): An open discriminated union allowing an
+ * else).) $(LI $(LREF Variant): An open discriminated union allowing an
  * unbounded set of types. If any of the types in the $(D Variant)
  * are larger than the largest built-in type, they will automatically
  * be boxed. This means that even large types will only be the size
@@ -143,7 +145,7 @@ private:
     }
     enum size = SizeChecker.sizeof - (int function()).sizeof;
 
-    /** Tells whether a type $(D T) is statically allowed for
+    /** Tells whether a type $(D T) is statically _allowed for
      * storage inside a $(D VariantN) object by looking
      * $(D T) up in $(D AllowedTypes).
      */
@@ -216,6 +218,7 @@ private:
     // Handler for all of a type's operations
     static ptrdiff_t handler(A)(OpID selector, ubyte[size]* pStore, void* parm)
     {
+        import std.conv : to;
         static A* getPtr(void* untyped)
         {
             if (untyped)
@@ -268,61 +271,56 @@ private:
         static bool tryPutting(A* src, TypeInfo targetType, void* target)
         {
             alias UA = Unqual!A;
-            alias MutaTypes = TypeTuple!(UA, ImplicitConversionTargets!UA);
+            alias MutaTypes = AliasSeq!(UA, ImplicitConversionTargets!UA);
             alias ConstTypes = staticMap!(ConstOf, MutaTypes);
             alias SharedTypes = staticMap!(SharedOf, MutaTypes);
             alias SharedConstTypes = staticMap!(SharedConstOf, MutaTypes);
             alias ImmuTypes  = staticMap!(ImmutableOf, MutaTypes);
 
             static if (is(A == immutable))
-                alias AllTypes = TypeTuple!(ImmuTypes, ConstTypes, SharedConstTypes);
+                alias AllTypes = AliasSeq!(ImmuTypes, ConstTypes, SharedConstTypes);
             else static if (is(A == shared))
             {
                 static if (is(A == const))
                     alias AllTypes = SharedConstTypes;
                 else
-                    alias AllTypes = TypeTuple!(SharedTypes, SharedConstTypes);
+                    alias AllTypes = AliasSeq!(SharedTypes, SharedConstTypes);
             }
             else
             {
                 static if (is(A == const))
                     alias AllTypes = ConstTypes;
                 else
-                    alias AllTypes = TypeTuple!(MutaTypes, ConstTypes);
+                    alias AllTypes = AliasSeq!(MutaTypes, ConstTypes);
             }
 
             foreach (T ; AllTypes)
             {
                 if (targetType != typeid(T))
-                {
                     continue;
-                }
 
-                static if (is(typeof(*cast(T*) target = *src)))
+                static if (is(typeof(*cast(T*) target = *src)) ||
+                           is(T ==        const(U), U) ||
+                           is(T ==       shared(U), U) ||
+                           is(T == shared const(U), U) ||
+                           is(T ==    immutable(U), U))
                 {
+                    import std.conv : emplaceRef;
+
                     auto zat = cast(T*) target;
                     if (src)
                     {
-                        assert(target, "target must be non-null");
-                        *zat = *src;
-                    }
-                }
-                else static if (is(T == const(U), U) ||
-                                is(T == shared(U), U) ||
-                                is(T == shared const(U), U) ||
-                                is(T == immutable(U), U))
-                {
-                    auto zat = cast(U*) target;
-                    if (src)
-                    {
-                        assert(target, "target must be non-null");
-                        *zat = *(cast(UA*) (src));
+                        static if (T.sizeof > 0)
+                            assert(target, "target must be non-null");
+
+                        emplaceRef(*cast(Unqual!T*) zat, *cast(UA*) src);
                     }
                 }
                 else
                 {
-                    // type is not assignable
-                    if (src) assert(false, A.stringof);
+                    // type T is not constructible from A
+                    if (src)
+                        assert(false, A.stringof);
                 }
                 return true;
             }
@@ -362,7 +360,8 @@ private:
                 // cool! Same type!
                 auto rhsPA = getPtr(&rhsP.store);
                 return compare(rhsPA, zis, selector);
-            } else if (rhsType == typeid(void))
+            }
+            else if (rhsType == typeid(void))
             {
                 // No support for ordering comparisons with
                 // uninitialized vars
@@ -487,12 +486,16 @@ private:
         case OpID.apply:
             static if (!isFunctionPointer!A && !isDelegate!A)
             {
+                import std.conv : text;
+                import std.exception : enforce;
                 enforce(0, text("Cannot apply `()' to a value of type `",
                                 A.stringof, "'."));
             }
             else
             {
-                alias ParamTypes = ParameterTypeTuple!A;
+                import std.conv : text;
+                import std.exception : enforce;
+                alias ParamTypes = Parameters!A;
                 auto p = cast(Variant*) parm;
                 auto argCount = p.get!size_t;
                 // To assign the tuple we need to use the unqualified version,
@@ -507,11 +510,11 @@ private:
                 auto variantArgs = p[1 .. argCount + 1];
                 foreach (i, T; ParamTypes)
                 {
-                    t[i] = cast()variantArgs[i].get!T;
+                    t[i] = cast() variantArgs[i].get!T;
                 }
 
                 auto args = cast(Tuple!(ParamTypes))t;
-                static if(is(ReturnType!A == void))
+                static if (is(ReturnType!A == void))
                 {
                     (*zis)(args.expand);
                     *p = Variant.init; // void returns uninitialized Variant.
@@ -541,6 +544,8 @@ private:
         }
         return 0;
     }
+
+    enum doUnittest = is(VariantN == Variant);
 
 public:
     /** Constructs a $(D VariantN) value given an argument of a
@@ -607,6 +612,7 @@ public:
 
             static if (T.sizeof <= size)
             {
+                import core.stdc.string : memcpy;
                 // If T is a class we're only copying the reference, so it
                 // should be safe to cast away shared so the memcpy will work.
                 //
@@ -624,7 +630,8 @@ public:
             }
             else
             {
-                static if (__traits(compiles, {new T(rhs);}))
+                import core.stdc.string : memcpy;
+                static if (__traits(compiles, {new T(T.init);}))
                 {
                     auto p = new T(rhs);
                 }
@@ -675,7 +682,8 @@ public:
     }
 
     ///
-    unittest
+    static if (doUnittest)
+    @system unittest
     {
         Variant a;
         assert(!a.hasValue);
@@ -707,7 +715,8 @@ public:
     }
 
     ///
-    unittest
+    static if (doUnittest)
+    @system unittest
     {
         Variant a = 5;
         auto b = a.peek!(int);
@@ -731,9 +740,9 @@ public:
 
     /**
      * Returns $(D true) if and only if the $(D VariantN)
-     * object holds an object implicitly convertible to type $(D
-     * U). Implicit convertibility is defined as per
-     * $(LINK2 std_traits.html#ImplicitConversionTargets,ImplicitConversionTargets).
+     * object holds an object implicitly convertible to type `T`.
+     * Implicit convertibility is defined as per
+     * $(REF_ALTTEXT ImplicitConversionTargets, ImplicitConversionTargets, std,traits).
      */
 
     @property bool convertsTo(T)() const
@@ -755,17 +764,18 @@ public:
      */
     @property inout(T) get(T)() inout
     {
+        inout(T) result = void;
         static if (is(T == shared))
-            shared Unqual!T result;
+            alias R = shared Unqual!T;
         else
-            Unqual!T result;
-        auto buf = tuple(typeid(T), &result);
+            alias R = Unqual!T;
+        auto buf = tuple(typeid(T), cast(R*)&result);
 
         if (fptr(OpID.get, cast(ubyte[size]*) &store, &buf))
         {
             throw new VariantException(type, typeid(T));
         }
-        return * cast(inout T*) &result;
+        return result;
     }
 
     /// Ditto
@@ -791,6 +801,7 @@ public:
 
     @property T coerce(T)()
     {
+        import std.conv : to, text;
         static if (isNumeric!T || isBoolean!T)
         {
             if (convertsTo!real)
@@ -813,6 +824,7 @@ public:
             }
             else
             {
+                import std.exception : enforce;
                 enforce(false, text("Type ", type, " does not convert to ",
                                 typeid(T)));
                 assert(0);
@@ -850,6 +862,7 @@ public:
 
     // returns 1 if the two are equal
     bool opEquals(T)(auto ref T rhs) const
+    if (allowed!T || is(Unqual!T == VariantN))
     {
         static if (is(Unqual!T == VariantN))
             alias temp = rhs;
@@ -862,7 +875,7 @@ public:
     // workaround for bug 10567 fix
     int opCmp(ref const VariantN rhs) const
     {
-        return (cast()this).opCmp!(VariantN)(cast()rhs);
+        return (cast() this).opCmp!(VariantN)(cast() rhs);
     }
 
     /**
@@ -872,6 +885,7 @@ public:
      */
 
     int opCmp(T)(T rhs)
+    if (allowed!T)  // includes T == VariantN
     {
         static if (is(T == VariantN))
             alias temp = rhs;
@@ -1085,55 +1099,53 @@ public:
      * VariantN) contains an (associative) array, it can be indexed
      * into. Otherwise, an exception is thrown.
      */
-    Variant opIndex(K)(K i)
+    inout(Variant) opIndex(K)(K i) inout
     {
         auto result = Variant(i);
-        fptr(OpID.index, &store, &result) == 0 || assert(false);
+        fptr(OpID.index, cast(ubyte[size]*) &store, &result) == 0 || assert(false);
         return result;
     }
 
     ///
-    unittest
-    {
-        auto a = Variant(new int[10]);
-        a[5] = 42;
-        assert(a[5] == 42);
-        int[int] hash = [ 42:24 ];
-        a = hash;
-        assert(a[42] == 24);
-    }
-
-    /** Caveat:
-    Due to limitations in current language, read-modify-write
-    operations $(D op=) will not work properly:
-    */
-    unittest
+    static if (doUnittest)
+    @system unittest
     {
         Variant a = new int[10];
         a[5] = 42;
+        assert(a[5] == 42);
         a[5] += 8;
-        //assert(a[5] == 50); // will fail, a[5] is still 42
-    }
+        assert(a[5] == 50);
 
-    unittest
-    {
         int[int] hash = [ 42:24 ];
-        Variant v = hash;
-        assert(v[42] == 24);
-        v[42] = 5;
-        assert(v[42] == 5);
+        a = hash;
+        assert(a[42] == 24);
+        a[42] /= 2;
+        assert(a[42] == 12);
     }
 
     /// ditto
     Variant opIndexAssign(T, N)(T value, N i)
     {
+        static if (AllowedTypes.length && !isInstanceOf!(.VariantN, T))
+        {
+            enum canAssign(U) = __traits(compiles, (U u){ u[i] = value; });
+            static assert(anySatisfy!(canAssign, AllowedTypes),
+                "Cannot assign " ~ T.stringof ~ " to " ~ VariantN.stringof ~
+                " indexed with " ~ N.stringof);
+        }
         Variant[2] args = [ Variant(value), Variant(i) ];
         fptr(OpID.indexAssign, &store, &args) == 0 || assert(false);
         return args[0];
     }
 
+    /// ditto
+    Variant opIndexOpAssign(string op, T, N)(T value, N i)
+    {
+        return opIndexAssign(mixin(`opIndex(i)` ~ op ~ `value`), i);
+    }
+
     /** If the $(D VariantN) contains an (associative) array,
-     * returns the length of that array. Otherwise, throws an
+     * returns the _length of that array. Otherwise, throws an
      * exception.
      */
     @property size_t length()
@@ -1147,7 +1159,7 @@ public:
      */
     int opApply(Delegate)(scope Delegate dg) if (is(Delegate == delegate))
     {
-        alias A = ParameterTypeTuple!(Delegate)[0];
+        alias A = Parameters!(Delegate)[0];
         if (type == typeid(A[]))
         {
             auto arr = get!(A[]);
@@ -1170,6 +1182,8 @@ public:
         }
         else
         {
+            import std.conv : text;
+            import std.exception : enforce;
             enforce(false, text("Variant type ", type,
                             " not iterable with values of type ",
                             A.stringof));
@@ -1178,8 +1192,9 @@ public:
     }
 }
 
-unittest
+@system unittest
 {
+    import std.conv : to;
     Variant v;
     int foo() { return 42; }
     v = &foo;
@@ -1190,8 +1205,17 @@ unittest
     assert(v("43") == 43);
 }
 
+@system unittest
+{
+    int[int] hash = [ 42:24 ];
+    Variant v = hash;
+    assert(v[42] == 24);
+    v[42] = 5;
+    assert(v[42] == 5);
+}
+
 // opIndex with static arrays, issue 12771
-unittest
+@system unittest
 {
     int[4] elements = [0, 1, 2, 3];
     Variant v = elements;
@@ -1203,8 +1227,26 @@ unittest
     assert(v != elements);
 }
 
+@system unittest
+{
+    import std.exception : assertThrown;
+    Algebraic!(int[]) v = [2, 2];
+
+    assert(v == [2, 2]);
+    v[0] = 1;
+    assert(v[0] == 1);
+    assert(v != [2, 2]);
+
+    // opIndexAssign from Variant
+    v[1] = v[0];
+    assert(v[1] == 1);
+
+    static assert(!__traits(compiles, (v[1] = null)));
+    assertThrown!VariantException(v[1] = Variant(null));
+}
+
 //Issue# 8195
-unittest
+@system unittest
 {
     struct S
     {
@@ -1216,7 +1258,7 @@ unittest
     }
 
     static assert(S.sizeof >= Variant.sizeof);
-    alias Types = TypeTuple!(string, int, S);
+    alias Types = AliasSeq!(string, int, S);
     alias MyVariant = VariantN!(maxSize!Types, Types);
 
     auto v = MyVariant(S.init);
@@ -1224,7 +1266,7 @@ unittest
 }
 
 // Issue #10961
-unittest
+@system unittest
 {
     // Primarily test that we can assign a void[] to a Variant.
     void[] elements = cast(void[])[1, 2, 3];
@@ -1234,7 +1276,7 @@ unittest
 }
 
 // Issue #13352
-unittest
+@system unittest
 {
     alias TP = Algebraic!(long);
     auto a = TP(1L);
@@ -1250,7 +1292,7 @@ unittest
 }
 
 // Issue #13354
-unittest
+@system unittest
 {
     alias A = Algebraic!(string[]);
     A a = ["a", "b"];
@@ -1268,14 +1310,14 @@ unittest
 }
 
 // Issue #14198
-unittest
+@system unittest
 {
     Variant a = true;
     assert(a.type == typeid(bool));
 }
 
 // Issue #14233
-unittest
+@system unittest
 {
     alias Atom = Algebraic!(string, This[]);
 
@@ -1284,7 +1326,7 @@ unittest
 }
 
 pure nothrow @nogc
-unittest
+@system unittest
 {
     Algebraic!(int, double) a;
     a = 100;
@@ -1292,7 +1334,7 @@ unittest
 }
 
 // Issue 14457
-unittest
+@system unittest
 {
     alias A = Algebraic!(int, float, double);
     alias B = Algebraic!(int, float);
@@ -1306,7 +1348,7 @@ unittest
 }
 
 // Issue 14585
-unittest
+@system unittest
 {
     static struct S
     {
@@ -1317,13 +1359,13 @@ unittest
 }
 
 // Issue 14586
-unittest
+@system unittest
 {
     const Variant v = new immutable Object;
     v.get!(immutable Object);
 }
 
-unittest
+@system unittest
 {
     static struct S
     {
@@ -1335,8 +1377,8 @@ unittest
 
 
 /**
-Algebraic data type restricted to a closed set of possible
-types. It's an alias for a $(LREF VariantN) with an
+_Algebraic data type restricted to a closed set of possible
+types. It's an alias for $(LREF VariantN) with an
 appropriately-constructed maximum size. `Algebraic` is
 useful when it is desirable to restrict what a discriminated type
 could hold to the end of defining simpler and more efficient
@@ -1349,7 +1391,7 @@ template Algebraic(T...)
 }
 
 ///
-unittest
+@system unittest
 {
     auto v = Algebraic!(int, double, string)(5);
     assert(v.peek!(int));
@@ -1368,12 +1410,15 @@ values of their own type within.
 
 This is achieved with `Algebraic` by using `This` as a placeholder whenever a
 reference to the type being defined is needed. The `Algebraic` instantiation
-will perform $(LUCKY alpha renaming) on its constituent types, replacing `This`
+will perform $(LINK2 https://en.wikipedia.org/wiki/Name_resolution_(programming_languages)#Alpha_renaming_to_make_name_resolution_trivial,
+alpha renaming) on its constituent types, replacing `This`
 with the self-referenced type. The structure of the type involving `This` may
 be arbitrarily complex.
 */
-unittest
+@system unittest
 {
+    import std.typecons : Tuple, tuple;
+
     // A tree is either a leaf or a branch of two other trees
     alias Tree(Leaf) = Algebraic!(Leaf, Tuple!(This*, This*));
     Tree!int tree = tuple(new Tree!int(42), new Tree!int(43));
@@ -1391,7 +1436,7 @@ unittest
 }
 
 /**
-`Variant` is an alias for `VariantN` instantiated with the largest of `creal`,
+Alias for $(LREF VariantN) instantiated with the largest size of `creal`,
 `char[]`, and `void delegate()`. This ensures that `Variant` is large enough
 to hold all of D's predefined types unboxed, including all numeric types,
 pointers, delegates, and class references.  You may want to use
@@ -1418,7 +1463,7 @@ Variant[] variantArray(T...)(T args)
 }
 
 ///
-unittest
+@system unittest
 {
     auto a = variantArray(1, 3.14, "Hi!");
     assert(a[1] == 3.14);
@@ -1426,32 +1471,10 @@ unittest
     assert(b[1] == 3.14);
 }
 
-/** Code that needs functionality similar to the $(D boxArray)
-function in the $(D std.boxer) module can achieve it like this:
-*/
-unittest
-{
-    /* old
-    Box[] fun(...)
-    {
-        // ...
-        return boxArray(_arguments, _argptr);
-    }
-    */
-    // new
-    Variant[] fun(T...)(T args)
-    {
-        // ...
-        return variantArray(args);
-    }
-}
-
-/**
-
 /**
  * Thrown in three cases:
  *
- * $(OL $(LI An uninitialized Variant is used in any way except
+ * $(OL $(LI An uninitialized `Variant` is used in any way except
  * assignment and $(D hasValue);) $(LI A $(D get) or
  * $(D coerce) is attempted with an incompatible target type;)
  * $(LI A comparison between $(D Variant) objects of
@@ -1480,17 +1503,17 @@ static class VariantException : Exception
     }
 }
 
-unittest
+@system unittest
 {
     alias W1 = This2Variant!(char, int, This[int]);
-    alias W2 = TypeTuple!(int, char[int]);
+    alias W2 = AliasSeq!(int, char[int]);
     static assert(is(W1 == W2));
 
     alias var_t = Algebraic!(void, string);
     var_t foo = "quux";
 }
 
-unittest
+@system unittest
 {
      alias A = Algebraic!(real, This[], This[int], This[This]);
      A v1, v2, v3;
@@ -1505,8 +1528,10 @@ unittest
      //writeln(v1);
 }
 
-unittest
+@system unittest
 {
+    import std.conv : ConvException;
+    import std.exception : assertThrown, collectException;
     // try it with an oddly small size
     VariantN!(1) test;
     assert(test.size > 1);
@@ -1600,7 +1625,7 @@ unittest
 
 // tests adapted from
 // http://www.dsource.org/projects/tango/browser/trunk/tango/core/Variant.d?rev=2601
-unittest
+@system unittest
 {
     Variant v;
 
@@ -1612,8 +1637,7 @@ unittest
     assert( v.get!(long) == 42L );
     assert( v.get!(ulong) == 42uL );
 
-    // should be string... @@@BUG IN COMPILER
-    v = "Hello, World!"c;
+    v = "Hello, World!";
     assert( v.peek!(string) );
 
     assert( v.get!(string) == "Hello, World!" );
@@ -1627,10 +1651,9 @@ unittest
     assert( v.get!(int[4]) == [1,2,3,4] );
 
     {
-        // @@@BUG@@@: array literals should have type T[], not T[5] (I guess)
-        // v = [1,2,3,4,5];
-        // assert( v.peek!(int[]) );
-        // assert( v.get!(int[]) == [1,2,3,4,5] );
+         v = [1,2,3,4,5];
+         assert( v.peek!(int[]) );
+         assert( v.get!(int[]) == [1,2,3,4,5] );
     }
 
     v = 3.1413;
@@ -1709,9 +1732,7 @@ unittest
         assert( hash[v2] == 1 );
         assert( hash[v3] == 2 );
     }
-    /+
-    // @@@BUG@@@
-    // dmd: mtype.c:3886: StructDeclaration* TypeAArray::getImpl(): Assertion `impl' failed.
+
     {
         int[char[]] hash;
         hash["a"] = 1;
@@ -1723,10 +1744,22 @@ unittest
         assert( vhash.get!(int[char[]])["b"] == 2 );
         assert( vhash.get!(int[char[]])["c"] == 3 );
     }
-    +/
 }
 
-unittest
+@system unittest
+{
+    // check comparisons incompatible with AllowedTypes
+    Algebraic!int v = 2;
+
+    assert(v == 2);
+    assert(v < 3);
+    static assert(!__traits(compiles, {v == long.max;}));
+    static assert(!__traits(compiles, {v == null;}));
+    static assert(!__traits(compiles, {v < long.max;}));
+    static assert(!__traits(compiles, {v > null;}));
+}
+
+@system unittest
 {
     // bug 1558
     Variant va=1;
@@ -1735,7 +1768,7 @@ unittest
     assert((va-vb).get!(int) == 3);
 }
 
-unittest
+@system unittest
 {
     Variant a;
     a=5;
@@ -1746,14 +1779,14 @@ unittest
     assert(c[3] == "hello");
 }
 
-unittest
+@system unittest
 {
     Variant v = 5;
-    assert (!__traits(compiles, v.coerce!(bool delegate())));
+    assert(!__traits(compiles, v.coerce!(bool delegate())));
 }
 
 
-unittest
+@system unittest
 {
     struct Huge {
         real a, b, c, d, e, f, g;
@@ -1766,7 +1799,7 @@ unittest
     assert(v.get!(Huge).e == 42);
 }
 
-unittest
+@system unittest
 {
     const x = Variant(42);
     auto y1 = x.get!(const int);
@@ -1775,7 +1808,7 @@ unittest
 }
 
 // test iteration
-unittest
+@system unittest
 {
     auto v = Variant([ 1, 2, 3, 4 ][]);
     auto j = 0;
@@ -1787,14 +1820,14 @@ unittest
 }
 
 // test convertibility
-unittest
+@system unittest
 {
     auto v = Variant("abc".dup);
     assert(v.convertsTo!(char[]));
 }
 
 // http://d.puremagic.com/issues/show_bug.cgi?id=5424
-unittest
+@system unittest
 {
     interface A {
         void func1();
@@ -1809,7 +1842,7 @@ unittest
     Variant b = Variant(a);
 }
 
-unittest
+@system unittest
 {
     // bug 7070
     Variant v;
@@ -1817,7 +1850,7 @@ unittest
 }
 
 // Class and interface opEquals, issue 12157
-unittest
+@system unittest
 {
     class Foo { }
 
@@ -1835,7 +1868,7 @@ unittest
 }
 
 // Const parameters with opCall, issue 11361.
-unittest
+@system unittest
 {
     static string t1(string c) {
         return c ~ "a";
@@ -1846,6 +1879,7 @@ unittest
     }
 
     static char[] t3(int p) {
+        import std.conv : text;
         return p.text.dup;
     }
 
@@ -1865,13 +1899,13 @@ unittest
 }
 
 // issue 12071
-unittest
+@system unittest
 {
     static struct Structure { int data; }
-    alias VariantTest = Algebraic!(Structure delegate());
+    alias VariantTest = Algebraic!(Structure delegate() pure nothrow @nogc @safe);
 
     bool called = false;
-    Structure example()
+    Structure example() pure nothrow @nogc @safe
     {
         called = true;
         return Structure.init;
@@ -1882,8 +1916,9 @@ unittest
 }
 
 // Ordering comparisons of incompatible types, e.g. issue 7990.
-unittest
+@system unittest
 {
+    import std.exception : assertThrown;
     assertThrown!VariantException(Variant(3) < "a");
     assertThrown!VariantException("a" < Variant(3));
     assertThrown!VariantException(Variant(3) < Variant("a"));
@@ -1893,8 +1928,9 @@ unittest
 }
 
 // Handling of unordered types, e.g. issue 9043.
-unittest
+@system unittest
 {
+    import std.exception : assertThrown;
     static struct A { int a; }
 
     assert(Variant(A(3)) != A(4));
@@ -1905,7 +1941,7 @@ unittest
 }
 
 // Handling of empty types and arrays, e.g. issue 10958
-unittest
+@system unittest
 {
     class EmptyClass { }
     struct EmptyStruct { }
@@ -1936,7 +1972,7 @@ unittest
 }
 
 // Handling of void function pointers / delegates, e.g. issue 11360
-unittest
+@system unittest
 {
     static void t1() { }
     Variant v = &t1;
@@ -1948,7 +1984,7 @@ unittest
 }
 
 // Using peek for large structs, issue 8580
-unittest
+@system unittest
 {
     struct TestStruct(bool pad)
     {
@@ -1979,68 +2015,88 @@ unittest
 }
 
 /**
- * Applies a delegate or function to the given Algebraic depending on the held type,
+ * Applies a delegate or function to the given $(LREF Algebraic) depending on the held type,
  * ensuring that all types are handled by the visiting functions.
  *
  * The delegate or function having the currently held value as parameter is called
  * with $(D variant)'s current value. Visiting handlers are passed
  * in the template parameter list.
- * It is statically ensured that all types of
+ * It is statically ensured that all held types of
  * $(D variant) are handled across all handlers.
  * $(D visit) allows delegates and static functions to be passed
  * as parameters.
  *
+ * If a function with an untyped parameter is specified, this function is called
+ * when the variant contains a type that does not match any other function.
+ * This can be used to apply the same function across multiple possible types.
+ * Exactly one generic function is allowed.
+ *
  * If a function without parameters is specified, this function is called
- * when variant doesn't hold a value. Exactly one parameter-less function
+ * when `variant` doesn't hold a value. Exactly one parameter-less function
  * is allowed.
  *
  * Duplicate overloads matching the same type in one of the visitors are disallowed.
  *
  * Returns: The return type of visit is deduced from the visiting functions and must be
  * the same across all overloads.
- * Throws: If no parameter-less, error function is specified:
- * $(D VariantException) if $(D variant) doesn't hold a value.
+ * Throws: $(LREF VariantException) if `variant` doesn't hold a value and no
+ * parameter-less fallback function is specified.
  */
-template visit(Handler ...)
-    if (Handler.length > 0)
+template visit(Handlers...)
+if (Handlers.length > 0)
 {
+    ///
     auto visit(VariantType)(VariantType variant)
         if (isAlgebraic!VariantType)
     {
-        return visitImpl!(true, VariantType, Handler)(variant);
+        return visitImpl!(true, VariantType, Handlers)(variant);
     }
 }
 
 ///
-unittest
+@system unittest
 {
     Algebraic!(int, string) variant;
 
     variant = 10;
-    assert(variant.visit!((string s) => cast(int)s.length,
+    assert(variant.visit!((string s) => cast(int) s.length,
                           (int i)    => i)()
                           == 10);
     variant = "string";
     assert(variant.visit!((int i) => i,
-                          (string s) => cast(int)s.length)()
+                          (string s) => cast(int) s.length)()
                           == 6);
 
     // Error function usage
     Algebraic!(int, string) emptyVar;
-    auto rslt = emptyVar.visit!((string s) => cast(int)s.length,
+    auto rslt = emptyVar.visit!((string s) => cast(int) s.length,
                           (int i)    => i,
                           () => -1)();
     assert(rslt == -1);
+
+    // Generic function usage
+    Algebraic!(int, float, real) number = 2;
+    assert(number.visit!(x => x += 1) == 3);
+
+    // Generic function for int/float with separate behavior for string
+    Algebraic!(int, float, string) something = 2;
+    assert(something.visit!((string s) => s.length, x => x) == 2); // generic
+    something = "asdf";
+    assert(something.visit!((string s) => s.length, x => x) == 4); // string
+
+    // Generic handler and empty handler
+    Algebraic!(int, float, real) empty2;
+    assert(empty2.visit!(x => x + 1, () => -1) == -1);
 }
 
-unittest
+@system unittest
 {
     Algebraic!(size_t, string) variant;
 
     // not all handled check
     static assert(!__traits(compiles, variant.visit!((size_t i){ })() ));
 
-    variant = cast(size_t)10;
+    variant = cast(size_t) 10;
     auto which = 0;
     variant.visit!( (string s) => which = 1,
                     (size_t i) => which = 0
@@ -2068,15 +2124,15 @@ unittest
     Algebraic!(int, float, string) variant2 = 5.0f;
     // Shouldn' t compile as float not handled by visitor.
     static assert(!__traits(compiles, variant2.visit!(
-                        (int) {},
-                        (string) {})()));
+                        (int _) {},
+                        (string _) {})()));
 
     Algebraic!(size_t, string, float) variant3;
     variant3 = 10.0f;
     auto floatVisited = false;
 
     assert(variant3.visit!(
-                 (float f) { floatVisited = true; return cast(size_t)f; },
+                 (float f) { floatVisited = true; return cast(size_t) f; },
                  func,
                  (size_t i) { return i; }
                  )() == 10);
@@ -2084,16 +2140,39 @@ unittest
 
     Algebraic!(float, string) variant4;
 
-    assert(variant4.visit!(func, (float f) => cast(size_t)f, () => size_t.max)() == size_t.max);
+    assert(variant4.visit!(func, (float f) => cast(size_t) f, () => size_t.max)() == size_t.max);
 
     // double error func check
     static assert(!__traits(compiles,
-                            visit!(() => size_t.max, func, (float f) => cast(size_t)f, () => size_t.max)(variant4))
+                            visit!(() => size_t.max, func, (float f) => cast(size_t) f, () => size_t.max)(variant4))
                  );
 }
 
+// disallow providing multiple generic handlers to visit
+// disallow a generic handler that does not apply to all types
+@system unittest
+{
+    Algebraic!(int, float) number = 2;
+    // ok, x + 1 valid for int and float
+    static assert( __traits(compiles, number.visit!(x => x + 1)));
+    // bad, two generic handlers
+    static assert(!__traits(compiles, number.visit!(x => x + 1, x => x + 2)));
+    // bad, x ~ "a" does not apply to int or float
+    static assert(!__traits(compiles, number.visit!(x => x ~ "a")));
+    // bad, x ~ "a" does not apply to int or float
+    static assert(!__traits(compiles, number.visit!(x => x + 1, x => x ~ "a")));
+
+    Algebraic!(int, string) maybenumber = 2;
+    // ok, x ~ "a" valid for string, x + 1 valid for int, only 1 generic
+    static assert( __traits(compiles, number.visit!((string x) => x ~ "a", x => x + 1)));
+    // bad, x ~ "a" valid for string but not int
+    static assert(!__traits(compiles, number.visit!(x => x ~ "a")));
+    // bad, two generics, each only applies in one case
+    static assert(!__traits(compiles, number.visit!(x => x + 1, x => x ~ "a")));
+}
+
 /**
- * Behaves as $(D visit) but doesn't enforce that all types are handled
+ * Behaves as $(LREF visit) but doesn't enforce that all types are handled
  * by the visiting functions.
  *
  * If a parameter-less function is specified it is called when
@@ -2102,23 +2181,23 @@ unittest
  *
  * Returns: The return type of tryVisit is deduced from the visiting functions and must be
  * the same across all overloads.
- * Throws: If no parameter-less, error function is specified: $(D VariantException) if
- *         $(D variant) doesn't hold a value or
- *         if $(D variant) holds a value which isn't handled by the visiting
- *         functions.
+ * Throws: $(LREF VariantException) if `variant` doesn't hold a value or
+ * `variant` holds a value which isn't handled by the visiting functions,
+ * when no parameter-less fallback function is specified.
  */
-template tryVisit(Handler ...)
-    if (Handler.length > 0)
+template tryVisit(Handlers...)
+if (Handlers.length > 0)
 {
+    ///
     auto tryVisit(VariantType)(VariantType variant)
         if (isAlgebraic!VariantType)
     {
-        return visitImpl!(false, VariantType, Handler)(variant);
+        return visitImpl!(false, VariantType, Handlers)(variant);
     }
 }
 
 ///
-unittest
+@system unittest
 {
     Algebraic!(int, string) variant;
 
@@ -2134,8 +2213,9 @@ unittest
     assert(which == -100);
 }
 
-unittest
+@system unittest
 {
+    import std.exception : assertThrown;
     Algebraic!(int, string) variant;
 
     variant = 10;
@@ -2166,7 +2246,7 @@ private template isAlgebraic(Type)
         enum isAlgebraic = false;
 }
 
-unittest
+@system unittest
 {
     static assert(!isAlgebraic!(Variant));
     static assert( isAlgebraic!(Algebraic!(string)));
@@ -2174,7 +2254,7 @@ unittest
 }
 
 private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant)
-    if (isAlgebraic!VariantType && Handler.length > 0)
+if (isAlgebraic!VariantType && Handler.length > 0)
 {
     alias AllowedTypes = VariantType.AllowedTypes;
 
@@ -2192,19 +2272,20 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
         struct Result {
             int[AllowedTypes.length] indices;
             int exceptionFuncIdx = -1;
+            int generalFuncIdx = -1;
         }
 
         Result result;
 
-        foreach(tidx, T; AllowedTypes)
+        foreach (tidx, T; AllowedTypes)
         {
             bool added = false;
-            foreach(dgidx, dg; Handler)
+            foreach (dgidx, dg; Handler)
             {
                 // Handle normal function objects
                 static if (isSomeFunction!dg)
                 {
-                    alias Params = ParameterTypeTuple!dg;
+                    alias Params = Parameters!dg;
                     static if (Params.length == 0)
                     {
                         // Just check exception functions in the first
@@ -2218,7 +2299,7 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
                             result.exceptionFuncIdx = dgidx;
                         }
                     }
-                    else if (is(Unqual!(Params[0]) == T))
+                    else static if (is(Params[0] == T) || is(Unqual!(Params[0]) == T))
                     {
                         if (added)
                             assert(false, "duplicate overload specified for type '" ~ T.stringof ~ "'");
@@ -2226,6 +2307,13 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
                         added = true;
                         result.indices[tidx] = dgidx;
                     }
+                }
+                else static if (isSomeFunction!(dg!T))
+                {
+                    assert(result.generalFuncIdx == -1 ||
+                           result.generalFuncIdx == dgidx,
+                           "Only one generic visitor function is allowed");
+                    result.generalFuncIdx = dgidx;
                 }
                 // Handle composite visitors with opCall overloads
                 else
@@ -2254,23 +2342,26 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
             throw new VariantException("variant must hold a value before being visited.");
     }
 
-    foreach(idx, T; AllowedTypes)
+    foreach (idx, T; AllowedTypes)
     {
-        if (T* ptr = variant.peek!T)
+        if (auto ptr = variant.peek!T)
         {
             enum dgIdx = HandlerOverloadMap.indices[idx];
 
             static if (dgIdx == -1)
             {
-                static if (Strict)
+                static if (HandlerOverloadMap.generalFuncIdx >= 0)
+                    return Handler[HandlerOverloadMap.generalFuncIdx](*ptr);
+                else static if (Strict)
                     static assert(false, "overload for type '" ~ T.stringof ~ "' hasn't been specified");
+                else static if (HandlerOverloadMap.exceptionFuncIdx != -1)
+                    return Handler[HandlerOverloadMap.exceptionFuncIdx]();
                 else
-                {
-                    static if (HandlerOverloadMap.exceptionFuncIdx != -1)
-                        return Handler[ HandlerOverloadMap.exceptionFuncIdx ]();
-                    else
-                        throw new VariantException("variant holds value of type '" ~ T.stringof ~ "' but no visitor has been provided");
-                }
+                    throw new VariantException(
+                        "variant holds value of type '"
+                        ~ T.stringof ~
+                        "' but no visitor has been provided"
+                    );
             }
             else
             {
@@ -2282,7 +2373,35 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
     assert(false);
 }
 
-unittest
+@system unittest
+{
+    // validate that visit can be called with a const type
+    struct Foo { int depth; }
+    struct Bar { int depth; }
+    alias FooBar = Algebraic!(Foo, Bar);
+
+    int depth(in FooBar fb) {
+        return fb.visit!((Foo foo) => foo.depth,
+                         (Bar bar) => bar.depth);
+    }
+
+    FooBar fb = Foo(3);
+    assert(depth(fb) == 3);
+}
+
+@system unittest
+{
+    // https://issues.dlang.org/show_bug.cgi?id=16383
+    class Foo {this() immutable {}}
+    alias V = Algebraic!(immutable Foo);
+
+    auto x = V(new immutable Foo).visit!(
+        (immutable(Foo) _) => 3
+    );
+    assert(x == 3);
+}
+
+@system unittest
 {
     // http://d.puremagic.com/issues/show_bug.cgi?id=5310
     const Variant a;
@@ -2292,7 +2411,13 @@ unittest
     assert(b == a);
 }
 
-unittest
+@system unittest
+{
+    const Variant a = [2];
+    assert(a[0] == 2);
+}
+
+@system unittest
 {
     // http://d.puremagic.com/issues/show_bug.cgi?id=10017
     static struct S
@@ -2305,31 +2430,32 @@ unittest
     v2 = v1;  // AssertError: target must be non-null
     assert(v1 == v2);
 }
-unittest
+@system unittest
 {
+    import std.exception : assertThrown;
     // http://d.puremagic.com/issues/show_bug.cgi?id=7069
     Variant v;
 
     int i = 10;
     v = i;
-    foreach (qual; TypeTuple!(MutableOf, ConstOf))
+    foreach (qual; AliasSeq!(MutableOf, ConstOf))
     {
         assert(v.get!(qual!int) == 10);
         assert(v.get!(qual!float) == 10.0f);
     }
-    foreach (qual; TypeTuple!(ImmutableOf, SharedOf, SharedConstOf))
+    foreach (qual; AliasSeq!(ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!int));
     }
 
     const(int) ci = 20;
     v = ci;
-    foreach (qual; TypeTuple!(ConstOf))
+    foreach (qual; AliasSeq!(ConstOf))
     {
         assert(v.get!(qual!int) == 20);
         assert(v.get!(qual!float) == 20.0f);
     }
-    foreach (qual; TypeTuple!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
+    foreach (qual; AliasSeq!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!int));
         assertThrown!VariantException(v.get!(qual!float));
@@ -2337,12 +2463,12 @@ unittest
 
     immutable(int) ii = ci;
     v = ii;
-    foreach (qual; TypeTuple!(ImmutableOf, ConstOf, SharedConstOf))
+    foreach (qual; AliasSeq!(ImmutableOf, ConstOf, SharedConstOf))
     {
         assert(v.get!(qual!int) == 20);
         assert(v.get!(qual!float) == 20.0f);
     }
-    foreach (qual; TypeTuple!(MutableOf, SharedOf))
+    foreach (qual; AliasSeq!(MutableOf, SharedOf))
     {
         assertThrown!VariantException(v.get!(qual!int));
         assertThrown!VariantException(v.get!(qual!float));
@@ -2350,12 +2476,12 @@ unittest
 
     int[] ai = [1,2,3];
     v = ai;
-    foreach (qual; TypeTuple!(MutableOf, ConstOf))
+    foreach (qual; AliasSeq!(MutableOf, ConstOf))
     {
         assert(v.get!(qual!(int[])) == [1,2,3]);
         assert(v.get!(qual!(int)[]) == [1,2,3]);
     }
-    foreach (qual; TypeTuple!(ImmutableOf, SharedOf, SharedConstOf))
+    foreach (qual; AliasSeq!(ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!(int[])));
         assertThrown!VariantException(v.get!(qual!(int)[]));
@@ -2363,12 +2489,12 @@ unittest
 
     const(int[]) cai = [4,5,6];
     v = cai;
-    foreach (qual; TypeTuple!(ConstOf))
+    foreach (qual; AliasSeq!(ConstOf))
     {
         assert(v.get!(qual!(int[])) == [4,5,6]);
         assert(v.get!(qual!(int)[]) == [4,5,6]);
     }
-    foreach (qual; TypeTuple!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
+    foreach (qual; AliasSeq!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!(int[])));
         assertThrown!VariantException(v.get!(qual!(int)[]));
@@ -2382,7 +2508,7 @@ unittest
     assert(v.get!(const(int)[]) == [7,8,9]);
     //assert(v.get!(shared(const(int[]))) == cast(shared const)[7,8,9]);    // Bug ??? runtime error
     //assert(v.get!(shared(const(int))[]) == cast(shared const)[7,8,9]);    // Bug ??? runtime error
-    foreach (qual; TypeTuple!(MutableOf))
+    foreach (qual; AliasSeq!(MutableOf))
     {
         assertThrown!VariantException(v.get!(qual!(int[])));
         assertThrown!VariantException(v.get!(qual!(int)[]));
@@ -2392,13 +2518,13 @@ unittest
     class B : A {}
     B b = new B();
     v = b;
-    foreach (qual; TypeTuple!(MutableOf, ConstOf))
+    foreach (qual; AliasSeq!(MutableOf, ConstOf))
     {
         assert(v.get!(qual!B) is b);
         assert(v.get!(qual!A) is b);
         assert(v.get!(qual!Object) is b);
     }
-    foreach (qual; TypeTuple!(ImmutableOf, SharedOf, SharedConstOf))
+    foreach (qual; AliasSeq!(ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!B));
         assertThrown!VariantException(v.get!(qual!A));
@@ -2407,13 +2533,13 @@ unittest
 
     const(B) cb = new B();
     v = cb;
-    foreach (qual; TypeTuple!(ConstOf))
+    foreach (qual; AliasSeq!(ConstOf))
     {
         assert(v.get!(qual!B) is cb);
         assert(v.get!(qual!A) is cb);
         assert(v.get!(qual!Object) is cb);
     }
-    foreach (qual; TypeTuple!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
+    foreach (qual; AliasSeq!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!B));
         assertThrown!VariantException(v.get!(qual!A));
@@ -2422,13 +2548,13 @@ unittest
 
     immutable(B) ib = new immutable(B)();
     v = ib;
-    foreach (qual; TypeTuple!(ImmutableOf, ConstOf, SharedConstOf))
+    foreach (qual; AliasSeq!(ImmutableOf, ConstOf, SharedConstOf))
     {
         assert(v.get!(qual!B) is ib);
         assert(v.get!(qual!A) is ib);
         assert(v.get!(qual!Object) is ib);
     }
-    foreach (qual; TypeTuple!(MutableOf, SharedOf))
+    foreach (qual; AliasSeq!(MutableOf, SharedOf))
     {
         assertThrown!VariantException(v.get!(qual!B));
         assertThrown!VariantException(v.get!(qual!A));
@@ -2437,13 +2563,13 @@ unittest
 
     shared(B) sb = new shared B();
     v = sb;
-    foreach (qual; TypeTuple!(SharedOf, SharedConstOf))
+    foreach (qual; AliasSeq!(SharedOf, SharedConstOf))
     {
         assert(v.get!(qual!B) is sb);
         assert(v.get!(qual!A) is sb);
         assert(v.get!(qual!Object) is sb);
     }
-    foreach (qual; TypeTuple!(MutableOf, ImmutableOf, ConstOf))
+    foreach (qual; AliasSeq!(MutableOf, ImmutableOf, ConstOf))
     {
         assertThrown!VariantException(v.get!(qual!B));
         assertThrown!VariantException(v.get!(qual!A));
@@ -2452,13 +2578,13 @@ unittest
 
     shared(const(B)) scb = new shared const B();
     v = scb;
-    foreach (qual; TypeTuple!(SharedConstOf))
+    foreach (qual; AliasSeq!(SharedConstOf))
     {
         assert(v.get!(qual!B) is scb);
         assert(v.get!(qual!A) is scb);
         assert(v.get!(qual!Object) is scb);
     }
-    foreach (qual; TypeTuple!(MutableOf, ConstOf, ImmutableOf, SharedOf))
+    foreach (qual; AliasSeq!(MutableOf, ConstOf, ImmutableOf, SharedOf))
     {
         assertThrown!VariantException(v.get!(qual!B));
         assertThrown!VariantException(v.get!(qual!A));
@@ -2466,7 +2592,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     static struct DummyScope
     {
@@ -2480,7 +2606,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     // https://issues.dlang.org/show_bug.cgi?id=10194
     // Also test for elaborate copying
@@ -2526,7 +2652,7 @@ unittest
     assert(S.cnt == 0);
 }
 
-unittest
+@system unittest
 {
     // Bugzilla 13300
     static struct S
@@ -2556,7 +2682,7 @@ unittest
     auto a = appender!(T[]);
 }
 
-unittest
+@system unittest
 {
     // Bugzilla 13871
     alias A = Algebraic!(int, typeof(null));
@@ -2567,8 +2693,9 @@ unittest
     var = C(B());
 }
 
-unittest
+@system unittest
 {
+    import std.exception : assertThrown, assertNotThrown;
     // Make sure Variant can handle types with opDispatch but no length field.
     struct SWithNoLength
     {
@@ -2594,7 +2721,7 @@ unittest
     assertThrown!VariantException(v.length);
 }
 
-unittest
+@system unittest
 {
     // Bugzilla 13534
     static assert(!__traits(compiles, () @safe {
@@ -2602,4 +2729,43 @@ unittest
         auto v = Variant(&foo);
         v(); // foo is called in safe code!?
     }));
+}
+
+@system unittest
+{
+    // Bugzilla 15039
+    import std.typecons;
+    import std.variant;
+
+    alias IntTypedef = Typedef!int;
+    alias Obj = Algebraic!(int, IntTypedef, This[]);
+
+    Obj obj = 1;
+
+    obj.visit!(
+        (int x) {},
+        (IntTypedef x) {},
+        (Obj[] x) {},
+    );
+}
+
+@system unittest
+{
+    // Bugzilla 15791
+    int n = 3;
+    struct NS1 { int foo() { return n + 10; } }
+    struct NS2 { int foo() { return n * 10; } }
+
+    Variant v;
+    v = NS1();
+    assert(v.get!NS1.foo() == 13);
+    v = NS2();
+    assert(v.get!NS2.foo() == 30);
+}
+
+@system unittest
+{
+    // Bugzilla 15827
+    static struct Foo15827 { Variant v; this(Foo15827 v) {} }
+    Variant v = Foo15827.init;
 }

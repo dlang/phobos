@@ -4,6 +4,36 @@
     This module defines functions related to exceptions and general error
     handling. It also defines functions intended to aid in unit testing.
 
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Assumptions) $(TD
+        $(LREF assertNotThrown)
+        $(LREF assertThrown)
+        $(LREF assumeUnique)
+        $(LREF assumeWontThrow)
+        $(LREF mayPointTo)
+))
+$(TR $(TD Enforce) $(TD
+        $(LREF doesPointTo)
+        $(LREF enforce)
+        $(LREF enforceEx)
+        $(LREF errnoEnforce)
+))
+$(TR $(TD Handlers) $(TD
+        $(LREF collectException)
+        $(LREF collectExceptionMsg)
+        $(LREF ifThrown)
+        $(LREF handle)
+))
+$(TR $(TD Other) $(TD
+        $(LREF basicExceptionCtors)
+        $(LREF emptyExceptionMsg)
+        $(LREF ErrnoException)
+        $(LREF RangePrimitive)
+))
+)
+
     Synopsis of some of std.exception's functions:
     --------------------
     string synopsis()
@@ -33,22 +63,16 @@
     }
     --------------------
 
-    Macros:
-        WIKI = Phobos/StdException
-
     Copyright: Copyright Andrei Alexandrescu 2008-, Jonathan M Davis 2011-.
-    License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
-    Authors:   $(WEB erdani.org, Andrei Alexandrescu) and Jonathan M Davis
+    License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0)
+    Authors:   $(HTTP erdani.org, Andrei Alexandrescu) and Jonathan M Davis
     Source:    $(PHOBOSSRC std/_exception.d)
 
  +/
 module std.exception;
 
-import std.range;
+import std.range.primitives;
 import std.traits;
-
-import core.stdc.errno;
-import core.stdc.string;
 
 /++
     Asserts that the given expression does $(I not) throw the given type
@@ -70,8 +94,11 @@ import core.stdc.string;
 
     Throws:
         $(D AssertError) if the given $(D Throwable) is thrown.
+
+    Returns:
+        the result of `expression`.
  +/
-void assertNotThrown(T : Throwable = Exception, E)
+auto assertNotThrown(T : Throwable = Exception, E)
                     (lazy E expression,
                      string msg = null,
                      string file = __FILE__,
@@ -80,7 +107,7 @@ void assertNotThrown(T : Throwable = Exception, E)
     import core.exception : AssertError;
     try
     {
-        expression();
+        return expression();
     }
     catch (T t)
     {
@@ -90,7 +117,7 @@ void assertNotThrown(T : Throwable = Exception, E)
     }
 }
 ///
-unittest
+@system unittest
 {
     import core.exception : AssertError;
 
@@ -104,7 +131,7 @@ unittest
                enforce!StringException(false, "Error!"))) ==
            `assertNotThrown failed: StringException was thrown: Error!`);
 }
-unittest
+@system unittest
 {
     import core.exception : AssertError;
     import std.string;
@@ -121,34 +148,34 @@ unittest
            `assertNotThrown failed: StringException was thrown.`);
 }
 
-unittest
+@system unittest
 {
     import core.exception : AssertError;
 
     void throwEx(Throwable t) { throw t; }
-    void nothrowEx() { }
+    bool nothrowEx() { return true; }
 
     try
     {
-        assertNotThrown!Exception(nothrowEx());
+        assert(assertNotThrown!Exception(nothrowEx()));
     }
     catch (AssertError) assert(0);
 
     try
     {
-        assertNotThrown!Exception(nothrowEx(), "It's a message");
+        assert(assertNotThrown!Exception(nothrowEx(), "It's a message"));
     }
     catch (AssertError) assert(0);
 
     try
     {
-        assertNotThrown!AssertError(nothrowEx());
+        assert(assertNotThrown!AssertError(nothrowEx()));
     }
     catch (AssertError) assert(0);
 
     try
     {
-        assertNotThrown!AssertError(nothrowEx(), "It's a message");
+        assert(assertNotThrown!AssertError(nothrowEx(), "It's a message"));
     }
     catch (AssertError) assert(0);
 
@@ -233,7 +260,7 @@ void assertThrown(T : Throwable = Exception, E)
                           file, line);
 }
 ///
-unittest
+@system unittest
 {
     import core.exception : AssertError;
     import std.string;
@@ -248,7 +275,7 @@ unittest
            `assertThrown failed: No StringException was thrown.`);
 }
 
-unittest
+@system unittest
 {
     import core.exception : AssertError;
 
@@ -266,7 +293,7 @@ unittest
         assertThrown!Exception(throwEx(new Exception("It's an Exception")),
                                "It's a message");
     }
-    catch(AssertError) assert(0);
+    catch (AssertError) assert(0);
 
     try
     {
@@ -288,7 +315,7 @@ unittest
         bool thrown = false;
         try
             assertThrown!Exception(nothrowEx());
-        catch(AssertError)
+        catch (AssertError)
             thrown = true;
 
         assert(thrown);
@@ -298,7 +325,7 @@ unittest
         bool thrown = false;
         try
             assertThrown!Exception(nothrowEx(), "It's a message");
-        catch(AssertError)
+        catch (AssertError)
             thrown = true;
 
         assert(thrown);
@@ -308,7 +335,7 @@ unittest
         bool thrown = false;
         try
             assertThrown!AssertError(nothrowEx());
-        catch(AssertError)
+        catch (AssertError)
             thrown = true;
 
         assert(thrown);
@@ -318,7 +345,7 @@ unittest
         bool thrown = false;
         try
             assertThrown!AssertError(nothrowEx(), "It's a message");
-        catch(AssertError)
+        catch (AssertError)
             thrown = true;
 
         assert(thrown);
@@ -327,7 +354,16 @@ unittest
 
 
 /++
-    If $(D !!value) is true, $(D value) is returned. Otherwise,
+    Enforces that the given value is true.
+
+    Params:
+        value = The value to test.
+        E = Exception type to throw if the value evalues to false.
+        msg = The error message to put in the exception if it is thrown.
+        file = The source file of the caller.
+        line = The line number of the caller.
+
+    Returns: $(D value), if `cast(bool) value` is true. Otherwise,
     $(D new Exception(msg)) is thrown.
 
     Note:
@@ -345,38 +381,33 @@ unittest
     enforce(line.length, "Expected a non-empty line.");
     --------------------
  +/
-T enforce(E : Throwable = Exception, T)(T value, lazy const(char)[] msg = null, string file = __FILE__, size_t line = __LINE__)
-    if (is(typeof({ if (!value) {} })))
+T enforce(E : Throwable = Exception, T)(T value, lazy const(char)[] msg = null,
+string file = __FILE__, size_t line = __LINE__)
+if (is(typeof({ if (!value) {} })))
 {
     if (!value) bailOut!E(file, line, msg);
     return value;
 }
 
 /++
-   $(RED Deprecated. If passing the file or line number explicitly, please use
-         the overload of enforce which takes them as function arguments. Taking
-         them as template arguments causes unnecessary template bloat. This
-         overload will be removed in June 2015.)
- +/
-deprecated("Use the overload of enforce that takes file and line as function arguments.")
-T enforce(T, string file, size_t line = __LINE__)
-    (T value, lazy const(char)[] msg = null)
-    if (is(typeof({ if (!value) {} })))
-{
-    if (!value) bailOut(file, line, msg);
-    return value;
-}
+    Enforces that the given value is true.
 
-/++
-    If $(D !!value) is true, $(D value) is returned. Otherwise, the given
+    Params:
+        value = The value to test.
+        dg = The delegate to be called if the value evaluates to false.
+        file = The source file of the caller.
+        line = The line number of the caller.
+
+    Returns: $(D value), if `cast(bool) value` is true. Otherwise, the given
     delegate is called.
 
-    The whole safety and purity are inferred from $(D Dg)'s safety and purity.
+    The safety and purity of this function are inferred from $(D Dg)'s safety
+    and purity.
  +/
 T enforce(T, Dg, string file = __FILE__, size_t line = __LINE__)
     (T value, scope Dg dg)
-    if (isSomeFunction!Dg && is(typeof( dg() )) &&
-        is(typeof({ if (!value) {} })))
+if (isSomeFunction!Dg && is(typeof( dg() )) &&
+    is(typeof({ if (!value) {} })))
 {
     if (!value) dg();
     return value;
@@ -386,7 +417,7 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
 {
     static if (is(typeof(new E(string.init, string.init, size_t.init))))
     {
-        throw new E(msg.ptr ? msg.idup : "Enforcement failed", file, line);
+        throw new E(msg ? msg.idup : "Enforcement failed", file, line);
     }
     else static if (is(typeof(new E(string.init, size_t.init))))
     {
@@ -399,24 +430,24 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
     }
 }
 
-unittest
+@safe unittest
 {
-    assert (enforce(123) == 123);
+    assert(enforce(123) == 123);
 
     try
     {
         enforce(false, "error");
-        assert (false);
+        assert(false);
     }
     catch (Exception e)
     {
-        assert (e.msg == "error");
-        assert (e.file == __FILE__);
-        assert (e.line == __LINE__-7);
+        assert(e.msg == "error");
+        assert(e.file == __FILE__);
+        assert(e.line == __LINE__-7);
     }
 }
 
-unittest
+@safe unittest
 {
     // Issue 10510
     extern(C) void cFoo() { }
@@ -424,15 +455,15 @@ unittest
 }
 
 // purity and safety inference test
-unittest
+@system unittest
 {
-    import std.typetuple;
+    import std.meta : AliasSeq;
 
-    foreach (EncloseSafe; TypeTuple!(false, true))
-    foreach (EnclosePure; TypeTuple!(false, true))
+    foreach (EncloseSafe; AliasSeq!(false, true))
+    foreach (EnclosePure; AliasSeq!(false, true))
     {
-        foreach (BodySafe; TypeTuple!(false, true))
-        foreach (BodyPure; TypeTuple!(false, true))
+        foreach (BodySafe; AliasSeq!(false, true))
+        foreach (BodyPure; AliasSeq!(false, true))
         {
             enum code =
                 "delegate void() " ~
@@ -459,14 +490,14 @@ unittest
 }
 
 // Test for bugzilla 8637
-unittest
+@system unittest
 {
     struct S
     {
         static int g;
         ~this() {}  // impure & unsafe destructor
         bool opCast(T:bool)() {
-            int* p = cast(int*)0;   // unsafe operation
+            int* p = cast(int*) 0;   // unsafe operation
             int n = g;              // impure operation
             return true;
         }
@@ -492,24 +523,7 @@ unittest
     enforce!E2(s);
 }
 
-deprecated unittest
-{
-    struct S
-    {
-        static int g;
-        ~this() {}  // impure & unsafe destructor
-        bool opCast(T:bool)() {
-            int* p = cast(int*)0;   // unsafe operation
-            int n = g;              // impure operation
-            return true;
-        }
-    }
-    S s;
-
-    enforce!(S, __FILE__, __LINE__)(s, "");
-}
-
-unittest
+@safe unittest
 {
     // Issue 14685
 
@@ -521,7 +535,14 @@ unittest
 }
 
 /++
-    If $(D !!value) is true, $(D value) is returned. Otherwise, $(D ex) is thrown.
+    Enforces that the given value is true.
+
+    Params:
+        value = The value to test.
+        ex = The exception to throw if the value evaluates to false.
+
+    Returns: $(D value), if `cast(bool) value` is true. Otherwise, $(D ex) is
+    thrown.
 
     Example:
     --------------------
@@ -536,16 +557,24 @@ T enforce(T)(T value, lazy Throwable ex)
     return value;
 }
 
-unittest
+@safe unittest
 {
     assertNotThrown(enforce(true, new Exception("this should not be thrown")));
     assertThrown(enforce(false, new Exception("this should be thrown")));
 }
 
 /++
-    If $(D !!value) is true, $(D value) is returned. Otherwise,
-    $(D new ErrnoException(msg)) is thrown. $(D ErrnoException) assumes that the
-    last operation set $(D errno) to an error code.
+    Enforces that the given value is true, throwing an `ErrnoException` if it
+    is not.
+
+    Params:
+        value = The value to test.
+        msg = The message to include in the `ErrnoException` if it is thrown.
+
+    Returns: $(D value), if `cast(bool) value` is true. Otherwise,
+    $(D new ErrnoException(msg)) is thrown.  It is assumed that the last
+    operation set $(D errno) to an error code corresponding with the failed
+    condition.
 
     Example:
     --------------------
@@ -563,7 +592,7 @@ T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
 
 
 /++
-    If $(D !!value) is $(D true), $(D value) is returned. Otherwise,
+    If $(D !value) is $(D false), $(D value) is returned. Otherwise,
     $(D new E(msg, file, line)) is thrown. Or if $(D E) doesn't take a message
     and can be constructed with $(D new E(file, line)), then
     $(D new E(file, line)) will be thrown.
@@ -578,7 +607,7 @@ T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
     --------------------
  +/
 template enforceEx(E : Throwable)
-    if (is(typeof(new E("", __FILE__, __LINE__))))
+if (is(typeof(new E("", __FILE__, __LINE__))))
 {
     /++ Ditto +/
     T enforceEx(T)(T value, lazy string msg = "", string file = __FILE__, size_t line = __LINE__)
@@ -590,7 +619,7 @@ template enforceEx(E : Throwable)
 
 /++ Ditto +/
 template enforceEx(E : Throwable)
-    if (is(typeof(new E(__FILE__, __LINE__))) && !is(typeof(new E("", __FILE__, __LINE__))))
+if (is(typeof(new E(__FILE__, __LINE__))) && !is(typeof(new E("", __FILE__, __LINE__))))
 {
     /++ Ditto +/
     T enforceEx(T)(T value, string file = __FILE__, size_t line = __LINE__)
@@ -600,10 +629,10 @@ template enforceEx(E : Throwable)
     }
 }
 
-unittest
+@system unittest
 {
-    import std.array : empty;
     import core.exception : OutOfMemoryError;
+    import std.array : empty;
     assertNotThrown(enforceEx!Exception(true));
     assertNotThrown(enforceEx!Exception(true, "blah"));
     assertNotThrown(enforceEx!OutOfMemoryError(true));
@@ -643,7 +672,7 @@ unittest
     static assert(!is(typeof(enforceEx!int(true))));
 }
 
-unittest
+@safe unittest
 {
     alias enf = enforceEx!Exception;
     assertNotThrown(enf(true));
@@ -681,7 +710,7 @@ T collectException(T = Exception, E)(lazy E expression, ref E result)
     return null;
 }
 ///
-unittest
+@system unittest
 {
     int b;
     int foo() { throw new Exception("blah"); }
@@ -721,7 +750,7 @@ T collectException(T : Throwable = Exception, E)(lazy E expression)
     return null;
 }
 
-unittest
+@safe unittest
 {
     int foo() { throw new Exception("blah"); }
     assert(collectException(foo()));
@@ -753,13 +782,13 @@ string collectExceptionMsg(T = Exception, E)(lazy E expression)
     {
         expression();
 
-        return cast(string)null;
+        return cast(string) null;
     }
-    catch(T e)
+    catch (T e)
         return e.msg.empty ? emptyExceptionMsg : e.msg;
 }
 ///
-unittest
+@safe unittest
 {
     void throwFunc() { throw new Exception("My Message."); }
     assert(collectExceptionMsg(throwFunc()) == "My Message.");
@@ -792,6 +821,11 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  *
  * Typically, $(D assumeUnique) is used to return arrays from
  * functions that have allocated and built them.
+ *
+ * Params:
+ *  array = The array to cast to immutable.
+ *
+ * Returns: The immutable array.
  *
  * Example:
  *
@@ -858,7 +892,7 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  *
  * For more on infering uniqueness see the $(B unique) and
  * $(B lent) keywords in the
- * $(WEB archjava.fluid.cs.cmu.edu/papers/oopsla02.pdf, ArchJava)
+ * $(HTTP archjava.fluid.cs.cmu.edu/papers/oopsla02.pdf, ArchJava)
  * language.
  *
  * The downside of using $(D assumeUnique)'s
@@ -879,14 +913,7 @@ immutable(T)[] assumeUnique(T)(ref T[] array) pure nothrow
     array = null;
     return result;
 }
-
-unittest
-{
-    int[] arr = new int[1];
-    auto arr1 = assumeUnique(arr);
-    assert(is(typeof(arr1) == immutable(int)[]) && arr == null);
-}
-
+/// ditto
 immutable(T[U]) assumeUnique(T, U)(ref T[U] array) pure nothrow
 {
     auto result = cast(immutable(T[U])) array;
@@ -894,8 +921,16 @@ immutable(T[U]) assumeUnique(T, U)(ref T[U] array) pure nothrow
     return result;
 }
 
+@system unittest
+{
+    // @system due to assumeUnique
+    int[] arr = new int[1];
+    auto arr1 = assumeUnique(arr);
+    assert(is(typeof(arr1) == immutable(int)[]) && arr == null);
+}
+
 // @@@BUG@@@
-version(none) unittest
+version(none) @system unittest
 {
     int[string] arr = ["a":1];
     auto arr1 = assumeUnique(arr);
@@ -916,6 +951,16 @@ version(none) unittest
  * subclass $(D Exception) may be thrown even from $(D nothrow) functions,
  * since they are considered to be serious runtime problems that cannot be
  * recovered from.)
+ *
+ * Params:
+ *  expr = The expression asserted not to throw.
+ *  msg = The message to include in the `AssertError` if the assumption turns
+ *      out to be false.
+ *  file = The source file name of the caller.
+ *  line = The line number of the caller.
+ *
+ * Returns:
+ *  The value of `expr`, if any.
  */
 T assumeWontThrow(T)(lazy T expr,
                      string msg = null,
@@ -927,7 +972,7 @@ T assumeWontThrow(T)(lazy T expr,
     {
         return expr;
     }
-    catch(Exception e)
+    catch (Exception e)
     {
         import std.range.primitives : empty;
         immutable tail = msg.empty ? "." : ": " ~ msg;
@@ -937,7 +982,7 @@ T assumeWontThrow(T)(lazy T expr,
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.math : sqrt;
 
@@ -946,7 +991,7 @@ unittest
     {
         if (x < 0)
             throw new Exception("Tried to take root of negative number");
-        return cast(int)sqrt(cast(double)x);
+        return cast(int) sqrt(cast(double) x);
     }
 
     // This function never throws.
@@ -962,7 +1007,7 @@ unittest
     assert(computeLength(3, 4) == 5);
 }
 
-unittest
+@system unittest
 {
     import core.exception : AssertError;
 
@@ -978,16 +1023,21 @@ unittest
 }
 
 /**
-The "pointsTo" functions, $(D doesPointTo) and $(D mayPointTo).
+Checks whether a given source object contains pointers or references to a given
+target object.
 
-Returns $(D true) if $(D source)'s representation embeds a pointer
+Params:
+    source = The source object
+    target = The target object
+
+Returns: $(D true) if $(D source)'s representation embeds a pointer
 that points to $(D target)'s representation or somewhere inside
 it.
 
 If $(D source) is or contains a dynamic array, then, then these functions will check
 if there is overlap between the dynamic array and $(D target)'s representation.
 
-If $(D source) is a class, then pointsTo will handle it as a pointer.
+If $(D source) is a class, then it will be handled as a pointer.
 
 If $(D target) is a pointer, a dynamic array or a class, then these functions will only
 check if $(D source) points to $(D target), $(I not) what $(D target) references.
@@ -1005,14 +1055,14 @@ $(D source) does not point to $(D target). It may produce false positives, but n
 false negatives. This function should be prefered for defensively choosing a
 code path.
 
-Note: Evaluating $(D pointsTo(x, x)) checks whether $(D x) has
+Note: Evaluating $(D doesPointTo(x, x)) checks whether $(D x) has
 internal pointers. This should only be done as an assertive test,
 as the language is free to assume objects don't have internal pointers
 (TDPL 7.1.3.5).
 */
 bool doesPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @trusted pure nothrow
-    if (__traits(isRef, source) || isDynamicArray!S ||
-        isPointer!S || is(S == class))
+if (__traits(isRef, source) || isDynamicArray!S ||
+    isPointer!S || is(S == class))
 {
     static if (isPointer!S || is(S == class) || is(S == interface))
     {
@@ -1037,7 +1087,7 @@ bool doesPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target)
     else static if (isDynamicArray!S)
     {
         import std.array : overlap;
-        return overlap(cast(void[])source, cast(void[])(&target)[0 .. 1]).length != 0;
+        return overlap(cast(void[]) source, cast(void[])(&target)[0 .. 1]).length != 0;
     }
     else
     {
@@ -1045,9 +1095,17 @@ bool doesPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target)
     }
 }
 
+// for shared objects
+/// ditto
+bool doesPointTo(S, T)(auto ref const shared S source, ref const shared T target) @trusted pure nothrow
+{
+    return doesPointTo!(shared S, shared T, void)(source, target);
+}
+
+/// ditto
 bool mayPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @trusted pure nothrow
-    if (__traits(isRef, source) || isDynamicArray!S ||
-        isPointer!S || is(S == class))
+if (__traits(isRef, source) || isDynamicArray!S ||
+    isPointer!S || is(S == class))
 {
     static if (isPointer!S || is(S == class) || is(S == interface))
     {
@@ -1071,7 +1129,7 @@ bool mayPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) 
     else static if (isDynamicArray!S)
     {
         import std.array : overlap;
-        return overlap(cast(void[])source, cast(void[])(&target)[0 .. 1]).length != 0;
+        return overlap(cast(void[]) source, cast(void[])(&target)[0 .. 1]).length != 0;
     }
     else
     {
@@ -1080,74 +1138,14 @@ bool mayPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) 
 }
 
 // for shared objects
-bool doesPointTo(S, T)(auto ref const shared S source, ref const shared T target) @trusted pure nothrow
-{
-    return doesPointTo!(shared S, shared T, void)(source, target);
-}
+/// ditto
 bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target) @trusted pure nothrow
 {
     return mayPointTo!(shared S, shared T, void)(source, target);
 }
 
-deprecated ("pointsTo is ambiguous. Please use either of doesPointTo or mayPointTo")
-alias pointsTo = doesPointTo;
-
-/+
-Returns true if the field at index $(D i) in ($D T) shares its address with another field.
-
-Note: This does not merelly check if the field is a member of an union, but also that
-it is not a single child.
-+/
-package enum isUnionAliased(T, size_t i) = isUnionAliasedImpl!T(T.tupleof[i].offsetof);
-private bool isUnionAliasedImpl(T)(size_t offset)
-{
-    int count = 0;
-    foreach (i, U; typeof(T.tupleof))
-        if (T.tupleof[i].offsetof == offset)
-            ++count;
-    return count >= 2;
-}
-//
-unittest
-{
-    static struct S
-    {
-        int a0; //Not aliased
-        union
-        {
-            int a1; //Not aliased
-        }
-        union
-        {
-            int a2; //Aliased
-            int a3; //Aliased
-        }
-        union A4
-        {
-            int b0; //Not aliased
-        }
-        A4 a4;
-        union A5
-        {
-            int b0; //Aliased
-            int b1; //Aliased
-        }
-        A5 a5;
-    }
-
-    static assert(!isUnionAliased!(S, 0)); //a0;
-    static assert(!isUnionAliased!(S, 1)); //a1;
-    static assert( isUnionAliased!(S, 2)); //a2;
-    static assert( isUnionAliased!(S, 3)); //a3;
-    static assert(!isUnionAliased!(S, 4)); //a4;
-        static assert(!isUnionAliased!(S.A4, 0)); //a4.b0;
-    static assert(!isUnionAliased!(S, 5)); //a5;
-        static assert( isUnionAliased!(S.A5, 0)); //a5.b0;
-        static assert( isUnionAliased!(S.A5, 1)); //a5.b1;
-}
-
 /// Pointers
-unittest
+@system unittest
 {
     int  i = 0;
     int* p = null;
@@ -1157,7 +1155,7 @@ unittest
 }
 
 /// Structs and Unions
-unittest
+@system unittest
 {
     struct S
     {
@@ -1167,18 +1165,18 @@ unittest
     int i;
     auto s = S(0, &i);
 
-    //structs and unions "own" their members
-    //pointsTo will answer true if one of the members pointsTo.
+    // structs and unions "own" their members
+    // pointsTo will answer true if one of the members pointsTo.
     assert(!s.doesPointTo(s.v)); //s.v is just v member of s, so not pointed.
     assert( s.p.doesPointTo(i)); //i is pointed by s.p.
     assert( s  .doesPointTo(i)); //which means i is pointed by s itself.
 
-    //Unions will behave exactly the same. Points to will check each "member"
-    //individually, even if they share the same memory
+    // Unions will behave exactly the same. Points to will check each "member"
+    // individually, even if they share the same memory
 }
 
 /// Arrays (dynamic and static)
-unittest
+@system unittest
 {
     int i;
     int[]  slice = [0, 1, 2, 3, 4];
@@ -1186,20 +1184,23 @@ unittest
     int*[]  slicep = [&i];
     int*[1] arrp   = [&i];
 
-    //A slice points to all of its members:
+    // A slice points to all of its members:
     assert( slice.doesPointTo(slice[3]));
-    assert(!slice[0 .. 2].doesPointTo(slice[3])); //Object 3 is outside of the slice [0 .. 2]
+    assert(!slice[0 .. 2].doesPointTo(slice[3])); // Object 3 is outside of the
+                                                  // slice [0 .. 2]
 
-    //Note that a slice will not take into account what its members point to.
+    // Note that a slice will not take into account what its members point to.
     assert( slicep[0].doesPointTo(i));
     assert(!slicep   .doesPointTo(i));
 
-    //static arrays are objects that own their members, just like structs:
-    assert(!arr.doesPointTo(arr[0])); //arr[0] is just a member of arr, so not pointed.
-    assert( arrp[0].doesPointTo(i));  //i is pointed by arrp[0].
-    assert( arrp   .doesPointTo(i));  //which means i is pointed by arrp itslef.
+    // static arrays are objects that own their members, just like structs:
+    assert(!arr.doesPointTo(arr[0])); // arr[0] is just a member of arr, so not
+                                      // pointed.
+    assert( arrp[0].doesPointTo(i));  // i is pointed by arrp[0].
+    assert( arrp   .doesPointTo(i));  // which means i is pointed by arrp
+                                      // itself.
 
-    //Notice the difference between static and dynamic arrays:
+    // Notice the difference between static and dynamic arrays:
     assert(!arr  .doesPointTo(arr[0]));
     assert( arr[].doesPointTo(arr[0]));
     assert( arrp  .doesPointTo(i));
@@ -1207,7 +1208,7 @@ unittest
 }
 
 /// Classes
-unittest
+@system unittest
 {
     class C
     {
@@ -1217,26 +1218,30 @@ unittest
     int i;
     C a = new C(&i);
     C b = a;
-    //Classes are a bit particular, as they are treated like simple pointers
-    //to a class payload.
-    assert( a.p.doesPointTo(i)); //a.p points to i.
-    assert(!a  .doesPointTo(i)); //Yet a itself does not point i.
+
+    // Classes are a bit particular, as they are treated like simple pointers
+    // to a class payload.
+    assert( a.p.doesPointTo(i)); // a.p points to i.
+    assert(!a  .doesPointTo(i)); // Yet a itself does not point i.
 
     //To check the class payload itself, iterate on its members:
     ()
     {
-        foreach (index, _; FieldTypeTuple!C)
+        import std.traits : Fields;
+
+        foreach (index, _; Fields!C)
             if (doesPointTo(a.tupleof[index], i))
                 return;
         assert(0);
     }();
 
-    //To check if a class points a specific payload, a direct memmory check can be done:
+    // To check if a class points a specific payload, a direct memmory check
+    // can be done:
     auto aLoc = cast(ubyte[__traits(classInstanceSize, C)]*) a;
-    assert(b.doesPointTo(*aLoc)); //b points to where a is pointing
+    assert(b.doesPointTo(*aLoc)); // b points to where a is pointing
 }
 
-unittest
+@system unittest
 {
     struct S1 { int a; S1 * b; }
     S1 a1;
@@ -1266,7 +1271,7 @@ unittest
         static struct NoCopy { this(this) { assert(0); } }
         static struct Holder { NoCopy a, b, c; }
         Holder h;
-        cast(void)doesPointTo(h, h);
+        cast(void) doesPointTo(h, h);
     }
 
     shared S3 sh3;
@@ -1282,11 +1287,11 @@ unittest
     //But they do point their elements
     foreach (i; 0 .. 4)
         assert(doesPointTo(darr, darr[i]));
-    assert(doesPointTo(darr[0..3], darr[2]));
-    assert(!doesPointTo(darr[0..3], darr[3]));
+    assert(doesPointTo(darr[0 .. 3], darr[2]));
+    assert(!doesPointTo(darr[0 .. 3], darr[3]));
 }
 
-unittest
+@system unittest
 {
     //tests with static arrays
     //Static arrays themselves are just objects, and don't really *point* to anything.
@@ -1335,7 +1340,7 @@ unittest
 }
 
 
-unittest //Unions
+@system unittest //Unions
 {
     int i;
     union U //Named union
@@ -1374,7 +1379,7 @@ unittest //Unions
     assert( mayPointTo(s, i));
 }
 
-unittest //Classes
+@system unittest //Classes
 {
     int i;
     static class A
@@ -1386,7 +1391,7 @@ unittest //Classes
     a.p = &i;
     assert(!doesPointTo(a, i)); //a does not point to i
 }
-unittest //alias this test
+@safe unittest //alias this test
 {
     static int i;
     static int j;
@@ -1400,10 +1405,10 @@ unittest //alias this test
     S s = S(&j);
     assert(!doesPointTo(s, i));
     assert( doesPointTo(s, j));
-    assert( doesPointTo(cast(int*)s, i));
-    assert(!doesPointTo(cast(int*)s, j));
+    assert( doesPointTo(cast(int*) s, i));
+    assert(!doesPointTo(cast(int*) s, j));
 }
-unittest //more alias this opCast
+@safe unittest //more alias this opCast
 {
     void* p;
     class A
@@ -1419,6 +1424,88 @@ unittest //more alias this opCast
     assert(!mayPointTo(A.init, p));
 }
 
+/+
+Returns true if the field at index $(D i) in ($D T) shares its address with another field.
+
+Note: This does not merelly check if the field is a member of an union, but also that
+it is not a single child.
++/
+package enum isUnionAliased(T, size_t i) = isUnionAliasedImpl!T(T.tupleof[i].offsetof);
+private bool isUnionAliasedImpl(T)(size_t offset)
+{
+    int count = 0;
+    foreach (i, U; typeof(T.tupleof))
+        if (T.tupleof[i].offsetof == offset)
+            ++count;
+    return count >= 2;
+}
+//
+@safe unittest
+{
+    static struct S
+    {
+        int a0; //Not aliased
+        union
+        {
+            int a1; //Not aliased
+        }
+        union
+        {
+            int a2; //Aliased
+            int a3; //Aliased
+        }
+        union A4
+        {
+            int b0; //Not aliased
+        }
+        A4 a4;
+        union A5
+        {
+            int b0; //Aliased
+            int b1; //Aliased
+        }
+        A5 a5;
+    }
+
+    static assert(!isUnionAliased!(S, 0)); //a0;
+    static assert(!isUnionAliased!(S, 1)); //a1;
+    static assert( isUnionAliased!(S, 2)); //a2;
+    static assert( isUnionAliased!(S, 3)); //a3;
+    static assert(!isUnionAliased!(S, 4)); //a4;
+        static assert(!isUnionAliased!(S.A4, 0)); //a4.b0;
+    static assert(!isUnionAliased!(S, 5)); //a5;
+        static assert( isUnionAliased!(S.A5, 0)); //a5.b0;
+        static assert( isUnionAliased!(S.A5, 1)); //a5.b1;
+}
+
+package string errnoString(int errno) nothrow @trusted
+{
+    import core.stdc.string : strlen;
+    version (CRuntime_Glibc)
+    {
+        import core.stdc.string : strerror_r;
+        char[1024] buf = void;
+        auto s = strerror_r(errno, buf.ptr, buf.length);
+    }
+    else version (Posix)
+    {
+        // XSI-compliant
+        import core.stdc.string : strerror_r;
+        char[1024] buf = void;
+        const(char)* s;
+        if (strerror_r(errno, buf.ptr, buf.length) == 0)
+            s = buf.ptr;
+        else
+            return "Unknown error";
+    }
+    else
+    {
+        import core.stdc.string : strerror;
+        auto s = strerror(errno);
+    }
+    return s[0 .. s.strlen].idup;
+}
+
 /*********************
  * Thrown if errors that set $(D errno) occur.
  */
@@ -1426,19 +1513,36 @@ class ErrnoException : Exception
 {
     final @property uint errno() { return _errno; } /// Operating system error code.
     private uint _errno;
+    /// Constructor which takes an error message. The current global $(REF errno, core,stdc,errno) value is used as error code.
     this(string msg, string file = null, size_t line = 0) @trusted
     {
-        _errno = .errno;
-        version (CRuntime_Glibc)
-        {
-            char[1024] buf = void;
-            auto s = core.stdc.string.strerror_r(errno, buf.ptr, buf.length);
-        }
-        else
-        {
-            auto s = core.stdc.string.strerror(errno);
-        }
-        super(msg ~ " (" ~ s[0..s.strlen].idup ~ ")", file, line);
+        import core.stdc.errno : errno;
+        this(msg, errno, file, line);
+    }
+    /// Constructor which takes an error message and error code.
+    this(string msg, int errno, string file = null, size_t line = 0) @trusted
+    {
+        _errno = errno;
+        super(msg ~ " (" ~ errnoString(errno) ~ ")", file, line);
+    }
+
+    @system unittest
+    {
+        import core.stdc.errno : errno, EAGAIN;
+
+        auto old = errno;
+        scope(exit) errno = old;
+
+        errno = EAGAIN;
+        auto ex = new ErrnoException("oh no");
+        assert(ex.errno == EAGAIN);
+    }
+
+    @system unittest
+    {
+        import core.stdc.errno : EAGAIN;
+        auto ex = new ErrnoException("oh no", EAGAIN);
+        assert(ex.errno == EAGAIN);
     }
 }
 
@@ -1455,7 +1559,11 @@ class ErrnoException : Exception
         expression   = The expression to run and return its result.
         errorHandler = The handler to run if the expression throwed.
 
-    Examples:
+    Returns:
+        expression, if it does not throw. Otherwise, returns the result of
+        errorHandler.
+
+    Example:
     --------------------
     //Revert to a default value upon an error:
     assert("x".to!int().ifThrown(0) == 0);
@@ -1469,8 +1577,8 @@ class ErrnoException : Exception
     //Chaining multiple calls to ifThrown to attempt multiple things in a row:
     string s="true";
     assert(s.to!int().
-            ifThrown(cast(int)s.to!double()).
-            ifThrown(cast(int)s.to!bool())
+            ifThrown(cast(int) s.to!double()).
+            ifThrown(cast(int) s.to!bool())
             == 1);
 
     //Respond differently to different types of errors
@@ -1484,7 +1592,7 @@ class ErrnoException : Exception
     be implicitly casted to, and that type will be the type of the compound
     expression.
 
-    Examples:
+    Example:
     --------------------
     //null and new Object have a common type(Object).
     static assert(is(typeof(null.ifThrown(new Object())) == Object));
@@ -1506,12 +1614,17 @@ class ErrnoException : Exception
 CommonType!(T1, T2) ifThrown(E : Throwable = Exception, T1, T2)(lazy scope T1 expression, lazy scope T2 errorHandler)
 {
     static assert(!is(typeof(return) == void),
-            "The error handler's return value(" ~ T2.stringof ~ ") does not have a common type with the expression(" ~ T1.stringof ~ ").");
+        "The error handler's return value("
+        ~ T2.stringof ~
+        ") does not have a common type with the expression("
+        ~ T1.stringof ~
+        ")."
+    );
     try
     {
         return expression();
     }
-    catch(E)
+    catch (E)
     {
         return errorHandler();
     }
@@ -1522,12 +1635,17 @@ CommonType!(T1, T2) ifThrown(E : Throwable = Exception, T1, T2)(lazy scope T1 ex
 CommonType!(T1, T2) ifThrown(E : Throwable, T1, T2)(lazy scope T1 expression, scope T2 delegate(E) errorHandler)
 {
     static assert(!is(typeof(return) == void),
-            "The error handler's return value(" ~ T2.stringof ~ ") does not have a common type with the expression(" ~ T1.stringof ~ ").");
+        "The error handler's return value("
+        ~ T2.stringof ~
+        ") does not have a common type with the expression("
+        ~ T1.stringof ~
+        ")."
+    );
     try
     {
         return expression();
     }
-    catch(E e)
+    catch (E e)
     {
         return errorHandler(e);
     }
@@ -1538,30 +1656,35 @@ CommonType!(T1, T2) ifThrown(E : Throwable, T1, T2)(lazy scope T1 expression, sc
 CommonType!(T1, T2) ifThrown(T1, T2)(lazy scope T1 expression, scope T2 delegate(Exception) errorHandler)
 {
     static assert(!is(typeof(return) == void),
-            "The error handler's return value(" ~ T2.stringof ~ ") does not have a common type with the expression(" ~ T1.stringof ~ ").");
+        "The error handler's return value("
+        ~ T2.stringof ~
+        ") does not have a common type with the expression("
+        ~ T1.stringof ~
+        ")."
+    );
     try
     {
         return expression();
     }
-    catch(Exception e)
+    catch (Exception e)
     {
         return errorHandler(e);
     }
 }
 
 //Verify Examples
-unittest
+@system unittest
 {
-    import std.string;
     import std.conv;
+    import std.string;
     //Revert to a default value upon an error:
     assert("x".to!int().ifThrown(0) == 0);
 
     //Chaining multiple calls to ifThrown to attempt multiple things in a row:
     string s="true";
     assert(s.to!int().
-            ifThrown(cast(int)s.to!double()).
-            ifThrown(cast(int)s.to!bool())
+            ifThrown(cast(int) s.to!double()).
+            ifThrown(cast(int) s.to!bool())
             == 1);
 
     //Respond differently to different types of errors
@@ -1582,11 +1705,11 @@ unittest
     assert("%s".format().ifThrown(e => e.classinfo.name) == "std.format.FormatException");
 }
 
-unittest
+@system unittest
 {
-    import std.string;
-    import std.conv;
     import core.exception;
+    import std.conv;
+    import std.string;
     //Basic behaviour - all versions.
     assert("1".to!int().ifThrown(0) == 1);
     assert("x".to!int().ifThrown(0) == 0);
@@ -1622,8 +1745,8 @@ unittest
 version(unittest) package
 @property void assertCTFEable(alias dg)()
 {
-    static assert({ cast(void)dg(); return true; }());
-    cast(void)dg();
+    static assert({ cast(void) dg(); return true; }());
+    cast(void) dg();
 }
 
 /** This $(D enum) is used to select the primitives of the range to handle by the
@@ -1672,15 +1795,15 @@ Params:
 
 Returns: A wrapper $(D struct) that preserves the range interface of $(D input).
 
-opSlice:
+Note:
 Infinite ranges with slicing support must return an instance of
-$(XREF range, Take) when sliced with a specific lower and upper
-bound (see $(XREF_PACK range,primitives,hasSlicing)); $(D handle) deals with
+$(REF Take, std,range) when sliced with a specific lower and upper
+bound (see $(REF hasSlicing, std,range,primitives)); $(D handle) deals with
 this by $(D take)ing 0 from the return value of the handler function and
 returning that when an exception is caught.
 */
 auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Range)(Range input)
-    if (isInputRange!Range)
+if (isInputRange!Range)
 {
     static struct Handler
     {
@@ -1696,7 +1819,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                     {
                         return typeof(this)(range.save);
                     }
-                    catch(E exception)
+                    catch (E exception)
                     {
                         return typeof(this)(handler(exception, this.range));
                     }
@@ -1720,7 +1843,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                     {
                         return this.range.empty;
                     }
-                    catch(E exception)
+                    catch (E exception)
                     {
                         return handler(exception, this.range);
                     }
@@ -1738,7 +1861,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                 {
                     return this.range.front;
                 }
-                catch(E exception)
+                catch (E exception)
                 {
                     return handler(exception, this.range);
                 }
@@ -1755,7 +1878,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                 {
                     this.range.popFront();
                 }
-                catch(E exception)
+                catch (E exception)
                 {
                     handler(exception, this.range);
                 }
@@ -1774,7 +1897,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                     {
                         return this.range.back;
                     }
-                    catch(E exception)
+                    catch (E exception)
                     {
                         return handler(exception, this.range);
                     }
@@ -1791,7 +1914,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                     {
                         this.range.popBack();
                     }
-                    catch(E exception)
+                    catch (E exception)
                     {
                         handler(exception, this.range);
                     }
@@ -1811,7 +1934,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                     {
                         return this.range[index];
                     }
-                    catch(E exception)
+                    catch (E exception)
                     {
                         static if (__traits(compiles, handler(exception, this.range, index)))
                             return handler(exception, this.range, index);
@@ -1834,7 +1957,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                     {
                         return this.range.length;
                     }
-                    catch(E exception)
+                    catch (E exception)
                     {
                         return handler(exception, this.range);
                     }
@@ -1856,7 +1979,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                         {
                             return typeof(this)(this.range[lower .. upper]);
                         }
-                        catch(E exception)
+                        catch (E exception)
                         {
                             return typeof(this)(handler(exception, this.range));
                         }
@@ -1867,6 +1990,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
             }
             else static if (is(typeof(Range.init[size_t.init .. $])))
             {
+                import std.range : Take, takeExactly;
                 static struct DollarToken {}
                 enum opDollar = DollarToken.init;
 
@@ -1878,7 +2002,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                         {
                             return typeof(this)(this.range[lower .. $]);
                         }
-                        catch(E exception)
+                        catch (E exception)
                         {
                             return typeof(this)(handler(exception, this.range));
                         }
@@ -1895,7 +2019,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                         {
                             return takeExactly(typeof(this)(this.range[lower .. $]), upper - 1);
                         }
-                        catch(E exception)
+                        catch (E exception)
                         {
                             return takeExactly(typeof(this)(handler(exception, this.range)), 0);
                         }
@@ -1913,7 +2037,8 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
 ///
 pure @safe unittest
 {
-    import std.algorithm : equal, map, splitter;
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map, splitter;
     import std.conv : to, ConvException;
 
     auto s = "12,1337z32,54,2,7,9,1z,6,8";
@@ -1930,7 +2055,7 @@ pure @safe unittest
 ///
 pure @safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.range : retro;
     import std.utf : UTFException;
 
@@ -2057,6 +2182,7 @@ pure nothrow @safe unittest
 
     static struct Infinite
     {
+        import std.range : Take;
         pure @safe:
         enum bool empty = false;
         int front() { assert(false); }
@@ -2081,4 +2207,110 @@ pure nothrow @safe unittest
         RangePrimitive.opSlice, (e, r) => Infinite())();
 
     auto infSlice = infinite[0 .. $]; // this would throw otherwise
+}
+
+
+/++
+    Convenience mixin for trivially sub-classing exceptions
+
+    Even trivially sub-classing an exception involves writing boilerplate code
+    for the constructor to: 1$(RPAREN) correctly pass in the source file and line number
+    the exception was thrown from; 2$(RPAREN) be usable with $(LREF enforce) which
+    expects exception constructors to take arguments in a fixed order. This
+    mixin provides that boilerplate code.
+
+    Note however that you need to mark the $(B mixin) line with at least a
+    minimal (i.e. just $(B ///)) DDoc comment if you want the mixed-in
+    constructors to be documented in the newly created Exception subclass.
+
+    $(RED Current limitation): Due to
+    $(LINK2 https://issues.dlang.org/show_bug.cgi?id=11500, bug #11500),
+    currently the constructors specified in this mixin cannot be overloaded with
+    any other custom constructors. Thus this mixin can currently only be used
+    when no such custom constructors need to be explicitly specified.
+ +/
+mixin template basicExceptionCtors()
+{
+    /++
+        Params:
+            msg  = The message for the exception.
+            file = The file where the exception occurred.
+            line = The line number where the exception occurred.
+            next = The previous exception in the chain of exceptions, if any.
+    +/
+    this(string msg, string file = __FILE__, size_t line = __LINE__,
+         Throwable next = null) @nogc @safe pure nothrow
+    {
+        super(msg, file, line, next);
+    }
+
+    /++
+        Params:
+            msg  = The message for the exception.
+            next = The previous exception in the chain of exceptions.
+            file = The file where the exception occurred.
+            line = The line number where the exception occurred.
+    +/
+    this(string msg, Throwable next, string file = __FILE__,
+         size_t line = __LINE__) @nogc @safe pure nothrow
+    {
+        super(msg, file, line, next);
+    }
+}
+
+///
+@safe unittest
+{
+    class MeaCulpa: Exception
+    {
+        ///
+        mixin basicExceptionCtors;
+    }
+
+    try
+        throw new MeaCulpa("test");
+    catch (MeaCulpa e)
+    {
+        assert(e.msg == "test");
+        assert(e.file == __FILE__);
+        assert(e.line == __LINE__ - 5);
+    }
+}
+
+@safe pure nothrow unittest
+{
+    class TestException : Exception { mixin basicExceptionCtors; }
+    auto e = new Exception("msg");
+    auto te1 = new TestException("foo");
+    auto te2 = new TestException("foo", e);
+}
+
+@safe unittest
+{
+    class TestException : Exception { mixin basicExceptionCtors; }
+    auto e = new Exception("!!!");
+
+    auto te1 = new TestException("message", "file", 42, e);
+    assert(te1.msg == "message");
+    assert(te1.file == "file");
+    assert(te1.line == 42);
+    assert(te1.next is e);
+
+    auto te2 = new TestException("message", e, "file", 42);
+    assert(te2.msg == "message");
+    assert(te2.file == "file");
+    assert(te2.line == 42);
+    assert(te2.next is e);
+
+    auto te3 = new TestException("foo");
+    assert(te3.msg == "foo");
+    assert(te3.file == __FILE__);
+    assert(te3.line == __LINE__ - 3);
+    assert(te3.next is null);
+
+    auto te4 = new TestException("foo", e);
+    assert(te4.msg == "foo");
+    assert(te4.file == __FILE__);
+    assert(te4.line == __LINE__ - 3);
+    assert(te4.next is e);
 }

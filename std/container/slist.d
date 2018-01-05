@@ -1,28 +1,55 @@
 /**
 This module implements a singly-linked list container.
+It can be used as a stack.
 
-This module is a submodule of $(LINK2 std_container.html, std.container).
+This module is a submodule of $(MREF std, container).
 
 Source: $(PHOBOSSRC std/container/_slist.d)
-Macros:
-WIKI = Phobos/StdContainer
-TEXTWITHCOMMAS = $0
 
-Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
-copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
+Copyright: 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
 
 License: Distributed under the Boost Software License, Version 1.0.
-(See accompanying file LICENSE_1_0.txt or copy at $(WEB
+(See accompanying file LICENSE_1_0.txt or copy at $(HTTP
 boost.org/LICENSE_1_0.txt)).
 
-Authors: Steven Schveighoffer, $(WEB erdani.com, Andrei Alexandrescu)
+Authors: $(HTTP erdani.com, Andrei Alexandrescu)
+
+$(SCRIPT inhibitQuickIndex = 1;)
 */
 module std.container.slist;
+
+///
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.container : SList;
+
+    auto s = SList!int(1, 2, 3);
+    assert(equal(s[], [1, 2, 3]));
+
+    s.removeFront();
+    assert(equal(s[], [2, 3]));
+
+    s.insertFront([5, 6]);
+    assert(equal(s[], [5, 6, 2, 3]));
+
+    // If you want to apply range operations, simply slice it.
+    import std.algorithm.searching : countUntil;
+    import std.range : popFrontN, walkLength;
+
+    auto sl = SList!int(1, 2, 3, 4, 5);
+    assert(countUntil(sl[], 2) == 1);
+
+    auto r = sl[];
+    popFrontN(r, 2);
+    assert(walkLength(r) == 3);
+}
 
 public import std.container.util;
 
 /**
    Implements a simple and fast singly-linked list.
+   It can be used as a stack.
 
    $(D SList) uses reference semantics.
  */
@@ -30,8 +57,8 @@ struct SList(T)
 {
     import std.exception : enforce;
     import std.range : Take;
-    import std.range.primitives;
-    import std.traits;
+    import std.range.primitives : isInputRange, isForwardRange, ElementType;
+    import std.traits : isImplicitlyConvertible;
 
     private struct Node
     {
@@ -172,7 +199,7 @@ Defines the container's primary range, which embodies a forward range.
 
         T moveFront()
         {
-            import std.algorithm : move;
+            import std.algorithm.mutation : move;
 
             assert(!empty, "SList.Range.moveFront: Range is empty");
             return move(_head._payload);
@@ -184,7 +211,7 @@ Defines the container's primary range, which embodies a forward range.
         }
     }
 
-    unittest
+    @safe unittest
     {
         static assert(isForwardRange!Range);
     }
@@ -236,7 +263,7 @@ Complexity: $(BIGOH 1)
         return _first._payload;
     }
 
-    unittest
+    @safe unittest
     {
         auto s = SList!int(1, 2, 3);
         s.front = 42;
@@ -280,7 +307,29 @@ Complexity: $(BIGOH 1)
      */
     void clear()
     {
-        _first = null;
+        if (_root)
+            _first = null;
+    }
+
+/**
+Reverses SList in-place. Performs no memory allocation.
+
+Complexity: $(BIGOH n)
+     */
+    void reverse()
+    {
+        if (!empty)
+        {
+            Node* prev;
+            while (_first)
+            {
+                auto next = _first._next;
+                _first._next = prev;
+                prev = _first;
+                _first = next;
+            }
+            _first = prev;
+        }
     }
 
 /**
@@ -345,7 +394,7 @@ Complexity: $(BIGOH 1).
      */
     T removeAny()
     {
-        import std.algorithm : move;
+        import std.algorithm.mutation : move;
 
         assert(!empty, "SList.removeAny: List is empty");
         auto result = move(_first._payload);
@@ -418,7 +467,7 @@ Returns: The number of values inserted.
 Complexity: $(BIGOH k + m), where $(D k) is the number of elements in
 $(D r) and $(D m) is the length of $(D stuff).
 
-Examples:
+Example:
 --------------------
 auto sl = SList!string(["a", "b", "d"]);
 sl.insertAfter(sl[], "e"); // insert at the end (slowest)
@@ -542,9 +591,9 @@ Complexity: $(BIGOH n)
     alias stableLinearRemove = linearRemove;
 }
 
-unittest
+@safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
 
     auto a = SList!int(5);
     auto b = a;
@@ -558,21 +607,21 @@ unittest
     assert(equal(b[], [2, 1, 9]));
 }
 
-unittest
+@safe unittest
 {
     auto s = SList!int(1, 2, 3);
     auto n = s.findLastNode(s._root);
     assert(n && n._payload == 3);
 }
 
-unittest
+@safe unittest
 {
     import std.range.primitives;
     auto s = SList!int(1, 2, 5, 10);
     assert(walkLength(s[]) == 4);
 }
 
-unittest
+@safe unittest
 {
     import std.range : take;
     auto src = take([0, 1, 2, 3], 3);
@@ -580,7 +629,7 @@ unittest
     assert(s == SList!int(0, 1, 2));
 }
 
-unittest
+@safe unittest
 {
     auto a = SList!int();
     auto b = SList!int();
@@ -588,7 +637,7 @@ unittest
     assert(c.empty);
 }
 
-unittest
+@safe unittest
 {
     auto a = SList!int(1, 2, 3);
     auto b = SList!int(4, 5, 6);
@@ -596,7 +645,7 @@ unittest
     assert(c == SList!int(1, 2, 3, 4, 5, 6));
 }
 
-unittest
+@safe unittest
 {
     auto a = SList!int(1, 2, 3);
     auto b = [4, 5, 6];
@@ -604,21 +653,21 @@ unittest
     assert(c == SList!int(1, 2, 3, 4, 5, 6));
 }
 
-unittest
+@safe unittest
 {
     auto a = SList!int(1, 2, 3);
     auto c = a ~ 4;
     assert(c == SList!int(1, 2, 3, 4));
 }
 
-unittest
+@safe unittest
 {
     auto a = SList!int(2, 3, 4);
     auto b = 1 ~ a;
     assert(b == SList!int(1, 2, 3, 4));
 }
 
-unittest
+@safe unittest
 {
     auto a = [1, 2, 3];
     auto b = SList!int(4, 5, 6);
@@ -626,14 +675,14 @@ unittest
     assert(c == SList!int(1, 2, 3, 4, 5, 6));
 }
 
-unittest
+@safe unittest
 {
     auto s = SList!int(1, 2, 3, 4);
     s.insertFront([ 42, 43 ]);
     assert(s == SList!int(42, 43, 1, 2, 3, 4));
 }
 
-unittest
+@safe unittest
 {
     auto s = SList!int(1, 2, 3);
     assert(s.removeAny() == 1);
@@ -642,9 +691,9 @@ unittest
     assert(s == SList!int(3));
 }
 
-unittest
+@safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
 
     auto s = SList!int(1, 2, 3);
     s.removeFront();
@@ -653,21 +702,21 @@ unittest
     assert(equal(s[], [3]));
 }
 
-unittest
+@safe unittest
 {
     auto s = SList!int(1, 2, 3, 4, 5, 6, 7);
     assert(s.removeFront(3) == 3);
     assert(s == SList!int(4, 5, 6, 7));
 }
 
-unittest
+@safe unittest
 {
     auto a = SList!int(1, 2, 3);
     auto b = SList!int(1, 2, 3);
     assert(a.insertAfter(a[], b[]) == 3);
 }
 
-unittest
+@safe unittest
 {
     import std.range : take;
     auto s = SList!int(1, 2, 3, 4);
@@ -676,19 +725,20 @@ unittest
     assert(s == SList!int(1, 2, 5, 3, 4));
 }
 
-unittest
+@safe unittest
 {
-    import std.algorithm;
+    import std.algorithm.comparison : equal;
+    import std.range : take;
 
     // insertAfter documentation example
     auto sl = SList!string(["a", "b", "d"]);
     sl.insertAfter(sl[], "e"); // insert at the end (slowest)
-    assert(std.algorithm.equal(sl[], ["a", "b", "d", "e"]));
-    sl.insertAfter(std.range.take(sl[], 2), "c"); // insert after "b"
-    assert(std.algorithm.equal(sl[], ["a", "b", "c", "d", "e"]));
+    assert(equal(sl[], ["a", "b", "d", "e"]));
+    sl.insertAfter(take(sl[], 2), "c"); // insert after "b"
+    assert(equal(sl[], ["a", "b", "c", "d", "e"]));
 }
 
-unittest
+@safe unittest
 {
     import std.range.primitives;
     auto s = SList!int(1, 2, 3, 4, 5);
@@ -699,7 +749,7 @@ unittest
     assert(r1.empty);
 }
 
-unittest
+@safe unittest
 {
     auto s = SList!int(1, 2, 3, 4, 5);
     auto r = s[];
@@ -708,9 +758,9 @@ unittest
     assert(r1.empty);
 }
 
-unittest
+@safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.range;
 
     auto s = SList!int(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
@@ -723,7 +773,7 @@ unittest
     assert(equal(r2, [8, 9, 10]));
 }
 
-unittest
+@safe unittest
 {
     import std.range.primitives;
     auto lst = SList!int(1, 5, 42, 9);
@@ -738,12 +788,12 @@ unittest
     assert(walkLength(lst3[]) == 5);
 }
 
-unittest
+@safe unittest
 {
     auto s = make!(SList!int)(1, 2, 3);
 }
 
-unittest
+@safe unittest
 {
     // 5193
     static struct Data
@@ -753,7 +803,7 @@ unittest
     SList!Data list;
 }
 
-unittest
+@safe unittest
 {
     auto s = SList!int([1, 2, 3]);
     s.front = 5; //test frontAssign
@@ -763,10 +813,34 @@ unittest
     assert(r.front == 1);
 }
 
-unittest
+@safe unittest
 {
     // issue 14920
     SList!int s;
     s.insertAfter(s[], 1);
     assert(s.front == 1);
+}
+
+@safe unittest
+{
+    // issue 15659
+    SList!int s;
+    s.clear();
+}
+
+@safe unittest
+{
+    SList!int s;
+    s.reverse();
+}
+
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+
+    auto s = SList!int([1, 2, 3]);
+    assert(s[].equal([1, 2, 3]));
+
+    s.reverse();
+    assert(s[].equal([3, 2, 1]));
 }

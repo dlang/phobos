@@ -3,25 +3,16 @@
 /**
 Serialize data to $(D ubyte) arrays.
 
- * Macros:
- *      WIKI = Phobos/StdOutbuffer
- *
  * Copyright: Copyright Digital Mars 2000 - 2015.
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
- * Authors:   $(WEB digitalmars.com, Walter Bright)
+ * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * Authors:   $(HTTP digitalmars.com, Walter Bright)
  * Source:    $(PHOBOSSRC std/_outbuffer.d)
+ *
+ * $(SCRIPT inhibitQuickIndex = 1;)
  */
 module std.outbuffer;
 
-private
-{
-    import core.memory;
-    import core.stdc.stdarg;
-    import core.stdc.stdio;
-    import core.stdc.stdlib;
-    import std.algorithm;
-    import std.string;
-}
+import core.stdc.stdarg; // : va_list;
 
 /*********************************************
  * OutBuffer provides a way to build up an array of bytes out
@@ -30,7 +21,9 @@ private
  * OutBuffer's byte order is the format native to the computer.
  * To control the byte order (endianness), use a class derived
  * from OutBuffer.
- * OutBuffer's internal buffer is allocated with the GC.
+ * OutBuffer's internal buffer is allocated with the GC. Pointers
+ * stored into the buffer are scanned by the GC, but you have to
+ * ensure proper alignment, e.g. by using alignSize((void*).sizeof).
  */
 
 class OutBuffer
@@ -40,21 +33,14 @@ class OutBuffer
 
     invariant()
     {
-        //printf("this = %p, offset = %x, data.length = %u\n", this, offset, data.length);
         assert(offset <= data.length);
     }
 
   pure nothrow @safe
   {
-    this()
-    {
-        //printf("in OutBuffer constructor\n");
-    }
-
     /*********************************
      * Convert to array of bytes.
      */
-
     ubyte[] toBytes() { return data[0 .. offset]; }
 
     /***********************************
@@ -64,8 +50,6 @@ class OutBuffer
      * speed optimization, a good guess at the maximum size of the resulting
      * buffer will improve performance by eliminating reallocations and copying.
      */
-
-
     void reserve(size_t nbytes) @trusted
         in
         {
@@ -77,11 +61,11 @@ class OutBuffer
         }
         body
         {
-            //c.stdio.printf("OutBuffer.reserve: length = %d, offset = %d, nbytes = %d\n", data.length, offset, nbytes);
             if (data.length < offset + nbytes)
             {
-                data.length = (offset + nbytes) * 2;
-                GC.clrAttr(data.ptr, GC.BlkAttr.NO_SCAN);
+                void[] vdata = data;
+                vdata.length = (offset + nbytes + 7) * 2; // allocates as void[] to not set BlkAttr.NO_SCAN
+                data = cast(ubyte[]) vdata;
             }
         }
 
@@ -118,9 +102,9 @@ class OutBuffer
             offset += ubyte.sizeof;
         }
 
-    void write(byte b) { write(cast(ubyte)b); }         /// ditto
-    void write(char c) { write(cast(ubyte)c); }         /// ditto
-    void write(dchar c) { write(cast(uint)c); }         /// ditto
+    void write(byte b) { write(cast(ubyte) b); }         /// ditto
+    void write(char c) { write(cast(ubyte) c); }         /// ditto
+    void write(dchar c) { write(cast(uint) c); }         /// ditto
 
     void write(ushort w) @trusted                /// ditto
     {
@@ -129,7 +113,7 @@ class OutBuffer
         offset += ushort.sizeof;
     }
 
-    void write(short s) { write(cast(ushort)s); }               /// ditto
+    void write(short s) { write(cast(ushort) s); }               /// ditto
 
     void write(wchar c) @trusted        /// ditto
     {
@@ -145,7 +129,7 @@ class OutBuffer
         offset += uint.sizeof;
     }
 
-    void write(int i) { write(cast(uint)i); }           /// ditto
+    void write(int i) { write(cast(uint) i); }           /// ditto
 
     void write(ulong l) @trusted         /// ditto
     {
@@ -154,7 +138,7 @@ class OutBuffer
         offset += ulong.sizeof;
     }
 
-    void write(long l) { write(cast(ulong)l); }         /// ditto
+    void write(long l) { write(cast(ulong) l); }         /// ditto
 
     void write(float f) @trusted         /// ditto
     {
@@ -179,7 +163,7 @@ class OutBuffer
 
     void write(in char[] s) @trusted             /// ditto
     {
-        write(cast(ubyte[])s);
+        write(cast(ubyte[]) s);
     }
 
     void write(OutBuffer buf)           /// ditto
@@ -218,6 +202,12 @@ class OutBuffer
             fill0(alignsize - nbytes);
     }
 
+    /// Clear the data in the buffer
+    void clear()
+    {
+        offset = 0;
+    }
+
     /****************************************
      * Optimize common special case alignSize(2)
      */
@@ -225,7 +215,7 @@ class OutBuffer
     void align2()
     {
         if (offset & 1)
-            write(cast(byte)0);
+            write(cast(byte) 0);
     }
 
     /****************************************
@@ -257,7 +247,14 @@ class OutBuffer
 
     void vprintf(string format, va_list args) @trusted nothrow
     {
-        char[128] buffer;
+        import core.stdc.stdio : vsnprintf;
+        import core.stdc.stdlib : alloca;
+        import std.string : toStringz;
+
+        version (unittest)
+            char[3] buffer = void;      // trigger reallocation
+        else
+            char[128] buffer = void;
         int count;
 
         // Can't use `tempCString()` here as it will result in compilation error:
@@ -267,43 +264,26 @@ class OutBuffer
         auto psize = buffer.length;
         for (;;)
         {
-            version(Windows)
+            va_list args2;
+            va_copy(args2, args);
+            count = vsnprintf(p, psize, f, args2);
+            va_end(args2);
+            if (count == -1)
             {
-                count = vsnprintf(p,psize,f,args);
-                if (count != -1)
-                    break;
+                if (psize > psize.max / 2) assert(0); // overflow check
                 psize *= 2;
-                p = cast(char *) alloca(psize); // buffer too small, try again with larger size
             }
-            else version(Posix)
+            else if (count >= psize)
             {
-                count = vsnprintf(p,psize,f,args);
-                if (count == -1)
-                    psize *= 2;
-                else if (count >= psize)
-                    psize = count + 1;
-                else
-                    break;
-                /+
-                if (p != buffer)
-                    c.stdlib.free(p);
-                p = (char *) c.stdlib.malloc(psize);    // buffer too small, try again with larger size
-                +/
-                p = cast(char *) alloca(psize); // buffer too small, try again with larger size
+                if (count == count.max) assert(0); // overflow check
+                psize = count + 1;
             }
             else
-            {
-                static assert(0);
-            }
+                break;
+
+            p = cast(char *) alloca(psize); // buffer too small, try again with larger size
         }
         write(cast(ubyte[]) p[0 .. count]);
-        /+
-        version (Posix)
-        {
-            if (p != buffer)
-                c.stdlib.free(p);
-        }
-        +/
     }
 
     /*****************************************
@@ -322,12 +302,12 @@ class OutBuffer
      * Formats and writes its arguments in text format to the OutBuffer.
      *
      * Params:
-     *  fmt = format string as described in $(XREF format, formattedWrite)
+     *  fmt = format string as described in $(REF formattedWrite, std,format)
      *  args = arguments to be formatted
      *
      * See_Also:
-     *  $(XREF stdio, writef);
-     *  $(XREF format, formattedWrite);
+     *  $(REF _writef, std,stdio);
+     *  $(REF formattedWrite, std,format);
      */
     void writef(Char, A...)(in Char[] fmt, A args)
     {
@@ -336,7 +316,7 @@ class OutBuffer
     }
 
     ///
-    unittest
+    @safe unittest
     {
         OutBuffer b = new OutBuffer();
         b.writef("a%sb", 16);
@@ -348,12 +328,12 @@ class OutBuffer
      * followed by a newline.
      *
      * Params:
-     *  fmt = format string as described in $(XREF format, formattedWrite)
+     *  fmt = format string as described in $(REF formattedWrite, std,format)
      *  args = arguments to be formatted
      *
      * See_Also:
-     *  $(XREF stdio, writefln);
-     *  $(XREF format, formattedWrite);
+     *  $(REF _writefln, std,stdio);
+     *  $(REF formattedWrite, std,format);
      */
     void writefln(Char, A...)(in Char[] fmt, A args)
     {
@@ -363,7 +343,7 @@ class OutBuffer
     }
 
     ///
-    unittest
+    @safe unittest
     {
         OutBuffer b = new OutBuffer();
         b.writefln("a%sb", 16);
@@ -394,25 +374,27 @@ class OutBuffer
         }
 }
 
-unittest
+///
+@safe unittest
 {
-    //printf("Starting OutBuffer test\n");
+    import std.string : cmp;
 
     OutBuffer buf = new OutBuffer();
 
-    //printf("buf = %p\n", buf);
-    //printf("buf.offset = %x\n", buf.offset);
     assert(buf.offset == 0);
-    buf.write("hello"[]);
-    buf.write(cast(byte)0x20);
-    buf.write("world"[]);
-    buf.printf(" %d", 6);
-    //auto s = buf.toString();
-    //printf("buf = '%.*s'\n", s.length, s.ptr);
-    assert(cmp(buf.toString(), "hello world 6") == 0);
+    buf.write("hello");
+    buf.write(cast(byte) 0x20);
+    buf.write("world");
+    buf.printf(" %d", 62665);
+    assert(cmp(buf.toString(), "hello world 62665") == 0);
+
+    buf.clear();
+    assert(cmp(buf.toString(), "") == 0);
+    buf.write("New data");
+    assert(cmp(buf.toString(),"New data") == 0);
 }
 
-unittest
+@safe unittest
 {
     import std.range;
     static assert(isOutputRange!(OutBuffer, char));

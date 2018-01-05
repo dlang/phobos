@@ -3,16 +3,21 @@
     Placed into public domain.
 */
 
+// @@@DEPRECATED_2017-06@@@
 
-/// Please import the core.sys.posix.* modules you need instead. This module will be deprecated in DMD 2.068.
+/++
+    $(RED Deprecated. Use the appropriate $(D core.sys.posix.*) modules instead.
+          This module will be removed in June 2017.)
+  +/
+deprecated("Import the appropriate core.sys.posix.* instead")
 module std.c.osx.socket;
 
 version (OSX):
-private import core.stdc.stdint;
+import core.stdc.stdint;
 public import core.sys.posix.arpa.inet;
 public import core.sys.posix.netdb;
-public import core.sys.posix.netinet.tcp;
 public import core.sys.posix.netinet.in_;
+public import core.sys.posix.netinet.tcp;
 public import core.sys.posix.sys.select;
 public import core.sys.posix.sys.socket;
 

@@ -2,19 +2,20 @@
 Declarations for interfacing with the ODBC library.
 
 Adapted with minimal changes from the work of David L. Davis
-(refer to the $(WEB
-forum.dlang.org/thread/cfk7ql$(DOLLAR)1p4n$(DOLLAR)1@digitaldaemon.com#post-cfk7ql:241p4n:241:40digitaldaemon.com,
+(refer to the $(HTTP
+forum.dlang.org/post/cfk7ql$(DOLLAR)1p4n$(DOLLAR)1@digitaldaemon.com,
 original announcement)).
 
 `etc.c.odbc.sqlext` corresponds to the `sqlext.h` C header file.
 
-See_Also: $(LUCKY ODBC API Reference on MSN Online)
+See_Also: $(LINK2 https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/odbc-api-reference,
+            ODBC API Reference on MSN Online)
 */
 
 module etc.c.odbc.sqlext;
 
-private import etc.c.odbc.sql;
-private import etc.c.odbc.sqltypes;
+import etc.c.odbc.sql;
+import etc.c.odbc.sqltypes;
 
 extern (Windows):
 
@@ -456,7 +457,7 @@ enum
     SQL_WCHAR               = (-8),
     SQL_WVARCHAR            = (-9),
     SQL_WLONGVARCHAR        = (-10),
-    SQL_C_WCHAR	            = SQL_WCHAR,
+    SQL_C_WCHAR             = SQL_WCHAR,
     SQL_UNICODE             = SQL_WCHAR,
     SQL_UNICODE_VARCHAR     = SQL_WVARCHAR,
     SQL_UNICODE_LONGVARCHAR = SQL_WLONGVARCHAR,
@@ -552,7 +553,7 @@ uint SQL_LEN_DATA_AT_EXEC()
     uint length
 )
 {
-    return ( ( -1 * length ) + cast(uint)SQL_LEN_DATA_AT_EXEC_OFFSET );
+    return ( ( -1 * length ) + cast(uint) SQL_LEN_DATA_AT_EXEC_OFFSET );
 }
 
 // * binary length for driver specific attributes *
@@ -563,7 +564,7 @@ uint SQL_LEN_BINARY_ATTR()
     uint length
 )
 {
-    return ( ( -1 * length ) + cast(uint)SQL_LEN_BINARY_ATTR_OFFSET );
+    return ( ( -1 * length ) + cast(uint) SQL_LEN_BINARY_ATTR_OFFSET );
 }
 
 // * Defines used by Driver Manager when mapping SQLSetParam to SQLBindParameter *
@@ -661,7 +662,7 @@ enum
     SQL_ALTER_DOMAIN                    = 117,
     SQL_SQL_CONFORMANCE                 = 118,
     SQL_DATETIME_LITERALS               = 119,
-    SQL_ASYNC_MODE                      = 10021, /* new X/Open spec */
+    SQL_ASYNC_MODE                      = 10_021, /* new X/Open spec */
     SQL_BATCH_ROW_COUNT                 = 120,
     SQL_BATCH_SUPPORT                   = 121,
     SQL_QUALIFIER_LOCATION              = 114,
@@ -702,7 +703,7 @@ enum
     SQL_INFO_SCHEMA_VIEWS               = 149,
     SQL_KEYSET_CURSOR_ATTRIBUTES1       = 150,
     SQL_KEYSET_CURSOR_ATTRIBUTES2       = 151,
-    SQL_MAX_ASYNC_CONCURRENT_STATEMENTS = 10022, /* new X/Open spec */
+    SQL_MAX_ASYNC_CONCURRENT_STATEMENTS = 10_022, /* new X/Open spec */
     SQL_ODBC_INTERFACE_CONFORMANCE      = 152,
     SQL_PARAM_ARRAY_ROW_COUNTS          = 153,
     SQL_PARAM_ARRAY_SELECTS             = 154,
@@ -1010,8 +1011,8 @@ enum
     SQL_CA2_MAX_ROWS_UPDATE        = 0x00000400L,
     SQL_CA2_MAX_ROWS_CATALOG       = 0x00000800L,
     SQL_CA2_MAX_ROWS_AFFECTS_ALL   = (SQL_CA2_MAX_ROWS_SELECT |
-			              SQL_CA2_MAX_ROWS_INSERT | SQL_CA2_MAX_ROWS_DELETE |
-			              SQL_CA2_MAX_ROWS_UPDATE | SQL_CA2_MAX_ROWS_CATALOG),
+                          SQL_CA2_MAX_ROWS_INSERT | SQL_CA2_MAX_ROWS_DELETE |
+                          SQL_CA2_MAX_ROWS_UPDATE | SQL_CA2_MAX_ROWS_CATALOG),
 
     // * semantics of SQL_DIAG_CURSOR_ROW_COUNT *
     SQL_CA2_CRC_EXACT              = 0x00001000L,
@@ -1241,7 +1242,7 @@ enum
     SQL_DL_SQL92_INTERVAL_MINUTE           = 0x00000080L,
     SQL_DL_SQL92_INTERVAL_SECOND           = 0x00000100L,
     SQL_DL_SQL92_INTERVAL_YEAR_TO_MONTH    = 0x00000200L,
-    SQL_DL_SQL92_INTERVAL_DAY_TO_HOUR	   = 0x00000400L,
+    SQL_DL_SQL92_INTERVAL_DAY_TO_HOUR      = 0x00000400L,
     SQL_DL_SQL92_INTERVAL_DAY_TO_MINUTE    = 0x00000800L,
     SQL_DL_SQL92_INTERVAL_DAY_TO_SECOND    = 0x00001000L,
     SQL_DL_SQL92_INTERVAL_HOUR_TO_MINUTE   = 0x00002000L,
@@ -1294,7 +1295,7 @@ enum
     SQL_ISV_REFERENTIAL_CONSTRAINTS = 0x00001000L,
     SQL_ISV_SCHEMATA                = 0x00002000L,
     SQL_ISV_SQL_LANGUAGES           = 0x00004000L,
-    SQL_ISV_TABLE_CONSTRAINTS	    = 0x00008000L,
+    SQL_ISV_TABLE_CONSTRAINTS       = 0x00008000L,
     SQL_ISV_TABLE_PRIVILEGES        = 0x00010000L,
     SQL_ISV_TABLES                  = 0x00020000L,
     SQL_ISV_TRANSLATIONS            = 0x00040000L,
@@ -1304,9 +1305,9 @@ enum
     SQL_ISV_VIEWS                   = 0x00400000L,
 
     // * Bitmasks for SQL_ASYNC_MODE *
-    SQL_AM_NONE	        = 0,
-    SQL_AM_CONNECTION	= 1,
-    SQL_AM_STATEMENT	= 2,
+    SQL_AM_NONE         = 0,
+    SQL_AM_CONNECTION   = 1,
+    SQL_AM_STATEMENT    = 2,
 
     // * Bitmasks for SQL_ALTER_DOMAIN *
     SQL_AD_CONSTRAINT_NAME_DEFINITION         = 0x00000001L,
@@ -1346,7 +1347,7 @@ enum
     SQL_CDO_CREATE_DOMAIN                  = 0x00000001L,
     SQL_CDO_DEFAULT                        = 0x00000002L,
     SQL_CDO_CONSTRAINT                     = 0x00000004L,
-    SQL_CDO_COLLATION	                   = 0x00000008L,
+    SQL_CDO_COLLATION                      = 0x00000008L,
     SQL_CDO_CONSTRAINT_NAME_DEFINITION     = 0x00000010L,
     SQL_CDO_CONSTRAINT_INITIALLY_DEFERRED  = 0x00000020L,
     SQL_CDO_CONSTRAINT_INITIALLY_IMMEDIATE = 0x00000040L,
@@ -1393,7 +1394,7 @@ enum
     SQL_DA_DROP_ASSERTION = 0x00000001L,
 
     // * SQL_DROP_TABLE bitmasks *
-    SQL_DT_DROP_TABLE	= 0x00000001L,
+    SQL_DT_DROP_TABLE   = 0x00000001L,
     SQL_DT_RESTRICT     = 0x00000002L,
     SQL_DT_CASCADE      = 0x00000004L,
 
@@ -1419,18 +1420,18 @@ enum
     SQL_SFKD_CASCADE       = 0x00000001L,
     SQL_SFKD_NO_ACTION     = 0x00000002L,
     SQL_SFKD_SET_DEFAULT   = 0x00000004L,
-    SQL_SFKD_SET_NULL	   = 0x00000008L,
+    SQL_SFKD_SET_NULL      = 0x00000008L,
 
     // * SQL_SQL92_FOREIGN_KEY_UPDATE_RULE bitmasks *
     SQL_SFKU_CASCADE       = 0x00000001L,
     SQL_SFKU_NO_ACTION     = 0x00000002L,
     SQL_SFKU_SET_DEFAULT   = 0x00000004L,
-    SQL_SFKU_SET_NULL	   = 0x00000008L,
+    SQL_SFKU_SET_NULL      = 0x00000008L,
 
-    // * SQL_SQL92_GRANT	bitmasks *
+    // * SQL_SQL92_GRANT    bitmasks *
     SQL_SG_USAGE_ON_DOMAIN        = 0x00000001L,
     SQL_SG_USAGE_ON_CHARACTER_SET = 0x00000002L,
-    SQL_SG_USAGE_ON_COLLATION	  = 0x00000004L,
+    SQL_SG_USAGE_ON_COLLATION     = 0x00000004L,
     SQL_SG_USAGE_ON_TRANSLATION   = 0x00000008L,
     SQL_SG_WITH_GRANT_OPTION      = 0x00000010L,
     SQL_SG_DELETE_TABLE           = 0x00000020L,
@@ -1446,16 +1447,16 @@ enum
     SQL_SP_EXISTS                 = 0x00000001L,
     SQL_SP_ISNOTNULL              = 0x00000002L,
     SQL_SP_ISNULL                 = 0x00000004L,
-    SQL_SP_MATCH_FULL	          = 0x00000008L,
+    SQL_SP_MATCH_FULL             = 0x00000008L,
     SQL_SP_MATCH_PARTIAL          = 0x00000010L,
     SQL_SP_MATCH_UNIQUE_FULL      = 0x00000020L,
     SQL_SP_MATCH_UNIQUE_PARTIAL   = 0x00000040L,
     SQL_SP_OVERLAPS               = 0x00000080L,
     SQL_SP_UNIQUE                 = 0x00000100L,
     SQL_SP_LIKE                   = 0x00000200L,
-    SQL_SP_IN	                  = 0x00000400L,
+    SQL_SP_IN                     = 0x00000400L,
     SQL_SP_BETWEEN                = 0x00000800L,
-    SQL_SP_COMPARISON	          = 0x00001000L,
+    SQL_SP_COMPARISON             = 0x00001000L,
     SQL_SP_QUANTIFIED_COMPARISON  = 0x00002000L,
 
     // * SQL_SQL92_RELATIONAL_JOIN_OPERATORS bitmasks *
@@ -1467,7 +1468,7 @@ enum
     SQL_SRJO_INTERSECT_JOIN       = 0x00000020L,
     SQL_SRJO_LEFT_OUTER_JOIN      = 0x00000040L,
     SQL_SRJO_NATURAL_JOIN         = 0x00000080L,
-    SQL_SRJO_RIGHT_OUTER_JOIN	  = 0x00000100L,
+    SQL_SRJO_RIGHT_OUTER_JOIN     = 0x00000100L,
     SQL_SRJO_UNION_JOIN           = 0x00000200L,
 
     // * SQL_SQL92_REVOKE bitmasks *
@@ -1565,7 +1566,7 @@ int SQL_POSITION_TO()
 )
 {
     return SQLSetPos( hstmt, irow, SQL_POSITION, SQL_LOCK_NO_CHANGE );
-};
+}
 
 int SQL_LOCK_RECORD()
 (
@@ -2121,7 +2122,7 @@ SQLRETURN SQLColAttributes
     SQLPOINTER   rgbDesc,
     SQLSMALLINT  cbDescMax,
     SQLSMALLINT  *pcbDesc,
-    SQLINTEGER 	 *pfDesc
+    SQLINTEGER   *pfDesc
 );
 
 /+

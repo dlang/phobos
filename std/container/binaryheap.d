@@ -1,22 +1,18 @@
 /**
-This module provides a $(D BinaryHeap) adaptor that makes a binary heap out of
-any user-provided random-access range.
+This module provides a $(D BinaryHeap) (aka priority queue)
+adaptor that makes a binary heap out of any user-provided random-access range.
 
-This module is a submodule of $(LINK2 std_container.html, std.container).
+This module is a submodule of $(MREF std, container).
 
 Source: $(PHOBOSSRC std/container/_binaryheap.d)
-Macros:
-WIKI = Phobos/StdContainer
-TEXTWITHCOMMAS = $0
 
-Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
-copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
+Copyright: 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
 
 License: Distributed under the Boost Software License, Version 1.0.
-(See accompanying file LICENSE_1_0.txt or copy at $(WEB
+(See accompanying file LICENSE_1_0.txt or copy at $(HTTP
 boost.org/LICENSE_1_0.txt)).
 
-Authors: Steven Schveighoffer, $(WEB erdani.com, Andrei Alexandrescu)
+Authors: $(HTTP erdani.com, Andrei Alexandrescu)
 */
 module std.container.binaryheap;
 
@@ -25,9 +21,21 @@ import std.traits;
 
 public import std.container.util;
 
+///
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : take;
+    auto maxHeap = heapify([4, 7, 3, 1, 5]);
+    assert(maxHeap.take(3).equal([7, 5, 4]));
+
+    auto minHeap = heapify!"a > b"([4, 7, 3, 1, 5]);
+    assert(minHeap.take(3).equal([1, 3, 4]));
+}
+
 // BinaryHeap
 /**
-Implements a $(WEB en.wikipedia.org/wiki/Binary_heap, binary heap)
+Implements a $(HTTP en.wikipedia.org/wiki/Binary_heap, binary heap)
 container on top of a given random-access range type (usually $(D
 T[])) or a random-access container type (usually $(D Array!T)). The
 documentation of $(D BinaryHeap) will refer to the underlying range or
@@ -57,10 +65,19 @@ container.
 struct BinaryHeap(Store, alias less = "a < b")
 if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
 {
-    import std.functional : binaryFun;
+    import std.algorithm.comparison : min;
+    import std.algorithm.mutation : move, swapAt;
+    import std.algorithm.sorting : HeapOps;
     import std.exception : enforce;
-    import std.algorithm : move, min;
+    import std.functional : binaryFun;
     import std.typecons : RefCounted, RefCountedAutoInitialize;
+
+    static if (isRandomAccessRange!Store)
+        alias Range = Store;
+    else
+        alias Range = typeof(Store.init[]);
+    alias percolate = HeapOps!(less, Range).percolate;
+    alias buildHeap = HeapOps!(less, Range).buildHeap;
 
 // Really weird @@BUG@@: if you comment out the "private:" label below,
 // std.algorithm can't unittest anymore
@@ -103,62 +120,16 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
         }
     }
 
-    // Assuming the element at index i perturbs the heap property in
-    // store r, percolates it down the heap such that the heap
-    // property is restored.
-    private void percolateDown(Store r, size_t i, size_t length)
-    {
-        for (;;)
-        {
-            auto left = i * 2 + 1, right = left + 1;
-            if (right == length)
-            {
-                if (comp(r[i], r[left])) swap(r, i, left);
-                return;
-            }
-            if (right > length) return;
-            assert(left < length && right < length);
-            auto largest = comp(r[i], r[left])
-                ? (comp(r[left], r[right]) ? right : left)
-                : (comp(r[i], r[right]) ? right : i);
-            if (largest == i) return;
-            swap(r, i, largest);
-            i = largest;
-        }
-    }
-
     // @@@BUG@@@: add private here, std.algorithm doesn't unittest anymore
     /*private*/ void pop(Store store)
     {
         assert(!store.empty, "Cannot pop an empty store.");
         if (store.length == 1) return;
-        auto t1 = moveFront(store[]);
-        auto t2 = moveBack(store[]);
+        auto t1 = store[].moveFront();
+        auto t2 = store[].moveBack();
         store.front = move(t2);
         store.back = move(t1);
-        percolateDown(store, 0, store.length - 1);
-    }
-
-    /*private*/ static void swap(Store _store, size_t i, size_t j)
-    {
-        static if (is(typeof(swap(_store[i], _store[j]))))
-        {
-            swap(_store[i], _store[j]);
-        }
-        else static if (is(typeof(_store.moveAt(i))))
-        {
-            auto t1 = _store.moveAt(i);
-            auto t2 = _store.moveAt(j);
-            _store[i] = move(t2);
-            _store[j] = move(t1);
-        }
-        else // assume it's a container and access its range with []
-        {
-            auto t1 = _store[].moveAt(i);
-            auto t2 = _store[].moveAt(j);
-            _store[i] = move(t2);
-            _store[j] = move(t1);
-        }
+        percolate(store[], 0, store.length - 1);
     }
 
 public:
@@ -186,11 +157,7 @@ the heap work incorrectly.
         _store = move(s);
         _length = min(_store.length, initialSize);
         if (_length < 2) return;
-        for (auto i = (_length - 2) / 2; ; )
-        {
-            this.percolateDown(_store, i, _length);
-            if (i-- == 0) break;
-        }
+        buildHeap(_store[]);
         assertValid();
     }
 
@@ -208,7 +175,8 @@ heap.
 
 /**
 Clears the heap. Returns the portion of the store from $(D 0) up to
-$(D length), which satisfies the $(LUCKY heap property).
+$(D length), which satisfies the $(LINK2 https://en.wikipedia.org/wiki/Heap_(data_structure),
+heap property).
      */
     auto release()
     {
@@ -231,15 +199,18 @@ Returns $(D true) if the heap is _empty, $(D false) otherwise.
     }
 
 /**
-Returns a duplicate of the heap. The underlying store must also
-support a $(D dup) method.
+Returns a duplicate of the heap. The $(D dup) method is available only if the
+underlying store supports it.
      */
-    @property BinaryHeap dup()
+    static if (is(typeof((Store s) { return s.dup; }(Store.init)) == Store))
     {
-        BinaryHeap result;
-        if (!_payload.refCountedStore.isInitialized) return result;
-        result.assume(_store.dup, length);
-        return result;
+        @property BinaryHeap dup()
+        {
+            BinaryHeap result;
+            if (!_payload.refCountedStore.isInitialized) return result;
+            result.assume(_store.dup, length);
+            return result;
+        }
     }
 
 /**
@@ -308,10 +279,19 @@ and $(D length == capacity), throws an exception.
         }
         else
         {
-            // can't grow
-            enforce(length < _store.length,
-                    "Cannot grow a heap created over a range");
-            _store[_length] = value;
+            import std.traits : isDynamicArray;
+            static if (isDynamicArray!Store)
+            {
+                if (length == _store.length)
+                    _store.length = (length < 6 ? 8 : length * 3 / 2);
+                _store[_length] = value;
+            }
+            else
+            {
+                // can't grow
+                enforce(length < _store.length,
+                        "Cannot grow a heap created over a range");
+            }
         }
 
         // sink down the element
@@ -320,7 +300,7 @@ and $(D length == capacity), throws an exception.
             auto parentIdx = (n - 1) / 2;
             if (!comp(_store[parentIdx], _store[n])) break; // done!
             // must swap and continue
-            swap(_store, parentIdx, n);
+            _store.swapAt(parentIdx, n);
             n = parentIdx;
         }
         ++_length;
@@ -336,13 +316,13 @@ Removes the largest element from the heap.
         enforce(!empty, "Cannot call removeFront on an empty heap.");
         if (_length > 1)
         {
-            auto t1 = moveFront(_store[]);
-            auto t2 = moveAt(_store[], _length - 1);
+            auto t1 = _store[].moveFront();
+            auto t2 = _store[].moveAt(_length - 1);
             _store.front = move(t2);
             _store[_length - 1] = move(t1);
         }
         --_length;
-        percolateDown(_store, 0, _length);
+        percolate(_store[], 0, _length);
     }
 
     /// ditto
@@ -368,7 +348,7 @@ Replaces the largest element in the store with $(D value).
         // must replace the top
         assert(!empty, "Cannot call replaceFront on an empty heap.");
         _store.front = value;
-        percolateDown(_store, 0, _length);
+        percolate(_store[], 0, _length);
         debug(BinaryHeap) assertValid();
     }
 
@@ -388,20 +368,43 @@ must be collected.
             insert(value);
             return true;
         }
-        // must replace the top
+
         assert(!_store.empty, "Cannot replace front of an empty heap.");
         if (!comp(value, _store.front)) return false; // value >= largest
         _store.front = value;
-        percolateDown(_store, 0, _length);
+
+        percolate(_store[], 0, _length);
         debug(BinaryHeap) assertValid();
+        return true;
+    }
+
+/**
+Swapping is allowed if the heap is full. If $(D less(value, front)), the
+method exchanges store.front and value and returns $(D true). Otherwise, it
+leaves the heap unaffected and returns $(D false).
+     */
+    bool conditionalSwap(ref ElementType!Store value)
+    {
+        _payload.refCountedStore.ensureInitialized();
+        assert(_length == _store.length);
+        assert(!_store.empty, "Cannot swap front of an empty heap.");
+
+        if (!comp(value, _store.front)) return false; // value >= largest
+
+        import std.algorithm.mutation : swap;
+        swap(_store.front, value);
+
+        percolate(_store[], 0, _length);
+        debug(BinaryHeap) assertValid();
+
         return true;
     }
 }
 
 /// Example from "Introduction to Algorithms" Cormen et al, p 146
-unittest
+@system unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
     auto h = heapify(a);
     // largest element
@@ -412,9 +415,9 @@ unittest
 
 /// $(D BinaryHeap) implements the standard input range interface, allowing
 /// lazy iteration of the underlying range in descending order.
-unittest
+@system unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.range : take;
     int[] a = [4, 1, 3, 2, 16, 9, 10, 14, 8, 7];
     auto top5 = heapify(a).take(5);
@@ -428,12 +431,15 @@ initialized with $(D s) and $(D initialSize).
 BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
         size_t initialSize = size_t.max)
 {
+
     return BinaryHeap!(Store, less)(s, initialSize);
 }
 
-unittest
+///
+@system unittest
 {
     import std.conv : to;
+    import std.range.primitives;
     {
         // example from "Introduction to Algorithms" Cormen et al., p 146
         int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
@@ -461,12 +467,129 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     // Test range interface.
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     int[] a = [4, 1, 3, 2, 16, 9, 10, 14, 8, 7];
     auto h = heapify(a);
     static assert(isInputRange!(typeof(h)));
     assert(h.equal([16, 14, 10, 9, 8, 7, 4, 3, 2, 1]));
+}
+
+@system unittest // 15675
+{
+    import std.container.array : Array;
+
+    Array!int elements = [1, 2, 10, 12];
+    auto heap = heapify(elements);
+    assert(heap.front == 12);
+}
+
+@system unittest // 16072
+{
+    auto q = heapify!"a > b"([2, 4, 5]);
+    q.insert(1);
+    q.insert(6);
+    assert(q.front == 1);
+
+    // test more multiple grows
+    int[] arr;
+    auto r = heapify!"a < b"(arr);
+    foreach (i; 0 .. 100)
+        r.insert(i);
+
+    assert(r.front == 99);
+}
+
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+    int[] a = [4, 1, 3, 2, 16, 9, 10, 14, 8, 7];
+    auto heap = heapify(a);
+    auto dup = heap.dup();
+    assert(dup.equal([16, 14, 10, 9, 8, 7, 4, 3, 2, 1]));
+}
+
+@safe unittest
+{
+    static struct StructWithoutDup
+    {
+        int[] a;
+        @disable StructWithoutDup dup()
+        {
+            StructWithoutDup d;
+            return d;
+        }
+        alias a this;
+    }
+
+    // Assert Binary heap can be created when Store doesn't have dup
+    // if dup is not used.
+    assert(__traits(compiles, ()
+        {
+            auto s = StructWithoutDup([1,2]);
+            auto h = heapify(s);
+        }));
+
+    // Assert dup can't be used on BinaryHeaps when Store doesn't have dup
+    assert(!__traits(compiles, ()
+        {
+            auto s = StructWithoutDup([1,2]);
+            auto h = heapify(s);
+            h.dup();
+        }));
+}
+
+@safe unittest
+{
+    static struct StructWithDup
+    {
+        int[] a;
+        StructWithDup dup()
+        {
+            StructWithDup d;
+            return d;
+        }
+        alias a this;
+    }
+
+    // Assert dup can be used on BinaryHeaps when Store has dup
+    assert(__traits(compiles, ()
+        {
+            auto s = StructWithDup([1, 2]);
+            auto h = heapify(s);
+            h.dup();
+        }));
+}
+
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.internal.test.dummyrange;
+
+    alias RefRange = DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random);
+
+    RefRange a;
+    RefRange b;
+    a.reinit();
+    b.reinit();
+
+    auto heap = heapify(a);
+    foreach (ref elem; b)
+    {
+        heap.conditionalSwap(elem);
+    }
+
+    assert(equal(heap, [ 5, 5, 4, 4, 3, 3, 2, 2, 1, 1]));
+    assert(equal(b, [10, 9, 8, 7, 6, 6, 7, 8, 9, 10]));
+}
+
+@system unittest // Issue 17314
+{
+    import std.algorithm.comparison : equal;
+    int[] a = [5];
+    auto heap = heapify(a);
+    heap.insert(6);
+    assert(equal(heap, [6, 5]));
 }

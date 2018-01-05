@@ -3,12 +3,9 @@
 /**
  * Support UTF-8 on Windows 95, 98 and ME systems.
  *
- * Macros:
- *      WIKI = Phobos/StdWindowsCharset
- *
  * Copyright: Copyright Digital Mars 2005 - 2009.
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
- * Authors:   $(WEB digitalmars.com, Walter Bright)
+ * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * Authors:   $(HTTP digitalmars.com, Walter Bright)
  */
 /*          Copyright Digital Mars 2005 - 2009.
  * Distributed under the Boost Software License, Version 1.0.
@@ -16,30 +13,49 @@
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
 module std.windows.charset;
+
+version (StdDdoc)
+{
+    /******************************************
+     * Converts the UTF-8 string s into a null-terminated string in a Windows
+     * 8-bit character set.
+     *
+     * Params:
+     * s = UTF-8 string to convert.
+     * codePage = is the number of the target codepage, or
+     *   0 - ANSI,
+     *   1 - OEM,
+     *   2 - Mac
+     *
+     * Authors:
+     *      yaneurao, Walter Bright, Stewart Gordon
+     */
+    const(char)* toMBSz(in char[] s, uint codePage = 0);
+
+    /**********************************************
+     * Converts the null-terminated string s from a Windows 8-bit character set
+     * into a UTF-8 char array.
+     *
+     * Params:
+     * s = UTF-8 string to convert.
+     * codePage = is the number of the source codepage, or
+     *   0 - ANSI,
+     *   1 - OEM,
+     *   2 - Mac
+     * Authors: Stewart Gordon, Walter Bright
+     */
+    string fromMBSz(immutable(char)* s, int codePage = 0);
+}
+else:
+
 version (Windows):
 
-private import std.conv;
-private import core.sys.windows.windows;
-private import std.windows.syserror;
-private import std.utf;
-private import std.string;
+import core.sys.windows.windows;
+import std.conv;
+import std.string;
+import std.windows.syserror;
 
 import std.internal.cstring;
-
-/******************************************
- * Converts the UTF-8 string s into a null-terminated string in a Windows
- * 8-bit character set.
- *
- * Params:
- * s = UTF-8 string to convert.
- * codePage = is the number of the target codepage, or
- *   0 - ANSI,
- *   1 - OEM,
- *   2 - Mac
- *
- * Authors:
- *      yaneurao, Walter Bright, Stewart Gordon
- */
 
 const(char)* toMBSz(in char[] s, uint codePage = 0)
 {
@@ -72,20 +88,6 @@ const(char)* toMBSz(in char[] s, uint codePage = 0)
     return std.string.toStringz(s);
 }
 
-
-/**********************************************
- * Converts the null-terminated string s from a Windows 8-bit character set
- * into a UTF-8 char array.
- *
- * Params:
- * s = UTF-8 string to convert.
- * codePage = is the number of the source codepage, or
- *   0 - ANSI,
- *   1 - OEM,
- *   2 - Mac
- * Authors: Stewart Gordon, Walter Bright
- */
-
 string fromMBSz(immutable(char)* s, int codePage = 0)
 {
     const(char)* c;
@@ -111,7 +113,7 @@ string fromMBSz(immutable(char)* s, int codePage = 0)
                     sysErrorString(GetLastError()));
             }
 
-            return std.utf.toUTF8(result[0 .. result.length-1]); // omit trailing null
+            return result[0 .. result.length-1].to!string; // omit trailing null
         }
     }
     return s[0 .. c-s];         // string is ASCII, no conversion necessary
