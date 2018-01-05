@@ -3642,7 +3642,7 @@ enum hasMember(T, string name) = __traits(hasMember, T, name);
  *     member = Name of symbol to test that resides in $(D T).
  *
  * Returns:
- *     $(D true) iff $(D member) exists and is static.
+ *     $(D true) if $(D member) exists and is static.
  */
 template hasStaticMember(T, string member)
 {
