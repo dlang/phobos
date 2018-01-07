@@ -3040,19 +3040,45 @@ if (isInputRange!T)
             static if (is(StringTypeOf!T))
             {
                 auto s = val[0 .. f.precision < $ ? f.precision : $];
+
+                size_t width;
+                if (f.width > 0)
+                {
+                    // strings that are fully made of ASCII characters
+                    // can be aligned w/o graphemeStride
+                    bool onlyAscii = true;
+                    for (size_t i; i < s.length; i++)
+                    {
+                        if (s[i] > 0x7F)
+                        {
+                            onlyAscii = false;
+                            break;
+                        }
+                    }
+                    if (!onlyAscii)
+                    {
+                        //TODO: optimize this
+                        import std.uni : graphemeStride;
+                        for (size_t i; i < s.length; i += graphemeStride(s, i))
+                            width++;
+                    }
+                    else width = s.length;
+                }
+                else width = s.length;
+
                 if (!f.flDash)
                 {
                     // right align
-                    if (f.width > s.length)
-                        foreach (i ; 0 .. f.width - s.length) put(w, ' ');
+                    if (f.width > width)
+                        foreach (i ; 0 .. f.width - width) put(w, ' ');
                     put(w, s);
                 }
                 else
                 {
                     // left align
                     put(w, s);
-                    if (f.width > s.length)
-                        foreach (i ; 0 .. f.width - s.length) put(w, ' ');
+                    if (f.width > width)
+                        foreach (i ; 0 .. f.width - width) put(w, ' ');
                 }
             }
             else
@@ -5739,7 +5765,19 @@ private bool needToSwapEndianess(Char)(const ref FormatSpec!Char f)
     assert(r == ">            15<, [1, 2, 3]");
 
     assert(format("%8s", "bar") == "     bar");
-    assert(format("%8s", "b\u00e9ll\u00f4") == " b\u00e9ll\u00f4");
+    assert(format("%8s", "b\u00e9ll\u00f4") == "   b\u00e9ll\u00f4");
+}
+
+@safe pure unittest // bugzilla 18205
+{
+    assert("|%8s|".format("abc")        == "|     abc|");
+    assert("|%8s|".format("αβγ")        == "|     αβγ|");
+    assert("|%8s|".format("   ")        == "|        |");
+    assert("|%8s|".format("été"d)       == "|     été|");
+    assert("|%8s|".format("été 2018"w)  == "|été 2018|");
+
+    assert("%2s".format("e\u0301"w) == " e\u0301");
+    assert("%2s".format("a\u0310\u0337"d) == " a\u0310\u0337");
 }
 
 @safe unittest
