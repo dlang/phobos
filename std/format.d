@@ -3043,16 +3043,16 @@ if (isInputRange!T)
                 if (!f.flDash)
                 {
                     // right align
-                    if (f.width > s.length)
-                        foreach (i ; 0 .. f.width - s.length) put(w, ' ');
+                    if (f.width > s.walkLength)
+                        foreach (i ; 0 .. f.width - s.walkLength) put(w, ' ');
                     put(w, s);
                 }
                 else
                 {
                     // left align
                     put(w, s);
-                    if (f.width > s.length)
-                        foreach (i ; 0 .. f.width - s.length) put(w, ' ');
+                    if (f.width > s.walkLength)
+                        foreach (i ; 0 .. f.width - s.walkLength) put(w, ' ');
                 }
             }
             else
