@@ -1,3 +1,4 @@
+// Written in the D programming language.
 /**
 $(H2 Assembling Your Own Allocator)
 
@@ -279,6 +280,8 @@ uses an array of allocators, one per bucket, to satisfy requests.))
 $(COMMENT $(TR $(TDC2 InternalPointersTree) $(TD Adds support for resolving internal
 pointers on top of another allocator.)))
 )
+
+Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/_package.d)
 
 Macros:
 MYREF2 = $(REF_SHORT $1, std,experimental,allocator,building_blocks,$2)

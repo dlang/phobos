@@ -1,9 +1,12 @@
+// Written in the D programming language.
 /**
 Utility and ancillary artifacts of `std.experimental.allocator`. This module
 shouldn't be used directly; its functionality will be migrated into more
 appropriate parts of `std`.
 
 Authors: $(HTTP erdani.com, Andrei Alexandrescu), Timon Gehr (`Ternary`)
+
+Source: $(PHOBOSSRC std/experimental/allocator/_common.d)
 */
 module std.experimental.allocator.common;
 import std.algorithm.comparison, std.traits;

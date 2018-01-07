@@ -1,4 +1,7 @@
-///
+// Written in the D programming language.
+/**
+Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/_quantizer.d)
+*/
 module std.experimental.allocator.building_blocks.quantizer;
 
 import std.experimental.allocator.common;

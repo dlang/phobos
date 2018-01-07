@@ -1,4 +1,7 @@
-///
+// Written in the D programming language.
+/**
+Source: $(PHOBOSSRC std/experimental/logger/_nulllogger.d)
+*/
 module std.experimental.logger.nulllogger;
 
 import std.experimental.logger.core;
