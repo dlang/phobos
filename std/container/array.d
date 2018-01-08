@@ -25,7 +25,7 @@ import std.traits;
 public import std.container.util;
 
 ///
-pure @system unittest
+pure @safe unittest
 {
     auto arr = Array!int(0, 2, 3);
     assert(arr[0] == 0);
@@ -52,7 +52,7 @@ pure @system unittest
 }
 
 ///
-pure @system unittest
+pure @safe unittest
 {
     import std.algorithm.comparison : equal;
     auto arr = Array!int(1, 2, 3);
@@ -71,7 +71,7 @@ pure @system unittest
 }
 
 /// `Array!bool` packs together values efficiently by allocating one bit per element
-pure @system unittest
+pure @safe unittest
 {
     Array!bool arr;
     arr.insert([true, true, false, true, false]);
@@ -280,9 +280,9 @@ if (!is(Unqual!T == bool))
                     .destroy(e);
 
             static if (hasIndirections!T)
-                GC.removeRange(_payload.ptr);
+                (() @trusted => GC.removeRange(_payload.ptr))();
 
-            free(_payload.ptr);
+            (() @trusted => free(_payload.ptr))();
         }
 
         this(this) @disable;
@@ -302,10 +302,15 @@ if (!is(Unqual!T == bool))
             {
                 // shorten
                 static if (hasElaborateDestructor!T)
-                    foreach (ref e; _payload.ptr[newLength .. _payload.length])
+                    foreach (ref e; _payload[newLength .. _payload.length])
                         .destroy(e);
-
-                _payload = _payload.ptr[0 .. newLength];
+                () @trusted
+                {
+                    // Zero out unused capacity to prevent gc from seeing false pointers.
+                    static if (hasIndirections!T)
+                        memset(_payload.ptr + newLength, 0, T.sizeof * (_payload.length - newLength));
+                    _payload = _payload.ptr[0 .. newLength];
+                }();
                 return;
             }
             immutable startEmplace = length;
@@ -318,14 +323,15 @@ if (!is(Unqual!T == bool))
                 const nbytes = mulu(newLength, T.sizeof, overflow);
                 if (overflow)
                     assert(0);
-                _payload = (cast(T*) realloc(_payload.ptr, nbytes))[0 .. newLength];
+                _payload = (() @trusted => (cast(T*) realloc(_payload.ptr, nbytes))[0 .. newLength])();
                 _capacity = newLength;
             }
             else
             {
-                _payload = _payload.ptr[0 .. newLength];
+                _payload = (() @trusted => _payload.ptr[0 .. newLength])();
             }
-            initializeAll(_payload.ptr[startEmplace .. newLength]);
+            // Just sets uninitialized memory to T.init.
+            (() @trusted => initializeAll(_payload.ptr[startEmplace .. newLength]))();
         }
 
         @property size_t capacity() const
@@ -348,30 +354,35 @@ if (!is(Unqual!T == bool))
                  * threading bugs by using malloc/copy/free rather
                  * than realloc.
                  */
-                immutable oldLength = length;
+                (ref T[] _payload, size_t sz) @trusted
+                {
+                    immutable oldLength = _payload.length;
+                    auto newPayloadPtr = cast(T*) malloc(sz);
+                    newPayloadPtr || assert(false, "std.container.Array.reserve failed to allocate memory");
+                    auto newPayload = newPayloadPtr[0 .. oldLength];
 
-                auto newPayloadPtr = cast(T*) malloc(sz);
-                newPayloadPtr || assert(false, "std.container.Array.reserve failed to allocate memory");
-                auto newPayload = newPayloadPtr[0 .. oldLength];
-
-                // copy old data over to new array
-                memcpy(newPayload.ptr, _payload.ptr, T.sizeof * oldLength);
-                // Zero out unused capacity to prevent gc from seeing false pointers
-                memset(newPayload.ptr + oldLength,
-                        0,
-                        (elements - oldLength) * T.sizeof);
-                GC.addRange(newPayload.ptr, sz);
-                GC.removeRange(_payload.ptr);
-                free(_payload.ptr);
-                _payload = newPayload;
+                    // copy old data over to new array
+                    memcpy(newPayload.ptr, _payload.ptr, T.sizeof * oldLength);
+                    // Zero out unused capacity to prevent gc from seeing false pointers
+                    memset(newPayload.ptr + oldLength,
+                            0,
+                            (elements - oldLength) * T.sizeof);
+                    GC.addRange(newPayload.ptr, sz);
+                    GC.removeRange(_payload.ptr);
+                    free(_payload.ptr);
+                    _payload = newPayload;
+                }(_payload, sz);
             }
             else
             {
                 // These can't have pointers, so no need to zero unused region
-                auto newPayloadPtr = cast(T*) realloc(_payload.ptr, sz);
-                newPayloadPtr || assert(false, "std.container.Array.reserve failed to allocate memory");
-                auto newPayload = newPayloadPtr[0 .. length];
-                _payload = newPayload;
+                () @trusted
+                {
+                    auto newPayloadPtr = cast(T*) realloc(_payload.ptr, sz);
+                    newPayloadPtr || assert(false, "std.container.Array.reserve failed to allocate memory");
+                    auto newPayload = (() @trusted => newPayloadPtr[0 .. length])();
+                    _payload = newPayload;
+                }();
             }
             _capacity = elements;
         }
@@ -386,8 +397,8 @@ if (!is(Unqual!T == bool))
                 reserve(1 + capacity * 3 / 2);
             }
             assert(capacity > length && _payload.ptr);
-            emplace(_payload.ptr + _payload.length, elem);
-            _payload = _payload.ptr[0 .. _payload.length + 1];
+            emplace((() @trusted => _payload.ptr + _payload.length)(), elem);
+            (() @trusted => _payload = _payload.ptr[0 .. _payload.length + 1])();
             return 1;
         }
 
@@ -427,18 +438,20 @@ if (!is(Unqual!T == bool))
         bool overflow;
         const nbytes = mulu(values.length, T.sizeof, overflow);
         if (overflow) assert(0);
-        auto p = cast(T*) malloc(nbytes);
+        auto p = (() @trusted => cast(T*) malloc(nbytes))();
+        p || nbytes == 0 ||  assert(false, "std.container.Array.ctor failed to allocate memory");
         static if (hasIndirections!T)
         {
-            if (p)
-                GC.addRange(p, T.sizeof * values.length);
+            (() @trusted => GC.addRange(p, T.sizeof * values.length))();
         }
 
         foreach (i, e; values)
         {
-            emplace(p + i, e);
+            emplace((() @trusted => p + i)(), e);
         }
-        _data = Data(p[0 .. values.length]);
+        //Need to @trust both for the pointer slicing and for the
+        //constructor of RefCounted.
+        _data = Data((() @trusted => p[0 .. values.length])());
     }
 
     /**
@@ -553,9 +566,9 @@ if (!is(Unqual!T == bool))
             p || assert(false, "std.container.Array.reserve failed to allocate memory");
             static if (hasIndirections!T)
             {
-                GC.addRange(p, sz);
+                (() @trusted => GC.addRange(p, sz))();
             }
-            _data = Data(cast(T[]) p[0 .. 0]);
+            _data = Data((() @trusted => cast(T[]) p[0 .. 0])());
             _data._capacity = elements;
         }
         else
@@ -887,11 +900,12 @@ if (!is(Unqual!T == bool))
         reserve(length + 1);
         assert(_data.refCountedStore.isInitialized);
         // Move elements over by one slot
-        memmove(_data._payload.ptr + r._a + 1,
-                _data._payload.ptr + r._a,
-                T.sizeof * (length - r._a));
-        emplace(_data._payload.ptr + r._a, stuff);
-        _data._payload = _data._payload.ptr[0 .. _data._payload.length + 1];
+        (() @trusted =>
+            memmove(_data._payload.ptr + r._a + 1,
+                    _data._payload.ptr + r._a,
+                    T.sizeof * (length - r._a)))();
+        emplace((() @trusted => _data._payload.ptr + r._a)(), stuff);
+        _data._payload = (() @trusted => _data._payload.ptr[0 .. _data._payload.length + 1])();
         return 1;
     }
 
@@ -909,17 +923,17 @@ if (!is(Unqual!T == bool))
             reserve(length + extra);
             assert(_data.refCountedStore.isInitialized);
             // Move elements over by extra slots
-            memmove(_data._payload.ptr + r._a + extra,
-                    _data._payload.ptr + r._a,
-                    T.sizeof * (length - r._a));
-            foreach (p; _data._payload.ptr + r._a ..
-                    _data._payload.ptr + r._a + extra)
+            (() @trusted =>
+                memmove(_data._payload.ptr + r._a + extra,
+                        _data._payload.ptr + r._a,
+                        T.sizeof * (length - r._a)))();
+            foreach (i; 0 .. extra)
             {
-                emplace(p, stuff.front);
+                emplace((() @trusted => _data._payload.ptr + r._a + i)(), stuff.front);
                 stuff.popFront();
             }
-            _data._payload =
-                _data._payload.ptr[0 .. _data._payload.length + extra];
+            _data._payload = (() @trusted =>
+                _data._payload.ptr[0 .. _data._payload.length + extra])();
             return extra;
         }
         else
@@ -1020,13 +1034,13 @@ if (!is(Unqual!T == bool))
     }
 }
 
-@system unittest
+@safe unittest
 {
     Array!int a;
     assert(a.empty);
 }
 
-@system unittest
+@safe unittest
 {
     Array!int a;
     a.length = 10;
@@ -1034,7 +1048,7 @@ if (!is(Unqual!T == bool))
     assert(a.capacity >= a.length);
 }
 
-@system unittest
+@safe unittest
 {
     struct Dumb { int x = 5; }
     Array!Dumb a;
@@ -1078,7 +1092,7 @@ if (!is(Unqual!T == bool))
         assert(e.x == Dumb.init.x);
 }
 
-@system unittest
+@safe unittest
 {
     Array!int a = Array!int(1, 2, 3);
     //a._data._refCountedDebug = true;
@@ -1089,13 +1103,13 @@ if (!is(Unqual!T == bool))
     assert(a == Array!int(1, 2, 3));
 }
 
-@system unittest
+@safe unittest
 {
     auto a = Array!int(1, 2, 3);
     assert(a.length == 3);
 }
 
-@system unittest
+@safe unittest
 {
     const Array!int a = [1, 2];
 
@@ -1123,14 +1137,14 @@ if (!is(Unqual!T == bool))
     alias Heap = BinaryHeap!(Array!int);
 }
 
-@system unittest
+@safe unittest
 {
     Array!int a;
     a.reserve(1000);
     assert(a.length == 0);
     assert(a.empty);
     assert(a.capacity >= 1000);
-    auto p = a._data._payload.ptr;
+    auto p = (() @trusted => a._data._payload.ptr)();
     foreach (i; 0 .. 1000)
     {
         a.insertBack(i);
@@ -1138,14 +1152,14 @@ if (!is(Unqual!T == bool))
     assert(p == a._data._payload.ptr);
 }
 
-@system unittest
+@safe unittest
 {
     auto a = Array!int(1, 2, 3);
     a[1] *= 42;
     assert(a[1] == 84);
 }
 
-@system unittest
+@safe unittest
 {
     auto a = Array!int(1, 2, 3);
     auto b = Array!int(11, 12, 13);
@@ -1155,7 +1169,7 @@ if (!is(Unqual!T == bool))
     assert(a ~ [4,5] == Array!int(1,2,3,4,5));
 }
 
-@system unittest
+@safe unittest
 {
     auto a = Array!int(1, 2, 3);
     auto b = Array!int(11, 12, 13);
@@ -1163,14 +1177,14 @@ if (!is(Unqual!T == bool))
     assert(a == Array!int(1, 2, 3, 11, 12, 13));
 }
 
-@system unittest
+@safe unittest
 {
     auto a = Array!int(1, 2, 3, 4);
     assert(a.removeAny() == 4);
     assert(a == Array!int(1, 2, 3));
 }
 
-@system unittest
+@safe unittest
 {
     auto a = Array!int(1, 2, 3, 4, 5);
     auto r = a[2 .. a.length];
@@ -1181,7 +1195,7 @@ if (!is(Unqual!T == bool))
     assert(a == Array!int(1, 2, 8, 9, 42, 3, 4, 5));
 }
 
-@system unittest
+@safe unittest
 {
     auto a = Array!int(0, 1, 2, 3, 4, 5, 6, 7, 8);
     a.linearRemove(a[4 .. 6]);
@@ -1189,7 +1203,7 @@ if (!is(Unqual!T == bool))
 }
 
 // Give the Range object some testing.
-@system unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : retro;
@@ -1246,7 +1260,7 @@ if (!is(Unqual!T == bool))
     assert(dMask == 0b1111_1111);   // make sure the d'tor is called once only.
 }
 // Test issue 5792 (mainly just to check if this piece of code is compilable)
-@system unittest
+@safe unittest
 {
     auto a = Array!(int[])([[1,2],[3,4]]);
     a.reserve(4);
@@ -1262,7 +1276,7 @@ if (!is(Unqual!T == bool))
 }
 
 // test replace!Stuff with range Stuff
-@system unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     auto a = Array!int([1, 42, 5]);
@@ -1271,28 +1285,28 @@ if (!is(Unqual!T == bool))
 }
 
 // test insertBefore and replace with empty Arrays
-@system unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     auto a = Array!int();
     a.insertBefore(a[], 1);
     assert(equal(a[], [1]));
 }
-@system unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     auto a = Array!int();
     a.insertBefore(a[], [1, 2]);
     assert(equal(a[], [1, 2]));
 }
-@system unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     auto a = Array!int();
     a.replace(a[], [1, 2]);
     assert(equal(a[], [1, 2]));
 }
-@system unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     auto a = Array!int();
@@ -1313,7 +1327,7 @@ if (!is(Unqual!T == bool))
     assertThrown(a.replace(r, [42]));
     assertThrown(a.linearRemove(r));
 }
-@system unittest
+@safe unittest
 {
     auto a = Array!int([1, 1]);
     a[1]  = 0; //Check Array.opIndexAssign
@@ -1344,7 +1358,7 @@ if (!is(Unqual!T == bool))
     assert(~r[0] == ~3);
 }
 
-@system unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1415,7 +1429,7 @@ if (!is(Unqual!T == bool))
     alias B = Array!(shared bool);
 }
 
-@system unittest //11884
+@safe unittest //11884
 {
     import std.algorithm.iteration : filter;
     auto a = Array!int([1, 2, 2].filter!"true"());
@@ -1451,7 +1465,7 @@ if (!is(Unqual!T == bool))
     //Just to make sure the GC doesn't collect before the above test.
     assert(c.dummy == 1);
 }
-@system unittest //6998-2
+@safe unittest //6998-2
 {
     static class C {int i;}
     auto c = new C;
@@ -1468,7 +1482,7 @@ if (!is(Unqual!T == bool))
     static assert(is(Array!int.ConstRange));
 }
 
-@system unittest // const/immutable Array and Ranges
+@safe unittest // const/immutable Array and Ranges
 {
     static void test(A, R, E, S)()
     {
@@ -1498,7 +1512,7 @@ if (!is(Unqual!T == bool))
 }
 
 // ensure @nogc
-@nogc @system unittest
+@nogc @safe unittest
 {
     Array!int ai;
     ai ~= 1;
@@ -1748,15 +1762,15 @@ if (is(Unqual!T == bool))
     @property bool front()
     {
         enforce(!empty);
-        return data.ptr[0] & 1;
+        return data[0] & 1;
     }
 
     /// Ditto
     @property void front(bool value)
     {
         enforce(!empty);
-        if (value) data.ptr[0] |= 1;
-        else data.ptr[0] &= ~cast(size_t) 1;
+        if (value) data[0] |= 1;
+        else data[0] &= ~cast(size_t) 1;
     }
 
     /**
@@ -1801,7 +1815,7 @@ if (is(Unqual!T == bool))
         auto div = cast(size_t) (i / bitsPerWord);
         auto rem = i % bitsPerWord;
         enforce(div < data.length);
-        return cast(bool)(data.ptr[div] & (cast(size_t) 1 << rem));
+        return cast(bool)(data[div] & (cast(size_t) 1 << rem));
     }
 
     /// ditto
@@ -1810,8 +1824,8 @@ if (is(Unqual!T == bool))
         auto div = cast(size_t) (i / bitsPerWord);
         auto rem = i % bitsPerWord;
         enforce(div < data.length);
-        if (value) data.ptr[div] |= (cast(size_t) 1 << rem);
-        else data.ptr[div] &= ~(cast(size_t) 1 << rem);
+        if (value) data[div] |= (cast(size_t) 1 << rem);
+        else data[div] &= ~(cast(size_t) 1 << rem);
     }
 
     /// ditto
@@ -1820,14 +1834,14 @@ if (is(Unqual!T == bool))
         auto div = cast(size_t) (i / bitsPerWord);
         auto rem = i % bitsPerWord;
         enforce(div < data.length);
-        auto oldValue = cast(bool) (data.ptr[div] & (cast(size_t) 1 << rem));
+        auto oldValue = cast(bool) (data[div] & (cast(size_t) 1 << rem));
         // Do the deed
         auto newValue = mixin("oldValue "~op~" value");
         // Write back the value
         if (newValue != oldValue)
         {
-            if (newValue) data.ptr[div] |= (cast(size_t) 1 << rem);
-            else data.ptr[div] &= ~(cast(size_t) 1 << rem);
+            if (newValue) data[div] |= (cast(size_t) 1 << rem);
+            else data[div] &= ~(cast(size_t) 1 << rem);
         }
     }
 
@@ -2133,13 +2147,13 @@ if (is(Unqual!T == bool))
     }
 }
 
-@system unittest
+@safe @nogc unittest
 {
     Array!bool a;
     assert(a.empty);
 }
 
-@system unittest
+@safe unittest
 {
     Array!bool arr;
     arr.insert([false, false, false, false]);
@@ -2161,13 +2175,13 @@ if (is(Unqual!T == bool))
 }
 
 // issue 16331 - uncomparable values are valid values for an array
-@system unittest
+@safe unittest
 {
     double[] values = [double.nan, double.nan];
     auto arr = Array!double(values);
 }
 
-@nogc @system unittest
+@nogc @safe unittest
 {
     auto a = Array!int(0, 1, 2);
     int[3] b = [3, 4, 5];
@@ -2179,7 +2193,7 @@ if (is(Unqual!T == bool))
     assert(Array!int(0, 1, 2, 0, 1, 0) == a ~ c);
 }
 
-@nogc @system unittest
+@nogc @safe unittest
 {
     auto a = Array!char('a', 'b');
     assert(Array!char("abc") == a ~ 'c');
@@ -2187,7 +2201,7 @@ if (is(Unqual!T == bool))
     assert(Array!char("abcd") == a ~ "cd".byCodeUnit);
 }
 
-@nogc @system unittest
+@nogc @safe unittest
 {
     auto a = Array!dchar("ąćę"d);
     assert(Array!dchar("ąćęϢϖ"d) == a ~ "Ϣϖ"d);
@@ -2195,7 +2209,7 @@ if (is(Unqual!T == bool))
     assert(Array!dchar("ąćęϢz"d) == a ~ x ~ 'z');
 }
 
-@system unittest
+@safe unittest
 {
     Array!bool a;
     assert(a.empty);
@@ -2203,7 +2217,7 @@ if (is(Unqual!T == bool))
     assert(!a.empty);
 }
 
-@system unittest
+@safe unittest
 {
     Array!bool a;
     assert(a.empty);
@@ -2213,7 +2227,7 @@ if (is(Unqual!T == bool))
     assert(b.empty);
 }
 
-@system unittest
+@safe unittest
 {
     import std.conv : to;
     Array!bool a;
@@ -2222,7 +2236,7 @@ if (is(Unqual!T == bool))
     assert(a.length == 1, to!string(a.length));
 }
 
-@system unittest
+@safe unittest
 {
     import std.conv : to;
     Array!bool a;
@@ -2234,7 +2248,7 @@ if (is(Unqual!T == bool))
     }
 }
 
-@system unittest
+@safe @nogc unittest
 {
     Array!bool a;
     assert(a.capacity == 0);
@@ -2244,21 +2258,21 @@ if (is(Unqual!T == bool))
     assert(a.capacity >= 15657);
 }
 
-@system unittest
+@safe unittest
 {
     Array!bool a;
     a.insertBack([true, false, true, true]);
     assert(a[0 .. 2].length == 2);
 }
 
-@system unittest
+@safe unittest
 {
     Array!bool a;
     a.insertBack([true, false, true, true]);
     assert(a[].length == 4);
 }
 
-@system unittest
+@safe unittest
 {
     Array!bool a;
     a.insertBack([true, false, true, true]);
@@ -2267,14 +2281,14 @@ if (is(Unqual!T == bool))
     assert(!a.front);
 }
 
-@system unittest
+@safe unittest
 {
     Array!bool a;
     a.insertBack([true, false, true, true]);
     assert(a[].length == 4);
 }
 
-@system unittest
+@safe unittest
 {
     Array!bool a;
     a.insertBack([true, false, true, true]);
@@ -2283,7 +2297,7 @@ if (is(Unqual!T == bool))
     assert(!a.back);
 }
 
-@system unittest
+@safe unittest
 {
     Array!bool a;
     a.insertBack([true, false, true, true]);
@@ -2292,7 +2306,7 @@ if (is(Unqual!T == bool))
     assert(!a[0]);
 }
 
-@system unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     Array!bool a;
@@ -2306,7 +2320,7 @@ if (is(Unqual!T == bool))
     c.insertBack(true);
     assert((c ~ false)[].equal([true, false]));
 }
-@system unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     Array!bool a;
@@ -2319,7 +2333,7 @@ if (is(Unqual!T == bool))
                 [true, false, true, true, false, true, false, true, true]));
 }
 
-@system unittest
+@safe unittest
 {
     Array!bool a;
     a.insertBack([true, false, true, true]);
@@ -2327,7 +2341,7 @@ if (is(Unqual!T == bool))
     assert(a.capacity == 0);
 }
 
-@system unittest
+@safe unittest
 {
     Array!bool a;
     a.length = 1057;
@@ -2344,7 +2358,7 @@ if (is(Unqual!T == bool))
     assert(a.capacity == cap);
 }
 
-@system unittest
+@safe unittest
 {
     Array!bool a;
     a.length = 1057;
@@ -2356,7 +2370,7 @@ if (is(Unqual!T == bool))
     }
 }
 
-@system unittest
+@safe unittest
 {
     Array!bool a;
     for (int i = 0; i < 100; ++i)
@@ -2365,7 +2379,7 @@ if (is(Unqual!T == bool))
         assert(e);
 }
 
-@system unittest
+@safe unittest
 {
     Array!bool a;
     a.length = 1057;
@@ -2377,7 +2391,7 @@ if (is(Unqual!T == bool))
     }
 }
 
-@system unittest
+@safe unittest
 {
     import std.conv : to;
     Array!bool a;
@@ -2394,7 +2408,7 @@ if (is(Unqual!T == bool))
     assert(a[].equal([false, true, true]));
 }
 
-@system unittest
+@safe unittest
 {
     import std.conv : to;
     Array!bool a;
@@ -2403,7 +2417,7 @@ if (is(Unqual!T == bool))
     assert(a.length == 11, to!string(a.length));
     assert(a[5]);
 }
-@system unittest
+@safe unittest
 {
     alias V3 = int[3];
     V3 v = [1, 2, 3];
@@ -2411,7 +2425,7 @@ if (is(Unqual!T == bool))
     arr ~= v;
     assert(arr[0] == [1, 2, 3]);
 }
-@system unittest
+@safe unittest
 {
     alias V3 = int[3];
     V3[2] v = [[1, 2, 3], [4, 5, 6]];
