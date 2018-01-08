@@ -5425,37 +5425,23 @@ enum Mangle : char
 // routine could go away.
 private TypeInfo primitiveTypeInfo(Mangle m)
 {
-    // BUG: should fix this in static this() to avoid double checked locking bug
-    __gshared TypeInfo[Mangle] dic;
-    if (!dic.length)
+    enum types = [
+        "void", "bool", "byte", "ubyte",
+        "short", "ushort", "int", "uint", "long", "ulong",
+        "float", "double", "real",
+        "char", "wchar", "dchar",
+        "ifloat", "idouble", "ireal",
+        "cfloat", "cdouble", "creal",
+    ];
+    switch (m)
     {
-        dic = [
-            Mangle.Tvoid : typeid(void),
-            Mangle.Tbool : typeid(bool),
-            Mangle.Tbyte : typeid(byte),
-            Mangle.Tubyte : typeid(ubyte),
-            Mangle.Tshort : typeid(short),
-            Mangle.Tushort : typeid(ushort),
-            Mangle.Tint : typeid(int),
-            Mangle.Tuint : typeid(uint),
-            Mangle.Tlong : typeid(long),
-            Mangle.Tulong : typeid(ulong),
-            Mangle.Tfloat : typeid(float),
-            Mangle.Tdouble : typeid(double),
-            Mangle.Treal : typeid(real),
-            Mangle.Tifloat : typeid(ifloat),
-            Mangle.Tidouble : typeid(idouble),
-            Mangle.Tireal : typeid(ireal),
-            Mangle.Tcfloat : typeid(cfloat),
-            Mangle.Tcdouble : typeid(cdouble),
-            Mangle.Tcreal : typeid(creal),
-            Mangle.Tchar : typeid(char),
-            Mangle.Twchar : typeid(wchar),
-            Mangle.Tdchar : typeid(dchar)
-            ];
+        static foreach (type; types)
+        {
+            mixin("case Mangle.T"~type~":  return typeid("~type~");");
+        }
+        default:
+            return null;
     }
-    auto p = m in dic;
-    return p ? *p : null;
 }
 
 private bool needToSwapEndianess(Char)(const ref FormatSpec!Char f)
