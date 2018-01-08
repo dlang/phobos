@@ -1,4 +1,7 @@
-///
+// Written in the D programming language.
+/**
+Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/_fallback_allocator.d)
+*/
 module std.experimental.allocator.building_blocks.fallback_allocator;
 
 import std.experimental.allocator.common;

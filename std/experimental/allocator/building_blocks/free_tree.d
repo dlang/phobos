@@ -1,4 +1,7 @@
-///
+// Written in the D programming language.
+/**
+Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/_free_tree.d)
+*/
 module std.experimental.allocator.building_blocks.free_tree;
 
 import std.experimental.allocator.common;

@@ -1,9 +1,10 @@
-///
+// Written in the D programming language.
+/**
+Source: $(PHOBOSSRC std/experimental/allocator/_mmap_allocator.d)
+*/
 module std.experimental.allocator.mmap_allocator;
 
-// MmapAllocator
 /**
-
 Allocator (currently defined only for Posix and Windows) using
 $(D $(LINK2 https://en.wikipedia.org/wiki/Mmap, mmap))
 and $(D $(LUCKY munmap)) directly (or their Windows equivalents). There is no
@@ -12,7 +13,6 @@ $(D mmap(null, s, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)),
 and each call to $(D deallocate(b)) issues $(D munmap(b.ptr, b.length)).
 So $(D MmapAllocator) is usually intended for allocating large chunks to be
 managed by fine-granular allocators.
-
 */
 struct MmapAllocator
 {

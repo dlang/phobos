@@ -1,4 +1,9 @@
-///
+// Written in the D programming language.
+/**
+The C heap allocator.
+
+Source: $(PHOBOSSRC std/experimental/allocator/_mallocator.d)
+*/
 module std.experimental.allocator.mallocator;
 import std.experimental.allocator.common;
 

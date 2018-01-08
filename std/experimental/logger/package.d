@@ -1,3 +1,4 @@
+// Written in the D programming language.
 /**
 Implements logging facilities.
 
@@ -176,6 +177,8 @@ $(D ArrayLogger) contains an array of $(D Logger) and also propagates log
 calls to its stored $(D Logger). The $(D NullLogger) does not do anything. It
 will never log a message and will never throw on a log call with $(D LogLevel)
 $(D error).
+
+Source: $(PHOBOSSRC std/experimental/logger/_package.d)
 */
 module std.experimental.logger;
 
