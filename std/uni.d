@@ -7369,8 +7369,6 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
     assert("абвгд"d.byCodePoint.length == 5);
 }
 
-@trusted:
-
 /++
     $(P A structure designed to effectively pack $(CHARACTERS)
     of a $(CLUSTER).
@@ -7442,13 +7440,13 @@ public:
         Warning: Invalidates when this Grapheme leaves the scope,
         attempts to use it then would lead to memory corruption.
     +/
-    @system SliceOverIndexed!Grapheme opSlice(size_t a, size_t b) pure nothrow @nogc
+    SliceOverIndexed!Grapheme opSlice(size_t a, size_t b) pure nothrow @nogc
     {
         return sliceOverIndexed(a, b, &this);
     }
 
     /// ditto
-    @system SliceOverIndexed!Grapheme opSlice() pure nothrow @nogc
+    SliceOverIndexed!Grapheme opSlice() pure nothrow @nogc
     {
         return sliceOverIndexed(0, length, &this);
     }
@@ -8537,15 +8535,17 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
         }
         // reset variables
         decomposed.length = 0;
-        decomposed.assumeSafeAppend();
-        ccc.length = 0;
-        ccc.assumeSafeAppend();
+        () @trusted {
+            decomposed.assumeSafeAppend();
+            ccc.length = 0;
+            ccc.assumeSafeAppend();
+        } ();
         input = input[anchors[1]..$];
         // and move on
         anchors = splitNormalized!norm(input);
     }while (anchors[0] != input.length);
     app.put(input[0 .. anchors[0]]);
-    return cast(inout(C)[])app.data;
+    return () @trusted inout { return cast(inout(C)[]) app.data; } ();
 }
 
 ///
