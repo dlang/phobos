@@ -7114,6 +7114,16 @@ if (is(C : dchar))
     assert(city[first..$] == "rhus");
 }
 
+@safe unittest
+{
+    // Ensure that graphemeStride is usable from CTFE.
+    enum c1 = graphemeStride("A", 0);
+    static assert(c1 == 1);
+
+    enum c2 = graphemeStride("A\u0301", 0);
+    static assert(c2 == 3); // \u0301 has 2 UTF-8 code units
+}
+
 /++
     Reads one full grapheme cluster from an input range of dchar $(D inp).
 
