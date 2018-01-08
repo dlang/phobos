@@ -5495,10 +5495,16 @@ if (!is(T == class) && !(is(T == interface)))
             import core.exception : onOutOfMemoryError;
             import std.conv : emplace;
 
+            // @trusted for the cast from void* to Impl*. Could only be unsafe
+            // if _store were dereferenced before being initialized, which
+            // cannot happen since we next call emplace.
             _store = (() @trusted => cast(Impl*) pureMalloc(Impl.sizeof))();
             if (_store is null)
                 onOutOfMemoryError();
             static if (hasIndirections!T)
+                // @trusted for the pureGcAddRange. Okay because this cannot
+                // cannot conceivably cause memory corruption: pointer is
+                // non-null and size is correct.
                 (() @trusted => pureGcAddRange(&_store._payload, T.sizeof))();
             emplace(&_store._payload, args);
             _store._count = 1;
@@ -5509,10 +5515,17 @@ if (!is(T == class) && !(is(T == interface)))
             import core.exception : onOutOfMemoryError;
             import core.stdc.string : memcpy, memset;
 
+            // @trusted for the cast from void* to Impl*. Could only be unsafe
+            // if _store were dereferenced before being initialized, which
+            // cannot happen since we next either initialize with memcpy or
+            // with a blit.
             _store = (() @trusted => cast(Impl*) pureMalloc(Impl.sizeof))();
             if (_store is null)
                 onOutOfMemoryError();
             static if (hasIndirections!T)
+                // @trusted for the pureGcAddRange. Okay because this cannot
+                // cannot conceivably cause memory corruption: pointer is
+                // non-null and size is correct.
                 (() @trusted => pureGcAddRange(&_store._payload, T.sizeof))();
 
             // Can't use std.algorithm.move(source, _store._payload)
@@ -5521,6 +5534,11 @@ if (!is(T == class) && !(is(T == interface)))
 
             // Can avoid destructing result.
             static if (hasElaborateAssign!T || !isAssignable!T)
+                // @trusted for the memcpy. Okay because this cannot cannot
+                // cause memory corruption barring unsafe previous operations.
+                // By specification it is not safe for any structure to contain
+                // a pointer to itself, so the change in address is allowed;
+                // _store is non-null; and _store has the correct size.
                 (() @trusted => memcpy(&_store._payload, &source, T.sizeof))();
             else
                 _store._payload = source;
@@ -5537,8 +5555,12 @@ if (!is(T == class) && !(is(T == interface)))
 
                 auto init = typeid(T).initializer();
                 if (init.ptr is null) // null ptr means initialize to 0s
+                    // @trusted for memset. Address is valid and size is valid.
                     (() @trusted => memset(&source, 0, sz))();
                 else
+                    // @trusted for memcpy. Destination is non-null, source is
+                    // valid if there has not already been memory corruption,
+                    // and size does not overrun.
                     (() @trusted => memcpy(&source, init.ptr, sz))();
             }
 
@@ -5626,6 +5648,11 @@ to deallocate the corresponding resource.
         .destroy(_refCounted._store._payload);
         static if (hasIndirections!T)
         {
+            // @trusted for pureGcRemoveRange. Cannot possibly cause memory
+            // corruption unless the payload has pointers to garbage-collected
+            // memory which is referred to by pointers elsewhere not in a
+            // location known to the garbage collector, and there is no safe
+            // way to obtain such pointers.
             (() @trusted => pureGcRemoveRange(&_refCounted._store._payload))();
         }
 
