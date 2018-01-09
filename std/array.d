@@ -2102,38 +2102,62 @@ if (isInputRange!RoR &&
 /++
     Replace occurrences of `from` with `to` in `subject` in a new
     array. If `sink` is defined, then output the new array into
-    `sink`.
+    `sink`. If `countChanges` is defined, place the number of
+    replacements done in it.
 
     Params:
         sink = an $(REF_ALTTEXT output range, isOutputRange, std,range,primitives)
         subject = the array to scan
         from = the item to replace
         to = the item to replace all instances of `from` with
+        countChanges = the number of substitutions performed
 
     Returns:
         If `sink` isn't defined, a new array without changing the
         contents of `subject`, or the original array if no match
-        is found.
+        is found. The number of replacements is placed in countChanges
+        if it is defined.
 
     See_Also:
         $(REF map, std,algorithm,iteration) which can act as a lazy replace
  +/
-E[] replace(E, R1, R2)(E[] subject, R1 from, R2 to)
-if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
-        && (hasLength!R2 || isSomeString!R2))
+auto replace(E, R1, R2)(E subject, R1 from, R2 to)
+if (isForwardRange!E && isForwardRange!R1 && isForwardRange!R2)
 {
-    import std.algorithm.searching : find;
+    size_t countChanges = 0;
+    return replace(subject, from, to, countChanges);
+}
 
-    if (from.empty) return subject;
+/// ditto
+auto replace(E, R1, R2)(E subject, R1 from, R2 to, out size_t countChanges)
+if (isForwardRange!E && isForwardRange!R1 && isForwardRange!R2)
+{
+    import std.algorithm.searching : findSplit;
 
-    auto balance = find(subject, from.save);
-    if (balance.empty)
+    countChanges = 0;
+    if (from.empty)
         return subject;
 
-    auto app = appender!(E[])();
-    app.put(subject[0 .. subject.length - balance.length]);
-    app.put(to.save);
-    replaceInto(app, balance[from.length .. $], from, to);
+    static if (is(ElementType!E : R1))
+    {
+        import std.range : only;
+        auto res = findSplit(subject, from.only);
+    }
+    else
+    {
+        auto res = findSplit(subject, from);
+    }
+
+    if (res[1].empty)
+        return subject;
+
+    auto app = appender!((ElementEncodingType!E)[])();
+    put(app, res[0]);
+    put(app, to.save);
+    replaceInto(app, res[2], from, to, countChanges);
+
+    // the first replacement is counted here since replaceInto makes countChanges = 0
+    ++countChanges;
 
     return app.data;
 }
@@ -2143,32 +2167,56 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
 {
     assert("Hello Wörld".replace("o Wö", "o Wo") == "Hello World");
     assert("Hello Wörld".replace("l", "h") == "Hehho Wörhd");
+
+    size_t countChanges;
+    assert("Sooo many oooos".replace("o", "ö", countChanges) == "Sööö many öööös");
+    assert(countChanges == 7); // o was replaced 7 times with ö
 }
 
 /// ditto
-void replaceInto(E, Sink, R1, R2)(Sink sink, E[] subject, R1 from, R2 to)
-if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
-    && isForwardRange!R1 && isForwardRange!R2
-    && (hasLength!R2 || isSomeString!R2))
+void replaceInto(E, Sink, R1, R2)(Sink sink, E subject, R1 from, R2 to)
 {
-    import std.algorithm.searching : find;
+    size_t countChanges = 0;
+    replaceInto(sink, subject, from, to, countChanges);
+}
 
+/// ditto
+void replaceInto(E, Sink, R1, R2)(Sink sink, E subject, R1 from, R2 to, out size_t countChanges)
+if (isOutputRange!(Sink, E) && isForwardRange!E
+    && isForwardRange!R1 && isForwardRange!R2)
+{
+    import std.algorithm.searching : findSplit;
+    import std.range : take, drop;
+
+    countChanges = 0;
     if (from.empty)
     {
         sink.put(subject);
         return;
     }
+
+    auto subjectCopy = subject.save;
     for (;;)
     {
-        auto balance = find(subject, from.save);
-        if (balance.empty)
+        static if (is(ElementType!E : R1))
         {
-            sink.put(subject);
+            import std.range : only;
+            auto res = findSplit(subjectCopy, from.only);
+        }
+        else
+        {
+            auto res = findSplit(subjectCopy, from);
+        }
+
+        if (res[1].empty)
+        {
+            sink.put(subjectCopy);
             break;
         }
-        sink.put(subject[0 .. subject.length - balance.length]);
-        sink.put(to.save);
-        subject = balance[from.length .. $];
+        ++countChanges;
+        put(sink, res[0]);
+        put(sink, to.save);
+        subjectCopy = res[2];
     }
 }
 
@@ -2181,8 +2229,26 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
     auto sink = appender!(int[])();
 
     replaceInto(sink, arr, from, to);
-
     assert(sink.data == [1, 4, 6, 4, 5]);
+
+    size_t countChanges;
+    auto arr2 = [1, 2, 3, 4, 6, 4];
+    auto from2 = [4];
+    auto to2 = [1, 1];
+    auto sink2 = appender!(int[])();
+    replaceInto(sink2, arr2, from2, to2, countChanges);
+    assert(sink2.data == [1, 2, 3, 1, 1, 6, 1, 1] && countChanges == 2);
+}
+
+@safe unittest
+{
+    import std.algorithm.iteration : filter, map;
+    import std.range : iota;
+
+    auto arr = [0, 1, 2, 3, 4, 5];
+    auto from = 6.iota.filter!(a => a < 3);
+    auto to = from.map!(a => a * 2);
+    assert(arr.replace(from, to) == [0, 2, 4, 3, 4, 5]);
 }
 
 @safe unittest
