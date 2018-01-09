@@ -1,4 +1,7 @@
-///
+// Written in the D programming language.
+/**
+Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/_bitmapped_block.d)
+*/
 module std.experimental.allocator.building_blocks.bitmapped_block;
 
 import std.experimental.allocator.building_blocks.null_allocator;

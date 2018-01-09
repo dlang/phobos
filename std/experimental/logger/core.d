@@ -1,4 +1,7 @@
-///
+// Written in the D programming language.
+/**
+Source: $(PHOBOSSRC std/experimental/logger/_core.d)
+*/
 module std.experimental.logger.core;
 
 import core.sync.mutex : Mutex;

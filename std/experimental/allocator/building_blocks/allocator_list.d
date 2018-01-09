@@ -1,4 +1,7 @@
-///
+// Written in the D programming language.
+/**
+Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/_allocator_list.d)
+*/
 module std.experimental.allocator.building_blocks.allocator_list;
 
 import std.experimental.allocator.building_blocks.null_allocator;

@@ -1,10 +1,15 @@
-///
+// Written in the D programming language.
+/**
+D's built-in garbage-collected allocator.
+
+Source: $(PHOBOSSRC std/experimental/allocator/_gc_allocator.d)
+*/
 module std.experimental.allocator.gc_allocator;
 import std.experimental.allocator.common;
 
 /**
 D's built-in garbage-collected allocator.
- */
+*/
 struct GCAllocator
 {
     import core.memory : GC;

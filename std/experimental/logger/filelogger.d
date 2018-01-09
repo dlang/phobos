@@ -1,4 +1,7 @@
-///
+// Written in the D programming language.
+/**
+Source: $(PHOBOSSRC std/experimental/logger/_filelogger.d)
+*/
 module std.experimental.logger.filelogger;
 
 import std.experimental.logger.core;

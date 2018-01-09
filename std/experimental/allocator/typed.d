@@ -1,9 +1,12 @@
+// Written in the D programming language.
 /**
 This module defines `TypedAllocator`, a statically-typed allocator that
 aggregates multiple untyped allocators and uses them depending on the static
 properties of the types allocated. For example, distinct allocators may be used
 for thread-local vs. thread-shared data, or for fixed-size data (`struct`,
 `class` objects) vs. resizable data (arrays).
+
+Source: $(PHOBOSSRC std/experimental/allocator/_typed.d)
 
 Macros:
 T2=$(TR <td style="text-align:left">$(D $1)</td> $(TD $(ARGS $+)))
