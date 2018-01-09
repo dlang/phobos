@@ -16,7 +16,7 @@
 # make DEBUGGER=ddd std/XXXXX.debug => builds the module XXXXX and executes it
 #                                      in the debugger ddd
 #
-# make html => makes html documentation
+# make build-html => makes html documentation
 #
 # make install => copies library to /usr/lib
 #
@@ -76,6 +76,7 @@ endif
 # Configurable stuff that's rarely edited
 INSTALL_DIR = ../install
 DRUNTIME_PATH = ../druntime
+DLANG_ORG_DIR = ../dlang.org
 ZIPFILE = phobos.zip
 ROOT_OF_THEM_ALL = generated
 ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
@@ -83,19 +84,6 @@ DUB=dub
 TOOLS_DIR=../tools
 DSCANNER_HASH=bb32e9f1e3e5206deb11b3dbc43ad44e23fabf96
 DSCANNER_DIR=../dscanner-$(DSCANNER_HASH)
-
-# Documentation-related stuff
-DOCSRC = ../dlang.org
-WEBSITE_DIR = ../web
-DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos-prerelease
-BIGDOC_OUTPUT_DIR = /tmp
-SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) \
-	$(EXTRA_DOCUMENTABLES))
-STDDOC = $(DOCSRC)/html.ddoc $(DOCSRC)/dlang.org.ddoc $(DOCSRC)/std_navbar-prerelease.ddoc $(DOCSRC)/std.ddoc $(DOCSRC)/macros.ddoc $(DOCSRC)/.generated/modlist-prerelease.ddoc
-BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc $(DOCSRC)/macros.ddoc
-# Set DDOC, the documentation generator
-DDOC=$(DMD) -conf= $(MODEL_FLAG) -w -c -o- -version=StdDdoc \
-	-I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 
 # Set DRUNTIME name and full path
 ifneq (,$(DRUNTIME))
@@ -431,7 +419,7 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 	touch $@
 
 clean :
-	rm -rf $(ROOT_OF_THEM_ALL) $(ZIPFILE) $(DOC_OUTPUT_DIR)
+	rm -rf $(ROOT_OF_THEM_ALL) $(ZIPFILE)
 
 gitzip:
 	git archive --format=zip HEAD > $(ZIPFILE)
@@ -477,15 +465,20 @@ $(JSON) : $(ALL_D_FILES)
 	$(DMD) $(DFLAGS) -o- -Xf$@ $^
 
 ###########################################################
-# html documentation
+# HTML documentation
+# the following variables will be set by dlang.org:
+#     DOC_OUTPUT_DIR, STDDOC
+###########################################################
+SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(EXTRA_DOCUMENTABLES))
+# Set DDOC, the documentation generator
+DDOC=$(DMD) -conf= $(MODEL_FLAG) -w -c -o- -version=StdDdoc \
+	-I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 
 # D file to html, e.g. std/conv.d -> std_conv.html
 # But "package.d" is special cased: std/range/package.d -> std_range.html
 D2HTML=$(foreach p,$1,$(if $(subst package.d,,$(notdir $p)),$(subst /,_,$(subst .d,.html,$p)),$(subst /,_,$(subst /package.d,.html,$p))))
 
 HTMLS=$(addprefix $(DOC_OUTPUT_DIR)/, \
-	$(call D2HTML, $(SRC_DOCUMENTABLES)))
-BIGHTMLS=$(addprefix $(BIGDOC_OUTPUT_DIR)/, \
 	$(call D2HTML, $(SRC_DOCUMENTABLES)))
 
 $(DOC_OUTPUT_DIR)/. :
@@ -497,24 +490,11 @@ $(foreach p,$(SRC_DOCUMENTABLES),$(eval \
 $(DOC_OUTPUT_DIR)/$(call D2HTML,$p) : $p $(STDDOC) ;\
   $(DDOC) project.ddoc $(STDDOC) -Df$$@ $$<))
 
-html : $(DOC_OUTPUT_DIR)/. $(HTMLS) $(STYLECSS_TGT)
+# this target is called by dlang.org
+html : $(DOC_OUTPUT_DIR)/. $(HTMLS)
 
-allmod :
-	@echo $(SRC_DOCUMENTABLES)
-
-rsync-prerelease : html
-	rsync -avz $(DOC_OUTPUT_DIR)/ d-programming@digitalmars.com:data/phobos-prerelease/
-	rsync -avz $(WEBSITE_DIR)/ d-programming@digitalmars.com:data/phobos-prerelase/
-
-html_consolidated :
-	$(DDOC) -Df$(DOCSRC)/std_consolidated_header.html $(DOCSRC)/std_consolidated_header.dd
-	$(DDOC) -Df$(DOCSRC)/std_consolidated_footer.html $(DOCSRC)/std_consolidated_footer.dd
-	$(MAKE) -f $(MAKEFILE) DOC_OUTPUT_DIR=$(BIGDOC_OUTPUT_DIR) STDDOC=$(BIGSTDDOC) html -j 8
-	cat $(DOCSRC)/std_consolidated_header.html $(BIGHTMLS)	\
-	$(DOCSRC)/std_consolidated_footer.html > $(DOC_OUTPUT_DIR)/std_consolidated.html
-
-changelog.html: changelog.dd
-	$(DMD) -Df$@ $<
+build-html:
+	${MAKE} -C $(DLANG_ORG_DIR) -f posix.mak phobos-prerelease
 
 ################################################################################
 # Automatically create dlang/tools repository if non-existent
