@@ -5375,7 +5375,8 @@ if (isInputRange!Range)
 
 
 // Legacy implementation
-
+// @@@DEPRECATED_2019-01@@@
+deprecated("Use std.demangle")
 enum Mangle : char
 {
     Tvoid     = 'v',
@@ -5417,31 +5418,6 @@ enum Mangle : char
 
     Tconst    = 'x',
     Timmutable = 'y',
-}
-
-// return the TypeInfo for a primitive type and null otherwise.  This
-// is required since for arrays of ints we only have the mangled char
-// to work from. If arrays always subclassed TypeInfo_Array this
-// routine could go away.
-private TypeInfo primitiveTypeInfo(Mangle m)
-{
-    enum types = [
-        "void", "bool", "byte", "ubyte",
-        "short", "ushort", "int", "uint", "long", "ulong",
-        "float", "double", "real",
-        "char", "wchar", "dchar",
-        "ifloat", "idouble", "ireal",
-        "cfloat", "cdouble", "creal",
-    ];
-    switch (m)
-    {
-        static foreach (type; types)
-        {
-            mixin("case Mangle.T"~type~":  return typeid("~type~");");
-        }
-        default:
-            return null;
-    }
 }
 
 private bool needToSwapEndianess(Char)(const ref FormatSpec!Char f)
