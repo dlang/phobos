@@ -6501,6 +6501,30 @@ template isInstanceOf(alias S, alias T)
     static assert(isInstanceOf!(templ, templ!int));
 }
 
+/**
+ * To use `isInstanceOf` to check the identity of a template while inside of said
+ * template, use $(LREF TemplateOf).
+ */
+@safe unittest
+{
+    static struct A(T = void)
+    {
+        // doesn't work as expected, only accepts A when T = void
+        void func(B)(B b) if (isInstanceOf!(A, B)) {}
+
+        // correct behavior
+        void method(B)(B b) if (isInstanceOf!(TemplateOf!(A), B)) {}
+    }
+
+    A!(void) a1;
+    A!(void) a2;
+    A!(int) a3;
+
+    static assert(!__traits(compiles, a1.func(a3)));
+    static assert( __traits(compiles, a1.method(a2)));
+    static assert( __traits(compiles, a1.method(a3)));
+}
+
 @safe unittest
 {
     static void fun1(T)() { }
