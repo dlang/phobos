@@ -1357,8 +1357,8 @@ A singleton instance of the default random number generator
     static bool initialized;
     if (!initialized)
     {
-        static if (isSeedable!(Random, typeof(map!((a) => unpredictableSeed)(repeat(0)))))
-            result.seed(map!((a) => unpredictableSeed)(repeat(0)));
+        static if (isSeedable!(Random, ReturnType!unpredictableSeed))
+            result.seed(unpredictableSeed); // Avoid unnecessary copy.
         else
             result = Random(unpredictableSeed);
         initialized = true;
