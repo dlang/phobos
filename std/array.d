@@ -2124,6 +2124,7 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
         && (hasLength!R2 || isSomeString!R2))
 {
     import std.algorithm.searching : find;
+    import std.range : dropOne;
 
     if (from.empty) return subject;
 
@@ -2134,7 +2135,11 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
     auto app = appender!(E[])();
     app.put(subject[0 .. subject.length - balance.length]);
     app.put(to.save);
-    replaceInto(app, balance[from.length .. $], from, to);
+    // replacing an element in an array is different to a range replacement
+    static if (is(Unqual!E : Unqual!R1))
+        replaceInto(app, balance.dropOne, from, to);
+    else
+        replaceInto(app, balance[from.length .. $], from, to);
 
     return app.data;
 }
@@ -2146,6 +2151,35 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
     assert("Hello Wörld".replace("l", "h") == "Hehho Wörhd");
 }
 
+@safe unittest
+{
+    assert([1, 2, 3, 4, 2].replace([2], [5]) == [1, 5, 3, 4, 5]);
+    assert([3, 3, 3].replace([3], [0]) == [0, 0, 0]);
+    assert([3, 3, 4, 3].replace([3, 3], [1, 1, 1]) == [1, 1, 1, 4, 3]);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=18215
+@safe unittest
+{
+    auto arr = ["aaa.dd", "b"];
+    arr = arr.replace("aaa.dd", ".");
+    assert(arr == [".", "b"]);
+
+    arr = ["_", "_", "aaa.dd", "b", "c", "aaa.dd", "e"];
+    arr = arr.replace("aaa.dd", ".");
+    assert(arr == ["_", "_", ".", "b", "c", ".", "e"]);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=18215
+@safe unittest
+{
+    assert([[0], [1, 2], [0], [3]].replace([0], [4]) == [[4], [1, 2], [4], [3]]);
+    assert([[0], [1, 2], [0], [3], [1, 2]]
+            .replace([1, 2], [0]) == [[0], [0], [0], [3], [0]]);
+    assert([[0], [1, 2], [0], [3], [1, 2], [0], [1, 2]]
+            .replace([[0], [1, 2]], [[4]]) == [[4], [0], [3], [1, 2], [4]]);
+}
+
 /// ditto
 void replaceInto(E, Sink, R1, R2)(Sink sink, E[] subject, R1 from, R2 to)
 if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
@@ -2153,6 +2187,7 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
     && (hasLength!R2 || isSomeString!R2))
 {
     import std.algorithm.searching : find;
+    import std.range : dropOne;
 
     if (from.empty)
     {
@@ -2169,7 +2204,11 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
         }
         sink.put(subject[0 .. subject.length - balance.length]);
         sink.put(to.save);
-        subject = balance[from.length .. $];
+        // replacing an element in an array is different to a range replacement
+        static if (is(Unqual!E : Unqual!R1))
+            subject = balance.dropOne;
+        else
+            subject = balance[from.length .. $];
     }
 }
 
