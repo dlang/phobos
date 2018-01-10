@@ -2846,13 +2846,16 @@ if (isSomeChar!C)
 }
 
 /++
-    Strips leading whitespace (as defined by $(REF isWhite, std,uni)).
+    Strips leading whitespace (as defined by $(REF isWhite, std,uni)) or
+    as specified in the second argument.
 
     Params:
         input = string or $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
         of characters
+        chars = string of characters to be stripped
 
-    Returns: $(D input) stripped of leading whitespace.
+    Returns: $(D input) stripped of leading whitespace or characters
+    specified in the second argument.
 
     Postconditions: $(D input) and the returned value
     will share the same tail (see $(REF sameTail, std,array)).
@@ -2920,14 +2923,72 @@ if (isConvertibleToString!Range)
     assert(testAliasedString!stripLeft("  hello"));
 }
 
+/// Ditto
+auto stripLeft(Range, Char)(Range input, const(Char)[] chars)
+if (((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range)) ||
+     isConvertibleToString!Range) && isSomeChar!Char)
+{
+    static if (isConvertibleToString!Range)
+        return stripLeft!(StringTypeOf!Range)(input, chars);
+    else
+    {
+        for (; !input.empty; input.popFront)
+        {
+            if (chars.indexOf(input.front) == -1)
+                break;
+        }
+        return input;
+    }
+}
+
+///
+@safe pure unittest
+{
+    assert(stripLeft("     hello world     ", " ") ==
+           "hello world     ");
+    assert(stripLeft("xxxxxhello world     ", "x") ==
+           "hello world     ");
+    assert(stripLeft("xxxyy    hello world     ", "xy ") ==
+           "hello world     ");
+}
+
+///
+@safe pure unittest
+{
+    import std.array : array;
+    import std.utf : byChar, byWchar, byDchar;
+
+    assert(stripLeft("  xxxyy hello world     "w.byChar, "xy ").array ==
+           "hello world     ");
+
+    assert(stripLeft("\u2028\u2020hello world\u2028"w.byWchar,
+                     "\u2028").array == "\u2020hello world\u2028");
+    assert(stripLeft("\U00010001hello world"w.byWchar, " ").array ==
+           "\U00010001hello world"w);
+    assert(stripLeft("\U00010001 xyhello world"d.byDchar,
+                     "\U00010001 xy").array == "hello world"d);
+
+    assert(stripLeft("\u2020hello"w, "\u2020"w) == "hello"w);
+    assert(stripLeft("\U00010001hello"d, "\U00010001"d) == "hello"d);
+    assert(stripLeft(" hello ", "") == " hello ");
+}
+
+@safe pure unittest
+{
+    assert(testAliasedString!stripLeft(" xyz  hello", "xyz "));
+}
+
 /++
-    Strips trailing whitespace (as defined by $(REF isWhite, std,uni)).
+    Strips trailing whitespace (as defined by $(REF isWhite, std,uni)) or
+    as specified in the second argument.
 
     Params:
         str = string or random access range of characters
+        chars = string of characters to be stripped
 
     Returns:
-        slice of $(D str) stripped of trailing whitespace.
+        slice of $(D str) stripped of trailing whitespace or characters
+        specified in the second argument.
 
     See_Also:
         Generic stripping on ranges: $(REF _stripRight, std, algorithm, mutation)
@@ -3080,16 +3141,73 @@ if (isConvertibleToString!Range)
     cast(void) stripRight(ws.byUTF!wchar).array;
 }
 
+/// Ditto
+auto stripRight(Range, Char)(Range str, const(Char)[] chars)
+if (((isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range)) ||
+     isConvertibleToString!Range) && isSomeChar!Char)
+{
+    static if (isConvertibleToString!Range)
+        return stripRight!(StringTypeOf!Range)(str, chars);
+    else
+    {
+        for (; !str.empty; str.popBack)
+        {
+            if (chars.indexOf(str.back) == -1)
+                break;
+        }
+        return str;
+    }
+}
+
+///
+@safe pure
+unittest
+{
+    assert(stripRight("     hello world     ", "x") ==
+           "     hello world     ");
+    assert(stripRight("     hello world     ", " ") ==
+           "     hello world");
+    assert(stripRight("     hello worldxy     ", "xy ") ==
+           "     hello world");
+}
+
+@safe pure unittest
+{
+    assert(testAliasedString!stripRight("hello xyz  ", "xyz "));
+}
+
+@safe pure unittest
+{
+    import std.array : array;
+    import std.utf : byChar, byDchar, byUTF, byWchar;
+
+    assert(stripRight("     hello world  xyz   ".byChar,
+                      "xyz ").array == "     hello world");
+    assert(stripRight("\u2028hello world\u2020\u2028"w.byWchar,
+                      "\u2028").array == "\u2028hello world\u2020");
+    assert(stripRight("hello world\U00010001"w.byWchar,
+                      " ").array == "hello world\U00010001"w);
+    assert(stripRight("hello world\U00010001 xy"d.byDchar,
+                      "\U00010001 xy").array == "hello world"d);
+    assert(stripRight("hello\u2020"w, "\u2020"w) == "hello"w);
+    assert(stripRight("hello\U00010001"d, "\U00010001"d) == "hello"d);
+    assert(stripRight(" hello ", "") == " hello ");
+}
+
 
 /++
     Strips both leading and trailing whitespace (as defined by
-    $(REF isWhite, std,uni)).
+    $(REF isWhite, std,uni)) or as specified in the second argument.
 
     Params:
         str = string or random access range of characters
+        chars = string of characters to be stripped
+        leftChars = string of leading characters to be stripped
+        rightChars = string of trailing characters to be stripped
 
     Returns:
-        slice of $(D str) stripped of leading and trailing whitespace.
+        slice of $(D str) stripped of leading and trailing whitespace
+        or characters as specified in the second argument.
 
     See_Also:
         Generic stripping on ranges: $(REF _strip, std, algorithm, mutation)
@@ -3174,6 +3292,125 @@ if (isConvertibleToString!Range)
     wstring s = " ";
     assert(s.sameTail(s.stripLeft()));
     assert(s.sameHead(s.stripRight()));
+    });
+}
+
+/// Ditto
+auto strip(Range, Char)(Range str, const(Char)[] chars)
+if (((isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range)) ||
+     isConvertibleToString!Range) && isSomeChar!Char)
+{
+    static if (isConvertibleToString!Range)
+        return strip!(StringTypeOf!Range)(str, chars);
+    else
+        return stripRight(stripLeft(str, chars), chars);
+}
+
+///
+@safe pure unittest
+{
+    assert(strip("     hello world     ", "x") ==
+           "     hello world     ");
+    assert(strip("     hello world     ", " ") ==
+           "hello world");
+    assert(strip("   xyxyhello worldxyxy     ", "xy ") ==
+           "hello world");
+    assert(strip("\u2020hello\u2020"w, "\u2020"w) == "hello"w);
+    assert(strip("\U00010001hello\U00010001"d, "\U00010001"d) == "hello"d);
+    assert(strip(" hello ", "") == " hello ");
+}
+
+@safe pure unittest
+{
+    assert(testAliasedString!strip("  xyz   hello world  xyz   ", "xyz "));
+}
+
+/// Ditto
+auto strip(Range, Char)(Range str, const(Char)[] leftChars, const(Char)[] rightChars)
+if (((isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range)) ||
+     isConvertibleToString!Range) && isSomeChar!Char)
+{
+    static if (isConvertibleToString!Range)
+        return strip!(StringTypeOf!Range)(str, leftChars, rightChars);
+    else
+        return stripRight(stripLeft(str, leftChars), rightChars);
+}
+
+///
+@safe pure unittest
+{
+    assert(strip("xxhelloyy", "x", "y") == "hello");
+    assert(strip("   xyxyhello worldxyxyzz    ", "xy ", "xyz ") ==
+           "hello world");
+    assert(strip("\u2020hello\u2028"w, "\u2020"w, "\u2028"w) == "hello"w);
+    assert(strip("\U00010001hello\U00010002"d, "\U00010001"d, "\U00010002"d) ==
+           "hello"d);
+    assert(strip(" hello ", "", "") == " hello ");
+}
+
+@safe pure unittest
+{
+    assert(testAliasedString!strip("  xy   hello world  pq   ", "xy ", "pq "));
+}
+
+@safe pure unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.conv : to;
+    import std.exception : assertCTFEable;
+
+    assertCTFEable!(
+    {
+    static foreach (S; AliasSeq!( char[], const  char[],  string,
+                          wchar[], const wchar[], wstring,
+                          dchar[], const dchar[], dstring))
+    {
+        assert(equal(stripLeft(to!S("  \tfoo\t "), "\t "), "foo\t "));
+        assert(equal(stripLeft(to!S("\u2008  foo\t \u2007"), "\u2008 "),
+                     "foo\t \u2007"));
+        assert(equal(stripLeft(to!S("\u0085 μ \u0085 \u00BB \r"), "\u0085 "),
+                     "μ \u0085 \u00BB \r"));
+        assert(equal(stripLeft(to!S("1"), " "), "1"));
+        assert(equal(stripLeft(to!S("\U0010FFFE"), " "), "\U0010FFFE"));
+        assert(equal(stripLeft(to!S(""), " "), ""));
+
+        assert(equal(stripRight(to!S("  foo\t "), "\t "), "  foo"));
+        assert(equal(stripRight(to!S("\u2008  foo\t \u2007"), "\u2007\t "),
+                     "\u2008  foo"));
+        assert(equal(stripRight(to!S("\u0085 μ \u0085 \u00BB \r"), "\r "),
+                     "\u0085 μ \u0085 \u00BB"));
+        assert(equal(stripRight(to!S("1"), " "), "1"));
+        assert(equal(stripRight(to!S("\U0010FFFE"), " "), "\U0010FFFE"));
+        assert(equal(stripRight(to!S(""), " "), ""));
+
+        assert(equal(strip(to!S("  foo\t "), "\t "), "foo"));
+        assert(equal(strip(to!S("\u2008  foo\t \u2007"), "\u2008\u2007\t "),
+                     "foo"));
+        assert(equal(strip(to!S("\u0085 μ \u0085 \u00BB \r"), "\u0085\r "),
+                     "μ \u0085 \u00BB"));
+        assert(equal(strip(to!S("\U0010FFFE"), " "), "\U0010FFFE"));
+        assert(equal(strip(to!S(""), " "), ""));
+
+        assert(equal(strip(to!S("  \nfoo\t "), "\n ", "\t "), "foo"));
+        assert(equal(strip(to!S("\u2008\n  foo\t \u2007"),
+                           "\u2008\n ", "\u2007\t "), "foo"));
+        assert(equal(strip(to!S("\u0085 μ \u0085 \u00BB μ \u00BB\r"),
+                           "\u0085 ", "\u00BB\r "), "μ \u0085 \u00BB μ"));
+        assert(equal(strip(to!S("\U0010FFFE"), " ", " "), "\U0010FFFE"));
+        assert(equal(strip(to!S(""), " ", " "), ""));
+    }
+    });
+}
+
+@safe pure unittest
+{
+    import std.array : sameHead, sameTail;
+    import std.exception : assertCTFEable;
+    assertCTFEable!(
+    {
+    wstring s = " xyz ";
+    assert(s.sameTail(s.stripLeft(" ")));
+    assert(s.sameHead(s.stripRight(" ")));
     });
 }
 

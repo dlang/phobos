@@ -1,0 +1,14 @@
+`std.string.strip` now accepts a string of characters to be stripped
+
+New overload functions of $(REF strip, std, string),
+$(REF stripLeft, std, string) and
+$(REF stripRight, std, string) accepts a string of characters to be
+stripped instead of stripping only whitespace.
+
+---
+import std.string: stripLeft, stripRight, strip;
+
+assert(stripLeft("www.dlang.org", "w.") == "dlang.org");
+assert(stripRight("dlang.org/", "/") == "dlang.org");
+assert(strip("www.dlang.org/", "w./") == "dlang.org");
+---
