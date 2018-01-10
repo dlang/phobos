@@ -49,9 +49,6 @@ $(TR $(TDNW Introspection) $(TD
     $(MYREF isNormal) $(MYREF isSubnormal) $(MYREF signbit) $(MYREF sgn)
     $(MYREF copysign) $(MYREF isPowerOf2)
 ))
-$(TR $(TDNW Complex Numbers) $(TD
-  $(MYREF abs) $(MYREF conj) $(MYREF sin) $(MYREF cos) $(MYREF expi)
-))
 $(TR $(TDNW Hardware Control) $(TD
     $(MYREF IeeeFlags) $(MYREF FloatingPointControl)
 ))
@@ -507,6 +504,36 @@ enum real SQRT2 =      0x1.6a09e667f3bcc908b2fb1366ea958p+0L; /** $(SQRT)2 = 1.4
 enum real SQRT1_2 =    SQRT2/2;                               /** $(SQRT)$(HALF) = 0.707106... */
 // Note: Make sure the magic numbers in compiler backend for x87 match these.
 
+// it's quite tricky check for a type who will trigger a deprecation when accessed
+template isDeprecatedComplex(T)
+{
+    static if (__traits(isFloating, T) && __traits(isDeprecated, T))
+    {
+        enum isDeprecatedComplex = true;
+    }
+    else
+    {
+        enum m = T.mangleof;
+        // cfloat, cdouble, creal
+        // ifloat, idouble, ireal
+        enum isDeprecatedComplex = m == "q" || m == "r" || m == "c" ||
+                                   m == "o" || m == "p" || m == "j";
+    }
+}
+
+deprecated unittest
+{
+    static assert(isDeprecatedComplex!cfloat);
+    static assert(isDeprecatedComplex!cdouble);
+    static assert(isDeprecatedComplex!creal);
+    static assert(isDeprecatedComplex!ifloat);
+    static assert(isDeprecatedComplex!idouble);
+    static assert(isDeprecatedComplex!ireal);
+
+    static assert(!isDeprecatedComplex!float);
+    static assert(!isDeprecatedComplex!double);
+    static assert(!isDeprecatedComplex!real);
+}
 
 /***********************************
  * Calculates the absolute value of a number
@@ -514,23 +541,15 @@ enum real SQRT1_2 =    SQRT2/2;                               /** $(SQRT)$(HALF)
  * Params:
  *     Num = (template parameter) type of number
  *       x = real number value
- *       z = complex number value
- *       y = imaginary number value
  *
  * Returns:
  *     The absolute value of the number.  If floating-point or integral,
- *     the return type will be the same as the input; if complex or
- *     imaginary, the returned value will be the corresponding floating
- *     point type.
- *
- * For complex numbers, abs(z) = sqrt( $(POWER z.re, 2) + $(POWER z.im, 2) )
- * = hypot(z.re, z.im).
+ *     the return type will be the same as the input;
  */
 Num abs(Num)(Num x) @safe pure nothrow
 if ((is(typeof(Num.init >= 0)) && is(typeof(-Num.init)) ||
     (is(Num == short) || is(Num == byte))) &&
-    !(is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
-    || is(Num* : const(ireal*))))
+    !isDeprecatedComplex!Num)
 {
     static if (isFloatingPoint!(Num))
         return fabs(x);
@@ -543,20 +562,19 @@ if ((is(typeof(Num.init >= 0)) && is(typeof(-Num.init)) ||
     }
 }
 
-/// ditto
+deprecated("Please use std.complex")
 auto abs(Num)(Num z) @safe pure nothrow @nogc
-if (is(Num* : const(cfloat*)) || is(Num* : const(cdouble*))
-    || is(Num* : const(creal*)))
+if (isDeprecatedComplex!Num)
 {
-    return hypot(z.re, z.im);
-}
-
-/// ditto
-auto abs(Num)(Num y) @safe pure nothrow @nogc
-if (is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
-    || is(Num* : const(ireal*)))
-{
-    return fabs(y.im);
+    enum m = Num.mangleof;
+    // cfloat, cdouble, creal
+    static if (m == "q" || m == "r" || m == "c")
+        return hypot(z.re, z.im);
+    // ifloat, idouble, ireal
+    else static if (m == "o" || m == "p" || m == "j")
+        return fabs(z.im);
+    else
+        static assert(0, "Unsupported type: " ~ Num.stringof);
 }
 
 /// ditto
@@ -565,10 +583,15 @@ if (is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
     assert(isIdentical(abs(-0.0L), 0.0L));
     assert(isNaN(abs(real.nan)));
     assert(abs(-real.infinity) == real.infinity);
-    assert(abs(-3.2Li) == 3.2L);
-    assert(abs(71.6Li) == 71.6L);
     assert(abs(-56) == 56);
     assert(abs(2321312L)  == 2321312L);
+}
+
+deprecated
+@safe pure nothrow @nogc unittest
+{
+    assert(abs(-3.2Li) == 3.2L);
+    assert(abs(71.6Li) == 71.6L);
     assert(abs(-1L+1i) == sqrt(2.0L));
 }
 
@@ -589,6 +612,12 @@ if (is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
         assert(abs(f) == f);
         assert(abs(-f) == f);
     }}
+}
+
+deprecated
+@safe pure nothrow @nogc unittest
+{
+    import std.meta : AliasSeq;
     static foreach (T; AliasSeq!(cfloat, cdouble, creal))
     {{
         T f = -12+3i;
@@ -597,7 +626,7 @@ if (is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
     }}
 }
 
-/***********************************
+/*
  * Complex conjugate
  *
  *  conj(x + iy) = x - iy
@@ -605,6 +634,7 @@ if (is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
  * Note that z * conj(z) = $(POWER z.re, 2) - $(POWER z.im, 2)
  * is always a real number
  */
+deprecated("Please use std.complex.conj")
 auto conj(Num)(Num z) @safe pure nothrow @nogc
 if (is(Num* : const(cfloat*)) || is(Num* : const(cdouble*))
     || is(Num* : const(creal*)))
@@ -617,7 +647,7 @@ if (is(Num* : const(cfloat*)) || is(Num* : const(cdouble*))
         return z.re - z.im*1fi;
 }
 
-/** ditto */
+deprecated("Please use std.complex.conj")
 auto conj(Num)(Num y) @safe pure nothrow @nogc
 if (is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
     || is(Num* : const(ireal*)))
@@ -625,7 +655,7 @@ if (is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
     return -y;
 }
 
-///
+deprecated
 @safe pure nothrow @nogc unittest
 {
     creal c = 7 + 3Li;
@@ -634,6 +664,7 @@ if (is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
     assert(conj(z) == -z);
 }
 //Issue 14206
+deprecated
 @safe pure nothrow @nogc unittest
 {
     cdouble c = 7 + 3i;
@@ -642,6 +673,7 @@ if (is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
     assert(conj(z) == -z);
 }
 //Issue 14206
+deprecated
 @safe pure nothrow @nogc unittest
 {
     cfloat c = 7f + 3fi;
@@ -724,7 +756,7 @@ float sin(float x) @safe pure nothrow @nogc { return sin(cast(real) x); }
     assert(psin != null);
 }
 
-/***********************************
+/*
  *  Returns sine for complex and imaginary arguments.
  *
  *  sin(z) = sin(z.re)*cosh(z.im) + cos(z.re)*sinh(z.im)i
@@ -732,45 +764,49 @@ float sin(float x) @safe pure nothrow @nogc { return sin(cast(real) x); }
  * If both sin($(THETA)) and cos($(THETA)) are required,
  * it is most efficient to use expi($(THETA)).
  */
-creal sin(creal z) @safe pure nothrow @nogc
+deprecated("Use std.complex.sin")
+auto sin(creal z) @safe pure nothrow @nogc
 {
     const creal cs = expi(z.re);
     const creal csh = coshisinh(z.im);
     return cs.im * csh.re + cs.re * csh.im * 1i;
 }
 
-/** ditto */
-ireal sin(ireal y) @safe pure nothrow @nogc
+/* ditto */
+deprecated("Use std.complex.sin")
+auto sin(ireal y) @safe pure nothrow @nogc
 {
     return cosh(y.im)*1i;
 }
 
-///
+deprecated
 @safe pure nothrow @nogc unittest
 {
   assert(sin(0.0+0.0i) == 0.0);
   assert(sin(2.0+0.0i) == sin(2.0L) );
 }
 
-/***********************************
+/*
  *  cosine, complex and imaginary
  *
  *  cos(z) = cos(z.re)*cosh(z.im) - sin(z.re)*sinh(z.im)i
  */
-creal cos(creal z) @safe pure nothrow @nogc
+deprecated("Use std.complex.cos")
+auto cos(creal z) @safe pure nothrow @nogc
 {
     const creal cs = expi(z.re);
     const creal csh = coshisinh(z.im);
     return cs.re * csh.re - cs.im * csh.im * 1i;
 }
 
-/** ditto */
+/* ditto */
+deprecated("Use std.complex.cos")
 real cos(ireal y) @safe pure nothrow @nogc
 {
     return cosh(y.im);
 }
 
-///
+deprecated
 @safe pure nothrow @nogc unittest
 {
     assert(cos(0.0+0.0i)==1.0);
@@ -1416,7 +1452,8 @@ package:
 /* Returns cosh(x) + I * sinh(x)
  * Only one call to exp() is performed.
  */
-creal coshisinh(real x) @safe pure nothrow @nogc
+deprecated("Use std.complex")
+auto coshisinh(real x) @safe pure nothrow @nogc
 {
     // See comments for cosh, sinh.
     if (fabs(x) > real.mant_dig * LN2)
@@ -1431,6 +1468,7 @@ creal coshisinh(real x) @safe pure nothrow @nogc
     }
 }
 
+deprecated
 @safe pure nothrow @nogc unittest
 {
     creal c = coshisinh(3.0L);
@@ -1633,7 +1671,8 @@ real sqrt(real x) @nogc @safe pure nothrow { pragma(inline, true); return core.m
     assert(psqrtr != null);
 }
 
-creal sqrt(creal z) @nogc @safe pure nothrow
+deprecated("Use std.complex.sqrt")
+auto sqrt(creal z) @nogc @safe pure nothrow
 {
     creal c;
     real x,y,w,r;
@@ -2538,13 +2577,14 @@ private real exp2Impl(real x) @nogc @trusted pure nothrow
 }
 
 
-/**
+/*
  * Calculate cos(y) + i sin(y).
  *
  * On many CPUs (such as x86), this is a very efficient operation;
  * almost twice as fast as calculating sin(y) and cos(y) separately,
  * and is the preferred method when both are required.
  */
+deprecated("Use std.complex.expi")
 creal expi(real y) @trusted pure nothrow @nogc
 {
     version(InlineAsm_X86_Any)
@@ -2576,7 +2616,7 @@ creal expi(real y) @trusted pure nothrow @nogc
     }
 }
 
-///
+deprecated
 @safe pure nothrow @nogc unittest
 {
     assert(expi(1.3e5L) == cos(1.3e5L) + sin(1.3e5L) * 1i);
