@@ -895,7 +895,17 @@ nothrow @safe @nogc unittest
     assertThrown(make!InvalidImpureStruct(Mallocator.instance, 42));
 }
 
-private void fillWithMemcpy(T)(void[] array, auto ref T filler) nothrow
+private void fillWithMemcpy(T)(scope void[] array, auto ref T filler) nothrow
+if (T.sizeof == 1)
+{
+    import core.stdc.string : memset;
+    import std.traits : CopyConstness;
+    if (!array.length) return;
+    memset(array.ptr, *cast(CopyConstness!(T*, ubyte*)) &filler, array.length);
+}
+
+private void fillWithMemcpy(T)(scope void[] array, auto ref T filler) nothrow
+if (T.sizeof != 1)
 {
     import core.stdc.string : memcpy;
     import std.algorithm.comparison : min;
@@ -908,6 +918,17 @@ private void fillWithMemcpy(T)(void[] array, auto ref T filler) nothrow
         memcpy(array.ptr + offset, array.ptr, extent);
         offset += extent;
     }
+}
+
+@system unittest
+{
+    // Test T.sizeof == 1 path of fillWithMemcpy.
+    ubyte[] a;
+    fillWithMemcpy(a, ubyte(42));
+    assert(a.length == 0);
+    a = [ 1, 2, 3, 4, 5 ];
+    fillWithMemcpy(a, ubyte(42));
+    assert(a == [ 42, 42, 42, 42, 42]);
 }
 
 @system unittest
