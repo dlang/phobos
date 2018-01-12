@@ -5721,7 +5721,7 @@ pure @safe nothrow @nogc unittest
 pure @safe unittest
 {
     // Issue 18227
-    assert (iota(8.5300000000000011, 438.17803623529841, 0.4296480362352984).length == 1001);
+    assert(iota(8.5300000000000011, 438.17803623529841, 0.4296480362352984).length == 1001);
 }
 
 pure @safe unittest
