@@ -5590,12 +5590,20 @@ do
             auto pastEnd = start + count * step;
             if (step > 0)
             {
-                if (pastEnd < end) ++count;
+                while (pastEnd < end)
+                {
+                    ++count;
+                    pastEnd = start + count * step;
+                }
                 assert(start + count * step >= end);
             }
             else
             {
-                if (pastEnd > end) ++count;
+                while (pastEnd > end)
+                {
+                    ++count;
+                    pastEnd = start + count * step;
+                }
                 assert(start + count * step <= end);
             }
         }
@@ -5708,6 +5716,12 @@ pure @safe nothrow @nogc unittest
     assert(iota(1, 0, -1).length == 1);
     assert(iota(0, 1, -1).length == 0);
     assert(iota(ulong.max, 0).length == 0);
+}
+
+pure @safe unittest
+{
+    // Issue 18227
+    assert (iota(8.5300000000000011, 438.17803623529841, 0.4296480362352984).length == 1001);
 }
 
 pure @safe unittest
