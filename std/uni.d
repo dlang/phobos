@@ -4332,6 +4332,7 @@ if (sumOfIntegerTuple!sizes == 21)
         }
     }
 
+    ///
     auto codepointTrie()(T[dchar] map, T defValue=T.init)
     {
         return buildTrie!(T, dchar, Prefix)(map, defValue);
