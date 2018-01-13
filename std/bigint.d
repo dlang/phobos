@@ -467,6 +467,7 @@ public:
         where applicable, according to the following table.
 
         $(TABLE ,
+        $(TR $(TD `BigInt`) $(TD $(CODE_PERCENT)) $(TD `uint`) $(TD $(RARR)) $(TD `long`))
         $(TR $(TD `BigInt`) $(TD $(CODE_PERCENT)) $(TD `long`) $(TD $(RARR)) $(TD `long`))
         $(TR $(TD `BigInt`) $(TD $(CODE_PERCENT)) $(TD `ulong`) $(TD $(RARR)) $(TD `BigInt`))
         $(TR $(TD `BigInt`) $(TD $(CODE_PERCENT)) $(TD other type) $(TD $(RARR)) $(TD `int`))
@@ -477,6 +478,7 @@ public:
     {
         assert(y != 0);
 
+        // BigInt % uint => long
         // BigInt % long => long
         // BigInt % ulong => BigInt
         // BigInt % other_type => int
@@ -497,7 +499,11 @@ public:
         else
         {
             immutable uint u = absUnsign(y);
-            int rem = BigUint.modInt(data, u);
+            static if (is(Unqual!T == uint))
+               alias R = long;
+            else
+               alias R = int;
+            R rem = BigUint.modInt(data, u);
             // x%y always has the same sign as x.
             // This is not the same as mathematical mod.
             return sign ? -rem : rem;
@@ -1668,16 +1674,24 @@ unittest
 {
     BigInt x = 1;
     import std.meta : AliasSeq;
-    static foreach (Int; AliasSeq!(byte, ubyte, short, ushort, int, uint))
+    static foreach (Int; AliasSeq!(byte, ubyte, short, ushort, int))
     {
         assert(is(typeof(x % Int(1)) == int));
     }
+    assert(is(typeof(x % 1U) == long));
     assert(is(typeof(x % 1L) == long));
     assert(is(typeof(x % 1UL) == BigInt));
 
+    auto x0 = BigInt(uint.max - 1);
     auto x1 = BigInt(8);
     assert(x1 / x == x1);
     auto x2 = -BigInt(long.min) + 1;
+
+    // uint
+    assert( x0 % uint.max ==  x0 % BigInt(uint.max));
+    assert(-x0 % uint.max == -x0 % BigInt(uint.max));
+    assert( x0 % uint.max ==  long(uint.max - 1));
+    assert(-x0 % uint.max == -long(uint.max - 1));
 
     // long
     assert(x1 % 2L == 0L);
