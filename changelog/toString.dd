@@ -1,4 +1,4 @@
-toString Can Now Use Output Ranges
+`toString` Can Now Use Output Ranges
 
 The standard library has been modified to recognize and use `toString` overloads
 that accept $(REF_ALTTEXT output ranges, isOutputRange, std, range, primitives)
