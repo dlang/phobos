@@ -1136,7 +1136,7 @@ enum CurlOption {
   ftp_ssl_ccc = 154,
   /** Same as TIMEOUT and CONNECTTIMEOUT, but with ms resolution */
   timeout_ms,
-  connecttimeout_ms,
+  connecttimeout_ms, /// ditto
   /** set to zero to disable the libcurl's decoding and thus pass the raw body
      data to the application even when it is encoded/compressed */
   http_transfer_decoding,
