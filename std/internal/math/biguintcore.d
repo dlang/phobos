@@ -53,10 +53,10 @@ import std.traits;
 
 private:
 
-// compile-time & run-time dipatchers to allows BigInt CTFE for 32 bit OS.
+// compile-time & run-time dipatchers to allows BigInt CTFE for 32 bit systems.
 
 pragma(inline, true)
-uint multibyteAddSub(char op)(uint[] dest, const(uint)[] src1, const (uint)[] src2, uint carry) pure
+uint multibyteAddSub(char op)(uint[] dest, const(uint)[] src1, const (uint)[] src2, uint carry)
 {
     if (__ctfe)
         return std.internal.math.biguintnoasm.multibyteAddSub!op(dest, src1, src2, carry);
@@ -67,7 +67,7 @@ uint multibyteAddSub(char op)(uint[] dest, const(uint)[] src1, const (uint)[] sr
 }
 
 pragma(inline, true)
-uint multibyteIncrementAssign(char op)(uint[] dest, uint carry) pure
+uint multibyteIncrementAssign(char op)(uint[] dest, uint carry)
 {
     if (__ctfe)
         return std.internal.math.biguintnoasm.multibyteIncrementAssign!op(dest, carry);
@@ -78,7 +78,7 @@ uint multibyteIncrementAssign(char op)(uint[] dest, uint carry) pure
 }
 
 pragma(inline, true)
-uint multibyteShl()(uint[] dest, const(uint)[] src, uint numbits) pure
+uint multibyteShl()(uint[] dest, const(uint)[] src, uint numbits)
 {
     if (__ctfe)
         return std.internal.math.biguintnoasm.multibyteShl(dest, src, numbits);
@@ -89,7 +89,7 @@ uint multibyteShl()(uint[] dest, const(uint)[] src, uint numbits) pure
 }
 
 pragma(inline, true)
-void multibyteShr()(uint[] dest, const(uint)[] src, uint numbits) pure
+void multibyteShr()(uint[] dest, const(uint)[] src, uint numbits)
 {
     if (__ctfe)
         std.internal.math.biguintnoasm.multibyteShr(dest, src, numbits);
@@ -100,7 +100,7 @@ void multibyteShr()(uint[] dest, const(uint)[] src, uint numbits) pure
 }
 
 pragma(inline, true)
-uint multibyteMul()(uint[] dest, const(uint)[] src, uint multiplier, uint carry) pure
+uint multibyteMul()(uint[] dest, const(uint)[] src, uint multiplier, uint carry)
 {
     if (__ctfe)
         return std.internal.math.biguintnoasm.multibyteMul(dest, src, multiplier, carry);
@@ -111,7 +111,7 @@ uint multibyteMul()(uint[] dest, const(uint)[] src, uint multiplier, uint carry)
 }
 
 pragma(inline, true)
-uint multibyteMulAdd(char op)(uint[] dest, const(uint)[] src, uint multiplier, uint carry) pure
+uint multibyteMulAdd(char op)(uint[] dest, const(uint)[] src, uint multiplier, uint carry)
 {
     if (__ctfe)
         return std.internal.math.biguintnoasm.multibyteMulAdd!op(dest, src, multiplier, carry);
@@ -122,7 +122,7 @@ uint multibyteMulAdd(char op)(uint[] dest, const(uint)[] src, uint multiplier, u
 }
 
 pragma(inline, true)
-void multibyteMultiplyAccumulate()(uint[] dest, const(uint)[] left, const(uint)[] right) pure
+void multibyteMultiplyAccumulate()(uint[] dest, const(uint)[] left, const(uint)[] right)
 {
     if (__ctfe)
         std.internal.math.biguintnoasm.multibyteMultiplyAccumulate(dest, left, right);
@@ -133,7 +133,7 @@ void multibyteMultiplyAccumulate()(uint[] dest, const(uint)[] left, const(uint)[
 }
 
 pragma(inline, true)
-uint multibyteDivAssign()(uint[] dest, uint divisor, uint overflow) pure
+uint multibyteDivAssign()(uint[] dest, uint divisor, uint overflow)
 {
     if (__ctfe)
         return std.internal.math.biguintnoasm.multibyteDivAssign(dest, divisor, overflow);
@@ -144,7 +144,7 @@ uint multibyteDivAssign()(uint[] dest, uint divisor, uint overflow) pure
 }
 
 pragma(inline, true)
-void multibyteAddDiagonalSquares()(uint[] dest, const(uint)[] src) pure
+void multibyteAddDiagonalSquares()(uint[] dest, const(uint)[] src)
 {
     if (__ctfe)
         std.internal.math.biguintnoasm.multibyteAddDiagonalSquares(dest, src);
@@ -155,7 +155,7 @@ void multibyteAddDiagonalSquares()(uint[] dest, const(uint)[] src) pure
 }
 
 pragma(inline, true)
-void multibyteTriangleAccumulate()(uint[] dest, const(uint)[] x) pure
+void multibyteTriangleAccumulate()(uint[] dest, const(uint)[] x)
 {
     if (__ctfe)
         std.internal.math.biguintnoasm.multibyteTriangleAccumulate(dest, x);
@@ -166,7 +166,7 @@ void multibyteTriangleAccumulate()(uint[] dest, const(uint)[] x) pure
 }
 
 pragma(inline, true)
-void multibyteSquare()(BigDigit[] result, const(BigDigit) [] x) pure
+void multibyteSquare()(BigDigit[] result, const(BigDigit)[] x)
 {
     if (__ctfe)
         std.internal.math.biguintnoasm.multibyteSquare(result, x);
