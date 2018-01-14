@@ -37,10 +37,7 @@ version(D_InlineAsm_X86)
 {
     static import std.internal.math.biguintx86;
 }
-else
-{
-    static import std.internal.math.biguintnoasm;
-}
+static import std.internal.math.biguintnoasm;
 
 import std.internal.math.biguintnoasm : BigDigit, KARATSUBALIMIT,
     KARATSUBASQUARELIMIT;
