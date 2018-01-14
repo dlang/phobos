@@ -35,12 +35,15 @@ module std.internal.math.biguintcore;
 
 version(D_InlineAsm_X86)
 {
-    import std.internal.math.biguintx86;
+    static import std.internal.math.biguintx86;
 }
 else
 {
-    import std.internal.math.biguintnoasm;
+    static import std.internal.math.biguintnoasm;
 }
+
+import std.internal.math.biguintnoasm : BigDigit, KARATSUBALIMIT,
+    KARATSUBASQUARELIMIT;
 
 alias multibyteAdd = multibyteAddSub!('+');
 alias multibyteSub = multibyteAddSub!('-');
@@ -52,6 +55,130 @@ import std.range.primitives;
 import std.traits;
 
 private:
+
+// compile-time & run-time dipatchers to allows BigInt CTFE for 32 bit OS.
+
+pragma(inline, true)
+uint multibyteAddSub(char op)(uint[] dest, const(uint)[] src1, const (uint)[] src2, uint carry) pure
+{
+    if (__ctfe)
+        return std.internal.math.biguintnoasm.multibyteAddSub!op(dest, src1, src2, carry);
+    else version(D_InlineAsm_X86)
+        return std.internal.math.biguintx86.multibyteAddSub!op(dest, src1, src2, carry);
+    else
+        return std.internal.math.biguintnoasm.multibyteAddSub!op(dest, src1, src2, carry);
+}
+
+pragma(inline, true)
+uint multibyteIncrementAssign(char op)(uint[] dest, uint carry) pure
+{
+    if (__ctfe)
+        return std.internal.math.biguintnoasm.multibyteIncrementAssign!op(dest, carry);
+    else version(D_InlineAsm_X86)
+        return std.internal.math.biguintx86.multibyteIncrementAssign!op(dest, carry);
+    else
+        return std.internal.math.biguintnoasm.multibyteIncrementAssign!op(dest, carry);
+}
+
+pragma(inline, true)
+uint multibyteShl()(uint[] dest, const(uint)[] src, uint numbits) pure
+{
+    if (__ctfe)
+        return std.internal.math.biguintnoasm.multibyteShl(dest, src, numbits);
+    else version(D_InlineAsm_X86)
+        return std.internal.math.biguintx86.multibyteShl(dest, src, numbits);
+    else
+        return std.internal.math.biguintnoasm.multibyteShl(dest, src, numbits);
+}
+
+pragma(inline, true)
+void multibyteShr()(uint[] dest, const(uint)[] src, uint numbits) pure
+{
+    if (__ctfe)
+        std.internal.math.biguintnoasm.multibyteShr(dest, src, numbits);
+    else version(D_InlineAsm_X86)
+        std.internal.math.biguintx86.multibyteShr(dest, src, numbits);
+    else
+        std.internal.math.biguintnoasm.multibyteShr(dest, src, numbits);
+}
+
+pragma(inline, true)
+uint multibyteMul()(uint[] dest, const(uint)[] src, uint multiplier, uint carry) pure
+{
+    if (__ctfe)
+        return std.internal.math.biguintnoasm.multibyteMul(dest, src, multiplier, carry);
+    else version(D_InlineAsm_X86)
+        return std.internal.math.biguintx86.multibyteMul(dest, src, multiplier, carry);
+    else
+        return std.internal.math.biguintnoasm.multibyteMul(dest, src, multiplier, carry);
+}
+
+pragma(inline, true)
+uint multibyteMulAdd(char op)(uint[] dest, const(uint)[] src, uint multiplier, uint carry) pure
+{
+    if (__ctfe)
+        return std.internal.math.biguintnoasm.multibyteMulAdd!op(dest, src, multiplier, carry);
+    else version(D_InlineAsm_X86)
+        return std.internal.math.biguintx86.multibyteMulAdd!op(dest, src, multiplier, carry);
+    else
+        return std.internal.math.biguintnoasm.multibyteMulAdd!op(dest, src, multiplier, carry);
+}
+
+pragma(inline, true)
+void multibyteMultiplyAccumulate()(uint[] dest, const(uint)[] left, const(uint)[] right) pure
+{
+    if (__ctfe)
+        std.internal.math.biguintnoasm.multibyteMultiplyAccumulate(dest, left, right);
+    else version(D_InlineAsm_X86)
+        std.internal.math.biguintx86.multibyteMultiplyAccumulate(dest, left, right);
+    else
+        std.internal.math.biguintnoasm.multibyteMultiplyAccumulate(dest, left, right);
+}
+
+pragma(inline, true)
+uint multibyteDivAssign()(uint[] dest, uint divisor, uint overflow) pure
+{
+    if (__ctfe)
+        return std.internal.math.biguintnoasm.multibyteDivAssign(dest, divisor, overflow);
+    else version(D_InlineAsm_X86)
+        return std.internal.math.biguintx86.multibyteDivAssign(dest, divisor, overflow);
+    else
+        return std.internal.math.biguintnoasm.multibyteDivAssign(dest, divisor, overflow);
+}
+
+pragma(inline, true)
+void multibyteAddDiagonalSquares()(uint[] dest, const(uint)[] src) pure
+{
+    if (__ctfe)
+        std.internal.math.biguintnoasm.multibyteAddDiagonalSquares(dest, src);
+    else version(D_InlineAsm_X86)
+        std.internal.math.biguintx86.multibyteAddDiagonalSquares(dest, src);
+    else
+        std.internal.math.biguintnoasm.multibyteAddDiagonalSquares(dest, src);
+}
+
+pragma(inline, true)
+void multibyteTriangleAccumulate()(uint[] dest, const(uint)[] x) pure
+{
+    if (__ctfe)
+        std.internal.math.biguintnoasm.multibyteTriangleAccumulate(dest, x);
+    else version(D_InlineAsm_X86)
+        std.internal.math.biguintx86.multibyteTriangleAccumulate(dest, x);
+    else
+        std.internal.math.biguintnoasm.multibyteTriangleAccumulate(dest, x);
+}
+
+pragma(inline, true)
+void multibyteSquare()(BigDigit[] result, const(BigDigit) [] x) pure
+{
+    if (__ctfe)
+        std.internal.math.biguintnoasm.multibyteSquare(result, x);
+    else version(D_InlineAsm_X86)
+        std.internal.math.biguintx86.multibyteSquare(result, x);
+    else
+        std.internal.math.biguintnoasm.multibyteSquare(result, x);
+}
+
 // Limits for when to switch between algorithms.
 // Half the size of the data cache.
 @nogc nothrow pure size_t getCacheLimit()

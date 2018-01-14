@@ -1761,3 +1761,9 @@ unittest
     auto b = immutable BigInt("123");
     assert(b == 123);
 }
+
+@safe pure unittest // issue 14767
+{
+    static immutable a = BigInt("340282366920938463463374607431768211455");
+    assert(a == BigInt("340282366920938463463374607431768211455"));
+}
