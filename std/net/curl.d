@@ -169,8 +169,6 @@ version(StdUnittest)
 {
     import std.socket : Socket;
 
-    // Run unit test with the PHOBOS_TEST_ALLOW_NET=1 set in order to
-    // allow net traffic
     private struct TestServer
     {
         import std.socket : Socket, TcpSocket;
