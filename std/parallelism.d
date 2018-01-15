@@ -2780,7 +2780,7 @@ public:
             // done or in progress.  Force all of them.
             E result = seed;
 
-            Throwable firstException, lastException;
+            Throwable firstException;
 
             foreach (ref task; tasks)
             {
@@ -2790,7 +2790,10 @@ public:
                 }
                 catch (Throwable e)
                 {
-                    addToChain(e, firstException, lastException);
+                    /* Chain e to front because order doesn't matter and because
+                     * e is not likely to be a chain itself (so fewer traversals)
+                     */
+                    firstException = Throwable.chainTogether(e, firstException);
                     continue;
                 }
 
@@ -3512,7 +3515,7 @@ private void submitAndExecute(
         }
     }
 
-    Throwable firstException, lastException;
+    Throwable firstException;
 
     foreach (i, ref task; tasks)
     {
@@ -3522,7 +3525,10 @@ private void submitAndExecute(
         }
         catch (Throwable e)
         {
-            addToChain(e, firstException, lastException);
+            /* Chain e to front because order doesn't matter and because
+             * e is not likely to be a chain itself (so fewer traversals)
+             */
+            firstException = Throwable.chainTogether(e, firstException);
             continue;
         }
     }
@@ -3822,38 +3828,6 @@ enum string parallelApplyMixinInputRange = q{
     return 0;
 };
 
-// Calls e.next until the end of the chain is found.
-private Throwable findLastException(Throwable e) pure nothrow
-{
-    if (e is null) return null;
-
-    while (e.next)
-    {
-        e = e.next;
-    }
-
-    return e;
-}
-
-// Adds e to the exception chain.
-private void addToChain(
-    Throwable e,
-    ref Throwable firstException,
-    ref Throwable lastException
-) pure nothrow
-{
-    if (firstException)
-    {
-        assert(lastException); // nocoverage
-        lastException.next = e; // nocoverage
-        lastException = findLastException(e); // nocoverage
-    }
-    else
-    {
-        firstException = e;
-        lastException = findLastException(e);
-    }
-}
 
 private struct ParallelForeach(R)
 {
