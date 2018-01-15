@@ -3445,7 +3445,7 @@ auto minElement(Range, RangeElementType = ElementType!Range)
     import std.range : enumerate;
     import std.typecons : tuple;
 
-    assert([2, 1, 4, 3].minElement == 1);
+    assert([2, 7, 1, 3].minElement == 1);
 
     // allows to get the index of an element too
     assert([5, 3, 7, 9].enumerate.minElement!"a.value" == tuple(1, 3));
