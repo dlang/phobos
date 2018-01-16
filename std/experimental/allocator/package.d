@@ -31,6 +31,9 @@ $(TR $(TD Class interface) $(TD
     $(LREF CAllocatorImpl)
     $(LREF IAllocator)
 ))
+$(TR $(TD Other) $(TD
+    $(LREF disableNew)
+))
 )
 
 Synopsis:
@@ -2551,6 +2554,32 @@ class CSharedAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     theAllocator.shrinkArray(arr, 2);
     // Destroy and deallocate
     theAllocator.dispose(arr);
+}
+
+/**
+ * This string can be mixed in classes to disallow the creation of an instance
+ * using the `new` operator.
+ */
+enum disableNew = q{
+    @disable new (size_t){return null;}
+};
+
+///
+unittest
+{
+    // class requiring users to use allocators.
+    class NotUsableWithNew
+    {
+        mixin(disableNew);
+    }
+
+    // statically verify that `new` cannot be used.
+    static assert(!__traits(compiles, new NotUsableWithNew));
+
+    // Using Phobos, make + an allocator is the only was to instantiate.
+    import std.experimental.allocator.mallocator : Mallocator;
+    auto a = make!NotUsableWithNew(Mallocator.instance);
+    dispose(Mallocator.instance, a);
 }
 
 __EOF__
