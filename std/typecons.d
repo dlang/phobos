@@ -2324,12 +2324,12 @@ string alignForSize(E...)(const char[][] names...)
 }
 
 /**
-Defines a value paired with a distinctive "null" state that denotes
-the absence of a value. If default constructed, a $(D
-Nullable!T) object starts in the null state. Assigning it renders it
-non-null. Calling $(D nullify) can nullify it again.
+Defines a value paired with a distinctive "null" state that denotes the absence
+of a value. If default constructed, a `Nullable!T` object starts in the null
+state. Assigning it renders it non-null. Calling `nullify` can nullify it
+again.
 
-Practically $(D Nullable!T) stores a $(D T) and a $(D bool).
+Practically `Nullable!T` stores a `T` and a `bool`.
 
 If `T` is a class, which already has null semantics, `Nullable!T` will alias
 itself to `Nullable!(T, null)` instead.
