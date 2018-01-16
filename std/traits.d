@@ -4367,6 +4367,7 @@ template MemberFunctionsTuple(C, string name)
 
 /**
 Returns an alias to the template that $(D T) is an instance of.
+It will return `void` if a symbol without a template is given.
  */
 template TemplateOf(alias T : Base!Args, alias Base, Args...)
 {
@@ -4377,6 +4378,12 @@ template TemplateOf(alias T : Base!Args, alias Base, Args...)
 template TemplateOf(T : Base!Args, alias Base, Args...)
 {
     alias TemplateOf = Base;
+}
+
+/// ditto
+template TemplateOf(T)
+{
+    alias TemplateOf = void;
 }
 
 ///
@@ -4409,6 +4416,12 @@ template TemplateOf(T : Base!Args, alias Base, Args...)
     static assert(__traits(isSame, TemplateOf!(Foo10!()), Foo10));
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=18214
+@safe unittest
+{
+    static assert(is(TemplateOf!(int[]) == void));
+    static assert(is(TemplateOf!bool == void));
+}
 
 /**
 Returns a $(D AliasSeq) of the template arguments used to instantiate $(D T).
