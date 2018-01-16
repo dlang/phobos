@@ -5411,6 +5411,7 @@ if (isFloatingPoint!(X))
  *  $(D true) if $(D_PARAM x) is finite.
  */
 bool isFinite(X)(X x) @trusted pure nothrow @nogc
+    if (isFloatingPoint!X)
 {
     alias F = floatTraits!(X);
     ushort* pe = cast(ushort *)&x;
@@ -5458,6 +5459,7 @@ bool isFinite(X)(X x) @trusted pure nothrow @nogc
  * be converted to normal reals.
  */
 bool isNormal(X)(X x) @trusted pure nothrow @nogc
+    if (isFloatingPoint!X)
 {
     alias F = floatTraits!(X);
     static if (F.realFormat == RealFormat.ibmExtended)
@@ -5504,6 +5506,7 @@ bool isNormal(X)(X x) @trusted pure nothrow @nogc
  *  $(D true) if $(D_PARAM x) is a denormal number.
  */
 bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
+    if (isFloatingPoint!X)
 {
     /*
         Need one for each format because subnormal floats might
@@ -5709,6 +5712,7 @@ bool isIdentical(real x, real y) @trusted pure nothrow @nogc
  * Return 1 if sign bit of e is set, 0 if not.
  */
 int signbit(X)(X x) @nogc @trusted pure nothrow
+    if (isFloatingPoint!X)
 {
     alias F = floatTraits!(X);
     return ((cast(ubyte *)&x)[F.SIGNPOS_BYTE] & 0x80) != 0;
@@ -5810,6 +5814,7 @@ Returns $(D -1) if $(D x < 0), $(D x) if $(D x == 0), $(D 1) if
 $(D x > 0), and $(NAN) if x==$(NAN).
  */
 F sgn(F)(F x) @safe pure nothrow @nogc
+    if (isNumeric!F)
 {
     // @@@TODO@@@: make this faster
     return x > 0 ? 1 : x < 0 ? -1 : x;
@@ -6282,6 +6287,7 @@ float nextDown(float x) @safe pure nothrow @nogc
  * not equal to y.
  */
 T nextafter(T)(const T x, const T y) @safe pure nothrow @nogc
+    if (isFloatingPoint!T)
 {
     if (x == y) return y;
     return ((y>x) ? nextUp(x) :  nextDown(x));
