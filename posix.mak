@@ -322,7 +322,7 @@ $(ROOT)/%$(DOTOBJ): %.c
 	$(CC) -c $(CFLAGS) $< -o$@
 
 $(LIB): $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
-	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
+	$(DMD) $(DFLAGS) -transition=complex -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
 
 $(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
 	ln -sf $(notdir $(LIBSO)) $@
