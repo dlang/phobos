@@ -406,6 +406,23 @@ void put(R, E)(ref R r, E e)
     }
 }
 
+/**
+ * `put` treats dynamic arrays as array slices, and will call `popFront`
+ * on the slice after an element has been copied.
+ *
+ * Be sure to save the position of the array before calling `put`.
+ */
+@safe unittest
+{
+    int[] a = [1, 2, 3], b = [10, 20];
+    auto c = a;
+    put(a, b);
+    assert(c == [10, 20, 3]);
+    // at this point, a was advanced twice, so it only contains
+    // its last element while c represents the whole array
+    assert(a == [3]);
+}
+
 @safe pure nothrow @nogc unittest
 {
     static struct R() { void put(in char[]) {} }
@@ -484,15 +501,6 @@ pure @safe unittest
     }
     B b;
     put(b, 5);
-}
-
-@safe unittest
-{
-    int[] a = [1, 2, 3], b = [10, 20];
-    auto c = a;
-    put(a, b);
-    assert(c == [10, 20, 3]);
-    assert(a == [3]);
 }
 
 @safe unittest
