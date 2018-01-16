@@ -136,6 +136,7 @@ version (Win64)
 static import core.math;
 static import core.stdc.math;
 static import core.stdc.fenv;
+import std.range.primitives : isInputRange, ElementType;
 import std.traits; // CommonType, isFloatingPoint, isIntegral, isSigned, isUnsigned, Largest, Unqual
 
 version(LDC)
@@ -7496,6 +7497,9 @@ private real polyImpl(real x, in real[] A) @trusted pure nothrow @nogc
        pair of elements.
  */
 bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
+    if ((isNumeric!T || (isInputRange!T && isNumeric!(ElementType!T))) &&
+        (isNumeric!U || (isInputRange!U && isNumeric!(ElementType!U))) &&
+        isNumeric!V)
 {
     import std.range.primitives : empty, front, isInputRange, popFront;
     static if (isInputRange!T)
