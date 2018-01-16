@@ -1,0 +1,25 @@
+`std.format` with strings passed during compile-time has been optimized
+
+Giving $(REF format, std, format) a string as a template parameter allows
+the type correctness of the parameters to be checked at compile time:
+
+-------
+import std.format : format;
+
+auto s1 = format!"%d"(4); // works fine
+auto s2 = format("%d"); // runtime exception
+auto s3 = format!"%d"(); // compile time error
+-------
+
+Now, using this overload also allows std.format to make an educated guess at
+the length of the resulting string, reducing the total number of reallocations
+made to the output buffer.
+
+-------
+import std.format : format;
+
+auto s1 = format!"%02d:%02d:%02d"(10, 30, 50); // known for certain to be 8 chars long
+auto s2 = format!"%s %d"("Error Code: ", 42); // Makes an educated guess
+-------
+
+Longer format strings benefit the most from this change.
