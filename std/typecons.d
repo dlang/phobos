@@ -2330,6 +2330,9 @@ Nullable!T) object starts in the null state. Assigning it renders it
 non-null. Calling $(D nullify) can nullify it again.
 
 Practically $(D Nullable!T) stores a $(D T) and a $(D bool).
+
+If `T` is a class, which already has null semantics, `Nullable!T` will alias
+itself to `Nullable!(T, null)` instead.
  */
 template Nullable(T)
 {
