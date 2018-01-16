@@ -2827,7 +2827,6 @@ public:
             apply.
 
             Params:
-
                 args = Just the range to _fold over; or the range and one seed
                        per function; or the range, one seed per function, and
                        the work unit size
