@@ -949,7 +949,8 @@ See also: $(LREF multiwayMerge)
 auto multiwayUnion(alias less = "a < b", RangeOfRanges)(RangeOfRanges ror)
 {
     import std.algorithm.iteration : uniq;
-    return ror.multiwayMerge.uniq;
+    import std.functional : not;
+    return ror.multiwayMerge!(less).uniq!(not!less);
 }
 
 ///
@@ -980,6 +981,15 @@ auto multiwayUnion(alias less = "a < b", RangeOfRanges)(RangeOfRanges ror)
         [ 7 ],
     ];
     assert(equal(multiwayUnion(b), witness));
+
+    double[][] c =
+    [
+        [9, 8, 8, 8, 7, 6],
+        [9, 8, 6],
+        [9, 8, 5]
+    ];
+    auto witness2 = [9, 8, 7, 6, 5];
+    assert(equal(multiwayUnion!"a > b"(c), witness2));
 }
 
 /**
