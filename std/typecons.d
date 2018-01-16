@@ -2331,291 +2331,299 @@ non-null. Calling $(D nullify) can nullify it again.
 
 Practically $(D Nullable!T) stores a $(D T) and a $(D bool).
  */
-struct Nullable(T)
+template Nullable(T)
 {
-    // simple case: type is freely constructable
-    static if (__traits(compiles, { T _value; }))
-    {
-        private T _value;
-    }
-    // type is not constructable, but also has no way to notice
-    // that we're assigning to an uninitialized variable.
-    else static if (!hasElaborateAssign!T)
-    {
-        private T _value = T.init;
-    }
+    static if (is(T == class))
+        alias Nullable = Nullable!(T, null); // issue 17440
     else
     {
-        static assert(false,
-                      "Cannot construct " ~ typeof(this).stringof ~
-                      ": type has no default constructor and overloaded assignment."
-        );
-    }
-
-    private bool _isNull = true;
-
-/**
-Constructor initializing $(D this) with $(D value).
-
-Params:
-    value = The value to initialize this `Nullable` with.
- */
-    this(inout T value) inout
-    {
-        _value = value;
-        _isNull = false;
-    }
-
-    /**
-      If they are both null, then they are equal. If one is null and the other
-      is not, then they are not equal. If they are both non-null, then they are
-      equal if their values are equal.
-      */
-    bool opEquals()(auto ref const(typeof(this)) rhs) const
-    {
-        if (_isNull)
-            return rhs._isNull;
-        if (rhs._isNull)
-            return false;
-        return _value == rhs._value;
-    }
-
-    /// Ditto
-    bool opEquals(U)(auto ref const(U) rhs) const
-    if (is(typeof(this.get == rhs)))
-    {
-        return _isNull ? false : rhs == _value;
-    }
-
-    ///
-    @safe unittest
-    {
-        Nullable!int empty;
-        Nullable!int a = 42;
-        Nullable!int b = 42;
-        Nullable!int c = 27;
-
-        assert(empty == empty);
-        assert(empty == Nullable!int.init);
-        assert(empty != a);
-        assert(empty != b);
-        assert(empty != c);
-
-        assert(a == b);
-        assert(a != c);
-
-        assert(empty != 42);
-        assert(a == 42);
-        assert(c != 42);
-    }
-
-    @safe unittest
-    {
-        // Test constness
-        immutable Nullable!int a = 42;
-        Nullable!int b = 42;
-        immutable Nullable!int c = 29;
-        Nullable!int d = 29;
-        immutable e = 42;
-        int f = 29;
-        assert(a == a);
-        assert(a == b);
-        assert(a != c);
-        assert(a != d);
-        assert(a == e);
-        assert(a != f);
-
-        // Test rvalue
-        assert(a == const Nullable!int(42));
-        assert(a != Nullable!int(29));
-    }
-
-    // Issue 17482
-    @system unittest
-    {
-        import std.variant : Variant;
-        Nullable!Variant a = Variant(12);
-        assert(a == 12);
-        Nullable!Variant e;
-        assert(e != 12);
-    }
-
-    template toString()
-    {
-        import std.format : FormatSpec, formatValue;
-        // Needs to be a template because of DMD @@BUG@@ 13737.
-        void toString()(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt)
+        struct Nullable
         {
-            if (isNull)
+            // simple case: type is freely constructable
+            static if (__traits(compiles, { T _value; }))
             {
-                sink.formatValue("Nullable.null", fmt);
+                private T _value;
+            }
+            // type is not constructable, but also has no way to notice
+            // that we're assigning to an uninitialized variable.
+            else static if (!hasElaborateAssign!T)
+            {
+                private T _value = T.init;
             }
             else
             {
-                sink.formatValue(_value, fmt);
+                static assert(false,
+                              "Cannot construct " ~ typeof(this).stringof ~
+                              ": type has no default constructor and overloaded assignment."
+                );
             }
+
+            private bool _isNull = true;
+
+        /**
+        Constructor initializing $(D this) with $(D value).
+
+        Params:
+            value = The value to initialize this `Nullable` with.
+         */
+            this(inout T value) inout
+            {
+                _value = value;
+                _isNull = false;
+            }
+
+            /**
+              If they are both null, then they are equal. If one is null and the other
+              is not, then they are not equal. If they are both non-null, then they are
+              equal if their values are equal.
+              */
+            bool opEquals()(auto ref const(typeof(this)) rhs) const
+            {
+                if (_isNull)
+                    return rhs._isNull;
+                if (rhs._isNull)
+                    return false;
+                return _value == rhs._value;
+            }
+
+            /// Ditto
+            bool opEquals(U)(auto ref const(U) rhs) const
+            if (is(typeof(this.get == rhs)))
+            {
+                return _isNull ? false : rhs == _value;
+            }
+
+            ///
+            @safe unittest
+            {
+                Nullable!int empty;
+                Nullable!int a = 42;
+                Nullable!int b = 42;
+                Nullable!int c = 27;
+
+                assert(empty == empty);
+                assert(empty == Nullable!int.init);
+                assert(empty != a);
+                assert(empty != b);
+                assert(empty != c);
+
+                assert(a == b);
+                assert(a != c);
+
+                assert(empty != 42);
+                assert(a == 42);
+                assert(c != 42);
+            }
+
+            @safe unittest
+            {
+                // Test constness
+                immutable Nullable!int a = 42;
+                Nullable!int b = 42;
+                immutable Nullable!int c = 29;
+                Nullable!int d = 29;
+                immutable e = 42;
+                int f = 29;
+                assert(a == a);
+                assert(a == b);
+                assert(a != c);
+                assert(a != d);
+                assert(a == e);
+                assert(a != f);
+
+                // Test rvalue
+                assert(a == const Nullable!int(42));
+                assert(a != Nullable!int(29));
+            }
+
+            // Issue 17482
+            @system unittest
+            {
+                import std.variant : Variant;
+                Nullable!Variant a = Variant(12);
+                assert(a == 12);
+                Nullable!Variant e;
+                assert(e != 12);
+            }
+
+            template toString()
+            {
+                import std.format : FormatSpec, formatValue;
+                // Needs to be a template because of DMD @@BUG@@ 13737.
+                void toString()(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt)
+                {
+                    if (isNull)
+                    {
+                        sink.formatValue("Nullable.null", fmt);
+                    }
+                    else
+                    {
+                        sink.formatValue(_value, fmt);
+                    }
+                }
+
+                // Issue 14940
+                void toString()(scope void delegate(const(char)[]) @safe sink, const ref FormatSpec!char fmt)
+                {
+                    if (isNull)
+                    {
+                        sink.formatValue("Nullable.null", fmt);
+                    }
+                    else
+                    {
+                        sink.formatValue(_value, fmt);
+                    }
+                }
+            }
+
+        /**
+        Check if `this` is in the null state.
+
+        Returns:
+            true $(B iff) `this` is in the null state, otherwise false.
+         */
+            @property bool isNull() const @safe pure nothrow
+            {
+                return _isNull;
+            }
+
+        ///
+        @safe unittest
+        {
+            Nullable!int ni;
+            assert(ni.isNull);
+
+            ni = 0;
+            assert(!ni.isNull);
         }
 
         // Issue 14940
-        void toString()(scope void delegate(const(char)[]) @safe sink, const ref FormatSpec!char fmt)
+        @safe unittest
         {
-            if (isNull)
+            import std.array : appender;
+            import std.format : formattedWrite;
+
+            auto app = appender!string();
+            Nullable!int a = 1;
+            formattedWrite(app, "%s", a);
+            assert(app.data == "1");
+        }
+
+        /**
+        Forces $(D this) to the null state.
+         */
+            void nullify()()
             {
-                sink.formatValue("Nullable.null", fmt);
+                .destroy(_value);
+                _isNull = true;
             }
-            else
+
+        ///
+        @safe unittest
+        {
+            Nullable!int ni = 0;
+            assert(!ni.isNull);
+
+            ni.nullify();
+            assert(ni.isNull);
+        }
+
+        /**
+        Assigns $(D value) to the internally-held state. If the assignment
+        succeeds, $(D this) becomes non-null.
+
+        Params:
+            value = A value of type `T` to assign to this `Nullable`.
+         */
+            void opAssign()(T value)
             {
-                sink.formatValue(_value, fmt);
+                _value = value;
+                _isNull = false;
             }
+
+        /**
+            If this `Nullable` wraps a type that already has a null value
+            (such as a pointer), then assigning the null value to this
+            `Nullable` is no different than assigning any other value of
+            type `T`, and the resulting code will look very strange. It
+            is strongly recommended that this be avoided by instead using
+            the version of `Nullable` that takes an additional `nullValue`
+            template argument.
+         */
+        @safe unittest
+        {
+            //Passes
+            Nullable!(int*) npi;
+            assert(npi.isNull);
+
+            //Passes?!
+            npi = null;
+            assert(!npi.isNull);
+        }
+
+        /**
+        Gets the value if not null. If $(D this) is in the null state and the optional
+        parameter `datum` is passed, then `datum` is returned, otherwise
+        the function will throw an `AssertError`.
+        This function is also called for the implicit conversion to $(D T).
+
+        Params:
+            fallback = the value to return in case the `Nullable` is null.
+
+        Returns:
+            The value held internally by this `Nullable`.
+         */
+            @property ref inout(T) get() inout @safe pure nothrow
+            {
+                enum message = "Called `get' on null Nullable!" ~ T.stringof ~ ".";
+                assert(!isNull, message);
+                return _value;
+            }
+
+            /// ditto
+            @property get(U)(inout(U) fallback) inout @safe pure nothrow
+            {
+                return isNull ? fallback : _value;
+            }
+
+        ///
+        @system unittest
+        {
+            import core.exception : AssertError;
+            import std.exception : assertThrown, assertNotThrown;
+
+            Nullable!int ni;
+            int i = 42;
+            //`get` is implicitly called. Will throw
+            //an AssertError in non-release mode
+            assertThrown!AssertError(i = ni);
+            assert(i == 42);
+
+            ni = 5;
+            assertNotThrown!AssertError(i = ni);
+            assert(i == 5);
+        }
+
+        ///
+        @safe pure nothrow unittest
+        {
+            int i = 42;
+            Nullable!int ni2;
+            int x = ni2.get(i);
+            assert(x == i);
+
+            ni2 = 7;
+            x = ni2.get(i);
+            assert(x == 7);
+        }
+
+        /**
+        Implicitly converts to $(D T).
+        $(D this) must not be in the null state.
+         */
+            alias get this;
         }
     }
-
-/**
-Check if `this` is in the null state.
-
-Returns:
-    true $(B iff) `this` is in the null state, otherwise false.
- */
-    @property bool isNull() const @safe pure nothrow
-    {
-        return _isNull;
-    }
-
-///
-@safe unittest
-{
-    Nullable!int ni;
-    assert(ni.isNull);
-
-    ni = 0;
-    assert(!ni.isNull);
-}
-
-// Issue 14940
-@safe unittest
-{
-    import std.array : appender;
-    import std.format : formattedWrite;
-
-    auto app = appender!string();
-    Nullable!int a = 1;
-    formattedWrite(app, "%s", a);
-    assert(app.data == "1");
-}
-
-/**
-Forces $(D this) to the null state.
- */
-    void nullify()()
-    {
-        .destroy(_value);
-        _isNull = true;
-    }
-
-///
-@safe unittest
-{
-    Nullable!int ni = 0;
-    assert(!ni.isNull);
-
-    ni.nullify();
-    assert(ni.isNull);
-}
-
-/**
-Assigns $(D value) to the internally-held state. If the assignment
-succeeds, $(D this) becomes non-null.
-
-Params:
-    value = A value of type `T` to assign to this `Nullable`.
- */
-    void opAssign()(T value)
-    {
-        _value = value;
-        _isNull = false;
-    }
-
-/**
-    If this `Nullable` wraps a type that already has a null value
-    (such as a pointer), then assigning the null value to this
-    `Nullable` is no different than assigning any other value of
-    type `T`, and the resulting code will look very strange. It
-    is strongly recommended that this be avoided by instead using
-    the version of `Nullable` that takes an additional `nullValue`
-    template argument.
- */
-@safe unittest
-{
-    //Passes
-    Nullable!(int*) npi;
-    assert(npi.isNull);
-
-    //Passes?!
-    npi = null;
-    assert(!npi.isNull);
-}
-
-/**
-Gets the value if not null. If $(D this) is in the null state and the optional
-parameter `datum` is passed, then `datum` is returned, otherwise
-the function will throw an `AssertError`.
-This function is also called for the implicit conversion to $(D T).
-
-Params:
-    fallback = the value to return in case the `Nullable` is null.
-
-Returns:
-    The value held internally by this `Nullable`.
- */
-    @property ref inout(T) get() inout @safe pure nothrow
-    {
-        enum message = "Called `get' on null Nullable!" ~ T.stringof ~ ".";
-        assert(!isNull, message);
-        return _value;
-    }
-
-    /// ditto
-    @property get(U)(inout(U) fallback) inout @safe pure nothrow
-    {
-        return isNull ? fallback : _value;
-    }
-
-///
-@system unittest
-{
-    import core.exception : AssertError;
-    import std.exception : assertThrown, assertNotThrown;
-
-    Nullable!int ni;
-    int i = 42;
-    //`get` is implicitly called. Will throw
-    //an AssertError in non-release mode
-    assertThrown!AssertError(i = ni);
-    assert(i == 42);
-
-    ni = 5;
-    assertNotThrown!AssertError(i = ni);
-    assert(i == 5);
-}
-
-///
-@safe pure nothrow unittest
-{
-    int i = 42;
-    Nullable!int ni2;
-    int x = ni2.get(i);
-    assert(x == i);
-
-    ni2 = 7;
-    x = ni2.get(i);
-    assert(x == 7);
-}
-
-/**
-Implicitly converts to $(D T).
-$(D this) must not be in the null state.
- */
-    alias get this;
 }
 
 /// ditto
@@ -2963,6 +2971,25 @@ auto nullable(T)(T t)
     Nullable!DisabledDefaultConstructor var;
     var = DisabledDefaultConstructor(5);
     var.nullify;
+}
+
+// Issue 17440
+@safe unittest
+{
+    static class C
+    {
+        int canary;
+        ~this()
+        {
+            canary = 0x5050DEAD;
+        }
+    }
+    auto c = new C;
+    c.canary = 0xA71FE;
+    auto nc = nullable(c);
+    static assert(is(typeof(nc) == Nullable!(C, null)));
+    nc.nullify;
+    assert(c.canary == 0xA71FE);
 }
 
 /**
