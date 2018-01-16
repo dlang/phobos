@@ -950,7 +950,7 @@ auto multiwayUnion(alias less = "a < b", RangeOfRanges)(RangeOfRanges ror)
 {
     import std.algorithm.iteration : uniq;
     import std.functional : not;
-    return multiwayMerge!less(ror).uniq!(not!less);
+    return ror.multiwayMerge!(less).uniq!(not!less);
 }
 
 ///
