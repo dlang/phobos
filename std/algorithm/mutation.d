@@ -78,7 +78,7 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 module std.algorithm.mutation;
 
 import std.range.primitives;
-import std.traits : isArray, isBlitAssignable, isNarrowString, Unqual, isSomeChar, isDynamicArray;
+import std.traits : isArray, isBlitAssignable, isNarrowString, Unqual, isSomeChar;
 // FIXME
 import std.typecons; // : tuple, Tuple;
 
@@ -369,7 +369,7 @@ Params:
 
 Returns:
     The unfilled part of `target` if `target` is not a `put` defining output
-    range.
+    range. `void` otherwise.
 
 See_Also:
     $(HTTP sgi.com/tech/stl/_copy.html, STL's _copy)
