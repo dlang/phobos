@@ -407,12 +407,37 @@ void put(R, E)(ref R r, E e)
 }
 
 /**
+ * When an output range's `put` method only accepts elements of type
+ * `T`, use the global `put` to handle outputting a `T[]` to the range
+ * or vice-versa.
+ */
+@safe pure unittest
+{
+    import std.traits : isSomeChar;
+
+    static struct A
+    {
+        string data;
+
+        void put(C)(C c) if (isSomeChar!C)
+        {
+            data ~= c;
+        }
+    }
+    static assert(isOutputRange!(A, char));
+
+    auto a = A();
+    put(a, "Hello");
+    assert(a.data == "Hello");
+}
+
+/**
  * `put` treats dynamic arrays as array slices, and will call `popFront`
  * on the slice after an element has been copied.
  *
  * Be sure to save the position of the array before calling `put`.
  */
-@safe unittest
+@safe pure nothrow unittest
 {
     int[] a = [1, 2, 3], b = [10, 20];
     auto c = a;
@@ -421,6 +446,23 @@ void put(R, E)(ref R r, E e)
     // at this point, a was advanced twice, so it only contains
     // its last element while c represents the whole array
     assert(a == [3]);
+}
+
+/**
+ * Because of auto-decoding, the `front` of a `string` is a `dchar`,
+ * so using `put` with `char` arrays is disallowed. In order to fill
+ * any `char` type array, use $(REF byCodeUnit, std, utf).
+ */
+@safe pure nothrow unittest
+{
+    import std.utf : byCodeUnit;
+
+    // the elements must be mutable, so using string or const(char)[]
+    // won't compile
+    char[] s1 = new char[13];
+    auto r1 = s1.byCodeUnit;
+    put(r1, "Hello, World!");
+    assert(s1 == "Hello, World!");
 }
 
 @safe pure nothrow @nogc unittest
