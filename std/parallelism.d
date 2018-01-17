@@ -2421,12 +2421,15 @@ public:
     {
         /**
         Parallel reduce on a random access range.  Except as otherwise noted,
-        usage is similar to $(REF _reduce, std,algorithm,iteration).  This
-        function works by splitting the range to be reduced into work units,
-        which are slices to be reduced in parallel.  Once the results from all
-        work units are computed, a final serial reduction is performed on these
-        results to compute the final answer. Therefore, care must be taken to
-        choose the seed value appropriately.
+        usage is similar to $(REF _reduce, std,algorithm,iteration).  There is
+        also $(LREF fold) which does the same thing with a different parameter
+        order.
+
+        This function works by splitting the range to be reduced into work
+        units, which are slices to be reduced in parallel.  Once the results
+        from all work units are computed, a final serial reduction is performed
+        on these results to compute the final answer. Therefore, care must be
+        taken to choose the seed value appropriately.
 
         Because the reduction is being performed in parallel, $(D functions)
         must be associative.  For notational simplicity, let # be an
@@ -2502,6 +2505,12 @@ public:
         After this function is finished executing, any exceptions thrown
         are chained together via $(D Throwable.next) and rethrown.  The chaining
         order is non-deterministic.
+
+        See_Also:
+
+            $(LREF fold) is functionally equivalent to $(LREF _reduce) except the
+            range parameter comes first and there is no need to use
+            $(REF_ALTTEXT $(D tuple),tuple,std,typecons) for multiple seeds.
          */
         auto reduce(Args...)(Args args)
         {
@@ -2804,6 +2813,128 @@ public:
 
             return result;
         }
+    }
+
+    ///
+    template fold(functions...)
+    {
+        /** Implements the homonym function (also known as `accumulate`, `compress`,
+            `inject`, or `foldl`) present in various programming languages of
+            functional flavor.
+
+            `fold` is functionally equivalent to $(LREF reduce) except the range
+            parameter comes first and there is no need to use $(REF_ALTTEXT
+            `tuple`,tuple,std,typecons) for multiple seeds.
+
+            There may be one or more callable entities (`functions` argument) to
+            apply.
+
+            Params:
+                args = Just the range to _fold over; or the range and one seed
+                       per function; or the range, one seed per function, and
+                       the work unit size
+
+            Returns:
+                The accumulated result as a single value for single function and
+                as a tuple of values for multiple functions
+
+            See_Also:
+            Similar to $(REF _fold, std,algorithm,iteration), `fold` is a wrapper around $(LREF reduce).
+
+            Example:
+            ---
+            static int adder(int a, int b)
+            {
+                return a + b;
+            }
+            static int multiplier(int a, int b)
+            {
+                return a * b;
+            }
+
+            // Just the range
+            auto x = taskPool.fold!adder([1, 2, 3, 4]);
+            assert(x == 10);
+
+            // The range and the seeds (0 and 1 below; also note multiple
+            // functions in this example)
+            auto y = taskPool.fold!(adder, multiplier)([1, 2, 3, 4], 0, 1);
+            assert(y[0] == 10);
+            assert(y[1] == 24);
+
+            // The range, the seed (0), and the work unit size (20)
+            auto z = taskPool.fold!adder([1, 2, 3, 4], 0, 20);
+            assert(z == 10);
+            ---
+        */
+        auto fold(Args...)(Args args)
+        {
+            static assert(isInputRange!(Args[0]), "First argument must be an InputRange");
+
+            alias range = args[0];
+
+            static if (Args.length == 1)
+            {
+                // Just the range
+                return reduce!functions(range);
+            }
+            else static if (Args.length == 1 + functions.length ||
+                            Args.length == 1 + functions.length + 1)
+            {
+                static if (functions.length == 1)
+                {
+                    alias seeds = args[1];
+                }
+                else
+                {
+                    auto seeds()
+                    {
+                        import std.typecons : tuple;
+                        return tuple(args[1 .. functions.length+1]);
+                    }
+                }
+
+                static if (Args.length == 1 + functions.length)
+                {
+                    // The range and the seeds
+                    return reduce!functions(seeds, range);
+                }
+                else static if (Args.length == 1 + functions.length + 1)
+                {
+                    // The range, the seeds, and the work unit size
+                    static assert(isIntegral!(Args[$-1]), "Work unit size must be an integral type");
+                    return reduce!functions(seeds, range, args[$-1]);
+                }
+            }
+            else
+            {
+                import std.conv : text;
+                static assert(0, "Invalid number of arguments (" ~ Args.length.text ~ "): Should be an input range, "
+                              ~ functions.length.text ~ " optional seed(s), and an optional work unit size.");
+            }
+        }
+    }
+
+    // This test is not included in the documentation because even though these
+    // examples are for the inner fold() template, with their current location,
+    // they would appear under the outer one. (We can't move this inside the
+    // outer fold() template because then dmd runs out of memory possibly due to
+    // recursive template instantiation, which is surprisingly not caught.)
+    @system unittest
+    {
+        // Just the range
+        auto x = taskPool.fold!"a + b"([1, 2, 3, 4]);
+        assert(x == 10);
+
+        // The range and the seeds (0 and 1 below; also note multiple
+        // functions in this example)
+        auto y = taskPool.fold!("a + b", "a * b")([1, 2, 3, 4], 0, 1);
+        assert(y[0] == 10);
+        assert(y[1] == 24);
+
+        // The range, the seed (0), and the work unit size (20)
+        auto z = taskPool.fold!"a + b"([1, 2, 3, 4], 0, 20);
+        assert(z == 10);
     }
 
     /**
@@ -3336,6 +3467,28 @@ public:
             }
         }
     }
+}
+
+@system unittest
+{
+    import std.algorithm.iteration : sum;
+    import std.range : iota;
+    import std.typecons : tuple;
+
+    enum N = 100;
+    auto r = iota(1, N + 1);
+    const expected = r.sum();
+
+    // Just the range
+    assert(taskPool.fold!"a + b"(r) == expected);
+
+    // Range and seeds
+    assert(taskPool.fold!"a + b"(r, 0) == expected);
+    assert(taskPool.fold!("a + b", "a + b")(r, 0, 0) == tuple(expected, expected));
+
+    // Range, seeds, and work unit size
+    assert(taskPool.fold!"a + b"(r, 0, 42) == expected);
+    assert(taskPool.fold!("a + b", "a + b")(r, 0, 0, 42) == tuple(expected, expected));
 }
 
 /**
