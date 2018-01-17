@@ -53,15 +53,19 @@ import std.traits;
 
 private:
 
-// compile-time & run-time dipatchers to allows BigInt CTFE for 32 bit systems.
-
+// dipatchers to the right low-level primitives. Added to allow BigInt CTFE for
+// 32 bit systems (issue 14767) although it's used by the other architectures too.
+// See comments below in case it has to be refactored.
 pragma(inline, true)
 uint multibyteAddSub(char op)(uint[] dest, const(uint)[] src1, const (uint)[] src2, uint carry)
 {
+    // CTFE, no arch distinction
     if (__ctfe)
         return std.internal.math.biguintnoasm.multibyteAddSub!op(dest, src1, src2, carry);
+    // Run-time, X86 with asm
     else version(D_InlineAsm_X86)
         return std.internal.math.biguintx86.multibyteAddSub!op(dest, src1, src2, carry);
+    // Run-time, not X86
     else
         return std.internal.math.biguintnoasm.multibyteAddSub!op(dest, src1, src2, carry);
 }
