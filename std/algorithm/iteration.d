@@ -4722,49 +4722,53 @@ if (substs.length >= 2 && isExpressions!substs)
       Complexity: $(BIGOH 1) due to D's $(D switch) guaranteeing $(BIGOH 1);
     */
     auto substitute(Value)(Value value)
-    if (!isInputRange!Value && !is(CommonType!(Value, typeof(substs[0])) == void))
+    if (isInputRange!Value || !is(CommonType!(Value, typeof(substs[0])) == void))
     {
-        switch (value)
+        static if (isInputRange!Value)
         {
-            static foreach (i; 0 .. substs.length / 2)
-                case substs[2 * i]:
-                    return substs[2 * i + 1];
-
-            default: return value;
+            static if (!is(CommonType!(ElementType!Value, typeof(substs[0])) == void))
+            {
+                // Substitute single range elements with compile-time substitution mappings
+                return value.map!(a => substitute(a));
+            }
+            else static if (isInputRange!Value && !is(CommonType!(ElementType!Value, ElementType!(typeof(substs[0]))) == void))
+            {
+                // not implemented yet, fallback to runtime variant for now
+                return .substitute(value, substs);
+            }
+            else
+            {
+                static assert(0, "Compile-time substitutions must be elements or ranges of the same type of ` ~ Value.stringof ~ `.");
+            }
         }
-    }
+        // Substitute single values with compile-time substitution mappings.
+        else // static if (!is(CommonType!(Value, typeof(substs[0])) == void))
+        {
+            switch (value)
+            {
+                static foreach (i; 0 .. substs.length / 2)
+                    case substs[2 * i]:
+                        return substs[2 * i + 1];
 
-    /// Substitute single range elements with compile-time substitution mappings
-    auto substitute(R)(R r)
-    if (isInputRange!R && !is(CommonType!(ElementType!R, typeof(substs[0])) == void))
-    {
-        return r.map!(a => substitute(a));
-    }
-
-    /// Substitute subranges with compile-time substitution mappings
-    auto substitute(R)(R r)
-    if (isInputRange!R && !is(CommonType!(ElementType!R, ElementType!(typeof(substs[0]))) == void))
-    {
-        // not implemented yet, fallback to runtime variant for now
-        return .substitute(r, substs);
+                default: return value;
+            }
+        }
     }
 }
 
 // In same combinations substitute needs to calculate the auto-decoded length
 // of its needles
-private template needsManualAutodecoding(Range, Needles...)
+private template hasDifferentAutodecoding(Range, Needles...)
 {
     import std.meta : anySatisfy;
     /* iff
-       - the needles needs auto-decoding, but the incoming range doesn't
-       - (vice versa) if the incoming range needs auto-decoding, but the needle don't
+       - the needles needs auto-decoding, but the incoming range doesn't (or vice versa)
        - both (range, needle) need auto-decoding and don't share the same common type
     */
     enum needlesAreNarrow = anySatisfy!(isNarrowString, Needles);
     enum sourceIsNarrow = isNarrowString!Range;
-    enum needsManualAutodecoding = ( sourceIsNarrow && !needlesAreNarrow) ||
-                                   (!sourceIsNarrow &&  needlesAreNarrow) ||
-                                   ((sourceIsNarrow && needlesAreNarrow) &&
+    enum hasDifferentAutodecoding = sourceIsNarrow != needlesAreNarrow ||
+                                    (sourceIsNarrow && needlesAreNarrow &&
                                     is(CommonType!(Range, Needles) == void));
 }
 
@@ -4772,18 +4776,25 @@ private template needsManualAutodecoding(Range, Needles...)
 {
     import std.meta : AliasSeq; // used for better clarity
 
-    static assert(!needsManualAutodecoding!(string, AliasSeq!(string, string)));
-    static assert(!needsManualAutodecoding!(wstring, AliasSeq!(wstring, wstring)));
-    static assert(!needsManualAutodecoding!(dstring, AliasSeq!(dstring, dstring)));
+    static assert(!hasDifferentAutodecoding!(string, AliasSeq!(string, string)));
+    static assert(!hasDifferentAutodecoding!(wstring, AliasSeq!(wstring, wstring)));
+    static assert(!hasDifferentAutodecoding!(dstring, AliasSeq!(dstring, dstring)));
 
-    static assert(needsManualAutodecoding!(string, AliasSeq!(wstring, string)));
-    static assert(needsManualAutodecoding!(wstring, AliasSeq!(string, string)));
+    // the needles needs auto-decoding, but the incoming range doesn't (or vice versa)
+    static assert(hasDifferentAutodecoding!(string, AliasSeq!(wstring, wstring)));
+    static assert(hasDifferentAutodecoding!(string, AliasSeq!(dstring, dstring)));
+    static assert(hasDifferentAutodecoding!(wstring, AliasSeq!(string, string)));
+    static assert(hasDifferentAutodecoding!(wstring, AliasSeq!(dstring, dstring)));
+    static assert(hasDifferentAutodecoding!(dstring, AliasSeq!(string, string)));
+    static assert(hasDifferentAutodecoding!(dstring, AliasSeq!(wstring, wstring)));
 
-    static assert(needsManualAutodecoding!(dstring, AliasSeq!(string, string)));
-    static assert(needsManualAutodecoding!(dstring, AliasSeq!(string, wstring)));
-
-    static assert(needsManualAutodecoding!(string, AliasSeq!(dstring, string)));
-    static assert(needsManualAutodecoding!(string, AliasSeq!(wstring, string)));
+    // both (range, needle) need auto-decoding and don't share the same common type
+    static foreach (T; AliasSeq!(string, wstring, dstring))
+    {
+        static assert(hasDifferentAutodecoding!(T, AliasSeq!(wstring, string)));
+        static assert(hasDifferentAutodecoding!(T, AliasSeq!(dstring, string)));
+        static assert(hasDifferentAutodecoding!(T, AliasSeq!(wstring, dstring)));
+    }
 }
 
 /// ditto
@@ -4880,10 +4891,10 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
                 Hit hitNr; // hit number: 0 means no hit, otherwise index+1 to needles that matched
                 bool hasHit; // is there a replacement hit which should be printed?
 
-                enum needsManualAutodecoding = .needsManualAutodecoding!(typeof(rest), Ins);
+                enum hasDifferentAutodecoding = .hasDifferentAutodecoding!(typeof(rest), Ins);
 
                 // calculating the needle length for narrow strings might be expensive -> cache it
-                 static if (needsManualAutodecoding)
+                 static if (hasDifferentAutodecoding)
                      ptrdiff_t[n] needleLengths = -1;
             }
 
@@ -4960,12 +4971,12 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
                     else
                     {
                         auto hitLength = size_t.max;
-                        SWITCH: switch (hitNr - 1)
+                        switchL: switch (hitNr - 1)
                         {
                             static foreach (i; 0 .. n)
                             {
                                 case i:
-                                    static if (needsManualAutodecoding)
+                                    static if (hasDifferentAutodecoding)
                                     {
                                         import std.utf : codeLength;
 
@@ -4979,7 +4990,7 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
                                     {
                                         hitLength = needles[i].length;
                                     }
-                                    break SWITCH;
+                                    break switchL;
                             }
                             default:
                                 assert(0, "hitNr should always be found");
@@ -4993,7 +5004,7 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
 
                         // iff the source range and the substitutions are narrow strings,
                         // we can avoid calling the auto-decoding `popFront` (via drop)
-                        static if (isNarrowString!(typeof(hitValue)) && !needsManualAutodecoding)
+                        static if (isNarrowString!(typeof(hitValue)) && !hasDifferentAutodecoding)
                             rest = hitValue[hitLength .. $];
                         else
                             rest = hitValue.drop(hitLength);

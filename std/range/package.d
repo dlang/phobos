@@ -2010,13 +2010,6 @@ if (isInputRange!(Unqual!Range) &&
         return _maxAvailable == 0 || source.empty;
     }
 
-    static if (is(typeof((cast(const R) source).empty)))
-        /// ditto
-        @property bool empty() const
-        {
-            return _maxAvailable == 0 || source.empty;
-        }
-
     /// ditto
     @property auto ref front()
     {
