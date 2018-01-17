@@ -426,7 +426,7 @@ public:
             GetSystemInfo(&si);
             pageSize = cast(size_t) si.dwPageSize;
             numPages = n.roundUpToMultipleOf(cast(uint) pageSize) / pageSize;
-            data = VirtualAlloc(null, pageSize * numPages, MEM_RESERVE, PAGE_NOACCESS);
+            data = cast(shared(void*))VirtualAlloc(null, pageSize * numPages, MEM_RESERVE, PAGE_NOACCESS);
             if (!data)
                 assert(0, "Failed to VirtualAlloc memory");
         }
@@ -1084,7 +1084,7 @@ version (StdUnittest)
     tg.joinAll();
 
     sort!((a, b) => a.ptr < b.ptr)(buf[0 .. 100]);
-    foreach(i; 0 .. numThreads - 1)
+    foreach (i; 0 .. numThreads - 1)
     {
         assert(buf[i].ptr + buf[i].length == buf[i + 1].ptr);
     }
