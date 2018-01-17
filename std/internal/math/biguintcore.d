@@ -56,21 +56,23 @@ private:
 // dipatchers to the right low-level primitives. Added to allow BigInt CTFE for
 // 32 bit systems (issue 14767) although it's used by the other architectures too.
 // See comments below in case it has to be refactored.
-pragma(inline, true)
+version(X86)
 uint multibyteAddSub(char op)(uint[] dest, const(uint)[] src1, const (uint)[] src2, uint carry)
 {
-    // CTFE, no arch distinction
+    // must be checked before, otherwise D_InlineAsm_X86 is true.
     if (__ctfe)
         return std.internal.math.biguintnoasm.multibyteAddSub!op(dest, src1, src2, carry);
-    // Run-time, X86 with asm
+    // Runtime.
     else version(D_InlineAsm_X86)
         return std.internal.math.biguintx86.multibyteAddSub!op(dest, src1, src2, carry);
-    // Run-time, not X86
+    // Runtime if no asm available.
     else
         return std.internal.math.biguintnoasm.multibyteAddSub!op(dest, src1, src2, carry);
 }
+// Any other architecture
+else alias multibyteAddSub = std.internal.math.biguintnoasm.multibyteAddSub;
 
-pragma(inline, true)
+version(X86)
 uint multibyteIncrementAssign(char op)(uint[] dest, uint carry)
 {
     if (__ctfe)
@@ -80,8 +82,9 @@ uint multibyteIncrementAssign(char op)(uint[] dest, uint carry)
     else
         return std.internal.math.biguintnoasm.multibyteIncrementAssign!op(dest, carry);
 }
+else alias multibyteIncrementAssign = std.internal.math.biguintnoasm.multibyteIncrementAssign;
 
-pragma(inline, true)
+version(X86)
 uint multibyteShl()(uint[] dest, const(uint)[] src, uint numbits)
 {
     if (__ctfe)
@@ -91,8 +94,9 @@ uint multibyteShl()(uint[] dest, const(uint)[] src, uint numbits)
     else
         return std.internal.math.biguintnoasm.multibyteShl(dest, src, numbits);
 }
+else alias multibyteShl = std.internal.math.biguintnoasm.multibyteShl;
 
-pragma(inline, true)
+version(X86)
 void multibyteShr()(uint[] dest, const(uint)[] src, uint numbits)
 {
     if (__ctfe)
@@ -102,8 +106,9 @@ void multibyteShr()(uint[] dest, const(uint)[] src, uint numbits)
     else
         std.internal.math.biguintnoasm.multibyteShr(dest, src, numbits);
 }
+else alias multibyteShr = std.internal.math.biguintnoasm.multibyteShr;
 
-pragma(inline, true)
+version(X86)
 uint multibyteMul()(uint[] dest, const(uint)[] src, uint multiplier, uint carry)
 {
     if (__ctfe)
@@ -113,8 +118,9 @@ uint multibyteMul()(uint[] dest, const(uint)[] src, uint multiplier, uint carry)
     else
         return std.internal.math.biguintnoasm.multibyteMul(dest, src, multiplier, carry);
 }
+else alias multibyteMul = std.internal.math.biguintnoasm.multibyteMul;
 
-pragma(inline, true)
+version(X86)
 uint multibyteMulAdd(char op)(uint[] dest, const(uint)[] src, uint multiplier, uint carry)
 {
     if (__ctfe)
@@ -124,8 +130,9 @@ uint multibyteMulAdd(char op)(uint[] dest, const(uint)[] src, uint multiplier, u
     else
         return std.internal.math.biguintnoasm.multibyteMulAdd!op(dest, src, multiplier, carry);
 }
+else alias multibyteMulAdd = std.internal.math.biguintnoasm.multibyteMulAdd;
 
-pragma(inline, true)
+version(X86)
 void multibyteMultiplyAccumulate()(uint[] dest, const(uint)[] left, const(uint)[] right)
 {
     if (__ctfe)
@@ -135,8 +142,9 @@ void multibyteMultiplyAccumulate()(uint[] dest, const(uint)[] left, const(uint)[
     else
         std.internal.math.biguintnoasm.multibyteMultiplyAccumulate(dest, left, right);
 }
+else alias multibyteMultiplyAccumulate = std.internal.math.biguintnoasm.multibyteMultiplyAccumulate;
 
-pragma(inline, true)
+version(X86)
 uint multibyteDivAssign()(uint[] dest, uint divisor, uint overflow)
 {
     if (__ctfe)
@@ -146,8 +154,9 @@ uint multibyteDivAssign()(uint[] dest, uint divisor, uint overflow)
     else
         return std.internal.math.biguintnoasm.multibyteDivAssign(dest, divisor, overflow);
 }
+else alias multibyteDivAssign = std.internal.math.biguintnoasm.multibyteDivAssign;
 
-pragma(inline, true)
+version(X86)
 void multibyteAddDiagonalSquares()(uint[] dest, const(uint)[] src)
 {
     if (__ctfe)
@@ -157,8 +166,9 @@ void multibyteAddDiagonalSquares()(uint[] dest, const(uint)[] src)
     else
         std.internal.math.biguintnoasm.multibyteAddDiagonalSquares(dest, src);
 }
+else alias multibyteAddDiagonalSquares = std.internal.math.biguintnoasm.multibyteAddDiagonalSquares;
 
-pragma(inline, true)
+version(X86)
 void multibyteTriangleAccumulate()(uint[] dest, const(uint)[] x)
 {
     if (__ctfe)
@@ -168,8 +178,9 @@ void multibyteTriangleAccumulate()(uint[] dest, const(uint)[] x)
     else
         std.internal.math.biguintnoasm.multibyteTriangleAccumulate(dest, x);
 }
+else alias multibyteTriangleAccumulate = std.internal.math.biguintnoasm.multibyteTriangleAccumulate;
 
-pragma(inline, true)
+version(X86)
 void multibyteSquare()(BigDigit[] result, const(BigDigit)[] x)
 {
     if (__ctfe)
@@ -179,6 +190,7 @@ void multibyteSquare()(BigDigit[] result, const(BigDigit)[] x)
     else
         std.internal.math.biguintnoasm.multibyteSquare(result, x);
 }
+else alias multibyteSquare = std.internal.math.biguintnoasm.multibyteSquare;
 
 // Limits for when to switch between algorithms.
 // Half the size of the data cache.
