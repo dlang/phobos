@@ -287,7 +287,7 @@ public:
         import std.algorithm.comparison : min;
 
         if (!delta) return true;
-        if (!b.ptr) return false;
+        if (b is null) return false;
 
         size_t goodSize = goodAllocSize(b.length);
         size_t bytesLeftOnPage = goodSize - b.length;
@@ -487,6 +487,7 @@ public:
             lock.unlock();
             return null;
         }
+
         offset = cast(shared(void*)) (alignedStart + goodSize);
         localResult = alignedStart;
         if (offset > readWriteLimit)
@@ -586,7 +587,7 @@ public:
         import std.algorithm.comparison : min;
 
         if (!delta) return true;
-        if (!b.ptr) return false;
+        if (b is null) return false;
 
         size_t goodSize = goodAllocSize(b.length);
         size_t bytesLeftOnPage = goodSize - b.length;
@@ -779,7 +780,7 @@ version (StdUnittest)
     size_t pageSize = getPageSize();
     size_t numPages = 26214;
     AscendingPageAllocator a = AscendingPageAllocator(numPages * pageSize);
-    for (int i = 0; i < numPages; i++)
+    foreach (i; 0 .. numPages)
     {
         void[] buf = a.allocate(pageSize);
         assert(buf.length == pageSize);
@@ -797,7 +798,8 @@ version (StdUnittest)
     size_t numPages = 26214;
     uint alignment = cast(uint) pageSize;
     AscendingPageAllocator a = AscendingPageAllocator(numPages * pageSize);
-    for (int i = 0; i < numPages; i++)
+
+    foreach (i; 0 .. numPages)
     {
         void[] buf = a.alignedAllocate(pageSize, alignment);
         assert(buf.length == pageSize);
@@ -832,7 +834,7 @@ version (StdUnittest)
         testrw(b2);
         assert(b2.length == pageSize);
 
-        static if(hasMember!(Allocator, "getAvailableSize"))
+        static if (hasMember!(Allocator, "getAvailableSize"))
         assert(a.getAvailableSize() == pageSize * 3);
 
         void[] b3 = a.allocate(pageSize / 2);
@@ -853,7 +855,7 @@ version (StdUnittest)
         assert(a.expand(b3, 2));
         assert(a.expand(b3, 0));
 
-        static if(hasMember!(Allocator, "getAvailableSize"))
+        static if (hasMember!(Allocator, "getAvailableSize"))
         assert(a.getAvailableSize() == pageSize);
 
         assert(b3.length == pageSize + 1);
@@ -897,13 +899,13 @@ version (StdUnittest)
 
     for (int i = 0; i < numPages; i += testNum * allocPages)
     {
-        for (int j = 0; j < testNum; j++)
+        foreach (j; 0 .. testNum)
         {
             buf[j] = a.allocate(pageSize * allocPages);
             testrw(buf[j]);
         }
 
-        for (int j = 0; j < testNum; j++)
+        foreach (j; 0 .. testNum)
         {
             a.deallocate(buf[j]);
         }
@@ -921,13 +923,13 @@ version (StdUnittest)
 
     for (int i = 0; i < numPages; i += testNum * allocPages)
     {
-        for (int j = 0; j < testNum; j++)
+        foreach (j; 0 .. testNum)
         {
             buf[j] = a.allocate(pageSize * allocPages);
             testrw(buf[j]);
         }
 
-        for (int j = 0; j < testNum; j++)
+        foreach (j; 0 .. testNum)
         {
             a.deallocate(buf[j]);
         }
@@ -1001,12 +1003,10 @@ version (StdUnittest)
 {
     import core.thread : ThreadGroup;
     import std.algorithm;
-    enum numThreads = 100;
-
     import core.internal.spinlock : SpinLock;
+
+    enum numThreads = 100;
     SpinLock lock = SpinLock(SpinLock.Contention.lengthy);
-
-
     ulong[numThreads] ptrVals;
     size_t count = 0;
     shared SharedAscendingPageAllocator a = SharedAscendingPageAllocator(4096 * numThreads);
@@ -1033,7 +1033,8 @@ version (StdUnittest)
     tg.joinAll();
 
     ptrVals[].sort();
-    for (int i = 0; i < numThreads - 1; i++) {
+    foreach (i; 0 .. numThreads - 1)
+    {
         assert(ptrVals[i] + 4096 == ptrVals[i + 1]);
     }
 }
@@ -1047,7 +1048,6 @@ version (StdUnittest)
     SpinLock lock = SpinLock(SpinLock.Contention.lengthy);
     enum numThreads = 100;
     void[][numThreads] buf;
-    ulong[numThreads] ptrVals;
     size_t count = 0;
     shared SharedAscendingPageAllocator a = SharedAscendingPageAllocator(2 * 4096 * numThreads);
 
@@ -1076,7 +1076,8 @@ version (StdUnittest)
     tg.joinAll();
 
     sort!((a, b) => a.ptr < b.ptr)(buf[0 .. 100]);
-    for (int i = 0; i < numThreads - 1; i++) {
+    foreach(i; 0 .. numThreads - 1)
+    {
         assert(buf[i].ptr + buf[i].length == buf[i + 1].ptr);
     }
 }
