@@ -2508,7 +2508,10 @@ Forces $(D this) to the null state.
  */
     void nullify()()
     {
-        .destroy(_value);
+        static if (is(T == class))
+            _value = null;
+        else
+            .destroy(_value);
         _isNull = true;
     }
 
