@@ -2968,6 +2968,24 @@ auto nullable(T)(T t)
     var.nullify;
 }
 
+// Issue 17440
+@system unittest
+{
+    static class C
+    {
+        int canary;
+        ~this()
+        {
+            canary = 0x5050DEAD;
+        }
+    }
+    auto c = new C;
+    c.canary = 0xA71FE;
+    auto nc = nullable(c);
+    nc.nullify;
+    assert(c.canary == 0xA71FE);
+}
+
 /**
 Just like $(D Nullable!T), except that the null state is defined as a
 particular value. For example, $(D Nullable!(uint, uint.max)) is an
