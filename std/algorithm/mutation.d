@@ -78,7 +78,7 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 module std.algorithm.mutation;
 
 import std.range.primitives;
-import std.traits : isArray, isBlitAssignable, isNarrowString, Unqual, isSomeChar;
+import std.traits : isArray, isBlitAssignable, isNarrowString, Unqual, isSomeChar, isDynamicArray;
 // FIXME
 import std.typecons; // : tuple, Tuple;
 
@@ -351,18 +351,25 @@ private enum bool areCopyCompatibleArrays(T1, T2) =
 
 // copy
 /**
-Copies the content of `source` into `target` and returns the
-remaining (unfilled) part of `target`.
+Copies the content of `source` into `target`.
 
-Preconditions: `target` shall have enough room to accommodate
+If `target` is an $(REF_ALTTEXT output range, isOutputRange, std,range,primitives)
+which is a range with assignable elements, then `copy` returns the remaining
+(unfilled) part of `target`. In this case, `target` must have enough room to accommodate
 the entirety of `source`.
+
+If `target` is an $(REF_ALTTEXT output range, isOutputRange, std,range,primitives)
+which defines a `put` method, than nothing is returned. In this case, it's generally
+recommended to pass `target` as an lvalue, to avoid any issues with copying the output
+data by value.
 
 Params:
     source = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
-    target = an output range
+    target = an $(REF_ALTTEXT output range, isOutputRange, std,range,primitives)
 
 Returns:
-    The unfilled part of target
+    The unfilled part of `target` if `target` is not a `put` defining output
+    range.
 
 See_Also:
     $(HTTP sgi.com/tech/stl/_copy.html, STL's _copy)
@@ -399,7 +406,8 @@ if (areCopyCompatibleArrays!(SourceRange, TargetRange))
 TargetRange copy(SourceRange, TargetRange)(SourceRange source, TargetRange target)
 if (!areCopyCompatibleArrays!(SourceRange, TargetRange) &&
     isInputRange!SourceRange &&
-    isOutputRange!(TargetRange, ElementType!SourceRange))
+    isOutputRange!(TargetRange, ElementType!SourceRange) &&
+    (isArray!TargetRange || hasAssignableElements!TargetRange))
 {
     // Specialize for 2 random access ranges.
     // Typically 2 random access ranges are faster iterated by common
@@ -420,6 +428,17 @@ if (!areCopyCompatibleArrays!(SourceRange, TargetRange) &&
         put(target, source);
         return target;
     }
+}
+
+/// ditto
+void copy(SourceRange, TargetRange)(SourceRange source, auto ref TargetRange target)
+if (!areCopyCompatibleArrays!(SourceRange, TargetRange) &&
+    isInputRange!SourceRange &&
+    isOutputRange!(TargetRange, ElementType!SourceRange) &&
+    !isArray!TargetRange &&
+    !hasAssignableElements!TargetRange)
+{
+    put(target, source);
 }
 
 ///
