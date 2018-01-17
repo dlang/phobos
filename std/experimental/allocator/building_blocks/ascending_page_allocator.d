@@ -47,8 +47,12 @@ private:
 public:
     enum uint alignment = 4096;
     /**
-    The allocator receives as a parameter the size in pages of the virtual
-    address range
+    Rounds the mapping size to the next multiple of the page size and calls
+    the OS primitive responsible for creating memory mappings: `mmap` on POSIX and
+    `VirtualAlloc` on Windows.
+
+    Params:
+    n = mapping size in bytes
     */
     this(size_t n)
     {
@@ -391,8 +395,12 @@ private:
 public:
     enum uint alignment = 4096;
     /**
-    The allocator receives as a parameter the size in pages of the virtual
-    address range
+    Rounds the mapping size to the next multiple of the page size and calls
+    the OS primitive responsible for creating memory mappings: `mmap` on POSIX and
+    `VirtualAlloc` on Windows.
+
+    Params:
+    n = mapping size in bytes
     */
     this(size_t n)
     {
