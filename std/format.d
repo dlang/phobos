@@ -2590,6 +2590,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 /*
     Formatting a $(D creal) is deprecated but still kept around for a while.
  */
+deprecated("Use of complex types is deprecated. Use std.complex")
 private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
 if (is(Unqual!T : creal) && !is(T == enum) && !hasToString!(T, Char))
 {
@@ -2604,6 +2605,8 @@ if (is(Unqual!T : creal) && !is(T == enum) && !hasToString!(T, Char))
     put(w, 'i');
 }
 
+version(TestComplex)
+deprecated
 @safe /*pure*/ unittest     // formatting floating point values is now impure
 {
     import std.conv : to;
@@ -2621,6 +2624,8 @@ if (is(Unqual!T : creal) && !is(T == enum) && !hasToString!(T, Char))
     }
 }
 
+version(TestComplex)
+deprecated
 @system unittest
 {
     formatTest( 3+2.25i, "3+2.25i" );
@@ -2641,6 +2646,7 @@ if (is(Unqual!T : creal) && !is(T == enum) && !hasToString!(T, Char))
 /*
     Formatting an $(D ireal) is deprecated but still kept around for a while.
  */
+deprecated("Use of imaginary types is deprecated. Use std.complex")
 private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
 if (is(Unqual!T : ireal) && !is(T == enum) && !hasToString!(T, Char))
 {
@@ -2650,6 +2656,8 @@ if (is(Unqual!T : ireal) && !is(T == enum) && !hasToString!(T, Char))
     put(w, 'i');
 }
 
+version(TestComplex)
+deprecated
 @safe /*pure*/ unittest     // formatting floating point values is now impure
 {
     import std.conv : to;
@@ -2661,6 +2669,8 @@ if (is(Unqual!T : ireal) && !is(T == enum) && !hasToString!(T, Char))
     }
 }
 
+version(TestComplex)
+deprecated
 @system unittest
 {
     formatTest( 2.25i, "2.25i" );
@@ -5494,20 +5504,22 @@ private bool needToSwapEndianess(Char)(const ref FormatSpec!Char f)
 
     s = format("%d %s", 0x1234AF, 0xAFAFAFAF);
     assert(s == "1193135 2947526575");
+}
 
-    //version(X86_64)
-    //{
-    //    pragma(msg, "several format tests disabled on x86_64 due to bug 5625");
-    //}
-    //else
-    //{
-        s = format("%s", 1.2 + 3.4i);
+version(TestComplex)
+deprecated
+@system unittest
+{
+        string s = format("%s", 1.2 + 3.4i);
         assert(s == "1.2+3.4i", s);
+}
 
-        //s = format("%x %X", 1.32, 6.78f);
-        //assert(s == "3ff51eb851eb851f 40D8F5C3");
+@system unittest
+{
+    import std.conv : octal;
 
-    //}
+    string s;
+    int i;
 
     s = format("%#06.*f",2,12.345);
     assert(s == "012.35");

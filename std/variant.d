@@ -1192,6 +1192,7 @@ public:
     }
 }
 
+
 @system unittest
 {
     import std.conv : to;
@@ -1484,6 +1485,11 @@ be arbitrarily complex.
     assert(obj.get!2["customer"] == "John");
 }
 
+private struct FakeComplexReal
+{
+    real re, im;
+}
+
 /**
 Alias for $(LREF VariantN) instantiated with the largest size of `creal`,
 `char[]`, and `void delegate()`. This ensures that `Variant` is large enough
@@ -1492,7 +1498,7 @@ pointers, delegates, and class references.  You may want to use
 $(D VariantN) directly with a different maximum size either for
 storing larger types unboxed, or for saving memory.
  */
-alias Variant = VariantN!(maxSize!(creal, char[], void delegate()));
+alias Variant = VariantN!(maxSize!(FakeComplexReal, char[], void delegate()));
 
 /**
  * Returns an array of variants constructed from $(D args).
@@ -1770,16 +1776,13 @@ static class VariantException : Exception
     {
         auto v1 = Variant(42);
         auto v2 = Variant("foo");
-        auto v3 = Variant(1+2.0i);
 
         int[Variant] hash;
         hash[v1] = 0;
         hash[v2] = 1;
-        hash[v3] = 2;
 
         assert( hash[v1] == 0 );
         assert( hash[v2] == 1 );
-        assert( hash[v3] == 2 );
     }
 
     {
@@ -1793,6 +1796,15 @@ static class VariantException : Exception
         assert( vhash.get!(int[char[]])["b"] == 2 );
         assert( vhash.get!(int[char[]])["c"] == 3 );
     }
+}
+
+version(TestComplex)
+deprecated
+@system unittest
+{
+    auto v3 = Variant(1+2.0i);
+    hash[v3] = 2;
+    assert( hash[v3] == 2 );
 }
 
 @system unittest

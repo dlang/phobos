@@ -507,7 +507,7 @@ enum real SQRT1_2 =    SQRT2/2;                               /** $(SQRT)$(HALF)
 // it's quite tricky check for a type who will trigger a deprecation when accessed
 template isDeprecatedComplex(T)
 {
-    static if (__traits(isFloating, T) && __traits(isDeprecated, T))
+    static if (__traits(isDeprecated, T))
     {
         enum isDeprecatedComplex = true;
     }
@@ -546,10 +546,11 @@ deprecated unittest
  *     The absolute value of the number.  If floating-point or integral,
  *     the return type will be the same as the input;
  */
-Num abs(Num)(Num x) @safe pure nothrow
-if ((is(typeof(Num.init >= 0)) && is(typeof(-Num.init)) ||
-    (is(Num == short) || is(Num == byte))) &&
-    !isDeprecatedComplex!Num)
+auto abs(Num)(Num x)
+// workaround for https://issues.dlang.org/show_bug.cgi?id=18251
+//if (!isDeprecatedComplex!Num &&
+    //(is(typeof(Num.init >= 0)) && is(typeof(-Num.init)) ||
+    //(is(Num == short) || is(Num == byte))))
 {
     static if (isFloatingPoint!(Num))
         return fabs(x);
@@ -562,19 +563,22 @@ if ((is(typeof(Num.init >= 0)) && is(typeof(-Num.init)) ||
     }
 }
 
+import std.meta : AliasSeq;
 deprecated("Please use std.complex")
-auto abs(Num)(Num z) @safe pure nothrow @nogc
-if (isDeprecatedComplex!Num)
+static foreach (Num; AliasSeq!(cfloat, cdouble, creal, ifloat, idouble, ireal))
 {
-    enum m = Num.mangleof;
-    // cfloat, cdouble, creal
-    static if (m == "q" || m == "r" || m == "c")
-        return hypot(z.re, z.im);
-    // ifloat, idouble, ireal
-    else static if (m == "o" || m == "p" || m == "j")
-        return fabs(z.im);
-    else
-        static assert(0, "Unsupported type: " ~ Num.stringof);
+    auto abs(Num z) @safe pure nothrow @nogc
+    {
+        enum m = Num.mangleof;
+        // cfloat, cdouble, creal
+        static if (m == "q" || m == "r" || m == "c")
+            return hypot(z.re, z.im);
+        // ifloat, idouble, ireal
+        else static if (m == "o" || m == "p" || m == "j")
+            return fabs(z.im);
+        else
+            static assert(0, "Unsupported type: " ~ Num.stringof);
+    }
 }
 
 /// ditto
