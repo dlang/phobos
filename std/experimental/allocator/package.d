@@ -2023,11 +2023,9 @@ reference behaves as follows.
 $(UL
 $(LI If $(D A) has no state, the resulting object is allocated in static
 shared storage.)
-$(LI If $(D A) has state and is copyable, the result will store a copy of it
-within. The result itself is allocated in its own statically-typed allocator.)
-$(LI If $(D A) has state and is not copyable, the result will move the
-passed-in argument into the result. The result itself is allocated in its own
-statically-typed allocator.)
+$(LI If $(D A) has state, the result will $(REF move, std,algorithm,mutation)
+the supplied allocator $(D A a) within. The result itself is allocated in its
+own statically-typed allocator.)
 )
 
 */
@@ -2048,27 +2046,18 @@ if (!isPointer!A)
         assert(result);
         return result;
     }
-    else static if (is(typeof({ A b = a; A c = b; }))) // copyable
+    else
     {
         auto state = a.allocate(stateSize!(CAllocatorImpl!A));
+        import std.algorithm.mutation : move;
         import std.traits : hasMember;
         static if (hasMember!(A, "deallocate"))
         {
             scope(failure) a.deallocate(state);
         }
-        return cast(CAllocatorImpl!A) emplace!(CAllocatorImpl!A)(state);
-    }
-    else // the allocator object is not copyable
-    {
-        // This is sensitive... create on the stack and then move
-        enum s = stateSize!(CAllocatorImpl!A).divideRoundUp(ulong.sizeof);
-        ulong[s] state;
-        import std.algorithm.mutation : move;
-        emplace!(CAllocatorImpl!A)(state[], move(a));
-        auto dynState = a.allocate(stateSize!(CAllocatorImpl!A));
-        // Bitblast the object in its final destination
-        dynState[] = state[];
-        return cast(CAllocatorImpl!A) dynState.ptr;
+        auto tmp = cast(CAllocatorImpl!A) emplace!(CAllocatorImpl!A)(state);
+        move(a, tmp.impl);
+        return tmp;
     }
 }
 
@@ -2106,6 +2095,25 @@ CAllocatorImpl!(A, Yes.indirect) allocatorObject(A)(A* pa)
     assert(a.deallocate(b));
 }
 
+unittest
+{
+    import std.conv;
+    import std.experimental.allocator.mallocator;
+    import std.experimental.allocator.building_blocks.stats_collector;
+
+    alias SCAlloc = StatsCollector!(Mallocator, Options.bytesUsed);
+    SCAlloc statsCollectorAlloc;
+    assert(statsCollectorAlloc.bytesUsed == 0);
+
+    auto _allocator = allocatorObject(statsCollectorAlloc);
+    // Ensure that the allocator was passed through in CAllocatorImpl
+    // This allocator was used to allocate the chunk that holds the
+    // CAllocatorImpl object; which is it's own wrapper
+    assert(_allocator.impl.bytesUsed == stateSize!(CAllocatorImpl!(SCAlloc)));
+    _allocator.allocate(1);
+    assert(_allocator.impl.bytesUsed == stateSize!(CAllocatorImpl!(SCAlloc)) + 1);
+}
+
 /**
 
 Returns a dynamically-typed $(D CSharedAllocator) built around a given statically-
@@ -2117,8 +2125,9 @@ reference behaves as follows.
 $(UL
 $(LI If $(D A) has no state, the resulting object is allocated in static
 shared storage.)
-$(LI If $(D A) has state and is copyable, the result will store a copy of it
-within. The result itself is allocated in its own statically-typed allocator.)
+$(LI If $(D A) has state and is copyable, the result will
+$(REF move, std,algorithm,mutation) the supplied allocator $(D A a) within.
+The result itself is allocated in its own statically-typed allocator.)
 $(LI If $(D A) has state and is not copyable, the result will move the
 passed-in argument into the result. The result itself is allocated in its own
 statically-typed allocator.)
@@ -2146,12 +2155,15 @@ if (!isPointer!A)
     else static if (is(typeof({ shared A b = a; shared A c = b; }))) // copyable
     {
         auto state = a.allocate(stateSize!(CSharedAllocatorImpl!A));
+        import std.algorithm.mutation : move;
         import std.traits : hasMember;
         static if (hasMember!(A, "deallocate"))
         {
             scope(failure) a.deallocate(state);
         }
-        return emplace!(shared CSharedAllocatorImpl!A)(state);
+        auto tmp = emplace!(shared CSharedAllocatorImpl!A)(state);
+        move(a, tmp.impl);
+        return tmp;
     }
     else // the allocator object is not copyable
     {
