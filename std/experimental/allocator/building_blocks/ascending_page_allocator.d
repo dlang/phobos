@@ -1010,7 +1010,7 @@ version (StdUnittest)
 @system unittest
 {
     import core.thread : ThreadGroup;
-    import std.algorithm;
+    import std.algorithm.sorting : sort;
     import core.internal.spinlock : SpinLock;
 
     enum numThreads = 100;
@@ -1050,7 +1050,7 @@ version (StdUnittest)
 @system unittest
 {
     import core.thread : ThreadGroup;
-    import std.algorithm : sort;
+    import std.algorithm.sorting : sort;
     import core.internal.spinlock : SpinLock;
 
     SpinLock lock = SpinLock(SpinLock.Contention.lengthy);
