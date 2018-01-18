@@ -132,7 +132,7 @@ else
 endif
 
 # Set DFLAGS
-DFLAGS=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -dip25 $(MODEL_FLAG) $(PIC)
+DFLAGS=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -dip25 $(MODEL_FLAG) $(PIC) -transition=complex
 ifeq ($(BUILD),debug)
 	DFLAGS += -g -debug
 else

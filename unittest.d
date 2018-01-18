@@ -81,11 +81,6 @@ int main(string[] args)
     std.zlib.adler32(0,null);            // D.zlib
     auto t = task!cmp("foo", "bar");  // parallelism
 
-    creal c = 3.0 + 4.0i;
-    c = sqrt(c);
-    assert(c.re == 2);
-    assert(c.im == 1);
-
     printf("args.length = %d\n", args.length);
     for (int i = 0; i < args.length; i++)
         printf("args[%d] = '%.*s'\n", i, args[i].length, args[i].ptr);

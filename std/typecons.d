@@ -2300,13 +2300,13 @@ string alignForSize(E...)(const char[][] names...)
 {
     enum x = alignForSize!(int[], char[3], short, double[5])("x", "y","z", "w");
     struct Foo { int x; }
-    enum y = alignForSize!(ubyte, Foo, cdouble)("x", "y", "z");
+    enum y = alignForSize!(ubyte, Foo, double)("x", "y", "z");
 
     enum passNormalX = x == "double[5] w;\nint[] x;\nshort z;\nchar[3] y;\n";
-    enum passNormalY = y == "cdouble z;\nFoo y;\nubyte x;\n";
+    enum passNormalY = y == "double z;\nFoo y;\nubyte x;\n";
 
     enum passAbnormalX = x == "int[] x;\ndouble[5] w;\nshort z;\nchar[3] y;\n";
-    enum passAbnormalY = y == "Foo y;\ncdouble z;\nubyte x;\n";
+    enum passAbnormalY = y == "Foo y;\ndouble z;\nubyte x;\n";
     // ^ blame http://d.puremagic.com/issues/show_bug.cgi?id=231
 
     static assert(passNormalX || passAbnormalX && double.alignof <= (int[]).alignof);

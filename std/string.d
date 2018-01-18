@@ -6111,7 +6111,6 @@ if (isSomeString!S ||
   {
     assert(isNumeric(to!string(real.nan)) == true);
     assert(isNumeric(to!string(-real.infinity)) == true);
-    assert(isNumeric(to!string(123e+2+1234.78Li)) == true);
   }
 
     string s = "$250.99-";
@@ -6122,6 +6121,14 @@ if (isSomeString!S ||
 
     assert(!isNumeric("-"));
     assert(!isNumeric("+"));
+}
+
+version(TestComplex)
+deprecated
+unittest
+{
+    import std.conv : to;
+    assert(isNumeric(to!string(123e+2+1234.78Li)) == true);
 }
 
 /*****************************

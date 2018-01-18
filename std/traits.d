@@ -5191,7 +5191,7 @@ template BooleanTypeOf(T)
             static assert( is(Q!T == BooleanTypeOf!( SubTypeOf!(Q!T) )));
         }
 
-    static foreach (T; AliasSeq!(void, NumericTypeList, ImaginaryTypeList, ComplexTypeList, CharTypeList))
+    static foreach (T; AliasSeq!(void, NumericTypeList, /*ImaginaryTypeList, ComplexTypeList,*/ CharTypeList))
         static foreach (Q; TypeQualifierList)
         {
             static assert(!is(BooleanTypeOf!(            Q!T  )), Q!T.stringof);
@@ -5242,7 +5242,7 @@ template IntegralTypeOf(T)
             static assert( is(Q!T == IntegralTypeOf!( SubTypeOf!(Q!T) )));
         }
 
-    static foreach (T; AliasSeq!(void, bool, FloatingPointTypeList, ImaginaryTypeList, ComplexTypeList, CharTypeList))
+    static foreach (T; AliasSeq!(void, bool, FloatingPointTypeList, /*ImaginaryTypeList, ComplexTypeList,*/ CharTypeList))
         static foreach (Q; TypeQualifierList)
         {
             static assert(!is(IntegralTypeOf!(            Q!T  )));
@@ -5277,7 +5277,7 @@ template FloatingPointTypeOf(T)
             static assert( is(Q!T == FloatingPointTypeOf!( SubTypeOf!(Q!T) )));
         }
 
-    static foreach (T; AliasSeq!(void, bool, IntegralTypeList, ImaginaryTypeList, ComplexTypeList, CharTypeList))
+    static foreach (T; AliasSeq!(void, bool, IntegralTypeList, /*ImaginaryTypeList, ComplexTypeList,*/ CharTypeList))
         static foreach (Q; TypeQualifierList)
         {
             static assert(!is(FloatingPointTypeOf!(            Q!T  )));
@@ -5306,7 +5306,7 @@ template NumericTypeOf(T)
             static assert( is(Q!T == NumericTypeOf!( SubTypeOf!(Q!T) )));
         }
 
-    static foreach (T; AliasSeq!(void, bool, CharTypeList, ImaginaryTypeList, ComplexTypeList))
+    static foreach (T; AliasSeq!(void, bool, CharTypeList, /*ImaginaryTypeList, ComplexTypeList*/))
         static foreach (Q; TypeQualifierList)
         {
             static assert(!is(NumericTypeOf!(            Q!T  )));
@@ -5367,7 +5367,7 @@ template CharTypeOf(T)
             static assert( is(CharTypeOf!( SubTypeOf!(Q!T) )));
         }
 
-    static foreach (T; AliasSeq!(void, bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList))
+    static foreach (T; AliasSeq!(void, bool, NumericTypeList, /*ImaginaryTypeList, ComplexTypeList*/))
         static foreach (Q; TypeQualifierList)
         {
             static assert(!is(CharTypeOf!(            Q!T  )));
@@ -5399,7 +5399,7 @@ template StaticArrayTypeOf(T)
 
 @safe unittest
 {
-    static foreach (T; AliasSeq!(bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList))
+    static foreach (T; AliasSeq!(bool, NumericTypeList, /*ImaginaryTypeList, ComplexTypeList*/))
         static foreach (Q; AliasSeq!(TypeQualifierList, InoutOf, SharedInoutOf))
         {
             static assert(is( Q!(   T[1] ) == StaticArrayTypeOf!( Q!(              T[1]  ) ) ));
@@ -5436,7 +5436,7 @@ template DynamicArrayTypeOf(T)
 
 @safe unittest
 {
-    static foreach (T; AliasSeq!(/*void, */bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList))
+    static foreach (T; AliasSeq!(/*void, */bool, NumericTypeList, /*ImaginaryTypeList, ComplexTypeList*/))
         static foreach (Q; AliasSeq!(TypeQualifierList, InoutOf, SharedInoutOf))
         {
             static assert(is( Q!T[]  == DynamicArrayTypeOf!( Q!T[] ) ));
@@ -6103,7 +6103,6 @@ enum bool isEqualityComparable(T) = ifTestable!(T, unaryFun!"a == a");
 {
     static assert(isEqualityComparable!int);
     static assert(isEqualityComparable!string);
-    static assert(isEqualityComparable!creal);
     static assert(!isEqualityComparable!void);
 
     struct Foo {}
@@ -6121,6 +6120,13 @@ enum bool isEqualityComparable(T) = ifTestable!(T, unaryFun!"a == a");
     static assert(isEqualityComparable!Bar);
     assert(b1 == b2);
     assert(b1 != b3);
+}
+
+version(TestComplex)
+deprecated
+@safe unittest
+{
+    static assert(isEqualityComparable!creal);
 }
 
 /**
