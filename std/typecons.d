@@ -2508,7 +2508,10 @@ Forces $(D this) to the null state.
  */
     void nullify()()
     {
-        .destroy(_value);
+        static if (is(T == class) || is(T == interface))
+            _value = null;
+        else
+            .destroy(_value);
         _isNull = true;
     }
 
@@ -2963,6 +2966,31 @@ auto nullable(T)(T t)
     Nullable!DisabledDefaultConstructor var;
     var = DisabledDefaultConstructor(5);
     var.nullify;
+}
+
+// Issue 17440
+@system unittest
+{
+    static interface I { }
+
+    static class C : I
+    {
+        int canary;
+        ~this()
+        {
+            canary = 0x5050DEAD;
+        }
+    }
+    auto c = new C;
+    c.canary = 0xA71FE;
+    auto nc = nullable(c);
+    nc.nullify;
+    assert(c.canary == 0xA71FE);
+
+    I i = c;
+    auto ni = nullable(i);
+    ni.nullify;
+    assert(c.canary == 0xA71FE);
 }
 
 /**
