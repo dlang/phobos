@@ -32,15 +32,15 @@ $(LINK2 http://dlang.org/download.html, download page).
 
 Compared to using libcurl directly this module allows simpler client code for
 common uses, requires no unsafe operations, and integrates better with the rest
-of the language. Futhermore it provides <a href="std_range.html">$(D range)</a>
+of the language. Futhermore it provides $(MREF_ALTTEXT range, std,range)
 access to protocols supported by libcurl both synchronously and asynchronously.
 
 A high level and a low level API are available. The high level API is built
 entirely on top of the low level one.
 
 The high level API is for commonly used functionality such as HTTP/FTP get. The
-$(LREF byLineAsync) and $(LREF byChunkAsync) provides asynchronous <a
-href="std_range.html">$(D ranges)</a> that performs the request in another
+$(LREF byLineAsync) and $(LREF byChunkAsync) provides asynchronous
+$(MREF_ALTTEXT range, std,range) that performs the request in another
 thread while handling a line/chunk in the current thread.
 
 The low level API allows for streaming and other advanced features.
