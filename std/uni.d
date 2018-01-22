@@ -4929,7 +4929,6 @@ template Utf8Matcher()
 
         bool lookup(int size, Mode mode, Range)(ref Range inp) const pure @trusted
         {
-            import std.typecons : staticIota;
             if (inp.length < size)
             {
                 badEncoding();
@@ -4937,7 +4936,7 @@ template Utf8Matcher()
             }
             char[size] needle = void;
             needle[0] = leadMask!size & inp[0];
-            foreach (i; staticIota!(1, size))
+            static foreach (i; 1 .. size)
             {
                 needle[i] = truncate(inp[i]);
             }
@@ -5634,7 +5633,7 @@ template Sequence(size_t start, size_t end)
         {
             import std.stdio : writefln, writeln;
             writeln("---TRIE FOOTPRINT STATS---");
-            foreach (i; staticIota!(0, t.table.dim) )
+            static foreach (i; 0 .. t.table.dim)
             {
                 writefln("lvl%s = %s bytes;  %s pages"
                          , i, t.bytes!i, t.pages!i);
@@ -5643,7 +5642,7 @@ template Sequence(size_t start, size_t end)
             version(none)
             {
                 writeln("INDEX (excluding value level):");
-                foreach (i; staticIota!(0, t.table.dim-1) )
+                static foreach (i; 0 .. t.table.dim-1)
                     writeln(t.table.slice!(i)[0 .. t.table.length!i]);
             }
             writeln("---------------------------");
