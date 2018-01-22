@@ -561,7 +561,6 @@ follow this pattern:
 private template optionValidator(A...)
 {
     import std.format : format;
-    import std.typecons : staticIota;
 
     enum fmt = "getopt validator: %s (at position %d)";
     enum isReceiver(T) = isPointer!T || (is(T == function)) || (is(T == delegate));
@@ -580,24 +579,27 @@ private template optionValidator(A...)
             {
                 msg = format(fmt, "invalid argument type: " ~ A[0].stringof, 0);
             }
-            else foreach (i; staticIota!(1, A.length))
+            else
             {
-                static if (!isReceiver!(A[i]) && !isOptionStr!(A[i]) &&
-                    !(is(A[i] == config)))
+                static foreach (i; 1 .. A.length)
                 {
-                    msg = format(fmt, "invalid argument type: " ~ A[i].stringof, i);
-                    break;
-                }
-                else static if (isReceiver!(A[i]) && !isOptionStr!(A[i-1]))
-                {
-                    msg = format(fmt, "a receiver can not be preceeded by a receiver", i);
-                    break;
-                }
-                else static if (i > 1 && isOptionStr!(A[i]) && isOptionStr!(A[i-1])
-                    && isSomeString!(A[i-2]))
-                {
-                    msg = format(fmt, "a string can not be preceeded by two strings", i);
-                    break;
+                    static if (!isReceiver!(A[i]) && !isOptionStr!(A[i]) &&
+                        !(is(A[i] == config)))
+                    {
+                        msg = format(fmt, "invalid argument type: " ~ A[i].stringof, i);
+                        goto end;
+                    }
+                    else static if (isReceiver!(A[i]) && !isOptionStr!(A[i-1]))
+                    {
+                        msg = format(fmt, "a receiver can not be preceeded by a receiver", i);
+                        goto end;
+                    }
+                    else static if (i > 1 && isOptionStr!(A[i]) && isOptionStr!(A[i-1])
+                        && isSomeString!(A[i-2]))
+                    {
+                        msg = format(fmt, "a string can not be preceeded by two strings", i);
+                        goto end;
+                    }
                 }
             }
             static if (!isReceiver!(A[$-1]) && !is(A[$-1] == config))
@@ -606,6 +608,7 @@ private template optionValidator(A...)
                     A.length -1);
             }
         }
+    end:
         return msg;
     }
     enum message = validator;
