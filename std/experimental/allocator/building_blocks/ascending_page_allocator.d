@@ -181,6 +181,8 @@ version (StdDdoc)
     */
     struct AscendingPageAllocator
     {
+        import std.typecons : Ternary;
+
         /**
         Rounds the mapping size to the next multiple of the page size and calls
         the OS primitive responsible for creating memory mappings: `mmap` on POSIX and
@@ -426,6 +428,8 @@ version (StdDdoc)
     */
     shared struct SharedAscendingPageAllocator
     {
+        import std.typecons : Ternary;
+
         /**
         Rounds the mapping size to the next multiple of the page size and calls
         the OS primitive responsible for creating memory mappings: `mmap` on POSIX and
