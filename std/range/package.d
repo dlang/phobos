@@ -11650,7 +11650,6 @@ if (isInputRange!R && isIntegral!(ElementType!R))
         bw.popFront();
         assert(bw[2 * bitsNum - 3] == true);
 
-        import core.exception : Error;
         import std.exception : assertThrown;
 
         // Check out of bounds error
