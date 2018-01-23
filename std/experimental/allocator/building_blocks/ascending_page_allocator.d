@@ -146,8 +146,8 @@ private mixin template AscendingPageAllocatorImpl(bool isShared)
         {
             import core.sys.windows.windows : VirtualAlloc, MEM_COMMIT, PAGE_READWRITE;
 
-            return VirtualAlloc(start, size, MEM_COMMIT, PAGE_READWRITE);
-            return ret != 0;
+            auto ret = VirtualAlloc(start, size, MEM_COMMIT, PAGE_READWRITE);
+            return ret != null;
         }
         else
         {
