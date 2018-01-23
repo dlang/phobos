@@ -7668,28 +7668,7 @@ template getUDAs(alias symbol, alias attribute)
 {
     import std.meta : Filter;
 
-    template isDesiredUDA(alias toCheck)
-    {
-        static if (is(typeof(attribute)) && !__traits(isTemplate, attribute))
-        {
-            static if (__traits(compiles, toCheck == attribute))
-                enum isDesiredUDA = toCheck == attribute;
-            else
-                enum isDesiredUDA = false;
-        }
-        else static if (is(typeof(toCheck)))
-        {
-            static if (__traits(isTemplate, attribute))
-                enum isDesiredUDA =  isInstanceOf!(attribute, typeof(toCheck));
-            else
-                enum isDesiredUDA = is(typeof(toCheck) == attribute);
-        }
-        else static if (__traits(isTemplate, attribute))
-            enum isDesiredUDA = isInstanceOf!(attribute, toCheck);
-        else
-            enum isDesiredUDA = is(toCheck == attribute);
-    }
-    alias getUDAs = Filter!(isDesiredUDA, __traits(getAttributes, symbol));
+    alias getUDAs = Filter!(isDesiredUDA!attribute, __traits(getAttributes, symbol));
 }
 
 ///
@@ -7792,6 +7771,31 @@ template getUDAs(alias symbol, alias attribute)
     static assert(getUDAs!(i, 42)[0] == 42);
 
     static assert(getUDAs!(i, 'c').length == 0);
+}
+
+private template isDesiredUDA(alias attribute)
+{
+    template isDesiredUDA(alias toCheck)
+    {
+        static if (is(typeof(attribute)) && !__traits(isTemplate, attribute))
+        {
+            static if (__traits(compiles, toCheck == attribute))
+                enum isDesiredUDA = toCheck == attribute;
+            else
+                enum isDesiredUDA = false;
+        }
+        else static if (is(typeof(toCheck)))
+        {
+            static if (__traits(isTemplate, attribute))
+                enum isDesiredUDA =  isInstanceOf!(attribute, typeof(toCheck));
+            else
+                enum isDesiredUDA = is(typeof(toCheck) == attribute);
+        }
+        else static if (__traits(isTemplate, attribute))
+            enum isDesiredUDA = isInstanceOf!(attribute, toCheck);
+        else
+            enum isDesiredUDA = is(toCheck == attribute);
+    }
 }
 
 /**
