@@ -1775,3 +1775,17 @@ unittest
     auto b = immutable BigInt("123");
     assert(b == 123);
 }
+
+@system pure unittest // issue 14767
+{
+    static immutable a = BigInt("340282366920938463463374607431768211455");
+    assert(a == BigInt("340282366920938463463374607431768211455"));
+
+    BigInt plusTwo(in BigInt n)
+    {
+        return n + 2;
+    }
+
+    enum BigInt test1 = BigInt(123);
+    enum BigInt test2 = plusTwo(test1);
+}
