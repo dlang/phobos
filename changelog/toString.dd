@@ -1,0 +1,30 @@
+`toString` Can Now Use Output Ranges
+
+The standard library has been modified to recognize and use `toString` overloads
+that accept $(REF_ALTTEXT output ranges, isOutputRange, std, range, primitives)
+when such overloads exist.
+
+-------
+import std.range.primitives;
+import std.stdio;
+
+struct MyType
+{
+    void toString(W)(ref W writer) if (isOutputRange!(W, char))
+    {
+        put(writer, "Custom toString");
+    }
+}
+
+auto t = MyType();
+writeln(t); // writes "Custom toString"
+-------
+
+This has several benefits for the user. First, this design is much friendlier
+to inlining than the `toString(scope void delegate(const(char)[]) sink)` method of
+`toString`. Second, this cuts down on memory usage, as characters are placed right
+into the output buffers of functions like $(REF format, std, format). Third,
+because `toString` is now a template, can be marked `@safe` via inference much more
+often.
+
+All previous forms of `toString` will continue to work.
