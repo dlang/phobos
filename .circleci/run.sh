@@ -98,7 +98,7 @@ style_lint()
     # dscanner needs a more up-to-date DMD version
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$DSCANNER_DMD_VER --activate)"
 
-    make -f posix.mak style_lint DUB=$DUB BUILD=$BUILD
+    make -f posix.mak style_lint DUB=$DUB BUILD=$BUILD MODEL=$MODEL
 }
 
 # run unittest with coverage
@@ -114,7 +114,7 @@ coverage()
 
     # So instead we run all tests individually (hoping that that doesn't break any tests).
     # -cov is enabled by the %.test target itself
-    make -j$N -f posix.mak BUILD=$BUILD $(find std etc -name "*.d" | sed "s/[.]d$/.test/")
+    make -j$N -f posix.mak BUILD=$BUILD MODEL=$MODEL $(find std etc -name "*.d" | sed "s/[.]d$/.test/")
 
     # Remove coverage information from lines with non-deterministic coverage.
     # These lines are annotated with a comment containing "nocoverage".
@@ -132,7 +132,7 @@ publictests()
     fi
     git -C ../tools checkout 6ad91215253b52e6ecfc39fe1854815867c66f23
 
-    make -f posix.mak -j$N publictests DUB=$DUB BUILD=$BUILD
+    make -f posix.mak -j$N publictests DUB=$DUB BUILD=$BUILD MODEL=$MODEL
 }
 
 case $1 in
