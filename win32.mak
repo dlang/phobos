@@ -216,6 +216,7 @@ SRC_STD_REGEX= \
 	std\regex\package.d \
 	std\regex\internal\parser.d \
 	std\regex\internal\tests.d \
+	std\regex\internal\tests2.d \
 	std\regex\internal\backtracking.d \
 	std\regex\internal\thompson.d \
 	std\regex\internal\kickstart.d \
@@ -516,6 +517,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -conf= -cov=90 $(UDFLAGS) -main -run std\conv.d
 	$(DMD) -conf= -cov=0  $(UDFLAGS) -main -run std\zip.d
 	$(DMD) -conf= -cov=77 $(UDFLAGS) -main -run std\regex\tests.d
+	$(DMD) -conf= -cov=77 $(UDFLAGS) -main -run std\regex\tests2.d
 	$(DMD) -conf= -cov=92 $(UDFLAGS) -main -run std\json.d
 	$(DMD) -conf= -cov=87 $(UDFLAGS) -main -run std\parallelism.d
 	$(DMD) -conf= -cov=50 $(UDFLAGS) -main -run std\mathspecial.d
