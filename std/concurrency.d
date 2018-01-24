@@ -2578,7 +2578,7 @@ auto ref initOnce(alias var)(lazy typeof(var) init, shared Mutex mutex)
     {
         synchronized (mutex)
         {
-            if (!atomicLoad!(MemoryOrder.acq)(flag))
+            if (!atomicLoad!(MemoryOrder.raw)(flag))
             {
                 var = init;
                 atomicStore!(MemoryOrder.rel)(flag, true);
