@@ -130,7 +130,7 @@ publictests()
     if [ ! -d ../tools ] ; then
         clone https://github.com/dlang/tools.git ../tools master
     fi
-    git -C ../tools checkout 6ad91215253b52e6ecfc39fe1854815867c66f23
+    git -C ../tools checkout 1e547d263fca3a90faf9c19f1fb37ff8286129ef
 
     make -f posix.mak -j$N publictests DUB=$DUB BUILD=$BUILD
 }
