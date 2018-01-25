@@ -7549,40 +7549,37 @@ public:
     static Date fromISOExtString(S)(in S isoExtString) @safe pure
         if (isSomeString!(S))
     {
-        import std.algorithm.searching : all, startsWith;
-        import std.ascii : isDigit;
-        import std.conv : to;
-        import std.exception : enforce;
+        import std.algorithm.searching : startsWith;
+        import std.conv : to, ConvException;
         import std.format : format;
         import std.string : strip;
 
-        auto dstr = to!dstring(strip(isoExtString));
+        auto str = strip(isoExtString);
+        short year;
+        ubyte month, day;
 
-        enforce(dstr.length >= 10, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+        if (str.length < 10 || str[$-3] != '-' || str[$-6] != '-')
+            throw new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString));
 
-        auto day = dstr[$-2 .. $];
-        auto month = dstr[$-5 .. $-3];
-        auto year = dstr[0 .. $-6];
-
-        enforce(dstr[$-3] == '-', new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        enforce(dstr[$-6] == '-', new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        enforce(all!isDigit(day),
-                new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        enforce(all!isDigit(month),
-                new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-
-        if (year.length > 4)
+        auto yearStr = str[0 .. $-6];
+        auto signAtBegining = cast(bool) yearStr.startsWith('-', '+');
+        if ((yearStr.length > 4) != signAtBegining)
         {
-            enforce(year.startsWith('-', '+'),
-                    new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-            enforce(all!isDigit(year[1..$]),
-                    new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+            throw new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString));
         }
-        else
-            enforce(all!isDigit(year),
-                    new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
 
-        return Date(to!short(year), to!ubyte(month), to!ubyte(day));
+        try
+        {
+            day = to!ubyte(str[$-2 .. $]);
+            month = to!ubyte(str[$-5 .. $-3]);
+            year = to!short(yearStr);
+        }
+        catch (ConvException)
+        {
+            throw new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString));
+        }
+
+        return Date(year, month, day);
     }
 
     ///
