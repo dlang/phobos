@@ -1,7 +1,7 @@
 `std.algorithm.searching.substitute` was added
 
 $(REF substitute, std,algorithm,searching) yields a lazy range with
-all occurrences of $(D substs) in $(R r) replaced with their substitution:
+all occurrences of `substs` in `r` replaced with their substitution:
 
 ---
 import std.algorithm.comparison : equal;

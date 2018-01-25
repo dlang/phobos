@@ -48,7 +48,7 @@ $(T2 reduce,
 $(T2 splitter,
         Lazily splits a range by a separator.)
 $(T2 substitute,
-        $(D [1, 2].substitute(1, 0.1)) returns $(D [0.1, 2]).)
+        `[1, 2].substitute(1, 0.1)` returns `[0.1, 2]`.)
 $(T2 sum,
         Same as `fold`, but specialized for accurate summation.)
 $(T2 uniq,
