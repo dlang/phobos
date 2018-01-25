@@ -12,6 +12,7 @@ module std.datetime.date;
 import core.time;// : TimeException;
 import std.traits : isSomeString, Unqual;
 import std.typecons : Flag;
+import std.range.primitives : isOutputRange;
 
 version(unittest) import std.exception : assertThrown;
 
@@ -7184,27 +7185,22 @@ public:
 
 
     /++
-        Converts this $(LREF Date) to a string with the format YYYYMMDD.
+        Converts this $(LREF Date) to a string with the format `YYYYMMDD`.
+        If `writer` is set, the resulting string will be written directly
+        to it.
+
+        Params:
+            writer = A `char` accepting $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+        Returns:
+            A `string` when not using an output range; `void` otherwise.
       +/
     string toISOString() const @safe pure nothrow
     {
-        import std.format : format;
-        try
-        {
-            if (_year >= 0)
-            {
-                if (_year < 10_000)
-                    return format("%04d%02d%02d", _year, _month, _day);
-                else
-                    return format("+%05d%02d%02d", _year, _month, _day);
-            }
-            else if (_year > -10_000)
-                return format("%05d%02d%02d", _year, _month, _day);
-            else
-                return format("%06d%02d%02d", _year, _month, _day);
-        }
-        catch (Exception e)
-            assert(0, "format() threw.");
+        import std.array : appender;
+        auto w = appender!string();
+        w.reserve(8);
+        toISOString(w);
+        return w.data;
     }
 
     ///
@@ -7239,28 +7235,58 @@ public:
         assert(idate.toISOString() == "19990706");
     }
 
-    /++
-        Converts this $(LREF Date) to a string with the format YYYY-MM-DD.
-      +/
-    string toISOExtString() const @safe pure nothrow
+    /// ditto
+    void toISOString(W)(ref W writer) const
+    if (isOutputRange!(W, char))
     {
-        import std.format : format;
+        import std.format : formattedWrite;
         try
         {
             if (_year >= 0)
             {
                 if (_year < 10_000)
-                    return format("%04d-%02d-%02d", _year, _month, _day);
+                    formattedWrite(writer, "%04d%02d%02d", _year, _month, _day);
                 else
-                    return format("+%05d-%02d-%02d", _year, _month, _day);
+                    formattedWrite(writer, "+%05d%02d%02d", _year, _month, _day);
             }
             else if (_year > -10_000)
-                return format("%05d-%02d-%02d", _year, _month, _day);
+                formattedWrite(writer, "%05d%02d%02d", _year, _month, _day);
             else
-                return format("%06d-%02d-%02d", _year, _month, _day);
+                formattedWrite(writer, "%06d%02d%02d", _year, _month, _day);
         }
         catch (Exception e)
-            assert(0, "format() threw.");
+            assert(0, "formattedWrite() threw.");
+    }
+
+    @safe pure unittest
+    {
+        import std.array : appender;
+
+        auto w = appender!(char[])();
+        Date(2010, 7, 4).toISOString(w);
+        assert(w.data == "20100704");
+        w.clear();
+        Date(1998, 12, 25).toISOString(w);
+        assert(w.data == "19981225");
+    }
+
+    /++
+        Converts this $(LREF Date) to a string with the format `YYYY-MM-DD`.
+        If `writer` is set, the resulting string will be written directly
+        to it.
+
+        Params:
+            writer = A `char` accepting $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+        Returns:
+            A `string` when not using an output range; `void` otherwise.
+      +/
+    string toISOExtString() const @safe pure nothrow
+    {
+        import std.array : appender;
+        auto w = appender!string();
+        w.reserve(10);
+        toISOExtString(w);
+        return w.data;
     }
 
     ///
@@ -7295,28 +7321,58 @@ public:
         assert(idate.toISOExtString() == "1999-07-06");
     }
 
-    /++
-        Converts this $(LREF Date) to a string with the format YYYY-Mon-DD.
-      +/
-    string toSimpleString() const @safe pure nothrow
+    /// ditto
+    void toISOExtString(W)(ref W writer) const
+    if (isOutputRange!(W, char))
     {
-        import std.format : format;
+        import std.format : formattedWrite;
         try
         {
             if (_year >= 0)
             {
                 if (_year < 10_000)
-                    return format("%04d-%s-%02d", _year, monthToString(_month), _day);
+                    formattedWrite(writer, "%04d-%02d-%02d", _year, _month, _day);
                 else
-                    return format("+%05d-%s-%02d", _year, monthToString(_month), _day);
+                    formattedWrite(writer, "+%05d-%02d-%02d", _year, _month, _day);
             }
             else if (_year > -10_000)
-                return format("%05d-%s-%02d", _year, monthToString(_month), _day);
+                formattedWrite(writer, "%05d-%02d-%02d", _year, _month, _day);
             else
-                return format("%06d-%s-%02d", _year, monthToString(_month), _day);
+                formattedWrite(writer, "%06d-%02d-%02d", _year, _month, _day);
         }
         catch (Exception e)
-            assert(0, "format() threw.");
+            assert(0, "formattedWrite() threw.");
+    }
+
+    @safe pure unittest
+    {
+        import std.array : appender;
+
+        auto w = appender!(char[])();
+        Date(2010, 7, 4).toISOExtString(w);
+        assert(w.data == "2010-07-04");
+        w.clear();
+        Date(-4, 1, 5).toISOExtString(w);
+        assert(w.data == "-0004-01-05");
+    }
+
+    /++
+        Converts this $(LREF Date) to a string with the format `YYYY-Mon-DD`.
+        If `writer` is set, the resulting string will be written directly
+        to it.
+
+        Params:
+            writer = A `char` accepting $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+        Returns:
+            A `string` when not using an output range; `void` otherwise.
+      +/
+    string toSimpleString() const @safe pure nothrow
+    {
+        import std.array : appender;
+        auto w = appender!string();
+        w.reserve(11);
+        toSimpleString(w);
+        return w.data;
     }
 
     ///
@@ -7351,6 +7407,40 @@ public:
         assert(idate.toSimpleString() == "1999-Jul-06");
     }
 
+    /// ditto
+    void toSimpleString(W)(ref W writer) const
+    if (isOutputRange!(W, char))
+    {
+        import std.format : formattedWrite;
+        try
+        {
+            if (_year >= 0)
+            {
+                if (_year < 10_000)
+                    formattedWrite(writer, "%04d-%s-%02d", _year, monthToString(_month), _day);
+                else
+                    formattedWrite(writer, "+%05d-%s-%02d", _year, monthToString(_month), _day);
+            }
+            else if (_year > -10_000)
+                formattedWrite(writer, "%05d-%s-%02d", _year, monthToString(_month), _day);
+            else
+                formattedWrite(writer, "%06d-%s-%02d", _year, monthToString(_month), _day);
+        }
+        catch (Exception e)
+            assert(0, "formattedWrite() threw.");
+    }
+
+    @safe pure unittest
+    {
+        import std.array : appender;
+
+        auto w = appender!(char[])();
+        Date(9, 12, 4).toSimpleString(w);
+        assert(w.data == "0009-Dec-04");
+        w.clear();
+        Date(-10000, 10, 20).toSimpleString(w);
+        assert(w.data == "-10000-Oct-20");
+    }
 
     /++
         Converts this $(LREF Date) to a string.
@@ -7390,6 +7480,12 @@ public:
         assert(idate.toString());
     }
 
+    /// ditto
+    void toString(W)(ref W writer) const
+    if (isOutputRange!(W, char))
+    {
+        toSimpleString(writer);
+    }
 
     /++
         Creates a $(LREF Date) from a string with the format YYYYMMDD. Whitespace
