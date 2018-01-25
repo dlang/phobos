@@ -9986,12 +9986,11 @@ int cmpTimeUnits(string lhs, string rhs) @safe pure
     import std.exception : enforce;
     import std.format : format;
 
-    auto tstrings = timeStrings;
-    immutable indexOfLHS = countUntil(tstrings, lhs);
-    immutable indexOfRHS = countUntil(tstrings, rhs);
+    immutable indexOfLHS = countUntil(timeStrings, lhs);
+    immutable indexOfRHS = countUntil(timeStrings, rhs);
 
-    enforce(indexOfLHS != -1, format("%s is not a valid TimeString", lhs));
-    enforce(indexOfRHS != -1, format("%s is not a valid TimeString", rhs));
+    enforce!DateTimeException(indexOfLHS != -1, format("%s is not a valid TimeString", lhs));
+    enforce!DateTimeException(indexOfRHS != -1, format("%s is not a valid TimeString", rhs));
 
     if (indexOfLHS < indexOfRHS)
         return -1;
@@ -10004,9 +10003,13 @@ int cmpTimeUnits(string lhs, string rhs) @safe pure
 ///
 @safe pure unittest
 {
+    import std.exception : assertThrown;
+
     assert(cmpTimeUnits("hours", "hours") == 0);
     assert(cmpTimeUnits("hours", "weeks") < 0);
     assert(cmpTimeUnits("months", "seconds") > 0);
+
+    assertThrown!DateTimeException(cmpTimeUnits("month", "second"));
 }
 
 @safe unittest
