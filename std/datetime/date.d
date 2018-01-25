@@ -8507,7 +8507,7 @@ public:
     }
 
 
-    // Shares documentation with "hours" version.
+    /// ditto
     ref TimeOfDay roll(string units)(long value) @safe pure nothrow @nogc
         if (units == "minutes" || units == "seconds")
     {
