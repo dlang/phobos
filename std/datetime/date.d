@@ -7783,37 +7783,37 @@ public:
     static Date fromSimpleString(S)(in S simpleString) @safe pure
         if (isSomeString!(S))
     {
-        import std.algorithm.searching : all, startsWith;
-        import std.ascii : isDigit;
-        import std.conv : to;
-        import std.exception : enforce;
+        import std.algorithm.searching : startsWith;
+        import std.conv : to, ConvException;
         import std.format : format;
         import std.string : strip;
 
-        auto dstr = to!dstring(strip(simpleString));
+        auto str = strip(simpleString);
 
-        enforce(dstr.length >= 11, new DateTimeException(format("Invalid string format: %s", simpleString)));
+        if (str.length < 11 || str[$-3] != '-' || str[$-7] != '-')
+            throw new DateTimeException(format!"Invalid string format: %s"(simpleString));
 
-        auto day = dstr[$-2 .. $];
-        auto month = monthFromString(to!string(dstr[$-6 .. $-3]));
-        auto year = dstr[0 .. $-7];
-
-        enforce(dstr[$-3] == '-', new DateTimeException(format("Invalid string format: %s", simpleString)));
-        enforce(dstr[$-7] == '-', new DateTimeException(format("Invalid string format: %s", simpleString)));
-        enforce(all!isDigit(day), new DateTimeException(format("Invalid string format: %s", simpleString)));
-
-        if (year.length > 4)
+        int year;
+        uint day;
+        auto month = monthFromString(str[$ - 6 .. $ - 3]);
+        auto yearStr = str[0 .. $ - 7];
+        auto signAtBegining = cast(bool) yearStr.startsWith('-', '+');
+        if ((yearStr.length > 4) != signAtBegining)
         {
-            enforce(year.startsWith('-', '+'),
-                    new DateTimeException(format("Invalid string format: %s", simpleString)));
-            enforce(all!isDigit(year[1..$]),
-                    new DateTimeException(format("Invalid string format: %s", simpleString)));
+            throw new DateTimeException(format!"Invalid string format: %s"(simpleString));
         }
-        else
-            enforce(all!isDigit(year),
-                    new DateTimeException(format("Invalid string format: %s", simpleString)));
 
-        return Date(to!short(year), month, to!ubyte(day));
+        try
+        {
+            day = to!uint(str[$ - 2 .. $]);
+            year = to!int(yearStr);
+        }
+        catch (ConvException)
+        {
+            throw new DateTimeException(format!"Invalid string format: %s"(simpleString));
+        }
+
+        return Date(year, month, day);
     }
 
     ///
@@ -10343,7 +10343,8 @@ string monthToString(Month month) @safe pure
         $(REF DateTimeException,std,datetime,date) if the given month is not a
         valid month string.
   +/
-Month monthFromString(string monthStr) @safe pure
+Month monthFromString(T)(T monthStr) @safe pure
+if (isSomeString!T)
 {
     import std.format : format;
     switch (monthStr)
@@ -10373,7 +10374,7 @@ Month monthFromString(string monthStr) @safe pure
         case "Dec":
             return Month.dec;
         default:
-            throw new DateTimeException(format("Invalid month %s", monthStr));
+            throw new DateTimeException(format!"Invalid month %s"(monthStr));
     }
 }
 
