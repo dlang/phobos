@@ -286,6 +286,7 @@ implemented by the allocator instance.
 */
 interface IAllocator
 {
+nothrow:
     /**
     Returns the alignment offered.
     */
@@ -361,6 +362,251 @@ interface IAllocator
     $(D Ternary.unknown) if not supported.
     */
     Ternary empty();
+
+    /**
+    Increases the reference count of the concrete class that implements this
+    interface.
+
+    For stateless allocators, this does nothing.
+    */
+    @safe @nogc
+    void incRef();
+
+    /**
+    Decreases the reference count of the concrete class that implements this
+    interface.
+    When the reference count is `0`, the object self-destructs.
+
+    Returns: `true` if the reference count is greater than `0` and `false` when
+    it hits `0`. For stateless allocators, it always returns `true`.
+    */
+    @safe @nogc
+    bool decRef();
+}
+
+/**
+A reference counted struct that wraps the dynamic allocator interface.
+This should be used wherever a uniform type is required for encapsulating
+various allocator implementations.
+
+Code that defines allocators ultimately implements the $(LREF IAllocator)
+interface, possibly by using $(LREF CAllocatorImpl) below, and then build a
+`RCIAllocator` out of this.
+
+Composition of allocators is not recommended at this level due to
+inflexibility of dynamic interfaces and inefficiencies caused by cascaded
+multiple calls. Instead, compose allocators using the static interface defined
+in $(A std_experimental_allocator_building_blocks.html,
+`std.experimental.allocator.building_blocks`), then adapt the composed
+allocator to `RCIAllocator` (possibly by using $(LREF allocatorObject) below).
+*/
+struct RCIAllocator
+{
+    private IAllocator _alloc;
+
+nothrow:
+    private this(this _)(IAllocator alloc)
+    {
+        assert(alloc);
+        _alloc = alloc;
+    }
+
+    @nogc @safe
+    this(this)
+    {
+        if (_alloc !is null)
+        {
+            _alloc.incRef();
+        }
+    }
+
+    @nogc
+    ~this()
+    {
+        if (_alloc !is null)
+        {
+            bool isLast = !_alloc.decRef();
+            if (isLast) _alloc = null;
+        }
+    }
+
+    @nogc
+    auto ref opAssign()(typeof(this) rhs)
+    {
+        if (_alloc is rhs._alloc)
+        {
+            return this;
+        }
+        // incRef was allready called by rhs posblit, so we're just moving
+        // calling dtor is the equivalent of decRef
+        __dtor();
+        _alloc = rhs._alloc;
+        // move
+        rhs._alloc = null;
+        return this;
+    }
+
+    pure nothrow @safe @nogc
+    bool isNull(this _)()
+    {
+        return _alloc is null;
+    }
+
+    @property uint alignment()
+    {
+        assert(_alloc);
+        return _alloc.alignment();
+    }
+
+    size_t goodAllocSize(size_t s)
+    {
+        assert(_alloc);
+        return _alloc.goodAllocSize(s);
+    }
+
+    void[] allocate(size_t n, TypeInfo ti = null)
+    {
+        assert(_alloc);
+        return _alloc.allocate(n, ti);
+    }
+
+    void[] alignedAllocate(size_t n, uint a)
+    {
+        assert(_alloc);
+        return _alloc.alignedAllocate(n, a);
+    }
+
+    void[] allocateAll()
+    {
+        assert(_alloc);
+        return _alloc.allocateAll();
+    }
+
+    bool expand(ref void[] b, size_t size)
+    {
+        assert(_alloc);
+        return _alloc.expand(b, size);
+    }
+
+    bool reallocate(ref void[] b, size_t size)
+    {
+        assert(_alloc);
+        return _alloc.reallocate(b, size);
+    }
+
+    bool alignedReallocate(ref void[] b, size_t size, uint alignment)
+    {
+        assert(_alloc);
+        return _alloc.alignedReallocate(b, size, alignment);
+    }
+
+    Ternary owns(void[] b)
+    {
+        assert(_alloc);
+        return _alloc.owns(b);
+    }
+
+    Ternary resolveInternalPointer(const void* p, ref void[] result)
+    {
+        assert(_alloc);
+        return _alloc.resolveInternalPointer(p, result);
+    }
+
+    bool deallocate(void[] b)
+    {
+        assert(_alloc);
+        return _alloc.deallocate(b);
+    }
+
+    bool deallocateAll()
+    {
+        assert(_alloc);
+        return _alloc.deallocateAll();
+    }
+
+    Ternary empty()
+    {
+        assert(_alloc);
+        return _alloc.empty();
+    }
+}
+
+unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+    import std.conv : emplace;
+
+    auto reg = Region!()(new ubyte[1024]);
+    auto state = reg.allocate(stateSize!(CAllocatorImpl!(Region!(), Yes.indirect)));
+    auto regObj = emplace!(CAllocatorImpl!(Region!(), Yes.indirect))(state, &reg);
+
+    auto rcalloc = RCIAllocator(regObj);
+    auto b = rcalloc.allocate(10);
+    assert(b.length == 10);
+
+    // The reference counting is zero based
+    assert((cast(CAllocatorImpl!(Region!(), Yes.indirect))(rcalloc._alloc)).rc == 1);
+    {
+        auto rca2 = rcalloc;
+        assert((cast(CAllocatorImpl!(Region!(), Yes.indirect))(rcalloc._alloc)).rc == 2);
+    }
+    assert((cast(CAllocatorImpl!(Region!(), Yes.indirect))(rcalloc._alloc)).rc == 1);
+}
+
+unittest
+{
+    import std.conv;
+    import std.experimental.allocator.mallocator;
+    import std.experimental.allocator.building_blocks.stats_collector;
+
+    alias SCAlloc = StatsCollector!(Mallocator, Options.bytesUsed);
+    SCAlloc statsCollectorAlloc;
+
+    ulong bytesUsed = statsCollectorAlloc.bytesUsed;
+    assert(bytesUsed == 0);
+
+    {
+        auto _allocator = allocatorObject(&statsCollectorAlloc);
+        bytesUsed = statsCollectorAlloc.bytesUsed;
+        assert(bytesUsed == stateSize!(CAllocatorImpl!(SCAlloc, Yes.indirect)));
+    }
+
+    bytesUsed = statsCollectorAlloc.bytesUsed;
+    assert(bytesUsed == 0, "RCIAllocator leaks memory; leaked "
+            ~ to!string(bytesUsed) ~ " bytes");
+}
+
+unittest
+{
+    import std.conv;
+    import std.experimental.allocator.mallocator;
+    import std.experimental.allocator.building_blocks.stats_collector;
+
+    alias SCAlloc = StatsCollector!(Mallocator, Options.bytesUsed);
+    SCAlloc statsCollectorAlloc;
+
+    ulong bytesUsed = statsCollectorAlloc.bytesUsed;
+    assert(bytesUsed == 0);
+
+    {
+        auto _allocator = allocatorObject(statsCollectorAlloc);
+
+        // Ensure that the allocator was passed through in CAllocatorImpl
+        // This allocator was used to allocate the chunk that holds the
+        // CAllocatorImpl object; which is it's own wrapper
+        bytesUsed = (cast(CAllocatorImpl!(SCAlloc))(_allocator._alloc)).impl.bytesUsed;
+        assert(bytesUsed == stateSize!(CAllocatorImpl!(SCAlloc)),
+               "RCIAllocator leaks memory; leaked " ~ to!string(bytesUsed) ~ " bytes");
+        _allocator.allocate(1);
+        bytesUsed = (cast(CAllocatorImpl!(SCAlloc))(_allocator._alloc)).impl.bytesUsed;
+        assert(bytesUsed == stateSize!(CAllocatorImpl!(SCAlloc)) + 1,
+               "RCIAllocator leaks memory; leaked " ~ to!string(bytesUsed) ~ " bytes");
+    }
+
+    bytesUsed = statsCollectorAlloc.bytesUsed;
+    assert(bytesUsed == stateSize!(CAllocatorImpl!(SCAlloc)),
+            "RCIAllocator leaks memory; leaked "
+            ~ to!string(bytesUsed) ~ " bytes");
 }
 
 /**
@@ -382,6 +628,7 @@ implemented by the allocator instance.
 */
 interface ISharedAllocator
 {
+nothrow:
     /**
     Returns the alignment offered.
     */
@@ -457,18 +704,192 @@ interface ISharedAllocator
     $(D Ternary.unknown) if not supported.
     */
     Ternary empty() shared;
+
+    /**
+    Increases the reference count of the concrete class that implements this
+    interface.
+
+    For stateless allocators, this does nothing.
+    */
+    @safe @nogc
+    void incRef() shared;
+
+    /**
+    Decreases the reference count of the concrete class that implements this
+    interface.
+    When the reference count is `0`, the object self-destructs.
+
+    For stateless allocators, this does nothing.
+
+    Returns: `true` if the reference count is greater than `0` and `false` when
+    it hits `0`. For stateless allocators, it always returns `true`.
+    */
+    @safe @nogc
+    bool decRef() shared;
 }
 
-private shared ISharedAllocator _processAllocator;
-private IAllocator _threadAllocator;
+/**
+A reference counted struct that wraps the dynamic shared allocator interface.
+This should be used wherever a uniform type is required for encapsulating
+various allocator implementations.
 
-private IAllocator setupThreadAllocator() nothrow @nogc @safe
+Code that defines allocators shareable across threads ultimately implements the
+$(LREF ISharedAllocator) interface, possibly by using
+$(LREF CSharedAllocatorImpl) below, and then build a `RCISharedAllocator` out
+of this.
+
+Composition of allocators is not recommended at this level due to
+inflexibility of dynamic interfaces and inefficiencies caused by cascaded
+multiple calls. Instead, compose allocators using the static interface defined
+in $(A std_experimental_allocator_building_blocks.html,
+`std.experimental.allocator.building_blocks`), then adapt the composed allocator
+to `RCISharedAllocator` (possibly by using $(LREF sharedAllocatorObject) below).
+*/
+struct RCISharedAllocator
+{
+    private shared ISharedAllocator _alloc;
+
+nothrow:
+    private this(shared ISharedAllocator alloc)
+    {
+        assert(alloc);
+        _alloc = alloc;
+    }
+
+    @nogc
+    this(this) shared
+    {
+        if (_alloc !is null)
+        {
+            _alloc.incRef();
+        }
+    }
+
+    @nogc
+    ~this()
+    {
+        if (_alloc !is null)
+        {
+            bool isLast = !_alloc.decRef();
+            if (isLast) _alloc = null;
+        }
+    }
+
+    @nogc
+    auto ref opAssign()(shared RCISharedAllocator rhs) shared
+    {
+        if (_alloc is rhs._alloc)
+        {
+            return this;
+        }
+        // incRef was allready called by rhs posblit, so we're just moving
+        if (_alloc !is null)
+        {
+            _alloc.decRef();
+        }
+        _alloc = rhs._alloc;
+        // move
+        rhs._alloc = null;
+        return this;
+    }
+
+    pure nothrow @safe @nogc
+    bool isNull(this _)() shared
+    {
+        return _alloc is null;
+    }
+
+    @property uint alignment() shared
+    {
+        assert(_alloc);
+        return _alloc.alignment();
+    }
+
+    size_t goodAllocSize(size_t s) shared
+    {
+        assert(_alloc);
+        return _alloc.goodAllocSize(s);
+    }
+
+    void[] allocate(size_t n, TypeInfo ti = null) shared
+    {
+        assert(_alloc);
+        return _alloc.allocate(n, ti);
+    }
+
+    void[] alignedAllocate(size_t n, uint a) shared
+    {
+        assert(_alloc);
+        return _alloc.alignedAllocate(n, a);
+    }
+
+    void[] allocateAll() shared
+    {
+        assert(_alloc);
+        return _alloc.allocateAll();
+    }
+
+    bool expand(ref void[] b, size_t size) shared
+    {
+        assert(_alloc);
+        return _alloc.expand(b, size);
+    }
+
+    bool reallocate(ref void[] b, size_t size) shared
+    {
+        assert(_alloc);
+        return _alloc.reallocate(b, size);
+    }
+
+    bool alignedReallocate(ref void[] b, size_t size, uint alignment) shared
+    {
+        assert(_alloc);
+        return _alloc.alignedReallocate(b, size, alignment);
+    }
+
+    Ternary owns(void[] b) shared
+    {
+        assert(_alloc);
+        return _alloc.owns(b);
+    }
+
+    Ternary resolveInternalPointer(const void* p, ref void[] result) shared
+    {
+        assert(_alloc);
+        return _alloc.resolveInternalPointer(p, result);
+    }
+
+    bool deallocate(void[] b) shared
+    {
+        assert(_alloc);
+        return _alloc.deallocate(b);
+    }
+
+    bool deallocateAll() shared
+    {
+        assert(_alloc);
+        return _alloc.deallocateAll();
+    }
+
+    Ternary empty() shared
+    {
+        assert(_alloc);
+        return _alloc.empty();
+    }
+}
+
+private shared RCISharedAllocator _processAllocator;
+private RCIAllocator _threadAllocator;
+
+nothrow @nogc @safe
+private ref RCIAllocator setupThreadAllocator()
 {
     /*
     Forwards the `_threadAllocator` calls to the `processAllocator`
     */
     static class ThreadAllocator : IAllocator
     {
+    nothrow:
         override @property uint alignment()
         {
             return processAllocator.alignment();
@@ -533,12 +954,26 @@ private IAllocator setupThreadAllocator() nothrow @nogc @safe
         {
             return processAllocator.empty();
         }
+
+        //nothrow @safe @nogc
+        @safe @nogc
+        override void incRef()
+        {
+            processAllocator._alloc.incRef();
+        }
+
+        //nothrow @safe @nogc
+        @safe @nogc
+        override bool decRef()
+        {
+            return processAllocator._alloc.decRef();
+        }
     }
 
-    assert(!_threadAllocator);
+    assert(_threadAllocator.isNull);
     import std.conv : emplace;
     static ulong[stateSize!(ThreadAllocator).divideRoundUp(ulong.sizeof)] _threadAllocatorState;
-    _threadAllocator = () @trusted { return emplace!(ThreadAllocator)(_threadAllocatorState[]); } ();
+    () @trusted { _threadAllocator = RCIAllocator(emplace!(ThreadAllocator)(_threadAllocatorState[])); }();
     return _threadAllocator;
 }
 
@@ -549,16 +984,18 @@ to be shared across threads, use $(D processAllocator) (below). By default,
 $(D theAllocator) ultimately fetches memory from $(D processAllocator), which
 in turn uses the garbage collected heap.
 */
-nothrow @safe @nogc @property IAllocator theAllocator()
+nothrow @safe @nogc
+@property ref RCIAllocator theAllocator()
 {
-    auto p = _threadAllocator;
-    return p !is null ? p : setupThreadAllocator();
+    alias p = _threadAllocator;
+    return !p.isNull() ? p : setupThreadAllocator();
 }
 
 /// Ditto
-nothrow @safe @nogc @property void theAllocator(IAllocator a)
+nothrow @system @nogc
+@property void theAllocator(RCIAllocator a)
 {
-    assert(a);
+    assert(!a.isNull);
     _threadAllocator = a;
 }
 
@@ -582,18 +1019,26 @@ Gets/sets the allocator for the current process. This allocator must be used
 for allocating memory shared across threads. Objects created using this
 allocator can be cast to $(D shared).
 */
-@property shared(ISharedAllocator) processAllocator()
+@trusted nothrow @nogc
+@property ref shared(RCISharedAllocator) processAllocator()
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.concurrency : initOnce;
-    return initOnce!_processAllocator(
-        sharedAllocatorObject(GCAllocator.instance));
+
+    static shared(RCISharedAllocator)* forceAttributes()
+    {
+        return &initOnce!_processAllocator(
+                sharedAllocatorObject(GCAllocator.instance));
+    }
+
+    return *(cast(shared(RCISharedAllocator)* function() nothrow @nogc)(&forceAttributes))();
 }
 
 /// Ditto
-@property void processAllocator(shared ISharedAllocator a)
+nothrow @system @nogc
+@property void processAllocator(shared RCISharedAllocator a)
 {
-    assert(a);
+    assert(!a.isNull);
     _processAllocator = a;
 }
 
@@ -604,34 +1049,47 @@ allocator can be cast to $(D shared).
     import std.experimental.allocator.building_blocks.free_list : SharedFreeList;
     import std.experimental.allocator.mallocator : Mallocator;
 
-    assert(processAllocator);
-    assert(theAllocator);
+    assert(!processAllocator.isNull);
+    assert(!theAllocator.isNull);
 
     testAllocatorObject(processAllocator);
     testAllocatorObject(theAllocator);
 
     shared SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime) sharedFL;
-    shared ISharedAllocator sharedFLObj = sharedAllocatorObject(sharedFL);
-    assert(sharedFLObj);
+    shared RCISharedAllocator sharedFLObj = sharedAllocatorObject(sharedFL);
+    alias SharedAllocT = CSharedAllocatorImpl!(
+            shared SharedFreeList!(
+                Mallocator, chooseAtRuntime, chooseAtRuntime));
+
+    assert((cast(SharedAllocT)(sharedFLObj._alloc)).rc == 1);
+    assert(!sharedFLObj.isNull);
     testAllocatorObject(sharedFLObj);
 
     // Test processAllocator setter
-    shared ISharedAllocator oldProcessAllocator = processAllocator;
+    shared RCISharedAllocator oldProcessAllocator = processAllocator;
     processAllocator = sharedFLObj;
-    assert(processAllocator is sharedFLObj);
+    assert((cast(SharedAllocT)(sharedFLObj._alloc)).rc == 2);
+    assert(processAllocator._alloc is sharedFLObj._alloc);
 
     testAllocatorObject(processAllocator);
     testAllocatorObject(theAllocator);
-    assertThrown!AssertError(processAllocator = null);
+    assertThrown!AssertError(processAllocator = RCISharedAllocator(null));
 
     // Restore initial processAllocator state
     processAllocator = oldProcessAllocator;
+    assert((cast(SharedAllocT)(sharedFLObj._alloc)).rc == 1);
     assert(processAllocator is oldProcessAllocator);
 
-    shared ISharedAllocator indirectShFLObj = sharedAllocatorObject(&sharedFL);
+    shared RCISharedAllocator indirectShFLObj = sharedAllocatorObject(&sharedFL);
     testAllocatorObject(indirectShFLObj);
+    alias IndirectSharedAllocT = CSharedAllocatorImpl!(
+            shared SharedFreeList!(
+                Mallocator, chooseAtRuntime, chooseAtRuntime)
+            , Yes.indirect);
 
-    IAllocator indirectMallocator = allocatorObject(&Mallocator.instance);
+    assert((cast(IndirectSharedAllocT)(indirectShFLObj._alloc)).rc == 1);
+
+    RCIAllocator indirectMallocator = allocatorObject(&Mallocator.instance);
     testAllocatorObject(indirectMallocator);
 }
 
@@ -2029,7 +2487,7 @@ own statically-typed allocator.)
 )
 
 */
-CAllocatorImpl!A allocatorObject(A)(auto ref A a)
+RCIAllocator allocatorObject(A)(auto ref A a)
 if (!isPointer!A)
 {
     import std.conv : emplace;
@@ -2037,13 +2495,13 @@ if (!isPointer!A)
     {
         enum s = stateSize!(CAllocatorImpl!A).divideRoundUp(ulong.sizeof);
         static __gshared ulong[s] state;
-        static __gshared CAllocatorImpl!A result;
-        if (!result)
+        static __gshared RCIAllocator result;
+        if (result.isNull)
         {
             // Don't care about a few races
-            result = emplace!(CAllocatorImpl!A)(state[]);
+            result = RCIAllocator(emplace!(CAllocatorImpl!A)(state[]));
         }
-        assert(result);
+        assert(!result.isNull);
         return result;
     }
     else
@@ -2057,12 +2515,12 @@ if (!isPointer!A)
         }
         auto tmp = cast(CAllocatorImpl!A) emplace!(CAllocatorImpl!A)(state);
         move(a, tmp.impl);
-        return tmp;
+        return RCIAllocator(tmp);
     }
 }
 
 /// Ditto
-CAllocatorImpl!(A, Yes.indirect) allocatorObject(A)(A* pa)
+RCIAllocator allocatorObject(A)(A* pa)
 {
     assert(pa);
     import std.conv : emplace;
@@ -2072,15 +2530,16 @@ CAllocatorImpl!(A, Yes.indirect) allocatorObject(A)(A* pa)
     {
         scope(failure) pa.deallocate(state);
     }
-    return emplace!(CAllocatorImpl!(A, Yes.indirect))
-        (state, pa);
+    return RCIAllocator(emplace!(CAllocatorImpl!(A, Yes.indirect))
+                            (state, pa));
 }
 
 ///
 @system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
-    IAllocator a = allocatorObject(Mallocator.instance);
+
+    RCIAllocator a = allocatorObject(Mallocator.instance);
     auto b = a.allocate(100);
     assert(b.length == 100);
     assert(a.deallocate(b));
@@ -2109,9 +2568,11 @@ unittest
     // Ensure that the allocator was passed through in CAllocatorImpl
     // This allocator was used to allocate the chunk that holds the
     // CAllocatorImpl object; which is it's own wrapper
-    assert(_allocator.impl.bytesUsed == stateSize!(CAllocatorImpl!(SCAlloc)));
+    assert((cast(CAllocatorImpl!(SCAlloc))(_allocator._alloc)).impl.bytesUsed
+            == stateSize!(CAllocatorImpl!(SCAlloc)));
     _allocator.allocate(1);
-    assert(_allocator.impl.bytesUsed == stateSize!(CAllocatorImpl!(SCAlloc)) + 1);
+    assert((cast(CAllocatorImpl!(SCAlloc))(_allocator._alloc)).impl.bytesUsed
+            == stateSize!(CAllocatorImpl!(SCAlloc)) + 1);
 }
 
 /**
@@ -2134,22 +2595,33 @@ statically-typed allocator.)
 )
 
 */
-shared(CSharedAllocatorImpl!A) sharedAllocatorObject(A)(auto ref A a)
+//nothrow @safe
+//nothrow @nogc @safe
+nothrow
+shared(RCISharedAllocator) sharedAllocatorObject(A)(auto ref A a)
 if (!isPointer!A)
 {
     import std.conv : emplace;
     static if (stateSize!A == 0)
     {
         enum s = stateSize!(CSharedAllocatorImpl!A).divideRoundUp(ulong.sizeof);
-        static __gshared ulong[s] state;
-        static shared CSharedAllocatorImpl!A result;
-        if (!result)
+        static shared ulong[s] state;
+        static shared RCISharedAllocator result;
+        if (result.isNull)
         {
             // Don't care about a few races
-            result = cast(shared
-                    CSharedAllocatorImpl!A)(emplace!(CSharedAllocatorImpl!A)(state[]));
+            //auto tmp = emplace!(CSharedAllocatorImpl!A)(
+                            //(() @trusted => cast(ulong[]) state[])());
+            //result = RCISharedAllocator(
+                        //(() @trusted => (cast(shared CSharedAllocatorImpl!A)(
+                            //tmp)
+                        //))());
+            result = RCISharedAllocator(
+                    (cast(shared CSharedAllocatorImpl!A)(
+                        emplace!(CSharedAllocatorImpl!A)(
+                            (() @trusted => cast(ulong[]) state[])()))));
         }
-        assert(result);
+        assert(!result.isNull);
         return result;
     }
     else static if (is(typeof({ shared A b = a; shared A c = b; }))) // copyable
@@ -2163,7 +2635,7 @@ if (!isPointer!A)
         }
         auto tmp = emplace!(shared CSharedAllocatorImpl!A)(state);
         move(a, tmp.impl);
-        return tmp;
+        return RCISharedAllocator(tmp);
     }
     else // the allocator object is not copyable
     {
@@ -2172,7 +2644,7 @@ if (!isPointer!A)
 }
 
 /// Ditto
-shared(CSharedAllocatorImpl!(A, Yes.indirect)) sharedAllocatorObject(A)(A* pa)
+shared(RCISharedAllocator) sharedAllocatorObject(A)(A* pa)
 {
     assert(pa);
     import std.conv : emplace;
@@ -2182,7 +2654,7 @@ shared(CSharedAllocatorImpl!(A, Yes.indirect)) sharedAllocatorObject(A)(A* pa)
     {
         scope(failure) pa.deallocate(state);
     }
-    return emplace!(shared CSharedAllocatorImpl!(A, Yes.indirect))(state, pa);
+    return RCISharedAllocator(emplace!(shared CSharedAllocatorImpl!(A, Yes.indirect))(state, pa));
 }
 
 
@@ -2199,12 +2671,16 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
 {
     import std.traits : hasMember;
 
+    static if (stateSize!Allocator) private size_t rc = 1;
+
     /**
     The implementation is available as a public member.
     */
     static if (indirect)
     {
+    nothrow:
         private Allocator* pimpl;
+        @nogc
         ref Allocator impl()
         {
             return *pimpl;
@@ -2220,6 +2696,7 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
         else alias impl = Allocator.instance;
     }
 
+nothrow:
     /// Returns `impl.alignment`.
     override @property uint alignment()
     {
@@ -2366,6 +2843,44 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
             return null;
         }
     }
+
+    nothrow @safe @nogc
+    override void incRef()
+    {
+        static if (stateSize!Allocator) ++rc;
+    }
+
+    nothrow @trusted @nogc
+    override bool decRef()
+    {
+        static if (stateSize!Allocator)
+        {
+            import core.stdc.string : memcpy;
+
+            if (rc == 1)
+            {
+                static if (indirect)
+                {
+                    Allocator* tmp = pimpl;
+                }
+                else
+                {
+                    Allocator tmp;
+                    memcpy(&tmp, &this.impl, Allocator.sizeof);
+                }
+                void[] support = (cast(void*) this)[0 .. stateSize!(typeof(this))];
+                tmp.deallocate(support);
+                return false;
+            }
+
+            --rc;
+            return true;
+        }
+        else
+        {
+            return true;
+        }
+    }
 }
 
 /**
@@ -2381,13 +2896,18 @@ class CSharedAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     : ISharedAllocator
 {
     import std.traits : hasMember;
+    import core.atomic : atomicOp, atomicLoad;
+
+    static if (stateSize!Allocator) shared size_t rc = 1;
 
     /**
     The implementation is available as a public member.
     */
     static if (indirect)
     {
+    nothrow:
         private shared Allocator* pimpl;
+        @nogc
         ref Allocator impl() shared
         {
             return *pimpl;
@@ -2403,6 +2923,7 @@ class CSharedAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
         else alias impl = Allocator.instance;
     }
 
+nothrow:
     /// Returns `impl.alignment`.
     override @property uint alignment() shared
     {
@@ -2547,6 +3068,43 @@ class CSharedAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
         else
         {
             return null;
+        }
+    }
+
+    nothrow @safe @nogc
+    override void incRef() shared
+    {
+        static if (stateSize!Allocator) atomicOp!"+="(rc, 1);
+    }
+
+    nothrow @trusted @nogc
+    override bool decRef() shared
+    {
+        static if (stateSize!Allocator)
+        {
+            import core.stdc.string : memcpy;
+
+            // rc starts as 1 to avoid comparing with size_t(0) - 1
+            if (atomicOp!"-="(rc, 1) == 0)
+            {
+                static if (indirect)
+                {
+                    Allocator* tmp = pimpl;
+                }
+                else
+                {
+                    Allocator tmp;
+                    memcpy(cast(void*) &tmp, cast(void*) &this.impl, Allocator.sizeof);
+                }
+                void[] support = (cast(void*) this)[0 .. stateSize!(typeof(this))];
+                tmp.deallocate(support);
+                return false;
+            }
+            return true;
+        }
+        else
+        {
+            return true;
         }
     }
 }
