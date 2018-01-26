@@ -3609,7 +3609,7 @@ if (is(T == class) && !is(T == enum))
     // TODO: Change this once toString() works for shared objects.
     static assert(!is(T == shared), "unable to format shared objects");
 
-    // TODO: remove this check once `@dsiable override` deprecation cycle is finished
+    // TODO: remove this check once `@disable override` deprecation cycle is finished
     static if (__traits(hasMember, T, "toString") && isSomeFunction!(val.toString))
         static assert(!__traits(isDisabled, T.toString), T.stringof ~
             " cannot be formatted because its `toString` is marked with `@disable`");
