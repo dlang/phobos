@@ -4327,7 +4327,7 @@ if (sumOfIntegerTuple!sizes == 21)
 
     static if (is(TypeOfBitPacked!T == bool))
     {
-        auto codepointTrie(Set)(in Set set)
+        auto codepointTrie(Set)(const scope Set set)
             if (isCodepointSet!Set)
         {
             return codepointSetTrie(set);
@@ -5727,13 +5727,13 @@ template Sequence(size_t start, size_t end)
 template useItemAt(size_t idx, T)
 if (isIntegral!T || is(T: dchar))
 {
-    size_t impl(in T[] arr){ return arr[idx]; }
+    size_t impl(const scope T[] arr){ return arr[idx]; }
     alias useItemAt = assumeSize!(impl, 8*T.sizeof);
 }
 
 template useLastItem(T)
 {
-    size_t impl(in T[] arr){ return arr[$-1]; }
+    size_t impl(const scope T[] arr){ return arr[$-1]; }
     alias useLastItem = assumeSize!(impl, 8*T.sizeof);
 }
 
@@ -5932,7 +5932,7 @@ else
 {
 
 // helper for looking up code point sets
-@trusted ptrdiff_t findUnicodeSet(alias table, C)(in C[] name) pure
+@trusted ptrdiff_t findUnicodeSet(alias table, C)(const scope C[] name) pure
 {
     import std.algorithm.iteration : map;
     import std.range : assumeSorted;
@@ -5945,7 +5945,7 @@ else
 }
 
 // another one that loads it
-@trusted bool loadUnicodeSet(alias table, Set, C)(in C[] name, ref Set dest) pure
+@trusted bool loadUnicodeSet(alias table, Set, C)(const scope C[] name, ref Set dest) pure
 {
     auto idx = findUnicodeSet!table(name);
     if (idx >= 0)
@@ -5957,7 +5957,7 @@ else
 }
 
 @trusted bool loadProperty(Set=CodepointSet, C)
-    (in C[] name, ref Set target) pure
+    (const scope C[] name, ref Set target) pure
 {
     import std.internal.unicode_tables : uniProps; // generated file
     alias ucmp = comparePropertyName;
@@ -6056,7 +6056,7 @@ else
 }
 
 // CTFE-only helper for checking property names at compile-time
-@safe bool isPrettyPropertyName(C)(in C[] name)
+@safe bool isPrettyPropertyName(C)(const scope C[] name)
 {
     import std.algorithm.searching : find;
     auto names = [
@@ -6076,7 +6076,7 @@ else
 }
 
 // ditto, CTFE-only, not optimized
-@safe private static bool findSetName(alias table, C)(in C[] name)
+@safe private static bool findSetName(alias table, C)(const scope C[] name)
 {
     return findUnicodeSet!table(name) >= 0;
 }
@@ -6084,7 +6084,7 @@ else
 template SetSearcher(alias table, string kind)
 {
     /// Run-time checked search.
-    static auto opCall(C)(in C[] name)
+    static auto opCall(C)(const scope C[] name)
         if (is(C : dchar))
     {
         import std.conv : to;
@@ -6220,7 +6220,7 @@ auto caseEnclose(CodepointSet set)
 /+
     fetch codepoint set corresponding to a name (InBlock or binary property)
 +/
-@trusted CodepointSet getUnicodeSet(in char[] name, bool negated,  bool casefold)
+@trusted CodepointSet getUnicodeSet(const scope char[] name, bool negated,  bool casefold)
 {
     CodepointSet s = unicode(name);
     //FIXME: caseEnclose for new uni as Set | CaseEnclose(SET && LC)
@@ -6744,7 +6744,7 @@ auto caseEnclose(CodepointSet set)
         See the $(S_LINK Unicode properties, table of properties) for available
         sets.
     */
-    static auto opCall(C)(in C[] name)
+    static auto opCall(C)(const scope C[] name)
         if (is(C : dchar))
     {
         return loadAny(name);
@@ -6916,7 +6916,7 @@ private:
             || (ucmp(name[0 .. 2],"In") == 0 && findSetName!(blocks.tab)(name[2..$]));
     }
 
-    static auto loadAny(Set=CodepointSet, C)(in C[] name) pure
+    static auto loadAny(Set=CodepointSet, C)(const scope C[] name) pure
     {
         import std.conv : to;
         import std.internal.unicode_tables : blocks, scripts; // generated file
@@ -7096,7 +7096,7 @@ public: // Public API continues
     Returns:
         length of grapheme cluster
 +/
-size_t graphemeStride(C)(in C[] input, size_t index)
+size_t graphemeStride(C)(const scope C[] input, size_t index)
 if (is(C : dchar))
 {
     auto src = input[index..$];
@@ -7402,7 +7402,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 
 public:
     /// Ctor
-    this(C)(in C[] chars...)
+    this(C)(const scope C[] chars...)
         if (is(C : dchar))
     {
         this ~= chars;
@@ -8683,7 +8683,7 @@ private auto splitNormalized(NormalizationForm norm, C)(const(C)[] input)
     return tuple(input.length, input.length);
 }
 
-private auto seekStable(NormalizationForm norm, C)(size_t idx, in C[] input)
+private auto seekStable(NormalizationForm norm, C)(size_t idx, const scope C[] input)
 {
     import std.typecons : tuple;
     import std.utf : codeLength;
@@ -9514,7 +9514,7 @@ if (is(C == char) || is(C == wchar)  || is(C == dchar))
 // helper to precalculate size of case-converted string
 private template toCaseLength(alias indexFn, uint maxIdx, alias tableFn)
 {
-    size_t toCaseLength(C)(in C[] str)
+    size_t toCaseLength(C)(const scope C[] str)
     {
         import std.utf : decode, codeLength;
         size_t codeLen = 0;
@@ -10332,7 +10332,7 @@ private:
     return CodepointSet.fromIntervals(decompressIntervals(compressed));
 }
 
-@safe pure nothrow auto asTrie(T...)(in TrieEntry!T e)
+@safe pure nothrow auto asTrie(T...)(const scope TrieEntry!T e)
 {
     return const(CodepointTrie!T)(e.offsets, e.sizes, e.data);
 }
