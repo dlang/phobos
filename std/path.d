@@ -508,7 +508,7 @@ if (isSomeChar!C && isSomeChar!C1)
     assert(sa.baseName == "test");
 }
 
-/** Returns the directory part of a path.  On Windows, this
+/** Returns the parent directory of path. On Windows, this
     includes the drive letter if present.
 
     Params:
