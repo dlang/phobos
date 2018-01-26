@@ -117,7 +117,7 @@ $(BOOKTABLE ,
         loop. Similar to $(D zip), except that $(D lockstep) is designed
         especially for $(D foreach) loops.
     ))
-    $(TR $(TD $(LREF NullSink))
+    $(TR $(TD $(LREF nullSink))
         $(TD An output _range that discards the data it receives.
     ))
     $(TR $(TD $(LREF only))
@@ -11677,14 +11677,46 @@ struct NullSink
     void put(E)(E){}
 }
 
+/// ditto
+auto ref nullSink()
+{
+    static NullSink sink;
+    return sink;
+}
+
 ///
-@safe unittest
+@safe nothrow unittest
 {
     import std.algorithm.iteration : map;
     import std.algorithm.mutation : copy;
-    [4, 5, 6].map!(x => x * 2).copy(NullSink()); // data is discarded
+    [4, 5, 6].map!(x => x * 2).copy(nullSink); // data is discarded
 }
 
+///
+@safe unittest
+{
+    import std.csv : csvNextToken;
+
+    string line = "a,b,c";
+
+    // ignore the first column
+    line.csvNextToken(nullSink, ',', '"');
+    line.popFront;
+
+    // look at the second column
+    Appender!string app;
+    line.csvNextToken(app, ',', '"');
+    assert(app.data == "b");
+}
+
+@safe unittest
+{
+    auto r = 10.iota
+                .tee(nullSink)
+                .dropOne;
+
+    assert(r.front == 1);
+}
 
 /++
 
