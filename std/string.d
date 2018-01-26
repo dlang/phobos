@@ -2713,11 +2713,16 @@ public:
     $(REF splitter, std,regex)
  */
 auto lineSplitter(KeepTerminator keepTerm = No.keepTerminator, Range)(Range r)
-if ((hasSlicing!Range && hasLength!Range && isSomeChar!(ElementType!Range) ||
-    isSomeString!Range) &&
-    !isConvertibleToString!Range)
+if (hasSlicing!Range && hasLength!Range && isSomeChar!(ElementType!Range) && !isSomeString!Range)
 {
     return LineSplitter!(keepTerm, Range)(r);
+}
+
+/// Ditto
+auto lineSplitter(KeepTerminator keepTerm = No.keepTerminator, C)(C[] r)
+if (isSomeChar!C)
+{
+    return LineSplitter!(keepTerm, C[])(r);
 }
 
 ///
@@ -2731,12 +2736,6 @@ if ((hasSlicing!Range && hasLength!Range && isSomeChar!(ElementType!Range) ||
     lineSplitter comparable to the string[] created by splitLines.
     */
     assert(lineSplitter(s).array == splitLines(s));
-}
-
-auto lineSplitter(KeepTerminator keepTerm = No.keepTerminator, Range)(auto ref Range r)
-if (isConvertibleToString!Range)
-{
-    return LineSplitter!(keepTerm, StringTypeOf!Range)(r);
 }
 
 @safe pure unittest
@@ -2822,9 +2821,17 @@ if (isConvertibleToString!Range)
 @nogc @safe pure unittest
 {
     import std.algorithm.comparison : equal;
+    import std.range : only;
+
     auto s = "std/string.d";
     auto as = TestAliasedString(s);
     assert(equal(s.lineSplitter(), as.lineSplitter()));
+
+    enum S : string { a = "hello\nworld" }
+    assert(equal(S.a.lineSplitter(), only("hello", "world")));
+
+    char[S.a.length] sa = S.a[];
+    assert(equal(sa.lineSplitter(), only("hello", "world")));
 }
 
 @safe pure unittest
