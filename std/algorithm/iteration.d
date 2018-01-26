@@ -47,6 +47,8 @@ $(T2 reduce,
         This is the old implementation of `fold`.)
 $(T2 splitter,
         Lazily splits a range by a separator.)
+$(T2 substitute,
+        `[1, 2].substitute(1, 0.1)` returns `[0.1, 2]`.)
 $(T2 sum,
         Same as `fold`, but specialized for accurate summation.)
 $(T2 uniq,
@@ -4685,6 +4687,624 @@ if (isSomeChar!C)
             assert(equal!equal(result, splitter!((a) => a == s)(input.filter!"true"())));
         }
     }
+}
+
+// substitute
+/**
+Returns a range with all occurrences of `substs` in `r`.
+replaced with their substitution.
+
+Single value replacements (`'ö'.substitute!('ä', 'a', 'ö', 'o', 'ü', 'u)`) are
+supported as well and in $(BIGOH 1).
+
+Params:
+    r = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+    value = a single value which can be substituted in $(BIGOH 1)
+    substs = a set of replacements/substitutions
+
+Returns: a range with the substitutions replaced.
+
+See_Also:
+$(REF replace, std, array) for an eager replace algorithm or
+$(REF translate, std, string), and $(REF tr, std, string)
+for string algorithms with translation tables.
+*/
+template substitute(substs...)
+if (substs.length >= 2 && isExpressions!substs)
+{
+    import std.range.primitives : ElementType;
+    import std.traits : CommonType;
+
+    static assert(!(substs.length & 1), "The number of substitution parameters must be even");
+
+    /**
+      Substitute single values with compile-time substitution mappings.
+      Complexity: $(BIGOH 1) due to D's $(D switch) guaranteeing $(BIGOH 1);
+    */
+    auto substitute(Value)(Value value)
+    if (isInputRange!Value || !is(CommonType!(Value, typeof(substs[0])) == void))
+    {
+        static if (isInputRange!Value)
+        {
+            static if (!is(CommonType!(ElementType!Value, typeof(substs[0])) == void))
+            {
+                // Substitute single range elements with compile-time substitution mappings
+                return value.map!(a => substitute(a));
+            }
+            else static if (isInputRange!Value && !is(CommonType!(ElementType!Value, ElementType!(typeof(substs[0]))) == void))
+            {
+                // not implemented yet, fallback to runtime variant for now
+                return .substitute(value, substs);
+            }
+            else
+            {
+                static assert(0, "Compile-time substitutions must be elements or ranges of the same type of ` ~ Value.stringof ~ `.");
+            }
+        }
+        // Substitute single values with compile-time substitution mappings.
+        else // static if (!is(CommonType!(Value, typeof(substs[0])) == void))
+        {
+            switch (value)
+            {
+                static foreach (i; 0 .. substs.length / 2)
+                    case substs[2 * i]:
+                        return substs[2 * i + 1];
+
+                default: return value;
+            }
+        }
+    }
+}
+
+// In same combinations substitute needs to calculate the auto-decoded length
+// of its needles
+private template hasDifferentAutodecoding(Range, Needles...)
+{
+    import std.meta : anySatisfy;
+    /* iff
+       - the needles needs auto-decoding, but the incoming range doesn't (or vice versa)
+       - both (range, needle) need auto-decoding and don't share the same common type
+    */
+    enum needlesAreNarrow = anySatisfy!(isNarrowString, Needles);
+    enum sourceIsNarrow = isNarrowString!Range;
+    enum hasDifferentAutodecoding = sourceIsNarrow != needlesAreNarrow ||
+                                    (sourceIsNarrow && needlesAreNarrow &&
+                                    is(CommonType!(Range, Needles) == void));
+}
+
+@safe nothrow @nogc pure unittest
+{
+    import std.meta : AliasSeq; // used for better clarity
+
+    static assert(!hasDifferentAutodecoding!(string, AliasSeq!(string, string)));
+    static assert(!hasDifferentAutodecoding!(wstring, AliasSeq!(wstring, wstring)));
+    static assert(!hasDifferentAutodecoding!(dstring, AliasSeq!(dstring, dstring)));
+
+    // the needles needs auto-decoding, but the incoming range doesn't (or vice versa)
+    static assert(hasDifferentAutodecoding!(string, AliasSeq!(wstring, wstring)));
+    static assert(hasDifferentAutodecoding!(string, AliasSeq!(dstring, dstring)));
+    static assert(hasDifferentAutodecoding!(wstring, AliasSeq!(string, string)));
+    static assert(hasDifferentAutodecoding!(wstring, AliasSeq!(dstring, dstring)));
+    static assert(hasDifferentAutodecoding!(dstring, AliasSeq!(string, string)));
+    static assert(hasDifferentAutodecoding!(dstring, AliasSeq!(wstring, wstring)));
+
+    // both (range, needle) need auto-decoding and don't share the same common type
+    static foreach (T; AliasSeq!(string, wstring, dstring))
+    {
+        static assert(hasDifferentAutodecoding!(T, AliasSeq!(wstring, string)));
+        static assert(hasDifferentAutodecoding!(T, AliasSeq!(dstring, string)));
+        static assert(hasDifferentAutodecoding!(T, AliasSeq!(wstring, dstring)));
+    }
+}
+
+/// ditto
+auto substitute(alias pred = (a, b) => a == b, R, Substs...)(R r, Substs substs)
+if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
+{
+    import std.range.primitives : ElementType;
+    import std.meta : allSatisfy;
+    import std.traits : CommonType;
+
+    static assert(!(Substs.length & 1), "The number of substitution parameters must be even");
+
+    enum n = Substs.length / 2;
+
+    // Substitute individual elements
+    static if (!is(CommonType!(ElementType!R, Substs) == void))
+    {
+        import std.functional : binaryFun;
+
+        // Imitate a value closure to be @nogc
+        static struct ReplaceElement
+        {
+            private Substs substs;
+
+            this(Substs substs)
+            {
+                this.substs = substs;
+            }
+
+            auto opCall(E)(E e)
+            {
+                static foreach (i; 0 .. n)
+                    if (binaryFun!pred(e, substs[2 * i]))
+                        return substs[2 * i + 1];
+
+                return e;
+            }
+        }
+        auto er = ReplaceElement(substs);
+        return r.map!er;
+    }
+    // Substitute subranges
+    else static if (!is(CommonType!(ElementType!R, ElementType!(Substs[0])) == void)  &&
+                        allSatisfy!(isForwardRange, Substs))
+    {
+        import std.range : choose, take;
+        import std.meta : Stride;
+
+        auto replaceElement(E)(E e)
+        {
+            alias ReturnA = typeof(e[0]);
+            alias ReturnB = typeof(substs[0 .. 1].take(1));
+
+            // 1-based index
+            const auto hitNr = e[1];
+            switch (hitNr)
+            {
+                // no hit
+                case 0:
+                    // use choose trick for non-common range
+                    static if (is(CommonType!(ReturnA, ReturnB) == void))
+                        return choose(1, e[0], ReturnB.init);
+                    else
+                        return e[0];
+
+                // all replacements
+                static foreach (i; 0 .. n)
+                    case i + 1:
+                        // use choose trick for non-common ranges
+                        static if (is(CommonType!(ReturnA, ReturnB) == void))
+                            return choose(0, e[0], substs[2 * i + 1].take(size_t.max));
+                        else
+                            return substs[2 * i + 1].take(size_t.max);
+                default:
+                    assert(0, "hitNr should always be found.");
+            }
+        }
+
+        alias Ins = Stride!(2, Substs);
+
+        static struct SubstituteSplitter
+        {
+            import std.range : drop;
+            import std.typecons : Tuple;
+
+            private
+            {
+                typeof(R.init.drop(0)) rest;
+                Ins needles;
+
+                typeof(R.init.take(0)) skip; // skip before next hit
+                alias Hit = size_t; // 0 iff no hit, otherwise hit in needles[index-1]
+                alias E = Tuple!(typeof(skip), Hit);
+                Hit hitNr; // hit number: 0 means no hit, otherwise index+1 to needles that matched
+                bool hasHit; // is there a replacement hit which should be printed?
+
+                enum hasDifferentAutodecoding = .hasDifferentAutodecoding!(typeof(rest), Ins);
+
+                // calculating the needle length for narrow strings might be expensive -> cache it
+                 static if (hasDifferentAutodecoding)
+                     ptrdiff_t[n] needleLengths = -1;
+            }
+
+            this(R haystack, Ins needles)
+            {
+                hasHit = !haystack.empty;
+                this.rest = haystack.drop(0);
+                this.needles = needles;
+                popFront;
+                static if (hasNested!(typeof(skip)))
+                    skip = rest.take(0);
+            }
+
+            /*  If `skip` is non-empty, it's returned as (skip, 0) tuple
+                otherwise a similar (<empty>, hitNr) tuple is returned.
+                `replaceElement` maps based on the second item (`hitNr`).
+            */
+            @property auto ref front()
+            {
+                assert(!empty, "Attempting to fetch the front of an empty substitute.");
+                return !skip.empty ? E(skip, 0) : E(typeof(skip).init, hitNr);
+            }
+
+            static if (isInfinite!R)
+                enum empty = false; // propagate infiniteness
+            else
+                @property bool empty()
+                {
+                    return skip.empty && !hasHit;
+                }
+
+            /* If currently in a skipping phase => reset.
+               Otherwise try to find the next occurrence of `needles`
+                  If valid match
+                    - if there are elements before the match, set skip with these elements
+                      (on the next popFront, the range will be in the skip state once)
+                    - `rest`: advance to the end of the match
+                    - set hasHit
+               Otherwise skip to the end
+            */
+            void popFront()
+            {
+                assert(!empty, "Attempting to popFront an empty substitute.");
+                if (!skip.empty)
+                {
+                    skip = typeof(skip).init; // jump over skip
+                }
+                else
+                {
+                    import std.algorithm.searching : countUntil, find;
+
+                    auto match = rest.find!pred(needles);
+
+                    static if (needles.length >= 2) // variadic version of find (returns a tuple)
+                    {
+                        // find with variadic needles returns a (range, needleNr) tuple
+                        // needleNr is a 1-based index
+                        auto hitValue = match[0];
+                        hitNr = match[1];
+                    }
+                    else
+                    {
+                        // find with one needle returns the range
+                        auto hitValue = needles[0];
+                        hitNr = match.empty ? 0 : 1;
+                    }
+
+                    if (hitNr == 0) // no more hits
+                    {
+                        skip = rest.take(size_t.max);
+                        hasHit = false;
+                        rest = typeof(rest).init;
+                    }
+                    else
+                    {
+                        auto hitLength = size_t.max;
+                        switchL: switch (hitNr - 1)
+                        {
+                            static foreach (i; 0 .. n)
+                            {
+                                case i:
+                                    static if (hasDifferentAutodecoding)
+                                    {
+                                        import std.utf : codeLength;
+
+                                        // cache calculated needle length
+                                        if (needleLengths[i] != -1)
+                                            hitLength = needleLengths[i];
+                                        else
+                                            hitLength = needleLengths[i] = codeLength!dchar(needles[i]);
+                                    }
+                                    else
+                                    {
+                                        hitLength = needles[i].length;
+                                    }
+                                    break switchL;
+                            }
+                            default:
+                                assert(0, "hitNr should always be found");
+                        }
+
+                        const pos = rest.countUntil(hitValue);
+                        if (pos > 0) // match not at start of rest
+                            skip = rest.take(pos);
+
+                        hasHit = true;
+
+                        // iff the source range and the substitutions are narrow strings,
+                        // we can avoid calling the auto-decoding `popFront` (via drop)
+                        static if (isNarrowString!(typeof(hitValue)) && !hasDifferentAutodecoding)
+                            rest = hitValue[hitLength .. $];
+                        else
+                            rest = hitValue.drop(hitLength);
+                    }
+                }
+            }
+        }
+
+        // extract inputs
+        Ins ins;
+        static foreach (i; 0 .. n)
+            ins[i] = substs[2 * i];
+
+        return SubstituteSplitter(r, ins)
+                .map!(a => replaceElement(a))
+                .joiner;
+    }
+    else
+    {
+        static assert(0, "The substitutions must either substitute a single element or a save-able subrange.");
+    }
+}
+
+///
+@safe pure unittest
+{
+    import std.algorithm.comparison : equal;
+
+    // substitute single elements
+    assert("do_it".substitute('_', ' ').equal("do it"));
+
+    // substitute multiple, single elements
+    assert("do_it".substitute('_', ' ',
+                               'd', 'g',
+                               'i', 't',
+                               't', 'o')
+                  .equal("go to"));
+
+    // substitute subranges
+    assert("do_it".substitute("_", " ",
+                              "do", "done")
+                  .equal("done it"));
+
+    // substitution works for any ElementType
+    int[] x = [1, 2, 3];
+    auto y = x.substitute(1, 0.1);
+    assert(y.equal([0.1, 2, 3]));
+    static assert(is(typeof(y.front) == double));
+
+    import std.range : retro;
+    assert([1, 2, 3].substitute(1, 0.1).retro.equal([3, 2, 0.1]));
+}
+
+/// Use faster compile-time overload
+@safe pure unittest
+{
+    import std.algorithm.comparison : equal;
+
+    // substitute subranges of a range
+    assert("apple_tree".substitute!("apple", "banana",
+                                    "tree", "shrub").equal("banana_shrub"));
+
+    // substitute subranges of a range
+    assert("apple_tree".substitute!('a', 'b',
+                                    't', 'f').equal("bpple_free"));
+
+    // substitute values
+    assert('a'.substitute!('a', 'b', 't', 'f') == 'b');
+}
+
+/// Multiple substitutes
+@safe pure unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range.primitives : ElementType;
+
+    int[3] x = [1, 2, 3];
+    auto y = x[].substitute(1, 0.1)
+                .substitute(0.1, 0.2);
+    static assert(is(typeof(y.front) == double));
+    assert(y.equal([0.2, 2, 3]));
+
+    auto z = "42".substitute('2', '3')
+                 .substitute('3', '1');
+    static assert(is(ElementType!(typeof(z)) == dchar));
+    assert(equal(z, "41"));
+}
+
+// Test the first example with Compile-Time overloads
+@safe pure unittest
+{
+    import std.algorithm.comparison : equal;
+
+    // substitute single elements
+    assert("do_it".substitute!('_', ' ').equal("do it"));
+
+    // substitute multiple, single elements
+    assert("do_it".substitute!('_', ' ',
+                               'd', 'g',
+                               'i', 't',
+                               't', 'o')
+                  .equal(`go to`));
+
+    // substitute subranges
+    assert("do_it".substitute!("_", " ",
+                               "do", "done")
+                  .equal("done it"));
+
+    // substitution works for any ElementType
+    int[3] x = [1, 2, 3];
+    auto y = x[].substitute!(1, 0.1);
+    assert(y.equal([0.1, 2, 3]));
+    static assert(is(typeof(y.front) == double));
+
+    import std.range : retro;
+    assert([1, 2, 3].substitute!(1, 0.1).retro.equal([3, 2, 0.1]));
+}
+
+// test infinite ranges
+@safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : cycle, take;
+
+    int[] x = [1, 2, 3];
+    assert(x.cycle.substitute!(1, 0.1).take(4).equal([0.1, 2, 3, 0.1]));
+    assert(x.cycle.substitute(1, 0.1).take(4).equal([0.1, 2, 3, 0.1]));
+}
+
+// test infinite ranges
+@safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.internal.test.dummyrange : AllDummyRanges;
+
+    foreach (R; AllDummyRanges)
+    {
+        assert(R.init
+                .substitute!(2, 22, 3, 33, 5, 55, 9, 99)
+                .equal([1, 22, 33, 4, 55, 6, 7, 8, 99, 10]));
+
+        assert(R.init
+                .substitute(2, 22, 3, 33, 5, 55, 9, 99)
+                .equal([1, 22, 33, 4, 55, 6, 7, 8, 99, 10]));
+    }
+}
+
+// test multiple replacements
+@safe pure unittest
+{
+    import std.algorithm.comparison : equal;
+
+    assert("alpha.beta.gamma"
+            .substitute("alpha", "1",
+                        "gamma", "3",
+                        "beta", "2").equal("1.2.3"));
+
+    assert("alpha.beta.gamma."
+            .substitute("alpha", "1",
+                        "gamma", "3",
+                        "beta", "2").equal("1.2.3."));
+
+    assert("beta.beta.beta"
+            .substitute("alpha", "1",
+                        "gamma", "3",
+                        "beta", "2").equal("2.2.2"));
+
+    assert("alpha.alpha.alpha"
+            .substitute("alpha", "1",
+                        "gamma", "3",
+                        "beta", "2").equal("1.1.1"));
+}
+
+// test combination of subrange + element replacement
+@safe pure unittest
+{
+    import std.algorithm.comparison : equal;
+
+    assert(("abcDe".substitute("a", "AA",
+                               "b", "DD")
+                   .substitute('A', 'y',
+                               'D', 'x',
+                               'e', '1'))
+           .equal("yyxxcx1"));
+}
+
+// test const + immutable storage groups
+@safe pure unittest
+{
+    import std.algorithm.comparison : equal;
+
+    auto xyz_abc(T)(T value)
+    {
+        immutable a = "a";
+        const b = "b";
+        auto c = "c";
+        return value.substitute!("x", a,
+                                 "y", b,
+                                 "z", c);
+    }
+    assert(xyz_abc("_x").equal("_a"));
+    assert(xyz_abc(".y.").equal(".b."));
+    assert(xyz_abc("z").equal("c"));
+    assert(xyz_abc("w").equal("w"));
+}
+
+// test with narrow strings (auto-decoding) and subranges
+@safe pure unittest
+{
+    import std.algorithm.comparison : equal;
+
+    assert("äöü€".substitute("ä", "b", "ü", "u").equal("böu€"));
+    assert("äöü€".substitute!("ä", "b", "ü", "u").equal("böu€"));
+    assert("ä...öü€".substitute("ä", "b", "ü", "u").equal("b...öu€"));
+
+    auto expected = "emoticons😄😅.😇😈Rock";
+    assert("emoticons😄😅😆😇😈rock"
+            .substitute("r", "R", "😆", ".").equal(expected));
+    assert("emoticons😄😅😆😇😈rock"
+            .substitute!("r", "R", "😆", ".").equal(expected));
+}
+
+// test with narrow strings (auto-decoding) and single elements
+@safe pure unittest
+{
+    import std.algorithm.comparison : equal;
+
+    assert("äöü€".substitute('ä', 'b', 'ü', 'u').equal("böu€"));
+    assert("äöü€".substitute!('ä', 'b', 'ü', 'u').equal("böu€"));
+
+    auto expected = "emoticons😄😅.😇😈Rock";
+    assert("emoticons😄😅😆😇😈rock"
+            .substitute('r', 'R', '😆', '.').equal(expected));
+    assert("emoticons😄😅😆😇😈rock"
+            .substitute!('r', 'R', '😆', '.').equal(expected));
+}
+
+// test auto-decoding {n,w,d} strings X {n,w,d} strings
+@safe pure unittest
+{
+    import std.algorithm.comparison : equal;
+
+    assert("ääöü€".substitute("ä", "b", "ü", "u").equal("bböu€"));
+    assert("ääöü€".substitute("ä"w, "b"w, "ü"w, "u"w).equal("bböu€"));
+    assert("ääöü€".substitute("ä"d, "b"d, "ü"d, "u"d).equal("bböu€"));
+
+    assert("ääöü€"w.substitute("ä", "b", "ü", "u").equal("bböu€"));
+    assert("ääöü€"w.substitute("ä"w, "b"w, "ü"w, "u"w).equal("bböu€"));
+    assert("ääöü€"w.substitute("ä"d, "b"d, "ü"d, "u"d).equal("bböu€"));
+
+    assert("ääöü€"d.substitute("ä", "b", "ü", "u").equal("bböu€"));
+    assert("ääöü€"d.substitute("ä"w, "b"w, "ü"w, "u"w).equal("bböu€"));
+    assert("ääöü€"d.substitute("ä"d, "b"d, "ü"d, "u"d).equal("bböu€"));
+
+    // auto-decoding is done before by a different range
+    assert("ääöü€".filter!(a => true).substitute("ä", "b", "ü", "u").equal("bböu€"));
+    assert("ääöü€".filter!(a => true).substitute("ä"w, "b"w, "ü"w, "u"w).equal("bböu€"));
+    assert("ääöü€".filter!(a => true).substitute("ä"d, "b"d, "ü"d, "u"d).equal("bböu€"));
+}
+
+// test repeated replacement
+@safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+
+    assert([1, 2, 3, 1, 1, 2].substitute(1, 0).equal([0, 2, 3, 0, 0, 2]));
+    assert([1, 2, 3, 1, 1, 2].substitute!(1, 0).equal([0, 2, 3, 0, 0, 2]));
+    assert([1, 2, 3, 1, 1, 2].substitute(1, 2, 2, 9).equal([2, 9, 3, 2, 2, 9]));
+}
+
+// test @nogc for single element replacements
+@safe @nogc unittest
+{
+    import std.algorithm.comparison : equal;
+
+    static immutable arr = [1, 2, 3, 1, 1, 2];
+    static immutable expected = [0, 2, 3, 0, 0, 2];
+
+    assert(arr.substitute!(1, 0).equal(expected));
+    assert(arr.substitute(1, 0).equal(expected));
+}
+
+// test different range types
+@safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.internal.test.dummyrange : AllDummyRanges;
+
+    static foreach (DummyType; AllDummyRanges)
+    {{
+        DummyType dummyRange;
+
+        // single substitution
+        dummyRange.substitute (2, 22).equal([1, 22, 3, 4, 5, 6, 7, 8, 9, 10]);
+        dummyRange.substitute!(2, 22).equal([1, 22, 3, 4, 5, 6, 7, 8, 9, 10]);
+
+        // multiple substitution
+        dummyRange.substitute (2, 22, 5, 55, 7, 77).equal([1, 22, 3, 4, 55, 6, 77, 8, 9, 10]);
+        dummyRange.substitute!(2, 22, 5, 55, 7, 77).equal([1, 22, 3, 4, 55, 6, 77, 8, 9, 10]);
+    }}
 }
 
 // sum

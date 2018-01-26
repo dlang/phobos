@@ -2116,7 +2116,7 @@ if (isInputRange!RoR &&
         is found.
 
     See_Also:
-        $(REF map, std,algorithm,iteration) which can act as a lazy replace
+        $(REF substitute, std,algorithm,iteration) for a lazy replace.
  +/
 E[] replace(E, R1, R2)(E[] subject, R1 from, R2 to)
 if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
@@ -2289,6 +2289,9 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
 
     Returns:
         A new array without changing the contents of `subject`.
+
+    See_Also:
+        $(REF substitute, std,algorithm,iteration) for a lazy replace.
  +/
 T[] replace(T, Range)(T[] subject, size_t from, size_t to, Range stuff)
 if (isInputRange!Range &&
@@ -2827,6 +2830,9 @@ if (isDynamicArray!(E[]) &&
     Returns:
         A new array that is `s` with `slice` replaced by
         `replacement[]`.
+
+    See_Also:
+        $(REF substitute, std,algorithm,iteration) for a lazy replace.
  +/
 inout(T)[] replaceSlice(T)(inout(T)[] s, in T[] slice, in T[] replacement)
 in

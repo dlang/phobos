@@ -1,0 +1,49 @@
+`std.algorithm.searching.substitute` was added
+
+$(REF substitute, std,algorithm,searching) yields a lazy range with
+all occurrences of `substs` in `r` replaced with their substitution:
+
+---
+import std.algorithm.comparison : equal;
+import std.algorithm.searching : substitute;
+
+// substitute single elements
+assert("do_it".substitute('_', ' ').equal("do it"));
+
+// substitute multiple, single elements
+assert("do_it".substitute('_', ' ',
+                           'd', 'g',
+                           'i', 't',
+                           't', 'o')
+              .equal("go to"));
+
+// substitute subranges
+assert("do_it".substitute("_", " ",
+                          "do", "done")
+              .equal("done it"));
+
+// substitution works for any ElementType
+int[] x = [1, 2, 3];
+auto y = x.substitute(1, 0.1);
+assert(y.equal([0.1, 2, 3]));
+static assert(is(typeof(y.front) == double));
+---
+
+If the substitution parameters are known at compile-time, the faster
+template overload can be used:
+
+---
+import std.algorithm.comparison : equal;
+import std.algorithm.searching : substitute;
+
+// substitute subranges of a range
+assert("apple_tree".substitute!("apple", "banana",
+                                "tree", "shrub").equal("banana_shrub"));
+
+// substitute elements in a range
+assert("apple_tree".substitute!('a', 'b',
+                                't', 'f').equal("bpple_free"));
+
+// substitute values
+assert('a'.substitute!('a', 'b', 't', 'f') == 'b');
+---

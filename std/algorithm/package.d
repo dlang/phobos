@@ -82,6 +82,7 @@ $(TR
         $(SUBREF iteration, permutations)
         $(SUBREF iteration, reduce)
         $(SUBREF iteration, splitter)
+        $(SUBREF iteration, substitute)
         $(SUBREF iteration, sum)
         $(SUBREF iteration, uniq)
     )
