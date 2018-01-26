@@ -276,8 +276,8 @@ encapsulating various allocator implementations.
 Composition of allocators is not recommended at this level due to
 inflexibility of dynamic interfaces and inefficiencies caused by cascaded
 multiple calls. Instead, compose allocators using the static interface defined
-in $(A std_experimental_allocator_building_blocks.html,
-`std.experimental.allocator.building_blocks`), then adapt the composed
+in $(MREF std,experimental,allocator,building_blocks),
+then adapt the composed
 allocator to `IAllocator` (possibly by using $(LREF CAllocatorImpl) below).
 
 Methods returning $(D Ternary) return $(D Ternary.yes) upon success,
@@ -372,8 +372,8 @@ implementations.
 Composition of allocators is not recommended at this level due to
 inflexibility of dynamic interfaces and inefficiencies caused by cascaded
 multiple calls. Instead, compose allocators using the static interface defined
-in $(A std_experimental_allocator_building_blocks.html,
-`std.experimental.allocator.building_blocks`), then adapt the composed
+in $(MREF std,experimental,allocator,building_blocks),
+then adapt the composed
 allocator to `ISharedAllocator` (possibly by using $(LREF CSharedAllocatorImpl) below).
 
 Methods returning $(D Ternary) return $(D Ternary.yes) upon success,

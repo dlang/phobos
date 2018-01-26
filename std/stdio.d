@@ -1534,7 +1534,7 @@ Writes its arguments in text format to the file, according to the
 format string fmt.
 
 Params:
-fmt = The $(LINK2 std_format.html#format-string, format string).
+fmt = The $(REF_ALTTEXT format string, formattedWrite, std, _format).
 When passed as a compile-time argument, the string will be statically checked
 against the argument types passed.
 args = Items to write.
@@ -1871,7 +1871,7 @@ is recommended if you want to process a complete file.
     /**
      * Reads formatted _data from the file using $(REF formattedRead, std,_format).
      * Params:
-     * format = The $(LINK2 std_format.html#_format-string, _format string).
+     * format = The $(REF_ALTTEXT format string, formattedWrite, std _format).
      * When passed as a compile-time argument, the string will be statically checked
      * against the argument types passed.
      * data = Items to be read.
@@ -3837,7 +3837,7 @@ void writeln(T...)(T args)
 Writes formatted data to standard output (without a trailing newline).
 
 Params:
-fmt = The $(LINK2 std_format.html#format-string, format string).
+fmt = The $(REF_ALTTEXT format string, formattedWrite, std, _format).
 When passed as a compile-time argument, the string will be statically checked
 against the argument types passed.
 args = Items to write.
@@ -3950,7 +3950,7 @@ void writefln(Char, A...)(in Char[] fmt, A args)
 /**
  * Reads formatted data from $(D stdin) using $(REF formattedRead, std,_format).
  * Params:
- * format = The $(LINK2 std_format.html#_format-string, _format string).
+ * format = The $(REF_ALTTEXT format string, formattedWrite, std, _format).
  * When passed as a compile-time argument, the string will be statically checked
  * against the argument types passed.
  * args = Items to be read.
