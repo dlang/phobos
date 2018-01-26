@@ -3116,11 +3116,12 @@ public:
         import std.exception : enforce;
         import std.format : format;
         import std.string : strip;
+        import std.utf : byCodeUnit;
 
         auto str = strip(isoString);
 
         enforce(str.length >= 15, new DateTimeException(format("Invalid ISO String: %s", isoString)));
-        auto t = str.countUntil('T');
+        auto t = str.byCodeUnit.countUntil('T');
 
         enforce(t != -1, new DateTimeException(format("Invalid ISO String: %s", isoString)));
 
@@ -3216,11 +3217,12 @@ public:
         import std.exception : enforce;
         import std.format : format;
         import std.string : strip;
+        import std.utf : byCodeUnit;
 
         auto str = strip(isoExtString);
 
         enforce(str.length >= 15, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        auto t = str.countUntil('T');
+        auto t = str.byCodeUnit.countUntil('T');
 
         enforce(t != -1, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
 
@@ -3315,11 +3317,12 @@ public:
         import std.exception : enforce;
         import std.format : format;
         import std.string : strip;
+        import std.utf : byCodeUnit;
 
         auto str = strip(simpleString);
 
         enforce(str.length >= 15, new DateTimeException(format("Invalid string format: %s", simpleString)));
-        auto t = str.countUntil(' ');
+        auto t = str.byCodeUnit.countUntil(' ');
 
         enforce(t != -1, new DateTimeException(format("Invalid string format: %s", simpleString)));
 
