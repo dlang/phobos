@@ -8966,15 +8966,32 @@ public:
 
 
     /++
-        Converts this $(LREF TimeOfDay) to a string with the format HHMMSS.
+        Converts this $(LREF TimeOfDay) to a string with the format `HHMMSS`.
+        If `writer` is set, the resulting string will be written directly to it.
+
+        Params:
+            writer = A `char` accepting $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+        Returns:
+            A `string` when not using an output range; `void` otherwise.
       +/
     string toISOString() const @safe pure nothrow
     {
-        import std.format : format;
+        import std.array : appender;
+        auto w = appender!string();
+        w.reserve(6);
+        toISOString(w);
+        return w.data;
+    }
+
+    /// ditto
+    void toISOString(W)(ref W writer) const
+    if (isOutputRange!(W, char))
+    {
+        import std.format : formattedWrite;
         try
-            return format("%02d%02d%02d", _hour, _minute, _second);
+            formattedWrite(writer, "%02d%02d%02d", _hour, _minute, _second);
         catch (Exception e)
-            assert(0, "format() threw.");
+            assert(0, "formattedWrite() threw.");
     }
 
     ///
@@ -8996,15 +9013,32 @@ public:
 
 
     /++
-        Converts this $(LREF TimeOfDay) to a string with the format HH:MM:SS.
+        Converts this $(LREF TimeOfDay) to a string with the format `HH:MM:SS`.
+        If `writer` is set, the resulting string will be written directly to it.
+
+        Params:
+            writer = A `char` accepting $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+        Returns:
+            A `string` when not using an output range; `void` otherwise.
       +/
     string toISOExtString() const @safe pure nothrow
     {
-        import std.format : format;
+        import std.array : appender;
+        auto w = appender!string();
+        w.reserve(8);
+        toISOExtString(w);
+        return w.data;
+    }
+
+    /// ditto
+    void toISOExtString(W)(ref W writer) const
+    if (isOutputRange!(W, char))
+    {
+        import std.format : formattedWrite;
         try
-            return format("%02d:%02d:%02d", _hour, _minute, _second);
+            formattedWrite(writer, "%02d:%02d:%02d", _hour, _minute, _second);
         catch (Exception e)
-            assert(0, "format() threw.");
+            assert(0, "formattedWrite() threw.");
     }
 
     ///
@@ -9047,10 +9081,22 @@ public:
         `fromISOString` and `fromISOExtString`.
 
         The format returned by toString may or may not change in the future.
+
+        Params:
+            writer = A `char` accepting $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+        Returns:
+            A `string` when not using an output range; `void` otherwise.
       +/
     string toString() const @safe pure nothrow
     {
         return toISOExtString();
+    }
+
+    /// ditto
+    void toString(W)(ref W writer) const
+    if (isOutputRange!(W, char))
+    {
+        toISOExtString(writer);
     }
 
     @safe unittest
