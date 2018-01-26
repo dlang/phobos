@@ -9204,31 +9204,29 @@ public:
     static TimeOfDay fromISOExtString(S)(in S isoExtString) @safe pure
         if (isSomeString!S)
     {
-        import std.algorithm.searching : all;
-        import std.ascii : isDigit;
-        import std.conv : to;
-        import std.exception : enforce;
-        import std.format : format;
+        import std.conv : ConvException, text, to;
         import std.string : strip;
 
-        auto dstr = to!dstring(strip(isoExtString));
+        auto str = strip(isoExtString);
+        int hours, minutes, seconds;
 
-        enforce(dstr.length == 8, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+        if (str.length != 8 || str[2] != ':' || str[5] != ':')
+            throw new DateTimeException(text("Invalid ISO Extended String: ", isoExtString));
 
-        auto hours = dstr[0 .. 2];
-        auto minutes = dstr[3 .. 5];
-        auto seconds = dstr[6 .. $];
+        try
+        {
+            // cast to int from uint is used because it checks for
+            // non digits without extra loops
+            hours = cast(int) to!uint(str[0 .. 2]);
+            minutes = cast(int) to!uint(str[3 .. 5]);
+            seconds = cast(int) to!uint(str[6 .. $]);
+        }
+        catch (ConvException)
+        {
+            throw new DateTimeException(text("Invalid ISO Extended String: ", isoExtString));
+        }
 
-        enforce(dstr[2] == ':', new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        enforce(dstr[5] == ':', new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        enforce(all!isDigit(hours),
-                new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        enforce(all!isDigit(minutes),
-                new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        enforce(all!isDigit(seconds),
-                new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-
-        return TimeOfDay(to!int(hours), to!int(minutes), to!int(seconds));
+        return TimeOfDay(hours, minutes, seconds);
     }
 
     ///
