@@ -563,7 +563,7 @@ private template fqnSym(alias T)
 
         if (s.skipOver("package ") || s.skipOver("module "))
             return s;
-        return s.findSplit("(").pre;
+        return s.findSplit("(")[0];
     }
     enum fqnSym = parentPrefix ~ adjustIdent(__traits(identifier, T));
 }
