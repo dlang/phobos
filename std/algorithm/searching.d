@@ -2790,32 +2790,30 @@ if (isForwardRange!R1 && ifTestable!(typeof(haystack.front), unaryFun!pred))
 These functions find the first occurrence of `needle` in `haystack` and then
 split `haystack` as follows.
 
-`findSplit` returns a `("pre", "separator", "post")` tuple containing three ranges:
-$(UL
-    $(LI `pre` is the portion of `haystack` $(B before) `needle`)
-    $(LI `match` is the portion of `haystack` that $(B matches) `needle`)
-    $(LI `post` is the portion of `haystack` $(B after) the match)
-)
-`findSplitBefore` returns a `("pre", "post")` tuple containing two ranges:
-$(UL
-    $(LI `pre` is the portion of `haystack` $(B before) `needle`)
-    $(LI `post` is the portion of `haystack` $(B starting) with the found match)
-)
-`findSplitAfter` returns a `("pre", "post")` tuple containing two ranges:
-$(UL
-    $(LI `pre` is the portion of `haystack` $(B up to and including) the haystack)
-    $(LI `post` is the portion of `haystack` $(B after) the found match)
-)
+`findSplit` returns a tuple `result` containing $(I three) ranges. `result[0]`
+is the portion of `haystack` before `needle`, `result[1]` is the portion of
+`haystack` that matches `needle`, and `result[2]` is the portion of `haystack`
+after the match. If `needle` was not found, `result[0]` comprehends `haystack`
+entirely and `result[1]` and `result[2]` are empty.
 
-If `needle` was not found, `pre` comprehends `haystack` entirely and with
-`match` and `post` being empty.
+`findSplitBefore` returns a tuple `result` containing two ranges. `result[0]` is
+the portion of `haystack` before `needle`, and `result[1]` is the balance of
+`haystack` starting with the match. If `needle` was not found, `result[0]`
+comprehends `haystack` entirely and `result[1]` is empty.
+
+`findSplitAfter` returns a tuple `result` containing two ranges.
+`result[0]` is the portion of `haystack` up to and including the
+match, and `result[1]` is the balance of `haystack` starting
+after the match. If `needle` was not found, `result[0]` is empty
+and `result[1]` is `haystack`.
+
 In all cases, the concatenation of the returned ranges spans the
 entire `haystack`.
 
 If `haystack` is a random-access range, all three components of the tuple have
 the same type as `haystack`. Otherwise, `haystack` must be a
 $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) and
-the type of `pre` and `match` is the same as $(REF takeExactly,
+the type of `result[0]` and `result[1]` is the same as $(REF takeExactly,
 std,range).
 
 Params:
@@ -2825,9 +2823,8 @@ Params:
 
 Returns:
 
-A sub-type of `Tuple!("pre", "match", "post")` of the split portions of
-`haystack` (see above for details).  This sub-type of $(REF Tuple, std.typecons)
-has `opCast` defined for `bool`.  This
+A sub-type of `Tuple!()` of the split portions of `haystack` (see above for
+details).  This sub-type of `Tuple!()` has `opCast` defined for `bool`.  This
 `opCast` returns `true` when the separating `needle` was found
 (`!result[1].empty`) and `false` otherwise.
  */
@@ -2845,7 +2842,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
         {
             asTuple = rhs;
         }
-        Tuple!(S1, "pre", S1, "match",  S2, "post") asTuple;
+        Tuple!(S1, S1, S2) asTuple;
         bool opCast(T : bool)()
         {
             return !asTuple[1].empty;
@@ -2909,7 +2906,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
         {
             asTuple = rhs;
         }
-        Tuple!(S1, "pre", S2, "post") asTuple;
+        Tuple!(S1, S2) asTuple;
         bool opCast(T : bool)()
         {
             return !asTuple[0].empty;
@@ -2969,7 +2966,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
         {
             asTuple = rhs;
         }
-        Tuple!(S1, "pre", S2, "post") asTuple;
+        Tuple!(S1, S2) asTuple;
         bool opCast(T : bool)()
         {
             return !asTuple[1].empty;
@@ -3028,7 +3025,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
 {
     // findSplit returns a triplet
     if (auto split = "dlang-rocks".findSplit("-"))
-        assert(split.post == "rocks");
+        assert(split[2] == "rocks");
 }
 
 ///
@@ -3038,28 +3035,25 @@ if (isForwardRange!R1 && isForwardRange!R2)
 
     auto a = "Carl Sagan Memorial Station";
     auto r = findSplit(a, "Velikovsky");
+    import std.typecons : isTuple;
+    static assert(isTuple!(typeof(r.asTuple)));
+    static assert(isTuple!(typeof(r)));
     assert(!r);
-    assert(r.pre == a);
-    assert(r.match.empty);
-    assert(r.post.empty);
-}
-
-///
-@safe pure nothrow unittest
-{
-    auto a = "Carl Sagan Memorial Station";
-    auto r = findSplit(a, " ");
-    assert(r.pre == "Carl");
-    assert(r.match == " ");
-    assert(r.post == "Sagan Memorial Station");
-
+    assert(r[0] == a);
+    assert(r[1].empty);
+    assert(r[2].empty);
+    r = findSplit(a, " ");
+    assert(r[0] == "Carl");
+    assert(r[1] == " ");
+    assert(r[2] == "Sagan Memorial Station");
     auto r1 = findSplitBefore(a, "Sagan");
-    assert(r1.pre == "Carl ");
-    assert(r1.post == "Sagan Memorial Station");
-
+    assert(r1);
+    assert(r1[0] == "Carl ");
+    assert(r1[1] == "Sagan Memorial Station");
     auto r2 = findSplitAfter(a, "Sagan");
-    assert(r2.pre == "Carl Sagan");
-    assert(r2.post == " Memorial Station");
+    assert(r2);
+    assert(r2[0] == "Carl Sagan");
+    assert(r2[1] == " Memorial Station");
 }
 
 /// Use $(REF only, std,range) to find single elements:
@@ -3067,21 +3061,6 @@ if (isForwardRange!R1 && isForwardRange!R2)
 {
     import std.range : only;
     assert([1, 2, 3, 4].findSplitBefore(only(3))[0] == [1, 2]);
-}
-
-@safe pure nothrow unittest
-{
-    import std.range.primitives : empty;
-    import std.typecons : isTuple;
-
-    auto a = "Carl Sagan Memorial Station";
-    auto r = findSplit(a, "Velikovsky");
-    static assert(isTuple!(typeof(r.asTuple)));
-    static assert(isTuple!(typeof(r)));
-    assert(!r);
-    assert(r.pre == a);
-    assert(r.match.empty);
-    assert(r.post.empty);
 }
 
 @safe pure nothrow unittest
