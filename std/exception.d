@@ -372,7 +372,7 @@ void assertThrown(T : Throwable = Exception, E)
         of your program. That is what $(D assert) is for. Also, do not use
         $(D enforce) inside of contracts (i.e. inside of $(D in) and $(D out)
         blocks and $(D invariant)s), because contracts are compiled out when
-        compiling with $(I -release). Use $(D assert) in contracts.
+        compiling with $(I -release).
 
     Example:
     --------------------
