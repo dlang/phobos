@@ -262,34 +262,6 @@ public:
     }
 
 
-    // Explicitly undocumented. It will be removed in January 2018. @@@DEPRECATED_2018-01@@@
-    deprecated("Use core.time.MonoTime.currTime instead")
-    static @property TickDuration currSystemTick() @safe nothrow
-    {
-        return TickDuration.currSystemTick;
-    }
-
-    deprecated @safe unittest
-    {
-        assert(Clock.currSystemTick.length > 0);
-    }
-
-    // Explicitly undocumented. It will be removed in January 2018. @@@DEPRECATED_2018-01@@@
-    deprecated("Use core.time.MonoTime instead. See currAppTick's documentation for details.")
-    static @property TickDuration currAppTick() @safe
-    {
-        return currSystemTick - TickDuration.appOrigin;
-    }
-
-    deprecated @safe unittest
-    {
-        auto a = Clock.currSystemTick;
-        auto b = Clock.currAppTick;
-        assert(a.length);
-        assert(b.length);
-        assert(a > b);
-    }
-
 private:
 
     @disable this() {}
@@ -6003,33 +5975,6 @@ public:
         //assert(ist - duration == SysTime(DateTime(1999, 7, 6, 12, 30, 21)));
     }
 
-    // Explicitly undocumented. It will be removed in January 2018. @@@DEPRECATED_2018-01@@@
-    deprecated("Use Duration instead of TickDuration.")
-    SysTime opBinary(string op)(TickDuration td) @safe const pure nothrow
-        if (op == "+" || op == "-")
-    {
-        SysTime retval = SysTime(this._stdTime, this._timezone);
-        immutable hnsecs = td.hnsecs;
-        mixin("retval._stdTime " ~ op ~ "= hnsecs;");
-        return retval;
-    }
-
-    deprecated @safe unittest
-    {
-        // This probably only runs in cases where gettimeofday() is used, but it's
-        // hard to do this test correctly with variable ticksPerSec.
-        if (TickDuration.ticksPerSec == 1_000_000)
-        {
-            auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_678));
-
-            assert(st + TickDuration.from!"usecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_748)));
-            assert(st + TickDuration.from!"usecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_608)));
-
-            assert(st - TickDuration.from!"usecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_748)));
-            assert(st - TickDuration.from!"usecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_608)));
-        }
-    }
-
 
     /++
         Gives the result of adding or subtracting a $(REF Duration, core,time) from
@@ -6231,46 +6176,6 @@ public:
         //static assert(!__traits(compiles, ist += duration));
         static assert(!__traits(compiles, cst -= duration));
         //static assert(!__traits(compiles, ist -= duration));
-    }
-
-    // Explicitly undocumented. It will be removed in January 2018. @@@DEPRECATED_2018-01@@@
-    deprecated("Use Duration instead of TickDuration.")
-    ref SysTime opOpAssign(string op)(TickDuration td) @safe pure nothrow
-        if (op == "+" || op == "-")
-    {
-        immutable hnsecs = td.hnsecs;
-        mixin("_stdTime " ~ op ~ "= hnsecs;");
-        return this;
-    }
-
-    deprecated @safe unittest
-    {
-        // This probably only runs in cases where gettimeofday() is used, but it's
-        // hard to do this test correctly with variable ticksPerSec.
-        if (TickDuration.ticksPerSec == 1_000_000)
-        {
-            {
-                auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_678));
-                st += TickDuration.from!"usecs"(7);
-                assert(st == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_748)));
-            }
-            {
-                auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_678));
-                st += TickDuration.from!"usecs"(-7);
-                assert(st == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_608)));
-            }
-
-            {
-                auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_678));
-                st -= TickDuration.from!"usecs"(-7);
-                assert(st == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_748)));
-            }
-            {
-                auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_678));
-                st -= TickDuration.from!"usecs"(7);
-                assert(st == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_608)));
-            }
-        }
     }
 
 
