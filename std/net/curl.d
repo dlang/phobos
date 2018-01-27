@@ -4046,6 +4046,7 @@ struct SMTP
     */
     void mailTo()(const(char)[][] recipients...)
     {
+        import std.internal.cstring : tempCString;
         assert(!recipients.empty, "Recipient must not be empty");
         curl_slist* recipients_list = null;
         foreach (recipient; recipients)
@@ -4066,6 +4067,20 @@ struct SMTP
         p.message = msg;
     }
 }
+
+@system unittest
+{
+    import std.net.curl;
+
+    // Send an email with SMTPS
+    auto smtp = SMTP("smtps://smtp.gmail.com");
+    smtp.setAuthentication("from.addr@gmail.com", "password");
+    smtp.mailTo = ["<to.addr@gmail.com>"];
+    smtp.mailFrom = "<from.addr@gmail.com>";
+    smtp.message = "Example Message";
+    //smtp.perform();
+}
+
 
 /++
     Exception thrown on errors in std.net.curl functions.
