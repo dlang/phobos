@@ -3729,6 +3729,11 @@ if (is(T == class) && !is(T == enum))
     // TODO: Change this once toString() works for shared objects.
     static assert(!is(T == shared), "unable to format shared objects");
 
+    // TODO: remove this check once `@disable override` deprecation cycle is finished
+    static if (__traits(hasMember, T, "toString") && isSomeFunction!(val.toString))
+        static assert(!__traits(isDisabled, T.toString), T.stringof ~
+            " cannot be formatted because its `toString` is marked with `@disable`");
+
     if (val is null)
         put(w, "null");
     else
@@ -3834,6 +3839,10 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is
         put(w, "null");
     else
     {
+        static if (__traits(hasMember, T, "toString") && isSomeFunction!(val.toString))
+            static assert(!__traits(isDisabled, T.toString), T.stringof ~
+                " cannot be formatted because its `toString` is marked with `@disable`");
+
         static if (hasToString!(T, Char))
         {
             formatObject(w, val, f);
@@ -3909,6 +3918,11 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is
 private void formatValueImpl(Writer, T, Char)(auto ref Writer w, auto ref T val, const ref FormatSpec!Char f)
 if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is(T == enum))
 {
+
+    static if (__traits(hasMember, T, "toString") && isSomeFunction!(val.toString))
+        static assert(!__traits(isDisabled, T.toString), T.stringof ~
+            " cannot be formatted because its `toString` is marked with `@disable`");
+
     enforceValidFormatSpec!(T, Char)(f);
     static if (hasToString!(T, Char))
     {
@@ -4023,7 +4037,7 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
 
 @safe unittest
 {
-    import std.array;
+    import std.array : appender;
     static struct S{ @disable this(this); }
     S s;
 
@@ -4031,6 +4045,24 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
     auto w = appender!string();
     formatValue(w, s, f);
     assert(w.data == "S()");
+}
+
+unittest
+{
+    //struct Foo { @disable string toString(); }
+    //Foo foo;
+
+    interface Bar { @disable string toString(); }
+    Bar bar;
+
+    import std.array : appender;
+    auto w = appender!(char[])();
+    FormatSpec!char f;
+
+    // NOTE: structs cant be tested : the assertion is correct so compilation
+    // continues and fails when trying to link the unimplemented toString.
+    //static assert(!__traits(compiles, formatValue(w, foo, f)));
+    static assert(!__traits(compiles, formatValue(w, bar, f)));
 }
 
 /*
