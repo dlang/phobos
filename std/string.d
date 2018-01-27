@@ -357,10 +357,21 @@ alias CaseSensitive = Flag!"caseSensitive";
 
     See_Also: $(REF countUntil, std,algorithm,searching)
   +/
-ptrdiff_t indexOf(Range)(Range s, in dchar c,
-        in CaseSensitive cs = Yes.caseSensitive)
-if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-    !isConvertibleToString!Range)
+ptrdiff_t indexOf(Range)(Range s, dchar c, CaseSensitive cs = Yes.caseSensitive)
+if (isInputRange!Range && isSomeChar!(ElementType!Range) && !isSomeString!Range)
+{
+    return _indexOf(s, c, cs);
+}
+
+/// Ditto
+ptrdiff_t indexOf(C)(C[] s, dchar c, CaseSensitive cs = Yes.caseSensitive)
+if (isSomeChar!C)
+{
+    return _indexOf(s, c, cs);
+}
+
+private ptrdiff_t _indexOf(Range)(Range s, dchar c, CaseSensitive cs = Yes.caseSensitive)
+if (isInputRange!Range && isSomeChar!(ElementType!Range))
 {
     static import std.ascii;
     static import std.uni;
@@ -485,10 +496,21 @@ if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
 }
 
 /// Ditto
-ptrdiff_t indexOf(Range)(Range s, in dchar c, in size_t startIdx,
-        in CaseSensitive cs = Yes.caseSensitive)
-if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-    !isConvertibleToString!Range)
+ptrdiff_t indexOf(Range)(Range s, dchar c, size_t startIdx, CaseSensitive cs = Yes.caseSensitive)
+if (isInputRange!Range && isSomeChar!(ElementType!Range) && !isSomeString!Range)
+{
+    return _indexOf(s, c, startIdx, cs);
+}
+
+/// Ditto
+ptrdiff_t indexOf(C)(C[] s, dchar c, size_t startIdx, CaseSensitive cs = Yes.caseSensitive)
+if (isSomeChar!C)
+{
+    return _indexOf(s, c, startIdx, cs);
+}
+
+private ptrdiff_t _indexOf(Range)(Range s, dchar c, size_t startIdx, CaseSensitive cs = Yes.caseSensitive)
+if (isInputRange!Range && isSomeChar!(ElementType!Range))
 {
     static if (isSomeString!(typeof(s)) ||
                 (hasSlicing!(typeof(s)) && hasLength!(typeof(s))))
@@ -541,23 +563,15 @@ if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
     assert(indexOf(s, 'w', 3, No.caseSensitive) == 6);
 }
 
-ptrdiff_t indexOf(Range)(auto ref Range s, in dchar c,
-        in CaseSensitive cs = Yes.caseSensitive)
-if (isConvertibleToString!Range)
-{
-    return indexOf!(StringTypeOf!Range)(s, c, cs);
-}
-
-ptrdiff_t indexOf(Range)(auto ref Range s, in dchar c, in size_t startIdx,
-        in CaseSensitive cs = Yes.caseSensitive)
-if (isConvertibleToString!Range)
-{
-    return indexOf!(StringTypeOf!Range)(s, c, startIdx, cs);
-}
-
 @safe pure unittest
 {
     assert(testAliasedString!indexOf("std/string.d", '/'));
+
+    enum S : string { a = "std/string.d" }
+    assert(S.a.indexOf('/') == 3);
+
+    char[S.a.length] sa = S.a[];
+    assert(sa.indexOf('/') == 3);
 }
 
 @safe pure unittest
@@ -613,7 +627,19 @@ if (isConvertibleToString!Range)
 
 @safe pure unittest
 {
-    assert(testAliasedString!indexOf("std/string.d", '/', 3));
+    assert(testAliasedString!indexOf("std/string.d", '/', 0));
+    assert(testAliasedString!indexOf("std/string.d", '/', 1));
+    assert(testAliasedString!indexOf("std/string.d", '/', 4));
+
+    enum S : string { a = "std/string.d" }
+    assert(S.a.indexOf('/', 0) == 3);
+    assert(S.a.indexOf('/', 1) == 3);
+    assert(S.a.indexOf('/', 4) == -1);
+
+    char[S.a.length] sa = S.a[];
+    assert(sa.indexOf('/', 0) == 3);
+    assert(sa.indexOf('/', 1) == 3);
+    assert(sa.indexOf('/', 4) == -1);
 }
 
 @safe pure unittest
@@ -2358,14 +2384,14 @@ if (!isSomeString!S && is(StringTypeOf!S))
 alias KeepTerminator = Flag!"keepTerminator";
 
 /// ditto
-S[] splitLines(S)(S s, in KeepTerminator keepTerm = No.keepTerminator) @safe pure
-if (isSomeString!S)
+C[][] splitLines(C)(C[] s, KeepTerminator keepTerm = No.keepTerminator) @safe pure
+if (isSomeChar!C)
 {
     import std.array : appender;
     import std.uni : lineSep, paraSep;
 
     size_t iStart = 0;
-    auto retval = appender!(S[])();
+    auto retval = appender!(C[][])();
 
     for (size_t i; i < s.length; ++i)
     {
@@ -2454,15 +2480,15 @@ if (isSomeString!S)
     assert(splitLines(s) == [s]);
 }
 
-auto splitLines(S)(auto ref S s, in KeepTerminator keepTerm = No.keepTerminator)
-if (!isSomeString!S && is(StringTypeOf!S))
-{
-    return splitLines!(StringTypeOf!S)(s, keepTerm);
-}
-
 @safe pure nothrow unittest
 {
     assert(testAliasedString!splitLines("hello\nworld"));
+
+    enum S : string { a = "hello\nworld" }
+    assert(S.a.splitLines() == ["hello", "world"]);
+
+    char[S.a.length] sa = S.a[];
+    assert(sa.splitLines() == ["hello", "world"]);
 }
 
 @safe pure unittest
@@ -2687,11 +2713,16 @@ public:
     $(REF splitter, std,regex)
  */
 auto lineSplitter(KeepTerminator keepTerm = No.keepTerminator, Range)(Range r)
-if ((hasSlicing!Range && hasLength!Range && isSomeChar!(ElementType!Range) ||
-    isSomeString!Range) &&
-    !isConvertibleToString!Range)
+if (hasSlicing!Range && hasLength!Range && isSomeChar!(ElementType!Range) && !isSomeString!Range)
 {
     return LineSplitter!(keepTerm, Range)(r);
+}
+
+/// Ditto
+auto lineSplitter(KeepTerminator keepTerm = No.keepTerminator, C)(C[] r)
+if (isSomeChar!C)
+{
+    return LineSplitter!(keepTerm, C[])(r);
 }
 
 ///
@@ -2705,12 +2736,6 @@ if ((hasSlicing!Range && hasLength!Range && isSomeChar!(ElementType!Range) ||
     lineSplitter comparable to the string[] created by splitLines.
     */
     assert(lineSplitter(s).array == splitLines(s));
-}
-
-auto lineSplitter(KeepTerminator keepTerm = No.keepTerminator, Range)(auto ref Range r)
-if (isConvertibleToString!Range)
-{
-    return LineSplitter!(keepTerm, StringTypeOf!Range)(r);
 }
 
 @safe pure unittest
@@ -2796,9 +2821,17 @@ if (isConvertibleToString!Range)
 @nogc @safe pure unittest
 {
     import std.algorithm.comparison : equal;
+    import std.range : only;
+
     auto s = "std/string.d";
     auto as = TestAliasedString(s);
     assert(equal(s.lineSplitter(), as.lineSplitter()));
+
+    enum S : string { a = "hello\nworld" }
+    assert(equal(S.a.lineSplitter(), only("hello", "world")));
+
+    char[S.a.length] sa = S.a[];
+    assert(equal(sa.lineSplitter(), only("hello", "world")));
 }
 
 @safe pure unittest
