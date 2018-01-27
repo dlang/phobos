@@ -4071,7 +4071,7 @@ struct SMTP
 @system unittest
 {
     import std.net.curl;
-   
+
     // Send an email with SMTPS
     auto smtp = SMTP("smtps://smtp.gmail.com");
     smtp.setAuthentication("from.addr@gmail.com", "password");
