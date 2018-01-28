@@ -894,7 +894,7 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  *
  * For more on infering uniqueness see the $(B unique) and
  * $(B lent) keywords in the
- * $(HTTP archjava.fluid.cs.cmu.edu/papers/oopsla02.pdf, ArchJava)
+ * $(HTTP www.cs.cmu.edu/~aldrich/papers/aldrich-dissertation.pdf, ArchJava)
  * language.
  *
  * The downside of using $(D assumeUnique)'s
