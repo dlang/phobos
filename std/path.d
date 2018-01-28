@@ -897,6 +897,7 @@ if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) && !isSo
 
 /// ditto
 auto stripDrive(C)(C[] path)
+if (isSomeChar!C)
 {
     return _stripDrive(path);
 }
