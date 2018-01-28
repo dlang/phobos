@@ -1235,10 +1235,20 @@ if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
  *      $(LREF setExtension)
  */
 auto withExtension(R, C)(R path, C[] ext)
-if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-    isNarrowString!R) &&
-    !isConvertibleToString!R &&
-    isSomeChar!C)
+if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) &&
+    !isSomeString!R && isSomeChar!C)
+{
+    return _withExtension(path, ext);
+}
+
+/// Ditto
+auto withExtension(C1, C2)(C1[] path, C2[] ext)
+if (isSomeChar!C1 && isSomeChar!C2)
+{
+    return _withExtension(path, ext);
+}
+
+private auto _withExtension(R, C)(R path, C[] ext)
 {
     import std.range : only, chain;
     import std.utf : byUTF;
@@ -1264,15 +1274,17 @@ if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(Element
     assert(withExtension("file.ext"w.byWchar, ".").array == "file."w);
 }
 
-auto withExtension(R, C)(auto ref R path, C[] ext)
-if (isConvertibleToString!R)
-{
-    return withExtension!(StringTypeOf!R)(path, ext);
-}
-
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
+
     assert(testAliasedString!withExtension("file", "ext"));
+
+    enum S : string { a = "foo.bar" }
+    assert(equal(S.a.withExtension(".txt"), "foo.txt"));
+
+    char[S.a.length] sa = S.a[];
+    assert(equal(sa.withExtension(".txt"), "foo.txt"));
 }
 
 /** Params:
