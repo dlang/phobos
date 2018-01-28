@@ -1331,17 +1331,27 @@ if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
  *      range with the result
  */
 auto withDefaultExtension(R, C)(R path, C[] ext)
-if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-    isNarrowString!R) &&
-    !isConvertibleToString!R &&
-    isSomeChar!C)
+if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) &&
+    !isSomeString!R && isSomeChar!C)
+{
+    return _withDefaultExtension(path, ext);
+}
+
+/// Ditto
+auto withDefaultExtension(C1, C2)(C1[] path, C2[] ext)
+if (isSomeChar!C1 && isSomeChar!C2)
+{
+    return _withDefaultExtension(path, ext);
+}
+
+private auto _withDefaultExtension(R, C)(R path, C[] ext)
 {
     import std.range : only, chain;
     import std.utf : byUTF;
 
     alias CR = Unqual!(ElementEncodingType!R);
     auto dot = only(CR('.'));
-    auto i = extSeparatorPos(path);
+    immutable i = extSeparatorPos(path);
     if (i == -1)
     {
         if (ext.length > 0 && ext[0] == '.')
@@ -1372,15 +1382,17 @@ if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(Element
     assert(withDefaultExtension("file".byChar, "").array == "file.");
 }
 
-auto withDefaultExtension(R, C)(auto ref R path, C[] ext)
-if (isConvertibleToString!R)
-{
-    return withDefaultExtension!(StringTypeOf!R, C)(path, ext);
-}
-
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
+
     assert(testAliasedString!withDefaultExtension("file", "ext"));
+
+    enum S : string { a = "foo" }
+    assert(equal(S.a.withDefaultExtension(".txt"), "foo.txt"));
+
+    char[S.a.length] sa = S.a[];
+    assert(equal(sa.withDefaultExtension(".txt"), "foo.txt"));
 }
 
 /** Combines one or more path segments.
