@@ -355,31 +355,36 @@ void assertThrown(T : Throwable = Exception, E)
 
 /++
     Enforces that the given value is true.
+    If the given value is false, an exception is thrown.
+    The
+    $(UL
+        $(LI `msg` - error message as a `string`)
+        $(LI `dg` - custom delegate that return a string and is only called if an exception occurred)
+        $(LI `ex` - custom exception to be thrown. It is `lazy` and is only created if an exception occurred)
+    )
 
     Params:
         value = The value to test.
-        E = Exception type to throw if the value evalues to false.
+        E = Exception type to throw if the value evaluates to false.
         msg = The error message to put in the exception if it is thrown.
+        dg = The delegate to be called if the value evaluates to false.
+        ex = The exception to throw if the value evaluates to false.
         file = The source file of the caller.
         line = The line number of the caller.
 
-    Returns: $(D value), if `cast(bool) value` is true. Otherwise,
-    $(D new Exception(msg)) is thrown.
+    Returns: `value`, if `cast(bool) value` is true. Otherwise,
+    depending on the chosen overload, `new Exception(msg)`, `dg()` or `ex` is thrown.
 
     Note:
-        $(D enforce) is used to throw exceptions and is therefore intended to
+        `enforce` is used to throw exceptions and is therefore intended to
         aid in error handling. It is $(I not) intended for verifying the logic
         of your program. That is what $(D assert) is for. Also, do not use
-        $(D enforce) inside of contracts (i.e. inside of $(D in) and $(D out)
+        `enforce` inside of contracts (i.e. inside of `in` and `out`
         blocks and $(D invariant)s), because contracts are compiled out when
         compiling with $(I -release).
 
-    Example:
-    --------------------
-    auto f = enforce(fopen("data.txt"));
-    auto line = readln(f);
-    enforce(line.length, "Expected a non-empty line.");
-    --------------------
+        If a delegate is passed, the safety and purity of this function are inferred
+        from `Dg`'s safety and purity.
  +/
 T enforce(E : Throwable = Exception, T)(T value, lazy const(char)[] msg = null,
 string file = __FILE__, size_t line = __LINE__)
@@ -389,21 +394,7 @@ if (is(typeof({ if (!value) {} })))
     return value;
 }
 
-/++
-    Enforces that the given value is true.
-
-    Params:
-        value = The value to test.
-        dg = The delegate to be called if the value evaluates to false.
-        file = The source file of the caller.
-        line = The line number of the caller.
-
-    Returns: $(D value), if `cast(bool) value` is true. Otherwise, the given
-    delegate is called.
-
-    The safety and purity of this function are inferred from $(D Dg)'s safety
-    and purity.
- +/
+/// ditto
 T enforce(T, Dg, string file = __FILE__, size_t line = __LINE__)
     (T value, scope Dg dg)
 if (isSomeFunction!Dg && is(typeof( dg() )) &&
@@ -411,6 +402,57 @@ if (isSomeFunction!Dg && is(typeof( dg() )) &&
 {
     if (!value) dg();
     return value;
+}
+
+/// ditto
+T enforce(T)(T value, lazy Throwable ex)
+{
+    if (!value) throw ex();
+    return value;
+}
+
+///
+unittest
+{
+    import core.stdc.stdlib : malloc, free;
+    import std.conv : ConvException, to;
+
+    // use enforce like assert
+    int a = 3;
+    enforce(a > 2, "a needs to be higher than 2.");
+
+    // enforce can throw a custom exception
+    enforce!ConvException(a > 2, "a needs to be higher than 2.");
+
+    // enforce will return it's input
+    enum size = 42;
+    auto memory = enforce(malloc(size), "malloc failed")[0 .. size];
+    scope(exit) free(memory.ptr);
+}
+
+///
+@safe unittest
+{
+    assertNotThrown(enforce(true, new Exception("this should not be thrown")));
+    assertThrown(enforce(false, new Exception("this should be thrown")));
+}
+
+///
+@safe unittest
+{
+    assert(enforce(123) == 123);
+
+    try
+    {
+        enforce(false, "error");
+        assert(false);
+    }
+    catch (Exception e)
+    {
+        assert(e.msg == "error");
+        assert(e.file == __FILE__);
+        assert(e.line == __LINE__-7);
+    }
 }
 
 private void bailOut(E : Throwable = Exception)(string file, size_t line, in char[] msg)
@@ -427,23 +469,6 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
     {
         static assert(0, "Expected this(string, string, size_t) or this(string, size_t)" ~
             " constructor for " ~ __traits(identifier, E));
-    }
-}
-
-@safe unittest
-{
-    assert(enforce(123) == 123);
-
-    try
-    {
-        enforce(false, "error");
-        assert(false);
-    }
-    catch (Exception e)
-    {
-        assert(e.msg == "error");
-        assert(e.file == __FILE__);
-        assert(e.line == __LINE__-7);
     }
 }
 
@@ -530,35 +555,6 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
         this() { super("Not found"); }
     }
     static assert(!__traits(compiles, { enforce!E(false); }));
-}
-
-/++
-    Enforces that the given value is true.
-
-    Params:
-        value = The value to test.
-        ex = The exception to throw if the value evaluates to false.
-
-    Returns: $(D value), if `cast(bool) value` is true. Otherwise, $(D ex) is
-    thrown.
-
-    Example:
-    --------------------
-    auto f = enforce(fopen("data.txt"));
-    auto line = readln(f);
-    enforce(line.length, new IOException); // expect a non-empty line
-    --------------------
- +/
-T enforce(T)(T value, lazy Throwable ex)
-{
-    if (!value) throw ex();
-    return value;
-}
-
-@safe unittest
-{
-    assertNotThrown(enforce(true, new Exception("this should not be thrown")));
-    assertThrown(enforce(false, new Exception("this should be thrown")));
 }
 
 /++
