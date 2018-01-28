@@ -96,11 +96,34 @@ enum JSON_TYPE : byte
     FALSE    /// ditto
 }
 
+private struct DefaultPolicy { }
+
 /**
 JSON value node
 */
-struct JSONValue
+alias JSONValue = JSONValueTemplate!DefaultPolicy;
+
+/**
+A JSONValue template. Features can be enabled/disabled via setting members in $(D Policy).
+Example:
+------------
+struct MyPolicy
 {
+    enum sortObjectMembers = false;
+    alias MyObjectType(K,V) = OrderedAA!(K,V);
+}
+alias MyJSONValue = JSONValueTemplate!MyPolicy;
+------------
+**/
+struct JSONValueTemplate(alias Policy)
+{
+    alias Value = typeof(this);
+
+    static if (hasMember!(Policy, "ObjectType"))
+        alias JSONObject = Policy.ObjectType!(string, Value);
+    else
+        alias JSONObject = Value[string];
+
     import std.exception : enforceEx, enforce;
 
     union Store
@@ -109,8 +132,8 @@ struct JSONValue
         long                            integer;
         ulong                           uinteger;
         double                          floating;
-        JSONValue[string]               object;
-        JSONValue[]                     array;
+        JSONObject                      object;
+        Value[]                         array;
     }
     private Store store;
     private JSON_TYPE type_tag;
@@ -126,7 +149,7 @@ struct JSONValue
     @safe unittest
     {
           string s = "{ \"language\": \"D\" }";
-          JSONValue j = parseJSON(s);
+          Value j = parseJSONTemplate!Policy(s);
           assert(j.type == JSON_TYPE.OBJECT);
           assert(j["language"].type == JSON_TYPE.STRING);
     }
@@ -151,7 +174,7 @@ struct JSONValue
     ///
     @safe unittest
     {
-        JSONValue j = [ "language": "D" ];
+        Value j = [ "language": "D" ];
 
         // get value
         assert(j["language"].str == "D");
@@ -227,14 +250,14 @@ struct JSONValue
        (*a)["hello"] = "world";  // segmentation fault
        ---
      */
-    @property ref inout(JSONValue[string]) object() inout pure @system
+    @property ref inout(JSONObject) object() inout pure @system
     {
         enforce!JSONException(type == JSON_TYPE.OBJECT,
                                 "JSONValue is not an object");
         return store.object;
     }
     /// ditto
-    @property JSONValue[string] object(JSONValue[string] v) pure nothrow @nogc @safe
+    @property JSONObject object(JSONObject v) pure nothrow @nogc @safe
     {
         assign(v);
         return v;
@@ -255,7 +278,7 @@ struct JSONValue
      * Throws: $(D JSONException) for read access if $(D type) is not
      * $(D JSON_TYPE.OBJECT).
      */
-    @property inout(JSONValue[string]) objectNoRef() inout pure @trusted
+    @property inout(JSONObject) objectNoRef() inout pure @trusted
     {
         enforce!JSONException(type == JSON_TYPE.OBJECT,
                                 "JSONValue is not an object");
@@ -273,14 +296,14 @@ struct JSONValue
        (*a)[0] = "world";  // segmentation fault
        ---
      */
-    @property ref inout(JSONValue[]) array() inout pure @system
+    @property ref inout(Value[]) array() inout pure @system
     {
         enforce!JSONException(type == JSON_TYPE.ARRAY,
                                 "JSONValue is not an array");
         return store.array;
     }
     /// ditto
-    @property JSONValue[] array(JSONValue[] v) pure nothrow @nogc @safe
+    @property Value[] array(Value[] v) pure nothrow @nogc @safe
     {
         assign(v);
         return v;
@@ -302,7 +325,7 @@ struct JSONValue
      * Throws: $(D JSONException) for read access if $(D type) is not
      * $(D JSON_TYPE.ARRAY).
      */
-    @property inout(JSONValue[]) arrayNoRef() inout pure @trusted
+    @property inout(Value[]) arrayNoRef() inout pure @trusted
     {
         enforce!JSONException(type == JSON_TYPE.ARRAY,
                                 "JSONValue is not an array");
@@ -355,40 +378,38 @@ struct JSONValue
             type_tag = JSON_TYPE.FLOAT;
             store.floating = arg;
         }
-        else static if (is(T : Value[Key], Key, Value))
+        else static if (is(T : JSONObject))
+        {
+            type_tag = JSON_TYPE.OBJECT;
+            JSONObject t = arg;
+            () @trusted { store.object = t; }();
+        }
+        else static if (is(T : AAValue[Key], Key, AAValue))
         {
             static assert(is(Key : string), "AA key must be string");
             type_tag = JSON_TYPE.OBJECT;
-            static if (is(Value : JSONValue))
-            {
-                JSONValue[string] t = arg;
-                () @trusted { store.object = t; }();
-            }
-            else
-            {
-                JSONValue[string] aa;
-                foreach (key, value; arg)
-                    aa[key] = JSONValue(value);
-                () @trusted { store.object = aa; }();
-            }
+            JSONObject aa;
+            foreach (key, value; arg)
+                aa[key] = Value(value);
+            () @trusted { store.object = aa; }();
         }
         else static if (isArray!T)
         {
             type_tag = JSON_TYPE.ARRAY;
-            static if (is(ElementEncodingType!T : JSONValue))
+            static if (is(ElementEncodingType!T : Value))
             {
-                JSONValue[] t = arg;
+                Value[] t = arg;
                 () @trusted { store.array = t; }();
             }
             else
             {
-                JSONValue[] new_arg = new JSONValue[arg.length];
+                Value[] new_arg = new Value[arg.length];
                 foreach (i, e; arg)
-                    new_arg[i] = JSONValue(e);
+                    new_arg[i] = Value(e);
                 () @trusted { store.array = new_arg; }();
             }
         }
-        else static if (is(T : JSONValue))
+        else static if (is(T : Value))
         {
             type_tag = arg.type;
             store = arg.store;
@@ -402,15 +423,15 @@ struct JSONValue
     private void assignRef(T)(ref T arg) if (isStaticArray!T)
     {
         type_tag = JSON_TYPE.ARRAY;
-        static if (is(ElementEncodingType!T : JSONValue))
+        static if (is(ElementEncodingType!T : Value))
         {
             store.array = arg;
         }
         else
         {
-            JSONValue[] new_arg = new JSONValue[arg.length];
+            Value[] new_arg = new Value[arg.length];
             foreach (i, e; arg)
-                new_arg[i] = JSONValue(e);
+                new_arg[i] = Value(e);
             store.array = new_arg;
         }
     }
@@ -437,7 +458,7 @@ struct JSONValue
         assignRef(arg);
     }
     /// Ditto
-    this(T : JSONValue)(inout T arg) inout
+    this(T : Value)(inout T arg) inout
     {
         store = arg.store;
         type_tag = arg.type;
@@ -445,17 +466,17 @@ struct JSONValue
     ///
     @safe unittest
     {
-        JSONValue j = JSONValue( "a string" );
-        j = JSONValue(42);
+        Value j = Value( "a string" );
+        j = Value(42);
 
-        j = JSONValue( [1, 2, 3] );
+        j = Value( [1, 2, 3] );
         assert(j.type == JSON_TYPE.ARRAY);
 
-        j = JSONValue( ["language": "D"] );
+        j = Value( ["language": "D"] );
         assert(j.type == JSON_TYPE.OBJECT);
     }
 
-    void opAssign(T)(T arg) if (!isStaticArray!T && !is(T : JSONValue))
+    void opAssign(T)(T arg) if (!isStaticArray!T && !is(T : Value))
     {
         assign(arg);
     }
@@ -469,7 +490,7 @@ struct JSONValue
      * Array syntax for json arrays.
      * Throws: $(D JSONException) if $(D type) is not $(D JSON_TYPE.ARRAY).
      */
-    ref inout(JSONValue) opIndex(size_t i) inout pure @safe
+    ref inout(Value) opIndex(size_t i) inout pure @safe
     {
         auto a = this.arrayNoRef;
         enforceEx!JSONException(i < a.length,
@@ -479,7 +500,7 @@ struct JSONValue
     ///
     @safe unittest
     {
-        JSONValue j = JSONValue( [42, 43, 44] );
+        Value j = Value( [42, 43, 44] );
         assert( j[0].integer == 42 );
         assert( j[1].integer == 43 );
     }
@@ -488,16 +509,16 @@ struct JSONValue
      * Hash syntax for json objects.
      * Throws: $(D JSONException) if $(D type) is not $(D JSON_TYPE.OBJECT).
      */
-    ref inout(JSONValue) opIndex(string k) inout pure @safe
+    ref inout(Value) opIndex(string k) inout pure @safe
     {
         auto o = this.objectNoRef;
         return *enforce!JSONException(k in o,
-                                        "Key not found: " ~ k);
+                                      "Key not found: " ~ k);
     }
     ///
     @safe unittest
     {
-        JSONValue j = JSONValue( ["language": "D"] );
+        Value j = Value( ["language": "D"] );
         assert( j["language"].str == "D" );
     }
 
@@ -514,7 +535,7 @@ struct JSONValue
     {
         enforceEx!JSONException(type == JSON_TYPE.OBJECT || type == JSON_TYPE.NULL,
                                 "JSONValue must be object or null");
-        JSONValue[string] aa = null;
+        JSONObject aa = null;
         if (type == JSON_TYPE.OBJECT)
         {
             aa = this.objectNoRef;
@@ -526,9 +547,9 @@ struct JSONValue
     ///
     @safe unittest
     {
-            JSONValue j = JSONValue( ["language": "D"] );
-            j["language"].str = "Perl";
-            assert( j["language"].str == "Perl" );
+        Value j = Value( ["language": "D"] );
+        j["language"].str = "Perl";
+        assert( j["language"].str == "Perl" );
     }
 
     void opIndexAssign(T)(T arg, size_t i) pure
@@ -542,21 +563,21 @@ struct JSONValue
     ///
     @safe unittest
     {
-            JSONValue j = JSONValue( ["Perl", "C"] );
+            Value j = Value( ["Perl", "C"] );
             j[1].str = "D";
             assert( j[1].str == "D" );
     }
 
-    JSONValue opBinary(string op : "~", T)(T arg) @safe
+    Value opBinary(string op : "~", T)(T arg) @safe
     {
         auto a = this.arrayNoRef;
         static if (isArray!T)
         {
-            return JSONValue(a ~ JSONValue(arg).arrayNoRef);
+            return Value(a ~ Value(arg).arrayNoRef);
         }
-        else static if (is(T : JSONValue))
+        else static if (is(T : Value))
         {
-            return JSONValue(a ~ arg.arrayNoRef);
+            return Value(a ~ arg.arrayNoRef);
         }
         else
         {
@@ -569,9 +590,9 @@ struct JSONValue
         auto a = this.arrayNoRef;
         static if (isArray!T)
         {
-            a ~= JSONValue(arg).arrayNoRef;
+            a ~= Value(arg).arrayNoRef;
         }
-        else static if (is(T : JSONValue))
+        else static if (is(T : Value))
         {
             a ~= arg.arrayNoRef;
         }
@@ -601,16 +622,16 @@ struct JSONValue
     ///
     @safe unittest
     {
-        JSONValue j = [ "language": "D", "author": "walter" ];
+        Value j = [ "language": "D", "author": "walter" ];
         string a = ("author" in j).str;
     }
 
-    bool opEquals(const JSONValue rhs) const @nogc nothrow pure @safe
+    bool opEquals(const Value rhs) const @nogc nothrow pure @safe
     {
         return opEquals(rhs);
     }
 
-    bool opEquals(ref const JSONValue rhs) const @nogc nothrow pure @trusted
+    bool opEquals(ref const Value rhs) const @nogc nothrow pure @trusted
     {
         // Default doesn't work well since store is a union.  Compare only
         // what should be in store.
@@ -639,7 +660,7 @@ struct JSONValue
     }
 
     /// Implements the foreach $(D opApply) interface for json arrays.
-    int opApply(scope int delegate(size_t index, ref JSONValue) dg) @system
+    int opApply(scope int delegate(size_t index, ref Value) dg) @system
     {
         int result;
 
@@ -654,7 +675,7 @@ struct JSONValue
     }
 
     /// Implements the foreach $(D opApply) interface for json objects.
-    int opApply(scope int delegate(string key, ref JSONValue) dg) @system
+    int opApply(scope int delegate(string key, ref Value) dg) @system
     {
         enforce!JSONException(type == JSON_TYPE.OBJECT,
                                 "JSONValue is not an object");
@@ -677,7 +698,7 @@ struct JSONValue
      */
     string toString(in JSONOptions options = JSONOptions.none) const @safe
     {
-        return toJSON(this, false, options);
+        return toJSONTemplate!Policy(this, false, options);
     }
 
     /***
@@ -688,7 +709,7 @@ struct JSONValue
      */
     string toPrettyString(in JSONOptions options = JSONOptions.none) const @safe
     {
-        return toJSON(this, true, options);
+        return toJSONTemplate!Policy(this, true, options);
     }
 }
 
@@ -703,9 +724,17 @@ Params:
 JSONValue parseJSON(T)(T json, int maxDepth = -1, JSONOptions options = JSONOptions.none)
 if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
 {
+    return parseJSONTemplate!(DefaultPolicy, T)(json, maxDepth, options);
+}
+/// ditto
+JSONValueTemplate!Policy parseJSONTemplate(alias Policy, T)(T json, int maxDepth = -1, JSONOptions options = JSONOptions.none)
+if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
+{
+    alias Value = JSONValueTemplate!Policy;
+
     import std.ascii : isWhite, isDigit, isHexDigit, toUpper, toLower;
     import std.typecons : Yes;
-    JSONValue root;
+    Value root;
     root.type_tag = JSON_TYPE.NULL;
 
     // Avoid UTF decoding when possible, as it is unnecessary when
@@ -907,7 +936,7 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
         }
     }
 
-    void parseValue(ref JSONValue value)
+    void parseValue(ref Value value)
     {
         depth++;
 
@@ -920,17 +949,17 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
             case '{':
                 if (testChar('}'))
                 {
-                    value.object = null;
+                    () @trusted { value.object = Value.JSONObject.init; }();
                     break;
                 }
 
-                JSONValue[string] obj;
+                Value.JSONObject obj;
                 do
                 {
                     checkChar('"');
                     string name = parseString();
                     checkChar(':');
-                    JSONValue member;
+                    Value member;
                     parseValue(member);
                     obj[name] = member;
                 }
@@ -947,10 +976,10 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
                     break;
                 }
 
-                JSONValue[] arr;
+                Value[] arr;
                 do
                 {
-                    JSONValue element;
+                    Value element;
                     parseValue(element);
                     arr ~= element;
                 }
@@ -1110,6 +1139,91 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
     assert(json["key1"]["key2"].integer == 1);
 }
 
+version(unittest)
+{
+    private struct OrderedAA(Key, Value)
+    {
+        static struct KeyValue
+        {
+            Key key;
+            Value value;
+        }
+
+        private KeyValue[] array;
+        private size_t[Key] indexMap;
+
+        auto byKeyValue() inout { return array; }
+        size_t length() const { return indexMap.length; }
+
+        auto opIn_r(in Key key) inout
+        {
+            auto indexPtr = key in indexMap;
+            return (indexPtr is null) ? null : &array[*indexPtr].value;
+        }
+        ref auto opIndex(in Key key) const
+        {
+            return array[indexMap[key]].value;
+        }
+        void opIndexAssign(Value value, Key key)
+        {
+            import std.range : put;
+            auto existingIndex = key in indexMap;
+            if (existingIndex is null)
+            {
+                indexMap[key] = array.length;
+                put(array, KeyValue(key, value));
+            }
+            else
+                array[*existingIndex].value = value;
+        }
+        enum opApplyBody = q{
+        {
+            int result = 0;
+            foreach (ref member; array)
+            {
+                result = dg(member.key, member.value);
+                if (result)
+                    break;
+            }
+            return result;
+        }};
+        //mixin(`int opApply(scope int delegate(Key key, Value value) dg)` ~ opApplyBody);
+        mixin(`int opApply(scope int delegate(Key key, ref Value value) dg)` ~ opApplyBody);
+        //mixin(`int opApply(scope int delegate(ref Key key, Value value) dg)` ~ opApplyBody);
+        //mixin(`int opApply(scope int delegate(ref Key key, ref Value value) dg)` ~ opApplyBody);
+        //mixin(`int opApply(K,V)(scope int delegate(K key, V value) dg)` ~ opApplyBody);
+    }
+    static struct OrderedAAPolicy
+    {
+         alias ObjectType = OrderedAA;
+         enum sortObjectMembers = false;
+    }
+}
+
+@system unittest
+{
+    enum jsonA = `{"a":0,"b":0}`;
+    enum jsonB = `{"b":0,"a":0}`;
+    {
+        auto json1 = parseJSON(jsonA);
+        auto json2 = parseJSON(jsonA);
+        auto json3 = parseJSON(jsonB);
+        assert(json1 == json2);
+        assert(json1 == json3);
+    }
+    {
+        auto json1 = parseJSONTemplate!OrderedAAPolicy(jsonA);
+        auto json2 = parseJSONTemplate!OrderedAAPolicy(jsonA);
+        auto json3 = parseJSONTemplate!OrderedAAPolicy(jsonB);
+        assert(json1 == json2);
+        assert(json1 != json3);
+    }
+}
+@system unittest
+{
+    auto json = parseJSONTemplate!OrderedAAPolicy(`{"a":0,"b":0,"c":0,"d":0}}`);
+}
+
 /**
 Parses a serialized string and returns a tree of JSON values.
 Throws: $(LREF JSONException) if the depth exceeds the max depth.
@@ -1132,7 +1246,8 @@ If $(D pretty) is false no whitespaces are generated.
 If $(D pretty) is true serialized string is formatted to be human-readable.
 Set the $(LREF JSONOptions.specialFloatLiterals) flag is set in $(D options) to encode NaN/Infinity as strings.
 */
-string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions options = JSONOptions.none) @safe
+alias toJSON = toJSONTemplate!DefaultPolicy;
+string toJSONTemplate(Policy)(const ref JSONValueTemplate!Policy root, in bool pretty = false, in JSONOptions options = JSONOptions.none) @safe
 {
     auto json = appender!string();
 
@@ -1207,7 +1322,7 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
             toStringImpl!char(str);
     }
 
-    void toValue(ref in JSONValue value, ulong indentLevel) @safe
+    void toValue(ref in JSONValueTemplate!Policy value, ulong indentLevel) @safe
     {
         void putTabs(ulong additionalIndent = 0)
         {
@@ -1239,35 +1354,53 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
                     putCharAndEOL('{');
                     bool first = true;
 
-                    void emit(R)(R names)
+                    static if (hasMember!(Policy, "sortObjectMembers") && !Policy.sortObjectMembers)
                     {
-                        foreach (name; names)
+                        foreach (keyValue; obj.byKeyValue)
                         {
-                            auto member = obj[name];
                             if (!first)
                                 putCharAndEOL(',');
                             first = false;
                             putTabs(1);
-                            toString(name);
+                            toString(keyValue.key);
                             json.put(':');
                             if (pretty)
                                 json.put(' ');
-                            toValue(member, indentLevel + 1);
+                            toValue(keyValue.value, indentLevel + 1);
                         }
                     }
-
-                    import std.algorithm.sorting : sort;
-                    // @@@BUG@@@ 14439
-                    // auto names = obj.keys;  // aa.keys can't be called in @safe code
-                    auto names = new string[obj.length];
-                    size_t i = 0;
-                    foreach (k, v; obj)
+                    else
                     {
-                        names[i] = k;
-                        i++;
+                        void emit(R)(R names)
+                        {
+                            foreach (name; names)
+                            {
+                                auto member = obj[name];
+                                if (!first)
+                                    putCharAndEOL(',');
+                                first = false;
+                                putTabs(1);
+                                toString(name);
+                                json.put(':');
+                                if (pretty)
+                                    json.put(' ');
+                                toValue(member, indentLevel + 1);
+                            }
+                        }
+
+                        import std.algorithm.sorting : sort;
+                        // @@@BUG@@@ 14439
+                        // auto names = obj.keys;  // aa.keys can't be called in @safe code
+                        auto names = new string[obj.length];
+                        size_t i = 0;
+                        foreach (k, v; obj)
+                        {
+                            names[i] = k;
+                            i++;
+                        }
+                        sort(names);
+                        emit(names);
                     }
-                    sort(names);
-                    emit(names);
 
                     putEOL();
                     putTabs();
