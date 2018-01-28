@@ -7824,36 +7824,56 @@ private template isDesiredUDA(alias attribute)
  */
 template getSymbolsByUDA(alias symbol, alias attribute)
 {
-    import std.format : format;
-    import std.meta : AliasSeq, Filter;
-
-    // translate a list of strings into symbols. mixing in the entire alias
-    // avoids trying to access the symbol, which could cause a privacy violation
-    template toSymbols(names...)
-    {
-        static if (names.length == 0)
-            alias toSymbols = AliasSeq!();
-        else
-            mixin("alias toSymbols = AliasSeq!(symbol.%s, toSymbols!(names[1..$]));"
-                  .format(names[0]));
-    }
-
-    // filtering inaccessible members
-    enum isAccessibleMember(string name) = __traits(compiles, __traits(getMember, symbol, name));
-    alias accessibleMembers = Filter!(isAccessibleMember, __traits(allMembers, symbol));
-
-    // filtering not compiled members such as alias of basic types
-    enum hasSpecificUDA(string name) = mixin("hasUDA!(symbol." ~ name ~ ", attribute)");
-    enum isCorrectMember(string name) = __traits(compiles, hasSpecificUDA!(name));
-
-    alias correctMembers = Filter!(isCorrectMember, accessibleMembers);
-    alias membersWithUDA = toSymbols!(Filter!(hasSpecificUDA, correctMembers));
+    alias membersWithUDA = getSymbolsByUDAImpl!(symbol, attribute, __traits(allMembers, symbol));
 
     // if the symbol itself has the UDA, tack it on to the front of the list
     static if (hasUDA!(symbol, attribute))
         alias getSymbolsByUDA = AliasSeq!(symbol, membersWithUDA);
     else
         alias getSymbolsByUDA = membersWithUDA;
+}
+
+private template getSymbolsByUDAImpl(alias symbol, alias attribute, names...)
+{
+    import std.meta : Alias, AliasSeq, Filter;
+    static if (names.length == 0)
+    {
+        alias getSymbolsByUDAImpl = AliasSeq!();
+    }
+    else
+    {
+        alias tail = getSymbolsByUDAImpl!(symbol, attribute, names[1 .. $]);
+
+        // Filtering inaccessible members.
+        static if (!__traits(compiles, __traits(getMember, symbol, names[0])))
+        {
+            alias getSymbolsByUDAImpl = tail;
+        }
+        else
+        {
+            alias member = Alias!(__traits(getMember, symbol, names[0]));
+
+            // Filtering not compiled members such as alias of basic types.
+            static if (!__traits(compiles, hasUDA!(member, attribute)))
+            {
+                alias getSymbolsByUDAImpl = tail;
+            }
+            // Get overloads for functions, in case different overloads have different sets of UDAs.
+            else static if (isFunction!member)
+            {
+                enum hasSpecificUDA(alias member) = hasUDA!(member, attribute);
+                alias getSymbolsByUDAImpl = Filter!(hasSpecificUDA, __traits(getOverloads, symbol, names[0]));
+            }
+            else static if (hasUDA!(member, attribute))
+            {
+                alias getSymbolsByUDAImpl = AliasSeq!(member, tail);
+            }
+            else
+            {
+                alias getSymbolsByUDAImpl = tail;
+            }
+        }
+    }
 }
 
 ///
@@ -7919,6 +7939,29 @@ template getSymbolsByUDA(alias symbol, alias attribute)
 
     //Finds nothing if there is no member with specific UDA
     static assert(getSymbolsByUDA!(D,UDA).length == 0);
+}
+
+// Issue 18314
+@safe unittest
+{
+    enum attr1;
+    enum attr2;
+
+    struct A
+    {
+        @attr1
+        int n;
+        // Removed due to Issue 16206
+        //@attr1
+        //void foo()(string){}
+        @attr1
+        void foo();
+        @attr2
+        void foo(int a);
+    }
+
+    static assert(getSymbolsByUDA!(A, attr1).length == 2);
+    static assert(getSymbolsByUDA!(A, attr2).length == 1);
 }
 
 // #15335: getSymbolsByUDA fails if type has private members
