@@ -17,7 +17,6 @@ $(TR $(TD Assumptions) $(TD
 $(TR $(TD Enforce) $(TD
         $(LREF doesPointTo)
         $(LREF enforce)
-        $(LREF enforceEx)
         $(LREF errnoEnforce)
 ))
 $(TR $(TD Handlers) $(TD
@@ -386,12 +385,17 @@ void assertThrown(T : Throwable = Exception, E)
         If a delegate is passed, the safety and purity of this function are inferred
         from `Dg`'s safety and purity.
  +/
-T enforce(E : Throwable = Exception, T)(T value, lazy const(char)[] msg = null,
-string file = __FILE__, size_t line = __LINE__)
-if (is(typeof({ if (!value) {} })))
+template enforce(E : Throwable = Exception)
+if (is(typeof(new E("", __FILE__, __LINE__)) : Throwable) || is(typeof(new E(__FILE__, __LINE__)) : Throwable))
 {
-    if (!value) bailOut!E(file, line, msg);
-    return value;
+
+    T enforce(T)(T value, lazy const(char)[] msg = null,
+    string file = __FILE__, size_t line = __LINE__)
+    if (is(typeof({ if (!value) {} })))
+    {
+        if (!value) bailOut!E(file, line, msg);
+        return value;
+    }
 }
 
 /// ditto
@@ -453,6 +457,15 @@ unittest
         assert(e.file == __FILE__);
         assert(e.line == __LINE__-7);
     }
+}
+
+/// Alias your own enforce function
+@safe unittest
+{
+    import std.conv : ConvException;
+    alias convEnforce = enforce!ConvException;
+    assertNotThrown(convEnforce(true));
+    assertThrown!ConvException(convEnforce(false, "blah"));
 }
 
 private void bailOut(E : Throwable = Exception)(string file, size_t line, in char[] msg)
@@ -585,7 +598,7 @@ T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
 }
 
 
-/++
+/+
     If $(D !value) is $(D false), $(D value) is returned. Otherwise,
     $(D new E(msg, file, line)) is thrown. Or if $(D E) doesn't take a message
     and can be constructed with $(D new E(file, line)), then
@@ -611,7 +624,7 @@ if (is(typeof(new E("", __FILE__, __LINE__))))
     }
 }
 
-/++ Ditto +/
+/+ Ditto +/
 template enforceEx(E : Throwable)
 if (is(typeof(new E(__FILE__, __LINE__))) && !is(typeof(new E("", __FILE__, __LINE__))))
 {
