@@ -597,8 +597,10 @@ T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
     return value;
 }
 
+// @@@DEPRECATED_2.084@@@
+/++
+    $(RED Deprecated. Please use $(LREF enforce) instead. This function will be removed 2.084.)
 
-/+
     If $(D !value) is $(D false), $(D value) is returned. Otherwise,
     $(D new E(msg, file, line)) is thrown. Or if $(D E) doesn't take a message
     and can be constructed with $(D new E(file, line)), then
@@ -613,6 +615,7 @@ T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
     enforceEx!DataCorruptionException(line.length);
     --------------------
  +/
+//deprecated("Please use enforce instead")
 template enforceEx(E : Throwable)
 if (is(typeof(new E("", __FILE__, __LINE__))))
 {
@@ -625,6 +628,7 @@ if (is(typeof(new E("", __FILE__, __LINE__))))
 }
 
 /+ Ditto +/
+//deprecated("Please use enforce instead")
 template enforceEx(E : Throwable)
 if (is(typeof(new E(__FILE__, __LINE__))) && !is(typeof(new E("", __FILE__, __LINE__))))
 {
@@ -636,6 +640,7 @@ if (is(typeof(new E(__FILE__, __LINE__))) && !is(typeof(new E("", __FILE__, __LI
     }
 }
 
+//deprecated
 @system unittest
 {
     import core.exception : OutOfMemoryError;
@@ -679,6 +684,7 @@ if (is(typeof(new E(__FILE__, __LINE__))) && !is(typeof(new E("", __FILE__, __LI
     static assert(!is(typeof(enforceEx!int(true))));
 }
 
+//deprecated
 @safe unittest
 {
     alias enf = enforceEx!Exception;
