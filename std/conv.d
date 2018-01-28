@@ -290,6 +290,29 @@ template to(T)
 }
 
 /**
+   Conversion from string types to char types enforces the input
+   to consist of a single code point, and said code point must
+   fit in the target type. Otherwise, $(LREF ConvException) is thrown.
+ */
+@safe pure unittest
+{
+    import std.exception : assertThrown;
+
+    assert(to!char("a") == 'a');
+    assertThrown(to!char("ñ")); // 'ñ' does not fit into a char
+    assert(to!wchar("ñ") == 'ñ');
+    assertThrown(to!wchar("😃")); // '😃' does not fit into a wchar
+    assert(to!dchar("😃") == '😃');
+
+    // Using wstring or dstring as source type does not affect the result
+    assert(to!char("a"w) == 'a');
+    assert(to!char("a"d) == 'a');
+
+    // Two code points cannot be converted to a single one
+    assertThrown(to!char("ab"));
+}
+
+/**
  * Converting an array _to another array type works by converting each
  * element in turn. Associative arrays can be converted _to associative
  * arrays as long as keys and values can in turn be converted.
