@@ -2018,13 +2018,19 @@ Returns:
     a copy.
  */
 auto ref choice(Range, RandomGen = Random)(auto ref Range range,
-                                           ref RandomGen urng = rndGen)
+                                           ref RandomGen urng)
 if (isRandomAccessRange!Range && hasLength!Range && isUniformRNG!RandomGen)
 {
     assert(range.length > 0,
            __PRETTY_FUNCTION__ ~ ": invalid Range supplied. Range cannot be empty");
 
     return range[uniform(size_t(0), $, urng)];
+}
+
+/// ditto
+auto ref choice(Range)(auto ref Range range)
+{
+    return choice(range, rndGen);
 }
 
 ///
@@ -2041,6 +2047,10 @@ if (isRandomAccessRange!Range && hasLength!Range && isUniformRNG!RandomGen)
     auto urng = Random(unpredictableSeed);
     elem = choice(array, urng);
 
+    assert(canFind(array, elem),
+           "Choice did not return a valid element from the given Range");
+    auto rng2 = Xorshift();
+    elem = choice(array, rng2);
     assert(canFind(array, elem),
            "Choice did not return a valid element from the given Range");
 }
