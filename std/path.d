@@ -1080,12 +1080,22 @@ if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
         slice of path with the extension (if any) stripped off
 */
 auto stripExtension(R)(R path)
-if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-    isNarrowString!R) &&
-    !isConvertibleToString!R)
+if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) && !isSomeString!R)
 {
-    auto i = extSeparatorPos(path);
-    return (i == -1) ? path : path[0 .. i];
+    return _stripExtension(path);
+}
+
+/// Ditto
+auto stripExtension(C)(C[] path)
+if (isSomeChar!C)
+{
+    return _stripExtension(path);
+}
+
+private auto _stripExtension(R)(R path)
+{
+    immutable i = extSeparatorPos(path);
+    return i == -1 ? path : path[0 .. i];
 }
 
 ///
@@ -1100,15 +1110,15 @@ if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(Element
     assert(stripExtension("dir/file.ext")   == "dir/file");
 }
 
-auto stripExtension(R)(auto ref R path)
-if (isConvertibleToString!R)
-{
-    return stripExtension!(StringTypeOf!R)(path);
-}
-
 @safe unittest
 {
     assert(testAliasedString!stripExtension("file"));
+
+    enum S : string { a = "foo.bar" }
+    assert(S.a.stripExtension == "foo");
+
+    char[S.a.length] sa = S.a[];
+    assert(sa.stripExtension == "foo");
 }
 
 @safe unittest
