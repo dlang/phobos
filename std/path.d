@@ -537,8 +537,6 @@ if (isSomeChar!C)
 }
 
 private auto _dirName(R)(R path)
-if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-    isNarrowString!R)
 {
     static auto result(bool dot, typeof(path[0 .. 1]) p)
     {
@@ -701,8 +699,6 @@ if (isSomeChar!C)
 }
 
 private auto _rootName(R)(R path)
-if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-    isNarrowString!R)
 {
     if (path.empty)
         goto Lnull;
@@ -809,8 +805,6 @@ if (isSomeChar!C)
 }
 
 private auto _driveName(R)(R path)
-if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-    isNarrowString!R)
 {
     version (Windows)
     {
@@ -903,8 +897,6 @@ if (isSomeChar!C)
 }
 
 private auto _stripDrive(R)(R path)
-if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
-    isNarrowString!R)
 {
     version(Windows)
     {
