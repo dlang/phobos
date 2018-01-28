@@ -537,8 +537,6 @@ if (isSomeChar!C)
 }
 
 private auto _dirName(R)(R path)
-if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-    isNarrowString!R)
 {
     static auto result(bool dot, typeof(path[0 .. 1]) p)
     {
@@ -701,8 +699,6 @@ if (isSomeChar!C)
 }
 
 private auto _rootName(R)(R path)
-if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-    isNarrowString!R)
 {
     if (path.empty)
         goto Lnull;
@@ -809,8 +805,6 @@ if (isSomeChar!C)
 }
 
 private auto _driveName(R)(R path)
-if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-    isNarrowString!R)
 {
     version (Windows)
     {
@@ -897,13 +891,12 @@ if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) && !isSo
 
 /// ditto
 auto stripDrive(C)(C[] path)
+if (isSomeChar!C)
 {
     return _stripDrive(path);
 }
 
 private auto _stripDrive(R)(R path)
-if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
-    isNarrowString!R)
 {
     version(Windows)
     {
@@ -1080,12 +1073,22 @@ if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
         slice of path with the extension (if any) stripped off
 */
 auto stripExtension(R)(R path)
-if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-    isNarrowString!R) &&
-    !isConvertibleToString!R)
+if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) && !isSomeString!R)
 {
-    auto i = extSeparatorPos(path);
-    return (i == -1) ? path : path[0 .. i];
+    return _stripExtension(path);
+}
+
+/// Ditto
+auto stripExtension(C)(C[] path)
+if (isSomeChar!C)
+{
+    return _stripExtension(path);
+}
+
+private auto _stripExtension(R)(R path)
+{
+    immutable i = extSeparatorPos(path);
+    return i == -1 ? path : path[0 .. i];
 }
 
 ///
@@ -1100,15 +1103,15 @@ if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(Element
     assert(stripExtension("dir/file.ext")   == "dir/file");
 }
 
-auto stripExtension(R)(auto ref R path)
-if (isConvertibleToString!R)
-{
-    return stripExtension!(StringTypeOf!R)(path);
-}
-
 @safe unittest
 {
     assert(testAliasedString!stripExtension("file"));
+
+    enum S : string { a = "foo.bar" }
+    assert(S.a.stripExtension == "foo");
+
+    char[S.a.length] sa = S.a[];
+    assert(sa.stripExtension == "foo");
 }
 
 @safe unittest
@@ -1224,10 +1227,20 @@ if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
  *      $(LREF setExtension)
  */
 auto withExtension(R, C)(R path, C[] ext)
-if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-    isNarrowString!R) &&
-    !isConvertibleToString!R &&
-    isSomeChar!C)
+if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) &&
+    !isSomeString!R && isSomeChar!C)
+{
+    return _withExtension(path, ext);
+}
+
+/// Ditto
+auto withExtension(C1, C2)(C1[] path, C2[] ext)
+if (isSomeChar!C1 && isSomeChar!C2)
+{
+    return _withExtension(path, ext);
+}
+
+private auto _withExtension(R, C)(R path, C[] ext)
 {
     import std.range : only, chain;
     import std.utf : byUTF;
@@ -1253,15 +1266,17 @@ if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(Element
     assert(withExtension("file.ext"w.byWchar, ".").array == "file."w);
 }
 
-auto withExtension(R, C)(auto ref R path, C[] ext)
-if (isConvertibleToString!R)
-{
-    return withExtension!(StringTypeOf!R)(path, ext);
-}
-
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
+
     assert(testAliasedString!withExtension("file", "ext"));
+
+    enum S : string { a = "foo.bar" }
+    assert(equal(S.a.withExtension(".txt"), "foo.txt"));
+
+    char[S.a.length] sa = S.a[];
+    assert(equal(sa.withExtension(".txt"), "foo.txt"));
 }
 
 /** Params:
@@ -1316,17 +1331,27 @@ if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
  *      range with the result
  */
 auto withDefaultExtension(R, C)(R path, C[] ext)
-if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-    isNarrowString!R) &&
-    !isConvertibleToString!R &&
-    isSomeChar!C)
+if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) &&
+    !isSomeString!R && isSomeChar!C)
+{
+    return _withDefaultExtension(path, ext);
+}
+
+/// Ditto
+auto withDefaultExtension(C1, C2)(C1[] path, C2[] ext)
+if (isSomeChar!C1 && isSomeChar!C2)
+{
+    return _withDefaultExtension(path, ext);
+}
+
+private auto _withDefaultExtension(R, C)(R path, C[] ext)
 {
     import std.range : only, chain;
     import std.utf : byUTF;
 
     alias CR = Unqual!(ElementEncodingType!R);
     auto dot = only(CR('.'));
-    auto i = extSeparatorPos(path);
+    immutable i = extSeparatorPos(path);
     if (i == -1)
     {
         if (ext.length > 0 && ext[0] == '.')
@@ -1357,15 +1382,17 @@ if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(Element
     assert(withDefaultExtension("file".byChar, "").array == "file.");
 }
 
-auto withDefaultExtension(R, C)(auto ref R path, C[] ext)
-if (isConvertibleToString!R)
-{
-    return withDefaultExtension!(StringTypeOf!R, C)(path, ext);
-}
-
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
+
     assert(testAliasedString!withDefaultExtension("file", "ext"));
+
+    enum S : string { a = "foo" }
+    assert(equal(S.a.withDefaultExtension(".txt"), "foo.txt"));
+
+    char[S.a.length] sa = S.a[];
+    assert(equal(sa.withDefaultExtension(".txt"), "foo.txt"));
 }
 
 /** Combines one or more path segments.
