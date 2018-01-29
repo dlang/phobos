@@ -54,8 +54,13 @@ import std.traits;
     // list already exists, so .object optional
     jj["list"].array ~= JSONValue("D");
 
-    string jjStr = `{"language":"D","list":["a","b","c","D"],"rating":3.5}`;
-    assert(jj.toString == jjStr);
+    auto jjAsString = jj.toString;
+    assert(jjAsString[0]     == '{');
+    assert(jjAsString[$ - 1] == '}');
+    import std.algorithm;
+    assert(jjAsString.canFind(`"language":"D"`));
+    assert(jjAsString.canFind(`"list":["a","b","c","D"]`));
+    assert(jjAsString.canFind(`"rating":3.5`));
 }
 
 /**
@@ -1126,8 +1131,6 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
 /**
 Takes a tree of JSON values and returns the serialized string.
 
-Any Object types will be serialized in a key-sorted order.
-
 If $(D pretty) is false no whitespaces are generated.
 If $(D pretty) is true serialized string is formatted to be human-readable.
 Set the $(LREF JSONOptions.specialFloatLiterals) flag is set in $(D options) to encode NaN/Infinity as strings.
@@ -1239,35 +1242,18 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
                     putCharAndEOL('{');
                     bool first = true;
 
-                    void emit(R)(R names)
+                    foreach (pair; obj.byKeyValue)
                     {
-                        foreach (name; names)
-                        {
-                            auto member = obj[name];
-                            if (!first)
-                                putCharAndEOL(',');
-                            first = false;
-                            putTabs(1);
-                            toString(name);
-                            json.put(':');
-                            if (pretty)
-                                json.put(' ');
-                            toValue(member, indentLevel + 1);
-                        }
+                        if (!first)
+                            putCharAndEOL(',');
+                        first = false;
+                        putTabs(1);
+                        toString(pair.key);
+                        json.put(':');
+                        if (pretty)
+                            json.put(' ');
+                        toValue(pair.value, indentLevel + 1);
                     }
-
-                    import std.algorithm.sorting : sort;
-                    // @@@BUG@@@ 14439
-                    // auto names = obj.keys;  // aa.keys can't be called in @safe code
-                    auto names = new string[obj.length];
-                    size_t i = 0;
-                    foreach (k, v; obj)
-                    {
-                        names[i] = k;
-                        i++;
-                    }
-                    sort(names);
-                    emit(names);
 
                     putEOL();
                     putTabs();
@@ -1599,7 +1585,8 @@ class JSONException : Exception
             val = parseJSON(json);
             enum pretty = false;
             result = toJSON(val, pretty);
-            assert(result == json, text(result, " should be ", json));
+            auto secondPassParse = parseJSON(result);
+            assert(val == secondPassParse, text(result, " should be ", json));
         }
         catch (JSONException e)
         {
