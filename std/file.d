@@ -32,6 +32,7 @@ $(TR $(TD Files) $(TD
           $(LREF copy)
           $(LREF read)
           $(LREF readText)
+          $(LREF readBOM)
           $(LREF remove)
           $(LREF slurp)
           $(LREF write)
@@ -83,6 +84,7 @@ import core.time : abs, dur, hnsecs, seconds;
 
 import std.datetime.date : DateTime;
 import std.datetime.systime : Clock, SysTime, unixTimeToStdTime;
+import std.encoding : BOMSeq;
 import std.internal.cstring;
 import std.meta;
 import std.range.primitives;
@@ -465,30 +467,98 @@ version (linux) @safe unittest
     assert(read(deleteme) == "abcd");
 }
 
-/********************************************
-Read and validates (using $(REF validate, std,utf)) a text file. $(D S)
-can be a type of array of characters of any width and constancy. No
-width conversion is performed; if the width of the characters in file
-$(D name) is different from the width of elements of $(D S),
-validation will fail.
+/++
+    Read and validates (using $(REF validate, std, utf)) a text file. S can
+    be a type of array of characters of any width and constancy. No width
+    conversion is performed; if the width of the characters in file name
+    is different from the width of elements of S, validation will fail.
 
-Params:
-    name = string or range of characters representing the file _name
+    Before validating the characters, the file is first checked for a
+    $(HTTP https://en.wikipedia.org/wiki/Byte_order_mark, BOM). If it is present
+    and matches the encoding of the requested string type, then it is stripped
+    from the output, but if it doesn't match, then a
+    $(REF BOMException, std, encoding) is thrown.
+    $(REF BOMException.bomSeq, std, encoding) will then indicate what the actual
+    encoding was, and the program can then request the string type that matches
+    that encoding.
 
-Returns: Array of characters read.
+    Params:
+        name = string or range of characters representing the file _name
 
-Throws: $(D FileException) on file error, $(D UTFException) on UTF
-decoding error.
- */
+    Returns: Array of characters read.
 
-S readText(S = string, R)(R name)
-if (isSomeString!S &&
-    (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
-    !isConvertibleToString!R)
+    Throws: $(LREF FileException) if there is an error reading the file,
+            $(REF BOMException, std, encoding) if there is a BOM at the front
+            of the input, and it does not match the requested encoding, and
+            $(REF UTFException, std, utf) if the text contains invalid Unicode.
++/
+S readText(S = string, R)(auto ref R name)
+if (isSomeString!S && (isInputRange!R && !isInfinite!R && isSomeChar!(ElementType!R) || is(StringTypeOf!R)))
 {
-    import std.utf : validate;
+    import std.algorithm.searching : startsWith;
+    import std.encoding : BOM, BOMException;
+    import std.exception : enforce;
+    import std.format : format;
+    import std.utf : UTFException, validate;
+
+    static if(is(StringTypeOf!R))
+        StringTypeOf!R filename = name;
+    else
+        auto filename = name;
+
+    immutable bomSeq = readBOM(filename);
+    immutable bom = bomSeq.schema;
+
+    static if(is(Unqual!(ElementEncodingType!S) == char))
+    {
+        with(BOM) switch(bom)
+        {
+            case none:
+            case utf8: break;
+            default: throw new BOMException(format!"UTF-8 requested, but BOM is %s"(bom), bomSeq);
+        }
+    }
+    else static if(is(Unqual!(ElementEncodingType!S) == wchar))
+    {
+        with(BOM) switch(bom)
+        {
+            case none:
+            version(BigEndian)
+            {
+                case utf16be: break;
+                default: throw new BOMException(format!"UTF-16 BE requested, but BOM is %s"(bom), bomSeq);
+            }
+            else
+            {
+                case utf16le: break;
+                default: throw new BOMException(format!"UTF-16 LE requested, but BOM is %s"(bom), bomSeq);
+            }
+        }
+    }
+    else
+    {
+        with(BOM) switch(bom)
+        {
+            case none:
+            version(BigEndian)
+            {
+                case utf32be: break;
+                default: throw new BOMException(format!"UTF-32 BE requested, but BOM is %s"(bom), bomSeq);
+            }
+            else
+            {
+                case utf32le: break;
+                default: throw new BOMException(format!"UTF-32 LE requested, but BOM is %s"(bom), bomSeq);
+            }
+        }
+    }
+
+    auto data = read(filename);
+    if (data.length % ElementEncodingType!S.sizeof != 0)
+        throw new UTFException(format!"The content of %s is not UTF-%s" (filename, ElementEncodingType!S.sizeof * 8));
+
     static auto trustedCast(void[] buf) @trusted { return cast(S) buf; }
-    auto result = trustedCast(read(name));
+    auto result = trustedCast(data[bomSeq.sequence.length .. $]);
     validate(result);
     return result;
 }
@@ -503,17 +573,152 @@ if (isSomeString!S &&
     enforce(content == "abc");
 }
 
-/// ditto
-S readText(S = string, R)(auto ref R name)
-if (isConvertibleToString!R)
-{
-    return readText!(S, StringTypeOf!R)(name);
-}
-
 @safe unittest
 {
     static assert(__traits(compiles, readText(TestAliasedString(null))));
 }
+
+@system unittest
+{
+    import std.encoding : BOMException;
+    import std.exception : assertThrown;
+    import std.path : buildPath;
+    import std.string : representation;
+    import std.utf : UTFException;
+
+    mkdir(deleteme);
+    scope(exit) rmdirRecurse(deleteme);
+
+    immutable none8 = buildPath(deleteme, "none8");
+    immutable none16 = buildPath(deleteme, "none16");
+    immutable utf8 = buildPath(deleteme, "utf8");
+    immutable utf16be = buildPath(deleteme, "utf16be");
+    immutable utf16le = buildPath(deleteme, "utf16le");
+    immutable utf32be = buildPath(deleteme, "utf32be");
+    immutable utf32le = buildPath(deleteme, "utf32le");
+    immutable utf7 = buildPath(deleteme, "utf7");
+
+    write(none8, "京都市");
+    write(none16, "京都市"w);
+    write(utf8, (cast(char[])[0xEF, 0xBB, 0xBF]) ~ "京都市");
+    version(BigEndian)
+    {
+        write(utf16be, [cast(wchar) 0xFEFF] ~ "京都市"w);
+        write(utf16le, [cast(wchar) 0xFFFE] ~ "京都市"w);
+        write(utf32be, [cast(dchar) 0x0000FEFF] ~ "京都市"d);
+        write(utf32le, [cast(dchar) 0xFFFE0000] ~ "京都市"d);
+    }
+    else
+    {
+        write(utf16be, [cast(wchar) 0xFFFE] ~ "京都市"w);
+        write(utf16le, [cast(wchar) 0xFEFF] ~ "京都市"w);
+        write(utf32be, [cast(dchar) 0xFFFE0000] ~ "京都市"d);
+        write(utf32le, [cast(dchar) 0x0000FEFF] ~ "京都市"d);
+    }
+    write(utf7, (cast(ubyte[])[0x2B, 0x2F, 0x76, 0x38, 0x2D]) ~ "hello world".representation);
+
+    assert(readText(none8) == "京都市");
+    assertThrown!UTFException(readText(none16));
+    assert(readText(utf8) == "京都市");
+    assertThrown!BOMException(readText(utf16be));
+    assertThrown!BOMException(readText(utf16le));
+    assertThrown!BOMException(readText(utf32be));
+    assertThrown!BOMException(readText(utf32le));
+    assertThrown!BOMException(readText(utf7));
+
+    assertThrown!UTFException(readText!wstring(none8));
+    assert(readText!wstring(none16) == "京都市");
+    assertThrown!BOMException(readText!wstring(utf8));
+    version(BigEndian)
+    {
+        assertThrown!BOMException(readText!wstring(utf16le));
+        assert(readText!wstring(utf16be) == "京都市");
+    }
+    else
+    {
+        assertThrown!BOMException(readText!wstring(utf16be));
+        assert(readText!wstring(utf16le) == "京都市");
+    }
+    assertThrown!BOMException(readText!wstring(utf32be));
+    assertThrown!BOMException(readText!wstring(utf32le));
+    assertThrown!BOMException(readText!wstring(utf7));
+
+    assertThrown!BOMException(readText!dstring(utf8));
+    assertThrown!BOMException(readText!dstring(utf16be));
+    assertThrown!BOMException(readText!dstring(utf16le));
+    version(BigEndian)
+    {
+       assertThrown!BOMException(readText!dstring(utf32le));
+       assert(readText!dstring(utf32be) == "京都市");
+    }
+    else
+    {
+       assertThrown!BOMException(readText!dstring(utf32be));
+       assert(readText!dstring(utf32le) == "京都市");
+    }
+    assertThrown!BOMException(readText!dstring(utf7));
+}
+
+
+/++
+    Returns the $(REF BOSeq, std, encoding) for the given file.
+
+    Params: The path to the file to read.
+
+    Returns: The $(REF BOSeq, std, encoding) at the start of the file.
+
+    Throws: $(LREF FileException) if there is an error reading the file.
+  +/
+immutable(BOMSeq) readBOM(R)(R name)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementType!R))
+{
+    import std.encoding : getBOM;
+    static auto trustedCast(void[] buf) @trusted { return cast(ubyte[]) buf; }
+    return trustedCast(read(name, 5)).getBOM();
+}
+
+///
+@system unittest
+{
+    import std.encoding : BOM, BOMSeq;
+    import std.path : buildPath;
+
+    mkdir(deleteme);
+    scope(exit) rmdirRecurse(deleteme);
+
+    immutable none = buildPath(deleteme, "none");
+    immutable utf8 = buildPath(deleteme, "utf8");
+    immutable utf16 = buildPath(deleteme, "utf16");
+
+    write(none, "hello world");
+    assert(readBOM(none) == BOMSeq(BOM.none, null));
+
+    write(utf8, (cast(char[])[0xEF, 0xBB, 0xBF]) ~ "hello world");
+    assert(readBOM(utf8) ==
+           BOMSeq(BOM.utf8, cast(ubyte[]) [0xEF, 0xBB, 0xBF]));
+
+    write(utf16, [cast(wchar) 0xFEFF] ~ "hello world"w);
+
+    version(BigEndian)
+    {
+        assert(readBOM(utf16) ==
+               BOMSeq(BOM.utf16be, cast(ubyte[]) [0xFE, 0xFF]));
+    }
+    else
+    {
+        assert(readBOM(utf16) ==
+               BOMSeq(BOM.utf16le, cast(ubyte[]) [0xFF, 0xFE]));
+    }
+}
+
+@safe unittest
+{
+    import std.encoding : BOM;
+    scope(exit) remove(deleteme);
+    write(deleteme, "");
+    assert(readBOM(deleteme).schema == BOM.none);
+}
+
 
 /*********************************************
 Write $(D buffer) to file $(D name).

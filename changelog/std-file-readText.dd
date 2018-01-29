@@ -1,0 +1,15 @@
+$(REF readBOM, std, file) added and $(REF readText, std, file) now reports mismatched BOMs.
+
+$(REF readBOM, std, file) attempts to read the
+$(HTTP https://en.wikipedia.org/wiki/Byte_order_mark, BOM) from the front of the
+file and returns the corresponding $(REF BOMSeq, std, encoding).
+
+$(REF readText, std, file) now checks the BOM (if present) and throws a
+$(REF BOMException, std, encoding) if the the BOM is for an encoding that does
+not match the requested return type. A $(REF UTFException, std, utf) will still
+be thrown if the file contains invalid UTF, but now, if there isn't a BOM, it
+also checks whether the length of the file indicates that it can't have the
+requested encoding, in which case an $(REF UTFException, std, utf) is thrown.
+Previously, in that case, when $(REF readText, std, file) attempt to cast to
+the requested type, an Error was thrown because the resulting array was
+misaligned.
