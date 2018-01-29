@@ -296,32 +296,35 @@ version (unittest)
         }
     }
 
-    private string httpOK(string msg)
+    private string httpOK(string msg = "")
+    {
+        return "HTTP/1.1 200 OK\r\n"~
+            httpContent(msg);
+    }
+
+    private string httpNotFound(string msg = "")
+    {
+        return "HTTP/1.1 404 Not Found\r\n"~
+            httpContent(msg);
+    }
+
+    private string httpInternalServerError(string msg = "")
+    {
+        return "HTTP/1.1 500 Internal Server Error\r\n"~
+            httpContent(msg);
+    }
+
+    private enum httpContinue = "HTTP/1.1 100 Continue\r\n\r\n";
+
+    private string httpContent(string msg)
     {
         import std.conv : to;
 
-        return "HTTP/1.1 200 OK\r\n"~
-            "Content-Type: text/plain\r\n"~
+        return "Content-Type: text/plain\r\n"~
             "Content-Length: "~msg.length.to!string~"\r\n"~
             "\r\n"~
             msg;
     }
-
-    private string httpOK()
-    {
-        return "HTTP/1.1 200 OK\r\n"~
-            "Content-Length: 0\r\n"~
-            "\r\n";
-    }
-
-    private string httpNotFound()
-    {
-        return "HTTP/1.1 404 Not Found\r\n"~
-            "Content-Length: 0\r\n"~
-            "\r\n";
-    }
-
-    private enum httpContinue = "HTTP/1.1 100 Continue\r\n\r\n";
 }
 version (StdDdoc) import std.stdio;
 
@@ -415,11 +418,22 @@ if (isCurlConn!Conn)
 {
     static if (is(Conn : HTTP) || is(Conn : FTP))
     {
+        import std.exception : enforce;
+        import std.format : format;
         import std.stdio : File;
+
         conn.url = url;
         auto f = File(saveToPath, "wb");
         conn.onReceive = (ubyte[] data) { f.rawWrite(data); return data.length; };
+        static if (is(Conn : HTTP))
+        {
+            HTTP.StatusLine statusLine;
+            conn.onReceiveStatusLine = (HTTP.StatusLine l) { statusLine = l; };
+        }
         conn.perform();
+        static if (is(Conn : HTTP))
+            enforce(statusLine.code / 100 == 2, new HTTPStatusException(statusLine.code,
+                    format("HTTP request returned status code %d (%s)", statusLine.code, statusLine.reason)));
     }
     else
     {
@@ -433,6 +447,7 @@ if (isCurlConn!Conn)
 @system unittest
 {
     import std.algorithm.searching : canFind;
+    import std.exception : collectException;
     static import std.file;
 
     foreach (host; [testServer.addr, "http://"~testServer.addr])
@@ -449,6 +464,27 @@ if (isCurlConn!Conn)
         }
         download(host, fn);
         assert(std.file.readText(fn) == "Hello world");
+    }
+
+    {
+        testServer.handle((s) {
+            s.send(httpNotFound("response content"));
+        });
+        auto fn = std.file.deleteme;
+        scope (exit) std.file.remove(fn);
+        auto e = collectException!HTTPStatusException(download(testServer.addr, fn));
+        assert(e.status == 404);
+        assert(std.file.readText(fn) == "response content");
+    }
+    {
+        testServer.handle((s) {
+            s.send(httpInternalServerError("response content"));
+        });
+        auto fn = std.file.deleteme;
+        scope (exit) std.file.remove(fn);
+        auto e = collectException!HTTPStatusException(download(testServer.addr, fn));
+        assert(e.status == 500);
+        assert(std.file.readText(fn) == "response content");
     }
 }
 
@@ -490,19 +526,31 @@ if (isCurlConn!Conn)
 
     static if (is(Conn : HTTP) || is(Conn : FTP))
     {
+        import std.exception : enforce;
+        import std.format : format;
         import std.stdio : File;
+
         auto f = File(loadFromPath, "rb");
         conn.onSend = buf => f.rawRead(buf).length;
         immutable sz = f.size;
         if (sz != ulong.max)
             conn.contentLength = sz;
+        static if (is(Conn : HTTP))
+        {
+            HTTP.StatusLine statusLine;
+            conn.onReceiveStatusLine = (HTTP.StatusLine l) { statusLine = l; };
+        }
         conn.perform();
+        static if (is(Conn : HTTP))
+            enforce(statusLine.code / 100 == 2, new HTTPStatusException(statusLine.code,
+                    format("HTTP request returned status code %d (%s)", statusLine.code, statusLine.reason)));
     }
 }
 
 @system unittest
 {
     import std.algorithm.searching : canFind;
+    import std.exception : collectException;
     static import std.file;
 
     foreach (host; [testServer.addr, "http://"~testServer.addr])
@@ -521,6 +569,27 @@ if (isCurlConn!Conn)
             s.send(httpOK());
         });
         upload(fn, host ~ "/path");
+    }
+
+    {
+        auto fn = std.file.deleteme;
+        scope (exit) std.file.remove(fn);
+        std.file.write(fn, "upload data\n");
+        testServer.handle((s) {
+            s.send(httpNotFound());
+        });
+        auto e = collectException!HTTPStatusException(upload(fn, testServer.addr));
+        assert(e.status == 404);
+    }
+    {
+        auto fn = std.file.deleteme;
+        scope (exit) std.file.remove(fn);
+        std.file.write(fn, "upload data\n");
+        testServer.handle((s) {
+            s.send(httpInternalServerError());
+        });
+        auto e = collectException!HTTPStatusException(upload(fn, testServer.addr));
+        assert(e.status == 500);
     }
 }
 
