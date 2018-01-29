@@ -62,7 +62,7 @@ private mixin template AscendingPageAllocatorImpl(bool isShared)
         }
         else
         {
-            assert(0, "Unsupported OS version");
+            static assert(0, "Unsupported OS version");
         }
         data = null;
         offset = null;
