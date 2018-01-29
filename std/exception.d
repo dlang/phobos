@@ -823,6 +823,7 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  *
  * Example:
  *
+ * $(RUNNABLE_EXAMPLE
  * ----
  * string letters()
  * {
@@ -834,6 +835,7 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  *   return assumeUnique(result);
  * }
  * ----
+ * )
  *
  * The use in the example above is correct because $(D result)
  * was private to $(D letters) and is inaccessible in writing
@@ -842,6 +844,7 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  *
  * Bad:
  *
+ * $(RUNNABLE_EXAMPLE
  * ----
  * private char[] buffer;
  * string letters(char first, char last)
@@ -856,11 +859,13 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  *   return assumeUnique(sneaky); // BAD
  * }
  * ----
+ * )
  *
  * The example above wreaks havoc on client code because it is
  * modifying arrays that callers considered immutable. To obtain an
  * immutable array from the writable array $(D buffer), replace
  * the last line with:
+ *
  * ----
  * return to!(string)(sneaky); // not that sneaky anymore
  * ----
@@ -872,6 +877,8 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  * marked as a pure function. The following example does not
  * need to call assumeUnique because the compiler can infer the
  * uniqueness of the array in the pure function:
+ *
+ * $(RUNNABLE_EXAMPLE
  * ----
  * string letters() pure
  * {
@@ -883,10 +890,11 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  *   return result;
  * }
  * ----
+ * )
  *
  * For more on infering uniqueness see the $(B unique) and
  * $(B lent) keywords in the
- * $(HTTP archjava.fluid.cs.cmu.edu/papers/oopsla02.pdf, ArchJava)
+ * $(HTTP www.cs.cmu.edu/~aldrich/papers/aldrich-dissertation.pdf, ArchJava)
  * language.
  *
  * The downside of using $(D assumeUnique)'s
@@ -1557,15 +1565,18 @@ class ErrnoException : Exception
         errorHandler.
 
     Example:
+    $(RUNNABLE_EXAMPLE
     --------------------
     //Revert to a default value upon an error:
     assert("x".to!int().ifThrown(0) == 0);
     --------------------
+    )
 
     You can also chain multiple calls to ifThrown, each capturing errors from the
     entire preceding expression.
 
     Example:
+    $(RUNNABLE_EXAMPLE
     --------------------
     //Chaining multiple calls to ifThrown to attempt multiple things in a row:
     string s="true";
@@ -1580,12 +1591,14 @@ class ErrnoException : Exception
             .ifThrown!Exception("number too small")
             == "not a number");
     --------------------
+    )
 
     The expression and the errorHandler must have a common type they can both
     be implicitly casted to, and that type will be the type of the compound
     expression.
 
     Example:
+    $(RUNNABLE_EXAMPLE
     --------------------
     //null and new Object have a common type(Object).
     static assert(is(typeof(null.ifThrown(new Object())) == Object));
@@ -1595,13 +1608,17 @@ class ErrnoException : Exception
     static assert(!__traits(compiles, 1.ifThrown(new Object())));
     static assert(!__traits(compiles, (new Object()).ifThrown(1)));
     --------------------
+    )
 
     If you need to use the actual thrown exception, you can use a delegate.
     Example:
+
+    $(RUNNABLE_EXAMPLE
     --------------------
     //Use a lambda to get the thrown object.
     assert("%s".format().ifThrown!Exception(e => e.classinfo.name) == "std.format.FormatException");
     --------------------
+    )
     +/
 //lazy version
 CommonType!(T1, T2) ifThrown(E : Throwable = Exception, T1, T2)(lazy scope T1 expression, lazy scope T2 errorHandler)
