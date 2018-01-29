@@ -2880,10 +2880,9 @@ $(D Range) that locks the file and allows fast writing to it.
             }
 
             // put each element in turn.
-            alias Elem = Unqual!(ElementType!A);
-            foreach (Elem c; writeme)
+            for (; !writeme.empty; writeme.popFront)
             {
-                put(c);
+                put(writeme.front);
             }
         }
 
