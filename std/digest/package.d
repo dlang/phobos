@@ -265,7 +265,7 @@ version(ExampleDigest)
 
     auto oneMillionRange = repeat!ubyte(cast(ubyte)'a', 1000000);
     auto ctx = makeDigest!MD5();
-    copy(oneMillionRange, &ctx); //Note: You must pass a pointer to copy!
+    oneMillionRange.copy(ctx);
     assert(ctx.finish().toHexString() == "7707D6AE4E027C70EEA2A935C2296F21");
 }
 
@@ -433,10 +433,10 @@ DigestType!Hash digest(Hash, Range)(auto ref Range range)
 if (!isArray!Range
     && isDigestibleRange!Range)
 {
-    import std.algorithm.mutation : copy;
+    import std.range.primitives : put;
     Hash hash;
     hash.start();
-    copy(range, &hash);
+    put(hash, range);
     return hash.finish();
 }
 
@@ -634,7 +634,7 @@ interface Digest
 
     auto oneMillionRange = repeat!ubyte(cast(ubyte)'a', 1000000);
     auto ctx = new MD5Digest();
-    copy(oneMillionRange, ctx);
+    oneMillionRange.copy(ctx);
     assert(ctx.finish().toHexString() == "7707D6AE4E027C70EEA2A935C2296F21");
 }
 

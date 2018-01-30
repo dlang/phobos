@@ -15,7 +15,6 @@ module std.stdio;
 
 import core.stdc.stddef; // wchar_t
 public import core.stdc.stdio;
-import std.algorithm.mutation; // copy
 import std.meta; // allSatisfy
 import std.range.primitives; // ElementEncodingType, empty, front,
     // isBidirectionalRange, isInputRange, put
@@ -3143,7 +3142,7 @@ void main()
 
     @system unittest
     {
-        import std.algorithm.mutation : reverse;
+        import std.algorithm.mutation : copy, reverse;
         import std.exception : collectException;
         static import std.file;
         import std.range : only, retro;
@@ -4572,16 +4571,17 @@ private struct ChunksImpl
 
 /**
 Writes an array or range to a file.
-Shorthand for $(D data.copy(File(fileName, "wb").lockingBinaryWriter)).
+Shorthand for `put(data, File(fileName, "wb").lockingBinaryWriter)`.
 Similar to $(REF write, std,file), strings are written as-is,
 rather than encoded according to the $(D File)'s $(HTTP
 en.cppreference.com/w/c/io#Narrow_and_wide_orientation,
 orientation).
 */
 void toFile(T)(T data, string fileName)
-if (is(typeof(copy(data, stdout.lockingBinaryWriter))))
+if (is(typeof({ auto w = stdout.lockingBinaryWriter; put(w, data); })))
 {
-    copy(data, File(fileName, "wb").lockingBinaryWriter);
+    auto w = File(fileName, "wb").lockingBinaryWriter;
+    put(w, data);
 }
 
 @system unittest

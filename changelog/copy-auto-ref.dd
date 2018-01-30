@@ -1,0 +1,34 @@
+`std.algorithm.mutation.copy` Has Been Modified For `put`-style Output Ranges
+
+With this release, when the target output range in a call to
+$(REF copy, std, algorithm, mutation) is any `put` defining output range (and it
+doesn't have $(REF_ALTTEXT assignable elements, hasAssignableElements, std, range, primitives)),
+the target is taken as `auto ref`. This new overload is also `void` returning
+vs the other overloads which return the unfilled portion of the given range
+or array.
+
+Before this release, $(REF copy, std, algorithm, mutation) took all
+$(REF_ALTTEXT output ranges, isOutputRange, std, range, primitives) by value.
+This leads to some issues when output ranges aren't designed around a reference
+to heap memory, e.g. the hash ranges in $(MREF std,digest):
+
+-------
+// v2.078 and earlier
+import std.algorithm.mutation : copy;
+import std.digest.digest : toHexString;
+import std.digest.md : MD5;
+import std.range : put;
+
+auto s = "Hello!\n";
+auto h1 = makeDigest!MD5;
+auto h2 = makeDigest!MD5;
+
+put(h1, s); // takes h1 by ref
+copy(s, h2); // takes h2 by value
+
+assert(h1.finish().toHexString == "E134CED312B3511D88943D57CCD70C83");
+// Different result because copy didn't properly insert the contents of s
+assert(h2.finish().toHexString == "D41D8CD98F00B204E9800998ECF8427E");
+-------
+
+This issue no longer occurs in 2.079 and later as long as `target` is an lvalue.
