@@ -4217,10 +4217,11 @@ if (isInputRange!R1 &&
     else
         enum isDefaultPred = false;
 
-    //Note: While narrow strings don't have a "true" length, for a narrow string to start with another
-    //narrow string *of the same type*, it must have *at least* as many code units.
+    // Note: Although narrow strings don't have a "true" length, for a narrow string to start with another
+    // narrow string, it must have *at least* as many code units.
     static if ((hasLength!R1 && hasLength!R2) ||
-        (isNarrowString!R1 && isNarrowString!R2 && ElementEncodingType!R1.sizeof == ElementEncodingType!R2.sizeof))
+        ((hasLength!R1 || isNarrowString!R1) && (hasLength!R2 || isNarrowString!R2)
+            && (ElementEncodingType!R1.sizeof <= ElementEncodingType!R2.sizeof)))
     {
         if (haystack.length < needle.length)
             return false;
