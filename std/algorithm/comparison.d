@@ -913,9 +913,6 @@ template equal(alias pred = "a == b")
     Returns:
         `true` if and only if the two ranges compare _equal element
         for element, according to binary predicate `pred`.
-
-    See_Also:
-        $(HTTP sgi.com/tech/stl/_equal.html, STL's _equal)
     +/
     bool equal(Range1, Range2)(Range1 r1, Range2 r2)
     if (isInputRange!Range1 && isInputRange!Range2 &&
@@ -1724,9 +1721,6 @@ stops at the first mismatch (according to `pred`, by default
 equality). Returns a tuple with the reduced ranges that start with the
 two mismatched values. Performs $(BIGOH min(r1.length, r2.length))
 evaluations of `pred`.
-
-See_Also:
-    $(HTTP sgi.com/tech/stl/_mismatch.html, STL's _mismatch)
 */
 Tuple!(Range1, Range2)
 mismatch(alias pred = "a == b", Range1, Range2)(Range1 r1, Range2 r2)

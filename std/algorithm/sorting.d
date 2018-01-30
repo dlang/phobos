@@ -391,10 +391,6 @@ ordering of all elements `a`, `b` in `r` for which `predicate(a) =$D(
 predicate(b)). If `ss == SwapStrategy.semistable`, `partition` preserves
 the relative ordering of all elements `a`, `b` in the left part of `r`
 for which `predicate(a) == predicate(b)`.
-
-See_Also:
-    STL's $(HTTP sgi.com/tech/stl/_partition.html, _partition)$(BR)
-    STL's $(HTTP sgi.com/tech/stl/stable_partition.html, stable_partition)
 */
 Range partition(alias predicate, SwapStrategy ss, Range)(Range r)
 if (ss == SwapStrategy.stable && isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
@@ -3096,7 +3092,6 @@ Params:
 
 See_Also:
     $(LREF topNIndex),
-    $(HTTP sgi.com/tech/stl/nth_element.html, STL's nth_element)
 
 BUGS:
 
