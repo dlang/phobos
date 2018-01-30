@@ -618,6 +618,7 @@ if (isCurlConn!Conn)
  * Throws:
  *
  * `CurlException` on error.
+ * `HTTPStatusException` when the response has a non-2xx status
  *
  * See_Also: $(LREF HTTP.Method)
  */
@@ -686,6 +687,11 @@ if ( isCurlConn!Conn && (is(T == char) || is(T == ubyte)) )
  *
  * Returns:
  * A T[] range containing the content of the resource pointed to by the URL.
+ *
+ * Throws:
+ *
+ * `CurlException` on error.
+ * `HTTPStatusException` when the response has a non-2xx status
  *
  * See_Also: $(LREF HTTP.Method)
  */
@@ -787,6 +793,11 @@ if (is(T == char) || is(T == ubyte))
  * Returns:
  * A T[] range containing the content of the resource pointed to by the URL.
  *
+ * Throws:
+ *
+ * `CurlException` on error.
+ * `HTTPStatusException` when the response has a non-2xx status
+ *
  * See_Also: $(LREF HTTP.Method)
  */
 T[] put(Conn = AutoProtocol, T = char, PutUnit)(const(char)[] url, const(PutUnit)[] putData,
@@ -841,6 +852,11 @@ if ( isCurlConn!Conn && (is(T == char) || is(T == ubyte)) )
  * import std.net.curl;
  * del("https://httpbin.org/delete");
  * ----
+ *
+ * Throws:
+ *
+ * `CurlException` on error.
+ * `HTTPStatusException` when the response has a non-2xx status
  *
  * See_Also: $(LREF HTTP.Method)
  */
@@ -958,6 +974,11 @@ if (is(T == char) || is(T == ubyte))
  * Returns:
  * A T[] range containing the trace info of the resource pointed to by the URL.
  *
+ * Throws:
+ *
+ * `CurlException` on error.
+ * `HTTPStatusException` when the response has a non-2xx status
+ *
  * See_Also: $(LREF HTTP.Method)
  */
 T[] trace(T = char)(const(char)[] url, HTTP conn = HTTP())
@@ -998,6 +1019,11 @@ if (is(T == char) || is(T == ubyte))
  *
  * Returns:
  * A T[] range containing the connect info of the resource pointed to by the URL.
+ *
+ * Throws:
+ *
+ * `CurlException` on error.
+ * `HTTPStatusException` when the response has a non-2xx status
  *
  * See_Also: $(LREF HTTP.Method)
  */
@@ -1043,6 +1069,11 @@ if (is(T == char) || is(T == ubyte))
  *
  * Returns:
  * A T[] range containing the content of the resource pointed to by the URL.
+ *
+ * Throws:
+ *
+ * `CurlException` on error.
+ * `HTTPStatusException` when the response has a non-2xx status
  *
  * See_Also: $(LREF HTTP.Method)
  */
@@ -1353,6 +1384,11 @@ struct ByLineBuffer(Char)
  *
  * Returns:
  * A range of Char[] with the content of the resource pointer to by the URL
+ *
+ * Throws:
+ *
+ * `CurlException` on error.
+ * `HTTPStatusException` when the response has a non-2xx status
  */
 auto byLine(Conn = AutoProtocol, Terminator = char, Char = char)
            (const(char)[] url, KeepTerminator keepTerminator = No.keepTerminator,
@@ -1462,6 +1498,11 @@ if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
  *
  * Returns:
  * A range of ubyte[chunkSize] with the content of the resource pointer to by the URL
+ *
+ * Throws:
+ *
+ * `CurlException` on error.
+ * `HTTPStatusException` when the response has a non-2xx status
  */
 auto byChunk(Conn = AutoProtocol)
             (const(char)[] url, size_t chunkSize = 1024, Conn conn = Conn())
