@@ -1194,7 +1194,7 @@ public:
     }
 
 
-    // Shares documentation with "days" version.
+    /// ditto
     ref DateTime roll(string units)(long value) @safe pure nothrow @nogc
         if (units == "hours" ||
             units == "minutes" ||
