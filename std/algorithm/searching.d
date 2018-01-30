@@ -233,14 +233,25 @@ bool balancedParens(Range, E)(Range r, E lPar, E rPar,
 if (isInputRange!(Range) && is(typeof(r.front == lPar)))
 {
     size_t count;
-    for (; !r.empty; r.popFront())
+
+    static if (is(Unqual!(ElementEncodingType!Range) == Unqual!E) && isNarrowString!Range)
     {
-        if (r.front == lPar)
+        import std.utf : byCodeUnit;
+        auto rn = r.byCodeUnit;
+    }
+    else
+    {
+        alias rn = r;
+    }
+
+    for (; !rn.empty; rn.popFront())
+    {
+        if (rn.front == lPar)
         {
             if (count > maxNestingLevel) return false;
             ++count;
         }
-        else if (r.front == rPar)
+        else if (rn.front == rPar)
         {
             if (!count) return false;
             --count;
@@ -250,7 +261,7 @@ if (isInputRange!(Range) && is(typeof(r.front == lPar)))
 }
 
 ///
-@safe unittest
+@safe pure unittest
 {
     auto s = "1 + (2 * (3 + 1 / 2)";
     assert(!balancedParens(s, '(', ')'));
@@ -260,6 +271,8 @@ if (isInputRange!(Range) && is(typeof(r.front == lPar)))
     assert(!balancedParens(s, '(', ')', 0));
     s = "1 + (2 * 3 + 1) / (2 - 5)";
     assert(balancedParens(s, '(', ')', 0));
+    s = "f(x) = ⌈x⌉";
+    assert(balancedParens(s, '⌈', '⌉'));
 }
 
 /**
