@@ -363,9 +363,6 @@ Params:
 
 Returns:
     The unfilled part of target
-
-See_Also:
-    $(HTTP sgi.com/tech/stl/_copy.html, STL's _copy)
  */
 TargetRange copy(SourceRange, TargetRange)(SourceRange source, TargetRange target)
 if (areCopyCompatibleArrays!(SourceRange, TargetRange))

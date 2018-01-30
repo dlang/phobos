@@ -9922,8 +9922,7 @@ if (isInputRange!Range)
    all $(D x) (e.g., if $(D pred) is "less than", returns the portion of
    the range with elements strictly smaller than $(D value)). The search
    schedule and its complexity are documented in
-   $(LREF SearchPolicy).  See also STL's
-   $(HTTP sgi.com/tech/stl/lower_bound.html, lower_bound).
+   $(LREF SearchPolicy).
 */
     auto lowerBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V)
@@ -9953,8 +9952,6 @@ For ranges that do not offer random access, $(D SearchPolicy.linear)
 is the only policy allowed (and it must be specified explicitly lest it exposes
 user code to unexpected inefficiencies). For random-access searches, all
 policies are allowed, and $(D SearchPolicy.binarySearch) is the default.
-
-See_Also: STL's $(HTTP sgi.com/tech/stl/lower_bound.html,upper_bound).
 */
     auto upperBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V))
@@ -9997,8 +9994,7 @@ See_Also: STL's $(HTTP sgi.com/tech/stl/lower_bound.html,upper_bound).
    and $(D SearchPolicy.gallop) to find the right boundary. These
    policies are justified by the fact that the two boundaries are likely
    to be near the first found value (i.e., equal ranges are relatively
-   small). Completes the entire search in $(BIGOH log(n)) time. See also
-   STL's $(HTTP sgi.com/tech/stl/equal_range.html, equal_range).
+   small). Completes the entire search in $(BIGOH log(n)) time.
 */
     auto equalRange(V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V)
@@ -10114,8 +10110,7 @@ equalRange). Completes the entire search in $(BIGOH log(n)) time.
 /**
 Returns $(D true) if and only if $(D value) can be found in $(D
 range), which is assumed to be sorted. Performs $(BIGOH log(r.length))
-evaluations of $(D pred). See also STL's $(HTTP
-sgi.com/tech/stl/binary_search.html, binary_search).
+evaluations of $(D pred).
  */
 
     bool contains(V)(V value)
