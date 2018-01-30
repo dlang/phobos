@@ -847,6 +847,29 @@ public:
         return BigUint(removeLeadingZeros(trustedAssumeUnique(rem)));
     }
 
+    // Return x / y in quotient, x % y in remainder
+    static void divMod(BigUint x, BigUint y, out BigUint quotient, out BigUint remainder) pure nothrow
+    {
+        if (y.data.length > x.data.length)
+        {
+            quotient = 0uL;
+            remainder = x;
+        }
+        else if (y.data.length == 1)
+        {
+            quotient = divInt(x, y.data[0]);
+            remainder = BigUint([modInt(x, y.data[0])]);
+        }
+        else
+        {
+            BigDigit[] quot = new BigDigit[x.data.length - y.data.length + 1];
+            BigDigit[] rem = new BigDigit[y.data.length];
+            divModInternal(quot, rem, x.data, y.data);
+            quotient = BigUint(removeLeadingZeros(trustedAssumeUnique(quot)));
+            remainder = BigUint(removeLeadingZeros(trustedAssumeUnique(rem)));
+        }
+    }
+
     // return x op y
     static BigUint bitwiseOp(string op)(BigUint x, BigUint y, bool xSign, bool ySign, ref bool resultSign)
     pure nothrow @safe if (op == "|" || op == "^" || op == "&")

@@ -1836,3 +1836,65 @@ unittest
     enum BigInt test1 = BigInt(123);
     enum BigInt test2 = plusTwo(test1);
 }
+
+/**
+ * Finds the quotient and remainder for the given dividend and divisor in one operation.
+ *
+ * Params:
+ *     dividend = the $(LREF BigInt) to divide
+ *     divisor = the $(LREF BigInt) to divide the dividend by
+ *     quotient = is set to the result of the division
+ *     remainder = is set to the remainder of the division
+ */
+void divMod(const BigInt dividend, const BigInt divisor, out BigInt quotient, out BigInt remainder) pure nothrow
+{
+    BigUint q, r;
+    BigUint.divMod(dividend.data, divisor.data, q, r);
+    quotient.sign = dividend.sign != divisor.sign;
+    quotient.data = q;
+    remainder.sign = dividend.sign;
+    remainder.data = r;
+}
+
+///
+@system pure nothrow unittest
+{
+    auto a = BigInt(123);
+    auto b = BigInt(25);
+    BigInt q, r;
+
+    divMod(a, b, q, r);
+
+    assert(q == 4);
+    assert(r == 23);
+    assert(q * b + r == a);
+}
+
+// Issue 18086
+@system pure nothrow unittest
+{
+    BigInt q = 1;
+    BigInt r = 1;
+    BigInt c = 1024;
+    BigInt d = 100;
+
+    divMod(c, d, q, r);
+    assert(q ==  10);
+    assert(r ==  24);
+    assert((q * d + r) == c);
+
+    divMod(c, -d, q, r);
+    assert(q == -10);
+    assert(r ==  24);
+    assert(q * -d + r == c);
+
+    divMod(-c, -d, q, r);
+    assert(q ==  10);
+    assert(r == -24);
+    assert(q * -d + r == -c);
+
+    divMod(-c, d, q, r);
+    assert(q == -10);
+    assert(r == -24);
+    assert(q * d + r == -c);
+}
