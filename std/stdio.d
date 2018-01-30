@@ -2880,8 +2880,7 @@ $(D Range) that locks the file and allows fast writing to it.
             }
 
             // put each element in turn.
-            alias Elem = Unqual!(ElementType!A);
-            foreach (Elem c; writeme)
+            foreach (c; writeme)
             {
                 put(c);
             }
@@ -2908,7 +2907,7 @@ $(D Range) that locks the file and allows fast writing to it.
             }
             else static if (c.sizeof == 2)
             {
-                import std.utf : encode, UseReplacementDchar;
+                import std.utf : encode;
 
                 if (orientation_ <= 0)
                 {
@@ -2919,7 +2918,7 @@ $(D Range) that locks the file and allows fast writing to it.
                     else
                     {
                         char[4] buf;
-                        immutable size = encode!(UseReplacementDchar.yes)(buf, c);
+                        immutable size = encode(buf, c);
                         foreach (i ; 0 .. size)
                             trustedFPUTC(buf[i], handle_);
                     }
@@ -2981,10 +2980,15 @@ $(D Range) that locks the file and allows fast writing to it.
         }
     }
 
-/** Returns an output range that locks the file and allows fast writing to it.
-
-See $(LREF byChunk) for an example.
-*/
+    /**
+     * Returns: An $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+     * that locks the file and allows fast writing to it.
+     *
+     * Throws: $(REF UTFException, std, utf) if the data given is a `char` range
+     * and it contains malformed UTF data.
+     *
+     * See_Also: $(LREF byChunk) for an example.
+     */
     auto lockingTextWriter() @safe
     {
         return LockingTextWriter(this);
