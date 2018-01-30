@@ -505,7 +505,7 @@ struct MurmurHash3(uint size /* 32 or 128 */ , uint opt = size_t.sizeof == 8 ? 6
         // Buffer should never be full while entering this function.
         assert(bufferSize < Element.sizeof);
 
-        // Check if we don't fill up a whole block buffer.
+        // Check if the incoming data doesn't fill up a whole block buffer.
         if (bufferSize + data.length < Element.sizeof)
         {
             buffer.data[bufferSize .. bufferSize + data.length] = data[];
@@ -513,7 +513,8 @@ struct MurmurHash3(uint size /* 32 or 128 */ , uint opt = size_t.sizeof == 8 ? 6
             return;
         }
 
-        // Check if we have some leftover data in the buffer. Then fill the first block buffer.
+        // Check if there's some leftover data in the first block buffer, and
+        // fill the remaining space first.
         if (bufferSize != 0)
         {
             const bufferLeeway = Element.sizeof - bufferSize;
