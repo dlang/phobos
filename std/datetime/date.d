@@ -2799,28 +2799,43 @@ public:
 
 
     /++
-        Converts this $(LREF DateTime) to a string with the format YYYYMMDDTHHMMSS.
+        Converts this $(LREF DateTime) to a string with the format `YYYYMMDDTHHMMSS`.
+        If `writer` is set, the resulting string will be written directly to it.
+
+        Params:
+            writer = A `char` accepting
+            $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+        Returns:
+            A `string` when not using an output range; `void` otherwise.
       +/
     string toISOString() const @safe pure nothrow
     {
-        import std.format : format;
+        import std.array : appender;
+        auto w = appender!string();
+        w.reserve(18);
         try
-        {
-            return format!("%sT%02d%02d%02d")(
-                _date.toISOString(),
-                _tod._hour,
-                _tod._minute,
-                _tod._second
-            );
-        }
+            toISOString(w);
         catch (Exception e)
-        {
-            assert(0, "format() threw.");
-        }
+            assert(0, "formattedWrite() threw.");
+        return w.data;
+    }
+
+    /// ditto
+    void toISOString(W)(ref W writer) const
+    if (isOutputRange!(W, char))
+    {
+        import std.format : formattedWrite;
+        _date.toISOString(writer);
+        formattedWrite!("T%02d%02d%02d")(
+            writer,
+            _tod._hour,
+            _tod._minute,
+            _tod._second
+        );
     }
 
     ///
-    @safe unittest
+    @safe pure nothrow unittest
     {
         assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOString() ==
                "20100704T070612");
@@ -2861,28 +2876,43 @@ public:
 
     /++
         Converts this $(LREF DateTime) to a string with the format
-        YYYY-MM-DDTHH:MM:SS.
+        `YYYY-MM-DDTHH:MM:SS`. If `writer` is set, the resulting
+        string will be written directly to it.
+
+        Params:
+            writer = A `char` accepting
+            $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+        Returns:
+            A `string` when not using an output range; `void` otherwise.
       +/
     string toISOExtString() const @safe pure nothrow
     {
-        import std.format : format;
+        import std.array : appender;
+        auto w = appender!string();
+        w.reserve(20);
         try
-        {
-            return format!("%sT%02d:%02d:%02d")(
-                _date.toISOExtString(),
-                _tod._hour,
-                _tod._minute,
-                _tod._second
-            );
-        }
+            toISOExtString(w);
         catch (Exception e)
-        {
-            assert(0, "format() threw.");
-        }
+            assert(0, "formattedWrite() threw.");
+        return w.data;
+    }
+
+    /// ditto
+    void toISOExtString(W)(ref W writer) const
+    if (isOutputRange!(W, char))
+    {
+        import std.format : formattedWrite;
+        _date.toISOExtString(writer);
+        formattedWrite!("T%02d:%02d:%02d")(
+            writer,
+            _tod._hour,
+            _tod._minute,
+            _tod._second
+        );
     }
 
     ///
-    @safe unittest
+    @safe pure nothrow unittest
     {
         assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOExtString() ==
                "2010-07-04T07:06:12");
@@ -2922,28 +2952,43 @@ public:
 
     /++
         Converts this $(LREF DateTime) to a string with the format
-        YYYY-Mon-DD HH:MM:SS.
+        `YYYY-Mon-DD HH:MM:SS`. If `writer` is set, the resulting
+        string will be written directly to it.
+
+        Params:
+            writer = A `char` accepting
+            $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+        Returns:
+            A `string` when not using an output range; `void` otherwise.
       +/
     string toSimpleString() const @safe pure nothrow
     {
-        import std.format : format;
+        import std.array : appender;
+        auto w = appender!string();
+        w.reserve(22);
         try
-        {
-            return format!("%s %02d:%02d:%02d")(
-                _date.toSimpleString(),
-                _tod._hour,
-                _tod._minute,
-                _tod._second
-            );
-        }
+            toSimpleString(w);
         catch (Exception e)
-        {
-            assert(0, "format() threw.");
-        }
+            assert(0, "formattedWrite() threw.");
+        return w.data;
+    }
+
+    /// ditto
+    void toSimpleString(W)(ref W writer) const
+    if (isOutputRange!(W, char))
+    {
+        import std.format : formattedWrite;
+        _date.toSimpleString(writer);
+        formattedWrite!(" %02d:%02d:%02d")(
+            writer,
+            _tod._hour,
+            _tod._minute,
+            _tod._second
+        );
     }
 
     ///
-    @safe unittest
+    @safe pure nothrow unittest
     {
         assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toSimpleString() ==
                "2010-Jul-04 07:06:12");
@@ -3020,7 +3065,12 @@ public:
         assert(idt.toString());
     }
 
-
+    /// ditto
+    void toString(W)(ref W writer) const
+    if (isOutputRange!(W, char))
+    {
+        toSimpleString(writer);
+    }
 
     /++
         Creates a $(LREF DateTime) from a string with the format YYYYMMDDTHHMMSS.
