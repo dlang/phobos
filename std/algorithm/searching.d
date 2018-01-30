@@ -1121,13 +1121,21 @@ if (isBidirectionalRange!R &&
     if (doesThisEnd.empty)
         return false;
 
+    static if (is(typeof(pred) : string))
+        enum isDefaultPred = pred == "a == b";
+    else
+        enum isDefaultPred = false;
+
     alias predFunc = binaryFun!pred;
 
     // auto-decoding special case
     static if (isNarrowString!R)
     {
+        // statically determine decoding is unnecessary to evaluate pred
+        static if (isDefaultPred && isSomeChar!E && E.sizeof <= ElementEncodingType!R.sizeof)
+            return doesThisEnd[$ - 1] == withThis;
         // specialize for ASCII as to not change previous behavior
-        if (withThis <= 0x7F)
+        else if (withThis <= 0x7F)
             return predFunc(doesThisEnd[$ - 1], withThis);
         else
             return predFunc(doesThisEnd.back, withThis);
@@ -4272,13 +4280,21 @@ if (isInputRange!R &&
     if (doesThisStart.empty)
         return false;
 
+    static if (is(typeof(pred) : string))
+        enum isDefaultPred = pred == "a == b";
+    else
+        enum isDefaultPred = false;
+
     alias predFunc = binaryFun!pred;
 
     // auto-decoding special case
     static if (isNarrowString!R)
     {
+        // statically determine decoding is unnecessary to evaluate pred
+        static if (isDefaultPred && isSomeChar!E && E.sizeof <= ElementEncodingType!R.sizeof)
+            return doesThisStart[0] == withThis;
         // specialize for ASCII as to not change previous behavior
-        if (withThis <= 0x7F)
+        else if (withThis <= 0x7F)
             return predFunc(doesThisStart[0], withThis);
         else
             return predFunc(doesThisStart.front, withThis);
