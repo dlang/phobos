@@ -371,7 +371,6 @@ template packageName(alias T)
 ///
 @safe unittest
 {
-    import std.traits;
     static assert(packageName!packageName == "std");
 }
 
@@ -427,7 +426,6 @@ template moduleName(alias T)
 ///
 @safe unittest
 {
-    import std.traits;
     static assert(moduleName!moduleName == "std.traits");
 }
 
@@ -1429,8 +1427,6 @@ template functionAttributes(func...)
 ///
 @safe unittest
 {
-    import std.traits : functionAttributes, FunctionAttribute;
-
     alias FA = FunctionAttribute; // shorten the enum name
 
     real func(real x) pure nothrow @safe
@@ -7208,7 +7204,6 @@ alias KeyType(V : V[K], K) = K;
 ///
 @safe unittest
 {
-    import std.traits;
     alias Hash = int[string];
     static assert(is(KeyType!Hash == string));
     static assert(is(ValueType!Hash == int));
@@ -7224,7 +7219,6 @@ alias ValueType(V : V[K], K) = V;
 ///
 @safe unittest
 {
-    import std.traits;
     alias Hash = int[string];
     static assert(is(KeyType!Hash == string));
     static assert(is(ValueType!Hash == int));
