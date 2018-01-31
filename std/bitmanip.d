@@ -764,9 +764,18 @@ struct DoubleRep
 }
 
 /**
- * An array of bits.
- */
+An array of bits, where the bits are packed in `size_t` values, so the
+dimension, i.e. underlying array size, is effectively
+`dim == ceil(length / size_t.sizeof * 8)`.
 
+`BitArray` is a `RandomAccessRange` and provides all the bitwise operators
+applicable to builtin integers: `&`, `|`, `^`, `~`, as well as bunch of
+standard methods operating effectively on the bits.
+
+The methods `all`, `any`, `none`, `sort`, whose generic equivalents can be
+found in the $(REF , std, algorithm), are specialized for `BitArray` to be
+faster - they operate in complexity relative to its dimension instead of the length.
+*/
 struct BitArray
 {
 private:
@@ -798,7 +807,14 @@ private:
 
     static size_t lenToDim(size_t len) @nogc pure nothrow @safe
     {
-        return (len + (bitsPerSizeT-1)) / bitsPerSizeT;
+        return (len + (bitsPerSizeT - 1)) / bitsPerSizeT;
+    }
+
+    // Set extra bits from last word to false
+    void clearExtraBits() @nogc pure nothrow
+    {
+        if (endBits)
+            _ptr[fullWords] &= endMask;
     }
 
 public:
@@ -1229,6 +1245,105 @@ public:
         }
     }
 
+    /**
+    Checks if all the bits in this `BitArray` are set to true.
+    Complexity: $(BIGOH dim).
+    */
+    @property bool all() const @nogc pure nothrow
+    {
+        if (_len == 0)
+            return false;
+        foreach (i; 0 .. fullWords)
+            if (~_ptr[i] != 0)
+                return false;
+        return (_ptr[fullWords] & endMask) == endMask;
+    }
+
+    ///
+    @system unittest
+    {
+        BitArray empty;
+        assert(!empty.all);
+
+        auto a = BitArray([1]);
+        auto b = BitArray([1, 1, 1, 1, 1]);
+        auto c = BitArray([1, 1, 1, 1, 0, 1, 1]);
+        auto d = BitArray([1, 1, 1, 0]);
+        assert(a.all);
+        assert(b.all);
+        assert(!c.all);
+        assert(!d.all);
+
+        bool[70] bits = 1;
+        bits[65] = 0;
+        auto e = BitArray(bits);
+        assert(!e.all);
+    }
+
+    /**
+    Checks if any of the bits in the `BitArray` is set to true.
+    Complexity: $(BIGOH dim).
+    */
+    @property bool any() const @nogc pure nothrow
+    {
+        if (_len == 0)
+            return false;
+        foreach (i; 0 .. fullWords)
+            if (_ptr[i] != 0)
+                return true;
+        return (_ptr[fullWords] & endMask) != 0;
+    }
+
+    ///
+    @system unittest
+    {
+        BitArray empty;
+        assert(!empty.any);
+
+        auto a = BitArray([0]);
+        auto b = BitArray([0, 0, 0, 1, 0, 1]);
+        auto c = BitArray([1, 0, 0, 0, 0, 0]);
+        auto d = BitArray([0, 0, 0, 0, 0, 0, 0, 0]);
+        assert(!a.any);
+        assert(b.any);
+        assert(c.any);
+        assert(!d.any);
+
+        bool[70] bits;
+        bits[65] = 1;
+        auto e = BitArray(bits);
+        assert(e.any);
+    }
+
+    /**
+    Checks if none of the bits in the `BitArray` is set to true.
+    Complexity: $(BIGOH dim).
+    */
+    @property bool none() const @nogc pure nothrow
+    {
+        return !any;
+    }
+
+    ///
+    @system unittest
+    {
+        BitArray empty;
+        assert(empty.none);
+
+        auto a = BitArray([0]);
+        auto b = BitArray([0, 0, 0, 1, 0, 1]);
+        auto c = BitArray([1, 0, 0, 0, 0, 0]);
+        auto d = BitArray([0, 0, 0, 0, 0, 0, 0, 0]);
+        assert(a.none);
+        assert(!b.none);
+        assert(!c.none);
+        assert(d.none);
+
+        bool[70] bits;
+        bits[65] = 1;
+        auto e = BitArray(bits);
+        assert(!e.none);
+    }
 
     /**********************************************
      * Reverses the bits of the `BitArray` in place.
@@ -1274,11 +1389,11 @@ public:
     }
 
 
-    /**********************************************
-     * Sorts the bits of the `BitArray` in place.
-     * Complexity: $(BIGOH dim).
-     * Returns: Copy of the `BitArray` with bits sorted.
-     */
+    /**
+    Sorts the bits of the `BitArray` in place.
+    Complexity: $(BIGOH dim).
+    Returns: Copy of the `BitArray` with bits sorted.
+    */
     @property BitArray sort() @nogc pure nothrow
     out (result)
     {
@@ -1288,54 +1403,83 @@ public:
     {
         if (_len >= 2)
         {
-            size_t lo, hi;
+            immutable ones = count();
+            if (ones == 0)
+                return this;
 
-            lo = 0;
-            hi = _len - 1;
-            while (1)
+            immutable zeros = _len - ones;
+            immutable zerosWords = lenToDim(zeros);
+            _ptr[0 .. zerosWords] = 0;
+            immutable endZeros = zeros % bitsPerSizeT;
+            if (endZeros)
             {
-                while (1)
-                {
-                    if (lo >= hi)
-                        goto Ldone;
-                    if (this[lo] == true)
-                        break;
-                    lo++;
-                }
-
-                while (1)
-                {
-                    if (lo >= hi)
-                        goto Ldone;
-                    if (this[hi] == false)
-                        break;
-                    hi--;
-                }
-
-                this[lo] = false;
-                this[hi] = true;
-
-                lo++;
-                hi--;
+                immutable endZerosMask = (size_t(1) << endZeros) - 1;
+                immutable beginOnes = ~endZerosMask;
+                _ptr[zerosWords - 1] |= beginOnes;
             }
+            _ptr[zerosWords .. dim] = ~size_t(0);
+            clearExtraBits();
         }
-    Ldone:
         return this;
-    }
+   }
 
     @system unittest
     {
         debug(bitarray) printf("BitArray.sort.unittest\n");
 
-        __gshared size_t x = 0b1100011000;
-        __gshared ba = BitArray(10, &x);
-        ba.sort;
-        for (size_t i = 0; i < 6; i++)
-            assert(ba[i] == false);
-        for (size_t i = 6; i < 10; i++)
-            assert(ba[i] == true);
-    }
+        bool isSorted(const ref BitArray b, size_t zeros)
+        {
+            size_t i = 0;
+            for (; i < b.length; i++)
+                if (b[i])
+                    break;
 
+            if (i != zeros)
+                return false;
+
+            for (; i < b.length; i++)
+                if (!b[i])
+                    return false;
+            return true;
+        }
+
+        size_t x = 0b1100011000;
+        auto a = BitArray(10, &x);
+        a.sort;
+        assert(isSorted(a, 6));
+
+        BitArray empty;
+        empty.sort;
+        assert(empty.length == 0);
+
+        BitArray b;
+        b.length = 128;
+        b.sort;
+        assert(isSorted(b, 128));
+
+        b[] = 1;
+        b.sort;
+        assert(isSorted(b, 0));
+
+        import std.range : iota;
+
+        size_t zeros = 0;
+        foreach (i; iota(0, 128, 3))
+        {
+            b[i] = 0;
+            zeros++;
+        }
+        b.sort;
+        assert(isSorted(b, zeros));
+
+        b.flip;
+        b.sort;
+        assert(isSorted(b, b.length - zeros));
+
+        b.length = 1233;
+        b.sort;
+        assert(isSorted(b, b.length - zeros));
+    }
 
     /***************************************
      * Support for operators `==` and `!=` for `BitArray`.
@@ -1517,6 +1661,67 @@ public:
         }
     }
 
+    /**
+    Creates `BitArray` from a string.
+    Params:
+      s = string consisting of `0`, `1` and separators `_`.
+    Throws:
+      `Exception` if the given string contains invalid characters.
+    */
+    static BitArray fromString(string s) pure @system
+    {
+        import std.exception : enforce;
+        import std.string : lastIndexOfNeither;
+        import std.algorithm.searching : count;
+
+        enforce(s.lastIndexOfNeither("01_") == -1,
+            "String contains invalid characters, only '0', '1', '_' are allowed.");
+
+        BitArray ba;
+        ba.length = s.length - s.count('_');
+        size_t i = 0;
+        foreach (c; s)
+        {
+            if (c == '_')
+                continue;
+            if (c == '1')
+                ba[i] = 1;
+            i++;
+        }
+        return ba;
+    }
+
+    ///
+    @system unittest
+    {
+        auto a = BitArray.fromString("00000");
+        auto ac = BitArray([0, 0, 0, 0, 0]);
+        assert(a == ac);
+
+        auto b = BitArray.fromString("0011_1000_1101_0001");
+        auto bc = BitArray([0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 1]);
+        assert(b == bc);
+
+        auto c = BitArray.fromString("");
+        assert(c.length == 0);
+
+        auto d = BitArray.fromString("_11_1001_0_0_011__1");
+        auto dc = BitArray([1, 1, 1, 0, 0, 1, 0, 0, 0, 1, 1, 1]);
+
+        auto e = BitArray.fromString("_");
+        assert(e.length == 0);
+    }
+
+    @system unittest
+    {
+        import std.exception : assertThrown;
+
+        assertThrown(BitArray.fromString("012"));
+        assertThrown(BitArray.fromString("10-1000"));
+        assertThrown(BitArray.fromString("0000 0000"));
+        assertThrown(BitArray.fromString("abcd"));
+    }
+
     // Deliberately undocumented: raw initialization of bit array.
     this(size_t len, size_t* ptr)
     {
@@ -1546,11 +1751,7 @@ public:
     {
         _ptr = cast(size_t*) v.ptr;
         _len = numbits;
-        if (endBits)
-        {
-            // Need to mask away extraneous bits from v.
-            _ptr[dim - 1] &= endMask;
-        }
+        clearExtraBits();
     }
 
     @system unittest
@@ -1622,9 +1823,7 @@ public:
         result._ptr[0 .. dim] = ~this._ptr[0 .. dim];
 
         // Avoid putting garbage in extra bits
-        // Remove once we zero on length extension
-        if (endBits)
-            result._ptr[dim - 1] &= endMask;
+        result.clearExtraBits();
 
         return result;
     }
@@ -1668,9 +1867,7 @@ public:
             mixin("result._ptr[0 .. dim] = this._ptr[0 .. dim]"~op~" e2._ptr[0 .. dim];");
 
         // Avoid putting garbage in extra bits
-        // Remove once we zero on length extension
-        if (endBits)
-            result._ptr[dim - 1] &= endMask;
+        result.clearExtraBits();
 
         return result;
     }
