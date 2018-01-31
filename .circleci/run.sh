@@ -17,8 +17,9 @@ esac
 
 install_deps() {
     if [ $MODEL -eq 32 ]; then
+        sudo dpkg --add-architecture  i386
         sudo apt-get update
-        sudo apt-get install g++-multilib
+        sudo apt-get install g++-multilib libcurl3-dev:i386
     fi
 
     for i in {0..4}; do
