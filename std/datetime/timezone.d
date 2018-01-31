@@ -1994,41 +1994,37 @@ public:
     }
 
 
-    version(TZDatabaseDir)
+    version(StdDdoc)
+    {
+        /++
+            The default directory where the TZ Database files are stored. It's
+            empty for Windows, since Windows doesn't have them. You can also use
+            the TZDatabaseDir version to pass an arbitrary path at compile-time,
+            rather than hard-coding it here. Android concatenates all time zone
+            data into a single file called tzdata and stores it in the directory
+            below.
+          +/
+        enum defaultTZDatabaseDir = "";
+    }
+    else version(TZDatabaseDir)
     {
         import std.string : strip;
-        /++
-            The default directory where the TZ Database files are. It's empty
-            for Windows, since Windows doesn't have them.
-          +/
         enum defaultTZDatabaseDir = strip(import("TZDatabaseDirFile"));
     }
     else version(Android)
     {
-        // Android concatenates all time zone data into a single file and stores it here.
         enum defaultTZDatabaseDir = "/system/usr/share/zoneinfo/";
     }
     else version(Solaris)
     {
-        /++
-            The default directory where the TZ Database files are. It's empty
-            for Windows, since Windows doesn't have them.
-          +/
         enum defaultTZDatabaseDir = "/usr/share/lib/zoneinfo/";
     }
     else version(Posix)
     {
-        /++
-            The default directory where the TZ Database files are. It's empty
-            for Windows, since Windows doesn't have them.
-          +/
         enum defaultTZDatabaseDir = "/usr/share/zoneinfo/";
     }
     else version(Windows)
     {
-        /++ The default directory where the TZ Database files are. It's empty
-            for Windows, since Windows doesn't have them.
-          +/
         enum defaultTZDatabaseDir = "";
     }
 
