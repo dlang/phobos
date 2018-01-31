@@ -1700,43 +1700,51 @@ package:
     static immutable(SimpleTimeZone) fromISOExtString(S)(S isoExtString) @safe pure
         if (isSomeString!S)
     {
-        import std.algorithm.searching : startsWith, countUntil, all;
-        import std.ascii : isDigit;
-        import std.conv : to;
+        import std.algorithm.searching : startsWith;
+        import std.conv : ConvException, to;
+        import std.datetime.date : DateTimeException;
         import std.exception : enforce;
         import std.format : format;
+        import std.string : indexOf;
 
-        auto dstr = to!dstring(isoExtString);
+        auto whichSign = isoExtString.startsWith('-', '+');
+        enforce!DateTimeException(whichSign > 0, format("Invalid ISO String: %s", isoExtString));
+        auto sign = whichSign == 1 ? -1 : 1;
 
-        import std.datetime.date : DateTimeException;
-        enforce!DateTimeException(dstr.startsWith('-', '+'), "Invalid ISO String");
+        isoExtString = isoExtString[1 .. $];
+        enforce!DateTimeException(!isoExtString.empty, format("Invalid ISO String: %s", isoExtString));
 
-        auto sign = dstr.startsWith('-') ? -1 : 1;
-
-        dstr.popFront();
-        enforce!DateTimeException(!dstr.empty, "Invalid ISO String");
-
-        immutable colon = dstr.countUntil(':');
-
-        dstring hoursStr;
-        dstring minutesStr;
+        immutable colon = isoExtString.indexOf(':');
+        S hoursStr;
+        S minutesStr;
+        int hours, minutes;
 
         if (colon != -1)
         {
-            hoursStr = dstr[0 .. colon];
-            minutesStr = dstr[colon + 1 .. $];
-            enforce!DateTimeException(minutesStr.length == 2, format("Invalid ISO String: %s", dstr));
+            hoursStr = isoExtString[0 .. colon];
+            minutesStr = isoExtString[colon + 1 .. $];
+            enforce!DateTimeException(minutesStr.length == 2, format("Invalid ISO String: %s", isoExtString));
         }
         else
-            hoursStr = dstr;
+        {
+            hoursStr = isoExtString;
+        }
 
-        enforce!DateTimeException(hoursStr.length == 2, format("Invalid ISO String: %s", dstr));
-        enforce!DateTimeException(all!isDigit(hoursStr), format("Invalid ISO String: %s", dstr));
-        enforce!DateTimeException(all!isDigit(minutesStr), format("Invalid ISO String: %s", dstr));
+        enforce!DateTimeException(hoursStr.length == 2, format("Invalid ISO String: %s", isoExtString));
 
-        immutable hours = to!int(hoursStr);
-        immutable minutes = minutesStr.empty ? 0 : to!int(minutesStr);
-        enforce!DateTimeException(hours < 24 && minutes < 60, format("Invalid ISO String: %s", dstr));
+        try
+        {
+            // cast to int from uint is used because it checks for
+            // non digits without extra loops
+            hours = cast(int) to!uint(hoursStr);
+            minutes = cast(int) (minutesStr.empty ? 0 : to!uint(minutesStr));
+        }
+        catch (ConvException)
+        {
+            throw new DateTimeException(format("Invalid ISO String: %s", isoExtString));
+        }
+
+        enforce!DateTimeException(hours < 24 && minutes < 60, format("Invalid ISO String: %s", isoExtString));
 
         return new immutable SimpleTimeZone(sign * (dur!"hours"(hours) + dur!"minutes"(minutes)));
     }
