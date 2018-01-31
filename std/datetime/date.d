@@ -2799,24 +2799,39 @@ public:
 
 
     /++
-        Converts this $(LREF DateTime) to a string with the format YYYYMMDDTHHMMSS.
+        Converts this $(LREF DateTime) to a string with the format `YYYYMMDDTHHMMSS`.
+        If `writer` is set, the resulting string will be written directly to it.
+
+        Params:
+            writer = A `char` accepting
+            $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+        Returns:
+            A `string` when not using an output range; `void` otherwise.
       +/
     string toISOString() const @safe pure nothrow
     {
-        import std.format : format;
+        import std.array : appender;
+        auto w = appender!string();
+        w.reserve(18);
         try
-        {
-            return format!("%sT%02d%02d%02d")(
-                _date.toISOString(),
-                _tod._hour,
-                _tod._minute,
-                _tod._second
-            );
-        }
+            toISOString(w);
         catch (Exception e)
-        {
-            assert(0, "format() threw.");
-        }
+            assert(0, "toISOString() threw.");
+        return w.data;
+    }
+
+    /// ditto
+    void toISOString(W)(ref W writer) const
+    if (isOutputRange!(W, char))
+    {
+        import std.format : formattedWrite;
+        _date.toISOString(writer);
+        formattedWrite!("T%02d%02d%02d")(
+            writer,
+            _tod._hour,
+            _tod._minute,
+            _tod._second
+        );
     }
 
     ///
@@ -2861,24 +2876,39 @@ public:
 
     /++
         Converts this $(LREF DateTime) to a string with the format
-        YYYY-MM-DDTHH:MM:SS.
+        `YYYY-MM-DDTHH:MM:SS`. If `writer` is set, the resulting
+        string will be written directly to it.
+
+        Params:
+            writer = A `char` accepting
+            $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+        Returns:
+            A `string` when not using an output range; `void` otherwise.
       +/
     string toISOExtString() const @safe pure nothrow
     {
-        import std.format : format;
+        import std.array : appender;
+        auto w = appender!string();
+        w.reserve(20);
         try
-        {
-            return format!("%sT%02d:%02d:%02d")(
-                _date.toISOExtString(),
-                _tod._hour,
-                _tod._minute,
-                _tod._second
-            );
-        }
+            toISOExtString(w);
         catch (Exception e)
-        {
-            assert(0, "format() threw.");
-        }
+            assert(0, "toISOExtString() threw.");
+        return w.data;
+    }
+
+    /// ditto
+    void toISOExtString(W)(ref W writer) const
+    if (isOutputRange!(W, char))
+    {
+        import std.format : formattedWrite;
+        _date.toISOExtString(writer);
+        formattedWrite!("T%02d:%02d:%02d")(
+            writer,
+            _tod._hour,
+            _tod._minute,
+            _tod._second
+        );
     }
 
     ///
@@ -2922,24 +2952,39 @@ public:
 
     /++
         Converts this $(LREF DateTime) to a string with the format
-        YYYY-Mon-DD HH:MM:SS.
+        `YYYY-Mon-DD HH:MM:SS`. If `writer` is set, the resulting
+        string will be written directly to it.
+
+        Params:
+            writer = A `char` accepting
+            $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+        Returns:
+            A `string` when not using an output range; `void` otherwise.
       +/
     string toSimpleString() const @safe pure nothrow
     {
-        import std.format : format;
+        import std.array : appender;
+        auto w = appender!string();
+        w.reserve(22);
         try
-        {
-            return format!("%s %02d:%02d:%02d")(
-                _date.toSimpleString(),
-                _tod._hour,
-                _tod._minute,
-                _tod._second
-            );
-        }
+            toSimpleString(w);
         catch (Exception e)
-        {
-            assert(0, "format() threw.");
-        }
+            assert(0, "toSimpleString() threw.");
+        return w.data;
+    }
+
+    /// ditto
+    void toSimpleString(W)(ref W writer) const
+    if (isOutputRange!(W, char))
+    {
+        import std.format : formattedWrite;
+        _date.toSimpleString(writer);
+        formattedWrite!(" %02d:%02d:%02d")(
+            writer,
+            _tod._hour,
+            _tod._minute,
+            _tod._second
+        );
     }
 
     ///
@@ -3020,7 +3065,12 @@ public:
         assert(idt.toString());
     }
 
-
+    /// ditto
+    void toString(W)(ref W writer) const
+    if (isOutputRange!(W, char))
+    {
+        toSimpleString(writer);
+    }
 
     /++
         Creates a $(LREF DateTime) from a string with the format YYYYMMDDTHHMMSS.
@@ -7058,7 +7108,10 @@ public:
         import std.array : appender;
         auto w = appender!string();
         w.reserve(8);
-        toISOString(w);
+        try
+            toISOString(w);
+        catch (Exception e)
+            assert(0, "toISOString() threw.");
         return w.data;
     }
 
@@ -7099,22 +7152,17 @@ public:
     if (isOutputRange!(W, char))
     {
         import std.format : formattedWrite;
-        try
+        if (_year >= 0)
         {
-            if (_year >= 0)
-            {
-                if (_year < 10_000)
-                    formattedWrite(writer, "%04d%02d%02d", _year, _month, _day);
-                else
-                    formattedWrite(writer, "+%05d%02d%02d", _year, _month, _day);
-            }
-            else if (_year > -10_000)
-                formattedWrite(writer, "%05d%02d%02d", _year, _month, _day);
+            if (_year < 10_000)
+                formattedWrite(writer, "%04d%02d%02d", _year, _month, _day);
             else
-                formattedWrite(writer, "%06d%02d%02d", _year, _month, _day);
+                formattedWrite(writer, "+%05d%02d%02d", _year, _month, _day);
         }
-        catch (Exception e)
-            assert(0, "formattedWrite() threw.");
+        else if (_year > -10_000)
+            formattedWrite(writer, "%05d%02d%02d", _year, _month, _day);
+        else
+            formattedWrite(writer, "%06d%02d%02d", _year, _month, _day);
     }
 
     @safe pure unittest
@@ -7144,7 +7192,10 @@ public:
         import std.array : appender;
         auto w = appender!string();
         w.reserve(10);
-        toISOExtString(w);
+        try
+            toISOExtString(w);
+        catch (Exception e)
+            assert(0, "toISOExtString() threw.");
         return w.data;
     }
 
@@ -7185,22 +7236,17 @@ public:
     if (isOutputRange!(W, char))
     {
         import std.format : formattedWrite;
-        try
+        if (_year >= 0)
         {
-            if (_year >= 0)
-            {
-                if (_year < 10_000)
-                    formattedWrite(writer, "%04d-%02d-%02d", _year, _month, _day);
-                else
-                    formattedWrite(writer, "+%05d-%02d-%02d", _year, _month, _day);
-            }
-            else if (_year > -10_000)
-                formattedWrite(writer, "%05d-%02d-%02d", _year, _month, _day);
+            if (_year < 10_000)
+                formattedWrite(writer, "%04d-%02d-%02d", _year, _month, _day);
             else
-                formattedWrite(writer, "%06d-%02d-%02d", _year, _month, _day);
+                formattedWrite(writer, "+%05d-%02d-%02d", _year, _month, _day);
         }
-        catch (Exception e)
-            assert(0, "formattedWrite() threw.");
+        else if (_year > -10_000)
+            formattedWrite(writer, "%05d-%02d-%02d", _year, _month, _day);
+        else
+            formattedWrite(writer, "%06d-%02d-%02d", _year, _month, _day);
     }
 
     @safe pure unittest
@@ -7230,7 +7276,10 @@ public:
         import std.array : appender;
         auto w = appender!string();
         w.reserve(11);
-        toSimpleString(w);
+        try
+            toSimpleString(w);
+        catch (Exception e)
+            assert(0, "toSimpleString() threw.");
         return w.data;
     }
 
@@ -7271,22 +7320,17 @@ public:
     if (isOutputRange!(W, char))
     {
         import std.format : formattedWrite;
-        try
+        if (_year >= 0)
         {
-            if (_year >= 0)
-            {
-                if (_year < 10_000)
-                    formattedWrite(writer, "%04d-%s-%02d", _year, monthToString(_month), _day);
-                else
-                    formattedWrite(writer, "+%05d-%s-%02d", _year, monthToString(_month), _day);
-            }
-            else if (_year > -10_000)
-                formattedWrite(writer, "%05d-%s-%02d", _year, monthToString(_month), _day);
+            if (_year < 10_000)
+                formattedWrite(writer, "%04d-%s-%02d", _year, monthToString(_month), _day);
             else
-                formattedWrite(writer, "%06d-%s-%02d", _year, monthToString(_month), _day);
+                formattedWrite(writer, "+%05d-%s-%02d", _year, monthToString(_month), _day);
         }
-        catch (Exception e)
-            assert(0, "formattedWrite() threw.");
+        else if (_year > -10_000)
+            formattedWrite(writer, "%05d-%s-%02d", _year, monthToString(_month), _day);
+        else
+            formattedWrite(writer, "%06d-%s-%02d", _year, monthToString(_month), _day);
     }
 
     @safe pure unittest
@@ -8770,7 +8814,10 @@ public:
         import std.array : appender;
         auto w = appender!string();
         w.reserve(6);
-        toISOString(w);
+        try
+            toISOString(w);
+        catch (Exception e)
+            assert(0, "toISOString() threw.");
         return w.data;
     }
 
@@ -8779,10 +8826,7 @@ public:
     if (isOutputRange!(W, char))
     {
         import std.format : formattedWrite;
-        try
-            formattedWrite(writer, "%02d%02d%02d", _hour, _minute, _second);
-        catch (Exception e)
-            assert(0, "formattedWrite() threw.");
+        formattedWrite(writer, "%02d%02d%02d", _hour, _minute, _second);
     }
 
     ///
@@ -8817,7 +8861,10 @@ public:
         import std.array : appender;
         auto w = appender!string();
         w.reserve(8);
-        toISOExtString(w);
+        try
+            toISOExtString(w);
+        catch (Exception e)
+            assert(0, "toISOExtString() threw.");
         return w.data;
     }
 
@@ -8826,10 +8873,7 @@ public:
     if (isOutputRange!(W, char))
     {
         import std.format : formattedWrite;
-        try
-            formattedWrite(writer, "%02d:%02d:%02d", _hour, _minute, _second);
-        catch (Exception e)
-            assert(0, "formattedWrite() threw.");
+        formattedWrite(writer, "%02d:%02d:%02d", _hour, _minute, _second);
     }
 
     ///
