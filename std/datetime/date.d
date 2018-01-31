@@ -2816,7 +2816,7 @@ public:
         try
             toISOString(w);
         catch (Exception e)
-            assert(0, "formattedWrite() threw.");
+            assert(0, "toISOString() threw.");
         return w.data;
     }
 
@@ -2835,7 +2835,7 @@ public:
     }
 
     ///
-    @safe pure nothrow unittest
+    @safe unittest
     {
         assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOString() ==
                "20100704T070612");
@@ -2893,7 +2893,7 @@ public:
         try
             toISOExtString(w);
         catch (Exception e)
-            assert(0, "formattedWrite() threw.");
+            assert(0, "toISOExtString() threw.");
         return w.data;
     }
 
@@ -2912,7 +2912,7 @@ public:
     }
 
     ///
-    @safe pure nothrow unittest
+    @safe unittest
     {
         assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOExtString() ==
                "2010-07-04T07:06:12");
@@ -2969,7 +2969,7 @@ public:
         try
             toSimpleString(w);
         catch (Exception e)
-            assert(0, "formattedWrite() threw.");
+            assert(0, "toSimpleString() threw.");
         return w.data;
     }
 
@@ -2988,7 +2988,7 @@ public:
     }
 
     ///
-    @safe pure nothrow unittest
+    @safe unittest
     {
         assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toSimpleString() ==
                "2010-Jul-04 07:06:12");
@@ -7108,7 +7108,10 @@ public:
         import std.array : appender;
         auto w = appender!string();
         w.reserve(8);
-        toISOString(w);
+        try
+            toISOString(w);
+        catch (Exception e)
+            assert(0, "toISOString() threw.");
         return w.data;
     }
 
@@ -7149,22 +7152,17 @@ public:
     if (isOutputRange!(W, char))
     {
         import std.format : formattedWrite;
-        try
+        if (_year >= 0)
         {
-            if (_year >= 0)
-            {
-                if (_year < 10_000)
-                    formattedWrite(writer, "%04d%02d%02d", _year, _month, _day);
-                else
-                    formattedWrite(writer, "+%05d%02d%02d", _year, _month, _day);
-            }
-            else if (_year > -10_000)
-                formattedWrite(writer, "%05d%02d%02d", _year, _month, _day);
+            if (_year < 10_000)
+                formattedWrite(writer, "%04d%02d%02d", _year, _month, _day);
             else
-                formattedWrite(writer, "%06d%02d%02d", _year, _month, _day);
+                formattedWrite(writer, "+%05d%02d%02d", _year, _month, _day);
         }
-        catch (Exception e)
-            assert(0, "formattedWrite() threw.");
+        else if (_year > -10_000)
+            formattedWrite(writer, "%05d%02d%02d", _year, _month, _day);
+        else
+            formattedWrite(writer, "%06d%02d%02d", _year, _month, _day);
     }
 
     @safe pure unittest
@@ -7194,7 +7192,10 @@ public:
         import std.array : appender;
         auto w = appender!string();
         w.reserve(10);
-        toISOExtString(w);
+        try
+            toISOExtString(w);
+        catch (Exception e)
+            assert(0, "toISOExtString() threw.");
         return w.data;
     }
 
@@ -7235,22 +7236,17 @@ public:
     if (isOutputRange!(W, char))
     {
         import std.format : formattedWrite;
-        try
+        if (_year >= 0)
         {
-            if (_year >= 0)
-            {
-                if (_year < 10_000)
-                    formattedWrite(writer, "%04d-%02d-%02d", _year, _month, _day);
-                else
-                    formattedWrite(writer, "+%05d-%02d-%02d", _year, _month, _day);
-            }
-            else if (_year > -10_000)
-                formattedWrite(writer, "%05d-%02d-%02d", _year, _month, _day);
+            if (_year < 10_000)
+                formattedWrite(writer, "%04d-%02d-%02d", _year, _month, _day);
             else
-                formattedWrite(writer, "%06d-%02d-%02d", _year, _month, _day);
+                formattedWrite(writer, "+%05d-%02d-%02d", _year, _month, _day);
         }
-        catch (Exception e)
-            assert(0, "formattedWrite() threw.");
+        else if (_year > -10_000)
+            formattedWrite(writer, "%05d-%02d-%02d", _year, _month, _day);
+        else
+            formattedWrite(writer, "%06d-%02d-%02d", _year, _month, _day);
     }
 
     @safe pure unittest
@@ -7280,7 +7276,10 @@ public:
         import std.array : appender;
         auto w = appender!string();
         w.reserve(11);
-        toSimpleString(w);
+        try
+            toSimpleString(w);
+        catch (Exception e)
+            assert(0, "toSimpleString() threw.");
         return w.data;
     }
 
@@ -7321,22 +7320,17 @@ public:
     if (isOutputRange!(W, char))
     {
         import std.format : formattedWrite;
-        try
+        if (_year >= 0)
         {
-            if (_year >= 0)
-            {
-                if (_year < 10_000)
-                    formattedWrite(writer, "%04d-%s-%02d", _year, monthToString(_month), _day);
-                else
-                    formattedWrite(writer, "+%05d-%s-%02d", _year, monthToString(_month), _day);
-            }
-            else if (_year > -10_000)
-                formattedWrite(writer, "%05d-%s-%02d", _year, monthToString(_month), _day);
+            if (_year < 10_000)
+                formattedWrite(writer, "%04d-%s-%02d", _year, monthToString(_month), _day);
             else
-                formattedWrite(writer, "%06d-%s-%02d", _year, monthToString(_month), _day);
+                formattedWrite(writer, "+%05d-%s-%02d", _year, monthToString(_month), _day);
         }
-        catch (Exception e)
-            assert(0, "formattedWrite() threw.");
+        else if (_year > -10_000)
+            formattedWrite(writer, "%05d-%s-%02d", _year, monthToString(_month), _day);
+        else
+            formattedWrite(writer, "%06d-%s-%02d", _year, monthToString(_month), _day);
     }
 
     @safe pure unittest
@@ -8820,7 +8814,10 @@ public:
         import std.array : appender;
         auto w = appender!string();
         w.reserve(6);
-        toISOString(w);
+        try
+            toISOString(w);
+        catch (Exception e)
+            assert(0, "toISOString() threw.");
         return w.data;
     }
 
@@ -8829,10 +8826,7 @@ public:
     if (isOutputRange!(W, char))
     {
         import std.format : formattedWrite;
-        try
-            formattedWrite(writer, "%02d%02d%02d", _hour, _minute, _second);
-        catch (Exception e)
-            assert(0, "formattedWrite() threw.");
+        formattedWrite(writer, "%02d%02d%02d", _hour, _minute, _second);
     }
 
     ///
@@ -8867,7 +8861,10 @@ public:
         import std.array : appender;
         auto w = appender!string();
         w.reserve(8);
-        toISOExtString(w);
+        try
+            toISOExtString(w);
+        catch (Exception e)
+            assert(0, "toISOExtString() threw.");
         return w.data;
     }
 
@@ -8876,10 +8873,7 @@ public:
     if (isOutputRange!(W, char))
     {
         import std.format : formattedWrite;
-        try
-            formattedWrite(writer, "%02d:%02d:%02d", _hour, _minute, _second);
-        catch (Exception e)
-            assert(0, "formattedWrite() threw.");
+        formattedWrite(writer, "%02d:%02d:%02d", _hour, _minute, _second);
     }
 
     ///
