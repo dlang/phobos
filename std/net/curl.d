@@ -1593,7 +1593,7 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
         import std.format : format;
         tryEnsureUnits();
         assert(state == State.gotUnits,
-               format("Expected %s but got $s",
+               format("Expected %s but got %s",
                       State.gotUnits, state));
         return units;
     }
@@ -1605,7 +1605,7 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
 
         tryEnsureUnits();
         assert(state == State.gotUnits,
-               format("Expected %s but got $s",
+               format("Expected %s but got %s",
                       State.gotUnits, state));
         state = State.needUnits;
         // Send to worker thread for buffer reuse
