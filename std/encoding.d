@@ -3634,7 +3634,7 @@ class EncodingSchemeUtf32Native : EncodingScheme
 
 
 // Helper functions
-version(unittest)
+version(StdUnittest)
 {
     void transcodeReverse(Src,Dst)(immutable(Src)[] s, out immutable(Dst)[] r)
     {

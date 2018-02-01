@@ -26,7 +26,7 @@ import std.range.primitives;
 import std.traits;
 import std.typecons;
 
-version(unittest)
+version(StdUnittest)
 {
     import std.stdio;
 }

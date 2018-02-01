@@ -354,7 +354,7 @@ struct AlignedMallocator
     //...
 }
 
-version(unittest) version(CRuntime_DigitalMars)
+version(StdUnittest) version(CRuntime_DigitalMars)
 @nogc nothrow
 size_t addr(ref void* ptr) { return cast(size_t) ptr; }
 

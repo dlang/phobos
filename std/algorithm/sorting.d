@@ -637,7 +637,7 @@ if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range)
         for (;;)
         {
             // Loop invariant
-            version(unittest)
+            version(StdUnittest)
             {
                 import std.algorithm.searching : all;
                 assert(r[0 .. lo].all!(x => !lt(p, x)));
@@ -3439,7 +3439,7 @@ done:
         a.length / 2 + 1);
 }
 
-version(unittest)
+version(StdUnittest)
 private T[] randomArray(Flag!"exactSize" flag = No.exactSize, T = int)(
     size_t maxSize = 1000,
     T minValue = 0, T maxValue = 255)

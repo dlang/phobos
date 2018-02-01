@@ -118,7 +118,7 @@ else version(D_InlineAsm_X86_64)
 version(LittleEndian) import core.bitop : bswap;
 
 
-version(unittest)
+version(StdUnittest)
 {
     import std.exception;
 }

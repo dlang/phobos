@@ -60,8 +60,7 @@ module std.digest.crc;
 
 public import std.digest;
 
-version(unittest)
-    import std.exception;
+version(StdUnittest) import std.exception;
 
 
 ///

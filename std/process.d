@@ -2731,7 +2731,7 @@ version (Windows) private immutable string shellSwitch = "/C";
 // file. On Windows the file name gets a .cmd extension, while on
 // POSIX its executable permission bit is set.  The file is
 // automatically deleted when the object goes out of scope.
-version (unittest)
+version(StdUnittest)
 private struct TestScript
 {
     this(string code) @system
@@ -2774,7 +2774,7 @@ private struct TestScript
     string path;
 }
 
-version (unittest)
+version(StdUnittest)
 private string uniqueTempPath() @safe
 {
     import std.file : tempDir;
@@ -3073,7 +3073,7 @@ if (is(typeof(allocator(size_t.init)[0] = char.init)))
     return buf;
 }
 
-version(Windows) version(unittest)
+version(Windows) version(StdUnittest)
 {
     import core.stdc.stddef;
     import core.stdc.wchar_ : wcslen;
@@ -3752,7 +3752,7 @@ version (Posix)
 {
     import core.sys.posix.stdlib;
 }
-version (unittest)
+version(StdUnittest)
 {
     import std.conv, std.file, std.random;
 }

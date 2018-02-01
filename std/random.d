@@ -75,7 +75,7 @@ import std.traits;
     static assert(is(typeof(u) == uint));
 }
 
-version(unittest)
+version(StdUnittest)
 {
     static import std.meta;
     package alias PseudoRngTypes = std.meta.AliasSeq!(MinstdRand0, MinstdRand, Mt19937, Xorshift32, Xorshift64,
