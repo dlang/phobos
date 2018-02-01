@@ -1668,25 +1668,29 @@ public:
     Throws:
       `Exception` if the given string contains invalid characters.
     */
-    static BitArray fromString(string s) pure @system
+    static BitArray fromString(S)(S s) pure @system
+    if (isSomeString!S)
     {
-        import std.exception : enforce;
-        import std.string : lastIndexOfNeither;
         import std.algorithm.searching : count;
-
-        enforce(s.lastIndexOfNeither("01_") == -1,
-            "String contains invalid characters, only '0', '1', '_' are allowed.");
 
         BitArray ba;
         ba.length = s.length - s.count('_');
         size_t i = 0;
         foreach (c; s)
         {
-            if (c == '_')
-                continue;
-            if (c == '1')
-                ba[i] = 1;
-            i++;
+            switch (c)
+            {
+                case '1':
+                    ba[i] = 1;
+                    goto case;
+                case '0':
+                    i++;
+                    break;
+                case '_':
+                    break;
+                default:
+                    throw new Exception("String contains invalid characters, only '0', '1', '_' are allowed.");
+            }
         }
         return ba;
     }
