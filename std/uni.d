@@ -7395,7 +7395,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 
     See_Also: $(LREF decodeGrapheme), $(LREF graphemeStride)
 +/
-@trusted struct Grapheme
+@safe struct Grapheme
 {
     import std.exception : enforce;
     import std.traits : isDynamicArray;
@@ -7417,7 +7417,7 @@ public:
     }
 
     /// Gets a $(CODEPOINT) at the given index in this cluster.
-    dchar opIndex(size_t index) const pure nothrow @nogc
+    dchar opIndex(size_t index) const pure nothrow @nogc @trusted
     {
         assert(index < length);
         return read24(isBig ? ptr_ : small_.ptr, index);
@@ -7430,7 +7430,7 @@ public:
         Use of this facility may invalidate grapheme cluster,
         see also $(LREF Grapheme.valid).
     +/
-    void opIndexAssign(dchar ch, size_t index) pure nothrow @nogc
+    void opIndexAssign(dchar ch, size_t index) pure nothrow @nogc @trusted
     {
         assert(index < length);
         write24(isBig ? ptr_ : small_.ptr, ch, index);
@@ -7453,13 +7453,13 @@ public:
         Warning: Invalidates when this Grapheme leaves the scope,
         attempts to use it then would lead to memory corruption.
     +/
-    SliceOverIndexed!Grapheme opSlice(size_t a, size_t b) pure nothrow @nogc
+    SliceOverIndexed!Grapheme opSlice(size_t a, size_t b) pure nothrow @nogc return
     {
         return sliceOverIndexed(a, b, &this);
     }
 
     /// ditto
-    SliceOverIndexed!Grapheme opSlice() pure nothrow @nogc
+    SliceOverIndexed!Grapheme opSlice() pure nothrow @nogc return
     {
         return sliceOverIndexed(0, length, &this);
     }
@@ -7478,7 +7478,7 @@ public:
 
         See_Also: $(LREF Grapheme.valid)
     +/
-    ref opOpAssign(string op)(dchar ch)
+    ref opOpAssign(string op)(dchar ch) @trusted
     {
         static if (op == "~")
         {
@@ -7560,7 +7560,7 @@ public:
         return r.length == 0;
     }
 
-    this(this) pure @nogc nothrow
+    this(this) pure @nogc nothrow @trusted
     {
         import core.exception : onOutOfMemoryError;
         import core.memory : pureMalloc;
@@ -7578,7 +7578,7 @@ public:
         }
     }
 
-    ~this() pure @nogc nothrow
+    ~this() pure @nogc nothrow @trusted
     {
         import core.memory : pureFree;
         if (isBig)
@@ -7612,7 +7612,7 @@ private:
         }
     }
 
-    void convertToBig() pure @nogc nothrow
+    void convertToBig() pure @nogc nothrow @trusted
     {
         import core.exception : onOutOfMemoryError;
         import core.memory : pureMalloc;
