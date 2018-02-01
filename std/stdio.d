@@ -420,10 +420,14 @@ Throws: $(D ErrnoException) if the file could not be opened.
         import std.conv : text;
         import std.exception : errnoEnforce;
 
-        this(errnoEnforce(.fopen(name, stdioOpenmode),
-                        text("Cannot open file `", name, "' in mode `",
-                                stdioOpenmode, "'")),
-                name);
+        this(
+            errnoEnforce(
+                .fopen(name, stdioOpenmode),
+                text("Cannot open file `", name, "' in mode `", stdioOpenmode, "'")
+            ),
+            name,
+            1
+        );
 
         // MSVCRT workaround (issue 14422)
         version (MICROSOFT_STDIO)
@@ -457,6 +461,18 @@ Throws: $(D ErrnoException) if the file could not be opened.
         auto f = File(deleteme.byChar, "w".byChar);
         f.close();
         std.file.remove(deleteme);
+    }
+
+    /**
+     * Construct a $(LREF File) using an existing C-style `FILE*` handle.
+     *
+     * Params:
+     *     handle = `FILE*` pointing to an already open file
+     *     name = The name of the file. Can be empty.
+     */
+    this(FILE* handle, string name = "") @safe
+    {
+        this(handle, name, 1);
     }
 
     ~this() @safe
