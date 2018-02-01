@@ -1698,8 +1698,8 @@ public:
             switch (c)
             {
                 case '1':
-                    ba[i] = 1;
-                    goto case;
+                    ba[i++] = 1;
+                    break;
                 case '0':
                     i++;
                     break;
