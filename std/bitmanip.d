@@ -1421,7 +1421,24 @@ public:
             clearExtraBits();
         }
         return this;
-   }
+    }
+
+    ///
+    @system unittest
+    {
+        auto a = BitArray([0, 1, 1, 0, 1, 1, 0, 0, 0, 1]);
+        auto b = BitArray([0, 0, 0, 0, 0, 1, 1, 1, 1, 1]);
+        a.sort;
+        assert(a == b);
+
+        import std.algorithm.comparison : equal;
+
+        bool[72] bits;
+        bits[65] = 1;
+        auto c = BitArray(bits);
+        c.sort;
+        assert(c.bitsSet.equal([71]));
+    }
 
     @system unittest
     {
