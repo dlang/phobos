@@ -7,7 +7,7 @@ code that works with strings does not necessarily work with enums whose base
 type is a string, making it easy to write code where an enum would pass the
 template constraint and then the template would fail to compile. For instance,
 enums of base type string are `false` for
-$(REF `isInputRange`, std, range, primitives). As such, it really doesn't make
+$(REF isInputRange, std, range, primitives). As such, it really doesn't make
 sense for $(REF isSomeString, std, traits) and
 $(REF isNarrowString, std, traits) to be `true` for enums.
 
