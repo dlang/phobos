@@ -765,9 +765,11 @@ struct DoubleRep
 }
 
 /**
- * An array of bits.
- */
-
+A dynamic array of bits. Each bit in a `BitArray` can be manipulated individually
+or by the standard bitwise operators `&`, `|`, `^`, `~`, `>>`, `<<` and also by
+other effective member functions; most of them work relative to the `BitArray`'s
+dimension (see $(LREF dim)), instead of its $(LREF length).
+*/
 struct BitArray
 {
 private:
@@ -799,18 +801,176 @@ private:
     }
 
 public:
-    /**********************************************
-     * Gets the amount of native words backing this $(D BitArray).
-     */
-    @property size_t dim() const @nogc pure nothrow @safe
+    /**
+    Creates a `BitArray` from a `bool` array, such that `bool` values read
+    from left to right correspond to subsequent bits in the `BitArray`.
+
+    Params: ba = Source array of `bool` values.
+    */
+    this(in bool[] ba) nothrow pure
+    {
+        length = ba.length;
+        foreach (i, b; ba)
+        {
+            this[i] = b;
+        }
+    }
+
+    ///
+    @system unittest
+    {
+        import std.algorithm.comparison : equal;
+
+        bool[] input = [true, false, false, true, true];
+        auto a = BitArray(input);
+        assert(a.length == 5);
+        assert(a.bitsSet.equal([0, 3, 4]));
+
+        // This also works because an implicit cast to bool[] occurs for this array.
+        auto b = BitArray([0, 0, 1]);
+        assert(b.length == 3);
+        assert(b.bitsSet.equal([2]));
+    }
+
+    ///
+    @system unittest
+    {
+        import std.algorithm.comparison : equal;
+        import std.array : array;
+        import std.range : iota, repeat;
+
+        BitArray a = true.repeat(70).array;
+        assert(a.length == 70);
+        assert(a.bitsSet.equal(iota(0, 70)));
+    }
+
+    /**
+    Creates a `BitArray` from the raw contents of the source array. The
+    source array is not copied but simply acts as the underlying array
+    of bits, which stores data as `size_t` units.
+
+    That means a particular care should be taken when passing an array
+    of a type different than `size_t`, firstly because its length should
+    be a multiple of `size_t.sizeof`, and secondly because how the bits
+    are mapped:
+    ---
+    size_t[] source = [1, 2, 3, 3424234, 724398, 230947, 389492];
+    enum sbits = size_t.sizeof * 8;
+    auto ba = BitArray(source, source.length * sbits);
+    foreach (n; 0 .. source.length * sbits)
+    {
+        auto nth_bit = cast(bool) (source[n / sbits] & (1L << (n % sbits)));
+        assert(ba[n] == nth_bit);
+    }
+    ---
+    The least significant bit in any `size_t` unit is the starting bit of this
+    unit, and the most significant bit is the last bit of this unit. Therefore,
+    passing e.g. an array of `int`s may result in a different `BitArray`
+    depending on the processor's endianness.
+
+    This constructor is the inverse of $(LREF opCast).
+
+    $(RED Warning: All unmapped bits in the final word will be set to 0.)
+
+    Params:
+        v = Source array. `v.length` must be a multple of `size_t.sizeof`.
+        numbits = Number of bits to be mapped from the source array, i.e.
+                  length of the created `BitArray`.
+    */
+    this(void[] v, size_t numbits) @nogc nothrow pure
+    in
+    {
+        assert(numbits <= v.length * 8);
+        assert(v.length % size_t.sizeof == 0);
+    }
+    do
+    {
+        _ptr = cast(size_t*) v.ptr;
+        _len = numbits;
+        if (endBits)
+        {
+            // Need to mask away extraneous bits from v.
+            _ptr[dim - 1] &= endMask;
+        }
+    }
+
+    ///
+    @system unittest
+    {
+        import std.algorithm.comparison : equal;
+
+        auto a = BitArray([1, 0, 0, 1, 1]);
+
+        // Inverse of the cast.
+        auto v = cast(void[]) a;
+        auto b = BitArray(v, a.length);
+
+        assert(b.length == 5);
+        assert(b.bitsSet.equal([0, 3, 4]));
+
+        // a and b share the underlying data.
+        a[0] = 0;
+        assert(b[0] == 0);
+        assert(a == b);
+    }
+
+    ///
+    @system unittest
+    {
+        import std.algorithm.comparison : equal;
+
+        size_t[] source = [0b1100, 0b0011];
+        enum sbits = size_t.sizeof * 8;
+        auto ba = BitArray(source, source.length * sbits);
+        // The least significant bit in each unit is this unit's starting bit.
+        assert(ba.bitsSet.equal([2, 3, sbits, sbits + 1]));
+    }
+
+    ///
+    @system unittest
+    {
+        // Example from the doc for this constructor.
+        size_t[] source = [1, 0b101, 3, 3424234, 724398, 230947, 389492];
+        enum sbits = size_t.sizeof * 8;
+        auto ba = BitArray(source, source.length * sbits);
+        foreach (n; 0 .. source.length * sbits)
+        {
+            auto nth_bit = cast(bool) (source[n / sbits] & (1L << (n % sbits)));
+            assert(ba[n] == nth_bit);
+        }
+
+        // Example of mapping only part of the array.
+        import std.algorithm.comparison : equal;
+
+        auto bc = BitArray(source, sbits + 1);
+        assert(bc.bitsSet.equal([0, sbits]));
+        // The unmapped bits from the final word have been cleared.
+        assert(source[1] == 1);
+    }
+
+    // Deliberately undocumented: raw initialization of bit array.
+    this(size_t len, size_t* ptr) @nogc nothrow pure
+    {
+        _len = len;
+        _ptr = ptr;
+    }
+
+    /**
+    Returns: Dimension i.e. the number of native words backing this `BitArray`.
+
+    Technically, this is the length of the underlying array storing bits, which
+    is equal to `ceil(length / (size_t.sizeof * 8))`, as bits are packed into
+    `size_t` units.
+    */
+    @property size_t dim() const @nogc nothrow pure @safe
     {
         return lenToDim(_len);
     }
 
-    /**********************************************
-     * Gets the amount of bits in the $(D BitArray).
-     */
-    @property size_t length() const @nogc pure nothrow @safe
+    /**
+    Returns: Number of bits in the `BitArray`.
+    */
+    @property size_t length() const @nogc nothrow pure @safe
     {
         return _len;
     }
@@ -1472,74 +1632,6 @@ public:
             hash += this[i];
         }
         return hash;
-    }
-
-    /***************************************
-     * Set this $(D BitArray) to the contents of $(D ba).
-     */
-    this(bool[] ba) pure nothrow @system
-    {
-        length = ba.length;
-        foreach (i, b; ba)
-        {
-            this[i] = b;
-        }
-    }
-
-    // Deliberately undocumented: raw initialization of bit array.
-    this(size_t len, size_t* ptr)
-    {
-        _len = len;
-        _ptr = ptr;
-    }
-
-    /***************************************
-     * Map the $(D BitArray) onto $(D v), with $(D numbits) being the number of bits
-     * in the array. Does not copy the data. $(D v.length) must be a multiple of
-     * $(D size_t.sizeof). If there are unmapped bits in the final mapped word then
-     * these will be set to 0.
-     *
-     * This is the inverse of $(D opCast).
-     */
-    this(void[] v, size_t numbits) pure nothrow
-    in
-    {
-        assert(numbits <= v.length * 8);
-        assert(v.length % size_t.sizeof == 0);
-    }
-    do
-    {
-        _ptr = cast(size_t*) v.ptr;
-        _len = numbits;
-        if (endBits)
-        {
-            // Need to mask away extraneous bits from v.
-            _ptr[dim - 1] &= endMask;
-        }
-    }
-
-    @system unittest
-    {
-        debug(bitarray) printf("BitArray.init unittest\n");
-
-        static bool[] ba = [1,0,1,0,1];
-
-        auto a = BitArray(ba);
-        void[] v;
-
-        v = cast(void[]) a;
-        auto b = BitArray(v, a.length);
-
-        assert(b[0] == 1);
-        assert(b[1] == 0);
-        assert(b[2] == 1);
-        assert(b[3] == 0);
-        assert(b[4] == 1);
-
-        a[0] = 0;
-        assert(b[0] == 0);
-
-        assert(a == b);
     }
 
     /***************************************
