@@ -1473,6 +1473,9 @@ Elements of `haystack` are compared with `needle` by using predicate
 `pred` with `pred(haystack.front, needle)`.
 `find` performs $(BIGOH walkLength(haystack)) evaluations of `pred`.
 
+The predicate is passed to $(REF binaryFun, std, functional), and can either accept a
+string, or any callable that can be executed via `pred(element, element)`.
+
 To _find the last occurrence of `needle` in a
 $(REF_ALTTEXT bidirectional, isBidirectionalRange, std,range,primitives) `haystack`,
 call `find(retro(haystack), needle)`. See $(REF retro, std,range).
@@ -1664,38 +1667,29 @@ if (isInputRange!InputRange &&
 ///
 @safe unittest
 {
-    import std.algorithm.comparison : equal;
-    import std.container : SList;
-    import std.range;
-    import std.range.primitives : empty;
+    import std.range.primitives;
 
-    auto arr = assumeSorted!"a < b"([1, 2, 4, 4, 4, 4, 5, 6, 9]);
-    assert(find(arr, 4) == assumeSorted!"a < b"([4, 4, 4, 4, 5, 6, 9]));
-    assert(find(arr, 1) == arr);
-    assert(find(arr, 9) == assumeSorted!"a < b"([9]));
-    assert(find!"a > b"(arr, 4) == assumeSorted!"a < b"([5, 6, 9]));
-    assert(find!"a < b"(arr, 4) == arr);
-    assert(find(arr, 0).empty());
-    assert(find(arr, 10).empty());
-    assert(find(arr, 8).empty());
-
-    auto r = assumeSorted!"a > b"([10, 7, 3, 1, 0, 0]);
-    assert(find(r, 3) == assumeSorted!"a > b"([3, 1, 0, 0]));
-    assert(find!"a > b"(r, 8) == r);
-    assert(find!"a < b"(r, 5) == assumeSorted!"a > b"([3, 1, 0, 0]));
+    auto arr = [1, 2, 4, 4, 4, 4, 5, 6, 9];
+    assert(arr.find(4) == [4, 4, 4, 4, 5, 6, 9]);
+    assert(arr.find(1) == arr);
+    assert(arr.find(9) == [9]);
+    assert(arr.find!((a, b) => a > b)(4) == [5, 6, 9]);
+    assert(arr.find!((a, b) => a < b)(4) == arr);
+    assert(arr.find(0).empty);
+    assert(arr.find(10).empty);
+    assert(arr.find(8).empty);
 
     assert(find("hello, world", ',') == ", world");
-    assert(find([1, 2, 3, 5], 4) == []);
-    assert(equal(find(SList!int(1, 2, 3, 4, 5)[], 4), SList!int(4, 5)[]));
-    assert(find!"a > b"([1, 2, 3, 5], 2) == [3, 5]);
+}
 
-    auto a = [ 1, 2, 3 ];
-    assert(find(a, 5).empty);       // not found
-    assert(!find(a, 2).empty);      // found
+/// Case-insensitive find of a string
+@safe unittest
+{
+    import std.range.primitives;
+    import std.uni : toLower;
 
-    // Case-insensitive find of a string
-    string[] s = [ "Hello", "world", "!" ];
-    assert(!find!("toLower(a) == b")(s, "hello").empty);
+    string[] s = ["Hello", "world", "!"];
+    assert(s.find!((a, b) => toLower(a) == b)("hello") == s);
 }
 
 @safe unittest
