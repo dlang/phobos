@@ -3,6 +3,12 @@
 /**
 JavaScript Object Notation
 
+$(MESSAGE_BOX red, This module is considered out-dated and not up to Phobos'
+      current standards. It will remain until we have a suitable replacement,
+      but be aware that it will not remain long term.
+      A potential replacement is $(LINK2 https://github.com/s-ludwig/std_data_json, `std.experimnetal.json`).
+)
+
 Copyright: Copyright Jeremie Pelletier 2008 - 2009.
 License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   Jeremie Pelletier, David Herberth
