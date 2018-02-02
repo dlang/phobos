@@ -2427,7 +2427,7 @@ private
     }
 }
 
-version (unittest)
+version(StdUnittest)
 {
     import std.stdio;
     import std.typecons : tuple, Tuple;

@@ -657,7 +657,7 @@ else
     }
 }
 
-version (StdUnittest)
+version(StdUnittest)
 {
     static void testrw(void[] b) @nogc nothrow
     {
