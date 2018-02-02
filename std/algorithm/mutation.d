@@ -538,12 +538,22 @@ $(HTTP sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
 /**
 Assigns `value` to each element of input _range `range`.
 
+Alternatively, instead of using a single `value` to fill the `range`,
+a `filter` $(REF_ALTTEXT forward _range, isForwardRange, std,_range,primitives)
+can be provided. The length of `filler` and `range` do not need to match, but
+`filler` must not be empty.
+
 Params:
         range = An
                 $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
                 that exposes references to its elements and has assignable
                 elements
         value = Assigned to each element of range
+        filler = A
+                $(REF_ALTTEXT forward _range, isForwardRange, std,_range,primitives)
+                representing the _fill pattern.
+
+Throws: If `filler` is empty.
 
 See_Also:
         $(LREF uninitializedFill)
@@ -709,18 +719,7 @@ if ((isInputRange!Range && is(typeof(range.front = value)) ||
     }
 }
 
-/**
-Fills `range` with a pattern copied from `filler`. The length of
-`range` does not have to be a multiple of the length of $(D
-filler). If `filler` is empty, an exception is thrown.
-
-Params:
-    range = An $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
-            that exposes references to its elements and has assignable elements.
-    filler = The
-             $(REF_ALTTEXT forward _range, isForwardRange, std,_range,primitives)
-             representing the _fill pattern.
- */
+/// ditto
 void fill(InputRange, ForwardRange)(InputRange range, ForwardRange filler)
 if (isInputRange!InputRange
     && (isForwardRange!ForwardRange
@@ -2178,14 +2177,19 @@ if (isBidirectionalRange!Range
 
 // reverse
 /**
-Reverses `r` in-place.  Performs `r.length / 2` evaluations of $(D
-swap).
+Reverses `r` in-place.  Performs `r.length / 2` evaluations of `swap`.
+UTF sequences consisting of multiple code units are preserved properly.
+
 Params:
     r = a $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives)
-    with swappable elements or a random access range with a length member
+        with either swappable elements, a random access range with a length member,
+        or a narrow string
 
-See_Also:
-    $(HTTP sgi.com/tech/stl/_reverse.html, STL's _reverse), $(REF retro, std,range) for a lazy reversed range view
+Note:
+    When passing a string with unicode modifiers on characters, such as `\u0301`,
+    this function will not properly keep the position of the modifier. For example,
+    reversing `ba\u0301d` ("bád") will result in d\u0301ab ("d́ab") instead of
+    `da\u0301b` ("dáb").
 */
 void reverse(Range)(Range r)
 if (isBidirectionalRange!Range && !isRandomAccessRange!Range
@@ -2236,20 +2240,7 @@ if (isRandomAccessRange!Range && hasLength!Range)
     assert(range == [3, 2, 1]);
 }
 
-/**
-Reverses `r` in-place, where `r` is a narrow string (having
-elements of type `char` or `wchar`). UTF sequences consisting of
-multiple code units are preserved properly.
-
-Params:
-    s = a narrow string
-
-Bugs:
-    When passing a sting with unicode modifiers on characters, such as `\u0301`,
-    this function will not properly keep the position of the modifier. For example,
-    reversing `ba\u0301d` ("bád") will result in d\u0301ab ("d́ab") instead of
-    `da\u0301b` ("dáb").
-*/
+///ditto
 void reverse(Char)(Char[] s)
 if (isNarrowString!(Char[]) && !is(Char == const) && !is(Char == immutable))
 {

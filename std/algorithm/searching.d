@@ -761,7 +761,8 @@ if (isInputRange!R && !isInfinite!R)
     `haystack` before reaching an element for which
     `startsWith!pred(haystack, needles)` is `true`. If
     `startsWith!pred(haystack, needles)` is not `true` for any element in
-    `haystack`, then `-1` is returned.
+    `haystack`, then `-1` is returned. If only `pred` is provided,
+    `pred(haystack)` is tested for each element.
 
     See_Also: $(REF indexOf, std,string)
   +/
@@ -911,18 +912,7 @@ if (isInputRange!R &&
     assert(countUntil("hello world", "world", 'l') == 2);
 }
 
-/++
-    Similar to the previous overload of `countUntil`, except that this one
-    evaluates only the predicate `pred`.
-
-    Params:
-        pred = Predicate to when to stop counting.
-        haystack = An
-          $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of
-          elements to be counted.
-    Returns: The number of elements which must be popped from `haystack`
-    before `pred(haystack.front)` is `true`.
-  +/
+/// ditto
 ptrdiff_t countUntil(alias pred, R)(R haystack)
 if (isInputRange!R &&
     is(typeof(unaryFun!pred(haystack.front)) : bool))
@@ -1478,35 +1468,51 @@ private auto extremum(alias selector = "a < b", Range,
 
 // find
 /**
-Finds an individual element in an input range. Elements of $(D
-haystack) are compared with `needle` by using predicate $(D
-pred). Performs $(BIGOH walkLength(haystack)) evaluations of $(D
-pred).
+Finds an individual element in an $(REF_ALTTEXT input range, isInputRange, std,range,primitives).
+Elements of `haystack` are compared with `needle` by using predicate
+`pred` with `pred(haystack.front, needle)`.
+`find` performs $(BIGOH walkLength(haystack)) evaluations of `pred`.
 
-To _find the last occurrence of `needle` in `haystack`, call $(D
-find(retro(haystack), needle)). See $(REF retro, std,range).
+To _find the last occurrence of `needle` in a
+$(REF_ALTTEXT bidirectional, isBidirectionalRange, std,range,primitives) `haystack`,
+call `find(retro(haystack), needle)`. See $(REF retro, std,range).
+
+If no `needle` is provided, `pred(haystack.front)` will be evaluated on each
+element of the input range.
+
+If `input` is a $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives),
+`needle` can be a $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) too.
+In this case `startsWith!pred(haystack, needle)` is evaluated on each evaluation.
+
+Note:
+    `find` behaves similar to `dropWhile` in other languages.
+
+Complexity:
+    `find` performs $(BIGOH walkLength(haystack)) evaluations of `pred`.
+    There are specializations that improve performance by taking
+    advantage of $(REF_ALTTEXT bidirectional, isBidirectionalRange, std,range,primitives)
+    or $(REF_ALTTEXT random access, isRandomAccess, std,range,primitives)
+    ranges (where possible).
 
 Params:
 
-pred = The predicate for comparing each element with the needle, defaulting to
-`"a == b"`.
-The negated predicate `"a != b"` can be used to search instead for the first
-element $(I not) matching the needle.
+    pred = The predicate for comparing each element with the needle, defaulting to equality `"a == b"`.
+           The negated predicate `"a != b"` can be used to search instead for the first
+           element $(I not) matching the needle.
 
-haystack = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
-searched in.
+    haystack = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+               searched in.
 
-needle = The element searched for.
+    needle = The element searched for.
 
 Returns:
 
-`haystack` advanced such that the front element is the one searched for;
-that is, until `binaryFun!pred(haystack.front, needle)` is `true`. If no
-such position exists, returns an empty `haystack`.
+    `haystack` advanced such that the front element is the one searched for;
+    that is, until `binaryFun!pred(haystack.front, needle)` is `true`. If no
+    such position exists, returns an empty `haystack`.
 
-See_Also:
-     $(HTTP sgi.com/tech/stl/_find.html, STL's _find)
- */
+See_ALso: $(LREF findAdjacent), $(LREF findAmong), $(LREF findSkip), $(LREF findSplit), $(LREF startsWith)
+*/
 InputRange find(alias pred = "a == b", InputRange, Element)(InputRange haystack, scope Element needle)
 if (isInputRange!InputRange &&
     is (typeof(binaryFun!pred(haystack.front, needle)) : bool))
@@ -1781,35 +1787,7 @@ if (isInputRange!InputRange &&
     assert([x].find(x).empty == false);
 }
 
-/**
-Advances the input range `haystack` by calling `haystack.popFront`
-until either `pred(haystack.front)`, or $(D
-haystack.empty). Performs $(BIGOH haystack.length) evaluations of $(D
-pred).
-
-To _find the last element of a
-$(REF_ALTTEXT bidirectional, isBidirectionalRange, std,range,primitives) `haystack` satisfying
-`pred`, call `find!(pred)(retro(haystack))`. See $(REF retro, std,range).
-
-`find` behaves similar to `dropWhile` in other languages.
-
-Params:
-
-pred = The predicate for determining if a given element is the one being
-searched for.
-
-haystack = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to
-search in.
-
-Returns:
-
-`haystack` advanced such that the front element is the one searched for;
-that is, until `binaryFun!pred(haystack.front, needle)` is `true`. If no
-such position exists, returns an empty `haystack`.
-
-See_Also:
-     $(HTTP sgi.com/tech/stl/find_if.html, STL's find_if)
-*/
+/// ditto
 InputRange find(alias pred, InputRange)(InputRange haystack)
 if (isInputRange!InputRange)
 {
@@ -1863,31 +1841,7 @@ if (isInputRange!InputRange)
     assert(find!(a=>a%4 == 0)("日本語") == "本語");
 }
 
-/**
-Finds the first occurrence of a forward range in another forward range.
-
-Performs $(BIGOH walkLength(haystack) * walkLength(needle)) comparisons in the
-worst case.  There are specializations that improve performance by taking
-advantage of $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives)
-or random access in the given ranges (where possible), depending on the statistics
-of the two ranges' content.
-
-Params:
-
-pred = The predicate to use for comparing respective elements from the haystack
-and the needle. Defaults to simple equality `"a == b"`.
-
-haystack = The $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
-searched in.
-
-needle = The $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
-searched for.
-
-Returns:
-
-`haystack` advanced such that `needle` is a prefix of it (if no
-such position exists, returns `haystack` advanced to termination).
- */
+/// ditto
 R1 find(alias pred = "a == b", R1, R2)(R1 haystack, scope R2 needle)
 if (isForwardRange!R1 && isForwardRange!R2
         && is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
@@ -2685,8 +2639,7 @@ Returns:
 `seq` advanced to the first matching element, or until empty if there are no
 matching elements.
 
-See_Also:
-    $(HTTP sgi.com/tech/stl/find_first_of.html, STL's find_first_of)
+See_Also: $(LREF find), $(REF std,algorithm,comparison,among)
 */
 InputRange findAmong(alias pred = "a == b", InputRange, ForwardRange)(
     InputRange seq, ForwardRange choices)
@@ -2721,6 +2674,11 @@ if (isInputRange!InputRange && isForwardRange!ForwardRange)
  * Finds `needle` in `haystack` and positions `haystack`
  * right after the first occurrence of `needle`.
  *
+ * If no needle is provided, the `haystack` is advanced as long as `pred`
+ * evaluates to `true`.
+ * Similarly, the haystack is positioned so as `pred` evaluates to `false` for
+ * `haystack.front`.
+ *
  * Params:
  *  haystack = The
  *   $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to search
@@ -2732,7 +2690,10 @@ if (isInputRange!InputRange && isForwardRange!ForwardRange)
  *
  * Returns: `true` if the needle was found, in which case `haystack` is
  * positioned after the end of the first occurrence of `needle`; otherwise
- * `false`, leaving `haystack` untouched.
+ * `false`, leaving `haystack` untouched. If no needle is provided, it returns
+ *  the number of times `pred(haystack.front)` returned true.
+ *
+ * See_Also: $(LREF find)
  */
 bool findSkip(alias pred = "a == b", R1, R2)(ref R1 haystack, R2 needle)
 if (isForwardRange!R1 && isForwardRange!R2
@@ -2763,18 +2724,7 @@ if (isForwardRange!R1 && isForwardRange!R2
     assert(findSkip(s, "def") && s.empty);
 }
 
-/**
-* Advances the `haystack` as long as `pred` evaluates to `true`.
-* The haystack is positioned so as pred evaluates to false for haystack.front.
-*
-* Params:
-*  haystack = The
-*   $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to search
-*   in.
-*  pred = Custom predicate for comparison of haystack and needle
-*
-* Returns: The number of times `pred(haystack.front)` returned true.
-*/
+/// ditto
 size_t findSkip(alias pred, R1)(ref R1 haystack)
 if (isForwardRange!R1 && ifTestable!(typeof(haystack.front), unaryFun!pred))
 {
@@ -2848,6 +2798,8 @@ A sub-type of `Tuple!()` of the split portions of `haystack` (see above for
 details).  This sub-type of `Tuple!()` has `opCast` defined for `bool`.  This
 `opCast` returns `true` when the separating `needle` was found
 (`!result[1].empty`) and `false` otherwise.
+
+See_Also: $(LREF find)
  */
 auto findSplit(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (isForwardRange!R1 && isForwardRange!R2)
@@ -3213,6 +3165,8 @@ Returns: The minimum, respectively maximum element of a range together with the
 number it occurs in the range.
 
 Throws: `Exception` if `range.empty`.
+
+See_Also: $(REF min, std,algorithm,comparison), $(LREF minIndex), $(LREF minElement), $(LREF minPos)
  */
 Tuple!(ElementType!Range, size_t)
 minCount(alias pred = "a < b", Range)(Range range)
@@ -3419,7 +3373,9 @@ Params:
 Returns: The minimal element of the passed-in range.
 
 See_Also:
-    $(REF min, std,algorithm,comparison)
+
+    $(LREF maxElement), $(REF min, std,algorithm,comparison), $(LREF minCount),
+    $(LREF minIndex), $(LREF minPos)
 */
 auto minElement(alias map, Range)(Range r)
 if (isInputRange!Range && !isInfinite!Range)
@@ -3532,8 +3488,11 @@ Params:
 
 Returns: The maximal element of the passed-in range.
 
+
 See_Also:
-    $(REF max, std,algorithm,comparison)
+
+    $(LREF minElement), $(REF max, std,algorithm,comparison), $(LREF maxCount),
+    $(LREF maxIndex), $(LREF maxPos)
 */
 auto maxElement(alias map, Range)(Range r)
 if (isInputRange!Range && !isInfinite!Range)
@@ -3658,6 +3617,8 @@ Returns: The position of the minimum (respectively maximum) element of forward
 range `range`, i.e. a subrange of `range` starting at the position of  its
 smallest (respectively largest) element and with the same ending as `range`.
 
+See_Also:
+    $(REF max, std,algorithm,comparison), $(LREF minCount), $(LREF minIndex), $(LREF minElement)
 */
 Range minPos(alias pred = "a < b", Range)(Range range)
 if (isForwardRange!Range && !isInfinite!Range &&
@@ -3759,15 +3720,15 @@ Params:
     range = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
     to search.
 
-Complexity: O(n)
-    Exactly `n - 1` comparisons are needed.
+Complexity: $(BIGOH range.length)
+    Exactly `range.length - 1` comparisons are needed.
 
 Returns:
     The index of the first encounter of the minimum element in `range`. If the
     `range` is empty, -1 is returned.
 
 See_Also:
-    $(REF min, std,algorithm,comparison), $(LREF minCount), $(LREF minElement), $(LREF minPos)
+    $(LREF maxIndex), $(REF min, std,algorithm,comparison), $(LREF minCount), $(LREF minElement), $(LREF minPos)
  */
 sizediff_t minIndex(alias pred = "a < b", Range)(Range range)
 if (isForwardRange!Range && !isInfinite!Range &&
@@ -3873,8 +3834,8 @@ if (isForwardRange!Range && !isInfinite!Range &&
 /**
 Computes the index of the first occurrence of `range`'s maximum element.
 
-Complexity: O(n)
-    Exactly `n - 1` comparisons are needed.
+Complexity: $(BIGOH range)
+    Exactly `range.length - 1` comparisons are needed.
 
 Params:
     pred = The ordering predicate to use to determine the maximum element.
@@ -3885,7 +3846,7 @@ Returns:
     `range` is empty, -1 is returned.
 
 See_Also:
-    $(REF max, std,algorithm,comparison), $(LREF maxCount), $(LREF maxElement), $(LREF maxPos)
+    $(LREF minIndex), $(REF max, std,algorithm,comparison), $(LREF maxCount), $(LREF maxElement), $(LREF maxPos)
  */
 sizediff_t maxIndex(alias pred = "a < b", Range)(Range range)
 if (isInputRange!Range && !isInfinite!Range &&
