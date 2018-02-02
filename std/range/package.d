@@ -232,9 +232,9 @@ public import std.range.interfaces;
 public import std.range.primitives;
 public import std.typecons : Flag, Yes, No;
 
-import std.meta; // allSatisfy, staticMap
-import std.traits; // CommonType, isCallable, isFloatingPoint, isIntegral,
-    // isPointer, isSomeFunction, isStaticArray, Unqual
+import std.meta : allSatisfy, staticMap;
+import std.traits : CommonType, isCallable, isFloatingPoint, isIntegral,
+    isPointer, isSomeFunction, isStaticArray, Unqual;
 
 
 /**
@@ -3397,12 +3397,13 @@ private struct Generator(Fun...)
     static assert(isInputRange!Generator);
 
 private:
+    import std.traits : FunctionAttribute, functionAttributes, ReturnType;
     static if (is(Fun[0]))
         Fun[0] fun;
     else
         alias fun = Fun[0];
 
-    enum returnByRef_ = (functionAttributes!fun & FunctionAttribute.ref_) ? true : false;
+    enum returnByRef_ = functionAttributes!fun & FunctionAttribute.ref_;
     static if (returnByRef_)
         ReturnType!fun *elem_;
     else
@@ -5670,6 +5671,8 @@ pure @safe unittest
 
 pure nothrow @nogc @safe unittest
 {
+    import std.traits : Signed;
+
    //float overloads use std.conv.to so can't be @nogc or nothrow
     alias ssize_t = Signed!size_t;
     assert(iota(ssize_t.max, 0, -1).length == ssize_t.max);
@@ -11213,6 +11216,7 @@ private struct Bitwise(R)
 if (isInputRange!R && isIntegral!(ElementType!R))
 {
 private:
+    import std.traits : Unsigned;
     alias ElemType = ElementType!R;
     alias UnsignedElemType = Unsigned!ElemType;
 
@@ -11528,6 +11532,7 @@ if (isInputRange!R && isIntegral!(ElementType!R))
 @safe pure nothrow unittest
 {
     import std.internal.test.dummyrange;
+    import std.meta : AliasSeq;
 
     alias IntegralTypes = AliasSeq!(byte, ubyte, short, ushort, int, uint,
             long, ulong);
@@ -11623,6 +11628,7 @@ if (isInputRange!R && isIntegral!(ElementType!R))
 // Test opIndex and opSlice
 @system unittest
 {
+    import std.meta : AliasSeq;
     alias IntegralTypes = AliasSeq!(byte, ubyte, short, ushort, int, uint,
             long, ulong);
     foreach (IntegralType; IntegralTypes)

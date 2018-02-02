@@ -76,12 +76,12 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 module std.algorithm.sorting;
 
 import std.algorithm.mutation : SwapStrategy;
-import std.functional; // : unaryFun, binaryFun;
+import std.functional : unaryFun, binaryFun;
 import std.range.primitives;
-import std.typecons : Flag;
+import std.typecons : Flag, Yes, No;
 // FIXME
-import std.meta; // : allSatisfy;
-import std.range; // : SortedRange;
+import std.meta : allSatisfy;
+import std.range : SortedRange;
 import std.traits;
 
 /**
@@ -743,7 +743,9 @@ if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range)
         assert(a == [ 42, 42 ]);
 
         import std.algorithm.iteration : map;
+        import std.array : array;
         import std.random;
+        import std.range : iota;
         import std.stdio;
         auto s = unpredictableSeed;
         auto g = Random(s);
@@ -1055,6 +1057,7 @@ if (isRandomAccessRange!Range && !isInfinite!Range &&
 @safe unittest
 {
     import std.algorithm.comparison : equal;
+    import std.range : iota;
 
     ubyte[256] index = void;
     iota(256).makeIndex(index[]);
@@ -1533,7 +1536,8 @@ private void multiSortImpl(Range, SwapStrategy ss, funs...)(Range r)
 @safe unittest
 {
     import std.algorithm.comparison : equal;
-    import std.range;
+    import std.array : array;
+    import std.range : indexed, iota, retro;
 
     static struct Point { int x, y; }
     auto pts1 = [ Point(5, 6), Point(1, 0), Point(5, 7), Point(1, 1), Point(1, 2), Point(0, 1) ];
@@ -1780,6 +1784,7 @@ private void sort5(alias lt, Range)(Range r)
 {
     import std.algorithm.iteration : permutations;
     import std.algorithm.mutation : copy;
+    import std.range : iota;
 
     int[5] buf;
     foreach (per; iota(5).permutations)
@@ -1921,6 +1926,9 @@ if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
 {
     // Simple regression benchmark
     import std.algorithm.iteration, std.algorithm.mutation, std.random;
+    import std.array : array;
+    import std.range : iota;
+
     Random rng;
     int[] a = iota(20148).map!(_ => uniform(-1000, 1000, rng)).array;
     static uint comps;
@@ -3431,6 +3439,8 @@ done:
 
 @safe unittest
 {
+    import std.array : array;
+
     auto a = [ 10, 5, 3, 4, 8,  11,  13, 3, 9, 4, 10 ];
     assert(expandPartition!((a, b) => a < b)(a, 4, 5, 6) == 9);
     a = randomArray;
@@ -3445,7 +3455,10 @@ private T[] randomArray(Flag!"exactSize" flag = No.exactSize, T = int)(
     T minValue = 0, T maxValue = 255)
 {
     import std.algorithm.iteration : map;
+    import std.array : array;
     import std.random : unpredictableSeed, Random, uniform;
+    import std.range : iota;
+
     auto size = flag == Yes.exactSize ? maxSize : uniform(1, maxSize);
     return iota(0, size).map!(_ => uniform(minValue, maxValue)).array;
 }

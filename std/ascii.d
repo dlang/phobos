@@ -62,9 +62,9 @@ module std.ascii;
 version(StdUnittest)
 {
     // FIXME: When dmd bug #314 is fixed, make these selective.
-    import std.meta; // : AliasSeq;
-    import std.range; // : chain;
-    import std.traits; // : functionAttributes, FunctionAttribute, isSafe;
+    import std.meta : AliasSeq;
+    import std.range : chain;
+    import std.traits : functionAttributes, FunctionAttribute, isSafe;
 }
 
 
@@ -675,6 +675,8 @@ if (is(C : dchar))
 
 @safe unittest //Test both toUpper and toLower with non-builtin
 {
+    import std.traits : OriginalType;
+
     //User Defined [Char|Wchar|Dchar]
     static struct UDC {  char c; alias c this; }
     static struct UDW { wchar c; alias c this; }

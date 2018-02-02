@@ -69,7 +69,7 @@ Authors:   $(HTTP erdani.org, Andrei Alexandrescu),
 module std.typecons;
 
 import core.stdc.stdint : uintptr_t;
-import std.meta; // : AliasSeq, allSatisfy;
+import std.meta : Alias, AliasSeq, aliasSeqOf, allSatisfy;
 import std.traits;
 
 ///
@@ -4260,6 +4260,7 @@ private static:
             };
         }
     }
+    import std.meta : templateNot;
 
     alias Implementation = AutoImplement!(Issue17177, how, templateNot!isFinalFunction);
 }

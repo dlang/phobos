@@ -69,7 +69,7 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 module std.algorithm.iteration;
 
 // FIXME
-import std.functional; // : unaryFun, binaryFun;
+import std.functional : unaryFun, binaryFun;
 import std.range.primitives;
 import std.traits;
 

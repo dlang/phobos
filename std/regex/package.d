@@ -298,7 +298,7 @@ module std.regex;
 
 import std.range.primitives, std.traits;
 import std.regex.internal.ir;
-import std.typecons; // : Flag, Yes, No;
+import std.typecons : Flag, Yes, No;
 
 /++
     $(D Regex) object holds regular expression pattern in compiled form.
@@ -704,6 +704,7 @@ public:
 @trusted public struct RegexMatch(R)
 if (isSomeString!R)
 {
+    import std.typecons : Rebindable;
 private:
     alias Char = BasicElementOf!R;
     Matcher!Char _engine;

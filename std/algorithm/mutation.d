@@ -80,7 +80,7 @@ module std.algorithm.mutation;
 import std.range.primitives;
 import std.traits : isArray, isBlitAssignable, isNarrowString, Unqual, isSomeChar;
 // FIXME
-import std.typecons; // : tuple, Tuple;
+import std.typecons : tuple, Tuple;
 
 // bringToFront
 /**

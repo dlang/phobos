@@ -134,7 +134,7 @@ static import core.math;
 static import core.stdc.math;
 static import core.stdc.fenv;
 import std.range.primitives : isInputRange, ElementType;
-import std.traits; // CommonType, isFloatingPoint, isIntegral, isSigned, isUnsigned, Largest, Unqual
+import std.traits : CommonType, isFloatingPoint, isIntegral, isNumeric, isSigned, isUnsigned, Largest, Unqual;
 
 version(LDC)
 {
@@ -177,7 +177,7 @@ else version (X86)
 
 version(StdUnittest)
 {
-    import core.stdc.stdio; // : sprintf;
+    import core.stdc.stdio : sprintf;
 
     static if (real.sizeof > double.sizeof)
         enum uint useDigits = 16;
