@@ -74,6 +74,7 @@ $(TR $(TD Representation) $(TD
 $(TR $(TD Exceptions) $(TD
     $(LREF INVALID_SEQUENCE)
     $(LREF EncodingException)
+    $(LREF BOMException))
 ))
 )
 
@@ -2502,11 +2503,18 @@ do
 //=============================================================================
 
 /** The base class for exceptions thrown by this module */
-class EncodingException : Exception { this(string msg) @safe pure { super(msg); } }
+class EncodingException : Exception
+{
+    import std.exception : basicExceptionCtors;
+    ///
+    mixin basicExceptionCtors;
+}
 
 class UnrecognizedEncodingException : EncodingException
 {
-    private this(string msg) @safe pure { super(msg); }
+    import std.exception : basicExceptionCtors;
+    ///
+    mixin basicExceptionCtors;
 }
 
 /** Abstract base class of all encoding schemes */
@@ -3907,3 +3915,23 @@ if (isForwardRange!Range && is(Unqual!(ElementType!Range) == ubyte))
 
 /** Constant defining a fully decoded BOM */
 enum dchar utfBOM = 0xfeff;
+
+
+/++
+    Used to indicate that a BOM was encountered that is considered invalid by
+    the function that encountered it (e.g. if a file's $(LREF BOM) says that
+    it's $(LREF BOM.utf16be), but the function tried to read it as
+    $(LREF BOM.utf8)).
+  +/
+class BOMException : EncodingException
+{
+    ///
+    this(string msg, immutable BOMSeq bomSeq, string file = __FILE__, size_t line = __LINE__) @nogc nothrow pure @safe
+    {
+        super(msg, file, line);
+        this.bomSeq = bomSeq;
+    }
+
+    /// The $(LREF BOMSeq) that was encountered.
+    immutable BOMSeq bomSeq;
+}
