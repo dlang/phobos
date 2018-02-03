@@ -1,0 +1,24 @@
+std.utf.stripBOM was added
+
+$(REF stripBOM, std, utf) takes a range of characters and strips the
+$(LINK2 https://en.wikipedia.org/wiki/Byte_Order_Mark, BOM) (if any) from the
+front of the range.
+
+$(REF stripBOM, std, utf) checks for the BOM that matches the encoding of the
+range and the endianness of the machine, and it is stripped from the range if
+present, but other types of BOMs are not checked. Strings are treated as ranges
+of code units, not code points. So, if the range is a $(D string) or a range of
+$(D char), then the UTF-8 BOM will be stripped if present, or if the range is a
+$(D wstring) or a range of $(D wchar), and the machine is little endian, then
+the UTF-16 LE BOM will be stripped if present, whereas if the UTF-16 BE BOM
+were present, it would be ignored.
+
+If there is no BOM, then the original range is returned.
+
+One convenient place for using $(REF stripBOM, std, utf) would be to use
+it on the return value of $(REF readText, std, file) - particularly if
+$(D readText!wstring) is used, since BOMs on UTF-16 files are common (but not
+guaranteed to be there), whereas BOMs on UTF-8 files are fairly rare, and most
+programs just want the actual text of the files they operate on and aren't
+interested in the BOM (and $(D readText!wstring) will have already verified
+that the text is valid UTF-16 of the endianness of the machine).
