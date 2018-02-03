@@ -28,7 +28,7 @@ to your $(B dub.json) file if you are using $(LINK2 http://code.dlang.org, DUB).
 
 Windows x86 note:
 A DMD compatible libcurl static library can be downloaded from the dlang.org
-$(LINK2 http://dlang.org/download.html, download page).
+$(LINK2 http://downloads.dlang.org/other/index.html, download archive page).
 
 Compared to using libcurl directly this module allows simpler client code for
 common uses, requires no unsafe operations, and integrates better with the rest
