@@ -46,6 +46,7 @@ $(TR $(TD Miscellaneous) $(TD
     $(LREF replacementDchar)
     $(LREF UseReplacementDchar)
     $(LREF UTFException)
+    $(LREF stripBOM)
 ))
 )
     See_Also:
@@ -4062,4 +4063,81 @@ if (isSomeChar!C)
     "𐐷".byUTF!char().equal([0xF0, 0x90, 0x90, 0xB7]);
     "𐐷".byUTF!wchar().equal([0xD801, 0xDC37]);
     "𐐷".byUTF!dchar().equal([0x00010437]);
+}
+
+
+/++
+    Strips the BOM (if present) from the front of the given range and returns
+    the range.
+
+    If the range is a range of $(D char) or an array of $(D char), then the
+    UTF-8 BOM will be stripped if present, but no other BOMs will be checked
+    for.
+
+    If the range is a range of $(D wchar) or an array of $(D wchar), then the
+    UTF-16 BOM of the native endianness will be stripped if present, but no
+    other BOMs will be checked for.
+
+    If the range is a range of $(D dchar) or an array of $(D dchar), then the
+    UTF-32 BOM of the native endianness will be stripped if present, but no
+    other BOMs will be checked for.
+
+    Params:
+        range = A range of characters of ubyte.
+
+    Returns:
+        The range with the BOM stripped from the front of the given range if
+        there is a BOM at the front of the range; otherwise, the given range is
+        returned unchanged.
+  +/
+R stripBOM(R)(R range)
+if (isForwardRange!R && isSomeChar!(ElementType!R))
+{
+    import std.utf : decodeFront, UseReplacementDchar;
+    if (range.empty)
+        return range;
+    auto orig = range.save;
+    immutable c = range.decodeFront!(UseReplacementDchar.yes)();
+    return c == '\uFEFF' ? range : orig;
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    import std.string : representation;
+
+    assert(stripBOM("hello world") == "hello world");
+    assert(stripBOM("\uFEFFhello world") == "hello world");
+    assert(stripBOM("\uFEFFhello world"w) == "hello world"w);
+    assert(stripBOM("\uFEFFhello world"d) == "hello world"d);
+}
+
+@system unittest
+{
+    import std.algorithm.iteration : filter;
+    import std.algorithm.comparison : equal;
+    import std.utf : byCodeUnit;
+
+    assert(stripBOM("") == "");
+    assert(stripBOM((cast(dchar[])[0x0000FEFF]) ~ "hello world"d) == "hello world"d);
+    assert(equal(stripBOM(filter!"true"(((cast(string)[0xEF, 0xBB, 0xBF]) ~ "hello world").byCodeUnit())),
+                 "hello world"));
+
+    static class RefCharRange(C)
+    {
+        @property empty() { return _str.empty; }
+        @property front() { return _str[0]; }
+        void popFront() { _str = _str[1 .. $]; }
+        @property save() { return new RefCharRange(_str); }
+        immutable(C)[] _str;
+        this(immutable(C)[] str) { _str = str; }
+    }
+
+    assert(equal(stripBOM(new RefCharRange!char("京都市")), "京都市"));
+    assert(equal(stripBOM(new RefCharRange!wchar("京都市"w)), "京都市"w));
+    assert(equal(stripBOM(new RefCharRange!dchar("京都市"d)), "京都市"d));
+
+    assert(equal(stripBOM(new RefCharRange!char((cast(string)[0xEF, 0xBB, 0xBF]) ~ "京都市")), "京都市"));
+    assert(equal(stripBOM(new RefCharRange!wchar((cast(wstring)[0xFEFF]) ~ "京都市"w)), "京都市"w));
+    assert(equal(stripBOM(new RefCharRange!dchar((cast(dstring)[0x0000FEFF]) ~ "京都市"d)), "京都市"d));
 }
