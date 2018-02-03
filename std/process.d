@@ -3341,7 +3341,7 @@ static:
     Retrieves the value of the environment variable with the given $(D name),
     or a default value if the variable doesn't exist.
 
-    Unlike $(LREF environment.opIndex), this function never throws.
+    Unlike $(LREF environment.opIndex), this function never throws on Posix.
     ---
     auto sh = environment.get("SHELL", "/bin/sh");
     ---
@@ -3357,6 +3357,13 @@ static:
         // empty.
     }
     ---
+    Params:
+        name = name of the environment variable to retrieve
+        defaultValue = default value to return if the environment variable doesn't exist.
+
+    Returns:
+        the value of the environment variable if found, otherwise
+        `null` if the environment doesn't exist.
 
     Throws:
     $(REF UTFException, std,utf) if the variable contains invalid UTF-16
