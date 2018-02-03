@@ -5,6 +5,18 @@
 
     For convenience, this module publicly imports $(MREF core,time).
 
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Main functionality) $(TD
+    $(LREF StopWatch)
+    $(LREF benchmark)
+))
+$(TR $(TD Flags) $(TD
+    $(LREF AutoStart)
+))
+)
+
     $(RED Unlike the other modules in std.datetime, this module is not currently
           publicly imported in std.datetime.package, because the old
           versions of this functionality which use
