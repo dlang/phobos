@@ -5058,7 +5058,7 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
     assert([1, 2, 3].substitute(1, 0.1).retro.equal([3, 2, 0.1]));
 }
 
-/// Use faster compile-time overload
+/// Use the faster compile-time overload
 @safe pure unittest
 {
     import std.algorithm.comparison : equal;
@@ -5093,7 +5093,7 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
     assert(equal(z, "41"));
 }
 
-// Test the first example with Compile-Time overloads
+// Test the first example with compile-time overloads
 @safe pure unittest
 {
     import std.algorithm.comparison : equal;
