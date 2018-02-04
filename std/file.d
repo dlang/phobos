@@ -4138,11 +4138,13 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
     dirEntries("", SpanMode.shallow).walkLength();
 
     // issue 6138
-    foreach (string entry; dirEntries(testdir, SpanMode.shallow) {
+    string cwd = getcwd();
+    foreach (string entry; dirEntries(testdir, SpanMode.shallow)) {
         if (entry.isDir) {
              chdir(entry);
         }
     }
+    chdir (cwd); // needed for the directories to be removed
 }
 
 /// Ditto
