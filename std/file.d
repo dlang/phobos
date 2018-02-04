@@ -4139,8 +4139,10 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
 
     // issue 6138
     string cwd = getcwd();
-    foreach (string entry; dirEntries(testdir, SpanMode.shallow)) {
-        if (entry.isDir) {
+    foreach (string entry; dirEntries(testdir, SpanMode.shallow))
+    {
+        if (entry.isDir)
+        {
              chdir(entry);
         }
     }
