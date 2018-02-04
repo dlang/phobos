@@ -4136,6 +4136,13 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
 
     // issue 15146
     dirEntries("", SpanMode.shallow).walkLength();
+
+    // issue 6138
+    foreach (string entry; dirEntries(testdir, SpanMode.shallow) {
+        if (entry.isDir) {
+             chdir(entry);
+        }
+    }
 }
 
 /// Ditto
