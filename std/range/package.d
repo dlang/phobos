@@ -7752,6 +7752,63 @@ auto slide(Flag!"withPartial" f = Yes.withPartial,
     return Slides!(f, Source)(source, windowSize, stepSize);
 }
 
+/// Iterate over ranges with windows
+@safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+
+    assert([0, 1, 2, 3].slide(2).equal!equal(
+        [[0, 1], [1, 2], [2, 3]]
+    ));
+
+    assert(5.iota.slide(3).equal!equal(
+        [[0, 1, 2], [1, 2, 3], [2, 3, 4]]
+    ));
+}
+
+/// set a custom stepsize (default 1)
+@safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+
+    assert(6.iota.slide(1, 2).equal!equal(
+        [[0], [2], [4]]
+    ));
+
+    assert(6.iota.slide(2, 4).equal!equal(
+        [[0, 1], [4, 5]]
+    ));
+
+    assert(iota(7).slide(2, 2).equal!equal(
+        [[0, 1], [2, 3], [4, 5], [6]]
+    ));
+
+    assert(iota(12).slide(2, 4).equal!equal(
+        [[0, 1], [4, 5], [8, 9]]
+    ));
+}
+
+/// Allow the last slide to have fewer elements than windowSize
+@safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+
+    assert(3.iota.slide!(No.withPartial)(4).empty);
+    assert(3.iota.slide!(Yes.withPartial)(4).equal!equal(
+        [[0, 1, 2]]
+    ));
+}
+
+/// Count all the possible substrings of length 2
+@safe pure nothrow unittest
+{
+    import std.algorithm.iteration : each;
+
+    int[dstring] d;
+    "AGAGA"d.slide!(Yes.withPartial)(2).each!(a => d[a]++);
+    assert(d == ["AG"d: 2, "GA"d: 2]);
+}
+
 private struct Slides(Flag!"withPartial" withPartial = Yes.withPartial, Source)
     if (isForwardRange!Source)
 {
@@ -8277,63 +8334,6 @@ public:
             }
         }
     }
-}
-
-/// Iterate over ranges with windows
-@safe pure nothrow unittest
-{
-    import std.algorithm.comparison : equal;
-
-    assert([0, 1, 2, 3].slide(2).equal!equal(
-        [[0, 1], [1, 2], [2, 3]]
-    ));
-
-    assert(5.iota.slide(3).equal!equal(
-        [[0, 1, 2], [1, 2, 3], [2, 3, 4]]
-    ));
-}
-
-/// set a custom stepsize (default 1)
-@safe pure nothrow unittest
-{
-    import std.algorithm.comparison : equal;
-
-    assert(6.iota.slide(1, 2).equal!equal(
-        [[0], [2], [4]]
-    ));
-
-    assert(6.iota.slide(2, 4).equal!equal(
-        [[0, 1], [4, 5]]
-    ));
-
-    assert(iota(7).slide(2, 2).equal!equal(
-        [[0, 1], [2, 3], [4, 5], [6]]
-    ));
-
-    assert(iota(12).slide(2, 4).equal!equal(
-        [[0, 1], [4, 5], [8, 9]]
-    ));
-}
-
-/// Allow the last slide to have fewer elements than windowSize
-@safe pure nothrow unittest
-{
-    import std.algorithm.comparison : equal;
-
-    assert(3.iota.slide!(No.withPartial)(4).empty);
-    assert(3.iota.slide!(Yes.withPartial)(4).equal!equal(
-        [[0, 1, 2]]
-    ));
-}
-
-/// Count all the possible substrings of length 2
-@safe pure nothrow unittest
-{
-    import std.algorithm.iteration : each;
-
-    int[dstring] d;
-    "AGAGA"d.slide!(Yes.withPartial)(2).each!(a => d[a]++);
-    assert(d == ["AG"d: 2, "GA"d: 2]);
 }
 
 // test @nogc
