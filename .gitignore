@@ -21,3 +21,6 @@ obj/
 .vscode
 
 *.html
+
+# Generated header files
+*.di

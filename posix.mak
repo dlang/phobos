@@ -297,6 +297,11 @@ unittest-%:
 	$(MAKE) -f $(MAKEFILE) unittest OS=$(OS) MODEL=$(MODEL) DMD=$(DMD) BUILD=$*
 endif
 
+
+HEADER_FILES=std/internal/unicode_tables.di
+%.di: %.d
+	$(DMD) $(DFLAGS) -c -o- -Hf$@ $<
+
 ################################################################################
 # Patterns begin here
 ################################################################################
@@ -309,7 +314,7 @@ $(ROOT)/%$(DOTOBJ): %.c
 	@[ -d $(dir $@) ] || mkdir -p $(dir $@) || [ -d $(dir $@) ]
 	$(CC) -c $(CFLAGS) $< -o$@
 
-$(LIB): $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
+$(LIB): $(OBJS) $(ALL_D_FILES) $(DRUNTIME) $(HEADER_FILES)
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
 
 $(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
@@ -319,13 +324,13 @@ $(ROOT)/$(SONAME): $(LIBSO)
 	ln -sf $(notdir $(LIBSO)) $@
 
 $(LIBSO): override PIC:=-fPIC
-$(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIMESO)
+$(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIMESO) $(HEADER_FILES)
 	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(LINKDL) $(D_FILES) $(OBJS)
 
 ifeq (osx,$(OS))
 # Build fat library that combines the 32 bit and the 64 bit libraries
 libphobos2.a: $(ROOT_OF_THEM_ALL)/osx/release/libphobos2.a
-$(ROOT_OF_THEM_ALL)/osx/release/libphobos2.a:
+$(ROOT_OF_THEM_ALL)/osx/release/libphobos2.a: $(HEADER_FILES)
 	$(MAKE) -f $(MAKEFILE) OS=$(OS) MODEL=32 BUILD=release
 	$(MAKE) -f $(MAKEFILE) OS=$(OS) MODEL=64 BUILD=release
 	lipo $(ROOT_OF_THEM_ALL)/osx/release/32/libphobos2.a \
