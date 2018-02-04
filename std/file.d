@@ -4038,7 +4038,7 @@ foreach (d; dFiles)
  +/
 auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
 {
-    import std.path: absolutePath;
+    import std.path : absolutePath;
     return DirIterator(absolutePath(path), mode, followSymlink);
 }
 
