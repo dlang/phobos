@@ -601,7 +601,7 @@ T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
     --------------------
  +/
 template enforceEx(E : Throwable)
-if (is(typeof(new E("", __FILE__, __LINE__))))
+if (is(typeof(new E("", string.init, size_t.init))))
 {
     /++ Ditto +/
     T enforceEx(T)(T value, lazy string msg = "", string file = __FILE__, size_t line = __LINE__)
@@ -613,7 +613,7 @@ if (is(typeof(new E("", __FILE__, __LINE__))))
 
 /++ Ditto +/
 template enforceEx(E : Throwable)
-if (is(typeof(new E(__FILE__, __LINE__))) && !is(typeof(new E("", __FILE__, __LINE__))))
+if (is(typeof(new E(string.init, size_t.init))) && !is(typeof(new E("", string.init, size_t.init))))
 {
     /++ Ditto +/
     T enforceEx(T)(T value, string file = __FILE__, size_t line = __LINE__)
