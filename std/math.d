@@ -270,7 +270,6 @@ pragma(inline, true):
 
     // 32-bit, 64-bit and 80-bit reals only:
     //      word = view as an unsigned integer.
-    //      sword = view as a signed integer.
 
     // 64-bit, 80-bit and 128-bit reals only:
     //      msw = view the most significant part.
@@ -298,7 +297,6 @@ pragma(inline, true):
         ubyte[4] bytes;
         ushort[2] shorts;
         uint word;
-        int sword;
     }
     else static if (traits.realFormat == RealFormat.ieeeDouble)
     {
@@ -319,7 +317,6 @@ pragma(inline, true):
         ubyte[8] bytes;
         ushort[4] shorts;
         ulong word;
-        long sword;
     }
     else static if (traits.realFormat == RealFormat.ieeeExtended
                     || traits.realFormat == RealFormat.ieeeExtended53)
@@ -337,7 +334,6 @@ pragma(inline, true):
                         uint msw;
                     }
                     ulong word;
-                    long sword;
                 }
                 ushort exponent;
                 ushort __pad;
@@ -354,7 +350,6 @@ pragma(inline, true):
                         uint lsw;
                     }
                     ulong word;
-                    long sword;
                 }
             }
         }
@@ -2967,9 +2962,9 @@ if (isFloatingPoint!T)
         {   // If exponent is non-zero
             if (ex == F.EXPMASK) // infinity or NaN
             {
-                if (vf.sword & 0x7FFF_FFFF_FFFF_FFFF)  // NaN
+                if (vf.word & 0x7FFF_FFFF_FFFF_FFFF)  // NaN
                 {
-                    vf.sword |= 0xC000_0000_0000_0000;  // convert NaNS to NaNQ
+                    vf.word |= 0xC000_0000_0000_0000;  // convert NaNS to NaNQ
                     exp = int.min;
                 }
                 else if (vf.shorts[F.EXPPOS_SHORT] & 0x8000)   // negative infinity
@@ -2984,7 +2979,7 @@ if (isFloatingPoint!T)
                 vf.shorts[F.EXPPOS_SHORT] = (0x8000 & vf.shorts[F.EXPPOS_SHORT]) | 0x3FFE;
             }
         }
-        else if (!vf.sword)
+        else if (!vf.word)
         {
             // vf is +-0.0
             exp = 0;
@@ -3044,15 +3039,15 @@ if (isFloatingPoint!T)
         {
             if (ex == F.EXPMASK)   // infinity or NaN
             {
-                if (vf.sword == 0x7FF0_0000_0000_0000)  // positive infinity
+                if (vf.word == 0x7FF0_0000_0000_0000)  // positive infinity
                 {
                     exp = int.max;
                 }
-                else if (vf.sword == 0xFFF0_0000_0000_0000) // negative infinity
+                else if (vf.word == 0xFFF0_0000_0000_0000) // negative infinity
                     exp = int.min;
                 else
                 { // NaN
-                    vf.sword |= 0x0008_0000_0000_0000;  // convert NaNS to NaNQ
+                    vf.word |= 0x0008_0000_0000_0000;  // convert NaNS to NaNQ
                     exp = int.min;
                 }
             }
@@ -3062,7 +3057,7 @@ if (isFloatingPoint!T)
                 vf.shorts[F.EXPPOS_SHORT] = cast(ushort)((0x800F & vf.shorts[F.EXPPOS_SHORT]) | 0x3FE0);
             }
         }
-        else if (!(vf.sword & 0x7FFF_FFFF_FFFF_FFFF))
+        else if (!(vf.word & 0x7FFF_FFFF_FFFF_FFFF))
         {
             // vf is +-0.0
             exp = 0;
@@ -3084,15 +3079,15 @@ if (isFloatingPoint!T)
         {
             if (ex == F.EXPMASK)   // infinity or NaN
             {
-                if (vf.sword == 0x7F80_0000)  // positive infinity
+                if (vf.word == 0x7F80_0000)  // positive infinity
                 {
                     exp = int.max;
                 }
-                else if (vf.sword == 0xFF80_0000) // negative infinity
+                else if (vf.word == 0xFF80_0000) // negative infinity
                     exp = int.min;
                 else
                 { // NaN
-                    vf.sword |= 0x0040_0000;  // convert NaNS to NaNQ
+                    vf.word |= 0x0040_0000;  // convert NaNS to NaNQ
                     exp = int.min;
                 }
             }
@@ -3102,7 +3097,7 @@ if (isFloatingPoint!T)
                 vf.shorts[F.EXPPOS_SHORT] = cast(ushort)((0x807F & vf.shorts[F.EXPPOS_SHORT]) | 0x3F00);
             }
         }
-        else if (!(vf.sword & 0x7FFF_FFFF))
+        else if (!(vf.word & 0x7FFF_FFFF))
         {
             // vf is +-0.0
             exp = 0;
@@ -6153,7 +6148,7 @@ bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
     }
     else static if (F.realFormat == RealFormat.ieeeExtended)
     {
-        return (y.shorts[F.EXPPOS_SHORT] & F.EXPMASK) == 0 && y.sword > 0;
+        return (y.shorts[F.EXPPOS_SHORT] & F.EXPMASK) == 0 && (cast(long)y.word) > 0;
     }
     else static if (F.realFormat == RealFormat.ibmExtended)
     {
