@@ -3972,7 +3972,7 @@ public:
     type $(D string) if only the name is needed, or $(D DirEntry)
     if additional details are needed. The span _mode dictates how the
     directory is traversed. The name of each iterated directory entry
-    contains the absolute _path.
+    contains the absolute or relative _path (depending on _pathname).
 
     Params:
         path = The directory to iterate over.
