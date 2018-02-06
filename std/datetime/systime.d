@@ -8414,18 +8414,18 @@ public:
     {
         import std.algorithm.searching : countUntil, find;
         import std.conv : to;
-        import std.string : strip;
+        import std.string : strip, indexOf;
 
-        auto dstr = to!dstring(strip(isoExtString));
+        auto str = strip(isoExtString);
 
-        auto tIndex = dstr.countUntil('T');
+        auto tIndex = str.indexOf('T');
         enforce(tIndex != -1, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
 
-        auto found = dstr[tIndex + 1 .. $].find('.', 'Z', '+', '-');
-        auto dateTimeStr = dstr[0 .. $ - found[0].length];
+        auto found = str[tIndex + 1 .. $].find('.', 'Z', '+', '-');
+        auto dateTimeStr = str[0 .. $ - found[0].length];
 
-        dstring fracSecStr;
-        dstring zoneStr;
+        typeof(str) fracSecStr;
+        typeof(str) zoneStr;
 
         if (found[1] != 0)
         {
