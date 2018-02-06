@@ -101,7 +101,7 @@ JSON value node
 */
 struct JSONValue
 {
-    import std.exception : enforce;
+    import std.exception : enforceEx, enforce;
 
     union Store
     {
@@ -472,7 +472,7 @@ struct JSONValue
     ref inout(JSONValue) opIndex(size_t i) inout pure @safe
     {
         auto a = this.arrayNoRef;
-        enforce!JSONException(i < a.length,
+        enforceEx!JSONException(i < a.length,
                                 "JSONValue array index is out of range");
         return a[i];
     }
@@ -512,7 +512,7 @@ struct JSONValue
      */
     void opIndexAssign(T)(auto ref T value, string key) pure
     {
-        enforce!JSONException(type == JSON_TYPE.OBJECT || type == JSON_TYPE.NULL,
+        enforceEx!JSONException(type == JSON_TYPE.OBJECT || type == JSON_TYPE.NULL,
                                 "JSONValue must be object or null");
         JSONValue[string] aa = null;
         if (type == JSON_TYPE.OBJECT)
@@ -534,7 +534,7 @@ struct JSONValue
     void opIndexAssign(T)(T arg, size_t i) pure
     {
         auto a = this.arrayNoRef;
-        enforce!JSONException(i < a.length,
+        enforceEx!JSONException(i < a.length,
                                 "JSONValue array index is out of range");
         a[i] = arg;
         this.array = a;
