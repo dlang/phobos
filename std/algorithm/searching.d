@@ -4099,12 +4099,29 @@ list matches).
 In the case when no needle parameters are given, return `true` iff front of
 `doesThisStart` fulfils predicate `pred`.
  */
-uint startsWith(alias pred = "a == b", Range, Needles...)(Range doesThisStart, Needles withOneOfThese)
+uint startsWith(alias pred = (a, b) => a == b, Range, Needles...)(Range doesThisStart, Needles withOneOfThese)
 if (isInputRange!Range && Needles.length > 1 &&
     is(typeof(.startsWith!pred(doesThisStart, withOneOfThese[0])) : bool ) &&
     is(typeof(.startsWith!pred(doesThisStart, withOneOfThese[1 .. $])) : uint))
 {
-    alias haystack = doesThisStart;
+    import std.meta : allSatisfy;
+
+    template checkType(T)
+    {
+        enum checkType = is(Unqual!(ElementEncodingType!Range) == Unqual!T);
+    }
+
+    // auto-decoding special case
+    static if (__traits(isSame, binaryFun!pred, (a, b) => a == b) &&
+        isNarrowString!Range && allSatisfy!(checkType, Needles))
+    {
+        import std.utf : byCodeUnit;
+        auto haystack = doesThisStart.byCodeUnit;
+    }
+    else
+    {
+        alias haystack = doesThisStart;
+    }
     alias needles  = withOneOfThese;
 
     // Make one pass looking for empty ranges in needles
