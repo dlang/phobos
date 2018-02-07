@@ -553,13 +553,13 @@ auto abs(Num)(Num x)
 // workaround for https://issues.dlang.org/show_bug.cgi?id=18251
 //if (!isDeprecatedComplex!Num &&
     //(is(typeof(Num.init >= 0)) && is(typeof(-Num.init)) ||
-    //(is(Num : const(short)) || is(Num : const(byte)))))
+    //(is(Unqual!Num == short) || is(Unqual!Num == byte))))
 {
     static if (isFloatingPoint!(Num))
         return fabs(x);
     else
     {
-        static if (is(Num : const(short)) || is(Num : const(byte)))
+        static if (is(Unqual!Num == short) || is(Unqual!Num == byte))
             return x >= 0 ? x : cast(Num) -int(x);
         else
             return x >= 0 ? x : -x;
