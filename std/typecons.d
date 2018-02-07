@@ -2842,7 +2842,7 @@ if (is(S == struct))
 }
 
 // Test disabled default ctor
-unittest
+@safe unittest
 {
     static struct ND
     {
@@ -2861,6 +2861,108 @@ unittest
     static assert(!__traits(compiles, rb.i++));
 }
 
+@safe unittest
+{
+    int del;
+    int post;
+    struct S
+    {
+        int* ptr;
+        int level;
+        this(this) {
+            post++;
+            level++;
+        }
+        ~this() {
+            del++;
+        }
+    }
+
+    // test const
+    {
+        Rebindable!(const S) rc = S(new int);
+        assert(post == 1);
+        assert(rc.level == 1);
+        assert(post == 1);
+        assert(rc.level == 1); // no copy is created
+    }
+    assert(post == 1);
+    assert(del == 2);
+    del = 0, post = 0;
+
+    // immutable
+    {
+        // on every field access a temporary immutable copy gets created
+        Rebindable!(immutable S) ri = S(new int);
+        assert(post == 1);
+        assert(ri.level == 2);
+        assert(post == 2);
+        assert(ri.level == 2); // however it's a copy of the payload's level
+    }
+    assert(post == 3);
+    assert(del == 4);
+    del = 0, post = 0;
+
+    {
+        // the initial value is copied and destructed
+        Rebindable!(const S) rc = S(new int);
+        assert(post == 1);
+        assert(del == 1);
+        assert(rc.level == 1);
+
+        // on an assignment to another value is simply post-blitted
+        const S cs = rc;
+        assert(del == 1);
+        assert(post == 2);
+        assert(rc.level == 1);
+        assert(cs.level == 2);
+
+        // however on an assignment, the old payload gets destructed
+        rc = cs;
+        assert(del == 2);
+        assert(post == 3);
+        assert(cs.level == 2);
+        assert(rc.level == 3);
+    }
+    assert(post == 3);
+    assert(del == 4);
+    del = 0, post = 0;
+
+    {
+        // the initial value is copied and destructed
+        Rebindable!(immutable S) ri = S(new int);
+        assert(post == 1);
+        assert(del == 1);
+        // creates temporary (gets immediately destroyed), actual level is still 1
+        assert(ri.level == 2);
+        assert(del == 2);
+        assert(post == 2);
+
+        // on an assignment to another value is simply post-blitted
+        const S cs = ri;
+        assert(del == 2);
+        assert(post == 3);
+        // creates temporary (gets immediately destroyed), actual level is still 1
+        assert(ri.level == 2);
+        assert(cs.level == 2);
+        assert(del == 3);
+        assert(post == 4);
+
+        // however, on an assignment to Rebindable the old value gets destructed
+        auto ri2 = ri;
+        static assert(is(typeof(ri2) == Rebindable!(immutable S)));
+        static assert(TemplateOf!(typeof(ri2)).stringof == "Rebindable(S) if (is(S == struct))");
+        assert(del == 3);
+        assert(post == 4);
+        assert(ri2.level == 2); // should be 3??
+        assert(del == 4);
+
+        // similarly an assignment
+        //ri = ri2; // fails to compile due to overload conflicts
+    }
+    assert(post == 5);
+    assert(del == 7);
+}
 
 /**
     Similar to `Rebindable!(T)` but strips all qualifiers from the reference as
