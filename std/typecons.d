@@ -2712,21 +2712,20 @@ if (is(S == struct))
         }
 
         // must not escape when S is immutable
-        private
-        ref trustedPayload() @trusted
+        private ref trustedPayload() @trusted
         {
-            return *cast(S*)mutPayload.ptr;
+            return *cast(S*) mutPayload.ptr;
         }
 
         static if (!is(S == immutable))
-        ref S Rebindable_getRef() @property
+        private ref S Rebindable_getRef() @property
         {
             // payload exposed as const ref when S is const
             return trustedPayload;
         }
 
         static if (is(S == immutable))
-        S Rebindable_get() @property
+        private S Rebindable_get() @property
         {
             // we return a copy for immutable S
             return trustedPayload;
@@ -2737,11 +2736,10 @@ if (is(S == struct))
         else
             alias Rebindable_getRef this;
 
-        private
-        auto movePayload() @trusted
+        private auto movePayload() @trusted
         {
             import std.algorithm : move;
-            return cast(S)move(*cast(Unqual!S*)mutPayload.ptr);
+            return cast(S) move(*cast(Unqual!S*) mutPayload.ptr);
         }
 
         ~this()
