@@ -987,47 +987,51 @@ version (Posix) @system unittest
     assert(execute(testDefaults.path).status == 0);
     assert(execute(testDefaults.path, null, Config.inheritFDs).status == 0);
 
-    // try /proc/<pid>/fd/ on linux
-    version (linux)
+    // Try a few different methods to check whether there are any
+    // incorrectly-open files.
+    void testFDs()
     {
-        TestScript proc = "ls /proc/$$/fd";
-        auto procRes = execute(proc.path, null);
-        if (procRes.status == 0)
+        // try /proc/<pid>/fd/ on linux
+        version (linux)
         {
-            auto fdStr = fd.to!string;
-            assert(!procRes.output.split.canFind(fdStr));
-            assert(execute(proc.path, null, Config.inheritFDs)
-                    .output.split.canFind(fdStr));
+            TestScript proc = "ls /proc/$$/fd";
+            auto procRes = execute(proc.path, null);
+            if (procRes.status == 0)
+            {
+                auto fdStr = fd.to!string;
+                assert(!procRes.output.split.canFind(fdStr));
+                assert(execute(proc.path, null, Config.inheritFDs)
+                        .output.split.canFind(fdStr));
+                return;
+            }
+        }
+
+        // try fuser (might sometimes need permissions)
+        TestScript fuser = "echo $$ && fuser -f " ~ path;
+        auto fuserRes = execute(fuser.path, null);
+        if (fuserRes.status == 0)
+        {
+            assert(!reverseArgs!canFind(fuserRes
+                        .output.findSplitBefore("\n").expand));
+            assert(reverseArgs!canFind(execute(fuser.path, null, Config.inheritFDs)
+                        .output.findSplitBefore("\n").expand));
             return;
         }
-    }
 
-    // try fuser (might sometimes need permissions)
-    TestScript fuser = "echo $$ && fuser -f " ~ path;
-    auto fuserRes = execute(fuser.path, null);
-    if (fuserRes.status == 0)
-    {
-        assert(!reverseArgs!canFind(fuserRes
-                    .output.findSplitBefore("\n").expand));
-        assert(reverseArgs!canFind(execute(fuser.path, null, Config.inheritFDs)
-                    .output.findSplitBefore("\n").expand));
-        return;
-    }
+        // last resort, try lsof (not available on all Posix)
+        TestScript lsof = "lsof -p$$";
+        auto lsofRes = execute(lsof.path, null);
+        if (lsofRes.status == 0)
+        {
+            assert(!lsofRes.output.canFind(path));
+            assert(execute(lsof.path, null, Config.inheritFDs).output.canFind(path));
+            return;
+        }
 
-    // last resort, try lsof (not available on all Posix)
-    TestScript lsof = "lsof -p$$";
-    auto lsofRes = execute(lsof.path, null);
-    if (lsofRes.status == 0)
-    {
-        assert(!lsofRes.output.canFind(path));
-        assert(execute(lsof.path, null, Config.inheritFDs).output.canFind(path));
-        return;
+        std.stdio.stderr.writeln(__FILE__, ':', __LINE__,
+                ": Warning: Couldn't find any way to check open files");
     }
-
-    std.stdio.stderr.writeln(__FILE__, ':', __LINE__,
-            ": Warning: Couldn't find any way to check open files");
-    // DON'T DO ANY MORE TESTS BELOW HERE IN THIS UNITTEST BLOCK, THE ABOVE
-    // TESTS RETURN ON SUCCESS
+    testFDs();
 }
 
 @system unittest // Environment variables in spawnProcess().
