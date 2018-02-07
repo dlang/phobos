@@ -1,6 +1,30 @@
 // Written in the D programming language
 
 /++
+
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Types) $(TD
+    $(LREF Clock)
+    $(LREF SysTime)
+    $(LREF DosFileTime)
+))
+$(TR $(TD Conversion) $(TD
+    $(LREF parseRFC822DateTime)
+    $(LREF DosFileTimeToSysTime)
+    $(LREF FILETIMEToStdTime)
+    $(LREF FILETIMEToSysTime)
+    $(LREF stdTimeToFILETIME)
+    $(LREF stdTimeToUnixTime)
+    $(LREF SYSTEMTIMEToSysTime)
+    $(LREF SysTimeToDosFileTime)
+    $(LREF SysTimeToFILETIME)
+    $(LREF SysTimeToSYSTEMTIME)
+    $(LREF unixTimeToStdTime)
+))
+)
+
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Jonathan M Davis
     Source:    $(PHOBOSSRC std/datetime/_systime.d)

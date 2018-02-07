@@ -1,6 +1,39 @@
 // Written in the D programming language
-
 /++
+
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Main date types) $(TD
+    $(LREF Date)
+    $(LREF DateTime)
+))
+$(TR $(TD Other date types) $(TD
+    $(LREF Month)
+    $(LREF DayOfWeek)
+    $(LREF TimeOfDay)
+))
+$(TR $(TD Date checking) $(TD
+    $(LREF valid)
+    $(LREF validTimeUnits)
+    $(LREF yearIsLeapYear)
+    $(LREF isTimePoint)
+    $(LREF enforceValid)
+))
+$(TR $(TD Date conversion) $(TD
+    $(LREF daysToDayOfWeek)
+    $(LREF monthsToMonth)
+))
+$(TR $(TD Time units) $(TD
+    $(LREF cmpTimeUnits)
+    $(LREF timeStrings)
+))
+$(TR $(TD Other) $(TD
+    $(LREF AllowDayOverflow)
+    $(LREF DateTimeException)
+))
+)
+
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Jonathan M Davis
     Source:    $(PHOBOSSRC std/datetime/_date.d)

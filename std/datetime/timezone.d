@@ -1,6 +1,26 @@
 // Written in the D programming language
 
 /++
+
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Time zones) $(TD
+    $(LREF TimeZone)
+    $(LREF UTC)
+    $(LREF LocalTime)
+    $(LREF PosixTimeZone)
+    $(LREF WindowsTimeZone)
+    $(LREF SimpleTimeZone)
+))
+$(TR $(TD Utilities) $(TD
+    $(LREF clearTZEnvVar)
+    $(LREF parseTZConversions)
+    $(LREF setTZEnvVar)
+    $(LREF TZConversions)
+))
+)
+
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Jonathan M Davis
     Source:    $(PHOBOSSRC std/datetime/_timezone.d)
