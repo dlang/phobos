@@ -17,7 +17,7 @@ import std.datetime.timezone;// : LocalTime, SimpleTimeZone, TimeZone, UTC;
 import std.exception : enforce;
 import std.format : format;
 import std.range.primitives;
-import std.traits : isIntegral, isSigned, isSomeString, Unqual;
+import std.traits : isIntegral, isSigned, isSomeString, Unqual, isNarrowString;
 
 version(Windows)
 {
@@ -8097,15 +8097,16 @@ public:
         import std.algorithm.searching : startsWith, find;
         import std.conv : to;
         import std.string : strip;
+        import std.utf : byCodeUnit;
 
-        auto dstr = to!dstring(strip(isoString));
-        immutable skipFirst = dstr.startsWith('+', '-') != 0;
+        auto str = strip(isoString);
+        immutable skipFirst = str.startsWith('+', '-');
 
-        auto found = (skipFirst ? dstr[1..$] : dstr).find('.', 'Z', '+', '-');
-        auto dateTimeStr = dstr[0 .. $ - found[0].length];
+        auto found = (skipFirst ? str[1..$] : str).byCodeUnit.find('.', 'Z', '+', '-');
+        auto dateTimeStr = str[0 .. $ - found[0].length];
 
-        dstring fracSecStr;
-        dstring zoneStr;
+        typeof(str) fracSecStr;
+        typeof(str) zoneStr;
 
         if (found[1] != 0)
         {
@@ -8115,20 +8116,39 @@ public:
 
                 if (foundTZ[1] != 0)
                 {
-                    fracSecStr = found[0][0 .. $ - foundTZ[0].length];
-                    zoneStr = foundTZ[0];
+                    static if (isNarrowString!S)
+                    {
+                        fracSecStr = found[0][0 .. $ - foundTZ[0].length].source;
+                        zoneStr = foundTZ[0].source;
+                    }
+                    else
+                    {
+                        fracSecStr = found[0][0 .. $ - foundTZ[0].length];
+                        zoneStr = foundTZ[0];
+                    }
                 }
                 else
-                    fracSecStr = found[0];
+                {
+                    static if (isNarrowString!S)
+                        fracSecStr = found[0].source;
+                    else
+                        fracSecStr = found[0];
+                }
             }
             else
-                zoneStr = found[0];
+            {
+                static if (isNarrowString!S)
+                    zoneStr = found[0].source;
+                else
+                    zoneStr = found[0];
+            }
         }
 
         try
         {
             auto dateTime = DateTime.fromISOString(dateTimeStr);
             auto fracSec = fracSecsFromISOString(fracSecStr);
+
             Rebindable!(immutable TimeZone) parsedZone;
 
             if (zoneStr.empty)
@@ -8280,6 +8300,12 @@ public:
         test("20101222T172201.0+01", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east60));
         test("20101222T172201.0000000+0130", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east90));
         test("20101222T172201.45+0800", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(4_500_000), east480));
+
+        // for dstring coverage
+        assert(SysTime.fromISOString("20101222T172201.23112-0100"d) == SysTime(
+            DateTime(2010, 12, 22, 17, 22, 01), hnsecs(2_311_200), west60));
+        assert(SysTime.fromISOString("19070707T121212.0010000"d) == SysTime(
+            DateTime(1907, 07, 07, 12, 12, 12), msecs(1)));
 
         // @@@DEPRECATED_2019-07@@@
         // This isn't deprecated per se, but that text will make it so that it
