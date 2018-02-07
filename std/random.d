@@ -1473,10 +1473,42 @@ if (isFloatingPoint!(CommonType!(T1, T2)) && isUniformRNG!UniformRandomNumberGen
     enforce(_a <= _b,
             text("std.random.uniform(): invalid bounding interval ",
                     boundaries[0], a, ", ", b, boundaries[1]));
-    NumberType result =
-        _a + (_b - _a) * cast(NumberType) (urng.front - urng.min)
-        / (urng.max - urng.min);
-    urng.popFront();
+
+    alias R = typeof(urng.front);
+    // Special case: pop off the front two items to get enough
+    // bits for a double or a real when typeof(rng.front) is uint.
+    // (Generalized but in practice it's only uint.)
+    enum useFrontTwoItems = isIntegral!R
+        && NumberType.mant_dig > R.sizeof * 8
+        && R.sizeof <= uint.sizeof
+        && (hasIndirections!(typeof(urng)) || typeof(urng).sizeof >= R.sizeof * 2
+            || !__traits(compiles, () pure { return urng.front; }()))
+        && (urng.min == R.min || urng.min == R.min + 1)
+        && urng.max == R.max;
+
+    static if (useFrontTwoItems)
+    {
+        import std.algorithm.comparison : min;
+        import std.meta : AliasSeq;
+        alias TwiceR = AliasSeq!(void, ushort, uint, void, ulong)[R.sizeof];
+        static assert(TwiceR.sizeof == R.sizeof * 2);
+        TwiceR v = cast(TwiceR) urng.front << (R.sizeof * 8);
+        urng.popFront();
+        v += cast(Unsigned!R) urng.front;
+        urng.popFront();
+        enum nbitsUsed = min(TwiceR.sizeof * 8, NumberType.mant_dig);
+        enum NumberType divisor = NumberType(2) ^^ nbitsUsed - NumberType(1);
+        v = v >>> (TwiceR.sizeof * 8 - nbitsUsed);
+        NumberType result =
+            _a + (_b - _a) * cast(NumberType) (v / divisor);
+    }
+    else
+    {
+        NumberType result =
+            _a + (_b - _a) * cast(NumberType) (urng.front - urng.min)
+            / (urng.max - urng.min);
+        urng.popFront();
+    }
     return result;
 }
 
@@ -1891,7 +1923,23 @@ out (result)
 do
 {
     alias R = typeof(rng.front);
-    static if (isIntegral!R)
+    // Special case: pop off the front two items to get enough
+    // bits for a double or a real when typeof(rng.front) is uint.
+    // Generalized but in practice it's only uint.
+    enum useFrontTwoItems = isIntegral!R
+        && T.mant_dig > R.sizeof * 8
+        && R.sizeof <= uint.sizeof
+        && (hasIndirections!(typeof(rng)) || typeof(rng).sizeof >= R.sizeof * 2
+            || !__traits(compiles, () pure { return rng.front; }()))
+        && (rng.min == R.min || rng.min == R.min + 1)
+        && rng.max == R.max;
+
+    static if (useFrontTwoItems)
+    {
+        // Don't define "factor" up here to prevent it from being
+        // accidentally used with rng.front.
+    }
+    else static if (isIntegral!R)
     {
         enum T factor = 1 / (T(1) + rng.max - rng.min);
     }
@@ -1906,8 +1954,26 @@ do
 
     while (true)
     {
-        immutable T u = (rng.front - rng.min) * factor;
-        rng.popFront();
+        static if (useFrontTwoItems)
+        {
+            import std.algorithm.comparison : min;
+            import std.meta : AliasSeq;
+            alias TwiceR = AliasSeq!(void, ushort, uint, void, ulong)[R.sizeof];
+            static assert(TwiceR.sizeof == R.sizeof * 2);
+            TwiceR v = cast(TwiceR) (cast(Unsigned!R) rng.front) << (R.sizeof * 8);
+            rng.popFront();
+            v += cast(Unsigned!R) rng.front;
+            rng.popFront();
+            enum nbitsUsed = min(TwiceR.sizeof * 8, T.mant_dig);
+            enum T factor = 1 / (T(2) ^^ nbitsUsed);
+            v = v >>> (TwiceR.sizeof * 8 - nbitsUsed);
+            immutable T u = v * factor;
+        }
+        else
+        {
+            immutable T u = (rng.front - rng.min) * factor;
+            rng.popFront();
+        }
 
         import core.stdc.limits : CHAR_BIT;  // CHAR_BIT is always 8
         static if (isIntegral!R && T.mant_dig >= (CHAR_BIT * R.sizeof))
