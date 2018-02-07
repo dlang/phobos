@@ -2336,9 +2336,8 @@ if (isInputRange!RoR &&
         $(REF substitute, std,algorithm,iteration) for a lazy replace.
  +/
 E[] replace(E, R1, R2)(E[] subject, R1 from, R2 to)
-if (isDynamicArray!(E[]) &&
-    ((isForwardRange!R1 && isForwardRange!R2 && (hasLength!R2 || isSomeString!R2)) ||
-    is(Unqual!E : Unqual!R1)))
+if ((isForwardRange!R1 && isForwardRange!R2 && (hasLength!R2 || isSomeString!R2)) ||
+    is(Unqual!E : Unqual!R1))
 {
     import std.algorithm.searching : find;
     import std.range : dropOne;
@@ -2433,7 +2432,7 @@ if (isDynamicArray!(E[]) &&
         $(REF substitute, std,algorithm,iteration) for a lazy replace.
  +/
 void replaceInto(E, Sink, R1, R2)(Sink sink, E[] subject, R1 from, R2 to)
-if (isOutputRange!(Sink, E) && isDynamicArray!(E[]) &&
+if (isOutputRange!(Sink, E) &&
     ((isForwardRange!R1 && isForwardRange!R2 && (hasLength!R2 || isSomeString!R2)) ||
     is(Unqual!E : Unqual!R1)))
 {
