@@ -3435,6 +3435,7 @@ if (isInputRange!Range && !isInfinite!Range &&
         DummyType d;
         assert(d.minElement == 1);
         assert(d.minElement!(a => a) == 1);
+        assert(d.minElement!(a => -a) == 10);
     }
 
     // with empty, but seeded ranges
@@ -3537,6 +3538,7 @@ if (isInputRange!Range && !isInfinite!Range &&
         DummyType d;
         assert(d.maxElement == 10);
         assert(d.maxElement!(a => a) == 10);
+        assert(d.maxElement!(a => -a) == 1);
     }
 
     // with empty, but seeded ranges
