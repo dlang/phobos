@@ -1392,7 +1392,7 @@ enum Config
     By default, the child process inherits the parent's environment,
     and any environment variables passed to $(LREF spawnProcess) will
     be added to it.  If this flag is set, the only variables in the
-    child process' environment will be those given to spawnProcess.
+    child process's environment will be those given to spawnProcess.
     */
     newEnv = 1,
 
@@ -2026,7 +2026,7 @@ input, output and/or error streams.
 
 $(D pipeProcess) and $(D pipeShell) are convenient wrappers around
 $(LREF spawnProcess) and $(LREF spawnShell), respectively, and
-automate the task of redirecting one or more of the child process'
+automate the task of redirecting one or more of the child process's
 standard streams through pipes.  Like the functions they wrap,
 these functions return immediately, leaving the child process to
 execute in parallel with the invoking process.  It is recommended
@@ -2225,7 +2225,7 @@ private ProcessPipes pipeProcessImpl(alias spawnFunc, Cmd, ExtraSpawnFuncArgs...
 
 /**
 Flags that can be passed to $(LREF pipeProcess) and $(LREF pipeShell)
-to specify which of the child process' standard streams are redirected.
+to specify which of the child process's standard streams are redirected.
 Use bitwise OR to combine flags.
 */
 enum Redirect
@@ -2344,49 +2344,49 @@ struct ProcessPipes
     }
 
     /**
-    An $(REF File, std,stdio) that allows writing to the child process'
+    An $(REF File, std,stdio) that allows writing to the child process's
     standard input stream.
 
     Throws:
-    $(OBJECTREF Error) if the child process' standard input stream hasn't
+    $(OBJECTREF Error) if the child process's standard input stream hasn't
     been redirected.
     */
     @property File stdin() @safe nothrow
     {
         if ((_redirectFlags & Redirect.stdin) == 0)
-            throw new Error("Child process' standard input stream hasn't "
+            throw new Error("child process's standard input stream hasn't "
                             ~"been redirected.");
         return _stdin;
     }
 
     /**
-    An $(REF File, std,stdio) that allows reading from the child process'
+    An $(REF File, std,stdio) that allows reading from the child process's
     standard output stream.
 
     Throws:
-    $(OBJECTREF Error) if the child process' standard output stream hasn't
+    $(OBJECTREF Error) if the child process's standard output stream hasn't
     been redirected.
     */
     @property File stdout() @safe nothrow
     {
         if ((_redirectFlags & Redirect.stdout) == 0)
-            throw new Error("Child process' standard output stream hasn't "
+            throw new Error("child process's standard output stream hasn't "
                             ~"been redirected.");
         return _stdout;
     }
 
     /**
-    An $(REF File, std,stdio) that allows reading from the child process'
+    An $(REF File, std,stdio) that allows reading from the child process's
     standard error stream.
 
     Throws:
-    $(OBJECTREF Error) if the child process' standard error stream hasn't
+    $(OBJECTREF Error) if the child process's standard error stream hasn't
     been redirected.
     */
     @property File stderr() @safe nothrow
     {
         if ((_redirectFlags & Redirect.stderr) == 0)
-            throw new Error("Child process' standard error stream hasn't "
+            throw new Error("child process's standard error stream hasn't "
                             ~"been redirected.");
         return _stderr;
     }
