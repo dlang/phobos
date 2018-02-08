@@ -480,7 +480,7 @@ struct MD5
                     "1234567890123456789012345678901234567890");
     assert(digest == cast(ubyte[]) hexString!"57edf4a22be3c955ac49da2e2107b67a");
 
-    enum ubyte[16] input = hexString!"c3fcd3d76192e4007dfb496cca67e13b";
+    enum ubyte[16] input = cast(ubyte[16]) hexString!"c3fcd3d76192e4007dfb496cca67e13b";
     assert(toHexString(input)
         == "C3FCD3D76192E4007DFB496CCA67E13B");
 

@@ -381,7 +381,7 @@ struct CRC(uint N, ulong P) if (N == 32 || N == 64)
                     "1234567890123456789012345678901234567890");
     assert(digest == cast(ubyte[]) hexString!"724aa97c");
 
-    enum ubyte[4] input = hexString!"c3fcd3d7";
+    enum ubyte[4] input = cast(ubyte[4]) hexString!"c3fcd3d7";
     assert(crcHexString(input) == "D7D3FCC3");
 }
 
@@ -421,7 +421,7 @@ struct CRC(uint N, ulong P) if (N == 32 || N == 64)
                          "1234567890123456789012345678901234567890");
     assert(digest == cast(ubyte[]) hexString!"bd3eb7765d0a22ae");
 
-    enum ubyte[8] input = hexString!"c3fcd3d7efbeadde";
+    enum ubyte[8] input = cast(ubyte[8]) hexString!"c3fcd3d7efbeadde";
     assert(crcHexString(input) == "DEADBEEFD7D3FCC3");
 }
 
@@ -461,7 +461,7 @@ struct CRC(uint N, ulong P) if (N == 32 || N == 64)
                         "1234567890123456789012345678901234567890");
     assert(digest == cast(ubyte[]) hexString!"760cd2d3588bf809");
 
-    enum ubyte[8] input = hexString!"c3fcd3d7efbeadde";
+    enum ubyte[8] input = cast(ubyte[8]) hexString!"c3fcd3d7efbeadde";
     assert(crcHexString(input) == "DEADBEEFD7D3FCC3");
 }
 

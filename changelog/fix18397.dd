@@ -1,0 +1,29 @@
+Changed std.conv.hexString() to return an immutable string literal
+rather than an array of ubytes. This is more in keeping with
+the documentation that says it is a replacement for the deprecated
+x"deadbeef" string literal syntax.
+
+https://dlang.org/phobos/std_conv.html#hexString
+
+The benefits of this change are:
+
+* behavior consistency with the documentation
+* the hexString template instantiations no longer appear in the
+generated object file
+* the generated object file no longer contains references to TypeInfo
+and various druntime functions
+* it is now compatible with -betterC mode
+
+In some cases, code did rely on it being an array, and a cast will
+fix the issue:
+
+---
+// now an error:
+enum ubyte[8] input = hexString!"c3 fc 3d 7e fb ea dd aa";
+---
+
+---
+// add cast to fix:
+enum ubyte[8] input = cast(ubyte[8]) hexString!"c3 fc 3d 7e fb ea dd aa";
+---
+
