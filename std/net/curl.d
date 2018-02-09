@@ -2314,7 +2314,7 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
   * http.perform();
   * ---
   *
-  * See_Also: $(_HTTP www.ietf.org/rfc/rfc2616.txt, RFC2616)
+  * See_Also: $(LINK2 http://www.ietf.org/rfc/rfc2616.txt, RFC2616)
   *
   */
 struct HTTP
