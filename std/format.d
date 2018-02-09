@@ -82,7 +82,7 @@ class FormatException : Exception
     }
 }
 
-private alias enforceFmt = enforceEx!FormatException;
+private alias enforceFmt = enforce!FormatException;
 
 
 /**********************************************************************
