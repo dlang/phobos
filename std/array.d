@@ -59,6 +59,9 @@ $(TR $(TH Function Name) $(TH Description)
         $(TD Checks if the final segments of two arrays refer to the same place
         in memory.
     ))
+    $(TR $(TD $(LREF isSliceOf))
+        $(TD Checks if the first array is a slice of the second array.
+    ))
     $(TR $(TD $(LREF split))
         $(TD Eagerly split a range or string into an array.
     ))
@@ -1840,6 +1843,84 @@ pure nothrow @nogc bool sameTail(T)(in T[] lhs, in T[] rhs)
         assert(a.sameHead(a[0 .. 0]));
         assert(a.sameTail(a[$ .. $]));
     }}
+}
+
+/**
+Checks whether a `part` is part of a `whole` array.
+
+Params:
+
+    part = The array to check for its origin
+    whole = The origin array to be queried
+
+Returns: `true` if `part` is a slice of `whole`.
+*/
+bool isSliceOf(T)(const scope T[] part, const scope T[] whole) @trusted
+{
+    return whole.ptr <= part.ptr &&
+           part.ptr + part.length <= whole.ptr + whole.length;
+}
+
+///
+@safe pure nothrow unittest
+{
+    auto a = [1, 2, 3, 4, 5];
+
+    assert(a[3..$].isSliceOf(a));
+    assert(a[].isSliceOf(a));
+    assert(!a.isSliceOf(a[3..$]));
+    assert(![7, 8].isSliceOf(a));
+    assert(!null.isSliceOf(a));
+
+    // null is a slice of itself
+    assert(null.isSliceOf(null));
+}
+
+@safe pure nothrow unittest
+{
+    static foreach (T; AliasSeq!(int[], const(int)[], immutable(int)[], const int[], immutable int[]))
+    {{
+        T a = [1, 2, 3, 4, 5];
+        T b = a;
+        T c = a[1 .. $];
+        T d = a[0 .. 1];
+        T e = null;
+
+        assert(a.isSliceOf(a));
+        assert(b.isSliceOf(a));
+        assert(a.isSliceOf(b));
+
+        assert(c.isSliceOf(a));
+        assert(c.isSliceOf(b));
+        assert(!a.isSliceOf(c));
+        assert(!b.isSliceOf(c));
+
+        assert(d.isSliceOf(a));
+        assert(d.isSliceOf(b));
+        assert(!a.isSliceOf(d));
+        assert(!b.isSliceOf(d));
+
+        assert(!e.isSliceOf(a));
+        assert(!e.isSliceOf(b));
+        assert(!e.isSliceOf(c));
+        assert(!e.isSliceOf(d));
+
+        //verifies R-value compatibilty
+        assert(a[$ .. $].isSliceOf(a));
+        assert(a[0 .. 0].isSliceOf(a));
+        assert(a.isSliceOf(a[0.. $]));
+        assert(a[0 .. $].isSliceOf(a));
+    }}
+}
+
+// null is a slice of itself
+@safe pure nothrow unittest
+{
+    assert(null.isSliceOf(null));
+
+    int[] arr;
+    assert(null.isSliceOf(arr));
+    assert(arr.isSliceOf(null));
 }
 
 /**

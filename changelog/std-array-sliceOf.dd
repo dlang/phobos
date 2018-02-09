@@ -1,0 +1,18 @@
+std.array.sliceOf has been added
+
+$(REF sliceOf, std,array) provides a `@safe` way to query
+
+---
+import std.array : sliceOf;
+
+auto a = [1, 2, 3, 4, 5];
+
+assert(a[3..$].sliceOf(a));
+assert(a[].sliceOf(a));
+assert(!a.sliceOf(a[3..$]));
+assert(![7, 8].sliceOf(a));
+assert(!null.sliceOf(a));
+
+// null is a slice of itself
+assert(null.sliceOf(null));
+---
