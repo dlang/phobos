@@ -3809,7 +3809,7 @@ version (StdDdoc)
     Replaces the current process by executing a command, $(D pathname), with
     the arguments in $(D argv).
 
-    $(BLUE This functions is Posix-Only.)
+    $(BLUE This function is Posix-Only.)
 
     Typically, the first element of $(D argv) is
     the command being executed, i.e. $(D argv[0] == pathname). The 'p'
