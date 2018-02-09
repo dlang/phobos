@@ -416,7 +416,7 @@ T enforce(T)(T value, lazy Throwable ex)
 }
 
 ///
-unittest
+@system unittest
 {
     import core.stdc.stdlib : malloc, free;
     import std.conv : ConvException, to;

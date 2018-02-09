@@ -1138,10 +1138,13 @@ if (isBidirectionalRange!R &&
         static if (isDefaultPred && isSomeChar!E && E.sizeof <= ElementEncodingType!R.sizeof)
             return doesThisEnd[$ - 1] == withThis;
         // specialize for ASCII as to not change previous behavior
-        else if (withThis <= 0x7F)
-            return predFunc(doesThisEnd[$ - 1], withThis);
         else
-            return predFunc(doesThisEnd.back, withThis);
+        {
+            if (withThis <= 0x7F)
+                return predFunc(doesThisEnd[$ - 1], withThis);
+            else
+                return predFunc(doesThisEnd.back, withThis);
+        }
     }
     else
     {
@@ -4263,10 +4266,13 @@ if (isInputRange!R &&
         static if (isDefaultPred && isSomeChar!E && E.sizeof <= ElementEncodingType!R.sizeof)
             return doesThisStart[0] == withThis;
         // specialize for ASCII as to not change previous behavior
-        else if (withThis <= 0x7F)
-            return predFunc(doesThisStart[0], withThis);
         else
-            return predFunc(doesThisStart.front, withThis);
+        {
+            if (withThis <= 0x7F)
+                return predFunc(doesThisStart[0], withThis);
+            else
+                return predFunc(doesThisStart.front, withThis);
+        }
     }
     else
     {

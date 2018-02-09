@@ -1299,7 +1299,7 @@ if (distinctFieldNames!(Specs))
 }
 
 /// Use tuples as ranges
-unittest
+@safe unittest
 {
     import std.algorithm.iteration : sum;
     import std.range : only;

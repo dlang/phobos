@@ -524,7 +524,7 @@ template isDeprecatedComplex(T)
     }
 }
 
-deprecated unittest
+@safe deprecated unittest
 {
     static assert(isDeprecatedComplex!cfloat);
     static assert(isDeprecatedComplex!cdouble);

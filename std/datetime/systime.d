@@ -10322,7 +10322,6 @@ if (isSomeString!S)
     import std.ascii : isDigit;
     import std.conv : to;
     import std.string : representation;
-    import core.time;
 
     if (isoString.empty)
         return Duration.zero;
@@ -10963,7 +10962,6 @@ version(StdUnittest)
 
     void initializeTests() @safe
     {
-        import core.time;
         import std.algorithm.sorting : sort;
         import std.typecons : Rebindable;
         immutable lt = LocalTime().utcToTZ(0);

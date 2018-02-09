@@ -313,7 +313,7 @@ version(StdUnittest)
 version(StdDdoc) import std.stdio;
 
 // Default data timeout for Protocols
-enum _defaultDataTimeout = dur!"minutes"(2);
+private enum _defaultDataTimeout = dur!"minutes"(2);
 
 /**
 Macros:
@@ -1643,7 +1643,7 @@ if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
     }
     else
     {
-        import std.concurrency;
+        import std.concurrency : OnCrowding, send, setMaxMailboxSize, spawn, thisTid, Tid;
         // 50 is just an arbitrary number for now
         setMaxMailboxSize(thisTid, 50, OnCrowding.block);
         auto tid = spawn(&_async!().spawn!(Conn, Char, Terminator));
@@ -1767,7 +1767,7 @@ if (isCurlConn!(Conn))
     }
     else
     {
-        import std.concurrency;
+        import std.concurrency : OnCrowding, send, setMaxMailboxSize, spawn, thisTid, Tid;
         // 50 is just an arbitrary number for now
         setMaxMailboxSize(thisTid, 50, OnCrowding.block);
         auto tid = spawn(&_async!().spawn!(Conn, ubyte));
@@ -1826,7 +1826,7 @@ if (isCurlConn!(Conn))
 */
 private mixin template Protocol()
 {
-    import etc.c.curl : CurlReadFunc;
+    import etc.c.curl : CurlReadFunc, RawCurlProxy = CurlProxy;
     import core.time : Duration;
     import std.socket : InternetAddress;
 
@@ -1911,7 +1911,7 @@ private mixin template Protocol()
     }
 
     /// Type of proxy
-    alias CurlProxy = etc.c.curl.CurlProxy;
+    alias CurlProxy = RawCurlProxy;
 
     /** Proxy type
      *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
@@ -2323,7 +2323,7 @@ struct HTTP
 
     import std.datetime.systime : SysTime;
     import std.typecons : RefCounted;
-    import etc.c.curl;
+    import etc.c.curl : CurlAuth, CurlInfo, curl_slist, CURLVERSION_NOW, curl_off_t;
 
     /// Authentication method equal to $(REF CurlAuth, etc,c,curl)
     alias AuthMethod = CurlAuth;
@@ -3244,7 +3244,7 @@ struct FTP
     mixin Protocol;
 
     import std.typecons : RefCounted;
-    import etc.c.curl;
+    import etc.c.curl : CurlError, CurlInfo, curl_off_t, curl_slist;
 
     private struct Impl
     {
@@ -3646,7 +3646,7 @@ struct SMTP
 {
     mixin Protocol;
     import std.typecons : RefCounted;
-    import etc.c.curl;
+    import etc.c.curl : CurlUseSSL, curl_slist;
 
     private struct Impl
     {
@@ -4056,9 +4056,11 @@ alias ThrowOnError = Flag!"throwOnError";
 
 private struct CurlAPI
 {
-    import etc.c.curl;
+    import etc.c.curl : CurlGlobal;
     static struct API
     {
+    import etc.c.curl : curl_version_info, curl_version_info_data,
+                        CURL, CURLcode, CURLINFO, CURLoption, CURLversion, curl_slist;
     extern(C):
         import core.stdc.config : c_long;
         CURLcode function(c_long flags) global_init;
@@ -4189,7 +4191,10 @@ private struct CurlAPI
 */
 struct Curl
 {
-    import etc.c.curl;
+    import etc.c.curl : CURL, CurlError, CurlPause, CurlSeek, CurlSeekPos,
+                        curl_socket_t, CurlSockType,
+                        CurlReadFunc, CurlInfo, curlsocktype, curl_off_t,
+                        LIBCURL_VERSION_MAJOR, LIBCURL_VERSION_MINOR, LIBCURL_VERSION_PATCH;
 
     alias OutData = void[];
     alias InData = ubyte[];

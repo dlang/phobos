@@ -531,7 +531,7 @@ nothrow:
     }
 }
 
-unittest
+@system unittest
 {
     import std.experimental.allocator.building_blocks.region : Region;
     import std.conv : emplace;
@@ -553,7 +553,7 @@ unittest
     assert((cast(CAllocatorImpl!(Region!(), Yes.indirect))(rcalloc._alloc)).rc == 1);
 }
 
-unittest
+@system unittest
 {
     import std.conv;
     import std.experimental.allocator.mallocator;
@@ -576,7 +576,7 @@ unittest
             ~ to!string(bytesUsed) ~ " bytes");
 }
 
-unittest
+@safe unittest
 {
     import std.conv;
     import std.experimental.allocator.mallocator;
@@ -2554,7 +2554,7 @@ RCIAllocator allocatorObject(A)(A* pa)
     assert(a.deallocate(b));
 }
 
-unittest
+@system unittest
 {
     import std.conv;
     import std.experimental.allocator.mallocator;

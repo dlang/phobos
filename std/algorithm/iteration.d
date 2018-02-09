@@ -4689,6 +4689,47 @@ if (isSomeChar!C)
     }
 }
 
+// In same combinations substitute needs to calculate the auto-decoded length
+// of its needles
+private template hasDifferentAutodecoding(Range, Needles...)
+{
+    import std.meta : anySatisfy;
+    /* iff
+       - the needles needs auto-decoding, but the incoming range doesn't (or vice versa)
+       - both (range, needle) need auto-decoding and don't share the same common type
+    */
+    enum needlesAreNarrow = anySatisfy!(isNarrowString, Needles);
+    enum sourceIsNarrow = isNarrowString!Range;
+    enum hasDifferentAutodecoding = sourceIsNarrow != needlesAreNarrow ||
+                                    (sourceIsNarrow && needlesAreNarrow &&
+                                    is(CommonType!(Range, Needles) == void));
+}
+
+@safe nothrow @nogc pure unittest
+{
+    import std.meta : AliasSeq; // used for better clarity
+
+    static assert(!hasDifferentAutodecoding!(string, AliasSeq!(string, string)));
+    static assert(!hasDifferentAutodecoding!(wstring, AliasSeq!(wstring, wstring)));
+    static assert(!hasDifferentAutodecoding!(dstring, AliasSeq!(dstring, dstring)));
+
+    // the needles needs auto-decoding, but the incoming range doesn't (or vice versa)
+    static assert(hasDifferentAutodecoding!(string, AliasSeq!(wstring, wstring)));
+    static assert(hasDifferentAutodecoding!(string, AliasSeq!(dstring, dstring)));
+    static assert(hasDifferentAutodecoding!(wstring, AliasSeq!(string, string)));
+    static assert(hasDifferentAutodecoding!(wstring, AliasSeq!(dstring, dstring)));
+    static assert(hasDifferentAutodecoding!(dstring, AliasSeq!(string, string)));
+    static assert(hasDifferentAutodecoding!(dstring, AliasSeq!(wstring, wstring)));
+
+    // both (range, needle) need auto-decoding and don't share the same common type
+    static foreach (T; AliasSeq!(string, wstring, dstring))
+    {
+        static assert(hasDifferentAutodecoding!(T, AliasSeq!(wstring, string)));
+        static assert(hasDifferentAutodecoding!(T, AliasSeq!(dstring, string)));
+        static assert(hasDifferentAutodecoding!(T, AliasSeq!(wstring, dstring)));
+    }
+}
+
 // substitute
 /**
 Returns a range with all occurrences of `substs` in `r`.
@@ -4731,14 +4772,16 @@ if (substs.length >= 2 && isExpressions!substs)
                 // Substitute single range elements with compile-time substitution mappings
                 return value.map!(a => substitute(a));
             }
-            else static if (isInputRange!Value && !is(CommonType!(ElementType!Value, ElementType!(typeof(substs[0]))) == void))
+            else static if (isInputRange!Value &&
+                    !is(CommonType!(ElementType!Value, ElementType!(typeof(substs[0]))) == void))
             {
                 // not implemented yet, fallback to runtime variant for now
                 return .substitute(value, substs);
             }
             else
             {
-                static assert(0, "Compile-time substitutions must be elements or ranges of the same type of ` ~ Value.stringof ~ `.");
+                static assert(0, `Compile-time substitutions must be elements or ranges of the same type of ` ~
+                    Value.stringof ~ `.`);
             }
         }
         // Substitute single values with compile-time substitution mappings.
@@ -4753,47 +4796,6 @@ if (substs.length >= 2 && isExpressions!substs)
                 default: return value;
             }
         }
-    }
-}
-
-// In same combinations substitute needs to calculate the auto-decoded length
-// of its needles
-private template hasDifferentAutodecoding(Range, Needles...)
-{
-    import std.meta : anySatisfy;
-    /* iff
-       - the needles needs auto-decoding, but the incoming range doesn't (or vice versa)
-       - both (range, needle) need auto-decoding and don't share the same common type
-    */
-    enum needlesAreNarrow = anySatisfy!(isNarrowString, Needles);
-    enum sourceIsNarrow = isNarrowString!Range;
-    enum hasDifferentAutodecoding = sourceIsNarrow != needlesAreNarrow ||
-                                    (sourceIsNarrow && needlesAreNarrow &&
-                                    is(CommonType!(Range, Needles) == void));
-}
-
-@safe nothrow @nogc pure unittest
-{
-    import std.meta : AliasSeq; // used for better clarity
-
-    static assert(!hasDifferentAutodecoding!(string, AliasSeq!(string, string)));
-    static assert(!hasDifferentAutodecoding!(wstring, AliasSeq!(wstring, wstring)));
-    static assert(!hasDifferentAutodecoding!(dstring, AliasSeq!(dstring, dstring)));
-
-    // the needles needs auto-decoding, but the incoming range doesn't (or vice versa)
-    static assert(hasDifferentAutodecoding!(string, AliasSeq!(wstring, wstring)));
-    static assert(hasDifferentAutodecoding!(string, AliasSeq!(dstring, dstring)));
-    static assert(hasDifferentAutodecoding!(wstring, AliasSeq!(string, string)));
-    static assert(hasDifferentAutodecoding!(wstring, AliasSeq!(dstring, dstring)));
-    static assert(hasDifferentAutodecoding!(dstring, AliasSeq!(string, string)));
-    static assert(hasDifferentAutodecoding!(dstring, AliasSeq!(wstring, wstring)));
-
-    // both (range, needle) need auto-decoding and don't share the same common type
-    static foreach (T; AliasSeq!(string, wstring, dstring))
-    {
-        static assert(hasDifferentAutodecoding!(T, AliasSeq!(wstring, string)));
-        static assert(hasDifferentAutodecoding!(T, AliasSeq!(dstring, string)));
-        static assert(hasDifferentAutodecoding!(T, AliasSeq!(wstring, dstring)));
     }
 }
 
