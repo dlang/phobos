@@ -6173,21 +6173,21 @@ Returns:
 template hexString(string hexData)
 if (hexData.isHexLiteral)
 {
-    immutable hexString = hexStrImpl(hexData);
+    enum hexString = mixin(hexToString(hexData));
 }
 
 /// ditto
 template hexString(wstring hexData)
 if (hexData.isHexLiteral)
 {
-    immutable hexString = hexStrImpl(hexData);
+    enum wstring hexString = mixin(hexToString(hexData));
 }
 
 /// ditto
 template hexString(dstring hexData)
 if (hexData.isHexLiteral)
 {
-    immutable hexString = hexStrImpl(hexData);
+    enum dstring hexString = mixin(hexToString(hexData));
 }
 
 ///
@@ -6202,44 +6202,70 @@ if (hexData.isHexLiteral)
     assert(string3 == "0J1K"d);
 }
 
+@safe nothrow pure private
+{
+    /* These are meant to be used with CTFE.
+     * They cause the instantiations of hexStrLiteral()
+     * to be in Phobos, not user code.
+     */
+    string hexToString(string s)
+    {
+        return hexStrLiteral(s);
+    }
+
+    wstring hexToString(wstring s)
+    {
+        return hexStrLiteral(s);
+    }
+
+    dstring hexToString(dstring s)
+    {
+        return hexStrLiteral(s);
+    }
+}
+
 /*
-    Takes a hexadecimal string literal and returns its representation.
-    hexData is granted to be a valid string by the caller.
-    C is granted to be a valid char type by the caller.
-*/
-@safe nothrow pure
-private auto hexStrImpl(String)(scope String hexData)
+    Turn a hexadecimal string into a regular string literal.
+    I.e. "dead beef" is transformed into "\xde\xad\xbe\xef"
+    suitable for use in a mixin.
+    Params:
+        hexData is string, wstring, or dstring and validated by isHexLiteral()
+ */
+@trusted nothrow pure
+private auto hexStrLiteral(String)(scope String hexData)
 {
     import std.ascii : isHexDigit;
-    alias C = Unqual!(ElementEncodingType!String);
+    alias C = Unqual!(ElementEncodingType!String);    // char, wchar or dchar
     C[] result;
-    result.length = hexData.length / 2;
-    size_t cnt;
+    result.length = 1 + hexData.length * 2 + 1;       // don't forget the " "
+    /* Use a pointer because we know it won't overrun,
+     * and this will reduce the size of the function substantially
+     * by not doing the array bounds checks.
+     * This is why this function is @trusted.
+     */
+    auto r = result.ptr;
+    r[0] = '"';
+    size_t cnt = 0;
     ubyte v;
     foreach (c; hexData)
     {
         if (c.isHexDigit)
         {
-            ubyte x;
-            if (c >= '0' && c <= '9')
-                x = cast(ubyte)(c - '0');
-            else if (c >= 'a' && c <= 'f')
-                x = cast(ubyte)(c - ('a' - 10));
-            else if (c >= 'A' && c <= 'F')
-                x = cast(ubyte)(c - ('A' - 10));
-            if (cnt & 1)
+            if ((cnt & 1) == 0)
             {
-                v = cast(ubyte)((v << 4) | x);
-                result[cnt / 2] = v;
+                r[1 + cnt]     = '\\';
+                r[1 + cnt + 1] = 'x';
+                cnt += 2;
             }
-            else
-                v = x;
+            r[1 + cnt] = c;
             ++cnt;
         }
     }
-    result.length = cnt / 2;
+    r[1 + cnt] = '"';
+    result.length = 1 + cnt + 1;        // trim off any excess length
     return result;
 }
+
 
 @safe unittest
 {

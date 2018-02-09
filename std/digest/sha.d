@@ -1117,7 +1117,7 @@ alias SHA512_256 = SHA!(1024, 256); /// SHA alias for SHA-512/256, hash is ubyte
     assert(digest512_224 == cast(ubyte[]) hexString!"37ab331d76f0d36de422bd0edeb22a28accd487b7a8453ae965dd287");
     assert(digest512_256 == cast(ubyte[]) hexString!"9a59a052930187a97038cae692f30708aa6491923ef5194394dc68d56c74fb21");
 
-    enum ubyte[20] input = hexString!"a9993e364706816aba3e25717850c26c9cd0d89d";
+    enum ubyte[20] input = cast(ubyte[20]) hexString!"a9993e364706816aba3e25717850c26c9cd0d89d";
     assert(toHexString(input)
         == "A9993E364706816ABA3E25717850C26C9CD0D89D");
 }
