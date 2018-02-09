@@ -4016,8 +4016,6 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
         Separator _separator;
         // _frontLength == size_t.max means empty
         size_t _frontLength = size_t.max;
-        static if (isBidirectionalRange!Range)
-            size_t _backLength = size_t.max;
 
         @property auto separatorLength() { return _separator.length; }
 
@@ -4028,22 +4026,6 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
             // compute front length
             _frontLength = (_separator.empty) ? 1 :
                            _input.length - find!pred(_input, _separator).length;
-            static if (isBidirectionalRange!Range)
-                if (_frontLength == _input.length) _backLength = _frontLength;
-        }
-
-        void ensureBackLength()
-        {
-            static if (isBidirectionalRange!Range)
-                if (_backLength != _backLength.max) return;
-            assert(!_input.empty);
-            // compute back length
-            static if (isBidirectionalRange!Range && isBidirectionalRange!Separator)
-            {
-                import std.range : retro;
-                _backLength = _input.length -
-                    find!pred(retro(_input), retro(_separator)).source.length;
-            }
         }
 
     public:
@@ -4081,8 +4063,6 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
                 // done, there's no separator in sight
                 _input = _input[_frontLength .. _frontLength];
                 _frontLength = _frontLength.max;
-                static if (isBidirectionalRange!Range)
-                    _backLength = _backLength.max;
                 return;
             }
             if (_frontLength + separatorLength == _input.length)
@@ -4091,8 +4071,6 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
                 // an empty item right after this.
                 _input = _input[_input.length .. _input.length];
                 _frontLength = 0;
-                static if (isBidirectionalRange!Range)
-                    _backLength = 0;
                 return;
             }
             // Normal case, pop one item and the separator, get ready for
@@ -4170,15 +4148,6 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
         assert(e == w[i++]);
     }
     assert(i == w.length);
-    // // Now go back
-    // auto s2 = splitter(a, 0);
-
-    // foreach (e; retro(s2))
-    // {
-    //     assert(i > 0);
-    //     assert(equal(e, w[--i]), text(e));
-    // }
-    // assert(i == 0);
 
     wstring names = ",peter,paul,jerry,";
     auto words = split(names, ",");
