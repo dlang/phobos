@@ -82,6 +82,22 @@ struct StopWatch
 {
 public:
 
+    /// Measure a time in milliseconds, microseconds, or nanoseconds
+    @safe nothrow @nogc unittest
+    {
+        auto sw = StopWatch(AutoStart.no);
+        sw.start();
+        // ... Insert operations to be timed here ...
+        sw.stop();
+
+        long msecs = sw.peek.total!"msecs";
+        long usecs = sw.peek.total!"usecs";
+        long nsecs = sw.peek.total!"nsecs";
+
+        assert(usecs >= msecs * 1000);
+        assert(nsecs >= usecs * 1000);
+    }
+
     ///
     @system nothrow @nogc unittest
     {
