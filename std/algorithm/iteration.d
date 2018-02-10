@@ -3292,6 +3292,11 @@ Returns:
 
 See_Also:
     $(HTTP en.wikipedia.org/wiki/Prefix_sum, Prefix Sum)
+
+Note:
+
+    In functional programming languages this is typically called `scan`, `scanl`,
+    `scanLeft` or `reductions`.
 +/
 template cumulativeFold(fun...)
 if (fun.length >= 1)
