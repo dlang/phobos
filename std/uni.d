@@ -1588,7 +1588,7 @@ private auto packedArrayView(T)(inout(size_t)* ptr, size_t items) @trusted pure 
 // Partially unrolled binary search using Shar's method
 //============================================================================
 
-string genUnrolledSwitchSearch(size_t size) @safe pure nothrow
+auto genUnrolledSwitchSearch(size_t size) @safe pure nothrow
 {
     import core.bitop : bsr;
     import std.array : replace;
@@ -2759,7 +2759,7 @@ public:
         }
         ---
     */
-    string toSourceCode(string funcName="")
+    string toSourceCode()(string funcName="")
     {
         import std.array : array;
         auto range = byInterval.array();
@@ -5937,7 +5937,7 @@ else
     import std.algorithm.iteration : map;
     import std.range : assumeSorted;
     auto range = assumeSorted!((a,b) => propertyNameLess(a,b))
-        (table.map!"a.name"());
+        (table.map!(a => a.name)());
     size_t idx = range.lowerBound(name).length;
     if (idx < range.length && comparePropertyName(range[idx], name) == 0)
         return idx;
@@ -6081,12 +6081,16 @@ else
     return findUnicodeSet!table(name) >= 0;
 }
 
-template SetSearcher(alias table, string kind)
+template SetSearcher(string tableName, string kind)
 {
     /// Run-time checked search.
     static auto opCall(C)(in C[] name)
         if (is(C : dchar))
     {
+        // lazily import the big unicode_table
+        mixin(q{
+            import std.internal.unicode_tables;
+            alias table = } ~ tableName ~ ";");
         import std.conv : to;
         CodepointSet set;
         if (loadUnicodeSet!table(name, set))
@@ -6097,6 +6101,10 @@ template SetSearcher(alias table, string kind)
     /// Compile-time checked search.
     static @property auto opDispatch(string name)()
     {
+        // lazily import the big unicode_table
+        mixin(q{
+            import std.internal.unicode_tables;
+            alias table = } ~ tableName ~ ";");
         static if (findSetName!table(name))
         {
             CodepointSet set;
@@ -6129,7 +6137,7 @@ package @trusted auto memoizeExpr(string expr)()
 }
 
 //property for \w character class
-package @property @safe CodepointSet wordCharacter()
+package @property @safe auto wordCharacter()
 {
     return memoizeExpr!("unicode.Alphabetic | unicode.Mn | unicode.Mc
         | unicode.Me | unicode.Nd | unicode.Pc")();
@@ -6206,7 +6214,7 @@ package dchar parseUniHex(Range)(ref Range str, size_t maxDigit)
       .canFind("invalid codepoint"));
 }
 
-auto caseEnclose(CodepointSet set)
+auto caseEnclose()(CodepointSet set)
 {
     auto cased = set & unicode.LC;
     foreach (dchar ch; cased.byCodepoint)
@@ -6220,7 +6228,7 @@ auto caseEnclose(CodepointSet set)
 /+
     fetch codepoint set corresponding to a name (InBlock or binary property)
 +/
-@trusted CodepointSet getUnicodeSet(in char[] name, bool negated,  bool casefold)
+@trusted CodepointSet getUnicodeSet()(in char[] name, bool negated,  bool casefold)
 {
     CodepointSet s = unicode(name);
     //FIXME: caseEnclose for new uni as Set | CaseEnclose(SET && LC)
@@ -6233,7 +6241,6 @@ auto caseEnclose(CodepointSet set)
 
 @safe struct UnicodeSetParser(Range)
 {
-    import std.exception : enforce;
     import std.typecons : tuple, Tuple;
     Range range;
     bool casefold_;
@@ -6251,6 +6258,7 @@ auto caseEnclose(CodepointSet set)
     //also fetches next set operation
     Tuple!(CodepointSet,Operator) parseCharTerm()
     {
+        import std.exception : enforce;
         import std.range : drop;
         enum privateUseStart = '\U000F0000', privateUseEnd ='\U000FFFFD';
         enum State{ Start, Char, Escape, CharDash, CharDashEscape,
@@ -6557,6 +6565,7 @@ auto caseEnclose(CodepointSet set)
 
     CodepointSet parseSet()
     {
+        import std.exception : enforce;
         ValStack vstack;
         OpStack opstack;
         import std.functional : unaryFun;
@@ -6689,7 +6698,6 @@ auto caseEnclose(CodepointSet set)
 */
 @safe public struct unicode
 {
-    import std.exception : enforce;
     /**
         Performs the lookup of set of $(CODEPOINTS)
         with compile-time correctness checking.
@@ -6762,8 +6770,7 @@ auto caseEnclose(CodepointSet set)
     */
     struct block
     {
-        import std.internal.unicode_tables : blocks; // generated file
-        mixin SetSearcher!(blocks.tab, "block");
+        mixin SetSearcher!("blocks.tab", "block");
     }
 
     ///
@@ -6781,8 +6788,7 @@ auto caseEnclose(CodepointSet set)
     */
     struct script
     {
-        import std.internal.unicode_tables : scripts; // generated file
-        mixin SetSearcher!(scripts.tab, "script");
+        mixin SetSearcher!("scripts.tab", "script");
     }
 
     ///
@@ -6812,8 +6818,7 @@ auto caseEnclose(CodepointSet set)
     */
     struct hangulSyllableType
     {
-        import std.internal.unicode_tables : hangul; // generated file
-        mixin SetSearcher!(hangul.tab, "hangul syllable type");
+        mixin SetSearcher!("hangul.tab", "hangul syllable type");
     }
 
     ///
@@ -6830,6 +6835,7 @@ auto caseEnclose(CodepointSet set)
     //parse control code of form \cXXX, c assumed to be the current symbol
     static package dchar parseControlCode(Parser)(ref Parser p)
     {
+        import std.exception : enforce;
         with(p)
         {
             popFront();
@@ -6846,6 +6852,7 @@ auto caseEnclose(CodepointSet set)
     static package CodepointSet parsePropertySpec(Range)(ref Range p,
         bool negated, bool casefold)
     {
+        import std.exception : enforce;
         static import std.ascii;
         with(p)
         {
@@ -7397,7 +7404,6 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 +/
 @trusted struct Grapheme
 {
-    import std.exception : enforce;
     import std.traits : isDynamicArray;
 
 public:
@@ -8783,20 +8789,27 @@ else
 // trusted -> avoid bounds check
 @trusted pure nothrow @nogc private
 {
-    import std.internal.unicode_tables; // : toLowerTable, toTitleTable, toUpperTable; // generated file
-
     // hide template instances behind functions (Bugzilla 13232)
     ushort toLowerIndex(dchar c) { return toLowerIndexTrie[c]; }
     ushort toLowerSimpleIndex(dchar c) { return toLowerSimpleIndexTrie[c]; }
-    dchar toLowerTab(size_t idx) { return toLowerTable[idx]; }
+    dchar toLowerTab()(size_t idx) {
+        import std.internal.unicode_tables : toLowerTable; // generated file
+        return toLowerTable[idx];
+    }
 
     ushort toTitleIndex(dchar c) { return toTitleIndexTrie[c]; }
     ushort toTitleSimpleIndex(dchar c) { return toTitleSimpleIndexTrie[c]; }
-    dchar toTitleTab(size_t idx) { return toTitleTable[idx]; }
+    dchar toTitleTab()(size_t idx) {
+        import std.internal.unicode_tables : toTitleTable; // generated file
+        return toTitleTable[idx];
+    }
 
     ushort toUpperIndex(dchar c) { return toUpperIndexTrie[c]; }
     ushort toUpperSimpleIndex(dchar c) { return toUpperSimpleIndexTrie[c]; }
-    dchar toUpperTab(size_t idx) { return toUpperTable[idx]; }
+    dchar toUpperTab()(size_t idx) {
+        import std.internal.unicode_tables : toUpperTable; // generated file
+        return toUpperTable[idx];
+    }
 }
 
 public:
@@ -8900,8 +8913,25 @@ private dchar toTitlecase(dchar c)
     return c;
 }
 
-private alias UpperTriple = AliasSeq!(toUpperIndex, MAX_SIMPLE_UPPER, toUpperTab);
-private alias LowerTriple = AliasSeq!(toLowerIndex, MAX_SIMPLE_LOWER, toLowerTab);
+/*
+Needs to be a function to make the import of std.internal.unicode_tables lazy
+As of 2.078.0 DMD
+- doesn't allow templated structs with zero arguments nor
+- doesn't allow tuples (AliasSeq) as return value
+- doesn't perform imports in structs lazily
+*/
+private auto Triples()
+{
+    static struct TriplesImpl
+    {
+        import std.internal.unicode_tables : MAX_SIMPLE_UPPER, MAX_SIMPLE_LOWER;
+        //enum MAX_SIMPLE_UPPER = 1041;
+        alias UpperTriple = AliasSeq!(toUpperIndex, MAX_SIMPLE_UPPER, toUpperTab);
+        //enum MAX_SIMPLE_LOWER = 1043;
+        alias LowerTriple = AliasSeq!(toLowerIndex, MAX_SIMPLE_LOWER, toLowerTab);
+    }
+    return TriplesImpl();
+}
 
 // generic toUpper/toLower on whole string, creates new or returns as is
 private S toCase(alias indexFn, uint maxIdx, alias tableFn, alias asciiConvert, S)(S s) @trusted pure
@@ -9077,7 +9107,7 @@ if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
     else
     {
         static import std.ascii;
-        return toCaser!(LowerTriple, std.ascii.toLower)(str);
+        return toCaser!(Triples.LowerTriple, std.ascii.toLower)(str);
     }
 }
 
@@ -9096,7 +9126,7 @@ if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
     else
     {
         static import std.ascii;
-        return toCaser!(UpperTriple, std.ascii.toUpper)(str);
+        return toCaser!(Triples.UpperTriple, std.ascii.toUpper)(str);
     }
 }
 
@@ -9289,11 +9319,11 @@ if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
         import std.utf : byDchar;
 
         // Decode first
-        return toCapitalizer!UpperTriple(str.byDchar);
+        return toCapitalizer!(Triples.UpperTriple)(str.byDchar);
     }
     else
     {
-        return toCapitalizer!UpperTriple(str);
+        return toCapitalizer!(Triples.UpperTriple)(str);
     }
 }
 
@@ -9554,7 +9584,7 @@ private template toCaseLength(alias indexFn, uint maxIdx, alias tableFn)
 
 @safe unittest
 {
-    alias toLowerLength = toCaseLength!(LowerTriple);
+    alias toLowerLength = toCaseLength!(Triples.LowerTriple);
     assert(toLowerLength("abcd") == 4);
     assert(toLowerLength("аБВгд456") == 10+3);
 }
@@ -9625,7 +9655,7 @@ private template toCaseInPlaceAlloc(alias indexFn, uint maxIdx, alias tableFn)
 void toLowerInPlace(C)(ref C[] s) @trusted pure
 if (is(C == char) || is(C == wchar) || is(C == dchar))
 {
-    toCaseInPlace!(LowerTriple)(s);
+    toCaseInPlace!(Triples.LowerTriple)(s);
 }
 // overloads for the most common cases to reduce compile time
 @safe pure /*TODO nothrow*/
@@ -9647,7 +9677,7 @@ if (is(C == char) || is(C == wchar) || is(C == dchar))
 void toUpperInPlace(C)(ref C[] s) @trusted pure
 if (is(C == char) || is(C == wchar) || is(C == dchar))
 {
-    toCaseInPlace!(UpperTriple)(s);
+    toCaseInPlace!(Triples.UpperTriple)(s);
 }
 // overloads for the most common cases to reduce compile time/code size
 @safe pure /*TODO nothrow*/
@@ -9696,7 +9726,7 @@ S toLower(S)(S s) @trusted pure
 if (isSomeString!S)
 {
     static import std.ascii;
-    return toCase!(LowerTriple, std.ascii.toLower)(s);
+    return toCase!(Triples.LowerTriple, std.ascii.toLower)(s);
 }
 // overloads for the most common cases to reduce compile time
 @safe pure /*TODO nothrow*/
@@ -9878,7 +9908,7 @@ S toUpper(S)(S s) @trusted pure
 if (isSomeString!S)
 {
     static import std.ascii;
-    return toCase!(UpperTriple, std.ascii.toUpper)(s);
+    return toCase!(Triples.UpperTriple, std.ascii.toUpper)(s);
 }
 // overloads for the most common cases to reduce compile time
 @safe pure /*TODO nothrow*/
@@ -10332,30 +10362,98 @@ private:
     return CodepointSet.fromIntervals(decompressIntervals(compressed));
 }
 
-@safe pure nothrow auto asTrie(T...)(in TrieEntry!T e)
+auto asTrie(A)(in A a)
 {
-    return const(CodepointTrie!T)(e.offsets, e.sizes, e.data);
+    import std.internal.unicode_tables : TrieEntry; // generated file
+    static auto asTrieImpl(T...)(in TrieEntry!T e)
+    {
+        return const(CodepointTrie!T)(e.offsets, e.sizes, e.data);
+    }
+    return asTrieImpl(a);
 }
 
 @safe pure nothrow @nogc @property
 {
-    import std.internal.unicode_tables; // generated file
-
     // It's important to use auto return here, so that the compiler
     // only runs semantic on the return type if the function gets
     // used. Also these are functions rather than templates to not
     // increase the object size of the caller.
-    auto lowerCaseTrie() { static immutable res = asTrie(lowerCaseTrieEntries); return res; }
-    auto upperCaseTrie() { static immutable res = asTrie(upperCaseTrieEntries); return res; }
-    auto simpleCaseTrie() { static immutable res = asTrie(simpleCaseTrieEntries); return res; }
-    auto fullCaseTrie() { static immutable res = asTrie(fullCaseTrieEntries); return res; }
-    auto alphaTrie() { static immutable res = asTrie(alphaTrieEntries); return res; }
-    auto markTrie() { static immutable res = asTrie(markTrieEntries); return res; }
-    auto numberTrie() { static immutable res = asTrie(numberTrieEntries); return res; }
-    auto punctuationTrie() { static immutable res = asTrie(punctuationTrieEntries); return res; }
-    auto symbolTrie() { static immutable res = asTrie(symbolTrieEntries); return res; }
-    auto graphicalTrie() { static immutable res = asTrie(graphicalTrieEntries); return res; }
-    auto nonCharacterTrie() { static immutable res = asTrie(nonCharacterTrieEntries); return res; }
+    auto lowerCaseTrie()
+    {
+        import std.internal.unicode_tables : lowerCaseTrieEntries; // generated file
+        static immutable res = asTrie(lowerCaseTrieEntries);
+        return res;
+    }
+
+    auto upperCaseTrie()
+    {
+        import std.internal.unicode_tables : upperCaseTrieEntries; // generated file
+        static immutable res = asTrie(upperCaseTrieEntries);
+        return res;
+    }
+
+    auto simpleCaseTrie()
+    {
+        import std.internal.unicode_tables : simpleCaseTrieEntries; // generated file
+        static immutable res = asTrie(simpleCaseTrieEntries);
+        return res;
+    }
+
+    auto fullCaseTrie()
+    {
+        import std.internal.unicode_tables : fullCaseTrieEntries; // generated file
+        static immutable res = asTrie(fullCaseTrieEntries);
+        return res;
+    }
+
+    auto alphaTrie()
+    {
+        import std.internal.unicode_tables : alphaTrieEntries; // generated file
+        static immutable res = asTrie(alphaTrieEntries);
+        return res;
+    }
+
+    auto markTrie()
+    {
+        import std.internal.unicode_tables : markTrieEntries; // generated file
+        static immutable res = asTrie(markTrieEntries);
+        return res;
+    }
+
+    auto numberTrie()
+    {
+        import std.internal.unicode_tables : numberTrieEntries; // generated file
+        static immutable res = asTrie(numberTrieEntries);
+        return res;
+    }
+
+    auto punctuationTrie()
+    {
+        import std.internal.unicode_tables : punctuationTrieEntries; // generated file
+        static immutable res = asTrie(punctuationTrieEntries);
+        return res;
+    }
+
+    auto symbolTrie()
+    {
+        import std.internal.unicode_tables : symbolTrieEntries; // generated file
+        static immutable res = asTrie(symbolTrieEntries);
+        return res;
+    }
+
+    auto graphicalTrie()
+    {
+        import std.internal.unicode_tables : graphicalTrieEntries; // generated file
+        static immutable res = asTrie(graphicalTrieEntries);
+        return res;
+    }
+
+    auto nonCharacterTrie()
+    {
+        import std.internal.unicode_tables : nonCharacterTrieEntries; // generated file
+        static immutable res = asTrie(nonCharacterTrieEntries);
+        return res;
+    }
 
     //normalization quick-check tables
     auto nfcQCTrie()
@@ -10445,13 +10543,48 @@ private:
     }
 
     //case conversion tables
-    auto toUpperIndexTrie() { static immutable res = asTrie(toUpperIndexTrieEntries); return res; }
-    auto toLowerIndexTrie() { static immutable res = asTrie(toLowerIndexTrieEntries); return res; }
-    auto toTitleIndexTrie() { static immutable res = asTrie(toTitleIndexTrieEntries); return res; }
+    auto toUpperIndexTrie()
+    {
+        import std.internal.unicode_tables : toUpperIndexTrieEntries; // generated file
+        static immutable res = asTrie(toUpperIndexTrieEntries);
+        return res;
+    }
+
+    auto toLowerIndexTrie()
+    {
+        import std.internal.unicode_tables : toLowerIndexTrieEntries; // generated file
+        static immutable res = asTrie(toLowerIndexTrieEntries);
+        return res;
+    }
+
+    auto toTitleIndexTrie()
+    {
+        import std.internal.unicode_tables : toTitleIndexTrieEntries; // generated file
+        static immutable res = asTrie(toTitleIndexTrieEntries);
+        return res;
+    }
+
     //simple case conversion tables
-    auto toUpperSimpleIndexTrie() { static immutable res = asTrie(toUpperSimpleIndexTrieEntries); return res; }
-    auto toLowerSimpleIndexTrie() { static immutable res = asTrie(toLowerSimpleIndexTrieEntries); return res; }
-    auto toTitleSimpleIndexTrie() { static immutable res = asTrie(toTitleSimpleIndexTrieEntries); return res; }
+    auto toUpperSimpleIndexTrie()
+    {
+        import std.internal.unicode_tables : toUpperSimpleIndexTrieEntries; // generated file
+        static immutable res = asTrie(toUpperSimpleIndexTrieEntries);
+        return res;
+    }
+
+    auto toLowerSimpleIndexTrie()
+    {
+        import std.internal.unicode_tables : toLowerSimpleIndexTrieEntries; // generated file
+        static immutable res = asTrie(toLowerSimpleIndexTrieEntries);
+        return res;
+    }
+
+    auto toTitleSimpleIndexTrie()
+    {
+        import std.internal.unicode_tables : toTitleSimpleIndexTrieEntries; // generated file
+        static immutable res = asTrie(toTitleSimpleIndexTrieEntries);
+        return res;
+    }
 
 }
 
