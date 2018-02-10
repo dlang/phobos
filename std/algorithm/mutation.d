@@ -84,11 +84,6 @@ import std.typecons; // : tuple, Tuple;
 
 // bringToFront
 /**
-The `bringToFront` function has considerable flexibility and
-usefulness. It can rotate elements in one buffer left or right, swap
-buffers of equal length, and even move elements across disjoint
-buffers of different types and different lengths.
-
 `bringToFront` takes two ranges `front` and `back`, which may
 be of different types. Considering the concatenation of `front` and
 `back` one unified range, `bringToFront` rotates that unified
@@ -103,6 +98,10 @@ in ranges, not as a string function.
 
 Performs $(BIGOH max(front.length, back.length)) evaluations of $(D
 swap).
+
+The `bringToFront` function can rotate elements in one buffer left or right, swap
+buffers of equal length, and even move elements across disjoint
+buffers of different types and different lengths.
 
 Preconditions:
 
