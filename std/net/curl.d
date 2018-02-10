@@ -2561,6 +2561,8 @@ struct HTTP
     // docs mixed in.
     version (StdDdoc)
     {
+        static import etc.c.curl;
+
         /// Value to return from $(D onSend)/$(D onReceive) delegates in order to
         /// pause a request
         alias requestPause = CurlReadFunc.pause;
@@ -3338,6 +3340,8 @@ struct FTP
     // docs mixed in.
     version (StdDdoc)
     {
+        static import etc.c.curl;
+
         /// Value to return from $(D onSend)/$(D onReceive) delegates in order to
         /// pause a request
         alias requestPause = CurlReadFunc.pause;
@@ -3762,6 +3766,8 @@ struct SMTP
     // docs mixed in.
     version (StdDdoc)
     {
+        static import etc.c.curl;
+
         /// Value to return from $(D onSend)/$(D onReceive) delegates in order to
         /// pause a request
         alias requestPause = CurlReadFunc.pause;

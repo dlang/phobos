@@ -535,7 +535,7 @@ style: publictests style_lint
 # runs static code analysis with Dscanner
 dscanner: | $(DSCANNER_DIR)/dsc
 	@echo "Running DScanner"
-	$(DEBUGGER) -q -ex run -ex bt -batch --args $(DSCANNER_DIR)/dsc --config .dscanner.ini --styleCheck etc std -I.
+	$(DEBUGGER) -return-child-result -q -ex run -ex bt -batch --args $(DSCANNER_DIR)/dsc --config .dscanner.ini --styleCheck etc std -I.
 
 style_lint: dscanner $(LIB)
 	@echo "Check for trailing whitespace"

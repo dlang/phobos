@@ -576,7 +576,7 @@ nothrow:
             ~ to!string(bytesUsed) ~ " bytes");
 }
 
-@safe unittest
+@system unittest
 {
     import std.conv;
     import std.experimental.allocator.mallocator;
