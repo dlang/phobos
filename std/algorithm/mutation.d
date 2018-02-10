@@ -80,6 +80,7 @@ module std.algorithm.mutation;
 import std.range.primitives;
 import std.traits : isArray, isAssignable, isBlitAssignable, isNarrowString,
        Unqual, isSomeChar, isMutable;
+import std.meta : allSatisfy;
 // FIXME
 import std.typecons; // : tuple, Tuple;
 
@@ -1693,11 +1694,27 @@ enum SwapStrategy
     assert(arr == [10, 9, 8, 4, 5, 6, 7, 3, 2, 1]);
 }
 
+private template isValidIntegralTuple(T)
+{
+    import std.traits : isIntegral;
+    import std.typecons : isTuple;
+    static if (isTuple!T)
+    {
+        enum isValidIntegralTuple = T.length == 2 &&
+                isIntegral!(typeof(T.init[0])) && isIntegral!(typeof(T.init[0]));
+    }
+    else
+    {
+        enum isValidIntegralTuple = isIntegral!T;
+    }
+}
+
+
 /**
 Eliminates elements at given offsets from `range` and returns the shortened
 range.
 
-For example, here is how to _remove a single element from an array:
+For example, here is how to remove a single element from an array:
 
 ----
 string[] a = [ "a", "b", "c", "d" ];
@@ -1716,7 +1733,7 @@ assert(remove(a, 1) == [ 3, 7, 8 ]);
 assert(a == [ 3, 7, 8, 8 ]);
 ----
 
-The element at _offset `1` has been removed and the rest of the elements have
+The element at offset `1` has been removed and the rest of the elements have
 shifted up to fill its place, however, the original array remains of the same
 length. This is because all functions in `std.algorithm` only change $(I
 content), not $(I topology). The value `8` is repeated because $(LREF move) was
@@ -1735,9 +1752,21 @@ assert(remove(a, 1, 3, 5) ==
 ----
 
 (Note that all indices refer to slots in the $(I original) array, not
-in the array as it is being progressively shortened.) Finally, any
-combination of integral offsets and tuples composed of two integral
-offsets can be passed in.
+in the array as it is being progressively shortened.)
+
+Tuples of two integral offsets can be used to remove an indices range:
+
+----
+int[] a = [ 3, 4, 5, 6, 7];
+assert(remove(a, 1, tuple(1, 3), 9) == [ 3, 6, 7 ]);
+----
+
+The tuple passes in a range closed to the left and open to
+the right (consistent with built-in slices), e.g. `tuple(1, 3)`
+means indices `1` and `2` but not `3`.
+
+Finally, any combination of integral offsets and tuples composed of two integral
+offsets can be passed in:
 
 ----
 int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
@@ -1745,9 +1774,7 @@ assert(remove(a, 1, tuple(3, 5), 9) == [ 0, 2, 5, 6, 7, 8, 10 ]);
 ----
 
 In this case, the slots at positions 1, 3, 4, and 9 are removed from
-the array. The tuple passes in a range closed to the left and open to
-the right (consistent with built-in slices), e.g. `tuple(3, 5)`
-means indices `3` and `4` but not `5`.
+the array.
 
 If the need is to remove some elements in the range but the order of
 the remaining elements does not have to be preserved, you may want to
@@ -1766,17 +1793,22 @@ movement to be done which improves the execution time of the function.
 
 The function `remove` works on bidirectional ranges that have assignable
 lvalue elements. The moving strategy is (listed from fastest to slowest):
-$(UL $(LI If $(D s == SwapStrategy.unstable && isRandomAccessRange!Range &&
+
+$(UL
+        $(LI If $(D s == SwapStrategy.unstable && isRandomAccessRange!Range &&
 hasLength!Range && hasLvalueElements!Range), then elements are moved from the
 end of the range into the slots to be filled. In this case, the absolute
-minimum of moves is performed.)  $(LI Otherwise, if $(D s ==
+minimum of moves is performed.)
+        $(LI Otherwise, if $(D s ==
 SwapStrategy.unstable && isBidirectionalRange!Range && hasLength!Range
 && hasLvalueElements!Range), then elements are still moved from the
 end of the range, but time is spent on advancing between slots by repeated
-calls to `range.popFront`.)  $(LI Otherwise, elements are moved
+calls to `range.popFront`.)
+        $(LI Otherwise, elements are moved
 incrementally towards the front of `range`; a given element is never
 moved several times, but more elements are moved than in the previous
-cases.))
+cases.)
+)
 
 Params:
     s = a SwapStrategy to determine if the original order needs to be preserved
@@ -1785,12 +1817,88 @@ Params:
     offset = which element(s) to remove
 
 Returns:
-    a range containing all of the elements of range with offset removed
- */
+    A range containing all of the elements of range with offset removed.
+*/
 Range remove
 (SwapStrategy s = SwapStrategy.stable, Range, Offset ...)
 (Range range, Offset offset)
-if (Offset.length >= 1)
+if (Offset.length >= 1 && allSatisfy!(isValidIntegralTuple, Offset))
+{
+    // Activate this check when the deprecation of non-integral tuples is over
+    //import std.traits : isIntegral;
+    //import std.typecons : isTuple;
+    //static foreach (T; Offset)
+    //{
+        //static if (isTuple!T)
+        //{
+            //static assert(T.length == 2 &&
+                    //isIntegral!(typeof(T.init[0])) && isIntegral!(typeof(T.init[0])),
+                //"Each offset must be an integral or a tuple of two integrals." ~
+                //"Use `arr.remove(pos1, pos2)` or `arr.remove(tuple(start, begin))`");
+        //}
+        //else
+        //{
+            //static assert(isIntegral!T,
+                //"Each offset must be an integral or a tuple of two integrals." ~
+                //"Use `arr.remove(pos1, pos2)` or `arr.remove(tuple(start, begin))`");
+        //}
+    //}
+    return removeImpl!s(range, offset);
+}
+
+deprecated("Use of non-integral tuples is deprecated. Use remove(tuple(start, end).")
+Range remove
+(SwapStrategy s = SwapStrategy.stable, Range, Offset ...)
+(Range range, Offset offset)
+if (Offset.length >= 1 && !allSatisfy!(isValidIntegralTuple, Offset))
+{
+    return removeImpl!s(range, offset);
+}
+
+///
+@safe pure unittest
+{
+    import std.typecons : tuple;
+
+    auto a = [ 0, 1, 2, 3, 4, 5 ];
+    assert(remove!(SwapStrategy.stable)(a, 1) == [ 0, 2, 3, 4, 5 ]);
+    a = [ 0, 1, 2, 3, 4, 5 ];
+    assert(remove!(SwapStrategy.stable)(a, 1, 3) == [ 0, 2, 4, 5] );
+    a = [ 0, 1, 2, 3, 4, 5 ];
+    assert(remove!(SwapStrategy.stable)(a, 1, tuple(3, 6)) == [ 0, 2 ]);
+
+    a = [ 0, 1, 2, 3, 4, 5 ];
+    assert(remove!(SwapStrategy.unstable)(a, 1) == [0, 5, 2, 3, 4]);
+    a = [ 0, 1, 2, 3, 4, 5 ];
+    assert(remove!(SwapStrategy.unstable)(a, tuple(1, 4)) == [0, 5, 4]);
+}
+
+///
+@safe pure unittest
+{
+    import std.typecons : tuple;
+
+    // Delete an index
+    assert([4, 5, 6].remove(1) == [4, 6]);
+
+    // Delete multiple indices
+    assert([4, 5, 6, 7, 8].remove(1, 3) == [4, 6, 8]);
+
+    // Use an indices range
+    assert([4, 5, 6, 7, 8].remove(tuple(1, 3)) == [4, 7, 8]);
+
+    // Use an indices range and individual indices
+    assert([4, 5, 6, 7, 8].remove(0, tuple(1, 3), 4) == [7]);
+}
+
+/// `SwapStrategy.unstable` is faster, but doesn't guarantee the same order of the original array
+@safe pure unittest
+{
+    assert([5, 6, 7, 8].remove!(SwapStrategy.stable)(1) == [5, 7, 8]);
+    assert([5, 6, 7, 8].remove!(SwapStrategy.unstable)(1) == [5, 8, 7]);
+}
+
+private auto removeImpl(SwapStrategy s, Range, Offset...)(Range range, Offset offset)
 {
     static if (isNarrowString!Range)
     {
@@ -1819,24 +1927,6 @@ if (Offset.length >= 1)
             static assert(false,
                     "Only SwapStrategy.stable and SwapStrategy.unstable are supported");
     }
-}
-
-///
-@safe pure unittest
-{
-    import std.typecons : tuple;
-
-    auto a = [ 0, 1, 2, 3, 4, 5 ];
-    assert(remove!(SwapStrategy.stable)(a, 1) == [ 0, 2, 3, 4, 5 ]);
-    a = [ 0, 1, 2, 3, 4, 5 ];
-    assert(remove!(SwapStrategy.stable)(a, 1, 3) == [ 0, 2, 4, 5] );
-    a = [ 0, 1, 2, 3, 4, 5 ];
-    assert(remove!(SwapStrategy.stable)(a, 1, tuple(3, 6)) == [ 0, 2 ]);
-
-    a = [ 0, 1, 2, 3, 4, 5 ];
-    assert(remove!(SwapStrategy.unstable)(a, 1) == [0, 5, 2, 3, 4]);
-    a = [ 0, 1, 2, 3, 4, 5 ];
-    assert(remove!(SwapStrategy.unstable)(a, tuple(1, 4)) == [0, 5, 4]);
 }
 
 @safe unittest
@@ -2104,6 +2194,21 @@ private Range removeStableString(Range, Offset...)(Range range, Offset offsets)
     return range[0 .. $ - charShift];
 }
 
+// Use of dynamic arrays as offsets is too error-prone
+// https://issues.dlang.org/show_bug.cgi?id=12086
+// Activate these tests once the deprecation period of remove with non-integral tuples is over
+@safe unittest
+{
+    //static assert(!__traits(compiles, [0, 1, 2, 3, 4].remove([1, 3]) == [0, 3, 4]));
+    static assert(__traits(compiles, [0, 1, 2, 3, 4].remove(1, 3) == [0, 2, 4]));
+    //static assert(!__traits(compiles, assert([0, 1, 2, 3, 4].remove([1, 3, 4]) == [0, 3, 4])));
+    //static assert(!__traits(compiles, assert([0, 1, 2, 3, 4].remove(tuple(1, 3, 4)) == [0, 3, 4])));
+
+    import std.range : only;
+    //static assert(!__traits(compiles, assert([0, 1, 2, 3, 4].remove(only(1, 3)) == [0, 3, 4])));
+    static assert(__traits(compiles, assert([0, 1, 2, 3, 4].remove(1, 3) == [0, 2, 4])));
+}
+
 /**
 Reduces the length of the
 $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives) `range` by removing
@@ -2199,19 +2304,20 @@ Range remove(alias pred, SwapStrategy s = SwapStrategy.stable, Range)(Range rang
     import std.meta : AliasSeq;
     import std.range : iota, only;
     import std.typecons : Tuple;
-    alias S = Tuple!(int[2]);
+    alias E = Tuple!(int, int);
+    alias S = Tuple!(E);
     S[] soffsets;
     foreach (start; 0 .. 5)
     foreach (end; min(start+1,5) .. 5)
-          soffsets ~= S([start,end]);
-    alias D = Tuple!(int[2],int[2]);
+          soffsets ~= S(E(start,end));
+    alias D = Tuple!(E, E);
     D[] doffsets;
     foreach (start1; 0 .. 10)
     foreach (end1; min(start1+1,10) .. 10)
     foreach (start2; end1 .. 10)
     foreach (end2; min(start2+1,10) .. 10)
-          doffsets ~= D([start1,end1],[start2,end2]);
-    alias T = Tuple!(int[2],int[2],int[2]);
+          doffsets ~= D(E(start1,end1),E(start2,end2));
+    alias T = Tuple!(E, E, E);
     T[] toffsets;
     foreach (start1; 0 .. 15)
     foreach (end1; min(start1+1,15) .. 15)
@@ -2219,7 +2325,7 @@ Range remove(alias pred, SwapStrategy s = SwapStrategy.stable, Range)(Range rang
     foreach (end2; min(start2+1,15) .. 15)
     foreach (start3; end2 .. 15)
     foreach (end3; min(start3+1,15) .. 15)
-            toffsets ~= T([start1,end1],[start2,end2],[start3,end3]);
+            toffsets ~= T(E(start1,end1),E(start2,end2),E(start3,end3));
 
     static void verify(O...)(int[] r, int len, int removed, bool stable, O offsets)
     {
