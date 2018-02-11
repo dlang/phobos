@@ -160,33 +160,33 @@ private mixin template AscendingPageAllocatorImpl(bool isShared)
     }
 }
 
-version (StdDdoc)
+/**
+`AscendingPageAllocator` is a fast and safe allocator that rounds all allocations
+to multiples of the system's page size. It reserves a range of virtual addresses
+(using `mmap` on Posix and `VirtualAlloc` on Windows) and allocates memory at consecutive virtual
+addresses.
+
+When a chunk of memory is requested, the allocator finds a range of
+virtual pages that satisfy the requested size, changing their protection to
+read/write using OS primitives (`mprotect` and `VirtualProtect`, respectively).
+The physical memory is allocated on demand, when the pages are accessed.
+
+Deallocation removes any read/write permissions from the target pages
+and notifies the OS to reclaim the physical memory, while keeping the virtual
+memory.
+
+Because the allocator does not reuse memory, any dangling references to
+deallocated memory will always result in deterministically crashing the process.
+
+See_Also:
+$(HTTPS microsoft.com/en-us/research/wp-content/uploads/2017/07/snowflake-extended.pdf, Project Snoflake) for the general approach.
+*/
+struct AscendingPageAllocator
 {
-    /**
-    `AscendingPageAllocator` is a fast and safe allocator that rounds all allocations
-    to multiples of the system's page size. It reserves a range of virtual addresses
-    (using `mmap` on Posix and `VirtualAlloc` on Windows) and allocates memory at consecutive virtual
-    addresses.
+    import std.typecons : Ternary;
 
-    When a chunk of memory is requested, the allocator finds a range of
-    virtual pages that satisfy the requested size, changing their protection to
-    read/write using OS primitives (`mprotect` and `VirtualProtect`, respectively).
-    The physical memory is allocated on demand, when the pages are accessed.
-
-    Deallocation removes any read/write permissions from the target pages
-    and notifies the OS to reclaim the physical memory, while keeping the virtual
-    memory.
-
-    Because the allocator does not reuse memory, any dangling references to
-    deallocated memory will always result in deterministically crashing the process.
-
-    See_Also:
-    $(HTTPS microsoft.com/en-us/research/wp-content/uploads/2017/07/snowflake-extended.pdf, Project Snoflake) for the general approach.
-    */
-    struct AscendingPageAllocator
+    version (StdDdoc)
     {
-        import std.typecons : Ternary;
-
         /**
         Rounds the mapping size to the next multiple of the page size and calls
         the OS primitive responsible for creating memory mappings: `mmap` on POSIX and
@@ -276,13 +276,8 @@ version (StdDdoc)
         */
         Ternary empty() nothrow @nogc;
     }
-}
-else
-{
-    struct AscendingPageAllocator
+    else
     {
-        import std.typecons : Ternary;
-
     private:
         size_t pageSize;
         size_t numPages;
@@ -425,15 +420,40 @@ else
     }
 }
 
-version (StdDdoc)
+///
+@system @nogc nothrow unittest
 {
-    /**
-    `SharedAscendingPageAllocator` is the threadsafe version of `AscendingPageAllocator`.
-    */
-    shared struct SharedAscendingPageAllocator
-    {
-        import std.typecons : Ternary;
+    size_t pageSize = 4096;
+    size_t numPages = 100;
+    void[] buf;
+    void[] prevBuf = null;
+    AscendingPageAllocator a = AscendingPageAllocator(numPages * pageSize);
 
+    foreach (i; 0 .. numPages)
+    {
+        // Allocation is rounded up to page size
+        buf = a.allocate(pageSize - 100);
+        assert(buf.length == pageSize - 100);
+
+        // Allocations are served at increasing addresses
+        if (prevBuf)
+            assert(prevBuf.ptr + pageSize == buf.ptr);
+
+        assert(a.deallocate(buf));
+        prevBuf = buf;
+    }
+}
+
+/**
+`SharedAscendingPageAllocator` is the threadsafe version of `AscendingPageAllocator`.
+*/
+shared struct SharedAscendingPageAllocator
+{
+    import std.typecons : Ternary;
+    import core.internal.spinlock : SpinLock;
+
+    version (StdDdoc)
+    {
         /**
         Rounds the mapping size to the next multiple of the page size and calls
         the OS primitive responsible for creating memory mappings: `mmap` on POSIX and
@@ -512,14 +532,8 @@ version (StdDdoc)
         */
         size_t getAvailableSize() nothrow @nogc;
     }
-}
-else
-{
-    shared struct SharedAscendingPageAllocator
+    else
     {
-        import std.typecons : Ternary;
-        import core.internal.spinlock : SpinLock;
-
     private:
         size_t pageSize;
         size_t numPages;
@@ -655,6 +669,31 @@ else
             return true;
         }
     }
+}
+
+///
+@system unittest
+{
+    import core.thread : ThreadGroup;
+
+    enum numThreads = 100;
+    enum pageSize = 4096;
+    shared SharedAscendingPageAllocator a = SharedAscendingPageAllocator(pageSize * numThreads);
+
+    void fun()
+    {
+        void[] b = a.allocate(pageSize);
+        assert(b.length == pageSize);
+
+        assert(a.deallocate(b));
+    }
+
+    auto tg = new ThreadGroup;
+    foreach (i; 0 .. numThreads)
+    {
+        tg.create(&fun);
+    }
+    tg.joinAll();
 }
 
 version(StdUnittest)
