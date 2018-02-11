@@ -78,7 +78,7 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 module std.algorithm.mutation;
 
 import std.range.primitives;
-import std.traits : isArray, isBlitAssignable, isNarrowString, Unqual, isSomeChar;
+import std.traits : isArray, isAssignable, isBlitAssignable, isNarrowString, Unqual, isSomeChar;
 // FIXME
 import std.typecons; // : tuple, Tuple;
 
@@ -2185,22 +2185,65 @@ Params:
         with either swappable elements, a random access range with a length member,
         or a narrow string
 
+Returns: `r`
+
 Note:
     When passing a string with unicode modifiers on characters, such as `\u0301`,
     this function will not properly keep the position of the modifier. For example,
     reversing `ba\u0301d` ("bád") will result in d\u0301ab ("d́ab") instead of
     `da\u0301b` ("dáb").
+
+See_Also: $(REF retro, std,range) for a lazy reverse without changing `r`
 */
-void reverse(Range)(Range r)
-if (isBidirectionalRange!Range && !isRandomAccessRange!Range
-    && hasSwappableElements!Range)
+Range reverse(Range)(Range r)
+if (isBidirectionalRange!Range &&
+        (hasSwappableElements!Range ||
+         (hasAssignableElements!Range && hasLength!Range && isRandomAccessRange!Range) ||
+         (isNarrowString!Range && isAssignable!(ElementType!Range))))
 {
-    while (!r.empty)
+    static if (isRandomAccessRange!Range && hasLength!Range)
     {
-        swap(r.front, r.back);
-        r.popFront();
-        if (r.empty) break;
-        r.popBack();
+        //swapAt is in fact the only way to swap non lvalue ranges
+        immutable last = r.length - 1;
+        immutable steps = r.length / 2;
+        for (size_t i = 0; i < steps; i++)
+        {
+            r.swapAt(i, last - i);
+        }
+        return r;
+    }
+    else static if (isNarrowString!Range && isAssignable!(ElementType!Range))
+    {
+        import std.string : representation;
+        import std.utf : stride;
+
+        auto raw = representation(r);
+        for (size_t i = 0; i < r.length;)
+        {
+            immutable step = stride(r, i);
+            if (step > 1)
+            {
+                .reverse(raw[i .. i + step]);
+                i += step;
+            }
+            else
+            {
+                ++i;
+            }
+        }
+        reverse(raw);
+        return r;
+    }
+    else
+    {
+        while (!r.empty)
+        {
+            swap(r.front, r.back);
+            r.popFront();
+            if (r.empty) break;
+            r.popBack();
+        }
+        return r;
     }
 }
 
@@ -2208,21 +2251,7 @@ if (isBidirectionalRange!Range && !isRandomAccessRange!Range
 @safe unittest
 {
     int[] arr = [ 1, 2, 3 ];
-    reverse(arr);
-    assert(arr == [ 3, 2, 1 ]);
-}
-
-///ditto
-void reverse(Range)(Range r)
-if (isRandomAccessRange!Range && hasLength!Range)
-{
-    //swapAt is in fact the only way to swap non lvalue ranges
-    immutable last = r.length-1;
-    immutable steps = r.length/2;
-    for (size_t i = 0; i < steps; i++)
-    {
-        r.swapAt(i, last-i);
-    }
+    assert(arr.reverse == [ 3, 2, 1 ]);
 }
 
 @safe unittest
@@ -2236,40 +2265,14 @@ if (isRandomAccessRange!Range && hasLength!Range)
     reverse(range);
     assert(range == [2, 1]);
     range = [1, 2, 3];
-    reverse(range);
-    assert(range == [3, 2, 1]);
-}
-
-///ditto
-void reverse(Char)(Char[] s)
-if (isNarrowString!(Char[]) && !is(Char == const) && !is(Char == immutable))
-{
-    import std.string : representation;
-    import std.utf : stride;
-
-    auto r = representation(s);
-    for (size_t i = 0; i < s.length; )
-    {
-        immutable step = stride(s, i);
-        if (step > 1)
-        {
-            .reverse(r[i .. i + step]);
-            i += step;
-        }
-        else
-        {
-            ++i;
-        }
-    }
-    reverse(r);
+    assert(range.reverse == [3, 2, 1]);
 }
 
 ///
 @safe unittest
 {
     char[] arr = "hello\U00010143\u0100\U00010143".dup;
-    reverse(arr);
-    assert(arr == "\U00010143\u0100\U00010143olleh");
+    assert(arr.reverse == "\U00010143\u0100\U00010143olleh");
 }
 
 @safe unittest
