@@ -277,6 +277,9 @@ and dispatches them to distinct allocators.))
 $(TR $(TDC2 Bucketizer, bucketizer) $(TD Divides allocation sizes in discrete buckets and
 uses an array of allocators, one per bucket, to satisfy requests.))
 
+$(TR $(TDC2 AscendingPageAllocator, ascending_page_allocator) $(TD A memory safe allocator
+where sizes are rounded to a multiple of the page size and allocations are satisfied at increasing addresses.))
+
 $(COMMENT $(TR $(TDC2 InternalPointersTree) $(TD Adds support for resolving internal
 pointers on top of another allocator.)))
 )
