@@ -284,7 +284,7 @@ $(COMMENT $(TR $(TDC2 InternalPointersTree) $(TD Adds support for resolving inte
 pointers on top of another allocator.)))
 )
 
-Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/_package.d)
+Source: $(PHOBOSSRC std/experimental/allocator/_building_blocks/package.d)
 
 Macros:
 MYREF2 = $(REF_SHORT $1, std,experimental,allocator,building_blocks,$2)
