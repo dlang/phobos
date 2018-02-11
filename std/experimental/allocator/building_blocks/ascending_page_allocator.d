@@ -179,7 +179,7 @@ Because the allocator does not reuse memory, any dangling references to
 deallocated memory will always result in deterministically crashing the process.
 
 See_Also:
-$(HTTPS microsoft.com/en-us/research/wp-content/uploads/2017/07/snowflake-extended.pdf, Project Snoflake) for the general approach.
+$(HTTPS microsoft.com/en-us/research/wp-content/uploads/2017/03/kedia2017mem.pdf, Simple Fast and Safe Manual Memory Management) for the general approach.
 */
 struct AscendingPageAllocator
 {
