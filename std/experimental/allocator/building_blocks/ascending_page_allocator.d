@@ -160,33 +160,34 @@ private mixin template AscendingPageAllocatorImpl(bool isShared)
     }
 }
 
-version (StdDdoc)
+/**
+`AscendingPageAllocator` is a fast and safe allocator that rounds all allocations
+to multiples of the system's page size. It reserves a range of virtual addresses
+(using `mmap` on Posix and `VirtualAlloc` on Windows) and allocates memory at consecutive virtual
+addresses.
+
+When a chunk of memory is requested, the allocator finds a range of
+virtual pages that satisfy the requested size, changing their protection to
+read/write using OS primitives (`mprotect` and `VirtualProtect`, respectively).
+The physical memory is allocated on demand, when the pages are accessed.
+
+Deallocation removes any read/write permissions from the target pages
+and notifies the OS to reclaim the physical memory, while keeping the virtual
+memory.
+
+Because the allocator does not reuse memory, any dangling references to
+deallocated memory will always result in deterministically crashing the process.
+
+See_Also:
+$(HTTPS microsoft.com/en-us/research/wp-content/uploads/2017/03/kedia2017mem.pdf, Simple Fast and Safe Manual Memory Management) for the general approach.
+*/
+struct AscendingPageAllocator
 {
-    /**
-    `AscendingPageAllocator` is a fast and safe allocator that rounds all allocations
-    to multiples of the system's page size. It reserves a range of virtual addresses
-    (using `mmap` on Posix and `VirtualAlloc` on Windows) and allocates memory at consecutive virtual
-    addresses.
+    import std.typecons : Ternary;
 
-    When a chunk of memory is requested, the allocator finds a range of
-    virtual pages that satisfy the requested size, changing their protection to
-    read/write using OS primitives (`mprotect` and `VirtualProtect`, respectively).
-    The physical memory is allocated on demand, when the pages are accessed.
-
-    Deallocation removes any read/write permissions from the target pages
-    and notifies the OS to reclaim the physical memory, while keeping the virtual
-    memory.
-
-    Because the allocator does not reuse memory, any dangling references to
-    deallocated memory will always result in deterministically crashing the process.
-
-    See_Also:
-    $(HTTPS microsoft.com/en-us/research/wp-content/uploads/2017/07/snowflake-extended.pdf, Project Snoflake) for the general approach.
-    */
-    struct AscendingPageAllocator
+    // Docs for mixin functions
+    version (StdDdoc)
     {
-        import std.typecons : Ternary;
-
         /**
         Rounds the mapping size to the next multiple of the page size and calls
         the OS primitive responsible for creating memory mappings: `mmap` on POSIX and
@@ -196,35 +197,6 @@ version (StdDdoc)
         n = mapping size in bytes
         */
         this(size_t n) nothrow @nogc;
-
-        /**
-        Rounds the allocation size to the next multiple of the page size.
-        The allocation only reserves a range of virtual pages but the actual
-        physical memory is allocated on demand, when accessing the memory.
-
-        Params:
-        n = Bytes to allocate
-
-        Returns:
-        `null` on failure or if the requested size exceeds the remaining capacity.
-        */
-        void[] allocate(size_t n) nothrow @nogc;
-
-        /**
-        Rounds the allocation size to the next multiple of the page size.
-        The allocation only reserves a range of virtual pages but the actual
-        physical memory is allocated on demand, when accessing the memory.
-
-        The allocated memory is aligned to the specified alignment `a`.
-
-        Params:
-        n = Bytes to allocate
-        a = Alignment
-
-        Returns:
-        `null` on failure or if the requested size exceeds the remaining capacity.
-        */
-        void[] alignedAllocate(size_t n, uint a) nothrow @nogc;
 
         /**
         Rounds the requested size to the next multiple of the page size.
@@ -239,261 +211,6 @@ version (StdDdoc)
         On Windows, it uses `VirtualFree` with `MEM_DECOMMIT`.
         */
         void deallocate(void[] b) nothrow @nogc;
-
-        /**
-        If the passed buffer is not the last allocation, then `delta` can be
-        at most the number of bytes left on the last page.
-        Otherwise, we can expand the last allocation until the end of the virtual
-        address range.
-        */
-        bool expand(ref void[] b, size_t delta) nothrow @nogc;
-
-        /**
-        Returns `Ternary.yes` if the passed buffer is inside the range of virtual adresses.
-        Does not guarantee that the passed buffer is still valid.
-        */
-        Ternary owns(void[] buf) nothrow @nogc;
-
-        /**
-        Removes the memory mapping causing all physical memory to be decommited and
-        the virtual address space to be reclaimed.
-        */
-        bool deallocateAll() nothrow @nogc;
-
-        /**
-        Returns the available size for further allocations in bytes.
-        */
-        size_t getAvailableSize() nothrow @nogc;
-
-        /**
-        Unmaps the whole virtual address range on destruction.
-        */
-        ~this() nothrow @nogc;
-
-        /**
-        Returns `Ternary.yes` if the allocator does not contain any alive objects
-        and `Ternary.no` otherwise.
-        */
-        Ternary empty() nothrow @nogc;
-    }
-}
-else
-{
-    struct AscendingPageAllocator
-    {
-        import std.typecons : Ternary;
-
-    private:
-        size_t pageSize;
-        size_t numPages;
-
-        // The start of the virtual address range
-        void* data;
-
-        // Keeps track of there the next allocation should start
-        void* offset;
-
-        // Number of pages which contain alive objects
-        size_t pagesUsed;
-
-        // On allocation requests, we allocate an extra 'extraAllocPages' pages
-        // The address up to which we have permissions is stored in 'readWriteLimit'
-        void* readWriteLimit;
-        enum extraAllocPages = 1000;
-
-    public:
-        enum uint alignment = 4096;
-
-        // Inject common function implementations
-        mixin AscendingPageAllocatorImpl!false;
-
-        void[] allocate(size_t n) nothrow @nogc
-        {
-            import std.algorithm.comparison : min;
-
-            immutable pagedBytes = numPages * pageSize;
-            size_t goodSize = goodAllocSize(n);
-
-            // Requested exceeds the virtual memory range
-            if (goodSize > pagedBytes || offset - data > pagedBytes - goodSize)
-                return null;
-
-            // Current allocation exceeds readable/writable memory area
-            if (offset + goodSize > readWriteLimit)
-            {
-                // Extend r/w memory range to new limit
-                void* newReadWriteLimit = min(data + pagedBytes,
-                    offset + goodSize + extraAllocPages * pageSize);
-                if (newReadWriteLimit != readWriteLimit)
-                {
-                    assert(newReadWriteLimit > readWriteLimit);
-                    if (!extendMemoryProtection(readWriteLimit, newReadWriteLimit - readWriteLimit))
-                        return null;
-
-                    readWriteLimit = newReadWriteLimit;
-                }
-            }
-
-            void* result = offset;
-            offset += goodSize;
-            pagesUsed += goodSize / pageSize;
-
-            return cast(void[]) result[0 .. n];
-        }
-
-        void[] alignedAllocate(size_t n, uint a) nothrow @nogc
-        {
-            void* alignedStart = cast(void*) roundUpToMultipleOf(cast(size_t) offset, a);
-            assert(alignedStart.alignedAt(a));
-            immutable pagedBytes = numPages * pageSize;
-            size_t goodSize = goodAllocSize(n);
-            if (goodSize > pagedBytes ||
-                alignedStart - data > pagedBytes - goodSize)
-                return null;
-
-            // Same logic as allocate, only that the buffer must be properly aligned
-            auto oldOffset = offset;
-            offset = alignedStart;
-            auto result = allocate(n);
-            if (!result)
-                offset = oldOffset;
-            return result;
-        }
-
-        bool expand(ref void[] b, size_t delta) nothrow @nogc
-        {
-            import std.algorithm.comparison : min;
-
-            if (!delta) return true;
-            if (b is null) return false;
-
-            size_t goodSize = goodAllocSize(b.length);
-            size_t bytesLeftOnPage = goodSize - b.length;
-
-            // If this is not the last allocation, we can only expand until
-            // completely filling the last page covered by this buffer
-            if (b.ptr + goodSize != offset && delta > bytesLeftOnPage)
-                return false;
-
-            size_t extraPages = 0;
-
-            // If the extra `delta` bytes requested do not fit the last page
-            // compute how many extra pages are neeeded
-            if (delta > bytesLeftOnPage)
-            {
-                extraPages = goodAllocSize(delta - bytesLeftOnPage) / pageSize;
-            }
-            else
-            {
-                b = cast(void[]) b.ptr[0 .. b.length + delta];
-                return true;
-            }
-
-            if (extraPages > numPages || offset - data > pageSize * (numPages - extraPages))
-                return false;
-
-            void* newPtrEnd = b.ptr + goodSize + extraPages * pageSize;
-            if (newPtrEnd > readWriteLimit)
-            {
-                void* newReadWriteLimit = min(data + numPages * pageSize,
-                    newPtrEnd + extraAllocPages * pageSize);
-                if (newReadWriteLimit > readWriteLimit)
-                {
-                    if (!extendMemoryProtection(readWriteLimit, newReadWriteLimit - readWriteLimit))
-                        return false;
-
-                    readWriteLimit = newReadWriteLimit;
-                }
-            }
-
-            pagesUsed += extraPages;
-            offset += extraPages * pageSize;
-            b = cast(void[]) b.ptr[0 .. b.length + delta];
-            return true;
-        }
-
-        Ternary empty() nothrow @nogc
-        {
-            return Ternary(pagesUsed == 0);
-        }
-
-        ~this() nothrow @nogc
-        {
-            if (data)
-                deallocateAll();
-        }
-    }
-}
-
-version (StdDdoc)
-{
-    /**
-    `SharedAscendingPageAllocator` is the threadsafe version of `AscendingPageAllocator`.
-    */
-    shared struct SharedAscendingPageAllocator
-    {
-        import std.typecons : Ternary;
-
-        /**
-        Rounds the mapping size to the next multiple of the page size and calls
-        the OS primitive responsible for creating memory mappings: `mmap` on POSIX and
-        `VirtualAlloc` on Windows.
-
-        Params:
-        n = mapping size in bytes
-        */
-        this(size_t n) nothrow @nogc;
-
-        /**
-        Rounds the allocation size to the next multiple of the page size.
-        The allocation only reserves a range of virtual pages but the actual
-        physical memory is allocated on demand, when accessing the memory.
-
-        Params:
-        n = Bytes to allocate
-
-        Returns:
-        `null` on failure or if the requested size exceeds the remaining capacity.
-        */
-        void[] allocate(size_t n) nothrow @nogc;
-
-        /**
-        Rounds the allocation size to the next multiple of the page size.
-        The allocation only reserves a range of virtual pages but the actual
-        physical memory is allocated on demand, when accessing the memory.
-
-        The allocated memory is aligned to the specified alignment `a`.
-
-        Params:
-        n = Bytes to allocate
-        a = Alignment
-
-        Returns:
-        `null` on failure or if the requested size exceeds the remaining capacity.
-        */
-        void[] alignedAllocate(size_t n, uint a) nothrow @nogc;
-
-        /**
-        Rounds the requested size to the next multiple of the page size.
-        */
-        size_t goodAllocSize(size_t n) nothrow @nogc;
-
-        /**
-        Decommit all physical memory associated with the buffer given as parameter,
-        but keep the range of virtual addresses.
-
-        On POSIX systems `deallocate` calls `mmap` with `MAP_FIXED' a second time to decommit the memory.
-        On Windows, it uses `VirtualFree` with `MEM_DECOMMIT`.
-        */
-        void deallocate(void[] b) nothrow @nogc;
-
-        /**
-        If the passed buffer is not the last allocation, then `delta` can be
-        at most the number of bytes left on the last page.
-        Otherwise, we can expand the last allocation until the end of the virtual
-        address range.
-        */
-        bool expand(ref void[] b, size_t delta) nothrow @nogc;
 
         /**
         Returns `Ternary.yes` if the passed buffer is inside the range of virtual adresses.
@@ -512,149 +229,453 @@ version (StdDdoc)
         */
         size_t getAvailableSize() nothrow @nogc;
     }
-}
-else
-{
-    shared struct SharedAscendingPageAllocator
+
+private:
+    size_t pageSize;
+    size_t numPages;
+
+    // The start of the virtual address range
+    void* data;
+
+    // Keeps track of there the next allocation should start
+    void* offset;
+
+    // Number of pages which contain alive objects
+    size_t pagesUsed;
+
+    // On allocation requests, we allocate an extra 'extraAllocPages' pages
+    // The address up to which we have permissions is stored in 'readWriteLimit'
+    void* readWriteLimit;
+    enum extraAllocPages = 1000;
+
+public:
+    enum uint alignment = 4096;
+
+    // Inject common function implementations
+    mixin AscendingPageAllocatorImpl!false;
+
+    /**
+    Rounds the allocation size to the next multiple of the page size.
+    The allocation only reserves a range of virtual pages but the actual
+    physical memory is allocated on demand, when accessing the memory.
+
+    Params:
+    n = Bytes to allocate
+
+    Returns:
+    `null` on failure or if the requested size exceeds the remaining capacity.
+    */
+    void[] allocate(size_t n) nothrow @nogc
     {
-        import std.typecons : Ternary;
-        import core.internal.spinlock : SpinLock;
+        import std.algorithm.comparison : min;
 
-    private:
-        size_t pageSize;
-        size_t numPages;
+        immutable pagedBytes = numPages * pageSize;
+        size_t goodSize = goodAllocSize(n);
 
-        // The start of the virtual address range
-        shared void* data;
+        // Requested exceeds the virtual memory range
+        if (goodSize > pagedBytes || offset - data > pagedBytes - goodSize)
+            return null;
 
-        // Keeps track of there the next allocation should start
-        shared void* offset;
-
-        // On allocation requests, we allocate an extra 'extraAllocPages' pages
-        // The address up to which we have permissions is stored in 'readWriteLimit'
-        shared void* readWriteLimit;
-        enum extraAllocPages = 1000;
-        SpinLock lock;
-
-    public:
-        enum uint alignment = 4096;
-
-        // Inject common function implementations
-        mixin AscendingPageAllocatorImpl!true;
-
-        void[] allocate(size_t n) nothrow @nogc
+        // Current allocation exceeds readable/writable memory area
+        if (offset + goodSize > readWriteLimit)
         {
-            return allocateImpl(n, 1);
-        }
-
-        void[] alignedAllocate(size_t n, uint a) nothrow @nogc
-        {
-            // For regular `allocate` calls, `a` will be set to 1
-            return allocateImpl(n, a);
-        }
-
-        private void[] allocateImpl(size_t n, uint a) nothrow @nogc
-        {
-            import std.algorithm.comparison : min;
-
-            immutable pagedBytes = numPages * pageSize;
-            size_t goodSize = goodAllocSize(n);
-            if (goodSize > pagedBytes)
-                return null;
-
-            void* localResult;
-            void* localOldLimit;
-            size_t localExtraAlloc;
-
-            lock.lock();
-            void* alignedStart = cast(void*) roundUpToMultipleOf(cast(size_t) offset, a);
-            assert(alignedStart.alignedAt(a));
-            if (alignedStart - data > pagedBytes - goodSize)
+            // Extend r/w memory range to new limit
+            void* newReadWriteLimit = min(data + pagedBytes,
+                offset + goodSize + extraAllocPages * pageSize);
+            if (newReadWriteLimit != readWriteLimit)
             {
-                lock.unlock();
-                return null;
-            }
-
-            // In case `extendMemoryProtection` fails, this might lead to leaks
-            // However this would happen only in extreme cases and the performance cost
-            // to fix this is too high
-            offset = cast(shared(void*)) (alignedStart + goodSize);
-            localResult = alignedStart;
-            if (offset > readWriteLimit)
-            {
-                void* newReadWriteLimit = min(cast(void*) data + pagedBytes,
-                    cast(void*) offset + extraAllocPages * pageSize);
                 assert(newReadWriteLimit > readWriteLimit);
-                localExtraAlloc = newReadWriteLimit - readWriteLimit;
-                localOldLimit = cast(void*) readWriteLimit;
-                readWriteLimit = cast(shared(void*)) newReadWriteLimit;
-            }
-            lock.unlock();
-
-            if (localExtraAlloc != 0)
-            {
-                if (!extendMemoryProtection(localOldLimit, localExtraAlloc))
+                if (!extendMemoryProtection(readWriteLimit, newReadWriteLimit - readWriteLimit))
                     return null;
-            }
 
-            return cast(void[]) localResult[0 .. n];
+                readWriteLimit = newReadWriteLimit;
+            }
         }
 
-        bool expand(ref void[] b, size_t delta) nothrow @nogc
+        void* result = offset;
+        offset += goodSize;
+        pagesUsed += goodSize / pageSize;
+
+        return cast(void[]) result[0 .. n];
+    }
+
+    /**
+    Rounds the allocation size to the next multiple of the page size.
+    The allocation only reserves a range of virtual pages but the actual
+    physical memory is allocated on demand, when accessing the memory.
+
+    The allocated memory is aligned to the specified alignment `a`.
+
+    Params:
+    n = Bytes to allocate
+    a = Alignment
+
+    Returns:
+    `null` on failure or if the requested size exceeds the remaining capacity.
+    */
+    void[] alignedAllocate(size_t n, uint a) nothrow @nogc
+    {
+        void* alignedStart = cast(void*) roundUpToMultipleOf(cast(size_t) offset, a);
+        assert(alignedStart.alignedAt(a));
+        immutable pagedBytes = numPages * pageSize;
+        size_t goodSize = goodAllocSize(n);
+        if (goodSize > pagedBytes ||
+            alignedStart - data > pagedBytes - goodSize)
+            return null;
+
+        // Same logic as allocate, only that the buffer must be properly aligned
+        auto oldOffset = offset;
+        offset = alignedStart;
+        auto result = allocate(n);
+        if (!result)
+            offset = oldOffset;
+        return result;
+    }
+
+    /**
+    If the passed buffer is not the last allocation, then `delta` can be
+    at most the number of bytes left on the last page.
+    Otherwise, we can expand the last allocation until the end of the virtual
+    address range.
+    */
+    bool expand(ref void[] b, size_t delta) nothrow @nogc
+    {
+        import std.algorithm.comparison : min;
+
+        if (!delta) return true;
+        if (b is null) return false;
+
+        size_t goodSize = goodAllocSize(b.length);
+        size_t bytesLeftOnPage = goodSize - b.length;
+
+        // If this is not the last allocation, we can only expand until
+        // completely filling the last page covered by this buffer
+        if (b.ptr + goodSize != offset && delta > bytesLeftOnPage)
+            return false;
+
+        size_t extraPages = 0;
+
+        // If the extra `delta` bytes requested do not fit the last page
+        // compute how many extra pages are neeeded
+        if (delta > bytesLeftOnPage)
         {
-            import std.algorithm.comparison : min;
-
-            if (!delta) return true;
-            if (b is null) return false;
-
-            size_t goodSize = goodAllocSize(b.length);
-            size_t bytesLeftOnPage = goodSize - b.length;
-            if (bytesLeftOnPage >= delta)
-            {
-                b = cast(void[]) b.ptr[0 .. b.length + delta];
-                return true;
-            }
-
-            lock.lock();
-            if (b.ptr + goodSize != offset)
-            {
-                lock.unlock();
-                return false;
-            }
-
-            size_t extraPages = goodAllocSize(delta - bytesLeftOnPage) / pageSize;
-            if (extraPages > numPages || offset - data > pageSize * (numPages - extraPages))
-            {
-                lock.unlock();
-                return false;
-            }
-
-            size_t localExtraAlloc;
-            void* localOldLimit;
-
-            offset = cast(shared(void*)) b.ptr + goodSize + extraPages * pageSize;
-            if (offset > readWriteLimit)
-            {
-                void* newReadWriteLimit = cast(void*) min(data + numPages * pageSize,
-                    offset + extraAllocPages * pageSize);
-                assert(newReadWriteLimit > readWriteLimit);
-
-                localExtraAlloc = newReadWriteLimit - readWriteLimit;
-                localOldLimit = cast(void*) readWriteLimit;
-                readWriteLimit = cast(shared(void*)) newReadWriteLimit;
-            }
-            lock.unlock();
-
-            if (localExtraAlloc != 0)
-            {
-                if (!extendMemoryProtection(localOldLimit, localExtraAlloc))
-                    return false;
-            }
-
+            extraPages = goodAllocSize(delta - bytesLeftOnPage) / pageSize;
+        }
+        else
+        {
             b = cast(void[]) b.ptr[0 .. b.length + delta];
             return true;
         }
+
+        if (extraPages > numPages || offset - data > pageSize * (numPages - extraPages))
+            return false;
+
+        void* newPtrEnd = b.ptr + goodSize + extraPages * pageSize;
+        if (newPtrEnd > readWriteLimit)
+        {
+            void* newReadWriteLimit = min(data + numPages * pageSize,
+                newPtrEnd + extraAllocPages * pageSize);
+            if (newReadWriteLimit > readWriteLimit)
+            {
+                if (!extendMemoryProtection(readWriteLimit, newReadWriteLimit - readWriteLimit))
+                    return false;
+
+                readWriteLimit = newReadWriteLimit;
+            }
+        }
+
+        pagesUsed += extraPages;
+        offset += extraPages * pageSize;
+        b = cast(void[]) b.ptr[0 .. b.length + delta];
+        return true;
     }
+
+    /**
+    Returns `Ternary.yes` if the allocator does not contain any alive objects
+    and `Ternary.no` otherwise.
+    */
+    Ternary empty() nothrow @nogc
+    {
+        return Ternary(pagesUsed == 0);
+    }
+
+    /**
+    Unmaps the whole virtual address range on destruction.
+    */
+    ~this() nothrow @nogc
+    {
+        if (data)
+            deallocateAll();
+    }
+}
+
+///
+@system @nogc nothrow unittest
+{
+    size_t pageSize = 4096;
+    size_t numPages = 100;
+    void[] buf;
+    void[] prevBuf = null;
+    AscendingPageAllocator a = AscendingPageAllocator(numPages * pageSize);
+
+    foreach (i; 0 .. numPages)
+    {
+        // Allocation is rounded up to page size
+        buf = a.allocate(pageSize - 100);
+        assert(buf.length == pageSize - 100);
+
+        // Allocations are served at increasing addresses
+        if (prevBuf)
+            assert(prevBuf.ptr + pageSize == buf.ptr);
+
+        assert(a.deallocate(buf));
+        prevBuf = buf;
+    }
+}
+
+/**
+`SharedAscendingPageAllocator` is the threadsafe version of `AscendingPageAllocator`.
+*/
+shared struct SharedAscendingPageAllocator
+{
+    import std.typecons : Ternary;
+    import core.internal.spinlock : SpinLock;
+
+    // Docs for mixin functions
+    version (StdDdoc)
+    {
+        /**
+        Rounds the mapping size to the next multiple of the page size and calls
+        the OS primitive responsible for creating memory mappings: `mmap` on POSIX and
+        `VirtualAlloc` on Windows.
+
+        Params:
+        n = mapping size in bytes
+        */
+        this(size_t n) nothrow @nogc;
+
+        /**
+        Rounds the requested size to the next multiple of the page size.
+        */
+        size_t goodAllocSize(size_t n) nothrow @nogc;
+
+        /**
+        Decommit all physical memory associated with the buffer given as parameter,
+        but keep the range of virtual addresses.
+
+        On POSIX systems `deallocate` calls `mmap` with `MAP_FIXED' a second time to decommit the memory.
+        On Windows, it uses `VirtualFree` with `MEM_DECOMMIT`.
+        */
+        void deallocate(void[] b) nothrow @nogc;
+
+        /**
+        Returns `Ternary.yes` if the passed buffer is inside the range of virtual adresses.
+        Does not guarantee that the passed buffer is still valid.
+        */
+        Ternary owns(void[] buf) nothrow @nogc;
+
+        /**
+        Removes the memory mapping causing all physical memory to be decommited and
+        the virtual address space to be reclaimed.
+        */
+        bool deallocateAll() nothrow @nogc;
+
+        /**
+        Returns the available size for further allocations in bytes.
+        */
+        size_t getAvailableSize() nothrow @nogc;
+    }
+
+private:
+    size_t pageSize;
+    size_t numPages;
+
+    // The start of the virtual address range
+    shared void* data;
+
+    // Keeps track of there the next allocation should start
+    shared void* offset;
+
+    // On allocation requests, we allocate an extra 'extraAllocPages' pages
+    // The address up to which we have permissions is stored in 'readWriteLimit'
+    shared void* readWriteLimit;
+    enum extraAllocPages = 1000;
+    SpinLock lock;
+
+public:
+    enum uint alignment = 4096;
+
+    // Inject common function implementations
+    mixin AscendingPageAllocatorImpl!true;
+
+    /**
+    Rounds the allocation size to the next multiple of the page size.
+    The allocation only reserves a range of virtual pages but the actual
+    physical memory is allocated on demand, when accessing the memory.
+
+    Params:
+    n = Bytes to allocate
+
+    Returns:
+    `null` on failure or if the requested size exceeds the remaining capacity.
+    */
+    void[] allocate(size_t n) nothrow @nogc
+    {
+        return allocateImpl(n, 1);
+    }
+
+    /**
+    Rounds the allocation size to the next multiple of the page size.
+    The allocation only reserves a range of virtual pages but the actual
+    physical memory is allocated on demand, when accessing the memory.
+
+    The allocated memory is aligned to the specified alignment `a`.
+
+    Params:
+    n = Bytes to allocate
+    a = Alignment
+
+    Returns:
+    `null` on failure or if the requested size exceeds the remaining capacity.
+    */
+    void[] alignedAllocate(size_t n, uint a) nothrow @nogc
+    {
+        // For regular `allocate` calls, `a` will be set to 1
+        return allocateImpl(n, a);
+    }
+
+    private void[] allocateImpl(size_t n, uint a) nothrow @nogc
+    {
+        import std.algorithm.comparison : min;
+
+        immutable pagedBytes = numPages * pageSize;
+        size_t goodSize = goodAllocSize(n);
+        if (goodSize > pagedBytes)
+            return null;
+
+        void* localResult;
+        void* localOldLimit;
+        size_t localExtraAlloc;
+
+        lock.lock();
+        void* alignedStart = cast(void*) roundUpToMultipleOf(cast(size_t) offset, a);
+        assert(alignedStart.alignedAt(a));
+        if (alignedStart - data > pagedBytes - goodSize)
+        {
+            lock.unlock();
+            return null;
+        }
+
+        // In case `extendMemoryProtection` fails, this might lead to leaks
+        // However this would happen only in extreme cases and the performance cost
+        // to fix this is too high
+        offset = cast(shared(void*)) (alignedStart + goodSize);
+        localResult = alignedStart;
+        if (offset > readWriteLimit)
+        {
+            void* newReadWriteLimit = min(cast(void*) data + pagedBytes,
+                cast(void*) offset + extraAllocPages * pageSize);
+            assert(newReadWriteLimit > readWriteLimit);
+            localExtraAlloc = newReadWriteLimit - readWriteLimit;
+            localOldLimit = cast(void*) readWriteLimit;
+            readWriteLimit = cast(shared(void*)) newReadWriteLimit;
+        }
+        lock.unlock();
+
+        if (localExtraAlloc != 0)
+        {
+            if (!extendMemoryProtection(localOldLimit, localExtraAlloc))
+                return null;
+        }
+
+        return cast(void[]) localResult[0 .. n];
+    }
+
+    /**
+    If the passed buffer is not the last allocation, then `delta` can be
+    at most the number of bytes left on the last page.
+    Otherwise, we can expand the last allocation until the end of the virtual
+    address range.
+    */
+    bool expand(ref void[] b, size_t delta) nothrow @nogc
+    {
+        import std.algorithm.comparison : min;
+
+        if (!delta) return true;
+        if (b is null) return false;
+
+        size_t goodSize = goodAllocSize(b.length);
+        size_t bytesLeftOnPage = goodSize - b.length;
+        if (bytesLeftOnPage >= delta)
+        {
+            b = cast(void[]) b.ptr[0 .. b.length + delta];
+            return true;
+        }
+
+        lock.lock();
+        if (b.ptr + goodSize != offset)
+        {
+            lock.unlock();
+            return false;
+        }
+
+        size_t extraPages = goodAllocSize(delta - bytesLeftOnPage) / pageSize;
+        if (extraPages > numPages || offset - data > pageSize * (numPages - extraPages))
+        {
+            lock.unlock();
+            return false;
+        }
+
+        size_t localExtraAlloc;
+        void* localOldLimit;
+
+        offset = cast(shared(void*)) b.ptr + goodSize + extraPages * pageSize;
+        if (offset > readWriteLimit)
+        {
+            void* newReadWriteLimit = cast(void*) min(data + numPages * pageSize,
+                offset + extraAllocPages * pageSize);
+            assert(newReadWriteLimit > readWriteLimit);
+
+            localExtraAlloc = newReadWriteLimit - readWriteLimit;
+            localOldLimit = cast(void*) readWriteLimit;
+            readWriteLimit = cast(shared(void*)) newReadWriteLimit;
+        }
+        lock.unlock();
+
+        if (localExtraAlloc != 0)
+        {
+            if (!extendMemoryProtection(localOldLimit, localExtraAlloc))
+                return false;
+        }
+
+        b = cast(void[]) b.ptr[0 .. b.length + delta];
+        return true;
+    }
+}
+
+///
+@system unittest
+{
+    import core.thread : ThreadGroup;
+
+    enum numThreads = 100;
+    enum pageSize = 4096;
+    shared SharedAscendingPageAllocator a = SharedAscendingPageAllocator(pageSize * numThreads);
+
+    void fun()
+    {
+        void[] b = a.allocate(pageSize);
+        assert(b.length == pageSize);
+
+        assert(a.deallocate(b));
+    }
+
+    auto tg = new ThreadGroup;
+    foreach (i; 0 .. numThreads)
+    {
+        tg.create(&fun);
+    }
+    tg.joinAll();
 }
 
 version(StdUnittest)
