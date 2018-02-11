@@ -233,7 +233,7 @@ struct RIPEMD160
 
             uint[16] x = void;
 
-            version(BigEndian)
+            version (BigEndian)
             {
                 import std.bitmanip : littleEndianToNative;
 

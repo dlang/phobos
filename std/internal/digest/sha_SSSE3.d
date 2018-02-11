@@ -15,7 +15,7 @@
  */
 module std.internal.digest.sha_SSSE3;
 
-version(D_InlineAsm_X86)
+version (D_InlineAsm_X86)
 {
     version (D_PIC) {} // Bugzilla 9378
     else
@@ -24,7 +24,7 @@ version(D_InlineAsm_X86)
         private version = _32Bit;
     }
 }
-else version(D_InlineAsm_X86_64)
+else version (D_InlineAsm_X86_64)
 {
     private version = USE_SSSE3;
     private version = _64Bit;
@@ -65,7 +65,7 @@ else version(D_InlineAsm_X86_64)
  * computed values.
  */
 
-version(USE_SSSE3)
+version (USE_SSSE3)
 {
     /*
      * The general idea is to use the XMM registers as a sliding window over
@@ -91,7 +91,7 @@ version(USE_SSSE3)
     private immutable string E = "EDX";
 
     /* */
-    version(_32Bit)
+    version (_32Bit)
     {
         private immutable string SP = "ESP";
         private immutable string BUFFER_PTR = "EAX";
@@ -103,7 +103,7 @@ version(USE_SSSE3)
         // Round constant (only used in round 0-15)
         private immutable string X_CONSTANT = "XMM7";
     }
-    version(_64Bit)
+    version (_64Bit)
     {
         private immutable string SP = "RSP";
         private immutable string BUFFER_PTR = "R9";
@@ -196,11 +196,11 @@ version(USE_SSSE3)
      */
     private nothrow pure string[] swt3264(string[] insn32, string[] insn64)
     {
-        version(_32Bit)
+        version (_32Bit)
         {
             return insn32;
         }
-        version(_64Bit)
+        version (_64Bit)
         {
             return insn64;
         }
@@ -318,7 +318,7 @@ version(USE_SSSE3)
                             ["movdqa "~X_SHUFFLECTL~","~bswap_shufb_ctl(),
                              "movdqa "~X_CONSTANT~","~constant(i)]);
         }
-        version(_64Bit)
+        version (_64Bit)
         {
             if (i%20 == 0)
             {
@@ -339,11 +339,11 @@ version(USE_SSSE3)
         int regno = regno(i);
 
         string W = "XMM" ~ to_string(regno);
-        version(_32Bit)
+        version (_32Bit)
         {
             string W_TMP = "XMM" ~ to_string(regno+2);
         }
-        version(_64Bit)
+        version (_64Bit)
         {
             string W_TMP = "XMM" ~ to_string(regno+8);
         }
@@ -392,7 +392,7 @@ version(USE_SSSE3)
         string W_minus_8 = "XMM" ~ to_string((regno-2)&7);
         string W_minus_12 = "XMM" ~ to_string((regno-3)&7);
         string W_minus_16 = "XMM" ~ to_string((regno-4)&7);
-        version(_32Bit)
+        version (_32Bit)
         {
             string W_TMP = "XMM" ~ to_string((regno+1)&7);
             string W_TMP2 = "XMM" ~ to_string((regno+2)&7);
@@ -447,14 +447,14 @@ version(USE_SSSE3)
         string W_minus_4 = "XMM" ~ to_string((regno-1)&7);
         string W_minus_8 = "XMM" ~ to_string((regno-2)&7);
         string W_minus_16 = "XMM" ~ to_string((regno-4)&7);
-        version(_32Bit)
+        version (_32Bit)
         {
             string W_minus_28 = "[ESP + WI_PTR + "~ to_string((regno-7)&7)~"*16]";
             string W_minus_32 = "[ESP + WI_PTR + "~ to_string((regno-8)&7)~"*16]";
             string W_TMP = "XMM" ~ to_string((regno+1)&7);
             string W_TMP2 = "XMM" ~ to_string((regno+2)&7);
         }
-        version(_64Bit)
+        version (_64Bit)
         {
             string W_minus_28 = "XMM" ~ to_string((regno-7)&7);
             string W_minus_32 = "XMM" ~ to_string((regno-8)&7);
@@ -534,11 +534,11 @@ version(USE_SSSE3)
     }
 
     // Offset into stack (see below)
-    version(_32Bit)
+    version (_32Bit)
     {
         private enum { STATE_OFS = 4, WI_PLUS_KI_PTR = 8, WI_PTR = 72 };
     }
-    version(_64Bit)
+    version (_64Bit)
     {
         private enum { WI_PLUS_KI_PTR = 0 };
     }
@@ -546,7 +546,7 @@ version(USE_SSSE3)
     /** The prologue sequence. */
     private nothrow pure string[] prologue()
     {
-        version(_32Bit)
+        version (_32Bit)
         {
             /*
              * Parameters:
@@ -594,7 +594,7 @@ version(USE_SSSE3)
                     "push EBP",
             ];
         }
-        version(_64Bit)
+        version (_64Bit)
         {
             /*
              * Parameters:
@@ -634,7 +634,7 @@ version(USE_SSSE3)
       */
     private nothrow pure string[] epilogue()
     {
-        version(_32Bit)
+        version (_32Bit)
         {
             return ["pop ESP",
                     "pop EBX",
@@ -644,7 +644,7 @@ version(USE_SSSE3)
                     "ret 4",
                    ];
         }
-        version(_64Bit)
+        version (_64Bit)
         {
             return ["add RSP,4*16+8",
                     "pop RBX",
@@ -718,7 +718,7 @@ version(USE_SSSE3)
         mixin(wrap(round(74, B, C, D, E, A)));
         mixin(wrap(round(76, E, A, B, C, D)));
         mixin(wrap(round(78, C, D, E, A, B)));
-        version(_32Bit)
+        version (_32Bit)
         {
             // Load pointer to state
             mixin(wrap(["mov "~STATE_PTR~",[ESP + STATE_OFS]"]));

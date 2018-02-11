@@ -1736,11 +1736,11 @@ unittest
 }
 
 
-version(StdUnittest) private void testDecode(R)(R range,
-                                             size_t index,
-                                             dchar expectedChar,
-                                             size_t expectedIndex,
-                                             size_t line = __LINE__)
+version (StdUnittest) private void testDecode(R)(R range,
+                                                 size_t index,
+                                                 dchar expectedChar,
+                                                 size_t expectedIndex,
+                                                 size_t line = __LINE__)
 {
     import core.exception : AssertError;
     import std.string : format;
@@ -1765,10 +1765,10 @@ version(StdUnittest) private void testDecode(R)(R range,
     }
 }
 
-version(StdUnittest) private void testDecodeFront(R)(ref R range,
-                                                  dchar expectedChar,
-                                                  size_t expectedNumCodeUnits,
-                                                  size_t line = __LINE__)
+version (StdUnittest) private void testDecodeFront(R)(ref R range,
+                                                      dchar expectedChar,
+                                                      size_t expectedNumCodeUnits,
+                                                      size_t line = __LINE__)
 {
     import core.exception : AssertError;
     import std.string : format;
@@ -1790,10 +1790,10 @@ version(StdUnittest) private void testDecodeFront(R)(ref R range,
     }
 }
 
-version(StdUnittest) private void testDecodeBack(R)(ref R range,
-                                                 dchar expectedChar,
-                                                 size_t expectedNumCodeUnits,
-                                                 size_t line = __LINE__)
+version (StdUnittest) private void testDecodeBack(R)(ref R range,
+                                                     dchar expectedChar,
+                                                     size_t expectedNumCodeUnits,
+                                                     size_t line = __LINE__)
 {
     // This condition is to allow unit testing all `decode` functions together
     static if (!isBidirectionalRange!R)
@@ -1821,10 +1821,10 @@ version(StdUnittest) private void testDecodeBack(R)(ref R range,
     }
 }
 
-version(StdUnittest) private void testAllDecode(R)(R range,
-                                                dchar expectedChar,
-                                                size_t expectedIndex,
-                                                size_t line = __LINE__)
+version (StdUnittest) private void testAllDecode(R)(R range,
+                                                    dchar expectedChar,
+                                                    size_t expectedIndex,
+                                                    size_t line = __LINE__)
 {
     testDecode(range, 0, expectedChar, expectedIndex, line);
     static if (isBidirectionalRange!R)
@@ -1835,7 +1835,7 @@ version(StdUnittest) private void testAllDecode(R)(R range,
     testDecodeFront(range, expectedChar, expectedIndex, line);
 }
 
-version(StdUnittest) private void testBadDecode(R)(R range, size_t index, size_t line = __LINE__)
+version (StdUnittest) private void testBadDecode(R)(R range, size_t index, size_t line = __LINE__)
 {
     import core.exception : AssertError;
     import std.string : format;
@@ -1861,7 +1861,7 @@ version(StdUnittest) private void testBadDecode(R)(R range, size_t index, size_t
         assertThrown!UTFException(decodeFront(range, index), null, __FILE__, line);
 }
 
-version(StdUnittest) private void testBadDecodeBack(R)(R range, size_t line = __LINE__)
+version (StdUnittest) private void testBadDecodeBack(R)(R range, size_t line = __LINE__)
 {
     // This condition is to allow unit testing all `decode` functions together
     static if (!isBidirectionalRange!R)
@@ -3152,7 +3152,7 @@ if (isSomeChar!C)
 
 
 // Ranges of code units for testing.
-version(StdUnittest)
+version (StdUnittest)
 {
     struct InputCU(C)
     {
@@ -3906,7 +3906,7 @@ pure @safe nothrow @nogc unittest
     foreach (c; s[].byDchar()) { }
 }
 
-version(StdUnittest)
+version (StdUnittest)
 int impureVariable;
 
 @system unittest

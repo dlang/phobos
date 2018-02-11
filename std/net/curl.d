@@ -164,7 +164,7 @@ import std.encoding : EncodingScheme;
 import std.traits : isSomeChar;
 import std.typecons : Flag, Yes, No, Tuple;
 
-version(StdUnittest)
+version (StdUnittest)
 {
     import std.socket : Socket;
 
@@ -310,7 +310,7 @@ version(StdUnittest)
 
     private enum httpContinue = "HTTP/1.1 100 Continue\r\n\r\n";
 }
-version(StdDdoc) import std.stdio;
+version (StdDdoc) import std.stdio;
 
 // Default data timeout for Protocols
 enum _defaultDataTimeout = dur!"minutes"(2);

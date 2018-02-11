@@ -950,7 +950,7 @@ template Filter(alias pred, TList...)
 
 
 // Used in template predicate unit tests below.
-private version(StdUnittest)
+private version (StdUnittest)
 {
     template testAlways(T...)
     {

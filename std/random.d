@@ -75,7 +75,7 @@ import std.traits;
     static assert(is(typeof(u) == uint));
 }
 
-version(StdUnittest)
+version (StdUnittest)
 {
     static import std.meta;
     package alias PseudoRngTypes = std.meta.AliasSeq!(MinstdRand0, MinstdRand, Mt19937, Xorshift32, Xorshift64,
@@ -532,7 +532,7 @@ alias MinstdRand = LinearCongruentialEngine!(uint, 48_271, 0, 2_147_483_647);
         auto rnd2 = rnd1.save;
         assert(rnd1 == rnd2);
         // Enable next test when RNGs are reference types
-        version(none) { assert(rnd1 !is rnd2); }
+        version (none) { assert(rnd1 !is rnd2); }
         assert(rnd1.take(100).array() == rnd2.take(100).array());
     }}
 }
@@ -969,7 +969,7 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
         auto gen2 = gen1.save;
         assert(gen1 == gen2);  // Danger, Will Robinson -- no opEquals for MT
         // Enable next test when RNGs are reference types
-        version(none) { assert(gen1 !is gen2); }
+        version (none) { assert(gen1 !is gen2); }
         assert(gen1.take(100).array() == gen2.take(100).array());
     }}
 }
@@ -1270,7 +1270,7 @@ alias Xorshift    = Xorshift128;                            /// ditto
         auto rnd2 = rnd1.save;
         assert(rnd1 == rnd2);
         // Enable next test when RNGs are reference types
-        version(none) { assert(rnd1 !is rnd2); }
+        version (none) { assert(rnd1 !is rnd2); }
         assert(rnd1.take(100).array() == rnd2.take(100).array());
     }
 }

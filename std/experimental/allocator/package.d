@@ -1930,7 +1930,7 @@ if (isInputRange!R && !isInfinite!R)
     assert(arr2.map!`a.val`.equal(iota(32, 204, 2)));
 }
 
-version(StdUnittest)
+version (StdUnittest)
 {
     private struct ForcedInputRange
     {
@@ -2239,7 +2239,7 @@ if (is(T == class) || is(T == interface))
     if (!p) return;
     static if (is(T == interface))
     {
-        version(Windows)
+        version (Windows)
         {
             import core.sys.windows.unknwn : IUnknown;
             static assert(!is(T: IUnknown), "COM interfaces can't be destroyed in "

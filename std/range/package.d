@@ -8910,7 +8910,7 @@ private struct OnlyResult(T, size_t arity)
     private size_t backIndex = 0;
 
     // @@@BUG@@@ 10643
-    version(none)
+    version (none)
     {
         import std.traits : hasElaborateAssign;
         static if (hasElaborateAssign!T)
@@ -9555,7 +9555,7 @@ pure @safe unittest
     }}
 }
 
-version(none) // @@@BUG@@@ 10939
+version (none) // @@@BUG@@@ 10939
 {
     // Re-enable (or remove) if 10939 is resolved.
     /+pure+/ @safe unittest // Impure because of std.conv.to
@@ -10474,7 +10474,7 @@ public:
     }
 
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         /++ +/
         @property auto front() {assert(0);}
@@ -10502,7 +10502,7 @@ public:
     }
 
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         @property bool empty(); ///
         @property bool empty() const; ///Ditto
@@ -10530,7 +10530,7 @@ public:
     }
 
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         /++
             Only defined if $(D isForwardRange!R) is $(D true).
@@ -10600,7 +10600,7 @@ public:
     }
 
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         /++
             Only defined if $(D isBidirectionalRange!R) is $(D true).
@@ -10637,7 +10637,7 @@ public:
     }
 
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         /++
             Only defined if $(D isRandomAccesRange!R) is $(D true).
@@ -10693,7 +10693,7 @@ public:
     }
 
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         /++
             Only defined if $(D hasLength!R) is $(D true).
@@ -10722,7 +10722,7 @@ public:
     }
 
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         /++
             Only defined if $(D hasSlicing!R) is $(D true).

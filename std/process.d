@@ -334,7 +334,7 @@ Pid spawnProcess(in char[] program,
     return spawnProcess((&program)[0 .. 1], env, config, workDir);
 }
 
-version(Posix) private enum InternalError : ubyte
+version (Posix) private enum InternalError : ubyte
 {
     noerror,
     exec,
@@ -1146,7 +1146,7 @@ version (Posix) @system unittest
     assertThrown!ProcessException(spawnProcess("./rgiuhrifuheiohnmnvqweoijwf", null, Config.detached));
 
     // can't execute malformed file with executable permissions
-    version(Posix)
+    version (Posix)
     {
         import std.path : buildPath;
         import std.file : remove, write, setAttributes;
@@ -1189,7 +1189,7 @@ version (Posix) @system unittest
     assertThrown!ProcessException(spawnProcess([prog.path], null, Config.detached, directory));
 
     // can't run in directory if user does not have search permission on this directory
-    version(Posix)
+    version (Posix)
     {
         if (core.sys.posix.unistd.getuid() != 0)
         {
@@ -1335,7 +1335,7 @@ Pid spawnShell(in char[] command,
     auto env = ["foo" : "bar"];
     assert(wait(spawnShell(cmd~redir, env)) == 0);
     auto f = File(tmpFile, "a");
-    version(CRuntime_Microsoft) f.seek(0, SEEK_END); // MSVCRT probably seeks to the end when writing, not before
+    version (CRuntime_Microsoft) f.seek(0, SEEK_END); // MSVCRT probably seeks to the end when writing, not before
     assert(wait(spawnShell(cmd, std.stdio.stdin, f, std.stdio.stderr, env)) == 0);
     f.close();
     auto output = std.file.readText(tmpFile);
@@ -1879,7 +1879,7 @@ void kill(Pid pid, int codeOrSignal)
     */
     Thread.sleep(1.seconds);
     assert(!pid.owned);
-    version(Windows) assert(pid.osHandle == INVALID_HANDLE_VALUE);
+    version (Windows) assert(pid.osHandle == INVALID_HANDLE_VALUE);
     assertThrown!ProcessException(wait(pid));
     assertThrown!ProcessException(kill(pid));
 }
@@ -2734,7 +2734,7 @@ version (Windows) private immutable string shellSwitch = "/C";
 // file. On Windows the file name gets a .cmd extension, while on
 // POSIX its executable permission bit is set.  The file is
 // automatically deleted when the object goes out of scope.
-version(StdUnittest)
+version (StdUnittest)
 private struct TestScript
 {
     this(string code) @system
@@ -2777,7 +2777,7 @@ private struct TestScript
     string path;
 }
 
-version(StdUnittest)
+version (StdUnittest)
 private string uniqueTempPath() @safe
 {
     import std.file : tempDir;
@@ -3076,7 +3076,7 @@ if (is(typeof(allocator(size_t.init)[0] = char.init)))
     return buf;
 }
 
-version(Windows) version(StdUnittest)
+version (Windows) version (StdUnittest)
 {
     import core.stdc.stddef;
     import core.stdc.wchar_ : wcslen;
@@ -3194,7 +3194,7 @@ string escapeShellFileName(in char[] fileName) @trusted pure nothrow
 // Loop generating strings with random characters
 //version = unittest_burnin;
 
-version(unittest_burnin)
+version (unittest_burnin)
 @system unittest
 {
     // There are no readily-available commands on all platforms suitable
@@ -3762,7 +3762,7 @@ version (Posix)
 {
     import core.sys.posix.stdlib;
 }
-version(StdUnittest)
+version (StdUnittest)
 {
     import std.conv, std.file, std.random;
 }
@@ -3797,7 +3797,7 @@ private void toAStringz(in string[] a, const(char)**az)
 // Incorporating idea (for spawnvp() on Posix) from Dave Fladebo
 
 enum { _P_WAIT, _P_NOWAIT, _P_OVERLAY }
-version(Windows) extern(C) int spawnvp(int, in char *, in char **);
+version (Windows) extern(C) int spawnvp(int, in char *, in char **);
 alias P_WAIT = _P_WAIT;
 alias P_NOWAIT = _P_NOWAIT;
 
@@ -3874,7 +3874,7 @@ version (StdDdoc)
     /// ditto
     int execvpe(in string pathname, in string[] argv, in string[] envp);
 }
-else version(Posix)
+else version (Posix)
 {
     int execv(in string pathname, in string[] argv)
     {
@@ -3900,7 +3900,7 @@ extern(C)
     int execv(in char *, in char **);
     int execve(in char *, in char **, in char **);
     int execvp(in char *, in char **);
-    version(Windows) int execvpe(in char *, in char **, in char **);
+    version (Windows) int execvpe(in char *, in char **, in char **);
 }
 
 private int execv_(in string pathname, in string[] argv)
@@ -3938,7 +3938,7 @@ private int execvp_(in string pathname, in string[] argv)
 
 private int execvpe_(in string pathname, in string[] argv, in string[] envp)
 {
-version(Posix)
+version (Posix)
 {
     import std.array : split;
     import std.conv : to;
@@ -3973,7 +3973,7 @@ version(Posix)
         return iRet;
     }
 }
-else version(Windows)
+else version (Windows)
 {
     auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
     scope(exit) core.stdc.stdlib.free(argv_);
@@ -3991,7 +3991,7 @@ else
 } // version
 }
 
-version(StdDdoc)
+version (StdDdoc)
 {
     /****************************************
      * Start up the browser and set it to viewing the page at url.

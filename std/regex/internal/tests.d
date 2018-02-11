@@ -403,23 +403,23 @@ import std.uni : Escapables; // characters that need escaping
     void ct_tests()
     {
         import std.algorithm.comparison : equal;
-        version(std_regex_ct1)
+        version (std_regex_ct1)
         {
             pragma(msg, "Testing 1st part of ctRegex");
             enum Tests = iota(0, 155);
         }
-        else version(std_regex_ct2)
+        else version (std_regex_ct2)
         {
             pragma(msg, "Testing 2nd part of ctRegex");
             enum Tests = iota(155, 174);
         }
         //FIXME: #174-178 contains CTFE parser bug
-        else version(std_regex_ct3)
+        else version (std_regex_ct3)
         {
             pragma(msg, "Testing 3rd part of ctRegex");
             enum Tests = iota(178, 220);
         }
-        else version(std_regex_ct4)
+        else version (std_regex_ct4)
         {
             pragma(msg, "Testing 4th part of ctRegex");
             enum Tests = iota(220, tv.length);

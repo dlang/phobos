@@ -7,7 +7,7 @@ module std.experimental.allocator.building_blocks.allocator_list;
 import std.experimental.allocator.building_blocks.null_allocator;
 import std.experimental.allocator.common;
 import std.experimental.allocator.gc_allocator;
-version(StdUnittest) import std.stdio;
+version (StdUnittest) import std.stdio;
 
 // Turn this on for debugging
 // debug = allocator_list;
@@ -549,7 +549,7 @@ template AllocatorList(alias factoryFunction,
 }
 
 ///
-version(Posix) @system unittest
+version (Posix) @system unittest
 {
     import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.free_list : ContiguousFreeList;

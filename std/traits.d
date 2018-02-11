@@ -334,7 +334,7 @@ template QualifierOf(T)
     alias Qual7 = QualifierOf!(   immutable int);   static assert(is(Qual7!long ==    immutable long));
 }
 
-version(StdUnittest)
+version (StdUnittest)
 {
     alias TypeQualifierList = AliasSeq!(MutableOf, ConstOf, SharedOf, SharedConstOf, ImmutableOf);
 
@@ -393,7 +393,7 @@ template packageName(alias T)
     static assert(packageName!(X12287!int.i) == "std");
 }
 
-version (none) version(unittest) //Please uncomment me when changing packageName to test global imports
+version (none) version (unittest) //Please uncomment me when changing packageName to test global imports
 {
     import core.sync.barrier;  // global import
     static assert(packageName!core == "core");
@@ -448,7 +448,7 @@ template moduleName(alias T)
     static assert(moduleName!(X12287!int.i) == "std.traits");
 }
 
-version (none) version(unittest) //Please uncomment me when changing moduleName to test global imports
+version (none) version (unittest) //Please uncomment me when changing moduleName to test global imports
 {
     import core.sync.barrier;  // global import
     static assert(!__traits(compiles, moduleName!(core.sync)));
@@ -482,7 +482,7 @@ template fullyQualifiedName(T...)
     static assert(fullyQualifiedName!fullyQualifiedName == "std.traits.fullyQualifiedName");
 }
 
-version(StdUnittest)
+version (StdUnittest)
 {
     // Used for both fqnType and fqnSym unittests
     private struct QualifiedNameTests
@@ -2238,7 +2238,7 @@ template SetFunctionAttributes(T, string linkage, uint attrs)
     }
 }
 
-version(StdUnittest)
+version (StdUnittest)
 {
     // Some function types to test.
     int sc(scope int, ref int, out int, lazy int, int);
@@ -6138,7 +6138,7 @@ enum bool isEqualityComparable(T) = ifTestable!(T, unaryFun!"a == a");
     assert(b1 != b3);
 }
 
-version(TestComplex)
+version (TestComplex)
 deprecated
 @safe unittest
 {
@@ -7498,7 +7498,7 @@ template mangledName(sth...)
     static assert(TL == AliasSeq!("i", "xi", "yi"));
 }
 
-version(StdUnittest) void freeFunc(string);
+version (StdUnittest) void freeFunc(string);
 
 @safe unittest
 {

@@ -18,7 +18,7 @@ module std.internal.cstring;
 ///
 @safe unittest
 {
-    version(Posix)
+    version (Posix)
     {
         import core.stdc.stdlib : free;
         import core.sys.posix.stdlib : setenv;
@@ -28,7 +28,7 @@ module std.internal.cstring;
         { enforce(setenv(name.tempCString(), value.tempCString(), 1) != -1); }
     }
 
-    version(Windows)
+    version (Windows)
     {
         import core.sys.windows.windows : SetEnvironmentVariableW;
         import std.exception : enforce;
@@ -41,7 +41,7 @@ module std.internal.cstring;
 import std.range;
 import std.traits;
 
-version(unittest)
+version (unittest)
 @property inout(C)[] asArray(C)(inout C* cstr) pure nothrow @nogc @trusted
 if (isSomeChar!C)
 in { assert(cstr); }
@@ -177,7 +177,7 @@ pure nothrow @nogc @safe unittest
     assert(ptr is null);
 }
 
-version(Windows)
+version (Windows)
     alias tempCStringW = tempCString!(wchar, const(char)[]);
 
 private struct TempCStringBuffer(To = char)
@@ -217,7 +217,7 @@ private:
 
     To* _ptr;
     size_t _length;        // length of the string
-    version(StdUnittest)
+    version (StdUnittest)
     // the 'small string optimization'
     {
         // smaller size to trigger reallocations. Padding is to account for

@@ -132,7 +132,7 @@ else
     return _deleteme;
 }
 
-version(StdUnittest) private struct TestAliasedString
+version (StdUnittest) private struct TestAliasedString
 {
     string get() @safe @nogc pure nothrow { return _s; }
     alias get this;
@@ -140,12 +140,12 @@ version(StdUnittest) private struct TestAliasedString
     string _s;
 }
 
-version(Android)
+version (Android)
 {
     package enum system_directory = "/system/etc";
     package enum system_file      = "/system/etc/hosts";
 }
-else version(Posix)
+else version (Posix)
 {
     package enum system_directory = "/usr/include";
     package enum system_file      = "/usr/include/assert.h";
@@ -195,18 +195,18 @@ class FileException : Exception
             line  = The _line where the error occurred.
                     Defaults to $(D __LINE__).
      +/
-    version(Windows) this(in char[] name,
-                          uint errno = .GetLastError(),
-                          string file = __FILE__,
-                          size_t line = __LINE__) @safe
+    version (Windows) this(in char[] name,
+                           uint errno = .GetLastError(),
+                           string file = __FILE__,
+                           size_t line = __LINE__) @safe
     {
         this(name, sysErrorString(errno), file, line);
         this.errno = errno;
     }
-    else version(Posix) this(in char[] name,
-                             uint errno = .errno,
-                             string file = __FILE__,
-                             size_t line = __LINE__) @trusted
+    else version (Posix) this(in char[] name,
+                              uint errno = .errno,
+                              string file = __FILE__,
+                              size_t line = __LINE__) @trusted
     {
         import std.exception : errnoString;
         this(name, errnoString(errno), file, line);
@@ -615,8 +615,8 @@ if (isConvertibleToString!R)
 
 // Posix implementation helper for write and append
 
-version(Posix) private void writeImpl(const(char)[] name, const(FSChar)* namez,
-        in void[] buffer, bool append) @trusted
+version (Posix) private void writeImpl(const(char)[] name, const(FSChar)* namez,
+                                       in void[] buffer, bool append) @trusted
 {
     import std.conv : octal;
 
@@ -646,8 +646,8 @@ version(Posix) private void writeImpl(const(char)[] name, const(FSChar)* namez,
 
 // Windows implementation helper for write and append
 
-version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez,
-        in void[] buffer, bool append) @trusted
+version (Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez,
+                                         in void[] buffer, bool append) @trusted
 {
     HANDLE h;
     if (append)
@@ -737,7 +737,7 @@ if (isConvertibleToString!RF || isConvertibleToString!RT)
 
 private void renameImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, const(FSChar)* toz) @trusted
 {
-    version(Windows)
+    version (Windows)
     {
         import std.exception : enforce;
 
@@ -758,7 +758,7 @@ private void renameImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, 
                     text("Attempting to rename file ", f, " to ", t)));
         }
     }
-    else version(Posix)
+    else version (Posix)
     {
         static import core.stdc.stdio;
 
@@ -813,11 +813,11 @@ if (isConvertibleToString!R)
 
 private void removeImpl(const(char)[] name, const(FSChar)* namez) @trusted
 {
-    version(Windows)
+    version (Windows)
     {
         cenforce(DeleteFileW(namez), name, namez);
     }
-    else version(Posix)
+    else version (Posix)
     {
         static import core.stdc.stdio;
 
@@ -832,7 +832,7 @@ private void removeImpl(const(char)[] name, const(FSChar)* namez) @trusted
     }
 }
 
-version(Windows) private WIN32_FILE_ATTRIBUTE_DATA getFileAttributesWin(R)(R name)
+version (Windows) private WIN32_FILE_ATTRIBUTE_DATA getFileAttributesWin(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R))
 {
     auto namez = name.tempCString!FSChar();
@@ -865,7 +865,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R))
     return fad;
 }
 
-version(Windows) private ulong makeUlong(DWORD dwLow, DWORD dwHigh) @safe pure nothrow @nogc
+version (Windows) private ulong makeUlong(DWORD dwLow, DWORD dwHigh) @safe pure nothrow @nogc
 {
     ULARGE_INTEGER li;
     li.LowPart  = dwLow;
@@ -885,12 +885,12 @@ ulong getSize(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     !isConvertibleToString!R)
 {
-    version(Windows)
+    version (Windows)
     {
         with (getFileAttributesWin(name))
             return makeUlong(nFileSizeLow, nFileSizeHigh);
     }
-    else version(Posix)
+    else version (Posix)
     {
         auto namez = name.tempCString();
 
@@ -934,7 +934,7 @@ if (isConvertibleToString!R)
 
 
 // Reads a time field from a stat_t with full precision.
-version(Posix)
+version (Posix)
 private SysTime statTimeToStdTime(char which)(ref stat_t statbuf)
 {
     auto unixTime = mixin(`statbuf.st_` ~ which ~ `time`);
@@ -972,7 +972,7 @@ void getTimes(R)(R name,
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     !isConvertibleToString!R)
 {
-    version(Windows)
+    version (Windows)
     {
         import std.datetime.systime : FILETIMEToSysTime;
 
@@ -982,7 +982,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
             modificationTime = FILETIMEToSysTime(&ftLastWriteTime);
         }
     }
-    else version(Posix)
+    else version (Posix)
     {
         auto namez = name.tempCString();
 
@@ -1043,7 +1043,7 @@ if (isConvertibleToString!R)
         assert(abs(diffm) <= leeway);
     }
 
-    version(fullFileTests)
+    version (fullFileTests)
     {
         import core.thread;
         enum sleepTime = dur!"seconds"(2);
@@ -1073,7 +1073,7 @@ if (isConvertibleToString!R)
 }
 
 
-version(StdDdoc)
+version (StdDdoc)
 {
     /++
      $(BLUE This function is Windows-Only.)
@@ -1099,7 +1099,7 @@ version(StdDdoc)
     if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         !isConvertibleToString!R);
 }
-else version(Windows)
+else version (Windows)
 {
     void getTimesWin(R)(R name,
                         out SysTime fileCreationTime,
@@ -1128,7 +1128,7 @@ else version(Windows)
     }
 }
 
-version(Windows) @system unittest
+version (Windows) @system unittest
 {
     import std.stdio : writefln;
     auto currTime = Clock.currTime();
@@ -1160,7 +1160,7 @@ version(Windows) @system unittest
         assert(abs(diffm) <= leeway);
     }
 
-    version(fullFileTests)
+    version (fullFileTests)
     {
         import core.thread;
         Thread.sleep(dur!"seconds"(2));
@@ -1216,7 +1216,7 @@ void setTimes(R)(R name,
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     !isConvertibleToString!R)
 {
-    version(Windows)
+    version (Windows)
     {
         import std.datetime.systime : SysTimeToFILETIME;
 
@@ -1264,7 +1264,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
 
         cenforce(trustedSetFileTime(h, null, ta, tm), names, namez);
     }
-    else version(Posix)
+    else version (Posix)
     {
         auto namez = name.tempCString!FSChar();
         static if (is(typeof(&utimensat)))
@@ -1362,7 +1362,7 @@ SysTime timeLastModified(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     !isConvertibleToString!R)
 {
-    version(Windows)
+    version (Windows)
     {
         SysTime dummy;
         SysTime ftm;
@@ -1371,7 +1371,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
 
         return ftm;
     }
-    else version(Posix)
+    else version (Posix)
     {
         auto namez = name.tempCString!FSChar();
         static auto trustedStat(const(FSChar)* namez, ref stat_t buf) @trusted
@@ -1435,7 +1435,7 @@ else
 SysTime timeLastModified(R)(R name, SysTime returnIfMissing)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R))
 {
-    version(Windows)
+    version (Windows)
     {
         if (!exists(name))
             return returnIfMissing;
@@ -1447,7 +1447,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R))
 
         return ftm;
     }
-    else version(Posix)
+    else version (Posix)
     {
         auto namez = name.tempCString!FSChar();
         static auto trustedStat(const(FSChar)* namez, ref stat_t buf) @trusted
@@ -1535,13 +1535,13 @@ if (isConvertibleToString!R)
 
 private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
 {
-    version(Windows)
+    version (Windows)
     {
         // http://msdn.microsoft.com/library/default.asp?url=/library/en-us/
         // fileio/base/getfileattributes.asp
         return GetFileAttributesW(namez) != 0xFFFFFFFF;
     }
-    else version(Posix)
+    else version (Posix)
     {
         /*
             The reason why we use stat (and not access) here is
@@ -1609,7 +1609,7 @@ uint getAttributes(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     !isConvertibleToString!R)
 {
-    version(Windows)
+    version (Windows)
     {
         auto namez = name.tempCString!FSChar();
         static auto trustedGetFileAttributesW(const(FSChar)* namez) @trusted
@@ -1626,7 +1626,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
 
         return result;
     }
-    else version(Posix)
+    else version (Posix)
     {
         auto namez = name.tempCString!FSChar();
         static auto trustedStat(const(FSChar)* namez, ref stat_t buf) @trusted
@@ -1680,11 +1680,11 @@ uint getLinkAttributes(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     !isConvertibleToString!R)
 {
-    version(Windows)
+    version (Windows)
     {
         return getAttributes(name);
     }
-    else version(Posix)
+    else version (Posix)
     {
         auto namez = name.tempCString!FSChar();
         static auto trustedLstat(const(FSChar)* namez, ref stat_t buf) @trusted
@@ -1790,11 +1790,11 @@ assert("/usr/share/include".isDir);
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     !isConvertibleToString!R)
 {
-    version(Windows)
+    version (Windows)
     {
         return (getAttributes(name) & FILE_ATTRIBUTE_DIRECTORY) != 0;
     }
-    else version(Posix)
+    else version (Posix)
     {
         return (getAttributes(name) & S_IFMT) == S_IFDIR;
     }
@@ -1814,7 +1814,7 @@ if (isConvertibleToString!R)
 
 @safe unittest
 {
-    version(Windows)
+    version (Windows)
     {
         if ("C:\\Program Files\\".exists)
             assert("C:\\Program Files\\".isDir);
@@ -1822,7 +1822,7 @@ if (isConvertibleToString!R)
         if ("C:\\Windows\\system.ini".exists)
             assert(!"C:\\Windows\\system.ini".isDir);
     }
-    else version(Posix)
+    else version (Posix)
     {
         if (system_directory.exists)
             assert(system_directory.isDir);
@@ -1834,9 +1834,9 @@ if (isConvertibleToString!R)
 
 @system unittest
 {
-    version(Windows)
+    version (Windows)
         enum dir = "C:\\Program Files\\";
-    else version(Posix)
+    else version (Posix)
         enum dir = system_directory;
 
     if (dir.exists)
@@ -1864,11 +1864,11 @@ assert(!attrIsDir(getLinkAttributes("/etc/fonts/fonts.conf")));
   +/
 bool attrIsDir(uint attributes) @safe pure nothrow @nogc
 {
-    version(Windows)
+    version (Windows)
     {
         return (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
     }
-    else version(Posix)
+    else version (Posix)
     {
         return (attributes & S_IFMT) == S_IFDIR;
     }
@@ -1876,7 +1876,7 @@ bool attrIsDir(uint attributes) @safe pure nothrow @nogc
 
 @safe unittest
 {
-    version(Windows)
+    version (Windows)
     {
         if ("C:\\Program Files\\".exists)
         {
@@ -1890,7 +1890,7 @@ bool attrIsDir(uint attributes) @safe pure nothrow @nogc
             assert(!attrIsDir(getLinkAttributes("C:\\Windows\\system.ini")));
         }
     }
-    else version(Posix)
+    else version (Posix)
     {
         if (system_directory.exists)
         {
@@ -1941,9 +1941,9 @@ assert(!"/usr/share/include".isFile);
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     !isConvertibleToString!R)
 {
-    version(Windows)
+    version (Windows)
         return !name.isDir;
-    else version(Posix)
+    else version (Posix)
         return (getAttributes(name) & S_IFMT) == S_IFREG;
 }
 
@@ -1967,7 +1967,7 @@ if (isConvertibleToString!R)
 
 @safe unittest
 {
-    version(Windows)
+    version (Windows)
     {
         if ("C:\\Program Files\\".exists)
             assert(!"C:\\Program Files\\".isFile);
@@ -1975,7 +1975,7 @@ if (isConvertibleToString!R)
         if ("C:\\Windows\\system.ini".exists)
             assert("C:\\Windows\\system.ini".isFile);
     }
-    else version(Posix)
+    else version (Posix)
     {
         if (system_directory.exists)
             assert(!system_directory.isFile);
@@ -2014,11 +2014,11 @@ assert(attrIsFile(getLinkAttributes("/etc/fonts/fonts.conf")));
   +/
 bool attrIsFile(uint attributes) @safe pure nothrow @nogc
 {
-    version(Windows)
+    version (Windows)
     {
         return (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0;
     }
-    else version(Posix)
+    else version (Posix)
     {
         return (attributes & S_IFMT) == S_IFREG;
     }
@@ -2026,7 +2026,7 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
 
 @safe unittest
 {
-    version(Windows)
+    version (Windows)
     {
         if ("C:\\Program Files\\".exists)
         {
@@ -2040,7 +2040,7 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
             assert(attrIsFile(getLinkAttributes("C:\\Windows\\system.ini")));
         }
     }
-    else version(Posix)
+    else version (Posix)
     {
         if (system_directory.exists)
         {
@@ -2076,9 +2076,9 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     !isConvertibleToString!R)
 {
-    version(Windows)
+    version (Windows)
         return (getAttributes(name) & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
-    else version(Posix)
+    else version (Posix)
         return (getLinkAttributes(name) & S_IFMT) == S_IFLNK;
 }
 
@@ -2096,7 +2096,7 @@ if (isConvertibleToString!R)
 
 @system unittest
 {
-    version(Windows)
+    version (Windows)
     {
         if ("C:\\Program Files\\".exists)
             assert(!"C:\\Program Files\\".isSymlink);
@@ -2121,7 +2121,7 @@ if (isConvertibleToString!R)
             assert(getAttributes(fakeSymFile) == getLinkAttributes(fakeSymFile));
         }
     }
-    else version(Posix)
+    else version (Posix)
     {
         if (system_directory.exists)
         {
@@ -2190,9 +2190,9 @@ assert(getLinkAttributes("/tmp/alink").isSymlink);
   +/
 bool attrIsSymlink(uint attributes) @safe pure nothrow @nogc
 {
-    version(Windows)
+    version (Windows)
         return (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
-    else version(Posix)
+    else version (Posix)
         return (attributes & S_IFMT) == S_IFLNK;
 }
 
@@ -2208,14 +2208,14 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     // Place outside of @trusted block
     auto pathz = pathname.tempCString!FSChar();
 
-    version(Windows)
+    version (Windows)
     {
         static auto trustedChdir(const(FSChar)* pathz) @trusted
         {
             return SetCurrentDirectoryW(pathz);
         }
     }
-    else version(Posix)
+    else version (Posix)
     {
         static auto trustedChdir(const(FSChar)* pathz) @trusted
         {
@@ -2254,7 +2254,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     // Place outside of @trusted block
     const pathz = pathname.tempCString!FSChar();
 
-    version(Windows)
+    version (Windows)
     {
         static auto trustedCreateDirectoryW(const(FSChar)* pathz) @trusted
         {
@@ -2266,7 +2266,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
             string pathStr = null;
         wenforce(trustedCreateDirectoryW(pathz), pathStr, pathz);
     }
-    else version(Posix)
+    else version (Posix)
     {
         import std.conv : octal;
 
@@ -2303,13 +2303,13 @@ private bool ensureDirExists()(in char[] pathname)
     import std.exception : enforce;
     const pathz = pathname.tempCString!FSChar();
 
-    version(Windows)
+    version (Windows)
     {
         if (() @trusted { return CreateDirectoryW(pathz, null); }())
             return true;
         cenforce(GetLastError() == ERROR_ALREADY_EXISTS, pathname.idup);
     }
-    else version(Posix)
+    else version (Posix)
     {
         import std.conv : octal;
 
@@ -2368,7 +2368,7 @@ void mkdirRecurse(in char[] pathname) @safe
         mkdirRecurse(path); // should not throw
     }
 
-    version(Windows)
+    version (Windows)
     {
         assertThrown!FileException(mkdirRecurse(`1:\foobar`));
     }
@@ -2407,14 +2407,14 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     // Place outside of @trusted block
     auto pathz = pathname.tempCString!FSChar();
 
-    version(Windows)
+    version (Windows)
     {
         static auto trustedRmdir(const(FSChar)* pathz) @trusted
         {
             return RemoveDirectoryW(pathz);
         }
     }
-    else version(Posix)
+    else version (Posix)
     {
         static auto trustedRmdir(const(FSChar)* pathz) @trusted
         {
@@ -2456,12 +2456,12 @@ if (isConvertibleToString!R)
         $(D FileException) on error (which includes if the _symlink already
         exists).
   +/
-version(StdDdoc) void symlink(RO, RL)(RO original, RL link)
+version (StdDdoc) void symlink(RO, RL)(RO original, RL link)
 if ((isInputRange!RO && !isInfinite!RO && isSomeChar!(ElementEncodingType!RO) ||
     isConvertibleToString!RO) &&
     (isInputRange!RL && !isInfinite!RL && isSomeChar!(ElementEncodingType!RL) ||
     isConvertibleToString!RL));
-else version(Posix) void symlink(RO, RL)(RO original, RL link)
+else version (Posix) void symlink(RO, RL)(RO original, RL link)
 if ((isInputRange!RO && !isInfinite!RO && isSomeChar!(ElementEncodingType!RO) ||
     isConvertibleToString!RO) &&
     (isInputRange!RL && !isInfinite!RL && isSomeChar!(ElementEncodingType!RL) ||
@@ -2484,7 +2484,7 @@ if ((isInputRange!RO && !isInfinite!RO && isSomeChar!(ElementEncodingType!RO) ||
     }
 }
 
-version(Posix) @safe unittest
+version (Posix) @safe unittest
 {
     if (system_directory.exists)
     {
@@ -2527,7 +2527,7 @@ version(Posix) @safe unittest
     }
 }
 
-version(Posix) @safe unittest
+version (Posix) @safe unittest
 {
     static assert(__traits(compiles,
         symlink(TestAliasedString(null), TestAliasedString(null))));
@@ -2545,10 +2545,10 @@ version(Posix) @safe unittest
     Throws:
         $(D FileException) on error.
   +/
-version(StdDdoc) string readLink(R)(R link)
+version (StdDdoc) string readLink(R)(R link)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) ||
     isConvertibleToString!R);
-else version(Posix) string readLink(R)(R link)
+else version (Posix) string readLink(R)(R link)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) ||
     isConvertibleToString!R)
 {
@@ -2598,7 +2598,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) ||
     }
 }
 
-version(Posix) @safe unittest
+version (Posix) @safe unittest
 {
     import std.exception : assertThrown;
     import std.string;
@@ -2618,12 +2618,12 @@ version(Posix) @safe unittest
     assertThrown!FileException(readLink("/doesnotexist"));
 }
 
-version(Posix) @safe unittest
+version (Posix) @safe unittest
 {
     static assert(__traits(compiles, readLink(TestAliasedString("foo"))));
 }
 
-version(Posix) @system unittest // input range of dchars
+version (Posix) @system unittest // input range of dchars
 {
     mkdirRecurse(deleteme);
     scope(exit) if (deleteme.exists) rmdirRecurse(deleteme);
@@ -2644,7 +2644,7 @@ version(Posix) @system unittest // input range of dchars
  * Get the current working directory.
  * Throws: $(D FileException) on error.
  */
-version(Windows) string getcwd()
+version (Windows) string getcwd()
 {
     import std.conv : to;
     import std.experimental.checkedint : checked;
@@ -2655,7 +2655,7 @@ version(Windows) string getcwd()
         3. the buffer (lpBuffer) is not large enough: the required size of
     the buffer, in characters, including the null-terminating character.
     */
-    version(StdUnittest)
+    version (StdUnittest)
         enum BUF_SIZE = 10;     // trigger reallocation code
     else
         enum BUF_SIZE = 4096;   // enough for most common case
@@ -2814,7 +2814,7 @@ else version (NetBSD)
     assert(path.isFile);
 }
 
-version(StdDdoc)
+version (StdDdoc)
 {
     /++
         Info on a file, similar to what you'd get from stat on a Posix system.
@@ -2966,7 +2966,7 @@ assert(!de2.isFile);
           +/
         @property uint linkAttributes();
 
-        version(Windows)
+        version (Windows)
             alias stat_t = void*;
 
         /++
@@ -2977,7 +2977,7 @@ assert(!de2.isFile);
         @property stat_t statBuf();
     }
 }
-else version(Windows)
+else version (Windows)
 {
     struct DirEntry
     {
@@ -3086,7 +3086,7 @@ else version(Windows)
         uint  _attributes; /// The file attributes from WIN32_FIND_DATAW.
     }
 }
-else version(Posix)
+else version (Posix)
 {
     struct DirEntry
     {
@@ -3295,7 +3295,7 @@ else version(Posix)
 
 @system unittest
 {
-    version(Windows)
+    version (Windows)
     {
         if ("C:\\Program Files\\".exists)
         {
@@ -3319,7 +3319,7 @@ else version(Posix)
             assert(!de.isSymlink);
         }
     }
-    else version(Posix)
+    else version (Posix)
     {
         import std.exception : assertThrown;
 
@@ -3382,7 +3382,7 @@ version (StdDdoc)
     /// Defaults to $(D Yes.preserveAttributes) on Windows, and the opposite on all other platforms.
     PreserveAttributes preserveAttributesDefault;
 }
-else version(Windows)
+else version (Windows)
 {
     enum preserveAttributesDefault = Yes.preserveAttributes;
 }
@@ -3442,7 +3442,7 @@ if (isConvertibleToString!RF || isConvertibleToString!RT)
 private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, const(FSChar)* toz,
         PreserveAttributes preserve) @trusted
 {
-    version(Windows)
+    version (Windows)
     {
         assert(preserve == Yes.preserveAttributes);
         immutable result = CopyFileW(fromz, toz, false);
@@ -3457,7 +3457,7 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
             throw new FileException(t);
         }
     }
-    else version(Posix)
+    else version (Posix)
     {
         static import core.stdc.stdio;
         import std.conv : to, octal;
@@ -3542,7 +3542,7 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
     assert(readText(t2.byChar) == "2");
 }
 
-@safe version(Posix) @safe unittest //issue 11434
+@safe version (Posix) @safe unittest //issue 11434
 {
     import std.conv : octal;
     auto t1 = deleteme, t2 = deleteme~"2";
@@ -3622,7 +3622,7 @@ void rmdirRecurse(DirEntry de)
     rmdirRecurse(de);
 }
 
-version(Windows) @system unittest
+version (Windows) @system unittest
 {
     import std.exception : enforce;
     auto d = deleteme ~ r".dir\a\b\c\d\e\f\g";
@@ -3631,7 +3631,7 @@ version(Windows) @system unittest
     enforce(!exists(deleteme ~ ".dir"));
 }
 
-version(Posix) @system unittest
+version (Posix) @system unittest
 {
     import std.exception : enforce, collectException;
     import std.process : executeShell;
@@ -3648,7 +3648,7 @@ version(Posix) @system unittest
 
     d = deleteme~"/a/b/c/d/e/f/g";
     mkdirRecurse(d);
-    version(Android) string link_cmd = "ln -s ";
+    version (Android) string link_cmd = "ln -s ";
     else string link_cmd = "ln -sf ";
     executeShell(link_cmd~deleteme~"/a/b/c "~deleteme~"/link");
     rmdirRecurse(deleteme);
@@ -3739,7 +3739,7 @@ private struct DirIteratorImpl
         return de;
     }
 
-    version(Windows)
+    version (Windows)
     {
         WIN32_FIND_DATAW _findinfo;
         struct DirHandle
@@ -3812,7 +3812,7 @@ private struct DirIteratorImpl
             return _followSymlink ? _cur.isDir : _cur.isDir && !_cur.isSymlink;
         }
     }
-    else version(Posix)
+    else version (Posix)
     {
         struct DirHandle
         {
@@ -4078,7 +4078,7 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
     import std.process : thisProcessID;
     import std.range.primitives : walkLength;
 
-    version(Android)
+    version (Android)
         string testdir = deleteme; // This has to be an absolute path when
                                    // called from a shared library on Android,
                                    // ie an apk
@@ -4210,12 +4210,12 @@ auto dirEntries(string path, string pattern, SpanMode mode,
         assert(!attrIsSymlink(de.attributes));
         assert(attrIsSymlink(de.linkAttributes) == flags.link);
 
-        version(Windows)
+        version (Windows)
         {
             assert(de.timeCreated > past);
             assert(de.timeCreated < future);
         }
-        else version(Posix)
+        else version (Posix)
         {
             assert(de.timeStatusChanged > past);
             assert(de.timeStatusChanged < future);
@@ -4354,7 +4354,7 @@ string tempDir() @trusted
     static string cache;
     if (cache is null)
     {
-        version(Windows)
+        version (Windows)
         {
             import std.conv : to;
             // http://msdn.microsoft.com/en-us/library/windows/desktop/aa364992(v=vs.85).aspx
@@ -4362,7 +4362,7 @@ string tempDir() @trusted
             DWORD len = GetTempPathW(buf.length, buf.ptr);
             if (len) cache = buf[0 .. len].to!string;
         }
-        else version(Posix)
+        else version (Posix)
         {
             import std.process : environment;
             // This function looks through the list of alternative directories

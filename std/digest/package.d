@@ -186,10 +186,10 @@ import std.traits;
     }
 }
 
-version(StdDdoc)
+version (StdDdoc)
     version = ExampleDigest;
 
-version(ExampleDigest)
+version (ExampleDigest)
 {
     /**
      * This documents the general structure of a Digest in the template API.
@@ -950,7 +950,7 @@ if (isDigest!T) : Digest
             return buf;
         }
 
-        version(StdDdoc)
+        version (StdDdoc)
         {
             /**
              * Works like $(D finish) but does not reset the internal state, so it's possible

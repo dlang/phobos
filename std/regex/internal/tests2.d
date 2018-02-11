@@ -539,7 +539,7 @@ import std.uni : Escapables; // characters that need escaping
 }
 
 // bugzilla 13532
-version(none) // TODO: revist once we have proper benchmark framework
+version (none) // TODO: revist once we have proper benchmark framework
 @safe unittest
 {
     import std.datetime.stopwatch : StopWatch, AutoStart;
