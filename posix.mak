@@ -528,7 +528,7 @@ $(DSCANNER_DIR)/dsc: | $(DSCANNER_DIR) $(DMD) $(LIB)
 	# debug build is faster, but disable 'missing import' messages (missing core from druntime)
 	sed 's/dparse_verbose/StdLoggerDisableWarning/' $(DSCANNER_DIR)/makefile > $(DSCANNER_DIR)/dscanner_makefile_tmp
 	mv $(DSCANNER_DIR)/dscanner_makefile_tmp $(DSCANNER_DIR)/makefile
-	DC=$(DMD) DFLAGS="$(DFLAGS) -defaultlib=$(LIB)" make -C $(DSCANNER_DIR) githash debug
+	DC=$(DMD) DFLAGS="$(DFLAGS) -defaultlib=$(LIB)" $(MAKE) -C $(DSCANNER_DIR) githash debug
 
 style: publictests style_lint
 
