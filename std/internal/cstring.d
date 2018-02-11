@@ -16,7 +16,7 @@ COREREF = $(HTTP dlang.org/phobos/core_$1.html#$2, $(D core.$1.$2))
 module std.internal.cstring;
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     version(Posix)
     {
@@ -41,7 +41,7 @@ module std.internal.cstring;
 import std.range;
 import std.traits;
 
-version(unittest)
+version(StdUnittest) version(unittest)
 @property inout(C)[] asArray(C)(inout C* cstr) pure nothrow @nogc @trusted
 if (isSomeChar!C)
 in { assert(cstr); }
@@ -134,7 +134,7 @@ if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
 }
 
 ///
-nothrow @nogc @system unittest
+version(StdUnittest) nothrow @nogc @system unittest
 {
     import core.stdc.string;
 
@@ -155,7 +155,7 @@ nothrow @nogc @system unittest
     // both primary expressions are ended.
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     assert("abc".tempCString().asArray == "abc");
     assert("abc"d.tempCString().ptr.asArray == "abc");
@@ -169,7 +169,7 @@ nothrow @nogc @system unittest
 }
 
 // Bugzilla 14980
-pure nothrow @nogc @safe unittest
+version(StdUnittest) pure nothrow @nogc @safe unittest
 {
     const(char[]) str = null;
     auto res = tempCString(str);

@@ -9,14 +9,14 @@ import std.conv, std.exception, std.meta, std.range,
 
 import std.uni : Escapables; // characters that need escaping
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto cr = ctRegex!("abc");
     assert(bmatch("abc",cr).hit == "abc");
     auto cr2 = ctRegex!("ab*c");
     assert(bmatch("abbbbc",cr2).hit == "abbbbc");
 }
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto cr3 = ctRegex!("^abc$");
     assert(bmatch("abc",cr3).hit == "abc");
@@ -24,7 +24,7 @@ import std.uni : Escapables; // characters that need escaping
     assert(array(match("azb",cr4).captures) == ["azb", "azb"]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto cr5 = ctRegex!("(?:a{2,4}b{1,3}){1,2}");
     assert(bmatch("aaabaaaabbb", cr5).hit == "aaabaaaabbb");
@@ -32,7 +32,7 @@ import std.uni : Escapables; // characters that need escaping
     assert(bmatch("aaabaaaabbb"w,  cr6).hit == "aaab"w);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto cr7 = ctRegex!(`\r.*?$`,"sm");
     assert(bmatch("abc\r\nxy",  cr7).hit == "\r\nxy");
@@ -41,7 +41,7 @@ import std.uni : Escapables; // characters that need escaping
             == "<packet>text</packet>");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     auto cr8 = ctRegex!("^(a)(b)?(c*)");
@@ -56,7 +56,7 @@ import std.uni : Escapables; // characters that need escaping
     assert(equal(bmatch("xxqababqyy",cr9).captures, ["qababq", "b"]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     auto rtr = regex("a|b|c");
@@ -69,7 +69,7 @@ import std.uni : Escapables; // characters that need escaping
     assert(equal(testCT.ir,testRT.ir));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
@@ -100,7 +100,7 @@ import std.uni : Escapables; // characters that need escaping
     assert(equal(map!"a.hit"(m9), ["First", "", "Second"]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
@@ -143,7 +143,7 @@ import std.uni : Escapables; // characters that need escaping
 }
 
 //tests for accumulated std.regex issues and other regressions
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
@@ -225,7 +225,7 @@ import std.uni : Escapables; // characters that need escaping
 }
 
 // tests for replace
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     void test(alias matchFn)()
     {
@@ -259,7 +259,7 @@ import std.uni : Escapables; // characters that need escaping
 }
 
 // tests for splitter
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     auto s1 = ", abc, de,     fg, hi, ";
@@ -279,13 +279,13 @@ import std.uni : Escapables; // characters that need escaping
     assert(equal(sp2, w2));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     char[] s1 = ", abc, de,  fg, hi, ".dup;
     auto sp2 = splitter(s1, regex(", *"));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     auto s1 = ", abc, de,  fg, hi, ";
@@ -293,7 +293,7 @@ import std.uni : Escapables; // characters that need escaping
     assert(equal(split(s1, regex(", *")), w1[]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 { // bugzilla 7141
     string pattern = `[a\--b]`;
     assert(match("-", pattern));
@@ -301,17 +301,17 @@ import std.uni : Escapables; // characters that need escaping
     string pattern2 = `[&-z]`;
     assert(match("b", pattern2));
 }
-@safe unittest
+version(StdUnittest) @safe unittest
 {//bugzilla 7111
     assert(match("", regex("^")));
 }
-@safe unittest
+version(StdUnittest) @safe unittest
 {//bugzilla 7300
     assert(!match("a"d, "aa"d));
 }
 
 // bugzilla 7551
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto r = regex("[]abc]*");
     assert("]ab".matchFirst(r).hit == "]ab");
@@ -320,13 +320,13 @@ import std.uni : Escapables; // characters that need escaping
     assert("]ac".matchFirst(r2).hit == "]");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {//bugzilla 7674
     assert("1234".replace(regex("^"), "$$") == "$1234");
     assert("hello?".replace(regex(r"\?", "g"), r"\?") == r"hello\?");
     assert("hello?".replace(regex(r"\?", "g"), r"\\?") != r"hello\?");
 }
-@safe unittest
+version(StdUnittest) @safe unittest
 {// bugzilla 7679
     import std.algorithm.comparison : equal;
     static foreach (S; AliasSeq!(string, wstring, dstring))
@@ -337,7 +337,7 @@ import std.uni : Escapables; // characters that need escaping
         assert(split(str, re) == [to!S("a"), to!S("b")]);
     }}
 }
-@safe unittest
+version(StdUnittest) @safe unittest
 {//bugzilla 8203
     string data = "
     NAME   = XPAW01_STA:STATION
@@ -353,14 +353,14 @@ import std.uni : Escapables; // characters that need escaping
     auto r2 = regex(`([а-яА-Я\-_]+\s*)+(?<=[\s\.,\^])`);
     match("аллея Театральная", r2);
 }
-@safe unittest
+version(StdUnittest) @safe unittest
 {// bugzilla 8637 purity of enforce
     auto m = match("hello world", regex("world"));
     enforce(m);
 }
 
 // bugzilla 8725
-@safe unittest
+version(StdUnittest) @safe unittest
 {
   static italic = regex( r"\*
                 (?!\s+)
@@ -373,7 +373,7 @@ import std.uni : Escapables; // characters that need escaping
 }
 
 // bugzilla 8349
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     enum peakRegexStr = r"\>(wgEncode.*Tfbs.*\.(?:narrow)|(?:broad)Peak.gz)</a>";
     enum peakRegex = ctRegex!(peakRegexStr);
@@ -382,7 +382,7 @@ import std.uni : Escapables; // characters that need escaping
 }
 
 // bugzilla 9211
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     auto rx_1 =  regex(r"^(\w)*(\d)");
@@ -394,7 +394,7 @@ import std.uni : Escapables; // characters that need escaping
 }
 
 // bugzilla 9280
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     string tomatch = "a!b@c";
     static r = regex(r"^(?P<nick>.*?)!(?P<ident>.*?)@(?P<host>.*?)$");
@@ -407,7 +407,7 @@ import std.uni : Escapables; // characters that need escaping
 
 
 // bugzilla 9579
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     char[] input = ['a', 'b', 'c'];
     string format = "($1)";
@@ -418,14 +418,14 @@ import std.uni : Escapables; // characters that need escaping
 }
 
 // bugzilla 9634
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto re = ctRegex!"(?:a+)";
     assert(match("aaaa", re).hit == "aaaa");
 }
 
 //bugzilla 10798
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto cr = ctRegex!("[abcd--c]*");
     auto m  = "abc".match(cr);
@@ -434,7 +434,7 @@ import std.uni : Escapables; // characters that need escaping
 }
 
 // bugzilla 10913
-@system unittest
+version(StdUnittest) @system unittest
 {
     @system static string foo(const(char)[] s)
     {
@@ -453,7 +453,7 @@ import std.uni : Escapables; // characters that need escaping
 }
 
 // bugzilla 11262
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     enum reg = ctRegex!(r",", "g");
     auto str = "This,List";
@@ -462,13 +462,13 @@ import std.uni : Escapables; // characters that need escaping
 }
 
 // bugzilla 11775
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(collectException(regex("a{1,0}")));
 }
 
 // bugzilla 11839
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     assert(regex(`(?P<var1>\w+)`).namedCaptures.equal(["var1"]));
@@ -479,7 +479,7 @@ import std.uni : Escapables; // characters that need escaping
 }
 
 // bugzilla 12076
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto RE = ctRegex!(r"(?<!x[a-z]+)\s([a-z]+)");
     string s = "one two";
@@ -487,7 +487,7 @@ import std.uni : Escapables; // characters that need escaping
 }
 
 // bugzilla 12105
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto r = ctRegex!`.*?(?!a)`;
     assert("aaab".matchFirst(r).hit == "aaa");
@@ -496,14 +496,14 @@ import std.uni : Escapables; // characters that need escaping
 }
 
 //bugzilla 11784
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert("abcdefghijklmnopqrstuvwxyz"
         .matchFirst("[a-z&&[^aeiuo]]").hit == "b");
 }
 
 //bugzilla 12366
-@safe unittest
+version(StdUnittest) @safe unittest
 {
      auto re = ctRegex!(`^((?=(xx+?)\2+$)((?=\2+$)(?=(x+)(\4+$))\5){2})*x?$`);
      assert("xxxxxxxx".match(re).empty);
@@ -511,27 +511,27 @@ import std.uni : Escapables; // characters that need escaping
 }
 
 // bugzilla 12582
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto r = regex(`(?P<a>abc)`);
     assert(collectException("abc".matchFirst(r)["b"]));
 }
 
 // bugzilla 12691
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(bmatch("e@", "^([a-z]|)*$").empty);
     assert(bmatch("e@", ctRegex!`^([a-z]|)*$`).empty);
 }
 
 //bugzilla  12713
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assertThrown(regex("[[a-z]([a-z]|(([[a-z])))"));
 }
 
 //bugzilla 12747
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assertThrown(regex(`^x(\1)`));
     assertThrown(regex(`^(x(\1))`));
@@ -540,7 +540,7 @@ import std.uni : Escapables; // characters that need escaping
 
 // bugzilla 13532
 version(none) // TODO: revist once we have proper benchmark framework
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.stopwatch : StopWatch, AutoStart;
     import std.math : abs;
@@ -569,14 +569,14 @@ version(none) // TODO: revist once we have proper benchmark framework
 }
 
 // bugzilla 14504
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto p = ctRegex!("a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?" ~
             "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
 }
 
 // bugzilla 14529
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto ctPat2 = regex(r"^[CDF]$", "i");
     foreach (v; ["C", "c", "D", "d", "F", "f"])
@@ -584,7 +584,7 @@ version(none) // TODO: revist once we have proper benchmark framework
 }
 
 // bugzilla 14615
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.array : appender;
     import std.regex : replaceFirst, replaceFirstInto, regex;
@@ -603,19 +603,19 @@ version(none) // TODO: revist once we have proper benchmark framework
 }
 
 // bugzilla 15573
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto rx = regex("[c d]", "x");
     assert("a b".matchFirst(rx));
 }
 
 // bugzilla 15864
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     regex(`(<a (?:(?:\w+=\"[^"]*\")?\s*)*href="\.\.?)"`);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto r = regex("(?# comment)abc(?# comment2)");
     assert("abc".matchFirst(r));
@@ -623,7 +623,7 @@ version(none) // TODO: revist once we have proper benchmark framework
 }
 
 // bugzilla 17075
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     enum titlePattern = `<title>(.+)</title>`;
     static titleRegex = ctRegex!titlePattern;
@@ -632,14 +632,14 @@ version(none) // TODO: revist once we have proper benchmark framework
 }
 
 // bugzilla 17212
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto r = regex(" [a] ", "x");
     assert("a".matchFirst(r));
 }
 
 // bugzilla 17157
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     auto ctr = ctRegex!"(a)|(b)|(c)|(d)";
@@ -656,7 +656,7 @@ version(none) // TODO: revist once we have proper benchmark framework
 }
 
 // bugzilla 17667
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.searching : canFind;
     void willThrow(T, size_t line = __LINE__)(T arg, string msg)
@@ -672,7 +672,7 @@ version(none) // TODO: revist once we have proper benchmark framework
 }
 
 // bugzilla 17668
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.searching;
     auto e = collectException!RegexException(regex(q"<[^]>"));
@@ -680,7 +680,7 @@ version(none) // TODO: revist once we have proper benchmark framework
 }
 
 // bugzilla 17673
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     string str = `<">`;
     string[] regexps = ["abc", "\"|x"];

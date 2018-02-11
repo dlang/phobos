@@ -130,7 +130,7 @@ if (hasLength!(RandomAccessRange2) && hasSlicing!(RandomAccessRange2))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range : assumeSorted;
     int[] a = [ 1, 2, 3 ];
@@ -200,7 +200,7 @@ if (isForwardRange!(Range))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert([1, 1, 2].isSorted);
     // strictly monotonic doesn't allow duplicates
@@ -218,7 +218,7 @@ if (isForwardRange!(Range))
     assert(isStrictlyMonotonic(arr));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.conv : to;
 
@@ -244,7 +244,7 @@ if (isForwardRange!(Range))
     assert(isSorted(s));   // bidirectional
 }
 
-@nogc @safe nothrow pure unittest
+version(StdUnittest) @nogc @safe nothrow pure unittest
 {
     static immutable a = [1, 2, 3];
     assert(a.isSorted);
@@ -258,7 +258,7 @@ if (isForwardRange!Range)
     return findAdjacent!((a,b) => !binaryFun!less(a,b))(r).empty;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.conv : to;
 
@@ -284,7 +284,7 @@ if (isForwardRange!Range)
     assert(isStrictlyMonotonic(s2));   // bidirectional
 }
 
-@nogc @safe nothrow pure unittest
+version(StdUnittest) @nogc @safe nothrow pure unittest
 {
     static immutable a = [1, 2, 3];
     assert(a.isStrictlyMonotonic);
@@ -348,7 +348,7 @@ if (is(typeof(ordered!less(values))))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(ordered(42, 42, 43));
     assert(!strictlyOrdered(43, 42, 45));
@@ -512,7 +512,7 @@ if (ss != SwapStrategy.stable && isInputRange!Range && hasSwappableElements!Rang
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.mutation : SwapStrategy;
     import std.algorithm.searching : count, find;
@@ -552,7 +552,7 @@ if (ss != SwapStrategy.stable && isInputRange!Range && hasSwappableElements!Rang
     assert(arr == [4, 5, 6, 7, 8, 9, 10, 2, 3, 1] && r == arr[7 .. $]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.internal : rndstuff;
     static bool even(int a) { return (a & 1) == 0; }
@@ -692,7 +692,7 @@ if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range)
 }
 
 ///
-@safe nothrow unittest
+version(StdUnittest) @safe nothrow unittest
 {
     int[] a = [5, 3, 2, 6, 4, 1, 3, 7];
     size_t pivot = pivotPartition(a, a.length / 2);
@@ -701,7 +701,7 @@ if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range)
     assert(a[pivot .. $].all!(x => x >= a[pivot]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     void test(alias less)()
     {
@@ -787,7 +787,7 @@ if (isForwardRange!(Range))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[] r = [ 1, 3, 5, 7, 8, 2, 4, ];
     assert(isPartitioned!"a & 1"(r));
@@ -871,7 +871,7 @@ if (ss == SwapStrategy.unstable && isRandomAccessRange!Range
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto a = [ 8, 3, 4, 1, 4, 7, 4 ];
     auto pieces = partition3(a, 4);
@@ -880,7 +880,7 @@ if (ss == SwapStrategy.unstable && isRandomAccessRange!Range
     assert(pieces[2] == [ 8, 7 ]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.random : Random, uniform, unpredictableSeed;
 
@@ -1006,7 +1006,7 @@ if (isRandomAccessRange!Range && !isInfinite!Range &&
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     immutable(int[]) arr = [ 2, 3, 1, 5, 0 ];
     // index using pointers
@@ -1021,7 +1021,7 @@ if (isRandomAccessRange!Range && !isInfinite!Range &&
         (index2));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     immutable(int)[] arr = [ 2, 3, 1, 5, 0 ];
     // index using pointers
@@ -1052,7 +1052,7 @@ if (isRandomAccessRange!Range && !isInfinite!Range &&
             (index3));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1314,7 +1314,7 @@ if (Rs.length >= 2 &&
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : retro;
@@ -1326,7 +1326,7 @@ if (Rs.length >= 2 &&
     assert(a.merge(b).retro.equal([5, 4, 3, 3, 2, 1]));
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1343,7 +1343,7 @@ if (Rs.length >= 2 &&
     assert(equal(u, [-1, 1, 1, 2, 2, 4, 4, 5, 7, 7, 8, 9][]));
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     // save
     import std.range : dropOne;
@@ -1355,7 +1355,7 @@ if (Rs.length >= 2 &&
     assert(arr.front == 0);
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
@@ -1371,7 +1371,7 @@ if (Rs.length >= 2 &&
     }
 }
 
-@nogc @safe pure nothrow unittest
+version(StdUnittest) @nogc @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1382,7 +1382,7 @@ if (Rs.length >= 2 &&
 }
 
 /// test bi-directional access and common type
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : retro;
@@ -1479,7 +1479,7 @@ template multiSort(less...) //if (less.length > 1)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.mutation : SwapStrategy;
     static struct Point { int x, y; }
@@ -1530,7 +1530,7 @@ private void multiSortImpl(Range, SwapStrategy ss, funs...)(Range r)
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range;
@@ -1549,7 +1549,7 @@ private void multiSortImpl(Range, SwapStrategy ss, funs...)(Range r)
     assert(pts4.multiSort!("a > b").release.equal(iota(10).retro));
 }
 
-@safe unittest //issue 9160 (L-value only comparators)
+version(StdUnittest) @safe unittest //issue 9160 (L-value only comparators)
 {
     static struct A
     {
@@ -1573,7 +1573,7 @@ private void multiSortImpl(Range, SwapStrategy ss, funs...)(Range r)
     assert(points[1] == A(4, 1));
 }
 
-@safe unittest // issue 16179 (cannot access frame of function)
+version(StdUnittest) @safe unittest // issue 16179 (cannot access frame of function)
 {
     auto arr = [[1, 2], [2, 0], [1, 0], [1, 1]];
     int c = 3;
@@ -1585,7 +1585,7 @@ private void multiSortImpl(Range, SwapStrategy ss, funs...)(Range r)
     assert(arr == [[1, 0], [1, 1], [1, 2], [2, 0]]);
 }
 
-@safe unittest //Issue 16413 - @system comparison function
+version(StdUnittest) @safe unittest //Issue 16413 - @system comparison function
 {
     bool lt(int a, int b) { return a < b; } static @system
     auto a = [2, 1];
@@ -1707,7 +1707,7 @@ private void shortSort(alias less, Range)(Range r)
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.random : Random, uniform;
 
@@ -1776,7 +1776,7 @@ private void sort5(alias lt, Range)(Range r)
     // 7 comparisons, 0-9 swaps
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.iteration : permutations;
     import std.algorithm.mutation : copy;
@@ -1875,7 +1875,7 @@ if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     int[] array = [ 1, 2, 3, 4 ];
 
@@ -1893,7 +1893,7 @@ if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Showcase stable sorting
     import std.algorithm.mutation : SwapStrategy;
@@ -1903,7 +1903,7 @@ if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Sorting floating-point numbers in presence of NaN
     double[] numbers = [-0.0, 3.0, -2.0, double.nan, 0.0, -double.nan];
@@ -1917,7 +1917,7 @@ if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
     assert(numbers.equal!isIdentical(sorted));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Simple regression benchmark
     import std.algorithm.iteration, std.algorithm.mutation, std.random;
@@ -1944,7 +1944,7 @@ if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
         " Please update watermark from ", watermark, " to ", comps));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.internal : rndstuff;
     import std.algorithm.mutation : swapRanges;
@@ -2743,7 +2743,7 @@ private template TimSortImpl(alias pred, R)
     alias gallopReverseUpper = gallopSearch!( true,  true);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.random : Random, uniform, randomShuffle;
 
@@ -2819,7 +2819,7 @@ private template TimSortImpl(alias pred, R)
     assert(result == true);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {//bugzilla 4584
     assert(isSorted!"a < b"(sort!("a < b", SwapStrategy.stable)(
        [83, 42, 85, 86, 87, 22, 89, 30, 91, 46, 93, 94, 95, 6,
@@ -2828,7 +2828,7 @@ private template TimSortImpl(alias pred, R)
 
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //test stable sort + zip
     import std.range;
@@ -2840,7 +2840,7 @@ private template TimSortImpl(alias pred, R)
     assert(y == "aebcd"d);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Issue 14223
     import std.array, std.range;
@@ -2951,7 +2951,7 @@ if (isRandomAccessRange!R && hasLength!R)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.iteration : map;
     import std.numeric : entropy;
@@ -2972,7 +2972,7 @@ if (isRandomAccessRange!R && hasLength!R)
     assert(isSorted!("a > b")(map!(entropy)(arr)));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.iteration : map;
     import std.numeric : entropy;
@@ -2993,7 +2993,7 @@ if (isRandomAccessRange!R && hasLength!R)
     assert(isSorted!("a < b")(map!(entropy)(arr)));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // issue 4909
     import std.typecons : Tuple;
@@ -3001,7 +3001,7 @@ if (isRandomAccessRange!R && hasLength!R)
     schwartzSort!"a[0]"(chars);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // issue 5924
     import std.typecons : Tuple;
@@ -3032,7 +3032,7 @@ if (isRandomAccessRange!(Range) && hasLength!(Range) && hasSlicing!(Range))
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     int[] a = [ 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 ];
     partialSort(a, 5);
@@ -3059,7 +3059,7 @@ if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
     sort!(less, ss)(r1);
 }
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     int[] a = [5, 7, 2, 6, 7];
     int[] b = [2, 1, 5, 6, 7, 3, 0];
@@ -3123,7 +3123,7 @@ if (isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[] v = [ 25, 7, 9, 2, 0, 5, 21 ];
     topN!"a < b"(v, 100);
@@ -3429,7 +3429,7 @@ done:
     return pivot;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto a = [ 10, 5, 3, 4, 8,  11,  13, 3, 9, 4, 10 ];
     assert(expandPartition!((a, b) => a < b)(a, 4, 5, 6) == 9);
@@ -3450,7 +3450,7 @@ private T[] randomArray(Flag!"exactSize" flag = No.exactSize, T = int)(
     return iota(0, size).map!(_ => uniform(minValue, maxValue)).array;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : max, min;
     import std.algorithm.iteration : reduce;
@@ -3497,7 +3497,7 @@ private T[] randomArray(Flag!"exactSize" flag = No.exactSize, T = int)(
     foreach (e; idx[mid .. $]) assert((*e)[1] >= (*idx[mid])[1]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : max, min;
     import std.algorithm.iteration : reduce;
@@ -3527,7 +3527,7 @@ private T[] randomArray(Flag!"exactSize" flag = No.exactSize, T = int)(
 }
 
 // bug 12987
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[] a = [ 25, 7, 9, 2, 0, 5, 21 ];
     auto n = 4;
@@ -3567,7 +3567,7 @@ if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     int[] a = [ 5, 7, 2, 6, 7 ];
     int[] b = [ 2, 1, 5, 6, 7, 3, 0 ];
@@ -3577,7 +3577,7 @@ if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
 }
 
 // bug 15421
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
@@ -3621,7 +3621,7 @@ if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
 }
 
 // bug 15421
-@system unittest
+version(StdUnittest) @system unittest
 {
     auto a = [ 9, 8, 0, 3, 5, 25, 43, 4, 2, 0, 7 ];
     auto b = [ 9, 8, 0, 3, 5, 25, 43, 4, 2, 0, 7 ];
@@ -3640,7 +3640,7 @@ if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
 }
 
 // bug 12987
-@system unittest
+version(StdUnittest) @system unittest
 {
     int[] a = [ 5, 7, 2, 6, 7 ];
     int[] b = [ 2, 1, 5, 6, 7, 3, 0 ];
@@ -3650,7 +3650,7 @@ if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
 }
 
 // bug 15420
-@system unittest
+version(StdUnittest) @system unittest
 {
     int[] a = [ 5, 7, 2, 6, 7 ];
     int[] b = [ 2, 1, 5, 6, 7, 3, 0 ];
@@ -3694,7 +3694,7 @@ if (isInputRange!(SRange) && isRandomAccessRange!(TRange)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.typecons : Yes;
 
@@ -3704,7 +3704,7 @@ if (isInputRange!(SRange) && isRandomAccessRange!(TRange)
     assert(b == [ 0, 1, 2 ]);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.random : Random, unpredictableSeed, uniform, randomShuffle;
     import std.typecons : Yes;
@@ -3803,7 +3803,7 @@ if (isRandomAccessRange!Range &&
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.typecons : Yes;
 
@@ -3819,7 +3819,7 @@ if (isRandomAccessRange!Range &&
     assert(ptrIndex == [ &a[5], &a[1], &a[3] ]);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : text;
 
@@ -3985,7 +3985,7 @@ if (isRandomAccessRange!Range && hasLength!Range &&
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Verify medianOf for all permutations of [1, 2, 2, 3, 4].
     int[5] data = [1, 2, 2, 3, 4];
@@ -4094,7 +4094,7 @@ if (isBidirectionalRange!BidirectionalRange &&
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Step through all permutations of a sorted array in lexicographic order
     int[] a = [1,2,3];
@@ -4113,7 +4113,7 @@ if (isBidirectionalRange!BidirectionalRange &&
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Step through permutations of an array containing duplicate elements:
     int[] a = [1,1,2];
@@ -4125,7 +4125,7 @@ if (isBidirectionalRange!BidirectionalRange &&
     assert(a == [1,1,2]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Boundary cases: arrays of 0 or 1 element.
     int[] a1 = [];
@@ -4137,7 +4137,7 @@ if (isBidirectionalRange!BidirectionalRange &&
     assert(a2 == [1]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -4216,7 +4216,7 @@ if (isBidirectionalRange!BidirectionalRange &&
     assert(equal(a1, [1, 2, 3, 4]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Test with non-default sorting order
     int[] a = [3,2,1];
@@ -4235,7 +4235,7 @@ if (isBidirectionalRange!BidirectionalRange &&
 }
 
 // Issue 13594
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[3] a = [1,2,3];
     assert(nextPermutation(a[]));
@@ -4364,7 +4364,7 @@ if (isBidirectionalRange!BidirectionalRange &&
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Step through even permutations of a sorted array in lexicographic order
     int[] a = [1,2,3];
@@ -4376,7 +4376,7 @@ if (isBidirectionalRange!BidirectionalRange &&
     assert(a == [1,2,3]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto a3 = [ 1, 2, 3, 4 ];
     int count = 1;
@@ -4384,7 +4384,7 @@ if (isBidirectionalRange!BidirectionalRange &&
     assert(count == 12);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Test with non-default sorting order
     auto a = [ 3, 2, 1 ];
@@ -4397,7 +4397,7 @@ if (isBidirectionalRange!BidirectionalRange &&
     assert(a == [ 3, 2, 1 ]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Test various cases of rollover
     auto a = [ 3, 1, 2 ];
@@ -4409,7 +4409,7 @@ if (isBidirectionalRange!BidirectionalRange &&
     assert(b == [ 1, 3, 2 ]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Issue 13594
     int[3] a = [1,2,3];
@@ -4421,7 +4421,7 @@ if (isBidirectionalRange!BidirectionalRange &&
 Even permutations are useful for generating coordinates of certain geometric
 shapes. Here's a non-trivial example:
 */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.math : sqrt;
 

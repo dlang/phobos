@@ -41,7 +41,7 @@ License:    $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0)
 module std.parallelism;
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.iteration : map;
     import std.math : approxEqual;
@@ -175,7 +175,7 @@ private size_t cacheLineSizeImpl() @nogc nothrow @trusted
     return result;
 }
 
-@nogc @safe nothrow unittest
+version(StdUnittest) @nogc @safe nothrow unittest
 {
     assert(cacheLineSize == cacheLineSizeImpl);
 }
@@ -243,7 +243,7 @@ private template isSafeTask(F)
         allSatisfy!(noUnsharedAliasing, Parameters!F);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     alias F1 = void function() @safe;
     alias F2 = void function();
@@ -356,7 +356,7 @@ private template isRoundRobin(T)
     enum isRoundRobin = false;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert( isRoundRobin!(RoundRobinBuffer!(void delegate(char[]), bool delegate())));
     static assert(!isRoundRobin!(uint));
@@ -2920,7 +2920,7 @@ public:
     // they would appear under the outer one. (We can't move this inside the
     // outer fold() template because then dmd runs out of memory possibly due to
     // recursive template instantiation, which is surprisingly not caught.)
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         // Just the range
         auto x = taskPool.fold!"a + b"([1, 2, 3, 4]);
@@ -3469,7 +3469,7 @@ public:
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.iteration : sum;
     import std.range : iota;
@@ -4113,7 +4113,7 @@ version(StdUnittest)
 
 // These test basic functionality but don't stress test for threading bugs.
 // These are the tests that should be run every time Phobos is compiled.
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal, min, max;
     import std.algorithm.iteration : filter, map, reduce;
@@ -4525,7 +4525,7 @@ version(StdUnittest)
 // tons of stuff and should not be run every time make unittest is run.
 version(parallelismStressTest)
 {
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         size_t attempt;
         for (; attempt < 10; attempt++)
@@ -4608,7 +4608,7 @@ version(parallelismStressTest)
 
     // These unittests are intended more for actual testing and not so much
     // as examples.
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         foreach (attempt; 0 .. 10)
         foreach (poolSize; [0, 4])
@@ -4784,14 +4784,14 @@ version(StdUnittest)
     static auto __genPair_12733(ulong n) { return __S_12733(n); }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     immutable ulong[] data = [ 2UL^^59-1, 2UL^^59-1, 2UL^^59-1, 112_272_537_195_293UL ];
 
     auto result = taskPool.amap!__genPair_12733(data);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range : iota;
 
@@ -4799,7 +4799,7 @@ version(StdUnittest)
     assert(__traits(compiles, { foreach (i; iota(0, 100UL).parallel) {} }));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.iteration : each;
 
@@ -4810,7 +4810,7 @@ version(StdUnittest)
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=17539
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.random : rndGen;
     // ensure compilation

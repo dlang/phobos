@@ -32,7 +32,7 @@ class NullLogger : Logger
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.experimental.logger.core : LogLevel;
     auto nl1 = new NullLogger(LogLevel.all);

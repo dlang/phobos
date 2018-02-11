@@ -19,7 +19,7 @@ public import std.meta;
 alias TypeTuple = AliasSeq;
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.typetuple;
     alias TL = TypeTuple!(int, double);
@@ -31,7 +31,7 @@ alias TypeTuple = AliasSeq;
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     alias TL = TypeTuple!(int, double);
 

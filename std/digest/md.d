@@ -48,7 +48,7 @@ module std.digest.md;
 public import std.digest;
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Template API
     import std.digest.md;
@@ -64,7 +64,7 @@ public import std.digest;
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //OOP API
     import std.digest.md;
@@ -391,7 +391,7 @@ struct MD5
             return data;
         }
         ///
-        @safe unittest
+        version(StdUnittest) @safe unittest
         {
             //Simple example
             MD5 hash;
@@ -402,7 +402,7 @@ struct MD5
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Simple example, hashing a string using md5Of helper function
     ubyte[16] hash = md5Of("abc");
@@ -411,7 +411,7 @@ struct MD5
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Using the basic API
     MD5 hash;
@@ -423,7 +423,7 @@ struct MD5
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Let's use the template features:
     void doSomething(T)(ref T hash)
@@ -437,12 +437,12 @@ struct MD5
     assert(toHexString(md5.finish()) == "93B885ADFE0DA089CDF634904FD59F71");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(isDigest!MD5);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.range;
     import std.conv : hexString;
@@ -505,7 +505,7 @@ auto md5Of(T...)(T data)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     ubyte[16] hash = md5Of("abc");
     assert(hash == digest!MD5("abc"));
@@ -521,7 +521,7 @@ auto md5Of(T...)(T data)
 alias MD5Digest = WrapperDigest!MD5;
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Simple example, hashing a string using Digest.digest helper function
     auto md5 = new MD5Digest();
@@ -531,7 +531,7 @@ alias MD5Digest = WrapperDigest!MD5;
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
      //Let's use the OOP features:
     void test(Digest dig)
@@ -547,7 +547,7 @@ alias MD5Digest = WrapperDigest!MD5;
     assert(toHexString(result) == "93B885ADFE0DA089CDF634904FD59F71");
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : hexString;
     auto md5 = new MD5Digest();

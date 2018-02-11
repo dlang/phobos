@@ -22,7 +22,7 @@ import std.traits;
 public import std.container.util;
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : take;
@@ -402,7 +402,7 @@ leaves the heap unaffected and returns $(D false).
 }
 
 /// Example from "Introduction to Algorithms" Cormen et al, p 146
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
@@ -415,7 +415,7 @@ leaves the heap unaffected and returns $(D false).
 
 /// $(D BinaryHeap) implements the standard input range interface, allowing
 /// lazy iteration of the underlying range in descending order.
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : take;
@@ -436,7 +436,7 @@ BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : to;
     import std.range.primitives;
@@ -467,7 +467,7 @@ BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     // Test range interface.
     import std.algorithm.comparison : equal;
@@ -477,7 +477,7 @@ BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
     assert(h.equal([16, 14, 10, 9, 8, 7, 4, 3, 2, 1]));
 }
 
-@system unittest // 15675
+version(StdUnittest) @system unittest // 15675
 {
     import std.container.array : Array;
 
@@ -486,7 +486,7 @@ BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
     assert(heap.front == 12);
 }
 
-@system unittest // 16072
+version(StdUnittest) @system unittest // 16072
 {
     auto q = heapify!"a > b"([2, 4, 5]);
     q.insert(1);
@@ -502,7 +502,7 @@ BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
     assert(r.front == 99);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     int[] a = [4, 1, 3, 2, 16, 9, 10, 14, 8, 7];
@@ -511,7 +511,7 @@ BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
     assert(dup.equal([16, 14, 10, 9, 8, 7, 4, 3, 2, 1]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static struct StructWithoutDup
     {
@@ -541,7 +541,7 @@ BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
         }));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static struct StructWithDup
     {
@@ -563,7 +563,7 @@ BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
         }));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
@@ -585,7 +585,7 @@ BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
     assert(equal(b, [10, 9, 8, 7, 6, 6, 7, 8, 9, 10]));
 }
 
-@system unittest // Issue 17314
+version(StdUnittest) @system unittest // Issue 17314
 {
     import std.algorithm.comparison : equal;
     int[] a = [5];

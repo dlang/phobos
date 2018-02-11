@@ -98,7 +98,7 @@ $(TR $(TDNW UUID namespaces)
 module std.uuid;
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.uuid;
 
@@ -141,7 +141,7 @@ public struct UUID
                 return cast(Char)('a' + (i-10));
         }
 
-        @safe pure nothrow unittest
+        version(StdUnittest) @safe pure nothrow unittest
         {
             assert(UUID(cast(ubyte[16])[138, 179, 6, 14, 44, 186, 79, 35, 183, 76, 181, 45,
                 179, 189, 251, 70]).toString() == "8ab3060e-2cba-4f23-b74c-b52db3bdfb46");
@@ -229,7 +229,7 @@ public struct UUID
          * that is not needed right now.
          */
 
-        @safe pure unittest
+        version(StdUnittest) @safe pure unittest
         {
             UUID tmp;
             tmp.data = cast(ubyte[16])[0,1,2,3,4,5,6,7,8,9,10,11,12,
@@ -260,7 +260,7 @@ public struct UUID
         }
 
         ///
-        @safe pure unittest
+        version(StdUnittest) @safe pure unittest
         {
             enum ubyte[16] data = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
             auto uuid = UUID(data);
@@ -286,14 +286,14 @@ public struct UUID
         }
 
         ///
-        @safe unittest
+        version(StdUnittest) @safe unittest
         {
             auto tmp = UUID(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15);
             assert(tmp.data == cast(ubyte[16])[0,1,2,3,4,5,6,7,8,9,10,11,
                 12,13,14,15]);
         }
 
-        @safe unittest
+        version(StdUnittest) @safe unittest
         {
             UUID tmp = UUID(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15);
             assert(tmp.data == cast(ubyte[16])[0,1,2,3,4,5,6,7,8,9,10,11,
@@ -388,7 +388,7 @@ public struct UUID
         }
 
         ///
-        @safe pure unittest
+        version(StdUnittest) @safe pure unittest
         {
             auto id = UUID("8AB3060E-2cba-4f23-b74c-b52db3bdfb46");
             assert(id.data == [138, 179, 6, 14, 44, 186, 79, 35, 183, 76,
@@ -400,7 +400,7 @@ public struct UUID
             //here parsing is done at compile time, no runtime overhead!
         }
 
-        @safe pure unittest
+        version(StdUnittest) @safe pure unittest
         {
             import std.conv : to;
             import std.exception;
@@ -477,7 +477,7 @@ public struct UUID
         }
 
         ///
-        @safe pure unittest
+        version(StdUnittest) @safe pure unittest
         {
             UUID id;
             assert(id.empty);
@@ -485,7 +485,7 @@ public struct UUID
             assert(!id.empty);
         }
 
-        @safe pure unittest
+        version(StdUnittest) @safe pure unittest
         {
             ubyte[16] getData(size_t i)
             {
@@ -544,12 +544,12 @@ public struct UUID
         }
 
         ///
-        @safe pure unittest
+        version(StdUnittest) @safe pure unittest
         {
             assert(UUID("8ab3060e-2cba-4f23-b74c-b52db3bdfb46").variant
                == UUID.Variant.rfc4122);
         }
-        @system pure unittest
+        version(StdUnittest) @system pure unittest
         {
             // @system due to Variant
             Variant[ubyte] tests = cast(Variant[ubyte])[0x00 : Variant.ncs,
@@ -605,12 +605,12 @@ public struct UUID
         }
 
         ///
-        @safe unittest
+        version(StdUnittest) @safe unittest
         {
             assert(UUID("8ab3060e-2cba-4f23-b74c-b52db3bdfb46").uuidVersion
                 == UUID.Version.randomNumberBased);
         }
-        @system unittest
+        version(StdUnittest) @system unittest
         {
             // @system due to cast
             Version[ubyte] tests = cast(Version[ubyte]) [
@@ -649,7 +649,7 @@ public struct UUID
         }
 
         ///
-        @safe unittest
+        version(StdUnittest) @safe unittest
         {
             immutable ubyte[16] data = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
             UUID u1;
@@ -670,7 +670,7 @@ public struct UUID
         }
 
         ///
-        @safe pure unittest
+        version(StdUnittest) @safe pure unittest
         {
             //compare UUIDs
             assert(UUID("00000000-0000-0000-0000-000000000000") == UUID.init);
@@ -808,7 +808,7 @@ public struct UUID
             }
             return h;
         }
-        @safe unittest
+        version(StdUnittest) @safe unittest
         {
             assert(UUID("00000000-0000-0000-0000-000000000000") == UUID.init);
             int[UUID] test = [UUID("8a94f585-d180-44f7-8929-6fca0189c7d0") : 1,
@@ -901,14 +901,14 @@ public struct UUID
         }
 
         ///
-        @safe pure unittest
+        version(StdUnittest) @safe pure unittest
         {
             immutable str = "8ab3060e-2cba-4f23-b74c-b52db3bdfb46";
             auto id = UUID(str);
             assert(id.toString() == str);
         }
 
-        @safe pure nothrow @nogc unittest
+        version(StdUnittest) @safe pure nothrow @nogc unittest
         {
             import std.meta : AliasSeq;
             static foreach (Char; AliasSeq!(char, wchar, dchar))
@@ -929,7 +929,7 @@ public struct UUID
             }}
         }
 
-        @system pure nothrow @nogc unittest
+        version(StdUnittest) @system pure nothrow @nogc unittest
         {
             // @system due to cast
             import std.encoding : Char = AsciiChar;
@@ -943,7 +943,7 @@ public struct UUID
             assert(str == s);
         }
 
-        @safe unittest
+        version(StdUnittest) @safe unittest
         {
             auto u1 = UUID(cast(ubyte[16])[138, 179, 6, 14, 44, 186, 79,
                 35, 183, 76, 181, 45, 179, 189, 251, 70]);
@@ -1031,7 +1031,7 @@ public struct UUID
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Use default UUID.init namespace
     auto simpleID = md5UUID("test.uuid.any.string");
@@ -1041,7 +1041,7 @@ public struct UUID
     auto id = md5UUID("some-description", namespace);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     auto simpleID = md5UUID("test.uuid.any.string");
     assert(simpleID.data == cast(ubyte[16])[126, 206, 86, 72, 29, 233, 62, 213, 178, 139, 198, 136,
@@ -1143,7 +1143,7 @@ public struct UUID
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Use default UUID.init namespace
     auto simpleID = sha1UUID("test.uuid.any.string");
@@ -1153,7 +1153,7 @@ public struct UUID
     auto id = sha1UUID("some-description", namespace);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     auto simpleID = sha1UUID("test.uuid.any.string");
     assert(simpleID.data == cast(ubyte[16])[16, 209, 239, 61, 99, 12, 94, 70, 159, 79, 255, 250,
@@ -1231,7 +1231,7 @@ if (isInputRange!RNG && isIntegral!(ElementType!RNG))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.random : Xorshift192, unpredictableSeed;
 
@@ -1251,13 +1251,13 @@ if (isInputRange!RNG && isIntegral!(ElementType!RNG))
  * to something else, this assert and the randomUUID function
  * have to be updated.
  */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.random : rndGen, Mt19937;
     static assert(is(typeof(rndGen) == Mt19937));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.random : Xorshift192, unpredictableSeed;
     //simple call
@@ -1454,7 +1454,7 @@ if (isInputRange!Range
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto id = parseUUID("8AB3060E-2CBA-4F23-b74c-B52Db3BDFB46");
     //no dashes
@@ -1473,7 +1473,7 @@ if (isInputRange!Range
     //here parsing is done at compile time, no runtime overhead!
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
     import std.exception;
@@ -1646,7 +1646,7 @@ enum uuidRegex = "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}"~
     "-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}";
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm;
     import std.regex;
@@ -1710,7 +1710,7 @@ public class UUIDParsingException : Exception
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.exception : collectException;
 
@@ -1722,7 +1722,7 @@ public class UUIDParsingException : Exception
     assert(ex.reason == UUIDParsingException.Reason.tooLittle);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto ex = new UUIDParsingException("foo", 10, UUIDParsingException.Reason.tooMuch);
     assert(ex.input == "foo");

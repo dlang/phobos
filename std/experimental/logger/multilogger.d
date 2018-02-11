@@ -106,7 +106,7 @@ class MultiLogger : Logger
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.exception : assertThrown;
     import std.experimental.logger.nulllogger;
@@ -127,7 +127,7 @@ class MultiLogger : Logger
     assert(n is null);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto a = new MultiLogger;
     auto n0 = new TestLogger;
@@ -143,7 +143,7 @@ class MultiLogger : Logger
 }
 
 // Issue #16
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.file : deleteme;
     import std.stdio : File;
@@ -187,7 +187,7 @@ class MultiLogger : Logger
     assert(line.indexOf(iMsg) != -1, line ~ ":" ~ tMsg);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto dl = cast(FileLogger) sharedLog;
     assert(dl !is null);

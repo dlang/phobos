@@ -19,7 +19,7 @@ $(SCRIPT inhibitQuickIndex = 1;)
 module std.container.dlist;
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.container : DList;
@@ -105,7 +105,7 @@ The base DList Range. Contains Range primitives that don't depend on payload typ
  +/
 private struct DRange
 {
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         static assert(isBidirectionalRange!DRange);
         static assert(is(ElementType!DRange == BaseNode*));
@@ -799,7 +799,7 @@ private:
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -831,7 +831,7 @@ private:
     a.linearRemoveElement(3);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -850,7 +850,7 @@ private:
     assert(equal(a4[], [0, 1]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -867,7 +867,7 @@ private:
     assert(equal(list[],[4,5,6,7,0,1,2,3]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : take;
@@ -926,7 +926,7 @@ private:
     assert(equal(list[],[0,3]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -950,7 +950,7 @@ private:
     assert(dl.empty);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -963,7 +963,7 @@ private:
     assert(equal(dl[], ["a", "b", "c", "d", "e"]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -976,7 +976,7 @@ private:
     assert(equal(dl[], ["e", "a", "c", "b", "d"]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto d = DList!int([1, 2, 3]);
     d.front = 5; //test frontAssign
@@ -987,7 +987,7 @@ private:
 }
 
 // Issue 8895
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto a = make!(DList!int)(1,2,3,4);
     auto b = make!(DList!int)(1,2,3,4);
@@ -998,7 +998,7 @@ private:
     assert(!(a == d));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto d = DList!int([1, 2, 3]);
     d.front = 5; //test frontAssign
@@ -1008,7 +1008,7 @@ private:
     assert(r.back == 1);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto a = DList!int();
     assert(a.removeFront(10) == 0);
@@ -1017,7 +1017,7 @@ private:
     assert(a[].empty);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1053,7 +1053,7 @@ private:
     c.removeBack();
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1065,7 +1065,7 @@ private:
     assert(a[].equal([1, 2, 3, 7]));
 }
 
-@safe unittest //12566
+version(StdUnittest) @safe unittest //12566
 {
     auto dl2 = DList!int([2,7]);
     dl2.removeFront();
@@ -1074,14 +1074,14 @@ private:
     assert(dl2.empty, "not empty?!");
 }
 
-@safe unittest //13076
+version(StdUnittest) @safe unittest //13076
 {
     DList!int list;
     assert(list.empty);
     list.clear();
 }
 
-@safe unittest //13425
+version(StdUnittest) @safe unittest //13425
 {
     import std.range : drop, take;
     auto list = DList!int([1,2,3,4,5]);
@@ -1091,7 +1091,7 @@ private:
     assert(r.empty); // fails
 }
 
-@safe unittest //14300
+version(StdUnittest) @safe unittest //14300
 {
     interface ITest {}
     static class Test : ITest {}
@@ -1099,7 +1099,7 @@ private:
     DList!ITest().insertBack(new Test());
 }
 
-@safe unittest //15263
+version(StdUnittest) @safe unittest //15263
 {
     import std.range : iota;
     auto a = DList!int();

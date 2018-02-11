@@ -146,13 +146,13 @@ if (isPointer!Range && isIterable!(PointerTarget!Range) && !isNarrowString!Range
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     auto a = array([1, 2, 3, 4, 5][]);
     assert(a == [ 1, 2, 3, 4, 5 ]);
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
     struct Foo
@@ -163,7 +163,7 @@ if (isPointer!Range && isIterable!(PointerTarget!Range) && !isNarrowString!Range
     assert(equal(a, [Foo(1), Foo(2), Foo(3), Foo(4), Foo(5)]));
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     struct MyRange
     {
@@ -176,14 +176,14 @@ if (isPointer!Range && isIterable!(PointerTarget!Range) && !isNarrowString!Range
     assert(arr.empty);
 }
 
-@system pure nothrow unittest
+version(StdUnittest) @system pure nothrow unittest
 {
     immutable int[] a = [1, 2, 3, 4];
     auto b = (&a).array;
     assert(b == a);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     struct Foo
@@ -202,7 +202,7 @@ if (isPointer!Range && isIterable!(PointerTarget!Range) && !isNarrowString!Range
     assert(equal(a, [Foo(1), Foo(2), Foo(3), Foo(4), Foo(5)]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Issue 12315
     static struct Bug12315 { immutable int i; }
@@ -210,7 +210,7 @@ if (isPointer!Range && isIterable!(PointerTarget!Range) && !isNarrowString!Range
     static assert(bug12315[0].i == 123456789);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range;
     static struct S{int* p;}
@@ -240,7 +240,7 @@ if (isNarrowString!String)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range.primitives : isRandomAccessRange;
 
@@ -251,7 +251,7 @@ if (isNarrowString!String)
     static assert(isRandomAccessRange!dstring == true);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.conv : to;
 
@@ -312,7 +312,7 @@ if (isNarrowString!String)
 }
 
 //Bug# 8233
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(array("hello world"d) == "hello world"d);
     immutable a = [1, 2, 3, 4, 5];
@@ -339,7 +339,7 @@ if (isNarrowString!String)
     }}
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //9824
     static struct S
@@ -352,7 +352,7 @@ if (isNarrowString!String)
 }
 
 // Bugzilla 10220
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.exception;
@@ -372,7 +372,7 @@ if (isNarrowString!String)
     });
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Turn down infinity:
     static assert(!is(typeof(
@@ -414,7 +414,7 @@ if (isInputRange!Range)
 }
 
 ///
-@safe pure /*nothrow*/ unittest
+version(StdUnittest) @safe pure /*nothrow*/ unittest
 {
     import std.range;
     import std.typecons;
@@ -428,7 +428,7 @@ if (isInputRange!Range)
 }
 
 // @@@11053@@@ - Cannot be version(unittest) - recursive instantiation error
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.typecons;
     static assert(!__traits(compiles, [ tuple("foo", "bar", "baz") ].assocArray()));
@@ -437,7 +437,7 @@ if (isInputRange!Range)
 }
 
 // Issue 13909
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.typecons;
     auto a = [tuple!(const string, string)("foo", "bar")];
@@ -467,7 +467,7 @@ auto byPair(AA : Value[Key], Value, Key)(AA aa)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.sorting : sort;
     import std.typecons : tuple, Tuple;
@@ -494,7 +494,7 @@ auto byPair(AA : Value[Key], Value, Key)(AA aa)
     ]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.typecons : tuple, Tuple;
     import std.meta : AliasSeq;
@@ -519,7 +519,7 @@ auto byPair(AA : Value[Key], Value, Key)(AA aa)
 }
 
 // Issue 17711
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     const(int[string]) aa = [ "abc": 123 ];
 
@@ -619,7 +619,7 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I) && !hasIndirections!(ElementE
     return arrayAllocImpl!(false, T, ST)(sizes);
 }
 ///
-@system nothrow pure unittest
+version(StdUnittest) @system nothrow pure unittest
 {
     double[] arr = uninitializedArray!(double[])(100);
     assert(arr.length == 100);
@@ -657,7 +657,7 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I))
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : repeat;
@@ -668,7 +668,7 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I))
     assert(!arr.equal(0.repeat(42)));
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     cast(void) minimallyInitializedArray!(int[][][][][])();
     double[] arr = minimallyInitializedArray!(double[])(100);
@@ -745,7 +745,7 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
     return ret;
 }
 
-@safe nothrow pure unittest
+version(StdUnittest) @safe nothrow pure unittest
 {
     auto s1 = uninitializedArray!(int[])();
     auto s2 = minimallyInitializedArray!(int[])();
@@ -753,7 +753,7 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
     assert(s2.length == 0);
 }
 
-@safe nothrow pure unittest //@@@9803@@@
+version(StdUnittest) @safe nothrow pure unittest //@@@9803@@@
 {
     auto a = minimallyInitializedArray!(int*[])(1);
     assert(a[0] == null);
@@ -763,7 +763,7 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
     assert(c[0][0] == null);
 }
 
-@safe unittest //@@@10637@@@
+version(StdUnittest) @safe unittest //@@@10637@@@
 {
     static struct S
     {
@@ -789,7 +789,7 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
     assert(b[0].p == null);
 }
 
-@safe nothrow unittest
+version(StdUnittest) @safe nothrow unittest
 {
     static struct S1
     {
@@ -848,7 +848,7 @@ if (is(typeof(a.ptr < b.ptr) == bool))
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     int[] a = [ 10, 11, 12, 13, 14 ];
     int[] b = a[1 .. 3];
@@ -868,7 +868,7 @@ if (is(typeof(a.ptr < b.ptr) == bool))
     static assert(test == "three"d);
 }
 
-@safe nothrow unittest
+version(StdUnittest) @safe nothrow unittest
 {
     static void test(L, R)(L l, R r)
     {
@@ -893,7 +893,7 @@ if (is(typeof(a.ptr < b.ptr) == bool))
     assert(overlap(c, d.idup).empty);
 }
 
-@safe pure nothrow unittest // bugzilla 9836
+version(StdUnittest) @safe pure nothrow unittest // bugzilla 9836
 {
     // range primitives for array should work with alias this types
     struct Wrapper
@@ -1094,7 +1094,7 @@ if (isSomeString!(T[]) && allSatisfy!(isCharOrStringOrDcharRange, U))
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     int[] a = [ 1, 2, 3, 4 ];
     a.insertInPlace(2, [ 1, 2 ]);
@@ -1132,7 +1132,7 @@ private template isInputRangeOrConvertible(E)
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     // @system due to insertInPlace
     import core.exception;
@@ -1227,7 +1227,7 @@ private template isInputRangeOrConvertible(E)
                     "flip_xyz\U00010143_abc__flop"));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     // insertInPlace interop with postblit
@@ -1260,7 +1260,7 @@ private template isInputRangeOrConvertible(E)
     assert(equal(arr, [1, 2, 3, 4, 5]));  //check it works with postblit
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.exception;
     assertCTFEable!(
@@ -1272,7 +1272,7 @@ private template isInputRangeOrConvertible(E)
     });
 }
 
-@system unittest // bugzilla 6874
+version(StdUnittest) @system unittest // bugzilla 6874
 {
     import core.memory;
     // allocate some space
@@ -1303,7 +1303,7 @@ pure nothrow bool sameHead(T)(in T[] lhs, in T[] rhs)
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     auto a = [1, 2, 3, 4, 5];
     auto b = a[0 .. 2];
@@ -1324,7 +1324,7 @@ pure nothrow bool sameTail(T)(in T[] lhs, in T[] rhs)
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     auto a = [1, 2, 3, 4, 5];
     auto b = a[3..$];
@@ -1332,7 +1332,7 @@ pure nothrow bool sameTail(T)(in T[] lhs, in T[] rhs)
     assert(a.sameTail(b));
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     static foreach (T; AliasSeq!(int[], const(int)[], immutable(int)[], const int[], immutable int[]))
     {{
@@ -1407,7 +1407,7 @@ if (isInputRange!S && !isDynamicArray!S)
 
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto a = "abc";
     auto s = replicate(a, 3);
@@ -1424,7 +1424,7 @@ if (isInputRange!S && !isDynamicArray!S)
     assert(d == []);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.conv : to;
 
@@ -1494,7 +1494,7 @@ if (isSomeString!S)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     string str = "Hello World!";
     assert(str.split == ["Hello", "World!"]);
@@ -1507,7 +1507,7 @@ if (isSomeString!S)
  * `split` allocates memory, so the same effect can be achieved lazily
  * using $(REF splitter, std,algorithm,iteration).
  */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.ascii : isWhite;
     import std.algorithm.comparison : equal;
@@ -1517,7 +1517,7 @@ if (isSomeString!S)
     assert(str.splitter!(isWhite).equal(["Hello", "World!"]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.conv : to;
     import std.format;
@@ -1549,7 +1549,7 @@ if (isSomeString!S)
     assert(split(s) == ["peter", "paul", "jerry"]);
 }
 
-@safe unittest //purity, ctfe ...
+version(StdUnittest) @safe unittest //purity, ctfe ...
 {
     import std.exception;
     void dg() @safe pure {
@@ -1562,7 +1562,7 @@ if (isSomeString!S)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(split("hello world") == ["hello","world"]);
     assert(split("192.168.0.1", ".") == ["192", "168", "0", "1"]);
@@ -1621,7 +1621,7 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(range.front))))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.uni : isWhite;
     assert("Learning,D,is,fun".split(",") == ["Learning", "D", "is", "fun"]);
@@ -1629,7 +1629,7 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(range.front))))
     assert("Learning D is fun".split(" D ") == ["Learning", "is fun"]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : cmp;
     import std.conv;
@@ -1777,7 +1777,7 @@ if (isInputRange!RoR &&
     }
 }
 
-@safe unittest // Issue 14230
+version(StdUnittest) @safe unittest // Issue 14230
 {
    string[] ary = ["","aa","bb","cc"]; // leaded by _empty_ element
    assert(ary.join(" @") == " @aa @bb @cc"); // OK in 2.067b1 and olders
@@ -1849,7 +1849,7 @@ if (isInputRange!RoR &&
     }
 }
 
-@safe unittest // Issue 10895
+version(StdUnittest) @safe unittest // Issue 10895
 {
     class A
     {
@@ -1864,7 +1864,7 @@ if (isInputRange!RoR &&
     assert(temp.length == 3);
 }
 
-@safe unittest // Issue 14230
+version(StdUnittest) @safe unittest // Issue 14230
 {
    string[] ary = ["","aa","bb","cc"];
    assert(ary.join('@') == "@aa@bb@cc");
@@ -1907,7 +1907,7 @@ if (isInputRange!RoR &&
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     assert(join(["hello", "silly", "world"], " ") == "hello silly world");
     assert(join(["hello", "silly", "world"]) == "hellosillyworld");
@@ -1920,7 +1920,7 @@ if (isInputRange!RoR &&
     assert(arr.join() == "applebanana");
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
 
@@ -1959,7 +1959,7 @@ if (isInputRange!RoR &&
     assert(arr.join(',') == "apple,banana");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm;
     import std.conv : to;
@@ -2065,7 +2065,7 @@ if (isInputRange!RoR &&
 }
 
 // Issue 10683
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range : join;
     import std.typecons : tuple;
@@ -2074,7 +2074,7 @@ if (isInputRange!RoR &&
 }
 
 // Issue 13877
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Test that the range is iterated only once.
     import std.algorithm.iteration : map;
@@ -2140,13 +2140,13 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert("Hello Wörld".replace("o Wö", "o Wo") == "Hello World");
     assert("Hello Wörld".replace("l", "h") == "Hehho Wörhd");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert([1, 2, 3, 4, 2].replace([2], [5]) == [1, 5, 3, 4, 5]);
     assert([3, 3, 3].replace([3], [0]) == [0, 0, 0]);
@@ -2154,7 +2154,7 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=18215
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto arr = ["aaa.dd", "b"];
     arr = arr.replace("aaa.dd", ".");
@@ -2166,7 +2166,7 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=18215
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert([[0], [1, 2], [0], [3]].replace([0], [4]) == [[4], [1, 2], [4], [3]]);
     assert([[0], [1, 2], [0], [3], [1, 2]]
@@ -2208,7 +2208,7 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto arr = [1, 2, 3, 4, 5];
     auto from = [2, 3];
@@ -2220,7 +2220,7 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
     assert(sink.data == [1, 4, 6, 4, 5]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : cmp;
     import std.conv : to;
@@ -2251,7 +2251,7 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
     assert(replace(s, "foo", "silly") == "This is a silly silly list");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.searching : skipOver;
     import std.conv : to;
@@ -2319,7 +2319,7 @@ if (isInputRange!Range &&
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto a = [ 1, 2, 3, 4 ];
     auto b = a.replace(1, 3, [ 9, 9, 9 ]);
@@ -2327,7 +2327,7 @@ if (isInputRange!Range &&
     assert(b == [ 1, 9, 9, 9, 4 ]);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.exception;
     import std.algorithm.iteration : filter;
@@ -2452,7 +2452,7 @@ if (is(typeof(replace(array, from, to, stuff))))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[] a = [1, 4, 5];
     replaceInPlace(a, 1u, 2u, [2, 3, 4]);
@@ -2463,7 +2463,7 @@ if (is(typeof(replace(array, from, to, stuff))))
     assert(a == [1, 4, 5, 5]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Bug# 12889
     int[1][] arr = [[0], [1], [2], [3], [4], [5], [6]];
@@ -2472,7 +2472,7 @@ if (is(typeof(replace(array, from, to, stuff))))
     assert(arr == [[0], [1], [2], [3], [0], [1], [6]]);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     // Bug# 14925
     char[] a = "mon texte 1".dup;
@@ -2522,7 +2522,7 @@ if (is(typeof(replace(array, from, to, stuff))))
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // the constraint for the first overload used to match this, which wouldn't compile.
     import std.algorithm.comparison : equal;
@@ -2532,7 +2532,7 @@ if (is(typeof(replace(array, from, to, stuff))))
     assert(equal(a, [1L, 4, 5, 6, 3]));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.exception;
     import std.algorithm.comparison : equal;
@@ -2653,7 +2653,7 @@ if (isDynamicArray!(E[]) &&
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto a = [1, 2, 2, 3, 4, 5];
     auto b = a.replaceFirst([2], [1337]);
@@ -2664,7 +2664,7 @@ if (isDynamicArray!(E[]) &&
     assert(r == "This is a silly foo list");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : cmp;
     import std.conv : to;
@@ -2701,7 +2701,7 @@ if (isDynamicArray!(E[]) &&
 }
 
 //Bug# 8187
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto res = ["a", "a"];
     assert(replace(res, "a", "b") == ["b", "b"]);
@@ -2766,7 +2766,7 @@ if (isDynamicArray!(E[]) &&
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto a = [1, 2, 2, 3, 4, 5];
     auto b = a.replaceLast([2], [1337]);
@@ -2777,7 +2777,7 @@ if (isDynamicArray!(E[]) &&
     assert(r == "This is a foo silly list", r);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : cmp;
     import std.conv : to;
@@ -2851,7 +2851,7 @@ do
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto a = [1, 2, 3, 4, 5];
     auto b = replaceSlice(a, a[1 .. 4], [0, 0, 0]);
@@ -2859,7 +2859,7 @@ do
     assert(b == [1, 0, 0, 0, 5]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : cmp;
 
@@ -3205,7 +3205,7 @@ if (isDynamicArray!A)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto app = appender!string();
     string b = "abcdefg";
@@ -3220,7 +3220,7 @@ if (isDynamicArray!A)
     assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.format : format;
     auto app = appender!(int[])();
@@ -3230,7 +3230,7 @@ if (isDynamicArray!A)
     assert("%s".format(app) == "Appender!(int[])(%s)".format([1,2,3]));
 }
 
-@safe unittest // issue 17251
+version(StdUnittest) @safe unittest // issue 17251
 {
     static struct R
     {
@@ -3345,7 +3345,7 @@ if (isDynamicArray!A)
 
 ///
 @system pure nothrow
-unittest
+version(StdUnittest) unittest
 {
     int[] a = [1, 2];
     auto app2 = appender(&a);
@@ -3378,7 +3378,7 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
     return Appender!(E[])(array);
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.exception;
     {
@@ -3484,7 +3484,7 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
 
 ///
 @safe pure nothrow
-unittest
+version(StdUnittest) unittest
 {
     auto w = appender!string;
     // pre-allocate space for at least 10 elements (this avoids costly reallocations)
@@ -3501,7 +3501,7 @@ unittest
     assert(w.data == "abcdef");
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     {
         auto w = appender!string();
@@ -3550,7 +3550,7 @@ unittest
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm;
     import std.typecons;
@@ -3559,7 +3559,7 @@ unittest
     [tuple("A")].filter!(t => true).array; // error
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range;
     //Coverage for put(Range)
@@ -3579,7 +3579,7 @@ unittest
     au1.put(sc1.repeat().take(10));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.range;
     struct S2
@@ -3591,7 +3591,7 @@ unittest
     au2.put(sc2.repeat().take(10));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     struct S
     {
@@ -3624,7 +3624,7 @@ unittest
     a2.put([s2]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //9528
     const(E)[] fastCopy(E)(E[] src) {
@@ -3642,7 +3642,7 @@ unittest
     assert(t.length == 1);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.iteration : map;
     //10753
@@ -3656,7 +3656,7 @@ unittest
     [1, 2].map!Bar.array;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -3705,7 +3705,7 @@ unittest
     assert(app8.data == null);
 }
 
-@safe unittest //Test large allocations (for GC.extend)
+version(StdUnittest) @safe unittest //Test large allocations (for GC.extend)
 {
     import std.algorithm.comparison : equal;
     import std.range;
@@ -3716,7 +3716,7 @@ unittest
     assert(equal(app.data, 'a'.repeat(100_000)));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto reference = new ubyte[](2048 + 1); //a number big enough to have a full page (EG: the GC extends)
     auto arr = reference.dup;
@@ -3726,7 +3726,7 @@ unittest
     assert(reference[] == arr[]);
 }
 
-@safe unittest // clear method is supported only for mutable element types
+version(StdUnittest) @safe unittest // clear method is supported only for mutable element types
 {
     Appender!string app;
     app.put("foo");
@@ -3734,7 +3734,7 @@ unittest
     assert(app.data == "foo");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static struct D//dynamic
     {
@@ -3763,7 +3763,7 @@ unittest
     static assert(!is(typeof(appender(foo()))));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     // Issue 13077
     static class A {}
@@ -3794,7 +3794,7 @@ RefAppender!(E[]) appender(P : E[]*, E)(P arrayPtr)
 
 ///
 @system pure nothrow
-unittest
+version(StdUnittest) unittest
 {
     int[] a = [1, 2];
     auto app2 = appender(&a);
@@ -3809,7 +3809,7 @@ unittest
     assert(app2.capacity >= 5);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.exception;
     {
@@ -3864,13 +3864,13 @@ unittest
     assert(app3.data == [1, 2, 3]);
 }
 
-@safe unittest // issue 14605
+version(StdUnittest) @safe unittest // issue 14605
 {
     static assert(isOutputRange!(Appender!(int[]), int));
     static assert(isOutputRange!(RefAppender!(int[]), int));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     Appender!(int[]) app;
     short[] range = [1, 2, 3];
@@ -3878,7 +3878,7 @@ unittest
     assert(app.data == [1, 2, 3]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     string s = "hello".idup;
     char[] a = "hello".dup;

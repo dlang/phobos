@@ -83,7 +83,7 @@ class Win32Exception : WindowsException
 
 version(StdUnittest) import std.string : startsWith, endsWith;
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Test that we can throw and catch one by its own type
     string message = "Test W1";
@@ -93,7 +93,7 @@ version(StdUnittest) import std.string : startsWith, endsWith;
     assert(e.msg.startsWith(message));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     // ditto
     string message = "Test W2";
@@ -138,7 +138,7 @@ public:
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     // (i) Test that we can throw and catch one by its own type
     string message = "Test 1";
@@ -150,7 +150,7 @@ public:
     assert(e.msg.startsWith(message));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // ditto
     string message = "Test 2";
@@ -1739,7 +1739,7 @@ private:
 }
 
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     debug(winreg) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(winreg) writefln("std.windows.registry.unittest read");
@@ -1772,7 +1772,7 @@ private:
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     debug(winreg) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(winreg) writefln("std.windows.registry.unittest write");
@@ -1843,7 +1843,7 @@ private:
     assert(e.msg.endsWith(" (error 2)"));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     Key HKCU = Registry.currentUser;
     assert(HKCU);

@@ -1113,7 +1113,7 @@ public:
 
 } // end BigUint
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     // ulong comparison test
     BigUint a = [1];
@@ -1135,7 +1135,7 @@ inout(BigDigit) [] removeLeadingZeros(inout(BigDigit) [] x) pure nothrow @safe
     return x[0 .. k];
 }
 
-pure @system unittest
+version(StdUnittest) pure @system unittest
 {
    BigUint r = BigUint([5]);
    BigUint t = BigUint([7]);
@@ -1144,7 +1144,7 @@ pure @system unittest
 }
 
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     BigUint r;
     r = 5UL;
@@ -1157,7 +1157,7 @@ pure @system unittest
 
 
 // Pow tests
-pure @system unittest
+version(StdUnittest) pure @system unittest
 {
     BigUint r, s;
     r.fromHexString("80000000_00000001");
@@ -1181,7 +1181,7 @@ pure @system unittest
 }
 
 // Radix conversion tests
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     BigUint r;
     r.fromHexString("1_E1178E81_00000000");
@@ -1202,7 +1202,7 @@ pure @system unittest
 }
 
 //
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     BigUint r;
     r.fromHexString("1_E1178E81_00000000");
@@ -1337,7 +1337,7 @@ int highestPowerBelowUlongMax(uint x) pure nothrow @safe
      return 2;
 }
 
-version(unittest)
+version(StdUnittest) version(unittest)
 {
 
 int slowHighestPowerBelowUintMax(uint x) pure nothrow @safe
@@ -1350,7 +1350,7 @@ int slowHighestPowerBelowUintMax(uint x) pure nothrow @safe
      return pwr;
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(highestPowerBelowUintMax(10)==9);
     for (int k=82; k<88; ++k)
@@ -1724,7 +1724,7 @@ void divModInternal(BigDigit [] quotient, BigDigit[] remainder, const BigDigit [
     () @trusted { GC.free(un.ptr); GC.free(vn.ptr); } ();
 }
 
-pure @system unittest
+version(StdUnittest) pure @system unittest
 {
     immutable(uint) [] u = [0, 0xFFFF_FFFE, 0x8000_0000];
     immutable(uint) [] v = [0xFFFF_FFFF, 0x8000_0000];
@@ -2679,7 +2679,7 @@ pure nothrow
     () @trusted { GC.free(scratch.ptr); } ();
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.stdc.stdio;
 
@@ -2716,7 +2716,7 @@ pure nothrow
 }
 
 // biguintToOctal
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     enum bufSize = 5 * BigDigitBits / 3 + 1;
     auto buf = new char[bufSize];

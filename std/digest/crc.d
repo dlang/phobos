@@ -64,7 +64,7 @@ version(StdUnittest) import std.exception;
 
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Template API
     import std.digest.crc;
@@ -82,7 +82,7 @@ version(StdUnittest) import std.exception;
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //OOP API
     import std.digest.crc;
@@ -124,7 +124,7 @@ private T[256][8] genTables(T)(T polynomial)
     return res;
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     auto tables = genTables(0xEDB88320);
     assert(tables[0][0] == 0x00000000 && tables[0][$ - 1] == 0x2d02ef8d && tables[7][$ - 1] == 0x264b06e6);
@@ -282,7 +282,7 @@ struct CRC(uint N, ulong P) if (N == 32 || N == 64)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Simple example, hashing a string using crc32Of helper function
     ubyte[4] hash32 = crc32Of("abc");
@@ -296,7 +296,7 @@ struct CRC(uint N, ulong P) if (N == 32 || N == 64)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     ubyte[1024] data;
     //Using the basic API
@@ -313,7 +313,7 @@ struct CRC(uint N, ulong P) if (N == 32 || N == 64)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Let's use the template features:
     //Note: When passing a CRC32 to a function, it must be passed by reference!
@@ -337,14 +337,14 @@ struct CRC(uint N, ulong P) if (N == 32 || N == 64)
     assert(crcHexString(crc64iso.finish()) == "6F90000000000000");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(isDigest!CRC32);
     assert(isDigest!CRC64ECMA);
     assert(isDigest!CRC64ISO);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : hexString;
     ubyte[4] digest;
@@ -385,7 +385,7 @@ struct CRC(uint N, ulong P) if (N == 32 || N == 64)
     assert(crcHexString(input) == "D7D3FCC3");
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : hexString;
     ubyte[8] digest;
@@ -425,7 +425,7 @@ struct CRC(uint N, ulong P) if (N == 32 || N == 64)
     assert(crcHexString(input) == "DEADBEEFD7D3FCC3");
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : hexString;
     ubyte[8] digest;
@@ -484,7 +484,7 @@ ubyte[4] crc32Of(T...)(T data)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     ubyte[] data = [4,5,7,25];
     assert(data.crc32Of == [167, 180, 199, 131]);
@@ -519,7 +519,7 @@ ubyte[8] crc64ECMAOf(T...)(T data)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     ubyte[] data = [4,5,7,25];
     assert(data.crc64ECMAOf == [58, 142, 220, 214, 118, 98, 105, 69]);
@@ -555,7 +555,7 @@ ubyte[8] crc64ISOOf(T...)(T data)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     ubyte[] data = [4,5,7,25];
     assert(data.crc64ISOOf == [0, 0, 0, 80, 137, 232, 203, 120]);
@@ -608,7 +608,7 @@ alias CRC64ECMADigest = WrapperDigest!CRC64ECMA;
 alias CRC64ISODigest = WrapperDigest!CRC64ISO;
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Simple example, hashing a string using Digest.digest helper function
     auto crc = new CRC32Digest();
@@ -618,7 +618,7 @@ alias CRC64ISODigest = WrapperDigest!CRC64ISO;
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
      //Let's use the OOP features:
     void test(Digest dig)
@@ -635,7 +635,7 @@ alias CRC64ISODigest = WrapperDigest!CRC64ISO;
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Simple example
     auto hash = new CRC32Digest();
@@ -644,7 +644,7 @@ alias CRC64ISODigest = WrapperDigest!CRC64ISO;
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     //using a supplied buffer
     ubyte[4] buf;
@@ -656,7 +656,7 @@ alias CRC64ISODigest = WrapperDigest!CRC64ISO;
     //length)
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : hexString;
     import std.range;

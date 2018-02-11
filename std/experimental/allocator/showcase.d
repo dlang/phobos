@@ -40,7 +40,7 @@ alias StackFront(size_t stackSize, Allocator = GCAllocator) =
         Allocator);
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     StackFront!4096 a;
     auto b = a.allocate(4000);
@@ -85,7 +85,7 @@ auto mmapRegionList(size_t bytesPerRegion)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     auto alloc = mmapRegionList(1024 * 1024);
     const b = alloc.allocate(100);

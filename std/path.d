@@ -257,7 +257,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementType!R) ||
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.array;
     import std.utf : byDchar;
@@ -286,7 +286,7 @@ if (isBidirectionalRange!R && isSomeChar!(ElementType!R) ||
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.array;
     import std.utf : byDchar;
@@ -304,7 +304,7 @@ if (isBidirectionalRange!R && isSomeChar!(ElementType!R) ||
     return ltrimDirSeparators(rtrimDirSeparators(path));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.array;
     import std.utf : byDchar;
@@ -436,7 +436,7 @@ if (isSomeChar!C && isSomeChar!C1)
     else return p;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(baseName("").empty);
     assert(baseName("file.ext"w) == "file.ext");
@@ -497,7 +497,7 @@ if (isSomeChar!C && isSomeChar!C1)
     assert(baseName(DirEntry("dir/file.ext")) == "file.ext");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(testAliasedString!baseName("file"));
 
@@ -583,7 +583,7 @@ private auto _dirName(R)(R path)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(dirName("") == ".");
     assert(dirName("file"w) == ".");
@@ -620,7 +620,7 @@ private auto _dirName(R)(R path)
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(testAliasedString!dirName("file"));
 
@@ -631,7 +631,7 @@ private auto _dirName(R)(R path)
     assert(sa.dirName == "file/path/to");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(dirName("dir/file") == "dir");
 
@@ -731,7 +731,7 @@ Lnull:
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(rootName("") is null);
     assert(rootName("foo") is null);
@@ -747,7 +747,7 @@ Lnull:
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(testAliasedString!rootName("/foo/bar"));
 
@@ -758,7 +758,7 @@ Lnull:
     assert(sa.rootName == "/");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.array;
     import std.utf : byChar;
@@ -820,7 +820,7 @@ private auto _driveName(R)(R path)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range : empty;
     version (Posix)  assert(driveName("c:/foo").empty);
@@ -838,7 +838,7 @@ private auto _driveName(R)(R path)
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(testAliasedString!driveName("d:/file"));
 
@@ -854,7 +854,7 @@ private auto _driveName(R)(R path)
     assert(sa.driveName == result);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.array;
     import std.utf : byChar;
@@ -907,7 +907,7 @@ private auto _stripDrive(R)(R path)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     version (Windows)
     {
@@ -916,7 +916,7 @@ private auto _stripDrive(R)(R path)
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(testAliasedString!stripDrive("d:/dir/file"));
 
@@ -932,7 +932,7 @@ private auto _stripDrive(R)(R path)
     assert(sa.stripDrive == result);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     version(Windows)
     {
@@ -977,7 +977,7 @@ if (isRandomAccessRange!R && hasLength!R && isSomeChar!(ElementType!R) ||
     return -1;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(extSeparatorPos("file") == -1);
     assert(extSeparatorPos("file.ext"w) == 4);
@@ -986,7 +986,7 @@ if (isRandomAccessRange!R && hasLength!R && isSomeChar!(ElementType!R) ||
     assert(extSeparatorPos(".foo.ext"w.dup) == 4);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(extSeparatorPos("dir/file"d.dup) == -1);
     assert(extSeparatorPos("dir/file.ext") == 8);
@@ -1036,7 +1036,7 @@ if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range : empty;
     assert(extension("file").empty);
@@ -1050,7 +1050,7 @@ if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
     static assert(extension("file.ext") == ".ext");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     {
         auto r = MockRange!(immutable(char))(`file.ext1.ext2`);
@@ -1092,7 +1092,7 @@ private auto _stripExtension(R)(R path)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(stripExtension("file")           == "file");
     assert(stripExtension("file.ext")       == "file");
@@ -1103,7 +1103,7 @@ private auto _stripExtension(R)(R path)
     assert(stripExtension("dir/file.ext")   == "dir/file");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(testAliasedString!stripExtension("file"));
 
@@ -1114,7 +1114,7 @@ private auto _stripExtension(R)(R path)
     assert(sa.stripExtension == "foo");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(stripExtension("file.ext"w) == "file");
     assert(stripExtension("file.ext1.ext2"d) == "file.ext1");
@@ -1184,7 +1184,7 @@ if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(setExtension("file", "ext") == "file.ext");
     assert(setExtension("file"w, ".ext"w) == "file.ext");
@@ -1194,7 +1194,7 @@ if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
     assert(setExtension("file.old"d, ".new"d) == "file.new");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(setExtension("file"w.dup, "ext"w) == "file.ext");
     assert(setExtension("file"w.dup, ".ext"w) == "file.ext");
@@ -1253,7 +1253,7 @@ private auto _withExtension(R, C)(R path, C[] ext)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.array;
     assert(withExtension("file", "ext").array == "file.ext");
@@ -1266,7 +1266,7 @@ private auto _withExtension(R, C)(R path, C[] ext)
     assert(withExtension("file.ext"w.byWchar, ".").array == "file."w);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1299,7 +1299,7 @@ if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(defaultExtension("file", "ext") == "file.ext");
     assert(defaultExtension("file", ".ext") == "file.ext");
@@ -1308,7 +1308,7 @@ if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
     assert(defaultExtension("file.old", ".new") == "file.old");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(defaultExtension("file"w.dup, "ext"w) == "file.ext");
     assert(defaultExtension("file.old"d.dup, "new"d) == "file.old");
@@ -1367,7 +1367,7 @@ private auto _withDefaultExtension(R, C)(R path, C[] ext)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.array;
     assert(withDefaultExtension("file", "ext").array == "file.ext");
@@ -1382,7 +1382,7 @@ private auto _withDefaultExtension(R, C)(R path, C[] ext)
     assert(withDefaultExtension("file".byChar, "").array == "file.");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1466,7 +1466,7 @@ if (isSomeChar!C)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     version (Posix)
     {
@@ -1485,7 +1485,7 @@ if (isSomeChar!C)
     }
 }
 
-@system unittest // non-documented
+version(StdUnittest) @system unittest // non-documented
 {
     import std.range;
     // ir() wraps an array in a plain (i.e. non-forward) input range, so that
@@ -1564,7 +1564,7 @@ if (isSomeChar!C)
     assert(buildPath(ir(fewLong)) == fewLongCombined);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Test for issue 7397
     string[] ary = ["a", "b"];
@@ -1650,7 +1650,7 @@ if ((isRandomAccessRange!R1 && hasSlicing!R1 && hasLength!R1 && isSomeChar!(Elem
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.array;
     version (Posix)
@@ -1696,7 +1696,7 @@ if (Ranges.length >= 2 &&
     return chainPath!Types(ranges);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(chainPath(TestAliasedString(null), TestAliasedString(null), TestAliasedString(null)).empty);
     assert(chainPath(TestAliasedString(null), TestAliasedString(null), "").empty);
@@ -1743,7 +1743,7 @@ if (isSomeChar!C)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(buildNormalizedPath("foo", "..") == ".");
 
@@ -1768,7 +1768,7 @@ if (isSomeChar!C)
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(buildNormalizedPath(".", ".") == ".");
     assert(buildNormalizedPath("foo", "..") == ".");
@@ -1843,7 +1843,7 @@ if (isSomeChar!C)
     else static assert(0);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Test for issue 7397
     string[] ary = ["a", "b"];
@@ -2021,7 +2021,7 @@ if (isSomeChar!(ElementEncodingType!R) &&
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.array;
     assert(asNormalizedPath("foo/..").array == ".");
@@ -2051,12 +2051,12 @@ if (isConvertibleToString!R)
     return asNormalizedPath!(StringTypeOf!R)(path);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(testAliasedString!asNormalizedPath(null));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.array;
     import std.utf : byChar;
@@ -2144,7 +2144,7 @@ if (isConvertibleToString!R)
     else static assert(0);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.array;
 
@@ -2425,7 +2425,7 @@ if ((isRandomAccessRange!R && hasSlicing!R ||
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.conv : to;
@@ -2454,13 +2454,13 @@ if (isConvertibleToString!R)
     return pathSplitter!(StringTypeOf!R)(path);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     assert(testAliasedString!pathSplitter("/"));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // equal2 verifies that the range is the same both ways, i.e.
     // through front/popFront and back/popBack.
@@ -2569,7 +2569,7 @@ if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
 }
 
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(isRooted("/"));
     assert(isRooted("/foo"));
@@ -2652,7 +2652,7 @@ else version (Posix)
 }
 
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(!isAbsolute("foo"));
     assert(!isAbsolute("../foo"w));
@@ -2727,7 +2727,7 @@ string absolutePath(string path, lazy string base = getcwd())
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     version (Posix)
     {
@@ -2746,7 +2746,7 @@ string absolutePath(string path, lazy string base = getcwd())
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     version (Posix)
     {
@@ -2794,7 +2794,7 @@ if ((isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.array;
     assert(asAbsolutePath(cast(string) null).array == "");
@@ -2815,7 +2815,7 @@ if (isConvertibleToString!R)
     return asAbsolutePath!(StringTypeOf!R)(path);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     assert(testAliasedString!asAbsolutePath(null));
 }
@@ -2874,7 +2874,7 @@ string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(relativePath("foo") == "foo");
 
@@ -2897,7 +2897,7 @@ string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.exception;
     assert(relativePath("foo") == "foo");
@@ -3005,7 +3005,7 @@ if ((isNarrowString!R1 ||
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.array;
     version (Posix)
@@ -3040,7 +3040,7 @@ if (isConvertibleToString!R1 || isConvertibleToString!R2)
     return asRelativePath!(cs, Types)(path, base);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.array;
     version (Posix)
@@ -3054,7 +3054,7 @@ if (isConvertibleToString!R1 || isConvertibleToString!R2)
     assert(asRelativePath("foo"d.byDchar, TestAliasedString("bar")).array == "foo");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.array, std.utf : bCU=byCodeUnit;
     version (Posix)
@@ -3104,7 +3104,7 @@ int filenameCharCmp(CaseSensitive cs = CaseSensitive.osDefault)(dchar a, dchar b
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(filenameCharCmp('a', 'a') == 0);
     assert(filenameCharCmp('a', 'b') < 0);
@@ -3125,7 +3125,7 @@ int filenameCharCmp(CaseSensitive cs = CaseSensitive.osDefault)(dchar a, dchar b
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(filenameCharCmp!(CaseSensitive.yes)('A', 'a') < 0);
     assert(filenameCharCmp!(CaseSensitive.yes)('a', 'A') > 0);
@@ -3208,7 +3208,7 @@ if (isInputRange!Range1 && !isInfinite!Range1 &&
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(filenameCmp("abc", "abc") == 0);
     assert(filenameCmp("abc", "abd") < 0);
@@ -3241,14 +3241,14 @@ if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
     return filenameCmp!(cs, Types)(filename1, filename2);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(filenameCmp!(CaseSensitive.yes)(TestAliasedString("Abc"), "abc") < 0);
     assert(filenameCmp!(CaseSensitive.yes)("Abc", TestAliasedString("abc")) < 0);
     assert(filenameCmp!(CaseSensitive.yes)(TestAliasedString("Abc"), TestAliasedString("abc")) < 0);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(filenameCmp!(CaseSensitive.yes)("Abc", "abc") < 0);
     assert(filenameCmp!(CaseSensitive.yes)("abc", "Abc") > 0);
@@ -3458,7 +3458,7 @@ do
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(globMatch("foo.bar", "*"));
     assert(globMatch("foo.bar", "*.*"));
@@ -3491,12 +3491,12 @@ if (isConvertibleToString!Range)
     return globMatch!(cs, C, StringTypeOf!Range)(path, pattern);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(testAliasedString!globMatch("foo.bar", "*"));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(globMatch!(CaseSensitive.no)("foo", "Foo"));
     assert(!globMatch!(CaseSensitive.yes)("foo", "Foo"));
@@ -3629,7 +3629,7 @@ if ((isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && isSomeC
 
 ///
 @safe pure @nogc nothrow
-unittest
+version(StdUnittest) unittest
 {
     import std.utf : byCodeUnit;
 
@@ -3642,13 +3642,13 @@ if (isConvertibleToString!Range)
     return isValidFilename!(StringTypeOf!Range)(filename);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(testAliasedString!isValidFilename("hello.exe"));
 }
 
 @safe pure
-unittest
+version(StdUnittest) unittest
 {
     import std.conv;
     auto valid = ["foo"];
@@ -3822,7 +3822,7 @@ if ((isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && isSomeC
 
 ///
 @safe pure @nogc nothrow
-unittest
+version(StdUnittest) unittest
 {
     assert(isValidPath("/foo/bar"));
     assert(!isValidPath("/foo\0/bar"));
@@ -3865,7 +3865,7 @@ if (isConvertibleToString!Range)
     return isValidPath!(StringTypeOf!Range)(path);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(testAliasedString!isValidPath("/foo/bar"));
 }
@@ -4010,8 +4010,20 @@ string expandTilde(string inputPath) nothrow
 
                 assert(last_char > 1);
 
+                version(unittest)
+                {
+                    version(StdUnittest)
+                        enum inStdUnittest = true;
+                    else
+                        enum inStdUnittest = false;
+                }
+                else
+                {
+                    enum inStdUnittest = false;
+                }
+
                 // Reserve C memory for the getpwnam_r() function.
-                version (unittest)
+                static if (inStdUnittest)
                     uint extra_memory_size = 2;
                 else
                     uint extra_memory_size = 5 * 1024;
@@ -4074,7 +4086,7 @@ string expandTilde(string inputPath) nothrow
 }
 
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     version (Posix)
     {

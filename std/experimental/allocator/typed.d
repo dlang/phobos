@@ -394,7 +394,7 @@ struct TypedAllocator(PrimaryAllocator, Policies...)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.mallocator : Mallocator;

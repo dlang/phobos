@@ -180,7 +180,7 @@ class FileLogger : Logger
     protected string filename;
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.array : empty;
     import std.file : deleteme, remove;
@@ -209,7 +209,7 @@ class FileLogger : Logger
     assert(readLine.indexOf(notWritten) == -1, readLine);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.file : rmdirRecurse, exists, deleteme;
     import std.path : dirName;
@@ -227,7 +227,7 @@ class FileLogger : Logger
     f.file.close();
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.array : empty;
     import std.file : deleteme, remove;
@@ -258,7 +258,7 @@ class FileLogger : Logger
     file.close();
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto dl = cast(FileLogger) sharedLog;
     assert(dl !is null);

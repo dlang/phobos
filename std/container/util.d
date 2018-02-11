@@ -52,7 +52,7 @@ if (is(T == struct) || is(T == class))
 
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.container;
@@ -68,7 +68,7 @@ if (is(T == struct) || is(T == class))
     assert(equal(slist[], [1, 2, 3]));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.container;
@@ -85,7 +85,7 @@ if (is(T == struct) || is(T == class))
 }
 
 // Issue 8895
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.container;
@@ -123,7 +123,7 @@ if (!is(Container))
 }
 
 /// forbid construction from infinite range
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.container.array : Array;
     import std.range : only, repeat;
@@ -133,7 +133,7 @@ if (!is(Container))
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.container.array, std.container.rbtree, std.container.slist;
@@ -153,7 +153,7 @@ if (!is(Container))
     assert(equal(list[], [1, 7, 42]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.container.rbtree;
@@ -163,7 +163,7 @@ if (!is(Container))
 }
 
 // Issue 13872
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.container;
 

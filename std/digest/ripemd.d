@@ -49,7 +49,7 @@ module std.digest.ripemd;
 public import std.digest;
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Template API
     import std.digest.md;
@@ -68,7 +68,7 @@ public import std.digest;
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //OOP API
     import std.digest.md;
@@ -560,7 +560,7 @@ struct RIPEMD160
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Simple example, hashing a string using ripemd160Of helper function
     ubyte[20] hash = ripemd160Of("abc");
@@ -569,7 +569,7 @@ struct RIPEMD160
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Using the basic API
     RIPEMD160 hash;
@@ -581,7 +581,7 @@ struct RIPEMD160
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Let's use the template features:
     void doSomething(T)(ref T hash)
@@ -596,7 +596,7 @@ struct RIPEMD160
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Simple example
     RIPEMD160 hash;
@@ -606,12 +606,12 @@ struct RIPEMD160
     assert(toHexString(result) == "C81B94933420221A7AC004A90242D8B1D3E5070D");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(isDigest!RIPEMD160);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : hexString;
     import std.range;
@@ -674,7 +674,7 @@ auto ripemd160Of(T...)(T data)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     ubyte[20] hash = ripemd160Of("abc");
     assert(hash == digest!RIPEMD160("abc"));
@@ -690,7 +690,7 @@ auto ripemd160Of(T...)(T data)
 alias RIPEMD160Digest = WrapperDigest!RIPEMD160;
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Simple example, hashing a string using Digest.digest helper function
     auto md = new RIPEMD160Digest();
@@ -700,7 +700,7 @@ alias RIPEMD160Digest = WrapperDigest!RIPEMD160;
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     //Let's use the OOP features:
     void test(Digest dig)
@@ -716,7 +716,7 @@ alias RIPEMD160Digest = WrapperDigest!RIPEMD160;
     assert(toHexString(result) == "C81B94933420221A7AC004A90242D8B1D3E5070D");
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : hexString;
     auto md = new RIPEMD160Digest();

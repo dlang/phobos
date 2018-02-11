@@ -121,7 +121,7 @@ if (!moduleName.length)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     static assert(moduleLogLevel!"" == LogLevel.all);
 }
@@ -147,7 +147,7 @@ if (moduleName.length)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     static assert(moduleLogLevel!"not.amodule.path" == LogLevel.all);
 }
@@ -665,7 +665,7 @@ private void formatString(A...)(MsgRange oRange, A args)
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     void dummy() @safe
     {
@@ -1741,7 +1741,7 @@ class StdForwardLogger : Logger
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto nl1 = new StdForwardLogger(LogLevel.all);
 }
@@ -1800,7 +1800,7 @@ functions.
 }
 
 /// Ditto
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.logger.filelogger : FileLogger;
     import std.file : deleteme, remove;
@@ -1813,7 +1813,7 @@ functions.
     destroy(tempLog);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     LogLevel ll = globalLogLevel;
     globalLogLevel = LogLevel.fatal;
@@ -1852,7 +1852,7 @@ version(StdUnittest) private void testFuncNames(Logger logger) @safe
     logger.log(s);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto tl1 = new TestLogger();
     testFuncNames(tl1);
@@ -1863,7 +1863,7 @@ version(StdUnittest) private void testFuncNames(Logger logger) @safe
     assert(tl1.msg == "I'm here", tl1.msg);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto tl1 = new TestLogger(LogLevel.all);
     tl1.log();
@@ -1904,7 +1904,7 @@ version(StdUnittest) private void testFuncNames(Logger logger) @safe
     assert(tl1.line == __LINE__ - 1);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.experimental.logger.multilogger : MultiLogger;
 
@@ -1929,7 +1929,7 @@ version(StdUnittest) private void testFuncNames(Logger logger) @safe
     assert(n is null);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     bool errorThrown = false;
     auto tl = new TestLogger;
@@ -1941,7 +1941,7 @@ version(StdUnittest) private void testFuncNames(Logger logger) @safe
     assert(errorThrown);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.conv : to;
     import std.exception : assertThrown, assertNotThrown;
@@ -2083,7 +2083,7 @@ version(StdUnittest) private void testFuncNames(Logger logger) @safe
     assert(l.logLevel == LogLevel.all);
 }
 
-@system unittest // default logger
+version(StdUnittest) @system unittest // default logger
 {
     import std.file : deleteme, exists, remove;
     import std.stdio : File;
@@ -2123,7 +2123,7 @@ version(StdUnittest) private void testFuncNames(Logger logger) @safe
     file.close();
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.file : deleteme, remove;
     import std.stdio : File;
@@ -2158,7 +2158,7 @@ version(StdUnittest) private void testFuncNames(Logger logger) @safe
     file.close();
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.conv : to;
 
@@ -2176,7 +2176,7 @@ version(StdUnittest) private void testFuncNames(Logger logger) @safe
 }
 
 // testing possible log conditions
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.conv : to;
     import std.format : format;
@@ -2423,7 +2423,7 @@ version(StdUnittest) private void testFuncNames(Logger logger) @safe
 }
 
 // more testing
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.conv : to;
     import std.format : format;
@@ -2680,7 +2680,7 @@ version(StdUnittest) private void testFuncNames(Logger logger) @safe
 }
 
 // testing more possible log conditions
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     bool fatalLog;
     auto mem = new TestLogger;
@@ -2911,7 +2911,7 @@ version(StdUnittest) private void testFuncNames(Logger logger) @safe
 }
 
 // Issue #5
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.string : indexOf;
 
@@ -2931,7 +2931,7 @@ version(StdUnittest) private void testFuncNames(Logger logger) @safe
 }
 
 // Issue #5
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.experimental.logger.multilogger : MultiLogger;
     import std.string : indexOf;
@@ -2960,7 +2960,7 @@ version(StdUnittest) private void testFuncNames(Logger logger) @safe
     assert(tl.msg.indexOf("error") == 0);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.exception : assertThrown;
     auto tl = new TestLogger();
@@ -2968,7 +2968,7 @@ version(StdUnittest) private void testFuncNames(Logger logger) @safe
 }
 
 // log objects with non-safe toString
-@system unittest
+version(StdUnittest) @system unittest
 {
     struct Test
     {
@@ -2999,7 +2999,7 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
 
 // check that thread-local logging does not propagate
 // to shared logger
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.atomic, core.thread, std.concurrency;
 
@@ -3059,7 +3059,7 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
     assert(atomicOp!"=="(logged_count, 4));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto dl = cast(FileLogger) sharedLog;
     assert(dl !is null);
@@ -3072,7 +3072,7 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
 }
 
 // Issue 14940
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.typecons : Nullable;
 
@@ -3083,7 +3083,7 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
 }
 
 // Ensure @system toString methods work
-@system unittest
+version(StdUnittest) @system unittest
 {
     enum SystemToStringMsg = "SystemToString";
     static struct SystemToString
@@ -3102,7 +3102,7 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
 }
 
 // Issue 17328
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.format : format;
 
@@ -3124,7 +3124,7 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
 }
 
 // Issue 15954
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.conv : to;
     auto tl = new TestLogger();
@@ -3133,7 +3133,7 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
 }
 
 // Issue 16256
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.conv : to;
     auto tl = new TestLogger();
@@ -3142,7 +3142,7 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
 }
 
 // Issue 15517
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.file : exists, remove;
     import std.stdio : File;

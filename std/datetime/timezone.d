@@ -191,7 +191,7 @@ public:
     }
 
     ///
-    deprecated @safe unittest
+    version(StdUnittest) deprecated @safe unittest
     {
         auto tz = TimeZone.getTimeZone("America/Los_Angeles");
     }
@@ -217,7 +217,7 @@ public:
     // Since reading in the time zone files could be expensive, most unit tests
     // are consolidated into this one unittest block which minimizes how often
     // it reads a time zone file.
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         import core.exception : AssertError;
         import std.conv : to;
@@ -543,7 +543,7 @@ public:
         }
     }
 
-    deprecated @safe unittest
+   version(StdUnittest) deprecated @safe unittest
     {
         import std.exception : assertNotThrown;
         import std.stdio : writefln;
@@ -691,7 +691,7 @@ public:
         }
     }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         version(FreeBSD)
         {
@@ -776,7 +776,7 @@ public:
         }
     }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         assert(LocalTime().dstName !is null);
 
@@ -843,7 +843,7 @@ public:
         }
     }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         LocalTime().hasDST;
 
@@ -901,7 +901,7 @@ public:
         }
     }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         auto currTime = Clock.currStdTime;
         LocalTime().dstInEffect(currTime);
@@ -941,7 +941,7 @@ public:
         }
     }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         LocalTime().utcToTZ(0);
     }
@@ -994,7 +994,7 @@ public:
         }
     }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         import core.exception : AssertError;
         import std.format : format;
@@ -1232,7 +1232,7 @@ public:
         return stdTime;
     }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         assert(UTC().utcToTZ(0) == 0);
 
@@ -1265,7 +1265,7 @@ public:
         return adjTime;
     }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         assert(UTC().tzToUTC(0) == 0);
 
@@ -1356,7 +1356,7 @@ public:
         return stdTime + _utcOffset.total!"hnsecs";
     }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         auto west = new immutable SimpleTimeZone(dur!"hours"(-8));
         auto east = new immutable SimpleTimeZone(dur!"hours"(8));
@@ -1383,7 +1383,7 @@ public:
         return adjTime - _utcOffset.total!"hnsecs";
     }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         auto west = new immutable SimpleTimeZone(dur!"hours"(-8));
         auto east = new immutable SimpleTimeZone(dur!"hours"(8));
@@ -1427,7 +1427,7 @@ public:
         this._utcOffset = utcOffset;
     }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         auto stz = new immutable SimpleTimeZone(dur!"hours"(-8), "PST");
         assert(stz.name == "");
@@ -1472,7 +1472,7 @@ package:
         return format(utcOffset < Duration.zero ? "-%02d%02d" : "+%02d%02d", hours, minutes);
     }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         static string testSTZInvalid(Duration offset)
         {
@@ -1528,7 +1528,7 @@ package:
         return format(utcOffset < Duration.zero ? "-%02d:%02d" : "+%02d:%02d", hours, minutes);
     }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         static string testSTZInvalid(Duration offset)
         {
@@ -1614,7 +1614,7 @@ package:
         return new immutable SimpleTimeZone(sign * (dur!"hours"(hours) + dur!"minutes"(minutes)));
     }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         import core.exception : AssertError;
         import std.format : format;
@@ -1675,7 +1675,7 @@ package:
         test("-23", hours(-23));
     }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         import core.exception : AssertError;
         import std.format : format;
@@ -1776,7 +1776,7 @@ package:
         return new immutable SimpleTimeZone(sign * (dur!"hours"(hours) + dur!"minutes"(minutes)));
     }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         import core.exception : AssertError;
         import std.format : format;
@@ -1837,7 +1837,7 @@ package:
         test("-23", hours(-23));
     }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         import core.exception : AssertError;
         import std.format : format;
@@ -2413,7 +2413,7 @@ public:
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         version(Posix)
         {
@@ -2495,7 +2495,7 @@ public:
         return timezones.data;
     }
 
-    version(Posix) @system unittest
+    version(Posix) version(StdUnittest) @system unittest
     {
         import std.exception : assertNotThrown;
         import std.stdio : writefln;
@@ -3066,7 +3066,7 @@ else version(Windows)
             return timezones.data;
         }
 
-        @safe unittest
+        version(StdUnittest) @safe unittest
         {
             import std.exception : assertNotThrown;
             import std.stdio : writefln;
@@ -3160,7 +3160,7 @@ else version(Windows)
                 assert(0, "DateTime's constructor threw.");
         }
 
-        @system unittest
+        version(StdUnittest) @system unittest
         {
             TIME_ZONE_INFORMATION tzInfo;
             GetTimeZoneInformation(&tzInfo);
@@ -3467,7 +3467,7 @@ TZConversions parseTZConversions(string windowsZonesXMLText) @safe pure
     return TZConversions(nix2Win, win2Nix);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : uniq;
@@ -4007,7 +4007,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
     }
 }
 
-version(Windows) version(UpdateWindowsTZTranslations) deprecated @system unittest
+version(Windows) version(StdUnittest) version(UpdateWindowsTZTranslations) deprecated @system unittest
 {
     import std.stdio : stderr;
 

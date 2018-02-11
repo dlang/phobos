@@ -315,7 +315,7 @@ template taggedPointer(T : T*, string name, Ts...) {
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     struct A
     {
@@ -349,7 +349,7 @@ if (is(T == class))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     struct A
     {
@@ -364,7 +364,7 @@ if (is(T == class))
 }
 
 @safe pure nothrow @nogc
-unittest
+version(StdUnittest) unittest
 {
     // Degenerate bitfields (#8474 / #11160) tests mixed with range tests
     struct Test1
@@ -430,7 +430,7 @@ unittest
     t4b.a = -5; assert(t4b.a == -5L);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     struct Test5
     {
@@ -470,7 +470,7 @@ unittest
     assert(t6.b == true);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(!__traits(compiles,
         taggedPointer!(
@@ -494,7 +494,7 @@ unittest
     static assert(!__traits(compiles, bar(s)));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Bug #6686
     union  S {
@@ -511,7 +511,7 @@ unittest
     assert(num.bits == 0xFFFF_FFFF_8000_0001uL);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Bug #5942
     struct S
@@ -528,7 +528,7 @@ unittest
     assert(data.b == 42);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     struct Test
     {
@@ -553,7 +553,7 @@ unittest
     test();
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     {
         static struct Integrals {
@@ -630,7 +630,7 @@ unittest
 }
 
 // Issue 12477
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.exception : AssertError;
     import std.algorithm.searching : canFind;
@@ -720,7 +720,7 @@ struct DoubleRep
     enum uint bias = 1023, signBits = 1, fractionBits = 52, exponentBits = 11;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // test reading
     DoubleRep x;
@@ -748,7 +748,7 @@ struct DoubleRep
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Issue #15305
     struct S {
@@ -854,7 +854,7 @@ public:
         return cast(bool) bt(_ptr, i);
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         debug(bitarray) printf("BitArray.opIndex.unittest\n");
 
@@ -903,7 +903,7 @@ public:
     }
 
     ///
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         import std.algorithm.comparison : equal;
 
@@ -969,7 +969,7 @@ public:
     }
 
     ///
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         import std.algorithm.comparison : equal;
         import std.range : iota;
@@ -1010,7 +1010,7 @@ public:
     }
 
     ///
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         import std.algorithm.comparison : equal;
         import std.range : iota;
@@ -1035,7 +1035,7 @@ public:
         bt(_ptr, i) ? btr(_ptr, i) : bts(_ptr, i);
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         auto ax = BitArray([1, 0, 0, 1]);
         ax.flip(0);
@@ -1060,7 +1060,7 @@ public:
         return bitCount;
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         auto a = BitArray([0, 1, 1, 0, 0, 1, 1]);
         assert(a.count == 4);
@@ -1084,7 +1084,7 @@ public:
         return ba;
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         BitArray a;
         BitArray b;
@@ -1166,7 +1166,7 @@ public:
         return result;
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         debug(bitarray) printf("BitArray.opApply unittest\n");
 
@@ -1227,7 +1227,7 @@ public:
         return this;
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         debug(bitarray) printf("BitArray.reverse.unittest\n");
 
@@ -1291,7 +1291,7 @@ public:
         return this;
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         debug(bitarray) printf("BitArray.sort.unittest\n");
 
@@ -1325,7 +1325,7 @@ public:
         return (p1[i] & endMask) == (p2[i] & endMask);
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         debug(bitarray) printf("BitArray.opEquals unittest\n");
 
@@ -1391,7 +1391,7 @@ public:
         return (this.length > a2.length) - (this.length < a2.length);
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         debug(bitarray) printf("BitArray.opCmp unittest\n");
 
@@ -1517,7 +1517,7 @@ public:
         }
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         debug(bitarray) printf("BitArray.init unittest\n");
 
@@ -1557,7 +1557,7 @@ public:
         return _ptr[0 .. dim];
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         debug(bitarray) printf("BitArray.opCast unittest\n");
 
@@ -1589,7 +1589,7 @@ public:
         return result;
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         debug(bitarray) printf("BitArray.opCom unittest\n");
 
@@ -1635,7 +1635,7 @@ public:
         return result;
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         debug(bitarray) printf("BitArray.opAnd unittest\n");
 
@@ -1654,7 +1654,7 @@ public:
         assert(c[4] == 0);
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         debug(bitarray) printf("BitArray.opOr unittest\n");
 
@@ -1673,7 +1673,7 @@ public:
         assert(c[4] == 1);
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         debug(bitarray) printf("BitArray.opXor unittest\n");
 
@@ -1692,7 +1692,7 @@ public:
         assert(c[4] == 1);
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         debug(bitarray) printf("BitArray.opSub unittest\n");
 
@@ -1744,7 +1744,7 @@ public:
         return this;
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         static bool[] ba = [1,0,1,0,1,1,0,1,0,1];
         static bool[] bb = [1,0,1,1,0];
@@ -1760,7 +1760,7 @@ public:
         assert(a[9] == 1);
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         debug(bitarray) printf("BitArray.opAndAssign unittest\n");
 
@@ -1778,7 +1778,7 @@ public:
         assert(a[4] == 0);
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         debug(bitarray) printf("BitArray.opOrAssign unittest\n");
 
@@ -1796,7 +1796,7 @@ public:
         assert(a[4] == 1);
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         debug(bitarray) printf("BitArray.opXorAssign unittest\n");
 
@@ -1814,7 +1814,7 @@ public:
         assert(a[4] == 1);
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         debug(bitarray) printf("BitArray.opSubAssign unittest\n");
 
@@ -1847,7 +1847,7 @@ public:
         return this;
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         debug(bitarray) printf("BitArray.opCatAssign unittest\n");
 
@@ -1880,7 +1880,7 @@ public:
         return this;
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         debug(bitarray) printf("BitArray.opCatAssign unittest\n");
 
@@ -1937,7 +1937,7 @@ public:
         return r;
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         debug(bitarray) printf("BitArray.opCat unittest\n");
 
@@ -1984,7 +1984,7 @@ public:
         return (upper << (bitsPerSizeT - nbits)) | (lower >> nbits);
     }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         static if (size_t.sizeof == 8)
         {
@@ -2021,7 +2021,7 @@ public:
         return (upper << nbits) | (lower >> (bitsPerSizeT - nbits));
     }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         static if (size_t.sizeof == 8)
         {
@@ -2120,7 +2120,7 @@ public:
     }
 
     // Issue 17467
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         import std.algorithm.comparison : equal;
         import std.range : iota;
@@ -2140,7 +2140,7 @@ public:
         assert(equal(b.bitsSet, iota(64, 128)));
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         import std.format : format;
 
@@ -2168,7 +2168,7 @@ public:
     }
 
     // Test multi-word case
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         import std.format : format;
 
@@ -2245,7 +2245,7 @@ public:
     }
 
     ///
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         import std.format : format;
 
@@ -2274,7 +2274,7 @@ public:
     }
 
     ///
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         import std.algorithm.comparison : equal;
 
@@ -2289,7 +2289,7 @@ public:
         assert(b2.bitsSet.equal([333, 666, 999]));
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         import std.algorithm.comparison : equal;
         import std.range : iota;
@@ -2353,7 +2353,7 @@ public:
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.format : format;
 
@@ -2424,7 +2424,7 @@ private ulong swapEndianImpl(ulong val) @trusted pure nothrow @nogc
     return res << 32 | bswap(cast(uint)(val >> 32));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.meta;
     static foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong, char, wchar, dchar))
@@ -2507,7 +2507,7 @@ if (canSwapEndianness!T)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int i = 12345;
     ubyte[4] swappedI = nativeToBigEndian(i);
@@ -2540,7 +2540,7 @@ if (isFloatOrDouble!T)
         return floatEndianImpl!(T, false)(val);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.meta;
     static foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
@@ -2629,7 +2629,7 @@ if (canSwapEndianness!T && n == T.sizeof)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     ushort i = 12345;
     ubyte[2] swappedI = nativeToBigEndian(i);
@@ -2681,7 +2681,7 @@ if (canSwapEndianness!T)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int i = 12345;
     ubyte[4] swappedI = nativeToLittleEndian(i);
@@ -2714,7 +2714,7 @@ if (isFloatOrDouble!T)
         return floatEndianImpl!(T, false)(val);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.meta;
     static foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
@@ -2776,7 +2776,7 @@ if (canSwapEndianness!T && n == T.sizeof)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     ushort i = 12345;
     ubyte[2] swappedI = nativeToLittleEndian(i);
@@ -2844,7 +2844,7 @@ private template isFloatOrDouble(T)
                            !is(Unqual!(FloatingPointTypeOf!T) == real);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.meta;
     static foreach (T; AliasSeq!(float, double))
@@ -2873,7 +2873,7 @@ private template canSwapEndianness(T)
                              isFloatOrDouble!T;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.meta;
     static foreach (T; AliasSeq!(bool, ubyte, byte, ushort, short, uint, int, ulong,
@@ -2971,7 +2971,7 @@ if (canSwapEndianness!T &&
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     ubyte[] buffer = [1, 5, 22, 9, 44, 255, 8];
     assert(buffer.peek!uint() == 17110537);
@@ -2993,7 +2993,7 @@ if (canSwapEndianness!T &&
     assert(index == 7);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     {
         //bool
@@ -3194,7 +3194,7 @@ if (canSwapEndianness!T &&
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.iteration : filter;
     ubyte[] buffer = [1, 5, 22, 9, 44, 255, 7];
@@ -3242,7 +3242,7 @@ if (canSwapEndianness!T && isInputRange!R && is(ElementType!R : const ubyte))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range.primitives : empty;
     ubyte[] buffer = [1, 5, 22, 9, 44, 255, 8];
@@ -3258,7 +3258,7 @@ if (canSwapEndianness!T && isInputRange!R && is(ElementType!R : const ubyte))
     assert(buffer.empty);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     {
         //bool
@@ -3431,7 +3431,7 @@ if (canSwapEndianness!T && isInputRange!R && is(ElementType!R : const ubyte))
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.iteration : filter;
     ubyte[] buffer = [1, 5, 22, 9, 44, 255, 8];
@@ -3449,7 +3449,7 @@ if (canSwapEndianness!T && isInputRange!R && is(ElementType!R : const ubyte))
 }
 
 // issue 17247
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     struct UbyteRange
     {
@@ -3518,7 +3518,7 @@ if (canSwapEndianness!T &&
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     {
         ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0];
@@ -3561,7 +3561,7 @@ if (canSwapEndianness!T &&
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     {
         //bool
@@ -3844,7 +3844,7 @@ if (canSwapEndianness!T && isOutputRange!(R, ubyte))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.array;
     auto buffer = appender!(const ubyte[])();
@@ -3858,7 +3858,7 @@ if (canSwapEndianness!T && isOutputRange!(R, ubyte))
     assert(buffer.data == [1, 5, 22, 9, 44, 255, 8]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.array;
     {
@@ -3989,7 +3989,7 @@ if (canSwapEndianness!T && isOutputRange!(R, ubyte))
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.array;
     import std.format : format;
@@ -4074,7 +4074,7 @@ if (isIntegral!T)
     return cast(uint) c;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(countBitsSet(1) == 1);
     assert(countBitsSet(0) == 0);
@@ -4082,7 +4082,7 @@ if (isIntegral!T)
     assert(countBitsSet(uint.max) == 32);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.meta;
     static foreach (T; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
@@ -4179,7 +4179,7 @@ if (isIntegral!T)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : iota;
@@ -4190,7 +4190,7 @@ if (isIntegral!T)
     assert(bitsSet(int.min).equal([31]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : iota;

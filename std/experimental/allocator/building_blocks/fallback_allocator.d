@@ -29,8 +29,7 @@ struct FallbackAllocator(Primary, Fallback)
 
     // Need both allocators to be stateless
     // This is to avoid using default initialized stateful allocators
-    version(StdUnittest)
-    static if (!stateSize!Primary && !stateSize!Fallback)
+    version(StdUnittest) static if (!stateSize!Primary && !stateSize!Fallback)
     @system unittest
     {
         testAllocator!(() => FallbackAllocator());
@@ -262,7 +261,7 @@ struct FallbackAllocator(Primary, Fallback)
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : text;
     import std.experimental.allocator.building_blocks.region : InSituRegion;
@@ -284,7 +283,7 @@ struct FallbackAllocator(Primary, Fallback)
     () nothrow @nogc { a.deallocate(b2); }();
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.bitmapped_block : BitmappedBlockWithInternalPointers;
     import std.typecons : Ternary;
@@ -308,7 +307,7 @@ struct FallbackAllocator(Primary, Fallback)
     assert((() nothrow @safe @nogc => a.empty)() == Ternary.no);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.region : Region;
     import std.typecons : Ternary;
@@ -323,7 +322,7 @@ struct FallbackAllocator(Primary, Fallback)
     assert(b.length == 100);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.bitmapped_block : BitmappedBlockWithInternalPointers;
     import std.typecons : Ternary;
@@ -343,7 +342,7 @@ struct FallbackAllocator(Primary, Fallback)
     );
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     import std.typecons : Ternary;
@@ -372,7 +371,7 @@ private auto ref forward(alias arg)()
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     void fun(T)(auto ref T, string) { /* ... */ }
     void gun(T...)(auto ref T args)
@@ -384,7 +383,7 @@ private auto ref forward(alias arg)()
     gun(x, "hello");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static void checkByRef(T)(auto ref T value)
     {
@@ -424,7 +423,7 @@ fallbackAllocator(Primary, Fallback)(auto ref Primary p, auto ref Fallback f)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.region : Region;
     import std.experimental.allocator.gc_allocator : GCAllocator;
@@ -438,7 +437,7 @@ fallbackAllocator(Primary, Fallback)(auto ref Primary p, auto ref Fallback f)
     assert(a.primary.owns(b2) == Ternary.no);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.region : Region;
     import std.experimental.allocator.gc_allocator : GCAllocator;
@@ -446,7 +445,7 @@ fallbackAllocator(Primary, Fallback)(auto ref Primary p, auto ref Fallback f)
 }
 
 // Ensure `owns` inherits function attributes
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.region : InSituRegion;
     import std.typecons : Ternary;
@@ -456,7 +455,7 @@ fallbackAllocator(Primary, Fallback)(auto ref Primary p, auto ref Fallback f)
     assert((() pure nothrow @safe @nogc => a.owns(buff))() == Ternary.yes);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.typecons : Ternary;
@@ -470,7 +469,7 @@ fallbackAllocator(Primary, Fallback)(auto ref Primary p, auto ref Fallback f)
     assert((() nothrow @safe @nogc => a.resolveInternalPointer(&b[0], p))() == Ternary.yes);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.region : Region;
     import std.typecons : Ternary;

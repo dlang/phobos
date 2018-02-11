@@ -492,7 +492,7 @@ class Protocol
 // Skip this test on Android because getprotobyname/number are
 // unimplemented in bionic.
 version(CRuntime_Bionic) {} else
-@safe unittest
+version (StdUnittest) @safe unittest
 {
     softUnittest({
         Protocol proto = new Protocol;
@@ -593,7 +593,7 @@ class Service
 }
 
 
-@safe unittest
+version (StdUnittest) @safe unittest
 {
     softUnittest({
         Service serv = new Service;
@@ -812,7 +812,7 @@ class InternetHost
 }
 
 ///
-@safe unittest
+version (StdUnittest) @safe unittest
 {
     InternetHost ih = new InternetHost;
 
@@ -967,7 +967,7 @@ AddressInfo[] getAddressInfo(T...)(in char[] node, T options)
     return () @trusted { return getAddressInfoImpl(node, service, &hints); }();
 }
 
-@system unittest
+version (StdUnittest) @system unittest
 {
     struct Oops
     {
@@ -1018,7 +1018,7 @@ private AddressInfo[] getAddressInfoImpl(in char[] node, in char[] service, addr
 }
 
 
-@safe unittest
+version (StdUnittest) @safe unittest
 {
     softUnittest({
         if (getaddrinfoPointer)
@@ -1133,7 +1133,7 @@ Address[] getAddress(in char[] hostname, ushort port)
 }
 
 
-@safe unittest
+version (StdUnittest) @safe unittest
 {
     softUnittest({
         auto addresses = getAddress("63.105.9.61");
@@ -1213,7 +1213,7 @@ Address parseAddress(in char[] hostaddr, ushort port)
 }
 
 
-@safe unittest
+version (StdUnittest) @safe unittest
 {
     softUnittest({
         auto address = parseAddress("63.105.9.61");
@@ -1661,7 +1661,7 @@ public:
     }
 
     ///
-    @system unittest
+version (StdUnittest)     @system unittest
     {
         auto addr1 = new InternetAddress("127.0.0.1", 80);
         auto addr2 = new InternetAddress("127.0.0.2", 80);
@@ -1694,7 +1694,7 @@ public:
 }
 
 
-@safe unittest
+version (StdUnittest) @safe unittest
 {
     softUnittest({
         const InternetAddress ia = new InternetAddress("63.105.9.61", 80);
@@ -1901,7 +1901,7 @@ public:
 }
 
 
-@safe unittest
+version (StdUnittest) @safe unittest
 {
     softUnittest({
         const Internet6Address ia = new Internet6Address("::1", 80);
@@ -2063,7 +2063,7 @@ static if (is(sockaddr_un))
         }
     }
 
-    @safe unittest
+version (StdUnittest)     @safe unittest
     {
         import core.stdc.stdio : remove;
         import std.file : deleteme;
@@ -2431,7 +2431,7 @@ public:
     }
 }
 
-@safe unittest
+version (StdUnittest) @safe unittest
 {
     auto fds = cast(socket_t[])
         [cast(socket_t) 1, 2, 0, 1024, 17, 42, 1234, 77, 77+32, 77+64];
@@ -2453,7 +2453,7 @@ public:
     }
 }
 
-@safe unittest
+version (StdUnittest) @safe unittest
 {
     softUnittest({
         enum PAIRS = 768;
@@ -2528,7 +2528,7 @@ public:
     });
 }
 
-@safe unittest // Issue 14012, 14013
+version (StdUnittest) @safe unittest // Issue 14012, 14013
 {
     auto set = new SocketSet(1);
     assert(set.max >= 0);
@@ -2629,7 +2629,7 @@ private:
     // behavior.
     enum WINSOCK_TIMEOUT_SKEW = 500;
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         version(SlowTests)
         softUnittest({
@@ -3565,7 +3565,7 @@ class UdpSocket: Socket
 }
 
 // Issue 16514
-@safe unittest
+version (StdUnittest) @safe unittest
 {
     class TestSocket : Socket
     {
@@ -3660,7 +3660,7 @@ Socket[2] socketPair() @trusted
 }
 
 ///
-@safe unittest
+version (StdUnittest) @safe unittest
 {
     immutable ubyte[] data = [1, 2, 3, 4];
     auto pair = socketPair();

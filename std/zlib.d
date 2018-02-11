@@ -121,7 +121,7 @@ uint adler32(uint adler, const(void)[] buf)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     static ubyte[] data = [1,2,3,4,5,6,7,8,9,10];
 
@@ -129,7 +129,7 @@ uint adler32(uint adler, const(void)[] buf)
     assert(adler == 0xdc0037);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     static string data = "test";
 
@@ -163,7 +163,7 @@ uint crc32(uint crc, const(void)[] buf)
     return crc;
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     static ubyte[] data = [1,2,3,4,5,6,7,8,9,10];
 
@@ -279,7 +279,7 @@ void[] uncompress(const(void)[] srcbuf, size_t destlen = 0u, int winbits = 15)
     assert(0, "Unreachable code");
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     auto src =
 "the quick brown fox jumps over the lazy dog\r
@@ -296,7 +296,7 @@ the quick brown fox jumps over the lazy dog\r
     assert(result == src);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     ubyte[] src = new ubyte[1000000];
     ubyte[] dst;
@@ -657,7 +657,7 @@ class UnCompress
     }
 
     // Test for issues 3191 and 9505
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         import std.algorithm.comparison;
         import std.array;
@@ -711,7 +711,7 @@ class UnCompress
                 "The uncompressed and the original data differ");
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         ubyte[1024] invalidData;
         auto decompressor = new UnCompress();
@@ -729,7 +729,7 @@ class UnCompress
         assert(false, "Corrupted data didn't result in an error");
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         ubyte[2014] originalData = void;
         auto compressedData = compress(originalData, 9);
@@ -773,7 +773,7 @@ class UnCompress
     }
 
     ///
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         // some random data
         ubyte[1024] originalData = void;
@@ -795,7 +795,7 @@ class UnCompress
 import std.random;
 import std.stdio;
 
-@system unittest // by Dave
+version(StdUnittest) @system unittest // by Dave
 {
     debug(zlib) writeln("std.zlib.unittest");
 
@@ -855,7 +855,7 @@ import std.stdio;
 }
 
 
-@system unittest // by Artem Rebrov
+version(StdUnittest) @system unittest // by Artem Rebrov
 {
     Compress cmp = new Compress;
     UnCompress decmp = new UnCompress;
@@ -872,7 +872,7 @@ import std.stdio;
     assert( output[] == input[] );
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     static assert(__traits(compiles, etc.c.zlib.gzclose(null)));        // bugzilla 15457
 }

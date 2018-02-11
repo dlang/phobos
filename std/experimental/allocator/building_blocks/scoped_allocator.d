@@ -24,7 +24,7 @@ struct ScopedAllocator(ParentAllocator)
     {
         // This test is available only for stateless allocators
         version(StdUnittest)
-        @system unittest
+        version(StdUnittest) @system unittest
         {
             testAllocator!(() => ScopedAllocator());
         }
@@ -200,7 +200,7 @@ struct ScopedAllocator(ParentAllocator)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     import std.typecons : Ternary;
@@ -211,13 +211,13 @@ struct ScopedAllocator(ParentAllocator)
     assert(alloc.empty == Ternary.no);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     testAllocator!(() => ScopedAllocator!GCAllocator());
 }
 
-@system unittest // https://issues.dlang.org/show_bug.cgi?id=16046
+version(StdUnittest) @system unittest // https://issues.dlang.org/show_bug.cgi?id=16046
 {
     import std.exception;
     import std.experimental.allocator;
@@ -229,7 +229,7 @@ struct ScopedAllocator(ParentAllocator)
     alloc.dispose(bar); // segfault here
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     ScopedAllocator!GCAllocator a;
@@ -245,7 +245,7 @@ struct ScopedAllocator(ParentAllocator)
 }
 
 // Test that deallocateAll infers from parent
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.region : Region;
 
@@ -260,7 +260,7 @@ struct ScopedAllocator(ParentAllocator)
     assert((() nothrow @nogc => a.deallocateAll())());
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.region : Region;
     import std.experimental.allocator.mallocator : Mallocator;
@@ -279,7 +279,7 @@ struct ScopedAllocator(ParentAllocator)
 }
 
 // Test empty
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     import std.typecons : Ternary;

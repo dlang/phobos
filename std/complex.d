@@ -54,7 +54,7 @@ if (is(R : double) && is(I : double))
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     auto a = complex(1.0);
     static assert(is(typeof(a) == Complex!double));
@@ -130,7 +130,7 @@ if (isFloatingPoint!T)
 
     static if (is(T == double))
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         auto c = complex(1.2, 3.4);
 
@@ -437,7 +437,7 @@ if (isFloatingPoint!T)
     }
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.complex;
     import std.math;
@@ -613,7 +613,7 @@ if (isFloatingPoint!T)
     assert(approxEqual(c2c.im, 0.0, EPS));
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     // Initialization
     Complex!double a = 1;
@@ -624,7 +624,7 @@ if (isFloatingPoint!T)
     assert(c.re == 1.0 && c.im == 2);
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     // Assignments and comparisons
     Complex!double z;
@@ -672,7 +672,7 @@ if (is(T R == Complex!R))
     alias Complex = T;
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     static assert(is(Complex!(Complex!real) == Complex!real));
 
@@ -701,7 +701,7 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     static import std.math;
     assert(abs(complex(1.0)) == 1.0);
@@ -723,7 +723,7 @@ T sqAbs(T)(Complex!T z) @safe pure nothrow @nogc
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.math;
     assert(sqAbs(complex(0.0)) == 0.0);
@@ -741,7 +741,7 @@ if (isFloatingPoint!T)
     return x*x;
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.math;
     assert(sqAbs(0.0) == 0.0);
@@ -762,7 +762,7 @@ T arg(T)(Complex!T z) @safe pure nothrow @nogc
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.math;
     assert(arg(complex(1.0)) == 0.0);
@@ -781,7 +781,7 @@ Complex!T conj(T)(Complex!T z) @safe pure nothrow @nogc
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     assert(conj(complex(1.0)) == complex(1.0));
     assert(conj(complex(1.0, 2.0)) == complex(1.0, -2.0));
@@ -804,7 +804,7 @@ Complex!(CommonType!(T, U)) fromPolar(T, U)(T modulus, U argument)
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.math;
     auto z = fromPolar(std.math.sqrt(2.0), PI_4);
@@ -827,7 +827,7 @@ Complex!T sin(T)(Complex!T z)  @safe pure nothrow @nogc
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     static import std.math;
     assert(sin(complex(0.0)) == 0.0);
@@ -844,14 +844,14 @@ Complex!T cos(T)(Complex!T z)  @safe pure nothrow @nogc
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.complex;
     assert(cos(complex(0.0)) == 1.0);
 }
 
 deprecated
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.math;
     assert(cos(complex(0, 5.2L)) == cosh(5.2L));
@@ -875,7 +875,7 @@ Complex!real expi(real y)  @trusted pure nothrow @nogc
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.math : cos, sin;
     assert(expi(0.0L) == 1.0L);
@@ -883,7 +883,7 @@ Complex!real expi(real y)  @trusted pure nothrow @nogc
 }
 
 deprecated
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     static import std.math;
 
@@ -916,14 +916,14 @@ Complex!real coshisinh(real y) @safe pure nothrow @nogc
 }
 
 ///
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     import std.math : cosh, sinh;
     assert(coshisinh(3.0L) == complex(cosh(3.0L), sinh(3.0L)));
 }
 
 deprecated
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     static import std.math;
     assert(coshisinh(3.0L) == complex(std.math.cosh(3.0L), std.math.sinh(3.0L)));
@@ -981,7 +981,7 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     static import std.math;
     assert(sqrt(complex(0.0)) == 0.0);
@@ -989,7 +989,7 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
     assert(sqrt(complex(-1.0L, 0)) == complex(0, 1.0L));
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.math : approxEqual;
 
@@ -1006,7 +1006,7 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
 }
 
 // Issue 10881: support %f formatting of complex numbers
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.format : format;
 
@@ -1017,7 +1017,7 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
     assert(format("%.2f", y) == "1.20-3.40i");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Test wide string formatting
     import std.format;
@@ -1033,7 +1033,7 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
     assert(wformat("%.2f", x) == "1.20+3.40i"w);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Test ease of use (vanilla toString() should be supported)
     assert(complex(1.2, 3.4).toString() == "1.2+3.4i");

@@ -524,7 +524,7 @@ template isDeprecatedComplex(T)
     }
 }
 
-deprecated unittest
+version(StdUnittest) deprecated unittest
 {
     static assert(isDeprecatedComplex!cfloat);
     static assert(isDeprecatedComplex!cdouble);
@@ -585,7 +585,7 @@ static foreach (Num; AliasSeq!(cfloat, cdouble, creal, ifloat, idouble, ireal))
 }
 
 /// ditto
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     assert(isIdentical(abs(-0.0L), 0.0L));
     assert(isNaN(abs(real.nan)));
@@ -595,14 +595,14 @@ static foreach (Num; AliasSeq!(cfloat, cdouble, creal, ifloat, idouble, ireal))
 }
 
 deprecated
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     assert(abs(-3.2Li) == 3.2L);
     assert(abs(71.6Li) == 71.6L);
     assert(abs(-1L+1i) == sqrt(2.0L));
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     short s = -8;
     byte b = -8;
@@ -612,7 +612,7 @@ deprecated
     assert(abs(c) == 8);
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     import std.meta : AliasSeq;
     static foreach (T; AliasSeq!(float, double, real))
@@ -624,7 +624,7 @@ deprecated
 }
 
 deprecated
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     import std.meta : AliasSeq;
     static foreach (T; AliasSeq!(cfloat, cdouble, creal))
@@ -665,7 +665,7 @@ if (is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
 }
 
 deprecated
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     creal c = 7 + 3Li;
     assert(conj(c) == 7-3Li);
@@ -674,7 +674,7 @@ deprecated
 }
 //Issue 14206
 deprecated
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     cdouble c = 7 + 3i;
     assert(conj(c) == 7-3i);
@@ -683,7 +683,7 @@ deprecated
 }
 //Issue 14206
 deprecated
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     cfloat c = 7f + 3fi;
     assert(conj(c) == 7f-3fi);
@@ -711,7 +711,7 @@ double cos(double x) @safe pure nothrow @nogc { return cos(cast(real) x); }
 ///ditto
 float cos(float x) @safe pure nothrow @nogc { return cos(cast(real) x); }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     real function(real) pcos = &cos;
     assert(pcos != null);
@@ -746,7 +746,7 @@ double sin(double x) @safe pure nothrow @nogc { return sin(cast(real) x); }
 float sin(float x) @safe pure nothrow @nogc { return sin(cast(real) x); }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.math : sin, PI;
     import std.stdio : writefln;
@@ -759,7 +759,7 @@ float sin(float x) @safe pure nothrow @nogc { return sin(cast(real) x); }
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     real function(real) psin = &sin;
     assert(psin != null);
@@ -789,7 +789,7 @@ auto sin(ireal y) @safe pure nothrow @nogc
 }
 
 deprecated
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
   assert(sin(0.0+0.0i) == 0.0);
   assert(sin(2.0+0.0i) == sin(2.0L) );
@@ -816,7 +816,7 @@ real cos(ireal y) @safe pure nothrow @nogc
 }
 
 deprecated
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     assert(cos(0.0+0.0i)==1.0);
     assert(cos(1.3L+0.0i)==cos(1.3L));
@@ -1024,7 +1024,7 @@ Lret: {}
     }
 }
 
-@safe nothrow @nogc unittest
+version(StdUnittest) @safe nothrow @nogc unittest
 {
     static real[2][] vals =     // angle,tan
         [
@@ -1078,7 +1078,7 @@ Lret: {}
     assert(isIdentical( tan(NaN(0x0123L)), NaN(0x0123L) ));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     assert(equalsDigit(tan(PI / 3), std.math.sqrt(3.0), useDigits));
 }
@@ -1105,7 +1105,7 @@ double acos(double x) @safe pure nothrow @nogc { return acos(cast(real) x); }
 /// ditto
 float acos(float x) @safe pure nothrow @nogc  { return acos(cast(real) x); }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     assert(equalsDigit(acos(0.5), std.math.PI / 3, useDigits));
 }
@@ -1132,7 +1132,7 @@ double asin(double x) @safe pure nothrow @nogc { return asin(cast(real) x); }
 /// ditto
 float asin(float x) @safe pure nothrow @nogc  { return asin(cast(real) x); }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     assert(equalsDigit(asin(0.5), PI / 6, useDigits));
 }
@@ -1248,7 +1248,7 @@ double atan(double x) @safe pure nothrow @nogc { return atan(cast(real) x); }
 /// ditto
 float atan(float x)  @safe pure nothrow @nogc { return atan(cast(real) x); }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     assert(equalsDigit(atan(std.math.sqrt(3.0)), PI / 3, useDigits));
 }
@@ -1361,7 +1361,7 @@ float atan2(float y, float x) @safe pure nothrow @nogc
     return atan2(cast(real) y, cast(real) x);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     assert(equalsDigit(atan2(1.0L, std.math.sqrt(3.0L)), PI / 6, useDigits));
 }
@@ -1388,7 +1388,7 @@ double cosh(double x) @safe pure nothrow @nogc { return cosh(cast(real) x); }
 /// ditto
 float cosh(float x) @safe pure nothrow @nogc  { return cosh(cast(real) x); }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     assert(equalsDigit(cosh(1.0), (E + 1.0 / E) / 2, useDigits));
 }
@@ -1423,7 +1423,7 @@ double sinh(double x) @safe pure nothrow @nogc { return sinh(cast(real) x); }
 /// ditto
 float sinh(float x) @safe pure nothrow @nogc  { return sinh(cast(real) x); }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     assert(equalsDigit(sinh(1.0), (E - 1.0 / E) / 2, useDigits));
 }
@@ -1455,7 +1455,7 @@ double tanh(double x) @safe pure nothrow @nogc { return tanh(cast(real) x); }
 /// ditto
 float tanh(float x) @safe pure nothrow @nogc { return tanh(cast(real) x); }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     assert(equalsDigit(tanh(1.0), sinh(1.0) / cosh(1.0), 15));
 }
@@ -1482,7 +1482,7 @@ auto coshisinh(real x) @safe pure nothrow @nogc
 }
 
 deprecated
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     creal c = coshisinh(3.0L);
     assert(c.re == cosh(3.0L));
@@ -1524,7 +1524,7 @@ double acosh(double x) @safe pure nothrow @nogc { return acosh(cast(real) x); }
 float acosh(float x) @safe pure nothrow @nogc  { return acosh(cast(real) x); }
 
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     assert(isNaN(acosh(0.9)));
     assert(isNaN(acosh(real.nan)));
@@ -1565,7 +1565,7 @@ double asinh(double x) @safe pure nothrow @nogc { return asinh(cast(real) x); }
 /// ditto
 float asinh(float x) @safe pure nothrow @nogc { return asinh(cast(real) x); }
 
-@system  unittest
+version(StdUnittest) @system  unittest
 {
     assert(isIdentical(asinh(0.0), 0.0));
     assert(isIdentical(asinh(-0.0), -0.0));
@@ -1606,7 +1606,7 @@ double atanh(double x) @safe pure nothrow @nogc { return atanh(cast(real) x); }
 float atanh(float x) @safe pure nothrow @nogc { return atanh(cast(real) x); }
 
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     assert(isIdentical(atanh(0.0), 0.0));
     assert(isIdentical(atanh(-0.0),-0.0));
@@ -1630,7 +1630,7 @@ long rndtol(double x) @safe pure nothrow @nogc { return rndtol(cast(real) x); }
 ///ditto
 long rndtol(float x) @safe pure nothrow @nogc { return rndtol(cast(real) x); }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     long function(real) prndtol = &rndtol;
     assert(prndtol != null);
@@ -1662,7 +1662,7 @@ double sqrt(double x) @nogc @safe pure nothrow { pragma(inline, true); return co
 /// ditto
 real sqrt(real x) @nogc @safe pure nothrow { pragma(inline, true); return core.math.sqrt(x); }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     //ctfe
     enum ZX80 = sqrt(7.0f);
@@ -1674,7 +1674,7 @@ real sqrt(real x) @nogc @safe pure nothrow { pragma(inline, true); return core.m
     assert(isNaN(sqrt(-1.0L)));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     float function(float) psqrtf = &sqrt;
     assert(psqrtf != null);
@@ -1877,7 +1877,7 @@ double exp(double x) @safe pure nothrow @nogc  { return exp(cast(real) x); }
 /// ditto
 float exp(float x)  @safe pure nothrow @nogc   { return exp(cast(real) x); }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     assert(equalsDigit(exp(3.0L), E * E * E, useDigits));
 }
@@ -2453,14 +2453,14 @@ private real exp2Impl(real x) @nogc @trusted pure nothrow
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(feqrel(exp2(0.5L), SQRT2) >= real.mant_dig -1);
     assert(exp2(8.0L) == 256.0);
     assert(exp2(-9.0L)== 1.0L/512.0);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     version(CRuntime_Microsoft) {} else // aexp2/exp2f/exp2l not implemented
     {
@@ -2470,7 +2470,7 @@ private real exp2Impl(real x) @nogc @trusted pure nothrow
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     FloatingPointControl ctrl;
     if (FloatingPointControl.hasExceptionTraps)
@@ -2630,7 +2630,7 @@ creal expi(real y) @trusted pure nothrow @nogc
 }
 
 deprecated
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     assert(expi(1.3e5L) == cos(1.3e5L) + sin(1.3e5L) * 1i);
     assert(expi(0.0L) == 1L + 0.0Li);
@@ -2834,7 +2834,7 @@ if (isFloatingPoint!T)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int exp;
     real mantissa = frexp(123.456L, exp);
@@ -2849,7 +2849,7 @@ if (isFloatingPoint!T)
     assert(frexp(0.0, exp) == 0.0 && exp == 0);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     int exp;
     real mantissa = frexp(123.456L, exp);
@@ -2858,7 +2858,7 @@ if (isFloatingPoint!T)
     assert(equalsDigit(mantissa * pow(2.0L, cast(real) exp), 123.456L, 19));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.meta : AliasSeq;
     import std.typecons : tuple, Tuple;
@@ -2917,7 +2917,7 @@ if (isFloatingPoint!T)
     }}
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.meta : AliasSeq;
     void foo() {
@@ -3112,7 +3112,7 @@ if (isIntegral!T && isSigned!T)
 alias FP_ILOGB0   = core.stdc.math.FP_ILOGB0;
 alias FP_ILOGBNAN = core.stdc.math.FP_ILOGBNAN;
 
-@safe nothrow @nogc unittest
+version(StdUnittest) @safe nothrow @nogc unittest
 {
     import std.meta : AliasSeq;
     import std.typecons : Tuple;
@@ -3186,7 +3186,7 @@ double ldexp(double n, int exp) @safe pure nothrow @nogc { return ldexp(cast(rea
 float ldexp(float n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real) n, exp); }
 
 ///
-@nogc @safe pure nothrow unittest
+version(StdUnittest) @nogc @safe pure nothrow unittest
 {
     import std.meta : AliasSeq;
     static foreach (T; AliasSeq!(float, double, real))
@@ -3206,7 +3206,7 @@ float ldexp(float n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real)
     }}
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
     {
@@ -3232,7 +3232,7 @@ float ldexp(float n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real)
 }
 
 /* workaround Issue 14718, float parsing depends on platform strtold
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     assert(ldexp(1.0, -1024) == 0x1p-1024);
     assert(ldexp(1.0, -1022) == 0x1p-1022);
@@ -3243,7 +3243,7 @@ float ldexp(float n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real)
     assert(ldexp(n, x)==0x1p-1024);
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     assert(ldexp(1.0f, -128) == 0x1p-128f);
     assert(ldexp(1.0f, -126) == 0x1p-126f);
@@ -3255,7 +3255,7 @@ float ldexp(float n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real)
 }
 */
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     static real[3][] vals =    // value,exp,ldexp
     [
@@ -3470,7 +3470,7 @@ real log(real x) @safe pure nothrow @nogc
 }
 
 ///
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     assert(log(E) == 1);
 }
@@ -3567,7 +3567,7 @@ real log10(real x) @safe pure nothrow @nogc
 }
 
 ///
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     assert(fabs(log10(1000) - 3) < .000001);
 }
@@ -3694,12 +3694,12 @@ real log2(real x) @safe pure nothrow @nogc
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(approxEqual(log2(1024.0L), 10));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     // check if values are equal to 19 decimal digits of precision
     assert(equalsDigit(log2(1024.0L), 10, 19));
@@ -3837,7 +3837,7 @@ real scalbn(real x, int n) @trusted nothrow @nogc
 }
 
 ///
-@safe nothrow @nogc unittest
+version(StdUnittest) @safe nothrow @nogc unittest
 {
     assert(scalbn(-real.infinity, 5) == -real.infinity);
 }
@@ -3883,7 +3883,7 @@ double fabs(double x) @safe pure nothrow @nogc { return fabs(cast(real) x); }
 ///ditto
 float fabs(float x) @safe pure nothrow @nogc { return fabs(cast(real) x); }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     real function(real) pfabs = &fabs;
     assert(pfabs != null);
@@ -3962,7 +3962,7 @@ real hypot(real x, real y) @safe pure nothrow @nogc
     return sqrt(u*u + v*v);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static real[3][] vals =     // x,y,hypot
         [
@@ -4052,7 +4052,7 @@ real ceil(real x) @trusted pure nothrow @nogc
 }
 
 ///
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     assert(ceil(+123.456L) == +124);
     assert(ceil(-123.456L) == -123);
@@ -4080,7 +4080,7 @@ double ceil(double x) @trusted pure nothrow @nogc
     return y;
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     assert(ceil(+123.456) == +124);
     assert(ceil(-123.456) == -123);
@@ -4108,7 +4108,7 @@ float ceil(float x) @trusted pure nothrow @nogc
     return y;
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     assert(ceil(+123.456f) == +124);
     assert(ceil(-123.456f) == -123);
@@ -4176,7 +4176,7 @@ real floor(real x) @trusted pure nothrow @nogc
 }
 
 ///
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     assert(floor(+123.456L) == +123);
     assert(floor(-123.456L) == -124);
@@ -4200,7 +4200,7 @@ double floor(double x) @trusted pure nothrow @nogc
     return floorImpl(x);
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     assert(floor(+123.456) == +123);
     assert(floor(-123.456) == -124);
@@ -4224,7 +4224,7 @@ float floor(float x) @trusted pure nothrow @nogc
     return floorImpl(x);
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     assert(floor(+123.456f) == +123);
     assert(floor(-123.456f) == -124);
@@ -4257,7 +4257,7 @@ if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F)
 }
 
 ///
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     assert(12345.6789L.quantize(0.01L) == 12345.68L);
     assert(12345.6789L.quantize!floor(0.01L) == 12345.67L);
@@ -4265,7 +4265,7 @@ if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F)
 }
 
 ///
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     assert(12345.6789L.quantize(0) == 12345.6789L);
     assert(12345.6789L.quantize(real.infinity).isNaN);
@@ -4298,7 +4298,7 @@ if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F)
 }
 
 ///
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     assert(12345.6789L.quantize!10(-2) == 12345.68L);
     assert(12345.6789L.quantize!(10, -2) == 12345.68L);
@@ -4309,7 +4309,7 @@ if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F)
     assert(12345.6789L.quantize!22 == 12342.0L);
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     import std.meta : AliasSeq;
 
@@ -4362,7 +4362,7 @@ double rint(double x) @safe pure nothrow @nogc { return rint(cast(real) x); }
 ///ditto
 float rint(float x) @safe pure nothrow @nogc { return rint(cast(real) x); }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     real function(real) print = &rint;
     assert(print != null);
@@ -4550,7 +4550,7 @@ long lrint(real x) @trusted pure nothrow @nogc
 }
 
 ///
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     assert(lrint(4.5) == 4);
     assert(lrint(5.5) == 6);
@@ -4565,7 +4565,7 @@ long lrint(real x) @trusted pure nothrow @nogc
 
 static if (real.mant_dig >= long.sizeof * 8)
 {
-    @safe pure nothrow @nogc unittest
+    version(StdUnittest) @safe pure nothrow @nogc unittest
     {
         assert(lrint(long.max - 1.5L) == long.max - 1);
         assert(lrint(long.max - 0.5L) == long.max - 1);
@@ -4613,7 +4613,7 @@ long lround(real x) @trusted nothrow @nogc
 
 version(Posix)
 {
-    @safe nothrow @nogc unittest
+    version(StdUnittest) @safe nothrow @nogc unittest
     {
         assert(lround(0.49) == 0);
         assert(lround(0.5) == 1);
@@ -4857,7 +4857,7 @@ public:
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     static void func() {
         int a = 10 * 10;
@@ -4883,7 +4883,7 @@ public:
     assert(ieeeFlags == f);
 }
 
-version(D_HardFloat) @system unittest
+version(StdUnittest) version(D_HardFloat) @system unittest
 {
     import std.meta : AliasSeq;
 
@@ -5349,7 +5349,7 @@ private:
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     void ensureDefaults()
     {
@@ -5389,7 +5389,7 @@ private:
     ensureDefaults();
 }
 
-version(D_HardFloat) @system unittest // rounding
+version(StdUnittest) version(D_HardFloat) @system unittest // rounding
 {
     import std.meta : AliasSeq;
 
@@ -5475,7 +5475,7 @@ if (isFloatingPoint!(X))
 }
 
 ///
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     assert( isNaN(float.init));
     assert( isNaN(-double.init));
@@ -5485,7 +5485,7 @@ if (isFloatingPoint!(X))
     assert(!isNaN(cast(real)-53.6));
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     import std.meta : AliasSeq;
 
@@ -5534,7 +5534,7 @@ if (isFloatingPoint!X)
 }
 
 ///
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     assert( isFinite(1.23f));
     assert( isFinite(float.max));
@@ -5543,7 +5543,7 @@ if (isFloatingPoint!X)
     assert(!isFinite(float.infinity));
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     assert(isFinite(1.23));
     assert(isFinite(double.max));
@@ -5590,7 +5590,7 @@ if (isFloatingPoint!X)
 }
 
 ///
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     float f = 3;
     double d = 500;
@@ -5664,7 +5664,7 @@ if (isFloatingPoint!X)
 }
 
 ///
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     import std.meta : AliasSeq;
 
@@ -5723,7 +5723,7 @@ if (isFloatingPoint!(X))
 }
 
 ///
-@nogc @safe pure nothrow unittest
+version(StdUnittest) @nogc @safe pure nothrow unittest
 {
     assert(!isInfinity(float.init));
     assert(!isInfinity(-float.init));
@@ -5734,7 +5734,7 @@ if (isFloatingPoint!(X))
     assert(isInfinity(-1.0f / 0.0f));
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     // CTFE-able tests
     assert(!isInfinity(double.init));
@@ -5834,7 +5834,7 @@ if (isFloatingPoint!X)
 }
 
 ///
-@nogc @safe pure nothrow unittest
+version(StdUnittest) @nogc @safe pure nothrow unittest
 {
     assert(!signbit(float.nan));
     assert(signbit(-float.nan));
@@ -5888,7 +5888,7 @@ if (isIntegral!(X) && isFloatingPoint!(R))
     return copysign(cast(R) to, from);
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     import std.meta : AliasSeq;
 
@@ -5936,7 +5936,7 @@ if (isNumeric!F)
 }
 
 ///
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     assert(sgn(168.1234) == 1);
     assert(sgn(-168.1234) == -1);
@@ -6025,7 +6025,7 @@ real NaN(ulong payload) @trusted pure nothrow @nogc
     }
 }
 
-@system pure nothrow @nogc unittest // not @safe because taking address of local.
+version(StdUnittest) @system pure nothrow @nogc unittest // not @safe because taking address of local.
 {
     static if (floatTraits!(real).realFormat == RealFormat.ieeeDouble)
     {
@@ -6088,7 +6088,7 @@ ulong getNaNPayload(real x) @trusted pure nothrow @nogc
 
 debug(UnitTest)
 {
-    @safe pure nothrow @nogc unittest
+    version(StdUnittest) @safe pure nothrow @nogc unittest
     {
         real nan4 = NaN(0x789_ABCD_EF12_3456);
         static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended
@@ -6313,12 +6313,12 @@ float nextDown(float x) @safe pure nothrow @nogc
 }
 
 ///
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     assert( nextDown(1.0 + real.epsilon) == 1.0);
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
     {
@@ -6409,7 +6409,7 @@ if (isFloatingPoint!T)
 }
 
 ///
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     float a = 1;
     assert(is(typeof(nextafter(a, a)) == float));
@@ -6506,7 +6506,7 @@ if (isFloatingPoint!(F) && isIntegral!(G))
     return p;
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     // Make sure it instantiates and works properly on immutable values and
     // with various integer and float types.
@@ -6549,7 +6549,7 @@ if (isFloatingPoint!(F) && isIntegral!(G))
     assert(feqrel(pow(x, neg3),  1 / (x * x * x)) >= real.mant_dig - 1);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     assert(equalsDigit(pow(2.0L, 10.0L), 1024, 19));
 }
@@ -6600,7 +6600,7 @@ if (isIntegral!(F) && isIntegral!(G))
 }
 
 ///
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     immutable int one = 1;
     immutable byte two = 2;
@@ -6867,7 +6867,7 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
     return impl(x, y);
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     // Test all the special values.  These unittests can be run on Windows
     // by temporarily changing the version(linux) to version(all).
@@ -7007,7 +7007,7 @@ if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
     return result;
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     ulong a = 18446744073709551615u, b = 20u, c = 18446744073709551610u;
     assert(powmod(a, b, c) == 95367431640625u);
@@ -7164,7 +7164,7 @@ if (isFloatingPoint!(X))
     }
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     void testFeqrel(F)()
     {
@@ -7336,7 +7336,7 @@ do
     return u;
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     assert(ieeeMean(-0.0,-1e-20)<0);
     assert(ieeeMean(0.0,1e-20)>0);
@@ -7392,7 +7392,7 @@ do
 }
 
 ///
-@safe nothrow @nogc unittest
+version(StdUnittest) @safe nothrow @nogc unittest
 {
     real x = 3.1;
     static real[] pp = [56.1, 32.7, 6];
@@ -7400,7 +7400,7 @@ do
     assert(poly(x, pp) == (56.1L + (32.7L + 6.0L * x) * x));
 }
 
-@safe nothrow @nogc unittest
+version(StdUnittest) @safe nothrow @nogc unittest
 {
     double x = 3.1;
     static double[] pp = [56.1, 32.7, 6];
@@ -7412,7 +7412,7 @@ do
     assert(poly(x, pp) == y);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(poly(3.0, [1.0, 2.0, 3.0]) == 34);
 }
@@ -7718,7 +7718,7 @@ bool approxEqual(T, U)(T lhs, U rhs)
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     assert(approxEqual(1.0, 1.0099));
     assert(!approxEqual(1.0, 1.011));
@@ -7742,7 +7742,7 @@ bool approxEqual(T, U)(T lhs, U rhs)
     assert(approxEqual(10, a));
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     real num = real.infinity;
     assert(num == real.infinity);  // Passes.
@@ -7750,7 +7750,7 @@ bool approxEqual(T, U)(T lhs, U rhs)
 }
 
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     float f = sqrt(2.0f);
     assert(fabs(f * f - 2.0f) < .00001);
@@ -7762,7 +7762,7 @@ bool approxEqual(T, U)(T lhs, U rhs)
     assert(fabs(r * r - 2.0) < .00001);
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     float f = fabs(-2.0f);
     assert(f == 2);
@@ -7774,7 +7774,7 @@ bool approxEqual(T, U)(T lhs, U rhs)
     assert(r == 2);
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     float f = sin(-2.0f);
     assert(fabs(f - -0.909297f) < .00001);
@@ -7786,7 +7786,7 @@ bool approxEqual(T, U)(T lhs, U rhs)
     assert(fabs(r - -0.909297f) < .00001);
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     float f = cos(-2.0f);
     assert(fabs(f - -0.416147f) < .00001);
@@ -7798,7 +7798,7 @@ bool approxEqual(T, U)(T lhs, U rhs)
     assert(fabs(r - -0.416147f) < .00001);
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     float f = tan(-2.0f);
     assert(fabs(f - 2.18504f) < .00001);
@@ -7819,14 +7819,14 @@ bool approxEqual(T, U)(T lhs, U rhs)
     }
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     // issue 6381: floor/ceil should be usable in pure function.
     auto x = floor(1.2);
     auto y = ceil(1.2);
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     // relative comparison depends on rhs, make sure proper side is used when
     // comparing range to single value. Based on bugzilla issue 15763
@@ -7999,7 +7999,7 @@ if (isFloatingPoint!T)
 }
 
 /// Most numbers are ordered naturally.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(cmp(-double.infinity, -double.max) < 0);
     assert(cmp(-double.max, -100.0) < 0);
@@ -8014,14 +8014,14 @@ if (isFloatingPoint!T)
 }
 
 /// Positive and negative zeroes are distinct.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(cmp(-0.0, +0.0) < 0);
     assert(cmp(+0.0, -0.0) > 0);
 }
 
 /// Depending on the sign, $(NAN)s go to either end of the spectrum.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(cmp(-double.nan, -double.infinity) < 0);
     assert(cmp(double.infinity, double.nan) < 0);
@@ -8029,13 +8029,13 @@ if (isFloatingPoint!T)
 }
 
 /// $(NAN)s of the same sign are ordered by the payload.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(cmp(NaN(10), NaN(20)) < 0);
     assert(cmp(-NaN(20), -NaN(10)) < 0);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.meta : AliasSeq;
     static foreach (T; AliasSeq!(float, double, real))
@@ -8139,7 +8139,7 @@ if (isFloatingPoint!T)
 }
 
 ///
-@safe @nogc pure nothrow unittest
+version(StdUnittest) @safe @nogc pure nothrow unittest
 {
     assert(nextPow2(2) == 4);
     assert(nextPow2(10) == 16);
@@ -8160,7 +8160,7 @@ if (isFloatingPoint!T)
 }
 
 ///
-@safe @nogc pure nothrow unittest
+version(StdUnittest) @safe @nogc pure nothrow unittest
 {
     assert(nextPow2(2.1) == 4.0);
     assert(nextPow2(-2.0) == -4.0);
@@ -8171,7 +8171,7 @@ if (isFloatingPoint!T)
     assert(nextPow2(double.infinity) == double.infinity);
 }
 
-@safe @nogc pure nothrow unittest
+version(StdUnittest) @safe @nogc pure nothrow unittest
 {
     assert(nextPow2(ubyte(2)) == 4);
     assert(nextPow2(ubyte(10)) == 16);
@@ -8188,7 +8188,7 @@ if (isFloatingPoint!T)
     assert(nextPow2(ushort(4000)) == 4096);
 }
 
-@safe @nogc pure nothrow unittest
+version(StdUnittest) @safe @nogc pure nothrow unittest
 {
     foreach (ulong i; 1 .. 62)
     {
@@ -8199,7 +8199,7 @@ if (isFloatingPoint!T)
     }
 }
 
-@safe @nogc pure nothrow unittest
+version(StdUnittest) @safe @nogc pure nothrow unittest
 {
     import std.meta : AliasSeq;
 
@@ -8231,7 +8231,7 @@ if (isFloatingPoint!T)
     }}
 }
 
-@safe @nogc pure nothrow unittest // Issue 15973
+version(StdUnittest) @safe @nogc pure nothrow unittest // Issue 15973
 {
     assert(nextPow2(uint.max / 2) == uint.max / 2 + 1);
     assert(nextPow2(uint.max / 2 + 2) == 0);
@@ -8264,7 +8264,7 @@ if (isFloatingPoint!T)
 }
 
 ///
-@safe @nogc pure nothrow unittest
+version(StdUnittest) @safe @nogc pure nothrow unittest
 {
     assert(truncPow2(3) == 2);
     assert(truncPow2(4) == 4);
@@ -8286,7 +8286,7 @@ if (isFloatingPoint!T)
 }
 
 ///
-@safe @nogc pure nothrow unittest
+version(StdUnittest) @safe @nogc pure nothrow unittest
 {
     assert(truncPow2(2.1) == 2.0);
     assert(truncPow2(7.0) == 4.0);
@@ -8297,7 +8297,7 @@ if (isFloatingPoint!T)
     assert(truncPow2(double.infinity) == double.infinity);
 }
 
-@safe @nogc pure nothrow unittest
+version(StdUnittest) @safe @nogc pure nothrow unittest
 {
     assert(truncPow2(ubyte(3)) == 2);
     assert(truncPow2(ubyte(4)) == 4);
@@ -8318,7 +8318,7 @@ if (isFloatingPoint!T)
     assert(truncPow2(short(4000)) == 2048);
 }
 
-@safe @nogc pure nothrow unittest
+version(StdUnittest) @safe @nogc pure nothrow unittest
 {
     foreach (ulong i; 1 .. 62)
     {
@@ -8329,7 +8329,7 @@ if (isFloatingPoint!T)
     }
 }
 
-@safe @nogc pure nothrow unittest
+version(StdUnittest) @safe @nogc pure nothrow unittest
 {
     import std.meta : AliasSeq;
 
@@ -8391,7 +8391,7 @@ if (isNumeric!X)
     }
 }
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert( isPowerOf2(1.0L));
     assert( isPowerOf2(2.0L));
@@ -8409,7 +8409,7 @@ if (isNumeric!X)
     assert(!isPowerOf2(real.infinity));
 }
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert( isPowerOf2(1));
     assert( isPowerOf2(2));
@@ -8420,7 +8420,7 @@ if (isNumeric!X)
     assert(!isPowerOf2(1337u));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.meta : AliasSeq;
 

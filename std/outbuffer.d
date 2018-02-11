@@ -251,7 +251,19 @@ class OutBuffer
         import core.stdc.stdlib : alloca;
         import std.string : toStringz;
 
-        version (unittest)
+        version(unittest)
+        {
+            version(StdUnittest)
+                enum triggerReallocationForTest = true;
+            else
+                enum triggerReallocationForTest = false;
+        }
+        else
+        {
+            enum triggerReallocationForTest = false;
+        }
+
+        static if (triggerReallocationForTest)
             char[3] buffer = void;      // trigger reallocation
         else
             char[128] buffer = void;
@@ -316,7 +328,7 @@ class OutBuffer
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         OutBuffer b = new OutBuffer();
         b.writef("a%sb", 16);
@@ -343,7 +355,7 @@ class OutBuffer
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         OutBuffer b = new OutBuffer();
         b.writefln("a%sb", 16);
@@ -375,7 +387,7 @@ class OutBuffer
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.string : cmp;
 
@@ -394,7 +406,7 @@ class OutBuffer
     assert(cmp(buf.toString(),"New data") == 0);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range;
     static assert(isOutputRange!(OutBuffer, char));

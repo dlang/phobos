@@ -778,7 +778,7 @@ if (isSomeChar!(Char))
     return EmailStatus(valid, to!(string)(localPart), to!(string)(domainPart), finalStatus);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(`test.test@iana.org`.isEmail(No.checkDns).statusCode == EmailStatusCode.valid);
     assert(`test.test@iana.org`.isEmail(No.checkDns, EmailStatusCode.none).statusCode == EmailStatusCode.valid);
@@ -1258,7 +1258,7 @@ if (isSomeChar!(Char))
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=17217
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     wstring a = `test.test@iana.org`w;
     dstring b = `test.test@iana.org`d;
@@ -1802,7 +1802,7 @@ if (is(Unqual!(ElementType!(S1)) == dchar) && is(Unqual!(ElementType!(S2)) == dc
     return slice1.icmp(slice2);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert("abc".compareFirstN("abcdef", 3) == 0);
     assert("abc".compareFirstN("Abc", 3) == 0);
@@ -1826,7 +1826,7 @@ if (isDynamicArray!(A) && !isNarrowString!(A) && isMutable!(A) && !is(A == void[
     return e;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto array = [0, 1, 2, 3];
     auto result = array.pop();
@@ -1852,13 +1852,13 @@ const(T)[] get (T) (const(T)[] str, size_t index, dchar c)
     return str[index .. index + codeLength!(T)(c)];
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert("abc".get(1, 'b') == "b");
     assert("löv".get(1, 'ö') == "ö");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert("abc".get(1, 'b') == "b");
     assert("löv".get(1, 'ö') == "ö");

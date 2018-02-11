@@ -72,7 +72,7 @@ struct MmapAllocator
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     alias alloc = MmapAllocator.instance;
     auto p = alloc.allocate(100);

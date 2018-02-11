@@ -194,7 +194,7 @@ module std.experimental.checkedint;
 import std.traits : isFloatingPoint, isIntegral, isNumeric, isUnsigned, Unqual;
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     int[] concatAndAdd(int[] a, int[] b, int offset)
     {
@@ -246,7 +246,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     */
     auto get() inout { return payload; }
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         auto x = checked(ubyte(42));
         static assert(is(typeof(x.get()) == ubyte));
@@ -264,7 +264,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     {
         enum Checked!(T, Hook) min = Checked!(T, Hook)(Hook.min!T);
         ///
-        @system unittest
+        version(StdUnittest) @system unittest
         {
             assert(Checked!short.min == -32768);
             assert(Checked!(short, WithNaN).min == -32767);
@@ -297,7 +297,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
             payload = rhs.payload;
     }
     ///
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         auto a = checked(42L);
         assert(a == 42);
@@ -316,7 +316,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
             payload = rhs.payload;
     }
     ///
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         Checked!long a;
         a = 42L;
@@ -381,7 +381,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         }
     }
     ///
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         assert(cast(uint) checked(42) == 42);
         assert(cast(uint) checked!WithNaN(-42) == uint.max);
@@ -435,7 +435,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     }
 
     ///
-    static if (is(T == int) && is(Hook == void)) @safe unittest
+    version(StdUnittest) static if (is(T == int) && is(Hook == void)) @safe unittest
     {
         static struct MyHook
         {
@@ -536,7 +536,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     }
 
     ///
-    static if (is(T == int) && is(Hook == void)) @safe unittest
+    version(StdUnittest) static if (is(T == int) && is(Hook == void)) @safe unittest
     {
         static struct MyHook
         {
@@ -578,7 +578,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     }
 
     // For coverage
-    static if (is(T == int) && is(Hook == void)) @system unittest
+    version(StdUnittest) static if (is(T == int) && is(Hook == void)) @system unittest
     {
         assert(checked(42) <= checked!void(42));
         assert(checked!void(42) <= checked(42u));
@@ -657,7 +657,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     }
 
     ///
-    static if (is(T == int) && is(Hook == void)) @safe unittest
+    version(StdUnittest) static if (is(T == int) && is(Hook == void)) @safe unittest
     {
         static struct MyHook
         {
@@ -789,7 +789,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         }
     }
 
-    static if (is(T == int) && is(Hook == void)) @system unittest
+    version(StdUnittest) static if (is(T == int) && is(Hook == void)) @system unittest
     {
         const a = checked(42);
         assert(a + 1 == 43);
@@ -867,7 +867,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         }
     }
 
-    static if (is(T == int) && is(Hook == void)) @system unittest
+    version(StdUnittest) static if (is(T == int) && is(Hook == void)) @system unittest
     {
         assert(1 + checked(1) == 2);
         static uint tally;
@@ -956,7 +956,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     }
 
     ///
-    static if (is(T == int) && is(Hook == void)) @safe unittest
+    version(StdUnittest) static if (is(T == int) && is(Hook == void)) @safe unittest
     {
         static struct MyHook
         {
@@ -996,7 +996,7 @@ if (is(typeof(Checked!(T, Hook)(value))))
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     static assert(is(typeof(checked(42)) == Checked!int));
     assert(checked(42) == Checked!int(42));
@@ -1005,7 +1005,7 @@ if (is(typeof(Checked!(T, Hook)(value))))
 }
 
 // get
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     void test(T)()
     {
@@ -1159,7 +1159,7 @@ static:
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     void test(T)()
     {
@@ -1332,7 +1332,7 @@ struct Throw
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     void test(T)()
     {
@@ -1446,7 +1446,7 @@ static:
     }
 
     ///
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         auto x = checked!Warn(-42);
         // Passes
@@ -1485,7 +1485,7 @@ static:
     }
 
     ///
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         auto x = checked!Warn(-42);
         // Passes
@@ -1524,7 +1524,7 @@ static:
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     auto x = checked!Warn(42);
     short x1 = cast(short) x;
@@ -1648,7 +1648,7 @@ struct ProperCompare
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     alias opEqualsProper = ProperCompare.hookOpEquals;
     assert(opEqualsProper(42, 42));
@@ -1663,7 +1663,7 @@ struct ProperCompare
     assert(!opEqualsProper(3_000_000_000U, -1_294_967_296));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     alias opCmpProper = ProperCompare.hookOpCmp;
     assert(opCmpProper(42, 42) == 0);
@@ -1679,7 +1679,7 @@ struct ProperCompare
     assert(opCmpProper(-1.0, -1) == 0);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto x1 = Checked!(uint, ProperCompare)(42u);
     assert(x1.get < -1);
@@ -1758,7 +1758,7 @@ static:
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         auto x = checked!WithNaN(422);
         assert((cast(ubyte) x) == 255);
@@ -1811,7 +1811,7 @@ static:
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         Checked!(int, WithNaN) x;
         assert(!(x < 0) && !(x > 0) && !(x == 0));
@@ -1870,7 +1870,7 @@ static:
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         Checked!(int, WithNaN) x;
         ++x;
@@ -1882,7 +1882,7 @@ static:
         assert(!x.isNaN);
     }
 
-    @safe unittest // for coverage
+    version(StdUnittest) @safe unittest // for coverage
     {
         Checked!(uint, WithNaN) y;
         ++y;
@@ -1920,7 +1920,7 @@ static:
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         Checked!(int, WithNaN) x;
         assert((x + 1).isNaN);
@@ -1958,7 +1958,7 @@ static:
         return defaultValue!Result;
     }
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         Checked!(int, WithNaN) x;
         assert((1 + x).isNaN);
@@ -1995,7 +1995,7 @@ static:
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         Checked!(int, WithNaN) x;
         x += 4;
@@ -2009,7 +2009,7 @@ static:
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto x1 = Checked!(int, WithNaN)();
     assert(x1.isNaN);
@@ -2046,7 +2046,7 @@ bool isNaN(T)(const Checked!(T, WithNaN) x)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto x1 = Checked!(int, WithNaN)();
     assert(x1.isNaN);
@@ -2056,7 +2056,7 @@ bool isNaN(T)(const Checked!(T, WithNaN) x)
     assert(x1.isNaN);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     void test1(T)()
     {
@@ -2101,7 +2101,7 @@ bool isNaN(T)(const Checked!(T, WithNaN) x)
     test2!int;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     alias Smart(T) = Checked!(Checked!(T, ProperCompare), WithNaN);
     Smart!int x1;
@@ -2149,7 +2149,7 @@ static:
         return bound;
     }
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         auto x = checked!Saturate(short(100));
         x += 33000;
@@ -2207,7 +2207,7 @@ static:
             static assert(false);
     }
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         assert(checked!Saturate(int.max) + 1 == int.max);
         assert(checked!Saturate(100) ^^ 10 == int.max);
@@ -2221,7 +2221,7 @@ static:
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto x = checked!Saturate(int.max);
     ++x;
@@ -2459,7 +2459,7 @@ fail:
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     bool overflow;
     assert(opChecked!"+"(const short(1), short(1), overflow) == 2 && !overflow);
@@ -2470,7 +2470,7 @@ fail:
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     bool overflow;
     assert(opChecked!"-"(1, 1, overflow) == 0 && !overflow);
@@ -2479,7 +2479,7 @@ fail:
     assert(opChecked!"-"(-1, 1u, overflow) == 0 && overflow);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     bool overflow;
     assert(opChecked!"*"(2, 3, overflow) == 6 && !overflow);
@@ -2488,7 +2488,7 @@ fail:
     //assert(mul(-1, 1u, overflow) == uint.max - 1 && overflow);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     bool overflow;
     assert(opChecked!"/"(6, 3, overflow) == 2 && !overflow);
@@ -2586,7 +2586,7 @@ if (isIntegral!T && T.sizeof >= 4)
     return r;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static void testPow(T)(T x, uint e)
     {
@@ -2656,7 +2656,7 @@ version(StdUnittest) private struct CountOpBinary
 }
 
 // opBinary
-@nogc nothrow pure @safe unittest
+version(StdUnittest) @nogc nothrow pure @safe unittest
 {
     auto x = Checked!(const int, void)(42), y = Checked!(immutable int, void)(142);
     assert(x + y == 184);
@@ -2739,7 +2739,7 @@ version(StdUnittest) private struct CountOpBinary
 }
 
 // opBinaryRight
-@nogc nothrow pure @safe unittest
+version(StdUnittest) @nogc nothrow pure @safe unittest
 {
     auto x1 = Checked!(int, CountOverflows)(42);
     assert(1 + x1 == 43);
@@ -2751,7 +2751,7 @@ version(StdUnittest) private struct CountOpBinary
 }
 
 // opOpAssign
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto x1 = Checked!(int, CountOverflows)(3);
     assert((x1 += 2) == 5);
@@ -2772,7 +2772,7 @@ version(StdUnittest) private struct CountOpBinary
 }
 
 // opAssign
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     Checked!(int, void) x;
     x = 42;
@@ -2785,7 +2785,7 @@ version(StdUnittest) private struct CountOpBinary
     assert(x.get == 44);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(!is(typeof(Checked!(short, void)(ushort(42)))));
     static assert(!is(typeof(Checked!(int, void)(long(42)))));
@@ -2795,7 +2795,7 @@ version(StdUnittest) private struct CountOpBinary
 }
 
 // opCast
-@nogc nothrow pure @safe unittest
+version(StdUnittest) @nogc nothrow pure @safe unittest
 {
     static assert(is(typeof(cast(float) Checked!(int, void)(42)) == float));
     assert(cast(float) Checked!(int, void)(42) == 42);
@@ -2855,7 +2855,7 @@ version(StdUnittest) private struct CountOpBinary
 }
 
 // opEquals
-@nogc nothrow pure @safe unittest
+version(StdUnittest) @nogc nothrow pure @safe unittest
 {
     assert(Checked!(int, void)(42) == 42L);
     assert(42UL == Checked!(int, void)(42));
@@ -2909,7 +2909,7 @@ version(StdUnittest) private struct CountOpBinary
 }
 
 // opCmp
-@nogc nothrow pure @safe unittest
+version(StdUnittest) @nogc nothrow pure @safe unittest
 {
     Checked!(int, void) x;
     assert(x <= x);
@@ -2959,7 +2959,7 @@ version(StdUnittest) private struct CountOpBinary
 }
 
 // opUnary
-@nogc nothrow pure @safe unittest
+version(StdUnittest) @nogc nothrow pure @safe unittest
 {
     auto x = Checked!(int, void)(42);
     assert(x == +x);
@@ -3027,7 +3027,7 @@ version(StdUnittest) private struct CountOpBinary
 }
 
 //
-@nogc nothrow pure @safe unittest
+version(StdUnittest) @nogc nothrow pure @safe unittest
 {
     Checked!(int, void) x;
     assert(x == x);

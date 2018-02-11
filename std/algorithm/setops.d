@@ -131,7 +131,7 @@ if (!allSatisfy!(isForwardRange, R1, R2) ||
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.searching : canFind;
     import std.range;
@@ -148,7 +148,7 @@ if (!allSatisfy!(isForwardRange, R1, R2) ||
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.searching : canFind;
     import std.typecons : tuple;
@@ -164,7 +164,7 @@ if (!allSatisfy!(isForwardRange, R1, R2) ||
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Test cartesian product of two infinite ranges
     import std.algorithm.searching : canFind;
@@ -187,7 +187,7 @@ if (!allSatisfy!(isForwardRange, R1, R2) ||
     assert(canFind(EvenOdd, tuple(42, 1)));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Test cartesian product of an infinite input range and a finite forward
     // range.
@@ -227,7 +227,7 @@ if (!allSatisfy!(isForwardRange, R1, R2) ||
     assert(!canFind(MN.take(100), tuple(100, 200)));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.searching : canFind;
     import std.typecons : tuple;
@@ -254,7 +254,7 @@ if (!allSatisfy!(isForwardRange, R1, R2) ||
     // And therefore, by set comprehension, XY == Expected
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
@@ -349,7 +349,7 @@ if (!allSatisfy!(isForwardRange, R1, R2) ||
 }
 
 // Issue 13091
-pure nothrow @safe @nogc unittest
+version(StdUnittest) pure nothrow @safe @nogc unittest
 {
     int[1] a = [1];
     foreach (t; cartesianProduct(a[], a[])) {}
@@ -422,7 +422,7 @@ if (ranges.length >= 2 &&
     return Result(ranges);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Issue 10693: cartesian product of empty ranges should be empty.
     int[] a, b, c, d, e;
@@ -438,7 +438,7 @@ if (ranges.length >= 2 &&
     foreach (_; cprod2) {} // should not crash
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // .init value of cartesianProduct should be empty
     auto cprod = cartesianProduct([0,0], [1,1], [2,2]);
@@ -446,7 +446,7 @@ if (ranges.length >= 2 &&
     assert(cprod.init.empty);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Issue 13393
     assert(!cartesianProduct([0],[0],[0]).save.empty);
@@ -473,7 +473,7 @@ if (!allSatisfy!(isForwardRange, R1, R2, RR) ||
     );
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.searching : canFind;
     import std.range;
@@ -490,7 +490,7 @@ if (!allSatisfy!(isForwardRange, R1, R2, RR) ||
     assert(canFind(N3, tuple(9, 3, 0)));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.searching : canFind;
     import std.range;
@@ -509,7 +509,7 @@ if (!allSatisfy!(isForwardRange, R1, R2, RR) ||
 
 // Issue 9878
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.typecons : tuple;
@@ -532,7 +532,7 @@ if (!allSatisfy!(isForwardRange, R1, R2, RR) ||
     ]));
 }
 
-pure @safe nothrow @nogc unittest
+version(StdUnittest) pure @safe nothrow @nogc unittest
 {
     import std.range.primitives : isForwardRange;
     int[2] A = [1,2];
@@ -547,7 +547,7 @@ pure @safe nothrow @nogc unittest
 }
 
 // Issue 13935
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.iteration : map;
     auto seq = [1, 2].map!(x => x);
@@ -603,7 +603,7 @@ void largestPartialIntersection
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.typecons : tuple, Tuple;
 
@@ -686,7 +686,7 @@ void largestPartialIntersectionWeighted
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.typecons : tuple, Tuple;
 
@@ -723,7 +723,7 @@ void largestPartialIntersectionWeighted
     // 1.0 occurs 5 times -> 1.2 * 5 = 6
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : text;
     import std.typecons : tuple, Tuple, Yes;
@@ -742,7 +742,7 @@ void largestPartialIntersectionWeighted
     assert(a[0].empty);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : text;
     import std.typecons : tuple, Tuple, Yes;
@@ -760,7 +760,7 @@ void largestPartialIntersectionWeighted
     assert(b == [ tuple("7", 4u), tuple("1", 3u) ][], text(b));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.typecons : tuple, Tuple;
 
@@ -781,7 +781,7 @@ void largestPartialIntersectionWeighted
     assert(b[0] == tuple(4.0, 2u));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.container : Array;
     import std.typecons : Tuple;
@@ -896,7 +896,7 @@ MultiwayMerge!(less, RangeOfRanges) multiwayMerge
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -954,7 +954,7 @@ auto multiwayUnion(alias less = "a < b", RangeOfRanges)(RangeOfRanges ror)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1086,7 +1086,7 @@ SetDifference!(less, R1, R2) setDifference(alias less = "a < b", R1, R2)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range.primitives : isForwardRange;
@@ -1105,7 +1105,7 @@ SetDifference!(less, R1, R2) setDifference(alias less = "a < b", R1, R2)
     assert(setDifference(r, x).empty);
 }
 
-@safe unittest // Issue 10460
+version(StdUnittest) @safe unittest // Issue 10460
 {
     import std.algorithm.comparison : equal;
 
@@ -1234,7 +1234,7 @@ if (Rs.length >= 2 && allSatisfy!(isInputRange, Rs) &&
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1253,7 +1253,7 @@ if (Rs.length >= 2 && allSatisfy!(isInputRange, Rs) &&
     assert(equal(setIntersection(d, e), [1, 1, 7]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter;
@@ -1402,7 +1402,7 @@ setSymmetricDifference(alias less = "a < b", R1, R2)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range.primitives : isForwardRange;
@@ -1420,7 +1420,7 @@ setSymmetricDifference(alias less = "a < b", R1, R2)
     assert(equal(setSymmetricDifference(c, d), [1, 1, 2, 5, 6, 7, 9]));
 }
 
-@safe unittest // Issue 10460
+version(StdUnittest) @safe unittest // Issue 10460
 {
     import std.algorithm.comparison : equal;
 
@@ -1468,7 +1468,7 @@ auto setUnion(alias less = "a < b", Rs...)
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
     ///
 {
     import std.algorithm.comparison : equal;
@@ -1478,7 +1478,7 @@ auto setUnion(alias less = "a < b", Rs...)
     assert(a.setUnion(b).equal([1, 2, 3, 4, 5]));
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1491,7 +1491,7 @@ auto setUnion(alias less = "a < b", Rs...)
                     [0, 1, 2, 4, 5, 7, 8, 9, 10.5][]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // save
     import std.range : dropOne;
@@ -1503,7 +1503,7 @@ auto setUnion(alias less = "a < b", Rs...)
     assert(arr.front == 0);
 }
 
-@nogc @safe pure nothrow unittest
+version(StdUnittest) @nogc @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1513,7 +1513,7 @@ auto setUnion(alias less = "a < b", Rs...)
     assert(a.setUnion(b).equal(r));
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;

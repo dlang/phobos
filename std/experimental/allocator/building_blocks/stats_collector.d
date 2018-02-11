@@ -9,7 +9,7 @@ Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/_stats_collector.
 module std.experimental.allocator.building_blocks.stats_collector;
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.building_blocks.free_list : FreeList;
@@ -658,7 +658,7 @@ public:
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.free_list : FreeList;
     import std.experimental.allocator.gc_allocator : GCAllocator;
@@ -680,7 +680,7 @@ public:
     assert(File(f).byLine.walkLength == 22);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     void test(Allocator)()
     {
@@ -719,7 +719,7 @@ public:
         Options.all));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     void test(Allocator)()
     {
@@ -740,7 +740,7 @@ public:
     test!(StatsCollector!(GCAllocator, 0, 0));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     StatsCollector!(GCAllocator, 0, 0) a;
@@ -749,7 +749,7 @@ public:
     assert((() pure nothrow @safe @nogc => a.goodAllocSize(1))());
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.region : Region;
 

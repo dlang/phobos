@@ -212,7 +212,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.free_tree : FreeTree;
     import std.experimental.allocator.gc_allocator : GCAllocator;
@@ -233,7 +233,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     assert(buf.ptr);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     alias MyAlloc = Quantizer!(GCAllocator,
@@ -258,7 +258,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     () nothrow @nogc { a.deallocate(b); }();
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.region : Region;
     import std.experimental.allocator.mallocator : Mallocator;
@@ -287,7 +287,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     assert(c.length == 100);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.region : Region;
     import std.experimental.allocator.mallocator : Mallocator;
@@ -303,7 +303,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     assert(alignedAt(&b[0], 16));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.region : Region;
     import std.typecons : Ternary;

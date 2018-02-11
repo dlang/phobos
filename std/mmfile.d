@@ -624,7 +624,7 @@ private:
     // }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.memory : GC;
     import std.file : deleteme;
@@ -670,7 +670,7 @@ private:
 }
 
 version(linux)
-@system unittest // Issue 14868
+version(StdUnittest) @system unittest // Issue 14868
 {
     import std.file : deleteme;
     import std.typecons : scoped;
@@ -693,7 +693,7 @@ version(linux)
     assert(.close(fd) == -1);
 }
 
-@system unittest // Issue 14994, 14995
+version(StdUnittest) @system unittest // Issue 14994, 14995
 {
     import std.file : deleteme;
     import std.typecons : scoped;

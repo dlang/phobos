@@ -774,7 +774,7 @@ public enum dchar paraSep = '\u2029'; /// Constant $(CODEPOINT) (0x2029) - parag
 public enum dchar nelSep  = '\u0085'; /// Constant $(CODEPOINT) (0x0085) - next line.
 
 // test the intro example
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.searching : find;
     // initialize code point sets using script/block or property name
@@ -872,7 +872,7 @@ size_t replicateBits(size_t times, size_t bits)(size_t val) @safe pure nothrow @
         return replicateBits!(times/2, bits*2)((val << bits) | val);
 }
 
-@safe pure nothrow @nogc unittest // for replicate
+version(StdUnittest) @safe pure nothrow @nogc unittest // for replicate
 {
     import std.algorithm.iteration : sum, map;
     import std.range : iota;
@@ -1012,7 +1012,7 @@ private:
     size_t[] storage;
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : text;
     enum dg = (){
@@ -1085,7 +1085,7 @@ private:
     auto rt = dg();
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {// more bitpacking tests
     import std.conv : text;
 
@@ -1542,7 +1542,7 @@ if (is(Unqual!T == T))
     return SliceOverIndexed!T(a, b, x);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     int[] idxArray = [2, 3, 5, 8, 13];
     auto sliced = sliceOverIndexed(0, idxArray.length, &idxArray);
@@ -1687,7 +1687,7 @@ template sharMethod(alias uniLowerBound)
 alias sharLowerBound = sharMethod!uniformLowerBound;
 alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.array : array;
     import std.range : assumeSorted, iota;
@@ -1866,7 +1866,7 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
         arr[$-1] = force!T(value);
     }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         int[] arr;
         ReallocPolicy.append(arr, 3);
@@ -1889,7 +1889,7 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
         copy(value, arr[$-value.length..$]);
     }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         int[] arr;
         ReallocPolicy.append(arr, [1,2,3]);
@@ -1910,7 +1910,7 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
 //build hack
 alias _RealArray = CowArray!ReallocPolicy;
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -2150,7 +2150,7 @@ pure:
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         import std.algorithm.comparison : equal;
 
@@ -2201,7 +2201,7 @@ pure:
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         auto gothic = unicode.Gothic;
         // Gothic letter ahsa
@@ -2287,7 +2287,7 @@ public:
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         import std.algorithm.comparison : equal;
         import std.range : iota;
@@ -2353,7 +2353,7 @@ public:
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         assert('я' in unicode.Cyrillic);
         assert(!('z' in unicode.Cyrillic));
@@ -2415,7 +2415,7 @@ public:
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         import std.algorithm.comparison : equal;
         import std.range : iota;
@@ -2473,7 +2473,7 @@ public:
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         import std.conv : to;
         import std.format : format;
@@ -2494,7 +2494,7 @@ public:
             ~"[0XA640..0XA698) [0XA69F..0XA6A0)");
     }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         import std.exception : assertThrown;
         import std.format : format, FormatException;
@@ -2512,7 +2512,7 @@ public:
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         CodepointSet someSet;
         someSet.add('0', '5').add('A','Z'+1);
@@ -2548,7 +2548,7 @@ private:
         return this;
     }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         assert(unicode.Cyrillic.intersect('-').byInterval.empty);
     }
@@ -2615,7 +2615,7 @@ public:
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         auto set = unicode.ASCII;
         // union with the inverse gets all of the code points in the Unicode
@@ -2775,7 +2775,7 @@ public:
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         CodepointSet emptySet;
         assert(emptySet.length == 0);
@@ -3120,7 +3120,7 @@ private:
     CowArray!SP data;
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : to;
     assert(unicode.ASCII.to!string() == "[0..128)");
@@ -3405,7 +3405,7 @@ private:
     uint[] data;
 }
 
-@safe unittest// Uint24 tests
+version(StdUnittest) @safe unittest// Uint24 tests
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.mutation : copy;
@@ -3497,7 +3497,7 @@ version(StdUnittest)
     private alias AllSets = AliasSeq!(InversionList!GcPolicy, InversionList!ReallocPolicy);
 }
 
-@safe unittest// core set primitives test
+version(StdUnittest) @safe unittest// core set primitives test
 {
     import std.conv : text;
     foreach (CodeList; AllSets)
@@ -3574,7 +3574,7 @@ version(StdUnittest)
 
 
 //test constructor to work with any order of intervals
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.conv : text, to;
@@ -3618,7 +3618,7 @@ version(StdUnittest)
 }
 
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {   // full set operations
     import std.conv : text;
     foreach (CodeList; AllSets)
@@ -3723,7 +3723,7 @@ version(StdUnittest)
 
 }
 
-@safe unittest// vs single dchar
+version(StdUnittest) @safe unittest// vs single dchar
 {
     import std.conv : text;
     CodepointSet a = CodepointSet(10, 100, 120, 200);
@@ -3731,7 +3731,7 @@ version(StdUnittest)
     assert((a & 'B') == CodepointSet(66, 67));
 }
 
-@safe unittest// iteration & opIndex
+version(StdUnittest) @safe unittest// iteration & opIndex
 {
     import std.algorithm.comparison : equal;
     import std.conv : text;
@@ -4353,7 +4353,7 @@ if (sumOfIntegerTuple!sizes == 21)
     }
 }
 
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     import std.algorithm.comparison : max;
     import std.algorithm.searching : count;
@@ -4620,7 +4620,7 @@ public struct MatcherConcept
         assert(false);
     }
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         string truth = "2² = 4";
         auto m = utfMatcher!char(unicode.Number);
@@ -4656,7 +4656,7 @@ public struct MatcherConcept
         return this;
     }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         auto m = utfMatcher!char(unicode.Number);
         string square = "2²";
@@ -4693,7 +4693,7 @@ public enum isUtfMatcher(M, C) = __traits(compiles, (){
     assert(is(typeof(m.test(s)) == bool));
 });
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     alias CharMatcher = typeof(utfMatcher!char(CodepointSet.init));
     alias WcharMatcher = typeof(utfMatcher!wchar(CodepointSet.init));
@@ -5305,7 +5305,7 @@ if (is(C : wchar) || is(C : char))
     return Decoder(s, offset);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     string rs = "hi! ﾈемног砀 текста";
     auto codec = rs.decoder;
@@ -5360,7 +5360,7 @@ if (is(C : wchar) || is(C : char))
     assert(codec.idx == i);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range : stride;
     static bool testAll(Matcher, Range)(ref Matcher m, ref Range r)
@@ -5410,7 +5410,7 @@ if (is(C : wchar) || is(C : char))
 }
 
 // cover decode fail cases of Matcher
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.iteration : map;
     import std.exception : collectException;
@@ -5620,7 +5620,7 @@ template Sequence(size_t start, size_t end)
 }
 
 //---- TRIE TESTS ----
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.iteration : map;
     import std.algorithm.sorting : sort;
@@ -5780,7 +5780,7 @@ if (is(Char1 : dchar) && is(Char2 : dchar))
         b.map!toLower.filter!pred);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(!comparePropertyName("foo-bar", "fooBar"));
 }
@@ -5849,7 +5849,7 @@ if (isInputRange!Range && isIntegralPair!(ElementType!Range))
     return storage;
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
     import std.typecons : tuple;
@@ -6189,7 +6189,7 @@ package dchar parseUniHex(Range)(ref Range str, size_t maxDigit)
     return val;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.searching : canFind;
     import std.exception : collectException;
@@ -6714,7 +6714,7 @@ auto caseEnclose(CodepointSet set)
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         import std.exception : collectException;
         auto ascii = unicode.ASCII;
@@ -6767,7 +6767,7 @@ auto caseEnclose(CodepointSet set)
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         // use .block for explicitness
         assert(unicode.block.Greek_and_Coptic == unicode.InGreek_and_Coptic);
@@ -6786,7 +6786,7 @@ auto caseEnclose(CodepointSet set)
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         auto arabicScript = unicode.script.arabic;
         auto arabicBlock = unicode.block.arabic;
@@ -6817,7 +6817,7 @@ auto caseEnclose(CodepointSet set)
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         // L here is syllable type not Letter as in unicode.L short-cut
         auto leadingVowel = unicode.hangulSyllableType("L");
@@ -6895,7 +6895,7 @@ auto caseEnclose(CodepointSet set)
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         import std.uni : unicode;
         string pat = "[a-zA-Z0-9]hello";
@@ -6934,7 +6934,7 @@ private:
     //@disable ~this();
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.internal.unicode_tables : blocks, uniProps; // generated file
     assert(unicode("InHebrew") == asSet(blocks.Hebrew));
@@ -7106,7 +7106,7 @@ if (is(C : dchar))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(graphemeStride("  ", 1) == 1);
     // A + combing ring above
@@ -7117,7 +7117,7 @@ if (is(C : dchar))
     assert(city[first..$] == "rhus");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Ensure that graphemeStride is usable from CTFE.
     enum c1 = graphemeStride("A", 0);
@@ -7142,7 +7142,7 @@ if (isInputRange!Input && is(Unqual!(ElementType!Input) == dchar))
     return genericDecodeGrapheme!true(inp);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -7208,7 +7208,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range.primitives : walkLength;
@@ -7234,7 +7234,7 @@ private static struct InputRangeString
     void popFront() { s.popFront(); }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.array : array;
@@ -7338,7 +7338,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.array : array;
     import std.conv : text;
@@ -7356,7 +7356,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
     assert(reverse == "le\u0308on"); // lëon
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.range.primitives : walkLength;
@@ -7437,7 +7437,7 @@ public:
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         auto g = Grapheme("A\u0302");
         assert(g[0] == 'A');
@@ -7515,7 +7515,7 @@ public:
     }
 
     ///
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         import std.algorithm.comparison : equal;
         auto g = Grapheme("A");
@@ -7646,7 +7646,7 @@ private:
 static assert(Grapheme.sizeof == size_t.sizeof*4);
 
 
-@system pure /*nothrow @nogc*/ unittest // TODO: string .front is GC and throw
+version(StdUnittest) @system pure /*nothrow @nogc*/ unittest // TODO: string .front is GC and throw
 {
     import std.algorithm.comparison : equal;
     Grapheme[3] data = [Grapheme("Ю"), Grapheme("У"), Grapheme("З")];
@@ -7654,7 +7654,7 @@ static assert(Grapheme.sizeof == size_t.sizeof*4);
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter;
@@ -7690,7 +7690,7 @@ static assert(Grapheme.sizeof == size_t.sizeof*4);
     assert(g[].equal("A\u0301B"));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto g = Grapheme("A\u0302");
     assert(g[0] == 'A');
@@ -7700,7 +7700,7 @@ static assert(Grapheme.sizeof == size_t.sizeof*4);
     assert(!g.valid);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
@@ -7820,7 +7820,7 @@ if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
 }
 
 ///
-@safe @nogc pure nothrow unittest
+version(StdUnittest) @safe @nogc pure nothrow unittest
 {
     assert(sicmp("Август", "авгусТ") == 0);
     // Greek also works as long as there is no 1:M mapping in sight
@@ -7939,7 +7939,7 @@ if (isForwardRange!S1 && isSomeChar!(ElementEncodingType!S1)
 }
 
 ///
-@safe @nogc pure nothrow unittest
+version(StdUnittest) @safe @nogc pure nothrow unittest
 {
     assert(icmp("Rußland", "Russland") == 0);
     assert(icmp("ᾩ -> \u1F70\u03B9", "\u1F61\u03B9 -> ᾲ") == 0);
@@ -7949,7 +7949,7 @@ if (isForwardRange!S1 && isSomeChar!(ElementEncodingType!S1)
  * By using $(REF byUTF, std,utf) and its aliases, GC allocations via auto-decoding
  * and thrown exceptions can be avoided, making `icmp` `@safe @nogc nothrow pure`.
  */
-@safe @nogc nothrow pure unittest
+version(StdUnittest) @safe @nogc nothrow pure unittest
 {
     import std.utf : byDchar;
 
@@ -7958,7 +7958,7 @@ if (isForwardRange!S1 && isSomeChar!(ElementEncodingType!S1)
 }
 
 // test different character types
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(icmp("Rußland", "Russland") == 0);
     assert(icmp("Rußland"w, "Russland") == 0);
@@ -7979,7 +7979,7 @@ if (isForwardRange!S1 && isSomeChar!(ElementEncodingType!S1)
     { return icmp!(const(dchar)[], const(dchar)[])(str1, str2); }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.sorting : sort;
     import std.conv : to;
@@ -8020,7 +8020,7 @@ if (isForwardRange!S1 && isSomeChar!(ElementEncodingType!S1)
 }
 
 // issue 17372
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.iteration : joiner, map;
     import std.algorithm.sorting : sort;
@@ -8109,7 +8109,7 @@ package auto simpleCaseFoldings(dchar ch) @safe
     return Range(start, entry.size);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.searching : canFind;
@@ -8137,7 +8137,7 @@ ubyte combiningClass(dchar ch) @safe pure nothrow @nogc
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // shorten the code
     alias CC = combiningClass;
@@ -8150,7 +8150,7 @@ ubyte combiningClass(dchar ch) @safe pure nothrow @nogc
     // placed after a "ring below" in a sequence
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     foreach (ch; 0 .. 0x80)
         assert(combiningClass(ch) == 0);
@@ -8213,7 +8213,7 @@ public dchar compose(dchar first, dchar second) pure nothrow @safe
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(compose('A','\u0308') == '\u00C4');
     assert(compose('A', 'B') == dchar.init);
@@ -8260,7 +8260,7 @@ public Grapheme decompose(UnicodeDecomposition decompType=Canonical)(dchar ch) @
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -8368,7 +8368,7 @@ Grapheme decomposeHangul(dchar ch) @safe
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     assert(decomposeHangul('\uD4DB')[].equal("\u1111\u1171\u11B6"));
@@ -8397,7 +8397,7 @@ dchar composeJamo(dchar lead, dchar vowel, dchar trailing=dchar.init) pure nothr
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(composeJamo('\u1111', '\u1171', '\u11B6') == '\uD4DB');
     // leaving out T-vowel, or passing any codepoint
@@ -8408,7 +8408,7 @@ dchar composeJamo(dchar lead, dchar vowel, dchar trailing=dchar.init) pure nothr
     assert(composeJamo('A', '\u1171') == dchar.init);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.conv : text;
@@ -8562,7 +8562,7 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // any encoding works
     wstring greet = "Hello world";
@@ -8576,7 +8576,7 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
     assert(normalize!NFKD("ϓ") == "\u03A5\u0301");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.conv : text;
 
@@ -8726,7 +8726,7 @@ public bool allowedIn(NormalizationForm norm)(dchar ch)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // e.g. Cyrillic is always allowed, so is ASCII
     assert(allowedIn!NFC('я'));
@@ -8752,7 +8752,7 @@ private bool notAllowedIn(NormalizationForm norm)(dchar ch)
     return qcTrie[ch];
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(allowedIn!NFC('я'));
     assert(allowedIn!NFD('я'));
@@ -8825,7 +8825,7 @@ bool isLower(dchar c)
     return lowerCaseTrie[c];
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.ascii : isLower;
     foreach (v; 0 .. 0x80)
@@ -8858,7 +8858,7 @@ bool isUpper(dchar c)
     return upperCaseTrie[c];
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.ascii : isLower;
     foreach (v; 0 .. 0x80)
@@ -8949,7 +8949,7 @@ if (isSomeString!S)
     return s;
 }
 
-@safe unittest //12428
+version(StdUnittest) @safe unittest //12428
 {
     import std.array : replicate;
     auto s = "abcdefghij".replicate(300);
@@ -9101,7 +9101,7 @@ if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -9124,13 +9124,13 @@ if (isConvertibleToString!Range)
     return asUpperCase!(StringTypeOf!Range)(str);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(testAliasedString!asLowerCase("hEllo"));
     assert(testAliasedString!asUpperCase("hEllo"));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.array : array;
 
@@ -9298,7 +9298,7 @@ if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -9312,18 +9312,18 @@ if (isConvertibleToString!Range)
     return asCapitalized!(StringTypeOf!Range)(str);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(testAliasedString!asCapitalized("hEllo"));
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     auto r = "hEllo".asCapitalized();
     assert(r.front == 'H');
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.array : array;
 
@@ -9405,7 +9405,7 @@ private size_t encodeTo(scope char[] buf, size_t idx, dchar c) @trusted pure not
     return idx;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     char[] s = "abcd".dup;
     size_t i = 0;
@@ -9552,7 +9552,7 @@ private template toCaseLength(alias indexFn, uint maxIdx, alias tableFn)
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     alias toLowerLength = toCaseLength!(LowerTriple);
     assert(toLowerLength("abcd") == 4);
@@ -9708,7 +9708,7 @@ if (isSomeString!S)
     dstring toLower(dstring s)
     { return toLower!dstring(s); }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         // https://issues.dlang.org/show_bug.cgi?id=16663
 
@@ -9726,7 +9726,7 @@ if (isSomeString!S)
 }
 
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static import std.ascii;
     import std.format : format;
@@ -9746,7 +9746,7 @@ if (isSomeString!S)
 }
 
 //bugzilla 9629
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     wchar[] test = "hello þ world"w.dup;
     auto piece = test[6 .. 7];
@@ -9755,7 +9755,7 @@ if (isSomeString!S)
 }
 
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : cmp;
     string s1 = "FoL";
@@ -9841,7 +9841,7 @@ dchar toUpper(dchar c)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.iteration : map;
     import std.algorithm.mutation : copy;
@@ -9852,7 +9852,7 @@ dchar toUpper(dchar c)
     assert(abuf.data == "HELLO");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static import std.ascii;
     import std.format : format;
@@ -9890,7 +9890,7 @@ if (isSomeString!S)
     dstring toUpper(dstring s)
     { return toUpper!dstring(s); }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         // https://issues.dlang.org/show_bug.cgi?id=16663
 
@@ -9907,7 +9907,7 @@ if (isSomeString!S)
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : cmp;
 
@@ -9936,7 +9936,7 @@ if (isSomeString!S)
     assert(s2 !is s1);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     static void doTest(C)(const(C)[] s, const(C)[] trueUp, const(C)[] trueLow)
     {
@@ -10019,7 +10019,7 @@ bool isAlpha(dchar c)
     return alphaTrie[c];
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto alpha = unicode("Alphabetic");
     foreach (ch; alpha.byCodepoint)
@@ -10039,7 +10039,7 @@ bool isMark(dchar c)
     return markTrie[c];
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto mark = unicode("Mark");
     foreach (ch; mark.byCodepoint)
@@ -10066,7 +10066,7 @@ bool isNumber(dchar c)
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto n = unicode("N");
     foreach (ch; n.byCodepoint)
@@ -10101,7 +10101,7 @@ bool isAlphaNum(dchar c)
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto n = unicode("N");
     auto alpha = unicode("Alphabetic");
@@ -10138,7 +10138,7 @@ bool isPunctuation(dchar c)
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(isPunctuation('\u0021'));
     assert(isPunctuation('\u0028'));
@@ -10161,7 +10161,7 @@ bool isSymbol(dchar c)
    return symbolTrie[c];
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.format : format;
     assert(isSymbol('\u0024'));
@@ -10185,7 +10185,7 @@ bool isSpace(dchar c)
     return isSpaceGen(c);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(isSpace('\u0020'));
     auto space = unicode.Zs;
@@ -10208,7 +10208,7 @@ bool isGraphical(dchar c)
 }
 
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto set = unicode("Graphical");
     import std.format : format;
@@ -10230,7 +10230,7 @@ bool isControl(dchar c)
     return isControlGen(c);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(isControl('\u0000'));
     assert(isControl('\u0081'));
@@ -10255,7 +10255,7 @@ bool isFormat(dchar c)
 }
 
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(isFormat('\u00AD'));
     foreach (ch; unicode("Format").byCodepoint)
@@ -10316,7 +10316,7 @@ bool isNonCharacter(dchar c)
     return nonCharacterTrie[c];
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto set = unicode("Cn");
     foreach (ch; set.byCodepoint)

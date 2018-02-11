@@ -341,7 +341,7 @@ struct Region(ParentAllocator = NullAllocator,
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.allocator_list
@@ -363,7 +363,7 @@ struct Region(ParentAllocator = NullAllocator,
     // Destructor will free the memory
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     import std.typecons : Ternary;
@@ -384,7 +384,7 @@ struct Region(ParentAllocator = NullAllocator,
     assert((() pure nothrow @safe @nogc => reg.empty)() ==  Ternary.no);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
 
@@ -392,7 +392,7 @@ struct Region(ParentAllocator = NullAllocator,
     testAllocator!(() => Region!(Mallocator, Mallocator.alignment, Yes.growDownwards)(1024 * 64));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
 
@@ -577,7 +577,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     // 128KB region, allocated to x86's cache line
     InSituRegion!(128 * 1024, 16) r1;
@@ -611,7 +611,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     assert(a4.length == 104);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.typecons : Ternary;
 
@@ -830,7 +830,7 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
     }
 }
 
-version(Posix) @system unittest
+version(StdUnittest) version(Posix) @system unittest
 {
     // Let's test the assumption that sbrk(n) returns the old address
     const p1 = sbrk(0);
@@ -842,7 +842,7 @@ version(Posix) @system unittest
     sbrk(-4096);
 }
 
-version(Posix) @system unittest
+version(StdUnittest) version(Posix) @system unittest
 {
     import std.typecons : Ternary;
     import std.algorithm.comparison : min;

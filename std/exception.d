@@ -116,7 +116,7 @@ auto assertNotThrown(T : Throwable = Exception, E)
     }
 }
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.exception : AssertError;
 
@@ -130,7 +130,7 @@ auto assertNotThrown(T : Throwable = Exception, E)
                enforce!StringException(false, "Error!"))) ==
            `assertNotThrown failed: StringException was thrown: Error!`);
 }
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.exception : AssertError;
     import std.string;
@@ -147,7 +147,7 @@ auto assertNotThrown(T : Throwable = Exception, E)
            `assertNotThrown failed: StringException was thrown.`);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.exception : AssertError;
 
@@ -259,7 +259,7 @@ void assertThrown(T : Throwable = Exception, E)
                           file, line);
 }
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.exception : AssertError;
     import std.string;
@@ -274,7 +274,7 @@ void assertThrown(T : Throwable = Exception, E)
            `assertThrown failed: No StringException was thrown.`);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.exception : AssertError;
 
@@ -416,7 +416,7 @@ T enforce(T)(T value, lazy Throwable ex)
 }
 
 ///
-unittest
+version(StdUnittest) unittest
 {
     import core.stdc.stdlib : malloc, free;
     import std.conv : ConvException, to;
@@ -435,14 +435,14 @@ unittest
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assertNotThrown(enforce(true, new Exception("this should not be thrown")));
     assertThrown(enforce(false, new Exception("this should be thrown")));
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(enforce(123) == 123);
 
@@ -460,7 +460,7 @@ unittest
 }
 
 /// Alias your own enforce function
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.conv : ConvException;
     alias convEnforce = enforce!ConvException;
@@ -485,7 +485,7 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Issue 10510
     extern(C) void cFoo() { }
@@ -493,7 +493,7 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
 }
 
 // purity and safety inference test
-@system unittest
+version(StdUnittest) @system unittest
 {
     static foreach (EncloseSafe; [false, true])
     static foreach (EnclosePure; [false, true])
@@ -526,7 +526,7 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
 }
 
 // Test for bugzilla 8637
-@system unittest
+version(StdUnittest) @system unittest
 {
     struct S
     {
@@ -559,7 +559,7 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
     enforce!E2(s);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Issue 14685
 
@@ -641,7 +641,7 @@ if (is(typeof(new E(string.init, size_t.init))) && !is(typeof(new E("", string.i
 }
 
 //deprecated
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.exception : OutOfMemoryError;
     import std.array : empty;
@@ -685,7 +685,7 @@ if (is(typeof(new E(string.init, size_t.init))) && !is(typeof(new E("", string.i
 }
 
 //deprecated
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     alias enf = enforceEx!Exception;
     assertNotThrown(enf(true));
@@ -723,7 +723,7 @@ T collectException(T = Exception, E)(lazy E expression, ref E result)
     return null;
 }
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     int b;
     int foo() { throw new Exception("blah"); }
@@ -763,7 +763,7 @@ T collectException(T : Throwable = Exception, E)(lazy E expression)
     return null;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int foo() { throw new Exception("blah"); }
     assert(collectException(foo()));
@@ -801,7 +801,7 @@ string collectExceptionMsg(T = Exception, E)(lazy E expression)
         return e.msg.empty ? emptyExceptionMsg : e.msg;
 }
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     void throwFunc() { throw new Exception("My Message."); }
     assert(collectExceptionMsg(throwFunc()) == "My Message.");
@@ -942,7 +942,7 @@ immutable(T[U]) assumeUnique(T, U)(ref T[U] array) pure nothrow
     return result;
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     // @system due to assumeUnique
     int[] arr = new int[1];
@@ -950,7 +950,7 @@ immutable(T[U]) assumeUnique(T, U)(ref T[U] array) pure nothrow
     assert(is(typeof(arr1) == immutable(int)[]) && arr == null);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     int[string] arr = ["a":1];
     auto arr1 = assumeUnique(arr);
@@ -1002,7 +1002,7 @@ T assumeWontThrow(T)(lazy T expr,
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.math : sqrt;
 
@@ -1027,7 +1027,7 @@ T assumeWontThrow(T)(lazy T expr,
     assert(computeLength(3, 4) == 5);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.exception : AssertError;
 
@@ -1165,7 +1165,7 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
 }
 
 /// Pointers
-@system unittest
+version(StdUnittest) @system unittest
 {
     int  i = 0;
     int* p = null;
@@ -1175,7 +1175,7 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
 }
 
 /// Structs and Unions
-@system unittest
+version(StdUnittest) @system unittest
 {
     struct S
     {
@@ -1196,7 +1196,7 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
 }
 
 /// Arrays (dynamic and static)
-@system unittest
+version(StdUnittest) @system unittest
 {
     int i;
     int[]  slice = [0, 1, 2, 3, 4];
@@ -1228,7 +1228,7 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
 }
 
 /// Classes
-@system unittest
+version(StdUnittest) @system unittest
 {
     class C
     {
@@ -1261,7 +1261,7 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
     assert(b.doesPointTo(*aLoc)); // b points to where a is pointing
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     struct S1 { int a; S1 * b; }
     S1 a1;
@@ -1311,7 +1311,7 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
     assert(!doesPointTo(darr[0 .. 3], darr[3]));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     //tests with static arrays
     //Static arrays themselves are just objects, and don't really *point* to anything.
@@ -1360,7 +1360,7 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
 }
 
 
-@system unittest //Unions
+version(StdUnittest) @system unittest //Unions
 {
     int i;
     union U //Named union
@@ -1399,7 +1399,7 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
     assert( mayPointTo(s, i));
 }
 
-@system unittest //Classes
+version(StdUnittest) @system unittest //Classes
 {
     int i;
     static class A
@@ -1411,7 +1411,7 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
     a.p = &i;
     assert(!doesPointTo(a, i)); //a does not point to i
 }
-@safe unittest //alias this test
+version(StdUnittest) @safe unittest //alias this test
 {
     static int i;
     static int j;
@@ -1428,7 +1428,7 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
     assert( doesPointTo(cast(int*) s, i));
     assert(!doesPointTo(cast(int*) s, j));
 }
-@safe unittest //more alias this opCast
+version(StdUnittest) @safe unittest //more alias this opCast
 {
     void* p;
     class A
@@ -1460,7 +1460,7 @@ private bool isUnionAliasedImpl(T)(size_t offset)
     return count >= 2;
 }
 //
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static struct S
     {
@@ -1546,7 +1546,7 @@ class ErrnoException : Exception
         super(msg ~ " (" ~ errnoString(errno) ~ ")", file, line);
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         import core.stdc.errno : errno, EAGAIN;
 
@@ -1558,7 +1558,7 @@ class ErrnoException : Exception
         assert(ex.errno == EAGAIN);
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         import core.stdc.errno : EAGAIN;
         auto ex = new ErrnoException("oh no", EAGAIN);
@@ -1702,7 +1702,7 @@ CommonType!(T1, T2) ifThrown(T1, T2)(lazy scope T1 expression, scope T2 delegate
 }
 
 //Verify Examples
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv;
     import std.string;
@@ -1734,7 +1734,7 @@ CommonType!(T1, T2) ifThrown(T1, T2)(lazy scope T1 expression, scope T2 delegate
     assert("%s".format().ifThrown(e => e.classinfo.name) == "std.format.FormatException");
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.exception;
     import std.conv;
@@ -2082,7 +2082,7 @@ pure @safe unittest
 }
 
 ///
-pure @safe unittest
+version(StdUnittest) pure @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : retro;
@@ -2097,7 +2097,7 @@ pure @safe unittest
     assert(handled.retro.equal("dlrow olleh")); // as well as `back`
 }
 
-pure nothrow @safe unittest
+version(StdUnittest) pure nothrow @safe unittest
 {
     static struct ThrowingRange
     {
@@ -2288,7 +2288,7 @@ mixin template basicExceptionCtors()
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     class MeaCulpa: Exception
     {
@@ -2306,7 +2306,7 @@ mixin template basicExceptionCtors()
     }
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     class TestException : Exception { mixin basicExceptionCtors; }
     auto e = new Exception("msg");
@@ -2314,7 +2314,7 @@ mixin template basicExceptionCtors()
     auto te2 = new TestException("foo", e);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     class TestException : Exception { mixin basicExceptionCtors; }
     auto e = new Exception("!!!");

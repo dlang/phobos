@@ -400,7 +400,7 @@ if (isSomeString!(S))
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     // multi-pattern regex example
     auto multi = regex([`([a-z]+):(\d+)`, `(\d+),\d+`]); // multi regex
@@ -637,7 +637,7 @@ public:
     @safe @property int whichPattern() const nothrow { return _nMatch; }
 
     ///
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         import std.regex;
         assert(matchFirst("abc", "[0-9]+", "[a-z]+").whichPattern == 2);
@@ -674,7 +674,7 @@ public:
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.range.primitives : popFrontN;
 
@@ -818,7 +818,7 @@ private auto matchMany(RegEx, R)(R input, RegEx re) @safe
     return RegexMatch!R(input, re.withFlags(re.flags | RegexOption.global));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     //sanity checks for new API
     auto re = regex("abc");
@@ -827,7 +827,7 @@ private auto matchMany(RegEx, R)(R input, RegEx re) @safe
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=18135
-unittest
+version(StdUnittest) unittest
 {
     static struct MapResult { RegexMatch!string m; }
     MapResult m;
@@ -1014,7 +1014,7 @@ if (isSomeString!R && isSomeString!String)
 }
 
 // another set of tests just to cover the new API
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
@@ -1183,7 +1183,7 @@ if (isSomeString!R && is(C : dchar) && isRegexFor!(RegEx, R))
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     assert(replaceFirst("noon", regex("n"), "[$&]") == "[n]oon");
 }
@@ -1210,7 +1210,7 @@ if (isSomeString!R && isRegexFor!(RegEx, R))
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : to;
     string list = "#21 out of 46";
@@ -1246,7 +1246,7 @@ if (isOutputRange!(Sink, dchar) && isSomeString!R && isRegexFor!(RegEx, R))
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.array;
     string m1 = "first message\n";
@@ -1259,7 +1259,7 @@ if (isOutputRange!(Sink, dchar) && isSomeString!R && isRegexFor!(RegEx, R))
 }
 
 //examples for replaceFirst
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv;
     string list = "#21 out of 46";
@@ -1301,7 +1301,7 @@ if (isSomeString!R && is(C : dchar) && isRegexFor!(RegEx, R))
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     // insert comma as thousands delimiter
     auto re = regex(r"(?<=\d)(?=(\d\d\d)+\b)","g");
@@ -1335,7 +1335,7 @@ if (isSomeString!R && isRegexFor!(RegEx, R))
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     string baz(Captures!(string) m)
     {
@@ -1374,7 +1374,7 @@ if (isOutputRange!(Sink, dchar) && isSomeString!R && isRegexFor!(RegEx, R))
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     // insert comma as thousands delimiter in fifty randomly produced big numbers
     import std.array, std.conv, std.random, std.range;
@@ -1391,7 +1391,7 @@ if (isOutputRange!(Sink, dchar) && isSomeString!R && isRegexFor!(RegEx, R))
 }
 
 // exercise all of the replace APIs
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.array : appender;
     import std.conv;
@@ -1580,7 +1580,7 @@ if (
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     auto s1 = ", abc, de,  fg, hi, ";
@@ -1589,7 +1589,7 @@ if (
 }
 
 /// Split on a pattern, but keep the matches in the resulting range
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.typecons : Yes;
@@ -1659,7 +1659,7 @@ auto escaper(Range)(Range r)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison;
     import std.regex;
@@ -1667,7 +1667,7 @@ auto escaper(Range)(Range r)
     assert(s.escaper.equal(`This is \{unfriendly\} to \*regex\*`));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison;
     import std.conv;
