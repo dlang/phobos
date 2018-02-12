@@ -240,12 +240,47 @@ SRC_STD_REGEX= \
 	std\regex\internal\ir.d \
 	std\regex\package.d \
 	std\regex\internal\parser.d \
-	std\regex\internal\tests.d \
-	std\regex\internal\tests2.d \
 	std\regex\internal\backtracking.d \
 	std\regex\internal\thompson.d \
 	std\regex\internal\kickstart.d \
 	std\regex\internal\generator.d
+
+SRC_STD_REGEX_1= \
+	std\regex\internal\tests\test1.d \
+	std\regex\internal\tests\test2.d \
+	std\regex\internal\tests\test3.d \
+	std\regex\internal\tests\test4.d
+SRC_STD_REGEX_2= \
+	std\regex\internal\tests\test5.d \
+	std\regex\internal\tests\test6.d \
+	std\regex\internal\tests\test7.d \
+	std\regex\internal\tests\test8.d
+SRC_STD_REGEX_3= \
+	std\regex\internal\tests\test9.d \
+	std\regex\internal\tests\test10.d \
+	std\regex\internal\tests\test11.d \
+	std\regex\internal\tests\test12.d
+SRC_STD_REGEX_4= \
+	std\regex\internal\tests\test13.d \
+	std\regex\internal\tests\test14.d \
+	std\regex\internal\tests\test15.d \
+	std\regex\internal\tests\test16.d
+SRC_STD_REGEX_5= \
+	std\regex\internal\tests\test17.d \
+	std\regex\internal\tests\test18.d \
+	std\regex\internal\tests\test19.d \
+	std\regex\internal\tests\test20.d
+SRC_STD_REGEX_6= \
+	std\regex\internal\tests\test21.d \
+	std\regex\internal\tests\test22.d \
+	std\regex\internal\tests\test23.d \
+	std\regex\internal\tests\test24.d
+SRC_STD_REGEX_7= \
+	std\regex\internal\tests\test25.d \
+	std\regex\internal\tests\test26.d \
+	std\regex\internal\tests\test27.d \
+	std\regex\internal\tests\test28.d \
+	std\regex\internal\tests\other.d
 
 SRC_STD_C= \
 	std\c\process.d \
@@ -448,7 +483,14 @@ UNITTEST_OBJS= \
 		unittest8d.obj \
 		unittest8e.obj \
 		unittest8f.obj \
-		unittest9.obj
+		unittest9.obj \
+		unittest9a.obj \
+		unittest9b.obj \
+		unittest9c.obj \
+		unittest9d.obj \
+		unittest9e.obj \
+		unittest9f.obj
+
 
 unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c  -ofunittest1.obj $(SRC_STD_1)
@@ -477,6 +519,13 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c  -ofunittest8e.obj $(SRC_ETC) $(SRC_ETC_C)
 	$(DMD) $(UDFLAGS) -c  -ofunittest8f.obj $(SRC_STD_EXP)
 	$(DMD) $(UDFLAGS) -c  -ofunittest9.obj $(SRC_STD_EXP_ALLOC)
+	$(DMD) $(UDFLAGS) -c  -ofunittest9a.obj $(SRC_STD_REGEX_1)
+	$(DMD) $(UDFLAGS) -c  -ofunittest9b.obj $(SRC_STD_REGEX_2)
+	$(DMD) $(UDFLAGS) -c  -ofunittest9c.obj $(SRC_STD_REGEX_3)
+	$(DMD) $(UDFLAGS) -c  -ofunittest9d.obj $(SRC_STD_REGEX_4)
+	$(DMD) $(UDFLAGS) -c  -ofunittest9e.obj $(SRC_STD_REGEX_5)
+	$(DMD) $(UDFLAGS) -c  -ofunittest9f.obj $(SRC_STD_REGEX_6)
+	$(DMD) $(UDFLAGS) -c  -ofunittest9g.obj $(SRC_STD_REGEX_7)
 	$(DMD) $(UDFLAGS) -L/OPT:NOICF  unittest.d $(UNITTEST_OBJS) \
 	    $(ZLIB) $(DRUNTIMELIB)
 	.\unittest.exe

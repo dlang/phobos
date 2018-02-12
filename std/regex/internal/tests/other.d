@@ -10,6 +10,25 @@ import std.conv, std.exception, std.meta, std.range,
 import std.uni : Escapables; // characters that need escaping
 
 @safe unittest
+{//sanity checks
+    regex("(a|b)*");
+    regex(`(?:([0-9A-F]+)\.\.([0-9A-F]+)|([0-9A-F]+))\s*;\s*(.*)\s*#`);
+    regex("abc|edf|ighrg");
+    auto r1 = regex("abc");
+    auto r2 = regex("(gylba)");
+    assert(match("abcdef", r1).hit == "abc");
+    assert(!match("wida",r2));
+    assert(bmatch("abcdef", r1).hit == "abc");
+    assert(!bmatch("wida", r2));
+    assert(match("abc", "abc".dup));
+    assert(bmatch("abc", "abc".dup));
+    Regex!char rc;
+    assert(rc.empty);
+    rc = regex("test");
+    assert(!rc.empty);
+}
+
+@safe unittest
 {
     auto cr = ctRegex!("abc");
     assert(bmatch("abc",cr).hit == "abc");
