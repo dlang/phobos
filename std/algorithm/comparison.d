@@ -851,6 +851,8 @@ pure @safe unittest
             ++ctr;
             return 0;
         }
+        bool opEquals(T)(T o) const { return false; }
+        size_t toHash() const { return 0; }
     }
     immutable S[4] a;
     immutable S[4] b;
@@ -869,6 +871,8 @@ nothrow pure @safe unittest
         {
             return value - rhs.value;
         }
+        bool opEquals(T)(T o) const { return false; }
+        size_t toHash() const { return 0; }
     }
     auto result = cmp([F(1), F(2), F(3)], [F(1), F(2), F(3)]);
     assert(result == 0);

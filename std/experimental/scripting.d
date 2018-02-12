@@ -9,7 +9,7 @@ module std.experimental.scripting;
     import std.experimental.scripting;
 
     int len;
-    auto r = 6.iota
+    const r = 6.iota
               .filter!(a => a % 2) // 0 2 4
               .map!(a => a * 2) // 0 4 8
               .tee!(_ => len++)

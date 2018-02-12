@@ -1835,6 +1835,7 @@ unittest
 
     enum BigInt test1 = BigInt(123);
     enum BigInt test2 = plusTwo(test1);
+    assert(test2 == 125);
 }
 
 /**

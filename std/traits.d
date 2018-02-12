@@ -5238,7 +5238,8 @@ template IntegralTypeOf(T)
             static assert( is(Q!T == IntegralTypeOf!( SubTypeOf!(Q!T) )));
         }
 
-    static foreach (T; AliasSeq!(void, bool, FloatingPointTypeList, /*ImaginaryTypeList, ComplexTypeList,*/ CharTypeList))
+    static foreach (T; AliasSeq!(void, bool, FloatingPointTypeList,
+                /*ImaginaryTypeList, ComplexTypeList,*/ CharTypeList))
         static foreach (Q; TypeQualifierList)
         {
             static assert(!is(IntegralTypeOf!(            Q!T  )));

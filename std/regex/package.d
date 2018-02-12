@@ -827,11 +827,12 @@ private auto matchMany(RegEx, R)(R input, RegEx re) @safe
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=18135
-unittest
+@system unittest
 {
     static struct MapResult { RegexMatch!string m; }
     MapResult m;
     m = MapResult();
+    assert(m == m);
 }
 
 private enum isReplaceFunctor(alias fun, R) =

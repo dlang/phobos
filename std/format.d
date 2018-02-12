@@ -4047,7 +4047,7 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
     assert(w.data == "S()");
 }
 
-unittest
+@safe unittest
 {
     //struct Foo { @disable string toString(); }
     //Foo foo;
