@@ -10,7 +10,7 @@ import std.conv, std.exception, std.meta, std.range,
 
 import std.uni : Escapables; // characters that need escaping
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {//sanity checks
     regex("(a|b)*");
     regex(`(?:([0-9A-F]+)\.\.([0-9A-F]+)|([0-9A-F]+))\s*;\s*(.*)\s*#`);
@@ -52,7 +52,7 @@ import std.uni : Escapables; // characters that need escaping
 
  */
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     struct TestVectors
     {

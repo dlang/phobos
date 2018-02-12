@@ -175,7 +175,7 @@ module std.regex.internal.generator;
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.range, std.regex;
     auto re = regex(`P[a-z]{3,}q`);

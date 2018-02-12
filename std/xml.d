@@ -159,7 +159,7 @@ bool isChar(dchar c) @safe @nogc pure nothrow // rule 2
     return false;
 }
 
-@safe @nogc nothrow pure unittest
+version(StdUnittest) @safe @nogc nothrow pure unittest
 {
     assert(!isChar(cast(dchar) 0x8));
     assert( isChar(cast(dchar) 0x9));
@@ -221,7 +221,7 @@ bool isDigit(dchar c) @safe @nogc pure nothrow
         return lookup(DigitTable,c);
 }
 
-@safe @nogc nothrow pure unittest
+version(StdUnittest) @safe @nogc nothrow pure unittest
 {
     debug (stdxml_TestHardcodedChecks)
     {
@@ -263,7 +263,7 @@ bool isIdeographic(dchar c) @safe @nogc nothrow pure
     return false;
 }
 
-@safe @nogc nothrow pure unittest
+version(StdUnittest) @safe @nogc nothrow pure unittest
 {
     assert(isIdeographic('\u4E00'));
     assert(isIdeographic('\u9FA5'));
@@ -373,7 +373,7 @@ S encode(S)(S s)
     return result.data;
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     auto s = "hello";
     assert(encode(s) is s);
@@ -485,7 +485,7 @@ string decode(string s, DecodeMode mode=DecodeMode.LOOSE) @safe pure
     return (buffer.length == 0) ? s : buffer;
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     void assertNot(string s) pure
     {
@@ -643,7 +643,7 @@ class Document : Element
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     // https://issues.dlang.org/show_bug.cgi?id=14966
     auto xml = `<?xml version="1.0" encoding="UTF-8"?><foo></foo>`;
@@ -1313,7 +1313,7 @@ class Comment : Item
     override @property @safe @nogc pure nothrow scope bool isEmptyXML() const { return false; } /// Returns false always
 }
 
-@safe unittest // issue 16241
+version(StdUnittest) @safe unittest // issue 16241
 {
     import std.exception : assertThrown;
     auto c = new Comment("==");
@@ -1727,7 +1727,7 @@ class DocumentParser : ElementParser
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     auto doc = new Document("<root><child><grandchild/></child></root>");
     assert(doc.elements.length == 1);
@@ -2739,7 +2739,7 @@ void check(string s) @safe pure
     }
 }
 
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     import std.string : indexOf;
 
@@ -2788,7 +2788,7 @@ void check(string s) @safe pure
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     string s = q"EOS
 <?xml version="1.0"?>
@@ -2808,7 +2808,7 @@ EOS";
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     string test_xml = `<?xml version="1.0" encoding='UTF-8'?><r><stream:stream
                         xmlns:stream="http://etherx.'jabber'.org/streams"
@@ -2828,7 +2828,7 @@ EOS";
     assert(tested);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     string s = q"EOS
 <?xml version="1.0" encoding="utf-8"?> <Tests>
@@ -2847,7 +2847,7 @@ EOS";
     xml.parse();
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     string s = `<tag attr="&quot;value&gt;" />`;
     auto doc = new Document(s);

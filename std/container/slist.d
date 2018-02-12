@@ -19,7 +19,7 @@ $(SCRIPT inhibitQuickIndex = 1;)
 module std.container.slist;
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.container : SList;
@@ -223,7 +223,7 @@ Defines the container's primary range, which embodies a forward range.
         }
     }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         static assert(isForwardRange!Range);
     }
@@ -275,7 +275,7 @@ Complexity: $(BIGOH 1)
         return _first._payload;
     }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         auto s = SList!int(1, 2, 3);
         s.front = 42;
@@ -626,7 +626,7 @@ Complexity: $(BIGOH n)
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -658,7 +658,7 @@ Complexity: $(BIGOH n)
     a.linearRemoveElement(3);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -674,21 +674,21 @@ Complexity: $(BIGOH n)
     assert(equal(b[], [2, 1, 9]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto s = SList!int(1, 2, 3);
     auto n = s.findLastNode(s._root);
     assert(n && n._payload == 3);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range.primitives;
     auto s = SList!int(1, 2, 5, 10);
     assert(walkLength(s[]) == 4);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range : take;
     auto src = take([0, 1, 2, 3], 3);
@@ -696,7 +696,7 @@ Complexity: $(BIGOH n)
     assert(s == SList!int(0, 1, 2));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto a = SList!int();
     auto b = SList!int();
@@ -704,7 +704,7 @@ Complexity: $(BIGOH n)
     assert(c.empty);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto a = SList!int(1, 2, 3);
     auto b = SList!int(4, 5, 6);
@@ -712,7 +712,7 @@ Complexity: $(BIGOH n)
     assert(c == SList!int(1, 2, 3, 4, 5, 6));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto a = SList!int(1, 2, 3);
     auto b = [4, 5, 6];
@@ -720,21 +720,21 @@ Complexity: $(BIGOH n)
     assert(c == SList!int(1, 2, 3, 4, 5, 6));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto a = SList!int(1, 2, 3);
     auto c = a ~ 4;
     assert(c == SList!int(1, 2, 3, 4));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto a = SList!int(2, 3, 4);
     auto b = 1 ~ a;
     assert(b == SList!int(1, 2, 3, 4));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto a = [1, 2, 3];
     auto b = SList!int(4, 5, 6);
@@ -742,14 +742,14 @@ Complexity: $(BIGOH n)
     assert(c == SList!int(1, 2, 3, 4, 5, 6));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto s = SList!int(1, 2, 3, 4);
     s.insertFront([ 42, 43 ]);
     assert(s == SList!int(42, 43, 1, 2, 3, 4));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto s = SList!int(1, 2, 3);
     assert(s.removeAny() == 1);
@@ -758,7 +758,7 @@ Complexity: $(BIGOH n)
     assert(s == SList!int(3));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -769,21 +769,21 @@ Complexity: $(BIGOH n)
     assert(equal(s[], [3]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto s = SList!int(1, 2, 3, 4, 5, 6, 7);
     assert(s.removeFront(3) == 3);
     assert(s == SList!int(4, 5, 6, 7));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto a = SList!int(1, 2, 3);
     auto b = SList!int(1, 2, 3);
     assert(a.insertAfter(a[], b[]) == 3);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range : take;
     auto s = SList!int(1, 2, 3, 4);
@@ -792,7 +792,7 @@ Complexity: $(BIGOH n)
     assert(s == SList!int(1, 2, 5, 3, 4));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : take;
@@ -805,7 +805,7 @@ Complexity: $(BIGOH n)
     assert(equal(sl[], ["a", "b", "c", "d", "e"]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range.primitives;
     auto s = SList!int(1, 2, 3, 4, 5);
@@ -816,7 +816,7 @@ Complexity: $(BIGOH n)
     assert(r1.empty);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto s = SList!int(1, 2, 3, 4, 5);
     auto r = s[];
@@ -825,7 +825,7 @@ Complexity: $(BIGOH n)
     assert(r1.empty);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range;
@@ -840,7 +840,7 @@ Complexity: $(BIGOH n)
     assert(equal(r2, [8, 9, 10]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range.primitives;
     auto lst = SList!int(1, 5, 42, 9);
@@ -855,12 +855,12 @@ Complexity: $(BIGOH n)
     assert(walkLength(lst3[]) == 5);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto s = make!(SList!int)(1, 2, 3);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // 5193
     static struct Data
@@ -870,7 +870,7 @@ Complexity: $(BIGOH n)
     SList!Data list;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto s = SList!int([1, 2, 3]);
     s.front = 5; //test frontAssign
@@ -880,7 +880,7 @@ Complexity: $(BIGOH n)
     assert(r.front == 1);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // issue 14920
     SList!int s;
@@ -888,20 +888,20 @@ Complexity: $(BIGOH n)
     assert(s.front == 1);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // issue 15659
     SList!int s;
     s.clear();
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     SList!int s;
     s.reverse();
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 

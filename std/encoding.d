@@ -111,7 +111,7 @@ import std.range.primitives;
 import std.traits;
 import std.typecons;
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     static ubyte[][] validStrings =
     [
@@ -1636,7 +1636,7 @@ bool isValidCodePoint(dchar c) @safe pure nothrow @nogc
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(encodingName!(char) == "UTF-8");
     assert(encodingName!(wchar) == "UTF-16");
@@ -1665,7 +1665,7 @@ bool canEncode(E)(dchar c)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert( canEncode!(Latin1Char)('A'));
     assert( canEncode!(Latin2Char)('A'));
@@ -1685,7 +1685,7 @@ bool canEncode(E)(dchar c)
 }
 
 /// How to check an entire string
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.searching : find;
     import std.utf : byDchar;
@@ -1713,7 +1713,7 @@ bool isValidCodeUnit(E)(E c)
 }
 
 ///
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     assert(!isValidCodeUnit(cast(char) 0xC0));
     assert(!isValidCodeUnit(cast(char) 0xFF));
@@ -1748,7 +1748,7 @@ bool isValid(E)(const(E)[] s)
 }
 
 ///
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     assert( isValid("\u20AC100"));
     assert(!isValid(cast(char[3])[167, 133, 175]));
@@ -1833,7 +1833,7 @@ immutable(E)[] sanitize(E)(immutable(E)[] s)
 }
 
 ///
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     assert(sanitize("hello \xF0\x80world") == "hello \xEF\xBF\xBDworld");
 }
@@ -1865,7 +1865,7 @@ do
 }
 
 ///
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     assert(firstSequence("\u20AC1000") == "\u20AC".length);
     assert(firstSequence("hel") == "h".length);
@@ -1897,7 +1897,7 @@ do
 }
 
 ///
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     assert(lastSequence("1000\u20AC") == "\u20AC".length);
     assert(lastSequence("hellö") == "ö".length);
@@ -1933,7 +1933,7 @@ do
 }
 
 ///
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     assert(index("\u20AC100",1) == 3);
     assert(index("hällo",2) == 3);
@@ -2180,7 +2180,7 @@ if (isNativeOutputRange!(R, E))
     }
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.array;
     Appender!(char[]) r;
@@ -2286,7 +2286,7 @@ do
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     string s = "hello";
     string t;
@@ -2327,7 +2327,7 @@ do
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     char[] a;
     foreach (c;codeUnits!(char)(cast(dchar)'\u20AC'))
@@ -2408,7 +2408,7 @@ do
 }
 
 ///
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     wstring ws;
     // transcode from UTF-8 to UTF-16
@@ -2421,7 +2421,7 @@ do
     assert(ws == "hello world");
 }
 
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     import std.meta;
     import std.range;
@@ -2461,7 +2461,7 @@ do
     }
 }
 
-@system unittest // mutable/const input/output
+version(StdUnittest) @system unittest // mutable/const input/output
 {
     import std.meta : AliasSeq;
 
@@ -3301,7 +3301,7 @@ class EncodingSchemeWindows1252 : EncodingScheme
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     static string[] schemeNames =
     [
@@ -3516,7 +3516,7 @@ class EncodingSchemeUtf16Native : EncodingScheme
         }
     }
 }
-@system unittest
+version(StdUnittest) @system unittest
 {
     version(LittleEndian)
     {
@@ -3612,7 +3612,7 @@ class EncodingSchemeUtf32Native : EncodingScheme
         }
     }
 }
-@system unittest
+version(StdUnittest) @system unittest
 {
     version(LittleEndian)
     {
@@ -3815,7 +3815,7 @@ if (isForwardRange!Range && is(Unqual!(ElementType!Range) == ubyte))
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.format : format;
 
@@ -3832,7 +3832,7 @@ if (isForwardRange!Range && is(Unqual!(ElementType!Range) == ubyte))
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.format : format;
 
@@ -3850,7 +3850,7 @@ if (isForwardRange!Range && is(Unqual!(ElementType!Range) == ubyte))
     }
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     struct BOMInputRange
     {

@@ -178,7 +178,7 @@ final class ArchiveMember
         }
     }
 
-    version (Posix) @safe unittest
+    version(StdUnittest) version (Posix) @safe unittest
     {
         auto am = new ArchiveMember();
         am.fileAttributes = octal!100644;
@@ -834,7 +834,7 @@ debug(print)
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     // @system due to (at least) ZipArchive.build
     auto zip1 = new ZipArchive();
@@ -887,7 +887,7 @@ debug(print)
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : to;
     import std.random : Mt19937, randomShuffle;
@@ -926,7 +926,7 @@ debug(print)
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.zlib;
 
@@ -939,7 +939,7 @@ the quick brown fox jumps over the lazy dog\r
     assert(src == after);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     // @system due to ZipArchive.build
     import std.datetime;
@@ -966,7 +966,7 @@ the quick brown fox jumps over the lazy dog\r
 // Non-Android Posix-only, because we can't rely on the unzip command being
 // available on Android or Windows
 version(Android) {} else
-version(Posix) @system unittest
+version(StdUnittest) version(Posix) @system unittest
 {
     import std.datetime, std.file, std.format, std.path, std.process, std.stdio;
 

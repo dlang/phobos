@@ -17,7 +17,7 @@ Authors: Steven Schveighoffer, $(HTTP erdani.com, Andrei Alexandrescu)
 module std.container.rbtree;
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
     import std.container.rbtree;
@@ -638,7 +638,7 @@ struct RBNode(V)
 }
 
 //constness checks
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     const RBNode!int n;
     static assert(is(typeof(n.leftmost)));
@@ -1754,7 +1754,7 @@ assert(equal(rbt[], [5]));
 }
 
 //Verify Example for removeKey.
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
     auto rbt = redBlackTree!true(0, 1, 1, 1, 4, 5, 7);
@@ -1765,7 +1765,7 @@ assert(equal(rbt[], [5]));
 }
 
 //Tests for removeKey
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
     {
@@ -1795,7 +1795,7 @@ assert(equal(rbt[], [5]));
     }
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     void test(T)()
     {
@@ -1890,7 +1890,7 @@ if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.range : iota;
 
@@ -1908,7 +1908,7 @@ if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init
 }
 
 //Combinations not in examples.
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     auto rbt1 = redBlackTree!(true, string)("hello", "hello");
     auto rbt2 = redBlackTree!((a, b){return a < b;}, double)(5.1, 2.3);
@@ -1916,7 +1916,7 @@ if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init
 }
 
 //Range construction.
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : iota;
@@ -1926,7 +1926,7 @@ if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init
 
 
 // construction with arrays
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1956,7 +1956,7 @@ if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init
 }
 
 // convenience wrapper range construction
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : chain, iota;
@@ -1980,7 +1980,7 @@ if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init
     assert(equal(rbt6[], [7.2, 5.9, 5.9, 1.3, 0.1]));
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.array : array;
 
@@ -2001,7 +2001,7 @@ if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init
     assert(array(rt4[]) == ["hello"]);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : to;
 
@@ -2020,7 +2020,7 @@ if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init
 }
 
 //constness checks
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     const rt1 = redBlackTree(5,4,3,2,1);
     static assert(is(typeof(rt1.length)));
@@ -2035,7 +2035,7 @@ if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init
 }
 
 //immutable checks
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     immutable rt1 = redBlackTree(5,4,3,2,1);
     static assert(is(typeof(rt1.length)));
@@ -2046,13 +2046,13 @@ if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init
 }
 
 // issue 15941
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     class C {}
     RedBlackTree!(C, "cast(void*)a < cast(void*) b") tree;
 }
 
-@safe pure unittest // const/immutable elements (issue 17519)
+version(StdUnittest) @safe pure unittest // const/immutable elements (issue 17519)
 {
     RedBlackTree!(immutable int) t1;
     RedBlackTree!(const int) t2;

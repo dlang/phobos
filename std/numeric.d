@@ -126,7 +126,7 @@ if (((flags & flags.signed) + precision + exponentWidth) % 8 == 0 && precision +
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.math : sin, cos;
 
@@ -614,7 +614,7 @@ public:
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.meta;
     alias FPTypes =
@@ -650,7 +650,7 @@ public:
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     // @system due to to!string(CustomFloat)
     import std.conv;
@@ -691,7 +691,7 @@ if (isFloatingPoint!F)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.math : approxEqual;
 
@@ -736,7 +736,7 @@ template secantMethod(alias fun)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.math : approxEqual, cos;
 
@@ -748,7 +748,7 @@ template secantMethod(alias fun)
     assert(approxEqual(x, 0.865474));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     // @system because of __gshared stderr
     scope(failure) stderr.writeln("Failure testing secantMethod");
@@ -1176,7 +1176,7 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
     return findRoot!(T, R delegate(T), bool delegate(T lo, T hi))(f, a, b, tolerance);
 }
 
-@safe nothrow unittest
+version(StdUnittest) @safe nothrow unittest
 {
     int numProblems = 0;
     int numCalls;
@@ -1387,7 +1387,7 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
 }
 
 //regression control
-@system unittest
+version(StdUnittest) @system unittest
 {
     // @system due to the case in the 2nd line
     static assert(__traits(compiles, findRoot((float x)=>cast(real) x, float.init, float.init)));
@@ -1576,7 +1576,7 @@ do
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.math : approxEqual;
 
@@ -1585,7 +1585,7 @@ do
     assert(ret.y.approxEqual(0.0));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.meta : AliasSeq;
     static foreach (T; AliasSeq!(double, float, real))
@@ -1674,7 +1674,7 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
     return sqrt(result);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.meta : AliasSeq;
     static foreach (T; AliasSeq!(double, const double, immutable double))
@@ -1765,7 +1765,7 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
     return sum0;
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     // @system due to dotProduct and assertCTFEable
     import std.exception : assertCTFEable;
@@ -1812,7 +1812,7 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
     return dotprod / sqrt(norma * normb);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.meta : AliasSeq;
     static foreach (T; AliasSeq!(double, const double, immutable double))
@@ -1876,7 +1876,7 @@ if (isForwardRange!(R))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     double[] a = [];
     assert(!normalize(a));
@@ -1914,7 +1914,7 @@ if (isInputRange!Range && isFloatingPoint!(ElementType!Range))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.math : isNaN;
 
@@ -1966,7 +1966,7 @@ if (isInputRange!Range &&
     return result;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.meta : AliasSeq;
     static foreach (T; AliasSeq!(double, const double, immutable double))
@@ -2013,7 +2013,7 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.math : approxEqual;
 
@@ -2097,7 +2097,7 @@ if (isInputRange!Range1 && isInputRange!Range2 &&
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.math : approxEqual;
 
@@ -2232,7 +2232,7 @@ if (isRandomAccessRange!(R1) && hasLength!(R1) &&
     return result;
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     string[] s = ["Hello", "brave", "new", "world"];
     string[] t = ["Hello", "new", "world"];
@@ -2287,7 +2287,7 @@ if (isRandomAccessRange!(R1) && hasLength!(R1) &&
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.math : approxEqual, sqrt;
 
@@ -2513,7 +2513,7 @@ GapWeightedSimilarityIncremental!(R, F) gapWeightedSimilarityIncremental(R, F)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     string[] s = ["Hello", "brave", "new", "world"];
     string[] t = ["Hello", "new", "world"];
@@ -2527,7 +2527,7 @@ GapWeightedSimilarityIncremental!(R, F) gapWeightedSimilarityIncremental(R, F)
     assert(simIter.empty);     // no more match
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : text;
     string[] s = ["Hello", "brave", "new", "world"];
@@ -2569,7 +2569,7 @@ GapWeightedSimilarityIncremental!(R, F) gapWeightedSimilarityIncremental(R, F)
     assert(simIter.front == 0.5, text(simIter.front)); // one 2-gram match, 1 gap
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     GapWeightedSimilarityIncremental!(string[]) sim =
         GapWeightedSimilarityIncremental!(string[])(
@@ -2656,7 +2656,7 @@ T gcd(T)(T a, T b)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(gcd(2 * 5 * 7 * 7, 5 * 7 * 11) == 5 * 7);
     const int a = 5 * 13 * 23 * 23, b = 13 * 59;
@@ -2720,7 +2720,7 @@ T gcd(T)(T a, T b)
 }
 
 // Issue 7102
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     import std.bigint : BigInt;
     assert(gcd(BigInt("71_000_000_000_000_000_000"),
@@ -2728,7 +2728,7 @@ T gcd(T)(T a, T b)
            BigInt("1_000_000_000_000_000_000"));
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     // A numerical type that only supports % and - (to force gcd implementation
     // to use Euclidean algorithm).
@@ -3252,7 +3252,7 @@ void inverseFft(Ret, R)(R range, Ret buf)
     return fftObj.inverseFft!(Ret, R)(range, buf);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm;
     import std.conv;
@@ -3448,7 +3448,7 @@ if (isScalarType!N && !isFloatingPoint!N)
     return num & (cast(N) 1 << bsr(num));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(roundDownToPowerOf2(7) == 4);
     assert(roundDownToPowerOf2(4) == 4);
@@ -3460,7 +3460,7 @@ template isComplexLike(T)
         is(typeof(T.init.im));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(isComplexLike!(Complex!double));
     static assert(!isComplexLike!(uint));

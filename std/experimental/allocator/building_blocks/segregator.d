@@ -277,7 +277,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.free_list : FreeList;
     import std.experimental.allocator.gc_allocator : GCAllocator;
@@ -345,7 +345,7 @@ if (Args.length > 3)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.free_list : FreeList;
     import std.experimental.allocator.gc_allocator : GCAllocator;
@@ -363,7 +363,7 @@ if (Args.length > 3)
     a.deallocate(b);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.building_blocks.kernighan_ritchie : KRRegion;
@@ -378,7 +378,7 @@ if (Args.length > 3)
             == GCAllocator.instance.goodAllocSize(1));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.bitmapped_block : BitmappedBlock;
     import std.typecons : Ternary;
@@ -418,7 +418,7 @@ if (Args.length > 3)
     assert(a.empty == Ternary.yes);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.typecons : Ternary;
@@ -436,7 +436,7 @@ if (Args.length > 3)
     assert((() nothrow @nogc => a.deallocate(b))());
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.bitmapped_block : BitmappedBlockWithInternalPointers;
     import std.typecons : Ternary;
@@ -460,7 +460,7 @@ if (Args.length > 3)
 }
 
 // Test that reallocate infers from parent
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
 
@@ -473,7 +473,7 @@ if (Args.length > 3)
     assert((() nothrow @nogc => a.deallocate(b))());
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.region : Region;
     import std.typecons : Ternary;

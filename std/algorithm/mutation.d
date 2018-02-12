@@ -149,7 +149,7 @@ if (isInputRange!InputRange && isForwardRange!ForwardRange)
 The simplest use of `bringToFront` is for rotating elements in a
 buffer. For example:
 */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto arr = [4, 5, 6, 7, 1, 2, 3];
     auto p = bringToFront(arr[0 .. 4], arr[4 .. $]);
@@ -163,7 +163,7 @@ range. This is very useful with forward ranges that cannot compute
 comfortably right-bounded subranges like `arr[0 .. 4]` above. In
 the example below, `r2` is a right subrange of `r1`.
 */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.container : SList;
@@ -180,7 +180,7 @@ the example below, `r2` is a right subrange of `r1`.
 /**
 Elements can be swapped across ranges of different types:
 */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.container : SList;
@@ -195,7 +195,7 @@ Elements can be swapped across ranges of different types:
 /**
 Unicode integrity is not preserved:
 */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.string : representation;
     auto ar = representation("a".dup);
@@ -275,7 +275,7 @@ if (isInputRange!InputRange && isForwardRange!ForwardRange)
     return result;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.conv : text;
@@ -420,7 +420,7 @@ if (!areCopyCompatibleArrays!(SourceRange, TargetRange) &&
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[] a = [ 1, 5 ];
     int[] b = [ 9, 8 ];
@@ -435,7 +435,7 @@ if (!areCopyCompatibleArrays!(SourceRange, TargetRange) &&
 As long as the target range elements support assignment from source
 range elements, different types of ranges are accepted:
 */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     float[] src = [ 1.0f, 5 ];
     double[] dest = new double[src.length];
@@ -446,7 +446,7 @@ range elements, different types of ranges are accepted:
 To _copy at most `n` elements from a range, you may want to use
 $(REF take, std,range):
 */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range;
     int[] src = [ 1, 5, 8, 9, 10 ];
@@ -459,7 +459,7 @@ $(REF take, std,range):
 To _copy just those elements from a range that satisfy a predicate,
 use $(LREF filter):
 */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.iteration : filter;
     int[] src = [ 1, 5, 8, 9, 10, 1, 2, 0 ];
@@ -474,7 +474,7 @@ use $(LREF filter):
 $(REF retro, std,range) can be used to achieve behavior similar to
 $(HTTP sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
 */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm, std.range;
     int[] src = [1, 2, 4];
@@ -484,14 +484,14 @@ $(HTTP sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
 }
 
 // Test CTFE copy.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     enum c = copy([1,2,3], [4,5,6,7]);
     assert(c == [7]);
 }
 
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.iteration : filter;
 
@@ -521,7 +521,7 @@ $(HTTP sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Issue 13650
     import std.meta : AliasSeq;
@@ -583,7 +583,7 @@ if ((isInputRange!Range && is(typeof(range.front = value)) ||
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[] a = [ 1, 2, 3, 4 ];
     fill(a, 5);
@@ -591,7 +591,7 @@ if ((isInputRange!Range && is(typeof(range.front = value)) ||
 }
 
 // issue 16342, test fallback on mutable narrow strings
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     char[] chars = ['a', 'b'];
     fill(chars, 'c');
@@ -610,7 +610,7 @@ if ((isInputRange!Range && is(typeof(range.front = value)) ||
     assert(dchars == "cc"d);
 }
 
-@nogc @safe unittest
+version(StdUnittest) @nogc @safe unittest
 {
     const(char)[] chars;
     assert(chars.length == 0);
@@ -620,21 +620,21 @@ if ((isInputRange!Range && is(typeof(range.front = value)) ||
     static assert(!__traits(compiles, fill(wchars, wchar('c'))));
 }
 
-@nogc @safe unittest
+version(StdUnittest) @nogc @safe unittest
 {
     char[] chars;
     fill(chars, 'c');
     assert(chars == ""c);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     shared(char)[] chrs = ['r'];
     fill(chrs, 'c');
     assert(chrs == [shared(char)('c')]);
 }
 
-@nogc @safe unittest
+version(StdUnittest) @nogc @safe unittest
 {
     struct Str(size_t len)
     {
@@ -647,7 +647,7 @@ if ((isInputRange!Range && is(typeof(range.front = value)) ||
     assert(str._data == "::");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     char[] chars = ['a','b','c','d'];
     chars[1 .. 3].fill(':');
@@ -655,7 +655,7 @@ if ((isInputRange!Range && is(typeof(range.front = value)) ||
 }
 // end issue 16342
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.conv : text;
     import std.internal.test.dummyrange;
@@ -682,7 +682,7 @@ if ((isInputRange!Range && is(typeof(range.front = value)) ||
         assert(value == filler);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //ER8638_1 IS_NOT self assignable
     static struct ER8638_1
@@ -703,7 +703,7 @@ if ((isInputRange!Range && is(typeof(range.front = value)) ||
     er8638_2.fill(5); //opSlice(T.init) case
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     {
         int[] a = [1, 2, 3];
@@ -790,7 +790,7 @@ if (isInputRange!InputRange
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[] a = [ 1, 2, 3, 4, 5 ];
     int[] b = [ 8, 9 ];
@@ -798,7 +798,7 @@ if (isInputRange!InputRange
     assert(a == [ 8, 9, 8, 9, 8 ]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.exception : assertThrown;
     import std.internal.test.dummyrange;
@@ -898,7 +898,7 @@ if (is(Range == char[]) || is(Range == wchar[]))
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.stdc.stdlib : malloc, free;
 
@@ -914,7 +914,7 @@ if (is(Range == char[]) || is(Range == wchar[]))
     scope(exit) free(s.ptr);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.iteration : filter;
     import std.meta : AliasSeq;
@@ -1002,7 +1002,7 @@ if (is(Range == char[]) || is(Range == wchar[]))
 
 // test that initializeAll works for arrays of static arrays of structs with
 // elaborate assigns.
-@system unittest
+version(StdUnittest) @system unittest
 {
     struct Int {
         ~this() {}
@@ -1047,7 +1047,7 @@ void move(T)(ref T source, ref T target)
 }
 
 /// For non-struct types, `move` just performs `target = source`:
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     Object obj1 = new Object;
     Object obj2 = obj1;
@@ -1060,7 +1060,7 @@ void move(T)(ref T source, ref T target)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+version(StdUnittest) pure nothrow @safe @nogc unittest
 {
     // Structs without destructors are simply copied
     struct S1
@@ -1094,7 +1094,7 @@ pure nothrow @safe @nogc unittest
     assert(s22 == S2(3, 4));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.exception : assertCTFEable;
     import std.traits;
@@ -1166,7 +1166,7 @@ T move(T)(return scope ref T source)
 }
 
 /// Non-copyable structs can still be moved:
-pure nothrow @safe @nogc unittest
+version(StdUnittest) pure nothrow @safe @nogc unittest
 {
     struct S
     {
@@ -1212,7 +1212,7 @@ private T moveImpl(T)(ref T source)
     return result;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.exception : assertCTFEable;
     import std.traits;
@@ -1271,7 +1271,7 @@ private T moveImpl(T)(ref T source)
     assert(s53 is s51);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     static struct S { int n = 0; ~this() @system { n = 0; } }
     S a, b;
@@ -1285,14 +1285,14 @@ private T moveImpl(T)(ref T source)
     assert(a.n == 0);
 }
 
-@safe unittest//Issue 6217
+version(StdUnittest) @safe unittest//Issue 6217
 {
     import std.algorithm.iteration : map;
     auto x = map!"a"([1,2,3]);
     x = move(x);
 }
 
-@safe unittest// Issue 8055
+version(StdUnittest) @safe unittest// Issue 8055
 {
     static struct S
     {
@@ -1312,7 +1312,7 @@ private T moveImpl(T)(ref T source)
     assert(b.x == 0);
 }
 
-@system unittest// Issue 8057
+version(StdUnittest) @system unittest// Issue 8057
 {
     int n = 10;
     struct S
@@ -1405,7 +1405,7 @@ void moveEmplace(T)(ref T source, ref T target) @system
 }
 
 ///
-pure nothrow @nogc @system unittest
+version(StdUnittest) pure nothrow @nogc @system unittest
 {
     static struct Foo
     {
@@ -1456,7 +1456,7 @@ if (isInputRange!InputRange1 && isInputRange!InputRange2
 }
 
 ///
-pure nothrow @safe @nogc unittest
+version(StdUnittest) pure nothrow @safe @nogc unittest
 {
     int[3] a = [ 1, 2, 3 ];
     int[5] b;
@@ -1479,7 +1479,7 @@ if (isInputRange!InputRange1 && isInputRange!InputRange2
 }
 
 ///
-pure nothrow @nogc @system unittest
+version(StdUnittest) pure nothrow @nogc @system unittest
 {
     static struct Foo
     {
@@ -1499,7 +1499,7 @@ pure nothrow @nogc @system unittest
     assert(dst[0 .. 3].all!(e => e._ptr !is null));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     struct InputRange
     {
@@ -1563,7 +1563,7 @@ if (isInputRange!InputRange1 && isInputRange!InputRange2
 }
 
 ///
-pure nothrow @safe @nogc unittest
+version(StdUnittest) pure nothrow @safe @nogc unittest
 {
     int[5] a = [ 1, 2, 3, 4, 5 ];
     int[3] b;
@@ -1585,7 +1585,7 @@ if (isInputRange!InputRange1 && isInputRange!InputRange2
 }
 
 ///
-pure nothrow @nogc @system unittest
+version(StdUnittest) pure nothrow @nogc @system unittest
 {
     static struct Foo
     {
@@ -1666,7 +1666,7 @@ enum SwapStrategy
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.stdio;
     import std.algorithm.sorting : partition;
@@ -1677,7 +1677,7 @@ enum SwapStrategy
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.sorting : partition;
 
@@ -1927,7 +1927,7 @@ if (s == SwapStrategy.stable
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.typecons : tuple;
 
@@ -1944,7 +1944,7 @@ if (s == SwapStrategy.stable
     assert(remove!(SwapStrategy.unstable)(a, tuple(1, 4)) == [0, 5, 4]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.exception : assertThrown;
     import std.range;
@@ -1957,7 +1957,7 @@ if (s == SwapStrategy.stable
     assertThrown(remove!(SwapStrategy.unstable)(test, 2, 4, 1, 3));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range;
     int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
@@ -1993,7 +1993,7 @@ if (s == SwapStrategy.stable
             == [0, 9, 8, 7, 4, 5]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Issue 11576
     auto arr = [1,2,3];
@@ -2002,7 +2002,7 @@ if (s == SwapStrategy.stable
 
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range;
     // Bug# 12889
@@ -2072,7 +2072,7 @@ if (isBidirectionalRange!Range
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static immutable base = [1, 2, 3, 2, 4, 2, 5, 2];
 
@@ -2090,7 +2090,7 @@ if (isBidirectionalRange!Range
     assert(remove!(a => a == 2)(arr) == [ 1, 3, 4, 5 ]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[] a = [ 1, 2, 3, 2, 3, 4, 5, 2, 5, 6 ];
     assert(remove!("a == 2", SwapStrategy.unstable)(a) ==
@@ -2100,7 +2100,7 @@ if (isBidirectionalRange!Range
             [ 1, 3, 3, 4, 5, 5, 6 ]);
 }
 
-@nogc @safe unittest
+version(StdUnittest) @nogc @safe unittest
 {
     // @nogc test
     int[10] arr = [0,1,2,3,4,5,6,7,8,9];
@@ -2112,7 +2112,7 @@ if (isBidirectionalRange!Range
     r = r.remove!(pred, SwapStrategy.stable);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : min;
     import std.algorithm.searching : all, any;
@@ -2248,13 +2248,13 @@ if (isBidirectionalRange!Range &&
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[] arr = [ 1, 2, 3 ];
     assert(arr.reverse == [ 3, 2, 1 ]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[] range = null;
     reverse(range);
@@ -2269,13 +2269,13 @@ if (isBidirectionalRange!Range &&
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     char[] arr = "hello\U00010143\u0100\U00010143".dup;
     assert(arr.reverse == "\U00010143\u0100\U00010143olleh");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     void test(string a, string b)
     {
@@ -2375,7 +2375,7 @@ if (isBidirectionalRange!Range && is(typeof(pred(range.back)) : bool))
 }
 
 /// Strip leading and trailing elements equal to the target element.
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert("  foobar  ".strip(' ') == "foobar");
     assert("00223.444500".strip('0') == "223.4445");
@@ -2385,7 +2385,7 @@ if (isBidirectionalRange!Range && is(typeof(pred(range.back)) : bool))
 }
 
 /// Strip leading and trailing elements while the predicate returns true.
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert("  foobar  ".strip!(a => a == ' ')() == "foobar");
     assert("00223.444500".strip!(a => a == '0')() == "223.4445");
@@ -2395,7 +2395,7 @@ if (isBidirectionalRange!Range && is(typeof(pred(range.back)) : bool))
 }
 
 /// Strip leading elements equal to the target element.
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert("  foobar  ".stripLeft(' ') == "foobar  ");
     assert("00223.444500".stripLeft('0') == "223.444500");
@@ -2405,7 +2405,7 @@ if (isBidirectionalRange!Range && is(typeof(pred(range.back)) : bool))
 }
 
 /// Strip leading elements while the predicate returns true.
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert("  foobar  ".stripLeft!(a => a == ' ')() == "foobar  ");
     assert("00223.444500".stripLeft!(a => a == '0')() == "223.444500");
@@ -2415,7 +2415,7 @@ if (isBidirectionalRange!Range && is(typeof(pred(range.back)) : bool))
 }
 
 /// Strip trailing elements equal to the target element.
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert("  foobar  ".stripRight(' ') == "  foobar");
     assert("00223.444500".stripRight('0') == "00223.4445");
@@ -2425,7 +2425,7 @@ if (isBidirectionalRange!Range && is(typeof(pred(range.back)) : bool))
 }
 
 /// Strip trailing elements while the predicate returns true.
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert("  foobar  ".stripRight!(a => a == ' ')() == "  foobar");
     assert("00223.444500".stripRight!(a => a == '0')() == "00223.4445");
@@ -2498,7 +2498,7 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Swapping POD (plain old data) types:
     int a = 42, b = 34;
@@ -2530,7 +2530,7 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Non-copyable types can still be swapped.
     static struct NoCopy
@@ -2576,7 +2576,7 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
     static assert(!__traits(compiles, swap(const1, const2)));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Bug# 4789
     int[1] s = [1];
@@ -2587,7 +2587,7 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
     assert(a == [1, 3, 2]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static struct NoAssign
     {
@@ -2601,7 +2601,7 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
     assert(s2.i == 1);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     struct S
     {
@@ -2616,7 +2616,7 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
     assert(s.i3 == 2);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //11853
     import std.traits : isAssignable;
@@ -2624,7 +2624,7 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
     static assert(isAssignable!T);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // 12024
     import std.datetime;
@@ -2632,7 +2632,7 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
     swap(a, b);
 }
 
-@system unittest // 9975
+version(StdUnittest) @system unittest // 9975
 {
     import std.exception : doesPointTo, mayPointTo;
     static struct S2
@@ -2658,7 +2658,7 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
     assertThrown!Error(swap(p, pp));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     static struct A
     {
@@ -2714,7 +2714,7 @@ void swapAt(R)(auto ref R r, size_t i1, size_t i2)
 }
 
 ///
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     auto a = [1, 2, 3];
@@ -2722,7 +2722,7 @@ pure @safe nothrow unittest
     assert(a.equal([1, 3, 2]));
 }
 
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     auto a = [4, 5, 6];
@@ -2730,7 +2730,7 @@ pure @safe nothrow unittest
     assert(a.equal([4, 5, 6]));
 }
 
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     // test non random access ranges
     import std.algorithm.comparison : equal;
@@ -2839,7 +2839,7 @@ if (hasSwappableElements!InputRange1 && hasSwappableElements!InputRange2
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range : empty;
     int[] a = [ 100, 101, 102, 103 ];
@@ -2888,7 +2888,7 @@ if (isInputRange!Range && hasLvalueElements!Range && is(typeof(range.front = val
 }
 
 ///
-nothrow @system unittest
+version(StdUnittest) nothrow @system unittest
 {
     import core.stdc.stdlib : malloc, free;
 

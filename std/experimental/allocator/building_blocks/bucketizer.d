@@ -225,7 +225,7 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.allocator_list : AllocatorList;
@@ -246,7 +246,7 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     a.deallocate(b);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.allocator_list : AllocatorList;
@@ -282,7 +282,7 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
 }
 
 // Test alignedAllocate
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.bitmapped_block : BitmappedBlock;
     import std.experimental.allocator.gc_allocator : GCAllocator;
@@ -304,7 +304,7 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     assert((() pure nothrow @safe @nogc => !a.expand(b, 1))());
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.bitmapped_block : BitmappedBlock;
     import std.experimental.allocator.gc_allocator : GCAllocator;

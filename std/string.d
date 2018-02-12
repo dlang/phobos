@@ -219,7 +219,7 @@ inout(char)[] fromStringz(inout(char)* cString) @nogc @system pure nothrow {
 }
 
 ///
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     assert(fromStringz(null) == null);
     assert(fromStringz("foo") == "foo");
@@ -299,7 +299,7 @@ immutable(char)* toStringz(in string s) @trusted pure nothrow
 }
 
 ///
-pure nothrow @system unittest
+version(StdUnittest) pure nothrow @system unittest
 {
     import core.stdc.string : strlen;
     import std.conv : to;
@@ -542,7 +542,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.typecons : No;
 
@@ -553,7 +553,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.typecons : No;
 
@@ -563,7 +563,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
     assert(indexOf(s, 'w', 3, No.caseSensitive) == 6);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(testAliasedString!indexOf("std/string.d", '/'));
 
@@ -574,7 +574,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
     assert(sa.indexOf('/') == 3);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -625,7 +625,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
     });
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(testAliasedString!indexOf("std/string.d", '/', 0));
     assert(testAliasedString!indexOf("std/string.d", '/', 1));
@@ -642,7 +642,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
     assert(sa.indexOf('/', 4) == -1);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
     import std.traits : EnumMembers;
@@ -805,7 +805,7 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.typecons : No;
 
@@ -816,7 +816,7 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.typecons : No;
 
@@ -835,12 +835,12 @@ if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
     return indexOf!(StringTypeOf!Range)(s, sub, cs);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(testAliasedString!indexOf("std/string.d", "string"));
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -894,7 +894,7 @@ if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
 }
 
 @safe pure @nogc nothrow
-unittest
+version(StdUnittest) unittest
 {
     import std.traits : EnumMembers;
     import std.utf : byWchar;
@@ -911,7 +911,7 @@ unittest
     }
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
     import std.traits : EnumMembers;
@@ -1065,7 +1065,7 @@ if (isSomeChar!Char)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.typecons : No;
 
@@ -1076,7 +1076,7 @@ if (isSomeChar!Char)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.typecons : No;
 
@@ -1086,7 +1086,7 @@ if (isSomeChar!Char)
     assert(lastIndexOf(s, 'L', 7, No.caseSensitive) == 3);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -1126,7 +1126,7 @@ if (isSomeChar!Char)
     });
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
     import std.traits : EnumMembers;
@@ -1271,7 +1271,7 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.typecons : No;
 
@@ -1282,7 +1282,7 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.typecons : No;
 
@@ -1292,7 +1292,7 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
     assert(lastIndexOf(s, "lL", 3, No.caseSensitive) == -1);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
 
@@ -1309,7 +1309,7 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
     }}
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -1369,7 +1369,7 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
     });
 }
 
-@safe pure unittest // issue13529
+version(StdUnittest) @safe pure unittest // issue13529
 {
     import std.conv : to;
     static foreach (S; AliasSeq!(string, wstring, dstring))
@@ -1386,7 +1386,7 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
     }
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
     import std.traits : EnumMembers;
@@ -1593,7 +1593,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
 
@@ -1604,7 +1604,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
 
@@ -1615,7 +1615,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
     assert(i == 8, to!string(i));
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
 
@@ -1632,7 +1632,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
     }}
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -1671,7 +1671,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
     );
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
     import std.traits : EnumMembers;
@@ -1758,7 +1758,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     ptrdiff_t i = "helloWorld".lastIndexOfAny("Wlo");
     assert(i == 8);
@@ -1768,7 +1768,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
 
@@ -1779,7 +1779,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
     assert(i == 0);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
 
@@ -1796,7 +1796,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
     }}
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -1849,7 +1849,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
     );
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -1942,7 +1942,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(indexOfNeither("abba", "a", 2) == 2);
     assert(indexOfNeither("def", "de", 1) == 2);
@@ -1950,14 +1950,14 @@ if (isSomeChar!Char && isSomeChar!Char2)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(indexOfNeither("def", "a") == 0);
     assert(indexOfNeither("def", "de") == 2);
     assert(indexOfNeither("dfefffg", "dfe") == 6);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
 
@@ -1974,7 +1974,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
     }}
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -2018,7 +2018,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
     );
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -2098,20 +2098,20 @@ if (isSomeChar!Char && isSomeChar!Char2)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(lastIndexOfNeither("abba", "a") == 2);
     assert(lastIndexOfNeither("def", "f") == 1);
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(lastIndexOfNeither("def", "rsa", 3) == -1);
     assert(lastIndexOfNeither("abba", "a", 2) == 1);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
 
@@ -2128,7 +2128,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
     }}
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -2173,7 +2173,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
     );
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -2237,7 +2237,7 @@ if (isSomeChar!Char)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     string s = "hello";
     static assert(is(typeof(representation(s)) == immutable(ubyte)[]));
@@ -2245,7 +2245,7 @@ if (isSomeChar!Char)
     assert(representation(s) == [0x68, 0x65, 0x6c, 0x6c, 0x6f]);
 }
 
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     import std.exception : assertCTFEable;
     import std.traits : Fields;
@@ -2301,7 +2301,7 @@ if (isSomeString!S)
 }
 
 ///
-pure @safe unittest
+version(StdUnittest) pure @safe unittest
 {
     assert(capitalize("hello") == "Hello");
     assert(capitalize("World") == "World");
@@ -2313,12 +2313,12 @@ if (!isSomeString!S && is(StringTypeOf!S))
     return capitalize!(StringTypeOf!S)(s);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(testAliasedString!capitalize("hello"));
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : cmp;
     import std.conv : to;
@@ -2468,19 +2468,19 @@ if (isSomeChar!C)
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     string s = "Hello\nmy\rname\nis";
     assert(splitLines(s) == ["Hello", "my", "name", "is"]);
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     string s = "a\xC2\x86b";
     assert(splitLines(s) == [s]);
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     assert(testAliasedString!splitLines("hello\nworld"));
 
@@ -2491,7 +2491,7 @@ if (isSomeChar!C)
     assert(sa.splitLines() == ["hello", "world"]);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -2726,7 +2726,7 @@ if (isSomeChar!C)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.array : array;
 
@@ -2738,7 +2738,7 @@ if (isSomeChar!C)
     assert(lineSplitter(s).array == splitLines(s));
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.array : array;
     import std.conv : to;
@@ -2805,7 +2805,7 @@ if (isSomeChar!C)
 }
 
 ///
-@nogc @safe pure unittest
+version(StdUnittest) @nogc @safe pure unittest
 {
     auto s = "\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\nsunday\nmon\u2030day\n";
     auto lines = s.lineSplitter();
@@ -2818,7 +2818,7 @@ if (isSomeChar!C)
     assert(i == witness.length);
 }
 
-@nogc @safe pure unittest
+version(StdUnittest) @nogc @safe pure unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : only;
@@ -2834,7 +2834,7 @@ if (isSomeChar!C)
     assert(equal(sa.lineSplitter(), only("hello", "world")));
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     auto s = "line1\nline2";
     auto spl0 = s.lineSplitter!(Yes.keepTerminator);
@@ -2892,7 +2892,7 @@ if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.uni : lineSep, paraSep;
     assert(stripLeft("     hello world     ") ==
@@ -2918,7 +2918,7 @@ if (isConvertibleToString!Range)
     return stripLeft!(StringTypeOf!Range)(str);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(testAliasedString!stripLeft("  hello"));
 }
@@ -2942,7 +2942,7 @@ if (((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range)) ||
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(stripLeft("     hello world     ", " ") ==
            "hello world     ");
@@ -2953,7 +2953,7 @@ if (((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range)) ||
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.array : array;
     import std.utf : byChar, byWchar, byDchar;
@@ -2973,7 +2973,7 @@ if (((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range)) ||
     assert(stripLeft(" hello ", "") == " hello ");
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(testAliasedString!stripLeft(" xyz  hello", "xyz "));
 }
@@ -3091,7 +3091,7 @@ if (isSomeString!Range ||
 
 ///
 @safe pure
-unittest
+version(StdUnittest) unittest
 {
     import std.uni : lineSep, paraSep;
     assert(stripRight("     hello world     ") ==
@@ -3112,12 +3112,12 @@ if (isConvertibleToString!Range)
     return stripRight!(StringTypeOf!Range)(str);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(testAliasedString!stripRight("hello   "));
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.array : array;
     import std.uni : lineSep, paraSep;
@@ -3161,7 +3161,7 @@ if (((isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range)) ||
 
 ///
 @safe pure
-unittest
+version(StdUnittest) unittest
 {
     assert(stripRight("     hello world     ", "x") ==
            "     hello world     ");
@@ -3171,12 +3171,12 @@ unittest
            "     hello world");
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(testAliasedString!stripRight("hello xyz  ", "xyz "));
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.array : array;
     import std.utf : byChar, byDchar, byUTF, byWchar;
@@ -3222,7 +3222,7 @@ if (isSomeString!Range ||
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.uni : lineSep, paraSep;
     assert(strip("     hello world     ") ==
@@ -3243,12 +3243,12 @@ if (isConvertibleToString!Range)
     return strip!(StringTypeOf!Range)(str);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(testAliasedString!strip("     hello world     "));
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
     import std.conv : to;
@@ -3283,7 +3283,7 @@ if (isConvertibleToString!Range)
     });
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.array : sameHead, sameTail;
     import std.exception : assertCTFEable;
@@ -3307,7 +3307,7 @@ if (((isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range)) ||
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(strip("     hello world     ", "x") ==
            "     hello world     ");
@@ -3320,7 +3320,7 @@ if (((isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range)) ||
     assert(strip(" hello ", "") == " hello ");
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(testAliasedString!strip("  xyz   hello world  xyz   ", "xyz "));
 }
@@ -3337,7 +3337,7 @@ if (((isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range)) ||
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(strip("xxhelloyy", "x", "y") == "hello");
     assert(strip("   xyxyhello worldxyxyzz    ", "xy ", "xyz ") ==
@@ -3348,12 +3348,12 @@ if (((isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range)) ||
     assert(strip(" hello ", "", "") == " hello ");
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(testAliasedString!strip("  xy   hello world  pq   ", "xy ", "pq "));
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
     import std.conv : to;
@@ -3402,7 +3402,7 @@ if (((isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range)) ||
     });
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.array : sameHead, sameTail;
     import std.exception : assertCTFEable;
@@ -3529,7 +3529,7 @@ if ((isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range) ||
 
 ///
 @safe pure
-unittest
+version(StdUnittest) unittest
 {
     import std.uni : lineSep, paraSep, nelSep;
     import std.utf : decode;
@@ -3565,13 +3565,13 @@ if (isConvertibleToString!Range)
     return chomp!(StringTypeOf!Range, C2)(str, delimiter);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(testAliasedString!chomp(" hello world  \n\r"));
     assert(testAliasedString!chomp(" hello world", "orld"));
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -3679,7 +3679,7 @@ if ((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) ||
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(chompPrefix("hello world", "he") == "llo world");
     assert(chompPrefix("hello world", "hello w") == "orld");
@@ -3694,7 +3694,7 @@ if (isConvertibleToString!Range)
 }
 
 @safe pure
-unittest
+version(StdUnittest) unittest
 {
     import std.algorithm.comparison : equal;
     import std.conv : to;
@@ -3729,7 +3729,7 @@ unittest
     assert(chompPrefix("\u2020world"d.byDchar, "\u2020"d).array == "world"d);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(testAliasedString!chompPrefix("hello world", "hello"));
 }
@@ -3803,7 +3803,7 @@ if ((isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range) ||
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(chop("hello world") == "hello worl");
     assert(chop("hello world\n") == "hello world");
@@ -3820,12 +3820,12 @@ if (isConvertibleToString!Range)
     return chop!(StringTypeOf!Range)(str);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(testAliasedString!chop("hello world"));
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.array : array;
     import std.utf : byChar, byWchar, byDchar, byCodeUnit, invalidUTFstrings;
@@ -3859,7 +3859,7 @@ if (isConvertibleToString!Range)
     }
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
     import std.conv : to;
@@ -3905,7 +3905,7 @@ if (isSomeString!S)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(leftJustify("hello", 7, 'X') == "helloXX");
     assert(leftJustify("hello", 2, 'X') == "hello");
@@ -3993,7 +3993,7 @@ if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
 
 ///
 @safe pure @nogc nothrow
-unittest
+version(StdUnittest) unittest
 {
     import std.algorithm.comparison : equal;
     import std.utf : byChar;
@@ -4008,7 +4008,7 @@ if (isConvertibleToString!Range)
     return leftJustifier!(StringTypeOf!Range)(r, width, fillChar);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     auto r = "hello".leftJustifier(8);
     r.popFront();
@@ -4018,7 +4018,7 @@ if (isConvertibleToString!Range)
     assert(save.front == 'e');
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(testAliasedString!leftJustifier("hello", 2));
 }
@@ -4047,7 +4047,7 @@ if (isSomeString!S)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(rightJustify("hello", 7, 'X') == "XXhello");
     assert(rightJustify("hello", 2, 'X') == "hello");
@@ -4173,7 +4173,7 @@ if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
 
 ///
 @safe pure @nogc nothrow
-unittest
+version(StdUnittest) unittest
 {
     import std.algorithm.comparison : equal;
     import std.utf : byChar;
@@ -4188,12 +4188,12 @@ if (isConvertibleToString!Range)
     return rightJustifier!(StringTypeOf!Range)(r, width, fillChar);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(testAliasedString!rightJustifier("hello", 2));
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     auto r = "hello"d.rightJustifier(6);
     r.popFront();
@@ -4237,7 +4237,7 @@ if (isSomeString!S)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(center("hello", 7, 'X') == "XhelloX");
     assert(center("hello", 2, 'X') == "hello");
@@ -4245,7 +4245,7 @@ if (isSomeString!S)
 }
 
 @safe pure
-unittest
+version(StdUnittest) unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -4332,7 +4332,7 @@ if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
 
 ///
 @safe pure @nogc nothrow
-unittest
+version(StdUnittest) unittest
 {
     import std.algorithm.comparison : equal;
     import std.utf : byChar;
@@ -4347,12 +4347,12 @@ if (isConvertibleToString!Range)
     return centerJustifier!(StringTypeOf!Range)(r, width, fillChar);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(testAliasedString!centerJustifier("hello", 8));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static auto byFwdRange(dstring s)
     {
@@ -4412,12 +4412,12 @@ if ((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(detab(" \n\tx", 9) == " \n         x");
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     static struct TestStruct
     {
@@ -4565,7 +4565,7 @@ if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.array : array;
 
@@ -4578,12 +4578,12 @@ if (isConvertibleToString!Range)
     return detabber!(StringTypeOf!Range)(r, tabSize);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(testAliasedString!detabber(  "  ab\t asdf ", 8));
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : cmp;
     import std.conv : to;
@@ -4614,7 +4614,7 @@ if (isConvertibleToString!Range)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.array : array;
     import std.utf : byChar, byWchar;
@@ -4652,7 +4652,7 @@ if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(entab("        x \n") == "\tx\n");
 }
@@ -4664,7 +4664,7 @@ if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range)) &&
     return entab!(StringTypeOf!Range)(s, tabSize);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(testAliasedString!entab("        x \n"));
 }
@@ -4903,7 +4903,7 @@ if (isForwardRange!Range && !isConvertibleToString!Range)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.array : array;
     assert(entabber("        x \n").array == "\tx\n");
@@ -4915,13 +4915,13 @@ if (isConvertibleToString!Range)
     return entabber!(StringTypeOf!Range)(r, tabSize);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(testAliasedString!entabber("  ab    asdf ", 8));
 }
 
 @safe pure
-unittest
+version(StdUnittest) unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -4968,7 +4968,7 @@ unittest
 }
 
 @safe pure
-unittest
+version(StdUnittest) unittest
 {
     import std.array : array;
     import std.utf : byChar;
@@ -5015,7 +5015,7 @@ if (isSomeChar!C1 && isSomeChar!C2)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     dchar[dchar] transTable1 = ['e' : '5', 'o' : '7', '5': 'q'];
     assert(translate("hello world", transTable1) == "h5ll7 w7rld");
@@ -5026,7 +5026,7 @@ if (isSomeChar!C1 && isSomeChar!C2)
     assert(translate("hello world", transTable2) == "h5llorange worangerld");
 }
 
-@safe pure unittest // issue 13018
+version(StdUnittest) @safe pure unittest // issue 13018
 {
     immutable dchar[dchar] transTable1 = ['e' : '5', 'o' : '7', '5': 'q'];
     assert(translate("hello world", transTable1) == "h5ll7 w7rld");
@@ -5037,7 +5037,7 @@ if (isSomeChar!C1 && isSomeChar!C2)
     assert(translate("hello world", transTable2) == "h5llorange worangerld");
 }
 
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -5095,7 +5095,7 @@ if (isSomeChar!C1 && isSomeString!S && isSomeChar!C2)
     return buffer.data;
 }
 
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -5170,7 +5170,7 @@ if (isSomeChar!C1 && isSomeChar!C2 && isOutputRange!(Buffer, C1))
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.array : appender;
     dchar[dchar] transTable1 = ['e' : '5', 'o' : '7', '5': 'q'];
@@ -5188,7 +5188,7 @@ if (isSomeChar!C1 && isSomeChar!C2 && isOutputRange!(Buffer, C1))
     assert(buffer.data == "h5llorange worangerld");
 }
 
-@safe pure unittest // issue 13018
+version(StdUnittest) @safe pure unittest // issue 13018
 {
     import std.array : appender;
     immutable dchar[dchar] transTable1 = ['e' : '5', 'o' : '7', '5': 'q'];
@@ -5319,7 +5319,7 @@ string makeTrans(in char[] from, in char[] to) @trusted pure nothrow
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     auto transTable1 = makeTrans("eo5", "57q");
     assert(translate("hello world", transTable1) == "h5ll7 w7rld");
@@ -5360,7 +5360,7 @@ do
     return result;
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -5435,7 +5435,7 @@ do
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.array : appender;
     auto buffer = appender!(char[])();
@@ -5507,7 +5507,7 @@ if (isSomeString!S)
 
 
 deprecated
-@safe pure @nogc unittest
+version(StdUnittest) @safe pure @nogc unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -5581,7 +5581,7 @@ if (isSomeString!S && isSomeString!S1)
 }
 
 deprecated
-@safe pure @nogc unittest
+version(StdUnittest) @safe pure @nogc unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -5634,7 +5634,7 @@ if (isSomeString!S)
 }
 
 deprecated
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -5649,7 +5649,7 @@ deprecated
 }
 
 deprecated
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(removechars("abc", "x") == "abc");
 }
@@ -5710,7 +5710,7 @@ S squeeze(S)(S s, in S pattern = null)
 }
 
 deprecated
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -5765,7 +5765,7 @@ S1 munch(S1, S2)(ref S1 s, S2 pattern) @safe pure @nogc
 
 ///
 deprecated
-@safe pure @nogc unittest
+version(StdUnittest) @safe pure @nogc unittest
 {
     string s = "123abc";
     string t = munch(s, "0123456789");
@@ -5775,7 +5775,7 @@ deprecated
 }
 
 deprecated
-@safe pure @nogc unittest
+version(StdUnittest) @safe pure @nogc unittest
 {
     string s = "123€abc";
     string t = munch(s, "0123456789");
@@ -5842,7 +5842,7 @@ if (isSomeString!S)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(succ("1") == "2");
     assert(succ("9") == "10");
@@ -5850,7 +5850,7 @@ if (isSomeString!S)
     assert(succ("zz99") == "aaa00");
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -6026,7 +6026,7 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
     return result.data;
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
     import std.conv : to;
@@ -6070,7 +6070,7 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
     });
 }
 
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     import core.exception : AssertError;
     import std.exception : assertThrown;
@@ -6243,7 +6243,7 @@ if (isSomeString!S ||
  * Integer Whole Number: (byte, ubyte, short, ushort, int, uint, long, and ulong)
  * ['+'|'-']digit(s)[U|L|UL]
  */
-@safe @nogc pure nothrow unittest
+version(StdUnittest) @safe @nogc pure nothrow unittest
 {
     assert(isNumeric("123"));
     assert(isNumeric("123UL"));
@@ -6257,7 +6257,7 @@ if (isSomeString!S ||
  * ['+'|'-']digit(s)[.][digit(s)][[e-|e+]digit(s)][i|f|L|Li|fi]]
  *      or [nan|nani|inf|-inf]
  */
-@safe @nogc pure nothrow unittest
+version(StdUnittest) @safe @nogc pure nothrow unittest
 {
     assert(isNumeric("+123"));
     assert(isNumeric("-123.01"));
@@ -6276,14 +6276,14 @@ if (isSomeString!S ||
  *         [digit(s)[.][digit(s)][[e-|e+]digit(s)][i|f|L|Li|fi]]
  *      or [nan|nani|nan+nani|inf|-inf]
  */
-@safe @nogc pure nothrow unittest
+version(StdUnittest) @safe @nogc pure nothrow unittest
 {
     assert(isNumeric("-123e-1+456.9e-10Li"));
     assert(isNumeric("+123e+10+456i"));
     assert(isNumeric("123+456"));
 }
 
-@safe @nogc pure nothrow unittest
+version(StdUnittest) @safe @nogc pure nothrow unittest
 {
     assert(!isNumeric("F"));
     assert(!isNumeric("L"));
@@ -6307,7 +6307,7 @@ if (isSomeString!S ||
 }
 
 // Test string types
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.conv : to;
 
@@ -6322,7 +6322,7 @@ if (isSomeString!S ||
 }
 
 // test ranges
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     import std.range : refRange;
     import std.utf : byCodeUnit;
@@ -6341,7 +6341,7 @@ if (isSomeString!S ||
 }
 
 /// isNumeric works with CTFE
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     enum a = isNumeric("123.00E-5+1234.45E-12Li");
     enum b = isNumeric("12345xxxx890");
@@ -6350,7 +6350,7 @@ if (isSomeString!S ||
     static assert(!b);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -6402,7 +6402,7 @@ if (isSomeString!S ||
 
 version(TestComplex)
 deprecated
-unittest
+version(StdUnittest) unittest
 {
     import std.conv : to;
     assert(isNumeric(to!string(123e+2+1234.78Li)) == true);
@@ -6539,7 +6539,7 @@ do
 }
 
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.exception : assertCTFEable;
     assertCTFEable!(
@@ -6592,7 +6592,7 @@ do
     });
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(testAliasedString!soundexer("Martinez"));
 }
@@ -6658,7 +6658,7 @@ string[string] abbrev(string[] values) @safe pure
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.string;
 
@@ -6669,7 +6669,7 @@ string[string] abbrev(string[] values) @safe pure
 }
 
 
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     import std.algorithm.sorting : sort;
     import std.conv : to;
@@ -6765,7 +6765,7 @@ if ((isInputRange!Range && isSomeChar!(Unqual!(ElementEncodingType!Range)) ||
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.utf : byChar, byWchar, byDchar;
 
@@ -6806,12 +6806,12 @@ if (isConvertibleToString!Range)
     return column!(StringTypeOf!Range)(str, tabsize);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(testAliasedString!column("abc\u00861"));
 }
 
-@safe @nogc unittest
+version(StdUnittest) @safe @nogc unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -6913,7 +6913,7 @@ if (isSomeString!S)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     assert(wrap("a short string", 7) == "a short\nstring\n");
 
@@ -6924,7 +6924,7 @@ if (isSomeString!S)
     assert(wrap("a short string", 7, "\t", "    ") == "\ta\n    short\n    string\n");
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -6968,7 +6968,7 @@ if (isSomeString!S)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     enum pretty = q{
        import std.stdio;
@@ -7064,7 +7064,7 @@ if (isSomeString!S)
     return lines;
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -7157,7 +7157,7 @@ if (isSomeString!S)
     });
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.exception : assertThrown;
     auto bad = "      a\n\tb\n   c";
@@ -7193,7 +7193,7 @@ if (staticIndexOf!(Unqual!T, ubyte, ushort, uint) != -1)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     string a = "Hölo World";
     immutable(ubyte)[] b = a.representation;
@@ -7202,7 +7202,7 @@ if (staticIndexOf!(Unqual!T, ubyte, ushort, uint) != -1)
     assert(a == c);
 }
 
-pure @system unittest
+version(StdUnittest) pure @system unittest
 {
     import std.algorithm.comparison : equal;
     static foreach (T; AliasSeq!(char[], wchar[], dchar[]))

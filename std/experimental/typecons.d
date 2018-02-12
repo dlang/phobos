@@ -56,7 +56,7 @@ if (is(T == class) || is(T == interface))
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     class C { @disable opCast(T)() {} }
     auto c = new C;
@@ -129,7 +129,7 @@ if (Targets.length >= 1 && !allSatisfy!(isMutable, Targets))
     alias implementsInterface = .implementsInterface!(Source, staticMap!(Unqual, Targets));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     interface Foo {
         void foo();
@@ -375,7 +375,7 @@ private template wrapperSignature(alias fun)
         ~ name~"("~wrapperParameters~")"~mod;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     interface M
     {
@@ -427,7 +427,7 @@ version(StdDdoc)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     interface Quack
     {
@@ -508,7 +508,7 @@ version(StdDdoc)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.traits : functionAttributes, FunctionAttribute;
     interface A { int run(); }
@@ -609,7 +609,7 @@ template unwrap(Target)
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     // Validate const/immutable
     class A
@@ -656,7 +656,7 @@ template unwrap(Target)
         assert(d.draw(10) == 10);
     }
 }
-@system unittest
+version(StdUnittest) @system unittest
 {
     // Bugzilla 10377
     import std.algorithm, std.range;
@@ -673,7 +673,7 @@ template unwrap(Target)
     auto r = iota(0,10,1).inputRangeObject().wrap!(MyInputRange!int)();
     assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]));
 }
-@system unittest
+version(StdUnittest) @system unittest
 {
     // Bugzilla 10536
     interface Interface
@@ -689,7 +689,7 @@ template unwrap(Target)
     Interface i = new Pluggable().wrap!Interface;
     assert(i.foo() == 1);
 }
-@system unittest
+version(StdUnittest) @system unittest
 {
     // Enhancement 10538
     interface Interface
@@ -911,7 +911,7 @@ Final!T makeFinal(T)(T t)
 }
 
 /// `Final` can be used to create class references which cannot be rebound:
-pure nothrow @safe unittest
+version(StdUnittest) pure nothrow @safe unittest
 {
     static class A
     {
@@ -933,7 +933,7 @@ pure nothrow @safe unittest
 }
 
 /// `Final` can also be used to create read-only data fields without using transitive immutability:
-pure nothrow @safe unittest
+version(StdUnittest) pure nothrow @safe unittest
 {
     static class A
     {
@@ -964,7 +964,7 @@ pure nothrow @safe unittest
     assert(b.a.i == 24);
 }
 
-pure nothrow @safe unittest
+version(StdUnittest) pure nothrow @safe unittest
 {
     static class A { int i; }
     static assert(!is(Final!A == A));
@@ -1037,7 +1037,7 @@ pure nothrow @safe unittest
     assert(c.get == 30);
 }
 
-pure nothrow @safe unittest
+version(StdUnittest) pure nothrow @safe unittest
 {
     auto arr = makeFinal([1, 2, 3]);
     static assert(!__traits(compiles, arr = null));
@@ -1046,7 +1046,7 @@ pure nothrow @safe unittest
 }
 
 // issue 17270
-pure nothrow @nogc @system unittest
+version(StdUnittest) pure nothrow @nogc @system unittest
 {
     int i = 1;
     Final!(int*) fp = &i;
@@ -1061,7 +1061,7 @@ pure nothrow @nogc @system unittest
     assert(*p == 2);
 }
 
-pure nothrow @system unittest
+version(StdUnittest) pure nothrow @system unittest
 {
     Final!(int[]) arr;
     // static assert(!__traits(compiles,

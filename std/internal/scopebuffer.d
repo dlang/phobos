@@ -128,7 +128,7 @@ if (isAssignable!T &&
         this.bufLen = cast(uint) buf.length;
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         ubyte[10] tmpbuf = void;
         auto sbuf = ScopeBuffer!ubyte(tmpbuf);
@@ -289,7 +289,7 @@ if (isAssignable!T &&
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.stdc.stdio;
     import std.range;
@@ -332,7 +332,7 @@ if (isAssignable!T &&
 
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     string cat(string s1, string s2)
     {
@@ -350,7 +350,7 @@ if (isAssignable!T &&
 }
 
 // const
-@system unittest
+version(StdUnittest) @system unittest
 {
     char[10] tmpbuf = void;
     auto textbuf = ScopeBuffer!char(tmpbuf);
@@ -377,14 +377,14 @@ auto scopeBuffer(T)(T[] tmpbuf)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     ubyte[10] tmpbuf = void;
     auto sb = scopeBuffer(tmpbuf);
     scope(exit) sb.free();
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     ScopeBuffer!(int*) b;
     int*[] s;

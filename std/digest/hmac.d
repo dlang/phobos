@@ -32,7 +32,7 @@ import std.meta : allSatisfy;
  */
 
 /// Compute HMAC over an input string
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.ascii : LetterCase;
     import std.digest : toHexString;
@@ -90,7 +90,7 @@ if (hashBlockSize % 8 == 0)
     }
 
     ///
-    @safe pure nothrow @nogc unittest
+    version(StdUnittest) @safe pure nothrow @nogc unittest
     {
         import std.digest.hmac, std.digest.sha;
         import std.string : representation;
@@ -127,7 +127,7 @@ if (hashBlockSize % 8 == 0)
     }
 
     ///
-    @safe pure nothrow @nogc unittest
+    version(StdUnittest) @safe pure nothrow @nogc unittest
     {
         import std.digest.hmac, std.digest.sha;
         import std.string : representation;
@@ -158,7 +158,7 @@ if (hashBlockSize % 8 == 0)
     }
 
     ///
-    @safe pure nothrow @nogc unittest
+    version(StdUnittest) @safe pure nothrow @nogc unittest
     {
         import std.digest.hmac, std.digest.sha;
         import std.string : representation;
@@ -194,7 +194,7 @@ if (hashBlockSize % 8 == 0)
     }
 
     ///
-    @safe pure nothrow @nogc unittest
+    version(StdUnittest) @safe pure nothrow @nogc unittest
     {
         import std.digest.hmac, std.digest.sha;
         import std.string : representation;
@@ -235,7 +235,7 @@ if (isDigest!H)
     }
 
     ///
-    @safe pure nothrow @nogc unittest
+    version(StdUnittest) @safe pure nothrow @nogc unittest
     {
         import std.digest.hmac, std.digest.sha;
         import std.string : representation;
@@ -269,7 +269,7 @@ if (isDigest!H)
     }
 
     ///
-    @safe pure nothrow @nogc unittest
+    version(StdUnittest) @safe pure nothrow @nogc unittest
     {
         import std.algorithm.iteration : map;
         import std.digest.hmac, std.digest.sha;
@@ -294,7 +294,7 @@ version(StdUnittest)
 }
 
 @safe pure nothrow @nogc
-unittest
+version(StdUnittest) unittest
 {
     import std.digest.md : MD5;
     import std.range : isOutputRange;
@@ -304,7 +304,7 @@ unittest
 }
 
 @safe pure nothrow
-unittest
+version(StdUnittest) unittest
 {
     import std.digest.md : MD5;
     import std.digest.sha : SHA1, SHA256;

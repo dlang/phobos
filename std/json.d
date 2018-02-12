@@ -23,7 +23,7 @@ import std.range.primitives;
 import std.traits;
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : to;
 
@@ -123,7 +123,7 @@ struct JSONValue
         return type_tag;
     }
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
           string s = "{ \"language\": \"D\" }";
           JSONValue j = parseJSON(s);
@@ -149,7 +149,7 @@ struct JSONValue
         return v;
     }
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         JSONValue j = [ "language": "D" ];
 
@@ -443,7 +443,7 @@ struct JSONValue
         type_tag = arg.type;
     }
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         JSONValue j = JSONValue( "a string" );
         j = JSONValue(42);
@@ -477,7 +477,7 @@ struct JSONValue
         return a[i];
     }
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         JSONValue j = JSONValue( [42, 43, 44] );
         assert( j[0].integer == 42 );
@@ -495,7 +495,7 @@ struct JSONValue
                                         "Key not found: " ~ k);
     }
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         JSONValue j = JSONValue( ["language": "D"] );
         assert( j["language"].str == "D" );
@@ -524,7 +524,7 @@ struct JSONValue
         this.object = aa;
     }
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
             JSONValue j = JSONValue( ["language": "D"] );
             j["language"].str = "Perl";
@@ -540,7 +540,7 @@ struct JSONValue
         this.array = a;
     }
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
             JSONValue j = JSONValue( ["Perl", "C"] );
             j[1].str = "D";
@@ -599,7 +599,7 @@ struct JSONValue
         return k in this.objectNoRef;
     }
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         JSONValue j = [ "language": "D", "author": "walter" ];
         string a = ("author" in j).str;
@@ -1074,7 +1074,7 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
     return root;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     enum issue15742objectOfObject = `{ "key1": { "key2": 1 }}`;
     static assert(parseJSON(issue15742objectOfObject).type == JSON_TYPE.OBJECT);
@@ -1083,7 +1083,7 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
     static assert(parseJSON(issue15742arrayOfArray).type == JSON_TYPE.ARRAY);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Ensure we can parse and use JSON from @safe code
     auto a = `{ "key1": { "key2": 1 }}`.parseJSON;
@@ -1091,7 +1091,7 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
     assert(a.toString == `{"key1":{"key2":1}}`);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     // Ensure we can parse JSON from a @system range.
     struct Range
@@ -1367,7 +1367,7 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
     return json.data;
 }
 
-@safe unittest // bugzilla 12897
+version(StdUnittest) @safe unittest // bugzilla 12897
 {
     JSONValue jv0 = JSONValue("test测试");
     assert(toJSON(jv0, false, JSONOptions.escapeNonAsciiChars) == `"test\u6D4B\u8BD5"`);
@@ -1401,7 +1401,7 @@ class JSONException : Exception
 }
 
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.exception;
     JSONValue jv = "123";
@@ -1478,7 +1478,7 @@ class JSONException : Exception
     assert(jv3.str == "\u001C");
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     // Bugzilla 11504
 
@@ -1520,7 +1520,7 @@ class JSONException : Exception
     assert(jv.type == JSON_TYPE.TRUE);
 }
 
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     // Adding new json element via array() / object() directly
 
@@ -1535,7 +1535,7 @@ class JSONException : Exception
     assert(jobj.object.length == 10);
 }
 
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     // Adding new json element without array() / object() access
 
@@ -1555,7 +1555,7 @@ class JSONException : Exception
     assert(jarr[0] == JSONValue(10));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     // @system because JSONValue.array is @system
     import std.exception;
@@ -1643,7 +1643,7 @@ class JSONException : Exception
 }`);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
   auto json = `"hello\nworld"`;
   const jv = parseJSON(json);
@@ -1651,7 +1651,7 @@ class JSONException : Exception
   assert(jv.toPrettyString == json);
 }
 
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     // Bugzilla 12969
 
@@ -1681,7 +1681,7 @@ class JSONException : Exception
     assert( jv[3].integer == 2 );
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto s = q"EOF
 [
@@ -1699,7 +1699,7 @@ EOF";
 }
 
 // handling of special float values (NaN, Inf, -Inf)
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.exception : assertThrown;
     import std.math : isNaN, isInfinity;
@@ -1740,7 +1740,7 @@ EOF";
     assert(jvNegInf.str == JSONFloatLiteral.negativeInf);
 }
 
-pure nothrow @safe @nogc unittest
+version(StdUnittest) pure nothrow @safe @nogc unittest
 {
     JSONValue testVal;
     testVal = "test";
@@ -1753,7 +1753,7 @@ pure nothrow @safe @nogc unittest
     assert(testVal.isNull);
 }
 
-pure nothrow @safe unittest // issue 15884
+version(StdUnittest) pure nothrow @safe unittest // issue 15884
 {
     import std.typecons;
     void Test(C)() {
@@ -1768,7 +1768,7 @@ pure nothrow @safe unittest // issue 15884
     Test!dchar();
 }
 
-@safe unittest // issue 15885
+version(StdUnittest) @safe unittest // issue 15885
 {
     enum bool realInDoublePrecision = real.mant_dig == double.mant_dig;
 
@@ -1802,47 +1802,47 @@ pure nothrow @safe unittest // issue 15884
     assert(test(3*minSub));
 }
 
-@safe unittest // issue 17555
+version(StdUnittest) @safe unittest // issue 17555
 {
     import std.exception : assertThrown;
 
     assertThrown!JSONException(parseJSON("\"a\nb\""));
 }
 
-@safe unittest // issue 17556
+version(StdUnittest) @safe unittest // issue 17556
 {
     auto v = JSONValue("\U0001D11E");
     auto j = toJSON(v, false, JSONOptions.escapeNonAsciiChars);
     assert(j == `"\uD834\uDD1E"`);
 }
 
-@safe unittest // issue 5904
+version(StdUnittest) @safe unittest // issue 5904
 {
     string s = `"\uD834\uDD1E"`;
     auto j = parseJSON(s);
     assert(j.str == "\U0001D11E");
 }
 
-@safe unittest // issue 17557
+version(StdUnittest) @safe unittest // issue 17557
 {
     assert(parseJSON("\"\xFF\"").str == "\xFF");
     assert(parseJSON("\"\U0001D11E\"").str == "\U0001D11E");
 }
 
-@safe unittest // issue 17553
+version(StdUnittest) @safe unittest // issue 17553
 {
     auto v = JSONValue("\xFF");
     assert(toJSON(v) == "\"\xFF\"");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.utf;
     assert(parseJSON("\"\xFF\"".byChar).str == "\xFF");
     assert(parseJSON("\"\U0001D11E\"".byChar).str == "\U0001D11E");
 }
 
-@safe unittest // JSONOptions.doNotEscapeSlashes (issue 17587)
+version(StdUnittest) @safe unittest // JSONOptions.doNotEscapeSlashes (issue 17587)
 {
     assert(parseJSON(`"/"`).toString == `"\/"`);
     assert(parseJSON(`"\/"`).toString == `"\/"`);

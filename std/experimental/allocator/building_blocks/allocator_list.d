@@ -549,7 +549,7 @@ template AllocatorList(alias factoryFunction,
 }
 
 ///
-version(Posix) @system unittest
+version(StdUnittest) version(Posix) @system unittest
 {
     import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.free_list : ContiguousFreeList;
@@ -592,7 +592,7 @@ version(Posix) @system unittest
     assert(b1.length == 1024 * 10);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     // Create an allocator based upon 4MB regions, fetched from the GC heap.
     import std.algorithm.comparison : max;
@@ -606,7 +606,7 @@ version(Posix) @system unittest
     a.deallocateAll();
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     // Create an allocator based upon 4MB regions, fetched from the GC heap.
     import std.algorithm.comparison : max;
@@ -621,7 +621,7 @@ version(Posix) @system unittest
     a.deallocateAll();
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.region : Region;
@@ -641,7 +641,7 @@ version(Posix) @system unittest
     assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.yes);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.region : Region;
     enum bs = GCAllocator.alignment;
@@ -663,7 +663,7 @@ version(Posix) @system unittest
     a.deallocateAll();
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.ascending_page_allocator : AscendingPageAllocator;
     import std.experimental.allocator.mallocator : Mallocator;
@@ -723,7 +723,7 @@ version(Posix) @system unittest
     assert(a.deallocateAll());
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.ascending_page_allocator : AscendingPageAllocator;
     import std.experimental.allocator.mallocator : Mallocator;

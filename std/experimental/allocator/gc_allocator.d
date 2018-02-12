@@ -14,7 +14,7 @@ struct GCAllocator
 {
     import core.memory : GC;
     import std.typecons : Ternary;
-    @system unittest { testAllocator!(() => GCAllocator.instance); }
+    version(StdUnittest) @system unittest { testAllocator!(() => GCAllocator.instance); }
 
     /**
     The alignment is a static constant equal to $(D platformAlignment), which
@@ -127,7 +127,7 @@ struct GCAllocator
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     auto buffer = GCAllocator.instance.allocate(1024 * 1024 * 4);
     // deallocate upon scope's end (alternatively: leave it to collection)
@@ -135,13 +135,13 @@ struct GCAllocator
     //...
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto b = GCAllocator.instance.allocate(10_000);
     assert(GCAllocator.instance.expand(b, 1));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.memory : GC;
     import std.typecons : Ternary;
@@ -173,7 +173,7 @@ struct GCAllocator
     assert((() nothrow @safe @nogc => GCAllocator.instance.goodAllocSize(4096 * 4 + 1))() == 4096 * 5);
 }
 
-nothrow @safe unittest
+version(StdUnittest) nothrow @safe unittest
 {
     import std.typecons : Ternary;
 

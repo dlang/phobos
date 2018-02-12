@@ -132,7 +132,7 @@ template all(alias pred = "a")
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert( all!"a & 1"([1, 3, 5, 7, 9]));
     assert(!all!"a & 1"([1, 2, 3, 5, 7, 9]));
@@ -144,13 +144,13 @@ evaluated to true or false in a conditional statement. This can be a
 convenient way to quickly evaluate that $(I _all) of the elements of a range
 are true.
  +/
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[3] vals = [5, 3, 18];
     assert( all(vals[]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int x = 1;
     assert(all!(a => a > x)([2, 3]));
@@ -177,7 +177,7 @@ template any(alias pred = "a")
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.ascii : isWhite;
     assert( all!(any!isWhite)(["a a", "b b"]));
@@ -190,7 +190,7 @@ evaluated to true or false in a conditional statement. `!any` can be a
 convenient way to quickly test that $(I none) of the elements of a range
 evaluate to true.
  +/
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[3] vals1 = [0, 0, 0];
     assert(!any(vals1[])); //none of vals1 evaluate to true
@@ -204,7 +204,7 @@ evaluate to true.
     assert( all(vals3[]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto a = [ 1, 2, 0, 4 ];
     assert(any!"a == 2"(a));
@@ -261,7 +261,7 @@ if (isInputRange!(Range) && is(typeof(r.front == lPar)))
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     auto s = "1 + (2 * (3 + 1 / 2)";
     assert(!balancedParens(s, '(', ')'));
@@ -401,7 +401,7 @@ if ((isRandomAccessRange!(Range) && hasSlicing!Range) || isSomeString!Range)
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     auto bmFinder = boyerMooreFinder("TG");
 
@@ -471,7 +471,7 @@ if (isForwardRange!R1 && isInputRange!R2 &&
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(commonPrefix("hello, world", "hello, there") == "hello, ");
 }
@@ -536,7 +536,7 @@ if (isNarrowString!R1 && isNarrowString!R2)
         return commonPrefix!"a == b"(r1, r2);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter;
@@ -642,7 +642,7 @@ if (isInputRange!Range && !isInfinite!Range &&
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.uni : toLower;
 
@@ -661,7 +661,7 @@ if (isInputRange!Range && !isInfinite!Range &&
     assert(count!("a > 1")(a) == 8);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.conv : text;
 
@@ -679,7 +679,7 @@ if (isInputRange!Range && !isInfinite!Range &&
     assert(count!("a == '語'")("日本語"d) == 1);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     string s = "This is a fofofof list";
     string sub = "fof";
@@ -729,7 +729,7 @@ if (isInputRange!R && !isInfinite!R)
     return walkLength(haystack);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[] a = [ 1, 2, 4, 3, 2, 5, 3, 2, 4 ];
     assert(count!("a == 3")(a) == 2);
@@ -737,7 +737,7 @@ if (isInputRange!R && !isInfinite!R)
 }
 
 // Issue 11253
-@safe nothrow unittest
+version(StdUnittest) @safe nothrow unittest
 {
     assert([1, 2, 3].count([2, 3]) == 1);
 }
@@ -863,7 +863,7 @@ if (isInputRange!R &&
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(countUntil("hello world", "world") == 6);
     assert(countUntil("hello world", 'r') == 8);
@@ -877,7 +877,7 @@ if (isInputRange!R &&
     assert(countUntil!"a > b"([0, 7, 12, 22, 9], 20) == 3);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.iteration : filter;
     import std.internal.test.dummyrange;
@@ -904,7 +904,7 @@ if (isInputRange!R &&
     assert(r.save.countUntil(r3) == -1);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(countUntil("hello world", "world", "asd") == 6);
     assert(countUntil("hello world", "world", "ello") == 1);
@@ -957,7 +957,7 @@ if (isInputRange!R &&
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.ascii : isDigit;
     import std.uni : isWhite;
@@ -967,7 +967,7 @@ if (isInputRange!R &&
     assert(countUntil!"a > 20"([0, 7, 12, 22, 9]) == 3);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.internal.test.dummyrange;
 
@@ -1158,7 +1158,7 @@ if (isInputRange!R &&
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.ascii : isAlpha;
     assert("abc".endsWith!(a => a.isAlpha));
@@ -1185,7 +1185,7 @@ if (isInputRange!R &&
     assert(endsWith("abc", "x", "aaa", 'c', "sab") == 3);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.iteration : filterBidirectional;
     import std.conv : to;
@@ -1391,7 +1391,7 @@ private auto extremum(alias selector = "a < b", Range,
     return extremeElement;
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     // allows a custom map to select the extremum
     assert([[0, 4], [1, 2]].extremum!"a[0]" == [0, 4]);
@@ -1416,7 +1416,7 @@ private auto extremum(alias selector = "a < b", Range,
     assert(arr.extremum(1) == 1);
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     // 2d seeds
     int[][] arr2d;
@@ -1426,7 +1426,7 @@ private auto extremum(alias selector = "a < b", Range,
     assert(extremum([2, 3, 4], 1.5) == 1.5);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.range : enumerate, iota;
 
@@ -1457,7 +1457,7 @@ private auto extremum(alias selector = "a < b", Range,
     }
 }
 
-@nogc @safe nothrow pure unittest
+version(StdUnittest) @nogc @safe nothrow pure unittest
 {
     static immutable arr = [7, 3, 4, 2, 1, 8];
     assert(arr.extremum == 1);
@@ -1665,7 +1665,7 @@ if (isInputRange!InputRange &&
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range.primitives;
 
@@ -1683,7 +1683,7 @@ if (isInputRange!InputRange &&
 }
 
 /// Case-insensitive find of a string
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range.primitives;
     import std.uni : toLower;
@@ -1692,7 +1692,7 @@ if (isInputRange!InputRange &&
     assert(s.find!((a, b) => toLower(a) == b)("hello") == s);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.container : SList;
@@ -1705,7 +1705,7 @@ if (isInputRange!InputRange &&
     assert(equal(find!"a > b"("hello", 'k'), "llo"));
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     assert(!find              ([1, 2, 3], 2).empty);
     assert(!find!((a,b)=>a == b)([1, 2, 3], 2).empty);
@@ -1713,7 +1713,7 @@ if (isInputRange!InputRange &&
     assert(!find!((a,b)=>a == b)([1, 2, 3], 2).empty);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.meta : AliasSeq;
     static foreach (R; AliasSeq!(string, wstring, dstring))
@@ -1734,7 +1734,7 @@ if (isInputRange!InputRange &&
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //CTFE
     static assert(find("abc", 'b') == "bc");
@@ -1748,7 +1748,7 @@ if (isInputRange!InputRange &&
     static assert(find!((a,b)=>a == b)([1, 2, 3], 2));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.exception : assertCTFEable;
     import std.meta : AliasSeq;
@@ -1771,7 +1771,7 @@ if (isInputRange!InputRange &&
     assertCTFEable!dg;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Bugzilla 11603
     enum Foo : ubyte { A }
@@ -1814,7 +1814,7 @@ if (isInputRange!InputRange)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto arr = [ 1, 2, 3, 4, 1 ];
     assert(find!("a > 2")(arr) == [ 3, 4, 1 ]);
@@ -1824,7 +1824,7 @@ if (isInputRange!InputRange)
     assert(find!(pred)(arr) == arr);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     int[] r = [ 1, 2, 3 ];
     assert(find!(a=>a > 2)(r) == [3]);
@@ -2038,7 +2038,7 @@ if (isForwardRange!R1 && isForwardRange!R2
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.container : SList;
     import std.range.primitives : empty;
@@ -2053,14 +2053,14 @@ if (isForwardRange!R1 && isForwardRange!R2
     assert(a[1 .. $].find!"a.x == b"([2, 3]) == [C(2,0), C(3,1), C(4,0)]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.container : SList;
     alias C = Tuple!(int, "x", int, "y");
     assert([C(1,0), C(2,0), C(3,1), C(4,0)].find!"a.x == b"(SList!int(2, 3)[]) == [C(2,0), C(3,1), C(4,0)]);
 }
 
-@safe unittest // issue 12470
+version(StdUnittest) @safe unittest // issue 12470
 {
     import std.array : replace;
     inout(char)[] sanitize(inout(char)[] p)
@@ -2070,7 +2070,7 @@ if (isForwardRange!R1 && isForwardRange!R2
     assert(sanitize("O\x00o") == "O o");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.container : SList;
@@ -2082,7 +2082,7 @@ if (isForwardRange!R1 && isForwardRange!R2
     assert(equal(r, SList!int(2, 5, 7, 3)[]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range;
     import std.stdio;
@@ -2103,7 +2103,7 @@ if (isForwardRange!R1 && isForwardRange!R2
     assert(find(r1, r7).empty());
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     // @@@BUG@@@ removing static below makes unittest fail
@@ -2121,7 +2121,7 @@ if (isForwardRange!R1 && isForwardRange!R2
     assert(equal(find(r, [10, 11]), [10, 11, 4]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.container : SList;
 
@@ -2130,7 +2130,7 @@ if (isForwardRange!R1 && isForwardRange!R2
 }
 
 //Bug# 8334
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.iteration : filter;
     import std.range;
@@ -2214,7 +2214,7 @@ private R1 simpleMindedFind(alias pred, R1, R2)(R1 haystack, scope R2 needle)
     return haystack;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Test simpleMindedFind for the case where both haystack and needle have
     // length.
@@ -2304,7 +2304,7 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.typecons : tuple;
     int[] a = [ 1, 4, 2, 3 ];
@@ -2315,7 +2315,7 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
     assert(find(a, 5, [ 1.2, 3.5 ], 2.0) == tuple([ 2, 3 ], 3));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto s1 = "Mary has a little lamb";
     assert(find(s1, "has a", "has an") == tuple("has a little lamb", 1));
@@ -2324,7 +2324,7 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
     assert(find("abc", "bc").length == 2);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.internal : rndstuff;
     import std.meta : AliasSeq;
@@ -2351,7 +2351,7 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
     assert(find!(f)(s, "hello").length == 3);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.internal : rndstuff;
@@ -2373,7 +2373,7 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
@@ -2410,7 +2410,7 @@ RandomAccessRange find(RandomAccessRange, alias pred, InputRange)(
     return needle.beFound(haystack);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     string h = "/homes/aalexand/d/dmd/bin/../lib/libphobos.a(dmain2.o)"~
         "(.gnu.linkonce.tmain+0x74): In function `main' undefined reference"~
@@ -2424,7 +2424,7 @@ RandomAccessRange find(RandomAccessRange, alias pred, InputRange)(
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range.primitives : empty;
     int[] a = [ -1, 0, 1, 2, 3, 4, 5 ];
@@ -2434,7 +2434,7 @@ RandomAccessRange find(RandomAccessRange, alias pred, InputRange)(
     assert(find(b, boyerMooreFinder(a)).empty);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto bm = boyerMooreFinder("for");
     auto match = find("Moor", bm);
@@ -2495,7 +2495,7 @@ template canFind(alias pred="a == b")
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(canFind([0, 1, 2, 3], 2) == true);
     assert(canFind([0, 1, 2, 3], [1, 2], [2, 3]));
@@ -2512,7 +2512,7 @@ template canFind(alias pred="a == b")
  * Example using a custom predicate.
  * Note that the needle appears as the second argument of the predicate.
  */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto words = [
         "apple",
@@ -2523,7 +2523,7 @@ template canFind(alias pred="a == b")
     assert( canFind!((string a, string b) => a.startsWith(b))(words, "bees"));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.internal : rndstuff;
 
@@ -2535,7 +2535,7 @@ template canFind(alias pred="a == b")
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     assert(equal!(canFind!"a < b")([[1, 2, 3], [7, 8, 9]], [2, 8]));
@@ -2576,7 +2576,7 @@ if (isForwardRange!(Range))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[] a = [ 11, 10, 10, 9, 8, 8, 7, 8, 9 ];
     auto r = findAdjacent(a);
@@ -2586,7 +2586,7 @@ if (isForwardRange!(Range))
 
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
@@ -2646,14 +2646,14 @@ if (isInputRange!InputRange && isForwardRange!ForwardRange)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[] a = [ -1, 0, 1, 2, 3, 4, 5 ];
     int[] b = [ 3, 1, 2 ];
     assert(findAmong(a, b) == a[2 .. $]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[] a = [ -1, 0, 2, 1, 2, 3, 4, 5 ];
     int[] b = [ 1, 2, 3 ];
@@ -2701,7 +2701,7 @@ if (isForwardRange!R1 && isForwardRange!R2
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range.primitives : empty;
     // Needle is found; s is replaced by the substring following the first
@@ -2732,7 +2732,7 @@ if (isForwardRange!R1 && ifTestable!(typeof(haystack.front), unaryFun!pred))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.ascii : isWhite;
     string s = "    abc";
@@ -2743,7 +2743,7 @@ if (isForwardRange!R1 && ifTestable!(typeof(haystack.front), unaryFun!pred))
     assert(findSkip!isWhite(s) == 2);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.ascii : isWhite;
 
@@ -2988,7 +2988,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
 
 /// Returning a subtype of $(REF Tuple, std,typecons) enables
 /// the following convenient idiom:
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     // findSplit returns a triplet
     if (auto split = "dlang-rocks".findSplit("-"))
@@ -2996,7 +2996,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.range.primitives : empty;
 
@@ -3024,13 +3024,13 @@ if (isForwardRange!R1 && isForwardRange!R2)
 }
 
 /// Use $(REF only, std,range) to find single elements:
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.range : only;
     assert([1, 2, 3, 4].findSplitBefore(only(3))[0] == [1, 2]);
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.range.primitives : empty;
 
@@ -3065,7 +3065,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(r2[1] == a[4 .. $]);
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter;
@@ -3102,7 +3102,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(equal(r2[1], a[4 .. $]));
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     auto str = "sep,one,sep,two";
 
@@ -3116,7 +3116,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(split[0] == "sep");
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     auto str = "sep,one,sep,two";
 
@@ -3258,7 +3258,7 @@ if (isInputRange!Range && !isInfinite!Range &&
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.conv : text;
     import std.typecons : tuple;
@@ -3270,7 +3270,7 @@ if (isInputRange!Range && !isInfinite!Range &&
     assert(a.maxCount == tuple(4, 2));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : text;
     import std.exception : assertThrown;
@@ -3288,7 +3288,7 @@ if (isInputRange!Range && !isInfinite!Range &&
     assert(minCount(new ReferenceForwardRange!int([1, 2, 1, 0, 2, 0])) == tuple(0, 2));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : text;
     import std.meta : AliasSeq;
@@ -3403,7 +3403,7 @@ auto minElement(Range, RangeElementType = ElementType!Range)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.range : enumerate;
     import std.typecons : tuple;
@@ -3421,7 +3421,7 @@ auto minElement(Range, RangeElementType = ElementType!Range)
     assert(arr.minElement(1) == 1);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.range : enumerate, iota;
     // supports mapping
@@ -3458,7 +3458,7 @@ auto minElement(Range, RangeElementType = ElementType!Range)
     assert(arr.minElement!(a => a)(42) == 42);
 }
 
-@nogc @safe nothrow pure unittest
+version(StdUnittest) @nogc @safe nothrow pure unittest
 {
     static immutable arr = [7, 3, 4, 2, 1, 8];
     assert(arr.minElement == 1);
@@ -3520,7 +3520,7 @@ if (isInputRange!Range && !isInfinite!Range &&
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.range : enumerate;
     import std.typecons : tuple;
@@ -3537,7 +3537,7 @@ if (isInputRange!Range && !isInfinite!Range &&
     assert(arr.minElement(1) == 1);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.range : enumerate, iota;
 
@@ -3577,7 +3577,7 @@ if (isInputRange!Range && !isInfinite!Range &&
 
 }
 
-@nogc @safe nothrow pure unittest
+version(StdUnittest) @nogc @safe nothrow pure unittest
 {
     static immutable arr = [7, 3, 8, 2, 1, 4];
     assert(arr.maxElement == 8);
@@ -3658,7 +3658,7 @@ if (isForwardRange!Range && !isInfinite!Range &&
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[] a = [ 2, 3, 4, 1, 2, 4, 1, 1, 2 ];
     // Minimum is 1 and first occurs in position 3
@@ -3667,7 +3667,7 @@ if (isForwardRange!Range && !isInfinite!Range &&
     assert(a.maxPos == [ 4, 1, 2, 4, 1, 1, 2 ]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
@@ -3681,7 +3681,7 @@ if (isForwardRange!Range && !isInfinite!Range &&
     assert( equal( minPos(new ReferenceForwardRange!int([1, 2, 1, 0, 2, 0])), [0, 2, 0] ) );
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     //Rvalue range
     import std.algorithm.comparison : equal;
@@ -3693,7 +3693,7 @@ if (isForwardRange!Range && !isInfinite!Range &&
                .equal([ 1, 2, 4, 1, 1, 2 ]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //BUG 9299
     immutable a = [ 2, 3, 4, 1, 2, 4, 1, 1, 2 ];
@@ -3760,7 +3760,7 @@ if (isForwardRange!Range && !isInfinite!Range &&
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     int[] a = [2, 3, 4, 1, 2, 4, 1, 1, 2];
 
@@ -3779,7 +3779,7 @@ if (isForwardRange!Range && !isInfinite!Range &&
     assert(dogs.minIndex!"a.age < b.age" == 1);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     // should work with const
     const(int)[] immArr = [2, 1, 3];
@@ -3816,7 +3816,7 @@ if (isForwardRange!Range && !isInfinite!Range &&
     }
 }
 
-@nogc @safe nothrow pure unittest
+version(StdUnittest) @nogc @safe nothrow pure unittest
 {
     static immutable arr = [7, 3, 8, 2, 1, 4];
     assert(arr.minIndex == 4);
@@ -3850,7 +3850,7 @@ if (isInputRange!Range && !isInfinite!Range &&
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     // Maximum is 4 and first occurs in position 2
     int[] a = [2, 3, 4, 1, 2, 4, 1, 1, 2];
@@ -3866,7 +3866,7 @@ if (isInputRange!Range && !isInfinite!Range &&
     assert(dogs.maxIndex!"a.age < b.age" == 1);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     // should work with const
     const(int)[] immArr = [5, 1, 3];
@@ -3905,7 +3905,7 @@ if (isInputRange!Range && !isInfinite!Range &&
     }
 }
 
-@nogc @safe nothrow pure unittest
+version(StdUnittest) @nogc @safe nothrow pure unittest
 {
     static immutable arr = [7, 3, 8, 2, 1, 4];
     assert(arr.maxIndex == 2);
@@ -4000,7 +4000,7 @@ template skipOver(alias pred = "a == b")
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -4028,7 +4028,7 @@ template skipOver(alias pred = "a == b")
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -4049,7 +4049,7 @@ template skipOver(alias pred = "a == b")
 }
 
 /// Partial instantiation
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.ascii : isWhite;
     import std.range.primitives : empty;
@@ -4283,7 +4283,7 @@ if (isInputRange!R &&
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.ascii : isAlpha;
 
@@ -4314,7 +4314,7 @@ if (isInputRange!R &&
     assert(startsWith!"a.x == b"([ C(1,1), C(2,1), C(2,2) ], [1, 1], [1, 2], [1, 3]) == 2);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.iteration : filter;
     import std.conv : to;
@@ -4427,7 +4427,7 @@ private void skipAll(alias pred = "a == b", R, Es...)(ref R r, Es es)
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto s1 = "Hello world";
     skipAll(s1, 'H', 'e');
@@ -4577,7 +4577,7 @@ if (isInputRange!Range)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.typecons : No;
@@ -4586,7 +4586,7 @@ if (isInputRange!Range)
     assert(equal(a.until(7, No.openRight), [1, 2, 4, 7]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     int[] a = [ 1, 2, 4, 7, 7, 2, 4, 7, 3, 5];
@@ -4600,7 +4600,7 @@ if (isInputRange!Range)
     assert(equal(until!"a == 2"(a, No.openRight), [1, 2]));
 }
 
-@system unittest // bugzilla 13171
+version(StdUnittest) @system unittest // bugzilla 13171
 {
     import std.algorithm.comparison : equal;
     import std.range;
@@ -4609,7 +4609,7 @@ if (isInputRange!Range)
     assert(a == [4]);
 }
 
-@safe unittest // Issue 10460
+version(StdUnittest) @safe unittest // Issue 10460
 {
     import std.algorithm.comparison : equal;
     auto a = [1, 2, 3, 4];
@@ -4618,7 +4618,7 @@ if (isInputRange!Range)
     assert(equal(a, [0, 0, 3, 4]));
 }
 
-@safe unittest // Issue 13124
+version(StdUnittest) @safe unittest // Issue 13124
 {
     import std.algorithm.comparison : among, equal;
     auto s = "hello how\nare you";

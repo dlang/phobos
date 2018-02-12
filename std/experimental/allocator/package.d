@@ -227,7 +227,7 @@ public import std.experimental.allocator.common,
     std.experimental.allocator.typed;
 
 // Example in the synopsis above
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : min, max;
     import std.experimental.allocator.building_blocks.allocator_list
@@ -531,7 +531,7 @@ nothrow:
     }
 }
 
-unittest
+version(StdUnittest) unittest
 {
     import std.experimental.allocator.building_blocks.region : Region;
     import std.conv : emplace;
@@ -553,7 +553,7 @@ unittest
     assert((cast(CAllocatorImpl!(Region!(), Yes.indirect))(rcalloc._alloc)).rc == 1);
 }
 
-unittest
+version(StdUnittest) unittest
 {
     import std.conv;
     import std.experimental.allocator.mallocator;
@@ -576,7 +576,7 @@ unittest
             ~ to!string(bytesUsed) ~ " bytes");
 }
 
-unittest
+version(StdUnittest) unittest
 {
     import std.conv;
     import std.experimental.allocator.mallocator;
@@ -1000,7 +1000,7 @@ nothrow @system @nogc
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     // Install a new allocator that is faster for 128-byte allocations.
     import std.experimental.allocator.building_blocks.free_list : FreeList;
@@ -1042,7 +1042,7 @@ nothrow @system @nogc
     _processAllocator = a;
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.exception : AssertError;
     import std.exception : assertThrown;
@@ -1156,7 +1156,7 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     // Dynamically allocate one integer
     const int* p1 = theAllocator.make!int;
@@ -1202,7 +1202,7 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
     assert(outer.x == inner.getX);
 }
 
-@system unittest // bugzilla 15639 & 15772
+version(StdUnittest) @system unittest // bugzilla 15639 & 15772
 {
     abstract class Foo {}
     class Bar: Foo {}
@@ -1210,7 +1210,7 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
     static assert( is(typeof(theAllocator.make!Bar)));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     void test(Allocator)(auto ref Allocator alloc)
     {
@@ -1268,7 +1268,7 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
 }
 
 // Attribute propagation
-nothrow @safe @nogc unittest
+version(StdUnittest) nothrow @safe @nogc unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     alias alloc = Mallocator.instance;
@@ -1286,7 +1286,7 @@ nothrow @safe @nogc unittest
 }
 
 // should be pure with the GCAllocator
-/*pure nothrow*/ @safe unittest
+version(StdUnittest) /*pure nothrow*/ @safe unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
 
@@ -1305,7 +1305,7 @@ nothrow @safe @nogc unittest
 }
 
 // Verify that making an object by calling an impure constructor is not @safe
-nothrow @safe @nogc unittest
+version(StdUnittest) nothrow @safe @nogc unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     static struct Pure { this(int) pure nothrow @nogc @safe {} }
@@ -1320,7 +1320,7 @@ nothrow @safe @nogc unittest
 }
 
 // test failure with a pure, failing struct
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.exception : assertThrown, enforce;
 
@@ -1337,7 +1337,7 @@ nothrow @safe @nogc unittest
 }
 
 // test failure with an impure, failing struct
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.exception : assertThrown, enforce;
     static int g;
@@ -1378,7 +1378,7 @@ if (T.sizeof != 1)
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     // Test T.sizeof == 1 path of fillWithMemcpy.
     ubyte[] a;
@@ -1389,7 +1389,7 @@ if (T.sizeof != 1)
     assert(a == [ 42, 42, 42, 42, 42]);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     int[] a;
     fillWithMemcpy(a, 42);
@@ -1407,7 +1407,7 @@ private T[] uninitializedFillDefault(T)(T[] array) nothrow
 }
 
 pure nothrow @nogc
-@system unittest
+version(StdUnittest) @system unittest
 {
     static struct S { int x = 42; @disable this(this); }
 
@@ -1417,7 +1417,7 @@ pure nothrow @nogc
     assert((cast(int*) arr.ptr)[0 .. arr.length] == expected);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     int[] a = [1, 2, 4];
     uninitializedFillDefault(a);
@@ -1452,7 +1452,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length)
     return () @trusted { return cast(T[]) uninitializedFillDefault(cast(U[]) m); }();
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     void test1(A)(auto ref A alloc)
     {
@@ -1481,7 +1481,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length)
     test2(theAllocator);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     auto a = theAllocator.makeArray!(shared int)(5);
@@ -1553,7 +1553,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length, T init)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     static void test(T)()
@@ -1572,7 +1572,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length, T init)
     test!(immutable int)();
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     void test(T)(in T initialValue)
     {
@@ -1584,7 +1584,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length, T init)
     test(init);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     void test(A)(auto ref A alloc)
     {
@@ -1600,7 +1600,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length, T init)
 }
 
 // test failure with a pure, failing struct
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.exception : assertThrown, enforce;
 
@@ -1621,7 +1621,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length, T init)
 }
 
 // test failure with an impure, failing struct
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.exception : assertThrown, enforce;
 
@@ -1762,7 +1762,7 @@ if (isInputRange!R && !isInfinite!R)
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     void test(A)(auto ref A alloc)
     {
@@ -1783,7 +1783,7 @@ if (isInputRange!R && !isInfinite!R)
 }
 
 // infer types for strings
-@system unittest
+version(StdUnittest) @system unittest
 {
     void test(A)(auto ref A alloc)
     {
@@ -1805,7 +1805,7 @@ if (isInputRange!R && !isInfinite!R)
     test(theAllocator);
 }
 
-/*pure*/ nothrow @safe unittest
+version(StdUnittest) /*pure*/ nothrow @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.experimental.allocator.gc_allocator : GCAllocator;
@@ -1824,7 +1824,7 @@ if (isInputRange!R && !isInfinite!R)
 }
 
 // test failure with a pure, failing struct
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.exception : assertThrown, enforce;
 
@@ -1871,7 +1871,7 @@ if (isInputRange!R && !isInfinite!R)
 }
 
 // test failure with an impure, failing struct
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.exception : assertThrown, enforce;
 
@@ -1942,7 +1942,7 @@ version(StdUnittest)
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.array : array;
     import std.range : iota;
@@ -2001,7 +2001,7 @@ bool expandArray(T, Allocator)(auto ref Allocator alloc, ref T[] array,
     return true;
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     void test(A)(auto ref A alloc)
     {
@@ -2030,7 +2030,7 @@ bool expandArray(T, Allocator)(auto ref Allocator alloc, ref T[] array,
     return true;
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     void test(A)(auto ref A alloc)
     {
@@ -2104,7 +2104,7 @@ if (isInputRange!R)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     auto arr = theAllocator.makeArray!int([1, 2, 3]);
     assert(theAllocator.expandArray(arr, 2));
@@ -2114,7 +2114,7 @@ if (isInputRange!R)
     assert(arr == [1, 2, 3, 0, 0, 4, 5]);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     auto arr = theAllocator.makeArray!int([1, 2, 3]);
     ForcedInputRange r;
@@ -2188,7 +2188,7 @@ bool shrinkArray(T, Allocator)(auto ref Allocator alloc,
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     int[] a = theAllocator.makeArray!int(100, 42);
     assert(a.length == 100);
@@ -2197,7 +2197,7 @@ bool shrinkArray(T, Allocator)(auto ref Allocator alloc,
     assert(a == [42, 42]);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     void test(A)(auto ref A alloc)
     {
@@ -2271,7 +2271,7 @@ void dispose(A, T)(auto ref A alloc, auto ref T[] array)
         array = null;
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     static int x;
     static interface I
@@ -2309,7 +2309,7 @@ void dispose(A, T)(auto ref A alloc, auto ref T[] array)
     theAllocator.dispose(arr);
 }
 
-@system unittest //bugzilla 16512
+version(StdUnittest) @system unittest //bugzilla 16512
 {
     import std.experimental.allocator.mallocator : Mallocator;
 
@@ -2330,7 +2330,7 @@ void dispose(A, T)(auto ref A alloc, auto ref T[] array)
     assert(ua is null);
 }
 
-@system unittest //bugzilla 15721
+version(StdUnittest) @system unittest //bugzilla 15721
 {
     import std.experimental.allocator.mallocator : Mallocator;
 
@@ -2373,7 +2373,7 @@ auto makeMultidimensionalArray(T, Allocator, size_t N)(auto ref Allocator alloc,
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
 
@@ -2417,7 +2417,7 @@ void disposeMultidimensionalArray(T, Allocator)(auto ref Allocator alloc, auto r
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     struct TestAllocator
     {
@@ -2535,7 +2535,7 @@ RCIAllocator allocatorObject(A)(A* pa)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
 
@@ -2554,7 +2554,7 @@ RCIAllocator allocatorObject(A)(A* pa)
     assert(a.deallocate(b));
 }
 
-unittest
+version(StdUnittest) unittest
 {
     import std.conv;
     import std.experimental.allocator.mallocator;
@@ -3111,7 +3111,7 @@ nothrow:
 
 
 // Example in intro above
-@system unittest
+version(StdUnittest) @system unittest
 {
     // Allocate an int, initialize it with 42
     int* p = theAllocator.make!int(42);
@@ -3185,7 +3185,7 @@ struct ThreadLocal(A)
 }
 
 ///
-unittest
+version(StdUnittest) unittest
 {
     import std.experimental.allocator.building_blocks.free_list : FreeList;
     import std.experimental.allocator.gc_allocator : GCAllocator;
@@ -3389,7 +3389,7 @@ private struct EmbeddedTree(T, alias less)
     }
 }
 
-unittest
+version(StdUnittest) unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
 
@@ -3534,7 +3534,7 @@ private struct InternalPointersTree(Allocator)
     }
 }
 
-unittest
+version(StdUnittest) unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     import std.random : randomCover;
@@ -3572,7 +3572,7 @@ unittest
 }
 
 //version (std_allocator_benchmark)
-unittest
+version(StdUnittest) unittest
 {
     import std.experimental.allocator.building_blocks.null_allocator : NullAllocator;
     import std.experimental.allocator.building_blocks.allocator_list : AllocatorList;
@@ -3641,7 +3641,7 @@ unittest
     )(20)[].map!(t => t.to!Duration));
 }
 
-unittest
+version(StdUnittest) unittest
 {
     import std.experimental.allocator.building_blocks.free_list : FreeList;
     import std.experimental.allocator.building_blocks.region : InSituRegion;
@@ -3666,7 +3666,7 @@ unittest
 }
 
 ///
-unittest
+version(StdUnittest) unittest
 {
     import std.experimental.allocator.building_blocks.allocator_list : AllocatorList;
     import std.experimental.allocator.building_blocks.bitmapped_block : BitmappedBlock;

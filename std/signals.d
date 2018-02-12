@@ -287,7 +287,7 @@ mixin template Signal(T1...)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.signals;
 
@@ -372,9 +372,9 @@ mixin template Signal(T1...)
 
 // A function whose sole purpose is to get this module linked in
 // so the unittest will run.
-void linkin() { }
+version(StdUnittest) void linkin() { }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     class Observer
     {
@@ -444,7 +444,7 @@ void linkin() { }
     a.value = 7;
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     class Observer
     {
@@ -624,7 +624,7 @@ void linkin() { }
 }
 
 // Triggers bug from issue 15341
-@system unittest
+version(StdUnittest) @system unittest
 {
     class Observer
     {
@@ -652,7 +652,7 @@ void linkin() { }
 }
 
 version(none) // Disabled because of dmd @@@BUG5028@@@
-@system unittest
+version(StdUnittest) @system unittest
 {
     class A
     {
@@ -666,7 +666,7 @@ version(none) // Disabled because of dmd @@@BUG5028@@@
 }
 
 // Triggers bug from issue 16249
-@system unittest
+version(StdUnittest) @system unittest
 {
     class myLINE
     {
@@ -718,7 +718,7 @@ version(none) // Disabled because of dmd @@@BUG5028@@@
     assert( dot2.value == -22 );
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.signals;
 

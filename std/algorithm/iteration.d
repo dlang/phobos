@@ -97,7 +97,7 @@ if (fun.length >= 1)
         return ror.map!(reduce!fun);
     }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         import std.algorithm.comparison : equal, max, min;
 
@@ -164,7 +164,7 @@ if (isBidirectionalRange!Range)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range, std.stdio;
@@ -219,7 +219,7 @@ may yield a faster _range.
 Either way, the resulting ranges will be equivalent, but maybe not at the
 same cost or side effects.
 +/
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range;
@@ -236,7 +236,7 @@ same cost or side effects.
     assert(i == 3); //cache has accessed 3. It is still stored internally by cache.
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range;
@@ -249,7 +249,7 @@ same cost or side effects.
     assert(equal(r2, [2, 3, 4]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -267,7 +267,7 @@ same cost or side effects.
     assert(equal(s.cacheBidirectional(), s));
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -277,14 +277,14 @@ same cost or side effects.
     assert(equal(a.cacheBidirectional(), a));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     char[][] stringbufs = ["hello".dup, "world".dup];
     auto strings = stringbufs.map!((a)=>a.idup)().cache();
     assert(strings.front is strings.front);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range : cycle;
     import std.algorithm.comparison : equal;
@@ -295,7 +295,7 @@ same cost or side effects.
     assert(d.equal([2]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static struct Range
     {
@@ -499,7 +499,7 @@ if (fun.length >= 1)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : chain;
@@ -514,7 +514,7 @@ Multiple functions can be passed to `map`. In that case, the
 element type of `map` is a tuple containing one element for each
 function.
 */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto sums = [2, 4, 6, 8];
     auto products = [1, 4, 9, 16];
@@ -532,7 +532,7 @@ function.
 You may alias `map` with some function(s) to a symbol and use
 it separately:
 */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.conv : to;
@@ -540,8 +540,7 @@ it separately:
     alias stringize = map!(to!string);
     assert(equal(stringize([ 1, 2, 3, 4 ]), [ "1", "2", "3", "4" ]));
 }
-
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Verify workaround for DMD #15777
 
@@ -664,8 +663,7 @@ private struct MapResult(alias fun, Range)
         }
     }
 }
-
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.conv : to;
@@ -684,7 +682,7 @@ private struct MapResult(alias fun, Range)
     //assert(equal(countAndSquare([ 10, 2 ]), [ tuple(0u, 100), tuple(1u, 4) ]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.ascii : toUpper;
@@ -799,7 +797,7 @@ private struct MapResult(alias fun, Range)
     assert(dd.length == 4);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range;
@@ -808,7 +806,7 @@ private struct MapResult(alias fun, Range)
     assert(equal(m, [1L, 4L, 9L]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range : iota;
 
@@ -824,7 +822,7 @@ private struct MapResult(alias fun, Range)
     assert(map!(i => i)(iota(floatBegin, floatEnd, floatStep)).walkLength == 50);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range;
@@ -836,7 +834,7 @@ private struct MapResult(alias fun, Range)
     assert(equal(rr[0 .. 5], [1, 4, 9, 16, 0]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range;
     struct S {int* p;}
@@ -965,7 +963,7 @@ public:
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.range : iota;
 
@@ -1006,7 +1004,7 @@ public:
 }
 
 // binary foreach with two ref args
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.range : lockstep;
 
@@ -1020,7 +1018,7 @@ public:
 }
 
 // #15358: application of `each` with >2 args (opApply)
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.range : lockstep;
     auto a = [0,1,2];
@@ -1035,7 +1033,7 @@ public:
 }
 
 // #15358: application of `each` with >2 args (range interface)
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range : zip;
     auto a = [0,1,2];
@@ -1050,7 +1048,7 @@ public:
 }
 
 // #16255: `each` on opApply doesn't support ref
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[] dynamicArray = [1, 2, 3, 4, 5];
     int[5] staticArray = [1, 2, 3, 4, 5];
@@ -1066,7 +1064,7 @@ public:
 }
 
 // #16255: `each` on opApply doesn't support ref
-@system unittest
+version(StdUnittest) @system unittest
 {
     struct S
     {
@@ -1110,7 +1108,7 @@ if (is(typeof(unaryFun!predicate)))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.math : approxEqual;
@@ -1200,8 +1198,7 @@ private struct FilterResult(alias pred, Range)
         }
     }
 }
-
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
@@ -1262,8 +1259,7 @@ private struct FilterResult(alias pred, Range)
     auto m = map!"a + 1"(filter!"a < 4"(arr));
     assert(equal(m, [2, 3, 4]));
 }
-
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1279,7 +1275,7 @@ private struct FilterResult(alias pred, Range)
     assert(equal(under10.save, under10));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.functional : compose, pipe;
@@ -1290,7 +1286,7 @@ private struct FilterResult(alias pred, Range)
             [2,6,10]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1330,7 +1326,7 @@ template filterBidirectional(alias pred)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range;
@@ -1512,7 +1508,7 @@ if (isInputRange!R)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.typecons : tuple, Tuple;
@@ -1526,7 +1522,7 @@ if (isInputRange!R)
  * Using group, an associative array can be easily generated with the count of each
  * unique element in the range.
  */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.sorting : sort;
     import std.array : assocArray;
@@ -1540,7 +1536,7 @@ if (isInputRange!R)
     assert(result == ["a": 2U, "b": 2U, "c": 3U, "d": 1U, "e": 1U]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
@@ -1564,7 +1560,7 @@ if (isInputRange!R)
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.typecons : tuple;
@@ -1828,7 +1824,7 @@ if (isForwardRange!Range)
     static assert(isForwardRange!(typeof(this)));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1929,7 +1925,7 @@ if (isInputRange!Range)
 }
 
 /// Showing usage with binary predicate:
-/*FIXME: @safe*/ @system unittest
+version(StdUnittest) /*FIXME: @safe*/ @system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1956,7 +1952,7 @@ if (isInputRange!Range)
 }
 
 version(none) // this example requires support for non-equivalence relations
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Grouping by maximum adjacent difference:
     import std.math : abs;
@@ -1970,7 +1966,7 @@ version(none) // this example requires support for non-equivalence relations
 }
 
 /// Showing usage with unary predicate:
-/* FIXME: pure @safe nothrow*/ @system unittest
+version(StdUnittest) /* FIXME: pure @safe nothrow*/ @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.range.primitives;
@@ -2019,7 +2015,7 @@ version(none) // this example requires support for non-equivalence relations
     }
 }
 
-/*FIXME: pure @safe nothrow*/ @system unittest
+version(StdUnittest) /*FIXME: pure @safe nothrow*/ @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.typecons : tuple;
@@ -2097,7 +2093,7 @@ version(none) // this example requires support for non-equivalence relations
 
 // Issue 13595
 version(none) // This requires support for non-equivalence relations
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     auto r = [1, 2, 3, 4, 5, 6, 7, 8, 9].chunkBy!((x, y) => ((x*y) % 3) == 0);
@@ -2110,7 +2106,7 @@ version(none) // This requires support for non-equivalence relations
 }
 
 // Issue 13805
-@system unittest
+version(StdUnittest) @system unittest
 {
     [""].map!((s) => s).chunkBy!((x, y) => true);
 }
@@ -2293,7 +2289,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.conv : text;
@@ -2306,8 +2302,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
     assert([""].joiner("xyz").equal(""));
     assert(["", ""].joiner("xyz").equal("xyz"));
 }
-
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.range.interfaces;
@@ -2317,7 +2312,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
     assert(equal(joiner(r, "xyz"), "abcxyzdef"));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.range;
@@ -2366,7 +2361,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
         .array();
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -2413,7 +2408,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
     assert(equal(joiner(tr5, [0,1]), [1,2,0,1,3,4,0,1,0,1]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(isInputRange!(typeof(joiner([""], ""))));
     static assert(isForwardRange!(typeof(joiner([""], ""))));
@@ -2525,8 +2520,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
     }
     return Result(r);
 }
-
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range.interfaces : inputRangeObject;
@@ -2552,7 +2546,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
 }
 
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.range.interfaces : inputRangeObject;
@@ -2575,7 +2569,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
     assert(!equal(js2, js));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -2620,7 +2614,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
     assert(equal(result, [1,2,3,4,5,6,7]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.internal : algoFormat;
@@ -2670,7 +2664,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
 }
 
 // Issue 8061
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : to;
     import std.range.interfaces;
@@ -2682,7 +2676,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
     assert(str == "abcd");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range : repeat;
 
@@ -2897,7 +2891,7 @@ Many aggregate range operations turn out to be solved with `reduce`
 quickly and easily. The example below illustrates `reduce`'s
 remarkable power and flexibility.
 */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : max, min;
     import std.math : approxEqual;
@@ -2952,7 +2946,7 @@ If two or more functions are passed, `reduce` returns a
 $(REF Tuple, std,typecons) object with one member per passed-in function.
 The number of seeds must be correspondingly increased.
 */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : max, min;
     import std.math : approxEqual, sqrt;
@@ -2976,7 +2970,7 @@ The number of seeds must be correspondingly increased.
     assert(cast(int) stdev == 2);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : max, min;
     import std.range : chain;
@@ -3005,7 +2999,7 @@ The number of seeds must be correspondingly increased.
     assert(rep[2 .. $] == "1, 2, 3, 4, 5", "["~rep[2 .. $]~"]");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : max, min;
     import std.exception : assertThrown;
@@ -3045,7 +3039,7 @@ The number of seeds must be correspondingly increased.
     assertThrown(reduce!"a + b"(oa));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     const float a = 0.0;
     const float[] b = [ 1.2, 3, 3.3 ];
@@ -3055,7 +3049,7 @@ The number of seeds must be correspondingly increased.
     assert(r == 7.5);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Issue #10408 - Two-function reduce of a const array.
     import std.algorithm.comparison : max, min;
@@ -3068,7 +3062,7 @@ The number of seeds must be correspondingly increased.
     assert(minmax == tuple(10, 30));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //10709
     import std.typecons : tuple, Tuple;
@@ -3081,7 +3075,7 @@ The number of seeds must be correspondingly increased.
     assert(r2 == tuple(3, 3));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static struct OpApply
     {
@@ -3120,7 +3114,7 @@ The number of seeds must be correspondingly increased.
     assert(b == 9);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : max, min;
     import std.typecons : tuple, Tuple;
@@ -3137,7 +3131,7 @@ The number of seeds must be correspondingly increased.
     assert(minmaxElement([1, 2, 3]) == tuple(1, 3));
 }
 
-@safe unittest //12569
+version(StdUnittest) @safe unittest //12569
 {
     import std.algorithm.comparison : max, min;
     import std.typecons : tuple;
@@ -3158,7 +3152,7 @@ The number of seeds must be correspondingly increased.
     static assert(!is(typeof(reduce!(all, all)(tuple(1, 1), "hello"))));
 }
 
-@safe unittest //13304
+version(StdUnittest) @safe unittest //13304
 {
     int[] data;
     static assert(is(typeof(reduce!((a, b) => a + b)(data))));
@@ -3230,7 +3224,7 @@ if (fun.length >= 1)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     immutable arr = [1, 2, 3, 4, 5];
 
@@ -3256,7 +3250,7 @@ if (fun.length >= 1)
     assert(arr.fold!((a, b) => b) == 5);
 }
 
-@safe @nogc pure nothrow unittest
+version(StdUnittest) @safe @nogc pure nothrow unittest
 {
     int[1] arr;
     static assert(!is(typeof(arr.fold!())));
@@ -3444,7 +3438,7 @@ if (fun.length >= 1)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : max, min;
     import std.array : array;
@@ -3500,7 +3494,7 @@ If two or more functions are passed, `cumulativeFold` returns a $(REF Tuple,
 std,typecons) object with one member per passed-in function.
 The number of seeds must be correspondingly increased.
 */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : max, min;
     import std.algorithm.iteration : map;
@@ -3520,7 +3514,7 @@ The number of seeds must be correspondingly increased.
     assert(approxEqual(r2.map!"a[1]", [9, 25, 74, 195, 204, 208, 233])); // sum of squares
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal, max, min;
     import std.conv : to;
@@ -3555,7 +3549,7 @@ The number of seeds must be correspondingly increased.
     assert(a.cumulativeFold!"a + b"(2.0).empty);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : max, min;
     import std.array : array;
@@ -3578,8 +3572,7 @@ The number of seeds must be correspondingly increased.
     enum minmax = numbers.cumulativeFold!(min, max).array;
     assert(minmax == [tuple(10, 10), tuple(10, 30), tuple(10, 30)]);
 }
-
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.math : approxEqual;
     import std.typecons : tuple;
@@ -3592,8 +3585,7 @@ The number of seeds must be correspondingly increased.
     assert(approxEqual(r2.map!"a[0]", [0, 0.5, 1.5, 3]));
     assert(approxEqual(r2.map!"a[1]", [0, 0.5, 1.5, 3]));
 }
-
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal, max, min;
     import std.array : array;
@@ -3610,7 +3602,7 @@ The number of seeds must be correspondingly increased.
     assert(minmaxElement([1, 2, 3]).equal([tuple(1, 1), tuple(1, 2), tuple(1, 3)]));
 }
 
-@safe unittest //12569
+version(StdUnittest) @safe unittest //12569
 {
     import std.algorithm.comparison : equal, max, min;
     import std.typecons : tuple;
@@ -3633,13 +3625,12 @@ The number of seeds must be correspondingly increased.
     static assert(!__traits(compiles, cumulativeFold!(all, all)("hello", tuple(1, 1))));
 }
 
-@safe unittest //13304
+version(StdUnittest) @safe unittest //13304
 {
     int[] data;
     assert(data.cumulativeFold!((a, b) => a + b).empty);
 }
-
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : AllDummyRanges, propagatesLength,
@@ -3856,7 +3847,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.ascii : toLower;
@@ -3897,7 +3888,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     assert(equal(splitter("a|bc|def", '|').retro, [ "def", "bc", "a" ]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm;
     import std.array : array;
@@ -3959,7 +3950,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
         }
     }
 }
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm;
     import std.range;
@@ -4100,7 +4091,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -4119,7 +4110,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
     assert(equal(splitter(a, [0, 0]), [ [], [1] ]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.typecons : Tuple;
@@ -4129,7 +4120,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
     assert(equal(splitter!"a.x == b"(a, [2, 3]), [ [C(1,0)], [C(4,0)] ]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.array : split;
@@ -4159,7 +4150,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
     assert(walkLength(words) == 5, text(walkLength(words)));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[][] a = [ [1], [2], [0], [3], [0], [4], [5], [0] ];
     int[][][] w = [ [[1], [2]], [[3]], [[4], [5]], [] ];
@@ -4172,7 +4163,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
     assert(i == w.length);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     auto s6 = ",";
@@ -4181,7 +4172,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
     assert(equal(sp6, ["", ""][]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -4190,7 +4181,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
     assert(s.equal(["a", "b", "c"]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -4245,7 +4236,7 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(input.front))))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range.primitives : front;
@@ -4377,7 +4368,7 @@ private struct SplitterResult(alias isTerminator, Range)
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : iota;
@@ -4391,7 +4382,7 @@ private struct SplitterResult(alias isTerminator, Range)
     assert(s.empty);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.internal : algoFormat;
@@ -4426,7 +4417,7 @@ private struct SplitterResult(alias isTerminator, Range)
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.internal : algoFormat;
@@ -4453,7 +4444,7 @@ private struct SplitterResult(alias isTerminator, Range)
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.uni : isWhite;
@@ -4539,14 +4530,14 @@ if (isSomeChar!C)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
     auto a = " a     bcd   ef gh ";
     assert(equal(splitter(a), ["a", "bcd", "ef", "gh"][]));
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
     import std.meta : AliasSeq;
@@ -4563,7 +4554,7 @@ if (isSomeChar!C)
     assert(equal(splitter(s), ["a", "bcd", "ef", "gh"][]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.conv : to;
     import std.string : strip;
@@ -4591,7 +4582,7 @@ if (isSomeChar!C)
     assert(dictionary["last"]== 4);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.internal : algoFormat;
@@ -4746,7 +4737,7 @@ private template hasDifferentAutodecoding(Range, Needles...)
                                     is(CommonType!(Range, Needles) == void));
 }
 
-@safe nothrow @nogc pure unittest
+version(StdUnittest) @safe nothrow @nogc pure unittest
 {
     import std.meta : AliasSeq; // used for better clarity
 
@@ -5003,7 +4994,7 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -5033,7 +5024,7 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
 }
 
 /// Use the faster compile-time overload
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -5050,7 +5041,7 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
 }
 
 /// Multiple substitutes
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
     import std.range.primitives : ElementType;
@@ -5068,7 +5059,7 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
 }
 
 // Test the first example with compile-time overloads
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -5098,7 +5089,7 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
 }
 
 // test infinite ranges
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : cycle, take;
@@ -5109,7 +5100,7 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
 }
 
 // test infinite ranges
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : AllDummyRanges;
@@ -5127,7 +5118,7 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
 }
 
 // test multiple replacements
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -5153,7 +5144,7 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
 }
 
 // test combination of subrange + element replacement
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -5166,7 +5157,7 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
 }
 
 // test const + immutable storage groups
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -5186,7 +5177,7 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
 }
 
 // test with narrow strings (auto-decoding) and subranges
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -5202,7 +5193,7 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
 }
 
 // test with narrow strings (auto-decoding) and single elements
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -5217,7 +5208,7 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
 }
 
 // test auto-decoding {n,w,d} strings X {n,w,d} strings
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -5240,7 +5231,7 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
 }
 
 // test repeated replacement
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -5250,7 +5241,7 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
 }
 
 // test @nogc for single element replacements
-@safe @nogc unittest
+version(StdUnittest) @safe @nogc unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -5262,7 +5253,7 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
 }
 
 // test different range types
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : AllDummyRanges;
@@ -5360,7 +5351,7 @@ if (isInputRange!R && !isInfinite!R && is(typeof(seed = seed + r.front)))
 }
 
 /// Ditto
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.range;
 
@@ -5499,7 +5490,7 @@ private auto sumKahan(Result, R)(Result result, R r)
     return result;
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     static assert(is(typeof(sum([cast( byte) 1])) ==  int));
     static assert(is(typeof(sum([cast(ubyte) 1])) ==  int));
@@ -5516,7 +5507,7 @@ private auto sumKahan(Result, R)(Result result, R r)
     assert(sum([42, 43, 44, 45]) == 42 + 43 + 44 + 45);
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     static assert(is(typeof(sum([1.0, 2.0, 3.0, 4.0])) == double));
     static assert(is(typeof(sum([ 1F,  2F,  3F,  4F])) == double));
@@ -5532,7 +5523,7 @@ private auto sumKahan(Result, R)(Result result, R r)
     assert(sum([42., 43., 44., 45.5]) == 42 + 43 + 44 + 45.5);
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.container;
     static assert(is(typeof(sum(SList!float()[])) == double));
@@ -5546,7 +5537,7 @@ private auto sumKahan(Result, R)(Result result, R r)
     assert(sum(SList!double(1, 2, 3, 4)[]) == 10);
 }
 
-@safe pure nothrow unittest // 12434
+version(StdUnittest) @safe pure nothrow unittest // 12434
 {
     immutable a = [10, 20];
     auto s1 = sum(a);
@@ -5555,7 +5546,7 @@ private auto sumKahan(Result, R)(Result result, R r)
     assert(s2 == 30);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.bigint;
     import std.range;
@@ -5568,7 +5559,7 @@ private auto sumKahan(Result, R)(Result result, R r)
     assert(sb == (BigInt(ulong.max/2) * 10));
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     import std.range;
     foreach (n; iota(50))
@@ -5651,7 +5642,7 @@ if (isInputRange!R &&
 }
 
 ///
-@safe @nogc pure nothrow unittest
+version(StdUnittest) @safe @nogc pure nothrow unittest
 {
     import std.math : approxEqual, isNaN;
 
@@ -5664,7 +5655,7 @@ if (isInputRange!R &&
     assert(arr1[0 .. 0].mean.isNaN);
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.internal.test.dummyrange : ReferenceInputRange;
     import std.math : approxEqual;
@@ -5677,7 +5668,7 @@ if (isInputRange!R &&
 }
 
 // Test user defined types
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     import std.bigint : BigInt;
     import std.internal.test.dummyrange : ReferenceInputRange;
@@ -5733,7 +5724,7 @@ if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.mutation : copy;
@@ -5819,7 +5810,7 @@ private struct UniqResult(alias pred, Range)
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
@@ -5847,7 +5838,7 @@ private struct UniqResult(alias pred, Range)
     }
 }
 
-@safe unittest // https://issues.dlang.org/show_bug.cgi?id=17264
+version(StdUnittest) @safe unittest // https://issues.dlang.org/show_bug.cgi?id=17264
 {
     import std.algorithm.comparison : equal;
 
@@ -5935,7 +5926,7 @@ if (isRandomAccessRange!Range && hasLength!Range)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : iota;

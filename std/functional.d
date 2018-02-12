@@ -126,14 +126,14 @@ template unaryFun(alias fun, string parmName = "a")
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Strings are compiled into functions:
     alias isEven = unaryFun!("(a & 1) == 0");
     assert(isEven(2) && !isEven(1));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static int f1(int a) { return a + 1; }
     static assert(is(typeof(unaryFun!(f1)(1)) == int));
@@ -213,7 +213,7 @@ template binaryFun(alias fun, string parm1Name = "a",
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     alias less = binaryFun!("a < b");
     assert(less(1, 2) && !less(2, 1));
@@ -221,7 +221,7 @@ template binaryFun(alias fun, string parm1Name = "a",
     assert(!greater("1", "2") && greater("2", "1"));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static int f1(int a, string b) { return a + 1; }
     static assert(is(typeof(binaryFun!(f1)(1, "2")) == int));
@@ -325,7 +325,7 @@ private uint _ctfeMatchUnary(string fun, string name)
     return fun.length == 0;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(!_ctfeMatchUnary("sqrt(ё)", "ё"));
     static assert(!_ctfeMatchUnary("ё.sqrt", "ё"));
@@ -372,7 +372,7 @@ private uint _ctfeMatchBinary(string fun, string name1, string name2)
     return fun.length == 0;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
 
     static assert(!_ctfeMatchBinary("sqrt(ё)", "ё", "b"));
@@ -461,7 +461,7 @@ if (S=="<"||S==">"||S=="<="||S==">="||S=="=="||S=="!=")
     }
 }
 
-@safe unittest //check user defined types
+version(StdUnittest) @safe unittest //check user defined types
 {
     import std.algorithm.comparison : equal;
     struct Foo
@@ -482,7 +482,7 @@ if (S=="<"||S==">"||S=="<="||S==">="||S=="=="||S=="!=")
 alias lessThan = safeOp!"<";
 
 ///
-pure @safe @nogc nothrow unittest
+version(StdUnittest) pure @safe @nogc nothrow unittest
 {
     assert(lessThan(2, 3));
     assert(lessThan(2U, 3U));
@@ -503,7 +503,7 @@ pure @safe @nogc nothrow unittest
 alias greaterThan = safeOp!">";
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(!greaterThan(2, 3));
     assert(!greaterThan(2U, 3U));
@@ -524,7 +524,7 @@ alias greaterThan = safeOp!">";
 alias equalTo = safeOp!"==";
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(equalTo(0U, 0));
     assert(equalTo(0, 0U));
@@ -544,7 +544,7 @@ template reverseArgs(alias pred)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     alias gt = reverseArgs!(binaryFun!("a < b"));
     assert(gt(2, 1) && !gt(1, 1));
@@ -557,7 +557,7 @@ template reverseArgs(alias pred)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int abc(int a, int b, int c) { return a * b + c; }
     alias cba = reverseArgs!abc;
@@ -565,7 +565,7 @@ template reverseArgs(alias pred)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int a(int a) { return a * 2; }
     alias _a = reverseArgs!a;
@@ -573,7 +573,7 @@ template reverseArgs(alias pred)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int b() { return 4; }
     alias _b = reverseArgs!b;
@@ -594,14 +594,14 @@ template binaryReverseArgs(alias pred)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     alias gt = binaryReverseArgs!(binaryFun!("a < b"));
     assert(gt(2, 1) && !gt(1, 1));
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int x = 42;
     bool xyz(int a, int b) { return a * x < b / x; }
@@ -630,7 +630,7 @@ template not(alias pred)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.searching : find;
     import std.functional;
@@ -639,7 +639,7 @@ template not(alias pred)
     assert(find!(not!isWhite)(a) == "Hello, world!");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(not!"a != 5"(5));
     assert(not!"a != b"(5, 5));
@@ -690,7 +690,7 @@ template partial(alias fun, alias arg)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int fun(int a, int b) { return a + b; }
     alias fun5 = partial!(fun, 5);
@@ -701,7 +701,7 @@ template partial(alias fun, alias arg)
 }
 
 // tests for partially evaluating callables
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static int f1(int a, int b) { return a + b; }
     assert(partial!(f1, 5)(6) == 11);
@@ -731,7 +731,7 @@ template partial(alias fun, alias arg)
 }
 
 // tests for partially evaluating templated/overloaded callables
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static auto add(A, B)(A x, B y)
     {
@@ -826,7 +826,7 @@ if (F.length > 1)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.functional, std.typecons : Tuple;
     static bool f1(int a) { return a != 0; }
@@ -836,7 +836,7 @@ if (F.length > 1)
     assert(x[0] == true && x[1] == 2);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.typecons : Tuple;
     static bool F1(int a) { return a != 0; }
@@ -862,7 +862,7 @@ if (F.length > 1)
     assert(x4 == 43);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.meta : staticMap;
     import std.typecons : Tuple, tuple;
@@ -915,7 +915,7 @@ template compose(fun...)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
@@ -946,7 +946,7 @@ int[] a = pipe!(readText, split, map!(to!(int)))("file.txt");
  */
 alias pipe(fun...) = compose!(Reverse!(fun));
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.conv : to;
     string foo(int a) { return to!(string)(a); }
@@ -1072,7 +1072,7 @@ template memoize(alias fun, uint maxSize)
  * To _memoize a recursive function, simply insert the memoized call in lieu of the plain recursive call.
  * For example, to transform the exponential-time Fibonacci implementation into a linear-time computation:
  */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     ulong fib(ulong n) @safe
     {
@@ -1084,7 +1084,7 @@ template memoize(alias fun, uint maxSize)
 /**
  * To improve the speed of the factorial function,
  */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     ulong fact(ulong n) @safe
     {
@@ -1097,7 +1097,7 @@ template memoize(alias fun, uint maxSize)
  * This memoizes all values of $(D fact) up to the largest argument. To only cache the final
  * result, move $(D memoize) outside the function as shown below.
  */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     ulong factImpl(ulong n) @safe
     {
@@ -1111,7 +1111,7 @@ template memoize(alias fun, uint maxSize)
  * When the $(D maxSize) parameter is specified, memoize will used
  * a fixed size hash table to limit the number of cached entries.
  */
-@system unittest // not @safe due to memoize
+version(StdUnittest) @system unittest // not @safe due to memoize
 {
     ulong fact(ulong n)
     {
@@ -1123,7 +1123,7 @@ template memoize(alias fun, uint maxSize)
     assert(fact(10) == 3628800);
 }
 
-@system unittest // not @safe due to memoize
+version(StdUnittest) @system unittest // not @safe due to memoize
 {
     import core.math : sqrt;
     alias msqrt = memoize!(function double(double x) { return sqrt(x); });
@@ -1170,7 +1170,7 @@ template memoize(alias fun, uint maxSize)
 }
 
 // 16079: memoize should work with arrays
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int executed = 0;
     T median(T)(const T[] nums) {
@@ -1194,7 +1194,7 @@ template memoize(alias fun, uint maxSize)
 }
 
 // 16079: memoize should work with structs
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int executed = 0;
     T pickFirst(T)(T first)
@@ -1213,7 +1213,7 @@ template memoize(alias fun, uint maxSize)
 }
 
 // 16079: memoize should work with classes
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int executed = 0;
     T pickFirst(T)(T first)
@@ -1369,7 +1369,7 @@ if (isCallable!(F))
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     static int inc(ref uint num) {
         num++;
@@ -1382,7 +1382,7 @@ if (isCallable!(F))
     assert(myNum == 1);
 }
 
-@system unittest // not @safe due to toDelegate
+version(StdUnittest) @system unittest // not @safe due to toDelegate
 {
     static int inc(ref uint num) {
         num++;
@@ -1497,7 +1497,7 @@ template forward(args...)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     class C
     {
@@ -1512,7 +1512,7 @@ template forward(args...)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     void foo(int n, ref string s) { s = null; foreach (i; 0 .. n) s ~= "Hello"; }
 
@@ -1529,7 +1529,7 @@ template forward(args...)
     assert(s == "HelloHello");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto foo(TL...)(auto ref TL args)
     {
@@ -1560,7 +1560,7 @@ template forward(args...)
     assert(baz(S(), makeS(), n, s) == "LLRRRL");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     ref int foo(return ref int a) { return a; }
     ref int bar(Args)(auto ref Args args)
@@ -1573,7 +1573,7 @@ template forward(args...)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     struct X {
         int i;
@@ -1640,7 +1640,7 @@ template forward(args...)
 }
 
 // lazy -> lazy
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int foo1(lazy int i) { return i; }
     int foo2(A)(auto ref A i) { return foo1(forward!i); }
@@ -1652,7 +1652,7 @@ template forward(args...)
 }
 
 // lazy -> non-lazy
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int foo1(int a, int b) { return a + b; }
     int foo2(A...)(auto ref A args) { return foo1(forward!args); }
@@ -1664,7 +1664,7 @@ template forward(args...)
 }
 
 // non-lazy -> lazy
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int foo1(int a, lazy int b) { return a + b; }
     int foo2(A...)(auto ref A args) { return foo1(forward!args); }
@@ -1674,7 +1674,7 @@ template forward(args...)
 }
 
 // out
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     void foo1(int a, out int b) { b = a; }
     void foo2(A...)(auto ref A args) { foo1(forward!args); }

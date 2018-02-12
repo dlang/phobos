@@ -710,7 +710,7 @@ version(StdUnittest)
     }
 }
 
-@system @nogc nothrow unittest
+version(StdUnittest) @system @nogc nothrow unittest
 {
     static void testAlloc(Allocator)(ref Allocator a) @nogc nothrow
     {
@@ -749,7 +749,7 @@ version(StdUnittest)
     testAlloc(aa);
 }
 
-@system @nogc nothrow unittest
+version(StdUnittest) @system @nogc nothrow unittest
 {
     size_t pageSize = getPageSize();
     size_t numPages = 26214;
@@ -766,7 +766,7 @@ version(StdUnittest)
     assert(a.getAvailableSize() == 0);
 }
 
-@system @nogc nothrow unittest
+version(StdUnittest) @system @nogc nothrow unittest
 {
     size_t pageSize = getPageSize();
     size_t numPages = 26214;
@@ -785,7 +785,7 @@ version(StdUnittest)
     assert(a.getAvailableSize() == 0);
 }
 
-@system @nogc nothrow unittest
+version(StdUnittest) @system @nogc nothrow unittest
 {
     static void testAlloc(Allocator)(ref Allocator a) @nogc nothrow
     {
@@ -858,7 +858,7 @@ version(StdUnittest)
     testAlloc(aa);
 }
 
-@system @nogc nothrow unittest
+version(StdUnittest) @system @nogc nothrow unittest
 {
     size_t pageSize = getPageSize();
     size_t numPages = 21000;
@@ -882,7 +882,7 @@ version(StdUnittest)
     }
 }
 
-@system @nogc nothrow unittest
+version(StdUnittest) @system @nogc nothrow unittest
 {
     size_t pageSize = getPageSize();
     size_t numPages = 21000;
@@ -906,7 +906,7 @@ version(StdUnittest)
     }
 }
 
-@system @nogc nothrow unittest
+version(StdUnittest) @system @nogc nothrow unittest
 {
     size_t pageSize = getPageSize();
     enum numPages = 2;
@@ -920,7 +920,7 @@ version(StdUnittest)
     assert(!a.data && !a.offset);
 }
 
-@system @nogc nothrow unittest
+version(StdUnittest) @system @nogc nothrow unittest
 {
     size_t pageSize = getPageSize();
     enum numPages = 26;
@@ -934,7 +934,7 @@ version(StdUnittest)
     assert(!a.data && !a.offset);
 }
 
-@system @nogc nothrow unittest
+version(StdUnittest) @system @nogc nothrow unittest
 {
     size_t pageSize = getPageSize();
     enum numPages = 10;
@@ -969,7 +969,7 @@ version(StdUnittest)
     assert(!a.data && !a.offset);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.thread : ThreadGroup;
     import std.algorithm.sorting : sort;
@@ -1009,7 +1009,7 @@ version(StdUnittest)
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.thread : ThreadGroup;
     import std.algorithm.sorting : sort;

@@ -361,7 +361,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     // One word before and after each allocation.
@@ -373,7 +373,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         && A.instance.suffix(b) == 0xDEAD_BEEF);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator : theAllocator, RCIAllocator;
@@ -395,7 +395,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         && B.suffix(b) == 0xDEAD_BEEF);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.bitmapped_block
         : BitmappedBlock;
@@ -408,7 +408,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
 }
 
 // Test empty
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.bitmapped_block : BitmappedBlock;
     import std.typecons : Ternary;
@@ -421,7 +421,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.no);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     alias A = AffixAllocator!(Mallocator, size_t);
@@ -436,7 +436,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     assert(b is null);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator;
     import std.experimental.allocator.gc_allocator;
@@ -459,7 +459,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     assert(p.ptr is d.ptr && p.length >= d.length);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.gc_allocator;
     alias a = AffixAllocator!(GCAllocator, uint).instance;
@@ -473,7 +473,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     () nothrow @nogc { a.deallocate(b); }();
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.region : Region;
 
@@ -488,7 +488,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
 }
 
 // Test that reallocate infers from parent
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
 

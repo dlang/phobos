@@ -74,14 +74,14 @@ struct Mallocator
 }
 
 ///
-@nogc @system nothrow unittest
+version(StdUnittest) @nogc @system nothrow unittest
 {
     auto buffer = Mallocator.instance.allocate(1024 * 1024 * 4);
     scope(exit) Mallocator.instance.deallocate(buffer);
     //...
 }
 
-@nogc @system nothrow unittest
+version(StdUnittest) @nogc @system nothrow unittest
 {
     @nogc nothrow
     static void test(A)()
@@ -95,7 +95,7 @@ struct Mallocator
     test!Mallocator();
 }
 
-@nogc @system nothrow unittest
+version(StdUnittest) @nogc @system nothrow unittest
 {
     static void test(A)()
     {
@@ -202,7 +202,7 @@ version (Windows)
  */
 struct AlignedMallocator
 {
-    @system unittest { testAllocator!(() => typeof(this).instance); }
+    version(StdUnittest) @system unittest { testAllocator!(() => typeof(this).instance); }
 
     /**
     The default alignment is $(D platformAlignment).
@@ -346,7 +346,7 @@ struct AlignedMallocator
 }
 
 ///
-@nogc @system nothrow unittest
+version(StdUnittest) @nogc @system nothrow unittest
 {
     auto buffer = AlignedMallocator.instance.alignedAllocate(1024 * 1024 * 4,
         128);
@@ -359,7 +359,7 @@ version(StdUnittest) version(CRuntime_DigitalMars)
 size_t addr(ref void* ptr) { return cast(size_t) ptr; }
 
 version(Posix)
-@nogc @system nothrow unittest
+version(StdUnittest) @nogc @system nothrow unittest
 {
     // 16398 : test the "pseudo" alignedReallocate for Posix
     void[] s = AlignedMallocator.instance.alignedAllocate(16, 32);
@@ -386,7 +386,7 @@ version(Posix)
 }
 
 version(CRuntime_DigitalMars)
-@nogc @system nothrow unittest
+version(StdUnittest) @nogc @system nothrow unittest
 {
     void* m;
 

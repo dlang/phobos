@@ -252,7 +252,7 @@ bool isValidDchar(dchar c) pure nothrow @safe @nogc
     return c < 0xD800 || (c > 0xDFFF && c <= 0x10FFFF);
 }
 
-pure nothrow @safe @nogc unittest
+version(StdUnittest) pure nothrow @safe @nogc unittest
 {
     import std.exception;
 
@@ -339,7 +339,7 @@ do
     return msbs;
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.exception : AssertError;
     import std.conv : to;
@@ -406,7 +406,7 @@ do
     });
 }
 
-@safe unittest // invalid start bytes
+version(StdUnittest) @safe unittest // invalid start bytes
 {
     import std.exception : assertThrown;
     immutable char[] invalidStartBytes = [
@@ -447,7 +447,7 @@ if (isInputRange!S && is(Unqual!(ElementType!S) == wchar))
     return 1 + (u >= 0xD800 && u <= 0xDBFF);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.exception : AssertError;
     import std.conv : to;
@@ -526,7 +526,7 @@ if (is(S : const dchar[]) ||
     return 1;
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.exception : AssertError;
     import std.conv : to;
@@ -672,7 +672,7 @@ if (isBidirectionalRange!S && is(Unqual!(ElementType!S) == char) && !isRandomAcc
     throw new UTFException("The last code unit is not the end of the UTF-8 sequence");
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.exception : AssertError;
     import std.conv : to;
@@ -769,7 +769,7 @@ if (is(S : const wchar[]) ||
     return 1 + (0xDC00 <= c2 && c2 <= 0xE000);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.exception : AssertError;
     import std.conv : to;
@@ -854,7 +854,7 @@ if (isBidirectionalRange!S && is(Unqual!(ElementEncodingType!S) == dchar))
     return 1;
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.exception : AssertError;
     import std.conv : to;
@@ -955,7 +955,7 @@ if (isSomeChar!C)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(toUCSindex(`hello world`, 7) == 7);
     assert(toUCSindex(`hello world`w, 7) == 7);
@@ -995,7 +995,7 @@ if (isSomeChar!C)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(toUTFindex(`hello world`, 7) == 7);
     assert(toUTFindex(`hello world`w, 7) == 7);
@@ -1529,7 +1529,7 @@ if (
 }
 
 @safe pure @nogc nothrow
-unittest
+version(StdUnittest) unittest
 {
     // Add tests for useReplacemendDchar == yes path
 
@@ -1646,7 +1646,7 @@ if (is(S : const wchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S
 }
 
 @safe pure @nogc nothrow
-unittest
+version(StdUnittest) unittest
 {
     // Add tests for useReplacemendDchar == true path
 
@@ -1710,7 +1710,7 @@ if (is(S : const dchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S
 }
 
 @safe pure @nogc nothrow
-unittest
+version(StdUnittest) unittest
 {
     // Add tests for useReplacemendDchar == true path
 
@@ -1886,7 +1886,7 @@ version(StdUnittest) private void testBadDecodeBack(R)(R range, size_t line = __
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : to;
     import std.exception;
@@ -1970,7 +1970,7 @@ version(StdUnittest) private void testBadDecodeBack(R)(R range, size_t line = __
     });
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : to;
     import std.exception;
@@ -2026,7 +2026,7 @@ version(StdUnittest) private void testBadDecodeBack(R)(R range, size_t line = __
     });
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : to;
     import std.exception;
@@ -2082,7 +2082,7 @@ version(StdUnittest) private void testBadDecodeBack(R)(R range, size_t line = __
     });
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.exception;
     assertCTFEable!(
@@ -2107,7 +2107,7 @@ version(StdUnittest) private void testBadDecodeBack(R)(R range, size_t line = __
     });
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.exception;
     char[4] val;
@@ -2180,7 +2180,7 @@ size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     goto L3;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.exception;
     assertCTFEable!(
@@ -2237,7 +2237,7 @@ size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     goto L1;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.exception;
     assertCTFEable!(
@@ -2276,7 +2276,7 @@ size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     return 1;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.exception;
     assertCTFEable!(
@@ -2362,7 +2362,7 @@ void encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     str = r;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.exception;
 
@@ -2384,7 +2384,7 @@ void encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     });
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.exception;
     assertCTFEable!(
@@ -2449,7 +2449,7 @@ void encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     str = r;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.exception;
     assertCTFEable!(
@@ -2487,7 +2487,7 @@ void encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     str ~= c;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.exception;
     assertCTFEable!(
@@ -2541,7 +2541,7 @@ if (isSomeChar!C)
 }
 
 ///
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     assert(codeLength!char('a') == 1);
     assert(codeLength!wchar('a') == 1);
@@ -2583,7 +2583,7 @@ if (isInputRange!InputRange && !isInfinite!InputRange && is(ElementType!InputRan
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.conv : to;
     assert(codeLength!char("hello world") ==
@@ -2606,7 +2606,7 @@ if (isInputRange!InputRange && !isInfinite!InputRange && is(ElementType!InputRan
            `, ça, ce ne serait pas bien.`);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.iteration : filter;
     import std.conv : to;
@@ -2652,7 +2652,7 @@ if (isSomeChar!C)
     else
         static assert(0);
 }
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert( canSearchInCodeUnits! char('a'));
     assert( canSearchInCodeUnits!wchar('a'));
@@ -2690,7 +2690,7 @@ if (isSomeString!S)
 }
 
 
-@safe unittest // bugzilla 12923
+version(StdUnittest) @safe unittest // bugzilla 12923
 {
     import std.exception;
     assertThrown((){
@@ -2717,7 +2717,7 @@ if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -2728,7 +2728,7 @@ if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
     assert("𐐷"d.toUTF8.equal([0xF0, 0x90, 0x90, 0xB7]));
 }
 
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : ReferenceInputRange;
@@ -2758,7 +2758,7 @@ if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -2770,7 +2770,7 @@ if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
     assert("𐐷"d.toUTF16.equal([0xD801, 0xDC37]));
 }
 
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : ReferenceInputRange;
@@ -2869,7 +2869,7 @@ template toUTFz(P)
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     auto p1 = toUTFz!(char*)("hello world");
     auto p2 = toUTFz!(const(char)*)("hello world");
@@ -2979,7 +2979,7 @@ if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
     return () @trusted { return cast(P) retval.data.ptr; } ();
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import core.exception : AssertError;
     import std.algorithm;
@@ -3080,7 +3080,7 @@ if (isSomeChar!C)
     return toUTFz!(const(wchar)*)(str);
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.conv : to;
     //toUTFz is already thoroughly tested, so this will just verify that
@@ -3092,7 +3092,7 @@ if (isSomeChar!C)
 
 /* ================================ tests ================================== */
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.exception;
 
@@ -3138,7 +3138,7 @@ if (isSomeChar!C)
     return walkLength(str);
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     import std.exception;
     assertCTFEable!(
@@ -3355,7 +3355,7 @@ if (isAutodecodableString!R ||
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range.primitives;
 
@@ -3376,7 +3376,7 @@ if (isAutodecodableString!R ||
 }
 
 /// `byCodeUnit` does no Unicode decoding
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     string noel1 = "noe\u0308l"; // noël using e + combining diaeresis
     assert(noel1.byCodeUnit[2] != 'ë');
@@ -3389,7 +3389,7 @@ if (isAutodecodableString!R ||
 }
 
 /// `byCodeUnit` exposes a `source` property when wrapping narrow strings.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : popFrontN;
@@ -3407,7 +3407,7 @@ if (isAutodecodableString!R ||
     }
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     import std.range;
     {
@@ -3712,7 +3712,7 @@ alias byWchar = byUTF!wchar;
 /// Ditto
 alias byDchar = byUTF!dchar;
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
   {
     char[5] s;
@@ -3759,7 +3759,7 @@ alias byDchar = byUTF!dchar;
   }
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
   {
     wchar[11] s;
@@ -3801,7 +3801,7 @@ alias byDchar = byUTF!dchar;
   }
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
   {
     dchar[9] s;
@@ -3898,7 +3898,7 @@ alias byDchar = byUTF!dchar;
 // test pure, @safe, nothrow, @nogc correctness of byChar/byWchar/byDchar,
 // which needs to support ranges with and without those attributes
 
-pure @safe nothrow @nogc unittest
+version(StdUnittest) pure @safe nothrow @nogc unittest
 {
     dchar[5] s = "hello"d;
     foreach (c; s[].byChar())  { }
@@ -3909,7 +3909,7 @@ pure @safe nothrow @nogc unittest
 version(StdUnittest)
 int impureVariable;
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     static struct ImpureThrowingSystemRange(Char)
     {
@@ -4048,7 +4048,7 @@ if (isSomeChar!C)
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
 

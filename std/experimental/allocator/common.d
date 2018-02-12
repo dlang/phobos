@@ -29,7 +29,7 @@ template stateSize(T)
 }
 
 @safe @nogc nothrow pure
-unittest
+version(StdUnittest) unittest
 {
     static assert(stateSize!void == 0);
     struct A {}
@@ -103,7 +103,7 @@ package size_t roundUpToMultipleOf(size_t s, uint base)
 }
 
 @safe @nogc nothrow pure
-unittest
+version(StdUnittest) unittest
 {
     assert(10.roundUpToMultipleOf(11) == 11);
     assert(11.roundUpToMultipleOf(11) == 11);
@@ -128,7 +128,7 @@ package size_t roundUpToAlignment(size_t n, uint alignment)
 }
 
 @safe @nogc nothrow pure
-unittest
+version(StdUnittest) unittest
 {
     assert(10.roundUpToAlignment(4) == 12);
     assert(11.roundUpToAlignment(2) == 12);
@@ -148,7 +148,7 @@ package size_t roundDownToAlignment(size_t n, uint alignment)
 }
 
 @safe @nogc nothrow pure
-unittest
+version(StdUnittest) unittest
 {
     assert(10.roundDownToAlignment(4) == 8);
     assert(11.roundDownToAlignment(2) == 10);
@@ -171,7 +171,7 @@ package void[] roundUpToAlignment(void[] b, uint a)
 }
 
 @nogc nothrow pure
-@system unittest
+version(StdUnittest) @system unittest
 {
     void[] empty;
     assert(roundUpToAlignment(empty, 4) == null);
@@ -204,7 +204,7 @@ package void[] roundStartToMultipleOf(void[] s, uint base)
 }
 
 nothrow pure
-@system unittest
+version(StdUnittest) @system unittest
 {
     void[] p;
     assert(roundStartToMultipleOf(p, 16) is null);
@@ -233,7 +233,7 @@ package size_t roundUpToPowerOf2(size_t s)
 }
 
 @safe @nogc nothrow pure
-unittest
+version(StdUnittest) unittest
 {
     assert(0.roundUpToPowerOf2 == 0);
     assert(1.roundUpToPowerOf2 == 1);
@@ -264,7 +264,7 @@ package uint trailingZeros(ulong x)
 }
 
 @safe @nogc nothrow pure
-unittest
+version(StdUnittest) unittest
 {
     assert(trailingZeros(0) == 64);
     assert(trailingZeros(1) == 0);
@@ -293,7 +293,7 @@ package uint effectiveAlignment(void* ptr)
 }
 
 @nogc nothrow pure
-@system unittest
+version(StdUnittest) @system unittest
 {
     int x;
     assert(effectiveAlignment(&x) >= int.alignof);
@@ -404,7 +404,7 @@ if (hasMember!(Allocator, "alignedAllocate"))
     return true;
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     bool called = false;
     struct DummyAllocator

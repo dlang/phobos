@@ -116,7 +116,7 @@ if (isExpressionTuple!values)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(3.among(1, 42, 24, 3, 2));
 
@@ -133,13 +133,13 @@ if (isExpressionTuple!values)
 Alternatively, `values` can be passed at compile-time, allowing for a more
 efficient search, but one that only supports matching on equality:
 */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(3.among!(2, 3, 4));
     assert("bar".among!("foo", "bar", "baz") == 2);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.meta : AliasSeq;
 
@@ -373,7 +373,7 @@ auto castSwitch(choices...)(Object switchObject)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.iteration : map;
     import std.format : format;
@@ -404,7 +404,7 @@ auto castSwitch(choices...)(Object switchObject)
 }
 
 /// Using with void handlers:
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.exception : assertThrown;
 
@@ -425,7 +425,7 @@ auto castSwitch(choices...)(Object switchObject)
     )();
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.exception : SwitchError;
     import std.exception : assertThrown;
@@ -498,7 +498,7 @@ auto castSwitch(choices...)(Object switchObject)
                            )());
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     interface I { }
     class B : I { }
@@ -541,7 +541,7 @@ do
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(clamp(2, 1, 3) == 2);
     assert(clamp(0, 1, 3) == 1);
@@ -552,7 +552,7 @@ do
     assert(clamp(5, -1, 2u) == 2);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int a = 1;
     short b = 6;
@@ -752,7 +752,7 @@ if (isInputRange!R1 && isInputRange!R2)
 }
 
 ///
-pure @safe unittest
+version(StdUnittest) pure @safe unittest
 {
     int result;
 
@@ -789,7 +789,7 @@ pure @safe unittest
 }
 
 /// Example predicate that compares individual elements in reverse lexical order
-pure @safe unittest
+version(StdUnittest) pure @safe unittest
 {
     int result;
 
@@ -825,7 +825,7 @@ pure @safe unittest
     assert(result > 0);
 }
 
-@nogc nothrow pure @safe unittest
+version(StdUnittest) @nogc nothrow pure @safe unittest
 {
     // Issue 18286: cmp for string with custom predicate fails if distinct chars can compare equal
     static bool ltCi(dchar a, dchar b)// less than, case insensitive
@@ -840,7 +840,7 @@ pure @safe unittest
     static assert(cmp!ltCi("apple", "APPLE") == 0);
 }
 
-@nogc nothrow @safe unittest
+version(StdUnittest) @nogc nothrow @safe unittest
 {
     // Issue 18280: for non-string ranges check that opCmp is evaluated only once per pair.
     static int ctr = 0;
@@ -859,7 +859,7 @@ pure @safe unittest
     assert(ctr == a.length, "opCmp should be called exactly once per pair of items!");
 }
 
-nothrow pure @safe unittest
+version(StdUnittest) nothrow pure @safe unittest
 {
     // Test cmp when opCmp returns float.
     struct F
@@ -881,7 +881,7 @@ nothrow pure @safe unittest
     assert(result > 0);
 }
 
-nothrow pure @safe unittest
+version(StdUnittest) nothrow pure @safe unittest
 {
     // Parallelism (was broken by inferred return type "immutable int")
     import std.parallelism : task;
@@ -984,7 +984,7 @@ template equal(alias pred = "a == b")
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.math : approxEqual;
@@ -1010,7 +1010,7 @@ This can be very useful when the element type of a range is itself a
 range. In particular, `equal` can be its own predicate, allowing
 range of range (of range...) comparisons.
  +/
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : iota, chunks;
@@ -1020,7 +1020,7 @@ range of range (of range...) comparisons.
     ));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.iteration : map;
     import std.internal.test.dummyrange : ReferenceForwardRange,
@@ -1084,7 +1084,7 @@ range of range (of range...) comparisons.
     assert(!equal(cir, ifr));
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.utf : byChar, byWchar, byDchar;
 
@@ -1096,7 +1096,7 @@ range of range (of range...) comparisons.
     assert(equal("æøå"d, "æøå".byDchar));
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     struct R(bool _empty) {
         enum empty = _empty;
@@ -1169,7 +1169,7 @@ enum EditOp : char
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     with(EditOp)
     {
@@ -1418,7 +1418,7 @@ if (isForwardRange!(Range1) && isForwardRange!(Range2))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.iteration : filter;
     import std.uni : toUpper;
@@ -1434,7 +1434,7 @@ if (isForwardRange!(Range1) && isForwardRange!(Range2))
     assert(levenshteinDistance("ID", "I♥D") == 1);
 }
 
-@safe @nogc nothrow unittest
+version(StdUnittest) @safe @nogc nothrow unittest
 {
     assert(levenshteinDistance("cat"d, "rat"d) == 1);
 }
@@ -1449,7 +1449,7 @@ if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
     return levenshteinDistance!(equals, Types)(s, t);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static struct S { string s; alias s this; }
     assert(levenshteinDistance(S("cat"), S("rat")) == 1);
@@ -1457,7 +1457,7 @@ if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
     assert(levenshteinDistance(S("cat"), "rat") == 1);
 }
 
-@safe @nogc nothrow unittest
+version(StdUnittest) @safe @nogc nothrow unittest
 {
     static struct S { dstring s; alias s this; }
     assert(levenshteinDistance(S("cat"d), S("rat"d)) == 1);
@@ -1491,7 +1491,7 @@ if (isForwardRange!(Range1) && isForwardRange!(Range2))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     string a = "Saturday", b = "Sundays";
     auto p = levenshteinDistanceAndPath(a, b);
@@ -1499,7 +1499,7 @@ if (isForwardRange!(Range1) && isForwardRange!(Range2))
     assert(equal(p[1], "nrrnsnnni"));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(levenshteinDistance("a", "a") == 0);
     assert(levenshteinDistance("a", "b") == 1);
@@ -1520,7 +1520,7 @@ if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
     return levenshteinDistanceAndPath!(equals, Types)(s, t);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static struct S { string s; alias s this; }
     assert(levenshteinDistanceAndPath(S("cat"), S("rat"))[0] == 1);
@@ -1571,7 +1571,7 @@ if (T.length >= 2)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int a = 5;
     short b = 6;
@@ -1584,7 +1584,7 @@ if (T.length >= 2)
     assert(e == 2);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int a = 5;
     short b = 6;
@@ -1683,7 +1683,7 @@ if (T.length >= 2)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int a = 5;
     short b = 6;
@@ -1734,7 +1734,7 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[]    x = [ 1,  5, 2, 7,   4, 3 ];
     double[] y = [ 1.0, 5, 2, 7.3, 4, 8 ];
@@ -1743,7 +1743,7 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
     assert(m[1] == y[3 .. $]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[] a = [ 1, 2, 3 ];
     int[] b = [ 1, 2, 4, 5 ];
@@ -1829,7 +1829,7 @@ auto predSwitch(alias pred = "a == b", T, R ...)(T switchExpression, lazy R choi
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     string res = 2.predSwitch!"a < b"(
         1, "less than 1",
@@ -1856,7 +1856,7 @@ auto predSwitch(alias pred = "a == b", T, R ...)(T switchExpression, lazy R choi
     assertThrown!Exception(factorial(-9));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.exception : SwitchError;
     import std.exception : assertThrown;
@@ -1965,7 +1965,7 @@ if (isInputRange!Range1 &&
 }
 
 ///
-@safe nothrow pure unittest
+version(StdUnittest) @safe nothrow pure unittest
 {
     assert(isSameLength([1, 2, 3], [4, 5, 6]));
     assert(isSameLength([0.3, 90.4, 23.7, 119.2], [42.6, 23.6, 95.5, 6.3]));
@@ -1981,7 +1981,7 @@ if (isInputRange!Range1 &&
 }
 
 // Test CTFE
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     enum result1 = isSameLength([1, 2, 3], [4, 5, 6]);
     static assert(result1);
@@ -1990,7 +1990,7 @@ if (isInputRange!Range1 &&
     static assert(!result2);
 }
 
-@safe nothrow pure unittest
+version(StdUnittest) @safe nothrow pure unittest
 {
     import std.internal.test.dummyrange;
 
@@ -2168,7 +2168,7 @@ if (is(typeof(binaryFun!(pred))) &&
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.typecons : Yes;
 
@@ -2186,7 +2186,7 @@ if (is(typeof(binaryFun!(pred))) &&
 }
 
 // Test @nogc inference
-@safe @nogc pure unittest
+version(StdUnittest) @safe @nogc pure unittest
 {
     static immutable arr1 = [1, 2, 3];
     static immutable arr2 = [3, 2, 1];
@@ -2197,7 +2197,7 @@ if (is(typeof(binaryFun!(pred))) &&
     assert(!isPermutation(arr3, arr4));
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.internal.test.dummyrange;
 
@@ -2269,7 +2269,7 @@ if (alternatives.length >= 1 &&
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     const a = 1;
     const b = 2;

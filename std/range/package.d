@@ -363,7 +363,7 @@ if (isBidirectionalRange!(Unqual!Range))
 
 
 ///
-pure @safe nothrow @nogc unittest
+version(StdUnittest) pure @safe nothrow @nogc unittest
 {
     import std.algorithm.comparison : equal;
     int[5] a = [ 1, 2, 3, 4, 5 ];
@@ -373,7 +373,7 @@ pure @safe nothrow @nogc unittest
     assert(retro(retro(a[])) is a[]);
 }
 
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     static assert(isBidirectionalRange!(typeof(retro("hello"))));
@@ -400,7 +400,7 @@ pure @safe nothrow unittest
     assert(equal(r, [3, 2, 1]));
 }
 
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     import std.internal.test.dummyrange : AllDummyRanges, propagatesRangeType,
         ReturnBy;
@@ -461,7 +461,7 @@ pure @safe nothrow unittest
     }
 }
 
-pure @safe nothrow @nogc unittest
+version(StdUnittest) pure @safe nothrow @nogc unittest
 {
     import std.algorithm.comparison : equal;
     auto LL = iota(1L, 4L);
@@ -471,7 +471,7 @@ pure @safe nothrow @nogc unittest
 }
 
 // Issue 12662
-pure @safe nothrow @nogc unittest
+version(StdUnittest) pure @safe nothrow @nogc unittest
 {
     int[3] src = [1,2,3];
     int[] data = src[];
@@ -686,7 +686,7 @@ do
 }
 
 ///
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -695,7 +695,7 @@ pure @safe nothrow unittest
     assert(stride(stride(a, 2), 3) == stride(a, 6));
 }
 
-pure @safe nothrow @nogc unittest
+version(StdUnittest) pure @safe nothrow @nogc unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -704,7 +704,7 @@ pure @safe nothrow @nogc unittest
     assert(equal(testArr[].stride(2), result));
 }
 
-debug pure nothrow @system unittest
+version(StdUnittest) debug pure nothrow @system unittest
 {//check the contract
     int[4] testArr = [1,2,3,4];
     bool passed = false;
@@ -722,7 +722,7 @@ debug pure nothrow @system unittest
     }
 }
 
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : AllDummyRanges, propagatesRangeType,
@@ -858,7 +858,7 @@ pure @safe nothrow unittest
     }
 }
 
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1205,7 +1205,7 @@ if (Ranges.length > 0 &&
 }
 
 ///
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1222,7 +1222,7 @@ pure @safe nothrow unittest
  * Range primitives are carried over to the returned range if
  * all of the ranges provide them
  */
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.sorting : sort;
@@ -1240,7 +1240,7 @@ pure @safe nothrow unittest
     assert(arr3.equal([7, 8, 9]));
 }
 
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : AllDummyRanges, dummyLength,
@@ -1339,7 +1339,7 @@ pure @safe nothrow unittest
     }
 }
 
-pure @safe nothrow @nogc unittest
+version(StdUnittest) pure @safe nothrow @nogc unittest
 {
     class Foo{}
     immutable(Foo)[] a;
@@ -1538,7 +1538,7 @@ private struct ChooseResult(R1, R2)
 }
 
 ///
-@safe nothrow pure @nogc unittest
+version(StdUnittest) @safe nothrow pure @nogc unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter, map;
@@ -1594,7 +1594,7 @@ if (Ranges.length >= 2
 }
 
 ///
-@safe nothrow pure @nogc unittest
+version(StdUnittest) @safe nothrow pure @nogc unittest
 {
     auto test()
     {
@@ -1670,7 +1670,7 @@ if (Ranges.length >= 2
     static b = test();
 }
 
-@safe nothrow pure @nogc unittest
+version(StdUnittest) @safe nothrow pure @nogc unittest
 {
     int[3] a = [1, 2, 3];
     long[3] b = [4, 5, 6];
@@ -1679,7 +1679,7 @@ if (Ranges.length >= 2
     assert(c[0] == 42);
 }
 
-@safe nothrow pure @nogc unittest
+version(StdUnittest) @safe nothrow pure @nogc unittest
 {
     static struct RefAccessRange
     {
@@ -1816,7 +1816,7 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1830,7 +1830,7 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
  * roundRobin can be used to create "interleave" functionality which inserts
  * an element between each element in a range.
  */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1882,7 +1882,7 @@ if (isRandomAccessRange!(Unqual!R) && hasLength!(Unqual!R) && hasSlicing!(Unqual
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     int[] a = [ 1, 2, 3, 4, 5 ];
@@ -1900,7 +1900,7 @@ if (isRandomAccessRange!(Unqual!R) && hasLength!(Unqual!R) && hasSlicing!(Unqual
     assert(equal(radial(a, 4), [ 4, 5, 3, 2, 1, 0 ]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.conv : text;
@@ -1942,7 +1942,7 @@ if (isRandomAccessRange!(Unqual!R) && hasLength!(Unqual!R) && hasSlicing!(Unqual
     // static assert(is(typeof(radial(immi))));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -2190,7 +2190,7 @@ if (isInputRange!(Unqual!R) &&
 }
 
 ///
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -2206,7 +2206,7 @@ pure @safe nothrow unittest
  * range (unlike $(LREF takeExactly), which will cause an assertion failure if
  * the range ends prematurely):
  */
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -2216,7 +2216,7 @@ pure @safe nothrow unittest
     assert(equal(t, [ 1, 2, 3 ]));
 }
 
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : AllDummyRanges;
@@ -2282,7 +2282,7 @@ pure @safe nothrow unittest
     static assert(is(Take!(typeof(myRepeat))));
 }
 
-pure @safe nothrow @nogc unittest
+version(StdUnittest) pure @safe nothrow @nogc unittest
 {
     //check for correct slicing of Take on an infinite range
     import std.algorithm.comparison : equal;
@@ -2292,7 +2292,7 @@ pure @safe nothrow @nogc unittest
                 .equal(iota(start, stop)));
 }
 
-pure @safe nothrow @nogc unittest
+version(StdUnittest) pure @safe nothrow @nogc unittest
 {
     // Check that one can declare variables of all Take types,
     // and that they match the return type of the corresponding
@@ -2312,7 +2312,7 @@ pure @safe nothrow @nogc unittest
     assert(t3.empty);
 }
 
-pure @safe nothrow @nogc unittest
+version(StdUnittest) pure @safe nothrow @nogc unittest
 {
     alias R1 = typeof(repeat(1));
     alias R2 = typeof(cycle([1]));
@@ -2322,7 +2322,7 @@ pure @safe nothrow @nogc unittest
     static assert(isBidirectionalRange!TR2);
 }
 
-pure @safe nothrow @nogc unittest //12731
+version(StdUnittest) pure @safe nothrow @nogc unittest //12731
 {
     auto a = repeat(1);
     auto s = a[1 .. 5];
@@ -2332,7 +2332,7 @@ pure @safe nothrow @nogc unittest //12731
     assert(s[1] == 1);
 }
 
-pure @safe nothrow @nogc unittest //13151
+version(StdUnittest) pure @safe nothrow @nogc unittest //13151
 {
     import std.algorithm.comparison : equal;
 
@@ -2432,7 +2432,7 @@ if (isInputRange!R)
 }
 
 ///
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -2446,7 +2446,7 @@ pure @safe nothrow unittest
     assert(b.back == 3);
 }
 
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter;
@@ -2469,7 +2469,7 @@ pure @safe nothrow unittest
     assert(equal(takeExactly(e, 3), [3, 4, 5]));
 }
 
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : AllDummyRanges;
@@ -2531,7 +2531,7 @@ pure @safe nothrow unittest
     }
 }
 
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : DummyRange, Length, RangeType, ReturnBy;
@@ -2545,7 +2545,7 @@ pure @safe nothrow unittest
 
 // https://issues.dlang.org/show_bug.cgi?id=18092
 // can't combine take and takeExactly
-unittest
+version(StdUnittest) unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : AllDummyRanges;
@@ -2635,7 +2635,7 @@ if (isInputRange!R)
 }
 
 ///
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     auto s = takeOne([42, 43, 44]);
     static assert(isRandomAccessRange!(typeof(s)));
@@ -2651,7 +2651,7 @@ pure @safe nothrow unittest
     assert(s.empty);
 }
 
-pure @safe nothrow @nogc unittest
+version(StdUnittest) pure @safe nothrow @nogc unittest
 {
     struct NonForwardRange
     {
@@ -2667,7 +2667,7 @@ pure @safe nothrow @nogc unittest
 }
 
 //guards against issue 16999
-pure @safe unittest
+version(StdUnittest) pure @safe unittest
 {
     auto myIota = new class
     {
@@ -2697,14 +2697,14 @@ if (isInputRange!R)
 }
 
 ///
-pure @safe nothrow @nogc unittest
+version(StdUnittest) pure @safe nothrow @nogc unittest
 {
     auto range = takeNone!(int[])();
     assert(range.length == 0);
     assert(range.empty);
 }
 
-pure @safe nothrow @nogc unittest
+version(StdUnittest) pure @safe nothrow @nogc unittest
 {
     enum ctfe = takeNone!(int[])();
     static assert(ctfe.length == 0);
@@ -2743,7 +2743,7 @@ if (isInputRange!R)
 }
 
 ///
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     import std.algorithm.iteration : filter;
     assert(takeNone([42, 27, 19]).empty);
@@ -2751,7 +2751,7 @@ pure @safe nothrow unittest
     assert(takeNone(filter!"true"([42, 27, 19])).empty);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.iteration : filter;
     import std.meta : AliasSeq;
@@ -2928,7 +2928,7 @@ if (isInputRange!Range && !isInfinite!Range &&
 }
 
 ///
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     // tail -c n
     assert([1, 2, 3].tail(1) == [3]);
@@ -2951,7 +2951,7 @@ pure @safe nothrow unittest
 }
 
 // @nogc prevented by @@@BUG@@@ 15408
-pure nothrow @safe /+@nogc+/ unittest
+version(StdUnittest) pure nothrow @safe /+@nogc+/ unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : AllDummyRanges, DummyRange, Length,
@@ -2981,7 +2981,7 @@ pure nothrow @safe /+@nogc+/ unittest
         RangeType.Input).init.tail(5)));
 }
 
-pure @safe nothrow @nogc unittest
+version(StdUnittest) pure @safe nothrow @nogc unittest
 {
     static immutable input = [1, 2, 3];
     static immutable expectedOutput = [2, 3];
@@ -3027,7 +3027,7 @@ if (isBidirectionalRange!R)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -3037,7 +3037,7 @@ if (isBidirectionalRange!R)
     assert("hello world".take(6).drop(3).equal("lo "));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -3047,7 +3047,7 @@ if (isBidirectionalRange!R)
     assert("hello world".drop(4).dropBack(4).equal("o w"));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.container.dlist : DList;
@@ -3058,7 +3058,7 @@ if (isBidirectionalRange!R)
     assert(a[].equal(a[].take(2)));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter;
@@ -3067,7 +3067,7 @@ if (isBidirectionalRange!R)
     assert(equal(drop(filter!"true"([0, 2, 1, 5, 0, 3]), 3), [5, 0, 3]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.container.dlist : DList;
@@ -3117,7 +3117,7 @@ if (isBidirectionalRange!R)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filterBidirectional;
@@ -3160,7 +3160,7 @@ if (isBidirectionalRange!R)
 }
 
 ///
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filterBidirectional;
@@ -3255,14 +3255,14 @@ public:
 Repeat!T repeat(T)(T value) { return Repeat!T(value); }
 
 ///
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
     assert(equal(5.repeat().take(4), [ 5, 5, 5, 5 ]));
 }
 
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -3293,14 +3293,14 @@ Take!(Repeat!T) repeat(T)(T value, size_t n)
 }
 
 ///
-pure @safe nothrow @nogc unittest
+version(StdUnittest) pure @safe nothrow @nogc unittest
 {
     import std.algorithm.comparison : equal;
 
     assert(equal(5.repeat(4), 5.repeat().take(4)));
 }
 
-pure @safe nothrow unittest //12007
+version(StdUnittest) pure @safe nothrow unittest //12007
 {
     static class C{}
     Repeat!(immutable int) ri;
@@ -3356,7 +3356,7 @@ if (isCallable!fun)
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
@@ -3367,7 +3367,7 @@ if (isCallable!fun)
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -3382,7 +3382,7 @@ if (isCallable!fun)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.format : format;
     import std.random : uniform;
@@ -3439,7 +3439,7 @@ public:
     }
 }
 
-@safe nothrow unittest
+version(StdUnittest) @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -3451,7 +3451,7 @@ public:
     assert(equal(generate!StaticOpCall().take(10), repeat(5).take(10)));
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -3465,7 +3465,7 @@ public:
 }
 
 // verify ref mechanism works
-@system nothrow unittest
+version(StdUnittest) @system nothrow unittest
 {
     int[10] arr;
     int idx;
@@ -3485,7 +3485,7 @@ public:
 }
 
 // assure front isn't the mechanism to make generate go to the next element.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int i;
     auto g = generate!(() => ++i);
@@ -3778,7 +3778,7 @@ if (isInputRange!R)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : cycle, take;
@@ -3805,7 +3805,7 @@ if (isStaticArray!R)
     return Cycle!R(input, index);
 }
 
-@safe nothrow unittest
+version(StdUnittest) @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : AllDummyRanges;
@@ -3867,7 +3867,7 @@ if (isStaticArray!R)
     }
 }
 
-@system nothrow unittest // For static arrays.
+version(StdUnittest) @system nothrow unittest // For static arrays.
 {
     import std.algorithm.comparison : equal;
 
@@ -3885,7 +3885,7 @@ if (isStaticArray!R)
     static assert(is(typeof(cConst[1 .. $]) == const(C)));
 }
 
-@safe nothrow unittest // For infinite ranges
+version(StdUnittest) @safe nothrow unittest // For infinite ranges
 {
     struct InfRange
     {
@@ -3909,7 +3909,7 @@ if (isStaticArray!R)
     static assert(is(typeof(j.cycle) == typeof(j)));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -3929,7 +3929,7 @@ if (isStaticArray!R)
     }
 }
 
-@system @nogc nothrow unittest
+version(StdUnittest) @system @nogc nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -3949,7 +3949,7 @@ if (isStaticArray!R)
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -3960,7 +3960,7 @@ if (isStaticArray!R)
     assert(cleS.front == 0);
 }
 
-@system unittest //10845
+version(StdUnittest) @system unittest //10845
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter;
@@ -3969,13 +3969,13 @@ if (isStaticArray!R)
     assert(equal(cycle(a).take(10), [0, 1, 2, 0, 1, 2, 0, 1, 2, 0]));
 }
 
-@safe unittest // 12177
+version(StdUnittest) @safe unittest // 12177
 {
     static assert(__traits(compiles, recurrence!q{a[n - 1] ~ a[n - 2]}("1", "0")));
 }
 
 // Issue 13390
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.exception : AssertError;
     import std.exception : assertThrown;
@@ -4362,7 +4362,7 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
 }
 
 ///
-pure @safe unittest
+version(StdUnittest) pure @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
@@ -4374,7 +4374,7 @@ pure @safe unittest
 }
 
 ///
-pure @safe unittest
+version(StdUnittest) pure @safe unittest
 {
     import std.conv : to;
 
@@ -4400,7 +4400,7 @@ pure @safe unittest
 }
 
 /// $(D zip) is powerful - the following code sorts two arrays in parallel:
-pure @safe unittest
+version(StdUnittest) pure @safe unittest
 {
     import std.algorithm.sorting : sort;
 
@@ -4434,7 +4434,7 @@ enum StoppingPolicy
     requireSameLength,
 }
 
-pure @system unittest
+version(StdUnittest) pure @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter, map;
@@ -4556,7 +4556,7 @@ pure @system unittest
     +/
 }
 
-pure @safe unittest
+version(StdUnittest) pure @safe unittest
 {
     import std.algorithm.sorting : sort;
 
@@ -4570,7 +4570,7 @@ pure @safe unittest
     assert(b == [6, 5, 2, 1, 3]);
 }
 
-pure @safe unittest
+version(StdUnittest) pure @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.typecons : tuple;
@@ -4586,7 +4586,7 @@ pure @safe unittest
 }
 
 // Text for Issue 11196
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.exception : assertThrown;
 
@@ -4596,7 +4596,7 @@ pure @safe unittest
     assertThrown(zip(StoppingPolicy.longest, cast(S[]) null, new int[1]).front);
 }
 
-@safe pure unittest //12007
+version(StdUnittest) @safe pure unittest //12007
 {
     static struct R
     {
@@ -4611,7 +4611,7 @@ pure @safe unittest
     assert(z.save == z);
 }
 
-pure @system unittest
+version(StdUnittest) pure @system unittest
 {
     import std.typecons : tuple;
 
@@ -4838,7 +4838,7 @@ if (allSatisfy!(isInputRange, Ranges))
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
    auto arr1 = [1,2,3,4,5,100];
    auto arr2 = [6,7,8,9,10];
@@ -4858,7 +4858,7 @@ if (allSatisfy!(isInputRange, Ranges))
    }
 }
 
-@system unittest // Bugzilla 15860: foreach_reverse on lockstep
+version(StdUnittest) @system unittest // Bugzilla 15860: foreach_reverse on lockstep
 {
     auto arr1 = [0, 1, 2, 3];
     auto arr2 = [4, 5, 6, 7];
@@ -4882,7 +4882,7 @@ if (allSatisfy!(isInputRange, Ranges))
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.iteration : filter;
     import std.conv : to;
@@ -4978,7 +4978,7 @@ if (allSatisfy!(isInputRange, Ranges))
     foreach (x, y; lockstep(iota(0, 10), iota(0, 10))) { }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     struct RvalueRange
     {
@@ -5075,7 +5075,7 @@ struct Recurrence(alias fun, StateType, size_t stateSize)
 }
 
 ///
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -5111,7 +5111,7 @@ recurrence(alias fun, State...)(State initial)
     return typeof(return)(state);
 }
 
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -5212,7 +5212,7 @@ auto sequence(alias fun, State...)(State args)
 }
 
 /// Odd numbers, using function in string form:
-pure @safe nothrow @nogc unittest
+version(StdUnittest) pure @safe nothrow @nogc unittest
 {
     auto odds = sequence!("a[0] + n * a[1]")(1, 2);
     assert(odds.front == 1);
@@ -5223,7 +5223,7 @@ pure @safe nothrow @nogc unittest
 }
 
 /// Triangular numbers, using function in lambda form:
-pure @safe nothrow @nogc unittest
+version(StdUnittest) pure @safe nothrow @nogc unittest
 {
     auto tri = sequence!((a,n) => n*(n+1)/2)();
 
@@ -5236,7 +5236,7 @@ pure @safe nothrow @nogc unittest
 }
 
 /// Fibonacci numbers, using function in explicit form:
-@safe nothrow @nogc unittest
+version(StdUnittest) @safe nothrow @nogc unittest
 {
     import std.math : pow, round, sqrt;
     static ulong computeFib(S)(S state, size_t n)
@@ -5258,7 +5258,7 @@ pure @safe nothrow @nogc unittest
     assert(fib[9] == 55);
 }
 
-pure @safe nothrow @nogc unittest
+version(StdUnittest) pure @safe nothrow @nogc unittest
 {
     import std.typecons : Tuple, tuple;
     auto y = Sequence!("a[0] + n * a[1]", Tuple!(int, int))(tuple(0, 4));
@@ -5279,7 +5279,7 @@ pure @safe nothrow @nogc unittest
     }
 }
 
-pure @safe nothrow @nogc unittest
+version(StdUnittest) pure @safe nothrow @nogc unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -5304,7 +5304,7 @@ pure @safe nothrow @nogc unittest
 }
 
 // Issue 5036
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     auto s = sequence!((a, n) => new int)(0);
     assert(s.front != s.front);  // no caching
@@ -5648,7 +5648,7 @@ do
 }
 
 ///
-pure @safe unittest
+version(StdUnittest) pure @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.math : approxEqual;
@@ -5668,7 +5668,7 @@ pure @safe unittest
     assert(approxEqual(rf, [0.0, 0.1, 0.2, 0.3, 0.4]));
 }
 
-pure nothrow @nogc @safe unittest
+version(StdUnittest) pure nothrow @nogc @safe unittest
 {
    //float overloads use std.conv.to so can't be @nogc or nothrow
     alias ssize_t = Signed!size_t;
@@ -5679,7 +5679,7 @@ pure nothrow @nogc @safe unittest
     assert(iota(ssize_t.max, ssize_t.min, -3).length == size_t.max / 3);
 }
 
-debug @system unittest
+version(StdUnittest) debug @system unittest
 {//check the contracts
     import core.exception : AssertError;
     import std.exception : assertThrown;
@@ -5689,7 +5689,7 @@ debug @system unittest
     assertThrown!AssertError(iota(0f,1f,-0.1f));
 }
 
-pure @system nothrow unittest
+version(StdUnittest) pure @system nothrow unittest
 {
     int[] a = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
     auto r1 = iota(a.ptr, a.ptr + a.length, 1);
@@ -5698,7 +5698,7 @@ pure @system nothrow unittest
     assert(&a[4] in r1);
 }
 
-pure @safe nothrow @nogc unittest
+version(StdUnittest) pure @safe nothrow @nogc unittest
 {
     assert(iota(1UL, 0UL).length == 0);
     assert(iota(1UL, 0UL, 1).length == 0);
@@ -5708,7 +5708,7 @@ pure @safe nothrow @nogc unittest
     assert(iota(ulong.max, 0).length == 0);
 }
 
-pure @safe unittest
+version(StdUnittest) pure @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.searching : count;
@@ -5854,14 +5854,14 @@ pure @safe unittest
     }}
 }
 
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     import std.algorithm.mutation : copy;
     auto idx = new size_t[100];
     copy(iota(0, idx.length), idx);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.meta : AliasSeq;
     static foreach (range; AliasSeq!(iota(2, 27, 4),
@@ -5880,7 +5880,7 @@ pure @safe nothrow unittest
     }}
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     //The ptr stuff can't be done at compile time, so we unfortunately end
     //up with some code duplication here.
@@ -5909,7 +5909,7 @@ pure @safe nothrow unittest
     }
 }
 
-@nogc nothrow pure @safe unittest
+version(StdUnittest) @nogc nothrow pure @safe unittest
 {
     {
         ushort start = 0, end = 10, step = 2;
@@ -5966,7 +5966,7 @@ if (!isIntegral!(CommonType!(B, E)) &&
     return Result(begin, end);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -6247,7 +6247,7 @@ FrontTransversal!(RangeOfRanges, opt) frontTransversal(
 }
 
 ///
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     int[][] x = new int[][2];
@@ -6257,7 +6257,7 @@ pure @safe nothrow unittest
     assert(equal(ror, [ 1, 3 ][]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : AllDummyRanges, DummyRange, ReturnBy;
@@ -6325,7 +6325,7 @@ pure @safe nothrow unittest
 }
 
 // Issue 16363
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -6337,7 +6337,7 @@ pure @safe nothrow unittest
 }
 
 // Bugzilla 16442
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     int[][] arr = [[], []];
 
@@ -6346,7 +6346,7 @@ pure @safe nothrow unittest
 }
 
 // ditto
-pure @safe unittest
+version(StdUnittest) pure @safe unittest
 {
     int[][] arr = [[], []];
 
@@ -6586,7 +6586,7 @@ Transversal!(RangeOfRanges, opt) transversal
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     int[][] x = new int[][2];
@@ -6597,7 +6597,7 @@ Transversal!(RangeOfRanges, opt) transversal
 }
 
 /// The following code does a full unzip
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
@@ -6606,7 +6606,7 @@ Transversal!(RangeOfRanges, opt) transversal
     assert(equal!equal(z, [[1, 4], [2, 5], [3, 6]]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.internal.test.dummyrange : DummyRange, Length, RangeType, ReturnBy;
 
@@ -6732,7 +6732,7 @@ private:
     RangeOfRanges _input;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Boundary case: transpose of empty range should be empty
     int[][] ror = [];
@@ -6740,7 +6740,7 @@ private:
 }
 
 // Issue 9507
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -6752,7 +6752,7 @@ private:
 }
 
 // Issue 17742
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.iteration : map;
     import std.algorithm.comparison : equal;
@@ -6805,7 +6805,7 @@ if (isForwardRange!RangeOfRanges &&
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     int[][] ror = [
@@ -6821,7 +6821,7 @@ if (isForwardRange!RangeOfRanges &&
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[][] x = new int[][2];
     x[0] = [1, 2];
@@ -6837,7 +6837,7 @@ if (isForwardRange!RangeOfRanges &&
 }
 
 // Issue 8764
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     ulong[1] t0 = [ 123 ];
@@ -7047,7 +7047,7 @@ if (isRandomAccessRange!Source && isInputRange!Indices &&
         }
 
         ///
-        @safe unittest
+        version(StdUnittest) @safe unittest
         {
             auto ind = indexed([1, 2, 3, 4, 5], [1, 3, 4]);
             assert(ind.physicalIndex(0) == 1);
@@ -7067,7 +7067,7 @@ Indexed!(Source, Indices) indexed(Source, Indices)(Source source, Indices indice
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     auto source = [1, 2, 3, 4, 5];
@@ -7077,7 +7077,7 @@ Indexed!(Source, Indices) indexed(Source, Indices)(Source source, Indices indice
     assert(equal(retro(ind), [5, 1, 3, 2, 4, 5]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     {
         auto ind = indexed([1, 2, 3, 4, 5], [1, 3, 4]);
@@ -7095,7 +7095,7 @@ Indexed!(Source, Indices) indexed(Source, Indices)(Source source, Indices indice
     assert(ind[5] == 6);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.internal.test.dummyrange : AllDummyRanges, propagatesLength,
         propagatesRangeType, RangeType;
@@ -7388,7 +7388,7 @@ if (isInputRange!Source)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     auto source = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -7403,7 +7403,7 @@ if (isInputRange!Source)
 }
 
 /// Non-forward input ranges are supported, but with limited semantics.
-@system /*@safe*/ unittest // FIXME: can't be @safe because RefCounted isn't.
+version(StdUnittest) @system /*@safe*/ unittest // FIXME: can't be @safe because RefCounted isn't.
 {
     import std.algorithm.comparison : equal;
 
@@ -7421,7 +7421,7 @@ if (isInputRange!Source)
     assert(chunked.front.equal([3, 4]));
 }
 
-@system /*@safe*/ unittest
+version(StdUnittest) @system /*@safe*/ unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : ReferenceInputRange;
@@ -7451,7 +7451,7 @@ if (isInputRange!Source)
     assert(r3.front.equal([5]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto source = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     auto chunks = chunks(source, 4);
@@ -7466,7 +7466,7 @@ if (isInputRange!Source)
     static assert(isRandomAccessRange!(typeof(chunks)));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -7501,7 +7501,7 @@ if (isInputRange!Source)
     assert(chunks1[$ / 2 .. $ - 1].equal([[2, 2], [3, 3]])); //Slow
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter;
@@ -7674,7 +7674,7 @@ if (isForwardRange!Source && hasLength!Source)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     auto source = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -7684,7 +7684,7 @@ if (isForwardRange!Source && hasLength!Source)
     assert(chunks[2] == [8, 9, 10]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -7706,7 +7706,7 @@ if (isForwardRange!Source && hasLength!Source)
     static assert(isRandomAccessRange!(typeof(chunks)));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -7753,7 +7753,7 @@ auto slide(Flag!"withPartial" f = Yes.withPartial,
 }
 
 /// Iterate over ranges with windows
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -7767,7 +7767,7 @@ auto slide(Flag!"withPartial" f = Yes.withPartial,
 }
 
 /// set a custom stepsize (default 1)
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -7789,7 +7789,7 @@ auto slide(Flag!"withPartial" f = Yes.withPartial,
 }
 
 /// Allow the last slide to have fewer elements than windowSize
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -7800,7 +7800,7 @@ auto slide(Flag!"withPartial" f = Yes.withPartial,
 }
 
 /// Count all the possible substrings of length 2
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.iteration : each;
 
@@ -8337,7 +8337,7 @@ public:
 }
 
 // test @nogc
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -8349,7 +8349,7 @@ public:
 }
 
 // test different window sizes
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.array : array;
     import std.algorithm.comparison : equal;
@@ -8371,7 +8371,7 @@ public:
 }
 
 // test combinations
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.typecons : tuple;
@@ -8414,7 +8414,7 @@ public:
 }
 
 // test emptiness and copyability
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
@@ -8433,7 +8433,7 @@ public:
 }
 
 // test with strings
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.iteration : each;
 
@@ -8450,7 +8450,7 @@ public:
 }
 
 // test with utf8 strings
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.stdio;
     import std.algorithm.comparison : equal;
@@ -8465,7 +8465,7 @@ public:
 }
 
 // test length
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     // Slides with fewer elements are empty or 1 for Yes.withPartial
     static foreach (expectedLength, Partial; [No.withPartial, Yes.withPartial])
@@ -8498,7 +8498,7 @@ public:
 }
 
 // test index and slicing
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.array : array;
@@ -8540,7 +8540,7 @@ public:
 }
 
 // test with infinite ranges
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -8571,7 +8571,7 @@ public:
 }
 
 // test reverse
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -8592,7 +8592,7 @@ public:
 }
 
 // test with dummy ranges
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : AllDummyRanges;
@@ -8629,7 +8629,7 @@ public:
 }
 
 // test with dummy ranges
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : AllDummyRanges;
@@ -8678,7 +8678,7 @@ public:
 }
 
 // test reverse with dummy ranges
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : AllDummyRanges;
@@ -8721,7 +8721,7 @@ public:
 }
 
 // test different sliceable ranges
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : AllDummyRanges;
@@ -9041,7 +9041,7 @@ if (!is(CommonType!Values == void) || Values.length == 0)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter, joiner, map;
@@ -9061,7 +9061,7 @@ if (!is(CommonType!Values == void) || Values.length == 0)
         .equal("T.D.P.L"));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Verify that the same common type and same arity
     // results in the same template instantiation
@@ -9073,7 +9073,7 @@ if (!is(CommonType!Values == void) || Values.length == 0)
 }
 
 // Tests the zero-element result
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -9095,7 +9095,7 @@ if (!is(CommonType!Values == void) || Values.length == 0)
 }
 
 // Tests the single-element result
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.typecons : tuple;
@@ -9144,7 +9144,7 @@ if (!is(CommonType!Values == void) || Values.length == 0)
 }
 
 // Tests multiple-element results
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : joiner;
@@ -9416,7 +9416,7 @@ do
 }
 
 /// Can start enumeration from a negative position:
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     import std.array : assocArray;
     import std.range : enumerate;
@@ -9427,7 +9427,7 @@ pure @safe nothrow unittest
     assert(aa[1]);
 }
 
-pure @safe nothrow unittest
+version(StdUnittest) pure @safe nothrow unittest
 {
     import std.internal.test.dummyrange : AllDummyRanges;
     import std.meta : AliasSeq;
@@ -9534,7 +9534,7 @@ pure @safe nothrow unittest
     }}
 }
 
-pure @safe unittest
+version(StdUnittest) pure @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.meta : AliasSeq;
@@ -9558,7 +9558,7 @@ pure @safe unittest
 version(none) // @@@BUG@@@ 10939
 {
     // Re-enable (or remove) if 10939 is resolved.
-    /+pure+/ @safe unittest // Impure because of std.conv.to
+    version(StdUnittest) /+pure+/ @safe unittest // Impure because of std.conv.to
     {
         import core.exception : RangeError;
         import std.exception : assertNotThrown, assertThrown;
@@ -9932,7 +9932,7 @@ if (isInputRange!Range)
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         import std.algorithm.comparison : equal;
         auto a = assumeSorted([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]);
@@ -9974,7 +9974,7 @@ policies are allowed, and $(D SearchPolicy.binarySearch) is the default.
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         import std.algorithm.comparison : equal;
         auto a = assumeSorted([ 1, 2, 3, 3, 3, 4, 4, 5, 6 ]);
@@ -10036,7 +10036,7 @@ policies are allowed, and $(D SearchPolicy.binarySearch) is the default.
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         import std.algorithm.comparison : equal;
         auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
@@ -10096,7 +10096,7 @@ equalRange). Completes the entire search in $(BIGOH log(n)) time.
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         import std.algorithm.comparison : equal;
         auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
@@ -10144,7 +10144,7 @@ sorting relation.
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.sorting : sort;
     auto a = [ 1, 2, 3, 42, 52, 64 ];
@@ -10166,7 +10166,7 @@ No copy of the original range is ever made. If the underlying range is
 changed concurrently with its corresponding $(D SortedRange) in ways
 that break its sorted-ness, $(D SortedRange) will work erratically.
 */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.mutation : swap;
     auto a = [ 1, 2, 3, 42, 52, 64 ];
@@ -10176,7 +10176,7 @@ that break its sorted-ness, $(D SortedRange) will work erratically.
     assert(!r.contains(42));  // passes although it shouldn't
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -10192,7 +10192,7 @@ that break its sorted-ness, $(D SortedRange) will work erratically.
     assert(equal(r[2], [ 40, 40, 50, 60 ]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     auto a = [ "A", "AG", "B", "E", "F" ];
@@ -10206,7 +10206,7 @@ that break its sorted-ness, $(D SortedRange) will work erratically.
     assert(equal(r[2], [ "AG", "B", "E", "F" ]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     static void test(SearchPolicy pol)()
@@ -10241,7 +10241,7 @@ that break its sorted-ness, $(D SortedRange) will work erratically.
     test!(SearchPolicy.binarySearch)();
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Check for small arrays
     int[] a;
@@ -10254,7 +10254,7 @@ that break its sorted-ness, $(D SortedRange) will work erratically.
     r = assumeSorted(a);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.mutation : swap;
     auto a = [ 1, 2, 3, 42, 52, 64 ];
@@ -10264,13 +10264,13 @@ that break its sorted-ness, $(D SortedRange) will work erratically.
     assert(!r.contains(42));            // passes although it shouldn't
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     immutable(int)[] arr = [ 1, 2, 3 ];
     auto s = assumeSorted(arr);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     int[] arr = [100, 101, 102, 200, 201, 300];
@@ -10279,7 +10279,7 @@ that break its sorted-ness, $(D SortedRange) will work erratically.
 }
 
 // Test on an input range
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : text;
     import std.file : exists, remove, tempDir;
@@ -10319,7 +10319,7 @@ if (isInputRange!(Unqual!R))
     return SortedRange!(Unqual!R, pred)(r);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     static assert(isRandomAccessRange!(SortedRange!(int[])));
@@ -10334,7 +10334,7 @@ if (isInputRange!(Unqual!R))
     assert(equal(p, [ 0, 1, 2, 3, 4, 5, 6]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     int[] a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
@@ -10344,7 +10344,7 @@ if (isInputRange!(Unqual!R))
     assert(equal(p, [ 5, 6 ]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.conv : text;
@@ -10364,7 +10364,7 @@ if (isInputRange!(Unqual!R))
     assert(equal(p, [ 3, 3, 3]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[] a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
     if (a.length)
@@ -10375,7 +10375,7 @@ if (isInputRange!(Unqual!R))
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto a = [ 5, 7, 34, 345, 677 ];
     auto r = assumeSorted(a);
@@ -10385,7 +10385,7 @@ if (isInputRange!(Unqual!R))
     r = assumeSorted(a);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     bool ok = true;
     try
@@ -10400,7 +10400,7 @@ if (isInputRange!(Unqual!R))
 }
 
 // issue 15003
-@nogc @safe unittest
+version(StdUnittest) @nogc @safe unittest
 {
     static immutable a = [1, 2, 3, 4];
     auto r = a.assumeSorted;
@@ -10774,7 +10774,7 @@ private:
 }
 
 /// Basic Example
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.searching : find;
     ubyte[] buffer = [1, 9, 45, 12, 22];
@@ -10801,7 +10801,7 @@ private:
 }
 
 /// opAssign Example.
-@system unittest
+version(StdUnittest) @system unittest
 {
     ubyte[] buffer1 = [1, 2, 3, 4, 5];
     ubyte[] buffer2 = [6, 7, 8, 9, 10];
@@ -10846,7 +10846,7 @@ private:
     assert(buffer2 == [11, 12, 13, 14, 15]);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.iteration : filter;
     {
@@ -10933,7 +10933,7 @@ private:
 }
 
 //Test assignment.
-@system unittest
+version(StdUnittest) @system unittest
 {
     ubyte[] buffer1 = [1, 2, 3, 4, 5];
     ubyte[] buffer2 = [6, 7, 8, 9, 10];
@@ -10960,7 +10960,7 @@ private:
     assert(buffer2 == [6, 7, 8, 9, 10]);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.mutation : bringToFront;
@@ -11080,7 +11080,7 @@ private:
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     struct S
     {
@@ -11095,7 +11095,7 @@ private:
     static assert(isInfinite!(typeof(wrapper)));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     class C
     {
@@ -11112,7 +11112,7 @@ private:
     assert(cWrapper is c);
 }
 
-@system unittest // issue 14373
+version(StdUnittest) @system unittest // issue 14373
 {
     static struct R
     {
@@ -11125,7 +11125,7 @@ private:
     assert(r.empty);
 }
 
-@system unittest // issue 14575
+version(StdUnittest) @system unittest // issue 14575
 {
     struct R
     {
@@ -11167,7 +11167,7 @@ if (isInputRange!R)
 
 /*****************************************************************************/
 
-@safe unittest    // bug 9060
+version(StdUnittest) @safe unittest    // bug 9060
 {
     import std.algorithm.iteration : map, joiner, group;
     import std.algorithm.searching : until;
@@ -11475,7 +11475,7 @@ if (isInputRange!R && isIntegral!(ElementType!R))
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
     import std.format : format;
@@ -11496,7 +11496,7 @@ if (isInputRange!R && isIntegral!(ElementType!R))
 }
 
 /// You can use bitwise to implement an uniform bool generator
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.random : rndGen;
@@ -11510,7 +11510,7 @@ if (isInputRange!R && isIntegral!(ElementType!R))
 }
 
 // Test nogc inference
-@safe @nogc unittest
+version(StdUnittest) @safe @nogc unittest
 {
     static ubyte[] arr = [3, 9];
     auto bw = arr.bitwise;
@@ -11525,7 +11525,7 @@ if (isInputRange!R && isIntegral!(ElementType!R))
 }
 
 // Test all range types over all integral types
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.internal.test.dummyrange;
 
@@ -11621,7 +11621,7 @@ if (isInputRange!R && isIntegral!(ElementType!R))
 }
 
 // Test opIndex and opSlice
-@system unittest
+version(StdUnittest) @system unittest
 {
     alias IntegralTypes = AliasSeq!(byte, ubyte, short, ushort, int, uint,
             long, ulong);
@@ -11680,7 +11680,7 @@ auto ref nullSink()
 }
 
 ///
-@safe nothrow unittest
+version(StdUnittest) @safe nothrow unittest
 {
     import std.algorithm.iteration : map;
     import std.algorithm.mutation : copy;
@@ -11688,7 +11688,7 @@ auto ref nullSink()
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.csv : csvNextToken;
 
@@ -11704,7 +11704,7 @@ auto ref nullSink()
     assert(app.data == "b");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto r = 10.iota
                 .tee(nullSink)
@@ -11837,7 +11837,7 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter, map;
@@ -11863,7 +11863,7 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
 }
 
 //
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter, map;
@@ -11901,7 +11901,7 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
 }
 
 //
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter, map;
@@ -11925,7 +11925,7 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
     assert(shiftedCount == 3);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Manually stride to test different pipe behavior.
     void testRange(Range)(Range r)
@@ -11962,7 +11962,7 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
     assert(frontCount == 9);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.meta : AliasSeq;
@@ -12003,7 +12003,7 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
     }}
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Issue 13483
     static void func1(T)(T x) {}
@@ -12052,7 +12052,7 @@ if (
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -12062,7 +12062,7 @@ if (
     assert("abc".padLeft('_', 6).equal("___abc"));
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : DummyRange, Length, RangeType, ReturnBy;
@@ -12092,7 +12092,7 @@ if (
 }
 
 // Test nogc inference
-@safe @nogc pure unittest
+version(StdUnittest) @safe @nogc pure unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -12248,7 +12248,7 @@ if (
 }
 
 ///
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -12258,7 +12258,7 @@ if (
     assert("abc".padRight('_', 6).equal("abc___"));
 }
 
-pure @safe unittest
+version(StdUnittest) pure @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : AllDummyRanges, ReferenceInputRange;
@@ -12306,7 +12306,7 @@ pure @safe unittest
 }
 
 // Test nogc inference
-@safe @nogc pure unittest
+version(StdUnittest) @safe @nogc pure unittest
 {
     import std.algorithm.comparison : equal;
 

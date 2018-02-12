@@ -169,7 +169,7 @@ enum bool isInputRange(R) =
     && is(typeof((R r) => r.popFront));
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     struct A {}
     struct B
@@ -220,7 +220,7 @@ enum bool isInputRange(R) =
     static assert(!isInputRange!VoidFront);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -286,7 +286,7 @@ private void doPut(R, E)(ref R r, auto ref E e)
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(!isNativeOutputRange!(int,     int));
     static assert( isNativeOutputRange!(int[],   int));
@@ -411,7 +411,7 @@ void put(R, E)(ref R r, E e)
  * `T`, use the global `put` to handle outputting a `T[]` to the range
  * or vice-versa.
  */
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.traits : isSomeChar;
 
@@ -437,7 +437,7 @@ void put(R, E)(ref R r, E e)
  *
  * Be sure to save the position of the array before calling `put`.
  */
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     int[] a = [1, 2, 3], b = [10, 20];
     auto c = a;
@@ -453,7 +453,7 @@ void put(R, E)(ref R r, E e)
  * so using `put` with `char` arrays is disallowed. In order to fill
  * any `char` type array, use $(REF byCodeUnit, std, utf).
  */
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     import std.utf : byCodeUnit;
 
@@ -465,7 +465,7 @@ void put(R, E)(ref R r, E e)
     assert(s1 == "Hello, World!");
 }
 
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     static struct R() { void put(in char[]) {} }
     R!() r;
@@ -519,21 +519,21 @@ if (isSomeChar!E)
     }
 }
 
-pure @safe unittest
+version(StdUnittest) pure @safe unittest
 {
     auto f = delegate (const(char)[]) {};
     putChar(f, cast(dchar)'a');
 }
 
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     static struct R() { void put(in char[]) {} }
     R!() r;
     putChar(r, 'a');
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     struct A {}
     static assert(!isInputRange!(A));
@@ -545,7 +545,7 @@ pure @safe unittest
     put(b, 5);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[] a = new int[10];
     int b;
@@ -553,14 +553,14 @@ pure @safe unittest
     put(a, b);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     void myprint(in char[] s) { }
     auto r = &myprint;
     put(r, 'a');
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[] a = new int[10];
     static assert(!__traits(compiles, put(a, 1.0L)));
@@ -576,7 +576,7 @@ pure @safe unittest
     assert(a.length == 6);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     char[] a = new char[10];
     static assert(!__traits(compiles, put(a, 1.0L)));
@@ -586,7 +586,7 @@ pure @safe unittest
     static assert(!__traits(compiles, put(a, "ABC")));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[][] a = new int[][10];
     int[]   b = new int[10];
@@ -598,7 +598,7 @@ pure @safe unittest
     static assert(!__traits(compiles, put(a, c)));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[][] a = new int[][](3);
     int[]   b = [1];
@@ -613,7 +613,7 @@ pure @safe unittest
     assert(a == [[2], [2], [2]]);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Test fix for bug 7476.
     struct LockingTextWriter
@@ -632,7 +632,7 @@ pure @safe unittest
     put(w, r);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : to;
     import std.meta : AliasSeq;
@@ -695,7 +695,7 @@ pure @safe unittest
     }}
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static struct CharRange
     {
@@ -712,7 +712,7 @@ pure @safe unittest
     put(c, "hello"d);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     // issue 9823
     const(char)[] r;
@@ -721,7 +721,7 @@ pure @safe unittest
     assert(r == "ABC");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // issue 10571
     import std.format;
@@ -730,7 +730,7 @@ pure @safe unittest
     assert(buf == "hello");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.format;
     import std.meta : AliasSeq;
@@ -798,7 +798,7 @@ guaranteed to not overflow the range.
 package(std) enum bool isNativeOutputRange(R, E) =
     is(typeof(doPut(lvalueOf!R, lvalueOf!E)));
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[] r = new int[](4);
     static assert(isInputRange!(int[]));
@@ -821,7 +821,7 @@ enum bool isOutputRange(R, E) =
     is(typeof(put(lvalueOf!R, lvalueOf!E)));
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     void myprint(in char[] s) { }
     static assert(isOutputRange!(typeof(&myprint), char));
@@ -831,7 +831,7 @@ enum bool isOutputRange(R, E) =
     static assert( isOutputRange!(dchar[], dchar));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.array;
     import std.stdio : writeln;
@@ -884,14 +884,14 @@ enum bool isForwardRange(R) = isInputRange!R
     && is(ReturnType!((R r) => r.save) == R);
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(!isForwardRange!(int));
     static assert( isForwardRange!(int[]));
     static assert( isForwardRange!(inout(int)[]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // BUG 14544
     struct R14544
@@ -924,7 +924,7 @@ enum bool isBidirectionalRange(R) = isForwardRange!R
     && is(ReturnType!((R r) => r.back) == ElementType!R);
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     alias R = int[];
     R r = [0,1];
@@ -935,7 +935,7 @@ enum bool isBidirectionalRange(R) = isForwardRange!R
     static assert(is(typeof(t) == typeof(w))); // same type for front and back
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     struct A {}
     struct B
@@ -990,7 +990,7 @@ enum bool isRandomAccessRange(R) =
         || is(typeof(lvalueOf!R[$ - 1]) == ElementType!R));
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.traits : isNarrowString;
 
@@ -1019,7 +1019,7 @@ enum bool isRandomAccessRange(R) =
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     struct A {}
     struct B
@@ -1071,7 +1071,7 @@ enum bool isRandomAccessRange(R) =
     static assert( isRandomAccessRange!(inout(int)[]));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Test fix for bug 6935.
     struct R
@@ -1128,7 +1128,7 @@ enum bool hasMobileElements(R) =
         || is(typeof(moveAt(lvalueOf!R, 0)) == ElementType!R));
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.iteration : map;
     import std.range : iota, repeat;
@@ -1167,7 +1167,7 @@ template ElementType(R)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range : iota;
 
@@ -1187,14 +1187,14 @@ template ElementType(R)
     static assert(is(ElementType!(typeof(range)) == int));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(is(ElementType!(byte[]) == byte));
     static assert(is(ElementType!(wchar[]) == dchar)); // rvalue
     static assert(is(ElementType!(wstring) == dchar));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     enum XYZ : string { a = "foo" }
     auto x = XYZ.a.front;
@@ -1209,7 +1209,7 @@ template ElementType(R)
     static assert(is(ElementType!(inout(int[])) == inout(int)));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(is(ElementType!(int[5]) == int));
     static assert(is(ElementType!(int[0]) == int));
@@ -1217,7 +1217,7 @@ template ElementType(R)
     static assert(is(ElementType!(char[0]) == dchar));
 }
 
-@safe unittest //11336
+version(StdUnittest) @safe unittest //11336
 {
     static struct S
     {
@@ -1226,7 +1226,7 @@ template ElementType(R)
     static assert(is(ElementType!(S[]) == S));
 }
 
-@safe unittest // 11401
+version(StdUnittest) @safe unittest // 11401
 {
     // ElementType should also work for non-@propety 'front'
     struct E { ushort id; }
@@ -1253,7 +1253,7 @@ template ElementEncodingType(R)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range : iota;
     // internally the range stores the encoded type
@@ -1267,7 +1267,7 @@ template ElementEncodingType(R)
     static assert(is(ElementEncodingType!(typeof(range)) == int));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(is(ElementEncodingType!(wchar[]) == wchar));
     static assert(is(ElementEncodingType!(dchar[]) == dchar));
@@ -1276,7 +1276,7 @@ template ElementEncodingType(R)
     static assert(is(ElementEncodingType!(int[])  == int));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     enum XYZ : string { a = "foo" }
     auto x = XYZ.a.front;
@@ -1294,7 +1294,7 @@ template ElementEncodingType(R)
     static assert(is(ElementEncodingType!(inout char[]) : inout(char)));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(is(ElementEncodingType!(int[5]) == int));
     static assert(is(ElementEncodingType!(int[0]) == int));
@@ -1327,7 +1327,7 @@ template hasSwappableElements(R)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(!hasSwappableElements!(const int[]));
     static assert(!hasSwappableElements!(const(int)[]));
@@ -1361,7 +1361,7 @@ enum bool hasAssignableElements(R) = isInputRange!R
         || is(typeof(lvalueOf!R[0] = lvalueOf!R.front)));
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(!hasAssignableElements!(const int[]));
     static assert(!hasAssignableElements!(const(int)[]));
@@ -1395,7 +1395,7 @@ enum bool hasLvalueElements(R) = isInputRange!R
         || is(typeof(((ref x) => x)(lvalueOf!R[0]))));
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range : iota, chain;
 
@@ -1414,7 +1414,7 @@ enum bool hasLvalueElements(R) = isInputRange!R
     static assert( hasLvalueElements!(typeof(c)));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // bugfix 6336
     struct S { immutable int value; }
@@ -1448,7 +1448,7 @@ template hasLength(R)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(!hasLength!(char[]));
     static assert( hasLength!(int[]));
@@ -1461,7 +1461,7 @@ template hasLength(R)
 }
 
 // test combinations which are invalid on some platforms
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     struct A { ulong length; }
     struct B { @property uint length() { return 0; } }
@@ -1479,7 +1479,7 @@ template hasLength(R)
 }
 
 // test combinations which are invalid on all platforms
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     struct A { long length; }
     struct B { int length; }
@@ -1515,7 +1515,7 @@ template isInfinite(R)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range : Repeat;
     static assert(!isInfinite!(int[]));
@@ -1565,7 +1565,7 @@ enum bool hasSlicing(R) = isForwardRange!R
     }));
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range : takeExactly;
     static assert( hasSlicing!(int[]));
@@ -1659,7 +1659,7 @@ if (isInputRange!Range)
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.iteration : filter;
     import std.range : recurrence, take;
@@ -1774,7 +1774,7 @@ if (isBidirectionalRange!Range)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[] a = [ 1, 2, 3, 4, 5 ];
     a.popFrontN(2);
@@ -1784,7 +1784,7 @@ if (isBidirectionalRange!Range)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : iota;
@@ -1795,7 +1795,7 @@ if (isBidirectionalRange!Range)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     int[] a = [ 1, 2, 3, 4, 5 ];
     a.popBackN(2);
@@ -1805,7 +1805,7 @@ if (isBidirectionalRange!Range)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : iota;
@@ -1867,7 +1867,7 @@ if (isBidirectionalRange!Range)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filterBidirectional;
@@ -1919,7 +1919,7 @@ ElementType!R moveFront(R)(R r)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto a = [ 1, 2, 3 ];
     assert(moveFront(a) == 1);
@@ -1938,7 +1938,7 @@ ElementType!R moveFront(R)(R r)
     assert(moveFront(r) == 43);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     struct R
     {
@@ -1977,7 +1977,7 @@ ElementType!R moveBack(R)(R r)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     struct TestRange
     {
@@ -2023,7 +2023,7 @@ ElementType!R moveAt(R)(R r, size_t i)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto a = [1,2,3,4];
     foreach (idx, it; a)
@@ -2032,7 +2032,7 @@ ElementType!R moveAt(R)(R r, size_t i)
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.internal.test.dummyrange;
 
@@ -2066,7 +2066,7 @@ if (is(typeof(a.length) : size_t) || isNarrowString!T)
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     auto a = [ 1, 2, 3 ];
     assert(!a.empty);
@@ -2091,7 +2091,7 @@ content of the array, it simply returns its argument.
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     auto a = [ 1, 2, 3 ];
     auto b = a.save;
@@ -2114,7 +2114,7 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     auto a = [ 1, 2, 3 ];
     a.popFront();
@@ -2165,7 +2165,7 @@ if (isNarrowString!(C[]))
     else static assert(0, "Bad template constraint.");
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.meta : AliasSeq;
 
@@ -2200,7 +2200,7 @@ if (isNarrowString!(C[]))
     static assert(checkCTFEW.empty);
 }
 
-@safe unittest // issue 16090
+version(StdUnittest) @safe unittest // issue 16090
 {
     string s = "\u00E4";
     assert(s.length == 2);
@@ -2210,7 +2210,7 @@ if (isNarrowString!(C[]))
     assert(s.empty);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     wstring s = "\U00010000";
     assert(s.length == 2);
@@ -2235,7 +2235,7 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     auto a = [ 1, 2, 3 ];
     a.popBack();
@@ -2258,7 +2258,7 @@ if (isNarrowString!(T[]))
     a = a[0 .. $ - strideBack(a, $)];
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.meta : AliasSeq;
 
@@ -2302,13 +2302,13 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     int[] a = [ 1, 2, 3 ];
     assert(a.front == 1);
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     auto a = [ 1, 2 ];
     a.front = 4;
@@ -2348,7 +2348,7 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     int[] a = [ 1, 2, 3 ];
     assert(a.back == 3);
@@ -2356,7 +2356,7 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
     assert(a.back == 7);
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     immutable b = [ 1, 2, 3 ];
     assert(b.back == 3);

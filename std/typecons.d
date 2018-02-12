@@ -73,7 +73,7 @@ import std.meta; // : AliasSeq, allSatisfy;
 import std.traits;
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // value tuples
     alias Coord = Tuple!(int, "x", int, "y", int, "z");
@@ -247,7 +247,7 @@ private:
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static struct S
     {
@@ -282,7 +282,7 @@ private:
     assert(u1.isEmpty);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     // test conversion to base ref
     int deleted = 0;
@@ -307,7 +307,7 @@ private:
     assert(deleted == 2);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     class Bar
     {
@@ -329,7 +329,7 @@ private:
     assert(!ub2.isEmpty);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     interface Bar
     {
@@ -371,7 +371,7 @@ private:
     assert(BarImpl.count == 0);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     struct Foo
     {
@@ -396,7 +396,7 @@ private:
 }
 
 // ensure Unique behaves correctly through const access paths
-@system unittest
+version(StdUnittest) @system unittest
 {
     struct Bar {int val;}
     struct Foo
@@ -435,7 +435,7 @@ private enum bool distinctFieldNames(names...) = __traits(compiles,
             mixin("enum int" ~ name ~ " = 0;");
 });
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(!distinctFieldNames!(string, "abc", string, "abc"));
     static assert(distinctFieldNames!(string, "abc", int, "abd"));
@@ -587,7 +587,7 @@ if (distinctFieldNames!(Specs))
         alias Types = staticMap!(extractType, fieldSpecs);
 
         ///
-        static if (Specs.length == 0) @safe unittest
+        version(StdUnittest) static if (Specs.length == 0) @safe unittest
         {
             alias Fields = Tuple!(int, "id", string, float);
             static assert(is(Fields.Types == AliasSeq!(int, string, float)));
@@ -599,7 +599,7 @@ if (distinctFieldNames!(Specs))
         alias fieldNames = staticMap!(extractName, fieldSpecs);
 
         ///
-        static if (Specs.length == 0) @safe unittest
+        version(StdUnittest) static if (Specs.length == 0) @safe unittest
         {
             alias Fields = Tuple!(int, "id", string, float);
             static assert(Fields.fieldNames == AliasSeq!("id", "", ""));
@@ -615,7 +615,7 @@ if (distinctFieldNames!(Specs))
         mixin(injectNamedFields());
 
         ///
-        static if (Specs.length == 0) @safe unittest
+        version(StdUnittest) static if (Specs.length == 0) @safe unittest
         {
             auto t1 = tuple(1, " hello ", 'a');
             assert(t1.toString() == `Tuple!(int, string, char)(1, " hello ", 'a')`);
@@ -673,7 +673,7 @@ if (distinctFieldNames!(Specs))
         }
 
         ///
-        static if (Specs.length == 0) @safe unittest
+        version(StdUnittest) static if (Specs.length == 0) @safe unittest
         {
             alias ISD = Tuple!(int, string, double);
             auto tup = ISD(1, "test", 3.2);
@@ -697,7 +697,7 @@ if (distinctFieldNames!(Specs))
         }
 
         ///
-        static if (Specs.length == 0) @safe unittest
+        version(StdUnittest) static if (Specs.length == 0) @safe unittest
         {
             int[2] ints;
             Tuple!(int, int) t = ints;
@@ -720,7 +720,7 @@ if (distinctFieldNames!(Specs))
         }
 
         ///
-        static if (Specs.length == 0) @safe unittest
+        version(StdUnittest) static if (Specs.length == 0) @safe unittest
         {
             alias IntVec = Tuple!(int, int, int);
             alias DubVec = Tuple!(double, double, double);
@@ -767,7 +767,7 @@ if (distinctFieldNames!(Specs))
         }
 
         ///
-        static if (Specs.length == 0) @safe unittest
+        version(StdUnittest) static if (Specs.length == 0) @safe unittest
         {
             Tuple!(int, string) t1 = tuple(1, "test");
             Tuple!(double, string) t2 =  tuple(1.0, "test");
@@ -823,7 +823,7 @@ if (distinctFieldNames!(Specs))
             The first `v1` for which `v1 > v2` is true determines
             the result. This could lead to unexpected behaviour.
          */
-        static if (Specs.length == 0) @safe unittest
+        version(StdUnittest) static if (Specs.length == 0) @safe unittest
         {
             auto tup1 = tuple(1, 1, 1);
             auto tup2 = tuple(1, 100, 100);
@@ -913,7 +913,7 @@ if (distinctFieldNames!(Specs))
         }
 
         ///
-        static if (Specs.length == 0) @safe unittest
+        version(StdUnittest) static if (Specs.length == 0) @safe unittest
         {
             auto t0 = tuple(4, "hello");
 
@@ -1012,7 +1012,7 @@ if (distinctFieldNames!(Specs))
         }
 
         ///
-        static if (Specs.length == 0) @safe unittest
+        version(StdUnittest) static if (Specs.length == 0) @safe unittest
         {
             //replacing names by their current name
 
@@ -1032,7 +1032,7 @@ if (distinctFieldNames!(Specs))
         }
 
         ///
-        static if (Specs.length == 0) @safe unittest
+        version(StdUnittest) static if (Specs.length == 0) @safe unittest
         {
             //replace names by their position
 
@@ -1052,7 +1052,7 @@ if (distinctFieldNames!(Specs))
             assert(t2Named.c == 3);
         }
 
-        static if (Specs.length == 0) @safe unittest
+        version(StdUnittest) static if (Specs.length == 0) @safe unittest
         {
             //check that empty translations work fine
             enum string[string] a0 = null;
@@ -1096,7 +1096,7 @@ if (distinctFieldNames!(Specs))
         }
 
         ///
-        static if (Specs.length == 0) @safe unittest
+        version(StdUnittest) static if (Specs.length == 0) @safe unittest
         {
             Tuple!(int, string, float, double) a;
             a[1] = "abc";
@@ -1260,7 +1260,7 @@ if (distinctFieldNames!(Specs))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     Tuple!(int, int) point;
     // assign coordinates
@@ -1275,7 +1275,7 @@ if (distinctFieldNames!(Specs))
     `Tuple` members can be named. It is legal to mix named and unnamed
     members. The method above is still applicable to all fields.
  */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     alias Entry = Tuple!(int, "index", string, "value");
     Entry e;
@@ -1291,7 +1291,7 @@ if (distinctFieldNames!(Specs))
     `Tuple`s differing in naming only are still distinct, even though they
     might have the same structure.
  */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     Tuple!(int, "x", int, "y") point1;
     Tuple!(int, int) point2;
@@ -1299,7 +1299,7 @@ if (distinctFieldNames!(Specs))
 }
 
 /// Use tuples as ranges
-unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.iteration : sum;
     import std.range : only;
@@ -1307,7 +1307,7 @@ unittest
     assert(t.expand.only.sum == 3);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Bugzilla 4582
     static assert(!__traits(compiles, Tuple!(string, "id", int, "id")));
@@ -1339,7 +1339,7 @@ auto reverse(T)(T t)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto tup = tuple(1, "2");
     assert(tup.reverse == tuple("2", 1));
@@ -1374,12 +1374,12 @@ private template ReverseTupleSpecs(T...)
 }
 
 // ensure that internal Tuple unittests are compiled
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     Tuple!() t;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.conv;
     {
@@ -1558,7 +1558,7 @@ private template ReverseTupleSpecs(T...)
         assert(rev.x == 3 && rev.y == "4");
     }
 }
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // opEquals
     {
@@ -1653,7 +1653,7 @@ private template ReverseTupleSpecs(T...)
         assert(t2[0] == 1 && t2[1] == 2);
     }
 }
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto t1 = Tuple!(int, "x", string, "y")(1, "a");
     assert(t1.x == 1);
@@ -1668,7 +1668,7 @@ private template ReverseTupleSpecs(T...)
     static assert(is(typeof(Tuple!(int, "x", string, "y").tupleof) ==
                      typeof(Tuple!(int,      string     ).tupleof)));
 }
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Bugzilla 10686
     immutable Tuple!(int) t1;
@@ -1676,7 +1676,7 @@ private template ReverseTupleSpecs(T...)
     immutable Tuple!(int, "x") t2;
     auto r2 = t2[0]; // error
 }
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.exception : assertCTFEable;
 
@@ -1687,13 +1687,13 @@ private template ReverseTupleSpecs(T...)
         t = tuple(2);   // assignment
     });
 }
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     class Foo{}
     Tuple!(immutable(Foo)[]) a;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Test non-assignable
     static struct S
@@ -1716,7 +1716,7 @@ private template ReverseTupleSpecs(T...)
 }
 
 // Bugzilla #9819
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     alias T = Tuple!(int, "x", double, "foo");
     static assert(T.fieldNames[0] == "x");
@@ -1727,7 +1727,7 @@ private template ReverseTupleSpecs(T...)
 }
 
 // Bugzilla 13837
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // New behaviour, named arguments.
     static assert(is(
@@ -1760,7 +1760,7 @@ private template ReverseTupleSpecs(T...)
     static assert(!__traits(compiles, tuple!("x", int)(2)));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     class C {}
     Tuple!(Rebindable!(const C)) a;
@@ -1768,14 +1768,14 @@ private template ReverseTupleSpecs(T...)
     a = b;
 }
 
-@nogc @safe unittest
+version(StdUnittest) @nogc @safe unittest
 {
     alias T = Tuple!(string, "s");
     T x;
     x = T.init;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.format : format, FormatException;
     import std.exception : assertThrown;
@@ -1816,13 +1816,13 @@ private template ReverseTupleSpecs(T...)
 }
 
 // Issue 17803, parte uno
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto a = tuple(3, "foo");
     assert(__traits(compiles, { a = (a = a); }));
 }
 // Ditto
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     Tuple!(int[]) a, b, c;
     a = tuple([0, 1, 2]);
@@ -1892,7 +1892,7 @@ template tuple(Names...)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto value = tuple(5, 6.7, "hello");
     assert(value[0] == 5);
@@ -1921,7 +1921,7 @@ enum isTuple(T) = __traits(compiles,
                            } );
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(isTuple!(Tuple!()));
     static assert(isTuple!(Tuple!(int)));
@@ -1930,7 +1930,7 @@ enum isTuple(T) = __traits(compiles,
     static assert(isTuple!(Tuple!(int, Tuple!(real), string)));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(isTuple!(const Tuple!(int)));
     static assert(isTuple!(immutable Tuple!(int)));
@@ -2027,7 +2027,7 @@ template Rebindable(T)
 }
 
 ///Regular $(D const) object references cannot be reassigned.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     class Widget { int x; int y() @safe const { return x; } }
     const a = new Widget;
@@ -2043,7 +2043,7 @@ template Rebindable(T)
     However, $(D Rebindable!(Widget)) does allow reassignment,
     while otherwise behaving exactly like a $(D const Widget).
  */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     class Widget { int x; int y() const @safe { return x; } }
     auto a = Rebindable!(const Widget)(new Widget);
@@ -2055,7 +2055,7 @@ template Rebindable(T)
     a = new Widget;
 }
 
-@safe unittest // issue 16054
+version(StdUnittest) @safe unittest // issue 16054
 {
     Rebindable!(immutable Object) r;
     static assert(__traits(compiles, r.get()));
@@ -2097,7 +2097,7 @@ Rebindable!T rebindable(T)(Rebindable!T obj)
     return obj;
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     interface CI { int foo() const; }
     class C : CI {
@@ -2216,7 +2216,7 @@ template UnqualRef(T)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     class Data {}
 
@@ -2237,7 +2237,7 @@ template UnqualRef(T)
     assert(b is null);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     class C { }
     alias T = UnqualRef!(const shared C);
@@ -2289,14 +2289,14 @@ string alignForSize(E...)(const char[][] names...)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     struct Banner {
         mixin(alignForSize!(byte[6], double)(["name", "height"]));
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     enum x = alignForSize!(int[], char[3], short, double[5])("x", "y","z", "w");
     struct Foo { int x; }
@@ -2314,7 +2314,7 @@ string alignForSize(E...)(const char[][] names...)
 }
 
 // Issue 12914
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     immutable string[] fieldNames = ["x", "y"];
     struct S
@@ -2388,7 +2388,7 @@ Params:
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         Nullable!int empty;
         Nullable!int a = 42;
@@ -2409,7 +2409,7 @@ Params:
         assert(c != 42);
     }
 
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         // Test constness
         immutable Nullable!int a = 42;
@@ -2431,7 +2431,7 @@ Params:
     }
 
     // Issue 17482
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         import std.variant : Variant;
         Nullable!Variant a = Variant(12);
@@ -2482,7 +2482,7 @@ Returns:
     }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     Nullable!int ni;
     assert(ni.isNull);
@@ -2492,7 +2492,7 @@ Returns:
 }
 
 // Issue 14940
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.array : appender;
     import std.format : formattedWrite;
@@ -2516,7 +2516,7 @@ Forces $(D this) to the null state.
     }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     Nullable!int ni = 0;
     assert(!ni.isNull);
@@ -2547,7 +2547,7 @@ Params:
     the version of `Nullable` that takes an additional `nullValue`
     template argument.
  */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Passes
     Nullable!(int*) npi;
@@ -2584,7 +2584,7 @@ Returns:
     }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.exception : AssertError;
     import std.exception : assertThrown, assertNotThrown;
@@ -2602,7 +2602,7 @@ Returns:
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     int i = 42;
     Nullable!int ni2;
@@ -2628,7 +2628,7 @@ auto nullable(T)(T t)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     struct CustomerRecord
     {
@@ -2660,7 +2660,7 @@ auto nullable(T)(T t)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.exception : assertThrown;
 
@@ -2673,7 +2673,7 @@ auto nullable(T)(T t)
     assertThrown!Throwable(a.get);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.exception : assertThrown;
 
@@ -2696,14 +2696,14 @@ auto nullable(T)(T t)
     a.nullify();
     assertThrown!Throwable(a += 2);
 }
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto k = Nullable!int(74);
     assert(k == 74);
     k.nullify();
     assert(k.isNull);
 }
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static int f(in Nullable!int x) {
         return x.isNull ? 42 : x.get;
@@ -2715,7 +2715,7 @@ auto nullable(T)(T t)
     a.nullify();
     assert(f(a) == 42);
 }
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.exception : assertThrown;
 
@@ -2731,7 +2731,7 @@ auto nullable(T)(T t)
     s.nullify();
     assertThrown!Throwable(s.x = 9441);
 }
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Ensure Nullable can be used in pure/nothrow/@safe environment.
     function() @safe pure nothrow
@@ -2745,7 +2745,7 @@ auto nullable(T)(T t)
         assert(n.isNull);
     }();
 }
-@system unittest
+version(StdUnittest) @system unittest
 {
     // Ensure Nullable can be used when the value is not pure/nothrow/@safe
     static struct S
@@ -2762,7 +2762,7 @@ auto nullable(T)(T t)
     s.nullify();
     assert(s.isNull);
 }
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Bugzilla 9404
     alias N = Nullable!int;
@@ -2775,7 +2775,7 @@ auto nullable(T)(T t)
     N n;
     foo(n);
 }
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Check nullable immutable is constructable
     {
@@ -2790,7 +2790,7 @@ auto nullable(T)(T t)
         auto i = a2.get;
     }
 }
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     alias NInt   = Nullable!int;
 
@@ -2833,7 +2833,7 @@ auto nullable(T)(T t)
         assert(b3.isNull);
     }
 }
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Check nullable is nicelly embedable in a struct
     static struct S1
@@ -2860,7 +2860,7 @@ auto nullable(T)(T t)
         c = a;
     }}
 }
-@system unittest
+version(StdUnittest) @system unittest
 {
     // Bugzilla 10268
     import std.json;
@@ -2911,13 +2911,13 @@ auto nullable(T)(T t)
         assert(*x4.val == 10);
     }
 }
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Bugzila 10357
     import std.datetime;
     Nullable!SysTime time = SysTime(0);
 }
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : to;
     import std.array;
@@ -2956,7 +2956,7 @@ auto nullable(T)(T t)
 }
 
 // Bugzilla 14477
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static struct DisabledDefaultConstructor
     {
@@ -2969,7 +2969,7 @@ auto nullable(T)(T t)
 }
 
 // Issue 17440
-@system unittest
+version(StdUnittest) @system unittest
 {
     static interface I { }
 
@@ -3065,7 +3065,7 @@ Returns:
     }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     Nullable!(int, -1) ni;
     //Initialized to "null" state
@@ -3077,7 +3077,7 @@ Returns:
 
 // https://issues.dlang.org/show_bug.cgi?id=11135
 // disable test until https://issues.dlang.org/show_bug.cgi?id=15316 gets fixed
-version (none) @system unittest
+version(StdUnittest) version (none) @system unittest
 {
     static foreach (T; AliasSeq!(float, double, real))
     {{
@@ -3103,7 +3103,7 @@ Forces $(D this) to the null state.
     }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     Nullable!(int, -1) ni = 0;
     assert(!ni.isNull);
@@ -3136,7 +3136,7 @@ Params:
     recommended that this be avoided by using `T`'s "built in"
     null value for `nullValue`.
  */
-@system unittest
+version(StdUnittest) @system unittest
 {
     //Passes
     enum nullVal = cast(int*) 0xCAFEBABE;
@@ -3165,7 +3165,7 @@ Returns:
     }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.exception : assertThrown, assertNotThrown;
 
@@ -3193,7 +3193,7 @@ auto nullable(alias nullValue, T)(T t)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     Nullable!(size_t, size_t.max) indexOf(string[] haystack, string needle)
     {
@@ -3224,7 +3224,7 @@ auto nullable(alias nullValue, T)(T t)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.exception : assertThrown;
 
@@ -3238,7 +3238,7 @@ auto nullable(alias nullValue, T)(T t)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto a = nullable!(int.min)(8);
     assert(a == 8);
@@ -3246,7 +3246,7 @@ auto nullable(alias nullValue, T)(T t)
     assert(a.isNull);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static int f(in Nullable!(int, int.min) x) {
         return x.isNull ? 42 : x.get;
@@ -3258,7 +3258,7 @@ auto nullable(alias nullValue, T)(T t)
     a.nullify();
     assert(f(a) == 42);
 }
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Ensure Nullable can be used in pure/nothrow/@safe environment.
     function() @safe pure nothrow
@@ -3272,7 +3272,7 @@ auto nullable(alias nullValue, T)(T t)
         assert(n.isNull);
     }();
 }
-@system unittest
+version(StdUnittest) @system unittest
 {
     // Ensure Nullable can be used when the value is not pure/nothrow/@system
     static struct S
@@ -3289,7 +3289,7 @@ auto nullable(alias nullValue, T)(T t)
     s.nullify();
     assert(s.isNull);
 }
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Check nullable is nicelly embedable in a struct
     static struct S1
@@ -3316,7 +3316,7 @@ auto nullable(alias nullValue, T)(T t)
         c = a;
     }}
 }
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : to;
 
@@ -3404,7 +3404,7 @@ Params:
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         NullableRef!int nr = new int(42);
         assert(nr == 42);
@@ -3426,7 +3426,7 @@ Returns:
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         NullableRef!int nr;
         assert(nr.isNull);
@@ -3445,7 +3445,7 @@ Forces $(D this) to the null state.
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         NullableRef!int nr = new int(42);
         assert(!nr.isNull);
@@ -3472,7 +3472,7 @@ Params:
     }
 
     ///
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         import std.exception : assertThrown, assertNotThrown;
 
@@ -3498,7 +3498,7 @@ This function is also called for the implicit conversion to $(D T).
     }
 
     ///
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         import std.exception : assertThrown, assertNotThrown;
 
@@ -3525,7 +3525,7 @@ auto nullableRef(T)(T* t)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.exception : assertThrown;
 
@@ -3548,7 +3548,7 @@ auto nullableRef(T)(T* t)
     y = 135;
     assert(a == 135);
 }
-@system unittest
+version(StdUnittest) @system unittest
 {
     static int f(in NullableRef!int x) {
         return x.isNull ? 42 : x.get;
@@ -3559,7 +3559,7 @@ auto nullableRef(T)(T* t)
     a.nullify();
     assert(f(a) == 42);
 }
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Ensure NullableRef can be used in pure/nothrow/@safe environment.
     function() @safe pure nothrow
@@ -3578,7 +3578,7 @@ auto nullableRef(T)(T* t)
         assert(n.isNull);
     }();
 }
-@system unittest
+version(StdUnittest) @system unittest
 {
     // Ensure NullableRef can be used when the value is not pure/nothrow/@safe
     static struct S
@@ -3598,7 +3598,7 @@ auto nullableRef(T)(T* t)
     s.nullify();
     assert(s.isNull);
 }
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Check nullable is nicelly embedable in a struct
     static struct S1
@@ -3625,7 +3625,7 @@ auto nullableRef(T)(T* t)
         c = a;
     }}
 }
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : to;
 
@@ -3679,7 +3679,7 @@ See_Also:
 alias BlackHole(Base) = AutoImplement!(Base, generateEmptyFunction, isAbstractFunction);
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.math : isNaN;
 
@@ -3702,7 +3702,7 @@ alias BlackHole(Base) = AutoImplement!(Base, generateEmptyFunction, isAbstractFu
     c.doSomething();
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.math : isNaN;
 
@@ -3759,7 +3759,7 @@ See_Also:
 alias WhiteHole(Base) = AutoImplement!(Base, generateAssertTrap, isAbstractFunction);
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.exception : assertThrown;
 
@@ -3781,7 +3781,7 @@ class NotImplementedError : Error
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.exception : assertThrown;
     // nothrow
@@ -4109,7 +4109,7 @@ private static:
 }
 
 //debug = SHOW_GENERATED_CODE;
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.vararg;
     // no function to implement
@@ -4224,7 +4224,7 @@ private static:
 }
 
 // Issue 17177 - AutoImplement fails on function overload sets with "cannot infer type from overloaded function symbol"
-@system unittest
+version(StdUnittest) @system unittest
 {
     static class Issue17177
     {
@@ -4298,7 +4298,7 @@ version(StdUnittest)
         void bar(int a) { }
     }
 }
-@system unittest
+version(StdUnittest) @system unittest
 {
     auto foo = new issue10647_DoNothing!issue10647_Foo();
     foo.bar(13);
@@ -4676,7 +4676,7 @@ if (is(T == class) || is(T == interface))
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     class C { @disable opCast(T)() {} }
     auto c = new C;
@@ -4937,7 +4937,7 @@ if (!isMutable!Target)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     interface Quack
     {
@@ -4998,7 +4998,7 @@ if (!isMutable!Target)
     assert(hz is h1);
 }
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.traits : FunctionAttribute, functionAttributes;
     interface A { int run(); }
@@ -5019,7 +5019,7 @@ if (!isMutable!Target)
     assert(b.status == 3);
     static assert(functionAttributes!(typeof(ab).status) & FunctionAttribute.property);
 }
-@system unittest
+version(StdUnittest) @system unittest
 {
     class A
     {
@@ -5065,7 +5065,7 @@ if (!isMutable!Target)
         assert(d.draw(10) == 10);
     }
 }
-@system unittest
+version(StdUnittest) @system unittest
 {
     // Bugzilla 10377
     import std.range, std.algorithm;
@@ -5082,7 +5082,7 @@ if (!isMutable!Target)
     auto r = iota(0,10,1).inputRangeObject().wrap!(MyInputRange!int)();
     assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]));
 }
-@system unittest
+version(StdUnittest) @system unittest
 {
     // Bugzilla 10536
     interface Interface
@@ -5098,7 +5098,7 @@ if (!isMutable!Target)
     Interface i = new Pluggable().wrap!Interface;
     assert(i.foo() == 1);
 }
-@system unittest
+version(StdUnittest) @system unittest
 {
     // Enhancement 10538
     interface Interface
@@ -5116,7 +5116,7 @@ if (!isMutable!Target)
     assert(i.bar(10) == 100);
 }
 
-@system unittest // issue 12064
+version(StdUnittest) @system unittest // issue 12064
 {
     interface I
     {
@@ -5243,7 +5243,7 @@ version(StdUnittest)
         alias type = FunctionTypeOf!f;
     }
 }
-@system unittest
+version(StdUnittest) @system unittest
 {
     class A
     {
@@ -5339,7 +5339,7 @@ package template DerivedFunctionType(T...)
     else
         alias DerivedFunctionType = void;
 }
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // attribute covariance
     alias int F1();
@@ -5733,7 +5733,7 @@ assert(refCountedStore.isInitialized)).
 }
 
 ///
-pure @system nothrow @nogc unittest
+version(StdUnittest) pure @system nothrow @nogc unittest
 {
     // A pair of an `int` and a `size_t` - the latter being the
     // reference count - will be dynamically allocated
@@ -5747,7 +5747,7 @@ pure @system nothrow @nogc unittest
     // the pair will be freed when rc1 and rc2 go out of scope
 }
 
-pure @system unittest
+version(StdUnittest) pure @system unittest
 {
     RefCounted!int* p;
     {
@@ -5786,7 +5786,7 @@ pure @system unittest
     assert(a.x._refCounted._store._count == 2, "BUG 4356 still unfixed");
 }
 
-pure @system nothrow @nogc unittest
+version(StdUnittest) pure @system nothrow @nogc unittest
 {
     import std.algorithm.mutation : swap;
 
@@ -5795,7 +5795,7 @@ pure @system nothrow @nogc unittest
 }
 
 // 6606
-@safe pure nothrow @nogc unittest
+version(StdUnittest) @safe pure nothrow @nogc unittest
 {
     union U {
        size_t i;
@@ -5810,7 +5810,7 @@ pure @system nothrow @nogc unittest
 }
 
 // 6436
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     struct S { this(ref int val) { assert(val == 3); ++val; } }
 
@@ -5820,14 +5820,14 @@ pure @system nothrow @nogc unittest
 }
 
 // gc_addRange coverage
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     struct S { int* p; }
 
     auto s = RefCounted!S(null);
 }
 
-@system pure nothrow @nogc unittest
+version(StdUnittest) @system pure nothrow @nogc unittest
 {
     RefCounted!int a;
     a = 5; //This should not assert
@@ -5861,7 +5861,7 @@ RefCounted!(T, RefCountedAutoInitialize.no) refCounted(T)(T val)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     static struct File
     {
@@ -6117,7 +6117,7 @@ mixin template Proxy(alias a)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     struct MyInt
     {
@@ -6142,7 +6142,7 @@ mixin template Proxy(alias a)
 }
 
 ///The proxied value must be an $(B lvalue).
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     struct NewIntType
     {
@@ -6181,7 +6181,7 @@ mixin template Proxy(alias a)
     functions are usable with the new type; they will be forwarded on to the
     proxied value.
  */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.math;
 
@@ -6200,7 +6200,7 @@ mixin template Proxy(alias a)
     assert(!nf.isInfinity);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static struct MyInt
     {
@@ -6247,7 +6247,7 @@ mixin template Proxy(alias a)
         static assert(T.arr == [1,2,3]);
     }}
 }
-@system unittest
+version(StdUnittest) @system unittest
 {
     static struct MyArray
     {
@@ -6287,7 +6287,7 @@ mixin template Proxy(alias a)
         }
     }}
 }
-@system unittest
+version(StdUnittest) @system unittest
 {
     class Foo
     {
@@ -6363,7 +6363,7 @@ mixin template Proxy(alias a)
     assert(h.tempfunc!int() == 0);
 }
 
-@system unittest // about Proxy inside a class
+version(StdUnittest) @system unittest // about Proxy inside a class
 {
     class MyClass
     {
@@ -6476,7 +6476,7 @@ mixin template Proxy(alias a)
     assert(hash[c] == 21);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     struct MyInt
     {
@@ -6513,7 +6513,7 @@ mixin template Proxy(alias a)
     MyFoo2 f2;
     f2 = f2;
 }
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // bug8613
     static struct Name
@@ -6528,7 +6528,7 @@ mixin template Proxy(alias a)
     bool* b = Name("a") in names;
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     // bug14213, using function for the payload
     static struct S
@@ -6550,7 +6550,7 @@ mixin template Proxy(alias a)
 // Check all floating point comparisons for both Proxy and Typedef,
 // also against int and a Typedef!int, to be as regression-proof
 // as possible. bug 15561
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static struct MyFloatImpl
     {
@@ -6714,7 +6714,7 @@ template TypedefType(T)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.typecons : Typedef, TypedefType;
     import std.conv : to;
@@ -6739,7 +6739,7 @@ template TypedefType(T)
     static assert(MyIntInit() == 42);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     Typedef!int x = 10;
     static assert(!__traits(compiles, { int y = x; }));
@@ -6801,7 +6801,7 @@ template TypedefType(T)
     assert(drange3[$] == 123);
 }
 
-@safe @nogc pure nothrow unittest // Bugzilla 11703
+version(StdUnittest) @safe @nogc pure nothrow unittest // Bugzilla 11703
 {
     alias I = Typedef!int;
     static assert(is(typeof(I.min) == I));
@@ -6816,7 +6816,7 @@ template TypedefType(T)
     assert(!is(typeof(F.im).stringof == double));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // bug8655
     import std.typecons;
@@ -6834,7 +6834,7 @@ template TypedefType(T)
     }
 }
 
-@safe unittest // Issue 12596
+version(StdUnittest) @safe unittest // Issue 12596
 {
     import std.typecons;
     alias TD = Typedef!int;
@@ -6843,7 +6843,7 @@ template TypedefType(T)
     assert(x == y);
 }
 
-@safe unittest // about toHash
+version(StdUnittest) @safe unittest // about toHash
 {
     import std.typecons;
     {
@@ -6901,7 +6901,7 @@ template TypedefType(T)
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     alias String = Typedef!(char[]);
     alias CString = Typedef!(const(char)[]);
@@ -6988,7 +6988,7 @@ template scoped(T)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     class A
     {
@@ -7076,7 +7076,7 @@ private uintptr_t _alignUp(uintptr_t alignment)(uintptr_t n)
     return (n + badEnd) & ~badEnd;
 }
 
-@system unittest // Issue 6580 testcase
+version(StdUnittest) @system unittest // Issue 6580 testcase
 {
     enum alignment = (void*).alignof;
 
@@ -7139,7 +7139,7 @@ private uintptr_t _alignUp(uintptr_t alignment)(uintptr_t n)
     }
 }
 
-@system unittest // Original Issue 6580 testcase
+version(StdUnittest) @system unittest // Original Issue 6580 testcase
 {
     class C { int i; byte b; }
 
@@ -7148,7 +7148,7 @@ private uintptr_t _alignUp(uintptr_t alignment)(uintptr_t n)
     assert(cast(uint)&sa[1].i % int.alignof == 0); // fails
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     class A { int x = 1; }
     auto a1 = scoped!A();
@@ -7159,7 +7159,7 @@ private uintptr_t _alignUp(uintptr_t alignment)(uintptr_t n)
     assert(a1.x == 42);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     class A { int x = 1; this() { x = 2; } }
     auto a1 = scoped!A();
@@ -7170,7 +7170,7 @@ private uintptr_t _alignUp(uintptr_t alignment)(uintptr_t n)
     assert(a1.x == 42);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     class A { int x = 1; this(int y) { x = y; } ~this() {} }
     auto a1 = scoped!A(5);
@@ -7181,7 +7181,7 @@ private uintptr_t _alignUp(uintptr_t alignment)(uintptr_t n)
     assert(a1.x == 42);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     class A { static bool dead; ~this() { dead = true; } }
     class B : A { static bool dead; ~this() { dead = true; } }
@@ -7192,7 +7192,7 @@ private uintptr_t _alignUp(uintptr_t alignment)(uintptr_t n)
     assert(A.dead, "asdasd");
 }
 
-@system unittest // Issue 8039 testcase
+version(StdUnittest) @system unittest // Issue 8039 testcase
 {
     static int dels;
     static struct S { ~this(){ ++dels; } }
@@ -7215,7 +7215,7 @@ private uintptr_t _alignUp(uintptr_t alignment)(uintptr_t n)
     assert(dels == 1+6);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     // bug4500
     class A
@@ -7236,7 +7236,7 @@ private uintptr_t _alignUp(uintptr_t alignment)(uintptr_t n)
     assert(a1.check());
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     static class A
     {
@@ -7259,13 +7259,13 @@ private uintptr_t _alignUp(uintptr_t alignment)(uintptr_t n)
     auto abob = scoped!ABob();
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static class A { this(int) {} }
     static assert(!__traits(compiles, scoped!A()));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     static class A { @property inout(int) foo() inout { return 1; } }
 
@@ -7294,7 +7294,7 @@ private uintptr_t _alignUp(uintptr_t alignment)(uintptr_t n)
     static assert(is(typeof(c3.foo) == immutable(int)));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     class C { this(ref int val) { assert(val == 3); ++val; } }
 
@@ -7303,7 +7303,7 @@ private uintptr_t _alignUp(uintptr_t alignment)(uintptr_t n)
     assert(val == 4);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     class C
     {
@@ -7420,7 +7420,7 @@ struct No
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     Flag!"abc" flag1;
     assert(flag1 == Flag!"abc".no);
@@ -7462,7 +7462,7 @@ template isBitFlagEnum(E)
 }
 
 ///
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     enum A
     {
@@ -7648,7 +7648,7 @@ public:
 }
 
 /// BitFlags can be manipulated with the usual operators
-@safe @nogc pure nothrow unittest
+version(StdUnittest) @safe @nogc pure nothrow unittest
 {
     import std.traits : EnumMembers;
 
@@ -7812,7 +7812,7 @@ template ReplaceType(From, To, T...)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(
         is(ReplaceType!(int, string, int[]) == string[]) &&
@@ -7907,7 +7907,7 @@ private template replaceTypeInFunctionType(From, To, fun)
     mixin("alias replaceTypeInFunctionType = " ~ gen() ~ ";");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     template Test(Ts...)
     {
@@ -7995,7 +7995,7 @@ private template replaceTypeInFunctionType(From, To, fun)
     );
 }
 
-@safe unittest // Bugzilla 17116
+version(StdUnittest) @safe unittest // Bugzilla 17116
 {
     alias ConstDg = void delegate(float) const;
     alias B = void delegate(int) const;
@@ -8100,7 +8100,7 @@ struct Ternary
 
 ///
 @safe @nogc nothrow pure
-unittest
+version(StdUnittest) unittest
 {
     Ternary a;
     assert(a == Ternary.unknown);
@@ -8111,7 +8111,7 @@ unittest
 }
 
 @safe @nogc nothrow pure
-unittest
+version(StdUnittest) unittest
 {
     alias f = Ternary.no, t = Ternary.yes, u = Ternary.unknown;
     Ternary[27] truthTableAnd =
@@ -8182,7 +8182,7 @@ unittest
 }
 
 @safe @nogc nothrow pure
-unittest
+version(StdUnittest) unittest
 {
     Ternary a = Ternary(true);
     assert(a == Ternary.yes);

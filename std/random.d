@@ -56,7 +56,7 @@ import std.range.primitives;
 import std.traits;
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // seed a random generator with a constant
     auto rnd = Random(42);
@@ -193,7 +193,7 @@ template isSeedable(Rng)
         }));
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     struct NoRng
     {
@@ -316,7 +316,7 @@ The parameters of this distribution. The random number is $(D_PARAM x
         return result * n;
     }
 
-    @safe pure nothrow unittest
+    version(StdUnittest) @safe pure nothrow unittest
     {
         static assert(primeFactorsOnly(100) == 10);
         //writeln(primeFactorsOnly(11));
@@ -462,7 +462,7 @@ alias MinstdRand0 = LinearCongruentialEngine!(uint, 16_807, 0, 2_147_483_647);
 alias MinstdRand = LinearCongruentialEngine!(uint, 48_271, 0, 2_147_483_647);
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // seed with a constant
     auto rnd0 = MinstdRand0(1);
@@ -472,7 +472,7 @@ alias MinstdRand = LinearCongruentialEngine!(uint, 48_271, 0, 2_147_483_647);
     n = rnd0.front; // different across runs
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range;
     static assert(isForwardRange!MinstdRand);
@@ -537,7 +537,7 @@ alias MinstdRand = LinearCongruentialEngine!(uint, 48_271, 0, 2_147_483_647);
     }}
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto rnd0 = MinstdRand0(MinstdRand0.modulus);
     auto n = rnd0.front;
@@ -852,7 +852,7 @@ alias Mt19937 = MersenneTwisterEngine!(uint, 32, 624, 397, 31,
                                        0xefc60000, 18, 1_812_433_253);
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // seed with a constant
     Mt19937 gen;
@@ -862,7 +862,7 @@ alias Mt19937 = MersenneTwisterEngine!(uint, 32, 624, 397, 31,
     n = gen.front; // different across runs
 }
 
-@safe nothrow unittest
+version(StdUnittest) @safe nothrow unittest
 {
     import std.algorithm;
     import std.range;
@@ -893,7 +893,7 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
                                           0xfff7eee000000000, 43, 6_364_136_223_846_793_005);
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Seed with a constant
     auto gen = Mt19937_64(12345);
@@ -903,7 +903,7 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
     n = gen.front; // different across runs
 }
 
-@safe nothrow unittest
+version(StdUnittest) @safe nothrow unittest
 {
     import std.algorithm;
     import std.range;
@@ -928,7 +928,7 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
     assert(gen.front == 15956361063660440239uL);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm;
     import std.exception;
@@ -943,7 +943,7 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
     gen.seed(map!((a) => unpredictableSeed)(repeat(0)));
 }
 
-@safe pure nothrow unittest
+version(StdUnittest) @safe pure nothrow unittest
 {
     uint a, b;
     {
@@ -959,7 +959,7 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
     assert(a != b);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range;
     // Check .save works
@@ -974,7 +974,7 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
     }}
 }
 
-@safe pure nothrow unittest //11690
+version(StdUnittest) @safe pure nothrow unittest //11690
 {
     alias MT(UIntType, uint w) = MersenneTwisterEngine!(UIntType, w, 624, 397, 31,
                                                         0x9908b0df, 11, 0xffffffff, 7,
@@ -1187,7 +1187,7 @@ if (isUnsigned!UIntType)
     }
 
 
-    @safe pure nothrow unittest
+    version(StdUnittest) @safe pure nothrow unittest
     {
         static if (size  ==  4)  // Other bits too
         {
@@ -1214,7 +1214,7 @@ alias Xorshift192 = XorshiftEngine!(uint, 192, 2,  1,  4);  /// ditto
 alias Xorshift    = Xorshift128;                            /// ditto
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Seed with a constant
     auto rnd = Xorshift(1);
@@ -1225,7 +1225,7 @@ alias Xorshift    = Xorshift128;                            /// ditto
     num = rnd.front; // different across rnd
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.range;
     static assert(isForwardRange!Xorshift);
@@ -1281,7 +1281,7 @@ alias Xorshift    = Xorshift128;                            /// ditto
  * object is compatible with all the pseudo-random number generators
  * available.  It is enabled only in unittest mode.
  */
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     foreach (Rng; PseudoRngTypes)
     {
@@ -1315,7 +1315,7 @@ A single unsigned integer seed value, different on each successive call
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto rnd = Random(unpredictableSeed);
     auto n = rnd.front;
@@ -1332,7 +1332,7 @@ method being used.
 
 alias Random = Mt19937;
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(isUniformRNG!Random);
     static assert(isUniformRNG!(Random, uint));
@@ -1393,7 +1393,7 @@ if (!is(CommonType!(T1, T2) == void))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto gen = Random(unpredictableSeed);
     // Generate an integer in [0, 1023]
@@ -1403,7 +1403,7 @@ if (!is(CommonType!(T1, T2) == void))
 }
 
 /// Create an array of random numbers using range functions and UFCS
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.array : array;
     import std.range : generate, takeExactly;
@@ -1413,7 +1413,7 @@ if (!is(CommonType!(T1, T2) == void))
     assert(arr[0] >= 0 && arr[0] < 100);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     MinstdRand0 gen;
     foreach (i; 0 .. 20)
@@ -1605,7 +1605,7 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
     return cast(ResultType)(lower + offset);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.conv : to;
     auto gen = Mt19937(unpredictableSeed);
@@ -1789,7 +1789,7 @@ if (!is(T == enum) && (isIntegral!T || isSomeChar!T))
     return uniform!T(rndGen);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static foreach (T; std.meta.AliasSeq!(char, wchar, dchar, byte, ubyte, short, ushort,
                           int, uint, long, ulong))
@@ -1837,13 +1837,13 @@ if (is(E == enum))
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     enum Fruit { apple, mango, pear }
     auto randFruit = uniform!Fruit();
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     enum Fruit { Apple = 12, Mango = 29, Pear = 72 }
     foreach (_; 0 .. 100)
@@ -1936,7 +1936,7 @@ do
     assert(false);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.meta;
     static foreach (UniformRNG; PseudoRngTypes)
@@ -1989,7 +1989,7 @@ if (isFloatingPoint!F)
     return useThis;
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm;
     import std.math;
@@ -2034,7 +2034,7 @@ auto ref choice(Range)(auto ref Range range)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -2055,7 +2055,7 @@ auto ref choice(Range)(auto ref Range range)
            "Choice did not return a valid element from the given Range");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -2081,7 +2081,7 @@ auto ref choice(Range)(auto ref Range range)
            "Choice did not return a valid element from the given Range");
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.iteration : map;
     import std.algorithm.searching : canFind;
@@ -2119,7 +2119,7 @@ if (isRandomAccessRange!Range)
     return randomShuffle(r, rndGen);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.sorting : sort;
     foreach (RandomGen; PseudoRngTypes)
@@ -2174,7 +2174,7 @@ if (isRandomAccessRange!Range)
     return partialShuffle(r, n, rndGen);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm;
     foreach (RandomGen; PseudoRngTypes)
@@ -2260,7 +2260,7 @@ if (isNumeric!Num)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto x = dice(0.5, 0.5);   // x is 0 or 1 in equal proportions
     auto y = dice(50, 50);     // y is 0 or 1 in equal proportions
@@ -2296,7 +2296,7 @@ do
     assert(false);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto rnd = Random(unpredictableSeed);
     auto i = dice(rnd, 0.0, 100.0);
@@ -2489,7 +2489,7 @@ if (isRandomAccessRange!Range)
     return RandomCover!(Range, void)(r);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm;
     import std.conv;
@@ -2527,7 +2527,7 @@ if (isRandomAccessRange!Range)
     }}
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Bugzilla 12589
     int[] r = [];
@@ -3043,7 +3043,7 @@ if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
     return RandomSample!(Range, UniformRNG)(r, n, r.length, rng);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     // @system because it takes the address of a local
     import std.conv : text;

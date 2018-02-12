@@ -141,7 +141,7 @@ class CSVException : Exception
     }
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.string;
     auto e1 = new Exception("Foobar");
@@ -179,7 +179,7 @@ class IncompleteCellException : CSVException
     mixin basicExceptionCtors;
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     auto e1 = new Exception("Foobar");
     auto e2 = new IncompleteCellException("args", e1);
@@ -211,7 +211,7 @@ class HeaderMismatchException : CSVException
     mixin basicExceptionCtors;
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     auto e1 = new Exception("Foobar");
     auto e2 = new HeaderMismatchException("args", e1);
@@ -425,7 +425,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
 }
 
 // Test standard iteration over input.
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     string str = `one,"two ""quoted"""` ~ "\n\"three\nnew line\",\nfive,six";
     auto records = csvReader(str);
@@ -442,7 +442,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
 }
 
 // Test newline on last record
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     string str = "one,two\nthree,four\n";
     auto records = csvReader(str);
@@ -452,7 +452,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
 }
 
 // Test shorter row length
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     wstring str = "one,1\ntwo\nthree"w;
     struct Layout
@@ -481,7 +481,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
 }
 
 // Test shorter row length exception
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.exception;
 
@@ -504,7 +504,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
 
 
 // Test structure conversion interface with unicode.
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.math : abs;
 
@@ -538,7 +538,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
 }
 
 // Test input conversion interface
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm;
     string str = `76,26,22`;
@@ -552,7 +552,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
 }
 
 // Test struct & header interface and same unicode
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.math : abs;
 
@@ -587,7 +587,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
 }
 
 // Test header interface
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm;
 
@@ -633,7 +633,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
 }
 
 // Test null header interface
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     string str = "a,b,c\nHello,65,63.63\nWorld,123,3673.562";
     auto records = csvReader(str, ["a"]);
@@ -642,7 +642,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
 }
 
 // Test unchecked read
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     string str = "one \"quoted\"";
     foreach (record; csvReader!(string,Malformed.ignore)(str))
@@ -666,7 +666,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
 }
 
 // Test partial data returned
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     string str = "\"one\nnew line";
 
@@ -683,7 +683,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
 }
 
 // Test Windows line break
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     string str = "one,two\r\nthree";
 
@@ -699,7 +699,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
 
 
 // Test associative array support with unicode separator
-@safe unittest
+version(StdUnittest) @safe unittest
 {
   string str = "1❁2❁3\n34❁65❁63\n34❁65❁63";
 
@@ -715,7 +715,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
 }
 
 // Test restricted range
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.typecons;
     struct InputRange
@@ -753,7 +753,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
             (ir,cast(string[]) null)) {}
 }
 
-@safe unittest // const/immutable dchars
+version(StdUnittest) @safe unittest // const/immutable dchars
 {
     import std.algorithm.iteration : map;
     import std.array : array;
@@ -1099,7 +1099,7 @@ public:
     }
 }
 
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1116,7 +1116,7 @@ public:
 
 // Bugzilla 15545
 // @system due to the catch for Throwable
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     import std.exception : assertNotThrown;
     enum failData =
@@ -1464,7 +1464,7 @@ if (isSomeChar!Separator && isInputRange!Range
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.array : appender;
     import std.range.primitives : popFront;
@@ -1491,7 +1491,7 @@ if (isSomeChar!Separator && isInputRange!Range
 }
 
 // Test csvNextToken on simplest form and correct format.
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.array;
 
@@ -1534,7 +1534,7 @@ if (isSomeChar!Separator && isInputRange!Range
 }
 
 // Test quoted tokens
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.array;
 
@@ -1577,7 +1577,7 @@ if (isSomeChar!Separator && isInputRange!Range
 }
 
 // Test empty data is pulled at end of record.
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.array;
 
@@ -1593,7 +1593,7 @@ if (isSomeChar!Separator && isInputRange!Range
 }
 
 // Test exceptions
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.array;
 
@@ -1638,7 +1638,7 @@ if (isSomeChar!Separator && isInputRange!Range
 }
 
 // Test modifying token delimiter
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     import std.array;
 
@@ -1668,7 +1668,7 @@ if (isSomeChar!Separator && isInputRange!Range
 }
 
 // Bugzilla 8908
-@safe pure unittest
+version(StdUnittest) @safe pure unittest
 {
     string csv = `  1.0, 2.0, 3.0
                     4.0, 5.0, 6.0`;

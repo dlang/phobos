@@ -413,13 +413,13 @@ struct FreeTree(ParentAllocator)
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.gc_allocator;
     testAllocator!(() => FreeTree!GCAllocator());
 }
 
-@system unittest // issue 16506
+version(StdUnittest) @system unittest // issue 16506
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.mallocator : Mallocator;
@@ -438,7 +438,7 @@ struct FreeTree(ParentAllocator)
     f!GCAllocator(1);
 }
 
-@system unittest // issue 16507
+version(StdUnittest) @system unittest // issue 16507
 {
     static struct MyAllocator
     {
@@ -456,7 +456,7 @@ struct FreeTree(ParentAllocator)
     MyAllocator.alive = false;
 }
 
-@system unittest // "desperation mode"
+version(StdUnittest) @system unittest // "desperation mode"
 {
     uint myDeallocCounter = 0;
 
@@ -491,7 +491,7 @@ struct FreeTree(ParentAllocator)
     assert(y.ptr is null);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.gc_allocator;
     FreeTree!GCAllocator a;
@@ -501,7 +501,7 @@ struct FreeTree(ParentAllocator)
     assert(!__traits(compiles, (() pure nothrow @safe @nogc => a.goodAllocSize(0))()));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.experimental.allocator.building_blocks.region : Region;
 

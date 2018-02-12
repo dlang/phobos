@@ -96,7 +96,7 @@ public:
     }
 
     ///
-    @system nothrow @nogc unittest
+    version(StdUnittest) @system nothrow @nogc unittest
     {
         import core.thread : Thread;
 
@@ -138,7 +138,7 @@ public:
     }
 
     ///
-    @system nothrow @nogc unittest
+    version(StdUnittest) @system nothrow @nogc unittest
     {
         import core.thread : Thread;
 
@@ -150,7 +150,7 @@ public:
         assert(sw.peek() == Duration.zero);
     }
 
-    @system nothrow @nogc unittest
+    version(StdUnittest) @system nothrow @nogc unittest
     {
         import core.thread : Thread;
 
@@ -185,7 +185,7 @@ public:
     }
 
     ///
-    @system nothrow @nogc unittest
+    version(StdUnittest) @system nothrow @nogc unittest
     {
         import core.thread : Thread;
 
@@ -213,7 +213,7 @@ public:
     }
 
     ///
-    @system nothrow @nogc unittest
+    version(StdUnittest) @system nothrow @nogc unittest
     {
         import core.thread : Thread;
 
@@ -250,7 +250,7 @@ public:
     }
 
     ///
-    @system nothrow @nogc unittest
+    version(StdUnittest) @system nothrow @nogc unittest
     {
         import core.thread : Thread;
 
@@ -274,7 +274,7 @@ public:
         assert(sw.peek() > stopped);
     }
 
-    @safe nothrow @nogc unittest
+    version(StdUnittest) @safe nothrow @nogc unittest
     {
         assert(StopWatch.init.peek() == Duration.zero);
     }
@@ -295,7 +295,7 @@ public:
     }
 
     ///
-    @system nothrow @nogc unittest
+    version(StdUnittest) @system nothrow @nogc unittest
     {
         import core.thread : Thread;
 
@@ -323,7 +323,7 @@ public:
     }
 
     ///
-    @safe nothrow @nogc unittest
+    version(StdUnittest) @safe nothrow @nogc unittest
     {
         StopWatch sw;
         assert(!sw.running);
@@ -345,7 +345,7 @@ private:
 }
 
 /// Measure a time in milliseconds, microseconds, or nanoseconds
-@safe nothrow @nogc unittest
+version(StdUnittest) @safe nothrow @nogc unittest
 {
     auto sw = StopWatch(AutoStart.no);
     sw.start();
@@ -361,7 +361,7 @@ private:
 }
 
 ///
-@system nothrow @nogc unittest
+version(StdUnittest) @system nothrow @nogc unittest
 {
     import core.thread : Thread;
 
@@ -425,7 +425,7 @@ Duration[fun.length] benchmark(fun...)(uint n)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.conv : to;
 
@@ -439,7 +439,7 @@ Duration[fun.length] benchmark(fun...)(uint n)
     Duration f2Result = r[2]; // time f2 took to run 10,000 times
 }
 
-@safe nothrow unittest
+version(StdUnittest) @safe nothrow unittest
 {
     import std.conv : to;
 
@@ -454,7 +454,7 @@ Duration[fun.length] benchmark(fun...)(uint n)
     assert(r[1] < seconds(1));
 }
 
-@safe nothrow @nogc unittest
+version(StdUnittest) @safe nothrow @nogc unittest
 {
     int f0Count;
     int f1Count;

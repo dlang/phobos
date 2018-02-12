@@ -7,7 +7,7 @@ module std.internal.test.range;
 
 // Note: currently can't be @safe because RefCounted, which is used by chunks,
 // isn't.
-@system /*@safe*/ unittest
+version(StdUnittest) @system /*@safe*/ unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : chunks;

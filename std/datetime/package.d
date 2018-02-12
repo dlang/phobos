@@ -122,7 +122,7 @@ import std.typecons : Flag, Yes, No;
 
 
 // Verify module example.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     auto currentTime = Clock.currTime();
     auto timeString = currentTime.toISOExtString();
@@ -130,7 +130,7 @@ import std.typecons : Flag, Yes, No;
 }
 
 // Verify Examples for core.time.Duration which couldn't be in core.time.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(std.datetime.Date(2010, 9, 7) + dur!"days"(5) ==
            std.datetime.Date(2010, 9, 12));
@@ -139,7 +139,7 @@ import std.typecons : Flag, Yes, No;
            dur!"days"(-26));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.traits : hasUnsharedAliasing;
     /* Issue 6642 */
@@ -207,7 +207,7 @@ public:
             start();
     }
 
-    @nogc @safe unittest
+    version(StdUnittest) @nogc @safe unittest
     {
         auto sw = StopWatch(Yes.autoStart);
         sw.stop();
@@ -247,7 +247,7 @@ public:
         _timeMeasured.length = 0;
     }
 
-    @nogc @safe unittest
+    version(StdUnittest) @nogc @safe unittest
     {
         StopWatch sw;
         sw.start();
@@ -267,7 +267,7 @@ public:
         _timeStart = TickDuration.currSystemTick;
     }
 
-    @nogc @system unittest
+    version(StdUnittest) @nogc @system unittest
     {
         StopWatch sw;
         sw.start();
@@ -293,7 +293,7 @@ public:
         _timeMeasured += TickDuration.currSystemTick - _timeStart;
     }
 
-    @nogc @system unittest
+    version(StdUnittest) @nogc @system unittest
     {
         StopWatch sw;
         sw.start();
@@ -321,7 +321,7 @@ public:
         return _timeMeasured;
     }
 
-    @nogc @safe unittest
+    version(StdUnittest) @nogc @safe unittest
     {
         StopWatch sw;
         sw.start();
@@ -344,7 +344,7 @@ public:
         _timeMeasured = d;
     }
 
-    @nogc @safe unittest
+    version(StdUnittest) @nogc @safe unittest
     {
         StopWatch sw;
         TickDuration t0;
@@ -363,7 +363,7 @@ public:
         return _flagStarted;
     }
 
-    @nogc @safe unittest
+    version(StdUnittest) @nogc @safe unittest
     {
         StopWatch sw1;
         assert(!sw1.running);
@@ -395,7 +395,7 @@ private:
 }
 
 ///
-deprecated @safe unittest
+version(StdUnittest) deprecated @safe unittest
 {
     void writeln(S...)(S args){}
     static void bar() {}
@@ -475,7 +475,7 @@ TickDuration[fun.length] benchmark(fun...)(uint n)
 }
 
 ///
-deprecated @safe unittest
+version(StdUnittest) deprecated @safe unittest
 {
     import std.conv : to;
     int a;
@@ -488,7 +488,7 @@ deprecated @safe unittest
     auto f2Result = to!Duration(r[2]); // time f2 took to run 10,000 times
 }
 
-deprecated @safe unittest
+version(StdUnittest) deprecated @safe unittest
 {
     int a;
     void f0() {}
@@ -584,7 +584,7 @@ ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
 }
 
 ///
-deprecated @safe unittest
+version(StdUnittest) deprecated @safe unittest
 {
     void f1x() {}
     void f2x() {}
@@ -595,7 +595,7 @@ deprecated @safe unittest
 }
 
 //Bug# 8450
-deprecated @system unittest
+version(StdUnittest) deprecated @system unittest
 {
     @safe    void safeFunc() {}
     @trusted void trustFunc() {}
@@ -691,7 +691,7 @@ if (!isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
 }
 
 // Verify Example.
-deprecated @safe unittest
+version(StdUnittest) deprecated @safe unittest
 {
     {
         auto mt = measureTime!((TickDuration a)
@@ -710,7 +710,7 @@ deprecated @safe unittest
     }
 }
 
-deprecated @safe unittest
+version(StdUnittest) deprecated @safe unittest
 {
     import std.math : isNaN;
 
@@ -730,7 +730,7 @@ deprecated @safe unittest
     +/
 }
 
-deprecated @safe unittest
+version(StdUnittest) deprecated @safe unittest
 {
     import std.math : isNaN;
 
@@ -751,7 +751,7 @@ deprecated @safe unittest
 }
 
 //Bug# 8450
-deprecated @system unittest
+version(StdUnittest) deprecated @system unittest
 {
     @safe    void safeFunc() {}
     @trusted void trustFunc() {}

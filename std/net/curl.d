@@ -417,7 +417,7 @@ if (isCurlConn!Conn)
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.searching : canFind;
     static import std.file;
@@ -483,7 +483,7 @@ if (isCurlConn!Conn)
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.searching : canFind;
     static import std.file;
@@ -553,7 +553,7 @@ if ( isCurlConn!Conn && (is(T == char) || is(T == ubyte)) )
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -606,7 +606,7 @@ if (is(T == char) || is(T == ubyte))
     return _basicHTTP!(T)(url, postData, conn);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -623,7 +623,7 @@ if (is(T == char) || is(T == ubyte))
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -650,7 +650,7 @@ if (is(T == char) || is(T == ubyte))
     return post(url, urlEncode(postDict), conn);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     foreach (host; [testServer.addr, "http://" ~ testServer.addr])
     {
@@ -713,7 +713,7 @@ if ( isCurlConn!Conn && (is(T == char) || is(T == ubyte)) )
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -781,7 +781,7 @@ if (isCurlConn!Conn)
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -827,7 +827,7 @@ if (is(T == char) || is(T == ubyte))
     return _basicHTTP!(T)(url, null, conn);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -869,7 +869,7 @@ if (is(T == char) || is(T == ubyte))
     return _basicHTTP!(T)(url, cast(void[]) null, conn);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -910,7 +910,7 @@ if (is(T == char) || is(T == ubyte))
     return _basicHTTP!(T)(url, cast(void[]) null, conn);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -956,7 +956,7 @@ if (is(T == char) || is(T == ubyte))
     return _basicHTTP!(T)(url, patchData, conn);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -1056,7 +1056,7 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     return _decodeContent!T(content.data, client.p.charset);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.searching : canFind;
     import std.exception : collectException;
@@ -1072,7 +1072,7 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
 }
 
 // Bugzilla 14760 - content length must be reset after post
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -1097,7 +1097,7 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     assert(res == "TRACERESPONSE");
 }
 
-@system unittest // charset detection and transcoding to T
+version(StdUnittest) @system unittest // charset detection and transcoding to T
 {
     testServer.handle((s) {
         s.send("HTTP/1.1 200 OK\r\n"~
@@ -1330,7 +1330,7 @@ if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
     return SyncLineInputRange(result, keepTerminator == Yes.keepTerminator, terminator);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1404,7 +1404,7 @@ if (isCurlConn!(Conn))
     return SyncChunkInputRange(result, chunkSize);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1680,7 +1680,7 @@ auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char)
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1802,7 +1802,7 @@ if (isCurlConn!(Conn))
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -2038,7 +2038,7 @@ private mixin template Protocol()
         p.curl.set(CurlOption.userpwd, format("%s:%s", username, password));
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         import std.algorithm.searching : canFind;
 
@@ -3025,7 +3025,7 @@ struct HTTP
             method = Method.post;
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         import std.algorithm.searching : canFind;
 
@@ -3194,7 +3194,7 @@ struct HTTP
 
 } // HTTP
 
-@system unittest // charset/Charset/CHARSET/...
+version(StdUnittest) @system unittest // charset/Charset/CHARSET/...
 {
     import etc.c.curl;
 
@@ -3600,7 +3600,7 @@ struct FTP
         return p.curl.getTiming(timing, val);
     }
 
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         auto client = FTP();
 
@@ -3963,7 +3963,7 @@ struct SMTP
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.net.curl;
 

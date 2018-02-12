@@ -127,7 +127,7 @@ interface InputRange(E) {
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.algorithm.iteration : map;
     import std.range : iota;
@@ -213,7 +213,7 @@ interface InputAssignable(E) : InputRange!E {
     alias front = InputRange!E.front; // overload base interface method
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(isInputRange!(InputAssignable!int));
 }
@@ -249,7 +249,7 @@ interface OutputRange(E) {
     void put(E);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // 6973
     static assert(isOutputRange!(OutputRange!int, int));
@@ -509,7 +509,7 @@ template outputRangeObject(E...) {
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
      import std.array;
      auto app = appender!(uint[])();
@@ -518,7 +518,7 @@ template outputRangeObject(E...) {
      static assert(is(typeof(appWrapped) : OutputRange!(uint)));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.array;

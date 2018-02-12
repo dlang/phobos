@@ -263,7 +263,7 @@ private T cenforce(T)(T condition, const(char)[] name, const(FSChar)* namez,
     throw new FileException(name, .errno, file, line);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // issue 17102
     try
@@ -303,7 +303,7 @@ if (isInputRange!R && isSomeChar!(ElementEncodingType!R) && !isInfinite!R &&
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.utf : byChar;
     scope(exit)
@@ -325,7 +325,7 @@ if (isConvertibleToString!R)
     return read!(StringTypeOf!R)(name, upTo);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(__traits(compiles, read(TestAliasedString(null))));
 }
@@ -456,7 +456,7 @@ version (linux) @safe unittest
     //writefln("'%s'", s);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     scope(exit) if (exists(deleteme)) remove(deleteme);
     import std.stdio;
@@ -494,7 +494,7 @@ if (isSomeString!S &&
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.exception : enforce;
     write(deleteme, "abc"); // deleteme is the name of a temporary file
@@ -510,7 +510,7 @@ if (isConvertibleToString!R)
     return readText!(S, StringTypeOf!R)(name);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(__traits(compiles, readText(TestAliasedString(null))));
 }
@@ -539,7 +539,7 @@ if ((isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || is
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
    scope(exit)
    {
@@ -559,7 +559,7 @@ if (isConvertibleToString!R)
     write!(StringTypeOf!R)(name, buffer);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(__traits(compiles, write(TestAliasedString(null), null)));
 }
@@ -586,7 +586,7 @@ if ((isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || is
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
    scope(exit)
    {
@@ -608,7 +608,7 @@ if (isConvertibleToString!R)
     append!(StringTypeOf!R)(name, buffer);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(__traits(compiles, append(TestAliasedString("foo"), [0, 1, 2, 3])));
 }
@@ -726,7 +726,7 @@ if (isConvertibleToString!RF || isConvertibleToString!RT)
     rename!Types(from, to);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(__traits(compiles, rename(TestAliasedString(null), TestAliasedString(null))));
     static assert(__traits(compiles, rename("", TestAliasedString(null))));
@@ -766,7 +766,7 @@ private void renameImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, 
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.utf : byWchar;
 
@@ -806,7 +806,7 @@ if (isConvertibleToString!R)
     remove!(StringTypeOf!R)(name);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(__traits(compiles, remove(TestAliasedString("foo"))));
 }
@@ -915,12 +915,12 @@ if (isConvertibleToString!R)
     return getSize!(StringTypeOf!R)(name);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(__traits(compiles, getSize(TestAliasedString("foo"))));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // create a file of size 1
     write(deleteme, "a");
@@ -1012,13 +1012,13 @@ if (isConvertibleToString!R)
     return getTimes!(StringTypeOf!R)(name, accessTime, modificationTime);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     SysTime atime, mtime;
     static assert(__traits(compiles, getTimes(TestAliasedString("foo"), atime, mtime)));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.stdio : writefln;
 
@@ -1313,13 +1313,13 @@ if (isConvertibleToString!R)
     setTimes!(StringTypeOf!R)(name, accessTime, modificationTime);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     if (false) // Test instatiation
         setTimes(TestAliasedString("foo"), SysTime.init, SysTime.init);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.stdio : File;
     string newdir = deleteme ~ r".dir";
@@ -1397,7 +1397,7 @@ if (isConvertibleToString!R)
     return timeLastModified!(StringTypeOf!R)(name);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(__traits(compiles, timeLastModified(TestAliasedString("foo"))));
 }
@@ -1462,7 +1462,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R))
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //std.process.system("echo a > deleteme") == 0 || assert(false);
     if (exists(deleteme))
@@ -1492,7 +1492,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R))
 version (FreeBSD) {} else
 version (DragonFlyBSD) {} else
 version (OSX) {} else
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.thread;
 
@@ -1570,7 +1570,7 @@ private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
         static assert(0);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(exists("."));
     assert(!exists("this file does not exist"));
@@ -1579,7 +1579,7 @@ private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
     assert(exists(deleteme));
 }
 
-@safe unittest // Bugzilla 16573
+version(StdUnittest) @safe unittest // Bugzilla 16573
 {
     enum S : string { foo = "foo" }
     assert(__traits(compiles, S.foo.exists));
@@ -1652,7 +1652,7 @@ if (isConvertibleToString!R)
     return getAttributes!(StringTypeOf!R)(name);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(__traits(compiles, getAttributes(TestAliasedString(null))));
 }
@@ -1708,7 +1708,7 @@ if (isConvertibleToString!R)
     return getLinkAttributes!(StringTypeOf!R)(name);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(__traits(compiles, getLinkAttributes(TestAliasedString(null))));
 }
@@ -1763,7 +1763,7 @@ if (isConvertibleToString!R)
     return setAttributes!(StringTypeOf!R)(name, attributes);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(__traits(compiles, setAttributes(TestAliasedString(null), 0)));
 }
@@ -1807,12 +1807,12 @@ if (isConvertibleToString!R)
     return name.isDir!(StringTypeOf!R);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(__traits(compiles, TestAliasedString(null).isDir));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     version(Windows)
     {
@@ -1832,7 +1832,7 @@ if (isConvertibleToString!R)
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     version(Windows)
         enum dir = "C:\\Program Files\\";
@@ -1874,7 +1874,7 @@ bool attrIsDir(uint attributes) @safe pure nothrow @nogc
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     version(Windows)
     {
@@ -1954,18 +1954,18 @@ if (isConvertibleToString!R)
     return isFile!(StringTypeOf!R)(name);
 }
 
-@system unittest // bugzilla 15658
+version(StdUnittest) @system unittest // bugzilla 15658
 {
     DirEntry e = DirEntry(".");
     static assert(is(typeof(isFile(e))));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(__traits(compiles, TestAliasedString(null).isFile));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     version(Windows)
     {
@@ -2024,7 +2024,7 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     version(Windows)
     {
@@ -2089,12 +2089,12 @@ if (isConvertibleToString!R)
     return name.isSymlink!(StringTypeOf!R);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(__traits(compiles, TestAliasedString(null).isSymlink));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     version(Windows)
     {
@@ -2236,7 +2236,7 @@ if (isConvertibleToString!R)
     return chdir!(StringTypeOf!R)(pathname);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(__traits(compiles, chdir(TestAliasedString(null))));
 }
@@ -2289,7 +2289,7 @@ if (isConvertibleToString!R)
     return mkdir!(StringTypeOf!R)(pathname);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.file : mkdir;
     static assert(__traits(compiles, mkdir(TestAliasedString(null))));
@@ -2345,7 +2345,7 @@ void mkdirRecurse(in char[] pathname) @safe
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.exception : assertThrown;
     {
@@ -2435,7 +2435,7 @@ if (isConvertibleToString!R)
     rmdir!(StringTypeOf!R)(pathname);
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     static assert(__traits(compiles, rmdir(TestAliasedString(null))));
 }
@@ -2484,7 +2484,7 @@ if ((isInputRange!RO && !isInfinite!RO && isSomeChar!(ElementEncodingType!RO) ||
     }
 }
 
-version(Posix) @safe unittest
+version(StdUnittest) version(Posix) @safe unittest
 {
     if (system_directory.exists)
     {
@@ -2527,7 +2527,7 @@ version(Posix) @safe unittest
     }
 }
 
-version(Posix) @safe unittest
+version(StdUnittest) version(Posix) @safe unittest
 {
     static assert(__traits(compiles,
         symlink(TestAliasedString(null), TestAliasedString(null))));
@@ -2598,7 +2598,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) ||
     }
 }
 
-version(Posix) @safe unittest
+version(StdUnittest) version(Posix) @safe unittest
 {
     import std.exception : assertThrown;
     import std.string;
@@ -2618,12 +2618,12 @@ version(Posix) @safe unittest
     assertThrown!FileException(readLink("/doesnotexist"));
 }
 
-version(Posix) @safe unittest
+version(StdUnittest) version(Posix) @safe unittest
 {
     static assert(__traits(compiles, readLink(TestAliasedString("foo"))));
 }
 
-version(Posix) @system unittest // input range of dchars
+version(StdUnittest) version(Posix) @system unittest // input range of dchars
 {
     mkdirRecurse(deleteme);
     scope(exit) if (deleteme.exists) rmdirRecurse(deleteme);
@@ -2695,7 +2695,7 @@ else version (Posix) string getcwd()
     return p[0 .. core.stdc.string.strlen(p)].idup;
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     auto s = getcwd();
     assert(s.length);
@@ -2804,7 +2804,7 @@ else version (NetBSD)
         static assert(0, "thisExePath is not supported on this platform");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.path : isAbsolute;
     auto path = thisExePath();
@@ -3293,7 +3293,7 @@ else version(Posix)
     }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     version(Windows)
     {
@@ -3434,7 +3434,7 @@ if (isConvertibleToString!RF || isConvertibleToString!RT)
     copy!Types(from, to, preserve);
 }
 
-@safe unittest // issue 15319
+version(StdUnittest) @safe unittest // issue 15319
 {
     assert(__traits(compiles, copy("from.txt", "to.txt")));
 }
@@ -3525,7 +3525,7 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
     }
 }
 
-@safe unittest
+version(StdUnittest) version(StdUnittest) @safe unittest
 {
     import std.algorithm, std.file; // issue 14817
     auto t1 = deleteme, t2 = deleteme~"2";
@@ -3542,7 +3542,7 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
     assert(readText(t2.byChar) == "2");
 }
 
-@safe version(Posix) @safe unittest //issue 11434
+version(StdUnittest) @safe version(Posix) @safe unittest //issue 11434
 {
     import std.conv : octal;
     auto t1 = deleteme, t2 = deleteme~"2";
@@ -3554,7 +3554,7 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
     assert(getAttributes(t2) == octal!100767);
 }
 
-@safe unittest // issue 15865
+version(StdUnittest) @safe unittest // issue 15865
 {
     import std.exception : assertThrown;
     auto t = deleteme;
@@ -3622,7 +3622,7 @@ void rmdirRecurse(DirEntry de)
     rmdirRecurse(de);
 }
 
-version(Windows) @system unittest
+version(StdUnittest) version(Windows) @system unittest
 {
     import std.exception : enforce;
     auto d = deleteme ~ r".dir\a\b\c\d\e\f\g";
@@ -3631,7 +3631,7 @@ version(Windows) @system unittest
     enforce(!exists(deleteme ~ ".dir"));
 }
 
-version(Posix) @system unittest
+version(StdUnittest) version(Posix) @system unittest
 {
     import std.exception : enforce, collectException;
     import std.process : executeShell;
@@ -3655,7 +3655,7 @@ version(Posix) @system unittest
     enforce(!exists(deleteme));
 }
 
-@system unittest
+version(StdUnittest) version(StdUnittest) @system unittest
 {
     void[] buf;
 
@@ -4042,7 +4042,7 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
 }
 
 /// Duplicate functionality of D1's $(D std.file.listdir()):
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     string[] listdir(string pathname)
     {
@@ -4066,7 +4066,7 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
      }
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
@@ -4148,7 +4148,7 @@ auto dirEntries(string path, string pattern, SpanMode mode,
     return filter!f(DirIterator(path, mode, followSymlink));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.stdio : writefln;
     immutable dpath = deleteme ~ "_dir";
@@ -4225,7 +4225,7 @@ auto dirEntries(string path, string pattern, SpanMode mode,
 }
 
 // Bugzilla 17962 - Make sure that dirEntries does not butcher Unicode file names.
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
@@ -4299,7 +4299,7 @@ slurp(Types...)(string filename, in char[] format)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.typecons : tuple;
 

@@ -1613,7 +1613,7 @@ private:
 }
 
 // Test Interval's constructors.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
     import std.datetime.systime;
@@ -1642,7 +1642,7 @@ private:
 }
 
 // Test Interval's begin.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -1660,7 +1660,7 @@ private:
 }
 
 // Test Interval's end.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -1678,7 +1678,7 @@ private:
 }
 
 // Test Interval's length.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
     import std.datetime.systime;
@@ -1701,7 +1701,7 @@ private:
 }
 
 // Test Interval's empty.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
     import std.datetime.systime;
@@ -1723,7 +1723,7 @@ private:
 }
 
 // Test Interval's contains(time point).
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -1755,7 +1755,7 @@ private:
 }
 
 // Test Interval's contains(Interval).
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -1857,7 +1857,7 @@ private:
 }
 
 // Test Interval's isBefore(time point).
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -1889,7 +1889,7 @@ private:
 }
 
 // Test Interval's isBefore(Interval).
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -1992,7 +1992,7 @@ private:
 }
 
 // Test Interval's isAfter(time point).
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -2024,7 +2024,7 @@ private:
 }
 
 // Test Interval's isAfter(Interval).
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -2126,7 +2126,7 @@ private:
 }
 
 // Test Interval's intersects().
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -2230,7 +2230,7 @@ private:
 }
 
 // Test Interval's intersection().
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -2370,7 +2370,7 @@ private:
 }
 
 // Test Interval's isAdjacent().
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -2479,7 +2479,7 @@ private:
 }
 
 // Test Interval's merge().
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -2624,7 +2624,7 @@ private:
 }
 
 // Test Interval's span().
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -2759,7 +2759,7 @@ private:
 }
 
 // Test Interval's shift(duration).
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -2798,7 +2798,7 @@ private:
 }
 
 // Test Interval's shift(int, int, AllowDayOverflow).
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -2852,7 +2852,7 @@ private:
 }
 
 // Test Interval's expand(Duration).
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -2892,7 +2892,7 @@ private:
 }
 
 // Test Interval's expand(int, int, AllowDayOverflow, Direction)
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -3003,7 +3003,7 @@ private:
 }
 
 // Test Interval's fwdRange.
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.datetime.date;
 
@@ -3071,7 +3071,7 @@ private:
 }
 
 // Test Interval's bwdRange.
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.datetime.date;
 
@@ -3139,7 +3139,7 @@ private:
 }
 
 // Test Interval's toString().
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -4178,7 +4178,7 @@ private:
 }
 
 //Test PosInfInterval's constructor.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
     import std.datetime.systime;
@@ -4193,7 +4193,7 @@ private:
 }
 
 //Test PosInfInterval's begin.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -4211,7 +4211,7 @@ private:
 }
 
 //Test PosInfInterval's empty.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
     import std.datetime.systime;
@@ -4231,7 +4231,7 @@ private:
 }
 
 //Test PosInfInterval's contains(time point).
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -4260,7 +4260,7 @@ private:
 }
 
 //Test PosInfInterval's contains(Interval).
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -4356,7 +4356,7 @@ private:
 }
 
 //Test PosInfInterval's isBefore(time point).
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -4385,7 +4385,7 @@ private:
 }
 
 //Test PosInfInterval's isBefore(Interval).
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -4480,7 +4480,7 @@ private:
 }
 
 //Test PosInfInterval's isAfter(time point).
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -4509,7 +4509,7 @@ private:
 }
 
 //Test PosInfInterval's isAfter(Interval).
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -4606,7 +4606,7 @@ private:
 }
 
 //Test PosInfInterval's intersects().
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -4703,7 +4703,7 @@ private:
 }
 
 //Test PosInfInterval's intersection().
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -4821,7 +4821,7 @@ private:
 }
 
 //Test PosInfInterval's isAdjacent().
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -4917,7 +4917,7 @@ private:
 }
 
 //Test PosInfInterval's merge().
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -5026,7 +5026,7 @@ private:
 }
 
 //Test PosInfInterval's span().
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -5137,7 +5137,7 @@ private:
 }
 
 //Test PosInfInterval's shift().
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -5169,7 +5169,7 @@ private:
 }
 
 //Test PosInfInterval's shift(int, int, AllowDayOverflow).
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -5216,7 +5216,7 @@ private:
 }
 
 //Test PosInfInterval's expand().
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -5248,7 +5248,7 @@ private:
 }
 
 //Test PosInfInterval's expand(int, int, AllowDayOverflow).
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -5295,7 +5295,7 @@ private:
 }
 
 //Test PosInfInterval's fwdRange().
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.datetime.date;
 
@@ -5348,7 +5348,7 @@ private:
 }
 
 //Test PosInfInterval's toString().
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
     assert(PosInfInterval!Date(Date(2010, 7, 4)).toString() == "[2010-Jul-04 - ∞)");
@@ -6400,7 +6400,7 @@ private:
 }
 
 //Test NegInfInterval's constructor.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
     import std.datetime.systime;
@@ -6412,7 +6412,7 @@ private:
 }
 
 //Test NegInfInterval's end.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -6430,7 +6430,7 @@ private:
 }
 
 //Test NegInfInterval's empty.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
     import std.datetime.systime;
@@ -6450,7 +6450,7 @@ private:
 }
 
 //Test NegInfInterval's contains(time point).
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -6480,7 +6480,7 @@ private:
 }
 
 //Test NegInfInterval's contains(Interval).
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -6576,7 +6576,7 @@ private:
 }
 
 //Test NegInfInterval's isBefore(time point).
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -6606,7 +6606,7 @@ private:
 }
 
 //Test NegInfInterval's isBefore(Interval).
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -6703,7 +6703,7 @@ private:
 }
 
 //Test NegInfInterval's isAfter(time point).
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -6728,7 +6728,7 @@ private:
 }
 
 //Test NegInfInterval's isAfter(Interval).
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -6829,7 +6829,7 @@ private:
 }
 
 //Test NegInfInterval's intersects().
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -6926,7 +6926,7 @@ private:
 }
 
 //Test NegInfInterval's intersection().
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -7044,7 +7044,7 @@ private:
 }
 
 //Test NegInfInterval's isAdjacent().
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -7142,7 +7142,7 @@ private:
 }
 
 //Test NegInfInterval's merge().
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -7251,7 +7251,7 @@ private:
 }
 
 //Test NegInfInterval's span().
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -7362,7 +7362,7 @@ private:
 }
 
 //Test NegInfInterval's shift().
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -7394,7 +7394,7 @@ private:
 }
 
 //Test NegInfInterval's shift(int, int, AllowDayOverflow).
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -7446,7 +7446,7 @@ private:
 }
 
 //Test NegInfInterval's expand().
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -7478,7 +7478,7 @@ private:
 }
 
 //Test NegInfInterval's expand(int, int, AllowDayOverflow).
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -7525,7 +7525,7 @@ private:
 }
 
 //Test NegInfInterval's bwdRange().
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.datetime.date;
 
@@ -7579,7 +7579,7 @@ private:
 }
 
 //Test NegInfInterval's toString().
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
 
@@ -7633,7 +7633,7 @@ if (isTimePoint!TP &&
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.datetime.date : Date, DayOfWeek;
 
@@ -7657,7 +7657,7 @@ if (isTimePoint!TP &&
     assert(range.empty);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.datetime.date;
     import std.datetime.systime;
@@ -7755,7 +7755,7 @@ if (isTimePoint!TP &&
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.datetime.date : Date, Month;
 
@@ -7785,7 +7785,7 @@ if (isTimePoint!TP &&
     assert(range.empty);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.datetime.date;
     import std.datetime.systime;
@@ -7866,7 +7866,7 @@ if (isTimePoint!TP &&
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.time : dur;
     import std.datetime.date : Date;
@@ -7891,7 +7891,7 @@ if (isTimePoint!TP &&
     assert(range.empty);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.datetime.date;
     import std.datetime.systime;
@@ -7991,7 +7991,7 @@ if (isTimePoint!TP &&
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import core.time : dur;
     import std.datetime.date : AllowDayOverflow, Date;
@@ -8016,7 +8016,7 @@ if (isTimePoint!TP &&
     assert(range.empty);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.datetime.date;
     import std.datetime.systime;
@@ -8299,7 +8299,7 @@ private:
 }
 
 //Test that IntervalRange satisfies the range predicates that it's supposed to satisfy.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
     import std.datetime.systime;
@@ -8326,7 +8326,7 @@ private:
 }
 
 //Test construction of IntervalRange.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
     import std.datetime.systime;
@@ -8358,7 +8358,7 @@ private:
 }
 
 //Test IntervalRange's empty().
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.datetime.date;
 
@@ -8396,7 +8396,7 @@ private:
 }
 
 //Test IntervalRange's front.
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.datetime.date;
 
@@ -8438,7 +8438,7 @@ private:
 }
 
 //Test IntervalRange's popFront().
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.datetime.date;
     import std.range.primitives : walkLength;
@@ -8490,7 +8490,7 @@ private:
 }
 
 //Test IntervalRange's save.
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.datetime.date;
 
@@ -8514,7 +8514,7 @@ private:
 }
 
 //Test IntervalRange's interval.
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.datetime.date;
 
@@ -8544,7 +8544,7 @@ private:
 }
 
 //Test IntervalRange's func.
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.datetime.date;
 
@@ -8568,7 +8568,7 @@ private:
 }
 
 //Test IntervalRange's direction.
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.datetime.date;
 
@@ -8743,7 +8743,7 @@ private:
 }
 
 //Test that PosInfIntervalRange satisfies the range predicates that it's supposed to satisfy.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
     import std.datetime.systime;
@@ -8769,7 +8769,7 @@ private:
 }
 
 //Test construction of PosInfIntervalRange.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
     import std.datetime.systime;
@@ -8800,7 +8800,7 @@ private:
 }
 
 //Test PosInfIntervalRange's front.
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.datetime.date;
 
@@ -8815,7 +8815,7 @@ private:
 }
 
 //Test PosInfIntervalRange's popFront().
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.datetime.date;
     import std.range : take;
@@ -8834,7 +8834,7 @@ private:
 }
 
 //Test PosInfIntervalRange's save.
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.datetime.date;
 
@@ -8846,7 +8846,7 @@ private:
 }
 
 //Test PosInfIntervalRange's interval.
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.datetime.date;
 
@@ -8861,7 +8861,7 @@ private:
 }
 
 //Test PosInfIntervalRange's func.
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.datetime.date;
 
@@ -9027,7 +9027,7 @@ private:
 }
 
 //Test that NegInfIntervalRange satisfies the range predicates that it's supposed to satisfy.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
     import std.range.primitives;
@@ -9051,7 +9051,7 @@ private:
 }
 
 //Test construction of NegInfIntervalRange.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.datetime.date;
     import std.datetime.systime;
@@ -9082,7 +9082,7 @@ private:
 }
 
 //Test NegInfIntervalRange's front.
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.datetime.date;
 
@@ -9098,7 +9098,7 @@ private:
 }
 
 //Test NegInfIntervalRange's popFront().
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.datetime.date;
     import std.range : take;
@@ -9118,7 +9118,7 @@ private:
 }
 
 //Test NegInfIntervalRange's save.
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.datetime.date;
 
@@ -9130,7 +9130,7 @@ private:
 }
 
 //Test NegInfIntervalRange's interval.
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.datetime.date;
 
@@ -9145,7 +9145,7 @@ private:
 }
 
 //Test NegInfIntervalRange's func.
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.datetime.date;
 

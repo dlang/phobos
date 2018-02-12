@@ -75,7 +75,7 @@ struct NullAllocator
     static shared NullAllocator instance;
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     assert(NullAllocator.instance.alignedAllocate(100, 0) is null);
     assert(NullAllocator.instance.allocateAll() is null);

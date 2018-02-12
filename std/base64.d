@@ -62,7 +62,7 @@ import std.range.primitives;      // isInputRange, isOutputRange, isForwardRange
 import std.traits;     // isArray
 
 // Make sure module header code examples work correctly.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     ubyte[] data = [0x14, 0xfb, 0x9c, 0x03, 0xd9, 0x7e];
 
@@ -81,7 +81,7 @@ import std.traits;     // isArray
 alias Base64 = Base64Impl!('+', '/');
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     ubyte[] data = [0x83, 0xd7, 0x30, 0x7a, 0x01, 0x3f];
     assert(Base64.encode(data) == "g9cwegE/");
@@ -97,7 +97,7 @@ alias Base64 = Base64Impl!('+', '/');
 alias Base64URL = Base64Impl!('-', '_');
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     ubyte[] data = [0x83, 0xd7, 0x30, 0x7a, 0x01, 0x3f];
     assert(Base64URL.encode(data) == "g9cwegE_");
@@ -113,7 +113,7 @@ alias Base64URL = Base64Impl!('-', '_');
 alias Base64URLNoPadding = Base64Impl!('-', '_', Base64.NoPadding);
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     ubyte[] data = [0x83, 0xd7, 0x30, 0x7b, 0xef];
     assert(Base64URLNoPadding.encode(data) == "g9cwe-8");
@@ -189,7 +189,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         ubyte[] data = [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e];
 
@@ -276,7 +276,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         ubyte[] data = [0x83, 0xd7, 0x30, 0x7a, 0x01, 0x3f];
         char[32] buffer;    // much bigger than necessary
@@ -453,7 +453,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
 
     ///
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         // @system because encode for OutputRange is @system
         struct OutputRange
@@ -576,7 +576,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         ubyte[] data = [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e];
         assert(Base64.encode(data) == "Gis8TV1u");
@@ -941,7 +941,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         auto encoded = "Gis8TV1u";
 
@@ -1054,7 +1054,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         auto encoded = "Gis8TV1u";
         ubyte[32] buffer;   // much bigger than necessary
@@ -1238,7 +1238,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
 
     ///
-    @system unittest
+    version(StdUnittest) @system unittest
     {
         struct OutputRange
         {
@@ -1356,7 +1356,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
 
     ///
-    @safe unittest
+    version(StdUnittest) @safe unittest
     {
         auto data = "Gis8TV1u";
         assert(Base64.decode(data) == [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e]);
@@ -1731,7 +1731,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.string : representation;
 
@@ -1759,13 +1759,13 @@ class Base64Exception : Exception
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.exception : assertThrown;
     assertThrown!Base64Exception(Base64.decode("ab|c"));
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.sorting : sort;
@@ -2031,7 +2031,7 @@ class Base64Exception : Exception
 }
 
 // Regression control for the output range ref bug in encode.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     struct InputRange
     {
@@ -2063,7 +2063,7 @@ class Base64Exception : Exception
 }
 
 // Regression control for the output range ref bug in decode.
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     struct InputRange
     {

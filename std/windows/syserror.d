@@ -178,7 +178,7 @@ T wenforce(T)(T condition, const(char)[] name, const(wchar)* namez, string file 
 }
 
 version(Windows)
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.algorithm.searching : startsWith, endsWith;
     import std.exception;

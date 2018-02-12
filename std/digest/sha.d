@@ -58,7 +58,7 @@ $(TR $(TDNW Helpers) $(TD $(MYREF sha1Of))
 module std.digest.sha;
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Template API
     import std.digest.sha;
@@ -80,7 +80,7 @@ module std.digest.sha;
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //OOP API
     import std.digest.sha;
@@ -740,7 +740,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
                 (&buffer[index])[0 .. inputLen-i] = (&input[i])[0 .. inputLen-i];
         }
 
-        @safe unittest
+        version(StdUnittest) @safe unittest
         {
             typeof(this) dig;
             dig.put(cast(ubyte) 0); //single ubyte
@@ -810,7 +810,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
                 static assert(0);
         }
         ///
-        @safe unittest
+        version(StdUnittest) @safe unittest
         {
             //Simple example
             SHA1 hash;
@@ -829,7 +829,7 @@ alias SHA512_224 = SHA!(1024, 224); /// SHA alias for SHA-512/224, hash is ubyte
 alias SHA512_256 = SHA!(1024, 256); /// SHA alias for SHA-512/256, hash is ubyte[32]
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Simple example, hashing a string using sha1Of helper function
     ubyte[20] hash = sha1Of("abc");
@@ -842,7 +842,7 @@ alias SHA512_256 = SHA!(1024, 256); /// SHA alias for SHA-512/256, hash is ubyte
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Using the basic API
     SHA1 hash;
@@ -854,7 +854,7 @@ alias SHA512_256 = SHA!(1024, 256); /// SHA alias for SHA-512/256, hash is ubyte
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Let's use the template features:
     //Note: When passing a SHA1 to a function, it must be passed by reference!
@@ -869,7 +869,7 @@ alias SHA512_256 = SHA!(1024, 256); /// SHA alias for SHA-512/256, hash is ubyte
     assert(toHexString(sha.finish()) == "5BA93C9DB0CFF93F52B521D7420E43F6EDA2784F");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     assert(isDigest!SHA1);
     assert(isDigest!SHA224);
@@ -880,7 +880,7 @@ alias SHA512_256 = SHA!(1024, 256); /// SHA alias for SHA-512/256, hash is ubyte
     assert(isDigest!SHA512_256);
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : hexString;
     import std.range;
@@ -1163,7 +1163,7 @@ auto sha512_256Of(T...)(T data)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     ubyte[20] hash = sha1Of("abc");
     assert(hash == digest!SHA1("abc"));
@@ -1187,7 +1187,7 @@ auto sha512_256Of(T...)(T data)
     assert(hash512_256 == digest!SHA512_256("abc"));
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     string a = "Mary has ", b = "a little lamb";
     int[] c = [ 1, 2, 3, 4, 5 ];
@@ -1214,7 +1214,7 @@ alias SHA512_224Digest = WrapperDigest!SHA512_224; ///ditto
 alias SHA512_256Digest = WrapperDigest!SHA512_256; ///ditto
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     //Simple example, hashing a string using Digest.digest helper function
     auto sha = new SHA1Digest();
@@ -1230,7 +1230,7 @@ alias SHA512_256Digest = WrapperDigest!SHA512_256; ///ditto
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     //Let's use the OOP features:
     void test(Digest dig)
@@ -1246,7 +1246,7 @@ alias SHA512_256Digest = WrapperDigest!SHA512_256; ///ditto
     assert(toHexString(result) == "5BA93C9DB0CFF93F52B521D7420E43F6EDA2784F");
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.conv : hexString;
     auto sha = new SHA1Digest();

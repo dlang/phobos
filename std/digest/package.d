@@ -70,7 +70,7 @@ import std.traits;
 
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.digest.crc;
 
@@ -86,7 +86,7 @@ import std.traits;
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     //Generating the hashes of a file, idiomatic D way
     import std.digest.crc, std.digest.md, std.digest.sha;
@@ -112,7 +112,7 @@ import std.traits;
     }
 }
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     //Generating the hashes of a file using the template API
     import std.digest.crc, std.digest.md, std.digest.sha;
@@ -152,7 +152,7 @@ import std.traits;
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.digest.crc, std.digest.md, std.digest.sha;
     import std.stdio;
@@ -256,7 +256,7 @@ version(ExampleDigest)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     //Using the OutputRange feature
     import std.algorithm.mutation : copy;
@@ -297,13 +297,13 @@ template isDigest(T)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.digest.crc;
     static assert(isDigest!CRC32);
 }
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.digest.crc;
     void myFunction(T)()
@@ -335,13 +335,13 @@ template DigestType(T)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.digest.crc;
     assert(is(DigestType!(CRC32) == ubyte[4]));
 }
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.digest.crc;
     CRC32 dig;
@@ -371,14 +371,14 @@ template hasPeek(T)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.digest.crc, std.digest.md;
     assert(!hasPeek!(MD5));
     assert(hasPeek!CRC32);
 }
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.digest.crc;
     void myFunction(T)()
@@ -403,7 +403,7 @@ if (isDigest!T)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.digest.hmac, std.digest.md;
     static assert(hasBlockSize!MD5        && MD5.blockSize      == 512);
@@ -441,7 +441,7 @@ if (!isArray!Range
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.digest.md;
     import std.range : repeat;
@@ -466,7 +466,7 @@ if (allSatisfy!(isArray, typeof(data)))
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.digest.crc, std.digest.md, std.digest.sha;
     auto md5   = digest!MD5(  "The quick brown fox jumps over the lazy dog");
@@ -476,7 +476,7 @@ if (allSatisfy!(isArray, typeof(data)))
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.digest.crc;
     auto crc32 = digest!CRC32("The quick ", "brown ", "fox jumps over the lazy dog");
@@ -499,7 +499,7 @@ if (!isArray!Range && isDigestibleRange!Range)
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.digest.md;
     import std.range : repeat;
@@ -521,13 +521,13 @@ if (allSatisfy!(isArray, typeof(data)))
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.digest.crc;
     assert(hexDigest!(CRC32, Order.decreasing)("The quick brown fox jumps over the lazy dog") == "414FA339");
 }
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.digest.crc;
     assert(hexDigest!(CRC32, Order.decreasing)("The quick ", "brown ", "fox jumps over the lazy dog") == "414FA339");
@@ -545,7 +545,7 @@ Hash makeDigest(Hash)()
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.digest.md;
     auto md5 = makeDigest!MD5();
@@ -625,7 +625,7 @@ interface Digest
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     //Using the OutputRange feature
     import std.algorithm.mutation : copy;
@@ -639,7 +639,7 @@ interface Digest
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.digest.crc, std.digest.md, std.digest.sha;
     ubyte[] md5   = (new MD5Digest()).digest("The quick brown fox jumps over the lazy dog");
@@ -649,14 +649,14 @@ interface Digest
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.digest.crc;
     ubyte[] crc32 = (new CRC32Digest()).digest("The quick ", "brown ", "fox jumps over the lazy dog");
     assert(crcHexString(crc32) == "414FA339");
 }
 
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.range : isOutputRange;
     assert(!isDigest!(Digest));
@@ -664,7 +664,7 @@ interface Digest
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     void test(Digest dig)
     {
@@ -794,7 +794,7 @@ string toHexString(LetterCase letterCase, Order order = Order.increasing)(in uby
 //For more example unittests, see Digest.digest, digest
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.digest.crc;
     //Test with template API:
@@ -807,7 +807,7 @@ string toHexString(LetterCase letterCase, Order order = Order.increasing)(in uby
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     import std.digest.crc;
     // With OOP API
@@ -816,7 +816,7 @@ string toHexString(LetterCase letterCase, Order order = Order.increasing)(in uby
     assert(toHexString!(Order.decreasing)(crc32) == "414FA339");
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     ubyte[16] data;
     assert(toHexString(data) == "00000000000000000000000000000000");
@@ -851,7 +851,7 @@ if (isDigest!T)
 }
 
 @safe pure nothrow @nogc
-unittest
+version(StdUnittest) unittest
 {
     import std.digest.md : MD5;
     import std.digest.sha : SHA1, SHA256, SHA512;
@@ -988,7 +988,7 @@ if (isDigest!T) : Digest
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     import std.digest.md;
     //Simple example
@@ -998,7 +998,7 @@ if (isDigest!T) : Digest
 }
 
 ///
-@system unittest
+version(StdUnittest) @system unittest
 {
     //using a supplied buffer
     import std.digest.md;
@@ -1011,7 +1011,7 @@ if (isDigest!T) : Digest
     //length
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Test peek & length
     import std.digest.crc;
@@ -1113,7 +1113,7 @@ if (isInputRange!R1 && isInputRange!R2 && !isInfinite!R1 && !isInfinite!R2 &&
 }
 
 ///
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     import std.digest.hmac : hmac;
     import std.digest.sha : SHA1;
@@ -1131,7 +1131,7 @@ if (isInputRange!R1 && isInputRange!R2 && !isInfinite!R1 && !isInfinite!R2 &&
     assert(!secureEqual(hex1[], hex3[]));
 }
 
-@system pure unittest
+version(StdUnittest) @system pure unittest
 {
     import std.internal.test.dummyrange : ReferenceInputRange;
     import std.range : takeExactly;

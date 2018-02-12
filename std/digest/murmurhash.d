@@ -44,7 +44,7 @@ else version (X86_64)
     version = HaveUnalignedLoads;
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // MurmurHash3!32, MurmurHash3!(128, 32) and MurmurHash3!(128, 64) implement
     // the std.digest Template API.
@@ -55,7 +55,7 @@ else version (X86_64)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // One can also hash ubyte data piecewise by instanciating a hasher and call
     // the 'put' method.
@@ -73,7 +73,7 @@ else version (X86_64)
 }
 
 ///
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Using `putElements`, `putRemainder` and `finalize` you gain full
     // control over which part of the algorithm to run.
@@ -688,7 +688,7 @@ version(StdUnittest)
     }
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // dfmt off
     checkResult!(MurmurHash3!32)([
@@ -722,7 +722,7 @@ version(StdUnittest)
     // dfmt on
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // dfmt off
     checkResult!(MurmurHash3!(128,32))([
@@ -756,7 +756,7 @@ version(StdUnittest)
     // dfmt on
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // dfmt off
     checkResult!(MurmurHash3!(128,64))([
@@ -790,7 +790,7 @@ version(StdUnittest)
     // dfmt on
 }
 
-@safe unittest
+version(StdUnittest) @safe unittest
 {
     // Pushing unaligned data and making sure the result is still coherent.
     void testUnalignedHash(H)()
