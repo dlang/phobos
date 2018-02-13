@@ -586,7 +586,15 @@ public:
     {
         ~this()
         {
-            fptr(OpID.destruct, &store, null);
+            // Infer the safety of the provided types
+            static if (AllowedTypes.length)
+            {
+                if (0)
+                {
+                    AllowedTypes var;
+                }
+            }
+            (() @trusted => fptr(OpID.destruct, &store, null))();
         }
     }
 
@@ -1207,7 +1215,6 @@ public:
     }
 }
 
-
 @system unittest
 {
     import std.conv : to;
@@ -1465,6 +1472,18 @@ pure nothrow @nogc
 
     fun!(S4)(v);
     static assert(!is(typeof(fun!(shared(S4))(v))));
+}
+
+@safe unittest
+{
+    Algebraic!(int) x;
+
+    static struct SafeS
+    {
+        @safe ~this() {}
+    }
+
+    Algebraic!(SafeS) y;
 }
 
 /**
