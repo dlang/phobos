@@ -5,7 +5,7 @@
  * $(DDSUBLINK spec/template, variadic-templates, template parameter sequences)
  * (also known as $(I alias sequences)).
  *
- * Some operations on alias sequences are built into the language -
+ * Some operations on alias sequences are built into the language,
  * such as `S[i]`, which accesses the element at index `i` in the
  * sequence. `S[low .. high]` returns a new alias
  * sequence that is a slice of the old one.
