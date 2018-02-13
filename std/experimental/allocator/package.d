@@ -405,7 +405,8 @@ struct RCIAllocator
     private IAllocator _alloc;
 
 nothrow:
-    private this(this _)(IAllocator alloc)
+    private @nogc @safe
+    this(this _)(IAllocator alloc)
     {
         assert(alloc);
         _alloc = alloc;
@@ -420,7 +421,7 @@ nothrow:
         }
     }
 
-    @nogc
+    @nogc @safe
     ~this()
     {
         if (_alloc !is null)
@@ -430,7 +431,7 @@ nothrow:
         }
     }
 
-    @nogc
+    @nogc @safe
     auto ref opAssign()(typeof(this) rhs)
     {
         if (_alloc is rhs._alloc)
@@ -757,7 +758,7 @@ nothrow:
         _alloc = alloc;
     }
 
-    @nogc
+    @nogc @safe
     this(this)
     {
         if (_alloc !is null)
@@ -766,7 +767,7 @@ nothrow:
         }
     }
 
-    @nogc
+    @nogc @safe
     ~this()
     {
         if (_alloc !is null)
@@ -776,7 +777,7 @@ nothrow:
         }
     }
 
-    @nogc
+    @nogc @safe
     auto ref opAssign()(RCISharedAllocator rhs)
     {
         if (_alloc is rhs._alloc)
