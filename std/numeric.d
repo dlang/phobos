@@ -2684,6 +2684,12 @@ T gcd(T)(T a, T b)
 
     assert(a >= 0 && b >= 0);
 
+    // Special cases.
+    if (a == 0)
+        return b;
+    if (b == 0)
+        return a;
+
     static if (canUseBinaryGcd)
     {
         uint shift = 0;
@@ -2726,6 +2732,9 @@ T gcd(T)(T a, T b)
     assert(gcd(BigInt("71_000_000_000_000_000_000"),
                BigInt("31_000_000_000_000_000_000")) ==
            BigInt("1_000_000_000_000_000_000"));
+
+    assert(gcd(BigInt(0), BigInt(1234567)) == BigInt(1234567));
+    assert(gcd(BigInt(1234567), BigInt(0)) == BigInt(1234567));
 }
 
 @safe pure nothrow unittest
