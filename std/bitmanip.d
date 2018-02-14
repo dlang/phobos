@@ -2429,7 +2429,7 @@ private ulong swapEndianImpl(ulong val) @trusted pure nothrow @nogc
     import std.meta;
     static foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong, char, wchar, dchar))
     {{
-        scope(failure) writefln("Failed type: %s", T.stringof);
+        scope(failure) writeln("Failed type: ", T.stringof);
         T val;
         const T cval;
         immutable T ival;
@@ -2556,7 +2556,7 @@ if (isFloatOrDouble!T)
          */
                           /*,float, double*/))
     {{
-        scope(failure) writefln("Failed type: %s", T.stringof);
+        scope(failure) writeln("Failed type: ", T.stringof);
         T val;
         const T cval;
         immutable T ival;
@@ -2721,7 +2721,7 @@ if (isFloatOrDouble!T)
                          char, wchar, dchar/*,
                          float, double*/))
     {{
-        scope(failure) writefln("Failed type: %s", T.stringof);
+        scope(failure) writeln("Failed type: ", T.stringof);
         T val;
         const T cval;
         immutable T ival;
