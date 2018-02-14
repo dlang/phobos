@@ -608,7 +608,8 @@ When source type supports member template function opCast, it is used.
 */
 private T toImpl(T, S)(S value)
 if (!isImplicitlyConvertible!(S, T) &&
-    hasMember!(S, "opCast") && allSameType!(ReturnType!(S.opCast!T), T) &&
+    is(typeof(S.init.opCast!T())) &&
+    allSameType!(ReturnType!(S.opCast!T), T) &&
     !isExactSomeString!T &&
     !is(typeof(T(value))))
 {
