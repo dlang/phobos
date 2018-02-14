@@ -8655,20 +8655,20 @@ public:
     static SysTime fromSimpleString(S)(in S simpleString, immutable TimeZone tz = null) @safe
         if (isSomeString!(S))
     {
-        import std.algorithm.searching : countUntil, find;
+        import std.algorithm.searching : find;
         import std.conv : to;
-        import std.string : strip;
+        import std.string : strip, indexOf;
 
-        auto dstr = to!dstring(strip(simpleString));
+        auto str = strip(simpleString);
 
-        auto spaceIndex = dstr.countUntil(' ');
+        auto spaceIndex = str.indexOf(' ');
         enforce(spaceIndex != -1, new DateTimeException(format("Invalid Simple String: %s", simpleString)));
 
-        auto found = dstr[spaceIndex + 1 .. $].find('.', 'Z', '+', '-');
-        auto dateTimeStr = dstr[0 .. $ - found[0].length];
+        auto found = str[spaceIndex + 1 .. $].find('.', 'Z', '+', '-');
+        auto dateTimeStr = str[0 .. $ - found[0].length];
 
-        dstring fracSecStr;
-        dstring zoneStr;
+        typeof(str) fracSecStr;
+        typeof(str) zoneStr;
 
         if (found[1] != 0)
         {
