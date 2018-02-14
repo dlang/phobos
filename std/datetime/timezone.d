@@ -1460,16 +1460,32 @@ package:
       +/
     static string toISOString(Duration utcOffset) @safe pure
     {
+        import std.array : appender;
+        auto w = appender!string();
+        w.reserve(5);
+        toISOString(w, utcOffset);
+        return w.data;
+    }
+
+    // ditto
+    static void toISOString(W)(ref W writer, Duration utcOffset)
+    if (isOutputRange!(W, char))
+    {
         import std.datetime.date : DateTimeException;
         import std.exception : enforce;
-        import std.format : format;
+        import std.format : formattedWrite;
         immutable absOffset = abs(utcOffset);
         enforce!DateTimeException(absOffset < dur!"minutes"(1440),
                                   "Offset from UTC must be within range (-24:00 - 24:00).");
         int hours;
         int minutes;
         absOffset.split!("hours", "minutes")(hours, minutes);
-        return format(utcOffset < Duration.zero ? "-%02d%02d" : "+%02d%02d", hours, minutes);
+        formattedWrite(
+            writer,
+            utcOffset < Duration.zero ? "-%02d%02d" : "+%02d%02d",
+            hours,
+            minutes
+        );
     }
 
     @safe unittest
@@ -1515,8 +1531,18 @@ package:
       +/
     static string toISOExtString(Duration utcOffset) @safe pure
     {
+        import std.array : appender;
+        auto w = appender!string();
+        w.reserve(6);
+        toISOExtString(w, utcOffset);
+        return w.data;
+    }
+
+    // ditto
+    static void toISOExtString(W)(ref W writer, Duration utcOffset)
+    {
         import std.datetime.date : DateTimeException;
-        import std.format : format;
+        import std.format : formattedWrite;
         import std.exception : enforce;
 
         immutable absOffset = abs(utcOffset);
@@ -1525,7 +1551,12 @@ package:
         int hours;
         int minutes;
         absOffset.split!("hours", "minutes")(hours, minutes);
-        return format(utcOffset < Duration.zero ? "-%02d:%02d" : "+%02d:%02d", hours, minutes);
+        formattedWrite(
+            writer,
+            utcOffset < Duration.zero ? "-%02d:%02d" : "+%02d:%02d",
+            hours,
+            minutes
+        );
     }
 
     @safe unittest
