@@ -10263,24 +10263,32 @@ private:
 /+
     Returns the given hnsecs as an ISO string of fractional seconds.
   +/
-static string fracSecsToISOString(int hnsecs) @safe pure nothrow
+string fracSecsToISOString(int hnsecs) @safe pure nothrow
 {
+    import std.array : appender;
+    auto w = appender!string();
+    try
+        fracSecsToISOString(w, hnsecs);
+    catch (Exception e)
+        assert(0, "fracSecsToISOString() threw.");
+    return w.data;
+}
+
+void fracSecsToISOString(W)(ref W writer, int hnsecs)
+{
+    import std.conv : toChars;
+    import std.range : padLeft;
+
     assert(hnsecs >= 0);
 
-    try
-    {
-        if (hnsecs == 0)
-            return "";
+    if (hnsecs == 0)
+        return;
 
-        string isoString = format(".%07d", hnsecs);
-
-        while (isoString[$ - 1] == '0')
-            isoString.popBack();
-
-        return isoString;
-    }
-    catch (Exception e)
-        assert(0, "format() threw.");
+    put(writer, '.');
+    auto chars = hnsecs.toChars.padLeft('0', 7);
+    while (chars.back == '0')
+        chars.popBack();
+    put(writer, chars);
 }
 
 @safe unittest
