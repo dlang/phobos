@@ -8981,7 +8981,7 @@ private:
     /+
         Returns $(D stdTime) converted to $(LREF SysTime)'s time zone.
       +/
-    @property long adjTime() @safe const nothrow
+    @property long adjTime() @safe const nothrow scope
     {
         return _timezone.utcToTZ(_stdTime);
     }
@@ -8990,7 +8990,7 @@ private:
     /+
         Converts the given hnsecs from $(LREF SysTime)'s time zone to std time.
       +/
-    @property void adjTime(long adjTime) @safe nothrow
+    @property void adjTime(long adjTime) @safe nothrow scope
     {
         _stdTime = _timezone.tzToUTC(adjTime);
     }
