@@ -10,3 +10,4 @@ Nullable!int square(Nullable!int n)
 {
     return n.bind!(i => i * i);
 }
+-----

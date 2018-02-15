@@ -3354,16 +3354,27 @@ auto nullable(alias nullValue, T)(T t)
 }
 
 /**
+Unpacks the content of a $(D Nullable), performs an operation and packs it again. Does nothing if isNull.
+
 When called on a $(D Nullable), $(D bind) will unpack the value contained in the $(D Nullable),
 pass it to the function you provide and wrap the result in another $(D Nullable) (if necessary).
 If the Nullable is null, $(D bind) will return null itself.
+
+Params:
+    t = a $(D Nullable)
+    fun = a function operating on the content of the nullable
+
+Returns:
+    `fun(t.get).nullable` if `!t.isNull`, else `Nullable.init`.
+
+See also:
+    $(HTTP en.wikipedia.org/wiki/Monad_(functional_programming)#The_Maybe_monad, The `Maybe` monad)
  */
 template bind(alias fun)
 {
     import std.functional : unaryFun;
 
-    auto bind(T)(T t)
-    if (isInstanceOf!(Nullable, T) && is(typeof(unaryFun!fun(T.init.get))))
+    auto bind(T)(T t) if (isInstanceOf!(Nullable, T) && is(typeof(unaryFun!fun(T.init.get))))
     {
         alias FunType = typeof(unaryFun!fun(T.init.get));
 
