@@ -82,6 +82,7 @@ import std.meta;
 import std.traits;
 
 import std.range.primitives;
+import std.conv : emplaceRef;
 public import std.range.primitives : save, empty, popFront, popBack, front, back;
 
 /**
@@ -3926,4 +3927,287 @@ unittest
     a ~= 'a'; //Clobbers here?
     assert(appS.data == "hellow");
     assert(appA.data == "hellow");
+}
+
+/++
+Params: a = The array elements
+
+Returns: A static array constructed from `a`. The type of elements can be
+specified implicitly (`int[2] a = staticArray(1,2);`) or explicitly
+(`float[2] a = staticArray!float(1,2)`).
+The result is an rvalue, therefore uses like
+`foo(staticArray(1, 2, 3))` may be inefficient because of the copies.
++/
+pragma(inline, true) U[T.length] staticArray(U = CommonType!T, T...)(T a) nothrow @safe pure @nogc
+{
+    return [a];
+}
+
+/// ditto
+// Workaround https://issues.dlang.org/show_bug.cgi?id=16779 (make alias to staticArray once fixed)
+pragma(inline, true) U[T.length] staticArrayCast(U, T...)(T a) nothrow @safe pure @nogc
+{
+    enum n = T.length;
+    U[n] ret = void;
+    static foreach (i; 0 .. n)
+    {
+        // TODO: If any of these throws, the destructors of the already-constructed elements is not called. https://github.com/dlang/phobos/pull/4936/files#r131709329
+        emplaceRef!U(ret[i], cast(U) a[i]);
+    }
+    return ret;
+}
+
+///
+nothrow pure @safe unittest
+{
+    auto a = staticArray(1, 2);
+    assert(is(typeof(a) == int[2]) && a == [1, 2]);
+
+    auto b = staticArrayCast!byte(1, 2);
+    assert(is(typeof(b) == byte[2]) && b == [1, 2]);
+}
+
+nothrow pure @safe unittest
+{
+    int val = 3;
+    staticArray(1, 2, val).checkStaticArray!int([1, 2, 3]);
+    staticArray(1, 2.0).checkStaticArray!double([1, 2.0]);
+    assert(!__traits(compiles, staticArray(1, "")));
+    staticArray().checkStaticArray!void([]);
+    staticArray!float(1, 2).checkStaticArray!float([1, 2]);
+    // auto a = staticArray!byte(1, 2);
+    staticArrayCast!byte(1, 2).checkStaticArray!byte([1, 2]);
+    staticArrayCast!byte(1, 129).checkStaticArray!byte([1, -127]);
+
+    staticArrayCast!(const(int))(1, 2).checkStaticArray!(const(int))([1, 2]);
+    staticArrayCast!(immutable(int))(1, 2).checkStaticArray!(immutable(int))([1, 2]);
+    staticArray([1]).checkStaticArray!(int[])([[1]]);
+}
+
+@system unittest
+{
+    version (Bug)
+    {
+        // NOTE: correctly issues a deprecation
+        int[] a2 = staticArray(1, 2);
+    }
+}
+
+/++
+Params: arr = The array elements
+
+Returns: A static array constructed from `arr`. The type of elements can be
+specified implicitly (`int[2] a = [1,2].asStatic;`) or explicitly
+(`float[2] a = [1,2].asStaticCast!float`).
++/
+pragma(inline, true) T[n] asStatic(T, size_t n)(auto ref T[n] arr) nothrow @safe pure @nogc
+{
+    return arr;
+}
+
+/// ditto
+U[n] asStaticCast(U, T, size_t n)(auto ref T[n] arr) nothrow @safe pure @nogc
+{
+    U[n] ret = void;
+    static foreach (i; 0 .. n)
+    {
+        emplaceRef!U(ret[i], cast(U) arr[i]);
+    }
+    return ret;
+}
+
+///
+nothrow pure @safe unittest
+{
+    auto a = [0, 1].asStatic;
+    assert(is(typeof(a) == int[2]) && a == [0, 1]);
+
+    auto b = [0, 1].asStaticCast!byte;
+    assert(is(typeof(b) == byte[2]) && b == [0, 1]);
+}
+
+nothrow pure @safe unittest
+{
+    int val = 3;
+    static immutable gold = [1, 2, 3];
+    [1, 2, val].asStatic.checkStaticArray!int([1, 2, 3]);
+
+    @nogc void checkNogc()
+    {
+        [1, 2, val].asStatic.checkStaticArray!int(gold);
+    }
+
+    [1, 2, val].asStaticCast!double.checkStaticArray!double(gold);
+    [1, 2, 3].asStaticCast!int.checkStaticArray!int(gold);
+
+    [1, 2, 3].asStaticCast!(const(int)).checkStaticArray!(const(int))(gold);
+    [1, 2, 3].asStaticCast!(const(double)).checkStaticArray!(const(double))(gold);
+    {
+        const(int)[3] a2 = [1, 2, 3].asStatic;
+    }
+
+    [1, 129].asStaticCast!byte.checkStaticArray!byte([1, -127]);
+
+}
+
+/++
+Params: a = input range of elements
+
+Returns: A static array constructed from `a`.
++/
+auto asStatic(size_t n, T)(T a) nothrow @safe pure @nogc
+{
+    // TODO: ElementType vs ForeachType
+    alias U = typeof(a[0]);
+    U[n] ret = void;
+    size_t i;
+    foreach (ref ai; a)
+    {
+        emplaceRef!U(ret[i++], ai);
+    }
+    assert(i == n);
+    return ret;
+}
+
+/// ditto
+auto asStaticCast(Un : U[n], U, size_t n, T)(T a) nothrow @safe pure @nogc
+{
+    U[n] ret = void;
+    size_t i;
+    foreach (ref ai; a)
+    {
+        emplaceRef!U(ret[i++], cast(U) ai);
+    }
+    assert(i == n);
+    return ret;
+}
+
+///
+nothrow pure @safe unittest
+{
+    import std.range : iota;
+
+    auto a = 2.iota.asStatic!2;
+    assert(is(typeof(a) == int[2]) && a == [0, 1]);
+    auto b = 2.iota.asStaticCast!(byte[2]);
+    assert(is(typeof(b) == byte[2]) && b == [0, 1]);
+}
+
+nothrow pure @safe unittest
+{
+
+    auto a = [1, 2].asStatic;
+    assert(is(typeof(a) == int[2]) && a == [1, 2]);
+
+    import std.range : iota;
+
+    2.iota.asStatic!2.checkStaticArray!int([0, 1]);
+    2.iota.asStaticCast!(double[2]).checkStaticArray!double([0, 1]);
+    2.iota.asStaticCast!(byte[2]).checkStaticArray!byte([0, 1]);
+}
+
+nothrow pure @system unittest
+{
+    import std.range : iota;
+
+    assert(isThrown!Error(2.iota.asStatic!1));
+    assert(isThrown!Error(2.iota.asStatic!3));
+    // NOTE: alternatives are not nothrow:
+    version (none)
+    {
+        import std.exception : assertThrown;
+
+        assertThrown!Error(2.iota.asStatic!3);
+        import std.exception : ifThrown;
+
+        assert(ifThrown!Error({ 2.iota.asStatic!1; return false; }(), true));
+    }
+}
+
+@system unittest
+{
+    version (Bug)
+    {
+        // https://issues.dlang.org/show_bug.cgi?id=16779
+        auto a2 = [1, 2, 3].asStatic!byte;
+        auto a3 = [1, 2, 3].asStatic!ubyte;
+
+        // NOTE: correctly issues a deprecation
+        int[] a2 = [1, 2].asStatic;
+    }
+}
+
+/++
+Params: arr = the compile time range
+
+Returns: A static array constructed from `arr`.
++/
+auto asStatic(alias arr)() nothrow @safe pure @nogc
+{
+    enum n = arr.length;
+    alias U = typeof(arr[0]);
+    U[n] ret = void;
+    static foreach (i; 0 .. n)
+    {
+        emplaceRef!U(ret[i], arr[i]);
+    }
+    return ret;
+}
+
+/// ditto
+auto asStaticCast(U, alias arr)() nothrow @safe pure @nogc
+{
+    enum n = arr.length;
+    U[n] ret = void;
+    static foreach (i; 0 .. n)
+    {
+        emplaceRef!U(ret[i], cast(U) arr[i]);
+    }
+    return ret;
+}
+
+///
+nothrow pure @safe unittest
+{
+    import std.range : iota;
+
+    enum a = asStatic!(2.iota);
+    assert(is(typeof(a) == int[2]) && a == [0, 1]);
+
+    enum b = asStaticCast!(byte, 2.iota);
+    assert(is(typeof(b) == byte[2]) && b == [0, 1]);
+}
+
+nothrow pure @safe unittest
+{
+    import std.range : iota;
+
+    enum a = asStatic!(2.iota);
+    asStatic!(2.iota).checkStaticArray!int([0, 1]);
+    asStaticCast!(double, 2.iota).checkStaticArray!double([0, 1]);
+    asStaticCast!(byte, 2.iota).checkStaticArray!byte([0, 1]);
+}
+
+void checkStaticArray(T, T1, T2)(T1 a, T2 b) nothrow @safe pure @nogc
+{
+    assert(is(T1 == T[T1.length]));
+    assert(a == b);
+}
+
+// TODO: add this to assertThrown in std.exception
+bool isThrown(T : Throwable = Exception, E)(lazy E expression) nothrow pure @system
+{
+    try
+    {
+        expression();
+        return false;
+    }
+    catch (T)
+    {
+        return true;
+    }
+    catch (Exception)
+    {
+        return false;
+    }
 }
