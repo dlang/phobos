@@ -3353,6 +3353,77 @@ auto nullable(alias nullValue, T)(T t)
     assert(ntts.to!string() == "2.5");
 }
 
+/**
+When called on a $(D Nullable), $(D bind) will unpack the value contained in the $(D Nullable),
+pass it to the function you provide and wrap the result in another $(D Nullable) (if necessary).
+If the Nullable is null, $(D bind) will return null itself.
+ */
+template bind(alias fun)
+{
+    import std.functional : unaryFun;
+
+    auto bind(T)(T t)
+    if (isInstanceOf!(Nullable, T) && is(typeof(unaryFun!fun(T.init.get))))
+    {
+        alias FunType = typeof(unaryFun!fun(T.init.get));
+
+        enum MustWrapReturn = !isInstanceOf!(Nullable, FunType);
+
+        static if (MustWrapReturn)
+        {
+            alias ReturnType = Nullable!FunType;
+        }
+        else
+        {
+            alias ReturnType = FunType;
+        }
+
+        if (!t.isNull)
+        {
+            static if (MustWrapReturn)
+            {
+                return fun(t.get).nullable;
+            }
+            else
+            {
+                return fun(t.get);
+            }
+        }
+        else
+        {
+            return ReturnType.init;
+        }
+    }
+}
+
+///
+@safe unittest
+{
+    alias toFloat = Alias!(i => cast(float) i);
+
+    Nullable!int sample;
+    auto f = sample.bind!toFloat;
+    assert(sample.isNull && f.isNull);
+
+    sample = 3;
+    f = sample.bind!toFloat;
+    assert(!sample.isNull && !f.isNull);
+
+    alias greaterThree = Alias!(i => (i > 3) ? i.nullable : Nullable!(typeof(i)).init);
+
+    sample.nullify;
+    auto result = sample.bind!greaterThree;
+    assert(sample.isNull && result.isNull);
+
+    sample = 3;
+    result = sample.bind!greaterThree;
+    assert(!sample.isNull && result.isNull);
+
+    sample = 4;
+    result = sample.bind!greaterThree;
+    assert(!sample.isNull && !result.isNull);
+}
+
 
 /**
 Just like $(D Nullable!T), except that the object refers to a value
