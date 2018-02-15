@@ -3399,6 +3399,8 @@ template bind(alias fun)
 ///
 @safe unittest
 {
+    import std.meta : Alias;
+
     alias toFloat = Alias!(i => cast(float) i);
 
     Nullable!int sample;
