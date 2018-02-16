@@ -1,13 +1,15 @@
-`bind` was added to std.typecons.
+`bind` was added to `std.typecons`.
 
-$(REF bind, std, typecons) is an operation for $(D Nullable) values that "unpacks" the $(D Nullable), performs some
-operation (that is passed as a template parameter), then packs the result into another $(D Nullable) if necessary.
-When the initial $(D Nullable) is $(D null), the resulting $(D Nullable) is also $(D null) and the function is not
+`bind` is an operation for $(REF Nullable, std, typecons) values that "unpacks" the `Nullable`, performs some
+operation (that is passed as a template parameter), then packs the result into another `Nullable` if necessary.
+When the initial `Nullable` is `null`, the resulting `Nullable` is also `null` and the function is not
 called.
 
 -----
-Nullable!int square(Nullable!int n)
-{
-    return n.bind!(i => i * i);
-}
+Nullable!int n;
+alias square = i => i * i;
+n = n.bind!square; // does nothing if isNull
+assert(n.isNull);
+n = 2;
+assert(n.bind!square.get == 4);
 -----

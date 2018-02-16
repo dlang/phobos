@@ -3374,7 +3374,8 @@ template bind(alias fun)
 {
     import std.functional : unaryFun;
 
-    auto bind(T)(T t) if (isInstanceOf!(Nullable, T) && is(typeof(unaryFun!fun(T.init.get))))
+    auto bind(T)(T t)
+    if (isInstanceOf!(Nullable, T) && is(typeof(unaryFun!fun(T.init.get))))
     {
         alias FunType = typeof(unaryFun!fun(T.init.get));
 
@@ -3408,35 +3409,46 @@ template bind(alias fun)
 }
 
 ///
-@safe unittest
+nothrow pure @nogc @safe unittest
 {
-    import std.meta : Alias;
-
-    alias toFloat = Alias!(i => cast(float) i);
+    alias toFloat = i => cast(float) i;
 
     Nullable!int sample;
+
+    // bind(null) results in a null $(D Nullable) of the function's return type.
     auto f = sample.bind!toFloat;
     assert(sample.isNull && f.isNull);
 
     sample = 3;
+
+    // bind(non-null) calls the function and wraps the result in a $(D Nullable).
     f = sample.bind!toFloat;
     assert(!sample.isNull && !f.isNull);
+    assert(f.get == 3.0f);
+}
 
-    alias greaterThree = Alias!(i => (i > 3) ? i.nullable : Nullable!(typeof(i)).init);
+///
+nothrow pure @nogc @safe unittest
+{
+    alias greaterThree = i => (i > 3) ? i.nullable : Nullable!(typeof(i)).init;
 
-    sample.nullify;
+    Nullable!int sample;
+
+    // when the function already returns a $(D Nullable), that $(D Nullable) is not wrapped.
     auto result = sample.bind!greaterThree;
     assert(sample.isNull && result.isNull);
 
+    // The function may decide to return a null $(D Nullable).
     sample = 3;
     result = sample.bind!greaterThree;
     assert(!sample.isNull && result.isNull);
 
+    // Or it may return a value already wrapped in a $(D Nullable).
     sample = 4;
     result = sample.bind!greaterThree;
     assert(!sample.isNull && !result.isNull);
+    assert(result.get == 4);
 }
-
 
 /**
 Just like $(D Nullable!T), except that the object refers to a value
