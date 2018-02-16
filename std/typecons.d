@@ -7474,7 +7474,11 @@ template isBitFlagEnum(E)
     }
 
     static assert(isBitFlagEnum!A);
+}
 
+/// Test an enum with default (consecutive) values
+@safe pure nothrow unittest
+{
     enum B
     {
         A,
@@ -7484,7 +7488,11 @@ template isBitFlagEnum(E)
     }
 
     static assert(!isBitFlagEnum!B);
+}
 
+/// Test an enum with non-integral values
+@safe pure nothrow unittest
+{
     enum C: double
     {
         A = 1 << 0,
