@@ -7655,12 +7655,29 @@ public:
     }
 }
 
-/// BitFlags can be manipulated with the usual operators
+/// Set values with the | operator and test with &
 @safe @nogc pure nothrow unittest
 {
-    import std.traits : EnumMembers;
+    enum Enum
+    {
+        A = 1 << 0,
+    }
 
-    // You can use such an enum with BitFlags straight away
+    // A default constructed BitFlags has no value set
+    immutable BitFlags!Enum flags_empty;
+
+    // Value can be set with the | operator
+    immutable flags_A = flags_empty | Enum.A;
+
+    // And tested with the & operator
+    assert(flags_A & Enum.A);
+    // Which commutes
+    assert(Enum.A & flags_A);
+}
+
+/// A default constructed BitFlags has no value set
+@safe @nogc pure nothrow unittest
+{
     enum Enum
     {
         None,
@@ -7668,10 +7685,111 @@ public:
         B = 1 << 1,
         C = 1 << 2
     }
-    BitFlags!Enum flags1;
-    assert(!(flags1 & (Enum.A | Enum.B | Enum.C)));
 
-    // You need to specify the `unsafe` parameter for enum with custom values
+    immutable BitFlags!Enum flags_empty;
+    assert(!(flags_empty & (Enum.A | Enum.B | Enum.C)));
+    assert(!(flags_empty & Enum.A) && !(flags_empty & Enum.B) && !(flags_empty & Enum.C));
+}
+
+// BitFlags can be variadically initialized
+@safe @nogc pure nothrow unittest
+{
+    import std.traits : EnumMembers;
+
+    enum Enum
+    {
+        A = 1 << 0,
+        B = 1 << 1,
+        C = 1 << 2
+    }
+
+    // BitFlags can be variadically initialized
+    immutable BitFlags!Enum flags_AB = BitFlags!Enum(Enum.A, Enum.B);
+    assert((flags_AB & Enum.A) && (flags_AB & Enum.B) && !(flags_AB & Enum.C));
+
+    // You can use the EnumMembers template to set all flags
+    immutable BitFlags!Enum flags_all = EnumMembers!Enum;
+}
+
+/// Binary operations: subtracting and intersecting flags
+@safe @nogc pure nothrow unittest
+{
+    enum Enum
+    {
+        A = 1 << 0,
+        B = 1 << 1,
+        C = 1 << 2,
+    }
+    immutable BitFlags!Enum flags_AB = BitFlags!Enum(Enum.A, Enum.B);
+    immutable BitFlags!Enum flags_BC = BitFlags!Enum(Enum.B, Enum.C);
+
+    // Use the ~ operator for subtracting flags
+    immutable BitFlags!Enum flags_B = flags_AB & ~BitFlags!Enum(Enum.A);
+    assert(!(flags_B & Enum.A) && (flags_B & Enum.B) && !(flags_B & Enum.C));
+
+    // use & between BitFlags for intersection
+    assert(flags_B == (flags_BC & flags_AB));
+}
+
+/// All the binary operators work in their assignment version
+@safe @nogc pure nothrow unittest
+{
+    enum Enum
+    {
+        A = 1 << 0,
+        B = 1 << 1,
+    }
+
+    BitFlags!Enum flags_empty, temp, flags_AB;
+    flags_AB = Enum.A | Enum.B;
+
+    temp |= flags_AB;
+    assert(temp == (flags_empty | flags_AB));
+
+    temp = flags_empty;
+    temp |= Enum.B;
+    assert(temp == (flags_empty | Enum.B));
+
+    temp = flags_empty;
+    temp &= flags_AB;
+    assert(temp == (flags_empty & flags_AB));
+
+    temp = flags_empty;
+    temp &= Enum.A;
+    assert(temp == (flags_empty & Enum.A));
+}
+
+/// Conversion to bool and int
+@safe @nogc pure nothrow unittest
+{
+    enum Enum
+    {
+        A = 1 << 0,
+        B = 1 << 1,
+    }
+
+    BitFlags!Enum flags;
+
+    // BitFlags with no value set evaluate to false
+    assert(!flags);
+
+    // BitFlags with at least one value set evaluate to true
+    flags |= Enum.A;
+    assert(flags);
+
+    // This can be useful to check intersection between BitFlags
+    BitFlags!Enum flags_AB = Enum.A | Enum.B;
+    assert(flags & flags_AB);
+    assert(flags & Enum.A);
+
+    // Finally, you can of course get you raw value out of flags
+    auto value = cast(int) flags;
+    assert(value == Enum.A);
+}
+
+/// You need to specify the `unsafe` parameter for enum with custom values
+@safe @nogc pure nothrow unittest
+{
     enum UnsafeEnum
     {
         A,
@@ -7681,62 +7799,6 @@ public:
     }
     static assert(!__traits(compiles, { BitFlags!UnsafeEnum flags2; }));
     BitFlags!(UnsafeEnum, Yes.unsafe) flags3;
-
-    immutable BitFlags!Enum flags_empty;
-    // A default constructed BitFlags has no value set
-    assert(!(flags_empty & Enum.A) && !(flags_empty & Enum.B) && !(flags_empty & Enum.C));
-
-    // Value can be set with the | operator
-    immutable BitFlags!Enum flags_A = flags_empty | Enum.A;
-
-    // And tested with the & operator
-    assert(flags_A & Enum.A);
-
-    // Which commutes
-    assert(Enum.A & flags_A);
-
-    // BitFlags can be variadically initialized
-    immutable BitFlags!Enum flags_AB = BitFlags!Enum(Enum.A, Enum.B);
-    assert((flags_AB & Enum.A) && (flags_AB & Enum.B) && !(flags_AB & Enum.C));
-
-    // Use the ~ operator for subtracting flags
-    immutable BitFlags!Enum flags_B = flags_AB & ~BitFlags!Enum(Enum.A);
-    assert(!(flags_B & Enum.A) && (flags_B & Enum.B) && !(flags_B & Enum.C));
-
-    // You can use the EnumMembers template to set all flags
-    immutable BitFlags!Enum flags_all = EnumMembers!Enum;
-
-    // use & between BitFlags for intersection
-    immutable BitFlags!Enum flags_BC = BitFlags!Enum(Enum.B, Enum.C);
-    assert(flags_B == (flags_BC & flags_AB));
-
-    // All the binary operators work in their assignment version
-    BitFlags!Enum temp = flags_empty;
-    temp |= flags_AB;
-    assert(temp == (flags_empty | flags_AB));
-    temp = flags_empty;
-    temp |= Enum.B;
-    assert(temp == (flags_empty | Enum.B));
-    temp = flags_empty;
-    temp &= flags_AB;
-    assert(temp == (flags_empty & flags_AB));
-    temp = flags_empty;
-    temp &= Enum.A;
-    assert(temp == (flags_empty & Enum.A));
-
-    // BitFlags with no value set evaluate to false
-    assert(!flags_empty);
-
-    // BitFlags with at least one value set evaluate to true
-    assert(flags_A);
-
-    // This can be useful to check intersection between BitFlags
-    assert(flags_A & flags_AB);
-    assert(flags_AB & Enum.A);
-
-    // Finally, you can of course get you raw value out of flags
-    auto value = cast(int) flags_A;
-    assert(value == Enum.A);
 }
 
 // ReplaceType
