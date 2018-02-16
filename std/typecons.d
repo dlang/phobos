@@ -7446,12 +7446,12 @@ template isBitFlagEnum(E)
     {
         enum isBitFlagEnum = (E.min >= 0) &&
         {
-            foreach (immutable flag; EnumMembers!E)
-            {
+            static foreach (immutable flag; EnumMembers!E)
+            {{
                 Base value = flag;
                 value &= value - 1;
                 if (value != 0) return false;
-            }
+            }}
             return true;
         }();
     }
