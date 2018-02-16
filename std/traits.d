@@ -50,6 +50,7 @@
  *           $(LREF InterfacesTuple)
  *           $(LREF isInnerClass)
  *           $(LREF isNested)
+ *           $(LREF Layout)
  *           $(LREF MemberFunctionsTuple)
  *           $(LREF RepresentationTypeTuple)
  *           $(LREF TemplateArgsOf)
@@ -2657,6 +2658,150 @@ template RepresentationTypeTuple(T)
     alias R2 = RepresentationTypeTuple!S5;
     static assert(R2.length == 2 && is(R2[0] == int) && is(R2[1] == immutable(Object)));
 }
+
+// Layout
+/**
+Returns the layout in memory of type `T` as an `AliasSeq`. For each field in
+`T`, the result includes the offset of the field followed by the type of the
+field. Detailed information depends on the type's kind, as follows:
+
+$(UL
+$(LI If `T` is a `struct` or `union` type, then `Layout!T` is an `AliasSeq`
+containing each field preceded by its offset. Fields that are in turn of
+`struct` or `union` types are decomposed transitively. The result is ordered
+in increasing offset order. (Two or more fields may have the same offset due to
+`union`s.) For a given offset, types are in the order of the declaration
+they are a part of.)
+
+$(LI If `T` is a `class` or `interface` type, the layout is similar to the one
+return for `struct`s, with one difference: classes and interfaces have
+additional opaque data managed by the compiler. Usually these are placed at the
+front of the object. This data is represented in the layout as pointers to opaque
+types. The presence, number, and types of additional fields are
+implementation-dependent and should not be relied upon in portable code. All these
+additional types have names that start with a double underscore.)
+
+$(LI If `T` is a statically-sized array, the layout is an iteration of the
+layouts of each field of the array. Note that this may create large tuples.)
+
+$(LI For all other types, the layout is $(D AliasSeq!(size_t(0), T)).)
+
+)
+ */
+template Layout(T)
+{
+    private template Add(size_t offset, U...)
+    {
+        static if (!U.length)
+            alias Add = AliasSeq!();
+        else
+            alias Add = AliasSeq!(U[0] + offset, U[1],
+                                     Add!(offset, U[2 .. $]));
+    }
+
+    static if (!is(T == Unqual!T))
+    {
+        alias Layout = Layout!(Unqual!T);
+    }
+    else static if (is(T == U[n], U, size_t n))
+    {
+        static if (n == 0)
+            alias Layout = AliasSeq!();
+        else static if (is(U == class) || is(U == interface))
+            alias Layout = AliasSeq!(size_t(0), U, Add!(U.sizeof, Layout!(U[n - 1])));
+        else
+            alias Layout = AliasSeq!(Layout!U, Add!(U.sizeof, Layout!(U[n - 1])));
+    }
+    else static if (!is(T == struct) && !is(T == union)
+                    && !is(T == class) && !is(T == interface))
+    {
+        alias Layout = AliasSeq!(size_t(0), T);
+    }
+    else
+    {
+        // Simple mergesort by offset implementation
+        private template Sort(T...)
+        {
+            template Merge(T...)
+            {
+                template With(U...)
+                {
+                    static if (T.length == 0)
+                        alias With = U;
+                    else static if (U.length == 0)
+                        alias With = T;
+                    else static if (T[0] <= U[0])
+                        alias With =
+                            AliasSeq!(T[0], T[1], Merge!(T[2 .. $]).With!U);
+                    else
+                        alias With =
+                            AliasSeq!(U[0], U[1], Merge!(T).With!(U[2 .. $]));
+                }
+            }
+            static if (T.length <= 2)
+                alias Sort = T;
+            else
+                alias Sort = Merge!(Sort!(T[0 .. T.length / 2]))
+                    .With!(Sort!(T[T.length / 2 .. $]));
+        }
+
+        private alias names = FieldNameTuple!T;
+
+        // Implementation tracks the current index to process in startAt
+        private template Impl(size_t startAt)
+        {
+            static if (names.length <= startAt)
+            {
+                alias Impl = AliasSeq!(); // all done
+            }
+            else
+            {
+                enum size_t offset = mixin("T." ~ names[startAt] ~ ".offsetof");
+                mixin("alias F = typeof(T." ~ names[startAt] ~ ");");
+                alias Impl = AliasSeq!(Add!(offset, Layout!F), Impl!(startAt + 1));
+            }
+        }
+
+        static if (is(T == class))
+            alias Layout = AliasSeq!(0, __Vtable!T*, size_t.sizeof, __Bookkeeping!T*, Sort!(Impl!0));
+        else static if (is(T == interface))
+            alias Layout = AliasSeq!(0, __Vtable!T*, Sort!(Impl!0));
+        else
+            alias Layout = AliasSeq!(Sort!(Impl!0));
+    }
+}
+
+///
+@safe unittest
+{
+    struct S1 { int a; float b; }
+    alias L1 = Layout!S1;
+    static assert(L1.length == 4);
+    static assert(L1[0] == 0 && is(L1[1] == int));
+    static assert(L1[2] == 4 && is(L1[3] == float));
+
+    struct S2 { char[] a; union { S1 b; S1 * c; } }
+    alias L2 = Layout!S2;
+    static assert(L2.length == 8);
+    static assert(L2[0] == 0 && is(L2[1] == char[]));
+    static assert(L2[2] == 16 && is(L2[3] == int));
+    static assert(L2[4] == 16 && is(L2[5] == S1*));
+    static assert(L2[6] == 20 && is(L2[7] == float));
+
+    class C1 { char[] a; union { S1 b; S1 * c; } }
+    alias L3 = Layout!C1;
+    static assert(L3.length == 12);
+    static assert(L3[0] == 0 && is(L3[1] == __Vtable!C1*));
+    static assert(L3[2] == size_t.sizeof && is(L3[3] == __Bookkeeping!C1*));
+    static assert(L3[4] == 2 * size_t.sizeof && is(L3[5] == char[]));
+    static assert(L3[6] == 4 * size_t.sizeof && is(L3[7] == int));
+    static assert(L3[8] == 4 * size_t.sizeof && is(L3[9] == S1*));
+    static assert(L3[10] == 4 + 4 * size_t.sizeof && is(L3[11] == float));
+}
+
+// Intentionally undefined and undocumented.
+struct __Vtable(C);
+struct __Bookkeeping(C);
 
 /*
 Statically evaluates to $(D true) if and only if $(D T)'s
