@@ -128,6 +128,7 @@
  *           $(LREF OriginalType)
  *           $(LREF PointerTarget)
  *           $(LREF Signed)
+ *           $(LREF TailShared)
  *           $(LREF Unqual)
  *           $(LREF Unsigned)
  *           $(LREF ValueType)
@@ -7023,6 +7024,41 @@ template Unqual(T)
 
     alias ImmIntArr = immutable(int[]);
     static assert(is(Unqual!ImmIntArr == immutable(int)[]));
+}
+
+/**
+Construct a type with a shared tail, and if possible with an unshared head.
+
+If $(D T) does not have indirections, or $(D T) already has an unshared head and
+a shared tail, $(D TailShared) will alias itself away.
+
+---
+// For any type T
+static assert(is(Tailshared!T == TailShared(shared T)));
+---
+*/
+template TailShared(T)
+{
+    // TailShared is already defined privately in core.atomic, instead of
+    // redefining it here, let's just steal it...
+
+    import core.atomic : atomicLoad, MemoryOrder;
+    alias TailShared = ReturnType!(atomicLoad!(MemoryOrder.seq, T));
+}
+
+// NOTE: Full unittest is in core.atomic, This one is mainly for docs.
+///
+@safe unittest
+{
+    static assert(is(TailShared!(shared int) == int));
+    static assert(is(TailShared!(shared int*) == shared(int)*));
+
+    static class C { int i; }
+    static assert(is(TailShared!C == shared C));
+
+    static struct S3 { int* p; int i; }
+    static assert(!is(TailShared!S3 : S3));
+    static assert(is(TailShared!S3 : shared S3));
 }
 
 // [For internal use]
