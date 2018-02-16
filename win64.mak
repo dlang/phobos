@@ -309,7 +309,7 @@ SRC_STD_INTERNAL_WINDOWS= \
 	std\internal\windows\advapi32.d
 
 SRC_STD_EXP= \
-	std\experimental\checkedint.d std\experimental\typecons.d std\experimental\scripting.d
+	std\experimental\all.d std\experimental\checkedint.d std\experimental\typecons.d
 
 SRC_STD_EXP_ALLOC_BB= \
 	std\experimental\allocator\building_blocks\affix_allocator.d \
