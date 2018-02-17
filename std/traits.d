@@ -2699,11 +2699,7 @@ template Layout(T)
                                      Add!(offset, U[2 .. $]));
     }
 
-    static if (!is(T == Unqual!T))
-    {
-        alias Layout = Layout!(Unqual!T);
-    }
-    else static if (is(T == U[n], U, size_t n))
+    static if (is(T == U[n], U, size_t n))
     {
         static if (n == 0)
             alias Layout = AliasSeq!();
