@@ -54,6 +54,7 @@ public import std.container.util;
    $(D SList) uses reference semantics.
  */
 struct SList(T)
+if (!is(T == shared))
 {
     import std.exception : enforce;
     import std.range : Take;
