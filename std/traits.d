@@ -2681,9 +2681,6 @@ types. The presence, number, and types of additional fields are
 implementation-dependent and should not be relied upon in portable code. All these
 additional types have names that start with a double underscore.)
 
-$(LI If `T` is a statically-sized array, the layout is an iteration of the
-layouts of each field of the array. Note that this may create large tuples.)
-
 $(LI For all other types, the layout is $(D AliasSeq!(size_t(0), T)).)
 
 )
@@ -2699,16 +2696,7 @@ template Layout(T)
                                      Add!(offset, U[2 .. $]));
     }
 
-    static if (is(T == U[n], U, size_t n))
-    {
-        static if (n == 0)
-            alias Layout = AliasSeq!();
-        else static if (is(U == class) || is(U == interface))
-            alias Layout = AliasSeq!(size_t(0), U, Add!(U.sizeof, Layout!(U[n - 1])));
-        else
-            alias Layout = AliasSeq!(Layout!U, Add!(U.sizeof, Layout!(U[n - 1])));
-    }
-    else static if (!is(T == struct) && !is(T == union)
+    static if (!is(T == struct) && !is(T == union)
                     && !is(T == class) && !is(T == interface))
     {
         alias Layout = AliasSeq!(size_t(0), T);
