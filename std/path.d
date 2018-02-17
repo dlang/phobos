@@ -102,7 +102,7 @@ static import std.meta;
 import std.range.primitives;
 import std.traits;
 
-version (unittest)
+version(StdUnittest)
 {
 private:
     struct TestAliasedString
@@ -257,7 +257,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementType!R) ||
     }
 }
 
-@system unittest
+@safe unittest
 {
     import std.array;
     import std.utf : byDchar;
@@ -286,7 +286,7 @@ if (isBidirectionalRange!R && isSomeChar!(ElementType!R) ||
     }
 }
 
-@system unittest
+@safe unittest
 {
     import std.array;
     import std.utf : byDchar;
@@ -304,7 +304,7 @@ if (isBidirectionalRange!R && isSomeChar!(ElementType!R) ||
     return ltrimDirSeparators(rtrimDirSeparators(path));
 }
 
-@system unittest
+@safe unittest
 {
     import std.array;
     import std.utf : byDchar;
@@ -314,9 +314,6 @@ if (isBidirectionalRange!R && isSomeChar!(ElementType!R) ||
 
     assert(trimDirSeparators(MockBiRange!char("//abc//")).array == "abc");
 }
-
-
-
 
 /** This $(D enum) is used as a template argument to functions which
     compare file names, and determines whether the comparison is
@@ -511,7 +508,7 @@ if (isSomeChar!C && isSomeChar!C1)
     assert(sa.baseName == "test");
 }
 
-/** Returns the directory part of a path.  On Windows, this
+/** Returns the parent directory of path. On Windows, this
     includes the drive letter if present.
 
     Params:
@@ -540,8 +537,6 @@ if (isSomeChar!C)
 }
 
 private auto _dirName(R)(R path)
-if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-    isNarrowString!R)
 {
     static auto result(bool dot, typeof(path[0 .. 1]) p)
     {
@@ -636,7 +631,7 @@ if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementT
     assert(sa.dirName == "file/path/to");
 }
 
-@system unittest
+@safe unittest
 {
     static assert(dirName("dir/file") == "dir");
 
@@ -691,9 +686,19 @@ if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementT
         A slice of $(D path).
 */
 auto rootName(R)(R path)
-if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-    isNarrowString!R) &&
-    !isConvertibleToString!R)
+if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) && !isSomeString!R)
+{
+    return _rootName(path);
+}
+
+/// ditto
+auto rootName(C)(C[] path)
+if (isSomeChar!C)
+{
+    return _rootName(path);
+}
+
+private auto _rootName(R)(R path)
 {
     if (path.empty)
         goto Lnull;
@@ -745,6 +750,12 @@ Lnull:
 @safe unittest
 {
     assert(testAliasedString!rootName("/foo/bar"));
+
+    enum S : string { a = "/foo/bar" }
+    assert(S.a.rootName == "/");
+
+    char[S.a.length] sa = S.a[];
+    assert(sa.rootName == "/");
 }
 
 @safe unittest
@@ -766,12 +777,6 @@ Lnull:
     }
 }
 
-auto rootName(R)(R path)
-if (isConvertibleToString!R)
-{
-    return rootName!(StringTypeOf!R)(path);
-}
-
 
 /**
     Get the drive portion of a path.
@@ -787,9 +792,19 @@ if (isConvertibleToString!R)
         Always returns an empty range on POSIX.
 */
 auto driveName(R)(R path)
-if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-    isNarrowString!R) &&
-    !isConvertibleToString!R)
+if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) && !isSomeString!R)
+{
+    return _driveName(path);
+}
+
+/// ditto
+auto driveName(C)(C[] path)
+if (isSomeChar!C)
+{
+    return _driveName(path);
+}
+
+private auto _driveName(R)(R path)
 {
     version (Windows)
     {
@@ -823,15 +838,20 @@ if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(Element
     }
 }
 
-auto driveName(R)(auto ref R path)
-if (isConvertibleToString!R)
-{
-    return driveName!(StringTypeOf!R)(path);
-}
-
 @safe unittest
 {
-    assert(testAliasedString!driveName(`d:\file`));
+    assert(testAliasedString!driveName("d:/file"));
+
+    version(Posix)
+        immutable result = "";
+    else version(Windows)
+        immutable result = "d:";
+
+    enum S : string { a = "d:/file" }
+    assert(S.a.driveName == result);
+
+    char[S.a.length] sa = S.a[];
+    assert(sa.driveName == result);
 }
 
 @safe unittest
@@ -864,9 +884,19 @@ if (isConvertibleToString!R)
     Returns: A slice of path without the drive component.
 */
 auto stripDrive(R)(R path)
-if ((isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
-    isNarrowString!R) &&
-    !isConvertibleToString!R)
+if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) && !isSomeString!R)
+{
+    return _stripDrive(path);
+}
+
+/// ditto
+auto stripDrive(C)(C[] path)
+if (isSomeChar!C)
+{
+    return _stripDrive(path);
+}
+
+private auto _stripDrive(R)(R path)
 {
     version(Windows)
     {
@@ -886,15 +916,20 @@ if ((isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
     }
 }
 
-auto stripDrive(R)(auto ref R path)
-if (isConvertibleToString!R)
-{
-    return stripDrive!(StringTypeOf!R)(path);
-}
-
 @safe unittest
 {
-    assert(testAliasedString!stripDrive(`d:\dir\file`));
+    assert(testAliasedString!stripDrive("d:/dir/file"));
+
+    version(Posix)
+        immutable result = "d:/dir/file";
+    else version(Windows)
+        immutable result = "/dir/file";
+
+    enum S : string { a = "d:/dir/file" }
+    assert(S.a.stripDrive == result);
+
+    char[S.a.length] sa = S.a[];
+    assert(sa.stripDrive == result);
 }
 
 @safe unittest
@@ -1038,12 +1073,22 @@ if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
         slice of path with the extension (if any) stripped off
 */
 auto stripExtension(R)(R path)
-if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-    isNarrowString!R) &&
-    !isConvertibleToString!R)
+if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) && !isSomeString!R)
 {
-    auto i = extSeparatorPos(path);
-    return (i == -1) ? path : path[0 .. i];
+    return _stripExtension(path);
+}
+
+/// Ditto
+auto stripExtension(C)(C[] path)
+if (isSomeChar!C)
+{
+    return _stripExtension(path);
+}
+
+private auto _stripExtension(R)(R path)
+{
+    immutable i = extSeparatorPos(path);
+    return i == -1 ? path : path[0 .. i];
 }
 
 ///
@@ -1058,15 +1103,15 @@ if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(Element
     assert(stripExtension("dir/file.ext")   == "dir/file");
 }
 
-auto stripExtension(R)(auto ref R path)
-if (isConvertibleToString!R)
-{
-    return stripExtension!(StringTypeOf!R)(path);
-}
-
 @safe unittest
 {
     assert(testAliasedString!stripExtension("file"));
+
+    enum S : string { a = "foo.bar" }
+    assert(S.a.stripExtension == "foo");
+
+    char[S.a.length] sa = S.a[];
+    assert(sa.stripExtension == "foo");
 }
 
 @safe unittest
@@ -1182,10 +1227,20 @@ if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
  *      $(LREF setExtension)
  */
 auto withExtension(R, C)(R path, C[] ext)
-if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-    isNarrowString!R) &&
-    !isConvertibleToString!R &&
-    isSomeChar!C)
+if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) &&
+    !isSomeString!R && isSomeChar!C)
+{
+    return _withExtension(path, ext);
+}
+
+/// Ditto
+auto withExtension(C1, C2)(C1[] path, C2[] ext)
+if (isSomeChar!C1 && isSomeChar!C2)
+{
+    return _withExtension(path, ext);
+}
+
+private auto _withExtension(R, C)(R path, C[] ext)
 {
     import std.range : only, chain;
     import std.utf : byUTF;
@@ -1211,15 +1266,17 @@ if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(Element
     assert(withExtension("file.ext"w.byWchar, ".").array == "file."w);
 }
 
-auto withExtension(R, C)(auto ref R path, C[] ext)
-if (isConvertibleToString!R)
-{
-    return withExtension!(StringTypeOf!R)(path, ext);
-}
-
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
+
     assert(testAliasedString!withExtension("file", "ext"));
+
+    enum S : string { a = "foo.bar" }
+    assert(equal(S.a.withExtension(".txt"), "foo.txt"));
+
+    char[S.a.length] sa = S.a[];
+    assert(equal(sa.withExtension(".txt"), "foo.txt"));
 }
 
 /** Params:
@@ -1274,17 +1331,27 @@ if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
  *      range with the result
  */
 auto withDefaultExtension(R, C)(R path, C[] ext)
-if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-    isNarrowString!R) &&
-    !isConvertibleToString!R &&
-    isSomeChar!C)
+if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) &&
+    !isSomeString!R && isSomeChar!C)
+{
+    return _withDefaultExtension(path, ext);
+}
+
+/// Ditto
+auto withDefaultExtension(C1, C2)(C1[] path, C2[] ext)
+if (isSomeChar!C1 && isSomeChar!C2)
+{
+    return _withDefaultExtension(path, ext);
+}
+
+private auto _withDefaultExtension(R, C)(R path, C[] ext)
 {
     import std.range : only, chain;
     import std.utf : byUTF;
 
     alias CR = Unqual!(ElementEncodingType!R);
     auto dot = only(CR('.'));
-    auto i = extSeparatorPos(path);
+    immutable i = extSeparatorPos(path);
     if (i == -1)
     {
         if (ext.length > 0 && ext[0] == '.')
@@ -1315,15 +1382,17 @@ if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(Element
     assert(withDefaultExtension("file".byChar, "").array == "file.");
 }
 
-auto withDefaultExtension(R, C)(auto ref R path, C[] ext)
-if (isConvertibleToString!R)
-{
-    return withDefaultExtension!(StringTypeOf!R, C)(path, ext);
-}
-
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
+
     assert(testAliasedString!withDefaultExtension("file", "ext"));
+
+    enum S : string { a = "foo" }
+    assert(equal(S.a.withDefaultExtension(".txt"), "foo.txt"));
+
+    char[S.a.length] sa = S.a[];
+    assert(equal(sa.withDefaultExtension(".txt"), "foo.txt"));
 }
 
 /** Combines one or more path segments.
@@ -2805,7 +2874,7 @@ string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
 }
 
 ///
-@system unittest
+@safe unittest
 {
     assert(relativePath("foo") == "foo");
 
@@ -2828,7 +2897,7 @@ string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
     }
 }
 
-@system unittest
+@safe unittest
 {
     import std.exception;
     assert(relativePath("foo") == "foo");
@@ -2936,7 +3005,7 @@ if ((isNarrowString!R1 ||
 }
 
 ///
-@system unittest
+@safe unittest
 {
     import std.array;
     version (Posix)
@@ -2971,7 +3040,7 @@ if (isConvertibleToString!R1 || isConvertibleToString!R2)
     return asRelativePath!(cs, Types)(path, base);
 }
 
-@system unittest
+@safe unittest
 {
     import std.array;
     version (Posix)
@@ -2985,7 +3054,7 @@ if (isConvertibleToString!R1 || isConvertibleToString!R2)
     assert(asRelativePath("foo"d.byDchar, TestAliasedString("bar")).array == "foo");
 }
 
-@system unittest
+@safe unittest
 {
     import std.array, std.utf : bCU=byCodeUnit;
     version (Posix)
@@ -3590,7 +3659,7 @@ unittest
     else static assert(0);
 
     import std.meta : AliasSeq;
-    foreach (T; AliasSeq!(char[], const(char)[], string, wchar[],
+    static foreach (T; AliasSeq!(char[], const(char)[], string, wchar[],
         const(wchar)[], wstring, dchar[], const(dchar)[], dstring))
     {
         foreach (fn; valid)
@@ -3970,7 +4039,7 @@ string expandTilde(string inputPath) nothrow
                     }
 
                     if (errno != ERANGE &&
-                        // On FreeBSD and OSX, errno can be left at 0 instead of set to ERANGE
+                        // On BSD and OSX, errno can be left at 0 instead of set to ERANGE
                         errno != 0)
                         onOutOfMemoryError();
 
@@ -4005,11 +4074,13 @@ string expandTilde(string inputPath) nothrow
 }
 
 
-version(unittest) import std.process : environment;
 @system unittest
 {
     version (Posix)
     {
+        import std.process : executeShell, environment;
+        import std.string : strip;
+
         // Retrieve the current home variable.
         auto oldHome = environment.get("HOME");
 
@@ -4032,25 +4103,18 @@ version(unittest) import std.process : environment;
         if (oldHome !is null) environment["HOME"] = oldHome;
         else environment.remove("HOME");
 
-        // Test user expansion for root, no /root on Android
-        version (OSX)
-        {
-            assert(expandTilde("~root") == "/var/root", expandTilde("~root"));
-            assert(expandTilde("~root/") == "/var/root/", expandTilde("~root/"));
-        }
-        else version (Android)
-        {
-        }
-        else
-        {
-            assert(expandTilde("~root") == "/root", expandTilde("~root"));
-            assert(expandTilde("~root/") == "/root/", expandTilde("~root/"));
-        }
+        immutable tildeUser = "~" ~ environment.get("USER");
+        immutable path = executeShell("echo " ~ tildeUser).output.strip();
+        immutable expTildeUser = expandTilde(tildeUser);
+        assert(expTildeUser == path, expTildeUser);
+        immutable expTildeUserSlash = expandTilde(tildeUser ~ "/");
+        assert(expTildeUserSlash == path ~ "/", expTildeUserSlash);
+
         assert(expandTilde("~Idontexist/hey") == "~Idontexist/hey");
     }
 }
 
-version (unittest)
+version(StdUnittest)
 {
     /* Define a mock RandomAccessRange to use for unittesting.
      */
@@ -4081,7 +4145,7 @@ version (unittest)
     static assert( isRandomAccessRange!(MockRange!(const(char))) );
 }
 
-version (unittest)
+version(StdUnittest)
 {
     /* Define a mock BidirectionalRange to use for unittesting.
      */

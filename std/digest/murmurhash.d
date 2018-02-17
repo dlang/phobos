@@ -38,6 +38,11 @@ $(BR) $(LINK2 https://en.wikipedia.org/wiki/MurmurHash, Wikipedia)
  */
 module std.digest.murmurhash;
 
+version (X86)
+    version = HaveUnalignedLoads;
+else version (X86_64)
+    version = HaveUnalignedLoads;
+
 ///
 @safe unittest
 {
@@ -500,28 +505,75 @@ struct MurmurHash3(uint size /* 32 or 128 */ , uint opt = size_t.sizeof == 8 ? 6
         // Buffer should never be full while entering this function.
         assert(bufferSize < Element.sizeof);
 
-        // Check if we have some leftover data in the buffer. Then fill the first block buffer.
+        // Check if the incoming data doesn't fill up a whole block buffer.
         if (bufferSize + data.length < Element.sizeof)
         {
             buffer.data[bufferSize .. bufferSize + data.length] = data[];
             bufferSize += data.length;
             return;
         }
-        const bufferLeeway = Element.sizeof - bufferSize;
-        assert(bufferLeeway <= Element.sizeof);
-        buffer.data[bufferSize .. $] = data[0 .. bufferLeeway];
-        putElement(buffer.block);
-        data = data[bufferLeeway .. $];
+
+        // Check if there's some leftover data in the first block buffer, and
+        // fill the remaining space first.
+        if (bufferSize != 0)
+        {
+            const bufferLeeway = Element.sizeof - bufferSize;
+            buffer.data[bufferSize .. $] = data[0 .. bufferLeeway];
+            putElement(buffer.block);
+            element_count += Element.sizeof;
+            data = data[bufferLeeway .. $];
+        }
 
         // Do main work: process chunks of `Element.sizeof` bytes.
         const numElements = data.length / Element.sizeof;
         const remainderStart = numElements * Element.sizeof;
-        foreach (ref const Element block; cast(const(Element[]))(data[0 .. remainderStart]))
+        version (HaveUnalignedLoads)
         {
-            putElement(block);
+            foreach (ref const Element block; cast(const(Element[])) data[0 .. remainderStart])
+            {
+                putElement(block);
+            }
         }
-        // +1 for bufferLeeway Element.
-        element_count += (numElements + 1) * Element.sizeof;
+        else
+        {
+            void processChunks(T)() @trusted
+            {
+                alias TChunk = T[Element.sizeof / T.sizeof];
+                foreach (ref const chunk; cast(const(TChunk[])) data[0 .. remainderStart])
+                {
+                    static if (T.alignof >= Element.alignof)
+                    {
+                        putElement(*cast(const(Element)*) chunk.ptr);
+                    }
+                    else
+                    {
+                        Element[1] alignedCopy = void;
+                        (cast(T[]) alignedCopy)[] = chunk[];
+                        putElement(alignedCopy[0]);
+                    }
+                }
+            }
+
+            const startAddress = cast(size_t) data.ptr;
+            static if (size >= 64)
+            {
+                if ((startAddress & 7) == 0)
+                {
+                    processChunks!ulong();
+                    goto L_end;
+                }
+            }
+            static assert(size >= 32);
+            if ((startAddress & 3) == 0)
+                processChunks!uint();
+            else if ((startAddress & 1) == 0)
+                processChunks!ushort();
+            else
+                processChunks!ubyte();
+
+L_end:
+        }
+        element_count += numElements * Element.sizeof;
         data = data[remainderStart .. $];
 
         // Now add remaining data to buffer.
@@ -606,7 +658,7 @@ struct MurmurHash3(uint size /* 32 or 128 */ , uint opt = size_t.sizeof == 8 ? 6
     }
 }
 
-version (unittest)
+version(StdUnittest)
 {
     import std.string : representation;
 
@@ -743,10 +795,13 @@ version (unittest)
     // Pushing unaligned data and making sure the result is still coherent.
     void testUnalignedHash(H)()
     {
-        immutable ubyte[1025] data = 0xAC;
-        immutable alignedHash = digest!H(data[0 .. $ - 1]); // 0 .. 1023
-        immutable unalignedHash = digest!H(data[1 .. $]); // 1 .. 1024
-        assert(alignedHash == unalignedHash);
+        immutable ubyte[1028] data = 0xAC;
+        immutable alignedHash = digest!H(data[0 .. 1024]);
+        foreach (i; 1 .. 5)
+        {
+            immutable unalignedHash = digest!H(data[i .. 1024 + i]);
+            assert(alignedHash == unalignedHash);
+        }
     }
 
     testUnalignedHash!(MurmurHash3!32)();

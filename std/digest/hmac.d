@@ -287,7 +287,7 @@ if (isDigest!H)
     }
 }
 
-version(unittest)
+version(StdUnittest)
 {
     import std.digest : toHexString, LetterCase;
     alias hex = toHexString!(LetterCase.lower);

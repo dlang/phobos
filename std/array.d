@@ -76,7 +76,6 @@ Source: $(PHOBOSSRC std/_array.d)
 */
 module std.array;
 
-static import std.algorithm.iteration; // FIXME, remove with alias of splitter
 import std.functional;
 import std.meta;
 import std.traits;
@@ -184,7 +183,7 @@ if (isPointer!Range && isIterable!(PointerTarget!Range) && !isNarrowString!Range
     assert(b == a);
 }
 
-@system unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     struct Foo
@@ -252,9 +251,8 @@ if (isNarrowString!String)
     static assert(isRandomAccessRange!dstring == true);
 }
 
-@system unittest
+@safe unittest
 {
-    // @system due to array!string
     import std.conv : to;
 
     static struct TestArray { int x; string toString() @safe { return to!string(x); } }
@@ -271,7 +269,7 @@ if (isNarrowString!String)
 
     static struct OpApply
     {
-        int opApply(scope int delegate(ref int) dg)
+        int opApply(scope int delegate(ref int) @safe dg)
         {
             int res;
             foreach (i; 0 .. 10)
@@ -334,11 +332,11 @@ if (isNarrowString!String)
         int i;
     }
 
-    foreach (T; AliasSeq!(S, const S, immutable S))
-    {
+    static foreach (T; AliasSeq!(S, const S, immutable S))
+    {{
         auto arr = [T(1), T(2), T(3), T(4)];
         assert(array(arr) == arr);
-    }
+    }}
 }
 
 @safe unittest
@@ -469,7 +467,7 @@ auto byPair(AA : Value[Key], Value, Key)(AA aa)
 }
 
 ///
-@system unittest
+@safe unittest
 {
     import std.algorithm.sorting : sort;
     import std.typecons : tuple, Tuple;
@@ -496,7 +494,7 @@ auto byPair(AA : Value[Key], Value, Key)(AA aa)
     ]);
 }
 
-@system unittest
+@safe unittest
 {
     import std.typecons : tuple, Tuple;
     import std.meta : AliasSeq;
@@ -521,7 +519,7 @@ auto byPair(AA : Value[Key], Value, Key)(AA aa)
 }
 
 // Issue 17711
-@system unittest
+@safe unittest
 {
     const(int[string]) aa = [ "abc": 123 ];
 
@@ -552,7 +550,7 @@ private template blockAttribute(T)
         enum blockAttribute = GC.BlkAttr.NO_SCAN;
     }
 }
-version(unittest)
+version(StdUnittest)
 {
     import core.memory : UGC = GC;
     static assert(!(blockAttribute!void & UGC.BlkAttr.NO_SCAN));
@@ -571,7 +569,7 @@ private template nDimensions(T)
     }
 }
 
-version(unittest)
+version(StdUnittest)
 {
     static assert(nDimensions!(uint[]) == 1);
     static assert(nDimensions!(float[][]) == 2);
@@ -1189,10 +1187,10 @@ private template isInputRangeOrConvertible(E)
                 new AssertError("testStr failure 3", file, line));
     }
 
-    foreach (T; AliasSeq!(char, wchar, dchar,
+    static foreach (T; AliasSeq!(char, wchar, dchar,
         immutable(char), immutable(wchar), immutable(dchar)))
     {
-        foreach (U; AliasSeq!(char, wchar, dchar,
+        static foreach (U; AliasSeq!(char, wchar, dchar,
             immutable(char), immutable(wchar), immutable(dchar)))
         {
             testStr!(T[], U[])();
@@ -1336,8 +1334,8 @@ pure nothrow bool sameTail(T)(in T[] lhs, in T[] rhs)
 
 @safe pure nothrow unittest
 {
-    foreach (T; AliasSeq!(int[], const(int)[], immutable(int)[], const int[], immutable int[]))
-    {
+    static foreach (T; AliasSeq!(int[], const(int)[], immutable(int)[], const int[], immutable int[]))
+    {{
         T a = [1, 2, 3, 4, 5];
         T b = a;
         T c = a[1 .. $];
@@ -1359,7 +1357,7 @@ pure nothrow bool sameTail(T)(in T[] lhs, in T[] rhs)
         //verifies R-value compatibilty
         assert(a.sameHead(a[0 .. 0]));
         assert(a.sameTail(a[$ .. $]));
-    }
+    }}
 }
 
 /**
@@ -1430,8 +1428,8 @@ if (isInputRange!S && !isDynamicArray!S)
 {
     import std.conv : to;
 
-    foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
-    {
+    static foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
+    {{
         immutable S t = "abc";
 
         assert(replicate(to!S("1234"), 0) is null);
@@ -1441,7 +1439,7 @@ if (isInputRange!S && !isDynamicArray!S)
         assert(replicate(to!S("1"), 4) == "1111");
         assert(replicate(t, 3) == "abcabcabc");
         assert(replicate(cast(S) null, 4) is null);
-    }
+    }}
 }
 
 /++
@@ -1513,6 +1511,7 @@ if (isSomeString!S)
 {
     import std.ascii : isWhite;
     import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : splitter;
 
     string str = "Hello World!";
     assert(str.splitter!(isWhite).equal(["Hello", "World!"]));
@@ -1527,8 +1526,8 @@ if (isSomeString!S)
     static auto makeEntry(S)(string l, string[] r)
     {return tuple(l.to!S(), r.to!(S[])());}
 
-    foreach (S; AliasSeq!(string, wstring, dstring,))
-    {
+    static foreach (S; AliasSeq!(string, wstring, dstring,))
+    {{
         auto entries =
         [
             makeEntry!S("", []),
@@ -1543,7 +1542,7 @@ if (isSomeString!S)
         ];
         foreach (entry; entries)
             assert(entry[0].split() == entry[1], format("got: %s, expected: %s.", entry[0].split(), entry[1]));
-    }
+    }}
 
     //Just to test that an immutable is split-able
     immutable string s = " \t\npeter paul\tjerry \n";
@@ -1571,10 +1570,6 @@ if (isSomeString!S)
     auto a = split([1, 2, 3, 4, 5, 1, 2, 3, 4, 5], [2, 3]);
     assert(a == [[1], [4, 5, 1], [4, 5]]);
 }
-
-// Explicitly undocumented. It will be removed in January 2018. @@@DEPRECATED_2018-01@@@
-deprecated("Please use std.algorithm.iteration.splitter instead.")
-alias splitter = std.algorithm.iteration.splitter;
 
 /++
     Eagerly splits $(D range) into an array, using $(D sep) as the delimiter.
@@ -1639,12 +1634,12 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(range.front))))
     import std.algorithm.comparison : cmp;
     import std.conv;
 
-    foreach (S; AliasSeq!(string, wstring, dstring,
+    static foreach (S; AliasSeq!(string, wstring, dstring,
                     immutable(string), immutable(wstring), immutable(dstring),
                     char[], wchar[], dchar[],
                     const(char)[], const(wchar)[], const(dchar)[],
                     const(char[]), immutable(char[])))
-    {
+    {{
         S s = to!S(",peter,paul,jerry,");
 
         auto words = split(s, ",");
@@ -1684,7 +1679,7 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(range.front))))
         words = split(s5, ",,");
         assert(words.length == 3);
         assert(cmp(words[0], "peter") == 0);
-    }
+    }}
 }
 
 /++
@@ -1929,49 +1924,49 @@ if (isInputRange!RoR &&
 {
     import std.conv : to;
 
-    foreach (T; AliasSeq!(string,wstring,dstring))
-    {
+    static foreach (T; AliasSeq!(string,wstring,dstring))
+    {{
         auto arr2 = "Здравствуй Мир Unicode".to!(T);
         auto arr = ["Здравствуй", "Мир", "Unicode"].to!(T[]);
         assert(join(arr) == "ЗдравствуйМирUnicode");
-        foreach (S; AliasSeq!(char,wchar,dchar))
-        {
+        static foreach (S; AliasSeq!(char,wchar,dchar))
+        {{
             auto jarr = arr.join(to!S(' '));
             static assert(is(typeof(jarr) == T));
             assert(jarr == arr2);
-        }
-        foreach (S; AliasSeq!(string,wstring,dstring))
-        {
+        }}
+        static foreach (S; AliasSeq!(string,wstring,dstring))
+        {{
             auto jarr = arr.join(to!S(" "));
             static assert(is(typeof(jarr) == T));
             assert(jarr == arr2);
-        }
-    }
+        }}
+    }}
 
-    foreach (T; AliasSeq!(string,wstring,dstring))
-    {
+    static foreach (T; AliasSeq!(string,wstring,dstring))
+    {{
         auto arr2 = "Здравствуй\u047CМир\u047CUnicode".to!(T);
         auto arr = ["Здравствуй", "Мир", "Unicode"].to!(T[]);
-        foreach (S; AliasSeq!(wchar,dchar))
-        {
+        static foreach (S; AliasSeq!(wchar,dchar))
+        {{
             auto jarr = arr.join(to!S('\u047C'));
             static assert(is(typeof(jarr) == T));
             assert(jarr == arr2);
-        }
-    }
+        }}
+    }}
 
     const string[] arr = ["apple", "banana"];
     assert(arr.join(',') == "apple,banana");
 }
 
-@system unittest
+@safe unittest
 {
     import std.algorithm;
     import std.conv : to;
     import std.range;
 
-    foreach (R; AliasSeq!(string, wstring, dstring))
-    {
+    static foreach (R; AliasSeq!(string, wstring, dstring))
+    {{
         R word1 = "日本語";
         R word2 = "paul";
         R word3 = "jerry";
@@ -1987,8 +1982,8 @@ if (isInputRange!RoR &&
         auto filteredLenWordsArr = [filteredLenWord1, filteredLenWord2, filteredLenWord3];
         auto filteredWords    = filter!"true"(filteredWordsArr);
 
-        foreach (S; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (S; AliasSeq!(string, wstring, dstring))
+        {{
             assert(join(filteredWords, to!S(", ")) == "日本語, paul, jerry");
             assert(join(filteredWords, to!(ElementType!S)(',')) == "日本語,paul,jerry");
             assert(join(filteredWordsArr, to!(ElementType!(S))(',')) == "日本語,paul,jerry");
@@ -2022,7 +2017,7 @@ if (isInputRange!RoR &&
             assert(join(filteredLenWordsArr, filterComma) == "日本語, paul, jerry");
             assert(join(filter!"true"(words), filterComma) == "日本語, paul, jerry");
             assert(join(words, filterComma) == "日本語, paul, jerry");
-        }();
+        }}
 
         assert(join(filteredWords) == "日本語pauljerry");
         assert(join(filteredWordsArr) == "日本語pauljerry");
@@ -2048,7 +2043,7 @@ if (isInputRange!RoR &&
 
         assert(join(filter!"true"(cast(R[])[])).empty);
         assert(join(cast(R[])[]).empty);
-    }
+    }}
 
     assert(join([[1, 2], [41, 42]], [5, 6]) == [1, 2, 5, 6, 41, 42]);
     assert(join([[1, 2], [41, 42]], cast(int[])[]) == [1, 2, 41, 42]);
@@ -2117,7 +2112,7 @@ if (isInputRange!RoR &&
         is found.
 
     See_Also:
-        $(REF map, std,algorithm,iteration) which can act as a lazy replace
+        $(REF substitute, std,algorithm,iteration) for a lazy replace.
  +/
 E[] replace(E, R1, R2)(E[] subject, R1 from, R2 to)
 if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
@@ -2230,10 +2225,10 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
     import std.algorithm.comparison : cmp;
     import std.conv : to;
 
-    foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
+    static foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
-        foreach (T; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (T; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
+        {{
             auto s = to!S("This is a foo foo list");
             auto from = to!T("foo");
             auto into = to!S("silly");
@@ -2249,7 +2244,7 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
             assert(i == 0);
 
             assert(replace(r, to!S("won't find this"), to!S("whatever")) is r);
-        }();
+        }}
     }
 
     immutable s = "This is a foo foo list";
@@ -2267,15 +2262,15 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
         this(C[] arr){ desired = arr; }
         void put(C[] part){ assert(skipOver(desired, part)); }
     }
-    foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
-    {
+    static foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
+    {{
         alias Char = ElementEncodingType!S;
         S s = to!S("yet another dummy text, yet another ...");
         S from = to!S("yet another");
         S into = to!S("some");
         replaceInto(CheckOutput!(Char)(to!S("some dummy text, some ..."))
                     , s, from, into);
-    }
+    }}
 }
 
 /++
@@ -2290,6 +2285,9 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
 
     Returns:
         A new array without changing the contents of `subject`.
+
+    See_Also:
+        $(REF substitute, std,algorithm,iteration) for a lazy replace.
  +/
 T[] replace(T, Range)(T[] subject, size_t from, size_t to, Range stuff)
 if (isInputRange!Range &&
@@ -2671,12 +2669,12 @@ if (isDynamicArray!(E[]) &&
     import std.algorithm.comparison : cmp;
     import std.conv : to;
 
-    foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
+    static foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
                           const(char[]), immutable(char[])))
     {
-        foreach (T; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
+        static foreach (T; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
                               const(char[]), immutable(char[])))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {{
             auto s = to!S("This is a foo foo list");
             auto s2 = to!S("Thüs is a ßöö foo list");
             auto from = to!T("foo");
@@ -2698,7 +2696,7 @@ if (isDynamicArray!(E[]) &&
             assert(cmp(r3, "This is a foo foo list") == 0);
 
             assert(replaceFirst(r3, to!T("won't find"), to!T("whatever")) is r3);
-        }();
+        }}
     }
 }
 
@@ -2784,12 +2782,12 @@ if (isDynamicArray!(E[]) &&
     import std.algorithm.comparison : cmp;
     import std.conv : to;
 
-    foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
+    static foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
                           const(char[]), immutable(char[])))
     {
-        foreach (T; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
+        static foreach (T; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
                               const(char[]), immutable(char[])))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {{
             auto s = to!S("This is a foo foo list");
             auto s2 = to!S("Thüs is a ßöö ßöö list");
             auto from = to!T("foo");
@@ -2811,7 +2809,7 @@ if (isDynamicArray!(E[]) &&
             assert(cmp(r3, "This is a foo foo list") == 0);
 
             assert(replaceLast(r3, to!T("won't find"), to!T("whatever")) is r3);
-        }();
+        }}
     }
 }
 
@@ -2828,6 +2826,9 @@ if (isDynamicArray!(E[]) &&
     Returns:
         A new array that is `s` with `slice` replaced by
         `replacement[]`.
+
+    See_Also:
+        $(REF substitute, std,algorithm,iteration) for a lazy replace.
  +/
 inout(T)[] replaceSlice(T)(inout(T)[] s, in T[] slice, in T[] replacement)
 in
@@ -2838,17 +2839,19 @@ in
 do
 {
     auto result = new T[s.length - slice.length + replacement.length];
-    immutable so = slice.ptr - s.ptr;
+    immutable so = &slice[0] - &s[0];
     result[0 .. so] = s[0 .. so];
     result[so .. so + replacement.length] = replacement[];
     result[so + replacement.length .. result.length] =
         s[so + slice.length .. s.length];
 
-    return cast(inout(T)[]) result;
+    return () @trusted inout {
+        return cast(inout(T)[]) result;
+    }();
 }
 
 ///
-@system unittest
+@safe unittest
 {
     auto a = [1, 2, 3, 4, 5];
     auto b = replaceSlice(a, a[1 .. 4], [0, 0, 0]);
@@ -2856,7 +2859,7 @@ do
     assert(b == [1, 0, 0, 0, 5]);
 }
 
-@system unittest
+@safe unittest
 {
     import std.algorithm.comparison : cmp;
 
@@ -3433,7 +3436,7 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
     catch (Exception) assert(0);
 
     // Issue 5663 & 9725 tests
-    foreach (S; AliasSeq!(char[], const(char)[], string))
+    static foreach (S; AliasSeq!(char[], const(char)[], string))
     {
         {
             Appender!S app5663i;
@@ -3556,7 +3559,7 @@ unittest
     [tuple("A")].filter!(t => true).array; // error
 }
 
-@system unittest
+@safe unittest
 {
     import std.range;
     //Coverage for put(Range)
@@ -3570,12 +3573,21 @@ unittest
     auto a1 = Appender!(S1[])();
     auto a2 = Appender!(S2[])();
     auto au1 = Appender!(const(S1)[])();
-    auto au2 = Appender!(const(S2)[])();
     a1.put(S1().repeat().take(10));
     a2.put(S2().repeat().take(10));
     auto sc1 = const(S1)();
-    auto sc2 = const(S2)();
     au1.put(sc1.repeat().take(10));
+}
+
+@system unittest
+{
+    import std.range;
+    struct S2
+    {
+        void opAssign(S2){}
+    }
+    auto au2 = Appender!(const(S2)[])();
+    auto sc2 = const(S2)();
     au2.put(sc2.repeat().take(10));
 }
 

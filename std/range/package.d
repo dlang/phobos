@@ -117,7 +117,7 @@ $(BOOKTABLE ,
         loop. Similar to $(D zip), except that $(D lockstep) is designed
         especially for $(D foreach) loops.
     ))
-    $(TR $(TD $(LREF NullSink))
+    $(TR $(TD $(LREF nullSink))
         $(TD An output _range that discards the data it receives.
     ))
     $(TR $(TD $(LREF only))
@@ -161,14 +161,12 @@ $(BOOKTABLE ,
         $(TD Similar to $(D recurrence), except that a random-access _range is
         created.
     ))
-    $(COMMENT Explicitly undocumented to delay the release until 2.076
     $(TR $(TD $(D $(LREF slide)))
         $(TD Creates a _range that returns a fixed-size sliding window
         over the original _range. Unlike chunks,
         it advances a configurable number of items at a time,
         not one chunk at a time.
     ))
-    )
     $(TR $(TD $(LREF stride))
         $(TD Iterates a _range with stride $(I n).
     ))
@@ -2547,7 +2545,7 @@ pure @safe nothrow unittest
 
 // https://issues.dlang.org/show_bug.cgi?id=18092
 // can't combine take and takeExactly
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : AllDummyRanges;
@@ -2835,7 +2833,7 @@ pure @safe nothrow unittest
 
     import std.format : format;
 
-    foreach (range; AliasSeq!([1, 2, 3, 4, 5],
+    static foreach (range; AliasSeq!([1, 2, 3, 4, 5],
                              "hello world",
                              "hello world"w,
                              "hello world"d,
@@ -2849,7 +2847,7 @@ pure @safe nothrow unittest
         static assert(is(typeof(range) == typeof(takeNone(range))), typeof(range).stringof);
     }
 
-    foreach (range; AliasSeq!(NormalStruct([1, 2, 3]),
+    static foreach (range; AliasSeq!(NormalStruct([1, 2, 3]),
                              InitStruct([1, 2, 3])))
     {
         static assert(takeNone(range).empty, typeof(range).stringof);
@@ -5847,13 +5845,13 @@ pure @safe unittest
 
 
     // Issue 8920
-    foreach (Type; AliasSeq!(byte, ubyte, short, ushort,
+    static foreach (Type; AliasSeq!(byte, ubyte, short, ushort,
         int, uint, long, ulong))
-    {
+    {{
         Type val;
         foreach (i; iota(cast(Type) 0, cast(Type) 10)) { val++; }
         assert(val == 10);
-    }
+    }}
 }
 
 pure @safe nothrow unittest
@@ -5866,11 +5864,11 @@ pure @safe nothrow unittest
 @safe unittest
 {
     import std.meta : AliasSeq;
-    foreach (range; AliasSeq!(iota(2, 27, 4),
+    static foreach (range; AliasSeq!(iota(2, 27, 4),
                              iota(3, 9),
                              iota(2.7, 12.3, .1),
                              iota(3.2, 9.7)))
-    {
+    {{
         const cRange = range;
         const e = cRange.empty;
         const f = cRange.front;
@@ -5879,7 +5877,7 @@ pure @safe nothrow unittest
         const s1 = cRange[];
         const s2 = cRange[0 .. 3];
         const l = cRange.length;
-    }
+    }}
 }
 
 @system unittest
@@ -7721,7 +7719,7 @@ if (isForwardRange!Source && hasLength!Source)
     assert(equal(chunks, [[1], [2], [3], [], []]));
 }
 
-/*
+/**
 A fixed-sized sliding window iteration
 of size `windowSize` over a `source` range by a custom `stepSize`.
 
@@ -7732,35 +7730,92 @@ For `windowSize = 1` it splits the range into single element groups (aka `unflat
 For `windowSize = 2` it is similar to `zip(source, source.save.dropOne)`.
 
 Params:
-    f = If `Yes.withFewerElements` slide with fewer
-        elements than `windowSize`. This can only happen if the initial range
-        contains less elements than `windowSize`. In this case
-        if `No.withFewerElements` an empty range will be returned.
+    f = Whether the last element with fewer elements than `windowSize`
+        should be be ignored (`Yes.withPartial`)
     source = Range from which the slide will be selected
     windowSize = Sliding window size
     stepSize = Steps between the windows (by default 1)
 
 Returns: Range of all sliding windows with propagated bi-directionality,
-         forwarding, conditional random access, and slicing.
+         forwarding, random access, and slicing.
+
+Note: To avoid performance overhead, bi-directionality is only forwarded when
+      $(REF hasSlicing, std,range,primitives) and $(REF hasLength, std,range,primitives)
+      are true.
 
 See_Also: $(LREF chunks)
 */
-// Explicitly set to private to delay the release until 2.076
-private
-auto slide(Flag!"withFewerElements" f = Yes.withFewerElements,
+auto slide(Flag!"withPartial" f = Yes.withPartial,
             Source)(Source source, size_t windowSize, size_t stepSize = 1)
     if (isForwardRange!Source)
 {
     return Slides!(f, Source)(source, windowSize, stepSize);
 }
 
-private struct Slides(Flag!"withFewerElements" withFewerElements = Yes.withFewerElements, Source)
+/// Iterate over ranges with windows
+@safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+
+    assert([0, 1, 2, 3].slide(2).equal!equal(
+        [[0, 1], [1, 2], [2, 3]]
+    ));
+
+    assert(5.iota.slide(3).equal!equal(
+        [[0, 1, 2], [1, 2, 3], [2, 3, 4]]
+    ));
+}
+
+/// set a custom stepsize (default 1)
+@safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+
+    assert(6.iota.slide(1, 2).equal!equal(
+        [[0], [2], [4]]
+    ));
+
+    assert(6.iota.slide(2, 4).equal!equal(
+        [[0, 1], [4, 5]]
+    ));
+
+    assert(iota(7).slide(2, 2).equal!equal(
+        [[0, 1], [2, 3], [4, 5], [6]]
+    ));
+
+    assert(iota(12).slide(2, 4).equal!equal(
+        [[0, 1], [4, 5], [8, 9]]
+    ));
+}
+
+/// Allow the last slide to have fewer elements than windowSize
+@safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+
+    assert(3.iota.slide!(No.withPartial)(4).empty);
+    assert(3.iota.slide!(Yes.withPartial)(4).equal!equal(
+        [[0, 1, 2]]
+    ));
+}
+
+/// Count all the possible substrings of length 2
+@safe pure nothrow unittest
+{
+    import std.algorithm.iteration : each;
+
+    int[dstring] d;
+    "AGAGA"d.slide!(Yes.withPartial)(2).each!(a => d[a]++);
+    assert(d == ["AG"d: 2, "GA"d: 2]);
+}
+
+private struct Slides(Flag!"withPartial" withPartial = Yes.withPartial, Source)
     if (isForwardRange!Source)
 {
 private:
-    Source _source;
-    size_t _windowSize;
-    size_t _stepSize;
+    Source source;
+    size_t windowSize;
+    size_t stepSize;
 
     static if (hasLength!Source)
     {
@@ -7768,17 +7823,18 @@ private:
     }
     else
     {
-        // if there's no information about the length, track needs to be kept manually
-        Source _nextSource;
+        // If there's no information about the length, track needs to be kept manually
+        Source nextSource;
         enum needsEndTracker = true;
     }
 
     bool _empty;
 
     static if (hasSlicing!Source)
-    {
         enum hasSliceToEnd = hasSlicing!Source && is(typeof(Source.init[0 .. $]) == Source);
-    }
+
+    static if (withPartial)
+        bool hasShownPartialBefore;
 
 public:
     /// Standard constructor
@@ -7786,82 +7842,124 @@ public:
     {
         assert(windowSize > 0, "windowSize must be greater than zero");
         assert(stepSize > 0, "stepSize must be greater than zero");
-        _source = source;
-        _windowSize = windowSize;
-        _stepSize = stepSize;
+        this.source = source;
+        this.windowSize = windowSize;
+        this.stepSize = stepSize;
 
         static if (needsEndTracker)
         {
-            // _nextSource is used to "look into the future" and check for the end
-            _nextSource = source.save;
-            _nextSource.popFrontN(windowSize);
+            // `nextSource` is used to "look one step into the future" and check for the end
+            // this means `nextSource` is advanced by `stepSize` on every `popFront`
+            nextSource = source.save.drop(windowSize);
         }
 
-        static if (!withFewerElements)
+        if (source.empty)
+        {
+            _empty = true;
+            return;
+        }
+
+        static if (withPartial)
+        {
+            static if (needsEndTracker)
+            {
+                if (nextSource.empty)
+                    hasShownPartialBefore = true;
+            }
+            else
+            {
+                if (source.length <= windowSize)
+                    hasShownPartialBefore = true;
+            }
+
+        }
+        else
         {
             // empty source range is needed, s.t. length, slicing etc. works properly
             static if (needsEndTracker)
             {
-                if (_nextSource.empty)
-                    _source = _nextSource;
+                if (nextSource.empty)
+                     _empty = true;
             }
             else
             {
-                if (_source.length < windowSize)
-                {
-                    static if (hasSlicing!Source)
-                    {
-                        // if possible use the faster opDollar overload
-                        static if (hasSliceToEnd)
-                            _source = _source[$ .. $];
-                        else
-                            _source = _source[_source.length .. _source.length];
-                    }
-                    else
-                    {
-                        _source.popFrontN(_source.length);
-                    }
-                }
+                if (source.length < windowSize)
+                     _empty = true;
             }
         }
-
-        _empty = _source.empty;
     }
 
     /// Forward range primitives. Always present.
     @property auto front()
     {
-        assert(!empty, "Attempting to access front on an empty slide");
+        assert(!empty, "Attempting to access front on an empty slide.");
         static if (hasSlicing!Source && hasLength!Source)
         {
-            import std.algorithm.comparison : min;
-            return _source[0 .. min(_windowSize, _source.length)];
+            static if (withPartial)
+            {
+                import std.algorithm.comparison : min;
+                return source[0 .. min(windowSize, source.length)];
+            }
+            else
+            {
+                assert(windowSize <= source.length, "The last element is smaller than the current windowSize.");
+                return source[0 .. windowSize];
+            }
         }
         else
         {
-            return _source.save.take(_windowSize);
+            static if (withPartial)
+                return source.save.take(windowSize);
+            else
+                return source.save.takeExactly(windowSize);
         }
     }
 
     /// Ditto
     void popFront()
     {
-        assert(!empty, "Attempting to call popFront() on an empty slide");
-        _source.popFrontN(_stepSize);
+        assert(!empty, "Attempting to call popFront() on an empty slide.");
+        source.popFrontN(stepSize);
 
-        // if the range has less elements than its window size,
-        // we have seen the last full window (i.e. its empty)
+        if (source.empty)
+        {
+            _empty = true;
+            return;
+        }
+
+        static if (withPartial)
+        {
+            if (hasShownPartialBefore)
+                _empty = true;
+        }
+
         static if (needsEndTracker)
         {
-            if (_nextSource.empty)
-                _empty = true;
+            // Check the upcoming slide
+            auto poppedElements = nextSource.popFrontN(stepSize);
+            static if (withPartial)
+            {
+                if (poppedElements < stepSize || nextSource.empty)
+                    hasShownPartialBefore = true;
+            }
             else
-                _nextSource.popFrontN(_stepSize);
+            {
+                if (poppedElements < stepSize)
+                    _empty = true;
+            }
         }
         else
         {
-            if (_source.length < _windowSize)
-                _empty = true;
+            static if (withPartial)
+            {
+                if (source.length <= windowSize)
+                    hasShownPartialBefore = true;
+            }
+            else
+            {
+                if (source.length < windowSize)
+                    _empty = true;
+            }
         }
     }
 
@@ -7882,24 +7980,112 @@ public:
     /// Ditto
     @property typeof(this) save()
     {
-        return typeof(this)(_source.save, _windowSize, _stepSize);
+        return typeof(this)(source.save, windowSize, stepSize);
     }
 
     static if (hasLength!Source)
     {
-        /// Length. Only if $(D hasLength!Source) is $(D true)
+        // gaps between the last element and the end of the range
+        private size_t gap()
+        {
+            /*
+            * Note:
+            * - In the following `end` is the exclusive end as used in opSlice
+            * - For the trivial case with `stepSize = 1`  `end` is at `len`:
+            *
+            *    iota(4).slide(2) = [[0, 1], [1, 2], [2, 3]]    (end = 4)
+            *    iota(4).slide(3) = [[0, 1, 2], [1, 2, 3]]      (end = 4)
+            *
+            * - For the non-trivial cases, we need to calculate the gap
+            *   between `len` and `end` - this is the number of missing elements
+            *   from the input range:
+            *
+            *    iota(7).slide(2, 3) = [[0, 1], [3, 4]] || <gap: 2> 6
+            *    iota(7).slide(2, 4) = [[0, 1], [4, 5]] || <gap: 1> 6
+            *    iota(7).slide(1, 5) = [[0], [5]]       || <gap: 1> 6
+            *
+            *   As it can be seen `gap` can be at most `stepSize - 1`
+            *   More generally the elements of the sliding window with
+            *   `w = windowSize` and `s = stepSize` are:
+            *
+            *     [0, w], [s, s + w], [2 * s, 2 * s + w], ... [n * s, n * s + w]
+            *
+            *  We can thus calculate the gap between the `end` and `len` as:
+            *
+            *     gap = len - (n * s + w) = len - w - (n * s)
+            *
+            *  As we aren't interested in exact value of `n`, but the best
+            *  minimal `gap` value, we can use modulo to "cut" `len - w` optimally:
+            *
+            *     gap = len - w - (s - s ... - s) = (len - w) % s
+            *
+            *  So for example:
+            *
+            *    iota(7).slide(2, 3) = [[0, 1], [3, 4]]
+            *      gap: (7 - 2) % 3 = 5 % 3 = 2
+            *      end: 7 - 2 = 5
+            *
+            *    iota(7).slide(4, 2) = [[0, 1, 2, 3], [2, 3, 4, 5]]
+            *      gap: (7 - 4) % 2 = 3 % 2 = 1
+            *      end: 7 - 1 = 6
+            */
+            pragma(inline, true);
+            return (source.length - windowSize)  % stepSize;
+        }
+
+        private size_t numberOfFullFrames()
+        {
+            pragma(inline, true);
+            /**
+            5.iota.slides(2, 1) => [0, 1], [1, 2], [2, 3], [3, 4]       (4)
+            7.iota.slides(2, 2) => [0, 1], [2, 3], [4, 5], [6]          (3)
+            7.iota.slides(2, 3) => [0, 1], [3, 4], [6]                  (2)
+            6.iota.slides(3, 2) => [0, 1, 2], [2, 3, 4], [4, 5]         (2)
+            7.iota.slides(3, 3) => [0, 1, 2], [3, 4, 5], [6]            (2)
+
+            As the last window is only added iff its complete,
+            we don't count the last window except if it's full due to integer rounding.
+            */
+            return 1 + (source.length - windowSize) / stepSize;
+        }
+
+        // Whether the last slide frame size is less than windowSize
+        private bool hasPartialElements()
+        {
+            pragma(inline, true);
+            static if (withPartial)
+                return gap != 0 && source.length > numberOfFullFrames * stepSize;
+            else
+                return 0;
+        }
+
+        /// Length. Only if `hasLength!Source` is `true`
         @property size_t length()
         {
-            if (_source.length < _windowSize)
+            if (source.length < windowSize)
             {
-                static if (withFewerElements)
-                    return 1;
+                static if (withPartial)
+                    return source.length > 0;
                 else
                     return 0;
             }
             else
             {
-                return (_source.length - _windowSize + _stepSize) / _stepSize;
+                /***
+                  We bump the pointer by stepSize for every element.
+                  If withPartial, we don't count the last element if its size
+                  isn't windowSize
+
+                  At most:
+                      [p, p + stepSize, ..., p + stepSize * n]
+
+                5.iota.slides(2, 1) => [0, 1], [1, 2], [2, 3], [3, 4]       (4)
+                7.iota.slides(2, 2) => [0, 1], [2, 3], [4, 5], [6]          (4)
+                7.iota.slides(2, 3) => [0, 1], [3, 4], [6]                  (3)
+                7.iota.slides(3, 2) => [0, 1, 2], [2, 3, 4], [4, 5, 6]      (3)
+                7.iota.slides(3, 3) => [0, 1, 2], [3, 4, 5], [6]            (3)
+                */
+                return numberOfFullFrames + hasPartialElements;
             }
         }
     }
@@ -7912,22 +8098,22 @@ public:
          */
         auto opIndex(size_t index)
         {
-            immutable start = index * _stepSize;
+            immutable start = index * stepSize;
 
             static if (isInfinite!Source)
             {
-                immutable end = start + _windowSize;
+                immutable end = start + windowSize;
             }
             else
             {
                 import std.algorithm.comparison : min;
 
-                immutable len = _source.length;
+                immutable len = source.length;
                 assert(start < len, "slide index out of bounds");
-                immutable end = min(start + _windowSize, len);
+                immutable end = min(start + windowSize, len);
             }
 
-            return _source[start .. end];
+            return source[start .. end];
         }
 
         static if (!isInfinite!Source)
@@ -7936,39 +8122,83 @@ public:
             typeof(this) opSlice(size_t lower, size_t upper)
             {
                 import std.algorithm.comparison : min;
-                assert(lower <= upper && upper <= length, "slide slicing index out of bounds");
 
-                lower *= _stepSize;
-                upper *= _stepSize;
+                assert(upper <= length, "slide slicing index out of bounds");
+                assert(lower <= upper, "slide slicing index out of bounds");
 
-                immutable len = _source.length;
+                lower *= stepSize;
+                upper *= stepSize;
 
-                /*
-                * Notice that we only need to move for windowSize - 1 to the right:
-                * source = [0, 1, 2, 3] (length: 4)
-                * - source.slide(2) -> s = [[0, 1], [1, 2], [2, 3]]
-                *   right pos for s[0 .. 3]: 3 (upper) + 2 (windowSize) - 1 = 4
-                *
-                * - source.slide(3) -> s = [[0, 1, 2], [1, 2, 3]]
-                *   right pos for s[0 .. 2]: 2 (upper) + 3 (windowSize) - 1 = 4
-                *
-                * source = [0, 1, 2, 3, 4] (length: 5)
-                * - source.slide(4) -> s = [[0, 1, 2, 3], [1, 2, 3, 4]]
-                *   right pos for s[0 .. 2]: 2 (upper) + 4 (windowSize) - 1 = 5
-                */
-                return typeof(this)
-                    (_source[min(lower, len) .. min(upper + _windowSize - 1, len)],
-                     _windowSize, _stepSize);
+                immutable len = source.length;
+
+                static if (withPartial)
+                {
+                    import std.algorithm.comparison : max;
+
+                    if (lower == upper)
+                        return this[$ .. $];
+
+                    /*
+                    A) If `stepSize` >= `windowSize` => `rightPos = upper`
+
+                       [0, 1, 2, 3, 4, 5, 6].slide(2, 3) -> s = [[0, 1], [3, 4], [6]]
+                         rightPos for s[0 .. 2]: (upper=2) * (stepSize=3) = 6
+                         6.iota.slide(2, 3) = [[0, 1], [3, 4]]
+
+                    B) If `stepSize` < `windowSize` => add `windowSize - stepSize` to `upper`
+
+                       [0, 1, 2, 3].slide(2) = [[0, 1], [1, 2], [2, 3]]
+                         rightPos for s[0 .. 1]: = (upper=1) * (stepSize=1) = 1
+                         1.iota.slide(2) = [[0]]
+
+                         rightPos for s[0 .. 1]: = (upper=1) * (stepSize=1) + (windowSize-stepSize=1) = 2
+                         1.iota.slide(2) = [[0, 1]]
+
+                       More complex:
+
+                       20.iota.slide(7, 6)[0 .. 2]
+                         rightPos: (upper=2) * (stepSize=6) = 12.iota
+                         12.iota.slide(7, 6) = [[0, 1, 2, 3, 4, 5, 6], [6, 7, 8, 9, 10, 11]]
+
+                       Now we add up for the difference between `windowSize` and `stepSize`:
+
+                         rightPos: (upper=2) * (stepSize=6) + (windowSize-stepSize=1) = 13.iota
+                         13.iota.slide(7, 6) = [[0, 1, 2, 3, 4, 5, 6], [6, 7, 8, 9, 10, 11, 12]]
+                    */
+                    immutable rightPos = min(len, upper + max(0, windowSize - stepSize));
+                }
+                else
+                {
+                    /*
+                    After we have normalized `lower` and `upper` by `stepSize`,
+                    we only need to look at the case of `stepSize=1`.
+                    As `leftPos`, is equal to `lower`, we will only look `rightPos`.
+                    Notice that starting from `upper`,
+                    we only need to move for `windowSize - 1` to the right:
+
+                      - [0, 1, 2, 3].slide(2) -> s = [[0, 1], [1, 2], [2, 3]]
+                        rightPos for s[0 .. 3]: (upper=3) + (windowSize=2) - 1 = 4
+
+                      - [0, 1, 2, 3].slide(3) -> s = [[0, 1, 2], [1, 2, 3]]
+                        rightPos for s[0 .. 2]: (upper=2) + (windowSize=3) - 1 = 4
+
+                      - [0, 1, 2, 3, 4].slide(4) -> s = [[0, 1, 2, 3], [1, 2, 3, 4]]
+                        rightPos for s[0 .. 2]: (upper=2) + (windowSize=4) - 1 = 5
+                    */
+                    immutable rightPos = min(upper + windowSize - 1, len);
+                }
+
+                return typeof(this)(source[min(lower, len) .. rightPos], windowSize, stepSize);
             }
         }
         else static if (hasSliceToEnd)
         {
-            //For slicing an infinite chunk, we need to slice the source to the infinite end.
+            // For slicing an infinite chunk, we need to slice the source to the infinite end.
             auto opSlice(size_t lower, size_t upper)
             {
                 assert(lower <= upper, "slide slicing index out of bounds");
-                return typeof(this)(_source[lower * _stepSize .. $],
-                       _windowSize, _stepSize).takeExactly(upper - lower);
+                return typeof(this)(source[lower * stepSize .. $], windowSize, stepSize)
+                                    .takeExactly(upper - lower);
             }
         }
 
@@ -7984,15 +8214,15 @@ public:
                 //Slice to dollar
                 typeof(this) opSlice(size_t lower, DollarToken)
                 {
-                    return typeof(this)(_source[lower * _stepSize .. $], _windowSize, _stepSize);
+                    return typeof(this)(source[lower * stepSize .. $], windowSize, stepSize);
                 }
             }
         }
         else
         {
-            //Dollar token carries a static type, with no extra information.
-            //It can lazily transform into _source.length on algorithmic
-            //operations such as : slide[$/2, $-1];
+            // Dollar token carries a static type, with no extra information.
+            // It can lazily transform into source.length on algorithmic
+            // operations such as : slide[$/2, $-1];
             private static struct DollarToken
             {
                 private size_t _length;
@@ -8009,12 +8239,12 @@ public:
             {
                 static if (hasSliceToEnd)
                 {
-                    return typeof(this)(_source[$ .. $], _windowSize, _stepSize);
+                    return typeof(this)(source[$ .. $], windowSize, stepSize);
                 }
                 else
                 {
-                    immutable len = _source.length;
-                    return typeof(this)(_source[len .. len], _windowSize, _stepSize);
+                    immutable len = source.length;
+                    return typeof(this)(source[len .. len], windowSize, stepSize);
                 }
             }
 
@@ -8023,15 +8253,15 @@ public:
             {
                 import std.algorithm.comparison : min;
                 assert(lower <= length, "slide slicing index out of bounds");
-                lower *= _stepSize;
+                lower *= stepSize;
                 static if (hasSliceToEnd)
                 {
-                    return typeof(this)(_source[min(lower, _source.length) .. $], _windowSize, _stepSize);
+                    return typeof(this)(source[min(lower, source.length) .. $], windowSize, stepSize);
                 }
                 else
                 {
-                    immutable len = _source.length;
-                    return typeof(this)(_source[min(lower, len) .. len], _windowSize, _stepSize);
+                    immutable len = source.length;
+                    return typeof(this)(source[min(lower, len) .. len], windowSize, stepSize);
                 }
             }
 
@@ -8056,54 +8286,20 @@ public:
 
                 assert(!empty, "Attempting to access front on an empty slide");
 
-                immutable len = _source.length;
-                /*
-                * Note:
-                * - `end` in the following is the exclusive end as used in opSlice
-                * - For the trivial case with `stepSize = 1`  `end` is at `len`:
-                *
-                *    iota(4).slide(2) = [[0, 1], [1, 2], [2, 3]    (end = 4)
-                *    iota(4).slide(3) = [[0, 1, 2], [1, 2, 3]]     (end = 4)
-                *
-                * - For the non-trivial cases, we need to calculate the gap
-                *   between `len` and `end` - this is the number of missing elements
-                *   from the input range:
-                *
-                *    iota(7).slide(2, 3) = [[0, 1], [3, 4]] || <gap: 2> 6
-                *    iota(7).slide(2, 4) = [[0, 1], [4, 5]] || <gap: 1> 6
-                *    iota(7).slide(1, 5) = [[0], [5]]       || <gap: 1> 6
-                *
-                *   As it can be seen `gap` can be at most `stepSize - 1`
-                *   More generally the elements of the sliding window with
-                *   `w = windowSize` and `s = stepSize` are:
-                *
-                *     [0, w], [s, s + w], [2 * s, 2 * s + w], ... [n * s, n * s + w]
-                *
-                *  We can thus calculate the gap between the `end` and `len` as:
-                *
-                *     gap = len - (n * s + w) = len - w - (n * s)
-                *
-                *  As we aren't interested in exact value of `n`, but the best
-                *  minimal `gap` value, we can use modulo to "cut" `len - w` optimally:
-                *
-                *     gap = len - w - (s - s ... - s) = (len - w) % s
-                *
-                *  So for example:
-                *
-                *    iota(7).slide(2, 3) = [[0, 1], [3, 4]]
-                *      gap: (7 - 2) % 3 = 5 % 3 = 2
-                *      end: 7 - 2 = 5
-                *
-                *    iota(7).slide(4, 2) = [[0, 1, 2, 3], [2, 3, 4, 5]]
-                *      gap: (7 - 4) % 2 = 3 % 2 = 1
-                *      end: 7 - 1 = 6
-                */
-                size_t gap = (len - _windowSize)  % _stepSize;
+                immutable len = source.length;
+
+                static if (withPartial)
+                {
+                    if (source.length <= windowSize)
+                        return source[0 .. source.length];
+
+                    if (hasPartialElements)
+                        return source[numberOfFullFrames * stepSize .. len];
+                }
 
                 // check for underflow
-                immutable start = (len > _windowSize + gap) ? len - _windowSize - gap : 0;
-
-                return _source[start .. len - gap];
+                immutable start = (len > windowSize + gap) ? len - windowSize - gap : 0;
+                return source[start .. len - gap];
             }
 
             /// Ditto
@@ -8111,258 +8307,236 @@ public:
             {
                 assert(!empty, "Attempting to call popBack() on an empty slide");
 
-                immutable end = _source.length > _stepSize ? _source.length - _stepSize : 0;
-                _source = _source[0 .. end];
+                // Move by stepSize
+                immutable end = source.length > stepSize ? source.length - stepSize : 0;
 
-                if (_source.length < _windowSize)
+                static if (withPartial)
+                {
+                    if (hasShownPartialBefore || source.empty)
+                    {
+                        _empty = true;
+                        return;
+                    }
+
+                    // pop by stepSize, except for the partial frame at the end
+                    if (hasPartialElements)
+                        source = source[0 .. source.length - gap];
+                    else
+                        source = source[0 .. end];
+                }
+                else
+                {
+                    source = source[0 .. end];
+                }
+
+                if (source.length < windowSize)
                     _empty = true;
             }
         }
     }
 }
 
-//
-@safe pure nothrow unittest
-{
-    import std.algorithm.comparison : equal;
-    import std.array : array;
-
-    assert([0, 1, 2, 3].slide(2).equal!equal(
-        [[0, 1], [1, 2], [2, 3]]
-    ));
-    assert(5.iota.slide(3).equal!equal(
-        [[0, 1, 2], [1, 2, 3], [2, 3, 4]]
-    ));
-
-    assert(iota(7).slide(2, 2).equal!equal([[0, 1], [2, 3], [4, 5]]));
-    assert(iota(12).slide(2, 4).equal!equal([[0, 1], [4, 5], [8, 9]]));
-
-    // set a custom stepsize (default 1)
-    assert(6.iota.slide(1, 2).equal!equal(
-        [[0], [2], [4]]
-    ));
-
-    assert(6.iota.slide(2, 4).equal!equal(
-        [[0, 1], [4, 5]]
-    ));
-
-    // allow slide with less elements than the window size
-    assert(3.iota.slide!(No.withFewerElements)(4).empty);
-    assert(3.iota.slide!(Yes.withFewerElements)(4).equal!equal(
-        [[0, 1, 2]]
-    ));
-}
-
-// count k-mers
-@safe pure nothrow unittest
-{
-    import std.algorithm.comparison : equal;
-    import std.algorithm.iteration : each;
-
-    int[dstring] d;
-    "AGAGA"d.slide(2).each!(a => d[a]++);
-    assert(d == ["AG"d: 2, "GA"d: 2]);
-}
-
-// @nogc
+// test @nogc
 @safe pure nothrow @nogc unittest
 {
     import std.algorithm.comparison : equal;
 
     static immutable res1 = [[0], [1], [2], [3]];
-    assert(4.iota.slide(1).equal!equal(res1));
+    assert(4.iota.slide!(Yes.withPartial)(1).equal!equal(res1));
 
     static immutable res2 = [[0, 1], [1, 2], [2, 3]];
-    assert(4.iota.slide(2).equal!equal(res2));
+    assert(4.iota.slide!(Yes.withPartial)(2).equal!equal(res2));
 }
 
-// different window sizes
+// test different window sizes
 @safe pure nothrow unittest
 {
-    import std.algorithm.comparison : equal;
     import std.array : array;
-
-    assert([0, 1, 2, 3].slide(1).array == [[0], [1], [2], [3]]);
-    assert([0, 1, 2, 3].slide(2).array == [[0, 1], [1, 2], [2, 3]]);
-    assert([0, 1, 2, 3].slide(3).array == [[0, 1, 2], [1, 2, 3]]);
-    assert([0, 1, 2, 3].slide(4).array == [[0, 1, 2, 3]]);
-    assert([0, 1, 2, 3].slide(5).array == [[0, 1, 2, 3]]);
-
-
-    assert(iota(2).slide(2).front.equal([0, 1]));
-    assert(iota(3).slide(2).equal!equal([[0, 1],[1, 2]]));
-    assert(iota(3).slide(3).equal!equal([[0, 1, 2]]));
-    assert(iota(3).slide(4).equal!equal([[0, 1, 2]]));
-    assert(iota(1, 4).slide(1).equal!equal([[1], [2], [3]]));
-    assert(iota(1, 4).slide(3).equal!equal([[1, 2, 3]]));
-}
-
-@safe unittest
-{
     import std.algorithm.comparison : equal;
 
-    assert(6.iota.slide(1, 1).equal!equal(
-        [[0], [1], [2], [3], [4], [5]]
-    ));
-    assert(6.iota.slide(1, 2).equal!equal(
-        [[0], [2], [4]]
-    ));
-    assert(6.iota.slide(1, 3).equal!equal(
-        [[0], [3]]
-    ));
-    assert(6.iota.slide(1, 4).equal!equal(
-        [[0], [4]]
-    ));
-    assert(6.iota.slide(1, 5).equal!equal(
-        [[0], [5]]
-    ));
-    assert(6.iota.slide(2, 1).equal!equal(
-        [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5]]
-    ));
-    assert(6.iota.slide(2, 2).equal!equal(
-        [[0, 1], [2, 3], [4, 5]]
-    ));
-    assert(6.iota.slide(2, 3).equal!equal(
-        [[0, 1], [3, 4]]
-    ));
-    assert(6.iota.slide(2, 4).equal!equal(
-        [[0, 1], [4, 5]]
-    ));
-    assert(6.iota.slide(2, 5).equal!equal(
-        [[0, 1]]
-    ));
-    assert(6.iota.slide(3, 1).equal!equal(
-        [[0, 1, 2], [1, 2, 3], [2, 3, 4], [3, 4, 5]]
-    ));
-    assert(6.iota.slide(3, 2).equal!equal(
-        [[0, 1, 2], [2, 3, 4]]
-    ));
-    assert(6.iota.slide(3, 3).equal!equal(
-        [[0, 1, 2], [3, 4, 5]]
-    ));
-    assert(6.iota.slide(3, 4).equal!equal(
-        [[0, 1, 2]]
-    ));
-    assert(6.iota.slide(4, 1).equal!equal(
-        [[0, 1, 2, 3], [1, 2, 3, 4], [2, 3, 4, 5]]
-    ));
-    assert(6.iota.slide(4, 2).equal!equal(
-        [[0, 1, 2, 3], [2, 3, 4, 5]]
-    ));
-    assert(6.iota.slide(4, 3).equal!equal(
-        [[0, 1, 2, 3]]
-    ));
-    assert(6.iota.slide(5, 1).equal!equal(
-        [[0, 1, 2, 3, 4], [1, 2, 3, 4, 5]]
-    ));
-    assert(6.iota.slide(5, 2).equal!equal(
-        [[0, 1, 2, 3, 4]]
-    ));
-    assert(6.iota.slide(5, 3).equal!equal(
-        [[0, 1, 2, 3, 4]]
-    ));
+    assert([0, 1, 2, 3].slide!(Yes.withPartial)(1).array == [[0], [1], [2], [3]]);
+    assert([0, 1, 2, 3].slide!(Yes.withPartial)(2).array == [[0, 1], [1, 2], [2, 3]]);
+    assert([0, 1, 2, 3].slide!(Yes.withPartial)(3).array == [[0, 1, 2], [1, 2, 3]]);
+    assert([0, 1, 2, 3].slide!(Yes.withPartial)(4).array == [[0, 1, 2, 3]]);
+    assert([0, 1, 2, 3].slide!(No.withPartial)(5).walkLength == 0);
+    assert([0, 1, 2, 3].slide!(Yes.withPartial)(5).array == [[0, 1, 2, 3]]);
+
+    assert(iota(2).slide!(Yes.withPartial)(2).front.equal([0, 1]));
+    assert(iota(3).slide!(Yes.withPartial)(2).equal!equal([[0, 1],[1, 2]]));
+    assert(iota(3).slide!(Yes.withPartial)(3).equal!equal([[0, 1, 2]]));
+    assert(iota(3).slide!(No.withPartial)(4).walkLength == 0);
+    assert(iota(3).slide!(Yes.withPartial)(4).equal!equal([[0, 1, 2]]));
+    assert(iota(1, 4).slide!(Yes.withPartial)(1).equal!equal([[1], [2], [3]]));
+    assert(iota(1, 4).slide!(Yes.withPartial)(3).equal!equal([[1, 2, 3]]));
 }
 
-// emptyness, copyability, strings
+// test combinations
 @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
-    import std.algorithm.iteration : each, map;
+    import std.typecons : tuple;
+
+    alias t = tuple;
+    auto list = [
+        t(t(1, 1), [[0], [1], [2], [3], [4], [5]]),
+        t(t(1, 2), [[0], [2], [4]]),
+        t(t(1, 3), [[0], [3]]),
+        t(t(1, 4), [[0], [4]]),
+        t(t(1, 5), [[0], [5]]),
+        t(t(2, 1), [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5]]),
+        t(t(2, 2), [[0, 1], [2, 3], [4, 5]]),
+        t(t(2, 3), [[0, 1], [3, 4]]),
+        t(t(2, 4), [[0, 1], [4, 5]]),
+        t(t(3, 1), [[0, 1, 2], [1, 2, 3], [2, 3, 4], [3, 4, 5]]),
+        t(t(3, 3), [[0, 1, 2], [3, 4, 5]]),
+        t(t(4, 1), [[0, 1, 2, 3], [1, 2, 3, 4], [2, 3, 4, 5]]),
+        t(t(4, 2), [[0, 1, 2, 3], [2, 3, 4, 5]]),
+        t(t(5, 1), [[0, 1, 2, 3, 4], [1, 2, 3, 4, 5]]),
+    ];
+
+    static foreach (Partial; [Yes.withPartial, No.withPartial])
+        foreach (e; list)
+            assert(6.iota.slide!Partial(e[0].expand).equal!equal(e[1]));
+
+    auto listSpecial = [
+        t(t(2, 5), [[0, 1], [5]]),
+        t(t(3, 2), [[0, 1, 2], [2, 3, 4], [4, 5]]),
+        t(t(3, 4), [[0, 1, 2], [4, 5]]),
+        t(t(4, 3), [[0, 1, 2, 3], [3, 4, 5]]),
+        t(t(5, 2), [[0, 1, 2, 3, 4], [2, 3, 4, 5]]),
+        t(t(5, 3), [[0, 1, 2, 3, 4], [3, 4, 5]]),
+    ];
+    foreach (e; listSpecial)
+    {
+        assert(6.iota.slide!(Yes.withPartial)(e[0].expand).equal!equal(e[1]));
+        assert(6.iota.slide!(No.withPartial)(e[0].expand).equal!equal(e[1].dropBackOne));
+    }
+}
+
+// test emptiness and copyability
+@safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
 
     // check with empty input
     int[] d;
-    assert(d.slide(2).empty);
-    assert(d.slide(2, 2).empty);
+    assert(d.slide!(Yes.withPartial)(2).empty);
+    assert(d.slide!(Yes.withPartial)(2, 2).empty);
 
     // is copyable?
-    auto e = iota(5).slide(2);
+    auto e = iota(5).slide!(Yes.withPartial)(2);
     e.popFront;
     assert(e.save.equal!equal([[1, 2], [2, 3], [3, 4]]));
     assert(e.save.equal!equal([[1, 2], [2, 3], [3, 4]]));
     assert(e.map!"a.array".array == [[1, 2], [2, 3], [3, 4]]);
+}
 
-    // test with strings
+// test with strings
+@safe pure nothrow unittest
+{
+    import std.algorithm.iteration : each;
+
     int[dstring] f;
-    "AGAGA"d.slide(3).each!(a => f[a]++);
+    "AGAGA"d.slide!(Yes.withPartial)(3).each!(a => f[a]++);
     assert(f == ["AGA"d: 2, "GAG"d: 1]);
 
     int[dstring] g;
-    "ABCDEFG"d.slide(3, 3).each!(a => g[a]++);
+    "ABCDEFG"d.slide!(Yes.withPartial)(3, 3).each!(a => g[a]++);
+    assert(g == ["ABC"d:1, "DEF"d:1, "G": 1]);
+    g = null;
+    "ABCDEFG"d.slide!(No.withPartial)(3, 3).each!(a => g[a]++);
     assert(g == ["ABC"d:1, "DEF"d:1]);
 }
 
-// test slicing, length
+// test with utf8 strings
+@safe unittest
+{
+    import std.stdio;
+    import std.algorithm.comparison : equal;
+
+    assert("ä.ö.ü.".slide!(Yes.withPartial)(3, 2).equal!equal(["ä.ö", "ö.ü", "ü."]));
+    assert("ä.ö.ü.".slide!(No.withPartial)(3, 2).equal!equal(["ä.ö", "ö.ü"]));
+
+    "😄😅😆😇😈😄😅😆😇😈".slide!(Yes.withPartial)(2, 4).equal!equal(["😄😅", "😈😄", "😇😈"]);
+    "😄😅😆😇😈😄😅😆😇😈".slide!(No.withPartial)(2, 4).equal!equal(["😄😅", "😈😄", "😇😈"]);
+    "😄😅😆😇😈😄😅😆😇😈".slide!(Yes.withPartial)(3, 3).equal!equal(["😄😅😆", "😇😈😄", "😅😆😇", "😈"]);
+    "😄😅😆😇😈😄😅😆😇😈".slide!(No.withPartial)(3, 3).equal!equal(["😄😅😆", "😇😈😄", "😅😆😇"]);
+}
+
+// test length
+@safe pure nothrow unittest
+{
+    // Slides with fewer elements are empty or 1 for Yes.withPartial
+    static foreach (expectedLength, Partial; [No.withPartial, Yes.withPartial])
+    {{
+        assert(3.iota.slide!(Partial)(4, 2).walkLength == expectedLength);
+        assert(3.iota.slide!(Partial)(4).walkLength == expectedLength);
+        assert(3.iota.slide!(Partial)(4, 3).walkLength == expectedLength);
+    }}
+
+    static immutable list = [
+    //  iota   slide    expected
+        [4,    2, 1,     3, 3],
+        [5,    3, 1,     3, 3],
+        [7,    2, 2,     4, 3],
+        [12,   2, 4,     3, 3],
+        [6,    1, 2,     3, 3],
+        [6,    2, 4,     2, 2],
+        [3,    2, 4,     1, 1],
+        [5,    2, 1,     4, 4],
+        [7,    2, 2,     4, 3],
+        [7,    2, 3,     3, 2],
+        [7,    3, 2,     3, 3],
+        [7,    3, 3,     3, 2],
+    ];
+    foreach (e; list)
+    {
+        assert(e[0].iota.slide!(Yes.withPartial)(e[1], e[2]).length == e[3]);
+        assert(e[0].iota.slide!(No.withPartial)(e[1], e[2]).length == e[4]);
+    }
+}
+
+// test index and slicing
 @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.array : array;
 
-    // test index
-    assert(iota(3).slide(4)[0].equal([0, 1, 2]));
-    assert(iota(5).slide(4)[1].equal([1, 2, 3, 4]));
-    assert(iota(3).slide(4, 2)[0].equal([0, 1, 2]));
-    assert(iota(5).slide(4, 2)[1].equal([2, 3, 4]));
-    assert(iota(3).slide(4, 3)[0].equal([0, 1, 2]));
-    assert(iota(5).slide(4, 3)[1].equal([3, 4,]));
+    static foreach (Partial; [Yes.withPartial, No.withPartial])
+    {
+        foreach (s; [5, 7, 10, 15, 20])
+        foreach (windowSize; 1 .. 10)
+        foreach (stepSize; 1 .. 10)
+        {
+            auto r = s.iota.slide!Partial(windowSize, stepSize);
+            auto arr = r.array;
+            assert(r.length == arr.length);
 
-    // test slicing
-    assert(iota(3).slide(4)[0 .. $].equal!equal([[0, 1, 2]]));
-    assert(iota(3).slide(2)[1 .. $].equal!equal([[1, 2]]));
-    assert(iota(1, 5).slide(2)[0 .. 1].equal!equal([[1, 2]]));
-    assert(iota(1, 5).slide(2)[0 .. 2].equal!equal([[1, 2], [2, 3]]));
-    assert(iota(1, 5).slide(3)[0 .. 1].equal!equal([[1, 2, 3]]));
-    assert(iota(1, 5).slide(3)[0 .. 2].equal!equal([[1, 2, 3], [2, 3, 4]]));
-    assert(iota(1, 6).slide(3)[2 .. 3].equal!equal([[3, 4, 5]]));
-    assert(iota(1, 5).slide(4)[0 .. 1].equal!equal([[1, 2, 3, 4]]));
+            // test indexing
+            foreach (i; 0 .. arr.length)
+                assert(r[i] == arr[i]);
 
-    // length
-    assert(iota(3).slide(1).length == 3);
-    assert(iota(3).slide(1, 2).length == 2);
-    assert(iota(3).slide(1, 3).length == 1);
-    assert(iota(3).slide(1, 4).length == 1);
-    assert(iota(3).slide(2).length == 2);
-    assert(iota(3).slide(2, 2).length == 1);
-    assert(iota(3).slide(2, 3).length == 1);
-    assert(iota(3).slide(3).length == 1);
-    assert(iota(3).slide(3, 2).length == 1);
+            // test slicing
+            foreach (i; 0 .. arr.length)
+            {
+                foreach (j; i .. arr.length)
+                    assert(r[i .. j].equal(arr[i .. j]));
 
-    // opDollar
-    assert(iota(3).slide(4)[$/2 .. $].equal!equal([[0, 1, 2]]));
-    assert(iota(3).slide(4)[$ .. $].empty);
-    assert(iota(3).slide(4)[$ .. 1].empty);
+                assert(r[i .. $].equal(arr[i .. $]));
+            }
 
-    assert(iota(5).slide(3, 1)[$/2 .. $].equal!equal([[1, 2, 3], [2, 3, 4]]));
-    assert(iota(5).slide(3, 2)[$/2 .. $].equal!equal([[2, 3, 4]]));
-    assert(iota(5).slide(3, 3)[$/2 .. $].equal!equal([[0, 1, 2]]));
-    assert(iota(3).slide(4, 3)[$ .. $].empty);
-    assert(iota(3).slide(4, 3)[$ .. 1].empty);
-}
+            // test opDollar slicing
+            assert(r[$/2 .. $].equal(arr[$/2 .. $]));
+            assert(r[$ .. $].empty);
+            if (arr.empty)
+            {
+                assert(r[$ .. 0].empty);
+                assert(r[$/2 .. $].empty);
 
-// test No.withFewerElements
-@safe pure nothrow unittest
-{
-    assert(iota(3).slide(4).length == 1);
-    assert(iota(3).slide(4, 4).length == 1);
-
-    assert(iota(3).slide!(No.withFewerElements)(4).empty);
-    assert(iota(3, 3).slide!(No.withFewerElements)(4).empty);
-    assert(iota(3).slide!(No.withFewerElements)(4).length == 0);
-    assert(iota(3).slide!(No.withFewerElements)(4, 4).length == 0);
-
-    assert(iota(3).slide!(No.withFewerElements)(400).empty);
-    assert(iota(3).slide!(No.withFewerElements)(400).length == 0);
-    assert(iota(3).slide!(No.withFewerElements)(400, 10).length == 0);
-
-    assert(iota(3).slide!(No.withFewerElements)(4)[0 .. $].empty);
-    assert(iota(3).slide!(No.withFewerElements)(4)[$ .. $].empty);
-    assert(iota(3).slide!(No.withFewerElements)(4)[$ .. 0].empty);
-    assert(iota(3).slide!(No.withFewerElements)(4)[$/2 .. $].empty);
-
-    // with different step sizes
-    assert(iota(3).slide!(No.withFewerElements)(4, 5)[0 .. $].empty);
-    assert(iota(3).slide!(No.withFewerElements)(4, 6)[$ .. $].empty);
-    assert(iota(3).slide!(No.withFewerElements)(4, 7)[$ .. 0].empty);
-    assert(iota(3).slide!(No.withFewerElements)(4, 8)[$/2 .. $].empty);
+            }
+        }
+    }
 }
 
 // test with infinite ranges
@@ -8370,27 +8544,30 @@ public:
 {
     import std.algorithm.comparison : equal;
 
-    // InfiniteRange without RandomAccess
-    auto fibs = recurrence!"a[n-1] + a[n-2]"(1, 1);
-    assert(fibs.slide(2).take(2).equal!equal([[1,  1], [1,  2]]));
-    assert(fibs.slide(2, 3).take(2).equal!equal([[1,  1], [3,  5]]));
+    static foreach (Partial; [Yes.withPartial, No.withPartial])
+    {{
+        // InfiniteRange without RandomAccess
+        auto fibs = recurrence!"a[n-1] + a[n-2]"(1, 1);
+        assert(fibs.slide!Partial(2).take(2).equal!equal([[1,  1], [1,  2]]));
+        assert(fibs.slide!Partial(2, 3).take(2).equal!equal([[1,  1], [3,  5]]));
 
-    // InfiniteRange with RandomAccess and slicing
-    auto odds = sequence!("a[0] + n * a[1]")(1, 2);
-    auto oddsByPairs = odds.slide(2);
-    assert(oddsByPairs.take(2).equal!equal([[ 1,  3], [ 3,  5]]));
-    assert(oddsByPairs[1].equal([3, 5]));
-    assert(oddsByPairs[4].equal([9, 11]));
+        // InfiniteRange with RandomAccess and slicing
+        auto odds = sequence!("a[0] + n * a[1]")(1, 2);
+        auto oddsByPairs = odds.slide!Partial(2);
+        assert(oddsByPairs.take(2).equal!equal([[ 1,  3], [ 3,  5]]));
+        assert(oddsByPairs[1].equal([3, 5]));
+        assert(oddsByPairs[4].equal([9, 11]));
 
-    static assert(hasSlicing!(typeof(odds)));
-    assert(oddsByPairs[3 .. 5].equal!equal([[7, 9], [9, 11]]));
-    assert(oddsByPairs[3 .. $].take(2).equal!equal([[7, 9], [9, 11]]));
+        static assert(hasSlicing!(typeof(odds)));
+        assert(oddsByPairs[3 .. 5].equal!equal([[7, 9], [9, 11]]));
+        assert(oddsByPairs[3 .. $].take(2).equal!equal([[7, 9], [9, 11]]));
 
-    auto oddsWithGaps = odds.slide(2, 4);
-    assert(oddsWithGaps.take(3).equal!equal([[1, 3], [9, 11], [17, 19]]));
-    assert(oddsWithGaps[2].equal([17, 19]));
-    assert(oddsWithGaps[1 .. 3].equal!equal([[9, 11], [17, 19]]));
-    assert(oddsWithGaps[1 .. $].take(2).equal!equal([[9, 11], [17, 19]]));
+        auto oddsWithGaps = odds.slide!Partial(2, 4);
+        assert(oddsWithGaps.take(3).equal!equal([[1, 3], [9, 11], [17, 19]]));
+        assert(oddsWithGaps[2].equal([17, 19]));
+        assert(oddsWithGaps[1 .. 3].equal!equal([[9, 11], [17, 19]]));
+        assert(oddsWithGaps[1 .. $].take(2).equal!equal([[9, 11], [17, 19]]));
+    }}
 }
 
 // test reverse
@@ -8398,188 +8575,157 @@ public:
 {
     import std.algorithm.comparison : equal;
 
-    auto e = iota(3).slide(2);
-    assert(e.retro.equal!equal([[1, 2], [0, 1]]));
-    assert(e.retro.array.equal(e.array.retro));
+    static foreach (Partial; [Yes.withPartial, No.withPartial])
+    {{
+        foreach (windowSize; 1 .. 15)
+        foreach (stepSize; 1 .. 15)
+        {
+            auto r = 20.iota.slide!Partial(windowSize, stepSize);
+            auto rArr = r.array.retro;
+            auto rRetro = r.retro;
 
-    auto e2 = iota(5).slide(3);
-    assert(e2.retro.equal!equal([[2, 3, 4], [1, 2, 3], [0, 1, 2]]));
-    assert(e2.retro.array.equal(e2.array.retro));
-
-    auto e3 = iota(3).slide(4);
-    assert(e3.retro.equal!equal([[0, 1, 2]]));
-    assert(e3.retro.array.equal(e3.array.retro));
-}
-
-// test reverse with different steps
-@safe pure nothrow unittest
-{
-    import std.algorithm.comparison : equal;
-
-    assert(iota(7).slide(2, 1).retro.equal!equal(
-        [[5, 6], [4, 5], [3, 4], [2, 3], [1, 2], [0, 1]]
-    ));
-    assert(iota(7).slide(2, 2).retro.equal!equal(
-        [[4, 5], [2, 3], [0, 1]]
-    ));
-    assert(iota(7).slide(2, 3).retro.equal!equal(
-        [[3, 4], [0, 1]]
-    ));
-    assert(iota(7).slide(2, 4).retro.equal!equal(
-        [[4, 5], [0, 1]]
-    ));
-    assert(iota(7).slide(2, 5).retro.equal!equal(
-        [[5, 6], [0, 1]]
-    ));
-    assert(iota(7).slide(3, 1).retro.equal!equal(
-        [[4, 5, 6], [3, 4, 5], [2, 3, 4], [1, 2, 3], [0, 1, 2]]
-    ));
-    assert(iota(7).slide(3, 2).retro.equal!equal(
-        [[4, 5, 6], [2, 3, 4], [0, 1, 2]]
-    ));
-    assert(iota(7).slide(4, 1).retro.equal!equal(
-        [[3, 4, 5, 6], [2, 3, 4, 5], [1, 2, 3, 4], [0, 1, 2, 3]]
-    ));
-    assert(iota(7).slide(4, 2).retro.equal!equal(
-        [[2, 3, 4, 5], [0, 1, 2, 3]]
-    ));
-    assert(iota(7).slide(4, 3).retro.equal!equal(
-        [[3, 4, 5, 6], [0, 1, 2, 3]]
-    ));
-    assert(iota(7).slide(4, 4).retro.equal!equal(
-        [[0, 1, 2, 3]]
-    ));
-    assert(iota(7).slide(5, 1).retro.equal!equal(
-        [[2, 3, 4, 5, 6], [1, 2, 3, 4, 5], [0, 1, 2, 3, 4]]
-    ));
-    assert(iota(7).slide(5, 2).retro.equal!equal(
-        [[2, 3, 4, 5, 6], [0, 1, 2, 3, 4]]
-    ));
-    assert(iota(7).slide(5, 3).retro.equal!equal(
-        [[0, 1, 2, 3, 4]]
-    ));
-    assert(iota(7).slide(5, 4).retro.equal!equal(
-        [[0, 1, 2, 3, 4]]
-    ));
-}
-
-// step size
-@safe pure nothrow unittest
-{
-    import std.algorithm.comparison : equal;
-
-    assert(iota(7).slide(2, 2).equal!equal([[0, 1], [2, 3], [4, 5]]));
-    assert(iota(8).slide(2, 2).equal!equal([[0, 1], [2, 3], [4, 5], [6, 7]]));
-    assert(iota(9).slide(2, 2).equal!equal([[0, 1], [2, 3], [4, 5], [6, 7]]));
-    assert(iota(12).slide(2, 4).equal!equal([[0, 1], [4, 5], [8, 9]]));
-    assert(iota(13).slide(2, 4).equal!equal([[0, 1], [4, 5], [8, 9]]));
+            assert(rRetro.length == rArr.length);
+            assert(rRetro.equal(rArr));
+            assert(rRetro.array.retro.equal(r));
+        }
+    }}
 }
 
 // test with dummy ranges
 @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
-    import std.internal.test.dummyrange : DummyRange, Length, RangeType, ReturnBy, AllDummyRanges;
-    import std.meta : AliasSeq;
+    import std.internal.test.dummyrange : AllDummyRanges;
+    import std.meta : Filter;
 
-    alias AllForwardDummyRanges = AliasSeq!(
-        DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Forward),
-        DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Bidirectional),
-        DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random),
-        DummyRange!(ReturnBy.Reference, Length.No, RangeType.Forward),
-        DummyRange!(ReturnBy.Reference, Length.No, RangeType.Bidirectional),
-        //DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Input),
-        DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Forward),
-        DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Bidirectional),
-        DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random),
-        //DummyRange!(ReturnBy.Value, Length.No, RangeType.Input),
-        DummyRange!(ReturnBy.Value, Length.No, RangeType.Forward),
-        DummyRange!(ReturnBy.Value, Length.No, RangeType.Bidirectional)
-    );
+    static foreach (Range; Filter!(isForwardRange, AllDummyRanges))
+    {{
+        Range r;
 
-    foreach (Range; AliasSeq!AllForwardDummyRanges)
+        static foreach (Partial; [Yes.withPartial, No.withPartial])
+        {
+            assert(r.slide!Partial(1).equal!equal(
+                [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]]
+            ));
+            assert(r.slide!Partial(2).equal!equal(
+                [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 9], [9, 10]]
+            ));
+            assert(r.slide!Partial(3).equal!equal(
+                [[1, 2, 3], [2, 3, 4], [3, 4, 5], [4, 5, 6],
+                [5, 6, 7], [6, 7, 8], [7, 8, 9], [8, 9, 10]]
+            ));
+            assert(r.slide!Partial(6).equal!equal(
+                [[1, 2, 3, 4, 5, 6], [2, 3, 4, 5, 6, 7], [3, 4, 5, 6, 7, 8],
+                [4, 5, 6, 7, 8, 9], [5, 6, 7, 8, 9, 10]]
+            ));
+        }
+
+        // special cases
+        assert(r.slide!(Yes.withPartial)(15).equal!equal(iota(1, 11).only));
+        assert(r.slide!(Yes.withPartial)(15).walkLength == 1);
+        assert(r.slide!(No.withPartial)(15).empty);
+        assert(r.slide!(No.withPartial)(15).walkLength == 0);
+    }}
+}
+
+// test with dummy ranges
+@safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.internal.test.dummyrange : AllDummyRanges;
+    import std.meta : Filter;
+    import std.typecons : tuple;
+
+    alias t = tuple;
+    static immutable list = [
+    // iota   slide    expected
+        t(6,  t(4, 2), [[1, 2, 3, 4], [3, 4, 5, 6]]),
+        t(6,  t(4, 6), [[1, 2, 3, 4]]),
+        t(6,  t(4, 1), [[1, 2, 3, 4], [2, 3, 4, 5], [3, 4, 5, 6]]),
+        t(7,  t(4, 1), [[1, 2, 3, 4], [2, 3, 4, 5], [3, 4, 5, 6], [4, 5, 6, 7]]),
+        t(7,  t(4, 3), [[1, 2, 3, 4], [4, 5, 6, 7]]),
+        t(8,  t(4, 2), [[1, 2, 3, 4], [3, 4, 5, 6], [5, 6, 7, 8]]),
+        t(8,  t(4, 1), [[1, 2, 3, 4], [2, 3, 4, 5], [3, 4, 5, 6], [4, 5, 6, 7], [5, 6, 7, 8]]),
+        t(8,  t(3, 4), [[1, 2, 3], [5, 6, 7]]),
+        t(10, t(3, 7), [[1, 2, 3], [8, 9, 10]]),
+    ];
+
+    static foreach (Range; Filter!(isForwardRange, AllDummyRanges))
+    static foreach (Partial; [Yes.withPartial, No.withPartial])
+    foreach (e; list)
+        assert(Range().take(e[0]).slide!Partial(e[1].expand).equal!equal(e[2]));
+
+    static immutable listSpecial = [
+    // iota   slide    expected
+        t(6,  t(4, 3), [[1, 2, 3, 4], [4, 5, 6]]),
+        t(7,  t(4, 5), [[1, 2, 3, 4], [6, 7]]),
+        t(7,  t(4, 4), [[1, 2, 3, 4], [5, 6, 7]]),
+        t(7,  t(4, 2), [[1, 2, 3, 4], [3, 4, 5, 6], [5, 6, 7]]),
+        t(8,  t(4, 3), [[1, 2, 3, 4], [4, 5, 6, 7], [7, 8]]),
+        t(8,  t(3, 3), [[1, 2, 3], [4, 5, 6], [7, 8]]),
+        t(8,  t(3, 6), [[1, 2, 3], [7, 8]]),
+        t(10, t(7, 6), [[1, 2, 3, 4, 5, 6, 7], [7, 8, 9, 10]]),
+        t(10, t(3, 8), [[1, 2, 3], [9, 10]]),
+    ];
+    static foreach (Range; Filter!(isForwardRange, AllDummyRanges))
+    static foreach (Partial; [Yes.withPartial, No.withPartial])
+    foreach (e; listSpecial)
     {
         Range r;
-        assert(r.slide(1).equal!equal(
-            [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]]
-        ));
-        assert(r.slide(2).equal!equal(
-            [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 9], [9, 10]]
-        ));
-        assert(r.slide(3).equal!equal(
-            [[1, 2, 3], [2, 3, 4], [3, 4, 5], [4, 5, 6],
-            [5, 6, 7], [6, 7, 8], [7, 8, 9], [8, 9, 10]]
-        ));
-        assert(r.slide(6).equal!equal(
-            [[1, 2, 3, 4, 5, 6], [2, 3, 4, 5, 6, 7], [3, 4, 5, 6, 7, 8],
-            [4, 5, 6, 7, 8, 9], [5, 6, 7, 8, 9, 10]]
-        ));
-        assert(r.slide(15).equal!equal(
-            [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]]
-        ));
-
-        assert(r.slide!(No.withFewerElements)(15).empty);
+        assert(r.take(e[0]).slide!(Yes.withPartial)(e[1].expand).equal!equal(e[2]));
+        assert(r.take(e[0]).slide!(No.withPartial)(e[1].expand).equal!equal(e[2].dropBackOne));
     }
+}
 
-    alias BackwardsDummyRanges = AliasSeq!(
-        DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random),
-        DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random),
-    );
+// test reverse with dummy ranges
+@safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.internal.test.dummyrange : AllDummyRanges;
+    import std.meta : Filter, templateAnd;
+    import std.typecons : tuple;
+    alias t = tuple;
 
-    foreach (Range; AliasSeq!BackwardsDummyRanges)
-    {
+    static immutable list = [
+    //   slide   expected
+        t(1, 1, [[10], [9], [8], [7], [6], [5], [4], [3], [2], [1]]),
+        t(2, 1, [[9, 10], [8, 9], [7, 8], [6, 7], [5, 6], [4, 5], [3, 4], [2, 3], [1, 2]]),
+        t(5, 1, [[6, 7, 8, 9, 10], [5, 6, 7, 8, 9], [4, 5, 6, 7, 8],
+                 [3, 4, 5, 6, 7], [2, 3, 4, 5, 6], [1, 2, 3, 4, 5]]),
+        t(2, 2, [[9, 10], [7, 8], [5, 6], [3, 4], [1, 2]]),
+        t(2, 4, [[9, 10], [5, 6], [1, 2]]),
+    ];
+
+    static foreach (Range; Filter!(templateAnd!(hasSlicing, hasLength, isBidirectionalRange), AllDummyRanges))
+    {{
         Range r;
-        assert(r.slide(1).retro.equal!equal(
-            [[10], [9], [8], [7], [6], [5], [4], [3], [2], [1]]
-        ));
-        assert(r.slide(2).retro.equal!equal(
-            [[9, 10], [8, 9], [7, 8], [6, 7], [5, 6], [4, 5], [3, 4], [2, 3], [1, 2]]
-        ));
-        assert(r.slide(5).retro.equal!equal(
-            [[6, 7, 8, 9, 10], [5, 6, 7, 8, 9], [4, 5, 6, 7, 8],
-            [3, 4, 5, 6, 7], [2, 3, 4, 5, 6], [1, 2, 3, 4, 5]]
-        ));
-        assert(r.slide(15).retro.equal!equal(
-            [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]]
-        ));
+        static foreach (Partial; [Yes.withPartial, No.withPartial])
+        {
+            foreach (e; list)
+                assert(r.slide!Partial(e[0], e[1]).retro.equal!equal(e[2]));
 
-        // different step sizes
-        assert(r.slide(2, 4)[2].equal([9, 10]));
-        assert(r.slide(2, 1).equal!equal(
-            [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 9], [9, 10]]
-        ));
-        assert(r.slide(2, 2).equal!equal(
-            [[1, 2], [3, 4], [5, 6], [7, 8], [9, 10]]
-        ));
-        assert(r.slide(2, 3).equal!equal(
-            [[1, 2], [4, 5], [7, 8]]
-        ));
-        assert(r.slide(2, 4).equal!equal(
-            [[1, 2], [5, 6], [9, 10]]
-        ));
-
-        // front = back
-        foreach (windowSize; 1 .. 10)
+            // front = back
+            foreach (windowSize; 1 .. 10)
             foreach (stepSize; 1 .. 10)
             {
-                auto slider = r.slide(windowSize, stepSize);
-                assert(slider.retro.retro.equal!equal(slider));
+                auto slider = r.slide!Partial(windowSize, stepSize);
+                auto sliderRetro = slider.retro.array;
+                assert(slider.length == sliderRetro.length);
+                assert(sliderRetro.retro.equal!equal(slider));
             }
-    }
+        }
 
-    assert(iota(1, 12).slide(2, 4)[0 .. 3].equal!equal([[1, 2], [5, 6], [9, 10]]));
-    assert(iota(1, 12).slide(2, 4)[0 .. $].equal!equal([[1, 2], [5, 6], [9, 10]]));
-    assert(iota(1, 12).slide(2, 4)[$/2 .. $].equal!equal([[5, 6], [9, 10]]));
-
-    // reverse
-    assert(iota(1, 12).slide(2, 4).retro.equal!equal([[9, 10], [5, 6], [1, 2]]));
+        // special cases
+        assert(r.slide!(No.withPartial)(15).retro.walkLength == 0);
+        assert(r.slide!(Yes.withPartial)(15).retro.equal!equal(iota(1, 11).only));
+    }}
 }
 
 // test different sliceable ranges
 @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
-    import std.internal.test.dummyrange : DummyRange, Length, RangeType, ReturnBy;
+    import std.internal.test.dummyrange : AllDummyRanges;
     import std.meta : AliasSeq;
 
     struct SliceableRange(Range, Flag!"withOpDollar" withOpDollar = No.withOpDollar,
@@ -8612,7 +8758,7 @@ public:
                 struct Dollar {}
                 Dollar opDollar() const { return Dollar.init; }
 
-                //Slice to dollar
+                // Slice to dollar
                 typeof(this) opSlice(size_t lower, Dollar)
                 {
                     return typeof(this)(arr[lower .. $]);
@@ -8626,75 +8772,61 @@ public:
         }
     }
 
-    alias T = int[];
+    alias SliceableDummyRanges = Filter!(hasSlicing, AllDummyRanges);
 
-    alias SliceableDummyRanges = AliasSeq!(
-        DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random, T),
-        DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random, T),
-        SliceableRange!(T, No.withOpDollar, No.withInfiniteness),
-        SliceableRange!(T, Yes.withOpDollar, No.withInfiniteness),
-        SliceableRange!(T, Yes.withOpDollar, Yes.withInfiniteness),
-    );
+    static foreach (Partial; [Yes.withPartial, No.withPartial])
+    {{
+        static foreach (Range; SliceableDummyRanges)
+        {{
+            Range r;
+            r.reinit;
+            r.arr[] -= 1; // use a 0-based array (for clarity)
 
-    foreach (Range; AliasSeq!SliceableDummyRanges)
-    {
-        Range r;
-        r.arr = 10.iota.array; // for clarity
+            assert(r.slide!Partial(2)[0].equal([0, 1]));
+            assert(r.slide!Partial(2)[1].equal([1, 2]));
 
-        static assert(isForwardRange!Range);
-        enum hasSliceToEnd = hasSlicing!Range && is(typeof(Range.init[0 .. $]) == Range);
+            // saveable
+            auto s = r.slide!Partial(2);
+            assert(s[0 .. 2].equal!equal([[0, 1], [1, 2]]));
+            s.save.popFront;
+            assert(s[0 .. 2].equal!equal([[0, 1], [1, 2]]));
 
-        assert(r.slide(2)[0].equal([0, 1]));
-        assert(r.slide(2)[1].equal([1, 2]));
+            assert(r.slide!Partial(3)[1 .. 3].equal!equal([[1, 2, 3], [2, 3, 4]]));
+        }}
 
-        // saveable
-        auto s = r.slide(2);
-        assert(s[0 .. 2].equal!equal([[0, 1], [1, 2]]));
-        s.save.popFront;
-        assert(s[0 .. 2].equal!equal([[0, 1], [1, 2]]));
+        static foreach (Range; Filter!(templateNot!isInfinite, SliceableDummyRanges))
+        {{
+            Range r;
+            r.reinit;
+            r.arr[] -= 1; // use a 0-based array (for clarity)
 
-        assert(r.slide(3)[1 .. 3].equal!equal([[1, 2, 3], [2, 3, 4]]));
-    }
+            assert(r.slide!(No.withPartial)(6).equal!equal(
+                [[0, 1, 2, 3, 4, 5], [1, 2, 3, 4, 5, 6], [2, 3, 4, 5, 6, 7],
+                [3, 4, 5, 6, 7, 8], [4, 5, 6, 7, 8, 9]]
+            ));
+            assert(r.slide!(No.withPartial)(16).empty);
 
-    alias SliceableDummyRangesWithoutInfinity = AliasSeq!(
-        DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random, T),
-        DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random, T),
-        SliceableRange!(T, No.withOpDollar, No.withInfiniteness),
-        SliceableRange!(T, Yes.withOpDollar, No.withInfiniteness),
-    );
+            assert(r.slide!Partial(4)[0 .. $].equal(r.slide!Partial(4)));
+            assert(r.slide!Partial(2)[$/2 .. $].equal!equal([[4, 5], [5, 6], [6, 7], [7, 8], [8, 9]]));
+            assert(r.slide!Partial(2)[$ .. $].empty);
 
-    foreach (Range; AliasSeq!SliceableDummyRangesWithoutInfinity)
-    {
-        static assert(hasSlicing!Range);
-        static assert(hasLength!Range);
+            assert(r.slide!Partial(3).retro.equal!equal(
+                [[7, 8, 9], [6, 7, 8], [5, 6, 7], [4, 5, 6], [3, 4, 5], [2, 3, 4], [1, 2, 3], [0, 1, 2]]
+            ));
+        }}
 
-        Range r;
-        r.arr = 10.iota.array; // for clarity
+        alias T = int[];
 
-        assert(r.slide!(No.withFewerElements)(6).equal!equal(
-            [[0, 1, 2, 3, 4, 5], [1, 2, 3, 4, 5, 6], [2, 3, 4, 5, 6, 7],
-            [3, 4, 5, 6, 7, 8], [4, 5, 6, 7, 8, 9]]
-        ));
-        assert(r.slide!(No.withFewerElements)(16).empty);
+        // separate checks for infinity
+        auto infIndex = SliceableRange!(T, No.withOpDollar, Yes.withInfiniteness)([0, 1, 2, 3]);
+        assert(infIndex.slide!Partial(2)[0].equal([0, 1]));
+        assert(infIndex.slide!Partial(2)[1].equal([1, 2]));
 
-        assert(r.slide(4)[0 .. $].equal(r.slide(4)));
-        assert(r.slide(2)[$/2 .. $].equal!equal([[4, 5], [5, 6], [6, 7], [7, 8], [8, 9]]));
-        assert(r.slide(2)[$ .. $].empty);
-
-        assert(r.slide(3).retro.equal!equal(
-            [[7, 8, 9], [6, 7, 8], [5, 6, 7], [4, 5, 6], [3, 4, 5], [2, 3, 4], [1, 2, 3], [0, 1, 2]]
-        ));
-    }
-
-    // separate checks for infinity
-    auto infIndex = SliceableRange!(T, No.withOpDollar, Yes.withInfiniteness)([0, 1, 2, 3]);
-    assert(infIndex.slide(2)[0].equal([0, 1]));
-    assert(infIndex.slide(2)[1].equal([1, 2]));
-
-    auto infDollar = SliceableRange!(T, Yes.withOpDollar, Yes.withInfiniteness)();
-    assert(infDollar.slide(2)[1 .. $].front.equal([1, 2]));
-    assert(infDollar.slide(4)[0 .. $].front.equal([0, 1, 2, 3]));
-    assert(infDollar.slide(4)[2 .. $].front.equal([2, 3, 4, 5]));
+        auto infDollar = SliceableRange!(T, Yes.withOpDollar, Yes.withInfiniteness)();
+        assert(infDollar.slide!Partial(2)[1 .. $].front.equal([1, 2]));
+        assert(infDollar.slide!Partial(4)[0 .. $].front.equal([0, 1, 2, 3]));
+        assert(infDollar.slide!Partial(4)[2 .. $].front.equal([2, 3, 4, 5]));
+    }}
 }
 
 private struct OnlyResult(T, size_t arity)
@@ -9054,8 +9186,8 @@ if (!is(CommonType!Values == void) || Values.length == 0)
         ["one two", "one two three", "one two three four"];
     string[] joinedRange = joined;
 
-    foreach (argCount; AliasSeq!(2, 3, 4))
-    {
+    static foreach (argCount; 2 .. 5)
+    {{
         auto values = only(data[0 .. argCount]);
         alias Values = typeof(values);
         static assert(is(ElementType!Values == string));
@@ -9070,7 +9202,7 @@ if (!is(CommonType!Values == void) || Values.length == 0)
         assert(values[0 .. $].equal(values[0 .. values.length]));
         assert(values.joiner(" ").equal(joinedRange.front));
         joinedRange.popFront();
-    }
+    }}
 
     assert(saved.retro.equal(only(3, 2, 1)));
     assert(saved.length == 3);
@@ -9314,8 +9446,8 @@ pure @safe nothrow unittest
         }
     }
 
-    foreach (DummyType; AliasSeq!(AllDummyRanges, HasSlicing))
-    {
+    static foreach (DummyType; AliasSeq!(AllDummyRanges, HasSlicing))
+    {{
         alias R = typeof(enumerate(DummyType.init));
         static assert(isInputRange!R);
         static assert(isForwardRange!R == isForwardRange!DummyType);
@@ -9330,7 +9462,7 @@ pure @safe nothrow unittest
         }
 
         static assert(hasSlicing!R == hasSlicing!DummyType);
-    }
+    }}
 
     static immutable values = ["zero", "one", "two", "three"];
     auto enumerated = values[].enumerate();
@@ -9380,8 +9512,8 @@ pure @safe nothrow unittest
         assert(shifted.empty);
     }
 
-    foreach (T; AliasSeq!(ubyte, byte, uint, int))
-    {
+    static foreach (T; AliasSeq!(ubyte, byte, uint, int))
+    {{
         auto inf = 42.repeat().enumerate(T.max);
         alias Inf = typeof(inf);
         static assert(isInfinite!Inf);
@@ -9400,7 +9532,7 @@ pure @safe nothrow unittest
         assert(window.front == inf.front);
         window.popFront();
         assert(window.empty);
-    }
+    }}
 }
 
 pure @safe unittest
@@ -9408,8 +9540,8 @@ pure @safe unittest
     import std.algorithm.comparison : equal;
     import std.meta : AliasSeq;
     static immutable int[] values = [0, 1, 2, 3, 4];
-    foreach (T; AliasSeq!(ubyte, ushort, uint, ulong))
-    {
+    static foreach (T; AliasSeq!(ubyte, ushort, uint, ulong))
+    {{
         auto enumerated = values.enumerate!T();
         static assert(is(typeof(enumerated.front.index) == T));
         assert(enumerated.equal(values[].zip(values)));
@@ -9421,7 +9553,7 @@ pure @safe unittest
             static assert(is(typeof(enumerated.front.index) == T));
             assert(offsetEnumerated.equal(subset.zip(subset)));
         }
-    }
+    }}
 }
 
 version(none) // @@@BUG@@@ 10939
@@ -9450,7 +9582,7 @@ version(none) // @@@BUG@@@ 10939
         }
 
         SignedLengthRange svalues;
-        foreach (Enumerator; AliasSeq!(ubyte, byte, ushort, short, uint, int, ulong, long))
+        static foreach (Enumerator; AliasSeq!(ubyte, byte, ushort, short, uint, int, ulong, long))
         {
             assertThrown!RangeError(values[].enumerate!Enumerator(Enumerator.max));
             assertNotThrown!RangeError(values[].enumerate!Enumerator(Enumerator.max - values.length));
@@ -9461,7 +9593,7 @@ version(none) // @@@BUG@@@ 10939
             assertThrown!RangeError(svalues.enumerate!Enumerator(Enumerator.max - values.length + 1));
         }
 
-        foreach (Enumerator; AliasSeq!(byte, short, int))
+        static foreach (Enumerator; AliasSeq!(byte, short, int))
         {
             assertThrown!RangeError(repeat(0, uint.max).enumerate!Enumerator());
         }
@@ -9791,8 +9923,7 @@ if (isInputRange!Range)
    all $(D x) (e.g., if $(D pred) is "less than", returns the portion of
    the range with elements strictly smaller than $(D value)). The search
    schedule and its complexity are documented in
-   $(LREF SearchPolicy).  See also STL's
-   $(HTTP sgi.com/tech/stl/lower_bound.html, lower_bound).
+   $(LREF SearchPolicy).
 */
     auto lowerBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V)
@@ -9822,8 +9953,6 @@ For ranges that do not offer random access, $(D SearchPolicy.linear)
 is the only policy allowed (and it must be specified explicitly lest it exposes
 user code to unexpected inefficiencies). For random-access searches, all
 policies are allowed, and $(D SearchPolicy.binarySearch) is the default.
-
-See_Also: STL's $(HTTP sgi.com/tech/stl/lower_bound.html,upper_bound).
 */
     auto upperBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V))
@@ -9866,8 +9995,7 @@ See_Also: STL's $(HTTP sgi.com/tech/stl/lower_bound.html,upper_bound).
    and $(D SearchPolicy.gallop) to find the right boundary. These
    policies are justified by the fact that the two boundaries are likely
    to be near the first found value (i.e., equal ranges are relatively
-   small). Completes the entire search in $(BIGOH log(n)) time. See also
-   STL's $(HTTP sgi.com/tech/stl/equal_range.html, equal_range).
+   small). Completes the entire search in $(BIGOH log(n)) time.
 */
     auto equalRange(V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V)
@@ -9983,8 +10111,7 @@ equalRange). Completes the entire search in $(BIGOH log(n)) time.
 /**
 Returns $(D true) if and only if $(D value) can be found in $(D
 range), which is assumed to be sorted. Performs $(BIGOH log(r.length))
-evaluations of $(D pred). See also STL's $(HTTP
-sgi.com/tech/stl/binary_search.html, binary_search).
+evaluations of $(D pred).
  */
 
     bool contains(V)(V value)
@@ -11519,7 +11646,6 @@ if (isInputRange!R && isIntegral!(ElementType!R))
         bw.popFront();
         assert(bw[2 * bitsNum - 3] == true);
 
-        import core.exception : Error;
         import std.exception : assertThrown;
 
         // Check out of bounds error
@@ -11547,14 +11673,46 @@ struct NullSink
     void put(E)(E){}
 }
 
+/// ditto
+auto ref nullSink()
+{
+    static NullSink sink;
+    return sink;
+}
+
 ///
-@safe unittest
+@safe nothrow unittest
 {
     import std.algorithm.iteration : map;
     import std.algorithm.mutation : copy;
-    [4, 5, 6].map!(x => x * 2).copy(NullSink()); // data is discarded
+    [4, 5, 6].map!(x => x * 2).copy(nullSink); // data is discarded
 }
 
+///
+@safe unittest
+{
+    import std.csv : csvNextToken;
+
+    string line = "a,b,c";
+
+    // ignore the first column
+    line.csvNextToken(nullSink, ',', '"');
+    line.popFront;
+
+    // look at the second column
+    Appender!string app;
+    line.csvNextToken(app, ',', '"');
+    assert(app.data == "b");
+}
+
+@safe unittest
+{
+    auto r = 10.iota
+                .tee(nullSink)
+                .dropOne;
+
+    assert(r.front == 1);
+}
 
 /++
 
@@ -11831,19 +11989,19 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
     auto result3 = txt.tee(asink3).array;
     assert(equal(txt, result3) && equal(result3, asink3));
 
-    foreach (CharType; AliasSeq!(char, wchar, dchar))
-    {
+    static foreach (CharType; AliasSeq!(char, wchar, dchar))
+    {{
         auto appSink = appender!(CharType[])();
         auto appResult = txt.tee(appSink).array;
         assert(equal(txt, appResult) && equal(appResult, appSink.data));
-    }
+    }}
 
-    foreach (StringType; AliasSeq!(string, wstring, dstring))
-    {
+    static foreach (StringType; AliasSeq!(string, wstring, dstring))
+    {{
         auto appSink = appender!StringType();
         auto appResult = txt.tee(appSink).array;
         assert(equal(txt, appResult) && equal(appResult, appSink.data));
-    }
+    }}
 }
 
 @safe unittest

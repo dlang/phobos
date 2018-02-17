@@ -2,8 +2,7 @@
 
 set -uexo pipefail
 
-HOST_DMD_VER=2.072.2 # same as in dmd/src/posix.mak
-DSCANNER_DMD_VER=2.077.0 # dscanner needs a more up-to-date version
+HOST_DMD_VER=2.078.1
 CURL_USER_AGENT="CirleCI $(curl --version | head -n 1)"
 DUB=${DUB:-dub}
 N=2
@@ -68,13 +67,10 @@ setup_repos()
 
     # merge upstream branch with changes, s.t. we check with the latest changes
     if [ -n "${CIRCLE_PR_NUMBER:-}" ]; then
-        local current_branch=$(git rev-parse --abbrev-ref HEAD)
-        git config user.name dummyuser
-        git config user.email dummyuser@dummyserver.com
-        git remote add upstream https://github.com/dlang/phobos.git
-        git fetch upstream
-        git checkout -f upstream/$base_branch
-        git merge -m "Automatic merge" $current_branch
+        local head=$(git rev-parse HEAD)
+        git remote add upstream "https://github.com/dlang/$CIRCLE_PROJECT_REPONAME.git"
+        git fetch -q upstream "+refs/pull/${CIRCLE_PR_NUMBER}/merge:"
+        git checkout -f FETCH_HEAD
     fi
 
     for proj in dmd druntime ; do
@@ -99,7 +95,7 @@ setup_repos()
 style_lint()
 {
     # dscanner needs a more up-to-date DMD version
-    source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$DSCANNER_DMD_VER --activate)"
+    source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"
 
     make -f posix.mak style_lint DUB=$DUB BUILD=$BUILD
 }
@@ -133,7 +129,7 @@ publictests()
     if [ ! -d ../tools ] ; then
         clone https://github.com/dlang/tools.git ../tools master
     fi
-    git -C ../tools checkout df3dfa3061d25996ac98158d3bdb3525c8d89445
+    git -C ../tools checkout 6ad91215253b52e6ecfc39fe1854815867c66f23
 
     make -f posix.mak -j$N publictests DUB=$DUB BUILD=$BUILD
 }

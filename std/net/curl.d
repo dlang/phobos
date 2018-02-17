@@ -28,19 +28,19 @@ to your $(B dub.json) file if you are using $(LINK2 http://code.dlang.org, DUB).
 
 Windows x86 note:
 A DMD compatible libcurl static library can be downloaded from the dlang.org
-$(LINK2 http://dlang.org/download.html, download page).
+$(LINK2 http://downloads.dlang.org/other/index.html, download archive page).
 
 Compared to using libcurl directly this module allows simpler client code for
 common uses, requires no unsafe operations, and integrates better with the rest
-of the language. Futhermore it provides <a href="std_range.html">$(D range)</a>
+of the language. Futhermore it provides $(MREF_ALTTEXT range, std,range)
 access to protocols supported by libcurl both synchronously and asynchronously.
 
 A high level and a low level API are available. The high level API is built
 entirely on top of the low level one.
 
 The high level API is for commonly used functionality such as HTTP/FTP get. The
-$(LREF byLineAsync) and $(LREF byChunkAsync) provides asynchronous <a
-href="std_range.html">$(D ranges)</a> that performs the request in another
+$(LREF byLineAsync) and $(LREF byChunkAsync) provides asynchronous
+$(MREF_ALTTEXT range, std,range) that performs the request in another
 thread while handling a line/chunk in the current thread.
 
 The low level API allows for streaming and other advanced features.
@@ -159,20 +159,19 @@ module std.net.curl;
 public import etc.c.curl : CurlOption;
 import core.time : dur;
 import etc.c.curl : CURLcode;
-import std.concurrency : Tid;
 import std.range.primitives;
 import std.encoding : EncodingScheme;
 import std.traits : isSomeChar;
 import std.typecons : Flag, Yes, No, Tuple;
 
-version(unittest)
+version(StdUnittest)
 {
     import std.socket : Socket;
 
-    // Run unit test with the PHOBOS_TEST_ALLOW_NET=1 set in order to
-    // allow net traffic
     private struct TestServer
     {
+        import std.concurrency : Tid;
+
         import std.socket : Socket, TcpSocket;
 
         string addr() { return _addr; }
@@ -314,7 +313,7 @@ version(unittest)
 version(StdDdoc) import std.stdio;
 
 // Default data timeout for Protocols
-enum _defaultDataTimeout = dur!"minutes"(2);
+private enum _defaultDataTimeout = dur!"minutes"(2);
 
 /**
 Macros:
@@ -1568,35 +1567,6 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
     }
 }
 
-// @@@@BUG 15831@@@@
-// this should be inside byLineAsync
-// Range that reads one line at a time asynchronously.
-private static struct AsyncLineInputRange(Char)
-{
-    private Char[] line;
-    mixin WorkerThreadProtocol!(Char, line);
-
-    private Tid workerTid;
-    private State running;
-
-    private this(Tid tid, size_t transmitBuffers, size_t bufferSize)
-    {
-        import std.concurrency : send;
-
-        workerTid = tid;
-        state = State.needUnits;
-
-        // Send buffers to other thread for it to use.  Since no mechanism is in
-        // place for moving ownership a cast to shared is done here and casted
-        // back to non-shared in the receiving end.
-        foreach (i ; 0 .. transmitBuffers)
-        {
-            auto arr = new Char[](bufferSize);
-            workerTid.send(cast(immutable(Char[]))arr);
-        }
-    }
-}
-
 /** HTTP/FTP fetch content as a range of lines asynchronously.
  *
  * A range of lines is returned immediately and the request that fetches the
@@ -1614,7 +1584,7 @@ private static struct AsyncLineInputRange(Char)
  *
  * If no data is available and the main thread accesses the range it will block
  * until data becomes available. An exception to this is the $(D wait(Duration)) method on
- * the $(LREF AsyncLineInputRange). This method will wait at maximum for the
+ * the $(LREF LineInputRange). This method will wait at maximum for the
  * specified duration and return true if data is available.
  *
  * Example:
@@ -1673,18 +1643,18 @@ if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
     }
     else
     {
-        import std.concurrency;
+        import std.concurrency : OnCrowding, send, setMaxMailboxSize, spawn, thisTid, Tid;
         // 50 is just an arbitrary number for now
         setMaxMailboxSize(thisTid, 50, OnCrowding.block);
-        auto tid = spawn(&_spawnAsync!(Conn, Char, Terminator));
+        auto tid = spawn(&_async!().spawn!(Conn, Char, Terminator));
         tid.send(thisTid);
         tid.send(terminator);
         tid.send(keepTerminator == Yes.keepTerminator);
 
-        _asyncDuplicateConnection(url, conn, postData, tid);
+        _async!().duplicateConnection(url, conn, postData, tid);
 
-        return AsyncLineInputRange!Char(tid, transmitBuffers,
-                                        Conn.defaultAsyncStringBufferSize);
+        return _async!().LineInputRange!Char(tid, transmitBuffers,
+                                             Conn.defaultAsyncStringBufferSize);
     }
 }
 
@@ -1724,35 +1694,6 @@ auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char)
     }
 }
 
-// @@@@BUG 15831@@@@
-// this should be inside byLineAsync
-// Range that reads one chunk at a time asynchronously.
-private static struct AsyncChunkInputRange
-{
-    import std.concurrency : Tid, send;
-
-    private ubyte[] chunk;
-    mixin WorkerThreadProtocol!(ubyte, chunk);
-
-    private Tid workerTid;
-    private State running;
-
-    private this(Tid tid, size_t transmitBuffers, size_t chunkSize)
-    {
-        workerTid = tid;
-        state = State.needUnits;
-
-        // Send buffers to other thread for it to use.  Since no mechanism is in
-        // place for moving ownership a cast to shared is done here and a cast
-        // back to non-shared in the receiving end.
-        foreach (i ; 0 .. transmitBuffers)
-        {
-            ubyte[] arr = new ubyte[](chunkSize);
-            workerTid.send(cast(immutable(ubyte[]))arr);
-        }
-    }
-}
-
 /** HTTP/FTP fetch content as a range of chunks asynchronously.
  *
  * A range of chunks is returned immediately and the request that fetches the
@@ -1770,7 +1711,7 @@ private static struct AsyncChunkInputRange
  *
  * If no data is available and the main thread access the range it will block
  * until data becomes available. An exception to this is the $(D wait(Duration))
- * method on the $(LREF AsyncChunkInputRange). This method will wait at maximum for the specified
+ * method on the $(LREF ChunkInputRange). This method will wait at maximum for the specified
  * duration and return true if data is available.
  *
  * Example:
@@ -1826,15 +1767,15 @@ if (isCurlConn!(Conn))
     }
     else
     {
-        import std.concurrency;
+        import std.concurrency : OnCrowding, send, setMaxMailboxSize, spawn, thisTid, Tid;
         // 50 is just an arbitrary number for now
         setMaxMailboxSize(thisTid, 50, OnCrowding.block);
-        auto tid = spawn(&_spawnAsync!(Conn, ubyte));
+        auto tid = spawn(&_async!().spawn!(Conn, ubyte));
         tid.send(thisTid);
 
-        _asyncDuplicateConnection(url, conn, postData, tid);
+        _async!().duplicateConnection(url, conn, postData, tid);
 
-        return AsyncChunkInputRange(tid, transmitBuffers, chunkSize);
+        return _async!().ChunkInputRange(tid, transmitBuffers, chunkSize);
     }
 }
 
@@ -1876,54 +1817,6 @@ if (isCurlConn!(Conn))
 }
 
 
-/* Used by byLineAsync/byChunkAsync to duplicate an existing connection
- * that can be used exclusively in a spawned thread.
- */
-private void _asyncDuplicateConnection(Conn, PostData)
-    (const(char)[] url, Conn conn, PostData postData, Tid tid)
-{
-    import std.concurrency : send;
-    import std.exception : enforce;
-
-    // no move semantic available in std.concurrency ie. must use casting.
-    auto connDup = conn.dup();
-    connDup.url = url;
-
-    static if ( is(Conn : HTTP) )
-    {
-        connDup.p.headersOut = null;
-        connDup.method = conn.method == HTTP.Method.undefined ?
-            HTTP.Method.get : conn.method;
-        if (postData !is null)
-        {
-            if (connDup.method == HTTP.Method.put)
-            {
-                connDup.handle.set(CurlOption.infilesize_large,
-                                   postData.length);
-            }
-            else
-            {
-                // post
-                connDup.method = HTTP.Method.post;
-                connDup.handle.set(CurlOption.postfieldsize_large,
-                                   postData.length);
-            }
-            connDup.handle.set(CurlOption.copypostfields,
-                               cast(void*) postData.ptr);
-        }
-        tid.send(cast(ulong) connDup.handle.handle);
-        tid.send(connDup.method);
-    }
-    else
-    {
-        enforce!CurlException(postData is null,
-                                "Cannot put ftp data using byLineAsync()");
-        tid.send(cast(ulong) connDup.handle.handle);
-        tid.send(HTTP.Method.undefined);
-    }
-    connDup.p.curl.handle = null; // make sure handle is not freed
-}
-
 /*
   Mixin template for all supported curl protocols. This is the commom
   functionallity such as timeouts and network interface settings. This should
@@ -1933,7 +1826,7 @@ private void _asyncDuplicateConnection(Conn, PostData)
 */
 private mixin template Protocol()
 {
-    import etc.c.curl : CurlReadFunc;
+    import etc.c.curl : CurlReadFunc, RawCurlProxy = CurlProxy;
     import core.time : Duration;
     import std.socket : InternetAddress;
 
@@ -2018,7 +1911,7 @@ private mixin template Protocol()
     }
 
     /// Type of proxy
-    alias CurlProxy = etc.c.curl.CurlProxy;
+    alias CurlProxy = RawCurlProxy;
 
     /** Proxy type
      *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
@@ -2421,7 +2314,7 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
   * http.perform();
   * ---
   *
-  * See_Also: $(_HTTP www.ietf.org/rfc/rfc2616.txt, RFC2616)
+  * See_Also: $(LINK2 http://www.ietf.org/rfc/rfc2616.txt, RFC2616)
   *
   */
 struct HTTP
@@ -2430,7 +2323,7 @@ struct HTTP
 
     import std.datetime.systime : SysTime;
     import std.typecons : RefCounted;
-    import etc.c.curl;
+    import etc.c.curl : CurlAuth, CurlInfo, curl_slist, CURLVERSION_NOW, curl_off_t;
 
     /// Authentication method equal to $(REF CurlAuth, etc,c,curl)
     alias AuthMethod = CurlAuth;
@@ -2668,6 +2561,8 @@ struct HTTP
     // docs mixed in.
     version (StdDdoc)
     {
+        static import etc.c.curl;
+
         /// Value to return from $(D onSend)/$(D onReceive) delegates in order to
         /// pause a request
         alias requestPause = CurlReadFunc.pause;
@@ -3303,12 +3198,11 @@ struct HTTP
 
 @system unittest // charset/Charset/CHARSET/...
 {
-    import std.meta : AliasSeq;
     import etc.c.curl;
 
-    foreach (c; AliasSeq!("charset", "Charset", "CHARSET", "CharSet", "charSet",
-        "ChArSeT", "cHaRsEt"))
-    {
+    static foreach (c; ["charset", "Charset", "CHARSET", "CharSet", "charSet",
+        "ChArSeT", "cHaRsEt"])
+    {{
         testServer.handle((s) {
             s.send("HTTP/1.1 200 OK\r\n"~
                 "Content-Length: 0\r\n"~
@@ -3338,7 +3232,7 @@ struct HTTP
         assert(code == CurlError.ok);
         code = http.getTiming(CurlInfo.appconnect_time, val);
         assert(code == CurlError.ok);
-    }
+    }}
 }
 
 /**
@@ -3352,7 +3246,7 @@ struct FTP
     mixin Protocol;
 
     import std.typecons : RefCounted;
-    import etc.c.curl;
+    import etc.c.curl : CurlError, CurlInfo, curl_off_t, curl_slist;
 
     private struct Impl
     {
@@ -3446,6 +3340,8 @@ struct FTP
     // docs mixed in.
     version (StdDdoc)
     {
+        static import etc.c.curl;
+
         /// Value to return from $(D onSend)/$(D onReceive) delegates in order to
         /// pause a request
         alias requestPause = CurlReadFunc.pause;
@@ -3754,7 +3650,7 @@ struct SMTP
 {
     mixin Protocol;
     import std.typecons : RefCounted;
-    import etc.c.curl;
+    import etc.c.curl : CurlUseSSL, curl_slist;
 
     private struct Impl
     {
@@ -3870,6 +3766,8 @@ struct SMTP
     // docs mixed in.
     version (StdDdoc)
     {
+        static import etc.c.curl;
+
         /// Value to return from $(D onSend)/$(D onReceive) delegates in order to
         /// pause a request
         alias requestPause = CurlReadFunc.pause;
@@ -4049,6 +3947,7 @@ struct SMTP
     */
     void mailTo()(const(char)[][] recipients...)
     {
+        import std.internal.cstring : tempCString;
         assert(!recipients.empty, "Recipient must not be empty");
         curl_slist* recipients_list = null;
         foreach (recipient; recipients)
@@ -4069,6 +3968,20 @@ struct SMTP
         p.message = msg;
     }
 }
+
+@system unittest
+{
+    import std.net.curl;
+
+    // Send an email with SMTPS
+    auto smtp = SMTP("smtps://smtp.gmail.com");
+    smtp.setAuthentication("from.addr@gmail.com", "password");
+    smtp.mailTo = ["<to.addr@gmail.com>"];
+    smtp.mailFrom = "<from.addr@gmail.com>";
+    smtp.message = "Example Message";
+    //smtp.perform();
+}
+
 
 /++
     Exception thrown on errors in std.net.curl functions.
@@ -4149,9 +4062,11 @@ alias ThrowOnError = Flag!"throwOnError";
 
 private struct CurlAPI
 {
-    import etc.c.curl;
+    import etc.c.curl : CurlGlobal;
     static struct API
     {
+    import etc.c.curl : curl_version_info, curl_version_info_data,
+                        CURL, CURLcode, CURLINFO, CURLoption, CURLversion, curl_slist;
     extern(C):
         import core.stdc.config : c_long;
         CURLcode function(c_long flags) global_init;
@@ -4282,7 +4197,10 @@ private struct CurlAPI
 */
 struct Curl
 {
-    import etc.c.curl;
+    import etc.c.curl : CURL, CurlError, CurlPause, CurlSeek, CurlSeekPos,
+                        curl_socket_t, CurlSockType,
+                        CurlReadFunc, CurlInfo, curlsocktype, curl_off_t,
+                        LIBCURL_VERSION_MAJOR, LIBCURL_VERSION_MINOR, LIBCURL_VERSION_PATCH;
 
     alias OutData = void[];
     alias InData = ubyte[];
@@ -4886,285 +4804,397 @@ private struct Pool(Data)
     }
 }
 
-// Shared function for reading incoming chunks of data and
-// sending the to a parent thread
-private static size_t _receiveAsyncChunks(ubyte[] data, ref ubyte[] outdata,
-                                          Pool!(ubyte[]) freeBuffers,
-                                          ref ubyte[] buffer, Tid fromTid,
-                                          ref bool aborted)
+// Lazily-instantiated namespace to avoid importing std.concurrency until needed.
+private struct _async()
 {
-    import std.concurrency : receive, send, thisTid;
-
-    immutable datalen = data.length;
-
-    // Copy data to fill active buffer
-    while (!data.empty)
+static:
+    // @@@@BUG 15831@@@@
+    // this should be inside byLineAsync
+    // Range that reads one chunk at a time asynchronously.
+    private struct ChunkInputRange
     {
+        import std.concurrency : Tid, send;
 
-        // Make sure a buffer is present
-        while ( outdata.empty && freeBuffers.empty)
+        private ubyte[] chunk;
+        mixin WorkerThreadProtocol!(ubyte, chunk);
+
+        private Tid workerTid;
+        private State running;
+
+        private this(Tid tid, size_t transmitBuffers, size_t chunkSize)
         {
-            // Active buffer is invalid and there are no
-            // available buffers in the pool. Wait for buffers
-            // to return from main thread in order to reuse
-            // them.
-            receive((immutable(ubyte)[] buf)
-                    {
-                        buffer = cast(ubyte[]) buf;
-                        outdata = buffer[];
-                    },
-                    (bool flag) { aborted = true; }
-                    );
-            if (aborted) return cast(size_t) 0;
-        }
-        if (outdata.empty)
-        {
-            buffer = freeBuffers.pop();
-            outdata = buffer[];
-        }
+            workerTid = tid;
+            state = State.needUnits;
 
-        // Copy data
-        auto copyBytes = outdata.length < data.length ?
-            outdata.length : data.length;
-
-        outdata[0 .. copyBytes] = data[0 .. copyBytes];
-        outdata = outdata[copyBytes..$];
-        data = data[copyBytes..$];
-
-        if (outdata.empty)
-            fromTid.send(thisTid, curlMessage(cast(immutable(ubyte)[])buffer));
-    }
-
-    return datalen;
-}
-
-// ditto
-private static void _finalizeAsyncChunks(ubyte[] outdata, ref ubyte[] buffer,
-                                         Tid fromTid)
-{
-    import std.concurrency : send, thisTid;
-    if (!outdata.empty)
-    {
-        // Resize the last buffer
-        buffer.length = buffer.length - outdata.length;
-        fromTid.send(thisTid, curlMessage(cast(immutable(ubyte)[])buffer));
-    }
-}
-
-
-// Shared function for reading incoming lines of data and sending the to a
-// parent thread
-private static size_t _receiveAsyncLines(Terminator, Unit)
-    (const(ubyte)[] data, ref EncodingScheme encodingScheme,
-     bool keepTerminator, Terminator terminator,
-     ref const(ubyte)[] leftOverBytes, ref bool bufferValid,
-     ref Pool!(Unit[]) freeBuffers, ref Unit[] buffer,
-     Tid fromTid, ref bool aborted)
-{
-    import std.concurrency : prioritySend, receive, send, thisTid;
-    import std.exception : enforce;
-    import std.format : format;
-    import std.traits : isArray;
-
-    immutable datalen = data.length;
-
-    // Terminator is specified and buffers should be resized as determined by
-    // the terminator
-
-    // Copy data to active buffer until terminator is found.
-
-    // Decode as many lines as possible
-    while (true)
-    {
-
-        // Make sure a buffer is present
-        while (!bufferValid && freeBuffers.empty)
-        {
-            // Active buffer is invalid and there are no available buffers in
-            // the pool. Wait for buffers to return from main thread in order to
-            // reuse them.
-            receive((immutable(Unit)[] buf)
-                    {
-                        buffer = cast(Unit[]) buf;
-                        buffer.length = 0;
-                        buffer.assumeSafeAppend();
-                        bufferValid = true;
-                    },
-                    (bool flag) { aborted = true; }
-                    );
-            if (aborted) return cast(size_t) 0;
-        }
-        if (!bufferValid)
-        {
-            buffer = freeBuffers.pop();
-            bufferValid = true;
-        }
-
-        // Try to read a line from left over bytes from last onReceive plus the
-        // newly received bytes.
-        try
-        {
-            if (decodeLineInto(leftOverBytes, data, buffer,
-                               encodingScheme, terminator))
+            // Send buffers to other thread for it to use.  Since no mechanism is in
+            // place for moving ownership a cast to shared is done here and a cast
+            // back to non-shared in the receiving end.
+            foreach (i ; 0 .. transmitBuffers)
             {
-                if (keepTerminator)
+                ubyte[] arr = new ubyte[](chunkSize);
+                workerTid.send(cast(immutable(ubyte[]))arr);
+            }
+        }
+    }
+
+    // @@@@BUG 15831@@@@
+    // this should be inside byLineAsync
+    // Range that reads one line at a time asynchronously.
+    private static struct LineInputRange(Char)
+    {
+        private Char[] line;
+        mixin WorkerThreadProtocol!(Char, line);
+
+        private Tid workerTid;
+        private State running;
+
+        private this(Tid tid, size_t transmitBuffers, size_t bufferSize)
+        {
+            import std.concurrency : send;
+
+            workerTid = tid;
+            state = State.needUnits;
+
+            // Send buffers to other thread for it to use.  Since no mechanism is in
+            // place for moving ownership a cast to shared is done here and casted
+            // back to non-shared in the receiving end.
+            foreach (i ; 0 .. transmitBuffers)
+            {
+                auto arr = new Char[](bufferSize);
+                workerTid.send(cast(immutable(Char[]))arr);
+            }
+        }
+    }
+
+    import std.concurrency : Tid;
+
+    // Shared function for reading incoming chunks of data and
+    // sending the to a parent thread
+    private size_t receiveChunks(ubyte[] data, ref ubyte[] outdata,
+                                 Pool!(ubyte[]) freeBuffers,
+                                 ref ubyte[] buffer, Tid fromTid,
+                                 ref bool aborted)
+    {
+        import std.concurrency : receive, send, thisTid;
+
+        immutable datalen = data.length;
+
+        // Copy data to fill active buffer
+        while (!data.empty)
+        {
+
+            // Make sure a buffer is present
+            while ( outdata.empty && freeBuffers.empty)
+            {
+                // Active buffer is invalid and there are no
+                // available buffers in the pool. Wait for buffers
+                // to return from main thread in order to reuse
+                // them.
+                receive((immutable(ubyte)[] buf)
+                        {
+                            buffer = cast(ubyte[]) buf;
+                            outdata = buffer[];
+                        },
+                        (bool flag) { aborted = true; }
+                        );
+                if (aborted) return cast(size_t) 0;
+            }
+            if (outdata.empty)
+            {
+                buffer = freeBuffers.pop();
+                outdata = buffer[];
+            }
+
+            // Copy data
+            auto copyBytes = outdata.length < data.length ?
+                outdata.length : data.length;
+
+            outdata[0 .. copyBytes] = data[0 .. copyBytes];
+            outdata = outdata[copyBytes..$];
+            data = data[copyBytes..$];
+
+            if (outdata.empty)
+                fromTid.send(thisTid, curlMessage(cast(immutable(ubyte)[])buffer));
+        }
+
+        return datalen;
+    }
+
+    // ditto
+    private void finalizeChunks(ubyte[] outdata, ref ubyte[] buffer,
+                                Tid fromTid)
+    {
+        import std.concurrency : send, thisTid;
+        if (!outdata.empty)
+        {
+            // Resize the last buffer
+            buffer.length = buffer.length - outdata.length;
+            fromTid.send(thisTid, curlMessage(cast(immutable(ubyte)[])buffer));
+        }
+    }
+
+
+    // Shared function for reading incoming lines of data and sending the to a
+    // parent thread
+    private static size_t receiveLines(Terminator, Unit)
+        (const(ubyte)[] data, ref EncodingScheme encodingScheme,
+         bool keepTerminator, Terminator terminator,
+         ref const(ubyte)[] leftOverBytes, ref bool bufferValid,
+         ref Pool!(Unit[]) freeBuffers, ref Unit[] buffer,
+         Tid fromTid, ref bool aborted)
+    {
+        import std.concurrency : prioritySend, receive, send, thisTid;
+        import std.exception : enforce;
+        import std.format : format;
+        import std.traits : isArray;
+
+        immutable datalen = data.length;
+
+        // Terminator is specified and buffers should be resized as determined by
+        // the terminator
+
+        // Copy data to active buffer until terminator is found.
+
+        // Decode as many lines as possible
+        while (true)
+        {
+
+            // Make sure a buffer is present
+            while (!bufferValid && freeBuffers.empty)
+            {
+                // Active buffer is invalid and there are no available buffers in
+                // the pool. Wait for buffers to return from main thread in order to
+                // reuse them.
+                receive((immutable(Unit)[] buf)
+                        {
+                            buffer = cast(Unit[]) buf;
+                            buffer.length = 0;
+                            buffer.assumeSafeAppend();
+                            bufferValid = true;
+                        },
+                        (bool flag) { aborted = true; }
+                        );
+                if (aborted) return cast(size_t) 0;
+            }
+            if (!bufferValid)
+            {
+                buffer = freeBuffers.pop();
+                bufferValid = true;
+            }
+
+            // Try to read a line from left over bytes from last onReceive plus the
+            // newly received bytes.
+            try
+            {
+                if (decodeLineInto(leftOverBytes, data, buffer,
+                                   encodingScheme, terminator))
                 {
-                    fromTid.send(thisTid,
-                                 curlMessage(cast(immutable(Unit)[])buffer));
+                    if (keepTerminator)
+                    {
+                        fromTid.send(thisTid,
+                                     curlMessage(cast(immutable(Unit)[])buffer));
+                    }
+                    else
+                    {
+                        static if (isArray!Terminator)
+                            fromTid.send(thisTid,
+                                         curlMessage(cast(immutable(Unit)[])
+                                                 buffer[0..$-terminator.length]));
+                        else
+                            fromTid.send(thisTid,
+                                         curlMessage(cast(immutable(Unit)[])
+                                                 buffer[0..$-1]));
+                    }
+                    bufferValid = false;
                 }
                 else
                 {
-                    static if (isArray!Terminator)
-                        fromTid.send(thisTid,
-                                     curlMessage(cast(immutable(Unit)[])
-                                             buffer[0..$-terminator.length]));
-                    else
-                        fromTid.send(thisTid,
-                                     curlMessage(cast(immutable(Unit)[])
-                                             buffer[0..$-1]));
+                    // Could not decode an entire line. Save
+                    // bytes left in data for next call to
+                    // onReceive. Can be up to a max of 4 bytes.
+                    enforce!CurlException(data.length <= 4,
+                                            format(
+                                            "Too many bytes left not decoded %s"~
+                                            " > 4. Maybe the charset specified in"~
+                                            " headers does not match "~
+                                            "the actual content downloaded?",
+                                            data.length));
+                    leftOverBytes ~= data;
+                    break;
                 }
-                bufferValid = false;
             }
-            else
+            catch (CurlException ex)
             {
-                // Could not decode an entire line. Save
-                // bytes left in data for next call to
-                // onReceive. Can be up to a max of 4 bytes.
-                enforce!CurlException(data.length <= 4,
-                                        format(
-                                        "Too many bytes left not decoded %s"~
-                                        " > 4. Maybe the charset specified in"~
-                                        " headers does not match "~
-                                        "the actual content downloaded?",
-                                        data.length));
-                leftOverBytes ~= data;
-                break;
+                prioritySend(fromTid, cast(immutable(CurlException))ex);
+                return cast(size_t) 0;
             }
         }
-        catch (CurlException ex)
+        return datalen;
+    }
+
+    // ditto
+    private static
+    void finalizeLines(Unit)(bool bufferValid, Unit[] buffer, Tid fromTid)
+    {
+        import std.concurrency : send, thisTid;
+        if (bufferValid && buffer.length != 0)
+            fromTid.send(thisTid, curlMessage(cast(immutable(Unit)[])buffer[0..$]));
+    }
+
+    /* Used by byLineAsync/byChunkAsync to duplicate an existing connection
+     * that can be used exclusively in a spawned thread.
+     */
+    private void duplicateConnection(Conn, PostData)
+        (const(char)[] url, Conn conn, PostData postData, Tid tid)
+    {
+        import std.concurrency : send;
+        import std.exception : enforce;
+
+        // no move semantic available in std.concurrency ie. must use casting.
+        auto connDup = conn.dup();
+        connDup.url = url;
+
+        static if ( is(Conn : HTTP) )
         {
-            prioritySend(fromTid, cast(immutable(CurlException))ex);
-            return cast(size_t) 0;
+            connDup.p.headersOut = null;
+            connDup.method = conn.method == HTTP.Method.undefined ?
+                HTTP.Method.get : conn.method;
+            if (postData !is null)
+            {
+                if (connDup.method == HTTP.Method.put)
+                {
+                    connDup.handle.set(CurlOption.infilesize_large,
+                                       postData.length);
+                }
+                else
+                {
+                    // post
+                    connDup.method = HTTP.Method.post;
+                    connDup.handle.set(CurlOption.postfieldsize_large,
+                                       postData.length);
+                }
+                connDup.handle.set(CurlOption.copypostfields,
+                                   cast(void*) postData.ptr);
+            }
+            tid.send(cast(ulong) connDup.handle.handle);
+            tid.send(connDup.method);
         }
-    }
-    return datalen;
-}
-
-// ditto
-private static
-void _finalizeAsyncLines(Unit)(bool bufferValid, Unit[] buffer, Tid fromTid)
-{
-    import std.concurrency : send, thisTid;
-    if (bufferValid && buffer.length != 0)
-        fromTid.send(thisTid, curlMessage(cast(immutable(Unit)[])buffer[0..$]));
-}
-
-
-// Spawn a thread for handling the reading of incoming data in the
-// background while the delegate is executing.  This will optimize
-// throughput by allowing simultaneous input (this struct) and
-// output (e.g. AsyncHTTPLineOutputRange).
-private static void _spawnAsync(Conn, Unit, Terminator = void)()
-{
-    import std.concurrency : prioritySend, receiveOnly, send, thisTid;
-    import etc.c.curl : CURL, CurlError;
-    Tid fromTid = receiveOnly!Tid();
-
-    // Get buffer to read into
-    Pool!(Unit[]) freeBuffers;  // Free list of buffer objects
-
-    // Number of bytes filled into active buffer
-    Unit[] buffer;
-    bool aborted = false;
-
-    EncodingScheme encodingScheme;
-    static if ( !is(Terminator == void))
-    {
-        // Only lines reading will receive a terminator
-        const terminator = receiveOnly!Terminator();
-        const keepTerminator = receiveOnly!bool();
-
-        // max number of bytes to carry over from an onReceive
-        // callback. This is 4 because it is the max code units to
-        // decode a code point in the supported encodings.
-        auto leftOverBytes =  new const(ubyte)[4];
-        leftOverBytes.length = 0;
-        auto bufferValid = false;
-    }
-    else
-    {
-        Unit[] outdata;
-    }
-
-    // no move semantic available in std.concurrency ie. must use casting.
-    auto connDup = cast(CURL*) receiveOnly!ulong();
-    auto client = Conn();
-    client.p.curl.handle = connDup;
-
-    // receive a method for both ftp and http but just use it for http
-    auto method = receiveOnly!(HTTP.Method)();
-
-    client.onReceive = (ubyte[] data)
-    {
-        // If no terminator is specified the chunk size is fixed.
-        static if ( is(Terminator == void) )
-            return _receiveAsyncChunks(data, outdata, freeBuffers, buffer,
-                                       fromTid, aborted);
         else
-            return _receiveAsyncLines(data, encodingScheme,
-                                      keepTerminator, terminator, leftOverBytes,
-                                      bufferValid, freeBuffers, buffer,
-                                      fromTid, aborted);
-    };
-
-    static if ( is(Conn == HTTP) )
-    {
-        client.method = method;
-        // register dummy header handler
-        client.onReceiveHeader = (in char[] key, in char[] value)
         {
-            if (key == "content-type")
-                encodingScheme = EncodingScheme.create(client.p.charset);
+            enforce!CurlException(postData is null,
+                                    "Cannot put ftp data using byLineAsync()");
+            tid.send(cast(ulong) connDup.handle.handle);
+            tid.send(HTTP.Method.undefined);
+        }
+        connDup.p.curl.handle = null; // make sure handle is not freed
+    }
+
+    // Spawn a thread for handling the reading of incoming data in the
+    // background while the delegate is executing.  This will optimize
+    // throughput by allowing simultaneous input (this struct) and
+    // output (e.g. AsyncHTTPLineOutputRange).
+    private static void spawn(Conn, Unit, Terminator = void)()
+    {
+        import std.concurrency : Tid, prioritySend, receiveOnly, send, thisTid;
+        import etc.c.curl : CURL, CurlError;
+        Tid fromTid = receiveOnly!Tid();
+
+        // Get buffer to read into
+        Pool!(Unit[]) freeBuffers;  // Free list of buffer objects
+
+        // Number of bytes filled into active buffer
+        Unit[] buffer;
+        bool aborted = false;
+
+        EncodingScheme encodingScheme;
+        static if ( !is(Terminator == void))
+        {
+            // Only lines reading will receive a terminator
+            const terminator = receiveOnly!Terminator();
+            const keepTerminator = receiveOnly!bool();
+
+            // max number of bytes to carry over from an onReceive
+            // callback. This is 4 because it is the max code units to
+            // decode a code point in the supported encodings.
+            auto leftOverBytes =  new const(ubyte)[4];
+            leftOverBytes.length = 0;
+            auto bufferValid = false;
+        }
+        else
+        {
+            Unit[] outdata;
+        }
+
+        // no move semantic available in std.concurrency ie. must use casting.
+        auto connDup = cast(CURL*) receiveOnly!ulong();
+        auto client = Conn();
+        client.p.curl.handle = connDup;
+
+        // receive a method for both ftp and http but just use it for http
+        auto method = receiveOnly!(HTTP.Method)();
+
+        client.onReceive = (ubyte[] data)
+        {
+            // If no terminator is specified the chunk size is fixed.
+            static if ( is(Terminator == void) )
+                return receiveChunks(data, outdata, freeBuffers, buffer,
+                                     fromTid, aborted);
+            else
+                return receiveLines(data, encodingScheme,
+                                    keepTerminator, terminator, leftOverBytes,
+                                    bufferValid, freeBuffers, buffer,
+                                    fromTid, aborted);
         };
-    }
-    else
-    {
-        encodingScheme = EncodingScheme.create(client.encoding);
-    }
 
-    // Start the request
-    CurlCode code;
-    try
-    {
-        code = client.perform(No.throwOnError);
-    }
-    catch (Exception ex)
-    {
-        prioritySend(fromTid, cast(immutable(Exception)) ex);
-        fromTid.send(thisTid, curlMessage(true)); // signal done
-        return;
-    }
-
-    if (code != CurlError.ok)
-    {
-        if (aborted && (code == CurlError.aborted_by_callback ||
-                        code == CurlError.write_error))
+        static if ( is(Conn == HTTP) )
         {
+            client.method = method;
+            // register dummy header handler
+            client.onReceiveHeader = (in char[] key, in char[] value)
+            {
+                if (key == "content-type")
+                    encodingScheme = EncodingScheme.create(client.p.charset);
+            };
+        }
+        else
+        {
+            encodingScheme = EncodingScheme.create(client.encoding);
+        }
+
+        // Start the request
+        CurlCode code;
+        try
+        {
+            code = client.perform(No.throwOnError);
+        }
+        catch (Exception ex)
+        {
+            prioritySend(fromTid, cast(immutable(Exception)) ex);
             fromTid.send(thisTid, curlMessage(true)); // signal done
             return;
         }
-        prioritySend(fromTid, cast(immutable(CurlException))
-                     new CurlException(client.p.curl.errorString(code)));
+
+        if (code != CurlError.ok)
+        {
+            if (aborted && (code == CurlError.aborted_by_callback ||
+                            code == CurlError.write_error))
+            {
+                fromTid.send(thisTid, curlMessage(true)); // signal done
+                return;
+            }
+            prioritySend(fromTid, cast(immutable(CurlException))
+                         new CurlException(client.p.curl.errorString(code)));
+
+            fromTid.send(thisTid, curlMessage(true)); // signal done
+            return;
+        }
+
+        // Send remaining data that is not a full chunk size
+        static if ( is(Terminator == void) )
+            finalizeChunks(outdata, buffer, fromTid);
+        else
+            finalizeLines(bufferValid, buffer, fromTid);
 
         fromTid.send(thisTid, curlMessage(true)); // signal done
-        return;
     }
-
-    // Send remaining data that is not a full chunk size
-    static if ( is(Terminator == void) )
-        _finalizeAsyncChunks(outdata, buffer, fromTid);
-    else
-        _finalizeAsyncLines(bufferValid, buffer, fromTid);
-
-    fromTid.send(thisTid, curlMessage(true)); // signal done
 }

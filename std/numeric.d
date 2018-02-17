@@ -26,7 +26,7 @@ import std.range.primitives;
 import std.traits;
 import std.typecons;
 
-version(unittest)
+version(StdUnittest)
 {
     import std.stdio;
 }
@@ -1588,7 +1588,7 @@ do
 @safe unittest
 {
     import std.meta : AliasSeq;
-    foreach (T; AliasSeq!(double, float, real))
+    static foreach (T; AliasSeq!(double, float, real))
     {
         {
             auto ret = findLocalMin!T((T x) => (x-4)^^2, T.min_normal, 1e7);
@@ -1677,15 +1677,15 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
 @safe unittest
 {
     import std.meta : AliasSeq;
-    foreach (T; AliasSeq!(double, const double, immutable double))
-    {
+    static foreach (T; AliasSeq!(double, const double, immutable double))
+    {{
         T[] a = [ 1.0, 2.0, ];
         T[] b = [ 4.0, 6.0, ];
         assert(euclideanDistance(a, b) == 5);
         assert(euclideanDistance(a, b, 5) == 5);
         assert(euclideanDistance(a, b, 4) == 5);
         assert(euclideanDistance(a, b, 2) == 3);
-    }
+    }}
 }
 
 /**
@@ -1770,13 +1770,13 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
     // @system due to dotProduct and assertCTFEable
     import std.exception : assertCTFEable;
     import std.meta : AliasSeq;
-    foreach (T; AliasSeq!(double, const double, immutable double))
-    {
+    static foreach (T; AliasSeq!(double, const double, immutable double))
+    {{
         T[] a = [ 1.0, 2.0, ];
         T[] b = [ 4.0, 6.0, ];
         assert(dotProduct(a, b) == 16);
         assert(dotProduct([1, 3, -5], [4, -2, -1]) == 3);
-    }
+    }}
 
     // Make sure the unrolled loop codepath gets tested.
     static const x =
@@ -1815,14 +1815,14 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
 @safe unittest
 {
     import std.meta : AliasSeq;
-    foreach (T; AliasSeq!(double, const double, immutable double))
-    {
+    static foreach (T; AliasSeq!(double, const double, immutable double))
+    {{
         T[] a = [ 1.0, 2.0, ];
         T[] b = [ 4.0, 3.0, ];
         assert(approxEqual(
                     cosineSimilarity(a, b), 10.0 / sqrt(5.0 * 25),
                     0.01));
-    }
+    }}
 }
 
 /**
@@ -1969,14 +1969,14 @@ if (isInputRange!Range &&
 @safe unittest
 {
     import std.meta : AliasSeq;
-    foreach (T; AliasSeq!(double, const double, immutable double))
-    {
+    static foreach (T; AliasSeq!(double, const double, immutable double))
+    {{
         T[] p = [ 0.0, 0, 0, 1 ];
         assert(entropy(p) == 0);
         p = [ 0.25, 0.25, 0.25, 0.25 ];
         assert(entropy(p) == 2);
         assert(entropy(p, 1) == 1);
-    }
+    }}
 }
 
 /**
@@ -2684,6 +2684,12 @@ T gcd(T)(T a, T b)
 
     assert(a >= 0 && b >= 0);
 
+    // Special cases.
+    if (a == 0)
+        return b;
+    if (b == 0)
+        return a;
+
     static if (canUseBinaryGcd)
     {
         uint shift = 0;
@@ -2726,6 +2732,9 @@ T gcd(T)(T a, T b)
     assert(gcd(BigInt("71_000_000_000_000_000_000"),
                BigInt("31_000_000_000_000_000_000")) ==
            BigInt("1_000_000_000_000_000_000"));
+
+    assert(gcd(BigInt(0), BigInt(1234567)) == BigInt(1234567));
+    assert(gcd(BigInt(1234567), BigInt(0)) == BigInt(1234567));
 }
 
 @safe pure nothrow unittest

@@ -63,6 +63,12 @@ version (NetBSD)
     version = HAS_GETDELIM;
 }
 
+version (DragonFlyBSD)
+{
+    version = GENERIC_IO;
+    version = HAS_GETDELIM;
+}
+
 version (Solaris)
 {
     version = GENERIC_IO;
@@ -246,7 +252,7 @@ version(HAS_GETDELIM) extern(C) nothrow @nogc
 }
 
 //------------------------------------------------------------------------------
-struct ByRecord(Fields...)
+private struct ByRecordImpl(Fields...)
 {
 private:
     import std.typecons : Tuple;
@@ -301,9 +307,17 @@ public:
     }
 }
 
+// @@@DEPRECATED_2019-01@@@
+deprecated("Use .byRecord")
+struct ByRecord(Fields...)
+{
+    ByRecordImpl!Fields payload;
+    alias payload this;
+}
+
 template byRecord(Fields...)
 {
-    ByRecord!(Fields) byRecord(File f, string format)
+    auto byRecord(File f, string format)
     {
         return typeof(return)(f, format);
     }
@@ -1520,7 +1534,7 @@ Writes its arguments in text format to the file, according to the
 format string fmt.
 
 Params:
-fmt = The $(LINK2 std_format.html#format-string, format string).
+fmt = The $(REF_ALTTEXT format string, formattedWrite, std, _format).
 When passed as a compile-time argument, the string will be statically checked
 against the argument types passed.
 args = Items to write.
@@ -1617,8 +1631,8 @@ void main()
         auto deleteme = testFilename();
         std.file.write(deleteme, "hello\nworld\n");
         scope(exit) std.file.remove(deleteme);
-        foreach (String; AliasSeq!(string, char[], wstring, wchar[], dstring, dchar[]))
-        {
+        static foreach (String; AliasSeq!(string, char[], wstring, wchar[], dstring, dchar[]))
+        {{
             auto witness = [ "hello\n", "world\n" ];
             auto f = File(deleteme);
             uint i = 0;
@@ -1629,7 +1643,7 @@ void main()
                 assert(equal(buf, witness[i++]));
             }
             assert(i == witness.length);
-        }
+        }}
     }
 
     @system unittest
@@ -1641,13 +1655,13 @@ void main()
         std.file.write(deleteme, "cześć \U0002000D");
         scope(exit) std.file.remove(deleteme);
         uint[] lengths = [12,8,7];
-        foreach (uint i, C; Tuple!(char, wchar, dchar).Types)
-        {
+        static foreach (uint i, C; Tuple!(char, wchar, dchar).Types)
+        {{
             immutable(C)[] witness = "cześć \U0002000D";
             auto buf = File(deleteme).readln!(immutable(C)[])();
             assert(buf.length == lengths[i]);
             assert(buf == witness);
-        }
+        }}
     }
 
 /**
@@ -1857,7 +1871,7 @@ is recommended if you want to process a complete file.
     /**
      * Reads formatted _data from the file using $(REF formattedRead, std,_format).
      * Params:
-     * format = The $(LINK2 std_format.html#_format-string, _format string).
+     * format = The $(REF_ALTTEXT format string, formattedWrite, std _format).
      * When passed as a compile-time argument, the string will be statically checked
      * against the argument types passed.
      * data = Items to be read.
@@ -2061,7 +2075,7 @@ Range that reads one line at a time.  Returned by $(LREF byLine).
 
 Allows to directly use range operations on lines of a file.
 */
-    struct ByLine(Char, Terminator)
+    private struct ByLineImpl(Char, Terminator)
     {
     private:
         import std.typecons : RefCounted, RefCountedAutoInitialize;
@@ -2164,6 +2178,14 @@ Allows to directly use range operations on lines of a file.
         }
     }
 
+    // @@@DEPRECATED_2019-01@@@
+    deprecated("Use .byLine")
+    struct ByLine(Char, Terminator)
+    {
+        ByLineImpl!(Char, Terminator) payload;
+        alias payload this;
+    }
+
 /**
 Returns an input range set up to read from the file handle one line
 at a time.
@@ -2229,7 +2251,7 @@ the contents may well have changed).
             Terminator terminator = '\n')
     if (isScalarType!Terminator)
     {
-        return ByLine!(Char, Terminator)(this, keepTerminator, terminator);
+        return ByLineImpl!(Char, Terminator)(this, keepTerminator, terminator);
     }
 
 /// ditto
@@ -2237,7 +2259,7 @@ the contents may well have changed).
             (KeepTerminator keepTerminator, Terminator terminator)
     if (is(Unqual!(ElementEncodingType!Terminator) == Char))
     {
-        return ByLine!(Char, Terminator)(this, keepTerminator, terminator);
+        return ByLineImpl!(Char, Terminator)(this, keepTerminator, terminator);
     }
 
     @system unittest
@@ -2248,13 +2270,13 @@ the contents may well have changed).
         scope(success) std.file.remove(deleteme);
 
         import std.meta : AliasSeq;
-        foreach (T; AliasSeq!(char, wchar, dchar))
-        {
+        static foreach (T; AliasSeq!(char, wchar, dchar))
+        {{
             auto blc = File(deleteme).byLine!(T, T);
             assert(blc.front == "hi");
             // check front is cached
             assert(blc.front is blc.front);
-        }
+        }}
     }
 
     private struct ByLineCopy(Char, Terminator)
@@ -2294,14 +2316,14 @@ the contents may well have changed).
 
     private struct ByLineCopyImpl(Char, Terminator)
     {
-        ByLine!(Unqual!Char, Terminator).Impl impl;
+        ByLineImpl!(Unqual!Char, Terminator).Impl impl;
         bool gotFront;
         Char[] line;
 
     public:
         this(File f, KeepTerminator kt, Terminator terminator)
         {
-            impl = ByLine!(Unqual!Char, Terminator).Impl(f, kt, terminator);
+            impl = ByLineImpl!(Unqual!Char, Terminator).Impl(f, kt, terminator);
         }
 
         @property bool empty()
@@ -2496,7 +2518,7 @@ $(REF readText, std,file)
 
         // bug 9599
         file.rewind();
-        File.ByLine!(char, char) fbl = file.byLine();
+        File.ByLineImpl!(char, char) fbl = file.byLine();
         auto fbl2 = fbl;
         assert(fbl.front == "1");
         assert(fbl.front is fbl2.front);
@@ -2548,9 +2570,9 @@ $(REF readText, std,file)
     */
     template byRecord(Fields...)
     {
-        ByRecord!(Fields) byRecord(string format)
+        auto byRecord(string format)
         {
-            return typeof(return)(this, format);
+            return ByRecordImpl!(Fields)(this, format);
         }
     }
 
@@ -2581,7 +2603,7 @@ $(REF readText, std,file)
     /*
      * Range that reads a chunk at a time.
      */
-    struct ByChunk
+    private struct ByChunkImpl
     {
     private:
         File    file_;
@@ -2640,6 +2662,14 @@ $(REF readText, std,file)
             }
             prime();
         }
+    }
+
+    // @@@DEPRECATED_2019-01@@@
+    deprecated("Use .byChunk")
+    struct ByChunk
+    {
+        ByChunkImpl payload;
+        alias payload this;
     }
 
 /**
@@ -2721,12 +2751,12 @@ $(D StdioException).
  */
     auto byChunk(size_t chunkSize)
     {
-        return ByChunk(this, chunkSize);
+        return ByChunkImpl(this, chunkSize);
     }
 /// Ditto
-    ByChunk byChunk(ubyte[] buffer)
+    auto byChunk(ubyte[] buffer)
     {
-        return ByChunk(this, buffer);
+        return ByChunkImpl(this, buffer);
     }
 
     @system unittest
@@ -2850,8 +2880,7 @@ $(D Range) that locks the file and allows fast writing to it.
             }
 
             // put each element in turn.
-            alias Elem = Unqual!(ElementType!A);
-            foreach (Elem c; writeme)
+            foreach (c; writeme)
             {
                 put(c);
             }
@@ -2878,7 +2907,7 @@ $(D Range) that locks the file and allows fast writing to it.
             }
             else static if (c.sizeof == 2)
             {
-                import std.utf : encode, UseReplacementDchar;
+                import std.utf : encode;
 
                 if (orientation_ <= 0)
                 {
@@ -2889,7 +2918,7 @@ $(D Range) that locks the file and allows fast writing to it.
                     else
                     {
                         char[4] buf;
-                        immutable size = encode!(UseReplacementDchar.yes)(buf, c);
+                        immutable size = encode(buf, c);
                         foreach (i ; 0 .. size)
                             trustedFPUTC(buf[i], handle_);
                     }
@@ -2951,10 +2980,15 @@ $(D Range) that locks the file and allows fast writing to it.
         }
     }
 
-/** Returns an output range that locks the file and allows fast writing to it.
-
-See $(LREF byChunk) for an example.
-*/
+    /**
+     * Returns: An $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+     * that locks the file and allows fast writing to it.
+     *
+     * Throws: $(REF UTFException, std, utf) if the data given is a `char` range
+     * and it contains malformed UTF data.
+     *
+     * See_Also: $(LREF byChunk) for an example.
+     */
     auto lockingTextWriter() @safe
     {
         return LockingTextWriter(this);
@@ -3807,7 +3841,7 @@ void writeln(T...)(T args)
 Writes formatted data to standard output (without a trailing newline).
 
 Params:
-fmt = The $(LINK2 std_format.html#format-string, format string).
+fmt = The $(REF_ALTTEXT format string, formattedWrite, std, _format).
 When passed as a compile-time argument, the string will be statically checked
 against the argument types passed.
 args = Items to write.
@@ -3920,7 +3954,7 @@ void writefln(Char, A...)(in Char[] fmt, A args)
 /**
  * Reads formatted data from $(D stdin) using $(REF formattedRead, std,_format).
  * Params:
- * format = The $(LINK2 std_format.html#_format-string, _format string).
+ * format = The $(REF_ALTTEXT format string, formattedWrite, std, _format).
  * When passed as a compile-time argument, the string will be statically checked
  * against the argument types passed.
  * args = Items to be read.
@@ -4062,18 +4096,18 @@ if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum) &&
     {
         readln();
         readln('\t');
-        foreach (String; AliasSeq!(string, char[], wstring, wchar[], dstring, dchar[]))
+        static foreach (String; AliasSeq!(string, char[], wstring, wchar[], dstring, dchar[]))
         {
             readln!String();
             readln!String('\t');
         }
-        foreach (String; AliasSeq!(char[], wchar[], dchar[]))
-        {
+        static foreach (String; AliasSeq!(char[], wchar[], dchar[]))
+        {{
             String buf;
             readln(buf);
             readln(buf, '\t');
             readln(buf, "<br />");
-        }
+        }}
     }
 }
 
@@ -4409,7 +4443,7 @@ struct lines
 
     }
 
-    foreach (T; AliasSeq!(ubyte[]))
+    static foreach (T; AliasSeq!(ubyte[]))
     {
         // test looping with a file with three lines, last without a newline
         // using a counter too this time
@@ -5239,7 +5273,7 @@ version(linux)
     }
 }
 
-version(unittest) string testFilename(string file = __FILE__, size_t line = __LINE__) @safe
+version(StdUnittest) string testFilename(string file = __FILE__, size_t line = __LINE__) @safe
 {
     import std.conv : text;
     import std.file : deleteme;

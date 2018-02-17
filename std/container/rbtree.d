@@ -61,7 +61,7 @@ import std.functional : binaryFun;
 
 public import std.container.util;
 
-version(unittest) debug = RBDoChecks;
+version(StdUnittest) debug = RBDoChecks;
 
 //debug = RBDoChecks;
 
@@ -745,7 +745,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
 
     alias _less = binaryFun!less;
 
-    version(unittest)
+    version(StdUnittest)
     {
         static if (is(typeof(less) == string))
         {
@@ -1712,7 +1712,8 @@ assert(equal(rbt[], [5]));
      */
     static if (is(typeof((){FormatSpec!(char) fmt; formatValue((const(char)[]) {}, ConstRange.init, fmt);})))
     {
-        void toString(scope void delegate(const(char)[]) sink, FormatSpec!char fmt) const {
+        void toString(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt) const
+        {
             sink("RedBlackTree(");
             sink.formatValue(this[], fmt);
             sink(")");
@@ -1814,8 +1815,8 @@ assert(equal(rbt[], [5]));
     test!byte();
 }
 
-import std.range.primitives : isInputRange, isSomeString, ElementType;
-import std.traits : isArray;
+import std.range.primitives : isInputRange, ElementType;
+import std.traits : isArray, isSomeString;
 
 /++
     Convenience function for creating a $(D RedBlackTree!E) from a list of

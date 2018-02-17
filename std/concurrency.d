@@ -707,7 +707,7 @@ do
 }
 
 // Make sure receive() works with free functions as well.
-version (unittest)
+version(StdUnittest)
 {
     private void receiveFunction(int x) {}
 }
@@ -2427,7 +2427,7 @@ private
     }
 }
 
-version (unittest)
+version(StdUnittest)
 {
     import std.stdio;
     import std.typecons : tuple, Tuple;
@@ -2578,7 +2578,7 @@ auto ref initOnce(alias var)(lazy typeof(var) init, shared Mutex mutex)
     {
         synchronized (mutex)
         {
-            if (!atomicLoad!(MemoryOrder.acq)(flag))
+            if (!atomicLoad!(MemoryOrder.raw)(flag))
             {
                 var = init;
                 atomicStore!(MemoryOrder.rel)(flag, true);

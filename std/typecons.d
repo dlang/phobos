@@ -104,8 +104,6 @@ import std.traits;
     }
 }
 
-debug(Unique) import std.stdio;
-
 /**
 Encapsulates unique ownership of a resource.
 
@@ -154,7 +152,6 @@ public:
     static Unique!T create(A...)(auto ref A args)
     if (__traits(compiles, new T(args)))
     {
-        debug(Unique) writeln("Unique.create for ", T.stringof);
         Unique!T u;
         u._p = new T(args);
         return u;
@@ -171,7 +168,6 @@ public:
     */
     this(RefT p)
     {
-        debug(Unique) writeln("Unique constructor with rvalue");
         _p = p;
     }
     /**
@@ -182,7 +178,6 @@ public:
     this(ref RefT p)
     {
         _p = p;
-        debug(Unique) writeln("Unique constructor nulling source");
         p = null;
         assert(p is null);
     }
@@ -202,7 +197,6 @@ public:
     this(U)(Unique!U u)
     if (is(u.RefT:RefT))
     {
-        debug(Unique) writeln("Unique constructor converting from ", U.stringof);
         _p = u._p;
         u._p = null;
     }
@@ -211,7 +205,6 @@ public:
     void opAssign(U)(Unique!U u)
     if (is(u.RefT:RefT))
     {
-        debug(Unique) writeln("Unique opAssign converting from ", U.stringof);
         // first delete any resource we own
         destroy(this);
         _p = u._p;
@@ -220,7 +213,6 @@ public:
 
     ~this()
     {
-        debug(Unique) writeln("Unique destructor of ", (_p is null)? null: _p);
         if (_p !is null)
         {
             destroy(_p);
@@ -238,7 +230,6 @@ public:
     */
     Unique release()
     {
-        debug(Unique) writeln("Unique Release");
         import std.algorithm.mutation : move;
         return this.move;
     }
@@ -256,7 +247,7 @@ private:
 }
 
 ///
-@system unittest
+@safe unittest
 {
     static struct S
     {
@@ -318,7 +309,6 @@ private:
 
 @system unittest
 {
-    debug(Unique) writeln("Unique class");
     class Bar
     {
         ~this() { debug(Unique) writeln("    Bar destructor"); }
@@ -334,16 +324,13 @@ private:
     assert(!ub.isEmpty);
     assert(ub.val == 4);
     static assert(!__traits(compiles, {auto ub3 = g(ub);}));
-    debug(Unique) writeln("Calling g");
     auto ub2 = g(ub.release);
-    debug(Unique) writeln("Returned from g");
     assert(ub.isEmpty);
     assert(!ub2.isEmpty);
 }
 
 @system unittest
 {
-    debug(Unique) writeln("Unique interface");
     interface Bar
     {
         int val() const;
@@ -377,21 +364,18 @@ private:
     assert(!ub.isEmpty);
     assert(ub.val == 4);
     static assert(!__traits(compiles, {auto ub3 = g(ub);}));
-    debug(Unique) writeln("Calling g");
     auto ub2 = g(ub.release);
-    debug(Unique) writeln("Returned from g");
     assert(ub.isEmpty);
     assert(!ub2.isEmpty);
     consume(ub2.release);
     assert(BarImpl.count == 0);
 }
 
-@system unittest
+@safe unittest
 {
-    debug(Unique) writeln("Unique struct");
     struct Foo
     {
-        ~this() { debug(Unique) writeln("    Foo destructor"); }
+        ~this() { }
         int val() const { return 3; }
         @disable this(this);
     }
@@ -399,7 +383,6 @@ private:
 
     UFoo f(UFoo u)
     {
-        debug(Unique) writeln("inside f");
         return u.release;
     }
 
@@ -407,9 +390,7 @@ private:
     assert(!uf.isEmpty);
     assert(uf.val == 3);
     static assert(!__traits(compiles, {auto uf3 = f(uf);}));
-    debug(Unique) writeln("Unique struct: calling f");
     auto uf2 = f(uf.release);
-    debug(Unique) writeln("Unique struct: returned from f");
     assert(uf.isEmpty);
     assert(!uf2.isEmpty);
 }
@@ -535,16 +516,15 @@ if (distinctFieldNames!(Specs))
     string injectNamedFields()
     {
         string decl = "";
-        foreach (i, name; staticMap!(extractName, fieldSpecs))
-        {
-            import std.format : format;
-
-            decl ~= format("alias _%s = Identity!(field[%s]);", i, i);
-            if (name.length != 0)
+        static foreach (i, val; fieldSpecs)
+        {{
+            immutable si = i.stringof;
+            decl ~= "alias _" ~ si ~ " = Identity!(field[" ~ si ~ "]);";
+            if (val.name.length != 0)
             {
-                decl ~= format("alias %s = _%s;", name, i);
+                decl ~= "alias " ~ val.name ~ " = _" ~ si ~ ";";
             }
-        }
+        }}
         return decl;
     }
 
@@ -1209,11 +1189,12 @@ if (distinctFieldNames!(Specs))
              */
             void toString(DG)(scope DG sink) const
             {
-                toString(sink, FormatSpec!char());
+                auto f = FormatSpec!char();
+                toString(sink, f);
             }
 
             /// ditto
-            void toString(DG, Char)(scope DG sink, FormatSpec!Char fmt) const
+            void toString(DG, Char)(scope DG sink, const ref FormatSpec!Char fmt) const
             {
                 import std.format : formatElement, formattedWrite, FormatException;
                 if (fmt.nested)
@@ -1315,6 +1296,15 @@ if (distinctFieldNames!(Specs))
     Tuple!(int, "x", int, "y") point1;
     Tuple!(int, int) point2;
     assert(!is(typeof(point1) == typeof(point2)));
+}
+
+/// Use tuples as ranges
+@safe unittest
+{
+    import std.algorithm.iteration : sum;
+    import std.range : only;
+    auto t = tuple(1, 2);
+    assert(t.expand.only.sum == 3);
 }
 
 @safe unittest
@@ -1649,8 +1639,8 @@ private template ReverseTupleSpecs(T...)
               inout V wv;   // OK <- NG
         inout const V wcv;  // OK <- NG
 
-        foreach (v1; AliasSeq!(mv, cv, iv, wv, wcv))
-        foreach (v2; AliasSeq!(mv, cv, iv, wv, wcv))
+        static foreach (v1; AliasSeq!(mv, cv, iv, wv, wcv))
+        static foreach (v2; AliasSeq!(mv, cv, iv, wv, wcv))
         {
             assert(!(v1 < v2));
         }
@@ -2037,9 +2027,9 @@ template Rebindable(T)
 }
 
 ///Regular $(D const) object references cannot be reassigned.
-@system unittest
+@safe unittest
 {
-    class Widget { int x; int y() const { return x; } }
+    class Widget { int x; int y() @safe const { return x; } }
     const a = new Widget;
     // Fine
     a.y();
@@ -2053,9 +2043,9 @@ template Rebindable(T)
     However, $(D Rebindable!(Widget)) does allow reassignment,
     while otherwise behaving exactly like a $(D const Widget).
  */
-@system unittest
+@safe unittest
 {
-    class Widget { int x; int y() const { return x; } }
+    class Widget { int x; int y() const @safe { return x; } }
     auto a = Rebindable!(const Widget)(new Widget);
     // Fine
     a.y();
@@ -2178,7 +2168,7 @@ Rebindable!T rebindable(T)(Rebindable!T obj)
     immutable(char[]) s7654;
     Rebindable!(typeof(s7654)) r7654 = s7654;
 
-    foreach (T; AliasSeq!(char, wchar, char, int))
+    static foreach (T; AliasSeq!(char, wchar, char, int))
     {
         static assert(is(Rebindable!(immutable(T[])) == immutable(T)[]));
         static assert(is(Rebindable!(const(T[])) == const(T)[]));
@@ -2310,13 +2300,13 @@ string alignForSize(E...)(const char[][] names...)
 {
     enum x = alignForSize!(int[], char[3], short, double[5])("x", "y","z", "w");
     struct Foo { int x; }
-    enum y = alignForSize!(ubyte, Foo, cdouble)("x", "y", "z");
+    enum y = alignForSize!(ubyte, Foo, double)("x", "y", "z");
 
     enum passNormalX = x == "double[5] w;\nint[] x;\nshort z;\nchar[3] y;\n";
-    enum passNormalY = y == "cdouble z;\nFoo y;\nubyte x;\n";
+    enum passNormalY = y == "double z;\nFoo y;\nubyte x;\n";
 
     enum passAbnormalX = x == "int[] x;\ndouble[5] w;\nshort z;\nchar[3] y;\n";
-    enum passAbnormalY = y == "Foo y;\ncdouble z;\nubyte x;\n";
+    enum passAbnormalY = y == "Foo y;\ndouble z;\nubyte x;\n";
     // ^ blame http://d.puremagic.com/issues/show_bug.cgi?id=231
 
     static assert(passNormalX || passAbnormalX && double.alignof <= (int[]).alignof);
@@ -2454,7 +2444,7 @@ Params:
     {
         import std.format : FormatSpec, formatValue;
         // Needs to be a template because of DMD @@BUG@@ 13737.
-        void toString()(scope void delegate(const(char)[]) sink, FormatSpec!char fmt)
+        void toString()(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt)
         {
             if (isNull)
             {
@@ -2467,7 +2457,7 @@ Params:
         }
 
         // Issue 14940
-        void toString()(scope void delegate(const(char)[]) @safe sink, FormatSpec!char fmt)
+        void toString()(scope void delegate(const(char)[]) @safe sink, const ref FormatSpec!char fmt)
         {
             if (isNull)
             {
@@ -2492,7 +2482,7 @@ Returns:
     }
 
 ///
-@system unittest
+@safe unittest
 {
     Nullable!int ni;
     assert(ni.isNull);
@@ -2518,7 +2508,10 @@ Forces $(D this) to the null state.
  */
     void nullify()()
     {
-        .destroy(_value);
+        static if (is(T == class) || is(T == interface))
+            _value = null;
+        else
+            .destroy(_value);
         _isNull = true;
     }
 
@@ -2859,13 +2852,13 @@ auto nullable(T)(T t)
             ni = other.ni;
         }
     }
-    foreach (S; AliasSeq!(S1, S2))
-    {
+    static foreach (S; AliasSeq!(S1, S2))
+    {{
         S a;
         S b = a;
         S c;
         c = a;
-    }
+    }}
 }
 @system unittest
 {
@@ -2975,6 +2968,31 @@ auto nullable(T)(T t)
     var.nullify;
 }
 
+// Issue 17440
+@system unittest
+{
+    static interface I { }
+
+    static class C : I
+    {
+        int canary;
+        ~this()
+        {
+            canary = 0x5050DEAD;
+        }
+    }
+    auto c = new C;
+    c.canary = 0xA71FE;
+    auto nc = nullable(c);
+    nc.nullify;
+    assert(c.canary == 0xA71FE);
+
+    I i = c;
+    auto ni = nullable(i);
+    ni.nullify;
+    assert(c.canary == 0xA71FE);
+}
+
 /**
 Just like $(D Nullable!T), except that the null state is defined as a
 particular value. For example, $(D Nullable!(uint, uint.max)) is an
@@ -3007,7 +3025,7 @@ Params:
     {
         import std.format : FormatSpec, formatValue;
         // Needs to be a template because of DMD @@BUG@@ 13737.
-        void toString()(scope void delegate(const(char)[]) sink, FormatSpec!char fmt)
+        void toString()(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt)
         {
             if (isNull)
             {
@@ -3047,7 +3065,7 @@ Returns:
     }
 
 ///
-@system unittest
+@safe unittest
 {
     Nullable!(int, -1) ni;
     //Initialized to "null" state
@@ -3061,8 +3079,8 @@ Returns:
 // disable test until https://issues.dlang.org/show_bug.cgi?id=15316 gets fixed
 version (none) @system unittest
 {
-    foreach (T; AliasSeq!(float, double, real))
-    {
+    static foreach (T; AliasSeq!(float, double, real))
+    {{
         Nullable!(T, T.init) nf;
         //Initialized to "null" state
         assert(nf.isNull);
@@ -3073,7 +3091,7 @@ version (none) @system unittest
 
         nf.nullify();
         assert(nf.isNull);
-    }
+    }}
 }
 
 /**
@@ -3085,7 +3103,7 @@ Forces $(D this) to the null state.
     }
 
 ///
-@system unittest
+@safe unittest
 {
     Nullable!(int, -1) ni = 0;
     assert(!ni.isNull);
@@ -3290,13 +3308,13 @@ auto nullable(alias nullValue, T)(T t)
             ni = other.ni;
         }
     }
-    foreach (S; AliasSeq!(S1, S2))
-    {
+    static foreach (S; AliasSeq!(S1, S2))
+    {{
         S a;
         S b = a;
         S c;
         c = a;
-    }
+    }}
 }
 @system unittest
 {
@@ -3361,7 +3379,7 @@ Params:
     {
         import std.format : FormatSpec, formatValue;
         // Needs to be a template because of DMD @@BUG@@ 13737.
-        void toString()(scope void delegate(const(char)[]) sink, FormatSpec!char fmt)
+        void toString()(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt)
         {
             if (isNull)
             {
@@ -3599,13 +3617,13 @@ auto nullableRef(T)(T* t)
             ni = other.ni;
         }
     }
-    foreach (S; AliasSeq!(S1, S2))
-    {
+    static foreach (S; AliasSeq!(S1, S2))
+    {{
         S a;
         S b = a;
         S c;
         c = a;
-    }
+    }}
 }
 @system unittest
 {
@@ -4246,7 +4264,7 @@ private static:
     alias Implementation = AutoImplement!(Issue17177, how, templateNot!isFinalFunction);
 }
 
-version(unittest)
+version(StdUnittest)
 {
     // Issue 10647
     // Add prefix "issue10647_" as a workaround for issue 1238
@@ -5217,7 +5235,7 @@ private template TypeMod(T)
     enum TypeMod = cast(TypeModifier)(mod1 | mod2);
 }
 
-version(unittest)
+version(StdUnittest)
 {
     private template UnittestFuncInfo(alias f)
     {
@@ -6194,8 +6212,8 @@ mixin template Proxy(alias a)
         static immutable arr = [1,2,3];
     }
 
-    foreach (T; AliasSeq!(MyInt, const MyInt, immutable MyInt))
-    {
+    static foreach (T; AliasSeq!(MyInt, const MyInt, immutable MyInt))
+    {{
         T m = 10;
         static assert(!__traits(compiles, { int x = m; }));
         static assert(!__traits(compiles, { void func(int n){} func(m); }));
@@ -6227,7 +6245,7 @@ mixin template Proxy(alias a)
         static assert(T.init == int.init);
         static assert(T.str == "str");
         static assert(T.arr == [1,2,3]);
-    }
+    }}
 }
 @system unittest
 {
@@ -6239,8 +6257,8 @@ mixin template Proxy(alias a)
         this(immutable int[] arr) immutable { value = arr; }
     }
 
-    foreach (T; AliasSeq!(MyArray, const MyArray, immutable MyArray))
-    {
+    static foreach (T; AliasSeq!(MyArray, const MyArray, immutable MyArray))
+    {{
       static if (is(T == immutable) && !is(typeof({ T a = [1,2,3,4]; })))
         T a = [1,2,3,4].idup;   // workaround until qualified ctor is properly supported
       else
@@ -6267,7 +6285,7 @@ mixin template Proxy(alias a)
             a[]     *= 2;   assert(a == [8,4,4,2]);
             a[0 .. 2] /= 2;   assert(a == [4,2,4,2]);
         }
-    }
+    }}
 }
 @system unittest
 {
@@ -6547,11 +6565,11 @@ mixin template Proxy(alias a)
         assert(!(a>b));
         assert(!(a >= b));
     }
-    foreach (T1; AliasSeq!(MyFloatImpl, Typedef!float, Typedef!double,
+    static foreach (T1; AliasSeq!(MyFloatImpl, Typedef!float, Typedef!double,
         float, real, Typedef!int, int))
     {
-        foreach (T2; AliasSeq!(MyFloatImpl, Typedef!float))
-        {
+        static foreach (T2; AliasSeq!(MyFloatImpl, Typedef!float))
+        {{
             T1 a;
             T2 b;
 
@@ -6573,7 +6591,7 @@ mixin template Proxy(alias a)
             assert(a <= b);
             assert(!(a>b));
             assert(a >= b);
-        }
+        }}
     }
 }
 

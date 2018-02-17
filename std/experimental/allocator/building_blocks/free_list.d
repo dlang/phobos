@@ -120,6 +120,7 @@ struct FreeList(ParentAllocator,
             _max = high;
         }
 
+        version(StdUnittest)
         @system unittest
         {
             import std.experimental.allocator.common : chooseAtRuntime;

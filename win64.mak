@@ -50,7 +50,7 @@ DFLAGS=-conf= -m$(MODEL) -O -release -w -de -dip25 -I$(DRUNTIME)\import
 
 ## Flags for compiling unittests
 
-UDFLAGS=-conf= -g -m$(MODEL) -O -w -dip25 -I$(DRUNTIME)\import
+UDFLAGS=-conf= -g -m$(MODEL) -O -w -dip25 -I$(DRUNTIME)\import -version=StdUnittest
 
 ## C compiler, linker, librarian
 
@@ -89,7 +89,7 @@ targets : $(LIB)
 test : test.exe
 
 test.obj : test.d
-	$(DMD) -conf= -c -m$(MODEL) test -g -unittest
+	$(DMD) -conf= -c -m$(MODEL) test -g $(UDFLAGS)
 
 test.exe : test.obj $(LIB)
 	$(DMD) -conf= test.obj -m$(MODEL) -g -L/map
@@ -241,6 +241,7 @@ SRC_STD_REGEX= \
 	std\regex\package.d \
 	std\regex\internal\parser.d \
 	std\regex\internal\tests.d \
+	std\regex\internal\tests2.d \
 	std\regex\internal\backtracking.d \
 	std\regex\internal\thompson.d \
 	std\regex\internal\kickstart.d \
@@ -261,7 +262,6 @@ SRC_STD_C= \
 
 SRC_STD_WIN= \
 	std\windows\registry.d \
-	std\windows\iunknown.d \
 	std\windows\syserror.d \
 	std\windows\charset.d
 
@@ -309,7 +309,7 @@ SRC_STD_INTERNAL_WINDOWS= \
 	std\internal\windows\advapi32.d
 
 SRC_STD_EXP= \
-	std\experimental\checkedint.d std\experimental\typecons.d
+	std\experimental\checkedint.d std\experimental\typecons.d std\experimental\scripting.d
 
 SRC_STD_EXP_ALLOC_BB= \
 	std\experimental\allocator\building_blocks\affix_allocator.d \
@@ -451,33 +451,33 @@ UNITTEST_OBJS= \
 		unittest9.obj
 
 unittest : $(LIB)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest1.obj $(SRC_STD_1)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest2.obj $(SRC_STD_RANGE)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest2a.obj $(SRC_STD_2a)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3.obj $(SRC_STD_3)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3a.obj $(SRC_STD_3a)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3b.obj $(SRC_STD_3b)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3c.obj $(SRC_STD_3c)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3d.obj $(SRC_STD_3d) $(SRC_STD_DATETIME)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest4.obj $(SRC_STD_4) $(SRC_STD_DIGEST)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest5a.obj $(SRC_STD_ALGO_1)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest5b.obj $(SRC_STD_ALGO_2)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest5c.obj $(SRC_STD_ALGO_3)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6a.obj $(SRC_STD_6a)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6c.obj $(SRC_STD_6c)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6e.obj $(SRC_STD_6e)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6g.obj $(SRC_STD_CONTAINER)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6h.obj $(SRC_STD_6h)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6i.obj $(SRC_STD_6i)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest7.obj $(SRC_STD_7) $(SRC_STD_EXP_LOGGER)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8a.obj $(SRC_STD_REGEX)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8b.obj $(SRC_STD_NET)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8c.obj $(SRC_STD_C) $(SRC_STD_WIN) $(SRC_STD_C_WIN)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8d.obj $(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) $(SRC_STD_INTERNAL_WINDOWS)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8e.obj $(SRC_ETC) $(SRC_ETC_C)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8f.obj $(SRC_STD_EXP)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest9.obj $(SRC_STD_EXP_ALLOC)
-	$(DMD) $(UDFLAGS) -L/OPT:NOICF -unittest unittest.d $(UNITTEST_OBJS) \
+	$(DMD) $(UDFLAGS) -c  -ofunittest1.obj $(SRC_STD_1)
+	$(DMD) $(UDFLAGS) -c  -ofunittest2.obj $(SRC_STD_RANGE)
+	$(DMD) $(UDFLAGS) -c  -ofunittest2a.obj $(SRC_STD_2a)
+	$(DMD) $(UDFLAGS) -c  -ofunittest3.obj $(SRC_STD_3)
+	$(DMD) $(UDFLAGS) -c  -ofunittest3a.obj $(SRC_STD_3a)
+	$(DMD) $(UDFLAGS) -c  -ofunittest3b.obj $(SRC_STD_3b)
+	$(DMD) $(UDFLAGS) -c  -ofunittest3c.obj $(SRC_STD_3c)
+	$(DMD) $(UDFLAGS) -c  -ofunittest3d.obj $(SRC_STD_3d) $(SRC_STD_DATETIME)
+	$(DMD) $(UDFLAGS) -c  -ofunittest4.obj $(SRC_STD_4) $(SRC_STD_DIGEST)
+	$(DMD) $(UDFLAGS) -c  -ofunittest5a.obj $(SRC_STD_ALGO_1)
+	$(DMD) $(UDFLAGS) -c  -ofunittest5b.obj $(SRC_STD_ALGO_2)
+	$(DMD) $(UDFLAGS) -c  -ofunittest5c.obj $(SRC_STD_ALGO_3)
+	$(DMD) $(UDFLAGS) -c  -ofunittest6a.obj $(SRC_STD_6a)
+	$(DMD) $(UDFLAGS) -c  -ofunittest6c.obj $(SRC_STD_6c)
+	$(DMD) $(UDFLAGS) -c  -ofunittest6e.obj $(SRC_STD_6e)
+	$(DMD) $(UDFLAGS) -c  -ofunittest6g.obj $(SRC_STD_CONTAINER)
+	$(DMD) $(UDFLAGS) -c  -ofunittest6h.obj $(SRC_STD_6h)
+	$(DMD) $(UDFLAGS) -c  -ofunittest6i.obj $(SRC_STD_6i)
+	$(DMD) $(UDFLAGS) -c  -ofunittest7.obj $(SRC_STD_7) $(SRC_STD_EXP_LOGGER)
+	$(DMD) $(UDFLAGS) -c  -ofunittest8a.obj $(SRC_STD_REGEX)
+	$(DMD) $(UDFLAGS) -c  -ofunittest8b.obj $(SRC_STD_NET)
+	$(DMD) $(UDFLAGS) -c  -ofunittest8c.obj $(SRC_STD_C) $(SRC_STD_WIN) $(SRC_STD_C_WIN)
+	$(DMD) $(UDFLAGS) -c  -ofunittest8d.obj $(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) $(SRC_STD_INTERNAL_WINDOWS)
+	$(DMD) $(UDFLAGS) -c  -ofunittest8e.obj $(SRC_ETC) $(SRC_ETC_C)
+	$(DMD) $(UDFLAGS) -c  -ofunittest8f.obj $(SRC_STD_EXP)
+	$(DMD) $(UDFLAGS) -c  -ofunittest9.obj $(SRC_STD_EXP_ALLOC)
+	$(DMD) $(UDFLAGS) -L/OPT:NOICF  unittest.d $(UNITTEST_OBJS) \
 	    $(ZLIB) $(DRUNTIMELIB)
 	.\unittest.exe
 
@@ -489,7 +489,7 @@ unittest : $(LIB)
 #	dmc unittest.obj -g
 
 cov : $(SRC_TO_COMPILE) $(LIB)
-	$(DMD) -conf= -m$(MODEL) -cov -unittest -ofcov.exe unittest.d $(SRC_TO_COMPILE) $(LIB)
+	$(DMD) -conf= -m$(MODEL) -cov $(UDFLAGS) -ofcov.exe unittest.d $(SRC_TO_COMPILE) $(LIB)
 	cov
 
 ################### Win32 COFF support #########################

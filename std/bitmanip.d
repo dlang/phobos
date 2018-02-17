@@ -58,7 +58,7 @@ import std.range.primitives;
 public import std.system : Endian;
 import std.traits;
 
-version(unittest)
+version(StdUnittest)
 {
     import std.stdio;
 }
@@ -2231,8 +2231,7 @@ public:
      * $(LI $(B %b) which prints the bits as 8-bit byte packets)
      * separated with an underscore.
      */
-    void toString(scope void delegate(const(char)[]) sink,
-                  FormatSpec!char fmt) const
+    void toString(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt) const
     {
         switch (fmt.spec)
         {
@@ -2428,9 +2427,9 @@ private ulong swapEndianImpl(ulong val) @trusted pure nothrow @nogc
 @safe unittest
 {
     import std.meta;
-    foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong, char, wchar, dchar))
-    {
-        scope(failure) writefln("Failed type: %s", T.stringof);
+    static foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong, char, wchar, dchar))
+    {{
+        scope(failure) writeln("Failed type: ", T.stringof);
         T val;
         const T cval;
         immutable T ival;
@@ -2470,7 +2469,7 @@ private ulong swapEndianImpl(ulong val) @trusted pure nothrow @nogc
                 right <<= 8;
             }
         }
-    }
+    }}
 }
 
 
@@ -2544,7 +2543,7 @@ if (isFloatOrDouble!T)
 @safe unittest
 {
     import std.meta;
-    foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
+    static foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
                          char, wchar, dchar
         /* The trouble here is with floats and doubles being compared against nan
          * using a bit compare. There are two kinds of nans, quiet and signaling.
@@ -2556,8 +2555,8 @@ if (isFloatOrDouble!T)
          * I cannot think of a fix for this that makes consistent sense.
          */
                           /*,float, double*/))
-    {
-        scope(failure) writefln("Failed type: %s", T.stringof);
+    {{
+        scope(failure) writeln("Failed type: ", T.stringof);
         T val;
         const T cval;
         immutable T ival;
@@ -2607,7 +2606,7 @@ if (isFloatOrDouble!T)
             assert(nativeToBigEndian(T.min) == nativeToLittleEndian(T.min));
         else
             assert(nativeToBigEndian(T.min) != nativeToLittleEndian(T.min));
-    }
+    }}
 }
 
 
@@ -2718,11 +2717,11 @@ if (isFloatOrDouble!T)
 @safe unittest
 {
     import std.meta;
-    foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
+    static foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
                          char, wchar, dchar/*,
                          float, double*/))
-    {
-        scope(failure) writefln("Failed type: %s", T.stringof);
+    {{
+        scope(failure) writeln("Failed type: ", T.stringof);
         T val;
         const T cval;
         immutable T ival;
@@ -2750,7 +2749,7 @@ if (isFloatOrDouble!T)
                     assert(littleEndianToNative!T(nativeToLittleEndian(minI)) == minI);
             }
         }
-    }
+    }}
 }
 
 
@@ -2848,7 +2847,7 @@ private template isFloatOrDouble(T)
 @safe unittest
 {
     import std.meta;
-    foreach (T; AliasSeq!(float, double))
+    static foreach (T; AliasSeq!(float, double))
     {
         static assert(isFloatOrDouble!(T));
         static assert(isFloatOrDouble!(const T));
@@ -2877,7 +2876,7 @@ private template canSwapEndianness(T)
 @safe unittest
 {
     import std.meta;
-    foreach (T; AliasSeq!(bool, ubyte, byte, ushort, short, uint, int, ulong,
+    static foreach (T; AliasSeq!(bool, ubyte, byte, ushort, short, uint, int, ulong,
                          long, char, wchar, dchar, float, double))
     {
         static assert(canSwapEndianness!(T));
@@ -2889,7 +2888,7 @@ private template canSwapEndianness(T)
     }
 
     //!
-    foreach (T; AliasSeq!(real, string, wstring, dstring))
+    static foreach (T; AliasSeq!(real, string, wstring, dstring))
     {
         static assert(!canSwapEndianness!(T));
         static assert(!canSwapEndianness!(const T));
@@ -3994,9 +3993,9 @@ if (canSwapEndianness!T && isOutputRange!(R, ubyte))
 {
     import std.array;
     import std.format : format;
-    import std.meta;
-    foreach (endianness; AliasSeq!(Endian.bigEndian, Endian.littleEndian))
-    {
+    import std.meta : AliasSeq;
+    static foreach (endianness; [Endian.bigEndian, Endian.littleEndian])
+    {{
         auto toWrite = appender!(ubyte[])();
         alias Types = AliasSeq!(uint, int, long, ulong, short, ubyte, ushort, byte, uint);
         ulong[] values = [42, -11, long.max, 1098911981329L, 16, 255, 19012, 2, 17];
@@ -4004,7 +4003,7 @@ if (canSwapEndianness!T && isOutputRange!(R, ubyte))
 
         size_t index = 0;
         size_t length = 0;
-        foreach (T; Types)
+        static foreach (T; Types)
         {
             toWrite.append!(T, endianness)(cast(T) values[index++]);
             length += T.sizeof;
@@ -4014,7 +4013,7 @@ if (canSwapEndianness!T && isOutputRange!(R, ubyte))
         assert(toRead.length == length);
 
         index = 0;
-        foreach (T; Types)
+        static foreach (T; Types)
         {
             assert(toRead.peek!(T, endianness)() == values[index], format("Failed Index: %s", index));
             assert(toRead.peek!(T, endianness)(0) == values[index], format("Failed Index: %s", index));
@@ -4027,7 +4026,7 @@ if (canSwapEndianness!T && isOutputRange!(R, ubyte))
             ++index;
         }
         assert(toRead.empty);
-    }
+    }}
 }
 
 /**
@@ -4086,7 +4085,7 @@ if (isIntegral!T)
 @safe unittest
 {
     import std.meta;
-    foreach (T; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    static foreach (T; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         assert(countBitsSet(cast(T) 0) == 0);
         assert(countBitsSet(cast(T) 1) == 1);
@@ -4197,7 +4196,7 @@ if (isIntegral!T)
     import std.range : iota;
 
     import std.meta;
-    foreach (T; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    static foreach (T; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         assert(bitsSet(cast(T) 0).empty);
         assert(bitsSet(cast(T) 1).equal([0]));

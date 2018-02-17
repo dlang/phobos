@@ -23,9 +23,7 @@ module std.experimental.typecons;
 import std.meta; // : AliasSeq, allSatisfy;
 import std.traits;
 
-import std.typecons : Tuple, tuple, Bind, DerivedFunctionType,
-       isImplicitlyConvertible, mixinAll, staticIota,
-       GetOverloadedMethods;
+import std.typecons : Tuple, tuple, Bind, DerivedFunctionType, GetOverloadedMethods;
 
 private
 {
@@ -295,7 +293,7 @@ if (Targets.length >= 1 && allSatisfy!(isInterface, Targets))
                     {
                         string r;
                         bool first = true;
-                        foreach (i; staticIota!(0, num))
+                        foreach (i; 0 .. num)
                         {
                             import std.conv : to;
                             r ~= (first ? "" : ", ") ~ " a" ~ (i+1).to!string;
@@ -320,8 +318,8 @@ if (Targets.length >= 1 && allSatisfy!(isInterface, Targets))
                 }
 
             public:
-                mixin mixinAll!(
-                    staticMap!(generateFun, staticIota!(0, TargetMembers.length)));
+                static foreach (i; 0 .. TargetMembers.length)
+                    mixin(generateFun!i);
             }
         }
     }

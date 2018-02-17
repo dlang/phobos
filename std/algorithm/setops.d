@@ -557,9 +557,9 @@ pure @safe nothrow @nogc unittest
 // largestPartialIntersection
 /**
 Given a range of sorted $(REF_ALTTEXT forward ranges, isForwardRange, std,range,primitives)
-$(D ror), copies to $(D tgt) the elements that are common to most ranges, along with their number
-of occurrences. All ranges in $(D ror) are assumed to be sorted by $(D
-less). Only the most frequent $(D tgt.length) elements are returned.
+`ror`, copies to `tgt` the elements that are common to most ranges, along with their number
+of occurrences. All ranges in `ror` are assumed to be sorted by $(D
+less). Only the most frequent `tgt.length` elements are returned.
 
 Params:
     less = The predicate the ranges are sorted by.
@@ -567,27 +567,27 @@ Params:
     tgt = The target range to copy common elements to.
     sorted = Whether the elements copied should be in sorted order.
 
-The function $(D largestPartialIntersection) is useful for
+The function `largestPartialIntersection` is useful for
 e.g. searching an $(LINK2 https://en.wikipedia.org/wiki/Inverted_index,
 inverted index) for the documents most
 likely to contain some terms of interest. The complexity of the search
-is $(BIGOH n * log(tgt.length)), where $(D n) is the sum of lengths of
+is $(BIGOH n * log(tgt.length)), where `n` is the sum of lengths of
 all input ranges. This approach is faster than keeping an associative
 array of the occurrences and then selecting its top items, and also
-requires less memory ($(D largestPartialIntersection) builds its
-result directly in $(D tgt) and requires no extra memory).
+requires less memory (`largestPartialIntersection` builds its
+result directly in `tgt` and requires no extra memory).
 
 If at least one of the ranges is a multiset, then all occurences
 of a duplicate element are taken into account. The result is
 equivalent to merging all ranges and picking the most frequent
-$(D tgt.length) elements.
+`tgt.length` elements.
 
-Warning: Because $(D largestPartialIntersection) does not allocate
-extra memory, it will leave $(D ror) modified. Namely, $(D
-largestPartialIntersection) assumes ownership of $(D ror) and
+Warning: Because `largestPartialIntersection` does not allocate
+extra memory, it will leave `ror` modified. Namely, $(D
+largestPartialIntersection) assumes ownership of `ror` and
 discretionarily swaps and advances elements of it. If you want $(D
 ror) to preserve its contents after the call, you may want to pass a
-duplicate to $(D largestPartialIntersection) (and perhaps cache the
+duplicate to `largestPartialIntersection` (and perhaps cache the
 duplicate in between calls).
  */
 void largestPartialIntersection
@@ -652,13 +652,13 @@ import std.algorithm.sorting : SortOutput; // FIXME
 
 // largestPartialIntersectionWeighted
 /**
-Similar to $(D largestPartialIntersection), but associates a weight
+Similar to `largestPartialIntersection`, but associates a weight
 with each distinct element in the intersection.
 
 If at least one of the ranges is a multiset, then all occurences
 of a duplicate element are taken into account. The result
 is equivalent to merging all input ranges and picking the highest
-$(D tgt.length), weight-based ranking elements.
+`tgt.length`, weight-based ranking elements.
 
 Params:
     less = The predicate the ranges are sorted by.
@@ -798,15 +798,15 @@ void largestPartialIntersectionWeighted
 Merges multiple sets. The input sets are passed as a
 range of ranges and each is assumed to be sorted by $(D
 less). Computation is done lazily, one union element at a time. The
-complexity of one $(D popFront) operation is $(BIGOH
-log(ror.length)). However, the length of $(D ror) decreases as ranges
+complexity of one `popFront` operation is $(BIGOH
+log(ror.length)). However, the length of `ror` decreases as ranges
 in it are exhausted, so the complexity of a full pass through $(D
 MultiwayMerge) is dependent on the distribution of the lengths of ranges
-contained within $(D ror). If all ranges have the same length $(D n)
+contained within `ror`. If all ranges have the same length `n`
 (worst case scenario), the complexity of a full pass through $(D
 MultiwayMerge) is $(BIGOH n * ror.length * log(ror.length)), i.e., $(D
 log(ror.length)) times worse than just spanning all ranges in
-turn. The output comes sorted (unstably) by $(D less).
+turn. The output comes sorted (unstably) by `less`.
 
 The length of the resulting range is the sum of all lengths of
 the ranges passed as input. This means that all elements (duplicates
@@ -824,11 +824,11 @@ Params:
 Returns:
     A range of the union of the ranges in `ror`.
 
-Warning: Because $(D MultiwayMerge) does not allocate extra memory, it
-will leave $(D ror) modified. Namely, $(D MultiwayMerge) assumes ownership
-of $(D ror) and discretionarily swaps and advances elements of it. If
-you want $(D ror) to preserve its contents after the call, you may
-want to pass a duplicate to $(D MultiwayMerge) (and perhaps cache the
+Warning: Because `MultiwayMerge` does not allocate extra memory, it
+will leave `ror` modified. Namely, `MultiwayMerge` assumes ownership
+of `ror` and discretionarily swaps and advances elements of it. If
+you want `ror` to preserve its contents after the call, you may
+want to pass a duplicate to `MultiwayMerge` (and perhaps cache the
 duplicate in between calls).
  */
 struct MultiwayMerge(alias less, RangeOfRanges)
@@ -949,7 +949,8 @@ See also: $(LREF multiwayMerge)
 auto multiwayUnion(alias less = "a < b", RangeOfRanges)(RangeOfRanges ror)
 {
     import std.algorithm.iteration : uniq;
-    return ror.multiwayMerge.uniq;
+    import std.functional : not;
+    return ror.multiwayMerge!(less).uniq!(not!less);
 }
 
 ///
@@ -980,16 +981,25 @@ auto multiwayUnion(alias less = "a < b", RangeOfRanges)(RangeOfRanges ror)
         [ 7 ],
     ];
     assert(equal(multiwayUnion(b), witness));
+
+    double[][] c =
+    [
+        [9, 8, 8, 8, 7, 6],
+        [9, 8, 6],
+        [9, 8, 5]
+    ];
+    auto witness2 = [9, 8, 7, 6, 5];
+    assert(equal(multiwayUnion!"a > b"(c), witness2));
 }
 
 /**
-Lazily computes the difference of $(D r1) and $(D r2). The two ranges
-are assumed to be sorted by $(D less). The element types of the two
+Lazily computes the difference of `r1` and `r2`. The two ranges
+are assumed to be sorted by `less`. The element types of the two
 ranges must have a common type.
 
 
 In the case of multisets, considering that element `a` appears `x`
-times in $(D r1) and `y` times and $(D r2), the number of occurences
+times in `r1` and `y` times and `r2`, the number of occurences
 of `a` in the resulting range is going to be `x-y` if x > y or 0 othwerise.
 
 Params:
@@ -1108,7 +1118,7 @@ SetDifference!(less, R1, R2) setDifference(alias less = "a < b", R1, R2)
 
 /**
 Lazily computes the intersection of two or more input ranges $(D
-ranges). The ranges are assumed to be sorted by $(D less). The element
+ranges). The ranges are assumed to be sorted by `less`. The element
 types of the ranges must have a common type.
 
 In the case of multisets, the range with the minimum number of
@@ -1274,20 +1284,20 @@ if (Rs.length >= 2 && allSatisfy!(isInputRange, Rs) &&
 }
 
 /**
-Lazily computes the symmetric difference of $(D r1) and $(D r2),
-i.e. the elements that are present in exactly one of $(D r1) and $(D
-r2). The two ranges are assumed to be sorted by $(D less), and the
-output is also sorted by $(D less). The element types of the two
+Lazily computes the symmetric difference of `r1` and `r2`,
+i.e. the elements that are present in exactly one of `r1` and $(D
+r2). The two ranges are assumed to be sorted by `less`, and the
+output is also sorted by `less`. The element types of the two
 ranges must have a common type.
 
 If both ranges are sets (without duplicated elements), the resulting
 range is going to be a set. If at least one of the ranges is a multiset,
 the number of occurences of an element `x` in the resulting range is `abs(a-b)`
-where `a` is the number of occurences of `x` in $(D r1), `b` is the number of
-occurences of `x` in $(D r2), and `abs` is the absolute value.
+where `a` is the number of occurences of `x` in `r1`, `b` is the number of
+occurences of `x` in `r2`, and `abs` is the absolute value.
 
 If both arguments are ranges of L-values of the same type then
-$(D SetSymmetricDifference) will also be a range of L-values of
+`SetSymmetricDifference` will also be a range of L-values of
 that type.
 
 Params:
@@ -1435,8 +1445,8 @@ TODO: once SetUnion got deprecated we can provide the usual definition
 (= merge + filter after uniqs)
 See: https://github.com/dlang/phobos/pull/4249
 /**
-Lazily computes the union of two or more ranges $(D rs). The ranges
-are assumed to be sorted by $(D less). Elements in the output are
+Lazily computes the union of two or more ranges `rs`. The ranges
+are assumed to be sorted by `less`. Elements in the output are
 unique. The element types of all ranges must have a common type.
 
 Params:

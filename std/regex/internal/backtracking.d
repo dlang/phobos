@@ -807,8 +807,6 @@ final:
     return format;
 }
 
-alias Sequence(int B, int E) = staticIota!(B, E);
-
 struct CtContext
 {
     import std.conv : to, text;

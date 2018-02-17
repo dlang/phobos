@@ -85,10 +85,10 @@ else version(Posix)
         }
     }
 
+    public import core.sys.posix.netinet.in_;
     import core.sys.posix.arpa.inet;
     import core.sys.posix.fcntl;
     import core.sys.posix.netdb;
-    import core.sys.posix.netinet.in_;
     import core.sys.posix.netinet.tcp;
     import core.sys.posix.sys.select;
     import core.sys.posix.sys.socket;
@@ -120,7 +120,7 @@ else
     static assert(0);     // No socket support yet.
 }
 
-version(unittest)
+version(StdUnittest)
 {
     static assert(is(uint32_t == uint));
     static assert(is(uint16_t == ushort));
@@ -180,6 +180,14 @@ string formatSocketError(int err) @trusted
                 return "Socket error " ~ to!string(err);
         }
         else version (NetBSD)
+        {
+            auto errs = strerror_r(err, buf.ptr, buf.length);
+            if (errs == 0)
+                cs = buf.ptr;
+            else
+                return "Socket error " ~ to!string(err);
+        }
+        else version (DragonFlyBSD)
         {
             auto errs = strerror_r(err, buf.ptr, buf.length);
             if (errs == 0)

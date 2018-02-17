@@ -107,6 +107,13 @@ struct Region(ParentAllocator = NullAllocator,
         parent.deallocate(_begin[0 .. _end - _begin]);
     }
 
+    /**
+    Rounds the given size to a multiple of the `alignment`
+    */
+    size_t goodAllocSize(size_t n)
+    {
+        return n.roundUpToAlignment(alignment);
+    }
 
     /**
     Alignment offered.
@@ -126,34 +133,24 @@ struct Region(ParentAllocator = NullAllocator,
     */
     void[] allocate(size_t n)
     {
-        if (n == 0) return null;
+        auto rounded = goodAllocSize(n);
+        if (n == 0 || rounded < n || available < rounded) return null;
+
         static if (growDownwards)
         {
-            if (!available || available < n) return null;
-            static if (minAlign > 1)
-                const rounded = n.roundUpToAlignment(alignment);
-            else
-                alias rounded = n;
             assert(available >= rounded);
             auto result = (_current - rounded)[0 .. n];
             assert(result.ptr >= _begin);
             _current = result.ptr;
             assert(owns(result) == Ternary.yes);
-            return result;
         }
         else
         {
             auto result = _current[0 .. n];
-            static if (minAlign > 1)
-                const rounded = n.roundUpToAlignment(alignment);
-            else
-                alias rounded = n;
             _current += rounded;
-            if (_current <= _end) return result;
-            // Slow path, backtrack
-            _current -= rounded;
-            return null;
         }
+
+        return result;
     }
 
     /**
@@ -170,22 +167,29 @@ struct Region(ParentAllocator = NullAllocator,
     {
         import std.math : isPowerOf2;
         assert(a.isPowerOf2);
+
+        auto rounded = goodAllocSize(n);
+        if (n == 0 || rounded < n || available < rounded) return null;
+
         static if (growDownwards)
         {
-            const available = _current - _begin;
-            if (available < n) return null;
-            auto result = (_current - n).alignDownTo(a)[0 .. n];
-            if (result.ptr >= _begin)
+            auto tmpCurrent = _current - rounded;
+            auto result = tmpCurrent.alignDownTo(a);
+            if (result <= tmpCurrent && result >= _begin)
             {
-                _current = result.ptr;
-                return result;
+                _current = result;
+                return cast(void[]) result[0 .. n];
             }
         }
         else
         {
             // Just bump the pointer to the next good allocation
+            auto newCurrent = _current.alignUpTo(a);
+            if (newCurrent < _current || newCurrent > _end)
+                return null;
+
             auto save = _current;
-            _current = _current.alignUpTo(a);
+            _current = newCurrent;
             auto result = allocate(n);
             if (result.ptr)
             {
@@ -247,9 +251,7 @@ struct Region(ParentAllocator = NullAllocator,
     /**
     Deallocates $(D b). This works only if $(D b) was obtained as the last call
     to $(D allocate); otherwise (i.e. another allocation has occurred since) it
-    does nothing. This semantics is tricky and therefore $(D deallocate) is
-    defined only if $(D Region) is instantiated with $(D Yes.defineDeallocate)
-    as the third template argument.
+    does nothing.
 
     Params:
     b = Block previously obtained by a call to $(D allocate) against this
@@ -259,17 +261,18 @@ struct Region(ParentAllocator = NullAllocator,
     bool deallocate(void[] b)
     {
         assert(owns(b) == Ternary.yes || b.ptr is null);
+        auto rounded = goodAllocSize(b.length);
         static if (growDownwards)
         {
             if (b.ptr == _current)
             {
-                _current += this.goodAllocSize(b.length);
+                _current += rounded;
                 return true;
             }
         }
         else
         {
-            if (b.ptr + this.goodAllocSize(b.length) == _current)
+            if (b.ptr + rounded == _current)
             {
                 assert(b.ptr !is null || _current is null);
                 _current = b.ptr;
@@ -382,6 +385,17 @@ struct Region(ParentAllocator = NullAllocator,
     assert(c.length == 42);
     assert((() nothrow @nogc => reg.deallocate(c))());
     assert((() pure nothrow @safe @nogc => reg.empty)() ==  Ternary.no);
+}
+
+@system unittest
+{
+    import std.experimental.allocator.mallocator : AlignedMallocator;
+    import std.typecons : Ternary;
+
+    ubyte[] buf = cast(ubyte[]) AlignedMallocator.instance.alignedAllocate(64, 64);
+    auto reg = Region!(NullAllocator, 64, Yes.growDownwards)(buf);
+    assert(reg.alignedAllocate(10, 32).length == 10);
+    assert(!reg.available);
 }
 
 @system unittest
@@ -668,13 +682,20 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
     */
     enum uint alignment = minAlign;
 
+    /**
+    Rounds the given size to a multiple of the                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   `alignment`
+    */
+    size_t goodAllocSize(size_t n) shared
+    {
+        return n.roundUpToMultipleOf(alignment);
+    }
+
     /// Ditto
     void[] allocate(size_t bytes) shared
     {
-        static if (minAlign > 1)
-            const rounded = bytes.roundUpToMultipleOf(alignment);
-        else
-            alias rounded = bytes;
+        // Take alignment rounding into account
+        auto rounded = goodAllocSize(bytes);
+
         pthread_mutex_lock(cast(pthread_mutex_t*) &sbrkMutex) == 0 || assert(0);
         scope(exit) pthread_mutex_unlock(cast(pthread_mutex_t*) &sbrkMutex) == 0
             || assert(0);
@@ -743,10 +764,7 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
             || assert(0);
 
         // Take alignment rounding into account
-        static if (minAlign > 1)
-            const rounded = b.length.roundUpToMultipleOf(alignment);
-        else
-            alias rounded = b.length;
+        auto rounded = goodAllocSize(b.length);
 
         const slack = rounded - b.length;
         if (delta <= slack)
@@ -758,10 +776,8 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
         if (_brkCurrent != b.ptr + rounded) return false;
         // Great, can expand the last block
         delta -= slack;
-        static if (minAlign > 1)
-            const roundedDelta = delta.roundUpToMultipleOf(alignment);
-        else
-            alias roundedDelta = delta;
+
+        auto roundedDelta = goodAllocSize(delta);
         auto p = sbrk(roundedDelta);
         if (p == cast(void*) -1)
         {
@@ -792,10 +808,8 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
     nothrow @nogc
     bool deallocate(void[] b) shared
     {
-        static if (minAlign > 1)
-            const rounded = b.length.roundUpToMultipleOf(alignment);
-        else
-            const rounded = b.length;
+        // Take alignment rounding into account
+        auto rounded = goodAllocSize(b.length);
         pthread_mutex_lock(cast(pthread_mutex_t*) &sbrkMutex) == 0 || assert(0);
         scope(exit) pthread_mutex_unlock(cast(pthread_mutex_t*) &sbrkMutex) == 0
             || assert(0);

@@ -143,7 +143,7 @@ Source:    $(PHOBOSSRC std/_string.d)
 */
 module std.string;
 
-version (unittest)
+version(StdUnittest)
 {
 private:
     struct TestAliasedString
@@ -357,10 +357,21 @@ alias CaseSensitive = Flag!"caseSensitive";
 
     See_Also: $(REF countUntil, std,algorithm,searching)
   +/
-ptrdiff_t indexOf(Range)(Range s, in dchar c,
-        in CaseSensitive cs = Yes.caseSensitive)
-if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-    !isConvertibleToString!Range)
+ptrdiff_t indexOf(Range)(Range s, dchar c, CaseSensitive cs = Yes.caseSensitive)
+if (isInputRange!Range && isSomeChar!(ElementType!Range) && !isSomeString!Range)
+{
+    return _indexOf(s, c, cs);
+}
+
+/// Ditto
+ptrdiff_t indexOf(C)(C[] s, dchar c, CaseSensitive cs = Yes.caseSensitive)
+if (isSomeChar!C)
+{
+    return _indexOf(s, c, cs);
+}
+
+private ptrdiff_t _indexOf(Range)(Range s, dchar c, CaseSensitive cs = Yes.caseSensitive)
+if (isInputRange!Range && isSomeChar!(ElementType!Range))
 {
     static import std.ascii;
     static import std.uni;
@@ -485,10 +496,21 @@ if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
 }
 
 /// Ditto
-ptrdiff_t indexOf(Range)(Range s, in dchar c, in size_t startIdx,
-        in CaseSensitive cs = Yes.caseSensitive)
-if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-    !isConvertibleToString!Range)
+ptrdiff_t indexOf(Range)(Range s, dchar c, size_t startIdx, CaseSensitive cs = Yes.caseSensitive)
+if (isInputRange!Range && isSomeChar!(ElementType!Range) && !isSomeString!Range)
+{
+    return _indexOf(s, c, startIdx, cs);
+}
+
+/// Ditto
+ptrdiff_t indexOf(C)(C[] s, dchar c, size_t startIdx, CaseSensitive cs = Yes.caseSensitive)
+if (isSomeChar!C)
+{
+    return _indexOf(s, c, startIdx, cs);
+}
+
+private ptrdiff_t _indexOf(Range)(Range s, dchar c, size_t startIdx, CaseSensitive cs = Yes.caseSensitive)
+if (isInputRange!Range && isSomeChar!(ElementType!Range))
 {
     static if (isSomeString!(typeof(s)) ||
                 (hasSlicing!(typeof(s)) && hasLength!(typeof(s))))
@@ -541,23 +563,15 @@ if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
     assert(indexOf(s, 'w', 3, No.caseSensitive) == 6);
 }
 
-ptrdiff_t indexOf(Range)(auto ref Range s, in dchar c,
-        in CaseSensitive cs = Yes.caseSensitive)
-if (isConvertibleToString!Range)
-{
-    return indexOf!(StringTypeOf!Range)(s, c, cs);
-}
-
-ptrdiff_t indexOf(Range)(auto ref Range s, in dchar c, in size_t startIdx,
-        in CaseSensitive cs = Yes.caseSensitive)
-if (isConvertibleToString!Range)
-{
-    return indexOf!(StringTypeOf!Range)(s, c, startIdx, cs);
-}
-
 @safe pure unittest
 {
     assert(testAliasedString!indexOf("std/string.d", '/'));
+
+    enum S : string { a = "std/string.d" }
+    assert(S.a.indexOf('/') == 3);
+
+    char[S.a.length] sa = S.a[];
+    assert(sa.indexOf('/') == 3);
 }
 
 @safe pure unittest
@@ -569,8 +583,8 @@ if (isConvertibleToString!Range)
 
     assertCTFEable!(
     {
-    foreach (S; AliasSeq!(string, wstring, dstring))
-    {
+    static foreach (S; AliasSeq!(string, wstring, dstring))
+    {{
         assert(indexOf(cast(S) null, cast(dchar)'a') == -1);
         assert(indexOf(to!S("def"), cast(dchar)'a') == -1);
         assert(indexOf(to!S("abba"), cast(dchar)'a') == 0);
@@ -586,7 +600,7 @@ if (isConvertibleToString!Range)
         assert(indexOf("def", cast(char)'f', No.caseSensitive) == 2);
         assert(indexOf(sPlts, cast(char)'P', No.caseSensitive) == 23);
         assert(indexOf(sPlts, cast(char)'R', No.caseSensitive) == 2);
-    }
+    }}
 
     foreach (cs; EnumMembers!CaseSensitive)
     {
@@ -613,7 +627,19 @@ if (isConvertibleToString!Range)
 
 @safe pure unittest
 {
-    assert(testAliasedString!indexOf("std/string.d", '/', 3));
+    assert(testAliasedString!indexOf("std/string.d", '/', 0));
+    assert(testAliasedString!indexOf("std/string.d", '/', 1));
+    assert(testAliasedString!indexOf("std/string.d", '/', 4));
+
+    enum S : string { a = "std/string.d" }
+    assert(S.a.indexOf('/', 0) == 3);
+    assert(S.a.indexOf('/', 1) == 3);
+    assert(S.a.indexOf('/', 4) == -1);
+
+    char[S.a.length] sa = S.a[];
+    assert(sa.indexOf('/', 0) == 3);
+    assert(sa.indexOf('/', 1) == 3);
+    assert(sa.indexOf('/', 4) == -1);
 }
 
 @safe pure unittest
@@ -626,8 +652,8 @@ if (isConvertibleToString!Range)
     assert("hello".byWchar.indexOf(cast(dchar)'l', 1) == 2);
     assert("hello".byWchar.indexOf(cast(dchar)'l', 6) == -1);
 
-    foreach (S; AliasSeq!(string, wstring, dstring))
-    {
+    static foreach (S; AliasSeq!(string, wstring, dstring))
+    {{
         assert(indexOf(cast(S) null, cast(dchar)'a', 1) == -1);
         assert(indexOf(to!S("def"), cast(dchar)'a', 1) == -1);
         assert(indexOf(to!S("abba"), cast(dchar)'a', 1) == 3);
@@ -649,7 +675,7 @@ if (isConvertibleToString!Range)
         assert(indexOf(sPlts, cast(char)'P', 12, No.caseSensitive) == 23);
         assert(indexOf(sPlts, cast(char)'R', cast(ulong) 1,
             No.caseSensitive) == 2);
-    }
+    }}
 
     foreach (cs; EnumMembers!CaseSensitive)
     {
@@ -822,10 +848,10 @@ if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
 
     assertCTFEable!(
     {
-    foreach (S; AliasSeq!(string, wstring, dstring))
+    static foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (T; AliasSeq!(string, wstring, dstring))
+        {{
             assert(indexOf(cast(S) null, to!T("a")) == -1);
             assert(indexOf(to!S("def"), to!T("a")) == -1);
             assert(indexOf(to!S("abba"), to!T("a")) == 0);
@@ -855,7 +881,7 @@ if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
             // Thanks to Carlos Santander B. and zwang
             assert(indexOf("sus mejores cortesanos. Se embarcaron en el puerto de Dubai y",
                            to!T("page-break-before"), No.caseSensitive) == -1);
-        }();
+        }}
 
         foreach (cs; EnumMembers!CaseSensitive)
         {
@@ -890,10 +916,10 @@ unittest
     import std.conv : to;
     import std.traits : EnumMembers;
 
-    foreach (S; AliasSeq!(string, wstring, dstring))
+    static foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (T; AliasSeq!(string, wstring, dstring))
+        {{
             assert(indexOf(cast(S) null, to!T("a"), 1337) == -1);
             assert(indexOf(to!S("def"), to!T("a"), 0) == -1);
             assert(indexOf(to!S("abba"), to!T("a"), 2) == 3);
@@ -930,7 +956,7 @@ unittest
 
             // In order for indexOf with and without index to be consistent
             assert(indexOf(to!S(""), to!T("")) == indexOf(to!S(""), to!T(""), 0));
-        }();
+        }}
 
         foreach (cs; EnumMembers!CaseSensitive)
         {
@@ -1068,8 +1094,8 @@ if (isSomeChar!Char)
 
     assertCTFEable!(
     {
-    foreach (S; AliasSeq!(string, wstring, dstring))
-    {
+    static foreach (S; AliasSeq!(string, wstring, dstring))
+    {{
         assert(lastIndexOf(cast(S) null, 'a') == -1);
         assert(lastIndexOf(to!S("def"), 'a') == -1);
         assert(lastIndexOf(to!S("abba"), 'a') == 3);
@@ -1089,7 +1115,7 @@ if (isSomeChar!Char)
         assert(lastIndexOf(to!S("def"), 'f', No.caseSensitive) == 2);
         assert(lastIndexOf(sPlts, 'M', No.caseSensitive) == 34);
         assert(lastIndexOf(sPlts, 'S', No.caseSensitive) == 40);
-    }
+    }}
 
     foreach (cs; EnumMembers!CaseSensitive)
     {
@@ -1105,8 +1131,8 @@ if (isSomeChar!Char)
     import std.conv : to;
     import std.traits : EnumMembers;
 
-    foreach (S; AliasSeq!(string, wstring, dstring))
-    {
+    static foreach (S; AliasSeq!(string, wstring, dstring))
+    {{
         assert(lastIndexOf(cast(S) null, 'a') == -1);
         assert(lastIndexOf(to!S("def"), 'a') == -1);
         assert(lastIndexOf(to!S("abba"), 'a', 3) == 0);
@@ -1123,7 +1149,7 @@ if (isSomeChar!Char)
         assert(lastIndexOf(to!S("def"), 'f', 4, No.caseSensitive) == -1);
         assert(lastIndexOf(sPlts, 'M', sPlts.length -2, No.caseSensitive) == 34);
         assert(lastIndexOf(sPlts, 'S', sPlts.length -2, No.caseSensitive) == 40);
-    }
+    }}
 
     foreach (cs; EnumMembers!CaseSensitive)
     {
@@ -1270,8 +1296,8 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
 {
     import std.conv : to;
 
-    foreach (S; AliasSeq!(string, wstring, dstring))
-    {
+    static foreach (S; AliasSeq!(string, wstring, dstring))
+    {{
         auto r = to!S("").lastIndexOf("hello");
         assert(r == -1, to!string(r));
 
@@ -1280,7 +1306,7 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
 
         r = to!S("").lastIndexOf("");
         assert(r == -1, to!string(r));
-    }
+    }}
 }
 
 @safe pure unittest
@@ -1291,10 +1317,10 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
 
     assertCTFEable!(
     {
-    foreach (S; AliasSeq!(string, wstring, dstring))
+    static foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (T; AliasSeq!(string, wstring, dstring))
+        {{
             enum typeStr = S.stringof ~ " " ~ T.stringof;
 
             assert(lastIndexOf(cast(S) null, to!T("a")) == -1, typeStr);
@@ -1329,7 +1355,7 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
             assert(lastIndexOf(sPlts, to!T("FOuRTh"), No.caseSensitive) == 10, typeStr);
             assert(lastIndexOf(sMars, to!T("whO\'s \'MY"), No.caseSensitive) == 0, typeStr);
             assert(lastIndexOf(sMars, to!T(sMars), No.caseSensitive) == 0, typeStr);
-        }();
+        }}
 
         foreach (cs; EnumMembers!CaseSensitive)
         {
@@ -1346,17 +1372,17 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
 @safe pure unittest // issue13529
 {
     import std.conv : to;
-    foreach (S; AliasSeq!(string, wstring, dstring))
+    static foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; AliasSeq!(string, wstring, dstring))
-        {
+        static foreach (T; AliasSeq!(string, wstring, dstring))
+        {{
             enum typeStr = S.stringof ~ " " ~ T.stringof;
             auto idx = lastIndexOf(to!T("Hällö Wörldö ö"),to!S("ö ö"));
             assert(idx != -1, to!string(idx) ~ " " ~ typeStr);
 
             idx = lastIndexOf(to!T("Hällö Wörldö ö"),to!S("ö öd"));
             assert(idx == -1, to!string(idx) ~ " " ~ typeStr);
-        }
+        }}
     }
 }
 
@@ -1365,10 +1391,10 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
     import std.conv : to;
     import std.traits : EnumMembers;
 
-    foreach (S; AliasSeq!(string, wstring, dstring))
+    static foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (T; AliasSeq!(string, wstring, dstring))
+        {{
             enum typeStr = S.stringof ~ " " ~ T.stringof;
 
             assert(lastIndexOf(cast(S) null, to!T("a")) == -1, typeStr);
@@ -1396,7 +1422,7 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("cd"), 4, No.caseSensitive) == 2, typeStr);
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("def"), 6, No.caseSensitive) == 3, typeStr);
             assert(lastIndexOf(to!S(""), to!T(""), 0) == lastIndexOf(to!S(""), to!T("")), typeStr);
-        }();
+        }}
 
         foreach (cs; EnumMembers!CaseSensitive)
         {
@@ -1593,8 +1619,8 @@ if (isSomeChar!Char && isSomeChar!Char2)
 {
     import std.conv : to;
 
-    foreach (S; AliasSeq!(string, wstring, dstring))
-    {
+    static foreach (S; AliasSeq!(string, wstring, dstring))
+    {{
         auto r = to!S("").indexOfAny("hello");
         assert(r == -1, to!string(r));
 
@@ -1603,7 +1629,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
 
         r = to!S("").indexOfAny("");
         assert(r == -1, to!string(r));
-    }
+    }}
 }
 
 @safe pure unittest
@@ -1613,10 +1639,10 @@ if (isSomeChar!Char && isSomeChar!Char2)
 
     assertCTFEable!(
     {
-    foreach (S; AliasSeq!(string, wstring, dstring))
+    static foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (T; AliasSeq!(string, wstring, dstring))
+        {
             assert(indexOfAny(cast(S) null, to!T("a")) == -1);
             assert(indexOfAny(to!S("def"), to!T("rsa")) == -1);
             assert(indexOfAny(to!S("abba"), to!T("a")) == 0);
@@ -1639,7 +1665,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
                 No.caseSensitive) == 0);
 
             assert(indexOfAny("\u0100", to!T("\u0100"), No.caseSensitive) == 0);
-        }();
+        }
     }
     }
     );
@@ -1650,10 +1676,10 @@ if (isSomeChar!Char && isSomeChar!Char2)
     import std.conv : to;
     import std.traits : EnumMembers;
 
-    foreach (S; AliasSeq!(string, wstring, dstring))
+    static foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (T; AliasSeq!(string, wstring, dstring))
+        {
             assert(indexOfAny(cast(S) null, to!T("a"), 1337) == -1);
             assert(indexOfAny(to!S("def"), to!T("AaF"), 0) == -1);
             assert(indexOfAny(to!S("abba"), to!T("NSa"), 2) == 3);
@@ -1678,7 +1704,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
 
             assert(indexOfAny("\u0100", to!T("\u0100"), 0,
                 No.caseSensitive) == 0);
-        }();
+        }
 
         foreach (cs; EnumMembers!CaseSensitive)
         {
@@ -1757,8 +1783,8 @@ if (isSomeChar!Char && isSomeChar!Char2)
 {
     import std.conv : to;
 
-    foreach (S; AliasSeq!(string, wstring, dstring))
-    {
+    static foreach (S; AliasSeq!(string, wstring, dstring))
+    {{
         auto r = to!S("").lastIndexOfAny("hello");
         assert(r == -1, to!string(r));
 
@@ -1767,7 +1793,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
 
         r = to!S("").lastIndexOfAny("");
         assert(r == -1, to!string(r));
-    }
+    }}
 }
 
 @safe pure unittest
@@ -1777,10 +1803,10 @@ if (isSomeChar!Char && isSomeChar!Char2)
 
     assertCTFEable!(
     {
-    foreach (S; AliasSeq!(string, wstring, dstring))
+    static foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (T; AliasSeq!(string, wstring, dstring))
+        {{
             assert(lastIndexOfAny(cast(S) null, to!T("a")) == -1);
             assert(lastIndexOfAny(to!S("def"), to!T("rsa")) == -1);
             assert(lastIndexOfAny(to!S("abba"), to!T("a")) == 3);
@@ -1817,7 +1843,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
 
             assert(lastIndexOfAny("\u0100", to!T("\u0100"),
                 No.caseSensitive) == 0);
-        }();
+        }}
     }
     }
     );
@@ -1830,10 +1856,10 @@ if (isSomeChar!Char && isSomeChar!Char2)
 
     assertCTFEable!(
     {
-    foreach (S; AliasSeq!(string, wstring, dstring))
+    static foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (T; AliasSeq!(string, wstring, dstring))
+        {{
             enum typeStr = S.stringof ~ " " ~ T.stringof;
 
             assert(lastIndexOfAny(cast(S) null, to!T("a"), 1337) == -1,
@@ -1869,7 +1895,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
                 No.caseSensitive) == -1, typeStr);
             assert(lastIndexOfAny(to!S("ÖABCDEFCDEF"), to!T("ö"), 2,
                 No.caseSensitive) == 0, typeStr);
-        }();
+        }}
     }
     }
     );
@@ -1935,8 +1961,8 @@ if (isSomeChar!Char && isSomeChar!Char2)
 {
     import std.conv : to;
 
-    foreach (S; AliasSeq!(string, wstring, dstring))
-    {
+    static foreach (S; AliasSeq!(string, wstring, dstring))
+    {{
         auto r = to!S("").indexOfNeither("hello");
         assert(r == -1, to!string(r));
 
@@ -1945,7 +1971,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
 
         r = to!S("").indexOfNeither("");
         assert(r == -1, to!string(r));
-    }
+    }}
 }
 
 @safe pure unittest
@@ -1955,10 +1981,10 @@ if (isSomeChar!Char && isSomeChar!Char2)
 
     assertCTFEable!(
     {
-    foreach (S; AliasSeq!(string, wstring, dstring))
+    static foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (T; AliasSeq!(string, wstring, dstring))
+        {
             assert(indexOfNeither(cast(S) null, to!T("a")) == -1);
             assert(indexOfNeither("abba", "a") == 1);
 
@@ -1986,7 +2012,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
                     to!string(indexOfNeither(to!S("äDfEfffg"), to!T("ädFe"),
                     No.caseSensitive)));
             }
-        }();
+        }
     }
     }
     );
@@ -1999,10 +2025,10 @@ if (isSomeChar!Char && isSomeChar!Char2)
 
     assertCTFEable!(
     {
-    foreach (S; AliasSeq!(string, wstring, dstring))
+    static foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (T; AliasSeq!(string, wstring, dstring))
+        {
             assert(indexOfNeither(cast(S) null, to!T("a"), 1) == -1);
             assert(indexOfNeither(to!S("def"), to!T("a"), 1) == 1,
                 to!string(indexOfNeither(to!S("def"), to!T("a"), 1)));
@@ -2029,7 +2055,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
                     No.caseSensitive) == 2, to!string(indexOfNeither(
                     to!S("öDfEfffg"), to!T("äDi"), 2, No.caseSensitive)));
             }
-        }();
+        }
     }
     }
     );
@@ -2089,8 +2115,8 @@ if (isSomeChar!Char && isSomeChar!Char2)
 {
     import std.conv : to;
 
-    foreach (S; AliasSeq!(string, wstring, dstring))
-    {
+    static foreach (S; AliasSeq!(string, wstring, dstring))
+    {{
         auto r = to!S("").lastIndexOfNeither("hello");
         assert(r == -1, to!string(r));
 
@@ -2099,7 +2125,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
 
         r = to!S("").lastIndexOfNeither("");
         assert(r == -1, to!string(r));
-    }
+    }}
 }
 
 @safe pure unittest
@@ -2109,10 +2135,10 @@ if (isSomeChar!Char && isSomeChar!Char2)
 
     assertCTFEable!(
     {
-    foreach (S; AliasSeq!(string, wstring, dstring))
+    static foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (T; AliasSeq!(string, wstring, dstring))
+        {{
             assert(lastIndexOfNeither(cast(S) null, to!T("a")) == -1);
             assert(lastIndexOfNeither(to!S("def"), to!T("rsa")) == 2);
             assert(lastIndexOfNeither(to!S("dfefffg"), to!T("fgh")) == 2);
@@ -2141,7 +2167,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
             assert(lastIndexOfNeither(to!S("dfeffgfffö"), to!T("BNDabCHIJKQEPÖÖSYXÄ??ß"),
                 No.caseSensitive) == 8, to!string(lastIndexOfNeither(to!S("dfeffgfffö"),
                 to!T("BNDabCHIJKQEPÖÖSYXÄ??ß"), No.caseSensitive)));
-        }();
+        }}
     }
     }
     );
@@ -2154,10 +2180,10 @@ if (isSomeChar!Char && isSomeChar!Char2)
 
     assertCTFEable!(
     {
-    foreach (S; AliasSeq!(string, wstring, dstring))
+    static foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (T; AliasSeq!(string, wstring, dstring))
+        {{
             assert(lastIndexOfNeither(cast(S) null, to!T("a"), 1337) == -1);
             assert(lastIndexOfNeither(to!S("def"), to!T("f")) == 1);
             assert(lastIndexOfNeither(to!S("dfefffg"), to!T("fgh")) == 2);
@@ -2185,7 +2211,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
             assert(lastIndexOfNeither(to!S("dfefffg"), to!T("NSA"), 2,
                 No.caseSensitive) == 1, to!string(lastIndexOfNeither(
                     to!S("dfefffg"), to!T("NSA"), 2, No.caseSensitive)));
-        }();
+        }}
     }
     }
     );
@@ -2233,10 +2259,10 @@ if (isSomeChar!Char)
         assert(representation(str) is cast(T[]) str);
     }
 
-    foreach (Type; AliasSeq!(Tuple!(char , ubyte ),
+    static foreach (Type; AliasSeq!(Tuple!(char , ubyte ),
                              Tuple!(wchar, ushort),
                              Tuple!(dchar, uint  )))
-    {
+    {{
         alias Char = Fields!Type[0];
         alias Int  = Fields!Type[1];
         enum immutable(Char)[] hello = "hello";
@@ -2246,7 +2272,7 @@ if (isSomeChar!Char)
         test!(             Char,              Int)(hello.dup);
         test!(      shared Char,       shared Int)(cast(shared) hello.dup);
         test!(const shared Char, const shared Int)(hello);
-    }
+    }}
     });
 }
 
@@ -2300,8 +2326,8 @@ if (!isSomeString!S && is(StringTypeOf!S))
 
     assertCTFEable!(
     {
-    foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
-    {
+    static foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
+    {{
         S s1 = to!S("FoL");
         S s2;
 
@@ -2325,7 +2351,7 @@ if (!isSomeString!S && is(StringTypeOf!S))
         s2 = capitalize(s1);
         assert(cmp(s2, "\u0053 \u0069") == 0);
         assert(s2 !is s1);
-    }
+    }}
     });
 }
 
@@ -2358,14 +2384,14 @@ if (!isSomeString!S && is(StringTypeOf!S))
 alias KeepTerminator = Flag!"keepTerminator";
 
 /// ditto
-S[] splitLines(S)(S s, in KeepTerminator keepTerm = No.keepTerminator) @safe pure
-if (isSomeString!S)
+C[][] splitLines(C)(C[] s, KeepTerminator keepTerm = No.keepTerminator) @safe pure
+if (isSomeChar!C)
 {
     import std.array : appender;
     import std.uni : lineSep, paraSep;
 
     size_t iStart = 0;
-    auto retval = appender!(S[])();
+    auto retval = appender!(C[][])();
 
     for (size_t i; i < s.length; ++i)
     {
@@ -2454,15 +2480,15 @@ if (isSomeString!S)
     assert(splitLines(s) == [s]);
 }
 
-auto splitLines(S)(auto ref S s, in KeepTerminator keepTerm = No.keepTerminator)
-if (!isSomeString!S && is(StringTypeOf!S))
-{
-    return splitLines!(StringTypeOf!S)(s, keepTerm);
-}
-
 @safe pure nothrow unittest
 {
     assert(testAliasedString!splitLines("hello\nworld"));
+
+    enum S : string { a = "hello\nworld" }
+    assert(S.a.splitLines() == ["hello", "world"]);
+
+    char[S.a.length] sa = S.a[];
+    assert(sa.splitLines() == ["hello", "world"]);
 }
 
 @safe pure unittest
@@ -2472,8 +2498,8 @@ if (!isSomeString!S && is(StringTypeOf!S))
 
     assertCTFEable!(
     {
-    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
-    {
+    static foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
+    {{
         auto s = to!S(
             "\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\nsunday\n" ~
             "mon\u2030day\nschadenfreude\vkindergarten\f\vcookies\u0085"
@@ -2525,7 +2551,7 @@ if (!isSomeString!S && is(StringTypeOf!S))
         lines = splitLines(s, Yes.keepTerminator);
         assert(lines.length == 14);
         assert(lines[13] == "cookies");
-    }
+    }}
     });
 }
 
@@ -2687,11 +2713,16 @@ public:
     $(REF splitter, std,regex)
  */
 auto lineSplitter(KeepTerminator keepTerm = No.keepTerminator, Range)(Range r)
-if ((hasSlicing!Range && hasLength!Range && isSomeChar!(ElementType!Range) ||
-    isSomeString!Range) &&
-    !isConvertibleToString!Range)
+if (hasSlicing!Range && hasLength!Range && isSomeChar!(ElementType!Range) && !isSomeString!Range)
 {
     return LineSplitter!(keepTerm, Range)(r);
+}
+
+/// Ditto
+auto lineSplitter(KeepTerminator keepTerm = No.keepTerminator, C)(C[] r)
+if (isSomeChar!C)
+{
+    return LineSplitter!(keepTerm, C[])(r);
 }
 
 ///
@@ -2707,12 +2738,6 @@ if ((hasSlicing!Range && hasLength!Range && isSomeChar!(ElementType!Range) ||
     assert(lineSplitter(s).array == splitLines(s));
 }
 
-auto lineSplitter(KeepTerminator keepTerm = No.keepTerminator, Range)(auto ref Range r)
-if (isConvertibleToString!Range)
-{
-    return LineSplitter!(keepTerm, StringTypeOf!Range)(r);
-}
-
 @safe pure unittest
 {
     import std.array : array;
@@ -2721,8 +2746,8 @@ if (isConvertibleToString!Range)
 
     assertCTFEable!(
     {
-    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
-    {
+    static foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
+    {{
         auto s = to!S(
             "\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\n" ~
             "sunday\nmon\u2030day\nschadenfreude\vkindergarten\f\vcookies\u0085"
@@ -2775,7 +2800,7 @@ if (isConvertibleToString!Range)
         lines = lineSplitter!(Yes.keepTerminator)(s).array;
         assert(lines.length == 14);
         assert(lines[13] == "cookies");
-    }
+    }}
     });
 }
 
@@ -2796,9 +2821,17 @@ if (isConvertibleToString!Range)
 @nogc @safe pure unittest
 {
     import std.algorithm.comparison : equal;
+    import std.range : only;
+
     auto s = "std/string.d";
     auto as = TestAliasedString(s);
     assert(equal(s.lineSplitter(), as.lineSplitter()));
+
+    enum S : string { a = "hello\nworld" }
+    assert(equal(S.a.lineSplitter(), only("hello", "world")));
+
+    char[S.a.length] sa = S.a[];
+    assert(equal(sa.lineSplitter(), only("hello", "world")));
 }
 
 @safe pure unittest
@@ -2813,13 +2846,16 @@ if (isConvertibleToString!Range)
 }
 
 /++
-    Strips leading whitespace (as defined by $(REF isWhite, std,uni)).
+    Strips leading whitespace (as defined by $(REF isWhite, std,uni)) or
+    as specified in the second argument.
 
     Params:
         input = string or $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
         of characters
+        chars = string of characters to be stripped
 
-    Returns: $(D input) stripped of leading whitespace.
+    Returns: $(D input) stripped of leading whitespace or characters
+    specified in the second argument.
 
     Postconditions: $(D input) and the returned value
     will share the same tail (see $(REF sameTail, std,array)).
@@ -2887,14 +2923,72 @@ if (isConvertibleToString!Range)
     assert(testAliasedString!stripLeft("  hello"));
 }
 
+/// Ditto
+auto stripLeft(Range, Char)(Range input, const(Char)[] chars)
+if (((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range)) ||
+     isConvertibleToString!Range) && isSomeChar!Char)
+{
+    static if (isConvertibleToString!Range)
+        return stripLeft!(StringTypeOf!Range)(input, chars);
+    else
+    {
+        for (; !input.empty; input.popFront)
+        {
+            if (chars.indexOf(input.front) == -1)
+                break;
+        }
+        return input;
+    }
+}
+
+///
+@safe pure unittest
+{
+    assert(stripLeft("     hello world     ", " ") ==
+           "hello world     ");
+    assert(stripLeft("xxxxxhello world     ", "x") ==
+           "hello world     ");
+    assert(stripLeft("xxxyy    hello world     ", "xy ") ==
+           "hello world     ");
+}
+
+///
+@safe pure unittest
+{
+    import std.array : array;
+    import std.utf : byChar, byWchar, byDchar;
+
+    assert(stripLeft("  xxxyy hello world     "w.byChar, "xy ").array ==
+           "hello world     ");
+
+    assert(stripLeft("\u2028\u2020hello world\u2028"w.byWchar,
+                     "\u2028").array == "\u2020hello world\u2028");
+    assert(stripLeft("\U00010001hello world"w.byWchar, " ").array ==
+           "\U00010001hello world"w);
+    assert(stripLeft("\U00010001 xyhello world"d.byDchar,
+                     "\U00010001 xy").array == "hello world"d);
+
+    assert(stripLeft("\u2020hello"w, "\u2020"w) == "hello"w);
+    assert(stripLeft("\U00010001hello"d, "\U00010001"d) == "hello"d);
+    assert(stripLeft(" hello ", "") == " hello ");
+}
+
+@safe pure unittest
+{
+    assert(testAliasedString!stripLeft(" xyz  hello", "xyz "));
+}
+
 /++
-    Strips trailing whitespace (as defined by $(REF isWhite, std,uni)).
+    Strips trailing whitespace (as defined by $(REF isWhite, std,uni)) or
+    as specified in the second argument.
 
     Params:
         str = string or random access range of characters
+        chars = string of characters to be stripped
 
     Returns:
-        slice of $(D str) stripped of trailing whitespace.
+        slice of $(D str) stripped of trailing whitespace or characters
+        specified in the second argument.
 
     See_Also:
         Generic stripping on ranges: $(REF _stripRight, std, algorithm, mutation)
@@ -3034,7 +3128,7 @@ if (isConvertibleToString!Range)
     assert(stripRight("\u2028hello world\u2020\u2028".byChar).array == "\u2028hello world\u2020");
     assert(stripRight("hello world\U00010001"w.byWchar).array == "hello world\U00010001"w);
 
-    foreach (C; AliasSeq!(char, wchar, dchar))
+    static foreach (C; AliasSeq!(char, wchar, dchar))
     {
         foreach (s; invalidUTFstrings!C())
         {
@@ -3047,16 +3141,73 @@ if (isConvertibleToString!Range)
     cast(void) stripRight(ws.byUTF!wchar).array;
 }
 
+/// Ditto
+auto stripRight(Range, Char)(Range str, const(Char)[] chars)
+if (((isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range)) ||
+     isConvertibleToString!Range) && isSomeChar!Char)
+{
+    static if (isConvertibleToString!Range)
+        return stripRight!(StringTypeOf!Range)(str, chars);
+    else
+    {
+        for (; !str.empty; str.popBack)
+        {
+            if (chars.indexOf(str.back) == -1)
+                break;
+        }
+        return str;
+    }
+}
+
+///
+@safe pure
+unittest
+{
+    assert(stripRight("     hello world     ", "x") ==
+           "     hello world     ");
+    assert(stripRight("     hello world     ", " ") ==
+           "     hello world");
+    assert(stripRight("     hello worldxy     ", "xy ") ==
+           "     hello world");
+}
+
+@safe pure unittest
+{
+    assert(testAliasedString!stripRight("hello xyz  ", "xyz "));
+}
+
+@safe pure unittest
+{
+    import std.array : array;
+    import std.utf : byChar, byDchar, byUTF, byWchar;
+
+    assert(stripRight("     hello world  xyz   ".byChar,
+                      "xyz ").array == "     hello world");
+    assert(stripRight("\u2028hello world\u2020\u2028"w.byWchar,
+                      "\u2028").array == "\u2028hello world\u2020");
+    assert(stripRight("hello world\U00010001"w.byWchar,
+                      " ").array == "hello world\U00010001"w);
+    assert(stripRight("hello world\U00010001 xy"d.byDchar,
+                      "\U00010001 xy").array == "hello world"d);
+    assert(stripRight("hello\u2020"w, "\u2020"w) == "hello"w);
+    assert(stripRight("hello\U00010001"d, "\U00010001"d) == "hello"d);
+    assert(stripRight(" hello ", "") == " hello ");
+}
+
 
 /++
     Strips both leading and trailing whitespace (as defined by
-    $(REF isWhite, std,uni)).
+    $(REF isWhite, std,uni)) or as specified in the second argument.
 
     Params:
         str = string or random access range of characters
+        chars = string of characters to be stripped
+        leftChars = string of leading characters to be stripped
+        rightChars = string of trailing characters to be stripped
 
     Returns:
-        slice of $(D str) stripped of leading and trailing whitespace.
+        slice of $(D str) stripped of leading and trailing whitespace
+        or characters as specified in the second argument.
 
     See_Also:
         Generic stripping on ranges: $(REF _strip, std, algorithm, mutation)
@@ -3105,7 +3256,7 @@ if (isConvertibleToString!Range)
 
     assertCTFEable!(
     {
-    foreach (S; AliasSeq!( char[], const  char[],  string,
+    static foreach (S; AliasSeq!( char[], const  char[],  string,
                           wchar[], const wchar[], wstring,
                           dchar[], const dchar[], dstring))
     {
@@ -3141,6 +3292,125 @@ if (isConvertibleToString!Range)
     wstring s = " ";
     assert(s.sameTail(s.stripLeft()));
     assert(s.sameHead(s.stripRight()));
+    });
+}
+
+/// Ditto
+auto strip(Range, Char)(Range str, const(Char)[] chars)
+if (((isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range)) ||
+     isConvertibleToString!Range) && isSomeChar!Char)
+{
+    static if (isConvertibleToString!Range)
+        return strip!(StringTypeOf!Range)(str, chars);
+    else
+        return stripRight(stripLeft(str, chars), chars);
+}
+
+///
+@safe pure unittest
+{
+    assert(strip("     hello world     ", "x") ==
+           "     hello world     ");
+    assert(strip("     hello world     ", " ") ==
+           "hello world");
+    assert(strip("   xyxyhello worldxyxy     ", "xy ") ==
+           "hello world");
+    assert(strip("\u2020hello\u2020"w, "\u2020"w) == "hello"w);
+    assert(strip("\U00010001hello\U00010001"d, "\U00010001"d) == "hello"d);
+    assert(strip(" hello ", "") == " hello ");
+}
+
+@safe pure unittest
+{
+    assert(testAliasedString!strip("  xyz   hello world  xyz   ", "xyz "));
+}
+
+/// Ditto
+auto strip(Range, Char)(Range str, const(Char)[] leftChars, const(Char)[] rightChars)
+if (((isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range)) ||
+     isConvertibleToString!Range) && isSomeChar!Char)
+{
+    static if (isConvertibleToString!Range)
+        return strip!(StringTypeOf!Range)(str, leftChars, rightChars);
+    else
+        return stripRight(stripLeft(str, leftChars), rightChars);
+}
+
+///
+@safe pure unittest
+{
+    assert(strip("xxhelloyy", "x", "y") == "hello");
+    assert(strip("   xyxyhello worldxyxyzz    ", "xy ", "xyz ") ==
+           "hello world");
+    assert(strip("\u2020hello\u2028"w, "\u2020"w, "\u2028"w) == "hello"w);
+    assert(strip("\U00010001hello\U00010002"d, "\U00010001"d, "\U00010002"d) ==
+           "hello"d);
+    assert(strip(" hello ", "", "") == " hello ");
+}
+
+@safe pure unittest
+{
+    assert(testAliasedString!strip("  xy   hello world  pq   ", "xy ", "pq "));
+}
+
+@safe pure unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.conv : to;
+    import std.exception : assertCTFEable;
+
+    assertCTFEable!(
+    {
+    static foreach (S; AliasSeq!( char[], const  char[],  string,
+                          wchar[], const wchar[], wstring,
+                          dchar[], const dchar[], dstring))
+    {
+        assert(equal(stripLeft(to!S("  \tfoo\t "), "\t "), "foo\t "));
+        assert(equal(stripLeft(to!S("\u2008  foo\t \u2007"), "\u2008 "),
+                     "foo\t \u2007"));
+        assert(equal(stripLeft(to!S("\u0085 μ \u0085 \u00BB \r"), "\u0085 "),
+                     "μ \u0085 \u00BB \r"));
+        assert(equal(stripLeft(to!S("1"), " "), "1"));
+        assert(equal(stripLeft(to!S("\U0010FFFE"), " "), "\U0010FFFE"));
+        assert(equal(stripLeft(to!S(""), " "), ""));
+
+        assert(equal(stripRight(to!S("  foo\t "), "\t "), "  foo"));
+        assert(equal(stripRight(to!S("\u2008  foo\t \u2007"), "\u2007\t "),
+                     "\u2008  foo"));
+        assert(equal(stripRight(to!S("\u0085 μ \u0085 \u00BB \r"), "\r "),
+                     "\u0085 μ \u0085 \u00BB"));
+        assert(equal(stripRight(to!S("1"), " "), "1"));
+        assert(equal(stripRight(to!S("\U0010FFFE"), " "), "\U0010FFFE"));
+        assert(equal(stripRight(to!S(""), " "), ""));
+
+        assert(equal(strip(to!S("  foo\t "), "\t "), "foo"));
+        assert(equal(strip(to!S("\u2008  foo\t \u2007"), "\u2008\u2007\t "),
+                     "foo"));
+        assert(equal(strip(to!S("\u0085 μ \u0085 \u00BB \r"), "\u0085\r "),
+                     "μ \u0085 \u00BB"));
+        assert(equal(strip(to!S("\U0010FFFE"), " "), "\U0010FFFE"));
+        assert(equal(strip(to!S(""), " "), ""));
+
+        assert(equal(strip(to!S("  \nfoo\t "), "\n ", "\t "), "foo"));
+        assert(equal(strip(to!S("\u2008\n  foo\t \u2007"),
+                           "\u2008\n ", "\u2007\t "), "foo"));
+        assert(equal(strip(to!S("\u0085 μ \u0085 \u00BB μ \u00BB\r"),
+                           "\u0085 ", "\u00BB\r "), "μ \u0085 \u00BB μ"));
+        assert(equal(strip(to!S("\U0010FFFE"), " ", " "), "\U0010FFFE"));
+        assert(equal(strip(to!S(""), " ", " "), ""));
+    }
+    });
+}
+
+@safe pure unittest
+{
+    import std.array : sameHead, sameTail;
+    import std.exception : assertCTFEable;
+    assertCTFEable!(
+    {
+    wstring s = " xyz ";
+    assert(s.sameTail(s.stripLeft(" ")));
+    assert(s.sameHead(s.stripRight(" ")));
     });
 }
 
@@ -3308,7 +3578,7 @@ if (isConvertibleToString!Range)
 
     assertCTFEable!(
     {
-    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
+    static foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         // @@@ BUG IN COMPILER, MUST INSERT CAST
         assert(chomp(cast(S) null) is null);
@@ -3328,8 +3598,8 @@ if (isConvertibleToString!Range)
         assert(chomp(to!S("hello\u2029\u2129")) == "hello\u2029\u2129");
         assert(chomp(to!S("hello\u2029\u0185")) == "hello\u2029\u0185");
 
-        foreach (T; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (T; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
+        {
             // @@@ BUG IN COMPILER, MUST INSERT CAST
             assert(chomp(cast(S) null, cast(T) null) is null);
             assert(chomp(to!S("hello\n"), cast(T) null) == "hello");
@@ -3340,7 +3610,7 @@ if (isConvertibleToString!Range)
             assert(chomp(to!S("hello"), to!T("llo")) == "he");
             assert(chomp(to!S("\uFF28ello"), to!T("llo")) == "\uFF28e");
             assert(chomp(to!S("\uFF28el\uFF4co"), to!T("l\uFF4co")) == "\uFF28e");
-        }();
+        }
     }
     });
 
@@ -3431,16 +3701,16 @@ unittest
     import std.exception : assertCTFEable;
     assertCTFEable!(
     {
-    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
+    static foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
-        foreach (T; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (T; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
+        {
             assert(equal(chompPrefix(to!S("abcdefgh"), to!T("abcde")), "fgh"));
             assert(equal(chompPrefix(to!S("abcde"), to!T("abcdefgh")), "abcde"));
             assert(equal(chompPrefix(to!S("\uFF28el\uFF4co"), to!T("\uFF28el\uFF4co")), ""));
             assert(equal(chompPrefix(to!S("\uFF28el\uFF4co"), to!T("\uFF28el")), "\uFF4co"));
             assert(equal(chompPrefix(to!S("\uFF28el"), to!T("\uFF28el\uFF4co")), "\uFF28el"));
-        }();
+        }
     }
     });
 
@@ -3597,7 +3867,7 @@ if (isConvertibleToString!Range)
 
     assertCTFEable!(
     {
-    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
+    static foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         assert(chop(cast(S) null) is null);
         assert(equal(chop(to!S("hello")), "hell"));
@@ -3982,8 +4252,8 @@ unittest
 
     assertCTFEable!(
     {
-    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
-    {
+    static foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
+    {{
         S s = to!S("hello");
 
         assert(leftJustify(s, 2) == "hello");
@@ -4005,7 +4275,7 @@ unittest
         assert(leftJustify(s, 8, 'ö') == "helloööö");
         assert(rightJustify(s, 8, 'ö') == "öööhello");
         assert(center(s, 8, 'ö') == "öhelloöö");
-    }
+    }}
     });
 }
 
@@ -4082,12 +4352,13 @@ if (isConvertibleToString!Range)
     assert(testAliasedString!centerJustifier("hello", 8));
 }
 
-@system unittest
+@safe unittest
 {
     static auto byFwdRange(dstring s)
     {
         static struct FRange
         {
+            @safe:
             dstring str;
             this(dstring s) { str = s; }
             @property bool empty() { return str.length == 0; }
@@ -4141,7 +4412,7 @@ if ((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
 }
 
 ///
-@system pure unittest
+@safe pure unittest
 {
     assert(detab(" \n\tx", 9) == " \n         x");
 }
@@ -4294,7 +4565,7 @@ if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
 }
 
 ///
-@system pure unittest
+@safe pure unittest
 {
     import std.array : array;
 
@@ -4312,7 +4583,7 @@ if (isConvertibleToString!Range)
     assert(testAliasedString!detabber(  "  ab\t asdf ", 8));
 }
 
-@system pure unittest
+@safe pure unittest
 {
     import std.algorithm.comparison : cmp;
     import std.conv : to;
@@ -4320,8 +4591,8 @@ if (isConvertibleToString!Range)
 
     assertCTFEable!(
     {
-    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
-    {
+    static foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
+    {{
         S s = to!S("This \tis\t a fofof\tof list");
         assert(cmp(detab(s), "This    is       a fofof        of list") == 0);
 
@@ -4338,12 +4609,12 @@ if (isConvertibleToString!Range)
         assert(detab("\u0085\t", 9) == "\u0085         ");
         assert(detab("\u2028\t", 9) == "\u2028         ");
         assert(detab(" \u2029\t", 9) == " \u2029         ");
-    }
+    }}
     });
 }
 
 ///
-@system pure unittest
+@safe pure unittest
 {
     import std.array : array;
     import std.utf : byChar, byWchar;
@@ -4722,8 +4993,9 @@ unittest
     A copy with the changes is returned.
 
     See_Also:
-        $(LREF tr)
-        $(REF replace, std,array)
+        $(LREF tr),
+        $(REF replace, std,array),
+        $(REF substitute, std,algorithm,iteration)
 
     Params:
         str        = The original string.
@@ -4772,10 +5044,10 @@ if (isSomeChar!C1 && isSomeChar!C2)
 
     assertCTFEable!(
     {
-    foreach (S; AliasSeq!( char[], const( char)[], immutable( char)[],
+    static foreach (S; AliasSeq!( char[], const( char)[], immutable( char)[],
                           wchar[], const(wchar)[], immutable(wchar)[],
                           dchar[], const(dchar)[], immutable(dchar)[]))
-    {
+    {{
         assert(translate(to!S("hello world"), cast(dchar[dchar])['h' : 'q', 'l' : '5']) ==
                to!S("qe55o wor5d"));
         assert(translate(to!S("hello world"), cast(dchar[dchar])['o' : 'l', 'l' : '\U00010143']) ==
@@ -4786,13 +5058,13 @@ if (isSomeChar!C1 && isSomeChar!C2)
                to!S("hell0 o w0rld"));
         assert(translate(to!S("hello world"), cast(dchar[dchar]) null) == to!S("hello world"));
 
-        foreach (T; AliasSeq!( char[], const( char)[], immutable( char)[],
+        static foreach (T; AliasSeq!( char[], const( char)[], immutable( char)[],
                               wchar[], const(wchar)[], immutable(wchar)[],
                               dchar[], const(dchar)[], immutable(dchar)[]))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
-            foreach (R; AliasSeq!(dchar[dchar], const dchar[dchar],
+        {
+            static foreach (R; AliasSeq!(dchar[dchar], const dchar[dchar],
                         immutable dchar[dchar]))
-            {
+            {{
                 R tt = ['h' : 'q', 'l' : '5'];
                 assert(translate(to!S("hello world"), tt, to!T("r"))
                     == to!S("qe55o wo5d"));
@@ -4800,14 +5072,14 @@ if (isSomeChar!C1 && isSomeChar!C2)
                     == to!S(" wrd"));
                 assert(translate(to!S("hello world"), tt, to!T("q5"))
                     == to!S("qe55o wor5d"));
-            }
-        }();
+            }}
+        }
 
         auto s = to!S("hello world");
         dchar[dchar] transTable = ['h' : 'q', 'l' : '5'];
         static assert(is(typeof(s) == typeof(translate(s, transTable))));
         assert(translate(s, transTable) == "qe55o wor5d");
-    }
+    }}
     });
 }
 
@@ -4830,10 +5102,10 @@ if (isSomeChar!C1 && isSomeString!S && isSomeChar!C2)
 
     assertCTFEable!(
     {
-    foreach (S; AliasSeq!( char[], const( char)[], immutable( char)[],
+    static foreach (S; AliasSeq!( char[], const( char)[], immutable( char)[],
                           wchar[], const(wchar)[], immutable(wchar)[],
                           dchar[], const(dchar)[], immutable(dchar)[]))
-    {
+    {{
         assert(translate(to!S("hello world"), ['h' : "yellow", 'l' : "42"]) ==
                to!S("yellowe4242o wor42d"));
         assert(translate(to!S("hello world"), ['o' : "owl", 'l' : "\U00010143\U00010143"]) ==
@@ -4848,14 +5120,14 @@ if (isSomeChar!C1 && isSomeString!S && isSomeChar!C2)
                to!S("hello  world"));
         assert(translate(to!S("hello world"), cast(string[dchar]) null) == to!S("hello world"));
 
-        foreach (T; AliasSeq!( char[], const( char)[], immutable( char)[],
+        static foreach (T; AliasSeq!( char[], const( char)[], immutable( char)[],
                               wchar[], const(wchar)[], immutable(wchar)[],
                               dchar[], const(dchar)[], immutable(dchar)[]))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
 
-            foreach (R; AliasSeq!(string[dchar], const string[dchar],
+            static foreach (R; AliasSeq!(string[dchar], const string[dchar],
                         immutable string[dchar]))
-            {
+            {{
                 R tt = ['h' : "yellow", 'l' : "42"];
                 assert(translate(to!S("hello world"), tt, to!T("r")) ==
                        to!S("yellowe4242o wo42d"));
@@ -4867,14 +5139,14 @@ if (isSomeChar!C1 && isSomeString!S && isSomeChar!C2)
                        to!S(""));
                 assert(translate(to!S("hello world"), tt, to!T("42")) ==
                        to!S("yellowe4242o wor42d"));
-            }
-        }();
+            }}
+        }
 
         auto s = to!S("hello world");
         string[dchar] transTable = ['h' : "silly", 'l' : "putty"];
         static assert(is(typeof(s) == typeof(translate(s, transTable))));
         assert(translate(s, transTable) == "sillyeputtyputtyo worputtyd");
-    }
+    }}
     });
 }
 
@@ -4992,8 +5264,9 @@ private void translateImpl(C1, T, C2, Buffer)(C1[] str,
     unit greater than $(D 127) which will cause UTF validation issues.
 
     See_Also:
-        $(LREF tr)
-        $(REF replace, std,array)
+        $(LREF tr),
+        $(REF replace, std,array),
+        $(REF substitute, std,algorithm,iteration)
 
     Params:
         str        = The original string.
@@ -5094,17 +5367,17 @@ do
 
     assertCTFEable!(
     {
-    foreach (C; AliasSeq!(char, const char, immutable char))
-    {
+    static foreach (C; AliasSeq!(char, const char, immutable char))
+    {{
         assert(translate!C("hello world", makeTransTable("hl", "q5")) == to!(C[])("qe55o wor5d"));
 
         auto s = to!(C[])("hello world");
         auto transTable = makeTransTable("hl", "q5");
         static assert(is(typeof(s) == typeof(translate!C(s, transTable))));
         assert(translate(s, transTable) == "qe55o wor5d");
-    }
+    }}
 
-    foreach (S; AliasSeq!(char[], const(char)[], immutable(char)[]))
+    static foreach (S; AliasSeq!(char[], const(char)[], immutable(char)[]))
     {
         assert(translate(to!S("hello world"), makeTransTable("hl", "q5")) == to!S("qe55o wor5d"));
         assert(translate(to!S("hello \U00010143 world"), makeTransTable("hl", "q5")) ==
@@ -5115,8 +5388,8 @@ do
         assert(translate(to!S("hello \U00010143 world"), makeTransTable("12345", "67890")) ==
                to!S("hello \U00010143 world"));
 
-        foreach (T; AliasSeq!(char[], const(char)[], immutable(char)[]))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (T; AliasSeq!(char[], const(char)[], immutable(char)[]))
+        {
             assert(translate(to!S("hello world"), makeTransTable("hl", "q5"), to!T("r")) ==
                    to!S("qe55o wo5d"));
             assert(translate(to!S("hello \U00010143 world"), makeTransTable("hl", "q5"), to!T("r")) ==
@@ -5125,7 +5398,7 @@ do
                    to!S(" wrd"));
             assert(translate(to!S("hello world"), makeTransTable("hl", "q5"), to!T("q5")) ==
                    to!S("qe55o wor5d"));
-        }();
+        }
     }
     });
 }
@@ -5632,6 +5905,11 @@ if (isSomeString!S)
     (e.g. $(D "a-d") is synonymous with $(D "abcd").) Neither accept a leading
     $(D '^') as meaning the complement of the string (use the $(D 'c') modifier
     for that).
+
+    See_Also:
+        $(LREF translate),
+        $(REF replace, std,array),
+        $(REF substitute, std,algorithm,iteration)
   +/
 C1[] tr(C1, C2, C3, C4 = immutable char)
        (C1[] str, const(C2)[] from, const(C3)[] to, const(C4)[] modifiers = null)
@@ -6033,7 +6311,7 @@ if (isSomeString!S ||
 {
     import std.conv : to;
 
-    foreach (T; AliasSeq!(string, char[], wstring, wchar[], dstring, dchar[]))
+    static foreach (T; AliasSeq!(string, char[], wstring, wchar[], dstring, dchar[]))
     {
         assert("123".to!T.isNumeric());
         assert("123UL".to!T.isNumeric());
@@ -6110,7 +6388,6 @@ if (isSomeString!S ||
   {
     assert(isNumeric(to!string(real.nan)) == true);
     assert(isNumeric(to!string(-real.infinity)) == true);
-    assert(isNumeric(to!string(123e+2+1234.78Li)) == true);
   }
 
     string s = "$250.99-";
@@ -6121,6 +6398,14 @@ if (isSomeString!S ||
 
     assert(!isNumeric("-"));
     assert(!isNumeric("+"));
+}
+
+version(TestComplex)
+deprecated
+@safe unittest
+{
+    import std.conv : to;
+    assert(isNumeric(to!string(123e+2+1234.78Li)) == true);
 }
 
 /*****************************
@@ -6811,8 +7096,8 @@ if (isSomeString!S)
     assertCTFEable!(
     {
 
-    foreach (S; AliasSeq!(string, wstring, dstring))
-    {
+    static foreach (S; AliasSeq!(string, wstring, dstring))
+    {{
         enum S blank = "";
         assert(blank.outdent() == blank);
         static assert(blank.outdent() == blank);
@@ -6868,7 +7153,7 @@ if (isSomeString!S)
         enum expected7 = "a \nb ";
         assert(testStr7.outdent() == expected7);
         static assert(testStr7.outdent() == expected7);
-    }
+    }}
     });
 }
 
@@ -6920,8 +7205,8 @@ if (staticIndexOf!(Unqual!T, ubyte, ushort, uint) != -1)
 pure @system unittest
 {
     import std.algorithm.comparison : equal;
-    foreach (T; AliasSeq!(char[], wchar[], dchar[]))
-    {
+    static foreach (T; AliasSeq!(char[], wchar[], dchar[]))
+    {{
         immutable T jti = "Hello World";
         T jt = jti.dup;
 
@@ -6950,5 +7235,5 @@ pure @system unittest
         assert(equal(jt, ht));
         assert(equal(jt, htc));
         assert(equal(jt, hti));
-    }
+    }}
 }

@@ -1,6 +1,32 @@
 // Written in the D programming language
 
 /++
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Main types) $(TD
+    $(LREF Interval)
+    $(LREF Direction)
+))
+$(TR $(TD Special intervals) $(TD
+    $(LREF everyDayOfWeek)
+    $(LREF everyMonth)
+    $(LREF everyDuration)
+))
+$(TR $(TD Special intervals) $(TD
+    $(LREF NegInfInterval)
+    $(LREF PosInfInterval)
+))
+$(TR $(TD Underlying ranges) $(TD
+    $(LREF IntervalRange)
+    $(LREF NegInfIntervalRange)
+    $(LREF PosInfIntervalRange)
+))
+$(TR $(TD Flags) $(TD
+    $(LREF PopFirst)
+))
+)
+
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Jonathan M Davis
     Source:    $(PHOBOSSRC std/datetime/_interval.d)
@@ -14,7 +40,7 @@ import std.exception : enforce;
 import std.traits : isIntegral, Unqual;
 import std.typecons : Flag;
 
-version(unittest) import std.exception : assertThrown;
+version(StdUnittest) import std.exception : assertThrown;
 
 
 /++

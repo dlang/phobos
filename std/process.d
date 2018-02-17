@@ -80,8 +80,7 @@ License:
 Source:
     $(PHOBOSSRC std/_process.d)
 Macros:
-    OBJECTREF=$(D $(LINK2 object.html#$0,$0))
-    LREF=$(D $(LINK2 #.$0,$0))
+    OBJECTREF=$(REF1 $0, object)
 */
 module std.process;
 
@@ -987,47 +986,51 @@ version (Posix) @system unittest
     assert(execute(testDefaults.path).status == 0);
     assert(execute(testDefaults.path, null, Config.inheritFDs).status == 0);
 
-    // try /proc/<pid>/fd/ on linux
-    version (linux)
+    // Try a few different methods to check whether there are any
+    // incorrectly-open files.
+    void testFDs()
     {
-        TestScript proc = "ls /proc/$$/fd";
-        auto procRes = execute(proc.path, null);
-        if (procRes.status == 0)
+        // try /proc/<pid>/fd/ on linux
+        version (linux)
         {
-            auto fdStr = fd.to!string;
-            assert(!procRes.output.split.canFind(fdStr));
-            assert(execute(proc.path, null, Config.inheritFDs)
-                    .output.split.canFind(fdStr));
+            TestScript proc = "ls /proc/$$/fd";
+            auto procRes = execute(proc.path, null);
+            if (procRes.status == 0)
+            {
+                auto fdStr = fd.to!string;
+                assert(!procRes.output.split.canFind(fdStr));
+                assert(execute(proc.path, null, Config.inheritFDs)
+                        .output.split.canFind(fdStr));
+                return;
+            }
+        }
+
+        // try fuser (might sometimes need permissions)
+        TestScript fuser = "echo $$ && fuser -f " ~ path;
+        auto fuserRes = execute(fuser.path, null);
+        if (fuserRes.status == 0)
+        {
+            assert(!reverseArgs!canFind(fuserRes
+                        .output.findSplitBefore("\n").expand));
+            assert(reverseArgs!canFind(execute(fuser.path, null, Config.inheritFDs)
+                        .output.findSplitBefore("\n").expand));
             return;
         }
-    }
 
-    // try fuser (might sometimes need permissions)
-    TestScript fuser = "echo $$ && fuser -f " ~ path;
-    auto fuserRes = execute(fuser.path, null);
-    if (fuserRes.status == 0)
-    {
-        assert(!reverseArgs!canFind(fuserRes
-                    .output.findSplitBefore("\n").expand));
-        assert(reverseArgs!canFind(execute(fuser.path, null, Config.inheritFDs)
-                    .output.findSplitBefore("\n").expand));
-        return;
-    }
+        // last resort, try lsof (not available on all Posix)
+        TestScript lsof = "lsof -p$$";
+        auto lsofRes = execute(lsof.path, null);
+        if (lsofRes.status == 0)
+        {
+            assert(!lsofRes.output.canFind(path));
+            assert(execute(lsof.path, null, Config.inheritFDs).output.canFind(path));
+            return;
+        }
 
-    // last resort, try lsof (not available on all Posix)
-    TestScript lsof = "lsof -p$$";
-    auto lsofRes = execute(lsof.path, null);
-    if (lsofRes.status == 0)
-    {
-        assert(!lsofRes.output.canFind(path));
-        assert(execute(lsof.path, null, Config.inheritFDs).output.canFind(path));
-        return;
+        std.stdio.stderr.writeln(__FILE__, ':', __LINE__,
+                ": Warning: Couldn't find any way to check open files");
     }
-
-    std.stdio.stderr.writeln(__FILE__, ':', __LINE__,
-            ": Warning: Couldn't find any way to check open files");
-    // DON'T DO ANY MORE TESTS BELOW HERE IN THIS UNITTEST BLOCK, THE ABOVE
-    // TESTS RETURN ON SUCCESS
+    testFDs();
 }
 
 @system unittest // Environment variables in spawnProcess().
@@ -1507,8 +1510,8 @@ private:
     version (Posix)
     int performWait(bool block) @trusted
     {
-        import std.exception : enforceEx;
-        enforceEx!ProcessException(owned, "Can't wait on a detached process");
+        import std.exception : enforce;
+        enforce!ProcessException(owned, "Can't wait on a detached process");
         if (_processID == terminated) return _exitCode;
         int exitCode;
         while (true)
@@ -1557,8 +1560,8 @@ private:
     {
         int performWait(bool block) @trusted
         {
-            import std.exception : enforceEx;
-            enforceEx!ProcessException(owned, "Can't wait on a detached process");
+            import std.exception : enforce;
+            enforce!ProcessException(owned, "Can't wait on a detached process");
             if (_processID == terminated) return _exitCode;
             assert(_handle != INVALID_HANDLE_VALUE);
             if (block)
@@ -1803,8 +1806,8 @@ void kill(Pid pid)
 /// ditto
 void kill(Pid pid, int codeOrSignal)
 {
-    import std.exception : enforceEx;
-    enforceEx!ProcessException(pid.owned, "Can't kill detached process");
+    import std.exception : enforce;
+    enforce!ProcessException(pid.owned, "Can't kill detached process");
     version (Windows)
     {
         if (codeOrSignal < 0) throw new ProcessException("Invalid exit code");
@@ -2731,7 +2734,7 @@ version (Windows) private immutable string shellSwitch = "/C";
 // file. On Windows the file name gets a .cmd extension, while on
 // POSIX its executable permission bit is set.  The file is
 // automatically deleted when the object goes out of scope.
-version (unittest)
+version(StdUnittest)
 private struct TestScript
 {
     this(string code) @system
@@ -2774,7 +2777,7 @@ private struct TestScript
     string path;
 }
 
-version (unittest)
+version(StdUnittest)
 private string uniqueTempPath() @safe
 {
     import std.file : tempDir;
@@ -3073,7 +3076,7 @@ if (is(typeof(allocator(size_t.init)[0] = char.init)))
     return buf;
 }
 
-version(Windows) version(unittest)
+version(Windows) version(StdUnittest)
 {
     import core.stdc.stddef;
     import core.stdc.wchar_ : wcslen;
@@ -3341,7 +3344,7 @@ static:
     Retrieves the value of the environment variable with the given $(D name),
     or a default value if the variable doesn't exist.
 
-    Unlike $(LREF environment.opIndex), this function never throws.
+    Unlike $(LREF environment.opIndex), this function never throws on Posix.
     ---
     auto sh = environment.get("SHELL", "/bin/sh");
     ---
@@ -3357,6 +3360,13 @@ static:
         // empty.
     }
     ---
+    Params:
+        name = name of the environment variable to retrieve
+        defaultValue = default value to return if the environment variable doesn't exist.
+
+    Returns:
+        the value of the environment variable if found, otherwise
+        `null` if the environment doesn't exist.
 
     Throws:
     $(REF UTFException, std,utf) if the variable contains invalid UTF-16
@@ -3752,7 +3762,7 @@ version (Posix)
 {
     import core.sys.posix.stdlib;
 }
-version (unittest)
+version(StdUnittest)
 {
     import std.conv, std.file, std.random;
 }
@@ -3799,7 +3809,7 @@ version (StdDdoc)
     Replaces the current process by executing a command, $(D pathname), with
     the arguments in $(D argv).
 
-    $(BLUE This functions is Posix-Only.)
+    $(BLUE This function is Posix-Only.)
 
     Typically, the first element of $(D argv) is
     the command being executed, i.e. $(D argv[0] == pathname). The 'p'

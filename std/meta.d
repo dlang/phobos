@@ -950,7 +950,7 @@ template Filter(alias pred, TList...)
 
 
 // Used in template predicate unit tests below.
-private version (unittest)
+private version(StdUnittest)
 {
     template testAlways(T...)
     {
@@ -989,7 +989,7 @@ template templateNot(alias pred)
 
 @safe unittest
 {
-    foreach (T; AliasSeq!(int, staticMap, 42))
+    static foreach (T; AliasSeq!(int, staticMap, 42))
     {
         static assert(!Instantiate!(templateNot!testAlways, T));
         static assert(Instantiate!(templateNot!testNever, T));
@@ -1040,7 +1040,7 @@ template templateAnd(Preds...)
 
 @safe unittest
 {
-    foreach (T; AliasSeq!(int, staticMap, 42))
+    static foreach (T; AliasSeq!(int, staticMap, 42))
     {
         static assert( Instantiate!(templateAnd!(), T));
         static assert( Instantiate!(templateAnd!(testAlways), T));
@@ -1098,7 +1098,7 @@ template templateOr(Preds...)
 
 @safe unittest
 {
-    foreach (T; AliasSeq!(int, staticMap, 42))
+    static foreach (T; AliasSeq!(int, staticMap, 42))
     {
         static assert( Instantiate!(templateOr!(testAlways), T));
         static assert( Instantiate!(templateOr!(testAlways, testAlways), T));

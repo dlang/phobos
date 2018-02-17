@@ -146,8 +146,7 @@ if (isFloatingPoint!T)
     }
 
     /// ditto
-    void toString(Writer, Char)(scope Writer w,
-                        FormatSpec!Char formatSpec) const
+    void toString(Writer, Char)(scope Writer w, const ref FormatSpec!Char formatSpec) const
         if (isOutputRange!(Writer, const(Char)[]))
     {
         import std.format : formatValue;
@@ -822,7 +821,6 @@ Complex!(CommonType!(T, U)) fromPolar(T, U)(T modulus, U argument)
 */
 Complex!T sin(T)(Complex!T z)  @safe pure nothrow @nogc
 {
-    import std.math : expi, coshisinh;
     auto cs = expi(z.re);
     auto csh = coshisinh(z.im);
     return typeof(return)(cs.im * csh.re, cs.re * csh.im);
@@ -840,7 +838,6 @@ Complex!T sin(T)(Complex!T z)  @safe pure nothrow @nogc
 /// ditto
 Complex!T cos(T)(Complex!T z)  @safe pure nothrow @nogc
 {
-    import std.math : expi, coshisinh;
     auto cs = expi(z.re);
     auto csh = coshisinh(z.im);
     return typeof(return)(cs.re * csh.re, - cs.im * csh.im);
@@ -850,12 +847,16 @@ Complex!T cos(T)(Complex!T z)  @safe pure nothrow @nogc
 @safe pure nothrow unittest
 {
     import std.complex;
-    import std.math;
     assert(cos(complex(0.0)) == 1.0);
-    assert(cos(complex(1.3L)) == std.math.cos(1.3L));
-    assert(cos(complex(0, 5.2L)) == cosh(5.2L));
 }
 
+deprecated
+@safe pure nothrow unittest
+{
+    import std.math;
+    assert(cos(complex(0, 5.2L)) == cosh(5.2L));
+    assert(cos(complex(1.3L)) == std.math.cos(1.3L));
+}
 
 /**
     Params: y = A real number.
@@ -876,15 +877,60 @@ Complex!real expi(real y)  @trusted pure nothrow @nogc
 ///
 @safe pure nothrow unittest
 {
+    import std.math : cos, sin;
+    assert(expi(0.0L) == 1.0L);
+    assert(expi(1.3e5L) == complex(cos(1.3e5L), sin(1.3e5L)));
+}
+
+deprecated
+@safe pure nothrow unittest
+{
     static import std.math;
 
     assert(expi(1.3e5L) == complex(std.math.cos(1.3e5L), std.math.sin(1.3e5L)));
-    assert(expi(0.0L) == 1.0L);
     auto z1 = expi(1.234);
     auto z2 = std.math.expi(1.234);
     assert(z1.re == z2.re && z1.im == z2.im);
 }
 
+/**
+    Params: y = A real number.
+    Returns: The value of cosh(y) + i sinh(y)
+
+    Note:
+    $(D coshisinh) is included here for convenience and for easy migration of code
+    that uses $(REF _coshisinh, std,math).
+*/
+Complex!real coshisinh(real y) @safe pure nothrow @nogc
+{
+    static import std.math;
+    if (std.math.fabs(y) <= 0.5)
+        return Complex!real(std.math.cosh(y), std.math.sinh(y));
+    else
+    {
+        auto z = std.math.exp(y);
+        auto zi = 0.5 / z;
+        z = 0.5 * z;
+        return Complex!real(z + zi, z - zi);
+    }
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.math : cosh, sinh;
+    assert(coshisinh(3.0L) == complex(cosh(3.0L), sinh(3.0L)));
+}
+
+deprecated
+@safe pure nothrow @nogc unittest
+{
+    static import std.math;
+    assert(coshisinh(3.0L) == complex(std.math.cosh(3.0L), std.math.sinh(3.0L)));
+    auto z1 = coshisinh(1.234);
+    auto z2 = std.math.coshisinh(1.234);
+    assert(z1.re == z2.re && z1.im == z2.im);
+}
 
 /**
     Params: z = A complex number.

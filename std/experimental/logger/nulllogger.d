@@ -34,8 +34,7 @@ class NullLogger : Logger
 ///
 @safe unittest
 {
-    import std.experimental.logger.nulllogger : LogLevel;
-
+    import std.experimental.logger.core : LogLevel;
     auto nl1 = new NullLogger(LogLevel.all);
     nl1.info("You will never read this.");
     nl1.fatal("You will never read this, either and it will not throw");

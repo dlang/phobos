@@ -445,7 +445,8 @@ abstract class GenericFactory(alias EngineType, Char) : MatcherFactory!Char
 {
     import core.stdc.stdlib : malloc, free;
     import core.memory : GC;
-    enum classSize = __traits(classInstanceSize, EngineType!Char);
+    // round up to next multiple of size_t for alignment purposes
+    enum classSize = (__traits(classInstanceSize, EngineType!Char) + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
 
     Matcher!Char construct(const Regex!Char re, in Char[] input, void[] memory) const;
 

@@ -101,7 +101,7 @@ JSON value node
 */
 struct JSONValue
 {
-    import std.exception : enforceEx, enforce;
+    import std.exception : enforce;
 
     union Store
     {
@@ -472,7 +472,7 @@ struct JSONValue
     ref inout(JSONValue) opIndex(size_t i) inout pure @safe
     {
         auto a = this.arrayNoRef;
-        enforceEx!JSONException(i < a.length,
+        enforce!JSONException(i < a.length,
                                 "JSONValue array index is out of range");
         return a[i];
     }
@@ -512,7 +512,7 @@ struct JSONValue
      */
     void opIndexAssign(T)(auto ref T value, string key) pure
     {
-        enforceEx!JSONException(type == JSON_TYPE.OBJECT || type == JSON_TYPE.NULL,
+        enforce!JSONException(type == JSON_TYPE.OBJECT || type == JSON_TYPE.NULL,
                                 "JSONValue must be object or null");
         JSONValue[string] aa = null;
         if (type == JSON_TYPE.OBJECT)
@@ -534,7 +534,7 @@ struct JSONValue
     void opIndexAssign(T)(T arg, size_t i) pure
     {
         auto a = this.arrayNoRef;
-        enforceEx!JSONException(i < a.length,
+        enforce!JSONException(i < a.length,
                                 "JSONValue array index is out of range");
         a[i] = arg;
         this.array = a;
@@ -1112,7 +1112,7 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
 
 /**
 Parses a serialized string and returns a tree of JSON values.
-Throws: $(REF JSONException, std,json) if the depth exceeds the max depth.
+Throws: $(LREF JSONException) if the depth exceeds the max depth.
 Params:
     json = json-formatted string to parse
     options = enable decoding string representations of NaN/Inf as float values

@@ -445,6 +445,7 @@ struct MD5
 @system unittest
 {
     import std.range;
+    import std.conv : hexString;
 
     ubyte[16] digest;
 
@@ -452,44 +453,45 @@ struct MD5
     md5.put(cast(ubyte[])"abcdef");
     md5.start();
     md5.put(cast(ubyte[])"");
-    assert(md5.finish() == cast(ubyte[]) x"d41d8cd98f00b204e9800998ecf8427e");
+    assert(md5.finish() == cast(ubyte[]) hexString!"d41d8cd98f00b204e9800998ecf8427e");
 
     digest = md5Of("");
-    assert(digest == cast(ubyte[]) x"d41d8cd98f00b204e9800998ecf8427e");
+    assert(digest == cast(ubyte[]) hexString!"d41d8cd98f00b204e9800998ecf8427e");
 
     digest = md5Of("a");
-    assert(digest == cast(ubyte[]) x"0cc175b9c0f1b6a831c399e269772661");
+    assert(digest == cast(ubyte[]) hexString!"0cc175b9c0f1b6a831c399e269772661");
 
     digest = md5Of("abc");
-    assert(digest == cast(ubyte[]) x"900150983cd24fb0d6963f7d28e17f72");
+    assert(digest == cast(ubyte[]) hexString!"900150983cd24fb0d6963f7d28e17f72");
 
     digest = md5Of("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq");
-    assert(digest == cast(ubyte[]) x"8215ef0796a20bcaaae116d3876c664a");
+    assert(digest == cast(ubyte[]) hexString!"8215ef0796a20bcaaae116d3876c664a");
 
     digest = md5Of("message digest");
-    assert(digest == cast(ubyte[]) x"f96b697d7cb7938d525a2f31aaf161d0");
+    assert(digest == cast(ubyte[]) hexString!"f96b697d7cb7938d525a2f31aaf161d0");
 
     digest = md5Of("abcdefghijklmnopqrstuvwxyz");
-    assert(digest == cast(ubyte[]) x"c3fcd3d76192e4007dfb496cca67e13b");
+    assert(digest == cast(ubyte[]) hexString!"c3fcd3d76192e4007dfb496cca67e13b");
 
     digest = md5Of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
-    assert(digest == cast(ubyte[]) x"d174ab98d277d9f5a5611c2c9f419d9f");
+    assert(digest == cast(ubyte[]) hexString!"d174ab98d277d9f5a5611c2c9f419d9f");
 
     digest = md5Of("1234567890123456789012345678901234567890"~
                     "1234567890123456789012345678901234567890");
-    assert(digest == cast(ubyte[]) x"57edf4a22be3c955ac49da2e2107b67a");
+    assert(digest == cast(ubyte[]) hexString!"57edf4a22be3c955ac49da2e2107b67a");
 
-    assert(toHexString(cast(ubyte[16]) x"c3fcd3d76192e4007dfb496cca67e13b")
+    enum ubyte[16] input = cast(ubyte[16]) hexString!"c3fcd3d76192e4007dfb496cca67e13b";
+    assert(toHexString(input)
         == "C3FCD3D76192E4007DFB496CCA67E13B");
 
     ubyte[] onemilliona = new ubyte[1000000];
     onemilliona[] = 'a';
     digest = md5Of(onemilliona);
-    assert(digest == cast(ubyte[]) x"7707D6AE4E027C70EEA2A935C2296F21");
+    assert(digest == cast(ubyte[]) hexString!"7707D6AE4E027C70EEA2A935C2296F21");
 
     auto oneMillionRange = repeat!ubyte(cast(ubyte)'a', 1000000);
     digest = md5Of(oneMillionRange);
-    assert(digest == cast(ubyte[]) x"7707D6AE4E027C70EEA2A935C2296F21");
+    assert(digest == cast(ubyte[]) hexString!"7707D6AE4E027C70EEA2A935C2296F21");
 }
 
 /**
@@ -547,17 +549,18 @@ alias MD5Digest = WrapperDigest!MD5;
 
 @system unittest
 {
+    import std.conv : hexString;
     auto md5 = new MD5Digest();
 
     md5.put(cast(ubyte[])"abcdef");
     md5.reset();
     md5.put(cast(ubyte[])"");
-    assert(md5.finish() == cast(ubyte[]) x"d41d8cd98f00b204e9800998ecf8427e");
+    assert(md5.finish() == cast(ubyte[]) hexString!"d41d8cd98f00b204e9800998ecf8427e");
 
     md5.put(cast(ubyte[])"abcdefghijklmnopqrstuvwxyz");
     ubyte[20] result;
     auto result2 = md5.finish(result[]);
-    assert(result[0 .. 16] == result2 && result2 == cast(ubyte[]) x"c3fcd3d76192e4007dfb496cca67e13b");
+    assert(result[0 .. 16] == result2 && result2 == cast(ubyte[]) hexString!"c3fcd3d76192e4007dfb496cca67e13b");
 
     debug
     {
@@ -567,24 +570,24 @@ alias MD5Digest = WrapperDigest!MD5;
 
     assert(md5.length == 16);
 
-    assert(md5.digest("") == cast(ubyte[]) x"d41d8cd98f00b204e9800998ecf8427e");
+    assert(md5.digest("") == cast(ubyte[]) hexString!"d41d8cd98f00b204e9800998ecf8427e");
 
-    assert(md5.digest("a") == cast(ubyte[]) x"0cc175b9c0f1b6a831c399e269772661");
+    assert(md5.digest("a") == cast(ubyte[]) hexString!"0cc175b9c0f1b6a831c399e269772661");
 
-    assert(md5.digest("abc") == cast(ubyte[]) x"900150983cd24fb0d6963f7d28e17f72");
+    assert(md5.digest("abc") == cast(ubyte[]) hexString!"900150983cd24fb0d6963f7d28e17f72");
 
     assert(md5.digest("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq")
-           == cast(ubyte[]) x"8215ef0796a20bcaaae116d3876c664a");
+           == cast(ubyte[]) hexString!"8215ef0796a20bcaaae116d3876c664a");
 
-    assert(md5.digest("message digest") == cast(ubyte[]) x"f96b697d7cb7938d525a2f31aaf161d0");
+    assert(md5.digest("message digest") == cast(ubyte[]) hexString!"f96b697d7cb7938d525a2f31aaf161d0");
 
     assert(md5.digest("abcdefghijklmnopqrstuvwxyz")
-           == cast(ubyte[]) x"c3fcd3d76192e4007dfb496cca67e13b");
+           == cast(ubyte[]) hexString!"c3fcd3d76192e4007dfb496cca67e13b");
 
     assert(md5.digest("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
-           == cast(ubyte[]) x"d174ab98d277d9f5a5611c2c9f419d9f");
+           == cast(ubyte[]) hexString!"d174ab98d277d9f5a5611c2c9f419d9f");
 
     assert(md5.digest("1234567890123456789012345678901234567890",
                                    "1234567890123456789012345678901234567890")
-           == cast(ubyte[]) x"57edf4a22be3c955ac49da2e2107b67a");
+           == cast(ubyte[]) hexString!"57edf4a22be3c955ac49da2e2107b67a");
 }

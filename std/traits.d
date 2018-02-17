@@ -334,7 +334,7 @@ template QualifierOf(T)
     alias Qual7 = QualifierOf!(   immutable int);   static assert(is(Qual7!long ==    immutable long));
 }
 
-version(unittest)
+version(StdUnittest)
 {
     alias TypeQualifierList = AliasSeq!(MutableOf, ConstOf, SharedOf, SharedConstOf, ImmutableOf);
 
@@ -371,7 +371,6 @@ template packageName(alias T)
 ///
 @safe unittest
 {
-    import std.traits;
     static assert(packageName!packageName == "std");
 }
 
@@ -427,7 +426,6 @@ template moduleName(alias T)
 ///
 @safe unittest
 {
-    import std.traits;
     static assert(moduleName!moduleName == "std.traits");
 }
 
@@ -484,7 +482,7 @@ template fullyQualifiedName(T...)
     static assert(fullyQualifiedName!fullyQualifiedName == "std.traits.fullyQualifiedName");
 }
 
-version(unittest)
+version(StdUnittest)
 {
     // Used for both fqnType and fqnSym unittests
     private struct QualifiedNameTests
@@ -1104,7 +1102,7 @@ template extractParameterStorageClassFlags(Attribs...)
         auto result = ParameterStorageClass.none;
         static if (Attribs.length > 0)
         {
-            foreach (attrib; [Attribs])
+            static foreach (attrib; Attribs)
             {
                 final switch (attrib) with (ParameterStorageClass)
                 {
@@ -1341,7 +1339,7 @@ template ParameterDefaults(func...)
     }
     alias Voids = ParameterDefaults!func;
     static assert(Voids.length == 12);
-    foreach (V; Voids) static assert(is(V == void));
+    static foreach (V; Voids) static assert(is(V == void));
 }
 
 /**
@@ -1429,8 +1427,6 @@ template functionAttributes(func...)
 ///
 @safe unittest
 {
-    import std.traits : functionAttributes, FunctionAttribute;
-
     alias FA = FunctionAttribute; // shorten the enum name
 
     real func(real x) pure nothrow @safe
@@ -1555,7 +1551,7 @@ private FunctionAttribute extractAttribFlags(Attribs...)()
 {
     auto res = FunctionAttribute.none;
 
-    foreach (attrib; Attribs)
+    static foreach (attrib; Attribs)
     {
         switch (attrib) with (FunctionAttribute)
         {
@@ -1601,7 +1597,7 @@ template hasFunctionAttributes(args...)
         import std.algorithm.searching : canFind;
         import std.range : only;
         enum funcAttribs = only(__traits(getFunctionAttributes, args[0]));
-        foreach (attribute; args[1 .. $])
+        static foreach (attribute; args[1 .. $])
         {
             if (!funcAttribs.canFind(attribute))
                 return false;
@@ -2242,7 +2238,7 @@ template SetFunctionAttributes(T, string linkage, uint attrs)
     }
 }
 
-version (unittest)
+version(StdUnittest)
 {
     // Some function types to test.
     int sc(scope int, ref int, out int, lazy int, int);
@@ -2256,11 +2252,11 @@ version (unittest)
     import std.algorithm.iteration : reduce;
 
     alias FA = FunctionAttribute;
-    foreach (BaseT; AliasSeq!(typeof(&sc), typeof(&novar), typeof(&cstyle),
+    static foreach (BaseT; AliasSeq!(typeof(&sc), typeof(&novar), typeof(&cstyle),
         typeof(&dstyle), typeof(&typesafe)))
     {
-        foreach (T; AliasSeq!(BaseT, FunctionTypeOf!BaseT))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (T; AliasSeq!(BaseT, FunctionTypeOf!BaseT))
+        {{
             enum linkage = functionLinkage!T;
             enum attrs = functionAttributes!T;
 
@@ -2270,13 +2266,13 @@ version (unittest)
             // Check that all linkage types work (D-style variadics require D linkage).
             static if (variadicFunctionStyle!T != Variadic.d)
             {
-                foreach (newLinkage; AliasSeq!("D", "C", "Windows", "Pascal", "C++"))
-                {
+                static foreach (newLinkage; AliasSeq!("D", "C", "Windows", "Pascal", "C++"))
+                {{
                     alias New = SetFunctionAttributes!(T, newLinkage, attrs);
                     static assert(functionLinkage!New == newLinkage,
                         "Linkage test failed for: " ~ T.stringof ~ ", " ~ newLinkage ~
                         " (got " ~ New.stringof ~ ")");
-                }
+                }}
             }
 
             // Add @safe.
@@ -2294,7 +2290,7 @@ version (unittest)
             // Strip all attributes again.
             alias T3 = SetFunctionAttributes!(T2, functionLinkage!T, FA.none);
             static assert(is(T3 == T));
-        }();
+        }}
     }
 }
 
@@ -3856,7 +3852,7 @@ assert(sqrts == [ Sqrts.one, Sqrts.two, Sqrts.three ]);
 size_t rank(E)(E e)
     if (is(E == enum))
 {
-    foreach (i, member; EnumMembers!E)
+    static foreach (i, member; EnumMembers!E)
     {
         if (e == member)
             return i;
@@ -4367,6 +4363,7 @@ template MemberFunctionsTuple(C, string name)
 
 /**
 Returns an alias to the template that $(D T) is an instance of.
+It will return `void` if a symbol without a template is given.
  */
 template TemplateOf(alias T : Base!Args, alias Base, Args...)
 {
@@ -4377,6 +4374,12 @@ template TemplateOf(alias T : Base!Args, alias Base, Args...)
 template TemplateOf(T : Base!Args, alias Base, Args...)
 {
     alias TemplateOf = Base;
+}
+
+/// ditto
+template TemplateOf(T)
+{
+    alias TemplateOf = void;
 }
 
 ///
@@ -4409,6 +4412,12 @@ template TemplateOf(T : Base!Args, alias Base, Args...)
     static assert(__traits(isSame, TemplateOf!(Foo10!()), Foo10));
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=18214
+@safe unittest
+{
+    static assert(is(TemplateOf!(int[]) == void));
+    static assert(is(TemplateOf!bool == void));
+}
 
 /**
 Returns a $(D AliasSeq) of the template arguments used to instantiate $(D T).
@@ -5121,7 +5130,7 @@ int i = rvalueOf!int; // error, no actual value is returned
     static struct S { }
     int i;
     struct Nested { void f() { ++i; } }
-    foreach (T; AliasSeq!(int, immutable int, inout int, string, S, Nested, Object))
+    static foreach (T; AliasSeq!(int, immutable int, inout int, string, S, Nested, Object))
     {
         static assert(!__traits(compiles, needLvalue(rvalueOf!T)));
         static assert( __traits(compiles, needLvalue(lvalueOf!T)));
@@ -5171,15 +5180,15 @@ template BooleanTypeOf(T)
 @safe unittest
 {
     // unexpected failure, maybe dmd type-merging bug
-    foreach (T; AliasSeq!bool)
-        foreach (Q; TypeQualifierList)
+    static foreach (T; AliasSeq!bool)
+        static foreach (Q; TypeQualifierList)
         {
             static assert( is(Q!T == BooleanTypeOf!(            Q!T  )));
             static assert( is(Q!T == BooleanTypeOf!( SubTypeOf!(Q!T) )));
         }
 
-    foreach (T; AliasSeq!(void, NumericTypeList, ImaginaryTypeList, ComplexTypeList, CharTypeList))
-        foreach (Q; TypeQualifierList)
+    static foreach (T; AliasSeq!(void, NumericTypeList, /*ImaginaryTypeList, ComplexTypeList,*/ CharTypeList))
+        static foreach (Q; TypeQualifierList)
         {
             static assert(!is(BooleanTypeOf!(            Q!T  )), Q!T.stringof);
             static assert(!is(BooleanTypeOf!( SubTypeOf!(Q!T) )));
@@ -5222,15 +5231,16 @@ template IntegralTypeOf(T)
 
 @safe unittest
 {
-    foreach (T; IntegralTypeList)
-        foreach (Q; TypeQualifierList)
+    static foreach (T; IntegralTypeList)
+        static foreach (Q; TypeQualifierList)
         {
             static assert( is(Q!T == IntegralTypeOf!(            Q!T  )));
             static assert( is(Q!T == IntegralTypeOf!( SubTypeOf!(Q!T) )));
         }
 
-    foreach (T; AliasSeq!(void, bool, FloatingPointTypeList, ImaginaryTypeList, ComplexTypeList, CharTypeList))
-        foreach (Q; TypeQualifierList)
+    static foreach (T; AliasSeq!(void, bool, FloatingPointTypeList,
+                /*ImaginaryTypeList, ComplexTypeList,*/ CharTypeList))
+        static foreach (Q; TypeQualifierList)
         {
             static assert(!is(IntegralTypeOf!(            Q!T  )));
             static assert(!is(IntegralTypeOf!( SubTypeOf!(Q!T) )));
@@ -5257,15 +5267,15 @@ template FloatingPointTypeOf(T)
 
 @safe unittest
 {
-    foreach (T; FloatingPointTypeList)
-        foreach (Q; TypeQualifierList)
+    static foreach (T; FloatingPointTypeList)
+        static foreach (Q; TypeQualifierList)
         {
             static assert( is(Q!T == FloatingPointTypeOf!(            Q!T  )));
             static assert( is(Q!T == FloatingPointTypeOf!( SubTypeOf!(Q!T) )));
         }
 
-    foreach (T; AliasSeq!(void, bool, IntegralTypeList, ImaginaryTypeList, ComplexTypeList, CharTypeList))
-        foreach (Q; TypeQualifierList)
+    static foreach (T; AliasSeq!(void, bool, IntegralTypeList, /*ImaginaryTypeList, ComplexTypeList,*/ CharTypeList))
+        static foreach (Q; TypeQualifierList)
         {
             static assert(!is(FloatingPointTypeOf!(            Q!T  )));
             static assert(!is(FloatingPointTypeOf!( SubTypeOf!(Q!T) )));
@@ -5286,15 +5296,15 @@ template NumericTypeOf(T)
 
 @safe unittest
 {
-    foreach (T; NumericTypeList)
-        foreach (Q; TypeQualifierList)
+    static foreach (T; NumericTypeList)
+        static foreach (Q; TypeQualifierList)
         {
             static assert( is(Q!T == NumericTypeOf!(            Q!T  )));
             static assert( is(Q!T == NumericTypeOf!( SubTypeOf!(Q!T) )));
         }
 
-    foreach (T; AliasSeq!(void, bool, CharTypeList, ImaginaryTypeList, ComplexTypeList))
-        foreach (Q; TypeQualifierList)
+    static foreach (T; AliasSeq!(void, bool, CharTypeList, /*ImaginaryTypeList, ComplexTypeList*/))
+        static foreach (Q; TypeQualifierList)
         {
             static assert(!is(NumericTypeOf!(            Q!T  )));
             static assert(!is(NumericTypeOf!( SubTypeOf!(Q!T) )));
@@ -5347,22 +5357,22 @@ template CharTypeOf(T)
 
 @safe unittest
 {
-    foreach (T; CharTypeList)
-        foreach (Q; TypeQualifierList)
+    static foreach (T; CharTypeList)
+        static foreach (Q; TypeQualifierList)
         {
             static assert( is(CharTypeOf!(            Q!T  )));
             static assert( is(CharTypeOf!( SubTypeOf!(Q!T) )));
         }
 
-    foreach (T; AliasSeq!(void, bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList))
-        foreach (Q; TypeQualifierList)
+    static foreach (T; AliasSeq!(void, bool, NumericTypeList, /*ImaginaryTypeList, ComplexTypeList*/))
+        static foreach (Q; TypeQualifierList)
         {
             static assert(!is(CharTypeOf!(            Q!T  )));
             static assert(!is(CharTypeOf!( SubTypeOf!(Q!T) )));
         }
 
-    foreach (T; AliasSeq!(string, wstring, dstring, char[4]))
-        foreach (Q; TypeQualifierList)
+    static foreach (T; AliasSeq!(string, wstring, dstring, char[4]))
+        static foreach (Q; TypeQualifierList)
         {
             static assert(!is(CharTypeOf!(            Q!T  )));
             static assert(!is(CharTypeOf!( SubTypeOf!(Q!T) )));
@@ -5386,19 +5396,19 @@ template StaticArrayTypeOf(T)
 
 @safe unittest
 {
-    foreach (T; AliasSeq!(bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList))
-        foreach (Q; AliasSeq!(TypeQualifierList, InoutOf, SharedInoutOf))
+    static foreach (T; AliasSeq!(bool, NumericTypeList, /*ImaginaryTypeList, ComplexTypeList*/))
+        static foreach (Q; AliasSeq!(TypeQualifierList, InoutOf, SharedInoutOf))
         {
             static assert(is( Q!(   T[1] ) == StaticArrayTypeOf!( Q!(              T[1]  ) ) ));
 
-            foreach (P; TypeQualifierList)
+            static foreach (P; TypeQualifierList)
             { // SubTypeOf cannot have inout type
                 static assert(is( Q!(P!(T[1])) == StaticArrayTypeOf!( Q!(SubTypeOf!(P!(T[1]))) ) ));
             }
         }
 
-    foreach (T; AliasSeq!void)
-        foreach (Q; AliasSeq!TypeQualifierList)
+    static foreach (T; AliasSeq!void)
+        static foreach (Q; AliasSeq!TypeQualifierList)
         {
             static assert(is( StaticArrayTypeOf!( Q!(void[1]) ) == Q!(void[1]) ));
         }
@@ -5423,13 +5433,13 @@ template DynamicArrayTypeOf(T)
 
 @safe unittest
 {
-    foreach (T; AliasSeq!(/*void, */bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList))
-        foreach (Q; AliasSeq!(TypeQualifierList, InoutOf, SharedInoutOf))
+    static foreach (T; AliasSeq!(/*void, */bool, NumericTypeList, /*ImaginaryTypeList, ComplexTypeList*/))
+        static foreach (Q; AliasSeq!(TypeQualifierList, InoutOf, SharedInoutOf))
         {
             static assert(is( Q!T[]  == DynamicArrayTypeOf!( Q!T[] ) ));
             static assert(is( Q!(T[])  == DynamicArrayTypeOf!( Q!(T[]) ) ));
 
-            foreach (P; AliasSeq!(MutableOf, ConstOf, ImmutableOf))
+            static foreach (P; AliasSeq!(MutableOf, ConstOf, ImmutableOf))
             {
                 static assert(is( Q!(P!T[]) == DynamicArrayTypeOf!( Q!(SubTypeOf!(P!T[])) ) ));
                 static assert(is( Q!(P!(T[])) == DynamicArrayTypeOf!( Q!(SubTypeOf!(P!(T[]))) ) ));
@@ -5478,23 +5488,23 @@ template StringTypeOf(T)
 
 @safe unittest
 {
-    foreach (T; CharTypeList)
-        foreach (Q; AliasSeq!(MutableOf, ConstOf, ImmutableOf, InoutOf))
+    static foreach (T; CharTypeList)
+        static foreach (Q; AliasSeq!(MutableOf, ConstOf, ImmutableOf, InoutOf))
         {
             static assert(is(Q!T[] == StringTypeOf!( Q!T[] )));
 
             static if (!__traits(isSame, Q, InoutOf))
-            {
+            {{
                 static assert(is(Q!T[] == StringTypeOf!( SubTypeOf!(Q!T[]) )));
 
                 alias Str = Q!T[];
                 class C(S) { S val;  alias val this; }
                 static assert(is(StringTypeOf!(C!Str) == Str));
-            }
+            }}
         }
 
-    foreach (T; CharTypeList)
-        foreach (Q; AliasSeq!(SharedOf, SharedConstOf, SharedInoutOf))
+    static foreach (T; CharTypeList)
+        static foreach (Q; AliasSeq!(SharedOf, SharedConstOf, SharedInoutOf))
         {
             static assert(!is(StringTypeOf!( Q!T[] )));
         }
@@ -5524,19 +5534,19 @@ template AssocArrayTypeOf(T)
 
 @safe unittest
 {
-    foreach (T; AliasSeq!(int/*bool, CharTypeList, NumericTypeList, ImaginaryTypeList, ComplexTypeList*/))
-        foreach (P; AliasSeq!(TypeQualifierList, InoutOf, SharedInoutOf))
-            foreach (Q; AliasSeq!(TypeQualifierList, InoutOf, SharedInoutOf))
-                foreach (R; AliasSeq!(TypeQualifierList, InoutOf, SharedInoutOf))
+    static foreach (T; AliasSeq!(int/*bool, CharTypeList, NumericTypeList, ImaginaryTypeList, ComplexTypeList*/))
+        static foreach (P; AliasSeq!(TypeQualifierList, InoutOf, SharedInoutOf))
+            static foreach (Q; AliasSeq!(TypeQualifierList, InoutOf, SharedInoutOf))
+                static foreach (R; AliasSeq!(TypeQualifierList, InoutOf, SharedInoutOf))
                 {
                     static assert(is( P!(Q!T[R!T]) == AssocArrayTypeOf!(            P!(Q!T[R!T])  ) ));
                 }
 
-    foreach (T; AliasSeq!(int/*bool, CharTypeList, NumericTypeList, ImaginaryTypeList, ComplexTypeList*/))
-        foreach (O; AliasSeq!(TypeQualifierList, InoutOf, SharedInoutOf))
-            foreach (P; AliasSeq!TypeQualifierList)
-                foreach (Q; AliasSeq!TypeQualifierList)
-                    foreach (R; AliasSeq!TypeQualifierList)
+    static foreach (T; AliasSeq!(int/*bool, CharTypeList, NumericTypeList, ImaginaryTypeList, ComplexTypeList*/))
+        static foreach (O; AliasSeq!(TypeQualifierList, InoutOf, SharedInoutOf))
+            static foreach (P; AliasSeq!TypeQualifierList)
+                static foreach (Q; AliasSeq!TypeQualifierList)
+                    static foreach (R; AliasSeq!TypeQualifierList)
                     {
                         static assert(is( O!(P!(Q!T[R!T])) == AssocArrayTypeOf!( O!(SubTypeOf!(P!(Q!T[R!T]))) ) ));
                     }
@@ -5622,9 +5632,9 @@ enum bool isIntegral(T) = is(IntegralTypeOf!T) && !isAggregateType!T;
 
 @safe unittest
 {
-    foreach (T; IntegralTypeList)
+    static foreach (T; IntegralTypeList)
     {
-        foreach (Q; TypeQualifierList)
+        static foreach (Q; TypeQualifierList)
         {
             static assert( isIntegral!(Q!T));
             static assert(!isIntegral!(SubTypeOf!(Q!T)));
@@ -5682,17 +5692,17 @@ enum bool isFloatingPoint(T) = __traits(isFloating, T) && !(is(Unqual!T == cfloa
 {
     enum EF : real { a = 1.414, b = 1.732, c = 2.236 }
 
-    foreach (T; AliasSeq!(FloatingPointTypeList, EF))
+    static foreach (T; AliasSeq!(FloatingPointTypeList, EF))
     {
-        foreach (Q; TypeQualifierList)
+        static foreach (Q; TypeQualifierList)
         {
             static assert( isFloatingPoint!(Q!T));
             static assert(!isFloatingPoint!(SubTypeOf!(Q!T)));
         }
     }
-    foreach (T; IntegralTypeList)
+    static foreach (T; IntegralTypeList)
     {
-        foreach (Q; TypeQualifierList)
+        static foreach (Q; TypeQualifierList)
         {
             static assert(!isFloatingPoint!(Q!T));
         }
@@ -5755,9 +5765,9 @@ enum bool isNumeric(T) = __traits(isArithmetic, T) && !(is(Unqual!T == bool) ||
 
 @safe unittest
 {
-    foreach (T; AliasSeq!(NumericTypeList))
+    static foreach (T; AliasSeq!(NumericTypeList))
     {
-        foreach (Q; TypeQualifierList)
+        static foreach (Q; TypeQualifierList)
         {
             static assert( isNumeric!(Q!T));
             static assert(!isNumeric!(SubTypeOf!(Q!T)));
@@ -5856,9 +5866,9 @@ enum bool isUnsigned(T) = __traits(isUnsigned, T) && !(is(Unqual!T == char) ||
 
 @safe unittest
 {
-    foreach (T; AliasSeq!(UnsignedIntTypeList))
+    static foreach (T; AliasSeq!(UnsignedIntTypeList))
     {
-        foreach (Q; TypeQualifierList)
+        static foreach (Q; TypeQualifierList)
         {
             static assert( isUnsigned!(Q!T));
             static assert(!isUnsigned!(SubTypeOf!(Q!T)));
@@ -5900,9 +5910,9 @@ enum bool isSigned(T) = __traits(isArithmetic, T) && !__traits(isUnsigned, T);
     enum Eubyte : ubyte { e1 = 0 }
     static assert(!isSigned!Eubyte);
 
-    foreach (T; AliasSeq!(SignedIntTypeList))
+    static foreach (T; AliasSeq!(SignedIntTypeList))
     {
-        foreach (Q; TypeQualifierList)
+        static foreach (Q; TypeQualifierList)
         {
             static assert( isSigned!(Q!T));
             static assert(!isSigned!(SubTypeOf!(Q!T)));
@@ -5956,9 +5966,9 @@ enum bool isSomeChar(T) = is(CharTypeOf!T) && !isAggregateType!T;
 {
     enum EC : char { a = 'x', b = 'y' }
 
-    foreach (T; AliasSeq!(CharTypeList, EC))
+    static foreach (T; AliasSeq!(CharTypeList, EC))
     {
-        foreach (Q; TypeQualifierList)
+        static foreach (Q; TypeQualifierList)
         {
             static assert( isSomeChar!(            Q!T  ));
             static assert(!isSomeChar!( SubTypeOf!(Q!T) ));
@@ -5983,7 +5993,7 @@ $(D wchar) or $(D dchar), with or without qualifiers.
 Static arrays of characters (like $(D char[80])) are not considered
 built-in string types.
  */
-enum bool isSomeString(T) = is(StringTypeOf!T) && !isAggregateType!T && !isStaticArray!T;
+enum bool isSomeString(T) = is(StringTypeOf!T) && !isAggregateType!T && !isStaticArray!T && !is(T == enum);
 
 ///
 @safe unittest
@@ -5995,20 +6005,27 @@ enum bool isSomeString(T) = is(StringTypeOf!T) && !isAggregateType!T && !isStati
     static assert( isSomeString!(typeof("aaa")));
     static assert( isSomeString!(const(char)[]));
 
-    enum ES : string { a = "aaa", b = "bbb" }
-    static assert( isSomeString!ES);
-
     //Non string types
     static assert(!isSomeString!int);
     static assert(!isSomeString!(int[]));
     static assert(!isSomeString!(byte[]));
     static assert(!isSomeString!(typeof(null)));
     static assert(!isSomeString!(char[4]));
+
+    enum ES : string { a = "aaa", b = "bbb" }
+    static assert(!isSomeString!ES);
+
+    static struct Stringish
+    {
+        string str;
+        alias str this;
+    }
+    static assert(!isSomeString!Stringish);
 }
 
 @safe unittest
 {
-    foreach (T; AliasSeq!(char[], dchar[], string, wstring, dstring))
+    static foreach (T; AliasSeq!(char[], dchar[], string, wstring, dstring))
     {
         static assert( isSomeString!(           T ));
         static assert(!isSomeString!(SubTypeOf!(T)));
@@ -6021,7 +6038,7 @@ enum bool isSomeString(T) = is(StringTypeOf!T) && !isAggregateType!T && !isStati
  * All arrays that use char, wchar, and their qualified versions are narrow
  * strings. (Those include string and wstring).
  */
-enum bool isNarrowString(T) = (is(T : const char[]) || is(T : const wchar[])) && !isAggregateType!T && !isStaticArray!T;
+enum bool isNarrowString(T) = isSomeString!T && !is(T : const dchar[]);
 
 ///
 @safe unittest
@@ -6033,22 +6050,35 @@ enum bool isNarrowString(T) = (is(T : const char[]) || is(T : const wchar[])) &&
 
     static assert(!isNarrowString!dstring);
     static assert(!isNarrowString!(dchar[]));
+
+    static assert(!isNarrowString!(typeof(null)));
+    static assert(!isNarrowString!(char[4]));
+
+    enum ES : string { a = "aaa", b = "bbb" }
+    static assert(!isNarrowString!ES);
+
+    static struct Stringish
+    {
+        string str;
+        alias str this;
+    }
+    static assert(!isNarrowString!Stringish);
 }
 
 @safe unittest
 {
-    foreach (T; AliasSeq!(char[], string, wstring))
+    static foreach (T; AliasSeq!(char[], string, wstring))
     {
-        foreach (Q; AliasSeq!(MutableOf, ConstOf, ImmutableOf)/*TypeQualifierList*/)
+        static foreach (Q; AliasSeq!(MutableOf, ConstOf, ImmutableOf)/*TypeQualifierList*/)
         {
             static assert( isNarrowString!(            Q!T  ));
             static assert(!isNarrowString!( SubTypeOf!(Q!T) ));
         }
     }
 
-    foreach (T; AliasSeq!(int, int[], byte[], dchar[], dstring, char[4]))
+    static foreach (T; AliasSeq!(int, int[], byte[], dchar[], dstring, char[4]))
     {
-        foreach (Q; TypeQualifierList)
+        static foreach (Q; TypeQualifierList)
         {
             static assert(!isNarrowString!(            Q!T  ));
             static assert(!isNarrowString!( SubTypeOf!(Q!T) ));
@@ -6090,7 +6120,6 @@ enum bool isEqualityComparable(T) = ifTestable!(T, unaryFun!"a == a");
 {
     static assert(isEqualityComparable!int);
     static assert(isEqualityComparable!string);
-    static assert(isEqualityComparable!creal);
     static assert(!isEqualityComparable!void);
 
     struct Foo {}
@@ -6110,9 +6139,35 @@ enum bool isEqualityComparable(T) = ifTestable!(T, unaryFun!"a == a");
     assert(b1 != b3);
 }
 
+version(TestComplex)
+deprecated
+@safe unittest
+{
+    static assert(isEqualityComparable!creal);
+}
+
 /**
- * Detect whether $(D T) is a struct, static array, or enum that is implicitly
- * convertible to a string.
+  $(RED Warning: This trait will be deprecated as soon as it is no longer used
+                 in Phobos. For a function parameter to safely accept a type
+                 that implicitly converts to string as a string, the conversion
+                 needs to happen at the callsite; otherwise, the conversion is
+                 done inside the function, and in many cases, that means that
+                 local memory is sliced (e.g. if a static array is passed to
+                 the function, then it's copied, and the resulting dynamic
+                 array will be a slice of a local variable). So, if the
+                 resulting string escapes the function, the string refers to
+                 invalid memory, and accessing it would mean accessing invalid
+                 memory. As such, the only safe way for a function to accept
+                 types that implicitly convert to string is for the implicit
+                 conversion to be done at the callsite, and that can only occur
+                 if the parameter is explicitly typed as an array, whereas
+                 using isConvertibleToString in a template constraint would
+                 result in the conversion being done inside the function. As
+                 such, isConvertibleToString is inherently unsafe and is going
+                 to be deprecated.)
+
+   Detect whether $(D T) is a struct, static array, or enum that is implicitly
+   convertible to a string.
  */
 template isConvertibleToString(T)
 {
@@ -6210,11 +6265,11 @@ enum bool isStaticArray(T) = __traits(isStaticArray, T);
 
 @safe unittest
 {
-    foreach (T; AliasSeq!(int[51], int[][2],
+    static foreach (T; AliasSeq!(int[51], int[][2],
                            char[][int][11], immutable char[13u],
                            const(real)[1], const(real)[1][1], void[0]))
     {
-        foreach (Q; TypeQualifierList)
+        static foreach (Q; TypeQualifierList)
         {
             static assert( isStaticArray!(            Q!T  ));
             static assert(!isStaticArray!( SubTypeOf!(Q!T) ));
@@ -6244,9 +6299,9 @@ enum bool isDynamicArray(T) = is(DynamicArrayTypeOf!T) && !isAggregateType!T;
 @safe unittest
 {
     import std.meta : AliasSeq;
-    foreach (T; AliasSeq!(int[], char[], string, long[3][], double[string][]))
+    static foreach (T; AliasSeq!(int[], char[], string, long[3][], double[string][]))
     {
-        foreach (Q; TypeQualifierList)
+        static foreach (Q; TypeQualifierList)
         {
             static assert( isDynamicArray!(            Q!T  ));
             static assert(!isDynamicArray!( SubTypeOf!(Q!T) ));
@@ -6275,9 +6330,9 @@ enum bool isArray(T) = isStaticArray!T || isDynamicArray!T;
 @safe unittest
 {
     import std.meta : AliasSeq;
-    foreach (T; AliasSeq!(int[], int[5], void[]))
+    static foreach (T; AliasSeq!(int[], int[5], void[]))
     {
-        foreach (Q; TypeQualifierList)
+        static foreach (Q; TypeQualifierList)
         {
             static assert( isArray!(Q!T));
             static assert(!isArray!(SubTypeOf!(Q!T)));
@@ -6298,9 +6353,9 @@ enum bool isAssociativeArray(T) = __traits(isAssociativeArray, T);
         @property uint[] values() { return null; }
     }
 
-    foreach (T; AliasSeq!(int[int], int[string], immutable(char[5])[int]))
+    static foreach (T; AliasSeq!(int[int], int[string], immutable(char[5])[int]))
     {
-        foreach (Q; TypeQualifierList)
+        static foreach (Q; TypeQualifierList)
         {
             static assert( isAssociativeArray!(Q!T));
             static assert(!isAssociativeArray!(SubTypeOf!(Q!T)));
@@ -6364,9 +6419,9 @@ enum bool isPointer(T) = is(T == U*, U) && !isAggregateType!T;
 
 @safe unittest
 {
-    foreach (T; AliasSeq!(int*, void*, char[]*))
+    static foreach (T; AliasSeq!(int*, void*, char[]*))
     {
-        foreach (Q; TypeQualifierList)
+        static foreach (Q; TypeQualifierList)
         {
             static assert( isPointer!(Q!T));
             static assert(!isPointer!(SubTypeOf!(Q!T)));
@@ -6499,6 +6554,30 @@ template isInstanceOf(alias S, alias T)
     static assert(!isInstanceOf!(Foo, Foo));
     static assert(isInstanceOf!(fun, fun!int));
     static assert(isInstanceOf!(templ, templ!int));
+}
+
+/**
+ * To use `isInstanceOf` to check the identity of a template while inside of said
+ * template, use $(LREF TemplateOf).
+ */
+@safe unittest
+{
+    static struct A(T = void)
+    {
+        // doesn't work as expected, only accepts A when T = void
+        void func(B)(B b) if (isInstanceOf!(A, B)) {}
+
+        // correct behavior
+        void method(B)(B b) if (isInstanceOf!(TemplateOf!(A), B)) {}
+    }
+
+    A!(void) a1;
+    A!(void) a2;
+    A!(int) a3;
+
+    static assert(!__traits(compiles, a1.func(a3)));
+    static assert( __traits(compiles, a1.method(a2)));
+    static assert( __traits(compiles, a1.method(a3)));
 }
 
 @safe unittest
@@ -7146,7 +7225,6 @@ alias KeyType(V : V[K], K) = K;
 ///
 @safe unittest
 {
-    import std.traits;
     alias Hash = int[string];
     static assert(is(KeyType!Hash == string));
     static assert(is(ValueType!Hash == int));
@@ -7162,7 +7240,6 @@ alias ValueType(V : V[K], K) = V;
 ///
 @safe unittest
 {
-    import std.traits;
     alias Hash = int[string];
     static assert(is(KeyType!Hash == string));
     static assert(is(ValueType!Hash == int));
@@ -7351,10 +7428,10 @@ template mostNegative(T)
 {
     import std.meta : AliasSeq;
 
-    foreach (T; AliasSeq!(bool, byte, short, int, long))
+    static foreach (T; AliasSeq!(bool, byte, short, int, long))
         static assert(mostNegative!T == T.min);
 
-    foreach (T; AliasSeq!(ubyte, ushort, uint, ulong, char, wchar, dchar))
+    static foreach (T; AliasSeq!(ubyte, ushort, uint, ulong, char, wchar, dchar))
         static assert(mostNegative!T == 0);
 }
 
@@ -7383,14 +7460,14 @@ template Promoted(T)
 @safe unittest
 {
     // promote to int:
-    foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, char, wchar))
+    static foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, char, wchar))
     {
         static assert(is(Promoted!T == int));
         static assert(is(Promoted!(shared(const T)) == shared(const int)));
     }
 
     // already promoted:
-    foreach (T; AliasSeq!(int, uint, long, ulong, float, double, real))
+    static foreach (T; AliasSeq!(int, uint, long, ulong, float, double, real))
     {
         static assert(is(Promoted!T == T));
         static assert(is(Promoted!(immutable(T)) == immutable(T)));
@@ -7422,7 +7499,7 @@ template mangledName(sth...)
     static assert(TL == AliasSeq!("i", "xi", "yi"));
 }
 
-version(unittest) void freeFunc(string);
+version(StdUnittest) void freeFunc(string);
 
 @safe unittest
 {
@@ -7625,28 +7702,7 @@ template getUDAs(alias symbol, alias attribute)
 {
     import std.meta : Filter;
 
-    template isDesiredUDA(alias toCheck)
-    {
-        static if (is(typeof(attribute)) && !__traits(isTemplate, attribute))
-        {
-            static if (__traits(compiles, toCheck == attribute))
-                enum isDesiredUDA = toCheck == attribute;
-            else
-                enum isDesiredUDA = false;
-        }
-        else static if (is(typeof(toCheck)))
-        {
-            static if (__traits(isTemplate, attribute))
-                enum isDesiredUDA =  isInstanceOf!(attribute, typeof(toCheck));
-            else
-                enum isDesiredUDA = is(typeof(toCheck) == attribute);
-        }
-        else static if (__traits(isTemplate, attribute))
-            enum isDesiredUDA = isInstanceOf!(attribute, toCheck);
-        else
-            enum isDesiredUDA = is(toCheck == attribute);
-    }
-    alias getUDAs = Filter!(isDesiredUDA, __traits(getAttributes, symbol));
+    alias getUDAs = Filter!(isDesiredUDA!attribute, __traits(getAttributes, symbol));
 }
 
 ///
@@ -7751,6 +7807,31 @@ template getUDAs(alias symbol, alias attribute)
     static assert(getUDAs!(i, 'c').length == 0);
 }
 
+private template isDesiredUDA(alias attribute)
+{
+    template isDesiredUDA(alias toCheck)
+    {
+        static if (is(typeof(attribute)) && !__traits(isTemplate, attribute))
+        {
+            static if (__traits(compiles, toCheck == attribute))
+                enum isDesiredUDA = toCheck == attribute;
+            else
+                enum isDesiredUDA = false;
+        }
+        else static if (is(typeof(toCheck)))
+        {
+            static if (__traits(isTemplate, attribute))
+                enum isDesiredUDA =  isInstanceOf!(attribute, typeof(toCheck));
+            else
+                enum isDesiredUDA = is(typeof(toCheck) == attribute);
+        }
+        else static if (__traits(isTemplate, attribute))
+            enum isDesiredUDA = isInstanceOf!(attribute, toCheck);
+        else
+            enum isDesiredUDA = is(toCheck == attribute);
+    }
+}
+
 /**
  * Gets all symbols within `symbol` that have the given user-defined attribute.
  * This is not recursive; it will not search for symbols within symbols such as
@@ -7758,36 +7839,56 @@ template getUDAs(alias symbol, alias attribute)
  */
 template getSymbolsByUDA(alias symbol, alias attribute)
 {
-    import std.format : format;
-    import std.meta : AliasSeq, Filter;
-
-    // translate a list of strings into symbols. mixing in the entire alias
-    // avoids trying to access the symbol, which could cause a privacy violation
-    template toSymbols(names...)
-    {
-        static if (names.length == 0)
-            alias toSymbols = AliasSeq!();
-        else
-            mixin("alias toSymbols = AliasSeq!(symbol.%s, toSymbols!(names[1..$]));"
-                  .format(names[0]));
-    }
-
-    // filtering inaccessible members
-    enum isAccessibleMember(string name) = __traits(compiles, __traits(getMember, symbol, name));
-    alias accessibleMembers = Filter!(isAccessibleMember, __traits(allMembers, symbol));
-
-    // filtering not compiled members such as alias of basic types
-    enum hasSpecificUDA(string name) = mixin("hasUDA!(symbol." ~ name ~ ", attribute)");
-    enum isCorrectMember(string name) = __traits(compiles, hasSpecificUDA!(name));
-
-    alias correctMembers = Filter!(isCorrectMember, accessibleMembers);
-    alias membersWithUDA = toSymbols!(Filter!(hasSpecificUDA, correctMembers));
+    alias membersWithUDA = getSymbolsByUDAImpl!(symbol, attribute, __traits(allMembers, symbol));
 
     // if the symbol itself has the UDA, tack it on to the front of the list
     static if (hasUDA!(symbol, attribute))
         alias getSymbolsByUDA = AliasSeq!(symbol, membersWithUDA);
     else
         alias getSymbolsByUDA = membersWithUDA;
+}
+
+private template getSymbolsByUDAImpl(alias symbol, alias attribute, names...)
+{
+    import std.meta : Alias, AliasSeq, Filter;
+    static if (names.length == 0)
+    {
+        alias getSymbolsByUDAImpl = AliasSeq!();
+    }
+    else
+    {
+        alias tail = getSymbolsByUDAImpl!(symbol, attribute, names[1 .. $]);
+
+        // Filtering inaccessible members.
+        static if (!__traits(compiles, __traits(getMember, symbol, names[0])))
+        {
+            alias getSymbolsByUDAImpl = tail;
+        }
+        else
+        {
+            alias member = Alias!(__traits(getMember, symbol, names[0]));
+
+            // Filtering not compiled members such as alias of basic types.
+            static if (!__traits(compiles, hasUDA!(member, attribute)))
+            {
+                alias getSymbolsByUDAImpl = tail;
+            }
+            // Get overloads for functions, in case different overloads have different sets of UDAs.
+            else static if (isFunction!member)
+            {
+                enum hasSpecificUDA(alias member) = hasUDA!(member, attribute);
+                alias getSymbolsByUDAImpl = Filter!(hasSpecificUDA, __traits(getOverloads, symbol, names[0]));
+            }
+            else static if (hasUDA!(member, attribute))
+            {
+                alias getSymbolsByUDAImpl = AliasSeq!(member, tail);
+            }
+            else
+            {
+                alias getSymbolsByUDAImpl = tail;
+            }
+        }
+    }
 }
 
 ///
@@ -7853,6 +7954,29 @@ template getSymbolsByUDA(alias symbol, alias attribute)
 
     //Finds nothing if there is no member with specific UDA
     static assert(getSymbolsByUDA!(D,UDA).length == 0);
+}
+
+// Issue 18314
+@safe unittest
+{
+    enum attr1;
+    enum attr2;
+
+    struct A
+    {
+        @attr1
+        int n;
+        // Removed due to Issue 16206
+        //@attr1
+        //void foo()(string){}
+        @attr1
+        void foo();
+        @attr2
+        void foo(int a);
+    }
+
+    static assert(getSymbolsByUDA!(A, attr1).length == 2);
+    static assert(getSymbolsByUDA!(A, attr2).length == 1);
 }
 
 // #15335: getSymbolsByUDA fails if type has private members

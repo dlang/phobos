@@ -404,13 +404,13 @@ public struct UUID
         {
             import std.conv : to;
             import std.exception;
-            import std.meta;
+            import std.meta : AliasSeq;
 
-            foreach (S; AliasSeq!(char[], const(char)[], immutable(char)[],
+            static foreach (S; AliasSeq!(char[], const(char)[], immutable(char)[],
                                   wchar[], const(wchar)[], immutable(wchar)[],
                                   dchar[], const(dchar)[], immutable(dchar)[],
                                   immutable(char[]), immutable(wchar[]), immutable(dchar[])))
-            {
+            {{
                 //Test valid, working cases
                 assert(UUID(to!S("00000000-0000-0000-0000-000000000000")).empty);
 
@@ -456,7 +456,7 @@ public struct UUID
                     == UUID(cast(ubyte[16])[0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,0x01,
                     0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef]));
             }
-        }
+        }}
 
         /**
          * Returns true if and only if the UUID is equal
@@ -911,8 +911,8 @@ public struct UUID
         @safe pure nothrow @nogc unittest
         {
             import std.meta : AliasSeq;
-            foreach (Char; AliasSeq!(char, wchar, dchar))
-            {
+            static foreach (Char; AliasSeq!(char, wchar, dchar))
+            {{
                 alias String = immutable(Char)[];
                 //CTFE
                 enum String s = "8ab3060e-2cba-4f23-b74c-b52db3bdfb46";
@@ -926,7 +926,7 @@ public struct UUID
                 Char[36] str;
                 id.toString(str[]);
                 assert(str == s);
-            }
+            }}
         }
 
         @system pure nothrow @nogc unittest
@@ -1527,12 +1527,12 @@ if (isInputRange!Range
             return parseUUID(to!T(input));
     }
 
-    foreach (S; AliasSeq!(char[], const(char)[], immutable(char)[],
+    static foreach (S; AliasSeq!(char[], const(char)[], immutable(char)[],
                           wchar[], const(wchar)[], immutable(wchar)[],
                           dchar[], const(dchar)[], immutable(dchar)[],
                           immutable(char[]), immutable(wchar[]), immutable(dchar[]),
                           TestForwardRange, TestInputRange))
-    {
+    {{
         //Verify examples.
         auto id = parseHelper!S("8AB3060E-2CBA-4F23-b74c-B52Db3BDFB46");
         //no dashes
@@ -1608,7 +1608,7 @@ if (isInputRange!Range
         //multiple trailing/leading characters
         assert(parseHelper!S("///8ab3060e2cba4f23b74cb52db3bdfb46||")
             == parseUUID("8ab3060e-2cba-4f23-b74c-b52db3bdfb46"));
-    }
+    }}
 }
 
 /**

@@ -96,8 +96,7 @@ if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
 
     // Note: res._ptr can't point to res._buff as structs are movable.
 
-    To[] p;
-    bool p_is_onstack = true;
+    To[] p = res._buff;
     size_t i;
 
     size_t strLength;
@@ -111,26 +110,26 @@ if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
         auto r = cast(const(CF)[])str;  // because inout(CF) causes problems with byUTF
         if (r is null)  // Bugzilla 14980
         {
+            res._length = 0;
             res._ptr = null;
             return res;
         }
     }
     else
         alias r = str;
-    To[] q = res._buff;
+    To[] heapBuffer;
     foreach (const c; byUTF!(Unqual!To)(r))
     {
-        if (i + 1 == q.length)
+        if (i + 1 == p.length)
         {
-            p = trustedRealloc(p, i, res._buff, strLength, p_is_onstack);
-            p_is_onstack = false;
-            q = p;
+            heapBuffer = trustedRealloc(p, strLength, heapBuffer is null);
+            p = heapBuffer;
         }
-        q[i++] = c;
+        p[i++] = c;
     }
-    q[i] = 0;
+    p[i] = 0;
     res._length = i;
-    res._ptr = p_is_onstack ? res.useStack : &p[0];
+    res._ptr = (heapBuffer is null ? res.useStack : &heapBuffer[0]);
     return res;
 }
 
@@ -218,9 +217,8 @@ private:
 
     To* _ptr;
     size_t _length;        // length of the string
-
+    version(StdUnittest)
     // the 'small string optimization'
-    version (unittest)
     {
         // smaller size to trigger reallocations. Padding is to account for
         // unittest/non-unittest cross-compilation (to avoid corruption)
@@ -235,31 +233,30 @@ private:
     static TempCStringBuffer trustedVoidInit() { TempCStringBuffer res = void; return res; }
 }
 
-private To[] trustedRealloc(To)(To[] buf, size_t i, To[] res, size_t strLength, bool res_is_onstack)
+private To[] trustedRealloc(To)(To[] buf, size_t strLength, bool bufIsOnStack)
     @trusted @nogc pure nothrow
 {
     pragma(inline, false);  // because it's rarely called
 
     import core.exception : onOutOfMemoryError;
     import core.memory : pureMalloc, pureRealloc;
-    import core.stdc.string : memcpy;
 
-    if (res_is_onstack)
+    size_t newlen = buf.length * 3 / 2;
+
+    if (bufIsOnStack)
     {
-        size_t newlen = res.length * 3 / 2;
         if (newlen <= strLength)
             newlen = strLength + 1; // +1 for terminating 0
         auto ptr = cast(To*) pureMalloc(newlen * To.sizeof);
         if (!ptr)
             onOutOfMemoryError();
-        memcpy(ptr, res.ptr, i * To.sizeof);
+        ptr[0 .. buf.length] = buf[];
         return ptr[0 .. newlen];
     }
     else
     {
         if (buf.length >= size_t.max / (2 * To.sizeof))
             onOutOfMemoryError();
-        const newlen = buf.length * 3 / 2;
         auto ptr = cast(To*) pureRealloc(buf.ptr, newlen * To.sizeof);
         if (!ptr)
             onOutOfMemoryError();

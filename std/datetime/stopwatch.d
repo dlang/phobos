@@ -5,6 +5,18 @@
 
     For convenience, this module publicly imports $(MREF core,time).
 
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Main functionality) $(TD
+    $(LREF StopWatch)
+    $(LREF benchmark)
+))
+$(TR $(TD Flags) $(TD
+    $(LREF AutoStart)
+))
+)
+
     $(RED Unlike the other modules in std.datetime, this module is not currently
           publicly imported in std.datetime.package, because the old
           versions of this functionality which use
@@ -69,39 +81,6 @@ alias AutoStart = Flag!"autoStart";
 struct StopWatch
 {
 public:
-
-    ///
-    @system nothrow @nogc unittest
-    {
-        import core.thread : Thread;
-
-        auto sw = StopWatch(AutoStart.yes);
-
-        Duration t1 = sw.peek();
-        Thread.sleep(usecs(1));
-        Duration t2 = sw.peek();
-        assert(t2 > t1);
-
-        Thread.sleep(usecs(1));
-        sw.stop();
-
-        Duration t3 = sw.peek();
-        assert(t3 > t2);
-        Duration t4 = sw.peek();
-        assert(t3 == t4);
-
-        sw.start();
-        Thread.sleep(usecs(1));
-
-        Duration t5 = sw.peek();
-        assert(t5 > t4);
-
-        // If stopping or resetting the StopWatch is not required, then
-        // MonoTime can easily be used by itself without StopWatch.
-        auto before = MonoTime.currTime;
-        // do stuff...
-        auto timeElapsed = MonoTime.currTime - before;
-    }
 
     /++
         Constructs a StopWatch. Whether it starts immediately depends on the
@@ -363,6 +342,55 @@ private:
     bool _running = false; // Whether the StopWatch is currently running
     MonoTime _timeStarted; // The time the StopWatch started measuring (i.e. when it was started or reset).
     long _ticksElapsed;    // Total time that the StopWatch ran before it was stopped last.
+}
+
+/// Measure a time in milliseconds, microseconds, or nanoseconds
+@safe nothrow @nogc unittest
+{
+    auto sw = StopWatch(AutoStart.no);
+    sw.start();
+    // ... Insert operations to be timed here ...
+    sw.stop();
+
+    long msecs = sw.peek.total!"msecs";
+    long usecs = sw.peek.total!"usecs";
+    long nsecs = sw.peek.total!"nsecs";
+
+    assert(usecs >= msecs * 1000);
+    assert(nsecs >= usecs * 1000);
+}
+
+///
+@system nothrow @nogc unittest
+{
+    import core.thread : Thread;
+
+    auto sw = StopWatch(AutoStart.yes);
+
+    Duration t1 = sw.peek();
+    Thread.sleep(usecs(1));
+    Duration t2 = sw.peek();
+    assert(t2 > t1);
+
+    Thread.sleep(usecs(1));
+    sw.stop();
+
+    Duration t3 = sw.peek();
+    assert(t3 > t2);
+    Duration t4 = sw.peek();
+    assert(t3 == t4);
+
+    sw.start();
+    Thread.sleep(usecs(1));
+
+    Duration t5 = sw.peek();
+    assert(t5 > t4);
+
+    // If stopping or resetting the StopWatch is not required, then
+    // MonoTime can easily be used by itself without StopWatch.
+    auto before = MonoTime.currTime;
+    // do stuff...
+    auto timeElapsed = MonoTime.currTime - before;
 }
 
 

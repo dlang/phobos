@@ -1,0 +1,31 @@
+`fold` is added to `std.parallelism.TaskPool`
+
+$(REF fold, std, parallelism, TaskPool) is functionally equivalent to
+$(REF_ALTTEXT `reduce`, reduce, std, parallelism, TaskPool) except the range
+parameter comes first and there is no need to use $(REF_ALTTEXT
+`tuple`,tuple,std,typecons) for multiple seeds.
+
+---
+static int adder(int a, int b)
+{
+    return a + b;
+}
+static int multiplier(int a, int b)
+{
+    return a * b;
+}
+
+// Just the range
+auto x = taskPool.fold!adder([1, 2, 3, 4]);
+assert(x == 10);
+
+// The range and the seeds (0 and 1 below; also note multiple
+// functions in this example)
+auto y = taskPool.fold!(adder, multiplier)([1, 2, 3, 4], 0, 1);
+assert(y[0] == 10);
+assert(y[1] == 24);
+
+// The range, the seed (0), and the work unit size (20)
+auto z = taskPool.fold!adder([1, 2, 3, 4], 0, 20);
+assert(z == 10);
+---

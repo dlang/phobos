@@ -59,7 +59,7 @@ $(TR $(TD Enums) $(TD
   +/
 module std.ascii;
 
-version (unittest)
+version(StdUnittest)
 {
     // FIXME: When dmd bug #314 is fixed, make these selective.
     import std.meta; // : AliasSeq;
@@ -97,7 +97,7 @@ enum LetterCase : bool
 }
 
 ///
-@system unittest
+@safe unittest
 {
     import std.digest.hmac : hmac;
     import std.digest.digest : toHexString;
@@ -589,7 +589,7 @@ if (is(C : dchar))
 @safe pure nothrow unittest
 {
 
-    foreach (C; AliasSeq!(char, wchar, dchar, immutable char, ubyte))
+    static foreach (C; AliasSeq!(char, wchar, dchar, immutable char, ubyte))
     {
         foreach (i, c; uppercase)
             assert(toLower(cast(C) c) == lowercase[i]);
@@ -650,7 +650,7 @@ if (is(C : dchar))
 
 @safe pure nothrow unittest
 {
-    foreach (C; AliasSeq!(char, wchar, dchar, immutable char, ubyte))
+    static foreach (C; AliasSeq!(char, wchar, dchar, immutable char, ubyte))
     {
         foreach (i, c; lowercase)
             assert(toUpper(cast(C) c) == uppercase[i]);
@@ -689,7 +689,7 @@ if (is(C : dchar))
     enum UDDE : UDD {a = UDD('a'), A = UDD('A')}
 
     //User defined types with implicit cast to dchar test.
-    foreach (Char; AliasSeq!(UDC, UDW, UDD))
+    static foreach (Char; AliasSeq!(UDC, UDW, UDD))
     {
         assert(toLower(Char('a')) == 'a');
         assert(toLower(Char('A')) == 'a');
@@ -700,7 +700,7 @@ if (is(C : dchar))
     }
 
     //Various enum tests.
-    foreach (Enum; AliasSeq!(CE, WE, DE, UDCE, UDWE, UDDE))
+    static foreach (Enum; AliasSeq!(CE, WE, DE, UDCE, UDWE, UDDE))
     {
         assert(toLower(Enum.a) == 'a');
         assert(toLower(Enum.A) == 'a');
@@ -713,15 +713,15 @@ if (is(C : dchar))
     }
 
     //Return value type tests for enum of non-UDT. These should be the original type.
-    foreach (T; AliasSeq!(CE, WE, DE))
-    {
+    static foreach (T; AliasSeq!(CE, WE, DE))
+    {{
         alias C = OriginalType!T;
         static assert(is(typeof(toLower(T.init)) == C));
         static assert(is(typeof(toUpper(T.init)) == C));
-    }
+    }}
 
     //Return value tests for UDT and enum of UDT. These should be dchar
-    foreach (T; AliasSeq!(UDC, UDW, UDD, UDCE, UDWE, UDDE))
+    static foreach (T; AliasSeq!(UDC, UDW, UDD, UDCE, UDWE, UDDE))
     {
         static assert(is(typeof(toLower(T.init)) == dchar));
         static assert(is(typeof(toUpper(T.init)) == dchar));

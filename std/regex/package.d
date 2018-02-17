@@ -764,7 +764,7 @@ public:
         assert(m.empty);
         ---
     +/
-    @property auto front()
+    @property inout(Captures!R) front() inout
     {
         return _captures;
     }
@@ -799,7 +799,7 @@ public:
     T opCast(T:bool)(){ return !empty; }
 
     /// Same as .front, provided for compatibility with original std.regex.
-    @property auto captures() inout { return _captures; }
+    @property inout(Captures!R) captures() inout { return _captures; }
 }
 
 private @trusted auto matchOnce(RegEx, R)(R input, const RegEx prog)
@@ -827,11 +827,12 @@ private auto matchMany(RegEx, R)(R input, RegEx re) @safe
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=18135
-unittest
+@system unittest
 {
     static struct MapResult { RegexMatch!string m; }
     MapResult m;
     m = MapResult();
+    assert(m == m);
 }
 
 private enum isReplaceFunctor(alias fun, R) =
@@ -1020,8 +1021,8 @@ if (isSomeString!R && isSomeString!String)
     import std.algorithm.iteration : map;
     import std.conv : to;
 
-    foreach (String; AliasSeq!(string, wstring, const(dchar)[]))
-    {
+    static foreach (String; AliasSeq!(string, wstring, const(dchar)[]))
+    {{
         auto str1 = "blah-bleh".to!String();
         auto pat1 = "bl[ae]h".to!String();
         auto mf = matchFirst(str1, pat1);
@@ -1052,7 +1053,7 @@ if (isSomeString!R && isSomeString!String)
         assert(cmAll.front.equal(cmf));
         cmAll.popFront();
         assert(cmAll.front.equal(["6/1", "6", "1"].map!(to!String)()));
-    }
+    }}
 }
 
 /++
@@ -1396,8 +1397,8 @@ if (isOutputRange!(Sink, dchar) && isSomeString!R && isRegexFor!(RegEx, R))
     import std.array : appender;
     import std.conv;
     // try and check first/all simple substitution
-    foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
-    {
+    static foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
+    {{
         S s1 = "curt trial".to!S();
         S s2 = "round dome".to!S();
         S t1F = "court trial".to!S();
@@ -1428,7 +1429,7 @@ if (isOutputRange!(Sink, dchar) && isSomeString!R && isRegexFor!(RegEx, R))
         assert(sink.data == t1F~t2F~t1A);
         replaceAllInto(sink, s2, re2, "ho");
         assert(sink.data == t1F~t2F~t1A~t2A);
-    }
+    }}
 }
 
 /++
@@ -1671,11 +1672,11 @@ auto escaper(Range)(Range r)
 {
     import std.algorithm.comparison;
     import std.conv;
-    foreach (S; AliasSeq!(string, wstring, dstring))
-    {
+    static foreach (S; AliasSeq!(string, wstring, dstring))
+    {{
       auto s = "^".to!S;
       assert(s.escaper.equal(`\^`));
       auto s2 = "";
       assert(s2.escaper.equal(""));
-    }
+    }}
 }

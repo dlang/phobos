@@ -479,9 +479,9 @@ Forwards each of the methods in `funs` (if defined) to `member`.
     return result;
 }
 
-version(unittest)
+version(StdUnittest)
 {
-    import std.experimental.allocator : IAllocator, ISharedAllocator;
+    import std.experimental.allocator : RCIAllocator, RCISharedAllocator;
 
     package void testAllocator(alias make)()
     {
@@ -607,18 +607,18 @@ version(unittest)
          }}
     }
 
-    package void testAllocatorObject(AllocInterface)(AllocInterface a)
-        if (is(AllocInterface : IAllocator)
-            || is (AllocInterface : shared ISharedAllocator))
+    package void testAllocatorObject(RCAllocInterface)(RCAllocInterface a)
+        if (is(RCAllocInterface == RCIAllocator)
+            || is (RCAllocInterface == shared RCISharedAllocator))
     {
         import std.conv : text;
         import std.math : isPowerOf2;
         import std.stdio : writeln, stderr;
         import std.typecons : Ternary;
         scope(failure) stderr.writeln("testAllocatorObject failed for ",
-                AllocInterface.stringof);
+                RCAllocInterface.stringof);
 
-        assert(a);
+        assert(!a.isNull);
 
         // Test alignment
         assert(a.alignment.isPowerOf2);

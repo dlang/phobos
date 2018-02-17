@@ -132,7 +132,7 @@ else
     return _deleteme;
 }
 
-version (unittest) private struct TestAliasedString
+version(StdUnittest) private struct TestAliasedString
 {
     string get() @safe @nogc pure nothrow { return _s; }
     alias get this;
@@ -336,6 +336,7 @@ version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez
     import std.algorithm.comparison : min;
     import std.array : uninitializedArray;
     import std.conv : to;
+    import std.experimental.checkedint : checked;
 
     // A few internal configuration parameters {
     enum size_t
@@ -358,24 +359,25 @@ version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez
         : minInitialAlloc));
     void[] result = uninitializedArray!(ubyte[])(initialAlloc);
     scope(failure) GC.free(result.ptr);
-    size_t size = 0;
+
+    auto size = checked(size_t(0));
 
     for (;;)
     {
-        immutable actual = core.sys.posix.unistd.read(fd, result.ptr + size,
-                min(result.length, upTo) - size);
+        immutable actual = core.sys.posix.unistd.read(fd, result.ptr + size.get,
+                (min(result.length, upTo) - size).get);
         cenforce(actual != -1, name, namez);
         if (actual == 0) break;
         size += actual;
         if (size >= upTo) break;
         if (size < result.length) continue;
         immutable newAlloc = size + sizeIncrement;
-        result = GC.realloc(result.ptr, newAlloc, GC.BlkAttr.NO_SCAN)[0 .. newAlloc];
+        result = GC.realloc(result.ptr, newAlloc.get, GC.BlkAttr.NO_SCAN)[0 .. newAlloc.get];
     }
 
     return result.length - size >= maxSlackMemoryAllowed
-        ? GC.realloc(result.ptr, size, GC.BlkAttr.NO_SCAN)[0 .. size]
-        : result[0 .. size];
+        ? GC.realloc(result.ptr, size.get, GC.BlkAttr.NO_SCAN)[0 .. size.get]
+        : result[0 .. size.get];
 }
 
 
@@ -463,54 +465,242 @@ version (linux) @safe unittest
     assert(read(deleteme) == "abcd");
 }
 
-/********************************************
-Read and validates (using $(REF validate, std,utf)) a text file. $(D S)
-can be a type of array of characters of any width and constancy. No
-width conversion is performed; if the width of the characters in file
-$(D name) is different from the width of elements of $(D S),
-validation will fail.
+/++
+    Reads and validates (using $(REF validate, std, utf)) a text file. S can be
+    an array of any character type. However, no width or endian conversions are
+    performed. So, if the width or endianness of the characters in the given
+    file differ from the width or endianness of the element type of S, then
+    validation will fail.
 
-Params:
-    name = string or range of characters representing the file _name
+    Params:
+        name = string or range of characters representing the file _name
 
-Returns: Array of characters read.
+    Returns: Array of characters read.
 
-Throws: $(D FileException) on file error, $(D UTFException) on UTF
-decoding error.
- */
-
-S readText(S = string, R)(R name)
-if (isSomeString!S &&
-    (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
-    !isConvertibleToString!R)
+    Throws: $(LREF FileException) if there is an error reading the file,
+            $(REF UTFException, std, utf) on UTF decoding error.
++/
+S readText(S = string, R)(auto ref R name)
+if (isSomeString!S && (isInputRange!R && !isInfinite!R && isSomeChar!(ElementType!R) || is(StringTypeOf!R)))
 {
-    import std.utf : validate;
-    static auto trustedCast(void[] buf) @trusted { return cast(S) buf; }
-    auto result = trustedCast(read(name));
+    import std.algorithm.searching : startsWith;
+    import std.encoding : getBOM, BOM;
+    import std.exception : enforce;
+    import std.format : format;
+    import std.utf : UTFException, validate;
+
+    static if (is(StringTypeOf!R))
+        StringTypeOf!R filename = name;
+    else
+        auto filename = name;
+
+    static auto trustedCast(T)(void[] buf) @trusted { return cast(T) buf; }
+    auto data = trustedCast!(ubyte[])(read(filename));
+
+    immutable bomSeq = getBOM(data);
+    immutable bom = bomSeq.schema;
+
+    static if (is(Unqual!(ElementEncodingType!S) == char))
+    {
+        with(BOM) switch (bom)
+        {
+            case utf16be:
+            case utf16le: throw new UTFException("UTF-8 requested. BOM is for UTF-16");
+            case utf32be:
+            case utf32le: throw new UTFException("UTF-8 requested. BOM is for UTF-32");
+            default: break;
+        }
+    }
+    else static if (is(Unqual!(ElementEncodingType!S) == wchar))
+    {
+        with(BOM) switch (bom)
+        {
+            case utf8: throw new UTFException("UTF-16 requested. BOM is for UTF-8");
+            case utf16be:
+            {
+                version(BigEndian)
+                    break;
+                else
+                    throw new UTFException("BOM is for UTF-16 LE on Big Endian machine");
+            }
+            case utf16le:
+            {
+                version(BigEndian)
+                    throw new UTFException("BOM is for UTF-16 BE on Little Endian machine");
+                else
+                    break;
+            }
+            case utf32be:
+            case utf32le: throw new UTFException("UTF-8 requested. BOM is for UTF-32");
+            default: break;
+        }
+    }
+    else
+    {
+        with(BOM) switch (bom)
+        {
+            case utf8: throw new UTFException("UTF-16 requested. BOM is for UTF-8");
+            case utf16be:
+            case utf16le: throw new UTFException("UTF-8 requested. BOM is for UTF-16");
+            case utf32be:
+            {
+                version(BigEndian)
+                    break;
+                else
+                    throw new UTFException("BOM is for UTF-32 LE on Big Endian machine");
+            }
+            case utf32le:
+            {
+                version(BigEndian)
+                    throw new UTFException("BOM is for UTF-32 BE on Little Endian machine");
+                else
+                    break;
+            }
+            default: break;
+        }
+    }
+
+    if (data.length % ElementEncodingType!S.sizeof != 0)
+        throw new UTFException(format!"The content of %s is not UTF-%s"(filename, ElementEncodingType!S.sizeof * 8));
+
+    auto result = trustedCast!S(data);
     validate(result);
     return result;
 }
 
-///
+// Read file with UTF-8 text.
 @safe unittest
 {
-    import std.exception : enforce;
     write(deleteme, "abc"); // deleteme is the name of a temporary file
     scope(exit) remove(deleteme);
     string content = readText(deleteme);
-    enforce(content == "abc");
+    assert(content == "abc");
 }
 
-/// ditto
-S readText(S = string, R)(auto ref R name)
-if (isConvertibleToString!R)
+// Read file with UTF-8 text but try to read it as UTF-16.
+@safe unittest
 {
-    return readText!(S, StringTypeOf!R)(name);
+    import std.exception : assertThrown;
+    import std.utf : UTFException;
+
+    write(deleteme, "abc");
+    scope(exit) remove(deleteme);
+    // Throws because the file is not valid UTF-16.
+    assertThrown!UTFException(readText!wstring(deleteme));
+}
+
+// Read file with UTF-16 text.
+@safe unittest
+{
+    import std.algorithm.searching : skipOver;
+
+    write(deleteme, "\uFEFFabc"w); // With BOM
+    scope(exit) remove(deleteme);
+    auto content = readText!wstring(deleteme);
+    assert(content == "\uFEFFabc"w);
+    // Strips BOM if present.
+    content.skipOver('\uFEFF');
+    assert(content == "abc"w);
 }
 
 @safe unittest
 {
     static assert(__traits(compiles, readText(TestAliasedString(null))));
+}
+
+@system unittest
+{
+    import std.array : appender;
+    import std.bitmanip : append, Endian;
+    import std.exception : assertThrown;
+    import std.path : buildPath;
+    import std.string : representation;
+    import std.utf : UTFException;
+
+    mkdir(deleteme);
+    scope(exit) rmdirRecurse(deleteme);
+
+    immutable none8 = buildPath(deleteme, "none8");
+    immutable none16 = buildPath(deleteme, "none16");
+    immutable utf8 = buildPath(deleteme, "utf8");
+    immutable utf16be = buildPath(deleteme, "utf16be");
+    immutable utf16le = buildPath(deleteme, "utf16le");
+    immutable utf32be = buildPath(deleteme, "utf32be");
+    immutable utf32le = buildPath(deleteme, "utf32le");
+    immutable utf7 = buildPath(deleteme, "utf7");
+
+    write(none8, "京都市");
+    write(none16, "京都市"w);
+    write(utf8, (cast(char[])[0xEF, 0xBB, 0xBF]) ~ "京都市");
+    {
+        auto str = "\uFEFF京都市"w;
+        auto arr = appender!(ubyte[])();
+        foreach (c; str)
+            arr.append(c);
+        write(utf16be, arr.data);
+    }
+    {
+        auto str = "\uFEFF京都市"w;
+        auto arr = appender!(ubyte[])();
+        foreach (c; str)
+            arr.append!(ushort, Endian.littleEndian)(c);
+        write(utf16le, arr.data);
+    }
+    {
+        auto str = "\U0000FEFF京都市"d;
+        auto arr = appender!(ubyte[])();
+        foreach (c; str)
+            arr.append(c);
+        write(utf32be, arr.data);
+    }
+    {
+        auto str = "\U0000FEFF京都市"d;
+        auto arr = appender!(ubyte[])();
+        foreach (c; str)
+            arr.append!(uint, Endian.littleEndian)(c);
+        write(utf32le, arr.data);
+    }
+    write(utf7, (cast(ubyte[])[0x2B, 0x2F, 0x76, 0x38, 0x2D]) ~ "foobar".representation);
+
+    assertThrown!UTFException(readText(none16));
+    assert(readText(utf8) == (cast(char[])[0xEF, 0xBB, 0xBF]) ~ "京都市");
+    assertThrown!UTFException(readText(utf16be));
+    assertThrown!UTFException(readText(utf16le));
+    assertThrown!UTFException(readText(utf32be));
+    assertThrown!UTFException(readText(utf32le));
+    assert(readText(utf7) == (cast(char[])[0x2B, 0x2F, 0x76, 0x38, 0x2D]) ~ "foobar");
+
+    assertThrown!UTFException(readText!wstring(none8));
+    assert(readText!wstring(none16) == "京都市"w);
+    assertThrown!UTFException(readText!wstring(utf8));
+    version(BigEndian)
+    {
+        assert(readText!wstring(utf16be) == "\uFEFF京都市"w);
+        assertThrown!UTFException(readText!wstring(utf16le));
+    }
+    else
+    {
+        assertThrown!UTFException(readText!wstring(utf16be));
+        assert(readText!wstring(utf16le) == "\uFEFF京都市"w);
+    }
+    assertThrown!UTFException(readText!wstring(utf32be));
+    assertThrown!UTFException(readText!wstring(utf32le));
+    assertThrown!UTFException(readText!wstring(utf7));
+
+    assertThrown!UTFException(readText!dstring(utf8));
+    assertThrown!UTFException(readText!dstring(utf16be));
+    assertThrown!UTFException(readText!dstring(utf16le));
+    version(BigEndian)
+    {
+       assert(readText!dstring(utf32be) == "\U0000FEFF京都市"d);
+       assertThrown!UTFException(readText!dstring(utf32le));
+    }
+    else
+    {
+       assertThrown!UTFException(readText!dstring(utf32be));
+       assert(readText!dstring(utf32le) == "\U0000FEFF京都市"d);
+    }
+    assertThrown!UTFException(readText!dstring(utf7));
 }
 
 /*********************************************
@@ -1488,6 +1678,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R))
 // - OS X, where the native filesystem (HFS+) stores filesystem
 //   timestamps with 1-second precision.
 version (FreeBSD) {} else
+version (DragonFlyBSD) {} else
 version (OSX) {} else
 @system unittest
 {
@@ -2288,7 +2479,7 @@ if (isConvertibleToString!R)
 
 @safe unittest
 {
-    import std.path : mkdir;
+    import std.file : mkdir;
     static assert(__traits(compiles, mkdir(TestAliasedString(null))));
 }
 
@@ -2644,6 +2835,7 @@ version(Posix) @system unittest // input range of dchars
 version(Windows) string getcwd()
 {
     import std.conv : to;
+    import std.experimental.checkedint : checked;
     /* GetCurrentDirectory's return value:
         1. function succeeds: the number of characters that are written to
     the buffer, not including the terminating null character.
@@ -2651,7 +2843,11 @@ version(Windows) string getcwd()
         3. the buffer (lpBuffer) is not large enough: the required size of
     the buffer, in characters, including the null-terminating character.
     */
-    wchar[4096] buffW = void; //enough for most common case
+    version(StdUnittest)
+        enum BUF_SIZE = 10;     // trigger reallocation code
+    else
+        enum BUF_SIZE = 4096;   // enough for most common case
+    wchar[BUF_SIZE] buffW = void;
     immutable n = cenforce(GetCurrentDirectoryW(to!DWORD(buffW.length), buffW.ptr),
             "getcwd");
     // we can do it because toUTFX always produces a fresh string
@@ -2661,10 +2857,11 @@ version(Windows) string getcwd()
     }
     else //staticBuff isn't enough
     {
-        auto ptr = cast(wchar*) malloc(wchar.sizeof * n);
+        auto cn = checked(n);
+        auto ptr = cast(wchar*) malloc((cn * wchar.sizeof).get);
         scope(exit) free(ptr);
-        immutable n2 = GetCurrentDirectoryW(n, ptr);
-        cenforce(n2 && n2 < n, "getcwd");
+        immutable n2 = GetCurrentDirectoryW(cn.get, ptr);
+        cenforce(n2 && n2 < cn, "getcwd");
         return ptr[0 .. n2].to!string;
     }
 }
@@ -2778,6 +2975,10 @@ else version (NetBSD)
     else version (NetBSD)
     {
         return readLink("/proc/self/exe");
+    }
+    else version (DragonFlyBSD)
+    {
+        return readLink("/proc/curproc/file");
     }
     else version (Solaris)
     {
@@ -3959,7 +4160,7 @@ public:
     type $(D string) if only the name is needed, or $(D DirEntry)
     if additional details are needed. The span _mode dictates how the
     directory is traversed. The name of each iterated directory entry
-    contains the absolute _path.
+    contains the absolute or relative _path (depending on _pathname).
 
     Params:
         path = The directory to iterate over.
@@ -4060,7 +4261,8 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
     import std.algorithm.searching : startsWith;
     import std.array : array;
     import std.conv : to;
-    import std.path : dirEntries, buildPath, absolutePath;
+    import std.path : buildPath, absolutePath;
+    import std.file : dirEntries;
     import std.process : thisProcessID;
     import std.range.primitives : walkLength;
 
@@ -4347,11 +4549,6 @@ string tempDir() @trusted
             wchar[MAX_PATH + 2] buf;
             DWORD len = GetTempPathW(buf.length, buf.ptr);
             if (len) cache = buf[0 .. len].to!string;
-        }
-        else version(Android)
-        {
-            // Don't check for a global temporary directory as
-            // Android doesn't have one.
         }
         else version(Posix)
         {

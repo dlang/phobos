@@ -2,7 +2,7 @@
 /**
 $(H2 Assembling Your Own Allocator)
 
-In addition to defining the interfaces above, this package also implements
+This package also implements
 untyped composable memory allocators. They are $(I untyped) because they deal
 exclusively in $(D void[]) and have no notion of what type the memory allocated
 would be destined for. They are $(I composable) because the included allocators
@@ -277,11 +277,14 @@ and dispatches them to distinct allocators.))
 $(TR $(TDC2 Bucketizer, bucketizer) $(TD Divides allocation sizes in discrete buckets and
 uses an array of allocators, one per bucket, to satisfy requests.))
 
+$(TR $(TDC2 AscendingPageAllocator, ascending_page_allocator) $(TD A memory safe allocator
+where sizes are rounded to a multiple of the page size and allocations are satisfied at increasing addresses.))
+
 $(COMMENT $(TR $(TDC2 InternalPointersTree) $(TD Adds support for resolving internal
 pointers on top of another allocator.)))
 )
 
-Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/_package.d)
+Source: $(PHOBOSSRC std/experimental/allocator/_building_blocks/package.d)
 
 Macros:
 MYREF2 = $(REF_SHORT $1, std,experimental,allocator,building_blocks,$2)
@@ -300,6 +303,7 @@ module std.experimental.allocator.building_blocks;
 public import
     std.experimental.allocator.building_blocks.affix_allocator,
     std.experimental.allocator.building_blocks.allocator_list,
+    std.experimental.allocator.building_blocks.ascending_page_allocator,
     std.experimental.allocator.building_blocks.bucketizer,
     std.experimental.allocator.building_blocks.fallback_allocator,
     std.experimental.allocator.building_blocks.free_list,

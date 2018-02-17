@@ -75,7 +75,7 @@ import std.traits;
     static assert(is(typeof(u) == uint));
 }
 
-version(unittest)
+version(StdUnittest)
 {
     static import std.meta;
     package alias PseudoRngTypes = std.meta.AliasSeq!(MinstdRand0, MinstdRand, Mt19937, Xorshift32, Xorshift64,
@@ -526,15 +526,15 @@ alias MinstdRand = LinearCongruentialEngine!(uint, 48_271, 0, 2_147_483_647);
     assert(rnd.front == 399268537);
 
     // Check .save works
-    foreach (Type; std.meta.AliasSeq!(MinstdRand0, MinstdRand))
-    {
+    static foreach (Type; std.meta.AliasSeq!(MinstdRand0, MinstdRand))
+    {{
         auto rnd1 = Type(unpredictableSeed);
         auto rnd2 = rnd1.save;
         assert(rnd1 == rnd2);
         // Enable next test when RNGs are reference types
         version(none) { assert(rnd1 !is rnd2); }
         assert(rnd1.take(100).array() == rnd2.take(100).array());
-    }
+    }}
 }
 
 @safe unittest
@@ -963,15 +963,15 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
 {
     import std.range;
     // Check .save works
-    foreach (Type; std.meta.AliasSeq!(Mt19937, Mt19937_64))
-    {
+    static foreach (Type; std.meta.AliasSeq!(Mt19937, Mt19937_64))
+    {{
         auto gen1 = Type(unpredictableSeed);
         auto gen2 = gen1.save;
         assert(gen1 == gen2);  // Danger, Will Robinson -- no opEquals for MT
         // Enable next test when RNGs are reference types
         version(none) { assert(gen1 !is gen2); }
         assert(gen1.take(100).array() == gen2.take(100).array());
-    }
+    }}
 }
 
 @safe pure nothrow unittest //11690
@@ -987,14 +987,14 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
     ulong[] expected10kValue = [4123659995uL, 4123659995uL,
                                 51991688252792uL, 3031481165133029945uL];
 
-    foreach (i, R; std.meta.AliasSeq!(MT!(uint, 32), MT!(ulong, 32), MT!(ulong, 48), MT!(ulong, 64)))
-    {
+    static foreach (i, R; std.meta.AliasSeq!(MT!(uint, 32), MT!(ulong, 32), MT!(ulong, 48), MT!(ulong, 64)))
+    {{
         auto a = R();
         a.seed(a.defaultSeed); // checks that some alternative paths in `seed` are utilized
         assert(a.front == expectedFirstValue[i]);
         a.popFrontN(9999);
         assert(a.front == expected10kValue[i]);
-    }
+    }}
 }
 
 
@@ -1357,8 +1357,8 @@ A singleton instance of the default random number generator
     static bool initialized;
     if (!initialized)
     {
-        static if (isSeedable!(Random, typeof(map!((a) => unpredictableSeed)(repeat(0)))))
-            result.seed(map!((a) => unpredictableSeed)(repeat(0)));
+        static if (isSeedable!(Random, ReturnType!unpredictableSeed))
+            result.seed(unpredictableSeed); // Avoid unnecessary copy.
         else
             result = Random(unpredictableSeed);
         initialized = true;
@@ -1400,6 +1400,17 @@ if (!is(CommonType!(T1, T2) == void))
     auto a = uniform(0, 1024, gen);
     // Generate a float in [0, 1)
     auto b = uniform(0.0f, 1.0f, gen);
+}
+
+/// Create an array of random numbers using range functions and UFCS
+@safe unittest
+{
+    import std.array : array;
+    import std.range : generate, takeExactly;
+
+    int[] arr = generate!(() => uniform(0, 100)).takeExactly(10).array;
+    assert(arr.length == 10);
+    assert(arr[0] >= 0 && arr[0] < 100);
 }
 
 @safe unittest
@@ -1607,9 +1618,9 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
     auto c = uniform(0.0, 1.0);
     assert(0 <= c && c < 1);
 
-    foreach (T; std.meta.AliasSeq!(char, wchar, dchar, byte, ubyte, short, ushort,
+    static foreach (T; std.meta.AliasSeq!(char, wchar, dchar, byte, ubyte, short, ushort,
                           int, uint, long, ulong, float, double, real))
-    {
+    {{
         T lo = 0, hi = 100;
 
         // Try tests with each of the possible bounds
@@ -1657,19 +1668,19 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
                 assert(u <= T.max, "Upper bound violation for uniform!\"[]\" with " ~ T.stringof);
             }
         }
-    }
+    }}
 
     auto reproRng = Xorshift(239842);
 
-    foreach (T; std.meta.AliasSeq!(char, wchar, dchar, byte, ubyte, short,
+    static foreach (T; std.meta.AliasSeq!(char, wchar, dchar, byte, ubyte, short,
                           ushort, int, uint, long, ulong))
-    {
+    {{
         T lo = T.min + 10, hi = T.max - 10;
         T init = uniform(lo, hi, reproRng);
         size_t i = 50;
         while (--i && uniform(lo, hi, reproRng) == init) {}
         assert(i > 0);
-    }
+    }}
 
     {
         bool sawLB = false, sawUB = false;
@@ -1780,9 +1791,9 @@ if (!is(T == enum) && (isIntegral!T || isSomeChar!T))
 
 @safe unittest
 {
-    foreach (T; std.meta.AliasSeq!(char, wchar, dchar, byte, ubyte, short, ushort,
+    static foreach (T; std.meta.AliasSeq!(char, wchar, dchar, byte, ubyte, short, ushort,
                           int, uint, long, ulong))
-    {
+    {{
         T init = uniform!T();
         size_t i = 50;
         while (--i && uniform!T() == init) {}
@@ -1795,7 +1806,7 @@ if (!is(T == enum) && (isIntegral!T || isSomeChar!T))
             assert(T.min <= u, "Lower bound violation for uniform!" ~ T.stringof);
             assert(u <= T.max, "Upper bound violation for uniform!" ~ T.stringof);
         }
-    }
+    }}
 }
 
 /**
@@ -1928,11 +1939,11 @@ do
 @safe unittest
 {
     import std.meta;
-    foreach (UniformRNG; PseudoRngTypes)
-    {
+    static foreach (UniformRNG; PseudoRngTypes)
+    {{
 
-        foreach (T; std.meta.AliasSeq!(float, double, real))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (T; std.meta.AliasSeq!(float, double, real))
+        {{
             UniformRNG rng = UniformRNG(unpredictableSeed);
 
             auto a = uniform01();
@@ -1956,8 +1967,8 @@ do
             while (--i && uniform01!T(rng) == init) {}
             assert(i > 0);
             assert(i < 50);
-        }();
-    }
+        }}
+    }}
 }
 
 /**
@@ -2007,13 +2018,19 @@ Returns:
     a copy.
  */
 auto ref choice(Range, RandomGen = Random)(auto ref Range range,
-                                           ref RandomGen urng = rndGen)
+                                           ref RandomGen urng)
 if (isRandomAccessRange!Range && hasLength!Range && isUniformRNG!RandomGen)
 {
     assert(range.length > 0,
            __PRETTY_FUNCTION__ ~ ": invalid Range supplied. Range cannot be empty");
 
     return range[uniform(size_t(0), $, urng)];
+}
+
+/// ditto
+auto ref choice(Range)(auto ref Range range)
+{
+    return choice(range, rndGen);
 }
 
 ///
@@ -2030,6 +2047,10 @@ if (isRandomAccessRange!Range && hasLength!Range && isUniformRNG!RandomGen)
     auto urng = Random(unpredictableSeed);
     elem = choice(array, urng);
 
+    assert(canFind(array, elem),
+           "Choice did not return a valid element from the given Range");
+    auto rng2 = Xorshift();
+    elem = choice(array, rng2);
     assert(canFind(array, elem),
            "Choice did not return a valid element from the given Range");
 }
@@ -2474,8 +2495,8 @@ if (isRandomAccessRange!Range)
     import std.conv;
     int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8 ];
     int[] c;
-    foreach (UniformRNG; std.meta.AliasSeq!(void, PseudoRngTypes))
-    {
+    static foreach (UniformRNG; std.meta.AliasSeq!(void, PseudoRngTypes))
+    {{
         static if (is(UniformRNG == void))
         {
             auto rc = randomCover(a);
@@ -2503,7 +2524,7 @@ if (isRandomAccessRange!Range)
         }
         sort(b);
         assert(a == b, text(b));
-    }
+    }}
 }
 
 @safe unittest

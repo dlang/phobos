@@ -339,7 +339,17 @@ private:
             static if (target.size < A.sizeof)
             {
                 if (target.type.tsize < A.sizeof)
-                    *cast(A**)&target.store = new A;
+                {
+                    static if (is(A == U[n], U, size_t n))
+                    {
+                        A* p = cast(A*)(new U[n]).ptr;
+                    }
+                    else
+                    {
+                        A* p = new A;
+                    }
+                    *cast(A**)&target.store = p;
+                }
             }
             tryPutting(zis, typeid(A), cast(void*) getPtr(&target.store))
                 || assert(false);
@@ -545,8 +555,6 @@ private:
         return 0;
     }
 
-    enum doUnittest = is(VariantN == Variant);
-
 public:
     /** Constructs a $(D VariantN) value given an argument of a
      * generic type. Statically rejects disallowed types.
@@ -578,7 +586,15 @@ public:
     {
         ~this()
         {
-            fptr(OpID.destruct, &store, null);
+            // Infer the safety of the provided types
+            static if (AllowedTypes.length)
+            {
+                if (0)
+                {
+                    AllowedTypes var;
+                }
+            }
+            (() @trusted => fptr(OpID.destruct, &store, null))();
         }
     }
 
@@ -637,6 +653,11 @@ public:
                 {
                     auto p = new T(rhs);
                 }
+                else static if (is(T == U[n], U, size_t n))
+                {
+                    auto p = cast(T*)(new U[n]).ptr;
+                    *p = rhs;
+                }
                 else
                 {
                     auto p = new T;
@@ -684,7 +705,7 @@ public:
     }
 
     ///
-    static if (doUnittest)
+    version(StdUnittest)
     @system unittest
     {
         Variant a;
@@ -717,7 +738,7 @@ public:
     }
 
     ///
-    static if (doUnittest)
+    version(StdUnittest)
     @system unittest
     {
         Variant a = 5;
@@ -1109,7 +1130,7 @@ public:
     }
 
     ///
-    static if (doUnittest)
+    version(StdUnittest)
     @system unittest
     {
         Variant a = new int[10];
@@ -1245,6 +1266,32 @@ public:
 
     static assert(!__traits(compiles, (v[1] = null)));
     assertThrown!VariantException(v[1] = Variant(null));
+}
+
+//Issue# 10879
+@system unittest
+{
+    int[10] arr = [1,2,3,4,5,6,7,8,9,10];
+    Variant v1 = arr;
+    Variant v2;
+    v2 = arr;
+    assert(v1 == arr);
+    assert(v2 == arr);
+    foreach (i, e; arr)
+    {
+        assert(v1[i] == e);
+        assert(v2[i] == e);
+    }
+    static struct LargeStruct
+    {
+        int[100] data;
+    }
+    LargeStruct ls;
+    ls.data[] = 4;
+    v1 = ls;
+    Variant v3 = ls;
+    assert(v1 == ls);
+    assert(v3 == ls);
 }
 
 //Issue# 8195
@@ -1427,6 +1474,18 @@ pure nothrow @nogc
     static assert(!is(typeof(fun!(shared(S4))(v))));
 }
 
+@safe unittest
+{
+    Algebraic!(int) x;
+
+    static struct SafeS
+    {
+        @safe ~this() {}
+    }
+
+    Algebraic!(SafeS) y;
+}
+
 /**
 _Algebraic data type restricted to a closed set of possible
 types. It's an alias for $(LREF VariantN) with an
@@ -1486,6 +1545,11 @@ be arbitrarily complex.
     assert(obj.get!2["customer"] == "John");
 }
 
+private struct FakeComplexReal
+{
+    real re, im;
+}
+
 /**
 Alias for $(LREF VariantN) instantiated with the largest size of `creal`,
 `char[]`, and `void delegate()`. This ensures that `Variant` is large enough
@@ -1494,7 +1558,7 @@ pointers, delegates, and class references.  You may want to use
 $(D VariantN) directly with a different maximum size either for
 storing larger types unboxed, or for saving memory.
  */
-alias Variant = VariantN!(maxSize!(creal, char[], void delegate()));
+alias Variant = VariantN!(maxSize!(FakeComplexReal, char[], void delegate()));
 
 /**
  * Returns an array of variants constructed from $(D args).
@@ -1772,16 +1836,13 @@ static class VariantException : Exception
     {
         auto v1 = Variant(42);
         auto v2 = Variant("foo");
-        auto v3 = Variant(1+2.0i);
 
         int[Variant] hash;
         hash[v1] = 0;
         hash[v2] = 1;
-        hash[v3] = 2;
 
         assert( hash[v1] == 0 );
         assert( hash[v2] == 1 );
-        assert( hash[v3] == 2 );
     }
 
     {
@@ -1795,6 +1856,15 @@ static class VariantException : Exception
         assert( vhash.get!(int[char[]])["b"] == 2 );
         assert( vhash.get!(int[char[]])["c"] == 3 );
     }
+}
+
+version(TestComplex)
+deprecated
+@system unittest
+{
+    auto v3 = Variant(1+2.0i);
+    hash[v3] = 2;
+    assert( hash[v3] == 2 );
 }
 
 @system unittest
@@ -2489,24 +2559,24 @@ if (isAlgebraic!VariantType && Handler.length > 0)
 
     int i = 10;
     v = i;
-    foreach (qual; AliasSeq!(MutableOf, ConstOf))
+    static foreach (qual; AliasSeq!(MutableOf, ConstOf))
     {
         assert(v.get!(qual!int) == 10);
         assert(v.get!(qual!float) == 10.0f);
     }
-    foreach (qual; AliasSeq!(ImmutableOf, SharedOf, SharedConstOf))
+    static foreach (qual; AliasSeq!(ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!int));
     }
 
     const(int) ci = 20;
     v = ci;
-    foreach (qual; AliasSeq!(ConstOf))
+    static foreach (qual; AliasSeq!(ConstOf))
     {
         assert(v.get!(qual!int) == 20);
         assert(v.get!(qual!float) == 20.0f);
     }
-    foreach (qual; AliasSeq!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
+    static foreach (qual; AliasSeq!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!int));
         assertThrown!VariantException(v.get!(qual!float));
@@ -2514,12 +2584,12 @@ if (isAlgebraic!VariantType && Handler.length > 0)
 
     immutable(int) ii = ci;
     v = ii;
-    foreach (qual; AliasSeq!(ImmutableOf, ConstOf, SharedConstOf))
+    static foreach (qual; AliasSeq!(ImmutableOf, ConstOf, SharedConstOf))
     {
         assert(v.get!(qual!int) == 20);
         assert(v.get!(qual!float) == 20.0f);
     }
-    foreach (qual; AliasSeq!(MutableOf, SharedOf))
+    static foreach (qual; AliasSeq!(MutableOf, SharedOf))
     {
         assertThrown!VariantException(v.get!(qual!int));
         assertThrown!VariantException(v.get!(qual!float));
@@ -2527,12 +2597,12 @@ if (isAlgebraic!VariantType && Handler.length > 0)
 
     int[] ai = [1,2,3];
     v = ai;
-    foreach (qual; AliasSeq!(MutableOf, ConstOf))
+    static foreach (qual; AliasSeq!(MutableOf, ConstOf))
     {
         assert(v.get!(qual!(int[])) == [1,2,3]);
         assert(v.get!(qual!(int)[]) == [1,2,3]);
     }
-    foreach (qual; AliasSeq!(ImmutableOf, SharedOf, SharedConstOf))
+    static foreach (qual; AliasSeq!(ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!(int[])));
         assertThrown!VariantException(v.get!(qual!(int)[]));
@@ -2540,12 +2610,12 @@ if (isAlgebraic!VariantType && Handler.length > 0)
 
     const(int[]) cai = [4,5,6];
     v = cai;
-    foreach (qual; AliasSeq!(ConstOf))
+    static foreach (qual; AliasSeq!(ConstOf))
     {
         assert(v.get!(qual!(int[])) == [4,5,6]);
         assert(v.get!(qual!(int)[]) == [4,5,6]);
     }
-    foreach (qual; AliasSeq!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
+    static foreach (qual; AliasSeq!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!(int[])));
         assertThrown!VariantException(v.get!(qual!(int)[]));
@@ -2559,7 +2629,7 @@ if (isAlgebraic!VariantType && Handler.length > 0)
     assert(v.get!(const(int)[]) == [7,8,9]);
     //assert(v.get!(shared(const(int[]))) == cast(shared const)[7,8,9]);    // Bug ??? runtime error
     //assert(v.get!(shared(const(int))[]) == cast(shared const)[7,8,9]);    // Bug ??? runtime error
-    foreach (qual; AliasSeq!(MutableOf))
+    static foreach (qual; AliasSeq!(MutableOf))
     {
         assertThrown!VariantException(v.get!(qual!(int[])));
         assertThrown!VariantException(v.get!(qual!(int)[]));
@@ -2569,13 +2639,13 @@ if (isAlgebraic!VariantType && Handler.length > 0)
     class B : A {}
     B b = new B();
     v = b;
-    foreach (qual; AliasSeq!(MutableOf, ConstOf))
+    static foreach (qual; AliasSeq!(MutableOf, ConstOf))
     {
         assert(v.get!(qual!B) is b);
         assert(v.get!(qual!A) is b);
         assert(v.get!(qual!Object) is b);
     }
-    foreach (qual; AliasSeq!(ImmutableOf, SharedOf, SharedConstOf))
+    static foreach (qual; AliasSeq!(ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!B));
         assertThrown!VariantException(v.get!(qual!A));
@@ -2584,13 +2654,13 @@ if (isAlgebraic!VariantType && Handler.length > 0)
 
     const(B) cb = new B();
     v = cb;
-    foreach (qual; AliasSeq!(ConstOf))
+    static foreach (qual; AliasSeq!(ConstOf))
     {
         assert(v.get!(qual!B) is cb);
         assert(v.get!(qual!A) is cb);
         assert(v.get!(qual!Object) is cb);
     }
-    foreach (qual; AliasSeq!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
+    static foreach (qual; AliasSeq!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!B));
         assertThrown!VariantException(v.get!(qual!A));
@@ -2599,13 +2669,13 @@ if (isAlgebraic!VariantType && Handler.length > 0)
 
     immutable(B) ib = new immutable(B)();
     v = ib;
-    foreach (qual; AliasSeq!(ImmutableOf, ConstOf, SharedConstOf))
+    static foreach (qual; AliasSeq!(ImmutableOf, ConstOf, SharedConstOf))
     {
         assert(v.get!(qual!B) is ib);
         assert(v.get!(qual!A) is ib);
         assert(v.get!(qual!Object) is ib);
     }
-    foreach (qual; AliasSeq!(MutableOf, SharedOf))
+    static foreach (qual; AliasSeq!(MutableOf, SharedOf))
     {
         assertThrown!VariantException(v.get!(qual!B));
         assertThrown!VariantException(v.get!(qual!A));
@@ -2614,13 +2684,13 @@ if (isAlgebraic!VariantType && Handler.length > 0)
 
     shared(B) sb = new shared B();
     v = sb;
-    foreach (qual; AliasSeq!(SharedOf, SharedConstOf))
+    static foreach (qual; AliasSeq!(SharedOf, SharedConstOf))
     {
         assert(v.get!(qual!B) is sb);
         assert(v.get!(qual!A) is sb);
         assert(v.get!(qual!Object) is sb);
     }
-    foreach (qual; AliasSeq!(MutableOf, ImmutableOf, ConstOf))
+    static foreach (qual; AliasSeq!(MutableOf, ImmutableOf, ConstOf))
     {
         assertThrown!VariantException(v.get!(qual!B));
         assertThrown!VariantException(v.get!(qual!A));
@@ -2629,13 +2699,13 @@ if (isAlgebraic!VariantType && Handler.length > 0)
 
     shared(const(B)) scb = new shared const B();
     v = scb;
-    foreach (qual; AliasSeq!(SharedConstOf))
+    static foreach (qual; AliasSeq!(SharedConstOf))
     {
         assert(v.get!(qual!B) is scb);
         assert(v.get!(qual!A) is scb);
         assert(v.get!(qual!Object) is scb);
     }
-    foreach (qual; AliasSeq!(MutableOf, ConstOf, ImmutableOf, SharedOf))
+    static foreach (qual; AliasSeq!(MutableOf, ConstOf, ImmutableOf, SharedOf))
     {
         assertThrown!VariantException(v.get!(qual!B));
         assertThrown!VariantException(v.get!(qual!A));

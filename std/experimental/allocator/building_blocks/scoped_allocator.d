@@ -23,6 +23,7 @@ struct ScopedAllocator(ParentAllocator)
     static if (!stateSize!ParentAllocator)
     {
         // This test is available only for stateless allocators
+        version(StdUnittest)
         @system unittest
         {
             testAllocator!(() => ScopedAllocator());

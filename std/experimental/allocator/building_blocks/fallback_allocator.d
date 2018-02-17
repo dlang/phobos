@@ -29,6 +29,7 @@ struct FallbackAllocator(Primary, Fallback)
 
     // Need both allocators to be stateless
     // This is to avoid using default initialized stateful allocators
+    version(StdUnittest)
     static if (!stateSize!Primary && !stateSize!Fallback)
     @system unittest
     {

@@ -290,6 +290,29 @@ template to(T)
 }
 
 /**
+   Conversion from string types to char types enforces the input
+   to consist of a single code point, and said code point must
+   fit in the target type. Otherwise, $(LREF ConvException) is thrown.
+ */
+@safe pure unittest
+{
+    import std.exception : assertThrown;
+
+    assert(to!char("a") == 'a');
+    assertThrown(to!char("ñ")); // 'ñ' does not fit into a char
+    assert(to!wchar("ñ") == 'ñ');
+    assertThrown(to!wchar("😃")); // '😃' does not fit into a wchar
+    assert(to!dchar("😃") == '😃');
+
+    // Using wstring or dstring as source type does not affect the result
+    assert(to!char("a"w) == 'a');
+    assert(to!char("a"d) == 'a');
+
+    // Two code points cannot be converted to a single one
+    assertThrown(to!char("ab"));
+}
+
+/**
  * Converting an array _to another array type works by converting each
  * element in turn. Associative arrays can be converted _to associative
  * arrays as long as keys and values can in turn be converted.
@@ -427,12 +450,12 @@ template to(T)
 @safe pure unittest
 {
     import std.exception;
-    foreach (T; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    static foreach (T; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         assertThrown!ConvException(to!T(" 0"));
         assertThrown!ConvException(to!T(" 0", 8));
     }
-    foreach (T; AliasSeq!(float, double, real))
+    static foreach (T; AliasSeq!(float, double, real))
     {
         assertThrown!ConvException(to!T(" 0"));
     }
@@ -499,13 +522,13 @@ if (isImplicitlyConvertible!(S, T) &&
 {
     import std.exception;
     // Conversion between same size
-    foreach (S; AliasSeq!(byte, short, int, long))
-    (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+    static foreach (S; AliasSeq!(byte, short, int, long))
+    {{
         alias U = Unsigned!S;
 
-        foreach (Sint; AliasSeq!(S, const S, immutable S))
-        foreach (Uint; AliasSeq!(U, const U, immutable U))
-        {
+        static foreach (Sint; AliasSeq!(S, const S, immutable S))
+        static foreach (Uint; AliasSeq!(U, const U, immutable U))
+        {{
             // positive overflow
             Uint un = Uint.max;
             assertThrown!ConvOverflowException(to!Sint(un),
@@ -515,53 +538,53 @@ if (isImplicitlyConvertible!(S, T) &&
             Sint sn = -1;
             assertThrown!ConvOverflowException(to!Uint(sn),
                 text(Sint.stringof, ' ', Uint.stringof, ' ', un));
-        }
-    }();
+        }}
+    }}
 
     // Conversion between different size
-    foreach (i, S1; AliasSeq!(byte, short, int, long))
-    foreach (   S2; AliasSeq!(byte, short, int, long)[i+1..$])
-    (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+    static foreach (i, S1; AliasSeq!(byte, short, int, long))
+    static foreach (   S2; AliasSeq!(byte, short, int, long)[i+1..$])
+    {{
         alias U1 = Unsigned!S1;
         alias U2 = Unsigned!S2;
 
         static assert(U1.sizeof < S2.sizeof);
 
         // small unsigned to big signed
-        foreach (Uint; AliasSeq!(U1, const U1, immutable U1))
-        foreach (Sint; AliasSeq!(S2, const S2, immutable S2))
-        {
+        static foreach (Uint; AliasSeq!(U1, const U1, immutable U1))
+        static foreach (Sint; AliasSeq!(S2, const S2, immutable S2))
+        {{
             Uint un = Uint.max;
             assertNotThrown(to!Sint(un));
             assert(to!Sint(un) == un);
-        }
+        }}
 
         // big unsigned to small signed
-        foreach (Uint; AliasSeq!(U2, const U2, immutable U2))
-        foreach (Sint; AliasSeq!(S1, const S1, immutable S1))
-        {
+        static foreach (Uint; AliasSeq!(U2, const U2, immutable U2))
+        static foreach (Sint; AliasSeq!(S1, const S1, immutable S1))
+        {{
             Uint un = Uint.max;
             assertThrown(to!Sint(un));
-        }
+        }}
 
         static assert(S1.sizeof < U2.sizeof);
 
         // small signed to big unsigned
-        foreach (Sint; AliasSeq!(S1, const S1, immutable S1))
-        foreach (Uint; AliasSeq!(U2, const U2, immutable U2))
-        {
+        static foreach (Sint; AliasSeq!(S1, const S1, immutable S1))
+        static foreach (Uint; AliasSeq!(U2, const U2, immutable U2))
+        {{
             Sint sn = -1;
             assertThrown!ConvOverflowException(to!Uint(sn));
-        }
+        }}
 
         // big signed to small unsigned
-        foreach (Sint; AliasSeq!(S2, const S2, immutable S2))
-        foreach (Uint; AliasSeq!(U1, const U1, immutable U1))
-        {
+        static foreach (Sint; AliasSeq!(S2, const S2, immutable S2))
+        static foreach (Uint; AliasSeq!(U1, const U1, immutable U1))
+        {{
             Sint sn = -1;
             assertThrown!ConvOverflowException(to!Uint(sn));
-        }
-    }();
+        }}
+    }}
 }
 
 /*
@@ -837,7 +860,7 @@ if (!isImplicitlyConvertible!(S, T) &&
 
     static foreach (m1; 0 .. 5) // enumerate modifiers
     static foreach (m2; 0 .. 5) // ditto
-    (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+    {{
         alias srcmod = AddModifier!m1;
         alias tgtmod = AddModifier!m2;
 
@@ -871,7 +894,7 @@ if (!isImplicitlyConvertible!(S, T) &&
             static assert(!is(typeof(to!(tgtmod!C)(srcmod!I.init))));   // I to C
             static assert(!is(typeof(to!(tgtmod!J)(srcmod!I.init))));   // I to J
         }
-    }();
+    }}
 }
 
 /**
@@ -993,7 +1016,7 @@ if (!(isImplicitlyConvertible!(S, T) &&
 {
     void test1(T)(T lp, string cmp)
     {
-        foreach (e; AliasSeq!(char, wchar, dchar))
+        static foreach (e; AliasSeq!(char, wchar, dchar))
         {
             test2!(e[])(lp, cmp);
             test2!(const(e)[])(lp, cmp);
@@ -1006,12 +1029,12 @@ if (!(isImplicitlyConvertible!(S, T) &&
         assert(to!string(to!D(lp)) == cmp);
     }
 
-    foreach (e; AliasSeq!("Hello, world!", "Hello, world!"w, "Hello, world!"d))
+    static foreach (e; AliasSeq!("Hello, world!", "Hello, world!"w, "Hello, world!"d))
     {
         test1(e, "Hello, world!");
         test1(e.ptr, "Hello, world!");
     }
-    foreach (e; AliasSeq!("", ""w, ""d))
+    static foreach (e; AliasSeq!("", ""w, ""d))
     {
         test1(e, "");
         test1(e.ptr, "");
@@ -1176,14 +1199,14 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
     import std.exception;
     // Conversion representing integer values with string
 
-    foreach (Int; AliasSeq!(ubyte, ushort, uint, ulong))
+    static foreach (Int; AliasSeq!(ubyte, ushort, uint, ulong))
     {
         assert(to!string(Int(0)) == "0");
         assert(to!string(Int(9)) == "9");
         assert(to!string(Int(123)) == "123");
     }
 
-    foreach (Int; AliasSeq!(byte, short, int, long))
+    static foreach (Int; AliasSeq!(byte, short, int, long))
     {
         assert(to!string(Int(0)) == "0");
         assert(to!string(Int(9)) == "9");
@@ -1269,7 +1292,7 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
     enum EC : char { a = 'x', b = 'y' }
     enum ES : string { a = "aaa", b = "bbb" }
 
-    foreach (E; AliasSeq!(EB, EU, EI, EF, EC, ES))
+    static foreach (E; AliasSeq!(EB, EU, EI, EF, EC, ES))
     {
         assert(to! string(E.a) == "a"c);
         assert(to!wstring(E.a) == "a"w);
@@ -1297,23 +1320,23 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
     assert(to!string(E.doo) == "foo");
     assert(to!string(E.bar) == "bar");
 
-    foreach (S; AliasSeq!(string, wstring, dstring, const(char[]), const(wchar[]), const(dchar[])))
-    {
+    static foreach (S; AliasSeq!(string, wstring, dstring, const(char[]), const(wchar[]), const(dchar[])))
+    {{
         auto s1 = to!S(E.foo);
         auto s2 = to!S(E.foo);
         assert(s1 == s2);
         // ensure we don't allocate when it's unnecessary
         assert(s1 is s2);
-    }
+    }}
 
-    foreach (S; AliasSeq!(char[], wchar[], dchar[]))
-    {
+    static foreach (S; AliasSeq!(char[], wchar[], dchar[]))
+    {{
         auto s1 = to!S(E.foo);
         auto s2 = to!S(E.foo);
         assert(s1 == s2);
         // ensure each mutable array is unique
         assert(s1 !is s2);
-    }
+    }}
 }
 
 // ditto
@@ -1373,7 +1396,7 @@ do
 
 @safe pure nothrow unittest
 {
-    foreach (Int; AliasSeq!(uint, ulong))
+    static foreach (Int; AliasSeq!(uint, ulong))
     {
         assert(to!string(Int(16), 16) == "10");
         assert(to!string(Int(15), 2u) == "1111");
@@ -1383,7 +1406,7 @@ do
         assert(to!string(Int(0x1234AF), 16u, LetterCase.lower) == "1234af");
     }
 
-    foreach (Int; AliasSeq!(int, long))
+    static foreach (Int; AliasSeq!(int, long))
     {
         assert(to!string(Int(-10), 10u) == "-10");
     }
@@ -1853,12 +1876,12 @@ if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S) &&
 
 @safe pure unittest
 {
-    foreach (Str; AliasSeq!(string, wstring, dstring))
-    {
+    static foreach (Str; AliasSeq!(string, wstring, dstring))
+    {{
         Str a = "123";
         assert(to!int(a) == 123);
         assert(to!double(a) == 123);
-    }
+    }}
 
     // 6255
     auto n = to!int("FF", 16);
@@ -1881,6 +1904,49 @@ if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S) &&
     assert(to!int(byWchar("10"), 10) == 10);
     assert(to!int(byDchar("10")) == 10);
     assert(to!int(byDchar("10"), 10) == 10);
+}
+
+/**
+String, or string-like input range, to char type not directly
+supported by parse parses the first dchar of the source.
+
+Returns: the first code point of the input range, converted
+         to type T.
+
+Throws: ConvException if the input range contains more than
+        a single code point, or if the code point does not
+        fit into a code unit of type T.
+*/
+private T toImpl(T, S)(S value)
+if (isSomeChar!T && !is(typeof(parse!T(value))) &&
+    is(typeof(parse!dchar(value))))
+{
+    import std.utf : encode;
+
+    immutable dchar codepoint = parse!dchar(value);
+    if (!value.empty)
+        throw new ConvException(convFormat("Cannot convert \"%s\" to %s because it " ~
+                                           "contains more than a single code point.",
+                                           value, T.stringof));
+    T[dchar.sizeof / T.sizeof] decodedCodepoint;
+    if (encode(decodedCodepoint, codepoint) != 1)
+        throw new ConvException(convFormat("First code point '%s' of \"%s\" does not fit into a " ~
+                                           "single %s code unit", codepoint, value, T.stringof));
+    return decodedCodepoint[0];
+}
+
+@safe pure unittest
+{
+    import std.exception : assertThrown;
+
+    assert(toImpl!wchar("a") == 'a');
+
+    assert(toImpl!char("a"d) == 'a');
+    assert(toImpl!char("a"w) == 'a');
+    assert(toImpl!wchar("a"d) == 'a');
+
+    assertThrown!ConvException(toImpl!wchar("ab"));
+    assertThrown!ConvException(toImpl!char("😃"d));
 }
 
 /**
@@ -1952,7 +2018,7 @@ template roundTo(Target)
 {
     import std.exception;
     // boundary values
-    foreach (Int; AliasSeq!(byte, ubyte, short, ushort, int, uint))
+    static foreach (Int; AliasSeq!(byte, ubyte, short, ushort, int, uint))
     {
         assert(roundTo!Int(Int.min - 0.4L) == Int.min);
         assert(roundTo!Int(Int.max + 0.4L) == Int.max);
@@ -2216,7 +2282,7 @@ Lerr:
 
 @safe pure unittest
 {
-    foreach (Int; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    static foreach (Int; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         {
             assert(to!Int("0") == 0);
@@ -2311,74 +2377,75 @@ Lerr:
 @safe pure unittest
 {
     import std.exception;
+
+    immutable string[] errors =
+    [
+        "",
+        "-",
+        "+",
+        "-+",
+        " ",
+        " 0",
+        "0 ",
+        "- 0",
+        "1-",
+        "xx",
+        "123h",
+        "-+1",
+        "--1",
+        "+-1",
+        "++1",
+    ];
+
+    immutable string[] unsignedErrors =
+    [
+        "+5",
+        "-78",
+    ];
+
     // parsing error check
-    foreach (Int; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    static foreach (Int; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
-        {
-            immutable string[] errors1 =
-            [
-                "",
-                "-",
-                "+",
-                "-+",
-                " ",
-                " 0",
-                "0 ",
-                "- 0",
-                "1-",
-                "xx",
-                "123h",
-                "-+1",
-                "--1",
-                "+-1",
-                "++1",
-            ];
-            foreach (j, s; errors1)
-                assertThrown!ConvException(to!Int(s));
-        }
+        foreach (j, s; errors)
+            assertThrown!ConvException(to!Int(s));
 
         // parse!SomeUnsigned cannot parse head sign.
         static if (isUnsigned!Int)
         {
-            immutable string[] errors2 =
-            [
-                "+5",
-                "-78",
-            ];
-            foreach (j, s; errors2)
+            foreach (j, s; unsignedErrors)
                 assertThrown!ConvException(to!Int(s));
         }
     }
 
+    immutable string[] positiveOverflowErrors =
+    [
+        "128",                  // > byte.max
+        "256",                  // > ubyte.max
+        "32768",                // > short.max
+        "65536",                // > ushort.max
+        "2147483648",           // > int.max
+        "4294967296",           // > uint.max
+        "9223372036854775808",  // > long.max
+        "18446744073709551616", // > ulong.max
+    ];
     // positive overflow check
-    foreach (i, Int; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    static foreach (i, Int; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
-        immutable string[] errors =
-        [
-            "128",                  // > byte.max
-            "256",                  // > ubyte.max
-            "32768",                // > short.max
-            "65536",                // > ushort.max
-            "2147483648",           // > int.max
-            "4294967296",           // > uint.max
-            "9223372036854775808",  // > long.max
-            "18446744073709551616", // > ulong.max
-        ];
-        foreach (j, s; errors[i..$])
+        foreach (j, s; positiveOverflowErrors[i..$])
             assertThrown!ConvOverflowException(to!Int(s));
     }
 
+    immutable string[] negativeOverflowErrors =
+    [
+        "-129",                 // < byte.min
+        "-32769",               // < short.min
+        "-2147483649",          // < int.min
+        "-9223372036854775809", // < long.min
+    ];
     // negative overflow check
-    foreach (i, Int; AliasSeq!(byte, short, int, long))
+    static foreach (i, Int; AliasSeq!(byte, short, int, long))
     {
-        immutable string[] errors =
-        [
-            "-129",                 // < byte.min
-            "-32769",               // < short.min
-            "-2147483649",          // < int.min
-            "-9223372036854775809", // < long.min
-        ];
-        foreach (j, s; errors[i..$])
+        foreach (j, s; negativeOverflowErrors[i..$])
             assertThrown!ConvOverflowException(to!Int(s));
     }
 }
@@ -2616,7 +2683,7 @@ if (isSomeString!Source && !is(Source == enum) &&
     enum EC : char { a = 'a', b = 'b', c = 'c' }
     enum ES : string { a = "aaa", b = "bbb", c = "ccc" }
 
-    foreach (E; AliasSeq!(EB, EU, EI, EF, EC, ES))
+    static foreach (E; AliasSeq!(EB, EU, EI, EF, EC, ES))
     {
         assert(to!E("a"c) == E.a);
         assert(to!E("b"w) == E.b);
@@ -2743,8 +2810,21 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 
     if (isHex)
     {
+        /*
+         * The following algorithm consists of mainly 3 steps (and maybe should
+         * be refactored into functions accordingly)
+         * 1) Parse the textual input into msdec and exp variables:
+         *    input is 0xaaaaa...p+000... where aaaa is the mantissa in hex and
+         *    000 is the exponent in decimal format.
+         * 2) Rounding, ...
+         * 3) Convert msdec and exp into native real format
+         */
+
         int guard = 0;
-        int anydigits = 0;
+        // Used to enforce that any mantissa digits are present
+        bool anydigits = false;
+        // Number of mantissa digits (digit: base 16) we have processed,
+        // ignoring leading 0s
         uint ndigits = 0;
 
         p.popFront();
@@ -2753,14 +2833,23 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
             int i = p.front;
             while (isHexDigit(i))
             {
-                anydigits = 1;
+                anydigits = true;
+                /*
+                 * convert letter to binary representation: First clear bit
+                 * to convert lower space chars to upperspace, then -('A'-10)
+                 * converts letter A to 10, letter B to 11, ...
+                 */
                 i = isAlpha(i) ? ((i & ~0x20) - ('A' - 10)) : i - '0';
+                // 16*4 = 64: The max we can store in a long value
                 if (ndigits < 16)
                 {
+                    // base 16: Y = ... + y3*16^3 + y2*16^2 + y1*16^1 + y0*16^0
                     msdec = msdec * 16 + i;
+                    // ignore leading zeros
                     if (msdec)
                         ndigits++;
                 }
+                // All 64 bits of the long have been filled in now
                 else if (ndigits == 16)
                 {
                     while (msdec >= 0)
@@ -2813,6 +2902,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
             }
         }
 
+        // Have we seen any mantissa digits so far?
         enforce(anydigits, bailOut());
         enforce(!p.empty && (p.front == 'p' || p.front == 'P'),
                 bailOut("Floating point parsing: exponent is required"));
@@ -2849,7 +2939,79 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         enforce(ndigits, new ConvException("Error converting input"~
                         " to floating point"));
 
-        static if (real.mant_dig == 64)
+        import std.math : floatTraits, RealFormat;
+
+        static if (floatTraits!real.realFormat == RealFormat.ieeeQuadruple)
+        {
+            if (msdec)
+            {
+                /*
+                 * For quad precision, we currently allow max mantissa precision
+                 * of 64 bits, simply so we don't have to change the mantissa parser
+                 * in the code above. Feel free to adapt the parser to support full
+                 * 113 bit precision.
+                 */
+
+                // Exponent bias + 112:
+                // After shifting 112 times left, exp must be 1
+                int e2 = 0x3FFF + 112;
+
+                /*
+                 * left justify mantissa: The implicit bit (bit 112) must be 1
+                 * after this, (it is implicit and always defined as 1, so making
+                 * sure we end up with 1 at 112 means we adjust mantissa and eponent
+                 * to fit the ieee format)
+                 * For quadruple, this is especially fun as we have to use 2 longs
+                 * to store the mantissa and care about endianess...
+                 * quad_mant[0]               | quad_mant[1]
+                 * S.EEEEEEEEEEEEEEE.MMMMM .. | MMMMM .. 00000
+                 *                48       0  |
+                 */
+                ulong[2] quad_mant;
+                quad_mant[1] = msdec;
+                while ((quad_mant[0] & 0x0001_0000_0000_0000) == 0)
+                {
+                    // Shift high part one bit left
+                    quad_mant[0] <<= 1;
+                    // Transfer MSB from quad_mant[1] as new LSB
+                    quad_mant[0] |= (quad_mant[1] & 0x8000_0000_0000_0000) ? 0b1 : 0b0;
+                    // Now shift low part one bit left
+                    quad_mant[1] <<= 1;
+                    // Finally, decrease the exponent, as we increased the value
+                    // by shifting of the mantissa
+                    e2--;
+                }
+
+                ()@trusted {
+                    ulong* msw, lsw;
+                    version (LittleEndian)
+                    {
+                        lsw = &(cast(ulong*)&ldval)[0];
+                        msw = &(cast(ulong*)&ldval)[1];
+                    }
+                    else
+                    {
+                        msw = &(cast(ulong*)&ldval)[0];
+                        lsw = &(cast(ulong*)&ldval)[1];
+                    }
+
+                    // Stuff mantissa directly into double
+                    // (first including implicit bit)
+                    *msw = quad_mant[0];
+                    *lsw = quad_mant[1];
+
+                    // Store exponent, now overwriting implicit bit
+                    *msw &= 0x0000_FFFF_FFFF_FFFF;
+                    *msw |= ((e2 & 0xFFFFUL) << 48);
+                }();
+
+                import std.math : ldexp;
+
+                // Exponent is power of 2, not power of 10
+                ldval = ldexp(ldval, exp);
+            }
+        }
+        else static if (floatTraits!real.realFormat == RealFormat.ieeeExtended)
         {
             if (msdec)
             {
@@ -2872,12 +3034,12 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
                 ldval = ldexp(ldval,exp);
             }
         }
-        else static if (real.mant_dig == 53)
+        else static if (floatTraits!real.realFormat == RealFormat.ieeeDouble)
         {
             if (msdec)
             {
-                //Exponent bias + 52:
-                //After shifting 52 times left, exp must be 1
+                // Exponent bias + 52:
+                // After shifting 52 times left, exp must be 1
                 int e2 = 0x3FF + 52;
 
                 // right justify mantissa
@@ -2889,8 +3051,8 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
                     e2++;
                 }
 
-                //Have to shift one more time
-                //and do rounding
+                // Have to shift one more time
+                // and do rounding
                 if ((msdec & 0xFFE0_0000_0000_0000) != 0)
                 {
                     auto roundUp = (msdec & 0x1);
@@ -2900,9 +3062,9 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
                     if (roundUp)
                     {
                         msdec += 1;
-                        //If mantissa was 0b1111... and we added +1
-                        //the mantissa should be 0b10000 (think of implicit bit)
-                        //and the exponent increased
+                        // If mantissa was 0b1111... and we added +1
+                        // the mantissa should be 0b10000 (think of implicit bit)
+                        // and the exponent increased
                         if ((msdec & 0x0020_0000_0000_0000) != 0)
                         {
                             msdec = 0x0010_0000_0000_0000;
@@ -2923,7 +3085,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
                 // Stuff mantissa directly into double
                 // (first including implicit bit)
                 ()@trusted{ *cast(long *)&ldval = msdec; }();
-                //Store exponent, now overwriting implicit bit
+                // Store exponent, now overwriting implicit bit
                 ()@trusted{ *cast(long *)&ldval &= 0x000F_FFFF_FFFF_FFFF; }();
                 ()@trusted{ *cast(long *)&ldval |= ((e2 & 0xFFFUL) << 52); }();
 
@@ -3105,7 +3267,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         return f;
     }
 
-    foreach (Float; AliasSeq!(float, double, real))
+    static foreach (Float; AliasSeq!(float, double, real))
     {
         assert(to!Float("123") == Literal!Float(123));
         assert(to!Float("+123") == Literal!Float(+123));
@@ -3242,15 +3404,20 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 {
     import core.stdc.errno;
     import core.stdc.stdlib;
+    import std.math : floatTraits, RealFormat;
 
     errno = 0;  // In case it was set by another unittest in a different module.
     struct longdouble
     {
-        static if (real.mant_dig == 64)
+        static if (floatTraits!real.realFormat == RealFormat.ieeeQuadruple)
+        {
+            ushort[8] value;
+        }
+        else static if (floatTraits!real.realFormat == RealFormat.ieeeExtended)
         {
             ushort[5] value;
         }
-        else static if (real.mant_dig == 53)
+        else static if (floatTraits!real.realFormat == RealFormat.ieeeDouble)
         {
             ushort[4] value;
         }
@@ -3264,9 +3431,12 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     longdouble x1;
     int i;
 
-    static if (real.mant_dig == 64)
+    static if (floatTraits!real.realFormat == RealFormat.ieeeQuadruple)
+        // Our parser is currently limited to ieeeExtended precision
         enum s = "0x1.FFFFFFFFFFFFFFFEp-16382";
-    else static if (real.mant_dig == 53)
+    else static if (floatTraits!real.realFormat == RealFormat.ieeeExtended)
+        enum s = "0x1.FFFFFFFFFFFFFFFEp-16382";
+    else static if (floatTraits!real.realFormat == RealFormat.ieeeDouble)
         enum s = "0x1.FFFFFFFFFFFFFFFEp-1000";
     else
         static assert(false, "Floating point format for real not supported");
@@ -3276,7 +3446,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     assert(s2.empty);
     x = *cast(longdouble *)&ld;
 
-    static if (real.mant_dig == 64)
+    static if (floatTraits!real.realFormat == RealFormat.ieeeExtended)
     {
         version (CRuntime_Microsoft)
             ld1 = 0x1.FFFFFFFFFFFFFFFEp-16382L; // strtold currently mapped to strtod
@@ -3374,10 +3544,10 @@ if (isSomeString!Source && !is(Source == enum) &&
 
 @safe pure unittest
 {
-    foreach (Str; AliasSeq!(string, wstring, dstring))
+    static foreach (Str; AliasSeq!(string, wstring, dstring))
     {
-        foreach (Char; AliasSeq!(char, wchar, dchar))
-        {
+        static foreach (Char; AliasSeq!(char, wchar, dchar))
+        {{
             static if (is(Unqual!Char == dchar) ||
                        Char.sizeof == ElementEncodingType!Str.sizeof)
             {
@@ -3385,7 +3555,7 @@ if (isSomeString!Source && !is(Source == enum) &&
                 assert(parse!Char(s) == 'a');
                 assert(s == "aa");
             }
-        }
+        }}
     }
 }
 
@@ -4712,7 +4882,7 @@ if (!is(T == class))
     assert(u1.a == "hello");
 }
 
-version(unittest) private struct __conv_EmplaceTest
+version(StdUnittest) private struct __conv_EmplaceTest
 {
     int i = 3;
     this(int i)
@@ -4733,7 +4903,7 @@ version(unittest) private struct __conv_EmplaceTest
     void opAssign();
 }
 
-version(unittest) private class __conv_EmplaceTestClass
+version(StdUnittest) private class __conv_EmplaceTestClass
 {
     int i = 3;
     this(int i) @nogc @safe pure nothrow
@@ -5153,7 +5323,7 @@ version(unittest) private class __conv_EmplaceTestClass
         assert(s.i == 2);
     }
 }
-version(unittest)
+version(StdUnittest)
 {
     //Ambiguity
     struct __std_conv_S
@@ -5670,28 +5840,28 @@ if (isIntegral!T)
 
 @safe unittest
 {
-    foreach (T; AliasSeq!(byte, ubyte))
+    static foreach (T; AliasSeq!(byte, ubyte))
     {
         static assert(is(typeof(unsigned(cast(T) 1)) == ubyte));
         static assert(is(typeof(unsigned(cast(const T) 1)) == ubyte));
         static assert(is(typeof(unsigned(cast(immutable T) 1)) == ubyte));
     }
 
-    foreach (T; AliasSeq!(short, ushort))
+    static foreach (T; AliasSeq!(short, ushort))
     {
         static assert(is(typeof(unsigned(cast(T) 1)) == ushort));
         static assert(is(typeof(unsigned(cast(const T) 1)) == ushort));
         static assert(is(typeof(unsigned(cast(immutable T) 1)) == ushort));
     }
 
-    foreach (T; AliasSeq!(int, uint))
+    static foreach (T; AliasSeq!(int, uint))
     {
         static assert(is(typeof(unsigned(cast(T) 1)) == uint));
         static assert(is(typeof(unsigned(cast(const T) 1)) == uint));
         static assert(is(typeof(unsigned(cast(immutable T) 1)) == uint));
     }
 
-    foreach (T; AliasSeq!(long, ulong))
+    static foreach (T; AliasSeq!(long, ulong))
     {
         static assert(is(typeof(unsigned(cast(T) 1)) == ulong));
         static assert(is(typeof(unsigned(cast(const T) 1)) == ulong));
@@ -5709,7 +5879,7 @@ if (isSomeChar!T)
 
 @safe unittest
 {
-    foreach (T; AliasSeq!(char, wchar, dchar))
+    static foreach (T; AliasSeq!(char, wchar, dchar))
     {
         static assert(is(typeof(unsigned(cast(T)'A')) == T));
         static assert(is(typeof(unsigned(cast(const T)'A')) == T));
@@ -5748,28 +5918,28 @@ if (isIntegral!T)
 
 @system unittest
 {
-    foreach (T; AliasSeq!(byte, ubyte))
+    static foreach (T; AliasSeq!(byte, ubyte))
     {
         static assert(is(typeof(signed(cast(T) 1)) == byte));
         static assert(is(typeof(signed(cast(const T) 1)) == byte));
         static assert(is(typeof(signed(cast(immutable T) 1)) == byte));
     }
 
-    foreach (T; AliasSeq!(short, ushort))
+    static foreach (T; AliasSeq!(short, ushort))
     {
         static assert(is(typeof(signed(cast(T) 1)) == short));
         static assert(is(typeof(signed(cast(const T) 1)) == short));
         static assert(is(typeof(signed(cast(immutable T) 1)) == short));
     }
 
-    foreach (T; AliasSeq!(int, uint))
+    static foreach (T; AliasSeq!(int, uint))
     {
         static assert(is(typeof(signed(cast(T) 1)) == int));
         static assert(is(typeof(signed(cast(const T) 1)) == int));
         static assert(is(typeof(signed(cast(immutable T) 1)) == int));
     }
 
-    foreach (T; AliasSeq!(long, ulong))
+    static foreach (T; AliasSeq!(long, ulong))
     {
         static assert(is(typeof(signed(cast(T) 1)) == long));
         static assert(is(typeof(signed(cast(const T) 1)) == long));
@@ -6003,21 +6173,21 @@ Returns:
 template hexString(string hexData)
 if (hexData.isHexLiteral)
 {
-    immutable hexString = hexStrImpl(hexData);
+    enum hexString = mixin(hexToString(hexData));
 }
 
 /// ditto
 template hexString(wstring hexData)
 if (hexData.isHexLiteral)
 {
-    immutable hexString = hexStrImpl(hexData);
+    enum wstring hexString = mixin(hexToString(hexData));
 }
 
 /// ditto
 template hexString(dstring hexData)
 if (hexData.isHexLiteral)
 {
-    immutable hexString = hexStrImpl(hexData);
+    enum dstring hexString = mixin(hexToString(hexData));
 }
 
 ///
@@ -6032,44 +6202,70 @@ if (hexData.isHexLiteral)
     assert(string3 == "0J1K"d);
 }
 
+@safe nothrow pure private
+{
+    /* These are meant to be used with CTFE.
+     * They cause the instantiations of hexStrLiteral()
+     * to be in Phobos, not user code.
+     */
+    string hexToString(string s)
+    {
+        return hexStrLiteral(s);
+    }
+
+    wstring hexToString(wstring s)
+    {
+        return hexStrLiteral(s);
+    }
+
+    dstring hexToString(dstring s)
+    {
+        return hexStrLiteral(s);
+    }
+}
+
 /*
-    Takes a hexadecimal string literal and returns its representation.
-    hexData is granted to be a valid string by the caller.
-    C is granted to be a valid char type by the caller.
-*/
-@safe nothrow pure
-private auto hexStrImpl(String)(scope String hexData)
+    Turn a hexadecimal string into a regular string literal.
+    I.e. "dead beef" is transformed into "\xde\xad\xbe\xef"
+    suitable for use in a mixin.
+    Params:
+        hexData is string, wstring, or dstring and validated by isHexLiteral()
+ */
+@trusted nothrow pure
+private auto hexStrLiteral(String)(scope String hexData)
 {
     import std.ascii : isHexDigit;
-    alias C = Unqual!(ElementEncodingType!String);
+    alias C = Unqual!(ElementEncodingType!String);    // char, wchar or dchar
     C[] result;
-    result.length = hexData.length / 2;
-    size_t cnt;
+    result.length = 1 + hexData.length * 2 + 1;       // don't forget the " "
+    /* Use a pointer because we know it won't overrun,
+     * and this will reduce the size of the function substantially
+     * by not doing the array bounds checks.
+     * This is why this function is @trusted.
+     */
+    auto r = result.ptr;
+    r[0] = '"';
+    size_t cnt = 0;
     ubyte v;
     foreach (c; hexData)
     {
         if (c.isHexDigit)
         {
-            ubyte x;
-            if (c >= '0' && c <= '9')
-                x = cast(ubyte)(c - '0');
-            else if (c >= 'a' && c <= 'f')
-                x = cast(ubyte)(c - ('a' - 10));
-            else if (c >= 'A' && c <= 'F')
-                x = cast(ubyte)(c - ('A' - 10));
-            if (cnt & 1)
+            if ((cnt & 1) == 0)
             {
-                v = cast(ubyte)((v << 4) | x);
-                result[cnt / 2] = v;
+                r[1 + cnt]     = '\\';
+                r[1 + cnt + 1] = 'x';
+                cnt += 2;
             }
-            else
-                v = x;
+            r[1 + cnt] = c;
             ++cnt;
         }
     }
-    result.length = cnt / 2;
+    r[1 + cnt] = '"';
+    result.length = 1 + cnt + 1;        // trim off any excess length
     return result;
 }
+
 
 @safe unittest
 {

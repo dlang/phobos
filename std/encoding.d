@@ -2465,8 +2465,8 @@ do
 {
     import std.meta : AliasSeq;
 
-    foreach (O; AliasSeq!(Latin1Char, const Latin1Char, immutable Latin1Char))
-    {
+    static foreach (O; AliasSeq!(Latin1Char, const Latin1Char, immutable Latin1Char))
+    {{
         O[] output;
 
         char[] mutableInput = "äbc".dup;
@@ -2480,17 +2480,17 @@ do
         immutable char[] immutInput = "übc";
         transcode(immutInput, output);
         assert(output == [0xFC, 'b', 'c']);
-    }
+    }}
 
     // Make sure that const/mutable input is copied.
-    foreach (C; AliasSeq!(char, const char))
-    {
+    static foreach (C; AliasSeq!(char, const char))
+    {{
         C[] input = "foo".dup;
         C[] output;
         transcode(input, output);
         assert(input == output);
         assert(input !is output);
-    }
+    }}
 
     // But immutable input should not be copied.
     string input = "foo";
@@ -3634,7 +3634,7 @@ class EncodingSchemeUtf32Native : EncodingScheme
 
 
 // Helper functions
-version(unittest)
+version(StdUnittest)
 {
     void transcodeReverse(Src,Dst)(immutable(Src)[] s, out immutable(Dst)[] r)
     {
