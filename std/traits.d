@@ -2670,8 +2670,7 @@ $(LI If `T` is a `struct` or `union` type, then `Layout!T` is an `AliasSeq`
 containing each field preceded by its offset. Fields that are in turn of
 `struct` or `union` types are decomposed transitively. The result is ordered
 in increasing offset order. (Two or more fields may have the same offset due to
-`union`s.) For a given offset, types are in the order of the declaration
-they are a part of.)
+`union`s.) For a given offset, types are ordered lexicographically by their name.)
 
 $(LI If `T` is a `class` or `interface` type, the layout is similar to the one
 return for `struct`s, with one difference: classes and interfaces have
@@ -2714,7 +2713,8 @@ template Layout(T)
                         alias With = U;
                     else static if (U.length == 0)
                         alias With = T;
-                    else static if (T[0] <= U[0])
+                    else static if (T[0] < U[0]
+                            || T[0] == U[0] && T[1].stringof <= U[1].stringof)
                         alias With =
                             AliasSeq!(T[0], T[1], Merge!(T[2 .. $]).With!U);
                     else
@@ -2768,8 +2768,8 @@ template Layout(T)
     alias L2 = Layout!S2;
     static assert(L2.length == 8);
     static assert(L2[0] == 0 && is(L2[1] == char[]));
-    static assert(L2[2] == 16 && is(L2[3] == int));
-    static assert(L2[4] == 16 && is(L2[5] == S1*));
+    static assert(L2[2] == 16 && is(L2[3] == S1*));
+    static assert(L2[4] == 16 && is(L2[5] == int));
     static assert(L2[6] == 20 && is(L2[7] == float));
 
     class C1 { char[] a; union { S1 b; S1 * c; } }
@@ -2778,8 +2778,8 @@ template Layout(T)
     static assert(L3[0] == 0 && is(L3[1] == __Vtable!C1*));
     static assert(L3[2] == size_t.sizeof && is(L3[3] == __Bookkeeping!C1*));
     static assert(L3[4] == 2 * size_t.sizeof && is(L3[5] == char[]));
-    static assert(L3[6] == 4 * size_t.sizeof && is(L3[7] == int));
-    static assert(L3[8] == 4 * size_t.sizeof && is(L3[9] == S1*));
+    static assert(L3[6] == 4 * size_t.sizeof && is(L3[7] == S1*));
+    static assert(L3[8] == 4 * size_t.sizeof && is(L3[9] == int));
     static assert(L3[10] == 4 + 4 * size_t.sizeof && is(L3[11] == float));
 }
 
