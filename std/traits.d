@@ -2666,24 +2666,31 @@ Returns the layout in memory of type `T` as an `AliasSeq`. For each field in
 field. Detailed information depends on the type's kind, as follows:
 
 $(UL
+$(LI For built-in types including primitive types, static and dynamic arrays,
+and pointers, the layout is $(D AliasSeq!(size_t(0), T)).)
+
 $(LI If `T` is a `struct` or `union` type, then `Layout!T` is an `AliasSeq`
 containing each field preceded by its offset. Fields that are in turn of
 `struct` or `union` types are decomposed transitively. The result is ordered
 in increasing offset order. (Two or more fields may have the same offset due to
-`union`s.) For a given offset, types are ordered lexicographically by their name.)
+`union`s.) For a given offset, types are ordered lexicographically by their
+name.)
 
 $(LI If `T` is a `class` or `interface` type, the layout is similar to the one
 return for `struct`s, with one difference: classes and interfaces have
 additional opaque data managed by the compiler. Usually these are placed at the
-front of the object. This data is represented in the layout as pointers to opaque
-types. The presence, number, and types of additional fields are
-implementation-dependent and should not be relied upon in portable code. All these
-additional types have names that start with a double underscore.)
-
-$(LI For all other types, the layout is $(D AliasSeq!(size_t(0), T)).)
-
+front of the object. This data is represented in the layout as pointers to
+opaque types. The presence, number, and types of additional fields are
+implementation-dependent and should not be relied upon in portable code. All
+these additional types are modeled as $(D __ClassMeta!(T, index)) where `T` is
+the class or interface type, and `index` is a sequence number starting at `0`.
+In the current implementations, the first field in the layout has type
+$(D __ClassMeta!(T, 0)*) and contains a pointer to the virtual functions table
+associated with `T`. The second field, present in `class` objects but not in
+`interface` objects, has type $(D __ClassMeta!(T, 1)*) and represents a monitor
+type used for synchronization. These details may change in the future.)
 )
- */
+*/
 template Layout(T)
 {
     private template Add(size_t offset, U...)
@@ -2719,7 +2726,7 @@ template Layout(T)
                             AliasSeq!(T[0], T[1], Merge!(T[2 .. $]).With!U);
                     else
                         alias With =
-                            AliasSeq!(U[0], U[1], Merge!(T).With!(U[2 .. $]));
+                            AliasSeq!(U[0], U[1], Merge!T.With!(U[2 .. $]));
                 }
             }
             static if (T.length <= 2)
@@ -2747,9 +2754,11 @@ template Layout(T)
         }
 
         static if (is(T == class))
-            alias Layout = AliasSeq!(0, __Vtable!T*, size_t.sizeof, __Bookkeeping!T*, Sort!(Impl!0));
+            alias Layout = AliasSeq!(size_t(0), __ClassMeta!(T, 0)*,
+                                     size_t.sizeof, __ClassMeta!(T, 1)*,
+                                     Sort!(Impl!0));
         else static if (is(T == interface))
-            alias Layout = AliasSeq!(0, __Vtable!T*, Sort!(Impl!0));
+            alias Layout = AliasSeq!(0, __ClassMeta!(T, 0)*, Sort!(Impl!0));
         else
             alias Layout = AliasSeq!(Sort!(Impl!0));
     }
@@ -2775,8 +2784,8 @@ template Layout(T)
     class C1 { char[] a; union { S1 b; S1 * c; } }
     alias L3 = Layout!C1;
     static assert(L3.length == 12);
-    static assert(L3[0] == 0 && is(L3[1] == __Vtable!C1*));
-    static assert(L3[2] == size_t.sizeof && is(L3[3] == __Bookkeeping!C1*));
+    static assert(L3[0] == 0 && is(L3[1] == __ClassMeta!(C1, 0)*));
+    static assert(L3[2] == size_t.sizeof && is(L3[3] == __ClassMeta!(C1, 1)*));
     static assert(L3[4] == 2 * size_t.sizeof && is(L3[5] == char[]));
     static assert(L3[6] == 4 * size_t.sizeof && is(L3[7] == S1*));
     static assert(L3[8] == 4 * size_t.sizeof && is(L3[9] == int));
@@ -2784,8 +2793,7 @@ template Layout(T)
 }
 
 // Intentionally undefined and undocumented.
-struct __Vtable(C);
-struct __Bookkeeping(C);
+struct __ClassMeta(C, uint index);
 
 /*
 Statically evaluates to $(D true) if and only if $(D T)'s
