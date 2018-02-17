@@ -135,6 +135,48 @@ struct SList(T)
         return n;
     }
 
+    private static auto createNodeChain(Stuff)(Stuff stuff)
+    if (isImplicitlyConvertible!(Stuff, T))
+    {
+        import std.range : only;
+        return createNodeChain(only(stuff));
+    }
+
+    private static auto createNodeChain(Stuff)(Stuff stuff)
+    if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
+    {
+        static struct Chain
+        {
+            Node* first;
+            Node* last;
+            size_t length;
+        }
+
+        Chain ch;
+
+        foreach (item; stuff)
+        {
+            auto newNode = new Node(null, item);
+            (ch.first ? ch.last._next : ch.first) = newNode;
+            ch.last = newNode;
+            ++ch.length;
+        }
+
+        return ch;
+    }
+
+    private static size_t insertAfterNode(Stuff)(Node* n, Stuff stuff)
+    {
+        auto ch = createNodeChain(stuff);
+
+        if (!ch.length) return 0;
+
+        ch.last._next = n._next;
+        n._next = ch.first;
+
+        return ch.length;
+    }
+
 /**
 Constructor taking a number of nodes
      */
@@ -359,39 +401,16 @@ Returns: The number of elements inserted
 Complexity: $(BIGOH m), where $(D m) is the length of $(D stuff)
      */
     size_t insertFront(Stuff)(Stuff stuff)
-    if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
+    if (isInputRange!Stuff || isImplicitlyConvertible!(Stuff, T))
     {
         initialize();
-        size_t result;
-        Node * n, newRoot;
-        foreach (item; stuff)
-        {
-            auto newNode = new Node(null, item);
-            (newRoot ? n._next : newRoot) = newNode;
-            n = newNode;
-            ++result;
-        }
-        if (!n) return 0;
-        // Last node points to the old root
-        n._next = _first;
-        _first = newRoot;
-        return result;
+        return insertAfterNode(_root, stuff);
     }
 
     /// ditto
-    size_t insertFront(Stuff)(Stuff stuff)
-    if (isImplicitlyConvertible!(Stuff, T))
-    {
-        initialize();
-        auto newRoot = new Node(_first, stuff);
-        _first = newRoot;
-        return 1;
-    }
-
-/// ditto
     alias insert = insertFront;
 
-/// ditto
+    /// ditto
     alias stableInsert = insert;
 
     /// ditto
@@ -494,6 +513,7 @@ assert(std.algorithm.equal(sl[], ["a", "b", "c", "d", "e"]));
      */
 
     size_t insertAfter(Stuff)(Range r, Stuff stuff)
+    if (isInputRange!Stuff || isImplicitlyConvertible!(Stuff, T))
     {
         initialize();
         if (!_first)
@@ -503,10 +523,7 @@ assert(std.algorithm.equal(sl[], ["a", "b", "c", "d", "e"]));
         }
         enforce(r._head);
         auto n = findLastNode(r._head);
-        SList tmp;
-        auto result = tmp.insertFront(stuff);
-        n._next = tmp._first;
-        return result;
+        return insertAfterNode(n, stuff);
     }
 
 /**
@@ -524,6 +541,7 @@ Complexity: $(BIGOH k + m), where $(D k) is the number of elements in
 $(D r) and $(D m) is the length of $(D stuff).
      */
     size_t insertAfter(Stuff)(Take!Range r, Stuff stuff)
+    if (isInputRange!Stuff || isImplicitlyConvertible!(Stuff, T))
     {
         auto orig = r.source;
         if (!orig._head)
@@ -540,12 +558,7 @@ $(D r) and $(D m) is the length of $(D stuff).
             orig.popFront();
         }
         // insert here
-        SList tmp;
-        tmp.initialize();
-        tmp._first = orig._head._next;
-        auto result = tmp.insertFront(stuff);
-        orig._head._next = tmp._first;
-        return result;
+        return insertAfterNode(orig._head, stuff);
     }
 
 /// ditto
