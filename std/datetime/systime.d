@@ -7791,45 +7791,67 @@ public:
         enough to uniquely identify the time zone.
 
         Time zone offsets will be in the form +HH:MM or -HH:MM.
+
+        Params:
+            writer = A `char` accepting
+            $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+        Returns:
+            A `string` when not using an output range; `void` otherwise.
       +/
     string toISOExtString() @safe const nothrow
     {
+        import std.array : appender;
+        auto app = appender!string();
+        app.reserve(35);
         try
-        {
-            immutable adjustedTime = adjTime;
-            long hnsecs = adjustedTime;
-
-            auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
-
-            if (hnsecs < 0)
-            {
-                hnsecs += convert!("hours", "hnsecs")(24);
-                --days;
-            }
-
-            auto hour = splitUnitsFromHNSecs!"hours"(hnsecs);
-            auto minute = splitUnitsFromHNSecs!"minutes"(hnsecs);
-            auto second = splitUnitsFromHNSecs!"seconds"(hnsecs);
-
-            auto dateTime = DateTime(Date(cast(int) days), TimeOfDay(cast(int) hour,
-                                          cast(int) minute, cast(int) second));
-            auto fracSecStr = fracSecsToISOString(cast(int) hnsecs);
-
-            if (_timezone is LocalTime())
-                return dateTime.toISOExtString() ~ fracSecStr;
-
-            if (_timezone is UTC())
-                return dateTime.toISOExtString() ~ fracSecStr ~ "Z";
-
-            immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
-
-            return format("%s%s%s",
-                          dateTime.toISOExtString(),
-                          fracSecStr,
-                          SimpleTimeZone.toISOExtString(utcOffset));
-        }
+            toISOExtString(app);
         catch (Exception e)
-            assert(0, "format() threw.");
+            assert(0, "toISOExtString() threw.");
+        return app.data;
+    }
+
+    /// ditto
+    void toISOExtString(W)(ref W writer) const
+    if (isOutputRange!(W, char))
+    {
+        immutable adjustedTime = adjTime;
+        long hnsecs = adjustedTime;
+
+        auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
+
+        if (hnsecs < 0)
+        {
+            hnsecs += convert!("hours", "hnsecs")(24);
+            --days;
+        }
+
+        immutable hour = splitUnitsFromHNSecs!"hours"(hnsecs);
+        immutable minute = splitUnitsFromHNSecs!"minutes"(hnsecs);
+        immutable second = splitUnitsFromHNSecs!"seconds"(hnsecs);
+
+        immutable dateTime = DateTime(Date(cast(int) days), TimeOfDay(cast(int) hour,
+                                      cast(int) minute, cast(int) second));
+
+        if (_timezone is LocalTime())
+        {
+            dateTime.toISOExtString(writer);
+            fracSecsToISOString(writer, cast(int) hnsecs);
+            return;
+        }
+
+        if (_timezone is UTC())
+        {
+            dateTime.toISOExtString(writer);
+            fracSecsToISOString(writer, cast(int) hnsecs);
+            put(writer, 'Z');
+            return;
+        }
+
+        immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
+
+        dateTime.toISOExtString(writer);
+        fracSecsToISOString(writer, cast(int) hnsecs);
+        SimpleTimeZone.toISOExtString(writer, utcOffset);
     }
 
     ///
@@ -7928,45 +7950,67 @@ public:
         enough to uniquely identify the time zone.
 
         Time zone offsets will be in the form +HH:MM or -HH:MM.
+
+        Params:
+            writer = A `char` accepting
+            $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+        Returns:
+            A `string` when not using an output range; `void` otherwise.
       +/
     string toSimpleString() @safe const nothrow
     {
+        import std.array : appender;
+        auto app = appender!string();
+        app.reserve(35);
         try
-        {
-            immutable adjustedTime = adjTime;
-            long hnsecs = adjustedTime;
-
-            auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
-
-            if (hnsecs < 0)
-            {
-                hnsecs += convert!("hours", "hnsecs")(24);
-                --days;
-            }
-
-            auto hour = splitUnitsFromHNSecs!"hours"(hnsecs);
-            auto minute = splitUnitsFromHNSecs!"minutes"(hnsecs);
-            auto second = splitUnitsFromHNSecs!"seconds"(hnsecs);
-
-            auto dateTime = DateTime(Date(cast(int) days), TimeOfDay(cast(int) hour,
-                                          cast(int) minute, cast(int) second));
-            auto fracSecStr = fracSecsToISOString(cast(int) hnsecs);
-
-            if (_timezone is LocalTime())
-                return dateTime.toSimpleString() ~ fracSecStr;
-
-            if (_timezone is UTC())
-                return dateTime.toSimpleString() ~ fracSecStr ~ "Z";
-
-            immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
-
-            return format("%s%s%s",
-                          dateTime.toSimpleString(),
-                          fracSecStr,
-                          SimpleTimeZone.toISOExtString(utcOffset));
-        }
+            toSimpleString(app);
         catch (Exception e)
-            assert(0, "format() threw.");
+            assert(0, "toSimpleString() threw.");
+        return app.data;
+    }
+
+    /// ditto
+    void toSimpleString(W)(ref W writer) const
+    if (isOutputRange!(W, char))
+    {
+        immutable adjustedTime = adjTime;
+        long hnsecs = adjustedTime;
+
+        auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
+
+        if (hnsecs < 0)
+        {
+            hnsecs += convert!("hours", "hnsecs")(24);
+            --days;
+        }
+
+        immutable hour = splitUnitsFromHNSecs!"hours"(hnsecs);
+        immutable minute = splitUnitsFromHNSecs!"minutes"(hnsecs);
+        immutable second = splitUnitsFromHNSecs!"seconds"(hnsecs);
+
+        immutable dateTime = DateTime(Date(cast(int) days), TimeOfDay(cast(int) hour,
+                                      cast(int) minute, cast(int) second));
+
+        if (_timezone is LocalTime())
+        {
+            dateTime.toSimpleString(writer);
+            fracSecsToISOString(writer, cast(int) hnsecs);
+            return;
+        }
+
+        if (_timezone is UTC())
+        {
+            dateTime.toSimpleString(writer);
+            fracSecsToISOString(writer, cast(int) hnsecs);
+            put(writer, 'Z');
+            return;
+        }
+
+        immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
+
+        dateTime.toSimpleString(writer);
+        fracSecsToISOString(writer, cast(int) hnsecs);
+        SimpleTimeZone.toISOExtString(writer, utcOffset);
     }
 
     ///
@@ -8071,10 +8115,23 @@ public:
         `fromISOString`, `fromISOExtString`, and `fromSimpleString`.
 
         The format returned by toString may or may not change in the future.
+
+        Params:
+            writer = A `char` accepting
+            $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+        Returns:
+            A `string` when not using an output range; `void` otherwise.
       +/
     string toString() @safe const nothrow
     {
         return toSimpleString();
+    }
+
+    /// ditto
+    void toString(W)(ref W writer) const
+    if (isOutputRange!(W, char))
+    {
+        toSimpleString(writer);
     }
 
     @safe unittest
