@@ -7787,7 +7787,7 @@ public:
     assert(value == Enum.A);
 }
 
-/// You need to specify the `unsafe` parameter for enum with custom values
+/// You need to specify the `unsafe` parameter for enums with custom values
 @safe @nogc pure nothrow unittest
 {
     enum UnsafeEnum
