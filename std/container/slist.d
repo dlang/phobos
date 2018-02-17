@@ -290,24 +290,28 @@ define $(D opBinary).
     SList opBinary(string op, Stuff)(Stuff rhs)
     if (op == "~" && is(typeof(SList(rhs))))
     {
-        auto toAdd = SList(rhs);
-        if (empty) return toAdd;
-        // TODO: optimize
-        auto result = dup;
-        auto n = findLastNode(result._first);
-        n._next = toAdd._first;
-        return result;
+        import std.range : chain, only;
+
+        static if (isInputRange!Stuff)
+            alias r = rhs;
+        else
+            auto r = only(rhs);
+
+        return SList(this[].chain(r));
     }
 
     /// ditto
     SList opBinaryRight(string op, Stuff)(Stuff lhs)
     if (op == "~" && !is(typeof(lhs.opBinary!"~"(this))) && is(typeof(SList(lhs))))
     {
-        auto toAdd = SList(lhs);
-        if (empty) return toAdd;
-        auto result = dup;
-        result.insertFront(toAdd[]);
-        return result;
+        import std.range : chain, only;
+
+        static if (isInputRange!Stuff)
+            alias r = lhs;
+        else
+            auto r = only(lhs);
+
+        return SList(r.chain(this[]));
     }
 
 /**
