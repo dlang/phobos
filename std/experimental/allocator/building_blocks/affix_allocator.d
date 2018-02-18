@@ -349,7 +349,13 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     }
     else static if (is(typeof(Allocator.instance) == shared))
     {
+        static assert(stateSize!Allocator == 0);
         static shared AffixAllocator instance;
+        shared { mixin Impl!(); }
+    }
+    else static if (is(Allocator == shared))
+    {
+        static assert(stateSize!Allocator != 0);
         shared { mixin Impl!(); }
     }
     else
@@ -498,4 +504,19 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     assert((() nothrow @nogc => a.reallocate(b, 100))());
     assert(b.length == 100);
     assert((() nothrow @nogc => a.deallocate(b))());
+}
+
+@system unittest
+{
+    import std.experimental.allocator : processAllocator, RCISharedAllocator;
+    import std.traits;
+
+    alias SharedAllocT = shared AffixAllocator!(RCISharedAllocator, int);
+    static assert(is(RCISharedAllocator == shared));
+    static assert(!is(SharedAllocT.instance));
+
+    SharedAllocT a = SharedAllocT(processAllocator);
+    auto buf = a.allocate(10);
+    static assert(is(typeof(a.allocate) == shared));
+    assert(buf.length == 10);
 }
