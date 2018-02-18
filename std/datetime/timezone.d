@@ -546,10 +546,10 @@ public:
     deprecated @safe unittest
     {
         import std.exception : assertNotThrown;
-        import std.stdio : writefln;
+        import std.stdio : writeln;
         static void testPZSuccess(string tzName)
         {
-            scope(failure) writefln("TZName which threw: %s", tzName);
+            scope(failure) writeln("TZName which threw: ", tzName);
             TimeZone.getTimeZone(tzName);
         }
 
