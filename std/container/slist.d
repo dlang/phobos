@@ -929,3 +929,11 @@ Complexity: $(BIGOH n)
     s.reverse();
     assert(s[].equal([3, 2, 1]));
 }
+
+@safe unittest
+{
+    auto s = SList!int([4, 6, 8, 12, 16]);
+    auto d = s.dup;
+    assert(d !is s);
+    assert(d == s);
+}
