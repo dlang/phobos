@@ -340,12 +340,199 @@ endif
 $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
 	@echo Testing $@ - disabled
 
+#first dir-files, then sub-dir-files, lexical ordering
+#etc/
+aa[etc.c.curl]=-dip1000
+aa[etc.c.sqlite3]=-dip1000
+aa[etc.c.zlib]=-dip1000
+
+aa[etc.c.odbc.sql]=-dip1000
+aa[etc.c.odbc.sqlext]=-dip1000
+aa[etc.c.odbc.sqltypes]=-dip1000
+aa[etc.c.odbc.sqlucode]=-dip1000
+
+#std/
+aa[std.array]=-dip1000      # Can add multiple values one by one
+aa[std.ascii]=-dip1000      # Can add multiple values one by one
+aa[std.base64]=-dip1000
+aa[std.bigint]=-dip1000
+aa[std.bitmanip]=-dip1000 # PR 6174
+aa[std.compiler]=-dip1000
+aa[std.complex]=-dip1000
+aa[std.concurrency]=-dip1000
+aa[std.conv]=-dip25 # errors from std.typecons
+aa[std.csv]=-dip1000
+aa[std.demangle]=-dip1000
+aa[std.encoding]=-dip1000
+aa[std.exception]=-dip1000
+aa[std.file]=-dip25 # probably fixed by/depends on PR 6041 merged; errors from std.uni
+aa[std.format]=-dip25 # @system function std.range.primitives.put
+aa[std.functional]=-dip1000
+aa[std.getopt]=-dip1000
+aa[std.json]=-dip1000
+aa[std.math]=-dip1000
+aa[std.mathspecial]=-dip1000
+aa[std.meta]=-dip1000
+aa[std.mmfile]=-dip1000
+aa[std.numeric]=-dip1000
+aa[std.outbuffer]=-dip1000
+aa[std.parallelism]=-dip1000
+aa[std.path]=-dip25
+aa[std.process]=-dip1000
+aa[std.random]=-dip1000
+aa[std.signals]=-dip1000
+aa[std.socket]=-dip25
+aa[std.stdint]=-dip1000
+aa[std.stdio]=-dip25
+aa[std.string]=-dip1000
+aa[std.system]=-dip1000
+aa[std.traits]=-dip1000
+aa[std.typecons]=-dip25 # cannot call @system function std.format.formattedWrite!(Appender!string, char, Nullable!int)
+aa[std.typetuple]=-dip1000
+aa[std.uni]=-dip1000
+aa[std.uri]=-dip1000
+aa[std.utf]=-dip1000
+aa[std.uuid]=-dip1000
+aa[std.variant]=-dip1000
+aa[std.xml]=-dip1000
+aa[std.zip]=-dip1000
+aa[std.zlib]=-dip1000
+
+aa[std.algorithm.comparison]=-dip1000
+aa[std.algorithm.internal]=-dip1000
+aa[std.algorithm.iteration]=-dip25
+aa[std.algorithm.mutation]=-dip1000
+aa[std.algorithm.package]=-dip25
+aa[std.algorithm.searching]=-dip25 # @system find is a blocker for std.algorithm.iteration via comparison.equal
+aa[std.algorithm.setops]=-dip1000
+aa[std.algorithm.sorting]=-dip25
+
+aa[std.c.fenv]=-dip1000
+aa[std.c.locale]=-dip1000
+aa[std.c.math]=-dip1000
+aa[std.c.process]=-dip1000
+aa[std.c.stdarg]=-dip1000
+aa[std.c.stddef]=-dip1000
+aa[std.c.stdio]=-dip1000
+aa[std.c.stdlib]=-dip1000
+aa[std.c.string]=-dip1000
+aa[std.c.time]=-dip1000
+aa[std.c.wcharh]=-dip1000
+aa[std.c.freebsd.socket]=-dip1000
+aa[std.c.linux.linux]=-dip1000
+aa[std.c.linux.linuxextern]=-dip1000
+aa[std.c.linux.pthread]=-dip1000
+aa[std.c.linux.socket]=-dip1000
+aa[std.c.linux.termios]=-dip1000
+aa[std.c.linux.tipc]=-dip1000
+aa[std.c.osx.socket]=-dip1000
+aa[std.c.windows.com]=-dip1000
+aa[std.c.windows.stat]=-dip1000
+aa[std.c.windows.windows]=-dip1000
+aa[std.c.windows.winsock]=-dip1000
+
+aa[std.container.array]=-dip1000
+aa[std.container.binaryheap]=-dip1000
+aa[std.container.dlist]=-dip1000
+aa[std.container.package]=-dip1000
+aa[std.container.rbtree]=-dip1000
+aa[std.container.slist]=-dip25 # depends on issue 18445 fixed
+aa[std.container.util]=-dip25
+
+aa[std.datetime.date]=-dip25 # depends on a fix for writefln
+aa[std.datetime.interval]=-dip1000
+aa[std.datetime.package]=-dip1000
+aa[std.datetime.stopwatch]=-dip1000
+aa[std.datetime.systime]=-dip25 # depends on PR 6181 merged and a fix for writefln
+aa[std.datetime.timezone]=-dip1000 # PR 6183
+
+aa[std.digest.crc]=-dip1000
+aa[std.digest.digest]=-dip1000
+aa[std.digest.hmac]=-dip1000
+aa[std.digest.md]=-dip1000
+aa[std.digest.murmurhash]=-dip1000
+aa[std.digest.package]=-dip1000
+aa[std.digest.ripemd]=-dip1000
+aa[std.digest.sha]=-dip1000
+
+aa[std.experimental.checkedint]=-dip1000
+aa[std.experimental.scripting]=-dip1000
+aa[std.experimental.typecons]=-dip1000
+aa[std.experimental.allocator.common]=-dip1000
+aa[std.experimental.allocator.gc_allocator]=-dip1000
+aa[std.experimental.allocator.mallocator]=-dip1000
+aa[std.experimental.allocator.mmap_allocator]=-dip1000
+aa[std.experimental.allocator.package]=-dip1000
+aa[std.experimental.allocator.showcase]=-dip1000
+aa[std.experimental.allocator.typed]=-dip1000
+aa[std.experimental.allocator.building_blocks.affix_allocator]=-dip1000
+aa[std.experimental.allocator.building_blocks.allocator_list]=-dip1000
+aa[std.experimental.allocator.building_blocks.ascending_page_allocator]=-dip1000
+aa[std.experimental.allocator.building_blocks.bitmapped_block]=-dip1000
+aa[std.experimental.allocator.building_blocks.bucketizer]=-dip1000
+aa[std.experimental.allocator.building_blocks.fallback_allocator]=-dip1000
+aa[std.experimental.allocator.building_blocks.free_list]=-dip1000
+aa[std.experimental.allocator.building_blocks.free_tree]=-dip1000
+aa[std.experimental.allocator.building_blocks.kernighan_ritchie]=-dip1000
+aa[std.experimental.allocator.building_blocks.null_allocator]=-dip1000
+aa[std.experimental.allocator.building_blocks.package]=-dip1000
+aa[std.experimental.allocator.building_blocks.quantizer]=-dip1000
+aa[std.experimental.allocator.building_blocks.region]=-dip1000
+aa[std.experimental.allocator.building_blocks.scoped_allocator]=-dip1000
+aa[std.experimental.allocator.building_blocks.segregator]=-dip1000
+aa[std.experimental.allocator.building_blocks.stats_collector]=-dip1000
+aa[std.experimental.logger.core]=-dip25
+aa[std.experimental.logger.filelogger]=-dip25
+aa[std.experimental.logger.multilogger]=-dip25
+aa[std.experimental.logger.nulllogger]=-dip25
+aa[std.experimental.logger.package]=-dip1000
+
+aa[std.internal.cstring]=-dip1000
+aa[std.internal.scopebuffer]=-dip1000
+aa[std.internal.unicode_comp]=-dip1000
+aa[std.internal.unicode_decomp]=-dip1000
+aa[std.internal.unicode_grapheme]=-dip1000
+aa[std.internal.unicode_norm]=-dip1000
+aa[std.internal.unicode_tables]=-dip1000
+aa[std.internal.digest.sha_SSSE3]=-dip1000
+aa[std.internal.math.biguintcore]=-dip1000
+aa[std.internal.math.biguintnoasm]=-dip1000
+aa[std.internal.math.biguintx86]=-dip1000
+aa[std.internal.math.errorfunction]=-dip1000
+aa[std.internal.math.gammafunction]=-dip1000
+aa[std.internal.test.dummyrange]=-dip1000
+aa[std.internal.test.range]=-dip1000
+aa[std.internal.test.uda]=-dip1000
+aa[std.internal.windows.advapi32]=-dip1000
+
+aa[std.net.curl]=-dip1000
+aa[std.net.isemail]=-dip1000
+
+aa[std.range.interfaces]=-dip1000
+aa[std.range.package]=-dip25 # i.a. depends on issue 17512 fixed
+aa[std.range.primitives]=-dip1000
+
+aa[std.regex.package]=-dip1000
+aa[std.regex.internal.backtracking]=-dip1000
+aa[std.regex.internal.generator]=-dip1000
+aa[std.regex.internal.ir]=-dip1000
+aa[std.regex.internal.kickstart]=-dip1000
+aa[std.regex.internal.parser]=-dip1000
+aa[std.regex.internal.tests2]=-dip1000
+aa[std.regex.internal.tests]=-dip25
+aa[std.regex.internal.thompson]=-dip1000
+
+aa[std.windows.charset]=-dip1000
+aa[std.windows.registry]=-dip1000
+aa[std.windows.syserror]=-dip1000
+
+
 UT_D_OBJS:=$(addprefix $(ROOT)/unittest/,$(addsuffix .o,$(D_MODULES)))
 # need to recompile all unittest objects whenever sth. changes
 $(UT_D_OBJS): $(ALL_D_FILES)
 $(UT_D_OBJS): $(ROOT)/unittest/%.o: %.d
 	@mkdir -p $(dir $@)
-	$(DMD) $(DFLAGS) $(UDFLAGS) -c -of$@ $<
+	$(DMD) $(DFLAGS) $(UDFLAGS) $(aa[$(subst /,.,$(basename $<))]) -c -of$@ $<
 
 ifneq (1,$(SHARED))
 
@@ -382,7 +569,7 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 %.test : %.d $(LIB)
 	T=`mktemp -d /tmp/.dmd-run-test.XXXXXX` &&                                                              \
 	  (                                                                                                     \
-	    $(DMD) -od$$T $(DFLAGS) -main $(UDFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL) -cov -run $< ;     \
+	    $(DMD) -od$$T $(DFLAGS) $(aa[$(subst /,.,$(basename $<))]) -main $(UDFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL) -cov -run $< ;     \
 	    RET=$$? ; rm -rf $$T ; exit $$RET                                                                   \
 	  )
 
