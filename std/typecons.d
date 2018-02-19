@@ -3356,9 +3356,9 @@ auto nullable(alias nullValue, T)(T t)
 /**
 Unpacks the content of a $(D Nullable), performs an operation and packs it again. Does nothing if isNull.
 
-When called on a $(D Nullable), $(D bind) will unpack the value contained in the $(D Nullable),
+When called on a $(D Nullable), $(D apply) will unpack the value contained in the $(D Nullable),
 pass it to the function you provide and wrap the result in another $(D Nullable) (if necessary).
-If the Nullable is null, $(D bind) will return null itself.
+If the Nullable is null, $(D apply) will return null itself.
 
 Params:
     t = a $(D Nullable)
@@ -3370,11 +3370,11 @@ Returns:
 See also:
     $(HTTP en.wikipedia.org/wiki/Monad_(functional_programming)#The_Maybe_monad, The `Maybe` monad)
  */
-template bind(alias fun)
+template apply(alias fun)
 {
     import std.functional : unaryFun;
 
-    auto bind(T)(T t)
+    auto apply(T)(T t)
     if (isInstanceOf!(Nullable, T) && is(typeof(unaryFun!fun(T.init.get))))
     {
         alias FunType = typeof(unaryFun!fun(T.init.get));
@@ -3415,14 +3415,14 @@ nothrow pure @nogc @safe unittest
 
     Nullable!int sample;
 
-    // bind(null) results in a null $(D Nullable) of the function's return type.
-    auto f = sample.bind!toFloat;
+    // apply(null) results in a null $(D Nullable) of the function's return type.
+    auto f = sample.apply!toFloat;
     assert(sample.isNull && f.isNull);
 
     sample = 3;
 
-    // bind(non-null) calls the function and wraps the result in a $(D Nullable).
-    f = sample.bind!toFloat;
+    // apply(non-null) calls the function and wraps the result in a $(D Nullable).
+    f = sample.apply!toFloat;
     assert(!sample.isNull && !f.isNull);
     assert(f.get == 3.0f);
 }
@@ -3435,17 +3435,17 @@ nothrow pure @nogc @safe unittest
     Nullable!int sample;
 
     // when the function already returns a $(D Nullable), that $(D Nullable) is not wrapped.
-    auto result = sample.bind!greaterThree;
+    auto result = sample.apply!greaterThree;
     assert(sample.isNull && result.isNull);
 
     // The function may decide to return a null $(D Nullable).
     sample = 3;
-    result = sample.bind!greaterThree;
+    result = sample.apply!greaterThree;
     assert(!sample.isNull && result.isNull);
 
     // Or it may return a value already wrapped in a $(D Nullable).
     sample = 4;
-    result = sample.bind!greaterThree;
+    result = sample.apply!greaterThree;
     assert(!sample.isNull && !result.isNull);
     assert(result.get == 4);
 }
