@@ -1682,7 +1682,7 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(range.front))))
     }}
 }
 
-/++
+/+
    Conservative heuristic to determine if a range can be iterated cheaply.
    Used by $(D join) in decision to do an extra iteration of the range to
    compute the resultant length. If iteration is not cheap then precomputing
