@@ -1,7 +1,7 @@
 `fold` is added to `std.parallelism.TaskPool`
 
-$(REF fold, std, parallelism, TaskPool) is functionally equivalent to
-$(REF_ALTTEXT `reduce`, reduce, std, parallelism, TaskPool) except the range
+$(REF TaskPool.fold, std, parallelism) is functionally equivalent to
+$(REF_ALTTEXT TaskPool.reduce, reduce, std, parallelism) except the range
 parameter comes first and there is no need to use $(REF_ALTTEXT
 `tuple`,tuple,std,typecons) for multiple seeds.
 
