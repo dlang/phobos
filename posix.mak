@@ -389,7 +389,7 @@ aa[std.system]=-dip1000
 aa[std.traits]=-dip1000
 aa[std.typecons]=-dip25 # cannot call @system function std.format.formattedWrite!(Appender!string, char, Nullable!int)
 aa[std.typetuple]=-dip1000
-aa[std.uni]=-dip1000
+aa[std.uni]=-dip25 # depends on PR 6041 merged
 aa[std.uri]=-dip1000
 aa[std.utf]=-dip1000
 aa[std.uuid]=-dip1000
@@ -443,7 +443,7 @@ aa[std.datetime.date]=-dip25 # depends on a fix for writefln
 aa[std.datetime.interval]=-dip1000
 aa[std.datetime.package]=-dip1000
 aa[std.datetime.stopwatch]=-dip1000
-aa[std.datetime.systime]=-dip25 # depends on PR 6181 merged and a fix for writefln
+aa[std.datetime.systime]=-dip25 # PR 6181 ; depends on a fix for writefln
 aa[std.datetime.timezone]=-dip1000 # PR 6183
 
 aa[std.digest.crc]=-dip1000
