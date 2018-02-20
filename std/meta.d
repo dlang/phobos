@@ -10,7 +10,7 @@
  * sequence. `S[low .. high]` returns a new alias
  * sequence that is a slice of the old one.
  *
- * For more information, see $(DDLINK ctarguments, Compile-time Argument Lists, Compile-time Argument Lists).
+ * For more information, see $(DDLINK ctarguments, Compile-time Sequences, Compile-time Sequences).
  *
  * $(B Note:) Several templates in this module use or operate on eponymous templates that
  * take a single argument and evaluate to a boolean constant. Such templates
