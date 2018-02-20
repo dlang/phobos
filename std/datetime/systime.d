@@ -55,7 +55,7 @@ else version(Posix)
     import core.sys.posix.sys.types : time_t;
 }
 
-version(StdUnittest)
+version(unittest)
 {
     import core.exception : AssertError;
     import std.exception : assertThrown;
@@ -9771,7 +9771,7 @@ afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
     assertThrown!DateTimeException(parseRFC822DateTime(badStr));
 }
 
-version(StdUnittest) void testParse822(alias cr)(string str, SysTime expected, size_t line = __LINE__)
+version(unittest) void testParse822(alias cr)(string str, SysTime expected, size_t line = __LINE__)
 {
     import std.format : format;
     auto value = cr(str);
@@ -9780,7 +9780,7 @@ version(StdUnittest) void testParse822(alias cr)(string str, SysTime expected, s
         throw new AssertError(format("wrong result. expected [%s], actual[%s]", expected, result), __FILE__, line);
 }
 
-version(StdUnittest) void testBadParse822(alias cr)(string str, size_t line = __LINE__)
+version(unittest) void testBadParse822(alias cr)(string str, size_t line = __LINE__)
 {
     try
         parseRFC822DateTime(cr(str));
@@ -10715,7 +10715,7 @@ if (isIntegral!T && isSigned!T) // The constraints on R were already covered by 
 }
 
 
-version(StdUnittest)
+version(unittest)
 {
     // Variables to help in testing.
     Duration currLocalDiffFromUTC;

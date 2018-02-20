@@ -4103,7 +4103,7 @@ private struct RoundRobinBuffer(C1, C2)
     }
 }
 
-version(StdUnittest)
+version(unittest)
 {
     // This was the only way I could get nested maps to work.
     __gshared TaskPool poolInstance;
@@ -4770,7 +4770,7 @@ version(parallelismStressTest)
     }
 }
 
-version(StdUnittest)
+version(unittest)
 {
     struct __S_12733
     {

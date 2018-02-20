@@ -175,7 +175,7 @@ else version (X86)
     private alias haveSSE = core.cpuid.sse;
 }
 
-version(StdUnittest)
+version(unittest)
 {
     import core.stdc.stdio; // : sprintf;
 

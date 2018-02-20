@@ -334,7 +334,7 @@ template QualifierOf(T)
     alias Qual7 = QualifierOf!(   immutable int);   static assert(is(Qual7!long ==    immutable long));
 }
 
-version(StdUnittest)
+version(unittest)
 {
     alias TypeQualifierList = AliasSeq!(MutableOf, ConstOf, SharedOf, SharedConstOf, ImmutableOf);
 
@@ -482,7 +482,7 @@ template fullyQualifiedName(T...)
     static assert(fullyQualifiedName!fullyQualifiedName == "std.traits.fullyQualifiedName");
 }
 
-version(StdUnittest)
+version(unittest)
 {
     // Used for both fqnType and fqnSym unittests
     private struct QualifiedNameTests
@@ -2238,7 +2238,7 @@ template SetFunctionAttributes(T, string linkage, uint attrs)
     }
 }
 
-version(StdUnittest)
+version(unittest)
 {
     // Some function types to test.
     int sc(scope int, ref int, out int, lazy int, int);
@@ -7499,7 +7499,7 @@ template mangledName(sth...)
     static assert(TL == AliasSeq!("i", "xi", "yi"));
 }
 
-version(StdUnittest) void freeFunc(string);
+version(unittest) void freeFunc(string);
 
 @safe unittest
 {

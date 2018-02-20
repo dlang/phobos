@@ -47,7 +47,7 @@ import std.traits : isSomeString, Unqual;
 import std.typecons : Flag;
 import std.range.primitives : isOutputRange;
 
-version(StdUnittest) import std.exception : assertThrown;
+version(unittest) import std.exception : assertThrown;
 
 @safe unittest
 {
@@ -10305,7 +10305,7 @@ if (isSomeString!T)
 }
 
 
-version(StdUnittest)
+version(unittest)
 {
     // All of these helper arrays are sorted in ascending order.
     auto testYearsBC = [-1999, -1200, -600, -4, -1, 0];

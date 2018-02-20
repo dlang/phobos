@@ -14,7 +14,7 @@ package template algoFormat()
 }
 
 // Internal random array generators
-version(StdUnittest)
+version(unittest)
 {
     package enum size_t maxArraySize = 50;
     package enum size_t minArraySize = maxArraySize - 1;

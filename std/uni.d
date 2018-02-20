@@ -719,7 +719,7 @@ debug(std_uni) import std.stdio; // writefln, writeln
 
 private:
 
-version(StdUnittest)
+version(unittest)
 {
 private:
     struct TestAliasedString
@@ -3492,7 +3492,7 @@ private:
     }}
 }
 
-version(StdUnittest)
+version(unittest)
 {
     private alias AllSets = AliasSeq!(InversionList!GcPolicy, InversionList!ReallocPolicy);
 }
@@ -7224,7 +7224,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 }
 
 // For testing non-forward-range input ranges
-version(StdUnittest)
+version(unittest)
 private static struct InputRangeString
 {
     private string s;

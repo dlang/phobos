@@ -53,7 +53,7 @@ else version(Posix)
     import core.sys.posix.sys.types : time_t;
 }
 
-version(StdUnittest) import std.exception : assertThrown;
+version(unittest) import std.exception : assertThrown;
 
 
 /++
