@@ -550,7 +550,7 @@ private template blockAttribute(T)
         enum blockAttribute = GC.BlkAttr.NO_SCAN;
     }
 }
-version(StdUnittest)
+version(unittest)
 {
     import core.memory : UGC = GC;
     static assert(!(blockAttribute!void & UGC.BlkAttr.NO_SCAN));
@@ -569,7 +569,7 @@ private template nDimensions(T)
     }
 }
 
-version(StdUnittest)
+version(unittest)
 {
     static assert(nDimensions!(uint[]) == 1);
     static assert(nDimensions!(float[][]) == 2);

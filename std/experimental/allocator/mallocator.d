@@ -12,7 +12,7 @@ import std.experimental.allocator.common;
  */
 struct Mallocator
 {
-    version(StdUnittest)
+    version(unittest)
     @system unittest { testAllocator!(() => Mallocator.instance); }
 
     /**
@@ -354,7 +354,7 @@ struct AlignedMallocator
     //...
 }
 
-version(StdUnittest) version(CRuntime_DigitalMars)
+version(unittest) version(CRuntime_DigitalMars)
 @nogc nothrow
 size_t addr(ref void* ptr) { return cast(size_t) ptr; }
 

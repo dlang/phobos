@@ -58,7 +58,7 @@ import std.range.primitives;
 public import std.system : Endian;
 import std.traits;
 
-version(StdUnittest)
+version(unittest)
 {
     import std.stdio;
 }

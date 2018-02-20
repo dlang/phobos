@@ -102,7 +102,7 @@ static import std.meta;
 import std.range.primitives;
 import std.traits;
 
-version(StdUnittest)
+version(unittest)
 {
 private:
     struct TestAliasedString
@@ -4114,7 +4114,7 @@ string expandTilde(string inputPath) nothrow
     }
 }
 
-version(StdUnittest)
+version(unittest)
 {
     /* Define a mock RandomAccessRange to use for unittesting.
      */
@@ -4145,7 +4145,7 @@ version(StdUnittest)
     static assert( isRandomAccessRange!(MockRange!(const(char))) );
 }
 
-version(StdUnittest)
+version(unittest)
 {
     /* Define a mock BidirectionalRange to use for unittesting.
      */
