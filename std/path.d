@@ -1736,7 +1736,7 @@ if (isSomeChar!C)
         if (result)
             result = chainPath(result, path).array;
         else
-            result = path;
+            result = path.idup;
     }
     result = asNormalizedPath(result).array;
     return cast(typeof(return)) result;
