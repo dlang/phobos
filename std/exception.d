@@ -388,7 +388,7 @@ void assertThrown(T : Throwable = Exception, E)
 template enforce(E : Throwable = Exception)
 if (is(typeof(new E("", __FILE__, __LINE__)) : Throwable) || is(typeof(new E(__FILE__, __LINE__)) : Throwable))
 {
-
+    ///
     T enforce(T)(T value, lazy const(char)[] msg = null,
     string file = __FILE__, size_t line = __LINE__)
     if (is(typeof({ if (!value) {} })))
