@@ -69,7 +69,9 @@ Authors:   $(HTTP erdani.org, Andrei Alexandrescu),
 module std.typecons;
 
 import core.stdc.stdint : uintptr_t;
+import std.format : singleSpec, FormatSpec, formatValue;
 import std.meta; // : AliasSeq, allSatisfy;
+import std.range.primitives : isOutputRange;
 import std.traits;
 
 ///
@@ -2440,33 +2442,65 @@ Params:
         assert(e != 12);
     }
 
-    template toString()
+    /**
+     * Gives the string `"Nullable.null"` if `isNull` is `true`. Otherwise, the
+     * result is equivalent to calling $(REF formattedWrite, std,format) on the
+     * underlying value.
+     *
+     * Params:
+     *     writer = A `char` accepting
+     *     $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+     *     fmt = A $(REF FormatSpec, std,format) which is used to represent
+     *     the value if this Nullable is not null
+     * Returns:
+     *     A `string` if `writer` and `fmt` are not set; `void` otherwise.
+     */
+    string toString()
     {
-        import std.format : FormatSpec, formatValue;
-        // Needs to be a template because of DMD @@BUG@@ 13737.
-        void toString()(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt)
-        {
-            if (isNull)
-            {
-                sink.formatValue("Nullable.null", fmt);
-            }
-            else
-            {
-                sink.formatValue(_value, fmt);
-            }
-        }
+        import std.array : appender;
+        auto app = appender!string();
+        auto spec = singleSpec("%s");
+        toString(app, spec);
+        return app.data;
+    }
 
-        // Issue 14940
-        void toString()(scope void delegate(const(char)[]) @safe sink, const ref FormatSpec!char fmt)
+    /// ditto
+    void toString(W)(ref W writer, const ref FormatSpec!char fmt)
+    if (isOutputRange!(W, char))
+    {
+        import std.range.primitives : put;
+        if (isNull)
+            put(writer, "Nullable.null");
+        else
+            formatValue(writer, _value, fmt);
+    }
+
+    //@@@DEPRECATED_2.086@@@
+    deprecated("To be removed after 2.086. Please use the output range overload instead.")
+    void toString()(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt)
+    {
+        if (isNull)
         {
-            if (isNull)
-            {
-                sink.formatValue("Nullable.null", fmt);
-            }
-            else
-            {
-                sink.formatValue(_value, fmt);
-            }
+            sink.formatValue("Nullable.null", fmt);
+        }
+        else
+        {
+            sink.formatValue(_value, fmt);
+        }
+    }
+
+    // Issue 14940
+    //@@@DEPRECATED_2.086@@@
+    deprecated("To be removed after 2.086. Please use the output range overload instead.")
+    void toString()(scope void delegate(const(char)[]) @safe sink, const ref FormatSpec!char fmt)
+    {
+        if (isNull)
+        {
+            sink.formatValue("Nullable.null", fmt);
+        }
+        else
+        {
+            sink.formatValue(_value, fmt);
         }
     }
 
@@ -2932,7 +2966,10 @@ auto nullable(T)(T t)
     alias NullableTest = Nullable!Test;
 
     NullableTest nt = Test("test");
+    // test output range version
     assert(nt.to!string() == `Test("test")`);
+    // test appender version
+    assert(nt.toString() == `Test("test")`);
 
     NullableTest ntn = Test("null");
     assert(ntn.to!string() == `Test("null")`);
