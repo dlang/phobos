@@ -7102,7 +7102,7 @@ public: // Public API continues
     Returns:
         length of grapheme cluster
 +/
-size_t graphemeStride(C)(const scope C[] input, size_t index)
+size_t graphemeStride(C)(const scope C[] input, size_t index) @safe pure
 if (is(C : dchar))
 {
     auto src = input[index..$];
