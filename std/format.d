@@ -3726,8 +3726,6 @@ private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T val, const re
 if (is(T == class) && !is(T == enum))
 {
     enforceValidFormatSpec!(T, Char)(f);
-    // TODO: Change this once toString() works for shared objects.
-    static assert(!is(T == shared), "unable to format shared objects");
 
     // TODO: remove this check once `@disable override` deprecation cycle is finished
     static if (__traits(hasMember, T, "toString") && isSomeFunction!(val.toString))
@@ -3738,7 +3736,20 @@ if (is(T == class) && !is(T == enum))
         put(w, "null");
     else
     {
-        static if (hasToString!(T, Char) > 1 || (!isInputRange!T && !is(BuiltinTypeOf!T)))
+        static if ((is(T == immutable) || is(T == const) || is(T == shared)) && hasToString!(T, Char) == 0)
+        {
+            // issue 7879, remove this when Object gets const toString
+            static if (is(T == immutable))
+                put(w, "immutable(");
+            else static if (is(T == const))
+                put(w, "const(");
+            else static if (is(T == shared))
+                put(w, "shared(");
+
+            put(w, typeid(Unqual!T).name);
+            put(w, ')');
+        }
+        else static if (hasToString!(T, Char) > 1 || !isInputRange!T && !is(BuiltinTypeOf!T))
         {
             formatObject!(Writer, T, Char)(w, val, f);
         }
@@ -3828,6 +3839,33 @@ if (is(T == class) && !is(T == enum))
     formatTest( new C3([0, 1, 2]), "[012]" );
     formatTest( new C4([0, 1, 2]), "[012]" );
     formatTest( new C5([0, 1, 2]), "[0, 1, 2]" );
+}
+
+// outside the unittest block, otherwise the FQN of the
+// class contains the line number of the unittest
+version(unittest)
+{
+    private class C {}
+}
+
+// issue 7879
+@safe unittest
+{
+    const(C) c;
+    auto s = format("%s", c);
+    assert(s == "null");
+
+    immutable(C) c2 = new C();
+    s = format("%s", c2);
+    assert(s == "immutable(std.format.C)");
+
+    const(C) c3 = new C();
+    s = format("%s", c3);
+    assert(s == "const(std.format.C)");
+
+    shared(C) c4 = new C();
+    s = format("%s", c4);
+    assert(s == "shared(std.format.C)");
 }
 
 // ditto
