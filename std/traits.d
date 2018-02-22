@@ -2732,8 +2732,8 @@ template Layout(T)
             static if (T.length <= 2)
                 alias Sort = T;
             else
-                alias Sort = Merge!(Sort!(T[0 .. T.length / 2]))
-                    .With!(Sort!(T[T.length / 2 .. $]));
+                alias Sort = Merge!(Sort!(T[0 .. T.length / 4 * 2]))
+                    .With!(Sort!(T[T.length / 4 * 2 .. $]));
         }
 
         private alias names = FieldNameTuple!T;
@@ -2794,6 +2794,21 @@ template Layout(T)
 
 // Intentionally undefined and undocumented.
 struct __ClassMeta(C, uint index);
+
+unittest
+{
+    struct S
+    {
+        uint u;
+        char[64] c64;
+        long l1, l2, l3, l4, l5, l6;
+        union {
+            S* s;
+            S*[32] s32;
+        }
+    }
+    static assert(Layout!S.length == 20);
+}
 
 /*
 Statically evaluates to $(D true) if and only if $(D T)'s
