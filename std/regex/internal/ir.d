@@ -434,7 +434,7 @@ struct Group(DataIndex)
 interface MatcherFactory(Char)
 {
 @safe:
-    Matcher!Char create(const Regex!Char, in Char[] input) const;
+    Matcher!Char create(const ref Regex!Char, in Char[] input) const;
     Matcher!Char dup(Matcher!Char m, in Char[] input) const;
     size_t incRef(Matcher!Char m) const;
     size_t decRef(Matcher!Char m) const;
@@ -448,9 +448,9 @@ abstract class GenericFactory(alias EngineType, Char) : MatcherFactory!Char
     // round up to next multiple of size_t for alignment purposes
     enum classSize = (__traits(classInstanceSize, EngineType!Char) + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
 
-    Matcher!Char construct(const Regex!Char re, in Char[] input, void[] memory) const;
+    Matcher!Char construct(const ref Regex!Char re, in Char[] input, void[] memory) const;
 
-    override Matcher!Char create(const Regex!Char re, in Char[] input) const @trusted
+    override Matcher!Char create(const ref Regex!Char re, in Char[] input) const @trusted
     {
         immutable size = EngineType!Char.initialMemory(re) + classSize;
         auto memory = enforce(malloc(size), "malloc failed")[0 .. size];
@@ -496,7 +496,7 @@ abstract class GenericFactory(alias EngineType, Char) : MatcherFactory!Char
 // A factory for run-time engines
 class RuntimeFactory(alias EngineType, Char) : GenericFactory!(EngineType, Char)
 {
-    override EngineType!Char construct(const Regex!Char re, in Char[] input, void[] memory) const
+    override EngineType!Char construct(const ref Regex!Char re, in Char[] input, void[] memory) const
     {
         import std.conv : emplace;
         return emplace!(EngineType!Char)(memory[0 .. classSize],
@@ -507,7 +507,7 @@ class RuntimeFactory(alias EngineType, Char) : GenericFactory!(EngineType, Char)
 // A factory for compile-time engine
 class CtfeFactory(alias EngineType, Char, alias func) : GenericFactory!(EngineType, Char)
 {
-    override EngineType!Char construct(const Regex!Char re, in Char[] input, void[] memory) const
+    override EngineType!Char construct(const ref Regex!Char re, in Char[] input, void[] memory) const
     {
         import std.conv : emplace;
         return emplace!(EngineType!Char)(memory[0 .. classSize],
@@ -518,7 +518,7 @@ class CtfeFactory(alias EngineType, Char, alias func) : GenericFactory!(EngineTy
 // A workaround for R-T enum re = regex(...)
 template defaultFactory(Char)
 {
-    @property MatcherFactory!Char defaultFactory(const Regex!Char re)
+    @property MatcherFactory!Char defaultFactory(const ref Regex!Char re) @safe
     {
         import std.regex.internal.backtracking : BacktrackingMatcher;
         import std.regex.internal.thompson : ThompsonMatcher;

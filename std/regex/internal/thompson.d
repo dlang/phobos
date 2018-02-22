@@ -847,7 +847,7 @@ final:
         }
     }
 
-    this()(const Regex!Char program, Stream stream, void[] memory)
+    this()(ref const Regex!Char program, Stream stream, void[] memory)
     {
          // We are emplace'd to malloced memory w/o blitting T.init over it\
          // make sure we initialize all fields explicitly

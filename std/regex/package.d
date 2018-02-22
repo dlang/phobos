@@ -441,10 +441,20 @@ template ctRegexImpl(alias pattern, string flags=[])
     {
         // allow code that expects mutable Regex to still work
         // we stay "logically const"
-        @trusted @property auto getRe() const { return cast() staticRe; }
+        @property @trusted ref getRe() const { return *cast(Regex!Char*)&staticRe; }
         alias getRe this;
     }
     enum wrapper = Wrapper();
+}
+
+@safe unittest
+{
+    // test compat for logical const workaround
+    static void test(StaticRegex!char)
+    {
+    }
+    enum re = ctRegex!``;
+    test(re);
 }
 
 /++
@@ -476,8 +486,6 @@ if (isSomeString!R)
     alias String = R;
 private:
     import std.conv : text;
-    R _input;
-    int _nMatch;
     enum smallString = 3;
     enum SMALL_MASK = 0x8000_0000, REF_MASK= 0x1FFF_FFFF;
     union
@@ -485,9 +493,11 @@ private:
         Group!DataIndex[] big_matches;
         Group!DataIndex[smallString] small_matches;
     }
+    const(NamedGroup)[] _names;
+    R _input;
+    int _nMatch;
     uint _f, _b;
     uint _refcount; // ref count or SMALL MASK + num groups
-    const(NamedGroup)[] _names;
 
     this(R input, uint n, const(NamedGroup)[] named)
     {
@@ -671,6 +681,17 @@ public:
 
     ///A hook for compatibility with original std.regex.
     @property ref captures(){ return this; }
+
+    void opAssign()(auto ref Captures rhs)
+    {
+        if (rhs._refcount & SMALL_MASK)
+            small_matches[0 .. rhs._refcount & 0xFF] = rhs.small_matches[0 .. rhs._refcount & 0xFF];
+        else
+            big_matches = rhs.big_matches;
+        assert(&this.tupleof[0] is &big_matches);
+        assert(&this.tupleof[1] is &small_matches);
+        this.tupleof[2 .. $] = rhs.tupleof[2 .. $];
+    }
 }
 
 ///
@@ -802,7 +823,7 @@ public:
     @property inout(Captures!R) captures() inout { return _captures; }
 }
 
-private @trusted auto matchOnce(RegEx, R)(R input, const RegEx prog)
+private @trusted auto matchOnce(RegEx, R)(R input, const auto ref RegEx prog)
 {
     alias Char = BasicElementOf!R;
     auto factory = prog.factory is null ? defaultFactory!Char(prog) : prog.factory;
@@ -813,7 +834,7 @@ private @trusted auto matchOnce(RegEx, R)(R input, const RegEx prog)
     return captures;
 }
 
-private auto matchMany(RegEx, R)(R input, RegEx re) @safe
+private auto matchMany(RegEx, R)(R input, auto ref RegEx re) @safe
 {
     return RegexMatch!R(input, re.withFlags(re.flags | RegexOption.global));
 }
