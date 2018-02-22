@@ -194,33 +194,17 @@ Example:
 log(LogLevel.warning, true, "Hello World", 3.1415);
 --------------------
 */
-void log(int line = __LINE__, string file = __FILE__,
-    string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
-    string moduleName = __MODULE__, A...)(const LogLevel ll,
-    lazy bool condition, lazy A args)
-if (args.length != 1)
+void log(string moduleName = __MODULE__, A...)(const LogLevel ll,
+    lazy bool condition, lazy A args, int line = __LINE__,
+    string file = __FILE__, string funcName = __FUNCTION__,
+    string prettyFuncName = __PRETTY_FUNCTION__)
 {
     static if (isLoggingActive)
     {
         if (ll >= moduleLogLevel!moduleName)
         {
-               stdThreadLocalLog.log!(line, file, funcName, prettyFuncName, moduleName)
-                (ll, condition, args);
-        }
-    }
-}
-
-/// Ditto
-void log(T, string moduleName = __MODULE__)(const LogLevel ll,
-    lazy bool condition, lazy T arg, int line = __LINE__, string file = __FILE__,
-    string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__)
-{
-    static if (isLoggingActive)
-    {
-        if (ll >= moduleLogLevel!moduleName)
-        {
-            stdThreadLocalLog.log!(T,moduleName)(ll, condition, arg, line, file, funcName,
-                prettyFuncName);
+            stdThreadLocalLog.logForward!(moduleName)(ll, condition, line,
+                file, funcName, prettyFuncName, args);
         }
     }
 }
@@ -239,32 +223,17 @@ Example:
 log(LogLevel.warning, "Hello World", 3.1415);
 --------------------
 */
-void log(int line = __LINE__, string file = __FILE__,
-    string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
-    string moduleName = __MODULE__, A...)(const LogLevel ll, lazy A args)
-if (args.length > 1 && !is(Unqual!(A[0]) : bool))
-{
-    static if (isLoggingActive)
-    {
-        if (ll >= moduleLogLevel!moduleName)
-        {
-            stdThreadLocalLog.log!(line, file, funcName, prettyFuncName, moduleName)
-                (ll, args);
-        }
-    }
-}
-
-/// Ditto
-void log(T, string moduleName = __MODULE__)(const LogLevel ll, lazy T arg,
+void log(string moduleName = __MODULE__, A...)(const LogLevel ll, lazy A args,
     int line = __LINE__, string file = __FILE__, string funcName = __FUNCTION__,
     string prettyFuncName = __PRETTY_FUNCTION__)
+if ((args.length > 0 && !is(Unqual!(A[0]) : bool)) || args.length == 0)
 {
     static if (isLoggingActive)
     {
         if (ll >= moduleLogLevel!moduleName)
         {
-            stdThreadLocalLog.log!T(ll, arg, line, file, funcName, prettyFuncName,
-                moduleName);
+            stdThreadLocalLog.logForward!(moduleName)(ll, true, line, file,
+                funcName, prettyFuncName, args);
         }
     }
 }
@@ -284,27 +253,14 @@ Example:
 log(true, "Hello World", 3.1415);
 --------------------
 */
-void log(int line = __LINE__, string file = __FILE__,
-    string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
-    string moduleName = __MODULE__, A...)(lazy bool condition, lazy A args)
-if (args.length != 1)
+void log(string moduleName = __MODULE__, A...)(lazy bool condition, lazy A args,
+    int line = __LINE__, string file = __FILE__,
+    string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__)
 {
     static if (isLoggingActive)
     {
-        stdThreadLocalLog.log!(line, file, funcName, prettyFuncName, moduleName)
-            (stdThreadLocalLog.logLevel, condition, args);
-    }
-}
-
-/// Ditto
-void log(T, string moduleName = __MODULE__)(lazy bool condition, lazy T arg,
-    int line = __LINE__, string file = __FILE__, string funcName = __FUNCTION__,
-    string prettyFuncName = __PRETTY_FUNCTION__)
-{
-    static if (isLoggingActive)
-    {
-        stdThreadLocalLog.log!(T,moduleName)(stdThreadLocalLog.logLevel,
-            condition, arg, line, file, funcName, prettyFuncName);
+        stdThreadLocalLog.logForward!(moduleName)(stdThreadLocalLog.logLevel,
+            condition, line, file, funcName, prettyFuncName, args);
     }
 }
 
@@ -321,28 +277,18 @@ Example:
 log("Hello World", 3.1415);
 --------------------
 */
-void log(int line = __LINE__, string file = __FILE__,
-    string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
-    string moduleName = __MODULE__, A...)(lazy A args)
-if ((args.length > 1 && !is(Unqual!(A[0]) : bool)
+void log(string moduleName = __MODULE__, A...)(lazy A args,
+    int line = __LINE__, string file = __FILE__,
+    string funcName = __FUNCTION__,
+    string prettyFuncName = __PRETTY_FUNCTION__,)
+if ((args.length > 0 && !is(Unqual!(A[0]) : bool)
     && !is(Unqual!(A[0]) == LogLevel))
     || args.length == 0)
 {
     static if (isLoggingActive)
     {
-        stdThreadLocalLog.log!(line, file, funcName,
-           prettyFuncName, moduleName)(stdThreadLocalLog.logLevel, args);
-    }
-}
-
-void log(T)(lazy T arg, int line = __LINE__, string file = __FILE__,
-    string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
-    string moduleName = __MODULE__)
-{
-    static if (isLoggingActive)
-    {
-        stdThreadLocalLog.log!T(stdThreadLocalLog.logLevel, arg, line, file,
-            funcName, prettyFuncName, moduleName);
+        stdThreadLocalLog.logForward!(moduleName)(stdThreadLocalLog.logLevel,
+            true, line, file, funcName, prettyFuncName, args);
     }
 }
 
@@ -363,18 +309,17 @@ Example:
 logf(LogLevel.warning, true, "Hello World %f", 3.1415);
 --------------------
 */
-void logf(int line = __LINE__, string file = __FILE__,
-    string funcName = __FUNCTION__,
-    string prettyFuncName = __PRETTY_FUNCTION__,
-    string moduleName = __MODULE__, A...)(const LogLevel ll,
-    lazy bool condition, lazy string msg, lazy A args)
+void logf(string moduleName = __MODULE__, A...)(const LogLevel ll,
+    lazy bool condition, lazy string msg, lazy A args, int line = __LINE__,
+    string file = __FILE__, string funcName = __FUNCTION__,
+    string prettyFuncName = __PRETTY_FUNCTION__)
 {
     static if (isLoggingActive)
     {
         if (ll >= moduleLogLevel!moduleName)
         {
-            stdThreadLocalLog.logf!(line, file, funcName, prettyFuncName, moduleName)
-                (ll, condition, msg, args);
+            stdThreadLocalLog.logfForward!(moduleName)(line, file, funcName,
+                prettyFuncName, ll, condition, msg, args);
         }
     }
 }
@@ -395,17 +340,17 @@ Example:
 logf(LogLevel.warning, "Hello World %f", 3.1415);
 --------------------
 */
-void logf(int line = __LINE__, string file = __FILE__,
-    string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
-    string moduleName = __MODULE__, A...)(const LogLevel ll, lazy string msg,
-        lazy A args)
+void logf(string moduleName = __MODULE__, A...)(const LogLevel ll,
+    lazy string msg, lazy A args, int line = __LINE__,
+    string file = __FILE__, string funcName = __FUNCTION__,
+    string prettyFuncName = __PRETTY_FUNCTION__)
 {
     static if (isLoggingActive)
     {
         if (ll >= moduleLogLevel!moduleName)
         {
-            stdThreadLocalLog.logf!(line, file, funcName, prettyFuncName, moduleName)
-                (ll, msg, args);
+            stdThreadLocalLog.logfForward!(moduleName)(line, file, funcName,
+                prettyFuncName, ll, true, msg, args);
         }
     }
 }
@@ -426,15 +371,15 @@ Example:
 logf(true, "Hello World %f", 3.1415);
 --------------------
 */
-void logf(int line = __LINE__, string file = __FILE__,
-    string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
-    string moduleName = __MODULE__, A...)(lazy bool condition,
-        lazy string msg, lazy A args)
+void logf(string moduleName = __MODULE__, A...)(lazy bool condition,
+    lazy string msg, lazy A args, int line = __LINE__, string file = __FILE__,
+    string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__)
 {
     static if (isLoggingActive)
     {
-        stdThreadLocalLog.logf!(line, file, funcName, prettyFuncName, moduleName)
-            (stdThreadLocalLog.logLevel, condition, msg, args);
+        stdThreadLocalLog.logfForward!(moduleName)(line, file, funcName,
+            prettyFuncName, stdThreadLocalLog.logLevel, condition, msg,
+            args);
     }
 }
 
@@ -452,15 +397,15 @@ Example:
 logf("Hello World %f", 3.1415);
 --------------------
 */
-void logf(int line = __LINE__, string file = __FILE__,
-    string funcName = __FUNCTION__,
-    string prettyFuncName = __PRETTY_FUNCTION__,
-    string moduleName = __MODULE__, A...)(lazy string msg, lazy A args)
+void logf(string moduleName = __MODULE__, A...)(lazy string msg, lazy A args,
+    int line = __LINE__, string file = __FILE__, string funcName = __FUNCTION__,
+    string prettyFuncName = __PRETTY_FUNCTION__)
 {
     static if (isLoggingActive)
     {
-        stdThreadLocalLog.logf!(line, file, funcName,prettyFuncName, moduleName)
-            (stdThreadLocalLog.logLevel, msg, args);
+        stdThreadLocalLog.logfForward!(moduleName)(line, file,
+            funcName,prettyFuncName, stdThreadLocalLog.logLevel,
+            true, msg, args);
     }
 }
 
@@ -472,28 +417,28 @@ functions.
 */
 template defaultLogFunction(LogLevel ll)
 {
-    void defaultLogFunction(int line = __LINE__, string file = __FILE__,
+    void defaultLogFunction(string moduleName = __MODULE__,
+        int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
-        string prettyFuncName = __PRETTY_FUNCTION__,
-        string moduleName = __MODULE__, A...)(lazy A args)
+        string prettyFuncName = __PRETTY_FUNCTION__, A...)(lazy A args)
         if ((args.length > 0 && !is(Unqual!(A[0]) : bool)) || args.length == 0)
     {
         static if (isLoggingActiveAt!ll && ll >= moduleLogLevel!moduleName)
         {
-            stdThreadLocalLog.memLogFunctions!(ll).logImpl!(line, file, funcName,
-                prettyFuncName, moduleName)(args);
+            stdThreadLocalLog.memLogFunctions!(ll).logImpl!(moduleName,line,
+                file, funcName, prettyFuncName)(args);
         }
     }
 
-    void defaultLogFunction(int line = __LINE__, string file = __FILE__,
-        string funcName = __FUNCTION__,
-        string prettyFuncName = __PRETTY_FUNCTION__,
-        string moduleName = __MODULE__, A...)(lazy bool condition, lazy A args)
+    void defaultLogFunction(string moduleName = __MODULE__, int line = __LINE__,
+        string file = __FILE__, string funcName = __FUNCTION__,
+        string prettyFuncName = __PRETTY_FUNCTION__, A...)(lazy bool condition,
+        lazy A args)
     {
         static if (isLoggingActiveAt!ll && ll >= moduleLogLevel!moduleName)
         {
-            stdThreadLocalLog.memLogFunctions!(ll).logImpl!(line, file, funcName,
-                prettyFuncName, moduleName)(condition, args);
+            stdThreadLocalLog.memLogFunctions!(ll).logImpl!(moduleName, line,
+                file, funcName, prettyFuncName)(condition, args);
         }
     }
 }
@@ -546,28 +491,27 @@ functions.
 */
 template defaultLogFunctionf(LogLevel ll)
 {
-    void defaultLogFunctionf(int line = __LINE__, string file = __FILE__,
-        string funcName = __FUNCTION__,
-        string prettyFuncName = __PRETTY_FUNCTION__,
-        string moduleName = __MODULE__, A...)(lazy string msg, lazy A args)
+    void defaultLogFunctionf(string moduleName = __MODULE__,
+        int line = __LINE__, string file = __FILE__, string funcName = __FUNCTION__,
+        string prettyFuncName = __PRETTY_FUNCTION__, A...)(lazy string msg,
+        lazy A args)
     {
         static if (isLoggingActiveAt!ll && ll >= moduleLogLevel!moduleName)
         {
-            stdThreadLocalLog.memLogFunctions!(ll).logImplf!(line, file, funcName,
-                prettyFuncName, moduleName)(msg, args);
+            stdThreadLocalLog.memLogFunctions!(ll).logImplf!(moduleName, line,
+                file, funcName, prettyFuncName)(msg, args);
         }
     }
 
-    void defaultLogFunctionf(int line = __LINE__, string file = __FILE__,
-        string funcName = __FUNCTION__,
-        string prettyFuncName = __PRETTY_FUNCTION__,
-        string moduleName = __MODULE__, A...)(lazy bool condition,
-            lazy string msg, lazy A args)
+    void defaultLogFunctionf(string moduleName = __MODULE__, int line = __LINE__,
+        string file = __FILE__, string funcName = __FUNCTION__,
+        string prettyFuncName = __PRETTY_FUNCTION__, A...)(lazy bool condition,
+        lazy string msg, lazy A args)
     {
         static if (isLoggingActiveAt!ll && ll >= moduleLogLevel!moduleName)
         {
-            stdThreadLocalLog.memLogFunctions!(ll).logImplf!(line, file, funcName,
-                prettyFuncName, moduleName)(condition, msg, args);
+            stdThreadLocalLog.memLogFunctions!(ll).logImplf!(moduleName, line,
+                file, funcName, prettyFuncName)(condition, msg, args);
         }
     }
 }
@@ -938,10 +882,9 @@ abstract class Logger
         s.fatal(1337, "is number");
         --------------------
         */
-        void logImpl(int line = __LINE__, string file = __FILE__,
-            string funcName = __FUNCTION__,
-            string prettyFuncName = __PRETTY_FUNCTION__,
-            string moduleName = __MODULE__, A...)(lazy A args)
+        void logImpl(string moduleName = __MODULE__, int line = __LINE__,
+            string file = __FILE__, string funcName = __FUNCTION__,
+            string prettyFuncName = __PRETTY_FUNCTION__, A...)(lazy A args)
             if (args.length == 0 || (args.length > 0 && !is(A[0] : bool)))
         {
             static if (isLoggingActiveAt!ll && ll >= moduleLogLevel!moduleName)
@@ -985,11 +928,10 @@ abstract class Logger
         s.fatal(true, 1337, "is number");
         --------------------
         */
-        void logImpl(int line = __LINE__, string file = __FILE__,
-            string funcName = __FUNCTION__,
-            string prettyFuncName = __PRETTY_FUNCTION__,
-            string moduleName = __MODULE__, A...)(lazy bool condition,
-                lazy A args)
+        void logImpl(string moduleName = __MODULE__, int line = __LINE__,
+            string file = __FILE__, string funcName = __FUNCTION__,
+            string prettyFuncName = __PRETTY_FUNCTION__, A...)(
+            lazy bool condition, lazy A args)
         {
             static if (isLoggingActiveAt!ll && ll >= moduleLogLevel!moduleName)
                 synchronized (mutex)
@@ -1034,11 +976,10 @@ abstract class Logger
         s.fatalf(true, "is number %d", 5);
         --------------------
         */
-        void logImplf(int line = __LINE__, string file = __FILE__,
-            string funcName = __FUNCTION__,
-            string prettyFuncName = __PRETTY_FUNCTION__,
-            string moduleName = __MODULE__, A...)(lazy bool condition,
-                lazy string msg, lazy A args)
+        void logImplf(string moduleName = __MODULE__, int line = __LINE__,
+            string file = __FILE__, string funcName = __FUNCTION__,
+            string prettyFuncName = __PRETTY_FUNCTION__, A...)(
+            lazy bool condition, lazy string msg, lazy A args)
         {
             static if (isLoggingActiveAt!ll && ll >= moduleLogLevel!moduleName)
                 synchronized (mutex)
@@ -1083,10 +1024,10 @@ abstract class Logger
         s.fatalf("is number %d", 5);
         --------------------
         */
-        void logImplf(int line = __LINE__, string file = __FILE__,
-            string funcName = __FUNCTION__,
-            string prettyFuncName = __PRETTY_FUNCTION__,
-            string moduleName = __MODULE__, A...)(lazy string msg, lazy A args)
+        void logImplf(string moduleName = __MODULE__, int line = __LINE__,
+            string file = __FILE__, string funcName = __FUNCTION__,
+            string prettyFuncName = __PRETTY_FUNCTION__, A...)(lazy string msg,
+            lazy A args)
         {
             static if (isLoggingActiveAt!ll && ll >= moduleLogLevel!moduleName)
                 synchronized (mutex)
@@ -1135,31 +1076,11 @@ abstract class Logger
     /// Ditto
     alias fatalf = memLogFunctions!(LogLevel.fatal).logImplf;
 
-    /** This method logs data with the `LogLevel` of the used `Logger`.
-
-    This method takes a `bool` as first argument. In order for the
-    data to be processed the `bool` must be `true` and the `LogLevel`
-    of the Logger must be greater or equal to the global `LogLevel`.
-
-    Params:
-      args = The data that should be logged.
-      condition = The condition must be `true` for the data to be logged.
-      args = The data that is to be logged.
-
-    Returns: The logger used by the logging function as reference.
-
-    Example:
-    --------------------
-    auto l = new StdioLogger();
-    l.log(1337);
-    --------------------
+    /* Forward function to pass default parameter values correctly.
     */
-    void log(int line = __LINE__, string file = __FILE__,
-        string funcName = __FUNCTION__,
-        string prettyFuncName = __PRETTY_FUNCTION__,
-        string moduleName = __MODULE__, A...)(const LogLevel ll,
-        lazy bool condition, lazy A args)
-        if (args.length != 1)
+    private void logForward(string moduleName = __MODULE__, A...)(const LogLevel ll,
+        lazy bool condition, int line, string file , string funcName,
+        string prettyFuncName, lazy A args)
     {
         static if (isLoggingActive) synchronized (mutex)
         {
@@ -1179,19 +1100,37 @@ abstract class Logger
         }
     }
 
-    /// Ditto
-    void log(T, string moduleName = __MODULE__)(const LogLevel ll,
-        lazy bool condition, lazy T args, int line = __LINE__,
+    /** This method logs data with the $(D LogLevel) of the used $(D Logger).
+
+    This method takes a $(D bool) as first argument. In order for the
+    data to be processed the $(D bool) must be $(D true) and the $(D LogLevel)
+    of the Logger must be greater or equal to the global $(D LogLevel).
+
+    Params:
+      args = The data that should be logged.
+      condition = The condition must be $(D true) for the data to be logged.
+      args = The data that is to be logged.
+
+    Returns: The logger used by the logging function as reference.
+
+    Example:
+    --------------------
+    auto l = new StdioLogger();
+    l.log(1337);
+    --------------------
+    */
+    void log(string moduleName = __MODULE__, A...)(const LogLevel ll,
+        lazy bool condition, lazy A args, int line = __LINE__,
         string file = __FILE__, string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__)
     {
         static if (isLoggingActive) synchronized (mutex)
         {
-            if (isLoggingEnabled(ll, this.logLevel_, globalLogLevel,
-                condition) && ll >= moduleLogLevel!moduleName)
+            if (isLoggingEnabled(ll, this.logLevel_, globalLogLevel, condition))
             {
                 this.beginLogMsg(file, line, funcName, prettyFuncName,
                     moduleName, ll, thisTid, Clock.currTime, this);
+
                 auto writer = MsgRange(this);
                 formatString(writer, args);
 
@@ -1224,11 +1163,11 @@ abstract class Logger
     s.log(LogLevel.fatal, 1337, "is number");
     --------------------
     */
-    void log(int line = __LINE__, string file = __FILE__,
+    void log(string moduleName = __MODULE__, A...)(const LogLevel ll,
+        lazy A args, int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
-        string prettyFuncName = __PRETTY_FUNCTION__,
-        string moduleName = __MODULE__, A...)(const LogLevel ll, lazy A args)
-        if ((args.length > 1 && !is(Unqual!(A[0]) : bool)) || args.length == 0)
+        string prettyFuncName = __PRETTY_FUNCTION__)
+        if ((args.length > 0 && !is(Unqual!(A[0]) : bool)) || args.length == 0)
     {
         static if (isLoggingActive) synchronized (mutex)
         {
@@ -1237,29 +1176,6 @@ abstract class Logger
                 this.beginLogMsg(file, line, funcName, prettyFuncName,
                     moduleName, ll, thisTid, Clock.currTime, this);
 
-                auto writer = MsgRange(this);
-                formatString(writer, args);
-
-                this.finishLogMsg();
-
-                if (ll == LogLevel.fatal)
-                    this.fatalHandler_();
-            }
-        }
-    }
-
-    /// Ditto
-    void log(T)(const LogLevel ll, lazy T args, int line = __LINE__,
-        string file = __FILE__, string funcName = __FUNCTION__,
-        string prettyFuncName = __PRETTY_FUNCTION__,
-        string moduleName = __MODULE__)
-    {
-        static if (isLoggingActive) synchronized (mutex)
-        {
-            if (isLoggingEnabled(ll, this.logLevel_, globalLogLevel))
-            {
-                this.beginLogMsg(file, line, funcName, prettyFuncName,
-                    moduleName, ll, thisTid, Clock.currTime, this);
                 auto writer = MsgRange(this);
                 formatString(writer, args);
 
@@ -1293,11 +1209,10 @@ abstract class Logger
     s.log(false, 1337, "is number");
     --------------------
     */
-    void log(int line = __LINE__, string file = __FILE__,
+    void log(string moduleName = __MODULE__, A...)(lazy bool condition,
+        lazy A args, int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
-        string prettyFuncName = __PRETTY_FUNCTION__,
-        string moduleName = __MODULE__, A...)(lazy bool condition, lazy A args)
-        if (args.length != 1)
+        string prettyFuncName = __PRETTY_FUNCTION__)
     {
         static if (isLoggingActive) synchronized (mutex)
         {
@@ -1307,30 +1222,6 @@ abstract class Logger
                 this.beginLogMsg(file, line, funcName, prettyFuncName,
                     moduleName, this.logLevel_, thisTid, Clock.currTime, this);
 
-                auto writer = MsgRange(this);
-                formatString(writer, args);
-
-                this.finishLogMsg();
-
-                if (this.logLevel_ == LogLevel.fatal)
-                    this.fatalHandler_();
-            }
-        }
-    }
-
-    /// Ditto
-    void log(T)(lazy bool condition, lazy T args, int line = __LINE__,
-        string file = __FILE__, string funcName = __FUNCTION__,
-        string prettyFuncName = __PRETTY_FUNCTION__,
-        string moduleName = __MODULE__)
-    {
-        static if (isLoggingActive) synchronized (mutex)
-        {
-            if (isLoggingEnabled(this.logLevel_, this.logLevel_, globalLogLevel,
-                condition))
-            {
-                this.beginLogMsg(file, line, funcName, prettyFuncName,
-                    moduleName, this.logLevel_, thisTid, Clock.currTime, this);
                 auto writer = MsgRange(this);
                 formatString(writer, args);
 
@@ -1362,11 +1253,11 @@ abstract class Logger
     s.log(1337, "is number");
     --------------------
     */
-    void log(int line = __LINE__, string file = __FILE__,
+    void log(string moduleName = __MODULE__, A...)(lazy A args,
+        int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
-        string prettyFuncName = __PRETTY_FUNCTION__,
-        string moduleName = __MODULE__, A...)(lazy A args)
-        if ((args.length > 1
+        string prettyFuncName = __PRETTY_FUNCTION__)
+        if ((args.length > 0
                 && !is(Unqual!(A[0]) : bool)
                 && !is(Unqual!(A[0]) == LogLevel))
             || args.length == 0)
@@ -1389,24 +1280,27 @@ abstract class Logger
         }
     }
 
-    /// Ditto
-    void log(T)(lazy T arg, int line = __LINE__, string file = __FILE__,
-        string funcName = __FUNCTION__,
-        string prettyFuncName = __PRETTY_FUNCTION__,
-        string moduleName = __MODULE__)
+    /* Forward function to pass default parameter values correctly.
+    */
+    private void logfForward(string moduleName = __MODULE__, A...)(int line,
+        string file, string funcName, string prettyFuncName,
+        const LogLevel ll, lazy bool condition, lazy string msg, lazy A args)
     {
         static if (isLoggingActive) synchronized (mutex)
         {
-            if (isLoggingEnabled(this.logLevel_, this.logLevel_, globalLogLevel))
+            import std.format : formattedWrite;
+
+            if (isLoggingEnabled(ll, this.logLevel_, globalLogLevel, condition))
             {
                 this.beginLogMsg(file, line, funcName, prettyFuncName,
-                    moduleName, this.logLevel_, thisTid, Clock.currTime, this);
+                    moduleName, ll, thisTid, Clock.currTime, this);
+
                 auto writer = MsgRange(this);
-                formatString(writer, arg);
+                formattedWrite(writer, msg, args);
 
                 this.finishLogMsg();
 
-                if (this.logLevel_ == LogLevel.fatal)
+                if (ll == LogLevel.fatal)
                     this.fatalHandler_();
             }
         }
@@ -1436,11 +1330,11 @@ abstract class Logger
     s.logf(LogLevel.fatal, true ,"%d %s", 1337, "is number");
     --------------------
     */
-    void logf(int line = __LINE__, string file = __FILE__,
+    void logf(string moduleName = __MODULE__, A...)(const LogLevel ll,
+        lazy bool condition, lazy string msg, lazy A args,
+        int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
-        string prettyFuncName = __PRETTY_FUNCTION__,
-        string moduleName = __MODULE__, A...)(const LogLevel ll,
-        lazy bool condition, lazy string msg, lazy A args)
+        string prettyFuncName = __PRETTY_FUNCTION__)
     {
         static if (isLoggingActive) synchronized (mutex)
         {
@@ -1484,11 +1378,10 @@ abstract class Logger
     s.logf(LogLevel.fatal, "%d %s", 1337, "is number");
     --------------------
     */
-    void logf(int line = __LINE__, string file = __FILE__,
-        string funcName = __FUNCTION__,
-        string prettyFuncName = __PRETTY_FUNCTION__,
-        string moduleName = __MODULE__, A...)(const LogLevel ll,
-            lazy string msg, lazy A args)
+    void logf(string moduleName = __MODULE__, A...)(const LogLevel ll,
+        lazy string msg, lazy A args, int line = __LINE__,
+        string file = __FILE__, string funcName = __FUNCTION__,
+        string prettyFuncName = __PRETTY_FUNCTION__)
     {
         static if (isLoggingActive) synchronized (mutex)
         {
@@ -1533,11 +1426,10 @@ abstract class Logger
     s.logf(true ,"%d %s", 1337, "is number");
     --------------------
     */
-    void logf(int line = __LINE__, string file = __FILE__,
-        string funcName = __FUNCTION__,
-        string prettyFuncName = __PRETTY_FUNCTION__,
-        string moduleName = __MODULE__, A...)(lazy bool condition,
-            lazy string msg, lazy A args)
+    void logf(string moduleName = __MODULE__, A...)(lazy bool condition,
+        lazy string msg, lazy A args, int line = __LINE__,
+        string file = __FILE__, string funcName = __FUNCTION__,
+        string prettyFuncName = __PRETTY_FUNCTION__)
     {
         static if (isLoggingActive) synchronized (mutex)
         {
@@ -1580,10 +1472,10 @@ abstract class Logger
     s.logf("%d %s", 1337, "is number");
     --------------------
     */
-    void logf(int line = __LINE__, string file = __FILE__,
+    void logf(string moduleName = __MODULE__, A...)(lazy string msg,
+        lazy A args, int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
-        string prettyFuncName = __PRETTY_FUNCTION__,
-        string moduleName = __MODULE__, A...)(lazy string msg, lazy A args)
+        string prettyFuncName = __PRETTY_FUNCTION__)
     {
         static if (isLoggingActive) synchronized (mutex)
         {
@@ -1865,6 +1757,7 @@ version (unittest) private void testFuncNames(Logger logger) @safe
 
 @safe unittest
 {
+    import std.conv : to;
     auto tl1 = new TestLogger(LogLevel.all);
     tl1.log();
     assert(tl1.line == __LINE__ - 1);
@@ -1889,7 +1782,7 @@ version (unittest) private void testFuncNames(Logger logger) @safe
     sharedLog = tl1;
 
     log();
-    assert(tl1.line == __LINE__ - 1);
+    assert(tl1.line == __LINE__ - 1, to!string(tl1.line));
 
     log(LogLevel.info);
     assert(tl1.line == __LINE__ - 1);
@@ -1901,7 +1794,7 @@ version (unittest) private void testFuncNames(Logger logger) @safe
     assert(tl1.line == __LINE__ - 1);
 
     trace();
-    assert(tl1.line == __LINE__ - 1);
+    assert(tl1.line == __LINE__ - 1, to!string(tl1.line));
 }
 
 @safe unittest
@@ -2066,7 +1959,8 @@ version (unittest) private void testFuncNames(Logger logger) @safe
     } ();
     lineNumber = __LINE__ - 2;
     assert(l.msg == msg.format("Yet"));
-    assert(l.line == lineNumber);
+    assert(l.line == lineNumber, to!string(l.line) ~ "!=" ~
+            to!string(lineNumber));
     assert(l.logLevel == LogLevel.all);
 
     () @trusted {
