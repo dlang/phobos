@@ -2561,7 +2561,7 @@ the given predicate. If there are no such two elements, returns `r` advanced
 until empty.
 
 See_Also:
-     $(HTTP sgi.com/tech/stl/adjacent_find.html, STL's adjacent_find)
+     $(LINK2 http://en.cppreference.com/w/cpp/algorithm/adjacent_find, STL's `adjacent_find`)
 */
 Range findAdjacent(alias pred = "a == b", Range)(Range r)
 if (isForwardRange!(Range))

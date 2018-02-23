@@ -118,7 +118,7 @@ Returns:
     The number of elements brought to the front, i.e., the length of `back`.
 
 See_Also:
-    $(HTTP sgi.com/tech/stl/_rotate.html, STL's rotate)
+    $(LINK2 http://en.cppreference.com/w/cpp/algorithm/rotate, STL's `rotate`)
 */
 size_t bringToFront(InputRange, ForwardRange)(InputRange front, ForwardRange back)
 if (isInputRange!InputRange && isForwardRange!ForwardRange)
@@ -472,7 +472,7 @@ use $(LREF filter):
 
 /**
 $(REF retro, std,range) can be used to achieve behavior similar to
-$(HTTP sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
+$(LINK2 http://en.cppreference.com/w/cpp/algorithm/copy_backward, STL's `copy_backward`'):
 */
 @safe unittest
 {
