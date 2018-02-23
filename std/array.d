@@ -381,6 +381,98 @@ if (isNarrowString!String)
 }
 
 /**
+ * Returns a static array from the stack with length of `s` and initializes
+ * it with copies of the elements of range $(D r). The remainder of the
+ * array is default-initialized.
+ *
+ * Recommended particulary for complex initializations of static arrays
+ * during compilation.
+ *
+ * Params:
+ *      r = The range (or aggregate with $(D opApply) function) whose elements
+ *      are copied into the stack-allocated array. Must be as long or shorter
+ *      than `s`, otherwise causes an array overflow.
+ * Returns:
+ *      An initialized static array
+ */
+ForeachType!Range[s] array(size_t s, Range)(Range r)
+if (isInputRange!Range && !isInfinite!Range)
+{
+    alias E = ForeachType!Range;
+
+    import std.conv : emplaceRef;
+    import std.range : padRight;
+
+    if (__ctfe)
+    {
+        // Compile-time version to avoid memcpy calls.
+        Unqual!E[s] result;
+        size_t i;
+        foreach (e; r)
+        {
+
+            result[i] = e;
+            i++;
+        }
+
+        return (() @trusted => cast(E[s]) result)();
+    }
+
+    auto result = (() @trusted
+    {
+        Unqual!E[s] theArray = void;
+        return theArray;
+    }());
+
+    // Every element of the uninitialized array must be initialized
+    size_t i;
+    foreach (e; r.padRight(E.init, s))
+    {
+        emplaceRef!E(result[i], e);
+        i++;
+    }
+    return (() @trusted => cast(E[s]) result)();
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    import std.algorithm, std.range;
+    auto aStaticArray = iota(16)
+        .drop(2)
+        .stride(2)
+        .filter!(x => x % 3)
+        .array!6
+        ;
+    assert(aStaticArray[0] == 2);
+    assert(aStaticArray[1] == 4);
+    assert(aStaticArray[2] == 8);
+    assert(aStaticArray[3] == 10);
+    assert(aStaticArray[4] == 14);
+    assert(aStaticArray[5] == 0);
+
+    assert(aStaticArray.length == 6);
+}
+
+///works at compile-time too
+@nogc nothrow pure @safe unittest
+{
+    import std.range;
+    static struct MyRange
+    {
+        auto front(){return 6;}
+        void popFront(){}
+        enum empty = false;
+    }
+    enum aStaticArray = MyRange.init.take(3).array!5;
+    static assert(aStaticArray[0] == 6);
+    static assert(aStaticArray[2] == 6);
+    static assert(aStaticArray[3] == 0);
+
+    static assert(aStaticArray.length == 5);
+}
+
+/**
 Returns a newly allocated associative _array from a range of key/value tuples.
 
 Params:
