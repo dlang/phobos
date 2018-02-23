@@ -3868,6 +3868,26 @@ version(unittest)
     assert(s == "shared(std.format.C)");
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=7879
+@safe unittest
+{
+    class F
+    {
+        override string toString() const @safe
+        {
+            return "Foo";
+        }
+    }
+
+    const(F) c;
+    auto s = format("%s", c);
+    assert(s == "null");
+
+    const(F) c2 = new F();
+    s = format("%s", c2);
+    assert(s == "Foo", s);
+}
+
 // ditto
 private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T val, const ref FormatSpec!Char f)
 if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is(T == enum))
