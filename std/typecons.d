@@ -6736,6 +6736,35 @@ struct Typedef(T, T init = T.init, string cookie=null)
             TD im() {return TD(Typedef_payload.im);}
         }
     }
+
+    /**
+     * Convert wrapped value to a human readable string
+     */
+    string toString()
+    {
+        import std.array : appender;
+        auto app = appender!string();
+        auto spec = singleSpec("%s");
+        toString(app, spec);
+        return app.data;
+    }
+
+    /// ditto
+    void toString(W)(ref W writer, const ref FormatSpec!char fmt)
+    if (isOutputRange!(W, char))
+    {
+        formatValue(writer, Typedef_payload, fmt);
+    }
+
+    ///
+    @safe unittest
+    {
+        import std.conv : to;
+
+        int i = 123;
+        auto td = Typedef!int(i);
+        assert(i.to!string == td.to!string);
+    }
 }
 
 /**
@@ -6948,6 +6977,25 @@ template TypedefType(T)
     char[] s2 = cast(char[]) cs;
     const(char)[] cs2 = cast(const(char)[])s;
     assert(s2 == cs2);
+}
+
+@system unittest // toString
+{
+    import std.meta : AliasSeq;
+    import std.conv : to;
+
+    struct TestS {}
+    class TestC {}
+
+    static foreach (T; AliasSeq!(int, bool, float, double, real,
+                                 char, dchar, wchar,
+                                 TestS, TestC,
+                                 int*, int[], int[2], int[int]))
+    {{
+        T t;
+        Typedef!T td;
+        assert(t.to!string() == td.to!string());
+    }}
 }
 
 /**
