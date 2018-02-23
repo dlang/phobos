@@ -6738,7 +6738,7 @@ struct Typedef(T, T init = T.init, string cookie=null)
 
         // Prevents silent unexpected conversion into string and
         // leakage of string type payload
-        @disable string toString() { return null; };
+        @disable string toString() { assert(false); };
     }
 }
 
