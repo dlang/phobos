@@ -2104,16 +2104,18 @@ Params:
     r = random-access range whose elements are to be shuffled
     gen = (optional) random number generator to use; if not
           specified, defaults to $(D rndGen)
- */
+Returns:
+    The shuffled random-access range.
+*/
 
-void randomShuffle(Range, RandomGen)(Range r, ref RandomGen gen)
+Range randomShuffle(Range, RandomGen)(Range r, ref RandomGen gen)
 if (isRandomAccessRange!Range && isUniformRNG!RandomGen)
 {
     return partialShuffle!(Range, RandomGen)(r, r.length, gen);
 }
 
 /// ditto
-void randomShuffle(Range)(Range r)
+Range randomShuffle(Range)(Range r)
 if (isRandomAccessRange!Range)
 {
     return randomShuffle(r, rndGen);
@@ -2137,6 +2139,13 @@ if (isRandomAccessRange!Range)
     }
 }
 
+@safe unittest // bugzilla 18501
+{
+    import std.algorithm.comparison : among;
+    auto r = randomShuffle([0,1]);
+    assert(r.among([0,1],[1,0]));
+}
+
 /**
 Partially shuffles the elements of $(D r) such that upon returning $(D r[0 .. n])
 is a random subset of $(D r) and is randomly ordered.  $(D r[n .. r.length])
@@ -2154,8 +2163,10 @@ Params:
         must be less than $(D r.length)
     gen = (optional) random number generator to use; if not
           specified, defaults to $(D rndGen)
+Returns:
+    The shuffled random-access range.
 */
-void partialShuffle(Range, RandomGen)(Range r, in size_t n, ref RandomGen gen)
+Range partialShuffle(Range, RandomGen)(Range r, in size_t n, ref RandomGen gen)
 if (isRandomAccessRange!Range && isUniformRNG!RandomGen)
 {
     import std.algorithm.mutation : swapAt;
@@ -2165,10 +2176,11 @@ if (isRandomAccessRange!Range && isUniformRNG!RandomGen)
     {
         r.swapAt(i, uniform(i, r.length, gen));
     }
+    return r;
 }
 
 /// ditto
-void partialShuffle(Range)(Range r, in size_t n)
+Range partialShuffle(Range)(Range r, in size_t n)
 if (isRandomAccessRange!Range)
 {
     return partialShuffle(r, n, rndGen);
