@@ -352,8 +352,8 @@ aa[etc.c.odbc.sqltypes]=-dip1000
 aa[etc.c.odbc.sqlucode]=-dip1000
 
 #std/
-aa[std.array]=-dip1000      # Can add multiple values one by one
-aa[std.ascii]=-dip1000      # Can add multiple values one by one
+aa[std.array]=-dip1000 # Can add multiple values one by one
+aa[std.ascii]=-dip1000 # Can add multiple values one by one
 aa[std.base64]=-dip1000
 aa[std.bigint]=-dip1000
 aa[std.bitmanip]=-dip1000 # PR 6174
@@ -377,11 +377,11 @@ aa[std.mmfile]=-dip1000
 aa[std.numeric]=-dip1000
 aa[std.outbuffer]=-dip1000
 aa[std.parallelism]=-dip1000
-aa[std.path]=-dip25
+aa[std.path]=-dip25 # depends on PR 6203 merged and a fix for: std/path.d(2873): Error: @safe function std.path.relativePath!cast(CaseSensitive)true.relativePath cannot call @system function std.conv.to!string.to!(ChooseResult!(ByCodeUnitImpl, Result)).to
 aa[std.process]=-dip1000
 aa[std.random]=-dip1000
 aa[std.signals]=-dip1000
-aa[std.socket]=-dip25
+aa[std.socket]=-dip25 # depends on PR 6204 merged, which will be at least deferred or possibly rejected (deprecation process required due to changed class Socket)
 aa[std.stdint]=-dip1000
 aa[std.stdio]=-dip25
 aa[std.string]=-dip1000
@@ -405,7 +405,7 @@ aa[std.algorithm.mutation]=-dip1000
 aa[std.algorithm.package]=-dip25
 aa[std.algorithm.searching]=-dip25 # @system find is a blocker for std.algorithm.iteration via comparison.equal
 aa[std.algorithm.setops]=-dip1000
-aa[std.algorithm.sorting]=-dip25
+aa[std.algorithm.sorting]=-dip25 # i.a. depends on issue 17512 fixed and a fix for writefln
 
 aa[std.c.fenv]=-dip1000
 aa[std.c.locale]=-dip1000
@@ -456,7 +456,7 @@ aa[std.digest.ripemd]=-dip1000
 aa[std.digest.sha]=-dip1000
 
 aa[std.experimental.checkedint]=-dip1000
-aa[std.experimental.scripting]=-dip1000
+aa[std.experimental.scripting]=-dip1000 # rename scripting to all, depending on 6186
 aa[std.experimental.typecons]=-dip1000
 aa[std.experimental.allocator.common]=-dip1000
 aa[std.experimental.allocator.gc_allocator]=-dip1000
