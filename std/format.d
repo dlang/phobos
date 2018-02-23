@@ -1596,22 +1596,60 @@ if (is(Unqual!Char == Char))
         return w.data;
     }
 
-    string toString()
+    /**
+     * Gives a string containing all of the member variables on their own
+     * line.
+     *
+     * Params:
+     *     writer = A `char` accepting
+     *     $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+     * Returns:
+     *     A `string` when not using an output range; `void` otherwise.
+     */
+    string toString() const @safe pure
     {
-        return text("address = ", cast(void*) &this,
-                "\nwidth = ", width,
-                "\nprecision = ", precision,
-                "\nspec = ", spec,
-                "\nindexStart = ", indexStart,
-                "\nindexEnd = ", indexEnd,
-                "\nflDash = ", flDash,
-                "\nflZero = ", flZero,
-                "\nflSpace = ", flSpace,
-                "\nflPlus = ", flPlus,
-                "\nflHash = ", flHash,
-                "\nflSeparator = ", flSeparator,
-                "\nnested = ", nested,
-                "\ntrailing = ", trailing, "\n");
+        import std.array : appender;
+        auto app = appender!string();
+        app.reserve(200 + trailing.length);
+        toString(app);
+        return app.data;
+    }
+
+    /// ditto
+    void toString(OutputRange)(ref OutputRange writer) const
+    if (isOutputRange!(OutputRange, char))
+    {
+        auto s = singleSpec("%s");
+
+        put(writer, "address = ");
+        formatValue(writer, &this, s);
+        put(writer, "\nwidth = ");
+        formatValue(writer, width, s);
+        put(writer, "\nprecision = ");
+        formatValue(writer, precision, s);
+        put(writer, "\nspec = ");
+        formatValue(writer, spec, s);
+        put(writer, "\nindexStart = ");
+        formatValue(writer, indexStart, s);
+        put(writer, "\nindexEnd = ");
+        formatValue(writer, indexEnd, s);
+        put(writer, "\nflDash = ");
+        formatValue(writer, flDash, s);
+        put(writer, "\nflZero = ");
+        formatValue(writer, flZero, s);
+        put(writer, "\nflSpace = ");
+        formatValue(writer, flSpace, s);
+        put(writer, "\nflPlus = ");
+        formatValue(writer, flPlus, s);
+        put(writer, "\nflHash = ");
+        formatValue(writer, flHash, s);
+        put(writer, "\nflSeparator = ");
+        formatValue(writer, flSeparator, s);
+        put(writer, "\nnested = ");
+        formatValue(writer, nested, s);
+        put(writer, "\ntrailing = ");
+        formatValue(writer, trailing, s);
+        put(writer, '\n');
     }
 }
 
@@ -1675,6 +1713,29 @@ if (is(Unqual!Char == Char))
     assert(f.separators == 10);
     assert(f.width == 5);
     assert(f.precision == 4);
+}
+
+@safe pure unittest
+{
+    import std.algorithm.searching : canFind, findSplitBefore;
+    auto expected = "width = 2" ~
+        "\nprecision = 5" ~
+        "\nspec = f" ~
+        "\nindexStart = 0" ~
+        "\nindexEnd = 0" ~
+        "\nflDash = false" ~
+        "\nflZero = false" ~
+        "\nflSpace = false" ~
+        "\nflPlus = false" ~
+        "\nflHash = false" ~
+        "\nflSeparator = false" ~
+        "\nnested = " ~
+        "\ntrailing = \n";
+    auto spec = singleSpec("%2.5f");
+    auto res = spec.toString();
+    // make sure the address exists, then skip it
+    assert(res.canFind("address"));
+    assert(res.findSplitBefore("width")[1] == expected);
 }
 
 /**
