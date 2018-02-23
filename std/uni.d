@@ -1528,7 +1528,7 @@ private:
 
 static assert(isRandomAccessRange!(SliceOverIndexed!(int[])));
 
-SliceOverIndexed!(const(T)) sliceOverIndexed(T)(size_t a, size_t b, const(T)* x)
+SliceOverIndexed!(const(T)) sliceOverIndexed(T)(size_t a, size_t b, return const(T)* x)
 if (is(Unqual!T == T))
 {
     return SliceOverIndexed!(const(T))(a, b, x);
@@ -1536,7 +1536,7 @@ if (is(Unqual!T == T))
 
 // BUG? inout is out of reach
 //...SliceOverIndexed.arr only parameters or stack based variables can be inout
-SliceOverIndexed!T sliceOverIndexed(T)(size_t a, size_t b, T* x)
+SliceOverIndexed!T sliceOverIndexed(T)(size_t a, size_t b, return T* x)
 if (is(Unqual!T == T))
 {
     return SliceOverIndexed!T(a, b, x);
@@ -2505,7 +2505,7 @@ public:
     /**
         Add an interval [a, b$(RPAREN) to this set.
     */
-    ref add()(uint a, uint b)
+    ref add()(uint a, uint b) return
     {
         addInterval(a, b);
         return this;
@@ -2573,7 +2573,7 @@ private:
     }
 
   package(std)  // used from: std.regex.internal.parse
-    ref add(U)(U rhs)
+    ref add(U)(U rhs) return
         if (isCodepointSet!U)
     {
         Marker start;
@@ -7453,13 +7453,13 @@ public:
         Warning: Invalidates when this Grapheme leaves the scope,
         attempts to use it then would lead to memory corruption.
     +/
-    SliceOverIndexed!Grapheme opSlice(size_t a, size_t b) pure nothrow @nogc
+    SliceOverIndexed!Grapheme opSlice(size_t a, size_t b) return pure nothrow @nogc
     {
         return sliceOverIndexed(a, b, &this);
     }
 
     /// ditto
-    SliceOverIndexed!Grapheme opSlice() pure nothrow @nogc
+    SliceOverIndexed!Grapheme opSlice() return pure nothrow @nogc
     {
         return sliceOverIndexed(0, length, &this);
     }
