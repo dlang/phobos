@@ -6954,6 +6954,14 @@ template TypedefType(T)
     assert(s2 == cs2);
 }
 
+@safe unittest
+{
+    auto i = Typedef!int(10);
+    auto s = Typedef!string("test");
+    assert(!__traits(compiles, i.toString));
+    assert(!__traits(compiles, s.toString));
+}
+
 /**
 Allocates a $(D class) object right inside the current scope,
 therefore avoiding the overhead of $(D new). This facility is unsafe;
