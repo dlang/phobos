@@ -6735,6 +6735,10 @@ struct Typedef(T, T init = T.init, string cookie=null)
             TD re() {return TD(Typedef_payload.re);}
             TD im() {return TD(Typedef_payload.im);}
         }
+
+        // Prevents silent unexpected conversion into string and
+        // leakage of string type payload
+        @disable string toString() { assert(false); }
     }
 }
 
@@ -6948,6 +6952,14 @@ template TypedefType(T)
     char[] s2 = cast(char[]) cs;
     const(char)[] cs2 = cast(const(char)[])s;
     assert(s2 == cs2);
+}
+
+@safe unittest
+{
+    import std.conv: to;
+    auto i = Typedef!int(123);
+    assert((cast(int)i).to!string == "123");
+    assert(!__traits(compiles, i.to!string));
 }
 
 /**
