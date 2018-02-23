@@ -678,7 +678,7 @@ public:
     tg.joinAll();
 }
 
-version(StdUnittest)
+version(unittest)
 {
     static void testrw(void[] b) @nogc nothrow
     {

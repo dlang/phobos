@@ -47,7 +47,7 @@ DFLAGS=-conf= -O -release -w -de -dip25 -I$(DRUNTIME)\import
 
 ## Flags for compiling unittests
 
-UDFLAGS=-unittest -version=StdUnittest -conf= -O -w -dip25 -I$(DRUNTIME)\import
+UDFLAGS=-unittest -conf= -O -w -dip25 -I$(DRUNTIME)\import
 
 ## C compiler
 

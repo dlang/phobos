@@ -7,7 +7,7 @@ module std.experimental.allocator.building_blocks.allocator_list;
 import std.experimental.allocator.building_blocks.null_allocator;
 import std.experimental.allocator.common;
 import std.experimental.allocator.gc_allocator;
-version(StdUnittest) import std.stdio;
+version(unittest) import std.stdio;
 
 // Turn this on for debugging
 // debug = allocator_list;

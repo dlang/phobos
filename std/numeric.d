@@ -2,7 +2,7 @@
 
 /**
 This module is a port of a growing fragment of the $(D_PARAM numeric)
-header in Alexander Stepanov's $(LINK2 http://sgi.com/tech/stl,
+header in Alexander Stepanov's $(LINK2 https://en.wikipedia.org/wiki/Standard_Template_Library,
 Standard Template Library), with a few additions.
 
 Macros:
@@ -26,7 +26,7 @@ import std.range.primitives;
 import std.traits;
 import std.typecons;
 
-version(StdUnittest)
+version(unittest)
 {
     import std.stdio;
 }

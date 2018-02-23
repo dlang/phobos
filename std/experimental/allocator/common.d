@@ -479,7 +479,7 @@ Forwards each of the methods in `funs` (if defined) to `member`.
     return result;
 }
 
-version(StdUnittest)
+version(unittest)
 {
     import std.experimental.allocator : RCIAllocator, RCISharedAllocator;
 

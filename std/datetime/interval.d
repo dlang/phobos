@@ -40,7 +40,7 @@ import std.exception : enforce;
 import std.traits : isIntegral, Unqual;
 import std.typecons : Flag;
 
-version(StdUnittest) import std.exception : assertThrown;
+version(unittest) import std.exception : assertThrown;
 
 
 /++

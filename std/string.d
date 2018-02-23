@@ -143,7 +143,7 @@ Source:    $(PHOBOSSRC std/_string.d)
 */
 module std.string;
 
-version(StdUnittest)
+version(unittest)
 {
 private:
     struct TestAliasedString

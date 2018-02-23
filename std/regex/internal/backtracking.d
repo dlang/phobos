@@ -825,7 +825,7 @@ struct CtContext
         int addr;
     }
 
-    this(Char)(const Regex!Char re)
+    this(Char)(ref const Regex!Char re)
     {
         match = 1;
         reserved = 1; //first match is skipped

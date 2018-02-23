@@ -132,7 +132,7 @@ else
     return _deleteme;
 }
 
-version(StdUnittest) private struct TestAliasedString
+version(unittest) private struct TestAliasedString
 {
     string get() @safe @nogc pure nothrow { return _s; }
     alias get this;
@@ -2843,7 +2843,7 @@ version(Windows) string getcwd()
         3. the buffer (lpBuffer) is not large enough: the required size of
     the buffer, in characters, including the null-terminating character.
     */
-    version(StdUnittest)
+    version(unittest)
         enum BUF_SIZE = 10;     // trigger reallocation code
     else
         enum BUF_SIZE = 4096;   // enough for most common case

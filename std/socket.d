@@ -120,7 +120,7 @@ else
     static assert(0);     // No socket support yet.
 }
 
-version(StdUnittest)
+version(unittest)
 {
     static assert(is(uint32_t == uint));
     static assert(is(uint16_t == ushort));

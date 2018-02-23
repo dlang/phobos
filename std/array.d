@@ -550,7 +550,7 @@ private template blockAttribute(T)
         enum blockAttribute = GC.BlkAttr.NO_SCAN;
     }
 }
-version(StdUnittest)
+version(unittest)
 {
     import core.memory : UGC = GC;
     static assert(!(blockAttribute!void & UGC.BlkAttr.NO_SCAN));
@@ -569,7 +569,7 @@ private template nDimensions(T)
     }
 }
 
-version(StdUnittest)
+version(unittest)
 {
     static assert(nDimensions!(uint[]) == 1);
     static assert(nDimensions!(float[][]) == 2);
@@ -1443,20 +1443,26 @@ if (isInputRange!S && !isDynamicArray!S)
 }
 
 /++
-Eagerly split the string $(D s) into an array of words, using whitespace as
-delimiter. Runs of whitespace are merged together (no empty words are produced).
+Eagerly splits `range` into an array, using `sep` as the delimiter.
 
-$(D @safe), $(D pure) and $(D CTFE)-able.
+When no delimiter is provided, strings are split into an array of words,
+using whitespace as delimiter.
+Runs of whitespace are merged together (no empty words are produced).
+
+The `range` must be a $(REF_ALTTEXT forward _range, isForwardRange, std,_range,primitives).
+The separator can be a value of the same type as the elements in `range`
+or it can be another forward `range`.
 
 Params:
-    s = the string to split
+    s = the string to split by word if no separator is given
+    range = the range to split
+    sep = a value of the same type as the elements of $(D range) or another
 
 Returns:
-    An array of each word in `s`
+    An array containing the divided parts of `range` (or the words of `s`).
 
 See_Also:
-$(REF splitter, std,algorithm,iteration) for a version that splits using any
-separator.
+$(REF splitter, std,algorithm,iteration) for a lazy version without allocating memory.
 
 $(REF splitter, std,regex) for a version that splits using a regular
 expression defined separator.
@@ -1496,25 +1502,20 @@ if (isSomeString!S)
 ///
 @safe unittest
 {
+    import std.uni : isWhite;
+    assert("Learning,D,is,fun".split(",") == ["Learning", "D", "is", "fun"]);
+    assert("Learning D is fun".split!isWhite == ["Learning", "D", "is", "fun"]);
+    assert("Learning D is fun".split(" D ") == ["Learning", "is fun"]);
+}
+
+///
+@safe unittest
+{
     string str = "Hello World!";
     assert(str.split == ["Hello", "World!"]);
 
     string str2 = "Hello\t\tWorld\t!";
     assert(str2.split == ["Hello", "World", "!"]);
-}
-
-/**
- * `split` allocates memory, so the same effect can be achieved lazily
- * using $(REF splitter, std,algorithm,iteration).
- */
-@safe unittest
-{
-    import std.ascii : isWhite;
-    import std.algorithm.comparison : equal;
-    import std.algorithm.iteration : splitter;
-
-    string str = "Hello World!";
-    assert(str.splitter!(isWhite).equal(["Hello", "World!"]));
 }
 
 @safe unittest
@@ -1571,43 +1572,12 @@ if (isSomeString!S)
     assert(a == [[1], [4, 5, 1], [4, 5]]);
 }
 
-/++
-    Eagerly splits $(D range) into an array, using $(D sep) as the delimiter.
-
-    The _range must be a
-    $(REF_ALTTEXT forward _range, isForwardRange, std,_range,primitives).
-    The separator can be a value of the same type as the elements in $(D range)
-    or it can be another forward _range.
-
-    Example:
-        If $(D range) is a $(D string), $(D sep) can be a $(D char) or another
-        $(D string). The return type will be an array of strings. If $(D range) is
-        an $(D int) array, $(D sep) can be an $(D int) or another $(D int) array.
-        The return type will be an array of $(D int) arrays.
-
-    Params:
-        range = a forward _range.
-        sep = a value of the same type as the elements of $(D range) or another
-        forward range.
-
-    Returns:
-        An array containing the divided parts of $(D range).
-
-    See_Also:
-        $(REF splitter, std,algorithm,iteration) for the lazy version of this
-        function.
- +/
-auto split(Range, Separator)(Range range, Separator sep)
-if (isForwardRange!Range && is(typeof(ElementType!Range.init == Separator.init)))
-{
-    import std.algorithm.iteration : splitter;
-    return range.splitter(sep).array;
-}
 ///ditto
 auto split(Range, Separator)(Range range, Separator sep)
-if (
-    isForwardRange!Range && isForwardRange!Separator
-    && is(typeof(ElementType!Range.init == ElementType!Separator.init)))
+if (isForwardRange!Range && (
+    is(typeof(ElementType!Range.init == Separator.init)) ||
+    is(typeof(ElementType!Range.init == ElementType!Separator.init)) && isForwardRange!Separator
+    ))
 {
     import std.algorithm.iteration : splitter;
     return range.splitter(sep).array;
@@ -1618,15 +1588,6 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(range.front))))
 {
     import std.algorithm.iteration : splitter;
     return range.splitter!isTerminator.array;
-}
-
-///
-@safe unittest
-{
-    import std.uni : isWhite;
-    assert("Learning,D,is,fun".split(",") == ["Learning", "D", "is", "fun"]);
-    assert("Learning D is fun".split!isWhite == ["Learning", "D", "is", "fun"]);
-    assert("Learning D is fun".split(" D ") == ["Learning", "is fun"]);
 }
 
 @safe unittest
@@ -1682,7 +1643,7 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(range.front))))
     }}
 }
 
-/++
+/+
    Conservative heuristic to determine if a range can be iterated cheaply.
    Used by $(D join) in decision to do an extra iteration of the range to
    compute the resultant length. If iteration is not cheap then precomputing

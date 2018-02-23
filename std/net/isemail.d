@@ -1875,7 +1875,7 @@ bool isUpToFourHexChars(Char)(scope const(Char)[] s)
     return true;
 }
 
-version(StdUnittest) @nogc nothrow pure @safe unittest
+version(unittest) @nogc nothrow pure @safe unittest
 {
     assert(!isUpToFourHexChars("12345"));
     assert(!isUpToFourHexChars("defg"));
@@ -1945,7 +1945,7 @@ const(Char)[] matchIPSuffix(Char)(return const(Char)[] s) @nogc nothrow pure @sa
     return s[start .. $];
 }
 
-version(StdUnittest) @nogc nothrow pure @safe unittest
+version(unittest) @nogc nothrow pure @safe unittest
 {
     assert(matchIPSuffix("255.255.255.255") == "255.255.255.255");
     assert(matchIPSuffix("babaev 176.16.0.1") == "176.16.0.1");

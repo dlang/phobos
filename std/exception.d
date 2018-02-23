@@ -388,7 +388,7 @@ void assertThrown(T : Throwable = Exception, E)
 template enforce(E : Throwable = Exception)
 if (is(typeof(new E("", __FILE__, __LINE__)) : Throwable) || is(typeof(new E(__FILE__, __LINE__)) : Throwable))
 {
-
+    ///
     T enforce(T)(T value, lazy const(char)[] msg = null,
     string file = __FILE__, size_t line = __LINE__)
     if (is(typeof({ if (!value) {} })))
@@ -1771,7 +1771,7 @@ CommonType!(T1, T2) ifThrown(T1, T2)(lazy scope T1 expression, scope T2 delegate
     static assert(!__traits(compiles, (new Object()).ifThrown(e=>1)));
 }
 
-version(StdUnittest) package
+version(unittest) package
 @property void assertCTFEable(alias dg)()
 {
     static assert({ cast(void) dg(); return true; }());
