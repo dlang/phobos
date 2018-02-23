@@ -6735,6 +6735,10 @@ struct Typedef(T, T init = T.init, string cookie=null)
             TD re() {return TD(Typedef_payload.re);}
             TD im() {return TD(Typedef_payload.im);}
         }
+
+        // Prevents silent unexpected conversion into string and
+        // leakage of string type payload
+        @disable string toString() { return null; };
     }
 }
 
