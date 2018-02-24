@@ -1,7 +1,7 @@
 `std.typecons.BitFlags` now supports opDispatch-based property access
 
 $(REF BitFlags, std.typecons) was extended so that enum members can be set and tested directly on the
-BitFlags instead of having to `&` with the underlying enum.
+`BitFlags` instead of having to `&` with the underlying enum.
 
 -------
 enum Features
@@ -23,8 +23,9 @@ void run(BitFlags!Features features)
 }
 -------
 
-This also works for unsafe BitFlags where the property get tests for an exact
-match of all bits and property set clears or sets all bits.
+This also works for unsafe `BitFlags` where the property get access tests for an exact
+match of all bits of the unsafe `BitFlags` combination.
+Analogously, the property set access clears or sets all bits of the unsafe `BitFlags` combination.
 
 -------
 enum Features
