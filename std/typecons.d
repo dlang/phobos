@@ -7858,9 +7858,9 @@ public:
 {
     enum UnsafeEnum
     {
-        A,
-        B,
-        C,
+        A = 1,
+        B = 2,
+        C = 4,
         BC = B|C
     }
     static assert(!__traits(compiles, { BitFlags!UnsafeEnum flags; }));
@@ -7874,12 +7874,13 @@ public:
     flags.B = false;
     assert(!flags.BC); // only C
 
-    // property access sets all bits of unsafe enums
+    // property access sets all bits of unsafe enum group
     flags = flags.init;
     flags.BC = true;
-    assert(flags.B && flags.C);
+    assert(!flags.A && flags.B && flags.C);
+    flags.A = true;
     flags.BC = false;
-    assert(!flags.B && !flags.C);
+    assert(flags.A && !flags.B && !flags.C);
 }
 
 // ReplaceType
