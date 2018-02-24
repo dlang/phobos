@@ -133,7 +133,6 @@ version (Win64)
 static import core.math;
 static import core.stdc.math;
 static import core.stdc.fenv;
-import std.range.primitives : isInputRange, ElementType;
 import std.traits; // CommonType, isFloatingPoint, isIntegral, isSigned, isUnsigned, Largest, Unqual
 
 version(LDC)
@@ -175,7 +174,7 @@ else version (X86)
     private alias haveSSE = core.cpuid.sse;
 }
 
-version(StdUnittest)
+version(unittest)
 {
     import core.stdc.stdio; // : sprintf;
 
@@ -5526,7 +5525,6 @@ if (isFloatingPoint!(X))
  *  $(D true) if $(D_PARAM x) is finite.
  */
 bool isFinite(X)(X x) @trusted pure nothrow @nogc
-if (isFloatingPoint!X)
 {
     alias F = floatTraits!(X);
     ushort* pe = cast(ushort *)&x;
@@ -5574,7 +5572,6 @@ if (isFloatingPoint!X)
  * be converted to normal reals.
  */
 bool isNormal(X)(X x) @trusted pure nothrow @nogc
-if (isFloatingPoint!X)
 {
     alias F = floatTraits!(X);
     static if (F.realFormat == RealFormat.ibmExtended)
@@ -5621,7 +5618,6 @@ if (isFloatingPoint!X)
  *  $(D true) if $(D_PARAM x) is a denormal number.
  */
 bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
-if (isFloatingPoint!X)
 {
     /*
         Need one for each format because subnormal floats might
@@ -5827,7 +5823,6 @@ bool isIdentical(real x, real y) @trusted pure nothrow @nogc
  * Return 1 if sign bit of e is set, 0 if not.
  */
 int signbit(X)(X x) @nogc @trusted pure nothrow
-if (isFloatingPoint!X)
 {
     alias F = floatTraits!(X);
     return ((cast(ubyte *)&x)[F.SIGNPOS_BYTE] & 0x80) != 0;
@@ -5929,7 +5924,6 @@ Returns $(D -1) if $(D x < 0), $(D x) if $(D x == 0), $(D 1) if
 $(D x > 0), and $(NAN) if x==$(NAN).
  */
 F sgn(F)(F x) @safe pure nothrow @nogc
-if (isNumeric!F)
 {
     // @@@TODO@@@: make this faster
     return x > 0 ? 1 : x < 0 ? -1 : x;
@@ -6402,7 +6396,6 @@ float nextDown(float x) @safe pure nothrow @nogc
  * not equal to y.
  */
 T nextafter(T)(const T x, const T y) @safe pure nothrow @nogc
-if (isFloatingPoint!T)
 {
     if (x == y) return y;
     return ((y>x) ? nextUp(x) :  nextDown(x));
@@ -7639,9 +7632,6 @@ private real polyImpl(real x, in real[] A) @trusted pure nothrow @nogc
        pair of elements.
  */
 bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
-if ((isNumeric!T || (isInputRange!T && isNumeric!(ElementType!T))) &&
-    (isNumeric!U || (isInputRange!U && isNumeric!(ElementType!U))) &&
-    isNumeric!V)
 {
     import std.range.primitives : empty, front, isInputRange, popFront;
     static if (isInputRange!T)

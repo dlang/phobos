@@ -4882,7 +4882,7 @@ if (!is(T == class))
     assert(u1.a == "hello");
 }
 
-version(StdUnittest) private struct __conv_EmplaceTest
+version(unittest) private struct __conv_EmplaceTest
 {
     int i = 3;
     this(int i)
@@ -4903,7 +4903,7 @@ version(StdUnittest) private struct __conv_EmplaceTest
     void opAssign();
 }
 
-version(StdUnittest) private class __conv_EmplaceTestClass
+version(unittest) private class __conv_EmplaceTestClass
 {
     int i = 3;
     this(int i) @nogc @safe pure nothrow
@@ -5323,7 +5323,7 @@ version(StdUnittest) private class __conv_EmplaceTestClass
         assert(s.i == 2);
     }
 }
-version(StdUnittest)
+version(unittest)
 {
     //Ambiguity
     struct __std_conv_S

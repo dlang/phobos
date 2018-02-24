@@ -707,7 +707,7 @@ do
 }
 
 // Make sure receive() works with free functions as well.
-version(StdUnittest)
+version(unittest)
 {
     private void receiveFunction(int x) {}
 }
@@ -2427,7 +2427,7 @@ private
     }
 }
 
-version(StdUnittest)
+version(unittest)
 {
     import std.stdio;
     import std.typecons : tuple, Tuple;

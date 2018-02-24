@@ -135,7 +135,7 @@ $(file > /tmp/TZDatabaseDirFile, ${TZ_DATABASE_DIR})
 DFLAGS += -version=TZDatabaseDir -J/tmp/
 endif
 
-UDFLAGS=-unittest -version=StdUnittest
+UDFLAGS=-unittest
 
 # Set DOTOBJ and DOTEXE
 ifeq (,$(findstring win,$(OS)))

@@ -59,7 +59,7 @@ $(TR $(TD Enums) $(TD
   +/
 module std.ascii;
 
-version(StdUnittest)
+version(unittest)
 {
     // FIXME: When dmd bug #314 is fixed, make these selective.
     import std.meta; // : AliasSeq;
