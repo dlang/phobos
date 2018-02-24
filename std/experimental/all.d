@@ -1,12 +1,12 @@
 /++
 Convenience file that allows to import entire Phobos in one command.
 +/
-module std.experimental.scripting;
+module std.experimental.all;
 
 ///
 @safe unittest
 {
-    import std.experimental.scripting;
+    import std.experimental.all;
 
     int len;
     const r = 6.iota
@@ -23,7 +23,7 @@ module std.experimental.scripting;
 ///
 @safe unittest
 {
-    import std.experimental.scripting;
+    import std.experimental.all;
     assert(10.iota.map!(partial!(pow, 2)).sum == 1023);
 }
 
