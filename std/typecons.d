@@ -7691,13 +7691,15 @@ public:
         return opBinary!op(flag);
     }
 
-    bool opDispatch(string name)() const if (__traits(hasMember, E, name))
+    bool opDispatch(string name)() const
+    if (__traits(hasMember, E, name))
     {
         enum e = __traits(getMember, E, name);
         return (mValue & e) == e;
     }
 
-    void opDispatch(string name)(bool set) if (__traits(hasMember, E, name))
+    void opDispatch(string name)(bool set)
+    if (__traits(hasMember, E, name))
     {
         enum e = __traits(getMember, E, name);
         if (set)
