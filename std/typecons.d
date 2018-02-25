@@ -7690,6 +7690,23 @@ public:
     {
         return opBinary!op(flag);
     }
+
+    bool opDispatch(string name)() const
+    if (__traits(hasMember, E, name))
+    {
+        enum e = __traits(getMember, E, name);
+        return (mValue & e) == e;
+    }
+
+    void opDispatch(string name)(bool set)
+    if (__traits(hasMember, E, name))
+    {
+        enum e = __traits(getMember, E, name);
+        if (set)
+            mValue |= e;
+        else
+            mValue &= ~e;
+    }
 }
 
 /// Set values with the | operator and test with &
@@ -7702,13 +7719,17 @@ public:
 
     // A default constructed BitFlags has no value set
     immutable BitFlags!Enum flags_empty;
+    assert(!flags_empty.A);
 
     // Value can be set with the | operator
     immutable flags_A = flags_empty | Enum.A;
 
-    // And tested with the & operator
+    // and tested using property access
+    assert(flags_A.A);
+
+    // or the & operator
     assert(flags_A & Enum.A);
-    // Which commutes
+    // which commutes.
     assert(Enum.A & flags_A);
 }
 
@@ -7740,12 +7761,20 @@ public:
         C = 1 << 2
     }
 
+    // Values can also be set using property access
+    BitFlags!Enum flags;
+    flags.A = true;
+    assert(flags & Enum.A);
+    flags.A = false;
+    assert(!(flags & Enum.A));
+
     // BitFlags can be variadically initialized
     immutable BitFlags!Enum flags_AB = BitFlags!Enum(Enum.A, Enum.B);
-    assert((flags_AB & Enum.A) && (flags_AB & Enum.B) && !(flags_AB & Enum.C));
+    assert(flags_AB.A && flags_AB.B && !flags_AB.C);
 
     // You can use the EnumMembers template to set all flags
     immutable BitFlags!Enum flags_all = EnumMembers!Enum;
+    assert(flags_all.A && flags_all.B && flags_all.C);
 }
 
 /// Binary operations: subtracting and intersecting flags
@@ -7762,7 +7791,7 @@ public:
 
     // Use the ~ operator for subtracting flags
     immutable BitFlags!Enum flags_B = flags_AB & ~BitFlags!Enum(Enum.A);
-    assert(!(flags_B & Enum.A) && (flags_B & Enum.B) && !(flags_B & Enum.C));
+    assert(!flags_B.A && flags_B.B && !flags_B.C);
 
     // use & between BitFlags for intersection
     assert(flags_B == (flags_BC & flags_AB));
@@ -7819,7 +7848,7 @@ public:
     assert(flags & flags_AB);
     assert(flags & Enum.A);
 
-    // Finally, you can of course get you raw value out of flags
+    // You can of course get you raw value out of flags
     auto value = cast(int) flags;
     assert(value == Enum.A);
 }
@@ -7829,13 +7858,29 @@ public:
 {
     enum UnsafeEnum
     {
-        A,
-        B,
-        C,
-        D = B|C
+        A = 1,
+        B = 2,
+        C = 4,
+        BC = B|C
     }
-    static assert(!__traits(compiles, { BitFlags!UnsafeEnum flags2; }));
-    BitFlags!(UnsafeEnum, Yes.unsafe) flags3;
+    static assert(!__traits(compiles, { BitFlags!UnsafeEnum flags; }));
+    BitFlags!(UnsafeEnum, Yes.unsafe) flags;
+
+    // property access tests for exact match of unsafe enums
+    flags.B = true;
+    assert(!flags.BC); // only B
+    flags.C = true;
+    assert(flags.BC); // both B and C
+    flags.B = false;
+    assert(!flags.BC); // only C
+
+    // property access sets all bits of unsafe enum group
+    flags = flags.init;
+    flags.BC = true;
+    assert(!flags.A && flags.B && flags.C);
+    flags.A = true;
+    flags.BC = false;
+    assert(flags.A && !flags.B && !flags.C);
 }
 
 // ReplaceType
