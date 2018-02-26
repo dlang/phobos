@@ -7777,20 +7777,26 @@ if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
     && isInputRange!S2 && isSomeChar!(ElementEncodingType!S2))
 {
     import std.internal.unicode_tables : sTable = simpleCaseTable; // generated file
-    import std.utf : byDchar;
+    import std.utf : decodeFront;
+    import std.typecons : Yes;
+    static import std.ascii;
 
-    auto str1 = r1.byDchar;
-    auto str2 = r2.byDchar;
-
-    foreach (immutable lhs; str1)
+    while (!r1.empty)
     {
-        if (str2.empty)
+        immutable lhs = decodeFront!(Yes.useReplacementDchar)(r1);
+        if (r2.empty)
             return 1;
-        immutable rhs = str2.front;
-        str2.popFront();
+        immutable rhs = decodeFront!(Yes.useReplacementDchar)(r2);
         int diff = lhs - rhs;
         if (!diff)
             continue;
+        else if ((lhs | rhs) < 0x80)
+        {
+            auto lowL = std.ascii.toLower(lhs);
+            auto lowR = std.ascii.toLower(rhs);
+            if (!(lowL - lowR)) continue;
+            else return lowL - lowR;
+        }
         size_t idx = simpleCaseTrie[lhs];
         size_t idx2 = simpleCaseTrie[rhs];
         // simpleCaseTrie is packed index table
@@ -7816,7 +7822,7 @@ if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
         // one of chars is not cased at all
         return diff;
     }
-    return str2.empty ? 0 : -1;
+    return r2.empty ? 0 : -1;
 }
 
 ///
