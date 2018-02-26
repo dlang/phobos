@@ -25,7 +25,7 @@ void main()
       .map!(a => a * 2) // 0 4 8
       .tee!writeln
       .sum
-      .reverseArgs!writefln("Sum: %d"); // 18
+      .writefln!"Sum: %d"; // 18
 }
 ---
 
