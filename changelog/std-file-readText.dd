@@ -1,7 +1,7 @@
 readText now checks BOMs
 
 $(REF readText, std, file) now checks for a
-$(HTTP https://en.wikipedia.org/wiki/Byte_order_mark, BOM). If a BOM is present
+$(HTTPS en.wikipedia.org/wiki/Byte_order_mark, BOM). If a BOM is present
 and it is for UTF-8, UTF-16, or UTF-32, $(REF readText, std, file) verifies
 that it matches the requested string type and the endianness of the machine,
 and if there is a mismatch, a $(REF UTFException, std, utf) is thrown without
