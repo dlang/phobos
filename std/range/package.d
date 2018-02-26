@@ -4166,7 +4166,7 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
             {
                 //TODO: Fixme! BackElement != back of all ranges in case of jagged-ness
 
-                @property tryMoveBack(size_t i)(){return ranges[i].empty ? tryGetInit!i() : ranges[i].moveFront();}
+                @property tryMoveBack(size_t i)(){return ranges[i].empty ? tryGetInit!i() : ranges[i].moveBack();}
                 //ElementType(tryMoveBack!0, tryMoveBack!1, ...)
                 return mixin(q{ElementType(%(tryMoveBack!%s, %))}.format(iota(0, R.length)));
             }
@@ -4517,6 +4517,13 @@ pure @system unittest
     // BUG 8900
     assert(zip([1, 2], repeat('a')).array == [tuple(1, 'a'), tuple(2, 'a')]);
     assert(zip(repeat('a'), [1, 2]).array == [tuple('a', 1), tuple('a', 2)]);
+
+    // Issue 18524 - moveBack instead performs moveFront
+    {
+        auto r = zip([1,2,3]);
+        assert(r.moveBack()[0] == 3);
+        assert(r.moveFront()[0] == 1);
+    }
 
     // Doesn't work yet.  Issues w/ emplace.
     // static assert(is(Zip!(immutable int[], immutable float[])));
