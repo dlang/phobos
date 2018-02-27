@@ -2598,13 +2598,14 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 
     auto len = min(n, buf.length-1);
     ptrdiff_t dot = buf[0 .. len].indexOf('.');
-    if (fs.flSeparator && dot != -1)
+    if (fs.flSeparator)
     {
         ptrdiff_t firstDigit = buf[0 .. len].indexOfAny("0123456789");
         ptrdiff_t ePos = buf[0 .. len].indexOf('e');
+        auto dotIdx = dot == -1 ? ePos == -1 ? len : ePos : dot;
         size_t j;
 
-        ptrdiff_t firstLen = dot - firstDigit;
+        ptrdiff_t firstLen = dotIdx - firstDigit;
 
         size_t separatorScoreCnt = firstLen / fs.separators;
 
@@ -2641,12 +2642,17 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
             }
             put(w, buf[j + firstDigit]);
         }
-        put(w, '.');
+
+        // print dot for decimal numbers only or with '#' format specifier
+        if (dot != -1 || fs.flHash)
+        {
+            put(w, '.');
+        }
 
         // digits after dot
-        for (j = dot + 1; j < afterDotIdx; ++j)
+        for (j = dotIdx + 1; j < afterDotIdx; ++j)
         {
-            auto realJ = (j - (dot + 1));
+            auto realJ = (j - (dotIdx + 1));
             if (realJ != 0 && realJ % fs.separators == 0)
             {
                 put(w, fs.separatorChar);
@@ -2664,6 +2670,15 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     {
         put(w, buf[0 .. len]);
     }
+}
+
+@safe unittest
+{
+    assert(format("%.1f", 1337.7) == "1337.7");
+    assert(format("%,3.2f", 1331.982) == "1,331.98");
+    assert(format("%,3.0f", 1303.1982) == "1,303");
+    assert(format("%#,3.4f", 1303.1982) == "1,303.198,2");
+    assert(format("%#,3.0f", 1303.1982) == "1,303.");
 }
 
 @safe /*pure*/ unittest     // formatting floating point values is now impure
