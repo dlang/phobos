@@ -164,6 +164,16 @@ import std.encoding : EncodingScheme;
 import std.traits : isSomeChar;
 import std.typecons : Flag, Yes, No, Tuple;
 
+// Curl tests for FreeBSD 32-bit are temporarily disabled.
+// https://github.com/braddr/d-tester/issues/70
+// https://issues.dlang.org/show_bug.cgi?id=18519
+version(unittest)
+version(FreeBSD)
+version(X86)
+    version = DisableCurlTests;
+
+version(DisableCurlTests) {} else:
+
 version(unittest)
 {
     import std.socket : Socket;
