@@ -54,6 +54,12 @@ else version (CRuntime_Musl)
     version = GENERIC_IO;
     version = HAS_GETDELIM;
 }
+else version (CRuntime_UClibc)
+{
+    // uClibc supports GCC IO
+    version = GCC_IO;
+    version = HAS_GETDELIM;
+}
 
 version (OSX)
 {
