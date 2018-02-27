@@ -3852,3 +3852,28 @@ unittest
     assert(appS.data == "hellow");
     assert(appA.data == "hellow");
 }
+
+/++
+Return `.ptr` or `null` for an array `a`, mitigating the fact we can't use `.ptr` in @safe code.
+`a.ptr` could be an invalid but non-null address if `a` was produced as an empty
+slice of another array, eg b[$ .. $]; returning `null` here prevents memory corruption.
+
+Params:
+    a = array
+Returns:
+    `a.ptr` or null
++/
+T* pointer(T)(T[] a) @trusted @nogc pure nothrow
+{
+    return a.length > 0 ? a.ptr : null;
+}
+
+///
+@safe unittest
+{
+    auto a = [0, 1];
+    auto b = a.pointer;
+    assert(b && b[0] == 0);
+    auto c = a[$ .. $].pointer;
+    assert(c is null);
+}
