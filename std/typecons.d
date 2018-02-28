@@ -3030,6 +3030,17 @@ auto nullable(T)(T t)
     assert(c.canary == 0xA71FE);
 }
 
+// Regression test for issue 18539
+@safe unittest
+{
+    import std.math : approxEqual;
+
+    auto foo = nullable(2.0);
+    auto bar = nullable(2.0);
+
+    assert(foo.approxEqual(bar));
+}
+
 /**
 Just like $(D Nullable!T), except that the null state is defined as a
 particular value. For example, $(D Nullable!(uint, uint.max)) is an
