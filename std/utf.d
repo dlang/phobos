@@ -3978,6 +3978,64 @@ if (isSomeChar!C)
         {
             return r.byCodeUnit();
         }
+        else static if (is(C == dchar))
+        {
+            static struct Result
+            {
+                this(R val)
+                {
+                    r = val;
+                    popFront();
+                }
+
+                @property bool empty()
+                {
+                    return buff == uint.max;
+                }
+
+                @property auto front()
+                {
+                    assert(!empty, "Attempting to access the front of an empty byUTF");
+                    return cast(dchar) buff;
+                }
+
+                void popFront() scope
+                {
+                    assert(!empty, "Attempting to popFront an empty byUTF");
+                    if (r.empty)
+                    {
+                        buff = uint.max;
+                    }
+                    else
+                    {
+                        if (r.front < 0x80)
+                        {
+                            buff = r.front;
+                            r.popFront;
+                        }
+                        else
+                        {
+                            buff = () @trusted { return decodeFront!(Yes.useReplacementDchar)(r); }();
+                        }
+                    }
+                }
+
+                static if (isForwardRange!R)
+                {
+                    @property auto save() return scope
+                    {
+                        auto ret = this;
+                        ret.r = r.save;
+                        return ret;
+                    }
+                }
+
+                uint buff;
+                R r;
+            }
+
+            return Result(r);
+        }
         else
         {
             static struct Result
