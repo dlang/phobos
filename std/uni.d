@@ -7790,7 +7790,7 @@ if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
         int diff = lhs - rhs;
         if (!diff)
             continue;
-        else if ((lhs | rhs) < 0x80)
+        if ((lhs | rhs) < 0x80)
         {
             auto lowL = std.ascii.toLower(lhs);
             auto lowR = std.ascii.toLower(rhs);
@@ -7822,7 +7822,7 @@ if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
         // one of chars is not cased at all
         return diff;
     }
-    return r2.empty ? 0 : -1;
+    return -int(r2.empty);
 }
 
 ///
