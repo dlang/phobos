@@ -7792,10 +7792,9 @@ if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
             continue;
         if ((lhs | rhs) < 0x80)
         {
-            auto lowL = std.ascii.toLower(lhs);
-            auto lowR = std.ascii.toLower(rhs);
-            if (!(lowL - lowR)) continue;
-            else return lowL - lowR;
+            immutable d = std.ascii.toLower(lhs) - std.ascii.toLower(rhs);
+            if (!d) continue;
+            return d;
         }
         size_t idx = simpleCaseTrie[lhs];
         size_t idx2 = simpleCaseTrie[rhs];
