@@ -1290,6 +1290,48 @@ alias Xorshift    = Xorshift128;                            /// ditto
     }
 }
 
+version (CRuntime_Bionic)
+    version = SecureARC4Random; // ChaCha20
+version (OSX)
+    version = SecureARC4Random; // AES
+version (OpenBSD)
+    version = SecureARC4Random; // ChaCha20
+version (NetBSD)
+    version = SecureARC4Random; // ChaCha20
+
+version (CRuntime_UClibc)
+    version = LegacyARC4Random; // ARC4
+version (FreeBSD)
+    version = LegacyARC4Random; // ARC4
+version (DragonFlyBSD)
+    version = LegacyARC4Random; // ARC4
+version (BSD)
+    version = LegacyARC4Random; // Unknown implementation
+
+// For the current purpose of unpredictableSeed the difference between
+// a secure arc4random implementation and a legacy implementation is
+// unimportant. The source code documents this distinction in case in the
+// future Phobos is altered to require cryptographically secure sources
+// of randomness, and also so other people reading this source code (as
+// Phobos is often looked to as an example of good D programming practices)
+// do not mistakenly use insecure versions of arc4random in contexts where
+// cryptographically secure sources of randomness are needed.
+
+// Performance note: ChaCha20 is about 70% faster than ARC4, contrary to
+// what one might assume from it being more secure.
+
+version (SecureARC4Random)
+    version = AnyARC4Random;
+version (LegacyARC4Random)
+    version = AnyARC4Random;
+
+version (AnyARC4Random)
+{
+    extern(C) private @nogc nothrow
+    {
+        uint arc4random() @safe;
+    }
+}
 
 /**
 A "good" seed for initializing random number engines. Initializing
@@ -1298,20 +1340,33 @@ random number sequences every run.
 
 Returns:
 A single unsigned integer seed value, different on each successive call
+Note:
+In general periodically 'reseeding' a PRNG does not improve its quality
+and in some cases may harm it. For an extreme example the Mersenne
+Twister has `2 ^^ 19937 - 1` distinct states but after `seed(uint)` is
+called it can only be in one of `2 ^^ 32` distinct states regardless of
+how excellent the source of entropy is.
 */
 @property uint unpredictableSeed() @trusted nothrow @nogc
 {
-    import core.thread : Thread, getpid, MonoTime;
-    static bool seeded;
-    static MinstdRand0 rand;
-    if (!seeded)
+    version (AnyARC4Random)
     {
-        uint threadID = cast(uint) cast(void*) Thread.getThis();
-        rand.seed((getpid() + threadID) ^ cast(uint) MonoTime.currTime.ticks);
-        seeded = true;
+        return arc4random();
     }
-    rand.popFront();
-    return cast(uint) (MonoTime.currTime.ticks ^ rand.front);
+    else
+    {
+        import core.thread : Thread, getpid, MonoTime;
+        static bool seeded;
+        static MinstdRand0 rand;
+        if (!seeded)
+        {
+            uint threadID = cast(uint) cast(void*) Thread.getThis();
+            rand.seed((getpid() + threadID) ^ cast(uint) MonoTime.currTime.ticks);
+            seeded = true;
+        }
+        rand.popFront();
+        return cast(uint) (MonoTime.currTime.ticks ^ rand.front);
+    }
 }
 
 ///
