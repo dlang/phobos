@@ -1472,7 +1472,7 @@ if (isSomeString!S)
 {
     size_t istart;
     bool inword = false;
-    S[] result;
+    auto result = appender!(S[]);
 
     foreach (i, dchar c ; s)
     {
@@ -1481,7 +1481,7 @@ if (isSomeString!S)
         {
             if (inword)
             {
-                result ~= s[istart .. i];
+                put(result, s[istart .. i]);
                 inword = false;
             }
         }
@@ -1495,8 +1495,8 @@ if (isSomeString!S)
         }
     }
     if (inword)
-        result ~= s[istart .. $];
-    return result;
+        put(result, s[istart .. $]);
+    return result.data;
 }
 
 ///
