@@ -2981,7 +2981,7 @@ $(D Range) that locks the file and allows fast writing to it.
     }
 
     /**
-     * Output range which locks the file when created, and unlocks it when it goes
+     * Output range which locks the file when created, and unlocks the file when it goes
      * out of scope.
      *
      * Returns: An $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
