@@ -2987,8 +2987,17 @@ $(D Range) that locks the file and allows fast writing to it.
     }
 
     /**
+     * Output range which locks the file when created, and unlocks the file when it goes
+     * out of scope.
+     *
      * Returns: An $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
-     * that locks the file and allows fast writing to it.
+     * which accepts string types, `ubyte[]`, individual character types, and
+     * individual `ubyte`s.
+     *
+     * Note: Writing either arrays of `char`s or `ubyte`s is faster than
+     * writing each character individually from a range. For large amounts of data,
+     * writing the contents in chunks using an intermediary array can result
+     * in a speed increase.
      *
      * Throws: $(REF UTFException, std, utf) if the data given is a `char` range
      * and it contains malformed UTF data.
