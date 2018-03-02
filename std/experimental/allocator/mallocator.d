@@ -243,7 +243,6 @@ version(LDC_AddressSanitizer)
         if (code == -1)
             return null;
 }
-
         if (code == ENOMEM)
             return null;
 
