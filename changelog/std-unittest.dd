@@ -1,0 +1,17 @@
+`version(StdUnittest)` is now used in Phobos
+
+Similarly to the existing `CoreUnittest` which is used in DRuntime,
+`-version=StdUnittest` has been added to the Phobos build scripts.
+
+`StdUnittest` has been added to prevent leakage of symbols into user code and prevent execution of unittests from the standard library in user code when they were defined in templates.
+As an additional bonus, compilation times for such templates are reduced.
+For in-depth information about this topic, please see $(LINK2 https://wiki.dlang.org/DIP82, DIP82).
+
+There no effects or actions required for users of the official build scripts.
+However, quickly running the tests of a Phobos module, will now require `-version=StdUnittest`:
+
+$(CONSOLE ~/dlang/generated/dmd/linux/release/64/dmd -unittest -main -version=StdUnittest std/file.d)
+
+Note that `.test` is the officially supported Makefile rule to test an individual module:
+
+$(CONSOLE make -f posix.mak std/file.test)
