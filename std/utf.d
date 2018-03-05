@@ -4008,7 +4008,11 @@ if (isSomeChar!C)
                     }
                     else
                     {
-                        if (r.front < 0x80)
+                        static if (is(RC == wchar))
+                            enum firstMulti = 0xD800; // First high surrogate.
+                        else
+                            enum firstMulti = 0x80; // First non-ASCII.
+                        if (r.front < firstMulti)
                         {
                             buff = r.front;
                             r.popFront;
@@ -4052,7 +4056,11 @@ if (isSomeChar!C)
                         pos = 0;
                         auto c = r.front;
 
-                        if (c <= 0x7F)
+                        static if (C.sizeof >= 2 && RC.sizeof >= 2)
+                            enum firstMulti = 0xD800; // First high surrogate.
+                        else
+                            enum firstMulti = 0x80; // First non-ASCII.
+                        if (c < firstMulti)
                         {
                             fill = 1;
                             r.popFront;
