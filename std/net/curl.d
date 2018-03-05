@@ -22,6 +22,10 @@ SMTP) )
 )
 )
 
+$(MESSAGE_BOX gray, The API of `std.net.curl` has been $(B frozen) for stability.
+For a high-level, pure D networking client, see $(LINK2 https://github.com/ikod/dlang-requests, requests).
+)
+
 Note:
 You may need to link to the $(B curl) library, e.g. by adding $(D "libs": ["curl"])
 to your $(B dub.json) file if you are using $(LINK2 http://code.dlang.org, DUB).
