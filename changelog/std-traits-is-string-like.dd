@@ -1,0 +1,29 @@
+Added `std.traits.isStringLike` to check for types that behave similar to strings.
+
+$(REF isStringLike, std, traits) checks whether `T` behaves similar to a string.
+In other words it requires `T`
+to be an $(B finite) `InputRange` with `char`, `wchar` or `dchar`
+as $(REF ElementEncodingType, std, range).
+Moreover `T` isn't allowed to be an aggregate type,
+implicitly convertible enum or static string array:
+
+-------
+import std.traits : isStringLike;
+
+static assert(isStringLike!string);
+static assert(isStringLike!wstring);
+static assert(isStringLike!string);
+static assert(!isStringLike!(char[10]));
+static assert(!isStringLike!(wchar[10]));
+static assert(!isStringLike!(dchar[10]));
+
+struct InputString(T)
+{
+    T[] payload;
+    T front() { return payload[0]; }
+    bool empty() const { return payload.length > 0; }
+    void popFront() { payload = payload[1..$]; }
+}
+static assert(isStringLike!(InputString!char));
+static assert(isStringLike!(InputString!wchar));
+-------
