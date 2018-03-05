@@ -351,9 +351,9 @@ aa[etc.c.odbc.sqlext]=-dip1000
 aa[etc.c.odbc.sqltypes]=-dip1000
 aa[etc.c.odbc.sqlucode]=-dip1000
 
-#std/
-aa[std.array]=-dip1000 # Can add multiple values one by one
-aa[std.ascii]=-dip1000 # Can add multiple values one by one
+#std/                    branch for posix.mak: repo carblue:dip1000_3  TODO: harmonize with PR 5915
+aa[std.array]=-dip1000
+aa[std.ascii]=-dip1000
 aa[std.base64]=-dip1000
 aa[std.bigint]=-dip1000
 aa[std.bitmanip]=-dip1000 # PR 6174
@@ -403,7 +403,7 @@ aa[std.algorithm.internal]=-dip1000
 aa[std.algorithm.iteration]=-dip25
 aa[std.algorithm.mutation]=-dip1000
 aa[std.algorithm.package]=-dip25
-aa[std.algorithm.searching]=-dip25 # @system find is a blocker for std.algorithm.iteration via comparison.equal
+aa[std.algorithm.searching]=-dip25 # depends on PR 6246 merged and std.algorithm.comparison and std.uni fixed
 aa[std.algorithm.setops]=-dip1000
 aa[std.algorithm.sorting]=-dip25 # i.a. depends on issue 17512 fixed and a fix for writefln
 
@@ -437,7 +437,7 @@ aa[std.container.dlist]=-dip1000
 aa[std.container.package]=-dip1000
 aa[std.container.rbtree]=-dip1000
 aa[std.container.slist]=-dip25 # depends on issue 18445 fixed
-aa[std.container.util]=-dip25
+aa[std.container.util]=-dip25 # depends on aa[std.container.slist]=-dip1000
 
 aa[std.datetime.date]=-dip25 # depends on a fix for writefln
 aa[std.datetime.interval]=-dip1000
@@ -455,8 +455,8 @@ aa[std.digest.package]=-dip1000
 aa[std.digest.ripemd]=-dip1000
 aa[std.digest.sha]=-dip1000
 
+aa[std.experimental.all]=-dip1000
 aa[std.experimental.checkedint]=-dip1000
-aa[std.experimental.scripting]=-dip1000 # rename scripting to all, depending on 6186
 aa[std.experimental.typecons]=-dip1000
 aa[std.experimental.allocator.common]=-dip1000
 aa[std.experimental.allocator.gc_allocator]=-dip1000
@@ -519,7 +519,7 @@ aa[std.regex.internal.ir]=-dip1000
 aa[std.regex.internal.kickstart]=-dip1000
 aa[std.regex.internal.parser]=-dip1000
 aa[std.regex.internal.tests2]=-dip1000
-aa[std.regex.internal.tests]=-dip25
+aa[std.regex.internal.tests]=-dip25 # depends on a fix for writeln
 aa[std.regex.internal.thompson]=-dip1000
 
 aa[std.windows.charset]=-dip1000
