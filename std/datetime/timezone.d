@@ -2502,6 +2502,7 @@ public:
         }
         else
         {
+            import std.path : baseName;
             foreach (DirEntry de; dirEntries(tzDatabaseDir, SpanMode.depth))
             {
                 if (de.isFile)
@@ -2510,7 +2511,7 @@ public:
 
                     if (!tzName.extension().empty ||
                         !tzName.startsWith(subName) ||
-                        tzName == "leapseconds" ||
+                        baseName(tzName) == "leapseconds" ||
                         tzName == "+VERSION")
                     {
                         continue;
