@@ -489,6 +489,7 @@ version(unittest)
     {
         struct Inner
         {
+            bool value;
         }
 
         ref const(Inner[string]) func( ref Inner var1, lazy scope string var2 );
