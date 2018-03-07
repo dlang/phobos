@@ -4,16 +4,19 @@
 */
 module std.regex.internal.parser;
 
-import std.regex.internal.ir, std.regex.internal.shiftor,
-    std.regex.internal.bitnfa;
+import std.regex.internal.ir;
 import std.range.primitives, std.uni, std.meta,
-    std.traits, std.typecons, std.exception, std.range;
+    std.traits, std.typecons, std.exception;
 static import std.ascii;
 
 // package relevant info from parser into a regex object
-auto makeRegex(S, CG)(Parser!(S, CG) p) pure
+auto makeRegex(S, CG)(Parser!(S, CG) p)
 {
-    Regex!(BasicElementOf!S) re;
+    import std.regex.internal.backtracking : BacktrackingMatcher;
+    import std.regex.internal.thompson : ThompsonMatcher;
+    import std.algorithm.searching : canFind;
+    alias Char = BasicElementOf!S;
+    Regex!Char re;
     auto g = p.g;
     with(re)
     {
@@ -22,13 +25,16 @@ auto makeRegex(S, CG)(Parser!(S, CG) p) pure
         ngroup = g.ngroup;
         maxCounterDepth = g.counterDepth;
         flags = p.re_flags;
-        charsets = g.charsets
-            .map!(x =>
-                x.byInterval.map!(x=>Interval(x.a,x.b)).array
-            ).array;
+        charsets = g.charsets;
         matchers = g.matchers;
         backrefed = g.backrefed;
         re.postprocess();
+        // check if we have backreferences, if so - use backtracking
+        if (__ctfe) factory = null; // allows us to use the awful enum re = regex(...);
+        else if (re.backrefed.canFind!"a != 0")
+            factory =  new RuntimeFactory!(BacktrackingMatcher, Char);
+        else
+            factory = new RuntimeFactory!(ThompsonMatcher, Char);
         debug(std_regex_parser)
         {
             __ctfe || print();
@@ -42,12 +48,12 @@ auto makeRegex(S, CG)(Parser!(S, CG) p) pure
 
 // helper for unittest
 auto makeRegex(S)(S arg)
-    if (isSomeString!S)
+if (isSomeString!S)
 {
     return makeRegex(Parser!(S, CodeGen)(arg, ""));
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     auto re = makeRegex(`(?P<name>\w+) = (?P<var>\d+)`);
@@ -80,74 +86,89 @@ unittest
     assert(nc.equal(cp[1 .. $ - 1]));
 }
 
-//test if a given string starts with hex number of maxDigit that's a valid codepoint
-//returns it's value and skips these maxDigit chars on success, throws on failure
-dchar parseUniHex(Char)(ref Char[] str, size_t maxDigit)
+
+@trusted void reverseBytecode()(Bytecode[] code)
 {
-    //std.conv.parse is both @system and bogus
-    enforce(str.length >= maxDigit,"incomplete escape sequence");
-    uint val;
-    for (int k = 0; k < maxDigit; k++)
+    Bytecode[] rev = new Bytecode[code.length];
+    uint revPc = cast(uint) rev.length;
+    Stack!(Tuple!(uint, uint, uint)) stack;
+    uint start = 0;
+    uint end = cast(uint) code.length;
+    for (;;)
     {
-        immutable current = str[k];//accepts ascii only, so it's OK to index directly
-        if ('0' <= current && current <= '9')
-            val = val * 16 + current - '0';
-        else if ('a' <= current && current <= 'f')
-            val = val * 16 + current -'a' + 10;
-        else if ('A' <= current && current <= 'F')
-            val = val * 16 + current - 'A' + 10;
-        else
-            throw new Exception("invalid escape sequence");
+        for (uint pc = start; pc < end; )
+        {
+            immutable len = code[pc].length;
+            if (code[pc].code == IR.GotoEndOr)
+                break; //pick next alternation branch
+            if (code[pc].isAtom)
+            {
+                rev[revPc - len .. revPc] = code[pc .. pc + len];
+                revPc -= len;
+                pc += len;
+            }
+            else if (code[pc].isStart || code[pc].isEnd)
+            {
+                //skip over other embedded lookbehinds they are reversed
+                if (code[pc].code == IR.LookbehindStart
+                    || code[pc].code == IR.NeglookbehindStart)
+                {
+                    immutable blockLen = len + code[pc].data
+                         + code[pc].pairedLength;
+                    rev[revPc - blockLen .. revPc] = code[pc .. pc + blockLen];
+                    pc += blockLen;
+                    revPc -= blockLen;
+                    continue;
+                }
+                immutable second = code[pc].indexOfPair(pc);
+                immutable secLen = code[second].length;
+                rev[revPc - secLen .. revPc] = code[second .. second + secLen];
+                revPc -= secLen;
+                if (code[pc].code == IR.OrStart)
+                {
+                    //we pass len bytes forward, but secLen in reverse
+                    immutable revStart = revPc - (second + len - secLen - pc);
+                    uint r = revStart;
+                    uint i = pc + IRL!(IR.OrStart);
+                    while (code[i].code == IR.Option)
+                    {
+                        if (code[i - 1].code != IR.OrStart)
+                        {
+                            assert(code[i - 1].code == IR.GotoEndOr);
+                            rev[r - 1] = code[i - 1];
+                        }
+                        rev[r] = code[i];
+                        auto newStart = i + IRL!(IR.Option);
+                        auto newEnd = newStart + code[i].data;
+                        auto newRpc = r + code[i].data + IRL!(IR.Option);
+                        if (code[newEnd].code != IR.OrEnd)
+                        {
+                            newRpc--;
+                        }
+                        stack.push(tuple(newStart, newEnd, newRpc));
+                        r += code[i].data + IRL!(IR.Option);
+                        i += code[i].data + IRL!(IR.Option);
+                    }
+                    pc = i;
+                    revPc = revStart;
+                    assert(code[pc].code == IR.OrEnd);
+                }
+                else
+                    pc += len;
+            }
+        }
+        if (stack.empty)
+            break;
+        start = stack.top[0];
+        end = stack.top[1];
+        revPc = stack.top[2];
+        stack.pop();
     }
-    enforce(val <= 0x10FFFF, "invalid codepoint");
-    str = str[maxDigit..$];
-    return val;
-}
-
-@safe unittest
-{
-    import std.algorithm.searching : canFind;
-    string[] non_hex = [ "000j", "000z", "FffG", "0Z"];
-    string[] hex = [ "01", "ff", "00af", "10FFFF" ];
-    int[] value = [ 1, 0xFF, 0xAF, 0x10FFFF ];
-    foreach (v; non_hex)
-        assert(collectException(parseUniHex(v, v.length)).msg
-          .canFind("invalid escape sequence"));
-    foreach (i, v; hex)
-        assert(parseUniHex(v, v.length) == value[i]);
-    string over = "0011FFFF";
-    assert(collectException(parseUniHex(over, over.length)).msg
-      .canFind("invalid codepoint"));
-}
-
-auto caseEnclose(CodepointSet set)
-{
-    auto cased = set & unicode.LC;
-    foreach (dchar ch; cased.byCodepoint)
-    {
-        foreach (c; simpleCaseFoldings(ch))
-            set |= c;
-    }
-    return set;
-}
-
-/+
-    fetch codepoint set corresponding to a name (InBlock or binary property)
-+/
-@trusted CodepointSet getUnicodeSet(in char[] name, bool negated,  bool casefold) pure
-{
-    CodepointSet s = unicode(name);
-    //FIXME: caseEnclose for new uni as Set | CaseEnclose(SET && LC)
-    if (casefold)
-       s = caseEnclose(s);
-    if (negated)
-        s = s.inverted;
-    return s;
+    code[] = rev[];
 }
 
 struct CodeGen
 {
-pure:
     Bytecode[] ir;                 // resulting bytecode
     Stack!(uint) fixupStack;       // stack of opened start instructions
     NamedGroup[] dict;             // maps name -> user group number
@@ -202,7 +223,7 @@ pure:
     //try to generate optimal IR code for this CodepointSet
     @trusted void charsetToIr(CodepointSet set)
     {//@@@BUG@@@ writeln is @system
-        uint chars = cast(uint)set.length;
+        uint chars = cast(uint) set.length;
         if (chars < Bytecode.maxSequence)
         {
             switch (chars)
@@ -225,21 +246,21 @@ pure:
             if (n >= 0)
             {
                 if (ivals.length*2 > maxCharsetUsed)
-                    put(Bytecode(IR.Trie, cast(uint)n));
+                    put(Bytecode(IR.Trie, cast(uint) n));
                 else
-                    put(Bytecode(IR.CodepointSet, cast(uint)n));
+                    put(Bytecode(IR.CodepointSet, cast(uint) n));
                 return;
             }
             if (ivals.length*2 > maxCharsetUsed)
             {
-                auto t  = CharMatcher(set);
-                put(Bytecode(IR.Trie, cast(uint)matchers.length));
+                auto t  = getMatcher(set);
+                put(Bytecode(IR.Trie, cast(uint) matchers.length));
                 matchers ~= t;
                 debug(std_regex_allocation) writeln("Trie generated");
             }
             else
             {
-                put(Bytecode(IR.CodepointSet, cast(uint)charsets.length));
+                put(Bytecode(IR.CodepointSet, cast(uint) charsets.length));
                 matchers ~= CharMatcher.init;
             }
             charsets ~= set;
@@ -305,7 +326,7 @@ pure:
     {
         lookaroundNest--;
         ir[fix] = Bytecode(ir[fix].code,
-            cast(uint)ir.length - fix - IRL!(IR.LookaheadStart));
+            cast(uint) ir.length - fix - IRL!(IR.LookaheadStart));
         auto g = groupStack.pop();
         assert(!groupStack.empty);
         ir[fix+1] = Bytecode.fromRaw(groupStack.top);
@@ -338,7 +359,7 @@ pure:
         import std.algorithm.mutation : copy;
         import std.array : insertInPlace;
         immutable replace = ir[offset].code == IR.Nop;
-        immutable len = cast(uint)ir.length - offset - replace;
+        immutable len = cast(uint) ir.length - offset - replace;
         if (max != infinite)
         {
             if (min != 1 || max != 1)
@@ -404,9 +425,9 @@ pure:
         uint fix = fixupStack.top;
         if (ir.length > fix && ir[fix].code == IR.Option)
         {
-            ir[fix] = Bytecode(ir[fix].code, cast(uint)ir.length - fix);
+            ir[fix] = Bytecode(ir[fix].code, cast(uint) ir.length - fix);
             put(Bytecode(IR.GotoEndOr, 0));
-            fixupStack.top = cast(uint)ir.length; //replace latest fixup for Option
+            fixupStack.top = cast(uint) ir.length; //replace latest fixup for Option
             put(Bytecode(IR.Option, 0));
             return;
         }
@@ -414,19 +435,19 @@ pure:
         //start a new option
         if (fixupStack.length == 1)
         {//only root entry, effectively no fixup
-            len = cast(uint)ir.length + IRL!(IR.GotoEndOr);
+            len = cast(uint) ir.length + IRL!(IR.GotoEndOr);
             orStart = 0;
         }
         else
         {//IR.lookahead, etc. fixups that have length > 1, thus check ir[x].length
-            len = cast(uint)ir.length - fix - (ir[fix].length - 1);
+            len = cast(uint) ir.length - fix - (ir[fix].length - 1);
             orStart = fix + ir[fix].length;
         }
         insertInPlace(ir, orStart, Bytecode(IR.OrStart, 0), Bytecode(IR.Option, len));
         assert(ir[orStart].code == IR.OrStart);
         put(Bytecode(IR.GotoEndOr, 0));
         fixupStack.push(orStart); //fixup for StartOR
-        fixupStack.push(cast(uint)ir.length); //for second Option
+        fixupStack.push(cast(uint) ir.length); //for second Option
         put(Bytecode(IR.Option, 0));
     }
 
@@ -434,11 +455,11 @@ pure:
     void finishAlternation(uint fix)
     {
         enforce(ir[fix].code == IR.Option, "no matching ')'");
-        ir[fix] = Bytecode(ir[fix].code, cast(uint)ir.length - fix - IRL!(IR.OrStart));
+        ir[fix] = Bytecode(ir[fix].code, cast(uint) ir.length - fix - IRL!(IR.OrStart));
         fix = fixupStack.pop();
         enforce(ir[fix].code == IR.OrStart, "no matching ')'");
-        ir[fix] = Bytecode(IR.OrStart, cast(uint)ir.length - fix - IRL!(IR.OrStart));
-        put(Bytecode(IR.OrEnd, cast(uint)ir.length - fix - IRL!(IR.OrStart)));
+        ir[fix] = Bytecode(IR.OrStart, cast(uint) ir.length - fix - IRL!(IR.OrStart));
+        put(Bytecode(IR.OrEnd, cast(uint) ir.length - fix - IRL!(IR.OrStart)));
         uint pc = fix + IRL!(IR.OrStart);
         while (ir[pc].code == IR.Option)
         {
@@ -497,7 +518,7 @@ pure:
 
     @property size_t fixupLength(){ return fixupStack.data.length; }
 
-    @property uint length(){ return cast(uint)ir.length; }
+    @property uint length(){ return cast(uint) ir.length; }
 }
 
 // safety limits
@@ -511,10 +532,9 @@ enum maxCumulativeRepetitionLength = 2^^20;
 enum infinite = ~0u;
 
 struct Parser(R, Generator)
-    if (isForwardRange!R && is(ElementType!R : dchar))
+if (isForwardRange!R && is(ElementType!R : dchar))
 {
-pure:
-    dchar _current;
+    dchar front;
     bool empty;
     R pat, origin;       //keep full pattern for pretty printing error messages
     uint re_flags = 0;   //global flags e.g. multiline + internal ones
@@ -526,9 +546,9 @@ pure:
         pat = origin = pattern;
         //reserve slightly more then avg as sampled from unittests
         parseFlags(flags);
-        _current = ' ';//a safe default for freeform parsing
-        next();
-        g.start(cast(uint)pat.length);
+        front = ' ';//a safe default for freeform parsing
+        popFront();
+        g.start(cast(uint) pat.length);
         try
         {
             parseRegex();
@@ -540,59 +560,45 @@ pure:
         g.endPattern(1);
     }
 
-    @property dchar current(){ return _current; }
-
-    bool _next()
+    void _popFront()
     {
         if (pat.empty)
         {
             empty =  true;
-            return false;
         }
-        _current = pat.front;
-        pat.popFront();
-        return true;
+        else
+        {
+            front = pat.front;
+            pat.popFront();
+        }
     }
 
     void skipSpace()
     {
-        while (isWhite(current) && _next()){ }
+        while (!empty && isWhite(front)) _popFront();
     }
 
-    bool next()
+    void popFront()
     {
-        if (re_flags & RegexOption.freeform)
-        {
-            immutable r = _next();
-            skipSpace();
-            return r;
-        }
-        else
-            return _next();
+        _popFront();
+        if (re_flags & RegexOption.freeform) skipSpace();
     }
+
+    auto save(){ return this; }
 
     //parsing number with basic overflow check
     uint parseDecimal()
     {
         uint r = 0;
-        while (std.ascii.isDigit(current))
+        while (std.ascii.isDigit(front))
         {
             if (r >= (uint.max/10))
                 error("Overflow in decimal number");
-            r = 10*r + cast(uint)(current-'0');
-            if (!next())
-                break;
+            r = 10*r + cast(uint)(front-'0');
+            popFront();
+            if (empty) break;
         }
         return r;
-    }
-
-    //parse control code of form \cXXX, c assumed to be the current symbol
-    dchar parseControlCode()
-    {
-        enforce(next(), "Unfinished escape sequence");
-        enforce(('a' <= current && current <= 'z') || ('A' <= current && current <= 'Z'),
-            "Only letters are allowed after \\c");
-        return current & 0x1f;
     }
 
     //
@@ -626,73 +632,76 @@ pure:
 
         while (!empty)
         {
-            switch (current)
+            debug(std_regex_parser)
+                __ctfe || writeln("*LR*\nSource: ", pat, "\nStack: ",fixupStack.data);
+            switch (front)
             {
             case '(':
-                next();
-                if (current == '?')
+                popFront();
+                if (front == '?')
                 {
-                    next();
-                    switch (current)
+                    popFront();
+                    switch (front)
                     {
                     case '#':
                         for (;;)
                         {
-                            if (!next())
-                                error("Unexpected end of pattern");
-                            if (current == ')')
+                            popFront();
+                            enforce(!empty, "Unexpected end of pattern");
+                            if (front == ')')
                             {
-                                next();
+                                popFront();
                                 break;
                             }
                         }
                         break;
                     case ':':
                         g.genLogicGroup();
-                        next();
+                        popFront();
                         break;
                     case '=':
                         g.genLookaround(IR.LookaheadStart);
-                        next();
+                        popFront();
                         break;
                     case '!':
                         g.genLookaround(IR.NeglookaheadStart);
-                        next();
+                        popFront();
                         break;
                     case 'P':
-                        next();
-                        if (current != '<')
-                            error("Expected '<' in named group");
+                        popFront();
+                        enforce(front == '<', "Expected '<' in named group");
                         string name;
-                        if (!next() || !(isAlpha(current) || current == '_'))
+                        popFront();
+                        if (empty || !(isAlpha(front) || front == '_'))
                             error("Expected alpha starting a named group");
-                        name ~= current;
-                        while (next() && (isAlpha(current) ||
-                            current == '_' || std.ascii.isDigit(current)))
+                        name ~= front;
+                        popFront();
+                        while (!empty && (isAlpha(front) ||
+                            front == '_' || std.ascii.isDigit(front)))
                         {
-                            name ~= current;
+                            name ~= front;
+                            popFront();
                         }
-                        if (current != '>')
-                            error("Expected '>' closing named group");
-                        next();
+                        enforce(front == '>', "Expected '>' closing named group");
+                        popFront();
                         g.genNamedGroup(name);
                         break;
                     case '<':
-                        next();
-                        if (current == '=')
+                        popFront();
+                        if (front == '=')
                             g.genLookaround(IR.LookbehindStart);
-                        else if (current == '!')
+                        else if (front == '!')
                             g.genLookaround(IR.NeglookbehindStart);
                         else
                             error("'!' or '=' expected after '<'");
-                        next();
+                        popFront();
                         break;
                     default:
                         uint enableFlags, disableFlags;
                         bool enable = true;
                         do
                         {
-                            switch (current)
+                            switch (front)
                             {
                             case 's':
                                 if (enable)
@@ -726,9 +735,9 @@ pure:
                             default:
                                 error(" 's', 'x', 'i', 'm' or '-' expected after '(?' ");
                             }
-                            next();
-                        }while (current != ')');
-                        next();
+                            popFront();
+                        }while (front != ')');
+                        popFront();
                         re_flags |= enableFlags;
                         re_flags &= ~disableFlags;
                     }
@@ -740,13 +749,13 @@ pure:
                 break;
             case ')':
                 enforce(g.nesting, "Unmatched ')'");
-                next();
+                popFront();
                 auto pair = g.onClose();
                 if (pair[0])
                     parseQuantifier(pair[1]);
                 break;
             case '|':
-                next();
+                popFront();
                 g.fixAlternation();
                 break;
             default://no groups or whatever
@@ -771,7 +780,7 @@ pure:
         if (empty)
             return g.fixRepetition(offset);
         uint min, max;
-        switch (current)
+        switch (front)
         {
         case '*':
             min = 0;
@@ -786,28 +795,27 @@ pure:
             max = infinite;
             break;
         case '{':
-            enforce(next(), "Unexpected end of regex pattern");
-            enforce(std.ascii.isDigit(current), "First number required in repetition");
+            popFront();
+            enforce(!empty, "Unexpected end of regex pattern");
+            enforce(std.ascii.isDigit(front), "First number required in repetition");
             min = parseDecimal();
-            if (current == '}')
+            if (front == '}')
                 max = min;
-            else if (current == ',')
+            else if (front == ',')
             {
-                next();
-                if (std.ascii.isDigit(current))
+                popFront();
+                if (std.ascii.isDigit(front))
                     max = parseDecimal();
-                else if (current == '}')
+                else if (front == '}')
                     max = infinite;
                 else
                     error("Unexpected symbol in regex pattern");
                 skipSpace();
-                if (current != '}')
-                    error("Unmatched '{' in regex pattern");
+                enforce(front == '}', "Unmatched '{' in regex pattern");
             }
             else
                 error("Unexpected symbol in regex pattern");
-            if (min > max)
-                error("Illegal {n,m} quantifier");
+            enforce(min <= max, "Illegal {n,m} quantifier");
             break;
         default:
             g.fixRepetition(offset);
@@ -815,10 +823,11 @@ pure:
         }
         bool greedy = true;
         //check only if we managed to get new symbol
-        if (next() && current == '?')
+        popFront();
+        if (!empty && front == '?')
         {
             greedy = false;
-            next();
+            popFront();
         }
         g.fixRepetition(offset, min, max, greedy);
     }
@@ -828,7 +837,7 @@ pure:
     {
         if (empty)
             return;
-        switch (current)
+        switch (front)
         {
         case '*', '?', '+', '|', '{', '}':
             error("'*', '+', '?', '{', '}' not allowed in atom");
@@ -841,13 +850,14 @@ pure:
                 CodepointSet set;
                 g.charsetToIr(set.add('\n','\n'+1).add('\r', '\r'+1).inverted);
             }
-            next();
+            popFront();
             break;
         case '[':
             parseCharset();
             break;
         case '\\':
-            enforce(_next(), "Unfinished escape sequence");
+            _popFront();
+            enforce(!empty, "Unfinished escape sequence");
             parseEscape();
             break;
         case '^':
@@ -855,513 +865,117 @@ pure:
                 g.put(Bytecode(IR.Bol, 0));
             else
                 g.put(Bytecode(IR.Bof, 0));
-            next();
+            popFront();
             break;
         case '$':
             if (re_flags & RegexOption.multiline)
                 g.put(Bytecode(IR.Eol, 0));
             else
                 g.put(Bytecode(IR.Eof, 0));
-            next();
+            popFront();
             break;
         default:
-            //FIXME: getCommonCasing in new std uni
             if (re_flags & RegexOption.casefold)
             {
-                auto range = simpleCaseFoldings(current);
+                auto range = simpleCaseFoldings(front);
                 assert(range.length <= 5);
                 if (range.length == 1)
                     g.put(Bytecode(IR.Char, range.front));
                 else
                     foreach (v; range)
-                        g.put(Bytecode(IR.OrChar, v, cast(uint)range.length));
+                        g.put(Bytecode(IR.OrChar, v, cast(uint) range.length));
             }
             else
-                g.put(Bytecode(IR.Char, current));
-            next();
+                g.put(Bytecode(IR.Char, front));
+            popFront();
         }
     }
-
-
-
-    //CodepointSet operations relatively in order of priority
-    enum Operator:uint {
-        Open = 0, Negate,  Difference, SymDifference, Intersection, Union, None
-    }
-
-    //parse unit of CodepointSet spec, most notably escape sequences and char ranges
-    //also fetches next set operation
-    Tuple!(CodepointSet,Operator) parseCharTerm()
-    {
-        enum State{ Start, Char, Escape, CharDash, CharDashEscape,
-            PotentialTwinSymbolOperator }
-        Operator op = Operator.None;
-        dchar last;
-        CodepointSet set;
-        State state = State.Start;
-
-        static void addWithFlags(ref CodepointSet set, uint ch, uint re_flags)
-        {
-            if (re_flags & RegexOption.casefold)
-            {
-                auto range = simpleCaseFoldings(ch);
-                foreach (v; range)
-                    set |= v;
-            }
-            else
-                set |= ch;
-        }
-
-        static Operator twinSymbolOperator(dchar symbol)
-        {
-            switch (symbol)
-            {
-            case '|':
-                return Operator.Union;
-            case '-':
-                return Operator.Difference;
-            case '~':
-                return Operator.SymDifference;
-            case '&':
-                return Operator.Intersection;
-            default:
-                assert(false);
-            }
-        }
-
-        L_CharTermLoop:
-        for (;;)
-        {
-            final switch (state)
-            {
-            case State.Start:
-                switch (current)
-                {
-                case '|':
-                case '-':
-                case '~':
-                case '&':
-                    state = State.PotentialTwinSymbolOperator;
-                    last = current;
-                    break;
-                case '[':
-                    op = Operator.Union;
-                    goto case;
-                case ']':
-                    break L_CharTermLoop;
-                case '\\':
-                    state = State.Escape;
-                    break;
-                default:
-                    state = State.Char;
-                    last = current;
-                }
-                break;
-            case State.Char:
-                // xxx last current xxx
-                switch (current)
-                {
-                case '|':
-                case '~':
-                case '&':
-                    // then last is treated as normal char and added as implicit union
-                    state = State.PotentialTwinSymbolOperator;
-                    addWithFlags(set, last, re_flags);
-                    last = current;
-                    break;
-                case '-': // still need more info
-                    state = State.CharDash;
-                    break;
-                case '\\':
-                    set |= last;
-                    state = State.Escape;
-                    break;
-                case '[':
-                    op = Operator.Union;
-                    goto case;
-                case ']':
-                    addWithFlags(set, last, re_flags);
-                    break L_CharTermLoop;
-                default:
-                    state = State.Char;
-                    addWithFlags(set, last, re_flags);
-                    last = current;
-                }
-                break;
-            case State.PotentialTwinSymbolOperator:
-                // xxx last current xxxx
-                // where last = [|-&~]
-                if (current == last)
-                {
-                    op = twinSymbolOperator(last);
-                    next();//skip second twin char
-                    break L_CharTermLoop;
-                }
-                goto case State.Char;
-            case State.Escape:
-                // xxx \ current xxx
-                switch (current)
-                {
-                case 'f':
-                    last = '\f';
-                    state = State.Char;
-                    break;
-                case 'n':
-                    last = '\n';
-                    state = State.Char;
-                    break;
-                case 'r':
-                    last = '\r';
-                    state = State.Char;
-                    break;
-                case 't':
-                    last = '\t';
-                    state = State.Char;
-                    break;
-                case 'v':
-                    last = '\v';
-                    state = State.Char;
-                    break;
-                case 'c':
-                    last = parseControlCode();
-                    state = State.Char;
-                    break;
-                foreach (val; Escapables)
-                {
-                case val:
-                }
-                    last = current;
-                    state = State.Char;
-                    break;
-                case 'p':
-                    set.add(parseUnicodePropertySpec(false));
-                    state = State.Start;
-                    continue L_CharTermLoop; //next char already fetched
-                case 'P':
-                    set.add(parseUnicodePropertySpec(true));
-                    state = State.Start;
-                    continue L_CharTermLoop; //next char already fetched
-                case 'x':
-                    last = parseUniHex(pat, 2);
-                    state = State.Char;
-                    break;
-                case 'u':
-                    last = parseUniHex(pat, 4);
-                    state = State.Char;
-                    break;
-                case 'U':
-                    last = parseUniHex(pat, 8);
-                    state = State.Char;
-                    break;
-                case 'd':
-                    set.add(unicode.Nd);
-                    state = State.Start;
-                    break;
-                case 'D':
-                    set.add(unicode.Nd.inverted);
-                    state = State.Start;
-                    break;
-                case 's':
-                    set.add(unicode.White_Space);
-                    state = State.Start;
-                    break;
-                case 'S':
-                    set.add(unicode.White_Space.inverted);
-                    state = State.Start;
-                    break;
-                case 'w':
-                    set.add(wordCharacter);
-                    state = State.Start;
-                    break;
-                case 'W':
-                    set.add(wordCharacter.inverted);
-                    state = State.Start;
-                    break;
-                default:
-                    enforce(false, "invalid escape sequence");
-                }
-                break;
-            case State.CharDash:
-                // xxx last - current xxx
-                switch (current)
-                {
-                case '[':
-                    op = Operator.Union;
-                    goto case;
-                case ']':
-                    //means dash is a single char not an interval specifier
-                    addWithFlags(set, last, re_flags);
-                    addWithFlags(set, '-', re_flags);
-                    break L_CharTermLoop;
-                 case '-'://set Difference again
-                    addWithFlags(set, last, re_flags);
-                    op = Operator.Difference;
-                    next();//skip '-'
-                    break L_CharTermLoop;
-                case '\\':
-                    state = State.CharDashEscape;
-                    break;
-                default:
-                    enforce(last <= current, "inverted range");
-                    if (re_flags & RegexOption.casefold)
-                    {
-                        for (uint ch = last; ch <= current; ch++)
-                            addWithFlags(set, ch, re_flags);
-                    }
-                    else
-                        set.add(last, current + 1);
-                    state = State.Start;
-                }
-                break;
-            case State.CharDashEscape:
-            //xxx last - \ current xxx
-                uint end;
-                switch (current)
-                {
-                case 'f':
-                    end = '\f';
-                    break;
-                case 'n':
-                    end = '\n';
-                    break;
-                case 'r':
-                    end = '\r';
-                    break;
-                case 't':
-                    end = '\t';
-                    break;
-                case 'v':
-                    end = '\v';
-                    break;
-                foreach (val; Escapables)
-                {
-                case val:
-                }
-                    end = current;
-                    break;
-                case 'c':
-                    end = parseControlCode();
-                    break;
-                case 'x':
-                    end = parseUniHex(pat, 2);
-                    break;
-                case 'u':
-                    end = parseUniHex(pat, 4);
-                    break;
-                case 'U':
-                    end = parseUniHex(pat, 8);
-                    break;
-                default:
-                    error("invalid escape sequence");
-                }
-                enforce(last <= end,"inverted range");
-                set.add(last, end + 1);
-                state = State.Start;
-                break;
-            }
-            enforce(next(), "unexpected end of CodepointSet");
-        }
-        return tuple(set, op);
-    }
-
-    alias ValStack = Stack!(CodepointSet);
-    alias OpStack = Stack!(Operator);
 
     //parse and store IR for CodepointSet
     void parseCharset()
     {
         const save = re_flags;
         re_flags &= ~RegexOption.freeform; // stop ignoring whitespace if we did
-        parseCharsetImpl();
+        bool casefold = cast(bool)(re_flags & RegexOption.casefold);
+        g.charsetToIr(unicode.parseSet(this, casefold));
         re_flags = save;
-    }
-
-    void parseCharsetImpl()
-    {
-        ValStack vstack;
-        OpStack opstack;
-        import std.functional : unaryFun;
-        //
-        static bool apply(Operator op, ref ValStack stack)
-        {
-            switch (op)
-            {
-            case Operator.Negate:
-                stack.top = stack.top.inverted;
-                break;
-            case Operator.Union:
-                auto s = stack.pop();//2nd operand
-                enforce(!stack.empty, "no operand for '||'");
-                stack.top.add(s);
-                break;
-            case Operator.Difference:
-                auto s = stack.pop();//2nd operand
-                enforce(!stack.empty, "no operand for '--'");
-                stack.top.sub(s);
-                break;
-            case Operator.SymDifference:
-                auto s = stack.pop();//2nd operand
-                enforce(!stack.empty, "no operand for '~~'");
-                stack.top ~= s;
-                break;
-            case Operator.Intersection:
-                auto s = stack.pop();//2nd operand
-                enforce(!stack.empty, "no operand for '&&'");
-                stack.top.intersect(s);
-                break;
-            default:
-                return false;
-            }
-            return true;
-        }
-        static bool unrollWhile(alias cond)(ref ValStack vstack, ref OpStack opstack)
-        {
-            while (cond(opstack.top))
-            {
-                if (!apply(opstack.pop(),vstack))
-                    return false;//syntax error
-                if (opstack.empty)
-                    return false;
-            }
-            return true;
-        }
-
-        L_CharsetLoop:
-        do
-        {
-            switch (current)
-            {
-            case '[':
-                opstack.push(Operator.Open);
-                enforce(next(), "unexpected end of character class");
-                if (current == '^')
-                {
-                    opstack.push(Operator.Negate);
-                    enforce(next(), "unexpected end of character class");
-                }
-                else if (current == ']') // []...] is special cased
-                {
-                    enforce(next(), "wrong character set");
-                    auto pair = parseCharTerm();
-                    pair[0].add(']', ']'+1);
-                    if (pair[1] != Operator.None)
-                    {
-                        if (opstack.top == Operator.Union)
-                            unrollWhile!(unaryFun!"a == a.Union")(vstack, opstack);
-                        opstack.push(pair[1]);
-                    }
-                    vstack.push(pair[0]);
-                }
-                break;
-            case ']':
-                enforce(unrollWhile!(unaryFun!"a != a.Open")(vstack, opstack),
-                    "character class syntax error");
-                enforce(!opstack.empty, "unmatched ']'");
-                opstack.pop();
-                next();
-                if (opstack.empty)
-                    break L_CharsetLoop;
-                auto pair  = parseCharTerm();
-                if (!pair[0].empty)//not only operator e.g. -- or ~~
-                {
-                    vstack.top.add(pair[0]);//apply union
-                }
-                if (pair[1] != Operator.None)
-                {
-                    if (opstack.top == Operator.Union)
-                        unrollWhile!(unaryFun!"a == a.Union")(vstack, opstack);
-                    opstack.push(pair[1]);
-                }
-                break;
-            //
-            default://yet another pair of term(op)?
-                auto pair = parseCharTerm();
-                if (pair[1] != Operator.None)
-                {
-                    if (opstack.top == Operator.Union)
-                        unrollWhile!(unaryFun!"a == a.Union")(vstack, opstack);
-                    opstack.push(pair[1]);
-                }
-                vstack.push(pair[0]);
-            }
-
-        }while (!empty || !opstack.empty);
-        while (!opstack.empty)
-            apply(opstack.pop(),vstack);
-        assert(vstack.length == 1);
-        g.charsetToIr(vstack.top);
+        // Last next() in parseCharset is executed w/o freeform flag
+        if (re_flags & RegexOption.freeform) skipSpace();
     }
 
     //parse and generate IR for escape stand alone escape sequence
     @trusted void parseEscape()
     {//accesses array of appender
         import std.algorithm.iteration : sum;
-        switch (current)
+        switch (front)
         {
-        case 'f':   next(); g.put(Bytecode(IR.Char, '\f')); break;
-        case 'n':   next(); g.put(Bytecode(IR.Char, '\n')); break;
-        case 'r':   next(); g.put(Bytecode(IR.Char, '\r')); break;
-        case 't':   next(); g.put(Bytecode(IR.Char, '\t')); break;
-        case 'v':   next(); g.put(Bytecode(IR.Char, '\v')); break;
+        case 'f':   popFront(); g.put(Bytecode(IR.Char, '\f')); break;
+        case 'n':   popFront(); g.put(Bytecode(IR.Char, '\n')); break;
+        case 'r':   popFront(); g.put(Bytecode(IR.Char, '\r')); break;
+        case 't':   popFront(); g.put(Bytecode(IR.Char, '\t')); break;
+        case 'v':   popFront(); g.put(Bytecode(IR.Char, '\v')); break;
 
         case 'd':
-            next();
+            popFront();
             g.charsetToIr(unicode.Nd);
             break;
         case 'D':
-            next();
+            popFront();
             g.charsetToIr(unicode.Nd.inverted);
             break;
-        case 'b':   next(); g.put(Bytecode(IR.Wordboundary, 0)); break;
-        case 'B':   next(); g.put(Bytecode(IR.Notwordboundary, 0)); break;
+        case 'b':   popFront(); g.put(Bytecode(IR.Wordboundary, 0)); break;
+        case 'B':   popFront(); g.put(Bytecode(IR.Notwordboundary, 0)); break;
         case 's':
-            next();
+            popFront();
             g.charsetToIr(unicode.White_Space);
             break;
         case 'S':
-            next();
+            popFront();
             g.charsetToIr(unicode.White_Space.inverted);
             break;
         case 'w':
-            next();
+            popFront();
             g.charsetToIr(wordCharacter);
             break;
         case 'W':
-            next();
+            popFront();
             g.charsetToIr(wordCharacter.inverted);
             break;
         case 'p': case 'P':
-            auto CodepointSet = parseUnicodePropertySpec(current == 'P');
-            g.charsetToIr(CodepointSet);
+            bool casefold = cast(bool)(re_flags & RegexOption.casefold);
+            auto set = unicode.parsePropertySpec(this, front == 'P', casefold);
+            g.charsetToIr(set);
             break;
         case 'x':
             immutable code = parseUniHex(pat, 2);
-            next();
+            popFront();
             g.put(Bytecode(IR.Char,code));
             break;
         case 'u': case 'U':
-            immutable code = parseUniHex(pat, current == 'u' ? 4 : 8);
-            next();
+            immutable code = parseUniHex(pat, front == 'u' ? 4 : 8);
+            popFront();
             g.put(Bytecode(IR.Char, code));
             break;
         case 'c': //control codes
-            Bytecode code = Bytecode(IR.Char, parseControlCode());
-            next();
+            Bytecode code = Bytecode(IR.Char, unicode.parseControlCode(this));
+            popFront();
             g.put(code);
             break;
         case '0':
-            next();
+            popFront();
             g.put(Bytecode(IR.Char, 0));//NUL character
             break;
         case '1': .. case '9':
-            uint nref = cast(uint)current - '0';
+            uint nref = cast(uint) front - '0';
             immutable maxBackref = sum(g.groupStack.data);
             enforce(nref < maxBackref, "Backref to unseen group");
             //perl's disambiguation rule i.e.
             //get next digit only if there is such group number
-            while (nref < maxBackref && next() && std.ascii.isDigit(current))
+            popFront();
+            while (nref < maxBackref && !empty && std.ascii.isDigit(front))
             {
-                nref = nref * 10 + current - '0';
+                nref = nref * 10 + front - '0';
+                popFront();
             }
             if (nref >= maxBackref)
                 nref /= 10;
@@ -1377,45 +991,20 @@ pure:
             g.markBackref(nref);
             break;
         default:
-            if (current >= privateUseStart && current <= privateUseEnd)
+            if (front == '\\' && !pat.empty)
             {
-                g.endPattern(current - privateUseStart + 1);
+                if (pat.front >= privateUseStart && pat.front <= privateUseEnd)
+                    enforce(false, "invalid escape sequence");
             }
-            else
+            if (front >= privateUseStart && front <= privateUseEnd)
             {
-                auto op = Bytecode(IR.Char, current);
-                g.put(op);
+                g.endPattern(front - privateUseStart + 1);
+                break;
             }
-            next();
+            auto op = Bytecode(IR.Char, front);
+            popFront();
+            g.put(op);
         }
-    }
-
-    //parse and return a CodepointSet for \p{...Property...} and \P{...Property..},
-    //\ - assumed to be processed, p - is current
-    CodepointSet parseUnicodePropertySpec(bool negated)
-    {
-        enum MAX_PROPERTY = 128;
-        char[MAX_PROPERTY] result;
-        uint k = 0;
-        enforce(next(), "eof parsing unicode property spec");
-        if (current == '{')
-        {
-            while (k < MAX_PROPERTY && next() && current !='}' && current !=':')
-                if (current != '-' && current != ' ' && current != '_')
-                    result[k++] = cast(char)std.ascii.toLower(current);
-            enforce(k != MAX_PROPERTY, "invalid property name");
-            enforce(current == '}', "} expected ");
-        }
-        else
-        {//single char properties e.g.: \pL, \pN ...
-            enforce(current < 0x80, "invalid property name");
-            result[k++] = cast(char)current;
-        }
-        auto s = getUnicodeSet(result[0..k], negated,
-            cast(bool)(re_flags & RegexOption.casefold));
-        enforce(!s.empty, "unrecognized unicode property spec");
-        next();
-        return s;
     }
 
     //
@@ -1440,7 +1029,7 @@ pure:
 /+
     Postproces the IR, then optimize.
 +/
-@trusted void postprocess(Char)(ref Regex!Char zis) pure
+@trusted void postprocess(Char)(ref Regex!Char zis)
 {//@@@BUG@@@ write is @system
     with(zis)
     {
@@ -1479,7 +1068,7 @@ pure:
                 cumRange += cntRange;
                 enforce(cumRange < maxCumulativeRepetitionLength,
                     "repetition length limit is exceeded");
-                counterRange.push(cast(uint)cntRange + counterRange.top);
+                counterRange.push(cast(uint) cntRange + counterRange.top);
                 threadCount += counterRange.top;
                 break;
             case IR.RepeatEnd, IR.RepeatQEnd:
@@ -1501,16 +1090,8 @@ pure:
             }
         }
         checkIfOneShot();
-        if (!(flags & RegexInfo.oneShot) && !__ctfe)
-        {
-            kickstart = new ShiftOr!Char(zis);
-            if (kickstart.empty)
-            {
-                kickstart = new BitMatcher!Char(zis);
-                if (kickstart.empty)
-                    kickstart = null;
-            }
-        }
+        if (!(flags & RegexInfo.oneShot))
+            kickstart = Kickstart!Char(zis, new uint[](256));
         debug(std_regex_allocation) writefln("IR processed, max threads: %d", threadCount);
         optimize(zis);
     }
@@ -1560,7 +1141,7 @@ void fixupBytecode()(Bytecode[] ir)
     assert(fixups.empty);
 }
 
-void optimize(Char)(ref Regex!Char zis) pure
+void optimize(Char)(ref Regex!Char zis)
 {
     import std.array : insertInPlace;
     CodepointSet nextSet(uint idx)
@@ -1577,7 +1158,7 @@ void optimize(Char)(ref Regex!Char zis) pure
                     goto default;
                 //TODO: OrChar
                 case Trie, CodepointSet:
-                    set = .CodepointSet(zis.charsets[ir[i].data]);
+                    set = zis.charsets[ir[i].data];
                     goto default;
                 case GroupStart,GroupEnd:
                     break;
@@ -1599,7 +1180,7 @@ void optimize(Char)(ref Regex!Char zis) pure
                 ir[i - ir[i].data - IRL!(InfiniteStart)] =
                     Bytecode(InfiniteBloomStart, ir[i].data);
                 ir.insertInPlace(i+IRL!(InfiniteEnd),
-                    Bytecode.fromRaw(cast(uint)zis.filters.length));
+                    Bytecode.fromRaw(cast(uint) zis.filters.length));
                 zis.filters ~= BitTable(set);
                 fixupBytecode(ir);
             }

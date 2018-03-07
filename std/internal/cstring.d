@@ -16,7 +16,7 @@ COREREF = $(HTTP dlang.org/phobos/core_$1.html#$2, $(D core.$1.$2))
 module std.internal.cstring;
 
 ///
-unittest
+@safe unittest
 {
     version(Posix)
     {
@@ -38,14 +38,14 @@ unittest
     }
 }
 
-import std.traits;
 import std.range;
+import std.traits;
 
 version(unittest)
 @property inout(C)[] asArray(C)(inout C* cstr) pure nothrow @nogc @trusted
 if (isSomeChar!C)
 in { assert(cstr); }
-body
+do
 {
     size_t length = 0;
     while (cstr[length])
@@ -87,103 +87,17 @@ See $(RED WARNING) in $(B Examples) section.
 */
 
 auto tempCString(To = char, From)(From str)
-    if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
-        isSomeChar!(ElementEncodingType!From))
+if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
+    isSomeChar!(ElementEncodingType!From))
 {
-
     alias CF = Unqual!(ElementEncodingType!From);
 
-    enum To* useStack = () @trusted { return cast(To*)size_t.max; }();
-
-    static struct Res
-    {
-    @trusted:
-    nothrow @nogc:
-
-        @disable this();
-        @disable this(this);
-        alias ptr this;
-
-        @property inout(To)* buffPtr() inout pure
-        {
-            return _ptr == useStack ? _buff.ptr : _ptr;
-        }
-
-        @property const(To)* ptr() const pure
-        {
-            return buffPtr;
-        }
-
-        const(To)[] opIndex() const pure
-        {
-            return buffPtr[0 .. _length];
-        }
-
-        ~this()
-        {
-            if (_ptr != useStack)
-            {
-                import core.stdc.stdlib : free;
-                free(_ptr);
-            }
-        }
-
-    private:
-        To* _ptr;
-        size_t _length;        // length of the string
-        version (unittest)
-        {
-            enum buffLength = 16 / To.sizeof;   // smaller size to trigger reallocations
-        }
-        else
-        {
-            enum buffLength = 256 / To.sizeof;   // production size
-        }
-
-        To[buffLength] _buff;  // the 'small string optimization'
-
-        static Res trustedVoidInit() { Res res = void; return res; }
-    }
-
-    Res res = Res.trustedVoidInit();     // expensive to fill _buff[]
+    auto res = TempCStringBuffer!To.trustedVoidInit(); // expensive to fill _buff[]
 
     // Note: res._ptr can't point to res._buff as structs are movable.
 
-    To[] p;
-    bool p_is_onstack = true;
+    To[] p = res._buff;
     size_t i;
-
-    static To[] trustedRealloc(To[] buf, size_t i, To[] res, size_t strLength, bool res_is_onstack)
-        @trusted @nogc nothrow
-    {
-        pragma(inline, false);  // because it's rarely called
-
-        import core.exception : onOutOfMemoryError;
-        import core.stdc.string : memcpy;
-        import core.stdc.stdlib : malloc, realloc;
-
-        if (res_is_onstack)
-        {
-            size_t newlen = res.length * 3 / 2;
-            if (newlen <= strLength)
-                newlen = strLength + 1; // +1 for terminating 0
-            auto ptr = cast(To*)malloc(newlen * To.sizeof);
-            if (!ptr)
-                onOutOfMemoryError();
-            memcpy(ptr, res.ptr, i * To.sizeof);
-            return ptr[0 .. newlen];
-        }
-        else
-        {
-            if (buf.length >= size_t.max / (2 * To.sizeof))
-                onOutOfMemoryError();
-            const newlen = buf.length * 3 / 2;
-            auto ptr = cast(To*)realloc(buf.ptr, newlen * To.sizeof);
-            if (!ptr)
-                onOutOfMemoryError();
-            return ptr[0 .. newlen];
-        }
-    }
 
     size_t strLength;
     static if (hasLength!From)
@@ -196,31 +110,31 @@ auto tempCString(To = char, From)(From str)
         auto r = cast(const(CF)[])str;  // because inout(CF) causes problems with byUTF
         if (r is null)  // Bugzilla 14980
         {
+            res._length = 0;
             res._ptr = null;
             return res;
         }
     }
     else
         alias r = str;
-    To[] q = res._buff;
+    To[] heapBuffer;
     foreach (const c; byUTF!(Unqual!To)(r))
     {
-        if (i + 1 == q.length)
+        if (i + 1 == p.length)
         {
-            p = trustedRealloc(p, i, res._buff, strLength, p_is_onstack);
-            p_is_onstack = false;
-            q = p;
+            heapBuffer = trustedRealloc(p, strLength, heapBuffer is null);
+            p = heapBuffer;
         }
-        q[i++] = c;
+        p[i++] = c;
     }
-    q[i] = 0;
+    p[i] = 0;
     res._length = i;
-    res._ptr = p_is_onstack ? useStack : &p[0];
+    res._ptr = (heapBuffer is null ? res.useStack : &heapBuffer[0]);
     return res;
 }
 
 ///
-nothrow @nogc unittest
+nothrow @nogc @system unittest
 {
     import core.stdc.string;
 
@@ -241,7 +155,7 @@ nothrow @nogc unittest
     // both primary expressions are ended.
 }
 
-@safe nothrow @nogc unittest
+@safe pure nothrow @nogc unittest
 {
     assert("abc".tempCString().asArray == "abc");
     assert("abc"d.tempCString().ptr.asArray == "abc");
@@ -255,7 +169,7 @@ nothrow @nogc unittest
 }
 
 // Bugzilla 14980
-nothrow @nogc unittest
+pure nothrow @nogc @safe unittest
 {
     const(char[]) str = null;
     auto res = tempCString(str);
@@ -265,3 +179,87 @@ nothrow @nogc unittest
 
 version(Windows)
     alias tempCStringW = tempCString!(wchar, const(char)[]);
+
+private struct TempCStringBuffer(To = char)
+{
+@trusted pure nothrow @nogc:
+
+    @disable this();
+    @disable this(this);
+    alias ptr this; /// implicitly covert to raw pointer
+
+    @property inout(To)* buffPtr() inout
+    {
+        return _ptr == useStack ? _buff.ptr : _ptr;
+    }
+
+    @property const(To)* ptr() const
+    {
+        return buffPtr;
+    }
+
+    const(To)[] opIndex() const pure
+    {
+        return buffPtr[0 .. _length];
+    }
+
+    ~this()
+    {
+        if (_ptr != useStack)
+        {
+            import core.memory : pureFree;
+            pureFree(_ptr);
+        }
+    }
+
+private:
+    enum To* useStack = () @trusted { return cast(To*) size_t.max; }();
+
+    To* _ptr;
+    size_t _length;        // length of the string
+    version(unittest)
+    // the 'small string optimization'
+    {
+        // smaller size to trigger reallocations. Padding is to account for
+        // unittest/non-unittest cross-compilation (to avoid corruption)
+        To[16 / To.sizeof] _buff;
+        To[(256 - 16) / To.sizeof] _unittest_pad;
+    }
+    else
+    {
+        To[256 / To.sizeof] _buff; // production size
+    }
+
+    static TempCStringBuffer trustedVoidInit() { TempCStringBuffer res = void; return res; }
+}
+
+private To[] trustedRealloc(To)(To[] buf, size_t strLength, bool bufIsOnStack)
+    @trusted @nogc pure nothrow
+{
+    pragma(inline, false);  // because it's rarely called
+
+    import core.exception : onOutOfMemoryError;
+    import core.memory : pureMalloc, pureRealloc;
+
+    size_t newlen = buf.length * 3 / 2;
+
+    if (bufIsOnStack)
+    {
+        if (newlen <= strLength)
+            newlen = strLength + 1; // +1 for terminating 0
+        auto ptr = cast(To*) pureMalloc(newlen * To.sizeof);
+        if (!ptr)
+            onOutOfMemoryError();
+        ptr[0 .. buf.length] = buf[];
+        return ptr[0 .. newlen];
+    }
+    else
+    {
+        if (buf.length >= size_t.max / (2 * To.sizeof))
+            onOutOfMemoryError();
+        auto ptr = cast(To*) pureRealloc(buf.ptr, newlen * To.sizeof);
+        if (!ptr)
+            onOutOfMemoryError();
+        return ptr[0 .. newlen];
+    }
+}

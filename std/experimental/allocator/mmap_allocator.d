@@ -1,17 +1,18 @@
-///
+// Written in the D programming language.
+/**
+Source: $(PHOBOSSRC std/experimental/allocator/_mmap_allocator.d)
+*/
 module std.experimental.allocator.mmap_allocator;
 
-// MmapAllocator
 /**
-
-Allocator (currently defined only for Posix and Windows) using $(D $(LUCKY mmap))
+Allocator (currently defined only for Posix and Windows) using
+$(D $(LINK2 https://en.wikipedia.org/wiki/Mmap, mmap))
 and $(D $(LUCKY munmap)) directly (or their Windows equivalents). There is no
 additional structure: each call to $(D allocate(s)) issues a call to
 $(D mmap(null, s, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)),
 and each call to $(D deallocate(b)) issues $(D munmap(b.ptr, b.length)).
 So $(D MmapAllocator) is usually intended for allocating large chunks to be
 managed by fine-granular allocators.
-
 */
 struct MmapAllocator
 {
@@ -39,6 +40,7 @@ struct MmapAllocator
         }
 
         /// Ditto
+        nothrow @nogc
         bool deallocate(void[] b) shared
         {
             import core.sys.posix.sys.mman : munmap;
@@ -62,6 +64,7 @@ struct MmapAllocator
         }
 
         /// Ditto
+        nothrow @nogc
         bool deallocate(void[] b) shared
         {
             return b.ptr is null || VirtualFree(b.ptr, 0, MEM_RELEASE) != 0;
@@ -69,10 +72,10 @@ struct MmapAllocator
     }
 }
 
-unittest
+@system unittest
 {
     alias alloc = MmapAllocator.instance;
     auto p = alloc.allocate(100);
     assert(p.length == 100);
-    alloc.deallocate(p);
+    () nothrow @nogc { alloc.deallocate(p); }();
 }

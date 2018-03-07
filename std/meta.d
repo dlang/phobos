@@ -1,14 +1,18 @@
 // Written in the D programming language.
 
 /**
- * Templates to manipulate template argument lists (also known as type lists).
+ * Templates to manipulate
+ * $(DDSUBLINK spec/template, variadic-templates, template parameter sequences)
+ * (also known as $(I alias sequences)).
  *
- * Some operations on alias sequences are built in to the language,
- * such as TL[$(I n)] which gets the $(I n)th type from the
- * alias sequence. TL[$(I lwr) .. $(I upr)] returns a new type
- * list that is a slice of the old one.
+ * Some operations on alias sequences are built into the language,
+ * such as `S[i]`, which accesses the element at index `i` in the
+ * sequence. `S[low .. high]` returns a new alias
+ * sequence that is a slice of the old one.
  *
- * Several templates in this module use or operate on eponymous templates that
+ * For more information, see $(DDLINK ctarguments, Compile-time Sequences, Compile-time Sequences).
+ *
+ * $(B Note:) Several templates in this module use or operate on eponymous templates that
  * take a single argument and evaluate to a boolean constant. Such templates
  * are referred to as $(I template predicates).
  *
@@ -26,6 +30,7 @@
  *           $(LREF EraseAll)
  *           $(LREF Filter)
  *           $(LREF NoDuplicates)
+ *           $(LREF Stride)
  * ))
  * $(TR $(TD Alias sequence type hierarchy) $(TD
  *           $(LREF DerivedToFront)
@@ -53,6 +58,7 @@
  * $(TR $(TD Template instantiation) $(TD
  *           $(LREF ApplyLeft)
  *           $(LREF ApplyRight)
+ *           $(LREF Instantiate)
  * ))
  * ))
  *
@@ -74,6 +80,8 @@ module std.meta;
 /**
  * Creates a sequence of zero or more aliases. This is most commonly
  * used as template parameters or arguments.
+ *
+ * In previous versions of Phobos, this was known as `TypeTuple`.
  */
 template AliasSeq(TList...)
 {
@@ -88,7 +96,7 @@ template AliasSeq(TList...)
 
     int foo(TL td)  // same as int foo(int, double);
     {
-        return td[0] + cast(int)td[1];
+        return td[0] + cast(int) td[1];
     }
 }
 
@@ -175,15 +183,15 @@ template AliasSeq(TList...)
  *
  * Not everything can be directly aliased. An alias cannot be declared
  * of - for example - a literal:
- *
- * `alias a = 4; //Error`
- *
+ * ---
+ * alias a = 4; //Error
+ * ---
  * With this template any single entity can be aliased:
- *
- * `alias b = Alias!4; //OK`
- *
+ * ---
+ * alias b = Alias!4; //OK
+ * ---
  * See_Also:
- * To alias more than one thing at once, use $(LREF AliasSeq)
+ * To alias more than one thing at once, use $(LREF AliasSeq).
  */
 alias Alias(alias a) = a;
 
@@ -246,15 +254,10 @@ package template OldAlias(alias a)
 
 import std.traits : isAggregateType, Unqual;
 
-package template OldAlias(T) if (!isAggregateType!T || is(Unqual!T == T))
+package template OldAlias(T)
+if (!isAggregateType!T || is(Unqual!T == T))
 {
     alias OldAlias = T;
-}
-
-deprecated("Alias will stop to unqualify user defined types.")
-package template OldAlias(T) if (isAggregateType!T && !is(Unqual!T == T))
-{
-    alias OldAlias = Unqual!T;
 }
 
 @safe unittest
@@ -298,7 +301,7 @@ template staticIndexOf(alias T, TList...)
 
 // [internal]
 private template genericIndexOf(args...)
-    if (args.length >= 1)
+if (args.length >= 1)
 {
     alias e     = OldAlias!(args[0]);
     alias tuple = args[1 .. $];
@@ -346,12 +349,8 @@ private template genericIndexOf(args...)
     static assert(staticIndexOf!("void", 0, void, "void") == 2);
 }
 
-// Explicitly undocumented. It will be removed in February 2017. @@@DEPRECATED_2017-02@@@
-deprecated("Please use staticIndexOf")
-alias IndexOf = staticIndexOf;
-
 /**
- * Returns a typetuple created from TList with the first occurrence,
+ * Returns an `AliasSeq` created from TList with the first occurrence,
  * if any, of T removed.
  */
 template Erase(T, TList...)
@@ -375,7 +374,7 @@ template Erase(alias T, TList...)
 
 // [internal]
 private template GenericErase(args...)
-    if (args.length >= 1)
+if (args.length >= 1)
 {
     alias e     = OldAlias!(args[0]);
     alias tuple = args[1 .. $] ;
@@ -409,7 +408,7 @@ private template GenericErase(args...)
 
 
 /**
- * Returns a typetuple created from TList with the all occurrences,
+ * Returns an `AliasSeq` created from TList with the all occurrences,
  * if any, of T removed.
  */
 template EraseAll(T, TList...)
@@ -434,7 +433,7 @@ template EraseAll(alias T, TList...)
 
 // [internal]
 private template GenericEraseAll(args...)
-    if (args.length >= 1)
+if (args.length >= 1)
 {
     alias e     = OldAlias!(args[0]);
     alias tuple = args[1 .. $];
@@ -470,38 +469,47 @@ private template GenericEraseAll(args...)
         equals!(real, 3,    4,    5, 9));
 }
 
+/*
+ * Erase any occurrence of the first `TList[0 .. N]` elements from `TList[N .. $]`.
+ *
+ * Params:
+ *   N = number of elements to delete from the `TList`
+ *   TList = sequence of aliases
+ *
+ * See_Also: $(LREF EraseAll)
+ */
+private template EraseAllN(uint N, TList...)
+{
+    static if (N == 1)
+    {
+        alias EraseAllN = EraseAll!(TList[0], TList[1 .. $]);
+    }
+    else
+    {
+        static if (N & 1)
+            alias EraseAllN = EraseAllN!(N / 2, TList[N / 2 + 1 .. N],
+                    EraseAllN!(N / 2 + 1, TList[0 .. N / 2 + 1], TList[N .. $]));
+        else
+            alias EraseAllN = EraseAllN!(N / 2, TList[N / 2 .. N],
+                    EraseAllN!(N / 2, TList[0 .. N / 2], TList[N .. $]));
+    }
+}
 
 /**
- * Returns a typetuple created from TList with the all duplicate
+ * Returns an `AliasSeq` created from TList with the all duplicate
  * types removed.
  */
 template NoDuplicates(TList...)
 {
-    template EraseAllN(uint N, T...)
+    static if (TList.length >= 2)
     {
-        static if (N <= 1)
-        {
-            alias EraseAllN = T;
-        }
-        else
-        {
-            alias EraseAllN = EraseAllN!(N-1, T[1..N], EraseAll!(T[0], T[N..$]));
-        }
-    }
-    static if (TList.length > 500)
-    {
-        enum steps = 16;
-        alias first = NoDuplicates!(TList[0..steps]);
-        alias NoDuplicates = NoDuplicates!(EraseAllN!(first.length, first, TList[steps..$]));
-    }
-    else static if (TList.length == 0)
-    {
-        alias NoDuplicates = TList;
+        alias fst = NoDuplicates!(TList[0 .. $/2]);
+        alias snd = NoDuplicates!(TList[$/2 .. $]);
+        alias NoDuplicates = AliasSeq!(fst, EraseAllN!(fst.length, fst, snd));
     }
     else
     {
-        alias NoDuplicates =
-            AliasSeq!(TList[0], NoDuplicates!(EraseAll!(TList[0], TList[1 .. $])));
+        alias NoDuplicates = TList;
     }
 }
 
@@ -512,10 +520,23 @@ template NoDuplicates(TList...)
 
     alias TL = NoDuplicates!(Types);
     static assert(is(TL == AliasSeq!(int, long, float)));
+}
+
+@safe unittest
+{
+    import std.range : iota;
 
     // Bugzilla 14561: huge enums
     alias LongList = Repeat!(1500, int);
     static assert(NoDuplicates!LongList.length == 1);
+    // Bugzilla 17995: huge enums, revisited
+
+    alias a = NoDuplicates!(AliasSeq!(1, Repeat!(1000, 3)));
+    alias b = NoDuplicates!(AliasSeq!(1, Repeat!(10, 3)));
+    static assert(a.length == b.length);
+
+    static assert(NoDuplicates!(aliasSeqOf!(iota(7)), aliasSeqOf!(iota(7))) == aliasSeqOf!(iota(7)));
+    static assert(NoDuplicates!(aliasSeqOf!(iota(8)), aliasSeqOf!(iota(8))) == aliasSeqOf!(iota(8)));
 }
 
 @safe unittest
@@ -528,7 +549,7 @@ template NoDuplicates(TList...)
 
 
 /**
- * Returns a typetuple created from TList with the first occurrence
+ * Returns an `AliasSeq` created from TList with the first occurrence
  * of type T, if found, replaced with type U.
  */
 template Replace(T, U, TList...)
@@ -565,7 +586,7 @@ template Replace(alias T, alias U, TList...)
 
 // [internal]
 private template GenericReplace(args...)
-    if (args.length >= 2)
+if (args.length >= 2)
 {
     alias from  = OldAlias!(args[0]);
     alias to    = OldAlias!(args[1]);
@@ -608,7 +629,7 @@ private template GenericReplace(args...)
 }
 
 /**
- * Returns a typetuple created from TList with all occurrences
+ * Returns an `AliasSeq` created from TList with all occurrences
  * of type T, if found, replaced with type U.
  */
 template ReplaceAll(T, U, TList...)
@@ -645,7 +666,7 @@ template ReplaceAll(alias T, alias U, TList...)
 
 // [internal]
 private template GenericReplaceAll(args...)
-    if (args.length >= 2)
+if (args.length >= 2)
 {
     alias from  = OldAlias!(args[0]);
     alias to    = OldAlias!(args[1]);
@@ -688,7 +709,7 @@ private template GenericReplaceAll(args...)
 }
 
 /**
- * Returns a typetuple created from TList with the order reversed.
+ * Returns an `AliasSeq` created from TList with the order reversed.
  */
 template Reverse(TList...)
 {
@@ -741,7 +762,7 @@ template MostDerived(T, TList...)
 }
 
 /**
- * Returns the typetuple TList with the types sorted so that the most
+ * Returns an `AliasSeq` with the elements of TList sorted so that the most
  * derived types come first.
  */
 template DerivedToFront(TList...)
@@ -852,8 +873,8 @@ template allSatisfy(alias F, T...)
 Tests whether any given items satisfy a template predicate, i.e. evaluates to
 $(D F!(T[0]) || F!(T[1]) || ... || F!(T[$ - 1])).
 
-Evaluation is $(I not) short-circuited if a true result is encountered; the
-template predicate must be instantiable with all the given items.
+Evaluation is short-circuited if a true result is encountered; the
+template predicate must be instantiable with one of the given items.
  */
 template anySatisfy(alias F, T...)
 {
@@ -884,7 +905,7 @@ template anySatisfy(alias F, T...)
 
 
 /**
- * Filters an $(D AliasSeq) using a template predicate. Returns a
+ * Filters an $(D AliasSeq) using a template predicate. Returns an
  * $(D AliasSeq) of the elements which satisfy the predicate.
  */
 template Filter(alias pred, TList...)
@@ -933,7 +954,7 @@ template Filter(alias pred, TList...)
 
 
 // Used in template predicate unit tests below.
-private version (unittest)
+private version(unittest)
 {
     template testAlways(T...)
     {
@@ -972,7 +993,7 @@ template templateNot(alias pred)
 
 @safe unittest
 {
-    foreach (T; AliasSeq!(int, staticMap, 42))
+    static foreach (T; AliasSeq!(int, staticMap, 42))
     {
         static assert(!Instantiate!(templateNot!testAlways, T));
         static assert(Instantiate!(templateNot!testNever, T));
@@ -1016,14 +1037,14 @@ template templateAnd(Preds...)
     static assert(storesNegativeNumbers!int);
     static assert(!storesNegativeNumbers!string && !storesNegativeNumbers!uint);
 
-    // An empty list of predicates always yields true.
+    // An empty sequence of predicates always yields true.
     alias alwaysTrue = templateAnd!();
     static assert(alwaysTrue!int);
 }
 
 @safe unittest
 {
-    foreach (T; AliasSeq!(int, staticMap, 42))
+    static foreach (T; AliasSeq!(int, staticMap, 42))
     {
         static assert( Instantiate!(templateAnd!(), T));
         static assert( Instantiate!(templateAnd!(testAlways), T));
@@ -1074,14 +1095,14 @@ template templateOr(Preds...)
     static assert( isPtrOrUnsigned!uint &&  isPtrOrUnsigned!(short*));
     static assert(!isPtrOrUnsigned!int  && !isPtrOrUnsigned!(string));
 
-    // An empty list of predicates never yields true.
+    // An empty sequence of predicates never yields true.
     alias alwaysFalse = templateOr!();
     static assert(!alwaysFalse!int);
 }
 
 @safe unittest
 {
-    foreach (T; AliasSeq!(int, staticMap, 42))
+    static foreach (T; AliasSeq!(int, staticMap, 42))
     {
         static assert( Instantiate!(templateOr!(testAlways), T));
         static assert( Instantiate!(templateOr!(testAlways, testAlways), T));
@@ -1170,8 +1191,8 @@ template aliasSeqOf(alias range)
 
 @safe unittest
 {
-    import std.range : iota;
     import std.conv : to, octal;
+    import std.range : iota;
     //Testing compile time octal
     foreach (I2; aliasSeqOf!(iota(0, 8)))
         foreach (I1; aliasSeqOf!(iota(0, 8)))
@@ -1316,11 +1337,15 @@ private template SmartAlias(T...)
 }
 
 /**
- * Creates an `AliasSeq` which repeats a type or an `AliasSeq` exactly `n` times.
+ * Creates an `AliasSeq` which repeats `TList` exactly `n` times.
  */
-template Repeat(size_t n, TList...) if (n > 0)
+template Repeat(size_t n, TList...)
 {
-    static if (n == 1)
+    static if (n == 0)
+    {
+        alias Repeat = AliasSeq!();
+    }
+    else static if (n == 1)
     {
         alias Repeat = AliasSeq!TList;
     }
@@ -1345,6 +1370,9 @@ template Repeat(size_t n, TList...) if (n > 0)
 ///
 @safe unittest
 {
+    alias ImInt0 = Repeat!(0, int);
+    static assert(is(ImInt0 == AliasSeq!()));
+
     alias ImInt1 = Repeat!(1, immutable(int));
     static assert(is(ImInt1 == AliasSeq!(immutable(int))));
 
@@ -1376,7 +1404,7 @@ template Repeat(size_t n, TList...) if (n > 0)
 }
 
 /**
- * Sorts a $(LREF AliasSeq) using $(D cmp).
+ * Sorts an $(LREF AliasSeq) using $(D cmp).
  *
  * Parameters:
  *     cmp = A template that returns a $(D bool) (if its first argument is less than the second one)
@@ -1445,7 +1473,7 @@ private template staticMerge(alias cmp, int half, Seq...)
 }
 
 private template isLessEq(alias cmp, Seq...)
-    if (Seq.length == 2)
+if (Seq.length == 2)
 {
     private enum Result = cmp!(Seq[1], Seq[0]);
     static if (is(typeof(Result) == bool))
@@ -1483,7 +1511,7 @@ template staticIsSorted(alias cmp, Seq...)
 }
 
 ///
-unittest
+@safe unittest
 {
     enum Comp(int N1, int N2) = N1 < N2;
     static assert( staticIsSorted!(Comp, 2, 2));
@@ -1492,11 +1520,101 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     enum Comp(T1, T2) = __traits(isUnsigned, T2) - __traits(isUnsigned, T1);
     static assert( staticIsSorted!(Comp, uint, ubyte, ulong, short, long));
     static assert(!staticIsSorted!(Comp, uint, short, ubyte, long, ulong));
+}
+
+/**
+Selects a subset of `Args` by stepping with fixed `stepSize` over the sequence.
+A negative `stepSize` starts iteration with the last element.
+
+Params:
+    stepSize = Number of elements to increment on each iteration. Can't be `0`.
+    Args = Template arguments.
+
+Returns: An `AliasSeq` filtered by the selected stride.
+*/
+template Stride(int stepSize, Args...)
+if (stepSize != 0)
+{
+    static if (Args.length == 0)
+    {
+        alias Stride = AliasSeq!();
+    }
+    else static if (stepSize > 0)
+    {
+        static if (stepSize >= Args.length)
+            alias Stride = AliasSeq!(Args[0]);
+        else
+            alias Stride = AliasSeq!(Args[0], Stride!(stepSize, Args[stepSize .. $]));
+    }
+    else
+    {
+        static if (-stepSize >= Args.length)
+            alias Stride = AliasSeq!(Args[$ - 1]);
+        else
+            alias Stride = AliasSeq!(Args[$ - 1], Stride!(stepSize, Args[0 .. $ + stepSize]));
+    }
+}
+
+///
+@safe unittest
+{
+    static assert(is(Stride!(1, short, int, long) == AliasSeq!(short, int, long)));
+    static assert(is(Stride!(2, short, int, long) == AliasSeq!(short, long)));
+    static assert(is(Stride!(-1, short, int, long) == AliasSeq!(long, int, short)));
+    static assert(is(Stride!(-2, short, int, long) == AliasSeq!(long, short)));
+
+    alias attribs = AliasSeq!(short, int, long, ushort, uint, ulong);
+    static assert(is(Stride!(3, attribs) == AliasSeq!(short, ushort)));
+    static assert(is(Stride!(3, attribs[1 .. $]) == AliasSeq!(int, uint)));
+    static assert(is(Stride!(-3, attribs) == AliasSeq!(ulong, long)));
+}
+
+@safe unittest
+{
+    static assert(Pack!(Stride!(5, int)).equals!(int));
+    static assert(Pack!(Stride!(-5, int)).equals!(int));
+    static assert(!__traits(compiles, Stride!(0, int)));
+}
+
+/**
+ * Instantiates the given template with the given parameters.
+ *
+ * Used to work around syntactic limitations of D with regard to instantiating
+ * a template from an alias sequence (e.g. `T[0]!(...)` is not valid) or a
+ * template returning another template (e.g. `Foo!(Bar)!(Baz)` is not allowed).
+ *
+ * Params:
+ *    Template = The template to instantiate.
+ *    Params = The parameters with which to instantiate the template.
+ * Returns:
+ *    The instantiated template.
+ */
+alias Instantiate(alias Template, Params...) = Template!Params;
+
+///
+@safe unittest
+{
+    // ApplyRight combined with Instantiate can be used to apply various
+    // templates to the same parameters.
+    import std.string : leftJustify, center, rightJustify;
+    alias functions = staticMap!(ApplyRight!(Instantiate, string),
+                                 leftJustify, center, rightJustify);
+    string result = "";
+    static foreach (f; functions)
+    {
+        {
+            auto x = &f; // not a template, but a function instantiation
+            result ~= x("hello", 7);
+            result ~= ";";
+        }
+    }
+
+    assert(result == "hello  ; hello ;  hello;");
 }
 
 // : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : //
@@ -1513,7 +1631,7 @@ private:
  *                          templates, etc.)
  */
 private template isSame(ab...)
-    if (ab.length == 2)
+if (ab.length == 2)
 {
     static if (__traits(compiles, expectType!(ab[0]),
                                   expectType!(ab[1])))
@@ -1614,14 +1732,3 @@ private template Pack(T...)
     static assert( Pack!(1, int, "abc").equals!(1, int, "abc"));
     static assert(!Pack!(1, int, "abc").equals!(1, int, "cba"));
 }
-
-/*
- * Instantiates the given template with the given list of parameters.
- *
- * Used to work around syntactic limitations of D with regard to instantiating
- * a template from an alias sequence (e.g. T[0]!(...) is not valid) or a template
- * returning another template (e.g. Foo!(Bar)!(Baz) is not allowed).
- */
-// TODO: Consider publicly exposing this, maybe even if only for better
-// understandability of error messages.
-alias Instantiate(alias Template, Params...) = Template!Params;

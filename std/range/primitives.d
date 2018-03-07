@@ -4,29 +4,30 @@ This module is a submodule of $(MREF std, range).
 It provides basic range functionality by defining several templates for testing
 whether a given object is a _range, and what kind of _range it is:
 
+$(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE ,
-    $(TR $(TD $(D $(LREF isInputRange)))
+    $(TR $(TD $(LREF isInputRange))
         $(TD Tests if something is an $(I input _range), defined to be
         something from which one can sequentially read data using the
         primitives $(D front), $(D popFront), and $(D empty).
     ))
-    $(TR $(TD $(D $(LREF isOutputRange)))
+    $(TR $(TD $(LREF isOutputRange))
         $(TD Tests if something is an $(I output _range), defined to be
         something to which one can sequentially write data using the
-        $(D $(LREF put)) primitive.
+        $(LREF put) primitive.
     ))
-    $(TR $(TD $(D $(LREF isForwardRange)))
+    $(TR $(TD $(LREF isForwardRange))
         $(TD Tests if something is a $(I forward _range), defined to be an
         input _range with the additional capability that one can save one's
         current position with the $(D save) primitive, thus allowing one to
         iterate over the same _range multiple times.
     ))
-    $(TR $(TD $(D $(LREF isBidirectionalRange)))
+    $(TR $(TD $(LREF isBidirectionalRange))
         $(TD Tests if something is a $(I bidirectional _range), that is, a
         forward _range that allows reverse traversal using the primitives $(D
         back) and $(D popBack).
     ))
-    $(TR $(TD $(D $(LREF isRandomAccessRange)))
+    $(TR $(TD $(LREF isRandomAccessRange))
         $(TD Tests if something is a $(I random access _range), which is a
         bidirectional _range that also supports the array subscripting
         operation via the primitive $(D opIndex).
@@ -36,66 +37,69 @@ $(BOOKTABLE ,
 It also provides number of templates that test for various _range capabilities:
 
 $(BOOKTABLE ,
-    $(TR $(TD $(D $(LREF hasMobileElements)))
+    $(TR $(TD $(LREF hasMobileElements))
         $(TD Tests if a given _range's elements can be moved around using the
         primitives $(D moveFront), $(D moveBack), or $(D moveAt).
     ))
-    $(TR $(TD $(D $(LREF ElementType)))
+    $(TR $(TD $(LREF ElementType))
         $(TD Returns the element type of a given _range.
     ))
-    $(TR $(TD $(D $(LREF ElementEncodingType)))
+    $(TR $(TD $(LREF ElementEncodingType))
         $(TD Returns the encoding element type of a given _range.
     ))
-    $(TR $(TD $(D $(LREF hasSwappableElements)))
+    $(TR $(TD $(LREF hasSwappableElements))
         $(TD Tests if a _range is a forward _range with swappable elements.
     ))
-    $(TR $(TD $(D $(LREF hasAssignableElements)))
+    $(TR $(TD $(LREF hasAssignableElements))
         $(TD Tests if a _range is a forward _range with mutable elements.
     ))
-    $(TR $(TD $(D $(LREF hasLvalueElements)))
+    $(TR $(TD $(LREF hasLvalueElements))
         $(TD Tests if a _range is a forward _range with elements that can be
         passed by reference and have their address taken.
     ))
-    $(TR $(TD $(D $(LREF hasLength)))
+    $(TR $(TD $(LREF hasLength))
         $(TD Tests if a given _range has the $(D length) attribute.
     ))
-    $(TR $(TD $(D $(LREF isInfinite)))
+    $(TR $(TD $(LREF isInfinite))
         $(TD Tests if a given _range is an $(I infinite _range).
     ))
-    $(TR $(TD $(D $(LREF hasSlicing)))
+    $(TR $(TD $(LREF hasSlicing))
         $(TD Tests if a given _range supports the array slicing operation $(D
-        R[x..y]).
+        R[x .. y]).
     ))
 )
 
 Finally, it includes some convenience functions for manipulating ranges:
 
 $(BOOKTABLE ,
-    $(TR $(TD $(D $(LREF popFrontN)))
+    $(TR $(TD $(LREF popFrontN))
         $(TD Advances a given _range by up to $(I n) elements.
     ))
-    $(TR $(TD $(D $(LREF popBackN)))
+    $(TR $(TD $(LREF popBackN))
         $(TD Advances a given bidirectional _range from the right by up to
         $(I n) elements.
     ))
-    $(TR $(TD $(D $(LREF popFrontExactly)))
+    $(TR $(TD $(LREF popFrontExactly))
         $(TD Advances a given _range by up exactly $(I n) elements.
     ))
-    $(TR $(TD $(D $(LREF popBackExactly)))
+    $(TR $(TD $(LREF popBackExactly))
         $(TD Advances a given bidirectional _range from the right by exactly
         $(I n) elements.
     ))
-    $(TR $(TD $(D $(LREF moveFront)))
+    $(TR $(TD $(LREF moveFront))
         $(TD Removes the front element of a _range.
     ))
-    $(TR $(TD $(D $(LREF moveBack)))
+    $(TR $(TD $(LREF moveBack))
         $(TD Removes the back element of a bidirectional _range.
     ))
-    $(TR $(TD $(D $(LREF moveAt)))
+    $(TR $(TD $(LREF moveAt))
         $(TD Removes the $(I i)'th element of a random-access _range.
     ))
-    $(TR $(TD $(D $(LREF walkLength)))
+    $(TR $(TD $(LREF walkLength))
         $(TD Computes the length of any _range in O(n) time.
+    ))
+    $(TR $(TD $(LREF put))
+        $(TD Outputs element $(D e) to a _range.
     ))
 )
 
@@ -157,17 +161,12 @@ Params:
 Returns:
     true if R is an InputRange, false if not
  */
-template isInputRange(R)
-{
-    enum bool isInputRange = is(typeof(
-    (inout int = 0)
-    {
-        R r = R.init;     // can define a range object
-        if (r.empty) {}   // can test for empty
-        r.popFront;       // can invoke popFront()
-        auto h = r.front; // can get the front of the range
-    }));
-}
+enum bool isInputRange(R) =
+    is(typeof(R.init) == R)
+    && is(ReturnType!((R r) => r.empty) == bool)
+    && is(typeof((return ref R r) => r.front))
+    && !is(ReturnType!((R r) => r.front) == void)
+    && is(typeof((R r) => r.popFront));
 
 ///
 @safe unittest
@@ -185,6 +184,65 @@ template isInputRange(R)
     static assert( isInputRange!(char[]));
     static assert(!isInputRange!(char[4]));
     static assert( isInputRange!(inout(int)[]));
+
+    static struct NotDefaultConstructible
+    {
+        @disable this();
+        void popFront();
+        @property bool empty();
+        @property int front();
+    }
+    static assert( isInputRange!NotDefaultConstructible);
+
+    static struct NotDefaultConstructibleOrCopyable
+    {
+        @disable this();
+        @disable this(this);
+        void popFront();
+        @property bool empty();
+        @property int front();
+    }
+    static assert(isInputRange!NotDefaultConstructibleOrCopyable);
+
+    static struct Frontless
+    {
+        void popFront();
+        @property bool empty();
+    }
+    static assert(!isInputRange!Frontless);
+
+    static struct VoidFront
+    {
+        void popFront();
+        @property bool empty();
+        void front();
+    }
+    static assert(!isInputRange!VoidFront);
+}
+
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+
+    static struct R
+    {
+        static struct Front
+        {
+            R* impl;
+            @property int value() { return impl._front; }
+            alias value this;
+        }
+
+        int _front;
+
+        @property bool empty() { return _front >= 3; }
+        @property auto front() { return Front(&this); }
+        void popFront() { _front++; }
+    }
+    R r;
+
+    static assert(isInputRange!R);
+    assert(r.equal([ 0, 1, 2 ]));
 }
 
 /+
@@ -223,33 +281,33 @@ private void doPut(R, E)(ref R r, auto ref E e)
     }
     else
     {
-        static assert (false,
+        static assert(false,
             "Cannot put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
     }
 }
 
 @safe unittest
 {
-    static assert (!isNativeOutputRange!(int,     int));
-    static assert ( isNativeOutputRange!(int[],   int));
-    static assert (!isNativeOutputRange!(int[][], int));
+    static assert(!isNativeOutputRange!(int,     int));
+    static assert( isNativeOutputRange!(int[],   int));
+    static assert(!isNativeOutputRange!(int[][], int));
 
-    static assert (!isNativeOutputRange!(int,     int[]));
-    static assert (!isNativeOutputRange!(int[],   int[]));
-    static assert ( isNativeOutputRange!(int[][], int[]));
+    static assert(!isNativeOutputRange!(int,     int[]));
+    static assert(!isNativeOutputRange!(int[],   int[]));
+    static assert( isNativeOutputRange!(int[][], int[]));
 
-    static assert (!isNativeOutputRange!(int,     int[][]));
-    static assert (!isNativeOutputRange!(int[],   int[][]));
-    static assert (!isNativeOutputRange!(int[][], int[][]));
+    static assert(!isNativeOutputRange!(int,     int[][]));
+    static assert(!isNativeOutputRange!(int[],   int[][]));
+    static assert(!isNativeOutputRange!(int[][], int[][]));
 
-    static assert (!isNativeOutputRange!(int[4],   int));
-    static assert ( isNativeOutputRange!(int[4][], int)); //Scary!
-    static assert ( isNativeOutputRange!(int[4][], int[4]));
+    static assert(!isNativeOutputRange!(int[4],   int));
+    static assert( isNativeOutputRange!(int[4][], int)); //Scary!
+    static assert( isNativeOutputRange!(int[4][], int[4]));
 
-    static assert (!isNativeOutputRange!( char[],   char));
-    static assert (!isNativeOutputRange!( char[],  dchar));
-    static assert ( isNativeOutputRange!(dchar[],   char));
-    static assert ( isNativeOutputRange!(dchar[],  dchar));
+    static assert(!isNativeOutputRange!( char[],   char));
+    static assert(!isNativeOutputRange!( char[],  dchar));
+    static assert( isNativeOutputRange!(dchar[],   char));
+    static assert( isNativeOutputRange!(dchar[],  dchar));
 
 }
 
@@ -315,7 +373,7 @@ void put(R, E)(ref R r, E e)
             doPut(r, arr[]);
         }
         else
-            doPut(r, (ref e) @trusted { return (&e)[0..1]; }(e));
+            doPut(r, (ref e) @trusted { return (&e)[0 .. 1]; }(e));
     }
     //special case for char to string.
     else static if (isSomeChar!E && is(typeof(putChar(r, e))))
@@ -344,8 +402,67 @@ void put(R, E)(ref R r, E e)
     }
     else
     {
-        static assert (false, "Cannot put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
+        static assert(false, "Cannot put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
     }
+}
+
+/**
+ * When an output range's `put` method only accepts elements of type
+ * `T`, use the global `put` to handle outputting a `T[]` to the range
+ * or vice-versa.
+ */
+@safe pure unittest
+{
+    import std.traits : isSomeChar;
+
+    static struct A
+    {
+        string data;
+
+        void put(C)(C c) if (isSomeChar!C)
+        {
+            data ~= c;
+        }
+    }
+    static assert(isOutputRange!(A, char));
+
+    auto a = A();
+    put(a, "Hello");
+    assert(a.data == "Hello");
+}
+
+/**
+ * `put` treats dynamic arrays as array slices, and will call `popFront`
+ * on the slice after an element has been copied.
+ *
+ * Be sure to save the position of the array before calling `put`.
+ */
+@safe pure nothrow unittest
+{
+    int[] a = [1, 2, 3], b = [10, 20];
+    auto c = a;
+    put(a, b);
+    assert(c == [10, 20, 3]);
+    // at this point, a was advanced twice, so it only contains
+    // its last element while c represents the whole array
+    assert(a == [3]);
+}
+
+/**
+ * Because of auto-decoding, the `front` of a `string` is a `dchar`,
+ * so using `put` with `char` arrays is disallowed. In order to fill
+ * any `char` type array, use $(REF byCodeUnit, std, utf).
+ */
+@safe pure nothrow unittest
+{
+    import std.utf : byCodeUnit;
+
+    // the elements must be mutable, so using string or const(char)[]
+    // won't compile
+    char[] s1 = new char[13];
+    auto r1 = s1.byCodeUnit;
+    put(r1, "Hello, World!");
+    assert(s1 == "Hello, World!");
 }
 
 @safe pure nothrow @nogc unittest
@@ -398,11 +515,11 @@ if (isSomeChar!E)
     }
     else
     {
-        static assert (false, "Cannot put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
+        static assert(false, "Cannot put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
     }
 }
 
-pure unittest
+pure @safe unittest
 {
     auto f = delegate (const(char)[]) {};
     putChar(f, cast(dchar)'a');
@@ -416,7 +533,7 @@ pure unittest
     putChar(r, 'a');
 }
 
-unittest
+@safe unittest
 {
     struct A {}
     static assert(!isInputRange!(A));
@@ -428,16 +545,7 @@ unittest
     put(b, 5);
 }
 
-unittest
-{
-    int[] a = [1, 2, 3], b = [10, 20];
-    auto c = a;
-    put(a, b);
-    assert(c == [10, 20, 3]);
-    assert(a == [3]);
-}
-
-unittest
+@safe unittest
 {
     int[] a = new int[10];
     int b;
@@ -445,14 +553,14 @@ unittest
     put(a, b);
 }
 
-unittest
+@safe unittest
 {
     void myprint(in char[] s) { }
     auto r = &myprint;
     put(r, 'a');
 }
 
-unittest
+@safe unittest
 {
     int[] a = new int[10];
     static assert(!__traits(compiles, put(a, 1.0L)));
@@ -468,7 +576,7 @@ unittest
     assert(a.length == 6);
 }
 
-unittest
+@safe unittest
 {
     char[] a = new char[10];
     static assert(!__traits(compiles, put(a, 1.0L)));
@@ -478,7 +586,7 @@ unittest
     static assert(!__traits(compiles, put(a, "ABC")));
 }
 
-unittest
+@safe unittest
 {
     int[][] a = new int[][10];
     int[]   b = new int[10];
@@ -490,7 +598,7 @@ unittest
     static assert(!__traits(compiles, put(a, c)));
 }
 
-unittest
+@safe unittest
 {
     int[][] a = new int[][](3);
     int[]   b = [1];
@@ -505,7 +613,7 @@ unittest
     assert(a == [[2], [2], [2]]);
 }
 
-unittest
+@safe unittest
 {
     // Test fix for bug 7476.
     struct LockingTextWriter
@@ -524,7 +632,7 @@ unittest
     put(w, r);
 }
 
-unittest
+@system unittest
 {
     import std.conv : to;
     import std.meta : AliasSeq;
@@ -533,7 +641,7 @@ unittest
     static struct PutC(C)
     {
         string result;
-        void put(const(C) c) { result ~= to!string((&c)[0..1]); }
+        void put(const(C) c) { result ~= to!string((&c)[0 .. 1]); }
     }
     static struct PutS(C)
     {
@@ -554,19 +662,19 @@ unittest
     putChar(p, cast(dchar)'a');
 
     //Source Char
-    foreach (SC; AliasSeq!(char, wchar, dchar))
-    {
+    static foreach (SC; AliasSeq!(char, wchar, dchar))
+    {{
         SC ch = 'I';
         dchar dh = '♥';
         immutable(SC)[] s = "日本語！";
         immutable(SC)[][] ss = ["日本語", "が", "好き", "ですか", "？"];
 
         //Target Char
-        foreach (TC; AliasSeq!(char, wchar, dchar))
+        static foreach (TC; AliasSeq!(char, wchar, dchar))
         {
             //Testing PutC and PutS
-            foreach (Type; AliasSeq!(PutC!TC, PutS!TC))
-            (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+            static foreach (Type; AliasSeq!(PutC!TC, PutS!TC))
+            {{
                 Type type;
                 auto sink = new Type();
 
@@ -582,12 +690,12 @@ unittest
                     put(value, ss);
                     assert(value.result == "I♥日本語！日本語が好きですか？");
                 }
-            }();
+            }}
         }
-    }
+    }}
 }
 
-unittest
+@safe unittest
 {
     static struct CharRange
     {
@@ -604,7 +712,7 @@ unittest
     put(c, "hello"d);
 }
 
-unittest
+@system unittest
 {
     // issue 9823
     const(char)[] r;
@@ -613,7 +721,7 @@ unittest
     assert(r == "ABC");
 }
 
-unittest
+@safe unittest
 {
     // issue 10571
     import std.format;
@@ -622,7 +730,7 @@ unittest
     assert(buf == "hello");
 }
 
-unittest
+@safe unittest
 {
     import std.format;
     import std.meta : AliasSeq;
@@ -658,8 +766,8 @@ unittest
     }
     void foo()
     {
-        foreach (C; AliasSeq!(char, wchar, dchar))
-        {
+        static foreach (C; AliasSeq!(char, wchar, dchar))
+        {{
             formattedWrite((C c){},        "", 1, 'a', cast(wchar)'a', cast(dchar)'a', "a"c, "a"w, "a"d);
             formattedWrite((const(C)[]){}, "", 1, 'a', cast(wchar)'a', cast(dchar)'a', "a"c, "a"w, "a"d);
             formattedWrite(PutC!C(),       "", 1, 'a', cast(wchar)'a', cast(dchar)'a', "a"c, "a"w, "a"d);
@@ -670,7 +778,7 @@ unittest
             formattedWrite(callS,          "", 1, 'a', cast(wchar)'a', cast(dchar)'a', "a"c, "a"w, "a"d);
             formattedWrite(FrontC!C(),     "", 1, 'a', cast(wchar)'a', cast(dchar)'a', "a"c, "a"w, "a"d);
             formattedWrite(FrontS!C(),     "", 1, 'a', cast(wchar)'a', cast(dchar)'a', "a"c, "a"w, "a"d);
-        }
+        }}
         formattedWrite((dchar[]).init,     "", 1, 'a', cast(wchar)'a', cast(dchar)'a', "a"c, "a"w, "a"d);
     }
 }
@@ -687,16 +795,8 @@ are:
 2: if $(D E) is a non $(empty) $(D InputRange), then placing $(D e) is
 guaranteed to not overflow the range.
  +/
-package(std) template isNativeOutputRange(R, E)
-{
-    enum bool isNativeOutputRange = is(typeof(
-    (inout int = 0)
-    {
-        R r = void;
-        E e;
-        doPut(r, e);
-    }));
-}
+package(std) enum bool isNativeOutputRange(R, E) =
+    is(typeof(doPut(lvalueOf!R, lvalueOf!E)));
 
 @safe unittest
 {
@@ -711,21 +811,14 @@ package(std) template isNativeOutputRange(R, E)
     if (!r.empty)
         put(r, [1, 2]); //May actually error out.
 }
+
 /++
 Returns $(D true) if $(D R) is an output range for elements of type
 $(D E). An output range is defined functionally as a range that
 supports the operation $(D put(r, e)) as defined above.
  +/
-template isOutputRange(R, E)
-{
-    enum bool isOutputRange = is(typeof(
-    (inout int = 0)
-    {
-        R r = R.init;
-        E e = E.init;
-        put(r, e);
-    }));
-}
+enum bool isOutputRange(R, E) =
+    is(typeof(put(lvalueOf!R, lvalueOf!E)));
 
 ///
 @safe unittest
@@ -775,7 +868,7 @@ The following code should compile for any forward range.
 static assert(isInputRange!R);
 R r1;
 auto s1 = r1.save;
-static assert (is(typeof(s1) == R));
+static assert(is(typeof(s1) == R));
 ----
 
 Saving a range is not duplicating it; in the example above, $(D r1)
@@ -787,19 +880,8 @@ are the same as for an input range, with the additional requirement
 that backtracking must be possible by saving a copy of the range
 object with $(D save) and using it later.
  */
-template isForwardRange(R)
-{
-    enum bool isForwardRange = isInputRange!R && is(typeof(
-    (inout int = 0)
-    {
-        R r1 = R.init;
-        // NOTE: we cannot check typeof(r1.save) directly
-        // because typeof may not check the right type there, and
-        // because we want to ensure the range can be copied.
-        auto s1 = r1.save;
-        static assert (is(typeof(s1) == R));
-    }));
-}
+enum bool isForwardRange(R) = isInputRange!R
+    && is(ReturnType!((R r) => r.save) == R);
 
 ///
 @safe unittest
@@ -837,21 +919,12 @@ $(UL $(LI $(D r.back) returns (possibly a reference to) the last
 element in the range. Calling $(D r.back) is allowed only if calling
 $(D r.empty) has, or would have, returned $(D false).))
  */
-template isBidirectionalRange(R)
-{
-    enum bool isBidirectionalRange = isForwardRange!R && is(typeof(
-    (inout int = 0)
-    {
-        R r = R.init;
-        r.popBack;
-        auto t = r.back;
-        auto w = r.front;
-        static assert(is(typeof(t) == typeof(w)));
-    }));
-}
+enum bool isBidirectionalRange(R) = isForwardRange!R
+    && is(typeof((R r) => r.popBack))
+    && is(ReturnType!((R r) => r.back) == ElementType!R);
 
 ///
-unittest
+@safe unittest
 {
     alias R = int[];
     R r = [0,1];
@@ -907,32 +980,17 @@ isRandomAccessRange) yields $(D false) for them because they use
 variable-length encodings (UTF-8 and UTF-16 respectively). These types
 are bidirectional ranges only.
  */
-template isRandomAccessRange(R)
-{
-    enum bool isRandomAccessRange = is(typeof(
-    (inout int = 0)
-    {
-        static assert(isBidirectionalRange!R ||
-                      isForwardRange!R && isInfinite!R);
-        R r = R.init;
-        auto e = r[1];
-        auto f = r.front;
-        static assert(is(typeof(e) == typeof(f)));
-        static assert(!isNarrowString!R);
-        static assert(hasLength!R || isInfinite!R);
-
-        static if (is(typeof(r[$])))
-        {
-            static assert(is(typeof(f) == typeof(r[$])));
-
-            static if (!isInfinite!R)
-                static assert(is(typeof(f) == typeof(r[$ - 1])));
-        }
-    }));
-}
+enum bool isRandomAccessRange(R) =
+    is(typeof(lvalueOf!R[1]) == ElementType!R)
+    && !isNarrowString!R
+    && isForwardRange!R
+    && (isBidirectionalRange!R || isInfinite!R)
+    && (hasLength!R || isInfinite!R)
+    && (isInfinite!R || !is(typeof(lvalueOf!R[$ - 1]))
+        || is(typeof(lvalueOf!R[$ - 1]) == ElementType!R));
 
 ///
-unittest
+@safe unittest
 {
     import std.traits : isNarrowString;
 
@@ -1061,20 +1119,13 @@ static if (isRandomAccessRange!R)
     static assert(is(typeof(moveAt(r, 0)) == E));
 ----
  */
-template hasMobileElements(R)
-{
-    enum bool hasMobileElements = isInputRange!R && is(typeof(
-    (inout int = 0)
-    {
-        alias E = ElementType!R;
-        R r = R.init;
-        static assert(is(typeof(moveFront(r)) == E));
-        static if (isBidirectionalRange!R)
-            static assert(is(typeof(moveBack(r)) == E));
-        static if (isRandomAccessRange!R)
-            static assert(is(typeof(moveAt(r, 0)) == E));
-    }));
-}
+enum bool hasMobileElements(R) =
+    isInputRange!R
+    && is(typeof(moveFront(lvalueOf!R)) == ElementType!R)
+    && (!isBidirectionalRange!R
+        || is(typeof(moveBack(lvalueOf!R)) == ElementType!R))
+    && (!isRandomAccessRange!R
+        || is(typeof(moveAt(lvalueOf!R, 0)) == ElementType!R));
 
 ///
 @safe unittest
@@ -1261,20 +1312,18 @@ R r;
 static assert(isInputRange!R);
 swap(r.front, r.front);
 static if (isBidirectionalRange!R) swap(r.back, r.front);
-static if (isRandomAccessRange!R) swap(r[], r.front);
+static if (isRandomAccessRange!R) swap(r[0], r.front);
 ----
  */
 template hasSwappableElements(R)
 {
     import std.algorithm.mutation : swap;
-    enum bool hasSwappableElements = isInputRange!R && is(typeof(
-    (inout int = 0)
-    {
-        R r = R.init;
-        swap(r.front, r.front);
-        static if (isBidirectionalRange!R) swap(r.back, r.front);
-        static if (isRandomAccessRange!R) swap(r[0], r.front);
-    }));
+    enum bool hasSwappableElements = isInputRange!R
+        && is(typeof((ref R r) => swap(r.front, r.front)))
+        && (!isBidirectionalRange!R
+            || is(typeof((ref R r) => swap(r.back, r.front))))
+        && (!isRandomAccessRange!R
+            || is(typeof((ref R r) => swap(r[0], r.front))));
 }
 
 ///
@@ -1304,17 +1353,12 @@ static if (isBidirectionalRange!R) r.back = r.front;
 static if (isRandomAccessRange!R) r[0] = r.front;
 ----
  */
-template hasAssignableElements(R)
-{
-    enum bool hasAssignableElements = isInputRange!R && is(typeof(
-    (inout int = 0)
-    {
-        R r = R.init;
-        r.front = r.front;
-        static if (isBidirectionalRange!R) r.back = r.front;
-        static if (isRandomAccessRange!R) r[0] = r.front;
-    }));
-}
+enum bool hasAssignableElements(R) = isInputRange!R
+    && is(typeof(lvalueOf!R.front = lvalueOf!R.front))
+    && (!isBidirectionalRange!R
+        || is(typeof(lvalueOf!R.back = lvalueOf!R.back)))
+    && (!isRandomAccessRange!R
+        || is(typeof(lvalueOf!R[0] = lvalueOf!R.front)));
 
 ///
 @safe unittest
@@ -1343,19 +1387,12 @@ static if (isBidirectionalRange!R) passByRef(r.back);
 static if (isRandomAccessRange!R) passByRef(r[0]);
 ----
 */
-template hasLvalueElements(R)
-{
-    enum bool hasLvalueElements = isInputRange!R && is(typeof(
-    (inout int = 0)
-    {
-        void checkRef(ref ElementType!R stuff);
-        R r = R.init;
-
-        checkRef(r.front);
-        static if (isBidirectionalRange!R) checkRef(r.back);
-        static if (isRandomAccessRange!R) checkRef(r[0]);
-    }));
-}
+enum bool hasLvalueElements(R) = isInputRange!R
+    && is(typeof(((ref x) => x)(lvalueOf!R.front)))
+    && (!isBidirectionalRange!R
+        || is(typeof(((ref x) => x)(lvalueOf!R.back))))
+    && (!isRandomAccessRange!R
+        || is(typeof(((ref x) => x)(lvalueOf!R[0]))));
 
 ///
 @safe unittest
@@ -1386,28 +1423,28 @@ template hasLvalueElements(R)
 }
 
 /**
-Returns $(D true) if $(D R) has a $(D length) member that returns an
-integral type. $(D R) does not have to be a range. Note that $(D
-length) is an optional primitive as no range must implement it. Some
-ranges do not store their length explicitly, some cannot compute it
-without actually exhausting the range (e.g. socket streams), and some
-other ranges may be infinite.
+Yields `true` if `R` has a `length` member that returns a value of `size_t`
+type. `R` does not have to be a range. If `R` is a range, algorithms in the
+standard library are only guaranteed to support `length` with type `size_t`.
 
-Although narrow string types ($(D char[]), $(D wchar[]), and their
-qualified derivatives) do define a $(D length) property, $(D
-hasLength) yields $(D false) for them. This is because a narrow
-string's length does not reflect the number of characters, but instead
-the number of encoding units, and as such is not useful with
-range-oriented algorithms.
- */
+Note that `length` is an optional primitive as no range must implement it. Some
+ranges do not store their length explicitly, some cannot compute it without
+actually exhausting the range (e.g. socket streams), and some other ranges may
+be infinite.
+
+Although narrow string types (`char[]`, `wchar[]`, and their qualified
+derivatives) do define a `length` property, `hasLength` yields `false` for them.
+This is because a narrow string's length does not reflect the number of
+characters, but instead the number of encoding units, and as such is not useful
+with range-oriented algorithms. To use strings as random-access ranges with
+length, use $(REF representation, std, string) or $(REF byCodeUnit, std, utf).
+*/
 template hasLength(R)
 {
-    enum bool hasLength = !isNarrowString!R && is(typeof(
-    (inout int = 0)
-    {
-        R r = R.init;
-        ulong l = r.length;
-    }));
+    static if (is(typeof(((R* r) => r.length)(null)) Length))
+        enum bool hasLength = is(Length == size_t) && !isNarrowString!R;
+    else
+        enum bool hasLength = false;
 }
 
 ///
@@ -1417,12 +1454,41 @@ template hasLength(R)
     static assert( hasLength!(int[]));
     static assert( hasLength!(inout(int)[]));
 
-    struct A { ulong length; }
-    struct B { size_t length() { return 0; } }
-    struct C { @property size_t length() { return 0; } }
+    struct A { size_t length() { return 0; } }
+    struct B { @property size_t length() { return 0; } }
     static assert( hasLength!(A));
     static assert( hasLength!(B));
-    static assert( hasLength!(C));
+}
+
+// test combinations which are invalid on some platforms
+@safe unittest
+{
+    struct A { ulong length; }
+    struct B { @property uint length() { return 0; } }
+
+    version (X86)
+    {
+        static assert(!hasLength!(A));
+        static assert(hasLength!(B));
+    }
+    else version(X86_64)
+    {
+        static assert(hasLength!(A));
+        static assert(!hasLength!(B));
+    }
+}
+
+// test combinations which are invalid on all platforms
+@safe unittest
+{
+    struct A { long length; }
+    struct B { int length; }
+    struct C { ubyte length; }
+    struct D { char length; }
+    static assert(!hasLength!(A));
+    static assert(!hasLength!(B));
+    static assert(!hasLength!(C));
+    static assert(!hasLength!(D));
 }
 
 /**
@@ -1470,76 +1536,33 @@ original range (they both return the same type for infinite ranges). However,
 when using $(D opDollar), the result of $(D opSlice) must be that of the
 original range type.
 
-The following code must compile for $(D hasSlicing) to be $(D true):
+The following expression must be true for `hasSlicing` to be `true`:
 
 ----
-R r = void;
-
-static if (isInfinite!R)
-    typeof(take(r, 1)) s = r[1 .. 2];
-else
-{
-    static assert(is(typeof(r[1 .. 2]) == R));
-    R s = r[1 .. 2];
-}
-
-s = r[1 .. 2];
-
-static if (is(typeof(r[0 .. $])))
-{
-    static assert(is(typeof(r[0 .. $]) == R));
-    R t = r[0 .. $];
-    t = r[0 .. $];
-
-    static if (!isInfinite!R)
+    isForwardRange!R
+    && !isNarrowString!R
+    && is(ReturnType!((R r) => r[1 .. 1].length) == size_t)
+    && (is(typeof(lvalueOf!R[1 .. 1]) == R) || isInfinite!R)
+    && (!is(typeof(lvalueOf!R[0 .. $])) || is(typeof(lvalueOf!R[0 .. $]) == R))
+    && (!is(typeof(lvalueOf!R[0 .. $])) || isInfinite!R
+        || is(typeof(lvalueOf!R[0 .. $ - 1]) == R))
+    && is(typeof((ref R r)
     {
-        static assert(is(typeof(r[0 .. $ - 1]) == R));
-        R u = r[0 .. $ - 1];
-        u = r[0 .. $ - 1];
-    }
-}
-
-static assert(isForwardRange!(typeof(r[1 .. 2])));
-static assert(hasLength!(typeof(r[1 .. 2])));
+        static assert(isForwardRange!(typeof(r[1 .. 2])));
+    }));
 ----
  */
-template hasSlicing(R)
-{
-    enum bool hasSlicing = isForwardRange!R && !isNarrowString!R && is(typeof(
-    (inout int = 0)
+enum bool hasSlicing(R) = isForwardRange!R
+    && !isNarrowString!R
+    && is(ReturnType!((R r) => r[1 .. 1].length) == size_t)
+    && (is(typeof(lvalueOf!R[1 .. 1]) == R) || isInfinite!R)
+    && (!is(typeof(lvalueOf!R[0 .. $])) || is(typeof(lvalueOf!R[0 .. $]) == R))
+    && (!is(typeof(lvalueOf!R[0 .. $])) || isInfinite!R
+        || is(typeof(lvalueOf!R[0 .. $ - 1]) == R))
+    && is(typeof((ref R r)
     {
-        R r = R.init;
-
-        static if (isInfinite!R)
-        {
-            typeof(r[1 .. 1]) s = r[1 .. 2];
-        }
-        else
-        {
-            static assert(is(typeof(r[1 .. 2]) == R));
-            R s = r[1 .. 2];
-        }
-
-        s = r[1 .. 2];
-
-        static if (is(typeof(r[0 .. $])))
-        {
-            static assert(is(typeof(r[0 .. $]) == R));
-            R t = r[0 .. $];
-            t = r[0 .. $];
-
-            static if (!isInfinite!R)
-            {
-                static assert(is(typeof(r[0 .. $ - 1]) == R));
-                R u = r[0 .. $ - 1];
-                u = r[0 .. $ - 1];
-            }
-        }
-
         static assert(isForwardRange!(typeof(r[1 .. 2])));
-        static assert(hasLength!(typeof(r[1 .. 2])));
     }));
-}
 
 ///
 @safe unittest
@@ -1607,7 +1630,7 @@ Infinite ranges are compatible, provided the parameter $(D upTo) is
 specified, in which case the implementation simply returns upTo.
  */
 auto walkLength(Range)(Range range)
-    if (isInputRange!Range && !isInfinite!Range)
+if (isInputRange!Range && !isInfinite!Range)
 {
     static if (hasLength!Range)
         return range.length;
@@ -1621,7 +1644,7 @@ auto walkLength(Range)(Range range)
 }
 /// ditto
 auto walkLength(Range)(Range range, const size_t upTo)
-    if (isInputRange!Range)
+if (isInputRange!Range)
 {
     static if (hasLength!Range)
         return range.length;
@@ -1664,21 +1687,23 @@ auto walkLength(Range)(Range range, const size_t upTo)
 }
 
 /**
-    Eagerly advances $(D r) itself (not a copy) up to $(D n) times (by
-    calling $(D r.popFront)). $(D popFrontN) takes $(D r) by $(D ref),
+    $(D popFrontN) eagerly advances $(D r) itself (not a copy) up to $(D n) times
+    (by calling $(D r.popFront)). $(D popFrontN) takes $(D r) by $(D ref),
     so it mutates the original range. Completes in $(BIGOH 1) steps for ranges
     that support slicing and have length.
     Completes in $(BIGOH n) time for all other ranges.
+
+    $(D popBackN) behaves the same as $(D popFrontN) but instead removes
+    elements from the back of the (bidirectional) range instead of the front.
 
     Returns:
     How much $(D r) was actually advanced, which may be less than $(D n) if
     $(D r) did not have at least $(D n) elements.
 
-    $(D popBackN) will behave the same but instead removes elements from
-    the back of the (bidirectional) range instead of the front.
+    See_Also: $(REF drop, std, range), $(REF dropBack, std, range)
 */
 size_t popFrontN(Range)(ref Range r, size_t n)
-    if (isInputRange!Range)
+if (isInputRange!Range)
 {
     static if (hasLength!Range)
     {
@@ -1714,7 +1739,7 @@ size_t popFrontN(Range)(ref Range r, size_t n)
 
 /// ditto
 size_t popBackN(Range)(ref Range r, size_t n)
-    if (isBidirectionalRange!Range)
+if (isBidirectionalRange!Range)
 {
     static if (hasLength!Range)
     {
@@ -1807,9 +1832,11 @@ size_t popBackN(Range)(ref Range r, size_t n)
 
     $(D popBackExactly) will behave the same but instead removes elements from
     the back of the (bidirectional) range instead of the front.
+
+    See_Also: $(REF dropExactly, std, range), $(REF dropBackExactly, std, range)
 */
 void popFrontExactly(Range)(ref Range r, size_t n)
-    if (isInputRange!Range)
+if (isInputRange!Range)
 {
     static if (hasLength!Range)
         assert(n <= r.length, "range is smaller than amount of items to pop");
@@ -1825,7 +1852,7 @@ void popFrontExactly(Range)(ref Range r, size_t n)
 
 /// ditto
 void popBackExactly(Range)(ref Range r, size_t n)
-    if (isBidirectionalRange!Range)
+if (isBidirectionalRange!Range)
 {
     static if (hasLength!Range)
         assert(n <= r.length, "range is smaller than amount of items to pop");
@@ -1842,8 +1869,8 @@ void popBackExactly(Range)(ref Range r, size_t n)
 ///
 @safe unittest
 {
-    import std.algorithm.iteration : filterBidirectional;
     import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : filterBidirectional;
 
     auto a = [1, 2, 3];
     a.popFrontExactly(1);
@@ -2027,12 +2054,13 @@ ElementType!R moveAt(R)(R r, size_t i)
 }
 
 /**
-Implements the range interface primitive $(D empty) for built-in
-arrays. Due to the fact that nonmember functions can be called with
-the first argument using the dot notation, $(D array.empty) is
-equivalent to $(D empty(array)).
+Implements the range interface primitive $(D empty) for types that
+obey $(LREF hasLength) property and for narrow strings. Due to the
+fact that nonmember functions can be called with the first argument
+using the dot notation, $(D a.empty) is equivalent to $(D empty(a)).
  */
-@property bool empty(T)(in T[] a) @safe pure nothrow @nogc
+@property bool empty(T)(auto ref scope const(T) a)
+if (is(typeof(a.length) : size_t) || isNarrowString!T)
 {
     return !a.length;
 }
@@ -2043,6 +2071,11 @@ equivalent to $(D empty(array)).
     auto a = [ 1, 2, 3 ];
     assert(!a.empty);
     assert(a[3 .. $].empty);
+
+    int[string] b;
+    assert(b.empty);
+    b["zero"] = 0;
+    assert(!b.empty);
 }
 
 /**
@@ -2105,7 +2138,7 @@ if (isNarrowString!(C[]))
 
     static if (is(Unqual!C == char))
     {
-        __gshared static immutable ubyte[] charWidthTab = [
+        static immutable ubyte[] charWidthTab = [
             2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
             2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
             3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
@@ -2136,8 +2169,8 @@ if (isNarrowString!(C[]))
 {
     import std.meta : AliasSeq;
 
-    foreach (S; AliasSeq!(string, wstring, dstring))
-    {
+    static foreach (S; AliasSeq!(string, wstring, dstring))
+    {{
         S s = "\xC2\xA9hello";
         s.popFront();
         assert(s == "hello");
@@ -2152,7 +2185,7 @@ if (isNarrowString!(C[]))
 
         static assert(!is(typeof({          immutable S a; popFront(a); })));
         static assert(!is(typeof({ typeof(S.init[0])[4] a; popFront(a); })));
-    }
+    }}
 
     C[] _eatString(C)(C[] str)
     {
@@ -2167,7 +2200,7 @@ if (isNarrowString!(C[]))
     static assert(checkCTFEW.empty);
 }
 
-unittest // issue 16090
+@safe unittest // issue 16090
 {
     string s = "\u00E4";
     assert(s.length == 2);
@@ -2177,7 +2210,7 @@ unittest // issue 16090
     assert(s.empty);
 }
 
-unittest
+@safe unittest
 {
     wstring s = "\U00010000";
     assert(s.length == 2);
@@ -2229,8 +2262,8 @@ if (isNarrowString!(T[]))
 {
     import std.meta : AliasSeq;
 
-    foreach (S; AliasSeq!(string, wstring, dstring))
-    {
+    static foreach (S; AliasSeq!(string, wstring, dstring))
+    {{
         S s = "hello\xE2\x89\xA0";
         s.popBack();
         assert(s == "hello");
@@ -2250,7 +2283,7 @@ if (isNarrowString!(T[]))
 
         static assert(!is(typeof({          immutable S a; popBack(a); })));
         static assert(!is(typeof({ typeof(S.init[0])[4] a; popBack(a); })));
-    }
+    }}
 }
 
 /**
@@ -2290,7 +2323,8 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
 }
 
 /// ditto
-@property dchar front(T)(T[] a) @safe pure if (isNarrowString!(T[]))
+@property dchar front(T)(T[] a) @safe pure
+if (isNarrowString!(T[]))
 {
     import std.utf : decode;
     assert(a.length, "Attempting to fetch the front of an empty array of " ~ T.stringof);
@@ -2333,7 +2367,8 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
 
 /// ditto
 // Specialization for strings
-@property dchar back(T)(T[] a) @safe pure if (isNarrowString!(T[]))
+@property dchar back(T)(T[] a) @safe pure
+if (isNarrowString!(T[]))
 {
     import std.utf : decode, strideBack;
     assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);

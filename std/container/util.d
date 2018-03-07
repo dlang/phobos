@@ -12,6 +12,8 @@ License: Distributed under the Boost Software License, Version 1.0.
 boost.org/LICENSE_1_0.txt)).
 
 Authors: $(HTTP erdani.com, Andrei Alexandrescu)
+
+$(SCRIPT inhibitQuickIndex = 1;)
 */
 module std.container.util;
 
@@ -50,10 +52,10 @@ if (is(T == struct) || is(T == class))
 
 
 ///
-unittest
+@system unittest
 {
-    import std.container;
     import std.algorithm.comparison : equal;
+    import std.container;
 
     auto arr = make!(Array!int)([4, 2, 3, 1]);
     assert(equal(arr[], [4, 2, 3, 1]));
@@ -66,10 +68,10 @@ unittest
     assert(equal(slist[], [1, 2, 3]));
 }
 
-unittest
+@system unittest
 {
-    import std.container;
     import std.algorithm.comparison : equal;
+    import std.container;
 
     auto arr1 = make!(Array!dchar)();
     assert(arr1.empty);
@@ -83,10 +85,10 @@ unittest
 }
 
 // Issue 8895
-unittest
+@safe unittest
 {
-    import std.container;
     import std.algorithm.comparison : equal;
+    import std.container;
 
     auto a = make!(DList!int)(1,2,3,4);
     auto b = make!(DList!int)(1,2,3,4);
@@ -101,7 +103,7 @@ unittest
  * Convenience function for constructing a generic container.
  */
 template make(alias Container, Args...)
-    if (!is(Container))
+if (!is(Container))
 {
     import std.range : isInputRange, isInfinite;
     import std.traits : isDynamicArray;
@@ -121,7 +123,7 @@ template make(alias Container, Args...)
 }
 
 /// forbid construction from infinite range
-unittest
+@safe unittest
 {
     import std.container.array : Array;
     import std.range : only, repeat;
@@ -131,11 +133,11 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
+    import std.algorithm.comparison : equal;
     import std.container.array, std.container.rbtree, std.container.slist;
     import std.range : iota;
-    import std.algorithm.comparison : equal;
 
     auto arr = make!Array(iota(5));
     assert(equal(arr[], [0, 1, 2, 3, 4]));
@@ -151,17 +153,17 @@ unittest
     assert(equal(list[], [1, 7, 42]));
 }
 
-unittest
+@safe unittest
 {
-    import std.container.rbtree;
     import std.algorithm.comparison : equal;
+    import std.container.rbtree;
 
     auto rbtmin = make!(RedBlackTree, "a < b", false)(3, 2, 2, 1);
     assert(equal(rbtmin[], [1, 2, 3]));
 }
 
 // Issue 13872
-unittest
+@system unittest
 {
     import std.container;
 

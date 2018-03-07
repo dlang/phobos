@@ -249,7 +249,9 @@ real igammaTemmeLarge(real a, real x)
 
 public:
 /// The maximum value of x for which gamma(x) < real.infinity.
-static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
+static if (floatTraits!(real).realFormat == RealFormat.ieeeQuadruple)
+    enum real MAXGAMMA = 1755.5483429L;
+else static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
     enum real MAXGAMMA = 1755.5483429L;
 else static if (floatTraits!(real).realFormat == RealFormat.ieeeDouble)
     enum real MAXGAMMA = 171.6243769L;
@@ -293,7 +295,7 @@ real gamma(real x)
     if (isNaN(x)) return x;
     if (x == -x.infinity) return real.nan;
     if ( fabs(x) > MAXGAMMA ) return real.infinity;
-    if (x==0) return 1.0 / x; // +- infinity depending on sign of x, create an exception.
+    if (x == 0) return 1.0 / x; // +- infinity depending on sign of x, create an exception.
 
     q = fabs(x);
 
@@ -380,7 +382,7 @@ real gamma(real x)
     return z * poly( x, GammaNumeratorCoeffs ) / poly( x, GammaDenominatorCoeffs );
 }
 
-unittest
+@safe unittest
 {
     // gamma(n) = factorial(n-1) if n is an integer.
     real fact = 1.0L;
@@ -524,7 +526,7 @@ real logGamma(real x)
     return q ;
 }
 
-unittest
+@safe unittest
 {
     assert(isIdentical(logGamma(NaN(0xDEF)), NaN(0xDEF)));
     assert(logGamma(real.infinity) == real.infinity);
@@ -575,7 +577,28 @@ unittest
 
 
 private {
-static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
+/*
+ * These value can be calculated like this:
+ * 1) Get exact real.max/min_normal/epsilon from compiler:
+ *    writefln!"%a"(real.max/min_normal_epsilon)
+ * 2) Convert for Wolfram Alpha
+ *    0xf.fffffffffffffffp+16380 ==> (f.fffffffffffffff base 16) * 2^16380
+ * 3) Calculate result on wofram alpha:
+ *    http://www.wolframalpha.com/input/?i=ln((1.ffffffffffffffffffffffffffff+base+16)+*+2%5E16383)+in+base+2
+ * 4) Convert to proper format:
+ *    string mantissa = "1.011...";
+ *    write(mantissa[0 .. 2]); mantissa = mantissa[2 .. $];
+ *    for (size_t i = 0; i < mantissa.length/4; i++)
+ *    {
+ *        writef!"%x"(to!ubyte(mantissa[0 .. 4], 2)); mantissa = mantissa[4 .. $];
+ *    }
+ */
+static if (floatTraits!(real).realFormat == RealFormat.ieeeQuadruple)
+{
+    enum real MAXLOG = 0x1.62e42fefa39ef35793c7673007e6p+13;  // log(real.max)
+    enum real MINLOG = -0x1.6546282207802c89d24d65e96274p+13; // log(real.min_normal*real.epsilon) = log(smallest denormal)
+}
+else static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
 {
     enum real MAXLOG = 0x1.62e42fefa39ef358p+13L;  // log(real.max)
     enum real MINLOG = -0x1.6436716d5406e6d8p+13L; // log(real.min_normal*real.epsilon) = log(smallest denormal)
@@ -990,7 +1013,7 @@ done:
     return x;
 }
 
-unittest { // also tested by the normal distribution
+@safe unittest { // also tested by the normal distribution
     // check NaN propagation
     assert(isIdentical(betaIncomplete(NaN(0xABC),2,3), NaN(0xABC)));
     assert(isIdentical(betaIncomplete(7,NaN(0xABC),3), NaN(0xABC)));
@@ -1296,11 +1319,13 @@ real betaDistPowerSeries(real a, real b, real x )
  * values of a and x.
  */
 real gammaIncomplete(real a, real x )
-in {
+in
+{
    assert(x >= 0);
    assert(a > 0);
 }
-body {
+do
+{
     /* left tail of incomplete gamma function:
      *
      *          inf.      k
@@ -1310,7 +1335,7 @@ body {
      *          k=0   | (a+k+1)
      *
      */
-    if (x==0)
+    if (x == 0)
        return 0.0L;
 
     if ( (x > 1.0L) && (x > a ) )
@@ -1340,12 +1365,14 @@ body {
 
 /** ditto */
 real gammaIncompleteCompl(real a, real x )
-in {
+in
+{
    assert(x >= 0);
    assert(a > 0);
 }
-body {
-    if (x==0)
+do
+{
+    if (x == 0)
         return 1.0L;
     if ( (x < 1.0L) || (x < a) )
         return 1.0L - gammaIncomplete(a,x);
@@ -1426,12 +1453,14 @@ body {
  * root of incompleteGammaCompl(a,x) - p = 0.
  */
 real gammaIncompleteComplInv(real a, real p)
-in {
-  assert(p>=0 && p<= 1);
+in
+{
+  assert(p >= 0 && p <= 1);
   assert(a>0);
 }
-body {
-    if (p==0) return real.infinity;
+do
+{
+    if (p == 0) return real.infinity;
 
     real y0 = p;
     const real MAXLOGL =  1.1356523406294143949492E4L;
@@ -1552,7 +1581,7 @@ ihalve:
     return x;
 }
 
-unittest
+@safe unittest
 {
 //Values from Excel's GammaInv(1-p, x, 1)
 assert(fabs(gammaIncompleteComplInv(1, 0.5) - 0.693147188044814) < 0.00000005);
@@ -1675,7 +1704,7 @@ done:
     return y;
 }
 
-unittest
+@safe unittest
 {
     // Exact values
     assert(digamma(1.0)== -EULERGAMMA);
@@ -1688,7 +1717,7 @@ unittest
     for (int k=1; k<40; ++k)
     {
         real y=0;
-        for (int u=k; u>=1; --u)
+        for (int u=k; u >= 1; --u)
         {
             y += 1.0L/u;
         }
@@ -1735,7 +1764,7 @@ real logmdigamma(real x)
     return x == s ? y + 0.5L/s : (log(x/s) + 0.5L/s + y + w);
 }
 
-unittest
+@safe unittest
 {
     assert(logmdigamma(-5.0).isNaN());
     assert(isIdentical(logmdigamma(NaN(0xABC)), NaN(0xABC)));
@@ -1788,7 +1817,7 @@ real logmdigammaInverse(real y)
     return y; //NaN
 }
 
-unittest
+@safe unittest
 {
     import std.typecons;
     //WolframAlpha, 22.02.2015

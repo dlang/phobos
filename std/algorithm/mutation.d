@@ -3,50 +3,57 @@
 This is a submodule of $(MREF std, algorithm).
 It contains generic _mutation algorithms.
 
+$(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE Cheat Sheet,
 $(TR $(TH Function Name) $(TH Description))
 $(T2 bringToFront,
-        If $(D a = [1, 2, 3]) and $(D b = [4, 5, 6, 7]),
-        $(D bringToFront(a, b)) leaves $(D a = [4, 5, 6]) and
-        $(D b = [7, 1, 2, 3]).)
+        If `a = [1, 2, 3]` and `b = [4, 5, 6, 7]`,
+        `bringToFront(a, b)` leaves `a = [4, 5, 6]` and
+        `b = [7, 1, 2, 3]`.)
 $(T2 copy,
         Copies a range to another. If
-        $(D a = [1, 2, 3]) and $(D b = new int[5]), then $(D copy(a, b))
-        leaves $(D b = [1, 2, 3, 0, 0]) and returns $(D b[3 .. $]).)
+        `a = [1, 2, 3]` and `b = new int[5]`, then `copy(a, b)`
+        leaves `b = [1, 2, 3, 0, 0]` and returns `b[3 .. $]`.)
 $(T2 fill,
         Fills a range with a pattern,
-        e.g., if $(D a = new int[3]), then $(D fill(a, 4))
-        leaves $(D a = [4, 4, 4]) and $(D fill(a, [3, 4])) leaves
-        $(D a = [3, 4, 3]).)
+        e.g., if `a = new int[3]`, then `fill(a, 4)`
+        leaves `a = [4, 4, 4]` and `fill(a, [3, 4])` leaves
+        `a = [3, 4, 3]`.)
 $(T2 initializeAll,
-        If $(D a = [1.2, 3.4]), then $(D initializeAll(a)) leaves
-        $(D a = [double.init, double.init]).)
+        If `a = [1.2, 3.4]`, then `initializeAll(a)` leaves
+        `a = [double.init, double.init]`.)
 $(T2 move,
-        $(D move(a, b)) moves $(D a) into $(D b). $(D move(a)) reads $(D a)
+        `move(a, b)` moves `a` into `b`. `move(a)` reads `a`
         destructively when necessary.)
+$(T2 moveEmplace,
+        Similar to `move` but assumes `target` is uninitialized.)
 $(T2 moveAll,
         Moves all elements from one range to another.)
+$(T2 moveEmplaceAll,
+        Similar to `moveAll` but assumes all elements in `target` are uninitialized.)
 $(T2 moveSome,
         Moves as many elements as possible from one range to another.)
+$(T2 moveEmplaceSome,
+        Similar to `moveSome` but assumes all elements in `target` are uninitialized.)
 $(T2 remove,
         Removes elements from a range in-place, and returns the shortened
         range.)
 $(T2 reverse,
-        If $(D a = [1, 2, 3]), $(D reverse(a)) changes it to $(D [3, 2, 1]).)
+        If `a = [1, 2, 3]`, `reverse(a)` changes it to `[3, 2, 1]`.)
 $(T2 strip,
         Strips all leading and trailing elements equal to a value, or that
         satisfy a predicate.
-        If $(D a = [1, 1, 0, 1, 1]), then $(D strip(a, 1)) and
-        $(D strip!(e => e == 1)(a)) returns $(D [0]).)
+        If `a = [1, 1, 0, 1, 1]`, then `strip(a, 1)` and
+        `strip!(e => e == 1)(a)` returns `[0]`.)
 $(T2 stripLeft,
         Strips all leading elements equal to a value, or that satisfy a
-        predicate.  If $(D a = [1, 1, 0, 1, 1]), then $(D stripLeft(a, 1)) and
-        $(D stripLeft!(e => e == 1)(a)) returns $(D [0, 1, 1]).)
+        predicate.  If `a = [1, 1, 0, 1, 1]`, then `stripLeft(a, 1)` and
+        `stripLeft!(e => e == 1)(a)` returns `[0, 1, 1]`.)
 $(T2 stripRight,
         Strips all trailing elements equal to a value, or that satisfy a
         predicate.
-        If $(D a = [1, 1, 0, 1, 1]), then $(D stripRight(a, 1)) and
-        $(D stripRight!(e => e == 1)(a)) returns $(D [1, 1, 0]).)
+        If `a = [1, 1, 0, 1, 1]`, then `stripRight(a, 1)` and
+        `stripRight!(e => e == 1)(a)` returns `[1, 1, 0]`.)
 $(T2 swap,
         Swaps two values.)
 $(T2 swapAt,
@@ -71,50 +78,148 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 module std.algorithm.mutation;
 
 import std.range.primitives;
-import std.traits : isArray, isBlitAssignable, isNarrowString, Unqual;
+import std.traits : isArray, isAssignable, isBlitAssignable, isNarrowString, Unqual, isSomeChar;
 // FIXME
 import std.typecons; // : tuple, Tuple;
 
 // bringToFront
 /**
-The $(D bringToFront) function has considerable flexibility and
+The `bringToFront` function has considerable flexibility and
 usefulness. It can rotate elements in one buffer left or right, swap
 buffers of equal length, and even move elements across disjoint
 buffers of different types and different lengths.
 
-$(D bringToFront) takes two ranges $(D front) and $(D back), which may
-be of different types. Considering the concatenation of $(D front) and
-$(D back) one unified range, $(D bringToFront) rotates that unified
-range such that all elements in $(D back) are brought to the beginning
-of the unified range. The relative ordering of elements in $(D front)
-and $(D back), respectively, remains unchanged.
+`bringToFront` takes two ranges `front` and `back`, which may
+be of different types. Considering the concatenation of `front` and
+`back` one unified range, `bringToFront` rotates that unified
+range such that all elements in `back` are brought to the beginning
+of the unified range. The relative ordering of elements in `front`
+and `back`, respectively, remains unchanged.
+
+The `bringToFront` function treats strings at the code unit
+level and it is not concerned with Unicode character integrity.
+`bringToFront` is designed as a function for moving elements
+in ranges, not as a string function.
 
 Performs $(BIGOH max(front.length, back.length)) evaluations of $(D
 swap).
 
 Preconditions:
 
-Either $(D front) and $(D back) are disjoint, or $(D back) is
-reachable from $(D front) and $(D front) is not reachable from $(D
+Either `front` and `back` are disjoint, or `back` is
+reachable from `front` and `front` is not reachable from $(D
 back).
 
 Params:
-    front = an input range
-    back = a forward range
+    front = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+    back = a $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
 
 Returns:
-    The number of elements brought to the front, i.e., the length of $(D back).
+    The number of elements brought to the front, i.e., the length of `back`.
 
 See_Also:
-    $(HTTP sgi.com/tech/stl/_rotate.html, STL's rotate)
+    $(LINK2 http://en.cppreference.com/w/cpp/algorithm/rotate, STL's `rotate`)
 */
 size_t bringToFront(InputRange, ForwardRange)(InputRange front, ForwardRange back)
-    if (isInputRange!InputRange && isForwardRange!ForwardRange)
+if (isInputRange!InputRange && isForwardRange!ForwardRange)
 {
-    import std.range : take, Take;
+    import std.string : representation;
+
+    static if (isNarrowString!InputRange)
+    {
+        auto frontW = representation(front);
+    }
+    else
+    {
+        alias frontW = front;
+    }
+    static if (isNarrowString!ForwardRange)
+    {
+        auto backW = representation(back);
+    }
+    else
+    {
+        alias backW = back;
+    }
+
+    return bringToFrontImpl(frontW, backW);
+}
+
+/**
+The simplest use of `bringToFront` is for rotating elements in a
+buffer. For example:
+*/
+@safe unittest
+{
+    auto arr = [4, 5, 6, 7, 1, 2, 3];
+    auto p = bringToFront(arr[0 .. 4], arr[4 .. $]);
+    assert(p == arr.length - 4);
+    assert(arr == [ 1, 2, 3, 4, 5, 6, 7 ]);
+}
+
+/**
+The `front` range may actually "step over" the `back`
+range. This is very useful with forward ranges that cannot compute
+comfortably right-bounded subranges like `arr[0 .. 4]` above. In
+the example below, `r2` is a right subrange of `r1`.
+*/
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.container : SList;
+    import std.range.primitives : popFrontN;
+
+    auto list = SList!(int)(4, 5, 6, 7, 1, 2, 3);
+    auto r1 = list[];
+    auto r2 = list[]; popFrontN(r2, 4);
+    assert(equal(r2, [ 1, 2, 3 ]));
+    bringToFront(r1, r2);
+    assert(equal(list[], [ 1, 2, 3, 4, 5, 6, 7 ]));
+}
+
+/**
+Elements can be swapped across ranges of different types:
+*/
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.container : SList;
+
+    auto list = SList!(int)(4, 5, 6, 7);
+    auto vec = [ 1, 2, 3 ];
+    bringToFront(list[], vec);
+    assert(equal(list[], [ 1, 2, 3, 4 ]));
+    assert(equal(vec, [ 5, 6, 7 ]));
+}
+
+/**
+Unicode integrity is not preserved:
+*/
+@safe unittest
+{
+    import std.string : representation;
+    auto ar = representation("a".dup);
+    auto br = representation("ç".dup);
+
+    bringToFront(ar, br);
+
+    auto a = cast(char[]) ar;
+    auto b = cast(char[]) br;
+
+    // Illegal UTF-8
+    assert(a == "\303");
+    // Illegal UTF-8
+    assert(b == "\247a");
+}
+
+private size_t bringToFrontImpl(InputRange, ForwardRange)(InputRange front, ForwardRange back)
+if (isInputRange!InputRange && isForwardRange!ForwardRange)
+{
     import std.array : sameHead;
+    import std.range : take, Take;
     enum bool sameHeadExists = is(typeof(front.sameHead(back)));
     size_t result;
+
     for (bool semidone; !front.empty && !back.empty; )
     {
         static if (sameHeadExists)
@@ -152,7 +257,7 @@ size_t bringToFront(InputRange, ForwardRange)(InputRange front, ForwardRange bac
         }
         else
         {
-            assert(front.empty);
+            assert(front.empty, "Expected front to be empty");
             // Left side was shorter. Let's step into the back.
             static if (is(InputRange == Take!ForwardRange))
             {
@@ -170,61 +275,11 @@ size_t bringToFront(InputRange, ForwardRange)(InputRange front, ForwardRange bac
     return result;
 }
 
-/**
-The simplest use of $(D bringToFront) is for rotating elements in a
-buffer. For example:
-*/
-@safe unittest
-{
-    auto arr = [4, 5, 6, 7, 1, 2, 3];
-    auto p = bringToFront(arr[0 .. 4], arr[4 .. $]);
-    assert(p == arr.length - 4);
-    assert(arr == [ 1, 2, 3, 4, 5, 6, 7 ]);
-}
-
-/**
-The $(D front) range may actually "step over" the $(D back)
-range. This is very useful with forward ranges that cannot compute
-comfortably right-bounded subranges like $(D arr[0 .. 4]) above. In
-the example below, $(D r2) is a right subrange of $(D r1).
-*/
-@safe unittest
-{
-    import std.algorithm.comparison : equal;
-    import std.container : SList;
-
-    auto list = SList!(int)(4, 5, 6, 7, 1, 2, 3);
-    auto r1 = list[];
-    auto r2 = list[]; popFrontN(r2, 4);
-    assert(equal(r2, [ 1, 2, 3 ]));
-    bringToFront(r1, r2);
-    assert(equal(list[], [ 1, 2, 3, 4, 5, 6, 7 ]));
-}
-
-
-/**
-Elements can be swapped across ranges of different types:
-*/
-@safe unittest
-{
-    import std.algorithm.comparison : equal;
-    import std.container : SList;
-
-    auto list = SList!(int)(4, 5, 6, 7);
-    auto vec = [ 1, 2, 3 ];
-    bringToFront(list[], vec);
-    assert(equal(list[], [ 1, 2, 3, 4 ]));
-    assert(equal(vec, [ 5, 6, 7 ]));
-}
-
 @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.conv : text;
     import std.random : Random, unpredictableSeed, uniform;
-
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
     // a more elaborate test
     {
@@ -281,6 +336,13 @@ Elements can be swapped across ranges of different types:
         bringToFront(r1, r2) == 4 || assert(0);
         assert(equal(arr, [1, 2, 3, 4, 5, 6, 7]));
     }
+
+    // Bugzilla 16959
+    auto arr = ['4', '5', '6', '7', '1', '2', '3'];
+    auto p = bringToFront(arr[0 .. 4], arr[4 .. $]);
+
+    assert(p == arr.length - 4);
+    assert(arr == ['1', '2', '3', '4', '5', '6', '7']);
 }
 
 // Tests if types are arrays and support slice assign.
@@ -289,31 +351,28 @@ private enum bool areCopyCompatibleArrays(T1, T2) =
 
 // copy
 /**
-Copies the content of $(D source) into $(D target) and returns the
-remaining (unfilled) part of $(D target).
+Copies the content of `source` into `target` and returns the
+remaining (unfilled) part of `target`.
 
-Preconditions: $(D target) shall have enough room to accommodate
-the entirety of $(D source).
+Preconditions: `target` shall have enough room to accommodate
+the entirety of `source`.
 
 Params:
-    source = an input range
+    source = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
     target = an output range
 
 Returns:
     The unfilled part of target
-
-See_Also:
-    $(HTTP sgi.com/tech/stl/_copy.html, STL's _copy)
  */
 TargetRange copy(SourceRange, TargetRange)(SourceRange source, TargetRange target)
-    if (areCopyCompatibleArrays!(SourceRange, TargetRange))
+if (areCopyCompatibleArrays!(SourceRange, TargetRange))
 {
     const tlen = target.length;
     const slen = source.length;
     assert(tlen >= slen,
             "Cannot copy a source range into a smaller target range.");
 
-    immutable overlaps = () @trusted {
+    immutable overlaps = __ctfe || () @trusted {
         return source.ptr < target.ptr + tlen &&
                target.ptr < source.ptr + slen; }();
 
@@ -335,9 +394,9 @@ TargetRange copy(SourceRange, TargetRange)(SourceRange source, TargetRange targe
 
 /// ditto
 TargetRange copy(SourceRange, TargetRange)(SourceRange source, TargetRange target)
-    if (!areCopyCompatibleArrays!(SourceRange, TargetRange) &&
-        isInputRange!SourceRange &&
-        isOutputRange!(TargetRange, ElementType!SourceRange))
+if (!areCopyCompatibleArrays!(SourceRange, TargetRange) &&
+    isInputRange!SourceRange &&
+    isOutputRange!(TargetRange, ElementType!SourceRange))
 {
     // Specialize for 2 random access ranges.
     // Typically 2 random access ranges are faster iterated by common
@@ -384,7 +443,7 @@ range elements, different types of ranges are accepted:
 }
 
 /**
-To _copy at most $(D n) elements from a range, you may want to use
+To _copy at most `n` elements from a range, you may want to use
 $(REF take, std,range):
 */
 @safe unittest
@@ -413,7 +472,7 @@ use $(LREF filter):
 
 /**
 $(REF retro, std,range) can be used to achieve behavior similar to
-$(HTTP sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
+$(LINK2 http://en.cppreference.com/w/cpp/algorithm/copy_backward, STL's `copy_backward`'):
 */
 @safe unittest
 {
@@ -424,12 +483,18 @@ $(HTTP sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
     assert(dest == [0, 0, 1, 2, 4]);
 }
 
+// Test CTFE copy.
+@safe unittest
+{
+    enum c = copy([1,2,3], [4,5,6,7]);
+    assert(c == [7]);
+}
+
+
 @safe unittest
 {
     import std.algorithm.iteration : filter;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     {
         int[] a = [ 1, 5 ];
         int[] b = [ 9, 8 ];
@@ -439,8 +504,8 @@ $(HTTP sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
 
     {
         int[] a = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-        copy(a[5..10], a[4..9]);
-        assert(a[4..9] == [6, 7, 8, 9, 10]);
+        copy(a[5 .. 10], a[4 .. 9]);
+        assert(a[4 .. 9] == [6, 7, 8, 9, 10]);
     }
 
     {   // Test for bug 7898
@@ -452,6 +517,7 @@ $(HTTP sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
             copy(arr1, arr2);
             return 35;
         }();
+        assert(v == 35);
     }
 }
 
@@ -459,18 +525,23 @@ $(HTTP sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
 {
     // Issue 13650
     import std.meta : AliasSeq;
-    foreach (Char; AliasSeq!(char, wchar, dchar))
-    {
+    static foreach (Char; AliasSeq!(char, wchar, dchar))
+    {{
         Char[3] a1 = "123";
         Char[6] a2 = "456789";
         assert(copy(a1[], a2[]) is a2[3..$]);
         assert(a1[] == "123");
         assert(a2[] == "123789");
-    }
+    }}
 }
 
 /**
-Assigns $(D value) to each element of input _range $(D range).
+Assigns `value` to each element of input _range `range`.
+
+Alternatively, instead of using a single `value` to fill the `range`,
+a `filter` $(REF_ALTTEXT forward _range, isForwardRange, std,_range,primitives)
+can be provided. The length of `filler` and `range` do not need to match, but
+`filler` must not be empty.
 
 Params:
         range = An
@@ -478,13 +549,19 @@ Params:
                 that exposes references to its elements and has assignable
                 elements
         value = Assigned to each element of range
+        filler = A
+                $(REF_ALTTEXT forward _range, isForwardRange, std,_range,primitives)
+                representing the _fill pattern.
+
+Throws: If `filler` is empty.
 
 See_Also:
         $(LREF uninitializedFill)
         $(LREF initializeAll)
  */
-void fill(Range, Value)(Range range, Value value)
-    if (isInputRange!Range && is(typeof(range.front = value)))
+void fill(Range, Value)(auto ref Range range, auto ref Value value)
+if ((isInputRange!Range && is(typeof(range.front = value)) ||
+    isSomeChar!Value && is(typeof(range[] = value))))
 {
     alias T = ElementType!Range;
 
@@ -513,13 +590,75 @@ void fill(Range, Value)(Range range, Value value)
     assert(a == [ 5, 5, 5, 5 ]);
 }
 
+// issue 16342, test fallback on mutable narrow strings
+@safe unittest
+{
+    char[] chars = ['a', 'b'];
+    fill(chars, 'c');
+    assert(chars == "cc");
+
+    char[2] chars2 = ['a', 'b'];
+    fill(chars2, 'c');
+    assert(chars2 == "cc");
+
+    wchar[] wchars = ['a', 'b'];
+    fill(wchars, wchar('c'));
+    assert(wchars == "cc"w);
+
+    dchar[] dchars = ['a', 'b'];
+    fill(dchars, dchar('c'));
+    assert(dchars == "cc"d);
+}
+
+@nogc @safe unittest
+{
+    const(char)[] chars;
+    assert(chars.length == 0);
+    static assert(!__traits(compiles, fill(chars, 'c')));
+    wstring wchars;
+    assert(wchars.length == 0);
+    static assert(!__traits(compiles, fill(wchars, wchar('c'))));
+}
+
+@nogc @safe unittest
+{
+    char[] chars;
+    fill(chars, 'c');
+    assert(chars == ""c);
+}
+
+@safe unittest
+{
+    shared(char)[] chrs = ['r'];
+    fill(chrs, 'c');
+    assert(chrs == [shared(char)('c')]);
+}
+
+@nogc @safe unittest
+{
+    struct Str(size_t len)
+    {
+        private char[len] _data;
+        void opIndexAssign(char value) @safe @nogc
+        {_data[] = value;}
+    }
+    Str!2 str;
+    str.fill(':');
+    assert(str._data == "::");
+}
+
+@safe unittest
+{
+    char[] chars = ['a','b','c','d'];
+    chars[1 .. 3].fill(':');
+    assert(chars == "a::d");
+}
+// end issue 16342
+
 @safe unittest
 {
     import std.conv : text;
     import std.internal.test.dummyrange;
-
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
     int[] a = [ 1, 2, 3 ];
     fill(a, 6);
@@ -533,8 +672,6 @@ void fill(Range, Value)(Range range, Value value)
         }
     }
     void fun1() { foreach (i; 0 .. 1000) fill(a, 6); }
-    //void fun2() { foreach (i; 0 .. 1000) fill2(a, 6); }
-    //writeln(benchmark!(fun0, fun1, fun2)(10000));
 
     // fill should accept InputRange
     alias InputRange = DummyRange!(ReturnBy.Reference, Length.No, RangeType.Input);
@@ -582,23 +719,12 @@ void fill(Range, Value)(Range range, Value value)
     }
 }
 
-/**
-Fills $(D range) with a pattern copied from $(D filler). The length of
-$(D range) does not have to be a multiple of the length of $(D
-filler). If $(D filler) is empty, an exception is thrown.
-
-Params:
-    range = An $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
-            that exposes references to its elements and has assignable elements.
-    filler = The
-             $(REF_ALTTEXT forward _range, isForwardRange, std,_range,primitives)
-             representing the _fill pattern.
- */
+/// ditto
 void fill(InputRange, ForwardRange)(InputRange range, ForwardRange filler)
-    if (isInputRange!InputRange
-        && (isForwardRange!ForwardRange
-            || (isInputRange!ForwardRange && isInfinite!ForwardRange))
-        && is(typeof(InputRange.init.front = ForwardRange.init.front)))
+if (isInputRange!InputRange
+    && (isForwardRange!ForwardRange
+    || (isInputRange!ForwardRange && isInfinite!ForwardRange))
+    && is(typeof(InputRange.init.front = ForwardRange.init.front)))
 {
     static if (isInfinite!ForwardRange)
     {
@@ -677,9 +803,6 @@ void fill(InputRange, ForwardRange)(InputRange range, ForwardRange filler)
     import std.exception : assertThrown;
     import std.internal.test.dummyrange;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-
     int[] a = [ 1, 2, 3, 4, 5 ];
     int[] b = [1, 2];
     fill(a, b);
@@ -690,7 +813,7 @@ void fill(InputRange, ForwardRange)(InputRange range, ForwardRange filler)
     InputRange range;
     fill(range,[1,2]);
     foreach (i,value;range.arr)
-    assert(value == (i%2==0?1:2));
+    assert(value == (i%2 == 0?1:2));
 
     //test with a input being a "reference forward" range
     fill(a, new ReferenceForwardRange!int([8, 9]));
@@ -705,7 +828,7 @@ void fill(InputRange, ForwardRange)(InputRange range, ForwardRange filler)
 }
 
 /**
-Initializes all elements of $(D range) with their $(D .init) value.
+Initializes all elements of `range` with their `.init` value.
 Assumes that the elements of the range are uninitialized.
 
 Params:
@@ -719,7 +842,7 @@ See_Also:
         $(LREF uninitializeFill)
  */
 void initializeAll(Range)(Range range)
-    if (isInputRange!Range && hasLvalueElements!Range && hasAssignableElements!Range)
+if (isInputRange!Range && hasLvalueElements!Range && hasAssignableElements!Range)
 {
     import core.stdc.string : memset, memcpy;
     import std.traits : hasElaborateAssign, isDynamicArray;
@@ -741,7 +864,7 @@ void initializeAll(Range)(Range range)
                 {
                     // static array initializer only contains initialization
                     // for one element of the static array.
-                    auto elemp = cast(void *)addressOf(range.front);
+                    auto elemp = cast(void *) addressOf(range.front);
                     auto endp = elemp + T.sizeof;
                     while (elemp < endp)
                     {
@@ -768,14 +891,14 @@ void initializeAll(Range)(Range range)
 
 /// ditto
 void initializeAll(Range)(Range range)
-    if (is(Range == char[]) || is(Range == wchar[]))
+if (is(Range == char[]) || is(Range == wchar[]))
 {
     alias T = ElementEncodingType!Range;
     range[] = T.init;
 }
 
 ///
-unittest
+@system unittest
 {
     import core.stdc.stdlib : malloc, free;
 
@@ -791,14 +914,11 @@ unittest
     scope(exit) free(s.ptr);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.iteration : filter;
     import std.meta : AliasSeq;
     import std.traits : hasElaborateAssign;
-
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
     //Test strings:
     //Must work on narrow strings.
@@ -808,6 +928,8 @@ unittest
     assert(a[] == [char.init, char.init, char.init]);
     string s;
     assert(!__traits(compiles, s.initializeAll()));
+    assert(!__traits(compiles, s.initializeAll()));
+    assert(s.empty);
 
     //Note: Cannot call uninitializedFill on narrow strings
 
@@ -837,16 +959,16 @@ unittest
         int i = 1;
         this(this){}
     }
-    static assert (!hasElaborateAssign!S1);
-    static assert (!hasElaborateAssign!S2);
-    static assert ( hasElaborateAssign!S3);
-    static assert ( hasElaborateAssign!S4);
-    assert (!typeid(S1).initializer().ptr);
-    assert ( typeid(S2).initializer().ptr);
-    assert (!typeid(S3).initializer().ptr);
-    assert ( typeid(S4).initializer().ptr);
+    static assert(!hasElaborateAssign!S1);
+    static assert(!hasElaborateAssign!S2);
+    static assert( hasElaborateAssign!S3);
+    static assert( hasElaborateAssign!S4);
+    assert(!typeid(S1).initializer().ptr);
+    assert( typeid(S2).initializer().ptr);
+    assert(!typeid(S3).initializer().ptr);
+    assert( typeid(S4).initializer().ptr);
 
-    foreach (S; AliasSeq!(S1, S2, S3, S4))
+    static foreach (S; AliasSeq!(S1, S2, S3, S4))
     {
         //initializeAll
         {
@@ -880,7 +1002,7 @@ unittest
 
 // test that initializeAll works for arrays of static arrays of structs with
 // elaborate assigns.
-unittest
+@system unittest
 {
     struct Int {
         ~this() {}
@@ -925,7 +1047,7 @@ void move(T)(ref T source, ref T target)
 }
 
 /// For non-struct types, `move` just performs `target = source`:
-unittest
+@safe unittest
 {
     Object obj1 = new Object;
     Object obj2 = obj1;
@@ -972,12 +1094,11 @@ pure nothrow @safe @nogc unittest
     assert(s22 == S2(3, 4));
 }
 
-unittest
+@safe unittest
 {
-    import std.traits;
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     import std.exception : assertCTFEable;
+    import std.traits;
+
     assertCTFEable!((){
         Object obj1 = new Object;
         Object obj2 = obj1;
@@ -1035,7 +1156,7 @@ unittest
 }
 
 /// Ditto
-T move(T)(ref T source)
+T move(T)(return scope ref T source)
 {
     // test @safe destructible
     static if (__traits(compiles, (T t) @safe {}))
@@ -1049,11 +1170,15 @@ pure nothrow @safe @nogc unittest
 {
     struct S
     {
+        int a = 1;
         @disable this(this);
         ~this() pure nothrow @safe @nogc {}
     }
     S s1;
+    s1.a = 2;
     S s2 = move(s1);
+    assert(s1.a == 1);
+    assert(s2.a == 2);
 }
 
 private void trustedMoveImpl(T)(ref T source, ref T target) @trusted
@@ -1087,12 +1212,11 @@ private T moveImpl(T)(ref T source)
     return result;
 }
 
-unittest
+@safe unittest
 {
-    import std.traits;
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     import std.exception : assertCTFEable;
+    import std.traits;
+
     assertCTFEable!((){
         Object obj1 = new Object;
         Object obj2 = obj1;
@@ -1147,7 +1271,7 @@ unittest
     assert(s53 is s51);
 }
 
-unittest
+@system unittest
 {
     static struct S { int n = 0; ~this() @system { n = 0; } }
     S a, b;
@@ -1161,14 +1285,14 @@ unittest
     assert(a.n == 0);
 }
 
-unittest//Issue 6217
+@safe unittest//Issue 6217
 {
     import std.algorithm.iteration : map;
     auto x = map!"a"([1,2,3]);
     x = move(x);
 }
 
-unittest// Issue 8055
+@safe unittest// Issue 8055
 {
     static struct S
     {
@@ -1188,7 +1312,7 @@ unittest// Issue 8055
     assert(b.x == 0);
 }
 
-unittest// Issue 8057
+@system unittest// Issue 8057
 {
     int n = 10;
     struct S
@@ -1281,7 +1405,7 @@ void moveEmplace(T)(ref T source, ref T target) @system
 }
 
 ///
-pure nothrow @nogc unittest
+pure nothrow @nogc @system unittest
 {
     static struct Foo
     {
@@ -1319,9 +1443,9 @@ Params:
     src = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) with
         movable elements.
     tgt = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) with
-        elements that elements from $(D src) can be moved into.
+        elements that elements from `src` can be moved into.
 
-Returns: The leftover portion of $(D tgt) after all elements from $(D src) have
+Returns: The leftover portion of `tgt` after all elements from `src` have
 been moved.
  */
 InputRange2 moveAll(InputRange1, InputRange2)(InputRange1 src, InputRange2 tgt)
@@ -1355,7 +1479,7 @@ if (isInputRange!InputRange1 && isInputRange!InputRange2
 }
 
 ///
-pure nothrow @nogc unittest
+pure nothrow @nogc @system unittest
 {
     static struct Foo
     {
@@ -1375,7 +1499,7 @@ pure nothrow @nogc unittest
     assert(dst[0 .. 3].all!(e => e._ptr !is null));
 }
 
-unittest
+@system unittest
 {
     struct InputRange
     {
@@ -1400,7 +1524,7 @@ private InputRange2 moveAllImpl(alias moveOp, InputRange1, InputRange2)(
          && hasSlicing!InputRange2 && isRandomAccessRange!InputRange2)
     {
         auto toMove = src.length;
-        assert(toMove <= tgt.length);
+        assert(toMove <= tgt.length, "Source buffer needs to be smaller or equal to the target buffer.");
         foreach (idx; 0 .. toMove)
             moveOp(src[idx], tgt[idx]);
         return tgt[toMove .. tgt.length];
@@ -1409,7 +1533,7 @@ private InputRange2 moveAllImpl(alias moveOp, InputRange1, InputRange2)(
     {
         for (; !src.empty; src.popFront(), tgt.popFront())
         {
-            assert(!tgt.empty);
+            assert(!tgt.empty, "Source buffer needs to be smaller or equal to the target buffer.");
             moveOp(src.front, tgt.front);
         }
         return tgt;
@@ -1426,7 +1550,7 @@ Params:
     src = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) with
         movable elements.
     tgt = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) with
-        elements that elements from $(D src) can be moved into.
+        elements that elements from `src` can be moved into.
 
 Returns: The leftover portions of the two ranges after one or the other of the
 ranges have been exhausted.
@@ -1461,7 +1585,7 @@ if (isInputRange!InputRange1 && isInputRange!InputRange2
 }
 
 ///
-pure nothrow @nogc unittest
+pure nothrow @nogc @system unittest
 {
     static struct Foo
     {
@@ -1473,6 +1597,7 @@ pure nothrow @nogc unittest
     Foo[3] dst = void;
 
     auto res = moveEmplaceSome(src[], dst[]);
+    assert(res.length == 2);
 
     import std.algorithm.searching : all;
     assert(src[0 .. 3].all!(e => e._ptr is null));
@@ -1495,15 +1620,15 @@ Defines the swapping strategy for algorithms that need to swap
 elements in a range (such as partition and sort). The strategy
 concerns the swapping of elements that are not the core concern of the
 algorithm. For example, consider an algorithm that sorts $(D [ "abc",
-"b", "aBc" ]) according to $(D toUpper(a) < toUpper(b)). That
-algorithm might choose to swap the two equivalent strings $(D "abc")
-and $(D "aBc"). That does not affect the sorting since both $(D [
-"abc", "aBc", "b" ]) and $(D [ "aBc", "abc", "b" ]) are valid
+"b", "aBc" ]) according to `toUpper(a) < toUpper(b)`. That
+algorithm might choose to swap the two equivalent strings `"abc"`
+and `"aBc"`. That does not affect the sorting since both `$D(
+"abc", "aBc", "b" ]) and `[ "aBc", "abc", "b" ]` are valid
 outcomes.
 
 Some situations require that the algorithm must NOT ever change the
 relative ordering of equivalent elements (in the example above, only
-$(D [ "abc", "aBc", "b" ]) would be the correct result). Such
+`[ "abc", "aBc", "b" ]` would be the correct result). Such
 algorithms are called $(B stable). If the ordering algorithm may swap
 equivalent elements discretionarily, the ordering is called $(B
 unstable).
@@ -1513,12 +1638,12 @@ being stable only on a well-defined subrange of the range. There is no
 established terminology for such behavior; this library calls it $(B
 semistable).
 
-Generally, the $(D stable) ordering strategy may be more costly in
+Generally, the `stable` ordering strategy may be more costly in
 time and/or space than the other two because it imposes additional
-constraints. Similarly, $(D semistable) may be costlier than $(D
+constraints. Similarly, `semistable` may be costlier than $(D
 unstable). As (semi-)stability is not needed very often, the ordering
-algorithms in this module parameterized by $(D SwapStrategy) all
-choose $(D SwapStrategy.unstable) as the default.
+algorithms in this module parameterized by `SwapStrategy` all
+choose `SwapStrategy.unstable` as the default.
 */
 
 enum SwapStrategy
@@ -1540,9 +1665,52 @@ enum SwapStrategy
     stable,
 }
 
+///
+@safe unittest
+{
+    import std.stdio;
+    import std.algorithm.sorting : partition;
+    int[] a = [0, 1, 2, 3];
+    assert(remove!(SwapStrategy.stable)(a, 1) == [0, 2, 3]);
+    a = [0, 1, 2, 3];
+    assert(remove!(SwapStrategy.unstable)(a, 1) == [0, 3, 2]);
+}
+
+///
+@safe unittest
+{
+    import std.algorithm.sorting : partition;
+
+    // Put stuff greater than 3 on the left
+    auto arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    assert(partition!(a => a > 3, SwapStrategy.stable)(arr) == [1, 2, 3]);
+    assert(arr == [4, 5, 6, 7, 8, 9, 10, 1, 2, 3]);
+
+    arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    assert(partition!(a => a > 3, SwapStrategy.semistable)(arr) == [2, 3, 1]);
+    assert(arr == [4, 5, 6, 7, 8, 9, 10, 2, 3, 1]);
+
+    arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    assert(partition!(a => a > 3, SwapStrategy.unstable)(arr) == [3, 2, 1]);
+    assert(arr == [10, 9, 8, 4, 5, 6, 7, 3, 2, 1]);
+}
+
 /**
-Eliminates elements at given offsets from $(D range) and returns the
-shortened range. In the simplest call, one element is removed.
+Eliminates elements at given offsets from `range` and returns the shortened
+range.
+
+For example, here is how to _remove a single element from an array:
+
+----
+string[] a = [ "a", "b", "c", "d" ];
+a = a.remove(1); // remove element at offset 1
+assert(a == [ "a", "c", "d"]);
+----
+
+Note that `remove` does not change the length of the original _range directly;
+instead, it returns the shortened _range. If its return value is not assigned to
+the original _range, the original _range will retain its original length, though
+its contents will have changed:
 
 ----
 int[] a = [ 3, 5, 7, 8 ];
@@ -1550,17 +1718,15 @@ assert(remove(a, 1) == [ 3, 7, 8 ]);
 assert(a == [ 3, 7, 8, 8 ]);
 ----
 
-In the case above the element at offset $(D 1) is removed and $(D
-remove) returns the range smaller by one element. The original array
-has remained of the same length because all functions in $(D
-std.algorithm) only change $(I content), not $(I topology). The value
-$(D 8) is repeated because $(LREF move) was invoked to
-move elements around and on integers $(D move) simply copies the source to
-the destination. To replace $(D a) with the effect of the removal,
-simply assign $(D a = remove(a, 1)). The slice will be rebound to the
-shorter array and the operation completes with maximal efficiency.
+The element at _offset `1` has been removed and the rest of the elements have
+shifted up to fill its place, however, the original array remains of the same
+length. This is because all functions in `std.algorithm` only change $(I
+content), not $(I topology). The value `8` is repeated because $(LREF move) was
+invoked to rearrange elements, and on integers `move` simply copies the source
+to the destination.  To replace `a` with the effect of the removal, simply
+assign the slice returned by `remove` to it, as shown in the first example.
 
-Multiple indices can be passed into $(D remove). In that case,
+Multiple indices can be passed into `remove`. In that case,
 elements at the respective indices are all removed. The indices must
 be passed in increasing order, otherwise an exception occurs.
 
@@ -1570,7 +1736,7 @@ assert(remove(a, 1, 3, 5) ==
     [ 0, 2, 4, 6, 7, 8, 9, 10 ]);
 ----
 
-(Note how all indices refer to slots in the $(I original) array, not
+(Note that all indices refer to slots in the $(I original) array, not
 in the array as it is being progressively shortened.) Finally, any
 combination of integral offsets and tuples composed of two integral
 offsets can be passed in.
@@ -1582,25 +1748,25 @@ assert(remove(a, 1, tuple(3, 5), 9) == [ 0, 2, 5, 6, 7, 8, 10 ]);
 
 In this case, the slots at positions 1, 3, 4, and 9 are removed from
 the array. The tuple passes in a range closed to the left and open to
-the right (consistent with built-in slices), e.g. $(D tuple(3, 5))
-means indices $(D 3) and $(D 4) but not $(D 5).
+the right (consistent with built-in slices), e.g. `tuple(3, 5)`
+means indices `3` and `4` but not `5`.
 
 If the need is to remove some elements in the range but the order of
 the remaining elements does not have to be preserved, you may want to
-pass $(D SwapStrategy.unstable) to $(D remove).
+pass `SwapStrategy.unstable` to `remove`.
 
 ----
 int[] a = [ 0, 1, 2, 3 ];
 assert(remove!(SwapStrategy.unstable)(a, 1) == [ 0, 3, 2 ]);
 ----
 
-In the case above, the element at slot $(D 1) is removed, but replaced
+In the case above, the element at slot `1` is removed, but replaced
 with the last element of the range. Taking advantage of the relaxation
-of the stability requirement, $(D remove) moved elements from the end
+of the stability requirement, `remove` moved elements from the end
 of the array over the slots to be removed. This way there is less data
 movement to be done which improves the execution time of the function.
 
-The function $(D remove) works on bidirectional ranges that have assignable
+The function `remove` works on bidirectional ranges that have assignable
 lvalue elements. The moving strategy is (listed from fastest to slowest):
 $(UL $(LI If $(D s == SwapStrategy.unstable && isRandomAccessRange!Range &&
 hasLength!Range && hasLvalueElements!Range), then elements are moved from the
@@ -1609,14 +1775,15 @@ minimum of moves is performed.)  $(LI Otherwise, if $(D s ==
 SwapStrategy.unstable && isBidirectionalRange!Range && hasLength!Range
 && hasLvalueElements!Range), then elements are still moved from the
 end of the range, but time is spent on advancing between slots by repeated
-calls to $(D range.popFront).)  $(LI Otherwise, elements are moved
-incrementally towards the front of $(D range); a given element is never
+calls to `range.popFront`.)  $(LI Otherwise, elements are moved
+incrementally towards the front of `range`; a given element is never
 moved several times, but more elements are moved than in the previous
 cases.))
 
 Params:
     s = a SwapStrategy to determine if the original order needs to be preserved
-    range = a bidirectional range with a length member
+    range = a $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,_range,primitives)
+    with a length member
     offset = which element(s) to remove
 
 Returns:
@@ -1678,7 +1845,7 @@ if (s != SwapStrategy.stable
                 break;
         }
         // Advance to next blackout on the left
-        assert(blackouts[left].pos >= tgtPos);
+        assert(blackouts[left].pos >= tgtPos, "Next blackout on the left shouldn't appear before the target.");
         tgt.popFrontExactly(blackouts[left].pos - tgtPos);
         tgtPos = blackouts[left].pos;
 
@@ -1793,10 +1960,7 @@ if (s == SwapStrategy.stable
 @safe unittest
 {
     import std.range;
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
-    //writeln(remove!(SwapStrategy.stable)(a, 1));
     a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
     assert(remove!(SwapStrategy.stable)(a, 1) ==
         [ 0, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]);
@@ -1814,18 +1978,12 @@ if (s == SwapStrategy.stable
            [ 1, 2, 4 ]);
 
     a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
-    //writeln(remove!(SwapStrategy.stable)(a, 1, 5));
-    a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
     assert(remove!(SwapStrategy.stable)(a, 1, 5) ==
         [ 0, 2, 3, 4, 6, 7, 8, 9, 10 ]);
 
     a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
-    //writeln(remove!(SwapStrategy.stable)(a, 1, 3, 5));
-    a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
     assert(remove!(SwapStrategy.stable)(a, 1, 3, 5)
             == [ 0, 2, 4, 6, 7, 8, 9, 10]);
-    a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
-    //writeln(remove!(SwapStrategy.stable)(a, 1, tuple(3, 5)));
     a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
     assert(remove!(SwapStrategy.stable)(a, 1, tuple(3, 5))
             == [ 0, 2, 5, 6, 7, 8, 9, 10]);
@@ -1858,10 +2016,11 @@ if (s == SwapStrategy.stable
 }
 
 /**
-Reduces the length of the bidirectional range $(D range) by removing
-elements that satisfy $(D pred). If $(D s = SwapStrategy.unstable),
+Reduces the length of the
+$(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,_range,primitives) `range` by removing
+elements that satisfy `pred`. If `s = SwapStrategy.unstable`,
 elements are moved from the right end of the range over the elements
-to eliminate. If $(D s = SwapStrategy.stable) (the default),
+to eliminate. If `s = SwapStrategy.stable` (the default),
 elements are moved progressively to front such that their relative
 order is preserved. Returns the filtered range.
 
@@ -1869,7 +2028,7 @@ Params:
     range = a bidirectional ranges with lvalue elements
 
 Returns:
-    the range with all of the elements where $(D pred) is $(D true)
+    the range with all of the elements where `pred` is `true`
     removed
 */
 Range remove(alias pred, SwapStrategy s = SwapStrategy.stable, Range)
@@ -1933,18 +2092,15 @@ if (isBidirectionalRange!Range
 
 @safe unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 3, 2, 3, 4, 5, 2, 5, 6 ];
     assert(remove!("a == 2", SwapStrategy.unstable)(a) ==
             [ 1, 6, 3, 5, 3, 4, 5 ]);
     a = [ 1, 2, 3, 2, 3, 4, 5, 2, 5, 6 ];
-    //writeln(remove!("a != 2", SwapStrategy.stable)(a));
     assert(remove!("a == 2", SwapStrategy.stable)(a) ==
             [ 1, 3, 3, 4, 5, 5, 6 ]);
 }
 
-@nogc unittest
+@nogc @safe unittest
 {
     // @nogc test
     int[10] arr = [0,1,2,3,4,5,6,7,8,9];
@@ -1967,23 +2123,23 @@ if (isBidirectionalRange!Range
     import std.typecons : Tuple;
     alias S = Tuple!(int[2]);
     S[] soffsets;
-    foreach (start; 0..5)
+    foreach (start; 0 .. 5)
     foreach (end; min(start+1,5) .. 5)
           soffsets ~= S([start,end]);
     alias D = Tuple!(int[2],int[2]);
     D[] doffsets;
-    foreach (start1; 0..10)
+    foreach (start1; 0 .. 10)
     foreach (end1; min(start1+1,10) .. 10)
-    foreach (start2; end1 ..10)
+    foreach (start2; end1 .. 10)
     foreach (end2; min(start2+1,10) .. 10)
           doffsets ~= D([start1,end1],[start2,end2]);
     alias T = Tuple!(int[2],int[2],int[2]);
     T[] toffsets;
-    foreach (start1; 0..15)
+    foreach (start1; 0 .. 15)
     foreach (end1; min(start1+1,15) .. 15)
-    foreach (start2; end1..15)
+    foreach (start2; end1 .. 15)
     foreach (end2; min(start2+1,15) .. 15)
-    foreach (start3; end2..15)
+    foreach (start3; end2 .. 15)
     foreach (end3; min(start3+1,15) .. 15)
             toffsets ~= T([start1,end1],[start2,end2],[start3,end3]);
 
@@ -1994,7 +2150,7 @@ if (isBidirectionalRange!Range
         assert(r.all!(e => all!(o => e < o[0] || e >= o[1])(offsets.only)));
     }
 
-    foreach (offsets; AliasSeq!(soffsets,doffsets,toffsets))
+    static foreach (offsets; AliasSeq!(soffsets,doffsets,toffsets))
     foreach (os; offsets)
     {
         int len = 5*os.length;
@@ -2021,25 +2177,73 @@ if (isBidirectionalRange!Range
 
 // reverse
 /**
-Reverses $(D r) in-place.  Performs $(D r.length / 2) evaluations of $(D
-swap).
+Reverses `r` in-place.  Performs `r.length / 2` evaluations of `swap`.
+UTF sequences consisting of multiple code units are preserved properly.
 
 Params:
-    r = a bidirectional range with swappable elements or a random access range with a length member
+    r = a $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives)
+        with either swappable elements, a random access range with a length member,
+        or a narrow string
 
-See_Also:
-    $(HTTP sgi.com/tech/stl/_reverse.html, STL's _reverse)
+Returns: `r`
+
+Note:
+    When passing a string with unicode modifiers on characters, such as `\u0301`,
+    this function will not properly keep the position of the modifier. For example,
+    reversing `ba\u0301d` ("bád") will result in d\u0301ab ("d́ab") instead of
+    `da\u0301b` ("dáb").
+
+See_Also: $(REF retro, std,range) for a lazy reverse without changing `r`
 */
-void reverse(Range)(Range r)
-if (isBidirectionalRange!Range && !isRandomAccessRange!Range
-    && hasSwappableElements!Range)
+Range reverse(Range)(Range r)
+if (isBidirectionalRange!Range &&
+        (hasSwappableElements!Range ||
+         (hasAssignableElements!Range && hasLength!Range && isRandomAccessRange!Range) ||
+         (isNarrowString!Range && isAssignable!(ElementType!Range))))
 {
-    while (!r.empty)
+    static if (isRandomAccessRange!Range && hasLength!Range)
     {
-        swap(r.front, r.back);
-        r.popFront();
-        if (r.empty) break;
-        r.popBack();
+        //swapAt is in fact the only way to swap non lvalue ranges
+        immutable last = r.length - 1;
+        immutable steps = r.length / 2;
+        for (size_t i = 0; i < steps; i++)
+        {
+            r.swapAt(i, last - i);
+        }
+        return r;
+    }
+    else static if (isNarrowString!Range && isAssignable!(ElementType!Range))
+    {
+        import std.string : representation;
+        import std.utf : stride;
+
+        auto raw = representation(r);
+        for (size_t i = 0; i < r.length;)
+        {
+            immutable step = stride(r, i);
+            if (step > 1)
+            {
+                .reverse(raw[i .. i + step]);
+                i += step;
+            }
+            else
+            {
+                ++i;
+            }
+        }
+        reverse(raw);
+        return r;
+    }
+    else
+    {
+        while (!r.empty)
+        {
+            swap(r.front, r.back);
+            r.popFront();
+            if (r.empty) break;
+            r.popBack();
+        }
+        return r;
     }
 }
 
@@ -2047,27 +2251,11 @@ if (isBidirectionalRange!Range && !isRandomAccessRange!Range
 @safe unittest
 {
     int[] arr = [ 1, 2, 3 ];
-    reverse(arr);
-    assert(arr == [ 3, 2, 1 ]);
-}
-
-///ditto
-void reverse(Range)(Range r)
-if (isRandomAccessRange!Range && hasLength!Range)
-{
-    //swapAt is in fact the only way to swap non lvalue ranges
-    immutable last = r.length-1;
-    immutable steps = r.length/2;
-    for (size_t i = 0; i < steps; i++)
-    {
-        r.swapAt(i, last-i);
-    }
+    assert(arr.reverse == [ 3, 2, 1 ]);
 }
 
 @safe unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] range = null;
     reverse(range);
     range = [ 1 ];
@@ -2077,53 +2265,14 @@ if (isRandomAccessRange!Range && hasLength!Range)
     reverse(range);
     assert(range == [2, 1]);
     range = [1, 2, 3];
-    reverse(range);
-    assert(range == [3, 2, 1]);
-}
-
-/**
-Reverses $(D r) in-place, where $(D r) is a narrow string (having
-elements of type $(D char) or $(D wchar)). UTF sequences consisting of
-multiple code units are preserved properly.
-
-Params:
-    s = a narrow string
-
-Bugs:
-    When passing a sting with unicode modifiers on characters, such as $(D \u0301),
-    this function will not properly keep the position of the modifier. For example,
-    reversing $(D ba\u0301d) ("bád") will result in d\u0301ab ("d́ab") instead of
-    $(D da\u0301b) ("dáb").
-*/
-void reverse(Char)(Char[] s)
-if (isNarrowString!(Char[]) && !is(Char == const) && !is(Char == immutable))
-{
-    import std.string : representation;
-    import std.utf : stride;
-
-    auto r = representation(s);
-    for (size_t i = 0; i < s.length; )
-    {
-        immutable step = stride(s, i);
-        if (step > 1)
-        {
-            .reverse(r[i .. i + step]);
-            i += step;
-        }
-        else
-        {
-            ++i;
-        }
-    }
-    reverse(r);
+    assert(range.reverse == [3, 2, 1]);
 }
 
 ///
 @safe unittest
 {
     char[] arr = "hello\U00010143\u0100\U00010143".dup;
-    reverse(arr);
-    assert(arr == "\U00010143\u0100\U00010143olleh");
+    assert(arr.reverse == "\U00010143\u0100\U00010143olleh");
 }
 
 @safe unittest
@@ -2149,12 +2298,12 @@ if (isNarrowString!(Char[]) && !is(Char == const) && !is(Char == immutable))
     The strip group of functions allow stripping of either leading, trailing,
     or both leading and trailing elements.
 
-    The $(D stripLeft) function will strip the $(D front) of the range,
-    the $(D stripRight) function will strip the $(D back) of the range,
-    while the $(D strip) function will strip both the $(D front) and $(D back)
+    The `stripLeft` function will strip the `front` of the range,
+    the `stripRight` function will strip the `back` of the range,
+    while the `strip` function will strip both the `front` and `back`
     of the range.
 
-    Note that the $(D strip) and $(D stripRight) functions require the range to
+    Note that the `strip` and `stripRight` functions require the range to
     be a $(LREF BidirectionalRange) range.
 
     All of these functions come in two varieties: one takes a target element,
@@ -2163,28 +2312,29 @@ if (isNarrowString!(Char[]) && !is(Char == const) && !is(Char == immutable))
     long as the predicate returns true.
 
     Params:
-        range = a bidirectional or input range
+        range = a $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives)
+        or $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
         element = the elements to remove
 
     Returns:
         a Range with all of range except element at the start and end
 */
 Range strip(Range, E)(Range range, E element)
-    if (isBidirectionalRange!Range && is(typeof(range.front == element) : bool))
+if (isBidirectionalRange!Range && is(typeof(range.front == element) : bool))
 {
     return range.stripLeft(element).stripRight(element);
 }
 
 /// ditto
 Range strip(alias pred, Range)(Range range)
-    if (isBidirectionalRange!Range && is(typeof(pred(range.back)) : bool))
+if (isBidirectionalRange!Range && is(typeof(pred(range.back)) : bool))
 {
     return range.stripLeft!pred().stripRight!pred();
 }
 
 /// ditto
 Range stripLeft(Range, E)(Range range, E element)
-    if (isInputRange!Range && is(typeof(range.front == element) : bool))
+if (isInputRange!Range && is(typeof(range.front == element) : bool))
 {
     import std.algorithm.searching : find;
     return find!((auto ref a) => a != element)(range);
@@ -2192,7 +2342,7 @@ Range stripLeft(Range, E)(Range range, E element)
 
 /// ditto
 Range stripLeft(alias pred, Range)(Range range)
-    if (isInputRange!Range && is(typeof(pred(range.front)) : bool))
+if (isInputRange!Range && is(typeof(pred(range.front)) : bool))
 {
     import std.algorithm.searching : find;
     import std.functional : not;
@@ -2202,7 +2352,7 @@ Range stripLeft(alias pred, Range)(Range range)
 
 /// ditto
 Range stripRight(Range, E)(Range range, E element)
-    if (isBidirectionalRange!Range && is(typeof(range.back == element) : bool))
+if (isBidirectionalRange!Range && is(typeof(range.back == element) : bool))
 {
     for (; !range.empty; range.popBack())
     {
@@ -2214,7 +2364,7 @@ Range stripRight(Range, E)(Range range, E element)
 
 /// ditto
 Range stripRight(alias pred, Range)(Range range)
-    if (isBidirectionalRange!Range && is(typeof(pred(range.back)) : bool))
+if (isBidirectionalRange!Range && is(typeof(pred(range.back)) : bool))
 {
     for (; !range.empty; range.popBack())
     {
@@ -2286,18 +2436,18 @@ Range stripRight(alias pred, Range)(Range range)
 
 // swap
 /**
-Swaps $(D lhs) and $(D rhs). The instances $(D lhs) and $(D rhs) are moved in
-memory, without ever calling $(D opAssign), nor any other function. $(D T)
+Swaps `lhs` and `rhs`. The instances `lhs` and `rhs` are moved in
+memory, without ever calling `opAssign`, nor any other function. `T`
 need not be assignable at all to be swapped.
 
-If $(D lhs) and $(D rhs) reference the same instance, then nothing is done.
+If `lhs` and `rhs` reference the same instance, then nothing is done.
 
-$(D lhs) and $(D rhs) must be mutable. If $(D T) is a struct or union, then
+`lhs` and `rhs` must be mutable. If `T` is a struct or union, then
 its fields must also all be (recursively) mutable.
 
 Params:
-    lhs = Data to be swapped with $(D rhs).
-    rhs = Data to be swapped with $(D lhs).
+    lhs = Data to be swapped with `rhs`.
+    rhs = Data to be swapped with `lhs`.
 */
 void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow @nogc
 if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
@@ -2369,8 +2519,14 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
     assert(s2.y == [ 1, 2 ]);
 
     // Immutables cannot be swapped:
-    immutable int imm1, imm2;
+    immutable int imm1 = 1, imm2 = 2;
     static assert(!__traits(compiles, swap(imm1, imm2)));
+
+    int c = imm1 + 0;
+    int d = imm2 + 0;
+    swap(c, d);
+    assert(c == 2);
+    assert(d == 1);
 }
 
 ///
@@ -2416,6 +2572,7 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
 
     // Const types cannot be swapped.
     const NoCopy const1, const2;
+    assert(const1.n == 0 && const2.n == 0);
     static assert(!__traits(compiles, swap(const1, const2)));
 }
 
@@ -2449,9 +2606,14 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
     struct S
     {
         const int i;
+        int i2 = 2;
+        int i3 = 3;
     }
     S s;
     static assert(!__traits(compiles, swap(s, s)));
+    swap(s.i2, s.i3);
+    assert(s.i2 == 3);
+    assert(s.i3 == 2);
 }
 
 @safe unittest
@@ -2467,9 +2629,10 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
     // 12024
     import std.datetime;
     SysTime a, b;
+    swap(a, b);
 }
 
-unittest // 9975
+@system unittest // 9975
 {
     import std.exception : doesPointTo, mayPointTo;
     static struct S2
@@ -2495,7 +2658,7 @@ unittest // 9975
     assertThrown!Error(swap(p, pp));
 }
 
-unittest
+@system unittest
 {
     static struct A
     {
@@ -2516,7 +2679,7 @@ unittest
 
 /// ditto
 void swap(T)(ref T lhs, ref T rhs)
-    if (is(typeof(lhs.proxySwap(rhs))))
+if (is(typeof(lhs.proxySwap(rhs))))
 {
     lhs.proxySwap(rhs);
 }
@@ -2601,12 +2764,6 @@ pure @safe nothrow unittest
     {
         T payload;
 
-        // needed for ElementType
-        auto init()
-        {
-            return payload.init;
-        }
-
         ElementType!T moveAt(size_t i)
         {
            return payload.moveAt(i);
@@ -2638,7 +2795,7 @@ pure @safe nothrow unittest
 }
 
 private void swapFront(R1, R2)(R1 r1, R2 r2)
-    if (isInputRange!R1 && isInputRange!R2)
+if (isInputRange!R1 && isInputRange!R2)
 {
     static if (is(typeof(swap(r1.front, r2.front))))
     {
@@ -2654,8 +2811,8 @@ private void swapFront(R1, R2)(R1 r1, R2 r2)
 
 // swapRanges
 /**
-Swaps all elements of $(D r1) with successive elements in $(D r2).
-Returns a tuple containing the remainder portions of $(D r1) and $(D
+Swaps all elements of `r1` with successive elements in `r2`.
+Returns a tuple containing the remainder portions of `r1` and $(D
 r2) that were not swapped (one of them will be empty). The ranges may
 be of different types but must have the same element type and support
 swapping.
@@ -2671,9 +2828,8 @@ Returns:
 */
 Tuple!(InputRange1, InputRange2)
 swapRanges(InputRange1, InputRange2)(InputRange1 r1, InputRange2 r2)
-    if (isInputRange!(InputRange1) && isInputRange!(InputRange2)
-            && hasSwappableElements!(InputRange1) && hasSwappableElements!(InputRange2)
-            && is(ElementType!(InputRange1) == ElementType!(InputRange2)))
+if (hasSwappableElements!InputRange1 && hasSwappableElements!InputRange2
+    && is(ElementType!InputRange1 == ElementType!InputRange2))
 {
     for (; !r1.empty && !r2.empty; r1.popFront(), r2.popFront())
     {
@@ -2695,7 +2851,7 @@ swapRanges(InputRange1, InputRange2)(InputRange1 r1, InputRange2 r2)
 }
 
 /**
-Initializes each element of $(D range) with $(D value).
+Initializes each element of `range` with `value`.
 Assumes that the elements of the range are uninitialized.
 This is of interest for structs that
 define copy constructors (for all other types, $(LREF fill) and
@@ -2713,7 +2869,7 @@ See_Also:
         $(LREF initializeAll)
  */
 void uninitializedFill(Range, Value)(Range range, Value value)
-    if (isInputRange!Range && hasLvalueElements!Range && is(typeof(range.front = value)))
+if (isInputRange!Range && hasLvalueElements!Range && is(typeof(range.front = value)))
 {
     import std.traits : hasElaborateAssign;
 
@@ -2732,7 +2888,7 @@ void uninitializedFill(Range, Value)(Range range, Value value)
 }
 
 ///
-nothrow unittest
+nothrow @system unittest
 {
     import core.stdc.stdlib : malloc, free;
 

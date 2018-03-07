@@ -1,4 +1,7 @@
-///
+// Written in the D programming language.
+/**
+Source: $(PHOBOSSRC std/experimental/logger/_multilogger.d)
+*/
 module std.experimental.logger.multilogger;
 
 import std.experimental.logger.core;
@@ -105,8 +108,8 @@ class MultiLogger : Logger
 
 @safe unittest
 {
-    import std.experimental.logger.nulllogger;
     import std.exception : assertThrown;
+    import std.experimental.logger.nulllogger;
     auto a = new MultiLogger;
     auto n0 = new NullLogger();
     auto n1 = new NullLogger();
@@ -140,7 +143,7 @@ class MultiLogger : Logger
 }
 
 // Issue #16
-unittest
+@system unittest
 {
     import std.file : deleteme;
     import std.stdio : File;
@@ -186,12 +189,12 @@ unittest
 
 @safe unittest
 {
-    auto dl = cast(FileLogger)sharedLog;
+    auto dl = cast(FileLogger) sharedLog;
     assert(dl !is null);
     assert(dl.logLevel == LogLevel.all);
     assert(globalLogLevel == LogLevel.all);
 
-    auto tl = cast(StdForwardLogger)stdThreadLocalLog;
+    auto tl = cast(StdForwardLogger) stdThreadLocalLog;
     assert(tl !is null);
     stdThreadLocalLog.logLevel = LogLevel.all;
 }

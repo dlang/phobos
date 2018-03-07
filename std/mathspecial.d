@@ -53,9 +53,9 @@
  * Source:    $(PHOBOSSRC std/_mathspecial.d)
  */
 module std.mathspecial;
+import std.internal.math.errorfunction;
+import std.internal.math.gammafunction;
 public import std.math;
-private import std.internal.math.gammafunction;
-private import std.internal.math.errorfunction;
 
 /* ***********************************************
  *            GAMMA AND RELATED FUNCTIONS        *
@@ -135,7 +135,7 @@ real sgnGamma(real x)
     return n & 1 ? 1.0 : -1.0;
 }
 
-unittest
+@safe unittest
 {
     assert(sgnGamma(5.0) == 1.0);
     assert(isNaN(sgnGamma(-3.0)));
@@ -159,7 +159,7 @@ real beta(real x, real y)
     } else return gamma(x) * gamma(y) / gamma(x+y);
 }
 
-unittest
+@safe unittest
 {
     assert(isIdentical(beta(NaN(0xABC), 4), NaN(0xABC)));
     assert(isIdentical(beta(2, NaN(0xABC)), NaN(0xABC)));
@@ -253,21 +253,25 @@ real betaIncompleteInverse(real a, real b, real y )
  * values of a and x.
  */
 real gammaIncomplete(real a, real x )
-in {
+in
+{
    assert(x >= 0);
    assert(a > 0);
 }
-body {
+do
+{
     return std.internal.math.gammafunction.gammaIncomplete(a, x);
 }
 
 /** ditto */
 real gammaIncompleteCompl(real a, real x )
-in {
+in
+{
    assert(x >= 0);
    assert(a > 0);
 }
-body {
+do
+{
     return std.internal.math.gammafunction.gammaIncompleteCompl(a, x);
 }
 
@@ -278,11 +282,13 @@ body {
  *  gammaIncompleteCompl( a, x ) = p.
  */
 real gammaIncompleteComplInverse(real a, real p)
-in {
+in
+{
   assert(p >= 0 && p <= 1);
   assert(a > 0);
 }
-body {
+do
+{
     return std.internal.math.gammafunction.gammaIncompleteComplInv(a, p);
 }
 
@@ -348,12 +354,15 @@ real normalDistribution(real x)
  * Returns the argument, x, for which the area under the
  * Normal probability density function (integrated from
  * minus infinity to x) is equal to p.
+ *
+ * Note: This function is only implemented to 80 bit precision.
  */
 real normalDistributionInverse(real p)
-in {
-  assert(p>=0.0L && p<=1.0L, "Domain error");
+in
+{
+  assert(p >= 0.0L && p <= 1.0L, "Domain error");
 }
-body
+do
 {
     return std.internal.math.errorfunction.normalDistributionInvImpl(p);
 }

@@ -1,7 +1,8 @@
+// Written in the D programming language.
 /**
 $(H2 Assembling Your Own Allocator)
 
-In addition to defining the interfaces above, this package also implements
+This package also implements
 untyped composable memory allocators. They are $(I untyped) because they deal
 exclusively in $(D void[]) and have no notion of what type the memory allocated
 would be destined for. They are $(I composable) because the included allocators
@@ -62,7 +63,7 @@ $(TR $(TDC void[] allocateAll();) $(TD Offers all of allocator's memory to the
 caller, so it's usually defined by fixed-size allocators. If the allocator is
 currently NOT managing any memory, then $(D allocateAll()) shall allocate and
 return all memory available to the allocator, and subsequent calls to all
-allocation primitives should not succeed (e..g $(D allocate) shall return $(D
+allocation primitives should not succeed (e.g. $(D allocate) shall return $(D
 null) etc). Otherwise, $(D allocateAll) only works on a best-effort basis, and
 the allocator is allowed to return $(D null) even if does have available memory.
 Memory allocated with $(D allocateAll) is not otherwise special (e.g. can be
@@ -103,11 +104,12 @@ or linear time with a low multiplication factor). Traditional allocators such as
 the C heap do not define such functionality. If $(D b is null), the allocator
 shall return `Ternary.no`, i.e. no allocator owns the `null` slice.))
 
-$(TR $(TDC void[] resolveInternalPointer(void* p);) $(TD If $(D p) is a pointer
-somewhere inside a block allocated with this allocator, returns a pointer to the
-beginning of the allocated block. Otherwise, returns $(D null). If the pointer
-points immediately after an allocated block, the result is implementation
-defined.))
+$(TR $(TDC Ternary resolveInternalPointer(void* p, ref void[] result);) $(TD If
+`p` is a pointer somewhere inside a block allocated with this allocator,
+`result` holds a pointer to the beginning of the allocated block and returns
+`Ternary.yes`. Otherwise, `result` holds `null` and returns `Ternary.no`.
+If the pointer points immediately after an allocated block, the result is
+implementation defined.))
 
 $(TR $(TDC bool deallocate(void[] b);) $(TD If $(D b is null), does
 nothing and returns `true`. Otherwise, deallocates memory previously allocated
@@ -143,7 +145,7 @@ advance.
 
 Sizes through 3584 bytes are handled via freelists of staggered sizes. Sizes
 from 3585 bytes through 4072 KB are handled by a $(D BitmappedBlock) with a
-block size of 4 KB. Sizes above that are passed direct to the $(D Mallocator).
+block size of 4 KB. Sizes above that are passed direct to the $(D GCAllocator).
 
 ----
     alias FList = FreeList!(GCAllocator, 0, unbounded);
@@ -252,10 +254,11 @@ simple bump-the-pointer allocator.))
 $(TR $(TDC2 InSituRegion, region) $(TD Region holding its own allocation, most often on
 the stack. Has statically-determined size.))
 
-$(TR $(TDC2 SbrkRegion, region) $(TD Region using $(D $(LUCKY sbrk)) for allocating
-memory.))
+$(TR $(TDC2 SbrkRegion, region) $(TD Region using $(D $(LINK2 https://en.wikipedia.org/wiki/Sbrk,
+sbrk)) for allocating memory.))
 
-$(TR $(TDC3 MmapAllocator, mmap_allocator) $(TD Allocator using $(D $(LUCKY mmap)) directly.))
+$(TR $(TDC3 MmapAllocator, mmap_allocator) $(TD Allocator using
+            $(D $(LINK2 https://en.wikipedia.org/wiki/Mmap, mmap)) directly.))
 
 $(TR $(TDC2 StatsCollector, stats_collector) $(TD Collect statistics about any other
 allocator.))
@@ -274,9 +277,14 @@ and dispatches them to distinct allocators.))
 $(TR $(TDC2 Bucketizer, bucketizer) $(TD Divides allocation sizes in discrete buckets and
 uses an array of allocators, one per bucket, to satisfy requests.))
 
+$(TR $(TDC2 AscendingPageAllocator, ascending_page_allocator) $(TD A memory safe allocator
+where sizes are rounded to a multiple of the page size and allocations are satisfied at increasing addresses.))
+
 $(COMMENT $(TR $(TDC2 InternalPointersTree) $(TD Adds support for resolving internal
 pointers on top of another allocator.)))
 )
+
+Source: $(PHOBOSSRC std/experimental/allocator/_building_blocks/package.d)
 
 Macros:
 MYREF2 = $(REF_SHORT $1, std,experimental,allocator,building_blocks,$2)
@@ -295,6 +303,7 @@ module std.experimental.allocator.building_blocks;
 public import
     std.experimental.allocator.building_blocks.affix_allocator,
     std.experimental.allocator.building_blocks.allocator_list,
+    std.experimental.allocator.building_blocks.ascending_page_allocator,
     std.experimental.allocator.building_blocks.bucketizer,
     std.experimental.allocator.building_blocks.fallback_allocator,
     std.experimental.allocator.building_blocks.free_list,

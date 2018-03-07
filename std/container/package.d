@@ -1150,7 +1150,7 @@ Complexity: $(BIGOH n)
     }
 }
 
-unittest
+@safe unittest
 {
     TotalContainer!int test;
 }

@@ -80,15 +80,14 @@ License:
 Source:
     $(PHOBOSSRC std/_process.d)
 Macros:
-    OBJECTREF=$(D $(LINK2 object.html#$0,$0))
-    LREF=$(D $(LINK2 #.$0,$0))
+    OBJECTREF=$(REF1 $0, object)
 */
 module std.process;
 
 version (Posix)
 {
-    import core.sys.posix.unistd;
     import core.sys.posix.sys.wait;
+    import core.sys.posix.unistd;
 }
 version (Windows)
 {
@@ -98,10 +97,9 @@ version (Windows)
     import std.windows.syserror;
 }
 
+import std.internal.cstring;
 import std.range.primitives;
 import std.stdio;
-import std.internal.processinit;
-import std.internal.cstring;
 
 
 // When the DMC runtime is used, we have to use some custom functions
@@ -112,45 +110,47 @@ version (Win32) version (CRuntime_DigitalMars) version = DMC_RUNTIME;
 // Some of the following should be moved to druntime.
 private
 {
-
-// Microsoft Visual C Runtime (MSVCRT) declarations.
-version (Windows)
-{
-    version (DMC_RUNTIME) { } else
+    // Microsoft Visual C Runtime (MSVCRT) declarations.
+    version (Windows)
     {
-        import core.stdc.stdint;
-        enum
+        version (DMC_RUNTIME) { } else
         {
-            STDIN_FILENO  = 0,
-            STDOUT_FILENO = 1,
-            STDERR_FILENO = 2,
+            import core.stdc.stdint;
+            enum
+            {
+                STDIN_FILENO  = 0,
+                STDOUT_FILENO = 1,
+                STDERR_FILENO = 2,
+            }
         }
     }
-}
 
-// POSIX API declarations.
-version (Posix)
-{
-    version (OSX)
+    // POSIX API declarations.
+    version (Posix)
     {
-        extern(C) char*** _NSGetEnviron() nothrow;
-        private __gshared const(char**)* environPtr;
-        extern(C) void std_process_shared_static_this() { environPtr = _NSGetEnviron(); }
-        const(char**) environ() @property @trusted nothrow { return *environPtr; }
-    }
-    else
-    {
-        // Made available by the C runtime:
-        extern(C) extern __gshared const char** environ;
-    }
+        version (OSX)
+        {
+            extern(C) char*** _NSGetEnviron() nothrow;
+            const(char**) getEnvironPtr() @trusted
+            {
+                return *_NSGetEnviron;
+            }
+        }
+        else
+        {
+            // Made available by the C runtime:
+            extern(C) extern __gshared const char** environ;
+            const(char**) getEnvironPtr() @trusted
+            {
+                return environ;
+            }
+        }
 
-    @system unittest
-    {
-        new Thread({assert(environ !is null);}).start();
+        @system unittest
+        {
+            new Thread({assert(getEnvironPtr !is null);}).start();
+        }
     }
-}
-
-
 } // private
 
 
@@ -165,7 +165,8 @@ input, output, and error streams.
 
 The function returns immediately, leaving the child _process to execute
 in parallel with its parent.  It is recommended to always call $(LREF wait)
-on the returned $(LREF Pid), as detailed in the documentation for $(D wait).
+on the returned $(LREF Pid) unless the process was spawned with
+$(D Config.detached) flag, as detailed in the documentation for $(D wait).
 
 Command_line:
 There are four overloads of this function.  The first two take an array
@@ -333,6 +334,15 @@ Pid spawnProcess(in char[] program,
     return spawnProcess((&program)[0 .. 1], env, config, workDir);
 }
 
+version(Posix) private enum InternalError : ubyte
+{
+    noerror,
+    exec,
+    chdir,
+    getrlimit,
+    doubleFork,
+}
+
 /*
 Implementation of spawnProcess() for POSIX.
 
@@ -350,9 +360,9 @@ private Pid spawnProcessImpl(in char[][] args,
     @trusted // TODO: Should be @safe
 {
     import core.exception : RangeError;
+    import std.algorithm.searching : any;
     import std.conv : text;
     import std.path : isDirSeparator;
-    import std.algorithm.searching : any;
     import std.string : toStringz;
 
     if (args.empty) throw new RangeError();
@@ -394,10 +404,10 @@ private Pid spawnProcessImpl(in char[][] args,
         if (fstat(workDirFD, &s) < 0)
             throw ProcessException.newFromErrno("Failed to stat working directory");
         if (!S_ISDIR(s.st_mode))
-            throw new ProcessException("Not a directory: " ~ cast(string)workDir);
+            throw new ProcessException("Not a directory: " ~ cast(string) workDir);
     }
 
-    int getFD(ref File f) { return core.stdc.stdio.fileno(f.getFP()); }
+    static int getFD(ref File f) { return core.stdc.stdio.fileno(f.getFP()); }
 
     // Get the file descriptors of the streams.
     // These could potentially be invalid, but that is OK.  If so, later calls
@@ -406,9 +416,53 @@ private Pid spawnProcessImpl(in char[][] args,
     auto stdoutFD = getFD(stdout);
     auto stderrFD = getFD(stderr);
 
+    // We don't have direct access to the errors that may happen in a child process.
+    // So we use this pipe to deliver them.
+    int[2] forkPipe;
+    if (core.sys.posix.unistd.pipe(forkPipe) == 0)
+        setCLOEXEC(forkPipe[1], true);
+    else
+        throw ProcessException.newFromErrno("Could not create pipe to check startup of child");
+    scope(exit) close(forkPipe[0]);
+
+    /*
+    To create detached process, we use double fork technique
+    but we don't have a direct access to the second fork pid from the caller side thus use a pipe.
+    We also can't reuse forkPipe for that purpose
+    because we can't predict the order in which pid and possible error will be written
+    since the first and the second forks will run in parallel.
+    */
+    int[2] pidPipe;
+    if (config & Config.detached)
+    {
+        if (core.sys.posix.unistd.pipe(pidPipe) != 0)
+            throw ProcessException.newFromErrno("Could not create pipe to get process pid");
+        setCLOEXEC(pidPipe[1], true);
+    }
+    scope(exit) if (config & Config.detached) close(pidPipe[0]);
+
+    static void abortOnError(int forkPipeOut, InternalError errorType, int error) nothrow
+    {
+        core.sys.posix.unistd.write(forkPipeOut, &errorType, errorType.sizeof);
+        core.sys.posix.unistd.write(forkPipeOut, &error, error.sizeof);
+        close(forkPipeOut);
+        core.sys.posix.unistd._exit(1);
+        assert(0);
+    }
+
+    void closePipeWriteEnds()
+    {
+        close(forkPipe[1]);
+        if (config & Config.detached)
+            close(pidPipe[1]);
+    }
+
     auto id = core.sys.posix.unistd.fork();
     if (id < 0)
+    {
+        closePipeWriteEnds();
         throw ProcessException.newFromErrno("Failed to spawn new process");
+    }
 
     void forkChild() nothrow @nogc
     {
@@ -417,6 +471,13 @@ private Pid spawnProcessImpl(in char[][] args,
 
         // Child process
 
+        // no need for the read end of pipe on child side
+        if (config & Config.detached)
+            close(pidPipe[0]);
+        close(forkPipe[0]);
+        immutable forkPipeOut = forkPipe[1];
+        immutable pidPipeOut = pidPipe[1];
+
         // Set the working directory.
         if (workDirFD >= 0)
         {
@@ -424,94 +485,177 @@ private Pid spawnProcessImpl(in char[][] args,
             {
                 // Fail. It is dangerous to run a program
                 // in an unexpected working directory.
-                core.sys.posix.stdio.perror("spawnProcess(): " ~
-                    "Failed to set working directory");
-                core.sys.posix.unistd._exit(1);
-                assert(0);
+                abortOnError(forkPipeOut, InternalError.chdir, .errno);
             }
             close(workDirFD);
         }
 
-        // Redirect streams and close the old file descriptors.
-        // In the case that stderr is redirected to stdout, we need
-        // to backup the file descriptor since stdout may be redirected
-        // as well.
-        if (stderrFD == STDOUT_FILENO)  stderrFD = dup(stderrFD);
-        dup2(stdinFD,  STDIN_FILENO);
-        dup2(stdoutFD, STDOUT_FILENO);
-        dup2(stderrFD, STDERR_FILENO);
-
-        // Ensure that the standard streams aren't closed on execute, and
-        // optionally close all other file descriptors.
-        setCLOEXEC(STDIN_FILENO, false);
-        setCLOEXEC(STDOUT_FILENO, false);
-        setCLOEXEC(STDERR_FILENO, false);
-        if (!(config & Config.inheritFDs))
+        void execProcess()
         {
-            import core.sys.posix.poll : pollfd, poll, POLLNVAL;
-            import core.sys.posix.sys.resource : rlimit, getrlimit, RLIMIT_NOFILE;
-            import core.stdc.stdlib : malloc;
+            // Redirect streams and close the old file descriptors.
+            // In the case that stderr is redirected to stdout, we need
+            // to backup the file descriptor since stdout may be redirected
+            // as well.
+            if (stderrFD == STDOUT_FILENO) stderrFD = dup(stderrFD);
+            dup2(stdinFD,  STDIN_FILENO);
+            dup2(stdoutFD, STDOUT_FILENO);
+            dup2(stderrFD, STDERR_FILENO);
 
-            // Get the maximum number of file descriptors that could be open.
-            rlimit r;
-            if (getrlimit(RLIMIT_NOFILE, &r) != 0)
-            {
-                core.sys.posix.stdio.perror("getrlimit");
-                core.sys.posix.unistd._exit(1);
-                assert(0);
-            }
-            immutable maxDescriptors = cast(int)r.rlim_cur;
+            // Ensure that the standard streams aren't closed on execute, and
+            // optionally close all other file descriptors.
+            setCLOEXEC(STDIN_FILENO, false);
+            setCLOEXEC(STDOUT_FILENO, false);
+            setCLOEXEC(STDERR_FILENO, false);
 
-            // The above, less stdin, stdout, and stderr
-            immutable maxToClose = maxDescriptors - 3;
+            if (!(config & Config.inheritFDs))
+            {
+                import core.stdc.stdlib : malloc;
+                import core.sys.posix.poll : pollfd, poll, POLLNVAL;
+                import core.sys.posix.sys.resource : rlimit, getrlimit, RLIMIT_NOFILE;
 
-            // Call poll() to see which ones are actually open:
-            pollfd* pfds = cast(pollfd*)malloc(pollfd.sizeof * maxToClose);
-            foreach (i; 0 .. maxToClose)
-            {
-                pfds[i].fd = i + 3;
-                pfds[i].events = 0;
-                pfds[i].revents = 0;
-            }
-            if (poll(pfds, maxToClose, 0) >= 0)
-            {
+                // Get the maximum number of file descriptors that could be open.
+                rlimit r;
+                if (getrlimit(RLIMIT_NOFILE, &r) != 0)
+                {
+                    abortOnError(forkPipeOut, InternalError.getrlimit, .errno);
+                }
+                immutable maxDescriptors = cast(int) r.rlim_cur;
+
+                // The above, less stdin, stdout, and stderr
+                immutable maxToClose = maxDescriptors - 3;
+
+                // Call poll() to see which ones are actually open:
+                auto pfds = cast(pollfd*) malloc(pollfd.sizeof * maxToClose);
                 foreach (i; 0 .. maxToClose)
                 {
-                    // POLLNVAL will be set if the file descriptor is invalid.
-                    if (!(pfds[i].revents & POLLNVAL)) close(pfds[i].fd);
+                    pfds[i].fd = i + 3;
+                    pfds[i].events = 0;
+                    pfds[i].revents = 0;
                 }
+                if (poll(pfds, maxToClose, 0) >= 0)
+                {
+                    foreach (i; 0 .. maxToClose)
+                    {
+                        // don't close pipe write end
+                        if (pfds[i].fd == forkPipeOut) continue;
+                        // POLLNVAL will be set if the file descriptor is invalid.
+                        if (!(pfds[i].revents & POLLNVAL)) close(pfds[i].fd);
+                    }
+                }
+                else
+                {
+                    // Fall back to closing everything.
+                    foreach (i; 3 .. maxDescriptors)
+                    {
+                        if (i == forkPipeOut) continue;
+                        close(i);
+                    }
+                }
+            }
+            else // This is already done if we don't inherit descriptors.
+            {
+                // Close the old file descriptors, unless they are
+                // either of the standard streams.
+                if (stdinFD  > STDERR_FILENO)  close(stdinFD);
+                if (stdoutFD > STDERR_FILENO)  close(stdoutFD);
+                if (stderrFD > STDERR_FILENO)  close(stderrFD);
+            }
+
+            // Execute program.
+            core.sys.posix.unistd.execve(argz[0], argz.ptr, envz);
+
+            // If execution fails, exit as quickly as possible.
+            abortOnError(forkPipeOut, InternalError.exec, .errno);
+        }
+
+        if (config & Config.detached)
+        {
+            auto secondFork = core.sys.posix.unistd.fork();
+            if (secondFork == 0)
+            {
+                close(pidPipeOut);
+                execProcess();
+            }
+            else if (secondFork == -1)
+            {
+                auto secondForkErrno = .errno;
+                close(pidPipeOut);
+                abortOnError(forkPipeOut, InternalError.doubleFork, secondForkErrno);
             }
             else
             {
-                // Fall back to closing everything.
-                foreach (i; 3 .. maxDescriptors) close(i);
+                core.sys.posix.unistd.write(pidPipeOut, &secondFork, pid_t.sizeof);
+                close(pidPipeOut);
+                close(forkPipeOut);
+                _exit(0);
             }
         }
         else
-        { // This is already done if we don't inherit descriptors.
-
-            // Close the old file descriptors, unless they are
-            // either of the standard streams.
-            if (stdinFD  > STDERR_FILENO)  close(stdinFD);
-            if (stdoutFD > STDERR_FILENO)  close(stdoutFD);
-            if (stderrFD > STDERR_FILENO)  close(stderrFD);
+        {
+            execProcess();
         }
-
-        // Execute program.
-        core.sys.posix.unistd.execve(argz[0], argz.ptr, envz);
-
-        // If execution fails, exit as quickly as possible.
-        core.sys.posix.stdio.perror("spawnProcess(): Failed to execute program");
-        core.sys.posix.unistd._exit(1);
     }
 
     if (id == 0)
     {
         forkChild();
-        assert (0);
+        assert(0);
     }
     else
     {
+        closePipeWriteEnds();
+        auto status = InternalError.noerror;
+        auto readExecResult = core.sys.posix.unistd.read(forkPipe[0], &status, status.sizeof);
+        // Save error number just in case if subsequent "waitpid" fails and overrides errno
+        immutable lastError = .errno;
+
+        if (config & Config.detached)
+        {
+            // Forked child exits right after creating second fork. So it should be safe to wait here.
+            import core.sys.posix.sys.wait : waitpid;
+            int waitResult;
+            waitpid(id, &waitResult, 0);
+        }
+
+        if (readExecResult == -1)
+            throw ProcessException.newFromErrno(lastError, "Could not read from pipe to get child status");
+
+        bool owned = true;
+        if (status != InternalError.noerror)
+        {
+            int error;
+            readExecResult = read(forkPipe[0], &error, error.sizeof);
+            string errorMsg;
+            final switch (status)
+            {
+                case InternalError.chdir:
+                    errorMsg = "Failed to set working directory";
+                    break;
+                case InternalError.getrlimit:
+                    errorMsg = "getrlimit failed";
+                    break;
+                case InternalError.exec:
+                    errorMsg = "Failed to execute program";
+                    break;
+                case InternalError.doubleFork:
+                    // Can happen only when starting detached process
+                    assert(config & Config.detached);
+                    errorMsg = "Failed to fork twice";
+                    break;
+                case InternalError.noerror:
+                    assert(false);
+            }
+            if (readExecResult == error.sizeof)
+                throw ProcessException.newFromErrno(error, errorMsg);
+            throw new ProcessException(errorMsg);
+        }
+        else if (config & Config.detached)
+        {
+            owned = false;
+            if (read(pidPipe[0], &id, id.sizeof) != id.sizeof)
+                throw ProcessException.newFromErrno("Could not read from pipe to get detached process id");
+        }
+
         // Parent process:  Close streams and return.
         if (!(config & Config.retainStdin ) && stdinFD  > STDERR_FILENO
                                             && stdinFD  != getFD(std.stdio.stdin ))
@@ -522,7 +666,7 @@ private Pid spawnProcessImpl(in char[][] args,
         if (!(config & Config.retainStderr) && stderrFD > STDERR_FILENO
                                             && stderrFD != getFD(std.stdio.stderr))
             stderr.close();
-        return new Pid(id);
+        return new Pid(id, owned);
     }
 }
 
@@ -620,7 +764,11 @@ private Pid spawnProcessImpl(in char[] commandLine,
 
     // close the thread handle in the process info structure
     CloseHandle(pi.hThread);
-
+    if (config & Config.detached)
+    {
+        CloseHandle(pi.hProcess);
+        return new Pid(pi.dwProcessId);
+    }
     return new Pid(pi.dwProcessId, pi.hProcess);
 }
 
@@ -635,6 +783,7 @@ private const(char*)* createEnv(const string[string] childEnv,
 {
     // Determine the number of strings in the parent's environment.
     int parentEnvLength = 0;
+    auto environ = getEnvironPtr;
     if (mergeWithParentEnv)
     {
         if (childEnv.length == 0) return environ;
@@ -664,22 +813,23 @@ private const(char*)* createEnv(const string[string] childEnv,
 version (Posix) @system unittest
 {
     auto e1 = createEnv(null, false);
-    assert (e1 != null && *e1 == null);
+    assert(e1 != null && *e1 == null);
 
     auto e2 = createEnv(null, true);
-    assert (e2 != null);
+    assert(e2 != null);
     int i = 0;
+    auto environ = getEnvironPtr;
     for (; environ[i] != null; ++i)
     {
-        assert (e2[i] != null);
+        assert(e2[i] != null);
         import core.stdc.string;
-        assert (strcmp(e2[i], environ[i]) == 0);
+        assert(strcmp(e2[i], environ[i]) == 0);
     }
-    assert (e2[i] == null);
+    assert(e2[i] == null);
 
     auto e3 = createEnv(["foo" : "bar", "hello" : "world"], false);
-    assert (e3 != null && e3[0] != null && e3[1] != null && e3[2] == null);
-    assert ((e3[0][0 .. 8] == "foo=bar\0" && e3[1][0 .. 12] == "hello=world\0")
+    assert(e3 != null && e3[0] != null && e3[1] != null && e3[2] == null);
+    assert((e3[0][0 .. 8] == "foo=bar\0" && e3[1][0 .. 12] == "hello=world\0")
          || (e3[0][0 .. 12] == "hello=world\0" && e3[1][0 .. 8] == "foo=bar\0"));
 }
 
@@ -727,10 +877,10 @@ private LPVOID createEnv(const string[string] childEnv,
 
 version (Windows) @system unittest
 {
-    assert (createEnv(null, true) == null);
-    assert ((cast(wchar*) createEnv(null, false))[0 .. 2] == "\0\0"w);
+    assert(createEnv(null, true) == null);
+    assert((cast(wchar*) createEnv(null, false))[0 .. 2] == "\0\0"w);
     auto e1 = (cast(wchar*) createEnv(["foo":"bar", "ab":"c"], false))[0 .. 14];
-    assert (e1 == "FOO=bar\0AB=c\0\0"w || e1 == "AB=c\0FOO=bar\0\0"w);
+    assert(e1 == "FOO=bar\0AB=c\0\0"w || e1 == "AB=c\0FOO=bar\0\0"w);
 }
 
 // Searches the PATH variable for the given executable file,
@@ -739,8 +889,8 @@ version (Posix)
 private string searchPathFor(in char[] executable)
     @trusted //TODO: @safe nothrow
 {
-    import std.conv : to;
     import std.algorithm.iteration : splitter;
+    import std.conv : to;
     import std.path : buildPath;
 
     auto pathz = core.stdc.stdlib.getenv("PATH");
@@ -767,11 +917,11 @@ version (Posix) @safe unittest
 {
     import std.algorithm;
     auto lsPath = searchPathFor("ls");
-    assert (!lsPath.empty);
-    assert (lsPath[0] == '/');
-    assert (lsPath.endsWith("ls"));
+    assert(!lsPath.empty);
+    assert(lsPath[0] == '/');
+    assert(lsPath.endsWith("ls"));
     auto unlikely = searchPathFor("lkmqwpoialhggyaofijadsohufoiqezm");
-    assert (unlikely is null, "Are you kidding me?");
+    assert(unlikely is null, "Are you kidding me?");
 }
 
 // Sets or unsets the FD_CLOEXEC flag on the given file descriptor.
@@ -786,7 +936,7 @@ private void setCLOEXEC(int fd, bool on) nothrow @nogc
         else    flags &= ~(cast(typeof(flags)) FD_CLOEXEC);
         flags = fcntl(fd, F_SETFD, flags);
     }
-    assert (flags != -1 || .errno == EBADF);
+    assert(flags != -1 || .errno == EBADF);
 }
 
 @system unittest // Command line arguments in spawnProcess().
@@ -799,11 +949,88 @@ private void setCLOEXEC(int fd, bool on) nothrow @nogc
        `if test "$1" != "foo"; then exit 1; fi
         if test "$2" != "bar"; then exit 2; fi
         exit 0`;
-    assert (wait(spawnProcess(prog.path)) == 1);
-    assert (wait(spawnProcess([prog.path])) == 1);
-    assert (wait(spawnProcess([prog.path, "foo"])) == 2);
-    assert (wait(spawnProcess([prog.path, "foo", "baz"])) == 2);
-    assert (wait(spawnProcess([prog.path, "foo", "bar"])) == 0);
+    assert(wait(spawnProcess(prog.path)) == 1);
+    assert(wait(spawnProcess([prog.path])) == 1);
+    assert(wait(spawnProcess([prog.path, "foo"])) == 2);
+    assert(wait(spawnProcess([prog.path, "foo", "baz"])) == 2);
+    assert(wait(spawnProcess([prog.path, "foo", "bar"])) == 0);
+}
+
+// test that file descriptors are correctly closed / left open.
+// ideally this would be done by the child process making libc
+// calls, but we make do...
+version (Posix) @system unittest
+{
+    import core.sys.posix.fcntl : open, O_RDONLY;
+    import core.sys.posix.unistd : close;
+    import std.algorithm.searching : canFind, findSplitBefore;
+    import std.array : split;
+    import std.conv : to;
+    static import std.file;
+    import std.functional : reverseArgs;
+    import std.path : buildPath;
+
+    auto directory = uniqueTempPath();
+    std.file.mkdir(directory);
+    scope(exit) std.file.rmdirRecurse(directory);
+    auto path = buildPath(directory, "tmp");
+    std.file.write(path, null);
+    auto fd = open(path.tempCString, O_RDONLY);
+    scope(exit) close(fd);
+
+    // command >&2 (or any other number) checks whethether that number
+    // file descriptor is open.
+    // Can't use this for arbitrary descriptors as many shells only support
+    // single digit fds.
+    TestScript testDefaults = `command >&0 && command >&1 && command >&2`;
+    assert(execute(testDefaults.path).status == 0);
+    assert(execute(testDefaults.path, null, Config.inheritFDs).status == 0);
+
+    // Try a few different methods to check whether there are any
+    // incorrectly-open files.
+    void testFDs()
+    {
+        // try /proc/<pid>/fd/ on linux
+        version (linux)
+        {
+            TestScript proc = "ls /proc/$$/fd";
+            auto procRes = execute(proc.path, null);
+            if (procRes.status == 0)
+            {
+                auto fdStr = fd.to!string;
+                assert(!procRes.output.split.canFind(fdStr));
+                assert(execute(proc.path, null, Config.inheritFDs)
+                        .output.split.canFind(fdStr));
+                return;
+            }
+        }
+
+        // try fuser (might sometimes need permissions)
+        TestScript fuser = "echo $$ && fuser -f " ~ path;
+        auto fuserRes = execute(fuser.path, null);
+        if (fuserRes.status == 0)
+        {
+            assert(!reverseArgs!canFind(fuserRes
+                        .output.findSplitBefore("\n").expand));
+            assert(reverseArgs!canFind(execute(fuser.path, null, Config.inheritFDs)
+                        .output.findSplitBefore("\n").expand));
+            return;
+        }
+
+        // last resort, try lsof (not available on all Posix)
+        TestScript lsof = "lsof -p$$";
+        auto lsofRes = execute(lsof.path, null);
+        if (lsofRes.status == 0)
+        {
+            assert(!lsofRes.output.canFind(path));
+            assert(execute(lsof.path, null, Config.inheritFDs).output.canFind(path));
+            return;
+        }
+
+        std.stdio.stderr.writeln(__FILE__, ':', __LINE__,
+                ": Warning: Couldn't find any way to check open files");
+    }
+    testFDs();
 }
 
 @system unittest // Environment variables in spawnProcess().
@@ -831,30 +1058,30 @@ private void setCLOEXEC(int fd, bool on) nothrow @nogc
 
     environment.remove("std_process_unittest1"); // Just in case.
     environment.remove("std_process_unittest2");
-    assert (wait(spawnProcess(envProg.path)) == 0);
-    assert (wait(spawnProcess(envProg.path, null, Config.newEnv)) == 0);
+    assert(wait(spawnProcess(envProg.path)) == 0);
+    assert(wait(spawnProcess(envProg.path, null, Config.newEnv)) == 0);
 
     environment["std_process_unittest1"] = "1";
-    assert (wait(spawnProcess(envProg.path)) == 1);
-    assert (wait(spawnProcess(envProg.path, null, Config.newEnv)) == 0);
+    assert(wait(spawnProcess(envProg.path)) == 1);
+    assert(wait(spawnProcess(envProg.path, null, Config.newEnv)) == 0);
 
     auto env = ["std_process_unittest2" : "2"];
-    assert (wait(spawnProcess(envProg.path, env)) == 3);
-    assert (wait(spawnProcess(envProg.path, env, Config.newEnv)) == 2);
+    assert(wait(spawnProcess(envProg.path, env)) == 3);
+    assert(wait(spawnProcess(envProg.path, env, Config.newEnv)) == 2);
 
     env["std_process_unittest1"] = "4";
-    assert (wait(spawnProcess(envProg.path, env)) == 6);
-    assert (wait(spawnProcess(envProg.path, env, Config.newEnv)) == 6);
+    assert(wait(spawnProcess(envProg.path, env)) == 6);
+    assert(wait(spawnProcess(envProg.path, env, Config.newEnv)) == 6);
 
     environment.remove("std_process_unittest1");
-    assert (wait(spawnProcess(envProg.path, env)) == 6);
-    assert (wait(spawnProcess(envProg.path, env, Config.newEnv)) == 6);
+    assert(wait(spawnProcess(envProg.path, env)) == 6);
+    assert(wait(spawnProcess(envProg.path, env, Config.newEnv)) == 6);
 }
 
 @system unittest // Stream redirection in spawnProcess().
 {
-    import std.string;
     import std.path : buildPath;
+    import std.string;
     version (Windows) TestScript prog =
        "set /p INPUT=
         echo %INPUT% output %~1
@@ -865,33 +1092,49 @@ private void setCLOEXEC(int fd, bool on) nothrow @nogc
         echo $INPUT error $2 >&2";
 
     // Pipes
-    auto pipei = pipe();
-    auto pipeo = pipe();
-    auto pipee = pipe();
-    auto pid = spawnProcess([prog.path, "foo", "bar"],
-                             pipei.readEnd, pipeo.writeEnd, pipee.writeEnd);
-    pipei.writeEnd.writeln("input");
-    pipei.writeEnd.flush();
-    assert (pipeo.readEnd.readln().chomp() == "input output foo");
-    assert (pipee.readEnd.readln().chomp().stripRight() == "input error bar");
-    wait(pid);
+    void testPipes(Config config)
+    {
+        auto pipei = pipe();
+        auto pipeo = pipe();
+        auto pipee = pipe();
+        auto pid = spawnProcess([prog.path, "foo", "bar"],
+                                    pipei.readEnd, pipeo.writeEnd, pipee.writeEnd, null, config);
+        pipei.writeEnd.writeln("input");
+        pipei.writeEnd.flush();
+        assert(pipeo.readEnd.readln().chomp() == "input output foo");
+        assert(pipee.readEnd.readln().chomp().stripRight() == "input error bar");
+        if (!(config & Config.detached))
+            wait(pid);
+    }
 
     // Files
-    import std.ascii, std.file, std.uuid;
-    auto pathi = buildPath(tempDir(), randomUUID().toString());
-    auto patho = buildPath(tempDir(), randomUUID().toString());
-    auto pathe = buildPath(tempDir(), randomUUID().toString());
-    std.file.write(pathi, "INPUT"~std.ascii.newline);
-    auto filei = File(pathi, "r");
-    auto fileo = File(patho, "w");
-    auto filee = File(pathe, "w");
-    pid = spawnProcess([prog.path, "bar", "baz" ], filei, fileo, filee);
-    wait(pid);
-    assert (readText(patho).chomp() == "INPUT output bar");
-    assert (readText(pathe).chomp().stripRight() == "INPUT error baz");
-    remove(pathi);
-    remove(patho);
-    remove(pathe);
+    void testFiles(Config config)
+    {
+        import std.ascii, std.file, std.uuid, core.thread;
+        auto pathi = buildPath(tempDir(), randomUUID().toString());
+        auto patho = buildPath(tempDir(), randomUUID().toString());
+        auto pathe = buildPath(tempDir(), randomUUID().toString());
+        std.file.write(pathi, "INPUT"~std.ascii.newline);
+        auto filei = File(pathi, "r");
+        auto fileo = File(patho, "w");
+        auto filee = File(pathe, "w");
+        auto pid = spawnProcess([prog.path, "bar", "baz" ], filei, fileo, filee, null, config);
+        if (!(config & Config.detached))
+            wait(pid);
+        else
+            // We need to wait a little to ensure that the process has finished and data was written to files
+            Thread.sleep(2.seconds);
+        assert(readText(patho).chomp() == "INPUT output bar");
+        assert(readText(pathe).chomp().stripRight() == "INPUT error baz");
+        remove(pathi);
+        remove(patho);
+        remove(pathe);
+    }
+
+    testPipes(Config.none);
+    testFiles(Config.none);
+    testPipes(Config.detached);
+    testFiles(Config.detached);
 }
 
 @system unittest // Error handling in spawnProcess()
@@ -899,6 +1142,22 @@ private void setCLOEXEC(int fd, bool on) nothrow @nogc
     import std.exception : assertThrown;
     assertThrown!ProcessException(spawnProcess("ewrgiuhrifuheiohnmnvqweoijwf"));
     assertThrown!ProcessException(spawnProcess("./rgiuhrifuheiohnmnvqweoijwf"));
+    assertThrown!ProcessException(spawnProcess("ewrgiuhrifuheiohnmnvqweoijwf", null, Config.detached));
+    assertThrown!ProcessException(spawnProcess("./rgiuhrifuheiohnmnvqweoijwf", null, Config.detached));
+
+    // can't execute malformed file with executable permissions
+    version(Posix)
+    {
+        import std.path : buildPath;
+        import std.file : remove, write, setAttributes;
+        import core.sys.posix.sys.stat : S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IXGRP, S_IROTH, S_IXOTH;
+        string deleteme = buildPath(tempDir(), "deleteme.std.process.unittest.pid") ~ to!string(thisProcessID);
+        write(deleteme, "");
+        scope(exit) remove(deleteme);
+        setAttributes(deleteme, S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
+        assertThrown!ProcessException(spawnProcess(deleteme));
+        assertThrown!ProcessException(spawnProcess(deleteme, null, Config.detached));
+    }
 }
 
 @system unittest // Specifying a working directory.
@@ -922,10 +1181,27 @@ private void setCLOEXEC(int fd, bool on) nothrow @nogc
 
     auto directory = uniqueTempPath();
     assertThrown!ProcessException(spawnProcess([prog.path], null, Config.none, directory));
+    assertThrown!ProcessException(spawnProcess([prog.path], null, Config.detached, directory));
 
     std.file.write(directory, "foo");
     scope(exit) remove(directory);
     assertThrown!ProcessException(spawnProcess([prog.path], null, Config.none, directory));
+    assertThrown!ProcessException(spawnProcess([prog.path], null, Config.detached, directory));
+
+    // can't run in directory if user does not have search permission on this directory
+    version(Posix)
+    {
+        if (core.sys.posix.unistd.getuid() != 0)
+        {
+            import core.sys.posix.sys.stat : S_IRUSR;
+            auto directoryNoSearch = uniqueTempPath();
+            mkdir(directoryNoSearch);
+            scope(exit) rmdirRecurse(directoryNoSearch);
+            setAttributes(directoryNoSearch, S_IRUSR);
+            assertThrown!ProcessException(spawnProcess(prog.path, null, Config.none, directoryNoSearch));
+            assertThrown!ProcessException(spawnProcess(prog.path, null, Config.detached, directoryNoSearch));
+        }
+    }
 }
 
 @system unittest // Specifying empty working directory.
@@ -1057,13 +1333,13 @@ Pid spawnShell(in char[] command,
     scope(exit) if (exists(tmpFile)) remove(tmpFile);
     auto redir = "> \""~tmpFile~'"';
     auto env = ["foo" : "bar"];
-    assert (wait(spawnShell(cmd~redir, env)) == 0);
+    assert(wait(spawnShell(cmd~redir, env)) == 0);
     auto f = File(tmpFile, "a");
     version(CRuntime_Microsoft) f.seek(0, SEEK_END); // MSVCRT probably seeks to the end when writing, not before
-    assert (wait(spawnShell(cmd, std.stdio.stdin, f, std.stdio.stderr, env)) == 0);
+    assert(wait(spawnShell(cmd, std.stdio.stdin, f, std.stdio.stderr, env)) == 0);
     f.close();
     auto output = std.file.readText(tmpFile);
-    assert (output == "bar\nbar\n" || output == "bar\r\nbar\r\n");
+    assert(output == "bar\nbar\n" || output == "bar\r\nbar\r\n");
 }
 
 version (Windows)
@@ -1085,7 +1361,8 @@ version (Windows)
 
 
 /**
-Flags that control the behaviour of $(LREF spawnProcess) and
+Flags that control the behaviour of process creation functions in this
+module. Most flags only apply to $(LREF spawnProcess) and
 $(LREF spawnShell).
 
 Use bitwise OR to combine flags.
@@ -1151,6 +1428,30 @@ enum Config
     process.
     */
     inheritFDs = 32,
+
+    /**
+    Spawn process in detached state. This removes the need in calling
+    $(LREF wait) to clean up the process resources.
+
+    Note:
+    Calling $(LREF wait) or $(LREF kill) with the resulting $(D Pid) is invalid.
+    */
+    detached = 64,
+
+    /**
+    By default, the $(LREF execute) and $(LREF executeShell) functions
+    will capture child processes' both stdout and stderr. This can be
+    undesirable if the standard output is to be processed or otherwise
+    used by the invoking program, as `execute`'s result would then
+    contain a mix of output and warning/error messages.
+
+    Specify this flag when calling `execute` or `executeShell` to
+    cause invoked processes' stderr stream to be sent to $(REF stderr,
+    std,stdio), and only capture and return standard output.
+
+    This flag has no effect on $(LREF spawnProcess) or $(LREF spawnShell).
+    */
+    stderrPassThrough = 128,
 }
 
 
@@ -1209,6 +1510,8 @@ private:
     version (Posix)
     int performWait(bool block) @trusted
     {
+        import std.exception : enforce;
+        enforce!ProcessException(owned, "Can't wait on a detached process");
         if (_processID == terminated) return _exitCode;
         int exitCode;
         while (true)
@@ -1226,7 +1529,7 @@ private:
                 {
                     // waitpid() was interrupted by a signal.  We simply
                     // restart it.
-                    assert (errno == EINTR);
+                    assert(errno == EINTR);
                     continue;
                 }
             }
@@ -1257,8 +1560,10 @@ private:
     {
         int performWait(bool block) @trusted
         {
+            import std.exception : enforce;
+            enforce!ProcessException(owned, "Can't wait on a detached process");
             if (_processID == terminated) return _exitCode;
-            assert (_handle != INVALID_HANDLE_VALUE);
+            assert(_handle != INVALID_HANDLE_VALUE);
             if (block)
             {
                 auto result = WaitForSingleObject(_handle, INFINITE);
@@ -1295,6 +1600,10 @@ private:
     // sensible value if _processID == terminated.
     int _exitCode;
 
+    // Whether the process can be waited for by wait() for or killed by kill().
+    // False if process was started as detached. True otherwise.
+    bool owned;
+
     // Pids are only meant to be constructed inside this module, so
     // we make the constructor private.
     version (Windows)
@@ -1304,13 +1613,20 @@ private:
         {
             _processID = pid;
             _handle = handle;
+            this.owned = true;
+        }
+        this(int pid) @safe pure nothrow
+        {
+            _processID = pid;
+            this.owned = false;
         }
     }
     else
     {
-        this(int id) @safe pure nothrow
+        this(int id, bool owned) @safe pure nothrow
         {
             _processID = id;
+            this.owned = owned;
         }
     }
 }
@@ -1321,9 +1637,11 @@ Waits for the process associated with $(D pid) to terminate, and returns
 its exit status.
 
 In general one should always _wait for child processes to terminate
-before exiting the parent process.  Otherwise, they may become
-"$(HTTP en.wikipedia.org/wiki/Zombie_process,zombies)" – processes
-that are defunct, yet still occupy a slot in the OS process table.
+before exiting the parent process unless the process was spawned as detached
+(that was spawned with $(D Config.detached) flag).
+Otherwise, they may become "$(HTTP en.wikipedia.org/wiki/Zombie_process,zombies)"
+– processes that are defunct, yet still occupy a slot in the OS process table.
+You should not and must not wait for detached processes, since you don't own them.
 
 If the process has already terminated, this function returns directly.
 The exit code is cached, so that if wait() is called multiple times on
@@ -1338,7 +1656,7 @@ Signal codes are defined in the $(D core.sys.posix.signal) module
 (which corresponds to the $(D signal.h) POSIX header).
 
 Throws:
-$(LREF ProcessException) on failure.
+$(LREF ProcessException) on failure or on attempt to wait for detached process.
 
 Example:
 See the $(LREF spawnProcess) documentation.
@@ -1357,17 +1675,17 @@ int wait(Pid pid) @safe
 {
     version (Windows)    TestScript prog = "exit %~1";
     else version (Posix) TestScript prog = "exit $1";
-    assert (wait(spawnProcess([prog.path, "0"])) == 0);
-    assert (wait(spawnProcess([prog.path, "123"])) == 123);
+    assert(wait(spawnProcess([prog.path, "0"])) == 0);
+    assert(wait(spawnProcess([prog.path, "123"])) == 123);
     auto pid = spawnProcess([prog.path, "10"]);
-    assert (pid.processID > 0);
-    version (Windows)    assert (pid.osHandle != INVALID_HANDLE_VALUE);
-    else version (Posix) assert (pid.osHandle == pid.processID);
-    assert (wait(pid) == 10);
-    assert (wait(pid) == 10); // cached exit code
-    assert (pid.processID < 0);
-    version (Windows)    assert (pid.osHandle == INVALID_HANDLE_VALUE);
-    else version (Posix) assert (pid.osHandle < 0);
+    assert(pid.processID > 0);
+    version (Windows)    assert(pid.osHandle != INVALID_HANDLE_VALUE);
+    else version (Posix) assert(pid.osHandle == pid.processID);
+    assert(wait(pid) == 10);
+    assert(wait(pid) == 10); // cached exit code
+    assert(pid.processID < 0);
+    version (Windows)    assert(pid.osHandle == INVALID_HANDLE_VALUE);
+    else version (Posix) assert(pid.osHandle < 0);
 }
 
 
@@ -1393,7 +1711,7 @@ Returns:
 An $(D std.typecons.Tuple!(bool, "terminated", int, "status")).
 
 Throws:
-$(LREF ProcessException) on failure.
+$(LREF ProcessException) on failure or on attempt to wait for detached process.
 
 Example:
 ---
@@ -1448,7 +1766,7 @@ used by Windows to signal that a process has in fact $(I not) terminated yet.
 ---
 auto pid = spawnProcess("some_app");
 kill(pid, 10);
-assert (wait(pid) == 10);
+assert(wait(pid) == 10);
 ---
 
 POSIX_specific:
@@ -1466,11 +1784,12 @@ $(D _kill)) shell command.)
 import core.sys.posix.signal : SIGKILL;
 auto pid = spawnProcess("some_app");
 kill(pid, SIGKILL);
-assert (wait(pid) == -SIGKILL); // Negative return value on POSIX!
+assert(wait(pid) == -SIGKILL); // Negative return value on POSIX!
 ---
 
 Throws:
 $(LREF ProcessException) on error (e.g. if codeOrSignal is invalid).
+    or on attempt to kill detached process.
     Note that failure to terminate the process is considered a "normal"
     outcome, not an error.$(BR)
 */
@@ -1487,6 +1806,8 @@ void kill(Pid pid)
 /// ditto
 void kill(Pid pid, int codeOrSignal)
 {
+    import std.exception : enforce;
+    enforce!ProcessException(pid.owned, "Can't kill detached process");
     version (Windows)
     {
         if (codeOrSignal < 0) throw new ProcessException("Invalid exit code");
@@ -1528,19 +1849,38 @@ void kill(Pid pid, int codeOrSignal)
     else
         Thread.sleep(dur!"seconds"(1));
     kill(pid);
-    version (Windows)    assert (wait(pid) == 1);
-    else version (Posix) assert (wait(pid) == -SIGTERM);
+    version (Windows)    assert(wait(pid) == 1);
+    else version (Posix) assert(wait(pid) == -SIGTERM);
 
     pid = spawnProcess(prog.path);
     Thread.sleep(dur!"seconds"(1));
     auto s = tryWait(pid);
-    assert (!s.terminated && s.status == 0);
+    assert(!s.terminated && s.status == 0);
     assertThrown!ProcessException(kill(pid, -123)); // Negative code not allowed.
     version (Windows)    kill(pid, 123);
     else version (Posix) kill(pid, SIGKILL);
     do { s = tryWait(pid); } while (!s.terminated);
-    version (Windows)    assert (s.status == 123);
-    else version (Posix) assert (s.status == -SIGKILL);
+    version (Windows)    assert(s.status == 123);
+    else version (Posix) assert(s.status == -SIGKILL);
+    assertThrown!ProcessException(kill(pid));
+}
+
+@system unittest // wait() and kill() detached process
+{
+    import core.thread;
+    import std.exception : assertThrown;
+    TestScript prog = "exit 0";
+    auto pid = spawnProcess([prog.path], null, Config.detached);
+    /*
+    This sleep is needed because we can't wait() for detached process to end
+    and therefore TestScript destructor may run at the same time as /bin/sh tries to start the script.
+    This leads to the annoying message like "/bin/sh: 0: Can't open /tmp/std.process temporary file" to appear when running tests.
+    It does not happen in unittests with non-detached processes because we always wait() for them to finish.
+    */
+    Thread.sleep(1.seconds);
+    assert(!pid.owned);
+    version(Windows) assert(pid.osHandle == INVALID_HANDLE_VALUE);
+    assertThrown!ProcessException(wait(pid));
     assertThrown!ProcessException(kill(pid));
 }
 
@@ -1553,7 +1893,7 @@ Data is written to one end of the _pipe and read from the other.
 auto p = pipe();
 p.writeEnd.writeln("Hello World");
 p.writeEnd.flush();
-assert (p.readEnd.readln().chomp() == "Hello World");
+assert(p.readEnd.readln().chomp() == "Hello World");
 ---
 Pipes can, for example, be used for interprocess communication
 by spawning a new process and passing one end of the _pipe to
@@ -1673,10 +2013,10 @@ private:
     auto p = pipe();
     p.writeEnd.writeln("Hello World");
     p.writeEnd.flush();
-    assert (p.readEnd.readln().chomp() == "Hello World");
+    assert(p.readEnd.readln().chomp() == "Hello World");
     p.close();
-    assert (!p.readEnd.isOpen);
-    assert (!p.writeEnd.isOpen);
+    assert(!p.readEnd.isOpen);
+    assert(!p.writeEnd.isOpen);
 }
 
 
@@ -1940,35 +2280,35 @@ enum Redirect
     auto pp = pipeProcess([prog.path, "bar", "baz"]);
     pp.stdin.writeln("foo");
     pp.stdin.flush();
-    assert (pp.stdout.readln().chomp() == "foo bar");
-    assert (pp.stderr.readln().chomp().stripRight() == "foo baz");
+    assert(pp.stdout.readln().chomp() == "foo bar");
+    assert(pp.stderr.readln().chomp().stripRight() == "foo baz");
     pp.stdin.writeln("1234567890");
     pp.stdin.flush();
-    assert (pp.stdout.readln().chomp() == "1234567890 bar");
-    assert (pp.stderr.readln().chomp().stripRight() == "1234567890 baz");
+    assert(pp.stdout.readln().chomp() == "1234567890 bar");
+    assert(pp.stderr.readln().chomp().stripRight() == "1234567890 baz");
     pp.stdin.writeln("stop");
     pp.stdin.flush();
-    assert (wait(pp.pid) == 2);
+    assert(wait(pp.pid) == 2);
 
     pp = pipeProcess([prog.path, "12345", "67890"],
                      Redirect.stdin | Redirect.stdout | Redirect.stderrToStdout);
     pp.stdin.writeln("xyz");
     pp.stdin.flush();
-    assert (pp.stdout.readln().chomp() == "xyz 12345");
-    assert (pp.stdout.readln().chomp().stripRight() == "xyz 67890");
+    assert(pp.stdout.readln().chomp() == "xyz 12345");
+    assert(pp.stdout.readln().chomp().stripRight() == "xyz 67890");
     pp.stdin.writeln("stop");
     pp.stdin.flush();
-    assert (wait(pp.pid) == 1);
+    assert(wait(pp.pid) == 1);
 
     pp = pipeShell(escapeShellCommand(prog.path, "AAAAA", "BBB"),
                    Redirect.stdin | Redirect.stdoutToStderr | Redirect.stderr);
     pp.stdin.writeln("ab");
     pp.stdin.flush();
-    assert (pp.stderr.readln().chomp() == "ab AAAAA");
-    assert (pp.stderr.readln().chomp().stripRight() == "ab BBB");
+    assert(pp.stderr.readln().chomp() == "ab AAAAA");
+    assert(pp.stderr.readln().chomp().stripRight() == "ab BBB");
     pp.stdin.writeln("stop");
     pp.stdin.flush();
-    assert (wait(pp.pid) == 1);
+    assert(wait(pp.pid) == 1);
 }
 
 @system unittest
@@ -2000,7 +2340,6 @@ struct ProcessPipes
     /// The $(LREF Pid) of the child process.
     @property Pid pid() @safe nothrow
     {
-        assert(_pid !is null);
         return _pid;
     }
 
@@ -2163,11 +2502,15 @@ private auto executeImpl(alias pipeFunc, Cmd, ExtraPipeFuncArgs...)(
     in char[] workDir = null,
     ExtraPipeFuncArgs extraArgs = ExtraPipeFuncArgs.init)
 {
-    import std.typecons : Tuple;
-    import std.array : appender;
     import std.algorithm.comparison : min;
+    import std.array : appender;
+    import std.typecons : Tuple;
 
-    auto p = pipeFunc(commandLine, Redirect.stdout | Redirect.stderrToStdout,
+    auto redirect = (config & Config.stderrPassThrough)
+        ? Redirect.stdout
+        : Redirect.stdout | Redirect.stderrToStdout;
+
+    auto p = pipeFunc(commandLine, redirect,
                       env, config, workDir, extraArgs);
 
     auto a = appender!(ubyte[])();
@@ -2210,25 +2553,29 @@ private auto executeImpl(alias pipeFunc, Cmd, ExtraPipeFuncArgs...)(
         printf '%s' $2 >&2
         exit 123`;
     auto r = execute([prog.path, "foo", "bar"]);
-    assert (r.status == 123);
-    assert (r.output.stripRight() == "foobar");
+    assert(r.status == 123);
+    assert(r.output.stripRight() == "foobar");
     auto s = execute([prog.path, "Hello", "World"]);
-    assert (s.status == 123);
-    assert (s.output.stripRight() == "HelloWorld");
+    assert(s.status == 123);
+    assert(s.output.stripRight() == "HelloWorld");
 }
 
 @safe unittest
 {
     import std.string;
     auto r1 = executeShell("echo foo");
-    assert (r1.status == 0);
-    assert (r1.output.chomp() == "foo");
+    assert(r1.status == 0);
+    assert(r1.output.chomp() == "foo");
     auto r2 = executeShell("echo bar 1>&2");
-    assert (r2.status == 0);
-    assert (r2.output.chomp().stripRight() == "bar");
+    assert(r2.status == 0);
+    assert(r2.output.chomp().stripRight() == "bar");
     auto r3 = executeShell("exit 123");
-    assert (r3.status == 123);
-    assert (r3.output.empty);
+    assert(r3.status == 123);
+    assert(r3.output.empty);
+    auto r4 = executeShell("echo stderr test, please ignore 1>&2",
+        null, Config.stderrPassThrough);
+    assert(r4.status == 0);
+    assert(r4.output.empty);
 }
 
 @safe unittest
@@ -2256,19 +2603,17 @@ class ProcessException : Exception
                                          size_t line = __LINE__)
     {
         import core.stdc.errno : errno;
-        import std.conv : to;
-        version (CRuntime_Glibc)
-        {
-            import core.stdc.string : strerror_r;
-            char[1024] buf;
-            auto errnoMsg = to!string(
-                core.stdc.string.strerror_r(errno, buf.ptr, buf.length));
-        }
-        else
-        {
-            import core.stdc.string : strerror;
-            auto errnoMsg = to!string(strerror(errno));
-        }
+        return newFromErrno(errno, customMsg, file, line);
+    }
+
+    // ditto, but error number is provided by caller
+    static ProcessException newFromErrno(int error,
+                                         string customMsg = null,
+                                         string file = __FILE__,
+                                         size_t line = __LINE__)
+    {
+        import std.exception : errnoString;
+        auto errnoMsg = errnoString(error);
         auto msg = customMsg.empty ? errnoMsg
                                    : customMsg ~ " (" ~ errnoMsg ~ ')';
         return new ProcessException(msg, file, line);
@@ -2389,7 +2734,7 @@ version (Windows) private immutable string shellSwitch = "/C";
 // file. On Windows the file name gets a .cmd extension, while on
 // POSIX its executable permission bit is set.  The file is
 // automatically deleted when the object goes out of scope.
-version (unittest)
+version(unittest)
 private struct TestScript
 {
     this(string code) @system
@@ -2432,7 +2777,7 @@ private struct TestScript
     string path;
 }
 
-version (unittest)
+version(unittest)
 private string uniqueTempPath() @safe
 {
     import std.file : tempDir;
@@ -2612,7 +2957,7 @@ private string escapeShellArguments(in char[][] args...)
             auto p = buf.length;
             buf.length = buf.length + 1 + size;
             buf[p++] = ' ';
-            return buf[p..p+size];
+            return buf[p .. p+size];
         }
     }
 
@@ -2656,7 +3001,7 @@ private char[] charAllocator(size_t size) @safe pure nothrow
 
 private char[] escapeWindowsArgumentImpl(alias allocator)(in char[] arg)
     @safe nothrow
-    if (is(typeof(allocator(size_t.init)[0] = char.init)))
+if (is(typeof(allocator(size_t.init)[0] = char.init)))
 {
     // References:
     // * http://msdn.microsoft.com/en-us/library/windows/desktop/bb776391(v=vs.85).aspx
@@ -2733,10 +3078,10 @@ private char[] escapeWindowsArgumentImpl(alias allocator)(in char[] arg)
 
 version(Windows) version(unittest)
 {
-    import core.sys.windows.shellapi : CommandLineToArgvW;
-    import core.sys.windows.windows;
     import core.stdc.stddef;
     import core.stdc.wchar_ : wcslen;
+    import core.sys.windows.shellapi : CommandLineToArgvW;
+    import core.sys.windows.windows;
     import std.array;
 
     string[] parseCommandLine(string line)
@@ -2747,8 +3092,8 @@ version(Windows) version(unittest)
         int numArgs;
         LPWSTR* args = CommandLineToArgvW(lpCommandLine, &numArgs);
         scope(exit) LocalFree(args);
-        return args[0..numArgs]
-            .map!(arg => to!string(arg[0..wcslen(arg)]))
+        return args[0 .. numArgs]
+            .map!(arg => to!string(arg[0 .. wcslen(arg)]))
             .array();
     }
 
@@ -2774,7 +3119,7 @@ version(Windows) version(unittest)
         {
             auto q = escapeWindowsArgument(s);
             auto args = parseCommandLine("Dummy.exe " ~ q);
-            assert(args.length==2, s ~ " => " ~ q ~ " #" ~ text(args.length-1));
+            assert(args.length == 2, s ~ " => " ~ q ~ " #" ~ text(args.length-1));
             assert(args[1] == s, s ~ " => " ~ q ~ " => " ~ args[1]);
         }
     }
@@ -2789,7 +3134,7 @@ private string escapePosixArgument(in char[] arg) @trusted pure nothrow
 
 private char[] escapePosixArgumentImpl(alias allocator)(in char[] arg)
     @safe nothrow
-    if (is(typeof(allocator(size_t.init)[0] = char.init)))
+if (is(typeof(allocator(size_t.init)[0] = char.init)))
 {
     // '\'' means: close quoted part of argument, append an escaped
     // single quote, and reopen quotes
@@ -2808,7 +3153,7 @@ private char[] escapePosixArgumentImpl(alias allocator)(in char[] arg)
     foreach (char c; arg)
         if (c == '\'')
         {
-            buf[p..p+4] = `'\''`;
+            buf[p .. p+4] = `'\''`;
             p += 4;
         }
         else
@@ -2898,10 +3243,10 @@ version(unittest_burnin)
     while (true)
     {
         string[] args;
-        foreach (n; 0..uniform(1, 4))
+        foreach (n; 0 .. uniform(1, 4))
         {
             string arg;
-            foreach (l; 0..uniform(0, 10))
+            foreach (l; 0 .. uniform(0, 10))
             {
                 dchar c;
                 while (true)
@@ -2929,7 +3274,7 @@ version(unittest_burnin)
 
         // generate filename
         string fn;
-        foreach (l; 0..uniform(1, 10))
+        foreach (l; 0 .. uniform(1, 10))
         {
             dchar c;
             while (true)
@@ -2999,7 +3344,7 @@ static:
     Retrieves the value of the environment variable with the given $(D name),
     or a default value if the variable doesn't exist.
 
-    Unlike $(LREF environment.opIndex), this function never throws.
+    Unlike $(LREF environment.opIndex), this function never throws on Posix.
     ---
     auto sh = environment.get("SHELL", "/bin/sh");
     ---
@@ -3015,6 +3360,13 @@ static:
         // empty.
     }
     ---
+    Params:
+        name = name of the environment variable to retrieve
+        defaultValue = default value to return if the environment variable doesn't exist.
+
+    Returns:
+        the value of the environment variable if found, otherwise
+        `null` if the environment doesn't exist.
 
     Throws:
     $(REF UTFException, std,utf) if the variable contains invalid UTF-16
@@ -3030,6 +3382,7 @@ static:
     /**
     Assigns the given $(D value) to the environment variable with the given
     $(D name).
+    If $(D value) is null the variable is removed from environment.
 
     If the variable does not exist, it will be created. If it already exists,
     it will be overwritten.
@@ -3040,12 +3393,22 @@ static:
     Throws:
     $(OBJECTREF Exception) if the environment variable could not be added
         (e.g. if the name is invalid).
+
+    Note:
+    On some platforms, modifying environment variables may not be allowed in
+    multi-threaded programs. See e.g.
+    $(LINK2 https://www.gnu.org/software/libc/manual/html_node/Environment-Access.html#Environment-Access, glibc).
     */
     inout(char)[] opIndexAssign(inout char[] value, in char[] name) @trusted
     {
         version (Posix)
         {
             import std.exception : enforce, errnoEnforce;
+            if (value is null)
+            {
+                remove(name);
+                return value;
+            }
             if (core.sys.posix.stdlib.setenv(name.tempCString(), value.tempCString(), 1) != -1)
             {
                 return value;
@@ -3075,11 +3438,58 @@ static:
 
     If the variable isn't in the environment, this function returns
     successfully without doing anything.
+
+    Note:
+    On some platforms, modifying environment variables may not be allowed in
+    multi-threaded programs. See e.g.
+    $(LINK2 https://www.gnu.org/software/libc/manual/html_node/Environment-Access.html#Environment-Access, glibc).
     */
     void remove(in char[] name) @trusted nothrow @nogc // TODO: @safe
     {
         version (Windows)    SetEnvironmentVariableW(name.tempCStringW(), null);
         else version (Posix) core.sys.posix.stdlib.unsetenv(name.tempCString());
+        else static assert(0);
+    }
+
+    /**
+    Identify whether a variable is defined in the environment.
+
+    Because it doesn't return the value, this function is cheaper than `get`.
+    However, if you do need the value as well, you should just check the
+    return of `get` for `null` instead of using this function first.
+
+    Example:
+    -------------
+    // good usage
+    if ("MY_ENV_FLAG" in environment)
+        doSomething();
+
+    // bad usage
+    if ("MY_ENV_VAR" in environment)
+        doSomething(environment["MY_ENV_VAR"]);
+
+    // do this instead
+    if (auto var = environment.get("MY_ENV_VAR"))
+        doSomething(var);
+    -------------
+    */
+    bool opBinaryRight(string op : "in")(in char[] name) @trusted
+    {
+        version (Posix)
+            return core.sys.posix.stdlib.getenv(name.tempCString()) !is null;
+        else version (Windows)
+        {
+            SetLastError(NO_ERROR);
+            if (GetEnvironmentVariableW(name.tempCStringW, null, 0) > 0)
+                return true;
+            immutable err = GetLastError();
+            if (err == ERROR_ENVVAR_NOT_FOUND)
+                return false;
+            // some other windows error. Might actually be NO_ERROR, because
+            // GetEnvironmentVariable doesn't specify whether it sets on all
+            // failures
+            throw new WindowsException(err);
+        }
         else static assert(0);
     }
 
@@ -3101,13 +3511,14 @@ static:
         string[string] aa;
         version (Posix)
         {
+            auto environ = getEnvironPtr;
             for (int i=0; environ[i] != null; ++i)
             {
                 import std.string : indexOf;
 
                 immutable varDef = to!string(environ[i]);
                 immutable eq = indexOf(varDef, '=');
-                assert (eq >= 0);
+                assert(eq >= 0);
 
                 immutable name = varDef[0 .. eq];
                 immutable value = varDef[eq+1 .. $];
@@ -3210,7 +3621,7 @@ private:
                     // some other windows error
                     throw new WindowsException(err);
                 }
-                assert (lenRead != buf.length, "impossible according to msft docs");
+                assert(lenRead != buf.length, "impossible according to msft docs");
                 if (lenRead < buf.length) // the buffer was long enough
                 {
                     value = toUTF8(buf[0 .. lenRead]);
@@ -3250,39 +3661,44 @@ private:
     import std.exception : assertThrown;
     // New variable
     environment["std_process"] = "foo";
-    assert (environment["std_process"] == "foo");
+    assert(environment["std_process"] == "foo");
+    assert("std_process" in environment);
 
     // Set variable again (also tests length 1 case)
     environment["std_process"] = "b";
-    assert (environment["std_process"] == "b");
+    assert(environment["std_process"] == "b");
+    assert("std_process" in environment);
 
     // Remove variable
     environment.remove("std_process");
+    assert("std_process" !in environment);
 
     // Remove again, should succeed
     environment.remove("std_process");
+    assert("std_process" !in environment);
 
     // Throw on not found.
     assertThrown(environment["std_process"]);
 
     // get() without default value
-    assert (environment.get("std_process") is null);
+    assert(environment.get("std_process") is null);
 
     // get() with default value
-    assert (environment.get("std_process", "baz") == "baz");
+    assert(environment.get("std_process", "baz") == "baz");
 
     // get() on an empty (but present) value
     environment["std_process"] = "";
     auto res = environment.get("std_process");
-    assert (res !is null);
-    assert (res == "");
+    assert(res !is null);
+    assert(res == "");
+    assert("std_process" in environment);
 
     // Important to do the following round-trip after the previous test
     // because it tests toAA with an empty var
 
     // Convert to associative array
     auto aa = environment.toAA();
-    assert (aa.length > 0);
+    assert(aa.length > 0);
     foreach (n, v; aa)
     {
         // Wine has some bugs related to environment variables:
@@ -3290,7 +3706,7 @@ private:
         //    "\0", but GetEnvironmentVariable refuses to retrieve it.
         //    As of 2.067 we filter these out anyway (see comment in toAA).
 
-        assert (v == environment[n]);
+        assert(v == environment[n]);
     }
 
     // ... and back again.
@@ -3301,6 +3717,11 @@ private:
     auto aa2 = environment.toAA();
     import std.conv : text;
     assert(aa == aa2, text(aa, " != ", aa2));
+    assert("std_process" in environment);
+
+    // Setting null must have the same effect as remove
+    environment["std_process"] = null;
+    assert("std_process" !in environment);
 }
 
 
@@ -3328,22 +3749,22 @@ Distributed under the Boost Software License, Version 1.0.
 */
 
 
-import core.stdc.stdlib;
 import core.stdc.errno;
-import core.thread;
+import core.stdc.stdlib;
 import core.stdc.string;
+import core.thread;
 
 version (Windows)
 {
-    import std.format, std.random, std.file;
+    import std.file, std.format, std.random;
 }
 version (Posix)
 {
     import core.sys.posix.stdlib;
 }
-version (unittest)
+version(unittest)
 {
-    import std.file, std.conv, std.random;
+    import std.conv, std.file, std.random;
 }
 
 
@@ -3364,7 +3785,7 @@ private void toAStringz(in string[] a, const(char)**az)
 //{
 //    int spawnvp(int mode, string pathname, string[] argv)
 //    {
-//      char** argv_ = cast(char**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
+//      char** argv_ = cast(char**) core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
 //      scope(exit) core.stdc.stdlib.free(argv_);
 //
 //      toAStringz(argv, argv_);
@@ -3388,7 +3809,7 @@ version (StdDdoc)
     Replaces the current process by executing a command, $(D pathname), with
     the arguments in $(D argv).
 
-    $(BLUE This functions is Posix-Only.)
+    $(BLUE This function is Posix-Only.)
 
     Typically, the first element of $(D argv) is
     the command being executed, i.e. $(D argv[0] == pathname). The 'p'
@@ -3617,12 +4038,12 @@ else version (OSX)
         auto childpid = core.sys.posix.unistd.fork();
         if (childpid == 0)
         {
-            core.sys.posix.unistd.execvp(args[0], cast(char**)args.ptr);
+            core.sys.posix.unistd.execvp(args[0], cast(char**) args.ptr);
             perror(args[0]);                // failed to execute
             return;
         }
         if (browser)
-            free(cast(void*)browser);
+            free(cast(void*) browser);
     }
 }
 else version (Posix)
@@ -3650,14 +4071,13 @@ else version (Posix)
         auto childpid = core.sys.posix.unistd.fork();
         if (childpid == 0)
         {
-            core.sys.posix.unistd.execvp(args[0], cast(char**)args.ptr);
+            core.sys.posix.unistd.execvp(args[0], cast(char**) args.ptr);
             perror(args[0]);                // failed to execute
             return;
         }
         if (browser)
-            free(cast(void*)browser);
+            free(cast(void*) browser);
     }
 }
 else
     static assert(0, "os not supported");
-

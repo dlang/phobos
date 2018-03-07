@@ -23,9 +23,7 @@ module std.experimental.typecons;
 import std.meta; // : AliasSeq, allSatisfy;
 import std.traits;
 
-import std.typecons : Tuple, tuple, Bind, DerivedFunctionType,
-       isImplicitlyConvertible, mixinAll, staticIota,
-       GetOverloadedMethods;
+import std.typecons : Tuple, tuple, Bind, DerivedFunctionType, GetOverloadedMethods;
 
 private
 {
@@ -53,16 +51,16 @@ if (is(T == class) || is(T == interface))
         }
         else
         {
-            return cast(T)typecons_d_toObject(*cast(void**)(&source));
+            return cast(T) typecons_d_toObject(*cast(void**)(&source));
         }
     }
 }
 
-unittest
+@system unittest
 {
     class C { @disable opCast(T)() {} }
     auto c = new C;
-    static assert(!__traits(compiles, cast(Object)c));
+    static assert(!__traits(compiles, cast(Object) c));
     auto o = dynamicCast!Object(c);
     assert(c is o);
 
@@ -70,7 +68,7 @@ unittest
     interface J { @disable opCast(T)() {} Object instance(); }
     class D : I, J { Object instance() { return this; } }
     I i = new D();
-    static assert(!__traits(compiles, cast(J)i));
+    static assert(!__traits(compiles, cast(J) i));
     J j = dynamicCast!J(i);
     assert(i.instance() is j.instance());
 }
@@ -131,7 +129,7 @@ if (Targets.length >= 1 && !allSatisfy!(isMutable, Targets))
     alias implementsInterface = .implementsInterface!(Source, staticMap!(Unqual, Targets));
 }
 
-unittest
+@safe unittest
 {
     interface Foo {
         void foo();
@@ -271,7 +269,7 @@ if (Targets.length >= 1 && allSatisfy!(isInterface, Targets))
                 static if (is(Source == class) || is(Source == interface))
                 {
                     // BUG: making private should work with NVI.
-                    protected final inout(Object) _wrap_getSource() inout @safe
+                    protected inout(Object) _wrap_getSource() inout @safe
                     {
                         return dynamicCast!(inout Object)(_wrap_source);
                     }
@@ -279,7 +277,7 @@ if (Targets.length >= 1 && allSatisfy!(isInterface, Targets))
                 else
                 {
                     // BUG: making private should work with NVI.
-                    protected final inout(Source) _wrap_getSource() inout @safe
+                    protected inout(Source) _wrap_getSource() inout @safe
                     {
                         return _wrap_source;
                     }
@@ -295,7 +293,7 @@ if (Targets.length >= 1 && allSatisfy!(isInterface, Targets))
                     {
                         string r;
                         bool first = true;
-                        foreach (i; staticIota!(0, num))
+                        foreach (i; 0 .. num)
                         {
                             import std.conv : to;
                             r ~= (first ? "" : ", ") ~ " a" ~ (i+1).to!string;
@@ -320,8 +318,8 @@ if (Targets.length >= 1 && allSatisfy!(isInterface, Targets))
                 }
 
             public:
-                mixin mixinAll!(
-                    staticMap!(generateFun, staticIota!(0, TargetMembers.length)));
+                static foreach (i; 0 .. TargetMembers.length)
+                    mixin(generateFun!i);
             }
         }
     }
@@ -377,7 +375,7 @@ private template wrapperSignature(alias fun)
         ~ name~"("~wrapperParameters~")"~mod;
 }
 
-unittest
+@safe unittest
 {
     interface M
     {
@@ -429,7 +427,7 @@ version(StdDdoc)
 }
 
 ///
-unittest
+@system unittest
 {
     interface Quack
     {
@@ -510,7 +508,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     import std.traits : functionAttributes, FunctionAttribute;
     interface A { int run(); }
@@ -611,7 +609,7 @@ template unwrap(Target)
     }
 }
 
-unittest
+@system unittest
 {
     // Validate const/immutable
     class A
@@ -658,10 +656,10 @@ unittest
         assert(d.draw(10) == 10);
     }
 }
-unittest
+@system unittest
 {
     // Bugzilla 10377
-    import std.range, std.algorithm;
+    import std.algorithm, std.range;
 
     interface MyInputRange(T)
     {
@@ -675,7 +673,7 @@ unittest
     auto r = iota(0,10,1).inputRangeObject().wrap!(MyInputRange!int)();
     assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]));
 }
-unittest
+@system unittest
 {
     // Bugzilla 10536
     interface Interface
@@ -691,7 +689,7 @@ unittest
     Interface i = new Pluggable().wrap!Interface;
     assert(i.foo() == 1);
 }
-unittest
+@system unittest
 {
     // Enhancement 10538
     interface Interface
@@ -848,17 +846,39 @@ else
         }
 
         // Attaching function attributes gives less noisy error messages
-        pure nothrow @safe @nogc @disable
+        pure nothrow @safe @nogc
         {
             /++
              + All operators, including member access, are forwarded to the
              + underlying value of type `T` except for these mutating operators,
              + which are disabled.
              +/
-            void opAssign(Other)(Other other);
-            void opOpAssign(string op, Other)(Other other); /// Ditto
-            void opUnary(string op : "--")(); /// Ditto
-            void opUnary(string op : "++")(); /// Ditto
+            void opAssign(Other)(Other other)
+            {
+                static assert(0, typeof(this).stringof ~
+                                 " cannot be reassigned.");
+            }
+
+            /// Ditto
+            void opOpAssign(string op, Other)(Other other)
+            {
+                static assert(0, typeof(this).stringof ~
+                                 " cannot be reassigned.");
+            }
+
+            /// Ditto
+            void opUnary(string op : "--")()
+            {
+                static assert(0, typeof(this).stringof ~
+                                 " cannot be mutated.");
+            }
+
+            /// Ditto
+            void opUnary(string op : "++")()
+            {
+                static assert(0, typeof(this).stringof ~
+                                 " cannot be mutated.");
+            }
         }
 
         /**
@@ -875,7 +895,7 @@ else
         alias final_get this;
 
         /// Ditto
-        T opUnary(string op)()
+        auto ref opUnary(string op)()
             if (__traits(compiles, mixin(op ~ "T.init")))
         {
             return mixin(op ~ "this.final_value");
@@ -1023,4 +1043,34 @@ pure nothrow @safe unittest
     static assert(!__traits(compiles, arr = null));
     static assert(!__traits(compiles, arr ~= 4));
     assert((arr ~ 4) == [1, 2, 3, 4]);
+}
+
+// issue 17270
+pure nothrow @nogc @system unittest
+{
+    int i = 1;
+    Final!(int*) fp = &i;
+    assert(*fp == 1);
+    static assert(!__traits(compiles,
+        fp = &i // direct assignment
+    ));
+    static assert(is(typeof(*fp) == int));
+    *fp = 2; // indirect assignment
+    assert(*fp == 2);
+    int* p = fp;
+    assert(*p == 2);
+}
+
+pure nothrow @system unittest
+{
+    Final!(int[]) arr;
+    // static assert(!__traits(compiles,
+        // arr.length = 10; // bug!
+    // ));
+    static assert(!__traits(compiles,
+        arr.ptr = null
+    ));
+    static assert(!__traits(compiles,
+        arr.ptr++
+    ));
 }

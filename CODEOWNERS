@@ -1,0 +1,76 @@
+# See also:
+# - https://github.com/blog/2392-introducing-code-owners
+# - https://help.github.com/articles/about-codeowners/
+
+# Each line is a file pattern followed by one or more owners (sorted alphabetically).
+# Please feel free to add yourself to a module or create a new mapping.
+# Ideally each module should have two or more owners.
+
+# Code owners are automatically requested for review
+# when someone opens a pull request that modifies code that they own.
+# Later matches take precedence.
+
+.dscanner.ini @wilzbach
+circleci.sh @CyberShadow @MartinNowak @wilzbach
+etc/c/* @CyberShadow
+posix.mak @CyberShadow @MartinNowak @wilzbach
+std/* @andralex
+std/algorithm/* @andralex @JackStouffer @wilzbach @ZombineDev
+std/array.d @JackStouffer @wilzbach @ZombineDev
+std/ascii.d @JackStouffer @wilzbach
+# std/base64.d
+std/bigint.d @Biotronic
+# std/bitmanip.d
+std/c/windows/* @CyberShadow
+# std/compiler.d
+std/complex.d @kyllingstad
+std/concurrency.d @MartinNowak
+std/container/ @ZombineDev
+std/conv.d @JackStouffer
+# std/csv.d
+std/datetime/* @jmdavis
+std/demangle.d @MartinNowak @rainers
+std/digest/* @jpf91
+# std/encoding.d
+# std/exception.d
+std/experimental/allocator/* @andralex @wilzbach @ZombineDev
+std/experimental/checkedint/* @andralex
+std/experimental/logger/* @burner
+# std/experimental/typecons.d
+std/file.d @CyberShadow
+# std/format.d
+# std/functional.d
+# std/getopt.d
+# std/internal/
+std/json.d @CyberShadow
+std/math* @Biotronic @ibuclaw @klickverbot
+std/meta.d @Biotronic @klickverbot @MetaLang @ZombineDev
+# std/mmfile.d
+std/net/curl.d @CyberShadow
+std/net/isemail.d @JackStouffer
+# std/numeric.d
+# std/outbuffer.d
+# std/parallelism.d
+std/path.d @CyberShadow @kyllingstad
+std/process.d @CyberShadow @kyllingstad @schveiguy
+std/random.d @WebDrake @wilzbach
+std/range/* @andralex @JackStouffer @wilzbach @ZombineDev
+std/regex/* @DmitryOlshansky
+# std/signals.d
+std/socket.d @CyberShadow @klickverbot
+# std/stdint.d
+std/stdio.d @CyberShadow @schveiguy
+std/string.d @burner @JackStouffer
+# std/system.d
+std/traits.d @Biotronic @klickverbot @ZombineDev
+std/typecons.d @Biotronic @MetaLang @ZombineDev
+# std/typetuple.d
+std/uni.d @DmitryOlshansky
+# std/uri.d
+std/utf.d @jmdavis
+std/uuid.d @jpf91
+# std/variant.d
+std/windows/* @CyberShadow
+# std/xml.d
+std/zip.d @CyberShadow
+std/zlib.d @CyberShadow

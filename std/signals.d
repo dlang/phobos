@@ -52,6 +52,8 @@
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(HTTP digitalmars.com, Walter Bright)
  * Source:    $(PHOBOSSRC std/_signals.d)
+ *
+ * $(SCRIPT inhibitQuickIndex = 1;)
  */
 /*          Copyright Digital Mars 2000 - 2009.
  * Distributed under the Boost Software License, Version 1.0.
@@ -60,9 +62,9 @@
  */
 module std.signals;
 
-import std.stdio;
-import core.stdc.stdlib : calloc, realloc, free;
 import core.exception : onOutOfMemoryError;
+import core.stdc.stdlib : calloc, realloc, free;
+import std.stdio;
 
 // Special function for internal use only.
 // Use of this is where the slot had better be a delegate
@@ -83,8 +85,8 @@ extern (C) void  rt_detachDisposeEvent( Object obj, DisposeEvt evt );
 
 mixin template Signal(T1...)
 {
-    static import core.stdc.stdlib;
     static import core.exception;
+    static import core.stdc.stdlib;
     /***
      * A slot is implemented as a delegate.
      * The slot_t is the type of the delegate.
@@ -147,7 +149,7 @@ mixin template Signal(T1...)
                 auto p = core.stdc.stdlib.calloc(slot_t.sizeof, len);
                 if (!p)
                     core.exception.onOutOfMemoryError();
-                slots = (cast(slot_t*)p)[0 .. len];
+                slots = (cast(slot_t*) p)[0 .. len];
             }
             else
             {
@@ -160,7 +162,7 @@ mixin template Signal(T1...)
                 auto p = core.stdc.stdlib.realloc(slots.ptr, nbytes);
                 if (!p)
                     core.exception.onOutOfMemoryError();
-                slots = (cast(slot_t*)p)[0 .. len];
+                slots = (cast(slot_t*) p)[0 .. len];
                 slots[slots_idx + 1 .. $] = null;
             }
         }
@@ -219,6 +221,17 @@ mixin template Signal(T1...)
         }
      }
 
+    /***
+     * Disconnect all the slots.
+     */
+    final void disconnectAll()
+    {
+        debug (signal) writefln("Signal.disconnectAll");
+        __dtor();
+        slots_idx = 0;
+        status = ST.idle;
+    }
+
     /* **
      * Special function called when o is destroyed.
      * It causes any slots dependent on o to be removed from the list
@@ -226,8 +239,9 @@ mixin template Signal(T1...)
      */
     final void unhook(Object o)
     in { assert( status == ST.idle ); }
-    body {
-        debug (signal) writefln("Signal.unhook(o = %s)", cast(void*)o);
+    do
+    {
+        debug (signal) writefln("Signal.unhook(o = %s)", cast(void*) o);
         for (size_t i = 0; i < slots_idx; )
         {
             if (_d_toObject(slots[i].ptr) is o)
@@ -704,3 +718,58 @@ version(none) // Disabled because of dmd @@@BUG5028@@@
     assert( dot2.value == -22 );
 }
 
+@system unittest
+{
+    import std.signals;
+
+    class Observer
+    {   // our slot
+        void watch(string msg, int value)
+        {
+            if (value != 0)
+            {
+                assert(msg == "setting new value");
+                assert(value == 1);
+            }
+        }
+    }
+
+    class Foo
+    {
+        int value() { return _value; }
+
+        int value(int v)
+        {
+            if (v != _value)
+            {
+                _value = v;
+                // call all the connected slots with the parameters
+                emit("setting new value", v);
+            }
+            return v;
+        }
+
+        // Mix in all the code we need to make Foo into a signal
+        mixin Signal!(string, int);
+
+      private :
+        int _value;
+    }
+
+    Foo a = new Foo;
+    Observer o = new Observer;
+    auto o2 = new Observer;
+
+    a.value = 3;                // should not call o.watch()
+    a.connect(&o.watch);        // o.watch is the slot
+    a.connect(&o2.watch);
+    a.value = 1;                // should call o.watch()
+    a.disconnectAll();
+    a.value = 5;                // so should not call o.watch()
+    a.connect(&o.watch);        // connect again
+    a.connect(&o2.watch);
+    a.value = 1;                // should call o.watch()
+    destroy(o);                 // destroying o should automatically disconnect it
+    destroy(o2);
+    a.value = 7;                // should not call o.watch()
+}

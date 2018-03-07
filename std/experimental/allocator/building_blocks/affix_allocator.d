@@ -1,4 +1,7 @@
-///
+// Written in the D programming language.
+/**
+Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/_affix_allocator.d)
+*/
 module std.experimental.allocator.building_blocks.affix_allocator;
 
 /**
@@ -19,27 +22,43 @@ The following methods are defined if $(D Allocator) defines them, and forward to
  */
 struct AffixAllocator(Allocator, Prefix, Suffix = void)
 {
-    import std.conv : emplace;
-    import std.experimental.allocator.common : stateSize, forwardToMember,
-        roundUpToMultipleOf, alignedAt, alignDownTo, roundUpToMultipleOf;
-    import std.traits : hasMember;
     import std.algorithm.comparison : min;
-    import std.typecons : Ternary;
+    import std.conv : emplace;
+    import std.experimental.allocator : RCIAllocator, theAllocator;
+    import std.experimental.allocator.common : stateSize, forwardToMember,
+        roundUpToMultipleOf, alignedAt, alignDownTo, roundUpToMultipleOf,
+        hasStaticallyKnownAlignment;
     import std.math : isPowerOf2;
+    import std.traits : hasMember;
+    import std.typecons : Ternary;
 
-    static assert(
-        !stateSize!Prefix || Allocator.alignment >= Prefix.alignof,
-        "AffixAllocator does not work with allocators offering a smaller"
-        ~ " alignment than the prefix alignment.");
+    static if (hasStaticallyKnownAlignment!Allocator)
+    {
+        static assert(
+                !stateSize!Prefix || Allocator.alignment >= Prefix.alignof,
+                "AffixAllocator does not work with allocators offering a smaller"
+                ~ " alignment than the prefix alignment.");
+    }
     static assert(alignment % Suffix.alignof == 0,
         "This restriction could be relaxed in the future.");
 
     /**
     If $(D Prefix) is $(D void), the alignment is that of the parent. Otherwise, the alignment is the same as the $(D Prefix)'s alignment.
     */
-    enum uint alignment = isPowerOf2(stateSize!Prefix)
-        ? min(stateSize!Prefix, Allocator.alignment)
-        : (stateSize!Prefix ? Prefix.alignof : Allocator.alignment);
+    static if (hasStaticallyKnownAlignment!Allocator)
+    {
+        enum uint alignment = isPowerOf2(stateSize!Prefix)
+            ? min(stateSize!Prefix, Allocator.alignment)
+            : (stateSize!Prefix ? Prefix.alignof : Allocator.alignment);
+    }
+    else static if (is(Prefix == void))
+    {
+        enum uint alignment = platformAlignment;
+    }
+    else
+    {
+        enum uint alignment = Prefix.alignof;
+    }
 
     /**
     If the parent allocator $(D Allocator) is stateful, an instance of it is
@@ -47,11 +66,31 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     `Allocator.instance`. In either case, the name $(D _parent) is uniformly
     used for accessing the parent allocator.
     */
-    static if (stateSize!Allocator) Allocator parent;
-    else alias parent = Allocator.instance;
+    static if (stateSize!Allocator)
+    {
+        Allocator _parent;
+        static if (is(Allocator == RCIAllocator))
+        {
+            Allocator parent()
+            {
+                if (_parent.isNull) _parent = theAllocator;
+                assert(alignment <= _parent.alignment);
+                return _parent;
+            }
+        }
+        else
+        {
+            alias parent = _parent;
+        }
+    }
+    else
+    {
+        alias parent = Allocator.instance;
+    }
 
     private template Impl()
     {
+
         size_t goodAllocSize(size_t s)
         {
             import std.experimental.allocator.common : goodAllocSize;
@@ -91,7 +130,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             static if (stateSize!Prefix)
             {
                 assert(result.ptr.alignedAt(Prefix.alignof));
-                emplace!Prefix(cast(Prefix*)result.ptr);
+                emplace!Prefix(cast(Prefix*) result.ptr);
             }
             static if (stateSize!Suffix)
             {
@@ -115,7 +154,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             static if (stateSize!Prefix)
             {
                 assert(result.length > stateSize!Prefix);
-                emplace!Prefix(cast(Prefix*)result.ptr);
+                emplace!Prefix(cast(Prefix*) result.ptr);
                 result = result[stateSize!Prefix .. $];
             }
             static if (stateSize!Suffix)
@@ -135,28 +174,33 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         Ternary owns(void[] b)
         {
             if (b is null) return Ternary.no;
-            return parent.owns(actualAllocation(b));
+            return parent.owns((() @trusted => actualAllocation(b))());
         }
 
         static if (hasMember!(Allocator, "resolveInternalPointer"))
-        void[] resolveInternalPointer(void* p)
+        Ternary resolveInternalPointer(const void* p, ref void[] result)
         {
-            auto p1 = parent.resolveInternalPointer(p);
-            if (p1 is null) return p1;
+            void[] p1;
+            Ternary r = parent.resolveInternalPointer(p, p1);
+            if (r != Ternary.yes || p1 is null)
+                return r;
             p1 = p1[stateSize!Prefix .. $];
-            auto p2 = (p1.ptr + p1.length - stateSize!Suffix)
-                    .alignDownTo(Suffix.alignof);
-            return p1[0 .. p2 - p1.ptr];
+            auto p2 = (() @trusted => (&p1[0] + p1.length - stateSize!Suffix)
+                                      .alignDownTo(Suffix.alignof))();
+            result = p1[0 .. p2 - &p1[0]];
+            return Ternary.yes;
         }
 
-        static if (!stateSize!Suffix && hasMember!(Allocator, "expand"))
+        static if (!stateSize!Suffix && hasMember!(Allocator, "expand")
+                    && hasMember!(Allocator, "owns"))
         bool expand(ref void[] b, size_t delta)
         {
-            if (!b.ptr) return delta == 0;
-            auto t = actualAllocation(b);
+            if (!b || delta == 0) return delta == 0;
+            if (owns(b) == Ternary.no) return false;
+            auto t = (() @trusted => actualAllocation(b))();
             const result = parent.expand(t, delta);
             if (!result) return false;
-            b = b.ptr[0 .. b.length + delta];
+            b = (() @trusted => b.ptr[0 .. b.length + delta])();
             return true;
         }
 
@@ -317,7 +361,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     // One word before and after each allocation.
@@ -329,19 +373,55 @@ unittest
         && A.instance.suffix(b) == 0xDEAD_BEEF);
 }
 
-unittest
+@system unittest
+{
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator : theAllocator, RCIAllocator;
+
+    // One word before and after each allocation.
+    auto A = AffixAllocator!(RCIAllocator, size_t, size_t)(theAllocator);
+    auto a = A.allocate(11);
+    A.prefix(a) = 0xCAFE_BABE;
+    A.suffix(a) = 0xDEAD_BEEF;
+    assert(A.prefix(a) == 0xCAFE_BABE
+        && A.suffix(a) == 0xDEAD_BEEF);
+
+    // One word before and after each allocation.
+    auto B = AffixAllocator!(RCIAllocator, size_t, size_t)();
+    auto b = B.allocate(11);
+    B.prefix(b) = 0xCAFE_BABE;
+    B.suffix(b) = 0xDEAD_BEEF;
+    assert(B.prefix(b) == 0xCAFE_BABE
+        && B.suffix(b) == 0xDEAD_BEEF);
+}
+
+@system unittest
 {
     import std.experimental.allocator.building_blocks.bitmapped_block
         : BitmappedBlock;
     import std.experimental.allocator.common : testAllocator;
     testAllocator!({
         auto a = AffixAllocator!(BitmappedBlock!128, ulong, ulong)
-            (BitmappedBlock!128(new void[128 * 4096]));
+            (BitmappedBlock!128(new ubyte[128 * 4096]));
         return a;
     });
 }
 
-unittest
+// Test empty
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.bitmapped_block : BitmappedBlock;
+    import std.typecons : Ternary;
+
+    auto a = AffixAllocator!(BitmappedBlock!128, ulong, ulong)
+                (BitmappedBlock!128(new ubyte[128 * 4096]));
+    assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.yes);
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.no);
+}
+
+@system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     alias A = AffixAllocator!(Mallocator, size_t);
@@ -356,10 +436,11 @@ unittest
     assert(b is null);
 }
 
-unittest
+@system unittest
 {
-    import std.experimental.allocator.gc_allocator;
     import std.experimental.allocator;
+    import std.experimental.allocator.gc_allocator;
+    import std.typecons : Ternary;
     alias MyAllocator = AffixAllocator!(GCAllocator, uint);
     auto a = MyAllocator.instance.makeArray!(shared int)(100);
     static assert(is(typeof(&MyAllocator.instance.prefix(a)) == shared(uint)*));
@@ -371,4 +452,50 @@ unittest
     static assert(is(typeof(&MyAllocator.instance.prefix(d)) == uint*));
     auto e = MyAllocator.instance.makeArray!(const int)(100);
     static assert(is(typeof(&MyAllocator.instance.prefix(e)) == const(uint)*));
+
+    void[] p;
+    assert((() nothrow @safe @nogc => MyAllocator.instance.resolveInternalPointer(null, p))() == Ternary.no);
+    assert((() nothrow @safe => MyAllocator.instance.resolveInternalPointer(&d[0], p))() == Ternary.yes);
+    assert(p.ptr is d.ptr && p.length >= d.length);
+}
+
+@system unittest
+{
+    import std.experimental.allocator.gc_allocator;
+    alias a = AffixAllocator!(GCAllocator, uint).instance;
+
+    // Check that goodAllocSize inherits from parent, i.e. GCAllocator
+    assert(__traits(compiles, (() nothrow @safe @nogc => a.goodAllocSize(1))()));
+
+    // Ensure deallocate inherits from parent
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    () nothrow @nogc { a.deallocate(b); }();
+}
+
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+
+    auto a = AffixAllocator!(Region!(), uint)(Region!()(new ubyte[1024 * 64]));
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    // Test that expand infers from parent
+    assert((() pure nothrow @safe @nogc => a.expand(b, 58))());
+    assert(b.length == 100);
+    // Test that deallocateAll infers from parent
+    assert((() nothrow @nogc => a.deallocateAll())());
+}
+
+// Test that reallocate infers from parent
+@system unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+
+    alias a = AffixAllocator!(Mallocator, uint).instance;
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    assert((() nothrow @nogc => a.reallocate(b, 100))());
+    assert(b.length == 100);
+    assert((() nothrow @nogc => a.deallocate(b))());
 }

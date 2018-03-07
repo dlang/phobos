@@ -59,17 +59,17 @@ version (StdDdoc)
      +/
     T wenforce(T, S)(T value, lazy S msg = null,
         string file = __FILE__, size_t line = __LINE__) @safe
-        if (isSomeString!S);
+    if (isSomeString!S);
 }
 else:
 
 version (Windows):
 
-import std.windows.charset;
+import core.sys.windows.windows;
 import std.array : appender;
 import std.conv : to;
 import std.format : formattedWrite;
-import core.sys.windows.windows;
+import std.windows.charset;
 
 string sysErrorString(
     DWORD errCode,
@@ -107,7 +107,7 @@ bool putSysError(Writer)(DWORD code, Writer w, /*WORD*/int langId = 0)
     if (lpMsgBuf)
     {
         import std.string : strip;
-        w.put(lpMsgBuf[0..res].strip());
+        w.put(lpMsgBuf[0 .. res].strip());
         return true;
     }
     else
@@ -147,7 +147,8 @@ class WindowsException : Exception
 
 
 T wenforce(T, S)(T value, lazy S msg = null,
-    string file = __FILE__, size_t line = __LINE__) if (isSomeString!S)
+string file = __FILE__, size_t line = __LINE__)
+if (isSomeString!S)
 {
     if (!value)
         throw new WindowsException(GetLastError(), to!string(msg), file, line);
@@ -163,8 +164,8 @@ T wenforce(T)(T condition, const(char)[] name, const(wchar)* namez, string file 
     {
         static string trustedToString(const(wchar)* stringz) @trusted
         {
-            import std.conv : to;
             import core.stdc.wchar_ : wcslen;
+            import std.conv : to;
             auto len = wcslen(stringz);
             return to!string(stringz[0 .. len]);
         }
@@ -177,11 +178,11 @@ T wenforce(T)(T condition, const(char)[] name, const(wchar)* namez, string file 
 }
 
 version(Windows)
-unittest
+@system unittest
 {
+    import std.algorithm.searching : startsWith, endsWith;
     import std.exception;
     import std.string;
-    import std.algorithm.searching : startsWith, endsWith;
 
     auto e = collectException!WindowsException(
         DeleteFileA("unexisting.txt").wenforce("DeleteFile")

@@ -13,28 +13,38 @@
 #
 # make BUILD=debug unittest => builds all unittests (for debug) and runs them
 #
-# make html => makes html documentation
+# make DEBUGGER=ddd std/XXXXX.debug => builds the module XXXXX and executes it
+#                                      in the debugger ddd
+#
+# make build-html => makes html documentation
 #
 # make install => copies library to /usr/lib
 #
 # make std/somemodule.test => only builds and unittests std.somemodule
 #
+# make TZ_DATABASE_DIR=path to the TZDatabase directory => This is useful to
+# overwrite the hardcoded path to the TZDatabase directory needed
+# for std/datetime/timezone.d
 
 ################################################################################
 # Configurable stuff, usually from the command line
 #
-# OS can be linux, win32, win32wine, osx, or freebsd. The system will be
-# determined by using uname
+# OS can be linux, win32, win32wine, osx, freebsd, netbsd or dragonflybsd.
+# The system will be determined by using uname
 
-QUIET:=
+QUIET:=@
 
-include osmodel.mak
+DEBUGGER=gdb
+GIT_HOME=https://github.com/dlang
+DMD_DIR=../dmd
+
+include $(DMD_DIR)/src/osmodel.mak
 
 ifeq (osx,$(OS))
 	export MACOSX_DEPLOYMENT_TARGET=10.7
 endif
 
-# Default to a release built, override with BUILD=debug
+# Default to a release build, override with BUILD=debug
 ifeq (,$(BUILD))
 BUILD_WAS_SPECIFIED=0
 BUILD=release
@@ -48,27 +58,32 @@ ifneq ($(BUILD),release)
     endif
 endif
 
-override PIC:=$(if $(PIC),-fPIC,)
+# default to PIC on x86_64, use PIC=1/0 to en-/disable PIC.
+# Note that shared libraries and C files are always compiled with PIC.
+ifeq ($(PIC),)
+    ifeq ($(MODEL),64) # x86_64
+        PIC:=1
+    else
+        PIC:=0
+    endif
+endif
+ifeq ($(PIC),1)
+    override PIC:=-fPIC
+else
+    override PIC:=
+endif
 
 # Configurable stuff that's rarely edited
 INSTALL_DIR = ../install
 DRUNTIME_PATH = ../druntime
+DLANG_ORG_DIR = ../dlang.org
 ZIPFILE = phobos.zip
 ROOT_OF_THEM_ALL = generated
 ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
 DUB=dub
-# Documentation-related stuff
-DOCSRC = ../dlang.org
-WEBSITE_DIR = ../web
-DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos-prerelease
-BIGDOC_OUTPUT_DIR = /tmp
-SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) \
-	$(EXTRA_DOCUMENTABLES))
-STDDOC = $(DOCSRC)/html.ddoc $(DOCSRC)/dlang.org.ddoc $(DOCSRC)/std_navbar-prerelease.ddoc $(DOCSRC)/std.ddoc $(DOCSRC)/macros.ddoc $(DOCSRC)/.generated/modlist-prerelease.ddoc
-BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc $(DOCSRC)/macros.ddoc
-# Set DDOC, the documentation generator
-DDOC=$(DMD) -conf= $(MODEL_FLAG) -w -c -o- -version=StdDdoc \
-	-I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
+TOOLS_DIR=../tools
+DSCANNER_HASH=d2ee83b0548f567b93475af85756a6d3ca85ad14
+DSCANNER_DIR=$(ROOT_OF_THEM_ALL)/dscanner-$(DSCANNER_HASH)
 
 # Set DRUNTIME name and full path
 ifneq (,$(DRUNTIME))
@@ -87,7 +102,7 @@ ifeq ($(OS),win32wine)
 	DMD = wine dmd.exe
 	RUN = wine
 else
-	DMD = ../dmd/src/dmd
+	DMD = $(DMD_DIR)/generated/$(OS)/$(BUILD)/$(MODEL)/dmd
 	ifeq ($(OS),win32)
 		CC = dmc
 	else
@@ -105,7 +120,7 @@ else
 endif
 
 # Set DFLAGS
-DFLAGS=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -dip25 $(MODEL_FLAG) $(PIC)
+DFLAGS=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -dip25 $(MODEL_FLAG) $(PIC) -transition=complex
 ifeq ($(BUILD),debug)
 	DFLAGS += -g -debug
 else
@@ -115,6 +130,12 @@ endif
 ifdef ENABLE_COVERAGE
 DFLAGS  += -cov
 endif
+ifneq (,$(TZ_DATABASE_DIR))
+$(file > /tmp/TZDatabaseDirFile, ${TZ_DATABASE_DIR})
+DFLAGS += -version=TZDatabaseDir -J/tmp/
+endif
+
+UDFLAGS=-unittest
 
 # Set DOTOBJ and DOTEXE
 ifeq (,$(findstring win,$(OS)))
@@ -133,7 +154,7 @@ LINKDL:=$(if $(findstring $(OS),linux),-L-ldl,)
 TIMELIMIT:=$(if $(shell which timelimit 2>/dev/null || true),timelimit -t 90 ,)
 
 # Set VERSION, where the file is that contains the version string
-VERSION=../dmd/VERSION
+VERSION=$(DMD_DIR)/VERSION
 
 # Set LIB, the ultimate target
 ifeq (,$(findstring win,$(OS)))
@@ -161,39 +182,38 @@ P2MODULES=$(foreach P,$1,$(addprefix $P/,$(PACKAGE_$(subst /,_,$P))))
 # xy/zz is in variable PACKAGE_xy_zz. This allows automation in iterating
 # packages and their modules.
 STD_PACKAGES = std $(addprefix std/,\
-  algorithm container digest experimental/allocator \
+  algorithm container datetime digest experimental/allocator \
   experimental/allocator/building_blocks experimental/logger \
-  experimental/ndslice \
   net \
   experimental range regex)
 
 # Modules broken down per package
 
 PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
-  conv csv datetime demangle encoding exception file format \
+  conv csv demangle encoding exception file format \
   functional getopt json math mathspecial meta mmfile numeric \
   outbuffer parallelism path process random signals socket stdint \
-  stdio stdiobase string system traits typecons typetuple uni \
+  stdio string system traits typecons uni \
   uri utf uuid variant xml zip zlib
-PACKAGE_std_experimental = typecons
+PACKAGE_std_experimental = all checkedint typecons
 PACKAGE_std_algorithm = comparison iteration mutation package searching setops \
   sorting
 PACKAGE_std_container = array binaryheap dlist package rbtree slist util
-PACKAGE_std_digest = crc digest hmac md murmurhash ripemd sha
+PACKAGE_std_datetime = date interval package stopwatch systime timezone
+PACKAGE_std_digest = crc digest hmac md murmurhash package ripemd sha
 PACKAGE_std_experimental_logger = core filelogger \
   nulllogger multilogger package
 PACKAGE_std_experimental_allocator = \
   common gc_allocator mallocator mmap_allocator package showcase typed
 PACKAGE_std_experimental_allocator_building_blocks = \
-  affix_allocator allocator_list bucketizer \
+  affix_allocator allocator_list ascending_page_allocator bucketizer \
   fallback_allocator free_list free_tree bitmapped_block \
   kernighan_ritchie null_allocator package quantizer \
   region scoped_allocator segregator stats_collector
-PACKAGE_std_experimental_ndslice = package iteration selection slice
 PACKAGE_std_net = curl isemail
 PACKAGE_std_range = interfaces package primitives
 PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
-  backtracking bitnfa tests tests2 tests3 thompson shiftor)
+  backtracking tests tests2 thompson kickstart)
 
 # Modules in std (including those in packages)
 STD_MODULES=$(call P2MODULES,$(STD_PACKAGES))
@@ -203,7 +223,7 @@ EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
 EXTRA_MODULES_OSX := $(addprefix std/c/osx/, socket)
 EXTRA_MODULES_FREEBSD := $(addprefix std/c/freebsd/, socket)
 EXTRA_MODULES_WIN32 := $(addprefix std/c/windows/, com stat windows		\
-		winsock) $(addprefix std/windows/, charset iunknown syserror)
+		winsock) $(addprefix std/windows/, charset syserror)
 
 # Other D modules that aren't under std/
 EXTRA_MODULES_COMMON := $(addprefix etc/c/,curl odbc/sql odbc/sqlext \
@@ -212,16 +232,17 @@ EXTRA_MODULES_COMMON := $(addprefix etc/c/,curl odbc/sql odbc/sqlext \
 
 EXTRA_DOCUMENTABLES := $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_WIN32) $(EXTRA_MODULES_COMMON)
 
-EXTRA_MODULES_INTERNAL := $(addprefix			\
-	std/concurrencybase \
-	std/internal/digest/, sha_SSSE3 ) $(addprefix \
-	std/internal/math/, biguintcore biguintnoasm biguintx86	\
-	gammafunction errorfunction) $(addprefix std/internal/, \
-	cstring encodinginit processinit unicode_tables scopebuffer\
-	unicode_comp unicode_decomp unicode_grapheme unicode_norm) \
-	$(addprefix std/internal/test/, dummyrange) \
-	$(addprefix std/experimental/ndslice/, internal) \
-	$(addprefix std/algorithm/, internal)
+EXTRA_MODULES_INTERNAL := $(addprefix std/, \
+	algorithm/internal \
+	$(addprefix internal/, \
+		cstring digest/sha_SSSE3 \
+		$(addprefix math/, biguintcore biguintnoasm biguintx86	\
+						   errorfunction gammafunction ) \
+		scopebuffer test/dummyrange test/range \
+		$(addprefix unicode_, comp decomp grapheme norm tables) \
+	) \
+	typetuple \
+)
 
 EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(EXTRA_MODULES_INTERNAL)
 
@@ -249,6 +270,9 @@ MAKEFILE = $(firstword $(MAKEFILE_LIST))
 # build with shared library support (defaults to true on supported platforms)
 SHARED=$(if $(findstring $(OS),linux freebsd),1,)
 
+TESTS_EXTRACTOR=$(ROOT)/tests_extractor
+PUBLICTESTS_DIR=$(ROOT)/publictests
+
 ################################################################################
 # Rules begin here
 ################################################################################
@@ -272,10 +296,6 @@ unittest : unittest-debug unittest-release
 unittest-%:
 	$(MAKE) -f $(MAKEFILE) unittest OS=$(OS) MODEL=$(MODEL) DMD=$(DMD) BUILD=$*
 endif
-
-depend: $(addprefix $(ROOT)/unittest/,$(addsuffix .deps,$(D_MODULES)))
-
--include $(addprefix $(ROOT)/unittest/,$(addsuffix .deps,$(D_MODULES)))
 
 ################################################################################
 # Patterns begin here
@@ -321,20 +341,18 @@ $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
 	@echo Testing $@ - disabled
 
 UT_D_OBJS:=$(addprefix $(ROOT)/unittest/,$(addsuffix .o,$(D_MODULES)))
+# need to recompile all unittest objects whenever sth. changes
+$(UT_D_OBJS): $(ALL_D_FILES)
 $(UT_D_OBJS): $(ROOT)/unittest/%.o: %.d
 	@mkdir -p $(dir $@)
-	$(DMD) $(DFLAGS) -unittest -c -of$@ -deps=$(@:.o=.deps.tmp) $<
-	@echo $@: `sed 's|.*(\(.*\)).*|\1|' $(@:.o=.deps.tmp) | sort | uniq` \
-	   >$(@:.o=.deps)
-	@rm $(@:.o=.deps.tmp)
-#	$(DMD) $(DFLAGS) -unittest -c -of$@ $*.d
+	$(DMD) $(DFLAGS) $(UDFLAGS) -c -of$@ $<
 
 ifneq (1,$(SHARED))
 
 $(UT_D_OBJS): $(DRUNTIME)
 
 $(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME)
-	$(DMD) $(DFLAGS) -unittest -of$@ $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME) $(LINKDL) -defaultlib= -debuglib=
+	$(DMD) $(DFLAGS) $(UDFLAGS) -of$@ $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME) $(LINKDL) -defaultlib= -debuglib=
 
 else
 
@@ -344,7 +362,7 @@ $(UT_D_OBJS): $(DRUNTIMESO)
 
 $(UT_LIBSO): override PIC:=-fPIC
 $(UT_LIBSO): $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO)
-	$(DMD) $(DFLAGS) -shared -unittest -of$@ $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) $(LINKDL) -defaultlib= -debuglib=
+	$(DMD) $(DFLAGS) -shared $(UDFLAGS) -of$@ $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) $(LINKDL) -defaultlib= -debuglib=
 
 $(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_LIBSO)
 	$(DMD) $(DFLAGS) -of$@ $< -L$(UT_LIBSO) -defaultlib= -debuglib=
@@ -364,7 +382,7 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 %.test : %.d $(LIB)
 	T=`mktemp -d /tmp/.dmd-run-test.XXXXXX` &&                                                              \
 	  (                                                                                                     \
-	    $(DMD) -od$$T $(DFLAGS) -main -unittest $(LIB) -defaultlib= -debuglib= $(LINKDL) -cov -run $< ;     \
+	    $(DMD) -od$$T $(DFLAGS) -main $(UDFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL) -cov -run $< ;     \
 	    RET=$$? ; rm -rf $$T ; exit $$RET                                                                   \
 	  )
 
@@ -372,6 +390,22 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 # transitively. For example: "make std/algorithm.test"
 %.test : $(LIB)
 	$(MAKE) -f $(MAKEFILE) $(addsuffix .test,$(patsubst %.d,%,$(wildcard $*/*)))
+
+# Recursive target for %.debug
+# It has to be recursive as %.debug depends on $(LIB) and we don't want to
+# force the user to call make with BUILD=debug.
+# Therefore we call %.debug_with_debugger and pass BUILD=debug from %.debug
+# This forces all of phobos to have debug symbols, which we need as we don't
+# know where debugging is leading us.
+%.debug_with_debugger : %.d $(LIB)
+	$(DMD) $(DFLAGS) -main $(UDFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL) $<
+	$(DEBUGGER) ./$(basename $(notdir $<))
+
+# Target for quickly debugging a single module
+# For example: make -f posix.mak DEBUGGER=ddd std/format.debug
+# ddd in this case is a graphical frontend to gdb
+%.debug : %.d
+	 BUILD=debug $(MAKE) -f $(MAKEFILE) $(basename $<).debug_with_debugger
 
 ################################################################################
 # More stuff
@@ -385,7 +419,7 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 	touch $@
 
 clean :
-	rm -rf $(ROOT_OF_THEM_ALL) $(ZIPFILE) $(DOC_OUTPUT_DIR)
+	rm -rf $(ROOT_OF_THEM_ALL) $(ZIPFILE)
 
 gitzip:
 	git archive --format=zip HEAD > $(ZIPFILE)
@@ -431,15 +465,20 @@ $(JSON) : $(ALL_D_FILES)
 	$(DMD) $(DFLAGS) -o- -Xf$@ $^
 
 ###########################################################
-# html documentation
+# HTML documentation
+# the following variables will be set by dlang.org:
+#     DOC_OUTPUT_DIR, STDDOC
+###########################################################
+SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(EXTRA_DOCUMENTABLES))
+# Set DDOC, the documentation generator
+DDOC=$(DMD) -conf= $(MODEL_FLAG) -w -c -o- -version=StdDdoc \
+	-I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 
 # D file to html, e.g. std/conv.d -> std_conv.html
 # But "package.d" is special cased: std/range/package.d -> std_range.html
 D2HTML=$(foreach p,$1,$(if $(subst package.d,,$(notdir $p)),$(subst /,_,$(subst .d,.html,$p)),$(subst /,_,$(subst /package.d,.html,$p))))
 
 HTMLS=$(addprefix $(DOC_OUTPUT_DIR)/, \
-	$(call D2HTML, $(SRC_DOCUMENTABLES)))
-BIGHTMLS=$(addprefix $(BIGDOC_OUTPUT_DIR)/, \
 	$(call D2HTML, $(SRC_DOCUMENTABLES)))
 
 $(DOC_OUTPUT_DIR)/. :
@@ -451,31 +490,28 @@ $(foreach p,$(SRC_DOCUMENTABLES),$(eval \
 $(DOC_OUTPUT_DIR)/$(call D2HTML,$p) : $p $(STDDOC) ;\
   $(DDOC) project.ddoc $(STDDOC) -Df$$@ $$<))
 
-html : $(DOC_OUTPUT_DIR)/. $(HTMLS) $(STYLECSS_TGT)
+# this target is called by dlang.org
+html : $(DOC_OUTPUT_DIR)/. $(HTMLS)
 
-allmod :
-	@echo $(SRC_DOCUMENTABLES)
+build-html:
+	${MAKE} -C $(DLANG_ORG_DIR) -f posix.mak phobos-prerelease
 
-rsync-prerelease : html
-	rsync -avz $(DOC_OUTPUT_DIR)/ d-programming@digitalmars.com:data/phobos-prerelease/
-	rsync -avz $(WEBSITE_DIR)/ d-programming@digitalmars.com:data/phobos-prerelase/
+################################################################################
+# Automatically create dlang/tools repository if non-existent
+################################################################################
 
-html_consolidated :
-	$(DDOC) -Df$(DOCSRC)/std_consolidated_header.html $(DOCSRC)/std_consolidated_header.dd
-	$(DDOC) -Df$(DOCSRC)/std_consolidated_footer.html $(DOCSRC)/std_consolidated_footer.dd
-	$(MAKE) -f $(MAKEFILE) DOC_OUTPUT_DIR=$(BIGDOC_OUTPUT_DIR) STDDOC=$(BIGSTDDOC) html -j 8
-	cat $(DOCSRC)/std_consolidated_header.html $(BIGHTMLS)	\
-	$(DOCSRC)/std_consolidated_footer.html > $(DOC_OUTPUT_DIR)/std_consolidated.html
+${TOOLS_DIR}:
+	git clone --depth=1 ${GIT_HOME}/$(@F) $@
 
-changelog.html: changelog.dd
-	$(DMD) -Df$@ $<
+$(TOOLS_DIR)/checkwhitespace.d: | $(TOOLS_DIR)
+$(TOOLS_DIR)/tests_extractor.d: | $(TOOLS_DIR)
 
 #################### test for undesired white spaces ##########################
-CWS_TOCHECK = posix.mak win32.mak win64.mak osmodel.mak
+CWS_TOCHECK = posix.mak win32.mak win64.mak
 CWS_TOCHECK += $(ALL_D_FILES) index.d
 
-checkwhitespace: $(LIB)
-	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -run ../dmd/src/checkwhitespace.d $(CWS_TOCHECK)
+checkwhitespace: $(LIB) $(TOOLS_DIR)/checkwhitespace.d
+	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -run $(TOOLS_DIR)/checkwhitespace.d $(CWS_TOCHECK)
 
 #############################
 # Submission to Phobos are required to conform to the DStyle
@@ -483,46 +519,85 @@ checkwhitespace: $(LIB)
 # See also: http://dlang.org/dstyle.html
 #############################
 
-../dscanner:
-	git clone https://github.com/Hackerpilot/Dscanner ../dscanner
-	git -C ../dscanner checkout tags/v0.4.0-beta.3
-	git -C ../dscanner submodule update --init --recursive
+$(DSCANNER_DIR):
+	git clone https://github.com/dlang-community/Dscanner $@
+	git -C $@ checkout $(DSCANNER_HASH)
+	git -C $@ submodule update --init --recursive
 
-../dscanner/dsc: ../dscanner
+$(DSCANNER_DIR)/dsc: | $(DSCANNER_DIR) $(DMD) $(LIB)
 	# debug build is faster, but disable 'missing import' messages (missing core from druntime)
-	sed 's/dparse_verbose/StdLoggerDisableWarning/' ../dscanner/makefile > dscanner_makefile_tmp
-	mv dscanner_makefile_tmp ../dscanner/makefile
-	make -C ../dscanner githash debug
+	sed 's/dparse_verbose/StdLoggerDisableWarning/' $(DSCANNER_DIR)/makefile > $(DSCANNER_DIR)/dscanner_makefile_tmp
+	mv $(DSCANNER_DIR)/dscanner_makefile_tmp $(DSCANNER_DIR)/makefile
+	DC=$(abspath $(DMD)) DFLAGS="$(DFLAGS) -defaultlib=$(LIB)" $(MAKE) -C $(DSCANNER_DIR) githash debug
 
-style: ../dscanner/dsc
+style: publictests style_lint
+
+# runs static code analysis with Dscanner
+dscanner: | $(DSCANNER_DIR)/dsc
+	@echo "Running DScanner"
+	$(DEBUGGER) -return-child-result -q -ex run -ex bt -batch --args $(DSCANNER_DIR)/dsc --config .dscanner.ini --styleCheck etc std -I.
+
+style_lint: dscanner $(LIB)
 	@echo "Check for trailing whitespace"
 	grep -nr '[[:blank:]]$$' etc std ; test $$? -eq 1
 
 	@echo "Enforce whitespace before opening parenthesis"
-	grep -nrE "(for|foreach|foreach_reverse|if|while|switch|catch)\(" $$(find . -name '*.d') ; test $$? -eq 1
+	grep -nrE "(for|foreach|foreach_reverse|if|while|switch|catch)\(" $$(find etc std -name '*.d') ; test $$? -eq 1
 
 	@echo "Enforce whitespace between colon(:) for import statements (doesn't catch everything)"
-	grep -nr 'import [^/,=]*:.*;' $$(find . -name '*.d') | grep -vE "import ([^ ]+) :\s"; test $$? -eq 1
+	grep -nr 'import [^/,=]*:.*;' $$(find etc std -name '*.d') | grep -vE "import ([^ ]+) :\s"; test $$? -eq 1
 
 	@echo "Check for package wide std.algorithm imports"
-	grep -nr 'import std.algorithm : ' $$(find . -name '*.d') ; test $$? -eq 1
+	grep -nr 'import std.algorithm : ' $$(find etc std -name '*.d') ; test $$? -eq 1
 
 	@echo "Enforce Allman style"
-	grep -nrE '(if|for|foreach|foreach_reverse|while|unittest|switch|else|version) .*{$$' $$(find . -name '*.d'); test $$? -eq 1
+	grep -nrE '(if|for|foreach|foreach_reverse|while|unittest|switch|else|version) .*{$$' $$(find etc std -name '*.d'); test $$? -eq 1
 
 	@echo "Enforce do { to be in Allman style"
-	grep -nr 'do *{$$' $$(find . -name '*.d') ; test $$? -eq 1
+	grep -nr 'do *{$$' $$(find etc std -name '*.d') ; test $$? -eq 1
 
-	# at the moment libdparse has problems to parse some modules (->excludes)
-	@echo "Running DScanner"
-	../dscanner/dsc --config .dscanner.ini --styleCheck $$(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d') -I.
+	@echo "Enforce no space between assert and the opening brace, i.e. assert("
+	grep -nrE 'assert +\(' $$(find etc std -name '*.d') ; test $$? -eq 1
 
-publictests: $(LIB)
-	# parse all public unittests from Phobos, for now some modules are excluded
-	rm -rf ./out
-	DFLAGS="$(DFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL)" $(DUB) --compiler=$${PWD}/$(DMD) --single ../tools/phobos_tests_extractor.d -- --inputdir . --ignore "allocator/allocator_list.d,allocator/building_blocks/allocator_list.d,allocator/building_blocks/free_list.d,allocator/building_blocks/quantizer,allocator/building_blocks/quantizer,allocator/building_blocks/stats_collector.d,base64.d,bitmanip.d,concurrency.d,conv.d,csv.d,datetime.d,digest/hmac.d,digest/sha.d,file.d,index.d,isemail.d,logger/core.d,logger/nulllogger.d,math.d,ndslice/selection.d,ndslice/slice.d,numeric.d,stdio.d,traits.d,typecons.d,uni.d,utf.d,uuid.d" --outputdir ./out
-	# execute all parsed tests
-	for file in $$(find out -name '*.d'); do echo "executing $${file}" && $(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -main -unittest -run $$file || exit 1 ; done
+	@echo "Enforce space after cast(...)"
+	grep -nrE '[^"]cast\([^)]*?\)[[:alnum:]]' $$(find etc std -name '*.d') ; test $$? -eq 1
+
+	@echo "Enforce space between a .. b"
+	grep -nrE '[[:alnum:]][.][.][[:alnum:]]|[[:alnum:]] [.][.][[:alnum:]]|[[:alnum:]][.][.] [[:alnum:]]' $$(find etc std -name '*.d' | grep -vE 'std/string.d|std/uni.d') ; test $$? -eq 1
+
+	@echo "Enforce space between binary operators"
+	grep -nrE "[[:alnum:]](==|!=|<=|<<|>>|>>>|^^)[[:alnum:]]|[[:alnum:]] (==|!=|<=|<<|>>|>>>|^^)[[:alnum:]]|[[:alnum:]](==|!=|<=|<<|>>|>>>|^^) [[:alnum:]]" $$(find etc std -name '*.d'); test $$? -eq 1
+
+	@echo "Validate changelog files (Do _not_ use REF in the title!)"
+	@for file in $$(find changelog -name '*.dd') ; do  \
+		cat $$file | head -n1 | grep -nqE '\$$\((REF|LINK2|HTTP|MREF)' && \
+		{ echo "$$file: The title line can't contain links - it's already a link" && exit 1; } ;\
+		cat $$file | head -n2 | tail -n1 | grep -q '^$$' || \
+		{ echo "$$file: After the title line an empty, separating line is expected" && exit 1; } ;\
+		cat $$file | head -n3 | tail -n1 | grep -nqE '^.{1,}$$'  || \
+		{ echo "$$file: The title is supposed to be followed by a long description" && exit 1; } ;\
+	done
+
+	@echo "Check that Ddoc runs without errors"
+	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -w -D -Df/dev/null -main -c -o- $$(find etc std -type f -name '*.d') 2>&1
+
+################################################################################
+# Check for missing imports in public unittest examples.
+################################################################################
+publictests: $(addsuffix .publictests,$(D_MODULES))
+
+$(TESTS_EXTRACTOR): $(TOOLS_DIR)/tests_extractor.d | $(LIB)
+	DFLAGS="$(DFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL)" $(DUB) build --force --compiler=$${PWD}/$(DMD) --single $<
+	mv $(TOOLS_DIR)/tests_extractor $@
+
+################################################################################
+# Extract public tests of a module and test them in an separate file (i.e. without its module)
+# This is done to check for potentially missing imports in the examples, e.g.
+# make -f posix.mak std/format.publictests
+################################################################################
+%.publictests: %.d $(LIB) $(TESTS_EXTRACTOR) | $(PUBLICTESTS_DIR)/.directory
+	@$(TESTS_EXTRACTOR) --inputdir  $< --outputdir $(PUBLICTESTS_DIR)
+	@$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -main $(UDFLAGS) -run $(PUBLICTESTS_DIR)/$(subst /,_,$<)
 
 .PHONY : auto-tester-build
 auto-tester-build: all checkwhitespace

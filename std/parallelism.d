@@ -41,12 +41,12 @@ License:    $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0)
 module std.parallelism;
 
 ///
-unittest
+@system unittest
 {
     import std.algorithm.iteration : map;
-    import std.range : iota;
     import std.math : approxEqual;
     import std.parallelism : taskPool;
+    import std.range : iota;
 
     // Parallel reduce can be combined with
     // std.algorithm.iteration.map to interesting effect.
@@ -77,20 +77,14 @@ unittest
 }
 
 import core.atomic;
-import core.exception;
 import core.memory;
 import core.sync.condition;
 import core.thread;
 
-import std.algorithm;
-import std.conv;
-import std.exception;
 import std.functional;
-import std.math;
 import std.meta;
-import std.range;
+import std.range.primitives;
 import std.traits;
-import std.typecons;
 
 version(OSX)
 {
@@ -100,90 +94,91 @@ else version(FreeBSD)
 {
     version = useSysctlbyname;
 }
+else version(DragonFlyBSD)
+{
+    version = useSysctlbyname;
+}
 else version(NetBSD)
 {
     version = useSysctlbyname;
 }
 
+/*
+(For now public undocumented with reserved name.)
 
-version(Windows)
-{
-    // BUGS:  Only works on Windows 2000 and above.
-    shared static this()
-    {
-        import core.sys.windows.windows : SYSTEM_INFO, GetSystemInfo;
+A lazily initialized global constant. The underlying value is a shared global
+statically initialized to `outOfBandValue` which must not be a legit value of
+the constant. Upon the first call the situation is detected and the global is
+initialized by calling `initializer`. The initializer is assumed to be pure
+(even if not marked as such), i.e. return the same value upon repeated calls.
+For that reason, no special precautions are taken so `initializer` may be called
+more than one time leading to benign races on the cached value.
 
-        SYSTEM_INFO si;
-        GetSystemInfo(&si);
-        totalCPUs = max(1, cast(uint) si.dwNumberOfProcessors);
-    }
+In the quiescent state the cost of the function is an atomic load from a global.
 
-}
-else version(linux)
-{
-    shared static this()
-    {
-        import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
-        totalCPUs = cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
-    }
-}
-else version(Solaris)
-{
-    shared static this()
-    {
-        import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
-        totalCPUs = cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
-    }
-}
-else version(useSysctlbyname)
-{
-    extern(C) int sysctlbyname(
-        const char *, void *, size_t *, void *, size_t
-    );
+Params:
+    T = The type of the pseudo-constant (may be qualified)
+    outOfBandValue = A value that cannot be valid, it is used for initialization
+    initializer = The function performing initialization; must be `nothrow`
 
-    shared static this()
+Returns:
+    The lazily initialized value
+*/
+@property pure
+T __lazilyInitializedConstant(T, alias outOfBandValue, alias initializer)()
+if (is(Unqual!T : T)
+    && is(typeof(initializer()) : T)
+    && is(typeof(outOfBandValue) : T))
+{
+    static T impl() nothrow
     {
-        version(OSX)
+        // Thread-local cache
+        static Unqual!T tls = outOfBandValue;
+        auto local = tls;
+        // Shortest path, no atomic operations
+        if (local != outOfBandValue) return local;
+        // Process-level cache
+        static shared Unqual!T result = outOfBandValue;
+        // Initialize both process-level cache and tls
+        local = atomicLoad(result);
+        if (local == outOfBandValue)
         {
-            auto nameStr = "machdep.cpu.core_count\0".ptr;
+            local = initializer();
+            atomicStore(result, local);
         }
-        else version(FreeBSD)
-        {
-            auto nameStr = "hw.ncpu\0".ptr;
-        }
-        else version(NetBSD)
-        {
-            auto nameStr = "hw.ncpu\0".ptr;
-        }
-
-        uint ans;
-        size_t len = uint.sizeof;
-        sysctlbyname(nameStr, &ans, &len, null, 0);
-        totalCPUs = ans;
+        tls = local;
+        return local;
     }
 
-}
-else
-{
-    static assert(0, "Don't know how to get N CPUs on this OS.");
+    import std.traits : SetFunctionAttributes;
+    alias Fun = SetFunctionAttributes!(typeof(&impl), "D",
+        functionAttributes!(typeof(&impl)) | FunctionAttribute.pure_);
+    auto purified = (() @trusted => cast(Fun) &impl)();
+    return purified();
 }
 
-immutable size_t cacheLineSize;
-shared static this()
+// Returns the size of a cache line.
+alias cacheLineSize =
+    __lazilyInitializedConstant!(immutable(size_t), size_t.max, cacheLineSizeImpl);
+
+private size_t cacheLineSizeImpl() @nogc nothrow @trusted
 {
+    size_t result = 0;
     import core.cpuid : datacache;
-    size_t lineSize = 0;
-    foreach (cachelevel; datacache)
+    foreach (ref const cachelevel; datacache)
     {
-        if (cachelevel.lineSize > lineSize && cachelevel.lineSize < uint.max)
+        if (cachelevel.lineSize > result && cachelevel.lineSize < uint.max)
         {
-            lineSize = cachelevel.lineSize;
+            result = cachelevel.lineSize;
         }
     }
-
-    cacheLineSize = lineSize;
+    return result;
 }
 
+@nogc @safe nothrow unittest
+{
+    assert(cacheLineSize == cacheLineSizeImpl);
+}
 
 /* Atomics code.  These forward to core.atomic, but are written like this
    for two reasons:
@@ -248,7 +243,7 @@ private template isSafeTask(F)
         allSatisfy!(noUnsharedAliasing, Parameters!F);
 }
 
-unittest
+@safe unittest
 {
     alias F1 = void function() @safe;
     alias F2 = void function();
@@ -361,7 +356,7 @@ private template isRoundRobin(T)
     enum isRoundRobin = false;
 }
 
-unittest
+@safe unittest
 {
     static assert( isRoundRobin!(RoundRobinBuffer!(void delegate(char[]), bool delegate())));
     static assert(!isRoundRobin!(uint));
@@ -537,6 +532,7 @@ struct Task(alias fun, Args...)
 
     private void enforcePool()
     {
+        import std.exception : enforce;
         enforce(this.pool !is null, "Job not submitted yet.");
     }
 
@@ -633,7 +629,7 @@ struct Task(alias fun, Args...)
 
         if (exception)
         {
-            throw exception;
+            throw exception; // nocoverage
         }
 
         static if (!is(ReturnType == void))
@@ -949,11 +945,68 @@ if (is(typeof(fun(args))) && isSafeTask!F)
     return ret;
 }
 
+version(useSysctlbyname)
+    private extern(C) int sysctlbyname(
+        const char *, void *, size_t *, void *, size_t
+    ) @nogc nothrow;
+
 /**
 The total number of CPU cores available on the current machine, as reported by
 the operating system.
 */
-immutable uint totalCPUs;
+alias totalCPUs =
+    __lazilyInitializedConstant!(immutable(uint), uint.max, totalCPUsImpl);
+
+uint totalCPUsImpl() @nogc nothrow @trusted
+{
+    version(Windows)
+    {
+        // BUGS:  Only works on Windows 2000 and above.
+        import core.sys.windows.windows : SYSTEM_INFO, GetSystemInfo;
+        import std.algorithm.comparison : max;
+        SYSTEM_INFO si;
+        GetSystemInfo(&si);
+        return max(1, cast(uint) si.dwNumberOfProcessors);
+    }
+    else version(linux)
+    {
+        import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
+        return cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
+    }
+    else version(Solaris)
+    {
+        import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
+        return cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
+    }
+    else version(useSysctlbyname)
+    {
+        version(OSX)
+        {
+            auto nameStr = "machdep.cpu.core_count\0".ptr;
+        }
+        else version(FreeBSD)
+        {
+            auto nameStr = "hw.ncpu\0".ptr;
+        }
+        else version(DragonFlyBSD)
+        {
+            auto nameStr = "hw.ncpu\0".ptr;
+        }
+        else version(NetBSD)
+        {
+            auto nameStr = "hw.ncpu\0".ptr;
+        }
+
+        uint result;
+        size_t len = result.sizeof;
+        sysctlbyname(nameStr, &result, &len, null, 0);
+        return result;
+    }
+    else
+    {
+        static assert(0, "Don't know how to get N CPUs on this OS.");
+    }
+}
 
 /*
 This class serves two purposes:
@@ -1152,7 +1205,7 @@ private:
             assert(returned.prev is null);
         }
     }
-    body
+    do
     {
         if (isSingleTask) return null;
 
@@ -1187,6 +1240,8 @@ private:
     }
     out
     {
+        import std.conv : text;
+
         assert(tail.prev !is tail);
         assert(tail.next is null, text(tail.prev, '\t', tail.next));
         if (tail.prev !is null)
@@ -1194,7 +1249,7 @@ private:
             assert(tail.prev.next is tail, text(tail.prev, '\t', tail.next));
         }
     }
-    body
+    do
     {
         // Not using enforce() to save on function call overhead since this
         // is a performance critical function.
@@ -1401,6 +1456,8 @@ public:
     // as public API.
     size_t defaultWorkUnitSize(size_t rangeLen) const @safe pure nothrow
     {
+        import std.algorithm.comparison : max;
+
         if (this.size == 0)
         {
             return rangeLen;
@@ -1527,6 +1584,7 @@ public:
     */
     ParallelForeach!R parallel(R)(R range, size_t workUnitSize)
     {
+        import std.exception : enforce;
         enforce(workUnitSize > 0, "workUnitSize must be > 0.");
         alias RetType = ParallelForeach!R;
         return RetType(this, range, workUnitSize);
@@ -1565,8 +1623,8 @@ public:
         reasons, amap will assume the range elements have not yet been
         initialized. Elements will be overwritten without calling a destructor
         nor doing an assignment. As such, the range must not contain meaningful
-        data: either un-initialized objects, or objects in their $(D .init)
-        state.
+        data$(DDOC_COMMENT not a section): either un-initialized objects, or
+        objects in their $(D .init) state.
 
         ---
         auto numbers = iota(100_000_000.0);
@@ -1640,6 +1698,8 @@ public:
         auto amap(Args...)(Args args)
         if (isRandomAccessRange!(Args[0]))
         {
+            import std.conv : emplaceRef;
+
             alias fun = adjoin!(staticMap!(unaryFun, functions));
 
             alias range = args[0];
@@ -1651,6 +1711,9 @@ public:
                 is(MapType!(Args[0], functions) : ElementType!(Args[$ - 1]))
                 )
             {
+                import std.conv : text;
+                import std.exception : enforce;
+
                 alias buf = args[$ - 1];
                 alias args2 = args[0..$ - 1];
                 alias Args2 = Args[0..$ - 1];
@@ -1664,6 +1727,8 @@ public:
             }
             else
             {
+                import std.array : uninitializedArray;
+
                 auto buf = uninitializedArray!(MapType!(Args[0], functions)[])(len);
                 alias args2 = args;
                 alias Args2 = Args;
@@ -1706,6 +1771,8 @@ public:
 
             void doIt()
             {
+                import std.algorithm.comparison : min;
+
                 scope(failure)
                 {
                     // If an exception is thrown, all threads should bail.
@@ -1726,8 +1793,8 @@ public:
 
                     static if (hasSlicing!R)
                     {
-                        auto subrange = range[start..end];
-                        foreach (i; start..end)
+                        auto subrange = range[start .. end];
+                        foreach (i; start .. end)
                         {
                             emplaceRef(buf[i], fun(subrange.front));
                             subrange.popFront();
@@ -1735,7 +1802,7 @@ public:
                     }
                     else
                     {
-                        foreach (i; start..end)
+                        foreach (i; start .. end)
                         {
                             emplaceRef(buf[i], fun(range[i]));
                         }
@@ -1824,6 +1891,8 @@ public:
         map(S)(S source, size_t bufSize = 100, size_t workUnitSize = size_t.max)
         if (isInputRange!S)
         {
+            import std.exception : enforce;
+
             enforce(workUnitSize == size_t.max || workUnitSize <= bufSize,
                     "Work unit size must be smaller than buffer size.");
             alias fun = adjoin!(staticMap!(unaryFun, functions));
@@ -1854,7 +1923,9 @@ public:
 
                 void popSource()
                 {
-                    static if (__traits(compiles, source[0..source.length]))
+                    import std.algorithm.comparison : min;
+
+                    static if (__traits(compiles, source[0 .. source.length]))
                     {
                         source = source[min(buf1.length, source.length)..source.length];
                     }
@@ -1890,6 +1961,8 @@ public:
                 // No need to copy element by element.
                 FromType dumpToFrom()
                 {
+                    import std.algorithm.mutation : swap;
+
                     assert(source.buf1.length <= from.length);
                     from.length = source.buf1.length;
                     swap(source.buf1, from);
@@ -1926,7 +1999,7 @@ public:
                         from[i++] = source.front;
                     }
 
-                    from = from[0..i];
+                    from = from[0 .. i];
                     return from;
                 }
             }
@@ -1974,8 +2047,11 @@ public:
                 // case.
                 E[] fillBuf(E[] buf)
                 {
+                    import std.algorithm.comparison : min;
+
                     static if (isRandomAccessRange!S)
                     {
+                        import std.range : take;
                         auto toMap = take(source, buf.length);
                         scope(success) popSource();
                     }
@@ -1984,7 +2060,7 @@ public:
                         auto toMap = dumpToFrom();
                     }
 
-                    buf = buf[0..min(buf.length, toMap.length)];
+                    buf = buf[0 .. min(buf.length, toMap.length)];
 
                     // Handle as a special case:
                     if (pool.size == 0)
@@ -2007,7 +2083,8 @@ public:
                 {
                     assert(nextBufTask.prev is null);
                     assert(nextBufTask.next is null);
-                } body
+                }
+                do
                 {
                     // Hack to reuse the task object.
 
@@ -2067,14 +2144,14 @@ public:
                     }
                 }
 
-                static if (std.range.isInfinite!S)
+                static if (isInfinite!S)
                 {
                     enum bool empty = false;
                 }
                 else
                 {
 
-                    bool empty() @property
+                    bool empty() const @property
                     {
                         // popFront() sets this when source is empty
                         return buf1.length == 0;
@@ -2184,7 +2261,7 @@ public:
                     buf[i++] = source.front;
                 }
 
-                buf = buf[0..i];
+                buf = buf[0 .. i];
                 return buf;
             }
 
@@ -2193,7 +2270,8 @@ public:
             {
                 assert(nextBufTask.prev is null);
                 assert(nextBufTask.next is null);
-            } body
+            }
+            do
             {
                 // Hack to reuse the task object.
 
@@ -2247,7 +2325,7 @@ public:
                 }
             }
 
-            static if (std.range.isInfinite!S)
+            static if (isInfinite!S)
             {
                 enum bool empty = false;
             }
@@ -2343,12 +2421,15 @@ public:
     {
         /**
         Parallel reduce on a random access range.  Except as otherwise noted,
-        usage is similar to $(REF _reduce, std,algorithm,iteration).  This
-        function works by splitting the range to be reduced into work units,
-        which are slices to be reduced in parallel.  Once the results from all
-        work units are computed, a final serial reduction is performed on these
-        results to compute the final answer. Therefore, care must be taken to
-        choose the seed value appropriately.
+        usage is similar to $(REF _reduce, std,algorithm,iteration).  There is
+        also $(LREF fold) which does the same thing with a different parameter
+        order.
+
+        This function works by splitting the range to be reduced into work
+        units, which are slices to be reduced in parallel.  Once the results
+        from all work units are computed, a final serial reduction is performed
+        on these results to compute the final answer. Therefore, care must be
+        taken to choose the seed value appropriately.
 
         Because the reduction is being performed in parallel, $(D functions)
         must be associative.  For notational simplicity, let # be an
@@ -2424,9 +2505,19 @@ public:
         After this function is finished executing, any exceptions thrown
         are chained together via $(D Throwable.next) and rethrown.  The chaining
         order is non-deterministic.
+
+        See_Also:
+
+            $(LREF fold) is functionally equivalent to $(LREF _reduce) except the
+            range parameter comes first and there is no need to use
+            $(REF_ALTTEXT $(D tuple),tuple,std,typecons) for multiple seeds.
          */
         auto reduce(Args...)(Args args)
         {
+            import core.exception : OutOfMemoryError;
+            import std.conv : emplaceRef;
+            import std.exception : enforce;
+
             alias fun = reduceAdjoin!functions;
             alias finishFun = reduceFinish!functions;
 
@@ -2517,7 +2608,7 @@ public:
                         lowerBound++;
                     }
 
-                    foreach (i; lowerBound..upperBound)
+                    foreach (i; lowerBound .. upperBound)
                     {
                         result = fun(result, range[i]);
                     }
@@ -2545,7 +2636,7 @@ public:
                 }
 
                 immutable nLoop = subSize - (!explicitSeed);
-                foreach (i; 0..nLoop)
+                foreach (i; 0 .. nLoop)
                 {
                     foreach (j; ilpTuple)
                     {
@@ -2555,7 +2646,7 @@ public:
                 }
 
                 // Finish the remainder.
-                foreach (i; nILP * subSize + lowerBound..upperBound)
+                foreach (i; nILP * subSize + lowerBound .. upperBound)
                 {
                     results[$ - 1] = fun(results[$ - 1], range[i]);
                 }
@@ -2605,7 +2696,7 @@ public:
             import core.stdc.stdlib : malloc, free;
             if (nBytesNeeded < maxStack)
             {
-                tasks = (cast(RTask*) buf.ptr)[0..nWorkUnits];
+                tasks = (cast(RTask*) buf.ptr)[0 .. nWorkUnits];
             }
             else
             {
@@ -2617,7 +2708,7 @@ public:
                     );
                 }
 
-                tasks = ptr[0..nWorkUnits];
+                tasks = ptr[0 .. nWorkUnits];
             }
 
             scope(exit)
@@ -2642,6 +2733,8 @@ public:
             size_t curPos = 0;
             void useTask(ref RTask task)
             {
+                import std.algorithm.comparison : min;
+
                 task.pool = this;
                 task._args[0] = scopedAddress(&reduceOnRange);
                 task._args[3] = min(len, curPos + workUnitSize);  // upper bound.
@@ -2656,7 +2749,7 @@ public:
                 useTask(task);
             }
 
-            foreach (i; 1..tasks.length - 1)
+            foreach (i; 1 .. tasks.length - 1)
             {
                 tasks[i].next = tasks[i + 1].basePtr;
                 tasks[i + 1].prev = tasks[i].basePtr;
@@ -2696,7 +2789,7 @@ public:
             // done or in progress.  Force all of them.
             E result = seed;
 
-            Throwable firstException, lastException;
+            Throwable firstException;
 
             foreach (ref task; tasks)
             {
@@ -2706,7 +2799,10 @@ public:
                 }
                 catch (Throwable e)
                 {
-                    addToChain(e, firstException, lastException);
+                    /* Chain e to front because order doesn't matter and because
+                     * e is not likely to be a chain itself (so fewer traversals)
+                     */
+                    firstException = Throwable.chainTogether(e, firstException);
                     continue;
                 }
 
@@ -2717,6 +2813,128 @@ public:
 
             return result;
         }
+    }
+
+    ///
+    template fold(functions...)
+    {
+        /** Implements the homonym function (also known as `accumulate`, `compress`,
+            `inject`, or `foldl`) present in various programming languages of
+            functional flavor.
+
+            `fold` is functionally equivalent to $(LREF reduce) except the range
+            parameter comes first and there is no need to use $(REF_ALTTEXT
+            `tuple`,tuple,std,typecons) for multiple seeds.
+
+            There may be one or more callable entities (`functions` argument) to
+            apply.
+
+            Params:
+                args = Just the range to _fold over; or the range and one seed
+                       per function; or the range, one seed per function, and
+                       the work unit size
+
+            Returns:
+                The accumulated result as a single value for single function and
+                as a tuple of values for multiple functions
+
+            See_Also:
+            Similar to $(REF _fold, std,algorithm,iteration), `fold` is a wrapper around $(LREF reduce).
+
+            Example:
+            ---
+            static int adder(int a, int b)
+            {
+                return a + b;
+            }
+            static int multiplier(int a, int b)
+            {
+                return a * b;
+            }
+
+            // Just the range
+            auto x = taskPool.fold!adder([1, 2, 3, 4]);
+            assert(x == 10);
+
+            // The range and the seeds (0 and 1 below; also note multiple
+            // functions in this example)
+            auto y = taskPool.fold!(adder, multiplier)([1, 2, 3, 4], 0, 1);
+            assert(y[0] == 10);
+            assert(y[1] == 24);
+
+            // The range, the seed (0), and the work unit size (20)
+            auto z = taskPool.fold!adder([1, 2, 3, 4], 0, 20);
+            assert(z == 10);
+            ---
+        */
+        auto fold(Args...)(Args args)
+        {
+            static assert(isInputRange!(Args[0]), "First argument must be an InputRange");
+
+            alias range = args[0];
+
+            static if (Args.length == 1)
+            {
+                // Just the range
+                return reduce!functions(range);
+            }
+            else static if (Args.length == 1 + functions.length ||
+                            Args.length == 1 + functions.length + 1)
+            {
+                static if (functions.length == 1)
+                {
+                    alias seeds = args[1];
+                }
+                else
+                {
+                    auto seeds()
+                    {
+                        import std.typecons : tuple;
+                        return tuple(args[1 .. functions.length+1]);
+                    }
+                }
+
+                static if (Args.length == 1 + functions.length)
+                {
+                    // The range and the seeds
+                    return reduce!functions(seeds, range);
+                }
+                else static if (Args.length == 1 + functions.length + 1)
+                {
+                    // The range, the seeds, and the work unit size
+                    static assert(isIntegral!(Args[$-1]), "Work unit size must be an integral type");
+                    return reduce!functions(seeds, range, args[$-1]);
+                }
+            }
+            else
+            {
+                import std.conv : text;
+                static assert(0, "Invalid number of arguments (" ~ Args.length.text ~ "): Should be an input range, "
+                              ~ functions.length.text ~ " optional seed(s), and an optional work unit size.");
+            }
+        }
+    }
+
+    // This test is not included in the documentation because even though these
+    // examples are for the inner fold() template, with their current location,
+    // they would appear under the outer one. (We can't move this inside the
+    // outer fold() template because then dmd runs out of memory possibly due to
+    // recursive template instantiation, which is surprisingly not caught.)
+    @system unittest
+    {
+        // Just the range
+        auto x = taskPool.fold!"a + b"([1, 2, 3, 4]);
+        assert(x == 10);
+
+        // The range and the seeds (0 and 1 below; also note multiple
+        // functions in this example)
+        auto y = taskPool.fold!("a + b", "a * b")([1, 2, 3, 4], 0, 1);
+        assert(y[0] == 10);
+        assert(y[1] == 24);
+
+        // The range, the seed (0), and the work unit size (20)
+        auto z = taskPool.fold!"a + b"([1, 2, 3, 4], 0, 20);
+        assert(z == 10);
     }
 
     /**
@@ -2858,16 +3076,17 @@ public:
             // Cache line align data ptr.
             data = cast(void*) roundToLine(cast(size_t) data);
 
-            foreach (i; 0..nElem)
+            foreach (i; 0 .. nElem)
             {
                 this.opIndex(i) = T.init;
             }
         }
 
-        ref T opIndex(size_t index)
+        ref opIndex(this Qualified)(size_t index)
         {
+            import std.conv : text;
             assert(index < size, text(index, '\t', uint.max));
-            return *(cast(T*) (data + elemSize * index));
+            return *(cast(CopyTypeQualifiers!(Qualified, T)*) (data + elemSize * index));
         }
 
         void opIndexAssign(T val, size_t index)
@@ -2890,7 +3109,7 @@ public:
         failure will result when calling this method.  This is not checked
         when assertions are disabled for performance reasons.
          */
-        ref T get() @property
+        ref get(this Qualified)() @property
         {
             assert(*stillThreadLocal,
                 "Cannot call get() on this instance of WorkerLocalStorage " ~
@@ -2970,12 +3189,12 @@ public:
         }
 
     public:
-        ref T front() @property
+        ref front(this Qualified)() @property
         {
             return this[0];
         }
 
-        ref T back() @property
+        ref back(this Qualified)() @property
         {
             return this[_length - 1];
         }
@@ -3002,7 +3221,7 @@ public:
             return this;
         }
 
-        ref T opIndex(size_t index)
+        ref opIndex(this Qualified)(size_t index)
         {
             assert(index < _length);
             return workerLocalStorage[index + beginOffset];
@@ -3023,12 +3242,12 @@ public:
             return typeof(this)(newWl);
         }
 
-        bool empty() @property
+        bool empty() const @property
         {
             return length == 0;
         }
 
-        size_t length() @property
+        size_t length() const @property
         {
             return _length;
         }
@@ -3044,7 +3263,7 @@ public:
     {
         WorkerLocalStorage!T ret;
         ret.initialize(this);
-        foreach (i; 0..size + 1)
+        foreach (i; 0 .. size + 1)
         {
             ret[i] = initialVal;
         }
@@ -3168,6 +3387,7 @@ public:
     void put(alias fun, Args...)(Task!(fun, Args)* task)
     if (!isSafeReturn!(typeof(*task)))
     {
+        import std.exception : enforce;
         enforce(task !is null, "Cannot put a null Task on a TaskPool queue.");
         put(*task);
     }
@@ -3182,6 +3402,7 @@ public:
     @trusted void put(alias fun, Args...)(Task!(fun, Args)* task)
     if (isSafeReturn!(typeof(*task)))
     {
+        import std.exception : enforce;
         enforce(task !is null, "Cannot put a null Task on a TaskPool queue.");
         put(*task);
     }
@@ -3248,6 +3469,28 @@ public:
     }
 }
 
+@system unittest
+{
+    import std.algorithm.iteration : sum;
+    import std.range : iota;
+    import std.typecons : tuple;
+
+    enum N = 100;
+    auto r = iota(1, N + 1);
+    const expected = r.sum();
+
+    // Just the range
+    assert(taskPool.fold!"a + b"(r) == expected);
+
+    // Range and seeds
+    assert(taskPool.fold!"a + b"(r, 0) == expected);
+    assert(taskPool.fold!("a + b", "a + b")(r, 0, 0) == tuple(expected, expected));
+
+    // Range, seeds, and work unit size
+    assert(taskPool.fold!"a + b"(r, 0, 42) == expected);
+    assert(taskPool.fold!("a + b", "a + b")(r, 0, 0, 42) == tuple(expected, expected));
+}
+
 /**
 Returns a lazily initialized global instantiation of $(D TaskPool).
 This function can safely be called concurrently from multiple non-worker
@@ -3266,11 +3509,7 @@ terminating the main thread.
     }());
 }
 
-private shared uint _defaultPoolThreads;
-shared static this()
-{
-    atomicStore(_defaultPoolThreads, totalCPUs - 1);
-}
+private shared uint _defaultPoolThreads = uint.max;
 
 /**
 These properties get and set the number of worker threads in the $(D TaskPool)
@@ -3280,7 +3519,8 @@ number of worker threads in the instance returned by $(D taskPool).
 */
 @property uint defaultPoolThreads() @trusted
 {
-    return atomicLoad(_defaultPoolThreads);
+    const local = atomicLoad(_defaultPoolThreads);
+    return local < uint.max ? local : totalCPUs - 1;
 }
 
 /// Ditto
@@ -3340,6 +3580,7 @@ private void submitAndExecute(
     scope void delegate() doIt
 )
 {
+    import core.exception : OutOfMemoryError;
     immutable nThreads = pool.size + 1;
 
     alias PTask = typeof(scopedTask(doIt));
@@ -3359,13 +3600,13 @@ private void submitAndExecute(
     PTask[] tasks;
     if (nThreads <= nBuf)
     {
-        tasks = (cast(PTask*) buf.ptr)[0..nThreads];
+        tasks = (cast(PTask*) buf.ptr)[0 .. nThreads];
     }
     else
     {
         auto ptr = cast(PTask*) malloc(nThreads * PTask.sizeof);
         if (!ptr) throw new OutOfMemoryError("Out of memory in std.parallelism.");
-        tasks = ptr[0..nThreads];
+        tasks = ptr[0 .. nThreads];
     }
 
     scope(exit)
@@ -3391,7 +3632,7 @@ private void submitAndExecute(
         t.pool = pool;
     }
 
-    foreach (i; 1..tasks.length - 1)
+    foreach (i; 1 .. tasks.length - 1)
     {
         tasks[i].next = tasks[i + 1].basePtr;
         tasks[i + 1].prev = tasks[i].basePtr;
@@ -3416,7 +3657,7 @@ private void submitAndExecute(
         }
         catch (Throwable e)
         {
-            tasks[0].exception = e;
+            tasks[0].exception = e; // nocoverage
         }
         tasks[0].taskStatus = TaskStatus.done;
 
@@ -3427,7 +3668,7 @@ private void submitAndExecute(
         }
     }
 
-    Throwable firstException, lastException;
+    Throwable firstException;
 
     foreach (i, ref task; tasks)
     {
@@ -3437,7 +3678,10 @@ private void submitAndExecute(
         }
         catch (Throwable e)
         {
-            addToChain(e, firstException, lastException);
+            /* Chain e to front because order doesn't matter and because
+             * e is not likely to be a chain itself (so fewer traversals)
+             */
+            firstException = Throwable.chainTogether(e, firstException);
             continue;
         }
     }
@@ -3471,7 +3715,7 @@ int doSizeZeroCase(R, Delegate)(ref ParallelForeach!R p, Delegate dg)
                 {
                     res = dg(elem);
                 }
-                if (res) foreachErr();
+                if (res) break;
                 index++;
             }
         }
@@ -3487,10 +3731,11 @@ int doSizeZeroCase(R, Delegate)(ref ParallelForeach!R p, Delegate dg)
                 {
                     res = dg(elem);
                 }
-                if (res) foreachErr();
+                if (res) break;
                 index++;
             }
         }
+        if (res) foreachErr;
         return res;
     }
 }
@@ -3513,6 +3758,8 @@ private enum string parallelApplyMixinRandomAccess = q{
 
     void doIt()
     {
+        import std.algorithm.comparison : min;
+
         scope(failure)
         {
             // If an exception is thrown, all threads should bail.
@@ -3531,7 +3778,7 @@ private enum string parallelApplyMixinRandomAccess = q{
 
             immutable end = min(len, start + workUnitSize);
 
-            foreach (i; start..end)
+            foreach (i; start .. end)
             {
                 static if (withIndex)
                 {
@@ -3610,6 +3857,7 @@ enum string parallelApplyMixinInputRange = q{
             size_t makeTemp()
             {
                 import std.algorithm.internal : addressOf;
+                import std.array : uninitializedArray;
 
                 if (temp is null)
                 {
@@ -3625,7 +3873,7 @@ enum string parallelApplyMixinInputRange = q{
                     temp[i] = addressOf(range.front);
                 }
 
-                temp = temp[0..i];
+                temp = temp[0 .. i];
                 auto ret = nPopped;
                 nPopped += temp.length;
                 return ret;
@@ -3641,6 +3889,8 @@ enum string parallelApplyMixinInputRange = q{
             // Returns:  The previous value of nPopped.
             static if (!bufferTrick) size_t makeTemp()
             {
+                import std.array : uninitializedArray;
+
                 if (temp is null)
                 {
                     temp = uninitializedArray!Temp(workUnitSize);
@@ -3655,7 +3905,7 @@ enum string parallelApplyMixinInputRange = q{
                     temp[i] = range.front;
                 }
 
-                temp = temp[0..i];
+                temp = temp[0 .. i];
                 auto ret = nPopped;
                 nPopped += temp.length;
                 return ret;
@@ -3663,6 +3913,7 @@ enum string parallelApplyMixinInputRange = q{
 
             static if (bufferTrick) size_t makeTemp()
             {
+                import std.algorithm.mutation : swap;
                 rangeMutex.lock();
                 scope(exit) rangeMutex.unlock();
 
@@ -3695,7 +3946,7 @@ enum string parallelApplyMixinInputRange = q{
                 break;
             }
 
-            foreach (i; 0..temp.length)
+            foreach (i; 0 .. temp.length)
             {
                 scope(success) overallIndex++;
 
@@ -3730,38 +3981,6 @@ enum string parallelApplyMixinInputRange = q{
     return 0;
 };
 
-// Calls e.next until the end of the chain is found.
-private Throwable findLastException(Throwable e) pure nothrow
-{
-    if (e is null) return null;
-
-    while (e.next)
-    {
-        e = e.next;
-    }
-
-    return e;
-}
-
-// Adds e to the exception chain.
-private void addToChain(
-    Throwable e,
-    ref Throwable firstException,
-    ref Throwable lastException
-) pure nothrow
-{
-    if (firstException)
-    {
-        assert(lastException);
-        lastException.next = e;
-        lastException = findLastException(e);
-    }
-    else
-    {
-        firstException = e;
-        lastException = findLastException(e);
-    }
-}
 
 private struct ParallelForeach(R)
 {
@@ -3848,7 +4067,7 @@ private struct RoundRobinBuffer(C1, C2)
     {
         assert(!empty);
     }
-    body
+    do
     {
         scope(success) primed = true;
         nextDel(bufs[index]);
@@ -3860,7 +4079,7 @@ private struct RoundRobinBuffer(C1, C2)
     {
         assert(!empty);
     }
-    body
+    do
     {
         if (!primed) prime();
         return bufs[index];
@@ -3894,8 +4113,17 @@ version(unittest)
 
 // These test basic functionality but don't stress test for threading bugs.
 // These are the tests that should be run every time Phobos is compiled.
-unittest
+@system unittest
 {
+    import std.algorithm.comparison : equal, min, max;
+    import std.algorithm.iteration : filter, map, reduce;
+    import std.array : split;
+    import std.conv : text;
+    import std.exception : assertThrown;
+    import std.math : approxEqual, sqrt, log;
+    import std.range : indexed, iota, join;
+    import std.typecons : Tuple, tuple;
+
     poolInstance = new TaskPool(2);
     scope(exit) poolInstance.stop();
 
@@ -4040,12 +4268,12 @@ unittest
 
     // Test amap with a non-array buffer.
     auto toIndex = new int[5];
-    auto indexed = std.range.indexed(toIndex, [3, 1, 4, 0, 2]);
-    poolInstance.amap!"a * 2"([1, 2, 3, 4, 5], indexed);
-    assert(equal(indexed, [2, 4, 6, 8, 10]));
+    auto ind = indexed(toIndex, [3, 1, 4, 0, 2]);
+    poolInstance.amap!"a * 2"([1, 2, 3, 4, 5], ind);
+    assert(equal(ind, [2, 4, 6, 8, 10]));
     assert(equal(toIndex, [8, 4, 10, 2, 6]));
-    poolInstance.amap!"a / 2"(indexed, indexed);
-    assert(equal(indexed, [1, 2, 3, 4, 5]));
+    poolInstance.amap!"a / 2"(ind, ind);
+    assert(equal(ind, [1, 2, 3, 4, 5]));
     assert(equal(toIndex, [4, 2, 5, 1, 3]));
 
     auto buf = new int[5];
@@ -4062,7 +4290,7 @@ unittest
     assert(poolInstance.reduce!("a + b", "a * b")(tuple(0, 1), [1,2,3,4]) ==
            tuple(10, 24));
 
-    immutable serialAns = std.algorithm.reduce!"a + b"(iota(1000));
+    immutable serialAns = reduce!"a + b"(iota(1000));
     assert(poolInstance.reduce!"a + b"(0, iota(1000)) == serialAns);
     assert(poolInstance.reduce!"a + b"(iota(1000)) == serialAns);
 
@@ -4076,8 +4304,8 @@ unittest
     auto wlRange = wl.toRange;
     auto parallelSum = poolInstance.reduce!"a + b"(wlRange);
     assert(parallelSum == 499500);
-    assert(wlRange[0..1][0] == wlRange[0]);
-    assert(wlRange[1..2][0] == wlRange[1]);
+    assert(wlRange[0 .. 1][0] == wlRange[0]);
+    assert(wlRange[1 .. 2][0] == wlRange[1]);
 
     // Test finish()
     {
@@ -4123,7 +4351,7 @@ unittest
 
     assert(equal(
                poolInstance.map!"a * a"(iota(30_000_001), 10_000),
-               std.algorithm.map!"a * a"(iota(30_000_001))
+               map!"a * a"(iota(30_000_001))
            ));
 
     // The filter is to kill random access and test the non-random access
@@ -4132,7 +4360,7 @@ unittest
                poolInstance.map!"a * a"(
                    filter!"a == a"(iota(30_000_001)
                                   ), 10_000, 1000),
-               std.algorithm.map!"a * a"(iota(30_000_001))
+               map!"a * a"(iota(30_000_001))
            ));
 
     assert(
@@ -4140,7 +4368,7 @@ unittest
                        poolInstance.map!"a * a"(iota(3_000_001), 10_000)
                       ) ==
         reduce!"a + b"(0UL,
-                       std.algorithm.map!"a * a"(iota(3_000_001))
+                       map!"a * a"(iota(3_000_001))
                       )
     );
 
@@ -4150,6 +4378,7 @@ unittest
            ));
 
     {
+        import std.conv : to;
         import std.file : deleteme;
 
         string temp_file = deleteme ~ "-tempDelMe.txt";
@@ -4296,7 +4525,7 @@ unittest
 // tons of stuff and should not be run every time make unittest is run.
 version(parallelismStressTest)
 {
-    unittest
+    @safe unittest
     {
         size_t attempt;
         for (; attempt < 10; attempt++)
@@ -4313,7 +4542,7 @@ version(parallelismStressTest)
             }
 
             // Make sure it works.
-            foreach (i; 0..numbers.length)
+            foreach (i; 0 .. numbers.length)
             {
                 assert(numbers[i] == i);
             }
@@ -4379,9 +4608,9 @@ version(parallelismStressTest)
 
     // These unittests are intended more for actual testing and not so much
     // as examples.
-    unittest
+    @safe unittest
     {
-        foreach (attempt; 0..10)
+        foreach (attempt; 0 .. 10)
         foreach (poolSize; [0, 4])
         {
             poolInstance = new TaskPool(poolSize);
@@ -4490,7 +4719,7 @@ version(parallelismStressTest)
                 // Test work waiting.
                 static void uselessFun()
                 {
-                    foreach (i; 0..1_000_000) {}
+                    foreach (i; 0 .. 1_000_000) {}
                 }
 
                 auto uselessTasks = new typeof(task(&uselessFun))[1000];
@@ -4545,33 +4774,46 @@ version(unittest)
 {
     struct __S_12733
     {
-        invariant() { assert(checksum == 1234567890); }
+        invariant() { assert(checksum == 1_234_567_890); }
         this(ulong u){n = u;}
         void opAssign(__S_12733 s){this.n = s.n;}
         ulong n;
-        ulong checksum = 1234567890;
+        ulong checksum = 1_234_567_890;
     }
 
     static auto __genPair_12733(ulong n) { return __S_12733(n); }
 }
 
-unittest
+@system unittest
 {
     immutable ulong[] data = [ 2UL^^59-1, 2UL^^59-1, 2UL^^59-1, 112_272_537_195_293UL ];
 
     auto result = taskPool.amap!__genPair_12733(data);
 }
 
-unittest
+@safe unittest
 {
+    import std.range : iota;
+
     // this test was in std.range, but caused cycles.
     assert(__traits(compiles, { foreach (i; iota(0, 100UL).parallel) {} }));
 }
 
-unittest
+@safe unittest
 {
+    import std.algorithm.iteration : each;
+
     long[] arr;
     static assert(is(typeof({
         arr.parallel.each!"a++";
     })));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=17539
+@system unittest
+{
+    import std.random : rndGen;
+    // ensure compilation
+    try foreach (rnd; rndGen.parallel) break;
+    catch (ParallelForeachError e) {}
 }

@@ -1,4 +1,7 @@
-///
+// Written in the D programming language.
+/**
+Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/_scoped_allocator.d)
+*/
 module std.experimental.allocator.building_blocks.scoped_allocator;
 
 import std.experimental.allocator.common;
@@ -17,14 +20,19 @@ simpler design combining $(D AllocatorList) with $(D Region) is recommended.
 */
 struct ScopedAllocator(ParentAllocator)
 {
-    unittest
+    static if (!stateSize!ParentAllocator)
     {
-        testAllocator!(() => ScopedAllocator());
+        // This test is available only for stateless allocators
+        version(unittest)
+        @system unittest
+        {
+            testAllocator!(() => ScopedAllocator());
+        }
     }
 
-    private import std.experimental.allocator.building_blocks.affix_allocator
+    import std.experimental.allocator.building_blocks.affix_allocator
         : AffixAllocator;
-    private import std.traits : hasMember;
+    import std.traits : hasMember;
     import std.typecons : Ternary;
 
     private struct Node
@@ -102,9 +110,9 @@ struct ScopedAllocator(ParentAllocator)
     bool expand(ref void[] b, size_t delta)
     {
         auto result = parent.expand(b, delta);
-        if (result && b.ptr)
+        if (result && b)
         {
-            parent.prefix(b).length = b.length;
+            () @trusted { parent.prefix(b).length = b.length; }();
         }
         return result;
     }
@@ -184,6 +192,7 @@ struct ScopedAllocator(ParentAllocator)
     Returns `Ternary.yes` if this allocator is not responsible for any memory,
     `Ternary.no` otherwise. (Never returns `Ternary.unknown`.)
     */
+    pure nothrow @safe @nogc
     Ternary empty() const
     {
         return Ternary(root is null);
@@ -191,7 +200,7 @@ struct ScopedAllocator(ParentAllocator)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     import std.typecons : Ternary;
@@ -202,13 +211,13 @@ unittest
     assert(alloc.empty == Ternary.no);
 }
 
-unittest
+@system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     testAllocator!(() => ScopedAllocator!GCAllocator());
 }
 
-unittest // https://issues.dlang.org/show_bug.cgi?id=16046
+@system unittest // https://issues.dlang.org/show_bug.cgi?id=16046
 {
     import std.exception;
     import std.experimental.allocator;
@@ -218,4 +227,65 @@ unittest // https://issues.dlang.org/show_bug.cgi?id=16046
     auto bar = alloc.make!int(2).enforce;
     alloc.dispose(foo);
     alloc.dispose(bar); // segfault here
+}
+
+@system unittest
+{
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    ScopedAllocator!GCAllocator a;
+
+    assert(__traits(compiles, (() nothrow @safe @nogc => a.goodAllocSize(0))()));
+    // goodAllocSize is not pure because we are calling through Allocator.instance
+    assert(!__traits(compiles, (() pure nothrow @safe @nogc => a.goodAllocSize(0))()));
+
+    // Ensure deallocate inherits from parent allocators
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    () nothrow @nogc { a.deallocate(b); }();
+}
+
+// Test that deallocateAll infers from parent
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+
+    ScopedAllocator!(Region!()) a;
+    a.parent.parent = Region!()(new ubyte[1024 * 64]);
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    assert((() pure nothrow @safe @nogc => a.expand(b, 22))());
+    assert(b.length == 64);
+    assert((() nothrow @nogc => a.reallocate(b, 100))());
+    assert(b.length == 100);
+    assert((() nothrow @nogc => a.deallocateAll())());
+}
+
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.typecons : Ternary;
+
+    auto a = Region!(Mallocator)(1024 * 64);
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    assert((() pure nothrow @safe @nogc => a.expand(b, 22))());
+    assert(b.length == 64);
+    assert((() pure nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
+    assert((() nothrow @nogc => a.reallocate(b, 100))());
+    assert(b.length == 100);
+    assert((() pure nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
+    assert((() pure nothrow @safe @nogc => a.owns(null))() == Ternary.no);
+}
+
+// Test empty
+@system unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.typecons : Ternary;
+    ScopedAllocator!Mallocator alloc;
+
+    assert((() pure nothrow @safe @nogc => alloc.empty)() == Ternary.yes);
+    const b = alloc.allocate(10);
+    assert((() pure nothrow @safe @nogc => alloc.empty)() == Ternary.no);
 }

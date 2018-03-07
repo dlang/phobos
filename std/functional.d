@@ -7,41 +7,42 @@ This module provides functions for compile time function composition. These
 functions are helpful when constructing predicates for the algorithms in
 $(MREF std, algorithm) or $(MREF std, range).
 
+$(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)
 )
-    $(TR $(TD $(D $(LREF adjoin)))
+    $(TR $(TD $(LREF adjoin))
         $(TD Joins a couple of functions into one that executes the original
         functions independently and returns a tuple with all the results.
     ))
-    $(TR $(TD $(D $(LREF compose)), $(D $(LREF pipe)))
+    $(TR $(TD $(LREF compose), $(LREF pipe))
         $(TD Join a couple of functions into one that executes the original
         functions one after the other, using one function's result for the next
         function's argument.
     ))
-    $(TR $(TD $(D $(LREF forward)))
+    $(TR $(TD $(LREF forward))
         $(TD Forwards function arguments while saving ref-ness.
     ))
-    $(TR $(TD $(D $(LREF lessThan)), $(D $(LREF greaterThan)), $(D $(LREF equalTo)))
+    $(TR $(TD $(LREF lessThan), $(LREF greaterThan), $(LREF equalTo))
         $(TD Ready-made predicate functions to compare two values.
     ))
-    $(TR $(TD $(D $(LREF memoize)))
+    $(TR $(TD $(LREF memoize))
         $(TD Creates a function that caches its result for fast re-evaluation.
     ))
-    $(TR $(TD $(D $(LREF not)))
+    $(TR $(TD $(LREF not))
         $(TD Creates a function that negates another.
     ))
-    $(TR $(TD $(D $(LREF partial)))
+    $(TR $(TD $(LREF partial))
         $(TD Creates a function that binds the first argument of a given function
         to a given value.
     ))
-    $(TR $(TD $(D $(LREF reverseArgs)), $(D $(LREF binaryReverseArgs)))
+    $(TR $(TD $(LREF reverseArgs), $(LREF binaryReverseArgs))
         $(TD Predicate that reverses the order of its arguments.
     ))
-    $(TR $(TD $(D $(LREF toDelegate)))
+    $(TR $(TD $(LREF toDelegate))
         $(TD Converts a callable to a delegate.
     ))
-    $(TR $(TD $(D $(LREF unaryFun)), $(D $(LREF binaryFun)))
+    $(TR $(TD $(LREF unaryFun), $(LREF binaryFun))
         $(TD Create a unary or binary function from a string. Most often
         used when defining algorithms on ranges.
     ))
@@ -104,8 +105,8 @@ template unaryFun(alias fun, string parmName = "a")
     {
         static if (!fun._ctfeMatchUnary(parmName))
         {
-            import std.traits, std.typecons, std.meta;
             import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
+            import std.meta, std.traits, std.typecons;
         }
         auto unaryFun(ElementType)(auto ref ElementType __a)
         {
@@ -189,8 +190,8 @@ template binaryFun(alias fun, string parm1Name = "a",
     {
         static if (!fun._ctfeMatchBinary(parm1Name, parm2Name))
         {
-            import std.traits, std.typecons, std.meta;
             import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
+            import std.meta, std.traits, std.typecons;
         }
         auto binaryFun(ElementType1, ElementType2)
             (auto ref ElementType1 __a, auto ref ElementType2 __b)
@@ -254,7 +255,7 @@ template binaryFun(alias fun, string parm1Name = "a",
     static assert(!is(typeof(binaryFun!FuncObj)));
 }
 
-// skip all ASCII chars except a..z, A..Z, 0..9, '_' and '.'.
+// skip all ASCII chars except a .. z, A .. Z, 0 .. 9, '_' and '.'.
 private uint _ctfeSkipOp(ref string op)
 {
     if (!__ctfe) assert(false);
@@ -292,7 +293,7 @@ private uint _ctfeSkipInteger(ref string op)
 private uint _ctfeSkipName(ref string op, string name)
 {
     if (!__ctfe) assert(false);
-    if (op.length >= name.length && op[0..name.length] == name)
+    if (op.length >= name.length && op[0 .. name.length] == name)
     {
         op = op[name.length..$];
         return 1;
@@ -334,9 +335,9 @@ private uint _ctfeMatchUnary(string fun, string name)
     static assert(_ctfeMatchUnary("a+a", "a"));
     static assert(_ctfeMatchUnary("a + 10", "a"));
     static assert(_ctfeMatchUnary("4 == a", "a"));
-    static assert(_ctfeMatchUnary("2==a", "a"));
+    static assert(_ctfeMatchUnary("2 == a", "a"));
     static assert(_ctfeMatchUnary("1 != a", "a"));
-    static assert(_ctfeMatchUnary("a!=4", "a"));
+    static assert(_ctfeMatchUnary("a != 4", "a"));
     static assert(_ctfeMatchUnary("a< 1", "a"));
     static assert(_ctfeMatchUnary("434 < a", "a"));
     static assert(_ctfeMatchUnary("132 > a", "a"));
@@ -382,9 +383,9 @@ private uint _ctfeMatchBinary(string fun, string name1, string name2)
     static assert(_ctfeMatchBinary("a+a", "a", "b"));
     static assert(_ctfeMatchBinary("a + 10", "a", "b"));
     static assert(_ctfeMatchBinary("4 == a", "a", "b"));
-    static assert(_ctfeMatchBinary("2==a", "a", "b"));
+    static assert(_ctfeMatchBinary("2 == a", "a", "b"));
     static assert(_ctfeMatchBinary("1 != a", "a", "b"));
-    static assert(_ctfeMatchBinary("a!=4", "a", "b"));
+    static assert(_ctfeMatchBinary("a != 4", "a", "b"));
     static assert(_ctfeMatchBinary("a< 1", "a", "b"));
     static assert(_ctfeMatchBinary("434 < a", "a", "b"));
     static assert(_ctfeMatchBinary("132 > a", "a", "b"));
@@ -402,9 +403,9 @@ private uint _ctfeMatchBinary(string fun, string name1, string name2)
     static assert(_ctfeMatchBinary("a+b", "b", "a"));
     static assert(_ctfeMatchBinary("a + b", "b", "a"));
     static assert(_ctfeMatchBinary("b == a", "b", "a"));
-    static assert(_ctfeMatchBinary("b==a", "b", "a"));
+    static assert(_ctfeMatchBinary("b == a", "b", "a"));
     static assert(_ctfeMatchBinary("b != a", "b", "a"));
-    static assert(_ctfeMatchBinary("a!=b", "b", "a"));
+    static assert(_ctfeMatchBinary("a != b", "b", "a"));
     static assert(_ctfeMatchBinary("a< b", "b", "a"));
     static assert(_ctfeMatchBinary("b < a", "b", "a"));
     static assert(_ctfeMatchBinary("b > a", "b", "a"));
@@ -417,7 +418,7 @@ private uint _ctfeMatchBinary(string fun, string name1, string name2)
 
 //undocumented
 template safeOp(string S)
-    if (S=="<"||S==">"||S=="<="||S==">="||S=="=="||S=="!=")
+if (S=="<"||S==">"||S=="<="||S==">="||S=="=="||S=="!=")
 {
     import std.traits : isIntegral;
     private bool unsafeOp(ElementType1, ElementType2)(ElementType1 a, ElementType2 b) pure
@@ -425,7 +426,7 @@ template safeOp(string S)
     {
         import std.traits : CommonType;
         alias T = CommonType!(ElementType1, ElementType2);
-        return mixin("cast(T)a "~S~" cast(T)b");
+        return mixin("cast(T)a "~S~" cast(T) b");
     }
 
     bool safeOp(T0, T1)(auto ref T0 a, auto ref T1 b)
@@ -451,7 +452,7 @@ template safeOp(string S)
         }
         else
         {
-            static assert (is(typeof(mixin("a "~S~" b"))),
+            static assert(is(typeof(mixin("a "~S~" b"))),
                 "Invalid arguments: Cannot compare types " ~ T0.stringof ~ " and " ~ T1.stringof ~ ".");
 
             immutable result = mixin("a "~S~" b");
@@ -795,12 +796,14 @@ Note: In the special case where only a single function is provided
 ($(D F.length == 1)), adjoin simply aliases to the single passed function
 ($(D F[0])).
 */
-template adjoin(F...) if (F.length == 1)
+template adjoin(F...)
+if (F.length == 1)
 {
     alias adjoin = F[0];
 }
 /// ditto
-template adjoin(F...) if (F.length > 1)
+template adjoin(F...)
+if (F.length > 1)
 {
     auto adjoin(V...)(auto ref V a)
     {
@@ -883,6 +886,8 @@ template adjoin(F...) if (F.length > 1)
    function $(D f(x)) that in turn returns $(D
    fun[0](fun[1](...(x)))...). Each function can be a regular
    functions, a delegate, or a string.
+
+   See_Also: $(LREF pipe)
 */
 template compose(fun...)
 {
@@ -936,6 +941,8 @@ template compose(fun...)
 // integer
 int[] a = pipe!(readText, split, map!(to!(int)))("file.txt");
 ----
+
+   See_Also: $(LREF compose)
  */
 alias pipe(fun...) = compose!(Reverse!(fun));
 
@@ -957,8 +964,8 @@ alias pipe(fun...) = compose!(Reverse!(fun));
 }
 
 /**
- * $(LUCKY Memoizes) a function so as to avoid repeated
- * computation. The memoization structure is a hash table keyed by a
+ * $(LINK2 https://en.wikipedia.org/wiki/Memoization, Memoizes) a function so as
+ * to avoid repeated computation. The memoization structure is a hash table keyed by a
  * tuple of the function's arguments. There is a speed gain if the
  * function is repeatedly called with the same arguments and is more
  * expensive than a hash table lookup. For more information on memoization, refer to $(HTTP docs.google.com/viewer?url=http%3A%2F%2Fhop.perl.plover.com%2Fbook%2Fpdf%2F03CachingAndMemoization.pdf, this book chapter).
@@ -1023,9 +1030,9 @@ template memoize(alias fun, uint maxSize)
             static assert(maxSize < size_t.max - (8 * size_t.sizeof - 1));
 
             enum attr = GC.BlkAttr.NO_INTERIOR | (hasIndirections!Value ? 0 : GC.BlkAttr.NO_SCAN);
-            memo = (cast(Value*)GC.malloc(Value.sizeof * maxSize, attr))[0 .. maxSize];
+            memo = (cast(Value*) GC.malloc(Value.sizeof * maxSize, attr))[0 .. maxSize];
             enum nwords = (maxSize + 8 * size_t.sizeof - 1) / (8 * size_t.sizeof);
-            initialized = (cast(size_t*)GC.calloc(nwords * size_t.sizeof, attr | GC.BlkAttr.NO_SCAN))[0 .. nwords];
+            initialized = (cast(size_t*) GC.calloc(nwords * size_t.sizeof, attr | GC.BlkAttr.NO_SCAN))[0 .. nwords];
         }
 
         import core.bitop : bt, bts;
@@ -1045,7 +1052,7 @@ template memoize(alias fun, uint maxSize)
         else if (memo[idx1].args == args)
             return memo[idx1].res;
         // FNV prime
-        immutable idx2 = (hash * 16777619) % maxSize;
+        immutable idx2 = (hash * 16_777_619) % maxSize;
         if (!bt(initialized.ptr, idx2))
         {
             emplace(&memo[idx2], memo[idx1]);
@@ -1162,6 +1169,83 @@ template memoize(alias fun, uint maxSize)
     assert(func(int.init) == 1);
 }
 
+// 16079: memoize should work with arrays
+@safe unittest
+{
+    int executed = 0;
+    T median(T)(const T[] nums) {
+        import std.algorithm.sorting : sort;
+        executed++;
+        auto arr = nums.dup;
+        arr.sort();
+        if (arr.length % 2)
+            return arr[$ / 2];
+        else
+            return (arr[$ / 2 - 1]
+                + arr[$ / 2]) / 2;
+    }
+
+    alias fastMedian = memoize!(median!int);
+
+    assert(fastMedian([7, 5, 3]) == 5);
+    assert(fastMedian([7, 5, 3]) == 5);
+
+    assert(executed == 1);
+}
+
+// 16079: memoize should work with structs
+@safe unittest
+{
+    int executed = 0;
+    T pickFirst(T)(T first)
+    {
+        executed++;
+        return first;
+    }
+
+    struct Foo { int k; }
+    Foo A = Foo(3);
+
+    alias first = memoize!(pickFirst!Foo);
+    assert(first(Foo(3)) == A);
+    assert(first(Foo(3)) == A);
+    assert(executed == 1);
+}
+
+// 16079: memoize should work with classes
+@safe unittest
+{
+    int executed = 0;
+    T pickFirst(T)(T first)
+    {
+        executed++;
+        return first;
+    }
+
+    class Bar
+    {
+        size_t k;
+        this(size_t k)
+        {
+            this.k = k;
+        }
+        override size_t toHash()
+        {
+            return k;
+        }
+        override bool opEquals(Object o)
+        {
+            auto b = cast(Bar) o;
+            return b && k == b.k;
+        }
+    }
+
+    alias firstClass = memoize!(pickFirst!Bar);
+    assert(firstClass(new Bar(3)).k == 3);
+    assert(firstClass(new Bar(3)).k == 3);
+    assert(executed == 1);
+}
+
 private struct DelegateFaker(F)
 {
     import std.typecons : FuncInfo, MemberFunctionGenerator;
@@ -1241,7 +1325,8 @@ private struct DelegateFaker(F)
  *   $(LI Ignores C-style / D-style variadic arguments.)
  * )
  */
-auto toDelegate(F)(auto ref F fp) if (isCallable!(F))
+auto toDelegate(F)(auto ref F fp)
+if (isCallable!(F))
 {
     static if (is(F == delegate))
     {
@@ -1281,6 +1366,20 @@ auto toDelegate(F)(auto ref F fp) if (isCallable!(F))
 
         return df.del;
     }
+}
+
+///
+@system unittest
+{
+    static int inc(ref uint num) {
+        num++;
+        return 8675309;
+    }
+
+    uint myNum = 0;
+    auto incMyNumDel = toDelegate(&inc);
+    auto returnVal = incMyNumDel(myNum);
+    assert(myNum == 1);
 }
 
 @system unittest // not @safe due to toDelegate
@@ -1378,11 +1477,20 @@ template forward(args...)
         import std.algorithm.mutation : move;
 
         alias arg = args[0];
-        static if (__traits(isRef, arg))
+        // by ref || lazy || const/immutable
+        static if (__traits(isRef,  arg) ||
+                   __traits(isOut,  arg) ||
+                   __traits(isLazy, arg) ||
+                   !is(typeof(move(arg))))
             alias fwd = arg;
+        // (r)value
         else
-            @property fwd()(){ return move(arg); }
-        alias forward = AliasSeq!(fwd, forward!(args[1..$]));
+            @property auto fwd(){ return move(arg); }
+
+        static if (args.length == 1)
+            alias forward = fwd;
+        else
+            alias forward = AliasSeq!(fwd, forward!(args[1..$]));
     }
     else
         alias forward = AliasSeq!();
@@ -1406,7 +1514,7 @@ template forward(args...)
 ///
 @safe unittest
 {
-    void foo(int n, ref string s) { s = null; foreach (i; 0..n) s ~= "Hello"; }
+    void foo(int n, ref string s) { s = null; foreach (i; 0 .. n) s ~= "Hello"; }
 
     // forwards all arguments which are bound to parameter tuple
     void bar(Args...)(auto ref Args args) { return foo(forward!args); }
@@ -1462,4 +1570,117 @@ template forward(args...)
     static assert(!__traits(compiles, { auto x1 = bar(3); })); // case of NG
     int value = 3;
     auto x2 = bar(value); // case of OK
+}
+
+///
+@safe unittest
+{
+    struct X {
+        int i;
+        this(this)
+        {
+            ++i;
+        }
+    }
+
+    struct Y
+    {
+        private X x_;
+        this()(auto ref X x)
+        {
+            x_ = forward!x;
+        }
+    }
+
+    struct Z
+    {
+        private const X x_;
+        this()(auto ref X x)
+        {
+            x_ = forward!x;
+        }
+        this()(auto const ref X x)
+        {
+            x_ = forward!x;
+        }
+    }
+
+    X x;
+    const X cx;
+    auto constX = (){ const X x; return x; };
+    static assert(__traits(compiles, { Y y = x; }));
+    static assert(__traits(compiles, { Y y = X(); }));
+    static assert(!__traits(compiles, { Y y = cx; }));
+    static assert(!__traits(compiles, { Y y = constX(); }));
+    static assert(__traits(compiles, { Z z = x; }));
+    static assert(__traits(compiles, { Z z = X(); }));
+    static assert(__traits(compiles, { Z z = cx; }));
+    static assert(__traits(compiles, { Z z = constX(); }));
+
+
+    Y y1 = x;
+    // ref lvalue, copy
+    assert(y1.x_.i == 1);
+    Y y2 = X();
+    // rvalue, move
+    assert(y2.x_.i == 0);
+
+    Z z1 = x;
+    // ref lvalue, copy
+    assert(z1.x_.i == 1);
+    Z z2 = X();
+    // rvalue, move
+    assert(z2.x_.i == 0);
+    Z z3 = cx;
+    // ref const lvalue, copy
+    assert(z3.x_.i == 1);
+    Z z4 = constX();
+    // const rvalue, copy
+    assert(z4.x_.i == 1);
+}
+
+// lazy -> lazy
+@safe unittest
+{
+    int foo1(lazy int i) { return i; }
+    int foo2(A)(auto ref A i) { return foo1(forward!i); }
+    int foo3(lazy int i) { return foo2(i); }
+
+    int numCalls = 0;
+    assert(foo3({ ++numCalls; return 42; }()) == 42);
+    assert(numCalls == 1);
+}
+
+// lazy -> non-lazy
+@safe unittest
+{
+    int foo1(int a, int b) { return a + b; }
+    int foo2(A...)(auto ref A args) { return foo1(forward!args); }
+    int foo3(int a, lazy int b) { return foo2(a, b); }
+
+    int numCalls;
+    assert(foo3(11, { ++numCalls; return 31; }()) == 42);
+    assert(numCalls == 1);
+}
+
+// non-lazy -> lazy
+@safe unittest
+{
+    int foo1(int a, lazy int b) { return a + b; }
+    int foo2(A...)(auto ref A args) { return foo1(forward!args); }
+    int foo3(int a, int b) { return foo2(a, b); }
+
+    assert(foo3(11, 31) == 42);
+}
+
+// out
+@safe unittest
+{
+    void foo1(int a, out int b) { b = a; }
+    void foo2(A...)(auto ref A args) { foo1(forward!args); }
+    void foo3(int a, out int b) { foo2(a, b); }
+
+    int b;
+    foo3(42, b);
+    assert(b == 42);
 }

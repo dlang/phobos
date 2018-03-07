@@ -3,6 +3,15 @@
 This is a submodule of $(MREF std, algorithm).
 It contains generic algorithms that implement set operations.
 
+The functions $(LREF multiwayMerge), $(LREF multiwayUnion), $(LREF setDifference),
+$(LREF setIntersection), $(LREF setSymmetricDifference) expect a range of sorted
+ranges as input.
+
+All algorithms are generalized to accept as input not only sets but also
+$(HTTP https://en.wikipedia.org/wiki/Multiset, multisets). Each algorithm
+documents behaviour in the presence of duplicated inputs.
+
+$(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE Cheat Sheet,
 $(TR $(TH Function Name) $(TH Description))
 $(T2 cartesianProduct,
@@ -12,9 +21,10 @@ $(T2 largestPartialIntersection,
 $(T2 largestPartialIntersectionWeighted,
         Copies out the values that occur most frequently (multiplied by
         per-value weights) in a range of ranges.)
-$(T2 nWayUnion,
-        Computes the union of a set of sets implemented as a range of sorted
-        ranges.)
+$(T2 multiwayMerge,
+        Merges a range of sorted ranges.)
+$(T2 multiwayUnion,
+        Computes the union of a range of sorted ranges.)
 $(T2 setDifference,
         Lazily computes the set difference of two or more sorted ranges.)
 $(T2 setIntersection,
@@ -55,8 +65,9 @@ _range of tuples of elements from each respective range.
 
 The conditions for the two-range case are as follows:
 
-If both ranges are finite, then one must be (at least) a forward range and the
-other an input range.
+If both ranges are finite, then one must be (at least) a
+$(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) and the
+other an $(REF_ALTTEXT input range, isInputRange, std,range,primitives).
 
 If one _range is infinite and the other finite, then the finite _range must
 be a forward _range, and the infinite range can be an input _range.
@@ -77,8 +88,8 @@ Returns:
     cartesian product of the given ranges.
 */
 auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
-    if (!allSatisfy!(isForwardRange, R1, R2) ||
-        anySatisfy!(isInfinite, R1, R2))
+if (!allSatisfy!(isForwardRange, R1, R2) ||
+    anySatisfy!(isInfinite, R1, R2))
 {
     import std.algorithm.iteration : map, joiner;
 
@@ -92,7 +103,7 @@ auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
             // covering the right and bottom edges of an increasing square area
             // over the infinite table of combinations. This schedule allows us
             // to require only forward ranges.
-            return zip(sequence!"n"(cast(size_t)0), range1.save, range2.save,
+            return zip(sequence!"n"(cast(size_t) 0), range1.save, range2.save,
                        repeat(range1), repeat(range2))
                 .map!(function(a) => chain(
                     zip(repeat(a[1]), take(a[4].save, a[0])),
@@ -245,9 +256,9 @@ auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
 
 @safe unittest
 {
-    import std.algorithm.searching : canFind;
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
+    import std.algorithm.searching : canFind;
     import std.typecons : tuple;
 
     import std.range;
@@ -346,9 +357,9 @@ pure nothrow @safe @nogc unittest
 
 /// ditto
 auto cartesianProduct(RR...)(RR ranges)
-    if (ranges.length >= 2 &&
-        allSatisfy!(isForwardRange, RR) &&
-        !anySatisfy!(isInfinite, RR))
+if (ranges.length >= 2 &&
+    allSatisfy!(isForwardRange, RR) &&
+    !anySatisfy!(isInfinite, RR))
 {
     // This overload uses a much less template-heavy implementation when
     // all ranges are finite forward ranges, which is the most common use
@@ -389,7 +400,7 @@ auto cartesianProduct(RR...)(RR ranges)
                 r.popFront();
                 if (!r.empty) break;
 
-                static if (i==0)
+                static if (i == 0)
                     empty = true;
                 else
                     r = ranges[i].save; // rollover
@@ -443,8 +454,8 @@ auto cartesianProduct(RR...)(RR ranges)
 
 /// ditto
 auto cartesianProduct(R1, R2, RR...)(R1 range1, R2 range2, RR otherRanges)
-    if (!allSatisfy!(isForwardRange, R1, R2, RR) ||
-        anySatisfy!(isInfinite, R1, R2, RR))
+if (!allSatisfy!(isForwardRange, R1, R2, RR) ||
+    anySatisfy!(isInfinite, R1, R2, RR))
 {
     /* We implement the n-ary cartesian product by recursively invoking the
      * binary cartesian product. To make the resulting range nicer, we denest
@@ -536,7 +547,7 @@ pure @safe nothrow @nogc unittest
 }
 
 // Issue 13935
-unittest
+@safe unittest
 {
     import std.algorithm.iteration : map;
     auto seq = [1, 2].map!(x => x);
@@ -545,10 +556,10 @@ unittest
 
 // largestPartialIntersection
 /**
-Given a range of sorted forward ranges $(D ror), copies to $(D tgt)
-the elements that are common to most ranges, along with their number
-of occurrences. All ranges in $(D ror) are assumed to be sorted by $(D
-less). Only the most frequent $(D tgt.length) elements are returned.
+Given a range of sorted $(REF_ALTTEXT forward ranges, isForwardRange, std,range,primitives)
+`ror`, copies to `tgt` the elements that are common to most ranges, along with their number
+of occurrences. All ranges in `ror` are assumed to be sorted by $(D
+less). Only the most frequent `tgt.length` elements are returned.
 
 Params:
     less = The predicate the ranges are sorted by.
@@ -556,21 +567,27 @@ Params:
     tgt = The target range to copy common elements to.
     sorted = Whether the elements copied should be in sorted order.
 
-The function $(D largestPartialIntersection) is useful for
-e.g. searching an $(LUCKY inverted index) for the documents most
+The function `largestPartialIntersection` is useful for
+e.g. searching an $(LINK2 https://en.wikipedia.org/wiki/Inverted_index,
+inverted index) for the documents most
 likely to contain some terms of interest. The complexity of the search
-is $(BIGOH n * log(tgt.length)), where $(D n) is the sum of lengths of
+is $(BIGOH n * log(tgt.length)), where `n` is the sum of lengths of
 all input ranges. This approach is faster than keeping an associative
 array of the occurrences and then selecting its top items, and also
-requires less memory ($(D largestPartialIntersection) builds its
-result directly in $(D tgt) and requires no extra memory).
+requires less memory (`largestPartialIntersection` builds its
+result directly in `tgt` and requires no extra memory).
 
-Warning: Because $(D largestPartialIntersection) does not allocate
-extra memory, it will leave $(D ror) modified. Namely, $(D
-largestPartialIntersection) assumes ownership of $(D ror) and
+If at least one of the ranges is a multiset, then all occurences
+of a duplicate element are taken into account. The result is
+equivalent to merging all ranges and picking the most frequent
+`tgt.length` elements.
+
+Warning: Because `largestPartialIntersection` does not allocate
+extra memory, it will leave `ror` modified. Namely, $(D
+largestPartialIntersection) assumes ownership of `ror` and
 discretionarily swaps and advances elements of it. If you want $(D
 ror) to preserve its contents after the call, you may want to pass a
-duplicate to $(D largestPartialIntersection) (and perhaps cache the
+duplicate to `largestPartialIntersection` (and perhaps cache the
 duplicate in between calls).
  */
 void largestPartialIntersection
@@ -586,7 +603,7 @@ void largestPartialIntersection
 }
 
 ///
-unittest
+@system unittest
 {
     import std.typecons : tuple, Tuple;
 
@@ -613,18 +630,40 @@ unittest
     largestPartialIntersection(a, c);
     assert(c[0] == tuple(1.0, 3u));
     // 1.0 occurs in 3 inputs
+
+    // multiset
+    double[][] x =
+    [
+        [1, 1, 1, 1, 4, 7, 8],
+        [1, 7],
+        [1, 7, 8],
+        [4, 7],
+        [7]
+    ];
+    auto y = new Tuple!(double, uint)[2];
+    largestPartialIntersection(x.dup, y);
+    // 7.0 occurs 5 times
+    assert(y[0] == tuple(7.0, 5u));
+    // 1.0 occurs 6 times
+    assert(y[1] == tuple(1.0, 6u));
 }
 
 import std.algorithm.sorting : SortOutput; // FIXME
 
 // largestPartialIntersectionWeighted
 /**
-Similar to $(D largestPartialIntersection), but associates a weight
+Similar to `largestPartialIntersection`, but associates a weight
 with each distinct element in the intersection.
+
+If at least one of the ranges is a multiset, then all occurences
+of a duplicate element are taken into account. The result
+is equivalent to merging all input ranges and picking the highest
+`tgt.length`, weight-based ranking elements.
 
 Params:
     less = The predicate the ranges are sorted by.
-    ror = A range of forward ranges sorted by `less`.
+    ror = A range of $(REF_ALTTEXT forward ranges, isForwardRange, std,range,primitives)
+    sorted by `less`.
     tgt = The target range to copy common elements to.
     weights = An associative array mapping elements to weights.
     sorted = Whether the elements copied should be in sorted order.
@@ -643,11 +682,11 @@ void largestPartialIntersectionWeighted
     {
         return weights[a[0]] * a[1] > weights[b[0]] * b[1];
     }
-    topNCopy!heapComp(group(nWayUnion!less(ror)), tgt, sorted);
+    topNCopy!heapComp(group(multiwayMerge!less(ror)), tgt, sorted);
 }
 
 ///
-unittest
+@system unittest
 {
     import std.typecons : tuple, Tuple;
 
@@ -668,15 +707,26 @@ unittest
     assert(b[0] == tuple(4.0, 2u));
     // 4.0 occurs 2 times -> 4.6 (2 * 2.3)
     // 7.0 occurs 3 times -> 4.4 (3 * 1.1)
+
+   // multiset
+    double[][] x =
+    [
+        [ 1, 1, 1, 4, 7, 8 ],
+        [ 1, 7 ],
+        [ 1, 7, 8],
+        [ 4 ],
+        [ 7 ],
+    ];
+    auto y = new Tuple!(double, uint)[1];
+    largestPartialIntersectionWeighted(x, y, weights);
+    assert(y[0] == tuple(1.0, 5u));
+    // 1.0 occurs 5 times -> 1.2 * 5 = 6
 }
 
-unittest
+@system unittest
 {
     import std.conv : text;
     import std.typecons : tuple, Tuple, Yes;
-
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
     double[][] a =
         [
@@ -688,19 +738,14 @@ unittest
         ];
     auto b = new Tuple!(double, uint)[2];
     largestPartialIntersection(a, b, Yes.sortOutput);
-    //sort(b);
-    //writeln(b);
     assert(b == [ tuple(7.0, 4u), tuple(1.0, 3u) ][], text(b));
     assert(a[0].empty);
 }
 
-unittest
+@system unittest
 {
     import std.conv : text;
     import std.typecons : tuple, Tuple, Yes;
-
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
     string[][] a =
         [
@@ -712,17 +757,15 @@ unittest
         ];
     auto b = new Tuple!(string, uint)[2];
     largestPartialIntersection(a, b, Yes.sortOutput);
-    //writeln(b);
     assert(b == [ tuple("7", 4u), tuple("1", 3u) ][], text(b));
 }
 
-unittest
+@system unittest
 {
     import std.typecons : tuple, Tuple;
 
-    //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-// Figure which number can be found in most arrays of the set of
-// arrays below, with specific per-element weights
+    // Figure which number can be found in most arrays of the set of
+    // arrays below, with specific per-element weights
     double[][] a =
         [
             [ 1, 4, 7, 8 ],
@@ -734,12 +777,11 @@ unittest
     auto b = new Tuple!(double, uint)[1];
     double[double] weights = [ 1:1.2, 4:2.3, 7:1.1, 8:1.1 ];
     largestPartialIntersectionWeighted(a, b, weights);
-// First member is the item, second is the occurrence count
-    //writeln(b[0]);
+    // First member is the item, second is the occurrence count
     assert(b[0] == tuple(4.0, 2u));
 }
 
-unittest
+@system unittest
 {
     import std.container : Array;
     import std.typecons : Tuple;
@@ -751,20 +793,29 @@ unittest
     assert(arrayOne == arrayTwo);
 }
 
-// NWayUnion
+// MultiwayMerge
 /**
-Computes the union of multiple sets. The input sets are passed as a
+Merges multiple sets. The input sets are passed as a
 range of ranges and each is assumed to be sorted by $(D
 less). Computation is done lazily, one union element at a time. The
-complexity of one $(D popFront) operation is $(BIGOH
-log(ror.length)). However, the length of $(D ror) decreases as ranges
+complexity of one `popFront` operation is $(BIGOH
+log(ror.length)). However, the length of `ror` decreases as ranges
 in it are exhausted, so the complexity of a full pass through $(D
-NWayUnion) is dependent on the distribution of the lengths of ranges
-contained within $(D ror). If all ranges have the same length $(D n)
+MultiwayMerge) is dependent on the distribution of the lengths of ranges
+contained within `ror`. If all ranges have the same length `n`
 (worst case scenario), the complexity of a full pass through $(D
-NWayUnion) is $(BIGOH n * ror.length * log(ror.length)), i.e., $(D
+MultiwayMerge) is $(BIGOH n * ror.length * log(ror.length)), i.e., $(D
 log(ror.length)) times worse than just spanning all ranges in
-turn. The output comes sorted (unstably) by $(D less).
+turn. The output comes sorted (unstably) by `less`.
+
+The length of the resulting range is the sum of all lengths of
+the ranges passed as input. This means that all elements (duplicates
+included) are transferred to the resulting range.
+
+For backward compatibility, `multiwayMerge` is available under
+the name `nWayUnion` and `MultiwayMerge` under the name of `NWayUnion` .
+Future code should use `multiwayMerge` and `MultiwayMerge` as `nWayUnion`
+and `NWayUnion` will be deprecated.
 
 Params:
     less = Predicate the given ranges are sorted by.
@@ -773,14 +824,14 @@ Params:
 Returns:
     A range of the union of the ranges in `ror`.
 
-Warning: Because $(D NWayUnion) does not allocate extra memory, it
-will leave $(D ror) modified. Namely, $(D NWayUnion) assumes ownership
-of $(D ror) and discretionarily swaps and advances elements of it. If
-you want $(D ror) to preserve its contents after the call, you may
-want to pass a duplicate to $(D NWayUnion) (and perhaps cache the
+Warning: Because `MultiwayMerge` does not allocate extra memory, it
+will leave `ror` modified. Namely, `MultiwayMerge` assumes ownership
+of `ror` and discretionarily swaps and advances elements of it. If
+you want `ror` to preserve its contents after the call, you may
+want to pass a duplicate to `MultiwayMerge` (and perhaps cache the
 duplicate in between calls).
  */
-struct NWayUnion(alias less, RangeOfRanges)
+struct MultiwayMerge(alias less, RangeOfRanges)
 {
     import std.container : BinaryHeap;
 
@@ -837,7 +888,7 @@ struct NWayUnion(alias less, RangeOfRanges)
 }
 
 /// Ditto
-NWayUnion!(less, RangeOfRanges) nWayUnion
+MultiwayMerge!(less, RangeOfRanges) multiwayMerge
 (alias less = "a < b", RangeOfRanges)
 (RangeOfRanges ror)
 {
@@ -845,7 +896,7 @@ NWayUnion!(less, RangeOfRanges) nWayUnion
 }
 
 ///
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -860,13 +911,96 @@ unittest
     auto witness = [
         1, 1, 1, 4, 4, 7, 7, 7, 7, 8, 8
     ];
-    assert(equal(nWayUnion(a), witness));
+    assert(equal(multiwayMerge(a), witness));
+
+    double[][] b =
+    [
+        // range with duplicates
+        [ 1, 1, 4, 7, 8 ],
+        [ 7 ],
+        [ 1, 7, 8],
+        [ 4 ],
+        [ 7 ],
+    ];
+    // duplicates are propagated to the resulting range
+    assert(equal(multiwayMerge(b), witness));
+}
+
+alias nWayUnion = multiwayMerge;
+alias NWayUnion = MultiwayMerge;
+
+/**
+Computes the union of multiple ranges. The input ranges are passed
+as a range of ranges and each is assumed to be sorted by $(D
+less). Computation is done lazily, one union element at a time.
+`multiwayUnion(ror)` is functionally equivalent to `multiwayMerge(ror).uniq`.
+
+"The output of multiwayUnion has no duplicates even when its inputs contain duplicates."
+
+Params:
+    less = Predicate the given ranges are sorted by.
+    ror = A range of ranges sorted by `less` to compute the intersection for.
+
+Returns:
+    A range of the union of the ranges in `ror`.
+
+See also: $(LREF multiwayMerge)
+ */
+auto multiwayUnion(alias less = "a < b", RangeOfRanges)(RangeOfRanges ror)
+{
+    import std.algorithm.iteration : uniq;
+    import std.functional : not;
+    return ror.multiwayMerge!(less).uniq!(not!less);
+}
+
+///
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+
+    // sets
+    double[][] a =
+    [
+        [ 1, 4, 7, 8 ],
+        [ 1, 7 ],
+        [ 1, 7, 8],
+        [ 4 ],
+        [ 7 ],
+    ];
+
+    auto witness = [1, 4, 7, 8];
+    assert(equal(multiwayUnion(a), witness));
+
+    // multisets
+    double[][] b =
+    [
+        [ 1, 1, 1, 4, 7, 8 ],
+        [ 1, 7 ],
+        [ 1, 7, 7, 8],
+        [ 4 ],
+        [ 7 ],
+    ];
+    assert(equal(multiwayUnion(b), witness));
+
+    double[][] c =
+    [
+        [9, 8, 8, 8, 7, 6],
+        [9, 8, 6],
+        [9, 8, 5]
+    ];
+    auto witness2 = [9, 8, 7, 6, 5];
+    assert(equal(multiwayUnion!"a > b"(c), witness2));
 }
 
 /**
-Lazily computes the difference of $(D r1) and $(D r2). The two ranges
-are assumed to be sorted by $(D less). The element types of the two
+Lazily computes the difference of `r1` and `r2`. The two ranges
+are assumed to be sorted by `less`. The element types of the two
 ranges must have a common type.
+
+
+In the case of multisets, considering that element `a` appears `x`
+times in `r1` and `y` times and `r2`, the number of occurences
+of `a` in the resulting range is going to be `x-y` if x > y or 0 othwerise.
 
 Params:
     less = Predicate the given ranges are sorted by.
@@ -879,7 +1013,7 @@ Returns:
 See_also: $(LREF setSymmetricDifference)
  */
 struct SetDifference(alias less = "a < b", R1, R2)
-    if (isInputRange!(R1) && isInputRange!(R2))
+if (isInputRange!(R1) && isInputRange!(R2))
 {
 private:
     R1 r1;
@@ -957,10 +1091,18 @@ SetDifference!(less, R1, R2) setDifference(alias less = "a < b", R1, R2)
     import std.algorithm.comparison : equal;
     import std.range.primitives : isForwardRange;
 
+    //sets
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
-    assert(equal(setDifference(a, b), [5, 9][]));
+    assert(equal(setDifference(a, b), [5, 9]));
     static assert(isForwardRange!(typeof(setDifference(a, b))));
+
+    // multisets
+    int[] x = [1, 1, 1, 2, 3];
+    int[] y = [1, 1, 2, 4, 5];
+    auto r = setDifference(x, y);
+    assert(equal(r, [1, 3]));
+    assert(setDifference(r, x).empty);
 }
 
 @safe unittest // Issue 10460
@@ -976,8 +1118,12 @@ SetDifference!(less, R1, R2) setDifference(alias less = "a < b", R1, R2)
 
 /**
 Lazily computes the intersection of two or more input ranges $(D
-ranges). The ranges are assumed to be sorted by $(D less). The element
+ranges). The ranges are assumed to be sorted by `less`. The element
 types of the ranges must have a common type.
+
+In the case of multisets, the range with the minimum number of
+occurences of a given element, propagates the number of
+occurences of this element to the resulting range.
 
 Params:
     less = Predicate the given ranges are sorted by.
@@ -987,8 +1133,8 @@ Returns:
     A range containing the intersection of the given ranges.
  */
 struct SetIntersection(alias less = "a < b", Rs...)
-    if (Rs.length >= 2 && allSatisfy!(isInputRange, Rs) &&
-        !is(CommonType!(staticMap!(ElementType, Rs)) == void))
+if (Rs.length >= 2 && allSatisfy!(isInputRange, Rs) &&
+    !is(CommonType!(staticMap!(ElementType, Rs)) == void))
 {
 private:
     Rs _input;
@@ -1081,8 +1227,8 @@ public:
 
 /// Ditto
 SetIntersection!(less, Rs) setIntersection(alias less = "a < b", Rs...)(Rs ranges)
-    if (Rs.length >= 2 && allSatisfy!(isInputRange, Rs) &&
-        !is(CommonType!(staticMap!(ElementType, Rs)) == void))
+if (Rs.length >= 2 && allSatisfy!(isInputRange, Rs) &&
+    !is(CommonType!(staticMap!(ElementType, Rs)) == void))
 {
     return typeof(return)(ranges);
 }
@@ -1092,12 +1238,19 @@ SetIntersection!(less, Rs) setIntersection(alias less = "a < b", Rs...)(Rs range
 {
     import std.algorithm.comparison : equal;
 
+    // sets
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
     int[] c = [ 0, 1, 4, 5, 7, 8 ];
     assert(equal(setIntersection(a, a), a));
     assert(equal(setIntersection(a, b), [1, 2, 4, 7]));
     assert(equal(setIntersection(a, b, c), [1, 4, 7]));
+
+    // multisets
+    int[] d = [ 1, 1, 2, 2, 7, 7 ];
+    int[] e = [ 1, 1, 1, 7];
+    assert(equal(setIntersection(a, d), [1, 2, 7]));
+    assert(equal(setIntersection(d, e), [1, 1, 7]));
 }
 
 @safe unittest
@@ -1131,14 +1284,20 @@ SetIntersection!(less, Rs) setIntersection(alias less = "a < b", Rs...)(Rs range
 }
 
 /**
-Lazily computes the symmetric difference of $(D r1) and $(D r2),
-i.e. the elements that are present in exactly one of $(D r1) and $(D
-r2). The two ranges are assumed to be sorted by $(D less), and the
-output is also sorted by $(D less). The element types of the two
+Lazily computes the symmetric difference of `r1` and `r2`,
+i.e. the elements that are present in exactly one of `r1` and $(D
+r2). The two ranges are assumed to be sorted by `less`, and the
+output is also sorted by `less`. The element types of the two
 ranges must have a common type.
 
+If both ranges are sets (without duplicated elements), the resulting
+range is going to be a set. If at least one of the ranges is a multiset,
+the number of occurences of an element `x` in the resulting range is `abs(a-b)`
+where `a` is the number of occurences of `x` in `r1`, `b` is the number of
+occurences of `x` in `r2`, and `abs` is the absolute value.
+
 If both arguments are ranges of L-values of the same type then
-$(D SetSymmetricDifference) will also be a range of L-values of
+`SetSymmetricDifference` will also be a range of L-values of
 that type.
 
 Params:
@@ -1152,7 +1311,7 @@ Returns:
 See_also: $(LREF setDifference)
  */
 struct SetSymmetricDifference(alias less = "a < b", R1, R2)
-    if (isInputRange!(R1) && isInputRange!(R2))
+if (isInputRange!(R1) && isInputRange!(R2))
 {
 private:
     R1 r1;
@@ -1248,14 +1407,23 @@ setSymmetricDifference(alias less = "a < b", R1, R2)
     import std.algorithm.comparison : equal;
     import std.range.primitives : isForwardRange;
 
+    // sets
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
     assert(equal(setSymmetricDifference(a, b), [0, 5, 8, 9][]));
     static assert(isForwardRange!(typeof(setSymmetricDifference(a, b))));
+
+    //mutisets
+    int[] c = [1, 1, 1, 1, 2, 2, 2, 4, 5, 6];
+    int[] d = [1, 1, 2, 2, 2, 2, 4, 7, 9];
+    assert(equal(setSymmetricDifference(c, d), setSymmetricDifference(d, c)));
+    assert(equal(setSymmetricDifference(c, d), [1, 1, 2, 5, 6, 7, 9]));
 }
 
 @safe unittest // Issue 10460
 {
+    import std.algorithm.comparison : equal;
+
     int[] a = [1, 2];
     double[] b = [2.0, 3.0];
     int[] c = [2, 3];
@@ -1267,23 +1435,18 @@ setSymmetricDifference(alias less = "a < b", R1, R2)
     alias R2 = typeof(setSymmetricDifference(a, c));
     static assert(is(ElementType!R2 == int));
     static assert(hasLvalueElements!R2);
+
+    assert(equal(setSymmetricDifference(a, b), [1.0, 3.0]));
+    assert(equal(setSymmetricDifference(a, c), [1, 3]));
 }
-
-// Explicitly undocumented. It will be removed in December 2016. @@@DEPRECATED_2016-12@@@
-deprecated("Please use std.algorithm.sorting.merge to join ranges")
-alias setUnion = merge;
-
-// Explicitly undocumented. It will be removed in December 2016. @@@DEPRECATED_2016-12@@@
-deprecated("Please use std.algorithm.sorting.merge to join ranges")
-alias SetUnion = Merge;
 
 /++
 TODO: once SetUnion got deprecated we can provide the usual definition
 (= merge + filter after uniqs)
 See: https://github.com/dlang/phobos/pull/4249
 /**
-Lazily computes the union of two or more ranges $(D rs). The ranges
-are assumed to be sorted by $(D less). Elements in the output are
+Lazily computes the union of two or more ranges `rs`. The ranges
+are assumed to be sorted by `less`. Elements in the output are
 unique. The element types of all ranges must have a common type.
 
 Params:

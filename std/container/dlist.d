@@ -13,14 +13,16 @@ License: Distributed under the Boost Software License, Version 1.0.
 boost.org/LICENSE_1_0.txt)).
 
 Authors: $(HTTP erdani.com, Andrei Alexandrescu)
+
+$(SCRIPT inhibitQuickIndex = 1;)
 */
 module std.container.dlist;
 
 ///
-unittest
+@safe unittest
 {
-    import std.container : DList;
     import std.algorithm.comparison : equal;
+    import std.container : DList;
 
     auto s = DList!int(1, 2, 3);
     assert(equal(s[], [1, 2, 3]));
@@ -47,6 +49,19 @@ unittest
     popBackN(r, 2);
     assert(r.equal([3]));
     assert(walkLength(r) == 1);
+
+    // DList.Range can be used to remove elements from the list it spans
+    auto nl = DList!int([1, 2, 3, 4, 5]);
+    for (auto rn = nl[]; !rn.empty;)
+        if (rn.front % 2 == 0)
+            nl.popFirstOf(rn);
+        else
+            rn.popFront();
+    assert(equal(nl[], [1, 3, 5]));
+    auto rs = nl[];
+    rs.popFront();
+    nl.remove(rs);
+    assert(equal(nl[], [1]));
 }
 
 import std.range.primitives;
@@ -90,7 +105,7 @@ The base DList Range. Contains Range primitives that don't depend on payload typ
  +/
 private struct DRange
 {
-    unittest
+    @safe unittest
     {
         static assert(isBidirectionalRange!DRange);
         static assert(is(ElementType!DRange == BaseNode*));
@@ -624,7 +639,39 @@ Complexity: $(BIGOH 1)
     /// ditto
     Range linearRemove(Range r)
     {
-         return remove(r);
+        return remove(r);
+    }
+
+/**
+Removes first element of $(D r), wich must be a range obtained originally
+from this container, from both DList instance and range $(D r).
+
+Compexity: $(BIGOH 1)
+     */
+    void popFirstOf(ref Range r)
+    {
+        assert(_root !is null, "Cannot remove from an un-initialized List");
+        assert(r._first, "popFirstOf: Range is empty");
+        auto prev = r._first._prev;
+        auto next = r._first._next;
+        r.popFront();
+        BaseNode.connect(prev, next);
+    }
+
+/**
+Removes last element of $(D r), wich must be a range obtained originally
+from this container, from both DList instance and range $(D r).
+
+Compexity: $(BIGOH 1)
+     */
+    void popLastOf(ref Range r)
+    {
+        assert(_root !is null, "Cannot remove from an un-initialized List");
+        assert(r._first, "popLastOf: Range is empty");
+        auto prev = r._last._prev;
+        auto next = r._last._next;
+        r.popBack();
+        BaseNode.connect(prev, next);
     }
 
 /**
@@ -655,7 +702,44 @@ Complexity: $(BIGOH r.walkLength)
     /// ditto
     alias stableLinearRemove = linearRemove;
 
+/**
+Removes the first occurence of an element from the list in linear time.
+
+Returns: True if the element existed and was successfully removed, false otherwise.
+
+Params:
+    value = value of the node to be removed
+
+Complexity: $(BIGOH n)
+     */
+    bool linearRemoveElement(T value)
+    {
+        auto n1 = findNodeByValue(_root, value);
+        if (n1)
+        {
+            auto n2 = n1._next._next;
+            BaseNode.connect(n1, n2);
+            return true;
+        }
+
+        return false;
+    }
+
+
 private:
+
+    BaseNode* findNodeByValue(BaseNode* n, T value)
+    {
+        if (!n) return null;
+        auto ahead = n._next;
+        while (ahead && ahead.getPayload!T() != value)
+        {
+            n = ahead;
+            ahead = n._next;
+            if (ahead == _last._next) return null;
+        }
+        return n;
+    }
 
     // Helper: Inserts stuff before the node n.
     size_t insertBeforeNode(Stuff)(BaseNode* n, ref Stuff stuff)
@@ -713,6 +797,38 @@ private:
         }
         return Range(first, last);
     }
+}
+
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+
+    auto e = DList!int();
+    auto b = e.linearRemoveElement(1);
+    assert(b == false);
+    assert(e.empty());
+    auto a = DList!int(-1, 1, 2, 1, 3, 4);
+    b = a.linearRemoveElement(1);
+    assert(equal(a[], [-1, 2, 1, 3, 4]));
+    assert(b == true);
+    b = a.linearRemoveElement(-1);
+    assert(b == true);
+    assert(equal(a[], [2, 1, 3, 4]));
+    b = a.linearRemoveElement(1);
+    assert(b == true);
+    assert(equal(a[], [2, 3, 4]));
+    b = a.linearRemoveElement(2);
+    assert(b == true);
+    b = a.linearRemoveElement(20);
+    assert(b == false);
+    assert(equal(a[], [3, 4]));
+    b = a.linearRemoveElement(4);
+    assert(b == true);
+    assert(equal(a[], [3]));
+    b = a.linearRemoveElement(3);
+    assert(b == true);
+    assert(a.empty());
+    a.linearRemoveElement(3);
 }
 
 @safe unittest
@@ -808,6 +924,30 @@ private:
         }
     }
     assert(equal(list[],[0,3]));
+}
+
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+
+    auto dl = DList!int([1, 2, 3, 4, 5]);
+    auto r = dl[];
+    r.popFront();
+    dl.popFirstOf(r);
+    assert(equal(dl[], [1, 3, 4, 5]));
+    assert(equal(r, [3, 4, 5]));
+    r.popBack();
+    dl.popLastOf(r);
+    assert(equal(dl[], [1, 3, 5]));
+    assert(equal(r, [3]));
+    dl = DList!int([0]);
+    r = dl[];
+    dl.popFirstOf(r);
+    assert(dl.empty);
+    dl = DList!int([0]);
+    r = dl[];
+    dl.popLastOf(r);
+    assert(dl.empty);
 }
 
 @safe unittest

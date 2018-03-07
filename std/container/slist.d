@@ -13,14 +13,16 @@ License: Distributed under the Boost Software License, Version 1.0.
 boost.org/LICENSE_1_0.txt)).
 
 Authors: $(HTTP erdani.com, Andrei Alexandrescu)
+
+$(SCRIPT inhibitQuickIndex = 1;)
 */
 module std.container.slist;
 
 ///
-unittest
+@safe unittest
 {
-    import std.container : SList;
     import std.algorithm.comparison : equal;
+    import std.container : SList;
 
     auto s = SList!int(1, 2, 3);
     assert(equal(s[], [1, 2, 3]));
@@ -121,6 +123,18 @@ struct SList(T)
         return n;
     }
 
+    private static Node* findNodeByValue(Node* n, T value)
+    {
+        if (!n) return null;
+        auto ahead = n._next;
+        while (ahead && ahead._payload != value)
+        {
+            n = ahead;
+            ahead = n._next;
+        }
+        return n;
+    }
+
 /**
 Constructor taking a number of nodes
      */
@@ -209,7 +223,7 @@ Defines the container's primary range, which embodies a forward range.
         }
     }
 
-    unittest
+    @safe unittest
     {
         static assert(isForwardRange!Range);
     }
@@ -261,7 +275,7 @@ Complexity: $(BIGOH 1)
         return _first._payload;
     }
 
-    unittest
+    @safe unittest
     {
         auto s = SList!int(1, 2, 3);
         s.front = 42;
@@ -587,9 +601,64 @@ Complexity: $(BIGOH n)
 
 /// ditto
     alias stableLinearRemove = linearRemove;
+
+/**
+Removes the first occurence of an element from the list in linear time.
+
+Returns: True if the element existed and was successfully removed, false otherwise.
+
+Params:
+    value = value of the node to be removed
+
+Complexity: $(BIGOH n)
+     */
+    bool linearRemoveElement(T value)
+    {
+        auto n1 = findNodeByValue(_root, value);
+
+        if (n1 && n1._next)
+        {
+            n1._next = n1._next._next;
+            return true;
+        }
+
+        return false;
+    }
 }
 
-unittest
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+
+    auto e = SList!int();
+    auto b = e.linearRemoveElement(2);
+    assert(b == false);
+    assert(e.empty());
+    auto a = SList!int(-1, 1, 2, 1, 3, 4);
+    b = a.linearRemoveElement(1);
+    assert(equal(a[], [-1, 2, 1, 3, 4]));
+    assert(b == true);
+    b = a.linearRemoveElement(-1);
+    assert(b == true);
+    assert(equal(a[], [2, 1, 3, 4]));
+    b = a.linearRemoveElement(1);
+    assert(b == true);
+    assert(equal(a[], [2, 3, 4]));
+    b = a.linearRemoveElement(2);
+    assert(b == true);
+    b = a.linearRemoveElement(20);
+    assert(b == false);
+    assert(equal(a[], [3, 4]));
+    b = a.linearRemoveElement(4);
+    assert(b == true);
+    assert(equal(a[], [3]));
+    b = a.linearRemoveElement(3);
+    assert(b == true);
+    assert(a.empty());
+    a.linearRemoveElement(3);
+}
+
+@safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -605,21 +674,21 @@ unittest
     assert(equal(b[], [2, 1, 9]));
 }
 
-unittest
+@safe unittest
 {
     auto s = SList!int(1, 2, 3);
     auto n = s.findLastNode(s._root);
     assert(n && n._payload == 3);
 }
 
-unittest
+@safe unittest
 {
     import std.range.primitives;
     auto s = SList!int(1, 2, 5, 10);
     assert(walkLength(s[]) == 4);
 }
 
-unittest
+@safe unittest
 {
     import std.range : take;
     auto src = take([0, 1, 2, 3], 3);
@@ -627,7 +696,7 @@ unittest
     assert(s == SList!int(0, 1, 2));
 }
 
-unittest
+@safe unittest
 {
     auto a = SList!int();
     auto b = SList!int();
@@ -635,7 +704,7 @@ unittest
     assert(c.empty);
 }
 
-unittest
+@safe unittest
 {
     auto a = SList!int(1, 2, 3);
     auto b = SList!int(4, 5, 6);
@@ -643,7 +712,7 @@ unittest
     assert(c == SList!int(1, 2, 3, 4, 5, 6));
 }
 
-unittest
+@safe unittest
 {
     auto a = SList!int(1, 2, 3);
     auto b = [4, 5, 6];
@@ -651,21 +720,21 @@ unittest
     assert(c == SList!int(1, 2, 3, 4, 5, 6));
 }
 
-unittest
+@safe unittest
 {
     auto a = SList!int(1, 2, 3);
     auto c = a ~ 4;
     assert(c == SList!int(1, 2, 3, 4));
 }
 
-unittest
+@safe unittest
 {
     auto a = SList!int(2, 3, 4);
     auto b = 1 ~ a;
     assert(b == SList!int(1, 2, 3, 4));
 }
 
-unittest
+@safe unittest
 {
     auto a = [1, 2, 3];
     auto b = SList!int(4, 5, 6);
@@ -673,14 +742,14 @@ unittest
     assert(c == SList!int(1, 2, 3, 4, 5, 6));
 }
 
-unittest
+@safe unittest
 {
     auto s = SList!int(1, 2, 3, 4);
     s.insertFront([ 42, 43 ]);
     assert(s == SList!int(42, 43, 1, 2, 3, 4));
 }
 
-unittest
+@safe unittest
 {
     auto s = SList!int(1, 2, 3);
     assert(s.removeAny() == 1);
@@ -689,7 +758,7 @@ unittest
     assert(s == SList!int(3));
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -700,21 +769,21 @@ unittest
     assert(equal(s[], [3]));
 }
 
-unittest
+@safe unittest
 {
     auto s = SList!int(1, 2, 3, 4, 5, 6, 7);
     assert(s.removeFront(3) == 3);
     assert(s == SList!int(4, 5, 6, 7));
 }
 
-unittest
+@safe unittest
 {
     auto a = SList!int(1, 2, 3);
     auto b = SList!int(1, 2, 3);
     assert(a.insertAfter(a[], b[]) == 3);
 }
 
-unittest
+@safe unittest
 {
     import std.range : take;
     auto s = SList!int(1, 2, 3, 4);
@@ -723,7 +792,7 @@ unittest
     assert(s == SList!int(1, 2, 5, 3, 4));
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : take;
@@ -736,7 +805,7 @@ unittest
     assert(equal(sl[], ["a", "b", "c", "d", "e"]));
 }
 
-unittest
+@safe unittest
 {
     import std.range.primitives;
     auto s = SList!int(1, 2, 3, 4, 5);
@@ -747,7 +816,7 @@ unittest
     assert(r1.empty);
 }
 
-unittest
+@safe unittest
 {
     auto s = SList!int(1, 2, 3, 4, 5);
     auto r = s[];
@@ -756,7 +825,7 @@ unittest
     assert(r1.empty);
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range;
@@ -771,7 +840,7 @@ unittest
     assert(equal(r2, [8, 9, 10]));
 }
 
-unittest
+@safe unittest
 {
     import std.range.primitives;
     auto lst = SList!int(1, 5, 42, 9);
@@ -786,12 +855,12 @@ unittest
     assert(walkLength(lst3[]) == 5);
 }
 
-unittest
+@safe unittest
 {
     auto s = make!(SList!int)(1, 2, 3);
 }
 
-unittest
+@safe unittest
 {
     // 5193
     static struct Data
@@ -801,7 +870,7 @@ unittest
     SList!Data list;
 }
 
-unittest
+@safe unittest
 {
     auto s = SList!int([1, 2, 3]);
     s.front = 5; //test frontAssign
@@ -811,7 +880,7 @@ unittest
     assert(r.front == 1);
 }
 
-unittest
+@safe unittest
 {
     // issue 14920
     SList!int s;
@@ -819,20 +888,20 @@ unittest
     assert(s.front == 1);
 }
 
-unittest
+@safe unittest
 {
     // issue 15659
     SList!int s;
     s.clear();
 }
 
-unittest
+@safe unittest
 {
     SList!int s;
     s.reverse();
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
 

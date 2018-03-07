@@ -4,34 +4,34 @@
     This module defines functions related to exceptions and general error
     handling. It also defines functions intended to aid in unit testing.
 
-    Synopsis of some of std.exception's functions:
-    --------------------
-    string synopsis()
-    {
-        FILE* f = enforce(fopen("some/file"));
-        // f is not null from here on
-        FILE* g = enforce!WriteException(fopen("some/other/file", "w"));
-        // g is not null from here on
-
-        Exception e = collectException(write(g, readln(f)));
-        if (e)
-        {
-            ... an exception occurred...
-            ... We have the exception to play around with...
-        }
-
-        string msg = collectExceptionMsg(write(g, readln(f)));
-        if (msg)
-        {
-            ... an exception occurred...
-            ... We have the message from the exception but not the exception...
-        }
-
-        char[] line;
-        enforce(readln(f, line));
-        return assumeUnique(line);
-    }
-    --------------------
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Assumptions) $(TD
+        $(LREF assertNotThrown)
+        $(LREF assertThrown)
+        $(LREF assumeUnique)
+        $(LREF assumeWontThrow)
+        $(LREF mayPointTo)
+))
+$(TR $(TD Enforce) $(TD
+        $(LREF doesPointTo)
+        $(LREF enforce)
+        $(LREF errnoEnforce)
+))
+$(TR $(TD Handlers) $(TD
+        $(LREF collectException)
+        $(LREF collectExceptionMsg)
+        $(LREF ifThrown)
+        $(LREF handle)
+))
+$(TR $(TD Other) $(TD
+        $(LREF basicExceptionCtors)
+        $(LREF emptyExceptionMsg)
+        $(LREF ErrnoException)
+        $(LREF RangePrimitive)
+))
+)
 
     Copyright: Copyright Andrei Alexandrescu 2008-, Jonathan M Davis 2011-.
     License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0)
@@ -40,6 +40,73 @@
 
  +/
 module std.exception;
+
+/// Synopis
+@system unittest
+{
+    import core.stdc.stdlib : malloc, free;
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map, splitter;
+    import std.algorithm.searching : endsWith;
+    import std.conv : ConvException, to;
+    import std.range : front, retro;
+
+    // use enforce like assert
+    int a = 3;
+    enforce(a > 2, "a needs to be higher than 2.");
+
+    // enforce can throw a custom exception
+    enforce!ConvException(a > 2, "a needs to be higher than 2.");
+
+    // enforce will return it's input
+    enum size = 42;
+    auto memory = enforce(malloc(size), "malloc failed")[0 .. size];
+    scope(exit) free(memory.ptr);
+
+    // collectException can be used to test for exceptions
+    Exception e = collectException("abc".to!int);
+    assert(e.file.endsWith("conv.d"));
+
+    // and just for the exception message
+    string msg = collectExceptionMsg("abc".to!int);
+    assert(msg == "Unexpected 'a' when converting from type string to type int");
+
+    // assertThrown can be used to assert that an exception is thrown
+    assertThrown!ConvException("abc".to!int);
+
+    // ifThrown can be used to provide a default value if an exception is thrown
+    assert("x".to!int().ifThrown(0) == 0);
+
+    // handle is a more advanced version of ifThrown for ranges
+    auto r = "12,1337z32,54".splitter(',').map!(a => to!int(a));
+    auto h = r.handle!(ConvException, RangePrimitive.front, (e, r) => 0);
+    assert(h.equal([12, 0, 54]));
+    assertThrown!ConvException(h.retro.equal([54, 0, 12]));
+
+    // basicExceptionCtors avoids the boilerplate when creating custom exceptions
+    static class MeaCulpa : Exception
+    {
+        mixin basicExceptionCtors;
+    }
+    e = collectException((){throw new MeaCulpa("diagnostic message");}());
+    assert(e.msg == "diagnostic message");
+    assert(e.file == __FILE__);
+    assert(e.line == __LINE__ - 3);
+
+    // assumeWontThrow can be used to cast throwing code into `nothrow`
+    void exceptionFreeCode() nothrow
+    {
+        // auto-decoding only throws if an invalid UTF char is given
+        assumeWontThrow("abc".front);
+    }
+
+    // assumeUnique can be used to cast mutable instance to an `immutable` one
+    // use with care
+    char[] str = "  mutable".dup;
+    str[0 .. 2] = "im";
+    immutable res = assumeUnique(str);
+    assert(res == "immutable");
+}
 
 import std.range.primitives;
 import std.traits;
@@ -325,61 +392,118 @@ void assertThrown(T : Throwable = Exception, E)
 
 /++
     Enforces that the given value is true.
+    If the given value is false, an exception is thrown.
+    The
+    $(UL
+        $(LI `msg` - error message as a `string`)
+        $(LI `dg` - custom delegate that return a string and is only called if an exception occurred)
+        $(LI `ex` - custom exception to be thrown. It is `lazy` and is only created if an exception occurred)
+    )
 
     Params:
         value = The value to test.
-        E = Exception type to throw if the value evalues to false.
+        E = Exception type to throw if the value evaluates to false.
         msg = The error message to put in the exception if it is thrown.
+        dg = The delegate to be called if the value evaluates to false.
+        ex = The exception to throw if the value evaluates to false.
         file = The source file of the caller.
         line = The line number of the caller.
 
-    Returns: $(D value), if `cast(bool)value` is true. Otherwise,
-    $(D new Exception(msg)) is thrown.
+    Returns: `value`, if `cast(bool) value` is true. Otherwise,
+    depending on the chosen overload, `new Exception(msg)`, `dg()` or `ex` is thrown.
 
     Note:
-        $(D enforce) is used to throw exceptions and is therefore intended to
+        `enforce` is used to throw exceptions and is therefore intended to
         aid in error handling. It is $(I not) intended for verifying the logic
         of your program. That is what $(D assert) is for. Also, do not use
-        $(D enforce) inside of contracts (i.e. inside of $(D in) and $(D out)
-        blocks and $(D invariant)s), because they will be compiled out when
-        compiling with $(I -release). Use $(D assert) in contracts.
+        `enforce` inside of contracts (i.e. inside of `in` and `out`
+        blocks and $(D invariant)s), because contracts are compiled out when
+        compiling with $(I -release).
 
-    Example:
-    --------------------
-    auto f = enforce(fopen("data.txt"));
-    auto line = readln(f);
-    enforce(line.length, "Expected a non-empty line.");
-    --------------------
+        If a delegate is passed, the safety and purity of this function are inferred
+        from `Dg`'s safety and purity.
  +/
-T enforce(E : Throwable = Exception, T)(T value, lazy const(char)[] msg = null,
-    string file = __FILE__, size_t line = __LINE__) if (is(typeof({ if (!value) {} })))
+template enforce(E : Throwable = Exception)
+if (is(typeof(new E("", __FILE__, __LINE__)) : Throwable) || is(typeof(new E(__FILE__, __LINE__)) : Throwable))
 {
-    if (!value) bailOut!E(file, line, msg);
-    return value;
+    ///
+    T enforce(T)(T value, lazy const(char)[] msg = null,
+    string file = __FILE__, size_t line = __LINE__)
+    if (is(typeof({ if (!value) {} })))
+    {
+        if (!value) bailOut!E(file, line, msg);
+        return value;
+    }
 }
 
-/++
-    Enforces that the given value is true.
-
-    Params:
-        value = The value to test.
-        dg = The delegate to be called if the value evaluates to false.
-        file = The source file of the caller.
-        line = The line number of the caller.
-
-    Returns: $(D value), if `cast(bool)value` is true. Otherwise, the given
-    delegate is called.
-
-    The safety and purity of this function are inferred from $(D Dg)'s safety
-    and purity.
- +/
+/// ditto
 T enforce(T, Dg, string file = __FILE__, size_t line = __LINE__)
     (T value, scope Dg dg)
-    if (isSomeFunction!Dg && is(typeof( dg() )) &&
-        is(typeof({ if (!value) {} })))
+if (isSomeFunction!Dg && is(typeof( dg() )) &&
+    is(typeof({ if (!value) {} })))
 {
     if (!value) dg();
     return value;
+}
+
+/// ditto
+T enforce(T)(T value, lazy Throwable ex)
+{
+    if (!value) throw ex();
+    return value;
+}
+
+///
+@system unittest
+{
+    import core.stdc.stdlib : malloc, free;
+    import std.conv : ConvException, to;
+
+    // use enforce like assert
+    int a = 3;
+    enforce(a > 2, "a needs to be higher than 2.");
+
+    // enforce can throw a custom exception
+    enforce!ConvException(a > 2, "a needs to be higher than 2.");
+
+    // enforce will return it's input
+    enum size = 42;
+    auto memory = enforce(malloc(size), "malloc failed")[0 .. size];
+    scope(exit) free(memory.ptr);
+}
+
+///
+@safe unittest
+{
+    assertNotThrown(enforce(true, new Exception("this should not be thrown")));
+    assertThrown(enforce(false, new Exception("this should be thrown")));
+}
+
+///
+@safe unittest
+{
+    assert(enforce(123) == 123);
+
+    try
+    {
+        enforce(false, "error");
+        assert(false);
+    }
+    catch (Exception e)
+    {
+        assert(e.msg == "error");
+        assert(e.file == __FILE__);
+        assert(e.line == __LINE__-7);
+    }
+}
+
+/// Alias your own enforce function
+@safe unittest
+{
+    import std.conv : ConvException;
+    alias convEnforce = enforce!ConvException;
+    assertNotThrown(convEnforce(true));
+    assertThrown!ConvException(convEnforce(false, "blah"));
 }
 
 private void bailOut(E : Throwable = Exception)(string file, size_t line, in char[] msg)
@@ -401,23 +525,6 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
 
 @safe unittest
 {
-    assert (enforce(123) == 123);
-
-    try
-    {
-        enforce(false, "error");
-        assert (false);
-    }
-    catch (Exception e)
-    {
-        assert (e.msg == "error");
-        assert (e.file == __FILE__);
-        assert (e.line == __LINE__-7);
-    }
-}
-
-@safe unittest
-{
     // Issue 10510
     extern(C) void cFoo() { }
     enforce(false, &cFoo);
@@ -426,14 +533,12 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
 // purity and safety inference test
 @system unittest
 {
-    import std.meta : AliasSeq;
-
-    foreach (EncloseSafe; AliasSeq!(false, true))
-    foreach (EnclosePure; AliasSeq!(false, true))
+    static foreach (EncloseSafe; [false, true])
+    static foreach (EnclosePure; [false, true])
     {
-        foreach (BodySafe; AliasSeq!(false, true))
-        foreach (BodyPure; AliasSeq!(false, true))
-        {
+        static foreach (BodySafe; [false, true])
+        static foreach (BodyPure; [false, true])
+        {{
             enum code =
                 "delegate void() " ~
                 (EncloseSafe ? "@safe " : "") ~
@@ -454,7 +559,7 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
                         "code = ", code);
 
             static assert(__traits(compiles, mixin(code)()) == expect);
-        }
+        }}
     }
 }
 
@@ -466,7 +571,7 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
         static int g;
         ~this() {}  // impure & unsafe destructor
         bool opCast(T:bool)() {
-            int* p = cast(int*)0;   // unsafe operation
+            int* p = cast(int*) 0;   // unsafe operation
             int n = g;              // impure operation
             return true;
         }
@@ -504,35 +609,6 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
 }
 
 /++
-    Enforces that the given value is true.
-
-    Params:
-        value = The value to test.
-        ex = The exception to throw if the value evaluates to false.
-
-    Returns: $(D value), if `cast(bool)value` is true. Otherwise, $(D ex) is
-    thrown.
-
-    Example:
-    --------------------
-    auto f = enforce(fopen("data.txt"));
-    auto line = readln(f);
-    enforce(line.length, new IOException); // expect a non-empty line
-    --------------------
- +/
-T enforce(T)(T value, lazy Throwable ex)
-{
-    if (!value) throw ex();
-    return value;
-}
-
-@safe unittest
-{
-    assertNotThrown(enforce(true, new Exception("this should not be thrown")));
-    assertThrown(enforce(false, new Exception("this should be thrown")));
-}
-
-/++
     Enforces that the given value is true, throwing an `ErrnoException` if it
     is not.
 
@@ -540,7 +616,7 @@ T enforce(T)(T value, lazy Throwable ex)
         value = The value to test.
         msg = The message to include in the `ErrnoException` if it is thrown.
 
-    Returns: $(D value), if `cast(bool)value` is true. Otherwise,
+    Returns: $(D value), if `cast(bool) value` is true. Otherwise,
     $(D new ErrnoException(msg)) is thrown.  It is assumed that the last
     operation set $(D errno) to an error code corresponding with the failed
     condition.
@@ -559,8 +635,10 @@ T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
     return value;
 }
 
-
+// @@@DEPRECATED_2.084@@@
 /++
+    $(RED Deprecated. Please use $(LREF enforce) instead. This function will be removed 2.084.)
+
     If $(D !value) is $(D false), $(D value) is returned. Otherwise,
     $(D new E(msg, file, line)) is thrown. Or if $(D E) doesn't take a message
     and can be constructed with $(D new E(file, line)), then
@@ -575,8 +653,9 @@ T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
     enforceEx!DataCorruptionException(line.length);
     --------------------
  +/
+//deprecated("Please use enforce instead")
 template enforceEx(E : Throwable)
-    if (is(typeof(new E("", __FILE__, __LINE__))))
+if (is(typeof(new E("", string.init, size_t.init))))
 {
     /++ Ditto +/
     T enforceEx(T)(T value, lazy string msg = "", string file = __FILE__, size_t line = __LINE__)
@@ -586,9 +665,10 @@ template enforceEx(E : Throwable)
     }
 }
 
-/++ Ditto +/
+/+ Ditto +/
+//deprecated("Please use enforce instead")
 template enforceEx(E : Throwable)
-    if (is(typeof(new E(__FILE__, __LINE__))) && !is(typeof(new E("", __FILE__, __LINE__))))
+if (is(typeof(new E(string.init, size_t.init))) && !is(typeof(new E("", string.init, size_t.init))))
 {
     /++ Ditto +/
     T enforceEx(T)(T value, string file = __FILE__, size_t line = __LINE__)
@@ -598,10 +678,11 @@ template enforceEx(E : Throwable)
     }
 }
 
+//deprecated
 @system unittest
 {
-    import std.array : empty;
     import core.exception : OutOfMemoryError;
+    import std.array : empty;
     assertNotThrown(enforceEx!Exception(true));
     assertNotThrown(enforceEx!Exception(true, "blah"));
     assertNotThrown(enforceEx!OutOfMemoryError(true));
@@ -641,6 +722,7 @@ template enforceEx(E : Throwable)
     static assert(!is(typeof(enforceEx!int(true))));
 }
 
+//deprecated
 @safe unittest
 {
     alias enf = enforceEx!Exception;
@@ -751,7 +833,7 @@ string collectExceptionMsg(T = Exception, E)(lazy E expression)
     {
         expression();
 
-        return cast(string)null;
+        return cast(string) null;
     }
     catch (T e)
         return e.msg.empty ? emptyExceptionMsg : e.msg;
@@ -798,6 +880,7 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  *
  * Example:
  *
+ * $(RUNNABLE_EXAMPLE
  * ----
  * string letters()
  * {
@@ -809,6 +892,7 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  *   return assumeUnique(result);
  * }
  * ----
+ * )
  *
  * The use in the example above is correct because $(D result)
  * was private to $(D letters) and is inaccessible in writing
@@ -817,6 +901,7 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  *
  * Bad:
  *
+ * $(RUNNABLE_EXAMPLE
  * ----
  * private char[] buffer;
  * string letters(char first, char last)
@@ -831,11 +916,13 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  *   return assumeUnique(sneaky); // BAD
  * }
  * ----
+ * )
  *
  * The example above wreaks havoc on client code because it is
  * modifying arrays that callers considered immutable. To obtain an
  * immutable array from the writable array $(D buffer), replace
  * the last line with:
+ *
  * ----
  * return to!(string)(sneaky); // not that sneaky anymore
  * ----
@@ -847,6 +934,8 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  * marked as a pure function. The following example does not
  * need to call assumeUnique because the compiler can infer the
  * uniqueness of the array in the pure function:
+ *
+ * $(RUNNABLE_EXAMPLE
  * ----
  * string letters() pure
  * {
@@ -858,10 +947,11 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  *   return result;
  * }
  * ----
+ * )
  *
  * For more on infering uniqueness see the $(B unique) and
  * $(B lent) keywords in the
- * $(HTTP archjava.fluid.cs.cmu.edu/papers/oopsla02.pdf, ArchJava)
+ * $(HTTP www.cs.cmu.edu/~aldrich/papers/aldrich-dissertation.pdf, ArchJava)
  * language.
  *
  * The downside of using $(D assumeUnique)'s
@@ -882,6 +972,13 @@ immutable(T)[] assumeUnique(T)(ref T[] array) pure nothrow
     array = null;
     return result;
 }
+/// ditto
+immutable(T[U]) assumeUnique(T, U)(ref T[U] array) pure nothrow
+{
+    auto result = cast(immutable(T[U])) array;
+    array = null;
+    return result;
+}
 
 @system unittest
 {
@@ -891,15 +988,7 @@ immutable(T)[] assumeUnique(T)(ref T[] array) pure nothrow
     assert(is(typeof(arr1) == immutable(int)[]) && arr == null);
 }
 
-immutable(T[U]) assumeUnique(T, U)(ref T[U] array) pure nothrow
-{
-    auto result = cast(immutable(T[U])) array;
-    array = null;
-    return result;
-}
-
-// @@@BUG@@@
-version(none) @system unittest
+@system unittest
 {
     int[string] arr = ["a":1];
     auto arr1 = assumeUnique(arr);
@@ -960,7 +1049,7 @@ T assumeWontThrow(T)(lazy T expr,
     {
         if (x < 0)
             throw new Exception("Tried to take root of negative number");
-        return cast(int)sqrt(cast(double)x);
+        return cast(int) sqrt(cast(double) x);
     }
 
     // This function never throws.
@@ -1030,8 +1119,8 @@ as the language is free to assume objects don't have internal pointers
 (TDPL 7.1.3.5).
 */
 bool doesPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @trusted pure nothrow
-    if (__traits(isRef, source) || isDynamicArray!S ||
-        isPointer!S || is(S == class))
+if (__traits(isRef, source) || isDynamicArray!S ||
+    isPointer!S || is(S == class))
 {
     static if (isPointer!S || is(S == class) || is(S == interface))
     {
@@ -1056,7 +1145,7 @@ bool doesPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target)
     else static if (isDynamicArray!S)
     {
         import std.array : overlap;
-        return overlap(cast(void[])source, cast(void[])(&target)[0 .. 1]).length != 0;
+        return overlap(cast(void[]) source, cast(void[])(&target)[0 .. 1]).length != 0;
     }
     else
     {
@@ -1073,8 +1162,8 @@ bool doesPointTo(S, T)(auto ref const shared S source, ref const shared T target
 
 /// ditto
 bool mayPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @trusted pure nothrow
-    if (__traits(isRef, source) || isDynamicArray!S ||
-        isPointer!S || is(S == class))
+if (__traits(isRef, source) || isDynamicArray!S ||
+    isPointer!S || is(S == class))
 {
     static if (isPointer!S || is(S == class) || is(S == interface))
     {
@@ -1098,7 +1187,7 @@ bool mayPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) 
     else static if (isDynamicArray!S)
     {
         import std.array : overlap;
-        return overlap(cast(void[])source, cast(void[])(&target)[0 .. 1]).length != 0;
+        return overlap(cast(void[]) source, cast(void[])(&target)[0 .. 1]).length != 0;
     }
     else
     {
@@ -1240,7 +1329,7 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
         static struct NoCopy { this(this) { assert(0); } }
         static struct Holder { NoCopy a, b, c; }
         Holder h;
-        cast(void)doesPointTo(h, h);
+        cast(void) doesPointTo(h, h);
     }
 
     shared S3 sh3;
@@ -1256,8 +1345,8 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
     //But they do point their elements
     foreach (i; 0 .. 4)
         assert(doesPointTo(darr, darr[i]));
-    assert(doesPointTo(darr[0..3], darr[2]));
-    assert(!doesPointTo(darr[0..3], darr[3]));
+    assert(doesPointTo(darr[0 .. 3], darr[2]));
+    assert(!doesPointTo(darr[0 .. 3], darr[3]));
 }
 
 @system unittest
@@ -1374,8 +1463,8 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
     S s = S(&j);
     assert(!doesPointTo(s, i));
     assert( doesPointTo(s, j));
-    assert( doesPointTo(cast(int*)s, i));
-    assert(!doesPointTo(cast(int*)s, j));
+    assert( doesPointTo(cast(int*) s, i));
+    assert(!doesPointTo(cast(int*) s, j));
 }
 @safe unittest //more alias this opCast
 {
@@ -1447,6 +1536,37 @@ private bool isUnionAliasedImpl(T)(size_t offset)
         static assert( isUnionAliased!(S.A5, 1)); //a5.b1;
 }
 
+version (CRuntime_Glibc) version = GNU_STRERROR;
+version (CRuntime_UClibc) version = GNU_STRERROR;
+
+package string errnoString(int errno) nothrow @trusted
+{
+    import core.stdc.string : strlen;
+    version (GNU_STRERROR)
+    {
+        import core.stdc.string : strerror_r;
+        char[1024] buf = void;
+        auto s = strerror_r(errno, buf.ptr, buf.length);
+    }
+    else version (Posix)
+    {
+        // XSI-compliant
+        import core.stdc.string : strerror_r;
+        char[1024] buf = void;
+        const(char)* s;
+        if (strerror_r(errno, buf.ptr, buf.length) == 0)
+            s = buf.ptr;
+        else
+            return "Unknown error";
+    }
+    else
+    {
+        import core.stdc.string : strerror;
+        auto s = strerror(errno);
+    }
+    return s[0 .. s.strlen].idup;
+}
+
 /*********************
  * Thrown if errors that set $(D errno) occur.
  */
@@ -1454,24 +1574,36 @@ class ErrnoException : Exception
 {
     final @property uint errno() { return _errno; } /// Operating system error code.
     private uint _errno;
+    /// Constructor which takes an error message. The current global $(REF errno, core,stdc,errno) value is used as error code.
     this(string msg, string file = null, size_t line = 0) @trusted
     {
         import core.stdc.errno : errno;
-        import core.stdc.string : strlen;
-
+        this(msg, errno, file, line);
+    }
+    /// Constructor which takes an error message and error code.
+    this(string msg, int errno, string file = null, size_t line = 0) @trusted
+    {
         _errno = errno;
-        version (CRuntime_Glibc)
-        {
-            import core.stdc.string : strerror_r;
-            char[1024] buf = void;
-            auto s = strerror_r(errno, buf.ptr, buf.length);
-        }
-        else
-        {
-            import core.stdc.string : strerror;
-            auto s = strerror(errno);
-        }
-        super(msg ~ " (" ~ s[0..s.strlen].idup ~ ")", file, line);
+        super(msg ~ " (" ~ errnoString(errno) ~ ")", file, line);
+    }
+
+    @system unittest
+    {
+        import core.stdc.errno : errno, EAGAIN;
+
+        auto old = errno;
+        scope(exit) errno = old;
+
+        errno = EAGAIN;
+        auto ex = new ErrnoException("oh no");
+        assert(ex.errno == EAGAIN);
+    }
+
+    @system unittest
+    {
+        import core.stdc.errno : EAGAIN;
+        auto ex = new ErrnoException("oh no", EAGAIN);
+        assert(ex.errno == EAGAIN);
     }
 }
 
@@ -1493,21 +1625,24 @@ class ErrnoException : Exception
         errorHandler.
 
     Example:
+    $(RUNNABLE_EXAMPLE
     --------------------
     //Revert to a default value upon an error:
     assert("x".to!int().ifThrown(0) == 0);
     --------------------
+    )
 
     You can also chain multiple calls to ifThrown, each capturing errors from the
     entire preceding expression.
 
     Example:
+    $(RUNNABLE_EXAMPLE
     --------------------
     //Chaining multiple calls to ifThrown to attempt multiple things in a row:
     string s="true";
     assert(s.to!int().
-            ifThrown(cast(int)s.to!double()).
-            ifThrown(cast(int)s.to!bool())
+            ifThrown(cast(int) s.to!double()).
+            ifThrown(cast(int) s.to!bool())
             == 1);
 
     //Respond differently to different types of errors
@@ -1516,12 +1651,14 @@ class ErrnoException : Exception
             .ifThrown!Exception("number too small")
             == "not a number");
     --------------------
+    )
 
     The expression and the errorHandler must have a common type they can both
     be implicitly casted to, and that type will be the type of the compound
     expression.
 
     Example:
+    $(RUNNABLE_EXAMPLE
     --------------------
     //null and new Object have a common type(Object).
     static assert(is(typeof(null.ifThrown(new Object())) == Object));
@@ -1531,13 +1668,17 @@ class ErrnoException : Exception
     static assert(!__traits(compiles, 1.ifThrown(new Object())));
     static assert(!__traits(compiles, (new Object()).ifThrown(1)));
     --------------------
+    )
 
     If you need to use the actual thrown exception, you can use a delegate.
     Example:
+
+    $(RUNNABLE_EXAMPLE
     --------------------
     //Use a lambda to get the thrown object.
     assert("%s".format().ifThrown!Exception(e => e.classinfo.name) == "std.format.FormatException");
     --------------------
+    )
     +/
 //lazy version
 CommonType!(T1, T2) ifThrown(E : Throwable = Exception, T1, T2)(lazy scope T1 expression, lazy scope T2 errorHandler)
@@ -1604,16 +1745,16 @@ CommonType!(T1, T2) ifThrown(T1, T2)(lazy scope T1 expression, scope T2 delegate
 //Verify Examples
 @system unittest
 {
-    import std.string;
     import std.conv;
+    import std.string;
     //Revert to a default value upon an error:
     assert("x".to!int().ifThrown(0) == 0);
 
     //Chaining multiple calls to ifThrown to attempt multiple things in a row:
     string s="true";
     assert(s.to!int().
-            ifThrown(cast(int)s.to!double()).
-            ifThrown(cast(int)s.to!bool())
+            ifThrown(cast(int) s.to!double()).
+            ifThrown(cast(int) s.to!bool())
             == 1);
 
     //Respond differently to different types of errors
@@ -1636,9 +1777,9 @@ CommonType!(T1, T2) ifThrown(T1, T2)(lazy scope T1 expression, scope T2 delegate
 
 @system unittest
 {
-    import std.string;
-    import std.conv;
     import core.exception;
+    import std.conv;
+    import std.string;
     //Basic behaviour - all versions.
     assert("1".to!int().ifThrown(0) == 1);
     assert("x".to!int().ifThrown(0) == 0);
@@ -1674,8 +1815,8 @@ CommonType!(T1, T2) ifThrown(T1, T2)(lazy scope T1 expression, scope T2 delegate
 version(unittest) package
 @property void assertCTFEable(alias dg)()
 {
-    static assert({ cast(void)dg(); return true; }());
-    cast(void)dg();
+    static assert({ cast(void) dg(); return true; }());
+    cast(void) dg();
 }
 
 /** This $(D enum) is used to select the primitives of the range to handle by the
@@ -1724,7 +1865,7 @@ Params:
 
 Returns: A wrapper $(D struct) that preserves the range interface of $(D input).
 
-opSlice:
+Note:
 Infinite ranges with slicing support must return an instance of
 $(REF Take, std,range) when sliced with a specific lower and upper
 bound (see $(REF hasSlicing, std,range,primitives)); $(D handle) deals with
@@ -1732,7 +1873,7 @@ this by $(D take)ing 0 from the return value of the handler function and
 returning that when an exception is caught.
 */
 auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Range)(Range input)
-    if (isInputRange!Range)
+if (isInputRange!Range)
 {
     static struct Handler
     {

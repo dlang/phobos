@@ -8,9 +8,9 @@ package(std.regex):
 import std.conv, std.exception, std.meta, std.range,
     std.typecons, std.regex;
 
-alias Sequence(int B, int E) = staticIota!(B, E);
+import std.uni : Escapables; // characters that need escaping
 
-unittest
+@safe unittest
 {//sanity checks
     regex("(a|b)*");
     regex(`(?:([0-9A-F]+)\.\.([0-9A-F]+)|([0-9A-F]+))\s*;\s*(.*)\s*#`);
@@ -52,7 +52,7 @@ unittest
 
  */
 
-unittest
+@safe unittest
 {
     struct TestVectors
     {
@@ -313,7 +313,6 @@ unittest
         TestVectors(    `\b[A-Za-z0-9.]+(?=(@(?!gmail)))`, "a@gmail,x@com",  "y", "$&-$1", "x-@"),
         TestVectors(    `x()(abc)(?=(d)(e)(f)\2)`,   "xabcdefabc", "y", "$&", "xabc"),
         TestVectors(    `x()(abc)(?=(d)(e)(f)()\3\4\5)`,   "xabcdefdef", "y", "$&", "xabc"),
-
 //lookback
         TestVectors(    `(?<=(ab))\d`,    "12ba3ab4",    "y",   "$&-$1", "4-ab",  "i"),
         TestVectors(    `\w(?<!\d)\w`,   "123ab24",  "y",   "$&", "ab"),
@@ -352,8 +351,8 @@ unittest
     void run_tests(alias matchFn)()
     {
         int i;
-        foreach (Char; AliasSeq!( char, wchar, dchar))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        static foreach (Char; AliasSeq!( char, wchar, dchar))
+        {{
             alias String = immutable(Char)[];
             String produceExpected(M,Range)(auto ref M m, Range fmt)
             {
@@ -396,7 +395,7 @@ unittest
                     }
                 }
             }
-        }();
+        }}
         debug(std_regex_test) writeln("!!! FReD bulk test done "~matchFn.stringof~" !!!");
     }
 
@@ -407,33 +406,33 @@ unittest
         version(std_regex_ct1)
         {
             pragma(msg, "Testing 1st part of ctRegex");
-            alias Tests = Sequence!(0, 155);
+            enum Tests = iota(0, 155);
         }
         else version(std_regex_ct2)
         {
             pragma(msg, "Testing 2nd part of ctRegex");
-            alias Tests = Sequence!(155, 174);
+            enum Tests = iota(155, 174);
         }
         //FIXME: #174-178 contains CTFE parser bug
         else version(std_regex_ct3)
         {
             pragma(msg, "Testing 3rd part of ctRegex");
-            alias Tests = Sequence!(178, 220);
+            enum Tests = iota(178, 220);
         }
         else version(std_regex_ct4)
         {
             pragma(msg, "Testing 4th part of ctRegex");
-            alias Tests = Sequence!(220, tv.length);
+            enum Tests = iota(220, tv.length);
         }
         else
-            alias Tests = AliasSeq!(Sequence!(0, 25));
-        foreach (a, v; Tests)
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+            enum Tests = chain(iota(0, 30), iota(235, tv.length-5));
+        static foreach (v; Tests)
+        {{
             enum tvd = tv[v];
             static if (tvd.result == "c")
             {
                 static assert(!__traits(compiles, (){
-                    static r = regex(tvd.pattern, tvd.flags);
+                    enum r = regex(tvd.pattern, tvd.flags);
                 }), "errornously compiles regex pattern: " ~ tvd.pattern);
             }
             else
@@ -442,22 +441,22 @@ unittest
                 auto r = ctRegex!(tv[v].pattern, tv[v].flags);
                 auto nr = regex(tvd.pattern, tvd.flags);
                 assert(equal(r.ir, nr.ir),
-                    text("!C-T regex! failed to compile pattern #", a ,": ", tvd.pattern));
+                    text("!C-T regex! failed to compile pattern #", v ,": ", tvd.pattern));
                 auto m = match(tvd.input, r);
                 auto c = tvd.result[0];
                 bool ok = (c == 'y') ^ m.empty;
                 assert(ok, text("ctRegex: failed to match pattern #",
-                    a ,": ", tvd.pattern));
+                    v ,": ", tvd.pattern));
                 if (c == 'y')
                 {
                     import std.stdio;
                     auto result = produceExpected(m, tvd.format);
                     if (result != tvd.replace)
-                        writeln("ctRegex mismatch pattern #", a, ": ", tvd.pattern," expected: ",
+                        writeln("ctRegex mismatch pattern #", v, ": ", tvd.pattern," expected: ",
                                 tvd.replace, " vs ", result);
                 }
             }
-        }();
+        }}
         debug(std_regex_test) writeln("!!! FReD C-T test done !!!");
     }
 
@@ -466,18 +465,3 @@ unittest
     run_tests!match(); //thompson VM
 }
 
-unittest
-{
-    immutable cr = ctRegex!("abc");
-    assert(bmatch("abc",cr).hit == "abc");
-    immutable cr2 = ctRegex!("ab*c");
-    assert(bmatch("abbbbc",cr2).hit == "abbbbc");
-}
-
-unittest
-{
-    immutable cr3 = ctRegex!("^abc$");
-    assert(bmatch("abc",cr3).hit == "abc");
-    immutable cr4 = ctRegex!(`\b(a\B[a-z]b)\b`);
-    assert(array(match("azb",cr4).captures) == ["azb", "azb"]);
-}

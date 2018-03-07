@@ -7,6 +7,8 @@
  * Authors:   $(HTTP digitalmars.com, Walter Bright),
  *            Matthew Wilson
  * Source:    $(PHOBOSSRC std/_mmfile.d)
+ *
+ * $(SCRIPT inhibitQuickIndex = 1;)
  */
 /*          Copyright Digital Mars 2004 - 2009.
  * Distributed under the Boost Software License, Version 1.0.
@@ -15,13 +17,13 @@
  */
 module std.mmfile;
 
-private import std.file;
-private import core.stdc.stdio;
-private import core.stdc.stdlib;
-private import core.stdc.errno;
-private import std.path;
-private import std.string;
+import core.stdc.errno;
+import core.stdc.stdio;
+import core.stdc.stdlib;
 import std.conv, std.exception, std.stdio;
+import std.file;
+import std.path;
+import std.string;
 
 import std.internal.cstring;
 
@@ -29,16 +31,16 @@ import std.internal.cstring;
 
 version (Windows)
 {
-    private import core.sys.windows.windows;
-    private import std.utf;
-    private import std.windows.syserror;
+    import core.sys.windows.windows;
+    import std.utf;
+    import std.windows.syserror;
 }
 else version (Posix)
 {
-    private import core.sys.posix.fcntl;
-    private import core.sys.posix.unistd;
-    private import core.sys.posix.sys.mman;
-    private import core.sys.posix.sys.stat;
+    import core.sys.posix.fcntl;
+    import core.sys.posix.sys.mman;
+    import core.sys.posix.sys.stat;
+    import core.sys.posix.unistd;
 }
 else
 {
@@ -86,7 +88,7 @@ class MmFile
         int oflag;
         int fmode;
 
-        switch (mode)
+        final switch (mode)
         {
         case Mode.read:
             flags = MAP_SHARED;
@@ -116,9 +118,6 @@ class MmFile
             oflag = O_RDWR;
             fmode = 0;
             break;
-
-        default:
-            assert(0);
         }
 
         fd = fildes;
@@ -139,7 +138,7 @@ class MmFile
 
         // Map the file into memory!
         size_t initial_map = (window && 2*window<size)
-            ? 2*window : cast(size_t)size;
+            ? 2*window : cast(size_t) size;
         auto p = mmap(address, initial_map, prot, flags, fd, 0);
         if (p == MAP_FAILED)
         {
@@ -182,7 +181,7 @@ class MmFile
             uint dwCreationDisposition;
             uint flProtect;
 
-            switch (mode)
+            final switch (mode)
             {
             case Mode.read:
                 dwDesiredAccess2 = GENERIC_READ;
@@ -216,9 +215,6 @@ class MmFile
                 flProtect = PAGE_WRITECOPY;
                 dwDesiredAccess = FILE_MAP_COPY;
                 break;
-
-            default:
-                assert(0);
             }
 
             if (filename != null)
@@ -229,7 +225,7 @@ class MmFile
                         null,
                         dwCreationDisposition,
                         FILE_ATTRIBUTE_NORMAL,
-                        cast(HANDLE)null);
+                        cast(HANDLE) null);
                 wenforce(hFile != INVALID_HANDLE_VALUE, "CreateFileW");
             }
             else
@@ -244,9 +240,9 @@ class MmFile
                 }
             }
 
-            int hi = cast(int)(size>>32);
+            int hi = cast(int)(size >> 32);
             hFileMap = CreateFileMappingW(hFile, null, flProtect,
-                    hi, cast(uint)size, null);
+                    hi, cast(uint) size, null);
             wenforce(hFileMap, "CreateFileMapping");
             scope(failure)
             {
@@ -260,12 +256,12 @@ class MmFile
                 uint sizelow = GetFileSize(hFile, &sizehi);
                 wenforce(sizelow != INVALID_FILE_SIZE || GetLastError() != ERROR_SUCCESS,
                     "GetFileSize");
-                size = (cast(ulong)sizehi << 32) + sizelow;
+                size = (cast(ulong) sizehi << 32) + sizelow;
             }
             this.size = size;
 
             size_t initial_map = (window && 2*window<size)
-                ? 2*window : cast(size_t)size;
+                ? 2*window : cast(size_t) size;
             p = MapViewOfFileEx(hFileMap, dwDesiredAccess, 0, 0,
                     initial_map, address);
             wenforce(p, "MapViewOfFileEx");
@@ -279,7 +275,7 @@ class MmFile
             int oflag;
             int fmode;
 
-            switch (mode)
+            final switch (mode)
             {
             case Mode.read:
                 flags = MAP_SHARED;
@@ -309,9 +305,6 @@ class MmFile
                 oflag = O_RDWR;
                 fmode = 0;
                 break;
-
-            default:
-                assert(0);
             }
 
             if (filename.length)
@@ -346,7 +339,7 @@ class MmFile
             }
             this.size = size;
             size_t initial_map = (window && 2*window<size)
-                ? 2*window : cast(size_t)size;
+                ? 2*window : cast(size_t) size;
             p = mmap(address, initial_map, prot, flags, fd, 0);
             if (p == MAP_FAILED)
             {
@@ -419,7 +412,7 @@ class MmFile
         else version (Posix)
         {
             int i;
-            i = msync(cast(void*)data, data.length, MS_SYNC);   // sys/mman.h
+            i = msync(cast(void*) data, data.length, MS_SYNC);   // sys/mman.h
             errnoEnforce(i == 0, "msync failed");
         }
         else
@@ -475,7 +468,7 @@ class MmFile
         debug (MMFILE) printf("MmFile.opIndex(%lld)\n", i);
         ensureMapped(i);
         size_t off = cast(size_t)(i-start);
-        return (cast(ubyte[])data)[off];
+        return (cast(ubyte[]) data)[off];
     }
 
     /**
@@ -486,7 +479,7 @@ class MmFile
         debug (MMFILE) printf("MmFile.opIndex(%lld, %d)\n", i, value);
         ensureMapped(i);
         size_t off = cast(size_t)(i-start);
-        return (cast(ubyte[])data)[off] = value;
+        return (cast(ubyte[]) data)[off] = value;
     }
 
 
@@ -508,7 +501,7 @@ class MmFile
         }
         else
         {
-            errnoEnforce(!data.ptr || munmap(cast(void*)data, data.length) == 0,
+            errnoEnforce(!data.ptr || munmap(cast(void*) data, data.length) == 0,
                     "munmap failed");
         }
         data = null;
@@ -523,13 +516,13 @@ class MmFile
             len = cast(size_t)(size-start);
         version(Windows)
         {
-            uint hi = cast(uint)(start>>32);
-            p = MapViewOfFileEx(hFileMap, dwDesiredAccess, hi, cast(uint)start, len, address);
+            uint hi = cast(uint)(start >> 32);
+            p = MapViewOfFileEx(hFileMap, dwDesiredAccess, hi, cast(uint) start, len, address);
             wenforce(p, "MapViewOfFileEx");
         }
         else
         {
-            p = mmap(address, len, prot, flags, fd, cast(off_t)start);
+            p = mmap(address, len, prot, flags, fd, cast(off_t) start);
             errnoEnforce(p != MAP_FAILED);
         }
         data = p[0 .. len];
@@ -545,7 +538,7 @@ class MmFile
             unmap();
             if (window == 0)
             {
-                map(0,cast(size_t)size);
+                map(0,cast(size_t) size);
             }
             else
             {
@@ -567,7 +560,7 @@ class MmFile
             unmap();
             if (window == 0)
             {
-                map(0,cast(size_t)size);
+                map(0,cast(size_t) size);
             }
             else
             {
@@ -633,8 +626,8 @@ private:
 
 @system unittest
 {
-    import std.file : deleteme;
     import core.memory : GC;
+    import std.file : deleteme;
 
     const size_t K = 1024;
     size_t win = 64*K; // assume the page size is 64K
@@ -654,17 +647,17 @@ private:
     MmFile mf = new MmFile(test_file,MmFile.Mode.readWriteNew,
             100*K,null,win);
     ubyte[] str = cast(ubyte[])"1234567890";
-    ubyte[] data = cast(ubyte[])mf[0 .. 10];
+    ubyte[] data = cast(ubyte[]) mf[0 .. 10];
     data[] = str[];
     assert( mf[0 .. 10] == str );
-    data = cast(ubyte[])mf[50 .. 60];
+    data = cast(ubyte[]) mf[50 .. 60];
     data[] = str[];
     assert( mf[50 .. 60] == str );
-    ubyte[] data2 = cast(ubyte[])mf[20*K .. 60*K];
+    ubyte[] data2 = cast(ubyte[]) mf[20*K .. 60*K];
     assert( data2.length == 40*K );
     assert( data2[$-1] == 0 );
     mf[100*K-1] = cast(ubyte)'b';
-    data2 = cast(ubyte[])mf[21*K .. 100*K];
+    data2 = cast(ubyte[]) mf[21*K .. 100*K];
     assert( data2.length == 79*K );
     assert( data2[$-1] == 'b' );
 
@@ -679,8 +672,8 @@ private:
 version(linux)
 @system unittest // Issue 14868
 {
-    import std.typecons : scoped;
     import std.file : deleteme;
+    import std.typecons : scoped;
 
     // Test retaining ownership of File/fd
 

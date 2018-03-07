@@ -4,14 +4,17 @@ Allocator that collects useful statistics about allocations, both global and per
 calling point. The statistics collected can be configured statically by choosing
 combinations of `Options` appropriately.
 
-Example:
-----
-import std.experimental.allocator.gc_allocator : GCAllocator;
-import std.experimental.allocator.building_blocks.free_list : FreeList;
-alias Allocator = StatsCollector!(GCAllocator, Options.bytesUsed);
-----
+Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/_stats_collector.d)
 */
 module std.experimental.allocator.building_blocks.stats_collector;
+
+///
+@safe unittest
+{
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.building_blocks.free_list : FreeList;
+    alias Allocator = StatsCollector!(GCAllocator, Options.bytesUsed);
+}
 
 import std.experimental.allocator.common;
 
@@ -289,7 +292,7 @@ public:
         Ternary owns(void[] b)
         { return ownsImpl(b); }
         else
-        Ternary owns(string f = __FILE, uint n = line)(void[] b)
+        Ternary owns(string f = __FILE__, uint n = __LINE__)(void[] b)
         { return ownsImpl!(f, n)(b); }
     }
 
@@ -517,6 +520,7 @@ public:
     0).
     */
     static if (flags & Options.bytesUsed)
+    pure nothrow @safe @nogc
     Ternary empty()
     {
         return Ternary(_bytesUsed == 0);
@@ -529,8 +533,8 @@ public:
     */
     void reportStatistics(R)(auto ref R output)
     {
-        import std.traits : EnumMembers;
         import std.conv : to;
+        import std.traits : EnumMembers;
         foreach (e; EnumMembers!Options)
         {
             static if ((flags & e) && e != Options.numAll
@@ -611,8 +615,8 @@ public:
 
         private PerCallStatistics* statsAt(string f, uint n, opts...)()
         {
-            import std.range : repeat;
             import std.array : array;
+            import std.range : repeat;
 
             static PerCallStatistics s = { f, n, [ opts ],
                 repeat(0UL, opts.length).array };
@@ -654,10 +658,10 @@ public:
 }
 
 ///
-unittest
+@system unittest
 {
-    import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.building_blocks.free_list : FreeList;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
     alias Allocator = StatsCollector!(GCAllocator, Options.all, Options.all);
 
     Allocator alloc;
@@ -666,8 +670,8 @@ unittest
     alloc.deallocate(b);
 
     import std.file : deleteme, remove;
-    import std.stdio : File;
     import std.range : walkLength;
+    import std.stdio : File;
 
     auto f = deleteme ~ "-dlang.std.experimental.allocator.stats_collector.txt";
     scope(exit) remove(f);
@@ -676,16 +680,18 @@ unittest
     assert(File(f).byLine.walkLength == 22);
 }
 
-unittest
+@system unittest
 {
     void test(Allocator)()
     {
         import std.range : walkLength;
-        import std.stdio : writeln;
+        import std.typecons : Ternary;
+
         Allocator a;
+        assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.yes);
         auto b1 = a.allocate(100);
         assert(a.numAllocate == 1);
-        assert(a.expand(b1, 0));
+        assert((() nothrow @safe => a.expand(b1, 0))());
         assert(a.reallocate(b1, b1.length + 1));
         auto b2 = a.allocate(101);
         assert(a.numAllocate == 2);
@@ -694,42 +700,65 @@ unittest
         auto b3 = a.allocate(202);
         assert(a.numAllocate == 3);
         assert(a.bytesAllocated == 404);
+        assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.no);
 
-        a.deallocate(b2);
+        () nothrow @nogc { a.deallocate(b2); }();
         assert(a.numDeallocate == 1);
-        a.deallocate(b1);
+        () nothrow @nogc { a.deallocate(b1); }();
         assert(a.numDeallocate == 2);
-        a.deallocate(b3);
+        () nothrow @nogc { a.deallocate(b3); }();
         assert(a.numDeallocate == 3);
         assert(a.numAllocate == a.numDeallocate);
         assert(a.bytesUsed == 0);
      }
 
-    import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.building_blocks.free_list : FreeList;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
     test!(StatsCollector!(GCAllocator, Options.all, Options.all));
     test!(StatsCollector!(FreeList!(GCAllocator, 128), Options.all,
         Options.all));
 }
 
-unittest
+@system unittest
 {
     void test(Allocator)()
     {
         import std.range : walkLength;
-        import std.stdio : writeln;
         Allocator a;
         auto b1 = a.allocate(100);
-        assert(a.expand(b1, 0));
+        assert((() nothrow @safe => a.expand(b1, 0))());
         assert(a.reallocate(b1, b1.length + 1));
         auto b2 = a.allocate(101);
         auto b3 = a.allocate(202);
 
-        a.deallocate(b2);
-        a.deallocate(b1);
-        a.deallocate(b3);
+        () nothrow @nogc { a.deallocate(b2); }();
+        () nothrow @nogc { a.deallocate(b1); }();
+        () nothrow @nogc { a.deallocate(b3); }();
     }
-    import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.building_blocks.free_list : FreeList;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
     test!(StatsCollector!(GCAllocator, 0, 0));
+}
+
+@system unittest
+{
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    StatsCollector!(GCAllocator, 0, 0) a;
+
+    // calls std.experimental.allocator.common.goodAllocSize
+    assert((() pure nothrow @safe @nogc => a.goodAllocSize(1))());
+}
+
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+
+    auto a = StatsCollector!(Region!(), Options.all, Options.all)(Region!()(new ubyte[1024 * 64]));
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    // Test that reallocate infers from parent
+    assert((() nothrow @nogc => a.reallocate(b, 100))());
+    assert(b.length == 100);
+    // Test that deallocateAll infers from parent
+    assert((() nothrow @nogc => a.deallocateAll())());
 }
