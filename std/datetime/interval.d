@@ -37,6 +37,7 @@ import core.time : Duration, dur;
 import std.datetime.date : AllowDayOverflow, DateTimeException, daysToDayOfWeek,
                            DayOfWeek, isTimePoint, Month;
 import std.exception : enforce;
+import std.range.primitives : isOutputRange;
 import std.traits : isIntegral, Unqual;
 import std.typecons : Flag;
 
@@ -1536,47 +1537,38 @@ public:
         return range;
     }
 
-
-    /+
-        Converts this interval to a string.
-      +/
-    // Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
-    // have versions of toString() with extra modifiers, so we define one version
-    // with modifiers and one without.
-    string toString()
-    {
-        return _toStringImpl();
-    }
-
-
     /++
         Converts this interval to a string.
+        Params:
+            w = A `char` accepting
+            $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+        Returns:
+            A `string` when not using an output range; `void` otherwise.
       +/
-    // Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
-    // have versions of toString() with extra modifiers, so we define one version
-    // with modifiers and one without.
-    string toString() const nothrow
+    string toString() const @safe nothrow
     {
-        return _toStringImpl();
+        import std.array : appender;
+        auto app = appender!string();
+        try
+            toString(app);
+        catch (Exception e)
+            assert(0, "toString() threw.");
+        return app.data;
     }
 
+    /// ditto
+    void toString(Writer)(ref Writer w) const
+    if (isOutputRange!(Writer, char))
+    {
+        import std.range.primitives : put;
+        put(w, '[');
+        _begin.toString(w);
+        put(w, " - ");
+        _end.toString(w);
+        put(w, ')');
+    }
 
 private:
-
-    /+
-        Since we have two versions of toString, we have _toStringImpl
-        so that they can share implementations.
-      +/
-    string _toStringImpl() const nothrow
-    {
-        import std.format : format;
-        try
-            return format("[%s - %s)", _begin, _end);
-        catch (Exception e)
-            assert(0, "format() threw.");
-    }
-
-
     /+
         Throws:
             $(REF DateTimeException,std,datetime,date) if this interval is
