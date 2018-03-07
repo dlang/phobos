@@ -98,7 +98,7 @@ template maxSize(T...)
     static assert(maxSize!(bool, Cat) == 12);
 }
 
-struct This;
+struct This { byte b; }
 
 private alias This2Variant(V, T...) = AliasSeq!(ReplaceType!(This, V, T));
 
