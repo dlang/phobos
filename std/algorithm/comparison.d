@@ -894,24 +894,19 @@ nothrow pure @safe unittest
 
 // equal
 /**
-Compares two ore more ranges for equality, as defined by predicate $(D pred)
-(which is $(D ==) by default).
+Compares two or more ranges for equality, as defined by predicate `pred`
+(which is `a == b` by default).
 */
 template equal(alias pred = "a == b")
 {
-    import std.typecons : allSatisfy;
-
-    enum isEmptyRange(R) =
-        isInputRange!R && __traits(compiles, {static assert(R.empty, "");});
-
-    enum hasFixedLength(T) = hasLength!T || isNarrowString!T;
+    import std.meta : allSatisfy;
 
     /++
-    This function compares the ranges $(D r) and $(D rs) for equality. The
+    This function compares the ranges `r` and `rs` for equality. The
     ranges may have different element types, as long as $(D pred(a, b))
-    evaluates to $(D bool) for $(D a) in $(D r) and all $(D b) in all elements
-    in all the other $(D rs).  Performs $(BIGOH min(r1.length, rs.length)) TODO BIG differently
-    evaluations of $(D pred).
+    evaluates to $(D bool) for $(D a) in `r` and all $(D b) in all elements
+    in all the other `rs`.  Performs $(BIGOH min(r1.length, rs.length)) TODO BIG differently
+    evaluations of `pred`.
 
     Params:
         r = The first range to be compared.
@@ -929,14 +924,13 @@ template equal(alias pred = "a == b")
     {
         enum isEquableToR(T) = is(typeof({ return R.init == T.init; }));
 
-        // start by detecting default pred and compatible dynamic array
-        static if (is(typeof(pred) == string) &&
-                   pred == "a == b" &&
+        // start by detecting default predicate and compatible dynamic array
+        static if (__traits(isSame, binaryFun!pred, (a, b) => a == b) &&
                    isArray!R &&
                    allSatisfy!(isArray, Rs) &&
                    allSatisfy!(isEquableToR, Rs))
         {
-            foreach (ref s; rs)
+            static foreach (s; rs)
             {
                 if (r != s) return false;
             }
@@ -946,14 +940,14 @@ template equal(alias pred = "a == b")
         else static if (allSatisfy!(hasLength, R, Rs))
         {
             // check equal lengths
-            foreach (ref s; rs)
+            static foreach (s; rs)
             {
                 if (r.length != s.length) { return false; }
             }
             // check equal contents
             for (; !r.empty; r.popFront())  // for each element in first range `r`
             {
-                foreach (ref s; rs) // for each other range `s`
+                static foreach (s; rs) // for each other range `s`
                 {
                     if (!binaryFun!(pred)(r.front, s.front)) return false;
                     s.popFront();
@@ -966,7 +960,7 @@ template equal(alias pred = "a == b")
         {
             for (; !r.empty; r.popFront())  // for each element in first range `r`
             {
-                foreach (ref s; rs)
+                static foreach (s; rs)
                 {
                     static if (!isInfinite!(typeof(s)))
                     {
@@ -990,7 +984,7 @@ template equal(alias pred = "a == b")
             // check that all other ranges are empty
             static if (!isInfinite!R) // line only reached when previous `for`-loop terminated (`s.empty` not enum false)
             {
-                foreach (ref s; rs)
+                static foreach (s; rs)
                 {
                     static if (!isInfinite!(typeof(s))) // only when `s` is not infinite
                     {
@@ -1055,12 +1049,16 @@ template equal(alias pred = "a == b")
     int[] a = [ 1, 2, 4, 3 ];
     assert(!equal(a, a[1..$]));
     assert(equal(a, a));
+
+    // different formats of predicate (lambda)
     assert(equal!((a, b) => a == b)(a, a));
+    assert(equal!("a == b")(a, a));
 
     // different types
     double[] b = [ 1.0, 2, 4, 3];
     assert(!equal(a, b[1..$]));
-    assert(equal(a, b));
+    assert(equal!((a, b) => a == b)(a, b));
+    assert(equal!("a == b")(a, b));
 
     // predicated: ensure that two vectors are approximately equal
     double[] c = [ 1.005, 2, 4, 3];
