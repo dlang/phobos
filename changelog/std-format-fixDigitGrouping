@@ -1,0 +1,29 @@
+Fixed digits grouping for floating point number without decimal part
+
+$(REF formatValue, std, format) now correctly groups digits in the output string
+by inserting a group separator character (,) every n characters specified
+by the $(LINK2 https://dlang.org/library/std/format/formatted_write.html#format-string, Separator)
+grammar rule in cases with zero decimal precision specified in the format string
+for floating point numbers.
+
+No group separators at all are inserted for floating point numbers when formatted
+with zero precision (i.e. no decimal digits) in Phobos before this fix,
+regardless of the respective decimal part of the formatted number.
+
+-------
+import std.format;
+
+assert(format("%,3.2f", 1172.009) == "1,172.01");
+assert(format("%,3.0f", 1172.009) == "1,172");
+assert(format("%#,3.4f", 1303.2508) == "1,303.250,8");
+assert(format("%#,3.0f", 1303.2508) == "1,303.");
+
+// original (buggy) behaviour before this fix
+//assert(format("%,3.0f", 1303.2508) == "1303");
+//assert(format("%,3.0f", 1303.) == "1303");
+
+// original (correct) behaviour before this fix
+//assert(format("%,3.1f", 1303.2508) == "1,303.3");
+//assert(format("%,3.2f", 1303.) == "1,303.00");
+//assert(format("%,3f", 1303.) == "1,303.000,000");
+-------
