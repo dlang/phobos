@@ -454,20 +454,15 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     ///
     @safe pure nothrow unittest
     {
-        // @system because encode for OutputRange is @system
-        struct OutputRange
-        {
-            char[] result;
-            void put(const(char) ch) @safe { result ~= ch; }
-        }
+        import std.array : appender;
 
+        auto output = appender!string();
         ubyte[] data = [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e];
 
         // This overload of encode() returns the number of calls to the output
         // range's put method.
-        OutputRange output;
         assert(Base64.encode(data, output) == 8);
-        assert(output.result == "Gis8TV1u");
+        assert(output.data == "Gis8TV1u");
     }
 
 
