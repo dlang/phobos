@@ -953,7 +953,14 @@ template equal(alias pred = "a == b")
             enum hasSomeLength = indexOfFirstLength != -1;
             static if (hasSomeLength)
             {
+                /* if any `rs` `hasLength` then `primaryRange` will index the
+                 * first of them */
+                enum primaryRange = indexOfFirstLength;
                 const length = rs[indexOfFirstLength].length;
+            }
+            else
+            {
+                enum primaryRange = 0; // otherwise just pick first
             }
 
             // check lengths
@@ -970,11 +977,11 @@ template equal(alias pred = "a == b")
             }
 
             // check equal contents
-            for (size_t j = 0; !rs[0].empty; ++j, rs[0].popFront()) // for each element in first range `r`
+            for (; !rs[primaryRange].empty; rs[primaryRange].popFront()) // for each element in first range `r`
             {
-                static foreach (i, r; rs) // TODO static foreach has no scope and therefore gives unreachable code warning if use here
+                static foreach (i, r; rs)
                 {{                        // double braces because need scope
-                    static if (i != 0) // not primary
+                    static if (i != primaryRange) // not primary
                     {
                         // `r` is always empty, opposite of infinite range
                         enum alwaysEmpty = __traits(compiles, { enum _ = r.empty; }) && r.empty is true;
@@ -984,18 +991,24 @@ template equal(alias pred = "a == b")
                         }
                         else static if (!isInfinite!(typeof(r)))
                         {
-                            static if (!hasLength!(typeof(r))) // if `r` has no length
+                            static if (!hasLength!(typeof(r)))
                             {
                                 if (r.empty) { return false; } // check for premature emptyness of `r`
                             }
-                            if (!binaryFun!(pred)(rs[0].front, r.front))
+                            else
+                            {
+                                /* `r` has length aswell as rs[primaryRange] and
+                                 * both have already been asserted above to be
+                                 * equal so safe to skip empty check for `r` */
+                            }
+                            if (!binaryFun!(pred)(rs[primaryRange].front, r.front))
                                 return false;
                             else
                                 r.popFront();
                         }
                         else    // infinite range
                         {
-                            if (!binaryFun!(pred)(rs[0].front, r.front))
+                            if (!binaryFun!(pred)(rs[primaryRange].front, r.front))
                                 return false;
                             else
                                 r.popFront();
@@ -1005,11 +1018,11 @@ template equal(alias pred = "a == b")
             }
 
             // check that all other ranges are empty
-            static if (!isInfinite!(Rs[0])) // line only reached when previous `for`-loop terminated (`r.empty` not enum false)
+            static if (!isInfinite!(Rs[primaryRange])) // line only reached when previous `for`-loop terminated (`r.empty` not enum false)
             {
-                static foreach (i, r; rs) // TODO static foreach has no scope and therefore gives unreachable code warning if used here
+                static foreach (i, r; rs)
                 {{                        // double braces because need scope
-                    static if (i != 0) // not primary
+                    static if (i != primaryRange)    // not primary
                     {
                         static if (!isInfinite!(typeof(r)))
                         {
