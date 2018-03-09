@@ -977,8 +977,8 @@ template equal(alias pred = "a == b")
             {
                 // debug writeln("main index:", j);
 
-                foreach (i, ref r; rs) // TODO static foreach has no scope and therefore gives unreachable code warning if use here
-                {
+                static foreach (i, r; rs) // TODO static foreach has no scope and therefore gives unreachable code warning if use here
+                {{                        // double braces because need scope
                     static if (i != 0) // not primary
                     {
                         // debug writeln("a rangeIndex:", i, " r.empty:", r.empty);
@@ -1007,7 +1007,7 @@ template equal(alias pred = "a == b")
                                 r.popFront();
                         }
                     }
-                }
+                }}
             }
 
             // debug writeln("equal contents");
@@ -1016,8 +1016,8 @@ template equal(alias pred = "a == b")
             static if (!isInfinite!(Rs[0])) // line only reached when previous `for`-loop terminated (`r.empty` not enum false)
             {
                 // debug writeln("b main index:");
-                foreach (i, ref r; rs) // TODO static foreach has no scope and therefore gives unreachable code warning if used here
-                {
+                static foreach (i, r; rs) // TODO static foreach has no scope and therefore gives unreachable code warning if used here
+                {{                        // double braces because need scope
                     static if (i != 0) // not primary
                     {
                         // debug writeln("rangeIndex:", i, " r.empty:", r.empty);
@@ -1026,7 +1026,7 @@ template equal(alias pred = "a == b")
                             if (!r.empty) { return false; }
                         }
                     }
-                }
+                }}
                 return true;
             }
         }
