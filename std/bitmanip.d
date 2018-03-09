@@ -244,8 +244,7 @@ private template createTaggedReference(T, ulong a, string name, Ts...)
 }
 
 /**
-Allows creating bit fields inside $(D_PARAM struct)s and $(D_PARAM
-class)es.
+Allows creating bit fields inside structs and classes.
 
 Example:
 
@@ -265,11 +264,11 @@ obj.z = obj.x;
 ----
 
 The example above creates a bitfield pack of eight bits, which fit in
-one $(D_PARAM ubyte). The bitfields are allocated starting from the
-least significant bit, i.e. x occupies the two least significant bits
+one `ubyte`. The bitfields are allocated starting from the
+least significant bit, i.e. `x` occupies the two least significant bits
 of the bitfields storage.
 
-The sum of all bit lengths in one $(D_PARAM bitfield) instantiation
+The sum of all bit lengths in one `bitfield` instantiation
 must be exactly 8, 16, 32, or 64. If padding is needed, just allocate
 one bitfield with an empty name.
 
@@ -286,8 +285,8 @@ struct A
 ----
 
 The type of a bit field can be any integral type or enumerated
-type. The most efficient type to store in bitfields is $(D_PARAM
-bool), followed by unsigned types, followed by signed types.
+type. The most efficient type to store in bitfields is `bool`,
+followed by unsigned types, followed by signed types.
 */
 
 template bitfields(T...)
@@ -296,17 +295,17 @@ template bitfields(T...)
 }
 
 /**
-This string mixin generator allows one to create tagged pointers inside $(D_PARAM struct)s and $(D_PARAM class)es.
+This string mixin generator allows one to create tagged pointers inside structs and classes.
 
 A tagged pointer uses the bits known to be zero in a normal pointer or class reference to store extra information.
 For example, a pointer to an integer must be 4-byte aligned, so there are 2 bits that are always known to be zero.
 One can store a 2-bit integer there.
 
-The example above creates a tagged pointer in the struct A. The pointer is of type
-$(D uint*) as specified by the first argument, and is named x, as specified by the second
+The example above creates a tagged pointer in the `struct A`. The pointer is of type
+`uint*` as specified by the first argument, and is named `x`, as specified by the second
 argument.
 
-Following arguments works the same way as $(D bitfield)'s. The bitfield must fit into the
+Following arguments works the same way as `bitfield`'s. The `bitfield` must fit into the
 bits known to be zero because of the pointer alignment.
 */
 
@@ -332,14 +331,14 @@ template taggedPointer(T : T*, string name, Ts...) {
 }
 
 /**
-This string mixin generator allows one to create tagged class reference inside $(D_PARAM struct)s and $(D_PARAM class)es.
+This string mixin generator allows one to create tagged class reference inside structs and classes.
 
 A tagged class reference uses the bits known to be zero in a normal class reference to store extra information.
 For example, a pointer to an integer must be 4-byte aligned, so there are 2 bits that are always known to be zero.
 One can store a 2-bit integer there.
 
-The example above creates a tagged reference to an Object in the struct A. This expects the same parameters
-as $(D taggedPointer), except the first argument which must be a class type instead of a pointer type.
+The example above creates a tagged reference to an `Object` in the `struct A`. This expects the same parameters
+as `taggedPointer`, except the first argument which must be a class type instead of a pointer type.
 */
 
 template taggedClassRef(T, string name, Ts...)
@@ -656,7 +655,7 @@ unittest
 
 /**
    Allows manipulating the fraction, exponent, and sign parts of a
-   $(D_PARAM float) separately. The definition is:
+   `float` separately. The definition is:
 
 ----
 struct FloatRep
@@ -689,7 +688,7 @@ struct FloatRep
 
 /**
    Allows manipulating the fraction, exponent, and sign parts of a
-   $(D_PARAM double) separately. The definition is:
+   `double` separately. The definition is:
 
 ----
 struct DoubleRep
@@ -765,9 +764,18 @@ struct DoubleRep
 }
 
 /**
- * An array of bits.
- */
+An array of bits, where the bits are packed in `size_t` values, so the
+dimension, i.e. underlying array size, is effectively
+`dim == ceil(length / size_t.sizeof * 8)`.
 
+`BitArray` is a `RandomAccessRange` and provides all the bitwise operators
+applicable to builtin integers: `&`, `|`, `^`, `~`, as well as bunch of
+standard methods operating effectively on the bits.
+
+The methods `all`, `any`, `none`, `sort`, whose generic equivalents can be
+found in the $(REF , std, algorithm), are specialized for `BitArray` to be
+faster - they operate in complexity relative to its dimension instead of the length.
+*/
 struct BitArray
 {
 private:
@@ -777,30 +785,41 @@ private:
 
     size_t _len;
     size_t* _ptr;
+
     enum bitsPerSizeT = size_t.sizeof * 8;
 
-    @property size_t fullWords() const @nogc pure nothrow
+    @property size_t fullWords() const @nogc pure nothrow @safe
     {
         return _len / bitsPerSizeT;
     }
+
     // Number of bits after the last full word
-    @property size_t endBits() const @nogc pure nothrow
+    @property size_t endBits() const @nogc pure nothrow @safe
     {
         return _len % bitsPerSizeT;
     }
+
     // Bit mask to extract the bits after the last full word
-    @property size_t endMask() const @nogc pure nothrow
+    @property size_t endMask() const @nogc pure nothrow @safe
     {
         return (size_t(1) << endBits) - 1;
     }
+
     static size_t lenToDim(size_t len) @nogc pure nothrow @safe
     {
-        return (len + (bitsPerSizeT-1)) / bitsPerSizeT;
+        return (len + (bitsPerSizeT - 1)) / bitsPerSizeT;
+    }
+
+    // Set extra bits from last word to false
+    void clearExtraBits() @nogc pure nothrow
+    {
+        if (endBits)
+            _ptr[fullWords] &= endMask;
     }
 
 public:
     /**********************************************
-     * Gets the amount of native words backing this $(D BitArray).
+     * Returns the number of native words backing this `BitArray`.
      */
     @property size_t dim() const @nogc pure nothrow @safe
     {
@@ -808,7 +827,7 @@ public:
     }
 
     /**********************************************
-     * Gets the amount of bits in the $(D BitArray).
+     * Returns the number of bits in the `BitArray`.
      */
     @property size_t length() const @nogc pure nothrow @safe
     {
@@ -816,33 +835,39 @@ public:
     }
 
     /**********************************************
-     * Sets the amount of bits in the $(D BitArray).
-     * $(RED Warning: increasing length may overwrite bits in
-     * final word up to the next word boundary. i.e. D dynamic
+     * Sets the number of bits in the `BitArray`. If the length
+     * is increased, new bits are set to false.
+     *
+     * $(RED Warning: increasing the length may overwrite bits in
+     * the final word up to the next word boundary, regardless of whether
+     * it is shared between other `BitArray` objects i.e. D dynamic
      * array extension semantics are not followed.)
+     *
+     * Params: newLen = Number of bits the `BitArray` should contain.
+     * Returns: New length.
      */
-    @property size_t length(size_t newlen) pure nothrow @system
+    @property size_t length(size_t newLen) pure nothrow @system
     {
-        if (newlen != _len)
+        if (newLen != _len)
         {
-            size_t olddim = dim;
-            immutable newdim = lenToDim(newlen);
+            immutable oldDim = dim;
+            immutable newDim = lenToDim(newLen);
 
-            if (newdim != olddim)
+            if (newDim != oldDim)
             {
                 // Create a fake array so we can use D's realloc machinery
-                auto b = _ptr[0 .. olddim];
-                b.length = newdim;                // realloc
+                auto b = _ptr[0 .. oldDim];
+                b.length = newDim;                // realloc
                 _ptr = b.ptr;
             }
 
-            _len = newlen;
+            _len = newLen;
         }
         return _len;
     }
 
     /**********************************************
-     * Gets the $(D i)'th bit in the $(D BitArray).
+     * Returns the value of the `i`'th bit in the `BitArray`.
      */
     bool opIndex(size_t i) const @nogc pure nothrow
     in
@@ -870,7 +895,10 @@ public:
     }
 
     /**********************************************
-     * Sets the $(D i)'th bit in the $(D BitArray).
+     * Sets the `i`'th bit in the `BitArray`.
+     * Params:
+     *   b = Value to set.
+     *   i = Index of the bit to set.
      */
     bool opIndexAssign(bool b, size_t i) @nogc pure nothrow
     in
@@ -887,10 +915,10 @@ public:
     }
 
     /**
-      Sets all the values in the $(D BitArray) to the
-      value specified by $(D val).
+      Sets all the values in the `BitArray` to the
+      value specified by `val`.
      */
-    void opSliceAssign(bool val)
+    void opSliceAssign(bool val) @nogc pure nothrow
     {
         _ptr[0 .. fullWords] = val ? ~size_t(0) : 0;
         if (endBits)
@@ -918,10 +946,28 @@ public:
         assert(b.bitsSet.empty);
     }
 
+    @system unittest
+    {
+        import std.algorithm.comparison : equal;
+        // An example of BitArray consisting of one full word and a couple of bits after.
+        import std.range : iota;
+
+        bool[70] bits;
+        bits[10 .. 65] = true;
+        auto b70 = BitArray(bits);
+        assert(b70.bitsSet.equal(iota(10, 65)));
+        b70[] = true;
+        assert(b70.bitsSet.equal(iota(0, 70)));
+        b70[] = false;
+        assert(b70.bitsSet.empty);
+        b70[] = true;
+        assert(b70.bitsSet.equal(iota(0, 70)));
+    }
+
     /**
-      Sets the bits of a slice of $(D BitArray) starting
-      at index `start` and ends at index ($D end - 1)
-      with the values specified by $(D val).
+      Sets the bits of a slice of `BitArray` starting
+      at index `start` and ends at index `end - 1`
+      with the values specified by `val`.
      */
     void opSliceAssign(bool val, size_t start, size_t end)
     in
@@ -999,9 +1045,9 @@ public:
     }
 
     /**
-      Flips all the bits in the $(D BitArray)
+      Flips all the bits in the `BitArray`
      */
-    void flip()
+    void flip() @nogc pure nothrow
     {
         foreach (i; 0 .. fullWords)
             _ptr[i] = ~_ptr[i];
@@ -1029,9 +1075,9 @@ public:
     }
 
     /**
-      Flips a single bit, specified by `pos`
+      Flips a single bit, specified by `pos`.
      */
-    void flip(size_t i)
+    void flip(size_t i) @nogc pure nothrow
     {
         bt(_ptr, i) ? btr(_ptr, i) : bts(_ptr, i);
     }
@@ -1050,9 +1096,9 @@ public:
     }
 
     /**********************************************
-     * Counts all the set bits in the $(D BitArray)
+     * Counts all the set bits in the `BitArray`.
      */
-    size_t count()
+    size_t count() @nogc pure nothrow
     {
         size_t bitCount;
         foreach (i; 0 .. fullWords)
@@ -1073,7 +1119,7 @@ public:
     }
 
     /**********************************************
-     * Duplicates the $(D BitArray) and its contents.
+     * Duplicates the `BitArray` and its contents.
      */
     @property BitArray dup() const pure nothrow
     {
@@ -1104,7 +1150,7 @@ public:
     }
 
     /**********************************************
-     * Support for $(D foreach) loops for $(D BitArray).
+     * Support for `foreach` loops for `BitArray`.
      */
     int opApply(scope int delegate(ref bool) dg)
     {
@@ -1200,9 +1246,108 @@ public:
         }
     }
 
+    /**
+    Checks if all the bits in this `BitArray` are set to true.
+    Complexity: $(BIGOH dim).
+    */
+    @property bool all() const @nogc pure nothrow
+    {
+        if (_len == 0)
+            return false;
+        foreach (i; 0 .. fullWords)
+            if (~_ptr[i] != 0)
+                return false;
+        return (_ptr[fullWords] & endMask) == endMask;
+    }
+
+    ///
+    @system unittest
+    {
+        BitArray empty;
+        assert(!empty.all);
+
+        auto a = BitArray([1]);
+        auto b = BitArray([1, 1, 1, 1, 1]);
+        auto c = BitArray([1, 1, 1, 1, 0, 1, 1]);
+        auto d = BitArray([1, 1, 1, 0]);
+        assert(a.all);
+        assert(b.all);
+        assert(!c.all);
+        assert(!d.all);
+
+        bool[70] bits = 1;
+        bits[65] = 0;
+        auto e = BitArray(bits);
+        assert(!e.all);
+    }
+
+    /**
+    Checks if any of the bits in the `BitArray` is set to true.
+    Complexity: $(BIGOH dim).
+    */
+    @property bool any() const @nogc pure nothrow
+    {
+        if (_len == 0)
+            return false;
+        foreach (i; 0 .. fullWords)
+            if (_ptr[i] != 0)
+                return true;
+        return (_ptr[fullWords] & endMask) != 0;
+    }
+
+    ///
+    @system unittest
+    {
+        BitArray empty;
+        assert(!empty.any);
+
+        auto a = BitArray([0]);
+        auto b = BitArray([0, 0, 0, 1, 0, 1]);
+        auto c = BitArray([1, 0, 0, 0, 0, 0]);
+        auto d = BitArray([0, 0, 0, 0, 0, 0, 0, 0]);
+        assert(!a.any);
+        assert(b.any);
+        assert(c.any);
+        assert(!d.any);
+
+        bool[70] bits;
+        bits[65] = 1;
+        auto e = BitArray(bits);
+        assert(e.any);
+    }
+
+    /**
+    Checks if none of the bits in the `BitArray` is set to true.
+    Complexity: $(BIGOH dim).
+    */
+    @property bool none() const @nogc pure nothrow
+    {
+        return !any;
+    }
+
+    ///
+    @system unittest
+    {
+        BitArray empty;
+        assert(empty.none);
+
+        auto a = BitArray([0]);
+        auto b = BitArray([0, 0, 0, 1, 0, 1]);
+        auto c = BitArray([1, 0, 0, 0, 0, 0]);
+        auto d = BitArray([0, 0, 0, 0, 0, 0, 0, 0]);
+        assert(a.none);
+        assert(!b.none);
+        assert(!c.none);
+        assert(d.none);
+
+        bool[70] bits;
+        bits[65] = 1;
+        auto e = BitArray(bits);
+        assert(!e.none);
+    }
 
     /**********************************************
-     * Reverses the bits of the $(D BitArray).
+     * Reverses the bits of the `BitArray` in place.
      */
     @property BitArray reverse() @nogc pure nothrow
     out (result)
@@ -1245,9 +1390,11 @@ public:
     }
 
 
-    /**********************************************
-     * Sorts the $(D BitArray)'s elements.
-     */
+    /**
+    Sorts the bits of the `BitArray` in place.
+    Complexity: $(BIGOH dim).
+    Returns: Copy of the `BitArray` with bits sorted.
+    */
     @property BitArray sort() @nogc pure nothrow
     out (result)
     {
@@ -1257,57 +1404,103 @@ public:
     {
         if (_len >= 2)
         {
-            size_t lo, hi;
+            immutable ones = count();
+            if (ones == 0)
+                return this;
 
-            lo = 0;
-            hi = _len - 1;
-            while (1)
+            immutable zeros = _len - ones;
+            immutable zerosWords = lenToDim(zeros);
+            _ptr[0 .. zerosWords] = 0;
+            immutable endZeros = zeros % bitsPerSizeT;
+            if (endZeros)
             {
-                while (1)
-                {
-                    if (lo >= hi)
-                        goto Ldone;
-                    if (this[lo] == true)
-                        break;
-                    lo++;
-                }
-
-                while (1)
-                {
-                    if (lo >= hi)
-                        goto Ldone;
-                    if (this[hi] == false)
-                        break;
-                    hi--;
-                }
-
-                this[lo] = false;
-                this[hi] = true;
-
-                lo++;
-                hi--;
+                immutable endZerosMask = (size_t(1) << endZeros) - 1;
+                immutable beginOnes = ~endZerosMask;
+                _ptr[zerosWords - 1] |= beginOnes;
             }
+            _ptr[zerosWords .. dim] = ~size_t(0);
+            clearExtraBits();
         }
-    Ldone:
         return this;
+    }
+
+    ///
+    @system unittest
+    {
+        auto a = BitArray([0, 1, 1, 0, 1, 1, 0, 0, 0, 1]);
+        auto b = BitArray([0, 0, 0, 0, 0, 1, 1, 1, 1, 1]);
+        a.sort;
+        assert(a == b);
+
+        import std.algorithm.comparison : equal;
+
+        bool[72] bits;
+        bits[65] = 1;
+        auto c = BitArray(bits);
+        c.sort;
+        assert(c.bitsSet.equal([71]));
     }
 
     @system unittest
     {
         debug(bitarray) printf("BitArray.sort.unittest\n");
 
-        __gshared size_t x = 0b1100011000;
-        __gshared ba = BitArray(10, &x);
-        ba.sort;
-        for (size_t i = 0; i < 6; i++)
-            assert(ba[i] == false);
-        for (size_t i = 6; i < 10; i++)
-            assert(ba[i] == true);
+        bool isSorted(const ref BitArray b, size_t zeros)
+        {
+            size_t i = 0;
+            for (; i < b.length; i++)
+                if (b[i])
+                    break;
+
+            if (i != zeros)
+                return false;
+
+            for (; i < b.length; i++)
+                if (!b[i])
+                    return false;
+            return true;
+        }
+
+        size_t x = 0b1100011000;
+        auto a = BitArray(10, &x);
+        a.sort;
+        assert(isSorted(a, 6));
+
+        BitArray empty;
+        empty.sort;
+        assert(empty.length == 0);
+
+        BitArray b;
+        b.length = 128;
+        b.sort;
+        assert(isSorted(b, 128));
+
+        b[] = 1;
+        b.sort;
+        assert(isSorted(b, 0));
+
+        import std.range : iota;
+
+        size_t zeros = 0;
+        foreach (i; iota(0, 128, 3))
+        {
+            b[i] = 0;
+            zeros++;
+        }
+        b.sort;
+        assert(isSorted(b, zeros));
+
+        b.flip;
+        b.sort;
+        assert(isSorted(b, b.length - zeros));
+
+        b.length = 1233;
+        b.sort;
+        assert(isSorted(b, b.length - zeros));
     }
 
-
     /***************************************
-     * Support for operators == and != for $(D BitArray).
+     * Support for operators `==` and `!=` for `BitArray`.
      */
     bool opEquals(const ref BitArray a2) const @nogc pure nothrow
     {
@@ -1354,7 +1547,7 @@ public:
     }
 
     /***************************************
-     * Supports comparison operators for $(D BitArray).
+     * Support for comparison operators for `BitArray`.
      */
     int opCmp(BitArray a2) const @nogc pure nothrow
     {
@@ -1455,7 +1648,7 @@ public:
     }
 
     /***************************************
-     * Support for hashing for $(D BitArray).
+     * Calculates a hash of the `BitArray`.
      */
     size_t toHash() const @nogc pure nothrow
     {
@@ -1475,15 +1668,80 @@ public:
     }
 
     /***************************************
-     * Set this $(D BitArray) to the contents of $(D ba).
+     * Creates `BitArray` from an array where each bool value corresponds to one bit in the `BitArray`.
      */
-    this(bool[] ba) pure nothrow @system
+    this(const(bool)[] ba) pure nothrow @system
     {
         length = ba.length;
         foreach (i, b; ba)
         {
             this[i] = b;
         }
+    }
+
+    /**
+    Creates `BitArray` from a string.
+    Params:
+      s = string consisting of `0`, `1` and separators `_`.
+    Throws:
+      `Exception` if the given string contains invalid characters.
+    */
+    static BitArray fromString(S)(S s) pure @system
+    if (isSomeString!S)
+    {
+        import std.algorithm.searching : count;
+
+        BitArray ba;
+        ba.length = s.length - s.count('_');
+        size_t i = 0;
+        foreach (c; s)
+        {
+            switch (c)
+            {
+                case '1':
+                    ba[i++] = 1;
+                    break;
+                case '0':
+                    i++;
+                    break;
+                case '_':
+                    break;
+                default:
+                    throw new Exception("String contains invalid characters, only '0', '1', '_' are allowed.");
+            }
+        }
+        return ba;
+    }
+
+    ///
+    @system unittest
+    {
+        auto a = BitArray.fromString("00000");
+        auto ac = BitArray([0, 0, 0, 0, 0]);
+        assert(a == ac);
+
+        auto b = BitArray.fromString("0011_1000_1101_0001");
+        auto bc = BitArray([0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 1]);
+        assert(b == bc);
+
+        auto c = BitArray.fromString("");
+        assert(c.length == 0);
+
+        auto d = BitArray.fromString("_11_1001_0_0_011__1");
+        auto dc = BitArray([1, 1, 1, 0, 0, 1, 0, 0, 0, 1, 1, 1]);
+
+        auto e = BitArray.fromString("_");
+        assert(e.length == 0);
+    }
+
+    @system unittest
+    {
+        import std.exception : assertThrown;
+
+        assertThrown(BitArray.fromString("012"));
+        assertThrown(BitArray.fromString("10-1000"));
+        assertThrown(BitArray.fromString("0000 0000"));
+        assertThrown(BitArray.fromString("abcd"));
     }
 
     // Deliberately undocumented: raw initialization of bit array.
@@ -1494,12 +1752,16 @@ public:
     }
 
     /***************************************
-     * Map the $(D BitArray) onto $(D v), with $(D numbits) being the number of bits
-     * in the array. Does not copy the data. $(D v.length) must be a multiple of
-     * $(D size_t.sizeof). If there are unmapped bits in the final mapped word then
+     * Map the `BitArray` onto `v`, with `numbits` being the number of bits
+     * in the array. Does not copy the data. `v.length` must be a multiple of
+     * `size_t.sizeof`. If there are unmapped bits in the final mapped word then
      * these will be set to 0.
      *
-     * This is the inverse of $(D opCast).
+     * This is the inverse of `opCast`.
+     *
+     * Params:
+     *  v = Bits that will be used as array backing the `BitArray`.
+     *  numbits = Number of bits in the array.
      */
     this(void[] v, size_t numbits) pure nothrow
     in
@@ -1511,11 +1773,7 @@ public:
     {
         _ptr = cast(size_t*) v.ptr;
         _len = numbits;
-        if (endBits)
-        {
-            // Need to mask away extraneous bits from v.
-            _ptr[dim - 1] &= endMask;
-        }
+        clearExtraBits();
     }
 
     @system unittest
@@ -1543,7 +1801,7 @@ public:
     }
 
     /***************************************
-     * Convert to $(D void[]).
+     * Returns the underlying bits as `void[]`.
      */
     void[] opCast(T : void[])() @nogc pure nothrow
     {
@@ -1551,7 +1809,7 @@ public:
     }
 
     /***************************************
-     * Convert to $(D size_t[]).
+     * Returns the underlying bits as `size_t[]`.
      */
     size_t[] opCast(T : size_t[])() @nogc pure nothrow
     {
@@ -1571,9 +1829,13 @@ public:
     }
 
     /***************************************
-     * Support for unary operator ~ for $(D BitArray).
+     * Support for unary operator `~` for `BitArray`. This is the
+     * equivalent of `flip` which does not modify the original array.
+     *
+     * Returns: Copy of the `BitArray` with all bits flipped.
      */
-    BitArray opCom() const pure nothrow
+    BitArray opUnary(string op)() const pure nothrow
+    if (op == "~")
     {
         auto dim = this.dim;
 
@@ -1583,9 +1845,7 @@ public:
         result._ptr[0 .. dim] = ~this._ptr[0 .. dim];
 
         // Avoid putting garbage in extra bits
-        // Remove once we zero on length extension
-        if (endBits)
-            result._ptr[dim - 1] &= endMask;
+        result.clearExtraBits();
 
         return result;
     }
@@ -1608,10 +1868,10 @@ public:
 
 
     /***************************************
-     * Support for binary bitwise operators for $(D BitArray).
+     * Support for binary bitwise operators `-`, `&`, `|` and `^` for `BitArray`.
      */
     BitArray opBinary(string op)(const BitArray e2) const pure nothrow
-        if (op == "-" || op == "&" || op == "|" || op == "^")
+    if (op == "-" || op == "&" || op == "|" || op == "^")
     in
     {
         assert(_len == e2.length);
@@ -1629,9 +1889,7 @@ public:
             mixin("result._ptr[0 .. dim] = this._ptr[0 .. dim]"~op~" e2._ptr[0 .. dim];");
 
         // Avoid putting garbage in extra bits
-        // Remove once we zero on length extension
-        if (endBits)
-            result._ptr[dim - 1] &= endMask;
+        result.clearExtraBits();
 
         return result;
     }
@@ -1712,12 +1970,11 @@ public:
         assert(c[4] == 1);
     }
 
-
     /***************************************
-     * Support for operator op= for $(D BitArray).
+     * Support for operators `-=`, `&=`, `|=` and `^=` for `BitArray`.
      */
     BitArray opOpAssign(string op)(const BitArray e2) @nogc pure nothrow
-        if (op == "-" || op == "&" || op == "|" || op == "^")
+    if (op == "-" || op == "&" || op == "|" || op == "^")
     in
     {
         assert(_len == e2.length);
@@ -1834,14 +2091,15 @@ public:
     }
 
     /***************************************
-     * Support for operator ~= for $(D BitArray).
+     * Support for operator `~=` for `BitArray`.
+     *
      * $(RED Warning: This will overwrite a bit in the final word
-     * of the current underlying data regardless of whether it is
-     * shared between BitArray objects. i.e. D dynamic array
+     * of the current underlying data, regardless of whether it is
+     * shared between other `BitArray` objects i.e. D dynamic array
      * concatenation semantics are not followed)
      */
-
-    BitArray opCatAssign(bool b) pure nothrow
+    BitArray opOpAssign(string op)(bool b) pure nothrow
+    if (op == "~")
     {
         length = _len + 1;
         this[_len - 1] = b;
@@ -1866,13 +2124,14 @@ public:
         assert(a[5] == 1);
 
         assert(b == a);
+        assert(a.length == 6);
     }
 
     /***************************************
      * ditto
      */
-
-    BitArray opCatAssign(BitArray b) pure nothrow
+    BitArray opOpAssign(string op)(BitArray b) pure nothrow
+    if (op == "~")
     {
         auto istart = _len;
         length = _len + b.length;
@@ -1904,9 +2163,10 @@ public:
     }
 
     /***************************************
-     * Support for binary operator ~ for $(D BitArray).
+     * Support for binary operator `~` for `BitArray`.
      */
-    BitArray opCat(bool b) const pure nothrow
+    BitArray opBinary(string op)(bool b) const pure nothrow
+    if (op == "~")
     {
         BitArray r;
 
@@ -1917,7 +2177,8 @@ public:
     }
 
     /** ditto */
-    BitArray opCat_r(bool b) const pure nothrow
+    BitArray opBinaryRight(string op)(bool b) const pure nothrow
+    if (op == "~")
     {
         BitArray r;
 
@@ -1929,7 +2190,8 @@ public:
     }
 
     /** ditto */
-    BitArray opCat(BitArray b) const pure nothrow
+    BitArray opBinary(string op)(BitArray b) const pure nothrow
+    if (op == "~")
     {
         BitArray r;
 
@@ -1970,7 +2232,7 @@ public:
         assert(c[2] == 0);
     }
 
-    // Rolls double word (upper, lower) to the right by n bits and returns the
+    // Rolls double word (upper, lower) to the right by `n` bits and returns the
     // lower word of the result.
     private static size_t rollRight()(size_t upper, size_t lower, size_t nbits)
         pure @safe nothrow @nogc
@@ -2043,7 +2305,7 @@ public:
     }
 
     /**
-     * Operator $(D <<=) support.
+     * Operator `<<=` support.
      *
      * Shifts all the bits in the array to the left by the given number of
      * bits.  The leftmost bits are dropped, and 0's are appended to the end
@@ -2052,9 +2314,11 @@ public:
      * $(RED Warning: unused bits in the final word up to the next word
      * boundary may be overwritten by this operation. It does not attempt to
      * preserve bits past the end of the array.)
+     *
+     * Params: nbits = Number of bits to shift the `BitArray` to the left.
      */
     void opOpAssign(string op)(size_t nbits) @nogc pure nothrow
-        if (op == "<<")
+    if (op == "<<")
     {
         size_t wordsToShift = nbits / bitsPerSizeT;
         size_t bitsToShift = nbits % bitsPerSizeT;
@@ -2077,7 +2341,7 @@ public:
     }
 
     /**
-     * Operator $(D >>=) support.
+     * Operator `>>=` support.
      *
      * Shifts all the bits in the array to the right by the given number of
      * bits.  The rightmost bits are dropped, and 0's are inserted at the back
@@ -2086,6 +2350,8 @@ public:
      * $(RED Warning: unused bits in the final word up to the next word
      * boundary may be overwritten by this operation. It does not attempt to
      * preserve bits past the end of the array.)
+     *
+     * Params: nbits = Number of bits to shift the `BitArray` to the right.
      */
     void opOpAssign(string op)(size_t nbits) @nogc pure nothrow
         if (op == ">>")
@@ -2256,7 +2522,7 @@ public:
     }
 
     /***************************************
-     * Return a string representation of this BitArray.
+     * Return a string representation of the `BitArray`.
      *
      * Two format specifiers are supported:
      * $(LI $(B %s) which prints the bits as an array, and)
@@ -2292,7 +2558,7 @@ public:
     }
 
     /***************************************
-     * Return a lazy range of the indices of set bits.
+     * Returns a lazy range of the indices of set bits.
      */
     @property auto bitsSet() const nothrow
     {
@@ -2521,14 +2787,14 @@ if (canSwapEndianness!T)
 
 /++
     Converts the given value from the native endianness to big endian and
-    returns it as a $(D ubyte[n]) where $(D n) is the size of the given type.
+    returns it as a `ubyte[n]` where `n` is the size of the given type.
 
-    Returning a $(D ubyte[n]) helps prevent accidentally using a swapped value
+    Returning a `ubyte[n]` helps prevent accidentally using a swapped value
     as a regular one (and in the case of floating point values, it's necessary,
     because the FPU will mess up any swapped floating point values. So, you
     can't actually have swapped floating point values as floating point values).
 
-    $(D real) is not supported, because its size is implementation-dependent
+    `real` is not supported, because its size is implementation-dependent
     and therefore could vary from machine to machine (which could make it
     unusable if you tried to transfer it to another machine).
   +/
@@ -2644,12 +2910,12 @@ if (isFloatOrDouble!T)
 
 /++
     Converts the given value from big endian to the native endianness and
-    returns it. The value is given as a $(D ubyte[n]) where $(D n) is the size
+    returns it. The value is given as a `ubyte[n]` where `n` is the size
     of the target type. You must give the target type as a template argument,
     because there are multiple types with the same size and so the type of the
     argument is not enough to determine the return type.
 
-    Taking a $(D ubyte[n]) helps prevent accidentally using a swapped value
+    Taking a `ubyte[n]` helps prevent accidentally using a swapped value
     as a regular one (and in the case of floating point values, it's necessary,
     because the FPU will mess up any swapped floating point values. So, you
     can't actually have swapped floating point values as floating point values).
@@ -2699,9 +2965,9 @@ if (isFloatOrDouble!T && n == T.sizeof)
 
 /++
     Converts the given value from the native endianness to little endian and
-    returns it as a $(D ubyte[n]) where $(D n) is the size of the given type.
+    returns it as a `ubyte[n]` where `n` is the size of the given type.
 
-    Returning a $(D ubyte[n]) helps prevent accidentally using a swapped value
+    Returning a `ubyte[n]` helps prevent accidentally using a swapped value
     as a regular one (and in the case of floating point values, it's necessary,
     because the FPU will mess up any swapped floating point values. So, you
     can't actually have swapped floating point values as floating point values).
@@ -2787,17 +3053,17 @@ if (isFloatOrDouble!T)
 
 /++
     Converts the given value from little endian to the native endianness and
-    returns it. The value is given as a $(D ubyte[n]) where $(D n) is the size
+    returns it. The value is given as a `ubyte[n]` where `n` is the size
     of the target type. You must give the target type as a template argument,
     because there are multiple types with the same size and so the type of the
     argument is not enough to determine the return type.
 
-    Taking a $(D ubyte[n]) helps prevent accidentally using a swapped value
+    Taking a `ubyte[n]` helps prevent accidentally using a swapped value
     as a regular one (and in the case of floating point values, it's necessary,
     because the FPU will mess up any swapped floating point values. So, you
     can't actually have swapped floating point values as floating point values).
 
-    $(D real) is not supported, because its size is implementation-dependent
+    `real` is not supported, because its size is implementation-dependent
     and therefore could vary from machine to machine (which could make it
     unusable if you tried to transfer it to another machine).
   +/
@@ -2932,18 +3198,18 @@ private template canSwapEndianness(T)
 }
 
 /++
-    Takes a range of $(D ubyte)s and converts the first $(D T.sizeof) bytes to
-    $(D T). The value returned is converted from the given endianness to the
+    Takes a range of `ubyte`s and converts the first `T.sizeof` bytes to
+    `T`. The value returned is converted from the given endianness to the
     native endianness. The range is not consumed.
 
     Params:
-        T     = The integral type to convert the first $(D T.sizeof) bytes to.
+        T     = The integral type to convert the first `T.sizeof` bytes to.
         endianness = The endianness that the bytes are assumed to be in.
         range = The range to read from.
         index = The index to start reading from (instead of starting at the
                 front). If index is a pointer, then it is updated to the index
                 after the bytes read. The overloads with index are only
-                available if $(D hasSlicing!R) is $(D true).
+                available if `hasSlicing!R` is `true`.
   +/
 
 T peek(T, Endian endianness = Endian.bigEndian, R)(R range)
@@ -3238,13 +3504,13 @@ if (canSwapEndianness!T &&
 
 
 /++
-    Takes a range of $(D ubyte)s and converts the first $(D T.sizeof) bytes to
-    $(D T). The value returned is converted from the given endianness to the
-    native endianness. The $(D T.sizeof) bytes which are read are consumed from
+    Takes a range of `ubyte`s and converts the first `T.sizeof` bytes to
+    `T`. The value returned is converted from the given endianness to the
+    native endianness. The `T.sizeof` bytes which are read are consumed from
     the range.
 
     Params:
-        T     = The integral type to convert the first $(D T.sizeof) bytes to.
+        T     = The integral type to convert the first `T.sizeof` bytes to.
         endianness = The endianness that the bytes are assumed to be in.
         range = The range to read from.
   +/
@@ -3509,11 +3775,11 @@ if (canSwapEndianness!T && isInputRange!R && is(ElementType!R : const ubyte))
 
 /++
     Takes an integral value, converts it to the given endianness, and writes it
-    to the given range of $(D ubyte)s as a sequence of $(D T.sizeof) $(D ubyte)s
-    starting at index. $(D hasSlicing!R) must be $(D true).
+    to the given range of `ubyte`s as a sequence of `T.sizeof` `ubyte`s
+    starting at index. `hasSlicing!R` must be `true`.
 
     Params:
-        T     = The integral type to convert the first $(D T.sizeof) bytes to.
+        T     = The integral type to convert the first `T.sizeof` bytes to.
         endianness = The endianness to _write the bytes in.
         range = The range to _write to.
         value = The value to _write.
@@ -3854,12 +4120,12 @@ if (canSwapEndianness!T &&
 
 /++
     Takes an integral value, converts it to the given endianness, and appends
-    it to the given range of $(D ubyte)s (using $(D put)) as a sequence of
-    $(D T.sizeof) $(D ubyte)s starting at index. $(D hasSlicing!R) must be
-    $(D true).
+    it to the given range of `ubyte`s (using `put`) as a sequence of
+    `T.sizeof` `ubyte`s starting at index. `hasSlicing!R` must be
+    `true`.
 
     Params:
-        T     = The integral type to convert the first $(D T.sizeof) bytes to.
+        T     = The integral type to convert the first `T.sizeof` bytes to.
         endianness = The endianness to write the bytes in.
         range = The range to _append to.
         value = The value to _append.
@@ -4062,7 +4328,7 @@ if (canSwapEndianness!T && isOutputRange!(R, ubyte))
 }
 
 /**
-Counts the number of set bits in the binary representation of $(D value).
+Counts the number of set bits in the binary representation of `value`.
 For signed integers, the sign bit is included in the count.
 */
 private uint countBitsSet(T)(T value) @nogc pure nothrow
@@ -4200,7 +4466,7 @@ private struct BitsSet(T)
 }
 
 /**
-Range that iterates the indices of the set bits in $(D value).
+Range that iterates the indices of the set bits in `value`.
 Index 0 corresponds to the least significant bit.
 For signed integers, the highest index corresponds to the sign bit.
 */
