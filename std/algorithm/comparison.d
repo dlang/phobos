@@ -894,101 +894,137 @@ nothrow pure @safe unittest
 
 // equal
 /**
-Compares two or more ranges for equality, as defined by predicate `pred`
+Compares two or more ranges `rs` for equality, as defined by predicate `pred`
 (which is `a == b` by default).
 */
 template equal(alias pred = "a == b")
 {
-    import std.meta : allSatisfy;
+    import std.meta : anySatisfy, allSatisfy;
+
+    // TODO extend to variadic
+    enum areEquableRanges(Rs...) = is(typeof(binaryFun!pred(ElementType!(Rs[0]).init,
+                                                            ElementType!(Rs[1]).init)));
+
+
+    import std.stdio : writeln;
 
     /++
-    This function compares the ranges `r` and `rs` for equality. The
-    ranges may have different element types, as long as $(D pred(a, b))
-    evaluates to $(D bool) for $(D a) in `r` and all $(D b) in all elements
-    in all the other `rs`.  Performs $(BIGOH min(r1.length, rs.length)) TODO BIG differently
+    This function compares the ranges `rs` for equality. The
+    ranges may have different element types, as long as `pred(a, b)`
+    evaluates to `bool` for every combination elements `a` and `b` at the same position in the ranges
+    `rs`.  Performs $(BIGOH min(r1.length, rs.length)) TODO BIG differently
     evaluations of `pred`.
 
     Params:
-        r = The first range to be compared.
-        rs = The other ranges to be compared.
+        rs = The ranges to be compared.
 
     Returns:
-        `true` if and only if the two ranges compare _equal element
+        `true` if and only if all the ranges compare _equal element
         for element, according to binary predicate `pred`.
     +/
-    bool equal(R, Rs...)(R r, Rs rs)
-    if (rs.length >= 1 &&
-        allSatisfy!(isInputRange, R, Rs) &&
-        (!isInfinite!R || !allSatisfy!(isInfinite, Rs)) // at least one must be finite
-        )
+    bool equal(Rs...)(Rs rs)
+        if (rs.length >= 2 &&
+            areEquableRanges!(Rs) &&
+            allSatisfy!(isInputRange, Rs) && // TODO should we use `isIterable` instead?
+            !allSatisfy!(isInfinite, Rs)
+            )
     {
-        enum isEquableToR(T) = is(typeof({ return R.init == T.init; }));
+        enum isEquableToR(T) = is(typeof({ return Rs[0].init == T.init; }));
 
-        // start by detecting default predicate and compatible dynamic array
+        // if comparing arrays
         static if (__traits(isSame, binaryFun!pred, (a, b) => a == b) &&
-                   isArray!R &&
                    allSatisfy!(isArray, Rs) &&
-                   allSatisfy!(isEquableToR, Rs))
+                   allSatisfy!(isEquableToR, Rs[1 .. $]))
         {
-            static foreach (s; rs)
+            static foreach (r; rs[1 .. $])
             {
-                if (r != s) return false;
-            }
-            return true;
-        }
-        // use fast implementation when the ranges have comparable lengths
-        else static if (allSatisfy!(hasLength, R, Rs))
-        {
-            // check equal lengths
-            static foreach (s; rs)
-            {
-                if (r.length != s.length) { return false; }
-            }
-            // check equal contents
-            for (; !r.empty; r.popFront())  // for each element in first range `r`
-            {
-                static foreach (s; rs) // for each other range `s`
+                if (rs[0] != r) // use fast array comparison
                 {
-                    if (!binaryFun!(pred)(r.front, s.front)) return false;
-                    s.popFront();
+                    return false;
                 }
             }
             return true;
         }
-        // generic case, we have to walk all ranges making sure neither is empty
         else
         {
-            for (; !r.empty; r.popFront())  // for each element in first range `r`
+            import std.meta : staticMap, staticIndexOf;
+
+            alias hasLengthBits = staticMap!(hasLength, Rs);
+
+            // get length from first range that has one
+            enum indexOfFirstLength = staticIndexOf!(true, hasLengthBits);
+            enum hasSomeLength = indexOfFirstLength != -1;
+            static if (hasSomeLength)
             {
-                static foreach (s; rs)
+                const length = rs[indexOfFirstLength].length;
+            }
+
+            // check lengths
+            static if (hasSomeLength)
+            {
+                static foreach (i, r; rs)
                 {
-                    static if (!isInfinite!(typeof(s)))
+                    static if (i != indexOfFirstLength &&
+                               hasLength!(typeof(r)))
                     {
-                        if (s.empty)
-                            return false; // because ranges may be different in length
-                        else if (!binaryFun!(pred)(r.front, s.front))
-                            return false;
-                        else
-                            s.popFront();
-                    }
-                    else
-                    {
-                        if (!binaryFun!(pred)(r.front, s.front))
-                            return false;
-                        else
-                            s.popFront();
+                        if (length != r.length) { return false; }
                     }
                 }
             }
 
-            // check that all other ranges are empty
-            static if (!isInfinite!R) // line only reached when previous `for`-loop terminated (`s.empty` not enum false)
+            // check equal contents
+            for (size_t j = 0; !rs[0].empty; ++j, rs[0].popFront()) // for each element in first range `r`
             {
-                static foreach (s; rs)
+                // debug writeln("main index:", j);
+
+                foreach (i, ref r; rs) // TODO static foreach has no scope and therefore gives unreachable code warning if use here
                 {
-                    static if (!isInfinite!(typeof(s))) // only when `s` is not infinite
+                    static if (i != 0) // not primary
                     {
-                        if (!s.empty) return false;
+                        // debug writeln("a rangeIndex:", i, " r.empty:", r.empty);
+                        // `r` is always empty, opposite of infinite range
+                        enum alwaysEmpty = __traits(compiles, { enum _ = r.empty; }) && r.empty is true;
+                        static if (alwaysEmpty)
+                        {
+                            return false;
+                        }
+                        else static if (!isInfinite!(typeof(r)))
+                        {
+                            static if (!hasLength!(typeof(r))) // if `r` has no length
+                            {
+                                if (r.empty) { return false; } // check for premature emptyness of `r`
+                            }
+                            if (!binaryFun!(pred)(rs[0].front, r.front))
+                                return false;
+                            else
+                                r.popFront();
+                        }
+                        else    // infinite range
+                        {
+                            if (!binaryFun!(pred)(rs[0].front, r.front))
+                                return false;
+                            else
+                                r.popFront();
+                        }
+                    }
+                }
+            }
+
+            // debug writeln("equal contents");
+
+            // check that all other ranges are empty
+            static if (!isInfinite!(Rs[0])) // line only reached when previous `for`-loop terminated (`r.empty` not enum false)
+            {
+                // debug writeln("b main index:");
+                foreach (i, ref r; rs) // TODO static foreach has no scope and therefore gives unreachable code warning if used here
+                {
+                    static if (i != 0) // not primary
+                    {
+                        // debug writeln("rangeIndex:", i, " r.empty:", r.empty);
+                        static if (!isInfinite!(typeof(r)))
+                        {
+                            if (!r.empty) { return false; }
+                        }
                     }
                 }
                 return true;
@@ -1000,6 +1036,7 @@ template equal(alias pred = "a == b")
 ///
 @safe unittest
 {
+    assert(equal([1], [1]));
     import std.algorithm.iteration: map;
     auto s = "hello world";
     auto x = s.map!(a => cast(dchar)a);
@@ -1106,17 +1143,17 @@ range of range (of range...) comparisons.
     assert(!equal!("a == b")("???"d, "æøå"d));//UTF32 vs UTF32
     assert(!equal!("a == b")("hello", "world"));
 
-    //Array of string
+    // array of string
     assert(equal(["hello", "world"], ["hello", "world"]));
     assert(!equal(["hello", "world"], ["hello"]));
     assert(!equal(["hello", "world"], ["hello", "Bob!"]));
 
-    //Should not compile, because "string == dstring" is illegal
+    // should not compile, because "string == dstring" is illegal
     static assert(!is(typeof(equal(["hello", "world"], ["hello"d, "world"d]))));
     //However, arrays of non-matching string can be compared using equal!equal. Neat-o!
     equal!equal(["hello", "world"], ["hello"d, "world"d]);
 
-    //Tests, with more fancy map ranges
+    // tests, with more fancy map ranges
     int[] a = [ 1, 2, 4, 3 ];
     assert(equal([2, 4, 8, 6], map!"a*2"(a)));
     double[] b = [ 1.0, 2, 4, 3];
@@ -1126,7 +1163,7 @@ range of range (of range...) comparisons.
     assert(!equal([2, 4, 1], map!"a*2"(a)));
     assert(!equal!approxEqual(map!"a*3"(b), map!"a*2"(c)));
 
-    //Tests with some fancy reference ranges.
+    // tests with some fancy reference
     ReferenceInputRange!int cir = new ReferenceInputRange!int([1, 2, 4, 3]);
     ReferenceForwardRange!int cfr = new ReferenceForwardRange!int([1, 2, 4, 3]);
     assert(equal(cir, a));
@@ -1136,11 +1173,11 @@ range of range (of range...) comparisons.
     cir = new ReferenceInputRange!int([1, 2, 8, 1]);
     assert(!equal(cir, cfr));
 
-    //Test with an infinite range
+    // test with an infinite range
     auto ifr = new ReferenceInfiniteForwardRange!int;
     assert(!equal(a, ifr));
     assert(!equal(ifr, a));
-    //Test InputRange without length
+    // test InputRange without length
     assert(!equal(ifr, cir));
     assert(!equal(cir, ifr));
 }
