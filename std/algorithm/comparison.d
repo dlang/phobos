@@ -905,9 +905,6 @@ template equal(alias pred = "a == b")
     enum areEquableRanges(Rs...) = is(typeof(binaryFun!pred(ElementType!(Rs[0]).init,
                                                             ElementType!(Rs[1]).init)));
 
-
-    import std.stdio : writeln;
-
     /++
     This function compares the ranges `rs` for equality. The
     ranges may have different element types, as long as `pred(a, b)`
@@ -975,13 +972,10 @@ template equal(alias pred = "a == b")
             // check equal contents
             for (size_t j = 0; !rs[0].empty; ++j, rs[0].popFront()) // for each element in first range `r`
             {
-                // debug writeln("main index:", j);
-
                 static foreach (i, r; rs) // TODO static foreach has no scope and therefore gives unreachable code warning if use here
                 {{                        // double braces because need scope
                     static if (i != 0) // not primary
                     {
-                        // debug writeln("a rangeIndex:", i, " r.empty:", r.empty);
                         // `r` is always empty, opposite of infinite range
                         enum alwaysEmpty = __traits(compiles, { enum _ = r.empty; }) && r.empty is true;
                         static if (alwaysEmpty)
@@ -1010,17 +1004,13 @@ template equal(alias pred = "a == b")
                 }}
             }
 
-            // debug writeln("equal contents");
-
             // check that all other ranges are empty
             static if (!isInfinite!(Rs[0])) // line only reached when previous `for`-loop terminated (`r.empty` not enum false)
             {
-                // debug writeln("b main index:");
                 static foreach (i, r; rs) // TODO static foreach has no scope and therefore gives unreachable code warning if used here
                 {{                        // double braces because need scope
                     static if (i != 0) // not primary
                     {
-                        // debug writeln("rangeIndex:", i, " r.empty:", r.empty);
                         static if (!isInfinite!(typeof(r)))
                         {
                             if (!r.empty) { return false; }
