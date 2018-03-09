@@ -3416,7 +3416,7 @@ nothrow pure @nogc @safe unittest
     Nullable!int sample;
 
     // apply(null) results in a null $(D Nullable) of the function's return type.
-    auto f = sample.apply!toFloat;
+    Nullable!float f = sample.apply!toFloat;
     assert(sample.isNull && f.isNull);
 
     sample = 3;
