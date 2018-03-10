@@ -703,12 +703,10 @@ deprecated
  */
 
 real cos(real x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.cos(x); }
-//FIXME
 ///ditto
-double cos(double x) @safe pure nothrow @nogc { return cos(cast(real) x); }
-//FIXME
+double cos(double x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.cos(x); }
 ///ditto
-float cos(float x) @safe pure nothrow @nogc { return cos(cast(real) x); }
+float cos(float x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.cos(x); }
 
 @safe unittest
 {
@@ -737,12 +735,10 @@ float cos(float x) @safe pure nothrow @nogc { return cos(cast(real) x); }
  */
 
 real sin(real x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.sin(x); }
-//FIXME
 ///ditto
-double sin(double x) @safe pure nothrow @nogc { return sin(cast(real) x); }
-//FIXME
+double sin(double x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.sin(x); }
 ///ditto
-float sin(float x) @safe pure nothrow @nogc { return sin(cast(real) x); }
+float sin(float x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.sin(x); }
 
 ///
 @safe unittest
@@ -1099,10 +1095,16 @@ real acos(real x) @safe pure nothrow @nogc
 }
 
 /// ditto
-double acos(double x) @safe pure nothrow @nogc { return acos(cast(real) x); }
+double acos(double x) @safe pure nothrow @nogc
+{
+    return atan2(sqrt(1-x*x), x);
+}
 
 /// ditto
-float acos(float x) @safe pure nothrow @nogc  { return acos(cast(real) x); }
+float acos(float x) @safe pure nothrow @nogc
+{
+    return atan2(sqrt(1-x*x), x);
+}
 
 @system unittest
 {
@@ -1126,10 +1128,16 @@ real asin(real x) @safe pure nothrow @nogc
 }
 
 /// ditto
-double asin(double x) @safe pure nothrow @nogc { return asin(cast(real) x); }
+double asin(double x) @safe pure nothrow @nogc
+{
+    return atan2(x, sqrt(1-x*x));
+}
 
 /// ditto
-float asin(float x) @safe pure nothrow @nogc  { return asin(cast(real) x); }
+float asin(float x) @safe pure nothrow @nogc
+{
+    return atan2(x, sqrt(1-x*x));
+}
 
 @system unittest
 {
@@ -1382,10 +1390,18 @@ real cosh(real x) @safe pure nothrow @nogc
 }
 
 /// ditto
-double cosh(double x) @safe pure nothrow @nogc { return cosh(cast(real) x); }
+double cosh(double x) @safe pure nothrow @nogc
+{
+    const double y = exp(x);
+    return (y + 1.0/y) * 0.5;
+}
 
 /// ditto
-float cosh(float x) @safe pure nothrow @nogc  { return cosh(cast(real) x); }
+float cosh(float x) @safe pure nothrow @nogc
+{
+    const float y = exp(x);
+    return (y + 1.0/y) * 0.5;
+}
 
 @system unittest
 {
@@ -1417,10 +1433,28 @@ real sinh(real x) @safe pure nothrow @nogc
 }
 
 /// ditto
-double sinh(double x) @safe pure nothrow @nogc { return sinh(cast(real) x); }
+double sinh(double x) @safe pure nothrow @nogc
+{
+    if (fabs(x) > double.mant_dig * LN2)
+    {
+        return copysign(0.5 * exp(fabs(x)), x);
+    }
+    
+    const double y = expm1(x);
+    return 0.5 * y / (y+1) * (y+2);
+}
 
 /// ditto
-float sinh(float x) @safe pure nothrow @nogc  { return sinh(cast(real) x); }
+float sinh(float x) @safe pure nothrow @nogc
+{
+    if (fabs(x) > float.mant_dig * LN2)
+    {
+        return copysign(0.5 * exp(fabs(x)), x);
+    }
+    
+    const float y = expm1(x);
+    return 0.5 * y / (y+1) * (y+2);
+}
 
 @system unittest
 {
@@ -1449,10 +1483,28 @@ real tanh(real x) @safe pure nothrow @nogc
 }
 
 /// ditto
-double tanh(double x) @safe pure nothrow @nogc { return tanh(cast(real) x); }
+double tanh(double x) @safe pure nothrow @nogc
+{
+    if (fabs(x) > double.mant_dig * LN2)
+    {
+        return copysign(1, x);
+    }
+    
+    const double y = expm1(2*x);
+    return y / (y + 2);
+}
 
 /// ditto
-float tanh(float x) @safe pure nothrow @nogc { return tanh(cast(real) x); }
+float tanh(float x) @safe pure nothrow @nogc
+{
+    if (fabs(x) > float.mant_dig * LN2)
+    {
+        return copysign(1, x);
+    }
+    
+    const float y = expm1(2*x);
+    return y / (y + 2);
+}
 
 @system unittest
 {
@@ -1517,10 +1569,22 @@ real acosh(real x) @safe pure nothrow @nogc
 }
 
 /// ditto
-double acosh(double x) @safe pure nothrow @nogc { return acosh(cast(real) x); }
+double acosh(double x) @safe pure nothrow @nogc
+{
+    if (x > 1/double.epsilon)
+        return LN2 + log(x);
+    else
+        return log(x + sqrt(x*x - 1));
+}
 
 /// ditto
-float acosh(float x) @safe pure nothrow @nogc  { return acosh(cast(real) x); }
+float acosh(float x) @safe pure nothrow @nogc
+{
+    if (x > 1/float.epsilon)
+        return LN2 + log(x);
+    else
+        return log(x + sqrt(x*x - 1));
+}
 
 
 @system unittest
@@ -1559,10 +1623,20 @@ real asinh(real x) @safe pure nothrow @nogc
 }
 
 /// ditto
-double asinh(double x) @safe pure nothrow @nogc { return asinh(cast(real) x); }
+double asinh(double x) @safe pure nothrow @nogc
+{
+    return (fabs(x) > 1 / double.epsilon)
+        ?  copysign(LN2 + log(fabs(x)), x)
+        : copysign(log1p(fabs(x) + x*x / (1 + sqrt(x*x + 1)) ), x);
+}
 
 /// ditto
-float asinh(float x) @safe pure nothrow @nogc { return asinh(cast(real) x); }
+float asinh(float x) @safe pure nothrow @nogc
+{
+    return (fabs(x) > 1 / float.epsilon)
+        ?  copysign(LN2 + log(fabs(x)), x)
+        : copysign(log1p(fabs(x) + x*x / (1 + sqrt(x*x + 1)) ), x);
+}
 
 @system  unittest
 {
@@ -1599,10 +1673,16 @@ real atanh(real x) @safe pure nothrow @nogc
 }
 
 /// ditto
-double atanh(double x) @safe pure nothrow @nogc { return atanh(cast(real) x); }
+double atanh(double x) @safe pure nothrow @nogc
+{
+    return  0.5 * log1p( 2 * x / (1 - x) );
+}
 
 /// ditto
-float atanh(float x) @safe pure nothrow @nogc { return atanh(cast(real) x); }
+float atanh(float x) @safe pure nothrow @nogc
+{
+    return  0.5 * log1p( 2 * x / (1 - x) );
+}
 
 
 @system unittest
@@ -1622,12 +1702,10 @@ float atanh(float x) @safe pure nothrow @nogc { return atanh(cast(real) x); }
  * indeterminate.
  */
 long rndtol(real x) @nogc @safe pure nothrow { pragma(inline, true); return core.math.rndtol(x); }
-//FIXME
 ///ditto
-long rndtol(double x) @safe pure nothrow @nogc { return rndtol(cast(real) x); }
-//FIXME
+long rndtol(double x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.rndtol(x); }
 ///ditto
-long rndtol(float x) @safe pure nothrow @nogc { return rndtol(cast(real) x); }
+long rndtol(float x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.rndtol(x); }
 
 @safe unittest
 {
@@ -1871,10 +1949,16 @@ real exp(real x) @trusted pure nothrow @nogc
 }
 
 /// ditto
-double exp(double x) @safe pure nothrow @nogc  { return exp(cast(real) x); }
+double exp(double x) @safe pure nothrow @nogc
+{
+    return exp2(LOG2E*x);
+}
 
 /// ditto
-float exp(float x)  @safe pure nothrow @nogc   { return exp(cast(real) x); }
+float exp(float x)  @safe pure nothrow @nogc
+{
+    return exp2(LOG2E*x);
+}
 
 @system unittest
 {
@@ -3177,12 +3261,10 @@ alias FP_ILOGBNAN = core.stdc.math.FP_ILOGBNAN;
  */
 
 real ldexp(real n, int exp) @nogc @safe pure nothrow { pragma(inline, true); return core.math.ldexp(n, exp); }
-//FIXME
 ///ditto
-double ldexp(double n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real) n, exp); }
-//FIXME
+double ldexp(double n, int exp) @safe pure nothrow @nogc { pragma(inline, true); return core.math.ldexp(n, exp); }
 ///ditto
-float ldexp(float n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real) n, exp); }
+float ldexp(float n, int exp) @safe pure nothrow @nogc { pragma(inline, true); return core.math.ldexp(n, exp); }
 
 ///
 @nogc @safe pure nothrow unittest
@@ -3875,12 +3957,10 @@ real cbrt(real x) @trusted nothrow @nogc
  *      )
  */
 real fabs(real x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.fabs(x); }
-//FIXME
 ///ditto
-double fabs(double x) @safe pure nothrow @nogc { return fabs(cast(real) x); }
-//FIXME
+double fabs(double x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.fabs(x); }
 ///ditto
-float fabs(float x) @safe pure nothrow @nogc { return fabs(cast(real) x); }
+float fabs(float x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.fabs(x); }
 
 @safe unittest
 {
@@ -4354,12 +4434,10 @@ real nearbyint(real x) @trusted nothrow @nogc
  * the same operation, but does not set the FE_INEXACT exception.
  */
 real rint(real x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.rint(x); }
-//FIXME
 ///ditto
-double rint(double x) @safe pure nothrow @nogc { return rint(cast(real) x); }
-//FIXME
+double rint(double x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.rint(x); }
 ///ditto
-float rint(float x) @safe pure nothrow @nogc { return rint(cast(real) x); }
+float rint(float x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.rint(x); }
 
 @safe unittest
 {
