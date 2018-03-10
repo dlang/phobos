@@ -54,7 +54,8 @@ $(TR $(TD Enums) $(TD
         $(HTTP en.wikipedia.org/wiki/Ascii, Wikipedia)
 
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-    Authors:   $(HTTP digitalmars.com, Walter Bright) and Jonathan M Davis
+    Authors:   $(HTTP digitalmars.com, Walter Bright) and
+               $(HTTP jmdavisprog.com, Jonathan M Davis)
     Source:    $(PHOBOSSRC std/_ascii.d)
   +/
 module std.ascii;

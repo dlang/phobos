@@ -221,9 +221,10 @@ Source: $(PHOBOSSRC std/_range/_package.d)
 
 License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors: $(HTTP erdani.com, Andrei Alexandrescu), David Simcha, Jonathan M Davis,
-and Jack Stouffer. Credit for some of the ideas in building this module goes
-to $(HTTP fantascienza.net/leonardo/so/, Leonardo Maffi).
+Authors: $(HTTP erdani.com, Andrei Alexandrescu), David Simcha,
+         $(HTTP jmdavisprog.com, Jonathan M Davis), and Jack Stouffer. Credit
+         for some of the ideas in building this module goes to
+         $(HTTP fantascienza.net/leonardo/so/, Leonardo Maffi).
  */
 module std.range;
 

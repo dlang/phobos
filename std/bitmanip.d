@@ -38,7 +38,7 @@ Copyright: Copyright Digital Mars 2007 - 2011.
 License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(HTTP digitalmars.com, Walter Bright),
            $(HTTP erdani.org, Andrei Alexandrescu),
-           Jonathan M Davis,
+           $(HTTP jmdavisprog.com, Jonathan M Davis),
            Alex Rønne Petersen,
            Damian Ziemba,
            Amaury SECHET
