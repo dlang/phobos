@@ -2335,8 +2335,28 @@ Practically $(D Nullable!T) stores a $(D T) and a $(D bool).
  */
 struct Nullable(T)
 {
+    static if (is(T == enum))
+    {
+             static if (OriginalType!T.min < T.min) private enum nullValue = cast(T) OriginalType!T.min;
+        else static if (OriginalType!T.max > T.max) private enum nullValue = cast(T) OriginalType!T.max;
+        else                                        private enum nullValue = false;
+    }
+    else static if (is(T == class) || is(T == interface) || isPointer!T || isDynamicArray!T)
+    {
+        private enum nullValue = cast(T) null;
+    }
+    else
+    {
+        private enum nullValue = false;
+    }
+    private enum hasNullValue = !is(typeof(nullValue) == bool);
+
+    static if (hasNullValue)
+    {
+        private T _value = nullValue;
+    }
     // simple case: type is freely constructable
-    static if (__traits(compiles, { T _value; }))
+    else static if (__traits(compiles, { T _value; }))
     {
         private T _value;
     }
@@ -2354,7 +2374,10 @@ struct Nullable(T)
         );
     }
 
-    private bool _isNull = true;
+    static if (!hasNullValue)
+    {
+        private bool _isNull = true;
+    }
 
 /**
 Constructor initializing $(D this) with $(D value).
@@ -2365,7 +2388,8 @@ Params:
     this(inout T value) inout
     {
         _value = value;
-        _isNull = false;
+        static if (!hasNullValue)
+            _isNull = false;
     }
 
     /**
@@ -2375,10 +2399,13 @@ Params:
       */
     bool opEquals()(auto ref const(typeof(this)) rhs) const
     {
-        if (_isNull)
-            return rhs._isNull;
-        if (rhs._isNull)
-            return false;
+        static if (!hasNullValue)
+        {
+            if (_isNull)
+                return rhs._isNull;
+            if (rhs._isNull)
+                return false;
+        }
         return _value == rhs._value;
     }
 
@@ -2386,7 +2413,9 @@ Params:
     bool opEquals(U)(auto ref const(U) rhs) const
     if (is(typeof(this.get == rhs)))
     {
-        return _isNull ? false : rhs == _value;
+        static if (!hasNullValue)
+            if (_isNull) return false;
+        return rhs == _value;
     }
 
     ///
@@ -2512,7 +2541,10 @@ Returns:
  */
     @property bool isNull() const @safe pure nothrow
     {
-        return _isNull;
+        static if (hasNullValue)
+            return _value is nullValue;
+        else
+            return _isNull;
     }
 
 ///
@@ -2542,11 +2574,13 @@ Forces $(D this) to the null state.
  */
     void nullify()()
     {
-        static if (is(T == class) || is(T == interface))
-            _value = null;
+        static if (hasNullValue)
+            _value = nullValue;
         else
+        {
             .destroy(_value);
-        _isNull = true;
+            _isNull = true;
+        }
     }
 
 ///
@@ -2569,7 +2603,8 @@ Params:
     void opAssign()(T value)
     {
         _value = value;
-        _isNull = false;
+        static if (!hasNullValue)
+            _isNull = false;
     }
 
 /**
@@ -2587,9 +2622,9 @@ Params:
     Nullable!(int*) npi;
     assert(npi.isNull);
 
-    //Passes?!
+    //Passes
     npi = null;
-    assert(!npi.isNull);
+    assert(npi.isNull);
 }
 
 /**
@@ -3706,7 +3741,73 @@ auto nullableRef(T)(T* t)
     NullableRef!TestToString ntts = &tts;
     assert(ntts.to!string() == "2.5");
 }
+@safe unittest
+{
+    enum Foo {a, b, c}
+    static assert(Nullable!Foo.sizeof == Foo.sizeof);
 
+    {
+        auto foo = nullable(Foo.a);
+        static assert(foo.sizeof == Foo.sizeof);
+        assert(!foo.isNull);
+        assert(foo == Foo.a);
+        assert(foo.get == Foo.a);
+        foo = Foo.b;
+        assert(!foo.isNull);
+        assert(foo == Foo.b);
+        foo.nullify();
+        assert(foo.isNull);
+    }
+    {
+        auto foo = Nullable!Foo.init;
+        static assert(foo.sizeof == Foo.sizeof);
+        assert(foo.isNull);
+        foo = Foo.c;
+        assert(!foo.isNull);
+        assert(foo == Foo.c);
+    }
+
+    enum Foo2 : int {a = int.min}
+    static assert(Nullable!Foo2.sizeof == Foo2.sizeof);
+
+    enum Foo3 : int {a = int.min, b = int.max}
+    static assert(Nullable!Foo3.sizeof != Foo3.sizeof);
+}
+@safe unittest
+{
+    class FooClass { }
+    static assert(Nullable!FooClass.sizeof == FooClass.sizeof);
+    class FooInterface { }
+    static assert(Nullable!FooInterface.sizeof == FooInterface.sizeof);
+
+    Nullable!FooClass c = null;
+    assert(c.isNull);
+
+    Nullable!FooInterface i = null;
+    assert(i.isNull);
+}
+@safe unittest
+{
+    auto b = Nullable!bool.init;
+    assert(b.isNull);
+    b = false;
+    assert(!b.isNull);
+    assert(b.get == false);
+    b = true;
+    assert(!b.isNull);
+    assert(b.get == true);
+    b.nullify();
+    assert(b.isNull);
+    assert(nullable(true) != b);
+}
+@safe unittest
+{
+    Nullable!(int*) ip = null;
+    assert(ip.isNull);
+
+    Nullable!(int[]) ia = null;
+    assert(ia.isNull);
+}
 
 /**
 $(D BlackHole!Base) is a subclass of $(D Base) which automatically implements
