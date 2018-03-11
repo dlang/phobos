@@ -135,8 +135,8 @@ License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
 Authors: $(HTTP digitalmars.com, Walter Bright),
          $(HTTP erdani.org, Andrei Alexandrescu),
-        Jonathan M Davis,
-        and David L. 'SpottedTiger' Davis
+         $(HTTP jmdavisprog.com, Jonathan M Davis),
+         and David L. 'SpottedTiger' Davis
 
 Source:    $(PHOBOSSRC std/_string.d)
 

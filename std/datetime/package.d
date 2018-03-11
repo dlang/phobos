@@ -104,7 +104,7 @@ auto restoredTime = SysTime.fromISOExtString(timeString);
               List of Time Zones)<br>
 
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-    Authors:   Jonathan M Davis and Kato Shoichi
+    Authors:   $(HTTP jmdavisprog.com, Jonathan M Davis) and Kato Shoichi
     Source:    $(PHOBOSSRC std/_datetime/package.d)
 +/
 module std.datetime;

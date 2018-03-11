@@ -44,38 +44,44 @@ version (CRuntime_Glibc)
     version = GCC_IO;
     version = HAS_GETDELIM;
 }
+else version (CRuntime_Bionic)
+{
+    version = GENERIC_IO;
+    version = HAS_GETDELIM;
+}
+else version (CRuntime_Musl)
+{
+    version = GENERIC_IO;
+    version = HAS_GETDELIM;
+}
+else version (CRuntime_UClibc)
+{
+    // uClibc supports GCC IO
+    version = GCC_IO;
+    version = HAS_GETDELIM;
+}
 
 version (OSX)
 {
     version = GENERIC_IO;
     version = HAS_GETDELIM;
 }
-
-version (FreeBSD)
+else version (FreeBSD)
 {
     version = GENERIC_IO;
     version = HAS_GETDELIM;
 }
-
-version (NetBSD)
+else version (NetBSD)
 {
     version = GENERIC_IO;
     version = HAS_GETDELIM;
 }
-
-version (DragonFlyBSD)
+else version (DragonFlyBSD)
 {
     version = GENERIC_IO;
     version = HAS_GETDELIM;
 }
-
-version (Solaris)
-{
-    version = GENERIC_IO;
-    version = NO_GETDELIM;
-}
-
-version (CRuntime_Bionic)
+else version (Solaris)
 {
     version = GENERIC_IO;
     version = NO_GETDELIM;

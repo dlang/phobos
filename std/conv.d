@@ -1533,7 +1533,7 @@ if (!isImplicitlyConvertible!(S, T) &&
         import std.array : appender;
         auto w = appender!(E[])();
         w.reserve(value.length);
-        foreach (i, ref e; value)
+        foreach (ref e; value)
         {
             w.put(to!E(e));
         }

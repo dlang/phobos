@@ -73,7 +73,7 @@ and module $(MREF std, path) for manipulating path strings.
 License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(HTTP digitalmars.com, Walter Bright),
            $(HTTP erdani.org, Andrei Alexandrescu),
-           Jonathan M Davis
+           $(HTTP jmdavisprog.com, Jonathan M Davis)
 Source:    $(PHOBOSSRC std/_file.d)
  */
 module std.file;
@@ -2832,7 +2832,7 @@ version(Posix) @system unittest // input range of dchars
  * Get the current working directory.
  * Throws: $(D FileException) on error.
  */
-version(Windows) string getcwd()
+version(Windows) string getcwd() @trusted
 {
     import std.conv : to;
     import std.experimental.checkedint : checked;
@@ -2865,7 +2865,7 @@ version(Windows) string getcwd()
         return ptr[0 .. n2].to!string;
     }
 }
-else version (Solaris) string getcwd()
+else version (Solaris) string getcwd() @trusted
 {
     /* BUF_SIZE >= PATH_MAX */
     enum BUF_SIZE = 4096;
@@ -2875,7 +2875,7 @@ else version (Solaris) string getcwd()
     scope(exit) core.stdc.stdlib.free(p);
     return p[0 .. core.stdc.string.strlen(p)].idup;
 }
-else version (Posix) string getcwd()
+else version (Posix) string getcwd() @trusted
 {
     auto p = cenforce(core.sys.posix.unistd.getcwd(null, 0),
             "cannot get cwd");
@@ -2883,7 +2883,7 @@ else version (Posix) string getcwd()
     return p[0 .. core.stdc.string.strlen(p)].idup;
 }
 
-@system unittest
+@safe unittest
 {
     auto s = getcwd();
     assert(s.length);

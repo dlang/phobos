@@ -38,7 +38,7 @@ Copyright: Copyright Digital Mars 2007 - 2011.
 License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(HTTP digitalmars.com, Walter Bright),
            $(HTTP erdani.org, Andrei Alexandrescu),
-           Jonathan M Davis,
+           $(HTTP jmdavisprog.com, Jonathan M Davis),
            Alex Rønne Petersen,
            Damian Ziemba,
            Amaury SECHET
@@ -1006,7 +1006,8 @@ public:
         foreach (i; 0 .. fullWords)
             _ptr[i] = ~_ptr[i];
 
-        _ptr[fullWords] = (~_ptr[fullWords]) & endMask;
+        if (endBits)
+            _ptr[fullWords] = (~_ptr[fullWords]) & endMask;
     }
 
     ///
@@ -2108,8 +2109,11 @@ public:
             if (bitsToShift == 0)
                 _ptr[dim - wordsToShift - 1] = _ptr[dim - 1];
             else
-                _ptr[dim - wordsToShift - 1] = rollRight(0, _ptr[dim - 1] & endMask,
-                                                        bitsToShift);
+            {
+                // Special case: if endBits == 0, then also endMask == 0.
+                size_t lastWord = (endBits ? (_ptr[fullWords] & endMask) : _ptr[fullWords - 1]);
+                _ptr[dim - wordsToShift - 1] = rollRight(0, lastWord, bitsToShift);
+            }
         }
 
         import std.algorithm.comparison : min;
@@ -2138,6 +2142,34 @@ public:
         assert(equal(b.bitsSet, iota(64*2, 64*3)));
         b >>= 64;
         assert(equal(b.bitsSet, iota(64, 128)));
+    }
+
+    // Issue 18134 - shifting right when length is a multiple of 8 * size_t.sizeof.
+    @system unittest
+    {
+        import std.algorithm.comparison : equal;
+        import std.array : array;
+        import std.range : repeat, iota;
+
+        immutable r = size_t.sizeof * 8;
+
+        BitArray a = true.repeat(r / 2).array;
+        a >>= 0;
+        assert(a.bitsSet.equal(iota(0, r / 2)));
+        a >>= 1;
+        assert(a.bitsSet.equal(iota(0, r / 2 - 1)));
+
+        BitArray b = true.repeat(r).array;
+        b >>= 0;
+        assert(b.bitsSet.equal(iota(0, r)));
+        b >>= 1;
+        assert(b.bitsSet.equal(iota(0, r - 1)));
+
+        BitArray c = true.repeat(2 * r).array;
+        c >>= 0;
+        assert(c.bitsSet.equal(iota(0, 2 * r)));
+        c >>= 10;
+        assert(c.bitsSet.equal(iota(0, 2 * r - 10)));
     }
 
     @system unittest

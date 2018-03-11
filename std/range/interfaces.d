@@ -65,9 +65,10 @@ Source: $(PHOBOSSRC std/range/_interfaces.d)
 
 License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors: $(HTTP erdani.com, Andrei Alexandrescu), David Simcha,
-and Jonathan M Davis. Credit for some of the ideas in building this module goes
-to $(HTTP fantascienza.net/leonardo/so/, Leonardo Maffi).
+Authors: $(HTTP erdani.com, Andrei Alexandrescu), David Simcha, and
+         $(HTTP jmdavisprog.com, Jonathan M Davis). Credit for some of the ideas
+         in building this module goes to
+         $(HTTP fantascienza.net/leonardo/so/, Leonardo Maffi).
 */
 module std.range.interfaces;
 

@@ -35,7 +35,8 @@ $(TR $(TD Other) $(TD
 
     Copyright: Copyright Andrei Alexandrescu 2008-, Jonathan M Davis 2011-.
     License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0)
-    Authors:   $(HTTP erdani.org, Andrei Alexandrescu) and Jonathan M Davis
+    Authors:   $(HTTP erdani.org, Andrei Alexandrescu) and
+               $(HTTP jmdavisprog.com, Jonathan M Davis)
     Source:    $(PHOBOSSRC std/_exception.d)
 
  +/
@@ -1536,10 +1537,13 @@ private bool isUnionAliasedImpl(T)(size_t offset)
         static assert( isUnionAliased!(S.A5, 1)); //a5.b1;
 }
 
+version (CRuntime_Glibc) version = GNU_STRERROR;
+version (CRuntime_UClibc) version = GNU_STRERROR;
+
 package string errnoString(int errno) nothrow @trusted
 {
     import core.stdc.string : strlen;
-    version (CRuntime_Glibc)
+    version (GNU_STRERROR)
     {
         import core.stdc.string : strerror_r;
         char[1024] buf = void;
