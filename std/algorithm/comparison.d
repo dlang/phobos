@@ -987,8 +987,12 @@ template equal(alias pred = "a == b")
 
             static foreach (r; rs[1 .. $])
             {
-                static if (isAutodecodableString!(typeof(rs[0])) &&
-                           isAutodecodableString!(typeof(r)))
+                static if (is(typeof(rs[0]) == typeof(r)))
+                {
+                    if (!equal(rs[0], r)) { return false; }
+                }
+                else static if (isAutodecodableString!(typeof(rs[0])) &&
+                                isAutodecodableString!(typeof(r)))
                 {
                     if (!equal(rs[0].byCodeUnit, r.byCodeUnit)) { return false; }
                 }
@@ -1028,9 +1032,9 @@ template equal(alias pred = "a == b")
                 }
                 else
                 {
-                    enum primaryRangeIndex = 0; // otherwise just pick first
+                    enum primaryRangeIndex = 0; // just pick first
                 }
-                alias r0 = rs[primaryRangeIndex];
+                alias r0 = rs[primaryRangeIndex]; // shorthand
 
                 // check lengths
                 static if (hasSomeLength)
@@ -1048,7 +1052,7 @@ template equal(alias pred = "a == b")
                 }
 
                 // check equal contents
-                for (; !r0.empty; r0.popFront()) // for each element in first range `r`
+                for (; !r0.empty; r0.popFront()) // for each element in primary range `r`
                 {
                     static foreach (i, r; rs)
                     {
