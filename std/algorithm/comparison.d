@@ -1058,7 +1058,7 @@ template equal(alias pred = "a == b")
                 for (; !r0.empty; r0.popFront()) // for each element in first range `r`
                 {
                     static foreach (i, r; rs)
-                    {          // double braces because need scope
+                    {
                         static if (i != primaryRangeIndex) // not primary
                         {
                             static if (!isInfinite!(typeof(r))) // finite range
@@ -1093,15 +1093,15 @@ template equal(alias pred = "a == b")
                 static if (!isInfinite!(Rs[primaryRangeIndex])) // line only reached when previous `for`-loop terminated (`r.empty` not enum false)
                 {
                     static foreach (i, r; rs)
-                    {{              // double braces because need scope
-                            static if (i != primaryRangeIndex)    // not primary
+                    {
+                        static if (i != primaryRangeIndex)    // not primary
+                        {
+                            static if (!isInfinite!(typeof(r))) // finite range
                             {
-                                static if (!isInfinite!(typeof(r))) // finite range
-                                {
-                                    if (!r.empty) { return false; }
-                                }
+                                if (!r.empty) { return false; }
                             }
-                        }}
+                        }
+                    }
                     return true;
                 }
             }
