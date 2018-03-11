@@ -69,7 +69,9 @@ Authors:   $(HTTP erdani.org, Andrei Alexandrescu),
 module std.typecons;
 
 import core.stdc.stdint : uintptr_t;
+import std.format : singleSpec, FormatSpec, formatValue;
 import std.meta; // : AliasSeq, allSatisfy;
+import std.range.primitives : isOutputRange;
 import std.traits;
 
 ///
@@ -2440,33 +2442,65 @@ Params:
         assert(e != 12);
     }
 
-    template toString()
+    /**
+     * Gives the string `"Nullable.null"` if `isNull` is `true`. Otherwise, the
+     * result is equivalent to calling $(REF formattedWrite, std,format) on the
+     * underlying value.
+     *
+     * Params:
+     *     writer = A `char` accepting
+     *     $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+     *     fmt = A $(REF FormatSpec, std,format) which is used to represent
+     *     the value if this Nullable is not null
+     * Returns:
+     *     A `string` if `writer` and `fmt` are not set; `void` otherwise.
+     */
+    string toString()
     {
-        import std.format : FormatSpec, formatValue;
-        // Needs to be a template because of DMD @@BUG@@ 13737.
-        void toString()(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt)
-        {
-            if (isNull)
-            {
-                sink.formatValue("Nullable.null", fmt);
-            }
-            else
-            {
-                sink.formatValue(_value, fmt);
-            }
-        }
+        import std.array : appender;
+        auto app = appender!string();
+        auto spec = singleSpec("%s");
+        toString(app, spec);
+        return app.data;
+    }
 
-        // Issue 14940
-        void toString()(scope void delegate(const(char)[]) @safe sink, const ref FormatSpec!char fmt)
+    /// ditto
+    void toString(W)(ref W writer, const ref FormatSpec!char fmt)
+    if (isOutputRange!(W, char))
+    {
+        import std.range.primitives : put;
+        if (isNull)
+            put(writer, "Nullable.null");
+        else
+            formatValue(writer, _value, fmt);
+    }
+
+    //@@@DEPRECATED_2.086@@@
+    deprecated("To be removed after 2.086. Please use the output range overload instead.")
+    void toString()(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt)
+    {
+        if (isNull)
         {
-            if (isNull)
-            {
-                sink.formatValue("Nullable.null", fmt);
-            }
-            else
-            {
-                sink.formatValue(_value, fmt);
-            }
+            sink.formatValue("Nullable.null", fmt);
+        }
+        else
+        {
+            sink.formatValue(_value, fmt);
+        }
+    }
+
+    // Issue 14940
+    //@@@DEPRECATED_2.086@@@
+    deprecated("To be removed after 2.086. Please use the output range overload instead.")
+    void toString()(scope void delegate(const(char)[]) @safe sink, const ref FormatSpec!char fmt)
+    {
+        if (isNull)
+        {
+            sink.formatValue("Nullable.null", fmt);
+        }
+        else
+        {
+            sink.formatValue(_value, fmt);
         }
     }
 
@@ -2932,7 +2966,10 @@ auto nullable(T)(T t)
     alias NullableTest = Nullable!Test;
 
     NullableTest nt = Test("test");
+    // test output range version
     assert(nt.to!string() == `Test("test")`);
+    // test appender version
+    assert(nt.toString() == `Test("test")`);
 
     NullableTest ntn = Test("null");
     assert(ntn.to!string() == `Test("null")`);
@@ -2991,6 +3028,17 @@ auto nullable(T)(T t)
     auto ni = nullable(i);
     ni.nullify;
     assert(c.canary == 0xA71FE);
+}
+
+// Regression test for issue 18539
+@safe unittest
+{
+    import std.math : approxEqual;
+
+    auto foo = nullable(2.0);
+    auto bar = nullable(2.0);
+
+    assert(foo.approxEqual(bar));
 }
 
 /**
@@ -6699,6 +6747,35 @@ struct Typedef(T, T init = T.init, string cookie=null)
             TD im() {return TD(Typedef_payload.im);}
         }
     }
+
+    /**
+     * Convert wrapped value to a human readable string
+     */
+    string toString()
+    {
+        import std.array : appender;
+        auto app = appender!string();
+        auto spec = singleSpec("%s");
+        toString(app, spec);
+        return app.data;
+    }
+
+    /// ditto
+    void toString(W)(ref W writer, const ref FormatSpec!char fmt)
+    if (isOutputRange!(W, char))
+    {
+        formatValue(writer, Typedef_payload, fmt);
+    }
+
+    ///
+    @safe unittest
+    {
+        import std.conv : to;
+
+        int i = 123;
+        auto td = Typedef!int(i);
+        assert(i.to!string == td.to!string);
+    }
 }
 
 /**
@@ -6911,6 +6988,25 @@ template TypedefType(T)
     char[] s2 = cast(char[]) cs;
     const(char)[] cs2 = cast(const(char)[])s;
     assert(s2 == cs2);
+}
+
+@system unittest // toString
+{
+    import std.meta : AliasSeq;
+    import std.conv : to;
+
+    struct TestS {}
+    class TestC {}
+
+    static foreach (T; AliasSeq!(int, bool, float, double, real,
+                                 char, dchar, wchar,
+                                 TestS, TestC,
+                                 int*, int[], int[2], int[int]))
+    {{
+        T t;
+        Typedef!T td;
+        assert(t.to!string() == td.to!string());
+    }}
 }
 
 /**
@@ -7446,12 +7542,12 @@ template isBitFlagEnum(E)
     {
         enum isBitFlagEnum = (E.min >= 0) &&
         {
-            foreach (immutable flag; EnumMembers!E)
-            {
+            static foreach (immutable flag; EnumMembers!E)
+            {{
                 Base value = flag;
                 value &= value - 1;
                 if (value != 0) return false;
-            }
+            }}
             return true;
         }();
     }
@@ -7474,7 +7570,11 @@ template isBitFlagEnum(E)
     }
 
     static assert(isBitFlagEnum!A);
+}
 
+/// Test an enum with default (consecutive) values
+@safe pure nothrow unittest
+{
     enum B
     {
         A,
@@ -7484,7 +7584,11 @@ template isBitFlagEnum(E)
     }
 
     static assert(!isBitFlagEnum!B);
+}
 
+/// Test an enum with non-integral values
+@safe pure nothrow unittest
+{
     enum C: double
     {
         A = 1 << 0,
@@ -7645,14 +7749,52 @@ public:
     {
         return opBinary!op(flag);
     }
+
+    bool opDispatch(string name)() const
+    if (__traits(hasMember, E, name))
+    {
+        enum e = __traits(getMember, E, name);
+        return (mValue & e) == e;
+    }
+
+    void opDispatch(string name)(bool set)
+    if (__traits(hasMember, E, name))
+    {
+        enum e = __traits(getMember, E, name);
+        if (set)
+            mValue |= e;
+        else
+            mValue &= ~e;
+    }
 }
 
-/// BitFlags can be manipulated with the usual operators
+/// Set values with the | operator and test with &
 @safe @nogc pure nothrow unittest
 {
-    import std.traits : EnumMembers;
+    enum Enum
+    {
+        A = 1 << 0,
+    }
 
-    // You can use such an enum with BitFlags straight away
+    // A default constructed BitFlags has no value set
+    immutable BitFlags!Enum flags_empty;
+    assert(!flags_empty.A);
+
+    // Value can be set with the | operator
+    immutable flags_A = flags_empty | Enum.A;
+
+    // and tested using property access
+    assert(flags_A.A);
+
+    // or the & operator
+    assert(flags_A & Enum.A);
+    // which commutes.
+    assert(Enum.A & flags_A);
+}
+
+/// A default constructed BitFlags has no value set
+@safe @nogc pure nothrow unittest
+{
     enum Enum
     {
         None,
@@ -7660,75 +7802,144 @@ public:
         B = 1 << 1,
         C = 1 << 2
     }
-    BitFlags!Enum flags1;
-    assert(!(flags1 & (Enum.A | Enum.B | Enum.C)));
-
-    // You need to specify the `unsafe` parameter for enum with custom values
-    enum UnsafeEnum
-    {
-        A,
-        B,
-        C,
-        D = B|C
-    }
-    static assert(!__traits(compiles, { BitFlags!UnsafeEnum flags2; }));
-    BitFlags!(UnsafeEnum, Yes.unsafe) flags3;
 
     immutable BitFlags!Enum flags_empty;
-    // A default constructed BitFlags has no value set
+    assert(!(flags_empty & (Enum.A | Enum.B | Enum.C)));
     assert(!(flags_empty & Enum.A) && !(flags_empty & Enum.B) && !(flags_empty & Enum.C));
+}
 
-    // Value can be set with the | operator
-    immutable BitFlags!Enum flags_A = flags_empty | Enum.A;
+// BitFlags can be variadically initialized
+@safe @nogc pure nothrow unittest
+{
+    import std.traits : EnumMembers;
 
-    // And tested with the & operator
-    assert(flags_A & Enum.A);
+    enum Enum
+    {
+        A = 1 << 0,
+        B = 1 << 1,
+        C = 1 << 2
+    }
 
-    // Which commutes
-    assert(Enum.A & flags_A);
+    // Values can also be set using property access
+    BitFlags!Enum flags;
+    flags.A = true;
+    assert(flags & Enum.A);
+    flags.A = false;
+    assert(!(flags & Enum.A));
 
     // BitFlags can be variadically initialized
     immutable BitFlags!Enum flags_AB = BitFlags!Enum(Enum.A, Enum.B);
-    assert((flags_AB & Enum.A) && (flags_AB & Enum.B) && !(flags_AB & Enum.C));
-
-    // Use the ~ operator for subtracting flags
-    immutable BitFlags!Enum flags_B = flags_AB & ~BitFlags!Enum(Enum.A);
-    assert(!(flags_B & Enum.A) && (flags_B & Enum.B) && !(flags_B & Enum.C));
+    assert(flags_AB.A && flags_AB.B && !flags_AB.C);
 
     // You can use the EnumMembers template to set all flags
     immutable BitFlags!Enum flags_all = EnumMembers!Enum;
+    assert(flags_all.A && flags_all.B && flags_all.C);
+}
+
+/// Binary operations: subtracting and intersecting flags
+@safe @nogc pure nothrow unittest
+{
+    enum Enum
+    {
+        A = 1 << 0,
+        B = 1 << 1,
+        C = 1 << 2,
+    }
+    immutable BitFlags!Enum flags_AB = BitFlags!Enum(Enum.A, Enum.B);
+    immutable BitFlags!Enum flags_BC = BitFlags!Enum(Enum.B, Enum.C);
+
+    // Use the ~ operator for subtracting flags
+    immutable BitFlags!Enum flags_B = flags_AB & ~BitFlags!Enum(Enum.A);
+    assert(!flags_B.A && flags_B.B && !flags_B.C);
 
     // use & between BitFlags for intersection
-    immutable BitFlags!Enum flags_BC = BitFlags!Enum(Enum.B, Enum.C);
     assert(flags_B == (flags_BC & flags_AB));
+}
 
-    // All the binary operators work in their assignment version
-    BitFlags!Enum temp = flags_empty;
+/// All the binary operators work in their assignment version
+@safe @nogc pure nothrow unittest
+{
+    enum Enum
+    {
+        A = 1 << 0,
+        B = 1 << 1,
+    }
+
+    BitFlags!Enum flags_empty, temp, flags_AB;
+    flags_AB = Enum.A | Enum.B;
+
     temp |= flags_AB;
     assert(temp == (flags_empty | flags_AB));
+
     temp = flags_empty;
     temp |= Enum.B;
     assert(temp == (flags_empty | Enum.B));
+
     temp = flags_empty;
     temp &= flags_AB;
     assert(temp == (flags_empty & flags_AB));
+
     temp = flags_empty;
     temp &= Enum.A;
     assert(temp == (flags_empty & Enum.A));
+}
+
+/// Conversion to bool and int
+@safe @nogc pure nothrow unittest
+{
+    enum Enum
+    {
+        A = 1 << 0,
+        B = 1 << 1,
+    }
+
+    BitFlags!Enum flags;
 
     // BitFlags with no value set evaluate to false
-    assert(!flags_empty);
+    assert(!flags);
 
     // BitFlags with at least one value set evaluate to true
-    assert(flags_A);
+    flags |= Enum.A;
+    assert(flags);
 
     // This can be useful to check intersection between BitFlags
-    assert(flags_A & flags_AB);
-    assert(flags_AB & Enum.A);
+    BitFlags!Enum flags_AB = Enum.A | Enum.B;
+    assert(flags & flags_AB);
+    assert(flags & Enum.A);
 
-    // Finally, you can of course get you raw value out of flags
-    auto value = cast(int) flags_A;
+    // You can of course get you raw value out of flags
+    auto value = cast(int) flags;
     assert(value == Enum.A);
+}
+
+/// You need to specify the `unsafe` parameter for enums with custom values
+@safe @nogc pure nothrow unittest
+{
+    enum UnsafeEnum
+    {
+        A = 1,
+        B = 2,
+        C = 4,
+        BC = B|C
+    }
+    static assert(!__traits(compiles, { BitFlags!UnsafeEnum flags; }));
+    BitFlags!(UnsafeEnum, Yes.unsafe) flags;
+
+    // property access tests for exact match of unsafe enums
+    flags.B = true;
+    assert(!flags.BC); // only B
+    flags.C = true;
+    assert(flags.BC); // both B and C
+    flags.B = false;
+    assert(!flags.BC); // only C
+
+    // property access sets all bits of unsafe enum group
+    flags = flags.init;
+    flags.BC = true;
+    assert(!flags.A && flags.B && flags.C);
+    flags.A = true;
+    flags.BC = false;
+    assert(flags.A && !flags.B && !flags.C);
 }
 
 // ReplaceType

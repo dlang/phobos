@@ -22,7 +22,7 @@ $(TR $(TD Utilities) $(TD
 )
 
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-    Authors:   Jonathan M Davis
+    Authors:   $(HTTP jmdavisprog.com, Jonathan M Davis)
     Source:    $(PHOBOSSRC std/datetime/_timezone.d)
 +/
 module std.datetime.timezone;
@@ -546,10 +546,10 @@ public:
     deprecated @safe unittest
     {
         import std.exception : assertNotThrown;
-        import std.stdio : writefln;
+        import std.stdio : writeln;
         static void testPZSuccess(string tzName)
         {
-            scope(failure) writefln("TZName which threw: %s", tzName);
+            scope(failure) writeln("TZName which threw: ", tzName);
             TimeZone.getTimeZone(tzName);
         }
 
@@ -2502,6 +2502,7 @@ public:
         }
         else
         {
+            import std.path : baseName;
             foreach (DirEntry de; dirEntries(tzDatabaseDir, SpanMode.depth))
             {
                 if (de.isFile)
@@ -2510,7 +2511,7 @@ public:
 
                     if (!tzName.extension().empty ||
                         !tzName.startsWith(subName) ||
-                        tzName == "leapseconds" ||
+                        baseName(tzName) == "leapseconds" ||
                         tzName == "+VERSION")
                     {
                         continue;

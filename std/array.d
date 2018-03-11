@@ -70,7 +70,8 @@ Copyright: Copyright Andrei Alexandrescu 2008- and Jonathan M Davis 2011-.
 
 License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors:   $(HTTP erdani.org, Andrei Alexandrescu) and Jonathan M Davis
+Authors:   $(HTTP erdani.org, Andrei Alexandrescu) and
+           $(HTTP jmdavisprog.com, Jonathan M Davis)
 
 Source: $(PHOBOSSRC std/_array.d)
 */
@@ -1472,7 +1473,7 @@ if (isSomeString!S)
 {
     size_t istart;
     bool inword = false;
-    S[] result;
+    auto result = appender!(S[]);
 
     foreach (i, dchar c ; s)
     {
@@ -1481,7 +1482,7 @@ if (isSomeString!S)
         {
             if (inword)
             {
-                result ~= s[istart .. i];
+                put(result, s[istart .. i]);
                 inword = false;
             }
         }
@@ -1495,8 +1496,8 @@ if (isSomeString!S)
         }
     }
     if (inword)
-        result ~= s[istart .. $];
-    return result;
+        put(result, s[istart .. $]);
+    return result.data;
 }
 
 ///

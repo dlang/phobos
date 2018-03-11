@@ -54,7 +54,8 @@ $(TR $(TD Miscellaneous) $(TD
         $(LINK http://anubis.dkuug.dk/JTC1/SC2/WG2/docs/n1335)
     Copyright: Copyright Digital Mars 2000 - 2012.
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-    Authors:   $(HTTP digitalmars.com, Walter Bright) and Jonathan M Davis
+    Authors:   $(HTTP digitalmars.com, Walter Bright) and
+               $(HTTP jmdavisprog.com, Jonathan M Davis)
     Source:    $(PHOBOSSRC std/_utf.d)
    +/
 module std.utf;
@@ -3978,6 +3979,68 @@ if (isSomeChar!C)
         {
             return r.byCodeUnit();
         }
+        else static if (is(C == dchar))
+        {
+            static struct Result
+            {
+                this(R val)
+                {
+                    r = val;
+                    popFront();
+                }
+
+                @property bool empty()
+                {
+                    return buff == uint.max;
+                }
+
+                @property auto front()
+                {
+                    assert(!empty, "Attempting to access the front of an empty byUTF");
+                    return cast(dchar) buff;
+                }
+
+                void popFront() scope
+                {
+                    assert(!empty, "Attempting to popFront an empty byUTF");
+                    if (r.empty)
+                    {
+                        buff = uint.max;
+                    }
+                    else
+                    {
+                        static if (is(RC == wchar))
+                            enum firstMulti = 0xD800; // First high surrogate.
+                        else
+                            enum firstMulti = 0x80; // First non-ASCII.
+                        if (r.front < firstMulti)
+                        {
+                            buff = r.front;
+                            r.popFront;
+                        }
+                        else
+                        {
+                            buff = () @trusted { return decodeFront!(Yes.useReplacementDchar)(r); }();
+                        }
+                    }
+                }
+
+                static if (isForwardRange!R)
+                {
+                    @property auto save() return scope
+                    {
+                        auto ret = this;
+                        ret.r = r.save;
+                        return ret;
+                    }
+                }
+
+                uint buff;
+                R r;
+            }
+
+            return Result(r);
+        }
         else
         {
             static struct Result
@@ -3994,7 +4057,11 @@ if (isSomeChar!C)
                         pos = 0;
                         auto c = r.front;
 
-                        if (c <= 0x7F)
+                        static if (C.sizeof >= 2 && RC.sizeof >= 2)
+                            enum firstMulti = 0xD800; // First high surrogate.
+                        else
+                            enum firstMulti = 0x80; // First non-ASCII.
+                        if (c < firstMulti)
                         {
                             fill = 1;
                             r.popFront;
