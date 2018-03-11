@@ -926,16 +926,15 @@ template equal(alias pred = "a == b")
     enum isEmptyRange(R) = (isInputRange!R &&
                             __traits(compiles, { static assert(R.empty); }));
 
-    // TODO extend to variadic
-    enum areEquableRanges(Rs...) = is(typeof(binaryFun!pred(ElementType!(Rs[0]).init,
-                                                            ElementType!(Rs[1]).init)));
+    enum areAllEquableRanges(Rs...) = is(typeof(binaryFun!pred(ElementType!(Rs[0]).init, // TODO check all `Rs`
+                                                               ElementType!(Rs[1]).init)));
 
     alias ElementEncodingTypeUnqual(R) = Unqual!(ElementEncodingType!R);
 
     /++
-    This function compares the ranges `rs` for equality. The
+     This function compares two ore more ranges `rs` for equality. The
     ranges may have different element types, as long as `pred(a, b)`
-    evaluates to `bool` for every combination elements `a` and `b` at the same position in the ranges
+    evaluates to `bool` for every combination elements of `a` and `b` at the same position in the ranges
     `rs`.  Performs $(BIGOH min(r1.length, rs.length)) TODO BIG differently
     evaluations of `pred`.
 
@@ -948,7 +947,7 @@ template equal(alias pred = "a == b")
     +/
     bool equal(Rs...)(Rs rs)
         if (rs.length >= 2 &&
-            areEquableRanges!(Rs) &&
+            areAllEquableRanges!(Rs) &&
             allSatisfy!(isInputRange, Rs) &&
             !allSatisfy!(isInfinite, Rs)
             )
