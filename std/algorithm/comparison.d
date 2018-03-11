@@ -1037,7 +1037,7 @@ template equal(alias pred = "a == b")
                 {
                     enum primaryRangeIndex = 0; // just pick first
                 }
-                alias r0 = rs[primaryRangeIndex]; // shorthand
+                alias r_ = rs[primaryRangeIndex]; // shorthand
 
                 // check lengths
                 static if (hasSomeLength)
@@ -1055,50 +1055,88 @@ template equal(alias pred = "a == b")
                 }
 
                 // check equal contents
-                for (; !r0.empty; r0.popFront()) // for each element in primary range `r`
+                size_t ei = 0;   // element index
+                for (; ; ++ei) // for each element at index `ei` in primary range `r`
                 {
-                    static foreach (i, r; rs)
+                    static if (hasSlicing!(typeof(r_)))
                     {
-                        static if (i != primaryRangeIndex) // not primary
+                        if (ei == r_.length) { break; }
+                    }
+                    else
+                    {
+                        if (r_.empty) { break; }
+                    }
+                    static foreach (ri, r; rs)
+                    {
+                        static if (ri != primaryRangeIndex) // not primary
                         {
-                            static if (!isInfinite!(typeof(r))) // finite range
+                            static if (!isInfinite!(typeof(r))) // `r` is finite
                             {
-                                static if (!hasLength!(typeof(r)))
+                                static if (hasLength!(typeof(r_)) &&
+                                           hasLength!(typeof(r))) // TODO move after `hasSlicing`
+                                {
+                                    /* r_ and `r` have already been checked
+                                     * above to have equal lengths so safe to
+                                     * skip empty check for `r` */
+                                }
+                                else
                                 {
                                     if (r.empty) { return false; } // check for premature emptying of `r`
                                 }
+                                static if (hasSlicing!(typeof(r)))
+                                {
+                                    static if (hasSlicing!(typeof(r_)))
+                                    {
+                                        if (!binaryFun!(pred)(r_[ei], r[ei])) { return false; }
+                                    }
+                                    else
+                                    {
+                                        if (!binaryFun!(pred)(r_.front, r[ei])) { return false; }
+                                    }
+                                }
                                 else
                                 {
-                                    /* r0 and `r` have already been checked
-                                     * above to have equal lengths so safe
-                                     * to skip empty check for `r` */
+                                    static if (hasSlicing!(typeof(r_)))
+                                    {
+                                        if (!binaryFun!(pred)(r_[ei], r.front)) { return false; }
+                                    }
+                                    else
+                                    {
+                                        if (!binaryFun!(pred)(r_.front, r.front)) { return false; }
+                                    }
+                                    r.popFront();
                                 }
-                                if (!binaryFun!(pred)(r0.front, r.front))
-                                    return false;
-                                else
-                                    r.popFront();
                             }
-                            else    // infinite range
+                            else    // `r` is infinite
                             {
-                                if (!binaryFun!(pred)(r0.front, r.front))
-                                    return false;
-                                else
-                                    r.popFront();
+                                if (!binaryFun!(pred)(r_.front, r.front)) { return false; }
+                                r.popFront();
                             }
                         }
+                    }
+                    static if (!hasSlicing!(typeof(r_)))
+                    {
+                        r_.popFront();
                     }
                 }
 
                 // check that all other ranges are empty
                 static if (!isInfinite!(Rs[primaryRangeIndex])) // line only reached when previous `for`-loop terminated (`r.empty` not enum false)
                 {
-                    static foreach (i, r; rs)
+                    static foreach (ri, r; rs)
                     {
-                        static if (i != primaryRangeIndex)    // not primary
+                        static if (ri != primaryRangeIndex)    // not primary
                         {
                             static if (!isInfinite!(typeof(r))) // finite range
                             {
-                                if (!r.empty) { return false; }
+                                static if (hasSlicing!(typeof(r)))
+                                {
+                                    if (ei != r.length) { return false; }
+                                }
+                                else
+                                {
+                                    if (!r.empty) { return false; }
+                                }
                             }
                         }
                     }
@@ -1331,12 +1369,12 @@ range of range (of range...) comparisons.
     chunks = source.evenChunks(3);
     assert(chunks.empty);
     assert(chunks.length == 3);
-    // assert(equal(chunks, [[], [], []])); // TODO remove or make pass
+    assert(equal(chunks, [[], [], []]));
 
     chunks = [1, 2, 3].evenChunks(5);
     assert(!chunks.empty);
     assert(chunks.length == 5);
-    // assert(equal(chunks, [[1], [2], [3], [], []])); // TODO make pass
+    assert(equal(chunks, [[1], [2], [3], [], []]));
 }
 
 // MaxType
