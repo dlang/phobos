@@ -949,7 +949,7 @@ template equal(alias pred = "a == b")
     bool equal(Rs...)(Rs rs)
         if (rs.length >= 2 &&
             areEquableRanges!(Rs) &&
-            allSatisfy!(isInputRange, Rs) && // TODO should we use `isIterable` instead?
+            allSatisfy!(isInputRange, Rs) &&
             !allSatisfy!(isInfinite, Rs)
             )
     {
