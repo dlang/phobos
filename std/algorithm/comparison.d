@@ -892,7 +892,7 @@ nothrow pure @safe unittest
     auto t = task!cmp("foo", "bar");
 }
 
-template allSameTypeIterative(V...)
+private template allSameTypeIterative(V...)
 {
     static if (V.length >= 2)
     {
@@ -920,8 +920,11 @@ template equal(alias pred = "a == b")
 {
     import std.meta : anySatisfy, allSatisfy;
 
+    /** Check if `R` is a special kind of input range that is always empty
+     * (`empty` is an `enum` always being `true`)
+     */
     enum isEmptyRange(R) = (isInputRange!R &&
-                            __traits(compiles, { static assert(R.empty, ""); }));
+                            __traits(compiles, { static assert(R.empty); }));
 
     // TODO extend to variadic
     enum areEquableRanges(Rs...) = is(typeof(binaryFun!pred(ElementType!(Rs[0]).init,
@@ -953,7 +956,7 @@ template equal(alias pred = "a == b")
         enum isEquableToR(T) = is(typeof({ return Rs[0].init == T.init; }));
 
         // avoid calls to `pred` when all are empty
-        static if (allSatisfy!(isEmptyRange, Rs))
+        static if (anySatisfy!(isEmptyRange, Rs))
         {
             static foreach (r; rs)
             {
@@ -1011,92 +1014,96 @@ template equal(alias pred = "a == b")
         {
             import std.meta : staticMap, staticIndexOf;
 
+            // get lengths
             alias hasLengthBits = staticMap!(hasLength, Rs);
-
-            // get length from first range that has one
             enum indexOfFirstLength = staticIndexOf!(true, hasLengthBits);
             enum hasSomeLength = indexOfFirstLength != -1;
-            static if (hasSomeLength)
+
+            static if (hasSomeLength && // if one range has a (finite) length and
+                       anySatisfy!(isInfinite, Rs)) // another is infinite
             {
-                /* if any `rs` `hasLength` then `primaryRangeIndex` will index the
-                 * first of them */
-                enum primaryRangeIndex = indexOfFirstLength;
-                const length = rs[indexOfFirstLength].length;
+                return false;   // they can't be equal
             }
             else
             {
-                enum primaryRangeIndex = 0; // otherwise just pick first
-            }
-            alias r0 = rs[primaryRangeIndex];
-
-            // check lengths
-            static if (hasSomeLength)
-            {
-                static foreach (i, r; rs)
+                static if (hasSomeLength)
                 {
-                    static if (i != indexOfFirstLength &&
-                               hasLength!(typeof(r)))
+                    /* if any `rs` `hasLength` then `primaryRangeIndex` will index the
+                     * first of them */
+                    enum primaryRangeIndex = indexOfFirstLength;
+                    const length = rs[indexOfFirstLength].length;
+                }
+                else
+                {
+                    enum primaryRangeIndex = 0; // otherwise just pick first
+                }
+                alias r0 = rs[primaryRangeIndex];
+
+                // check lengths
+                static if (hasSomeLength)
+                {
+                    static foreach (i, r; rs)
                     {
-                        if (length != r.length) { return false; }
+                        static if (i != indexOfFirstLength)
+                        {
+                            static if (hasLength!(typeof(r)))
+                            {
+                                if (length != r.length) { return false; }
+                            }
+                        }
                     }
                 }
-            }
 
-            // check equal contents
-            for (; !r0.empty; r0.popFront()) // for each element in first range `r`
-            {
-                static foreach (i, r; rs)
-                {{              // double braces because need scope
-                    static if (i != primaryRangeIndex) // not primary
-                    {
-                        // corner-case when `r` is always empty
-                        enum alwaysEmpty = __traits(compiles, { enum _ = r.empty; }) && r.empty is true;
-                        static if (alwaysEmpty)
-                        {
-                            return false;
-                        }
-                        else static if (!isInfinite!(typeof(r))) // finite range
-                        {
-                            static if (!hasLength!(typeof(r)))
+                // check equal contents
+                for (; !r0.empty; r0.popFront()) // for each element in first range `r`
+                {
+                    static foreach (i, r; rs)
+                    {{          // double braces because need scope
+                            static if (i != primaryRangeIndex) // not primary
                             {
-                                if (r.empty) { return false; } // check for premature emptying of `r`
+                                static if (!isInfinite!(typeof(r))) // finite range
+                                {
+                                    static if (!hasLength!(typeof(r)))
+                                    {
+                                        if (r.empty) { return false; } // check for premature emptying of `r`
+                                    }
+                                    else
+                                    {
+                                        /* r0 and `r` have already been checked
+                                         * above to have equal lengths so safe
+                                         * to skip empty check for `r` */
+                                    }
+                                    if (!binaryFun!(pred)(r0.front, r.front))
+                                        return false;
+                                    else
+                                        r.popFront();
+                                }
+                                else    // infinite range
+                                {
+                                    if (!binaryFun!(pred)(r0.front, r.front))
+                                        return false;
+                                    else
+                                        r.popFront();
+                                }
                             }
-                            else
-                            {
-                                /* `r` has length aswell as r0 and
-                                 * both have already been asserted above to be
-                                 * equal so safe to skip empty check for `r` */
-                            }
-                            if (!binaryFun!(pred)(r0.front, r.front))
-                                return false;
-                            else
-                                r.popFront();
-                        }
-                        else    // infinite range
-                        {
-                            if (!binaryFun!(pred)(r0.front, r.front))
-                                return false;
-                            else
-                                r.popFront();
-                        }
-                    }
-                }}
-            }
+                        }}
+                }
 
-            // check that all other ranges are empty
-            static if (!isInfinite!(Rs[primaryRangeIndex])) // line only reached when previous `for`-loop terminated (`r.empty` not enum false)
-            {
-                static foreach (i, r; rs)
-                {{              // double braces because need scope
-                    static if (i != primaryRangeIndex)    // not primary
-                    {
-                        static if (!isInfinite!(typeof(r))) // finite range
-                        {
-                            if (!r.empty) { return false; }
-                        }
-                    }
-                }}
-                return true;
+                // check that all other ranges are empty
+                static if (!isInfinite!(Rs[primaryRangeIndex])) // line only reached when previous `for`-loop terminated (`r.empty` not enum false)
+                {
+                    static foreach (i, r; rs)
+                    {{              // double braces because need scope
+                            static if (i != primaryRangeIndex)    // not primary
+                            {
+                                static if (!isInfinite!(typeof(r))) // finite range
+                                {
+                                    if (!r.empty) { return false; }
+                                }
+                            }
+                        }}
+                    return true;
+                }
             }
         }
     }
@@ -1277,24 +1284,38 @@ range of range (of range...) comparisons.
     assert(equal("æøå"d, "æøå".byDchar));
 }
 
-/**TODO enable:*/version(none) @safe pure unittest
+@safe pure unittest
 {
+    /* special kind of range where `empty` is either always `false` or `true` */
     struct R(bool _empty) {
         enum empty = _empty;
         @property char front(){assert(0);}
         void popFront(){assert(0);}
     }
-    alias I = R!false;
+
+    alias I = R!false;          // infinite range when (`empty` is always `false`)
+    static assert(isInfinite!I);
+
+    /* two infinite ranges cannot be compared */
     static assert(!__traits(compiles, I().equal(I())));
-    // strings have fixed length so don't need to compare elements
+
+    /* strings have fixed length so don't need to compare elements so ok to
+     * compare with an infinite range */
     assert(!I().equal("foo"));
+
     assert(!"bar".equal(I()));
 
-    alias E = R!true;
+    alias E = R!true;           // always empty range (`empty` is always `true`)
+    static assert(!isInfinite!E);
+
     assert(E().equal(E()));
+
     assert(E().equal(""));
+
     assert("".equal(E()));
+
     assert(!E().equal("foo"));
+
     assert(!"bar".equal(E()));
 }
 
