@@ -983,6 +983,9 @@ template equal(alias pred = "a == b")
                         anySatisfy!(isAutodecodableString, Rs) && // some argument is either a string wstring
                         allSameTypeIterative!(staticMap!(ElementEncodingTypeUnqual, Rs)))
         {
+            // TODO forward some `rs` through a map via byCodeUnit to equal
+            // using ideas from
+            // https://forum.dlang.org/post/aaiirugsrtuuhuxdezyd@forum.dlang.org
             import std.utf : byCodeUnit;
 
             static foreach (r; rs[1 .. $])
