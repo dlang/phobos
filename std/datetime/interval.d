@@ -28,7 +28,7 @@ $(TR $(TD Flags) $(TD
 )
 
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-    Authors:   Jonathan M Davis
+    Authors:   $(HTTP jmdavisprog.com, Jonathan M Davis)
     Source:    $(PHOBOSSRC std/datetime/_interval.d)
 +/
 module std.datetime.interval;

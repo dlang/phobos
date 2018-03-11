@@ -42,7 +42,7 @@ $(TR $(TD Flags) $(TD
     rather than the deprecated ones from std.datetime.package.
 
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-    Authors:   Jonathan M Davis and Kato Shoichi
+    Authors:   $(HTTP jmdavisprog.com, Jonathan M Davis) and Kato Shoichi
     Source:    $(PHOBOSSRC std/datetime/_stopwatch.d)
 +/
 module std.datetime.stopwatch;

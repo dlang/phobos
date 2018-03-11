@@ -54,7 +54,8 @@ $(TR $(TD Miscellaneous) $(TD
         $(LINK http://anubis.dkuug.dk/JTC1/SC2/WG2/docs/n1335)
     Copyright: Copyright Digital Mars 2000 - 2012.
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-    Authors:   $(HTTP digitalmars.com, Walter Bright) and Jonathan M Davis
+    Authors:   $(HTTP digitalmars.com, Walter Bright) and
+               $(HTTP jmdavisprog.com, Jonathan M Davis)
     Source:    $(PHOBOSSRC std/_utf.d)
    +/
 module std.utf;
