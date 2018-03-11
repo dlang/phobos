@@ -1312,6 +1312,20 @@ range of range (of range...) comparisons.
     assert(!"bar".equal(E()));
 }
 
+@safe pure unittest             // borrowed from std.range
+{
+    import std.range : evenChunks;
+
+    int[] source = [];
+    auto chunks = source.evenChunks(0);
+    assert(chunks.length == 0);
+    chunks = source.evenChunks(3);
+    assert(chunks.empty);
+    assert(equal(chunks, [[], [], []]));
+    chunks = [1, 2, 3].evenChunks(5);
+    assert(equal(chunks, [[1], [2], [3], [], []]));
+}
+
 // MaxType
 private template MaxType(T...)
 if (T.length >= 1)
