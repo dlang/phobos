@@ -1058,35 +1058,35 @@ template equal(alias pred = "a == b")
                 for (; !r0.empty; r0.popFront()) // for each element in first range `r`
                 {
                     static foreach (i, r; rs)
-                    {{          // double braces because need scope
-                            static if (i != primaryRangeIndex) // not primary
+                    {          // double braces because need scope
+                        static if (i != primaryRangeIndex) // not primary
+                        {
+                            static if (!isInfinite!(typeof(r))) // finite range
                             {
-                                static if (!isInfinite!(typeof(r))) // finite range
+                                static if (!hasLength!(typeof(r)))
                                 {
-                                    static if (!hasLength!(typeof(r)))
-                                    {
-                                        if (r.empty) { return false; } // check for premature emptying of `r`
-                                    }
-                                    else
-                                    {
-                                        /* r0 and `r` have already been checked
-                                         * above to have equal lengths so safe
-                                         * to skip empty check for `r` */
-                                    }
-                                    if (!binaryFun!(pred)(r0.front, r.front))
-                                        return false;
-                                    else
-                                        r.popFront();
+                                    if (r.empty) { return false; } // check for premature emptying of `r`
                                 }
-                                else    // infinite range
+                                else
                                 {
-                                    if (!binaryFun!(pred)(r0.front, r.front))
-                                        return false;
-                                    else
-                                        r.popFront();
+                                    /* r0 and `r` have already been checked
+                                     * above to have equal lengths so safe
+                                     * to skip empty check for `r` */
                                 }
+                                if (!binaryFun!(pred)(r0.front, r.front))
+                                    return false;
+                                else
+                                    r.popFront();
                             }
-                        }}
+                            else    // infinite range
+                            {
+                                if (!binaryFun!(pred)(r0.front, r.front))
+                                    return false;
+                                else
+                                    r.popFront();
+                            }
+                        }
+                    }
                 }
 
                 // check that all other ranges are empty
