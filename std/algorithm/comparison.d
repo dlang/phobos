@@ -1301,11 +1301,9 @@ range of range (of range...) comparisons.
     assert(!equal(cir, ifr));
 }
 
-@trusted pure unittest
+@safe pure unittest
 {
     import std.utf : byChar, byWchar, byDchar;
-
-    assert(equal("æøå".byChar, cast(char[])("æøå"))); // exercise ElementEncodingTypeUnqual
 
     assert(equal("æøå".byChar, "æøå"));
     assert(equal("æøå".byChar, "æøå", "æøå"));
@@ -1322,6 +1320,12 @@ range of range (of range...) comparisons.
 
     assert(equal("æøå".byDchar, "æøå"d));
     assert(equal("æøå"d, "æøå".byDchar));
+}
+
+@system pure unittest
+{
+    import std.utf : byChar, byWchar, byDchar;
+    assert(equal("æøå".byChar, cast(char[])("æøå"))); // exercise ElementEncodingTypeUnqual
 }
 
 @safe pure unittest
