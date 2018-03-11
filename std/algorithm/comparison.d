@@ -955,7 +955,7 @@ template equal(alias pred = "a == b")
     {
         enum isEquableToR(T) = is(typeof({ return Rs[0].init == T.init; }));
 
-        // avoid calls to `pred` when all are empty
+        // avoid calls to `pred` when some range is always `empty` (`enum`)
         static if (anySatisfy!(isEmptyRange, Rs))
         {
             static foreach (r; rs)
@@ -967,26 +967,20 @@ template equal(alias pred = "a == b")
             }
             return true;
         }
-        // if comparing arrays
-        else static if (((is(typeof(pred) == string) && pred == "a == b") || // old style check
-                         __traits(isSame, binaryFun!pred, (a, b) => a == b)) &&
+        // if comparing two arrays
+        else static if (rs.length == 2 && // builtin array comparison can only support binary case
+                        ((is(typeof(pred) == string) && pred == "a == b") || // old style check
+                         __traits(isSame, binaryFun!pred, (a, b) => a == b)) && // TODO is this correct?
                         allSatisfy!(isArray, Rs) &&
                         allSatisfy!(isEquableToR, Rs[1 .. $]))
         {
-            static foreach (r; rs[1 .. $])
-            {
-                if (rs[0] != r) // use fast array comparison
-                {
-                    return false;
-                }
-            }
-            return true;
+            return rs[0] == rs[1]; // use fast builtin array comparison
         }
         // if one of the arguments is a string and the other isn't, then
         // auto-decoding can be avoided if they have the same
-        // ElementEncodingType
+        // `ElementEncodingType`
         else static if (((is(typeof(pred) == string) && pred == "a == b") || // old style check
-                         __traits(isSame, binaryFun!pred, (a, b) => a == b)) &&
+                         __traits(isSame, binaryFun!pred, (a, b) => a == b)) && // TODO is this correct?
                         anySatisfy!(isAutodecodableString, Rs) && // some argument is either a string wstring
                         allSameTypeIterative!(staticMap!(ElementEncodingTypeUnqual, Rs)))
         {
