@@ -911,6 +911,8 @@ private template allSameTypeIterative(V...)
     }
 }
 
+private enum hasIndexingAndLength(T) = is(typeof(T.init[0])) && is(typeof(T.length));
+
 // equal
 /**
 Compares two or more ranges `rs` for equality, as defined by predicate `pred`
@@ -1058,7 +1060,7 @@ template equal(alias pred = "a == b")
                 size_t ei = 0;   // element index
                 for (; ; ++ei) // for each element at index `ei` in primary range `r`
                 {
-                    static if (hasSlicing!(typeof(r_)))
+                    static if (hasIndexingAndLength!(typeof(r_)))
                     {
                         if (ei == r_.length) { break; }
                     }
@@ -1073,7 +1075,7 @@ template equal(alias pred = "a == b")
                             static if (!isInfinite!(typeof(r))) // `r` is finite
                             {
                                 static if (hasLength!(typeof(r_)) &&
-                                           hasLength!(typeof(r))) // TODO move after `hasSlicing`
+                                           hasLength!(typeof(r))) // TODO move after `hasIndexingAndLength`
                                 {
                                     /* r_ and `r` have already been checked
                                      * above to have equal lengths so safe to
@@ -1083,9 +1085,9 @@ template equal(alias pred = "a == b")
                                 {
                                     if (r.empty) { return false; } // check for premature emptying of `r`
                                 }
-                                static if (hasSlicing!(typeof(r)))
+                                static if (hasIndexingAndLength!(typeof(r)))
                                 {
-                                    static if (hasSlicing!(typeof(r_)))
+                                    static if (hasIndexingAndLength!(typeof(r_)))
                                     {
                                         if (!binaryFun!(pred)(r_[ei], r[ei])) { return false; }
                                     }
@@ -1096,7 +1098,7 @@ template equal(alias pred = "a == b")
                                 }
                                 else
                                 {
-                                    static if (hasSlicing!(typeof(r_)))
+                                    static if (hasIndexingAndLength!(typeof(r_)))
                                     {
                                         if (!binaryFun!(pred)(r_[ei], r.front)) { return false; }
                                     }
@@ -1114,7 +1116,7 @@ template equal(alias pred = "a == b")
                             }
                         }
                     }
-                    static if (!hasSlicing!(typeof(r_)))
+                    static if (!hasIndexingAndLength!(typeof(r_)))
                     {
                         r_.popFront();
                     }
@@ -1129,7 +1131,7 @@ template equal(alias pred = "a == b")
                         {
                             static if (!isInfinite!(typeof(r))) // finite range
                             {
-                                static if (hasSlicing!(typeof(r)))
+                                static if (hasIndexingAndLength!(typeof(r)))
                                 {
                                     if (ei != r.length) { return false; }
                                 }
