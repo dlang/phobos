@@ -28,6 +28,7 @@ auto makeRegex(S, CG)(Parser!(S, CG) p)
         charsets = g.charsets;
         matchers = g.matchers;
         backrefed = g.backrefed;
+        re.pattern = p.origin.idup;
         re.postprocess();
         // check if we have backreferences, if so - use backtracking
         if (__ctfe) factory = null; // allows us to use the awful enum re = regex(...);

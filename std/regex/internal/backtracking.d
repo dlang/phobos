@@ -172,6 +172,15 @@ final:
         backtracking.initExternalMemory(memBlock);
     }
 
+    override Matcher!Char rearm(in Char[] data)
+    {
+        merge[] = Trace.init;
+        exhausted = false;
+        s = Stream(data);
+        next();
+        return this;
+    }
+
     this(ref const RegEx program, Stream stream, void[] memBlock, dchar ch, DataIndex idx)
     {
         _refCount = 1;
