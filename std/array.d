@@ -2268,7 +2268,14 @@ if (isInputRange!Range &&
             copy(stuff, retval[from .. from + stuff.length]);
 
         retval[from + stuff.length .. $] = subject[to .. $];
-        return cast(T[]) retval;
+        static if (is(T == const) || is(T == immutable))
+        {
+            return () @trusted { return cast(T[]) retval; } ();
+        }
+        else
+        {
+            return cast(T[]) retval;
+        }
     }
     else
     {
@@ -2360,6 +2367,13 @@ if (isInputRange!Range &&
     assert(replace(d, 3, 8, "¹⁰¹²"d) == "⁰¹²¹⁰¹²⁸⁹"d);
     assert(replace(d, 0, 5, "⁴³²¹⁰"d) == "⁴³²¹⁰⁵⁶⁷⁸⁹"d);
     assert(replace(d, 5, 10, "⁴³²¹⁰"d) == "⁰¹²³⁴⁴³²¹⁰"d);
+}
+
+// Issue 18166
+@safe pure unittest
+{
+    auto str = replace("aaaaa"d, 1, 4, "***"d);
+    assert(str == "a***a");
 }
 
 /++
