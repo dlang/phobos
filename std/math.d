@@ -1260,102 +1260,17 @@ real atan(real x) @safe pure nothrow @nogc
 {
     version(InlineAsm_X86_Any)
     {
-        return atan2(x, 1.0L);
+        if (!__ctfe)
+            return atan2(x, 1.0L);
     }
-    else
-    {
-        // Coefficients for atan(x)
-        static if (floatTraits!real.realFormat == RealFormat.ieeeQuadruple)
-        {
-            static immutable real[9] P = [
-                -6.880597774405940432145577545328795037141E2L,
-                -2.514829758941713674909996882101723647996E3L,
-                -3.696264445691821235400930243493001671932E3L,
-                -2.792272753241044941703278827346430350236E3L,
-                -1.148164399808514330375280133523543970854E3L,
-                -2.497759878476618348858065206895055957104E2L,
-                -2.548067867495502632615671450650071218995E1L,
-                -8.768423468036849091777415076702113400070E-1L,
-                -6.635810778635296712545011270011752799963E-4L
-            ];
-            static immutable real[9] Q = [
-                2.064179332321782129643673263598686441900E3L,
-                8.782996876218210302516194604424986107121E3L,
-                1.547394317752562611786521896296215170819E4L,
-                1.458510242529987155225086911411015961174E4L,
-                7.928572347062145288093560392463784743935E3L,
-                2.494680540950601626662048893678584497900E3L,
-                4.308348370818927353321556740027020068897E2L,
-                3.566239794444800849656497338030115886153E1L,
-                1.0
-            ];
-        }
-        else
-        {
-            static immutable real[5] P = [
-               -5.0894116899623603312185E1L,
-               -9.9988763777265819915721E1L,
-               -6.3976888655834347413154E1L,
-               -1.4683508633175792446076E1L,
-               -8.6863818178092187535440E-1L,
-            ];
-            static immutable real[6] Q = [
-                1.5268235069887081006606E2L,
-                3.9157570175111990631099E2L,
-                3.6144079386152023162701E2L,
-                1.4399096122250781605352E2L,
-                2.2981886733594175366172E1L,
-                1.0000000000000000000000E0L,
-            ];
-        }
-
-        // tan(PI/8)
-        enum real TAN_PI_8 = 0.414213562373095048801688724209698078569672L;
-        // tan(3 * PI/8)
-        enum real TAN3_PI_8 = 2.414213562373095048801688724209698078569672L;
-
-        // Special cases.
-        if (x == 0.0)
-            return x;
-        if (isInfinity(x))
-            return copysign(PI_2, x);
-
-        // Make argument positive but save the sign.
-        bool sign = false;
-        if (signbit(x))
-        {
-            sign = true;
-            x = -x;
-        }
-
-        // Range reduction.
-        real y;
-        if (x > TAN3_PI_8)
-        {
-            y = PI_2;
-            x = -(1.0 / x);
-        }
-        else if (x > TAN_PI_8)
-        {
-            y = PI_4;
-            x = (x - 1.0)/(x + 1.0);
-        }
-        else
-            y = 0.0;
-
-        // Rational form in x^^2.
-        const real z = x * x;
-        y = y + (poly(z, P) / poly(z, Q)) * z * x + x;
-
-        return (sign) ? -y : y;
-    }
+    return atanImpl(x);
 }
 
 /// ditto
-double atan(double x) @safe pure nothrow @nogc { return atan(cast(real) x); }
+double atan(double x) @safe pure nothrow @nogc { return atanImpl(x); }
 
 /// ditto
-float atan(float x)  @safe pure nothrow @nogc { return atan(cast(real) x); }
+float atan(float x) @safe pure nothrow @nogc { return atanImpl(x); }
 
 ///
 @safe unittest
@@ -1364,9 +1279,213 @@ float atan(float x)  @safe pure nothrow @nogc { return atan(cast(real) x); }
     assert(atan(sqrt(3.0)).approxEqual(PI / 3));
 }
 
+private T atanImpl(T)(T x) @safe pure nothrow @nogc
+{
+    // Coefficients for atan(x)
+    enum realFormat = floatTraits!T.realFormat;
+    static if (realFormat == RealFormat.ieeeQuadruple)
+    {
+        static immutable T[9] P = [
+            -6.880597774405940432145577545328795037141E2L,
+            -2.514829758941713674909996882101723647996E3L,
+            -3.696264445691821235400930243493001671932E3L,
+            -2.792272753241044941703278827346430350236E3L,
+            -1.148164399808514330375280133523543970854E3L,
+            -2.497759878476618348858065206895055957104E2L,
+            -2.548067867495502632615671450650071218995E1L,
+            -8.768423468036849091777415076702113400070E-1L,
+            -6.635810778635296712545011270011752799963E-4L
+        ];
+        static immutable T[9] Q = [
+            2.064179332321782129643673263598686441900E3L,
+            8.782996876218210302516194604424986107121E3L,
+            1.547394317752562611786521896296215170819E4L,
+            1.458510242529987155225086911411015961174E4L,
+            7.928572347062145288093560392463784743935E3L,
+            2.494680540950601626662048893678584497900E3L,
+            4.308348370818927353321556740027020068897E2L,
+            3.566239794444800849656497338030115886153E1L,
+            1.0
+        ];
+    }
+    else static if (realFormat == RealFormat.ieeeExtended)
+    {
+        static immutable T[5] P = [
+           -5.0894116899623603312185E1L,
+           -9.9988763777265819915721E1L,
+           -6.3976888655834347413154E1L,
+           -1.4683508633175792446076E1L,
+           -8.6863818178092187535440E-1L,
+        ];
+        static immutable T[6] Q = [
+            1.5268235069887081006606E2L,
+            3.9157570175111990631099E2L,
+            3.6144079386152023162701E2L,
+            1.4399096122250781605352E2L,
+            2.2981886733594175366172E1L,
+            1.0000000000000000000000E0L,
+        ];
+    }
+    else static if (realFormat == RealFormat.ieeeDouble)
+    {
+        static immutable T[5] P = [
+            -6.485021904942025371773E1L,
+            -1.228866684490136173410E2L,
+            -7.500855792314704667340E1L,
+            -1.615753718733365076637E1L,
+            -8.750608600031904122785E-1L,
+        ];
+        static immutable T[6] Q = [
+             1.945506571482613964425E2L,
+             4.853903996359136964868E2L,
+             4.328810604912902668951E2L,
+             1.650270098316988542046E2L,
+             2.485846490142306297962E1L,
+             1.000000000000000000000E0L,
+        ];
+
+        enum T MOREBITS = 6.123233995736765886130E-17L;
+    }
+    else static if (realFormat == RealFormat.ieeeSingle)
+    {
+        // inlined below
+    }
+    else
+        static assert(0, "no coefficients for atan()");
+
+    // tan(PI/8)
+    enum T TAN_PI_8 = 0.414213562373095048801688724209698078569672L;
+    // tan(3 * PI/8)
+    enum T TAN3_PI_8 = 2.414213562373095048801688724209698078569672L;
+
+    // Special cases.
+    if (x == cast(T) 0.0)
+        return x;
+    if (isInfinity(x))
+        return copysign(cast(T) PI_2, x);
+
+    // Make argument positive but save the sign.
+    bool sign = false;
+    if (signbit(x))
+    {
+        sign = true;
+        x = -x;
+    }
+
+    static if (realFormat == RealFormat.ieeeDouble) // special case for double precision
+    {
+        short flag = 0;
+        T y;
+        if (x > TAN3_PI_8)
+        {
+            y = PI_2;
+            flag = 1;
+            x = -(1.0 / x);
+        }
+        else if (x <= 0.66)
+        {
+            y = 0.0;
+        }
+        else
+        {
+            y = PI_4;
+            flag = 2;
+            x = (x - 1.0)/(x + 1.0);
+        }
+
+        T z = x * x;
+        z = z * poly(z, P) / poly(z, Q);
+        z = x * z + x;
+        if (flag == 2)
+            z += 0.5 * MOREBITS;
+        else if (flag == 1)
+            z += MOREBITS;
+        y = y + z;
+    }
+    else
+    {
+        // Range reduction.
+        T y;
+        if (x > TAN3_PI_8)
+        {
+            y = PI_2;
+            x = -((cast(T) 1.0) / x);
+        }
+        else if (x > TAN_PI_8)
+        {
+            y = PI_4;
+            x = (x - cast(T) 1.0)/(x + cast(T) 1.0);
+        }
+        else
+            y = 0.0;
+
+        // Rational form in x^^2.
+        const T z = x * x;
+        static if (realFormat == RealFormat.ieeeSingle)
+        {
+            y += ((( 8.05374449538e-2f * z
+                   - 1.38776856032E-1f) * z
+                   + 1.99777106478E-1f) * z
+                   - 3.33329491539E-1f) * z * x
+                 + x;
+        }
+        else
+        {
+            y = y + (poly(z, P) / poly(z, Q)) * z * x + x;
+        }
+    }
+
+    return (sign) ? -y : y;
+}
+
 @safe @nogc nothrow unittest
 {
-    assert(equalsDigit(atan(std.math.sqrt(3.0)), PI / 3, useDigits));
+    static void testAtan(T)()
+    {
+        // ±0
+        const T zero = 0.0;
+        assert(isIdentical(atan(zero), zero));
+        assert(isIdentical(atan(-zero), -zero));
+        // ±∞
+        const T inf = T.infinity;
+        assert(approxEqual(atan(inf), cast(T) PI_2));
+        assert(approxEqual(atan(-inf), cast(T) -PI_2));
+        // NaN
+        const T specialNaN = NaN(0x0123L);
+        assert(isIdentical(atan(specialNaN), specialNaN));
+
+        static immutable T[2][] vals =
+        [
+            // x, atan(x)
+            [ 0.25, 0.2449786631 ],
+            [ 0.5,  0.4636476090 ],
+            [ 1,    PI_4         ],
+            [ 1.5,  0.9827937232 ],
+            [ 10,   1.4711276743 ],
+        ];
+
+        foreach (ref val; vals)
+        {
+            T x = val[0];
+            T r = val[1];
+            T a = atan(x);
+
+            //printf("atan(%Lg) = %Lg, should be %Lg\n", cast(real) x, cast(real) a, cast(real) r);
+            assert(approxEqual(r, a));
+
+            x = -x;
+            r = -r;
+            a = atan(x);
+            //printf("atan(%Lg) = %Lg, should be %Lg\n", cast(real) x, cast(real) a, cast(real) r);
+            assert(approxEqual(r, a));
+        }
+    }
+
+    import std.meta : AliasSeq;
+    foreach (T; AliasSeq!(real, double, float))
+        testAtan!T();
+
+    assert(equalsDigit(atan(std.math.sqrt(3.0L)), PI / 3, useDigits));
 }
 
 /***************
