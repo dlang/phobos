@@ -682,7 +682,7 @@ public:
     ///A hook for compatibility with original std.regex.
     @property ref captures(){ return this; }
 
-    void opAssign()(auto ref Captures rhs)
+    typeof(this) opAssign()(auto ref Captures rhs)
     {
         if (rhs._refcount & SMALL_MASK)
             small_matches[0 .. rhs._refcount & 0xFF] = rhs.small_matches[0 .. rhs._refcount & 0xFF];
@@ -691,6 +691,7 @@ public:
         assert(&this.tupleof[0] is &big_matches);
         assert(&this.tupleof[1] is &small_matches);
         this.tupleof[2 .. $] = rhs.tupleof[2 .. $];
+        return this;
     }
 }
 
@@ -714,6 +715,14 @@ public:
     assert(c.empty);
 
     assert(!matchFirst("nothing", "something"));
+}
+
+@system unittest
+{
+    Captures!string c;
+    string s = "abc";
+    assert(cast(bool)(c = matchFirst(s, regex("d")))
+        || cast(bool)(c = matchFirst(s, regex("a"))));
 }
 
 /++
