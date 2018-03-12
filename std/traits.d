@@ -2527,8 +2527,10 @@ private enum NameOf(alias T) = T.stringof;
  * Get as an expression tuple the names of the fields of a struct, class, or
  * union. This consists of the fields that take up memory space, excluding the
  * hidden fields like the virtual function table pointer or a context pointer
- * for nested types. If $(D T) isn't a struct, class, or union returns an
- * expression tuple with an empty string.
+ * for nested types.
+ * Inherited fields (for classes) are not included.
+ * If $(D T) isn't a struct, class, or union, an
+ * expression tuple with an empty string is returned.
  */
 template FieldNameTuple(T)
 {
@@ -2559,6 +2561,15 @@ template FieldNameTuple(T)
 
     static struct StaticStruct2 { int a, b; }
     static assert(FieldNameTuple!StaticStruct2 == AliasSeq!("a", "b"));
+
+    static class StaticClass1 { }
+    static assert(is(FieldNameTuple!StaticClass1 == AliasSeq!()));
+
+    static class StaticClass2 : StaticClass1 { int a, b; }
+    static assert(FieldNameTuple!StaticClass2 == AliasSeq!("a", "b"));
+
+    static class StaticClass3 : StaticClass2 { int c; }
+    static assert(FieldNameTuple!StaticClass3 == AliasSeq!("c"));
 
     int i;
 
