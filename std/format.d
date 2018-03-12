@@ -3550,20 +3550,25 @@ private template hasToString(T, Char)
         enum hasToString = 0;
     }
     else static if (is(typeof(
-        {T val = void; FormatSpec!Char f; static struct S {void put(Char s){}}
-        S s; val.toString(s, f);
-        // force toString to take output range by ref
-        static assert(ParameterStorageClassTuple!(T.toString!(S))[0] == ParameterStorageClass.ref_);
-        static assert(ParameterStorageClassTuple!(T.toString!(S))[1] == ParameterStorageClass.ref_);
-        static assert(is(Parameters!(T.toString!(S))[1] == const));}
+        {T val = void;
+        const FormatSpec!Char f;
+        static struct S {void put(Char s){}}
+        S s;
+        val.toString(s, f);
+        // force toString to take parameters by ref
+        static assert(!__traits(compiles, val.toString(s, FormatSpec!Char())));
+        static assert(!__traits(compiles, val.toString(S(), f)));}
     )))
     {
         enum hasToString = 6;
     }
     else static if (is(typeof(
-        {T val = void; static struct S {void put(Char s){}}
-        S s; val.toString(s);
-        static assert(ParameterStorageClassTuple!(T.toString!(S))[0] == ParameterStorageClass.ref_);}
+        {T val = void;
+        static struct S {void put(Char s){}}
+        S s;
+        val.toString(s);
+        // force toString to take parameters by ref
+        static assert(!__traits(compiles, val.toString(S())));}
     )))
     {
         enum hasToString = 5;
@@ -3594,7 +3599,9 @@ private template hasToString(T, Char)
 {
     static struct A
     {
-        void toString(Writer)(ref Writer w) if (isOutputRange!(Writer, string)) {}
+        void toString(Writer)(ref Writer w)
+        if (isOutputRange!(Writer, string))
+        {}
     }
     static struct B
     {
@@ -3614,7 +3621,47 @@ private template hasToString(T, Char)
     }
     static struct F
     {
-        void toString(Writer)(ref Writer w, const ref FormatSpec!char fmt) if (isOutputRange!(Writer, string)) {}
+        void toString(Writer)(ref Writer w, const ref FormatSpec!char fmt)
+        if (isOutputRange!(Writer, string))
+        {}
+    }
+    static struct G
+    {
+        string toString() {return "";}
+        void toString(Writer)(ref Writer w) if (isOutputRange!(Writer, string)) {}
+    }
+    static struct H
+    {
+        string toString() {return "";}
+        void toString(Writer)(ref Writer w, const ref FormatSpec!char fmt)
+        if (isOutputRange!(Writer, string))
+        {}
+    }
+    static struct I
+    {
+        void toString(Writer)(ref Writer w) if (isOutputRange!(Writer, string)) {}
+        void toString(Writer)(ref Writer w, const ref FormatSpec!char fmt)
+        if (isOutputRange!(Writer, string))
+        {}
+    }
+    static struct J
+    {
+        string toString() {return "";}
+        void toString(Writer)(ref Writer w, ref FormatSpec!char fmt)
+        if (isOutputRange!(Writer, string))
+        {}
+    }
+    static struct K
+    {
+        void toString(Writer)(Writer w, const ref FormatSpec!char fmt)
+        if (isOutputRange!(Writer, string))
+        {}
+    }
+    static struct L
+    {
+        void toString(Writer)(ref Writer w, const FormatSpec!char fmt)
+        if (isOutputRange!(Writer, string))
+        {}
     }
 
     static assert(hasToString!(A, char) == 5);
@@ -3623,6 +3670,12 @@ private template hasToString(T, Char)
     static assert(hasToString!(D, char) == 2);
     static assert(hasToString!(E, char) == 1);
     static assert(hasToString!(F, char) == 6);
+    static assert(hasToString!(G, char) == 5);
+    static assert(hasToString!(H, char) == 6);
+    static assert(hasToString!(I, char) == 6);
+    static assert(hasToString!(J, char) == 1);
+    static assert(hasToString!(K, char) == 4);
+    static assert(hasToString!(L, char) == 0);
 }
 
 // object formatting with toString
