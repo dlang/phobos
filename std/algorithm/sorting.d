@@ -3137,7 +3137,7 @@ if (isRandomAccessRange!(Range) && hasLength!Range &&
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=8341
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.typecons : tuple;
