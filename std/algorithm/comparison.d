@@ -972,8 +972,6 @@ template equal(alias pred = "a == b")
             !allSatisfy!(isInfinite, Rs)
             )
     {
-        enum isEquableToR(T) = is(typeof({ return Rs[0].init == T.init; }));
-
         // avoid calls to `pred` when some range is always `empty` (`enum`)
         static if (anySatisfy!(isEmptyRange, Rs))
         {
@@ -990,7 +988,7 @@ template equal(alias pred = "a == b")
         else static if (rs.length == 2 && // builtin array comparison can only support binary case
                         isEqualityPredicate!pred &&
                         allSatisfy!(isArray, Rs) &&
-                        allSatisfy!(isEquableToR, Rs[1 .. $]))
+                        is(typeof(Rs[0].init == Rs[1].init)))
         {
             return rs[0] == rs[1]; // use fast builtin array comparison
         }
