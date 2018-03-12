@@ -892,7 +892,7 @@ nothrow pure @safe unittest
     auto t = task!cmp("foo", "bar");
 }
 
-private template allSameTypeIterative(V...)
+private static template allSameTypeIterative(V...)
 {
     static if (V.length >= 2)
     {
@@ -911,7 +911,22 @@ private template allSameTypeIterative(V...)
     }
 }
 
-private enum hasIndexingAndLength(T) = is(typeof(T.init[0])) && is(typeof(T.length));
+/** Check if `pred` is a standard equality string or lambda predicate.
+ *
+ * See also: https://github.com/dlang/phobos/pull/3373#pullrequestreview-102956739
+ */
+private static template isEqualityPredicate(alias pred)
+{
+    static if (is(typeof(pred) == string))
+    {
+        // TODO remove when string lambdas become deprecated
+        enum isEqualityPredicate = (pred == "a == b");
+    }
+    else
+    {
+        enum isEqualityPredicate = __traits(isSame, pred, (a, b) => a == b);
+    }
+}
 
 // equal
 /**
@@ -925,13 +940,16 @@ template equal(alias pred = "a == b")
     /** Check if `R` is a special kind of input range that is always empty
      * (`empty` is an `enum` always being `true`)
      */
-    enum isEmptyRange(R) = (isInputRange!R &&
-                            __traits(compiles, { static assert(R.empty); }));
+    static enum isEmptyRange(R) = (isInputRange!R &&
+                                   __traits(compiles, { static assert(R.empty); }));
 
-    enum areAllEquableRanges(Rs...) = is(typeof(binaryFun!pred(ElementType!(Rs[0]).init, // TODO check all `Rs`
-                                                               ElementType!(Rs[1]).init)));
+    static enum areAllEquableRanges(Rs...) = is(typeof(binaryFun!pred(ElementType!(Rs[0]).init, // TODO check all `Rs`
+                                                                      ElementType!(Rs[1]).init)));
 
-    alias ElementEncodingTypeUnqual(R) = Unqual!(ElementEncodingType!R);
+    static alias ElementEncodingTypeUnqual(R) = Unqual!(ElementEncodingType!R);
+
+    static enum hasIndexingAndLength(T) = (is(typeof(T.init[0])) &&
+                                           is(typeof(T.length)));
 
     /++
      This function compares two ore more ranges `rs` for equality. The
@@ -970,8 +988,7 @@ template equal(alias pred = "a == b")
         }
         // if comparing two arrays
         else static if (rs.length == 2 && // builtin array comparison can only support binary case
-                        ((is(typeof(pred) == string) && pred == "a == b") || // old style check
-                         __traits(isSame, binaryFun!pred, (a, b) => a == b)) && // TODO is this correct?
+                        isEqualityPredicate!pred &&
                         allSatisfy!(isArray, Rs) &&
                         allSatisfy!(isEquableToR, Rs[1 .. $]))
         {
@@ -980,8 +997,7 @@ template equal(alias pred = "a == b")
         // if one of the arguments is a string and the other isn't, then
         // auto-decoding can be avoided if they have the same
         // `ElementEncodingType`
-        else static if (((is(typeof(pred) == string) && pred == "a == b") || // old style check
-                         __traits(isSame, binaryFun!pred, (a, b) => a == b)) && // TODO is this correct?
+        else static if (isEqualityPredicate!pred &&
                         anySatisfy!(isAutodecodableString, Rs) && // some argument is either a string wstring
                         allSameTypeIterative!(staticMap!(ElementEncodingTypeUnqual, Rs)))
         {
