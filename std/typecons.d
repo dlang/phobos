@@ -2326,14 +2326,29 @@ string alignForSize(E...)(const char[][] names...)
 }
 
 /**
-Defines a value paired with a distinctive "null" state that denotes
-the absence of a value. If default constructed, a $(D
-Nullable!T) object starts in the null state. Assigning it renders it
-non-null. Calling $(D nullify) can nullify it again.
-
-Practically $(D Nullable!T) stores a $(D T) and a $(D bool).
+Defines a value that can be "nullified". If `T` can already be
+"nullified" (i.e. if `T` is a class, interace, pointer, dynamic array)
+then it is implemented as an API wrapper adding methods like `isNull`
+and `nullify`, otherwise, it adds an extra `bool` field to represent
+the "nullified" state.
  */
-struct Nullable(T)
+template Nullable(T)
+{
+    alias Nullable = NullableWithExtraField!T;
+}
+
+/**
+Defines a value paired with a distinctive "null" state that denotes
+the absence of a value. If default constructed, a $(D Nullable!T)
+object starts in the null state. Assigning it renders it non-null.
+Calling $(D nullify) can nullify it again.
+
+Practically $(D Nullable!T) stores a $(D T) and a $(D bool). Note that being
+nullified is not the same as assigning the value to a `null` value.
+For example, if `T` is a class, assigning the value to `null` does not nullify
+this struct.
+ */
+struct NullableWithExtraField(T)
 {
     // simple case: type is freely constructable
     static if (__traits(compiles, { T _value; }))
