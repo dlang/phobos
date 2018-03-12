@@ -1035,16 +1035,18 @@ template equal(alias pred = "a == b")
             // get lengths
             alias hasLengthBits = staticMap!(hasLength, Rs);
             enum indexOfFirstLength = staticIndexOf!(true, hasLengthBits);
-            enum hasSomeLength = indexOfFirstLength != -1;
+            enum someHasLength = indexOfFirstLength != -1;
 
-            static if (hasSomeLength && // if one range has a (finite) length and
+            static if (someHasLength && // if one range has a (finite) length and
                        anySatisfy!(isInfinite, Rs)) // another is infinite
             {
                 return false;   // they can't be equal
             }
             else
             {
-                static if (hasSomeLength)
+                enum someHasIndexingAndLength = anySatisfy!(hasIndexingAndLength, Rs);
+
+                static if (someHasLength)
                 {
                     /* if any `rs` `hasLength` then `primaryRangeIndex` will index the
                      * first of them */
@@ -1058,7 +1060,7 @@ template equal(alias pred = "a == b")
                 alias r_ = rs[primaryRangeIndex]; // shorthand
 
                 // check lengths
-                static if (hasSomeLength)
+                static if (someHasLength)
                 {
                     static foreach (i, r; rs)
                     {
@@ -1073,8 +1075,11 @@ template equal(alias pred = "a == b")
                 }
 
                 // check equal contents
-                size_t ei = 0;   // element index
-                for (; ; ++ei) // for each element at index `ei` in primary range `r`
+                static if (someHasIndexingAndLength) // if some `Rs` needs a element offset counter
+                {
+                    size_t ei = 0; // element offset counter
+                }
+                while (true) // for each element in primary range `r`
                 {
                     static if (hasIndexingAndLength!(typeof(r_)))
                     {
@@ -1084,9 +1089,12 @@ template equal(alias pred = "a == b")
                     {
                         if (r_.empty) { break; }
                     }
+
+                    /* compare current element in primary range `r_` with each
+                     * non-primary range `r` in `rs` */
                     static foreach (ri, r; rs)
                     {
-                        static if (ri != primaryRangeIndex) // not primary
+                        static if (ri != primaryRangeIndex) // not primary other rnage
                         {
                             static if (!isInfinite!(typeof(r))) // `r` is finite
                             {
@@ -1135,6 +1143,10 @@ template equal(alias pred = "a == b")
                     static if (!hasIndexingAndLength!(typeof(r_)))
                     {
                         r_.popFront();
+                    }
+                    static if (someHasIndexingAndLength)
+                    {
+                        ei += 1;
                     }
                 }
 
