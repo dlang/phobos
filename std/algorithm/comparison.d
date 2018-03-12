@@ -937,11 +937,9 @@ template equal(alias pred = "a == b")
 {
     import std.meta : anySatisfy, allSatisfy;
 
-    /** Check if `R` is a special kind of input range that is always empty
-     * (`empty` is an `enum` always being `true`)
+    /** Check if `T` is always empty (`empty` is an `enum` always being `true`)
      */
-    static enum isEmptyRange(R) = (isInputRange!R &&
-                                   __traits(compiles, { static assert(R.empty); }));
+    static enum isAlwaysEmpty(T) = (__traits(compiles, { static assert(T.empty); }));
 
     static enum areAllEquableRanges(Rs...) = is(typeof(binaryFun!pred(ElementType!(Rs[0]).init, // TODO check all `Rs`
                                                                       ElementType!(Rs[1]).init)));
@@ -973,7 +971,7 @@ template equal(alias pred = "a == b")
             )
     {
         // avoid calls to `pred` when some range is always `empty` (`enum`)
-        static if (anySatisfy!(isEmptyRange, Rs))
+        static if (anySatisfy!(isAlwaysEmpty, Rs))
         {
             static foreach (r; rs)
             {
