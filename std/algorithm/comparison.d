@@ -987,7 +987,8 @@ template equal(alias pred = "a == b")
         // if comparing two arrays
         else static if (rs.length == 2 && // builtin array comparison can only support binary case
                         isEqualityPredicate!pred &&
-                        allSatisfy!(isArray, Rs) &&
+                        isArray!(Rs[0]) &&
+                        isArray!(Rs[1]) &&
                         is(typeof(Rs[0].init == Rs[1].init)))
         {
             return rs[0] == rs[1]; // use fast builtin array comparison
