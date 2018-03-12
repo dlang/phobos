@@ -970,8 +970,20 @@ template equal(alias pred = "a == b")
             !allSatisfy!(isInfinite, Rs)
             )
     {
+        // if comparing two arrays
+        static if (rs.length == 2 && // builtin array comparison can only support binary case
+                   isArray!(Rs[0]) &&
+                   isArray!(Rs[1]) &&
+                   isEqualityPredicate!pred &&
+                   is(typeof(Rs[0].init == Rs[1].init)))
+        {
+            return rs[0] == rs[1]; // use fast builtin array comparison
+        }
+        // if one of the arguments is a string and the other isn't, then
+        // auto-decoding can be avoided if they have the same
+        // `ElementEncodingType`
         // avoid calls to `pred` when some range is always `empty` (`enum`)
-        static if (anySatisfy!(isAlwaysEmpty, Rs))
+        else static if (anySatisfy!(isAlwaysEmpty, Rs))
         {
             static foreach (r; rs)
             {
@@ -982,18 +994,6 @@ template equal(alias pred = "a == b")
             }
             return true;
         }
-        // if comparing two arrays
-        else static if (rs.length == 2 && // builtin array comparison can only support binary case
-                        isEqualityPredicate!pred &&
-                        isArray!(Rs[0]) &&
-                        isArray!(Rs[1]) &&
-                        is(typeof(Rs[0].init == Rs[1].init)))
-        {
-            return rs[0] == rs[1]; // use fast builtin array comparison
-        }
-        // if one of the arguments is a string and the other isn't, then
-        // auto-decoding can be avoided if they have the same
-        // `ElementEncodingType`
         else static if (isEqualityPredicate!pred &&
                         anySatisfy!(isAutodecodableString, Rs) && // some argument is either a string wstring
                         allSameTypeIterative!(staticMap!(ElementEncodingTypeUnqual, Rs)))
