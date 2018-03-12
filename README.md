@@ -2,6 +2,7 @@
 ===================================================================
 
 [![GitHub tag](https://img.shields.io/github/tag/dlang/phobos.svg?maxAge=86400)](https://github.com/dlang/phobos/releases)
+[![Bugzilla Issues](https://img.shields.io/badge/issues-Bugzilla-green.svg)](https://issues.dlang.org/buglist.cgi?component=phobos&list_id=220147&product=D&resolution=---)
 [![Build status](https://img.shields.io/circleci/project/dlang/phobos/master.svg?maxAge=86400)](https://circleci.com/gh/dlang/phobos)
 [![Code coverage](https://img.shields.io/codecov/c/github/dlang/phobos.svg?maxAge=86400)](https://codecov.io/gh/dlang/phobos)
 [![Issue Stats](https://img.shields.io/issuestats/p/github/dlang/phobos.svg?maxAge=2592000)](http://www.issuestats.com/github/dlang/phobos)
