@@ -390,9 +390,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      * Returns:
      *  The number of times the output range's $(D put) method was invoked.
      */
-    size_t encode(R1, R2)(in R1 source, auto ref R2 range)
-        if (isArray!R1 && is(ElementType!R1 : ubyte) &&
-            !is(R2 == char[]) && isOutputRange!(R2, char))
+    size_t encode(E, R)(scope const(E)[] source, auto ref R range)
+    if (is(E : ubyte) && isOutputRange!(R, char))
     out(result)
     {
         assert(result == encodeLength(source.length), "The number of put is different from the length of Base64");
@@ -405,23 +404,23 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
 
         immutable blocks = srcLen / 3;
         immutable remain = srcLen % 3;
-        auto      srcptr = source.ptr;
-        size_t    pcount;
+        auto s = source; // copy for out contract length check
+        size_t pcount;
 
         foreach (Unused; 0 .. blocks)
         {
-            immutable val = srcptr[0] << 16 | srcptr[1] << 8 | srcptr[2];
+            immutable val = s[0] << 16 | s[1] << 8 | s[2];
             put(range, EncodeMap[val >> 18       ]);
             put(range, EncodeMap[val >> 12 & 0x3f]);
             put(range, EncodeMap[val >>  6 & 0x3f]);
             put(range, EncodeMap[val       & 0x3f]);
-            srcptr += 3;
+            s = s[3 .. $];
             pcount += 4;
         }
 
         if (remain)
         {
-            immutable val = srcptr[0] << 16 | (remain == 2 ? srcptr[1] << 8 : 0);
+            immutable val = s[0] << 16 | (remain == 2 ? s[1] << 8 : 0);
             put(range, EncodeMap[val >> 18       ]);
             put(range, EncodeMap[val >> 12 & 0x3f]);
             pcount += 2;
@@ -453,22 +452,17 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
 
     ///
-    @system unittest
+    @safe pure nothrow unittest
     {
-        // @system because encode for OutputRange is @system
-        struct OutputRange
-        {
-            char[] result;
-            void put(const(char) ch) @safe { result ~= ch; }
-        }
+        import std.array : appender;
 
+        auto output = appender!string();
         ubyte[] data = [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e];
 
         // This overload of encode() returns the number of calls to the output
         // range's put method.
-        OutputRange output;
         assert(Base64.encode(data, output) == 8);
-        assert(output.result == "Gis8TV1u");
+        assert(output.data == "Gis8TV1u");
     }
 
 
