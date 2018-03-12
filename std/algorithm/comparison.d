@@ -1054,14 +1054,14 @@ template equal(alias pred = "a == b")
                 {
                     enum primaryRangeIndex = 0; // just pick first
                 }
-                alias r_ = rs[primaryRangeIndex]; // shorthand
+                alias primaryRange = rs[primaryRangeIndex]; // shorthand
 
                 // check lengths
                 static if (someHasLength)
                 {
-                    static foreach (i, r; rs)
+                    static foreach (idx, r; rs)
                     {
-                        static if (i != indexOfFirstLength)
+                        static if (idx != indexOfFirstLength)
                         {
                             static if (hasLength!(typeof(r)))
                             {
@@ -1078,27 +1078,27 @@ template equal(alias pred = "a == b")
                 }
                 while (true) // for each element in primary range `r`
                 {
-                    static if (hasIndexingAndLength!(typeof(r_)))
+                    static if (hasIndexingAndLength!(typeof(primaryRange)))
                     {
-                        if (ei == r_.length) { break; }
+                        if (ei == primaryRange.length) { break; }
                     }
                     else
                     {
-                        if (r_.empty) { break; }
+                        if (primaryRange.empty) { break; }
                     }
 
-                    /* compare current element in primary range `r_` with each
+                    /* compare current element in primary range `primaryRange` with each
                      * non-primary range `r` in `rs` */
-                    static foreach (ri, r; rs)
+                    static foreach (idx, r; rs)
                     {
-                        static if (ri != primaryRangeIndex) // not primary other rnage
+                        static if (idx != primaryRangeIndex) // not primary other rnage
                         {
                             static if (!isInfinite!(typeof(r))) // `r` is finite
                             {
-                                static if (hasLength!(typeof(r_)) &&
+                                static if (hasLength!(typeof(primaryRange)) &&
                                            hasLength!(typeof(r))) // TODO move after `hasIndexingAndLength`
                                 {
-                                    /* r_ and `r` have already been checked
+                                    /* primaryRange and `r` have already been checked
                                      * above to have equal lengths so safe to
                                      * skip empty check for `r` */
                                 }
@@ -1108,38 +1108,38 @@ template equal(alias pred = "a == b")
                                 }
                                 static if (hasIndexingAndLength!(typeof(r)))
                                 {
-                                    static if (hasIndexingAndLength!(typeof(r_)))
+                                    static if (hasIndexingAndLength!(typeof(primaryRange)))
                                     {
-                                        if (!binaryFun!(pred)(r_[ei], r[ei])) { return false; }
+                                        if (!binaryFun!(pred)(primaryRange[ei], r[ei])) { return false; }
                                     }
                                     else
                                     {
-                                        if (!binaryFun!(pred)(r_.front, r[ei])) { return false; }
+                                        if (!binaryFun!(pred)(primaryRange.front, r[ei])) { return false; }
                                     }
                                 }
                                 else
                                 {
-                                    static if (hasIndexingAndLength!(typeof(r_)))
+                                    static if (hasIndexingAndLength!(typeof(primaryRange)))
                                     {
-                                        if (!binaryFun!(pred)(r_[ei], r.front)) { return false; }
+                                        if (!binaryFun!(pred)(primaryRange[ei], r.front)) { return false; }
                                     }
                                     else
                                     {
-                                        if (!binaryFun!(pred)(r_.front, r.front)) { return false; }
+                                        if (!binaryFun!(pred)(primaryRange.front, r.front)) { return false; }
                                     }
                                     r.popFront();
                                 }
                             }
                             else    // `r` is infinite
                             {
-                                if (!binaryFun!(pred)(r_.front, r.front)) { return false; }
+                                if (!binaryFun!(pred)(primaryRange.front, r.front)) { return false; }
                                 r.popFront();
                             }
                         }
                     }
-                    static if (!hasIndexingAndLength!(typeof(r_)))
+                    static if (!hasIndexingAndLength!(typeof(primaryRange)))
                     {
-                        r_.popFront();
+                        primaryRange.popFront();
                     }
                     static if (someHasIndexingAndLength)
                     {
@@ -1150,9 +1150,9 @@ template equal(alias pred = "a == b")
                 // check that all other ranges are empty
                 static if (!isInfinite!(Rs[primaryRangeIndex])) // line only reached when previous `for`-loop terminated (`r.empty` not enum false)
                 {
-                    static foreach (ri, r; rs)
+                    static foreach (idx, r; rs)
                     {
-                        static if (ri != primaryRangeIndex)    // not primary
+                        static if (idx != primaryRangeIndex)    // not primary
                         {
                             static if (!isInfinite!(typeof(r))) // finite range
                             {
