@@ -825,7 +825,7 @@ abstract class Logger
     }
 
     /** Logs a part of the log message. */
-    protected void logMsgPart(const(char)[] msg) @safe
+    protected void logMsgPart(scope const(char)[] msg) @safe
     {
         static if (isLoggingActive)
         {

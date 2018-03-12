@@ -138,7 +138,7 @@ class FileLogger : Logger
     /* This methods overrides the base class method and writes the parts of
     the log call directly to the file.
     */
-    override protected void logMsgPart(const(char)[] msg)
+    override protected void logMsgPart(scope const(char)[] msg)
     {
         formattedWrite(this.file_.lockingTextWriter(), "%s", msg);
     }
