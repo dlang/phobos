@@ -112,8 +112,9 @@ Params:
         sorted.
 */
 void completeSort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
-        RandomAccessRange1, RandomAccessRange2)(SortedRange!(RandomAccessRange1, less) lhs, RandomAccessRange2 rhs)
-if (hasLength!(RandomAccessRange2) && hasSlicing!(RandomAccessRange2))
+        Lhs , Rhs)(SortedRange!(Lhs, less) lhs, Rhs rhs)
+if (hasLength!(Rhs) && hasSlicing!(Rhs)
+        && hasSwappableElements!Lhs && hasSwappableElements!Rhs)
 {
     import std.algorithm.mutation : bringToFront;
     import std.range : chain, assumeSorted;
@@ -393,7 +394,8 @@ the relative ordering of all elements `a`, `b` in the left part of `r`
 for which `predicate(a) == predicate(b)`.
 */
 Range partition(alias predicate, SwapStrategy ss, Range)(Range r)
-if (ss == SwapStrategy.stable && isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
+if (ss == SwapStrategy.stable && isRandomAccessRange!(Range) && hasLength!Range &&
+        hasSlicing!Range && hasSwappableElements!Range)
 {
     import std.algorithm.mutation : bringToFront;
 
@@ -611,7 +613,7 @@ Keynote), Andrei Alexandrescu.
 */
 size_t pivotPartition(alias less = "a < b", Range)
 (Range r, size_t pivot)
-if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range)
+if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && hasAssignableElements!Range)
 {
     assert(pivot < r.length || r.length == 0 && pivot == 0);
     if (r.length <= 1) return 0;
@@ -631,7 +633,7 @@ if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range)
         auto p = r[0];
         // Plant the pivot in the end as well as a sentinel
         size_t lo = 0, hi = r.length - 1;
-        auto save = move(r[hi]);
+        auto save = r.moveAt(hi);
         r[hi] = p; // Vacancy is in r[$ - 1] now
         // Start process
         for (;;)
@@ -956,7 +958,7 @@ makeIndex(
     RangeIndex)
 (Range r, RangeIndex index)
 if (isForwardRange!(Range) && isRandomAccessRange!(RangeIndex)
-    && is(ElementType!(RangeIndex) : ElementType!(Range)*))
+    && is(ElementType!(RangeIndex) : ElementType!(Range)*) && hasAssignableElements!RangeIndex)
 {
     import std.algorithm.internal : addressOf;
     import std.exception : enforce;
@@ -980,7 +982,7 @@ void makeIndex(
 (Range r, RangeIndex index)
 if (isRandomAccessRange!Range && !isInfinite!Range &&
     isRandomAccessRange!RangeIndex && !isInfinite!RangeIndex &&
-    isIntegral!(ElementType!RangeIndex))
+    isIntegral!(ElementType!RangeIndex) && hasAssignableElements!RangeIndex)
 {
     import std.conv : to;
     import std.exception : enforce;
@@ -1450,7 +1452,7 @@ Returns:
 template multiSort(less...) //if (less.length > 1)
 {
     auto multiSort(Range)(Range r)
-    if (validPredicates!(ElementType!Range, less))
+    if (validPredicates!(ElementType!Range, less) && hasSwappableElements!Range)
     {
         import std.meta : AliasSeq;
         import std.range : assumeSorted;
@@ -2900,7 +2902,7 @@ SortedRange!(R, ((a, b) => binaryFun!less(unaryFun!transform(a),
                                           unaryFun!transform(b))))
 schwartzSort(alias transform, alias less = "a < b",
         SwapStrategy ss = SwapStrategy.unstable, R)(R r)
-if (isRandomAccessRange!R && hasLength!R)
+if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R)
 {
     import std.conv : emplace;
     import std.range : zip, SortedRange;
@@ -3100,7 +3102,8 @@ Stable topN has not been implemented yet.
 auto topN(alias less = "a < b",
         SwapStrategy ss = SwapStrategy.unstable,
         Range)(Range r, size_t nth)
-if (isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
+if (isRandomAccessRange!(Range) && hasLength!Range &&
+    hasSlicing!Range && hasAssignableElements!Range)
 {
     static assert(ss == SwapStrategy.unstable,
             "Stable topN not yet implemented");
@@ -3131,6 +3134,16 @@ if (isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
     auto n = 4;
     topN!((a, b) => a < b)(v, n);
     assert(v[n] == 9);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=8341
+unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.typecons : tuple;
+    auto a = [10, 30, 20];
+    auto b = ["c", "b", "a"];
+    assert(topN!"a[0] > b[0]"(zip(a, b), 2).equal([tuple(20, "a"), tuple(30, "b")]));
 }
 
 private @trusted
