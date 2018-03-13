@@ -1261,7 +1261,7 @@ real atan(real x) @safe pure nothrow @nogc
     version(InlineAsm_X86_Any)
     {
         if (!__ctfe)
-            return atan2(x, 1.0L);
+            return atan2Asm(x, 1.0L);
     }
     return atanImpl(x);
 }
@@ -1509,91 +1509,26 @@ private T atanImpl(T)(T x) @safe pure nothrow @nogc
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD -$(INFIN))    $(TD $(PLUSMN)3$(PI)/4))
  *      )
  */
-real atan2(real y, real x) @trusted pure nothrow @nogc
+real atan2(real y, real x) @trusted pure nothrow @nogc // TODO: @safe
 {
     version(InlineAsm_X86_Any)
     {
-        version (Win64)
-        {
-            asm pure nothrow @nogc {
-                naked;
-                fld real ptr [RDX]; // y
-                fld real ptr [RCX]; // x
-                fpatan;
-                ret;
-            }
-        }
-        else
-        {
-            asm pure nothrow @nogc {
-                fld y;
-                fld x;
-                fpatan;
-            }
-        }
+        if (!__ctfe)
+            return atan2Asm(y, x);
     }
-    else
-    {
-        // Special cases.
-        if (isNaN(x) || isNaN(y))
-            return real.nan;
-        if (y == 0.0)
-        {
-            if (x >= 0 && !signbit(x))
-                return copysign(0, y);
-            else
-                return copysign(PI, y);
-        }
-        if (x == 0.0)
-            return copysign(PI_2, y);
-        if (isInfinity(x))
-        {
-            if (signbit(x))
-            {
-                if (isInfinity(y))
-                    return copysign(3*PI_4, y);
-                else
-                    return copysign(PI, y);
-            }
-            else
-            {
-                if (isInfinity(y))
-                    return copysign(PI_4, y);
-                else
-                    return copysign(0.0, y);
-            }
-        }
-        if (isInfinity(y))
-            return copysign(PI_2, y);
-
-        // Call atan and determine the quadrant.
-        real z = atan(y / x);
-
-        if (signbit(x))
-        {
-            if (signbit(y))
-                z = z - PI;
-            else
-                z = z + PI;
-        }
-
-        if (z == 0.0)
-            return copysign(z, y);
-
-        return z;
-    }
+    return atan2Impl(y, x);
 }
 
 /// ditto
 double atan2(double y, double x) @safe pure nothrow @nogc
 {
-    return atan2(cast(real) y, cast(real) x);
+    return atan2Impl(y, x);
 }
 
 /// ditto
 float atan2(float y, float x) @safe pure nothrow @nogc
 {
-    return atan2(cast(real) y, cast(real) x);
+    return atan2Impl(y, x);
 }
 
 ///
@@ -1602,8 +1537,152 @@ float atan2(float y, float x) @safe pure nothrow @nogc
     assert(atan2(1.0, sqrt(3.0)).approxEqual(PI / 6));
 }
 
+version(InlineAsm_X86_Any)
+private real atan2Asm(real y, real x) @trusted pure nothrow @nogc
+{
+    version (Win64)
+    {
+        asm pure nothrow @nogc {
+            naked;
+            fld real ptr [RDX]; // y
+            fld real ptr [RCX]; // x
+            fpatan;
+            ret;
+        }
+    }
+    else
+    {
+        asm pure nothrow @nogc {
+            fld y;
+            fld x;
+            fpatan;
+        }
+    }
+}
+
+private T atan2Impl(T)(T y, T x) @safe pure nothrow @nogc
+{
+    // Special cases.
+    if (isNaN(x) || isNaN(y))
+        return T.nan;
+    if (y == cast(T) 0.0)
+    {
+        if (x >= 0 && !signbit(x))
+            return copysign(0, y);
+        else
+            return copysign(cast(T) PI, y);
+    }
+    if (x == cast(T) 0.0)
+        return copysign(cast(T) PI_2, y);
+    if (isInfinity(x))
+    {
+        if (signbit(x))
+        {
+            if (isInfinity(y))
+                return copysign(3 * cast(T) PI_4, y);
+            else
+                return copysign(cast(T) PI, y);
+        }
+        else
+        {
+            if (isInfinity(y))
+                return copysign(cast(T) PI_4, y);
+            else
+                return copysign(cast(T) 0.0, y);
+        }
+    }
+    if (isInfinity(y))
+        return copysign(cast(T) PI_2, y);
+
+    // Call atan and determine the quadrant.
+    T z = atan(y / x);
+
+    if (signbit(x))
+    {
+        if (signbit(y))
+            z = z - cast(T) PI;
+        else
+            z = z + cast(T) PI;
+    }
+
+    if (z == cast(T) 0.0)
+        return copysign(z, y);
+
+    return z;
+}
+
 @safe @nogc nothrow unittest
 {
+    static void testAtan2(T)()
+    {
+        // NaN
+        const T nan = T.nan;
+        assert(isNaN(atan2(nan, cast(T) 1)));
+        assert(isNaN(atan2(cast(T) 1, nan)));
+
+        const T inf = T.infinity;
+        static immutable T[3][] vals =
+        [
+            // y, x, atan2(y, x)
+
+            // ±0
+            [  0.0,  1.0,  0.0 ],
+            [ -0.0,  1.0, -0.0 ],
+            [  0.0,  0.0,  0.0 ],
+            [ -0.0,  0.0, -0.0 ],
+            [  0.0, -1.0,  PI ],
+            [ -0.0, -1.0, -PI ],
+            [  0.0, -0.0,  PI ],
+            [ -0.0, -0.0, -PI ],
+            [  1.0,  0.0,  PI_2 ],
+            [  1.0, -0.0,  PI_2 ],
+            [ -1.0,  0.0, -PI_2 ],
+            [ -1.0, -0.0, -PI_2 ],
+
+            // ±∞
+            [  1.0,  inf,  0.0 ],
+            [ -1.0,  inf, -0.0 ],
+            [  1.0, -inf,  PI ],
+            [ -1.0, -inf, -PI ],
+            [  inf,  1.0,  PI_2 ],
+            [  inf, -1.0,  PI_2 ],
+            [ -inf,  1.0, -PI_2 ],
+            [ -inf, -1.0, -PI_2 ],
+            [  inf,  inf,  PI_4 ],
+            [ -inf,  inf, -PI_4 ],
+            [  inf, -inf,  3 * PI_4 ],
+            [ -inf, -inf, -3 * PI_4 ],
+
+            [  1.0,  1.0,  PI_4 ],
+            [ -2.0,  2.0, -PI_4 ],
+            [  3.0, -3.0,  3 * PI_4 ],
+            [ -4.0, -4.0, -3 * PI_4 ],
+
+            [  0.75,  0.25,   1.249045772398 ],
+            [ -0.5,   0.375, -0.927295218002 ],
+            [  0.5,  -0.125,  1.815774989922 ],
+            [ -0.75, -0.5,   -2.158798930342 ],
+        ];
+
+        foreach (ref val; vals)
+        {
+            const T y = val[0];
+            const T x = val[1];
+            const T r = val[2];
+            const T a = atan2(y, x);
+
+            //printf("atan2(%Lg, %Lg) = %Lg, should be %Lg\n", cast(real) y, cast(real) x, cast(real) a, cast(real) r);
+            if (r == 0)
+                assert(isIdentical(r, a)); // check sign
+            else
+                assert(approxEqual(r, a));
+        }
+    }
+
+    import std.meta : AliasSeq;
+    foreach (T; AliasSeq!(real, double, float))
+        testAtan2!T();
+
     assert(equalsDigit(atan2(1.0L, std.math.sqrt(3.0L)), PI / 6, useDigits));
 }
 
