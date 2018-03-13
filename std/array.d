@@ -2859,6 +2859,7 @@ struct Appender(A)
 if (isDynamicArray!A)
 {
     import core.memory : GC;
+    import std.format : FormatSpec;
 
     private alias T = ElementEncodingType!A;
 
@@ -3173,7 +3174,55 @@ if (isDynamicArray!A)
         }
     }
 
+    /**
+     * Gives a string in the form of `Appender!(A)(data)`.
+     *
+     * Params:
+     *     w = A `char` accepting
+     *     $(REF_ALTTEXT output range, isOutputRange, std, range, primitives).
+     *     fmt = A $(REF FormatSpec, std, format) which controls how the array
+     *     is formatted.
+     * Returns:
+     *     A `string` if `writer` is not set; `void` otherwise.
+     */
+    string toString() const
+    {
+        import std.format : singleSpec;
+
+        auto app = appender!string();
+        auto spec = singleSpec("%s");
+        // different reserve lengths because each element in a
+        // non-string-like array uses two extra characters for `, `.
+        static if (isSomeString!A)
+        {
+            app.reserve(_data.arr.length + 25);
+        }
+        else
+        {
+            // Multiplying by three is a very conservative estimate of
+            // length, as it assumes each element is only one char
+            app.reserve((_data.arr.length * 3) + 25);
+        }
+        toString(app, spec);
+        return app.data;
+    }
+
+    /// ditto
+    void toString(Writer)(ref Writer w, const ref FormatSpec!char fmt) const
+    if (isOutputRange!(Writer, char))
+    {
+        import std.format : formatValue;
+        import std.range.primitives : put;
+        put(w, Unqual!(typeof(this)).stringof);
+        put(w, '(');
+        formatValue(w, data, fmt);
+        put(w, ')');
+    }
+
+    // @@@DEPRECATED_2.089@@@
+    deprecated("To be removed after 2.089. Please use the output range overload.")
     void toString(Writer)(scope Writer w)
+    if (isCallable!Writer)
     {
         import std.format : formattedWrite;
         w.formattedWrite(typeof(this).stringof ~ "(%s)", data);
@@ -3196,14 +3245,25 @@ if (isDynamicArray!A)
     assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
 }
 
-@safe unittest
+@safe pure unittest
 {
-    import std.format : format;
+    import std.format : format, singleSpec;
+
     auto app = appender!(int[])();
     app.put(1);
     app.put(2);
     app.put(3);
     assert("%s".format(app) == "Appender!(int[])(%s)".format([1,2,3]));
+
+    auto app2 = appender!string();
+    auto spec = singleSpec("%s");
+    app.toString(app2, spec);
+    assert(app2.data == "Appender!(int[])([1, 2, 3])");
+
+    auto app3 = appender!string();
+    spec = singleSpec("%(%04d, %)");
+    app.toString(app3, spec);
+    assert(app3.data == "Appender!(int[])(0001, 0002, 0003)");
 }
 
 @safe unittest // issue 17251
