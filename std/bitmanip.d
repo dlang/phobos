@@ -2354,7 +2354,29 @@ public:
      * $(LI $(B %s) which prints the bits as an array, and)
      * $(LI $(B %b) which prints the bits as 8-bit byte packets)
      * separated with an underscore.
+     *
+     * Params:
+     *     sink = A `char` accepting
+     *     $(REF_ALTTEXT output range, isOutputRange, std, range, primitives).
+     *     fmt = A $(REF FormatSpec, std,format) which controls how the data
+     *     is displayed.
      */
+    void toString(W)(ref W sink, const ref FormatSpec!char fmt) const
+    if (isOutputRange!(W, char))
+    {
+        switch (fmt.spec)
+        {
+            case 'b':
+                return formatBitString(sink);
+            case 's':
+                return formatBitArray(sink);
+            default:
+                throw new Exception("Unknown format specifier: %" ~ fmt.spec);
+        }
+    }
+
+    // @@@DEPRECATED_2.089@@@
+    deprecated("To be removed by 2.089. Please use the writer overload instead.")
     void toString(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt) const
     {
         switch (fmt.spec)
@@ -2369,7 +2391,7 @@ public:
     }
 
     ///
-    @system unittest
+    @system pure unittest
     {
         import std.format : format;
 
@@ -2435,7 +2457,7 @@ public:
         assert(b.bitsSet.equal(iota(wordBits * 2)));
     }
 
-    private void formatBitString(scope void delegate(const(char)[]) sink) const
+    private void formatBitString(Writer)(auto ref Writer sink) const
     {
         if (!length)
             return;
@@ -2443,37 +2465,34 @@ public:
         auto leftover = _len % 8;
         foreach (idx; 0 .. leftover)
         {
-            char[1] res = cast(char)(this[idx] + '0');
-            sink.put(res[]);
+            put(sink, cast(char)(this[idx] + '0'));
         }
 
         if (leftover && _len > 8)
-            sink.put("_");
+            put(sink, "_");
 
         size_t count;
         foreach (idx; leftover .. _len)
         {
-            char[1] res = cast(char)(this[idx] + '0');
-            sink.put(res[]);
+            put(sink, cast(char)(this[idx] + '0'));
             if (++count == 8 && idx != _len - 1)
             {
-                sink.put("_");
+                put(sink, "_");
                 count = 0;
             }
         }
     }
 
-    private void formatBitArray(scope void delegate(const(char)[]) sink) const
+    private void formatBitArray(Writer)(auto ref Writer sink) const
     {
-        sink("[");
+        put(sink, "[");
         foreach (idx; 0 .. _len)
         {
-            char[1] res = cast(char)(this[idx] + '0');
-            sink(res[]);
-            if (idx+1 < _len)
-                sink(", ");
+            put(sink, cast(char)(this[idx] + '0'));
+            if (idx + 1 < _len)
+                put(sink, ", ");
         }
-        sink("]");
+        put(sink, "]");
     }
 }
 
