@@ -4131,7 +4131,7 @@ nothrow pure @safe unittest
     asStatic!(byte, 2.iota).checkStaticArray!byte([0, 1]);
 }
 
-void checkStaticArray(T, T1, T2)(T1 a, T2 b) nothrow @safe pure @nogc
+private void checkStaticArray(T, T1, T2)(T1 a, T2 b) nothrow @safe pure @nogc
 {
     assert(is(T1 == T[T1.length]));
     assert(a == b);
