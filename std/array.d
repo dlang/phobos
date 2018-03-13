@@ -3998,7 +3998,9 @@ Params: arr = The array elements
 
 Returns: A static array constructed from `arr`. The type of elements can be
 specified implicitly (`int[2] a = [1,2].asStatic;`) or explicitly
-(`float[2] a = [1,2].asStaticCast!float`).
+(`float[2] a = [1,2].asStatic!float`).
+The result is an rvalue, therefore uses like
+`foo([1, 2, 3].asStatic)` may be inefficient because of the copies.
 +/
 pragma(inline, true) T[n] asStatic(T, size_t n)(auto ref T[n] arr) nothrow @safe pure @nogc
 {
@@ -4006,7 +4008,8 @@ pragma(inline, true) T[n] asStatic(T, size_t n)(auto ref T[n] arr) nothrow @safe
 }
 
 /// ditto
-U[n] asStaticCast(U, T, size_t n)(auto ref T[n] arr) nothrow @safe pure @nogc
+U[n] asStatic(U, T, size_t n)(auto ref T[n] arr) nothrow @safe pure @nogc
+if(!is(U==T))
 {
     import std.conv : emplaceRef;
     U[n] ret = void;
@@ -4023,7 +4026,7 @@ nothrow pure @safe unittest
     auto a = [0, 1].asStatic;
     assert(is(typeof(a) == int[2]) && a == [0, 1]);
 
-    auto b = [0, 1].asStaticCast!byte;
+    auto b = [0, 1].asStatic!byte;
     assert(is(typeof(b) == byte[2]) && b == [0, 1]);
 }
 
@@ -4038,16 +4041,16 @@ nothrow pure @safe unittest
         [1, 2, val].asStatic.checkStaticArray!int(gold);
     }
 
-    [1, 2, val].asStaticCast!double.checkStaticArray!double(gold);
-    [1, 2, 3].asStaticCast!int.checkStaticArray!int(gold);
+    [1, 2, val].asStatic!double.checkStaticArray!double(gold);
+    [1, 2, 3].asStatic!int.checkStaticArray!int(gold);
 
-    [1, 2, 3].asStaticCast!(const(int)).checkStaticArray!(const(int))(gold);
-    [1, 2, 3].asStaticCast!(const(double)).checkStaticArray!(const(double))(gold);
+    [1, 2, 3].asStatic!(const(int)).checkStaticArray!(const(int))(gold);
+    [1, 2, 3].asStatic!(const(double)).checkStaticArray!(const(double))(gold);
     {
         const(int)[3] a2 = [1, 2, 3].asStatic;
     }
 
-    [1, 129].asStaticCast!byte.checkStaticArray!byte([1, -127]);
+    [1, 129].asStatic!byte.checkStaticArray!byte([1, -127]);
 
 }
 
@@ -4072,7 +4075,7 @@ auto asStatic(size_t n, T)(T a) nothrow @safe pure @nogc
 }
 
 /// ditto
-auto asStaticCast(Un : U[n], U, size_t n, T)(T a) nothrow @safe pure @nogc
+auto asStatic(Un : U[n], U, size_t n, T)(T a) nothrow @safe pure @nogc
 {
     import std.conv : emplaceRef;
     U[n] ret = void;
@@ -4092,7 +4095,7 @@ nothrow pure @safe unittest
 
     auto a = 2.iota.asStatic!2;
     assert(is(typeof(a) == int[2]) && a == [0, 1]);
-    auto b = 2.iota.asStaticCast!(byte[2]);
+    auto b = 2.iota.asStatic!(byte[2]);
     assert(is(typeof(b) == byte[2]) && b == [0, 1]);
 }
 
@@ -4105,8 +4108,8 @@ nothrow pure @safe unittest
     import std.range : iota;
 
     2.iota.asStatic!2.checkStaticArray!int([0, 1]);
-    2.iota.asStaticCast!(double[2]).checkStaticArray!double([0, 1]);
-    2.iota.asStaticCast!(byte[2]).checkStaticArray!byte([0, 1]);
+    2.iota.asStatic!(double[2]).checkStaticArray!double([0, 1]);
+    2.iota.asStatic!(byte[2]).checkStaticArray!byte([0, 1]);
 }
 
 nothrow pure @system unittest
@@ -4159,7 +4162,7 @@ auto asStatic(alias arr)() nothrow @safe pure @nogc
 }
 
 /// ditto
-auto asStaticCast(U, alias arr)() nothrow @safe pure @nogc
+auto asStatic(U, alias arr)() nothrow @safe pure @nogc
 {
     import std.conv : emplaceRef;
     enum n = arr.length;
@@ -4179,7 +4182,7 @@ nothrow pure @safe unittest
     enum a = asStatic!(2.iota);
     assert(is(typeof(a) == int[2]) && a == [0, 1]);
 
-    enum b = asStaticCast!(byte, 2.iota);
+    enum b = asStatic!(byte, 2.iota);
     assert(is(typeof(b) == byte[2]) && b == [0, 1]);
 }
 
@@ -4189,8 +4192,8 @@ nothrow pure @safe unittest
 
     enum a = asStatic!(2.iota);
     asStatic!(2.iota).checkStaticArray!int([0, 1]);
-    asStaticCast!(double, 2.iota).checkStaticArray!double([0, 1]);
-    asStaticCast!(byte, 2.iota).checkStaticArray!byte([0, 1]);
+    asStatic!(double, 2.iota).checkStaticArray!double([0, 1]);
+    asStatic!(byte, 2.iota).checkStaticArray!byte([0, 1]);
 }
 
 void checkStaticArray(T, T1, T2)(T1 a, T2 b) nothrow @safe pure @nogc
