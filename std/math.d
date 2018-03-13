@@ -918,8 +918,32 @@ deprecated
  *      $(TR $(TD $(PLUSMNINF))  $(TD $(NAN))       $(TD yes))
  *      )
  */
+real tan(real x) @trusted pure nothrow @nogc // TODO: @safe
+{
+    version(InlineAsm_X86_Any)
+    {
+        if (!__ctfe)
+            return tanAsm(x);
+    }
+    return tanImpl(x);
+}
 
-real tan(real x) @trusted pure nothrow @nogc
+/// ditto
+double tan(double x) @safe pure nothrow @nogc { return tanImpl(x); }
+
+/// ditto
+float tan(float x) @safe pure nothrow @nogc { return tanImpl(x); }
+
+///
+@safe unittest
+{
+    assert(isIdentical(tan(0.0), 0.0));
+    assert(tan(PI).approxEqual(0));
+    assert(tan(PI / 3).approxEqual(sqrt(3.0)));
+}
+
+version(InlineAsm_X86_Any)
+private real tanAsm(real x) @trusted pure nothrow @nogc
 {
     version(D_InlineAsm_X86)
     {
@@ -1010,170 +1034,209 @@ Clear1: asm pure nothrow @nogc{
 Lret: {}
     }
     else
+        static assert(0);
+}
+
+private T tanImpl(T)(T x) @safe pure nothrow @nogc
+{
+    // Coefficients for tan(x) and PI/4 split into three parts.
+    enum realFormat = floatTraits!T.realFormat;
+    static if (realFormat == RealFormat.ieeeQuadruple)
     {
-        enum realFormat = floatTraits!real.realFormat;
+        static immutable T[6] P = [
+            2.883414728874239697964612246732416606301E10L,
+            -2.307030822693734879744223131873392503321E9L,
+            5.160188250214037865511600561074819366815E7L,
+            -4.249691853501233575668486667664718192660E5L,
+            1.272297782199996882828849455156962260810E3L,
+            -9.889929415807650724957118893791829849557E-1L
+        ];
+        static immutable T[7] Q = [
+            8.650244186622719093893836740197250197602E10L
+            -4.152206921457208101480801635640958361612E10L,
+            2.758476078803232151774723646710890525496E9L,
+            -5.733709132766856723608447733926138506824E7L,
+            4.529422062441341616231663543669583527923E5L,
+            -1.317243702830553658702531997959756728291E3L,
+            1.0
+        ];
 
-        // Coefficients for tan(x) and PI/4 split into three parts.
-        static if (realFormat == RealFormat.ieeeQuadruple)
-        {
-            static immutable real[6] P = [
-                2.883414728874239697964612246732416606301E10L,
-                -2.307030822693734879744223131873392503321E9L,
-                5.160188250214037865511600561074819366815E7L,
-                -4.249691853501233575668486667664718192660E5L,
-                1.272297782199996882828849455156962260810E3L,
-                -9.889929415807650724957118893791829849557E-1L
-            ];
-            static immutable real[7] Q = [
-                8.650244186622719093893836740197250197602E10L
-                -4.152206921457208101480801635640958361612E10L,
-                2.758476078803232151774723646710890525496E9L,
-                -5.733709132766856723608447733926138506824E7L,
-                4.529422062441341616231663543669583527923E5L,
-                -1.317243702830553658702531997959756728291E3L,
-                1.0
-            ];
+        enum T P1 =
+            7.853981633974483067550664827649598009884357452392578125E-1L;
+        enum T P2 =
+            2.8605943630549158983813312792950660807511260829685741796657E-18L;
+        enum T P3 =
+            2.1679525325309452561992610065108379921905808E-35L;
+    }
+    else static if (realFormat == RealFormat.ieeeExtended ||
+                    realFormat == RealFormat.ieeeDouble)
+    {
+        static immutable T[3] P = [
+           -1.7956525197648487798769E7L,
+            1.1535166483858741613983E6L,
+           -1.3093693918138377764608E4L,
+        ];
+        static immutable T[5] Q = [
+           -5.3869575592945462988123E7L,
+            2.5008380182335791583922E7L,
+           -1.3208923444021096744731E6L,
+            1.3681296347069295467845E4L,
+            1.0000000000000000000000E0L,
+        ];
 
-            enum real P1 =
-                7.853981633974483067550664827649598009884357452392578125E-1L;
-            enum real P2 =
-                2.8605943630549158983813312792950660807511260829685741796657E-18L;
-            enum real P3 =
-                2.1679525325309452561992610065108379921905808E-35L;
-        }
-        else
-        {
-            static immutable real[3] P = [
-               -1.7956525197648487798769E7L,
-                1.1535166483858741613983E6L,
-               -1.3093693918138377764608E4L,
-            ];
-            static immutable real[5] Q = [
-               -5.3869575592945462988123E7L,
-                2.5008380182335791583922E7L,
-               -1.3208923444021096744731E6L,
-                1.3681296347069295467845E4L,
-                1.0000000000000000000000E0L,
-            ];
+        enum T P1 = 7.853981554508209228515625E-1L;
+        enum T P2 = 7.946627356147928367136046290398E-9L;
+        enum T P3 = 3.061616997868382943065164830688E-17L;
+    }
+    else static if (realFormat == RealFormat.ieeeSingle)
+    {
+        enum T P1 = 0.78515625;
+        enum T P2 = 2.4187564849853515625e-4;
+        enum T P3 = 3.77489497744594108e-8;
+    }
+    else
+        static assert(0, "no coefficients for tan()");
 
-            enum real P1 = 7.853981554508209228515625E-1L;
-            enum real P2 = 7.946627356147928367136046290398E-9L;
-            enum real P3 = 3.061616997868382943065164830688E-17L;
-        }
+    // Special cases.
+    if (x == cast(T) 0.0 || isNaN(x))
+        return x;
+    if (isInfinity(x))
+        return T.nan;
 
-        // Special cases.
-        if (x == 0.0 || isNaN(x))
-            return x;
-        if (isInfinity(x))
-            return real.nan;
+    // Make argument positive but save the sign.
+    bool sign = false;
+    if (signbit(x))
+    {
+        sign = true;
+        x = -x;
+    }
 
-        // Make argument positive but save the sign.
-        bool sign = false;
-        if (signbit(x))
-        {
-            sign = true;
-            x = -x;
-        }
-
-        // Compute x mod PI/4.
-        real y = floor(x / PI_4);
+    // Compute x mod PI/4.
+    static if (realFormat == RealFormat.ieeeSingle)
+    {
+        enum T FOPI = 4 / PI;
+        int j = cast(int) (FOPI * x);
+        T y = j;
+        T z;
+    }
+    else
+    {
+        T y = floor(x / cast(T) PI_4);
         // Strip high bits of integer part.
         enum numHighBits = (realFormat == RealFormat.ieeeDouble ? 3 : 4);
-        real z = ldexp(y, -numHighBits);
+        T z = ldexp(y, -numHighBits);
         // Compute y - 2^numHighBits * (y / 2^numHighBits).
         z = y - ldexp(floor(z), numHighBits);
 
         // Integer and fraction part modulo one octant.
         int j = cast(int)(z);
-
-        // Map zeros and singularities to origin.
-        if (j & 1)
-        {
-            j += 1;
-            y += 1.0;
-        }
-
-        z = ((x - y * P1) - y * P2) - y * P3;
-        const real zz = z * z;
-
-        enum zzThreshold = (realFormat == RealFormat.ieeeDouble ? 1.0e-14L : 1.0e-20L);
-        if (zz > zzThreshold)
-            y = z + z * (zz * poly(zz, P) / poly(zz, Q));
-        else
-            y = z;
-
-        if (j & 2)
-            y = -1.0 / y;
-
-        return (sign) ? -y : y;
     }
-}
 
-@safe nothrow @nogc unittest
-{
-    static real[2][] vals =     // angle,tan
-        [
-         [   0,   0],
-         [   .5,  .5463024898],
-         [   1,   1.557407725],
-         [   1.5, 14.10141995],
-         [   2,  -2.185039863],
-         [   2.5,-.7470222972],
-         [   3,  -.1425465431],
-         [   3.5, .3745856402],
-         [   4,   1.157821282],
-         [   4.5, 4.637332055],
-         [   5,  -3.380515006],
-         [   5.5,-.9955840522],
-         [   6,  -.2910061914],
-         [   6.5, .2202772003],
-         [   10,  .6483608275],
-
-         // special angles
-         [   PI_4,   1],
-         //[   PI_2,   real.infinity], // PI_2 is not _exactly_ pi/2.
-         [   3*PI_4, -1],
-         [   PI,     0],
-         [   5*PI_4, 1],
-         //[   3*PI_2, -real.infinity],
-         [   7*PI_4, -1],
-         [   2*PI,   0],
-         ];
-    int i;
-
-    for (i = 0; i < vals.length; i++)
+    // Map zeros and singularities to origin.
+    if (j & 1)
     {
-        real x = vals[i][0];
-        real r = vals[i][1];
-        real t = tan(x);
-
-        //printf("tan(%Lg) = %Lg, should be %Lg\n", x, t, r);
-        if (!isIdentical(r, t)) assert(fabs(r-t) <= .0000001);
-
-        x = -x;
-        r = -r;
-        t = tan(x);
-        //printf("tan(%Lg) = %Lg, should be %Lg\n", x, t, r);
-        if (!isIdentical(r, t) && !(r != r && t != t)) assert(fabs(r-t) <= .0000001);
+        j += 1;
+        y += cast(T) 1.0;
     }
-    // overflow
-    assert(isNaN(tan(real.infinity)));
-    assert(isNaN(tan(-real.infinity)));
-    // NaN propagation
-    assert(isIdentical( tan(NaN(0x0123L)), NaN(0x0123L) ));
-}
 
-///
-@safe unittest
-{
-    assert(isIdentical(tan(0.0), 0.0));
-    assert(tan(PI).approxEqual(0));
-    assert(tan(PI / 3).approxEqual(sqrt(3.0)));
+    z = ((x - y * P1) - y * P2) - y * P3;
+    const T zz = z * z;
+
+    enum T zzThreshold = (realFormat == RealFormat.ieeeSingle ? 1.0e-4L :
+                          realFormat == RealFormat.ieeeDouble ? 1.0e-14L : 1.0e-20L);
+    if (zz > zzThreshold)
+    {
+        static if (realFormat == RealFormat.ieeeSingle)
+        {
+            y = ((((( 9.38540185543E-3f  * zz
+                    + 3.11992232697E-3f) * zz
+                    + 2.44301354525E-2f) * zz
+                    + 5.34112807005E-2f) * zz
+                    + 1.33387994085E-1f) * zz
+                    + 3.33331568548E-1f) * zz * z
+                + z;
+        }
+        else
+        {
+            y = z + z * (zz * poly(zz, P) / poly(zz, Q));
+        }
+    }
+    else
+        y = z;
+
+    if (j & 2)
+        y = (cast(T) -1.0) / y;
+
+    return (sign) ? -y : y;
 }
 
 @safe @nogc nothrow unittest
 {
-    assert(equalsDigit(tan(PI / 3), std.math.sqrt(3.0), useDigits));
+    static void testTan(T)()
+    {
+        // ±0
+        const T zero = 0.0;
+        assert(isIdentical(tan(zero), zero));
+        assert(isIdentical(tan(-zero), -zero));
+        // ±∞
+        const T inf = T.infinity;
+        assert(isNaN(tan(inf)));
+        assert(isNaN(tan(-inf)));
+        // NaN
+        const T specialNaN = NaN(0x0123L);
+        assert(isIdentical(tan(specialNaN), specialNaN));
+
+        static immutable T[2][] vals =
+        [
+            // angle, tan
+            [   .5,  .5463024898],
+            [   1,   1.557407725],
+            [   1.5, 14.10141995],
+            [   2,  -2.185039863],
+            [   2.5,-.7470222972],
+            [   3,  -.1425465431],
+            [   3.5, .3745856402],
+            [   4,   1.157821282],
+            [   4.5, 4.637332055],
+            [   5,  -3.380515006],
+            [   5.5,-.9955840522],
+            [   6,  -.2910061914],
+            [   6.5, .2202772003],
+            [   10,  .6483608275],
+
+            // special angles
+            [   PI_4,   1],
+            //[   PI_2,   T.infinity], // PI_2 is not _exactly_ pi/2.
+            [   3*PI_4, -1],
+            [   PI,     0],
+            [   5*PI_4, 1],
+            //[   3*PI_2, -T.infinity],
+            [   7*PI_4, -1],
+            [   2*PI,   0],
+         ];
+
+        foreach (ref val; vals)
+        {
+            T x = val[0];
+            T r = val[1];
+            T t = tan(x);
+
+            //printf("tan(%Lg) = %Lg, should be %Lg\n", cast(real) x, cast(real) t, cast(real) r);
+            assert(approxEqual(r, t));
+
+            x = -x;
+            r = -r;
+            t = tan(x);
+            //printf("tan(%Lg) = %Lg, should be %Lg\n", cast(real) x, cast(real) t, cast(real) r);
+            assert(approxEqual(r, t));
+        }
+    }
+
+    import std.meta : AliasSeq;
+    foreach (T; AliasSeq!(real, double, float))
+        testTan!T();
+
+    assert(equalsDigit(tan(PI / 3), std.math.sqrt(3.0L), useDigits));
 }
 
 /***************
