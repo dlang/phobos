@@ -277,13 +277,13 @@ if (!isAggregateType!T || is(Unqual!T == T))
  */
 template staticIndexOf(T, TList...)
 {
-    enum staticIndexOf = genericIndexOf!(T, TList).index;
+    enum staticIndexOf = genericIndexOf!(T, TList);
 }
 
 /// Ditto
 template staticIndexOf(alias T, TList...)
 {
-    enum staticIndexOf = genericIndexOf!(T, TList).index;
+    enum staticIndexOf = genericIndexOf!(T, TList);
 }
 
 ///
@@ -303,27 +303,17 @@ template staticIndexOf(alias T, TList...)
 private template genericIndexOf(args...)
 if (args.length >= 1)
 {
-    alias e     = OldAlias!(args[0]);
-    alias tuple = args[1 .. $];
-
-    static if (tuple.length)
+    static foreach (idx, arg; args[1 .. $])
     {
-        alias head = OldAlias!(tuple[0]);
-        alias tail = tuple[1 .. $];
-
-        static if (isSame!(e, head))
+        static if (is(typeof(genericIndexOf) == void) && // not yet defined
+                   isSame!(args[0], arg))
         {
-            enum index = 0;
-        }
-        else
-        {
-            enum next  = genericIndexOf!(e, tail).index;
-            enum index = (next == -1) ? -1 : 1 + next;
+            enum genericIndexOf = idx;
         }
     }
-    else
+    static if (is(typeof(genericIndexOf) == void)) // no hit
     {
-        enum index = -1;
+        enum genericIndexOf = -1;
     }
 }
 
@@ -844,19 +834,17 @@ template predicate must be instantiable with all the given items.
  */
 template allSatisfy(alias F, T...)
 {
-    static if (T.length == 0)
+    static foreach (Ti; T)
+    {
+        static if (!is(typeof(allSatisfy) == bool) && // not yet defined
+                   !F!(Ti))
+        {
+            enum allSatisfy = false;
+        }
+    }
+    static if (!is(typeof(allSatisfy) == bool)) // if not yet defined
     {
         enum allSatisfy = true;
-    }
-    else static if (T.length == 1)
-    {
-        enum allSatisfy = F!(T[0]);
-    }
-    else
-    {
-        enum allSatisfy =
-            allSatisfy!(F, T[ 0  .. $/2]) &&
-            allSatisfy!(F, T[$/2 ..  $ ]);
     }
 }
 
@@ -878,19 +866,17 @@ template predicate must be instantiable with one of the given items.
  */
 template anySatisfy(alias F, T...)
 {
-    static if (T.length == 0)
+    static foreach (Ti; T)
+    {
+        static if (!is(typeof(anySatisfy) == bool) && // not yet defined
+                   F!(Ti))
+        {
+            enum anySatisfy = true;
+        }
+    }
+    static if (!is(typeof(anySatisfy) == bool)) // if not yet defined
     {
         enum anySatisfy = false;
-    }
-    else static if (T.length == 1)
-    {
-        enum anySatisfy = F!(T[0]);
-    }
-    else
-    {
-        enum anySatisfy =
-            anySatisfy!(F, T[ 0  .. $/2]) ||
-            anySatisfy!(F, T[$/2 ..  $ ]);
     }
 }
 
