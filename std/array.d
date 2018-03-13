@@ -3944,7 +3944,7 @@ pragma(inline, true) T[n] asStatic(T, size_t n)(auto ref T[n] arr) nothrow @safe
 
 /// ditto
 U[n] asStatic(U, T, size_t n)(auto ref T[n] arr) nothrow @safe pure @nogc
-if (!is(U==T))
+if (!is(U == T))
 {
     import std.conv : emplaceRef;
     U[n] ret = void;
