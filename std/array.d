@@ -3929,71 +3929,6 @@ unittest
 }
 
 /++
-Params: a = The array elements
-
-Returns: A static array constructed from `a`. The type of elements can be
-specified implicitly (`int[2] a = staticArray(1,2);`) or explicitly
-(`float[2] a = staticArray!float(1,2)`).
-The result is an rvalue, therefore uses like
-`foo(staticArray(1, 2, 3))` may be inefficient because of the copies.
-+/
-pragma(inline, true) U[T.length] staticArray(U = CommonType!T, T...)(T a) nothrow @safe pure @nogc
-{
-    return [a];
-}
-
-/// ditto
-// Workaround https://issues.dlang.org/show_bug.cgi?id=16779 (make alias to staticArray once fixed)
-pragma(inline, true) U[T.length] staticArrayCast(U, T...)(T a) nothrow @safe pure @nogc
-{
-    import std.conv : emplaceRef;
-    enum n = T.length;
-    U[n] ret = void;
-    static foreach (i; 0 .. n)
-    {
-        // TODO: If any of these throws, the destructors of the already-constructed elements is not called. https://github.com/dlang/phobos/pull/4936/files#r131709329
-        emplaceRef!U(ret[i], cast(U) a[i]);
-    }
-    return ret;
-}
-
-///
-nothrow pure @safe unittest
-{
-    auto a = staticArray(1, 2);
-    assert(is(typeof(a) == int[2]) && a == [1, 2]);
-
-    auto b = staticArrayCast!byte(1, 2);
-    assert(is(typeof(b) == byte[2]) && b == [1, 2]);
-}
-
-nothrow pure @safe unittest
-{
-    int val = 3;
-    staticArray(1, 2, val).checkStaticArray!int([1, 2, 3]);
-    staticArray(1, 2.0).checkStaticArray!double([1, 2.0]);
-    assert(!__traits(compiles, staticArray(1, "")));
-    staticArray().checkStaticArray!void([]);
-    staticArray!float(1, 2).checkStaticArray!float([1, 2]);
-    // auto a = staticArray!byte(1, 2);
-    staticArrayCast!byte(1, 2).checkStaticArray!byte([1, 2]);
-    staticArrayCast!byte(1, 129).checkStaticArray!byte([1, -127]);
-
-    staticArrayCast!(const(int))(1, 2).checkStaticArray!(const(int))([1, 2]);
-    staticArrayCast!(immutable(int))(1, 2).checkStaticArray!(immutable(int))([1, 2]);
-    staticArray([1]).checkStaticArray!(int[])([[1]]);
-}
-
-@system unittest
-{
-    version (Bug)
-    {
-        // NOTE: correctly issues a deprecation
-        int[] a2 = staticArray(1, 2);
-    }
-}
-
-/++
 Params: arr = The array elements
 
 Returns: A static array constructed from `arr`. The type of elements can be
@@ -4009,7 +3944,7 @@ pragma(inline, true) T[n] asStatic(T, size_t n)(auto ref T[n] arr) nothrow @safe
 
 /// ditto
 U[n] asStatic(U, T, size_t n)(auto ref T[n] arr) nothrow @safe pure @nogc
-if(!is(U==T))
+if (!is(U==T))
 {
     import std.conv : emplaceRef;
     U[n] ret = void;
