@@ -82,7 +82,6 @@ import std.meta;
 import std.traits;
 
 import std.range.primitives;
-import std.conv : emplaceRef;
 public import std.range.primitives : save, empty, popFront, popBack, front, back;
 
 /**
@@ -3947,6 +3946,7 @@ pragma(inline, true) U[T.length] staticArray(U = CommonType!T, T...)(T a) nothro
 // Workaround https://issues.dlang.org/show_bug.cgi?id=16779 (make alias to staticArray once fixed)
 pragma(inline, true) U[T.length] staticArrayCast(U, T...)(T a) nothrow @safe pure @nogc
 {
+    import std.conv : emplaceRef;
     enum n = T.length;
     U[n] ret = void;
     static foreach (i; 0 .. n)
@@ -4008,6 +4008,7 @@ pragma(inline, true) T[n] asStatic(T, size_t n)(auto ref T[n] arr) nothrow @safe
 /// ditto
 U[n] asStaticCast(U, T, size_t n)(auto ref T[n] arr) nothrow @safe pure @nogc
 {
+    import std.conv : emplaceRef;
     U[n] ret = void;
     static foreach (i; 0 .. n)
     {
@@ -4057,6 +4058,7 @@ Returns: A static array constructed from `a`.
 +/
 auto asStatic(size_t n, T)(T a) nothrow @safe pure @nogc
 {
+    import std.conv : emplaceRef;
     // TODO: ElementType vs ForeachType
     alias U = typeof(a[0]);
     U[n] ret = void;
@@ -4072,6 +4074,7 @@ auto asStatic(size_t n, T)(T a) nothrow @safe pure @nogc
 /// ditto
 auto asStaticCast(Un : U[n], U, size_t n, T)(T a) nothrow @safe pure @nogc
 {
+    import std.conv : emplaceRef;
     U[n] ret = void;
     size_t i;
     foreach (ref ai; a)
@@ -4144,6 +4147,7 @@ Returns: A static array constructed from `arr`.
 +/
 auto asStatic(alias arr)() nothrow @safe pure @nogc
 {
+    import std.conv : emplaceRef;
     enum n = arr.length;
     alias U = typeof(arr[0]);
     U[n] ret = void;
@@ -4157,6 +4161,7 @@ auto asStatic(alias arr)() nothrow @safe pure @nogc
 /// ditto
 auto asStaticCast(U, alias arr)() nothrow @safe pure @nogc
 {
+    import std.conv : emplaceRef;
     enum n = arr.length;
     U[n] ret = void;
     static foreach (i; 0 .. n)
@@ -4195,7 +4200,7 @@ void checkStaticArray(T, T1, T2)(T1 a, T2 b) nothrow @safe pure @nogc
 }
 
 // TODO: add this to assertThrown in std.exception
-bool isThrown(T : Throwable = Exception, E)(lazy E expression) nothrow pure @system
+private bool isThrown(T : Throwable = Exception, E)(lazy E expression) nothrow pure @system
 {
     try
     {
