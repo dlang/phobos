@@ -20,7 +20,7 @@ the store and the limits. One allocation entails rounding up the allocation
 size for alignment purposes, bumping the current pointer, and comparing it
 against the limit.
 
-If $(D ParentAllocator) is different from $(D NullAllocator), $(D Region)
+If $(D ParentAllocator) is different from $(REF_ALTTEXT `NullAllocator`, NullAllocator, std,experimental,allocator,building_blocks,null_allocator), $(D Region)
 deallocates the chunk of memory during destruction.
 
 The $(D minAlign) parameter establishes alignment. If $(D minAlign > 1), the
@@ -53,42 +53,49 @@ struct Region(ParentAllocator = NullAllocator,
     {
         alias parent = ParentAllocator.instance;
     }
+
     private void* _current, _begin, _end;
 
+    pure nothrow @trusted @nogc
+    private void* roundedBegin() const
+    {
+        return cast(void*) roundUpToAlignment(cast(size_t) _begin, alignment);
+    }
+
+    pure nothrow @trusted @nogc
+    private void* roundedEnd() const
+    {
+        return cast(void*) roundDownToAlignment(cast(size_t) _end, alignment);
+    }
     /**
-    Constructs a region backed by a user-provided store. Assumes $(D store) is
-    aligned at $(D minAlign). Also assumes the memory was allocated with $(D
-    ParentAllocator) (if different from $(D NullAllocator)).
+    Constructs a region backed by a user-provided store.
+    Assumes the memory was allocated with $(D ParentAllocator)
+    (if different from $(REF_ALTTEXT `NullAllocator`, NullAllocator, std,experimental,allocator,building_blocks,null_allocator)).
 
     Params:
-    store = User-provided store backing up the region. $(D store) must be
-    aligned at $(D minAlign) (enforced with $(D assert)). If $(D
-    ParentAllocator) is different from $(D NullAllocator), memory is assumed to
-    have been allocated with $(D ParentAllocator).
-    n = Bytes to allocate using $(D ParentAllocator). This constructor is only
-    defined If $(D ParentAllocator) is different from $(D NullAllocator). If
-    $(D parent.allocate(n)) returns $(D null), the region will be initialized
-    as empty (correctly initialized but unable to allocate).
-    */
+        store = User-provided store backing up the region. If $(D
+        ParentAllocator) is different from $(REF_ALTTEXT `NullAllocator`, NullAllocator, std,experimental,allocator,building_blocks,null_allocator), memory is assumed to
+        have been allocated with $(D ParentAllocator).
+        n = Bytes to allocate using $(D ParentAllocator). This constructor is only
+        defined If $(D ParentAllocator) is different from $(REF_ALTTEXT `NullAllocator`, NullAllocator, std,experimental,allocator,building_blocks,null_allocator). If
+        $(D parent.allocate(n)) returns $(D null), the region will be initialized
+        as empty (correctly initialized but unable to allocate).
+        */
     this(ubyte[] store)
     {
-        store = cast(ubyte[])(store.roundUpToAlignment(alignment));
-        store = store[0 .. $.roundDownToAlignment(alignment)];
-        assert(store.ptr.alignedAt(minAlign));
-        assert(store.length % minAlign == 0);
         _begin = store.ptr;
         _end = store.ptr + store.length;
         static if (growDownwards)
-            _current = _end;
+            _current = roundedEnd();
         else
-            _current = store.ptr;
+            _current = roundedBegin();
     }
 
     /// Ditto
     static if (!is(ParentAllocator == NullAllocator))
     this(size_t n)
     {
-        this(cast(ubyte[])(parent.allocate(n.roundUpToAlignment(alignment))));
+        this(cast(ubyte[]) (parent.allocate(n.roundUpToAlignment(alignment))));
     }
 
     /*
@@ -97,7 +104,8 @@ struct Region(ParentAllocator = NullAllocator,
     */
 
     /**
-    If `ParentAllocator` is not `NullAllocator` and defines `deallocate`, the region defines a destructor that uses `ParentAllocator.delete` to free the
+    If `ParentAllocator` is not $(REF_ALTTEXT `NullAllocator`, NullAllocator, std,experimental,allocator,building_blocks,null_allocator) and defines `deallocate`,
+    the region defines a destructor that uses `ParentAllocator.deallocate` to free the
     memory chunk.
     */
     static if (!is(ParentAllocator == NullAllocator)
@@ -125,11 +133,11 @@ struct Region(ParentAllocator = NullAllocator,
     adjustment (if $(D alignment > 1)), an increment, and a comparison.
 
     Params:
-    n = number of bytes to allocate
+        n = number of bytes to allocate
 
     Returns:
-    A properly-aligned buffer of size $(D n) or $(D null) if request could not
-    be satisfied.
+        A properly-aligned buffer of size $(D n) or $(D null) if request could not
+        be satisfied.
     */
     void[] allocate(size_t n)
     {
@@ -157,11 +165,11 @@ struct Region(ParentAllocator = NullAllocator,
     Allocates $(D n) bytes of memory aligned at alignment $(D a).
 
     Params:
-    n = number of bytes to allocate
-    a = alignment for the allocated block
+        n = number of bytes to allocate
+        a = alignment for the allocated block
 
     Returns:
-    Either a suitable block of $(D n) bytes aligned at $(D a), or $(D null).
+        Either a suitable block of $(D n) bytes aligned at $(D a), or $(D null).
     */
     void[] alignedAllocate(size_t n, uint a)
     {
@@ -254,8 +262,8 @@ struct Region(ParentAllocator = NullAllocator,
     does nothing.
 
     Params:
-    b = Block previously obtained by a call to $(D allocate) against this
-    allocator ($(D null) is allowed).
+        b = Block previously obtained by a call to $(D allocate) against this
+        allocator ($(D null) is allowed).
     */
     pure nothrow @nogc
     bool deallocate(void[] b)
@@ -291,11 +299,11 @@ struct Region(ParentAllocator = NullAllocator,
     {
         static if (growDownwards)
         {
-            _current = _end;
+            _current = roundedEnd();
         }
         else
         {
-            _current = _begin;
+            _current = roundedBegin();
         }
         return true;
     }
@@ -304,11 +312,11 @@ struct Region(ParentAllocator = NullAllocator,
     Queries whether `b` has been allocated with this region.
 
     Params:
-    b = Arbitrary block of memory (`null` is allowed; `owns(null)` returns
-    `false`).
+        b = Arbitrary block of memory (`null` is allowed; `owns(null)` returns
+        `false`).
 
     Returns:
-    `true` if `b` has been allocated with this region, `false` otherwise.
+        `true` if `b` has been allocated with this region, `false` otherwise.
     */
     pure nothrow @trusted @nogc
     Ternary owns(const void[] b) const
@@ -324,9 +332,9 @@ struct Region(ParentAllocator = NullAllocator,
     Ternary empty() const
     {
         static if (growDownwards)
-            return Ternary(_current == _end);
+            return Ternary(_current == roundedEnd());
         else
-            return Ternary(_current == _begin);
+            return Ternary(_current == roundedBegin());
     }
 
     /// Nonstandard property that returns bytes available for allocation.
@@ -371,20 +379,29 @@ struct Region(ParentAllocator = NullAllocator,
     import std.experimental.allocator.mallocator : Mallocator;
     import std.typecons : Ternary;
 
+    static void testAlloc(Allocator)(ref Allocator a)
+    {
+        assert((() pure nothrow @safe @nogc => a.empty)() ==  Ternary.yes);
+        const b = a.allocate(101);
+        assert(b.length == 101);
+        assert((() nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
+
+        // Ensure deallocate inherits from parent allocators
+        auto c = a.allocate(42);
+        assert(c.length == 42);
+        assert((() nothrow @nogc => a.deallocate(c))());
+        assert((() pure nothrow @safe @nogc => a.empty)() ==  Ternary.no);
+    }
+
     // Create a 64 KB region allocated with malloc
     auto reg = Region!(Mallocator, Mallocator.alignment,
         Yes.growDownwards)(1024 * 64);
+    testAlloc(reg);
 
-    assert((() pure nothrow @safe @nogc => reg.empty)() ==  Ternary.yes);
-    const b = reg.allocate(101);
-    assert(b.length == 101);
-    assert((() nothrow @safe @nogc => reg.owns(b))() == Ternary.yes);
-
-    // Ensure deallocate inherits from parent allocators
-    auto c = reg.allocate(42);
-    assert(c.length == 42);
-    assert((() nothrow @nogc => reg.deallocate(c))());
-    assert((() pure nothrow @safe @nogc => reg.empty)() ==  Ternary.no);
+    // Create a 64 KB shared region allocated with malloc
+    auto sharedReg = SharedRegion!(Mallocator, Mallocator.alignment,
+        Yes.growDownwards)(1024 * 64);
+    testAlloc(sharedReg);
 }
 
 @system unittest
@@ -400,10 +417,53 @@ struct Region(ParentAllocator = NullAllocator,
 
 @system unittest
 {
+    // test 'this(ubyte[] store)' constructed regions properly clean up
+    // their inner storage after destruction
+    import std.experimental.allocator.mallocator : Mallocator;
+
+    static shared struct LocalAllocator
+    {
+    nothrow @nogc:
+        enum alignment = Mallocator.alignment;
+        void[] buf;
+        bool deallocate(void[] b)
+        {
+            assert(buf.ptr == b.ptr && buf.length == b.length);
+            return true;
+        }
+
+        void[] allocate(size_t n)
+        {
+            return null;
+        }
+
+    }
+
+    enum bufLen = 10 * Mallocator.alignment;
+    void[] tmp = Mallocator.instance.allocate(bufLen);
+
+    LocalAllocator a;
+    a.buf = cast(typeof(a.buf)) tmp[1 .. $];
+
+    auto reg = Region!(LocalAllocator, Mallocator.alignment,
+        Yes.growDownwards)(cast(ubyte[]) a.buf);
+    auto sharedReg = SharedRegion!(LocalAllocator, Mallocator.alignment,
+        Yes.growDownwards)(cast(ubyte[]) a.buf);
+    reg.parent = a;
+    sharedReg.parent = a;
+
+    Mallocator.instance.deallocate(tmp);
+}
+
+@system unittest
+{
     import std.experimental.allocator.mallocator : Mallocator;
 
     testAllocator!(() => Region!(Mallocator)(1024 * 64));
     testAllocator!(() => Region!(Mallocator, Mallocator.alignment, Yes.growDownwards)(1024 * 64));
+
+    testAllocator!(() => SharedRegion!(Mallocator)(1024 * 64));
+    testAllocator!(() => SharedRegion!(Mallocator, Mallocator.alignment, Yes.growDownwards)(1024 * 64));
 }
 
 @system unittest
@@ -531,8 +591,8 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     as the third template argument.
 
     Params:
-    b = Block previously obtained by a call to $(D allocate) against this
-    allocator ($(D null) is allowed).
+        b = Block previously obtained by a call to $(D allocate) against this
+        allocator ($(D null) is allowed).
     */
     bool deallocate(void[] b)
     {
@@ -613,14 +673,14 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     // Reap with GC fallback.
     InSituRegion!(128 * 1024, 8) tmp3;
     FallbackAllocator!(BitmappedBlock!(64, 8), GCAllocator) r3;
-    r3.primary = BitmappedBlock!(64, 8)(cast(ubyte[])(tmp3.allocateAll()));
+    r3.primary = BitmappedBlock!(64, 8)(cast(ubyte[]) (tmp3.allocateAll()));
     const a3 = r3.allocate(103);
     assert(a3.length == 103);
 
     // Reap/GC with a freelist for small objects up to 16 bytes.
     InSituRegion!(128 * 1024, 64) tmp4;
     FreeList!(FallbackAllocator!(BitmappedBlock!(64, 64), GCAllocator), 0, 16) r4;
-    r4.parent.primary = BitmappedBlock!(64, 64)(cast(ubyte[])(tmp4.allocateAll()));
+    r4.parent.primary = BitmappedBlock!(64, 64)(cast(ubyte[]) (tmp4.allocateAll()));
     const a4 = r4.allocate(104);
     assert(a4.length == 104);
 }
@@ -897,4 +957,391 @@ version(Posix) @system unittest
     assert(c.length == 2001);
     assert((() nothrow @safe @nogc => alloc.owns(c))() == Ternary.yes);
     assert((() nothrow @safe @nogc => alloc.owns(null))() == Ternary.no);
+}
+
+/**
+The threadsafe version of the `Region` allocator.
+Allocations and deallocations are lock-free based using $(REF cas, core,atomic).
+*/
+shared struct SharedRegion(ParentAllocator = NullAllocator,
+    uint minAlign = platformAlignment,
+    Flag!"growDownwards" growDownwards = No.growDownwards)
+{
+nothrow @nogc:
+    static assert(minAlign.isGoodStaticAlignment);
+    static assert(ParentAllocator.alignment >= minAlign);
+
+    import std.traits : hasMember;
+    import std.typecons : Ternary;
+
+    // state
+    /**
+    The _parent allocator. Depending on whether `ParentAllocator` holds state
+    or not, this is a member variable or an alias for
+    `ParentAllocator.instance`.
+    */
+    static if (stateSize!ParentAllocator)
+    {
+        ParentAllocator parent;
+    }
+    else
+    {
+        alias parent = ParentAllocator.instance;
+    }
+    private shared void* _current, _begin, _end;
+
+    pure nothrow @trusted @nogc
+    private void* roundedBegin() const
+    {
+        return cast(void*) roundUpToAlignment(cast(size_t) _begin, alignment);
+    }
+
+    pure nothrow @trusted @nogc
+    private void* roundedEnd() const
+    {
+        return cast(void*) roundDownToAlignment(cast(size_t) _end, alignment);
+    }
+
+
+    /**
+    Constructs a region backed by a user-provided store.
+    Assumes the memory was allocated with `ParentAllocator`
+    (if different from $(REF_ALTTEXT `NullAllocator`, NullAllocator, std,experimental,allocator,building_blocks,null_allocator)).
+
+    Params:
+        store = User-provided store backing up the region. If `ParentAllocator`
+        is different from $(REF_ALTTEXT `NullAllocator`, NullAllocator, std,experimental,allocator,building_blocks,null_allocator), memory is assumed to
+        have been allocated with `ParentAllocator`.
+        n = Bytes to allocate using `ParentAllocator`. This constructor is only
+        defined If $(D ParentAllocator) is different from $(REF_ALTTEXT `NullAllocator`, NullAllocator, std,experimental,allocator,building_blocks,null_allocator). If
+        `parent.allocate(n)` returns `null`, the region will be initialized
+        as empty (correctly initialized but unable to allocate).
+    */
+    this(ubyte[] store)
+    {
+        _begin = cast(typeof(_begin)) store.ptr;
+        _end = cast(typeof(_end)) (store.ptr + store.length);
+        static if (growDownwards)
+            _current = cast(typeof(_current)) roundedEnd();
+        else
+            _current = cast(typeof(_current)) roundedBegin();
+    }
+
+    /// Ditto
+    static if (!is(ParentAllocator == NullAllocator))
+    this(size_t n)
+    {
+        this(cast(ubyte[]) (parent.allocate(n.roundUpToAlignment(alignment))));
+    }
+
+    /**
+    Rounds the given size to a multiple of the `alignment`
+    */
+    size_t goodAllocSize(size_t n)
+    {
+        return n.roundUpToAlignment(alignment);
+    }
+
+    /**
+    Alignment offered.
+    */
+    alias alignment = minAlign;
+
+    /**
+    Allocates `n` bytes of memory. The allocation is served by atomically incrementing
+    a pointer which keeps track of the current used space.
+
+    Params:
+        n = number of bytes to allocate
+
+    Returns:
+        A properly-aligned buffer of size `n`, or `null` if request could not
+        be satisfied.
+    */
+    void[] allocate(size_t n)
+    {
+        import core.atomic : cas, atomicLoad;
+
+        if (n == 0) return null;
+        auto rounded = goodAllocSize(n);
+
+        shared void* localCurrent, localNewCurrent;
+        static if (growDownwards)
+        {
+            do
+            {
+                localCurrent = atomicLoad(_current);
+                localNewCurrent = localCurrent - rounded;
+                if (localNewCurrent > localCurrent || localNewCurrent < _begin)
+                    return null;
+            } while (!cas(&_current, localCurrent, localNewCurrent));
+
+            return cast(void[]) localNewCurrent[0 .. n];
+        }
+        else
+        {
+            do
+            {
+                localCurrent = atomicLoad(_current);
+                localNewCurrent = localCurrent + rounded;
+                if (localNewCurrent < localCurrent || localNewCurrent > _end)
+                    return null;
+            } while (!cas(&_current, localCurrent, localNewCurrent));
+
+            return cast(void[]) localCurrent[0 .. n];
+        }
+
+        assert(0, "Unexpected error in SharedRegion.allocate");
+    }
+
+    /**
+    Deallocates `b`. This works only if `b` was obtained as the last call
+    to `allocate`; otherwise (i.e. another allocation has occurred since) it
+    does nothing.
+
+    Params:
+        b = Block previously obtained by a call to `allocate` against this
+        allocator (`null` is allowed).
+    */
+    bool deallocate(void[] b)
+    {
+        import core.atomic : cas, atomicLoad;
+
+        auto rounded = goodAllocSize(b.length);
+        shared void* localCurrent, localNewCurrent;
+
+        // The cas is done only once, because only the last allocation can be reverted
+        localCurrent = atomicLoad(_current);
+        static if (growDownwards)
+        {
+            localNewCurrent = localCurrent + rounded;
+            if (b.ptr == localCurrent)
+                return cas(&_current, localCurrent, localNewCurrent);
+        }
+        else
+        {
+            localNewCurrent = localCurrent - rounded;
+            if (b.ptr == localNewCurrent)
+                return cas(&_current, localCurrent, localNewCurrent);
+        }
+
+        return false;
+    }
+
+    /**
+    Allocates `n` bytes of memory aligned at alignment `a`.
+    Params:
+        n = number of bytes to allocate
+        a = alignment for the allocated block
+
+    Returns:
+        Either a suitable block of `n` bytes aligned at `a`, or `null`.
+    */
+    void[] alignedAllocate(size_t n, uint a)
+    {
+        import core.atomic : cas, atomicLoad;
+        import std.math : isPowerOf2;
+
+        assert(a.isPowerOf2);
+        if (n == 0) return null;
+
+        auto rounded = goodAllocSize(n);
+        shared void* localCurrent, localNewCurrent;
+
+        static if (growDownwards)
+        {
+            do
+            {
+                localCurrent = atomicLoad(_current);
+                auto alignedCurrent = cast(void*)(localCurrent - rounded);
+                localNewCurrent = cast(shared(void*)) alignedCurrent.alignDownTo(a);
+                if (alignedCurrent > localCurrent || localNewCurrent > alignedCurrent ||
+                    localNewCurrent < _begin)
+                    return null;
+            } while (!cas(&_current, localCurrent, localNewCurrent));
+
+            return cast(void[]) localNewCurrent[0 .. n];
+        }
+        else
+        {
+            do
+            {
+                localCurrent = atomicLoad(_current);
+                auto alignedCurrent = alignUpTo(cast(void*) localCurrent, a);
+                localNewCurrent = cast(shared(void*)) (alignedCurrent + rounded);
+                if (alignedCurrent < localCurrent || localNewCurrent < alignedCurrent ||
+                    localNewCurrent > _end)
+                    return null;
+            } while (!cas(&_current, localCurrent, localNewCurrent));
+
+            return cast(void[]) (localNewCurrent - rounded)[0 .. n];
+        }
+
+        assert(0, "Unexpected error in SharedRegion.alignedAllocate");
+    }
+
+    /**
+    Queries whether `b` has been allocated with this region.
+
+    Params:
+        b = Arbitrary block of memory (`null` is allowed; `owns(null)` returns
+        `false`).
+
+    Returns:
+        `true` if `b` has been allocated with this region, `false` otherwise.
+    */
+    pure nothrow @trusted @nogc
+    Ternary owns(const void[] b) const
+    {
+        return Ternary(b && (&b[0] >= _begin) && (&b[0] + b.length <= _end));
+    }
+
+    /**
+    Returns `Ternary.yes` if no memory has been allocated in this region,
+    `Ternary.no` otherwise. (Never returns `Ternary.unknown`.)
+    */
+    pure nothrow @safe @nogc
+    Ternary empty() const
+    {
+        import core.atomic : atomicLoad;
+
+        auto localCurrent = atomicLoad(_current);
+        static if (growDownwards)
+            return Ternary(localCurrent == roundedEnd());
+        else
+            return Ternary(localCurrent == roundedBegin());
+    }
+
+    /**
+    If `ParentAllocator` is not $(REF_ALTTEXT `NullAllocator`, NullAllocator, std,experimental,allocator,building_blocks,null_allocator) and defines `deallocate`,
+    the region defines a destructor that uses `ParentAllocator.deallocate` to free the
+    memory chunk.
+    */
+    static if (!is(ParentAllocator == NullAllocator)
+        && hasMember!(ParentAllocator, "deallocate"))
+    ~this()
+    {
+        parent.deallocate(cast(void[]) _begin[0 .. _end - _begin]);
+    }
+}
+
+@system unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+
+    static void testAlloc(Allocator)(ref Allocator a, bool growDownwards)
+    {
+        import core.thread : ThreadGroup;
+        import std.algorithm.sorting : sort;
+        import core.internal.spinlock : SpinLock;
+
+        SpinLock lock = SpinLock(SpinLock.Contention.brief);
+        enum numThreads = 100;
+        void[][numThreads] buf;
+        size_t count = 0;
+
+        void fun()
+        {
+            void[] b = a.allocate(63);
+            assert(b.length == 63);
+
+            lock.lock();
+            buf[count] = b;
+            count++;
+            lock.unlock();
+        }
+
+        auto tg = new ThreadGroup;
+        foreach (i; 0 .. numThreads)
+        {
+            tg.create(&fun);
+        }
+        tg.joinAll();
+
+        sort!((a, b) => a.ptr < b.ptr)(buf[0 .. numThreads]);
+        foreach (i; 0 .. numThreads - 1)
+        {
+            assert(buf[i].ptr + a.goodAllocSize(buf[i].length) == buf[i + 1].ptr);
+        }
+
+        assert(!a.deallocate(buf[1]));
+
+        foreach (i; 0 .. numThreads)
+        {
+            if (!growDownwards)
+                assert(a.deallocate(buf[numThreads - 1 - i]));
+            else
+                assert(a.deallocate(buf[i]));
+        }
+    }
+
+    auto a1 = SharedRegion!(Mallocator, Mallocator.alignment,
+        Yes.growDownwards)(1024 * 64);
+
+    auto a2 = SharedRegion!(Mallocator, Mallocator.alignment,
+        No.growDownwards)(1024 * 64);
+
+    testAlloc(a1, true);
+    testAlloc(a2, false);
+}
+
+@system unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+
+    static void testAlloc(Allocator)(ref Allocator a, bool growDownwards)
+    {
+        import core.thread : ThreadGroup;
+        import std.algorithm.sorting : sort;
+        import core.internal.spinlock : SpinLock;
+
+        SpinLock lock = SpinLock(SpinLock.Contention.brief);
+        enum numThreads = 100;
+        void[][2 * numThreads] buf;
+        size_t count = 0;
+
+        void fun()
+        {
+            void[] b = a.allocate(63);
+            assert(b.length == 63);
+
+            lock.lock();
+            buf[count] = b;
+            count++;
+            lock.unlock();
+
+            b = a.alignedAllocate(63, 32);
+            assert(b.length == 63);
+            assert(cast(size_t) b.ptr % 32 == 0);
+
+            lock.lock();
+            buf[count] = b;
+            count++;
+            lock.unlock();
+        }
+
+        auto tg = new ThreadGroup;
+        foreach (i; 0 .. numThreads)
+        {
+            tg.create(&fun);
+        }
+        tg.joinAll();
+
+        sort!((a, b) => a.ptr < b.ptr)(buf[0 .. 2 * numThreads]);
+        foreach (i; 0 .. 2 * numThreads - 1)
+        {
+            assert(buf[i].ptr + buf[i].length <= buf[i + 1].ptr);
+        }
+
+        assert(!a.deallocate(buf[1]));
+    }
+
+    auto a1 = SharedRegion!(Mallocator, Mallocator.alignment,
+        Yes.growDownwards)(1024 * 64);
+
+    auto a2 = SharedRegion!(Mallocator, Mallocator.alignment,
+        No.growDownwards)(1024 * 64);
+
+    testAlloc(a1, true);
+    testAlloc(a2, false);
 }
