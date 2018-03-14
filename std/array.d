@@ -3929,28 +3929,27 @@ unittest
 }
 
 /++
-Params: arr = The array elements
+Params: a = The input elements
 
-Returns: A static array constructed from `arr`. The type of elements can be
+Returns: A static array constructed from `a`. The type of elements can be
 specified implicitly (`int[2] a = [1,2].asStatic;`) or explicitly
 (`float[2] a = [1,2].asStatic!float`).
-The result is an rvalue, therefore uses like
-`foo([1, 2, 3].asStatic)` may be inefficient because of the copies.
+Note: `foo([1, 2, 3].asStatic)` may be inefficient because of the copies involved.
 +/
-pragma(inline, true) T[n] asStatic(T, size_t n)(auto ref T[n] arr) nothrow @safe pure @nogc
+pragma(inline, true) T[n] asStatic(T, size_t n)(auto ref T[n] a) nothrow @safe pure @nogc
 {
-    return arr;
+    return a;
 }
 
 /// ditto
-U[n] asStatic(U, T, size_t n)(auto ref T[n] arr) nothrow @safe pure @nogc
+U[n] asStatic(U, T, size_t n)(auto ref T[n] a) nothrow @safe pure @nogc
 if (!is(U == T))
 {
     import std.conv : emplaceRef;
     U[n] ret = void;
     static foreach (i; 0 .. n)
     {
-        emplaceRef!U(ret[i], cast(U) arr[i]);
+        emplaceRef!U(ret[i], cast(U) a[i]);
     }
     return ret;
 }
@@ -3989,11 +3988,7 @@ nothrow pure @safe unittest
 
 }
 
-/++
-Params: a = input range of elements
-
-Returns: A static array constructed from `a`.
-+/
+/// ditto
 auto asStatic(size_t n, T)(T a) nothrow @safe pure @nogc
 {
     import std.conv : emplaceRef;
@@ -4079,34 +4074,19 @@ nothrow pure @system unittest
 }
 
 /++
-Params: arr = the compile time range
+Params: a = the compile time range
 
-Returns: A static array constructed from `arr`.
+Returns: A static array constructed from `a`.
 +/
-auto asStatic(alias arr)() nothrow @safe pure @nogc
+auto asStatic(alias a)() nothrow @safe pure @nogc
 {
-    import std.conv : emplaceRef;
-    enum n = arr.length;
-    alias U = typeof(arr[0]);
-    U[n] ret = void;
-    static foreach (i; 0 .. n)
-    {
-        emplaceRef!U(ret[i], arr[i]);
-    }
-    return ret;
+    return .asStatic!(cast(size_t) a.length)(a);
 }
 
 /// ditto
-auto asStatic(U, alias arr)() nothrow @safe pure @nogc
+auto asStatic(U, alias a)() nothrow @safe pure @nogc
 {
-    import std.conv : emplaceRef;
-    enum n = arr.length;
-    U[n] ret = void;
-    static foreach (i; 0 .. n)
-    {
-        emplaceRef!U(ret[i], cast(U) arr[i]);
-    }
-    return ret;
+    return .asStatic!(U[cast(size_t) a.length])(a);
 }
 
 ///
