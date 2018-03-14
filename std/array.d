@@ -3980,6 +3980,7 @@ nothrow pure @safe unittest
     {
         [1, 2, val].asStatic.checkStaticArray!int(gold);
     }
+    checkNogc();
 
     [1, 2, val].asStatic!double.checkStaticArray!double(gold);
     [1, 2, 3].asStatic!int.checkStaticArray!int(gold);
