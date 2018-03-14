@@ -2187,135 +2187,32 @@ auto sqrt(creal z) @nogc @safe pure nothrow
  *    $(TR $(TD $(NAN))        $(TD $(NAN))    )
  *  )
  */
-real exp(real x) @trusted pure nothrow @nogc
+real exp(real x) @trusted pure nothrow @nogc // TODO: @safe
 {
     version(D_InlineAsm_X86)
     {
         //  e^^x = 2^^(LOG2E*x)
         // (This is valid because the overflow & underflow limits for exp
         // and exp2 are so similar).
-        return exp2(LOG2E*x);
+        if (!__ctfe)
+            return exp2(LOG2E*x);
     }
     else version(D_InlineAsm_X86_64)
     {
         //  e^^x = 2^^(LOG2E*x)
         // (This is valid because the overflow & underflow limits for exp
         // and exp2 are so similar).
-        return exp2(LOG2E*x);
+        if (!__ctfe)
+            return exp2(LOG2E*x);
     }
-    else
-    {
-        alias F = floatTraits!real;
-        static if (F.realFormat == RealFormat.ieeeDouble)
-        {
-            // Coefficients for exp(x)
-            static immutable real[3] P = [
-                9.99999999999999999910E-1L,
-                3.02994407707441961300E-2L,
-                1.26177193074810590878E-4L,
-            ];
-            static immutable real[4] Q = [
-                2.00000000000000000009E0L,
-                2.27265548208155028766E-1L,
-                2.52448340349684104192E-3L,
-                3.00198505138664455042E-6L,
-            ];
-
-            // C1 + C2 = LN2.
-            enum real C1 = 6.93145751953125E-1;
-            enum real C2 = 1.42860682030941723212E-6;
-
-            // Overflow and Underflow limits.
-            enum real OF =  7.09782712893383996732E2;  // ln((1-2^-53) * 2^1024)
-            enum real UF = -7.451332191019412076235E2; // ln(2^-1075)
-        }
-        else static if (F.realFormat == RealFormat.ieeeExtended)
-        {
-            // Coefficients for exp(x)
-            static immutable real[3] P = [
-                9.9999999999999999991025E-1L,
-                3.0299440770744196129956E-2L,
-                1.2617719307481059087798E-4L,
-            ];
-            static immutable real[4] Q = [
-                2.0000000000000000000897E0L,
-                2.2726554820815502876593E-1L,
-                2.5244834034968410419224E-3L,
-                3.0019850513866445504159E-6L,
-            ];
-
-            // C1 + C2 = LN2.
-            enum real C1 = 6.9314575195312500000000E-1L;
-            enum real C2 = 1.4286068203094172321215E-6L;
-
-            // Overflow and Underflow limits.
-            enum real OF =  1.1356523406294143949492E4L;  // ln((1-2^-64) * 2^16384)
-            enum real UF = -1.13994985314888605586758E4L; // ln(2^-16446)
-        }
-        else static if (F.realFormat == RealFormat.ieeeQuadruple)
-        {
-            // Coefficients for exp(x) - 1
-            static immutable real[5] P = [
-                9.999999999999999999999999999999999998502E-1L,
-                3.508710990737834361215404761139478627390E-2L,
-                2.708775201978218837374512615596512792224E-4L,
-                6.141506007208645008909088812338454698548E-7L,
-                3.279723985560247033712687707263393506266E-10L
-            ];
-            static immutable real[6] Q = [
-                2.000000000000000000000000000000000000150E0,
-                2.368408864814233538909747618894558968880E-1L,
-                3.611828913847589925056132680618007270344E-3L,
-                1.504792651814944826817779302637284053660E-5L,
-                1.771372078166251484503904874657985291164E-8L,
-                2.980756652081995192255342779918052538681E-12L
-            ];
-
-            // C1 + C2 = LN2.
-            enum real C1 = 6.93145751953125E-1L;
-            enum real C2 = 1.428606820309417232121458176568075500134E-6L;
-
-            // Overflow and Underflow limits.
-            enum real OF =  1.135583025911358400418251384584930671458833e4L;
-            enum real UF = -1.143276959615573793352782661133116431383730e4L;
-        }
-        else
-            static assert(0, "Not implemented for this architecture");
-
-        // Special cases.
-        if (isNaN(x))
-            return x;
-        if (x > OF)
-            return real.infinity;
-        if (x < UF)
-            return 0.0;
-
-        // Express: e^^x = e^^g * 2^^n
-        //   = e^^g * e^^(n * LOG2E)
-        //   = e^^(g + n * LOG2E)
-        int n = cast(int) floor(LOG2E * x + 0.5);
-        x -= n * C1;
-        x -= n * C2;
-
-        // Rational approximation for exponential of the fractional part:
-        //  e^^x = 1 + 2x P(x^^2) / (Q(x^^2) - P(x^^2))
-        const real xx = x * x;
-        const real px = x * poly(xx, P);
-        x = px / (poly(xx, Q) - px);
-        x = 1.0 + ldexp(x, 1);
-
-        // Scale by power of 2.
-        x = ldexp(x, n);
-
-        return x;
-    }
+    return expImpl(x);
 }
 
 /// ditto
-double exp(double x) @safe pure nothrow @nogc  { return exp(cast(real) x); }
+double exp(double x) @safe pure nothrow @nogc { return expImpl(x); }
 
 /// ditto
-float exp(float x)  @safe pure nothrow @nogc   { return exp(cast(real) x); }
+float exp(float x) @safe pure nothrow @nogc { return expImpl(x); }
 
 ///
 @safe unittest
@@ -2324,8 +2221,265 @@ float exp(float x)  @safe pure nothrow @nogc   { return exp(cast(real) x); }
     assert(exp(3.0).feqrel(E * E * E) > 16);
 }
 
+private T expImpl(T)(T x) @safe pure nothrow @nogc
+{
+    alias F = floatTraits!T;
+    static if (F.realFormat == RealFormat.ieeeSingle)
+    {
+        enum T C1 = 0.693359375;
+        enum T C2 = -2.12194440e-4;
+
+        // Overflow and Underflow limits.
+        enum T OF = 88.72283905206835;
+        enum T UF = -103.278929903431851103; // ln(2^-149)
+    }
+    else static if (F.realFormat == RealFormat.ieeeDouble)
+    {
+        // Coefficients for exp(x)
+        static immutable T[3] P = [
+            9.99999999999999999910E-1L,
+            3.02994407707441961300E-2L,
+            1.26177193074810590878E-4L,
+        ];
+        static immutable T[4] Q = [
+            2.00000000000000000009E0L,
+            2.27265548208155028766E-1L,
+            2.52448340349684104192E-3L,
+            3.00198505138664455042E-6L,
+        ];
+
+        // C1 + C2 = LN2.
+        enum T C1 = 6.93145751953125E-1;
+        enum T C2 = 1.42860682030941723212E-6;
+
+        // Overflow and Underflow limits.
+        enum T OF =  7.09782712893383996732E2;  // ln((1-2^-53) * 2^1024)
+        enum T UF = -7.451332191019412076235E2; // ln(2^-1075)
+    }
+    else static if (F.realFormat == RealFormat.ieeeExtended)
+    {
+        // Coefficients for exp(x)
+        static immutable T[3] P = [
+            9.9999999999999999991025E-1L,
+            3.0299440770744196129956E-2L,
+            1.2617719307481059087798E-4L,
+        ];
+        static immutable T[4] Q = [
+            2.0000000000000000000897E0L,
+            2.2726554820815502876593E-1L,
+            2.5244834034968410419224E-3L,
+            3.0019850513866445504159E-6L,
+        ];
+
+        // C1 + C2 = LN2.
+        enum T C1 = 6.9314575195312500000000E-1L;
+        enum T C2 = 1.4286068203094172321215E-6L;
+
+        // Overflow and Underflow limits.
+        enum T OF =  1.1356523406294143949492E4L;  // ln((1-2^-64) * 2^16384)
+        enum T UF = -1.13994985314888605586758E4L; // ln(2^-16446)
+    }
+    else static if (F.realFormat == RealFormat.ieeeQuadruple)
+    {
+        // Coefficients for exp(x) - 1
+        static immutable T[5] P = [
+            9.999999999999999999999999999999999998502E-1L,
+            3.508710990737834361215404761139478627390E-2L,
+            2.708775201978218837374512615596512792224E-4L,
+            6.141506007208645008909088812338454698548E-7L,
+            3.279723985560247033712687707263393506266E-10L
+        ];
+        static immutable T[6] Q = [
+            2.000000000000000000000000000000000000150E0,
+            2.368408864814233538909747618894558968880E-1L,
+            3.611828913847589925056132680618007270344E-3L,
+            1.504792651814944826817779302637284053660E-5L,
+            1.771372078166251484503904874657985291164E-8L,
+            2.980756652081995192255342779918052538681E-12L
+        ];
+
+        // C1 + C2 = LN2.
+        enum T C1 = 6.93145751953125E-1L;
+        enum T C2 = 1.428606820309417232121458176568075500134E-6L;
+
+        // Overflow and Underflow limits.
+        enum T OF =  1.135583025911358400418251384584930671458833e4L;
+        enum T UF = -1.143276959615573793352782661133116431383730e4L;
+    }
+    else
+        static assert(0, "Not implemented for this architecture");
+
+    // Special cases.
+    if (isNaN(x))
+        return x;
+    if (x > OF)
+        return real.infinity;
+    if (x < UF)
+        return 0.0;
+
+    // Express: e^^x = e^^g * 2^^n
+    //   = e^^g * e^^(n * LOG2E)
+    //   = e^^(g + n * LOG2E)
+    T xx = floor((cast(T) LOG2E) * x + cast(T) 0.5);
+    const int n = cast(int) xx;
+    x -= xx * C1;
+    x -= xx * C2;
+
+    static if (F.realFormat == RealFormat.ieeeSingle)
+    {
+        xx = x * x;
+        x = ((((( 1.9875691500E-4f  * x
+                + 1.3981999507E-3f) * x
+                + 8.3334519073E-3f) * x
+                + 4.1665795894E-2f) * x
+                + 1.6666665459E-1f) * x
+                + 5.0000001201E-1f) * xx
+                + x
+                + 1.0f;
+    }
+    else
+    {
+        // Rational approximation for exponential of the fractional part:
+        //  e^^x = 1 + 2x P(x^^2) / (Q(x^^2) - P(x^^2))
+        xx = x * x;
+        const T px = x * poly(xx, P);
+        x = px / (poly(xx, Q) - px);
+        x = (cast(T) 1.0) + ldexp(x, 1);
+    }
+
+    // Scale by power of 2.
+    x = ldexp(x, n);
+
+    return x;
+}
+
 @safe @nogc nothrow unittest
 {
+    FloatingPointControl ctrl;
+    if (FloatingPointControl.hasExceptionTraps)
+        ctrl.disableExceptions(FloatingPointControl.allExceptions);
+    ctrl.rounding = FloatingPointControl.roundToNearest;
+
+    static void testExp(T)()
+    {
+        enum realFormat = floatTraits!T.realFormat;
+        static if (realFormat == RealFormat.ieeeQuadruple)
+        {
+            static immutable T[2][] exptestpoints =
+            [ //  x               exp(x)
+                [ 1.0L,           E                                        ],
+                [ 0.5L,           0x1.a61298e1e069bc972dfefab6df34p+0L     ],
+                [ 3.0L,           E*E*E                                    ],
+                [ 0x1.6p+13L,     0x1.6e509d45728655cdb4840542acb5p+16250L ], // near overflow
+                [ 0x1.7p+13L,     T.infinity                               ], // close overflow
+                [ 0x1p+80L,       T.infinity                               ], // far overflow
+                [ T.infinity,     T.infinity                               ],
+                [-0x1.18p+13L,    0x1.5e4bf54b4807034ea97fef0059a6p-12927L ], // near underflow
+                [-0x1.625p+13L,   0x1.a6bd68a39d11fec3a250cd97f524p-16358L ], // ditto
+                [-0x1.62dafp+13L, 0x0.cb629e9813b80ed4d639e875be6cp-16382L ], // near underflow - subnormal
+                [-0x1.6549p+13L,  0x0.0000000000000000000000000001p-16382L ], // ditto
+                [-0x1.655p+13L,   0                                        ], // close underflow
+                [-0x1p+30L,       0                                        ], // far underflow
+            ];
+        }
+        else static if (realFormat == RealFormat.ieeeExtended)
+        {
+            static immutable T[2][] exptestpoints =
+            [ //  x               exp(x)
+                [ 1.0L,           E                            ],
+                [ 0.5L,           0x1.a61298e1e069bc97p+0L     ],
+                [ 3.0L,           E*E*E                        ],
+                [ 0x1.1p+13L,     0x1.29aeffefc8ec645p+12557L  ], // near overflow
+                [ 0x1.7p+13L,     T.infinity                   ], // close overflow
+                [ 0x1p+80L,       T.infinity                   ], // far overflow
+                [ T.infinity,     T.infinity                   ],
+                [-0x1.18p+13L,    0x1.5e4bf54b4806db9p-12927L  ], // near underflow
+                [-0x1.625p+13L,   0x1.a6bd68a39d11f35cp-16358L ], // ditto
+                [-0x1.62dafp+13L, 0x1.96c53d30277021dp-16383L  ], // near underflow - subnormal
+                [-0x1.643p+13L,   0x1p-16444L                  ], // ditto
+                [-0x1.645p+13L,   0                            ], // close underflow
+                [-0x1p+30L,       0                            ], // far underflow
+            ];
+        }
+        else static if (realFormat == RealFormat.ieeeDouble)
+        {
+            static immutable T[2][] exptestpoints =
+            [ //  x,             exp(x)
+                [ 1.0L,          E                        ],
+                [ 0.5L,          0x1.a61298e1e069cp+0L    ],
+                [ 3.0L,          E*E*E                    ],
+                [ 0x1.6p+9L,     0x1.93bf4ec282efbp+1015L ], // near overflow
+                [ 0x1.7p+9L,     T.infinity               ], // close overflow
+                [ 0x1p+80L,      T.infinity               ], // far overflow
+                [ T.infinity,    T.infinity               ],
+                [-0x1.6p+9L,     0x1.44a3824e5285fp-1016L ], // near underflow
+                [-0x1.64p+9L,    0x0.06f84920bb2d4p-1022L ], // near underflow - subnormal
+                [-0x1.743p+9L,   0x0.0000000000001p-1022L ], // ditto
+                [-0x1.8p+9L,     0                        ], // close underflow
+                [-0x1p+30L,      0                        ], // far underflow
+            ];
+        }
+        else static if (realFormat == RealFormat.ieeeSingle)
+        {
+            static immutable T[2][] exptestpoints =
+            [ //  x,             exp(x)
+                [ 1.0L,          E                ],
+                [ 0.5L,          0x1.a61299p+0L   ],
+                [ 3.0L,          E*E*E            ],
+                [ 0x1.62p+6L,    0x1.99b988p+127L ], // near overflow
+                [ 0x1.7p+6L,     T.infinity       ], // close overflow
+                [ 0x1p+80L,      T.infinity       ], // far overflow
+                [ T.infinity,    T.infinity       ],
+                [-0x1.5cp+6L,    0x1.666d0ep-126L ], // near underflow
+                [-0x1.7p+6L,     0x0.026a42p-126L ], // near underflow - subnormal
+                [-0x1.9cp+6L,    0x0.000002p-126L ], // ditto
+                [-0x1.ap+6L,     0                ], // close underflow
+                [-0x1p+30L,      0                ], // far underflow
+            ];
+        }
+        else
+            static assert(0, "No exp() tests for real type!");
+
+        const minEqualMantissaBits = T.mant_dig - 2;
+        T x;
+        IeeeFlags f;
+        foreach (ref pair; exptestpoints)
+        {
+            resetIeeeFlags();
+            x = exp(pair[0]);
+            //printf("exp(%La) = %La, should be %La\n", cast(real) pair[0], cast(real) x, cast(real) pair[1]);
+            assert(feqrel(x, pair[1]) >= minEqualMantissaBits);
+        }
+
+        // Ideally, exp(0) would not set the inexact flag.
+        // Unfortunately, fldl2e sets it!
+        // So it's not realistic to avoid setting it.
+        assert(exp(cast(T) 0.0) == 1.0);
+
+        // NaN propagation. Doesn't set flags, bcos was already NaN.
+        resetIeeeFlags();
+        x = exp(T.nan);
+        f = ieeeFlags;
+        assert(isIdentical(abs(x), T.nan));
+        assert(f.flags == 0);
+
+        resetIeeeFlags();
+        x = exp(-T.nan);
+        f = ieeeFlags;
+        assert(isIdentical(abs(x), T.nan));
+        assert(f.flags == 0);
+
+        x = exp(NaN(0x123));
+        assert(isIdentical(x, NaN(0x123)));
+    }
+
+    import std.meta : AliasSeq;
+    foreach (T; AliasSeq!(real, double, float))
+        testExp!T();
+
+    // High resolution test (verified against GNU MPFR/Mathematica).
+    assert(exp(0.5L) == 0x1.A612_98E1_E069_BC97_2DFE_FAB6_DF34p+0L);
+
     assert(equalsDigit(exp(3.0L), E * E * E, useDigits));
 }
 
@@ -2913,110 +3067,6 @@ private real exp2Impl(real x) @nogc @trusted pure nothrow
         assert( core.stdc.math.exp2l(0.0L) == 1 );
     }
 }
-
-@system unittest
-{
-    FloatingPointControl ctrl;
-    if (FloatingPointControl.hasExceptionTraps)
-        ctrl.disableExceptions(FloatingPointControl.allExceptions);
-    ctrl.rounding = FloatingPointControl.roundToNearest;
-
-    alias F = floatTraits!real;
-
-    static if (F.realFormat == RealFormat.ieeeQuadruple)
-    {
-        static immutable real[2][] exptestpoints =
-        [ //  x               exp(x)
-            [ 1.0L,           E                                        ],
-            [ 0.5L,           0x1.a61298e1e069bc972dfefab6df34p+0L     ],
-            [ 3.0L,           E*E*E                                    ],
-            [ 0x1.6p+13L,     0x1.6e509d45728655cdb4840542acb5p+16250L ], // near overflow
-            [ 0x1.7p+13L,     real.infinity                            ], // close overflow
-            [ 0x1p+80L,       real.infinity                            ], // far overflow
-            [ real.infinity,  real.infinity                            ],
-            [-0x1.18p+13L,    0x1.5e4bf54b4807034ea97fef0059a6p-12927L ], // near underflow
-            [-0x1.625p+13L,   0x1.a6bd68a39d11fec3a250cd97f524p-16358L ], // ditto
-            [-0x1.62dafp+13L, 0x0.cb629e9813b80ed4d639e875be6cp-16382L ], // near underflow - subnormal
-            [-0x1.6549p+13L,  0x0.0000000000000000000000000001p-16382L ], // ditto
-            [-0x1.655p+13L,   0                                        ], // close underflow
-            [-0x1p+30L,       0                                        ], // far underflow
-        ];
-    }
-    else static if (F.realFormat == RealFormat.ieeeExtended)
-    {
-        static immutable real[2][] exptestpoints =
-        [ //  x               exp(x)
-            [ 1.0L,           E                            ],
-            [ 0.5L,           0x1.a61298e1e069bc97p+0L     ],
-            [ 3.0L,           E*E*E                        ],
-            [ 0x1.1p+13L,     0x1.29aeffefc8ec645p+12557L  ], // near overflow
-            [ 0x1.7p+13L,     real.infinity                ], // close overflow
-            [ 0x1p+80L,       real.infinity                ], // far overflow
-            [ real.infinity,  real.infinity                ],
-            [-0x1.18p+13L,    0x1.5e4bf54b4806db9p-12927L  ], // near underflow
-            [-0x1.625p+13L,   0x1.a6bd68a39d11f35cp-16358L ], // ditto
-            [-0x1.62dafp+13L, 0x1.96c53d30277021dp-16383L  ], // near underflow - subnormal
-            [-0x1.643p+13L,   0x1p-16444L                  ], // ditto
-            [-0x1.645p+13L,   0                            ], // close underflow
-            [-0x1p+30L,       0                            ], // far underflow
-        ];
-    }
-    else static if (F.realFormat == RealFormat.ieeeDouble)
-    {
-        static immutable real[2][] exptestpoints =
-        [ //  x,             exp(x)
-            [ 1.0L,          E                        ],
-            [ 0.5L,          0x1.a61298e1e069cp+0L    ],
-            [ 3.0L,          E*E*E                    ],
-            [ 0x1.6p+9L,     0x1.93bf4ec282efbp+1015L ], // near overflow
-            [ 0x1.7p+9L,     real.infinity            ], // close overflow
-            [ 0x1p+80L,      real.infinity            ], // far overflow
-            [ real.infinity, real.infinity            ],
-            [-0x1.6p+9L,     0x1.44a3824e5285fp-1016L ], // near underflow
-            [-0x1.64p+9L,    0x0.06f84920bb2d4p-1022L ], // near underflow - subnormal
-            [-0x1.743p+9L,   0x0.0000000000001p-1022L ], // ditto
-            [-0x1.8p+9L,     0                        ], // close underflow
-            [-0x1p30L,       0                        ], // far underflow
-        ];
-    }
-    else
-        static assert(0, "No exp() tests for real type!");
-
-    const minEqualMantissaBits = real.mant_dig - 2;
-    real x;
-    IeeeFlags f;
-    foreach (ref pair; exptestpoints)
-    {
-        resetIeeeFlags();
-        x = exp(pair[0]);
-        assert(feqrel(x, pair[1]) >= minEqualMantissaBits);
-    }
-
-    // Ideally, exp(0) would not set the inexact flag.
-    // Unfortunately, fldl2e sets it!
-    // So it's not realistic to avoid setting it.
-    assert(exp(0.0L) == 1.0);
-
-    // NaN propagation. Doesn't set flags, bcos was already NaN.
-    resetIeeeFlags();
-    x = exp(real.nan);
-    f = ieeeFlags;
-    assert(isIdentical(abs(x), real.nan));
-    assert(f.flags == 0);
-
-    resetIeeeFlags();
-    x = exp(-real.nan);
-    f = ieeeFlags;
-    assert(isIdentical(abs(x), real.nan));
-    assert(f.flags == 0);
-
-    x = exp(NaN(0x123));
-    assert(isIdentical(x, NaN(0x123)));
-
-    // High resolution test (verified against GNU MPFR/Mathematica).
-    assert(exp(0.5L) == 0x1.A612_98E1_E069_BC97_2DFE_FAB6_DF34p+0L);
-}
-
 
 /*
  * Calculate cos(y) + i sin(y).
