@@ -2513,7 +2513,7 @@ private auto executeImpl(alias pipeFunc, Cmd, ExtraPipeFuncArgs...)(
     auto p = pipeFunc(commandLine, redirect,
                       env, config, workDir, extraArgs);
 
-    auto a = appender!(ubyte[])();
+    auto a = appender!string;
     enum size_t defaultChunkSize = 4096;
     immutable chunkSize = min(maxOutput, defaultChunkSize);
 
@@ -2532,7 +2532,7 @@ private auto executeImpl(alias pipeFunc, Cmd, ExtraPipeFuncArgs...)(
     // Exhaust the stream, if necessary.
     foreach (ubyte[] chunk; p.stdout.byChunk(defaultChunkSize)) { }
 
-    return Tuple!(int, "status", string, "output")(wait(p.pid), cast(string) a.data);
+    return Tuple!(int, "status", string, "output")(wait(p.pid), a.data);
 }
 
 @system unittest
