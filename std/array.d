@@ -3938,7 +3938,7 @@ or explicitly (`float[2] a = [1,2].asStatic!float`). When `a` is a range,
 the number of elements has to be given as template argument (eg `2.iota.asStatic!2`).
 Size and type can be combined (eg: `2.iota.asStatic!(byte[2])`).
 Range `a` can also be specified as a template argument (eg: `asStatic!(2.iota)`
-or `asStatic!(double, 2.iota)`.
+or `asStatic!(double, 2.iota)`).
 
 Note: `foo([1, 2, 3].asStatic)` may be inefficient because of the copies involved.
 +/
