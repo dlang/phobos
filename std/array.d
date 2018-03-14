@@ -3931,9 +3931,15 @@ unittest
 /++
 Params: a = The input elements
 
-Returns: A static array constructed from `a`. The type of elements can be
-specified implicitly (`int[2] a = [1,2].asStatic;`) or explicitly
-(`float[2] a = [1,2].asStatic!float`).
+Returns: A static array constructed from `a`.
+
+The type of elements can be specified implicitly (`int[2] a = [1,2].asStatic;`)
+or explicitly (`float[2] a = [1,2].asStatic!float`). When `a` is a range,
+the number of elements has to be given as template argument (eg `2.iota.asStatic!2`).
+Size and type can be combined (eg: `2.iota.asStatic!(byte[2])`).
+Range `a` can also be specified as a template argument (eg: `asStatic!(2.iota)`
+or `asStatic!(double, 2.iota)`.
+
 Note: `foo([1, 2, 3].asStatic)` may be inefficient because of the copies involved.
 +/
 pragma(inline, true) T[n] asStatic(T, size_t n)(auto ref T[n] a) nothrow @safe pure @nogc
@@ -4073,11 +4079,7 @@ nothrow pure @system unittest
     }
 }
 
-/++
-Params: a = the compile time range
-
-Returns: A static array constructed from `a`.
-+/
+///
 auto asStatic(alias a)() nothrow @safe pure @nogc
 {
     return .asStatic!(cast(size_t) a.length)(a);
@@ -4117,7 +4119,7 @@ private void checkStaticArray(T, T1, T2)(T1 a, T2 b) nothrow @safe pure @nogc
     assert(a == b);
 }
 
-// TODO: add this to assertThrown in std.exception
+// TODO: consider adding this to assertThrown in std.exception
 private bool isThrown(T : Throwable = Exception, E)(lazy E expression) nothrow pure @system
 {
     try
