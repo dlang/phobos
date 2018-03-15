@@ -190,7 +190,7 @@ version(unittest)
      *  0       nomatch
      */
 
-    private bool equalsDigit(real x, real y, uint ndigits)
+    private bool equalsDigit(real x, real y, uint ndigits) @safe nothrow @nogc
     {
         if (signbit(x) != signbit(y))
             return 0;
@@ -215,8 +215,12 @@ version(unittest)
             alias real_t = double;
         else
             alias real_t = real;
-        ix = sprintf(bufx.ptr, "%.*Lg", ndigits, cast(real_t) x);
-        iy = sprintf(bufy.ptr, "%.*Lg", ndigits, cast(real_t) y);
+
+        () @trusted {
+            ix = sprintf(bufx.ptr, "%.*Lg", ndigits, cast(real_t) x);
+            iy = sprintf(bufy.ptr, "%.*Lg", ndigits, cast(real_t) y);
+        } ();
+
         assert(ix < bufx.length && ix > 0);
         assert(ix < bufy.length && ix > 0);
 
@@ -1077,7 +1081,7 @@ Lret: {}
     assert(isIdentical( tan(NaN(0x0123L)), NaN(0x0123L) ));
 }
 
-@system unittest
+@safe @nogc nothrow unittest
 {
     assert(equalsDigit(tan(PI / 3), std.math.sqrt(3.0), useDigits));
 }
@@ -1104,7 +1108,7 @@ double acos(double x) @safe pure nothrow @nogc { return acos(cast(real) x); }
 /// ditto
 float acos(float x) @safe pure nothrow @nogc  { return acos(cast(real) x); }
 
-@system unittest
+@safe @nogc nothrow unittest
 {
     assert(equalsDigit(acos(0.5), std.math.PI / 3, useDigits));
 }
@@ -1131,7 +1135,7 @@ double asin(double x) @safe pure nothrow @nogc { return asin(cast(real) x); }
 /// ditto
 float asin(float x) @safe pure nothrow @nogc  { return asin(cast(real) x); }
 
-@system unittest
+@safe @nogc nothrow unittest
 {
     assert(equalsDigit(asin(0.5), PI / 6, useDigits));
 }
@@ -1247,7 +1251,7 @@ double atan(double x) @safe pure nothrow @nogc { return atan(cast(real) x); }
 /// ditto
 float atan(float x)  @safe pure nothrow @nogc { return atan(cast(real) x); }
 
-@system unittest
+@safe @nogc nothrow unittest
 {
     assert(equalsDigit(atan(std.math.sqrt(3.0)), PI / 3, useDigits));
 }
@@ -1360,7 +1364,7 @@ float atan2(float y, float x) @safe pure nothrow @nogc
     return atan2(cast(real) y, cast(real) x);
 }
 
-@system unittest
+@safe @nogc nothrow unittest
 {
     assert(equalsDigit(atan2(1.0L, std.math.sqrt(3.0L)), PI / 6, useDigits));
 }
@@ -1387,7 +1391,7 @@ double cosh(double x) @safe pure nothrow @nogc { return cosh(cast(real) x); }
 /// ditto
 float cosh(float x) @safe pure nothrow @nogc  { return cosh(cast(real) x); }
 
-@system unittest
+@safe @nogc nothrow unittest
 {
     assert(equalsDigit(cosh(1.0), (E + 1.0 / E) / 2, useDigits));
 }
@@ -1422,7 +1426,7 @@ double sinh(double x) @safe pure nothrow @nogc { return sinh(cast(real) x); }
 /// ditto
 float sinh(float x) @safe pure nothrow @nogc  { return sinh(cast(real) x); }
 
-@system unittest
+@safe @nogc nothrow unittest
 {
     assert(equalsDigit(sinh(1.0), (E - 1.0 / E) / 2, useDigits));
 }
@@ -1454,7 +1458,7 @@ double tanh(double x) @safe pure nothrow @nogc { return tanh(cast(real) x); }
 /// ditto
 float tanh(float x) @safe pure nothrow @nogc { return tanh(cast(real) x); }
 
-@system unittest
+@safe @nogc nothrow unittest
 {
     assert(equalsDigit(tanh(1.0), sinh(1.0) / cosh(1.0), 15));
 }
@@ -1523,7 +1527,7 @@ double acosh(double x) @safe pure nothrow @nogc { return acosh(cast(real) x); }
 float acosh(float x) @safe pure nothrow @nogc  { return acosh(cast(real) x); }
 
 
-@system unittest
+@safe @nogc nothrow unittest
 {
     assert(isNaN(acosh(0.9)));
     assert(isNaN(acosh(real.nan)));
@@ -1564,7 +1568,7 @@ double asinh(double x) @safe pure nothrow @nogc { return asinh(cast(real) x); }
 /// ditto
 float asinh(float x) @safe pure nothrow @nogc { return asinh(cast(real) x); }
 
-@system  unittest
+@safe @nogc nothrow unittest
 {
     assert(isIdentical(asinh(0.0), 0.0));
     assert(isIdentical(asinh(-0.0), -0.0));
@@ -1605,7 +1609,7 @@ double atanh(double x) @safe pure nothrow @nogc { return atanh(cast(real) x); }
 float atanh(float x) @safe pure nothrow @nogc { return atanh(cast(real) x); }
 
 
-@system unittest
+@safe @nogc nothrow unittest
 {
     assert(isIdentical(atanh(0.0), 0.0));
     assert(isIdentical(atanh(-0.0),-0.0));
@@ -1876,7 +1880,7 @@ double exp(double x) @safe pure nothrow @nogc  { return exp(cast(real) x); }
 /// ditto
 float exp(float x)  @safe pure nothrow @nogc   { return exp(cast(real) x); }
 
-@system unittest
+@safe @nogc nothrow unittest
 {
     assert(equalsDigit(exp(3.0L), E * E * E, useDigits));
 }
@@ -2848,7 +2852,7 @@ if (isFloatingPoint!T)
     assert(frexp(0.0, exp) == 0.0 && exp == 0);
 }
 
-@system unittest
+@safe @nogc nothrow unittest
 {
     int exp;
     real mantissa = frexp(123.456L, exp);
@@ -3254,7 +3258,7 @@ float ldexp(float n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real)
 }
 */
 
-@system unittest
+@safe @nogc nothrow unittest
 {
     static real[3][] vals =    // value,exp,ldexp
     [
@@ -3698,7 +3702,7 @@ real log2(real x) @safe pure nothrow @nogc
     assert(approxEqual(log2(1024.0L), 10));
 }
 
-@system unittest
+@safe @nogc nothrow unittest
 {
     // check if values are equal to 19 decimal digits of precision
     assert(equalsDigit(log2(1024.0L), 10, 19));
@@ -6542,7 +6546,7 @@ if (isFloatingPoint!(F) && isIntegral!(G))
     assert(feqrel(pow(x, neg3),  1 / (x * x * x)) >= real.mant_dig - 1);
 }
 
-@system unittest
+@safe @nogc nothrow unittest
 {
     assert(equalsDigit(pow(2.0L, 10.0L), 1024, 19));
 }
