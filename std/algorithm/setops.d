@@ -504,7 +504,7 @@ if (!allSatisfy!(isForwardRange, R1, R2, RR) ||
 
     assert(canFind(N4, tuple(1, 2, 3, 4)));
     assert(canFind(N4, tuple(4, 3, 2, 1)));
-    assert(canFind(N4, tuple(10, 31, 7, 12)));
+    assert(canFind(N4, tuple(10, 3, 7, 2)));
 }
 
 // Issue 9878
