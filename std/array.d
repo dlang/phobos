@@ -3930,12 +3930,14 @@ unittest
 
 /++
 Constructs a static array from `a`.
-The type of elements can be specified implicitly (`auto a = [1,2].asStatic;` of type int[2])
-or explicitly (`auto a = [1,2].asStatic!float` of type float[2]). When `a` is a range,
-the number of elements has to be given as template argument (eg `2.iota.asStatic!2`).
+The type of elements can be specified implicitly (`[1,2].asStatic` of type int[2])
+or explicitly (`[1,2].asStatic!float` of type float[2]).
+When `a` is a range (not known at compile time), the number of elements has to be given as template argument
+(eg `myrange.asStatic!2`).
 Size and type can be combined (eg: `2.iota.asStatic!(byte[2])`).
-Range `a` can also be specified as a template argument (eg: `asStatic!(2.iota)`
-or `asStatic!(double, 2.iota)`).
+When the range `a` is known at compile time, it can also be specified as a
+template argument to avoid having to specify the number of elements
+(eg: `asStatic!(2.iota)` or `asStatic!(double, 2.iota)`).
 
 Note: `foo([1, 2, 3].asStatic)` may be inefficient because of the copies involved.
 
@@ -4128,7 +4130,7 @@ private void checkStaticArray(T, T1, T2)(T1 a, T2 b) nothrow @safe pure @nogc
 }
 
 // TODO: consider adding this to assertThrown in std.exception
-private bool isThrown(T : Throwable = Exception, E)(lazy E expression) nothrow
+version(unittest) private bool isThrown(T : Throwable = Exception, E)(lazy E expression) nothrow
 {
     try
     {
