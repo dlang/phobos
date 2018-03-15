@@ -200,7 +200,7 @@ PACKAGE_std_algorithm = comparison iteration mutation package searching setops \
   sorting
 PACKAGE_std_container = array binaryheap dlist package rbtree slist util
 PACKAGE_std_datetime = date interval package stopwatch systime timezone
-PACKAGE_std_digest = crc digest hmac md murmurhash package ripemd sha
+PACKAGE_std_digest = crc hmac md murmurhash package ripemd sha
 PACKAGE_std_experimental_logger = core filelogger \
   nulllogger multilogger package
 PACKAGE_std_experimental_allocator = \
@@ -234,6 +234,7 @@ EXTRA_DOCUMENTABLES := $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_WIN32) $(EXTRA_MOD
 
 EXTRA_MODULES_INTERNAL := $(addprefix std/, \
 	algorithm/internal \
+	digest/digest \
 	$(addprefix internal/, \
 		cstring digest/sha_SSSE3 \
 		$(addprefix math/, biguintcore biguintnoasm biguintx86	\
