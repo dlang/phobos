@@ -422,7 +422,7 @@ parses foo but leaves "--bar" in $(D args). The double-dash itself is
 removed from the argument array unless the $(D std.getopt.config.keepEndOfOptions)
 directive is given.
 */
-GetoptResult getopt(T...)(ref string[] args, T opts)
+GetoptResult getopt(T...)(ref string[] args, scope T opts)
 {
     import std.exception : enforce;
     enforce(args.length,
@@ -456,6 +456,19 @@ GetoptResult getopt(T...)(ref string[] args, T opts)
     {
         defaultGetoptPrinter("Some information about the program.",
             rslt.options);
+    }
+}
+
+version(DIP1000)
+{
+    @safe unittest
+    {
+        auto args = ["prog", "--foo", "-b"];
+
+        bool foo;
+        bool bar;
+        auto rslt = getopt(args, "foo|f", "Some information about foo.", &foo, "bar|b",
+            "Some help message about bar.", &bar);
     }
 }
 
@@ -681,7 +694,7 @@ private template optionValidator(A...)
 
 private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
     ref GetoptResult rslt, ref GetOptException excep,
-    void[][string] visitedLongOpts, void[][string] visitedShortOpts, T opts)
+    void[][string] visitedLongOpts, void[][string] visitedShortOpts, scope T opts)
 {
     enum validationMessage = optionValidator!T;
     static assert(validationMessage == "", validationMessage);
@@ -700,7 +713,16 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
         else
         {
             // it's an option string
-            auto option = to!string(opts[0]);
+            static if (is(typeof(opts[0]) == string))
+            {
+                // allocate a new string so as to remove the
+                // scope restriction
+                string option = opts[0].idup;
+            }
+            else
+            {
+                string option = to!string(opts[0]);
+            }
             if (option.length == 0)
             {
                 excep = new GetOptException("An option name may not be an empty string", excep);
@@ -729,7 +751,9 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
             static if (is(typeof(opts[1]) : string))
             {
                 auto receiver = opts[2];
-                optionHelp.help = opts[1];
+                // allocate a new string so as to remove the
+                // scope restriction
+                optionHelp.help = opts[1].idup;
                 immutable lowSliceIdx = 3;
             }
             else
@@ -802,7 +826,7 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
     }
 }
 
-private bool handleOption(R)(string option, R receiver, ref string[] args,
+private bool handleOption(R)(string option, scope R receiver, ref string[] args,
     ref configuration cfg, bool incremental)
 {
     import std.algorithm.iteration : map, splitter;
