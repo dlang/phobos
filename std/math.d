@@ -2498,7 +2498,29 @@ private T expImpl(T)(T x) @safe pure nothrow @nogc
  *    $(TR $(TD $(NAN))        $(TD $(NAN))       )
  *  )
  */
-real expm1(real x) @trusted pure nothrow @nogc
+real expm1(real x) @trusted pure nothrow @nogc // TODO: @safe
+{
+    version(InlineAsm_X86_Any)
+    {
+        if (!__ctfe)
+            return expm1Asm(x);
+    }
+    return expm1Impl(x);
+}
+
+/// ditto
+double expm1(double x) @safe pure nothrow @nogc { return expm1Impl(x); }
+
+///
+@safe unittest
+{
+    assert(isIdentical(expm1(0.0), 0.0));
+    assert(expm1(1.0).feqrel(1.71828) > 16);
+    assert(expm1(2.0).feqrel(6.3890) > 16);
+}
+
+version(InlineAsm_X86_Any)
+private real expm1Asm(real x) @trusted pure nothrow @nogc
 {
     version(D_InlineAsm_X86)
     {
@@ -2662,98 +2684,147 @@ L_largenegative:
         }
     }
     else
+        static assert(0);
+}
+
+private T expm1Impl(T)(T x) @safe pure nothrow @nogc
+{
+    // Coefficients for exp(x) - 1 and overflow/underflow limits.
+    enum realFormat = floatTraits!T.realFormat;
+    static if (realFormat == RealFormat.ieeeQuadruple)
     {
-        // Coefficients for exp(x) - 1 and overflow/underflow limits.
-        static if (floatTraits!real.realFormat == RealFormat.ieeeQuadruple)
-        {
-            static immutable real[8] P = [
-                2.943520915569954073888921213330863757240E8L,
-                -5.722847283900608941516165725053359168840E7L,
-                8.944630806357575461578107295909719817253E6L,
-                -7.212432713558031519943281748462837065308E5L,
-                4.578962475841642634225390068461943438441E4L,
-                -1.716772506388927649032068540558788106762E3L,
-                4.401308817383362136048032038528753151144E1L,
-                -4.888737542888633647784737721812546636240E-1L
-            ];
+        static immutable T[8] P = [
+            2.943520915569954073888921213330863757240E8L,
+            -5.722847283900608941516165725053359168840E7L,
+            8.944630806357575461578107295909719817253E6L,
+            -7.212432713558031519943281748462837065308E5L,
+            4.578962475841642634225390068461943438441E4L,
+            -1.716772506388927649032068540558788106762E3L,
+            4.401308817383362136048032038528753151144E1L,
+            -4.888737542888633647784737721812546636240E-1L
+        ];
 
-            static immutable real[9] Q = [
-                1.766112549341972444333352727998584753865E9L,
-                -7.848989743695296475743081255027098295771E8L,
-                1.615869009634292424463780387327037251069E8L,
-                -2.019684072836541751428967854947019415698E7L,
-                1.682912729190313538934190635536631941751E6L,
-                -9.615511549171441430850103489315371768998E4L,
-                3.697714952261803935521187272204485251835E3L,
-                -8.802340681794263968892934703309274564037E1L,
-                1.0
-            ];
+        static immutable T[9] Q = [
+            1.766112549341972444333352727998584753865E9L,
+            -7.848989743695296475743081255027098295771E8L,
+            1.615869009634292424463780387327037251069E8L,
+            -2.019684072836541751428967854947019415698E7L,
+            1.682912729190313538934190635536631941751E6L,
+            -9.615511549171441430850103489315371768998E4L,
+            3.697714952261803935521187272204485251835E3L,
+            -8.802340681794263968892934703309274564037E1L,
+            1.0
+        ];
 
-            enum real OF = 1.1356523406294143949491931077970764891253E4L;
-            enum real UF = -1.143276959615573793352782661133116431383730e4L;
-        }
-        else
-        {
-            static immutable real[5] P = [
-               -1.586135578666346600772998894928250240826E4L,
-                2.642771505685952966904660652518429479531E3L,
-               -3.423199068835684263987132888286791620673E2L,
-                1.800826371455042224581246202420972737840E1L,
-               -5.238523121205561042771939008061958820811E-1L,
-            ];
-            static immutable real[6] Q = [
-               -9.516813471998079611319047060563358064497E4L,
-                3.964866271411091674556850458227710004570E4L,
-               -7.207678383830091850230366618190187434796E3L,
-                7.206038318724600171970199625081491823079E2L,
-               -4.002027679107076077238836622982900945173E1L,
-                1.0
-            ];
+        enum T OF = 1.1356523406294143949491931077970764891253E4L;
+        enum T UF = -1.143276959615573793352782661133116431383730e4L;
+    }
+    else static if (realFormat == RealFormat.ieeeExtended)
+    {
+        static immutable T[5] P = [
+           -1.586135578666346600772998894928250240826E4L,
+            2.642771505685952966904660652518429479531E3L,
+           -3.423199068835684263987132888286791620673E2L,
+            1.800826371455042224581246202420972737840E1L,
+           -5.238523121205561042771939008061958820811E-1L,
+        ];
+        static immutable T[6] Q = [
+           -9.516813471998079611319047060563358064497E4L,
+            3.964866271411091674556850458227710004570E4L,
+           -7.207678383830091850230366618190187434796E3L,
+            7.206038318724600171970199625081491823079E2L,
+           -4.002027679107076077238836622982900945173E1L,
+            1.0
+        ];
 
-            enum real OF =  1.1356523406294143949492E4L;
-            enum real UF = -4.5054566736396445112120088E1L;
-        }
+        enum T OF =  1.1356523406294143949492E4L;
+        enum T UF = -4.5054566736396445112120088E1L;
+    }
+    else static if (realFormat == RealFormat.ieeeDouble)
+    {
+        static immutable T[3] P = [
+            9.9999999999999999991025E-1,
+            3.0299440770744196129956E-2,
+            1.2617719307481059087798E-4,
+        ];
+        static immutable T[4] Q = [
+            2.0000000000000000000897E0,
+            2.2726554820815502876593E-1,
+            2.5244834034968410419224E-3,
+            3.0019850513866445504159E-6,
+        ];
+    }
+    else
+        static assert(0, "no coefficients for expm1()");
 
+    static if (realFormat == RealFormat.ieeeDouble) // special case for double precision
+    {
+        if (x < -0.5 || x > 0.5)
+            return exp(x) - 1.0;
+        if (x == 0.0)
+            return x;
 
+        const T xx = x * x;
+        x = x * poly(xx, P);
+        x = x / (poly(xx, Q) - x);
+        return x + x;
+    }
+    else
+    {
         // C1 + C2 = LN2.
-        enum real C1 = 6.9314575195312500000000E-1L;
-        enum real C2 = 1.428606820309417232121458176568075500134E-6L;
+        enum T C1 = 6.9314575195312500000000E-1L;
+        enum T C2 = 1.428606820309417232121458176568075500134E-6L;
 
         // Special cases.
         if (x > OF)
             return real.infinity;
-        if (x == 0.0)
+        if (x == cast(T) 0.0)
             return x;
         if (x < UF)
             return -1.0;
 
         // Express x = LN2 (n + remainder), remainder not exceeding 1/2.
-        int n = cast(int) floor(0.5 + x / LN2);
+        int n = cast(int) floor((cast(T) 0.5) + x / cast(T) LN2);
         x -= n * C1;
         x -= n * C2;
 
         // Rational approximation:
         //  exp(x) - 1 = x + 0.5 x^^2 + x^^3 P(x) / Q(x)
-        real px = x * poly(x, P);
-        real qx = poly(x, Q);
-        const real xx = x * x;
-        qx = x + (0.5 * xx + xx * px / qx);
+        T px = x * poly(x, P);
+        T qx = poly(x, Q);
+        const T xx = x * x;
+        qx = x + ((cast(T) 0.5) * xx + xx * px / qx);
 
         // We have qx = exp(remainder LN2) - 1, so:
         //  exp(x) - 1 = 2^^n (qx + 1) - 1 = 2^^n qx + 2^^n - 1.
-        px = ldexp(1.0, n);
-        x = px * qx + (px - 1.0);
+        px = ldexp(cast(T) 1.0, n);
+        x = px * qx + (px - cast(T) 1.0);
 
         return x;
     }
 }
 
-///
-@safe unittest
+@safe @nogc nothrow unittest
 {
-    assert(isIdentical(expm1(0.0), 0.0));
-    assert(expm1(1.0).feqrel(1.71828) > 16);
-    assert(expm1(2.0).feqrel(6.3890) > 16);
+    static void testExpm1(T)()
+    {
+        // NaN
+        assert(isNaN(expm1(cast(T) T.nan)));
+
+        static immutable T[] xs = [ -2, -0.75, -0.3, 0.0, 0.1, 0.2, 0.5, 1.0 ];
+        foreach (x; xs)
+        {
+            const T e = expm1(x);
+            const T r = exp(x) - 1;
+
+            //printf("expm1(%Lg) = %Lg, should approximately be %Lg\n", cast(real) x, cast(real) e, cast(real) r);
+            assert(approxEqual(r, e));
+        }
+    }
+
+    import std.meta : AliasSeq;
+    foreach (T; AliasSeq!(real, double))
+        testExpm1!T();
 }
 
 /**
