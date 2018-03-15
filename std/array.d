@@ -3929,18 +3929,19 @@ unittest
 }
 
 /++
-Params: a = The input elements
-
-Returns: A static array constructed from `a`.
-
-The type of elements can be specified implicitly (`int[2] a = [1,2].asStatic;`)
-or explicitly (`float[2] a = [1,2].asStatic!float`). When `a` is a range,
+Constructs a static array from `a`.
+The type of elements can be specified implicitly (`auto a = [1,2].asStatic;` of type int[2])
+or explicitly (`auto a = [1,2].asStatic!float` of type float[2]). When `a` is a range,
 the number of elements has to be given as template argument (eg `2.iota.asStatic!2`).
 Size and type can be combined (eg: `2.iota.asStatic!(byte[2])`).
 Range `a` can also be specified as a template argument (eg: `asStatic!(2.iota)`
 or `asStatic!(double, 2.iota)`).
 
 Note: `foo([1, 2, 3].asStatic)` may be inefficient because of the copies involved.
+
+Params: a = The input elements
+
+Returns: A static array constructed from `a`.
 +/
 pragma(inline, true) T[n] asStatic(T, size_t n)(auto ref T[n] a) nothrow @safe pure @nogc
 {
@@ -3960,7 +3961,7 @@ if (!is(U == T))
     return ret;
 }
 
-///
+/// static array from array
 nothrow pure @safe unittest
 {
     auto a = [0, 1].asStatic;
@@ -4025,14 +4026,14 @@ auto asStatic(Un : U[n], U, size_t n, T)(T a) nothrow @safe pure @nogc
     return ret;
 }
 
-///
+/// static array from range + size
 nothrow pure @safe unittest
 {
     import std.range : iota;
-
-    auto a = 2.iota.asStatic!2;
+    auto input = 2.iota;
+    auto a = input.asStatic!2;
     assert(is(typeof(a) == int[2]) && a == [0, 1]);
-    auto b = 2.iota.asStatic!(byte[2]);
+    auto b = input.asStatic!(byte[2]);
     assert(is(typeof(b) == byte[2]) && b == [0, 1]);
 }
 
@@ -4080,7 +4081,7 @@ nothrow pure @system unittest
     }
 }
 
-///
+/// ditto
 auto asStatic(alias a)() nothrow @safe pure @nogc
 {
     return .asStatic!(cast(size_t) a.length)(a);
@@ -4092,7 +4093,7 @@ auto asStatic(U, alias a)() nothrow @safe pure @nogc
     return .asStatic!(U[cast(size_t) a.length])(a);
 }
 
-///
+/// static array from CT range
 nothrow pure @safe unittest
 {
     import std.range : iota;
@@ -4116,7 +4117,7 @@ nothrow pure @safe unittest
 
 private void checkStaticArray(T, T1, T2)(T1 a, T2 b) nothrow @safe pure @nogc
 {
-    assert(is(T1 == T[T1.length]));
+    static assert(is(T1 == T[T1.length]));
     assert(a == b);
 }
 
