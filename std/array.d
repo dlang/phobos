@@ -4062,29 +4062,9 @@ nothrow pure @system unittest
 
     assert(isThrown!Error(2.iota.asStatic!1));
     assert(isThrown!Error(2.iota.asStatic!3));
-    // NOTE: alternatives are not nothrow:
-    version (none)
-    {
-        import std.exception : assertThrown;
 
-        assertThrown!Error(2.iota.asStatic!3);
-        import std.exception : ifThrown;
-
-        assert(ifThrown!Error({ 2.iota.asStatic!1; return false; }(), true));
-    }
-}
-
-@system unittest
-{
-    version (Bug)
-    {
-        // https://issues.dlang.org/show_bug.cgi?id=16779
-        auto a2 = [1, 2, 3].asStatic!byte;
-        auto a3 = [1, 2, 3].asStatic!ubyte;
-
-        // NOTE: correctly issues a deprecation
-        int[] a2 = [1, 2].asStatic;
-    }
+    // NOTE: correctly issues a deprecation
+    // int[] a2 = [1, 2].asStatic;
 }
 
 /// ditto
@@ -4129,7 +4109,20 @@ private void checkStaticArray(T, T1, T2)(T1 a, T2 b) nothrow @safe pure @nogc
     assert(a == b);
 }
 
-// TODO: consider adding this to assertThrown in std.exception
+/+
+TODO: consider adding this to assertThrown in std.exception
+The alternatives are not nothrow (see https://issues.dlang.org/show_bug.cgi?id=12647)
+---
+import std.exception : assertThrown;
+assertThrown!Error(expr_that_throws);
+
+// or
+import std.exception : ifThrown;
+scope(failure) assert(0);
+assert(ifThrown!Error({ expr_that_throws; return false; }(), true));
+---
+Also, `isThrown` is easier to use than ifThrown and more flexible than assertThrown.
++/
 version(unittest) private bool isThrown(T : Throwable = Exception, E)(lazy E expression) nothrow
 {
     try
