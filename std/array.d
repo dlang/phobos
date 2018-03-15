@@ -3949,7 +3949,7 @@ pragma(inline, true) T[n] asStatic(T, size_t n)(auto ref T[n] a) nothrow @safe p
 }
 
 /// ditto
-U[n] asStatic(U, T, size_t n)(auto ref T[n] a) nothrow @safe pure @nogc
+U[n] asStatic(U, T, size_t n)(auto ref T[n] a)
 if (!is(U == T))
 {
     import std.conv : emplaceRef;
@@ -3997,7 +3997,7 @@ nothrow pure @safe unittest
 }
 
 /// ditto
-auto asStatic(size_t n, T)(T a) nothrow @safe pure @nogc
+auto asStatic(size_t n, T)(T a)
 {
     import std.conv : emplaceRef;
     // TODO: ElementType vs ForeachType
@@ -4082,13 +4082,13 @@ nothrow pure @system unittest
 }
 
 /// ditto
-auto asStatic(alias a)() nothrow @safe pure @nogc
+auto asStatic(alias a)()
 {
     return .asStatic!(cast(size_t) a.length)(a);
 }
 
 /// ditto
-auto asStatic(U, alias a)() nothrow @safe pure @nogc
+auto asStatic(U, alias a)()
 {
     return .asStatic!(U[cast(size_t) a.length])(a);
 }
@@ -4122,7 +4122,7 @@ private void checkStaticArray(T, T1, T2)(T1 a, T2 b) nothrow @safe pure @nogc
 }
 
 // TODO: consider adding this to assertThrown in std.exception
-private bool isThrown(T : Throwable = Exception, E)(lazy E expression) nothrow pure @system
+private bool isThrown(T : Throwable = Exception, E)(lazy E expression) nothrow
 {
     try
     {
