@@ -3965,10 +3965,12 @@ if (!is(U == T))
 nothrow pure @safe unittest
 {
     auto a = [0, 1].asStatic;
-    assert(is(typeof(a) == int[2]) && a == [0, 1]);
+    static assert(is(typeof(a) == int[2]));
+    assert(a == [0, 1]);
 
     auto b = [0, 1].asStatic!byte;
-    assert(is(typeof(b) == byte[2]) && b == [0, 1]);
+    static assert(is(typeof(b) == byte[2]));
+    assert(b == [0, 1]);
 }
 
 nothrow pure @safe unittest
@@ -4032,9 +4034,11 @@ nothrow pure @safe unittest
     import std.range : iota;
     auto input = 2.iota;
     auto a = input.asStatic!2;
-    assert(is(typeof(a) == int[2]) && a == [0, 1]);
+    static assert(is(typeof(a) == int[2]));
+    assert(a == [0, 1]);
     auto b = input.asStatic!(byte[2]);
-    assert(is(typeof(b) == byte[2]) && b == [0, 1]);
+    static assert(is(typeof(b) == byte[2]));
+    assert(b == [0, 1]);
 }
 
 nothrow pure @safe unittest
@@ -4099,10 +4103,12 @@ nothrow pure @safe unittest
     import std.range : iota;
 
     enum a = asStatic!(2.iota);
-    assert(is(typeof(a) == int[2]) && a == [0, 1]);
+    static assert(is(typeof(a) == int[2]));
+    assert(a == [0, 1]);
 
     enum b = asStatic!(byte, 2.iota);
-    assert(is(typeof(b) == byte[2]) && b == [0, 1]);
+    static assert(is(typeof(b) == byte[2]));
+    assert(b == [0, 1]);
 }
 
 nothrow pure @safe unittest
