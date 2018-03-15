@@ -107,7 +107,8 @@ private template createAccessors(
 
         static if (is(T == bool))
         {
-            static assert(len == 1);
+            static assert(len == 1, "`" ~ name ~
+                    "` definition problem: type `bool` is only allowed for single-bit fields");
             enum result =
             // getter
                 "@property bool " ~ name ~ "() @safe pure nothrow @nogc const { return "
