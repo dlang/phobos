@@ -35,7 +35,7 @@ $(T2 endsWith,
         `endsWith("rocks", "ks")` returns `true`.)
 $(T2 find,
         `find("hello world", "or")` returns `"orld"` using linear search.
-        (For binary search refer to $(REF sortedRange, std,range).))
+        (For binary search refer to $(REF SortedRange, std,range).))
 $(T2 findAdjacent,
         `findAdjacent([1, 2, 3, 3, 4])` returns the subrange starting with
         two equal adjacent elements, i.e. `[3, 3, 4]`.)
