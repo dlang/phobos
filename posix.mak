@@ -530,7 +530,8 @@ CWS_TOCHECK = posix.mak win32.mak win64.mak
 CWS_TOCHECK += $(ALL_D_FILES) index.d
 
 checkwhitespace: $(LIB) $(TOOLS_DIR)/checkwhitespace.d
-	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -run $(TOOLS_DIR)/checkwhitespace.d $(CWS_TOCHECK)
+	# Temporarily disabled - see https://github.com/dlang/dmd/pull/7953
+	#$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -run $(TOOLS_DIR)/checkwhitespace.d $(CWS_TOCHECK)
 
 #############################
 # Submission to Phobos are required to conform to the DStyle
