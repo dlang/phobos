@@ -629,12 +629,7 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
     enforce(line.length); // expect a non-empty line
     --------------------
  +/
-T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
-    (T value, lazy string msg = null)
-{
-    if (!value) throw new ErrnoException(msg, file, line);
-    return value;
-}
+alias errnoEnforce = enforce!ErrnoException;
 
 // @@@DEPRECATED_2.084@@@
 /++
