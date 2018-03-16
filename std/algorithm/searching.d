@@ -79,9 +79,6 @@ $(T2 maxPos,
         `maxPos([2, 3, 1, 3, 4, 1])` returns the subrange `[4, 1]`,
         i.e., positions the range at the first occurrence of its maximal
         element.)
-$(T2 mismatch,
-        `mismatch("parakeet", "parachute")` returns the two ranges
-        `"keet"` and `"chute"`.)
 $(T2 skipOver,
         Assume `a = "blah"`. Then `skipOver(a, "bi")` leaves `a`
         unchanged and returns `false`, whereas `skipOver(a, "bl")`
