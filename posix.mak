@@ -213,7 +213,7 @@ PACKAGE_std_experimental_allocator_building_blocks = \
 PACKAGE_std_net = curl isemail
 PACKAGE_std_range = interfaces package primitives
 PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
-  backtracking tests tests2 thompson kickstart)
+  backtracking thompson kickstart)
 
 # Modules in std (including those in packages)
 STD_MODULES=$(call P2MODULES,$(STD_PACKAGES))
@@ -340,7 +340,9 @@ endif
 $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
 	@echo Testing $@ - disabled
 
-UT_D_OBJS:=$(addprefix $(ROOT)/unittest/,$(addsuffix .o,$(D_MODULES)))
+UT_D_OBJS:=$(addprefix $(ROOT)/unittest/,$(addsuffix .o,$(D_MODULES) \
+	$(addprefix std/regex/internal/tests/, comon other $(addprefix test, 1 2 3 4  6 \
+		7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28))))
 # need to recompile all unittest objects whenever sth. changes
 $(UT_D_OBJS): $(ALL_D_FILES)
 $(UT_D_OBJS): $(ROOT)/unittest/%.o: %.d
