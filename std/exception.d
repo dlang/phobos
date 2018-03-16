@@ -636,16 +636,14 @@ T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
     return value;
 }
 
-// @@@DEPRECATED_2.084@@@
+// @@@DEPRECATED_2.089@@@
 /++
-    $(RED Deprecated. Please use $(LREF enforce) instead. This function will be removed 2.084.)
+    $(RED Deprecated. Please use $(LREF enforce) instead. This function will be removed 2.089.)
 
     If $(D !value) is $(D false), $(D value) is returned. Otherwise,
     $(D new E(msg, file, line)) is thrown. Or if $(D E) doesn't take a message
     and can be constructed with $(D new E(file, line)), then
     $(D new E(file, line)) will be thrown.
-
-    This is legacy name, it is recommended to use $(D enforce!E) instead.
 
     Example:
     --------------------
@@ -654,7 +652,7 @@ T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
     enforceEx!DataCorruptionException(line.length);
     --------------------
  +/
-//deprecated("Please use enforce instead")
+deprecated("Use `enforce`. `enforceEx` will be removed with 2.089.")
 template enforceEx(E : Throwable)
 if (is(typeof(new E("", string.init, size_t.init))))
 {
@@ -667,7 +665,7 @@ if (is(typeof(new E("", string.init, size_t.init))))
 }
 
 /+ Ditto +/
-//deprecated("Please use enforce instead")
+deprecated("Use `enforce`. `enforceEx` will be removed with 2.089.")
 template enforceEx(E : Throwable)
 if (is(typeof(new E(string.init, size_t.init))) && !is(typeof(new E("", string.init, size_t.init))))
 {
@@ -679,7 +677,7 @@ if (is(typeof(new E(string.init, size_t.init))) && !is(typeof(new E("", string.i
     }
 }
 
-//deprecated
+deprecated
 @system unittest
 {
     import core.exception : OutOfMemoryError;
@@ -723,7 +721,7 @@ if (is(typeof(new E(string.init, size_t.init))) && !is(typeof(new E("", string.i
     static assert(!is(typeof(enforceEx!int(true))));
 }
 
-//deprecated
+deprecated
 @safe unittest
 {
     alias enf = enforceEx!Exception;

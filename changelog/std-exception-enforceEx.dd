@@ -1,0 +1,24 @@
+`std.exception.enforceEx` was deprecated in favor of `std.exception.enforce`
+
+With 2.079 $(REF enforce, std,exception) became a complete super set of
+$(REF enforceEx, std,exception)
+
+$(H3 Corrective action)
+
+Replace:
+
+---
+import std.exception;
+alias enf = enforceEx!Exception;
+assertNotThrown(enf(true));
+assertThrown(enf(false, "blah"));
+---
+
+with:
+
+---
+import std.exception;
+alias enf = enforce!Exception;
+assertNotThrown(enf(true));
+assertThrown(enf(false, "blah"));
+---
