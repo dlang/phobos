@@ -36,7 +36,7 @@ $(TR $(TH Function Name) $(TH Description)
         $(TD Creates a function that binds the first argument of a given function
         to a given value.
     ))
-    $(TR $(TD $(LREF reverseArgs), $(LREF binaryReverseArgs))
+    $(TR $(TD $(LREF reverseArgs))
         $(TD Predicate that reverses the order of its arguments.
     ))
     $(TR $(TD $(LREF toDelegate))
@@ -537,10 +537,28 @@ alias equalTo = safeOp!"==";
 template reverseArgs(alias pred)
 {
     auto reverseArgs(Args...)(auto ref Args args)
-        if (is(typeof(pred(Reverse!args))))
+    if (is(typeof(pred(Reverse!args))))
     {
         return pred(Reverse!args);
     }
+}
+
+///
+@safe unittest
+{
+    alias gt = reverseArgs!(binaryFun!("a < b"));
+    assert(gt(2, 1) && !gt(1, 1));
+}
+
+///
+@safe unittest
+{
+    int x = 42;
+    bool xyz(int a, int b) { return a * x < b / x; }
+    auto foo = &xyz;
+    foo(4, 5);
+    alias zyx = reverseArgs!(foo);
+    assert(zyx(5, 4) == foo(4, 5));
 }
 
 ///
@@ -580,10 +598,14 @@ template reverseArgs(alias pred)
     assert(b() == _b());
 }
 
+// @@@DEPRECATED_2.089@@@
 /**
    Binary predicate that reverses the order of arguments, e.g., given
    $(D pred(a, b)), returns $(D pred(b, a)).
+
+   $(RED DEPRECATED: Use $(LREF reverseArgs))
 */
+deprecated("Use `reverseArgs`. `binaryReverseArgs` will be removed in 2.089.")
 template binaryReverseArgs(alias pred)
 {
     auto binaryReverseArgs(ElementType1, ElementType2)
@@ -594,6 +616,7 @@ template binaryReverseArgs(alias pred)
 }
 
 ///
+deprecated
 @safe unittest
 {
     alias gt = binaryReverseArgs!(binaryFun!("a < b"));
@@ -601,6 +624,7 @@ template binaryReverseArgs(alias pred)
 }
 
 ///
+deprecated
 @safe unittest
 {
     int x = 42;
