@@ -74,6 +74,13 @@ class ConvException : Exception
     mixin basicExceptionCtors;
 }
 
+///
+@safe unittest
+{
+    import std.exception : assertThrown;
+    assertThrown!ConvException(to!int("abc"));
+}
+
 private auto convError(S, T)(S source, string fn = __FILE__, size_t ln = __LINE__)
 {
     string msg;
@@ -173,6 +180,13 @@ class ConvOverflowException : ConvException
     {
         super(s, fn, ln);
     }
+}
+
+///
+@safe unittest
+{
+    import std.exception : assertThrown;
+    assertThrown!ConvOverflowException(to!ubyte(1_000_000));
 }
 
 /**
@@ -4179,19 +4193,9 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
 string text(T...)(T args)
 if (T.length > 0) { return textImpl!string(args); }
 
-// @@@DEPRECATED_2018-06@@@
-deprecated("Calling `text` with 0 arguments is deprecated")
-string text(T...)(T args)
-if (T.length == 0) { return textImpl!string(args); }
-
 ///ditto
 wstring wtext(T...)(T args)
 if (T.length > 0) { return textImpl!wstring(args); }
-
-// @@@DEPRECATED_2018-06@@@
-deprecated("Calling `wtext` with 0 arguments is deprecated")
-wstring wtext(T...)(T args)
-if (T.length == 0) { return textImpl!wstring(args); }
 
 ///ditto
 dstring dtext(T...)(T args)
@@ -4204,6 +4208,16 @@ if (T.length > 0) { return textImpl!dstring(args); }
     assert(wtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"w);
     assert(dtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"d);
 }
+
+// @@@DEPRECATED_2018-06@@@
+deprecated("Calling `text` with 0 arguments is deprecated")
+string text(T...)(T args)
+if (T.length == 0) { return textImpl!string(args); }
+
+// @@@DEPRECATED_2018-06@@@
+deprecated("Calling `wtext` with 0 arguments is deprecated")
+wstring wtext(T...)(T args)
+if (T.length == 0) { return textImpl!wstring(args); }
 
 // @@@DEPRECATED_2018-06@@@
 deprecated("Calling `dtext` with 0 arguments is deprecated")
@@ -6438,6 +6452,19 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
 
         return Result(value);
     }
+}
+
+///
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+
+    assert(toChars(1).equal("1"));
+    assert(toChars(1_000_000).equal("1000000"));
+
+    assert(toChars!(2)(2U).equal("10"));
+    assert(toChars!(16)(255U).equal("ff"));
+    assert(toChars!(16, char, LetterCase.upper)(255U).equal("FF"));
 }
 
 
