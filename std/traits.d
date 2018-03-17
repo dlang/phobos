@@ -7889,7 +7889,9 @@ private template getSymbolsByUDAImpl(alias symbol, alias attribute, names...)
             else static if (isFunction!member)
             {
                 enum hasSpecificUDA(alias member) = hasUDA!(member, attribute);
-                alias getSymbolsByUDAImpl = Filter!(hasSpecificUDA, __traits(getOverloads, symbol, names[0]));
+                alias getSymbolsByUDAImpl = AliasSeq!(
+                    Filter!(hasSpecificUDA, __traits(getOverloads, symbol, names[0])),
+                    tail);
             }
             else static if (hasUDA!(member, attribute))
             {
@@ -7989,6 +7991,21 @@ private template getSymbolsByUDAImpl(alias symbol, alias attribute, names...)
 
     static assert(getSymbolsByUDA!(A, attr1).length == 2);
     static assert(getSymbolsByUDA!(A, attr2).length == 1);
+}
+
+//Issue 18624
+@safe unittest
+{
+    enum Attr;
+    struct A
+    {
+        @Attr void a();
+        @Attr void a(int n);
+              void b();
+        @Attr void c();
+    }
+
+    static assert(getSymbolsByUDA!(A, Attr).stringof == "tuple(a, a, c)");
 }
 
 // #15335: getSymbolsByUDA fails if type has private members
