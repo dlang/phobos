@@ -7877,7 +7877,8 @@ private template getSymbolsByUDAImpl(alias symbol, alias attribute, names...)
             else static if (isFunction!member)
             {
                 enum hasSpecificUDA(alias member) = hasUDA!(member, attribute);
-                alias getSymbolsByUDAImpl = Filter!(hasSpecificUDA, __traits(getOverloads, symbol, names[0]));
+                alias overloadsWithUDA = Filter!(hasSpecificUDA, __traits(getOverloads, symbol, names[0]));
+                alias getSymbolsByUDAImpl = AliasSeq!(overloadsWithUDA, tail);
             }
             else static if (hasUDA!(member, attribute))
             {
@@ -8018,6 +8019,21 @@ private template getSymbolsByUDAImpl(alias symbol, alias attribute, names...)
     alias res = getSymbolsByUDA!(A, Attr);
     static assert(res.length == 1);
     static assert(res[0].stringof == "a");
+}
+
+// #18624: getSymbolsByUDA produces wrong result if one of the symbols having the UDA is a function
+@safe unittest
+{
+    enum Attr;
+    struct A
+    {
+        @Attr void a();
+        @Attr void a(int n);
+              void b();
+        @Attr void c();
+    }
+
+    static assert(getSymbolsByUDA!(A, Attr).stringof == "tuple(a, a, c)");
 }
 
 /**
