@@ -8438,6 +8438,20 @@ do
     }
 }
 
+/// ditto
+Unqual!(CommonType!(T1, T2)) poly(T1, T2, int N)(T1 x, ref const T2[N] A) @safe pure nothrow @nogc
+if (isFloatingPoint!T1 && isFloatingPoint!T2 && N > 0 && N <= 10)
+{
+    // statically unrolled version for up to 10 coefficients
+    typeof(return) r = A[N - 1];
+    static foreach (i; 1 .. N)
+    {
+        r *= x;
+        r += A[N - 1 - i];
+    }
+    return r;
+}
+
 ///
 @safe nothrow @nogc unittest
 {
