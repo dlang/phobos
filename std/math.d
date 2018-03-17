@@ -1123,10 +1123,11 @@ private T tanImpl(T)(T x) @safe pure nothrow @nogc
     {
         T y = floor(x / cast(T) PI_4);
         // Strip high bits of integer part.
-        enum numHighBits = (realFormat == RealFormat.ieeeDouble ? 3 : 4);
-        T z = ldexp(y, -numHighBits);
+        enum T highBitsFactor = (realFormat == RealFormat.ieeeDouble ? 0x1p3 : 0x1p4);
+        enum T highBitsInv = 1.0 / highBitsFactor;
+        T z = y * highBitsInv;
         // Compute y - 2^numHighBits * (y / 2^numHighBits).
-        z = y - ldexp(floor(z), numHighBits);
+        z = y - highBitsFactor * floor(z);
 
         // Integer and fraction part modulo one octant.
         int j = cast(int)(z);
@@ -2344,7 +2345,7 @@ private T expImpl(T)(T x) @safe pure nothrow @nogc
         xx = x * x;
         const T px = x * poly(xx, P);
         x = px / (poly(xx, Q) - px);
-        x = (cast(T) 1.0) + ldexp(x, 1);
+        x = (cast(T) 1.0) + (cast(T) 2.0) * x;
     }
 
     // Scale by power of 2.
@@ -3173,7 +3174,7 @@ private T exp2Impl(T)(T x) @nogc @safe pure nothrow
         const T xx = x * x;
         const T px = x * poly(xx, P);
         x = px / (poly(xx, Q) - px);
-        x = (cast(T) 1.0) + ldexp(x, 1);
+        x = (cast(T) 1.0) + (cast(T) 2.0) * x;
     }
 
     // Scale by power of 2.
