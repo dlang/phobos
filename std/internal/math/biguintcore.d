@@ -655,7 +655,7 @@ public:
         {   // perform a subtraction
             if (x.data.length > 2)
             {
-                r.data = subInt(x.data, y);
+                r.data = cast(immutable) subInt(x.data, y);
             }
             else
             {   // could change sign!
@@ -690,7 +690,7 @@ public:
         }
         else
         {
-            r.data = addInt(x.data, y);
+            r.data = cast(immutable) addInt(x.data, y);
         }
         return r;
     }
