@@ -509,7 +509,12 @@ deprecated @safe unittest
           removed from the documentation in October 2018 and fully removed from
           Phobos in October 2019.)
 
-    Return value of benchmark with two functions comparing.
+    Benchmark with two functions comparing.
+
+    Params:
+        baseFunc   = The function to become the base of the speed.
+        targetFunc = The function that wants to measure speed.
+        times      = The number of times each function is to be executed.
   +/
 deprecated("Use std.datetime.stopwatch.benchmark.") @safe struct ComparingBenchmarkResult
 {
@@ -557,23 +562,7 @@ private:
 
 
 // @@@DEPRECATED_2018-10@@@
-/++
-    $(RED The old benchmarking functionality in std.datetime (which uses
-          $(REF TickDuration,core,time)) has been deprecated. Use what's in
-          std.datetime.stopwatch instead. It uses $(REF MonoTime,core,time) and
-          $(REF Duration,core,time). Note that comparingBenchmark has
-          not been ported over, because it's a trivial wrapper around benchmark.
-          See $(REF benchmark,std,datetime,stopwatch). This symbol will be
-          removed from the documentation in October 2018 and fully removed from
-          Phobos in October 2019.)
-
-    Benchmark with two functions comparing.
-
-    Params:
-        baseFunc   = The function to become the base of the speed.
-        targetFunc = The function that wants to measure speed.
-        times      = The number of times each function is to be executed.
-  +/
+/// ditto
 deprecated("Use std.datetime.stopwatch.benchmark.")
 ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
                                             alias targetFunc,
@@ -627,29 +616,6 @@ deprecated @system unittest
     $(D func) will run. $(D func) is a unary function that takes a
     $(REF TickDuration, core,time).
 
-    Example:
---------------------
-{
-    auto mt = measureTime!((TickDuration a)
-        { /+ do something when the scope is exited +/ });
-    // do something that needs to be timed
-}
---------------------
-
-    which is functionally equivalent to
-
---------------------
-{
-    auto sw = StopWatch(Yes.autoStart);
-    scope(exit)
-    {
-        TickDuration a = sw.peek();
-        /+ do something when the scope is exited +/
-    }
-    // do something that needs to be timed
-}
---------------------
-
     See_Also:
         $(LREF benchmark)
 +/
@@ -690,7 +656,7 @@ if (!isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
     return Result(Yes.autoStart);
 }
 
-// Verify Example.
+///
 deprecated @safe unittest
 {
     {
@@ -699,6 +665,7 @@ deprecated @safe unittest
         // do something that needs to be timed
     }
 
+    // functionally equivalent to the above
     {
         auto sw = StopWatch(Yes.autoStart);
         scope(exit)
