@@ -101,7 +101,7 @@ enum LetterCase : bool
 @safe unittest
 {
     import std.digest.hmac : hmac;
-    import std.digest.digest : toHexString;
+    import std.digest : toHexString;
     import std.digest.sha : SHA1;
     import std.string : representation;
 
