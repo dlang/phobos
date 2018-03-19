@@ -6028,7 +6028,30 @@ enum TransverseOptions
        checking was already done from the outside of the range.
     */
         assumeNotJagged,
-        }
+}
+
+///
+@safe pure unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.exception : assertThrown;
+
+    auto arr = [[1, 2], [3, 4, 5]];
+
+    auto r1 = arr.frontTransversal!(TransverseOptions.assumeJagged);
+    assert(r1.equal([1, 3]));
+
+    // throws on construction
+    assertThrown!Exception(arr.frontTransversal!(TransverseOptions.enforceNotJagged));
+
+    auto r2 = arr.frontTransversal!(TransverseOptions.assumeNotJagged);
+    assert(r2.equal([1, 3]));
+
+    // either assuming or checking for equal lengths makes
+    // the result a random access range
+    assert(r2[0] == 1);
+    static assert(!__traits(compiles, r1[0]));
+}
 
 /**
    Given a range of ranges, iterate transversally through the first
@@ -9633,6 +9656,17 @@ template isTwoWayCompatible(alias fn, T1, T2)
     ));
 }
 
+///
+@safe unittest
+{
+    void func1(int a, int b);
+    void func2(int a, float b);
+
+    static assert(isTwoWayCompatible!(func1, int, int));
+    static assert(isTwoWayCompatible!(func1, short, int));
+    static assert(!isTwoWayCompatible!(func2, int, float));
+}
+
 
 /**
    Policy used with the searching primitives $(D lowerBound), $(D
@@ -9665,7 +9699,7 @@ enum SearchPolicy
        remaining interval is searched using binary search. A value is
        found in $(BIGOH log(n)) time.
     */
-        gallop,
+    gallop,
 
     /**
        Searches using a classic interval halving policy. The search
@@ -9676,20 +9710,33 @@ enum SearchPolicy
        of $(D trot), $(D gallop), $(D trotBackwards), and $(D
        gallopBackwards) strategies.
     */
-        binarySearch,
+    binarySearch,
 
     /**
        Similar to $(D trot) but starts backwards. Use it when
        confident that the value is around the end of the range.
     */
-        trotBackwards,
+    trotBackwards,
 
     /**
        Similar to $(D gallop) but starts backwards. Use it when
        confident that the value is around the end of the range.
     */
-        gallopBackwards
-        }
+    gallopBackwards
+}
+
+///
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+
+    auto a = assumeSorted([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    auto p1 = a.upperBound!(SearchPolicy.binarySearch)(3);
+    assert(p1.equal([4, 5, 6, 7, 8, 9]));
+
+    auto p2 = a.lowerBound!(SearchPolicy.gallop)(4);
+    assert(p2.equal([0, 1, 2, 3]));
+}
 
 /**
 Represents a sorted range. In addition to the regular range
