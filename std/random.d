@@ -2017,7 +2017,7 @@ Returns:
     return a `ref` to the $(D range element), otherwise it will return
     a copy.
  */
-auto ref choice(Range, RandomGen = Random)(inout auto ref Range range,
+auto ref inout(ElementType!Range) choice(Range, RandomGen = Random)(inout auto ref Range range,
                                            ref RandomGen urng)
 if (isRandomAccessRange!Range && hasLength!Range && isUniformRNG!RandomGen)
 {
