@@ -7537,7 +7537,7 @@ public:
     }
 
     /// Append all $(CHARACTERS) from the input range $(D inp) to this Grapheme.
-    ref opOpAssign(string op, Input)(Input inp)
+    ref opOpAssign(string op, Input)(scope Input inp)
         if (isInputRange!Input && is(ElementType!Input : dchar))
     {
         static if (op == "~")
