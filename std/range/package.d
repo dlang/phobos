@@ -10328,24 +10328,24 @@ if (isInputRange!(Unqual!R))
     return SortedRange!(Unqual!R, pred)(r);
 }
 
+///
 @safe unittest
 {
     import std.algorithm.comparison : equal;
-    static assert(isRandomAccessRange!(SortedRange!(int[])));
-    int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
-    auto p = assumeSorted(a).lowerBound(4);
-    assert(equal(p, [0, 1, 2, 3]));
-    p = assumeSorted(a).lowerBound(5);
-    assert(equal(p, [0, 1, 2, 3, 4]));
-    p = assumeSorted(a).lowerBound(6);
-    assert(equal(p, [ 0, 1, 2, 3, 4, 5]));
-    p = assumeSorted(a).lowerBound(6.9);
-    assert(equal(p, [ 0, 1, 2, 3, 4, 5, 6]));
+
+    int[] a = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    auto p = assumeSorted(a);
+
+    assert(equal(p.lowerBound(4), [0, 1, 2, 3]));
+    assert(equal(p.lowerBound(5), [0, 1, 2, 3, 4]));
+    assert(equal(p.lowerBound(6), [0, 1, 2, 3, 4, 5]));
+    assert(equal(p.lowerBound(6.9), [0, 1, 2, 3, 4, 5, 6]));
 }
 
 @safe unittest
 {
     import std.algorithm.comparison : equal;
+    static assert(isRandomAccessRange!(SortedRange!(int[])));
     int[] a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
     auto p = assumeSorted(a).upperBound(3);
     assert(equal(p, [4, 4, 5, 6 ]));
