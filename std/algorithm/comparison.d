@@ -928,6 +928,31 @@ private static template isEqualityPredicate(alias pred)
     }
 }
 
+/** Returns: `xs` forwarded through calls to `fun` and packed into a `std.typecons.Tuple`.
+ *
+ * See also: https://forum.dlang.org/post/zjxmreegqkxgdzvihvyk@forum.dlang.org
+ */
+private static auto forwardMap(alias fun, Ts...)(Ts xs) @trusted
+    if (is(typeof(unaryFun!(fun))))
+{
+    import std.meta : staticMap;
+    alias MappedTypeOf(T) = typeof(fun(T.init));
+    alias NewTypes = staticMap!(MappedTypeOf, Ts);
+
+    import std.typecons : Tuple;
+    Tuple!NewTypes ys = void;
+
+    alias fun_ = unaryFun!(fun);
+
+    import std.conv : emplace;
+    static foreach (immutable i, x; xs)
+    {
+        emplace(&ys[i], fun_(x));
+    }
+
+    return ys;
+}
+
 // equal
 /**
 Compares two or more ranges `rs` for equality, as defined by predicate `pred`
@@ -948,6 +973,20 @@ template equal(alias pred = "a == b")
 
     static enum hasIndexingAndLength(T) = (is(typeof(T.init[0])) &&
                                            is(typeof(T.length)));
+
+    /// TODO better name, anyone?
+    static auto maybeByCodeUnit(T)(T x)
+    {
+        static if (isAutodecodableString!T)
+        {
+            import std.utf : byCodeUnit;
+            return x.byCodeUnit;
+        }
+        else
+        {
+            return x;
+        }
+    }
 
     /++
      This function compares two ore more ranges `rs` for equality. The
@@ -996,34 +1035,9 @@ template equal(alias pred = "a == b")
         }
         else static if (isEqualityPredicate!pred &&
                         anySatisfy!(isAutodecodableString, Rs) && // some argument is either a string wstring
-                        allSameTypeIterative!(staticMap!(ElementEncodingTypeUnqual, Rs)))
+                        allSameTypeIterative!(staticMap!(ElementEncodingTypeUnqual, Rs))) // and the rest can be decoded as char or wchar
         {
-            // TODO forward some `rs` through a map via byCodeUnit to equal
-            // using ideas from
-            // https://forum.dlang.org/post/aaiirugsrtuuhuxdezyd@forum.dlang.org
-            import std.utf : byCodeUnit;
-
-            static foreach (r; rs[1 .. $])
-            {
-                static if (is(typeof(rs[0]) == typeof(r)))
-                {
-                    if (!equal(rs[0], r)) { return false; }
-                }
-                else static if (isAutodecodableString!(typeof(rs[0])) &&
-                                isAutodecodableString!(typeof(r)))
-                {
-                    if (!equal(rs[0].byCodeUnit, r.byCodeUnit)) { return false; }
-                }
-                else static if (isAutodecodableString!(typeof(rs[0])))
-                {
-                    if (!equal(rs[0].byCodeUnit, r)) { return false; }
-                }
-                else static if (isAutodecodableString!(typeof(r)))
-                {
-                    if (!equal(r.byCodeUnit, rs[0])) { return false; }
-                }
-            }
-            return true;
+            return equal(forwardMap!maybeByCodeUnit(rs).tupleof); // compare by char or wchar
         }
         else
         {
