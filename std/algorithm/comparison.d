@@ -1018,9 +1018,6 @@ template equal(alias pred = "a == b")
         {
             return rs[0] == rs[1]; // use fast builtin array comparison
         }
-        // if one of the arguments is a string and the other isn't, then
-        // auto-decoding can be avoided if they have the same
-        // `ElementEncodingType`
         // avoid calls to `pred` when some range is always `empty` (`enum`)
         else static if (anySatisfy!(isAlwaysEmpty, Rs))
         {
@@ -1033,9 +1030,12 @@ template equal(alias pred = "a == b")
             }
             return true;
         }
+        // if one of the arguments is a `string` or `wstring` and the other
+        // isn't, then auto-decoding can be avoided if they have the same
+        // `ElementEncodingType`
         else static if (isEqualityPredicate!pred &&
-                        anySatisfy!(isAutodecodableString, Rs) && // some argument is either a string wstring
-                        allSameTypeIterative!(staticMap!(ElementEncodingTypeUnqual, Rs))) // and the rest can be decoded as char or wchar
+                        anySatisfy!(isAutodecodableString, Rs) && // some `Rs` is a `string` or `wstring`
+                        allSameTypeIterative!(staticMap!(ElementEncodingTypeUnqual, Rs))) // and all can be decoded as either `char` or `wchar`
         {
             return equal(forwardMap!maybeByCodeUnit(rs).tupleof); // compare by char or wchar
         }
