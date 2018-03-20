@@ -911,7 +911,7 @@ private static template allSameTypeIterative(V...)
     }
 }
 
-/** Check if `pred` is a standard equality string or lambda predicate.
+/* Check if `pred` is a standard equality string or lambda predicate.
  *
  * See also: https://github.com/dlang/phobos/pull/3373#pullrequestreview-102956739
  */
@@ -933,7 +933,7 @@ private static template isEqualityPredicate(alias pred)
  * See also: https://forum.dlang.org/post/zjxmreegqkxgdzvihvyk@forum.dlang.org
  */
 private static auto forwardMap(alias fun, Ts...)(Ts xs) @trusted
-    if (is(typeof(unaryFun!(fun))))
+if (is(typeof(unaryFun!(fun))))
 {
     import std.meta : staticMap;
     alias MappedTypeOf(T) = typeof(fun(T.init));
@@ -944,10 +944,10 @@ private static auto forwardMap(alias fun, Ts...)(Ts xs) @trusted
 
     alias fun_ = unaryFun!(fun);
 
-    import std.conv : emplace;
+    import std.conv : emplaceRef;
     static foreach (immutable i, x; xs)
     {
-        emplace(&ys[i], fun_(x));
+        emplaceRef(ys[i], fun_(x));
     }
 
     return ys;
@@ -964,15 +964,15 @@ template equal(alias pred = "a == b")
 
     /** Check if `T` is always empty (`empty` is an `enum` always being `true`)
      */
-    static enum isAlwaysEmpty(T) = (__traits(compiles, { static assert(T.empty); }));
+    enum isAlwaysEmpty(T) = (__traits(compiles, { static assert(T.empty); }));
 
-    static enum areAllEquableRanges(Rs...) = is(typeof(binaryFun!pred(ElementType!(Rs[0]).init, // TODO check all `Rs`
-                                                                      ElementType!(Rs[1]).init)));
+    enum areAllEquableRanges(Rs...) = is(typeof(binaryFun!pred(ElementType!(Rs[0]).init, // TODO check all `Rs`
+                                                               ElementType!(Rs[1]).init)));
 
     static alias ElementEncodingTypeUnqual(R) = Unqual!(ElementEncodingType!R);
 
-    static enum hasIndexingAndLength(T) = (is(typeof(T.init[0])) &&
-                                           is(typeof(T.length)));
+    enum hasIndexingAndLength(T) = (is(typeof(T.init[0])) &&
+                                    is(typeof(T.length)));
 
     /// TODO better name, anyone?
     static auto maybeByCodeUnit(T)(T x)
@@ -1003,11 +1003,10 @@ template equal(alias pred = "a == b")
         for element, according to binary predicate `pred`.
     +/
     bool equal(Rs...)(Rs rs)
-        if (rs.length >= 2 &&
-            areAllEquableRanges!(Rs) &&
-            allSatisfy!(isInputRange, Rs) &&
-            !allSatisfy!(isInfinite, Rs)
-            )
+    if (rs.length >= 2 &&
+        areAllEquableRanges!(Rs) &&
+        allSatisfy!(isInputRange, Rs) &&
+        !allSatisfy!(isInfinite, Rs))
     {
         // if comparing two arrays
         static if (rs.length == 2 && // builtin array comparison can only support binary case
@@ -1046,6 +1045,8 @@ template equal(alias pred = "a == b")
             // get lengths
             alias hasLengthBits = staticMap!(hasLength, Rs);
             enum indexOfFirstLength = staticIndexOf!(true, hasLengthBits);
+
+            // if `true`, at least one of `Rs` has a `length` property
             enum someHasLength = indexOfFirstLength != -1;
 
             static if (someHasLength && // if one range has a (finite) length and
@@ -1070,7 +1071,7 @@ template equal(alias pred = "a == b")
                 }
                 alias primaryRange = rs[primaryRangeIndex]; // shorthand
 
-                // check lengths
+                // check that all the range lengths available are equal
                 static if (someHasLength)
                 {
                     static foreach (idx, r; rs)
@@ -1079,7 +1080,7 @@ template equal(alias pred = "a == b")
                         {
                             static if (hasLength!(typeof(r)))
                             {
-                                if (length != r.length) { return false; }
+                                if (length != r.length) return false;
                             }
                         }
                     }
@@ -1094,59 +1095,60 @@ template equal(alias pred = "a == b")
                 {
                     static if (hasIndexingAndLength!(typeof(primaryRange)))
                     {
-                        if (ei == primaryRange.length) { break; }
+                        if (ei == primaryRange.length) break;
                     }
                     else
                     {
-                        if (primaryRange.empty) { break; }
+                        if (primaryRange.empty) break;
                     }
 
                     /* compare current element in primary range `primaryRange` with each
                      * non-primary range `r` in `rs` */
                     static foreach (idx, r; rs)
                     {
-                        static if (idx != primaryRangeIndex) // not primary other rnage
+                        static if (idx != primaryRangeIndex) // avoid checking the primary range with itself
                         {
                             static if (!isInfinite!(typeof(r))) // `r` is finite
                             {
                                 static if (hasLength!(typeof(primaryRange)) &&
-                                           hasLength!(typeof(r))) // TODO move after `hasIndexingAndLength`
+                                           hasLength!(typeof(r)))
                                 {
-                                    /* primaryRange and `r` have already been checked
-                                     * above to have equal lengths so safe to
-                                     * skip empty check for `r` */
+                                    /* primaryRange and `r` have already been
+                                     * checked above to have equal lengths so
+                                     * safe to skip empty check for `r` */
                                 }
                                 else
                                 {
-                                    if (r.empty) { return false; } // check for premature emptying of `r`
+                                    if (r.empty) return false; // check for premature emptying of `r`
                                 }
+                                if (!binaryFun!(pred)(primaryRange.front, r.front)) { return false; }
                                 static if (hasIndexingAndLength!(typeof(r)))
                                 {
                                     static if (hasIndexingAndLength!(typeof(primaryRange)))
                                     {
-                                        if (!binaryFun!(pred)(primaryRange[ei], r[ei])) { return false; }
+                                        if (!binaryFun!(pred)(primaryRange[ei], r[ei])) return false;
                                     }
                                     else
                                     {
-                                        if (!binaryFun!(pred)(primaryRange.front, r[ei])) { return false; }
+                                        if (!binaryFun!(pred)(primaryRange.front, r[ei])) return false;
                                     }
                                 }
                                 else
                                 {
                                     static if (hasIndexingAndLength!(typeof(primaryRange)))
                                     {
-                                        if (!binaryFun!(pred)(primaryRange[ei], r.front)) { return false; }
+                                        if (!binaryFun!(pred)(primaryRange[ei], r.front)) return false;
                                     }
                                     else
                                     {
-                                        if (!binaryFun!(pred)(primaryRange.front, r.front)) { return false; }
+                                        if (!binaryFun!(pred)(primaryRange.front, r.front)) return false;
                                     }
                                     r.popFront();
                                 }
                             }
                             else    // `r` is infinite
                             {
-                                if (!binaryFun!(pred)(primaryRange.front, r.front)) { return false; }
+                                if (!binaryFun!(pred)(primaryRange.front, r.front)) return false;
                                 r.popFront();
                             }
                         }
@@ -1172,11 +1174,11 @@ template equal(alias pred = "a == b")
                             {
                                 static if (hasIndexingAndLength!(typeof(r)))
                                 {
-                                    if (ei != r.length) { return false; }
+                                    if (ei != r.length) return false;
                                 }
                                 else
                                 {
-                                    if (!r.empty) { return false; }
+                                    if (!r.empty) return false;
                                 }
                             }
                         }
