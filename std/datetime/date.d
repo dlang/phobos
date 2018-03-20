@@ -82,6 +82,13 @@ enum Month : ubyte
     dec      ///
 }
 
+///
+@safe pure unittest
+{
+    assert(Date(2018, 10, 1).month == Month.oct);
+    assert(DateTime(1, 1, 1).month == Month.jan);
+}
+
 
 /++
     Represents the 7 days of the Gregorian week (Sunday is 0).
@@ -97,6 +104,12 @@ enum DayOfWeek : ubyte
     sat      ///
 }
 
+///
+@safe pure unittest
+{
+    assert(Date(2018, 10, 1).dayOfWeek == DayOfWeek.mon);
+    assert(DateTime(5, 5, 5).dayOfWeek == DayOfWeek.thu);
+}
 
 /++
     In some date calculations, adding months or years can cause the date to fall
@@ -3681,6 +3694,29 @@ private:
     TimeOfDay _tod;
 }
 
+///
+@safe pure unittest
+{
+    import core.time : days, seconds;
+
+    auto dt = DateTime(2000, 6, 1, 10, 30, 0);
+
+    assert(dt.date == Date(2000, 6, 1));
+    assert(dt.timeOfDay == TimeOfDay(10, 30, 0));
+    assert(dt.dayOfYear == 153);
+    assert(dt.dayOfWeek == DayOfWeek.thu);
+
+    dt += 10.days + 100.seconds;
+    assert(dt == DateTime(2000, 6, 11, 10, 31, 40));
+
+    assert(dt.toISOExtString() == "2000-06-11T10:31:40");
+    assert(dt.toISOString() == "20000611T103140");
+    assert(dt.toSimpleString() == "2000-Jun-11 10:31:40");
+
+    assert(DateTime.fromISOExtString("2018-01-01T12:00:00") == DateTime(2018, 1, 1, 12, 0, 0));
+    assert(DateTime.fromISOString("20180101T120000") == DateTime(2018, 1, 1, 12, 0, 0));
+    assert(DateTime.fromSimpleString("2018-Jan-01 12:00:00") == DateTime(2018, 1, 1, 12, 0, 0));
+}
 
 /++
     Represents a date in the
@@ -8098,6 +8134,28 @@ package:
     ubyte _day   = 1;
 }
 
+///
+@safe pure unittest
+{
+    import core.time : days;
+
+    auto d = Date(2000, 6, 1);
+
+    assert(d.dayOfYear == 153);
+    assert(d.dayOfWeek == DayOfWeek.thu);
+
+    d += 10.days;
+    assert(d == Date(2000, 6, 11));
+
+    assert(d.toISOExtString() == "2000-06-11");
+    assert(d.toISOString() == "20000611");
+    assert(d.toSimpleString() == "2000-Jun-11");
+
+    assert(Date.fromISOExtString("2018-01-01") == Date(2018, 1, 1));
+    assert(Date.fromISOString("20180101") == Date(2018, 1, 1));
+    assert(Date.fromSimpleString("2018-Jan-01") == Date(2018, 1, 1));
+}
+
 
 /++
     Represents a time of day with hours, minutes, and seconds. It uses 24 hour
@@ -9407,6 +9465,22 @@ package:
     enum ubyte maxSecond = 60 - 1;
 }
 
+///
+@safe pure unittest
+{
+    import core.time : minutes, seconds;
+
+    auto t = TimeOfDay(12, 30, 0);
+
+    t += 10.minutes + 100.seconds;
+    assert(t == TimeOfDay(12, 41, 40));
+
+    assert(t.toISOExtString() == "12:41:40");
+    assert(t.toISOString() == "124140");
+
+    assert(TimeOfDay.fromISOExtString("15:00:00") == TimeOfDay(15, 0, 0));
+    assert(TimeOfDay.fromISOString("015000") == TimeOfDay(1, 50, 0));
+}
 
 /++
     Returns whether the given value is valid for the given unit type when in a
@@ -9509,8 +9583,26 @@ if (units == "months" ||
     }
 }
 
+///
+@safe pure unittest
+{
+    import std.exception : assertThrown, assertNotThrown;
+
+    assertNotThrown(enforceValid!"months"(10));
+    assertNotThrown(enforceValid!"seconds"(40));
+
+    assertThrown!DateTimeException(enforceValid!"months"(0));
+    assertThrown!DateTimeException(enforceValid!"hours"(24));
+    assertThrown!DateTimeException(enforceValid!"minutes"(60));
+    assertThrown!DateTimeException(enforceValid!"seconds"(60));
+}
+
 
 /++
+    Because the validity of the day number depends on both on the year
+    and month of which the day is occurring, take all three variables
+    to validate the day.
+
     Params:
         units = The units of time to validate.
         year  = The year of the day to validate.
@@ -9530,6 +9622,20 @@ if (units == "days")
     import std.format : format;
     if (!valid!"days"(year, month, day))
         throw new DateTimeException(format("%s is not a valid day in %s in %s", day, month, year), file, line);
+}
+
+///
+@safe pure unittest
+{
+    import std.exception : assertThrown, assertNotThrown;
+
+    assertNotThrown(enforceValid!"days"(2000, Month.jan, 1));
+    // leap year
+    assertNotThrown(enforceValid!"days"(2000, Month.feb, 29));
+
+    assertThrown!DateTimeException(enforceValid!"days"(2001, Month.feb, 29));
+    assertThrown!DateTimeException(enforceValid!"days"(2000, Month.jan, 32));
+    assertThrown!DateTimeException(enforceValid!"days"(2000, Month.apr, 31));
 }
 
 
@@ -9961,6 +10067,13 @@ if (validTimeUnits(lhs, rhs))
     enum CmpTimeUnits = cmpTimeUnitsCTFE(lhs, rhs);
 }
 
+///
+@safe pure unittest
+{
+    static assert(CmpTimeUnits!("years", "weeks") > 0);
+    static assert(CmpTimeUnits!("days", "days") == 0);
+    static assert(CmpTimeUnits!("seconds", "hours") < 0);
+}
 
 // Helper function for CmpTimeUnits.
 private int cmpTimeUnitsCTFE(string lhs, string rhs) @safe pure nothrow @nogc
