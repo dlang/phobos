@@ -1667,8 +1667,6 @@ enum SwapStrategy
 ///
 @safe unittest
 {
-    import std.stdio;
-    import std.algorithm.sorting : partition;
     int[] a = [0, 1, 2, 3];
     assert(remove!(SwapStrategy.stable)(a, 1) == [0, 2, 3]);
     a = [0, 1, 2, 3];
