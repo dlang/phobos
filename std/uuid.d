@@ -961,6 +961,19 @@ public struct UUID
         }
 }
 
+///
+@safe unittest
+{
+    UUID id;
+    assert(id.empty);
+
+    id = randomUUID;
+    assert(!id.empty);
+
+    id = UUID(cast(ubyte[16]) [138, 179, 6, 14, 44, 186, 79,
+        35, 183, 76, 181, 45, 179, 189, 251, 70]);
+    assert(id.toString() == "8ab3060e-2cba-4f23-b74c-b52db3bdfb46");
+}
 
 /**
  * This function generates a name based (Version 3) UUID from a namespace UUID and a name.
