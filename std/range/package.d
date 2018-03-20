@@ -1371,6 +1371,38 @@ if (isInputRange!(Unqual!R1) && isInputRange!(Unqual!R2) &&
     return ChooseResult!(R1, R2)(condition, r1, r2);
 }
 
+///
+@safe nothrow pure @nogc unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : filter, map;
+
+    auto data1 = only(1, 2, 3, 4).filter!(a => a != 3);
+    auto data2 = only(5, 6, 7, 8).map!(a => a + 1);
+
+    // choose() is primarily useful when you need to select one of two ranges
+    // with different types at runtime.
+    static assert(!is(typeof(data1) == typeof(data2)));
+
+    auto chooseRange(bool pickFirst)
+    {
+        // The returned range is a common wrapper type that can be used for
+        // returning or storing either range without running into a type error.
+        return choose(pickFirst, data1, data2);
+
+        // Simply returning the chosen range without using choose() does not
+        // work, because map() and filter() return different types.
+        //return pickFirst ? data1 : data2; // does not compile
+    }
+
+    auto result = chooseRange(true);
+    assert(result.equal(only(1, 2, 4)));
+
+    result = chooseRange(false);
+    assert(result.equal(only(6, 7, 8, 9)));
+}
+
+
 private struct ChooseResult(R1, R2)
 {
     import std.traits : hasElaborateCopyConstructor, hasElaborateDestructor;
@@ -1536,37 +1568,6 @@ private struct ChooseResult(R1, R2)
                         return choose(false, Slice1.init, r[begin .. end]);
                 })(this, begin, end);
         }
-}
-
-///
-@safe nothrow pure @nogc unittest
-{
-    import std.algorithm.comparison : equal;
-    import std.algorithm.iteration : filter, map;
-
-    auto data1 = only(1, 2, 3, 4).filter!(a => a != 3);
-    auto data2 = only(5, 6, 7, 8).map!(a => a + 1);
-
-    // choose() is primarily useful when you need to select one of two ranges
-    // with different types at runtime.
-    static assert(!is(typeof(data1) == typeof(data2)));
-
-    auto chooseRange(bool pickFirst)
-    {
-        // The returned range is a common wrapper type that can be used for
-        // returning or storing either range without running into a type error.
-        return choose(pickFirst, data1, data2);
-
-        // Simply returning the chosen range without using choose() does not
-        // work, because map() and filter() return different types.
-        //return pickFirst ? data1 : data2; // does not compile
-    }
-
-    auto result = chooseRange(true);
-    assert(result.equal(only(1, 2, 4)));
-
-    result = chooseRange(false);
-    assert(result.equal(only(6, 7, 8, 9)));
 }
 
 /**
@@ -2179,10 +2180,7 @@ if (isInputRange!(Unqual!Range) &&
     }
 }
 
-/**
-This template simply aliases itself to R and is useful for consistency in
-generic code.
-*/
+/// ditto
 template Take(R)
 if (isInputRange!(Unqual!R) &&
     ((!isInfinite!(Unqual!R) && hasSlicing!(Unqual!R)) || is(R T == Take!T)))
@@ -3683,7 +3681,7 @@ if (isInfinite!R)
     alias Cycle = R;
 }
 
-///
+/// ditto
 struct Cycle(R)
 if (isStaticArray!R)
 {
