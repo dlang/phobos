@@ -1215,6 +1215,56 @@ public:
     }
 }
 
+///
+@system unittest
+{
+    alias Var = VariantN!(maxSize!(int, real, double));
+
+    Var a; // Must assign before use, otherwise exception ensues
+    // Initialize with an integer; make the type int
+    Var b = 42;
+    assert(b.type == typeid(int));
+    // Peek at the value
+    assert(b.peek!(int) !is null && *b.peek!(int) == 42);
+    // Automatically convert per language rules
+    auto x = b.get!(real);
+
+    // Assign any other type, including other variants
+    a = b;
+    a = 3.14;
+    assert(a.type == typeid(double));
+    // Implicit conversions work just as with built-in types
+    assert(a < b);
+    // Check for convertibility
+    assert(!a.convertsTo!(int)); // double not convertible to int
+    // Strings and all other arrays are supported
+    a = "now I'm a string";
+    assert(a == "now I'm a string");
+}
+
+/// can also assign arrays
+@system unittest
+{
+    alias Var = VariantN!(maxSize!(int[]));
+
+    Var a = new int[42];
+    assert(a.length == 42);
+    a[5] = 7;
+    assert(a[5] == 7);
+}
+
+/// Can also assign class values
+@system unittest
+{
+    alias Var = VariantN!(maxSize!(int*)); // classes are pointers
+    Var a;
+
+    class Foo {}
+    auto foo = new Foo;
+    a = foo;
+    assert(*a.peek!(Foo) == foo); // and full type information is preserved
+}
+
 @system unittest
 {
     import std.conv : to;
@@ -1560,6 +1610,51 @@ storing larger types unboxed, or for saving memory.
  */
 alias Variant = VariantN!(maxSize!(FakeComplexReal, char[], void delegate()));
 
+///
+@system unittest
+{
+    Variant a; // Must assign before use, otherwise exception ensues
+    // Initialize with an integer; make the type int
+    Variant b = 42;
+    assert(b.type == typeid(int));
+    // Peek at the value
+    assert(b.peek!(int) !is null && *b.peek!(int) == 42);
+    // Automatically convert per language rules
+    auto x = b.get!(real);
+
+    // Assign any other type, including other variants
+    a = b;
+    a = 3.14;
+    assert(a.type == typeid(double));
+    // Implicit conversions work just as with built-in types
+    assert(a < b);
+    // Check for convertibility
+    assert(!a.convertsTo!(int)); // double not convertible to int
+    // Strings and all other arrays are supported
+    a = "now I'm a string";
+    assert(a == "now I'm a string");
+}
+
+/// can also assign arrays
+@system unittest
+{
+    Variant a = new int[42];
+    assert(a.length == 42);
+    a[5] = 7;
+    assert(a[5] == 7);
+}
+
+/// Can also assign class values
+@system unittest
+{
+    Variant a;
+
+    class Foo {}
+    auto foo = new Foo;
+    a = foo;
+    assert(*a.peek!(Foo) == foo); // and full type information is preserved
+}
+
 /**
  * Returns an array of variants constructed from $(D args).
  *
@@ -1616,6 +1711,24 @@ static class VariantException : Exception
         this.source = source;
         this.target = target;
     }
+}
+
+///
+@system unittest
+{
+    import std.exception : assertThrown;
+
+    Variant v;
+
+    // uninitialized use
+    assertThrown!VariantException(v + 1);
+    assertThrown!VariantException(v.length);
+
+    // .get with an incompatible target type
+    assertThrown!VariantException(Variant("a").get!int);
+
+    // comparison between incompatible types
+    assertThrown!VariantException(Variant(3) < Variant("a"));
 }
 
 @system unittest
