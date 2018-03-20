@@ -1660,6 +1660,18 @@ if (isInputRange!Range)
     }
 }
 
+///
+@safe unittest
+{
+    import std.range : iota;
+
+    assert(10.iota.walkLength == 10);
+    // iota has a length function, and therefore the
+    // doesn't have to be walked, and the upTo
+    // parameter is ignored
+    assert(10.iota.walkLength(5) == 10);
+}
+
 @safe unittest
 {
     import std.algorithm.iteration : filter;
