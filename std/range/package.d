@@ -4420,8 +4420,8 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
 }
 
 /**
-   Dictates how iteration in a $(D Zip) should stop. By default stop at
-   the end of the shortest of all ranges.
+   Dictates how iteration in a $(LREF zip) and $(LREF lockstep) should stop.
+   By default stop at the end of the shortest of all ranges.
 */
 enum StoppingPolicy
 {
@@ -4431,6 +4431,37 @@ enum StoppingPolicy
     longest,
     /// Require that all ranges are equal
     requireSameLength,
+}
+
+///
+pure @safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.exception : assertThrown;
+    import std.range.primitives;
+    import std.typecons : tuple;
+
+    auto a = [1, 2, 3];
+    auto b = [4, 5, 6, 7];
+
+    auto shortest = zip(StoppingPolicy.shortest, a, b);
+    assert(shortest.equal([
+        tuple(1, 4),
+        tuple(2, 5),
+        tuple(3, 6)
+    ]));
+
+    auto longest = zip(StoppingPolicy.longest, a, b);
+    assert(longest.equal([
+        tuple(1, 4),
+        tuple(2, 5),
+        tuple(3, 6),
+        tuple(0, 7)
+    ]));
+
+    auto same = zip(StoppingPolicy.requireSameLength, a, b);
+    same.popFrontN(3);
+    assertThrown!Exception(same.popFront);
 }
 
 pure @system unittest
@@ -4785,48 +4816,6 @@ private:
     StoppingPolicy _stoppingPolicy;
 }
 
-string lockstepReverseFailMixin(Ranges...)(bool withIndex)
-{
-    import std.format : format;
-    string[] params;
-    string message;
-
-    if (withIndex)
-    {
-        message = "Indexed reverse iteration with lockstep is only supported"
-        ~"if all ranges are bidirectional and have a length.\n";
-    }
-    else
-    {
-        message = "Reverse iteration with lockstep is only supported if all ranges are bidirectional.\n";
-    }
-
-    if (withIndex)
-    {
-        params ~= "size_t";
-    }
-
-    foreach (idx, Range; Ranges)
-    {
-        params ~= format("%sElementType!(Ranges[%s])", hasLvalueElements!Range ? "ref " : "", idx);
-    }
-
-    return format(
-    q{
-        int opApplyReverse()(scope int delegate(%s) dg)
-        {
-            static assert(false, "%s");
-        }
-    }, params.join(", "), message);
-}
-
-// For generic programming, make sure Lockstep!(Range) is well defined for a
-// single range.
-template Lockstep(Range)
-{
-    alias Lockstep = Range;
-}
-
 /// Ditto
 Lockstep!(Ranges) lockstep(Ranges...)(Ranges ranges)
 if (allSatisfy!(isInputRange, Ranges))
@@ -5010,6 +4999,48 @@ if (allSatisfy!(isInputRange, Ranges))
     static assert(!__traits(compiles, {
         foreach (ref a, ref b; lockstep(r1, r2)) { a++; }
     }));
+}
+
+private string lockstepReverseFailMixin(Ranges...)(bool withIndex)
+{
+    import std.format : format;
+    string[] params;
+    string message;
+
+    if (withIndex)
+    {
+        message = "Indexed reverse iteration with lockstep is only supported"
+        ~"if all ranges are bidirectional and have a length.\n";
+    }
+    else
+    {
+        message = "Reverse iteration with lockstep is only supported if all ranges are bidirectional.\n";
+    }
+
+    if (withIndex)
+    {
+        params ~= "size_t";
+    }
+
+    foreach (idx, Range; Ranges)
+    {
+        params ~= format("%sElementType!(Ranges[%s])", hasLvalueElements!Range ? "ref " : "", idx);
+    }
+
+    return format(
+    q{
+        int opApplyReverse()(scope int delegate(%s) dg)
+        {
+            static assert(false, "%s");
+        }
+    }, params.join(", "), message);
+}
+
+// For generic programming, make sure Lockstep!(Range) is well defined for a
+// single range.
+template Lockstep(Range)
+{
+    alias Lockstep = Range;
 }
 
 /**
