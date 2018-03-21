@@ -2083,6 +2083,28 @@ if (is(T == class) || is(T == interface) || isDynamicArray!T || isAssociativeArr
     return ret;
 }
 
+///
+@system unittest
+{
+    class C
+    {
+        int payload;
+        this(int p) { payload = p; }
+    }
+    const c = new C(1);
+
+    auto c2 = c.rebindable;
+    assert(c2.payload == 1);
+    // passing Rebindable to rebindable
+    c2 = c2.rebindable;
+
+    c2 = new C(2);
+    assert(c2.payload == 2);
+
+    const c3 = c2.get;
+    assert(c3.payload == 2);
+}
+
 /**
 This function simply returns the $(D Rebindable) object passed in.  It's useful
 in generic programming cases when a given object may be either a regular
@@ -2097,6 +2119,24 @@ Returns:
 Rebindable!T rebindable(T)(Rebindable!T obj)
 {
     return obj;
+}
+
+// TODO: remove me once the rebindable overloads have been joined
+///
+@system unittest
+{
+    class C
+    {
+        int payload;
+        this(int p) { payload = p; }
+    }
+    const c = new C(1);
+
+    auto c2 = c.rebindable;
+    assert(c2.payload == 1);
+    // passing Rebindable to rebindable
+    c2 = c2.rebindable;
+    assert(c2.payload == 1);
 }
 
 @system unittest
@@ -3966,6 +4006,62 @@ if (is(Interface == interface) && is(BaseClass == class))
     mixin(autoImplement_helper_.code);
 }
 
+///
+@system unittest
+{
+    interface PackageSupplier
+    {
+        int foo();
+        int bar();
+    }
+
+    static abstract class AbstractFallbackPackageSupplier : PackageSupplier
+    {
+        protected PackageSupplier default_, fallback;
+
+        this(PackageSupplier default_, PackageSupplier fallback)
+        {
+            this.default_ = default_;
+            this.fallback = fallback;
+        }
+
+        abstract int foo();
+        abstract int bar();
+    }
+
+    template fallback(T, alias func)
+    {
+        import std.format : format;
+        // for all implemented methods:
+        // - try default first
+        // - only on a failure run & return fallback
+        enum fallback = q{
+            scope (failure) return fallback.%1$s(args);
+            return default_.%1$s(args);
+        }.format(__traits(identifier, func));
+    }
+
+    // combines two classes and use the second one as fallback
+    alias FallbackPackageSupplier = AutoImplement!(AbstractFallbackPackageSupplier, fallback);
+
+    class FailingPackageSupplier : PackageSupplier
+    {
+        int foo(){ throw new Exception("failure"); }
+        int bar(){ return 2;}
+    }
+
+    class BackupPackageSupplier : PackageSupplier
+    {
+        int foo(){ return -1; }
+        int bar(){ return -1;}
+    }
+
+    auto registry = new FallbackPackageSupplier(new FailingPackageSupplier(), new BackupPackageSupplier());
+
+    assert(registry.foo() == -1);
+    assert(registry.bar() == 2);
+}
+
 /*
  * Code-generating stuffs are encupsulated in this helper template so that
  * namespace pollution, which can cause name confliction with Base's public
@@ -4685,12 +4781,48 @@ template generateEmptyFunction(C, func.../+[BUG 4217]+/)
         };
 }
 
+///
+@system unittest
+{
+    alias BlackHole(Base) = AutoImplement!(Base, generateEmptyFunction);
+
+    interface I
+    {
+        int foo();
+        string bar();
+    }
+
+    auto i = new BlackHole!I();
+    // generateEmptyFunction returns the default value of the return type without doing anything
+    assert(i.foo == 0);
+    assert(i.bar is null);
+}
+
 /// ditto
 template generateAssertTrap(C, func...)
 {
     enum string generateAssertTrap =
         `throw new NotImplementedError("` ~ C.stringof ~ "."
                 ~ __traits(identifier, func) ~ `");`;
+}
+
+///
+@system unittest
+{
+    import std.exception : assertThrown;
+
+    alias WhiteHole(Base) = AutoImplement!(Base, generateAssertTrap);
+
+    interface I
+    {
+        int foo();
+        string bar();
+    }
+
+    auto i = new WhiteHole!I();
+    // generateAssertTrap throws an exception for every unimplemented function of the interface
+    assertThrown!NotImplementedError(i.foo);
+    assertThrown!NotImplementedError(i.bar);
 }
 
 private
@@ -4742,12 +4874,14 @@ if (is(T == class) || is(T == interface))
 }
 
 /**
- * Supports structural based typesafe conversion.
- *
- * If $(D Source) has structural conformance with the $(D interface) $(D Targets),
- * wrap creates internal wrapper class which inherits $(D Targets) and
- * wrap $(D src) object, then return it.
- */
+Supports structural based typesafe conversion.
+
+If `Source` has structural conformance with the `interface` `Targets`,
+wrap creates an internal wrapper class which inherits `Targets` and
+wraps the `src` object, then returns it.
+
+`unwrap` can be used to extract objects which have been wrapped by `wrap`.
+*/
 template wrap(Targets...)
 if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
 {
@@ -4937,15 +5071,7 @@ if (Targets.length >= 1 && !allSatisfy!(isMutable, Targets))
     alias wrap = .wrap!(staticMap!(Unqual, Targets));
 }
 
-// Internal class to support dynamic cross-casting
-private interface Structural
-{
-    inout(Object) _wrap_getSource() inout @safe pure nothrow;
-}
-
-/**
- * Extract object which wrapped by $(D wrap).
- */
+/// ditto
 template unwrap(Target)
 if (isMutable!Target)
 {
@@ -4977,6 +5103,7 @@ if (isMutable!Target)
         return null;
     }
 }
+
 /// ditto
 template unwrap(Target)
 if (!isMutable!Target)
@@ -5014,6 +5141,7 @@ if (!isMutable!Target)
     {
         int reflesh();
     }
+
     // does not have structural conformance
     static assert(!__traits(compiles, d1.wrap!Refleshable));
     static assert(!__traits(compiles, h1.wrap!Refleshable));
@@ -5037,14 +5165,15 @@ if (!isMutable!Target)
     Quack qx = h1.wrap!Quack;   // Human -> Quack
     Flyer fx = qx.wrap!Flyer;   // Quack -> Flyer
     assert(fx.height == 20);    // calls Human.height
-    // strucural downcast (two steps)
+    // structural downcast (two steps)
     Quack qy = fx.unwrap!Quack; // Flyer -> Quack
     Human hy = qy.unwrap!Human; // Quack -> Human
     assert(hy is h1);
-    // strucural downcast (one step)
+    // structural downcast (one step)
     Human hz = fx.unwrap!Human; // Flyer -> Human
     assert(hz is h1);
 }
+
 ///
 @system unittest
 {
@@ -5067,6 +5196,13 @@ if (!isMutable!Target)
     assert(b.status == 3);
     static assert(functionAttributes!(typeof(ab).status) & FunctionAttribute.property);
 }
+
+// Internal class to support dynamic cross-casting
+private interface Structural
+{
+    inout(Object) _wrap_getSource() inout @safe pure nothrow;
+}
+
 @system unittest
 {
     class A
@@ -5495,6 +5631,27 @@ enum RefCountedAutoInitialize
     no,
     /// Auto-initialize the object
     yes,
+}
+
+///
+@system unittest
+{
+    import core.exception : AssertError;
+    import std.exception : assertThrown;
+
+    struct Foo
+    {
+        int a = 42;
+    }
+
+    RefCounted!(Foo, RefCountedAutoInitialize.yes) rcAuto;
+    RefCounted!(Foo, RefCountedAutoInitialize.no) rcNoAuto;
+
+    assert(rcAuto.refCountedPayload.a == 42);
+
+    assertThrown!AssertError(rcNoAuto.refCountedPayload);
+    rcNoAuto.refCountedStore.ensureInitialized;
+    assert(rcNoAuto.refCountedPayload.a == 42);
 }
 
 /**
@@ -6648,47 +6805,11 @@ $(B Typedef) allows the creation of a unique type which is
 based on an existing type. Unlike the $(D alias) feature,
 $(B Typedef) ensures the two types are not considered as equals.
 
-Example:
-----
-alias MyInt = Typedef!int;
-static void takeInt(int) { }
-static void takeMyInt(MyInt) { }
-
-int i;
-takeInt(i);    // ok
-takeMyInt(i);  // fails
-
-MyInt myInt;
-takeInt(myInt);    // fails
-takeMyInt(myInt);  // ok
-----
-
 Params:
 
-init = Optional initial value for the new type. For example:
-
-----
-alias MyInt = Typedef!(int, 10);
-MyInt myInt;
-assert(myInt == 10);  // default-initialized to 10
-----
-
-cookie = Optional, used to create multiple unique types which are
-based on the same origin type $(D T). For example:
-
-----
-alias TypeInt1 = Typedef!int;
-alias TypeInt2 = Typedef!int;
-
-// The two Typedefs are the same type.
-static assert(is(TypeInt1 == TypeInt2));
-
-alias MoneyEuros = Typedef!(float, float.init, "euros");
-alias MoneyDollars = Typedef!(float, float.init, "dollars");
-
-// The two Typedefs are _not_ the same type.
-static assert(!is(MoneyEuros == MoneyDollars));
-----
+    init = Optional initial value for the new type.
+    cookie = Optional, used to create multiple unique types which are
+             based on the same origin type `T`
 
 Note: If a library routine cannot handle the Typedef type,
 you can use the $(D TypedefType) template to extract the
@@ -6778,6 +6899,55 @@ struct Typedef(T, T init = T.init, string cookie=null)
     }
 }
 
+///
+@safe unittest
+{
+    alias MyInt = Typedef!int;
+    MyInt foo = 10;
+    foo++;
+    assert(foo == 11);
+}
+
+/// custom initialization values
+@safe unittest
+{
+    alias MyIntInit = Typedef!(int, 42);
+    static assert(is(TypedefType!MyIntInit == int));
+    static assert(MyIntInit() == 42);
+}
+
+/// Typedef creates a new type
+@safe unittest
+{
+    alias MyInt = Typedef!int;
+    static void takeInt(int) {}
+    static void takeMyInt(MyInt) {}
+
+    int i;
+    takeInt(i);    // ok
+    static assert(!__traits(compiles, takeMyInt(i)));
+
+    MyInt myInt;
+    static assert(!__traits(compiles, takeInt(myInt)));
+    takeMyInt(myInt);  // ok
+}
+
+/// Use the optional `cookie` argument to create different types of the same base type
+@safe unittest
+{
+    alias TypeInt1 = Typedef!int;
+    alias TypeInt2 = Typedef!int;
+
+    // The two Typedefs are the same type.
+    static assert(is(TypeInt1 == TypeInt2));
+
+    alias MoneyEuros = Typedef!(float, float.init, "euros");
+    alias MoneyDollars = Typedef!(float, float.init, "dollars");
+
+    // The two Typedefs are _not_ the same type.
+    static assert(!is(MoneyEuros == MoneyDollars));
+}
+
 /**
 Get the underlying type which a $(D Typedef) wraps.
 If $(D T) is not a $(D Typedef) it will alias itself to $(D T).
@@ -6793,7 +6963,6 @@ template TypedefType(T)
 ///
 @safe unittest
 {
-    import std.typecons : Typedef, TypedefType;
     import std.conv : to;
 
     alias MyInt = Typedef!int;
@@ -7492,6 +7661,28 @@ template Flag(string name) {
     }
 }
 
+///
+@safe unittest
+{
+    Flag!"abc" flag;
+
+    assert(flag == Flag!"abc".no);
+    assert(flag == No.abc);
+    assert(!flag);
+    if (flag) assert(0);
+}
+
+///
+@safe unittest
+{
+    auto flag = Yes.abc;
+
+    assert(flag);
+    assert(flag == Yes.abc);
+    if (!flag) assert(0);
+    if (flag) {} else assert(0);
+}
+
 /**
 Convenience names that allow using e.g. $(D Yes.encryption) instead of
 $(D Flag!"encryption".yes) and $(D No.encryption) instead of $(D
@@ -7518,16 +7709,23 @@ struct No
 ///
 @safe unittest
 {
-    Flag!"abc" flag1;
-    assert(flag1 == Flag!"abc".no);
-    assert(flag1 == No.abc);
-    assert(!flag1);
-    if (flag1) assert(false);
-    flag1 = Yes.abc;
-    assert(flag1);
-    if (!flag1) assert(false);
-    if (flag1) {} else assert(false);
-    assert(flag1 == Yes.abc);
+    Flag!"abc" flag;
+
+    assert(flag == Flag!"abc".no);
+    assert(flag == No.abc);
+    assert(!flag);
+    if (flag) assert(0);
+}
+
+///
+@safe unittest
+{
+    auto flag = Yes.abc;
+
+    assert(flag);
+    assert(flag == Yes.abc);
+    if (!flag) assert(0);
+    if (flag) {} else assert(0);
 }
 
 /**
