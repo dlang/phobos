@@ -3956,6 +3956,7 @@ U[n] staticArray(U, T, size_t n)(auto ref T[n] a)
 if (!is(U == T))
 {
     import std.conv : emplaceRef;
+
     U[n] ret = void;
     static foreach (i; 0 .. n)
     {
@@ -3986,6 +3987,7 @@ nothrow pure @safe unittest
     {
         [1, 2, val].staticArray.checkStaticArray!int(gold);
     }
+
     checkNogc();
 
     [1, 2, val].staticArray!double.checkStaticArray!double(gold);
@@ -4003,10 +4005,12 @@ nothrow pure @safe unittest
 
 /// ditto
 auto staticArray(size_t n, T)(T a)
+if (isInputRange!T)
 {
     import std.conv : emplaceRef;
+
     // TODO: ElementType vs ForeachType
-    alias U = typeof(a[0]);
+    alias U = typeof(a.front);
     U[n] ret = void;
     size_t i;
     foreach (ref ai; a)
@@ -4019,8 +4023,10 @@ auto staticArray(size_t n, T)(T a)
 
 /// ditto
 auto staticArray(Un : U[n], U, size_t n, T)(T a) nothrow @safe pure @nogc
+if (isInputRange!T)
 {
     import std.conv : emplaceRef;
+
     U[n] ret = void;
     size_t i;
     foreach (ref ai; a)
@@ -4035,6 +4041,7 @@ auto staticArray(Un : U[n], U, size_t n, T)(T a) nothrow @safe pure @nogc
 nothrow pure @safe unittest
 {
     import std.range : iota;
+
     auto input = 2.iota;
     auto a = input.staticArray!2;
     static assert(is(typeof(a) == int[2]));
@@ -4070,6 +4077,7 @@ nothrow pure @system unittest
 
 /// ditto
 auto staticArray(alias a)()
+if (isInputRange!(typeof(a)))
 {
     // NOTE: without `cast`, getting error:
     // cannot deduce function from argument types !(length)(Result)
@@ -4078,6 +4086,7 @@ auto staticArray(alias a)()
 
 /// ditto
 auto staticArray(U, alias a)()
+if (isInputRange!(typeof(a)))
 {
     return .staticArray!(U[cast(size_t) a.length])(a);
 }
