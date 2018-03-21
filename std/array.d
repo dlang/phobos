@@ -3930,28 +3930,29 @@ unittest
 
 /++
 Constructs a static array from `a`.
-The type of elements can be specified implicitly (`[1,2].asStatic` of type int[2])
-or explicitly (`[1,2].asStatic!float` of type float[2]).
+The type of elements can be specified implicitly (`[1,2].staticArray` of type int[2])
+or explicitly (`[1,2].staticArray!float` of type float[2]).
 When `a` is a range (not known at compile time), the number of elements has to be given as template argument
-(eg `myrange.asStatic!2`).
-Size and type can be combined (eg: `2.iota.asStatic!(byte[2])`).
+(eg `myrange.staticArray!2`).
+Size and type can be combined (eg: `2.iota.staticArray!(byte[2])`).
 When the range `a` is known at compile time, it can also be specified as a
 template argument to avoid having to specify the number of elements
-(eg: `asStatic!(2.iota)` or `asStatic!(double, 2.iota)`).
+(eg: `staticArray!(2.iota)` or `staticArray!(double, 2.iota)`).
 
-Note: `foo([1, 2, 3].asStatic)` may be inefficient because of the copies involved.
+Note: `staticArray` returns by value, so expressions involving large arrays may be inefficient.
 
 Params: a = The input elements
 
 Returns: A static array constructed from `a`.
 +/
-pragma(inline, true) T[n] asStatic(T, size_t n)(auto ref T[n] a) nothrow @safe pure @nogc
+
+pragma(inline, true) T[n] staticArray(T, size_t n)(auto ref T[n] a) nothrow @safe pure @nogc
 {
     return a;
 }
 
 /// ditto
-U[n] asStatic(U, T, size_t n)(auto ref T[n] a)
+U[n] staticArray(U, T, size_t n)(auto ref T[n] a)
 if (!is(U == T))
 {
     import std.conv : emplaceRef;
@@ -3966,11 +3967,11 @@ if (!is(U == T))
 /// static array from array
 nothrow pure @safe unittest
 {
-    auto a = [0, 1].asStatic;
+    auto a = [0, 1].staticArray;
     static assert(is(typeof(a) == int[2]));
     assert(a == [0, 1]);
 
-    auto b = [0, 1].asStatic!byte;
+    auto b = [0, 1].staticArray!byte;
     static assert(is(typeof(b) == byte[2]));
     assert(b == [0, 1]);
 }
@@ -3979,29 +3980,29 @@ nothrow pure @safe unittest
 {
     int val = 3;
     static immutable gold = [1, 2, 3];
-    [1, 2, val].asStatic.checkStaticArray!int([1, 2, 3]);
+    [1, 2, val].staticArray.checkStaticArray!int([1, 2, 3]);
 
     @nogc void checkNogc()
     {
-        [1, 2, val].asStatic.checkStaticArray!int(gold);
+        [1, 2, val].staticArray.checkStaticArray!int(gold);
     }
     checkNogc();
 
-    [1, 2, val].asStatic!double.checkStaticArray!double(gold);
-    [1, 2, 3].asStatic!int.checkStaticArray!int(gold);
+    [1, 2, val].staticArray!double.checkStaticArray!double(gold);
+    [1, 2, 3].staticArray!int.checkStaticArray!int(gold);
 
-    [1, 2, 3].asStatic!(const(int)).checkStaticArray!(const(int))(gold);
-    [1, 2, 3].asStatic!(const(double)).checkStaticArray!(const(double))(gold);
+    [1, 2, 3].staticArray!(const(int)).checkStaticArray!(const(int))(gold);
+    [1, 2, 3].staticArray!(const(double)).checkStaticArray!(const(double))(gold);
     {
-        const(int)[3] a2 = [1, 2, 3].asStatic;
+        const(int)[3] a2 = [1, 2, 3].staticArray;
     }
 
-    [1, 129].asStatic!byte.checkStaticArray!byte([1, -127]);
+    [1, 129].staticArray!byte.checkStaticArray!byte([1, -127]);
 
 }
 
 /// ditto
-auto asStatic(size_t n, T)(T a)
+auto staticArray(size_t n, T)(T a)
 {
     import std.conv : emplaceRef;
     // TODO: ElementType vs ForeachType
@@ -4017,7 +4018,7 @@ auto asStatic(size_t n, T)(T a)
 }
 
 /// ditto
-auto asStatic(Un : U[n], U, size_t n, T)(T a) nothrow @safe pure @nogc
+auto staticArray(Un : U[n], U, size_t n, T)(T a) nothrow @safe pure @nogc
 {
     import std.conv : emplaceRef;
     U[n] ret = void;
@@ -4035,10 +4036,10 @@ nothrow pure @safe unittest
 {
     import std.range : iota;
     auto input = 2.iota;
-    auto a = input.asStatic!2;
+    auto a = input.staticArray!2;
     static assert(is(typeof(a) == int[2]));
     assert(a == [0, 1]);
-    auto b = input.asStatic!(byte[2]);
+    auto b = input.staticArray!(byte[2]);
     static assert(is(typeof(b) == byte[2]));
     assert(b == [0, 1]);
 }
@@ -4046,37 +4047,39 @@ nothrow pure @safe unittest
 nothrow pure @safe unittest
 {
 
-    auto a = [1, 2].asStatic;
+    auto a = [1, 2].staticArray;
     assert(is(typeof(a) == int[2]) && a == [1, 2]);
 
     import std.range : iota;
 
-    2.iota.asStatic!2.checkStaticArray!int([0, 1]);
-    2.iota.asStatic!(double[2]).checkStaticArray!double([0, 1]);
-    2.iota.asStatic!(byte[2]).checkStaticArray!byte([0, 1]);
+    2.iota.staticArray!2.checkStaticArray!int([0, 1]);
+    2.iota.staticArray!(double[2]).checkStaticArray!double([0, 1]);
+    2.iota.staticArray!(byte[2]).checkStaticArray!byte([0, 1]);
 }
 
 nothrow pure @system unittest
 {
     import std.range : iota;
 
-    assert(isThrown!Error(2.iota.asStatic!1));
-    assert(isThrown!Error(2.iota.asStatic!3));
+    assert(isThrown!Error(2.iota.staticArray!1));
+    assert(isThrown!Error(2.iota.staticArray!3));
 
     // NOTE: correctly issues a deprecation
-    // int[] a2 = [1, 2].asStatic;
+    // int[] a2 = [1, 2].staticArray;
 }
 
 /// ditto
-auto asStatic(alias a)()
+auto staticArray(alias a)()
 {
-    return .asStatic!(cast(size_t) a.length)(a);
+    // NOTE: without `cast`, getting error:
+    // cannot deduce function from argument types !(length)(Result)
+    return .staticArray!(cast(size_t) a.length)(a);
 }
 
 /// ditto
-auto asStatic(U, alias a)()
+auto staticArray(U, alias a)()
 {
-    return .asStatic!(U[cast(size_t) a.length])(a);
+    return .staticArray!(U[cast(size_t) a.length])(a);
 }
 
 /// static array from CT range
@@ -4084,11 +4087,11 @@ nothrow pure @safe unittest
 {
     import std.range : iota;
 
-    enum a = asStatic!(2.iota);
+    enum a = staticArray!(2.iota);
     static assert(is(typeof(a) == int[2]));
     assert(a == [0, 1]);
 
-    enum b = asStatic!(byte, 2.iota);
+    enum b = staticArray!(byte, 2.iota);
     static assert(is(typeof(b) == byte[2]));
     assert(b == [0, 1]);
 }
@@ -4097,10 +4100,10 @@ nothrow pure @safe unittest
 {
     import std.range : iota;
 
-    enum a = asStatic!(2.iota);
-    asStatic!(2.iota).checkStaticArray!int([0, 1]);
-    asStatic!(double, 2.iota).checkStaticArray!double([0, 1]);
-    asStatic!(byte, 2.iota).checkStaticArray!byte([0, 1]);
+    enum a = staticArray!(2.iota);
+    staticArray!(2.iota).checkStaticArray!int([0, 1]);
+    staticArray!(double, 2.iota).checkStaticArray!double([0, 1]);
+    staticArray!(byte, 2.iota).checkStaticArray!byte([0, 1]);
 }
 
 version(unittest) private void checkStaticArray(T, T1, T2)(T1 a, T2 b) nothrow @safe pure @nogc
