@@ -424,7 +424,8 @@ void assertThrown(T : Throwable = Exception, E)
         from `Dg`'s safety and purity.
  +/
 template enforce(E : Throwable = Exception)
-if (is(typeof(new E("", __FILE__, __LINE__)) : Throwable) || is(typeof(new E(__FILE__, __LINE__)) : Throwable))
+if (is(typeof(new E("", string.init, size_t.init)) : Throwable) ||
+    is(typeof(new E(string.init, size_t.init)) : Throwable))
 {
     ///
     T enforce(T)(T value, lazy const(char)[] msg = null,
