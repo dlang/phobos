@@ -287,18 +287,128 @@ package
     template MutableOf(T)     { alias MutableOf     =              T  ; }
 }
 
-/// Add the inout qualifier to the given type T.
-template InoutOf(T)       { alias InoutOf       =        inout(T) ; }
-/// Add the const qualifier to the given type T.
-template ConstOf(T)       { alias ConstOf       =        const(T) ; }
-/// Add the shared qualifier to the given type T.
-template SharedOf(T)      { alias SharedOf      =       shared(T) ; }
-/// Add the shared and inout qualifiers to the given type T.
-template SharedInoutOf(T) { alias SharedInoutOf = shared(inout(T)); }
-/// Add the shared and const qualifiers to the given type T.
-template SharedConstOf(T) { alias SharedConstOf = shared(const(T)); }
-/// Add the immutable qualifier to the given type T.
-template ImmutableOf(T)   { alias ImmutableOf   =    immutable(T) ; }
+/**
+ * Params:
+ *     T = The type to qualify
+ * Returns:
+ *     `T` with the `inout` qualifier added.
+ */
+template InoutOf(T)
+{
+    alias InoutOf = inout(T);
+}
+
+///
+@safe unittest
+{
+    static assert(is(InoutOf!(int) == inout int));
+    static assert(is(InoutOf!(inout int) == inout int));
+    static assert(is(InoutOf!(const int) == inout const int));
+    static assert(is(InoutOf!(shared int) == inout shared int));
+}
+
+/**
+ * Params:
+ *     T = The type to qualify
+ * Returns:
+ *     `T` with the `const` qualifier added.
+ */
+template ConstOf(T)
+{
+    alias ConstOf = const(T);
+}
+
+///
+@safe unittest
+{
+    static assert(is(ConstOf!(int) == const int));
+    static assert(is(ConstOf!(const int) == const int));
+    static assert(is(ConstOf!(inout int) == const inout int));
+    static assert(is(ConstOf!(shared int) == const shared int));
+}
+
+/**
+ * Params:
+ *     T = The type to qualify
+ * Returns:
+ *     `T` with the `shared` qualifier added.
+ */
+template SharedOf(T)
+{
+    alias SharedOf = shared(T);
+}
+
+///
+@safe unittest
+{
+    static assert(is(SharedOf!(int) == shared int));
+    static assert(is(SharedOf!(shared int) == shared int));
+    static assert(is(SharedOf!(inout int) == shared inout int));
+    static assert(is(SharedOf!(immutable int) == shared immutable int));
+}
+
+/**
+ * Params:
+ *     T = The type to qualify
+ * Returns:
+ *     `T` with the `inout` and `shared` qualifiers added.
+ */
+template SharedInoutOf(T)
+{
+    alias SharedInoutOf = shared(inout(T));
+}
+
+///
+@safe unittest
+{
+    static assert(is(SharedInoutOf!(int) == shared inout int));
+    static assert(is(SharedInoutOf!(int) == inout shared int));
+
+    static assert(is(SharedInoutOf!(const int) == shared inout const int));
+    static assert(is(SharedInoutOf!(immutable int) == shared inout immutable int));
+}
+
+/**
+ * Params:
+ *     T = The type to qualify
+ * Returns:
+ *     `T` with the `const` and `shared` qualifiers added.
+ */
+template SharedConstOf(T)
+{
+    alias SharedConstOf = shared(const(T));
+}
+
+///
+@safe unittest
+{
+    static assert(is(SharedConstOf!(int) == shared const int));
+    static assert(is(SharedConstOf!(int) == const shared int));
+
+    static assert(is(SharedConstOf!(inout int) == shared inout const int));
+    // immutable variables are implicitly shared and const
+    static assert(is(SharedConstOf!(immutable int) == immutable int));
+}
+
+/**
+ * Params:
+ *     T = The type to qualify
+ * Returns:
+ *     `T` with the `immutable` qualifier added.
+ */
+template ImmutableOf(T)
+{
+    alias ImmutableOf = immutable(T);
+}
+
+///
+@safe unittest
+{
+    static assert(is(ImmutableOf!(int) == immutable int));
+    static assert(is(ImmutableOf!(const int) == immutable int));
+    static assert(is(ImmutableOf!(inout int) == immutable int));
+    static assert(is(ImmutableOf!(shared int) == immutable int));
+}
 
 @safe unittest
 {
