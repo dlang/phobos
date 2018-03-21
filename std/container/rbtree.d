@@ -1075,7 +1075,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
 
         auto thisRange = this[];
         auto thatRange = that[];
-        return equal!(function(Elem a, Elem b) => !_less(a,b) && !_less(b,a))
+        return equal!((Elem a, Elem b) => !_less(a,b) && !_less(b,a))
                      (thisRange, thatRange);
     }
 
@@ -2063,4 +2063,14 @@ if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init
     t3.insert([1, 2, 3].map!(x => immutable S(new int(x))));
     static assert(!__traits(compiles, *t3.front.p = 4));
     assert(*t3.front.p == 1);
+}
+
+// make sure the comparator can be a delegate
+@safe pure unittest
+{
+    import std.algorithm.comparison : equal;
+
+    auto t = new RedBlackTree!(int, delegate(a, b) => a > b);
+    t.insert([1, 3, 5, 4, 2]);
+    assert(t[].equal([5, 4, 3, 2, 1]));
 }
