@@ -36,6 +36,13 @@ class URIException : Exception
     mixin basicExceptionCtors;
 }
 
+///
+@safe unittest
+{
+    import std.exception : assertThrown;
+    assertThrown!URIException("%ab".decode);
+}
+
 private enum
 {
     URI_Alpha = 1,
@@ -287,6 +294,15 @@ if (isSomeChar!Char)
     return r;
 }
 
+///
+@safe unittest
+{
+    assert("foo%20bar".decode == "foo bar");
+    assert("%3C%3E.@.%E2%84%A2".decode == "<>.@.™");
+    assert("foo&/".decode == "foo&/");
+    assert("!@#$&*(".decode == "!@#$&*(");
+}
+
 /*******************************
  * Decodes the URI string encodedURI into a UTF-8 string and returns it. All
  * escape sequences are decoded.
@@ -302,6 +318,14 @@ if (isSomeChar!Char)
     return r;
 }
 
+///
+@safe unittest
+{
+    assert("foo%2F%26".decodeComponent == "foo/&");
+    assert("dl%C3%A4ng%20r%C3%B6cks".decodeComponent == "dläng röcks");
+    assert("!%40%23%24%25%5E%26*(".decodeComponent == "!@#$%^&*(");
+}
+
 /*****************************
  * Encodes the UTF-8 string uri into a URI and returns that URI. Any character
  * not a valid URI character is escaped. The '#' character is not escaped.
@@ -314,6 +338,16 @@ if (isSomeChar!Char)
     return URI_Encode(s, URI_Reserved | URI_Hash | URI_Alpha | URI_Digit | URI_Mark);
 }
 
+///
+@safe unittest
+{
+    assert("foo bar".encode == "foo%20bar");
+    assert("<>.@.™".encode == "%3C%3E.@.%E2%84%A2");
+    assert("foo/#?a=1&b=2".encode == "foo/#?a=1&b=2");
+    assert("dlang+rocks!".encode == "dlang+rocks!");
+    assert("!@#$%^&*(".encode == "!@#$%25%5E&*(");
+}
+
 /********************************
  * Encodes the UTF-8 string uriComponent into a URI and returns that URI.
  * Any character not a letter, digit, or one of -_.!~*'() is escaped.
@@ -324,6 +358,16 @@ if (isSomeChar!Char)
     import std.utf : toUTF32;
     auto s = toUTF32(uriComponent);
     return URI_Encode(s, URI_Alpha | URI_Digit | URI_Mark);
+}
+
+///
+@safe unittest
+{
+    assert("!@#$%^&*(".encodeComponent == "!%40%23%24%25%5E%26*(");
+    assert("<>.@.™".encodeComponent == "%3C%3E.%40.%E2%84%A2");
+    assert("foo/&".encodeComponent == "foo%2F%26");
+    assert("dläng röcks".encodeComponent == "dl%C3%A4ng%20r%C3%B6cks");
+    assert("dlang+rocks!".encodeComponent == "dlang%2Brocks!");
 }
 
 /* Encode associative array using www-form-urlencoding
