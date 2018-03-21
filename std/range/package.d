@@ -3183,13 +3183,17 @@ pure @safe nothrow unittest
 }
 
 /**
-Create a range which repeats one value forever.
+Create a range which repeats one value.
 
 Params:
-    value = the value to repeat
+    value = the _value to repeat
+    n = the number of times to repeat `value`
 
 Returns:
-    An infinite random access range with slicing.
+    If `n` is not defined, an infinite random access range
+    with slicing.
+
+    If `n` is defined, a random access range with slicing.
 */
 struct Repeat(T)
 {
@@ -3258,7 +3262,7 @@ pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
-    assert(equal(5.repeat().take(4), [ 5, 5, 5, 5 ]));
+    assert(5.repeat().take(4).equal([5, 5, 5, 5]));
 }
 
 pure @safe nothrow unittest
@@ -3282,21 +3286,18 @@ pure @safe nothrow unittest
     assert(r2.front == 5);
 }
 
-/**
-   Repeats $(D value) exactly $(D n) times. Equivalent to $(D
-   take(repeat(value), n)).
-*/
+/// ditto
 Take!(Repeat!T) repeat(T)(T value, size_t n)
 {
     return take(repeat(value), n);
 }
 
 ///
-pure @safe nothrow @nogc unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
-    assert(equal(5.repeat(4), 5.repeat().take(4)));
+    assert(5.repeat(4).equal([5, 5, 5, 5]));
 }
 
 pure @safe nothrow unittest //12007
