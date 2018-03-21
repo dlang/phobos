@@ -23,7 +23,7 @@ aa[std.conv]=-dip25 # errors from std.typecons
 aa[std.csv]=-dip1000
 aa[std.demangle]=-dip1000
 aa[std.encoding]=-dip1000
-aa[std.exception]=-dip25 # DROP: depends on https://issues.dlang.org/show_bug.cgi?id=18478 fixed
+aa[std.exception]=-dip25 # DROP: depends on a workaround or https://issues.dlang.org/show_bug.cgi?id=18637 fixed
 aa[std.file]=-dip25 # probably already fixed (std.uni); currently: undefined symbol  pure nothrow @nogc return @safe std.uni.SliceOverIndexed!(std.uni.Grapheme).SliceOverIndexed std.uni.SliceOverIndexed!(std.uni.Grapheme).SliceOverIndexed.opSlice()
 aa[std.format]=-dip25 # @system function std.range.primitives.put
 aa[std.functional]=-dip25 # DROP: cannot call @system function std.functional.__unittest_L1216_C7.memoize!(pickFirst).memoize
@@ -92,11 +92,11 @@ aa[std.c.windows.winsock]=-dip1000
 
 aa[std.container.array]=-dip1000
 aa[std.container.binaryheap]=-dip1000
-aa[std.container.dlist]=-dip25 # DROP cannot call @system constructor std.container.dlist.DList!int.DList.__ctor!int.this
+aa[std.container.dlist]=-dip1000
 aa[std.container.package]=-dip1000
 aa[std.container.rbtree]=-dip25 # DROP
-aa[std.container.slist]=-dip25 # depends on https://github.com/dlang/phobos/pull/6295 merged
-aa[std.container.util]=-dip25 # depends on aa[std.container.slist]=-dip1000
+aa[std.container.slist]=-dip25 # -dip1000 -version=DIP1000   depends on https://github.com/dlang/phobos/pull/6295 merged
+aa[std.container.util]=-dip25 #    TODO
 
 aa[std.datetime.date]=-dip25 # depends on a fix for writefln
 aa[std.datetime.interval]=-dip1000
