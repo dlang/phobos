@@ -78,7 +78,8 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 module std.algorithm.mutation;
 
 import std.range.primitives;
-import std.traits : isArray, isAssignable, isBlitAssignable, isNarrowString, Unqual, isSomeChar;
+import std.traits : isArray, isAssignable, isBlitAssignable, isNarrowString,
+       Unqual, isSomeChar, isMutable;
 // FIXME
 import std.typecons; // : tuple, Tuple;
 
@@ -1787,140 +1788,37 @@ Returns:
     a range containing all of the elements of range with offset removed
  */
 Range remove
-(SwapStrategy s = SwapStrategy.stable, Range, Offset...)
+(SwapStrategy s = SwapStrategy.stable, Range, Offset ...)
 (Range range, Offset offset)
-if (s != SwapStrategy.stable
-    && isBidirectionalRange!Range
-    && hasLvalueElements!Range
-    && hasLength!Range
-    && Offset.length >= 1)
+if (Offset.length >= 1)
 {
-    Tuple!(size_t, "pos", size_t, "len")[offset.length] blackouts;
-    foreach (i, v; offset)
+    static if (isNarrowString!Range)
     {
-        static if (is(typeof(v[0]) : size_t) && is(typeof(v[1]) : size_t))
-        {
-            blackouts[i].pos = v[0];
-            blackouts[i].len = v[1] - v[0];
-        }
-        else
-        {
-            static assert(is(typeof(v) : size_t), typeof(v).stringof);
-            blackouts[i].pos = v;
-            blackouts[i].len = 1;
-        }
-        static if (i > 0)
-        {
-            import std.exception : enforce;
-
-            enforce(blackouts[i - 1].pos + blackouts[i - 1].len
-                    <= blackouts[i].pos,
-                "remove(): incorrect ordering of elements to remove");
-        }
+        static assert(isMutable!(typeof(range[0])),
+                "Elements must be mutable to remove");
+        static assert(s == SwapStrategy.stable,
+                "Only stable removing can be done for character arrays");
+        return removeStableString(range, offset);
     }
-
-    size_t left = 0, right = offset.length - 1;
-    auto tgt = range.save;
-    size_t tgtPos = 0;
-
-    while (left <= right)
+    else
     {
-        // Look for a blackout on the right
-        if (blackouts[right].pos + blackouts[right].len >= range.length)
-        {
-            range.popBackExactly(blackouts[right].len);
+        static assert(isBidirectionalRange!Range,
+                "Range must be bidirectional");
+        static assert(hasLvalueElements!Range,
+                "Range must have Lvalue elements (see std.range.hasLvalueElements)");
 
-            // Since right is unsigned, we must check for this case, otherwise
-            // we might turn it into size_t.max and the loop condition will not
-            // fail when it should.
-            if (right > 0)
-            {
-                --right;
-                continue;
-            }
-            else
-                break;
-        }
-        // Advance to next blackout on the left
-        assert(blackouts[left].pos >= tgtPos, "Next blackout on the left shouldn't appear before the target.");
-        tgt.popFrontExactly(blackouts[left].pos - tgtPos);
-        tgtPos = blackouts[left].pos;
-
-        // Number of elements to the right of blackouts[right]
-        immutable tailLen = range.length - (blackouts[right].pos + blackouts[right].len);
-        size_t toMove = void;
-        if (tailLen < blackouts[left].len)
+        static if (s == SwapStrategy.unstable)
         {
-            toMove = tailLen;
-            blackouts[left].pos += toMove;
-            blackouts[left].len -= toMove;
+            static assert(hasLength!Range,
+                    "Range must have `length` for unstable remove");
+            return removeUnstable(range, offset);
         }
+        else static if (s == SwapStrategy.stable)
+            return removeStable(range, offset);
         else
-        {
-            toMove = blackouts[left].len;
-            ++left;
-        }
-        tgtPos += toMove;
-        foreach (i; 0 .. toMove)
-        {
-            move(range.back, tgt.front);
-            range.popBack();
-            tgt.popFront();
-        }
+            static assert(false,
+                    "Only SwapStrategy.stable and SwapStrategy.unstable are supported");
     }
-
-    return range;
-}
-
-/// Ditto
-Range remove
-(SwapStrategy s = SwapStrategy.stable, Range, Offset...)
-(Range range, Offset offset)
-if (s == SwapStrategy.stable
-    && isBidirectionalRange!Range
-    && hasLvalueElements!Range
-    && Offset.length >= 1)
-{
-    auto result = range;
-    auto src = range, tgt = range;
-    size_t pos;
-    foreach (pass, i; offset)
-    {
-        static if (is(typeof(i[0])) && is(typeof(i[1])))
-        {
-            auto from = i[0], delta = i[1] - i[0];
-        }
-        else
-        {
-            auto from = i;
-            enum delta = 1;
-        }
-
-        static if (pass > 0)
-        {
-            import std.exception : enforce;
-            enforce(pos <= from,
-                    "remove(): incorrect ordering of elements to remove");
-
-            for (; pos < from; ++pos, src.popFront(), tgt.popFront())
-            {
-                move(src.front, tgt.front);
-            }
-        }
-        else
-        {
-            src.popFrontExactly(from);
-            tgt.popFrontExactly(from);
-            pos = from;
-        }
-        // now skip source to the "to" position
-        src.popFrontExactly(delta);
-        result.popBackExactly(delta);
-        pos += delta;
-    }
-    // leftover move
-    moveAll(src, tgt);
-    return result;
 }
 
 ///
@@ -2012,6 +1910,200 @@ if (s == SwapStrategy.stable
     }
 }
 
+@safe unittest
+{
+    char[] chars = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+    remove(chars, 4);
+    assert(chars == ['a', 'b', 'c', 'd', 'f', 'g', 'h', 'h']);
+
+    char[] bigChars = "∑œ∆¬é˚˙ƒé∂ß¡¡".dup;
+    assert(remove(bigChars, tuple(4, 6), 8) == ("∑œ∆¬˙ƒ∂ß¡¡"));
+
+    import std.exception : assertThrown;
+    assertThrown(remove(bigChars.dup, 1, 0));
+    assertThrown(remove(bigChars.dup, tuple(4, 3)));
+}
+
+private Range removeUnstable(Range, Offset...)(Range range, Offset offset)
+{
+    Tuple!(size_t, "pos", size_t, "len")[offset.length] blackouts;
+    foreach (i, v; offset)
+    {
+        static if (is(typeof(v[0]) : size_t) && is(typeof(v[1]) : size_t))
+        {
+            blackouts[i].pos = v[0];
+            blackouts[i].len = v[1] - v[0];
+        }
+        else
+        {
+            static assert(is(typeof(v) : size_t), typeof(v).stringof);
+            blackouts[i].pos = v;
+            blackouts[i].len = 1;
+        }
+        static if (i > 0)
+        {
+            import std.exception : enforce;
+
+            enforce(blackouts[i - 1].pos + blackouts[i - 1].len
+                    <= blackouts[i].pos,
+                "remove(): incorrect ordering of elements to remove");
+        }
+    }
+
+    size_t left = 0, right = offset.length - 1;
+    auto tgt = range.save;
+    size_t tgtPos = 0;
+
+    while (left <= right)
+    {
+        // Look for a blackout on the right
+        if (blackouts[right].pos + blackouts[right].len >= range.length)
+        {
+            range.popBackExactly(blackouts[right].len);
+
+            // Since right is unsigned, we must check for this case, otherwise
+            // we might turn it into size_t.max and the loop condition will not
+            // fail when it should.
+            if (right > 0)
+            {
+                --right;
+                continue;
+            }
+            else
+                break;
+        }
+        // Advance to next blackout on the left
+        assert(blackouts[left].pos >= tgtPos, "Next blackout on the left shouldn't appear before the target.");
+        tgt.popFrontExactly(blackouts[left].pos - tgtPos);
+        tgtPos = blackouts[left].pos;
+
+        // Number of elements to the right of blackouts[right]
+        immutable tailLen = range.length - (blackouts[right].pos + blackouts[right].len);
+        size_t toMove = void;
+        if (tailLen < blackouts[left].len)
+        {
+            toMove = tailLen;
+            blackouts[left].pos += toMove;
+            blackouts[left].len -= toMove;
+        }
+        else
+        {
+            toMove = blackouts[left].len;
+            ++left;
+        }
+        tgtPos += toMove;
+        foreach (i; 0 .. toMove)
+        {
+            move(range.back, tgt.front);
+            range.popBack();
+            tgt.popFront();
+        }
+    }
+
+    return range;
+}
+
+private Range removeStable(Range, Offset...)(Range range, Offset offset)
+{
+    auto result = range;
+    auto src = range, tgt = range;
+    size_t pos;
+    foreach (pass, i; offset)
+    {
+        static if (is(typeof(i[0])) && is(typeof(i[1])))
+        {
+            auto from = i[0], delta = i[1] - i[0];
+        }
+        else
+        {
+            auto from = i;
+            enum delta = 1;
+        }
+
+        static if (pass > 0)
+        {
+            import std.exception : enforce;
+            enforce(pos <= from,
+                    "remove(): incorrect ordering of elements to remove");
+
+            for (; pos < from; ++pos, src.popFront(), tgt.popFront())
+            {
+                move(src.front, tgt.front);
+            }
+        }
+        else
+        {
+            src.popFrontExactly(from);
+            tgt.popFrontExactly(from);
+            pos = from;
+        }
+        // now skip source to the "to" position
+        src.popFrontExactly(delta);
+        result.popBackExactly(delta);
+        pos += delta;
+    }
+    // leftover move
+    moveAll(src, tgt);
+    return result;
+}
+
+private Range removeStableString(Range, Offset...)(Range range, Offset offsets)
+{
+    import std.utf : stride;
+    size_t charIdx = 0;
+    size_t dcharIdx = 0;
+    size_t charShift = 0;
+
+    void skipOne()
+    {
+        charIdx += stride(range[charIdx .. $]);
+        ++dcharIdx;
+    }
+
+    void copyBackOne()
+    {
+        auto encodedLen = stride(range[charIdx .. $]);
+        foreach (j; charIdx .. charIdx + encodedLen)
+            range[j - charShift] = range[j];
+        charIdx += encodedLen;
+        ++dcharIdx;
+    }
+
+    foreach (pass, i; offsets)
+    {
+        static if (is(typeof(i[0])) && is(typeof(i[1])))
+        {
+            auto from = i[0];
+            auto delta = i[1] - i[0];
+        }
+        else
+        {
+            auto from = i;
+            enum delta = 1;
+        }
+
+        import std.exception : enforce;
+        enforce(dcharIdx <= from && delta >= 0,
+                "remove(): incorrect ordering of elements to remove");
+
+        while (dcharIdx < from)
+            static if (pass == 0)
+                skipOne();
+            else
+                copyBackOne();
+
+        auto mark = charIdx;
+        while (dcharIdx < from + delta)
+            skipOne();
+        charShift += charIdx - mark;
+    }
+
+    foreach (i; charIdx .. range.length)
+        range[i - charShift] = range[i];
+
+    return range[0 .. $ - charShift];
+}
+
 /**
 Reduces the length of the
 $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives) `range` by removing
@@ -2023,49 +2115,38 @@ order is preserved. Returns the filtered range.
 
 Params:
     range = a bidirectional ranges with lvalue elements
+        or mutable character arrays
 
 Returns:
     the range with all of the elements where `pred` is `true`
     removed
 */
-Range remove(alias pred, SwapStrategy s = SwapStrategy.stable, Range)
-(Range range)
-if (isBidirectionalRange!Range
-    && hasLvalueElements!Range)
+Range remove(alias pred, SwapStrategy s = SwapStrategy.stable, Range)(Range range)
 {
     import std.functional : unaryFun;
-    auto result = range;
-    static if (s != SwapStrategy.stable)
+    alias pred_ = unaryFun!pred;
+    static if (isNarrowString!Range)
     {
-        for (;!range.empty;)
-        {
-            if (!unaryFun!pred(range.front))
-            {
-                range.popFront();
-                continue;
-            }
-            move(range.back, range.front);
-            range.popBack();
-            result.popBack();
-        }
+        static assert(isMutable!(typeof(range[0])),
+                "Elements must be mutable to remove");
+        static assert(s == SwapStrategy.stable,
+                "Only stable removing can be done for character arrays");
+        return removePredString!pred_(range);
     }
     else
     {
-        auto tgt = range;
-        for (; !range.empty; range.popFront())
-        {
-            if (unaryFun!(pred)(range.front))
-            {
-                // yank this guy
-                result.popBack();
-                continue;
-            }
-            // keep this guy
-            move(range.front, tgt.front);
-            tgt.popFront();
-        }
+        static assert(isBidirectionalRange!Range,
+                "Range must be bidirectional");
+        static assert(hasLvalueElements!Range,
+                "Range must have Lvalue elements (see std.range.hasLvalueElements)");
+        static if (s == SwapStrategy.unstable)
+            return removePredUnstable!pred_(range);
+        else static if (s == SwapStrategy.stable)
+            return removePredStable!pred_(range);
+        else
+            static assert(false,
+                    "Only SwapStrategy.stable and SwapStrategy.unstable are supported");
     }
-    return result;
 }
 
 ///
@@ -2170,6 +2251,88 @@ if (isBidirectionalRange!Range
         assert(w == y);
         assert(x == z);
     }
+}
+
+@safe unittest
+{
+    char[] chars = "abcdefg".dup;
+    assert(chars.remove!(dc => dc == 'c' || dc == 'f') == "abdeg");
+    assert(chars == "abdegfg");
+
+    assert(chars.remove!"a == 'd'" == "abegfg");
+
+    char[] bigChars = "¥^¨^©é√∆π".dup;
+    assert(bigChars.remove!(dc => dc == "¨"d[0] || dc == "é"d[0]) ==  "¥^^©√∆π");
+}
+
+private Range removePredUnstable(alias pred, Range)(Range range)
+{
+    auto result = range;
+    for (;!range.empty;)
+    {
+        if (!pred(range.front))
+        {
+            range.popFront();
+            continue;
+        }
+        move(range.back, range.front);
+        range.popBack();
+        result.popBack();
+    }
+    return result;
+}
+
+private Range removePredStable(alias pred, Range)(Range range)
+{
+    auto result = range;
+    auto tgt = range;
+    for (; !range.empty; range.popFront())
+    {
+        if (pred(range.front))
+        {
+            // yank this guy
+            result.popBack();
+            continue;
+        }
+        // keep this guy
+        move(range.front, tgt.front);
+        tgt.popFront();
+    }
+    return result;
+}
+
+private Range removePredString(alias pred, SwapStrategy s = SwapStrategy.stable, Range)
+(Range range)
+{
+    import std.utf : decode;
+    import std.functional : unaryFun;
+
+    alias pred_ = unaryFun!pred;
+
+    size_t charIdx = 0;
+    size_t charShift = 0;
+    while (charIdx < range.length)
+    {
+        size_t start = charIdx;
+        if (pred_(decode(range, charIdx)))
+        {
+            charShift += charIdx - start;
+            break;
+        }
+    }
+    while (charIdx < range.length)
+    {
+        size_t start = charIdx;
+        auto doRemove = pred_(decode(range, charIdx));
+        auto encodedLen = charIdx - start;
+        if (doRemove)
+            charShift += encodedLen;
+        else
+            foreach (i; start .. charIdx)
+                range[i - charShift] = range[i];
+    }
+
+    return range[0 .. $ - charShift];
 }
 
 // reverse
