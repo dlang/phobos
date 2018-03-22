@@ -214,6 +214,14 @@ class FileException : Exception
     }
 }
 
+///
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    assertThrown!FileException("non.existing.file.".readText);
+}
+
 private T cenforce(T)(T condition, lazy const(char)[] name, string file = __FILE__, size_t line = __LINE__)
 {
     if (condition)
@@ -568,7 +576,7 @@ if (isSomeString!S && (isInputRange!R && !isInfinite!R && isSomeChar!(ElementTyp
     return result;
 }
 
-// Read file with UTF-8 text.
+/// Read file with UTF-8 text.
 @safe unittest
 {
     write(deleteme, "abc"); // deleteme is the name of a temporary file
@@ -923,6 +931,21 @@ if (isConvertibleToString!RF || isConvertibleToString!RT)
     static assert(__traits(compiles, rename(TestAliasedString(null), "".byChar)));
 }
 
+///
+@safe unittest
+{
+    auto t1 = deleteme, t2 = deleteme~"2";
+    scope(exit) foreach (t; [t1, t2]) if (t.exists) t.remove();
+
+    t1.write("1");
+    t1.rename(t2);
+    assert(t2.readText == "1");
+
+    t1.write("2");
+    t1.rename(t2);
+    assert(t2.readText == "2");
+}
+
 private void renameImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, const(FSChar)* toz) @trusted
 {
     version(Windows)
@@ -960,14 +983,15 @@ private void renameImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, 
 
     auto t1 = deleteme, t2 = deleteme~"2";
     scope(exit) foreach (t; [t1, t2]) if (t.exists) t.remove();
+
     write(t1, "1");
     rename(t1, t2);
     assert(readText(t2) == "1");
+
     write(t1, "2");
     rename(t1, t2.byWchar);
     assert(readText(t2) == "2");
 }
-
 
 /***************************************************
 Delete file $(D name).
@@ -992,6 +1016,18 @@ void remove(R)(auto ref R name)
 if (isConvertibleToString!R)
 {
     remove!(StringTypeOf!R)(name);
+}
+
+///
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    deleteme.write("Hello");
+    assert(deleteme.readText == "Hello");
+
+    deleteme.remove;
+    assertThrown!FileException(deleteme.readText);
 }
 
 @safe unittest
@@ -1108,18 +1144,31 @@ if (isConvertibleToString!R)
     static assert(__traits(compiles, getSize(TestAliasedString("foo"))));
 }
 
+///
+@safe unittest
+{
+    scope(exit) deleteme.remove;
+
+    // create a file of size 1
+    write(deleteme, "a");
+    assert(getSize(deleteme) == 1);
+
+    // create a file of size 3
+    write(deleteme, "abc");
+    assert(getSize(deleteme) == 3);
+}
+
 @safe unittest
 {
     // create a file of size 1
     write(deleteme, "a");
-    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
+    scope(exit) deleteme.exists && deleteme.remove;
     assert(getSize(deleteme) == 1);
     // create a file of size 3
     write(deleteme, "abc");
     import std.utf : byChar;
     assert(getSize(deleteme.byChar) == 3);
 }
-
 
 // Reads a time field from a stat_t with full precision.
 version(Posix)
@@ -1200,6 +1249,28 @@ if (isConvertibleToString!R)
     return getTimes!(StringTypeOf!R)(name, accessTime, modificationTime);
 }
 
+///
+@safe unittest
+{
+    import std.datetime : abs, SysTime;
+
+    scope(exit) deleteme.remove;
+    write(deleteme, "a");
+
+    SysTime accessTime, modificationTime;
+
+    getTimes(deleteme, accessTime, modificationTime);
+
+    import std.datetime : Clock, seconds;
+    auto currTime = Clock.currTime();
+    enum leeway = 5.seconds;
+
+    auto diffAccess = accessTime - currTime;
+    auto diffModification = modificationTime - currTime;
+    assert(abs(diffAccess) <= leeway);
+    assert(abs(diffModification) <= leeway);
+}
+
 @safe unittest
 {
     SysTime atime, mtime;
@@ -1213,14 +1284,14 @@ if (isConvertibleToString!R)
     auto currTime = Clock.currTime();
 
     write(deleteme, "a");
-    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
+    scope(exit) assert(deleteme.exists), deleteme.remove;
 
     SysTime accessTime1 = void;
     SysTime modificationTime1 = void;
 
     getTimes(deleteme, accessTime1, modificationTime1);
 
-    enum leeway = dur!"seconds"(5);
+    enum leeway = 5.seconds;
 
     {
         auto diffa = accessTime1 - currTime;
@@ -1492,6 +1563,25 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     }
 }
 
+///
+@safe unittest
+{
+    import std.datetime : DateTime, hnsecs, SysTime;
+
+    scope(exit) deleteme.remove;
+    write(deleteme, "a");
+
+    SysTime accessTime = SysTime(DateTime(2010, 10, 4, 0, 0, 30));
+    SysTime modificationTime = SysTime(DateTime(2018, 10, 4, 0, 0, 30));
+    setTimes(deleteme, accessTime, modificationTime);
+
+    SysTime accessTimeResolved, modificationTimeResolved;
+    getTimes(deleteme, accessTimeResolved, modificationTimeResolved);
+
+    assert(accessTime == accessTimeResolved);
+    assert(modificationTime == modificationTimeResolved);
+}
+
 /// ditto
 void setTimes(R)(auto ref R name,
               SysTime accessTime,
@@ -1585,6 +1675,19 @@ if (isConvertibleToString!R)
     return timeLastModified!(StringTypeOf!R)(name);
 }
 
+///
+@safe unittest
+{
+    import std.datetime : abs, DateTime, hnsecs, SysTime;
+    scope(exit) deleteme.remove;
+
+    import std.datetime : Clock, seconds;
+    auto currTime = Clock.currTime();
+    enum leeway = 5.seconds;
+    deleteme.write("bb");
+    assert(abs(deleteme.timeLastModified - currTime) <= leeway);
+}
+
 @safe unittest
 {
     static assert(__traits(compiles, timeLastModified(TestAliasedString("foo"))));
@@ -1610,7 +1713,7 @@ if (isConvertibleToString!R)
 
 Example:
 --------------------
-if (timeLastModified(source) >= timeLastModified(target, SysTime.min))
+if (source.timeLastModified >= target.timeLastModified(SysTime.min))
 {
     // must (re)build
 }
@@ -1648,6 +1751,23 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R))
                returnIfMissing :
                statTimeToStdTime!'m'(statbuf);
     }
+}
+
+///
+@safe unittest
+{
+    import std.datetime : SysTime;
+
+    assert("file.does.not.exist".timeLastModified(SysTime.min) == SysTime.min);
+
+    auto source = deleteme ~ "source";
+    auto target = deleteme ~ "target";
+    scope(exit) source.remove, target.remove;
+
+    source.write(".");
+    assert(target.timeLastModified(SysTime.min) < source.timeLastModified);
+    target.write(".");
+    assert(target.timeLastModified(SysTime.min) >= source.timeLastModified);
 }
 
 @safe unittest
@@ -1721,6 +1841,19 @@ if (isConvertibleToString!R)
     return exists!(StringTypeOf!R)(name);
 }
 
+///
+@safe unittest
+{
+    auto f = deleteme ~ "does.not.exist";
+    assert(!f.exists);
+
+    f.write("hello");
+    assert(f.exists);
+
+    f.remove;
+    assert(!f.exists);
+}
+
 private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
 {
     version(Windows)
@@ -1758,13 +1891,14 @@ private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
         static assert(0);
 }
 
+///
 @safe unittest
 {
-    assert(exists("."));
-    assert(!exists("this file does not exist"));
-    write(deleteme, "a\n");
-    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
-    assert(exists(deleteme));
+    assert(".".exists);
+    assert(!"this file does not exist".exists);
+    deleteme.write("a\n");
+    scope(exit) deleteme.remove;
+    assert(deleteme.exists);
 }
 
 @safe unittest // Bugzilla 16573
@@ -1840,6 +1974,40 @@ if (isConvertibleToString!R)
     return getAttributes!(StringTypeOf!R)(name);
 }
 
+/// getAttributes with a file
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    auto f = deleteme ~ "file";
+    scope(exit) f.remove;
+
+    assert(!f.exists);
+    assertThrown!FileException(f.getAttributes);
+
+    f.write(".");
+    auto attributes = f.getAttributes;
+    assert(!attributes.attrIsDir);
+    assert(attributes.attrIsFile);
+}
+
+/// getAttributes with a directory
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    auto dir = deleteme ~ "dir";
+    scope(exit) dir.rmdir;
+
+    assert(!dir.exists);
+    assertThrown!FileException(dir.getAttributes);
+
+    dir.mkdir;
+    auto attributes = dir.getAttributes;
+    assert(attributes.attrIsDir);
+    assert(!attributes.attrIsFile);
+}
+
 @safe unittest
 {
     static assert(__traits(compiles, getAttributes(TestAliasedString(null))));
@@ -1894,6 +2062,59 @@ uint getLinkAttributes(R)(auto ref R name)
 if (isConvertibleToString!R)
 {
     return getLinkAttributes!(StringTypeOf!R)(name);
+}
+
+///
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    auto source = deleteme ~ "source";
+    auto target = deleteme ~ "target";
+    scope(exit) source.remove, target.remove;
+
+    assert(!source.exists);
+    assertThrown!FileException(source.getLinkAttributes);
+
+    target.write("target");
+    target.symlink(source);
+    assert(source.readText == "target");
+    assert(source.isSymlink);
+    assert(source.getLinkAttributes.attrIsSymlink);
+}
+
+/// if the file is no symlink, getLinkAttributes behaves like getAttributes
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    auto f = deleteme ~ "file";
+    scope(exit) f.remove;
+
+    assert(!f.exists);
+    assertThrown!FileException(f.getLinkAttributes);
+
+    f.write(".");
+    auto attributes = f.getLinkAttributes;
+    assert(!attributes.attrIsDir);
+    assert(attributes.attrIsFile);
+}
+
+/// if the file is no symlink, getLinkAttributes behaves like getAttributes
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    auto dir = deleteme ~ "dir";
+    scope(exit) dir.rmdir;
+
+    assert(!dir.exists);
+    assertThrown!FileException(dir.getLinkAttributes);
+
+    dir.mkdir;
+    auto attributes = dir.getLinkAttributes;
+    assert(attributes.attrIsDir);
+    assert(!attributes.attrIsFile);
 }
 
 @safe unittest
@@ -1956,6 +2177,50 @@ if (isConvertibleToString!R)
     static assert(__traits(compiles, setAttributes(TestAliasedString(null), 0)));
 }
 
+/// setAttributes with a file
+@safe unittest
+{
+    import std.exception : assertThrown;
+    import std.conv : octal;
+
+    auto f = deleteme ~ "file";
+    scope(exit) f.remove;
+
+    assert(!f.exists);
+    assertThrown!FileException(f.setAttributes(octal!777));
+
+    f.write(".");
+    auto attributes = f.getAttributes;
+    assert(!attributes.attrIsDir);
+    assert(attributes.attrIsFile);
+
+    f.setAttributes(octal!777);
+    attributes = f.getAttributes;
+    assert((attributes & 1023) == octal!777);
+}
+
+/// setAttributes with a directory
+@safe unittest
+{
+    import std.exception : assertThrown;
+    import std.conv : octal;
+
+    auto dir = deleteme ~ "dir";
+    scope(exit) dir.rmdir;
+
+    assert(!dir.exists);
+    assertThrown!FileException(dir.setAttributes(octal!777));
+
+    dir.mkdir;
+    auto attributes = dir.getAttributes;
+    assert(attributes.attrIsDir);
+    assert(!attributes.attrIsFile);
+
+    dir.setAttributes(octal!777);
+    attributes = dir.getAttributes;
+    assert((attributes & 1023) == octal!777);
+}
+
 /++
     Returns whether the given file is a directory.
 
@@ -1967,12 +2232,6 @@ if (isConvertibleToString!R)
 
     Throws:
         $(D FileException) if the given file does not exist.
-
-Example:
---------------------
-assert(!"/etc/fonts/fonts.conf".isDir);
-assert("/usr/share/include".isDir);
---------------------
   +/
 @property bool isDir(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -1993,6 +2252,26 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
 if (isConvertibleToString!R)
 {
     return name.isDir!(StringTypeOf!R);
+}
+
+///
+
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    auto dir = deleteme ~ "dir";
+    auto f = deleteme ~ "f";
+    scope(exit) dir.rmdir, f.remove;
+
+    assert(!dir.exists);
+    assertThrown!FileException(dir.isDir);
+
+    dir.mkdir;
+    assert(dir.isDir);
+
+    f.write(".");
+    assert(!f.isDir);
 }
 
 @safe unittest
@@ -2043,13 +2322,7 @@ if (isConvertibleToString!R)
 
     Returns:
         true if attributes specifies a directory
-
-Example:
---------------------
-assert(!attrIsDir(getAttributes("/etc/fonts/fonts.conf")));
-assert(!attrIsDir(getLinkAttributes("/etc/fonts/fonts.conf")));
---------------------
-  +/
++/
 bool attrIsDir(uint attributes) @safe pure nothrow @nogc
 {
     version(Windows)
@@ -2060,6 +2333,27 @@ bool attrIsDir(uint attributes) @safe pure nothrow @nogc
     {
         return (attributes & S_IFMT) == S_IFDIR;
     }
+}
+
+///
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    auto dir = deleteme ~ "dir";
+    auto f = deleteme ~ "f";
+    scope(exit) dir.rmdir, f.remove;
+
+    assert(!dir.exists);
+    assertThrown!FileException(dir.getAttributes.attrIsDir);
+
+    dir.mkdir;
+    assert(dir.isDir);
+    assert(dir.getAttributes.attrIsDir);
+
+    f.write(".");
+    assert(!f.isDir);
+    assert(!f.getAttributes.attrIsDir);
 }
 
 @safe unittest
@@ -2118,13 +2412,7 @@ bool attrIsDir(uint attributes) @safe pure nothrow @nogc
 
     Throws:
         $(D FileException) if the given file does not exist.
-
-Example:
---------------------
-assert("/etc/fonts/fonts.conf".isFile);
-assert(!"/usr/share/include".isFile);
---------------------
-  +/
++/
 @property bool isFile(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     !isConvertibleToString!R)
@@ -2140,6 +2428,25 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
 if (isConvertibleToString!R)
 {
     return isFile!(StringTypeOf!R)(name);
+}
+
+///
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    auto dir = deleteme ~ "dir";
+    auto f = deleteme ~ "f";
+    scope(exit) dir.rmdir, f.remove;
+
+    dir.mkdir;
+    assert(!dir.isFile);
+
+    assert(!f.exists);
+    assertThrown!FileException(f.isFile);
+
+    f.write(".");
+    assert(f.isFile);
 }
 
 @system unittest // bugzilla 15658
@@ -2212,6 +2519,27 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
     }
 }
 
+///
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    auto dir = deleteme ~ "dir";
+    auto f = deleteme ~ "f";
+    scope(exit) dir.rmdir, f.remove;
+
+    dir.mkdir;
+    assert(!dir.isFile);
+    assert(!dir.getAttributes.attrIsFile);
+
+    assert(!f.exists);
+    assertThrown!FileException(f.getAttributes.attrIsFile);
+
+    f.write(".");
+    assert(f.isFile);
+    assert(f.getAttributes.attrIsFile);
+}
+
 @safe unittest
 {
     version(Windows)
@@ -2280,6 +2608,24 @@ if (isConvertibleToString!R)
 @safe unittest
 {
     static assert(__traits(compiles, TestAliasedString(null).isSymlink));
+}
+
+///
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    auto source = deleteme ~ "source";
+    auto target = deleteme ~ "target";
+    scope(exit) source.remove, target.remove;
+
+    assert(!source.exists);
+    assertThrown!FileException(source.isSymlink);
+
+    target.write("target");
+    target.symlink(source);
+    assert(source.readText == "target");
+    assert(source.isSymlink);
 }
 
 @system unittest
@@ -2384,6 +2730,25 @@ bool attrIsSymlink(uint attributes) @safe pure nothrow @nogc
         return (attributes & S_IFMT) == S_IFLNK;
 }
 
+///
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    auto source = deleteme ~ "source";
+    auto target = deleteme ~ "target";
+    scope(exit) source.remove, target.remove;
+
+    assert(!source.exists);
+    assertThrown!FileException(source.getLinkAttributes.attrIsSymlink);
+
+    target.write("target");
+    target.symlink(source);
+    assert(source.readText == "target");
+    assert(source.isSymlink);
+    assert(source.getLinkAttributes.attrIsSymlink);
+    assert(!source.getAttributes.attrIsSymlink);
+}
 
 /****************************************************
  * Change directory to $(D pathname).
@@ -2422,6 +2787,25 @@ void chdir(R)(auto ref R pathname)
 if (isConvertibleToString!R)
 {
     return chdir!(StringTypeOf!R)(pathname);
+}
+
+///
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.path : buildPath;
+
+    auto cwd = getcwd;
+    auto dir = deleteme ~ "dir";
+    dir.mkdir;
+    scope(exit) cwd.chdir, dir.rmdirRecurse;
+
+    dir.buildPath("a").write(".");
+    dir.chdir; // step into dir
+    "b".write(".");
+    dirEntries(".", SpanMode.shallow).equal(
+        [".".buildPath("b"), ".".buildPath("a")]
+    );
 }
 
 @safe unittest
@@ -2483,6 +2867,25 @@ if (isConvertibleToString!R)
     static assert(__traits(compiles, mkdir(TestAliasedString(null))));
 }
 
+///
+@safe unittest
+{
+    import std.file : mkdir;
+
+    auto dir = deleteme ~ "dir";
+    scope(exit) dir.rmdir;
+
+    dir.mkdir;
+    assert(dir.exists);
+}
+
+///
+@safe unittest
+{
+    import std.exception : assertThrown;
+    assertThrown!FileException("a/b/c/d/e".mkdir);
+}
+
 // Same as mkdir but ignores "already exists" errors.
 // Returns: "true" if the directory was created,
 //   "false" if it already existed.
@@ -2531,6 +2934,36 @@ void mkdirRecurse(in char[] pathname) @safe
     {
         ensureDirExists(pathname);
     }
+}
+
+///
+@system unittest
+{
+    import std.path : buildPath;
+
+    auto dir = deleteme ~ "dir";
+    scope(exit) dir.rmdirRecurse;
+
+    dir.mkdir;
+    assert(dir.exists);
+    dir.mkdirRecurse; // does nothing
+
+    // creates all parent directories as needed
+    auto nested = dir.buildPath("a", "b", "c");
+    nested.mkdirRecurse;
+    assert(nested.exists);
+}
+
+///
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    scope(exit) deleteme.remove;
+    deleteme.write("a");
+
+    // cannot make directory as it's already a file
+    assertThrown!FileException(deleteme.mkdirRecurse);
 }
 
 @safe unittest
@@ -2626,6 +3059,17 @@ if (isConvertibleToString!R)
 @safe unittest
 {
     static assert(__traits(compiles, rmdir(TestAliasedString(null))));
+}
+
+///
+@system unittest
+{
+    auto dir = deleteme ~ "dir";
+
+    dir.mkdir;
+    assert(dir.exists);
+    dir.rmdir;
+    assert(!dir.exists);
 }
 
 /++
@@ -2883,6 +3327,7 @@ else version (Posix) string getcwd() @trusted
     return p[0 .. core.stdc.string.strlen(p)].idup;
 }
 
+///
 @safe unittest
 {
     auto s = getcwd();
@@ -2992,6 +3437,7 @@ else version (NetBSD)
         static assert(0, "thisExePath is not supported on this platform");
 }
 
+///
 @safe unittest
 {
     import std.path : isAbsolute;
@@ -3622,6 +4068,27 @@ if (isConvertibleToString!RF || isConvertibleToString!RT)
     copy!Types(from, to, preserve);
 }
 
+///
+@safe unittest
+{
+    auto source = deleteme ~ "source";
+    auto target = deleteme ~ "target";
+    auto targetNonExistent = deleteme ~ "target2";
+
+    scope(exit) source.remove, target.remove, targetNonExistent.remove;
+
+    source.write("source");
+    target.write("target");
+
+    assert(target.readText == "target");
+
+    source.copy(target);
+    assert(target.readText == "source");
+
+    source.copy(targetNonExistent);
+    assert(targetNonExistent.readText == "source");
+}
+
 @safe unittest // issue 15319
 {
     assert(__traits(compiles, copy("from.txt", "to.txt")));
@@ -3767,14 +4234,7 @@ void rmdirRecurse(in char[] pathname)
     rmdirRecurse(DirEntry(cast(string) pathname));
 }
 
-/++
-    Remove directory and all of its content and subdirectories,
-    recursively.
-
-    Throws:
-        $(D FileException) if there is an error (including if the given
-        file is not a directory).
- +/
+/// ditto
 void rmdirRecurse(ref DirEntry de)
 {
     if (!de.isDir)
@@ -3808,6 +4268,21 @@ void rmdirRecurse(ref DirEntry de)
 void rmdirRecurse(DirEntry de)
 {
     rmdirRecurse(de);
+}
+
+///
+@system unittest
+{
+    import std.path : buildPath;
+
+    auto dir = deleteme.buildPath("a", "b", "c");
+
+    dir.mkdirRecurse;
+    assert(dir.exists);
+
+    deleteme.rmdirRecurse;
+    assert(!dir.exists);
+    assert(!deleteme.exists);
 }
 
 version(Windows) @system unittest
@@ -3891,6 +4366,34 @@ enum SpanMode
     _breadth-first traversal).
     */
     breadth,
+}
+
+///
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
+    import std.path : buildPath, relativePath;
+
+    auto root = tempDir.buildPath("root");
+    scope(exit) root.rmdirRecurse;
+    root.mkdir;
+
+    root.buildPath("animals").mkdir;
+    root.buildPath("animals", "cat").mkdir;
+    root.buildPath("animals", "dog").mkdir;
+    root.buildPath("plants").mkdir;
+
+    alias removeRoot = (e) => e.relativePath(root);
+
+    root.dirEntries(SpanMode.shallow).map!removeRoot.equal(
+        ["plants", "animals"]);
+
+    root.dirEntries(SpanMode.depth).map!removeRoot.equal(
+        ["plants", "animals/dog", "animals/cat", "animals"]);
+
+    root.dirEntries(SpanMode.breadth).map!removeRoot.equal(
+        ["plants", "animals", "animals/dog", "animals/cat"]);
 }
 
 private struct DirIteratorImpl
@@ -4574,4 +5077,15 @@ string tempDir() @trusted
         if (cache is null) cache = getcwd();
     }
     return cache;
+}
+
+///
+@safe unittest
+{
+    import std.path : buildPath;
+    auto myFile = tempDir.buildPath("my_tmp_file");
+    scope(exit) myFile.remove;
+
+    myFile.write("hello");
+    assert(myFile.readText == "hello");
 }
