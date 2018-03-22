@@ -382,6 +382,123 @@ if (isNarrowString!String)
 }
 
 /**
+ * Returns a static array from the stack with length of `s` and initializes
+ * it with copies of first `s` elements of range $(D r). If $(D r) does not
+ * have `s` elements the rest of the array is default-initialized.
+ *
+ * Recommended particulary for complex initializations of static arrays
+ * during compilation.
+ *
+ * Params:
+ *      r = The range (or aggregate with $(D opApply) function) whose elements
+ *      are copied into the stack-allocated array. It may be longer or shorter
+ *      than `s`.
+ *      rangeLength = outputs the amount of elements copied. Same as
+ *      $(D r).$(REF walkLength, std,range,primitives).
+ * Returns:
+ *      An initialized static array
+ */
+ForeachType!Range[s] array(size_t s, Range)(Range r, out size_t rangeLength)
+if (isInputRange!Range && !isInfinite!Range)
+{
+    alias E = ForeachType!Range;
+
+    import std.conv : emplaceRef;
+    import std.algorithm.mutation : uninitializedFill;
+    import std.algorithm.comparison : min;
+    import std.range : take;
+
+    size_t i = 0;
+
+    if (__ctfe)
+    {
+        // Compile-time version to avoid memcpy calls.
+        Unqual!E[s] result;
+        foreach (ref e; r.take(s))
+        {
+            result[i] = e;
+            i++;
+        }
+
+        rangeLength = i;
+        return (() @trusted => cast(E[s]) result)();
+    }
+
+    auto result = (() @trusted
+    {
+        Unqual!E[s] theArray = void;
+        return theArray;
+    }());
+
+    foreach (ref e; r.take(s))
+    {
+        emplaceRef!E(result[i], e);
+        i++;
+    }
+
+    // Result vas void-initialized so let's initialize the unfilled part manually.
+    result[i .. $].uninitializedFill(E.init);
+
+    rangeLength = i;
+    return (() @trusted => cast(E[s]) result)();
+}
+
+///ditto
+ForeachType!Range[s] array(size_t s, Range)(Range r)
+if (isInputRange!Range && !isInfinite!Range)
+{
+    size_t rangeLength = void;
+    return r.array!s(rangeLength);
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    import std.algorithm, std.range;
+    size_t lengthOfIteration = 0;
+    auto aStaticArray = iota(16)
+        .drop(2)
+        .stride(2)
+        .filter!(x => x % 3)
+        .array!6(lengthOfIteration)
+        ;
+    assert(aStaticArray[0] == 2);
+    assert(aStaticArray[1] == 4);
+    assert(aStaticArray[2] == 8);
+    assert(aStaticArray[3] == 10);
+    assert(aStaticArray[4] == 14);
+    assert(aStaticArray[5] == 0);
+
+    assert(aStaticArray.length == 6);
+    assert(lengthOfIteration == 5);
+
+    auto anotherStaticArray = only(2, 4, 8, 10, 14, 16, 20)
+        .array!4(lengthOfIteration)
+        ;
+
+    assert(lengthOfIteration == 4);
+    assert(aStaticArray[0 .. 4] == anotherStaticArray[]);
+}
+
+///works at compile-time too
+@nogc nothrow pure @safe unittest
+{
+    import std.range;
+    static struct MyRange
+    {
+        auto front(){return 6;}
+        void popFront(){}
+        enum empty = false;
+    }
+    enum aStaticArray = MyRange.init.take(3).array!5;
+    static assert(aStaticArray[0] == 6);
+    static assert(aStaticArray[2] == 6);
+    static assert(aStaticArray[3] == 0);
+
+    static assert(aStaticArray.length == 5);
+}
+
+/**
 Returns a newly allocated associative _array from a range of key/value tuples.
 
 Params:
