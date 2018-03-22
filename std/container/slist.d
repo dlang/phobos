@@ -138,9 +138,22 @@ struct SList(T)
 /**
 Constructor taking a number of nodes
      */
-    this(U)(U[] values...) if (isImplicitlyConvertible!(U, T))
+    this(U)(scope U[] values...) if (isImplicitlyConvertible!(U, T))
     {
-        insertFront(values);
+        initialize();
+        Node* n, newRoot;
+        foreach (item; values)
+        {
+            auto newNode = new Node(null, item);
+            (newRoot ? n._next : newRoot) = newNode;
+            n = newNode;
+        }
+        if (n)
+        {
+            // Last node points to the old root
+            n._next = _first;
+            _first = newRoot;
+        }
     }
 
 /**
@@ -359,7 +372,7 @@ Complexity: $(BIGOH m), where $(D m) is the length of $(D stuff)
     {
         initialize();
         size_t result;
-        Node * n, newRoot;
+        Node* n, newRoot;
         foreach (item; stuff)
         {
             auto newNode = new Node(null, item);
@@ -910,4 +923,16 @@ Complexity: $(BIGOH n)
 
     s.reverse();
     assert(s[].equal([3, 2, 1]));
+}
+
+version(DIP1000)
+@safe unittest
+{
+    int i, j;
+    auto s = SList!(int*)([&i, &j]);
+    assert(s._root);
+    assert(s._root._next);
+    assert(s._root._next._next);
+    assert(s._root._next._payload == &i);
+    assert(s._root._next._next._payload == &j);
 }
