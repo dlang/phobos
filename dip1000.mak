@@ -23,7 +23,7 @@ aa[std.conv]=-dip25 # errors from std.typecons
 aa[std.csv]=-dip1000
 aa[std.demangle]=-dip1000
 aa[std.encoding]=-dip1000
-aa[std.exception]=-dip25 # DROP: depends on a workaround or https://issues.dlang.org/show_bug.cgi?id=18637 fixed
+aa[std.exception]=-dip1000 # merged https://github.com/dlang/phobos/pull/6323; a workaround for https://issues.dlang.org/show_bug.cgi?id=18637
 aa[std.file]=-dip25 # probably already fixed (std.uni); currently: undefined symbol  pure nothrow @nogc return @safe std.uni.SliceOverIndexed!(std.uni.Grapheme).SliceOverIndexed std.uni.SliceOverIndexed!(std.uni.Grapheme).SliceOverIndexed.opSlice()
 aa[std.format]=-dip25 # @system function std.range.primitives.put
 aa[std.functional]=-dip25 # DROP: cannot call @system function std.functional.__unittest_L1216_C7.memoize!(pickFirst).memoize
