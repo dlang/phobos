@@ -835,9 +835,28 @@ public:
 private @trusted auto matchOnce(RegEx, R)(R input, const auto ref RegEx prog)
 {
     alias Char = BasicElementOf!R;
+    static struct Key
+    {
+        immutable(Char)[] pattern;
+        uint flags;
+    }
+    static Key cacheKey = Key("", -1);
+    static Matcher!Char cache;
     auto factory = prog.factory is null ? defaultFactory!Char(prog) : prog.factory;
-    auto engine = factory.create(prog, input);
-    scope(exit) factory.decRef(engine); // destroys the engine
+    auto key = Key(prog.pattern, prog.flags);
+    Matcher!Char engine;
+    if (cacheKey == key)
+    {
+        engine = cache;
+        engine.rearm(input);
+    }
+    else
+    {
+        engine = factory.create(prog, input);
+        if (cache) factory.decRef(cache); // destroy cached engine *after* building a new one
+        cache = engine;
+        cacheKey = key;
+    }
     auto captures = Captures!R(input, prog.ngroup, prog.dict);
     captures._nMatch = engine.match(captures.matches);
     return captures;

@@ -847,6 +847,14 @@ final:
         }
     }
 
+    override Matcher!Char rearm(in Char[] data)
+    {
+        exhausted = false;
+        matched = 0;
+        s = Stream(data);
+        return this;
+    }
+
     this()(ref const Regex!Char program, Stream stream, void[] memory)
     {
          // We are emplace'd to malloced memory w/o blitting T.init over it\
