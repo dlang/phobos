@@ -421,16 +421,40 @@ template ImmutableOf(T)
     static assert(is(  ImmutableOf!int ==    immutable int));
 }
 
-/// Get qualifier template from the given type T
+/**
+ * Gives a template that can be used to apply the same
+ * attributes that are on the given type `T`. E.g. passing
+ * `inout shared int` will return `SharedInoutOf`.
+ *
+ * Params:
+ *     T = the type to check qualifiers from
+ * Returns:
+ *     The qualifier template from the given type `T`
+ */
 template QualifierOf(T)
 {
-         static if (is(T == shared(const U), U)) alias QualifierOf = SharedConstOf;
-    else static if (is(T ==        const U , U)) alias QualifierOf = ConstOf;
-    else static if (is(T == shared(inout U), U)) alias QualifierOf = SharedInoutOf;
-    else static if (is(T ==        inout U , U)) alias QualifierOf = InoutOf;
-    else static if (is(T ==    immutable U , U)) alias QualifierOf = ImmutableOf;
-    else static if (is(T ==       shared U , U)) alias QualifierOf = SharedOf;
-    else                                         alias QualifierOf = MutableOf;
+    static if (is(T == shared(const U), U))
+        alias QualifierOf = SharedConstOf;
+    else static if (is(T == const U, U))
+        alias QualifierOf = ConstOf;
+    else static if (is(T == shared(inout U), U))
+        alias QualifierOf = SharedInoutOf;
+    else static if (is(T == inout U, U))
+        alias QualifierOf = InoutOf;
+    else static if (is(T == immutable U, U))
+        alias QualifierOf = ImmutableOf;
+    else static if (is(T == shared U, U))
+        alias QualifierOf = SharedOf;
+    else
+        alias QualifierOf = MutableOf;
+}
+
+///
+@safe unittest
+{
+    static assert(__traits(isSame, QualifierOf!(immutable int), ImmutableOf));
+    static assert(__traits(isSame, QualifierOf!(shared int), SharedOf));
+    static assert(__traits(isSame, QualifierOf!(shared inout int), SharedInoutOf));
 }
 
 @safe unittest
