@@ -2071,16 +2071,21 @@ if (isConvertibleToString!R)
 
     auto source = deleteme ~ "source";
     auto target = deleteme ~ "target";
-    scope(exit) source.remove, target.remove;
 
     assert(!source.exists);
     assertThrown!FileException(source.getLinkAttributes);
 
-    target.write("target");
-    target.symlink(source);
-    assert(source.readText == "target");
-    assert(source.isSymlink);
-    assert(source.getLinkAttributes.attrIsSymlink);
+    // symlinking isn't available on Windows
+    version(Posix)
+    {
+        scope(exit) source.remove, target.remove;
+
+        target.write("target");
+        target.symlink(source);
+        assert(source.readText == "target");
+        assert(source.isSymlink);
+        assert(source.getLinkAttributes.attrIsSymlink);
+    }
 }
 
 /// if the file is no symlink, getLinkAttributes behaves like getAttributes
@@ -2617,15 +2622,21 @@ if (isConvertibleToString!R)
 
     auto source = deleteme ~ "source";
     auto target = deleteme ~ "target";
-    scope(exit) source.remove, target.remove;
 
     assert(!source.exists);
     assertThrown!FileException(source.isSymlink);
 
-    target.write("target");
-    target.symlink(source);
-    assert(source.readText == "target");
-    assert(source.isSymlink);
+    // symlinking isn't available on Windows
+    version(Posix)
+    {
+        scope(exit) source.remove, target.remove;
+
+        target.write("target");
+        target.symlink(source);
+        assert(source.readText == "target");
+        assert(source.isSymlink);
+        assert(source.getLinkAttributes.attrIsSymlink);
+    }
 }
 
 @system unittest
@@ -2737,17 +2748,21 @@ bool attrIsSymlink(uint attributes) @safe pure nothrow @nogc
 
     auto source = deleteme ~ "source";
     auto target = deleteme ~ "target";
-    scope(exit) source.remove, target.remove;
 
     assert(!source.exists);
     assertThrown!FileException(source.getLinkAttributes.attrIsSymlink);
 
-    target.write("target");
-    target.symlink(source);
-    assert(source.readText == "target");
-    assert(source.isSymlink);
-    assert(source.getLinkAttributes.attrIsSymlink);
-    assert(!source.getAttributes.attrIsSymlink);
+    // symlinking isn't available on Windows
+    version(Posix)
+    {
+        scope(exit) source.remove, target.remove;
+
+        target.write("target");
+        target.symlink(source);
+        assert(source.readText == "target");
+        assert(source.isSymlink);
+        assert(source.getLinkAttributes.attrIsSymlink);
+    }
 }
 
 /****************************************************
