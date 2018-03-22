@@ -1090,9 +1090,18 @@ private T tanImpl(T)(T x) @safe pure nothrow @nogc
     }
     else static if (realFormat == RealFormat.ieeeSingle)
     {
+        static immutable T[6] P = [
+            3.33331568548E-1,
+            1.33387994085E-1,
+            5.34112807005E-2,
+            2.44301354525E-2,
+            3.11992232697E-3,
+            9.38540185543E-3,
+        ];
+
         enum T P1 = 0.78515625;
-        enum T P2 = 2.4187564849853515625e-4;
-        enum T P3 = 3.77489497744594108e-8;
+        enum T P2 = 2.4187564849853515625E-4;
+        enum T P3 = 3.77489497744594108E-8;
     }
     else
         static assert(0, "no coefficients for tan()");
@@ -1148,19 +1157,9 @@ private T tanImpl(T)(T x) @safe pure nothrow @nogc
     if (zz > zzThreshold)
     {
         static if (realFormat == RealFormat.ieeeSingle)
-        {
-            y = ((((( 9.38540185543E-3f  * zz
-                    + 3.11992232697E-3f) * zz
-                    + 2.44301354525E-2f) * zz
-                    + 5.34112807005E-2f) * zz
-                    + 1.33387994085E-1f) * zz
-                    + 3.33331568548E-1f) * zz * z
-                + z;
-        }
+            y = z + z * (zz * poly(zz, P));
         else
-        {
             y = z + z * (zz * poly(zz, P) / poly(zz, Q));
-        }
     }
     else
         y = z;
@@ -1393,26 +1392,31 @@ private T atanImpl(T)(T x) @safe pure nothrow @nogc
     else static if (realFormat == RealFormat.ieeeDouble)
     {
         static immutable T[5] P = [
-            -6.485021904942025371773E1L,
-            -1.228866684490136173410E2L,
-            -7.500855792314704667340E1L,
-            -1.615753718733365076637E1L,
-            -8.750608600031904122785E-1L,
+           -6.485021904942025371773E1L,
+           -1.228866684490136173410E2L,
+           -7.500855792314704667340E1L,
+           -1.615753718733365076637E1L,
+           -8.750608600031904122785E-1L,
         ];
         static immutable T[6] Q = [
-             1.945506571482613964425E2L,
-             4.853903996359136964868E2L,
-             4.328810604912902668951E2L,
-             1.650270098316988542046E2L,
-             2.485846490142306297962E1L,
-             1.000000000000000000000E0L,
+            1.945506571482613964425E2L,
+            4.853903996359136964868E2L,
+            4.328810604912902668951E2L,
+            1.650270098316988542046E2L,
+            2.485846490142306297962E1L,
+            1.000000000000000000000E0L,
         ];
 
         enum T MOREBITS = 6.123233995736765886130E-17L;
     }
     else static if (realFormat == RealFormat.ieeeSingle)
     {
-        // inlined below
+        static immutable T[4] P = [
+           -3.33329491539E-1,
+            1.99777106478E-1,
+           -1.38776856032E-1,
+            8.05374449538E-2,
+        ];
     }
     else
         static assert(0, "no coefficients for atan()");
@@ -1486,17 +1490,9 @@ private T atanImpl(T)(T x) @safe pure nothrow @nogc
         // Rational form in x^^2.
         const T z = x * x;
         static if (realFormat == RealFormat.ieeeSingle)
-        {
-            y += ((( 8.05374449538e-2f * z
-                   - 1.38776856032E-1f) * z
-                   + 1.99777106478E-1f) * z
-                   - 3.33329491539E-1f) * z * x
-                 + x;
-        }
+            y += poly(z, P) * z * x + x;
         else
-        {
             y = y + (poly(z, P) / poly(z, Q)) * z * x + x;
-        }
     }
 
     return (sign) ? -y : y;
@@ -2227,6 +2223,15 @@ private T expImpl(T)(T x) @safe pure nothrow @nogc
     alias F = floatTraits!T;
     static if (F.realFormat == RealFormat.ieeeSingle)
     {
+        static immutable T[6] P = [
+            5.0000001201E-1,
+            1.6666665459E-1,
+            4.1665795894E-2,
+            8.3334519073E-3,
+            1.3981999507E-3,
+            1.9875691500E-4,
+        ];
+
         enum T C1 = 0.693359375;
         enum T C2 = -2.12194440e-4;
 
@@ -2329,14 +2334,7 @@ private T expImpl(T)(T x) @safe pure nothrow @nogc
     static if (F.realFormat == RealFormat.ieeeSingle)
     {
         xx = x * x;
-        x = ((((( 1.9875691500E-4f  * x
-                + 1.3981999507E-3f) * x
-                + 8.3334519073E-3f) * x
-                + 4.1665795894E-2f) * x
-                + 1.6666665459E-1f) * x
-                + 5.0000001201E-1f) * xx
-                + x
-                + 1.0f;
+        x = poly(x, P) * xx + x + 1.0f;
     }
     else
     {
