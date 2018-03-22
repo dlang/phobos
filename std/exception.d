@@ -1231,9 +1231,10 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
 @system unittest
 {
     int i;
+    int* p = &i; // trick the compiler when initializing slicep; https://issues.dlang.org/show_bug.cgi?id=18637
     int[]  slice = [0, 1, 2, 3, 4];
     int[5] arr   = [0, 1, 2, 3, 4];
-    int*[]  slicep = [&i];
+    int*[]  slicep = [p];
     int*[1] arrp   = [&i];
 
     // A slice points to all of its members:
