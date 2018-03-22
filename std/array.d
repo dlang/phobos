@@ -3958,6 +3958,7 @@ if (!is(U == T))
     import std.conv : emplaceRef;
 
     U[n] ret = void;
+    // TODO: ElementType vs ForeachType
     static foreach (i; 0 .. n)
     {
         emplaceRef!U(ret[i], cast(U) a[i]);
@@ -4007,18 +4008,8 @@ nothrow pure @safe unittest
 auto staticArray(size_t n, T)(T a)
 if (isInputRange!T)
 {
-    import std.conv : emplaceRef;
-
-    // TODO: ElementType vs ForeachType
-    alias U = typeof(a.front);
-    U[n] ret = void;
-    size_t i;
-    foreach (ref ai; a)
-    {
-        emplaceRef!U(ret[i++], ai);
-    }
-    assert(i == n);
-    return ret;
+    alias U = ElementType!T;
+    return staticArray!(U[n], U, n)(a);
 }
 
 /// ditto
