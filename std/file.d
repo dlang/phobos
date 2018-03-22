@@ -2071,16 +2071,21 @@ if (isConvertibleToString!R)
 
     auto source = deleteme ~ "source";
     auto target = deleteme ~ "target";
-    scope(exit) source.remove, target.remove;
 
     assert(!source.exists);
     assertThrown!FileException(source.getLinkAttributes);
 
-    target.write("target");
-    target.symlink(source);
-    assert(source.readText == "target");
-    assert(source.isSymlink);
-    assert(source.getLinkAttributes.attrIsSymlink);
+    // symlinking isn't available on Windows
+    version(Posix)
+    {
+        scope(exit) source.remove, target.remove;
+
+        target.write("target");
+        target.symlink(source);
+        assert(source.readText == "target");
+        assert(source.isSymlink);
+        assert(source.getLinkAttributes.attrIsSymlink);
+    }
 }
 
 /// if the file is no symlink, getLinkAttributes behaves like getAttributes
@@ -2184,19 +2189,23 @@ if (isConvertibleToString!R)
     import std.conv : octal;
 
     auto f = deleteme ~ "file";
-    scope(exit) f.remove;
+    version(Posix)
+    {
+        scope(exit) f.remove;
 
-    assert(!f.exists);
-    assertThrown!FileException(f.setAttributes(octal!777));
+        assert(!f.exists);
+        assertThrown!FileException(f.setAttributes(octal!777));
 
-    f.write(".");
-    auto attributes = f.getAttributes;
-    assert(!attributes.attrIsDir);
-    assert(attributes.attrIsFile);
+        f.write(".");
+        auto attributes = f.getAttributes;
+        assert(!attributes.attrIsDir);
+        assert(attributes.attrIsFile);
 
-    f.setAttributes(octal!777);
-    attributes = f.getAttributes;
-    assert((attributes & 1023) == octal!777);
+        f.setAttributes(octal!777);
+        attributes = f.getAttributes;
+
+        assert((attributes & 1023) == octal!777);
+    }
 }
 
 /// setAttributes with a directory
@@ -2206,19 +2215,23 @@ if (isConvertibleToString!R)
     import std.conv : octal;
 
     auto dir = deleteme ~ "dir";
-    scope(exit) dir.rmdir;
+    version(Posix)
+    {
+        scope(exit) dir.rmdir;
 
-    assert(!dir.exists);
-    assertThrown!FileException(dir.setAttributes(octal!777));
+        assert(!dir.exists);
+        assertThrown!FileException(dir.setAttributes(octal!777));
 
-    dir.mkdir;
-    auto attributes = dir.getAttributes;
-    assert(attributes.attrIsDir);
-    assert(!attributes.attrIsFile);
+        dir.mkdir;
+        auto attributes = dir.getAttributes;
+        assert(attributes.attrIsDir);
+        assert(!attributes.attrIsFile);
 
-    dir.setAttributes(octal!777);
-    attributes = dir.getAttributes;
-    assert((attributes & 1023) == octal!777);
+        dir.setAttributes(octal!777);
+        attributes = dir.getAttributes;
+
+        assert((attributes & 1023) == octal!777);
+    }
 }
 
 /++
@@ -2617,15 +2630,21 @@ if (isConvertibleToString!R)
 
     auto source = deleteme ~ "source";
     auto target = deleteme ~ "target";
-    scope(exit) source.remove, target.remove;
 
     assert(!source.exists);
     assertThrown!FileException(source.isSymlink);
 
-    target.write("target");
-    target.symlink(source);
-    assert(source.readText == "target");
-    assert(source.isSymlink);
+    // symlinking isn't available on Windows
+    version(Posix)
+    {
+        scope(exit) source.remove, target.remove;
+
+        target.write("target");
+        target.symlink(source);
+        assert(source.readText == "target");
+        assert(source.isSymlink);
+        assert(source.getLinkAttributes.attrIsSymlink);
+    }
 }
 
 @system unittest
@@ -2737,17 +2756,21 @@ bool attrIsSymlink(uint attributes) @safe pure nothrow @nogc
 
     auto source = deleteme ~ "source";
     auto target = deleteme ~ "target";
-    scope(exit) source.remove, target.remove;
 
     assert(!source.exists);
     assertThrown!FileException(source.getLinkAttributes.attrIsSymlink);
 
-    target.write("target");
-    target.symlink(source);
-    assert(source.readText == "target");
-    assert(source.isSymlink);
-    assert(source.getLinkAttributes.attrIsSymlink);
-    assert(!source.getAttributes.attrIsSymlink);
+    // symlinking isn't available on Windows
+    version(Posix)
+    {
+        scope(exit) source.remove, target.remove;
+
+        target.write("target");
+        target.symlink(source);
+        assert(source.readText == "target");
+        assert(source.isSymlink);
+        assert(source.getLinkAttributes.attrIsSymlink);
+    }
 }
 
 /****************************************************
@@ -2883,7 +2906,7 @@ if (isConvertibleToString!R)
 @safe unittest
 {
     import std.exception : assertThrown;
-    assertThrown!FileException("a/b/c/d/e".mkdir);
+    assertThrown("a/b/c/d/e".mkdir);
 }
 
 // Same as mkdir but ignores "already exists" errors.
