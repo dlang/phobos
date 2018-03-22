@@ -2189,19 +2189,23 @@ if (isConvertibleToString!R)
     import std.conv : octal;
 
     auto f = deleteme ~ "file";
-    scope(exit) f.remove;
+    version(Posix)
+    {
+        scope(exit) f.remove;
 
-    assert(!f.exists);
-    assertThrown!FileException(f.setAttributes(octal!777));
+        assert(!f.exists);
+        assertThrown!FileException(f.setAttributes(octal!777));
 
-    f.write(".");
-    auto attributes = f.getAttributes;
-    assert(!attributes.attrIsDir);
-    assert(attributes.attrIsFile);
+        f.write(".");
+        auto attributes = f.getAttributes;
+        assert(!attributes.attrIsDir);
+        assert(attributes.attrIsFile);
 
-    f.setAttributes(octal!777);
-    attributes = f.getAttributes;
-    assert((attributes & 1023) == octal!777);
+        f.setAttributes(octal!777);
+        attributes = f.getAttributes;
+
+        assert((attributes & 1023) == octal!777);
+    }
 }
 
 /// setAttributes with a directory
@@ -2211,19 +2215,23 @@ if (isConvertibleToString!R)
     import std.conv : octal;
 
     auto dir = deleteme ~ "dir";
-    scope(exit) dir.rmdir;
+    version(Posix)
+    {
+        scope(exit) dir.rmdir;
 
-    assert(!dir.exists);
-    assertThrown!FileException(dir.setAttributes(octal!777));
+        assert(!dir.exists);
+        assertThrown!FileException(dir.setAttributes(octal!777));
 
-    dir.mkdir;
-    auto attributes = dir.getAttributes;
-    assert(attributes.attrIsDir);
-    assert(!attributes.attrIsFile);
+        dir.mkdir;
+        auto attributes = dir.getAttributes;
+        assert(attributes.attrIsDir);
+        assert(!attributes.attrIsFile);
 
-    dir.setAttributes(octal!777);
-    attributes = dir.getAttributes;
-    assert((attributes & 1023) == octal!777);
+        dir.setAttributes(octal!777);
+        attributes = dir.getAttributes;
+
+        assert((attributes & 1023) == octal!777);
+    }
 }
 
 /++
