@@ -3952,7 +3952,7 @@ pragma(inline, true) T[n] staticArray(T, size_t n)(auto ref T[n] a) nothrow @saf
 }
 
 /// ditto
-U[n] staticArray(U, T, size_t n)(auto ref T[n] a)
+U[n] staticArray(U, T, size_t n)(auto ref T[n] a) nothrow
 if (!is(U == T))
 {
     import std.conv : emplaceRef;
@@ -4013,7 +4013,7 @@ if (isInputRange!T)
 }
 
 /// ditto
-auto staticArray(Un : U[n], U, size_t n, T)(T a) nothrow @safe pure @nogc
+auto staticArray(Un : U[n], U, size_t n, T)(T a) nothrow
 if (isInputRange!T)
 {
     import std.conv : emplaceRef;
