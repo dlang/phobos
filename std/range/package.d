@@ -7723,15 +7723,15 @@ if (isForwardRange!Source && hasLength!Source)
 A fixed-sized sliding window iteration
 of size `windowSize` over a `source` range by a custom `stepSize`.
 
-The `Source` range must be at least an `ForwardRange` and
-the `windowSize` must be greater than zero.
+The `Source` range must be at least a $(REF_ALTTEXT ForwardRange, isForwardRange, std,range,primitives)
+and the `windowSize` must be greater than zero.
 
 For `windowSize = 1` it splits the range into single element groups (aka `unflatten`)
 For `windowSize = 2` it is similar to `zip(source, source.save.dropOne)`.
 
 Params:
-    f = Whether the last element with fewer elements than `windowSize`
-        should be be ignored (`Yes.withPartial`)
+    f = Whether the last element has fewer elements than `windowSize`
+        it should be be ignored (`No.withPartial`) or added (`Yes.withPartial`)
     source = Range from which the slide will be selected
     windowSize = Sliding window size
     stepSize = Steps between the windows (by default 1)
@@ -7739,9 +7739,9 @@ Params:
 Returns: Range of all sliding windows with propagated bi-directionality,
          forwarding, random access, and slicing.
 
-Note: To avoid performance overhead, bi-directionality is only forwarded when
-      $(REF hasSlicing, std,range,primitives) and $(REF hasLength, std,range,primitives)
-      are true.
+Note: To avoid performance overhead, $(REF_ALTTEXT bi-directionality, isBidirectionalRange, std,range,primitives)
+      is only available when $(REF hasSlicing, std,range,primitives)
+      and $(REF hasLength, std,range,primitives) are true.
 
 See_Also: $(LREF chunks)
 */
@@ -7807,6 +7807,20 @@ auto slide(Flag!"withPartial" f = Yes.withPartial,
     int[dstring] d;
     "AGAGA"d.slide!(Yes.withPartial)(2).each!(a => d[a]++);
     assert(d == ["AG"d: 2, "GA"d: 2]);
+}
+
+/// withPartial only has an effect if last element in the range doesn't have the full size
+@safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+
+    assert(5.iota.slide!(Yes.withPartial)(3, 4).equal!equal([[0, 1, 2], [4]]));
+    assert(6.iota.slide!(Yes.withPartial)(3, 4).equal!equal([[0, 1, 2], [4, 5]]));
+    assert(7.iota.slide!(Yes.withPartial)(3, 4).equal!equal([[0, 1, 2], [4, 5, 6]]));
+
+    assert(5.iota.slide!(No.withPartial)(3, 4).equal!equal([[0, 1, 2]]));
+    assert(6.iota.slide!(No.withPartial)(3, 4).equal!equal([[0, 1, 2]]));
+    assert(7.iota.slide!(No.withPartial)(3, 4).equal!equal([[0, 1, 2], [4, 5, 6]]));
 }
 
 private struct Slides(Flag!"withPartial" withPartial = Yes.withPartial, Source)
