@@ -2906,7 +2906,7 @@ if (isConvertibleToString!R)
 @safe unittest
 {
     import std.exception : assertThrown;
-    assertThrown!FileException("a/b/c/d/e".mkdir);
+    assertThrown("a/b/c/d/e".mkdir);
 }
 
 // Same as mkdir but ignores "already exists" errors.
