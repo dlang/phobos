@@ -128,7 +128,7 @@ rather than re-evaluated.
 This can be a useful function to place in a chain, after functions
 that have expensive evaluation, as a lazy alternative to $(REF array, std,array).
 In particular, it can be placed after a call to `map`, or before a call
-to `filter`.
+to `filter` or `tee`.
 
 `cache` may provide
 $(REF_ALTTEXT bidirectional _range, isBidirectionalRange, std,_range,primitives)
