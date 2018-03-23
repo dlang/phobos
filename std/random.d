@@ -2072,8 +2072,7 @@ Returns:
     return a `ref` to the $(D range element), otherwise it will return
     a copy.
  */
-auto ref inout(ElementType!Range) choice(Range, RandomGen = Random)(inout auto ref Range range,
-                                           ref RandomGen urng)
+auto ref choice(Range, RandomGen = Random)(auto ref Range range, ref RandomGen urng)
 if (isRandomAccessRange!Range && hasLength!Range && isUniformRNG!RandomGen)
 {
     assert(range.length > 0,
@@ -2108,13 +2107,6 @@ auto ref choice(Range)(auto ref Range range)
     elem = choice(array, rng2);
     assert(canFind(array, elem),
            "Choice did not return a valid element from the given Range");
-}
-
-@safe unittest // issue 18631
-{
-    const a = [0,1,2];
-    auto r = choice(a);
-    auto s = choice(cast(const)[0,1,2]);
 }
 
 @safe unittest
