@@ -1081,7 +1081,7 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
     assert(n == 6597103971274460346);
 
     // Seed with an unpredictable value
-    gen.seed(unpredictableSeed);
+    gen.seed(unpredictableSeed!ulong);
     n = gen.front; // different across runs
 }
 
@@ -1093,13 +1093,7 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
     static assert(isUniformRNG!(Mt19937_64, ulong));
     static assert(isSeedable!Mt19937_64);
     static assert(isSeedable!(Mt19937_64, ulong));
-    // Issue 15147: this test demonstrates viably that Mt19937_64
-    // is seedable with an infinite range of `ulong` values
-    // but it's a poor example of how to actually seed the
-    // generator, since it can't cover the full range of
-    // possible seed values.  Ideally we need a 64-bit
-    // unpredictable seed to complement the 32-bit one!
-    static assert(isSeedable!(Mt19937_64, typeof(map!((a) => (cast(ulong) unpredictableSeed))(repeat(0)))));
+    static assert(isSeedable!(Mt19937_64, typeof(map!((a) => unpredictableSeed!ulong)(repeat(0)))));
     Mt19937_64 gen;
     assert(gen.front == 14514284786278117030uL);
     popFrontN(gen, 9999);
@@ -1521,9 +1515,371 @@ version (LegacyARC4Random)
 
 version (AnyARC4Random)
 {
-    extern(C) private @nogc nothrow
+    extern(C) @nogc nothrow private
     {
         uint arc4random() @safe;
+        void arc4random_buf(scope void* buf, size_t nbytes) @system;
+    }
+}
+else version (Windows)
+{
+    import core.sys.windows.windows:
+        BOOL, HMODULE, FARPROC, LPCSTR, LPCWSTR, PBYTE,
+        ULONG_PTR, FreeLibrary, GetProcAddress, LoadLibraryA;
+    import core.sys.windows.wincrypt : HCRYPTPROV;
+    private alias DWORD = size_t; // uint in druntime
+
+    private alias FnCryptAcquireContextW = extern(Windows)
+        BOOL function(HCRYPTPROV*, LPCWSTR, LPCWSTR, DWORD, DWORD) @nogc nothrow;
+    private alias FnCryptAcquireContextA = extern (Windows)
+        BOOL function(HCRYPTPROV*, LPCSTR, LPCSTR, DWORD, DWORD) @nogc nothrow;
+    private alias FnCryptGenRandom = extern(Windows)
+        BOOL function(HCRYPTPROV, DWORD, scope PBYTE) @nogc nothrow;
+    private alias FnReleaseContext = extern(Windows)
+        BOOL function(HCRYPTPROV, DWORD) @nogc nothrow;
+
+    /+
+    Tries to use a system API to get entropy. Resources are not cached
+    due to the expectation that this function will not be called more
+    than once per program execution. If you want to retrieve system
+    entropy repeatedly over the life of the application, you should
+    use/write a different function.
+
+    Params:
+        ptr = address at which to start writing
+        len = number of bytes to write
+
+    Returns:
+        `len` on success, -1 on failure
+    +/
+    private ptrdiff_t oneTimeGenRandom()(scope void* ptr, ptrdiff_t len) @system
+    {
+        import core.sys.windows.winbase : GetLastError;
+        import core.sys.windows.winerror : NTE_BAD_KEYSET;
+        import core.sys.windows.wincrypt : PROV_RSA_FULL, CRYPT_NEWKEYSET,
+            CRYPT_VERIFYCONTEXT, CRYPT_SILENT;
+        auto hAdvapi32 = LoadLibraryA("Advapi32.dll");
+        if (!hAdvapi32) return -1;
+        scope (exit) { if (hAdvapi32) FreeLibrary(hAdvapi32); }
+        ULONG_PTR hProvider;
+        auto fnCryptReleaseContext = cast(FnReleaseContext)
+            GetProcAddress(hAdvapi32, "CryptReleaseContext");
+        if (!fnCryptReleaseContext) return -1;
+        auto fnCryptAcquireContextW = cast(FnCryptAcquireContextW)
+            GetProcAddress(hAdvapi32, "CryptAcquireContextW");
+        // https://msdn.microsoft.com/en-us/library/windows/desktop/aa379886(v=vs.85).aspx
+        // For performance reasons, we recommend that you set the pszContainer
+        // parameter to NULL and the dwFlags parameter to CRYPT_VERIFYCONTEXT
+        // in all situations where you do not require a persisted key.
+        // CRYPT_SILENT is intended for use with applications for which the UI
+        // cannot be displayed by the CSP.
+        if (!(fnCryptAcquireContextW && fnCryptAcquireContextW(
+                &hProvider, null, null,
+                PROV_RSA_FULL, CRYPT_VERIFYCONTEXT | CRYPT_SILENT)))
+        {
+            if (GetLastError() == NTE_BAD_KEYSET)
+            {
+                // Attempt to create default container
+                auto fnCryptAcquireContextA = cast(FnCryptAcquireContextA)
+                    GetProcAddress(hAdvapi32, "CryptAcquireContextA");
+                if (!(fnCryptAcquireContextA && fnCryptAcquireContextA(
+                    &hProvider, null, null,
+                    PROV_RSA_FULL, CRYPT_NEWKEYSET | CRYPT_SILENT)))
+                {
+                    return -1;
+                }
+            }
+        }
+        assert(hProvider, "CryptAcquireContext reported success but hProvider is null.");
+        scope (exit) fnCryptReleaseContext(hProvider, 0);
+        auto fnCryptGenRandom = cast(FnCryptGenRandom)
+            GetProcAddress(hAdvapi32, "CryptGenRandom");
+        if (!fnCryptGenRandom) return -1;
+        if (fnCryptGenRandom(hProvider, len, cast(PBYTE) ptr))
+            return len;
+        else
+            return -1;
+    }
+}
+else version (Posix)
+{
+    version (linux)
+    {
+        version (X86) private enum NR_getrandom = 355;
+        else version (X86_64) private enum NR_getrandom = 318;
+        else version (ARM) private enum NR_getrandom = 384;
+        else version (AArch64) private enum NR_getrandom = 278;
+        else version (SPARC) private enum NR_getrandom = 347;
+        else version (SPARC64) private enum NR_getrandom = 347;
+        else version (Alpha) private enum NR_getrandom = 511;
+        else version (IA64) private enum NR_getrandom = 1339;
+        else version (PPC) private enum NR_getrandom = 359;
+        else version (PPC64) private enum NR_getrandom = 359;
+        else version (S390) private enum NR_getrandom = 349;
+        else version (SystemZ) private enum NR_getrandom = 349;
+        else version (HPPA) private enum NR_getrandom = 339;
+        else version (HPPA64) private enum NR_getrandom = 339;
+        else version (MIPS_O32) private enum NR_getrandom = 4353;
+        else version (MIPS_N32) private enum NR_getrandom = 6317;
+        else version (MIPS64) private enum NR_getrandom = 5313;
+        else version (SH)
+        {
+            static if (size_t.sizeof == 4)
+                private enum NR_getrandom = 373;
+            else static if (size_t.sizeof == 8)
+                private enum NR_getrandom = 384;
+        }
+
+        static if (is(typeof(NR_getrandom)))
+        {
+            // getrandom was introduced in Linux 3.17. If it's not available
+            // syscall will return -1 and errno will be set to ENOSYS.
+
+            /*
+             * Flags for getrandom(2)
+             *
+             * GRND_NONBLOCK    Don't block and return EAGAIN instead
+             * GRND_RANDOM      Use the /dev/random pool instead of /dev/urandom
+             */
+            private enum GRND_NONBLOCK = 0x0001;
+            private enum GRND_RANDOM = 0x0002;
+
+            /*
+                http://man7.org/linux/man-pages/man2/getrandom.2.html
+                If the urandom source has been initialized, reads of up to 256 bytes
+                will always return as many bytes as requested and will not be
+                interrupted by signals.  No such guarantees apply for larger buffer
+                sizes.
+            */
+            private extern(C) int syscall(size_t ident, size_t n, size_t arg1, size_t arg2) @nogc nothrow;
+        }
+    }
+
+    /+
+    Tries to use a system API to get entropy. Resources are not cached
+    due to the expectation that this function will not be called more
+    than once per program execution. If you want to retrieve system
+    entropy repeatedly over the life of the application, you should
+    use/write a different function.
+
+    Params:
+        ptr = address at which to start writing
+        len = number of bytes to write
+
+    Returns:
+        Number of bytes successfully written up to `len`, or -1 on failure
+    +/
+    private ptrdiff_t oneTimeGenRandom()(scope void* ptr, size_t len) @system
+    {
+        version (linux)
+        static if (is(typeof(NR_getrandom)))
+        {{
+            import core.stdc.errno : ENOSYS, errno;
+            const result = syscall(NR_getrandom, cast(size_t) ptr, len, GRND_NONBLOCK);
+            if (result != -1 || errno != ENOSYS)
+                return result;
+        }}
+
+        import core.stdc.stdio : fclose, feof, ferror, fopen, fread;
+        auto f = fopen("/dev/urandom", "r");
+        if (f is null) return -1;
+        scope (exit) fclose(f);
+        const result = fread(ptr, 1, len, f);
+        // check for possible errors
+        if (result != len)
+        {
+            if (f.ferror)
+                return -1;
+
+            if (f.feof)
+                return -1;
+        }
+        return result;
+    }
+}
+else
+{
+    /+
+    Tries to use a system API to get entropy. Resources are not cached
+    due to the expectation that this function will not be called more
+    than once per program execution. If you want to retrieve system
+    entropy repeatedly over the life of the application, you should
+    use/write a different function.
+
+    Params:
+        ptr = address at which to start writing
+        len = number of bytes to write
+
+    Returns:
+        -1 (always fails)
+    +/
+    private ptrdiff_t oneTimeGenRandom()(scope void* ptr, size_t len) @system
+    {
+        return -1;
+    }
+}
+
+version (AnyARC4Random){}
+else
+{
+    /+
+    Returns:
+        a value based on a combination of pid, tid, and time, mixed.
+    +/
+    private ulong fallbackSeed()()
+    {
+        ulong result = void;
+        enum ulong m = 0xc6a4_a793_5bd1_e995UL; // MurmurHash2_64A constant.
+        void updateResult(ulong x)
+        {
+            x *= m;
+            x = (x ^ (x >>> 47)) * m;
+            result = (result ^ x) * m;
+        }
+        import core.thread : getpid, Thread;
+        import core.time : MonoTime;
+
+        updateResult(cast(ulong) cast(void*) Thread.getThis());
+        updateResult(cast(ulong) getpid());
+        updateResult(cast(ulong) MonoTime.currTime.ticks);
+        result = (result ^ (result >>> 47)) * m;
+        return result ^ (result >>> 47);
+    }
+
+    /+
+    Produces a suitable initial seed and gamma for a SplitMix engine.
+    First tries to draw on system entropy. If that fails makes use of
+    `fallbackSeed`.
+
+    Params:
+        outSeed = write to this the initial seed value
+        outGamma = write to this the gamma value
+    +/
+    private void oneTimeInitSeedAndGamma()(scope ref ulong outSeed, scope ref ulong outGamma)
+    {
+        ulong[2] s = void;
+        // Try to initialize using system entropy.
+        if (oneTimeGenRandom(&s, typeof(s).sizeof) != typeof(s).sizeof)
+        {
+            // Fall back to tid+pid+time seed.
+            auto x = fallbackSeed();
+            enum goldenGamma = 0x9e37_79b9_7f4a_7c15UL; // odd number closest to 2^^64 / golden ratio
+            // Stafford Mix07 for seed.
+            ulong y = (x += goldenGamma);
+            y = (y ^ (y >>> 30)) * 0x16a6_ac37_883a_f045UL;
+            y = (y ^ (y >>> 26)) * 0xcc9c_31a4_2746_86a5UL;
+            s[0] += (y ^ (y >>> 32));
+            // Stafford Mix06 for gamma.
+            ulong z = (x += goldenGamma);
+            z = (z ^ (z >>> 31)) * 0x69b0_bc90_bd9a_8c49UL;
+            z = (z ^ (z >>> 27)) * 0x3d5e_661a_2a77_868dUL;
+            z = z ^ (z >>> 30);
+            s[1] += z;
+        }
+        outSeed = s[0];
+        immutable ulong z = s[1] | 1UL; // Gamma must be odd for maximum period.
+        // Avoid long runs of 1s or 0s in gamma.
+        import core.bitop : popcnt;
+        immutable ulong alt = z ^ 0xaaaa_aaaa_aaaa_aaaaUL;
+        outGamma = popcnt(z ^ (z >>> 1)) < 24 ? alt : z;
+    }
+
+    import core.atomic : has64BitCAS;
+
+    /+
+    In the absence of a convenient arc4random-like interface use a
+    shared static SplitMix generator. Described by Guy L. Steele Jr.,
+    Doug Lea, and Christine H. Flood in "Fast Splittable Pseudorandom
+    Number Generators" (2014). As suggested in the paper use David
+    Stafford's superior parameterizations of the MurmurHash3 64-bit
+    finalizer from
+    http://zimbry.blogspot.com/2011/09/better-bit-mixing-improving-on.html.
+    +/
+    static if (has64BitCAS)
+    private ulong globalSplitMix()()
+    {
+        import core.atomic : atomicLoad, atomicOp, atomicStore, MemoryOrder;
+        shared static ulong _globalSeed;
+        shared static ulong _globalGamma;
+        ulong gamma = atomicLoad!(MemoryOrder.raw)(_globalGamma);
+        if (!gamma)
+        {
+            synchronized
+            {
+                gamma = atomicLoad(_globalGamma);
+                if (!gamma)
+                {
+                    // gamma hasn't been set yet, so initialize.
+                    ulong initialSeed = void;
+                    oneTimeInitSeedAndGamma(initialSeed, gamma);
+                    atomicStore(_globalSeed, initialSeed);
+                    atomicStore(_globalGamma, gamma);
+                }
+            }
+            assert(gamma);
+        }
+        // Stafford Mix05
+        ulong x = atomicOp!"+="(_globalSeed, gamma);
+        x = (x ^ (x >>> 31)) * 0x79c1_35c1_674b_9addUL;
+        x = (x ^ (x >>> 29)) * 0x54c7_7c86_f691_3e45UL;
+        return x ^ (x >>> 30);
+    }
+    /+
+    Similar to above but without 64-bit atomic ops. (All current platforms
+    supported by DMD or LDC have 64-bit atomic ops, but in the future some
+    might not.)
+    +/
+    private auto globalSplitMixNo64BitCAS()()
+    {
+        import core.atomic : atomicLoad, atomicOp, atomicStore, MemoryOrder;
+        shared static uint _globalSeedLow;
+        shared static uint _globalSeedHigh;
+        shared static uint _globalGammaLow;
+        shared static uint _globalGammaHigh;
+        uint gammaLow = atomicLoad!(MemoryOrder.raw)(_globalGammaLow);
+        if (!gammaLow)
+        {
+            synchronized
+            {
+                gammaLow = atomicLoad(_globalGammaLow);
+                if (!gammaLow)
+                {
+                    // gamma hasn't been set yet, so initialize.
+                    ulong initialSeed = void, gamma = void;
+                    oneTimeInitSeedAndGamma(initialSeed, gamma);
+                    atomicStore(_globalSeedHigh, cast(uint) (initialSeed >>> 32));
+                    atomicStore(_globalSeedLow, cast(uint) initialSeed);
+                    gammaLow = cast(uint) gamma;
+                    uint h = cast(uint) (gamma >>> 32);
+                    assert(h);
+                    atomicStore(_globalGammaHigh, h);
+                    atomicStore(_globalGammaLow, gammaLow);
+                }
+            }
+            assert(gammaLow);
+        }
+        uint gammaHigh = atomicLoad!(MemoryOrder.raw)(_globalGammaHigh);
+        if (!gammaHigh)
+        {
+             gammaHigh = atomicLoad(_globalGammaHigh);
+             assert(gammaHigh);
+        }
+        // Under contention updates can be interleaved. This is completely fine.
+        uint low = atomicOp!"+="(_globalSeedLow, gammaLow);
+        uint high = atomicOp!"+="(_globalSeedHigh, gammaHigh + uint(low < gammaLow));
+        // Stafford Mix04
+        ulong x = (cast(ulong) high) << 32 + cast(ulong) low;
+        x = (x ^ (x >>> 33)) * 0x62a9_d9ed_7997_05f5UL;
+        x = (x ^ (x >>> 28)) * 0xcb24_d0a5_c88c_35b3UL;
+        return x ^ (x >>> 32);
+    }
+    static if (!has64BitCAS)
+    private alias globalSplitMix = globalSplitMixNo64BitCAS;
+
+    // Verify `globalSplitMixNo64BitCAS` is compilable.
+    version (unittest)
+    {
+        static assert(is(typeof(globalSplitMixNo64BitCAS()) == ulong));
     }
 }
 
@@ -1549,17 +1905,36 @@ how excellent the source of entropy is.
     }
     else
     {
-        import core.thread : Thread, getpid, MonoTime;
-        static bool seeded;
-        static MinstdRand0 rand;
-        if (!seeded)
+        return cast(uint) globalSplitMix();
+    }
+}
+/// ditto
+template unpredictableSeed(UIntType)
+if (isUnsigned!UIntType)
+{
+    static if (!is(Unqual!UIntType == UIntType))
+        alias unpredictableSeed = .unpredictableSeed!(Unqual!UIntType);
+    else static if (is(UIntType == uint))
+        alias unpredictableSeed = .unpredictableSeed;
+    else
+    {
+        /// ditto
+        @property UIntType unpredictableSeed() @nogc nothrow @trusted
         {
-            uint threadID = cast(uint) cast(void*) Thread.getThis();
-            rand.seed((getpid() + threadID) ^ cast(uint) MonoTime.currTime.ticks);
-            seeded = true;
+            version (AnyARC4Random)
+            {
+                UIntType result = void;
+                static if (UIntType.sizeof <= uint.sizeof)
+                    result = cast(UIntType) arc4random();
+                else
+                    arc4random_buf(&result, UIntType.sizeof);
+                return result;
+            }
+            else
+            {
+                return cast(UIntType) globalSplitMix();
+            }
         }
-        rand.popFront();
-        return cast(uint) (MonoTime.currTime.ticks ^ rand.front);
     }
 }
 
@@ -1569,6 +1944,19 @@ how excellent the source of entropy is.
     auto rnd = Random(unpredictableSeed);
     auto n = rnd.front;
     static assert(is(typeof(n) == uint));
+}
+
+@nogc nothrow @safe unittest
+{
+    auto a = unpredictableSeed;
+    auto b = unpredictableSeed!uint;
+    auto c = unpredictableSeed!ulong;
+    static assert(is(typeof(a) == uint));
+    static assert(is(typeof(b) == uint));
+    static assert(is(typeof(c) == ulong));
+    ulong[2] seed = [unpredictableSeed!ulong, unpredictableSeed!ulong];
+    assert(seed[0] || seed[1], "Either an event of probability 2^^-128 occurred"
+        ~ " or unpredictableSeed has a flaw causing it to produce all zeroes.");
 }
 
 /**
