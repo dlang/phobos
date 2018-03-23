@@ -2121,7 +2121,7 @@ if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init
 @safe pure unittest
 {
     class C {}
-    RedBlackTree!(C, (a,b) @trusted  => cast(void*)a < cast(void*)b) tree;
+    RedBlackTree!(C, (a,b) @trusted  => cast(void*) a < cast(void*) b) tree;
 }
 
 @safe pure unittest // const/immutable elements (issue 17519)
