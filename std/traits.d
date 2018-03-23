@@ -4233,10 +4233,15 @@ template BaseClassesTuple(T)
 }
 
 /**
- * Get a $(D_PARAM AliasSeq) of $(I all) interfaces directly or
- * indirectly inherited by this class or interface. Interfaces do not
- * repeat if multiply implemented. $(D_PARAM InterfacesTuple!Object)
- * yields the empty type tuple.
+Params:
+    T = The `class` or `interface` to search.
+
+Returns:
+    $(REF AliasSeq,std,meta) of all interfaces directly or
+    indirectly inherited by this class or interface. Interfaces
+    do not repeat if multiply implemented.
+
+    `InterfacesTuple!Object` yields an empty `AliasSeq`.
  */
 template InterfacesTuple(T)
 {
@@ -4262,14 +4267,15 @@ template InterfacesTuple(T)
         alias InterfacesTuple = AliasSeq!();
 }
 
+///
 @safe unittest
 {
-    // doc example
     interface I1 {}
     interface I2 {}
-    class A : I1, I2 { }
-    class B : A, I1 { }
-    class C : B { }
+    class A : I1, I2 {}
+    class B : A, I1 {}
+    class C : B {}
+
     alias TL = InterfacesTuple!C;
     static assert(is(TL[0] == I1) && is(TL[1] == I2));
 }
@@ -5247,31 +5253,35 @@ template isCovariantWith(F, G)
 private struct __InoutWorkaroundStruct{}
 
 /**
-Creates an lvalue or rvalue of type $(D T) for $(D typeof(...)) and
-$(D __traits(compiles, ...)) purposes. No actual value is returned.
+Creates an lvalue or rvalue of type `T` for `typeof(...)` and
+`__traits(compiles, ...)` purposes. No actual value is returned.
+
+Params:
+    T = The type to transform
 
 Note: Trying to use returned value will result in a
 "Symbol Undefined" error at link time.
-
-Example:
----
-// Note that `f` doesn't have to be implemented
-// as is isn't called.
-int f(int);
-bool f(ref int);
-static assert(is(typeof(f(rvalueOf!int)) == int));
-static assert(is(typeof(f(lvalueOf!int)) == bool));
-
-int i = rvalueOf!int; // error, no actual value is returned
----
 */
 @property T rvalueOf(T)(inout __InoutWorkaroundStruct = __InoutWorkaroundStruct.init);
 
 /// ditto
 @property ref T lvalueOf(T)(inout __InoutWorkaroundStruct = __InoutWorkaroundStruct.init);
 
-// Note: unittest can't be used as an example here as function overloads
+// Note: can't put these unittests together as function overloads
 // aren't allowed inside functions.
+///
+@system unittest
+{
+    static int f(int);
+    static assert(is(typeof(f(rvalueOf!int)) == int));
+}
+
+///
+@system unittest
+{
+    static bool f(ref int);
+    static assert(is(typeof(f(lvalueOf!int)) == bool));
+}
 
 @system unittest
 {
@@ -6912,6 +6922,11 @@ template isDelegate(T...)
 
 /**
 Detect whether symbol or type $(D T) is a function, a function pointer or a delegate.
+
+Params:
+    T = The type to check
+Returns:
+    A `bool`
  */
 template isSomeFunction(T...)
     if (T.length == 1)
@@ -6933,12 +6948,11 @@ template isSomeFunction(T...)
         enum bool isSomeFunction = false;
 }
 
+///
 @safe unittest
 {
     static real func(ref int) { return 0; }
     static void prop() @property { }
-    void nestedFunc() { }
-    void nestedProp() @property { }
     class C
     {
         real method(ref int) { return 0; }
@@ -6951,24 +6965,28 @@ template isSomeFunction(T...)
 
     static assert( isSomeFunction!func);
     static assert( isSomeFunction!prop);
-    static assert( isSomeFunction!nestedFunc);
-    static assert( isSomeFunction!nestedProp);
     static assert( isSomeFunction!(C.method));
     static assert( isSomeFunction!(C.prop));
     static assert( isSomeFunction!(c.prop));
     static assert( isSomeFunction!(c.prop));
     static assert( isSomeFunction!fp);
     static assert( isSomeFunction!dg);
-    static assert( isSomeFunction!(typeof(func)));
-    static assert( isSomeFunction!(real function(ref int)));
-    static assert( isSomeFunction!(real delegate(ref int)));
-    static assert( isSomeFunction!((int a) { return a; }));
 
     static assert(!isSomeFunction!int);
     static assert(!isSomeFunction!val);
-    static assert(!isSomeFunction!isSomeFunction);
 }
 
+@safe unittest
+{
+    void nestedFunc() { }
+    void nestedProp() @property { }
+    static assert(isSomeFunction!nestedFunc);
+    static assert(isSomeFunction!nestedProp);
+    static assert(isSomeFunction!(real function(ref int)));
+    static assert(isSomeFunction!(real delegate(ref int)));
+    static assert(isSomeFunction!((int a) { return a; }));
+    static assert(!isSomeFunction!isSomeFunction);
+}
 
 /**
 Detect whether $(D T) is a callable object, which can be called with the
