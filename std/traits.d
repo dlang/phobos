@@ -1199,12 +1199,14 @@ template ParameterStorageClassTuple(func...)
     static assert(pstc[2] == STC.none);
 }
 
-/*****************
- * Convert string tuple Attribs to ParameterStorageClass bits
- * Params:
- *      Attribs = string tuple
- * Returns:
- *      ParameterStorageClass bits
+/**
+Convert the result of `__traits(getParameterStorageClasses)`
+to $(LREF ParameterStorageClass) `enum`s.
+
+Params:
+    Attribs = The return value of `__traits(getParameterStorageClasses)`
+Returns:
+    The bitwise OR of the equivalent $(LREF ParameterStorageClass) `enum`s.
  */
 template extractParameterStorageClassFlags(Attribs...)
 {
@@ -1232,6 +1234,28 @@ template extractParameterStorageClassFlags(Attribs...)
         }
         return result;
     }();
+}
+
+///
+@safe unittest
+{
+    static void func(ref int ctx, out real result);
+
+    enum param1 = extractParameterStorageClassFlags!(
+        __traits(getParameterStorageClasses, func, 0)
+    );
+    static assert(param1 == ParameterStorageClass.ref_);
+
+    enum param2 = extractParameterStorageClassFlags!(
+        __traits(getParameterStorageClasses, func, 1)
+    );
+    static assert(param2 == ParameterStorageClass.out_);
+
+    enum param3 = extractParameterStorageClassFlags!(
+        __traits(getParameterStorageClasses, func, 0),
+        __traits(getParameterStorageClasses, func, 1)
+    );
+    static assert(param3 == (ParameterStorageClass.ref_ | ParameterStorageClass.out_));
 }
 
 @safe unittest
