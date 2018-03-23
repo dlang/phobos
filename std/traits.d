@@ -3929,69 +3929,30 @@ template hasStaticMember(T, string member)
 }
 
 /**
-Retrieves the members of an enumerated type $(D enum E).
+Retrieves the members of an enumerated type `enum E`.
 
 Params:
- E = An enumerated type. $(D E) may have duplicated values.
+    E = An enumerated type. `E` may have duplicated values.
 
 Returns:
- Static tuple composed of the members of the enumerated type $(D E).
- The members are arranged in the same order as declared in $(D E).
+    Static tuple composed of the members of the enumerated type `E`.
+    The members are arranged in the same order as declared in `E`.
 
 Note:
- An enum can have multiple members which have the same value. If you want
- to use EnumMembers to e.g. generate switch cases at compile-time,
- you should use the $(REF NoDuplicates, std,meta) template to avoid
- generating duplicate switch cases.
+    An enum can have multiple members which have the same value. If you want
+    to use EnumMembers to e.g. generate switch cases at compile-time,
+    you should use the $(REF NoDuplicates, std,meta) template to avoid
+    generating duplicate switch cases.
 
 Note:
- Returned values are strictly typed with $(D E). Thus, the following code
- does not work without the explicit cast:
+    Returned values are strictly typed with `E`. Thus, the following code
+    does not work without the explicit cast:
 --------------------
 enum E : int { a, b, c }
 int[] abc = cast(int[]) [ EnumMembers!E ];
 --------------------
- Cast is not necessary if the type of the variable is inferred. See the
- example below.
-
-Example:
- Creating an array of enumerated values:
---------------------
-enum Sqrts : real
-{
-    one   = 1,
-    two   = 1.41421,
-    three = 1.73205,
-}
-auto sqrts = [ EnumMembers!Sqrts ];
-assert(sqrts == [ Sqrts.one, Sqrts.two, Sqrts.three ]);
---------------------
-
- A generic function $(D rank(v)) in the following example uses this
- template for finding a member $(D e) in an enumerated type $(D E).
---------------------
-// Returns i if e is the i-th enumerator of E.
-size_t rank(E)(E e)
-    if (is(E == enum))
-{
-    static foreach (i, member; EnumMembers!E)
-    {
-        if (e == member)
-            return i;
-    }
-    assert(0, "Not an enum member");
-}
-
-enum Mode
-{
-    read  = 1,
-    write = 2,
-    map   = 4,
-}
-assert(rank(Mode.read ) == 0);
-assert(rank(Mode.write) == 1);
-assert(rank(Mode.map  ) == 2);
---------------------
+    Cast is not necessary if the type of the variable is inferred. See the
+    example below.
  */
 template EnumMembers(E)
     if (is(E == enum))
@@ -4040,6 +4001,48 @@ template EnumMembers(E)
     }
 
     alias EnumMembers = EnumSpecificMembers!(__traits(allMembers, E));
+}
+
+/// Create an array of enumerated values
+@safe unittest
+{
+    enum Sqrts : real
+    {
+        one = 1,
+        two = 1.41421,
+        three = 1.73205
+    }
+    auto sqrts = [EnumMembers!Sqrts];
+    assert(sqrts == [Sqrts.one, Sqrts.two, Sqrts.three]);
+}
+
+/**
+A generic function `rank(v)` in the following example uses this
+template for finding a member `e` in an enumerated type `E`.
+ */
+@safe unittest
+{
+    // Returns i if e is the i-th enumerator of E.
+    static size_t rank(E)(E e)
+    if (is(E == enum))
+    {
+        static foreach (i, member; EnumMembers!E)
+        {
+            if (e == member)
+                return i;
+        }
+        assert(0, "Not an enum member");
+    }
+
+    enum Mode
+    {
+        read = 1,
+        write = 2,
+        map = 4
+    }
+    assert(rank(Mode.read) == 0);
+    assert(rank(Mode.write) == 1);
+    assert(rank(Mode.map) == 2);
 }
 
 @safe unittest
