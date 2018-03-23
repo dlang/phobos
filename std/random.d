@@ -1027,7 +1027,7 @@ if (isUnsigned!UIntType)
     /// Always $(D false) (random generators are infinite ranges).
     enum empty = false;
     /// Smallest generated value.
-    enum UIntType min = 0;
+    enum UIntType min = seeds_.length == 1 ? 1 : 0;
     /// Largest generated value.
     enum UIntType max = UIntType.max;
 
@@ -1233,6 +1233,8 @@ alias Xorshift    = Xorshift128;                            /// ditto
     static assert(isUniformRNG!(Xorshift, uint));
     static assert(isSeedable!Xorshift);
     static assert(isSeedable!(Xorshift, uint));
+
+    static assert(Xorshift32.min == 1);
 
     // Result from reference implementation.
     auto checking = [
