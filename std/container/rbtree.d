@@ -1401,7 +1401,7 @@ assert(equal(rbt[], [5]));
     }
 
     /++ Ditto +/
-    size_t removeKey(U)(U[] elems)
+    size_t removeKey(U)(scope U[] elems)
         if (isImplicitlyConvertible!(U, Elem))
     {
         immutable lenBefore = length;
@@ -1724,10 +1724,82 @@ assert(equal(rbt[], [5]));
      * Constructor. Pass in an array of elements, or individual elements to
      * initialize the tree with.
      */
-    this(Elem[] elems...)
+    this(scope Elem[] elems...)
     {
         _setup();
-        stableInsert(elems);
+        foreach (e; elems)
+        {
+            Node result;
+            static if (!allowDuplicates)
+                bool added = true;
+
+            if (!_end.left)
+            {
+                _end.left = _begin = result = allocate(e);
+            }
+            else
+            {
+                Node newParent = _end.left;
+                Node nxt;
+                while (true)
+                {
+                    if (_less(e, newParent.value))
+                    {
+                        nxt = newParent.left;
+                        if (nxt is null)
+                        {
+                            //
+                            // add to right of new parent
+                            //
+                            newParent.left = result = allocate(e);
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        static if (!allowDuplicates)
+                        {
+                            if (!_less(newParent.value, e))
+                            {
+                                result = newParent;
+                                added = false;
+                                break;
+                            }
+                        }
+                        nxt = newParent.right;
+                        if (nxt is null)
+                        {
+                            //
+                            // add to right of new parent
+                            //
+                            newParent.right = result = allocate(e);
+                            break;
+                        }
+                    }
+                    newParent = nxt;
+                }
+                if (_begin.left)
+                    _begin = _begin.left;
+            }
+
+            static if (allowDuplicates)
+            {
+                result.setColor(_end);
+                debug(RBDoChecks)
+                    check();
+                ++_length;
+            }
+            else
+            {
+                if (added)
+                {
+                    ++_length;
+                    result.setColor(_end);
+                }
+                debug(RBDoChecks)
+                    check();
+            }
+        }
     }
 
     /**
@@ -2049,7 +2121,7 @@ if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init
 @safe pure unittest
 {
     class C {}
-    RedBlackTree!(C, "cast(void*)a < cast(void*) b") tree;
+    RedBlackTree!(C, (a,b) @trusted  => cast(void*)a < cast(void*)b) tree;
 }
 
 @safe pure unittest // const/immutable elements (issue 17519)
