@@ -2452,7 +2452,9 @@ private real exp2Impl(real x) @nogc @trusted pure nothrow
         ctrl.disableExceptions(FloatingPointControl.allExceptions);
     ctrl.rounding = FloatingPointControl.roundToNearest;
 
-    static if (real.mant_dig == 113)
+    alias F = floatTraits!real;
+
+    static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
         static immutable real[2][] exptestpoints =
         [ //  x               exp(x)
@@ -2471,7 +2473,7 @@ private real exp2Impl(real x) @nogc @trusted pure nothrow
             [-0x1p+30L,       0                                        ], // far underflow
         ];
     }
-    else static if (real.mant_dig == 64) // 80-bit reals
+    else static if (F.realFormat == RealFormat.ieeeExtended)
     {
         static immutable real[2][] exptestpoints =
         [ //  x               exp(x)
@@ -2490,7 +2492,7 @@ private real exp2Impl(real x) @nogc @trusted pure nothrow
             [-0x1p+30L,       0                            ], // far underflow
         ];
     }
-    else static if (real.mant_dig == 53) // 64-bit reals
+    else static if (F.realFormat == RealFormat.ieeeDouble)
     {
         static immutable real[2][] exptestpoints =
         [ //  x,             exp(x)
@@ -2518,27 +2520,9 @@ private real exp2Impl(real x) @nogc @trusted pure nothrow
     {
         resetIeeeFlags();
         x = exp(pair[0]);
-        f = ieeeFlags;
         assert(feqrel(x, pair[1]) >= minEqualMantissaBits);
-
-        version (IeeeFlagsSupport)
-        {
-            // Check the overflow bit
-            if (x == real.infinity)
-            {
-                // don't care about the overflow bit if input was inf
-                // (e.g., the LLVM intrinsic doesn't set it on Linux x86_64)
-                assert(pair[0] == real.infinity || f.overflow);
-            }
-            else
-                assert(!f.overflow);
-            // Check the underflow bit
-            assert(f.underflow == (fabs(x) < real.min_normal));
-            // Invalid and div by zero shouldn't be affected.
-            assert(!f.invalid);
-            assert(!f.divByZero);
-        }
     }
+
     // Ideally, exp(0) would not set the inexact flag.
     // Unfortunately, fldl2e sets it!
     // So it's not realistic to avoid setting it.
