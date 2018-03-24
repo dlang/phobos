@@ -4690,7 +4690,7 @@ enum StdFileHandle: string
         it is thread un-safe to reassign `stdin` to a different `File` instance
         than the default.
 
-    Returns: stdin as $(LREF File).
+    Returns: stdin as a $(LREF File).
 */
 alias stdin = makeGlobal!(StdFileHandle.stdin);
 
@@ -4703,7 +4703,8 @@ alias stdin = makeGlobal!(StdFileHandle.stdin);
     import std.array : array;
     import std.typecons : Yes;
 
-    void main() {
+    void main()
+    {
         stdin                       // read from stdin
         .byLineCopy(Yes.keepTerminator) // copying each line
         .array()                    // convert to array of lines
@@ -4720,7 +4721,7 @@ alias stdin = makeGlobal!(StdFileHandle.stdin);
         it is thread un-safe to reassign `stdout` to a different `File` instance
         than the default.
 
-    Returns: stdout as $(LREF File).
+    Returns: stdout as a $(LREF File).
 */
 alias stdout = makeGlobal!(StdFileHandle.stdout);
 
@@ -4756,7 +4757,8 @@ alias stdout = makeGlobal!(StdFileHandle.stdout);
 ///
 @safe unittest
 {
-    void main() {
+    void main()
+    {
         import std.algorithm.mutation : copy;
         import std.algorithm.iteration : map;
         import std.format : format;
@@ -4775,7 +4777,7 @@ alias stdout = makeGlobal!(StdFileHandle.stdout);
         it is thread un-safe to reassign `stderr` to a different `File` instance
         than the default.
 
-    Returns: stderr as $(LREF File).
+    Returns: stderr as a $(LREF File).
 */
 alias stderr = makeGlobal!(StdFileHandle.stderr);
 
