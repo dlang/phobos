@@ -159,7 +159,8 @@ alias CRC64ISO = CRC!(64, 0xD800000000000000);
  *
  * See $(D std.digest.digest) for differences between template and OOP API.
  */
-struct CRC(uint N, ulong P) if (N == 32 || N == 64)
+struct CRC(uint N, ulong P)
+if (N == 32 || N == 64)
 {
     private:
         static if (N == 32)

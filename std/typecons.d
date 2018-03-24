@@ -419,13 +419,13 @@ private:
 
 // Used in Tuple.toString
 private template sharedToString(alias field)
-    if (is(typeof(field) == shared))
+if (is(typeof(field) == shared))
 {
     static immutable sharedToString = typeof(field).stringof;
 }
 
 private template sharedToString(alias field)
-    if (!is(typeof(field) == shared))
+if (!is(typeof(field) == shared))
 {
     alias sharedToString = field;
 }
@@ -1326,7 +1326,7 @@ if (distinctFieldNames!(Specs))
         A new `Tuple`.
  */
 auto reverse(T)(T t)
-    if (isTuple!T)
+if (isTuple!T)
 {
     import std.meta : Reverse;
     // @@@BUG@@@ Cannot be an internal function due to forward reference issues.
@@ -1349,7 +1349,7 @@ auto reverse(T)(T t)
 
 /* Get a Tuple type with the reverse specification of Tuple T. */
 private template ReverseTupleType(T)
-    if (isTuple!T)
+if (isTuple!T)
 {
     static if (is(T : Tuple!A, A...))
         alias ReverseTupleType = Tuple!(ReverseTupleSpecs!A);
@@ -1946,7 +1946,7 @@ enum isTuple(T) = __traits(compiles,
 
 // used by both Rebindable and UnqualRef
 private mixin template RebindableCommon(T, U, alias This)
-    if (is(T == class) || is(T == interface) || isAssociativeArray!T)
+if (is(T == class) || is(T == interface) || isAssociativeArray!T)
 {
     private union
     {
@@ -2005,7 +2005,7 @@ Params:
     T = An object, interface, array slice type, or associative array type.
  */
 template Rebindable(T)
-    if (is(T == class) || is(T == interface) || isDynamicArray!T || isAssociativeArray!T)
+if (is(T == class) || is(T == interface) || isDynamicArray!T || isAssociativeArray!T)
 {
     static if (is(T == const U, U) || is(T == immutable U, U))
     {
@@ -2076,7 +2076,7 @@ Returns:
     A newly constructed `Rebindable` initialized with the given reference.
 */
 Rebindable!T rebindable(T)(T obj)
-    if (is(T == class) || is(T == interface) || isDynamicArray!T || isAssociativeArray!T)
+if (is(T == class) || is(T == interface) || isDynamicArray!T || isAssociativeArray!T)
 {
     typeof(return) ret;
     ret = obj;
@@ -2199,7 +2199,7 @@ Rebindable!T rebindable(T)(Rebindable!T obj)
         T = A class or interface type.
  */
 template UnqualRef(T)
-    if (is(T == class) || is(T == interface))
+if (is(T == class) || is(T == interface))
 {
     static if (is(T == const U, U)
         || is(T == immutable U, U)
@@ -3235,7 +3235,7 @@ $(D this) must not be in the null state.
 
 /// ditto
 auto nullable(alias nullValue, T)(T t)
-    if (is (typeof(nullValue) == T))
+if (is (typeof(nullValue) == T))
 {
     return Nullable!(T, nullValue)(t);
 }
@@ -3948,7 +3948,7 @@ $(UL
 )
  */
 class AutoImplement(Base, alias how, alias what = isAbstractFunction) : Base
-    if (!is(how == class))
+if (!is(how == class))
 {
     private alias autoImplement_helper_ =
         AutoImplement_Helper!("autoImplement_helper_", "Base", Base, typeof(this), how, what);
@@ -3959,7 +3959,7 @@ class AutoImplement(Base, alias how, alias what = isAbstractFunction) : Base
 class AutoImplement(
     Interface, BaseClass, alias how,
     alias what = isAbstractFunction) : BaseClass, Interface
-    if (is(Interface == interface) && is(BaseClass == class))
+if (is(Interface == interface) && is(BaseClass == class))
 {
     private alias autoImplement_helper_ = AutoImplement_Helper!(
             "autoImplement_helper_", "Interface", Interface, typeof(this), how, what);
@@ -7028,7 +7028,7 @@ It's illegal to move a class instance even if you are sure there
 are no pointers to it. As such, it is illegal to move a scoped object.
  */
 template scoped(T)
-    if (is(T == class))
+if (is(T == class))
 {
     // _d_newclass now use default GC alignment (looks like (void*).sizeof * 2 for
     // small objects). We will just use the maximum of filed alignments.
@@ -7166,7 +7166,7 @@ template scoped(T)
 }
 
 private uintptr_t _alignUp(uintptr_t alignment)(uintptr_t n)
-    if (alignment > 0 && !((alignment - 1) & alignment))
+if (alignment > 0 && !((alignment - 1) & alignment))
 {
     enum badEnd = alignment - 1; // 0b11, 0b111, ...
     return (n + badEnd) & ~badEnd;
@@ -7624,7 +7624,8 @@ final switch (e)
 }
 ----
 */
-struct BitFlags(E, Flag!"unsafe" unsafe = No.unsafe) if (unsafe || isBitFlagEnum!(E))
+struct BitFlags(E, Flag!"unsafe" unsafe = No.unsafe)
+if (unsafe || isBitFlagEnum!(E))
 {
 @safe @nogc pure nothrow:
 private:

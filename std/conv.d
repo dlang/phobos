@@ -5974,7 +5974,8 @@ if (isIntegral!T)
 Returns the representation of an enumerated value, i.e. the value converted to
 the base type of the enumeration.
 */
-OriginalType!E asOriginalType(E)(E value) if (is(E == enum))
+OriginalType!E asOriginalType(E)(E value)
+if (is(E == enum))
 {
     return value;
 }

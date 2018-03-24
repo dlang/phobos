@@ -2610,7 +2610,7 @@ Returns:
     The greatest common divisor of the given arguments.
  */
 T gcd(T)(T a, T b)
-    if (isIntegral!T)
+if (isIntegral!T)
 {
     static if (is(T == const) || is(T == immutable))
     {
@@ -2667,7 +2667,7 @@ T gcd(T)(T a, T b)
 // user-defined types.
 /// ditto
 T gcd(T)(T a, T b)
-    if (!isIntegral!T &&
+if (!isIntegral!T &&
         is(typeof(T.init % T.init)) &&
         is(typeof(T.init == 0 || T.init > 0)))
 {

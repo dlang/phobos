@@ -601,7 +601,7 @@ static assert(fullyQualifiedName!(const MyStruct[]) == "const(myModule.MyStruct[
 -----------------
 */
 template fullyQualifiedName(T...)
-    if (T.length == 1)
+if (T.length == 1)
 {
 
     static if (is(T))
@@ -1027,7 +1027,7 @@ private template fqnType(T,
  * (see template $(LREF functionAttributes)).
  */
 template ReturnType(func...)
-    if (func.length == 1 && isCallable!func)
+if (func.length == 1 && isCallable!func)
 {
     static if (is(FunctionTypeOf!func R == return))
         alias ReturnType = R;
@@ -1086,7 +1086,7 @@ to function, a delegate, a struct with an $(D opCall), a pointer to a
 struct with an $(D opCall), or a class with an $(D opCall).
 */
 template Parameters(func...)
-    if (func.length == 1 && isCallable!func)
+if (func.length == 1 && isCallable!func)
 {
     static if (is(FunctionTypeOf!func P == function))
         alias Parameters = P;
@@ -1136,8 +1136,8 @@ Returns the number of arguments of function $(D func).
 arity is undefined for variadic functions.
 */
 template arity(func...)
-    if (func.length == 1 && isCallable!func &&
-        variadicFunctionStyle!func == Variadic.no)
+if (func.length == 1 && isCallable!func &&
+    variadicFunctionStyle!func == Variadic.no)
 {
     enum size_t arity = Parameters!func.length;
 }
@@ -1182,7 +1182,7 @@ enum ParameterStorageClass : uint
 
 /// ditto
 template ParameterStorageClassTuple(func...)
-    if (func.length == 1 && isCallable!func)
+if (func.length == 1 && isCallable!func)
 {
     alias Func = FunctionTypeOf!func;
 
@@ -1338,7 +1338,7 @@ template extractParameterStorageClassFlags(Attribs...)
 Get, as a tuple, the identifiers of the parameters to a function symbol.
  */
 template ParameterIdentifierTuple(func...)
-    if (func.length == 1 && isCallable!func)
+if (func.length == 1 && isCallable!func)
 {
     static if (is(FunctionTypeOf!func PT == __parameters))
     {
@@ -1425,7 +1425,7 @@ Get, as a tuple, the default value of the parameters to a function symbol.
 If a parameter doesn't have the default value, $(D void) is returned instead.
  */
 template ParameterDefaults(func...)
-    if (func.length == 1 && isCallable!func)
+if (func.length == 1 && isCallable!func)
 {
     alias param_names = ParameterIdentifierTuple!func;
     static if (is(FunctionTypeOf!(func[0]) PT == __parameters))
@@ -1573,7 +1573,7 @@ enum FunctionAttribute : uint
 
 /// ditto
 template functionAttributes(func...)
-    if (func.length == 1 && isCallable!func)
+if (func.length == 1 && isCallable!func)
 {
     // @bug: workaround for opCall
     alias FuncSym = Select!(is(typeof(__traits(getFunctionAttributes, func))),
@@ -1749,8 +1749,8 @@ See_Also:
     $(LREF functionAttributes)
 */
 template hasFunctionAttributes(args...)
-    if (args.length > 0 && isCallable!(args[0])
-         && allSatisfy!(isSomeString, typeof(args[1 .. $])))
+if (args.length > 0 && isCallable!(args[0])
+     && allSatisfy!(isSomeString, typeof(args[1 .. $])))
 {
     enum bool hasFunctionAttributes = {
         import std.algorithm.searching : canFind;
@@ -1933,7 +1933,7 @@ template hasFunctionAttributes(args...)
 $(D true) if $(D func) is $(D @safe) or $(D @trusted).
  */
 template isSafe(alias func)
-    if (isCallable!func)
+if (isCallable!func)
 {
     enum isSafe = (functionAttributes!func & FunctionAttribute.safe) != 0 ||
                   (functionAttributes!func & FunctionAttribute.trusted) != 0;
@@ -2092,7 +2092,7 @@ Returns:
     one of the strings "D", "C", "Windows", "Pascal", or "Objective-C"
 */
 template functionLinkage(func...)
-    if (func.length == 1 && isCallable!func)
+if (func.length == 1 && isCallable!func)
 {
     enum string functionLinkage = __traits(getLinkage, FunctionTypeOf!func);
 }
@@ -2146,7 +2146,7 @@ enum Variadic
 
 /// ditto
 template variadicFunctionStyle(func...)
-    if (func.length == 1 && isCallable!func)
+if (func.length == 1 && isCallable!func)
 {
     enum string varargs = __traits(getFunctionVariadicStyle, FunctionTypeOf!func);
     enum Variadic variadicFunctionStyle =
@@ -2196,7 +2196,7 @@ Do not confuse function types with function pointer types; function types are
 usually used for compile-time reflection purposes.
  */
 template FunctionTypeOf(func...)
-    if (func.length == 1 && isCallable!func)
+if (func.length == 1 && isCallable!func)
 {
     static if (is(typeof(& func[0]) Fsym : Fsym*) && is(Fsym == function) || is(typeof(& func[0]) Fsym == delegate))
     {
@@ -2301,7 +2301,7 @@ template FunctionTypeOf(func...)
  *    attrs = The desired $(LREF FunctionAttribute)s of the result type.
  */
 template SetFunctionAttributes(T, string linkage, uint attrs)
-    if (isFunctionPointer!T || isDelegate!T)
+if (isFunctionPointer!T || isDelegate!T)
 {
     mixin({
         import std.algorithm.searching : canFind;
@@ -2376,7 +2376,7 @@ template SetFunctionAttributes(T, string linkage, uint attrs)
 
 /// Ditto
 template SetFunctionAttributes(T, string linkage, uint attrs)
-    if (is(T == function))
+if (is(T == function))
 {
     // To avoid a lot of syntactic headaches, we just use the above version to
     // operate on the corresponding function pointer type and then remove the
@@ -2390,7 +2390,7 @@ template SetFunctionAttributes(T, string linkage, uint attrs)
     alias ExternC(T) = SetFunctionAttributes!(T, "C", functionAttributes!T);
 
     auto assumePure(T)(T t)
-        if (isFunctionPointer!T || isDelegate!T)
+    if (isFunctionPointer!T || isDelegate!T)
     {
         enum attrs = functionAttributes!T | FunctionAttribute.pure_;
         return cast(SetFunctionAttributes!(T, functionLinkage!T, attrs)) t;
@@ -2471,7 +2471,7 @@ Returns:
 `false` otherwise
 */
 template isInnerClass(T)
-    if (is(T == class))
+if (is(T == class))
 {
     import std.meta : staticIndexOf;
 
@@ -2517,7 +2517,7 @@ Determines whether $(D T) has its own context pointer.
 $(D T) must be either $(D class), $(D struct), or $(D union).
 */
 template isNested(T)
-    if (is(T == class) || is(T == struct) || is(T == union))
+if (is(T == class) || is(T == struct) || is(T == union))
 {
     enum isNested = __traits(isNested, T);
 }
@@ -4003,7 +4003,7 @@ int[] abc = cast(int[]) [ EnumMembers!E ];
     example below.
  */
 template EnumMembers(E)
-    if (is(E == enum))
+if (is(E == enum))
 {
     import std.meta : AliasSeq;
     // Supply the specified identifier to an constant value.
@@ -4213,7 +4213,7 @@ template BaseTypeTuple(A)
  * BaseClassesTuple!Object) yields the empty type tuple.
  */
 template BaseClassesTuple(T)
-    if (is(T == class))
+if (is(T == class))
 {
     static if (is(T == Object))
     {
@@ -4364,7 +4364,7 @@ class or interface $(D C).  Covariant duplicates are shrunk into the most
 derived one.
  */
 template MemberFunctionsTuple(C, string name)
-    if (is(C == class) || is(C == interface))
+if (is(C == class) || is(C == interface))
 {
     static if (__traits(hasMember, C, name))
     {
@@ -4647,7 +4647,8 @@ template TemplateArgsOf(T : Base!Args, alias Base, Args...)
 }
 
 
-private template maxAlignment(U...) if (isTypeTuple!U)
+private template maxAlignment(U...)
+if (isTypeTuple!U)
 {
     import std.meta : staticMap;
     static if (U.length == 0)
@@ -4665,7 +4666,8 @@ private template maxAlignment(U...) if (isTypeTuple!U)
 /**
 Returns class instance alignment.
  */
-template classInstanceAlignment(T) if (is(T == class))
+template classInstanceAlignment(T)
+if (is(T == class))
 {
     alias classInstanceAlignment = maxAlignment!(void*, typeof(T.tupleof));
 }
@@ -5072,9 +5074,9 @@ Determines whether the function type $(D F) is covariant with $(D G), i.e.,
 functions of the type $(D F) can override ones of the type $(D G).
  */
 template isCovariantWith(F, G)
-    if (is(F == function) && is(G == function) ||
-        is(F == delegate) && is(G == delegate) ||
-        isFunctionPointer!F && isFunctionPointer!G)
+if (is(F == function) && is(G == function) ||
+    is(F == delegate) && is(G == delegate) ||
+    isFunctionPointer!F && isFunctionPointer!G)
 {
     static if (is(F : G))
         enum isCovariantWith = true;
@@ -5331,7 +5333,8 @@ Note: Trying to use returned value will result in a
 // SomethingTypeOf
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
-private template AliasThisTypeOf(T) if (isAggregateType!T)
+private template AliasThisTypeOf(T)
+if (isAggregateType!T)
 {
     alias members = AliasSeq!(__traits(getAliasThis, T));
 
@@ -6874,7 +6877,7 @@ template isTypeTuple(T...)
 Detect whether symbol or type $(D T) is a function pointer.
  */
 template isFunctionPointer(T...)
-    if (T.length == 1)
+if (T.length == 1)
 {
     static if (is(T[0] U) || is(typeof(T[0]) U))
     {
@@ -6910,7 +6913,7 @@ template isFunctionPointer(T...)
 Detect whether symbol or type $(D T) is a delegate.
 */
 template isDelegate(T...)
-    if (T.length == 1)
+if (T.length == 1)
 {
     static if (is(typeof(& T[0]) U : U*) && is(typeof(& T[0]) U == delegate))
     {
@@ -6953,7 +6956,7 @@ Returns:
     A `bool`
  */
 template isSomeFunction(T...)
-    if (T.length == 1)
+if (T.length == 1)
 {
     static if (is(typeof(& T[0]) U : U*) && is(U == function) || is(typeof(& T[0]) U == delegate))
     {
@@ -7017,7 +7020,7 @@ Detect whether $(D T) is a callable object, which can be called with the
 function call operator $(D $(LPAREN)...$(RPAREN)).
  */
 template isCallable(T...)
-    if (T.length == 1)
+if (T.length == 1)
 {
     static if (is(typeof(& T[0].opCall) == delegate))
         // T is a object which has a member function opCall().
@@ -7051,7 +7054,7 @@ template isCallable(T...)
  * Detect whether $(D T) is an abstract function.
  */
 template isAbstractFunction(T...)
-    if (T.length == 1)
+if (T.length == 1)
 {
     enum bool isAbstractFunction = __traits(isAbstractFunction, T[0]);
 }
@@ -7071,7 +7074,7 @@ template isAbstractFunction(T...)
  * Detect whether $(D T) is a final function.
  */
 template isFinalFunction(T...)
-    if (T.length == 1)
+if (T.length == 1)
 {
     enum bool isFinalFunction = __traits(isFinalFunction, T[0]);
 }
@@ -7113,7 +7116,7 @@ template isNestedFunction(alias f)
  * Detect whether $(D T) is an abstract class.
  */
 template isAbstractClass(T...)
-    if (T.length == 1)
+if (T.length == 1)
 {
     enum bool isAbstractClass = __traits(isAbstractClass, T[0]);
 }
@@ -7137,7 +7140,7 @@ template isAbstractClass(T...)
  * Detect whether $(D T) is a final class.
  */
 template isFinalClass(T...)
-    if (T.length == 1)
+if (T.length == 1)
 {
     enum bool isFinalClass = __traits(isFinalClass, T[0]);
 }
@@ -7500,7 +7503,8 @@ Returns the largest type, i.e. T such that T.sizeof is the largest.  If more
 than one type is of the same size, the leftmost argument of these in will be
 returned.
 */
-template Largest(T...) if (T.length >= 1)
+template Largest(T...)
+if (T.length >= 1)
 {
     static if (T.length == 1)
     {
@@ -7595,7 +7599,7 @@ template Signed(T)
 Returns the most negative value of the numeric type T.
 */
 template mostNegative(T)
-    if (isNumeric!T || isSomeChar!T || isBoolean!T)
+if (isNumeric!T || isSomeChar!T || isBoolean!T)
 {
     static if (is(typeof(T.min_normal)))
         enum mostNegative = -T.max;
@@ -7631,7 +7635,7 @@ Get the type that a scalar type `T` will $(LINK2 $(ROOT_DIR)spec/type.html#integ
 to in multi-term arithmetic expressions.
 */
 template Promoted(T)
-    if (isScalarType!T)
+if (isScalarType!T)
 {
     alias Promoted = CopyTypeQualifiers!(T, typeof(T.init + T.init));
 }
@@ -7677,7 +7681,7 @@ might be more convenient in generic code, e.g. as a template argument
 when invoking staticMap.
  */
 template mangledName(sth...)
-    if (sth.length == 1)
+if (sth.length == 1)
 {
     enum string mangledName = sth[0].mangleof;
 }
@@ -7731,7 +7735,8 @@ version(unittest) void freeFunc(string);
 Aliases itself to $(D T[0]) if the boolean $(D condition) is $(D true)
 and to $(D T[1]) otherwise.
  */
-template Select(bool condition, T...) if (T.length == 2)
+template Select(bool condition, T...)
+if (T.length == 2)
 {
     import std.meta : Alias;
     alias Select = Alias!(T[!condition]);
@@ -8259,7 +8264,8 @@ enum ifTestable(T, alias pred = a => a) = __traits(compiles, { if (pred(T.init))
  * Returns:
  *      `true` if `X` is a type, `false` otherwise
  */
-template isType(X...) if (X.length == 1)
+template isType(X...)
+if (X.length == 1)
 {
     enum isType = is(X[0]);
 }
@@ -8302,7 +8308,8 @@ template isType(X...) if (X.length == 1)
  *     Use $(LREF isFunctionPointer) or $(LREF isDelegate) for detecting those types
  *     respectively.
  */
-template isFunction(X...) if (X.length == 1)
+template isFunction(X...)
+if (X.length == 1)
 {
     static if (is(typeof(&X[0]) U : U*) && is(U == function) ||
                is(typeof(&X[0]) U == delegate))
@@ -8338,7 +8345,8 @@ template isFunction(X...) if (X.length == 1)
  * Returns:
  *     `true` if `X` is final, `false` otherwise
  */
-template isFinal(X...) if (X.length == 1)
+template isFinal(X...)
+if (X.length == 1)
 {
     static if (is(X[0] == class))
         enum isFinal = __traits(isFinalClass, X[0]);

@@ -1378,8 +1378,8 @@ if (isInputRange!Range && !isInfinite!Range &&
 }
 
 private auto extremum(alias selector = "a < b", Range)(Range r)
-    if (isInputRange!Range && !isInfinite!Range &&
-        !is(typeof(unaryFun!selector(ElementType!(Range).init))))
+if (isInputRange!Range && !isInfinite!Range &&
+    !is(typeof(unaryFun!selector(ElementType!(Range).init))))
 {
     return extremum!(a => a, selector)(r);
 }
@@ -1388,9 +1388,9 @@ private auto extremum(alias selector = "a < b", Range)(Range r)
 private auto extremum(alias selector = "a < b", Range,
                       RangeElementType = ElementType!Range)
                      (Range r, RangeElementType seedElement)
-    if (isInputRange!Range && !isInfinite!Range &&
-        !is(CommonType!(ElementType!Range, RangeElementType) == void) &&
-        !is(typeof(unaryFun!selector(ElementType!(Range).init))))
+if (isInputRange!Range && !isInfinite!Range &&
+    !is(CommonType!(ElementType!Range, RangeElementType) == void) &&
+    !is(typeof(unaryFun!selector(ElementType!(Range).init))))
 {
     return extremum!(a => a, selector)(r, seedElement);
 }
