@@ -1834,24 +1834,13 @@ real exp(real x) @trusted pure nothrow @nogc
         else
             static assert(0, "Not implemented for this architecture");
 
-        // Special cases. Raises an overflow or underflow flag accordingly,
-        // except in the case for CTFE, where there are no hardware controls.
+        // Special cases.
         if (isNaN(x))
             return x;
         if (x > OF)
-        {
-            if (__ctfe)
-                return real.infinity;
-            else
-                return real.max * copysign(real.max, real.infinity);
-        }
+            return real.infinity;
         if (x < UF)
-        {
-            if (__ctfe)
-                return 0.0;
-            else
-                return real.min_normal * copysign(real.min_normal, 0.0);
-        }
+            return 0.0;
 
         // Express: e^^x = e^^g * 2^^n
         //   = e^^g * e^^(n * LOG2E)
@@ -2121,15 +2110,9 @@ L_largenegative:
         enum real C1 = 6.9314575195312500000000E-1L;
         enum real C2 = 1.428606820309417232121458176568075500134E-6L;
 
-        // Special cases. Raises an overflow flag, except in the case
-        // for CTFE, where there are no hardware controls.
+        // Special cases.
         if (x > OF)
-        {
-            if (__ctfe)
-                return real.infinity;
-            else
-                return real.max * copysign(real.max, real.infinity);
-        }
+            return real.infinity;
         if (x == 0.0)
             return x;
         if (x < UF)
@@ -2419,24 +2402,13 @@ private real exp2Impl(real x) @nogc @trusted pure nothrow
     enum real OF =  16_384.0L;
     enum real UF = -16_382.0L;
 
-    // Special cases. Raises an overflow or underflow flag accordingly,
-    // except in the case for CTFE, where there are no hardware controls.
+    // Special cases.
     if (isNaN(x))
         return x;
     if (x > OF)
-    {
-        if (__ctfe)
-            return real.infinity;
-        else
-            return real.max * copysign(real.max, real.infinity);
-    }
+        return real.infinity;
     if (x < UF)
-    {
-        if (__ctfe)
-            return 0.0;
-        else
-            return real.min_normal * copysign(real.min_normal, 0.0);
-    }
+        return 0.0;
 
     // Separate into integer and fractional parts.
     int n = cast(int) floor(x + 0.5);
