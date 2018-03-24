@@ -4720,7 +4720,7 @@ alias stdin = makeGlobal!(StdFileHandle.stdin);
         it is thread un-safe to reassign `stdout` to a different `File` instance
         than the default.
 
-    Returns: stdin as $(LREF File).
+    Returns: stdout as $(LREF File).
 */
 alias stdout = makeGlobal!(StdFileHandle.stdout);
 
@@ -4775,7 +4775,7 @@ alias stdout = makeGlobal!(StdFileHandle.stdout);
         it is thread un-safe to reassign `stderr` to a different `File` instance
         than the default.
 
-    Returns: stdin as $(LREF File).
+    Returns: stderr as $(LREF File).
 */
 alias stderr = makeGlobal!(StdFileHandle.stderr);
 
