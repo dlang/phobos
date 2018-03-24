@@ -14,7 +14,7 @@ import std.regex.internal.ir;
     regular expressions.
 +/
 @trusted class BacktrackingMatcher(Char, Stream = Input!Char) : Matcher!Char
-    if (is(Char : dchar))
+if (is(Char : dchar))
 {
     alias DataIndex = Stream.DataIndex;
     struct State

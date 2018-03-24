@@ -7808,7 +7808,7 @@ See_Also: $(LREF chunks)
 */
 auto slide(Flag!"withPartial" f = Yes.withPartial,
             Source)(Source source, size_t windowSize, size_t stepSize = 1)
-    if (isForwardRange!Source)
+if (isForwardRange!Source)
 {
     return Slides!(f, Source)(source, windowSize, stepSize);
 }
@@ -7871,7 +7871,7 @@ auto slide(Flag!"withPartial" f = Yes.withPartial,
 }
 
 private struct Slides(Flag!"withPartial" withPartial = Yes.withPartial, Source)
-    if (isForwardRange!Source)
+if (isForwardRange!Source)
 {
 private:
     Source source;

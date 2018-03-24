@@ -430,7 +430,8 @@ private template isSpawnable(F, T...)
  *  pointer indirection.  This is necessary for enforcing isolation among
  *  threads.
  */
-Tid spawn(F, T...)(F fn, T args) if (isSpawnable!(F, T))
+Tid spawn(F, T...)(F fn, T args)
+if (isSpawnable!(F, T))
 {
     static assert(!hasLocalAliasing!(T), "Aliases to mutable thread-local data not allowed.");
     return _spawn(false, fn, args);
@@ -504,7 +505,8 @@ Tid spawn(F, T...)(F fn, T args) if (isSpawnable!(F, T))
  * Returns:
  *  A Tid representing the new thread.
  */
-Tid spawnLinked(F, T...)(F fn, T args) if (isSpawnable!(F, T))
+Tid spawnLinked(F, T...)(F fn, T args)
+if (isSpawnable!(F, T))
 {
     static assert(!hasLocalAliasing!(T), "Aliases to mutable thread-local data not allowed.");
     return _spawn(true, fn, args);
@@ -513,7 +515,8 @@ Tid spawnLinked(F, T...)(F fn, T args) if (isSpawnable!(F, T))
 /*
  *
  */
-private Tid _spawn(F, T...)(bool linked, F fn, T args) if (isSpawnable!(F, T))
+private Tid _spawn(F, T...)(bool linked, F fn, T args)
+if (isSpawnable!(F, T))
 {
     // TODO: MessageList and &exec should be shared.
     auto spawnTid = Tid(new MessageBox);

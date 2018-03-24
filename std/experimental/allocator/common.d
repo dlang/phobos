@@ -608,8 +608,8 @@ version(unittest)
     }
 
     package void testAllocatorObject(RCAllocInterface)(RCAllocInterface a)
-        if (is(RCAllocInterface == RCIAllocator)
-            || is (RCAllocInterface == shared RCISharedAllocator))
+    if (is(RCAllocInterface == RCIAllocator)
+        || is (RCAllocInterface == shared RCISharedAllocator))
     {
         import std.conv : text;
         import std.math : isPowerOf2;
