@@ -37,6 +37,11 @@ QUIET:=@
 DEBUGGER=gdb
 GIT_HOME=https://github.com/dlang
 DMD_DIR=../dmd
+DRUNTIME_PATH = ../druntime
+
+# Auto-cloning missing directories
+$(shell [ ! -d $(DMD_DIR) ] && git clone ${GIT_HOME}/dmd $(DMD_DIR))
+$(shell [ ! -d $(DRUNTIME_PATH) ] && git clone ${GIT_HOME}/druntime $(DRUNTIME_PATH))
 
 include $(DMD_DIR)/src/osmodel.mak
 
@@ -75,7 +80,6 @@ endif
 
 # Configurable stuff that's rarely edited
 INSTALL_DIR = ../install
-DRUNTIME_PATH = ../druntime
 DLANG_ORG_DIR = ../dlang.org
 ZIPFILE = phobos.zip
 ROOT_OF_THEM_ALL = generated
