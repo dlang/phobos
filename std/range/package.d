@@ -972,10 +972,12 @@ if (Ranges.length > 0 &&
             static if (allSatisfy!(isForwardRange, R))
                 @property auto save()
                 {
+                    import std.algorithm.mutation : move;
                     typeof(this) result = this;
                     foreach (i, Unused; R)
                     {
-                        result.source[i] = result.source[i].save;
+                        auto saved = result.source[i].save;
+                        move(saved, result.source[i]);
                     }
                     return result;
                 }
@@ -1378,6 +1380,14 @@ pure @safe nothrow @nogc unittest
     immutable(Foo)[] a;
     immutable(Foo)[] b;
     assert(chain(a, b).empty);
+}
+
+pure @safe unittest // issue 18657
+{
+    import std.algorithm.comparison : equal;
+    auto r = refRange(&["foo"][0]).chain("bar");
+    assert(equal(r.save, "foobar"));
+    assert(equal(r, "foobar"));
 }
 
 /**
