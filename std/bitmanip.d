@@ -52,8 +52,6 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.bitmanip;
 
-//debug = bitarray;                // uncomment to turn on debugging printf's
-
 import std.range.primitives;
 public import std.system : Endian;
 import std.traits;
@@ -856,8 +854,6 @@ public:
 
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opIndex.unittest\n");
-
         void Fun(const BitArray arr)
         {
             auto x = arr[0];
@@ -1088,18 +1084,13 @@ public:
     {
         BitArray a;
         BitArray b;
-        int i;
-
-        debug(bitarray) printf("BitArray.dup.unittest\n");
 
         a.length = 3;
         a[0] = 1; a[1] = 0; a[2] = 1;
         b = a.dup;
         assert(b.length == 3);
-        for (i = 0; i < 3; i++)
-        {   debug(bitarray) printf("b[%d] = %d\n", i, b[i]);
+        foreach (i; 0 .. 3)
             assert(b[i] == (((i ^ 1) & 1) ? true : false));
-        }
     }
 
     /**********************************************
@@ -1168,9 +1159,7 @@ public:
 
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opApply unittest\n");
-
-        static bool[] ba = [1,0,1];
+        bool[] ba = [1,0,1];
 
         auto a = BitArray(ba);
 
@@ -1229,10 +1218,8 @@ public:
 
     @system unittest
     {
-        debug(bitarray) printf("BitArray.reverse.unittest\n");
-
         BitArray b;
-        static bool[5] data = [1,0,1,1,0];
+        bool[5] data = [1,0,1,1,0];
         int i;
 
         b = BitArray(data);
@@ -1293,8 +1280,6 @@ public:
 
     @system unittest
     {
-        debug(bitarray) printf("BitArray.sort.unittest\n");
-
         __gshared size_t x = 0b1100011000;
         __gshared ba = BitArray(10, &x);
         ba.sort;
@@ -1327,15 +1312,13 @@ public:
 
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opEquals unittest\n");
-
-        static bool[] ba = [1,0,1,0,1];
-        static bool[] bb = [1,0,1];
-        static bool[] bc = [1,0,1,0,1,0,1];
-        static bool[] bd = [1,0,1,1,1];
-        static bool[] be = [1,0,1,0,1];
-        static bool[] bf = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
-        static bool[] bg = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1];
+        bool[] ba = [1,0,1,0,1];
+        bool[] bb = [1,0,1];
+        bool[] bc = [1,0,1,0,1,0,1];
+        bool[] bd = [1,0,1,1,1];
+        bool[] be = [1,0,1,0,1];
+        bool[] bf = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+        bool[] bg = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1];
 
         auto a = BitArray(ba);
         auto b = BitArray(bb);
@@ -1393,15 +1376,13 @@ public:
 
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opCmp unittest\n");
-
-        static bool[] ba = [1,0,1,0,1];
-        static bool[] bb = [1,0,1];
-        static bool[] bc = [1,0,1,0,1,0,1];
-        static bool[] bd = [1,0,1,1,1];
-        static bool[] be = [1,0,1,0,1];
-        static bool[] bf = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1];
-        static bool[] bg = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0];
+        bool[] ba = [1,0,1,0,1];
+        bool[] bb = [1,0,1];
+        bool[] bc = [1,0,1,0,1,0,1];
+        bool[] bd = [1,0,1,1,1];
+        bool[] be = [1,0,1,0,1];
+        bool[] bf = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1];
+        bool[] bg = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0];
 
         auto a = BitArray(ba);
         auto b = BitArray(bb);
@@ -1519,9 +1500,7 @@ public:
 
     @system unittest
     {
-        debug(bitarray) printf("BitArray.init unittest\n");
-
-        static bool[] ba = [1,0,1,0,1];
+        bool[] ba = [1,0,1,0,1];
 
         auto a = BitArray(ba);
         void[] v;
@@ -1559,9 +1538,7 @@ public:
 
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opCast unittest\n");
-
-        static bool[] ba = [1,0,1,0,1];
+        bool[] ba = [1,0,1,0,1];
 
         auto a = BitArray(ba);
         void[] v = cast(void[]) a;
@@ -1591,9 +1568,7 @@ public:
 
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opCom unittest\n");
-
-        static bool[] ba = [1,0,1,0,1];
+        bool[] ba = [1,0,1,0,1];
 
         auto a = BitArray(ba);
         BitArray b = ~a;
@@ -1637,8 +1612,6 @@ public:
 
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opAnd unittest\n");
-
         static bool[] ba = [1,0,1,0,1];
         static bool[] bb = [1,0,1,1,0];
 
@@ -1656,10 +1629,8 @@ public:
 
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opOr unittest\n");
-
-        static bool[] ba = [1,0,1,0,1];
-        static bool[] bb = [1,0,1,1,0];
+        bool[] ba = [1,0,1,0,1];
+        bool[] bb = [1,0,1,1,0];
 
         auto a = BitArray(ba);
         auto b = BitArray(bb);
@@ -1675,10 +1646,8 @@ public:
 
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opXor unittest\n");
-
-        static bool[] ba = [1,0,1,0,1];
-        static bool[] bb = [1,0,1,1,0];
+        bool[] ba = [1,0,1,0,1];
+        bool[] bb = [1,0,1,1,0];
 
         auto a = BitArray(ba);
         auto b = BitArray(bb);
@@ -1694,10 +1663,8 @@ public:
 
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opSub unittest\n");
-
-        static bool[] ba = [1,0,1,0,1];
-        static bool[] bb = [1,0,1,1,0];
+        bool[] ba = [1,0,1,0,1];
+        bool[] bb = [1,0,1,1,0];
 
         auto a = BitArray(ba);
         auto b = BitArray(bb);
@@ -1746,8 +1713,8 @@ public:
 
     @system unittest
     {
-        static bool[] ba = [1,0,1,0,1,1,0,1,0,1];
-        static bool[] bb = [1,0,1,1,0];
+        bool[] ba = [1,0,1,0,1,1,0,1,0,1];
+        bool[] bb = [1,0,1,1,0];
         auto a = BitArray(ba);
         auto b = BitArray(bb);
         BitArray c = a;
@@ -1762,10 +1729,8 @@ public:
 
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opAndAssign unittest\n");
-
-        static bool[] ba = [1,0,1,0,1];
-        static bool[] bb = [1,0,1,1,0];
+        bool[] ba = [1,0,1,0,1];
+        bool[] bb = [1,0,1,1,0];
 
         auto a = BitArray(ba);
         auto b = BitArray(bb);
@@ -1780,10 +1745,8 @@ public:
 
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opOrAssign unittest\n");
-
-        static bool[] ba = [1,0,1,0,1];
-        static bool[] bb = [1,0,1,1,0];
+        bool[] ba = [1,0,1,0,1];
+        bool[] bb = [1,0,1,1,0];
 
         auto a = BitArray(ba);
         auto b = BitArray(bb);
@@ -1798,10 +1761,8 @@ public:
 
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opXorAssign unittest\n");
-
-        static bool[] ba = [1,0,1,0,1];
-        static bool[] bb = [1,0,1,1,0];
+        bool[] ba = [1,0,1,0,1];
+        bool[] bb = [1,0,1,1,0];
 
         auto a = BitArray(ba);
         auto b = BitArray(bb);
@@ -1816,10 +1777,8 @@ public:
 
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opSubAssign unittest\n");
-
-        static bool[] ba = [1,0,1,0,1];
-        static bool[] bb = [1,0,1,1,0];
+        bool[] ba = [1,0,1,0,1];
+        bool[] bb = [1,0,1,1,0];
 
         auto a = BitArray(ba);
         auto b = BitArray(bb);
@@ -1849,9 +1808,7 @@ public:
 
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opCatAssign unittest\n");
-
-        static bool[] ba = [1,0,1,0,1];
+        bool[] ba = [1,0,1,0,1];
 
         auto a = BitArray(ba);
         BitArray b;
@@ -1882,10 +1839,8 @@ public:
 
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opCatAssign unittest\n");
-
-        static bool[] ba = [1,0];
-        static bool[] bb = [0,1,0];
+        bool[] ba = [1,0];
+        bool[] bb = [0,1,0];
 
         auto a = BitArray(ba);
         auto b = BitArray(bb);
@@ -1939,10 +1894,8 @@ public:
 
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opCat unittest\n");
-
-        static bool[] ba = [1,0];
-        static bool[] bb = [0,1,0];
+        bool[] ba = [1,0];
+        bool[] bb = [0,1,0];
 
         auto a = BitArray(ba);
         auto b = BitArray(bb);
@@ -2249,7 +2202,6 @@ public:
     {
         import std.format : format;
 
-        debug(bitarray) printf("BitArray.toString unittest\n");
         auto b = BitArray([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]);
 
         auto s1 = format("%s", b);
@@ -2294,7 +2246,6 @@ public:
         import std.algorithm.comparison : equal;
         import std.range : iota;
 
-        debug(bitarray) printf("BitArray.bitsSet unittest\n");
         BitArray b;
         enum wordBits = size_t.sizeof * 8;
         b = BitArray([size_t.max], 0);
