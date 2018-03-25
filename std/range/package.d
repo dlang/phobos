@@ -1524,7 +1524,11 @@ private struct ChooseResult(R1, R2)
         @property auto save()
         {
             auto result = this;
-            actOnChosen!((ref r) { r = r.save; })(result);
+            actOnChosen!((ref r) {
+                import std.algorithm.mutation : move;
+                auto saved = r.save;
+                move(saved, r);
+            })(result);
             return result;
         }
 
@@ -1610,6 +1614,14 @@ private struct ChooseResult(R1, R2)
                         return choose(false, Slice1.init, r[begin .. end]);
                 })(this, begin, end);
         }
+}
+
+pure @safe unittest // issue 18657
+{
+    import std.algorithm.comparison : equal;
+    auto r = choose(true, refRange(&["foo"][0]), "bar");
+    assert(equal(r.save, "foo"));
+    assert(equal(r, "foo"));
 }
 
 /**
