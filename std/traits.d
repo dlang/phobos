@@ -8339,6 +8339,20 @@ if (X.length == 1)
     static assert(isFunction!(S.func));
 }
 
+
+unittest /// issue 18660
+{
+    struct UDA {}
+
+    static struct Foo
+    {
+        static @UDA bool b;
+        void brickWall(){}
+        static @UDA bool c;
+    }
+    static assert(getSymbolsByUDA!(Foo, UDA).length == 2);
+}
+
 /**
  * Detect whether `X` is a final method or class.
  *
