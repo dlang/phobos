@@ -907,7 +907,7 @@ object with `save` and using it later.
 See_Also:
     The header of $(MREF std,range) for tutorials on ranges.
  */
-enum bool isForwardRange(R) = isInputRange!R
+enum bool isForwardRange(R, E = void) = isInputRange!(R, void)
     && is(ReturnType!((R r) => r.save) == R);
 
 ///
@@ -949,7 +949,7 @@ element in the range. Calling `r.back` is allowed only if calling
 See_Also:
     The header of $(MREF std,range) for tutorials on ranges.
  */
-enum bool isBidirectionalRange(R) = isForwardRange!R
+enum bool isBidirectionalRange(R, E = void) = isForwardRange!(R, E)
     && is(typeof((R r) => r.popBack))
     && is(ReturnType!((R r) => r.back) == ElementType!R);
 
@@ -1013,10 +1013,10 @@ are bidirectional ranges only.
 See_Also:
     The header of $(MREF std,range) for tutorials on ranges.
  */
-enum bool isRandomAccessRange(R) =
+enum bool isRandomAccessRange(R, E = void) =
     is(typeof(lvalueOf!R[1]) == ElementType!R)
     && !isNarrowString!R
-    && isForwardRange!R
+    && isForwardRange!(R, E)
     && (isBidirectionalRange!R || isInfinite!R)
     && (hasLength!R || isInfinite!R)
     && (isInfinite!R || !is(typeof(lvalueOf!R[$ - 1]))
