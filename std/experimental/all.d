@@ -10,8 +10,8 @@ module std.experimental.all;
 
     int len;
     const r = 6.iota
-              .filter!(a => a % 2) // 0 2 4
-              .map!(a => a * 2) // 0 4 8
+              .filter!(a => a % 2) // 1 3 5
+              .map!(a => a * 2) // 2 6 10
               .tee!(_ => len++)
               .sum
               .reverseArgs!format("Sum: %d");

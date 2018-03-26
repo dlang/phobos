@@ -8,8 +8,7 @@ $(BOOKTABLE Cheat Sheet,
 $(TR $(TH Function Name) $(TH Description))
 $(T2 completeSort,
         If `a = [10, 20, 30]` and `b = [40, 6, 15]`, then
-        `completeSort(a, b)` leaves `a = [6, 10, 15]` and `b = [20$D(
-        30, 40]).
+        `completeSort(a, b)` leaves `a = [6, 10, 15]` and `b = [20, 30, 40]`.
         The range `a` must be sorted prior to the call, and as a result the
         combination `$(REF chain, std,range)(a, b)` is sorted.)
 $(T2 isPartitioned,

@@ -4695,6 +4695,8 @@ enum StdFileHandle: string
         Due to $(LINK2 https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
         it is thread un-safe to reassign `stdin` to a different `File` instance
         than the default.
+
+    Returns: stdin as a $(LREF File).
 */
 alias stdin = makeGlobal!(StdFileHandle.stdin);
 
@@ -4707,7 +4709,8 @@ alias stdin = makeGlobal!(StdFileHandle.stdin);
     import std.array : array;
     import std.typecons : Yes;
 
-    void main() {
+    void main()
+    {
         stdin                       // read from stdin
         .byLineCopy(Yes.keepTerminator) // copying each line
         .array()                    // convert to array of lines
@@ -4723,8 +4726,55 @@ alias stdin = makeGlobal!(StdFileHandle.stdin);
         Due to $(LINK2 https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
         it is thread un-safe to reassign `stdout` to a different `File` instance
         than the default.
+
+    Returns: stdout as a $(LREF File).
 */
 alias stdout = makeGlobal!(StdFileHandle.stdout);
+
+///
+@safe unittest
+{
+    void main()
+    {
+        stdout.writeln("Write a message to stdout.");
+    }
+}
+
+///
+@safe unittest
+{
+    void main()
+    {
+        import std.algorithm.iteration : filter, map, sum;
+        import std.format : format;
+        import std.range : iota, tee;
+
+        int len;
+        const r = 6.iota
+                  .filter!(a => a % 2) // 1 3 5
+                  .map!(a => a * 2) // 2 6 10
+                  .tee!(_ => stdout.writefln("len: %d", len++))
+                  .sum;
+
+        assert(r == 18);
+    }
+}
+
+///
+@safe unittest
+{
+    void main()
+    {
+        import std.algorithm.mutation : copy;
+        import std.algorithm.iteration : map;
+        import std.format : format;
+        import std.range : iota;
+
+        10.iota
+        .map!(e => "N: %d".format(e))
+        .copy(stdout.lockingTextWriter()); // the OutputRange
+    }
+}
 
 /**
     The standard error stream.
@@ -4732,8 +4782,19 @@ alias stdout = makeGlobal!(StdFileHandle.stdout);
         Due to $(LINK2 https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
         it is thread un-safe to reassign `stderr` to a different `File` instance
         than the default.
+
+    Returns: stderr as a $(LREF File).
 */
 alias stderr = makeGlobal!(StdFileHandle.stderr);
+
+///
+@safe unittest
+{
+    void main()
+    {
+        stderr.writeln("Write a message to stderr.");
+    }
+}
 
 @system unittest
 {
