@@ -329,7 +329,7 @@ pure nothrow @safe @nogc unittest
   +/
 uint stride(S)(auto ref S str, size_t index)
 if (is(S : const char[]) ||
-    (isRandomAccessRange!(S, char)))
+    (isRandomAccessRange!S && is(Unqual!(ElementType!S) == char)))
 {
     static if (is(typeof(str.length) : ulong))
         assert(index < str.length, "Past the end of the UTF-8 sequence");
@@ -441,7 +441,7 @@ if (is(S : const char[]) ||
 /// Ditto
 uint stride(S)(auto ref S str, size_t index)
 if (is(S : const wchar[]) ||
-    (isRandomAccessRange!(S, wchar)))
+    (isRandomAccessRange!S && is(Unqual!(ElementType!S) == wchar)))
 {
     static if (is(typeof(str.length) : ulong))
         assert(index < str.length, "Past the end of the UTF-16 sequence");
@@ -458,7 +458,7 @@ if (is(S : const wchar[]))
 
 /// Ditto
 uint stride(S)(auto ref S str)
-    if (isInputRange!(S, wchar))
+if (isInputRange!S && is(Unqual!(ElementType!S) == wchar))
 {
     assert(!str.empty, "UTF-16 sequence is empty");
     immutable uint u = str.front;
@@ -658,7 +658,7 @@ do
   +/
 uint strideBack(S)(auto ref S str, size_t index)
 if (is(S : const char[]) ||
-    (isRandomAccessRange!(S, char)))
+    (isRandomAccessRange!S && is(Unqual!(ElementType!S) == char)))
 {
     static if (is(typeof(str.length) : ulong))
         assert(index <= str.length, "Past the end of the UTF-8 sequence");
@@ -689,14 +689,14 @@ if (is(S : const char[]) ||
 /// Ditto
 uint strideBack(S)(auto ref S str)
 if (is(S : const char[]) ||
-    (isRandomAccessRange!(S, char) && hasLength!S))
+    (isRandomAccessRange!S && hasLength!S && is(Unqual!(ElementType!S) == char)))
 {
     return strideBack(str, str.length);
 }
 
 /// Ditto
 uint strideBack(S)(auto ref S str)
-    if (isBidirectionalRange!(S, char) && !isRandomAccessRange!S)
+if (isBidirectionalRange!S && is(Unqual!(ElementType!S) == char) && !isRandomAccessRange!S)
 {
     assert(!str.empty, "Past the end of the UTF-8 sequence");
     auto temp = str.save;
@@ -783,7 +783,7 @@ uint strideBack(S)(auto ref S str)
 /// Ditto
 uint strideBack(S)(auto ref S str, size_t index)
 if (is(S : const wchar[]) ||
-    (isRandomAccessRange!(S, wchar)))
+    (isRandomAccessRange!S && is(Unqual!(ElementType!S) == wchar)))
 {
     static if (is(typeof(str.length) : ulong))
         assert(index <= str.length, "Past the end of the UTF-16 sequence");
@@ -796,7 +796,7 @@ if (is(S : const wchar[]) ||
 /// Ditto
 uint strideBack(S)(auto ref S str)
 if (is(S : const wchar[]) ||
-    (isBidirectionalRange!(S, wchar)))
+    (isBidirectionalRange!S && is(Unqual!(ElementType!S) == wchar)))
 {
     assert(!str.empty, "UTF-16 sequence is empty");
 

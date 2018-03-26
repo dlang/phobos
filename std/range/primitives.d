@@ -1017,7 +1017,7 @@ enum bool isRandomAccessRange(R, E = void) =
     is(typeof(lvalueOf!R[1]) == ElementType!R)
     && !isNarrowString!R
     && isForwardRange!(R, E)
-    && (isBidirectionalRange!R || isInfinite!R)
+    && (isBidirectionalRange!(R, E) || isInfinite!R)
     && (hasLength!R || isInfinite!R)
     && (isInfinite!R || !is(typeof(lvalueOf!R[$ - 1]))
         || is(typeof(lvalueOf!R[$ - 1]) == ElementType!R));

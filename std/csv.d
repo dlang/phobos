@@ -326,7 +326,7 @@ Throws:
 */
 auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException, Range, Separator = char)(Range input,
                  Separator delimiter = ',', Separator quote = '"')
-    if (isInputRange!(Range, char)
+    if (isInputRange!(Range, dchar)
     && isSomeChar!(Separator)
     && !is(Contents T : T[U], U : string))
 {
