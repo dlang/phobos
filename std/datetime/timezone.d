@@ -3542,7 +3542,8 @@ For terms of use, see http://www.unicode.org/copyright.html
 
             <!-- (UTC-09:00) Alaska -->
             <mapZone other="Alaskan Standard Time" territory="001" type="America/Anchorage"/>
-            <mapZone other="Alaskan Standard Time" territory="US" type="America/Anchorage America/Juneau America/Nome America/Sitka America/Yakutat"/>
+            <mapZone other="Alaskan Standard Time" territory="US" `
+                ~ `type="America/Anchorage America/Juneau America/Nome America/Sitka America/Yakutat"/>
         </mapTimezones>
     </windowsZones>
 </supplementalData>`;
