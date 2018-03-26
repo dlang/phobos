@@ -1324,8 +1324,7 @@ if (isSomeString!T)
 
 ///ditto
 UUID parseUUID(Range)(ref Range uuidRange)
-if (isInputRange!Range
-    && is(Unqual!(ElementType!Range) == dchar))
+    if (isInputRange!(Range, dchar))
 {
     import std.ascii : isHexDigit;
     import std.conv : ConvException, parse;

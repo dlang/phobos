@@ -326,7 +326,7 @@ Throws:
 */
 auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException, Range, Separator = char)(Range input,
                  Separator delimiter = ',', Separator quote = '"')
-if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
+    if (isInputRange!(Range, char)
     && isSomeChar!(Separator)
     && !is(Contents T : T[U], U : string))
 {
@@ -341,7 +341,7 @@ auto csvReader(Contents = string,
                Range, Header, Separator = char)
                 (Range input, Header header,
                  Separator delimiter = ',', Separator quote = '"')
-if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
+    if (isInputRange!(Range, dchar)
     && isSomeChar!(Separator)
     && isForwardRange!Header
     && isSomeString!(ElementType!Header))
@@ -357,7 +357,7 @@ auto csvReader(Contents = string,
                Range, Header, Separator = char)
                 (Range input, Header header,
                  Separator delimiter = ',', Separator quote = '"')
-if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
+    if (isInputRange!(Range, dchar)
     && isSomeChar!(Separator)
     && is(Header : typeof(null)))
 {
@@ -820,8 +820,7 @@ private pure struct Input(Range, Malformed ErrorLevel)
  * Malformed).ignore if best guess processing should take place.
  */
 private struct CsvReader(Contents, Malformed ErrorLevel, Range, Separator, Header)
-if (isSomeChar!Separator && isInputRange!Range
-    && is(Unqual!(ElementType!Range) == dchar)
+    if (isSomeChar!Separator && isInputRange!(Range, dchar)
     && isForwardRange!Header && isSomeString!(ElementType!Header))
 {
 private:
@@ -1403,8 +1402,7 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
                           (ref Range input, ref Output ans,
                            Separator sep, Separator quote,
                            bool startQuoted = false)
-if (isSomeChar!Separator && isInputRange!Range
-    && is(Unqual!(ElementType!Range) == dchar)
+    if (isSomeChar!Separator && isInputRange!(Range, dchar)
     && isOutputRange!(Output, dchar))
 {
     bool quoted = startQuoted;
