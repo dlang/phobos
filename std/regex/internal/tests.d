@@ -10,6 +10,8 @@ import std.conv, std.exception, std.meta, std.range,
 
 import std.uni : Escapables; // characters that need escaping
 
+debug(std_regex_test) import std.stdio;
+
 @safe unittest
 {//sanity checks
     regex("(a|b)*");
@@ -449,11 +451,9 @@ import std.uni : Escapables; // characters that need escaping
                     v ,": ", tvd.pattern));
                 if (c == 'y')
                 {
-                    import std.stdio;
                     auto result = produceExpected(m, tvd.format);
-                    if (result != tvd.replace)
-                        writeln("ctRegex mismatch pattern #", v, ": ", tvd.pattern," expected: ",
-                                tvd.replace, " vs ", result);
+                    assert(result == tvd.replace, text("ctRegex mismatch pattern #", v,
+                        ": ", tvd.pattern," expected: ", tvd.replace, " vs ", result));
                 }
             }
         }}
