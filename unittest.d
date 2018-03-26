@@ -97,7 +97,7 @@ int main(string[] args)
     cast(void) std.math.sin(3.0);
     cast(void) std.mathspecial.gamma(6.2);
 
-    std.demangle.demangle("hello");
+    cast(void) std.demangle.demangle("hello");
 
     cast(void) std.uni.isAlpha('A');
 
