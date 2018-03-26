@@ -739,7 +739,7 @@ struct DoubleRep
     enum uint bias = 1023, signBits = 1, fractionBits = 52, exponentBits = 11;
 }
 
-/// test reading
+/// Reading
 @safe unittest
 {
     DoubleRep x;
@@ -751,7 +751,7 @@ struct DoubleRep
     assert(x.fraction == 0 && x.exponent == 1022 && !x.sign);
 }
 
-/// test writing
+/// Writing
 @safe unittest
 {
     DoubleRep x;
@@ -870,7 +870,7 @@ public:
     ///
     @system unittest
     {
-        void Fun(const BitArray arr)
+        static void fun(const BitArray arr)
         {
             auto x = arr[0];
             assert(x == 1);
@@ -878,7 +878,7 @@ public:
         BitArray a;
         a.length = 3;
         a[0] = 1;
-        Fun(a);
+        fun(a);
     }
 
     /**********************************************
@@ -1241,14 +1241,11 @@ public:
     {
         BitArray b;
         bool[5] data = [1,0,1,1,0];
-        int i;
 
         b = BitArray(data);
         b.reverse;
-        for (i = 0; i < data.length; i++)
-        {
+        foreach (i; 0 .. data.length)
             assert(b[i] == data[4 - i]);
-        }
     }
 
 
@@ -1302,12 +1299,12 @@ public:
     ///
     @system unittest
     {
-        __gshared size_t x = 0b1100011000;
-        __gshared ba = BitArray(10, &x);
+        size_t x = 0b1100011000;
+        auto ba = BitArray(10, &x);
         ba.sort;
-        for (size_t i = 0; i < 6; i++)
+        foreach (i; 0 .. 6)
             assert(ba[i] == false);
-        for (size_t i = 6; i < 10; i++)
+        foreach (i; 6 .. 10)
             assert(ba[i] == true);
     }
 
@@ -1567,12 +1564,14 @@ public:
     ///
     @system unittest
     {
-        bool[] ba = [1,0,1,0,1];
+        import std.array : array;
+        import std.range : repeat, take;
 
-        auto a = BitArray(ba);
-        void[] v = cast(void[]) a;
-
-        assert(v.length == a.dim * size_t.sizeof);
+        // bit array with 300 elements
+        auto a = BitArray(true.repeat.take(300).array);
+        size_t[] v = cast(size_t[]) a;
+        const blockSize = size_t.sizeof * 8;
+        assert(v.length == (a.length + blockSize - 1) / blockSize);
     }
 
     /***************************************
