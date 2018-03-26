@@ -2671,7 +2671,7 @@ if (is(S == struct))
         // mutPayload's pointers must be treated as tail const
         void[S.sizeof] mutPayload;
 
-        void emplace(ref S s)
+        void emplacePayload(ref S s)
         {
             import std.conv : emplace;
             static if (__traits(compiles, () @safe {S tmp = s;}))
@@ -2683,27 +2683,27 @@ if (is(S == struct))
     public:
         this()(auto ref S s)
         {
-            emplace(s);
+            emplacePayload(s);
         }
 
         // immutable S cannot be passed to auto ref S above
         static if (!is(S == immutable))
         this()(immutable S s)
         {
-            emplace(s);
+            emplacePayload(s);
         }
 
         void opAssign()(auto ref S s)
         {
             movePayload;
-            emplace(s);
+            emplacePayload(s);
         }
 
         static if (!is(S == immutable))
         void opAssign()(immutable S s)
         {
             movePayload;
-            emplace(s);
+            emplacePayload(s);
         }
 
         void opAssign(Rebindable other)
