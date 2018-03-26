@@ -4398,7 +4398,7 @@ enum SpanMode
     import std.algorithm.iteration : map;
     import std.path : buildPath, relativePath;
 
-    auto root = tempDir.buildPath("root");
+    auto root = deleteme ~ "root";
     scope(exit) root.rmdirRecurse;
     root.mkdir;
 
@@ -5105,8 +5105,15 @@ string tempDir() @trusted
 ///
 @safe unittest
 {
+    import std.ascii : letters;
+    import std.conv : to;
     import std.path : buildPath;
-    auto myFile = tempDir.buildPath("my_tmp_file");
+    import std.random : randomSample;
+    import std.utf : byCodeUnit;
+
+    // random id with 20 letters
+    auto id = letters.byCodeUnit.randomSample(20).to!string;
+    auto myFile = tempDir.buildPath(id ~ "my_tmp_file");
     scope(exit) myFile.remove;
 
     myFile.write("hello");
