@@ -161,16 +161,19 @@ See_Also:
 
 Params:
     R = type to be tested
+    E = the element type of the range. `void` means "any".
 
 Returns:
     `true` if R is an input range, `false` if not
  */
-enum bool isInputRange(R) =
+enum bool isInputRange(R, E = void) =
     is(typeof(R.init) == R)
     && is(ReturnType!((R r) => r.empty) == bool)
     && is(typeof((return ref R r) => r.front))
     && !is(ReturnType!((R r) => r.front) == void)
-    && is(typeof((R r) => r.popFront));
+    && is(typeof((R r) => r.popFront))
+    && (is(E == void) || is(Unqual!(ElementType!R) == E));
+
 
 ///
 @safe unittest
@@ -223,6 +226,20 @@ enum bool isInputRange(R) =
     }
     static assert(!isInputRange!VoidFront);
 }
+
+///
+@safe pure unittest {
+    struct R
+    {
+        void popFront();
+        enum empty = false;
+        @property int front();
+    }
+    static assert(isInputRange!R);
+    static assert(isInputRange!(R, int));
+    static assert(!isInputRange!(R, double));
+}
+
 
 @safe unittest
 {
