@@ -1,102 +1,80 @@
 // Written in the D programming language
 
 /++
-    Module containing Date/Time functionality.
+    $(SCRIPT inhibitQuickIndex = 1;)
 
-    This module provides:
+    Phobos provides the following functionality for time:
+
+    $(DIVC quickindex,
+    $(BOOKTABLE ,
+    $(TR $(TH Functionality) $(TH Symbols)
+    )
+    $(TR
+        $(TD Points in Time)
+        $(TD
+            $(REF_ALTTEXT Date, Date, std, datetime, date)$(NBSP)
+            $(REF_ALTTEXT TimeOfDay, TimeOfDay, std, datetime, date)$(NBSP)
+            $(REF_ALTTEXT DateTime, DateTime, std, datetime, date)$(NBSP)
+            $(REF_ALTTEXT SysTime, SysTime, std, datetime, systime)$(NBSP)
+        )
+    )
+    $(TR
+        $(TD Timezones)
+        $(TD
+            $(REF_ALTTEXT TimeZone, TimeZone, std, datetime, timezone)$(NBSP)
+            $(REF_ALTTEXT UTC, UTC, std, datetime, timezone)$(NBSP)
+            $(REF_ALTTEXT LocalTime, LocalTime, std, datetime, timezone)$(NBSP)
+            $(REF_ALTTEXT PosixTimeZone, PosixTimeZone, std, datetime, timezone)$(NBSP)
+            $(REF_ALTTEXT WindowsTimeZone, WindowsTimeZone, std, datetime, timezone)$(NBSP)
+            $(REF_ALTTEXT SimpleTimeZone, SimpleTimeZone, std, datetime, timezone)$(NBSP)
+        )
+    )
+    $(TR
+        $(TD Intervals and Ranges of Time)
+        $(TD
+            $(REF_ALTTEXT Interval, Interval, std, datetime, interval)$(NBSP)
+            $(REF_ALTTEXT PosInfInterval, PosInfInterval, std, datetime, interval)$(NBSP)
+            $(REF_ALTTEXT NegInfInterval, NegInfInterval, std, datetime, interval)$(NBSP)
+        )
+    )
+    $(TR
+        $(TD Durations of Time)
+        $(TD
+            $(REF_ALTTEXT Duration, Duration, core, time)$(NBSP)
+            $(REF_ALTTEXT weeks, weeks, core, time)$(NBSP)
+            $(REF_ALTTEXT days, days, core, time)$(NBSP)
+            $(REF_ALTTEXT hours, hours, core, time)$(NBSP)
+            $(REF_ALTTEXT minutes, minutes, core, time)$(NBSP)
+            $(REF_ALTTEXT seconds, seconds, core, time)$(NBSP)
+            $(REF_ALTTEXT msecs, msecs, core, time)$(NBSP)
+            $(REF_ALTTEXT usecs, usecs, core, time)$(NBSP)
+            $(REF_ALTTEXT hnsecs, hnsecs, core, time)$(NBSP)
+            $(REF_ALTTEXT nsecs, nsecs, core, time)$(NBSP)
+        )
+    )
+    $(TR
+        $(TD Time Measurement and Benchmarking)
+        $(TD
+            $(REF_ALTTEXT MonoTime, MonoTime, core, time)$(NBSP)
+            $(REF_ALTTEXT StopWatch, StopWatch, std, datetime, stopwatch)$(NBSP)
+            $(REF_ALTTEXT benchmark, benchmark, std, datetime, stopwatch)$(NBSP)
+        )
+    )
+    ))
+
+    This functionality is separated into the following modules
+
     $(UL
-        $(LI Types to represent points in time:
-             $(REF SysTime,std,_datetime,systime),
-             $(REF Date,std,_datetime,date),
-             $(REF TimeOfDay,std,_datetime,date),
-             $(REF DateTime,std,_datetime,date).)
-        $(LI Types to represent intervals of time.)
-        $(LI Types to represent ranges over intervals of time.)
-        $(LI Types to represent time zones (used by
-             $(REF SysTime,std,_datetime,systime)).)
-        $(LI A platform-independent, high precision stopwatch type:
-             $(LREF StopWatch))
-        $(LI Benchmarking functions.)
-        $(LI Various helper functions.)
+        $(LI $(MREF std, datetime, date) for points in time without timezones.)
+        $(LI $(MREF std, datetime, timezone) for classes which represent timezones.)
+        $(LI $(MREF std, datetime, systime) for a point in time with a timezone.)
+        $(LI $(MREF std, datetime, interval) for types which represent series of points in time.)
+        $(LI $(MREF std, datetime, stopwatch) for measuring time.)
     )
 
-    Closely related to std.datetime is <a href="core_time.html">`core.time`</a>,
-    and some of the time types used in std.datetime come from there - such as
-    $(REF Duration, core,time), $(REF TickDuration, core,time), and
-    $(REF FracSec, core,time).
-    core.time is publically imported into std.datetime, it isn't necessary
-    to import it separately.
-
-    Three of the main concepts used in this module are time points, time
-    durations, and time intervals.
-
-    A time point is a specific point in time. e.g. January 5th, 2010
-    or 5:00.
-
-    A time duration is a length of time with units. e.g. 5 days or 231 seconds.
-
-    A time interval indicates a period of time associated with a fixed point in
-    time. It is either two time points associated with each other,
-    indicating the time starting at the first point up to, but not including,
-    the second point - e.g. [January 5th, 2010 - March 10th, 2010$(RPAREN) - or
-    it is a time point and a time duration associated with one another. e.g.
-    January 5th, 2010 and 5 days, indicating [January 5th, 2010 -
-    January 10th, 2010$(RPAREN).
-
-    Various arithmetic operations are supported between time points and
-    durations (e.g. the difference between two time points is a time duration),
-    and ranges can be gotten from time intervals, so range-based operations may
-    be done on a series of time points.
-
-    The types that the typical user is most likely to be interested in are
-    $(REF Date,std,_datetime,date) (if they want dates but don't care about
-    time), $(REF DateTime,std,_datetime,date) (if they want dates and times
-    but don't care about time zones), $(REF SysTime,std,_datetime,systime) (if
-    they want the date and time from the OS and/or do care about time zones),
-    and StopWatch (a platform-independent, high precision stop watch).
-    $(REF Date,std,_datetime,date) and $(REF DateTime,std,_datetime,date) are
-    optimized for calendar-based operations, while
-    $(REF SysTime,std,_datetime,systime) is designed for dealing with time from
-    the OS. Check out their specific documentation for more details.
-
-    To get the current time, use $(REF Clock.currTime,std,_datetime,systime).
-    It will return the current time as a $(REF SysTime,std,_datetime,systime). To
-    print it, `toString` is sufficient, but if using `toISOString`,
-    `toISOExtString`, or `toSimpleString`, use the corresponding
-    `fromISOString`, `fromISOExtString`, or `fromSimpleString` to
-    create a $(REF SysTime,std,_datetime,systime) from the string.
-
---------------------
-auto currentTime = Clock.currTime();
-auto timeString = currentTime.toISOExtString();
-auto restoredTime = SysTime.fromISOExtString(timeString);
---------------------
-
-    Various functions take a string (or strings) to represent a unit of time
-    (e.g. $(D convert!("days", "hours")(numDays))). The valid strings to use
-    with such functions are `"years"`, `"months"`, `"weeks"`,
-    `"days"`, `"hours"`, `"minutes"`, `"seconds"`,
-    `"msecs"` (milliseconds), `"usecs"` (microseconds),
-    `"hnsecs"` (hecto-nanoseconds - i.e. 100 ns), or some subset thereof.
-    There are a few functions in core.time which take `"nsecs"`, but because
-    nothing in std.datetime has precision greater than hnsecs, and very little
-    in core.time does, no functions in std.datetime accept `"nsecs"`.
-    To remember which units are abbreviated and which aren't,
-    all units seconds and greater use their full names, and all
-    sub-second units are abbreviated (since they'd be rather long if they
-    weren't).
-
-    Note:
-        $(REF DateTimeException,std,_datetime,date) is an alias for
-        $(REF TimeException, core,time), so you don't need to worry about
-        core.time functions and std.datetime functions throwing different
-        exception types (except in the rare case that they throw something other
-        than $(REF TimeException, core,time) or
-        $(REF DateTimeException,std,_datetime,date)).
-
     See_Also:
-        $(DDLINK intro-to-_datetime, Introduction to std.datetime,
-                 Introduction to std&#46;_datetime)<br>
+        $(DDLINK intro-to-datetime, Introduction to std.datetime,
+                 Introduction to std&#46;datetime)<br>
         $(HTTP en.wikipedia.org/wiki/ISO_8601, ISO 8601)<br>
         $(HTTP en.wikipedia.org/wiki/Tz_database,
               Wikipedia entry on TZ Database)<br>
@@ -105,9 +83,46 @@ auto restoredTime = SysTime.fromISOExtString(timeString);
 
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   $(HTTP jmdavisprog.com, Jonathan M Davis) and Kato Shoichi
-    Source:    $(PHOBOSSRC std/_datetime/package.d)
+    Source:    $(PHOBOSSRC std/datetime/package.d)
 +/
 module std.datetime;
+
+/// Get the current time from the system clock
+@safe unittest
+{
+    import std.datetime.systime : SysTime, Clock;
+
+    SysTime currentTime = Clock.currTime();
+}
+
+/**
+Construct a specific point in time without timezone information
+and get its ISO string.
+ */
+@safe unittest
+{
+    import std.datetime.date : DateTime;
+
+    auto dt = DateTime(2018, 1, 1, 12, 30, 10);
+    assert(dt.toISOString() == "20180101T123010");
+    assert(dt.toISOExtString() == "2018-01-01T12:30:10");
+}
+
+/**
+Construct a specific point in time in the UTC timezone and
+add two days.
+ */
+@safe unittest
+{
+    import std.datetime.systime : SysTime;
+    import std.datetime.timezone : UTC;
+    import core.time : days;
+
+    auto st = SysTime(DateTime(2018, 1, 1, 12, 30, 10), UTC());
+    assert(st.toISOExtString() == "2018-01-01T12:30:10Z");
+    st += 2.days;
+    assert(st.toISOExtString() == "2018-01-03T12:30:10Z");
+}
 
 public import core.time;
 public import std.datetime.date;
