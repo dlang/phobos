@@ -178,7 +178,8 @@ template isSeedable(Rng, SeedType)
         is(typeof(
         {
             Rng r = void;              // can define a Rng object
-            r.seed(SeedType.init);     // can seed a Rng
+            SeedType s = void;
+            r.seed(s); // can seed a Rng
         }));
 }
 
@@ -189,7 +190,9 @@ template isSeedable(Rng)
         is(typeof(
         {
             Rng r = void;                     // can define a Rng object
-            r.seed(typeof(r.front).init);     // can seed a Rng
+            alias SeedType = typeof(r.front);
+            SeedType s = void;
+            r.seed(s); // can seed a Rng
         }));
 }
 
@@ -255,6 +258,7 @@ template isSeedable(Rng)
     static assert(isUniformRNG!(seedRng, uint));
     static assert(isUniformRNG!(seedRng));
     static assert(isSeedable!(seedRng, uint));
+    static assert(!isSeedable!(seedRng, ulong));
     static assert(isSeedable!(seedRng));
 }
 
