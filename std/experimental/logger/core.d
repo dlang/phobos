@@ -188,6 +188,10 @@ Params:
   ll = The `LogLevel` used by this log call.
   condition = The condition must be `true` for the data to be logged.
   args = The data that should be logged.
+  line = auto-filled with __LINE__ macro
+  file = auto-filled with __FILE__ macro
+  funcName = auto-filled with __FUNCTION__ macro
+  prettyFuncName = auto-filled with __PRETTY_FUNCTION__ macro
 
 Example:
 --------------------
@@ -217,6 +221,10 @@ be greater or equal to the `LogLevel` of the `sharedLog`.
 Params:
   ll = The `LogLevel` used by this log call.
   args = The data that should be logged.
+  line = auto-filled with __LINE__ macro
+  file = auto-filled with __FILE__ macro
+  funcName = auto-filled with __FUNCTION__ macro
+  prettyFuncName = auto-filled with __PRETTY_FUNCTION__ macro
 
 Example:
 --------------------
@@ -247,6 +255,10 @@ add the condition passed must be `true`.
 Params:
   condition = The condition must be `true` for the data to be logged.
   args = The data that should be logged.
+  line = auto-filled with __LINE__ macro
+  file = auto-filled with __FILE__ macro
+  funcName = auto-filled with __FUNCTION__ macro
+  prettyFuncName = auto-filled with __PRETTY_FUNCTION__ macro
 
 Example:
 --------------------
@@ -271,6 +283,10 @@ In order for the data to be processed the `LogLevel` of the
 
 Params:
   args = The data that should be logged.
+  line = auto-filled with __LINE__ macro
+  file = auto-filled with __FILE__ macro
+  funcName = auto-filled with __FUNCTION__ macro
+  prettyFuncName = auto-filled with __PRETTY_FUNCTION__ macro
 
 Example:
 --------------------
@@ -303,6 +319,10 @@ Params:
   condition = The condition must be `true` for the data to be logged.
   msg = The `printf`-style string.
   args = The data that should be logged.
+  line = auto-filled with __LINE__ macro
+  file = auto-filled with __FILE__ macro
+  funcName = auto-filled with __FUNCTION__ macro
+  prettyFuncName = auto-filled with __PRETTY_FUNCTION__ macro
 
 Example:
 --------------------
@@ -334,6 +354,10 @@ Params:
   ll = The `LogLevel` used by this log call.
   msg = The `printf`-style string.
   args = The data that should be logged.
+  line = auto-filled with __LINE__ macro
+  file = auto-filled with __FILE__ macro
+  funcName = auto-filled with __FUNCTION__ macro
+  prettyFuncName = auto-filled with __PRETTY_FUNCTION__ macro
 
 Example:
 --------------------
@@ -365,6 +389,10 @@ Params:
   condition = The condition must be `true` for the data to be logged.
   msg = The `printf`-style string.
   args = The data that should be logged.
+  line = auto-filled with __LINE__ macro
+  file = auto-filled with __FILE__ macro
+  funcName = auto-filled with __FUNCTION__ macro
+  prettyFuncName = auto-filled with __PRETTY_FUNCTION__ macro
 
 Example:
 --------------------
@@ -391,6 +419,10 @@ be greater or equal to the `defaultLogLevel`.
 Params:
   msg = The `printf`-style string.
   args = The data that should be logged.
+  line = auto-filled with __LINE__ macro
+  file = auto-filled with __FILE__ macro
+  funcName = auto-filled with __FUNCTION__ macro
+  prettyFuncName = auto-filled with __PRETTY_FUNCTION__ macro
 
 Example:
 --------------------
@@ -1110,6 +1142,10 @@ abstract class Logger
       args = The data that should be logged.
       condition = The condition must be $(D true) for the data to be logged.
       args = The data that is to be logged.
+      line = auto-filled with __LINE__ macro
+      file = auto-filled with __FILE__ macro
+      funcName = auto-filled with __FUNCTION__ macro
+      prettyFuncName = auto-filled with __PRETTY_FUNCTION__ macro
 
     Returns: The logger used by the logging function as reference.
 
@@ -1152,6 +1188,10 @@ abstract class Logger
     Params:
       ll = The specific `LogLevel` used for logging the log message.
       args = The data that should be logged.
+      line = auto-filled with __LINE__ macro
+      file = auto-filled with __FILE__ macro
+      funcName = auto-filled with __FUNCTION__ macro
+      prettyFuncName = auto-filled with __PRETTY_FUNCTION__ macro
 
     Example:
     --------------------
@@ -1198,6 +1238,10 @@ abstract class Logger
     Params:
       condition = The condition must be `true` for the data to be logged.
       args = The data that should be logged.
+      line = auto-filled with __LINE__ macro
+      file = auto-filled with __FILE__ macro
+      funcName = auto-filled with __FUNCTION__ macro
+      prettyFuncName = auto-filled with __PRETTY_FUNCTION__ macro
 
     Example:
     --------------------
@@ -1242,6 +1286,10 @@ abstract class Logger
 
     Params:
       args = The data that should be logged.
+      line = auto-filled with __LINE__ macro
+      file = auto-filled with __FILE__ macro
+      funcName = auto-filled with __FUNCTION__ macro
+      prettyFuncName = auto-filled with __PRETTY_FUNCTION__ macro
 
     Example:
     --------------------
@@ -1319,6 +1367,10 @@ abstract class Logger
       condition = The condition must be `true` for the data to be logged.
       msg = The format string used for this log call.
       args = The data that should be logged.
+      line = auto-filled with __LINE__ macro
+      file = auto-filled with __FILE__ macro
+      funcName = auto-filled with __FUNCTION__ macro
+      prettyFuncName = auto-filled with __PRETTY_FUNCTION__ macro
 
     Example:
     --------------------
@@ -1367,6 +1419,10 @@ abstract class Logger
       ll = The specific `LogLevel` used for logging the log message.
       msg = The format string used for this log call.
       args = The data that should be logged.
+      line = auto-filled with __LINE__ macro
+      file = auto-filled with __FILE__ macro
+      funcName = auto-filled with __FUNCTION__ macro
+      prettyFuncName = auto-filled with __PRETTY_FUNCTION__ macro
 
     Example:
     --------------------
@@ -1415,6 +1471,10 @@ abstract class Logger
       condition = The condition must be `true` for the data to be logged.
       msg = The format string used for this log call.
       args = The data that should be logged.
+      line = auto-filled with __LINE__ macro
+      file = auto-filled with __FILE__ macro
+      funcName = auto-filled with __FUNCTION__ macro
+      prettyFuncName = auto-filled with __PRETTY_FUNCTION__ macro
 
     Example:
     --------------------
@@ -1461,6 +1521,10 @@ abstract class Logger
     Params:
       msg = The format string used for this log call.
       args = The data that should be logged.
+      line = auto-filled with __LINE__ macro
+      file = auto-filled with __FILE__ macro
+      funcName = auto-filled with __FUNCTION__ macro
+      prettyFuncName = auto-filled with __PRETTY_FUNCTION__ macro
 
     Example:
     --------------------
