@@ -1,5 +1,4 @@
 // Written in the D programming language.
-
 /**
 Networking client functionality as provided by $(HTTP _curl.haxx.se/libcurl,
 libcurl). The libcurl library must be installed on the system in order to use
@@ -59,6 +58,10 @@ uploads file from file system to URL.)
 )
 $(TR $(TDNW $(LREF get)) $(TD $(D
 get("dlang.org")) returns a char[] containing the dlang.org web page.)
+)
+$(TR $(TDNW $(LREF head)) $(TD $(D
+head("dlang.org")) returns a char[] containing the header of the dlang.org
+web page.)
 )
 $(TR $(TDNW $(LREF put)) $(TD $(D
 put("dlang.org", "Hi")) returns a char[] containing
@@ -522,6 +525,54 @@ if (isCurlConn!Conn)
             s.send(httpOK());
         });
         upload(fn, host ~ "/path");
+    }
+}
+
+/** HTTP head
+ * Params:
+ * url = resource to call head method on
+ * conn = HTTP connection to use
+ *
+ * The template parameter $(D T) specifies the type to return. Possible values
+ * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]). If asking
+ * for $(D char), content will be converted from the connection character set
+ * (specified in HTTP response headers, both ISO-8859-1 by default) to UTF-8.
+ *
+ * Example:
+ * ----
+ * import std.net.curl;
+ * auto content = head("d-lang.appspot.com/testUrl2");
+ * ----
+ *
+ * Returns:
+ * A T[] range containing the head of the resource pointed to by the URL.
+ *
+ * Throws:
+ *
+ * $(D CurlException) on error.
+ *
+ * See_Also: $(LREF HTTP.Method)
+*/
+
+T[] head(T = char)(const (char)[] url, HTTP conn = HTTP())
+if ( (is(T == char) || is(T == ubyte)) )
+{
+    conn.method = HTTP.Method.head;
+    return _basicHTTP!(T)(url, "", conn);
+}
+
+@system unittest
+{
+    import std.algorithm.searching : canFind;
+
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
+    {
+        testServer.handle((s) {
+            assert(s.recvReq.hdrs.canFind("HEAD /path"));
+            s.send(httpOK("GETRESPONSE"));
+        });
+        auto res = head(host ~ "/path");
+        assert(res == "HTTP/1.1 200 OK\ncontent-type: text/plain\ncontent-length: 11\n");
     }
 }
 
@@ -1061,6 +1112,7 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
         };
     }
 
+    auto header = appender!(ubyte[])();
     client.onReceiveHeader = (in char[] key,
                               in char[] value)
     {
@@ -1069,11 +1121,22 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
             import std.conv : to;
             content.reserve(value.to!size_t);
         }
+        header ~= cast(ubyte[])(key ~ ": " ~ value ~ "\n");
     };
     client.onReceiveStatusLine = (HTTP.StatusLine l) { statusLine = l; };
     client.perform();
     enforce(statusLine.code / 100 == 2, new HTTPStatusException(statusLine.code,
             format("HTTP request returned status code %d (%s)", statusLine.code, statusLine.reason)));
+
+    if (client.method == HTTP.Method.head)
+    {
+        import std.conv : to;
+
+        auto tmpHeader = _decodeContent!T(header.data, client.p.charset);
+        auto statusFormat = to!(typeof(tmpHeader))(format("HTTP/%s.%s %s %s\n", statusLine.majorVersion,
+                statusLine.minorVersion, statusLine.code, statusLine.reason));
+        return statusFormat ~ tmpHeader;
+    }
 
     return _decodeContent!T(content.data, client.p.charset);
 }
