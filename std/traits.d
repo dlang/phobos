@@ -7097,19 +7097,49 @@ if (T.length == 1)
 }
 
 /**
-Determines whether function $(D f) requires a context pointer.
+Determines if `f` is a function that requires a context pointer.
+
+Params:
+    f = The type to check
+Returns
+    A `bool`
 */
 template isNestedFunction(alias f)
 {
-    enum isNestedFunction = __traits(isNested, f);
+    enum isNestedFunction = __traits(isNested, f) && isSomeFunction!(f);
 }
 
+///
 @safe unittest
 {
-    static void f() { }
-    void g() { }
+    static void f() {}
+    static void fun()
+    {
+        int i;
+        int f() { return i; }
+
+        static assert(isNestedFunction!(f));
+    }
+
     static assert(!isNestedFunction!f);
-    static assert( isNestedFunction!g);
+}
+
+// issue 18669
+@safe unittest
+{
+    static class Outer
+    {
+        class Inner
+        {
+        }
+    }
+    int i;
+    struct SS
+    {
+        int bar() { return i; }
+    }
+    static assert(!isNestedFunction!(Outer.Inner));
+    static assert(!isNestedFunction!(SS));
 }
 
 /**
