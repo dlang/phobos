@@ -4737,15 +4737,26 @@ template CommonType(T...)
 
 
 /**
- * Returns a tuple with all possible target types of an implicit
- * conversion of a value of type $(D_PARAM T).
- *
- * Important note:
- *
- * The possible targets are computed more conservatively than the D
- * 2.005 compiler does, eliminating all dangerous conversions. For
- * example, $(D_PARAM ImplicitConversionTargets!double) does not
- * include $(D_PARAM float).
+Params:
+    T = The type to check
+
+Returns:
+    An $(REF AliasSeq,std,meta) with all possible target types of an implicit
+    conversion `T`.
+
+    If `T` is a class derived from `Object`, the the result of
+    $(LREF TransitiveBaseTypeTuple) is returned.
+
+    If the type is not a built-in value type or a class derived from
+    `Object`, the an empty $(REF AliasSeq,std,meta) is returned.
+
+Note:
+    The possible targets are computed more conservatively than the
+    language allows, eliminating all dangerous conversions. For example,
+    `ImplicitConversionTargets!double` does not include `float`.
+
+See_Also:
+    $(LREF isImplicitlyConvertible)
  */
 template ImplicitConversionTargets(T)
 {
@@ -4813,6 +4824,36 @@ template ImplicitConversionTargets(T)
         alias ImplicitConversionTargets = AliasSeq!(void*);
     else
         alias ImplicitConversionTargets = AliasSeq!();
+}
+
+///
+@safe unittest
+{
+    import std.meta : AliasSeq;
+
+    static assert(is(ImplicitConversionTargets!(ulong) == AliasSeq!(float, double, real)));
+    static assert(is(ImplicitConversionTargets!(int) == AliasSeq!(long, ulong, float, double, real)));
+    static assert(is(ImplicitConversionTargets!(float) == AliasSeq!(double, real)));
+    static assert(is(ImplicitConversionTargets!(double) == AliasSeq!(real)));
+
+    static assert(is(ImplicitConversionTargets!(char) == AliasSeq!(
+        wchar, dchar, byte, ubyte, short, ushort, int, uint, long, ulong, float, double, real
+    )));
+    static assert(is(ImplicitConversionTargets!(wchar) == AliasSeq!(
+        dchar, short, ushort, int, uint, long, ulong, float, double, real
+    )));
+    static assert(is(ImplicitConversionTargets!(dchar) == AliasSeq!(
+        int, uint, long, ulong, float, double, real
+    )));
+
+    static assert(is(ImplicitConversionTargets!(string) == AliasSeq!(const(char)[])));
+    static assert(is(ImplicitConversionTargets!(void*) == AliasSeq!(void*)));
+
+    interface A {}
+    interface B {}
+    class C : A, B {}
+
+    static assert(is(ImplicitConversionTargets!(C) == AliasSeq!(Object, A, B)));
 }
 
 @safe unittest
@@ -7051,7 +7092,12 @@ if (T.length == 1)
 
 
 /**
- * Detect whether $(D T) is an abstract function.
+Detect whether `T` is an abstract function.
+
+Params:
+    T = The type to check
+Returns:
+    A `bool`
  */
 template isAbstractFunction(T...)
 if (T.length == 1)
@@ -7059,6 +7105,7 @@ if (T.length == 1)
     enum bool isAbstractFunction = __traits(isAbstractFunction, T[0]);
 }
 
+///
 @safe unittest
 {
     struct S { void foo() { } }
