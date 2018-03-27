@@ -178,7 +178,7 @@ aa[std.regex.internal.ir]=-dip1000
 aa[std.regex.internal.kickstart]=-dip1000
 aa[std.regex.internal.parser]=-dip1000
 aa[std.regex.internal.tests2]=-dip1000
-aa[std.regex.internal.tests]=-dip25 # i.a. depends on https://github.com/dlang/phobos/pull/5915 ? and a fix for writeln
+aa[std.regex.internal.tests]=-dip1000 # merged https://github.com/dlang/phobos/pull/6340; for -debug=std_regex_test (set nowhere in sources) still depends on a fix for writeln
 aa[std.regex.internal.thompson]=-dip1000
 
 aa[std.windows.charset]=-dip1000
