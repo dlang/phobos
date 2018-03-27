@@ -1194,7 +1194,7 @@ template memoize(alias fun, uint maxSize)
 }
 
 // 16079: memoize should work with arrays
-@safe unittest
+@system unittest // not @safe with -dip1000 due to memoize
 {
     int executed = 0;
     T median(T)(const T[] nums) {
@@ -1237,7 +1237,7 @@ template memoize(alias fun, uint maxSize)
 }
 
 // 16079: memoize should work with classes
-@safe unittest
+@system unittest // not @safe with -dip1000 due to memoize
 {
     int executed = 0;
     T pickFirst(T)(T first)
