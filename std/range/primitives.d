@@ -629,8 +629,8 @@ pure @safe unittest
         void popFront(){ end = true; }
     }
     LockingTextWriter w;
-    RetroResult r;
-    put(w, r);
+    RetroResult re;
+    put(w, re);
 }
 
 @system unittest
