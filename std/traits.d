@@ -7519,8 +7519,14 @@ alias ValueType(V : V[K], K) = V;
 }
 
 /**
- * Returns the corresponding unsigned type for T. T must be a numeric
- * integral type, otherwise a compile-time error occurs.
+Params:
+    T = A built in integral or vector type.
+
+Returns:
+    The corresponding unsigned numeric type for `T` with the
+    same type qualifiers.
+
+    If `T` is not a integral or vector, a compile-time error is given.
  */
 template Unsigned(T)
 {
@@ -7544,6 +7550,16 @@ template Unsigned(T)
     }
 
     alias Unsigned = ModifyTypePreservingTQ!(Impl, OriginalType!T);
+}
+
+///
+@safe unittest
+{
+    static assert(is(Unsigned!(int) == uint));
+    static assert(is(Unsigned!(long) == ulong));
+    static assert(is(Unsigned!(const short) == const ushort));
+    static assert(is(Unsigned!(immutable byte) == immutable ubyte));
+    static assert(is(Unsigned!(inout int) == inout uint));
 }
 
 @safe unittest
@@ -7842,19 +7858,28 @@ if (T.length == 2)
 }
 
 /**
-If $(D cond) is $(D true), returns $(D a) without evaluating $(D
-b). Otherwise, returns $(D b) without evaluating $(D a).
+Select one of two functions to run via template parameter.
+
+Params:
+    cond = A `bool` which determines which function is run
+    a = The first function
+    b = The second function
+
+Returns:
+    `a` without evaluating `b` if `cond` is `true`.
+    Otherwise, returns `b` without evaluating `a`.
  */
 A select(bool cond : true, A, B)(A a, lazy B b) { return a; }
 /// Ditto
 B select(bool cond : false, A, B)(lazy A a, B b) { return b; }
 
+///
 @safe unittest
 {
-    real pleasecallme() { return 0; }
-    int dontcallme() { assert(0); }
-    auto a = select!true(pleasecallme(), dontcallme());
-    auto b = select!false(dontcallme(), pleasecallme());
+    real run() { return 0; }
+    int fail() { assert(0); }
+    auto a = select!true(run(), fail());
+    auto b = select!false(fail(), run());
     static assert(is(typeof(a) == real));
     static assert(is(typeof(b) == real));
 }
@@ -8106,9 +8131,16 @@ private template isDesiredUDA(alias attribute)
 }
 
 /**
- * Gets all symbols within `symbol` that have the given user-defined attribute.
- * This is not recursive; it will not search for symbols within symbols such as
- * nested structs or unions.
+Params:
+    symbol = The aggregate type to search
+    attribute = The user-defined attribute to search for
+
+Returns:
+    All symbols within `symbol` that have the given UDA `attribute`.
+
+Note:
+    This is not recursive; it will not search for symbols within symbols such as
+    nested structs or unions.
  */
 template getSymbolsByUDA(alias symbol, alias attribute)
 {
@@ -8121,48 +8153,18 @@ template getSymbolsByUDA(alias symbol, alias attribute)
         alias getSymbolsByUDA = membersWithUDA;
 }
 
-private template getSymbolsByUDAImpl(alias symbol, alias attribute, names...)
+///
+@safe unittest
 {
-    import std.meta : Alias, AliasSeq, Filter;
-    static if (names.length == 0)
+    enum Attr;
+    struct A
     {
-        alias getSymbolsByUDAImpl = AliasSeq!();
+        @Attr int a;
+        int b;
     }
-    else
-    {
-        alias tail = getSymbolsByUDAImpl!(symbol, attribute, names[1 .. $]);
 
-        // Filtering inaccessible members.
-        static if (!__traits(compiles, __traits(getMember, symbol, names[0])))
-        {
-            alias getSymbolsByUDAImpl = tail;
-        }
-        else
-        {
-            alias member = Alias!(__traits(getMember, symbol, names[0]));
-
-            // Filtering not compiled members such as alias of basic types.
-            static if (!__traits(compiles, hasUDA!(member, attribute)))
-            {
-                alias getSymbolsByUDAImpl = tail;
-            }
-            // Get overloads for functions, in case different overloads have different sets of UDAs.
-            else static if (isFunction!member)
-            {
-                enum hasSpecificUDA(alias member) = hasUDA!(member, attribute);
-                alias overloadsWithUDA = Filter!(hasSpecificUDA, __traits(getOverloads, symbol, names[0]));
-                alias getSymbolsByUDAImpl = AliasSeq!(overloadsWithUDA, tail);
-            }
-            else static if (hasUDA!(member, attribute))
-            {
-                alias getSymbolsByUDAImpl = AliasSeq!(member, tail);
-            }
-            else
-            {
-                alias getSymbolsByUDAImpl = tail;
-            }
-        }
-    }
+    static assert(getSymbolsByUDA!(A, Attr).length == 1);
+    static assert(hasUDA!(getSymbolsByUDA!(A, Attr)[0], Attr));
 }
 
 ///
@@ -8264,22 +8266,6 @@ private template getSymbolsByUDAImpl(alias symbol, alias attribute, names...)
     static assert(hasUDA!(getSymbolsByUDA!(HasPrivateMembers, Attr)[0], Attr));
 }
 
-///
-@safe unittest
-{
-    enum Attr;
-    struct A
-    {
-        alias INT = int;
-        alias void function(INT) SomeFunction;
-        @Attr int a;
-        int b;
-    }
-
-    static assert(getSymbolsByUDA!(A, Attr).length == 1);
-    static assert(hasUDA!(getSymbolsByUDA!(A, Attr)[0], Attr));
-}
-
 // #16387: getSymbolsByUDA works with structs but fails with classes
 @safe unittest
 {
@@ -8307,6 +8293,50 @@ private template getSymbolsByUDAImpl(alias symbol, alias attribute, names...)
     }
 
     static assert(getSymbolsByUDA!(A, Attr).stringof == "tuple(a, a, c)");
+}
+
+private template getSymbolsByUDAImpl(alias symbol, alias attribute, names...)
+{
+    import std.meta : Alias, AliasSeq, Filter;
+    static if (names.length == 0)
+    {
+        alias getSymbolsByUDAImpl = AliasSeq!();
+    }
+    else
+    {
+        alias tail = getSymbolsByUDAImpl!(symbol, attribute, names[1 .. $]);
+
+        // Filtering inaccessible members.
+        static if (!__traits(compiles, __traits(getMember, symbol, names[0])))
+        {
+            alias getSymbolsByUDAImpl = tail;
+        }
+        else
+        {
+            alias member = Alias!(__traits(getMember, symbol, names[0]));
+
+            // Filtering not compiled members such as alias of basic types.
+            static if (!__traits(compiles, hasUDA!(member, attribute)))
+            {
+                alias getSymbolsByUDAImpl = tail;
+            }
+            // Get overloads for functions, in case different overloads have different sets of UDAs.
+            else static if (isFunction!member)
+            {
+                enum hasSpecificUDA(alias member) = hasUDA!(member, attribute);
+                alias overloadsWithUDA = Filter!(hasSpecificUDA, __traits(getOverloads, symbol, names[0]));
+                alias getSymbolsByUDAImpl = AliasSeq!(overloadsWithUDA, tail);
+            }
+            else static if (hasUDA!(member, attribute))
+            {
+                alias getSymbolsByUDAImpl = AliasSeq!(member, tail);
+            }
+            else
+            {
+                alias getSymbolsByUDAImpl = tail;
+            }
+        }
+    }
 }
 
 /**
