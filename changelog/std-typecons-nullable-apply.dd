@@ -1,0 +1,15 @@
+`apply` was added to `std.typecons`.
+
+`apply` is an operation for $(REF Nullable, std, typecons) values that "unpacks" the `Nullable`, performs some
+operation (that is passed as a template parameter), then packs the result into another `Nullable` if necessary.
+When the initial `Nullable` is `null`, the resulting `Nullable` is also `null` and the function is not
+called.
+
+-----
+Nullable!int n;
+alias square = i => i * i;
+n = n.apply!square; // does nothing if isNull
+assert(n.isNull);
+n = 2;
+assert(n.apply!square.get == 4);
+-----
