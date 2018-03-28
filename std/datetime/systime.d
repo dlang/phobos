@@ -97,7 +97,6 @@ public:
     @safe unittest
     {
         import std.format : format;
-        import std.stdio : writefln;
         import core.time;
         assert(currTime().timezone is LocalTime());
         assert(currTime(UTC()).timezone is UTC());
@@ -123,11 +122,10 @@ public:
         import std.meta : AliasSeq;
         static foreach (ct; AliasSeq!(ClockType.coarse, ClockType.precise, ClockType.second))
         {{
-            scope(failure) writefln("ClockType.%s", ct);
             auto value1 = Clock.currTime!ct;
             auto value2 = Clock.currTime!ct(UTC());
-            assert(value1 <= value2, format("%s %s", value1, value2));
-            assert(abs(value1 - value2) <= seconds(2));
+            assert(value1 <= value2, format("%s %s (ClockType: %s)", value1, value2, ct));
+            assert(abs(value1 - value2) <= seconds(2), format("ClockType.%s", ct));
         }}
     }
 
@@ -288,7 +286,6 @@ public:
         import std.format : format;
         import std.math : abs;
         import std.meta : AliasSeq;
-        import std.stdio : writefln;
         enum limit = convert!("seconds", "hnsecs")(2);
 
         auto norm1 = Clock.currStdTime;
@@ -298,10 +295,9 @@ public:
 
         static foreach (ct; AliasSeq!(ClockType.coarse, ClockType.precise, ClockType.second))
         {{
-            scope(failure) writefln("ClockType.%s", ct);
             auto value1 = Clock.currStdTime!ct;
             auto value2 = Clock.currStdTime!ct;
-            assert(value1 <= value2, format("%s %s", value1, value2));
+            assert(value1 <= value2, format("%s %s (ClockType: %s)", value1, value2, ct));
             assert(abs(value1 - value2) <= limit);
         }}
     }
@@ -10758,16 +10754,13 @@ if (isIntegral!T && isSigned!T) // The constraints on R were already covered by 
 {
     import std.conv : to;
     import std.range : chain, iota;
-    import std.stdio : writeln;
     foreach (i; chain(iota(0, 101), [250, 999, 1000, 1001, 2345, 9999]))
     {
-        scope(failure) writeln(i);
-        assert(_convDigits!int(to!string(i)) == i);
+        assert(_convDigits!int(to!string(i)) == i, i.to!string);
     }
     foreach (str; ["-42", "+42", "1a", "1 ", " ", " 42 "])
     {
-        scope(failure) writeln(str);
-        assert(_convDigits!int(str) == -1);
+        assert(_convDigits!int(str) == -1, str);
     }
 }
 

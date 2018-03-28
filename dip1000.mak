@@ -98,11 +98,11 @@ aa[std.container.rbtree]=-dip25 # DROP
 aa[std.container.slist]=-dip25 # -dip1000 -version=DIP1000   depends on https://github.com/dlang/phobos/pull/6295 merged
 aa[std.container.util]=-dip25 #    TODO
 
-aa[std.datetime.date]=-dip25 # depends on a fix for writefln
+aa[std.datetime.date]=-dip1000
 aa[std.datetime.interval]=-dip1000
 aa[std.datetime.package]=-dip1000
 aa[std.datetime.stopwatch]=-dip1000
-aa[std.datetime.systime]=-dip25 # merged https://github.com/dlang/phobos/pull/6181 ; depends on a fix for writefln
+aa[std.datetime.systime]=-dip1000 # merged https://github.com/dlang/phobos/pull/6181
 aa[std.datetime.timezone]=-dip1000 # merged https://github.com/dlang/phobos/pull/6183
 
 aa[std.digest.crc]=-dip1000

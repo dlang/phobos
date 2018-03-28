@@ -10401,19 +10401,17 @@ if (isSomeString!T)
 
 @safe unittest
 {
-    import std.stdio : writeln;
+    import std.conv : to;
     import std.traits : EnumMembers;
     foreach (badStr; ["Ja", "Janu", "Januar", "Januarys", "JJanuary", "JANUARY",
                       "JAN", "january", "jaNuary", "jaN", "jaNuaRy", "jAn"])
     {
-        scope(failure) writeln(badStr);
-        assertThrown!DateTimeException(monthFromString(badStr));
+        assertThrown!DateTimeException(monthFromString(badStr), badStr);
     }
 
     foreach (month; EnumMembers!Month)
     {
-        scope(failure) writeln(month);
-        assert(monthFromString(monthToString(month)) == month);
+        assert(monthFromString(monthToString(month)) == month, month.to!string);
     }
 }
 
