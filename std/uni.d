@@ -7821,7 +7821,7 @@ if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
         // one of chars is not cased at all
         return diff;
     }
-    return -int(r2.empty);
+    return int(r2.empty) - 1;
 }
 
 ///
