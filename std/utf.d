@@ -4091,7 +4091,19 @@ if (isSomeChar!C)
 
                 static if (isForwardRange!R)
                 {
+                    static if (hasIndirections!R)
                     @property auto save() return scope
+                    /* `return scope` cannot be inferred because compiler does not
+                     * track it backwards from assignment to local `ret`
+                     */
+                    {
+                        auto ret = this;
+                        ret.r = r.save;
+                        return ret;
+                    }
+
+                    static if (!hasIndirections!R)
+                    @property auto save() scope
                     /* `return scope` cannot be inferred because compiler does not
                      * track it backwards from assignment to local `ret`
                      */
