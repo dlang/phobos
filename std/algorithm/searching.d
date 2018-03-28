@@ -294,7 +294,7 @@ private:
     ptrdiff_t[ElementType!(Range)] occ;         // GC allocated
     Range needle;
 
-    ptrdiff_t occurrence(ElementType!(Range) c)
+    ptrdiff_t occurrence(ElementType!(Range) c) scope
     {
         auto p = c in occ;
         return p ? *p : -1;
@@ -357,7 +357,7 @@ public:
     }
 
     ///
-    Range beFound(Range haystack)
+    Range beFound(Range haystack) scope
     {
         import std.algorithm.comparison : max;
 
