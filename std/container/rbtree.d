@@ -937,7 +937,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
             debug(RBDoChecks)
                 check();
             ++_length;
-            return result;
+            return result is null;
         }
         else
         {
@@ -950,7 +950,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
             }
             debug(RBDoChecks)
                 check();
-            return Tuple!(bool, "added", Node, "n")(added, result);
+            return added;
         }
     }
 
@@ -1122,7 +1122,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
      *
      * Complexity: $(BIGOH log(n))
      */
-    size_t stableInsert(Stuff)(Stuff stuff) if (isImplicitlyConvertible!(Stuff, Elem))
+    size_t stableInsert(Stuff)(scope Stuff stuff) @safe if (isImplicitlyConvertible!(Stuff, Elem))
     {
         static if (allowDuplicates)
         {
@@ -1131,7 +1131,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
         }
         else
         {
-            return(_add(stuff).added ? 1 : 0);
+            return _add(stuff) ? 1 : 0;
         }
     }
 
@@ -1143,7 +1143,8 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
      *
      * Complexity: $(BIGOH m * log(n))
      */
-    size_t stableInsert(Stuff)(Stuff stuff) if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, Elem))
+    size_t stableInsert(Stuff)(scope Stuff stuff) @safe
+    if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, Elem))
     {
         size_t result = 0;
         static if (allowDuplicates)
@@ -1158,7 +1159,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
         {
             foreach (e; stuff)
             {
-                if (_add(e).added)
+                if (_add(e))
                     ++result;
             }
         }
@@ -1401,7 +1402,7 @@ assert(equal(rbt[], [5]));
     }
 
     /++ Ditto +/
-    size_t removeKey(U)(U[] elems)
+    size_t removeKey(U)(scope U[] elems)
         if (isImplicitlyConvertible!(U, Elem))
     {
         immutable lenBefore = length;
@@ -1423,7 +1424,7 @@ assert(equal(rbt[], [5]));
     }
 
     /++ Ditto +/
-    size_t removeKey(Stuff)(Stuff stuff)
+    size_t removeKey(Stuff)(scope Stuff stuff)
         if (isInputRange!Stuff &&
            isImplicitlyConvertible!(ElementType!Stuff, Elem) &&
            !isDynamicArray!Stuff)
@@ -1724,7 +1725,7 @@ assert(equal(rbt[], [5]));
      * Constructor. Pass in an array of elements, or individual elements to
      * initialize the tree with.
      */
-    this(Elem[] elems...)
+    this(scope Elem[] elems...)
     {
         _setup();
         stableInsert(elems);
@@ -1733,7 +1734,7 @@ assert(equal(rbt[], [5]));
     /**
      * Constructor. Pass in a range of elements to initialize the tree with.
      */
-    this(Stuff)(Stuff stuff) if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, Elem))
+    this(Stuff)(scope Stuff stuff) if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, Elem))
     {
         _setup();
         stableInsert(stuff);
@@ -1970,14 +1971,20 @@ if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init
     auto rbt3 = redBlackTree(chain([0, 1], [7, 5]));
     assert(equal(rbt3[], [0, 1, 5, 7]));
 
-    auto rbt4 = redBlackTree(chain(["hello"], ["world"]));
-    assert(equal(rbt4[], ["hello", "world"]));
-
     auto rbt5 = redBlackTree!true(chain([0, 1], [5, 7, 5]));
     assert(equal(rbt5[], [0, 1, 5, 5, 7]));
 
     auto rbt6 = redBlackTree!("a > b", true)(chain([0.1, 1.3], [5.9, 7.2, 5.9]));
     assert(equal(rbt6[], [7.2, 5.9, 5.9, 1.3, 0.1]));
+}
+
+version(DIP1000) {} else
+@safe pure unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : chain;
+    auto rbt4 = redBlackTree(chain(["hello"], ["world"]));
+    assert(equal(rbt4[], ["hello", "world"]));
 }
 
 @safe pure unittest
@@ -2049,7 +2056,7 @@ if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init
 @safe pure unittest
 {
     class C {}
-    RedBlackTree!(C, "cast(void*)a < cast(void*) b") tree;
+    RedBlackTree!(C, (a,b) @trusted  => cast(void*) a < cast(void*) b) tree;
 }
 
 @safe pure unittest // const/immutable elements (issue 17519)
