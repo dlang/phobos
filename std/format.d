@@ -64,8 +64,8 @@ import std.range.primitives;
 import std.traits;
 
 
-/**********************************************************************
- * Signals a mismatch between a format and its corresponding argument.
+/**
+Signals a mismatch between a format and its corresponding argument.
  */
 class FormatException : Exception
 {
@@ -80,6 +80,13 @@ class FormatException : Exception
     {
         super(msg, fn, ln, next);
     }
+}
+
+///
+@safe unittest
+{
+    import std.exception : assertThrown;
+    assertThrown!FormatException(format("%d", "foo"));
 }
 
 private alias enforceFmt = enforce!FormatException;
@@ -5440,7 +5447,9 @@ if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementT
                 || is(Unqual!(ElementEncodingType!Range) == ubyte))
             return rawRead!T(input);
         else
-            throw new FormatException("The raw read specifier %r may only be used with narrow strings and ranges of bytes.");
+            throw new FormatException(
+                "The raw read specifier %r may only be used with narrow strings and ranges of bytes."
+            );
     }
 
     enforceFmt(find(acceptedSpecs!T, spec.spec).length,
@@ -5474,7 +5483,9 @@ if (isFloatingPoint!T && !is(T == enum) && isInputRange!Range
                 || is(Unqual!(ElementEncodingType!Range) == ubyte))
             return rawRead!T(input);
         else
-            throw new FormatException("The raw read specifier %r may only be used with narrow strings and ranges of bytes.");
+            throw new FormatException(
+                "The raw read specifier %r may only be used with narrow strings and ranges of bytes."
+            );
     }
 
     enforceFmt(find(acceptedSpecs!T, spec.spec).length,
