@@ -596,24 +596,6 @@ auto abs(Num)(Num x)
     }
 }
 
-import std.meta : AliasSeq;
-deprecated("Please use std.complex")
-static foreach (Num; AliasSeq!(cfloat, cdouble, creal, ifloat, idouble, ireal))
-{
-    auto abs(Num z) @safe pure nothrow @nogc
-    {
-        enum m = Num.mangleof;
-        // cfloat, cdouble, creal
-        static if (m == "q" || m == "r" || m == "c")
-            return hypot(z.re, z.im);
-        // ifloat, idouble, ireal
-        else static if (m == "o" || m == "p" || m == "j")
-            return fabs(z.im);
-        else
-            static assert(0, "Unsupported type: " ~ Num.stringof);
-    }
-}
-
 /// ditto
 @safe pure nothrow @nogc unittest
 {
@@ -663,6 +645,24 @@ deprecated
         assert(abs(f) == hypot(f.re, f.im));
         assert(abs(-f) == hypot(f.re, f.im));
     }}
+}
+
+import std.meta : AliasSeq;
+deprecated("Please use std.complex")
+static foreach (Num; AliasSeq!(cfloat, cdouble, creal, ifloat, idouble, ireal))
+{
+    auto abs(Num z) @safe pure nothrow @nogc
+    {
+        enum m = Num.mangleof;
+        // cfloat, cdouble, creal
+        static if (m == "q" || m == "r" || m == "c")
+            return hypot(z.re, z.im);
+        // ifloat, idouble, ireal
+        else static if (m == "o" || m == "p" || m == "j")
+            return fabs(z.im);
+        else
+            static assert(0, "Unsupported type: " ~ Num.stringof);
+    }
 }
 
 /*
@@ -740,6 +740,14 @@ double cos(double x) @safe pure nothrow @nogc { return cos(cast(real) x); }
 //FIXME
 ///ditto
 float cos(float x) @safe pure nothrow @nogc { return cos(cast(real) x); }
+
+///
+@safe unittest
+{
+    assert(cos(0.0).approxEqual(1.0));
+    assert(cos(1.0).approxEqual(0.540));
+    assert(cos(3.0).approxEqual(-0.989));
+}
 
 @safe unittest
 {
@@ -1108,6 +1116,14 @@ Lret: {}
     assert(isIdentical( tan(NaN(0x0123L)), NaN(0x0123L) ));
 }
 
+///
+@safe unittest
+{
+    assert(tan(0.0).approxEqual(0));
+    assert(tan(PI).approxEqual(0));
+    assert(tan(PI / 3).approxEqual(sqrt(3.0)));
+}
+
 @safe @nogc nothrow unittest
 {
     assert(equalsDigit(tan(PI / 3), std.math.sqrt(3.0), useDigits));
@@ -1135,6 +1151,14 @@ double acos(double x) @safe pure nothrow @nogc { return acos(cast(real) x); }
 /// ditto
 float acos(float x) @safe pure nothrow @nogc  { return acos(cast(real) x); }
 
+///
+@safe unittest
+{
+    assert(acos(0.0).approxEqual(1.570));
+    assert(acos(0.5).approxEqual(std.math.PI / 3));
+    assert(acos(PI).isNaN);
+}
+
 @safe @nogc nothrow unittest
 {
     assert(equalsDigit(acos(0.5), std.math.PI / 3, useDigits));
@@ -1161,6 +1185,14 @@ double asin(double x) @safe pure nothrow @nogc { return asin(cast(real) x); }
 
 /// ditto
 float asin(float x) @safe pure nothrow @nogc  { return asin(cast(real) x); }
+
+///
+@safe unittest
+{
+    assert(asin(0.0).approxEqual(0.0));
+    assert(asin(0.5).approxEqual(PI / 6));
+    assert(asin(PI).isNaN);
+}
 
 @safe @nogc nothrow unittest
 {
@@ -1278,6 +1310,13 @@ double atan(double x) @safe pure nothrow @nogc { return atan(cast(real) x); }
 /// ditto
 float atan(float x)  @safe pure nothrow @nogc { return atan(cast(real) x); }
 
+///
+@safe unittest
+{
+    assert(atan(0.0).approxEqual(0.0));
+    assert(atan(sqrt(3.0)).approxEqual(PI / 3));
+}
+
 @safe @nogc nothrow unittest
 {
     assert(equalsDigit(atan(std.math.sqrt(3.0)), PI / 3, useDigits));
@@ -1391,6 +1430,12 @@ float atan2(float y, float x) @safe pure nothrow @nogc
     return atan2(cast(real) y, cast(real) x);
 }
 
+///
+@safe unittest
+{
+    assert(atan2(1.0, sqrt(3.0)).approxEqual(PI / 6));
+}
+
 @safe @nogc nothrow unittest
 {
     assert(equalsDigit(atan2(1.0L, std.math.sqrt(3.0L)), PI / 6, useDigits));
@@ -1417,6 +1462,13 @@ double cosh(double x) @safe pure nothrow @nogc { return cosh(cast(real) x); }
 
 /// ditto
 float cosh(float x) @safe pure nothrow @nogc  { return cosh(cast(real) x); }
+
+///
+@safe unittest
+{
+    assert(cosh(0.0).approxEqual(1.0));
+    assert(cosh(1.0).approxEqual((E + 1.0 / E) / 2));
+}
 
 @safe @nogc nothrow unittest
 {
@@ -1453,6 +1505,13 @@ double sinh(double x) @safe pure nothrow @nogc { return sinh(cast(real) x); }
 /// ditto
 float sinh(float x) @safe pure nothrow @nogc  { return sinh(cast(real) x); }
 
+///
+@safe unittest
+{
+    assert(sinh(0.0).approxEqual(0.0));
+    assert(sinh(1.0).approxEqual((E - 1.0 / E) / 2));
+}
+
 @safe @nogc nothrow unittest
 {
     assert(equalsDigit(sinh(1.0), (E - 1.0 / E) / 2, useDigits));
@@ -1484,6 +1543,13 @@ double tanh(double x) @safe pure nothrow @nogc { return tanh(cast(real) x); }
 
 /// ditto
 float tanh(float x) @safe pure nothrow @nogc { return tanh(cast(real) x); }
+
+///
+@safe unittest
+{
+    assert(tanh(0.0).approxEqual(0.0));
+    assert(tanh(1.0).approxEqual(sinh(1.0) / cosh(1.0)));
+}
 
 @safe @nogc nothrow unittest
 {
