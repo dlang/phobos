@@ -475,7 +475,7 @@ T floorImpl(T)(const T x) @trusted pure nothrow @nogc
             // Clear all bits representing the fraction part.
             const uint fraction_mask = F.MANTISSAMASK_INT >> exp;
 
-            if ((y.vi & i) != 0)
+            if ((y.vi & fraction_mask) != 0)
             {
                 // If 'x' is negative, then first substract 1.0 from the value.
                 if (y.vi < 0)
