@@ -1725,21 +1725,23 @@ if (Ranges.length >= 2 &&
     Returns: The assembled path.
 */
 immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
-    @trusted pure nothrow
+    @safe pure nothrow
 if (isSomeChar!C)
 {
     import std.array : array;
+    import std.exception : assumeUnique;
 
-    const(C)[] result;
+    const(C)[] chained;
     foreach (path; paths)
     {
-        if (result)
-            result = chainPath(result, path).array;
+        if (chained)
+            chained = chainPath(chained, path).array;
         else
-            result = path;
+            chained = path;
     }
-    result = asNormalizedPath(result).array;
-    return cast(typeof(return)) result;
+    auto result = asNormalizedPath(chained);
+    // .array returns a copy, so it is unique
+    return () @trusted { return assumeUnique(result.array); } ();
 }
 
 ///
