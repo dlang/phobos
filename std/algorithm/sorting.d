@@ -744,17 +744,16 @@ if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && hasAssig
         assert(a == [ 42, 42 ]);
 
         import std.algorithm.iteration : map;
+        import std.format : format;
         import std.random;
-        import std.stdio;
         auto s = 123_456_789;
         auto g = Xorshift(s);
         a = iota(0, uniform(1, 1000, g))
             .map!(_ => uniform(-1000, 1000, g))
             .array;
-        scope(failure) writeln("RNG seed was ", s);
         pivot = pivotPartition!less(a, a.length / 2);
-        assert(a[0 .. pivot].all!(x => x <= a[pivot]));
-        assert(a[pivot .. $].all!(x => x >= a[pivot]));
+        assert(a[0 .. pivot].all!(x => x <= a[pivot]), "RNG seed: %d".format(s));
+        assert(a[pivot .. $].all!(x => x >= a[pivot]), "RNG seed: %d".format(s));
     }
     test!"a < b";
     static bool myLess(int a, int b)
