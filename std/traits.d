@@ -8202,7 +8202,11 @@ template getSymbolsByUDA(alias symbol, alias attribute)
     // Can access attributes on the symbols returned by getSymbolsByUDA.
     static assert(hasUDA!(getSymbolsByUDA!(A, Attr)[0], Attr));
     static assert(hasUDA!(getSymbolsByUDA!(A, Attr)[1], Attr));
+}
 
+/// Finds multiple attributes
+@safe unittest
+{
     static struct UDA { string name; }
 
     static struct B
@@ -8221,6 +8225,12 @@ template getSymbolsByUDA(alias symbol, alias attribute)
     static assert(getSymbolsByUDA!(B, 100).length == 1);
     // Can get the value of the UDA from the return value
     static assert(getUDAs!(getSymbolsByUDA!(B, UDA)[0], UDA)[0].name == "X");
+}
+
+/// Checks for UDAs on the aggregate symbol itself
+@safe unittest
+{
+    static struct UDA { string name; }
 
     @UDA("A")
     static struct C
@@ -8229,18 +8239,22 @@ template getSymbolsByUDA(alias symbol, alias attribute)
         int d;
     }
 
-    // Also checks the symbol itself
     static assert(getSymbolsByUDA!(C, UDA).length == 2);
     static assert(getSymbolsByUDA!(C, UDA)[0].stringof == "C");
     static assert(getSymbolsByUDA!(C, UDA)[1].stringof == "d");
+}
+
+/// Finds nothing if there is no member with specific UDA
+@safe unittest
+{
+    static struct UDA { string name; }
 
     static struct D
     {
         int x;
     }
 
-    //Finds nothing if there is no member with specific UDA
-    static assert(getSymbolsByUDA!(D,UDA).length == 0);
+    static assert(getSymbolsByUDA!(D, UDA).length == 0);
 }
 
 // Issue 18314
