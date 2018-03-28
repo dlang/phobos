@@ -7519,8 +7519,14 @@ alias ValueType(V : V[K], K) = V;
 }
 
 /**
- * Returns the corresponding unsigned type for T. T must be a numeric
- * integral type, otherwise a compile-time error occurs.
+Params:
+    T = A built in integral or vector type.
+
+Returns:
+    The corresponding unsigned numeric type for `T` with the
+    same type qualifiers.
+
+    If `T` is not a integral or vector, a compile-time error is given.
  */
 template Unsigned(T)
 {
@@ -7544,6 +7550,27 @@ template Unsigned(T)
     }
 
     alias Unsigned = ModifyTypePreservingTQ!(Impl, OriginalType!T);
+}
+
+///
+@safe unittest
+{
+    static assert(is(Unsigned!(int) == uint));
+    static assert(is(Unsigned!(long) == ulong));
+    static assert(is(Unsigned!(const short) == const ushort));
+    static assert(is(Unsigned!(immutable byte) == immutable ubyte));
+    static assert(is(Unsigned!(inout int) == inout uint));
+}
+
+
+/// Unsigned types are forwarded
+@safe unittest
+{
+    static assert(is(Unsigned!(uint) == uint));
+    static assert(is(Unsigned!(const uint) == const uint));
+
+    static assert(is(Unsigned!(ubyte) == ubyte));
+    static assert(is(Unsigned!(immutable uint) == immutable uint));
 }
 
 @safe unittest
@@ -7842,19 +7869,28 @@ if (T.length == 2)
 }
 
 /**
-If $(D cond) is $(D true), returns $(D a) without evaluating $(D
-b). Otherwise, returns $(D b) without evaluating $(D a).
+Select one of two functions to run via template parameter.
+
+Params:
+    cond = A `bool` which determines which function is run
+    a = The first function
+    b = The second function
+
+Returns:
+    `a` without evaluating `b` if `cond` is `true`.
+    Otherwise, returns `b` without evaluating `a`.
  */
 A select(bool cond : true, A, B)(A a, lazy B b) { return a; }
 /// Ditto
 B select(bool cond : false, A, B)(lazy A a, B b) { return b; }
 
+///
 @safe unittest
 {
-    real pleasecallme() { return 0; }
-    int dontcallme() { assert(0); }
-    auto a = select!true(pleasecallme(), dontcallme());
-    auto b = select!false(dontcallme(), pleasecallme());
+    real run() { return 0; }
+    int fail() { assert(0); }
+    auto a = select!true(run(), fail());
+    auto b = select!false(fail(), run());
     static assert(is(typeof(a) == real));
     static assert(is(typeof(b) == real));
 }
@@ -8106,9 +8142,16 @@ private template isDesiredUDA(alias attribute)
 }
 
 /**
- * Gets all symbols within `symbol` that have the given user-defined attribute.
- * This is not recursive; it will not search for symbols within symbols such as
- * nested structs or unions.
+Params:
+    symbol = The aggregate type to search
+    attribute = The user-defined attribute to search for
+
+Returns:
+    All symbols within `symbol` that have the given UDA `attribute`.
+
+Note:
+    This is not recursive; it will not search for symbols within symbols such as
+    nested structs or unions.
  */
 template getSymbolsByUDA(alias symbol, alias attribute)
 {
@@ -8119,6 +8162,162 @@ template getSymbolsByUDA(alias symbol, alias attribute)
         alias getSymbolsByUDA = AliasSeq!(symbol, membersWithUDA);
     else
         alias getSymbolsByUDA = membersWithUDA;
+}
+
+///
+@safe unittest
+{
+    enum Attr;
+    struct A
+    {
+        @Attr int a;
+        int b;
+    }
+
+    static assert(getSymbolsByUDA!(A, Attr).length == 1);
+    static assert(hasUDA!(getSymbolsByUDA!(A, Attr)[0], Attr));
+}
+
+///
+@safe unittest
+{
+    enum Attr;
+
+    static struct A
+    {
+        @Attr int a;
+        int b;
+        @Attr void doStuff() {}
+        void doOtherStuff() {}
+        static struct Inner
+        {
+            // Not found by getSymbolsByUDA
+            @Attr int c;
+        }
+    }
+
+    // Finds both variables and functions with the attribute, but
+    // doesn't include the variables and functions without it.
+    static assert(getSymbolsByUDA!(A, Attr).length == 2);
+    // Can access attributes on the symbols returned by getSymbolsByUDA.
+    static assert(hasUDA!(getSymbolsByUDA!(A, Attr)[0], Attr));
+    static assert(hasUDA!(getSymbolsByUDA!(A, Attr)[1], Attr));
+}
+
+/// Finds multiple attributes
+@safe unittest
+{
+    static struct UDA { string name; }
+
+    static struct B
+    {
+        @UDA("X")
+        int x;
+        @UDA("Y")
+        int y;
+        @(100)
+        int z;
+    }
+
+    // Finds both UDA attributes.
+    static assert(getSymbolsByUDA!(B, UDA).length == 2);
+    // Finds one `100` attribute.
+    static assert(getSymbolsByUDA!(B, 100).length == 1);
+    // Can get the value of the UDA from the return value
+    static assert(getUDAs!(getSymbolsByUDA!(B, UDA)[0], UDA)[0].name == "X");
+}
+
+/// Checks for UDAs on the aggregate symbol itself
+@safe unittest
+{
+    static struct UDA { string name; }
+
+    @UDA("A")
+    static struct C
+    {
+        @UDA("B")
+        int d;
+    }
+
+    static assert(getSymbolsByUDA!(C, UDA).length == 2);
+    static assert(getSymbolsByUDA!(C, UDA)[0].stringof == "C");
+    static assert(getSymbolsByUDA!(C, UDA)[1].stringof == "d");
+}
+
+/// Finds nothing if there is no member with specific UDA
+@safe unittest
+{
+    static struct UDA { string name; }
+
+    static struct D
+    {
+        int x;
+    }
+
+    static assert(getSymbolsByUDA!(D, UDA).length == 0);
+}
+
+// Issue 18314
+@safe unittest
+{
+    enum attr1;
+    enum attr2;
+
+    struct A
+    {
+        @attr1
+        int n;
+        // Removed due to Issue 16206
+        //@attr1
+        //void foo()(string){}
+        @attr1
+        void foo();
+        @attr2
+        void foo(int a);
+    }
+
+    static assert(getSymbolsByUDA!(A, attr1).length == 2);
+    static assert(getSymbolsByUDA!(A, attr2).length == 1);
+}
+
+// #15335: getSymbolsByUDA fails if type has private members
+@safe unittest
+{
+    // HasPrivateMembers has, well, private members, one of which has a UDA.
+    import std.internal.test.uda : Attr, HasPrivateMembers;
+    // Trying access to private member from another file therefore we do not have access
+    // for this otherwise we get deprecation warning - not visible from module
+    static assert(getSymbolsByUDA!(HasPrivateMembers, Attr).length == 1);
+    static assert(hasUDA!(getSymbolsByUDA!(HasPrivateMembers, Attr)[0], Attr));
+}
+
+// #16387: getSymbolsByUDA works with structs but fails with classes
+@safe unittest
+{
+    enum Attr;
+    class A
+    {
+        @Attr uint a;
+    }
+
+    alias res = getSymbolsByUDA!(A, Attr);
+    static assert(res.length == 1);
+    static assert(res[0].stringof == "a");
+}
+
+// #18624: getSymbolsByUDA produces wrong result if one of the symbols having the UDA is a function
+@safe unittest
+{
+    enum Attr;
+    struct A
+    {
+        @Attr void a();
+        @Attr void a(int n);
+              void b();
+        @Attr void c();
+    }
+
+    static assert(getSymbolsByUDA!(A, Attr).stringof == "tuple(a, a, c)");
 }
 
 private template getSymbolsByUDAImpl(alias symbol, alias attribute, names...)
@@ -8163,150 +8362,6 @@ private template getSymbolsByUDAImpl(alias symbol, alias attribute, names...)
             }
         }
     }
-}
-
-///
-@safe unittest
-{
-    enum Attr;
-
-    static struct A
-    {
-        @Attr int a;
-        int b;
-        @Attr void doStuff() {}
-        void doOtherStuff() {}
-        static struct Inner
-        {
-            // Not found by getSymbolsByUDA
-            @Attr int c;
-        }
-    }
-
-    // Finds both variables and functions with the attribute, but
-    // doesn't include the variables and functions without it.
-    static assert(getSymbolsByUDA!(A, Attr).length == 2);
-    // Can access attributes on the symbols returned by getSymbolsByUDA.
-    static assert(hasUDA!(getSymbolsByUDA!(A, Attr)[0], Attr));
-    static assert(hasUDA!(getSymbolsByUDA!(A, Attr)[1], Attr));
-
-    static struct UDA { string name; }
-
-    static struct B
-    {
-        @UDA("X")
-        int x;
-        @UDA("Y")
-        int y;
-        @(100)
-        int z;
-    }
-
-    // Finds both UDA attributes.
-    static assert(getSymbolsByUDA!(B, UDA).length == 2);
-    // Finds one `100` attribute.
-    static assert(getSymbolsByUDA!(B, 100).length == 1);
-    // Can get the value of the UDA from the return value
-    static assert(getUDAs!(getSymbolsByUDA!(B, UDA)[0], UDA)[0].name == "X");
-
-    @UDA("A")
-    static struct C
-    {
-        @UDA("B")
-        int d;
-    }
-
-    // Also checks the symbol itself
-    static assert(getSymbolsByUDA!(C, UDA).length == 2);
-    static assert(getSymbolsByUDA!(C, UDA)[0].stringof == "C");
-    static assert(getSymbolsByUDA!(C, UDA)[1].stringof == "d");
-
-    static struct D
-    {
-        int x;
-    }
-
-    //Finds nothing if there is no member with specific UDA
-    static assert(getSymbolsByUDA!(D,UDA).length == 0);
-}
-
-// Issue 18314
-@safe unittest
-{
-    enum attr1;
-    enum attr2;
-
-    struct A
-    {
-        @attr1
-        int n;
-        // Removed due to Issue 16206
-        //@attr1
-        //void foo()(string){}
-        @attr1
-        void foo();
-        @attr2
-        void foo(int a);
-    }
-
-    static assert(getSymbolsByUDA!(A, attr1).length == 2);
-    static assert(getSymbolsByUDA!(A, attr2).length == 1);
-}
-
-// #15335: getSymbolsByUDA fails if type has private members
-@safe unittest
-{
-    // HasPrivateMembers has, well, private members, one of which has a UDA.
-    import std.internal.test.uda : Attr, HasPrivateMembers;
-    // Trying access to private member from another file therefore we do not have access
-    // for this otherwise we get deprecation warning - not visible from module
-    static assert(getSymbolsByUDA!(HasPrivateMembers, Attr).length == 1);
-    static assert(hasUDA!(getSymbolsByUDA!(HasPrivateMembers, Attr)[0], Attr));
-}
-
-///
-@safe unittest
-{
-    enum Attr;
-    struct A
-    {
-        alias INT = int;
-        alias void function(INT) SomeFunction;
-        @Attr int a;
-        int b;
-    }
-
-    static assert(getSymbolsByUDA!(A, Attr).length == 1);
-    static assert(hasUDA!(getSymbolsByUDA!(A, Attr)[0], Attr));
-}
-
-// #16387: getSymbolsByUDA works with structs but fails with classes
-@safe unittest
-{
-    enum Attr;
-    class A
-    {
-        @Attr uint a;
-    }
-
-    alias res = getSymbolsByUDA!(A, Attr);
-    static assert(res.length == 1);
-    static assert(res[0].stringof == "a");
-}
-
-// #18624: getSymbolsByUDA produces wrong result if one of the symbols having the UDA is a function
-@safe unittest
-{
-    enum Attr;
-    struct A
-    {
-        @Attr void a();
-        @Attr void a(int n);
-              void b();
-        @Attr void c();
-    }
-
-    static assert(getSymbolsByUDA!(A, Attr).stringof == "tuple(a, a, c)");
 }
 
 /**
