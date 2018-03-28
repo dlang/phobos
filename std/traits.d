@@ -7562,6 +7562,17 @@ template Unsigned(T)
     static assert(is(Unsigned!(inout int) == inout uint));
 }
 
+
+/// Unsigned types are forwarded
+@safe unittest
+{
+    static assert(is(Unsigned!(uint) == uint));
+    static assert(is(Unsigned!(const uint) == const uint));
+
+    static assert(is(Unsigned!(ubyte) == ubyte));
+    static assert(is(Unsigned!(immutable uint) == immutable uint));
+}
+
 @safe unittest
 {
     alias U1 = Unsigned!int;
