@@ -422,19 +422,20 @@ T floorImpl(T)(const T x) @trusted pure nothrow @nogc
     {
         T rv;
         ushort[T.sizeof/2] vu;
+
+        // Other kinds of extractors for real formats.
+        static if (F.realFormat == RealFormat.ieeeSingle)
+            int vi;
     }
     floatBits y = void;
     y.rv = x;
 
     // Find the exponent (power of 2)
+    // Do this by shifting the raw value so that the exponent lies in the low bits,
+    // then mask out the sign bit, and subtract the bias.
     static if (F.realFormat == RealFormat.ieeeSingle)
     {
-        int exp = ((y.vu[F.EXPPOS_SHORT] >> 7) & 0xff) - 0x7f;
-
-        version (LittleEndian)
-            int pos = 0;
-        else
-            int pos = 3;
+        int exp = ((y.vi >> (T.mant_dig - 1)) & 0xff) - 0x7f;
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
@@ -462,7 +463,7 @@ T floorImpl(T)(const T x) @trusted pure nothrow @nogc
             int pos = 0;
         else
             int pos = 7;
-        }
+    }
     else
         static assert(false, "Not implemented for this architecture");
 
@@ -474,24 +475,43 @@ T floorImpl(T)(const T x) @trusted pure nothrow @nogc
             return 0.0;
     }
 
-    exp = (T.mant_dig - 1) - exp;
-
-    // Zero 16 bits at a time.
-    while (exp >= 16)
+    static if (F.realFormat == RealFormat.ieeeSingle)
     {
-        version (LittleEndian)
-            y.vu[pos++] = 0;
-        else
-            y.vu[pos--] = 0;
-        exp -= 16;
+        if (exp < (T.mant_dig - 1))
+        {
+            // Clear all bits representing the fraction part.
+            const uint fraction_mask = F.MANTISSAMASK_INT >> exp;
+
+            if ((y.vi & fraction_mask) != 0)
+            {
+                // If 'x' is negative, then first substract 1.0 from the value.
+                if (y.vi < 0)
+                    y.vi += 0x00800000 >> exp;
+                y.vi &= ~fraction_mask;
+            }
+        }
     }
+    else
+    {
+        exp = (T.mant_dig - 1) - exp;
 
-    // Clear the remaining bits.
-    if (exp > 0)
-        y.vu[pos] &= 0xffff ^ ((1 << exp) - 1);
+        // Zero 16 bits at a time.
+        while (exp >= 16)
+        {
+            version (LittleEndian)
+                y.vu[pos++] = 0;
+            else
+                y.vu[pos--] = 0;
+            exp -= 16;
+        }
 
-    if ((x < 0.0) && (x != y.rv))
-        y.rv -= 1.0;
+        // Clear the remaining bits.
+        if (exp > 0)
+            y.vu[pos] &= 0xffff ^ ((1 << exp) - 1);
+
+        if ((x < 0.0) && (x != y.rv))
+            y.rv -= 1.0;
+    }
 
     return y.rv;
 }
@@ -4190,6 +4210,8 @@ real floor(real x) @trusted pure nothrow @nogc
 {
     assert(floor(+123.456L) == +123);
     assert(floor(-123.456L) == -124);
+    assert(floor(+123.0L) == +123);
+    assert(floor(-124.0L) == -124);
     assert(floor(-1.234L) == -2);
     assert(floor(-0.123L) == -1);
     assert(floor(0.0L) == 0);
@@ -4214,6 +4236,8 @@ double floor(double x) @trusted pure nothrow @nogc
 {
     assert(floor(+123.456) == +123);
     assert(floor(-123.456) == -124);
+    assert(floor(+123.0) == +123);
+    assert(floor(-124.0) == -124);
     assert(floor(-1.234) == -2);
     assert(floor(-0.123) == -1);
     assert(floor(0.0) == 0);
@@ -4238,6 +4262,8 @@ float floor(float x) @trusted pure nothrow @nogc
 {
     assert(floor(+123.456f) == +123);
     assert(floor(-123.456f) == -124);
+    assert(floor(+123.0f) == +123);
+    assert(floor(-124.0f) == -124);
     assert(floor(-1.234f) == -2);
     assert(floor(-0.123f) == -1);
     assert(floor(0.0f) == 0);
