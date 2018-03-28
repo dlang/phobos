@@ -46,7 +46,7 @@ aa[std.stdio]=-dip25 #    TODO
 aa[std.string]=-dip1000
 aa[std.system]=-dip1000
 aa[std.traits]=-dip1000
-aa[std.typecons]=-dip25 # cannot call @system function std.format.formattedWrite!(Appender!string, char, Nullable!int)
+aa[std.typecons]=-dip1000 -version=DIP1000 # merged https://github.com/dlang/phobos/pull/6338; COMPROMISE: check the reason for non-dip1000: static struct S. mixin Proxy!foo;
 aa[std.typetuple]=-dip1000
 aa[std.uni]=-dip1000 # merged https://github.com/dlang/phobos/pull/6294, https://github.com/dlang/phobos/pull/6041 (see also TODO-list there); supersedes/includes https://github.com/dlang/phobos/pull/5045; see also https://github.com/dlang/phobos/pull/6104 for improvements proposed by Seb
 aa[std.uri]=-dip1000
