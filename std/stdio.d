@@ -3814,8 +3814,8 @@ void writeln(T...)(T args)
     scope(exit) { std.file.remove(deleteme); }
 
     enum EI : int    { A, B }
-    enum ED : double { A, B }
-    enum EC : char   { A, B }
+    enum ED : double { A = 0, B } // NOTE: explicit initialization to 0 required during Enum init deprecation cycle
+    enum EC : char   { A = 0, B } // NOTE: explicit initialization to 0 required during Enum init deprecation cycle
     enum ES : string { A = "aaa", B = "bbb" }
 
     f.writeln(EI.A);  // false, but A on 2.058
