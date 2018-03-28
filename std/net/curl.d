@@ -2908,7 +2908,7 @@ struct HTTP
     /** The headers read from a successful response.
      *
      */
-    @property string[string] responseHeaders()
+    @property string[string] responseHeaders() return
     {
         return p.headersIn;
     }
@@ -2929,7 +2929,7 @@ struct HTTP
        HTTP status line of last response. One call to perform may
        result in several requests because of redirection.
     */
-    @property StatusLine statusLine()
+    @property StatusLine statusLine() return
     {
         return p.status;
     }
@@ -3570,7 +3570,7 @@ struct FTP
     }
 
     /// ditto
-    @property string encoding()
+    @property string encoding() return
     {
         return p.encoding;
     }
