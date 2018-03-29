@@ -2652,10 +2652,13 @@ Rebindable!T rebindable(T)(Rebindable!T obj)
 
 /** Models safe reassignment of otherwise constant struct instances.
  *
- * A struct with a field of reference type cannot be assigned to a constant
- * struct of the same type. `Rebindable!(const S)` allows assignment to
- * a `const S` while enforcing only constant access to its fields.
+ * A constant struct with a field of reference type cannot be assigned to a mutable
+ * struct of the same type. This protects the constant reference field from being
+ * mutably aliased, potentially allowing mutation of `immutable` data. However, the
+ * assignment could be safe if all reference fields are only exposed as `const`.
  *
+ * `Rebindable!(const S)` accepts assignment from
+ * a `const S` while enforcing only constant access to its fields.
  * `Rebindable!(immutable S)` does the same but field access may create a
  * temporary copy of `S` in order to enforce _true immutability.
  */
