@@ -145,12 +145,12 @@ version(DigitalMars)
     version = INLINE_YL2X;        // x87 has opcodes for these
 }
 
-version (X86)    version = X86_Any;
-version (X86_64) version = X86_Any;
-version (PPC)    version = PPC_Any;
-version (PPC64)  version = PPC_Any;
-version (MIPS)   version = MIPS_Any;
-version (MIPS64) version = MIPS_Any;
+version (X86)       version = X86_Any;
+version (X86_64)    version = X86_Any;
+version (PPC)       version = PPC_Any;
+version (PPC64)     version = PPC_Any;
+version (MIPS32)    version = MIPS_Any;
+version (MIPS64)    version = MIPS_Any;
 
 version(D_InlineAsm_X86)
 {
