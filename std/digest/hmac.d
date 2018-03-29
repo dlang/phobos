@@ -92,7 +92,7 @@ if (hashBlockSize % 8 == 0)
     ///
     @safe pure nothrow @nogc unittest
     {
-        import std.digest.hmac, std.digest.sha;
+        import std.digest.sha : SHA1;
         import std.string : representation;
         auto hmac = HMAC!SHA1("My s3cR3T keY".representation);
         hmac.put("Hello, world".representation);
@@ -129,7 +129,7 @@ if (hashBlockSize % 8 == 0)
     ///
     @safe pure nothrow @nogc unittest
     {
-        import std.digest.hmac, std.digest.sha;
+        import std.digest.sha : SHA1;
         import std.string : representation;
         string data1 = "Hello, world", data2 = "Hola mundo";
         auto hmac = HMAC!SHA1("My s3cR3T keY".representation);
@@ -196,7 +196,7 @@ if (hashBlockSize % 8 == 0)
     ///
     @safe pure nothrow @nogc unittest
     {
-        import std.digest.hmac, std.digest.sha;
+        import std.digest.sha : SHA1;
         import std.string : representation;
         string data1 = "Hello, world", data2 = "Hola mundo";
         auto hmac = HMAC!SHA1("My s3cR3T keY".representation);
@@ -211,7 +211,7 @@ if (hashBlockSize % 8 == 0)
     }
 }
 
-/// Convenience constructor for $(LREF HMAC).
+/// ditto
 template hmac(H)
 if (isDigest!H && hasBlockSize!H)
 {
@@ -237,7 +237,7 @@ if (isDigest!H)
     ///
     @safe pure nothrow @nogc unittest
     {
-        import std.digest.hmac, std.digest.sha;
+        import std.digest.sha : SHA1;
         import std.string : representation;
         string data1 = "Hello, world", data2 = "Hola mundo";
         auto digest = hmac!SHA1("My s3cR3T keY".representation)
@@ -272,7 +272,7 @@ if (isDigest!H)
     @safe pure nothrow @nogc unittest
     {
         import std.algorithm.iteration : map;
-        import std.digest.hmac, std.digest.sha;
+        import std.digest.sha : SHA1;
         import std.string : representation;
         string data = "Hello, world";
         auto digest = data.representation
@@ -285,6 +285,23 @@ if (isDigest!H)
             111, 136, 214, 167, 210, 58, 10];
         assert(digest == expected);
     }
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.digest.sha : SHA1;
+    import std.string : representation;
+    string data1 = "Hello, world", data2 = "Hola mundo";
+    auto hmac = HMAC!SHA1("My s3cR3T keY".representation);
+    auto digest = hmac.put(data1.representation)
+                      .put(data2.representation)
+                      .finish();
+    static immutable expected = [
+        197, 57, 52, 3, 13, 194, 13,
+        36, 117, 228, 8, 11, 111, 51,
+        165, 3, 123, 31, 251, 113];
+    assert(digest == expected);
 }
 
 version(unittest)

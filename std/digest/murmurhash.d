@@ -658,6 +658,33 @@ L_end:
     }
 }
 
+
+/// The convenient digest template allows for quick hashing of any data.
+@safe unittest
+{
+    ubyte[4] hashed = digest!(MurmurHash3!32)([1, 2, 3, 4]);
+    assert(hashed == [0, 173, 69, 68]);
+}
+
+/**
+One can also hash ubyte data piecewise by instanciating a hasher and call
+the 'put' method.
+*/
+@safe unittest
+{
+    const(ubyte)[] data1 = [1, 2, 3];
+    const(ubyte)[] data2 = [4, 5, 6, 7];
+    // The incoming data will be buffered and hashed element by element.
+    MurmurHash3!32 hasher;
+    hasher.put(data1);
+    hasher.put(data2);
+    // The call to 'finish' ensures:
+    // - the remaining bits are processed
+    // - the hash gets finalized
+    auto hashed = hasher.finish();
+    assert(hashed == [181, 151, 88, 252]);
+}
+
 version(unittest)
 {
     import std.string : representation;
