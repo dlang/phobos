@@ -2477,13 +2477,13 @@ public:
             assert(!errorSet.isSet(testPair[1]));
 
             ubyte[1] b;
-            testPair[0].send(b[]);
+            () @safe { testPair[0].send(b[]); }();
             fillSets();
             n = Socket.select(readSet, null, null);
             assert(n == 1); // testPair[1]
             assert(readSet.isSet(testPair[1]));
             assert(!readSet.isSet(testPair[0]));
-            testPair[1].receive(b[]);
+            () @safe { testPair[1].receive(b[]); }();
         }
     });
 }
@@ -2889,7 +2889,7 @@ public:
      * Calling shutdown() before this is recommended
      * for connection-oriented sockets.
      */
-    void close() @trusted nothrow @nogc
+    void close() @trusted nothrow @nogc scope
     {
         _close(sock);
         sock = socket_t.init;
@@ -2953,7 +2953,7 @@ public:
      * Returns: The number of bytes actually sent, or $(D Socket.ERROR) on
      * failure.
      */
-    ptrdiff_t send(const(void)[] buf, SocketFlags flags) @trusted
+    ptrdiff_t send(const(void)[] buf, SocketFlags flags) scope @trusted
     {
         static if (is(typeof(MSG_NOSIGNAL)))
         {
@@ -2967,7 +2967,7 @@ public:
     }
 
     /// ditto
-    ptrdiff_t send(const(void)[] buf)
+    ptrdiff_t send(const(void)[] buf) scope
     {
         return send(buf, SocketFlags.NONE);
     }
@@ -3030,7 +3030,7 @@ public:
      * Returns: The number of bytes actually received, $(D 0) if the remote side
      * has closed the connection, or $(D Socket.ERROR) on failure.
      */
-    ptrdiff_t receive(void[] buf, SocketFlags flags) @trusted
+    ptrdiff_t receive(void[] buf, SocketFlags flags) scope @trusted
     {
         version(Windows)         // Does not use size_t
         {
@@ -3047,7 +3047,7 @@ public:
     }
 
     /// ditto
-    ptrdiff_t receive(void[] buf)
+    ptrdiff_t receive(void[] buf) scope
     {
         return receive(buf, SocketFlags.NONE);
     }
@@ -3542,17 +3542,17 @@ class UdpSocket: Socket
             protected pure nothrow @safe Socket accepting() { assert(0); }
             @trusted Socket accept() { assert(0); }
             nothrow @nogc @trusted void shutdown(SocketShutdown how) { assert(0); }
-            nothrow @nogc @trusted void close() { assert(0); }
+            nothrow @nogc @trusted void close() scope { assert(0); }
             @property @trusted Address remoteAddress() { assert(0); }
             @property @trusted Address localAddress() { assert(0); }
-            @trusted ptrdiff_t send(const(void)[] buf, SocketFlags flags) { assert(0); }
-            @safe ptrdiff_t send(const(void)[] buf) { assert(0); }
+            @trusted ptrdiff_t send(const(void)[] buf, SocketFlags flags) scope { assert(0); }
+            @safe ptrdiff_t send(const(void)[] buf) scope { assert(0); }
             @trusted ptrdiff_t sendTo(const(void)[] buf, SocketFlags flags, Address to) { assert(0); }
             @safe ptrdiff_t sendTo(const(void)[] buf, Address to) { assert(0); }
             @trusted ptrdiff_t sendTo(const(void)[] buf, SocketFlags flags) { assert(0); }
             @safe ptrdiff_t sendTo(const(void)[] buf) { assert(0); }
-            @trusted ptrdiff_t receive(void[] buf, SocketFlags flags) { assert(0); }
-            @safe ptrdiff_t receive(void[] buf) { assert(0); }
+            @trusted ptrdiff_t receive(void[] buf, SocketFlags flags) scope { assert(0); }
+            @safe ptrdiff_t receive(void[] buf) scope { assert(0); }
             @trusted ptrdiff_t receiveFrom(void[] buf, SocketFlags flags, ref Address from) { assert(0); }
             @safe ptrdiff_t receiveFrom(void[] buf, ref Address from) { assert(0); }
             @trusted ptrdiff_t receiveFrom(void[] buf, SocketFlags flags) { assert(0); }
