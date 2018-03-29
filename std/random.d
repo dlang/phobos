@@ -109,6 +109,9 @@ import std.traits;
 ///
 @safe unittest
 {
+    import std.algorithm.comparison : among, equal;
+    import std.range : iota;
+
     // seed a random generator with a constant
     auto rnd = Random(42);
 
@@ -121,9 +124,41 @@ import std.traits;
     auto r = uniform(0.0L, 100.0L, rnd);
     assert(r >= 0 && r < 100);
 
+    // Sample from a custom type
+    enum Fruit { apple, mango, pear }
+    auto f = rnd.uniform!Fruit;
+    with(Fruit)
+    assert(f.among(apple, mango, pear));
+
     // Generate a 32-bit random number
     auto u = uniform!uint(rnd);
     static assert(is(typeof(u) == uint));
+
+    // Generate a random number in the range in the range [0, 1)
+    auto u2 = uniform01(rnd);
+    assert(u2 >= 0 && u2 < 1);
+
+    // Select an element randomly
+    auto el = 10.iota.choice(rnd);
+    assert(0 <= el && el < 10);
+
+    // Throw a dice with custom proportions
+    // 0: 20%, 1: 10%, 2: 60%
+    auto val = rnd.dice(0.2, 0.1, 0.6);
+    assert(0 <= val && val <= 2);
+
+    auto rnd2 = MinstdRand0(42);
+
+    // Select a random subsample from a range
+    assert(10.iota.randomSample(3, rnd2).equal([7, 8, 9]));
+
+    // Cover all elements in an array in random order
+    version(X86_64) // Issue 15147
+    assert(10.iota.randomCover(rnd2).equal([7, 4, 2, 0, 1, 6, 8, 3, 9, 5]));
+
+    // Shuffle an array
+    version(X86_64) // Issue 15147
+    assert([0, 1, 2, 4, 5].randomShuffle(rnd2).equal([2, 0, 4, 5, 1]));
 }
 
 version(unittest)
@@ -214,6 +249,29 @@ template isUniformRNG(Rng)
         }));
 }
 
+///
+@safe unittest
+{
+    struct NoRng
+    {
+        @property uint front() {return 0;}
+        @property bool empty() {return false;}
+        void popFront() {}
+    }
+    static assert(!isUniformRNG!(NoRng));
+
+    struct validRng
+    {
+        @property uint front() {return 0;}
+        @property bool empty() {return false;}
+        void popFront() {}
+
+        enum isUniformRandom = true;
+    }
+    static assert(isUniformRNG!(validRng, uint));
+    static assert(isUniformRNG!(validRng));
+}
+
 /**
  * Test if Rng is seedable. The overload
  * taking a SeedType also makes sure that the Rng can be seeded with SeedType.
@@ -245,6 +303,33 @@ template isSeedable(Rng)
             SeedType s = void;
             r.seed(s); // can seed a Rng
         }));
+}
+
+///
+@safe unittest
+{
+    struct validRng
+    {
+        @property uint front() {return 0;}
+        @property bool empty() {return false;}
+        void popFront() {}
+
+        enum isUniformRandom = true;
+    }
+    static assert(!isSeedable!(validRng, uint));
+    static assert(!isSeedable!(validRng));
+
+    struct seedRng
+    {
+        @property uint front() {return 0;}
+        @property bool empty() {return false;}
+        void popFront() {}
+        void seed(uint val){}
+        enum isUniformRandom = true;
+    }
+    static assert(isSeedable!(seedRng, uint));
+    static assert(!isSeedable!(seedRng, ulong));
+    static assert(isSeedable!(seedRng));
 }
 
 @safe pure nothrow unittest
@@ -503,6 +588,28 @@ Always `false` (random generators are infinite ranges).
     private UIntType _x = m ? (a + c) % m : (a + c);
 }
 
+/// Declare your own linear congruential engine
+@safe unittest
+{
+    alias CPP11LCG = LinearCongruentialEngine!(uint, 48271, 0, 2_147_483_647);
+
+    // seed with a constant
+    auto rnd = CPP11LCG(42);
+    auto n = rnd.front; // same for each run
+    assert(n == 2027382);
+}
+
+/// Declare your own linear congruential engine
+@safe unittest
+{
+    // glibc's LCG
+    alias GLibcLCG = LinearCongruentialEngine!(uint, 1103515245, 12345, 2_147_483_648);
+
+    // Seed with an unpredictable value
+    auto rnd = GLibcLCG(unpredictableSeed);
+    auto n = rnd.front; // different across runs
+}
+
 /**
 Define $(D_PARAM LinearCongruentialEngine) generators with well-chosen
 parameters. `MinstdRand0` implements Park and Miller's "minimal
@@ -521,7 +628,10 @@ alias MinstdRand = LinearCongruentialEngine!(uint, 48_271, 0, 2_147_483_647);
 {
     // seed with a constant
     auto rnd0 = MinstdRand0(1);
-    auto n = rnd0.front; // same for each run
+    auto n = rnd0.front;
+     // same for each run
+    assert(n == 16807);
+
     // Seed with an unpredictable value
     rnd0.seed(unpredictableSeed);
     n = rnd0.front; // different across runs
@@ -893,12 +1003,25 @@ Always `false`.
     enum bool empty = false;
 }
 
+///
+@safe unittest
+{
+    // seed with a constant
+    Mt19937 gen;
+    auto n = gen.front; // same for each run
+    assert(n == 3499211612);
+
+    // Seed with an unpredictable value
+    gen.seed(unpredictableSeed);
+    n = gen.front; // different across runs
+}
+
 /**
 A `MersenneTwisterEngine` instantiated with the parameters of the
 original engine $(HTTP math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt.html,
 MT19937), generating uniformly-distributed 32-bit numbers with a
 period of 2 to the power of 19937. Recommended for random number
-generation unless memory is severely restricted, in which case a $(D
+generation unless memory is severely restricted, in which case a $(LREF
 LinearCongruentialEngine) would be the generator of choice.
  */
 alias Mt19937 = MersenneTwisterEngine!(uint, 32, 624, 397, 31,
@@ -912,6 +1035,8 @@ alias Mt19937 = MersenneTwisterEngine!(uint, 32, 624, 397, 31,
     // seed with a constant
     Mt19937 gen;
     auto n = gen.front; // same for each run
+    assert(n == 3499211612);
+
     // Seed with an unpredictable value
     gen.seed(unpredictableSeed);
     n = gen.front; // different across runs
@@ -953,6 +1078,8 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
     // Seed with a constant
     auto gen = Mt19937_64(12345);
     auto n = gen.front; // same for each run
+    assert(n == 6597103971274460346);
+
     // Seed with an unpredictable value
     gen.seed(unpredictableSeed);
     n = gen.front; // different across runs
@@ -966,7 +1093,7 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
     static assert(isUniformRNG!(Mt19937_64, ulong));
     static assert(isSeedable!Mt19937_64);
     static assert(isSeedable!(Mt19937_64, ulong));
-    // FIXME: this test demonstrates viably that Mt19937_64
+    // Issue 15147: this test demonstrates viably that Mt19937_64
     // is seedable with an infinite range of `ulong` values
     // but it's a poor example of how to actually seed the
     // generator, since it can't cover the full range of
@@ -1255,6 +1382,15 @@ if (isUnsigned!UIntType)
     }
 }
 
+///
+@safe unittest
+{
+    alias Xorshift96  = XorshiftEngine!(uint, 96,  10, 5,  26);
+    auto rnd = Xorshift96(42);
+    auto num = rnd.front;  // same for each run
+    assert(num == 2704588748);
+}
+
 
 /**
  * Define `XorshiftEngine` generators with well-chosen parameters. See each bits examples of "Xorshift RNGs".
@@ -1274,6 +1410,7 @@ alias Xorshift    = Xorshift128;                            /// ditto
     // Seed with a constant
     auto rnd = Xorshift(1);
     auto num = rnd.front;  // same for each run
+    assert(num == 1405313047);
 
     // Seed with an unpredictable value
     rnd.seed(unpredictableSeed);
@@ -1478,6 +1615,15 @@ A singleton instance of the default random number generator
     return result;
 }
 
+///
+@safe unittest
+{
+    import std.algorithm.iteration : sum;
+    import std.range : take;
+    auto rnd = rndGen;
+    assert(rnd.take(3).sum > 0);
+}
+
 /**
 Generates a number between `a` and `b`. The `boundaries`
 parameter controls the shape of the interval (open vs. closed on
@@ -1507,11 +1653,23 @@ if (!is(CommonType!(T1, T2) == void))
 ///
 @safe unittest
 {
-    auto gen = Random(unpredictableSeed);
+    auto rnd = Random(unpredictableSeed);
+
     // Generate an integer in [0, 1023]
-    auto a = uniform(0, 1024, gen);
+    auto a = uniform(0, 1024, rnd);
+    assert(0 <= a && a < 1024);
+
     // Generate a float in [0, 1)
-    auto b = uniform(0.0f, 1.0f, gen);
+    auto b = uniform(0.0f, 1.0f, rnd);
+    assert(0 <= b && b < 1);
+
+    // Generate a float in [0, 1]
+    b = uniform!"[]"(0.0f, 1.0f, rnd);
+    assert(0 <= b && b <= 1);
+
+    // Generate a float in (0, 1)
+    b = uniform!"()"(0.0f, 1.0f, rnd);
+    assert(0 < b && b < 1);
 }
 
 /// Create an array of random numbers using range functions and UFCS
@@ -1857,13 +2015,16 @@ Generates a uniformly-distributed number in the range $(D [T.min,
 T.max]) for any integral or character type `T`. If no random
 number generator is passed, uses the default `rndGen`.
 
+If an `enum` is used as type, the random variate is drawn with
+equal probability from any of the possible values of the enum `E`.
+
 Params:
     urng = (optional) random number generator to use;
            if not specified, defaults to `rndGen`
 
 Returns:
     Random variate drawn from the _uniform distribution across all
-    possible values of the integral or character type `T`.
+    possible values of the integral, character or enum type `T`.
  */
 auto uniform(T, UniformRandomNumberGenerator)
 (ref UniformRandomNumberGenerator urng)
@@ -1901,6 +2062,19 @@ if (!is(T == enum) && (isIntegral!T || isSomeChar!T))
     return uniform!T(rndGen);
 }
 
+///
+@safe unittest
+{
+    auto rnd = MinstdRand0(42);
+
+    assert(rnd.uniform!ubyte == 102);
+    assert(rnd.uniform!ulong == 4838462006927449017);
+
+    enum Fruit { apple, mango, pear }
+    version(X86_64) // Issue 15147
+    assert(rnd.uniform!Fruit == Fruit.mango);
+}
+
 @safe unittest
 {
     static foreach (T; std.meta.AliasSeq!(char, wchar, dchar, byte, ubyte, short, ushort,
@@ -1921,18 +2095,7 @@ if (!is(T == enum) && (isIntegral!T || isSomeChar!T))
     }}
 }
 
-/**
-Returns a uniformly selected member of enum `E`. If no random number
-generator is passed, uses the default `rndGen`.
-
-Params:
-    urng = (optional) random number generator to use;
-           if not specified, defaults to `rndGen`
-
-Returns:
-    Random variate drawn with equal probability from any
-    of the possible values of the enum `E`.
- */
+/// ditto
 auto uniform(E, UniformRandomNumberGenerator)
 (ref UniformRandomNumberGenerator urng)
 if (is(E == enum) && isUniformRNG!UniformRandomNumberGenerator)
@@ -1946,13 +2109,6 @@ auto uniform(E)()
 if (is(E == enum))
 {
     return uniform!E(rndGen);
-}
-
-///
-@safe unittest
-{
-    enum Fruit { apple, mango, pear }
-    auto randFruit = uniform!Fruit();
 }
 
 @safe unittest
@@ -2048,6 +2204,17 @@ do
     assert(false);
 }
 
+///
+@safe unittest
+{
+    import std.math : feqrel;
+
+    auto rnd = MinstdRand0(42);
+
+    assert(rnd.uniform01.feqrel(0.000328707) > 20);
+    assert(rnd.uniform01!float.feqrel(0.524587) > 20);
+}
+
 @safe unittest
 {
     import std.meta;
@@ -2101,14 +2268,16 @@ if (isFloatingPoint!F)
     return useThis;
 }
 
+///
 @safe unittest
 {
-    import std.algorithm;
-    import std.math;
-    static assert(is(CommonType!(double, int) == double));
+    import std.algorithm.iteration : reduce;
+    import std.math : approxEqual;
+
     auto a = uniformDistribution(5);
     assert(a.length == 5);
     assert(approxEqual(reduce!"a + b"(a), 1));
+
     a = uniformDistribution(10, a);
     assert(a.length == 10);
     assert(approxEqual(reduce!"a + b"(a), 1));
@@ -2147,23 +2316,11 @@ auto ref choice(Range)(auto ref Range range)
 ///
 @safe unittest
 {
-    import std.algorithm.searching : canFind;
+    auto rnd = MinstdRand0(42);
 
-    auto array = [1, 2, 3, 4, 5];
-    auto elem = choice(array);
-
-    assert(canFind(array, elem),
-           "Choice did not return a valid element from the given Range");
-
-    auto urng = Random(unpredictableSeed);
-    elem = choice(array, urng);
-
-    assert(canFind(array, elem),
-           "Choice did not return a valid element from the given Range");
-    auto rng2 = Xorshift();
-    elem = choice(array, rng2);
-    assert(canFind(array, elem),
-           "Choice did not return a valid element from the given Range");
+    auto elem  = [1, 2, 3, 4, 5].choice(rnd);
+    version(X86_64) // Issue 15147
+    assert(elem == 3);
 }
 
 @safe unittest
@@ -2232,6 +2389,16 @@ if (isRandomAccessRange!Range)
     return randomShuffle(r, rndGen);
 }
 
+///
+@safe unittest
+{
+    auto rnd = MinstdRand0(42);
+
+    auto arr = [1, 2, 3, 4, 5].randomShuffle(rnd);
+    version(X86_64) // Issue 15147
+    assert(arr == [3, 5, 2, 4, 1]);
+}
+
 @safe unittest
 {
     import std.algorithm.sorting : sort;
@@ -2295,6 +2462,26 @@ Range partialShuffle(Range)(Range r, in size_t n)
 if (isRandomAccessRange!Range)
 {
     return partialShuffle(r, n, rndGen);
+}
+
+///
+@safe unittest
+{
+    auto rnd = MinstdRand0(42);
+
+    auto arr = [1, 2, 3, 4, 5, 6];
+    arr = arr.dup.partialShuffle(1, rnd);
+
+    version(X86_64) // Issue 15147
+    assert(arr == [2, 1, 3, 4, 5, 6]); // 1<->2
+
+    arr = arr.dup.partialShuffle(2, rnd);
+    version(X86_64) // Issue 15147
+    assert(arr == [1, 4, 3, 2, 5, 6]); // 1<->2, 2<->4
+
+    arr = arr.dup.partialShuffle(3, rnd);
+    version(X86_64) // Issue 15147
+    assert(arr == [5, 4, 6, 2, 1, 3]); // 1<->5, 2<->4, 3<->6
 }
 
 @safe unittest
@@ -2391,6 +2578,16 @@ if (isNumeric!Num)
                                // and 2 10% of the time
 }
 
+///
+@safe unittest
+{
+    auto rnd = MinstdRand0(42);
+    auto z = rnd.dice(70, 20, 10);
+    assert(z == 0);
+    z = rnd.dice(30, 20, 40, 10);
+    assert(z == 2);
+}
+
 private size_t diceImpl(Rng, Range)(ref Rng rng, scope Range proportions)
 if (isForwardRange!Range && isNumeric!(ElementType!Range) && isForwardRange!Rng)
 in
@@ -2419,6 +2616,7 @@ do
     assert(false);
 }
 
+///
 @safe unittest
 {
     auto rnd = Random(unpredictableSeed);
@@ -2448,40 +2646,7 @@ Returns:
     Range whose elements consist of the elements of `r`,
     in random order.  Will be a forward range if both `r` and
     `rng` are forward ranges, an input range otherwise.
-
-Example:
-----
-int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8 ];
-foreach (e; randomCover(a))
-{
-    writeln(e);
-}
-----
-
-$(B WARNING:) If an alternative RNG is desired, it is essential for this
-to be a $(I new) RNG seeded in an unpredictable manner. Passing it a RNG
-used elsewhere in the program will result in unintended correlations,
-due to the current implementation of RNGs as value types.
-
-Example:
-----
-int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8 ];
-foreach (e; randomCover(a, Random(unpredictableSeed)))  // correct!
-{
-    writeln(e);
-}
-
-foreach (e; randomCover(a, rndGen))  // DANGEROUS!! rndGen gets copied by value
-{
-    writeln(e);
-}
-
-foreach (e; randomCover(a, rndGen))  // ... so this second random cover
-{                                    // will output the same sequence as
-    writeln(e);                      // the previous one.
-}
-----
- */
+*/
 struct RandomCover(Range, UniformRNG = void)
 if (isRandomAccessRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))
 {
@@ -2612,6 +2777,17 @@ if (isRandomAccessRange!Range)
     return RandomCover!(Range, void)(r);
 }
 
+///
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : iota;
+    auto rnd = MinstdRand0(42);
+
+    version(X86_64) // Issue 15147
+    assert(10.iota.randomCover(rnd).equal([7, 4, 2, 0, 1, 6, 8, 3, 9, 5]));
+}
+
 @safe unittest
 {
     import std.algorithm;
@@ -2716,40 +2892,6 @@ or if $(D n > total).
 
 If no random number generator is passed to `randomSample`, the
 thread-global RNG rndGen will be used internally.
-
-Example:
-----
-int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
-// Print 5 random elements picked off from a
-foreach (e; randomSample(a, 5))
-{
-    writeln(e);
-}
-----
-
-$(B WARNING:) If an alternative RNG is desired, it is essential for this
-to be a $(I new) RNG seeded in an unpredictable manner. Passing it a RNG
-used elsewhere in the program will result in unintended correlations,
-due to the current implementation of RNGs as value types.
-
-Example:
-----
-int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
-foreach (e; randomSample(a, 5, Random(unpredictableSeed)))  // correct!
-{
-    writeln(e);
-}
-
-foreach (e; randomSample(a, 5, rndGen))  // DANGEROUS!! rndGen gets
-{                                        // copied by value
-    writeln(e);
-}
-
-foreach (e; randomSample(a, 5, rndGen))  // ... so this second random
-{                                        // sample will select the same
-    writeln(e);                          // values as the previous one.
-}
-----
 */
 struct RandomSample(Range, UniformRNG = void)
 if (isInputRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))
@@ -3164,6 +3306,15 @@ auto randomSample(Range, UniformRNG)(Range r, size_t n, auto ref UniformRNG rng)
 if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
 {
     return RandomSample!(Range, UniformRNG)(r, n, r.length, rng);
+}
+
+///
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : iota;
+    auto rnd = MinstdRand0(42);
+    assert(10.iota.randomSample(3, rnd).equal([7, 8, 9]));
 }
 
 @system unittest
