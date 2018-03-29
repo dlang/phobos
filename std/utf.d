@@ -90,12 +90,15 @@ class UTFException : Exception
 
     // FIXME: Use std.exception.basicExceptionCtors here once bug #11500 is fixed
 
+    /**
+    Standard exception constructors.
+     */
     this(string msg, string file = __FILE__, size_t line = __LINE__,
          Throwable next = null) @nogc @safe pure nothrow
     {
         super(msg, file, line, next);
     }
-
+    /// ditto
     this(string msg, size_t index, string file = __FILE__,
          size_t line = __LINE__, Throwable next = null) @safe pure nothrow
     {
@@ -104,7 +107,10 @@ class UTFException : Exception
         super(msg, file, line, next);
     }
 
-
+    /**
+    Returns:
+        A `string` detailing the invalid UTF sequence.
+     */
     override string toString() const
     {
         if (len == 0)
@@ -138,6 +144,19 @@ class UTFException : Exception
 
         return result;
     }
+}
+
+///
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    char[4] buf;
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xD800));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xDBFF));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xDC00));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xDFFF));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0x110000));
 }
 
 /*
@@ -241,7 +260,7 @@ if (isSomeChar!Char)
         c = code point to check
 
     Returns:
-        `true` iff `c` is a valid Unicode code point
+        `true` if and only if `c` is a valid Unicode code point
 
     Note:
     `'\uFFFE'` and `'\uFFFF'` are considered valid by `isValidDchar`,
@@ -251,6 +270,15 @@ if (isSomeChar!Char)
 bool isValidDchar(dchar c) pure nothrow @safe @nogc
 {
     return c < 0xD800 || (c > 0xDFFF && c <= 0x10FFFF);
+}
+
+///
+@safe @nogc pure nothrow unittest
+{
+    assert( isValidDchar(cast(dchar) 0x41));
+    assert( isValidDchar(cast(dchar) 0x00));
+    assert(!isValidDchar(cast(dchar) 0xD800));
+    assert(!isValidDchar(cast(dchar) 0x11FFFF));
 }
 
 pure nothrow @safe @nogc unittest
@@ -327,17 +355,6 @@ if (is(S : const char[]) ||
         return 1;
     else
         return strideImpl(c, 0);
-}
-
-private uint strideImpl(char c, size_t index) @trusted pure
-in { assert(c & 0x80); }
-do
-{
-    import core.bitop : bsr;
-    immutable msbs = 7 - bsr((~uint(c)) & 0xFF);
-    if (c == 0xFF || msbs < 2 || msbs > 4)
-        throw new UTFException("Invalid UTF-8 sequence", index);
-    return msbs;
 }
 
 @system unittest
@@ -527,6 +544,16 @@ if (is(S : const dchar[]) ||
     return 1;
 }
 
+///
+@safe unittest
+{
+    assert("a".stride == 1);
+    assert("λ".stride == 2);
+    assert("aλ".stride == 1);
+    assert("aλ".stride(1) == 2);
+    assert("𐐷".stride == 4);
+}
+
 @system unittest
 {
     import core.exception : AssertError;
@@ -592,6 +619,17 @@ if (is(S : const dchar[]) ||
         static assert((functionAttributes!(() => stride(str)   ) & FunctionAttribute.pure_) != 0);
     }
     });
+}
+
+private uint strideImpl(char c, size_t index) @trusted pure
+in { assert(c & 0x80); }
+do
+{
+    import core.bitop : bsr;
+    immutable msbs = 7 - bsr((~uint(c)) & 0xFF);
+    if (c == 0xFF || msbs < 2 || msbs > 4)
+        throw new UTFException("Invalid UTF-8 sequence", index);
+    return msbs;
 }
 
 /++
@@ -855,6 +893,16 @@ if (isBidirectionalRange!S && is(Unqual!(ElementEncodingType!S) == dchar))
     return 1;
 }
 
+///
+@safe unittest
+{
+    assert("a".strideBack == 1);
+    assert("λ".strideBack == 2);
+    assert("aλ".strideBack == 2);
+    assert("aλ".strideBack(1) == 1);
+    assert("𐐷".strideBack == 4);
+}
+
 @system unittest
 {
     import core.exception : AssertError;
@@ -1058,6 +1106,7 @@ do
         return decodeImpl!(true, useReplacementDchar)(str, index);
 }
 
+/// ditto
 dchar decode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(
 auto ref S str, ref size_t index) @trusted pure
 if (isSomeString!S)
@@ -1075,6 +1124,29 @@ do
         return str[index++];
     else
         return decodeImpl!(true, useReplacementDchar)(str, index);
+}
+
+///
+@safe pure unittest
+{
+    size_t i;
+
+    assert("a".decode(i) == 'a' && i == 1);
+    i = 0;
+    assert("å".decode(i) == 'å' && i == 2);
+    i = 1;
+    assert("aå".decode(i) == 'å' && i == 3);
+    i = 0;
+    assert("å"w.decode(i) == 'å' && i == 1);
+
+    // ë as a multi-code point grapheme
+    i = 0;
+    assert("e\u0308".decode(i) == 'e' && i == 1);
+    // ë as a single code point grapheme
+    i = 0;
+    assert("ë".decode(i) == 'ë' && i == 2);
+    i = 0;
+    assert("ë"w.decode(i) == 'ë' && i == 1);
 }
 
 /++
@@ -1137,6 +1209,7 @@ do
     }
 }
 
+/// ditto
 dchar decodeFront(UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(
 ref S str, out size_t numCodeUnits) @trusted pure
 if (isSomeString!S)
@@ -1171,6 +1244,20 @@ if (isInputRange!S && isSomeChar!(ElementType!S))
 {
     size_t numCodeUnits;
     return decodeFront!useReplacementDchar(str, numCodeUnits);
+}
+
+///
+@safe pure unittest
+{
+    import std.range.primitives;
+    string str = "Hello, World!";
+
+    assert(str.decodeFront == 'H' && str == "ello, World!");
+    str = "å";
+    assert(str.decodeFront == 'å' && str.empty);
+    str = "å";
+    size_t i;
+    assert(str.decodeFront(i) == 'å' && i == 2 && str.empty);
 }
 
 /++
@@ -1293,6 +1380,20 @@ do
 {
     size_t numCodeUnits;
     return decodeBack!useReplacementDchar(str, numCodeUnits);
+}
+
+///
+@system pure unittest
+{
+    import std.range.primitives;
+    string str = "Hello, World!";
+
+    assert(str.decodeBack == '!' && str == "Hello, World");
+    str = "å";
+    assert(str.decodeBack == 'å' && str.empty);
+    str = "å";
+    size_t i;
+    assert(str.decodeBack(i) == 'å' && i == 2 && str.empty);
 }
 
 // Gives the maximum value that a code unit for the given range type can hold.
@@ -2181,6 +2282,64 @@ size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     goto L3;
 }
 
+///
+@safe unittest
+{
+    import std.exception : assertThrown;
+    import std.typecons : Yes;
+
+    char[4] buf;
+
+    assert(encode(buf, '\u0000') == 1 && buf[0 .. 1] == "\u0000");
+    assert(encode(buf, '\u007F') == 1 && buf[0 .. 1] == "\u007F");
+    assert(encode(buf, '\u0080') == 2 && buf[0 .. 2] == "\u0080");
+    assert(encode(buf, '\uE000') == 3 && buf[0 .. 3] == "\uE000");
+    assert(encode(buf, 0xFFFE) == 3 && buf[0 .. 3] == "\xEF\xBF\xBE");
+    assertThrown!UTFException(encode(buf, cast(dchar) 0x110000));
+
+    encode!(Yes.useReplacementDchar)(buf, cast(dchar) 0x110000);
+    auto slice = buf[];
+    assert(slice.decodeFront == replacementDchar);
+}
+
+///
+@safe unittest
+{
+    import std.exception : assertThrown;
+    import std.typecons : Yes;
+
+    wchar[2] buf;
+
+    assert(encode(buf, '\u0000') == 1 && buf[0 .. 1] == "\u0000");
+    assert(encode(buf, '\uD7FF') == 1 && buf[0 .. 1] == "\uD7FF");
+    assert(encode(buf, '\uE000') == 1 && buf[0 .. 1] == "\uE000");
+    assert(encode(buf, '\U00010000') == 2 && buf[0 .. 2] == "\U00010000");
+    assert(encode(buf, '\U0010FFFF') == 2 && buf[0 .. 2] == "\U0010FFFF");
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xD800));
+
+    encode!(Yes.useReplacementDchar)(buf, cast(dchar) 0x110000);
+    auto slice = buf[];
+    assert(slice.decodeFront == replacementDchar);
+}
+
+///
+@safe unittest
+{
+    import std.exception : assertThrown;
+    import std.typecons : Yes;
+
+    dchar[1] buf;
+
+    assert(encode(buf, '\u0000') == 1 && buf[0] == '\u0000');
+    assert(encode(buf, '\uD7FF') == 1 && buf[0] == '\uD7FF');
+    assert(encode(buf, '\uE000') == 1 && buf[0] == '\uE000');
+    assert(encode(buf, '\U0010FFFF') == 1 && buf[0] == '\U0010FFFF');
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xD800));
+
+    encode!(Yes.useReplacementDchar)(buf, cast(dchar) 0x110000);
+    assert(buf[0] == replacementDchar);
+}
+
 @safe unittest
 {
     import std.exception;
@@ -2361,6 +2520,21 @@ void encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
         r ~= buf[0 .. L];
     }
     str = r;
+}
+
+///
+@safe unittest
+{
+    char[] s = "abcd".dup;
+    dchar d1 = 'a';
+    dchar d2 = 'ø';
+
+    encode(s, d1);
+    assert(s.length == 5);
+    assert(s == "abcda");
+    encode(s, d2);
+    assert(s.length == 7);
+    assert(s == "abcdaø");
 }
 
 @safe unittest
@@ -2690,6 +2864,13 @@ if (isSomeString!S)
     }
 }
 
+///
+@safe unittest
+{
+    import std.exception : assertThrown;
+    char[] a = [167, 133, 175];
+    assertThrown!UTFException(validate(a));
+}
 
 @safe unittest // bugzilla 12923
 {
@@ -2799,6 +2980,19 @@ dstring toUTF32(S)(S s)
 if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
 {
     return toUTFImpl!dstring(s);
+}
+
+///
+@safe pure unittest
+{
+    import std.algorithm.comparison : equal;
+
+    // these graphemes are two code units in UTF-16 and one in UTF-32
+    assert("𤭢"w.length == 2);
+    assert("𐐷"w.length == 2);
+
+    assert("𤭢"w.toUTF32.equal([0x00024B62]));
+    assert("𐐷"w.toUTF32.equal([0x00010437]));
 }
 
 private T toUTFImpl(T, S)(S s)
@@ -3081,6 +3275,14 @@ if (isSomeChar!C)
     return toUTFz!(const(wchar)*)(str);
 }
 
+///
+@system unittest
+{
+    string str = "Hello, World!";
+    const(wchar)* p = str.toUTF16z;
+    assert(p[str.length] == '\0');
+}
+
 @safe pure unittest
 {
     import std.conv : to;
@@ -3137,6 +3339,15 @@ size_t count(C)(const(C)[] str) @trusted pure nothrow @nogc
 if (isSomeChar!C)
 {
     return walkLength(str);
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert(count("") == 0);
+    assert(count("a") == 1);
+    assert(count("abc") == 3);
+    assert(count("\u20AC100") == 4);
 }
 
 @safe pure nothrow @nogc unittest
