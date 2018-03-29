@@ -497,8 +497,6 @@ struct FreeTree(ParentAllocator)
     FreeTree!GCAllocator a;
 
     assert((() nothrow @safe @nogc => a.goodAllocSize(1))() == typeof(*a.root).sizeof);
-    // goodAllocSize is not pure because we are calling through GCAllocator.instance
-    assert(!__traits(compiles, (() pure nothrow @safe @nogc => a.goodAllocSize(0))()));
 }
 
 @system unittest
