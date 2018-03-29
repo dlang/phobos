@@ -936,7 +936,7 @@ uint formattedRead(R, Char, S...)(auto ref R r, const(Char)[] fmt, auto ref S ar
 
     int[4] sa2;
     input = `[1,2,3]`;
-    assertThrown(formattedRead(input, "[%(%s,%)]", &sa2));
+    assertThrown!FormatException(formattedRead(input, "[%(%s,%)]", &sa2));
 }
 
 @system pure unittest
@@ -1690,10 +1690,10 @@ if (is(Unqual!Char == Char))
     auto a = appender!(string)();
 
     auto f = FormatSpec!char("%-(%s%"); // %)")
-    assertThrown(f.writeUpToNextSpec(a));
+    assertThrown!FormatException(f.writeUpToNextSpec(a));
 
     f = FormatSpec!char("%(%-"); // %)")
-    assertThrown(f.writeUpToNextSpec(a));
+    assertThrown!FormatException(f.writeUpToNextSpec(a));
 }
 
 @safe unittest
@@ -1789,9 +1789,9 @@ FormatSpec!Char singleSpec(Char)(Char[] fmt)
     assert(spec.width == 2);
     assert(spec.precision == 3);
 
-    assertThrown(singleSpec(""));
-    assertThrown(singleSpec("2.3e"));
-    assertThrown(singleSpec("%2.3eTest"));
+    assertThrown!FormatException(singleSpec(""));
+    assertThrown!FormatException(singleSpec("2.3e"));
+    assertThrown!FormatException(singleSpec("%2.3eTest"));
 }
 
 /**
@@ -4438,8 +4438,8 @@ if (isSIMDVector!V)
 {
     // Test for issue 11778
     int* p = null;
-    assertThrown(format("%d", p));
-    assertThrown(format("%04d", p + 2));
+    assertThrown!FormatException(format("%d", p));
+    assertThrown!FormatException(format("%04d", p + 2));
 }
 
 @safe pure unittest
