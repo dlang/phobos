@@ -1619,14 +1619,18 @@ double acosh(double x) @safe pure nothrow @nogc { return acosh(cast(real) x); }
 /// ditto
 float acosh(float x) @safe pure nothrow @nogc  { return acosh(cast(real) x); }
 
-
+///
 @safe @nogc nothrow unittest
 {
     assert(isNaN(acosh(0.9)));
     assert(isNaN(acosh(real.nan)));
-    assert(acosh(1.0)==0.0);
+    assert(acosh(1.0) == 0.0);
     assert(acosh(real.infinity) == real.infinity);
     assert(isNaN(acosh(0.5)));
+}
+
+@safe @nogc nothrow unittest
+{
     assert(equalsDigit(acosh(cosh(3.0)), 3, useDigits));
 }
 
@@ -1661,6 +1665,7 @@ double asinh(double x) @safe pure nothrow @nogc { return asinh(cast(real) x); }
 /// ditto
 float asinh(float x) @safe pure nothrow @nogc { return asinh(cast(real) x); }
 
+///
 @safe @nogc nothrow unittest
 {
     assert(isIdentical(asinh(0.0), 0.0));
@@ -1668,6 +1673,10 @@ float asinh(float x) @safe pure nothrow @nogc { return asinh(cast(real) x); }
     assert(asinh(real.infinity) == real.infinity);
     assert(asinh(-real.infinity) == -real.infinity);
     assert(isNaN(asinh(real.nan)));
+}
+
+@safe unittest
+{
     assert(equalsDigit(asinh(sinh(3.0)), 3, useDigits));
 }
 
@@ -1701,7 +1710,7 @@ double atanh(double x) @safe pure nothrow @nogc { return atanh(cast(real) x); }
 /// ditto
 float atanh(float x) @safe pure nothrow @nogc { return atanh(cast(real) x); }
 
-
+///
 @safe @nogc nothrow unittest
 {
     assert(isIdentical(atanh(0.0), 0.0));
@@ -1709,6 +1718,10 @@ float atanh(float x) @safe pure nothrow @nogc { return atanh(cast(real) x); }
     assert(isNaN(atanh(real.nan)));
     assert(isNaN(atanh(-real.infinity)));
     assert(atanh(0.0) == 0);
+}
+
+@safe unittest
+{
     assert(equalsDigit(atanh(tanh(0.5L)), 0.5, useDigits));
 }
 
@@ -1726,6 +1739,15 @@ long rndtol(double x) @safe pure nothrow @nogc { return rndtol(cast(real) x); }
 ///ditto
 long rndtol(float x) @safe pure nothrow @nogc { return rndtol(cast(real) x); }
 
+///
+@safe unittest
+{
+    assert(rndtol(1.0) == 1L);
+    assert(rndtol(1.2) == 1L);
+    assert(rndtol(1.7) == 2L);
+    assert(rndtol(1.0001) == 1L);
+}
+
 @safe unittest
 {
     long function(real) prndtol = &rndtol;
@@ -1739,6 +1761,15 @@ long rndtol(float x) @safe pure nothrow @nogc { return rndtol(cast(real) x); }
  * indeterminate.
  */
 extern (C) real rndtonl(real x);
+
+// issue 18693
+//@safe unittest
+//{
+//    assert(rndtol(1.0) == 1.0);
+//    assert(rndtol(1.2) == 1.0);
+//    assert(rndtol(1.7) == 2.0);
+//    assert(rndtol(1.0001) == 1.0);
+//}
 
 /***************************************
  * Compute square root of x.
@@ -1758,12 +1789,11 @@ double sqrt(double x) @nogc @safe pure nothrow { pragma(inline, true); return co
 /// ditto
 real sqrt(real x) @nogc @safe pure nothrow { pragma(inline, true); return core.math.sqrt(x); }
 
+///
 @safe pure nothrow @nogc unittest
 {
-    //ctfe
-    enum ZX80 = sqrt(7.0f);
-    enum ZX81 = sqrt(7.0);
-    enum ZX82 = sqrt(7.0L);
+    assert(sqrt(2.0).feqrel(1.4142) > 16);
+    assert(sqrt(9.0).feqrel(3.0) > 16);
 
     assert(isNaN(sqrt(-1.0f)));
     assert(isNaN(sqrt(-1.0)));
@@ -1778,6 +1808,11 @@ real sqrt(real x) @nogc @safe pure nothrow { pragma(inline, true); return core.m
     assert(psqrtd != null);
     real function(real) psqrtr = &sqrt;
     assert(psqrtr != null);
+
+    //ctfe
+    enum ZX80 = sqrt(7.0f);
+    enum ZX81 = sqrt(7.0);
+    enum ZX82 = sqrt(7.0L);
 }
 
 deprecated("Use std.complex.sqrt")
@@ -1972,6 +2007,13 @@ double exp(double x) @safe pure nothrow @nogc  { return exp(cast(real) x); }
 
 /// ditto
 float exp(float x)  @safe pure nothrow @nogc   { return exp(cast(real) x); }
+
+///
+@safe unittest
+{
+    assert(exp(0.0).feqrel(1.0) > 16);
+    assert(exp(3.0).feqrel(E * E * E) > 16);
+}
 
 @safe @nogc nothrow unittest
 {
@@ -2249,7 +2291,13 @@ L_largenegative:
     }
 }
 
-
+///
+@safe unittest
+{
+    assert(expm1(0.0).feqrel(0) > 16);
+    assert(expm1(1.0).feqrel(1.71828) > 16);
+    assert(expm1(2.0).feqrel(6.3890) > 16);
+}
 
 /**
  * Calculates 2$(SUPERSCRIPT x).
@@ -2275,6 +2323,14 @@ real exp2(real x) @nogc @trusted pure nothrow
     {
         return exp2Impl(x);
     }
+}
+
+///
+@safe unittest
+{
+    assert(exp2(0.0).feqrel(1.0) > 16);
+    assert(exp2(2.0).feqrel(4.0) > 16);
+    assert(exp2(8.0).feqrel(256.0) > 16);
 }
 
 version(InlineAsm_X86_Any)
@@ -3865,6 +3921,14 @@ real fmod(real x, real y) @trusted nothrow @nogc
         return core.stdc.math.fmodl(x, y);
 }
 
+///
+@safe unittest
+{
+    assert(fmod(0.0, 1.0).feqrel(0.0) > 16);
+    assert(fmod(5.0, 3.0).feqrel(2.0) > 16);
+    assert(isNaN(fmod(5.0, 0.0)));
+}
+
 /************************************
  * Breaks x into an integral part and a fractional part, each of which has
  * the same sign as x. The integral part is stored in i.
@@ -3885,6 +3949,17 @@ real modf(real x, ref real i) @trusted nothrow @nogc
     }
     else
         return core.stdc.math.modfl(x,&i);
+}
+
+///
+@safe unittest
+{
+    real frac;
+    real intpart;
+
+    frac = modf(3.14159, intpart);
+    assert(intpart.feqrel(3.0) > 16);
+    assert(frac.feqrel(0.14159) > 16);
 }
 
 /*************************************
@@ -3961,6 +4036,13 @@ real cbrt(real x) @trusted nothrow @nogc
         return core.stdc.math.cbrtl(x);
 }
 
+///
+@safe unittest
+{
+    assert(cbrt(1.0).feqrel(1.0) > 16);
+    assert(cbrt(27.0).feqrel(3.0) > 16);
+    assert(cbrt(15.625).feqrel(2.5) > 16);
+}
 
 /*******************************
  * Returns |x|
@@ -3978,6 +4060,14 @@ double fabs(double x) @safe pure nothrow @nogc { return fabs(cast(real) x); }
 //FIXME
 ///ditto
 float fabs(float x) @safe pure nothrow @nogc { return fabs(cast(real) x); }
+
+///
+@safe unittest
+{
+    assert(fabs(0.0) == 0.0);
+    assert(fabs(-0.0) == 0.0);
+    assert(fabs(-10.0) == 10.0);
+}
 
 @safe unittest
 {
@@ -4056,6 +4146,15 @@ real hypot(real x, real y) @safe pure nothrow @nogc
 
     // both are in the normal range
     return sqrt(u*u + v*v);
+}
+
+///
+@safe unittest
+{
+    assert(hypot(1.0, 1.0).feqrel(1.4142) > 16);
+    assert(hypot(3.0, 4.0).feqrel(5.0) > 16);
+    assert(hypot(real.infinity, 1.0) == real.infinity);
+    assert(hypot(real.infinity, real.nan) == real.infinity);
 }
 
 @safe unittest
@@ -7260,6 +7359,22 @@ if (isFloatingPoint!(X))
     }
 }
 
+///
+@safe pure unittest
+{
+    assert(feqrel(2.0, 2.0) == 53);
+    assert(feqrel(2.0f, 2.0f) == 24);
+    assert(feqrel(2.0, double.nan) == 0);
+
+    // Test that numbers are within n digits of each
+    // other by testing if feqrel > n * log2(10)
+
+    // five digits
+    assert(feqrel(2.0, 2.00001) > 16);
+    // ten digits
+    assert(feqrel(2.0, 2.00000000001) > 33);
+}
+
 @safe pure nothrow @nogc unittest
 {
     void testFeqrel(F)()
@@ -7733,6 +7848,9 @@ private real polyImpl(real x, in real[] A) @trusted pure nothrow @nogc
        `approxEqual` returns `true` if and only if the ranges have the same
        number of elements and if `approxEqual` evaluates to `true` for each
        pair of elements.
+
+    See_Also:
+        Use $(LREF feqrel) to get the number of equal bits in the mantissa.
  */
 bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
 {
