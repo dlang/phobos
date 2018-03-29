@@ -3814,10 +3814,15 @@ template hasStaticMember(T, string member)
 {
     static if (__traits(hasMember, T, member))
     {
-        import std.meta : Alias;
-        alias sym = Alias!(__traits(getMember, T, member));
+        static if (isPointer!T)
+            alias U = PointerTarget!T;
+        else
+            alias U = T;
 
-        static if (__traits(getOverloads, T, member).length == 0)
+        import std.meta : Alias;
+        alias sym = Alias!(__traits(getMember, U, member));
+
+        static if (__traits(getOverloads, U, member).length == 0)
             enum bool hasStaticMember = __traits(compiles, &sym);
         else
             enum bool hasStaticMember = __traits(isStaticFunction, sym);
@@ -3927,6 +3932,7 @@ template hasStaticMember(T, string member)
         static @property int sp();
     }
 
+    static assert(!hasStaticMember!(S, "na"));
     static assert(!hasStaticMember!(S, "X"));
     static assert(!hasStaticMember!(S, "Y"));
     static assert(!hasStaticMember!(S, "Y.i"));
@@ -3951,6 +3957,7 @@ template hasStaticMember(T, string member)
     static assert(!hasStaticMember!(S, "p"));
     static assert( hasStaticMember!(S, "sp"));
 
+    static assert(!hasStaticMember!(C, "na"));
     static assert(!hasStaticMember!(C, "X"));
     static assert(!hasStaticMember!(C, "Y"));
     static assert(!hasStaticMember!(C, "Y.i"));
@@ -3962,8 +3969,8 @@ template hasStaticMember(T, string member)
     static assert( hasStaticMember!(C, "sy"));
     static assert( hasStaticMember!(C, "f"));
     static assert( hasStaticMember!(C, "f2"));
-    static assert(!hasStaticMember!(S, "dm"));
-    static assert( hasStaticMember!(S, "sd"));
+    static assert(!hasStaticMember!(C, "dm"));
+    static assert( hasStaticMember!(C, "sd"));
     static assert(!hasStaticMember!(C, "g"));
     static assert( hasStaticMember!(C, "fp"));
     static assert( hasStaticMember!(C, "gfp"));
@@ -3974,6 +3981,32 @@ template hasStaticMember(T, string member)
     static assert( hasStaticMember!(C, "iosf"));
     static assert(!hasStaticMember!(C, "p"));
     static assert( hasStaticMember!(C, "sp"));
+
+    alias P = S*;
+    static assert(!hasStaticMember!(P, "na"));
+    static assert(!hasStaticMember!(P, "X"));
+    static assert(!hasStaticMember!(P, "Y"));
+    static assert(!hasStaticMember!(P, "Y.i"));
+    static assert(!hasStaticMember!(P, "S"));
+    static assert(!hasStaticMember!(P, "C"));
+    static assert( hasStaticMember!(P, "sx"));
+    static assert( hasStaticMember!(P, "gx"));
+    static assert(!hasStaticMember!(P, "y"));
+    static assert( hasStaticMember!(P, "sy"));
+    static assert( hasStaticMember!(P, "f"));
+    static assert( hasStaticMember!(P, "f2"));
+    static assert(!hasStaticMember!(P, "dm"));
+    static assert( hasStaticMember!(P, "sd"));
+    static assert(!hasStaticMember!(P, "g"));
+    static assert( hasStaticMember!(P, "fp"));
+    static assert( hasStaticMember!(P, "gfp"));
+    static assert(!hasStaticMember!(P, "fpm"));
+    static assert(!hasStaticMember!(P, "m"));
+    static assert(!hasStaticMember!(P, "m2"));
+    static assert(!hasStaticMember!(P, "iom"));
+    static assert( hasStaticMember!(P, "iosf"));
+    static assert(!hasStaticMember!(P, "p"));
+    static assert( hasStaticMember!(P, "sp"));
 }
 
 /**
