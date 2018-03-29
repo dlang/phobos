@@ -94,7 +94,7 @@ aa[std.container.array]=-dip1000
 aa[std.container.binaryheap]=-dip1000
 aa[std.container.dlist]=-dip1000
 aa[std.container.package]=-dip1000
-aa[std.container.rbtree]=-dip25 # DROP
+aa[std.container.rbtree]=-dip1000 # merged https://github.com/dlang/phobos/pull/6332
 aa[std.container.slist]=-dip25 # -dip1000 -version=DIP1000   depends on https://github.com/dlang/phobos/pull/6295 merged
 aa[std.container.util]=-dip25 #    TODO
 
