@@ -7480,7 +7480,7 @@ template OriginalType(T)
 ///
 @safe unittest
 {
-    enum E : real { a }
+    enum E : real { a = 0 } // NOTE: explicit initialization to 0 required during Enum init deprecation cycle
     enum F : E    { a = E.a }
     alias G = const(F);
     static assert(is(OriginalType!E == real));
