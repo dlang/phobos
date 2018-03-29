@@ -686,6 +686,16 @@ enum Order : bool
     decreasing ///
 }
 
+///
+@safe unittest
+{
+    import std.digest.crc : CRC32;
+
+    auto crc32 = digest!CRC32("The quick ", "brown ", "fox jumps over the lazy dog");
+    assert(crc32.toHexString!(Order.decreasing) == "414FA339");
+    assert(crc32.toHexString!(LetterCase.lower, Order.decreasing) == "414fa339");
+}
+
 
 /**
  * Used to convert a hash value (a static or dynamic array of ubytes) to a string.

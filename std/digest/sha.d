@@ -820,14 +820,6 @@ struct SHA(uint hashBlockSize, uint digestSize)
         }
 }
 
-alias SHA1 = SHA!(512, 160);  /// SHA alias for SHA-1, hash is ubyte[20]
-alias SHA224 = SHA!(512, 224);  /// SHA alias for SHA-224, hash is ubyte[28]
-alias SHA256 = SHA!(512, 256);  /// SHA alias for SHA-256, hash is ubyte[32]
-alias SHA384 = SHA!(1024, 384); /// SHA alias for SHA-384, hash is ubyte[48]
-alias SHA512 = SHA!(1024, 512); /// SHA alias for SHA-512, hash is ubyte[64]
-alias SHA512_224 = SHA!(1024, 224); /// SHA alias for SHA-512/224, hash is ubyte[28]
-alias SHA512_256 = SHA!(1024, 256); /// SHA alias for SHA-512/256, hash is ubyte[32]
-
 ///
 @safe unittest
 {
@@ -868,6 +860,14 @@ alias SHA512_256 = SHA!(1024, 256); /// SHA alias for SHA-512/256, hash is ubyte
     doSomething(sha);
     assert(toHexString(sha.finish()) == "5BA93C9DB0CFF93F52B521D7420E43F6EDA2784F");
 }
+
+alias SHA1 = SHA!(512, 160);  /// SHA alias for SHA-1, hash is ubyte[20]
+alias SHA224 = SHA!(512, 224);  /// SHA alias for SHA-224, hash is ubyte[28]
+alias SHA256 = SHA!(512, 256);  /// SHA alias for SHA-256, hash is ubyte[32]
+alias SHA384 = SHA!(1024, 384); /// SHA alias for SHA-384, hash is ubyte[48]
+alias SHA512 = SHA!(1024, 512); /// SHA alias for SHA-512, hash is ubyte[64]
+alias SHA512_224 = SHA!(1024, 224); /// SHA alias for SHA-512/224, hash is ubyte[28]
+alias SHA512_256 = SHA!(1024, 256); /// SHA alias for SHA-512/256, hash is ubyte[32]
 
 @safe unittest
 {
