@@ -235,8 +235,6 @@ struct ScopedAllocator(ParentAllocator)
     ScopedAllocator!GCAllocator a;
 
     assert(__traits(compiles, (() nothrow @safe @nogc => a.goodAllocSize(0))()));
-    // goodAllocSize is not pure because we are calling through Allocator.instance
-    assert(!__traits(compiles, (() pure nothrow @safe @nogc => a.goodAllocSize(0))()));
 
     // Ensure deallocate inherits from parent allocators
     auto b = a.allocate(42);
