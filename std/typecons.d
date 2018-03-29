@@ -2718,14 +2718,14 @@ if (is(S == struct))
         }
 
         static if (!is(S == immutable))
-        private ref S Rebindable_getRef() @property
+        ref S Rebindable_getRef() @property
         {
             // payload exposed as const ref when S is const
             return trustedPayload;
         }
 
         static if (is(S == immutable))
-        private S Rebindable_get() @property
+        S Rebindable_get() @property
         {
             // we return a copy for immutable S
             return trustedPayload;
