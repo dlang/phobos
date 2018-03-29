@@ -190,8 +190,9 @@ class ConvOverflowException : ConvException
 }
 
 /**
-The `to` template converts a value from one type _to another.
-The source type is deduced and the target type must be specified, for example the
+$(D_CODE T $(DDOC_PSYMBOL _to)$(DDOC_TEMPLATE_PARAM_LIST (S))(S value);)
+Converts a value from one type _to type `T`.
+The source type `S` is deduced and the target type must be specified, for example the
 expression `to!int(42.0)` converts the number 42 from
 `double` _to `int`. The conversion is "safe", i.e.,
 it checks for overflow; `to!int(4.2e10)` would throw the
@@ -254,7 +255,7 @@ template to(T)
  * Conversions from floating-point types _to integral types allow loss of
  * precision (the fractional part of a floating-point number). The
  * conversion is truncating towards zero, the same way a cast would
- * truncate. (_To round a floating point value when casting _to an
+ * truncate. (To round a floating point value when casting _to an
  * integral, use `roundTo`.)
  */
 @safe pure unittest
@@ -274,11 +275,12 @@ template to(T)
 
 /**
  * When converting strings _to numeric types, note that the D hexadecimal and binary
- * literals are not handled. Neither the prefixes that indicate the base, nor the
+ * literals are $(B not) handled. Neither the prefixes that indicate the base, nor the
  * horizontal bar used _to separate groups of digits are recognized. This also
- * applies to the suffixes that indicate the type.
+ * applies _to the suffixes that indicate the type.
  *
- * _To work around this, you can specify a radix for conversions involving numbers.
+ * To work around this, you can specify a radix for conversions involving numbers:
+ * $(D_CODE T $(DDOC_PSYMBOL _to)$(DDOC_TEMPLATE_PARAM_LIST (S))(S value, uint radix);)
  */
 @safe pure unittest
 {
@@ -401,13 +403,14 @@ template to(T)
  *   $(LI $(D char), $(D wchar), $(D dchar) _to a string type.)
  *   $(LI Unsigned or signed integers _to strings.
  *        $(DL $(DT [special case])
- *             $(DD Convert integral value _to string in $(D_PARAM radix) radix.
- *             radix must be a value from 2 to 36.
- *             value is treated as a signed value only if radix is 10.
- *             The characters A through Z are used to represent values 10 through 36
- *             and their case is determined by the $(D_PARAM letterCase) parameter.)))
+ *             $(D_CODE T $(DDOC_PSYMBOL _to)$(DDOC_TEMPLATE_PARAM_LIST (S))(S value, uint radix, LetterCase lc = LetterCase.upper);)
+ *             $(DD Converts an integral value _to a string using a radix.
+ *             $(D_PARAM radix) must be a value from 2 _to 36.
+ *             $(D_PARAM value) is treated as a signed value only if $(D_PARAM radix) is 10.
+ *             The characters A through Z are used _to represent values 10 through 36.
+ *             $(D_PARAM letterCase) is the case _to use for non-decimal output characters.)))
  *   $(LI All floating point types _to all string types.)
- *   $(LI Pointer to string conversions prints the pointer as a $(D size_t) value.
+ *   $(LI Pointer _to string conversions prints the pointer as a $(D size_t) value.
  *        If pointer is $(D char*), treat it as C-style strings.
  *        In that case, this function is $(D @system).))
  */
@@ -6292,7 +6295,7 @@ private auto hexStrLiteral(String)(scope String hexData)
 
 
 /**
- * Convert integer to a range of characters.
+ * Converts integer to a range of characters.
  * Intended to be lightweight and fast.
  *
  * Params:
