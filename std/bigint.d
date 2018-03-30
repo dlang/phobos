@@ -1156,7 +1156,7 @@ string toDecimalString(const(BigInt) x) pure nothrow
 
 /**
 Params:
-    x = The `BigInt` to convert to a hexadecimal $(D string).
+    x = The `BigInt` to convert to a hexadecimal `string`.
 
 Returns:
     A `string` that represents the `BigInt` as a hexadecimal (base 16)

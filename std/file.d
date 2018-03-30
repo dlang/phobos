@@ -191,9 +191,9 @@ class FileException : Exception
             name  = Name of file for which the error occurred.
             errno = The error number.
             file  = The _file where the error occurred.
-                    Defaults to $(D __FILE__).
+                    Defaults to `__FILE__`.
             line  = The _line where the error occurred.
-                    Defaults to $(D __LINE__).
+                    Defaults to `__LINE__`.
      +/
     version(Windows) this(in char[] name,
                           uint errno = .GetLastError(),
@@ -287,8 +287,8 @@ private T cenforce(T)(T condition, const(char)[] name, const(FSChar)* namez,
  */
 
 /********************************************
-Read entire contents of file $(D name) and returns it as an untyped
-array. If the file size is larger than $(D upTo), only $(D upTo)
+Read entire contents of file `name` and returns it as an untyped
+array. If the file size is larger than `upTo`, only `upTo`
 bytes are _read.
 
 Params:
@@ -712,7 +712,7 @@ if (isSomeString!S && (isInputRange!R && !isInfinite!R && isSomeChar!(ElementTyp
 }
 
 /*********************************************
-Write $(D buffer) to file $(D name).
+Write `buffer` to file `name`.
 
 Creates the file if it does not already exist.
 
@@ -720,7 +720,7 @@ Params:
     name = string or range of characters representing the file _name
     buffer = data to be written to file
 
-Throws: $(D FileException) on error.
+Throws: `FileException` on error.
 
 See_also: $(REF toFile, std,stdio)
  */
@@ -761,7 +761,7 @@ if (isConvertibleToString!R)
 }
 
 /*********************************************
-Appends $(D buffer) to file $(D name).
+Appends `buffer` to file `name`.
 
 Creates the file if it does not already exist.
 
@@ -769,7 +769,7 @@ Params:
     name = string or range of characters representing the file _name
     buffer = data to be appended to file
 
-Throws: $(D FileException) on error.
+Throws: `FileException` on error.
  */
 void append(R)(R name, const void[] buffer)
 if ((isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
@@ -883,12 +883,12 @@ version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez
 }
 
 /***************************************************
- * Rename file $(D from) _to $(D to).
+ * Rename file `from` _to `to`.
  * If the target file exists, it is overwritten.
  * Params:
  *    from = string or range of characters representing the existing file name
  *    to = string or range of characters representing the target file name
- * Throws: $(D FileException) on error.
+ * Throws: `FileException` on error.
  */
 void rename(RF, RT)(RF from, RT to)
 if ((isInputRange!RF && !isInfinite!RF && isSomeChar!(ElementEncodingType!RF) || isSomeString!RF)
@@ -994,12 +994,12 @@ private void renameImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, 
 }
 
 /***************************************************
-Delete file $(D name).
+Delete file `name`.
 
 Params:
     name = string or range of characters representing the file _name
 
-Throws: $(D FileException) on error.
+Throws: `FileException` on error.
  */
 void remove(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -1098,12 +1098,12 @@ version(Windows) private ulong makeUlong(DWORD dwLow, DWORD dwHigh) @safe pure n
 }
 
 /***************************************************
-Get size of file $(D name) in bytes.
+Get size of file `name` in bytes.
 
 Params:
     name = string or range of characters representing the file _name
 
-Throws: $(D FileException) on error (e.g., file not found).
+Throws: `FileException` on error (e.g., file not found).
  */
 ulong getSize(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -1193,7 +1193,7 @@ private SysTime statTimeToStdTime(char which)(ref stat_t statbuf)
 }
 
 /++
-    Get the access and modified times of file or folder $(D name).
+    Get the access and modified times of file or folder `name`.
 
     Params:
         name             = File/Folder _name to get times for.
@@ -1201,7 +1201,7 @@ private SysTime statTimeToStdTime(char which)(ref stat_t statbuf)
         modificationTime = Time the file/folder was last modified.
 
     Throws:
-        $(D FileException) on error.
+        `FileException` on error.
  +/
 void getTimes(R)(R name,
               out SysTime accessTime,
@@ -1337,9 +1337,9 @@ version(StdDdoc)
     /++
      $(BLUE This function is Windows-Only.)
 
-     Get creation/access/modified times of file $(D name).
+     Get creation/access/modified times of file `name`.
 
-     This is the same as $(D getTimes) except that it also gives you the file
+     This is the same as `getTimes` except that it also gives you the file
      creation time - which isn't possible on Posix systems.
 
      Params:
@@ -1349,7 +1349,7 @@ version(StdDdoc)
      fileModificationTime = Time the file was last modified.
 
      Throws:
-     $(D FileException) on error.
+     `FileException` on error.
      +/
     void getTimesWin(R)(R name,
                         out SysTime fileCreationTime,
@@ -1459,7 +1459,7 @@ version(Windows) @system unittest
 
 
 /++
-    Set access/modified times of file or folder $(D name).
+    Set access/modified times of file or folder `name`.
 
     Params:
         name             = File/Folder _name to get times for.
@@ -1467,7 +1467,7 @@ version(Windows) @system unittest
         modificationTime = Time the file/folder was last modified.
 
     Throws:
-        $(D FileException) on error.
+        `FileException` on error.
  +/
 void setTimes(R)(R name,
               SysTime accessTime,
@@ -1634,7 +1634,7 @@ if (isConvertibleToString!R)
     Returns the time that the given file was last modified.
 
     Throws:
-        $(D FileException) if the given file does not exist.
+        `FileException` if the given file does not exist.
 +/
 SysTime timeLastModified(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -1695,16 +1695,16 @@ if (isConvertibleToString!R)
 
 /++
     Returns the time that the given file was last modified. If the
-    file does not exist, returns $(D returnIfMissing).
+    file does not exist, returns `returnIfMissing`.
 
     A frequent usage pattern occurs in build automation tools such as
     $(HTTP gnu.org/software/make, make) or $(HTTP
     en.wikipedia.org/wiki/Apache_Ant, ant). To check whether file $(D
-    target) must be rebuilt from file $(D source) (i.e., $(D target) is
-    older than $(D source) or does not exist), use the comparison
-    below. The code throws a $(D FileException) if $(D source) does not
-    exist (as it should). On the other hand, the $(D SysTime.min) default
-    makes a non-existing $(D target) seem infinitely old so the test
+    target) must be rebuilt from file `source` (i.e., `target` is
+    older than `source` or does not exist), use the comparison
+    below. The code throws a `FileException` if `source` does not
+    exist (as it should). On the other hand, the `SysTime.min` default
+    makes a non-existing `target` seem infinitely old so the test
     correctly prompts building it.
 
     Params:
@@ -1915,7 +1915,7 @@ private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
  $(HTTP msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx,
  GetFileAttributes), whereas on Posix systems, they're the $(LUCKY
  st_mode) value which is part of the $(D stat struct) gotten by
- calling the $(HTTP en.wikipedia.org/wiki/Stat_%28Unix%29, $(D stat))
+ calling the $(HTTP en.wikipedia.org/wiki/Stat_%28Unix%29, `stat`)
  function.
 
  On Posix systems, if the given file is a symbolic link, then
@@ -1925,7 +1925,7 @@ private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
  Params:
  name = The file to get the attributes of.
 
- Throws: $(D FileException) on error.
+ Throws: `FileException` on error.
   +/
 uint getAttributes(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -2030,7 +2030,7 @@ if (isConvertibleToString!R)
         the attributes
 
     Throws:
-        $(D FileException) on error.
+        `FileException` on error.
  +/
 uint getLinkAttributes(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -2135,7 +2135,7 @@ if (isConvertibleToString!R)
         attributes = the _attributes to set the file to
 
     Throws:
-        $(D FileException) if the given file does not exist.
+        `FileException` if the given file does not exist.
  +/
 void setAttributes(R)(R name, uint attributes)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -2244,7 +2244,7 @@ if (isConvertibleToString!R)
         true if name specifies a directory
 
     Throws:
-        $(D FileException) if the given file does not exist.
+        `FileException` if the given file does not exist.
   +/
 @property bool isDir(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -2406,15 +2406,15 @@ bool attrIsDir(uint attributes) @safe pure nothrow @nogc
     Returns whether the given file (or directory) is a file.
 
     On Windows, if a file is not a directory, then it's a file. So,
-    either $(D isFile) or $(D isDir) will return true for any given file.
+    either `isFile` or `isDir` will return true for any given file.
 
-    On Posix systems, if $(D isFile) is $(D true), that indicates that the file
+    On Posix systems, if `isFile` is `true`, that indicates that the file
     is a regular file (e.g. not a block not device). So, on Posix systems, it's
-    possible for both $(D isFile) and $(D isDir) to be $(D false) for a
+    possible for both `isFile` and `isDir` to be `false` for a
     particular file (in which case, it's a special file). You can use
-    $(D getAttributes) to get the attributes to figure out what type of special
-    it is, or you can use $(D DirEntry) to get at its $(D statBuf), which is the
-    result from $(D stat). In either case, see the man page for $(D stat) for
+    `getAttributes` to get the attributes to figure out what type of special
+    it is, or you can use `DirEntry` to get at its `statBuf`, which is the
+    result from `stat`. In either case, see the man page for `stat` for
     more information.
 
     Params:
@@ -2424,7 +2424,7 @@ bool attrIsDir(uint attributes) @safe pure nothrow @nogc
         true if name specifies a file
 
     Throws:
-        $(D FileException) if the given file does not exist.
+        `FileException` if the given file does not exist.
 +/
 @property bool isFile(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -2498,15 +2498,15 @@ if (isConvertibleToString!R)
     Returns whether the given file _attributes are for a file.
 
     On Windows, if a file is not a directory, it's a file. So, either
-    $(D attrIsFile) or $(D attrIsDir) will return $(D true) for the
+    `attrIsFile` or `attrIsDir` will return `true` for the
     _attributes of any given file.
 
-    On Posix systems, if $(D attrIsFile) is $(D true), that indicates that the
+    On Posix systems, if `attrIsFile` is `true`, that indicates that the
     file is a regular file (e.g. not a block not device). So, on Posix systems,
-    it's possible for both $(D attrIsFile) and $(D attrIsDir) to be $(D false)
+    it's possible for both `attrIsFile` and `attrIsDir` to be `false`
     for a particular file (in which case, it's a special file). If a file is a
     special file, you can use the _attributes to check what type of special file
-    it is (see the man page for $(D stat) for more information).
+    it is (see the man page for `stat` for more information).
 
     Params:
         attributes = The file _attributes.
@@ -2589,7 +2589,7 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
 /++
     Returns whether the given file is a symbolic link.
 
-    On Windows, returns $(D true) when the file is either a symbolic link or a
+    On Windows, returns `true` when the file is either a symbolic link or a
     junction point.
 
     Params:
@@ -2599,7 +2599,7 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
         true if name is a symbolic link
 
     Throws:
-        $(D FileException) if the given file does not exist.
+        `FileException` if the given file does not exist.
   +/
 @property bool isSymlink(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -2724,7 +2724,7 @@ if (isConvertibleToString!R)
 /++
     Returns whether the given file attributes are for a symbolic link.
 
-    On Windows, return $(D true) when the file is either a symbolic link or a
+    On Windows, return `true` when the file is either a symbolic link or a
     junction point.
 
     Params:
@@ -2774,8 +2774,8 @@ bool attrIsSymlink(uint attributes) @safe pure nothrow @nogc
 }
 
 /****************************************************
- * Change directory to $(D pathname).
- * Throws: $(D FileException) on error.
+ * Change directory to `pathname`.
+ * Throws: `FileException` on error.
  */
 void chdir(R)(R pathname)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -2837,9 +2837,9 @@ if (isConvertibleToString!R)
 }
 
 /****************************************************
-Make directory $(D pathname).
+Make directory `pathname`.
 
-Throws: $(D FileException) on Posix or $(D WindowsException) on Windows
+Throws: `FileException` on Posix or `WindowsException` on Windows
         if an error occured.
  */
 void mkdir(R)(R pathname)
@@ -2939,9 +2939,9 @@ private bool ensureDirExists()(in char[] pathname)
  * Make directory and all parent directories as needed.
  *
  * Does nothing if the directory specified by
- * $(D pathname) already exists.
+ * `pathname` already exists.
  *
- * Throws: $(D FileException) on error.
+ * Throws: `FileException` on error.
  */
 
 void mkdirRecurse(in char[] pathname) @safe
@@ -3037,12 +3037,12 @@ void mkdirRecurse(in char[] pathname) @safe
 }
 
 /****************************************************
-Remove directory $(D pathname).
+Remove directory `pathname`.
 
 Params:
     pathname = Range or string specifying the directory name
 
-Throws: $(D FileException) on error.
+Throws: `FileException` on error.
  */
 void rmdir(R)(R pathname)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -3108,7 +3108,7 @@ if (isConvertibleToString!R)
             current working directory.
 
     Throws:
-        $(D FileException) on error (which includes if the _symlink already
+        `FileException` on error (which includes if the _symlink already
         exists).
   +/
 version(StdDdoc) void symlink(RO, RL)(RO original, RL link)
@@ -3198,7 +3198,7 @@ version(Posix) @safe unittest
     working directory.
 
     Throws:
-        $(D FileException) on error.
+        `FileException` on error.
   +/
 version(StdDdoc) string readLink(R)(R link)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) ||
@@ -3297,7 +3297,7 @@ version(Posix) @system unittest // input range of dchars
 
 /****************************************************
  * Get the current working directory.
- * Throws: $(D FileException) on error.
+ * Throws: `FileException` on error.
  */
 version(Windows) string getcwd() @trusted
 {
@@ -3480,13 +3480,13 @@ version(StdDdoc)
     {
         @safe:
         /++
-            Constructs a $(D DirEntry) for the given file (or directory).
+            Constructs a `DirEntry` for the given file (or directory).
 
             Params:
                 path = The file (or directory) to get a DirEntry for.
 
             Throws:
-                $(D FileException) if the file does not exist.
+                `FileException` if the file does not exist.
         +/
         this(string path);
 
@@ -3500,7 +3500,7 @@ version(StdDdoc)
         }
 
         /++
-            Returns the path to the file represented by this $(D DirEntry).
+            Returns the path to the file represented by this `DirEntry`.
 
 Example:
 --------------------
@@ -3515,7 +3515,7 @@ assert(de2.name == "/usr/share/include");
 
 
         /++
-            Returns whether the file represented by this $(D DirEntry) is a
+            Returns whether the file represented by this `DirEntry` is a
             directory.
 
 Example:
@@ -3531,16 +3531,16 @@ assert(de2.isDir);
 
 
         /++
-            Returns whether the file represented by this $(D DirEntry) is a file.
+            Returns whether the file represented by this `DirEntry` is a file.
 
             On Windows, if a file is not a directory, then it's a file. So,
-            either $(D isFile) or $(D isDir) will return $(D true).
+            either `isFile` or `isDir` will return `true`.
 
-            On Posix systems, if $(D isFile) is $(D true), that indicates that
+            On Posix systems, if `isFile` is `true`, that indicates that
             the file is a regular file (e.g. not a block not device). So, on
-            Posix systems, it's possible for both $(D isFile) and $(D isDir) to
-            be $(D false) for a particular file (in which case, it's a special
-            file). You can use $(D attributes) or $(D statBuf) to get more
+            Posix systems, it's possible for both `isFile` and `isDir` to
+            be `false` for a particular file (in which case, it's a special
+            file). You can use `attributes` or `statBuf` to get more
             information about a special file (see the stat man page for more
             details).
 
@@ -3556,16 +3556,16 @@ assert(!de2.isFile);
         @property bool isFile();
 
         /++
-            Returns whether the file represented by this $(D DirEntry) is a
+            Returns whether the file represented by this `DirEntry` is a
             symbolic link.
 
-            On Windows, return $(D true) when the file is either a symbolic
+            On Windows, return `true` when the file is either a symbolic
             link or a junction point.
           +/
         @property bool isSymlink();
 
         /++
-            Returns the size of the the file represented by this $(D DirEntry)
+            Returns the size of the the file represented by this `DirEntry`
             in bytes.
           +/
         @property ulong size();
@@ -3574,50 +3574,50 @@ assert(!de2.isFile);
             $(BLUE This function is Windows-Only.)
 
             Returns the creation time of the file represented by this
-            $(D DirEntry).
+            `DirEntry`.
           +/
         @property SysTime timeCreated() const;
 
         /++
-            Returns the time that the file represented by this $(D DirEntry) was
+            Returns the time that the file represented by this `DirEntry` was
             last accessed.
 
             Note that many file systems do not update the access time for files
             (generally for performance reasons), so there's a good chance that
-            $(D timeLastAccessed) will return the same value as
-            $(D timeLastModified).
+            `timeLastAccessed` will return the same value as
+            `timeLastModified`.
           +/
         @property SysTime timeLastAccessed();
 
         /++
-            Returns the time that the file represented by this $(D DirEntry) was
+            Returns the time that the file represented by this `DirEntry` was
             last modified.
           +/
         @property SysTime timeLastModified();
 
         /++
-            Returns the _attributes of the file represented by this $(D DirEntry).
+            Returns the _attributes of the file represented by this `DirEntry`.
 
             Note that the file _attributes on Windows and Posix systems are
             completely different. On, Windows, they're what is returned by
-            $(D GetFileAttributes)
+            `GetFileAttributes`
             $(HTTP msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx, GetFileAttributes)
-            Whereas, an Posix systems, they're the $(D st_mode) value which is
-            part of the $(D stat) struct gotten by calling $(D stat).
+            Whereas, an Posix systems, they're the `st_mode` value which is
+            part of the `stat` struct gotten by calling `stat`.
 
-            On Posix systems, if the file represented by this $(D DirEntry) is a
+            On Posix systems, if the file represented by this `DirEntry` is a
             symbolic link, then _attributes are the _attributes of the file
             pointed to by the symbolic link.
           +/
         @property uint attributes();
 
         /++
-            On Posix systems, if the file represented by this $(D DirEntry) is a
-            symbolic link, then $(D linkAttributes) are the attributes of the
-            symbolic link itself. Otherwise, $(D linkAttributes) is identical to
-            $(D attributes).
+            On Posix systems, if the file represented by this `DirEntry` is a
+            symbolic link, then `linkAttributes` are the attributes of the
+            symbolic link itself. Otherwise, `linkAttributes` is identical to
+            `attributes`.
 
-            On Windows, $(D linkAttributes) is identical to $(D attributes). It
+            On Windows, `linkAttributes` is identical to `attributes`. It
             exists on Windows so that you don't have to special-case code for
             Windows when dealing with symbolic links.
           +/
@@ -3629,7 +3629,7 @@ assert(!de2.isFile);
         /++
             $(BLUE This function is Posix-Only.)
 
-            The $(D stat) struct gotten from calling $(D stat).
+            The `stat` struct gotten from calling `stat`.
           +/
         @property stat_t statBuf();
     }
@@ -4036,7 +4036,7 @@ alias PreserveAttributes = Flag!"preserveAttributes";
 
 version (StdDdoc)
 {
-    /// Defaults to $(D Yes.preserveAttributes) on Windows, and the opposite on all other platforms.
+    /// Defaults to `Yes.preserveAttributes` on Windows, and the opposite on all other platforms.
     PreserveAttributes preserveAttributesDefault;
 }
 else version(Windows)
@@ -4049,9 +4049,9 @@ else
 }
 
 /***************************************************
-Copy file $(D from) _to file $(D to). File timestamps are preserved.
-File attributes are preserved, if $(D preserve) equals $(D Yes.preserveAttributes).
-On Windows only $(D Yes.preserveAttributes) (the default on Windows) is supported.
+Copy file `from` _to file `to`. File timestamps are preserved.
+File attributes are preserved, if `preserve` equals `Yes.preserveAttributes`.
+On Windows only `Yes.preserveAttributes` (the default on Windows) is supported.
 If the target file exists, it is overwritten.
 
 Params:
@@ -4059,7 +4059,7 @@ Params:
     to = string or range of characters representing the target file name
     preserve = whether to _preserve the file attributes
 
-Throws: $(D FileException) on error.
+Throws: `FileException` on error.
  */
 void copy(RF, RT)(RF from, RT to, PreserveAttributes preserve = preserveAttributesDefault)
 if (isInputRange!RF && !isInfinite!RF && isSomeChar!(ElementEncodingType!RF) && !isConvertibleToString!RF &&
@@ -4247,7 +4247,7 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
     recursively.
 
     Throws:
-        $(D FileException) if there is an error (including if the given
+        `FileException` if there is an error (including if the given
         file is not a directory).
  +/
 void rmdirRecurse(in char[] pathname)
@@ -4382,7 +4382,7 @@ enum SpanMode
     $(B pre)-order), i.e. the content of any subdirectory is spanned
     right after that subdirectory itself.
 
-    Note that $(D SpanMode.breadth) will not result in all directory
+    Note that `SpanMode.breadth` will not result in all directory
     members occurring before any subdirectory members, i.e. it is not
     _true
     $(HTTPS en.wikipedia.org/wiki/Tree_traversal#Breadth-first_search,
@@ -4681,9 +4681,9 @@ public:
     void popFront() { impl.popFront(); }
 }
 /++
-    Returns an input range of $(D DirEntry) that lazily iterates a given directory,
+    Returns an input range of `DirEntry` that lazily iterates a given directory,
     also provides two ways of foreach iteration. The iteration variable can be of
-    type $(D string) if only the name is needed, or $(D DirEntry)
+    type `string` if only the name is needed, or `DirEntry`
     if additional details are needed. The span _mode dictates how the
     directory is traversed. The name of each iterated directory entry
     contains the absolute or relative _path (depending on _pathname).
@@ -4708,7 +4708,7 @@ public:
                          iterated over.
 
     Throws:
-        $(D FileException) if the directory does not exist.
+        `FileException` if the directory does not exist.
 
 Example:
 --------------------
@@ -4755,7 +4755,7 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
     return DirIterator(path, mode, followSymlink);
 }
 
-/// Duplicate functionality of D1's $(D std.file.listdir()):
+/// Duplicate functionality of D1's `std.file.listdir()`:
 @safe unittest
 {
     string[] listdir(string pathname)
@@ -5038,20 +5038,20 @@ slurp(Types...)(string filename, in char[] format)
 Returns the path to a directory for temporary files.
 
 On Windows, this function returns the result of calling the Windows API function
-$(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/aa364992.aspx, $(D GetTempPath)).
+$(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/aa364992.aspx, `GetTempPath`).
 
 On POSIX platforms, it searches through the following list of directories
 and returns the first one which is found to exist:
 $(OL
-    $(LI The directory given by the $(D TMPDIR) environment variable.)
-    $(LI The directory given by the $(D TEMP) environment variable.)
-    $(LI The directory given by the $(D TMP) environment variable.)
-    $(LI $(D /tmp))
-    $(LI $(D /var/tmp))
-    $(LI $(D /usr/tmp))
+    $(LI The directory given by the `TMPDIR` environment variable.)
+    $(LI The directory given by the `TEMP` environment variable.)
+    $(LI The directory given by the `TMP` environment variable.)
+    $(LI `/tmp`)
+    $(LI `/var/tmp`)
+    $(LI `/usr/tmp`)
 )
 
-On all platforms, $(D tempDir) returns $(D ".") on failure, representing
+On all platforms, `tempDir` returns `"."` on failure, representing
 the current working directory.
 
 The return value of the function is cached, so the procedures described
@@ -5060,8 +5060,8 @@ subsequent runs will return the same string, regardless of whether
 environment variables and directory structures have changed in the
 meantime.
 
-The POSIX $(D tempDir) algorithm is inspired by Python's
-$(LINK2 http://docs.python.org/library/tempfile.html#tempfile.tempdir, $(D tempfile.tempdir)).
+The POSIX `tempDir` algorithm is inspired by Python's
+$(LINK2 http://docs.python.org/library/tempfile.html#tempfile.tempdir, `tempfile.tempdir`).
 */
 string tempDir() @trusted
 {

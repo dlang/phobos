@@ -315,10 +315,10 @@ For example, a pointer to an integer must be 4-byte aligned, so there are 2 bits
 One can store a 2-bit integer there.
 
 The example above creates a tagged pointer in the struct A. The pointer is of type
-$(D uint*) as specified by the first argument, and is named x, as specified by the second
+`uint*` as specified by the first argument, and is named x, as specified by the second
 argument.
 
-Following arguments works the same way as $(D bitfield)'s. The bitfield must fit into the
+Following arguments works the same way as `bitfield`'s. The bitfield must fit into the
 bits known to be zero because of the pointer alignment.
 */
 
@@ -351,7 +351,7 @@ For example, a pointer to an integer must be 4-byte aligned, so there are 2 bits
 One can store a 2-bit integer there.
 
 The example above creates a tagged reference to an Object in the struct A. This expects the same parameters
-as $(D taggedPointer), except the first argument which must be a class type instead of a pointer type.
+as `taggedPointer`, except the first argument which must be a class type instead of a pointer type.
 */
 
 template taggedClassRef(T, string name, Ts...)
@@ -1083,7 +1083,7 @@ public:
     }
 
     /**********************************************
-     * Sets the amount of bits in the $(D BitArray).
+     * Sets the amount of bits in the `BitArray`.
      * $(RED Warning: increasing length may overwrite bits in
      * final word up to the next word boundary. i.e. D dynamic
      * array extension semantics are not followed.)
@@ -1109,7 +1109,7 @@ public:
     }
 
     /**********************************************
-     * Gets the $(D i)'th bit in the $(D BitArray).
+     * Gets the `i`'th bit in the `BitArray`.
      */
     bool opIndex(size_t i) const @nogc pure nothrow
     in
@@ -1137,7 +1137,7 @@ public:
     }
 
     /**********************************************
-     * Sets the $(D i)'th bit in the $(D BitArray).
+     * Sets the `i`'th bit in the `BitArray`.
      */
     bool opIndexAssign(bool b, size_t i) @nogc pure nothrow
     in
@@ -1154,8 +1154,8 @@ public:
     }
 
     /**
-      Sets all the values in the $(D BitArray) to the
-      value specified by $(D val).
+      Sets all the values in the `BitArray` to the
+      value specified by `val`.
      */
     void opSliceAssign(bool val)
     {
@@ -1186,9 +1186,9 @@ public:
     }
 
     /**
-      Sets the bits of a slice of $(D BitArray) starting
+      Sets the bits of a slice of `BitArray` starting
       at index `start` and ends at index ($D end - 1)
-      with the values specified by $(D val).
+      with the values specified by `val`.
      */
     void opSliceAssign(bool val, size_t start, size_t end)
     in
@@ -1266,7 +1266,7 @@ public:
     }
 
     /**
-      Flips all the bits in the $(D BitArray)
+      Flips all the bits in the `BitArray`
      */
     void flip()
     {
@@ -1317,7 +1317,7 @@ public:
     }
 
     /**********************************************
-     * Counts all the set bits in the $(D BitArray)
+     * Counts all the set bits in the `BitArray`
      */
     size_t count()
     {
@@ -1340,7 +1340,7 @@ public:
     }
 
     /**********************************************
-     * Duplicates the $(D BitArray) and its contents.
+     * Duplicates the `BitArray` and its contents.
      */
     @property BitArray dup() const pure nothrow
     {
@@ -1371,7 +1371,7 @@ public:
     }
 
     /**********************************************
-     * Support for $(D foreach) loops for $(D BitArray).
+     * Support for `foreach` loops for `BitArray`.
      */
     int opApply(scope int delegate(ref bool) dg)
     {
@@ -1469,7 +1469,7 @@ public:
 
 
     /**********************************************
-     * Reverses the bits of the $(D BitArray).
+     * Reverses the bits of the `BitArray`.
      */
     @property BitArray reverse() @nogc pure nothrow
     out (result)
@@ -1513,7 +1513,7 @@ public:
 
 
     /**********************************************
-     * Sorts the $(D BitArray)'s elements.
+     * Sorts the `BitArray`'s elements.
      */
     @property BitArray sort() @nogc pure nothrow
     out (result)
@@ -1574,7 +1574,7 @@ public:
 
 
     /***************************************
-     * Support for operators == and != for $(D BitArray).
+     * Support for operators == and != for `BitArray`.
      */
     bool opEquals(const ref BitArray a2) const @nogc pure nothrow
     {
@@ -1621,7 +1621,7 @@ public:
     }
 
     /***************************************
-     * Supports comparison operators for $(D BitArray).
+     * Supports comparison operators for `BitArray`.
      */
     int opCmp(BitArray a2) const @nogc pure nothrow
     {
@@ -1722,7 +1722,7 @@ public:
     }
 
     /***************************************
-     * Support for hashing for $(D BitArray).
+     * Support for hashing for `BitArray`.
      */
     size_t toHash() const @nogc pure nothrow
     {
@@ -1742,7 +1742,7 @@ public:
     }
 
     /***************************************
-     * Convert to $(D void[]).
+     * Convert to `void[]`.
      */
     void[] opCast(T : void[])() @nogc pure nothrow
     {
@@ -1750,7 +1750,7 @@ public:
     }
 
     /***************************************
-     * Convert to $(D size_t[]).
+     * Convert to `size_t[]`.
      */
     size_t[] opCast(T : size_t[])() @nogc pure nothrow
     {
@@ -1770,7 +1770,7 @@ public:
     }
 
     /***************************************
-     * Support for unary operator ~ for $(D BitArray).
+     * Support for unary operator ~ for `BitArray`.
      */
     BitArray opCom() const pure nothrow
     {
@@ -1807,7 +1807,7 @@ public:
 
 
     /***************************************
-     * Support for binary bitwise operators for $(D BitArray).
+     * Support for binary bitwise operators for `BitArray`.
      */
     BitArray opBinary(string op)(const BitArray e2) const pure nothrow
         if (op == "-" || op == "&" || op == "|" || op == "^")
@@ -1913,7 +1913,7 @@ public:
 
 
     /***************************************
-     * Support for operator op= for $(D BitArray).
+     * Support for operator op= for `BitArray`.
      */
     BitArray opOpAssign(string op)(const BitArray e2) @nogc pure nothrow
         if (op == "-" || op == "&" || op == "|" || op == "^")
@@ -2033,7 +2033,7 @@ public:
     }
 
     /***************************************
-     * Support for operator ~= for $(D BitArray).
+     * Support for operator ~= for `BitArray`.
      * $(RED Warning: This will overwrite a bit in the final word
      * of the current underlying data regardless of whether it is
      * shared between BitArray objects. i.e. D dynamic array
@@ -2103,7 +2103,7 @@ public:
     }
 
     /***************************************
-     * Support for binary operator ~ for $(D BitArray).
+     * Support for binary operator ~ for `BitArray`.
      */
     BitArray opCat(bool b) const pure nothrow
     {
@@ -2242,7 +2242,7 @@ public:
     }
 
     /**
-     * Operator $(D <<=) support.
+     * Operator `<<=` support.
      *
      * Shifts all the bits in the array to the left by the given number of
      * bits.  The leftmost bits are dropped, and 0's are appended to the end
@@ -2276,7 +2276,7 @@ public:
     }
 
     /**
-     * Operator $(D >>=) support.
+     * Operator `>>=` support.
      *
      * Shifts all the bits in the array to the right by the given number of
      * bits.  The rightmost bits are dropped, and 0's are inserted at the back
@@ -2803,14 +2803,14 @@ if (canSwapEndianness!T)
 
 /++
     Converts the given value from the native endianness to big endian and
-    returns it as a $(D ubyte[n]) where $(D n) is the size of the given type.
+    returns it as a `ubyte[n]` where `n` is the size of the given type.
 
-    Returning a $(D ubyte[n]) helps prevent accidentally using a swapped value
+    Returning a `ubyte[n]` helps prevent accidentally using a swapped value
     as a regular one (and in the case of floating point values, it's necessary,
     because the FPU will mess up any swapped floating point values. So, you
     can't actually have swapped floating point values as floating point values).
 
-    $(D real) is not supported, because its size is implementation-dependent
+    `real` is not supported, because its size is implementation-dependent
     and therefore could vary from machine to machine (which could make it
     unusable if you tried to transfer it to another machine).
   +/
@@ -2926,12 +2926,12 @@ if (isFloatOrDouble!T)
 
 /++
     Converts the given value from big endian to the native endianness and
-    returns it. The value is given as a $(D ubyte[n]) where $(D n) is the size
+    returns it. The value is given as a `ubyte[n]` where `n` is the size
     of the target type. You must give the target type as a template argument,
     because there are multiple types with the same size and so the type of the
     argument is not enough to determine the return type.
 
-    Taking a $(D ubyte[n]) helps prevent accidentally using a swapped value
+    Taking a `ubyte[n]` helps prevent accidentally using a swapped value
     as a regular one (and in the case of floating point values, it's necessary,
     because the FPU will mess up any swapped floating point values. So, you
     can't actually have swapped floating point values as floating point values).
@@ -2981,9 +2981,9 @@ if (isFloatOrDouble!T && n == T.sizeof)
 
 /++
     Converts the given value from the native endianness to little endian and
-    returns it as a $(D ubyte[n]) where $(D n) is the size of the given type.
+    returns it as a `ubyte[n]` where `n` is the size of the given type.
 
-    Returning a $(D ubyte[n]) helps prevent accidentally using a swapped value
+    Returning a `ubyte[n]` helps prevent accidentally using a swapped value
     as a regular one (and in the case of floating point values, it's necessary,
     because the FPU will mess up any swapped floating point values. So, you
     can't actually have swapped floating point values as floating point values).
@@ -3069,17 +3069,17 @@ if (isFloatOrDouble!T)
 
 /++
     Converts the given value from little endian to the native endianness and
-    returns it. The value is given as a $(D ubyte[n]) where $(D n) is the size
+    returns it. The value is given as a `ubyte[n]` where `n` is the size
     of the target type. You must give the target type as a template argument,
     because there are multiple types with the same size and so the type of the
     argument is not enough to determine the return type.
 
-    Taking a $(D ubyte[n]) helps prevent accidentally using a swapped value
+    Taking a `ubyte[n]` helps prevent accidentally using a swapped value
     as a regular one (and in the case of floating point values, it's necessary,
     because the FPU will mess up any swapped floating point values. So, you
     can't actually have swapped floating point values as floating point values).
 
-    $(D real) is not supported, because its size is implementation-dependent
+    `real` is not supported, because its size is implementation-dependent
     and therefore could vary from machine to machine (which could make it
     unusable if you tried to transfer it to another machine).
   +/
@@ -3214,18 +3214,18 @@ private template canSwapEndianness(T)
 }
 
 /++
-    Takes a range of $(D ubyte)s and converts the first $(D T.sizeof) bytes to
-    $(D T). The value returned is converted from the given endianness to the
+    Takes a range of `ubyte`s and converts the first `T.sizeof` bytes to
+    `T`. The value returned is converted from the given endianness to the
     native endianness. The range is not consumed.
 
     Params:
-        T     = The integral type to convert the first $(D T.sizeof) bytes to.
+        T     = The integral type to convert the first `T.sizeof` bytes to.
         endianness = The endianness that the bytes are assumed to be in.
         range = The range to read from.
         index = The index to start reading from (instead of starting at the
                 front). If index is a pointer, then it is updated to the index
                 after the bytes read. The overloads with index are only
-                available if $(D hasSlicing!R) is $(D true).
+                available if `hasSlicing!R` is `true`.
   +/
 
 T peek(T, Endian endianness = Endian.bigEndian, R)(R range)
@@ -3520,13 +3520,13 @@ if (canSwapEndianness!T &&
 
 
 /++
-    Takes a range of $(D ubyte)s and converts the first $(D T.sizeof) bytes to
-    $(D T). The value returned is converted from the given endianness to the
-    native endianness. The $(D T.sizeof) bytes which are read are consumed from
+    Takes a range of `ubyte`s and converts the first `T.sizeof` bytes to
+    `T`. The value returned is converted from the given endianness to the
+    native endianness. The `T.sizeof` bytes which are read are consumed from
     the range.
 
     Params:
-        T     = The integral type to convert the first $(D T.sizeof) bytes to.
+        T     = The integral type to convert the first `T.sizeof` bytes to.
         endianness = The endianness that the bytes are assumed to be in.
         range = The range to read from.
   +/
@@ -3791,11 +3791,11 @@ if (canSwapEndianness!T && isInputRange!R && is(ElementType!R : const ubyte))
 
 /++
     Takes an integral value, converts it to the given endianness, and writes it
-    to the given range of $(D ubyte)s as a sequence of $(D T.sizeof) $(D ubyte)s
-    starting at index. $(D hasSlicing!R) must be $(D true).
+    to the given range of `ubyte`s as a sequence of `T.sizeof` `ubyte`s
+    starting at index. `hasSlicing!R` must be `true`.
 
     Params:
-        T     = The integral type to convert the first $(D T.sizeof) bytes to.
+        T     = The integral type to convert the first `T.sizeof` bytes to.
         endianness = The endianness to _write the bytes in.
         range = The range to _write to.
         value = The value to _write.
@@ -4136,12 +4136,12 @@ if (canSwapEndianness!T &&
 
 /++
     Takes an integral value, converts it to the given endianness, and appends
-    it to the given range of $(D ubyte)s (using $(D put)) as a sequence of
-    $(D T.sizeof) $(D ubyte)s starting at index. $(D hasSlicing!R) must be
-    $(D true).
+    it to the given range of `ubyte`s (using `put`) as a sequence of
+    `T.sizeof` `ubyte`s starting at index. `hasSlicing!R` must be
+    `true`.
 
     Params:
-        T     = The integral type to convert the first $(D T.sizeof) bytes to.
+        T     = The integral type to convert the first `T.sizeof` bytes to.
         endianness = The endianness to write the bytes in.
         range = The range to _append to.
         value = The value to _append.
@@ -4344,7 +4344,7 @@ if (canSwapEndianness!T && isOutputRange!(R, ubyte))
 }
 
 /**
-Counts the number of set bits in the binary representation of $(D value).
+Counts the number of set bits in the binary representation of `value`.
 For signed integers, the sign bit is included in the count.
 */
 private uint countBitsSet(T)(T value) @nogc pure nothrow
@@ -4482,7 +4482,7 @@ private struct BitsSet(T)
 }
 
 /**
-Range that iterates the indices of the set bits in $(D value).
+Range that iterates the indices of the set bits in `value`.
 Index 0 corresponds to the least significant bit.
 For signed integers, the highest index corresponds to the sign bit.
 */

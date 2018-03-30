@@ -3,9 +3,9 @@ Ddoc
 $(P Phobos is the standard runtime library that comes with the D language
 compiler.)
 
-$(P Generally, the $(D std) namespace is used for the main modules in the
-Phobos standard library. The $(D etc) namespace is used for external C/C++
-library bindings. The $(D core) namespace is used for low-level D runtime
+$(P Generally, the `std` namespace is used for the main modules in the
+Phobos standard library. The `etc` namespace is used for external C/C++
+library bindings. The `core` namespace is used for low-level D runtime
 functions.)
 
 $(P The following table is a quick reference guide for which Phobos modules to
@@ -41,7 +41,7 @@ $(BOOKTABLE ,
         $(TD Convenient operations commonly used with built-in arrays.
             Note that many common array operations are subsets of more generic
             algorithms that work with arbitrary ranges, so they are found in
-            $(D std.algorithm).
+            `std.algorithm`.
         )
     )
     $(LEADINGROW Containers)

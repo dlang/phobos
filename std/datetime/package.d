@@ -20,7 +20,7 @@
         $(LI Various helper functions.)
     )
 
-    Closely related to std.datetime is <a href="core_time.html">$(D core.time)</a>,
+    Closely related to std.datetime is <a href="core_time.html">`core.time`</a>,
     and some of the time types used in std.datetime come from there - such as
     $(REF Duration, core,time), $(REF TickDuration, core,time), and
     $(REF FracSec, core,time).
@@ -61,9 +61,9 @@
 
     To get the current time, use $(REF Clock.currTime,std,_datetime,systime).
     It will return the current time as a $(REF SysTime,std,_datetime,systime). To
-    print it, $(D toString) is sufficient, but if using $(D toISOString),
-    $(D toISOExtString), or $(D toSimpleString), use the corresponding
-    $(D fromISOString), $(D fromISOExtString), or $(D fromSimpleString) to
+    print it, `toString` is sufficient, but if using `toISOString`,
+    `toISOExtString`, or `toSimpleString`, use the corresponding
+    `fromISOString`, `fromISOExtString`, or `fromSimpleString` to
     create a $(REF SysTime,std,_datetime,systime) from the string.
 
 --------------------
@@ -74,13 +74,13 @@ auto restoredTime = SysTime.fromISOExtString(timeString);
 
     Various functions take a string (or strings) to represent a unit of time
     (e.g. $(D convert!("days", "hours")(numDays))). The valid strings to use
-    with such functions are $(D "years"), $(D "months"), $(D "weeks"),
-    $(D "days"), $(D "hours"), $(D "minutes"), $(D "seconds"),
-    $(D "msecs") (milliseconds), $(D "usecs") (microseconds),
-    $(D "hnsecs") (hecto-nanoseconds - i.e. 100 ns), or some subset thereof.
-    There are a few functions in core.time which take $(D "nsecs"), but because
+    with such functions are `"years"`, `"months"`, `"weeks"`,
+    `"days"`, `"hours"`, `"minutes"`, `"seconds"`,
+    `"msecs"` (milliseconds), `"usecs"` (microseconds),
+    `"hnsecs"` (hecto-nanoseconds - i.e. 100 ns), or some subset thereof.
+    There are a few functions in core.time which take `"nsecs"`, but because
     nothing in std.datetime has precision greater than hnsecs, and very little
-    in core.time does, no functions in std.datetime accept $(D "nsecs").
+    in core.time does, no functions in std.datetime accept `"nsecs"`.
     To remember which units are abbreviated and which aren't,
     all units seconds and greater use their full names, and all
     sub-second units are abbreviated (since they'd be rather long if they
@@ -162,10 +162,10 @@ import std.typecons : Flag, Yes, No;
     Used by StopWatch to indicate whether it should start immediately upon
     construction.
 
-    If set to $(D AutoStart.no), then the stopwatch is not started when it is
+    If set to `AutoStart.no`, then the stopwatch is not started when it is
     constructed.
 
-    Otherwise, if set to $(D AutoStart.yes), then the stopwatch is started when
+    Otherwise, if set to `AutoStart.yes`, then the stopwatch is started when
     it is constructed.
   +/
 deprecated("Use std.datetime.stopwatch.AutoStart.") alias AutoStart = Flag!"autoStart";
@@ -181,17 +181,17 @@ deprecated("Use std.datetime.stopwatch.AutoStart.") alias AutoStart = Flag!"auto
           from the documentation in October 2018 and fully removed from Phobos
           in October 2019.)
 
-    $(D StopWatch) measures time as precisely as possible.
+    `StopWatch` measures time as precisely as possible.
 
     This class uses a high-performance counter. On Windows systems, it uses
-    $(D QueryPerformanceCounter), and on Posix systems, it uses
-    $(D clock_gettime) if available, and $(D gettimeofday) otherwise.
+    `QueryPerformanceCounter`, and on Posix systems, it uses
+    `clock_gettime` if available, and `gettimeofday` otherwise.
 
-    But the precision of $(D StopWatch) differs from system to system. It is
+    But the precision of `StopWatch` differs from system to system. It is
     impossible to for it to be the same from system to system since the precision
     of the system clock varies from system to system, and other system-dependent
     and situation-dependent stuff (such as the overhead of a context switch
-    between threads) can also affect $(D StopWatch)'s accuracy.
+    between threads) can also affect `StopWatch`'s accuracy.
   +/
 deprecated("Use std.datetime.stopwatch.StopWatch.")
 @safe struct StopWatch
@@ -445,9 +445,9 @@ deprecated @safe unittest
 
     Returns:
         The amount of time (as a $(REF TickDuration, core,time)) that it took to
-        call each function $(D n) times. The first value is the length of time
-        that it took to call $(D fun[0]) $(D n) times. The second value is the
-        length of time it took to call $(D fun[1]) $(D n) times. Etc.
+        call each function `n` times. The first value is the length of time
+        that it took to call `fun[0]` `n` times. The second value is the
+        length of time it took to call `fun[1]` `n` times. Etc.
 
     Note that casting the TickDurations to $(REF Duration, core,time)s will make
     the results easier to deal with (and it may change in the future that
@@ -613,7 +613,7 @@ deprecated @system unittest
     and stopping it when its return value goes out of scope and is destroyed.
 
     When the value that is returned by this function is destroyed,
-    $(D func) will run. $(D func) is a unary function that takes a
+    `func` will run. `func` is a unary function that takes a
     $(REF TickDuration, core,time).
 
     See_Also:

@@ -54,10 +54,10 @@ import std.typecons : Flag;
     Used by StopWatch to indicate whether it should start immediately upon
     construction.
 
-    If set to $(D AutoStart.no), then the StopWatch is not started when it is
+    If set to `AutoStart.no`, then the StopWatch is not started when it is
     constructed.
 
-    Otherwise, if set to $(D AutoStart.yes), then the StopWatch is started when
+    Otherwise, if set to `AutoStart.yes`, then the StopWatch is started when
     it is constructed.
   +/
 alias AutoStart = Flag!"autoStart";
@@ -86,7 +86,7 @@ public:
         Constructs a StopWatch. Whether it starts immediately depends on the
         $(LREF AutoStart) argument.
 
-        If $(D StopWatch.init) is used, then the constructed StopWatch isn't
+        If `StopWatch.init` is used, then the constructed StopWatch isn't
         running (and can't be, since no constructor ran).
       +/
     this(AutoStart autostart) @safe nothrow @nogc
@@ -239,7 +239,7 @@ public:
        does include $(I all) of the time that it was running and not just the
        time since it was started last.
 
-       Calling $(LREF reset) will reset this to $(D Duration.zero).
+       Calling $(LREF reset) will reset this to `Duration.zero`.
       +/
     Duration peek() @safe const nothrow @nogc
     {
@@ -404,9 +404,9 @@ private:
 
     Returns:
         The amount of time (as a $(REF Duration,core,time)) that it took to call
-        each function $(D n) times. The first value is the length of time that
-        it took to call $(D fun[0]) $(D n) times. The second value is the length
-        of time it took to call $(D fun[1]) $(D n) times. Etc.
+        each function `n` times. The first value is the length of time that
+        it took to call `fun[0]` `n` times. The second value is the length
+        of time it took to call `fun[1]` `n` times. Etc.
   +/
 Duration[fun.length] benchmark(fun...)(uint n)
 {

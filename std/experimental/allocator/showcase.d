@@ -15,8 +15,8 @@ import std.traits : hasMember;
 
 /**
 
-Allocator that uses stack allocation for up to $(D stackSize) bytes and
-then falls back to $(D Allocator). Defined as:
+Allocator that uses stack allocation for up to `stackSize` bytes and
+then falls back to `Allocator`. Defined as:
 
 ----
 alias StackFront(size_t stackSize, Allocator) =

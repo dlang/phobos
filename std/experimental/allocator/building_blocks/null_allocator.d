@@ -5,7 +5,7 @@ Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/_null_allocator.d
 module std.experimental.allocator.building_blocks.null_allocator;
 
 /**
-$(D NullAllocator) is an emphatically empty implementation of the allocator
+`NullAllocator` is an emphatically empty implementation of the allocator
 interface. Although it has no direct use, it is useful as a "terminator" in
 composite allocators.
 */
@@ -13,23 +13,23 @@ struct NullAllocator
 {
     import std.typecons : Ternary;
     /**
-    $(D NullAllocator) advertises a relatively large _alignment equal to 64 KB.
-    This is because $(D NullAllocator) never actually needs to honor this
-    alignment and because composite allocators using $(D NullAllocator)
+    `NullAllocator` advertises a relatively large _alignment equal to 64 KB.
+    This is because `NullAllocator` never actually needs to honor this
+    alignment and because composite allocators using `NullAllocator`
     shouldn't be unnecessarily constrained.
     */
     enum uint alignment = 64 * 1024;
-    // /// Returns $(D n).
+    // /// Returns `n`.
     //size_t goodAllocSize(size_t n) shared const
     //{ return .goodAllocSize(this, n); }
-    /// Always returns $(D null).
+    /// Always returns `null`.
     void[] allocate(size_t) shared { return null; }
-    /// Always returns $(D null).
+    /// Always returns `null`.
     void[] alignedAllocate(size_t, uint) shared { return null; }
-    /// Always returns $(D null).
+    /// Always returns `null`.
     void[] allocateAll() shared { return null; }
     /**
-    These methods return $(D false).
+    These methods return `false`.
     Precondition: $(D b is null). This is because there is no other possible
     legitimate input.
     */
@@ -44,11 +44,11 @@ struct NullAllocator
     pure nothrow @nogc
     bool alignedReallocate(ref void[] b, size_t, uint) shared
     { assert(b is null); return false; }
-    /// Returns $(D Ternary.no).
+    /// Returns `Ternary.no`.
     pure nothrow @safe @nogc
     Ternary owns(const void[]) shared const { return Ternary.no; }
     /**
-    Returns $(D Ternary.no).
+    Returns `Ternary.no`.
     */
     pure nothrow @safe @nogc
     Ternary resolveInternalPointer(const void*, ref void[]) shared const
@@ -65,12 +65,12 @@ struct NullAllocator
     pure nothrow @safe @nogc
     bool deallocateAll() shared { return true; }
     /**
-    Returns $(D Ternary.yes).
+    Returns `Ternary.yes`.
     */
     pure nothrow @safe @nogc
     Ternary empty() shared const { return Ternary.yes; }
     /**
-    Returns the $(D shared) global instance of the $(D NullAllocator).
+    Returns the `shared` global instance of the `NullAllocator`.
     */
     static shared NullAllocator instance;
 }

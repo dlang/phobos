@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /++
-    $(P The $(D std.uni) module provides an implementation
+    $(P The `std.uni` module provides an implementation
     of fundamental Unicode algorithms and data structures.
     This doesn't include UTF encoding and decoding primitives,
     see $(REF decode, std,_utf) and $(REF encode, std,_utf) in $(MREF std, utf)
@@ -305,11 +305,11 @@ $(TR $(TD Building blocks) $(TD
     $(P $(DEF Code unit) The minimal bit combination that can represent
         a unit of encoded text for processing or interchange.
         Depending on the encoding this could be:
-        8-bit code units in the UTF-8 ($(D char)),
-        16-bit code units in the UTF-16 ($(D wchar)),
-        and 32-bit code units in the UTF-32 ($(D dchar)).
+        8-bit code units in the UTF-8 (`char`),
+        16-bit code units in the UTF-16 (`wchar`),
+        and 32-bit code units in the UTF-32 (`dchar`).
         $(I Note that in UTF-32, a code unit is a code point
-        and is represented by the D $(D dchar) type.)
+        and is represented by the D `dchar` type.)
     )
     $(P $(DEF Combining character) A character with the General Category
         of Combining Mark(M).
@@ -460,13 +460,13 @@ $(TR $(TD Building blocks) $(TD
         the lower bits as an offset within this page.
 
         Assuming that pages are laid out consequently
-        in one array at $(D pages), the pseudo-code is:
+        in one array at `pages`, the pseudo-code is:
     )
     ---
     auto elemsPerPage = (2 ^^ bits_per_page) / Value.sizeOfInBits;
     pages[index[n >> bits_per_page]][n & (elemsPerPage - 1)];
     ---
-    $(P Where if $(D elemsPerPage) is a power of 2 the whole process is
+    $(P Where if `elemsPerPage` is a power of 2 the whole process is
         a handful of simple instructions and 2 array reads. Subsequent levels
         of the trie are introduced by recursing on this notion - the index array
         is treated as values. The number of bits in index is then again
@@ -475,7 +475,7 @@ $(TR $(TD Building blocks) $(TD
 
     $(P For completeness a level 1 trie is simply an array.
         The current implementation takes advantage of bit-packing values
-        when the range is known to be limited in advance (such as $(D bool)).
+        when the range is known to be limited in advance (such as `bool`).
         See also $(LREF BitPacked) for enforcing it manually.
         The major size advantage however comes from the fact
         that multiple $(B identical pages on every level are merged) by construction.
@@ -483,7 +483,7 @@ $(TR $(TD Building blocks) $(TD
     $(P The process of constructing a trie is more involved and is hidden from
         the user in a form of the convenience functions $(LREF codepointTrie),
         $(LREF codepointSetTrie) and the even more convenient $(LREF toTrie).
-        In general a set or built-in AA with $(D dchar) type
+        In general a set or built-in AA with `dchar` type
         can be turned into a trie. The trie object in this module
         is read-only (immutable); it's effectively frozen after construction.
     )
@@ -1952,8 +1952,8 @@ public template isCodepointSet(T)
 }
 
 /**
-    Tests if $(D T) is a pair of integers that implicitly convert to $(D V).
-    The following code must compile for any pair $(D T):
+    Tests if `T` is a pair of integers that implicitly convert to `V`.
+    The following code must compile for any pair `T`:
     ---
     (T x){ V a = x[0]; V b = x[1];}
     ---
@@ -2009,7 +2009,7 @@ pure:
 
 /**
     $(P
-    $(D InversionList) is a set of $(CODEPOINTS)
+    `InversionList` is a set of $(CODEPOINTS)
     represented as an array of open-right [a, b$(RPAREN)
     intervals (see $(LREF CodepointInterval) above).
     The name comes from the way the representation reads left to right.
@@ -2033,7 +2033,7 @@ pure:
     on $(LINK2 https://en.wikipedia.org/wiki/Run-length_encoding, RLE encoding).
     )
 
-    $(P Sets are value types (just like $(D int) is) thus they
+    $(P Sets are value types (just like `int` is) thus they
         are never aliased.
     )
         Example:
@@ -2057,7 +2057,7 @@ pure:
 
     Note:
     $(P It's not recommended to rely on the template parameters
-    or the exact type of a current $(CODEPOINT) set in $(D std.uni).
+    or the exact type of a current $(CODEPOINT) set in `std.uni`.
     The type and parameters may change when the standard
     allocators design is finalized.
     Use $(LREF isCodepointSet) with templates or just stick with the default
@@ -2197,7 +2197,7 @@ public struct InversionList(SP=GcPolicy)
     }
 
     /**
-        Tests the presence of code point $(D val) in this set.
+        Tests the presence of code point `val` in this set.
     */
     bool opIndex(uint val) const
     {
@@ -2217,7 +2217,7 @@ public struct InversionList(SP=GcPolicy)
     }
 
 
-    // Linear scan for $(D ch). Useful only for small sets.
+    // Linear scan for `ch`. Useful only for small sets.
     // TODO:
     // used internally in std.regex
     // should be properly exposed in a public API ?
@@ -2349,7 +2349,7 @@ public:
     }
 
     /**
-        Tests the presence of codepoint $(D ch) in this set,
+        Tests the presence of codepoint `ch` in this set,
         the same as $(LREF opIndex).
     */
     bool opBinaryRight(string op: "in", U)(U ch) const
@@ -2432,7 +2432,7 @@ public:
 
     /**
         $(P Obtain textual representation of this set in from of
-        open-right intervals and feed it to $(D sink).
+        open-right intervals and feed it to `sink`.
         )
         $(P Used by various standard formatting facilities such as
          $(REF formattedWrite, std,_format), $(REF write, std,_stdio),
@@ -2725,7 +2725,7 @@ public:
 
     /**
         Generates string with D source code of unary function with name of
-        $(D funcName) taking a single $(D dchar) argument. If $(D funcName) is empty
+        `funcName` taking a single `dchar` argument. If `funcName` is empty
         the code is adjusted to be a lambda function.
 
         The function generated tests if the $(CODEPOINT) passed
@@ -3794,8 +3794,8 @@ auto arrayRepr(T)(T x)
 }
 
 /**
-    Maps $(D Key) to a suitable integer index within the range of $(D size_t).
-    The mapping is constructed by applying predicates from $(D Prefix) left to right
+    Maps `Key` to a suitable integer index within the range of `size_t`.
+    The mapping is constructed by applying predicates from `Prefix` left to right
     and concatenating the resulting bits.
 
     The first (leftmost) predicate defines the most significant bits of
@@ -3819,7 +3819,7 @@ template mapTrieIndex(Prefix...)
 }
 
 /*
-    $(D TrieBuilder) is a type used for incremental construction
+    `TrieBuilder` is a type used for incremental construction
     of $(LREF Trie)s.
 
     See $(LREF buildTrie) for generic helpers built on top of it.
@@ -4049,7 +4049,7 @@ private:
 
 public:
     /**
-        Construct a builder, where $(D filler) is a value
+        Construct a builder, where `filler` is a value
         to indicate empty slots (or "not found" condition).
     */
     this(Value filler)
@@ -4066,9 +4066,9 @@ public:
     }
 
     /**
-        Put a value $(D v) into interval as
-        mapped by keys from $(D a) to $(D b).
-        All slots prior to $(D a) are filled with
+        Put a value `v` into interval as
+        mapped by keys from `a` to `b`.
+        All slots prior to `a` are filled with
         the default filler.
     */
     void putRange(Key a, Key b, Value v)
@@ -4080,8 +4080,8 @@ public:
     }
 
     /**
-        Put a value $(D v) into slot mapped by $(D key).
-        All slots prior to $(D key) are filled with the
+        Put a value `v` into slot mapped by `key`.
+        All slots prior to `key` are filled with the
         default filler.
     */
     void putValue(Key key, Value v)
@@ -4155,7 +4155,7 @@ if (isValidPrefixForTrie!(Key, Args)
     }
 
     /**
-        $(P Lookup the $(D key) in this $(D Trie). )
+        $(P Lookup the `key` in this `Trie`. )
 
         $(P The lookup always succeeds if key fits the domain
         provided during construction. The whole domain defined
@@ -4163,7 +4163,7 @@ if (isValidPrefixForTrie!(Key, Args)
         the sentinel (filler) value could be used. )
 
         $(P See $(LREF buildTrie), $(LREF TrieBuilder) for how to
-        define a domain of $(D Trie) keys and the sentinel value. )
+        define a domain of `Trie` keys and the sentinel value. )
 
         Note:
         Domain range-checking is only enabled in debug builds
@@ -4232,10 +4232,10 @@ template callableWith(T)
 }
 
 /*
-    Check if $(D Prefix) is a valid set of predicates
-    for $(D Trie) template having $(D Key) as the type of keys.
+    Check if `Prefix` is a valid set of predicates
+    for `Trie` template having `Key` as the type of keys.
     This requires all predicates to be callable, take
-    single argument of type $(D Key) and return unsigned value.
+    single argument of type `Key` and return unsigned value.
 */
 template isValidPrefixForTrie(Key, Prefix...)
 {
@@ -4244,8 +4244,8 @@ template isValidPrefixForTrie(Key, Prefix...)
 }
 
 /*
-    Check if $(D Args) is a set of maximum key value followed by valid predicates
-    for $(D Trie) template having $(D Key) as the type of keys.
+    Check if `Args` is a set of maximum key value followed by valid predicates
+    for `Trie` template having `Key` as the type of keys.
 */
 template isValidArgsForTrie(Key, Args...)
 {
@@ -4268,10 +4268,10 @@ template isValidArgsForTrie(Key, Args...)
 
 /**
     A shorthand for creating a custom multi-level fixed Trie
-    from a $(D CodepointSet). $(D sizes) are numbers of bits per level,
+    from a `CodepointSet`. `sizes` are numbers of bits per level,
     with the most significant bits used first.
 
-    Note: The sum of $(D sizes) must be equal 21.
+    Note: The sum of `sizes` must be equal 21.
 
     See_Also: $(LREF toTrie), which is even simpler.
 
@@ -4315,14 +4315,14 @@ if (sumOfIntegerTuple!sizes == 21)
 }
 
 /**
-    A slightly more general tool for building fixed $(D Trie)
+    A slightly more general tool for building fixed `Trie`
     for the Unicode data.
 
-    Specifically unlike $(D codepointSetTrie) it's allows creating mappings
-    of $(D dchar) to an arbitrary type $(D T).
+    Specifically unlike `codepointSetTrie` it's allows creating mappings
+    of `dchar` to an arbitrary type `T`.
 
-    Note: Overload taking $(D CodepointSet)s will naturally convert
-    only to bool mapping $(D Trie)s.
+    Note: Overload taking `CodepointSet`s will naturally convert
+    only to bool mapping `Trie`s.
 
     CodepointTrie is the type of Trie as generated by codepointTrie function.
 */
@@ -4430,15 +4430,15 @@ package template cmpK0(alias Pred)
 }
 
 /**
-    The most general utility for construction of $(D Trie)s
-    short of using $(D TrieBuilder) directly.
+    The most general utility for construction of `Trie`s
+    short of using `TrieBuilder` directly.
 
     Provides a number of convenience overloads.
-    $(D Args) is tuple of maximum key value followed by
+    `Args` is tuple of maximum key value followed by
     predicates to construct index from key.
 
-    Alternatively if the first argument is not a value convertible to $(D Key)
-    then the whole tuple of $(D Args) is treated as predicates
+    Alternatively if the first argument is not a value convertible to `Key`
+    then the whole tuple of `Args` is treated as predicates
     and the maximum Key is deduced from predicates.
 */
 private template buildTrie(Value, Key, Args...)
@@ -4464,7 +4464,7 @@ if (isValidArgsForTrie!(Key, Args))
     }
 
     /*
-        Build $(D Trie) from a range of a Key-Value pairs,
+        Build `Trie` from a range of a Key-Value pairs,
         assuming it is sorted by Key as defined by the following lambda:
         ------
         (a, b) => mapTrieIndex!(Prefix)(a) < mapTrieIndex!(Prefix)(b)
@@ -4472,7 +4472,7 @@ if (isValidArgsForTrie!(Key, Args))
         Exception is thrown if it's detected that the above order doesn't hold.
 
         In other words $(LREF mapTrieIndex) should be a
-        monotonically increasing function that maps $(D Key) to an integer.
+        monotonically increasing function that maps `Key` to an integer.
 
         See_Also: $(REF sort, std,_algorithm),
         $(REF SortedRange, std,_range),
@@ -4489,14 +4489,14 @@ if (isValidArgsForTrie!(Key, Args))
     }
 
     /*
-        If $(D Value) is bool (or BitPacked!(bool, x)) then it's possible
-        to build $(D Trie) from a range of open-right intervals of $(D Key)s.
+        If `Value` is bool (or BitPacked!(bool, x)) then it's possible
+        to build `Trie` from a range of open-right intervals of `Key`s.
         The requirement  on the ordering of keys (and the behavior on the
         violation of it) is the same as for Key-Value range overload.
 
-        Intervals denote ranges of !$(D filler) i.e. the opposite of filler.
+        Intervals denote ranges of !`filler` i.e. the opposite of filler.
         If no filler provided keys inside of the intervals map to true,
-        and $(D filler) is false.
+        and `filler` is false.
     */
     auto buildTrie(Range)(Range range, Value filler=Value.init)
         if (is(TypeOfBitPacked!Value ==  bool)
@@ -4522,13 +4522,13 @@ if (isValidArgsForTrie!(Key, Args))
     }
 
     /*
-        If $(D Value) is bool (or BitPacked!(bool, x)) then it's possible
-        to build $(D Trie) simply from an input range of $(D Key)s.
+        If `Value` is bool (or BitPacked!(bool, x)) then it's possible
+        to build `Trie` simply from an input range of `Key`s.
         The requirement  on the ordering of keys (and the behavior on the
         violation of it) is the same as for Key-Value range overload.
 
-        Keys found in range denote !$(D filler) i.e. the opposite of filler.
-        If no filler provided keys map to true, and $(D filler) is false.
+        Keys found in range denote !`filler` i.e. the opposite of filler.
+        If no filler provided keys map to true, and `filler` is false.
     */
     auto buildTrie(Range)(Range range, Value filler=Value.init)
         if (is(TypeOfBitPacked!Value ==  bool)
@@ -4541,7 +4541,7 @@ if (isValidArgsForTrie!(Key, Args))
     }
 
     /*
-        If $(D Key) is unsigned integer $(D Trie) could be constructed from array
+        If `Key` is unsigned integer `Trie` could be constructed from array
         of values where array index serves as key.
     */
     auto buildTrie()(Value[] array, Value filler=Value.init)
@@ -4554,7 +4554,7 @@ if (isValidArgsForTrie!(Key, Args))
     }
 
     /*
-        Builds $(D Trie) from associative array.
+        Builds `Trie` from associative array.
     */
     auto buildTrie(Key, Value)(Value[Key] map, Value filler=Value.init)
     {
@@ -4591,12 +4591,12 @@ public struct MatcherConcept
 {
     /**
         $(P Perform a semantic equivalent 2 operations:
-        decoding a $(CODEPOINT) at front of $(D inp) and testing if
+        decoding a $(CODEPOINT) at front of `inp` and testing if
         it belongs to the set of $(CODEPOINTS) of this matcher. )
 
-        $(P The effect on $(D inp) depends on the kind of function called:)
+        $(P The effect on `inp` depends on the kind of function called:)
 
-        $(P Match. If the codepoint is found in the set then range $(D inp)
+        $(P Match. If the codepoint is found in the set then range `inp`
         is advanced by its size in $(S_LINK Code unit, code units),
         otherwise the range is not modifed.)
 
@@ -4645,7 +4645,7 @@ public struct MatcherConcept
         Advanced feature - provide direct access to a subset of matcher based a
         set of known encoding lengths. Lengths are provided in
         $(S_LINK Code unit, code units). The sub-matcher then may do less
-        operations per any $(D test)/$(D match).
+        operations per any `test`/`match`.
 
         Use with care as the sub-matcher won't match
         any $(CODEPOINTS) that have encoded length that doesn't belong
@@ -4682,7 +4682,7 @@ public struct MatcherConcept
 }
 
 /**
-    Test if $(D M) is an UTF Matcher for ranges of $(D Char).
+    Test if `M` is an UTF Matcher for ranges of `Char`.
 */
 public enum isUtfMatcher(M, C) = __traits(compiles, (){
     C[] s;
@@ -5265,8 +5265,8 @@ private auto utf16Matcher(Set)(Set set)
 
 /**
     Constructs a matcher object
-    to classify $(CODEPOINTS) from the $(D set) for encoding
-    that has $(D Char) as code unit.
+    to classify $(CODEPOINTS) from the `set` for encoding
+    that has `Char` as code unit.
 
     See $(LREF MatcherConcept) for API outline.
 */
@@ -5448,9 +5448,9 @@ pure @system unittest
 
 /++
     Convenience function to construct optimal configurations for
-    packed Trie from any $(D set) of $(CODEPOINTS).
+    packed Trie from any `set` of $(CODEPOINTS).
 
-    The parameter $(D level) indicates the number of trie levels to use,
+    The parameter `level` indicates the number of trie levels to use,
     allowed values are: 1, 2, 3 or 4. Levels represent different trade-offs
     speed-size wise.
 
@@ -5461,7 +5461,7 @@ pure @system unittest
 
     Note:
     Level 4 stays very practical (being faster and more predictable)
-    compared to using direct lookup on the $(D set) itself.
+    compared to using direct lookup on the `set` itself.
 
 
 +/
@@ -5482,7 +5482,7 @@ if (isCodepointSet!Set)
 }
 
 /**
-    $(P Builds a $(D Trie) with typically optimal speed-size trade-off
+    $(P Builds a `Trie` with typically optimal speed-size trade-off
     and wraps it into a delegate of the following type:
     $(D bool delegate(dchar ch)). )
 
@@ -5502,15 +5502,15 @@ if (isCodepointSet!Set)
 /**
     $(P Opaque wrapper around unsigned built-in integers and
     code unit (char/wchar/dchar) types.
-    Parameter $(D sz) indicates that the value is confined
+    Parameter `sz` indicates that the value is confined
     to the range of [0, 2^^sz$(RPAREN). With this knowledge it can be
     packed more tightly when stored in certain
     data-structures like trie. )
 
     Note:
-    $(P The $(D BitPacked!(T, sz)) is implicitly convertible to $(D T)
+    $(P The $(D BitPacked!(T, sz)) is implicitly convertible to `T`
     but not vise-versa. Users have to ensure the value fits in
-    the range required and use the $(D cast)
+    the range required and use the `cast`
     operator to perform the conversion.)
 */
 struct BitPacked(T, size_t sz)
@@ -5522,7 +5522,7 @@ if (isIntegral!T || is(T:dchar))
 }
 
 /*
-    Depending on the form of the passed argument $(D bitSizeOf) returns
+    Depending on the form of the passed argument `bitSizeOf` returns
     the amount of bits required to represent a given type
     or a return type of a given functor.
 */
@@ -5546,7 +5546,7 @@ if (Args.length == 1)
 }
 
 /**
-    Tests if $(D T) is some instantiation of $(LREF BitPacked)!(U, x)
+    Tests if `T` is some instantiation of $(LREF BitPacked)!(U, x)
     and thus suitable for packing.
 */
 template isBitPacked(T)
@@ -5558,8 +5558,8 @@ template isBitPacked(T)
 }
 
 /**
-    Gives the type $(D U) from $(LREF BitPacked)!(U, x)
-    or $(D T) itself for every other type.
+    Gives the type `U` from $(LREF BitPacked)!(U, x)
+    or `T` itself for every other type.
 */
 template TypeOfBitPacked(T)
 {
@@ -5570,9 +5570,9 @@ template TypeOfBitPacked(T)
 }
 
 /*
-    Wrapper, used in definition of custom data structures from $(D Trie) template.
+    Wrapper, used in definition of custom data structures from `Trie` template.
     Applying it to a unary lambda function indicates that the returned value always
-    fits within $(D bits) of bits.
+    fits within `bits` of bits.
 */
 struct assumeSize(alias Fn, size_t bits)
 {
@@ -5587,7 +5587,7 @@ struct assumeSize(alias Fn, size_t bits)
     A helper for defining lambda function that yields a slice
     of certain bits from an unsigned integral value.
     The resulting lambda is wrapped in assumeSize and can be used directly
-    with $(D Trie) template.
+    with `Trie` template.
 */
 struct sliceBits(size_t from, size_t to)
 {
@@ -5878,7 +5878,7 @@ if (isInputRange!Range && isIntegralPair!(ElementType!Range))
     assert(equal(decompressIntervals(compressIntervals(run2)), run2));
 }
 
-// Creates a range of $(D CodepointInterval) that lazily decodes compressed data.
+// Creates a range of `CodepointInterval` that lazily decodes compressed data.
 @safe package auto decompressIntervals(const(ubyte)[] data) pure
 {
     return DecompressedIntervals(data);
@@ -6704,8 +6704,8 @@ struct UnicodeSetParser(Range)
 
         Note that since scripts and blocks overlap the
         usual trick to disambiguate is used - to get a block use
-        $(D unicode.InBlockName), to search a script
-        use $(D unicode.ScriptName).
+        `unicode.InBlockName`, to search a script
+        use `unicode.ScriptName`.
 
         See_Also: $(LREF block), $(LREF script)
         and (not included in this search) $(LREF hangulSyllableType).
@@ -6743,7 +6743,7 @@ struct UnicodeSetParser(Range)
     /**
         The same lookup across blocks, scripts, or binary properties,
         but performed at run-time.
-        This version is provided for cases where $(D name)
+        This version is provided for cases where `name`
         is not known beforehand; otherwise compile-time
         checked $(LREF opDispatch) is typically a better choice.
 
@@ -6761,7 +6761,7 @@ struct UnicodeSetParser(Range)
 
         Note:
         Here block names are unambiguous as no scripts are searched
-        and thus to search use simply $(D unicode.block.BlockName) notation.
+        and thus to search use simply `unicode.block.BlockName` notation.
 
         See $(S_LINK Unicode properties, table of properties) for available sets.
         See_Also: $(S_LINK Unicode properties, table of properties).
@@ -6809,8 +6809,8 @@ struct UnicodeSetParser(Range)
         Fetch a set of $(CODEPOINTS) that have the given hangul syllable type.
 
         Other non-binary properties (once supported) follow the same
-        notation - $(D unicode.propertyName.propertyValue) for compile-time
-        checked access and $(D unicode.propertyName(propertyValue))
+        notation - `unicode.propertyName.propertyValue` for compile-time
+        checked access and `unicode.propertyName(propertyValue)`
         for run-time checked one.
 
         See the $(S_LINK Unicode properties, table of properties) for available
@@ -7090,14 +7090,14 @@ template genericDecodeGrapheme(bool getValue)
 public: // Public API continues
 
 /++
-    Computes the length of grapheme cluster starting at $(D index).
-    Both the resulting length and the $(D index) are measured
+    Computes the length of grapheme cluster starting at `index`.
+    Both the resulting length and the `index` are measured
     in $(S_LINK Code unit, code units).
 
     Params:
-        C = type that is implicitly convertible to $(D dchars)
+        C = type that is implicitly convertible to `dchars`
         input = array of grapheme clusters
-        index = starting index into $(D input[])
+        index = starting index into `input[]`
 
     Returns:
         length of grapheme cluster
@@ -7134,12 +7134,12 @@ if (is(C : dchar))
 }
 
 /++
-    Reads one full grapheme cluster from an input range of dchar $(D inp).
+    Reads one full grapheme cluster from an input range of dchar `inp`.
 
     For examples see the $(LREF Grapheme) below.
 
     Note:
-    This function modifies $(D inp) and thus $(D inp)
+    This function modifies `inp` and thus `inp`
     must be an L-value.
 +/
 Grapheme decodeGrapheme(Input)(ref Input inp)
@@ -7393,8 +7393,8 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
     of a $(CLUSTER).
     )
 
-    $(P $(D Grapheme) has value semantics so 2 copies of a $(D Grapheme)
-    always refer to distinct objects. In most actual scenarios a $(D Grapheme)
+    $(P `Grapheme` has value semantics so 2 copies of a `Grapheme`
+    always refer to distinct objects. In most actual scenarios a `Grapheme`
     fits on the stack and avoids memory allocation overhead for all but quite
     long clusters.
     )
@@ -7430,7 +7430,7 @@ public:
     }
 
     /++
-        Writes a $(CODEPOINT) $(D ch) at given index in this cluster.
+        Writes a $(CODEPOINT) `ch` at given index in this cluster.
 
         Warning:
         Use of this facility may invalidate grapheme cluster,
@@ -7477,10 +7477,10 @@ public:
     }
 
     /++
-        Append $(CHARACTER) $(D ch) to this grapheme.
+        Append $(CHARACTER) `ch` to this grapheme.
         Warning:
         Use of this facility may invalidate grapheme cluster,
-        see also $(D valid).
+        see also `valid`.
 
         See_Also: $(LREF Grapheme.valid)
     +/
@@ -7536,7 +7536,7 @@ public:
         assert(g[].equal("A\u0301B"));
     }
 
-    /// Append all $(CHARACTERS) from the input range $(D inp) to this Grapheme.
+    /// Append all $(CHARACTERS) from the input range `inp` to this Grapheme.
     ref opOpAssign(string op, Input)(scope Input inp)
         if (isInputRange!Input && is(ElementType!Input : dchar))
     {
@@ -7552,7 +7552,7 @@ public:
 
     /++
         True if this object contains valid extended grapheme cluster.
-        Decoding primitives of this module always return a valid $(D Grapheme).
+        Decoding primitives of this module always return a valid `Grapheme`.
 
         Appending to and direct manipulation of grapheme's $(CHARACTERS) may
         render it no longer valid. Certain applications may chose to use
@@ -7756,7 +7756,7 @@ static assert(Grapheme.sizeof == size_t.sizeof*4);
 }
 
 /++
-    $(P Does basic case-insensitive comparison of $(D r1) and $(D r2).
+    $(P Does basic case-insensitive comparison of `r1` and `r2`.
     This function uses simpler comparison rule thus achieving better performance
     than $(LREF icmp). However keep in mind the warning below.)
 
@@ -7765,9 +7765,9 @@ static assert(Grapheme.sizeof == size_t.sizeof*4);
         r2 = an input range of characters
 
     Returns:
-        An $(D int) that is 0 if the strings match,
-        &lt;0 if $(D r1) is lexicographically "less" than $(D r2),
-        &gt;0 if $(D r1) is lexicographically "greater" than $(D r2)
+        An `int` that is 0 if the strings match,
+        &lt;0 if `r1` is lexicographically "less" than `r2`,
+        &gt;0 if `r1` is lexicographically "greater" than `r2`
 
     Warning:
     This function only handles 1:1 $(CODEPOINT) mapping
@@ -7946,9 +7946,9 @@ private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
         r2 = a forward range of characters
 
     Returns:
-        An $(D int) that is 0 if the strings match,
-        &lt;0 if $(D str1) is lexicographically "less" than $(D str2),
-        &gt;0 if $(D str1) is lexicographically "greater" than $(D str2)
+        An `int` that is 0 if the strings match,
+        &lt;0 if `str1` is lexicographically "less" than `str2`,
+        &gt;0 if `str1` is lexicographically "greater" than `str2`
 
     See_Also:
         $(LREF sicmp)
@@ -8124,7 +8124,7 @@ if (isForwardRange!S1 && isSomeChar!(ElementEncodingType!S1)
 // It needs a better API
 /*
     Return a range of all $(CODEPOINTS) that casefold to
-    and from this $(D ch).
+    and from this `ch`.
 */
 package auto simpleCaseFoldings(dchar ch) @safe
 {
@@ -8221,7 +8221,7 @@ package auto simpleCaseFoldings(dchar ch) @safe
 }
 
 /++
-    $(P Returns the $(S_LINK Combining class, combining class) of $(D ch).)
+    $(P Returns the $(S_LINK Combining class, combining class) of `ch`.)
 +/
 ubyte combiningClass(dchar ch) @safe pure nothrow @nogc
 {
@@ -8277,11 +8277,11 @@ enum {
     Try to canonically compose 2 $(CHARACTERS).
     Returns the composed $(CHARACTER) if they do compose and dchar.init otherwise.
 
-    The assumption is that $(D first) comes before $(D second) in the original text,
+    The assumption is that `first` comes before `second` in the original text,
     usually meaning that the first is a starter.
 
     Note: Hangul syllables are not covered by this function.
-    See $(D composeJamo) below.
+    See `composeJamo` below.
 +/
 public dchar compose(dchar first, dchar second) pure nothrow @safe
 {
@@ -8318,9 +8318,9 @@ public dchar compose(dchar first, dchar second) pure nothrow @safe
 /++
     Returns a full $(S_LINK Canonical decomposition, Canonical)
     (by default) or $(S_LINK Compatibility decomposition, Compatibility)
-    decomposition of $(CHARACTER) $(D ch).
+    decomposition of $(CHARACTER) `ch`.
     If no decomposition is available returns a $(LREF Grapheme)
-    with the $(D ch) itself.
+    with the `ch` itself.
 
     Note:
     This function also decomposes hangul syllables
@@ -8379,14 +8379,14 @@ enum jamoLCount = 19, jamoVCount = 21, jamoTCount = 28;
 enum jamoNCount = jamoVCount * jamoTCount;
 enum jamoSCount = jamoLCount * jamoNCount;
 
-// Tests if $(D ch) is a Hangul leading consonant jamo.
+// Tests if `ch` is a Hangul leading consonant jamo.
 bool isJamoL(dchar ch) pure nothrow @nogc @safe
 {
     // first cmp rejects ~ 1M code points above leading jamo range
     return ch < jamoLBase+jamoLCount && ch >= jamoLBase;
 }
 
-// Tests if $(D ch) is a Hangul vowel jamo.
+// Tests if `ch` is a Hangul vowel jamo.
 bool isJamoT(dchar ch) pure nothrow @nogc @safe
 {
     // first cmp rejects ~ 1M code points above trailing jamo range
@@ -8394,7 +8394,7 @@ bool isJamoT(dchar ch) pure nothrow @nogc @safe
     return ch < jamoTBase+jamoTCount && ch > jamoTBase;
 }
 
-// Tests if $(D ch) is a Hangul trailnig consonant jamo.
+// Tests if `ch` is a Hangul trailnig consonant jamo.
 bool isJamoV(dchar ch) pure nothrow @nogc @safe
 {
     // first cmp rejects ~ 1M code points above vowel range
@@ -8440,8 +8440,8 @@ void hangulRecompose(dchar[] seq) pure nothrow @nogc @safe
 public:
 
 /**
-    Decomposes a Hangul syllable. If $(D ch) is not a composed syllable
-    then this function returns $(LREF Grapheme) containing only $(D ch) as is.
+    Decomposes a Hangul syllable. If `ch` is not a composed syllable
+    then this function returns $(LREF Grapheme) containing only `ch` as is.
 */
 Grapheme decomposeHangul(dchar ch) @safe
 {
@@ -8467,12 +8467,12 @@ Grapheme decomposeHangul(dchar ch) @safe
 }
 
 /++
-    Try to compose hangul syllable out of a leading consonant ($(D lead)),
-    a $(D vowel) and optional $(D trailing) consonant jamos.
+    Try to compose hangul syllable out of a leading consonant (`lead`),
+    a `vowel` and optional `trailing` consonant jamos.
 
     On success returns the composed LV or LVT hangul syllable.
 
-    If any of $(D lead) and $(D vowel) are not a valid hangul jamo
+    If any of `lead` and `vowel` are not a valid hangul jamo
     of the respective $(CHARACTER) class returns dchar.init.
 +/
 dchar composeJamo(dchar lead, dchar vowel, dchar trailing=dchar.init) pure nothrow @nogc @safe
@@ -8550,7 +8550,7 @@ enum {
 }
 
 /++
-    Returns $(D input) string normalized to the chosen form.
+    Returns `input` string normalized to the chosen form.
     Form C is used by default.
 
     For more information on normalization forms see
@@ -8809,8 +8809,8 @@ private auto seekStable(NormalizationForm norm, C)(size_t idx, const scope C[] i
 }
 
 /**
-    Tests if dchar $(D ch) is always allowed (Quick_Check=YES) in normalization
-    form $(D norm).
+    Tests if dchar `ch` is always allowed (Quick_Check=YES) in normalization
+    form `norm`.
 */
 public bool allowedIn(NormalizationForm norm)(dchar ch)
 {
@@ -8894,7 +8894,7 @@ else
 public:
 
 /++
-    Whether or not $(D c) is a Unicode whitespace $(CHARACTER).
+    Whether or not `c` is a Unicode whitespace $(CHARACTER).
     (general Unicode category: Part of C0(tab, vertical tab, form feed,
     carriage return, and linefeed characters), Zs, Zl, Zp, and NEL(U+0085))
 +/
@@ -8906,7 +8906,7 @@ public bool isWhite(dchar c)
 }
 
 /++
-    Return whether $(D c) is a Unicode lowercase $(CHARACTER).
+    Return whether `c` is a Unicode lowercase $(CHARACTER).
 +/
 @safe pure nothrow @nogc
 bool isLower(dchar c)
@@ -8939,7 +8939,7 @@ bool isLower(dchar c)
 
 
 /++
-    Return whether $(D c) is a Unicode uppercase $(CHARACTER).
+    Return whether `c` is a Unicode uppercase $(CHARACTER).
 +/
 @safe pure nothrow @nogc
 bool isUpper(dchar c)
@@ -9709,10 +9709,10 @@ private template toCaseInPlaceAlloc(alias indexFn, uint maxIdx, alias tableFn)
 }
 
 /++
-    Converts $(D s) to lowercase (by performing Unicode lowercase mapping) in place.
+    Converts `s` to lowercase (by performing Unicode lowercase mapping) in place.
     For a few characters string length may increase after the transformation,
     in such a case the function reallocates exactly once.
-    If $(D s) does not have any uppercase characters, then $(D s) is unaltered.
+    If `s` does not have any uppercase characters, then `s` is unaltered.
 +/
 void toLowerInPlace(C)(ref C[] s) @trusted pure
 if (is(C == char) || is(C == wchar) || is(C == dchar))
@@ -9731,10 +9731,10 @@ if (is(C == char) || is(C == wchar) || is(C == dchar))
 }
 
 /++
-    Converts $(D s) to uppercase  (by performing Unicode uppercase mapping) in place.
+    Converts `s` to uppercase  (by performing Unicode uppercase mapping) in place.
     For a few characters string length may increase after the transformation,
     in such a case the function reallocates exactly once.
-    If $(D s) does not have any lowercase characters, then $(D s) is unaltered.
+    If `s` does not have any lowercase characters, then `s` is unaltered.
 +/
 void toUpperInPlace(C)(ref C[] s) @trusted pure
 if (is(C == char) || is(C == wchar) || is(C == dchar))
@@ -9753,8 +9753,8 @@ if (is(C == char) || is(C == wchar) || is(C == dchar))
 }
 
 /++
-    If $(D c) is a Unicode uppercase $(CHARACTER), then its lowercase equivalent
-    is returned. Otherwise $(D c) is returned.
+    If `c` is a Unicode uppercase $(CHARACTER), then its lowercase equivalent
+    is returned. Otherwise `c` is returned.
 
     Warning: certain alphabets like German and Greek have no 1:1
     upper-lower mapping. Use overload of toLower which takes full string instead.
@@ -9780,9 +9780,9 @@ dchar toLower(dchar c)
 }
 
 /++
-    Returns a string which is identical to $(D s) except that all of its
+    Returns a string which is identical to `s` except that all of its
     characters are converted to lowercase (by preforming Unicode lowercase mapping).
-    If none of $(D s) characters were affected, then $(D s) itself is returned.
+    If none of `s` characters were affected, then `s` itself is returned.
 +/
 S toLower(S)(S s) @trusted pure
 if (isSomeString!S)
@@ -9899,8 +9899,8 @@ if (isSomeString!S)
 
 
 /++
-    If $(D c) is a Unicode lowercase $(CHARACTER), then its uppercase equivalent
-    is returned. Otherwise $(D c) is returned.
+    If `c` is a Unicode lowercase $(CHARACTER), then its uppercase equivalent
+    is returned. Otherwise `c` is returned.
 
     Warning:
     Certain alphabets like German and Greek have no 1:1
@@ -9962,9 +9962,9 @@ dchar toUpper(dchar c)
 }
 
 /++
-    Returns a string which is identical to $(D s) except that all of its
+    Returns a string which is identical to `s` except that all of its
     characters are converted to uppercase (by preforming Unicode uppercase mapping).
-    If none of $(D s) characters were affected, then $(D s) itself is returned.
+    If none of `s` characters were affected, then `s` itself is returned.
 +/
 S toUpper(S)(S s) @trusted pure
 if (isSomeString!S)
@@ -10087,7 +10087,7 @@ if (isSomeString!S)
 
 
 /++
-    Returns whether $(D c) is a Unicode alphabetic $(CHARACTER)
+    Returns whether `c` is a Unicode alphabetic $(CHARACTER)
     (general Unicode category: Alphabetic).
 +/
 @safe pure nothrow @nogc
@@ -10122,7 +10122,7 @@ bool isAlpha(dchar c)
 
 
 /++
-    Returns whether $(D c) is a Unicode mark
+    Returns whether `c` is a Unicode mark
     (general Unicode category: Mn, Me, Mc).
 +/
 @safe pure nothrow @nogc
@@ -10141,7 +10141,7 @@ bool isMark(dchar c)
 }
 
 /++
-    Returns whether $(D c) is a Unicode numerical $(CHARACTER)
+    Returns whether `c` is a Unicode numerical $(CHARACTER)
     (general Unicode category: Nd, Nl, No).
 +/
 @safe pure nothrow @nogc
@@ -10168,7 +10168,7 @@ bool isNumber(dchar c)
 }
 
 /++
-    Returns whether $(D c) is a Unicode alphabetic $(CHARACTER) or number.
+    Returns whether `c` is a Unicode alphabetic $(CHARACTER) or number.
     (general Unicode category: Alphabetic, Nd, Nl, No).
 
     Params:
@@ -10211,7 +10211,7 @@ bool isAlphaNum(dchar c)
 }
 
 /++
-    Returns whether $(D c) is a Unicode punctuation $(CHARACTER)
+    Returns whether `c` is a Unicode punctuation $(CHARACTER)
     (general Unicode category: Pd, Ps, Pe, Pc, Po, Pi, Pf).
 +/
 @safe pure nothrow @nogc
@@ -10244,7 +10244,7 @@ bool isPunctuation(dchar c)
 }
 
 /++
-    Returns whether $(D c) is a Unicode symbol $(CHARACTER)
+    Returns whether `c` is a Unicode symbol $(CHARACTER)
     (general Unicode category: Sm, Sc, Sk, So).
 +/
 @safe pure nothrow @nogc
@@ -10265,7 +10265,7 @@ bool isSymbol(dchar c)
 }
 
 /++
-    Returns whether $(D c) is a Unicode space $(CHARACTER)
+    Returns whether `c` is a Unicode space $(CHARACTER)
     (general Unicode category: Zs)
     Note: This doesn't include '\n', '\r', \t' and other non-space $(CHARACTER).
     For commonly used less strict semantics see $(LREF isWhite).
@@ -10289,7 +10289,7 @@ bool isSpace(dchar c)
 
 
 /++
-    Returns whether $(D c) is a Unicode graphical $(CHARACTER)
+    Returns whether `c` is a Unicode graphical $(CHARACTER)
     (general Unicode category: L, M, N, P, S, Zs).
 
 +/
@@ -10312,7 +10312,7 @@ bool isGraphical(dchar c)
 
 
 /++
-    Returns whether $(D c) is a Unicode control $(CHARACTER)
+    Returns whether `c` is a Unicode control $(CHARACTER)
     (general Unicode category: Cc).
 +/
 @safe pure nothrow @nogc
@@ -10336,7 +10336,7 @@ bool isControl(dchar c)
 
 
 /++
-    Returns whether $(D c) is a Unicode formatting $(CHARACTER)
+    Returns whether `c` is a Unicode formatting $(CHARACTER)
     (general Unicode category: Cf).
 +/
 @safe pure nothrow @nogc
@@ -10358,7 +10358,7 @@ bool isFormat(dchar c)
 // if need be they can be generated from unicode data as well
 
 /++
-    Returns whether $(D c) is a Unicode Private Use $(CODEPOINT)
+    Returns whether `c` is a Unicode Private Use $(CODEPOINT)
     (general Unicode category: Co).
 +/
 @safe pure nothrow @nogc
@@ -10370,7 +10370,7 @@ bool isPrivateUse(dchar c)
 }
 
 /++
-    Returns whether $(D c) is a Unicode surrogate $(CODEPOINT)
+    Returns whether `c` is a Unicode surrogate $(CODEPOINT)
     (general Unicode category: Cs).
 +/
 @safe pure nothrow @nogc
@@ -10380,7 +10380,7 @@ bool isSurrogate(dchar c)
 }
 
 /++
-    Returns whether $(D c) is a Unicode high surrogate (lead surrogate).
+    Returns whether `c` is a Unicode high surrogate (lead surrogate).
 +/
 @safe pure nothrow @nogc
 bool isSurrogateHi(dchar c)
@@ -10389,7 +10389,7 @@ bool isSurrogateHi(dchar c)
 }
 
 /++
-    Returns whether $(D c) is a Unicode low surrogate (trail surrogate).
+    Returns whether `c` is a Unicode low surrogate (trail surrogate).
 +/
 @safe pure nothrow @nogc
 bool isSurrogateLo(dchar c)
@@ -10398,7 +10398,7 @@ bool isSurrogateLo(dchar c)
 }
 
 /++
-    Returns whether $(D c) is a Unicode non-character i.e.
+    Returns whether `c` is a Unicode non-character i.e.
     a $(CODEPOINT) with no assigned abstract character.
     (general Unicode category: Cn)
 +/
