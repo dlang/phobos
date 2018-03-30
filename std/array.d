@@ -3933,7 +3933,7 @@ Constructs a static array from `a`.
 The type of elements can be specified implicitly (`[1,2].staticArray` of type int[2])
 or explicitly (`[1,2].staticArray!float` of type float[2]).
 When `a` is a range (not known at compile time), the number of elements has to be given as template argument
-(eg `myrange.staticArray!2`).
+(e.g. `myrange.staticArray!2`).
 Size and type can be combined (eg: `2.iota.staticArray!(byte[2])`).
 When the range `a` is known at compile time, it can also be specified as a
 template argument to avoid having to specify the number of elements
