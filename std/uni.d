@@ -7787,6 +7787,46 @@ if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
     import std.typecons : Yes;
     static import std.ascii;
 
+    static if ((isDynamicArray!S1 || isRandomAccessRange!S1)
+        && (isDynamicArray!S2 || isRandomAccessRange!S2)
+        && !(isInfinite!S1 && isInfinite!S2)
+        && __traits(compiles,
+            {
+                size_t s = size_t.sizeof / 2;
+                r1 = r1[s .. $];
+                r2 = r2[s .. $];
+            }))
+    {{
+        // ASCII optimization for dynamic arrays & similar.
+        size_t i = 0;
+        static if (isInfinite!S1)
+            immutable end = r2.length;
+        else static if (isInfinite!S2)
+            immutable end = r1.length;
+        else
+            immutable end = r1.length > r2.length ? r2.length : r1.length;
+        for (; i < end; ++i)
+        {
+            auto lhs = r1[i];
+            auto rhs = r2[i];
+            if ((lhs | rhs) >= 0x80) goto NonAsciiPath;
+            if (lhs == rhs) continue;
+            auto lowDiff = std.ascii.toLower(lhs) - std.ascii.toLower(rhs);
+            if (lowDiff) return lowDiff;
+        }
+        static if (isInfinite!S1)
+            return 1;
+        else static if (isInfinite!S2)
+            return -1;
+        else
+            return (r1.length > r2.length) - (r2.length > r1.length);
+
+    NonAsciiPath:
+        r1 = r1[i .. $];
+        r2 = r2[i .. $];
+        // Fall through to standard case.
+    }}
+
     while (!r1.empty)
     {
         immutable lhs = decodeFront!(Yes.useReplacementDchar)(r1);
@@ -7919,6 +7959,47 @@ if (isForwardRange!S1 && isSomeChar!(ElementEncodingType!S1)
     && isForwardRange!S2 && isSomeChar!(ElementEncodingType!S2))
 {
     import std.utf : byDchar;
+    static import std.ascii;
+
+    static if ((isDynamicArray!S1 || isRandomAccessRange!S1)
+        && (isDynamicArray!S2 || isRandomAccessRange!S2)
+        && !(isInfinite!S1 && isInfinite!S2)
+        && __traits(compiles,
+            {
+                size_t s = size_t.max / 2;
+                r1 = r1[s .. $];
+                r2 = r2[s .. $];
+            }))
+    {{
+        // ASCII optimization for dynamic arrays & similar.
+        size_t i = 0;
+        static if (isInfinite!S1)
+            immutable end = r2.length;
+        else static if (isInfinite!S2)
+            immutable end = r1.length;
+        else
+            immutable end = r1.length > r2.length ? r2.length : r1.length;
+        for (; i < end; ++i)
+        {
+            auto lhs = r1[i];
+            auto rhs = r2[i];
+            if ((lhs | rhs) >= 0x80) goto NonAsciiPath;
+            if (lhs == rhs) continue;
+            auto lowDiff = std.ascii.toLower(lhs) - std.ascii.toLower(rhs);
+            if (lowDiff) return lowDiff;
+        }
+        static if (isInfinite!S1)
+            return 1;
+        else static if (isInfinite!S2)
+            return -1;
+        else
+            return (r1.length > r2.length) - (r2.length > r1.length);
+
+    NonAsciiPath:
+        r1 = r1[i .. $];
+        r2 = r2[i .. $];
+        // Fall through to standard case.
+    }}
 
     auto str1 = r1.byDchar;
     auto str2 = r2.byDchar;
