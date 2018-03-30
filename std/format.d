@@ -64,22 +64,29 @@ import std.range.primitives;
 import std.traits;
 
 
-/**********************************************************************
- * Signals a mismatch between a format and its corresponding argument.
+/**
+Signals a mismatch between a format and its corresponding argument.
  */
 class FormatException : Exception
 {
-    @safe pure nothrow
+    @safe @nogc pure nothrow
     this()
     {
         super("format error");
     }
 
-    @safe pure nothrow
+    @safe @nogc pure nothrow
     this(string msg, string fn = __FILE__, size_t ln = __LINE__, Throwable next = null)
     {
         super(msg, fn, ln, next);
     }
+}
+
+///
+@safe unittest
+{
+    import std.exception : assertThrown;
+    assertThrown!FormatException(format("%d", "foo"));
 }
 
 private alias enforceFmt = enforce!FormatException;
@@ -629,7 +636,7 @@ can match the expected number of readings or fewer, even zero, if a
 matching failure happens.
 
 Throws:
-    An `Exception` if `S.length == 0` and `fmt` has format specifiers.
+    A `FormatException` if `S.length == 0` and `fmt` has format specifiers.
  */
 uint formattedRead(alias fmt, R, S...)(auto ref R r, auto ref S args)
 if (isSomeString!(typeof(fmt)))
@@ -648,7 +655,7 @@ uint formattedRead(R, Char, S...)(auto ref R r, const(Char)[] fmt, auto ref S ar
     static if (!S.length)
     {
         spec.readUpToNextSpec(r);
-        enforce(spec.trailing.empty, "Trailing characters in formattedRead format string");
+        enforceFmt(spec.trailing.empty, "Trailing characters in formattedRead format string");
         return 0;
     }
     else
@@ -929,7 +936,7 @@ uint formattedRead(R, Char, S...)(auto ref R r, const(Char)[] fmt, auto ref S ar
 
     int[4] sa2;
     input = `[1,2,3]`;
-    assertThrown(formattedRead(input, "[%(%s,%)]", &sa2));
+    assertThrown!FormatException(formattedRead(input, "[%(%s,%)]", &sa2));
 }
 
 @system pure unittest
@@ -1304,7 +1311,7 @@ if (is(Unqual!Char == Char))
                         else if (trailing[j] == ')')
                             break;
                         else
-                            throw new Exception(
+                            throw new FormatException(
                                 text("Incorrect format specifier: %",
                                         trailing[j .. $]));
                     }
@@ -1455,7 +1462,7 @@ if (is(Unqual!Char == Char))
                 return;
             } // end switch
         } // end for
-        throw new Exception(text("Incorrect format specifier: ", trailing));
+        throw new FormatException(text("Incorrect format specifier: ", trailing));
     }
 
     //--------------------------------------------------------------------------
@@ -1498,7 +1505,7 @@ if (is(Unqual!Char == Char))
                 }
                 else
                 {
-                    enforce(isLower(c2) || c2 == '*' ||
+                    enforceFmt(isLower(c2) || c2 == '*' ||
                             c2 == '(',
                             text("'%", c2,
                                     "' not supported with formatted read"));
@@ -1683,10 +1690,10 @@ if (is(Unqual!Char == Char))
     auto a = appender!(string)();
 
     auto f = FormatSpec!char("%-(%s%"); // %)")
-    assertThrown(f.writeUpToNextSpec(a));
+    assertThrown!FormatException(f.writeUpToNextSpec(a));
 
     f = FormatSpec!char("%(%-"); // %)")
-    assertThrown(f.writeUpToNextSpec(a));
+    assertThrown!FormatException(f.writeUpToNextSpec(a));
 }
 
 @safe unittest
@@ -1748,14 +1755,14 @@ Params:
 Returns:
     A $(D FormatSpec) with the specifier parsed.
 Throws:
-    An `Exception` when more than one specifier is given or the specifier
+    A `FormatException` when more than one specifier is given or the specifier
     is malformed.
   */
 FormatSpec!Char singleSpec(Char)(Char[] fmt)
 {
     import std.conv : text;
-    enforce(fmt.length >= 2, "fmt must be at least 2 characters long");
-    enforce(fmt.front == '%', "fmt must start with a '%' character");
+    enforceFmt(fmt.length >= 2, "fmt must be at least 2 characters long");
+    enforceFmt(fmt.front == '%', "fmt must start with a '%' character");
 
     static struct DummyOutputRange {
         void put(C)(C[] buf) {} // eat elements
@@ -1765,7 +1772,7 @@ FormatSpec!Char singleSpec(Char)(Char[] fmt)
     //dummy write
     spec.writeUpToNextSpec(a);
 
-    enforce(spec.trailing.empty,
+    enforceFmt(spec.trailing.empty,
             text("Trailing characters in fmt string: '", spec.trailing));
 
     return spec;
@@ -1782,9 +1789,9 @@ FormatSpec!Char singleSpec(Char)(Char[] fmt)
     assert(spec.width == 2);
     assert(spec.precision == 3);
 
-    assertThrown(singleSpec(""));
-    assertThrown(singleSpec("2.3e"));
-    assertThrown(singleSpec("%2.3eTest"));
+    assertThrown!FormatException(singleSpec(""));
+    assertThrown!FormatException(singleSpec("2.3e"));
+    assertThrown!FormatException(singleSpec("%2.3eTest"));
 }
 
 /**
@@ -3233,7 +3240,7 @@ if (isInputRange!T)
                     }
                     else
                     {
-                        enforce(f.width == 0, "Cannot right-align a range without length");
+                        enforceFmt(f.width == 0, "Cannot right-align a range without length");
                         size_t len = 0;
                     }
                     if (f.precision != f.UNSPECIFIED && len > f.precision)
@@ -3348,7 +3355,7 @@ if (isInputRange!T)
         }
     }
     else
-        throw new Exception(text("Incorrect format specifier for range: %", f.spec));
+        throw new FormatException(text("Incorrect format specifier for range: %", f.spec));
 }
 
 @safe pure unittest
@@ -4431,8 +4438,8 @@ if (isSIMDVector!V)
 {
     // Test for issue 11778
     int* p = null;
-    assertThrown(format("%d", p));
-    assertThrown(format("%04d", p + 2));
+    assertThrown!FormatException(format("%d", p));
+    assertThrown!FormatException(format("%04d", p + 2));
 }
 
 @safe pure unittest
@@ -5285,7 +5292,7 @@ private template acceptedSpecs(T)
  * Returns:
  *     A value from `input` of type `T`
  * Throws:
- *     An `Exception` if `spec` cannot read a type `T`
+ *     A `FormatException` if `spec` cannot read a type `T`
  * See_Also:
  *     $(REF parse, std, conv) and $(REF to, std, conv)
  */
@@ -5409,7 +5416,7 @@ if (isInputRange!Range && is(Unqual!T == bool))
 
     if (spec.spec == 's') return parse!T(input);
 
-    enforce(find(acceptedSpecs!long, spec.spec).length,
+    enforceFmt(find(acceptedSpecs!long, spec.spec).length,
             text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
     return unformatValue!long(input, spec) != 0;
@@ -5419,7 +5426,7 @@ private T unformatValueImpl(T, Range, Char)(ref Range input, const ref FormatSpe
 if (isInputRange!Range && is(T == typeof(null)))
 {
     import std.conv : parse, text;
-    enforce(spec.spec == 's',
+    enforceFmt(spec.spec == 's',
             text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
     return parse!T(input);
@@ -5440,13 +5447,15 @@ if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementT
                 || is(Unqual!(ElementEncodingType!Range) == ubyte))
             return rawRead!T(input);
         else
-            throw new Exception("The raw read specifier %r may only be used with narrow strings and ranges of bytes.");
+            throw new FormatException(
+                "The raw read specifier %r may only be used with narrow strings and ranges of bytes."
+            );
     }
 
-    enforce(find(acceptedSpecs!T, spec.spec).length,
+    enforceFmt(find(acceptedSpecs!T, spec.spec).length,
             text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
-    enforce(spec.width == 0, "Parsing integers with a width specification is not implemented");   // TODO
+    enforceFmt(spec.width == 0, "Parsing integers with a width specification is not implemented");   // TODO
 
     immutable uint base =
         spec.spec == 'x' || spec.spec == 'X' ? 16 :
@@ -5474,10 +5483,12 @@ if (isFloatingPoint!T && !is(T == enum) && isInputRange!Range
                 || is(Unqual!(ElementEncodingType!Range) == ubyte))
             return rawRead!T(input);
         else
-            throw new Exception("The raw read specifier %r may only be used with narrow strings and ranges of bytes.");
+            throw new FormatException(
+                "The raw read specifier %r may only be used with narrow strings and ranges of bytes."
+            );
     }
 
-    enforce(find(acceptedSpecs!T, spec.spec).length,
+    enforceFmt(find(acceptedSpecs!T, spec.spec).length,
             text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
     return parse!T(input);
@@ -5495,7 +5506,7 @@ if (isInputRange!Range && isSomeChar!T && !is(T == enum) && isSomeChar!(ElementT
         input.popFront();
         return result;
     }
-    enforce(find(acceptedSpecs!T, spec.spec).length,
+    enforceFmt(find(acceptedSpecs!T, spec.spec).length,
             text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
     static if (T.sizeof == 1)
@@ -5518,7 +5529,7 @@ if (isInputRange!Range && is(StringTypeOf!T) && !isAggregateType!T && !is(T == e
     {
         return unformatRange!T(input, spec);
     }
-    enforce(spec.spec == 's',
+    enforceFmt(spec.spec == 's',
             text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
     static if (isStaticArray!T)
@@ -5554,7 +5565,7 @@ if (isInputRange!Range && is(StringTypeOf!T) && !isAggregateType!T && !is(T == e
     }
     static if (isStaticArray!T)
     {
-        enforce(app.empty, "need more input");
+        enforceFmt(app.empty, "need more input");
         return result;
     }
     else
@@ -5570,7 +5581,7 @@ if (isInputRange!Range && isArray!T && !is(StringTypeOf!T) && !isAggregateType!T
     {
         return unformatRange!T(input, spec);
     }
-    enforce(spec.spec == 's',
+    enforceFmt(spec.spec == 's',
             text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
     return parse!T(input);
@@ -5585,7 +5596,7 @@ if (isInputRange!Range && isAssociativeArray!T && !is(T == enum))
     {
         return unformatRange!T(input, spec);
     }
-    enforce(spec.spec == 's',
+    enforceFmt(spec.spec == 's',
             text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
     return parse!T(input);
@@ -5664,7 +5675,7 @@ do
         {
             auto fmt = FormatSpec!Char(spec.nested);
             fmt.readUpToNextSpec(input);
-            enforce(!input.empty, "Unexpected end of input when parsing range");
+            enforceFmt(!input.empty, "Unexpected end of input when parsing range");
 
             debug (unformatRange) printf("\t) spec = %c, front = %c ", fmt.spec, input.front);
             static if (isStaticArray!T)
@@ -5690,7 +5701,7 @@ do
             static if (isStaticArray!T)
             {
                 debug (unformatRange) printf("i = %u < %u\n", i, T.length);
-                enforce(i <= T.length, "Too many format specifiers for static array of length %d".format(T.length));
+                enforceFmt(i <= T.length, "Too many format specifiers for static array of length %d".format(T.length));
             }
 
             if (spec.sep !is null)
@@ -5709,8 +5720,8 @@ do
             {
                 while (!sep.empty)
                 {
-                    enforce(!input.empty, "Unexpected end of input when parsing range separator");
-                    enforce(input.front == sep.front, "Unexpected character when parsing range separator");
+                    enforceFmt(!input.empty, "Unexpected end of input when parsing range separator");
+                    enforceFmt(input.front == sep.front, "Unexpected character when parsing range separator");
                     input.popFront();
                     sep.popFront();
                 }
@@ -5720,7 +5731,7 @@ do
     }
     static if (isStaticArray!T)
     {
-        enforce(i == T.length, "Too few (%d) format specifiers for static array of length %d".format(i, T.length));
+        enforceFmt(i == T.length, "Too few (%d) format specifiers for static array of length %d".format(i, T.length));
     }
     return result;
 }
@@ -6305,9 +6316,7 @@ if (isSomeChar!Char)
         // In the future, this check will be removed to increase consistency
         // with formattedWrite
         import std.conv : text;
-        import std.exception : enforce;
-        enforce(n == args.length, new FormatException(
-            text("Orphan format arguments: args[", n, "..", args.length, "]")));
+        enforceFmt(n == args.length, text("Orphan format arguments: args[", n, "..", args.length, "]"));
     }
     return w.data;
 }
@@ -6414,8 +6423,7 @@ char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
         // In the future, this check will be removed to increase consistency
         // with formattedWrite
         import std.conv : text;
-        import std.exception : enforce;
-        enforce!FormatException(
+        enforceFmt(
             n == args.length,
             text("Orphan format arguments: args[", n, " .. ", args.length, "]")
         );
