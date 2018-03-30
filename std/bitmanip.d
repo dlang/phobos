@@ -248,43 +248,9 @@ private template createTaggedReference(T, ulong a, string name, Ts...)
 Allows creating bit fields inside $(D_PARAM struct)s and $(D_PARAM
 class)es.
 
-Example:
-
-----
-struct A
-{
-    int a;
-    mixin(bitfields!(
-        uint, "x",    2,
-        int,  "y",    3,
-        uint, "z",    2,
-        bool, "flag", 1));
-}
-A obj;
-obj.x = 2;
-obj.z = obj.x;
-----
-
-The example above creates a bitfield pack of eight bits, which fit in
-one $(D_PARAM ubyte). The bitfields are allocated starting from the
-least significant bit, i.e. x occupies the two least significant bits
-of the bitfields storage.
-
 The sum of all bit lengths in one $(D_PARAM bitfield) instantiation
 must be exactly 8, 16, 32, or 64. If padding is needed, just allocate
 one bitfield with an empty name.
-
-Example:
-
-----
-struct A
-{
-    mixin(bitfields!(
-        bool, "flag1",    1,
-        bool, "flag2",    1,
-        uint, "",         6));
-}
-----
 
 The type of a bit field can be any integral type or enumerated
 type. The most efficient type to store in bitfields is $(D_PARAM
@@ -294,6 +260,51 @@ bool), followed by unsigned types, followed by signed types.
 template bitfields(T...)
 {
     enum { bitfields = createStorageAndFields!T.result }
+}
+
+/**
+Creates a bitfield pack of eight bits, which fit in
+one `ubyte`. The bitfields are allocated starting from the
+least significant bit, i.e. x occupies the two least significant bits
+of the bitfields storage.
+*/
+@safe unittest
+{
+    struct A
+    {
+        int a;
+        mixin(bitfields!(
+            uint, "x",    2,
+            int,  "y",    3,
+            uint, "z",    2,
+            bool, "flag", 1));
+    }
+    A obj;
+    obj.x = 2;
+    obj.z = obj.x;
+
+    assert(obj.x == 2);
+    assert(obj.y == 0);
+    assert(obj.z == 2);
+    assert(obj.flag == false);
+}
+
+/// Add empty fields for padding to have a total bit length of 8, 16, 32, or 64
+@safe unittest
+{
+    struct A
+    {
+        mixin(bitfields!(
+            bool, "flag1",    1,
+            bool, "flag2",    1,
+            uint, "",         6));
+    }
+    A a;
+    assert(a.flag1 == 0);
+    a.flag1 = 1;
+    assert(a.flag1 == 1);
+    a.flag1 = 0;
+    assert(a.flag1 == 0);
 }
 
 /**
@@ -674,7 +685,6 @@ struct FloatRep
 }
 ----
 */
-
 struct FloatRep
 {
     union
@@ -686,6 +696,54 @@ struct FloatRep
                   bool,  "sign",      1));
     }
     enum uint bias = 127, fractionBits = 23, exponentBits = 8, signBits = 1;
+}
+
+///
+@safe unittest
+{
+    FloatRep rep = {value: 0};
+    assert(rep.fraction == 0);
+    assert(rep.exponent == 0);
+    assert(!rep.sign);
+
+    rep.value = 42;
+    assert(rep.fraction == 2621440);
+    assert(rep.exponent == 132);
+    assert(!rep.sign);
+
+    rep.value = 10;
+    assert(rep.fraction == 2097152);
+    assert(rep.exponent == 130);
+}
+
+///
+@safe unittest
+{
+    FloatRep rep = {value: 1};
+    assert(rep.fraction == 0);
+    assert(rep.exponent == 127);
+    assert(!rep.sign);
+
+    rep.exponent = 126;
+    assert(rep.value == 0.5);
+
+    rep.exponent = 130;
+    assert(rep.value == 8);
+}
+
+///
+@safe unittest
+{
+    FloatRep rep = {value: 1};
+    rep.value = -0.5;
+    assert(rep.fraction == 0);
+    assert(rep.exponent == 126);
+    assert(rep.sign);
+
+    rep.value = -1. / 3;
+    assert(rep.fraction == 2796203);
+    assert(rep.exponent == 125);
+    assert(rep.sign);
 }
 
 /**
@@ -719,6 +777,54 @@ struct DoubleRep
                   bool,   "sign",      1));
     }
     enum uint bias = 1023, signBits = 1, fractionBits = 52, exponentBits = 11;
+}
+
+///
+@safe unittest
+{
+    DoubleRep rep = {value: 0};
+    assert(rep.fraction == 0);
+    assert(rep.exponent == 0);
+    assert(!rep.sign);
+
+    rep.value = 42;
+    assert(rep.fraction == 1407374883553280);
+    assert(rep.exponent == 1028);
+    assert(!rep.sign);
+
+    rep.value = 10;
+    assert(rep.fraction == 1125899906842624);
+    assert(rep.exponent == 1026);
+}
+
+///
+@safe unittest
+{
+    DoubleRep rep = {value: 1};
+    assert(rep.fraction == 0);
+    assert(rep.exponent == 1023);
+    assert(!rep.sign);
+
+    rep.exponent = 1022;
+    assert(rep.value == 0.5);
+
+    rep.exponent = 1026;
+    assert(rep.value == 8);
+}
+
+///
+@safe unittest
+{
+    DoubleRep rep = {value: 1};
+    rep.value = -0.5;
+    assert(rep.fraction == 0);
+    assert(rep.exponent == 1022);
+    assert(rep.sign);
+
+    rep.value = -1. / 3;
+    assert(rep.fraction == 1501199875790165);
+    assert(rep.exponent == 1021);
+    assert(rep.sign);
 }
 
 @safe unittest
@@ -2497,6 +2603,54 @@ public:
     }
 }
 
+/// Slicing & bitsSet
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : iota;
+
+    bool[] buf = new bool[64 * 3];
+    buf[0 .. 64] = true;
+    BitArray b = BitArray(buf);
+    assert(b.bitsSet.equal(iota(0, 64)));
+    b <<= 64;
+    assert(b.bitsSet.equal(iota(64, 128)));
+}
+
+/// Concatenation and appending
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+
+    auto b = BitArray([1, 0]);
+    b ~= true;
+    assert(b[2] == 1);
+    b ~= BitArray([0, 1]);
+    auto c = BitArray([1, 0, 1, 0, 1]);
+    assert(b == c);
+    assert(b.bitsSet.equal([0, 2, 4]));
+}
+
+/// Bit flipping
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+
+    auto b = BitArray([1, 1, 0, 1]);
+    b &= BitArray([0, 1, 1, 0]);
+    assert(b.bitsSet.equal([1]));
+    b.flip;
+    assert(b.bitsSet.equal([0, 2, 3]));
+}
+
+/// String format of bitarrays
+@system unittest
+{
+    import std.format : format;
+    auto b = BitArray([1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]);
+    assert(format("%b", b) == "1_00001111_00001111");
+}
+
 @system unittest
 {
     import std.format : format;
@@ -2547,6 +2701,22 @@ if (isIntegral!T || isSomeChar!T || isBoolean!T)
         return cast(T) swapEndian(cast(uint) val);
     else
         static assert(0, T.stringof ~ " unsupported by swapEndian.");
+}
+
+///
+@safe unittest
+{
+    assert(42.swapEndian == 704643072);
+    assert(42.swapEndian.swapEndian == 42); // reflexive
+    assert(1.swapEndian == 16777216);
+
+    assert(true.swapEndian == true);
+    assert(byte(10).swapEndian == 10);
+    assert(char(10).swapEndian == 10);
+
+    assert(ushort(10).swapEndian == 2560);
+    assert(long(10).swapEndian == 720575940379279360);
+    assert(ulong(10).swapEndian == 720575940379279360);
 }
 
 private ushort swapEndianImpl(ushort val) @safe pure nothrow @nogc
