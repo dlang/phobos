@@ -59,8 +59,8 @@ aa[std.zlib]=-dip1000
 
 aa[std.algorithm.comparison]=-dip1000
 aa[std.algorithm.internal]=-dip1000
-aa[std.algorithm.iteration]=-dip25 # depends on std.container.slist (to be updated https://github.com/dlang/phobos/pull/6295)
-aa[std.algorithm.mutation]=-dip25 #  depends on std.container.slist (to be updated https://github.com/dlang/phobos/pull/6295)
+aa[std.algorithm.iteration]=-dip25 # depends on SList!string fixed
+aa[std.algorithm.mutation]=-dip1000
 aa[std.algorithm.package]=-dip1000
 aa[std.algorithm.searching]=-dip25 # depends on https://github.com/dlang/phobos/pull/6246 merged and std.algorithm.comparison fixed
 aa[std.algorithm.setops]=-dip1000
@@ -95,7 +95,7 @@ aa[std.container.binaryheap]=-dip1000
 aa[std.container.dlist]=-dip1000
 aa[std.container.package]=-dip1000
 aa[std.container.rbtree]=-dip25 # DROP
-aa[std.container.slist]=-dip25 # -dip1000 -version=DIP1000   depends on an update (no insertFront's code duplication in constructor) and merge of https://github.com/dlang/phobos/pull/6295
+aa[std.container.slist]=-dip1000 # -dip1000 -version=DIP1000   depends on an update (no insertFront's code duplication in constructor) and merge of https://github.com/dlang/phobos/pull/6295
 aa[std.container.util]=-dip25 # depends on rbtree and slist = -dip1000
 
 aa[std.datetime.date]=-dip1000
