@@ -4007,8 +4007,10 @@ private alias lengthType(R) = typeof(R.init.length.init);
         An `Exception` if all of the _ranges are not the same length and
         `sp` is set to `StoppingPolicy.requireSameLength`.
 
-    Limitations: The `@nogc` or `nothrow` attributes for this range cannot be inferred
-    because $(LREF StoppingPolicy) is not known during compilation.
+    Limitations: The `@nogc` and `nothrow` attributes cannot be inferred for
+    the `Zip` struct because $(LREF StoppingPolicy) can vary at runtime. This
+    limitation is not shared by the anonymous range returned by the `zip`
+    function when not given an explicit `StoppingPolicy` as an argument.
 */
 struct Zip(Ranges...)
 if (Ranges.length && allSatisfy!(isInputRange, Ranges))
@@ -4358,11 +4360,62 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
 auto zip(Ranges...)(Ranges ranges)
 if (Ranges.length && allSatisfy!(isInputRange, Ranges))
 {
-    return Zip!Ranges(ranges);
+    static if (allSatisfy!(isInfinite, Ranges) || Ranges.length == 1)
+    {
+        return ZipShortest!(Ranges)(ranges);
+    }
+    else static if (allSatisfy!(isBidirectionalRange, Ranges))
+    {
+        static if (allSatisfy!(templateOr!(isInfinite, hasLength), Ranges)
+            && allSatisfy!(templateOr!(isInfinite, hasSlicing), Ranges)
+            && allSatisfy!(isBidirectionalRange, staticMap!(Take, Ranges)))
+        {
+            // If all the ranges are bidirectional, if possible slice them to
+            // the same length to simplify the implementation.
+            static assert(anySatisfy!(hasLength, Ranges));
+            static foreach (i, Range; Ranges)
+                static if (hasLength!Range)
+                {
+                    static if (!anySatisfy!(hasLength, Ranges[0 .. i]))
+                        size_t minLen = ranges[i].length;
+                    else
+                    {{
+                        const x = ranges[i].length;
+                        if (x < minLen) minLen = x;
+                    }}
+                }
+            import std.format : format;
+            static if (!anySatisfy!(isInfinite, Ranges))
+                return mixin(`ZipShortest!(Yes.allKnownSameLength, staticMap!(Take, Ranges))`~
+                    `(%(ranges[%s][0 .. minLen]%|, %))`.format(iota(0, Ranges.length)));
+            else
+                return mixin(`ZipShortest!(Yes.allKnownSameLength, staticMap!(Take, Ranges))`~
+                    `(%(take(ranges[%s], minLen)%|, %))`.format(iota(0, Ranges.length)));
+        }
+        else static if (allSatisfy!(isRandomAccessRange, Ranges))
+        {
+            // We can't slice but we can still use random access to ensure
+            // "back" is retrieving the same index for each range.
+            return ZipShortest!(Ranges)(ranges);
+        }
+        else
+        {
+            // If bidirectional range operations would not be supported by
+            // ZipShortest that might have actually been a bug since Zip
+            // supported `back` without verifying that each range had the
+            // same length, but for the sake of backwards compatibility
+            // use the old Zip to continue supporting them.
+            return Zip!Ranges(ranges);
+        }
+    }
+    else
+    {
+        return ZipShortest!(Ranges)(ranges);
+    }
 }
 
 ///
-pure @safe unittest
+@nogc nothrow pure @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
@@ -4374,7 +4427,7 @@ pure @safe unittest
 }
 
 ///
-pure @safe unittest
+nothrow pure @safe unittest
 {
     import std.conv : to;
 
@@ -4400,7 +4453,7 @@ pure @safe unittest
 }
 
 /// $(D zip) is powerful - the following code sorts two arrays in parallel:
-pure @safe unittest
+nothrow pure @safe unittest
 {
     import std.algorithm.sorting : sort;
 
@@ -4465,6 +4518,309 @@ pure @safe unittest
     assertThrown!Exception(same.popFront);
 }
 
+/+
+Non-public. Like $(LREF Zip) with `StoppingPolicy.shortest`
+except it properly implements `back` and `popBack` in the
+case of uneven ranges or disables those operations when
+it is not possible to guarantee they are correct.
++/
+package template ZipShortest(Ranges...)
+if (Ranges.length && __traits(compiles,
+    {
+        static assert(allSatisfy!(isInputRange, Ranges));
+    }))
+{
+    alias ZipShortest = .ZipShortest!(
+        Ranges.length == 1 || allSatisfy!(isInfinite, Ranges)
+            ? Yes.allKnownSameLength
+            : No.allKnownSameLength,
+        Ranges);
+}
+/+ non-public, ditto +/
+package struct ZipShortest(Flag!"allKnownSameLength" allKnownSameLength, Ranges...)
+if (Ranges.length && allSatisfy!(isInputRange, Ranges))
+{
+    import std.format : format; //for generic mixins
+    import std.typecons : Tuple;
+
+    deprecated("Use of an undocumented alias R.")
+    alias R = Ranges; // Unused here but defined in case library users rely on it.
+    private Ranges ranges;
+    alias ElementType = Tuple!(staticMap!(.ElementType, Ranges));
+
+    /+
+       Builds an object. Usually this is invoked indirectly by using the
+       $(LREF zip) function.
+    +/
+    this(Ranges rs)
+    {
+        ranges[] = rs[];
+    }
+
+    /+
+       Returns `true` if the range is at end.
+    +/
+    static if (allKnownSameLength ? anySatisfy!(isInfinite, Ranges)
+        : allSatisfy!(isInfinite, Ranges))
+    {
+        enum bool empty = false;
+    }
+    else
+    {
+        @property bool empty()
+        {
+            static if (allKnownSameLength)
+            {
+                return ranges[0].empty;
+            }
+            else
+            {
+                static foreach (i; 0 .. Ranges.length)
+                {
+                    if (ranges[i].empty)
+                        return true;
+                }
+                return false;
+            }
+        }
+    }
+
+    /+
+       Forward range primitive. Only present if each constituent range is a
+       forward range.
+    +/
+    static if (allSatisfy!(isForwardRange, Ranges))
+    @property typeof(this) save()
+    {
+        return mixin(`typeof(return)(%(ranges[%s].save%|, %))`.format(iota(0, Ranges.length)));
+    }
+
+    /+
+       Returns the current iterated element.
+    +/
+    @property ElementType front()
+    {
+        return mixin(`typeof(return)(%(ranges[%s].front%|, %))`.format(iota(0, Ranges.length)));
+    }
+
+    /+
+       Sets the front of all iterated ranges. Only present if each constituent
+       range has assignable elements.
+    +/
+    static if (allSatisfy!(hasAssignableElements, Ranges))
+    @property void front()(ElementType v)
+    {
+        static foreach (i; 0 .. Ranges.length)
+            ranges[i].front = v[i];
+    }
+
+    /+
+       Moves out the front. Present if each constituent range has mobile elements.
+    +/
+    static if (allSatisfy!(hasMobileElements, Ranges))
+    ElementType moveFront()()
+    {
+        return mixin(`typeof(return)(%(ranges[%s].moveFront()%|, %))`.format(iota(0, Ranges.length)));
+    }
+
+    private enum bool isBackWellDefined = allSatisfy!(isBidirectionalRange, Ranges)
+        && (allKnownSameLength
+            || allSatisfy!(isRandomAccessRange, Ranges)
+            // Could also add the case where there is one non-infinite bidirectional
+            // range that defines `length` and all others are infinite random access
+            // ranges. Adding this would require appropriate branches in
+            // back/moveBack/popBack.
+            );
+
+    /+
+       Returns the rightmost element. Present if all constituent ranges are
+       bidirectional and either there is a compile-time guarantee that all
+       ranges have the same length (in `allKnownSameLength`) or all ranges
+       provide random access to elements.
+    +/
+    static if (isBackWellDefined)
+    @property ElementType back()
+    {
+        static if (allKnownSameLength)
+        {
+            return mixin(`typeof(return)(%(ranges[%s].back()%|, %))`.format(iota(0, Ranges.length)));
+        }
+        else
+        {
+            const backIndex = length - 1;
+            return mixin(`typeof(return)(%(ranges[%s][backIndex]%|, %))`.format(iota(0, Ranges.length)));
+        }
+    }
+
+    /+
+       Moves out the back. Present if `back` is defined and
+       each constituent range has mobile elements.
+    +/
+    static if (isBackWellDefined && allSatisfy!(hasMobileElements, Ranges))
+    ElementType moveBack()()
+    {
+        static if (allKnownSameLength)
+        {
+            return mixin(`typeof(return)(%(ranges[%s].moveBack()%|, %))`.format(iota(0, Ranges.length)));
+        }
+        else
+        {
+            const backIndex = length - 1;
+            return mixin(`typeof(return)(%(ranges[%s].moveAt(backIndex)%|, %))`.format(iota(0, Ranges.length)));
+        }
+    }
+
+    /+
+       Sets the rightmost element. Only present if `back` is defined and
+       each constituent range has assignable elements.
+    +/
+    static if (isBackWellDefined && allSatisfy!(hasAssignableElements, Ranges))
+    @property void back()(ElementType v)
+    {
+        static if (allKnownSameLength)
+        {
+            static foreach (i; 0 .. Ranges.length)
+                ranges[i].back = v[i];
+        }
+        else
+        {
+            const backIndex = length - 1;
+            static foreach (i; 0 .. Ranges.length)
+                ranges[i][backIndex] = v[i];
+        }
+    }
+
+    /+
+       Calls `popFront` on each constituent range.
+    +/
+    void popFront()
+    {
+        static foreach (i; 0 .. Ranges.length)
+            ranges[i].popFront();
+    }
+
+    /+
+       Pops the rightmost element. Present if `back` is defined.
+    +/
+    static if (isBackWellDefined)
+    void popBack()
+    {
+        static if (allKnownSameLength)
+        {
+            static foreach (i; 0 .. Ranges.length)
+                ranges[i].popBack;
+        }
+        else
+        {
+            const len = length;
+            static foreach (i; 0 .. Ranges.length)
+                static if (!isInfinite!(Ranges[i]))
+                    if (ranges[i].length == len)
+                        ranges[i].popBack();
+        }
+    }
+
+    /+
+       Returns the length of this range. Defined if at least one
+       constituent range defines `length` and the other ranges all also
+       define `length` or are infinite, or if at least one constituent
+       range defines `length` and there is a compile-time guarantee that
+       all ranges have the same length (in `allKnownSameLength`).
+    +/
+    static if (allKnownSameLength
+        ? anySatisfy!(hasLength, Ranges)
+        : (anySatisfy!(hasLength, Ranges)
+            && allSatisfy!(templateOr!(isInfinite, hasLength), Ranges)))
+    {
+        @property size_t length()
+        {
+            static if (allKnownSameLength)
+            {
+                static foreach (i, Range; Ranges)
+                {
+                    static if (hasLength!Range && !anySatisfy!(hasLength, Ranges[0 .. i]))
+                        return ranges[i].length;
+                }
+            }
+            else
+            {
+                static foreach (i, Range; Ranges)
+                    static if (hasLength!Range)
+                    {
+                        static if (!anySatisfy!(hasLength, Ranges[0 .. i]))
+                            size_t minLen = ranges[i].length;
+                        else
+                        {{
+                            const x = ranges[i].length;
+                            if (x < minLen) minLen = x;
+                        }}
+                    }
+                return minLen;
+            }
+        }
+
+        alias opDollar = length;
+    }
+
+    /+
+       Returns a slice of the range. Defined if all constituent ranges
+       support slicing.
+    +/
+    static if (allSatisfy!(hasSlicing, Ranges))
+    {
+        // Note: we will know that all elements of the resultant range
+        // will have the same length but we cannot change `allKnownSameLength`
+        // because the `hasSlicing` predicate tests that the result returned
+        // by `opSlice` has the same type as the receiver.
+        auto opSlice()(size_t from, size_t to)
+        {
+            //(ranges[0][from .. to], ranges[1][from .. to], ...)
+            enum sliceArgs = `(%(ranges[%s][from .. to]%|, %))`.format(iota(0, Ranges.length));
+            static if (__traits(compiles, mixin(`typeof(this)`~sliceArgs)))
+                return mixin(`typeof(this)`~sliceArgs);
+            else
+                // The type is different anyway so we might as well
+                // explicitly set allKnownSameLength.
+                return mixin(`ZipShortest!(Yes.allKnownSameLength, staticMap!(Take, Ranges))`
+                    ~sliceArgs);
+        }
+    }
+
+    /+
+       Returns the `n`th element in the composite range. Defined if all
+       constituent ranges offer random access.
+    +/
+    static if (allSatisfy!(isRandomAccessRange, Ranges))
+    ElementType opIndex()(size_t n)
+    {
+        return mixin(`typeof(return)(%(ranges[%s][n]%|, %))`.format(iota(0, Ranges.length)));
+    }
+
+    /+
+       Sets the `n`th element in the composite range. Defined if all
+       constituent ranges offer random access and have assignable elements.
+    +/
+    static if (allSatisfy!(isRandomAccessRange, Ranges)
+        && allSatisfy!(hasAssignableElements, Ranges))
+    void opIndexAssign()(ElementType v, size_t n)
+    {
+        static foreach (i; 0 .. Ranges.length)
+            ranges[i][n] = v[i];
+    }
+
+    /+
+       Destructively reads the `n`th element in the composite
+       range. Defined if all constituent ranges offer random
+       access and have mobile elements.
+    +/
+    static if (allSatisfy!(isRandomAccessRange, Ranges)
+        && allSatisfy!(hasMobileElements, Ranges))
+    ElementType moveAt()(size_t n)
+    {
+        return mixin(`typeof(return)(%(ranges[%s].moveAt(n)%|, %))`.format(iota(0, Ranges.length)));
+    }
+}
+
 pure @system unittest
 {
     import std.algorithm.comparison : equal;
@@ -4483,13 +4839,15 @@ pure @system unittest
     }
 
     swap(a[0], a[1]);
-    auto z = zip(a, b);
+    {
+        auto z = zip(a, b);
+    }
     //swap(z.front(), z.back());
     sort!("a[0] < b[0]")(zip(a, b));
     assert(a == [1, 2, 3]);
     assert(b == [2.0, 1.0, 3.0]);
 
-    z = zip(StoppingPolicy.requireSameLength, a, b);
+    auto z = zip(StoppingPolicy.requireSameLength, a, b);
     assertNotThrown(z.popBack());
     assertNotThrown(z.popBack());
     assertNotThrown(z.popBack());
@@ -4594,7 +4952,7 @@ pure @system unittest
     +/
 }
 
-pure @safe unittest
+nothrow pure @safe unittest
 {
     import std.algorithm.sorting : sort;
 
@@ -4608,7 +4966,7 @@ pure @safe unittest
     assert(b == [6, 5, 2, 1, 3]);
 }
 
-pure @safe unittest
+nothrow pure @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.typecons : tuple;
@@ -4634,7 +4992,7 @@ pure @safe unittest
     assertThrown(zip(StoppingPolicy.longest, cast(S[]) null, new int[1]).front);
 }
 
-@safe pure unittest //12007
+@nogc nothrow @safe pure unittest //12007
 {
     static struct R
     {
@@ -4649,7 +5007,7 @@ pure @safe unittest
     assert(z.save == z);
 }
 
-pure @system unittest
+nothrow pure @system unittest
 {
     import std.typecons : tuple;
 
@@ -4660,6 +5018,98 @@ pure @system unittest
     z1.popFront();
     assert(z1.front == tuple(1,2));
     assert(z2.front == tuple(0,1));
+}
+
+@nogc nothrow pure @safe unittest
+{
+    // Test zip's `back` and `length` with non-equal ranges.
+    static struct NonSliceableRandomAccess
+    {
+        private int[] a;
+        @property ref front()
+        {
+            return a.front;
+        }
+        @property ref back()
+        {
+            return a.back;
+        }
+        ref opIndex(size_t i)
+        {
+            return a[i];
+        }
+        void popFront()
+        {
+            a.popFront();
+        }
+        void popBack()
+        {
+            a.popBack();
+        }
+        auto moveFront()
+        {
+            return a.moveFront();
+        }
+        auto moveBack()
+        {
+            return a.moveBack();
+        }
+        auto moveAt(size_t i)
+        {
+            return a.moveAt(i);
+        }
+        bool empty() const
+        {
+            return a.empty;
+        }
+        size_t length() const
+        {
+            return a.length;
+        }
+        typeof(this) save()
+        {
+            return this;
+        }
+    }
+    static assert(isRandomAccessRange!NonSliceableRandomAccess);
+    static assert(!hasSlicing!NonSliceableRandomAccess);
+    static foreach (iteration; 0 .. 2)
+    {{
+        int[5] data = [101, 102, 103, 201, 202];
+        static if (iteration == 0)
+        {
+            auto r1 = NonSliceableRandomAccess(data[0 .. 3]);
+            auto r2 = NonSliceableRandomAccess(data[3 .. 5]);
+        }
+        else
+        {
+            auto r1 = data[0 .. 3];
+            auto r2 = data[3 .. 5];
+        }
+        auto z = zip(r1, r2);
+        static assert(isRandomAccessRange!(typeof(z)));
+        assert(z.length == 2);
+        assert(z.back[0] == 102 && z.back[1] == 202);
+        z.back = typeof(z.back)(-102, -202);// Assign to back.
+        assert(z.back[0] == -102 && z.back[1] == -202);
+        z.popBack();
+        assert(z.length == 1);
+        assert(z.back[0] == 101 && z.back[1] == 201);
+        z.front = typeof(z.front)(-101, -201);
+        assert(z.moveBack() == typeof(z.back)(-101, -201));
+        z.popBack();
+        assert(z.empty);
+    }}
+}
+
+@nogc nothrow pure @safe unittest
+{
+    // Test opSlice on infinite `zip`.
+    auto z = zip(repeat(1), repeat(2));
+    assert(hasSlicing!(typeof(z)));
+    auto slice = z[10 .. 20];
+    assert(slice.length == 10);
+    static assert(!is(typeof(z) == typeof(slice)));
 }
 
 /*
