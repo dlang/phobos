@@ -6829,6 +6829,8 @@ mixin template Proxy(alias a)
     bool* b = Name("a") in names;
 }
 
+// excludes struct S; it's 'mixin Proxy!foo' doesn't compile with -dip1000
+version(DIP1000) {} else
 @system unittest
 {
     // bug14213, using function for the payload
@@ -6837,15 +6839,19 @@ mixin template Proxy(alias a)
         int foo() { return 12; }
         mixin Proxy!foo;
     }
+    S s;
+    assert(s + 1 == 13);
+    assert(s * 2 == 24);
+}
+
+@system unittest
+{
     static class C
     {
         int foo() { return 12; }
         mixin Proxy!foo;
     }
-    S s;
-    assert(s + 1 == 13);
     C c = new C();
-    assert(s * 2 == 24);
 }
 
 // Check all floating point comparisons for both Proxy and Typedef,
