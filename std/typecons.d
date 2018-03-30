@@ -3445,9 +3445,9 @@ if (is (typeof(nullValue) == T))
 /**
 Unpacks the content of a $(D Nullable), performs an operation and packs it again. Does nothing if isNull.
 
-When called on a $(D Nullable), `apply` will unpack the value contained in the $(D Nullable),
-pass it to the function you provide and wrap the result in another $(D Nullable) (if necessary).
-If the Nullable is null, `apply` will return null itself.
+When called on a `Nullable`, `apply` will unpack the value contained in the `Nullable`,
+pass it to the function you provide and wrap the result in another `Nullable` (if necessary).
+If the `Nullable` is null, `apply` will return null itself.
 
 Params:
     t = a `Nullable`
