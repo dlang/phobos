@@ -120,19 +120,20 @@ else
 endif
 
 # Set DFLAGS
-DFLAGS=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -dip25 $(MODEL_FLAG) $(PIC) -transition=complex
+DFLAGS=
+override DFLAGS+=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -dip25 $(MODEL_FLAG) $(PIC) -transition=complex
 ifeq ($(BUILD),debug)
-	DFLAGS += -g -debug
+override DFLAGS += -g -debug
 else
-	DFLAGS += -O -release
+override DFLAGS += -O -release
 endif
 
 ifdef ENABLE_COVERAGE
-DFLAGS  += -cov
+override DFLAGS  += -cov
 endif
 ifneq (,$(TZ_DATABASE_DIR))
 $(file > /tmp/TZDatabaseDirFile, ${TZ_DATABASE_DIR})
-DFLAGS += -version=TZDatabaseDir -J/tmp/
+override DFLAGS += -version=TZDatabaseDir -J/tmp/
 endif
 
 UDFLAGS=-unittest
