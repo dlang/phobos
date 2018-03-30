@@ -725,7 +725,6 @@ deprecated
     assertThrown(enf(false, "blah"));
 }
 
-
 /++
     Catches and returns the exception thrown from the given expression.
     If no exception is thrown, then null is returned and $(D result) is
@@ -796,10 +795,11 @@ T collectException(T : Throwable = Exception, E)(lazy E expression)
     return null;
 }
 
+///
 @safe unittest
 {
     int foo() { throw new Exception("blah"); }
-    assert(collectException(foo()));
+    assert(collectException(foo()).msg == "blah");
 }
 
 /++
@@ -975,19 +975,24 @@ immutable(T[U]) assumeUnique(T, U)(ref T[U] array) pure nothrow
     return result;
 }
 
+///
 @system unittest
 {
-    // @system due to assumeUnique
     int[] arr = new int[1];
-    auto arr1 = assumeUnique(arr);
-    assert(is(typeof(arr1) == immutable(int)[]) && arr == null);
+    auto arr1 = arr.assumeUnique;
+    static assert(is(typeof(arr1) == immutable(int)[]));
+    assert(arr == null);
+    assert(arr1 == [0]);
 }
 
+///
 @system unittest
 {
     int[string] arr = ["a":1];
-    auto arr1 = assumeUnique(arr);
-    assert(is(typeof(arr1) == immutable(int[string])) && arr == null);
+    auto arr1 = arr.assumeUnique;
+    static assert(is(typeof(arr1) == immutable(int[string])));
+    assert(arr == null);
+    assert(arr1.keys == ["a"]);
 }
 
 /**
@@ -1582,25 +1587,28 @@ class ErrnoException : Exception
         _errno = errno;
         super(msg ~ " (" ~ errnoString(errno) ~ ")", file, line);
     }
+}
 
-    @system unittest
-    {
-        import core.stdc.errno : errno, EAGAIN;
+///
+@system unittest
+{
+    import core.stdc.errno : EAGAIN;
+    auto ex = new ErrnoException("oh no", EAGAIN);
+    assert(ex.errno == EAGAIN);
+}
 
-        auto old = errno;
-        scope(exit) errno = old;
+/// errno is used by default if no explicit error code is provided
+@system unittest
+{
+    import core.stdc.errno : errno, EAGAIN;
 
-        errno = EAGAIN;
-        auto ex = new ErrnoException("oh no");
-        assert(ex.errno == EAGAIN);
-    }
+    auto old = errno;
+    scope(exit) errno = old;
 
-    @system unittest
-    {
-        import core.stdc.errno : EAGAIN;
-        auto ex = new ErrnoException("oh no", EAGAIN);
-        assert(ex.errno == EAGAIN);
-    }
+    // fake that errno got set by the callee
+    errno = EAGAIN;
+    auto ex = new ErrnoException("oh no");
+    assert(ex.errno == EAGAIN);
 }
 
 /++
@@ -1619,63 +1627,7 @@ class ErrnoException : Exception
     Returns:
         expression, if it does not throw. Otherwise, returns the result of
         errorHandler.
-
-    Example:
-    $(RUNNABLE_EXAMPLE
-    --------------------
-    //Revert to a default value upon an error:
-    assert("x".to!int().ifThrown(0) == 0);
-    --------------------
-    )
-
-    You can also chain multiple calls to ifThrown, each capturing errors from the
-    entire preceding expression.
-
-    Example:
-    $(RUNNABLE_EXAMPLE
-    --------------------
-    //Chaining multiple calls to ifThrown to attempt multiple things in a row:
-    string s="true";
-    assert(s.to!int().
-            ifThrown(cast(int) s.to!double()).
-            ifThrown(cast(int) s.to!bool())
-            == 1);
-
-    //Respond differently to different types of errors
-    assert(enforce("x".to!int() < 1).to!string()
-            .ifThrown!ConvException("not a number")
-            .ifThrown!Exception("number too small")
-            == "not a number");
-    --------------------
-    )
-
-    The expression and the errorHandler must have a common type they can both
-    be implicitly casted to, and that type will be the type of the compound
-    expression.
-
-    Example:
-    $(RUNNABLE_EXAMPLE
-    --------------------
-    //null and new Object have a common type(Object).
-    static assert(is(typeof(null.ifThrown(new Object())) == Object));
-    static assert(is(typeof((new Object()).ifThrown(null)) == Object));
-
-    //1 and new Object do not have a common type.
-    static assert(!__traits(compiles, 1.ifThrown(new Object())));
-    static assert(!__traits(compiles, (new Object()).ifThrown(1)));
-    --------------------
-    )
-
-    If you need to use the actual thrown exception, you can use a delegate.
-    Example:
-
-    $(RUNNABLE_EXAMPLE
-    --------------------
-    //Use a lambda to get the thrown object.
-    assert("%s".format().ifThrown!Exception(e => e.classinfo.name) == "std.format.FormatException");
-    --------------------
-    )
-    +/
++/
 //lazy version
 CommonType!(T1, T2) ifThrown(E : Throwable = Exception, T1, T2)(lazy scope T1 expression, lazy scope T2 errorHandler)
 {
@@ -1736,6 +1688,59 @@ CommonType!(T1, T2) ifThrown(T1, T2)(lazy scope T1 expression, scope T2 delegate
     {
         return errorHandler(e);
     }
+}
+
+/// Revert to a default value upon an error:
+@safe unittest
+{
+    import std.conv : to;
+    assert("x".to!int.ifThrown(0) == 0);
+}
+
+/**
+Chain multiple calls to ifThrown, each capturing errors from the
+entire preceding expression.
+*/
+@safe unittest
+{
+    import std.conv : ConvException, to;
+    string s = "true";
+    assert(s.to!int.ifThrown(cast(int) s.to!double)
+                   .ifThrown(cast(int) s.to!bool) == 1);
+
+    s = "2.0";
+    assert(s.to!int.ifThrown(cast(int) s.to!double)
+                   .ifThrown(cast(int) s.to!bool) == 2);
+
+    // Respond differently to different types of errors
+    alias orFallback = (lazy a)  => a.ifThrown!ConvException("not a number")
+                                     .ifThrown!Exception("number too small");
+
+    assert(orFallback(enforce("x".to!int < 1).to!string) == "not a number");
+    assert(orFallback(enforce("2".to!int < 1).to!string) == "number too small");
+}
+
+/**
+The expression and the errorHandler must have a common type they can both
+be implicitly casted to, and that type will be the type of the compound
+expression.
+*/
+@safe unittest
+{
+    // null and new Object have a common type(Object).
+    static assert(is(typeof(null.ifThrown(new Object())) == Object));
+    static assert(is(typeof((new Object()).ifThrown(null)) == Object));
+
+    // 1 and new Object do not have a common type.
+    static assert(!__traits(compiles, 1.ifThrown(new Object())));
+    static assert(!__traits(compiles, (new Object()).ifThrown(1)));
+}
+
+/// Use a lambda to get the thrown object.
+@system unittest
+{
+    import std.format : format;
+    assert("%s".format.ifThrown!Exception(e => e.classinfo.name) == "std.format.FormatException");
 }
 
 //Verify Examples
@@ -1839,6 +1844,40 @@ enum RangePrimitive
     opSlice  = 0b10_0000_0000, /// Ditto
     access   = front | back | opIndex, /// Ditto
     pop      = popFront | popBack, /// Ditto
+}
+
+///
+pure @safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map, splitter;
+    import std.conv : to, ConvException;
+
+    auto s = "12,1337z32,54,2,7,9,1z,6,8";
+
+    // The next line composition will throw when iterated
+    // as some elements of the input do not convert to integer
+    auto r = s.splitter(',').map!(a => to!int(a));
+
+    // Substitute 0 for cases of ConvException
+    auto h = r.handle!(ConvException, RangePrimitive.front, (e, r) => 0);
+    assert(h.equal([12, 0, 54, 2, 7, 9, 0, 6, 8]));
+}
+
+///
+pure @safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : retro;
+    import std.utf : UTFException;
+
+    auto str = "hello\xFFworld"; // 0xFF is an invalid UTF-8 code unit
+
+    auto handled = str.handle!(UTFException, RangePrimitive.access,
+            (e, r) => ' '); // Replace invalid code points with spaces
+
+    assert(handled.equal("hello world")); // `front` is handled,
+    assert(handled.retro.equal("dlrow olleh")); // as well as `back`
 }
 
 /** Handle exceptions thrown from range primitives.
