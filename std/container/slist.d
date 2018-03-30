@@ -58,7 +58,7 @@ struct SList(T)
     import std.exception : enforce;
     import std.range : Take;
     import std.range.primitives : isInputRange, isForwardRange, ElementType;
-    import std.traits : isImplicitlyConvertible;
+    import std.traits : isImplicitlyConvertible, isSomeString;
 
     private struct Node
     {
@@ -362,7 +362,10 @@ Complexity: $(BIGOH m), where $(D m) is the length of $(D stuff)
         Node * n, newRoot;
         foreach (item; stuff)
         {
-            auto newNode = new Node(null, item);
+            static if (isSomeString!T)
+                auto newNode = new Node(null, item.dup);
+            else
+                auto newNode = new Node(null, item);
             (newRoot ? n._next : newRoot) = newNode;
             n = newNode;
             ++result;
@@ -791,7 +794,7 @@ Complexity: $(BIGOH n)
     assert(s.insertAfter(r, 5) == 1);
     assert(s == SList!int(1, 2, 5, 3, 4));
 }
-/+
+
 @safe unittest
 {
     import std.algorithm.comparison : equal;
@@ -804,7 +807,7 @@ Complexity: $(BIGOH n)
     sl.insertAfter(take(sl[], 2), "c"); // insert after "b"
     assert(equal(sl[], ["a", "b", "c", "d", "e"]));
 }
-+/
+
 @safe unittest
 {
     import std.range.primitives;
