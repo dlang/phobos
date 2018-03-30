@@ -4236,7 +4236,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
         @property empty() { return _impl.empty; }
         @property auto front() { return _impl.front; }
         void popFront() { _impl = _impl[1..$]; }
-        @property RefSep save() { return new RefSep(_impl); }
+        @property RefSep save() scope { return new RefSep(_impl); }
         @property auto length() { return _impl.length; }
     }
     auto sep = new RefSep("->");
