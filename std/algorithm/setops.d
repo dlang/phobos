@@ -824,14 +824,16 @@ Params:
 Returns:
     A range of the union of the ranges in `ror`.
 
-Warning: Because `MultiwayMerge` does not allocate extra memory, it
+Warning: Because `MultiwayMerge` by default does not allocate extra memory, it
 will leave `ror` modified. Namely, `MultiwayMerge` assumes ownership
 of `ror` and discretionarily swaps and advances elements of it. If
 you want `ror` to preserve its contents after the call, you may
 want to pass a duplicate to `MultiwayMerge` (and perhaps cache the
 duplicate in between calls).
+If you want both the BinaryHeap and the `ror` to be copyable, you may
+instantiate MultiwayMerge with `copyable` as true.
  */
-struct MultiwayMerge(alias less, RangeOfRanges)
+struct MultiwayMerge(alias less, RangeOfRanges, bool copyable = false)
 {
     import std.container : BinaryHeap;
 
@@ -848,11 +850,19 @@ struct MultiwayMerge(alias less, RangeOfRanges)
     }
     private BinaryHeap!(RangeOfRanges, compFront) _heap;
 
-    ///
+    static if(copyable)
+    {
+        this(this)
+        {
+            _heap = _heap.dup;
+            _ror = _ror.dup;
+            _heap.assume(_ror);
+        }
+    }
+
     this(RangeOfRanges ror)
     {
         import std.algorithm.mutation : remove, SwapStrategy;
-
         // Preemptively get rid of all empty ranges in the input
         // No need for stability either
         _ror = remove!("a.empty", SwapStrategy.unstable)(ror);
@@ -888,8 +898,8 @@ struct MultiwayMerge(alias less, RangeOfRanges)
 }
 
 /// Ditto
-MultiwayMerge!(less, RangeOfRanges) multiwayMerge
-(alias less = "a < b", RangeOfRanges)
+MultiwayMerge!(less, RangeOfRanges, copyable)
+multiwayMerge(alias less = "a < b", RangeOfRanges, bool copyable = false)
 (RangeOfRanges ror)
 {
     return typeof(return)(ror);
@@ -924,6 +934,56 @@ MultiwayMerge!(less, RangeOfRanges) multiwayMerge
     ];
     // duplicates are propagated to the resulting range
     assert(equal(multiwayMerge(b), witness));
+}
+
+@system unittest
+{
+    int[][] a = [
+        [ 1 ],
+        [ 1, 2 ],
+        [ 1, 2, 3 ],
+        [ 1, 2, 3, 4 ],
+        [ 1, 2, 3, 4, 5 ],
+        [ 1, 2, 3, 4, 5, 6 ],
+        [ 1, 2, 3, 4, 5, 6, 7 ],
+    ];
+    auto un = nWayUnion!("a < b", typeof(a), true)(a).chunkBy!`a==b`;
+    assert(un.equal!equal([
+        [1, 1, 1, 1, 1, 1, 1],
+        [2, 2, 2, 2, 2, 2],
+        [3, 3, 3, 3, 3],
+        [4, 4, 4, 4],
+        [5, 5, 5],
+        [6, 6],
+        [7]
+    ]
+    ));
+}
+
+@system unittest
+{
+    int[][] a = [
+        [ 1 ],
+        [ 1, 2 ],
+        [ 1, 2, 3 ],
+        [ 1, 2, 3, 4 ],
+        [ 1, 2, 3, 4, 5 ],
+        [ 1, 2, 3, 4, 5, 6 ],
+        [ 1, 2, 3, 4, 5, 6, 7 ],
+    ];
+    auto un = nWayUnion!("a < b", typeof(a), true)(a).chunkBy!`a==b`;
+    auto un2 = un;
+
+    while (!un.empty())
+    {
+        un.front();
+        un.popFront();
+    }
+    while (!un2.empty())
+    {
+        un2.front();
+        un2.popFront();
+    }
 }
 
 alias nWayUnion = multiwayMerge;
