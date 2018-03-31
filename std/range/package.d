@@ -1241,6 +1241,38 @@ pure @safe nothrow unittest
     assert(arr3.equal([7, 8, 9]));
 }
 
+/**
+Due to safe type promotion in D, chaining together different
+character ranges results in a `uint` range.
+
+Use $(REF_ALTTEXT byChar, byChar,std,utf), $(REF_ALTTEXT byWchar, byWchar,std,utf),
+and $(REF_ALTTEXT byDchar, byDchar,std,utf) on the ranges
+to get the type you need.
+ */
+pure @safe nothrow unittest
+{
+    import std.utf : byChar, byCodeUnit;
+
+    auto s1 = "string one";
+    auto s2 = "string two";
+    // s1 and s2 front is dchar because of auto-decoding
+    static assert(is(typeof(s1.front) == dchar) && is(typeof(s2.front) == dchar));
+
+    auto r1 = s1.chain(s2);
+    // chains of ranges of the same character type give that same type
+    static assert(is(typeof(r1.front) == dchar));
+
+    auto s3 = "string three".byCodeUnit;
+    static assert(is(typeof(s3.front) == immutable char));
+    auto r2 = s1.chain(s3);
+    // type is promoted
+    static assert(is(typeof(r2.front) == uint));
+
+    // use byChar on character ranges to correctly convert them to UTF-8
+    auto r3 = s1.byChar.chain(s3);
+    static assert(is(typeof(r3.front) == immutable char));
+}
+
 pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
