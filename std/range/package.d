@@ -1713,25 +1713,25 @@ if (Ranges.length >= 2
     assert(c[0] == 42);
 }
 
-@safe nothrow pure @nogc unittest
+@safe nothrow pure /*@nogc*/ unittest
 {
     static struct RefAccessRange
     {
         int[] r;
-        ref front() @property { return r[0]; }
-        ref back() @property { return r[$ - 1]; }
+        scope ref front() @property { return r[0]; }
+        scope ref back() @property { return r[$ - 1]; }
         void popFront() { r = r[1 .. $]; }
         void popBack() { r = r[0 .. $ - 1]; }
         auto empty() @property { return r.empty; }
-        ref opIndex(size_t i) { return r[i]; }
+        scope ref opIndex(size_t i) { return r[i]; }
         auto length() @property { return r.length; }
         alias opDollar = length;
         auto save() { return this; }
     }
     static assert(isRandomAccessRange!RefAccessRange);
     static assert(isRandomAccessRange!RefAccessRange);
-    int[4] a = [4, 3, 2, 1];
-    int[2] b = [6, 5];
+    int[] a = [4, 3, 2, 1];
+    int[] b = [6, 5];
     auto c = chooseAmong(0, RefAccessRange(a[]), RefAccessRange(b[]));
 
     void refFunc(ref int a, int target) { assert(a == target); }
@@ -5052,21 +5052,21 @@ nothrow pure @system unittest
     assert(z2.front == tuple(0,1));
 }
 
-@nogc nothrow pure @safe unittest
+/*@nogc*/ nothrow pure @safe unittest
 {
     // Test zip's `back` and `length` with non-equal ranges.
     static struct NonSliceableRandomAccess
     {
         private int[] a;
-        @property ref front()
+        @property scope ref front()
         {
             return a.front;
         }
-        @property ref back()
+        @property scope ref back()
         {
             return a.back;
         }
-        ref opIndex(size_t i)
+        scope ref opIndex(size_t i)
         {
             return a[i];
         }
@@ -5107,7 +5107,7 @@ nothrow pure @system unittest
     static assert(!hasSlicing!NonSliceableRandomAccess);
     static foreach (iteration; 0 .. 2)
     {{
-        int[5] data = [101, 102, 103, 201, 202];
+        int[] data = [101, 102, 103, 201, 202];
         static if (iteration == 0)
         {
             auto r1 = NonSliceableRandomAccess(data[0 .. 3]);
