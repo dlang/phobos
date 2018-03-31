@@ -3,6 +3,57 @@
 /**
 Facilities for random number generation.
 
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Uniform sampling) $(TD
+    $(LREF uniform)
+    $(LREF uniform01)
+    $(LREF uniformDistribution)
+))
+$(TR $(TD Element sampling) $(TD
+    $(LREF choice)
+    $(LREF dice)
+))
+$(TR $(TD Range sampling) $(TD
+    $(LREF randomCover)
+    $(LREF randomSample)
+))
+$(TR $(TD Default Random Engines) $(TD
+    $(LREF rndGen)
+    $(LREF Random)
+    $(LREF unpredictableSeed)
+))
+$(TR $(TD Linear Congruential Engines) $(TD
+    $(LREF MinstdRand)
+    $(LREF MinstdRand0)
+    $(LREF LinearCongruentialEngine)
+))
+$(TR $(TD Mersenne Twister Engines) $(TD
+    $(LREF Mt19937)
+    $(LREF Mt19937_64)
+    $(LREF MersenneTwisterEngine)
+))
+$(TR $(TD Xorshift Engines) $(TD
+    $(LREF Xorshift)
+    $(LREF XorshiftEngine)
+    $(LREF Xorshift32)
+    $(LREF Xorshift64)
+    $(LREF Xorshift96)
+    $(LREF Xorshift128)
+    $(LREF Xorshift160)
+    $(LREF Xorshift192)
+))
+$(TR $(TD Shuffle) $(TD
+    $(LREF partialShuffle)
+    $(LREF randomShuffle)
+))
+$(TR $(TD Traits) $(TD
+    $(LREF isSeedable)
+    $(LREF isUniformRNG)
+))
+)
+
 $(RED Disclaimer:) The _random number generators and API provided in this
 module are not designed to be cryptographically secure, and are therefore
 unsuitable for cryptographic or security-related purposes such as generating
