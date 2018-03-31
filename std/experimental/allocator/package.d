@@ -1403,9 +1403,27 @@ if (T.sizeof != 1)
 
 private T[] uninitializedFillDefault(T)(T[] array) nothrow
 {
-    T t = T.init;
-    fillWithMemcpy(array, t);
-    return array;
+    static if (isInitAllZeroBits!T)
+    {
+        import core.stdc.string : memset;
+        if (array !is null)
+            memset(array.ptr, 0, T.sizeof * array.length);
+        return array;
+    }
+    else static if (isInitAllOneBits!T)
+    {
+        // Mostly for char and wchar.
+        import core.stdc.string : memset;
+        if (array !is null)
+            memset(array.ptr, 0xff, T.sizeof * array.length);
+        return array;
+    }
+    else
+    {
+        T t = T.init;
+        fillWithMemcpy(array, t);
+        return array;
+    }
 }
 
 pure nothrow @nogc
@@ -1424,6 +1442,24 @@ pure nothrow @nogc
     int[] a = [1, 2, 4];
     uninitializedFillDefault(a);
     assert(a == [0, 0, 0]);
+
+    char[] b = [1, 2, 4];
+    uninitializedFillDefault(b);
+    assert(b == [0xff, 0xff, 0xff]);
+
+    wchar[] c = [1, 2, 4];
+    uninitializedFillDefault(c);
+    assert(c == [0xffff, 0xffff, 0xffff]);
+}
+
+@system unittest
+{
+    static struct P { float x = 0; float y = 0; }
+
+    static assert(isInitAllZeroBits!P);
+    P[] a = [P(10, 11), P(20, 21), P(40, 41)];
+    uninitializedFillDefault(a);
+    assert(a == [P.init, P.init, P.init]);
 }
 
 /**
