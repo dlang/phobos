@@ -1447,7 +1447,7 @@ private struct ChooseResult(R1, R2)
     private bool r1Chosen;
 
     private static auto ref actOnChosen(alias foo, ExtraArgs ...)(ref ChooseResult r,
-            auto ref ExtraArgs extraArgs)
+            auto ref ExtraArgs extraArgs) @trusted
     {
         if (r.r1Chosen)
             return foo(r.r1, extraArgs);
