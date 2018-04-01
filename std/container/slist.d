@@ -58,7 +58,7 @@ struct SList(T)
     import std.exception : enforce;
     import std.range : Take;
     import std.range.primitives : isInputRange, isForwardRange, ElementType;
-    import std.traits : isImplicitlyConvertible;
+    import std.traits : isImplicitlyConvertible, isSomeString;
 
     private struct Node
     {
@@ -354,7 +354,7 @@ Returns: The number of elements inserted
 
 Complexity: $(BIGOH m), where $(D m) is the length of $(D stuff)
      */
-    size_t insertFront(Stuff)(Stuff stuff)
+    size_t insertFront(Stuff)(scope Stuff stuff)
     if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
         initialize();
@@ -362,7 +362,10 @@ Complexity: $(BIGOH m), where $(D m) is the length of $(D stuff)
         Node * n, newRoot;
         foreach (item; stuff)
         {
-            auto newNode = new Node(null, item);
+            static if (isSomeString!T)
+                auto newNode = new Node(null, item.dup);
+            else
+                auto newNode = new Node(null, item);
             (newRoot ? n._next : newRoot) = newNode;
             n = newNode;
             ++result;
