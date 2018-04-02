@@ -288,6 +288,7 @@ SRC_STD_EXP= \
 
 SRC_STD_EXP_ALLOC_BB= \
 	std\experimental\allocator\building_blocks\affix_allocator.d \
+	std\experimental\allocator\building_blocks\aligned_block_list.d \
 	std\experimental\allocator\building_blocks\allocator_list.d \
 	std\experimental\allocator\building_blocks\ascending_page_allocator.d \
 	std\experimental\allocator\building_blocks\bitmapped_block.d \
