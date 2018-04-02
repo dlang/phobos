@@ -4921,6 +4921,8 @@ real remquo(real x, real y, out int n) @trusted nothrow @nogc  /// ditto
  */
 struct IeeeFlags
 {
+@trusted nothrow @nogc:
+
 private:
     // The x87 FPU status register is 16 bits.
     // The Pentium SSE2 status register is 32 bits.
@@ -4959,7 +4961,7 @@ private:
     }
 
 private:
-    static uint getIeeeFlags()
+    static uint getIeeeFlags() pure
     {
         version(InlineAsm_X86_Any)
         {
@@ -4991,11 +4993,12 @@ private:
         else
             assert(0, "Not yet supported");
     }
-    static void resetIeeeFlags() @nogc
+
+    static void resetIeeeFlags()
     {
         version(InlineAsm_X86_Any)
         {
-            asm pure nothrow @nogc
+            asm nothrow @nogc
             {
                 fnclex;
             }
@@ -5058,22 +5061,22 @@ public:
 }
 
 ///
-@system unittest
+@safe unittest
 {
     static void func() {
         int a = 10 * 10;
     }
 
-    real a=3.5;
+    real a = 3.5;
     // Set all the flags to zero
     resetIeeeFlags();
     assert(!ieeeFlags.divByZero);
     // Perform a division by zero.
-    a/=0.0L;
+    a /= 0.0L;
     assert(a == real.infinity);
     assert(ieeeFlags.divByZero);
     // Create a NaN
-    a*=0.0L;
+    a *= 0.0L;
     assert(ieeeFlags.invalid);
     assert(isNaN(a));
 
@@ -5084,14 +5087,14 @@ public:
     assert(ieeeFlags == f);
 }
 
-version(D_HardFloat) @system unittest
+version(D_HardFloat) @safe unittest
 {
     import std.meta : AliasSeq;
 
     static struct Test
     {
-        void delegate() action;
-        bool function() ieeeCheck;
+        void delegate() @trusted action;
+        bool function() @trusted ieeeCheck;
     }
 
     static foreach (T; AliasSeq!(float, double, real))
@@ -5152,10 +5155,13 @@ else version(ARM)
 }
 
 /// Set all of the floating-point status flags to false.
-void resetIeeeFlags() @nogc { IeeeFlags.resetIeeeFlags(); }
+void resetIeeeFlags() @trusted nothrow @nogc
+{
+    IeeeFlags.resetIeeeFlags();
+}
 
 /// Returns: snapshot of the current state of the floating-point status flags
-@property IeeeFlags ieeeFlags()
+@property IeeeFlags ieeeFlags() @trusted pure nothrow @nogc
 {
    return IeeeFlags(IeeeFlags.getIeeeFlags());
 }
@@ -5211,6 +5217,8 @@ assert(rint(1.1) == 1);
  */
 struct FloatingPointControl
 {
+@trusted nothrow @nogc:
+
     alias RoundingMode = uint; ///
 
     version(StdDdoc)
@@ -5256,14 +5264,14 @@ struct FloatingPointControl
     }
 
     //// Change the floating-point hardware rounding mode
-    @property void rounding(RoundingMode newMode) @nogc
+    @property void rounding(RoundingMode newMode)
     {
         initialize();
         setControlState((getControlState() & (-1 - roundingMask)) | (newMode & roundingMask));
     }
 
     /// Returns: the currently active rounding mode
-    @property static RoundingMode rounding() @nogc
+    @property static RoundingMode rounding() pure
     {
         return cast(RoundingMode)(getControlState() & roundingMask);
     }
@@ -5372,7 +5380,7 @@ struct FloatingPointControl
 
 public:
     /// Returns: true if the current FPU supports exception trapping
-    @property static bool hasExceptionTraps() @safe nothrow @nogc
+    @property static bool hasExceptionTraps() @safe pure
     {
         version(X86_Any)
             return true;
@@ -5405,7 +5413,7 @@ public:
     }
 
     /// Enable (unmask) specific hardware exceptions. Multiple exceptions may be ORed together.
-    void enableExceptions(ExceptionMask exceptions) @nogc
+    void enableExceptions(ExceptionMask exceptions)
     {
         assert(hasExceptionTraps);
         initialize();
@@ -5416,7 +5424,7 @@ public:
     }
 
     /// Disable (mask) specific hardware exceptions. Multiple exceptions may be ORed together.
-    void disableExceptions(ExceptionMask exceptions) @nogc
+    void disableExceptions(ExceptionMask exceptions)
     {
         assert(hasExceptionTraps);
         initialize();
@@ -5427,7 +5435,7 @@ public:
     }
 
     /// Returns: the exceptions which are currently enabled (unmasked)
-    @property static ExceptionMask enabledExceptions() @nogc
+    @property static ExceptionMask enabledExceptions() pure
     {
         assert(hasExceptionTraps);
         version(X86_Any)
@@ -5437,7 +5445,7 @@ public:
     }
 
     ///  Clear all pending exceptions, then restore the original exception state and rounding mode.
-    ~this() @nogc
+    ~this()
     {
         clearExceptions();
         if (initialized)
@@ -5472,7 +5480,7 @@ private:
     else
         static assert(false, "Not implemented for this architecture");
 
-    void initialize() @nogc
+    void initialize()
     {
         // BUG: This works around the absence of this() constructors.
         if (initialized) return;
@@ -5482,18 +5490,18 @@ private:
     }
 
     // Clear all pending exceptions
-    static void clearExceptions() @nogc
+    static void clearExceptions()
     {
         resetIeeeFlags();
     }
 
     // Read from the control register
-    static ControlState getControlState() @trusted nothrow @nogc
+    static ControlState getControlState() pure
     {
         version (D_InlineAsm_X86)
         {
             short cont;
-            asm nothrow @nogc
+            asm pure nothrow @nogc
             {
                 xor EAX, EAX;
                 fstcw cont;
@@ -5504,7 +5512,7 @@ private:
         version (D_InlineAsm_X86_64)
         {
             short cont;
-            asm nothrow @nogc
+            asm pure nothrow @nogc
             {
                 xor RAX, RAX;
                 fstcw cont;
@@ -5516,7 +5524,7 @@ private:
     }
 
     // Set the control register
-    static void setControlState(ControlState newState) @trusted nothrow @nogc
+    static void setControlState(ControlState newState)
     {
         version (InlineAsm_X86_Any)
         {
@@ -5550,7 +5558,7 @@ private:
     }
 }
 
-@system unittest
+@safe unittest
 {
     void ensureDefaults()
     {
@@ -5590,7 +5598,7 @@ private:
     ensureDefaults();
 }
 
-version(D_HardFloat) @system unittest // rounding
+version(D_HardFloat) @safe unittest // rounding
 {
     import std.meta : AliasSeq;
 
