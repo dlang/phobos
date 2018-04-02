@@ -474,7 +474,7 @@ $(JSON) : $(ALL_D_FILES)
 ###########################################################
 SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(EXTRA_DOCUMENTABLES))
 # Set DDOC, the documentation generator
-DDOC=$(DMD) -conf= $(MODEL_FLAG) -w -c -o- -version=StdDdoc \
+DDOC=$(DMD) -conf= $(MODEL_FLAG) -w -c -o- -version=StdDdoc -transition=markdown \
 	-I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 
 # D file to html, e.g. std/conv.d -> std_conv.html
