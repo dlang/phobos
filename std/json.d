@@ -84,7 +84,7 @@ JSON type enumeration
 */
 enum JSON_TYPE : byte
 {
-    /// Indicates the type of a $(D JSONValue).
+    /// Indicates the type of a `JSONValue`.
     NULL,
     STRING,  /// ditto
     INTEGER, /// ditto
@@ -132,9 +132,9 @@ struct JSONValue
     }
 
     /***
-     * Value getter/setter for $(D JSON_TYPE.STRING).
-     * Throws: $(D JSONException) for read access if $(D type) is not
-     * $(D JSON_TYPE.STRING).
+     * Value getter/setter for `JSON_TYPE.STRING`.
+     * Throws: `JSONException` for read access if `type` is not
+     * `JSON_TYPE.STRING`.
      */
     @property string str() const pure @trusted
     {
@@ -162,9 +162,9 @@ struct JSONValue
     }
 
     /***
-     * Value getter/setter for $(D JSON_TYPE.INTEGER).
-     * Throws: $(D JSONException) for read access if $(D type) is not
-     * $(D JSON_TYPE.INTEGER).
+     * Value getter/setter for `JSON_TYPE.INTEGER`.
+     * Throws: `JSONException` for read access if `type` is not
+     * `JSON_TYPE.INTEGER`.
      */
     @property inout(long) integer() inout pure @safe
     {
@@ -180,9 +180,9 @@ struct JSONValue
     }
 
     /***
-     * Value getter/setter for $(D JSON_TYPE.UINTEGER).
-     * Throws: $(D JSONException) for read access if $(D type) is not
-     * $(D JSON_TYPE.UINTEGER).
+     * Value getter/setter for `JSON_TYPE.UINTEGER`.
+     * Throws: `JSONException` for read access if `type` is not
+     * `JSON_TYPE.UINTEGER`.
      */
     @property inout(ulong) uinteger() inout pure @safe
     {
@@ -198,10 +198,10 @@ struct JSONValue
     }
 
     /***
-     * Value getter/setter for $(D JSON_TYPE.FLOAT). Note that despite
+     * Value getter/setter for `JSON_TYPE.FLOAT`. Note that despite
      * the name, this is a $(B 64)-bit `double`, not a 32-bit `float`.
-     * Throws: $(D JSONException) for read access if $(D type) is not
-     * $(D JSON_TYPE.FLOAT).
+     * Throws: `JSONException` for read access if `type` is not
+     * `JSON_TYPE.FLOAT`.
      */
     @property inout(double) floating() inout pure @safe
     {
@@ -217,9 +217,9 @@ struct JSONValue
     }
 
     /***
-     * Value getter/setter for $(D JSON_TYPE.OBJECT).
-     * Throws: $(D JSONException) for read access if $(D type) is not
-     * $(D JSON_TYPE.OBJECT).
+     * Value getter/setter for `JSON_TYPE.OBJECT`.
+     * Throws: `JSONException` for read access if `type` is not
+     * `JSON_TYPE.OBJECT`.
      * Note: this is @system because of the following pattern:
        ---
        auto a = &(json.object());
@@ -241,8 +241,8 @@ struct JSONValue
     }
 
     /***
-     * Value getter for $(D JSON_TYPE.OBJECT).
-     * Unlike $(D object), this retrieves the object by value and can be used in @safe code.
+     * Value getter for `JSON_TYPE.OBJECT`.
+     * Unlike `object`, this retrieves the object by value and can be used in @safe code.
      *
      * A caveat is that, if the returned value is null, modifications will not be visible:
      * ---
@@ -252,8 +252,8 @@ struct JSONValue
      * assert("hello" !in json.object);
      * ---
      *
-     * Throws: $(D JSONException) for read access if $(D type) is not
-     * $(D JSON_TYPE.OBJECT).
+     * Throws: `JSONException` for read access if `type` is not
+     * `JSON_TYPE.OBJECT`.
      */
     @property inout(JSONValue[string]) objectNoRef() inout pure @trusted
     {
@@ -263,9 +263,9 @@ struct JSONValue
     }
 
     /***
-     * Value getter/setter for $(D JSON_TYPE.ARRAY).
-     * Throws: $(D JSONException) for read access if $(D type) is not
-     * $(D JSON_TYPE.ARRAY).
+     * Value getter/setter for `JSON_TYPE.ARRAY`.
+     * Throws: `JSONException` for read access if `type` is not
+     * `JSON_TYPE.ARRAY`.
      * Note: this is @system because of the following pattern:
        ---
        auto a = &(json.array());
@@ -287,8 +287,8 @@ struct JSONValue
     }
 
     /***
-     * Value getter for $(D JSON_TYPE.ARRAY).
-     * Unlike $(D array), this retrieves the array by value and can be used in @safe code.
+     * Value getter for `JSON_TYPE.ARRAY`.
+     * Unlike `array`, this retrieves the array by value and can be used in @safe code.
      *
      * A caveat is that, if you append to the returned array, the new values aren't visible in the
      * JSONValue:
@@ -299,8 +299,8 @@ struct JSONValue
      * assert(json.array.length == 1);
      * ---
      *
-     * Throws: $(D JSONException) for read access if $(D type) is not
-     * $(D JSON_TYPE.ARRAY).
+     * Throws: `JSONException` for read access if `type` is not
+     * `JSON_TYPE.ARRAY`.
      */
     @property inout(JSONValue[]) arrayNoRef() inout pure @trusted
     {
@@ -309,7 +309,7 @@ struct JSONValue
         return store.array;
     }
 
-    /// Test whether the type is $(D JSON_TYPE.NULL)
+    /// Test whether the type is `JSON_TYPE.NULL`
     @property bool isNull() const pure nothrow @safe @nogc
     {
         return type == JSON_TYPE.NULL;
@@ -416,15 +416,15 @@ struct JSONValue
     }
 
     /**
-     * Constructor for $(D JSONValue). If $(D arg) is a $(D JSONValue)
-     * its value and type will be copied to the new $(D JSONValue).
-     * Note that this is a shallow copy: if type is $(D JSON_TYPE.OBJECT)
-     * or $(D JSON_TYPE.ARRAY) then only the reference to the data will
+     * Constructor for `JSONValue`. If `arg` is a `JSONValue`
+     * its value and type will be copied to the new `JSONValue`.
+     * Note that this is a shallow copy: if type is `JSON_TYPE.OBJECT`
+     * or `JSON_TYPE.ARRAY` then only the reference to the data will
      * be copied.
-     * Otherwise, $(D arg) must be implicitly convertible to one of the
-     * following types: $(D typeof(null)), $(D string), $(D ulong),
-     * $(D long), $(D double), an associative array $(D V[K]) for any $(D V)
-     * and $(D K) i.e. a JSON object, any array or $(D bool). The type will
+     * Otherwise, `arg` must be implicitly convertible to one of the
+     * following types: `typeof(null)`, `string`, `ulong`,
+     * `long`, `double`, an associative array `V[K]` for any `V`
+     * and `K` i.e. a JSON object, any array or `bool`. The type will
      * be set accordingly.
      */
     this(T)(T arg) if (!isStaticArray!T)
@@ -467,7 +467,7 @@ struct JSONValue
 
     /***
      * Array syntax for json arrays.
-     * Throws: $(D JSONException) if $(D type) is not $(D JSON_TYPE.ARRAY).
+     * Throws: `JSONException` if `type` is not `JSON_TYPE.ARRAY`.
      */
     ref inout(JSONValue) opIndex(size_t i) inout pure @safe
     {
@@ -486,7 +486,7 @@ struct JSONValue
 
     /***
      * Hash syntax for json objects.
-     * Throws: $(D JSONException) if $(D type) is not $(D JSON_TYPE.OBJECT).
+     * Throws: `JSONException` if `type` is not `JSON_TYPE.OBJECT`.
      */
     ref inout(JSONValue) opIndex(string k) inout pure @safe
     {
@@ -502,13 +502,13 @@ struct JSONValue
     }
 
     /***
-     * Operator sets $(D value) for element of JSON object by $(D key).
+     * Operator sets `value` for element of JSON object by `key`.
      *
      * If JSON value is null, then operator initializes it with object and then
-     * sets $(D value) for it.
+     * sets `value` for it.
      *
-     * Throws: $(D JSONException) if $(D type) is not $(D JSON_TYPE.OBJECT)
-     * or $(D JSON_TYPE.NULL).
+     * Throws: `JSONException` if `type` is not `JSON_TYPE.OBJECT`
+     * or `JSON_TYPE.NULL`.
      */
     void opIndexAssign(T)(auto ref T value, string key) pure
     {
@@ -583,16 +583,16 @@ struct JSONValue
     }
 
     /**
-     * Support for the $(D in) operator.
+     * Support for the `in` operator.
      *
      * Tests wether a key can be found in an object.
      *
      * Returns:
-     *      when found, the $(D const(JSONValue)*) that matches to the key,
-     *      otherwise $(D null).
+     *      when found, the `const(JSONValue)*` that matches to the key,
+     *      otherwise `null`.
      *
-     * Throws: $(D JSONException) if the right hand side argument $(D JSON_TYPE)
-     * is not $(D OBJECT).
+     * Throws: `JSONException` if the right hand side argument `JSON_TYPE`
+     * is not `OBJECT`.
      */
     auto opBinaryRight(string op : "in")(string k) const @safe
     {
@@ -638,7 +638,7 @@ struct JSONValue
         }
     }
 
-    /// Implements the foreach $(D opApply) interface for json arrays.
+    /// Implements the foreach `opApply` interface for json arrays.
     int opApply(scope int delegate(size_t index, ref JSONValue) dg) @system
     {
         int result;
@@ -653,7 +653,7 @@ struct JSONValue
         return result;
     }
 
-    /// Implements the foreach $(D opApply) interface for json objects.
+    /// Implements the foreach `opApply` interface for json objects.
     int opApply(scope int delegate(string key, ref JSONValue) dg) @system
     {
         enforce!JSONException(type == JSON_TYPE.OBJECT,
@@ -671,7 +671,7 @@ struct JSONValue
     }
 
     /***
-     * Implicitly calls $(D toJSON) on this JSONValue.
+     * Implicitly calls `toJSON` on this JSONValue.
      *
      * $(I options) can be used to tweak the conversion behavior.
      */
@@ -681,7 +681,7 @@ struct JSONValue
     }
 
     /***
-     * Implicitly calls $(D toJSON) on this JSONValue, like $(D toString), but
+     * Implicitly calls `toJSON` on this JSONValue, like `toString`, but
      * also passes $(I true) as $(I pretty) argument.
      *
      * $(I options) can be used to tweak the conversion behavior
@@ -1128,9 +1128,9 @@ Takes a tree of JSON values and returns the serialized string.
 
 Any Object types will be serialized in a key-sorted order.
 
-If $(D pretty) is false no whitespaces are generated.
-If $(D pretty) is true serialized string is formatted to be human-readable.
-Set the $(LREF JSONOptions.specialFloatLiterals) flag is set in $(D options) to encode NaN/Infinity as strings.
+If `pretty` is false no whitespaces are generated.
+If `pretty` is true serialized string is formatted to be human-readable.
+Set the $(LREF JSONOptions.specialFloatLiterals) flag is set in `options` to encode NaN/Infinity as strings.
 */
 string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions options = JSONOptions.none) @safe
 {

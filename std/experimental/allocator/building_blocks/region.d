@@ -9,9 +9,9 @@ import std.experimental.allocator.common;
 import std.typecons : Flag, Yes, No;
 
 /**
-A $(D Region) allocator allocates memory straight from one contiguous chunk.
+A `Region` allocator allocates memory straight from one contiguous chunk.
 There is no deallocation, and once the region is full, allocation requests
-return $(D null). Therefore, $(D Region)s are often used (a) in conjunction with
+return `null`. Therefore, `Region`s are often used (a) in conjunction with
 more sophisticated allocators; or (b) for batch-style very fast allocations
 that deallocate everything at once.
 
@@ -20,11 +20,11 @@ the store and the limits. One allocation entails rounding up the allocation
 size for alignment purposes, bumping the current pointer, and comparing it
 against the limit.
 
-If $(D ParentAllocator) is different from $(REF_ALTTEXT `NullAllocator`, NullAllocator, std,experimental,allocator,building_blocks,null_allocator), $(D Region)
+If `ParentAllocator` is different from $(REF_ALTTEXT `NullAllocator`, NullAllocator, std,experimental,allocator,building_blocks,null_allocator), `Region`
 deallocates the chunk of memory during destruction.
 
-The $(D minAlign) parameter establishes alignment. If $(D minAlign > 1), the
-sizes of all allocation requests are rounded up to a multiple of $(D minAlign).
+The `minAlign` parameter establishes alignment. If $(D minAlign > 1), the
+sizes of all allocation requests are rounded up to a multiple of `minAlign`.
 Applications aiming at maximum speed may want to choose $(D minAlign = 1) and
 control alignment externally.
 
@@ -41,7 +41,7 @@ struct Region(ParentAllocator = NullAllocator,
 
     // state
     /**
-    The _parent allocator. Depending on whether $(D ParentAllocator) holds state
+    The _parent allocator. Depending on whether `ParentAllocator` holds state
     or not, this is a member variable or an alias for
     `ParentAllocator.instance`.
     */
@@ -69,16 +69,16 @@ struct Region(ParentAllocator = NullAllocator,
     }
     /**
     Constructs a region backed by a user-provided store.
-    Assumes the memory was allocated with $(D ParentAllocator)
+    Assumes the memory was allocated with `ParentAllocator`
     (if different from $(REF_ALTTEXT `NullAllocator`, NullAllocator, std,experimental,allocator,building_blocks,null_allocator)).
 
     Params:
         store = User-provided store backing up the region. If $(D
         ParentAllocator) is different from $(REF_ALTTEXT `NullAllocator`, NullAllocator, std,experimental,allocator,building_blocks,null_allocator), memory is assumed to
-        have been allocated with $(D ParentAllocator).
-        n = Bytes to allocate using $(D ParentAllocator). This constructor is only
-        defined If $(D ParentAllocator) is different from $(REF_ALTTEXT `NullAllocator`, NullAllocator, std,experimental,allocator,building_blocks,null_allocator). If
-        $(D parent.allocate(n)) returns $(D null), the region will be initialized
+        have been allocated with `ParentAllocator`.
+        n = Bytes to allocate using `ParentAllocator`. This constructor is only
+        defined If `ParentAllocator` is different from $(REF_ALTTEXT `NullAllocator`, NullAllocator, std,experimental,allocator,building_blocks,null_allocator). If
+        `parent.allocate(n)` returns `null`, the region will be initialized
         as empty (correctly initialized but unable to allocate).
         */
     this(ubyte[] store)
@@ -99,7 +99,7 @@ struct Region(ParentAllocator = NullAllocator,
     }
 
     /*
-    TODO: The postblit of $(D BasicRegion) should be disabled because such objects
+    TODO: The postblit of `BasicRegion` should be disabled because such objects
     should not be copied around naively.
     */
 
@@ -129,14 +129,14 @@ struct Region(ParentAllocator = NullAllocator,
     alias alignment = minAlign;
 
     /**
-    Allocates $(D n) bytes of memory. The shortest path involves an alignment
+    Allocates `n` bytes of memory. The shortest path involves an alignment
     adjustment (if $(D alignment > 1)), an increment, and a comparison.
 
     Params:
         n = number of bytes to allocate
 
     Returns:
-        A properly-aligned buffer of size $(D n) or $(D null) if request could not
+        A properly-aligned buffer of size `n` or `null` if request could not
         be satisfied.
     */
     void[] allocate(size_t n)
@@ -162,14 +162,14 @@ struct Region(ParentAllocator = NullAllocator,
     }
 
     /**
-    Allocates $(D n) bytes of memory aligned at alignment $(D a).
+    Allocates `n` bytes of memory aligned at alignment `a`.
 
     Params:
         n = number of bytes to allocate
         a = alignment for the allocated block
 
     Returns:
-        Either a suitable block of $(D n) bytes aligned at $(D a), or $(D null).
+        Either a suitable block of `n` bytes aligned at `a`, or `null`.
     */
     void[] alignedAllocate(size_t n, uint a)
     {
@@ -257,13 +257,13 @@ struct Region(ParentAllocator = NullAllocator,
     }
 
     /**
-    Deallocates $(D b). This works only if $(D b) was obtained as the last call
-    to $(D allocate); otherwise (i.e. another allocation has occurred since) it
+    Deallocates `b`. This works only if `b` was obtained as the last call
+    to `allocate`; otherwise (i.e. another allocation has occurred since) it
     does nothing.
 
     Params:
-        b = Block previously obtained by a call to $(D allocate) against this
-        allocator ($(D null) is allowed).
+        b = Block previously obtained by a call to `allocate` against this
+        allocator (`null` is allowed).
     */
     pure nothrow @nogc
     bool deallocate(void[] b)
@@ -481,13 +481,13 @@ struct Region(ParentAllocator = NullAllocator,
 
 /**
 
-$(D InSituRegion) is a convenient region that carries its storage within itself
+`InSituRegion` is a convenient region that carries its storage within itself
 (in the form of a statically-sized array).
 
 The first template argument is the size of the region and the second is the
 needed alignment. Depending on the alignment requested and platform details,
 the actual available storage may be smaller than the compile-time parameter. To
-make sure that at least $(D n) bytes are available in the region, use
+make sure that at least `n` bytes are available in the region, use
 $(D InSituRegion!(n + a - 1, a)).
 
 Given that the most frequent use of `InSituRegion` is as a stack allocator, it
@@ -529,7 +529,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     // }
 
     /**
-    An alias for $(D minAlign), which must be a valid alignment (nonzero power
+    An alias for `minAlign`, which must be a valid alignment (nonzero power
     of 2). The start of the region and all allocation requests will be rounded
     up to a multiple of the alignment.
 
@@ -550,7 +550,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     }
 
     /**
-    Allocates $(D bytes) and returns them, or $(D null) if the region cannot
+    Allocates `bytes` and returns them, or `null` if the region cannot
     accommodate the request. For efficiency reasons, if $(D bytes == 0) the
     function returns an empty non-null slice.
     */
@@ -568,7 +568,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     }
 
     /**
-    As above, but the memory allocated is aligned at $(D a) bytes.
+    As above, but the memory allocated is aligned at `a` bytes.
     */
     void[] alignedAllocate(size_t n, uint a)
     {
@@ -584,15 +584,15 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     }
 
     /**
-    Deallocates $(D b). This works only if $(D b) was obtained as the last call
-    to $(D allocate); otherwise (i.e. another allocation has occurred since) it
-    does nothing. This semantics is tricky and therefore $(D deallocate) is
-    defined only if $(D Region) is instantiated with $(D Yes.defineDeallocate)
+    Deallocates `b`. This works only if `b` was obtained as the last call
+    to `allocate`; otherwise (i.e. another allocation has occurred since) it
+    does nothing. This semantics is tricky and therefore `deallocate` is
+    defined only if `Region` is instantiated with `Yes.defineDeallocate`
     as the third template argument.
 
     Params:
-        b = Block previously obtained by a call to $(D allocate) against this
-        allocator ($(D null) is allowed).
+        b = Block previously obtained by a call to `allocate` against this
+        allocator (`null` is allowed).
     */
     bool deallocate(void[] b)
     {
@@ -719,10 +719,10 @@ private extern(C) int brk(shared void*) nothrow @nogc;
 /**
 
 Allocator backed by $(D $(LINK2 https://en.wikipedia.org/wiki/Sbrk, sbrk))
-for Posix systems. Due to the fact that $(D sbrk) is not thread-safe
+for Posix systems. Due to the fact that `sbrk` is not thread-safe
 $(HTTP lifecs.likai.org/2010/02/sbrk-is-not-thread-safe.html, by design),
-$(D SbrkRegion) uses a mutex internally. This implies
-that uncontrolled calls to $(D brk) and $(D sbrk) may affect the workings of $(D
+`SbrkRegion` uses a mutex internally. This implies
+that uncontrolled calls to `brk` and `sbrk` may affect the workings of $(D
 SbrkRegion) adversely.
 
 */
@@ -815,8 +815,8 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
 
     /**
 
-    The $(D expand) method may only succeed if the argument is the last block
-    allocated. In that case, $(D expand) attempts to push the break pointer to
+    The `expand` method may only succeed if the argument is the last block
+    allocated. In that case, `expand` attempts to push the break pointer to
     the right.
 
     */
@@ -865,8 +865,8 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
 
     /**
 
-    The $(D deallocate) method only works (and returns $(D true))  on systems
-    that support reducing the  break address (i.e. accept calls to $(D sbrk)
+    The `deallocate` method only works (and returns `true`)  on systems
+    that support reducing the  break address (i.e. accept calls to `sbrk`
     with negative offsets). OSX does not accept such. In addition the argument
     must be the last block allocated.
 
@@ -888,8 +888,8 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
     }
 
     /**
-    The $(D deallocateAll) method only works (and returns $(D true)) on systems
-    that support reducing the  break address (i.e. accept calls to $(D sbrk)
+    The `deallocateAll` method only works (and returns `true`) on systems
+    that support reducing the  break address (i.e. accept calls to `sbrk`
     with negative offsets). OSX does not accept such.
     */
     nothrow @nogc
@@ -1013,7 +1013,7 @@ nothrow @nogc:
         is different from $(REF_ALTTEXT `NullAllocator`, NullAllocator, std,experimental,allocator,building_blocks,null_allocator), memory is assumed to
         have been allocated with `ParentAllocator`.
         n = Bytes to allocate using `ParentAllocator`. This constructor is only
-        defined If $(D ParentAllocator) is different from $(REF_ALTTEXT `NullAllocator`, NullAllocator, std,experimental,allocator,building_blocks,null_allocator). If
+        defined If `ParentAllocator` is different from $(REF_ALTTEXT `NullAllocator`, NullAllocator, std,experimental,allocator,building_blocks,null_allocator). If
         `parent.allocate(n)` returns `null`, the region will be initialized
         as empty (correctly initialized but unable to allocate).
     */

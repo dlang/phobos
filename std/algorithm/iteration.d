@@ -2750,7 +2750,7 @@ See_Also:
     $(HTTP en.wikipedia.org/wiki/Fold_(higher-order_function), Fold (higher-order function))
 
     $(LREF fold) is functionally equivalent to $(LREF _reduce) with the argument
-    order reversed, and without the need to use $(REF_ALTTEXT $(D tuple),tuple,std,typecons)
+    order reversed, and without the need to use $(REF_ALTTEXT `tuple`,tuple,std,typecons)
     for multiple seeds. This makes it easier to use in UFCS chains.
 
     $(LREF sum) is similar to `reduce!((a, b) => a + b)` that offers
@@ -3209,7 +3209,7 @@ See_Also:
     precise summing of floating point numbers.
 
     This is functionally equivalent to $(LREF reduce) with the argument order
-    reversed, and without the need to use $(REF_ALTTEXT $(D tuple),tuple,std,typecons)
+    reversed, and without the need to use $(REF_ALTTEXT `tuple`,tuple,std,typecons)
     for multiple seeds.
 +/
 template fold(fun...)
@@ -4719,7 +4719,7 @@ if (substs.length >= 2 && isExpressions!substs)
 
     /**
       Substitute single values with compile-time substitution mappings.
-      Complexity: $(BIGOH 1) due to D's $(D switch) guaranteeing $(BIGOH 1);
+      Complexity: $(BIGOH 1) due to D's `switch` guaranteeing $(BIGOH 1);
     */
     auto substitute(Value)(Value value)
     if (isInputRange!Value || !is(CommonType!(Value, typeof(substs[0])) == void))

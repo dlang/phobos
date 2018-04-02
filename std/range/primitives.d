@@ -9,7 +9,7 @@ $(BOOKTABLE ,
     $(TR $(TD $(LREF isInputRange))
         $(TD Tests if something is an $(I input _range), defined to be
         something from which one can sequentially read data using the
-        primitives $(D front), $(D popFront), and $(D empty).
+        primitives `front`, `popFront`, and `empty`.
     ))
     $(TR $(TD $(LREF isOutputRange))
         $(TD Tests if something is an $(I output _range), defined to be
@@ -19,18 +19,18 @@ $(BOOKTABLE ,
     $(TR $(TD $(LREF isForwardRange))
         $(TD Tests if something is a $(I forward _range), defined to be an
         input _range with the additional capability that one can save one's
-        current position with the $(D save) primitive, thus allowing one to
+        current position with the `save` primitive, thus allowing one to
         iterate over the same _range multiple times.
     ))
     $(TR $(TD $(LREF isBidirectionalRange))
         $(TD Tests if something is a $(I bidirectional _range), that is, a
         forward _range that allows reverse traversal using the primitives $(D
-        back) and $(D popBack).
+        back) and `popBack`.
     ))
     $(TR $(TD $(LREF isRandomAccessRange))
         $(TD Tests if something is a $(I random access _range), which is a
         bidirectional _range that also supports the array subscripting
-        operation via the primitive $(D opIndex).
+        operation via the primitive `opIndex`.
     ))
 )
 
@@ -39,7 +39,7 @@ It also provides number of templates that test for various _range capabilities:
 $(BOOKTABLE ,
     $(TR $(TD $(LREF hasMobileElements))
         $(TD Tests if a given _range's elements can be moved around using the
-        primitives $(D moveFront), $(D moveBack), or $(D moveAt).
+        primitives `moveFront`, `moveBack`, or `moveAt`.
     ))
     $(TR $(TD $(LREF ElementType))
         $(TD Returns the element type of a given _range.
@@ -58,7 +58,7 @@ $(BOOKTABLE ,
         passed by reference and have their address taken.
     ))
     $(TR $(TD $(LREF hasLength))
-        $(TD Tests if a given _range has the $(D length) attribute.
+        $(TD Tests if a given _range has the `length` attribute.
     ))
     $(TR $(TD $(LREF isInfinite))
         $(TD Tests if a given _range is an $(I infinite _range).
@@ -99,7 +99,7 @@ $(BOOKTABLE ,
         $(TD Computes the length of any _range in O(n) time.
     ))
     $(TR $(TD $(LREF put))
-        $(TD Outputs element $(D e) to a _range.
+        $(TD Outputs element `e` to a _range.
     ))
 )
 
@@ -117,8 +117,8 @@ module std.range.primitives;
 import std.traits;
 
 /**
-Returns $(D true) if $(D R) is an input range. An input range must
-define the primitives $(D empty), $(D popFront), and $(D front). The
+Returns `true` if `R` is an input range. An input range must
+define the primitives `empty`, `popFront`, and `front`. The
 following code should compile for any input range.
 
 ----
@@ -247,13 +247,13 @@ enum bool isInputRange(R) =
 }
 
 /+
-puts the whole raw element $(D e) into $(D r). doPut will not attempt to
-iterate, slice or transcode $(D e) in any way shape or form. It will $(B only)
-call the correct primitive ($(D r.put(e)),  $(D r.front = e) or
-$(D r(0)) once.
+puts the whole raw element `e` into `r`. doPut will not attempt to
+iterate, slice or transcode `e` in any way shape or form. It will $(B only)
+call the correct primitive (`r.put(e)`,  $(D r.front = e) or
+`r(0)` once.
 
-This can be important when $(D e) needs to be placed in $(D r) unchanged.
-Furthermore, it can be useful when working with $(D InputRange)s, as doPut
+This can be important when `e` needs to be placed in `r` unchanged.
+Furthermore, it can be useful when working with `InputRange`s, as doPut
 guarantees that no more than a single element will be placed.
 +/
 private void doPut(R, E)(ref R r, auto ref E e)
@@ -313,14 +313,14 @@ private void doPut(R, E)(ref R r, auto ref E e)
 }
 
 /++
-Outputs $(D e) to $(D r). The exact effect is dependent upon the two
+Outputs `e` to `r`. The exact effect is dependent upon the two
 types. Several cases are accepted, as described below. The code snippets
 are attempted in order, and the first to compile "wins" and gets
 evaluated.
 
-In this table "doPut" is a method that places $(D e) into $(D r), using the
-correct primitive: $(D r.put(e)) if $(D R) defines $(D put), $(D r.front = e)
-if $(D r) is an input range (followed by $(D r.popFront())), or $(D r(e))
+In this table "doPut" is a method that places `e` into `r`, using the
+correct primitive: `r.put(e)` if `R` defines `put`, $(D r.front = e)
+if `r` is an input range (followed by `r.popFront()`), or `r(e)`
 otherwise.
 
 $(BOOKTABLE ,
@@ -329,27 +329,27 @@ $(BOOKTABLE ,
         $(TH Scenario)
     )
     $(TR
-        $(TD $(D r.doPut(e);))
-        $(TD $(D R) specifically accepts an $(D E).)
+        $(TD `r.doPut(e);`)
+        $(TD `R` specifically accepts an `E`.)
     )
     $(TR
         $(TD $(D r.doPut([ e ]);))
-        $(TD $(D R) specifically accepts an $(D E[]).)
+        $(TD `R` specifically accepts an `E[]`.)
     )
     $(TR
-        $(TD $(D r.putChar(e);))
-        $(TD $(D R) accepts some form of string or character. put will
-            transcode the character $(D e) accordingly.)
+        $(TD `r.putChar(e);`)
+        $(TD `R` accepts some form of string or character. put will
+            transcode the character `e` accordingly.)
     )
     $(TR
         $(TD $(D for (; !e.empty; e.popFront()) put(r, e.front);))
-        $(TD Copying range $(D E) into $(D R).)
+        $(TD Copying range `E` into `R`.)
     )
 )
 
-Tip: $(D put) should $(I not) be used "UFCS-style", e.g. $(D r.put(e)).
-Doing this may call $(D R.put) directly, by-passing any transformation
-feature provided by $(D Range.put). $(D put(r, e)) is prefered.
+Tip: `put` should $(I not) be used "UFCS-style", e.g. `r.put(e)`.
+Doing this may call `R.put` directly, by-passing any transformation
+feature provided by `Range.put`. $(D put(r, e)) is prefered.
  +/
 void put(R, E)(ref R r, E e)
 {
@@ -785,15 +785,15 @@ pure @safe unittest
 }
 
 /+
-Returns $(D true) if $(D R) is a native output range for elements of type
-$(D E). An output range is defined functionally as a range that
+Returns `true` if `R` is a native output range for elements of type
+`E`. An output range is defined functionally as a range that
 supports the operation $(D doPut(r, e)) as defined above. if $(D doPut(r, e))
-is valid, then $(D put(r,e)) will have the same behavior.
+is valid, then `put(r,e)` will have the same behavior.
 
-The two guarantees isNativeOutputRange gives over the larger $(D isOutputRange)
+The two guarantees isNativeOutputRange gives over the larger `isOutputRange`
 are:
-1: $(D e) is $(B exactly) what will be placed (not $(D [e]), for example).
-2: if $(D E) is a non $(empty) $(D InputRange), then placing $(D e) is
+1: `e` is $(B exactly) what will be placed (not `[e]`, for example).
+2: if `E` is a non $(empty) `InputRange`, then placing `e` is
 guaranteed to not overflow the range.
  +/
 package(std) enum bool isNativeOutputRange(R, E) =
@@ -814,8 +814,8 @@ package(std) enum bool isNativeOutputRange(R, E) =
 }
 
 /++
-Returns $(D true) if $(D R) is an output range for elements of type
-$(D E). An output range is defined functionally as a range that
+Returns `true` if `R` is an output range for elements of type
+`E`. An output range is defined functionally as a range that
 supports the operation $(D put(r, e)) as defined above.
  +/
 enum bool isOutputRange(R, E) =
@@ -854,9 +854,9 @@ enum bool isOutputRange(R, E) =
 
 
 /**
-Returns $(D true) if $(D R) is a forward range. A forward range is an
-input range $(D r) that can save "checkpoints" by saving $(D r.save)
-to another value of type $(D R). Notable examples of input ranges that
+Returns `true` if `R` is a forward range. A forward range is an
+input range `r` that can save "checkpoints" by saving `r.save`
+to another value of type `R`. Notable examples of input ranges that
 are $(I not) forward ranges are file/socket ranges; copying such a
 range will not save the position in the stream, and they most likely
 reuse an internal buffer as the entire stream does not sit in
@@ -872,14 +872,14 @@ auto s1 = r1.save;
 static assert(is(typeof(s1) == R));
 ----
 
-Saving a range is not duplicating it; in the example above, $(D r1)
-and $(D r2) still refer to the same underlying data. They just
+Saving a range is not duplicating it; in the example above, `r1`
+and `r2` still refer to the same underlying data. They just
 navigate that data independently.
 
 The semantics of a forward range (not checkable during compilation)
 are the same as for an input range, with the additional requirement
 that backtracking must be possible by saving a copy of the range
-object with $(D save) and using it later.
+object with `save` and using it later.
  */
 enum bool isForwardRange(R) = isInputRange!R
     && is(ReturnType!((R r) => r.save) == R);
@@ -907,18 +907,18 @@ enum bool isForwardRange(R) = isInputRange!R
 }
 
 /**
-Returns $(D true) if $(D R) is a bidirectional range. A bidirectional
-range is a forward range that also offers the primitives $(D back) and
-$(D popBack). The following code should compile for any bidirectional
+Returns `true` if `R` is a bidirectional range. A bidirectional
+range is a forward range that also offers the primitives `back` and
+`popBack`. The following code should compile for any bidirectional
 range.
 
 The semantics of a bidirectional range (not checkable during
-compilation) are assumed to be the following ($(D r) is an object of
-type $(D R)):
+compilation) are assumed to be the following (`r` is an object of
+type `R`):
 
-$(UL $(LI $(D r.back) returns (possibly a reference to) the last
-element in the range. Calling $(D r.back) is allowed only if calling
-$(D r.empty) has, or would have, returned $(D false).))
+$(UL $(LI `r.back` returns (possibly a reference to) the last
+element in the range. Calling `r.back` is allowed only if calling
+`r.empty` has, or would have, returned `false`.))
  */
 enum bool isBidirectionalRange(R) = isForwardRange!R
     && is(typeof((R r) => r.popBack))
@@ -963,21 +963,21 @@ enum bool isBidirectionalRange(R) = isForwardRange!R
 }
 
 /**
-Returns $(D true) if $(D R) is a random-access range. A random-access
+Returns `true` if `R` is a random-access range. A random-access
 range is a bidirectional range that also offers the primitive $(D
-opIndex), OR an infinite forward range that offers $(D opIndex). In
-either case, the range must either offer $(D length) or be
+opIndex), OR an infinite forward range that offers `opIndex`. In
+either case, the range must either offer `length` or be
 infinite. The following code should compile for any random-access
 range.
 
 The semantics of a random-access range (not checkable during
-compilation) are assumed to be the following ($(D r) is an object of
-type $(D R)): $(UL $(LI $(D r.opIndex(n)) returns a reference to the
-$(D n)th element in the range.))
+compilation) are assumed to be the following (`r` is an object of
+type `R`): $(UL $(LI `r.opIndex(n)` returns a reference to the
+`n`th element in the range.))
 
-Although $(D char[]) and $(D wchar[]) (as well as their qualified
-versions including $(D string) and $(D wstring)) are arrays, $(D
-isRandomAccessRange) yields $(D false) for them because they use
+Although `char[]` and `wchar[]` (as well as their qualified
+versions including `string` and `wstring`) are arrays, $(D
+isRandomAccessRange) yields `false` for them because they use
 variable-length encodings (UTF-8 and UTF-16 respectively). These types
 are bidirectional ranges only.
  */
@@ -1102,10 +1102,10 @@ enum bool isRandomAccessRange(R) =
 }
 
 /**
-Returns $(D true) iff $(D R) is an input range that supports the
-$(D moveFront) primitive, as well as $(D moveBack) and $(D moveAt) if it's a
+Returns `true` iff `R` is an input range that supports the
+`moveFront` primitive, as well as `moveBack` and `moveAt` if it's a
 bidirectional or random access range. These may be explicitly implemented, or
-may work via the default behavior of the module level functions $(D moveFront)
+may work via the default behavior of the module level functions `moveFront`
 and friends. The following code should compile for any range
 with mobile elements.
 
@@ -1152,12 +1152,12 @@ enum bool hasMobileElements(R) =
 }
 
 /**
-The element type of $(D R). $(D R) does not have to be a range. The
-element type is determined as the type yielded by $(D r.front) for an
-object $(D r) of type $(D R). For example, $(D ElementType!(T[])) is
-$(D T) if $(D T[]) isn't a narrow string; if it is, the element type is
-$(D dchar). If $(D R) doesn't have $(D front), $(D ElementType!R) is
-$(D void).
+The element type of `R`. `R` does not have to be a range. The
+element type is determined as the type yielded by `r.front` for an
+object `r` of type `R`. For example, `ElementType!(T[])` is
+`T` if `T[]` isn't a narrow string; if it is, the element type is
+`dchar`. If `R` doesn't have `front`, `ElementType!R` is
+`void`.
  */
 template ElementType(R)
 {
@@ -1239,11 +1239,11 @@ template ElementType(R)
 }
 
 /**
-The encoding element type of $(D R). For narrow strings ($(D char[]),
-$(D wchar[]) and their qualified variants including $(D string) and
-$(D wstring)), $(D ElementEncodingType) is the character type of the
-string. For all other types, $(D ElementEncodingType) is the same as
-$(D ElementType).
+The encoding element type of `R`. For narrow strings (`char[]`,
+`wchar[]` and their qualified variants including `string` and
+`wstring`), `ElementEncodingType` is the character type of the
+string. For all other types, `ElementEncodingType` is the same as
+`ElementType`.
  */
 template ElementEncodingType(R)
 {
@@ -1304,7 +1304,7 @@ template ElementEncodingType(R)
 }
 
 /**
-Returns $(D true) if $(D R) is an input range and has swappable
+Returns `true` if `R` is an input range and has swappable
 elements. The following code should compile for any range
 with swappable elements.
 
@@ -1342,7 +1342,7 @@ template hasSwappableElements(R)
 }
 
 /**
-Returns $(D true) if $(D R) is an input range and has mutable
+Returns `true` if `R` is an input range and has mutable
 elements. The following code should compile for any range
 with assignable elements.
 
@@ -1376,7 +1376,7 @@ enum bool hasAssignableElements(R) = isInputRange!R
 }
 
 /**
-Tests whether the range $(D R) has lvalue elements. These are defined as
+Tests whether the range `R` has lvalue elements. These are defined as
 elements that can be passed by reference and have their address taken.
 The following code should compile for any range with lvalue elements.
 ----
@@ -1493,9 +1493,9 @@ template hasLength(R)
 }
 
 /**
-Returns $(D true) if $(D R) is an infinite input range. An
+Returns `true` if `R` is an infinite input range. An
 infinite input range is an input range that has a statically-defined
-enumerated member called $(D empty) that is always $(D false),
+enumerated member called `empty` that is always `false`,
 for example:
 
 ----
@@ -1524,17 +1524,17 @@ template isInfinite(R)
 }
 
 /**
-Returns $(D true) if $(D R) offers a slicing operator with integral boundaries
+Returns `true` if `R` offers a slicing operator with integral boundaries
 that returns a forward range type.
 
-For finite ranges, the result of $(D opSlice) must be of the same type as the
-original range type. If the range defines $(D opDollar), then it must support
+For finite ranges, the result of `opSlice` must be of the same type as the
+original range type. If the range defines `opDollar`, then it must support
 subtraction.
 
-For infinite ranges, when $(I not) using $(D opDollar), the result of
-$(D opSlice) must be the result of $(LREF take) or $(LREF takeExactly) on the
+For infinite ranges, when $(I not) using `opDollar`, the result of
+`opSlice` must be the result of $(LREF take) or $(LREF takeExactly) on the
 original range (they both return the same type for infinite ranges). However,
-when using $(D opDollar), the result of $(D opSlice) must be that of the
+when using `opDollar`, the result of `opSlice` must be that of the
 original range type.
 
 The following expression must be true for `hasSlicing` to be `true`:
@@ -1611,23 +1611,23 @@ enum bool hasSlicing(R) = isForwardRange!R
 }
 
 /**
-This is a best-effort implementation of $(D length) for any kind of
+This is a best-effort implementation of `length` for any kind of
 range.
 
-If $(D hasLength!Range), simply returns $(D range.length) without
-checking $(D upTo) (when specified).
+If `hasLength!Range`, simply returns `range.length` without
+checking `upTo` (when specified).
 
 Otherwise, walks the range through its length and returns the number
-of elements seen. Performes $(BIGOH n) evaluations of $(D range.empty)
-and $(D range.popFront()), where $(D n) is the effective length of $(D
+of elements seen. Performes $(BIGOH n) evaluations of `range.empty`
+and `range.popFront()`, where `n` is the effective length of $(D
 range).
 
-The $(D upTo) parameter is useful to "cut the losses" in case
+The `upTo` parameter is useful to "cut the losses" in case
 the interest is in seeing whether the range has at least some number
-of elements. If the parameter $(D upTo) is specified, stops if $(D
-upTo) steps have been taken and returns $(D upTo).
+of elements. If the parameter `upTo` is specified, stops if $(D
+upTo) steps have been taken and returns `upTo`.
 
-Infinite ranges are compatible, provided the parameter $(D upTo) is
+Infinite ranges are compatible, provided the parameter `upTo` is
 specified, in which case the implementation simply returns upTo.
  */
 auto walkLength(Range)(Range range)
@@ -1700,18 +1700,18 @@ if (isInputRange!Range)
 }
 
 /**
-    $(D popFrontN) eagerly advances $(D r) itself (not a copy) up to $(D n) times
-    (by calling $(D r.popFront)). $(D popFrontN) takes $(D r) by $(D ref),
+    `popFrontN` eagerly advances `r` itself (not a copy) up to `n` times
+    (by calling `r.popFront`). `popFrontN` takes `r` by `ref`,
     so it mutates the original range. Completes in $(BIGOH 1) steps for ranges
     that support slicing and have length.
     Completes in $(BIGOH n) time for all other ranges.
 
-    $(D popBackN) behaves the same as $(D popFrontN) but instead removes
+    `popBackN` behaves the same as `popFrontN` but instead removes
     elements from the back of the (bidirectional) range instead of the front.
 
     Returns:
-    How much $(D r) was actually advanced, which may be less than $(D n) if
-    $(D r) did not have at least $(D n) elements.
+    How much `r` was actually advanced, which may be less than `n` if
+    `r` did not have at least `n` elements.
 
     See_Also: $(REF drop, std, range), $(REF dropBack, std, range)
 */
@@ -1829,21 +1829,21 @@ if (isBidirectionalRange!Range)
 }
 
 /**
-    Eagerly advances $(D r) itself (not a copy) exactly $(D n) times (by
-    calling $(D r.popFront)). $(D popFrontExactly) takes $(D r) by $(D ref),
+    Eagerly advances `r` itself (not a copy) exactly `n` times (by
+    calling `r.popFront`). `popFrontExactly` takes `r` by `ref`,
     so it mutates the original range. Completes in $(BIGOH 1) steps for ranges
     that support slicing, and have either length or are infinite.
     Completes in $(BIGOH n) time for all other ranges.
 
-    Note: Unlike $(LREF popFrontN), $(D popFrontExactly) will assume that the
-    range holds at least $(D n) elements. This makes $(D popFrontExactly)
-    faster than $(D popFrontN), but it also means that if $(D range) does
-    not contain at least $(D n) elements, it will attempt to call $(D popFront)
+    Note: Unlike $(LREF popFrontN), `popFrontExactly` will assume that the
+    range holds at least `n` elements. This makes `popFrontExactly`
+    faster than `popFrontN`, but it also means that if `range` does
+    not contain at least `n` elements, it will attempt to call `popFront`
     on an empty range, which is undefined behavior. So, only use
-    $(D popFrontExactly) when it is guaranteed that $(D range) holds at least
-    $(D n) elements.
+    `popFrontExactly` when it is guaranteed that `range` holds at least
+    `n` elements.
 
-    $(D popBackExactly) will behave the same but instead removes elements from
+    `popBackExactly` will behave the same but instead removes elements from
     the back of the (bidirectional) range instead of the front.
 
     See_Also: $(REF dropExactly, std, range), $(REF dropBackExactly, std, range)
@@ -1905,9 +1905,9 @@ if (isBidirectionalRange!Range)
 }
 
 /**
-   Moves the front of $(D r) out and returns it. Leaves $(D r.front) in a
+   Moves the front of `r` out and returns it. Leaves `r.front` in a
    destroyable state that does not allocate any resources (usually equal
-   to its $(D .init) value).
+   to its `.init` value).
 */
 ElementType!R moveFront(R)(R r)
 {
@@ -1963,9 +1963,9 @@ ElementType!R moveFront(R)(R r)
 }
 
 /**
-   Moves the back of $(D r) out and returns it. Leaves $(D r.back) in a
+   Moves the back of `r` out and returns it. Leaves `r.back` in a
    destroyable state that does not allocate any resources (usually equal
-   to its $(D .init) value).
+   to its `.init` value).
 */
 ElementType!R moveBack(R)(R r)
 {
@@ -2009,9 +2009,9 @@ ElementType!R moveBack(R)(R r)
 }
 
 /**
-   Moves element at index $(D i) of $(D r) out and returns it. Leaves $(D
+   Moves element at index `i` of `r` out and returns it. Leaves $(D
    r[i]) in a destroyable state that does not allocate any resources
-   (usually equal to its $(D .init) value).
+   (usually equal to its `.init` value).
 */
 ElementType!R moveAt(R)(R r, size_t i)
 {
@@ -2067,10 +2067,10 @@ ElementType!R moveAt(R)(R r, size_t i)
 }
 
 /**
-Implements the range interface primitive $(D empty) for types that
+Implements the range interface primitive `empty` for types that
 obey $(LREF hasLength) property and for narrow strings. Due to the
 fact that nonmember functions can be called with the first argument
-using the dot notation, $(D a.empty) is equivalent to $(D empty(a)).
+using the dot notation, `a.empty` is equivalent to `empty(a)`.
  */
 @property bool empty(T)(auto ref scope const(T) a)
 if (is(typeof(a.length) : size_t) || isNarrowString!T)
@@ -2092,10 +2092,10 @@ if (is(typeof(a.length) : size_t) || isNarrowString!T)
 }
 
 /**
-Implements the range interface primitive $(D save) for built-in
+Implements the range interface primitive `save` for built-in
 arrays. Due to the fact that nonmember functions can be called with
-the first argument using the dot notation, $(D array.save) is
-equivalent to $(D save(array)). The function does not duplicate the
+the first argument using the dot notation, `array.save` is
+equivalent to `save(array)`. The function does not duplicate the
 content of the array, it simply returns its argument.
  */
 @property T[] save(T)(T[] a) @safe pure nothrow @nogc
@@ -2112,11 +2112,11 @@ content of the array, it simply returns its argument.
 }
 
 /**
-Implements the range interface primitive $(D popFront) for built-in
+Implements the range interface primitive `popFront` for built-in
 arrays. Due to the fact that nonmember functions can be called with
-the first argument using the dot notation, $(D array.popFront) is
-equivalent to $(D popFront(array)). For $(GLOSSARY narrow strings),
-$(D popFront) automatically advances to the next $(GLOSSARY code
+the first argument using the dot notation, `array.popFront` is
+equivalent to `popFront(array)`. For $(GLOSSARY narrow strings),
+`popFront` automatically advances to the next $(GLOSSARY code
 point).
 */
 void popFront(T)(ref T[] a) @safe pure nothrow @nogc
@@ -2234,10 +2234,10 @@ if (isNarrowString!(C[]))
 }
 
 /**
-Implements the range interface primitive $(D popBack) for built-in
+Implements the range interface primitive `popBack` for built-in
 arrays. Due to the fact that nonmember functions can be called with
-the first argument using the dot notation, $(D array.popBack) is
-equivalent to $(D popBack(array)). For $(GLOSSARY narrow strings), $(D
+the first argument using the dot notation, `array.popBack` is
+equivalent to `popBack(array)`. For $(GLOSSARY narrow strings), $(D
 popFront) automatically eliminates the last $(GLOSSARY code point).
 */
 void popBack(T)(ref T[] a) @safe pure nothrow @nogc
@@ -2300,10 +2300,10 @@ if (isNarrowString!(T[]))
 }
 
 /**
-Implements the range interface primitive $(D front) for built-in
+Implements the range interface primitive `front` for built-in
 arrays. Due to the fact that nonmember functions can be called with
-the first argument using the dot notation, $(D array.front) is
-equivalent to $(D front(array)). For $(GLOSSARY narrow strings), $(D
+the first argument using the dot notation, `array.front` is
+equivalent to `front(array)`. For $(GLOSSARY narrow strings), $(D
 front) automatically returns the first $(GLOSSARY code point) as _a $(D
 dchar).
 */
@@ -2346,10 +2346,10 @@ if (isNarrowString!(T[]))
 }
 
 /**
-Implements the range interface primitive $(D back) for built-in
+Implements the range interface primitive `back` for built-in
 arrays. Due to the fact that nonmember functions can be called with
-the first argument using the dot notation, $(D array.back) is
-equivalent to $(D back(array)). For $(GLOSSARY narrow strings), $(D
+the first argument using the dot notation, `array.back` is
+equivalent to `back(array)`. For $(GLOSSARY narrow strings), $(D
 back) automatically returns the last $(GLOSSARY code point) as _a $(D
 dchar).
 */

@@ -2,7 +2,7 @@
 
 /**
    This module implements the formatting functionality for strings and
-   I/O. It's comparable to C99's $(D vsprintf()) and uses a similar
+   I/O. It's comparable to C99's `vsprintf()` and uses a similar
    _format encoding scheme.
 
    For an introductory look at $(B std._format)'s capabilities and how to use
@@ -93,19 +93,19 @@ private alias enforceFmt = enforce!FormatException;
 
 
 /**********************************************************************
-   Interprets variadic argument list $(D args), formats them according
-   to $(D fmt), and sends the resulting characters to $(D w). The
-   encoding of the output is the same as $(D Char). The type $(D Writer)
+   Interprets variadic argument list `args`, formats them according
+   to `fmt`, and sends the resulting characters to `w`. The
+   encoding of the output is the same as `Char`. The type `Writer`
    must satisfy $(D $(REF isOutputRange, std,range,primitives)!(Writer, Char)).
 
    The variadic arguments are normally consumed in order. POSIX-style
    $(HTTP opengroup.org/onlinepubs/009695399/functions/printf.html,
    positional parameter syntax) is also supported. Each argument is
    formatted into a sequence of chars according to the format
-   specification, and the characters are passed to $(D w). As many
+   specification, and the characters are passed to `w`. As many
    arguments as specified in the format string are consumed and
    formatted. If there are fewer arguments than format specifiers, a
-   $(D FormatException) is thrown. If there are more remaining arguments
+   `FormatException` is thrown. If there are more remaining arguments
    than needed by the format specification, they are ignored but only
    if at least one argument was formatted.
 
@@ -209,7 +209,7 @@ $(I FormatChar):
 
     $(TR $(TD $(B '0')) $(TD numeric) $(TD Use leading
     zeros to pad rather than spaces (except for the floating point
-    values $(D nan) and $(D infinity)).  Ignore if there's a $(I
+    values `nan` and `infinity`).  Ignore if there's a $(I
     Precision).))
 
     $(TR $(TD $(B ' ')) $(TD numeric) $(TD Prefix positive
@@ -250,7 +250,7 @@ $(I FormatChar):
             with its type:
             $(DL
                 $(DT $(B bool))
-                $(DD The result is $(D "true") or $(D "false").)
+                $(DD The result is `"true"` or `"false"`.)
                 $(DT integral types)
                 $(DD The $(B %d) format is used.)
                 $(DT floating point types)
@@ -427,7 +427,7 @@ $(CONSOLE
 
     Inside a compound format specifier, strings and characters are escaped
     automatically. To avoid this behavior, add $(B '-') flag to
-    $(D "%$(LPAREN)").
+    `"%$(LPAREN)"`.
     -------------------------
     import std.stdio;
 
@@ -621,8 +621,8 @@ uint formattedWrite(Writer, Char, A...)(auto ref Writer w, in Char[] fmt, A args
 }
 
 /**
-Reads characters from input range $(D r), converts them according
-to $(D fmt), and writes them to $(D args).
+Reads characters from input range `r`, converts them according
+to `fmt`, and writes them to `args`.
 
 Params:
     r = The range to read from.
@@ -1004,7 +1004,7 @@ if (!is(Unqual!Char == Char))
 }
 
 /**
- * A General handler for $(D printf) style format specifiers. Used for building more
+ * A General handler for `printf` style format specifiers. Used for building more
  * specific formatting functions.
  */
 struct FormatSpec(Char)
@@ -1015,7 +1015,7 @@ if (is(Unqual!Char == Char))
     import std.conv : parse, text, to;
 
     /**
-       Minimum _width, default $(D 0).
+       Minimum _width, default `0`.
      */
     int width = 0;
 
@@ -1042,8 +1042,8 @@ if (is(Unqual!Char == Char))
     dchar separatorChar = ',';
 
     /**
-       Special value for width and precision. $(D DYNAMIC) width or
-       precision means that they were specified with $(D '*') in the
+       Special value for width and precision. `DYNAMIC` width or
+       precision means that they were specified with `'*'` in the
        format string and are passed at runtime through the varargs.
      */
     enum int DYNAMIC = int.max;
@@ -1055,56 +1055,56 @@ if (is(Unqual!Char == Char))
     enum int UNSPECIFIED = DYNAMIC - 1;
 
     /**
-       The actual format specifier, $(D 's') by default.
+       The actual format specifier, `'s'` by default.
     */
     char spec = 's';
 
     /**
-       Index of the argument for positional parameters, from $(D 1) to
-       $(D ubyte.max). ($(D 0) means not used).
+       Index of the argument for positional parameters, from `1` to
+       `ubyte.max`. (`0` means not used).
     */
     ubyte indexStart;
 
     /**
        Index of the last argument for positional parameter range, from
-       $(D 1) to $(D ubyte.max). ($(D 0) means not used).
+       `1` to `ubyte.max`. (`0` means not used).
     */
     ubyte indexEnd;
 
     version(StdDdoc)
     {
         /**
-         The format specifier contained a $(D '-') ($(D printf)
+         The format specifier contained a `'-'` (`printf`
          compatibility).
          */
         bool flDash;
 
         /**
-         The format specifier contained a $(D '0') ($(D printf)
+         The format specifier contained a `'0'` (`printf`
          compatibility).
          */
         bool flZero;
 
         /**
-         The format specifier contained a $(D ' ') ($(D printf)
+         The format specifier contained a $(D ' ') (`printf`
          compatibility).
          */
         bool flSpace;
 
         /**
-         The format specifier contained a $(D '+') ($(D printf)
+         The format specifier contained a `'+'` (`printf`
          compatibility).
          */
         bool flPlus;
 
         /**
-         The format specifier contained a $(D '#') ($(D printf)
+         The format specifier contained a `'#'` (`printf`
          compatibility).
          */
         bool flHash;
 
         /**
-         The format specifier contained a $(D ',')
+         The format specifier contained a `','`
          */
         bool flSeparator;
 
@@ -1130,39 +1130,39 @@ if (is(Unqual!Char == Char))
 
     /**
        In case of a compound format specifier starting with $(D
-       "%$(LPAREN)") and ending with $(D "%$(RPAREN)"), $(D _nested)
+       "%$(LPAREN)") and ending with `"%$(RPAREN)"`, `_nested`
        contains the string contained within the two separators.
      */
     const(Char)[] nested;
 
     /**
-       In case of a compound format specifier, $(D _sep) contains the
-       string positioning after $(D "%|").
+       In case of a compound format specifier, `_sep` contains the
+       string positioning after `"%|"`.
        `sep is null` means no separator else `sep.empty` means 0 length
         separator.
      */
     const(Char)[] sep;
 
     /**
-       $(D _trailing) contains the rest of the format string.
+       `_trailing` contains the rest of the format string.
      */
     const(Char)[] trailing;
 
     /*
        This string is inserted before each sequence (e.g. array)
-       formatted (by default $(D "[")).
+       formatted (by default `"["`).
      */
     enum immutable(Char)[] seqBefore = "[";
 
     /*
        This string is inserted after each sequence formatted (by
-       default $(D "]")).
+       default `"]"`).
      */
     enum immutable(Char)[] seqAfter = "]";
 
     /*
        This string is inserted after each element keys of a sequence (by
-       default $(D ":")).
+       default `":"`).
      */
     enum immutable(Char)[] keySeparator = ":";
 
@@ -1173,7 +1173,7 @@ if (is(Unqual!Char == Char))
     enum immutable(Char)[] seqSeparator = ", ";
 
     /**
-       Construct a new $(D FormatSpec) using the format string $(D fmt), no
+       Construct a new `FormatSpec` using the format string `fmt`, no
        processing is done until needed.
      */
     this(in Char[] fmt) @safe pure
@@ -1746,14 +1746,14 @@ if (is(Unqual!Char == Char))
 }
 
 /**
-Helper function that returns a $(D FormatSpec) for a single specifier given
-in $(D fmt).
+Helper function that returns a `FormatSpec` for a single specifier given
+in `fmt`.
 
 Params:
     fmt = A format specifier.
 
 Returns:
-    A $(D FormatSpec) with the specifier parsed.
+    A `FormatSpec` with the specifier parsed.
 Throws:
     A `FormatException` when more than one specifier is given or the specifier
     is malformed.
@@ -1846,7 +1846,7 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, const ref F
 }
 
 /++
-   The following code compares the use of $(D formatValue) and $(D formattedWrite).
+   The following code compares the use of `formatValue` and `formattedWrite`.
  +/
 @safe pure unittest
 {
@@ -1952,7 +1952,7 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, const ref F
  *
  * Specializations:
  *   $(UL
- *      $(LI $(D void[]) is formatted like $(D ubyte[]).)
+ *      $(LI `void[]` is formatted like `ubyte[]`.)
  *      $(LI Const array is converted to input range by removing its qualifier.)
  *   )
  */
@@ -2722,7 +2722,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 }
 
 /*
-    Formatting a $(D creal) is deprecated but still kept around for a while.
+    Formatting a `creal` is deprecated but still kept around for a while.
  */
 deprecated("Use of complex types is deprecated. Use std.complex")
 private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
@@ -2778,7 +2778,7 @@ deprecated
 }
 
 /*
-    Formatting an $(D ireal) is deprecated but still kept around for a while.
+    Formatting an `ireal` is deprecated but still kept around for a while.
  */
 deprecated("Use of imaginary types is deprecated. Use std.complex")
 private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
@@ -3520,8 +3520,8 @@ if (!is(StringTypeOf!T) && !is(CharTypeOf!T) || is(T == enum))
 }
 
 /*
-   Associative arrays are formatted by using $(D ':') and $(D ", ") as
-   separators, and enclosed by $(D '[') and $(D ']').
+   Associative arrays are formatted by using `':'` and $(D ", ") as
+   separators, and enclosed by `'['` and `']'`.
  */
 private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
 if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))

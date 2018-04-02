@@ -18,7 +18,7 @@ $(TR $(TDNW Helpers) $(TD $(MYREF md5Of))
 )
 )
 
- * This module conforms to the APIs defined in $(D std.digest). To understand the
+ * This module conforms to the APIs defined in `std.digest`. To understand the
  * differences between the template and the OOP API, see $(MREF std, digest).
  *
  * This module publicly imports $(MREF std, digest) and can be used as a stand-alone
@@ -91,7 +91,7 @@ private uint rotateLeft(uint x, uint n) @safe pure nothrow @nogc
 
 /**
  * Template API MD5 implementation.
- * See $(D std.digest) for differences between template and OOP API.
+ * See `std.digest` for differences between template and OOP API.
  */
 struct MD5
 {
@@ -289,7 +289,7 @@ struct MD5
         /**
          * Use this to feed the digest with data.
          * Also implements the $(REF isOutputRange, std,range,primitives)
-         * interface for $(D ubyte) and $(D const(ubyte)[]).
+         * interface for `ubyte` and `const(ubyte)[]`.
          *
          * Example:
          * ----
@@ -513,7 +513,7 @@ auto md5Of(T...)(T data)
 
 /**
  * OOP API MD5 implementation.
- * See $(D std.digest) for differences between template and OOP API.
+ * See `std.digest` for differences between template and OOP API.
  *
  * This is an alias for $(D $(REF WrapperDigest, std,digest)!MD5), see
  * there for more information.

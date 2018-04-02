@@ -114,24 +114,24 @@ import std.traits;
 
 /++
     Asserts that the given expression does $(I not) throw the given type
-    of $(D Throwable). If a $(D Throwable) of the given type is thrown,
+    of `Throwable`. If a `Throwable` of the given type is thrown,
     it is caught and does not escape assertNotThrown. Rather, an
-    $(D AssertError) is thrown. However, any other $(D Throwable)s will escape.
+    `AssertError` is thrown. However, any other `Throwable`s will escape.
 
     Params:
-        T          = The $(D Throwable) to test for.
+        T          = The `Throwable` to test for.
         expression = The expression to test.
         msg        = Optional message to output on test failure.
                      If msg is empty, and the thrown exception has a
                      non-empty msg field, the exception's msg field
                      will be output on test failure.
         file       = The file where the error occurred.
-                     Defaults to $(D __FILE__).
+                     Defaults to `__FILE__`.
         line       = The line where the error occurred.
-                     Defaults to $(D __LINE__).
+                     Defaults to `__LINE__`.
 
     Throws:
-        $(D AssertError) if the given $(D Throwable) is thrown.
+        `AssertError` if the given `Throwable` is thrown.
 
     Returns:
         the result of `expression`.
@@ -264,22 +264,22 @@ auto assertNotThrown(T : Throwable = Exception, E)
 }
 
 /++
-    Asserts that the given expression throws the given type of $(D Throwable).
-    The $(D Throwable) is caught and does not escape assertThrown. However,
-    any other $(D Throwable)s $(I will) escape, and if no $(D Throwable)
-    of the given type is thrown, then an $(D AssertError) is thrown.
+    Asserts that the given expression throws the given type of `Throwable`.
+    The `Throwable` is caught and does not escape assertThrown. However,
+    any other `Throwable`s $(I will) escape, and if no `Throwable`
+    of the given type is thrown, then an `AssertError` is thrown.
 
     Params:
-        T          = The $(D Throwable) to test for.
+        T          = The `Throwable` to test for.
         expression = The expression to test.
         msg        = Optional message to output on test failure.
         file       = The file where the error occurred.
-                     Defaults to $(D __FILE__).
+                     Defaults to `__FILE__`.
         line       = The line where the error occurred.
-                     Defaults to $(D __LINE__).
+                     Defaults to `__LINE__`.
 
     Throws:
-        $(D AssertError) if the given $(D Throwable) is not thrown.
+        `AssertError` if the given `Throwable` is not thrown.
   +/
 void assertThrown(T : Throwable = Exception, E)
                  (lazy E expression,
@@ -416,9 +416,9 @@ void assertThrown(T : Throwable = Exception, E)
     Note:
         `enforce` is used to throw exceptions and is therefore intended to
         aid in error handling. It is $(I not) intended for verifying the logic
-        of your program. That is what $(D assert) is for. Also, do not use
+        of your program. That is what `assert` is for. Also, do not use
         `enforce` inside of contracts (i.e. inside of `in` and `out`
-        blocks and $(D invariant)s), because contracts are compiled out when
+        blocks and `invariant`s), because contracts are compiled out when
         compiling with $(I -release).
 
         If a delegate is passed, the safety and purity of this function are inferred
@@ -618,9 +618,9 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
         value = The value to test.
         msg = The message to include in the `ErrnoException` if it is thrown.
 
-    Returns: $(D value), if `cast(bool) value` is true. Otherwise,
+    Returns: `value`, if `cast(bool) value` is true. Otherwise,
     $(D new ErrnoException(msg)) is thrown.  It is assumed that the last
-    operation set $(D errno) to an error code corresponding with the failed
+    operation set `errno` to an error code corresponding with the failed
     condition.
 
     Example:
@@ -636,8 +636,8 @@ alias errnoEnforce = enforce!ErrnoException;
 /++
     $(RED Deprecated. Please use $(LREF enforce) instead. This function will be removed 2.089.)
 
-    If $(D !value) is $(D false), $(D value) is returned. Otherwise,
-    $(D new E(msg, file, line)) is thrown. Or if $(D E) doesn't take a message
+    If `!value` is `false`, `value` is returned. Otherwise,
+    $(D new E(msg, file, line)) is thrown. Or if `E` doesn't take a message
     and can be constructed with $(D new E(file, line)), then
     $(D new E(file, line)) will be thrown.
 
@@ -727,14 +727,14 @@ deprecated
 
 /++
     Catches and returns the exception thrown from the given expression.
-    If no exception is thrown, then null is returned and $(D result) is
+    If no exception is thrown, then null is returned and `result` is
     set to the result of the expression.
 
-    Note that while $(D collectException) $(I can) be used to collect any
-    $(D Throwable) and not just $(D Exception)s, it is generally ill-advised to
-    catch anything that is neither an $(D Exception) nor a type derived from
-    $(D Exception). So, do not use $(D collectException) to collect
-    non-$(D Exception)s unless you're sure that that's what you really want to
+    Note that while `collectException` $(I can) be used to collect any
+    `Throwable` and not just `Exception`s, it is generally ill-advised to
+    catch anything that is neither an `Exception` nor a type derived from
+    `Exception`. So, do not use `collectException` to collect
+    non-`Exception`s unless you're sure that that's what you really want to
     do.
 
     Params:
@@ -768,14 +768,14 @@ T collectException(T = Exception, E)(lazy E expression, ref E result)
 
 /++
     Catches and returns the exception thrown from the given expression.
-    If no exception is thrown, then null is returned. $(D E) can be
-    $(D void).
+    If no exception is thrown, then null is returned. `E` can be
+    `void`.
 
-    Note that while $(D collectException) $(I can) be used to collect any
-    $(D Throwable) and not just $(D Exception)s, it is generally ill-advised to
-    catch anything that is neither an $(D Exception) nor a type derived from
-    $(D Exception). So, do not use $(D collectException) to collect
-    non-$(D Exception)s unless you're sure that that's what you really want to
+    Note that while `collectException` $(I can) be used to collect any
+    `Throwable` and not just `Exception`s, it is generally ill-advised to
+    catch anything that is neither an `Exception` nor a type derived from
+    `Exception`. So, do not use `collectException` to collect
+    non-`Exception`s unless you're sure that that's what you really want to
     do.
 
     Params:
@@ -805,16 +805,16 @@ T collectException(T : Throwable = Exception, E)(lazy E expression)
 /++
     Catches the exception thrown from the given expression and returns the
     msg property of that exception. If no exception is thrown, then null is
-    returned. $(D E) can be $(D void).
+    returned. `E` can be `void`.
 
     If an exception is thrown but it has an empty message, then
-    $(D emptyExceptionMsg) is returned.
+    `emptyExceptionMsg` is returned.
 
-    Note that while $(D collectExceptionMsg) $(I can) be used to collect any
-    $(D Throwable) and not just $(D Exception)s, it is generally ill-advised to
-    catch anything that is neither an $(D Exception) nor a type derived from
-    $(D Exception). So, do not use $(D collectExceptionMsg) to collect
-    non-$(D Exception)s unless you're sure that that's what you really want to
+    Note that while `collectExceptionMsg` $(I can) be used to collect any
+    `Throwable` and not just `Exception`s, it is generally ill-advised to
+    catch anything that is neither an `Exception` nor a type derived from
+    `Exception`. So, do not use `collectExceptionMsg` to collect
+    non-`Exception`s unless you're sure that that's what you really want to
     do.
 
     Params:
@@ -854,18 +854,18 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
 
 /**
  * Casts a mutable array to an immutable array in an idiomatic
- * manner. Technically, $(D assumeUnique) just inserts a cast,
+ * manner. Technically, `assumeUnique` just inserts a cast,
  * but its name documents assumptions on the part of the
- * caller. $(D assumeUnique(arr)) should only be called when
+ * caller. `assumeUnique(arr)` should only be called when
  * there are no more active mutable aliases to elements of $(D
- * arr). To strengthen this assumption, $(D assumeUnique(arr))
- * also clears $(D arr) before returning. Essentially $(D
+ * arr). To strengthen this assumption, `assumeUnique(arr)`
+ * also clears `arr` before returning. Essentially $(D
  * assumeUnique(arr)) indicates commitment from the caller that there
- * is no more mutable access to any of $(D arr)'s elements
+ * is no more mutable access to any of `arr`'s elements
  * (transitively), and that all future accesses will be done through
- * the immutable array returned by $(D assumeUnique).
+ * the immutable array returned by `assumeUnique`.
  *
- * Typically, $(D assumeUnique) is used to return arrays from
+ * Typically, `assumeUnique` is used to return arrays from
  * functions that have allocated and built them.
  *
  * Params:
@@ -889,10 +889,10 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  * ----
  * )
  *
- * The use in the example above is correct because $(D result)
- * was private to $(D letters) and is inaccessible in writing
+ * The use in the example above is correct because `result`
+ * was private to `letters` and is inaccessible in writing
  * after the function returns. The following example shows an
- * incorrect use of $(D assumeUnique).
+ * incorrect use of `assumeUnique`.
  *
  * Bad:
  *
@@ -915,7 +915,7 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  *
  * The example above wreaks havoc on client code because it is
  * modifying arrays that callers considered immutable. To obtain an
- * immutable array from the writable array $(D buffer), replace
+ * immutable array from the writable array `buffer`, replace
  * the last line with:
  *
  * ----
@@ -949,10 +949,10 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  * $(HTTP www.cs.cmu.edu/~aldrich/papers/aldrich-dissertation.pdf, ArchJava)
  * language.
  *
- * The downside of using $(D assumeUnique)'s
+ * The downside of using `assumeUnique`'s
  * convention-based usage is that at this time there is no
  * formal checking of the correctness of the assumption;
- * on the upside, the idiomatic use of $(D assumeUnique) is
+ * on the upside, the idiomatic use of `assumeUnique` is
  * simple and rare enough to be tolerable.
  *
  */
@@ -996,17 +996,17 @@ immutable(T[U]) assumeUnique(T, U)(ref T[U] array) pure nothrow
 }
 
 /**
- * Wraps a possibly-throwing expression in a $(D nothrow) wrapper so that it
- * can be called by a $(D nothrow) function.
+ * Wraps a possibly-throwing expression in a `nothrow` wrapper so that it
+ * can be called by a `nothrow` function.
  *
  * This wrapper function documents commitment on the part of the caller that
  * the appropriate steps have been taken to avoid whatever conditions may
- * trigger an exception during the evaluation of $(D expr).  If it turns out
+ * trigger an exception during the evaluation of `expr`.  If it turns out
  * that the expression $(I does) throw at runtime, the wrapper will throw an
- * $(D AssertError).
+ * `AssertError`.
  *
- * (Note that $(D Throwable) objects such as $(D AssertError) that do not
- * subclass $(D Exception) may be thrown even from $(D nothrow) functions,
+ * (Note that `Throwable` objects such as `AssertError` that do not
+ * subclass `Exception` may be thrown even from `nothrow` functions,
  * since they are considered to be serious runtime problems that cannot be
  * recovered from.)
  *
@@ -1088,32 +1088,32 @@ Params:
     source = The source object
     target = The target object
 
-Returns: $(D true) if $(D source)'s representation embeds a pointer
-that points to $(D target)'s representation or somewhere inside
+Returns: `true` if `source`'s representation embeds a pointer
+that points to `target`'s representation or somewhere inside
 it.
 
-If $(D source) is or contains a dynamic array, then, then these functions will check
-if there is overlap between the dynamic array and $(D target)'s representation.
+If `source` is or contains a dynamic array, then, then these functions will check
+if there is overlap between the dynamic array and `target`'s representation.
 
-If $(D source) is a class, then it will be handled as a pointer.
+If `source` is a class, then it will be handled as a pointer.
 
-If $(D target) is a pointer, a dynamic array or a class, then these functions will only
-check if $(D source) points to $(D target), $(I not) what $(D target) references.
+If `target` is a pointer, a dynamic array or a class, then these functions will only
+check if `source` points to `target`, $(I not) what `target` references.
 
-If $(D source) is or contains a union, then there may be either false positives or
+If `source` is or contains a union, then there may be either false positives or
 false negatives:
 
-$(D doesPointTo) will return $(D true) if it is absolutely certain
-$(D source) points to $(D target). It may produce false negatives, but never
+`doesPointTo` will return `true` if it is absolutely certain
+`source` points to `target`. It may produce false negatives, but never
 false positives. This function should be prefered when trying to validate
 input data.
 
-$(D mayPointTo) will return $(D false) if it is absolutely certain
-$(D source) does not point to $(D target). It may produce false positives, but never
+`mayPointTo` will return `false` if it is absolutely certain
+`source` does not point to `target`. It may produce false positives, but never
 false negatives. This function should be prefered for defensively choosing a
 code path.
 
-Note: Evaluating $(D doesPointTo(x, x)) checks whether $(D x) has
+Note: Evaluating $(D doesPointTo(x, x)) checks whether `x` has
 internal pointers. This should only be done as an assertive test,
 as the language is free to assume objects don't have internal pointers
 (TDPL 7.1.3.5).
@@ -1484,7 +1484,7 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
 }
 
 /+
-Returns true if the field at index $(D i) in ($D T) shares its address with another field.
+Returns true if the field at index `i` in ($D T) shares its address with another field.
 
 Note: This does not merelly check if the field is a member of an union, but also that
 it is not a single child.
@@ -1569,7 +1569,7 @@ package string errnoString(int errno) nothrow @trusted
 }
 
 /*********************
- * Thrown if errors that set $(D errno) occur.
+ * Thrown if errors that set `errno` occur.
  */
 class ErrnoException : Exception
 {
@@ -1613,12 +1613,12 @@ class ErrnoException : Exception
 
 /++
     ML-style functional exception handling. Runs the supplied expression and
-    returns its result. If the expression throws a $(D Throwable), runs the
+    returns its result. If the expression throws a `Throwable`, runs the
     supplied error handler instead and return its result. The error handler's
     type must be the same as the expression's type.
 
     Params:
-        E            = The type of $(D Throwable)s to catch. Defaults to $(D Exception)
+        E            = The type of `Throwable`s to catch. Defaults to `Exception`
         T1           = The type of the expression.
         T2           = The return type of the error handler.
         expression   = The expression to run and return its result.
@@ -1820,15 +1820,15 @@ version(unittest) package
     cast(void) dg();
 }
 
-/** This $(D enum) is used to select the primitives of the range to handle by the
-  $(LREF handle) range wrapper. The values of the $(D enum) can be $(D OR)'d to
+/** This `enum` is used to select the primitives of the range to handle by the
+  $(LREF handle) range wrapper. The values of the `enum` can be `OR`'d to
   select multiple primitives to be handled.
 
-  $(D RangePrimitive.access) is a shortcut for the access primitives; $(D front),
-  $(D back) and $(D opIndex).
+  `RangePrimitive.access` is a shortcut for the access primitives; `front`,
+  `back` and `opIndex`.
 
-  $(D RangePrimitive.pop) is a shortcut for the mutating primitives;
-  $(D popFront) and $(D popBack).
+  `RangePrimitive.pop` is a shortcut for the mutating primitives;
+  `popFront` and `popBack`.
  */
 enum RangePrimitive
 {
@@ -1883,28 +1883,28 @@ pure @safe unittest
 /** Handle exceptions thrown from range primitives.
 
 Use the $(LREF RangePrimitive) enum to specify which primitives to _handle.
-Multiple range primitives can be handled at once by using the $(D OR) operator
-or the pseudo-primitives $(D RangePrimitive.access) and $(D RangePrimitive.pop).
+Multiple range primitives can be handled at once by using the `OR` operator
+or the pseudo-primitives `RangePrimitive.access` and `RangePrimitive.pop`.
 All handled primitives must have return types or values compatible with the
 user-supplied handler.
 
 Params:
-    E = The type of $(D Throwable) to _handle.
+    E = The type of `Throwable` to _handle.
     primitivesToHandle = Set of range primitives to _handle.
     handler = The callable that is called when a handled primitive throws a
-    $(D Throwable) of type $(D E). The handler must accept arguments of
+    `Throwable` of type `E`. The handler must accept arguments of
     the form $(D E, ref IRange) and its return value is used as the primitive's
-    return value whenever $(D E) is thrown. For $(D opIndex), the handler can
+    return value whenever `E` is thrown. For `opIndex`, the handler can
     optionally recieve a third argument; the index that caused the exception.
     input = The range to _handle.
 
-Returns: A wrapper $(D struct) that preserves the range interface of $(D input).
+Returns: A wrapper `struct` that preserves the range interface of `input`.
 
 Note:
 Infinite ranges with slicing support must return an instance of
 $(REF Take, std,range) when sliced with a specific lower and upper
-bound (see $(REF hasSlicing, std,range,primitives)); $(D handle) deals with
-this by $(D take)ing 0 from the return value of the handler function and
+bound (see $(REF hasSlicing, std,range,primitives)); `handle` deals with
+this by `take`ing 0 from the return value of the handler function and
 returning that when an exception is caught.
 */
 auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Range)(Range input)

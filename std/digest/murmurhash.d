@@ -9,7 +9,7 @@ The older MurmurHash 1 and 2 are currently not supported.
 
 MurmurHash3 comes in three flavors, listed in increasing order of throughput:
 $(UL
-$(LI $(D MurmurHash3!32) produces a 32-bit value and is optimized for 32-bit architectures)
+$(LI `MurmurHash3!32` produces a 32-bit value and is optimized for 32-bit architectures)
 $(LI $(D MurmurHash3!(128, 32)) produces a 128-bit value and is optimized for 32-bit architectures)
 $(LI $(D MurmurHash3!(128, 64)) produces a 128-bit value and is optimized for 64-bit architectures)
 )
@@ -584,8 +584,8 @@ L_end:
 
     /++
     Finalizes the computation of the hash and returns the computed value.
-    Note that $(D finish) can be called only once and that no subsequent calls
-    to $(D put) is allowed.
+    Note that `finish` can be called only once and that no subsequent calls
+    to `put` is allowed.
     +/
     ubyte[Element.sizeof] finish() pure nothrow
     {
