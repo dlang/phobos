@@ -22,6 +22,7 @@
  *           $(LREF FunctionTypeOf)
  *           $(LREF isSafe)
  *           $(LREF isUnsafe)
+ *           $(LREF isStronglyPure)
  *           $(LREF isFinal)
  *           $(LREF ParameterDefaults)
  *           $(LREF ParameterIdentifierTuple)
@@ -9079,4 +9080,114 @@ enum isCopyable(S) = __traits(isCopyable, S);
     static assert(isCopyable!C1);
     static assert(isCopyable!int);
     static assert(isCopyable!(int[]));
+}
+
+/++
+Determines if `F` is a strongly `pure` function. This is true when :
+    $(UL
+        $(LI Each parameter is `immutable`, or can be converted automatically to `immutable`
+        (i.e. has no mutable indirections) and is passed by value)
+        $(LI The return type is `immutable` or can be implicitly converted to `immutable`)
+    )
+Params:
+    F = The function to be tested
+
+Returns:
+    `true` if the function is strongly `pure`, `false` if otherwise.
+Note:
+    Member functions must be marked `immutable`
+++/
+template isStronglyPure(F...)
+if (F.length == 1 && isCallable!F)
+{
+    bool isStronglyPure()
+    {
+        if (!hasFunctionAttributes!(F, "pure"))
+            return false;
+
+        //check if the function is a member function
+        static if (isType!(__traits(parent, F)) && !hasFunctionAttributes!(F, "immutable"))
+            return false;
+
+        alias STC = ParameterStorageClass;
+
+        static foreach (i, param; Parameters!F)
+        {
+            if (!is(param == immutable)
+                    && (isRefType!param || hasAliasing!param
+                    || ParameterStorageClassTuple!F[i] == STC.ref_
+                    || ParameterStorageClassTuple!F[i] == STC.out_))
+                return false;
+        }
+
+        alias rt = ReturnType!F;
+
+        if (is(rt == immutable))
+            return true;
+        else if (isRefType!rt || hasAliasing!rt || hasFunctionAttributes!(F, "ref"))
+            return false;
+        else
+            return true;
+    }
+
+    private bool isRefType(T)()
+    {
+        if (is(T == class) || is(T == interface)
+                || isDelegate!T || isAssociativeArray!T
+                || isPointer!T)
+            return true;
+        else if (isDynamicArray!T && !is(T : immutable(U)[], U))
+            return true;
+        else
+            return false;
+    }
+}
+
+///
+@safe pure unittest
+{
+    int f(int) pure;
+    void g(ref int) pure;
+    void j(immutable (void function(ref int) pure)) pure;
+    static assert( isStronglyPure!f);
+    static assert(!isStronglyPure!g); //takes args by mutable reference
+    static assert( isStronglyPure!j); //can call a function which is not strongly pure
+}
+
+@safe pure unittest
+{
+    void h(out int) pure;
+
+    struct Test
+    {
+        int[string] aa;
+    }
+
+    void i(Test) pure;
+
+    Test k(int) pure;
+
+    string l(int[]) pure;
+
+    ref int m(int) pure;
+
+    string n(int) pure;
+
+    struct S
+    {
+        int x;
+        int f() pure
+        {
+            return x++;
+        }
+    }
+
+
+    static assert(!isStronglyPure!h);
+    static assert(!isStronglyPure!i); //has parameter Test with mutable reference member aa
+    static assert(!isStronglyPure!k);
+    static assert(!isStronglyPure!l);
+    static assert(!isStronglyPure!m);
+    static assert( isStronglyPure!n);
+    static assert(!isStronglyPure!(S.f)); //S.f should be immutable
 }

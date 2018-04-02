@@ -1,0 +1,15 @@
+Addition: `std.traits.isStronglyPure` 
+
+Strongly `pure` functions are `pure` functions of which parameters and return value cannot
+reach any mutable state. Practically this means the layout of all parameters and that of
+the result contains nonpointer data passed (or returned) by value, in conjunction
+with `immutable` indirectly-accessed data. This is in keeping with the
+$(LINK2 $(ROOT_DIR)spec/function.html#pure-functions, D language spacification of pure functions).
+
+$(REF isStronglyPure, std, traits) yields `true` if a the function passed to it satisfies
+these conditions. Example:
+-------
+static assert(isStronglyPure!((int x) => x));
+static assert(!isStronglyPure((ref int x) => x));
+-------
+
