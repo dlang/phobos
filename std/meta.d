@@ -1167,7 +1167,7 @@ if (isIterable!(typeof(iter)) && !isInfinite!(typeof(iter)))
     {
         int opApply(scope int delegate(ref int) dg)
         {
-            foreach(int i; 3 .. 5)
+            foreach (int i; 3 .. 5)
                 if (auto r = dg(i))
                     return r;
             return 0;
