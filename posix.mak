@@ -536,7 +536,10 @@ $(DSCANNER_DIR)/dsc: | $(DSCANNER_DIR) $(DMD) $(LIB)
 style: publictests style_lint
 
 # runs static code analysis with Dscanner
-dscanner: | $(DSCANNER_DIR)/dsc
+dscanner:
+	@# The dscanner target is without dependencies to avoid constant rebuilds of Phobos (`make` always rebuilds order-only dependencies)
+	@# However, we still need to ensure that the DScanner binary is built once
+	@[ -f $(DSCANNER_DIR)/dsc ] || ${MAKE} -f posix.mak $(DSCANNER_DIR)/dsc
 	@echo "Running DScanner"
 	$(DEBUGGER) -return-child-result -q -ex run -ex bt -batch --args $(DSCANNER_DIR)/dsc --config .dscanner.ini --styleCheck etc std -I.
 
