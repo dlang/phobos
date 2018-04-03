@@ -226,6 +226,18 @@ module std.experimental.allocator;
 public import std.experimental.allocator.common,
     std.experimental.allocator.typed;
 
+// Fix issue 17806: this should always be the first unittest in this module
+// in order to ensure that we use the `processAllocator` setter before the getter
+@system unittest
+{
+    import std.experimental.allocator.mallocator: Mallocator;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    auto newAlloc = sharedAllocatorObject(Mallocator.instance);
+    processAllocator = newAlloc;
+    assert(processAllocator is newAlloc);
+    processAllocator = sharedAllocatorObject(GCAllocator.instance);
+}
+
 // Example in the synopsis above
 @system unittest
 {
@@ -1038,10 +1050,10 @@ allocator can be cast to `shared`.
 
 /// Ditto
 nothrow @system @nogc
-@property void processAllocator(RCISharedAllocator a)
+@property void processAllocator(ref RCISharedAllocator a)
 {
     assert(!a.isNull);
-    _processAllocator = a;
+    processAllocator() = a;
 }
 
 @system unittest
