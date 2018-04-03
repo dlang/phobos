@@ -1122,39 +1122,49 @@ propagates the exception.
 auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
 {
     import std.algorithm.comparison : max;
-    import std.conv : emplace, emplaceRef;
-    auto m = alloc.allocate(max(stateSize!T, 1));
-    if (!m.ptr) return null;
-
-    // make can only be @safe if emplace or emplaceRef is `pure`
-    auto construct()
+    static if (!is(T == class) && !is(T == interface) && A.length == 0
+        && __traits(compiles, {T t;}) && isInitAllZeroBits!T
+        && is(typeof(alloc.allocateZeroed(size_t.max))))
     {
-        static if (is(T == class)) return emplace!T(m, args);
-        else
-        {
-            // Assume cast is safe as allocation succeeded for `stateSize!T`
-            auto p = () @trusted { return cast(T*) m.ptr; }();
-            emplaceRef(*p, args);
-            return p;
-        }
+        auto m = alloc.allocateZeroed(max(T.sizeof, 1));
+        return (() @trusted => cast(T*) m.ptr)();
     }
-
-    scope(failure)
+    else
     {
-        static if (is(typeof(() pure { return construct(); })))
-        {
-            // Assume deallocation is safe because:
-            // 1) in case of failure, `m` is the only reference to this memory
-            // 2) `m` is known to originate from `alloc`
-            () @trusted { alloc.deallocate(m); }();
-        }
-        else
-        {
-            alloc.deallocate(m);
-        }
-    }
+        import std.conv : emplace, emplaceRef;
+        auto m = alloc.allocate(max(stateSize!T, 1));
+        if (!m.ptr) return null;
 
-    return construct();
+        // make can only be @safe if emplace or emplaceRef is `pure`
+        auto construct()
+        {
+            static if (is(T == class)) return emplace!T(m, args);
+            else
+            {
+                // Assume cast is safe as allocation succeeded for `stateSize!T`
+                auto p = () @trusted { return cast(T*) m.ptr; }();
+                emplaceRef(*p, args);
+                return p;
+            }
+        }
+
+        scope(failure)
+        {
+            static if (is(typeof(() pure { return construct(); })))
+            {
+                // Assume deallocation is safe because:
+                // 1) in case of failure, `m` is the only reference to this memory
+                // 2) `m` is known to originate from `alloc`
+                () @trusted { alloc.deallocate(m); }();
+            }
+            else
+            {
+                alloc.deallocate(m);
+            }
+        }
+
+        return construct();
+    }
 }
 
 ///
@@ -1355,6 +1365,19 @@ nothrow @safe @nogc unittest
     assertThrown(make!InvalidImpureStruct(Mallocator.instance, 42));
 }
 
+// Don't allow zero-ctor-args `make` for structs with `@disable this();`
+@system unittest
+{
+    struct NoDefaultCtor
+    {
+        int i;
+        @disable this();
+    }
+    import std.experimental.allocator.mallocator : Mallocator;
+    static assert(!__traits(compiles, make!NoDefaultCtor(Mallocator.instance)),
+        "Don't allow zero-ctor-args `make` for structs with `@disable this();`");
+}
+
 private void fillWithMemcpy(T)(scope void[] array, auto ref T filler) nothrow
 if (T.sizeof == 1)
 {
@@ -1484,10 +1507,18 @@ exception if the copy operation throws.
 T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length)
 {
     if (!length) return null;
-    auto m = alloc.allocate(T.sizeof * length);
-    if (!m.ptr) return null;
-    alias U = Unqual!T;
-    return () @trusted { return cast(T[]) uninitializedFillDefault(cast(U[]) m); }();
+    static if (isInitAllZeroBits!T && hasMember!(T, "allocateZeroed"))
+    {
+        auto m = alloc.allocateZeroed(T.sizeof * length);
+        return (() @trusted => cast(T[]) m)();
+    }
+    else
+    {
+        auto m = alloc.allocate(T.sizeof * length);
+        if (!m.ptr) return null;
+        alias U = Unqual!T;
+        return () @trusted { return cast(T[]) uninitializedFillDefault(cast(U[]) m); }();
+    }
 }
 
 @system unittest

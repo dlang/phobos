@@ -511,6 +511,18 @@ version(unittest)
         assert(b2.length == 2);
         assert(b2.ptr + b2.length <= b1.ptr || b1.ptr + b1.length <= b2.ptr);
 
+        // Test allocateZeroed
+        static if (hasMember!(A, "allocateZeroed"))
+        {{
+            auto b3 = a.allocateZeroed(8);
+            if (b3 !is null)
+            {
+                assert(b3.length == 8);
+                foreach (e; cast(ubyte[]) b3)
+                    assert(e == 0);
+            }
+        }}
+
         // Test alignedAllocate
         static if (hasMember!(A, "alignedAllocate"))
         {{
