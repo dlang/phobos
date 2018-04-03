@@ -281,9 +281,12 @@ public:
 
                 static void testTM(in SysTime st)
                 {
-                    import core.stdc.time : localtime, tm;
+                    import core.stdc.time : tm;
+                    import core.sys.posix.time : localtime_r;
+
                     time_t unixTime = st.toUnixTime();
-                    tm* osTimeInfo = localtime(&unixTime);
+                    tm osTimeInfo = void;
+                    localtime_r(&unixTime, &osTimeInfo);
                     tm ourTimeInfo = st.toTM();
 
                     assert(ourTimeInfo.tm_sec == osTimeInfo.tm_sec);
@@ -874,17 +877,23 @@ public:
       +/
     override bool dstInEffect(long stdTime) @trusted const nothrow
     {
-        import core.stdc.time : localtime, tm;
+        import core.stdc.time : tm;
+
         time_t unixTime = stdTimeToUnixTime(stdTime);
 
         version(Posix)
         {
-            tm* timeInfo = localtime(&unixTime);
+            import core.sys.posix.time : localtime_r;
+
+            tm timeInfo = void;
+            localtime_r(&unixTime, &timeInfo);
 
             return cast(bool)(timeInfo.tm_isdst);
         }
         else version(Windows)
         {
+            import core.stdc.time : localtime;
+
             // Apparently Windows isn't smart enough to deal with negative time_t.
             if (unixTime >= 0)
             {
@@ -926,9 +935,11 @@ public:
             return stdTime + convert!("seconds", "hnsecs")(tm_gmtoff(stdTime));
         else version(Posix)
         {
-            import core.stdc.time : localtime, tm;
+            import core.stdc.time : tm;
+            import core.sys.posix.time : localtime_r;
             time_t unixTime = stdTimeToUnixTime(stdTime);
-            tm* timeInfo = localtime(&unixTime);
+            tm timeInfo = void;
+            localtime_r(&unixTime, &timeInfo);
 
             return stdTime + convert!("seconds", "hnsecs")(timeInfo.tm_gmtoff);
         }
@@ -963,15 +974,17 @@ public:
     {
         version(Posix)
         {
-            import core.stdc.time : localtime, tm;
+            import core.stdc.time : tm;
+            import core.sys.posix.time : localtime_r;
             time_t unixTime = stdTimeToUnixTime(adjTime);
 
             immutable past = unixTime - cast(time_t) convert!("days", "seconds")(1);
-            tm* timeInfo = localtime(past < unixTime ? &past : &unixTime);
+            tm timeInfo = void;
+            localtime_r(past < unixTime ? &past : &unixTime, &timeInfo);
             immutable pastOffset = timeInfo.tm_gmtoff;
 
             immutable future = unixTime + cast(time_t) convert!("days", "seconds")(1);
-            timeInfo = localtime(future > unixTime ? &future : &unixTime);
+            localtime_r(future > unixTime ? &future : &unixTime, &timeInfo);
             immutable futureOffset = timeInfo.tm_gmtoff;
 
             if (pastOffset == futureOffset)
@@ -981,7 +994,7 @@ public:
                 unixTime -= cast(time_t) convert!("hours", "seconds")(1);
 
             unixTime -= pastOffset;
-            timeInfo = localtime(&unixTime);
+            localtime_r(&unixTime, &timeInfo);
 
             return adjTime - convert!("seconds", "hnsecs")(timeInfo.tm_gmtoff);
         }
@@ -1167,13 +1180,14 @@ private:
     {
         long tm_gmtoff(long stdTime) @trusted const nothrow
         {
-            import core.stdc.time : localtime, gmtime, tm;
+            import core.stdc.time : tm;
+            import core.sys.posix.time : localtime_r, gmtime_r;
 
             time_t unixTime = stdTimeToUnixTime(stdTime);
-            tm* buf = localtime(&unixTime);
-            tm timeInfo = *buf;
-            buf = gmtime(&unixTime);
-            tm timeInfoGmt = *buf;
+            tm timeInfo = void;
+            localtime_r(&unixTime, &timeInfo);
+            tm timeInfoGmt = void;
+            gmtime_r(&unixTime, &timeInfoGmt);
 
             return timeInfo.tm_sec - timeInfoGmt.tm_sec +
                    convert!("minutes", "seconds")(timeInfo.tm_min - timeInfoGmt.tm_min) +
