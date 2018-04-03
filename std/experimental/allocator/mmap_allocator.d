@@ -79,6 +79,5 @@ nothrow @safe @nogc unittest
     alias alloc = MmapAllocator.instance;
     auto p = alloc.allocate(100);
     assert(p.length == 100);
-    () @trusted { alloc.deallocate(p); }();
-    p = null;
+    () @trusted { alloc.deallocate(p); p = null; }();
 }
