@@ -77,6 +77,9 @@
 
 module std.meta;
 
+import std.traits : isAggregateType, Unqual, isIterable;
+import std.range.primitives : isInfinite;
+
 /**
  * Creates a sequence of zero or more aliases. This is most commonly
  * used as template parameters or arguments.
@@ -251,8 +254,6 @@ package template OldAlias(alias a)
     else
         static assert(0, "Cannot alias " ~ a.stringof);
 }
-
-import std.traits : isAggregateType, Unqual;
 
 package template OldAlias(T)
 if (!isAggregateType!T || is(Unqual!T == T))
@@ -1085,9 +1086,6 @@ template templateOr(Preds...)
         // static assert(!is(typeof(Instantiate!(templateOr!(testNever, testError), T))));
     }
 }
-
-import std.traits : isIterable;
-import std.range.primitives : isInfinite;
 
 /**
  * Converts any foreach-iterable (e.g. an input range) `iter` to an alias sequence.
