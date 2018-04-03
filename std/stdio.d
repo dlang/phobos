@@ -4708,7 +4708,18 @@ enum StdFileHandle: string
 
 /** The standard input stream.
 
-    Returns: stdin as a $(LREF File).
+    Returns:
+        stdin as a $(LREF File).
+
+    Note:
+        The returned $(LREF File) wraps $(REF stdin,core,stdio), and
+        is therefore thread global. Reassigning `stdin` to a different
+        `File` must be done in a single-threaded or locked context in
+        order to avoid race conditions.
+
+        All reading from `stdin` automatically locks the file globally,
+        and will cause all other threads calling `read` to wait until
+        the lock is released.
 */
 alias stdin = makeGlobal!(StdFileHandle.stdin);
 
@@ -4735,7 +4746,18 @@ alias stdin = makeGlobal!(StdFileHandle.stdin);
 /**
     The standard output stream.
 
-    Returns: stdout as a $(LREF File).
+    Returns:
+        stdout as a $(LREF File).
+
+    Note:
+        The returned $(LREF File) wraps $(REF stdout,core,stdio), and
+        is therefore thread global. Reassigning `stdout` to a different
+        `File` must be done in a single-threaded or locked context in
+        order to avoid race conditions.
+
+        All writing to `stdout` automatically locks the file globally,
+        and will cause all other threads calling `write` to wait until
+        the lock is released.
 */
 alias stdout = makeGlobal!(StdFileHandle.stdout);
 
@@ -4787,7 +4809,18 @@ alias stdout = makeGlobal!(StdFileHandle.stdout);
 /**
     The standard error stream.
 
-    Returns: stderr as a $(LREF File).
+    Returns:
+        stderr as a $(LREF File).
+
+    Note:
+        The returned $(LREF File) wraps $(REF stderr,core,stdio), and
+        is therefore thread global. Reassigning `stderr` to a different
+        `File` must be done in a single-threaded or locked context in
+        order to avoid race conditions.
+
+        All writing to `stderr` automatically locks the file globally,
+        and will cause all other threads calling `write` to wait until
+        the lock is released.
 */
 alias stderr = makeGlobal!(StdFileHandle.stderr);
 
