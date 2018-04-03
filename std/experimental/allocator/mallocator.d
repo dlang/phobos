@@ -28,29 +28,29 @@ struct Mallocator
     paradoxically, `malloc` is `@safe` but that's only useful to safe
     programs that can afford to leak memory allocated.
     */
-    @trusted @nogc nothrow
+    @trusted @nogc nothrow pure
     void[] allocate(size_t bytes) shared
     {
-        import core.stdc.stdlib : malloc;
+        import core.memory : pureMalloc;
         if (!bytes) return null;
-        auto p = malloc(bytes);
+        auto p = pureMalloc(bytes);
         return p ? p[0 .. bytes] : null;
     }
 
     /// Ditto
-    @system @nogc nothrow
+    @system @nogc nothrow pure
     bool deallocate(void[] b) shared
     {
-        import core.stdc.stdlib : free;
-        free(b.ptr);
+        import core.memory : pureFree;
+        pureFree(b.ptr);
         return true;
     }
 
     /// Ditto
-    @system @nogc nothrow
+    @system @nogc nothrow pure
     bool reallocate(ref void[] b, size_t s) shared
     {
-        import core.stdc.stdlib : realloc;
+        import core.memory : pureRealloc;
         if (!s)
         {
             // fuzzy area in the C standard, see http://goo.gl/ZpWeSE
@@ -59,7 +59,7 @@ struct Mallocator
             b = null;
             return true;
         }
-        auto p = cast(ubyte*) realloc(b.ptr, s);
+        auto p = cast(ubyte*) pureRealloc(b.ptr, s);
         if (!p) return false;
         b = p[0 .. s];
         return true;
@@ -74,16 +74,16 @@ struct Mallocator
 }
 
 ///
-@nogc @system nothrow unittest
+@nogc @system nothrow pure unittest
 {
     auto buffer = Mallocator.instance.allocate(1024 * 1024 * 4);
     scope(exit) Mallocator.instance.deallocate(buffer);
     //...
 }
 
-@nogc @system nothrow unittest
+@nogc @system nothrow pure unittest
 {
-    @nogc nothrow
+    @nogc nothrow pure
     static void test(A)()
     {
         int* p = null;
@@ -95,7 +95,7 @@ struct Mallocator
     test!Mallocator();
 }
 
-@nogc @system nothrow unittest
+@nogc @system nothrow pure unittest
 {
     static void test(A)()
     {
