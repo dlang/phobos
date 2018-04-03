@@ -2477,13 +2477,21 @@ public:
             assert(!errorSet.isSet(testPair[1]));
 
             ubyte[1] b;
-            testPair[0].send(b[]);
+            // Socket.send can't be marked with `scope`
+            // -> @safe DIP1000 code can't use it - see https://github.com/dlang/phobos/pull/6204
+            () @trusted {
+                testPair[0].send(b[]);
+            }();
             fillSets();
             n = Socket.select(readSet, null, null);
             assert(n == 1); // testPair[1]
             assert(readSet.isSet(testPair[1]));
             assert(!readSet.isSet(testPair[0]));
-            testPair[1].receive(b[]);
+            // Socket.receive can't be marked with `scope`
+            // -> @safe DIP1000 code can't use it - see https://github.com/dlang/phobos/pull/6204
+            () @trusted {
+                testPair[1].receive(b[]);
+            }();
         }
     });
 }
