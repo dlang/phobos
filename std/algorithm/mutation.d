@@ -278,11 +278,11 @@ if (isInputRange!InputRange && isForwardRange!ForwardRange)
 {
     import std.algorithm.comparison : equal;
     import std.conv : text;
-    import std.random : Random, unpredictableSeed, uniform;
+    import std.random : Random = Xorshift, uniform;
 
     // a more elaborate test
     {
-        auto rnd = Random(unpredictableSeed);
+        auto rnd = Random(123_456_789);
         int[] a = new int[uniform(100, 200, rnd)];
         int[] b = new int[uniform(100, 200, rnd)];
         foreach (ref e; a) e = uniform(-100, 100, rnd);

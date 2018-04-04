@@ -691,7 +691,7 @@ private struct MapResult(alias fun, Range)
     import std.internal.test.dummyrange;
     import std.range;
     import std.typecons : tuple;
-    import std.random : unpredictableSeed, uniform, Random;
+    import std.random : uniform, Random = Xorshift;
 
     int[] arr1 = [ 1, 2, 3, 4 ];
     const int[] arr1Const = arr1;
@@ -749,7 +749,7 @@ private struct MapResult(alias fun, Range)
     assert(fibsSquares.front == 9);
 
     auto repeatMap = map!"a"(repeat(1));
-    auto gen = Random(unpredictableSeed);
+    auto gen = Random(123_456_789);
     auto index = uniform(0, 1024, gen);
     static assert(isInfinite!(typeof(repeatMap)));
     assert(repeatMap[index] == 1);

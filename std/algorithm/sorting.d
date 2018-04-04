@@ -746,8 +746,8 @@ if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && hasAssig
         import std.algorithm.iteration : map;
         import std.random;
         import std.stdio;
-        auto s = unpredictableSeed;
-        auto g = Random(s);
+        auto s = 123_456_789;
+        auto g = Xorshift(s);
         a = iota(0, uniform(1, 1000, g))
             .map!(_ => uniform(-1000, 1000, g))
             .array;
@@ -883,9 +883,9 @@ if (ss == SwapStrategy.unstable && isRandomAccessRange!Range
 
 @safe unittest
 {
-    import std.random : Random, uniform, unpredictableSeed;
+    import std.random : Random = Xorshift, uniform;
 
-    immutable uint[] seeds = [3923355730, 1927035882, unpredictableSeed];
+    immutable uint[] seeds = [3923355730, 1927035882];
     foreach (s; seeds)
     {
         auto r = Random(s);
@@ -1710,7 +1710,7 @@ private void shortSort(alias less, Range)(Range r)
 
 @safe unittest
 {
-    import std.random : Random, uniform;
+    import std.random : Random = Xorshift, uniform;
 
     auto rnd = Random(1);
     auto a = new int[uniform(100, 200, rnd)];
@@ -1949,12 +1949,12 @@ if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
 {
     import std.algorithm.internal : rndstuff;
     import std.algorithm.mutation : swapRanges;
-    import std.random : Random, unpredictableSeed, uniform;
+    import std.random : Random = Xorshift, uniform;
     import std.uni : toUpper;
 
     // sort using delegate
     auto a = new int[100];
-    auto rnd = Random(unpredictableSeed);
+    auto rnd = Random(123_456_789);
     foreach (ref e; a)
     {
         e = uniform(-100, 100, rnd);
@@ -3457,7 +3457,7 @@ private T[] randomArray(Flag!"exactSize" flag = No.exactSize, T = int)(
     T minValue = 0, T maxValue = 255)
 {
     import std.algorithm.iteration : map;
-    import std.random : unpredictableSeed, Random, uniform;
+    import std.random : uniform;
     auto size = flag == Yes.exactSize ? maxSize : uniform(1, maxSize);
     return iota(0, size).map!(_ => uniform(minValue, maxValue)).array;
 }
@@ -3513,9 +3513,9 @@ private T[] randomArray(Flag!"exactSize" flag = No.exactSize, T = int)(
 {
     import std.algorithm.comparison : max, min;
     import std.algorithm.iteration : reduce;
-    import std.random : Random, uniform, unpredictableSeed;
+    import std.random : Random = Xorshift, uniform;
 
-    immutable uint[] seeds = [90027751, 2709791795, 1374631933, 995751648, 3541495258, 984840953, unpredictableSeed];
+    immutable uint[] seeds = [90027751, 2709791795, 1374631933, 995751648, 3541495258, 984840953];
     foreach (s; seeds)
     {
         auto r = Random(s);
@@ -3718,10 +3718,10 @@ if (isInputRange!(SRange) && isRandomAccessRange!(TRange)
 
 @system unittest
 {
-    import std.random : Random, unpredictableSeed, uniform, randomShuffle;
+    import std.random : Random = Xorshift, uniform, randomShuffle;
     import std.typecons : Yes;
 
-    auto r = Random(unpredictableSeed);
+    auto r = Random(123_456_789);
     ptrdiff_t[] a = new ptrdiff_t[uniform(1, 1000, r)];
     foreach (i, ref e; a) e = i;
     randomShuffle(a, r);
