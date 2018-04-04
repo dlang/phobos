@@ -2793,9 +2793,9 @@ if (canSwapEndianness!T)
     Unqual!T value;
     ubyte[T.sizeof] array;
 
-    static if (is(FloatingPointTypeOf!T == float))
+    static if (is(FloatingPointTypeOf!(Unqual!T) == float))
         uint  intValue;
-    else static if (is(FloatingPointTypeOf!T == double))
+    else static if (is(FloatingPointTypeOf!(Unqual!T) == double))
         ulong intValue;
 
 }
@@ -2827,9 +2827,21 @@ if (canSwapEndianness!T)
     ubyte[4] swappedI = nativeToBigEndian(i);
     assert(i == bigEndianToNative!int(swappedI));
 
+    float f = 123.45f;
+    ubyte[4] swappedF = nativeToBigEndian(f);
+    assert(f == bigEndianToNative!float(swappedF));
+
+    const float cf = 123.45f;
+    ubyte[4] swappedCF = nativeToBigEndian(cf);
+    assert(cf == bigEndianToNative!float(swappedCF));
+
     double d = 123.45;
     ubyte[8] swappedD = nativeToBigEndian(d);
     assert(d == bigEndianToNative!double(swappedD));
+
+    const double cd = 123.45;
+    ubyte[8] swappedCD = nativeToBigEndian(cd);
+    assert(cd == bigEndianToNative!double(swappedCD));
 }
 
 private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow @nogc
