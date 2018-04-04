@@ -4760,12 +4760,15 @@ template CommonType(T...)
     alias Y = CommonType!(int, char[], short);
     assert(is(Y == void));
 }
+
+///
 @safe unittest
 {
     static assert(is(CommonType!(3) == int));
     static assert(is(CommonType!(double, 4, float) == double));
     static assert(is(CommonType!(string, char[]) == const(char)[]));
     static assert(is(CommonType!(3, 3U) == uint));
+    static assert(is(CommonType!(double, int) == double));
 }
 
 
