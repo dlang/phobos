@@ -5027,8 +5027,8 @@ else
  * $(TABLE_SV
  *  $(TR $(TH x)               $(TH y)            $(TH remainder(x, y)) $(TH n)   $(TH invalid?))
  *  $(TR $(TD $(PLUSMN)0.0)    $(TD not 0.0)      $(TD $(PLUSMN)0.0)    $(TD 0.0) $(TD no))
- *  $(TR $(TD $(PLUSMNINF))    $(TD anything)     $(TD $(NAN))          $(TD ?)   $(TD yes))
- *  $(TR $(TD anything)        $(TD $(PLUSMN)0.0) $(TD $(NAN))          $(TD ?)   $(TD yes))
+ *  $(TR $(TD $(PLUSMNINF))    $(TD anything)     $(TD -$(NAN))         $(TD ?)   $(TD yes))
+ *  $(TR $(TD anything)        $(TD $(PLUSMN)0.0) $(TD -$(NAN))         $(TD ?)   $(TD yes))
  *  $(TR $(TD != $(PLUSMNINF)) $(TD $(PLUSMNINF)) $(TD x)               $(TD ?)   $(TD no))
  * )
  *
@@ -5052,6 +5052,33 @@ real remquo(real x, real y, out int n) @trusted nothrow @nogc  /// ditto
         return core.stdc.math.remquol(x, y, &n);
     else
         assert(0, "remquo not implemented");
+}
+
+///
+@safe @nogc nothrow unittest
+{
+    version(Posix)
+    {
+        assert(remainder(5.1, 3.0).feqrel(-0.9) > 16);
+        assert(remainder(-5.1, 3.0).feqrel(0.9) > 16);
+        assert(remainder(0.0, 3.0) == 0.0);
+
+        assert(remainder(1.0, 0.0) is -real.nan);
+        assert(remainder(-1.0, 0.0) is -real.nan);
+    }
+}
+
+///
+@safe @nogc nothrow unittest
+{
+    version(Posix)
+    {
+        int n;
+
+        assert(remquo(5.1, 3.0, n).feqrel(-0.9) > 16 && n == 2);
+        assert(remquo(-5.1, 3.0, n).feqrel(0.9) > 16 && n == -2);
+        assert(remquo(0.0, 3.0, n) == 0.0 && n == 0);
+    }
 }
 
 /** IEEE exception status flags ('sticky bits')
@@ -5303,10 +5330,38 @@ void resetIeeeFlags() @trusted nothrow @nogc
     IeeeFlags.resetIeeeFlags();
 }
 
+///
+@safe unittest
+{
+    resetIeeeFlags();
+    real a = 3.5;
+    a /= 0.0L;
+    assert(a == real.infinity);
+    assert(ieeeFlags.divByZero);
+
+    resetIeeeFlags();
+    assert(!ieeeFlags.divByZero);
+}
+
 /// Returns: snapshot of the current state of the floating-point status flags
 @property IeeeFlags ieeeFlags() @trusted pure nothrow @nogc
 {
    return IeeeFlags(IeeeFlags.getIeeeFlags());
+}
+
+///
+@safe nothrow unittest
+{
+    resetIeeeFlags();
+    real a = 3.5;
+
+    a /= 0.0L;
+    assert(a == real.infinity);
+    assert(ieeeFlags.divByZero);
+
+    a *= 0.0L;
+    assert(isNaN(a));
+    assert(ieeeFlags.invalid);
 }
 
 /** Control the Floating point hardware
@@ -5343,18 +5398,9 @@ Example:
     // NaN-s with other payload are valid:
     real z = y * real.nan; // ok
 
-    // Changing the rounding mode:
-    fpctrl.rounding = FloatingPointControl.roundUp;
-    assert(rint(1.1) == 2);
-
-    // The set hardware exceptions will be disabled when leaving this scope.
-    // The original rounding mode will also be restored.
+    // The set hardware exceptions and rounding modes will be disabled when
+    // leaving this scope.
 }
-
-// Ensure previous values are returned:
-assert(!FloatingPointControl.enabledExceptions);
-assert(FloatingPointControl.rounding == FloatingPointControl.roundToNearest);
-assert(rint(1.1) == 1);
 ----
 
  */
@@ -5699,6 +5745,21 @@ private:
         else
             assert(0, "Not yet supported");
     }
+}
+
+///
+@safe unittest
+{
+    FloatingPointControl fpctrl;
+
+    fpctrl.rounding = FloatingPointControl.roundDown;
+    assert(lrint(1.5) == 1.0);
+
+    fpctrl.rounding = FloatingPointControl.roundUp;
+    assert(lrint(1.4) == 2.0);
+
+    fpctrl.rounding = FloatingPointControl.roundToNearest;
+    assert(lrint(1.5) == 2.0);
 }
 
 @safe unittest
@@ -6172,6 +6233,19 @@ bool isIdentical(real x, real y) @trusted pure nothrow @nogc
     }
 }
 
+///
+@safe @nogc pure nothrow unittest
+{
+    assert( isIdentical(0.0, 0.0));
+    assert( isIdentical(1.0, 1.0));
+    assert( isIdentical(real.infinity, real.infinity));
+    assert( isIdentical(-real.infinity, -real.infinity));
+
+    assert(!isIdentical(0.0, -0.0));
+    assert(!isIdentical(real.nan, -real.nan));
+    assert(!isIdentical(real.infinity, -real.infinity));
+}
+
 /*********************************
  * Return 1 if sign bit of e is set, 0 if not.
  */
@@ -6213,8 +6287,12 @@ int signbit(X)(X x) @nogc @trusted pure nothrow
 }
 
 
-/*********************************
- * Return a value composed of to with from's sign bit.
+/**
+Params:
+    to = the numeric value to use
+    from = the sign value to use
+Returns:
+    a value composed of to with from's sign bit.
  */
 R copysign(R, X)(R to, X from) @trusted pure nothrow @nogc
 if (isFloatingPoint!(R) && isFloatingPoint!(X))
@@ -6229,11 +6307,25 @@ if (isFloatingPoint!(R) && isFloatingPoint!(X))
     return to;
 }
 
-// ditto
+/// ditto
 R copysign(R, X)(X to, R from) @trusted pure nothrow @nogc
 if (isIntegral!(X) && isFloatingPoint!(R))
 {
     return copysign(cast(R) to, from);
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert(copysign(1.0, 1.0) == 1.0);
+    assert(copysign(1.0, -0.0) == -1.0);
+    assert(copysign(1UL, -1.0) == -1.0);
+    assert(copysign(-1.0, -1.0) == -1.0);
+
+    assert(copysign(real.infinity, -1.0) == -real.infinity);
+    assert(copysign(real.nan, 1.0) is real.nan);
+    assert(copysign(-real.nan, 1.0) is real.nan);
+    assert(copysign(real.nan, -1.0) is -real.nan);
 }
 
 @safe pure nothrow @nogc unittest
@@ -6372,6 +6464,14 @@ real NaN(ulong payload) @trusted pure nothrow @nogc
     }
 }
 
+///
+@safe @nogc pure nothrow unittest
+{
+    real a = NaN(1_000_000);
+    assert(isNaN(a));
+    assert(getNaNPayload(a) == 1_000_000);
+}
+
 @system pure nothrow @nogc unittest // not @safe because taking address of local.
 {
     static if (floatTraits!(real).realFormat == RealFormat.ieeeDouble)
@@ -6431,6 +6531,14 @@ ulong getNaNPayload(real x) @trusted pure nothrow @nogc
             w |= (m & 0x00FF_FFFF_F800L) << (22 - 11);
             w |= (m & 0x7FF) << 51;
             return w;
+}
+
+///
+@safe @nogc pure nothrow unittest
+{
+    real a = NaN(1_000_000);
+    assert(isNaN(a));
+    assert(getNaNPayload(a) == 1_000_000);
 }
 
 debug(UnitTest)
@@ -6627,6 +6735,13 @@ float nextUp(float x) @trusted pure nothrow @nogc
     return x;
 }
 
+///
+@safe @nogc pure nothrow unittest
+{
+    assert(nextUp(1.0 - 1.0e-6).feqrel(0.999999) > 16);
+    assert(nextUp(1.0 - real.epsilon).feqrel(1.0) > 16);
+}
+
 /**
  * Calculate the next smallest floating point value before x.
  *
@@ -6772,8 +6887,11 @@ T nextafter(T)(const T x, const T y) @safe pure nothrow @nogc
 
 //real nexttoward(real x, real y) { return core.stdc.math.nexttowardl(x, y); }
 
-/*******************************************
+/**
  * Returns the positive difference between x and y.
+ *
+ * Equivalent to `fmax(x-y, 0)`.
+ *
  * Returns:
  *      $(TABLE_SV
  *      $(TR $(TH x, y)       $(TH fdim(x, y)))
@@ -6783,15 +6901,45 @@ T nextafter(T)(const T x, const T y) @safe pure nothrow @nogc
  */
 real fdim(real x, real y) @safe pure nothrow @nogc { return (x > y) ? x - y : +0.0; }
 
-/****************************************
+///
+@safe pure nothrow @nogc unittest
+{
+    assert(fdim(2.0, 0.0) == 2.0);
+    assert(fdim(-2.0, 0.0) == 0.0);
+    assert(fdim(real.infinity, 2.0) == real.infinity);
+    assert(fdim(real.nan, 2.0) == 0.0);
+    assert(fdim(2.0, real.nan) == 0.0);
+}
+
+/**
  * Returns the larger of x and y.
  */
 real fmax(real x, real y) @safe pure nothrow @nogc { return x > y ? x : y; }
 
-/****************************************
+///
+@safe pure nothrow @nogc unittest
+{
+    assert(fmax(0.0, 2.0) == 2.0);
+    assert(fmax(-2.0, 0.0) == 0.0);
+    assert(fmax(real.infinity, 2.0) == real.infinity);
+    assert(fmax(real.nan, 2.0) == 2.0);
+    assert(fmax(2.0, real.nan) is real.nan);
+}
+
+/**
  * Returns the smaller of x and y.
  */
 real fmin(real x, real y) @safe pure nothrow @nogc { return x < y ? x : y; }
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert(fmin(0.0, 2.0) == 0.0);
+    assert(fmin(-2.0, 0.0) == -2.0);
+    assert(fmin(real.infinity, 2.0) == 2.0);
+    assert(fmin(real.nan, 2.0) == 2.0);
+    assert(fmin(2.0, real.nan) is real.nan);
+}
 
 /**************************************
  * Returns (x * y) + z, rounding only once according to the
@@ -6801,7 +6949,17 @@ real fmin(real x, real y) @safe pure nothrow @nogc { return x < y ? x : y; }
  */
 real fma(real x, real y, real z) @safe pure nothrow @nogc { return (x * y) + z; }
 
-/*******************************************************************
+///
+@safe pure nothrow @nogc unittest
+{
+    assert(fma(0.0, 2.0, 2.0) == 2.0);
+    assert(fma(2.0, 2.0, 2.0) == 6.0);
+    assert(fma(real.infinity, 2.0, 2.0) == real.infinity);
+    assert(fma(real.nan, 2.0, 2.0) is real.nan);
+    assert(fma(2.0, 2.0, real.nan) is real.nan);
+}
+
+/**
  * Compute the value of x $(SUPERSCRIPT n), where n is an integer
  */
 Unqual!F pow(F, G)(F x, G n) @nogc @trusted pure nothrow
@@ -6850,6 +7008,15 @@ if (isFloatingPoint!(F) && isIntegral!(G))
         v *= v;
     }
     return p;
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert(pow(2.0, 5) == 32.0);
+    assert(pow(1.5, 9).feqrel(38.4433) > 16);
+    assert(pow(real.nan, 2) is real.nan);
+    assert(pow(real.infinity, 2) == real.infinity);
 }
 
 @safe pure nothrow @nogc unittest
@@ -6970,7 +7137,16 @@ if (isIntegral!I && isFloatingPoint!F)
     return pow(cast(real) x, cast(Unqual!F) y);
 }
 
-/*********************************************
+///
+@safe pure nothrow @nogc unittest
+{
+    assert(pow(2, 5.0) == 32.0);
+    assert(pow(7, 3.0) == 343.0);
+    assert(pow(2, real.nan) is real.nan);
+    assert(pow(2, real.infinity) == real.infinity);
+}
+
+/**
  * Calculates x$(SUPERSCRIPT y).
  *
  * $(TABLE_SV
@@ -6998,7 +7174,7 @@ if (isIntegral!I && isFloatingPoint!F)
  *      $(TD no)        $(TD no) )
  * $(TR $(TD -$(INFIN))      $(TD $(LT) 0.0, not odd integer) $(TD +0.0)
  *      $(TD no)        $(TD no) )
- * $(TR $(TD $(PLUSMN)1.0)   $(TD $(PLUSMN)$(INFIN))          $(TD $(NAN))
+ * $(TR $(TD $(PLUSMN)1.0)   $(TD $(PLUSMN)$(INFIN))          $(TD -$(NAN))
  *      $(TD no)        $(TD yes) )
  * $(TR $(TD $(LT) 0.0)      $(TD finite, nonintegral)        $(TD $(NAN))
  *      $(TD no)        $(TD yes))
@@ -7213,6 +7389,29 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
     return impl(x, y);
 }
 
+///
+@safe pure nothrow @nogc unittest
+{
+    assert(pow(1.0, 2.0) == 1.0);
+    assert(pow(0.0, 0.0) == 1.0);
+    assert(pow(1.5, 10.0).feqrel(57.665) > 16);
+
+    // special values
+    assert(pow(1.5, real.infinity) == real.infinity);
+    assert(pow(0.5, real.infinity) == 0.0);
+    assert(pow(1.5, -real.infinity) == 0.0);
+    assert(pow(0.5, -real.infinity) == real.infinity);
+    assert(pow(real.infinity, 1.0) == real.infinity);
+    assert(pow(real.infinity, -1.0) == 0.0);
+    assert(pow(-real.infinity, 1.0) == -real.infinity);
+    assert(pow(-real.infinity, 2.0) == real.infinity);
+    assert(pow(-real.infinity, -1.0) == -0.0);
+    assert(pow(-real.infinity, -2.0) == 0.0);
+    assert(pow(1.0, real.infinity) is -real.nan);
+    assert(pow(0.0, -1.0) == real.infinity);
+    assert(pow(real.nan, 0.0) == 1.0);
+}
+
 @safe pure nothrow @nogc unittest
 {
     // Test all the special values.  These unittests can be run on Windows
@@ -7351,6 +7550,17 @@ if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
     }
 
     return result;
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert(powmod(1U, 10U, 3U) == 1);
+    assert(powmod(3U, 2U, 6U) == 3);
+    assert(powmod(5U, 5U, 15U) == 5);
+    assert(powmod(2U, 3U, 5U) == 3);
+    assert(powmod(2U, 4U, 5U) == 1);
+    assert(powmod(2U, 5U, 5U) == 2);
 }
 
 @safe pure nothrow @nogc unittest
@@ -7989,7 +8199,8 @@ private real polyImpl(real x, in real[] A) @trusted pure nothrow @nogc
         lhs = First item to compare.
         rhs = Second item to compare.
         maxRelDiff = Maximum allowable difference relative to `rhs`.
-        maxAbsDiff = Maximum absolute difference.
+        Defaults to `1e-2`.
+        maxAbsDiff = Maximum absolute difference. Defaults to `1e-5`.
 
    Returns:
        `true` if the two items are approximately equal under either criterium.
@@ -8071,9 +8282,7 @@ bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
     }
 }
 
-/**
-   Returns $(D approxEqual(lhs, rhs, 1e-2, 1e-5)).
- */
+/// ditto
 bool approxEqual(T, U)(T lhs, U rhs)
 {
     return approxEqual(lhs, rhs, 1e-2, 1e-5);
