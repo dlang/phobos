@@ -565,7 +565,7 @@ if (distinctFieldNames!(Specs))
     enum areBuildCompatibleTuples(Tup1, Tup2) = isTuple!Tup2 && is(typeof(
     {
         static assert(Tup1.Types.length == Tup2.Types.length);
-        foreach (i, _; Tup1.Types)
+        static foreach (i, _; Tup1.Types)
             static assert(isBuildable!(Tup1.Types[i], Tup2.Types[i]));
     }));
 
@@ -575,7 +575,7 @@ if (distinctFieldNames!(Specs))
         U u = U.init;
         T t = u;
     }));
-    /+ Helper for partial instanciation +/
+    /+ Helper for partial instantiation +/
     template isBuildableFrom(U)
     {
         enum isBuildableFrom(T) = isBuildable!(T, U);
@@ -587,6 +587,8 @@ if (distinctFieldNames!(Specs))
          * The types of the `Tuple`'s components.
          */
         alias Types = staticMap!(extractType, fieldSpecs);
+
+        private alias _Fields = Specs;
 
         ///
         static if (Specs.length == 0) @safe unittest
@@ -768,6 +770,17 @@ if (distinctFieldNames!(Specs))
             return field[] == rhs.field[];
         }
 
+        /// ditto
+        bool opEquals(R...)(auto ref R rhs)
+        if (R.length > 1 && areCompatibleTuples!(typeof(this), Tuple!R, "=="))
+        {
+            static foreach (i, _; Types)
+                if (field[i] != rhs[i])
+                    return false;
+
+            return true;
+        }
+
         ///
         static if (Specs.length == 0) @safe unittest
         {
@@ -834,6 +847,49 @@ if (distinctFieldNames!(Specs))
             //Only the first result matters for comparison
             tup1[0] = 2;
             assert(tup1 > tup2);
+        }
+
+        /**
+         Concatenate Tuples.
+         Tuple concatenation is only allowed if all named fields are distinct (no named field of this tuple occurs in `t`
+         and no named field of `t` occurs in this tuple).
+
+         Params:
+             t = The `Tuple` to concatenate with
+
+         Returns: A concatenation of this tuple and `t`
+         */
+        auto opBinary(string op, T)(auto ref T t)
+        if (op == "~")
+        {
+            static if (isTuple!T)
+            {
+                static assert(distinctFieldNames!(_Fields, T._Fields),
+                    "Cannot concatenate tuples with duplicate fields: " ~ fieldNames.stringof ~
+                    " - " ~ T.fieldNames.stringof);
+                return Tuple!(_Fields, T._Fields)(expand, t.expand);
+            }
+            else
+            {
+                return Tuple!(_Fields, T)(expand, t);
+            }
+        }
+
+        /// ditto
+        auto opBinaryRight(string op, T)(auto ref T t)
+        if (op == "~")
+        {
+            static if (isTuple!T)
+            {
+                static assert(distinctFieldNames!(_Fields, T._Fields),
+                    "Cannot concatenate tuples with duplicate fields: " ~ T.stringof ~
+                    " - " ~ fieldNames.fieldNames.stringof);
+                return Tuple!(T._Fields, _Fields)(t.expand, expand);
+            }
+            else
+            {
+                return Tuple!(T, _Fields)(t, expand);
+            }
         }
 
         /**
@@ -1314,6 +1370,92 @@ if (distinctFieldNames!(Specs))
     // Bugzilla 4582
     static assert(!__traits(compiles, Tuple!(string, "id", int, "id")));
     static assert(!__traits(compiles, Tuple!(string, "str", int, "i", string, "str", float)));
+}
+
+/// Concatenate tuples
+@safe unittest
+{
+    import std.meta : AliasSeq;
+    auto t = tuple(1, "2") ~ tuple(ushort(42), true);
+    static assert(is(t.Types == AliasSeq!(int, string, ushort, bool)));
+    assert(t[1] == "2");
+    assert(t[2] == 42);
+    assert(t[3] == true);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=14637
+// tuple concat
+@safe unittest
+{
+    auto t = tuple!"foo"(1.0) ~ tuple!"bar"("3");
+    static assert(is(t.Types == AliasSeq!(double, string)));
+    static assert(t.fieldNames == tuple("foo", "bar"));
+    assert(t.foo == 1.0);
+    assert(t.bar == "3");
+}
+
+// tuple concat
+@safe unittest
+{
+    auto t = tuple!"foo"(1.0) ~ "3";
+    static assert(is(t.Types == AliasSeq!(double, string)));
+    assert(t.foo == 1.0);
+    assert(t[1]== "3");
+}
+
+// tuple concat
+@safe unittest
+{
+    auto t = "2" ~ tuple!"foo"(1.0);
+    static assert(is(t.Types == AliasSeq!(string, double)));
+    assert(t.foo == 1.0);
+    assert(t[0]== "2");
+}
+
+// tuple concat
+@safe unittest
+{
+    auto t = "2" ~ tuple!"foo"(1.0) ~ tuple(42, 3.0f) ~ real(1) ~ "a";
+    static assert(is(t.Types == AliasSeq!(string, double, int, float, real, string)));
+    assert(t.foo == 1.0);
+    assert(t[0] == "2");
+    assert(t[1] == 1.0);
+    assert(t[2] == 42);
+    assert(t[3] == 3.0f);
+    assert(t[4] == 1.0);
+    assert(t[5] == "a");
+}
+
+// ensure that concatenation of tuples with non-distinct fields is forbidden
+@safe unittest
+{
+    static assert(!__traits(compiles,
+        tuple!("a")(0) ~ tuple!("a")("1")));
+    static assert(!__traits(compiles,
+        tuple!("a", "b")(0, 1) ~ tuple!("b", "a")("3", 1)));
+    static assert(!__traits(compiles,
+        tuple!("a")(0) ~ tuple!("b", "a")("3", 1)));
+    static assert(!__traits(compiles,
+        tuple!("a1", "a")(1.0, 0) ~ tuple!("a2", "a")("3", 0)));
+}
+
+// Ensure that Tuple comparison with non-const opEquals works
+@safe unittest
+{
+    static struct Bad
+    {
+        int a;
+
+        bool opEquals(Bad b)
+        {
+            return a == b.a;
+        }
+    }
+
+    auto t = Tuple!(int, Bad, string)(1, Bad(1), "asdf");
+
+    //Error: mutable method Bad.opEquals is not callable using a const object
+    assert(t == AliasSeq!(1, Bad(1), "asdf"));
 }
 
 /**
