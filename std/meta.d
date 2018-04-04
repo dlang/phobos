@@ -1089,9 +1089,9 @@ template templateOr(Preds...)
 
 /**
  * Converts any foreach-iterable entity (e.g. an input range) to an alias sequence.
- * 
+ *
  * Params:
- *     iter = the entity to convert into an `AliasSeq`. It must be able to be able to be iterated over using 
+ *     iter = the entity to convert into an `AliasSeq`. It must be able to be able to be iterated over using
  *            a $(LINK2 https://dlang.org/spec/statement.html#foreach-statement, foreach-statement).
  *
  * Returns:
