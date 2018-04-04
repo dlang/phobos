@@ -31,6 +31,41 @@ $(TR $(TD Conversion) $(TD
 +/
 module std.datetime.systime;
 
+/// Get the current time as a $(LREF SysTime)
+@safe unittest
+{
+    import std.datetime.timezone : LocalTime;
+    SysTime today = Clock.currTime();
+    assert(today.timezone is LocalTime());
+}
+
+/// Construct a $(LREF SysTime) from a ISO time string
+@safe unittest
+{
+    import std.datetime.date : DateTime;
+    import std.datetime.timezone : UTC;
+
+    auto st = SysTime.fromISOExtString("2018-01-01T10:30:00Z");
+    assert(st == SysTime(DateTime(2018, 1, 1, 10, 30, 0), UTC()));
+}
+
+/// Make a specific point in time in the New York timezone
+@safe unittest
+{
+    import core.time : hours;
+    import std.datetime.date : DateTime;
+    import std.datetime.timezone : SimpleTimeZone;
+
+    auto ny = SysTime(
+        DateTime(2018, 1, 1, 10, 30, 0),
+        new immutable SimpleTimeZone(-5.hours, "America/New_York")
+    );
+
+    // ISO standard time strings
+    assert(ny.toISOString() == "20180101T103000-05:00");
+    assert(ny.toISOExtString() == "2018-01-01T10:30:00-05:00");
+}
+
 // Note: reconsider using specific imports below after
 // https://issues.dlang.org/show_bug.cgi?id=17630 has been fixed
 import core.time;// : ClockType, convert, dur, Duration, seconds, TimeException;
@@ -306,6 +341,14 @@ public:
 private:
 
     @disable this() {}
+}
+
+/// Get the current time as a $(LREF SysTime)
+@safe unittest
+{
+    import std.datetime.timezone : LocalTime;
+    SysTime today = Clock.currTime();
+    assert(today.timezone is LocalTime());
 }
 
 
@@ -9006,6 +9049,30 @@ private:
     Rebindable!(immutable TimeZone) _timezone;
 }
 
+///
+@safe unittest
+{
+    import core.time : days, hours, seconds;
+    import std.datetime.date : DateTime;
+    import std.datetime.timezone : SimpleTimeZone, UTC;
+
+    // make a specific point in time in the UTC timezone
+    auto st = SysTime(DateTime(2018, 1, 1, 10, 30, 0), UTC());
+    // make a specific point in time in the New York timezone
+    auto ny = SysTime(
+        DateTime(2018, 1, 1, 10, 30, 0),
+        new immutable SimpleTimeZone(-5.hours, "America/New_York")
+    );
+
+    // ISO standard time strings
+    assert(st.toISOString() == "20180101T103000Z");
+    assert(st.toISOExtString() == "2018-01-01T10:30:00Z");
+
+    // add two days and 30 seconds
+    st += 2.days + 30.seconds;
+    assert(st.toISOExtString() == "2018-01-03T10:30:30Z");
+}
+
 
 /++
     Converts from unix time (which uses midnight, January 1st, 1970 UTC as its
@@ -9512,8 +9579,11 @@ SysTime DosFileTimeToSysTime(DosFileTime dft, immutable TimeZone tz = LocalTime(
         throw new DateTimeException("Invalid DosFileTime", __FILE__, __LINE__, dte);
 }
 
+///
 @safe unittest
 {
+    import std.datetime.date : DateTime;
+
     assert(DosFileTimeToSysTime(0b00000000001000010000000000000000) == SysTime(DateTime(1980, 1, 1, 0, 0, 0)));
     assert(DosFileTimeToSysTime(0b11111111100111111011111101111101) == SysTime(DateTime(2107, 12, 31, 23, 59, 58)));
     assert(DosFileTimeToSysTime(0x3E3F8456) == SysTime(DateTime(2011, 1, 31, 16, 34, 44)));
@@ -9551,8 +9621,11 @@ DosFileTime SysTimeToDosFileTime(SysTime sysTime) @safe
     return cast(DosFileTime) retval;
 }
 
+///
 @safe unittest
 {
+    import std.datetime.date : DateTime;
+
     assert(SysTimeToDosFileTime(SysTime(DateTime(1980, 1, 1, 0, 0, 0))) == 0b00000000001000010000000000000000);
     assert(SysTimeToDosFileTime(SysTime(DateTime(2107, 12, 31, 23, 59, 58))) == 0b11111111100111111011111101111101);
     assert(SysTimeToDosFileTime(SysTime(DateTime(2011, 1, 31, 16, 34, 44))) == 0x3E3F8456);
