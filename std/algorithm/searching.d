@@ -1268,6 +1268,16 @@ if (isInputRange!R &&
     }}
 }
 
+// Rebindable doesn't work with structs
+// see: https://github.com/dlang/phobos/pull/6136
+private template RebindableOrUnqual(T)
+{
+    static if (is(T == class) || is(T == interface) || isDynamicArray!T || isAssociativeArray!T)
+        alias RebindableOrUnqual = Rebindable!T;
+    else
+        alias RebindableOrUnqual = Unqual!T;
+}
+
 /**
 Iterates the passed range and selects the extreme element with `less`.
 If the extreme element occurs multiple time, the first occurrence will be
@@ -1292,7 +1302,7 @@ in
 do
 {
     alias Element = ElementType!Range;
-    Unqual!Element seed = r.front;
+    RebindableOrUnqual!Element seed = r.front;
     r.popFront();
     return extremum!(map, selector)(r, seed);
 }
@@ -1309,7 +1319,7 @@ if (isInputRange!Range && !isInfinite!Range &&
 
     alias Element = ElementType!Range;
     alias CommonElement = CommonType!(Element, RangeElementType);
-    Unqual!CommonElement extremeElement = seedElement;
+    RebindableOrUnqual!CommonElement extremeElement = seedElement;
 
 
     // if we only have one statement in the loop, it can be optimized a lot better
@@ -1465,6 +1475,26 @@ if (isInputRange!Range && !isInfinite!Range &&
 
     static immutable arr2d = [[1, 9], [3, 1], [4, 2]];
     assert(arr2d.extremum!"a[1]" == arr2d[1]);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=17982
+@safe unittest
+{
+    class B
+    {
+        int val;
+        this(int val){ this.val = val; }
+    }
+
+    const(B) doStuff(const(B)[] v)
+    {
+        return v.extremum!"a.val";
+    }
+    assert(doStuff([new B(1), new B(0), new B(2)]).val == 0);
+
+    const(B)[] arr = [new B(0), new B(1)];
+    // can't compare directly - https://issues.dlang.org/show_bug.cgi?id=1824
+    assert(arr.extremum!"a.val".val == 0);
 }
 
 // find
@@ -2085,8 +2115,7 @@ if (isForwardRange!R1 && isForwardRange!R2
 
 @safe unittest
 {
-    import std.range;
-    import std.stdio;
+    import std.range : assumeSorted;
 
     auto r1 = assumeSorted([1, 2, 3, 3, 3, 4, 5, 6, 7, 8, 8, 8, 10]);
     auto r2 = assumeSorted([3, 3, 4, 5, 6, 7, 8, 8]);
@@ -3453,6 +3482,38 @@ if (isInputRange!Range && !isInfinite!Range &&
     assert(arr2d.minElement!"a[1]" == arr2d[1]);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=17982
+@safe unittest
+{
+    struct A
+    {
+      int val;
+    }
+
+    const(A)[] v = [A(0)];
+    assert(v.minElement!"a.val" == A(0));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=17982
+@safe unittest
+{
+    class B
+    {
+        int val;
+        this(int val){ this.val = val; }
+    }
+
+    const(B) doStuff(const(B)[] v)
+    {
+        return v.minElement!"a.val";
+    }
+    assert(doStuff([new B(1), new B(0), new B(2)]).val == 0);
+
+    const(B)[] arr = [new B(0), new B(1)];
+    // can't compare directly - https://issues.dlang.org/show_bug.cgi?id=1824
+    assert(arr.minElement!"a.val".val == 0);
+}
+
 /**
 Iterates the passed range and returns the maximal element.
 A custom mapping function can be passed to `map`.
@@ -3555,6 +3616,26 @@ if (isInputRange!Range && !isInfinite!Range &&
 
     static immutable arr2d = [[1, 3], [3, 9], [4, 2]];
     assert(arr2d.maxElement!"a[1]" == arr2d[1]);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=17982
+@safe unittest
+{
+    class B
+    {
+        int val;
+        this(int val){ this.val = val; }
+    }
+
+    const(B) doStuff(const(B)[] v)
+    {
+        return v.maxElement!"a.val";
+    }
+    assert(doStuff([new B(1), new B(0), new B(2)]).val == 2);
+
+    const(B)[] arr = [new B(0), new B(1)];
+    // can't compare directly - https://issues.dlang.org/show_bug.cgi?id=1824
+    assert(arr.maxElement!"a.val".val == 1);
 }
 
 // minPos

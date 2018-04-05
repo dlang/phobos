@@ -26,7 +26,7 @@ $(TR $(TDNW Helpers) $(TD $(MYREF sha1Of))
  * This module conforms to the APIs defined in $(MREF std, digest). To understand the
  * differences between the template and the OOP API, see $(MREF std, digest).
  *
- * This module publicly imports $(D std.digest) and can be used as a stand-alone
+ * This module publicly imports `std.digest` and can be used as a stand-alone
  * module.
  *
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
@@ -193,7 +193,7 @@ private ulong rotateRight(ulong x, uint n) @safe pure nothrow @nogc
  * simply use the convenience aliases: SHA1, SHA224, SHA256, SHA384, SHA512,
  * SHA512_224 and SHA512_256.
  *
- * See $(D std.digest) for differences between template and OOP API.
+ * See `std.digest` for differences between template and OOP API.
  */
 struct SHA(uint hashBlockSize, uint digestSize)
 {
@@ -694,7 +694,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
         /**
          * Use this to feed the digest with data.
          * Also implements the $(REF isOutputRange, std,range,primitives)
-         * interface for $(D ubyte) and $(D const(ubyte)[]).
+         * interface for `ubyte` and `const(ubyte)[]`.
          */
         void put(scope const(ubyte)[] input...) @trusted pure nothrow @nogc
         {
@@ -1203,7 +1203,7 @@ auto sha512_256Of(T...)(T data)
 
 /**
  * OOP API SHA1 and SHA2 implementations.
- * See $(D std.digest) for differences between template and OOP API.
+ * See `std.digest` for differences between template and OOP API.
  *
  * This is an alias for $(D $(REF WrapperDigest, std,digest)!SHA1), see
  * there for more information.

@@ -66,7 +66,7 @@ public:
 
     /++
         The name of the time zone per the TZ Database. This is the name used to
-        get a $(LREF TimeZone) by name with $(D TimeZone.getTimeZone).
+        get a $(LREF TimeZone) by name with `TimeZone.getTimeZone`.
 
         See_Also:
             $(HTTP en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
@@ -109,7 +109,7 @@ public:
     /++
         Whether this time zone has Daylight Savings Time at any point in time.
         Note that for some time zone types it may not have DST for current dates
-        but will still return true for $(D hasDST) because the time zone did at
+        but will still return true for `hasDST` because the time zone did at
         some point have DST.
       +/
     @property abstract bool hasDST() @safe const nothrow;
@@ -281,9 +281,12 @@ public:
 
                 static void testTM(in SysTime st)
                 {
-                    import core.stdc.time : localtime, tm;
+                    import core.stdc.time : tm;
+                    import core.sys.posix.time : localtime_r;
+
                     time_t unixTime = st.toUnixTime();
-                    tm* osTimeInfo = localtime(&unixTime);
+                    tm osTimeInfo = void;
+                    localtime_r(&unixTime, &osTimeInfo);
                     tm ourTimeInfo = st.toTM();
 
                     assert(ourTimeInfo.tm_sec == osTimeInfo.tm_sec);
@@ -617,11 +620,11 @@ public:
     {
         /++
             The name of the time zone per the TZ Database. This is the name used
-            to get a $(LREF TimeZone) by name with $(D TimeZone.getTimeZone).
+            to get a $(LREF TimeZone) by name with `TimeZone.getTimeZone`.
 
             Note that this always returns the empty string. This is because time
             zones cannot be uniquely identified by the attributes given by the
-            OS (such as the $(D stdName) and $(D dstName)), and neither Posix
+            OS (such as the `stdName` and `dstName`), and neither Posix
             systems nor Windows systems provide an easy way to get the TZ
             Database name of the local time zone.
 
@@ -808,7 +811,7 @@ public:
     /++
         Whether this time zone has Daylight Savings Time at any point in time.
         Note that for some time zone types it may not have DST for current
-        dates but will still return true for $(D hasDST) because the time zone
+        dates but will still return true for `hasDST` because the time zone
         did at some point have DST.
       +/
     @property override bool hasDST() @trusted const nothrow
@@ -874,17 +877,23 @@ public:
       +/
     override bool dstInEffect(long stdTime) @trusted const nothrow
     {
-        import core.stdc.time : localtime, tm;
+        import core.stdc.time : tm;
+
         time_t unixTime = stdTimeToUnixTime(stdTime);
 
         version(Posix)
         {
-            tm* timeInfo = localtime(&unixTime);
+            import core.sys.posix.time : localtime_r;
+
+            tm timeInfo = void;
+            localtime_r(&unixTime, &timeInfo);
 
             return cast(bool)(timeInfo.tm_isdst);
         }
         else version(Windows)
         {
+            import core.stdc.time : localtime;
+
             // Apparently Windows isn't smart enough to deal with negative time_t.
             if (unixTime >= 0)
             {
@@ -918,7 +927,7 @@ public:
                       time.
 
         See_Also:
-            $(D TimeZone.utcToTZ)
+            `TimeZone.utcToTZ`
       +/
     override long utcToTZ(long stdTime) @trusted const nothrow
     {
@@ -926,9 +935,11 @@ public:
             return stdTime + convert!("seconds", "hnsecs")(tm_gmtoff(stdTime));
         else version(Posix)
         {
-            import core.stdc.time : localtime, tm;
+            import core.stdc.time : tm;
+            import core.sys.posix.time : localtime_r;
             time_t unixTime = stdTimeToUnixTime(stdTime);
-            tm* timeInfo = localtime(&unixTime);
+            tm timeInfo = void;
+            localtime_r(&unixTime, &timeInfo);
 
             return stdTime + convert!("seconds", "hnsecs")(timeInfo.tm_gmtoff);
         }
@@ -953,7 +964,7 @@ public:
         time to UTC from the appropriate time zone.
 
         See_Also:
-            $(D TimeZone.tzToUTC)
+            `TimeZone.tzToUTC`
 
         Params:
             adjTime = The time in this time zone that needs to be adjusted to
@@ -963,15 +974,17 @@ public:
     {
         version(Posix)
         {
-            import core.stdc.time : localtime, tm;
+            import core.stdc.time : tm;
+            import core.sys.posix.time : localtime_r;
             time_t unixTime = stdTimeToUnixTime(adjTime);
 
             immutable past = unixTime - cast(time_t) convert!("days", "seconds")(1);
-            tm* timeInfo = localtime(past < unixTime ? &past : &unixTime);
+            tm timeInfo = void;
+            localtime_r(past < unixTime ? &past : &unixTime, &timeInfo);
             immutable pastOffset = timeInfo.tm_gmtoff;
 
             immutable future = unixTime + cast(time_t) convert!("days", "seconds")(1);
-            timeInfo = localtime(future > unixTime ? &future : &unixTime);
+            localtime_r(future > unixTime ? &future : &unixTime, &timeInfo);
             immutable futureOffset = timeInfo.tm_gmtoff;
 
             if (pastOffset == futureOffset)
@@ -981,7 +994,7 @@ public:
                 unixTime -= cast(time_t) convert!("hours", "seconds")(1);
 
             unixTime -= pastOffset;
-            timeInfo = localtime(&unixTime);
+            localtime_r(&unixTime, &timeInfo);
 
             return adjTime - convert!("seconds", "hnsecs")(timeInfo.tm_gmtoff);
         }
@@ -1167,13 +1180,14 @@ private:
     {
         long tm_gmtoff(long stdTime) @trusted const nothrow
         {
-            import core.stdc.time : localtime, gmtime, tm;
+            import core.stdc.time : tm;
+            import core.sys.posix.time : localtime_r, gmtime_r;
 
             time_t unixTime = stdTimeToUnixTime(stdTime);
-            tm* buf = localtime(&unixTime);
-            tm timeInfo = *buf;
-            buf = gmtime(&unixTime);
-            tm timeInfoGmt = *buf;
+            tm timeInfo = void;
+            localtime_r(&unixTime, &timeInfo);
+            tm timeInfoGmt = void;
+            gmtime_r(&unixTime, &timeInfoGmt);
 
             return timeInfo.tm_sec - timeInfoGmt.tm_sec +
                    convert!("minutes", "seconds")(timeInfo.tm_min - timeInfoGmt.tm_min) +
@@ -1191,7 +1205,7 @@ final class UTC : TimeZone
 public:
 
     /++
-        $(D UTC) is a singleton class. $(D UTC) returns its only instance.
+        `UTC` is a singleton class. `UTC` returns its only instance.
       +/
     static immutable(UTC) opCall() @safe pure nothrow
     {
@@ -1225,7 +1239,7 @@ public:
                       time.
 
         See_Also:
-            $(D TimeZone.utcToTZ)
+            `TimeZone.utcToTZ`
       +/
     override long utcToTZ(long stdTime) @safe const nothrow
     {
@@ -1254,7 +1268,7 @@ public:
         Returns the given hnsecs without changing them at all.
 
         See_Also:
-            $(D TimeZone.tzToUTC)
+            `TimeZone.tzToUTC`
 
         Params:
             adjTime = The time in this time zone that needs to be adjusted to
@@ -1313,10 +1327,10 @@ private:
     UTC but no DST.
 
     It's primarily used as the time zone in the result of
-    $(REF SysTime,std,datetime,systime)'s $(D fromISOString),
-    $(D fromISOExtString), and $(D fromSimpleString).
+    $(REF SysTime,std,datetime,systime)'s `fromISOString`,
+    `fromISOExtString`, and `fromSimpleString`.
 
-    $(D name) and $(D dstName) are always the empty string since this time zone
+    `name` and `dstName` are always the empty string since this time zone
     has no DST, and while it may be meant to represent a time zone which is in
     the TZ Database, obviously it's not likely to be following the exact rules
     of any of the time zones in the TZ Database, so it makes no sense to set it.
@@ -1414,7 +1428,7 @@ public:
         Params:
             utcOffset = This time zone's offset from UTC with west of UTC being
                         negative (it is added to UTC to get the adjusted time).
-            stdName   = The $(D stdName) for this time zone.
+            stdName   = The `stdName` for this time zone.
       +/
     this(Duration utcOffset, string stdName = "") @safe immutable pure
     {
@@ -1917,21 +1931,21 @@ private:
     Represents a time zone from a TZ Database time zone file. Files from the TZ
     Database are how Posix systems hold their time zone information.
     Unfortunately, Windows does not use the TZ Database. To use the TZ Database,
-    use $(D PosixTimeZone) (which reads its information from the TZ Database
+    use `PosixTimeZone` (which reads its information from the TZ Database
     files on disk) on Windows by providing the TZ Database files and telling
-    $(D PosixTimeZone.getTimeZone) where the directory holding them is.
+    `PosixTimeZone.getTimeZone` where the directory holding them is.
 
-    To get a $(D PosixTimeZone), either call $(D PosixTimeZone.getTimeZone)
+    To get a `PosixTimeZone`, either call `PosixTimeZone.getTimeZone`
     (which allows specifying the location the time zone files) or call
-    $(D TimeZone.getTimeZone) (which will give a $(D PosixTimeZone) on Posix
+    `TimeZone.getTimeZone` (which will give a `PosixTimeZone` on Posix
     systems and a $(LREF WindowsTimeZone) on Windows systems).
 
     Note:
         Unless your system's local time zone deals with leap seconds (which is
         highly unlikely), then the only way to get a time zone which
-        takes leap seconds into account is to use $(D PosixTimeZone) with a
+        takes leap seconds into account is to use `PosixTimeZone` with a
         time zone whose name starts with "right/". Those time zone files do
-        include leap seconds, and $(D PosixTimeZone) will take them into account
+        include leap seconds, and `PosixTimeZone` will take them into account
         (though posix systems which use a "right/" time zone as their local time
         zone will $(I not) take leap seconds into account even though they're
         in the file).
@@ -1955,7 +1969,7 @@ public:
     /++
         Whether this time zone has Daylight Savings Time at any point in time.
         Note that for some time zone types it may not have DST for current
-        dates but will still return true for $(D hasDST) because the time zone
+        dates but will still return true for `hasDST` because the time zone
         did at some point have DST.
       +/
     @property override bool hasDST() @safe const nothrow
@@ -2116,7 +2130,7 @@ public:
 
         Throws:
             $(REF DateTimeException,std,datetime,date) if the given time zone
-            could not be found or $(D FileException) if the TZ Database file
+            could not be found or `FileException` if the TZ Database file
             could not be opened.
       +/
     // TODO make it possible for tzDatabaseDir to be gzipped tar file rather than an uncompressed
@@ -2470,7 +2484,7 @@ public:
                             located.
 
         Throws:
-            $(D FileException) if it fails to read from disk.
+            `FileException` if it fails to read from disk.
       +/
     static string[] getInstalledTZNames(string subName = "", string tzDatabaseDir = defaultTZDatabaseDir) @trusted
     {
@@ -2574,7 +2588,7 @@ private:
 
     /+
         Holds information on when a time transition occures (usually a
-        transition to or from DST) as well as a pointer to the $(D TTInfo) which
+        transition to or from DST) as well as a pointer to the `TTInfo` which
         holds information on the utc offset past the transition.
       +/
     struct Transition
@@ -2625,7 +2639,7 @@ private:
 
 
     /+
-        Struct used to hold information relating to $(D TTInfo) while organizing
+        Struct used to hold information relating to `TTInfo` while organizing
         the time zone information prior to putting it in its final form.
       +/
     struct TempTTInfo
@@ -2644,7 +2658,7 @@ private:
 
 
     /+
-        Struct used to hold information relating to $(D Transition) while
+        Struct used to hold information relating to `Transition` while
         organizing the time zone information prior to putting it in its final
         form.
       +/
@@ -2664,8 +2678,8 @@ private:
 
 
     /+
-        Struct used to hold information relating to $(D Transition) and
-        $(D TTInfo) while organizing the time zone information prior to putting
+        Struct used to hold information relating to `Transition` and
+        `TTInfo` while organizing the time zone information prior to putting
         it in its final form.
       +/
     struct TransitionType
@@ -2715,7 +2729,7 @@ private:
 
 
     /+
-        Reads a $(D TempTTInfo) from a TZ file.
+        Reads a `TempTTInfo` from a TZ file.
       +/
     static T readVal(T)(ref File tzFile) @safe
         if (is(T == TempTTInfo))
@@ -2728,7 +2742,7 @@ private:
 
     /+
         Throws:
-            $(REF DateTimeException,std,datetime,date) if $(D result) is false.
+            $(REF DateTimeException,std,datetime,date) if `result` is false.
       +/
     static void _enforceValidTZFile(bool result, size_t line = __LINE__) @safe pure
     {
@@ -2881,24 +2895,24 @@ version(StdDdoc)
         does not use the TZ Database. To use the TZ Database, use
         $(LREF PosixTimeZone) (which reads its information from the TZ Database
         files on disk) on Windows by providing the TZ Database files and telling
-        $(D PosixTimeZone.getTimeZone) where the directory holding them is.
+        `PosixTimeZone.getTimeZone` where the directory holding them is.
 
         The TZ Database files and Windows' time zone information frequently
         do not match. Windows has many errors with regards to when DST switches
         occur (especially for historical dates). Also, the TZ Database files
         include far more time zones than Windows does. So, for accurate
         time zone information, use the TZ Database files with
-        $(LREF PosixTimeZone) rather than $(D WindowsTimeZone). However, because
-        $(D WindowsTimeZone) uses Windows system calls to deal with the time,
+        $(LREF PosixTimeZone) rather than `WindowsTimeZone`. However, because
+        `WindowsTimeZone` uses Windows system calls to deal with the time,
         it's far more likely to match the behavior of other Windows programs.
         Be aware of the differences when selecting a method.
 
-        $(D WindowsTimeZone) does not exist on Posix systems.
+        `WindowsTimeZone` does not exist on Posix systems.
 
-        To get a $(D WindowsTimeZone), either call
-        $(D WindowsTimeZone.getTimeZone) or call $(D TimeZone.getTimeZone)
+        To get a `WindowsTimeZone`, either call
+        `WindowsTimeZone.getTimeZone` or call `TimeZone.getTimeZone`
         (which will give a $(LREF PosixTimeZone) on Posix systems and a
-         $(D WindowsTimeZone) on Windows systems).
+         `WindowsTimeZone` on Windows systems).
 
         See_Also:
             $(HTTP www.iana.org/time-zones, Home of the TZ Database files)
@@ -2910,7 +2924,7 @@ version(StdDdoc)
         /++
             Whether this time zone has Daylight Savings Time at any point in
             time. Note that for some time zone types it may not have DST for
-            current dates but will still return true for $(D hasDST) because the
+            current dates but will still return true for `hasDST` because the
             time zone did at some point have DST.
           +/
         @property override bool hasDST() @safe const nothrow;
@@ -2982,7 +2996,7 @@ version(StdDdoc)
             Returns a list of the names of the time zones installed on the
             system. The list returned by WindowsTimeZone contains the Windows
             TZ names, not the TZ Database names. However,
-            $(D TimeZone.getinstalledTZNames) will return the TZ Database names
+            `TimeZone.getinstalledTZNames` will return the TZ Database names
             which are equivalent to the Windows TZ names.
           +/
         static string[] getInstalledTZNames() @safe;

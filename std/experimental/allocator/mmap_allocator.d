@@ -8,10 +8,10 @@ module std.experimental.allocator.mmap_allocator;
 Allocator (currently defined only for Posix and Windows) using
 $(D $(LINK2 https://en.wikipedia.org/wiki/Mmap, mmap))
 and $(D $(LUCKY munmap)) directly (or their Windows equivalents). There is no
-additional structure: each call to $(D allocate(s)) issues a call to
+additional structure: each call to `allocate(s)` issues a call to
 $(D mmap(null, s, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)),
-and each call to $(D deallocate(b)) issues $(D munmap(b.ptr, b.length)).
-So $(D MmapAllocator) is usually intended for allocating large chunks to be
+and each call to `deallocate(b)` issues $(D munmap(b.ptr, b.length)).
+So `MmapAllocator` is usually intended for allocating large chunks to be
 managed by fine-granular allocators.
 */
 struct MmapAllocator
@@ -28,15 +28,16 @@ struct MmapAllocator
     version(Posix)
     {
         /// Allocator API.
+        nothrow @nogc @safe
         void[] allocate(size_t bytes) shared
         {
             import core.sys.posix.sys.mman : mmap, MAP_ANON, PROT_READ,
                 PROT_WRITE, MAP_PRIVATE, MAP_FAILED;
             if (!bytes) return null;
-            auto p = mmap(null, bytes, PROT_READ | PROT_WRITE,
-                MAP_PRIVATE | MAP_ANON, -1, 0);
+            auto p = (() @trusted => mmap(null, bytes, PROT_READ | PROT_WRITE,
+                MAP_PRIVATE | MAP_ANON, -1, 0))();
             if (p is MAP_FAILED) return null;
-            return p[0 .. bytes];
+            return (() @trusted => p[0 .. bytes])();
         }
 
         /// Ditto
@@ -54,13 +55,14 @@ struct MmapAllocator
             PAGE_READWRITE, MEM_RELEASE;
 
         /// Allocator API.
+        nothrow @nogc @safe
         void[] allocate(size_t bytes) shared
         {
             if (!bytes) return null;
-            auto p = VirtualAlloc(null, bytes, MEM_COMMIT, PAGE_READWRITE);
+            auto p = (() @trusted => VirtualAlloc(null, bytes, MEM_COMMIT, PAGE_READWRITE))();
             if (p == null)
                 return null;
-            return p[0 .. bytes];
+            return (() @trusted => p[0 .. bytes])();
         }
 
         /// Ditto
@@ -72,10 +74,10 @@ struct MmapAllocator
     }
 }
 
-@system unittest
+nothrow @safe @nogc unittest
 {
     alias alloc = MmapAllocator.instance;
     auto p = alloc.allocate(100);
     assert(p.length == 100);
-    () nothrow @nogc { alloc.deallocate(p); }();
+    () @trusted { alloc.deallocate(p); p = null; }();
 }

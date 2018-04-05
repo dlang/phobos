@@ -559,8 +559,8 @@ abstract:
 }
 
 /++
-    $(D Regex) object holds regular expression pattern in compiled form.
-    Instances of this object are constructed via calls to $(D regex).
+    `Regex` object holds regular expression pattern in compiled form.
+    Instances of this object are constructed via calls to `regex`.
     This is an intended form for caching and storage of frequently
     used regular expressions.
 +/

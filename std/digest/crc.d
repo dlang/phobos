@@ -18,7 +18,7 @@ $(TR $(TDNW Helpers) $(TD $(MYREF crcHexString) $(MYREF crc32Of) $(MYREF crc64EC
 )
 
  *
- * This module conforms to the APIs defined in $(D std.digest). To understand the
+ * This module conforms to the APIs defined in `std.digest`. To understand the
  * differences between the template and the OOP API, see $(MREF std, digest).
  *
  * This module publicly imports $(MREF std, digest) and can be used as a stand-alone
@@ -132,19 +132,19 @@ private T[256][8] genTables(T)(T polynomial)
 
 /**
  * Template API CRC32 implementation.
- * See $(D std.digest) for differences between template and OOP API.
+ * See `std.digest` for differences between template and OOP API.
  */
 alias CRC32 = CRC!(32, 0xEDB88320);
 
 /**
  * Template API CRC64-ECMA implementation.
- * See $(D std.digest.digest) for differences between template and OOP API.
+ * See `std.digest.digest` for differences between template and OOP API.
  */
 alias CRC64ECMA = CRC!(64, 0xC96C5795D7870F42);
 
 /**
  * Template API CRC64-ISO implementation.
- * See $(D std.digest.digest) for differences between template and OOP API.
+ * See `std.digest.digest` for differences between template and OOP API.
  */
 alias CRC64ISO = CRC!(64, 0xD800000000000000);
 
@@ -157,7 +157,7 @@ alias CRC64ISO = CRC!(64, 0xD800000000000000);
  * You may want to use the CRC32, CRC65ECMA and CRC64ISO aliases
  * for convenience.
  *
- * See $(D std.digest.digest) for differences between template and OOP API.
+ * See `std.digest.digest` for differences between template and OOP API.
  */
 struct CRC(uint N, ulong P)
 if (N == 32 || N == 64)
@@ -187,7 +187,7 @@ if (N == 32 || N == 64)
         /**
          * Use this to feed the digest with data.
          * Also implements the $(REF isOutputRange, std,range,primitives)
-         * interface for $(D ubyte) and $(D const(ubyte)[]).
+         * interface for `ubyte` and `const(ubyte)[]`.
          */
         void put(scope const(ubyte)[] data...) @trusted pure nothrow @nogc
         {
@@ -271,7 +271,7 @@ if (N == 32 || N == 64)
         }
 
         /**
-         * Works like $(D finish) but does not reset the internal state, so it's possible
+         * Works like `finish` but does not reset the internal state, so it's possible
          * to continue putting data into this CRC after a call to peek.
          */
         R peek() const @safe pure nothrow @nogc
@@ -471,8 +471,8 @@ if (N == 32 || N == 64)
  * CRC32 implementation.
  *
  * Params:
- *      data = $(D InputRange) of $(D ElementType) implicitly convertible to
- *             $(D ubyte), $(D ubyte[]) or $(D ubyte[num]) or one or more arrays
+ *      data = `InputRange` of `ElementType` implicitly convertible to
+ *             `ubyte`, `ubyte[]` or `ubyte[num]` or one or more arrays
  *             of any type.
  *
  * Returns:
@@ -506,8 +506,8 @@ ubyte[4] crc32Of(T...)(T data)
  * CRC64-ECMA implementation.
  *
  * Params:
- *      data = $(D InputRange) of $(D ElementType) implicitly convertible to
- *             $(D ubyte), $(D ubyte[]) or $(D ubyte[num]) or one or more arrays
+ *      data = `InputRange` of `ElementType` implicitly convertible to
+ *             `ubyte`, `ubyte[]` or `ubyte[num]` or one or more arrays
  *             of any type.
  *
  * Returns:
@@ -542,8 +542,8 @@ ubyte[8] crc64ECMAOf(T...)(T data)
  * CRC64-ISO implementation.
  *
  * Params:
- *      data = $(D InputRange) of $(D ElementType) implicitly convertible to
- *             $(D ubyte), $(D ubyte[]) or $(D ubyte[num]) or one or more arrays
+ *      data = `InputRange` of `ElementType` implicitly convertible to
+ *             `ubyte`, `ubyte[]` or `ubyte[num]` or one or more arrays
  *             of any type.
  *
  * Returns:
@@ -583,7 +583,7 @@ public alias crcHexString = toHexString!(Order.decreasing, 16);
 
 /**
  * OOP API CRC32 implementation.
- * See $(D std.digest) for differences between template and OOP API.
+ * See `std.digest` for differences between template and OOP API.
  *
  * This is an alias for $(D $(REF WrapperDigest, std,digest)!CRC32), see
  * there for more information.
@@ -592,7 +592,7 @@ alias CRC32Digest = WrapperDigest!CRC32;
 
 /**
  * OOP API CRC64-ECMA implementation.
- * See $(D std.digest.digest) for differences between template and OOP API.
+ * See `std.digest.digest` for differences between template and OOP API.
  *
  * This is an alias for $(D $(REF WrapperDigest, std,digest,digest)!CRC64ECMA),
  * see there for more information.
@@ -601,7 +601,7 @@ alias CRC64ECMADigest = WrapperDigest!CRC64ECMA;
 
 /**
  * OOP API CRC64-ISO implementation.
- * See $(D std.digest.digest) for differences between template and OOP API.
+ * See `std.digest.digest` for differences between template and OOP API.
  *
  * This is an alias for $(D $(REF WrapperDigest, std,digest,digest)!CRC64ISO),
  * see there for more information.

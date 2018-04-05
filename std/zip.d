@@ -764,7 +764,7 @@ final class ZipArchive
         if (de.flags & 1)
             throw new ZipException("encryption not supported");
 
-        int i;
+        uint i;
         i = de.offset + 30 + namelen + extralen;
         if (i + de.compressedSize > endrecOffset)
             throw new ZipException("invalid directory entry 5");
@@ -793,35 +793,35 @@ final class ZipArchive
 
     /* ============ Utility =================== */
 
-    @safe @nogc pure nothrow ushort getUshort(int i)
+    @safe @nogc pure nothrow ushort getUshort(uint i)
     {
         ubyte[2] result = data[i .. i + 2];
         return littleEndianToNative!ushort(result);
     }
 
-    @safe @nogc pure nothrow uint getUint(int i)
+    @safe @nogc pure nothrow uint getUint(uint i)
     {
         ubyte[4] result = data[i .. i + 4];
         return littleEndianToNative!uint(result);
     }
 
-    @safe @nogc pure nothrow ulong getUlong(int i)
+    @safe @nogc pure nothrow ulong getUlong(uint i)
     {
         ubyte[8] result = data[i .. i + 8];
         return littleEndianToNative!ulong(result);
     }
 
-    @safe @nogc pure nothrow void putUshort(int i, ushort us)
+    @safe @nogc pure nothrow void putUshort(uint i, ushort us)
     {
         data[i .. i + 2] = nativeToLittleEndian(us);
     }
 
-    @safe @nogc pure nothrow void putUint(int i, uint ui)
+    @safe @nogc pure nothrow void putUint(uint i, uint ui)
     {
         data[i .. i + 4] = nativeToLittleEndian(ui);
     }
 
-    @safe @nogc pure nothrow void putUlong(int i, ulong ul)
+    @safe @nogc pure nothrow void putUlong(uint i, ulong ul)
     {
         data[i .. i + 8] = nativeToLittleEndian(ul);
     }

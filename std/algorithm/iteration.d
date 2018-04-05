@@ -691,7 +691,7 @@ private struct MapResult(alias fun, Range)
     import std.internal.test.dummyrange;
     import std.range;
     import std.typecons : tuple;
-    import std.random : unpredictableSeed, uniform, Random;
+    import std.random : uniform, Random = Xorshift;
 
     int[] arr1 = [ 1, 2, 3, 4 ];
     const int[] arr1Const = arr1;
@@ -749,7 +749,7 @@ private struct MapResult(alias fun, Range)
     assert(fibsSquares.front == 9);
 
     auto repeatMap = map!"a"(repeat(1));
-    auto gen = Random(unpredictableSeed);
+    auto gen = Random(123_456_789);
     auto index = uniform(0, 1024, gen);
     static assert(isInfinite!(typeof(repeatMap)));
     assert(repeatMap[index] == 1);
@@ -2750,7 +2750,7 @@ See_Also:
     $(HTTP en.wikipedia.org/wiki/Fold_(higher-order_function), Fold (higher-order function))
 
     $(LREF fold) is functionally equivalent to $(LREF _reduce) with the argument
-    order reversed, and without the need to use $(REF_ALTTEXT $(D tuple),tuple,std,typecons)
+    order reversed, and without the need to use $(REF_ALTTEXT `tuple`,tuple,std,typecons)
     for multiple seeds. This makes it easier to use in UFCS chains.
 
     $(LREF sum) is similar to `reduce!((a, b) => a + b)` that offers
@@ -2793,7 +2793,13 @@ if (fun.length >= 1)
 
         static if (isInputRange!R)
         {
-            enforce(!r.empty, "Cannot reduce an empty input range w/o an explicit seed value.");
+            // no need to throw if range is statically known to be non-empty
+            static if (!__traits(compiles,
+            {
+                static assert(r.length > 0);
+            }))
+                enforce(!r.empty, "Cannot reduce an empty input range w/o an explicit seed value.");
+
             Args result = r.front;
             r.popFront();
             return reduceImpl!false(r, result);
@@ -2882,8 +2888,15 @@ if (fun.length >= 1)
                 args[i] = f(args[i], e);
         }
         static if (mustInitialize)
-        if (!initialized)
-            throw new Exception("Cannot reduce an empty iterable w/o an explicit seed value.");
+        // no need to throw if range is statically known to be non-empty
+        static if (!__traits(compiles,
+        {
+            static assert(r.length > 0);
+        }))
+        {
+            if (!initialized)
+                throw new Exception("Cannot reduce an empty iterable w/o an explicit seed value.");
+        }
 
         static if (Args.length == 1)
             return args[0];
@@ -3165,6 +3178,19 @@ The number of seeds must be correspondingly increased.
     assert(data.length == 0);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=13880
+// reduce shouldn't throw if the length is statically known
+pure nothrow @safe @nogc unittest
+{
+    import std.algorithm.comparison : min;
+    int[5] arr;
+    arr[2] = -1;
+    assert(arr.reduce!min == -1);
+
+    int[0] arr0;
+    assert(reduce!min(42, arr0) == 42);
+}
+
 //Helper for Reduce
 private template ReduceSeedType(E)
 {
@@ -3209,7 +3235,7 @@ See_Also:
     precise summing of floating point numbers.
 
     This is functionally equivalent to $(LREF reduce) with the argument order
-    reversed, and without the need to use $(REF_ALTTEXT $(D tuple),tuple,std,typecons)
+    reversed, and without the need to use $(REF_ALTTEXT `tuple`,tuple,std,typecons)
     for multiple seeds.
 +/
 template fold(fun...)
@@ -4719,7 +4745,7 @@ if (substs.length >= 2 && isExpressions!substs)
 
     /**
       Substitute single values with compile-time substitution mappings.
-      Complexity: $(BIGOH 1) due to D's $(D switch) guaranteeing $(BIGOH 1);
+      Complexity: $(BIGOH 1) due to D's `switch` guaranteeing $(BIGOH 1);
     */
     auto substitute(Value)(Value value)
     if (isInputRange!Value || !is(CommonType!(Value, typeof(substs[0])) == void))

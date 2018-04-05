@@ -82,7 +82,7 @@ ROOT_OF_THEM_ALL = generated
 ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
 DUB=dub
 TOOLS_DIR=../tools
-DSCANNER_HASH=0ef3df1fd63371d9680348a5a45efd8675321ffc
+DSCANNER_HASH=7b3542fb6aa5b0cca0552aedc5417211b17b3877
 DSCANNER_DIR=$(ROOT_OF_THEM_ALL)/dscanner-$(DSCANNER_HASH)
 
 # Set DRUNTIME name and full path
@@ -536,7 +536,10 @@ $(DSCANNER_DIR)/dsc: | $(DSCANNER_DIR) $(DMD) $(LIB)
 style: publictests style_lint
 
 # runs static code analysis with Dscanner
-dscanner: | $(DSCANNER_DIR)/dsc
+dscanner:
+	@# The dscanner target is without dependencies to avoid constant rebuilds of Phobos (`make` always rebuilds order-only dependencies)
+	@# However, we still need to ensure that the DScanner binary is built once
+	@[ -f $(DSCANNER_DIR)/dsc ] || ${MAKE} -f posix.mak $(DSCANNER_DIR)/dsc
 	@echo "Running DScanner"
 	$(DEBUGGER) -return-child-result -q -ex run -ex bt -batch --args $(DSCANNER_DIR)/dsc --config .dscanner.ini --styleCheck etc std -I.
 
