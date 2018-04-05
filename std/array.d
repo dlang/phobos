@@ -451,14 +451,16 @@ if (isInputRange!Range)
 /**
 Construct a range iterating over an associative array by key/value tuples.
 
-Params: aa = The associative array to iterate over.
+Params:
+    aa = The associative array to iterate over.
 
 Returns: A $(REF_ALTTEXT forward range, isForwardRange, std,_range,primitives)
 of Tuple's of key and value pairs from the given associative array. The members
 of each pair can be accessed by name (`.key` and `.value`). or by integer
 index (0 and 1 respectively).
 */
-auto byPair(AA : Value[Key], Value, Key)(AA aa)
+auto byPair(AA)(AA aa)
+if (isAssociativeArray!AA)
 {
     import std.algorithm.iteration : map;
     import std.typecons : tuple;
@@ -578,14 +580,20 @@ version(unittest)
 
 /++
 Returns a new array of type `T` allocated on the garbage collected heap
-without initializing its elements.  This can be a useful optimization if every
-element will be immediately initialized.  `T` may be a multidimensional
-array.  In this case sizes may be specified for any number of dimensions from 0
+without initializing its elements. This can be a useful optimization if every
+element will be immediately initialized. `T` may be a multidimensional
+array. In this case sizes may be specified for any number of dimensions from 0
 to the number in `T`.
 
-uninitializedArray is nothrow and weakly pure.
+uninitializedArray is `nothrow` and weakly `pure`.
 
-uninitializedArray is @system if the uninitialized element type has pointers.
+uninitializedArray is `@system` if the uninitialized element type has pointers.
+
+Params:
+    T = The type of the resulting array elements
+    sizes = The length dimension(s) of the resulting array
+Returns:
+    An array of `T` with `I.length` dimensions.
 +/
 auto uninitializedArray(T, I...)(I sizes) nothrow @system
 if (isDynamicArray!T && allSatisfy!(isIntegral, I) && hasIndirections!(ElementEncodingType!T))
@@ -640,7 +648,13 @@ Partial initialization is done for types with indirections, for preservation
 of memory safety. Note that elements will only be initialized to 0, but not
 necessarily the element type's `.init`.
 
-minimallyInitializedArray is nothrow and weakly pure.
+minimallyInitializedArray is `nothrow` and weakly `pure`.
+
+Params:
+    T = The type of the array elements
+    sizes = The length dimension(s) of the resulting array
+Returns:
+    An array of `T` with `I.length` dimensions.
 +/
 auto minimallyInitializedArray(T, I...)(I sizes) nothrow @trusted
 if (isDynamicArray!T && allSatisfy!(isIntegral, I))
@@ -820,13 +834,18 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
 }
 
 /++
-Returns the overlapping portion, if any, of two arrays. Unlike $(D
-equal), `overlap` only compares the pointers and lengths in the
+Returns the overlapping portion, if any, of two arrays. Unlike `equal`,
+`overlap` only compares the pointers and lengths in the
 ranges, not the values referred by them. If `r1` and `r2` have an
 overlapping slice, returns that slice. Otherwise, returns the null
 slice.
-+/
 
+Params:
+    a = The first array to compare
+    b = The second array to compare
+Returns:
+    The overlapping portion of the two arrays.
++/
 CommonType!(T[], U[]) overlap(T, U)(T[] a, U[] b) @trusted
 if (is(typeof(a.ptr < b.ptr) == bool))
 {
@@ -1296,6 +1315,12 @@ private template isInputRangeOrConvertible(E)
     Returns whether the `front`s of `lhs` and `rhs` both refer to the
     same place in memory, making one of the arrays a slice of the other which
     starts at index `0`.
+
+    Params:
+        lhs = the first array to compare
+        rhs = the second array to compare
+    Returns:
+        `true` if $(D lhs.ptr == rhs.ptr), `false` otherwise.
   +/
 @safe
 pure nothrow bool sameHead(T)(in T[] lhs, in T[] rhs)
@@ -1317,6 +1342,13 @@ pure nothrow bool sameHead(T)(in T[] lhs, in T[] rhs)
     Returns whether the `back`s of `lhs` and `rhs` both refer to the
     same place in memory, making one of the arrays a slice of the other which
     end at index `$`.
+
+    Params:
+        lhs = the first array to compare
+        rhs = the second array to compare
+    Returns:
+        `true` if both arrays are the same length and $(D lhs.ptr == rhs.ptr),
+        `false` otherwise.
   +/
 @trusted
 pure nothrow bool sameTail(T)(in T[] lhs, in T[] rhs)
@@ -1458,6 +1490,7 @@ Params:
     s = the string to split by word if no separator is given
     range = the range to split
     sep = a value of the same type as the elements of `range` or another
+    isTerminator = a predicate that splits the range when it returns `true`.
 
 Returns:
     An array containing the divided parts of `range` (or the words of `s`).
@@ -2853,6 +2886,10 @@ Implements an output range that appends data to an array. This is
 recommended over $(D array ~= data) when appending many elements because it is more
 efficient. `Appender` maintains its own array metadata locally, so it can avoid
 global locking for each append where $(LREF capacity) is non-zero.
+
+Params:
+    A = the array type to simulate.
+
 See_Also: $(LREF appender)
  */
 struct Appender(A)
@@ -2905,6 +2942,9 @@ if (isDynamicArray!A)
      * Reserve at least newCapacity elements for appending.  Note that more elements
      * may be reserved than requested. If `newCapacity <= capacity`, then nothing is
      * done.
+     *
+     * Params:
+     *     newCapacity = the capacity the `Appender` should have
      */
     void reserve(size_t newCapacity) @safe pure nothrow
     {
@@ -3025,7 +3065,11 @@ if (isDynamicArray!A)
     }
 
     /**
-     * Appends `item` to the managed array.
+     * Appends `item` to the managed array. Performs encoding for
+     * `char` types if `A` is a differently typed `char` array.
+     *
+     * Params:
+     *     item = the single item to append
      */
     void put(U)(U item) if (canPutItem!U)
     {
@@ -3062,7 +3106,11 @@ if (isDynamicArray!A)
     }
 
     /**
-     * Appends an entire range to the managed array.
+     * Appends an entire range to the managed array. Performs encoding for
+     * `char` elements if `A` is a differently typed `char` array.
+     *
+     * Params:
+     *     items = the range of items to append
      */
     void put(Range)(Range items) if (canPutRange!Range)
     {
@@ -3129,7 +3177,8 @@ if (isDynamicArray!A)
     /**
      * Appends `rhs` to the managed array.
      * Params:
-     * rhs = Element or range.
+     *     op = the assignment operator `~`
+     *     rhs = Element or range.
      */
     void opOpAssign(string op : "~", U)(U rhs)
     if (__traits(compiles, put(rhs)))
@@ -3307,6 +3356,9 @@ private size_t appenderNewCapacity(size_t TSizeOf)(size_t curLen, size_t reqLen)
  * original array passed in.
  *
  * Tip: Use the `arrayPtr` overload of $(LREF appender) for construction with type-inference.
+ *
+ * Params:
+ *     A = The array type to simulate
  */
 struct RefAppender(A)
 if (isDynamicArray!A)
