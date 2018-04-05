@@ -2817,7 +2817,7 @@ private:
         {
             import std.concurrency : initOnce;
 
-            static __gshared uint[string] _tzIndex;
+            __gshared uint[string] _tzIndex;
 
             // _tzIndex is initialized once and then shared across all threads.
             initOnce!_tzIndex(

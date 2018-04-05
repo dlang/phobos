@@ -53,7 +53,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     else
     {
         alias parent = ParentAllocator.instance;
-        static __gshared Quantizer instance;
+        __gshared Quantizer instance;
     }
 
     /**

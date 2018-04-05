@@ -1082,7 +1082,7 @@ private:
     Mutex waiterMutex;  // For waiterCondition
 
     // The instanceStartIndex of the next instance that will be created.
-    __gshared static size_t nextInstanceIndex = 1;
+    __gshared size_t nextInstanceIndex = 1;
 
     // The index of the current thread.
     static size_t threadIndex;
