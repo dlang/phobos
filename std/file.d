@@ -5046,13 +5046,12 @@ $(OL
     $(LI The directory given by the `TMPDIR` environment variable.)
     $(LI The directory given by the `TEMP` environment variable.)
     $(LI The directory given by the `TMP` environment variable.)
-    $(LI `/tmp`)
-    $(LI `/var/tmp`)
-    $(LI `/usr/tmp`)
+    $(LI `/tmp/`)
+    $(LI `/var/tmp/`)
+    $(LI `/usr/tmp/`)
 )
 
-On all platforms, `tempDir` returns `"."` on failure, representing
-the current working directory.
+On all platforms, `tempDir` returns the current working directory on failure.
 
 The return value of the function is cached, so the procedures described
 above will only be performed the first time the function is called.  All
@@ -5078,13 +5077,14 @@ string tempDir() @trusted
         }
         else version(Posix)
         {
+            import std.path : dirSeparator;
             import std.process : environment;
             // This function looks through the list of alternative directories
             // and returns the first one which exists and is a directory.
             static string findExistingDir(T...)(lazy T alternatives)
             {
                 foreach (dir; alternatives)
-                    if (!dir.empty && exists(dir)) return dir;
+                    if (!dir.empty && exists(dir)) return dir ~ dirSeparator;
                 return null;
             }
 
@@ -5097,7 +5097,10 @@ string tempDir() @trusted
         }
         else static assert(false, "Unsupported platform");
 
-        if (cache is null) cache = getcwd();
+        if (cache is null)
+        {
+            cache = getcwd() ~ dirSeparator;
+        }
     }
     return cache;
 }
@@ -5118,4 +5121,11 @@ string tempDir() @trusted
 
     myFile.write("hello");
     assert(myFile.readText == "hello");
+}
+
+@safe unittest
+{
+    import std.algorithm.searching : endsWith;
+    import std.path : dirSeparator;
+    assert(tempDir.endsWith(dirSeparator));
 }
