@@ -2793,7 +2793,13 @@ if (fun.length >= 1)
 
         static if (isInputRange!R)
         {
-            enforce(!r.empty, "Cannot reduce an empty input range w/o an explicit seed value.");
+            // no need to throw if range is statically known to be non-empty
+            static if (!__traits(compiles,
+            {
+                static assert(r.length > 0);
+            }))
+                enforce(!r.empty, "Cannot reduce an empty input range w/o an explicit seed value.");
+
             Args result = r.front;
             r.popFront();
             return reduceImpl!false(r, result);
@@ -2882,8 +2888,15 @@ if (fun.length >= 1)
                 args[i] = f(args[i], e);
         }
         static if (mustInitialize)
-        if (!initialized)
-            throw new Exception("Cannot reduce an empty iterable w/o an explicit seed value.");
+        // no need to throw if range is statically known to be non-empty
+        static if (!__traits(compiles,
+        {
+            static assert(r.length > 0);
+        }))
+        {
+            if (!initialized)
+                throw new Exception("Cannot reduce an empty iterable w/o an explicit seed value.");
+        }
 
         static if (Args.length == 1)
             return args[0];
@@ -3163,6 +3176,19 @@ The number of seeds must be correspondingly increased.
     int[] data;
     static assert(is(typeof(reduce!((a, b) => a + b)(data))));
     assert(data.length == 0);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=13880
+// reduce shouldn't throw if the length is statically known
+pure nothrow @safe @nogc unittest
+{
+    import std.algorithm.comparison : min;
+    int[5] arr;
+    arr[2] = -1;
+    assert(arr.reduce!min == -1);
+
+    int[0] arr0;
+    assert(reduce!min(42, arr0) == 42);
 }
 
 //Helper for Reduce
