@@ -445,7 +445,14 @@ Duration[fun.length] benchmark(fun...)(uint n)
 
     int a;
     void f0() nothrow {}
-    void f1() nothrow { auto b = to!string(a); }
+    void f1() nothrow @trusted {
+        // do not allow any optimizer to optimize this function away
+        import core.thread : getpid;
+        import core.stdc.stdio : printf;
+        auto b = getpid.to!string;
+        if (getpid == 1) // never happens, but prevents optimization
+            printf("%p", &b);
+    }
     auto r = benchmark!(f0, f1)(1000);
     assert(r[0] >= Duration.zero);
     assert(r[1] > Duration.zero);
