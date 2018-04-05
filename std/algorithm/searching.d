@@ -155,9 +155,8 @@ are true.
 
 /++
 Checks if $(I _any) of the elements verifies `pred`.
-`!any` can be used to verify that $(I none) of the elements verify
-`pred`.
 This is sometimes called `exists` in other languages.
+`! any!pred` is equivalent to `none!pred`.
  +/
 template any(alias pred = "a")
 {
@@ -179,19 +178,15 @@ template any(alias pred = "a")
     import std.ascii : isWhite;
     assert( all!(any!isWhite)(["a a", "b b"]));
     assert(!any!(all!isWhite)(["a a", "b b"]));
+    assert(none!(all!isWhite)(["a a", "b b"]));
 }
 
 /++
 `any` can also be used without a predicate, if its items can be
-evaluated to true or false in a conditional statement. `!any` can be a
-convenient way to quickly test that $(I none) of the elements of a range
-evaluate to true.
+evaluated to true or false in a conditional statement.
  +/
 @safe unittest
 {
-    int[3] vals1 = [0, 0, 0];
-    assert(!any(vals1[])); //none of vals1 evaluate to true
-
     int[3] vals2 = [2, 0, 2];
     assert( any(vals2[]));
     assert(!all(vals2[]));
@@ -205,6 +200,38 @@ evaluate to true.
 {
     auto a = [ 1, 2, 0, 4 ];
     assert(any!"a == 2"(a));
+}
+
+/++
+Checks if $(I _none) of the elements verify `pred`. This is a convenience wrapper for `!any!pred`.
+ +/
+template none(alias pred = "a")
+{
+    /++
+    Returns `true` if and only if $(I _no) value `v` found in the
+    input _range `range` satisfies the predicate `pred`.
+    Performs (at most) $(BIGOH range.length) evaluations of `pred`.
+     +/
+    bool none(Range)(Range range)
+    if (isInputRange!Range && is(typeof(unaryFun!pred(range.front))))
+    {
+        return !any!pred(range);
+    }
+}
+
+/++
+`none` can also be used without a predicate, if its items can be
+evaluated to true or false in a conditional statement.
+ +/
+@safe unittest
+{
+    int[3] vals1 = [0, 0, 0];
+    assert(none(vals1[]));
+
+    int[3] vals2 = [2, 0, 2];
+    assert(!none(vals2[]));
+
+    assert(none((int[]).init));
 }
 
 // balancedParens
