@@ -303,7 +303,8 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     Allocations greater than 64 blocks require a multiword search through the
     metadata.
     */
-    @trusted void[] allocate(const size_t s)
+    pure nothrow @trusted @nogc
+    void[] allocate(const size_t s)
     {
         const blocks = s.divideRoundUp(blockSize);
         void[] result = void;
@@ -509,9 +510,10 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         return available;
     }
 
+    pure nothrow @safe @nogc
     private void[] smallAlloc(uint blocks)
     {
-        assert(blocks >= 2 && blocks <= 64, text(blocks));
+        assert(blocks >= 2 && blocks <= 64);
         void[] result;
         foreach (i; _startIdx .. _control.rep.length)
         {
@@ -544,6 +546,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         return null;
     }
 
+    pure nothrow @safe @nogc
     private void[] hugeAlloc(size_t blocks)
     {
         assert(blocks > 64);
@@ -806,19 +809,21 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     uint blockSize = 64;
     auto a = BitmappedBlock!(chooseAtRuntime, 64)(cast(ubyte[])(r.allocateAll()), blockSize);
     static assert(hasMember!(InSituRegion!(10_240, 64), "allocateAll"));
-    const b = a.allocate(100);
+    const b = (() pure nothrow @safe @nogc => a.allocate(100))();
     assert(b.length == 100);
 }
 
-@system unittest
+pure @safe unittest
 {
     import std.typecons : Ternary;
 
-    auto a = BitmappedBlock!(64, 64)(new ubyte[10_240]);
-    assert((() nothrow @safe @nogc => a.empty)() == Ternary.yes);
-    const b = a.allocate(100);
-    assert(b.length == 100);
-    assert((() nothrow @safe @nogc => a.empty)() == Ternary.no);
+    auto a = (() @trusted => BitmappedBlock!(64, 64)(new ubyte[10_240]))();
+    () nothrow @nogc {
+        assert(a.empty == Ternary.yes);
+        const b = a.allocate(100);
+        assert(b.length == 100);
+        assert(a.empty == Ternary.no);
+    }();
 }
 
 @system unittest
@@ -851,10 +856,10 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         blocks = a._blocks;
 
         // test allocation of 0 bytes
-        auto x = a.allocate(0);
+        auto x = (() pure nothrow @safe @nogc => a.allocate(0))();
         assert(x is null);
         // test allocation of 1 byte
-        x = a.allocate(1);
+        x = (() pure nothrow @safe @nogc => a.allocate(1))();
         assert(x.length == 1 || blocks == 0,
             text(x.ptr, " ", x.length, " ", a));
         assert((() nothrow @nogc => a.deallocateAll())());
@@ -864,12 +869,14 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     begin:
         foreach (i; 0 .. blocks / blocksAtATime)
         {
-            auto b = a.allocate(bs * blocksAtATime);
+            auto b = (() pure nothrow @safe @nogc => a.allocate(bs * blocksAtATime))();
             assert(b.length == bs * blocksAtATime, text(i, ": ", b.length));
         }
-        assert(a.allocate(bs * blocksAtATime) is null);
+        assert((() pure nothrow @safe @nogc => a.allocate(bs * blocksAtATime))() is null);
         if (a._blocks % blocksAtATime == 0)
-            assert(a.allocate(1) is null);
+        {
+            assert((() pure nothrow @safe @nogc => a.allocate(1))() is null);
+        }
 
         // Now deallocate all and do it again!
         assert((() nothrow @nogc => a.deallocateAll())());
@@ -879,13 +886,15 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         auto v = new void[][blocks / blocksAtATime];
         foreach (i; 0 .. blocks / blocksAtATime)
         {
-            auto b = a.allocate(bs * blocksAtATime);
+            auto b = (() pure nothrow @safe @nogc => a.allocate(bs * blocksAtATime))();
             assert(b.length == bs * blocksAtATime, text(i, ": ", b.length));
             v[i] = b;
         }
-        assert(a.allocate(bs * blocksAtATime) is null);
+        assert((() pure nothrow @safe @nogc => a.allocate(bs * blocksAtATime))() is null);
         if (a._blocks % blocksAtATime == 0)
-            assert(a.allocate(1) is null);
+        {
+            assert((() pure nothrow @safe @nogc => a.allocate(1))() is null);
+        }
 
         foreach (i; 0 .. blocks / blocksAtATime)
         {
@@ -894,7 +903,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
 
         foreach (i; 0 .. blocks / blocksAtATime)
         {
-            auto b = a.allocate(bs * blocksAtATime);
+            auto b = (() pure nothrow @safe @nogc => a.allocate(bs * blocksAtATime))();
             assert(b.length == bs * blocksAtATime, text(i, ": ", b.length));
             v[i] = b;
         }
@@ -917,7 +926,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         {
             foreach (i; 0 .. blocks / blocksAtATime - 1)
             {
-                auto b = a.allocate(bs * blocksAtATime);
+                auto b = (() pure nothrow @safe @nogc => a.allocate(bs * blocksAtATime))();
                 assert(b.length == bs * blocksAtATime, text(i, ": ", b.length));
                 (cast(ubyte[]) b)[] = 0xff;
                 assert((() pure nothrow @safe @nogc => a.expand(b, blocksAtATime * bs))()
@@ -1126,7 +1135,7 @@ nothrow @safe @nogc unittest
     import std.typecons : Ternary;
 
     auto a = BitmappedBlock!(64, 8, GCAllocator)(1024 * 64);
-    const void[] buff = a.allocate(42);
+    const void[] buff = (() pure nothrow @safe @nogc => a.allocate(42))();
 
     assert((() nothrow @safe @nogc => a.owns(buff))() == Ternary.yes);
     assert((() nothrow @safe @nogc => a.owns(null))() == Ternary.no);
@@ -1216,13 +1225,13 @@ struct BitmappedBlockWithInternalPointers(
     {
         auto r = _heap.allocate(bytes);
         if (!r.ptr) return r;
-        immutable block = (r.ptr - _heap._payload.ptr) / _heap.blockSize;
+        immutable block = (() @trusted => (r.ptr - _heap._payload.ptr) / _heap.blockSize)();
         immutable blocks =
             (r.length + _heap.blockSize - 1) / _heap.blockSize;
         if (!ensureRoomForAllocStart(block + blocks))
         {
             // Failed, free r and bailout
-            _heap.deallocate(r);
+            () @trusted { _heap.deallocate(r); r = null; }();
             return null;
         }
         assert(block < _allocStart.length);
@@ -1360,7 +1369,7 @@ struct BitmappedBlockWithInternalPointers(
 
     auto h = BitmappedBlockWithInternalPointers!(4096)(new ubyte[4096 * 1024]);
     assert((() nothrow @safe @nogc => h.empty)() == Ternary.yes);
-    auto b = h.allocate(123);
+    auto b = (() pure nothrow @safe @nogc => h.allocate(123))();
     assert(b.length == 123);
     assert((() nothrow @safe @nogc => h.empty)() == Ternary.no);
 
@@ -1369,7 +1378,7 @@ struct BitmappedBlockWithInternalPointers(
     assert((() nothrow @safe @nogc => h.resolveInternalPointer(offset, p))() == Ternary.yes);
     assert(p.ptr is b.ptr);
     assert(p.length >= b.length);
-    b = h.allocate(4096);
+    b = (() pure nothrow @safe @nogc => h.allocate(4096))();
 
     offset = &b[0];
     assert((() nothrow @safe @nogc => h.resolveInternalPointer(offset, p))() == Ternary.yes);
@@ -1572,7 +1581,7 @@ private struct BitVector
     /* Returns the index of the first 1 to the right of i (including i itself),
     or length if not found.
     */
-    nothrow @safe @nogc
+    pure nothrow @safe @nogc
     ulong find1(ulong i)
     {
         assert(i < length);
@@ -1600,7 +1609,7 @@ private struct BitVector
     /* Returns the index of the first 1 to the left of i (including i itself),
     or ulong.max if not found.
     */
-    nothrow @safe @nogc
+    pure nothrow @safe @nogc
     ulong find1Backward(ulong i)
     {
         assert(i < length);
@@ -1634,14 +1643,14 @@ private struct BitVector
     }
 
     /// Are all bits one?
-    nothrow @safe @nogc
+    pure nothrow @safe @nogc
     bool allAre1() const
     {
         foreach (w; _rep) if (w != ulong.max) return false;
         return true;
     }
 
-    nothrow @safe @nogc
+    pure nothrow @safe @nogc
     ulong findZeros(immutable size_t howMany, ulong start)
     {
         assert(start < length);
