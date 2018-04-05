@@ -271,7 +271,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
     else
     {
         static if (!stateSize!SmallAllocator && !stateSize!LargeAllocator)
-            static __gshared Segregator instance;
+            __gshared Segregator instance;
         mixin Impl!();
     }
 }

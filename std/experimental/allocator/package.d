@@ -2532,8 +2532,8 @@ if (!isPointer!A)
     static if (stateSize!A == 0)
     {
         enum s = stateSize!(CAllocatorImpl!A).divideRoundUp(ulong.sizeof);
-        static __gshared ulong[s] state;
-        static __gshared RCIAllocator result;
+        __gshared ulong[s] state;
+        __gshared RCIAllocator result;
         if (result.isNull)
         {
             // Don't care about a few races

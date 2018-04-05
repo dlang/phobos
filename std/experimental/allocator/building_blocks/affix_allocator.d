@@ -362,7 +362,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     {
         mixin Impl!();
         static if (stateSize!Allocator == 0)
-            static __gshared AffixAllocator instance;
+            __gshared AffixAllocator instance;
     }
 }
 

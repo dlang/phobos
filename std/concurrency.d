@@ -2522,7 +2522,7 @@ auto ref initOnce(alias var)(lazy typeof(var) init)
     {
         static MySingleton instance()
         {
-            static __gshared MySingleton inst;
+            __gshared MySingleton inst;
             return initOnce!inst(new MySingleton);
         }
     }
@@ -2536,14 +2536,14 @@ auto ref initOnce(alias var)(lazy typeof(var) init)
     {
         static MySingleton instance()
         {
-            static __gshared MySingleton inst;
+            __gshared MySingleton inst;
             return initOnce!inst(new MySingleton);
         }
 
     private:
         this() { val = ++cnt; }
         size_t val;
-        static __gshared size_t cnt;
+        __gshared size_t cnt;
     }
 
     foreach (_; 0 .. 10)
