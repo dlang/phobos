@@ -1,0 +1,3 @@
+Changed `std.experimental.logger` to pass default values like `__LINE__` as parameter
+
+This reduces the number of template instantiations.
