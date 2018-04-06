@@ -1840,7 +1840,21 @@ float sqrt(float x) @nogc @safe pure nothrow { pragma(inline, true); return core
 double sqrt(double x) @nogc @safe pure nothrow { pragma(inline, true); return core.math.sqrt(x); }
 
 /// ditto
-real sqrt(real x) @nogc @safe pure nothrow { pragma(inline, true); return core.math.sqrt(x); }
+real sqrt(real x) @nogc @safe pure nothrow
+{
+    pragma(inline, true);
+
+    version(FreeBSD)
+        return core.math.sqrtl(x);
+    else version(OpenBSD)
+        return core.math.sqrtl(x);
+    else version(NetBSD)
+        return core.math.sqrtl(x);
+    else version(DragonFlyBSD)
+        return core.math.sqrtl(x);
+    else
+        return core.math.sqrt(x);
+}
 
 ///
 @safe pure nothrow @nogc unittest
