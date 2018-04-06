@@ -119,16 +119,16 @@ if (fun.length >= 1)
 }
 
 /++
-`cache` eagerly evaluates `front` of `range`
-on each construction or call to `popFront`,
+`cache` eagerly evaluates $(REF_ALTTEXT front, front, std,_range,primitives) of `range`
+on each construction or call to $(REF_ALTTEXT popFront, popFront, std,_range,primitives),
 to store the result in a _cache.
-The result is then directly returned when `front` is called,
+The result is then directly returned when $(REF_ALTTEXT front, front, std,_range,primitives) is called,
 rather than re-evaluated.
 
 This can be a useful function to place in a chain, after functions
 that have expensive evaluation, as a lazy alternative to $(REF array, std,array).
-In particular, it can be placed after a call to `map`, or before a call
-to `filter`.
+In particular, it can be placed after a call to $(LREF map), or before a call
+$(REF filter, std,_range) or $(REF tee, std,_range)
 
 `cache` may provide
 $(REF_ALTTEXT bidirectional _range, isBidirectionalRange, std,_range,primitives)
@@ -148,7 +148,7 @@ Params:
     range = an $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
 
 Returns:
-    an input _range with the cached values of _range
+    An $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives) with the cached values of _range
 +/
 auto cache(Range)(Range range)
 if (isInputRange!Range)

@@ -689,3 +689,13 @@ version(none) // TODO: revist once we have proper benchmark framework
     assert(c);
     assert(c.whichPattern == 2);
 }
+
+// bugzilla 18692
+@safe unittest
+{
+    auto rx = regex("()()()");
+    auto ma = "".matchFirst(rx);
+    auto ma2 = ma;
+    ma = ma2;
+    assert(ma[1] == "");
+}
