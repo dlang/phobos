@@ -899,3 +899,214 @@ struct CharMatcher {
             return trie[ch];
     }
 }
+
+// Internal non-resizeble array, switches between inline storage and CoW
+// POD-only
+struct SmallFixedArray(T, uint SMALL=3)
+if (!hasElaborateDestructor!T)
+{
+    import core.stdc.stdlib : malloc, free;
+    static struct Payload
+    {
+        size_t refcount;
+        T[0] placeholder;
+        inout(T)* ptr() inout { return placeholder.ptr; }
+    }
+    static assert(Payload.sizeof == size_t.sizeof);
+    union
+    {
+        Payload* big;
+        T[SMALL] small;
+    }
+    size_t _sizeMask;
+    enum BIG_MASK = size_t(1)<<(8*size_t.sizeof-1);
+    enum SIZE_MASK = ~BIG_MASK;
+
+    @property bool isBig() const { return (_sizeMask & BIG_MASK) != 0; }
+    @property size_t length() const { return _sizeMask & SIZE_MASK; }
+
+    this(size_t size)
+    {
+        if (size <= SMALL)
+        {
+            small[] = T.init;
+            _sizeMask = size;
+        }
+        else
+        {
+            big = cast(Payload*) enforce(malloc(Payload.sizeof + T.sizeof*size), "Failed to malloc storage");
+            big.refcount = 1;
+            _sizeMask = size | BIG_MASK;
+        }
+    }
+
+    private @trusted @property inout(T)[] internalSlice() inout
+    {
+        return isBig ? big.ptr[0 .. length] : small[0 .. length];
+    }
+
+    this(this)
+    {
+        if (isBig)
+        {
+            big.refcount++;
+        }
+    }
+
+    bool opEquals(SmallFixedArray a)
+    {
+        return internalSlice[] == a.internalSlice[];
+    }
+
+    size_t toHash()
+    {
+        return hashOf(internalSlice[]);
+    }
+
+    T opIndex(size_t idx) inout
+    {
+        return internalSlice[idx];
+    }
+
+    // accesses big to test self-referencing so not @safe
+    @trusted ref opAssign(SmallFixedArray arr)
+    {
+        if (isBig)
+        {
+            if (arr.isBig)
+            {
+                if (big is arr.big) return this; // self-assign
+                else
+                {
+                    abandonRef();
+                    _sizeMask = arr._sizeMask;
+                    big = arr.big;
+                    big.refcount++;
+                }
+            }
+            else
+            {
+                abandonRef();
+                _sizeMask = arr._sizeMask;
+                small = arr.small;
+            }
+        }
+        else
+        {
+            if (arr.isBig)
+            {
+                _sizeMask = arr._sizeMask;
+                big = arr.big;
+                big.refcount++;
+            }
+            else
+            {
+                _sizeMask = arr._sizeMask;
+                small = arr.small;
+            }
+        }
+        return this;
+    }
+
+    void mutate(scope void delegate(T[]) filler)
+    {
+        if (isBig && big.refcount != 1) // copy on write
+        {
+            auto oldSizeMask = _sizeMask;
+            auto newbig = cast(Payload*) enforce(malloc(Payload.sizeof + T.sizeof*length), "Failed to malloc storage");
+            newbig.refcount = 1;
+            abandonRef();
+            big = newbig;
+            _sizeMask = oldSizeMask;
+        }
+        filler(internalSlice);
+    }
+
+    ~this()
+    {
+        if (isBig)
+        {
+            abandonRef();
+        }
+    }
+
+    @trusted private void abandonRef()
+    {
+        assert(isBig);
+        if (--big.refcount == 0)
+        {
+            free(big);
+            _sizeMask = 0;
+            assert(!isBig);
+        }
+    }
+}
+
+@system unittest
+{
+    alias SA = SmallFixedArray!(int, 2);
+    SA create(int[] data)
+    {
+        SA a = SA(data.length);
+        a.mutate((slice) { slice[] = data[]; });
+        assert(a.internalSlice == data);
+        return a;
+    }
+
+    {
+        SA a;
+        a = SA(1);
+        assert(a.length == 1);
+        a = SA.init;
+        assert(a.length == 0);
+    }
+
+    {
+        SA a, b, c, d;
+        assert(a.length == 0);
+        assert(a.internalSlice == b.internalSlice);
+        a = create([1]);
+        assert(a.internalSlice == [1]);
+        b = create([2, 3]);
+        assert(b.internalSlice == [2, 3]);
+        c = create([3, 4, 5]);
+        d = create([5, 6, 7, 8]);
+        assert(c.isBig);
+        a = c;
+        assert(a.isBig);
+        assert(a.big is c.big);
+        assert(a.big.refcount == 2);
+        assert(a.internalSlice == [3, 4, 5]);
+        assert(c.internalSlice == [3, 4, 5]);
+        a = b;
+        assert(!a.isBig);
+        assert(a.internalSlice == [2, 3]);
+        assert(c.big.refcount == 1);
+        a = c;
+        assert(c.big.refcount == 2);
+
+        // mutate copies on write if ref-count is not 1
+        a.mutate((slice){ slice[] = 1; });
+        assert(a.internalSlice == [1, 1, 1]);
+        assert(c.internalSlice == [3, 4, 5]);
+        assert(a.isBig && c.isBig);
+        assert(a.big.refcount == 1);
+        assert(c.big.refcount == 1);
+
+        auto e = d;
+        assert(e.big.refcount == 2);
+        auto f = d;
+        f = a;
+        assert(f.isBig);
+        assert(f.internalSlice == [1, 1, 1]);
+        assert(f.big.refcount == 2); // a & f
+        assert(e.big.refcount == 2); // d & e
+        a = c;
+        assert(f.big.refcount == 1); // f
+        assert(e.big.refcount == 2); // d & e
+        a = a;
+        a = a;
+        a = a;
+        assert(a.big.refcount == 2); // a & c
+    }
+}
