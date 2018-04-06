@@ -484,26 +484,20 @@ if (isSomeString!R)
 {//@trusted because of union inside
     alias DataIndex = size_t;
     alias String = R;
+    alias Store = SmallFixedArray!(Group!DataIndex, 3);
 private:
     import std.conv : text;
-    enum smallString = 3;
-    enum SMALL_MASK = 0x8000_0000, REF_MASK= 0x1FFF_FFFF;
-    union
-    {
-        Group!DataIndex[] big_matches;
-        Group!DataIndex[smallString] small_matches;
-    }
+    Store matches;
     const(NamedGroup)[] _names;
     R _input;
     int _nMatch;
     uint _f, _b;
-    uint _refcount; // ref count or SMALL MASK + num groups
 
     this(R input, uint n, const(NamedGroup)[] named)
     {
         _input = input;
         _names = named;
-        newMatches(n);
+        matches = Store(n);
         _b = n;
         _f = 0;
     }
@@ -513,60 +507,12 @@ private:
         _input = rmatch._input;
         _names = rmatch._engine.pattern.dict;
         immutable n = rmatch._engine.pattern.ngroup;
-        newMatches(n);
+        matches = Store(n);
         _b = n;
         _f = 0;
     }
 
-    @property inout(Group!DataIndex[]) matches() inout
-    {
-       return (_refcount & SMALL_MASK)  ? small_matches[0 .. _refcount & 0xFF] : big_matches;
-    }
-
-    void newMatches(uint n)
-    {
-        import core.stdc.stdlib : calloc;
-        import std.exception : enforce;
-        if (n > smallString)
-        {
-            auto p = cast(Group!DataIndex*) enforce(
-                calloc(Group!DataIndex.sizeof,n),
-                "Failed to allocate Captures struct"
-            );
-            big_matches = p[0 .. n];
-            _refcount = 1;
-        }
-        else
-        {
-            _refcount = SMALL_MASK | n;
-        }
-    }
-
-    bool unique()
-    {
-        return (_refcount & SMALL_MASK) || _refcount == 1;
-    }
-
 public:
-    this(this)
-    {
-        if (!(_refcount & SMALL_MASK))
-        {
-            _refcount++;
-        }
-    }
-    ~this()
-    {
-        import core.stdc.stdlib : free;
-        if (!(_refcount & SMALL_MASK))
-        {
-            if (--_refcount == 0)
-            {
-                free(big_matches.ptr);
-                big_matches = null;
-            }
-        }
-    }
     ///Slice of input prior to the match.
     @property R pre()
     {
@@ -681,18 +627,6 @@ public:
 
     ///A hook for compatibility with original std.regex.
     @property ref captures(){ return this; }
-
-    typeof(this) opAssign()(auto ref Captures rhs)
-    {
-        if (rhs._refcount & SMALL_MASK)
-            small_matches[0 .. rhs._refcount & 0xFF] = rhs.small_matches[0 .. rhs._refcount & 0xFF];
-        else
-            big_matches = rhs.big_matches;
-        assert(&this.tupleof[0] is &big_matches);
-        assert(&this.tupleof[1] is &small_matches);
-        this.tupleof[2 .. $] = rhs.tupleof[2 .. $];
-        return this;
-    }
 }
 
 ///
@@ -750,7 +684,7 @@ private:
         _engine = _factory.create(prog, input);
         assert(_engine.refCount == 1);
         _captures = Captures!R(this);
-        _captures._nMatch = _engine.match(_captures.matches);
+        _captures.matches.mutate((slice) { _captures._nMatch = _engine.match(slice); });
     }
 
 public:
@@ -811,12 +745,7 @@ public:
             _engine = _factory.dup(old, _input);
             _factory.decRef(old);
         }
-        if (!_captures.unique)
-        {
-            // has external references - allocate new space
-            _captures.newMatches(_engine.pattern.ngroup);
-        }
-        _captures._nMatch = _engine.match(_captures.matches);
+        _captures.matches.mutate((slice) { _captures._nMatch = _engine.match(slice); });
     }
 
     ///ditto
@@ -858,7 +787,7 @@ private @trusted auto matchOnce(RegEx, R)(R input, const auto ref RegEx prog)
         cacheKey = key;
     }
     auto captures = Captures!R(input, prog.ngroup, prog.dict);
-    captures._nMatch = engine.match(captures.matches);
+    captures.matches.mutate((slice){ captures._nMatch = engine.match(slice); });
     return captures;
 }
 
