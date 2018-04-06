@@ -369,6 +369,7 @@ Hello, Jimmy!
  */
 struct File
 {
+    import core.atomic : atomicOp, atomicStore, atomicLoad;
     import std.range.primitives : ElementEncodingType;
     import std.traits : isScalarType, isArray;
     enum Orientation { unknown, narrow, wide }
@@ -376,7 +377,7 @@ struct File
     private struct Impl
     {
         FILE * handle = null; // Is null iff this Impl is closed by another File
-        uint refs = uint.max / 2;
+        shared uint refs = uint.max / 2;
         bool isPopened; // true iff the stream has been created by popen()
         Orientation orientation;
     }
@@ -397,7 +398,7 @@ struct File
     {
         assert(_p);
         _p.handle = handle;
-        _p.refs = refs;
+        atomicStore(_p.refs, refs);
         _p.isPopened = isPopened;
         _p.orientation = Orientation.unknown;
         _name = name;
@@ -473,8 +474,8 @@ Throws: `ErrnoException` if the file could not be opened.
     this(this) @safe nothrow
     {
         if (!_p) return;
-        assert(_p.refs);
-        ++_p.refs;
+        assert(atomicLoad(_p.refs));
+        atomicOp!"+="(_p.refs, 1);
     }
 
 /**
@@ -513,14 +514,11 @@ Throws: `ErrnoException` in case of error.
         {
             _p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
         }
-        else if (_p.refs == 1)
         {
-            closeHandles();
-        }
-        else
-        {
-            _p.refs--;
-            _p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
+            if (atomicOp!"-="(_p.refs, 1) == 0)
+                closeHandles();
+            else
+                _p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
         }
 
         FILE* handle;
@@ -840,16 +838,17 @@ Detaches from the underlying file. If the sole owner, calls `close`.
 
 Throws: `ErrnoException` on failure if closing the file.
   */
-    void detach() @safe
+    void detach() @trusted
     {
+        import core.stdc.stdlib : free;
+
         if (!_p) return;
-        if (_p.refs == 1)
-            close();
-        else
+        scope(exit) _p = null;
+
+        if (atomicOp!"-="(_p.refs, 1) == 0)
         {
-            assert(_p.refs);
-            --_p.refs;
-            _p = null;
+            scope(exit) free(_p);
+            closeHandles();
         }
     }
 
@@ -887,8 +886,7 @@ Throws: `ErrnoException` on error.
         if (!_p) return; // succeed vacuously
         scope(exit)
         {
-            assert(_p.refs);
-            if (!--_p.refs)
+            if (atomicOp!"-="(_p.refs, 1) == 0)
                 free(_p);
             _p = null; // start a new life
         }
@@ -3427,6 +3425,24 @@ void main()
     assert(e && e.msg == "Attempting to write to closed File");
 }
 
+version(StdStressTest)
+{
+    // issue 15768
+    @system unittest
+    {
+        import std.parallelism : parallel;
+        import std.range : iota;
+
+        auto deleteme = testFilename();
+        stderr = File(deleteme, "w");
+
+        foreach (t; 1_000_000.iota.parallel)
+        {
+            stderr.write("aaa");
+        }
+    }
+}
+
 /// Used to specify the lock type for `File.lock` and `File.tryLock`.
 enum LockType
 {
@@ -4691,12 +4707,19 @@ enum StdFileHandle: string
 }
 
 /** The standard input stream.
-    Bugs:
-        Due to $(LINK2 https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
-        it is thread un-safe to reassign `stdin` to a different `File` instance
-        than the default.
 
-    Returns: stdin as a $(LREF File).
+    Returns:
+        stdin as a $(LREF File).
+
+    Note:
+        The returned $(LREF File) wraps $(REF stdin,core,stdio), and
+        is therefore thread global. Reassigning `stdin` to a different
+        `File` must be done in a single-threaded or locked context in
+        order to avoid race conditions.
+
+        All reading from `stdin` automatically locks the file globally,
+        and will cause all other threads calling `read` to wait until
+        the lock is released.
 */
 alias stdin = makeGlobal!(StdFileHandle.stdin);
 
@@ -4722,12 +4745,19 @@ alias stdin = makeGlobal!(StdFileHandle.stdin);
 
 /**
     The standard output stream.
-    Bugs:
-        Due to $(LINK2 https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
-        it is thread un-safe to reassign `stdout` to a different `File` instance
-        than the default.
 
-    Returns: stdout as a $(LREF File).
+    Returns:
+        stdout as a $(LREF File).
+
+    Note:
+        The returned $(LREF File) wraps $(REF stdout,core,stdio), and
+        is therefore thread global. Reassigning `stdout` to a different
+        `File` must be done in a single-threaded or locked context in
+        order to avoid race conditions.
+
+        All writing to `stdout` automatically locks the file globally,
+        and will cause all other threads calling `write` to wait until
+        the lock is released.
 */
 alias stdout = makeGlobal!(StdFileHandle.stdout);
 
@@ -4778,12 +4808,19 @@ alias stdout = makeGlobal!(StdFileHandle.stdout);
 
 /**
     The standard error stream.
-    Bugs:
-        Due to $(LINK2 https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
-        it is thread un-safe to reassign `stderr` to a different `File` instance
-        than the default.
 
-    Returns: stderr as a $(LREF File).
+    Returns:
+        stderr as a $(LREF File).
+
+    Note:
+        The returned $(LREF File) wraps $(REF stderr,core,stdio), and
+        is therefore thread global. Reassigning `stderr` to a different
+        `File` must be done in a single-threaded or locked context in
+        order to avoid race conditions.
+
+        All writing to `stderr` automatically locks the file globally,
+        and will cause all other threads calling `write` to wait until
+        the lock is released.
 */
 alias stderr = makeGlobal!(StdFileHandle.stderr);
 
