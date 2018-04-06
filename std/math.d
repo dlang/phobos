@@ -393,6 +393,11 @@ template floatTraits(T)
             enum EXPPOS_SHORT = 0;
             enum SIGNPOS_BYTE = 0;
         }
+        // For IBM doubledouble the larger magnitude double comes first.
+        // It's really a double[2] and arrays don't index differently
+        // between little and big-endian targets.
+        enum DOUBLEPAIR_MSB = 0;
+        enum DOUBLEPAIR_LSB = 1;
     }
     else
         static assert(false, "No traits support for " ~ T.stringof);
@@ -426,91 +431,139 @@ T floorImpl(T)(const T x) @trusted pure nothrow @nogc
         // Other kinds of extractors for real formats.
         static if (F.realFormat == RealFormat.ieeeSingle)
             int vi;
+
+        static if (F.realFormat == RealFormat.ibmExtended)
+            double[2] vd;
     }
     floatBits y = void;
     y.rv = x;
 
-    // Find the exponent (power of 2)
-    // Do this by shifting the raw value so that the exponent lies in the low bits,
-    // then mask out the sign bit, and subtract the bias.
-    static if (F.realFormat == RealFormat.ieeeSingle)
+    static if (F.realFormat == RealFormat.ibmExtended)
     {
-        int exp = ((y.vi >> (T.mant_dig - 1)) & 0xff) - 0x7f;
-    }
-    else static if (F.realFormat == RealFormat.ieeeDouble)
-    {
-        int exp = ((y.vu[F.EXPPOS_SHORT] >> 4) & 0x7ff) - 0x3ff;
+        // The real format is made up of two IEEE doubles.
+        // Call floor() on each part separately.
+        double hi = floorImpl(y.vd[F.DOUBLEPAIR_MSB]);
 
-        version (LittleEndian)
-            int pos = 0;
+        if (hi != y.vd[F.DOUBLEPAIR_MSB])
+        {
+            // High part is not an integer, the low part doesn't affect the result
+            y.vd[F.DOUBLEPAIR_MSB] = hi;
+            y.vd[F.DOUBLEPAIR_LSB] = 0;
+        }
         else
-            int pos = 3;
-    }
-    else static if (F.realFormat == RealFormat.ieeeExtended)
-    {
-        int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+        {
+            // High part is a non zero integer
+            double lo = floorImpl(y.vd[F.DOUBLEPAIR_LSB]);
 
-        version (LittleEndian)
-            int pos = 0;
-        else
-            int pos = 4;
-    }
-    else static if (F.realFormat == RealFormat.ieeeQuadruple)
-    {
-        int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+            // Canonicalize the result
+            const long xh = *cast(long*)&hi;
+            const long xl = *cast(long*)&lo;
+            const int expdiff = ((xh >> 52) & 0x7ff) - ((xl >> 52) & 0x7ff);
 
-        version (LittleEndian)
-            int pos = 0;
-        else
-            int pos = 7;
+            if (expdiff < 53)
+            {
+                // The sum can be represented in a single double
+                hi += lo;
+                lo = 0;
+            }
+            else if (expdiff == 53)
+            {
+                // Half way between two double values.
+                // Non-canonical if the low bit of the high part's mantissa is 1.
+                if ((xh & 1) != 0)
+                {
+                    hi += 2 * lo;
+                    lo = -lo;
+                }
+            }
+            y.vd[F.DOUBLEPAIR_MSB] = hi;
+            y.vd[F.DOUBLEPAIR_LSB] = lo;
+        }
     }
     else
-        static assert(false, "Not implemented for this architecture");
-
-    if (exp < 0)
     {
-        if (x < 0.0)
-            return -1.0;
-        else
-            return 0.0;
-    }
-
-    static if (F.realFormat == RealFormat.ieeeSingle)
-    {
-        if (exp < (T.mant_dig - 1))
+        // Find the exponent (power of 2)
+        // Do this by shifting the raw value so that the exponent lies in the low bits,
+        // then mask out the sign bit, and subtract the bias.
+        static if (F.realFormat == RealFormat.ieeeSingle)
         {
-            // Clear all bits representing the fraction part.
-            const uint fraction_mask = F.MANTISSAMASK_INT >> exp;
+            int exp = ((y.vi >> (T.mant_dig - 1)) & 0xff) - 0x7f;
+        }
+        else static if (F.realFormat == RealFormat.ieeeDouble)
+        {
+            int exp = ((y.vu[F.EXPPOS_SHORT] >> 4) & 0x7ff) - 0x3ff;
 
-            if ((y.vi & fraction_mask) != 0)
+            version (LittleEndian)
+                int pos = 0;
+            else
+                int pos = 3;
+        }
+        else static if (F.realFormat == RealFormat.ieeeExtended)
+        {
+            int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+
+            version (LittleEndian)
+                int pos = 0;
+            else
+                int pos = 4;
+        }
+        else static if (F.realFormat == RealFormat.ieeeQuadruple)
+        {
+            int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+
+            version (LittleEndian)
+                int pos = 0;
+            else
+                int pos = 7;
+        }
+        else
+            static assert(false, "Not implemented for this architecture");
+
+        if (exp < 0)
+        {
+            if (x < 0.0)
+                return -1.0;
+            else
+                return 0.0;
+        }
+
+        static if (F.realFormat == RealFormat.ieeeSingle)
+        {
+            if (exp < (T.mant_dig - 1))
             {
-                // If 'x' is negative, then first substract 1.0 from the value.
-                if (y.vi < 0)
-                    y.vi += 0x00800000 >> exp;
-                y.vi &= ~fraction_mask;
+                // Clear all bits representing the fraction part.
+                const uint fraction_mask = F.MANTISSAMASK_INT >> exp;
+
+                if ((y.vi & fraction_mask) != 0)
+                {
+                    // If 'x' is negative, then first substract 1.0 from the value.
+                    if (y.vi < 0)
+                        y.vi += 0x00800000 >> exp;
+                    y.vi &= ~fraction_mask;
+                }
             }
         }
-    }
-    else
-    {
-        exp = (T.mant_dig - 1) - exp;
-
-        // Zero 16 bits at a time.
-        while (exp >= 16)
+        else
         {
-            version (LittleEndian)
-                y.vu[pos++] = 0;
-            else
-                y.vu[pos--] = 0;
-            exp -= 16;
+            exp = (T.mant_dig - 1) - exp;
+
+            // Zero 16 bits at a time.
+            while (exp >= 16)
+            {
+                version (LittleEndian)
+                    y.vu[pos++] = 0;
+                else
+                    y.vu[pos--] = 0;
+                exp -= 16;
+            }
+
+            // Clear the remaining bits.
+            if (exp > 0)
+                y.vu[pos] &= 0xffff ^ ((1 << exp) - 1);
+
+            if ((x < 0.0) && (x != y.rv))
+                y.rv -= 1.0;
         }
-
-        // Clear the remaining bits.
-        if (exp > 0)
-            y.vu[pos] &= 0xffff ^ ((1 << exp) - 1);
-
-        if ((x < 0.0) && (x != y.rv))
-            y.rv -= 1.0;
     }
 
     return y.rv;
