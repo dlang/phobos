@@ -481,6 +481,7 @@ version (linux) @safe unittest
     validation will fail.
 
     Params:
+        S = the sting type of the file
         name = string or range of characters representing the file _name
 
     Returns: Array of characters read.
@@ -1097,13 +1098,15 @@ version(Windows) private ulong makeUlong(DWORD dwLow, DWORD dwHigh) @safe pure n
     return li.QuadPart;
 }
 
-/***************************************************
+/**
 Get size of file `name` in bytes.
 
 Params:
     name = string or range of characters representing the file _name
-
-Throws: `FileException` on error (e.g., file not found).
+Returns:
+    The size of file in bytes.
+Throws:
+    `FileException` on error (e.g., file not found).
  */
 ulong getSize(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -1633,6 +1636,10 @@ if (isConvertibleToString!R)
 /++
     Returns the time that the given file was last modified.
 
+    Params:
+        name = the name of the file to check
+    Returns:
+        A $(REF SysTime,std,datetime,systime).
     Throws:
         `FileException` if the given file does not exist.
 +/
@@ -1708,8 +1715,10 @@ if (isConvertibleToString!R)
     correctly prompts building it.
 
     Params:
-        name            = The _name of the file to get the modification time for.
+        name = The name of the file to get the modification time for.
         returnIfMissing = The time to return if the given file does not exist.
+    Returns:
+        A $(REF SysTime,std,datetime,systime).
 
 Example:
 --------------------
@@ -1913,8 +1922,8 @@ private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
  Note that the file attributes on Windows and Posix systems are
  completely different. On Windows, they're what is returned by
  $(HTTP msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx,
- GetFileAttributes), whereas on Posix systems, they're the $(LUCKY
- st_mode) value which is part of the $(D stat struct) gotten by
+ GetFileAttributes), whereas on Posix systems, they're the
+ `st_mode` value which is part of the $(D stat struct) gotten by
  calling the $(HTTP en.wikipedia.org/wiki/Stat_%28Unix%29, `stat`)
  function.
 
@@ -1923,8 +1932,9 @@ private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
  link.
 
  Params:
- name = The file to get the attributes of.
-
+    name = The file to get the attributes of.
+ Returns:
+    The attributes of the file as a `uint`.
  Throws: `FileException` on error.
   +/
 uint getAttributes(R)(R name)
@@ -2773,9 +2783,14 @@ bool attrIsSymlink(uint attributes) @safe pure nothrow @nogc
     }
 }
 
-/****************************************************
- * Change directory to `pathname`.
- * Throws: `FileException` on error.
+/**
+Change directory to `pathname`. Equivalent to `cd` on
+Windows and Posix.
+
+Params:
+    pathname = the directory to step into
+
+Throws: `FileException` on error.
  */
 void chdir(R)(R pathname)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -2836,11 +2851,15 @@ if (isConvertibleToString!R)
     static assert(__traits(compiles, chdir(TestAliasedString(null))));
 }
 
-/****************************************************
-Make directory `pathname`.
+/**
+Make a new directory `pathname`.
 
-Throws: `FileException` on Posix or `WindowsException` on Windows
-        if an error occured.
+Params:
+    pathname = the path of the directory to make
+
+Throws:
+    $(LREF FileException) on Posix or $(LREF WindowsException) on Windows
+    if an error occured.
  */
 void mkdir(R)(R pathname)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -2935,15 +2954,17 @@ private bool ensureDirExists()(in char[] pathname)
     return false;
 }
 
-/****************************************************
- * Make directory and all parent directories as needed.
- *
- * Does nothing if the directory specified by
- * `pathname` already exists.
- *
- * Throws: `FileException` on error.
- */
+/**
+Make directory and all parent directories as needed.
 
+Does nothing if the directory specified by
+`pathname` already exists.
+
+Params:
+    pathname = the full path of the directory to create
+
+Throws: $(LREF FileException) on error.
+ */
 void mkdirRecurse(in char[] pathname) @safe
 {
     import std.path : dirName, baseName;
@@ -3369,10 +3390,13 @@ else version (NetBSD)
 /**
  * Returns the full path of the current executable.
  *
+ * Returns:
+ *     The path of the executable as a `string`.
+ *
  * Throws:
  * $(REF1 Exception, object)
  */
-@trusted string thisExePath ()
+@trusted string thisExePath()
 {
     version (OSX)
     {
@@ -4246,8 +4270,12 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
     Remove directory and all of its content and subdirectories,
     recursively.
 
+    Params:
+        pathname = the path of the directory to completely remove
+        de = The $(LREF DirEntry) to remove
+
     Throws:
-        `FileException` if there is an error (including if the given
+        $(LREF FileException) if there is an error (including if the given
         file is not a directory).
  +/
 void rmdirRecurse(in char[] pathname)
@@ -4707,6 +4735,10 @@ public:
                          should be treated as directories and their contents
                          iterated over.
 
+    Returns:
+        An $(REF_ALTTEXT input range, isInputRange,std,range,primitives) of
+        $(LREF DirEntries).
+
     Throws:
         `FileException` if the directory does not exist.
 
@@ -5037,31 +5069,32 @@ slurp(Types...)(string filename, in char[] format)
 /**
 Returns the path to a directory for temporary files.
 
-On Windows, this function returns the result of calling the Windows API function
-$(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/aa364992.aspx, `GetTempPath`).
-
-On POSIX platforms, it searches through the following list of directories
-and returns the first one which is found to exist:
-$(OL
-    $(LI The directory given by the `TMPDIR` environment variable.)
-    $(LI The directory given by the `TEMP` environment variable.)
-    $(LI The directory given by the `TMP` environment variable.)
-    $(LI `/tmp`)
-    $(LI `/var/tmp`)
-    $(LI `/usr/tmp`)
-)
-
-On all platforms, `tempDir` returns `"."` on failure, representing
-the current working directory.
-
 The return value of the function is cached, so the procedures described
-above will only be performed the first time the function is called.  All
+below will only be performed the first time the function is called.  All
 subsequent runs will return the same string, regardless of whether
 environment variables and directory structures have changed in the
 meantime.
 
 The POSIX `tempDir` algorithm is inspired by Python's
 $(LINK2 http://docs.python.org/library/tempfile.html#tempfile.tempdir, `tempfile.tempdir`).
+
+Returns:
+    On Windows, this function returns the result of calling the Windows API function
+    $(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/aa364992.aspx, `GetTempPath`).
+
+    On POSIX platforms, it searches through the following list of directories
+    and returns the first one which is found to exist:
+    $(OL
+        $(LI The directory given by the `TMPDIR` environment variable.)
+        $(LI The directory given by the `TEMP` environment variable.)
+        $(LI The directory given by the `TMP` environment variable.)
+        $(LI `/tmp`)
+        $(LI `/var/tmp`)
+        $(LI `/usr/tmp`)
+    )
+
+    On all platforms, `tempDir` returns `"."` on failure, representing
+    the current working directory.
 */
 string tempDir() @trusted
 {
