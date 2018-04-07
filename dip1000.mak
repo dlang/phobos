@@ -48,10 +48,10 @@ aa[std.system]=-dip1000
 aa[std.traits]=-dip1000
 aa[std.typecons]=-dip1000 -version=DIP1000 # merged https://github.com/dlang/phobos/pull/6338; COMPROMISE: check the reason for non-dip1000: static struct S. mixin Proxy!foo;
 aa[std.typetuple]=-dip1000
-aa[std.uni]=-dip1000 # merged https://github.com/dlang/phobos/pull/6294, https://github.com/dlang/phobos/pull/6041 (see also TODO-list there); supersedes/includes https://github.com/dlang/phobos/pull/5045; see also https://github.com/dlang/phobos/pull/6104 for improvements proposed by Seb
+aa[std.uni]= #merged https://github.com/dlang/phobos/pull/6294, https://github.com/dlang/phobos/pull/6041 (see also TODO-list there); supersedes/includes https://github.com/dlang/phobos/pull/5045; see also https://github.com/dlang/phobos/pull/6104 for improvements proposed by Seb
 aa[std.uri]=-dip1000
 aa[std.utf]=-dip1000 # for me (carblue) std.utf is -dip1000 compilable even without applying https://github.com/dlang/phobos/pull/5915, i.e. I don't observe a depends on (?); after applying PR 5915 it's still dip1000
-aa[std.uuid]=-dip1000
+aa[std.uuid]=
 aa[std.variant]=-dip1000
 aa[std.xml]=-dip1000
 aa[std.zip]=-dip1000
@@ -164,21 +164,21 @@ aa[std.internal.test.range]=-dip1000
 aa[std.internal.test.uda]=-dip1000
 aa[std.internal.windows.advapi32]=-dip1000
 
-aa[std.net.curl]=-dip1000 # TODO have a look into open https://github.com/dlang/phobos/pull/5052: std.net.curl: fix for -dip1000
+aa[std.net.curl]= # TODO have a look into open https://github.com/dlang/phobos/pull/5052: std.net.curl: fix for -dip1000
 aa[std.net.isemail]=-dip1000
 
 aa[std.range.interfaces]=-dip1000
 aa[std.range.package]=-dip25 # reference to local variable a / b assigned to non-scope parameter _param_1 / _param_2 calling std.range.chooseAmong!(RefAccessRange, RefAccessRange).chooseAmong
 aa[std.range.primitives]=-dip1000
 
-aa[std.regex.package]=-dip1000
+aa[std.regex.package]=
 aa[std.regex.internal.backtracking]=-dip1000
-aa[std.regex.internal.generator]=-dip1000
-aa[std.regex.internal.ir]=-dip1000
-aa[std.regex.internal.kickstart]=-dip1000
-aa[std.regex.internal.parser]=-dip1000
-aa[std.regex.internal.tests2]=-dip1000
-aa[std.regex.internal.tests]=-dip1000 # merged https://github.com/dlang/phobos/pull/6340; for -debug=std_regex_test (set nowhere in sources) still depends on a fix for writeln
+aa[std.regex.internal.generator]=
+aa[std.regex.internal.ir]=
+aa[std.regex.internal.kickstart]=
+aa[std.regex.internal.parser]=
+aa[std.regex.internal.tests2]=
+aa[std.regex.internal.tests]= # merged https://github.com/dlang/phobos/pull/6340; for -debug=std_regex_test (set nowhere in sources) still depends on a fix for writeln
 aa[std.regex.internal.thompson]=-dip1000
 
 aa[std.windows.charset]=-dip1000
