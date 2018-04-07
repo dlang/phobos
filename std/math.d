@@ -72,9 +72,6 @@ $(TR $(TDNW Hardware Control) $(TD
  * Unlike C, there is no global 'errno' variable. Consequently, almost all of
  * these functions are pure nothrow.
  *
- * Status:
- * The semantics and names of feqrel and approxEqual will be revised.
- *
  * Macros:
  *      TABLE_SV = <table border="1" cellpadding="4" cellspacing="0">
  *              <caption>Special Values</caption>
