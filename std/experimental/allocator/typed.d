@@ -405,9 +405,10 @@ struct TypedAllocator(PrimaryAllocator, Policies...)
                 | AllocFlag.hasNoIndirections,
             MmapAllocator,
     );
+
     MyAllocator a;
     auto b = &a.allocatorFor!0();
-    static assert(is(typeof(*b) == shared GCAllocator));
+    static assert(is(typeof(*b) == shared const(GCAllocator)));
     enum f1 = AllocFlag.fixedSize | AllocFlag.threadLocal;
     auto c = &a.allocatorFor!f1();
     static assert(is(typeof(*c) == Mallocator));
