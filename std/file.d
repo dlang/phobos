@@ -721,7 +721,7 @@ Params:
     name = string or range of characters representing the file _name
     buffer = data to be written to file
 
-Throws: `FileException` on error.
+Throws: $(LREF FileException) on error.
 
 See_also: $(REF toFile, std,stdio)
  */
@@ -770,7 +770,7 @@ Params:
     name = string or range of characters representing the file _name
     buffer = data to be appended to file
 
-Throws: `FileException` on error.
+Throws: $(LREF FileException) on error.
  */
 void append(R)(R name, const void[] buffer)
 if ((isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
@@ -889,7 +889,7 @@ version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez
  * Params:
  *    from = string or range of characters representing the existing file name
  *    to = string or range of characters representing the target file name
- * Throws: `FileException` on error.
+ * Throws: $(LREF FileException) on error.
  */
 void rename(RF, RT)(RF from, RT to)
 if ((isInputRange!RF && !isInfinite!RF && isSomeChar!(ElementEncodingType!RF) || isSomeString!RF)
@@ -1000,7 +1000,7 @@ Delete file `name`.
 Params:
     name = string or range of characters representing the file _name
 
-Throws: `FileException` on error.
+Throws: $(LREF FileException) on error.
  */
 void remove(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -1106,7 +1106,7 @@ Params:
 Returns:
     The size of file in bytes.
 Throws:
-    `FileException` on error (e.g., file not found).
+    $(LREF FileException) on error (e.g., file not found).
  */
 ulong getSize(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -1204,7 +1204,7 @@ private SysTime statTimeToStdTime(char which)(ref stat_t statbuf)
         modificationTime = Time the file/folder was last modified.
 
     Throws:
-        `FileException` on error.
+        $(LREF FileException) on error.
  +/
 void getTimes(R)(R name,
               out SysTime accessTime,
@@ -1352,7 +1352,7 @@ version(StdDdoc)
      fileModificationTime = Time the file was last modified.
 
      Throws:
-     `FileException` on error.
+     $(LREF FileException) on error.
      +/
     void getTimesWin(R)(R name,
                         out SysTime fileCreationTime,
@@ -1470,7 +1470,7 @@ version(Windows) @system unittest
         modificationTime = Time the file/folder was last modified.
 
     Throws:
-        `FileException` on error.
+        $(LREF FileException) on error.
  +/
 void setTimes(R)(R name,
               SysTime accessTime,
@@ -1641,7 +1641,7 @@ if (isConvertibleToString!R)
     Returns:
         A $(REF SysTime,std,datetime,systime).
     Throws:
-        `FileException` if the given file does not exist.
+        $(LREF FileException) if the given file does not exist.
 +/
 SysTime timeLastModified(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -1709,7 +1709,7 @@ if (isConvertibleToString!R)
     en.wikipedia.org/wiki/Apache_Ant, ant). To check whether file $(D
     target) must be rebuilt from file `source` (i.e., `target` is
     older than `source` or does not exist), use the comparison
-    below. The code throws a `FileException` if `source` does not
+    below. The code throws a $(LREF FileException) if `source` does not
     exist (as it should). On the other hand, the `SysTime.min` default
     makes a non-existing `target` seem infinitely old so the test
     correctly prompts building it.
@@ -1935,7 +1935,7 @@ private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
     name = The file to get the attributes of.
  Returns:
     The attributes of the file as a `uint`.
- Throws: `FileException` on error.
+ Throws: $(LREF FileException) on error.
   +/
 uint getAttributes(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -2040,7 +2040,7 @@ if (isConvertibleToString!R)
         the attributes
 
     Throws:
-        `FileException` on error.
+        $(LREF FileException) on error.
  +/
 uint getLinkAttributes(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -2145,7 +2145,7 @@ if (isConvertibleToString!R)
         attributes = the _attributes to set the file to
 
     Throws:
-        `FileException` if the given file does not exist.
+        $(LREF FileException) if the given file does not exist.
  +/
 void setAttributes(R)(R name, uint attributes)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -2254,7 +2254,7 @@ if (isConvertibleToString!R)
         true if name specifies a directory
 
     Throws:
-        `FileException` if the given file does not exist.
+        $(LREF FileException) if the given file does not exist.
   +/
 @property bool isDir(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -2434,7 +2434,7 @@ bool attrIsDir(uint attributes) @safe pure nothrow @nogc
         true if name specifies a file
 
     Throws:
-        `FileException` if the given file does not exist.
+        $(LREF FileException) if the given file does not exist.
 +/
 @property bool isFile(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -2609,7 +2609,7 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
         true if name is a symbolic link
 
     Throws:
-        `FileException` if the given file does not exist.
+        $(LREF FileException) if the given file does not exist.
   +/
 @property bool isSymlink(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -2790,7 +2790,7 @@ Windows and Posix.
 Params:
     pathname = the directory to step into
 
-Throws: `FileException` on error.
+Throws: $(LREF FileException) on error.
  */
 void chdir(R)(R pathname)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -3063,7 +3063,7 @@ Remove directory `pathname`.
 Params:
     pathname = Range or string specifying the directory name
 
-Throws: `FileException` on error.
+Throws: $(LREF FileException) on error.
  */
 void rmdir(R)(R pathname)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -3129,7 +3129,7 @@ if (isConvertibleToString!R)
             current working directory.
 
     Throws:
-        `FileException` on error (which includes if the _symlink already
+        $(LREF FileException) on error (which includes if the _symlink already
         exists).
   +/
 version(StdDdoc) void symlink(RO, RL)(RO original, RL link)
@@ -3219,7 +3219,7 @@ version(Posix) @safe unittest
     working directory.
 
     Throws:
-        `FileException` on error.
+        $(LREF FileException) on error.
   +/
 version(StdDdoc) string readLink(R)(R link)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) ||
@@ -3318,7 +3318,7 @@ version(Posix) @system unittest // input range of dchars
 
 /****************************************************
  * Get the current working directory.
- * Throws: `FileException` on error.
+ * Throws: $(LREF FileException) on error.
  */
 version(Windows) string getcwd() @trusted
 {
@@ -3510,7 +3510,7 @@ version(StdDdoc)
                 path = The file (or directory) to get a DirEntry for.
 
             Throws:
-                `FileException` if the file does not exist.
+                $(LREF FileException) if the file does not exist.
         +/
         this(string path);
 
@@ -4083,7 +4083,7 @@ Params:
     to = string or range of characters representing the target file name
     preserve = whether to _preserve the file attributes
 
-Throws: `FileException` on error.
+Throws: $(LREF FileException) on error.
  */
 void copy(RF, RT)(RF from, RT to, PreserveAttributes preserve = preserveAttributesDefault)
 if (isInputRange!RF && !isInfinite!RF && isSomeChar!(ElementEncodingType!RF) && !isConvertibleToString!RF &&
@@ -4740,7 +4740,7 @@ public:
         $(LREF DirEntries).
 
     Throws:
-        `FileException` if the directory does not exist.
+        $(LREF FileException) if the directory does not exist.
 
 Example:
 --------------------
