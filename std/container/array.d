@@ -460,7 +460,7 @@ if (!is(Unqual!T == bool))
     }
 
     /**
-     * Constructor taking an input range
+     * Constructor taking an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
      */
     this(Range)(Range r)
     if (isInputRange!Range && isImplicitlyConvertible!(ElementType!Range, T) && !is(Range == T[]))

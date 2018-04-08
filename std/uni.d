@@ -7134,7 +7134,8 @@ if (is(C : dchar))
 }
 
 /++
-    Reads one full grapheme cluster from an input range of dchar `inp`.
+    Reads one full grapheme cluster from an
+    $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of dchar `inp`.
 
     For examples see the $(LREF Grapheme) below.
 
@@ -7761,8 +7762,8 @@ static assert(Grapheme.sizeof == size_t.sizeof*4);
     than $(LREF icmp). However keep in mind the warning below.)
 
     Params:
-        r1 = an input range of characters
-        r2 = an input range of characters
+        r1 = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of characters
+        r2 = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of characters
 
     Returns:
         An `int` that is 0 if the strings match,
@@ -9139,7 +9140,8 @@ if (isInputRange!Range &&
 }
 
 /*********************
- * Convert input range or string to upper or lower case.
+ * Convert an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+ * or a string to upper or lower case.
  *
  * Does not allocate memory.
  * Characters in UTF-8 or UTF-16 format that cannot be decoded
@@ -9149,7 +9151,7 @@ if (isInputRange!Range &&
  *      str = string or range of characters
  *
  * Returns:
- *      an InputRange of dchars
+ *      an input range of `dchar`s
  *
  * See_Also:
  *      $(LREF toUpper), $(LREF toLower)
@@ -9354,7 +9356,8 @@ if (isInputRange!Range &&
 }
 
 /*********************
- * Capitalize input range or string, meaning convert the first
+ * Capitalize an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+ * or string, meaning convert the first
  * character to upper case and subsequent characters to lower case.
  *
  * Does not allocate memory.

@@ -930,7 +930,8 @@ alias nWayUnion = multiwayMerge;
 alias NWayUnion = MultiwayMerge;
 
 /**
-Computes the union of multiple ranges. The input ranges are passed
+Computes the union of multiple ranges. The
+$(REF_ALTTEXT input ranges, isInputRange, std,range,primitives) are passed
 as a range of ranges and each is assumed to be sorted by $(D
 less). Computation is done lazily, one union element at a time.
 `multiwayUnion(ror)` is functionally equivalent to `multiwayMerge(ror).uniq`.
@@ -1117,8 +1118,9 @@ SetDifference!(less, R1, R2) setDifference(alias less = "a < b", R1, R2)
 }
 
 /**
-Lazily computes the intersection of two or more input ranges $(D
-ranges). The ranges are assumed to be sorted by `less`. The element
+Lazily computes the intersection of two or more
+$(REF_ALTTEXT input ranges, isInputRange, std,range,primitives)
+`ranges`. The ranges are assumed to be sorted by `less`. The element
 types of the ranges must have a common type.
 
 In the case of multisets, the range with the minimum number of

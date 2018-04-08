@@ -1414,7 +1414,8 @@ private auto _withDefaultExtension(R, C)(R path, C[] ext)
     range.
 
     Params:
-        segments = An input range of segments to assemble the path from.
+        segments = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+        of segments to assemble the path from.
     Returns: The assembled path.
 */
 immutable(ElementEncodingType!(ElementType!Range))[]

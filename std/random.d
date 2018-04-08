@@ -2648,7 +2648,8 @@ Params:
 Returns:
     Range whose elements consist of the elements of `r`,
     in random order.  Will be a forward range if both `r` and
-    `rng` are forward ranges, an input range otherwise.
+    `rng` are forward ranges, an
+    $(REF_ALTTEXT input range, isInputRange, std,range,primitives) otherwise.
 */
 struct RandomCover(Range, UniformRNG = void)
 if (isRandomAccessRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))

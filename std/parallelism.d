@@ -1835,7 +1835,8 @@ public:
 
         Params:
 
-        source = The input range to be mapped.  If `source` is not random
+        source = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+        to be mapped.  If `source` is not random
         access it will be lazily buffered to an array of size `bufSize` before
         the map function is evaluated.  (For an exception to this rule, see Notes.)
 
@@ -2164,8 +2165,8 @@ public:
 
     /**
     Given a `source` range that is expensive to iterate over, returns an
-    input range that asynchronously buffers the contents of
-    `source` into a buffer of `bufSize` elements in a worker thread,
+    $(REF_ALTTEXT input range, isInputRange, std,range,primitives) that
+    asynchronously buffers the contents of `source` into a buffer of `bufSize` elements in a worker thread,
     while making previously buffered elements from a second buffer, also of size
     `bufSize`, available via the range interface of the returned
     object.  The returned range has a length iff `hasLength!S`.
