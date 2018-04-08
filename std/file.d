@@ -54,6 +54,8 @@ $(TR $(TD Timestamp) $(TD
           $(LREF getTimesWin)
           $(LREF setTimes)
           $(LREF timeLastModified)
+          $(LREF timeLastAccessed)
+          $(LREF timeStatusChanged)
 ))
 $(TR $(TD Other) $(TD
           $(LREF DirEntry)
@@ -1780,6 +1782,50 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R))
     assert(target.timeLastModified(SysTime.min) < source.timeLastModified);
     target.write(".");
     assert(target.timeLastModified(SysTime.min) >= source.timeLastModified);
+}
+
+version(StdDdoc)
+{
+    /++
+     $(BLUE This function is Posix-Only.)
+
+     Returns the time that the given file was last modified.
+     Params:
+        statbuf = stat_t retrieved from file.
+     +/
+    SysTime timeLastModified(ref stat_t statbuf) pure nothrow;
+    /++
+     $(BLUE This function is Posix-Only.)
+
+     Returns the time that the given file was last accessed.
+     Params:
+        statbuf = stat_t retrieved from file.
+     +/
+    SysTime timeLastAccessed(ref stat_t statbuf) pure nothrow;
+    /++
+     $(BLUE This function is Posix-Only.)
+
+     Returns the time that the given file was last changed.
+     Params:
+        statbuf = stat_t retrieved from file.
+     +/
+    SysTime timeStatusChanged(ref stat_t statbuf) pure nothrow;
+}
+else
+version(Posix)
+{
+    SysTime timeLastModified(ref stat_t statbuf) pure nothrow
+    {
+        return statTimeToStdTime!'m'(statbuf);
+    }
+    SysTime timeLastAccessed(ref stat_t statbuf) pure nothrow
+    {
+        return statTimeToStdTime!'a'(statbuf);
+    }
+    SysTime timeStatusChanged(ref stat_t statbuf) pure nothrow
+    {
+        return statTimeToStdTime!'c'(statbuf);
+    }
 }
 
 @safe unittest
