@@ -27,7 +27,7 @@ struct GCAllocator
     deallocate) and `reallocate` methods are `@system` because they may
     move memory around, leaving dangling pointers in user code.
     */
-    pure nothrow @trusted void[] allocate(size_t bytes) shared
+    pure nothrow @trusted void[] allocate(size_t bytes) shared const
     {
         if (!bytes) return null;
         auto p = GC.malloc(bytes);
@@ -35,7 +35,7 @@ struct GCAllocator
     }
 
     /// Ditto
-    pure nothrow @trusted bool expand(ref void[] b, size_t delta) shared
+    pure nothrow @trusted bool expand(ref void[] b, size_t delta) shared const
     {
         if (delta == 0) return true;
         if (b is null) return false;
@@ -58,7 +58,7 @@ struct GCAllocator
     }
 
     /// Ditto
-    pure nothrow @system bool reallocate(ref void[] b, size_t newSize) shared
+    pure nothrow @system bool reallocate(ref void[] b, size_t newSize) shared const
     {
         import core.exception : OutOfMemoryError;
         try
@@ -76,7 +76,7 @@ struct GCAllocator
 
     /// Ditto
     pure nothrow @trusted @nogc
-    Ternary resolveInternalPointer(const void* p, ref void[] result) shared
+    Ternary resolveInternalPointer(const void* p, ref void[] result) shared const
     {
         auto r = GC.addrOf(cast(void*) p);
         if (!r) return Ternary.no;
@@ -86,7 +86,7 @@ struct GCAllocator
 
     /// Ditto
     pure nothrow @system @nogc
-    bool deallocate(void[] b) shared
+    bool deallocate(void[] b) shared const
     {
         GC.free(b.ptr);
         return true;
@@ -94,7 +94,7 @@ struct GCAllocator
 
     /// Ditto
     pure nothrow @safe @nogc
-    size_t goodAllocSize(size_t n) shared
+    size_t goodAllocSize(size_t n) shared const
     {
         if (n == 0)
             return 0;
@@ -117,17 +117,17 @@ struct GCAllocator
     are `shared`.
     */
 
-    static shared GCAllocator instance;
+    static shared const GCAllocator instance;
 
     // Leave it undocummented for now.
-    nothrow @trusted void collect() shared
+    nothrow @trusted void collect() shared const
     {
         GC.collect();
     }
 }
 
 ///
-@system unittest
+pure @system unittest
 {
     auto buffer = GCAllocator.instance.allocate(1024 * 1024 * 4);
     // deallocate upon scope's end (alternatively: leave it to collection)
@@ -135,13 +135,13 @@ struct GCAllocator
     //...
 }
 
-@safe unittest
+pure @safe unittest
 {
     auto b = GCAllocator.instance.allocate(10_000);
     assert(GCAllocator.instance.expand(b, 1));
 }
 
-@system unittest
+pure @system unittest
 {
     import core.memory : GC;
     import std.typecons : Ternary;
@@ -173,7 +173,7 @@ struct GCAllocator
     assert((() nothrow @safe @nogc => GCAllocator.instance.goodAllocSize(4096 * 4 + 1))() == 4096 * 5);
 }
 
-nothrow @safe unittest
+pure nothrow @safe unittest
 {
     import std.typecons : Ternary;
 
