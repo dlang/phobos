@@ -481,7 +481,7 @@ version (linux) @safe unittest
     validation will fail.
 
     Params:
-        S = the sting type of the file
+        S = the string type of the file
         name = string or range of characters representing the file _name
 
     Returns: Array of characters read.
