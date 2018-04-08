@@ -3620,6 +3620,14 @@ assert(!de2.isFile);
         @property SysTime timeLastModified();
 
         /++
+            $(BLUE This function is Posix-Only.)
+
+            Returns the time that the file represented by this `DirEntry` was
+            last changed (not only in contents, but also in permissions or ownership).
+          +/
+        @property SysTime timeStatusChanged() const;
+
+        /++
             Returns the _attributes of the file represented by this `DirEntry`.
 
             Note that the file _attributes on Windows and Posix systems are
