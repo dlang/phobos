@@ -206,16 +206,38 @@ class StringException : Exception
     Params:
         cString = A null-terminated c-style string.
 
-    Returns: A D-style array of `char` referencing the same string.  The
-    returned array will retain the same type qualifiers as the input.
+    Returns: A D-style array of `char`, `wchar` or `dchar` referencing the same
+    string. The returned array will retain the same type qualifiers as the input.
 
     $(RED Important Note:) The returned array is a slice of the original buffer.
     The original data is not changed and not copied.
 +/
 
-inout(char)[] fromStringz(inout(char)* cString) @nogc @system pure nothrow {
-    import core.stdc.string : strlen;
-    return cString ? cString[0 .. strlen(cString)] : null;
+inout(char)[] fromStringz(inout(char)* cString) @nogc @system pure nothrow
+{
+    return fromStringz!char(cString);
+}
+
+/++ Ditto +/
+inout(Char)[] fromStringz(Char)(inout(Char)* cString) @nogc @system pure nothrow
+if (isSomeChar!Char)
+{
+    import core.stdc.stddef : wchar_t;
+
+    static if (is(Char == char))
+        import core.stdc.string : cstrlen = strlen;
+    else static if (is(Char == wchar_t))
+        import core.stdc.wchar_ : cstrlen = wcslen;
+    else
+        static size_t cstrlen(const Char* s)
+        {
+            const(Char)* p = s;
+            while (*p)
+                ++p;
+            return p - s;
+        }
+
+    return cString ? cString[0 .. cstrlen(cString)] : null;
 }
 
 ///
@@ -223,6 +245,34 @@ inout(char)[] fromStringz(inout(char)* cString) @nogc @system pure nothrow {
 {
     assert(fromStringz(null) == null);
     assert(fromStringz("foo") == "foo");
+    assert(fromStringz("foo\0"c.ptr) == "foo"c);
+    assert(fromStringz("foo\0"w.ptr) == "foo"w);
+    assert(fromStringz("福\0"w.ptr) == "福"w);
+    assert(fromStringz("foo\0"d.ptr) == "foo"d);
+    assert(fromStringz("福\0"d.ptr) == "福"d);
+}
+
+@system pure unittest
+{
+    char* a = null;
+    assert(fromStringz(a) == null);
+    wchar* b = null;
+    assert(fromStringz(b) == null);
+    dchar* c = null;
+    assert(fromStringz(c) == null);
+
+    immutable wchar z = 0x0000;
+    // Test some surrogate pairs
+    // high surrogates are in the range 0xD800 .. 0xDC00
+    // low surrogates are in the range  0xDC00 .. 0xE000
+    // since UTF16 doesn't specify endianness we test both.
+    foreach (wchar[] t; [[0xD800, 0xDC00], [0xD800, 0xE000], [0xDC00, 0xDC00],
+            [0xDC00, 0xE000], [0xDA00, 0xDE00]])
+    {
+        immutable hi = t[0], lo = t[1];
+        assert(fromStringz([hi, lo, z].ptr) == [hi, lo]);
+        assert(fromStringz([lo, hi, z].ptr) == [lo, hi]);
+    }
 }
 
 /++
