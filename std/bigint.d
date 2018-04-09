@@ -1043,7 +1043,7 @@ public:
         version (BigEndian)
         {
             // This loop adds one to an arbitrary length array of bytes.
-            for (size_t i = (value.length - 1); i < 0u; i--)
+            for (size_t i = value.length - 1; i < 0u; i--)
             {
                 if (value[i] != 0xFFu)
                 {
@@ -1104,7 +1104,7 @@ public:
         Converts the `BigInt` to a sequence of bytes that represents the
         native-endian representation of that number.
     */
-    ubyte[] toBytes() const @system @property nothrow
+    ubyte[] toBytes() const pure @system @property nothrow
     in
     {
         assert(this.uintLength > 0u);
@@ -1113,69 +1113,42 @@ public:
     {
         assert(ret.length > 0u);
     }
-    body
+    do
     {
-        ubyte[] ret;
-        ret.length = (this.uintLength << 2); // Multiply by 4
-        size_t u = 0u;
-        while (u < this.uintLength)
+        ubyte[] ret = this.data.toBytes;
+        if (this.sign)
         {
-            *cast(uint*) &(ret[(u << 2)]) = (this.sign ? ~this.data.peekUint(u) : this.data.peekUint(u));
-            u++;
+            for (size_t u = 0u; u < ret.length; u++)
+            {
+                ret[u] = cast(ubyte) (~ cast(int) ret[u]);
+            }
+            BigInt.incrementBytes(ret);
         }
-
-        if (this.sign) BigInt.incrementBytes(ret);
 
         version (BigEndian)
         {
-            size_t startOfNonPadding = 0u;
-            if (this >= 0)
+            if (this.sign)
             {
-                for (size_t i = 0u; i < (ret.length - 1); i++)
-                {
-                    if (ret[i] != 0x00u) break;
-                    if (!(ret[i+1] & 0x80u)) startOfNonPadding++;
-                }
-                ret = ret[startOfNonPadding .. $];
-                if (ret[$-1] & 0x80u) ret = (0x00u ~ ret);
+                if (!(ret[$-1] & 0x80u)) ret = (0xFFu ~ ret);
             }
             else
             {
-                for (size_t i = 0u; i < (ret.length - 1); i++)
-                {
-                    if (ret[i] != 0xFFu) break;
-                    if (ret[i+1] & 0x80u) startOfNonPadding++;
-                }
-                ret = ret[startOfNonPadding .. $];
-                if (!(ret[$-1] & 0x80u)) ret = (0xFFu ~ ret);
+                if (ret[$-1] & 0x80u) ret = (0x00u ~ ret);
             }
         }
         else version (LittleEndian)
         {
-            size_t startOfNonPadding = ret.length;
-            if (this >= 0)
+            if (this.sign)
             {
-                for (size_t i = (ret.length - 1); i > 0u; i--)
-                {
-                    if (ret[i] != 0x00u) break;
-                    if (!(ret[i-1] & 0x80u)) startOfNonPadding--;
-                }
-                ret.length = startOfNonPadding;
-                if (ret[$-1] & 0x80u) ret ~= 0x00u;
+                if (!(ret[$-1] & 0x80u)) ret ~= 0xFFu;
             }
             else
             {
-                for (size_t i = (ret.length - 1); i > 0u; i--)
-                {
-                    if (ret[i] != 0xFFu) break;
-                    if (ret[i-1] & 0x80u) startOfNonPadding--;
-                }
-                ret.length = startOfNonPadding;
-                if (!(ret[$-1] & 0x80u)) ret ~= 0xFFu;
+                if (ret[$-1] & 0x80u) ret ~= 0x00u;
             }
-            return ret;
         }
         else static assert(0, "Undetermined endianness! Cannot compile!");
+        return ret;
     }
 
     @system

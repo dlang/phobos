@@ -409,6 +409,69 @@ public:
         return data.length * BigDigit.sizeof;
     }
 
+    /**
+        Converts the `BigUint` to a sequence of bytes that represents the
+        native-endian unsigned representation of that number. The sign is
+        completely ignored, so -1,000,000 will produce the same output as
+        1,000,000. The integer will be encoded on the fewest possible bytes.
+        In other words, there will be no leading zeroes.
+    */
+    ubyte[] toBytes() const pure @system @property nothrow
+    in
+    {
+        assert(this.uintLength > 0u);
+    }
+    out (ret)
+    {
+        assert(ret.length > 0u);
+    }
+    do
+    {
+        if (this.uintLength == 0u) return [ 0x00u ];
+        ubyte[] ret;
+        ret.length = this.uintLength * 4u;
+        size_t u = 0u;
+        while (u < this.uintLength)
+        {
+            *cast(uint*) &(ret[(u << 2)]) = this.peekUint(u);
+            u++;
+        }
+
+        version (BigEndian)
+        {
+            size_t startOfNonPadding = 0u;
+            while (startOfNonPadding < ret.length && ret[startOfNonPadding] == 0x00u)
+                startOfNonPadding++;
+            ret = ret[startOfNonPadding .. $];
+        }
+        else version (LittleEndian)
+        {
+            size_t startOfNonPadding = ret.length - 1;
+            while (startOfNonPadding > 0u && ret[startOfNonPadding] == 0x00u)
+                startOfNonPadding--;
+            ret.length = startOfNonPadding + 1u;
+        }
+        else static assert(0, "Undetermined endianness! Cannot compile!");
+        return ret;
+    }
+
+    @system
+    unittest
+    {
+        assert(BigUint(cast(ulong) 0u).toBytes == [ 0x00u ]);
+        assert(BigUint(cast(ulong) 1u).toBytes == [ 0x01u ]);
+        assert(BigUint(cast(ulong) (ushort.max)).toBytes == [ 0xFFu, 0xFFu ]);
+
+        version (BigEndian)
+        {
+            assert(BigUint(cast(ulong) (ushort.max + 1)).toBytes == [ 0x01u, 0x00u, 0x00u ]);
+        }
+        else version (LittleEndian)
+        {
+            assert(BigUint(cast(ulong) (ushort.max + 1)).toBytes == [ 0x00u, 0x00u, 0x01u ]);
+        }
+    }
+
     // the extra bytes are added to the start of the string
     char [] toDecimalString(int frontExtraBytes) const pure nothrow
     {
