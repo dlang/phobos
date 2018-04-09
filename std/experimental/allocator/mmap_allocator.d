@@ -17,7 +17,7 @@ managed by fine-granular allocators.
 struct MmapAllocator
 {
     /// The one shared instance.
-    static shared MmapAllocator instance;
+    static shared const MmapAllocator instance;
 
     /**
     Alignment is page-size and hardcoded to 4096 (even though on certain systems
@@ -28,24 +28,23 @@ struct MmapAllocator
     version(Posix)
     {
         /// Allocator API.
-        nothrow @nogc @safe
-        void[] allocate(size_t bytes) shared
+        pure nothrow @nogc @safe
+        void[] allocate(size_t bytes) shared const
         {
-            import core.sys.posix.sys.mman : mmap, MAP_ANON, PROT_READ,
+            import core.sys.posix.sys.mman : MAP_ANON, PROT_READ,
                 PROT_WRITE, MAP_PRIVATE, MAP_FAILED;
             if (!bytes) return null;
-            auto p = (() @trusted => mmap(null, bytes, PROT_READ | PROT_WRITE,
+            auto p = (() @trusted => pureMmap(null, bytes, PROT_READ | PROT_WRITE,
                 MAP_PRIVATE | MAP_ANON, -1, 0))();
             if (p is MAP_FAILED) return null;
             return (() @trusted => p[0 .. bytes])();
         }
 
         /// Ditto
-        nothrow @nogc
-        bool deallocate(void[] b) shared
+        pure nothrow @nogc
+        bool deallocate(void[] b) shared const
         {
-            import core.sys.posix.sys.mman : munmap;
-            if (b.ptr) munmap(b.ptr, b.length) == 0 || assert(0);
+            if (b.ptr) pureMunmap(b.ptr, b.length) == 0 || assert(0);
             return true;
         }
     }
@@ -55,8 +54,8 @@ struct MmapAllocator
             PAGE_READWRITE, MEM_RELEASE;
 
         /// Allocator API.
-        nothrow @nogc @safe
-        void[] allocate(size_t bytes) shared
+        pure nothrow @nogc @safe
+        void[] allocate(size_t bytes) shared const
         {
             if (!bytes) return null;
             auto p = (() @trusted => VirtualAlloc(null, bytes, MEM_COMMIT, PAGE_READWRITE))();
@@ -66,15 +65,48 @@ struct MmapAllocator
         }
 
         /// Ditto
-        nothrow @nogc
-        bool deallocate(void[] b) shared
+        pure nothrow @nogc
+        bool deallocate(void[] b) shared const
         {
             return b.ptr is null || VirtualFree(b.ptr, 0, MEM_RELEASE) != 0;
         }
     }
 }
 
-nothrow @safe @nogc unittest
+extern (C) private @system @nogc nothrow
+{
+    ref int fakePureErrnoImpl()
+    {
+        import core.stdc.errno : errno;
+        return errno();
+    }
+}
+
+extern (C) private pure @system @nogc nothrow
+{
+    public import core.sys.posix.sys.types : off_t;
+    pragma(mangle, "fakePureErrnoImpl") ref int fakePureErrno();
+    pragma(mangle, "mmap") void* fakePureMmap(void*, size_t, int, int, int, off_t);
+    pragma(mangle, "munmap") int fakePureMunmap(void*, size_t);
+}
+
+private void* pureMmap(void* a, size_t b, int c, int d, int e, off_t f) @trusted pure @nogc nothrow
+{
+    const errnosave = fakePureErrno();
+    void* ret = fakePureMmap(a, b, c, d, e, f);
+    fakePureErrno() = errnosave;
+    return ret;
+}
+
+private int pureMunmap(void* a, size_t b) @trusted pure @nogc nothrow
+{
+    const errnosave = fakePureErrno();
+    const ret = fakePureMunmap(a, b);
+    fakePureErrno() = errnosave;
+    return ret;
+}
+
+pure nothrow @safe @nogc unittest
 {
     alias alloc = MmapAllocator.instance;
     auto p = alloc.allocate(100);
