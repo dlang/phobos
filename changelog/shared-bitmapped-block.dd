@@ -1,0 +1,7 @@
+Added the `SharedBitmappedBlock`, as the thread-safe version of the regular `BitmappedBlock`.
+
+The limitation of the new $(REF SharedBitmappedBlock, std,experimental,allocator,building_blocks,bitmapped_block)
+implementation is that the shared version can only allocate
+at most one block per allocation. This however allows for greater performance, because
+the synchronization is done at a single block level, whereas for multiple blocks the whole
+bit array should have been synchronized by means of wide locking.
