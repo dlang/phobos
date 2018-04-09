@@ -14,7 +14,7 @@ Guides:
 There are many articles available that can bolster understanding ranges:
 
 $(UL
-    $(LI Ali Çehreli's $(HTTP ddili.org/ders/d.en/ranges.html, tutorial on _ranges)
+    $(LI Ali Çehreli's $(HTTP ddili.org/ders/d.en/ranges.html, tutorial on ranges)
         for the basics of working with and creating range-based code.)
     $(LI Jonathan M. Davis $(LINK2 http://dconf.org/2015/talks/davis.html, $(I Introduction to Ranges))
         talk at DConf 2015 a vivid introduction from its core constructs to practical advice.)
@@ -22,7 +22,7 @@ $(UL
         for an interactive introduction.)
     $(LI H. S. Teoh's $(LINK2 http://wiki.dlang.org/Component_programming_with_ranges, tutorial on
         component programming with ranges) for a real-world showcase of the influence
-        of _range-based programming on complex algorithms.)
+        of range-based programming on complex algorithms.)
     $(LI Andrei Alexandrescu's article
         $(LINK2 http://www.informit.com/articles/printerfriendly.aspx?p=1407357$(AMP)rll=1,
         $(I On Iteration)) for conceptual aspect of ranges and the motivation
@@ -33,23 +33,23 @@ Submodules:
 
 This module has two submodules:
 
-The $(MREF std, _range, primitives) submodule
-provides basic _range functionality. It defines several templates for testing
-whether a given object is a _range, what kind of _range it is, and provides
-some common _range operations.
+The $(MREF std, range, primitives) submodule
+provides basic range functionality. It defines several templates for testing
+whether a given object is a range, what kind of range it is, and provides
+some common range operations.
 
-The $(MREF std, _range, interfaces) submodule
+The $(MREF std, range, interfaces) submodule
 provides object-based interfaces for working with ranges via runtime
 polymorphism.
 
-The remainder of this module provides a rich set of _range creation and
+The remainder of this module provides a rich set of range creation and
 composition templates that let you construct new ranges out of existing ranges:
 
 
 $(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE ,
     $(TR $(TD $(LREF chain))
-        $(TD Concatenates several ranges into a single _range.
+        $(TD Concatenates several ranges into a single range.
     ))
     $(TR $(TD $(LREF choose))
         $(TD Chooses one of two ranges at runtime based on a boolean condition.
@@ -58,151 +58,151 @@ $(BOOKTABLE ,
         $(TD Chooses one of several ranges at runtime based on an index.
     ))
     $(TR $(TD $(LREF chunks))
-        $(TD Creates a _range that returns fixed-size chunks of the original
-        _range.
+        $(TD Creates a range that returns fixed-size chunks of the original
+        range.
     ))
     $(TR $(TD $(LREF cycle))
-        $(TD Creates an infinite _range that repeats the given forward _range
+        $(TD Creates an infinite range that repeats the given forward range
         indefinitely. Good for implementing circular buffers.
     ))
     $(TR $(TD $(LREF drop))
-        $(TD Creates the _range that results from discarding the first $(I n)
-        elements from the given _range.
+        $(TD Creates the range that results from discarding the first $(I n)
+        elements from the given range.
     ))
     $(TR $(TD $(LREF dropBack))
-        $(TD Creates the _range that results from discarding the last $(I n)
-        elements from the given _range.
+        $(TD Creates the range that results from discarding the last $(I n)
+        elements from the given range.
     ))
     $(TR $(TD $(LREF dropExactly))
-        $(TD Creates the _range that results from discarding exactly $(I n)
-        of the first elements from the given _range.
+        $(TD Creates the range that results from discarding exactly $(I n)
+        of the first elements from the given range.
     ))
     $(TR $(TD $(LREF dropBackExactly))
-        $(TD Creates the _range that results from discarding exactly $(I n)
-        of the last elements from the given _range.
+        $(TD Creates the range that results from discarding exactly $(I n)
+        of the last elements from the given range.
     ))
     $(TR $(TD $(LREF dropOne))
-        $(TD Creates the _range that results from discarding
-        the first element from the given _range.
+        $(TD Creates the range that results from discarding
+        the first element from the given range.
     ))
     $(TR $(TD $(D $(LREF dropBackOne)))
-        $(TD Creates the _range that results from discarding
-        the last element from the given _range.
+        $(TD Creates the range that results from discarding
+        the last element from the given range.
     ))
     $(TR $(TD $(LREF enumerate))
-        $(TD Iterates a _range with an attached index variable.
+        $(TD Iterates a range with an attached index variable.
     ))
     $(TR $(TD $(LREF evenChunks))
-        $(TD Creates a _range that returns a number of chunks of
-        approximately equal length from the original _range.
+        $(TD Creates a range that returns a number of chunks of
+        approximately equal length from the original range.
     ))
     $(TR $(TD $(LREF frontTransversal))
-        $(TD Creates a _range that iterates over the first elements of the
+        $(TD Creates a range that iterates over the first elements of the
         given ranges.
     ))
     $(TR $(TD $(LREF generate))
-        $(TD Creates a _range by successive calls to a given function. This
+        $(TD Creates a range by successive calls to a given function. This
         allows to create ranges as a single delegate.
     ))
     $(TR $(TD $(LREF indexed))
-        $(TD Creates a _range that offers a view of a given _range as though
-        its elements were reordered according to a given _range of indices.
+        $(TD Creates a range that offers a view of a given range as though
+        its elements were reordered according to a given range of indices.
     ))
     $(TR $(TD $(LREF iota))
-        $(TD Creates a _range consisting of numbers between a starting point
+        $(TD Creates a range consisting of numbers between a starting point
         and ending point, spaced apart by a given interval.
     ))
     $(TR $(TD $(LREF lockstep))
-        $(TD Iterates $(I n) _ranges in lockstep, for use in a `foreach`
+        $(TD Iterates $(I n) ranges in lockstep, for use in a `foreach`
         loop. Similar to `zip`, except that `lockstep` is designed
         especially for `foreach` loops.
     ))
     $(TR $(TD $(LREF nullSink))
-        $(TD An output _range that discards the data it receives.
+        $(TD An output range that discards the data it receives.
     ))
     $(TR $(TD $(LREF only))
-        $(TD Creates a _range that iterates over the given arguments.
+        $(TD Creates a range that iterates over the given arguments.
     ))
     $(TR $(TD $(LREF padLeft))
-        $(TD Pads a _range to a specified length by adding a given element to
-        the front of the _range. Is lazy if the _range has a known length.
+        $(TD Pads a range to a specified length by adding a given element to
+        the front of the range. Is lazy if the range has a known length.
     ))
     $(TR $(TD $(LREF padRight))
-        $(TD Lazily pads a _range to a specified length by adding a given element to
-        the back of the _range.
+        $(TD Lazily pads a range to a specified length by adding a given element to
+        the back of the range.
     ))
     $(TR $(TD $(LREF radial))
-        $(TD Given a random-access _range and a starting point, creates a
-        _range that alternately returns the next left and next right element to
+        $(TD Given a random-access range and a starting point, creates a
+        range that alternately returns the next left and next right element to
         the starting point.
     ))
     $(TR $(TD $(LREF recurrence))
-        $(TD Creates a forward _range whose values are defined by a
+        $(TD Creates a forward range whose values are defined by a
         mathematical recurrence relation.
     ))
     $(TR $(TD $(LREF refRange))
-        $(TD Pass a _range by reference. Both the original _range and the RefRange
+        $(TD Pass a range by reference. Both the original range and the RefRange
         will always have the exact same elements.
         Any operation done on one will affect the other.
     ))
     $(TR $(TD $(LREF repeat))
-        $(TD Creates a _range that consists of a single element repeated $(I n)
-        times, or an infinite _range repeating that element indefinitely.
+        $(TD Creates a range that consists of a single element repeated $(I n)
+        times, or an infinite range repeating that element indefinitely.
     ))
     $(TR $(TD $(LREF retro))
-        $(TD Iterates a bidirectional _range backwards.
+        $(TD Iterates a bidirectional range backwards.
     ))
     $(TR $(TD $(LREF roundRobin))
-        $(TD Given $(I n) ranges, creates a new _range that return the $(I n)
-        first elements of each _range, in turn, then the second element of each
-        _range, and so on, in a round-robin fashion.
+        $(TD Given $(I n) ranges, creates a new range that return the $(I n)
+        first elements of each range, in turn, then the second element of each
+        range, and so on, in a round-robin fashion.
     ))
     $(TR $(TD $(LREF sequence))
-        $(TD Similar to `recurrence`, except that a random-access _range is
+        $(TD Similar to `recurrence`, except that a random-access range is
         created.
     ))
     $(TR $(TD $(D $(LREF slide)))
-        $(TD Creates a _range that returns a fixed-size sliding window
-        over the original _range. Unlike chunks,
+        $(TD Creates a range that returns a fixed-size sliding window
+        over the original range. Unlike chunks,
         it advances a configurable number of items at a time,
         not one chunk at a time.
     ))
     $(TR $(TD $(LREF stride))
-        $(TD Iterates a _range with stride $(I n).
+        $(TD Iterates a range with stride $(I n).
     ))
     $(TR $(TD $(LREF tail))
-        $(TD Return a _range advanced to within `n` elements of the end of
-        the given _range.
+        $(TD Return a range advanced to within `n` elements of the end of
+        the given range.
     ))
     $(TR $(TD $(LREF take))
-        $(TD Creates a sub-_range consisting of only up to the first $(I n)
-        elements of the given _range.
+        $(TD Creates a sub-range consisting of only up to the first $(I n)
+        elements of the given range.
     ))
     $(TR $(TD $(LREF takeExactly))
-        $(TD Like `take`, but assumes the given _range actually has $(I n)
+        $(TD Like `take`, but assumes the given range actually has $(I n)
         elements, and therefore also defines the `length` property.
     ))
     $(TR $(TD $(LREF takeNone))
-        $(TD Creates a random-access _range consisting of zero elements of the
-        given _range.
+        $(TD Creates a random-access range consisting of zero elements of the
+        given range.
     ))
     $(TR $(TD $(LREF takeOne))
-        $(TD Creates a random-access _range consisting of exactly the first
-        element of the given _range.
+        $(TD Creates a random-access range consisting of exactly the first
+        element of the given range.
     ))
     $(TR $(TD $(LREF tee))
-        $(TD Creates a _range that wraps a given _range, forwarding along
+        $(TD Creates a range that wraps a given range, forwarding along
         its elements while also calling a provided function with each element.
     ))
     $(TR $(TD $(LREF transposed))
-        $(TD Transposes a _range of ranges.
+        $(TD Transposes a range of ranges.
     ))
     $(TR $(TD $(LREF transversal))
-        $(TD Creates a _range that iterates over the $(I n)'th elements of the
+        $(TD Creates a range that iterates over the $(I n)'th elements of the
         given random-access ranges.
     ))
     $(TR $(TD $(LREF zip))
-        $(TD Given $(I n) _ranges, creates a _range that successively returns a
+        $(TD Given $(I n) ranges, creates a range that successively returns a
         tuple of all the first elements, a tuple of all the second elements,
         etc.
     ))
@@ -212,12 +212,12 @@ Sortedness:
 
 Ranges whose elements are sorted afford better efficiency with certain
 operations. For this, the $(LREF assumeSorted) function can be used to
-construct a $(LREF SortedRange) from a pre-sorted _range. The $(REF
+construct a $(LREF SortedRange) from a pre-sorted range. The $(REF
 sort, std, algorithm, sorting) function also conveniently
 returns a $(LREF SortedRange). $(LREF SortedRange) objects provide some additional
-_range operations that take advantage of the fact that the _range is sorted.
+range operations that take advantage of the fact that the range is sorted.
 
-Source: $(PHOBOSSRC std/_range/_package.d)
+Source: $(PHOBOSSRC std/range/_package.d)
 
 License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
@@ -2906,23 +2906,23 @@ pure @safe nothrow unittest
 }
 
 /++
- + Return a _range advanced to within `_n` elements of the end of
- + `_range`.
+ + Return a range advanced to within `_n` elements of the end of
+ + `range`.
  +
- + Intended as the _range equivalent of the Unix
+ + Intended as the range equivalent of the Unix
  + $(HTTP en.wikipedia.org/wiki/Tail_%28Unix%29, _tail) utility. When the length
- + of `_range` is less than or equal to `_n`, `_range` is returned
+ + of `range` is less than or equal to `_n`, `range` is returned
  + as-is.
  +
  + Completes in $(BIGOH 1) steps for ranges that support slicing and have
- + length. Completes in $(BIGOH _range.length) time for all other ranges.
+ + length. Completes in $(BIGOH range.length) time for all other ranges.
  +
  + Params:
- +    range = _range to get _tail of
+ +    range = range to get _tail of
  +    n = maximum number of elements to include in _tail
  +
  + Returns:
- +    Returns the _tail of `_range` augmented with length information
+ +    Returns the _tail of `range` augmented with length information
  +/
 auto tail(Range)(Range range, size_t n)
 if (isInputRange!Range && !isInfinite!Range &&
@@ -3021,13 +3021,13 @@ pure @safe nothrow @nogc unittest
 
 /++
     Convenience function which calls
-    $(REF popFrontN, std, _range, primitives)`(range, n)` and returns `range`.
+    $(REF popFrontN, std, range, primitives)`(range, n)` and returns `range`.
     `drop` makes it easier to pop elements from a range
     and then pass it to another function within a single expression,
     whereas `popFrontN` would require multiple statements.
 
     `dropBack` provides the same functionality but instead calls
-    $(REF popBackN, std, _range, primitives)`(range, n)`
+    $(REF popBackN, std, range, primitives)`(range, n)`
 
     Note: `drop` and `dropBack` will only pop $(I up to)
     `n` elements but will stop if the range is empty first.
@@ -3041,7 +3041,7 @@ pure @safe nothrow @nogc unittest
         `range` with up to `n` elements dropped
 
     See_Also:
-        $(REF popFront, std, _range, primitives), $(REF popBackN, std, _range, primitives)
+        $(REF popFront, std, range, primitives), $(REF popBackN, std, range, primitives)
   +/
 R drop(R)(R range, size_t n)
 if (isInputRange!R)
@@ -3130,8 +3130,8 @@ if (isBidirectionalRange!R)
         `range` with `n` elements dropped
 
     See_Also:
-        $(REF popFrontExcatly, std, _range, primitives),
-        $(REF popBackExcatly, std, _range, primitives)
+        $(REF popFrontExcatly, std, range, primitives),
+        $(REF popBackExcatly, std, range, primitives)
 +/
 R dropExactly(R)(R range, size_t n)
 if (isInputRange!R)
@@ -4027,7 +4027,7 @@ private alias lengthType(R) = typeof(R.init.length.init);
    `foreach` iterations.
 
     Params:
-        sp = controls what `zip` will do if the _ranges are different lengths
+        sp = controls what `zip` will do if the ranges are different lengths
         ranges = the ranges to zip together
     Returns:
         At minimum, an input range. `Zip` offers the lowest range facilities
@@ -4036,7 +4036,7 @@ private alias lengthType(R) = typeof(R.init.length.init);
         it. Due to this, `Zip` is extremely powerful because it allows manipulating
         several ranges in lockstep.
     Throws:
-        An `Exception` if all of the _ranges are not the same length and
+        An `Exception` if all of the ranges are not the same length and
         `sp` is set to `StoppingPolicy.requireSameLength`.
 
     Limitations: The `@nogc` and `nothrow` attributes cannot be inferred for

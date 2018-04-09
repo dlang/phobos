@@ -116,7 +116,7 @@ template all(alias pred = "a")
 {
     /++
     Returns `true` if and only if $(I _all) values `v` found in the
-    input _range `range` satisfy the predicate `pred`.
+    input range `range` satisfy the predicate `pred`.
     Performs (at most) $(BIGOH range.length) evaluations of `pred`.
      +/
     bool all(Range)(Range range)
@@ -163,7 +163,7 @@ template any(alias pred = "a")
 {
     /++
     Returns `true` if and only if $(I _any) value `v` found in the
-    input _range `range` satisfies the predicate `pred`.
+    input range `range` satisfies the predicate `pred`.
     Performs (at most) $(BIGOH range.length) evaluations of `pred`.
      +/
     bool any(Range)(Range range)
@@ -4525,7 +4525,7 @@ This is similar to `takeWhile` in other languages.
 
 Params:
     pred = Predicate to determine when to stop.
-    range = The $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
+    range = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
     to iterate over.
     sentinel = The element to stop at.
     openRight = Determines whether the element for which the given predicate is
@@ -4533,10 +4533,10 @@ Params:
         not (`Yes.openRight`).
 
 Returns:
-    An $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives) that
+    An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) that
     iterates over the original range's elements, but ends when the specified
     predicate becomes true. If the original range is a
-    $(REF_ALTTEXT forward _range, isForwardRange, std,_range,primitives) or
+    $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) or
     higher, this range will be a forward range.
  */
 Until!(pred, Range, Sentinel)

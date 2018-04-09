@@ -1836,7 +1836,7 @@ FormatSpec!Char singleSpec(Char)(Char[] fmt)
  * Otherwise, are formatted just as their type name.
  *
  * Params:
- *     w = The $(REF_ALTTEXT output range, isOutputRange, std,_range,primitives) to write to.
+ *     w = The $(REF_ALTTEXT output range, isOutputRange, std,range,primitives) to write to.
  *     val = The value to write.
  *     f = The $(REF FormatSpec, std, format) defining how to write the value.
  */
