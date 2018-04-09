@@ -119,36 +119,36 @@ if (fun.length >= 1)
 }
 
 /++
-`cache` eagerly evaluates $(REF_ALTTEXT front, front, std,_range,primitives) of `range`
-on each construction or call to $(REF_ALTTEXT popFront, popFront, std,_range,primitives),
+`cache` eagerly evaluates $(REF_ALTTEXT front, front, std,range,primitives) of `range`
+on each construction or call to $(REF_ALTTEXT popFront, popFront, std,range,primitives),
 to store the result in a _cache.
-The result is then directly returned when $(REF_ALTTEXT front, front, std,_range,primitives) is called,
+The result is then directly returned when $(REF_ALTTEXT front, front, std,range,primitives) is called,
 rather than re-evaluated.
 
 This can be a useful function to place in a chain, after functions
 that have expensive evaluation, as a lazy alternative to $(REF array, std,array).
 In particular, it can be placed after a call to $(LREF map), or before a call
-$(REF filter, std,_range) or $(REF tee, std,_range)
+$(REF filter, std,range) or $(REF tee, std,range)
 
 `cache` may provide
-$(REF_ALTTEXT bidirectional _range, isBidirectionalRange, std,_range,primitives)
+$(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives)
 iteration if needed, but since this comes at an increased cost, it must be explicitly requested via the
 call to `cacheBidirectional`. Furthermore, a bidirectional _cache will
 evaluate the "center" element twice, when there is only one element left in
-the _range.
+the range.
 
 `cache` does not provide random access primitives,
 as `cache` would be unable to _cache the random accesses.
 If `Range` provides slicing primitives,
 then `cache` will provide the same slicing primitives,
-but `hasSlicing!Cache` will not yield true (as the $(REF hasSlicing, std,_range,primitives)
+but `hasSlicing!Cache` will not yield true (as the $(REF hasSlicing, std,range,primitives)
 trait also checks for random access).
 
 Params:
-    range = an $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
+    range = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
 
 Returns:
-    An $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives) with the cached values of _range
+    An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) with the cached values of range
 +/
 auto cache(Range)(Range range)
 if (isInputRange!Range)
@@ -207,14 +207,14 @@ if (isBidirectionalRange!Range)
 
 /++
 Tip: `cache` is eager when evaluating elements. If calling front on the
-underlying _range has a side effect, it will be observable before calling
-front on the actual cached _range.
+underlying range has a side effect, it will be observable before calling
+front on the actual cached range.
 
-Furthermore, care should be taken composing `cache` with $(REF take, std,_range).
+Furthermore, care should be taken composing `cache` with $(REF take, std,range).
 By placing `take` before `cache`, then `cache` will be "aware"
-of when the _range ends, and correctly stop caching elements when needed.
+of when the range ends, and correctly stop caching elements when needed.
 If calling front has no side effect though, placing `take` after `cache`
-may yield a faster _range.
+may yield a faster range.
 
 Either way, the resulting ranges will be equivalent, but maybe not at the
 same cost or side effects.
@@ -1890,7 +1890,7 @@ if (isForwardRange!Range)
  *
  * Equivalence is defined by the predicate `pred`, which can be either
  * binary, which is passed to $(REF binaryFun, std,functional), or unary, which is
- * passed to $(REF unaryFun, std,functional). In the binary form, two _range elements
+ * passed to $(REF unaryFun, std,functional). In the binary form, two range elements
  * `a` and `b` are considered equivalent if `pred(a,b)` is true. In
  * unary form, two elements are considered equivalent if `pred(a) == pred(b)`
  * is true.

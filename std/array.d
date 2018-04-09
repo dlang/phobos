@@ -454,7 +454,7 @@ Construct a range iterating over an associative array by key/value tuples.
 Params:
     aa = The associative array to iterate over.
 
-Returns: A $(REF_ALTTEXT forward range, isForwardRange, std,_range,primitives)
+Returns: A $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
 of Tuple's of key and value pairs from the given associative array. The members
 of each pair can be accessed by name (`.key` and `.value`). or by integer
 index (0 and 1 respectively).
@@ -1482,7 +1482,7 @@ When no delimiter is provided, strings are split into an array of words,
 using whitespace as delimiter.
 Runs of whitespace are merged together (no empty words are produced).
 
-The `range` must be a $(REF_ALTTEXT forward _range, isForwardRange, std,_range,primitives).
+The `range` must be a $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives).
 The separator can be a value of the same type as the elements in `range`
 or it can be another forward `range`.
 

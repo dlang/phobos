@@ -61,7 +61,7 @@ import std.typecons : No;
 // cartesianProduct
 /**
 Lazily computes the Cartesian product of two or more ranges. The product is a
-_range of tuples of elements from each respective range.
+range of tuples of elements from each respective range.
 
 The conditions for the two-range case are as follows:
 
@@ -69,8 +69,8 @@ If both ranges are finite, then one must be (at least) a
 $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) and the
 other an $(REF_ALTTEXT input range, isInputRange, std,range,primitives).
 
-If one _range is infinite and the other finite, then the finite _range must
-be a forward _range, and the infinite range can be an input _range.
+If one range is infinite and the other finite, then the finite range must
+be a forward range, and the infinite range can be an input range.
 
 If both ranges are infinite, then both must be forward ranges.
 

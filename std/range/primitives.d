@@ -2,69 +2,69 @@
 This module is a submodule of $(MREF std, range).
 
 It provides basic range functionality by defining several templates for testing
-whether a given object is a _range, and what kind of _range it is:
+whether a given object is a range, and what kind of range it is:
 
 $(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE ,
     $(TR $(TD $(LREF isInputRange))
-        $(TD Tests if something is an $(I input _range), defined to be
+        $(TD Tests if something is an $(I input range), defined to be
         something from which one can sequentially read data using the
         primitives `front`, `popFront`, and `empty`.
     ))
     $(TR $(TD $(LREF isOutputRange))
-        $(TD Tests if something is an $(I output _range), defined to be
+        $(TD Tests if something is an $(I output range), defined to be
         something to which one can sequentially write data using the
         $(LREF put) primitive.
     ))
     $(TR $(TD $(LREF isForwardRange))
-        $(TD Tests if something is a $(I forward _range), defined to be an
-        input _range with the additional capability that one can save one's
+        $(TD Tests if something is a $(I forward range), defined to be an
+        input range with the additional capability that one can save one's
         current position with the `save` primitive, thus allowing one to
-        iterate over the same _range multiple times.
+        iterate over the same range multiple times.
     ))
     $(TR $(TD $(LREF isBidirectionalRange))
-        $(TD Tests if something is a $(I bidirectional _range), that is, a
-        forward _range that allows reverse traversal using the primitives $(D
+        $(TD Tests if something is a $(I bidirectional range), that is, a
+        forward range that allows reverse traversal using the primitives $(D
         back) and `popBack`.
     ))
     $(TR $(TD $(LREF isRandomAccessRange))
-        $(TD Tests if something is a $(I random access _range), which is a
-        bidirectional _range that also supports the array subscripting
+        $(TD Tests if something is a $(I random access range), which is a
+        bidirectional range that also supports the array subscripting
         operation via the primitive `opIndex`.
     ))
 )
 
-It also provides number of templates that test for various _range capabilities:
+It also provides number of templates that test for various range capabilities:
 
 $(BOOKTABLE ,
     $(TR $(TD $(LREF hasMobileElements))
-        $(TD Tests if a given _range's elements can be moved around using the
+        $(TD Tests if a given range's elements can be moved around using the
         primitives `moveFront`, `moveBack`, or `moveAt`.
     ))
     $(TR $(TD $(LREF ElementType))
-        $(TD Returns the element type of a given _range.
+        $(TD Returns the element type of a given range.
     ))
     $(TR $(TD $(LREF ElementEncodingType))
-        $(TD Returns the encoding element type of a given _range.
+        $(TD Returns the encoding element type of a given range.
     ))
     $(TR $(TD $(LREF hasSwappableElements))
-        $(TD Tests if a _range is a forward _range with swappable elements.
+        $(TD Tests if a range is a forward range with swappable elements.
     ))
     $(TR $(TD $(LREF hasAssignableElements))
-        $(TD Tests if a _range is a forward _range with mutable elements.
+        $(TD Tests if a range is a forward range with mutable elements.
     ))
     $(TR $(TD $(LREF hasLvalueElements))
-        $(TD Tests if a _range is a forward _range with elements that can be
+        $(TD Tests if a range is a forward range with elements that can be
         passed by reference and have their address taken.
     ))
     $(TR $(TD $(LREF hasLength))
-        $(TD Tests if a given _range has the `length` attribute.
+        $(TD Tests if a given range has the `length` attribute.
     ))
     $(TR $(TD $(LREF isInfinite))
-        $(TD Tests if a given _range is an $(I infinite _range).
+        $(TD Tests if a given range is an $(I infinite range).
     ))
     $(TR $(TD $(LREF hasSlicing))
-        $(TD Tests if a given _range supports the array slicing operation $(D
+        $(TD Tests if a given range supports the array slicing operation $(D
         R[x .. y]).
     ))
 )
@@ -73,33 +73,33 @@ Finally, it includes some convenience functions for manipulating ranges:
 
 $(BOOKTABLE ,
     $(TR $(TD $(LREF popFrontN))
-        $(TD Advances a given _range by up to $(I n) elements.
+        $(TD Advances a given range by up to $(I n) elements.
     ))
     $(TR $(TD $(LREF popBackN))
-        $(TD Advances a given bidirectional _range from the right by up to
+        $(TD Advances a given bidirectional range from the right by up to
         $(I n) elements.
     ))
     $(TR $(TD $(LREF popFrontExactly))
-        $(TD Advances a given _range by up exactly $(I n) elements.
+        $(TD Advances a given range by up exactly $(I n) elements.
     ))
     $(TR $(TD $(LREF popBackExactly))
-        $(TD Advances a given bidirectional _range from the right by exactly
+        $(TD Advances a given bidirectional range from the right by exactly
         $(I n) elements.
     ))
     $(TR $(TD $(LREF moveFront))
-        $(TD Removes the front element of a _range.
+        $(TD Removes the front element of a range.
     ))
     $(TR $(TD $(LREF moveBack))
-        $(TD Removes the back element of a bidirectional _range.
+        $(TD Removes the back element of a bidirectional range.
     ))
     $(TR $(TD $(LREF moveAt))
-        $(TD Removes the $(I i)'th element of a random-access _range.
+        $(TD Removes the $(I i)'th element of a random-access range.
     ))
     $(TR $(TD $(LREF walkLength))
-        $(TD Computes the length of any _range in O(n) time.
+        $(TD Computes the length of any range in O(n) time.
     ))
     $(TR $(TD $(LREF put))
-        $(TD Outputs element `e` to a _range.
+        $(TD Outputs element `e` to a range.
     ))
 )
 

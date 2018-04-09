@@ -4475,7 +4475,7 @@ if (isValidArgsForTrie!(Key, Args))
         monotonically increasing function that maps `Key` to an integer.
 
         See_Also: $(REF sort, std,_algorithm),
-        $(REF SortedRange, std,_range),
+        $(REF SortedRange, std,range),
         $(REF setUnion, std,_algorithm).
     */
     auto buildTrie(Range)(Range range, Value filler=Value.init)

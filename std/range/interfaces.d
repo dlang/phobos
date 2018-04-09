@@ -5,7 +5,7 @@ The main $(MREF std, range) module provides template-based tools for working wit
 ranges, but sometimes an object-based interface for ranges is needed, such as
 when runtime polymorphism is required. For this purpose, this submodule
 provides a number of object and `interface` definitions that can be used to
-wrap around _range objects created by the $(MREF std, range) templates.
+wrap around range objects created by the $(MREF std, range) templates.
 
 $(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE ,
@@ -49,7 +49,7 @@ $(BOOKTABLE ,
     ))
     $(TR $(TD $(LREF InputRangeObject))
         $(TD Class that implements the `InputRange` interface and wraps the
-        input _range methods in virtual functions.
+        input range methods in virtual functions.
     ))
     $(TR $(TD $(LREF inputRangeObject))
         $(TD Convenience function for creating an `InputRangeObject`
