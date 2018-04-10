@@ -1804,22 +1804,34 @@ long rndtol(float x) @safe pure nothrow @nogc { return rndtol(cast(real) x); }
     assert(prndtol != null);
 }
 
-/*****************************************
- * Returns x rounded to a long value using the FE_TONEAREST rounding mode.
- * If the integer value of x is
- * greater than long.max, the result is
- * indeterminate.
+/**
+$(RED Deprecated. Please use $(LREF round) instead.)
+
+Returns `x` rounded to a `long` value using the `FE_TONEAREST` rounding mode.
+If the integer value of `x` is greater than `long.max`, the result is
+indeterminate.
+
+Only works with the Digital Mars C Runtime.
+
+Params:
+    x = the number to round
+Returns:
+    `x` rounded to an integer value
  */
+deprecated("rndtonl is to be removed by 2.089. Please use round instead")
 extern (C) real rndtonl(real x);
 
-// issue 18693
-//@safe unittest
-//{
-//    assert(rndtol(1.0) == 1.0);
-//    assert(rndtol(1.2) == 1.0);
-//    assert(rndtol(1.7) == 2.0);
-//    assert(rndtol(1.0001) == 1.0);
-//}
+///
+deprecated @system unittest
+{
+    version(CRuntime_DigitalMars)
+    {
+        assert(rndtonl(1.0) is -real.nan);
+        assert(rndtonl(1.2) is -real.nan);
+        assert(rndtonl(1.7) is -real.nan);
+        assert(rndtonl(1.0001) is -real.nan);
+    }
+}
 
 /***************************************
  * Compute square root of x.
