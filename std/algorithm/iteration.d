@@ -1706,7 +1706,7 @@ if (isInputRange!Range && !isForwardRange!Range)
 }
 
 // Inner range
-struct ChunkByGroupImpl(alias eq, Range, Impl)
+private struct ChunkByGroupImpl(alias eq, Range, Impl)
 {
     import std.typecons : RefCounted;
 
