@@ -1888,7 +1888,7 @@ if (isForwardRange!Range)
 }
 
 // Issue 18751
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : chunkBy;
