@@ -1043,15 +1043,15 @@ public:
         version (BigEndian)
         {
             // This loop adds one to an arbitrary length array of bytes.
-            for (size_t i = value.length - 1; i < 0u; i--)
+            foreach_reverse (ref b; value)
             {
-                if (value[i] != 0xFFu)
+                if (b != 0xFFu)
                 {
-                    value[i]++;
+                    b++;
                     break;
                 }
 
-                value[i] = 0x00u;
+                b = 0x00u;
 
                 // If the array of bytes is maxed out, append a next byte set to one.
                 if (i == (value.length - 1))
@@ -1064,15 +1064,15 @@ public:
         else version (LittleEndian)
         {
             // This loop adds one to an arbitrary length array of bytes.
-            for (size_t i = 0u; i < value.length; i++)
+            foreach (size_t i, ref b; value)
             {
-                if (value[i] != 0xFFu)
+                if (b != 0xFFu)
                 {
-                    value[i]++;
+                    b++;
                     break;
                 }
 
-                value[i] = 0x00u;
+                b = 0x00u;
 
                 // If the array of bytes is maxed out, append a next byte set to one.
                 if (i == (value.length - 1))
@@ -1098,6 +1098,10 @@ public:
         ubyte[] c = [ 0xFDu, 0xFFu, 0xFFu ];
         incrementBytes(c);
         assert(c == [ 0xFEu, 0xFFu, 0xFFu ]);
+
+        ubyte[] d = [];
+        incrementBytes(d);
+        assert(d == [ 0x01u ]);
     }
 
     /**
@@ -1107,20 +1111,20 @@ public:
     ubyte[] toBytes() const pure @system @property nothrow
     in
     {
-        assert(this.uintLength > 0u);
+        assert(this.uintLength > 0u, "A BigInt contained no underlying uints!");
     }
     out (ret)
     {
-        assert(ret.length > 0u);
+        assert(ret.length > 0u, "BigInt.toBytes returned zero bytes!");
     }
     do
     {
         ubyte[] ret = this.data.toBytes;
         if (this.sign)
         {
-            for (size_t u = 0u; u < ret.length; u++)
+            foreach (ref u; ret)
             {
-                ret[u] = cast(ubyte) (~ cast(int) ret[u]);
+                u = cast(ubyte) (~ cast(int) u);
             }
             BigInt.incrementBytes(ret);
         }
