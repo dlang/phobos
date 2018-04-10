@@ -442,8 +442,6 @@ private struct _Cache(R, bool bidir)
 }
 
 /**
-`auto map(Range)(Range r) if (isInputRange!(Unqual!Range));`
-
 Implements the homonym function (also known as `transform`) present
 in many languages of functional flavor. The call `map!(fun)(range)`
 returns a range of which elements are obtained by applying `fun(a)`
@@ -452,11 +450,6 @@ not changed. Evaluation is done lazily.
 
 Params:
     fun = one or more transformation functions
-    r = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
-
-Returns:
-    a range with each fun applied to all the elements. If there is more than one
-    fun, the element type will be `Tuple` containing one element for each fun.
 
 See_Also:
     $(HTTP en.wikipedia.org/wiki/Map_(higher-order_function), Map (higher-order function))
@@ -464,6 +457,13 @@ See_Also:
 template map(fun...)
 if (fun.length >= 1)
 {
+    /**
+    Params:
+        r = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+    Returns:
+        A range with each fun applied to all the elements. If there is more than one
+        fun, the element type will be `Tuple` containing one element for each fun.
+     */
     auto map(Range)(Range r) if (isInputRange!(Unqual!Range))
     {
         import std.meta : AliasSeq, staticMap;
@@ -861,7 +861,6 @@ Params:
     r = range or iterable over which each iterates
 
 See_Also: $(REF tee, std,range)
-
  */
 template each(alias pred = "a")
 {
@@ -898,6 +897,10 @@ private:
         (isForeachUnaryIterable!R || isForeachBinaryIterable!R);
 
 public:
+    /**
+    Params:
+        r = range or iterable over which each iterates
+     */
     void each(Range)(Range r)
     if (!isForeachIterable!Range && (
         isRangeIterable!Range ||
@@ -933,6 +936,10 @@ public:
         }
     }
 
+    /**
+    Params:
+        r = range or iterable over which each iterates
+     */
     void each(Iterable)(auto ref Iterable r)
     if (isForeachIterable!Iterable ||
         __traits(compiles, Parameters!(Parameters!(r.opApply))))
@@ -1083,15 +1090,12 @@ public:
 
 // filter
 /**
-`auto filter(Range)(Range rs) if (isInputRange!(Unqual!Range));`
-
-Implements the higher order _filter function. The predicate is passed to
+Implements the higher order filter function. The predicate is passed to
 $(REF unaryFun, std,functional), and can either accept a string, or any callable
 that can be executed via `pred(element)`.
 
 Params:
     predicate = Function to apply to each element of range
-    range = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of elements
 
 Returns:
     `filter!(predicate)(range)` returns a new range containing only elements `x` in `range` for
@@ -1103,6 +1107,14 @@ See_Also:
 template filter(alias predicate)
 if (is(typeof(unaryFun!predicate)))
 {
+    /**
+    Params:
+        range = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+        of elements
+    Returns:
+        A range containing only elements `x` in `range` for
+        which `predicate(x)` returns `true`.
+     */
     auto filter(Range)(Range range) if (isInputRange!(Unqual!Range))
     {
         return FilterResult!(unaryFun!predicate, Range)(range);
@@ -1301,8 +1313,6 @@ private struct FilterResult(alias pred, Range)
 }
 
 /**
- * `auto filterBidirectional(Range)(Range r) if (isBidirectionalRange!(Unqual!Range));`
- *
  * Similar to `filter`, except it defines a
  * $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives).
  * There is a speed disadvantage - the constructor spends time
@@ -1316,13 +1326,15 @@ private struct FilterResult(alias pred, Range)
  *
  * Params:
  *     pred = Function to apply to each element of range
- *     r = Bidirectional range of elements
- *
- * Returns:
- *     a new range containing only the elements in r for which pred returns `true`.
  */
 template filterBidirectional(alias pred)
 {
+    /**
+    Params:
+        r = Bidirectional range of elements
+    Returns:
+        A range containing only the elements in `r` for which `pred` returns `true`.
+     */
     auto filterBidirectional(Range)(Range r) if (isBidirectionalRange!(Unqual!Range))
     {
         return FilterBidiResult!(unaryFun!pred, Range)(r);
@@ -1410,6 +1422,7 @@ and can either accept a string, or any callable that can be executed via
 
 Params:
     pred = Binary predicate for determining equivalence of two elements.
+    R = The range type
     r = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to
         iterate over.
 
@@ -1492,7 +1505,7 @@ if (isInputRange!R)
         }
     }
 
-    ///
+    /// Returns: the front of the range
     @property auto ref front()
     {
         assert(!empty, "Attempting to fetch the front of an empty Group.");
@@ -3225,8 +3238,8 @@ result) is returned. The one-argument version `fold!(fun)(range)`
 works similarly, but it uses the first element of the range as the
 seed (the range must be non-empty).
 
-Returns:
-    the accumulated `result`
+Params:
+    fun = the predicate function(s) to apply to the elements
 
 See_Also:
     $(HTTP en.wikipedia.org/wiki/Fold_(higher-order_function), Fold (higher-order function))
@@ -3241,6 +3254,13 @@ See_Also:
 template fold(fun...)
 if (fun.length >= 1)
 {
+    /**
+    Params:
+        r = the $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to fold
+        seed = the initial value of the accumulator
+    Returns:
+        the accumulated `result`
+     */
     auto fold(R, S...)(R r, S seed)
     {
         static if (S.length < 2)
@@ -4727,6 +4747,8 @@ Params:
     r = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
     value = a single value which can be substituted in $(BIGOH 1)
     substs = a set of replacements/substitutions
+    pred = the equality function to test if element(s) are equal to
+    a substitution
 
 Returns: a range with the substitutions replaced.
 
@@ -5602,6 +5624,7 @@ is empty. However, the second overload will return `seed` on empty ranges.
 This function is $(BIGOH r.length).
 
 Params:
+    T = The type of the return value.
     r = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
     seed = For user defined types. Should be equivalent to `0`.
 
@@ -5872,9 +5895,13 @@ private struct UniqResult(alias pred, Range)
 Lazily computes all _permutations of `r` using $(HTTP
 en.wikipedia.org/wiki/Heap%27s_algorithm, Heap's algorithm).
 
+Params:
+    Range = the range type
+    r = the $(REF_ALTTEXT random access range, isRandomAccessRange, std,range,primitives)
+    to find the permutations for.
 Returns:
-A $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
-the elements of which are an $(REF indexed, std,range) view into `r`.
+    A $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
+    of elements of which are an $(REF indexed, std,range) view into `r`.
 
 See_Also:
 $(REF nextPermutation, std,algorithm,sorting).
@@ -5905,13 +5932,13 @@ if (isRandomAccessRange!Range && hasLength!Range)
         _empty = r.length == 0;
     }
 
-    ///
+    /// Returns: `true` if the range is empty, `false` otherwise.
     @property bool empty() const pure nothrow @safe @nogc
     {
         return _empty;
     }
 
-    ///
+    /// Returns: the front of the range
     @property auto front()
     {
         import std.range : indexed;
