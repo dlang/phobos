@@ -1726,7 +1726,7 @@ else
     Returns:
         a value based on a combination of pid, tid, and time, mixed.
     +/
-    private ulong fallbackSeed()()
+    private ulong bootstrapSeed()()
     {
         ulong result = void;
         enum ulong m = 0xc6a4_a793_5bd1_e995UL; // MurmurHash2_64A constant.
@@ -1749,11 +1749,13 @@ else
     /+
     Produces a suitable initial seed and gamma for a SplitMix engine.
     First tries to draw on system entropy. If that fails makes use of
-    `fallbackSeed`.
+    `bootstrapSeed`.
 
     Params:
         outSeed = write to this the initial seed value
         outGamma = write to this the gamma value
+    See_Also:
+        globalSplitMix
     +/
     private void oneTimeInitSeedAndGamma()(scope ref ulong outSeed, scope ref ulong outGamma)
     {
@@ -1762,26 +1764,12 @@ else
         if (oneTimeGenRandom(&s, typeof(s).sizeof) != typeof(s).sizeof)
         {
             // Fall back to tid+pid+time seed.
-            auto x = fallbackSeed();
-            enum goldenGamma = 0x9e37_79b9_7f4a_7c15UL; // odd number closest to 2^^64 / golden ratio
-            // Stafford Mix07 for seed.
-            ulong y = (x += goldenGamma);
-            y = (y ^ (y >>> 30)) * 0x16a6_ac37_883a_f045UL;
-            y = (y ^ (y >>> 26)) * 0xcc9c_31a4_2746_86a5UL;
-            s[0] += (y ^ (y >>> 32));
-            // Stafford Mix06 for gamma.
-            ulong z = (x += goldenGamma);
-            z = (z ^ (z >>> 31)) * 0x69b0_bc90_bd9a_8c49UL;
-            z = (z ^ (z >>> 27)) * 0x3d5e_661a_2a77_868dUL;
-            z = z ^ (z >>> 30);
-            s[1] += z;
+            auto x = bootstrapSeed();
+            s[0] += murmurHash3Mix(x += goldenRatioGamma);
+            s[1] += murmurHash3Mix(x += goldenRatioGamma);
         }
         outSeed = s[0];
-        immutable ulong z = s[1] | 1UL; // Gamma must be odd for maximum period.
-        // Avoid long runs of 1s or 0s in gamma.
-        import core.bitop : popcnt;
-        immutable ulong alt = z ^ 0xaaaa_aaaa_aaaa_aaaaUL;
-        outGamma = popcnt(z ^ (z >>> 1)) < 24 ? alt : z;
+        outGamma = ensureValidGamma(s[1]);
     }
 
     import core.atomic : has64BitCAS;
@@ -1790,10 +1778,7 @@ else
     In the absence of a convenient arc4random-like interface use a
     shared static SplitMix generator. Described by Guy L. Steele Jr.,
     Doug Lea, and Christine H. Flood in "Fast Splittable Pseudorandom
-    Number Generators" (2014). As suggested in the paper use David
-    Stafford's superior parameterizations of the MurmurHash3 64-bit
-    finalizer from
-    http://zimbry.blogspot.com/2011/09/better-bit-mixing-improving-on.html.
+    Number Generators" (2014).
     +/
     static if (has64BitCAS)
     private ulong globalSplitMix()()
@@ -1818,68 +1803,83 @@ else
             }
             assert(gamma);
         }
-        // Stafford Mix05
-        ulong x = atomicOp!"+="(_globalSeed, gamma);
-        x = (x ^ (x >>> 31)) * 0x79c1_35c1_674b_9addUL;
-        x = (x ^ (x >>> 29)) * 0x54c7_7c86_f691_3e45UL;
-        return x ^ (x >>> 30);
+        return murmurHash3Mix(atomicOp!"+="(_globalSeed, gamma));
     }
-    /+
-    Similar to above but without 64-bit atomic ops. (All current platforms
-    supported by DMD or LDC have 64-bit atomic ops, but in the future some
-    might not.)
-    +/
-    private auto globalSplitMixNo64BitCAS()()
-    {
-        import core.atomic : atomicLoad, atomicOp, atomicStore, MemoryOrder;
-        shared static uint _globalSeedLow;
-        shared static uint _globalSeedHigh;
-        shared static uint _globalGammaLow;
-        shared static uint _globalGammaHigh;
-        uint gammaLow = atomicLoad!(MemoryOrder.raw)(_globalGammaLow);
-        if (!gammaLow)
-        {
-            synchronized
-            {
-                gammaLow = atomicLoad(_globalGammaLow);
-                if (!gammaLow)
-                {
-                    // gamma hasn't been set yet, so initialize.
-                    ulong initialSeed = void, gamma = void;
-                    oneTimeInitSeedAndGamma(initialSeed, gamma);
-                    atomicStore(_globalSeedHigh, cast(uint) (initialSeed >>> 32));
-                    atomicStore(_globalSeedLow, cast(uint) initialSeed);
-                    gammaLow = cast(uint) gamma;
-                    uint h = cast(uint) (gamma >>> 32);
-                    assert(h);
-                    atomicStore(_globalGammaHigh, h);
-                    atomicStore(_globalGammaLow, gammaLow);
-                }
-            }
-            assert(gammaLow);
-        }
-        uint gammaHigh = atomicLoad!(MemoryOrder.raw)(_globalGammaHigh);
-        if (!gammaHigh)
-        {
-             gammaHigh = atomicLoad(_globalGammaHigh);
-             assert(gammaHigh);
-        }
-        // Under contention updates can be interleaved. This is completely fine.
-        uint low = atomicOp!"+="(_globalSeedLow, gammaLow);
-        uint high = atomicOp!"+="(_globalSeedHigh, gammaHigh + uint(low < gammaLow));
-        // Stafford Mix04
-        ulong x = (cast(ulong) high) << 32 + cast(ulong) low;
-        x = (x ^ (x >>> 33)) * 0x62a9_d9ed_7997_05f5UL;
-        x = (x ^ (x >>> 28)) * 0xcb24_d0a5_c88c_35b3UL;
-        return x ^ (x >>> 32);
-    }
-    static if (!has64BitCAS)
-    private alias globalSplitMix = globalSplitMixNo64BitCAS;
 
-    // Verify `globalSplitMixNo64BitCAS` is compilable.
-    version (unittest)
+    /+
+    Similar to above but entirely thread-local.
+    Unlike what one might expect does $(B not) split off a local
+    SplitMix instance from a global SplitMix instance!
+    +/
+    private ulong threadLocalSplitMix()()
     {
-        static assert(is(typeof(globalSplitMixNo64BitCAS()) == ulong));
+        static ulong seed;
+        static ulong gamma;
+        if (!gamma)
+        {
+            // gamma hasn't been set yet, so initialize.
+            oneTimeInitSeedAndGamma(seed, gamma);
+            assert(gamma);
+        }
+        return murmurHash3Mix(seed += gamma);
+    }
+
+    static if (has64BitCAS)
+        private alias unpredictableSeedPRNGImpl = globalSplitMix;
+    else
+        private alias unpredictableSeedPRNGImpl = threadLocalSplitMix;
+
+    /+
+    Verify `threadLocalSplitMix` compiles.
+    +/
+    @nogc nothrow @system unittest
+    {
+        static assert(is(typeof(threadLocalSplitMix()) == ulong));
+    }
+
+    /+
+    `fmix64` from MurmurHash3.
+
+    Returns:
+        x scrambled
+    See_Also:
+        std.digest.murmurhash
+    +/
+    private ulong murmurHash3Mix()(ulong x)
+    {
+        x = (x ^ (x >>> 33)) * 0xff51_afd7_ed55_8ccdUL;
+        x = (x ^ (x >>> 33)) * 0xc4ce_b9fe_1a85_ec53UL;
+        return x ^ (x >>> 33);
+    }
+
+    /+
+    Odd number closest to 2^^64 / golden ratio.
+    Used as a default increment for the SplitMix algorithm.
+    +/
+    private enum goldenRatioGamma = 0x9e37_79b9_7f4a_7c15UL;
+
+    /+
+    Returns the value transformed to have suitable properties
+    for `gamma` for a SplitMix engine.
+
+    Input:
+        candidateGamma = random bits
+    Returns:
+        suitable `gamma` based on candidate
+    +/
+    private ulong ensureValidGamma()(ulong candidateGamma)
+    {
+        // Gamma must be odd for maximum period.
+        immutable ulong z = candidateGamma | 1UL;
+        // Avoid long runs of 1s or 0s in gamma.
+        import core.bitop : popcnt;
+        immutable ulong alt = z ^ 0xaaaa_aaaa_aaaa_aaaaUL;
+        return popcnt(z ^ (z >>> 1)) < 24 ? alt : z;
+    }
+
+    @nogc nothrow pure @safe unittest
+    {
+        assert(goldenRatioGamma == ensureValidGamma(goldenRatioGamma));
     }
 }
 
@@ -1905,7 +1905,7 @@ how excellent the source of entropy is.
     }
     else
     {
-        return cast(uint) globalSplitMix();
+        return cast(uint) unpredictableSeedPRNGImpl();
     }
 }
 /// ditto
@@ -1932,7 +1932,7 @@ if (isUnsigned!UIntType)
             }
             else
             {
-                return cast(UIntType) globalSplitMix();
+                return cast(UIntType) unpredictableSeedPRNGImpl();
             }
         }
     }
