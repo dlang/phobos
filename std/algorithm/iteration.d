@@ -1705,6 +1705,63 @@ if (isInputRange!Range && !isForwardRange!Range)
     }
 }
 
+// Inner range
+private struct ChunkByGroupImpl(alias eq, Range, Impl)
+{
+    import std.typecons : RefCounted;
+
+    private size_t groupNum;
+    private Range  start;
+    private Range  current;
+
+    private RefCounted!Impl mothership;
+
+    this(RefCounted!Impl origin)
+    {
+        groupNum = origin.groupNum;
+
+        start = origin.current.save;
+        current = origin.current.save;
+        assert(!start.empty);
+
+        mothership = origin;
+
+        // Note: this requires reflexivity.
+        assert(eq(start.front, current.front),
+               "predicate is not reflexive");
+    }
+
+    @property bool empty() { return groupNum == size_t.max; }
+    @property auto ref front() { return current.front; }
+
+    void popFront()
+    {
+        current.popFront();
+
+        // Note: this requires transitivity.
+        if (current.empty || !eq(start.front, current.front))
+        {
+            if (groupNum == mothership.groupNum)
+            {
+                // If parent range hasn't moved on yet, help it along by
+                // saving location of start of next ChunkByGroupImpl.
+                mothership.next = current.save;
+            }
+
+            groupNum = size_t.max;
+        }
+    }
+
+    @property auto save()
+    {
+        auto copy = this;
+        copy.current = current.save;
+        return copy;
+    }
+
+    static assert(isForwardRange!(typeof(this)));
+}
+
 // Single-pass implementation of chunkBy for forward ranges.
 private struct ChunkByImpl(alias pred, Range)
 if (isForwardRange!Range)
@@ -1726,60 +1783,6 @@ if (isForwardRange!Range)
         Range  next;
     }
 
-    // Inner range
-    static struct Group
-    {
-        private size_t groupNum;
-        private Range  start;
-        private Range  current;
-
-        private RefCounted!Impl mothership;
-
-        this(RefCounted!Impl origin)
-        {
-            groupNum = origin.groupNum;
-
-            start = origin.current.save;
-            current = origin.current.save;
-            assert(!start.empty);
-
-            mothership = origin;
-
-            // Note: this requires reflexivity.
-            assert(eq(start.front, current.front),
-                   "predicate is not reflexive");
-        }
-
-        @property bool empty() { return groupNum == size_t.max; }
-        @property auto ref front() { return current.front; }
-
-        void popFront()
-        {
-            current.popFront();
-
-            // Note: this requires transitivity.
-            if (current.empty || !eq(start.front, current.front))
-            {
-                if (groupNum == mothership.groupNum)
-                {
-                    // If parent range hasn't moved on yet, help it along by
-                    // saving location of start of next Group.
-                    mothership.next = current.save;
-                }
-
-                groupNum = size_t.max;
-            }
-        }
-
-        @property auto save()
-        {
-            auto copy = this;
-            copy.current = current.save;
-            return copy;
-        }
-    }
-    static assert(isForwardRange!Group);
-
     private RefCounted!Impl impl;
 
     this(Range r)
@@ -1794,11 +1797,12 @@ if (isForwardRange!Range)
         static if (isUnary)
         {
             import std.typecons : tuple;
-            return tuple(unaryFun!pred(impl.current.front), Group(impl));
+            return tuple(unaryFun!pred(impl.current.front),
+                         ChunkByGroupImpl!(eq, Range, Impl)(impl));
         }
         else
         {
-            return Group(impl);
+            return ChunkByGroupImpl!(eq, Range, Impl)(impl);
         }
     }
 
@@ -1881,6 +1885,19 @@ if (isForwardRange!Range)
     // Inner range should not be affected by subsequent inner ranges.
     assert(groups.front.equal([2, 4]));
     assert(grp1.save.equal([1, 3, 5]));
+}
+
+// Issue 18751
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : chunkBy;
+
+    string[] data = [ "abc", "abc", "def" ];
+    int[] indices = [ 0, 1, 2 ];
+
+    auto chunks = indices.chunkBy!((i, j) => data[i] == data[j]);
+    assert(chunks.equal!equal([ [ 0, 1 ], [ 2 ] ]));
 }
 
 /**
