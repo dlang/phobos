@@ -2657,10 +2657,16 @@ Rebindable!T rebindable(T)(Rebindable!T obj)
  * mutably aliased, potentially allowing mutation of `immutable` data. However, the
  * assignment could be safe if all reference fields are only exposed as `const`.
  *
- * `Rebindable!(const S)` accepts assignment from
- * a `const S` while enforcing only constant access to its fields.
- * `Rebindable!(immutable S)` does the same but field access may create a
- * temporary copy of `S` in order to enforce _true immutability.
+ * `Rebindable!(const S)` accepts (re)assignment from
+ * a `const S` while enforcing only `const` access to its fields.
+ * It implicitly converts to `ref const S` when possible. Otherwise,
+ * a copy is made on each implicit conversion to `const S`. Copies must be made
+ * e.g. when the struct contains a head-immutable data field.
+ *
+ * `Rebindable!(immutable S)` always makes a copy on implicit conversion to
+ * `immutable S`. This is required to preserve `immutable`'s
+ * guarantees. A copy is currently always made for conversion to `const S`
+ * (due to `alias this` limitations).
  */
 template Rebindable(S)
 if (is(S == struct))
@@ -2714,32 +2720,42 @@ if (is(S == struct))
             this = other.trustedPayload;
         }
 
-        // must not escape when S is immutable
-        private ref trustedPayload() @trusted
+        import std.traits : Fields, isMutable;
+        private template isConst(T)
+        {
+            static if (is(T == struct) || is(T == union))
+                enum isConst = !isMutable!T || haveConstHead!T;
+            else
+                enum isConst = !isMutable!T;
+        }
+        private enum bool haveConstHead(T) = anySatisfy!(isConst, Fields!T);
+        private enum bool unsafeRef = is(S == immutable) || haveConstHead!(Unqual!S);
+
+        // must not escape when unsafeRef
+        private ref S trustedPayload() @trusted
         {
             return *cast(S*) mutPayload.ptr;
         }
 
-        static if (!is(S == immutable))
+        // expose payload as const ref when members have no head const data
+        static if (!unsafeRef)
         ref S Rebindable_getRef() @property
         {
-            // payload exposed as const ref when S is const
             return trustedPayload;
         }
 
-        static if (is(S == immutable))
-        S Rebindable_get() @property
+        static if (unsafeRef)
+        S Rebindable_getCopy() @property
         {
-            // we return a copy for immutable S
             return trustedPayload;
         }
 
-        static if (is(S == immutable))
-            alias Rebindable_get this;
+        static if (unsafeRef)
+            alias Rebindable_getCopy this;
         else
             alias Rebindable_getRef this;
 
-        private auto movePayload() @trusted
+        private S movePayload() @trusted
         {
             import std.algorithm : move;
             return cast(S) move(*cast(Unqual!S*) mutPayload.ptr);
@@ -2894,6 +2910,41 @@ if (is(S == struct))
     static assert(!__traits(compiles, rb.i++));
 }
 
+// Test head const fields aren't exposed as ref const S
+@safe unittest
+{
+    struct S(T)
+    {
+        T i;
+    }
+    auto r = rebindable(const S!(immutable int)());
+    // check we can't reference `i`, as it's a field of a temporary S copy
+    // If r.i was an lvalue, it would break immutable when r was rebound
+    static assert(!__traits(compiles, {const ref get(){ return r.i; }}));
+
+    // test when Rebindable!const should make a copy
+    @property rcs(T)(){ return rebindable(const S!T()); }
+    // values
+    static assert(!rcs!(int).unsafeRef);
+    static assert(rcs!(const int).unsafeRef);
+    static assert(rcs!(immutable int).unsafeRef);
+    // arrays
+    static assert(!rcs!(string).unsafeRef);
+    static assert(rcs!(const char[]).unsafeRef);
+    // class refs
+    static assert(!rcs!(Object).unsafeRef);
+    static assert(rcs!(const Object).unsafeRef);
+    // nested structs
+    static assert(!rcs!(S!int).unsafeRef);
+    static assert(!rcs!(S!string).unsafeRef);
+    static assert(!rcs!(S!Object).unsafeRef);
+    static assert(rcs!(const S!int).unsafeRef);
+    static assert(rcs!(const S!string).unsafeRef);
+    static assert(rcs!(S!(const Object)).unsafeRef);
+    static assert(rcs!(const S!Object).unsafeRef);
+}
+
+// Test copying
 @safe unittest
 {
     int del;
