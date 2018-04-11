@@ -201,6 +201,13 @@ class StringException : Exception
     mixin basicExceptionCtors;
 }
 
+///
+@safe pure unittest
+{
+    import std.exception : assertThrown;
+    auto bad = "      a\n\tb\n   c";
+    assertThrown!StringException(bad.outdent);
+}
 
 /++
     Params:
@@ -370,131 +377,6 @@ if (isSomeChar!C)
     return _indexOf(s, c, cs);
 }
 
-private ptrdiff_t _indexOf(Range)(Range s, dchar c, CaseSensitive cs = Yes.caseSensitive)
-if (isInputRange!Range && isSomeChar!(ElementType!Range))
-{
-    static import std.ascii;
-    static import std.uni;
-    import std.utf : byDchar, byCodeUnit, UTFException, codeLength;
-    alias Char = Unqual!(ElementEncodingType!Range);
-
-    if (cs == Yes.caseSensitive)
-    {
-        static if (Char.sizeof == 1 && isSomeString!Range)
-        {
-            if (std.ascii.isASCII(c) && !__ctfe)
-            {                                               // Plain old ASCII
-                static ptrdiff_t trustedmemchr(Range s, char c) @trusted
-                {
-                    import core.stdc.string : memchr;
-                    const p = cast(const(Char)*)memchr(s.ptr, c, s.length);
-                    return p ? p - s.ptr : -1;
-                }
-
-                return trustedmemchr(s, cast(char) c);
-            }
-        }
-
-        static if (Char.sizeof == 1)
-        {
-            if (c <= 0x7F)
-            {
-                ptrdiff_t i;
-                foreach (const c2; s)
-                {
-                    if (c == c2)
-                        return i;
-                    ++i;
-                }
-            }
-            else
-            {
-                ptrdiff_t i;
-                foreach (const c2; s.byDchar())
-                {
-                    if (c == c2)
-                        return i;
-                    i += codeLength!Char(c2);
-                }
-            }
-        }
-        else static if (Char.sizeof == 2)
-        {
-            if (c <= 0xFFFF)
-            {
-                ptrdiff_t i;
-                foreach (const c2; s)
-                {
-                    if (c == c2)
-                        return i;
-                    ++i;
-                }
-            }
-            else if (c <= 0x10FFFF)
-            {
-                // Encode UTF-16 surrogate pair
-                const wchar c1 = cast(wchar)((((c - 0x10000) >> 10) & 0x3FF) + 0xD800);
-                const wchar c2 = cast(wchar)(((c - 0x10000) & 0x3FF) + 0xDC00);
-                ptrdiff_t i;
-                for (auto r = s.byCodeUnit(); !r.empty; r.popFront())
-                {
-                    if (c1 == r.front)
-                    {
-                        r.popFront();
-                        if (r.empty)    // invalid UTF - missing second of pair
-                            break;
-                        if (c2 == r.front)
-                            return i;
-                        ++i;
-                    }
-                    ++i;
-                }
-            }
-        }
-        else static if (Char.sizeof == 4)
-        {
-            ptrdiff_t i;
-            foreach (const c2; s)
-            {
-                if (c == c2)
-                    return i;
-                ++i;
-            }
-        }
-        else
-            static assert(0);
-        return -1;
-    }
-    else
-    {
-        if (std.ascii.isASCII(c))
-        {                                                   // Plain old ASCII
-            immutable c1 = cast(char) std.ascii.toLower(c);
-
-            ptrdiff_t i;
-            foreach (const c2; s.byCodeUnit())
-            {
-                if (c1 == std.ascii.toLower(c2))
-                    return i;
-                ++i;
-            }
-        }
-        else
-        {                                                   // c is a universal character
-            immutable c1 = std.uni.toLower(c);
-
-            ptrdiff_t i;
-            foreach (const c2; s.byDchar())
-            {
-                if (c1 == std.uni.toLower(c2))
-                    return i;
-                i += codeLength!Char(c2);
-            }
-        }
-    }
-    return -1;
-}
-
 /// Ditto
 ptrdiff_t indexOf(Range)(Range s, dchar c, size_t startIdx, CaseSensitive cs = Yes.caseSensitive)
 if (isInputRange!Range && isSomeChar!(ElementType!Range) && !isSomeString!Range)
@@ -507,38 +389,6 @@ ptrdiff_t indexOf(C)(C[] s, dchar c, size_t startIdx, CaseSensitive cs = Yes.cas
 if (isSomeChar!C)
 {
     return _indexOf(s, c, startIdx, cs);
-}
-
-private ptrdiff_t _indexOf(Range)(Range s, dchar c, size_t startIdx, CaseSensitive cs = Yes.caseSensitive)
-if (isInputRange!Range && isSomeChar!(ElementType!Range))
-{
-    static if (isSomeString!(typeof(s)) ||
-                (hasSlicing!(typeof(s)) && hasLength!(typeof(s))))
-    {
-        if (startIdx < s.length)
-        {
-            ptrdiff_t foundIdx = indexOf(s[startIdx .. $], c, cs);
-            if (foundIdx != -1)
-            {
-                return foundIdx + cast(ptrdiff_t) startIdx;
-            }
-        }
-    }
-    else
-    {
-        foreach (i; 0 .. startIdx)
-        {
-            if (s.empty)
-                return -1;
-            s.popFront();
-        }
-        ptrdiff_t foundIdx = indexOf(s, c, cs);
-        if (foundIdx != -1)
-        {
-            return foundIdx + cast(ptrdiff_t) startIdx;
-        }
-    }
-    return -1;
 }
 
 ///
@@ -686,6 +536,163 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
         assert(indexOf("hello\U00010143\u0100\U00010143"d, '\u0100', 6, cs)
             == 6);
     }
+}
+
+private ptrdiff_t _indexOf(Range)(Range s, dchar c, CaseSensitive cs = Yes.caseSensitive)
+if (isInputRange!Range && isSomeChar!(ElementType!Range))
+{
+    static import std.ascii;
+    static import std.uni;
+    import std.utf : byDchar, byCodeUnit, UTFException, codeLength;
+    alias Char = Unqual!(ElementEncodingType!Range);
+
+    if (cs == Yes.caseSensitive)
+    {
+        static if (Char.sizeof == 1 && isSomeString!Range)
+        {
+            if (std.ascii.isASCII(c) && !__ctfe)
+            {                                               // Plain old ASCII
+                static ptrdiff_t trustedmemchr(Range s, char c) @trusted
+                {
+                    import core.stdc.string : memchr;
+                    const p = cast(const(Char)*)memchr(s.ptr, c, s.length);
+                    return p ? p - s.ptr : -1;
+                }
+
+                return trustedmemchr(s, cast(char) c);
+            }
+        }
+
+        static if (Char.sizeof == 1)
+        {
+            if (c <= 0x7F)
+            {
+                ptrdiff_t i;
+                foreach (const c2; s)
+                {
+                    if (c == c2)
+                        return i;
+                    ++i;
+                }
+            }
+            else
+            {
+                ptrdiff_t i;
+                foreach (const c2; s.byDchar())
+                {
+                    if (c == c2)
+                        return i;
+                    i += codeLength!Char(c2);
+                }
+            }
+        }
+        else static if (Char.sizeof == 2)
+        {
+            if (c <= 0xFFFF)
+            {
+                ptrdiff_t i;
+                foreach (const c2; s)
+                {
+                    if (c == c2)
+                        return i;
+                    ++i;
+                }
+            }
+            else if (c <= 0x10FFFF)
+            {
+                // Encode UTF-16 surrogate pair
+                const wchar c1 = cast(wchar)((((c - 0x10000) >> 10) & 0x3FF) + 0xD800);
+                const wchar c2 = cast(wchar)(((c - 0x10000) & 0x3FF) + 0xDC00);
+                ptrdiff_t i;
+                for (auto r = s.byCodeUnit(); !r.empty; r.popFront())
+                {
+                    if (c1 == r.front)
+                    {
+                        r.popFront();
+                        if (r.empty)    // invalid UTF - missing second of pair
+                            break;
+                        if (c2 == r.front)
+                            return i;
+                        ++i;
+                    }
+                    ++i;
+                }
+            }
+        }
+        else static if (Char.sizeof == 4)
+        {
+            ptrdiff_t i;
+            foreach (const c2; s)
+            {
+                if (c == c2)
+                    return i;
+                ++i;
+            }
+        }
+        else
+            static assert(0);
+        return -1;
+    }
+    else
+    {
+        if (std.ascii.isASCII(c))
+        {                                                   // Plain old ASCII
+            immutable c1 = cast(char) std.ascii.toLower(c);
+
+            ptrdiff_t i;
+            foreach (const c2; s.byCodeUnit())
+            {
+                if (c1 == std.ascii.toLower(c2))
+                    return i;
+                ++i;
+            }
+        }
+        else
+        {                                                   // c is a universal character
+            immutable c1 = std.uni.toLower(c);
+
+            ptrdiff_t i;
+            foreach (const c2; s.byDchar())
+            {
+                if (c1 == std.uni.toLower(c2))
+                    return i;
+                i += codeLength!Char(c2);
+            }
+        }
+    }
+    return -1;
+}
+
+private ptrdiff_t _indexOf(Range)(Range s, dchar c, size_t startIdx, CaseSensitive cs = Yes.caseSensitive)
+if (isInputRange!Range && isSomeChar!(ElementType!Range))
+{
+    static if (isSomeString!(typeof(s)) ||
+                (hasSlicing!(typeof(s)) && hasLength!(typeof(s))))
+    {
+        if (startIdx < s.length)
+        {
+            ptrdiff_t foundIdx = indexOf(s[startIdx .. $], c, cs);
+            if (foundIdx != -1)
+            {
+                return foundIdx + cast(ptrdiff_t) startIdx;
+            }
+        }
+    }
+    else
+    {
+        foreach (i; 0 .. startIdx)
+        {
+            if (s.empty)
+                return -1;
+            s.popFront();
+        }
+        ptrdiff_t foundIdx = indexOf(s, c, cs);
+        if (foundIdx != -1)
+        {
+            return foundIdx + cast(ptrdiff_t) startIdx;
+        }
+    }
+    return -1;
 }
 
 /++
@@ -5306,6 +5313,14 @@ do
     return cast(C[])(buffer);
 }
 
+///
+@safe pure nothrow unittest
+{
+    auto transTable1 = makeTrans("eo5", "57q");
+    assert(translate("hello world", transTable1) == "h5ll7 w7rld");
+
+    assert(translate("hello world", transTable1, "low") == "h5 rd");
+}
 
 /**
  * Do same thing as $(LREF makeTransTable) but allocate the translation table
@@ -5337,7 +5352,6 @@ string makeTrans(in char[] from, in char[] to) @trusted pure nothrow
  * Returns:
  *      translation array
  */
-
 char[256] makeTransTable(in char[] from, in char[] to) @safe pure nothrow @nogc
 in
 {
@@ -5358,6 +5372,13 @@ do
     foreach (i, c; from)
         result[c] = to[i];
     return result;
+}
+
+///
+@safe pure unittest
+{
+    assert(translate("hello world", makeTransTable("hl", "q5")) == "qe55o wor5d");
+    assert(translate("hello world", makeTransTable("12345", "67890")) == "hello world");
 }
 
 @safe pure unittest
@@ -6026,6 +6047,15 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
     return result.data;
 }
 
+///
+@safe pure unittest
+{
+    assert(tr("abcdef", "cd", "CD") == "abCDef");
+    assert(tr("1st March, 2018", "March", "MAR", "s") == "1st MAR, 2018");
+    assert(tr("abcdef", "ef", "", "d") == "abcd");
+    assert(tr("14-Jul-87", "a-zA-Z", " ", "cs") == " Jul ");
+}
+
 @safe pure unittest
 {
     import std.algorithm.comparison : equal;
@@ -6429,10 +6459,8 @@ deprecated
  *  $(LUCKY The Soundex Indexing System)
  *  $(LREF soundex)
  *
- * Bugs:
+ * Note:
  *  Only works well with English names.
- *  There are other arguably better Soundex algorithms,
- *  but this one is the standard one.
  */
 char[4] soundexer(Range)(Range str)
 if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
@@ -6490,10 +6518,23 @@ if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
     return result;
 }
 
+/// ditto
 char[4] soundexer(Range)(auto ref Range str)
 if (isConvertibleToString!Range)
 {
     return soundexer!(StringTypeOf!Range)(str);
+}
+
+///
+@safe unittest
+{
+    assert(soundexer("Gauss") == "G200");
+    assert(soundexer("Ghosh") == "G200");
+
+    assert(soundexer("Robert") == "R163");
+    assert(soundexer("Rupert") == "R163");
+
+    assert(soundexer("0123^&^^**&^") == ['\0', '\0', '\0', '\0']);
 }
 
 /*****************************
@@ -6538,6 +6579,17 @@ do
     return buffer;
 }
 
+///
+@safe unittest
+{
+    assert(soundex("Gauss") == "G200");
+    assert(soundex("Ghosh") == "G200");
+
+    assert(soundex("Robert") == "R163");
+    assert(soundex("Rupert") == "R163");
+
+    assert(soundex("0123^&^^**&^") == null);
+}
 
 @safe pure nothrow unittest
 {
@@ -6607,7 +6659,6 @@ do
  * auto-complete the string once sufficient characters have been
  * entered that uniquely identify it.
  */
-
 string[string] abbrev(string[] values) @safe pure
 {
     import std.algorithm.sorting : sort;
@@ -7062,6 +7113,32 @@ if (isSomeString!S)
     }
 
     return lines;
+}
+
+///
+@safe pure unittest
+{
+    auto str1 = [
+        "    void main()\n",
+        "    {\n",
+        "        test();\n",
+        "    }\n"
+    ];
+    auto str1Expected = [
+        "void main()\n",
+        "{\n",
+        "    test();\n",
+        "}\n"
+    ];
+    assert(str1.outdent == str1Expected);
+
+    auto str2 = [
+        "void main()\n",
+        "    {\n",
+        "            test();\n",
+        "    }\n"
+    ];
+    assert(str2.outdent == str2);
 }
 
 @safe pure unittest
