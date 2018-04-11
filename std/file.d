@@ -5246,7 +5246,7 @@ Returns:
 Throws:
     $(LREF FileException) in case of failure
 */
-ulong getAvailableDiskSpace(string path) @safe
+ulong getAvailableDiskSpace(scope const(char)[] path) @safe
 {
     version (Windows)
     {
