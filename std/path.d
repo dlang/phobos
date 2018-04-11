@@ -3916,7 +3916,7 @@ if (isConvertibleToString!Range)
     }
     -----
 */
-string expandTilde(string inputPath) nothrow
+string expandTilde(string inputPath) @safe nothrow
 {
     version(Posix)
     {
@@ -3930,9 +3930,10 @@ string expandTilde(string inputPath) nothrow
             is joined to path[char_pos .. length] if char_pos is smaller
             than length, otherwise path is not appended to c_path.
         */
-        static string combineCPathWithDPath(char* c_path, string path, size_t char_pos) nothrow
+        static string combineCPathWithDPath(char* c_path, string path, size_t char_pos) @trusted nothrow
         {
             import core.stdc.string : strlen;
+            import std.exception : assumeUnique;
 
             assert(c_path != null);
             assert(path.length > 0);
@@ -3945,11 +3946,10 @@ string expandTilde(string inputPath) nothrow
             if (end && isDirSeparator(c_path[end - 1]))
                 end--;
 
-            // (this is the only GC allocation done in expandTilde())
             string cp;
             if (char_pos < path.length)
                 // Append something from path
-                cp = cast(string)(c_path[0 .. end] ~ path[char_pos .. $]);
+                cp = assumeUnique(c_path[0 .. end] ~ path[char_pos .. $]);
             else
                 // Create our own copy, as lifetime of c_path is undocumented
                 cp = c_path[0 .. end].idup;
@@ -3958,7 +3958,7 @@ string expandTilde(string inputPath) nothrow
         }
 
         // Replaces the tilde from path with the environment variable HOME.
-        static string expandFromEnvironment(string path) nothrow
+        static string expandFromEnvironment(string path) @safe nothrow
         {
             import core.stdc.stdlib : getenv;
 
@@ -3966,7 +3966,7 @@ string expandTilde(string inputPath) nothrow
             assert(path[0] == '~');
 
             // Get HOME and use that to replace the tilde.
-            auto home = getenv("HOME");
+            auto home = () @trusted { return getenv("HOME"); } ();
             if (home == null)
                 return path;
 
@@ -3974,7 +3974,7 @@ string expandTilde(string inputPath) nothrow
         }
 
         // Replaces the tilde from path with the path from the user database.
-        static string expandFromDatabase(string path) nothrow
+        static string expandFromDatabase(string path) @safe nothrow
         {
             // bionic doesn't really support this, as getpwnam_r
             // isn't provided and getpwnam is basically just a stub
@@ -3994,10 +3994,7 @@ string expandTilde(string inputPath) nothrow
                 auto last_char = indexOf(path, dirSeparator[0]);
 
                 size_t username_len = (last_char == -1) ? path.length : last_char;
-                char* username = cast(char*) malloc(username_len * char.sizeof);
-                if (!username)
-                    onOutOfMemoryError();
-                scope(exit) free(username);
+                char[] username = new char[username_len * char.sizeof];
 
                 if (last_char == -1)
                 {
@@ -4017,24 +4014,27 @@ string expandTilde(string inputPath) nothrow
                     uint extra_memory_size = 2;
                 else
                     uint extra_memory_size = 5 * 1024;
-                char* extra_memory;
-                scope(exit) free(extra_memory);
+                char[] extra_memory;
 
                 passwd result;
                 while (1)
                 {
-                    extra_memory = cast(char*) realloc(extra_memory, extra_memory_size * char.sizeof);
-                    if (extra_memory == null)
-                        onOutOfMemoryError();
+                    extra_memory.length += extra_memory_size;
 
                     // Obtain info from database.
                     passwd *verify;
                     errno = 0;
-                    if (getpwnam_r(username, &result, extra_memory, extra_memory_size,
-                            &verify) == 0)
+                    auto passResult = () @trusted { return getpwnam_r(
+                        &username[0],
+                        &result,
+                        &extra_memory[0],
+                        extra_memory.length,
+                        &verify
+                    ); } ();
+                    if (passResult == 0)
                     {
                         // Succeeded if verify points at result
-                        if (verify == &result)
+                        if (verify == () @trusted { return &result; } ())
                             // username is found
                             path = combineCPathWithDPath(result.pw_dir, path, last_char);
                         break;
