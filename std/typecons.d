@@ -2096,36 +2096,33 @@ if (is(T == class) || is(T == interface) || isAssociativeArray!T)
         U stripped;
     }
 
-    @trusted pure nothrow @nogc
+    void opAssign(T another) @trusted pure nothrow @nogc
     {
-        void opAssign(T another)
-        {
-            stripped = cast(U) another;
-        }
+        stripped = cast(U) another;
+    }
 
-        void opAssign(typeof(this) another)
+    void opAssign(typeof(this) another) @trusted pure nothrow @nogc
+    {
+        stripped = another.stripped;
+    }
+
+    static if (is(T == const U) && is(T == const shared U))
+    {
+        // safely assign immutable to const / const shared
+        void opAssign(This!(immutable U) another) @trusted pure nothrow @nogc
         {
             stripped = another.stripped;
         }
+    }
 
-        static if (is(T == const U) && is(T == const shared U))
-        {
-            // safely assign immutable to const / const shared
-            void opAssign(This!(immutable U) another)
-            {
-                stripped = another.stripped;
-            }
-        }
+    this(T initializer) @trusted pure nothrow @nogc
+    {
+        opAssign(initializer);
+    }
 
-        this(T initializer)
-        {
-            opAssign(initializer);
-        }
-
-        @property inout(T) get() inout
-        {
-            return original;
-        }
+    @property inout(T) get() @trusted pure nothrow @nogc inout
+    {
+        return original;
     }
 
     bool opEquals()(auto ref const(typeof(this)) rhs) const
