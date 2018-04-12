@@ -1523,9 +1523,33 @@ version (AnyARC4Random)
 }
 else version (Windows)
 {
+    import core.sys.windows.windows :
+        BOOL, DWORD, HINSTANCE, LPCSTR, LPCWSTR, PBYTE,
+        ULONG_PTR, FreeLibrary, GetProcAddress, LoadLibraryA;
     import core.sys.windows.wincrypt : HCRYPTPROV;
+    private alias FnCryptAcquireContextW = extern(Windows)
+        BOOL function(HCRYPTPROV*, LPCWSTR, LPCWSTR, DWORD, DWORD) @nogc nothrow;
+    private alias FnCryptAcquireContextA = extern (Windows)
+        BOOL function(HCRYPTPROV*, LPCSTR, LPCSTR, DWORD, DWORD) @nogc nothrow;
+    private alias FnCryptGenRandom = extern(Windows)
+        BOOL function(HCRYPTPROV, DWORD, scope PBYTE) @nogc nothrow;
+    private alias FnCryptReleaseContext = extern(Windows)
+        BOOL function(HCRYPTPROV, DWORD) @nogc nothrow;
 
-    private shared size_t _hProvider;
+    // CryptGenRandom globals
+    private
+    {
+        __gshared bool _cryptGenLoadingFailed;
+        shared size_t _gAdvapi32;
+        shared size_t _gProvider;
+    }
+    // CryptGenRandom thread-locals
+    private
+    {
+        static assert(HINSTANCE.sizeof == size_t.sizeof && HCRYPTPROV.sizeof == size_t.sizeof);
+        HCRYPTPROV _hProvider;
+        FnCryptGenRandom _fnCryptGenRandom;
+    }
 
     /+
     Tries to use a system API to get entropy.
@@ -1539,72 +1563,97 @@ else version (Windows)
     +/
     private ptrdiff_t getEntropyNonBlocking()(scope void* ptr, size_t len)
     {
-        import core.sys.windows.wincrypt : CryptGenRandom;
-        import core.sys.windows.windef : DWORD, PBYTE;
-        auto hProvider = getCryptGenProvider();
-        if (hProvider && len <= DWORD.max
-                && CryptGenRandom(hProvider, cast(DWORD) len, cast(PBYTE) ptr))
+        if (_cryptGenLoadingFailed) return -1;
+        if (!_fnCryptGenRandom)
+        {
+            if (!setupCryptGenRandom())
+            {
+                _cryptGenLoadingFailed = true;
+                return -1;
+            }
+            assert(_fnCryptGenRandom);
+        }
+        if (len <= DWORD.max && _fnCryptGenRandom(_hProvider, cast(DWORD) len, cast(PBYTE) ptr))
             return len;
         else
             return -1;
     }
 
-    // This destructor might not be necessary if the resources are
-    // automatically released when the process ends.
-    shared static ~this()
+    /+
+    Sets up thread-local CryptGenRandom variables from global variables.
+    Sets up global CryptGenRandom variables if they have not yet been set up.
+    +/
+    private bool setupCryptGenRandom()()
     {
-        import core.atomic : atomicLoad;
-        import core.sys.windows.wincrypt : CryptReleaseContext;
-        auto hProvider = cast(HCRYPTPROV) atomicLoad(_hProvider);
-        if (hProvider)
-            CryptReleaseContext(hProvider, 0);
-    }
-
-    // Loads shared provider, performing initialization if required.
-    private HCRYPTPROV getCryptGenProvider()()
-    {
-        import core.atomic : atomicLoad, cas, MemoryOrder;
+        import core.atomic : atomicLoad, atomicStore, cas, MemoryOrder;
         import core.sys.windows.winbase : GetLastError;
-        import core.sys.windows.wincrypt : CryptAcquireContextA,
-            CryptAcquireContextW, CryptReleaseContext, CRYPT_NEWKEYSET,
-            CRYPT_SILENT, CRYPT_VERIFYCONTEXT, PROV_RSA_FULL;
+        import core.sys.windows.wincrypt : CRYPT_NEWKEYSET, CRYPT_SILENT,
+            CRYPT_VERIFYCONTEXT, PROV_RSA_FULL;
         import core.sys.windows.winerror : NTE_BAD_KEYSET;
 
-        auto hProvider = cast(HCRYPTPROV) atomicLoad!(MemoryOrder.raw)(_hProvider);
+        HINSTANCE hAdvapi32 = cast(HINSTANCE) atomicLoad!(MemoryOrder.acq)(_gAdvapi32);
+        if (!hAdvapi32)
+        {
+            hAdvapi32 = cast(HINSTANCE) LoadLibraryA("Advapi32.dll");
+            if (!hAdvapi32)
+                return false;
+            if (!cas(&_gAdvapi32, size_t(0), cast(size_t) hAdvapi32))
+            {
+                FreeLibrary(hAdvapi32);
+                hAdvapi32 = cast(HINSTANCE) atomicLoad!(MemoryOrder.acq)(_gAdvapi32);
+            }
+            assert(hAdvapi32);
+        }
+
+        HCRYPTPROV hProvider = cast(HCRYPTPROV) atomicLoad!(MemoryOrder.acq)(_gProvider);
         if (!hProvider)
         {
+            auto fnCryptAcquireContextW = cast(FnCryptAcquireContextW)
+                GetProcAddress(hAdvapi32, "CryptAcquireContextW");
+            auto fnCryptAcquireContextA = cast(FnCryptAcquireContextA)
+                GetProcAddress(hAdvapi32, "CryptAcquireContextA");
+            auto fnCryptReleaseContext = cast(FnCryptReleaseContext)
+                GetProcAddress(hAdvapi32, "CryptReleaseContext");
+
+            if (!fnCryptAcquireContextW || !fnCryptAcquireContextA || !fnCryptReleaseContext)
+                return false;
+
             // https://msdn.microsoft.com/en-us/library/windows/desktop/aa379886(v=vs.85).aspx
             // For performance reasons, we recommend that you set the pszContainer
             // parameter to NULL and the dwFlags parameter to CRYPT_VERIFYCONTEXT
             // in all situations where you do not require a persisted key.
             // CRYPT_SILENT is intended for use with applications for which the UI
             // cannot be displayed by the CSP.
-            if (!CryptAcquireContextW(&hProvider, null, null,
+            if (!fnCryptAcquireContextW(&hProvider, null, null,
                     PROV_RSA_FULL, CRYPT_VERIFYCONTEXT | CRYPT_SILENT))
             {
                 if (GetLastError() == NTE_BAD_KEYSET)
                 {
                     // Attempt to create default container
-                    if (!CryptAcquireContextA(&hProvider, null, null,
+                    if (!fnCryptAcquireContextA(&hProvider, null, null,
                         PROV_RSA_FULL, CRYPT_NEWKEYSET | CRYPT_SILENT))
                     {
-                        return 0;
+                        return false;
                     }
                 }
                 else
                 {
-                    return 0;
+                    return false;
                 }
             }
+            assert(hProvider, "CryptAcquireContext reported success but hProvider is null.");
+            if (!cas(&_gProvider, size_t(0), cast(size_t) hProvider))
+            {
+                fnCryptReleaseContext(hProvider, 0);
+                hProvider = cast(HCRYPTPROV) atomicLoad!(MemoryOrder.acq)(_gProvider);
+            }
+            assert(hProvider);
         }
-        assert(hProvider, "CryptAcquireContext reported success but hProvider is null.");
-        if (!cas(&_hProvider, 0, cast(size_t) hProvider))
-        {
-            // _hProvider was set by another thread.
-            CryptReleaseContext(hProvider, 0);
-            hProvider = cast(HCRYPTPROV) atomicLoad!(MemoryOrder.acq)(_hProvider);
-        }
-        return hProvider;
+
+        // Set thread-locals.
+        _hProvider = hProvider;
+        _fnCryptGenRandom = cast(FnCryptGenRandom) GetProcAddress(hAdvapi32, "CryptGenRandom");
+        return _fnCryptGenRandom !is null;
     }
 }
 else version (Posix)
@@ -1972,7 +2021,7 @@ if (isUnsigned!UIntType)
                     if (typeof(result).sizeof == getEntropyNonBlocking(&result, typeof(result).sizeof))
                         return result;
                 }}
-                return cast(uint) fallbackSeedPRNG();
+                return cast(UIntType) fallbackSeedPRNG();
             }
         }
     }
