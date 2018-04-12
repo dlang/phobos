@@ -6,7 +6,6 @@ module std.experimental.allocator.building_blocks.kernighan_ritchie;
 import std.experimental.allocator.building_blocks.null_allocator;
 
 //debug = KRRegion;
-version(unittest) import std.conv : text;
 debug(KRRegion) import std.stdio;
 
 // KRRegion
@@ -554,7 +553,6 @@ struct KRRegion(ParentAllocator = NullAllocator)
     }
 
     ///
-    version(unittest)
     @system unittest
     {
         import std.experimental.allocator.gc_allocator : GCAllocator;
@@ -776,7 +774,7 @@ it actually returns memory to the operating system when possible.
     auto p = cast(KRRegion!()* ) store.ptr;
     import core.stdc.string : memcpy;
     import std.algorithm.mutation : move;
-    import std.conv : emplace;
+    import std.conv : text, emplace;
 
     memcpy(p, &alloc, alloc.sizeof);
     emplace(&alloc);
