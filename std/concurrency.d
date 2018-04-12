@@ -2430,12 +2430,11 @@ private
     }
 }
 
-version(unittest)
+@system unittest
 {
-    import std.stdio;
     import std.typecons : tuple, Tuple;
 
-    void testfn(Tid tid)
+    static void testfn(Tid tid)
     {
         receive((float val) { assert(0); }, (int val, int val2) {
             assert(val == 42 && val2 == 86);
@@ -2450,7 +2449,7 @@ version(unittest)
         prioritySend(tid, "done");
     }
 
-    void runTest(Tid tid)
+    static void runTest(Tid tid)
     {
         send(tid, 42, 86);
         send(tid, tuple(42, 86));
@@ -2459,7 +2458,7 @@ version(unittest)
         receive((string val) { assert(val == "done"); });
     }
 
-    void simpleTest()
+    static void simpleTest()
     {
         auto tid = spawn(&testfn, thisTid);
         runTest(tid);
@@ -2470,17 +2469,11 @@ version(unittest)
         runTest(tid);
     }
 
-    @system unittest
-    {
-        simpleTest();
-    }
+    simpleTest();
 
-    @system unittest
-    {
-        scheduler = new ThreadScheduler;
-        simpleTest();
-        scheduler = null;
-    }
+    scheduler = new ThreadScheduler;
+    simpleTest();
+    scheduler = null;
 }
 
 private @property shared(Mutex) initOnceLock()
