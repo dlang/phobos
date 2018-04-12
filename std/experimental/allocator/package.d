@@ -892,92 +892,111 @@ private ref RCIAllocator setupThreadAllocator()
     static class ThreadAllocator : IAllocator
     {
     nothrow:
+        private RCISharedAllocator _allocator;
+
+        @nogc @safe
+        this(ref RCISharedAllocator procAlloc)
+        {
+            _allocator = procAlloc;
+        }
+
         override @property uint alignment()
         {
-            return processAllocator.alignment();
+            return _allocator.alignment();
         }
 
         override size_t goodAllocSize(size_t s)
         {
-            return processAllocator.goodAllocSize(s);
+            return _allocator.goodAllocSize(s);
         }
 
         override void[] allocate(size_t n, TypeInfo ti = null)
         {
-            return processAllocator.allocate(n, ti);
+            return _allocator.allocate(n, ti);
         }
 
         override void[] alignedAllocate(size_t n, uint a)
         {
-            return processAllocator.alignedAllocate(n, a);
+            return _allocator.alignedAllocate(n, a);
         }
 
         override void[] allocateAll()
         {
-            return processAllocator.allocateAll();
+            return _allocator.allocateAll();
         }
 
         override bool expand(ref void[] b, size_t size)
         {
-            return processAllocator.expand(b, size);
+            return _allocator.expand(b, size);
         }
 
         override bool reallocate(ref void[] b, size_t size)
         {
-            return processAllocator.reallocate(b, size);
+            return _allocator.reallocate(b, size);
         }
 
         override bool alignedReallocate(ref void[] b, size_t size, uint alignment)
         {
-            return processAllocator.alignedReallocate(b, size, alignment);
+            return _allocator.alignedReallocate(b, size, alignment);
         }
 
         override Ternary owns(void[] b)
         {
-            return processAllocator.owns(b);
+            return _allocator.owns(b);
         }
 
         override Ternary resolveInternalPointer(const void* p, ref void[] result)
         {
-            return processAllocator.resolveInternalPointer(p, result);
+            return _allocator.resolveInternalPointer(p, result);
         }
 
         override bool deallocate(void[] b)
         {
-            return processAllocator.deallocate(b);
+            return _allocator.deallocate(b);
         }
 
         override bool deallocateAll()
         {
-            return processAllocator.deallocateAll();
+            return _allocator.deallocateAll();
         }
 
         override Ternary empty()
         {
-            return processAllocator.empty();
+            return _allocator.empty();
         }
 
-        //nothrow @safe @nogc
-        @safe @nogc
         override void incRef()
         {
-            processAllocator._alloc.incRef();
+            _allocator._alloc.incRef();
         }
 
-        //nothrow @safe @nogc
-        @safe @nogc
         override bool decRef()
         {
-            return processAllocator._alloc.decRef();
+            return _allocator._alloc.decRef();
         }
     }
 
     assert(_threadAllocator.isNull);
     import std.conv : emplace;
     static ulong[stateSize!(ThreadAllocator).divideRoundUp(ulong.sizeof)] _threadAllocatorState;
-    () @trusted { _threadAllocator = RCIAllocator(emplace!(ThreadAllocator)(_threadAllocatorState[])); }();
+    () @trusted {
+        _threadAllocator = RCIAllocator(emplace!(ThreadAllocator)(_threadAllocatorState[], processAllocator()));
+    }();
     return _threadAllocator;
 }
+
+// Fix threadAllocator bug: the threadAllocator should hold an internal reference
+// to the processAllocator that it's using
+@system unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+
+    auto a = sharedAllocatorObject(Mallocator.instance);
+    auto buf = theAllocator.allocate(42);
+    processAllocator = a;
+    theAllocator.deallocate(buf);
+}
+
 
 /**
 Gets/sets the allocator for the current thread. This is the default allocator
