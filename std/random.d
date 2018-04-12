@@ -1523,27 +1523,12 @@ version (AnyARC4Random)
 }
 else version (Windows)
 {
-    import core.sys.windows.windows:
-        BOOL, HMODULE, FARPROC, LPCSTR, LPCWSTR, PBYTE,
-        ULONG_PTR, FreeLibrary, GetProcAddress, LoadLibraryA;
     import core.sys.windows.wincrypt : HCRYPTPROV;
-    private alias DWORD = size_t; // uint in druntime
 
-    private alias FnCryptAcquireContextW = extern(Windows)
-        BOOL function(HCRYPTPROV*, LPCWSTR, LPCWSTR, DWORD, DWORD) @nogc nothrow;
-    private alias FnCryptAcquireContextA = extern (Windows)
-        BOOL function(HCRYPTPROV*, LPCSTR, LPCSTR, DWORD, DWORD) @nogc nothrow;
-    private alias FnCryptGenRandom = extern(Windows)
-        BOOL function(HCRYPTPROV, DWORD, scope PBYTE) @nogc nothrow;
-    private alias FnReleaseContext = extern(Windows)
-        BOOL function(HCRYPTPROV, DWORD) @nogc nothrow;
+    private shared size_t _hProvider;
 
     /+
-    Tries to use a system API to get entropy. Resources are not cached
-    due to the expectation that this function will not be called more
-    than once per program execution. If you want to retrieve system
-    entropy repeatedly over the life of the application, you should
-    use/write a different function.
+    Tries to use a system API to get entropy.
 
     Params:
         ptr = address at which to start writing
@@ -1552,53 +1537,74 @@ else version (Windows)
     Returns:
         `len` on success, -1 on failure
     +/
-    private ptrdiff_t oneTimeGenRandom()(scope void* ptr, ptrdiff_t len) @system
+    private ptrdiff_t getEntropyNonBlocking()(scope void* ptr, size_t len)
     {
+        import core.sys.windows.wincrypt : CryptGenRandom;
+        import core.sys.windows.windef : DWORD, PBYTE;
+        auto hProvider = getCryptGenProvider();
+        if (hProvider && len <= DWORD.max
+                && CryptGenRandom(hProvider, cast(DWORD) len, cast(PBYTE) ptr))
+            return len;
+        else
+            return -1;
+    }
+
+    // This destructor might not be necessary if the resources are
+    // automatically released when the process ends.
+    shared static ~this()
+    {
+        import core.atomic : atomicLoad;
+        import core.sys.windows.wincrypt : CryptReleaseContext;
+        auto hProvider = cast(HCRYPTPROV) atomicLoad(_hProvider);
+        if (hProvider)
+            CryptReleaseContext(hProvider, 0);
+    }
+
+    // Loads shared provider, performing initialization if required.
+    private HCRYPTPROV getCryptGenProvider()()
+    {
+        import core.atomic : atomicLoad, cas, MemoryOrder;
         import core.sys.windows.winbase : GetLastError;
+        import core.sys.windows.wincrypt : CryptAcquireContextA,
+            CryptAcquireContextW, CryptReleaseContext, CRYPT_NEWKEYSET,
+            CRYPT_SILENT, CRYPT_VERIFYCONTEXT, PROV_RSA_FULL;
         import core.sys.windows.winerror : NTE_BAD_KEYSET;
-        import core.sys.windows.wincrypt : PROV_RSA_FULL, CRYPT_NEWKEYSET,
-            CRYPT_VERIFYCONTEXT, CRYPT_SILENT;
-        auto hAdvapi32 = LoadLibraryA("Advapi32.dll");
-        if (!hAdvapi32) return -1;
-        scope (exit) { if (hAdvapi32) FreeLibrary(hAdvapi32); }
-        ULONG_PTR hProvider;
-        auto fnCryptReleaseContext = cast(FnReleaseContext)
-            GetProcAddress(hAdvapi32, "CryptReleaseContext");
-        if (!fnCryptReleaseContext) return -1;
-        auto fnCryptAcquireContextW = cast(FnCryptAcquireContextW)
-            GetProcAddress(hAdvapi32, "CryptAcquireContextW");
-        // https://msdn.microsoft.com/en-us/library/windows/desktop/aa379886(v=vs.85).aspx
-        // For performance reasons, we recommend that you set the pszContainer
-        // parameter to NULL and the dwFlags parameter to CRYPT_VERIFYCONTEXT
-        // in all situations where you do not require a persisted key.
-        // CRYPT_SILENT is intended for use with applications for which the UI
-        // cannot be displayed by the CSP.
-        if (!(fnCryptAcquireContextW && fnCryptAcquireContextW(
-                &hProvider, null, null,
-                PROV_RSA_FULL, CRYPT_VERIFYCONTEXT | CRYPT_SILENT)))
+
+        auto hProvider = cast(HCRYPTPROV) atomicLoad!(MemoryOrder.raw)(_hProvider);
+        if (!hProvider)
         {
-            if (GetLastError() == NTE_BAD_KEYSET)
+            // https://msdn.microsoft.com/en-us/library/windows/desktop/aa379886(v=vs.85).aspx
+            // For performance reasons, we recommend that you set the pszContainer
+            // parameter to NULL and the dwFlags parameter to CRYPT_VERIFYCONTEXT
+            // in all situations where you do not require a persisted key.
+            // CRYPT_SILENT is intended for use with applications for which the UI
+            // cannot be displayed by the CSP.
+            if (!CryptAcquireContextW(&hProvider, null, null,
+                    PROV_RSA_FULL, CRYPT_VERIFYCONTEXT | CRYPT_SILENT))
             {
-                // Attempt to create default container
-                auto fnCryptAcquireContextA = cast(FnCryptAcquireContextA)
-                    GetProcAddress(hAdvapi32, "CryptAcquireContextA");
-                if (!(fnCryptAcquireContextA && fnCryptAcquireContextA(
-                    &hProvider, null, null,
-                    PROV_RSA_FULL, CRYPT_NEWKEYSET | CRYPT_SILENT)))
+                if (GetLastError() == NTE_BAD_KEYSET)
                 {
-                    return -1;
+                    // Attempt to create default container
+                    if (!CryptAcquireContextA(&hProvider, null, null,
+                        PROV_RSA_FULL, CRYPT_NEWKEYSET | CRYPT_SILENT))
+                    {
+                        return 0;
+                    }
+                }
+                else
+                {
+                    return 0;
                 }
             }
         }
         assert(hProvider, "CryptAcquireContext reported success but hProvider is null.");
-        scope (exit) fnCryptReleaseContext(hProvider, 0);
-        auto fnCryptGenRandom = cast(FnCryptGenRandom)
-            GetProcAddress(hAdvapi32, "CryptGenRandom");
-        if (!fnCryptGenRandom) return -1;
-        if (fnCryptGenRandom(hProvider, len, cast(PBYTE) ptr))
-            return len;
-        else
-            return -1;
+        if (!cas(&_hProvider, 0, cast(size_t) hProvider))
+        {
+            // _hProvider was set by another thread.
+            CryptReleaseContext(hProvider, 0);
+            hProvider = cast(HCRYPTPROV) atomicLoad!(MemoryOrder.acq)(_hProvider);
+        }
+        return hProvider;
     }
 }
 else version (Posix)
@@ -1652,15 +1658,26 @@ else version (Posix)
                 sizes.
             */
             private extern(C) int syscall(size_t ident, size_t n, size_t arg1, size_t arg2) @nogc nothrow;
+
+            /+
+            Tries to get entropy using Linux syscall `getrandom`.
+
+            Params:
+                ptr = address at which to start writing
+                len = number of bytes to write
+
+            Returns:
+                Number of bytes successfully written up to `len`, or -1 on failure
+            +/
+            private ptrdiff_t getEntropySyscallNonBlocking()(scope void* ptr, size_t len)
+            {
+                return syscall(NR_getrandom, cast(size_t) ptr, len, GRND_NONBLOCK);
+            }
         }
     }
 
     /+
-    Tries to use a system API to get entropy. Resources are not cached
-    due to the expectation that this function will not be called more
-    than once per program execution. If you want to retrieve system
-    entropy repeatedly over the life of the application, you should
-    use/write a different function.
+    Tries to use a system API to get entropy.
 
     Params:
         ptr = address at which to start writing
@@ -1669,53 +1686,129 @@ else version (Posix)
     Returns:
         Number of bytes successfully written up to `len`, or -1 on failure
     +/
-    private ptrdiff_t oneTimeGenRandom()(scope void* ptr, size_t len) @system
+    private ptrdiff_t getEntropyNonBlocking()(scope void* ptr, size_t len)
     {
-        version (linux)
-        static if (is(typeof(NR_getrandom)))
+        import core.stdc.stdio : feof, ferror, fread;
+        static if (is(typeof(getEntropySyscallNonBlocking)))
         {{
             import core.stdc.errno : ENOSYS, errno;
-            const result = syscall(NR_getrandom, cast(size_t) ptr, len, GRND_NONBLOCK);
+            const result = getEntropySyscallNonBlocking(ptr, len);
             if (result != -1 || errno != ENOSYS)
                 return result;
         }}
-
-        import core.stdc.stdio : fclose, feof, ferror, fopen, fread;
-        auto f = fopen("/dev/urandom", "r");
-        if (f is null) return -1;
-        scope (exit) fclose(f);
-        const result = fread(ptr, 1, len, f);
+        auto dev = RandomDeviceFile!"/dev/urandom"(0);
+        if (!dev.filePointer)
+            return -1;
+        const result = fread(ptr, 1, len, dev.filePointer);
         // check for possible errors
         if (result != len)
         {
-            if (f.ferror)
+            if (dev.filePointer.ferror)
                 return -1;
 
-            if (f.feof)
+            if (dev.filePointer.feof)
                 return -1;
         }
         return result;
     }
-}
-else
-{
+
     /+
-    Tries to use a system API to get entropy. Resources are not cached
-    due to the expectation that this function will not be called more
-    than once per program execution. If you want to retrieve system
-    entropy repeatedly over the life of the application, you should
-    use/write a different function.
+    Random device file pointer wrapper with a heuristic to reduce repeated
+    opening and closing.
 
-    Params:
-        ptr = address at which to start writing
-        len = number of bytes to write
+    The file pointer accessed through this struct must not be used after
+    this struct's destructor has been called because the destructor may
+    invalidate it.
 
-    Returns:
-        -1 (always fails)
+    The first time a RandomDeviceFile for a given file name is constructed,
+    the file will close when the RandomDeviceFile is destroyed. On
+    subsequent times the RandomDeviceFile may save the FILE pointer in a
+    `static shared` variable and keep it open from then on. This will
+    happen on the second time if all construction occurs in a single
+    thread. In multi-threaded scenarios this may happen any time other than
+    the first, but it is guaranteed that at most one FILE pointer will ever
+    be written to `static shared` memory and kept open this way.
+    No special cleanup is necessary because the operating system will close
+    any open files when the process ends.
+
+    The file is opened in READ mode and buffering is disabled.
     +/
-    private ptrdiff_t oneTimeGenRandom()(scope void* ptr, size_t len) @system
+    private struct RandomDeviceFile(string theFileName)
+    if (theFileName == "/dev/urandom" || theFileName == "/dev/random")
     {
-        return -1;
+        @disable this();
+        @disable this(this);
+        @disable void opAssign(this);
+
+        import core.stdc.stdio : fopen;
+        alias FilePtr = typeof(fopen("a", "b"));
+        static assert(FilePtr.sizeof == size_t.sizeof);
+
+        private
+        {
+            /+
+            Value is either a non-null FILE pointer returned by fopen,
+            0, or size_t.max. We know size_t.max cannot be returned by
+            fopen because size_t.max cannot be the address of anything
+            larger than one byte, which is not enough room for a FILE.
+            +/
+            static assert(typeof(*(FilePtr.init)).sizeof > 1);
+            shared static size_t stateOrFilePointer;
+            enum size_t notCalledBefore = size_t.init;
+            enum size_t calledOnceBefore = size_t.max;
+        }
+        /+
+        File pointer for the random device. This pointer may become invalid
+        after this struct's destructor is called.
+        +/
+        FilePtr filePointer;
+        private bool ownsFilePointer;
+
+        this(uint _)
+        {
+            import core.stdc.stdio : _IONBF, fclose, fopen, setvbuf;
+            import core.atomic : atomicLoad, cas, MemoryOrder;
+            // MemoryOrder.raw corresponds to C++11/C11 memory_order_relaxed.
+            // If all load and store operations for a memory location are done
+            // with memory_order_relaxed or stronger, loads in multi-threaded
+            // scenarios may return stale values but will never return random
+            // garbage.
+            const previousState = atomicLoad!(MemoryOrder.raw)(stateOrFilePointer);
+            if (previousState == notCalledBefore || previousState == calledOnceBefore)
+            {
+                filePointer = fopen(theFileName.ptr, "r");
+                if (filePointer)
+                    setvbuf(filePointer, null, _IONBF, 0);
+                if (previousState == notCalledBefore)
+                {
+                    ownsFilePointer = true;
+                    cas(&stateOrFilePointer, notCalledBefore, calledOnceBefore);
+                }
+                else
+                {
+                    // If opened a second time, hold onto the FILE instead of closing it.
+                    ownsFilePointer = false;
+                    if (!cas(&stateOrFilePointer, calledOnceBefore, cast(size_t) filePointer))
+                    {
+                        if (filePointer)
+                            fclose(filePointer);
+                        filePointer = cast(FilePtr) atomicLoad!(MemoryOrder.acq)(stateOrFilePointer);
+                    }
+                }
+            }
+            else
+            {
+                ownsFilePointer = false;
+                filePointer = cast(FilePtr) previousState;
+            }
+        }
+
+        ~this()
+        {
+            import core.stdc.stdio : fclose;
+            if (filePointer && ownsFilePointer)
+                fclose(filePointer);
+        }
     }
 }
 
@@ -1747,94 +1840,29 @@ else
     }
 
     /+
-    Produces a suitable initial seed and gamma for a SplitMix engine.
-    First tries to draw on system entropy. If that fails makes use of
-    `bootstrapSeed`.
+    Conceptually similar to the old `unpredictableSeed`: a thread-local
+    PRNG initialized with combination of pid, tid, and time, whose output
+    is returned XOR a high-precision timestamp.
 
-    Params:
-        outSeed = write to this the initial seed value
-        outGamma = write to this the gamma value
-    See_Also:
-        globalSplitMix
+    The XOR with the timestamp could probably be removed without diminishing
+    the quality of the output.
     +/
-    private void oneTimeInitSeedAndGamma()(scope ref ulong outSeed, scope ref ulong outGamma)
+    private ulong fallbackSeedPRNG()() @nogc nothrow @trusted
     {
-        ulong[2] s = void;
-        // Try to initialize using system entropy.
-        if (oneTimeGenRandom(&s, typeof(s).sizeof) != typeof(s).sizeof)
-        {
-            // Fall back to tid+pid+time seed.
-            auto x = bootstrapSeed();
-            s[0] += murmurHash3Mix(x += goldenRatioGamma);
-            s[1] += murmurHash3Mix(x += goldenRatioGamma);
-        }
-        outSeed = s[0];
-        outGamma = ensureValidGamma(s[1]);
-    }
-
-    import core.atomic : has64BitCAS;
-
-    /+
-    In the absence of a convenient arc4random-like interface use a
-    shared static SplitMix generator. Described by Guy L. Steele Jr.,
-    Doug Lea, and Christine H. Flood in "Fast Splittable Pseudorandom
-    Number Generators" (2014).
-    +/
-    static if (has64BitCAS)
-    private ulong globalSplitMix()()
-    {
-        import core.atomic : atomicLoad, atomicOp, atomicStore, MemoryOrder;
-        shared static ulong _globalSeed;
-        shared static ulong _globalGamma;
-        ulong gamma = atomicLoad!(MemoryOrder.raw)(_globalGamma);
-        if (!gamma)
-        {
-            synchronized
-            {
-                gamma = atomicLoad(_globalGamma);
-                if (!gamma)
-                {
-                    // gamma hasn't been set yet, so initialize.
-                    ulong initialSeed = void;
-                    oneTimeInitSeedAndGamma(initialSeed, gamma);
-                    atomicStore(_globalSeed, initialSeed);
-                    atomicStore(_globalGamma, gamma);
-                }
-            }
-            assert(gamma);
-        }
-        return murmurHash3Mix(atomicOp!"+="(_globalSeed, gamma));
-    }
-
-    /+
-    Similar to above but entirely thread-local.
-    Unlike what one might expect does $(B not) split off a local
-    SplitMix instance from a global SplitMix instance!
-    +/
-    private ulong threadLocalSplitMix()()
-    {
+        // SplitMix PRNG.
+        import core.time : MonoTime;
         static ulong seed;
         static ulong gamma;
         if (!gamma)
         {
-            // gamma hasn't been set yet, so initialize.
-            oneTimeInitSeedAndGamma(seed, gamma);
+            // Perform first-time initialization.
+            // Assume we have no available source of system entropy.
+            ulong x = bootstrapSeed();
+            seed = murmurHash3Mix(x += goldenRatioGamma);
+            gamma = ensureValidGamma(murmurHash3Mix(x += goldenRatioGamma));
             assert(gamma);
         }
-        return murmurHash3Mix(seed += gamma);
-    }
-
-    static if (has64BitCAS)
-        private alias unpredictableSeedPRNGImpl = globalSplitMix;
-    else
-        private alias unpredictableSeedPRNGImpl = threadLocalSplitMix;
-
-    /+
-    Verify `threadLocalSplitMix` compiles.
-    +/
-    @nogc nothrow @system unittest
-    {
-        static assert(is(typeof(threadLocalSplitMix()) == ulong));
+        return murmurHash3Mix(seed += gamma) ^ cast(ulong) MonoTime.currTime.ticks;
     }
 
     /+
@@ -1905,7 +1933,13 @@ how excellent the source of entropy is.
     }
     else
     {
-        return cast(uint) unpredictableSeedPRNGImpl();
+        static if (is(typeof(getEntropyNonBlocking)))
+        {{
+            typeof(return) result = void;
+            if (typeof(result).sizeof == getEntropyNonBlocking(&result, typeof(result).sizeof))
+                return result;
+        }}
+        return cast(uint) fallbackSeedPRNG();
     }
 }
 /// ditto
@@ -1932,7 +1966,13 @@ if (isUnsigned!UIntType)
             }
             else
             {
-                return cast(UIntType) unpredictableSeedPRNGImpl();
+                static if (is(typeof(getEntropyNonBlocking)))
+                {{
+                    typeof(return) result = void;
+                    if (typeof(result).sizeof == getEntropyNonBlocking(&result, typeof(result).sizeof))
+                        return result;
+                }}
+                return cast(uint) fallbackSeedPRNG();
             }
         }
     }
