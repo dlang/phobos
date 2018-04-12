@@ -640,9 +640,12 @@ if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && hasAssig
             // Loop invariant
             version(unittest)
             {
-                import std.algorithm.searching : all;
-                assert(r[0 .. lo].all!(x => !lt(p, x)));
-                assert(r[hi + 1 .. r.length].all!(x => !lt(x, p)));
+                // this used to import std.algorithm.all, but we want to save
+                // imports when unittests are enabled if possible.
+                foreach (x; r[0 .. lo])
+                    assert(!lt(p, x));
+                foreach (x; r[hi+1 .. r.length])
+                    assert(!lt(x, p));
             }
             do ++lo; while (lt(r[lo], p));
             r[hi] = r[lo];
@@ -3444,21 +3447,14 @@ done:
 {
     auto a = [ 10, 5, 3, 4, 8,  11,  13, 3, 9, 4, 10 ];
     assert(expandPartition!((a, b) => a < b)(a, 4, 5, 6) == 9);
-    a = randomArray;
+
+    import std.algorithm.iteration : map;
+    import std.random : uniform;
+    auto size = uniform(1, 1000);
+    a = iota(0, size).map!(_ => uniform(0, 1000)).array;
     if (a.length == 0) return;
     expandPartition!((a, b) => a < b)(a, a.length / 2, a.length / 2,
         a.length / 2 + 1);
-}
-
-version(unittest)
-private T[] randomArray(Flag!"exactSize" flag = No.exactSize, T = int)(
-    size_t maxSize = 1000,
-    T minValue = 0, T maxValue = 255)
-{
-    import std.algorithm.iteration : map;
-    import std.random : uniform;
-    auto size = flag == Yes.exactSize ? maxSize : uniform(1, maxSize);
-    return iota(0, size).map!(_ => uniform(minValue, maxValue)).array;
 }
 
 @safe unittest

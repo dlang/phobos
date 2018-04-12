@@ -56,12 +56,6 @@ import std.range.primitives;
 public import std.system : Endian;
 import std.traits;
 
-version(unittest)
-{
-    import std.stdio;
-}
-
-
 private string myToString(ulong n)
 {
     import core.internal.string : UnsignedStringBuf, unsignedToTempString;
@@ -2770,6 +2764,7 @@ private ulong swapEndianImpl(ulong val) @trusted pure nothrow @nogc
 @safe unittest
 {
     import std.meta;
+    import std.stdio;
     static foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong, char, wchar, dchar))
     {{
         scope(failure) writeln("Failed type: ", T.stringof);
@@ -2898,6 +2893,7 @@ if (isFloatOrDouble!T)
 @safe unittest
 {
     import std.meta;
+    import std.stdio;
     static foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
                          char, wchar, dchar
         /* The trouble here is with floats and doubles being compared against nan
@@ -3072,6 +3068,7 @@ if (isFloatOrDouble!T)
 @safe unittest
 {
     import std.meta;
+    import std.stdio;
     static foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
                          char, wchar, dchar/*,
                          float, double*/))

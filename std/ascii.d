@@ -60,15 +60,6 @@ $(TR $(TD Enums) $(TD
   +/
 module std.ascii;
 
-version(unittest)
-{
-    // FIXME: When dmd bug #314 is fixed, make these selective.
-    import std.meta; // : AliasSeq;
-    import std.range; // : chain;
-    import std.traits; // : functionAttributes, FunctionAttribute, isSafe;
-}
-
-
 immutable fullHexDigits  = "0123456789ABCDEFabcdef";     /// 0 .. 9A .. Fa .. f
 immutable hexDigits      = fullHexDigits[0 .. 16];         /// 0 .. 9A .. F
 immutable lowerHexDigits = "0123456789abcdef";           /// 0 .. 9a .. f
@@ -142,6 +133,7 @@ bool isAlphaNum(dchar c) @safe pure nothrow @nogc
 
 @safe unittest
 {
+    import std.range;
     foreach (c; chain(digits, octalDigits, fullHexDigits, letters, lowercase, uppercase))
         assert(isAlphaNum(c));
 
@@ -173,6 +165,7 @@ bool isAlpha(dchar c) @safe pure nothrow @nogc
 
 @safe unittest
 {
+    import std.range;
     foreach (c; chain(letters, lowercase, uppercase))
         assert(isAlpha(c));
 
@@ -204,6 +197,7 @@ bool isLower(dchar c) @safe pure nothrow @nogc
 
 @safe unittest
 {
+    import std.range;
     foreach (c; lowercase)
         assert(isLower(c));
 
@@ -235,6 +229,7 @@ bool isUpper(dchar c) @safe pure nothrow @nogc
 
 @safe unittest
 {
+    import std.range;
     foreach (c; uppercase)
         assert(isUpper(c));
 
@@ -267,6 +262,7 @@ bool isDigit(dchar c) @safe pure nothrow @nogc
 
 @safe unittest
 {
+    import std.range;
     foreach (c; digits)
         assert(isDigit(c));
 
@@ -296,6 +292,7 @@ bool isOctalDigit(dchar c) @safe pure nothrow @nogc
 
 @safe unittest
 {
+    import std.range;
     foreach (c; octalDigits)
         assert(isOctalDigit(c));
 
@@ -326,6 +323,7 @@ bool isHexDigit(dchar c) @safe pure nothrow @nogc
 
 @safe unittest
 {
+    import std.range;
     foreach (c; fullHexDigits)
         assert(isHexDigit(c));
 
@@ -363,6 +361,7 @@ bool isWhite(dchar c) @safe pure nothrow @nogc
 
 @safe unittest
 {
+    import std.range;
     foreach (c; whitespace)
         assert(isWhite(c));
 
@@ -399,6 +398,7 @@ bool isControl(dchar c) @safe pure nothrow @nogc
 
 @safe unittest
 {
+    import std.range;
     foreach (dchar c; 0 .. 32)
         assert(isControl(c));
     assert(isControl(127));
@@ -590,6 +590,7 @@ if (is(C : dchar))
 @safe pure nothrow unittest
 {
 
+    import std.meta;
     static foreach (C; AliasSeq!(char, wchar, dchar, immutable char, ubyte))
     {
         foreach (i, c; uppercase)
@@ -651,6 +652,7 @@ if (is(C : dchar))
 
 @safe pure nothrow unittest
 {
+    import std.meta;
     static foreach (C; AliasSeq!(char, wchar, dchar, immutable char, ubyte))
     {
         foreach (i, c; lowercase)
@@ -676,6 +678,9 @@ if (is(C : dchar))
 
 @safe unittest //Test both toUpper and toLower with non-builtin
 {
+    import std.meta;
+    import std.traits;
+
     //User Defined [Char|Wchar|Dchar]
     static struct UDC {  char c; alias c this; }
     static struct UDW { wchar c; alias c this; }
