@@ -53,7 +53,6 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     import std.typecons : Ternary;
     import std.typecons : tuple, Tuple;
 
-    version(unittest)
     @system unittest
     {
         import std.algorithm.comparison : max;

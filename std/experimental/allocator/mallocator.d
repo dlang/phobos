@@ -12,7 +12,6 @@ import std.experimental.allocator.common;
  */
 struct Mallocator
 {
-    version(unittest)
     @system unittest { testAllocator!(() => Mallocator.instance); }
 
     /**
@@ -363,10 +362,6 @@ version(LDC_AddressSanitizer)
     //...
 }
 
-version(unittest) version(CRuntime_DigitalMars)
-@nogc nothrow
-size_t addr(ref void* ptr) { return cast(size_t) ptr; }
-
 version(Posix)
 @nogc @system nothrow unittest
 {
@@ -399,24 +394,26 @@ version(CRuntime_DigitalMars)
 {
     void* m;
 
+    size_t m_addr() { return cast(size_t) m; }
+
     m = _aligned_malloc(16, 0x10);
     if (m)
     {
-        assert((m.addr & 0xF) == 0);
+        assert((m_addr & 0xF) == 0);
         _aligned_free(m);
     }
 
     m = _aligned_malloc(16, 0x100);
     if (m)
     {
-        assert((m.addr & 0xFF) == 0);
+        assert((m_addr & 0xFF) == 0);
         _aligned_free(m);
     }
 
     m = _aligned_malloc(16, 0x1000);
     if (m)
     {
-        assert((m.addr & 0xFFF) == 0);
+        assert((m_addr & 0xFFF) == 0);
         _aligned_free(m);
     }
 
@@ -425,7 +422,7 @@ version(CRuntime_DigitalMars)
     {
         assert((cast(size_t) m & 0xF) == 0);
         m = _aligned_realloc(m, 32, 0x10000);
-        if (m) assert((m.addr & 0xFFFF) == 0);
+        if (m) assert((m_addr & 0xFFFF) == 0);
         _aligned_free(m);
     }
 
