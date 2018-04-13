@@ -4144,11 +4144,6 @@ version(unittest)
         C[] array;
     }
 
-    static assert( isRandomAccessRange!(MockRange!(const(char))) );
-}
-
-version(unittest)
-{
     /* Define a mock BidirectionalRange to use for unittesting.
      */
 
@@ -4169,6 +4164,11 @@ version(unittest)
         const(C)[] array;
     }
 
+}
+
+@safe unittest
+{
+    static assert( isRandomAccessRange!(MockRange!(const(char))) );
     static assert( isBidirectionalRange!(MockBiRange!(const(char))) );
 }
 
