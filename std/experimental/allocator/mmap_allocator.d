@@ -82,6 +82,8 @@ extern (C) private @system @nogc nothrow
     }
 }
 
+// pure wrappers around `mmap` and `munmap` because they are used here locally
+// solely to perform allocation and deallocation which in this case is `pure`
 extern (C) private pure @system @nogc nothrow
 {
     public import core.sys.posix.sys.types : off_t;
