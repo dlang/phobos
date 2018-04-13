@@ -612,7 +612,7 @@ version(unittest)
         // unnecessary import of std.experimental.allocator
         import std.experimental.allocator : RCIAllocator, RCISharedAllocator;
         static assert(is(RCAllocInterface == RCIAllocator)
-            || is (RCAllocInterface == shared RCISharedAllocator));
+            || is (RCAllocInterface == RCISharedAllocator));
 
         import std.conv : text;
         import std.math : isPowerOf2;
