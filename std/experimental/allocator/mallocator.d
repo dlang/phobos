@@ -394,7 +394,7 @@ version(CRuntime_DigitalMars)
 {
     void* m;
 
-    alias m_addr = () => cast(size_t) m;
+    size_t m_addr() { return cast(size_t) m; }
 
     m = _aligned_malloc(16, 0x10);
     if (m)
