@@ -4107,8 +4107,6 @@ version(unittest)
 {
     // This was the only way I could get nested maps to work.
     __gshared TaskPool poolInstance;
-
-    import std.stdio;
 }
 
 // These test basic functionality but don't stress test for threading bugs.
@@ -4123,6 +4121,7 @@ version(unittest)
     import std.math : approxEqual, sqrt, log;
     import std.range : indexed, iota, join;
     import std.typecons : Tuple, tuple;
+    import std.stdio;
 
     poolInstance = new TaskPool(2);
     scope(exit) poolInstance.stop();
@@ -4770,9 +4769,9 @@ version(parallelismStressTest)
     }
 }
 
-version(unittest)
+@system unittest
 {
-    struct __S_12733
+    static struct __S_12733
     {
         invariant() { assert(checksum == 1_234_567_890); }
         this(ulong u){n = u;}
@@ -4782,10 +4781,6 @@ version(unittest)
     }
 
     static auto __genPair_12733(ulong n) { return __S_12733(n); }
-}
-
-@system unittest
-{
     immutable ulong[] data = [ 2UL^^59-1, 2UL^^59-1, 2UL^^59-1, 112_272_537_195_293UL ];
 
     auto result = taskPool.amap!__genPair_12733(data);

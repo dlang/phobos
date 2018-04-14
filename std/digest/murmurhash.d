@@ -687,8 +687,6 @@ the 'put' method.
 
 version(unittest)
 {
-    import std.string : representation;
-
     private auto hash(H, Element = H.Element)(string data)
     {
         H hasher;
