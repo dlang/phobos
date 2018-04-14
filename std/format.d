@@ -621,8 +621,8 @@ uint formattedWrite(Writer, Char, A...)(auto ref Writer w, in Char[] fmt, A args
 }
 
 /**
-Reads characters from input range `r`, converts them according
-to `fmt`, and writes them to `args`.
+Reads characters from $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+`r`, converts them according to `fmt`, and writes them to `args`.
 
 Params:
     r = The range to read from.

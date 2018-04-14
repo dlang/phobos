@@ -156,11 +156,14 @@ Also, note that Phobos code assumes that the primitives `r.front` and
 running time. $(BIGOH) statements in the documentation of range functions
 are made with this assumption.
 
+See_Also:
+    The header of $(MREF std,range) for tutorials on ranges.
+
 Params:
     R = type to be tested
 
 Returns:
-    true if R is an InputRange, false if not
+    `true` if R is an input range, `false` if not
  */
 enum bool isInputRange(R) =
     is(typeof(R.init) == R)
@@ -817,6 +820,9 @@ package(std) enum bool isNativeOutputRange(R, E) =
 Returns `true` if `R` is an output range for elements of type
 `E`. An output range is defined functionally as a range that
 supports the operation $(D put(r, e)) as defined above.
+
+See_Also:
+    The header of $(MREF std,range) for tutorials on ranges.
  +/
 enum bool isOutputRange(R, E) =
     is(typeof(put(lvalueOf!R, lvalueOf!E)));
@@ -880,6 +886,9 @@ The semantics of a forward range (not checkable during compilation)
 are the same as for an input range, with the additional requirement
 that backtracking must be possible by saving a copy of the range
 object with `save` and using it later.
+
+See_Also:
+    The header of $(MREF std,range) for tutorials on ranges.
  */
 enum bool isForwardRange(R) = isInputRange!R
     && is(ReturnType!((R r) => r.save) == R);
@@ -919,6 +928,9 @@ type `R`):
 $(UL $(LI `r.back` returns (possibly a reference to) the last
 element in the range. Calling `r.back` is allowed only if calling
 `r.empty` has, or would have, returned `false`.))
+
+See_Also:
+    The header of $(MREF std,range) for tutorials on ranges.
  */
 enum bool isBidirectionalRange(R) = isForwardRange!R
     && is(typeof((R r) => r.popBack))
@@ -980,6 +992,9 @@ versions including `string` and `wstring`) are arrays, $(D
 isRandomAccessRange) yields `false` for them because they use
 variable-length encodings (UTF-8 and UTF-16 respectively). These types
 are bidirectional ranges only.
+
+See_Also:
+    The header of $(MREF std,range) for tutorials on ranges.
  */
 enum bool isRandomAccessRange(R) =
     is(typeof(lvalueOf!R[1]) == ElementType!R)

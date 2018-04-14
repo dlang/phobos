@@ -4720,7 +4720,8 @@ public:
     void popFront() { impl.popFront(); }
 }
 /++
-    Returns an input range of `DirEntry` that lazily iterates a given directory,
+    Returns an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+    of `DirEntry` that lazily iterates a given directory,
     also provides two ways of foreach iteration. The iteration variable can be of
     type `string` if only the name is needed, or `DirEntry`
     if additional details are needed. The span _mode dictates how the

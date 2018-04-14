@@ -2191,8 +2191,8 @@ Allows to directly use range operations on lines of a file.
     }
 
 /**
-Returns an input range set up to read from the file handle one line
-at a time.
+Returns an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+set up to read from the file handle one line at a time.
 
 The element type for the range will be `Char[]`. Range primitives
 may throw `StdioException` on I/O error.
@@ -2353,7 +2353,8 @@ the contents may well have changed).
     }
 
 /**
-Returns an input range set up to read from the file handle one line
+Returns an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+set up to read from the file handle one line
 at a time. Each line will be newly allocated. `front` will cache
 its value to allow repeated calls without unnecessary allocations.
 
@@ -2556,8 +2557,8 @@ $(REF readText, std,file)
     }
 
     /**
-    Creates an input range set up to parse one line at a time from the file
-    into a tuple.
+    Creates an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+    set up to parse one line at a time from the file into a tuple.
 
     Range primitives may throw `StdioException` on I/O error.
 
@@ -2677,8 +2678,8 @@ $(REF readText, std,file)
     }
 
 /**
-Returns an input range set up to read from the file handle a chunk at a
-time.
+Returns an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+set up to read from the file handle a chunk at a time.
 
 The element type for the range will be `ubyte[]`. Range primitives
 may throw `StdioException` on I/O error.

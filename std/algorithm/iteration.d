@@ -1091,7 +1091,7 @@ that can be executed via `pred(element)`.
 
 Params:
     predicate = Function to apply to each element of range
-    range = Input range of elements
+    range = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of elements
 
 Returns:
     `filter!(predicate)(range)` returns a new range containing only elements `x` in `range` for

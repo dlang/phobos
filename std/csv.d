@@ -2,7 +2,7 @@
 
 /**
  * Implements functionality to read Comma Separated Values and its variants
- * from an input range of `dchar`.
+ * from an $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of `dchar`.
  *
  * Comma Separated Values provide a simple means to transfer and store
  * tabular data. It has been common for programs to use their own
@@ -293,8 +293,8 @@ enum Malformed
 }
 
 /**
-Returns an input range for iterating over records found in $(D
-input).
+Returns an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+for iterating over records found in `input`.
 
 An optional `header` can be provided. The first record will be read in
 as the header. If `Contents` is a struct then the header provided is
@@ -1182,7 +1182,7 @@ private:
 public:
     /*
      * Params:
-     *      input = Pointer to a character input range
+     *      input = Pointer to a character $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
      *      delimiter = Separator for each column
      *      quote = Character used for quotation
      *      indices = An array containing which columns will be returned.

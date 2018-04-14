@@ -308,8 +308,8 @@ pure nothrow @safe @nogc unittest
     in `str`.
 
     Params:
-        str = input range of UTF code units. Must be random access if
-        `index` is passed
+        str = $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+        of UTF code units. Must be random access if `index` is passed
         index = starting index of UTF sequence (default: `0`)
 
     Returns:
@@ -1152,7 +1152,8 @@ do
 /++
     `decodeFront` is a variant of $(LREF decode) which specifically decodes
     the first code point. Unlike $(LREF decode), `decodeFront` accepts any
-    input range of code units (rather than just a string or random access
+    $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+    of code units (rather than just a string or random access
     range). It also takes the range by `ref` and pops off the elements as it
     decodes them. If `numCodeUnits` is passed in, it gets set to the number
     of code units which were in the code point which was decoded.
@@ -2736,7 +2737,8 @@ if (isSomeChar!C)
 
     Params:
         C = the character type to get the encoding length for
-        input = the input range to calculate the encoding length from
+        input = the $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+        to calculate the encoding length from
     Returns:
         The number of code units in `input` when encoded to `C`
   +/
@@ -3489,8 +3491,8 @@ enum dchar replacementDchar = '\uFFFD';
  * one while iterating over the resulting range will give nonsensical results.
  *
  * Params:
- *      r = an input range of characters (including strings) or a type that
- *          implicitly converts to a string type.
+ *      r = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+ *      of characters (including strings) or a type that implicitly converts to a string type.
  * Returns:
  *      If `r` is not an auto-decodable string (i.e. a narrow string or a
  *      user-defined type that implicits converts to a string type), then `r`
@@ -3909,7 +3911,8 @@ if (isAutodecodableString!R ||
 }
 
 /****************************
- * Iterate an input range of characters by char, wchar, or dchar.
+ * Iterate an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+ * of characters by char, wchar, or dchar.
  * These aliases simply forward to $(LREF byUTF) with the
  * corresponding C argument.
  *
@@ -4144,8 +4147,8 @@ int impureVariable;
 }
 
 /****************************
- * Iterate an input range of characters by char type `C` by
- * encoding the elements of the range.
+ * Iterate an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+ * of characters by char type `C` by encoding the elements of the range.
  *
  * UTF sequences that cannot be converted to the specified encoding are
  * replaced by U+FFFD per "5.22 Best Practice for U+FFFD Substitution"

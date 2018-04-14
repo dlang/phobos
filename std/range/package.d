@@ -489,7 +489,7 @@ the same range results in a stride with a step that is the
 product of the two applications. It is an error for `n` to be 0.
 
 Params:
-    r = the input range to stride over
+    r = the $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to stride over
     n = the number of elements to skip over
 
 Returns:
@@ -881,7 +881,7 @@ Chain) type exits the picture by aliasing itself directly to that
 range's type.
 
 Params:
-    rs = the input ranges to chain together
+    rs = the $(REF_ALTTEXT input ranges, isInputRange, std,range,primitives) to chain together
 
 Returns:
     An input range at minimum. If all of the ranges in `rs` provide
@@ -1995,7 +1995,8 @@ information is not applied to the result unless `input` also has
 length information.
 
 Params:
-    input = an input range to iterate over up to `n` times
+    input = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+    to iterate over up to `n` times
     n = the number of elements to take
 
 Returns:
@@ -3034,7 +3035,7 @@ pure @safe nothrow @nogc unittest
     In other languages this is sometimes called `skip`.
 
     Params:
-        range = the input range to drop from
+        range = the $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to drop from
         n = the number of elements to drop
 
     Returns:
@@ -3123,7 +3124,7 @@ if (isBidirectionalRange!R)
     `n` elements.
 
     Params:
-        range = the input range to drop from
+        range = the $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to drop from
         n = the number of elements to drop
 
     Returns:
@@ -7654,8 +7655,8 @@ Indexed!(Source, Indices) indexed(Source, Indices)(Source source, Indices indice
 
 /**
 This range iterates over fixed-sized chunks of size `chunkSize` of a
-`source` range. `Source` must be an input range. `chunkSize` must be
-greater than zero.
+`source` range. `Source` must be an $(REF_ALTTEXT input range, isInputRange, std,range,primitives).
+`chunkSize` must be greater than zero.
 
 If `!isInfinite!Source` and `source.walkLength` is not evenly
 divisible by `chunkSize`, the back element of this range will contain
@@ -9812,7 +9813,7 @@ Overflow:
     continue from `Enumerator.min`.
 
 Params:
-    range = the input range to attach indexes to
+    range = the $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to attach indexes to
     start = the number to start the index counter from
 
 Returns:
@@ -12043,7 +12044,7 @@ Bitwise adapter over an integral type range. Consumes the range elements bit by
 bit, from the least significant bit to the most significant bit.
 
 Params:
-    R = an integral input range to iterate over
+    R = an integral $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to iterate over
     range = range to consume bit by by
 
 Returns:
@@ -12609,7 +12610,7 @@ $(REF byGrapheme, std, uni) before calling this function.
 If `r` has a length, then this is $(BIGOH 1). Otherwise, it's $(BIGOH r.length).
 
 Params:
-    r = an input range with a length, or a forward range
+    r = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives) with a length, or a forward range
     e = element to pad the range with
     n = the length to pad to
 
@@ -12695,7 +12696,7 @@ provides them. Except the functions `back` and `popBack`, which also require
 the range to have a length as well as `back` and `popBack`
 
 Params:
-    r = an input range with a length
+    r = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives) with a length
     e = element to pad the range with
     n = the length to pad to
 
