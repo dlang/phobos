@@ -64,6 +64,15 @@ struct Mallocator
         return true;
     }
 
+    @trusted @nogc nothrow pure
+    package void[] allocateZeroed(size_t bytes) shared
+    {
+        import core.memory : pureCalloc;
+        if (!bytes) return null;
+        auto p = pureCalloc(1, bytes);
+        return p ? p[0 .. bytes] : null;
+    }
+
     /**
     Returns the global instance of this allocator type. The C heap allocator is
     thread-safe, therefore all of its methods and `it` itself are

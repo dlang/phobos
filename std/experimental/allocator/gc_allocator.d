@@ -111,6 +111,13 @@ struct GCAllocator
         return ((n + 4095) / 4096) * 4096;
     }
 
+    package pure nothrow @trusted void[] allocateZeroed(size_t bytes) shared const
+    {
+        if (!bytes) return null;
+        auto p = GC.calloc(bytes);
+        return p ? p[0 .. bytes] : null;
+    }
+
     /**
     Returns the global instance of this allocator type. The garbage collected
     allocator is thread-safe, therefore all of its methods and `instance` itself
