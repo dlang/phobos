@@ -1,0 +1,8 @@
+Added `toBytes` property to `std.bigint.BigInt`
+
+Added a `toBytes` property to `std.bigint.BigInt`, which converts the `BigInt`
+to a sequence of bytes that represents the native-endian representation of
+that number.
+
+Also added an `opCast` operator for converting `BigInt` to `ubyte[]`, which
+just calls the `toBytes` method and returns the result.

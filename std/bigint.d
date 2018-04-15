@@ -1107,6 +1107,9 @@ public:
     /**
         Converts the `BigInt` to a sequence of bytes that represents the
         native-endian representation of that number.
+
+        Returns: a `ubyte[]` array that represents the native-endian
+            representation of that number.
     */
     ubyte[] toBytes() const pure @system @property nothrow
     in
@@ -1214,6 +1217,18 @@ public:
                 0xFDu
             ]);
         }
+    }
+
+    /**
+        Override for the `cast` operator, so the `BigInt` can be cast to a
+        `ubyte[]`.
+
+        Returns: a `ubyte[]` array, representing the native-endian
+            representation of that number.
+    */
+    T opCast(T : ubyte[])() pure nothrow @system const
+    {
+        return this.toBytes;
     }
 
     /**

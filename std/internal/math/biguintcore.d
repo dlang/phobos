@@ -415,6 +415,9 @@ public:
         completely ignored, so -1,000,000 will produce the same output as
         1,000,000. The integer will be encoded on the fewest possible bytes.
         In other words, there will be no leading zeroes.
+
+        Returns: the native-endian unsigned representation of the `BigInt` in
+            the form of a `ubyte[]` array.
     */
     ubyte[] toBytes() const pure @system @property nothrow
     in
