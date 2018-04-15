@@ -8,8 +8,7 @@ $(BOOKTABLE Cheat Sheet,
 $(TR $(TH Function Name) $(TH Description))
 $(T2 completeSort,
         If `a = [10, 20, 30]` and `b = [40, 6, 15]`, then
-        `completeSort(a, b)` leaves `a = [6, 10, 15]` and `b = [20$D(
-        30, 40]).
+        `completeSort(a, b)` leaves `a = [6, 10, 15]` and `b = [20, 30, 40]`.
         The range `a` must be sorted prior to the call, and as a result the
         combination `$(REF chain, std,range)(a, b)` is sorted.)
 $(T2 isPartitioned,
@@ -641,9 +640,12 @@ if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && hasAssig
             // Loop invariant
             version(unittest)
             {
-                import std.algorithm.searching : all;
-                assert(r[0 .. lo].all!(x => !lt(p, x)));
-                assert(r[hi + 1 .. r.length].all!(x => !lt(x, p)));
+                // this used to import std.algorithm.all, but we want to save
+                // imports when unittests are enabled if possible.
+                foreach (x; r[0 .. lo])
+                    assert(!lt(p, x));
+                foreach (x; r[hi+1 .. r.length])
+                    assert(!lt(x, p));
             }
             do ++lo; while (lt(r[lo], p));
             r[hi] = r[lo];
@@ -745,17 +747,16 @@ if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && hasAssig
         assert(a == [ 42, 42 ]);
 
         import std.algorithm.iteration : map;
+        import std.format : format;
         import std.random;
-        import std.stdio;
-        auto s = unpredictableSeed;
-        auto g = Random(s);
+        auto s = 123_456_789;
+        auto g = Xorshift(s);
         a = iota(0, uniform(1, 1000, g))
             .map!(_ => uniform(-1000, 1000, g))
             .array;
-        scope(failure) writeln("RNG seed was ", s);
         pivot = pivotPartition!less(a, a.length / 2);
-        assert(a[0 .. pivot].all!(x => x <= a[pivot]));
-        assert(a[pivot .. $].all!(x => x >= a[pivot]));
+        assert(a[0 .. pivot].all!(x => x <= a[pivot]), "RNG seed: %d".format(s));
+        assert(a[pivot .. $].all!(x => x >= a[pivot]), "RNG seed: %d".format(s));
     }
     test!"a < b";
     static bool myLess(int a, int b)
@@ -884,9 +885,9 @@ if (ss == SwapStrategy.unstable && isRandomAccessRange!Range
 
 @safe unittest
 {
-    import std.random : Random, uniform, unpredictableSeed;
+    import std.random : Random = Xorshift, uniform;
 
-    immutable uint[] seeds = [3923355730, 1927035882, unpredictableSeed];
+    immutable uint[] seeds = [3923355730, 1927035882];
     foreach (s; seeds)
     {
         auto r = Random(s);
@@ -1711,7 +1712,7 @@ private void shortSort(alias less, Range)(Range r)
 
 @safe unittest
 {
-    import std.random : Random, uniform;
+    import std.random : Random = Xorshift, uniform;
 
     auto rnd = Random(1);
     auto a = new int[uniform(100, 200, rnd)];
@@ -1950,12 +1951,12 @@ if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
 {
     import std.algorithm.internal : rndstuff;
     import std.algorithm.mutation : swapRanges;
-    import std.random : Random, unpredictableSeed, uniform;
+    import std.random : Random = Xorshift, uniform;
     import std.uni : toUpper;
 
     // sort using delegate
     auto a = new int[100];
-    auto rnd = Random(unpredictableSeed);
+    auto rnd = Random(123_456_789);
     foreach (ref e; a)
     {
         e = uniform(-100, 100, rnd);
@@ -3446,21 +3447,14 @@ done:
 {
     auto a = [ 10, 5, 3, 4, 8,  11,  13, 3, 9, 4, 10 ];
     assert(expandPartition!((a, b) => a < b)(a, 4, 5, 6) == 9);
-    a = randomArray;
+
+    import std.algorithm.iteration : map;
+    import std.random : uniform;
+    auto size = uniform(1, 1000);
+    a = iota(0, size).map!(_ => uniform(0, 1000)).array;
     if (a.length == 0) return;
     expandPartition!((a, b) => a < b)(a, a.length / 2, a.length / 2,
         a.length / 2 + 1);
-}
-
-version(unittest)
-private T[] randomArray(Flag!"exactSize" flag = No.exactSize, T = int)(
-    size_t maxSize = 1000,
-    T minValue = 0, T maxValue = 255)
-{
-    import std.algorithm.iteration : map;
-    import std.random : unpredictableSeed, Random, uniform;
-    auto size = flag == Yes.exactSize ? maxSize : uniform(1, maxSize);
-    return iota(0, size).map!(_ => uniform(minValue, maxValue)).array;
 }
 
 @safe unittest
@@ -3514,9 +3508,9 @@ private T[] randomArray(Flag!"exactSize" flag = No.exactSize, T = int)(
 {
     import std.algorithm.comparison : max, min;
     import std.algorithm.iteration : reduce;
-    import std.random : Random, uniform, unpredictableSeed;
+    import std.random : Random = Xorshift, uniform;
 
-    immutable uint[] seeds = [90027751, 2709791795, 1374631933, 995751648, 3541495258, 984840953, unpredictableSeed];
+    immutable uint[] seeds = [90027751, 2709791795, 1374631933, 995751648, 3541495258, 984840953];
     foreach (s; seeds)
     {
         auto r = Random(s);
@@ -3719,10 +3713,10 @@ if (isInputRange!(SRange) && isRandomAccessRange!(TRange)
 
 @system unittest
 {
-    import std.random : Random, unpredictableSeed, uniform, randomShuffle;
+    import std.random : Random = Xorshift, uniform, randomShuffle;
     import std.typecons : Yes;
 
-    auto r = Random(unpredictableSeed);
+    auto r = Random(123_456_789);
     ptrdiff_t[] a = new ptrdiff_t[uniform(1, 1000, r)];
     foreach (i, ref e; a) e = i;
     randomShuffle(a, r);

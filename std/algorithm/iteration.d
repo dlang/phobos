@@ -119,36 +119,36 @@ if (fun.length >= 1)
 }
 
 /++
-`cache` eagerly evaluates `front` of `range`
-on each construction or call to `popFront`,
+`cache` eagerly evaluates $(REF_ALTTEXT front, front, std,range,primitives) of `range`
+on each construction or call to $(REF_ALTTEXT popFront, popFront, std,range,primitives),
 to store the result in a _cache.
-The result is then directly returned when `front` is called,
+The result is then directly returned when $(REF_ALTTEXT front, front, std,range,primitives) is called,
 rather than re-evaluated.
 
 This can be a useful function to place in a chain, after functions
 that have expensive evaluation, as a lazy alternative to $(REF array, std,array).
-In particular, it can be placed after a call to `map`, or before a call
-to `filter`.
+In particular, it can be placed after a call to $(LREF map), or before a call
+$(REF filter, std,range) or $(REF tee, std,range)
 
 `cache` may provide
-$(REF_ALTTEXT bidirectional _range, isBidirectionalRange, std,_range,primitives)
+$(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives)
 iteration if needed, but since this comes at an increased cost, it must be explicitly requested via the
 call to `cacheBidirectional`. Furthermore, a bidirectional _cache will
 evaluate the "center" element twice, when there is only one element left in
-the _range.
+the range.
 
 `cache` does not provide random access primitives,
 as `cache` would be unable to _cache the random accesses.
 If `Range` provides slicing primitives,
 then `cache` will provide the same slicing primitives,
-but `hasSlicing!Cache` will not yield true (as the $(REF hasSlicing, std,_range,primitives)
+but `hasSlicing!Cache` will not yield true (as the $(REF hasSlicing, std,range,primitives)
 trait also checks for random access).
 
 Params:
-    range = an $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
+    range = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
 
 Returns:
-    an input _range with the cached values of _range
+    An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) with the cached values of range
 +/
 auto cache(Range)(Range range)
 if (isInputRange!Range)
@@ -207,14 +207,14 @@ if (isBidirectionalRange!Range)
 
 /++
 Tip: `cache` is eager when evaluating elements. If calling front on the
-underlying _range has a side effect, it will be observable before calling
-front on the actual cached _range.
+underlying range has a side effect, it will be observable before calling
+front on the actual cached range.
 
-Furthermore, care should be taken composing `cache` with $(REF take, std,_range).
+Furthermore, care should be taken composing `cache` with $(REF take, std,range).
 By placing `take` before `cache`, then `cache` will be "aware"
-of when the _range ends, and correctly stop caching elements when needed.
+of when the range ends, and correctly stop caching elements when needed.
 If calling front has no side effect though, placing `take` after `cache`
-may yield a faster _range.
+may yield a faster range.
 
 Either way, the resulting ranges will be equivalent, but maybe not at the
 same cost or side effects.
@@ -691,7 +691,7 @@ private struct MapResult(alias fun, Range)
     import std.internal.test.dummyrange;
     import std.range;
     import std.typecons : tuple;
-    import std.random : unpredictableSeed, uniform, Random;
+    import std.random : uniform, Random = Xorshift;
 
     int[] arr1 = [ 1, 2, 3, 4 ];
     const int[] arr1Const = arr1;
@@ -749,7 +749,7 @@ private struct MapResult(alias fun, Range)
     assert(fibsSquares.front == 9);
 
     auto repeatMap = map!"a"(repeat(1));
-    auto gen = Random(unpredictableSeed);
+    auto gen = Random(123_456_789);
     auto index = uniform(0, 1024, gen);
     static assert(isInfinite!(typeof(repeatMap)));
     assert(repeatMap[index] == 1);
@@ -1091,7 +1091,7 @@ that can be executed via `pred(element)`.
 
 Params:
     predicate = Function to apply to each element of range
-    range = Input range of elements
+    range = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of elements
 
 Returns:
     `filter!(predicate)(range)` returns a new range containing only elements `x` in `range` for
@@ -1890,7 +1890,7 @@ if (isForwardRange!Range)
  *
  * Equivalence is defined by the predicate `pred`, which can be either
  * binary, which is passed to $(REF binaryFun, std,functional), or unary, which is
- * passed to $(REF unaryFun, std,functional). In the binary form, two _range elements
+ * passed to $(REF unaryFun, std,functional). In the binary form, two range elements
  * `a` and `b` are considered equivalent if `pred(a,b)` is true. In
  * unary form, two elements are considered equivalent if `pred(a) == pred(b)`
  * is true.
@@ -2750,7 +2750,7 @@ See_Also:
     $(HTTP en.wikipedia.org/wiki/Fold_(higher-order_function), Fold (higher-order function))
 
     $(LREF fold) is functionally equivalent to $(LREF _reduce) with the argument
-    order reversed, and without the need to use $(REF_ALTTEXT $(D tuple),tuple,std,typecons)
+    order reversed, and without the need to use $(REF_ALTTEXT `tuple`,tuple,std,typecons)
     for multiple seeds. This makes it easier to use in UFCS chains.
 
     $(LREF sum) is similar to `reduce!((a, b) => a + b)` that offers
@@ -2793,7 +2793,13 @@ if (fun.length >= 1)
 
         static if (isInputRange!R)
         {
-            enforce(!r.empty, "Cannot reduce an empty input range w/o an explicit seed value.");
+            // no need to throw if range is statically known to be non-empty
+            static if (!__traits(compiles,
+            {
+                static assert(r.length > 0);
+            }))
+                enforce(!r.empty, "Cannot reduce an empty input range w/o an explicit seed value.");
+
             Args result = r.front;
             r.popFront();
             return reduceImpl!false(r, result);
@@ -2882,8 +2888,15 @@ if (fun.length >= 1)
                 args[i] = f(args[i], e);
         }
         static if (mustInitialize)
-        if (!initialized)
-            throw new Exception("Cannot reduce an empty iterable w/o an explicit seed value.");
+        // no need to throw if range is statically known to be non-empty
+        static if (!__traits(compiles,
+        {
+            static assert(r.length > 0);
+        }))
+        {
+            if (!initialized)
+                throw new Exception("Cannot reduce an empty iterable w/o an explicit seed value.");
+        }
 
         static if (Args.length == 1)
             return args[0];
@@ -3165,6 +3178,19 @@ The number of seeds must be correspondingly increased.
     assert(data.length == 0);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=13880
+// reduce shouldn't throw if the length is statically known
+pure nothrow @safe @nogc unittest
+{
+    import std.algorithm.comparison : min;
+    int[5] arr;
+    arr[2] = -1;
+    assert(arr.reduce!min == -1);
+
+    int[0] arr0;
+    assert(reduce!min(42, arr0) == 42);
+}
+
 //Helper for Reduce
 private template ReduceSeedType(E)
 {
@@ -3209,7 +3235,7 @@ See_Also:
     precise summing of floating point numbers.
 
     This is functionally equivalent to $(LREF reduce) with the argument order
-    reversed, and without the need to use $(REF_ALTTEXT $(D tuple),tuple,std,typecons)
+    reversed, and without the need to use $(REF_ALTTEXT `tuple`,tuple,std,typecons)
     for multiple seeds.
 +/
 template fold(fun...)
@@ -4236,7 +4262,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
         @property empty() { return _impl.empty; }
         @property auto front() { return _impl.front; }
         void popFront() { _impl = _impl[1..$]; }
-        @property RefSep save() { return new RefSep(_impl); }
+        @property RefSep save() scope { return new RefSep(_impl); }
         @property auto length() { return _impl.length; }
     }
     auto sep = new RefSep("->");
@@ -4719,7 +4745,7 @@ if (substs.length >= 2 && isExpressions!substs)
 
     /**
       Substitute single values with compile-time substitution mappings.
-      Complexity: $(BIGOH 1) due to D's $(D switch) guaranteeing $(BIGOH 1);
+      Complexity: $(BIGOH 1) due to D's `switch` guaranteeing $(BIGOH 1);
     */
     auto substitute(Value)(Value value)
     if (isInputRange!Value || !is(CommonType!(Value, typeof(substs[0])) == void))

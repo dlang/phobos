@@ -548,47 +548,37 @@ public:
     {
         import std.algorithm.comparison : min;
 
+        size_t localExtraAlloc;
+        void* localOffset;
         immutable pagedBytes = numPages * pageSize;
         size_t goodSize = goodAllocSize(n);
+
         if (goodSize > pagedBytes)
             return null;
 
-        void* localResult;
-        void* localOldLimit;
-        size_t localExtraAlloc;
-
         lock.lock();
-        void* alignedStart = cast(void*) roundUpToMultipleOf(cast(size_t) offset, a);
+        scope(exit) lock.unlock();
+
+        localOffset = cast(void*) offset;
+        void* alignedStart = cast(void*) roundUpToMultipleOf(cast(size_t) localOffset, a);
         assert(alignedStart.alignedAt(a));
         if (alignedStart - data > pagedBytes - goodSize)
-        {
-            lock.unlock();
             return null;
-        }
 
-        // In case `extendMemoryProtection` fails, this might lead to leaks
-        // However this would happen only in extreme cases and the performance cost
-        // to fix this is too high
-        offset = cast(shared(void*)) (alignedStart + goodSize);
-        localResult = alignedStart;
-        if (offset > readWriteLimit)
+        localOffset = alignedStart + goodSize;
+        if (localOffset > readWriteLimit)
         {
             void* newReadWriteLimit = min(cast(void*) data + pagedBytes,
-                cast(void*) offset + extraAllocPages * pageSize);
+                cast(void*) localOffset + extraAllocPages * pageSize);
             assert(newReadWriteLimit > readWriteLimit);
             localExtraAlloc = newReadWriteLimit - readWriteLimit;
-            localOldLimit = cast(void*) readWriteLimit;
+            if (!extendMemoryProtection(cast(void*) readWriteLimit, localExtraAlloc))
+                return null;
             readWriteLimit = cast(shared(void*)) newReadWriteLimit;
         }
-        lock.unlock();
 
-        if (localExtraAlloc != 0)
-        {
-            if (!extendMemoryProtection(localOldLimit, localExtraAlloc))
-                return null;
-        }
-
-        return cast(void[]) localResult[0 .. n];
+        offset = cast(typeof(offset)) localOffset;
+        return cast(void[]) alignedStart[0 .. n];
     }
 
     /**
@@ -604,8 +594,11 @@ public:
         if (!delta) return true;
         if (b is null) return false;
 
+        void* localOffset;
+        size_t localExtraAlloc;
         size_t goodSize = goodAllocSize(b.length);
         size_t bytesLeftOnPage = goodSize - b.length;
+
         if (bytesLeftOnPage >= delta)
         {
             b = cast(void[]) b.ptr[0 .. b.length + delta];
@@ -613,41 +606,30 @@ public:
         }
 
         lock.lock();
-        if (b.ptr + goodSize != offset)
-        {
-            lock.unlock();
+        scope(exit) lock.unlock();
+
+        localOffset = cast(void*) offset;
+        if (b.ptr + goodSize != localOffset)
             return false;
-        }
 
         size_t extraPages = goodAllocSize(delta - bytesLeftOnPage) / pageSize;
-        if (extraPages > numPages || offset - data > pageSize * (numPages - extraPages))
-        {
-            lock.unlock();
+        if (extraPages > numPages || localOffset - data > pageSize * (numPages - extraPages))
             return false;
-        }
 
-        size_t localExtraAlloc;
-        void* localOldLimit;
 
-        offset = cast(shared(void*)) b.ptr + goodSize + extraPages * pageSize;
-        if (offset > readWriteLimit)
+        localOffset = b.ptr + goodSize + extraPages * pageSize;
+        if (localOffset > readWriteLimit)
         {
-            void* newReadWriteLimit = cast(void*) min(data + numPages * pageSize,
-                offset + extraAllocPages * pageSize);
+            void* newReadWriteLimit = min(cast(void*) data + numPages * pageSize,
+                localOffset + extraAllocPages * pageSize);
             assert(newReadWriteLimit > readWriteLimit);
-
             localExtraAlloc = newReadWriteLimit - readWriteLimit;
-            localOldLimit = cast(void*) readWriteLimit;
+            if (!extendMemoryProtection(cast(void*) readWriteLimit, localExtraAlloc))
+                return false;
             readWriteLimit = cast(shared(void*)) newReadWriteLimit;
         }
-        lock.unlock();
 
-        if (localExtraAlloc != 0)
-        {
-            if (!extendMemoryProtection(localOldLimit, localExtraAlloc))
-                return false;
-        }
-
+        offset = cast(typeof(offset)) localOffset;
         b = cast(void[]) b.ptr[0 .. b.length + delta];
         return true;
     }

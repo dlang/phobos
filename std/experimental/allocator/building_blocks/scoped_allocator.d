@@ -8,14 +8,14 @@ import std.experimental.allocator.common;
 
 /**
 
-$(D ScopedAllocator) delegates all allocation requests to $(D ParentAllocator).
-When destroyed, the $(D ScopedAllocator) object automatically calls $(D
+`ScopedAllocator` delegates all allocation requests to `ParentAllocator`.
+When destroyed, the `ScopedAllocator` object automatically calls $(D
 deallocate) for all memory allocated through its lifetime. (The $(D
 deallocateAll) function is also implemented with the same semantics.)
 
-$(D deallocate) is also supported, which is where most implementation effort
-and overhead of $(D ScopedAllocator) go. If $(D deallocate) is not needed, a
-simpler design combining $(D AllocatorList) with $(D Region) is recommended.
+`deallocate` is also supported, which is where most implementation effort
+and overhead of `ScopedAllocator` go. If `deallocate` is not needed, a
+simpler design combining `AllocatorList` with `Region` is recommended.
 
 */
 struct ScopedAllocator(ParentAllocator)
@@ -23,7 +23,6 @@ struct ScopedAllocator(ParentAllocator)
     static if (!stateSize!ParentAllocator)
     {
         // This test is available only for stateless allocators
-        version(unittest)
         @system unittest
         {
             testAllocator!(() => ScopedAllocator());
@@ -46,8 +45,8 @@ struct ScopedAllocator(ParentAllocator)
 
     // state
     /**
-    If $(D ParentAllocator) is stateful, $(D parent) is a property giving access
-    to an $(D AffixAllocator!ParentAllocator). Otherwise, $(D parent) is an alias for `AffixAllocator!ParentAllocator.instance`.
+    If `ParentAllocator` is stateful, `parent` is a property giving access
+    to an `AffixAllocator!ParentAllocator`. Otherwise, `parent` is an alias for `AffixAllocator!ParentAllocator.instance`.
     */
     static if (stateSize!ParentAllocator)
     {
@@ -60,12 +59,12 @@ struct ScopedAllocator(ParentAllocator)
     private Node* root;
 
     /**
-    $(D ScopedAllocator) is not copyable.
+    `ScopedAllocator` is not copyable.
     */
     @disable this(this);
 
     /**
-    $(D ScopedAllocator)'s destructor releases all memory allocated during its
+    `ScopedAllocator`'s destructor releases all memory allocated during its
     lifetime.
     */
     ~this()
@@ -77,7 +76,7 @@ struct ScopedAllocator(ParentAllocator)
     enum alignment = Allocator.alignment;
 
     /**
-    Forwards to $(D parent.goodAllocSize) (which accounts for the management
+    Forwards to `parent.goodAllocSize` (which accounts for the management
     overhead).
     */
     size_t goodAllocSize(size_t n)
@@ -118,7 +117,7 @@ struct ScopedAllocator(ParentAllocator)
     }
 
     /**
-    Reallocates $(D b) to new size $(D s).
+    Reallocates `b` to new size `s`.
     */
     bool reallocate(ref void[] b, size_t s)
     {
@@ -145,7 +144,7 @@ struct ScopedAllocator(ParentAllocator)
     }
 
     /**
-    Forwards to $(D parent.owns(b)).
+    Forwards to `parent.owns(b)`.
     */
     static if (hasMember!(Allocator, "owns"))
     Ternary owns(void[] b)
@@ -154,7 +153,7 @@ struct ScopedAllocator(ParentAllocator)
     }
 
     /**
-    Deallocates $(D b).
+    Deallocates `b`.
     */
     static if (hasMember!(Allocator, "deallocate"))
     bool deallocate(void[] b)
@@ -235,8 +234,6 @@ struct ScopedAllocator(ParentAllocator)
     ScopedAllocator!GCAllocator a;
 
     assert(__traits(compiles, (() nothrow @safe @nogc => a.goodAllocSize(0))()));
-    // goodAllocSize is not pure because we are calling through Allocator.instance
-    assert(!__traits(compiles, (() pure nothrow @safe @nogc => a.goodAllocSize(0))()));
 
     // Ensure deallocate inherits from parent allocators
     auto b = a.allocate(42);

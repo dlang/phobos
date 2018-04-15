@@ -36,7 +36,7 @@ $(TR $(TH Function Name) $(TH Description)
         $(TD Creates a function that binds the first argument of a given function
         to a given value.
     ))
-    $(TR $(TD $(LREF reverseArgs), $(LREF binaryReverseArgs))
+    $(TR $(TD $(LREF reverseArgs))
         $(TD Predicate that reverses the order of its arguments.
     ))
     $(TR $(TD $(LREF toDelegate))
@@ -94,9 +94,9 @@ private template needOpCallAlias(alias fun)
 
 /**
 Transforms a string representing an expression into a unary
-function. The string must either use symbol name $(D a) as
-the parameter or provide the symbol via the $(D parmName) argument.
-If $(D fun) is not a string, $(D unaryFun) aliases itself away to $(D fun).
+function. The string must either use symbol name `a` as
+the parameter or provide the symbol via the `parmName` argument.
+If `fun` is not a string, `unaryFun` aliases itself away to `fun`.
 */
 
 template unaryFun(alias fun, string parmName = "a")
@@ -177,10 +177,10 @@ template unaryFun(alias fun, string parmName = "a")
 
 /**
 Transforms a string representing an expression into a binary function. The
-string must either use symbol names $(D a) and $(D b) as the parameters or
-provide the symbols via the $(D parm1Name) and $(D parm2Name) arguments.
-If $(D fun) is not a string, $(D binaryFun) aliases itself away to
-$(D fun).
+string must either use symbol names `a` and `b` as the parameters or
+provide the symbols via the `parm1Name` and `parm2Name` arguments.
+If `fun` is not a string, `binaryFun` aliases itself away to
+`fun`.
 */
 
 template binaryFun(alias fun, string parm1Name = "a",
@@ -301,7 +301,7 @@ private uint _ctfeSkipName(ref string op, string name)
     return 0;
 }
 
-// returns 1 if $(D fun) is trivial unary function
+// returns 1 if `fun` is trivial unary function
 private uint _ctfeMatchUnary(string fun, string name)
 {
     if (!__ctfe) assert(false);
@@ -348,7 +348,7 @@ private uint _ctfeMatchUnary(string fun, string name)
     static assert(_ctfeMatchUnary("ё[21]", "ё"));
 }
 
-// returns 1 if $(D fun) is trivial binary function
+// returns 1 if `fun` is trivial binary function
 private uint _ctfeMatchBinary(string fun, string name1, string name2)
 {
     if (!__ctfe) assert(false);
@@ -537,10 +537,28 @@ alias equalTo = safeOp!"==";
 template reverseArgs(alias pred)
 {
     auto reverseArgs(Args...)(auto ref Args args)
-        if (is(typeof(pred(Reverse!args))))
+    if (is(typeof(pred(Reverse!args))))
     {
         return pred(Reverse!args);
     }
+}
+
+///
+@safe unittest
+{
+    alias gt = reverseArgs!(binaryFun!("a < b"));
+    assert(gt(2, 1) && !gt(1, 1));
+}
+
+///
+@safe unittest
+{
+    int x = 42;
+    bool xyz(int a, int b) { return a * x < b / x; }
+    auto foo = &xyz;
+    foo(4, 5);
+    alias zyx = reverseArgs!(foo);
+    assert(zyx(5, 4) == foo(4, 5));
 }
 
 ///
@@ -580,10 +598,14 @@ template reverseArgs(alias pred)
     assert(b() == _b());
 }
 
+// @@@DEPRECATED_2.089@@@
 /**
    Binary predicate that reverses the order of arguments, e.g., given
    $(D pred(a, b)), returns $(D pred(b, a)).
+
+   $(RED DEPRECATED: Use $(LREF reverseArgs))
 */
+deprecated("Use `reverseArgs`. `binaryReverseArgs` will be removed in 2.089.")
 template binaryReverseArgs(alias pred)
 {
     auto binaryReverseArgs(ElementType1, ElementType2)
@@ -594,6 +616,7 @@ template binaryReverseArgs(alias pred)
 }
 
 ///
+deprecated
 @safe unittest
 {
     alias gt = binaryReverseArgs!(binaryFun!("a < b"));
@@ -601,6 +624,7 @@ template binaryReverseArgs(alias pred)
 }
 
 ///
+deprecated
 @safe unittest
 {
     int x = 42;
@@ -612,7 +636,7 @@ template binaryReverseArgs(alias pred)
 }
 
 /**
-Negates predicate $(D pred).
+Negates predicate `pred`.
  */
 template not(alias pred)
 {
@@ -794,7 +818,7 @@ functions.
 
 Note: In the special case where only a single function is provided
 ($(D F.length == 1)), adjoin simply aliases to the single passed function
-($(D F[0])).
+(`F[0]`).
 */
 template adjoin(F...)
 if (F.length == 1)
@@ -883,7 +907,7 @@ if (F.length > 1)
 
 /**
    Composes passed-in functions $(D fun[0], fun[1], ...) returning a
-   function $(D f(x)) that in turn returns $(D
+   function `f(x)` that in turn returns $(D
    fun[0](fun[1](...(x)))...). Each function can be a regular
    functions, a delegate, or a string.
 
@@ -985,8 +1009,8 @@ unittest
 }
 ----
 
-Technically the memoized function should be pure because $(D memoize) assumes it will
-always return the same result for a given tuple of arguments. However, $(D memoize) does not
+Technically the memoized function should be pure because `memoize` assumes it will
+always return the same result for a given tuple of arguments. However, `memoize` does not
 enforce that because sometimes it
 is useful to memoize an impure function, too.
 */
@@ -1094,8 +1118,8 @@ template memoize(alias fun, uint maxSize)
 }
 
 /**
- * This memoizes all values of $(D fact) up to the largest argument. To only cache the final
- * result, move $(D memoize) outside the function as shown below.
+ * This memoizes all values of `fact` up to the largest argument. To only cache the final
+ * result, move `memoize` outside the function as shown below.
  */
 @safe unittest
 {
@@ -1108,7 +1132,7 @@ template memoize(alias fun, uint maxSize)
 }
 
 /**
- * When the $(D maxSize) parameter is specified, memoize will used
+ * When the `maxSize` parameter is specified, memoize will used
  * a fixed size hash table to limit the number of cached entries.
  */
 @system unittest // not @safe due to memoize
@@ -1170,7 +1194,7 @@ template memoize(alias fun, uint maxSize)
 }
 
 // 16079: memoize should work with arrays
-@safe unittest
+@system unittest // not @safe with -dip1000 due to memoize
 {
     int executed = 0;
     T median(T)(const T[] nums) {
@@ -1213,7 +1237,7 @@ template memoize(alias fun, uint maxSize)
 }
 
 // 16079: memoize should work with classes
-@safe unittest
+@system unittest // not @safe with -dip1000 due to memoize
 {
     int executed = 0;
     T pickFirst(T)(T first)
@@ -1321,7 +1345,7 @@ private struct DelegateFaker(F)
  *
  * BUGS:
  * $(UL
- *   $(LI Does not work with $(D @safe) functions.)
+ *   $(LI Does not work with `@safe` functions.)
  *   $(LI Ignores C-style / D-style variadic arguments.)
  * )
  */

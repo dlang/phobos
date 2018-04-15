@@ -11,7 +11,7 @@ License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors: Denis Shelomovskij
 
 Macros:
-COREREF = $(HTTP dlang.org/phobos/core_$1.html#$2, $(D core.$1.$2))
+COREREF = $(HTTP dlang.org/phobos/core_$1.html#$2, `core.$1.$2`)
 */
 module std.internal.cstring;
 
@@ -41,18 +41,6 @@ module std.internal.cstring;
 import std.range;
 import std.traits;
 
-version(unittest)
-@property inout(C)[] asArray(C)(inout C* cstr) pure nothrow @nogc @trusted
-if (isSomeChar!C)
-in { assert(cstr); }
-do
-{
-    size_t length = 0;
-    while (cstr[length])
-        ++length;
-    return cstr[0 .. length];
-}
-
 /**
 Creates temporary 0-terminated $(I C string) with copy of passed text.
 
@@ -63,8 +51,8 @@ Params:
 Returns:
 
 The value returned is implicitly convertible to $(D const To*) and
-has two properties: $(D ptr) to access $(I C string) as $(D const To*)
-and $(D buffPtr) to access it as $(D To*).
+has two properties: `ptr` to access $(I C string) as $(D const To*)
+and `buffPtr` to access it as `To*`.
 
 The value returned can be indexed by [] to access it as an array.
 
@@ -77,11 +65,11 @@ primary expression.
 Implementation_note:
 For small strings tempCString will use stack allocated buffer,
 for large strings (approximately 250 characters and more) it will
-allocate temporary one using C's $(D malloc).
+allocate temporary one using C's `malloc`.
 
 Note:
 This function is intended to be used in function call expression (like
-$(D strlen(str.tempCString()))). Incorrect usage of this function may
+`strlen(str.tempCString())`). Incorrect usage of this function may
 lead to memory corruption.
 See $(RED WARNING) in $(B Examples) section.
 */
@@ -157,14 +145,23 @@ nothrow @nogc @system unittest
 
 @safe pure nothrow @nogc unittest
 {
-    assert("abc".tempCString().asArray == "abc");
-    assert("abc"d.tempCString().ptr.asArray == "abc");
-    assert("abc".tempCString!wchar().buffPtr.asArray == "abc"w);
+    static inout(C)[] arrayFor(C)(inout(C)* cstr) pure nothrow @nogc @trusted
+    {
+        assert(cstr);
+        size_t length = 0;
+        while (cstr[length])
+            ++length;
+        return cstr[0 .. length];
+    }
+
+    assert(arrayFor("abc".tempCString()) == "abc");
+    assert(arrayFor("abc"d.tempCString().ptr) == "abc");
+    assert(arrayFor("abc".tempCString!wchar().buffPtr) == "abc"w);
 
     import std.utf : byChar, byWchar;
     char[300] abc = 'a';
-    assert(tempCString(abc[].byChar).buffPtr.asArray == abc);
-    assert(tempCString(abc[].byWchar).buffPtr.asArray == abc);
+    assert(arrayFor(tempCString(abc[].byChar).buffPtr) == abc);
+    assert(arrayFor(tempCString(abc[].byWchar).buffPtr) == abc);
     assert(tempCString(abc[].byChar)[] == abc);
 }
 

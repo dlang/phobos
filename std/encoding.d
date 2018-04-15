@@ -281,6 +281,55 @@ import std.typecons;
         "\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD",
     ];
 
+    // HELPER FUNCTIONS
+    // we can probably do this better...
+    static char toHexDigit(int n)
+    {
+        return "0123456789ABCDEF"[n & 0xF];
+    }
+
+    static string makeReadable(string s)
+    {
+        string r = "\"";
+        foreach (char c;s)
+        {
+            if (c >= 0x20 && c < 0x80)
+            {
+                r ~= c;
+            }
+            else
+            {
+                r ~= "\\x";
+                r ~= toHexDigit(c >> 4);
+                r ~= toHexDigit(c);
+            }
+        }
+        r ~= "\"";
+        return r;
+    }
+
+    void transcodeReverse(Src,Dst)(immutable(Src)[] s, out immutable(Dst)[] r)
+    {
+        static if (is(Src == Dst))
+        {
+            return s;
+        }
+        else static if (is(Src == AsciiChar))
+        {
+            transcodeReverse!(char,Dst)(cast(string) s,r);
+        }
+        else
+        {
+            foreach_reverse (d;codePoints(s))
+            {
+                foreach_reverse (c;codeUnits!(Dst)(d))
+                {
+                    r = c ~ r;
+                }
+            }
+        }
+    }
+
     // Make sure everything that should be valid, is
     foreach (a;validStrings)
     {
@@ -427,7 +476,7 @@ import std.typecons;
 
 //=============================================================================
 
-/** Special value returned by $(D safeDecode) */
+/** Special value returned by `safeDecode` */
 enum dchar INVALID_SEQUENCE = cast(dchar) 0xFFFFFFFF;
 
 template EncoderFunctions()
@@ -1608,7 +1657,7 @@ Returns true if c is a valid code point
  characters).
 
  Supersedes:
- This function supersedes $(D std.utf.startsValidDchar()).
+ This function supersedes `std.utf.startsValidDchar()`.
 
  Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
  WINDOWS-1251, WINDOWS-1252
@@ -2119,8 +2168,8 @@ do
 }
 
 /*
-Encodes $(D c) in units of type $(D E) and writes the result to the
-output range $(D R). Returns the number of $(D E)s written.
+Encodes `c` in units of type `E` and writes the result to the
+output range `R`. Returns the number of `E`s written.
  */
 size_t encode(E, R)(dchar c, auto ref R range)
 if (isNativeOutputRange!(R, E))
@@ -2223,12 +2272,12 @@ do
 }
 
 /**
-Encodes the contents of $(D s) in units of type $(D Tgt), writing the result to an
+Encodes the contents of `s` in units of type `Tgt`, writing the result to an
 output range.
 
-Returns: The number of $(D Tgt) elements written.
+Returns: The number of `Tgt` elements written.
 Params:
-Tgt = Element type of $(D range).
+Tgt = Element type of `range`.
 s = Input array.
 range = Output range.
  */
@@ -3633,114 +3682,9 @@ class EncodingSchemeUtf32Native : EncodingScheme
 //=============================================================================
 
 
-// Helper functions
-version(unittest)
-{
-    void transcodeReverse(Src,Dst)(immutable(Src)[] s, out immutable(Dst)[] r)
-    {
-        static if (is(Src == Dst))
-        {
-            return s;
-        }
-        else static if (is(Src == AsciiChar))
-        {
-            transcodeReverse!(char,Dst)(cast(string) s,r);
-        }
-        else
-        {
-            foreach_reverse (d;codePoints(s))
-            {
-                foreach_reverse (c;codeUnits!(Dst)(d))
-                {
-                    r = c ~ r;
-                }
-            }
-        }
-    }
-
-    string makeReadable(string s)
-    {
-        string r = "\"";
-        foreach (char c;s)
-        {
-            if (c >= 0x20 && c < 0x80)
-            {
-                r ~= c;
-            }
-            else
-            {
-                r ~= "\\x";
-                r ~= toHexDigit(c >> 4);
-                r ~= toHexDigit(c);
-            }
-        }
-        r ~= "\"";
-        return r;
-    }
-
-    string makeReadable(wstring s)
-    {
-        string r = "\"";
-        foreach (wchar c;s)
-        {
-            if (c >= 0x20 && c < 0x80)
-            {
-                r ~= cast(char) c;
-            }
-            else
-            {
-                r ~= "\\u";
-                r ~= toHexDigit(c >> 12);
-                r ~= toHexDigit(c >> 8);
-                r ~= toHexDigit(c >> 4);
-                r ~= toHexDigit(c);
-            }
-        }
-        r ~= "\"w";
-        return r;
-    }
-
-    string makeReadable(dstring s)
-    {
-        string r = "\"";
-        foreach (dchar c; s)
-        {
-            if (c >= 0x20 && c < 0x80)
-            {
-                r ~= cast(char) c;
-            }
-            else if (c < 0x10000)
-            {
-                r ~= "\\u";
-                r ~= toHexDigit(c >> 12);
-                r ~= toHexDigit(c >> 8);
-                r ~= toHexDigit(c >> 4);
-                r ~= toHexDigit(c);
-            }
-            else
-            {
-                r ~= "\\U00";
-                r ~= toHexDigit(c >> 20);
-                r ~= toHexDigit(c >> 16);
-                r ~= toHexDigit(c >> 12);
-                r ~= toHexDigit(c >> 8);
-                r ~= toHexDigit(c >> 4);
-                r ~= toHexDigit(c);
-            }
-        }
-        r ~= "\"d";
-        return r;
-    }
-
-    char toHexDigit(int n)
-    {
-        return "0123456789ABCDEF"[n & 0xF];
-    }
-}
-
 /** Definitions of common Byte Order Marks.
-The elements of the $(D enum) can used as indices into $(D bomTable) to get
-matching $(D BOMSeq).
+The elements of the `enum` can used as indices into `bomTable` to get
+matching `BOMSeq`.
 */
 enum BOM
 {
@@ -3763,7 +3707,7 @@ enum BOM
     utf16le   = 15  /// [0xFF, 0xFE]
 }
 
-/// The type stored inside $(D bomTable).
+/// The type stored inside `bomTable`.
 alias BOMSeq = Tuple!(BOM, "schema", ubyte[], "sequence");
 
 /** Mapping of a byte sequence to $(B Byte Order Mark (BOM))
@@ -3787,17 +3731,17 @@ immutable bomTable = [
     BOMSeq(BOM.utf16le, cast(ubyte[])([0xFF, 0xFE]))
 ];
 
-/** Returns a $(D BOMSeq) for a given $(D input).
-If no $(D BOM) is present the $(D BOMSeq) for $(D BOM.none) is
-returned. The $(D BOM) sequence at the beginning of the range will
+/** Returns a `BOMSeq` for a given `input`.
+If no `BOM` is present the `BOMSeq` for `BOM.none` is
+returned. The `BOM` sequence at the beginning of the range will
 not be comsumed from the passed range. If you pass a reference type
-range make sure that $(D save) creates a deep copy.
+range make sure that `save` creates a deep copy.
 
 Params:
-    input = The sequence to check for the $(D BOM)
+    input = The sequence to check for the `BOM`
 
 Returns:
-    the found $(D BOMSeq) corresponding to the passed $(D input).
+    the found `BOMSeq` corresponding to the passed `input`.
 */
 immutable(BOMSeq) getBOM(Range)(Range input)
 if (isForwardRange!Range && is(Unqual!(ElementType!Range) == ubyte))

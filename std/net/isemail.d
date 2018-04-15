@@ -41,7 +41,7 @@ import std.typecons : Flag, Yes, No;
  *
  * Params:
  *     email = The email address to check
- *     checkDNS = If $(D Yes.checkDns) then a DNS check for MX records will be made
+ *     checkDNS = If `Yes.checkDns` then a DNS check for MX records will be made
  *     errorLevel = Determines the boundary between valid and invalid addresses.
  *                  Status codes above this number will be returned as-is,
  *                  status codes below will be returned as EmailStatusCode.valid.
@@ -1268,9 +1268,9 @@ if (isSomeChar!(Char))
 /**
  * Flag for indicating if the isEmail function should perform a DNS check or not.
  *
- * If set to $(D CheckDns.no), isEmail does not perform DNS checking.
+ * If set to `CheckDns.no`, isEmail does not perform DNS checking.
  *
- * Otherwise if set to $(D CheckDns.yes), isEmail performs DNS checking.
+ * Otherwise if set to `CheckDns.yes`, isEmail performs DNS checking.
  */
 alias CheckDns = Flag!"checkDns";
 
@@ -1875,7 +1875,7 @@ bool isUpToFourHexChars(Char)(scope const(Char)[] s)
     return true;
 }
 
-version(unittest) @nogc nothrow pure @safe unittest
+@nogc nothrow pure @safe unittest
 {
     assert(!isUpToFourHexChars("12345"));
     assert(!isUpToFourHexChars("defg"));
@@ -1945,7 +1945,7 @@ const(Char)[] matchIPSuffix(Char)(return const(Char)[] s) @nogc nothrow pure @sa
     return s[start .. $];
 }
 
-version(unittest) @nogc nothrow pure @safe unittest
+@nogc nothrow pure @safe unittest
 {
     assert(matchIPSuffix("255.255.255.255") == "255.255.255.255");
     assert(matchIPSuffix("babaev 176.16.0.1") == "176.16.0.1");

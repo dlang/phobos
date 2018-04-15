@@ -5,7 +5,7 @@
 // @@@DEPRECATED_2017-06@@@
 
 /++
-    $(RED Deprecated. Use $(D core.sys.windows.stat) instead. This module will be
+    $(RED Deprecated. Use `core.sys.windows.stat` instead. This module will be
           removed in June 2017.)
   +/
 deprecated("Import core.sys.windows.stat instead")

@@ -9,20 +9,20 @@ import std.experimental.allocator.common;
 
 /**
 
-$(D BitmappedBlock) implements a simple heap consisting of one contiguous area
-of memory organized in blocks, each of size $(D theBlockSize). A block is a unit
+`BitmappedBlock` implements a simple heap consisting of one contiguous area
+of memory organized in blocks, each of size `theBlockSize`. A block is a unit
 of allocation. A bitmap serves as bookkeeping data, more precisely one bit per
 block indicating whether that block is currently allocated or not.
 
-Passing $(D NullAllocator) as $(D ParentAllocator) (the default) means user code
+Passing `NullAllocator` as `ParentAllocator` (the default) means user code
 manages allocation of the memory block from the outside; in that case
-$(D BitmappedBlock) must be constructed with a $(D void[]) preallocated block and
+`BitmappedBlock` must be constructed with a `void[]` preallocated block and
 has no responsibility regarding the lifetime of its support underlying storage.
-If another allocator type is passed, $(D BitmappedBlock) defines a destructor that
-uses the parent allocator to release the memory block. That makes the combination of $(D AllocatorList), $(D BitmappedBlock), and a back-end allocator such as $(D MmapAllocator) a simple and scalable solution for memory allocation.
+If another allocator type is passed, `BitmappedBlock` defines a destructor that
+uses the parent allocator to release the memory block. That makes the combination of `AllocatorList`, `BitmappedBlock`, and a back-end allocator such as `MmapAllocator` a simple and scalable solution for memory allocation.
 
 There are advantages to storing bookkeeping data separated from the payload
-(as opposed to e.g. using $(D AffixAllocator) to store metadata together with
+(as opposed to e.g. using `AffixAllocator` to store metadata together with
 each allocation). The layout is more compact (overhead is one bit per block),
 searching for a free block during allocation enjoys better cache locality, and
 deallocation does not touch memory around the payload being deallocated (which
@@ -32,16 +32,16 @@ Allocation requests are handled on a first-fit basis. Although linear in
 complexity, allocation is in practice fast because of the compact bookkeeping
 representation, use of simple and fast bitwise routines, and caching of the
 first available block position. A known issue with this general approach is
-fragmentation, partially mitigated by coalescing. Since $(D BitmappedBlock) does
+fragmentation, partially mitigated by coalescing. Since `BitmappedBlock` does
 not need to maintain the allocated size, freeing memory implicitly coalesces
-free blocks together. Also, tuning $(D blockSize) has a considerable impact on
+free blocks together. Also, tuning `blockSize` has a considerable impact on
 both internal and external fragmentation.
 
 The size of each block can be selected either during compilation or at run
 time. Statically-known block sizes are frequent in practice and yield slightly
 better performance. To choose a block size statically, pass it as the $(D
-blockSize) parameter as in $(D BitmappedBlock!(4096)). To choose a block
-size parameter, use $(D BitmappedBlock!(chooseAtRuntime)) and pass the
+blockSize) parameter as in `BitmappedBlock!(4096)`. To choose a block
+size parameter, use `BitmappedBlock!(chooseAtRuntime)` and pass the
 block size to the constructor.
 
 */
@@ -53,7 +53,6 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     import std.typecons : Ternary;
     import std.typecons : tuple, Tuple;
 
-    version(unittest)
     @system unittest
     {
         import std.algorithm.comparison : max;
@@ -76,11 +75,11 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         "Block size must be a multiple of the alignment");
 
     /**
-    If $(D blockSize == chooseAtRuntime), $(D BitmappedBlock) offers a read/write
-    property $(D blockSize). It must be set before any use of the allocator.
-    Otherwise (i.e. $(D theBlockSize) is a legit constant), $(D blockSize) is
-    an alias for $(D theBlockSize). Whether constant or variable, must also be
-    a multiple of $(D alignment). This constraint is $(D assert)ed statically
+    If $(D blockSize == chooseAtRuntime), `BitmappedBlock` offers a read/write
+    property `blockSize`. It must be set before any use of the allocator.
+    Otherwise (i.e. `theBlockSize` is a legit constant), `blockSize` is
+    an alias for `theBlockSize`. Whether constant or variable, must also be
+    a multiple of `alignment`. This constraint is `assert`ed statically
     and dynamically.
     */
     static if (theBlockSize != chooseAtRuntime)
@@ -110,13 +109,13 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
 
     /**
     The _alignment offered is user-configurable statically through parameter
-    $(D theAlignment), defaulted to $(D platformAlignment).
+    `theAlignment`, defaulted to `platformAlignment`.
     */
     alias alignment = theAlignment;
 
     // state {
     /**
-    The _parent allocator. Depending on whether $(D ParentAllocator) holds state
+    The _parent allocator. Depending on whether `ParentAllocator` holds state
     or not, this is a member variable or an alias for
     `ParentAllocator.instance`.
     */
@@ -160,12 +159,12 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     in bytes.
 
     $(UL
-    $(LI If $(D ParentAllocator) is $(D NullAllocator), only the constructor
-    taking $(D data) is defined and the user is responsible for freeing $(D
+    $(LI If `ParentAllocator` is `NullAllocator`, only the constructor
+    taking `data` is defined and the user is responsible for freeing $(D
     data) if desired.)
-    $(LI Otherwise, both constructors are defined. The $(D data)-based
+    $(LI Otherwise, both constructors are defined. The `data`-based
     constructor assumes memory has been allocated with the parent allocator.
-    The $(D capacity)-based constructor uses $(D ParentAllocator) to allocate
+    The `capacity`-based constructor uses `ParentAllocator` to allocate
     an appropriate contiguous hunk of memory. Regardless of the constructor
     used, the destructor releases the memory by using $(D
     ParentAllocator.deallocate).)
@@ -230,7 +229,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     }
 
     /**
-    If $(D ParentAllocator) is not $(D NullAllocator) and defines $(D
+    If `ParentAllocator` is not `NullAllocator` and defines $(D
     deallocate), the destructor is defined to deallocate the block held.
     */
     static if (!is(ParentAllocator == NullAllocator)
@@ -282,8 +281,8 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     }
 
     /**
-    Returns the actual bytes allocated when $(D n) bytes are requested, i.e.
-    $(D n.roundUpToMultipleOf(blockSize)).
+    Returns the actual bytes allocated when `n` bytes are requested, i.e.
+    `n.roundUpToMultipleOf(blockSize)`.
     */
     pure nothrow @safe @nogc
     size_t goodAllocSize(size_t n)
@@ -292,18 +291,19 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     }
 
     /**
-    Allocates $(D s) bytes of memory and returns it, or $(D null) if memory
+    Allocates `s` bytes of memory and returns it, or `null` if memory
     could not be allocated.
 
     The following information might be of help with choosing the appropriate
     block size. Actual allocation occurs in sizes multiple of the block size.
     Allocating one block is the fastest because only one 0 bit needs to be
     found in the metadata. Allocating 2 through 64 blocks is the next cheapest
-    because it affects a maximum of two $(D ulong)s in the metadata.
+    because it affects a maximum of two `ulong`s in the metadata.
     Allocations greater than 64 blocks require a multiword search through the
     metadata.
     */
-    @trusted void[] allocate(const size_t s)
+    pure nothrow @trusted @nogc
+    void[] allocate(const size_t s)
     {
         const blocks = s.divideRoundUp(blockSize);
         void[] result = void;
@@ -370,8 +370,8 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     }
 
     /**
-    Allocates a block with specified alignment $(D a). The alignment must be a
-    power of 2. If $(D a <= alignment), function forwards to $(D allocate).
+    Allocates a block with specified alignment `a`. The alignment must be a
+    power of 2. If $(D a <= alignment), function forwards to `allocate`.
     Otherwise, it attempts to overallocate and then adjust the result for
     proper alignment. In the worst case the slack memory is around two blocks.
     */
@@ -407,8 +407,8 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     }
 
     /**
-    If the $(D BitmappedBlock) object is empty (has no active allocation), allocates
-    all memory within and returns a slice to it. Otherwise, returns $(D null)
+    If the `BitmappedBlock` object is empty (has no active allocation), allocates
+    all memory within and returns a slice to it. Otherwise, returns `null`
     (i.e. no attempt is made to allocate the largest available block).
     */
     void[] allocateAll()
@@ -509,9 +509,10 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         return available;
     }
 
+    pure nothrow @safe @nogc
     private void[] smallAlloc(uint blocks)
     {
-        assert(blocks >= 2 && blocks <= 64, text(blocks));
+        assert(blocks >= 2 && blocks <= 64);
         void[] result;
         foreach (i; _startIdx .. _control.rep.length)
         {
@@ -544,6 +545,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         return null;
     }
 
+    pure nothrow @safe @nogc
     private void[] hugeAlloc(size_t blocks)
     {
         assert(blocks > 64);
@@ -652,7 +654,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     }
 
     /**
-    Reallocates a block previously allocated with $(D alignedAllocate). Contractions do not occur in place.
+    Reallocates a block previously allocated with `alignedAllocate`. Contractions do not occur in place.
     */
     @system bool alignedReallocate(ref void[] b, size_t newSize, uint a)
     {
@@ -806,19 +808,21 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     uint blockSize = 64;
     auto a = BitmappedBlock!(chooseAtRuntime, 64)(cast(ubyte[])(r.allocateAll()), blockSize);
     static assert(hasMember!(InSituRegion!(10_240, 64), "allocateAll"));
-    const b = a.allocate(100);
+    const b = (() pure nothrow @safe @nogc => a.allocate(100))();
     assert(b.length == 100);
 }
 
-@system unittest
+pure @safe unittest
 {
     import std.typecons : Ternary;
 
-    auto a = BitmappedBlock!(64, 64)(new ubyte[10_240]);
-    assert((() nothrow @safe @nogc => a.empty)() == Ternary.yes);
-    const b = a.allocate(100);
-    assert(b.length == 100);
-    assert((() nothrow @safe @nogc => a.empty)() == Ternary.no);
+    auto a = (() @trusted => BitmappedBlock!(64, 64)(new ubyte[10_240]))();
+    () nothrow @nogc {
+        assert(a.empty == Ternary.yes);
+        const b = a.allocate(100);
+        assert(b.length == 100);
+        assert(a.empty == Ternary.no);
+    }();
 }
 
 @system unittest
@@ -851,10 +855,10 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         blocks = a._blocks;
 
         // test allocation of 0 bytes
-        auto x = a.allocate(0);
+        auto x = (() pure nothrow @safe @nogc => a.allocate(0))();
         assert(x is null);
         // test allocation of 1 byte
-        x = a.allocate(1);
+        x = (() pure nothrow @safe @nogc => a.allocate(1))();
         assert(x.length == 1 || blocks == 0,
             text(x.ptr, " ", x.length, " ", a));
         assert((() nothrow @nogc => a.deallocateAll())());
@@ -864,12 +868,14 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     begin:
         foreach (i; 0 .. blocks / blocksAtATime)
         {
-            auto b = a.allocate(bs * blocksAtATime);
+            auto b = (() pure nothrow @safe @nogc => a.allocate(bs * blocksAtATime))();
             assert(b.length == bs * blocksAtATime, text(i, ": ", b.length));
         }
-        assert(a.allocate(bs * blocksAtATime) is null);
+        assert((() pure nothrow @safe @nogc => a.allocate(bs * blocksAtATime))() is null);
         if (a._blocks % blocksAtATime == 0)
-            assert(a.allocate(1) is null);
+        {
+            assert((() pure nothrow @safe @nogc => a.allocate(1))() is null);
+        }
 
         // Now deallocate all and do it again!
         assert((() nothrow @nogc => a.deallocateAll())());
@@ -879,13 +885,15 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         auto v = new void[][blocks / blocksAtATime];
         foreach (i; 0 .. blocks / blocksAtATime)
         {
-            auto b = a.allocate(bs * blocksAtATime);
+            auto b = (() pure nothrow @safe @nogc => a.allocate(bs * blocksAtATime))();
             assert(b.length == bs * blocksAtATime, text(i, ": ", b.length));
             v[i] = b;
         }
-        assert(a.allocate(bs * blocksAtATime) is null);
+        assert((() pure nothrow @safe @nogc => a.allocate(bs * blocksAtATime))() is null);
         if (a._blocks % blocksAtATime == 0)
-            assert(a.allocate(1) is null);
+        {
+            assert((() pure nothrow @safe @nogc => a.allocate(1))() is null);
+        }
 
         foreach (i; 0 .. blocks / blocksAtATime)
         {
@@ -894,7 +902,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
 
         foreach (i; 0 .. blocks / blocksAtATime)
         {
-            auto b = a.allocate(bs * blocksAtATime);
+            auto b = (() pure nothrow @safe @nogc => a.allocate(bs * blocksAtATime))();
             assert(b.length == bs * blocksAtATime, text(i, ": ", b.length));
             v[i] = b;
         }
@@ -917,7 +925,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         {
             foreach (i; 0 .. blocks / blocksAtATime - 1)
             {
-                auto b = a.allocate(bs * blocksAtATime);
+                auto b = (() pure nothrow @safe @nogc => a.allocate(bs * blocksAtATime))();
                 assert(b.length == bs * blocksAtATime, text(i, ": ", b.length));
                 (cast(ubyte[]) b)[] = 0xff;
                 assert((() pure nothrow @safe @nogc => a.expand(b, blocksAtATime * bs))()
@@ -1126,7 +1134,7 @@ nothrow @safe @nogc unittest
     import std.typecons : Ternary;
 
     auto a = BitmappedBlock!(64, 8, GCAllocator)(1024 * 64);
-    const void[] buff = a.allocate(42);
+    const void[] buff = (() pure nothrow @safe @nogc => a.allocate(42))();
 
     assert((() nothrow @safe @nogc => a.owns(buff))() == Ternary.yes);
     assert((() nothrow @safe @nogc => a.owns(null))() == Ternary.no);
@@ -1135,12 +1143,12 @@ nothrow @safe @nogc unittest
 // BitmappedBlockWithInternalPointers
 /**
 
-A $(D BitmappedBlock) with additional structure for supporting $(D
-resolveInternalPointer). To that end, $(D BitmappedBlockWithInternalPointers) adds a
+A `BitmappedBlock` with additional structure for supporting $(D
+resolveInternalPointer). To that end, `BitmappedBlockWithInternalPointers` adds a
 bitmap (one bit per block) that marks object starts. The bitmap itself has
 variable size and is allocated together with regular allocations.
 
-The time complexity of $(D resolveInternalPointer) is $(BIGOH k), where $(D k)
+The time complexity of `resolveInternalPointer` is $(BIGOH k), where `k`
 is the size of the object within which the internal pointer is looked up.
 
 */
@@ -1166,7 +1174,7 @@ struct BitmappedBlockWithInternalPointers(
 
     /**
     Constructors accepting desired capacity or a preallocated buffer, similar
-    in semantics to those of $(D BitmappedBlock).
+    in semantics to those of `BitmappedBlock`.
     */
     this(ubyte[] data)
     {
@@ -1216,13 +1224,13 @@ struct BitmappedBlockWithInternalPointers(
     {
         auto r = _heap.allocate(bytes);
         if (!r.ptr) return r;
-        immutable block = (r.ptr - _heap._payload.ptr) / _heap.blockSize;
+        immutable block = (() @trusted => (r.ptr - _heap._payload.ptr) / _heap.blockSize)();
         immutable blocks =
             (r.length + _heap.blockSize - 1) / _heap.blockSize;
         if (!ensureRoomForAllocStart(block + blocks))
         {
             // Failed, free r and bailout
-            _heap.deallocate(r);
+            () @trusted { _heap.deallocate(r); r = null; }();
             return null;
         }
         assert(block < _allocStart.length);
@@ -1360,7 +1368,7 @@ struct BitmappedBlockWithInternalPointers(
 
     auto h = BitmappedBlockWithInternalPointers!(4096)(new ubyte[4096 * 1024]);
     assert((() nothrow @safe @nogc => h.empty)() == Ternary.yes);
-    auto b = h.allocate(123);
+    auto b = (() pure nothrow @safe @nogc => h.allocate(123))();
     assert(b.length == 123);
     assert((() nothrow @safe @nogc => h.empty)() == Ternary.no);
 
@@ -1369,7 +1377,7 @@ struct BitmappedBlockWithInternalPointers(
     assert((() nothrow @safe @nogc => h.resolveInternalPointer(offset, p))() == Ternary.yes);
     assert(p.ptr is b.ptr);
     assert(p.length >= b.length);
-    b = h.allocate(4096);
+    b = (() pure nothrow @safe @nogc => h.allocate(4096))();
 
     offset = &b[0];
     assert((() nothrow @safe @nogc => h.resolveInternalPointer(offset, p))() == Ternary.yes);
@@ -1402,7 +1410,7 @@ struct BitmappedBlockWithInternalPointers(
 
 /**
 Returns the number of most significant ones before a zero can be found in $(D
-x). If $(D x) contains no zeros (i.e. is equal to $(D ulong.max)), returns 64.
+x). If `x` contains no zeros (i.e. is equal to `ulong.max`), returns 64.
 */
 pure nothrow @safe @nogc
 private uint leadingOnes(ulong x)
@@ -1428,7 +1436,7 @@ private uint leadingOnes(ulong x)
 }
 
 /**
-Finds a run of contiguous ones in $(D x) of length at least $(D n).
+Finds a run of contiguous ones in `x` of length at least `n`.
 */
 pure nothrow @safe @nogc
 private uint findContigOnes(ulong x, uint n)
@@ -1572,7 +1580,7 @@ private struct BitVector
     /* Returns the index of the first 1 to the right of i (including i itself),
     or length if not found.
     */
-    nothrow @safe @nogc
+    pure nothrow @safe @nogc
     ulong find1(ulong i)
     {
         assert(i < length);
@@ -1600,7 +1608,7 @@ private struct BitVector
     /* Returns the index of the first 1 to the left of i (including i itself),
     or ulong.max if not found.
     */
-    nothrow @safe @nogc
+    pure nothrow @safe @nogc
     ulong find1Backward(ulong i)
     {
         assert(i < length);
@@ -1634,14 +1642,14 @@ private struct BitVector
     }
 
     /// Are all bits one?
-    nothrow @safe @nogc
+    pure nothrow @safe @nogc
     bool allAre1() const
     {
         foreach (w; _rep) if (w != ulong.max) return false;
         return true;
     }
 
-    nothrow @safe @nogc
+    pure nothrow @safe @nogc
     ulong findZeros(immutable size_t howMany, ulong start)
     {
         assert(start < length);

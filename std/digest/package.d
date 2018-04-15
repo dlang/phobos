@@ -28,13 +28,13 @@ $(TR $(TDNW Implementation helpers) $(TD $(MYREF digestLength) $(MYREF WrapperDi
  * There are two APIs for digests: The template API and the OOP API. The template API uses structs
  * and template helpers like $(LREF isDigest). The OOP API implements digests as classes inheriting
  * the $(LREF Digest) interface. All digests are named so that the template API struct is called "$(B x)"
- * and the OOP API class is called "$(B x)Digest". For example we have $(D MD5) <--> $(D MD5Digest),
- * $(D CRC32) <--> $(D CRC32Digest), etc.
+ * and the OOP API class is called "$(B x)Digest". For example we have `MD5` <--> `MD5Digest`,
+ * `CRC32` <--> `CRC32Digest`, etc.
  *
  * The template API is slightly more efficient. It does not have to allocate memory dynamically,
  * all memory is allocated on the stack. The OOP API has to allocate in the finish method if no
  * buffer was provided. If you provide a buffer to the OOP APIs finish function, it doesn't allocate,
- * but the $(LREF Digest) classes still have to be created using $(D new) which allocates them using the GC.
+ * but the $(LREF Digest) classes still have to be created using `new` which allocates them using the GC.
  *
  * The OOP API is useful to change the _digest function and/or _digest backend at 'runtime'. The benefit here
  * is that switching e.g. Phobos MD5Digest and an OpenSSLMD5Digest implementation is ABI compatible.
@@ -199,7 +199,7 @@ version(ExampleDigest)
      * Note:
      * $(UL
      * $(LI A digest must be a struct (value type) to pass the $(LREF isDigest) test.)
-     * $(LI A digest passing the $(LREF isDigest) test is always an $(D OutputRange))
+     * $(LI A digest passing the $(LREF isDigest) test is always an `OutputRange`)
      * )
      */
     struct ExampleDigest
@@ -208,8 +208,8 @@ version(ExampleDigest)
             /**
              * Use this to feed the digest with data.
              * Also implements the $(REF isOutputRange, std,range,primitives)
-             * interface for $(D ubyte) and $(D const(ubyte)[]).
-             * The following usages of $(D put) must work for any type which
+             * interface for `ubyte` and `const(ubyte)[]`.
+             * The following usages of `put` must work for any type which
              * passes $(LREF isDigest):
              * Example:
              * ----
@@ -240,7 +240,7 @@ version(ExampleDigest)
              *
              * Note:
              * The actual type returned by finish depends on the digest implementation.
-             * $(D ubyte[16]) is just used as an example. It is guaranteed that the type is a
+             * `ubyte[16]` is just used as an example. It is guaranteed that the type is a
              * static array of ubytes.
              *
              * $(UL
@@ -350,7 +350,7 @@ template DigestType(T)
 }
 
 /**
- * Used to check if a digest supports the $(D peek) method.
+ * Used to check if a digest supports the `peek` method.
  * Peek has exactly the same function signatures as finish, but it doesn't reset
  * the digest's internal state.
  *
@@ -392,7 +392,7 @@ template hasPeek(T)
 }
 
 /**
- * Checks whether the digest has a $(D blockSize) member, which contains the
+ * Checks whether the digest has a `blockSize` member, which contains the
  * digest's internal block size in bits. It is primarily used by $(REF HMAC, std,digest,hmac).
  */
 
@@ -427,7 +427,7 @@ package template isDigestibleRange(Range)
  * Every digest passing the $(LREF isDigest) test can be used with this function.
  *
  * Params:
- *  range= an $(D InputRange) with $(D ElementType) $(D ubyte), $(D ubyte[]) or $(D ubyte[num])
+ *  range= an `InputRange` with `ElementType` `ubyte`, `ubyte[]` or `ubyte[num]`
  */
 DigestType!Hash digest(Hash, Range)(auto ref Range range)
 if (!isArray!Range
@@ -490,7 +490,7 @@ if (allSatisfy!(isArray, typeof(data)))
  *
  * Params:
  *  order= the order in which the bytes are processed (see $(LREF toHexString))
- *  range= an $(D InputRange) with $(D ElementType) $(D ubyte), $(D ubyte[]) or $(D ubyte[num])
+ *  range= an `InputRange` with `ElementType` `ubyte`, `ubyte[]` or `ubyte[num]`
  */
 char[digestLength!(Hash)*2] hexDigest(Hash, Order order = Order.increasing, Range)(ref Range range)
 if (!isArray!Range && isDigestibleRange!Range)
@@ -562,7 +562,7 @@ Hash makeDigest(Hash)()
  * The Digest interface is the base interface which is implemented by all digests.
  *
  * Note:
- * A Digest implementation is always an $(D OutputRange)
+ * A Digest implementation is always an `OutputRange`
  */
 interface Digest
 {
@@ -570,7 +570,7 @@ interface Digest
         /**
          * Use this to feed the digest with data.
          * Also implements the $(REF isOutputRange, std,range,primitives)
-         * interface for $(D ubyte) and $(D const(ubyte)[]).
+         * interface for `ubyte` and `const(ubyte)[]`.
          *
          * Example:
          * ----
@@ -589,7 +589,7 @@ interface Digest
          * Resets the internal state of the digest.
          * Note:
          * $(LREF finish) calls this internally, so it's not necessary to call
-         * $(D reset) manually after a call to $(LREF finish).
+         * `reset` manually after a call to $(LREF finish).
          */
         @trusted nothrow void reset();
 
@@ -684,6 +684,16 @@ enum Order : bool
 {
     increasing, ///
     decreasing ///
+}
+
+///
+@safe unittest
+{
+    import std.digest.crc : CRC32;
+
+    auto crc32 = digest!CRC32("The quick ", "brown ", "fox jumps over the lazy dog");
+    assert(crc32.toHexString!(Order.decreasing) == "414FA339");
+    assert(crc32.toHexString!(LetterCase.lower, Order.decreasing) == "414fa339");
 }
 
 
@@ -884,7 +894,7 @@ if (isDigest!T) : Digest
         /**
          * Use this to feed the digest with data.
          * Also implements the $(REF isOutputRange, std,range,primitives)
-         * interface for $(D ubyte) and $(D const(ubyte)[]).
+         * interface for `ubyte` and `const(ubyte)[]`.
          */
         @trusted nothrow void put(scope const(ubyte)[] data...)
         {
@@ -895,7 +905,7 @@ if (isDigest!T) : Digest
          * Resets the internal state of the digest.
          * Note:
          * $(LREF finish) calls this internally, so it's not necessary to call
-         * $(D reset) manually after a call to $(LREF finish).
+         * `reset` manually after a call to $(LREF finish).
          */
         @trusted nothrow void reset()
         {
@@ -953,10 +963,10 @@ if (isDigest!T) : Digest
         version(StdDdoc)
         {
             /**
-             * Works like $(D finish) but does not reset the internal state, so it's possible
+             * Works like `finish` but does not reset the internal state, so it's possible
              * to continue putting data into this WrapperDigest after a call to peek.
              *
-             * These functions are only available if $(D hasPeek!T) is true.
+             * These functions are only available if `hasPeek!T` is true.
              */
             @trusted ubyte[] peek(ubyte[] buf) const;
             ///ditto

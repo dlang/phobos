@@ -1709,9 +1709,9 @@ static:
     */
     enum T defaultValue(T) = T.min == 0 ? T.max : T.min;
     /**
-    The maximum value representable is $(D T.max) for signed integrals, $(D
+    The maximum value representable is `T.max` for signed integrals, $(D
     T.max - 1) for unsigned integrals. The minimum value representable is $(D
-    T.min + 1) for signed integrals, $(D 0) for unsigned integrals.
+    T.min + 1) for signed integrals, `0` for unsigned integrals.
     */
     enum T max(T) = cast(T) (T.min == 0 ? T.max - 1 : T.max);
     /// ditto

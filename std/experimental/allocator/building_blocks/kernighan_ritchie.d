@@ -6,12 +6,11 @@ module std.experimental.allocator.building_blocks.kernighan_ritchie;
 import std.experimental.allocator.building_blocks.null_allocator;
 
 //debug = KRRegion;
-version(unittest) import std.conv : text;
 debug(KRRegion) import std.stdio;
 
 // KRRegion
 /**
-$(D KRRegion) draws inspiration from the $(MREF_ALTTEXT region allocation
+`KRRegion` draws inspiration from the $(MREF_ALTTEXT region allocation
 strategy, std,experimental,allocator,building_blocks,region) and also the
 $(HTTP stackoverflow.com/questions/13159564/explain-this-implementation-of-malloc-from-the-kr-book,
 famed allocator) described by Brian Kernighan and Dennis Ritchie in section 8.7
@@ -22,11 +21,11 @@ $(H4 `KRRegion` = `Region` + Kernighan-Ritchie Allocator)
 
 Initially, `KRRegion` starts in "region" mode: allocations are served from
 the memory chunk in a region fashion. Thus, as long as there is enough memory
-left, $(D KRRegion.allocate) has the performance profile of a region allocator.
+left, `KRRegion.allocate` has the performance profile of a region allocator.
 Deallocation inserts (in $(BIGOH 1) time) the deallocated blocks in an
 unstructured freelist, which is not read in region mode.
 
-Once the region cannot serve an $(D allocate) request, $(D KRRegion) switches
+Once the region cannot serve an `allocate` request, `KRRegion` switches
 to "free list" mode. It sorts the list of previously deallocated blocks by
 address and serves allocation requests off that free list. The allocation and
 deallocation follow the pattern described by Kernighan and Ritchie.
@@ -50,17 +49,17 @@ systems, 8 bytes on 32-bit systems). This is because the free list management
 needs two words (one for the length, the other for the next pointer in the
 singly-linked list).
 
-The $(D ParentAllocator) type parameter is the type of the allocator used to
-allocate the memory chunk underlying the $(D KRRegion) object. Choosing the
-default ($(D NullAllocator)) means the user is responsible for passing a buffer
-at construction (and for deallocating it if necessary). Otherwise, $(D KRRegion)
+The `ParentAllocator` type parameter is the type of the allocator used to
+allocate the memory chunk underlying the `KRRegion` object. Choosing the
+default (`NullAllocator`) means the user is responsible for passing a buffer
+at construction (and for deallocating it if necessary). Otherwise, `KRRegion`
 automatically deallocates the buffer during destruction. For that reason, if
-$(D ParentAllocator) is not $(D NullAllocator), then $(D KRRegion) is not
+`ParentAllocator` is not `NullAllocator`, then `KRRegion` is not
 copyable.
 
 $(H4 Implementation Details)
 
-In free list mode, $(D KRRegion) embeds a free blocks list onto the chunk of
+In free list mode, `KRRegion` embeds a free blocks list onto the chunk of
 memory. The free list is circular, coalesced, and sorted by address at all
 times. Allocations and deallocations take time proportional to the number of
 previously deallocated blocks. (In practice the cost may be lower, e.g. if
@@ -87,9 +86,9 @@ Differences from the Kernighan-Ritchie allocator:
 $(UL
 $(LI Once the chunk is exhausted, the Kernighan-Ritchie allocator allocates
 another chunk using operating system primitives. For better composability, $(D
-KRRegion) just gets full (returns $(D null) on new allocation requests). The
+KRRegion) just gets full (returns `null` on new allocation requests). The
 decision to allocate more blocks is deferred to a higher-level entity. For an
-example, see the example below using $(D AllocatorList) in conjunction with $(D
+example, see the example below using `AllocatorList` in conjunction with $(D
 KRRegion).)
 $(LI Allocated blocks do not hold a size prefix. This is because in D the size
 information is available in client code at deallocation time.)
@@ -166,8 +165,8 @@ struct KRRegion(ParentAllocator = NullAllocator)
 
     // state
     /**
-    If $(D ParentAllocator) holds state, $(D parent) is a public member of type
-    $(D KRRegion). Otherwise, $(D parent) is an $(D alias) for
+    If `ParentAllocator` holds state, `parent` is a public member of type
+    `KRRegion`. Otherwise, `parent` is an `alias` for
     `ParentAllocator.instance`.
     */
     static if (stateSize!ParentAllocator) ParentAllocator parent;
@@ -307,14 +306,14 @@ struct KRRegion(ParentAllocator = NullAllocator)
     }
 
     /**
-    Create a $(D KRRegion). If $(D ParentAllocator) is not $(D NullAllocator),
-    $(D KRRegion)'s destructor will call $(D parent.deallocate).
+    Create a `KRRegion`. If `ParentAllocator` is not `NullAllocator`,
+    `KRRegion`'s destructor will call `parent.deallocate`.
 
     Params:
     b = Block of memory to serve as support for the allocator. Memory must be
     larger than two words and word-aligned.
     n = Capacity desired. This constructor is defined only if $(D
-    ParentAllocator) is not $(D NullAllocator).
+    ParentAllocator) is not `NullAllocator`.
     */
     this(ubyte[] b)
     {
@@ -379,13 +378,13 @@ struct KRRegion(ParentAllocator = NullAllocator)
     enum alignment = Node.alignof;
 
     /**
-    Allocates $(D n) bytes. Allocation searches the list of available blocks
-    until a free block with $(D n) or more bytes is found (first fit strategy).
+    Allocates `n` bytes. Allocation searches the list of available blocks
+    until a free block with `n` or more bytes is found (first fit strategy).
     The block is split (if larger) and returned.
 
     Params: n = number of bytes to _allocate
 
-    Returns: A word-aligned buffer of $(D n) bytes, or $(D null).
+    Returns: A word-aligned buffer of `n` bytes, or `null`.
     */
     void[] allocate(size_t n)
     {
@@ -442,7 +441,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
     }
 
     /**
-    Deallocates $(D b), which is assumed to have been previously allocated with
+    Deallocates `b`, which is assumed to have been previously allocated with
     this allocator. Deallocation performs a linear search in the free list to
     preserve its sorting order. It follows that blocks with higher addresses in
     allocators with many free blocks are slower to deallocate.
@@ -537,13 +536,13 @@ struct KRRegion(ParentAllocator = NullAllocator)
     /**
     Allocates all memory available to this allocator. If the allocator is empty,
     returns the entire available block of memory. Otherwise, it still performs
-    a best-effort allocation: if there is no fragmentation (e.g. $(D allocate)
-    has been used but not $(D deallocate)), allocates and returns the only
+    a best-effort allocation: if there is no fragmentation (e.g. `allocate`
+    has been used but not `deallocate`), allocates and returns the only
     available block of memory.
 
     The operation takes time proportional to the number of adjacent free blocks
     at the front of the free list. These blocks get coalesced, whether
-    $(D allocateAll) succeeds or fails due to fragmentation.
+    `allocateAll` succeeds or fails due to fragmentation.
     */
     void[] allocateAll()
     {
@@ -554,7 +553,6 @@ struct KRRegion(ParentAllocator = NullAllocator)
     }
 
     ///
-    version(unittest)
     @system unittest
     {
         import std.experimental.allocator.gc_allocator : GCAllocator;
@@ -587,9 +585,9 @@ struct KRRegion(ParentAllocator = NullAllocator)
     }
 
     /**
-    Checks whether the allocator is responsible for the allocation of $(D b).
-    It does a simple $(BIGOH 1) range check. $(D b) should be a buffer either
-    allocated with $(D this) or obtained through other means.
+    Checks whether the allocator is responsible for the allocation of `b`.
+    It does a simple $(BIGOH 1) range check. `b` should be a buffer either
+    allocated with `this` or obtained through other means.
     */
     pure nothrow @trusted @nogc
     Ternary owns(void[] b)
@@ -601,7 +599,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
     }
 
     /**
-    Adjusts $(D n) to a size suitable for allocation (two words or larger,
+    Adjusts `n` to a size suitable for allocation (two words or larger,
     word-aligned).
     */
     pure nothrow @safe @nogc
@@ -627,9 +625,9 @@ struct KRRegion(ParentAllocator = NullAllocator)
 }
 
 /**
-$(D KRRegion) is preferable to $(D Region) as a front for a general-purpose
-allocator if $(D deallocate) is needed, yet the actual deallocation traffic is
-relatively low. The example below shows a $(D KRRegion) using stack storage
+`KRRegion` is preferable to `Region` as a front for a general-purpose
+allocator if `deallocate` is needed, yet the actual deallocation traffic is
+relatively low. The example below shows a `KRRegion` using stack storage
 fronting the GC allocator.
 */
 @system unittest
@@ -776,7 +774,7 @@ it actually returns memory to the operating system when possible.
     auto p = cast(KRRegion!()* ) store.ptr;
     import core.stdc.string : memcpy;
     import std.algorithm.mutation : move;
-    import std.conv : emplace;
+    import std.conv : text, emplace;
 
     memcpy(p, &alloc, alloc.sizeof);
     emplace(&alloc);

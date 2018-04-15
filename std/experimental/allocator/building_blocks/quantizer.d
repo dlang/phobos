@@ -42,7 +42,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     import std.traits : hasMember;
 
     /**
-    The parent allocator. Depending on whether $(D ParentAllocator) holds state
+    The parent allocator. Depending on whether `ParentAllocator` holds state
     or not, this is a member variable or an alias for
     `ParentAllocator.instance`.
     */
@@ -53,11 +53,11 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     else
     {
         alias parent = ParentAllocator.instance;
-        static __gshared Quantizer instance;
+        __gshared Quantizer instance;
     }
 
     /**
-    Returns $(D roundingFunction(n)).
+    Returns `roundingFunction(n)`.
     */
     size_t goodAllocSize(size_t n)
     {
@@ -72,9 +72,9 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     enum alignment = ParentAllocator.alignment;
 
     /**
-    Gets a larger buffer $(D buf) by calling
-    $(D parent.allocate(goodAllocSize(n))). If $(D buf) is $(D null), returns
-    $(D null). Otherwise, returns $(D buf[0 .. n]).
+    Gets a larger buffer `buf` by calling
+    `parent.allocate(goodAllocSize(n))`. If `buf` is `null`, returns
+    `null`. Otherwise, returns $(D buf[0 .. n]).
     */
     void[] allocate(size_t n)
     {
@@ -83,8 +83,8 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     }
 
     /**
-    Defined only if $(D parent.alignedAllocate) exists and works similarly to
-    $(D allocate) by forwarding to
+    Defined only if `parent.alignedAllocate` exists and works similarly to
+    `allocate` by forwarding to
     $(D parent.alignedAllocate(goodAllocSize(n), a)).
     */
     static if (hasMember!(ParentAllocator, "alignedAllocate"))
@@ -95,10 +95,10 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     }
 
     /**
-    First checks whether there's enough slack memory preallocated for $(D b)
+    First checks whether there's enough slack memory preallocated for `b`
     by evaluating $(D b.length + delta <= goodAllocSize(b.length)). If that's
-    the case, expands $(D b) in place. Otherwise, attempts to use
-    $(D parent.expand) appropriately if present.
+    the case, expands `b` in place. Otherwise, attempts to use
+    `parent.expand` appropriately if present.
     */
     bool expand(ref void[] b, size_t delta)
     {
@@ -137,7 +137,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     /**
     Expands or shrinks allocated block to an allocated size of $(D
     goodAllocSize(s)). Expansion occurs in place under the conditions required
-    by $(D expand). Shrinking occurs in place if $(D goodAllocSize(b.length)
+    by `expand`. Shrinking occurs in place if $(D goodAllocSize(b.length)
     == goodAllocSize(s)).
     */
     bool reallocate(ref void[] b, size_t s)
@@ -165,8 +165,8 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     }
 
     /**
-    Defined only if $(D ParentAllocator.alignedAllocate) exists. Expansion
-    occurs in place under the conditions required by $(D expand). Shrinking
+    Defined only if `ParentAllocator.alignedAllocate` exists. Expansion
+    occurs in place under the conditions required by `expand`. Shrinking
     occurs in place if $(D goodAllocSize(b.length) == goodAllocSize(s)).
     */
     static if (hasMember!(ParentAllocator, "alignedAllocate"))
@@ -196,7 +196,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     }
 
     /**
-    Defined if $(D ParentAllocator.deallocate) exists and forwards to
+    Defined if `ParentAllocator.deallocate` exists and forwards to
     $(D parent.deallocate(b.ptr[0 .. goodAllocSize(b.length)])).
     */
     static if (hasMember!(ParentAllocator, "deallocate"))

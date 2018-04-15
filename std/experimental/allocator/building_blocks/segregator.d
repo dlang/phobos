@@ -8,11 +8,11 @@ import std.experimental.allocator.common;
 
 /**
 Dispatches allocations (and deallocations) between two allocators ($(D
-SmallAllocator) and $(D LargeAllocator)) depending on the size allocated, as
-follows. All allocations smaller than or equal to $(D threshold) will be
-dispatched to $(D SmallAllocator). The others will go to $(D LargeAllocator).
+SmallAllocator) and `LargeAllocator`) depending on the size allocated, as
+follows. All allocations smaller than or equal to `threshold` will be
+dispatched to `SmallAllocator`. The others will go to `LargeAllocator`.
 
-If both allocators are $(D shared), the $(D Segregator) will also offer $(D
+If both allocators are `shared`, the `Segregator` will also offer $(D
 shared) methods.
 */
 struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
@@ -34,73 +34,73 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
         enum uint alignment;
         /**
         This method is defined only if at least one of the allocators defines
-        it. The good allocation size is obtained from $(D SmallAllocator) if $(D
-        s <= threshold), or $(D LargeAllocator) otherwise. (If one of the
-        allocators does not define $(D goodAllocSize), the default
+        it. The good allocation size is obtained from `SmallAllocator` if $(D
+        s <= threshold), or `LargeAllocator` otherwise. (If one of the
+        allocators does not define `goodAllocSize`, the default
         implementation in this module applies.)
         */
         static size_t goodAllocSize(size_t s);
         /**
-        The memory is obtained from $(D SmallAllocator) if $(D s <= threshold),
-        or $(D LargeAllocator) otherwise.
+        The memory is obtained from `SmallAllocator` if $(D s <= threshold),
+        or `LargeAllocator` otherwise.
         */
         void[] allocate(size_t);
         /**
         This method is defined if both allocators define it, and forwards to
-        $(D SmallAllocator) or $(D LargeAllocator) appropriately.
+        `SmallAllocator` or `LargeAllocator` appropriately.
         */
         void[] alignedAllocate(size_t, uint);
         /**
         This method is defined only if at least one of the allocators defines
-        it. If $(D SmallAllocator) defines $(D expand) and $(D b.length +
-        delta <= threshold), the call is forwarded to $(D SmallAllocator). If $(D
-        LargeAllocator) defines $(D expand) and $(D b.length > threshold), the
-        call is forwarded to $(D LargeAllocator). Otherwise, the call returns
-        $(D false).
+        it. If `SmallAllocator` defines `expand` and $(D b.length +
+        delta <= threshold), the call is forwarded to `SmallAllocator`. If $(D
+        LargeAllocator) defines `expand` and $(D b.length > threshold), the
+        call is forwarded to `LargeAllocator`. Otherwise, the call returns
+        `false`.
         */
         bool expand(ref void[] b, size_t delta);
         /**
         This method is defined only if at least one of the allocators defines
-        it. If $(D SmallAllocator) defines $(D reallocate) and $(D b.length <=
+        it. If `SmallAllocator` defines `reallocate` and $(D b.length <=
         threshold && s <= threshold), the call is forwarded to $(D
-        SmallAllocator). If $(D LargeAllocator) defines $(D expand) and $(D
+        SmallAllocator). If `LargeAllocator` defines `expand` and $(D
         b.length > threshold && s > threshold), the call is forwarded to $(D
-        LargeAllocator). Otherwise, the call returns $(D false).
+        LargeAllocator). Otherwise, the call returns `false`.
         */
         bool reallocate(ref void[] b, size_t s);
         /**
         This method is defined only if at least one of the allocators defines
-        it, and work similarly to $(D reallocate).
+        it, and work similarly to `reallocate`.
         */
         bool alignedReallocate(ref void[] b, size_t s, uint a);
         /**
         This method is defined only if both allocators define it. The call is
-        forwarded to $(D SmallAllocator) if $(D b.length <= threshold), or $(D
+        forwarded to `SmallAllocator` if $(D b.length <= threshold), or $(D
         LargeAllocator) otherwise.
         */
         Ternary owns(void[] b);
         /**
         This function is defined only if both allocators define it, and forwards
-        appropriately depending on $(D b.length).
+        appropriately depending on `b.length`.
         */
         bool deallocate(void[] b);
         /**
         This function is defined only if both allocators define it, and calls
-        $(D deallocateAll) for them in turn.
+        `deallocateAll` for them in turn.
         */
         bool deallocateAll();
         /**
         This function is defined only if both allocators define it, and returns
-        the conjunction of $(D empty) calls for the two.
+        the conjunction of `empty` calls for the two.
         */
         Ternary empty();
     }
 
     /**
-    Composite allocators involving nested instantiations of $(D Segregator) make
+    Composite allocators involving nested instantiations of `Segregator` make
     it difficult to access individual sub-allocators stored within. $(D
     allocatorForSize) simplifies the task by supplying the allocator nested
-    inside a $(D Segregator) that is responsible for a specific size $(D s).
+    inside a `Segregator` that is responsible for a specific size `s`.
 
     Example:
     ----
@@ -271,7 +271,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
     else
     {
         static if (!stateSize!SmallAllocator && !stateSize!LargeAllocator)
-            static __gshared Segregator instance;
+            __gshared Segregator instance;
         mixin Impl!();
     }
 }
@@ -299,8 +299,8 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 }
 
 /**
-A $(D Segregator) with more than three arguments expands to a composition of
-elemental $(D Segregator)s, as illustrated by the following example:
+A `Segregator` with more than three arguments expands to a composition of
+elemental `Segregator`s, as illustrated by the following example:
 
 ----
 alias A =
@@ -312,11 +312,11 @@ alias A =
     );
 ----
 
-With this definition, allocation requests for $(D n1) bytes or less are directed
-to $(D A1); requests between $(D n1 + 1) and $(D n2) bytes (inclusive) are
-directed to $(D A2); requests between $(D n2 + 1) and $(D n3) bytes (inclusive)
-are directed to $(D A3); and requests for more than $(D n3) bytes are directed
-to $(D A4). If some particular range should not be handled, $(D NullAllocator)
+With this definition, allocation requests for `n1` bytes or less are directed
+to `A1`; requests between $(D n1 + 1) and `n2` bytes (inclusive) are
+directed to `A2`; requests between $(D n2 + 1) and `n3` bytes (inclusive)
+are directed to `A3`; and requests for more than `n3` bytes are directed
+to `A4`. If some particular range should not be handled, `NullAllocator`
 may be used appropriately.
 
 */

@@ -19,14 +19,14 @@ aa[std.bitmanip]=-dip1000 # merged https://github.com/dlang/phobos/pull/6174
 aa[std.compiler]=-dip1000
 aa[std.complex]=-dip1000
 aa[std.concurrency]=-dip1000
-aa[std.conv]=-dip25 # errors from std.typecons
+aa[std.conv]=-dip1000
 aa[std.csv]=-dip1000
 aa[std.demangle]=-dip1000
 aa[std.encoding]=-dip1000
 aa[std.exception]=-dip1000 # merged https://github.com/dlang/phobos/pull/6323; a workaround for https://issues.dlang.org/show_bug.cgi?id=18637
 aa[std.file]=-dip25 # probably already fixed (std.uni); currently: undefined symbol  pure nothrow @nogc return @safe std.uni.SliceOverIndexed!(std.uni.Grapheme).SliceOverIndexed std.uni.SliceOverIndexed!(std.uni.Grapheme).SliceOverIndexed.opSlice()
 aa[std.format]=-dip25 # @system function std.range.primitives.put
-aa[std.functional]=-dip25 # DROP: cannot call @system function std.functional.__unittest_L1216_C7.memoize!(pickFirst).memoize
+aa[std.functional]=-dip1000 # merged https://github.com/dlang/phobos/pull/6351
 aa[std.getopt]=-dip1000
 aa[std.json]=-dip1000
 aa[std.math]=-dip1000
@@ -36,17 +36,17 @@ aa[std.mmfile]=-dip1000
 aa[std.numeric]=-dip1000
 aa[std.outbuffer]=-dip25 # DROP: cannot call @system function std.outbuffer.OutBuffer.writef!(char, int).writef
 aa[std.parallelism]=-dip1000
-aa[std.path]=-dip25 # overhaul https://github.com/dlang/phobos/pull/6203; TODO include (if not merged already) https://github.com/dlang/phobos/pull/5045 in a fix for std.path, thus forgotten 5045 could be closed then
+aa[std.path]=-dip25 #    TODO
 aa[std.process]=-dip1000
 aa[std.random]=-dip1000
 aa[std.signals]=-dip1000
-aa[std.socket]=-dip25 # depends on https://github.com/dlang/phobos/pull/6204 merged, which will be at least deferred or possibly rejected (deprecation process required due to changed class Socket)
+aa[std.socket]=-dip1000
 aa[std.stdint]=-dip1000
 aa[std.stdio]=-dip25 #    TODO
 aa[std.string]=-dip1000
 aa[std.system]=-dip1000
 aa[std.traits]=-dip1000
-aa[std.typecons]=-dip25 # cannot call @system function std.format.formattedWrite!(Appender!string, char, Nullable!int)
+aa[std.typecons]=-dip1000 -version=DIP1000 # merged https://github.com/dlang/phobos/pull/6338; COMPROMISE: check the reason for non-dip1000: static struct S. mixin Proxy!foo;
 aa[std.typetuple]=-dip1000
 aa[std.uni]=-dip1000 # merged https://github.com/dlang/phobos/pull/6294, https://github.com/dlang/phobos/pull/6041 (see also TODO-list there); supersedes/includes https://github.com/dlang/phobos/pull/5045; see also https://github.com/dlang/phobos/pull/6104 for improvements proposed by Seb
 aa[std.uri]=-dip1000
@@ -59,8 +59,8 @@ aa[std.zlib]=-dip1000
 
 aa[std.algorithm.comparison]=-dip1000
 aa[std.algorithm.internal]=-dip1000
-aa[std.algorithm.iteration]=-dip25 #    WIP_carblue
-aa[std.algorithm.mutation]=-dip25 # depends on std.container.slist (https://github.com/dlang/phobos/pull/6295)
+aa[std.algorithm.iteration]=-dip25 # depends on std.container.slist (to be updated https://github.com/dlang/phobos/pull/6295)
+aa[std.algorithm.mutation]=-dip25 #  depends on std.container.slist (to be updated https://github.com/dlang/phobos/pull/6295)
 aa[std.algorithm.package]=-dip1000
 aa[std.algorithm.searching]=-dip25 # depends on https://github.com/dlang/phobos/pull/6246 merged and std.algorithm.comparison fixed
 aa[std.algorithm.setops]=-dip1000
@@ -95,14 +95,14 @@ aa[std.container.binaryheap]=-dip1000
 aa[std.container.dlist]=-dip1000
 aa[std.container.package]=-dip1000
 aa[std.container.rbtree]=-dip25 # DROP
-aa[std.container.slist]=-dip25 # -dip1000 -version=DIP1000   depends on https://github.com/dlang/phobos/pull/6295 merged
-aa[std.container.util]=-dip25 #    TODO
+aa[std.container.slist]=-dip25 # -dip1000 -version=DIP1000   depends on an update (no insertFront's code duplication in constructor) and merge of https://github.com/dlang/phobos/pull/6295
+aa[std.container.util]=-dip25 # depends on rbtree and slist = -dip1000
 
-aa[std.datetime.date]=-dip25 # depends on a fix for writefln
+aa[std.datetime.date]=-dip1000
 aa[std.datetime.interval]=-dip1000
 aa[std.datetime.package]=-dip1000
 aa[std.datetime.stopwatch]=-dip1000
-aa[std.datetime.systime]=-dip25 # merged https://github.com/dlang/phobos/pull/6181 ; depends on a fix for writefln
+aa[std.datetime.systime]=-dip1000 # merged https://github.com/dlang/phobos/pull/6181
 aa[std.datetime.timezone]=-dip1000 # merged https://github.com/dlang/phobos/pull/6183
 
 aa[std.digest.crc]=-dip1000
@@ -140,10 +140,10 @@ aa[std.experimental.allocator.building_blocks.region]=-dip25 #    Linker errors
 aa[std.experimental.allocator.building_blocks.scoped_allocator]=-dip1000
 aa[std.experimental.allocator.building_blocks.segregator]=-dip25 #    Linker errors
 aa[std.experimental.allocator.building_blocks.stats_collector]=-dip1000
-aa[std.experimental.logger.core]=-dip1000       # merged https://github.com/dlang/phobos/pull/6266
+aa[std.experimental.logger.core]=-dip1000 # merged https://github.com/dlang/phobos/pull/6266
 aa[std.experimental.logger.filelogger]=-dip25 # merged https://github.com/dlang/phobos/pull/6266; depends on https://github.com/dlang/phobos/pull/5915 ? and a fix for: std.format.formattedWrite
-aa[std.experimental.logger.multilogger]=-dip1000# merged https://github.com/dlang/phobos/pull/6266
-aa[std.experimental.logger.nulllogger]=-dip1000 # merged https://github.com/dlang/phobos/pull/6266
+aa[std.experimental.logger.multilogger]=-dip1000
+aa[std.experimental.logger.nulllogger]=-dip1000
 aa[std.experimental.logger.package]=-dip1000
 
 aa[std.internal.cstring]=-dip1000
@@ -168,7 +168,7 @@ aa[std.net.curl]=-dip1000 # TODO have a look into open https://github.com/dlang/
 aa[std.net.isemail]=-dip1000
 
 aa[std.range.interfaces]=-dip1000
-aa[std.range.package]=-dip25 # i.a. depends on https://github.com/dlang/phobos/pull/5915 ?
+aa[std.range.package]=-dip25 # reference to local variable a / b assigned to non-scope parameter _param_1 / _param_2 calling std.range.chooseAmong!(RefAccessRange, RefAccessRange).chooseAmong
 aa[std.range.primitives]=-dip1000
 
 aa[std.regex.package]=-dip1000
@@ -178,7 +178,7 @@ aa[std.regex.internal.ir]=-dip1000
 aa[std.regex.internal.kickstart]=-dip1000
 aa[std.regex.internal.parser]=-dip1000
 aa[std.regex.internal.tests2]=-dip1000
-aa[std.regex.internal.tests]=-dip25 # i.a. depends on https://github.com/dlang/phobos/pull/5915 ? and a fix for writeln
+aa[std.regex.internal.tests]=-dip1000 # merged https://github.com/dlang/phobos/pull/6340; for -debug=std_regex_test (set nowhere in sources) still depends on a fix for writeln
 aa[std.regex.internal.thompson]=-dip1000
 
 aa[std.windows.charset]=-dip1000

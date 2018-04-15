@@ -1,0 +1,5 @@
+`std.functional.binaryReverseArgs` was deprecated in favor of `std.functional.reverseArgs`
+
+$(REF reverseArgs, std,functional) is a full super set of $(REF binaryReverseArgs, std,functional).
+
+Correct action: replace `binaryReverseArgs` with `reverseArgs`.
