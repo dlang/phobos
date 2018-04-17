@@ -225,6 +225,9 @@ $(HTTP man7.org/linux/man-pages/man3/posix_memalign.3.html, `posix_memalign`)
 on Posix and $(HTTP msdn.microsoft.com/en-us/library/fs9stz4e(v=vs.80).aspx,
 `__aligned_xxx`) on Windows.))
 
+$(TR $(TDC2 AlignedBlockList, aligned_block_list) $(TD A wrapper around a list of allocators
+which allow for very fast deallocations.))
+
 $(TR $(TDC2 AffixAllocator, affix_allocator) $(TD Allocator that allows and manages allocating
 extra prefix and/or a suffix bytes for each block allocated.))
 
@@ -302,6 +305,7 @@ module std.experimental.allocator.building_blocks;
 
 public import
     std.experimental.allocator.building_blocks.affix_allocator,
+    std.experimental.allocator.building_blocks.aligned_block_list,
     std.experimental.allocator.building_blocks.allocator_list,
     std.experimental.allocator.building_blocks.ascending_page_allocator,
     std.experimental.allocator.building_blocks.bucketizer,
