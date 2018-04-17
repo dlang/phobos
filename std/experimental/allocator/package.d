@@ -107,11 +107,11 @@ std,experimental,_allocator,mmap_allocator)). Most custom allocators would
 ultimately obtain memory from one of these core allocators.)
 )
 
-$(H2 Idiomatic Use of $(D std.experimental._allocator))
+$(H2 Idiomatic Use of `std.experimental._allocator`)
 
-As of this time, $(D std.experimental._allocator) is not integrated with D's
+As of this time, `std.experimental._allocator` is not integrated with D's
 built-in operators that allocate memory, such as `new`, array literals, or
-array concatenation operators. That means $(D std.experimental._allocator) is
+array concatenation operators. That means `std.experimental._allocator` is
 opt-in$(MDASH)applications need to make explicit use of it.
 
 For casual creation and disposal of dynamically-allocated objects, use $(LREF
@@ -177,8 +177,8 @@ struct HashTable
 ----
 
 Following initialization, the `HashTable` object would consistently use its
-$(D _allocator) object for acquiring memory. Furthermore, setting
-$(D HashTable._allocator) to point to a different _allocator should be legal but
+`_allocator` object for acquiring memory. Furthermore, setting
+`HashTable._allocator` to point to a different _allocator should be legal but
 only if the object is empty; otherwise, the object wouldn't be able to
 deallocate its existing state.
 
@@ -280,8 +280,8 @@ in $(MREF std,experimental,allocator,building_blocks),
 then adapt the composed
 allocator to `IAllocator` (possibly by using $(LREF CAllocatorImpl) below).
 
-Methods returning $(D Ternary) return $(D Ternary.yes) upon success,
-$(D Ternary.no) upon failure, and $(D Ternary.unknown) if the primitive is not
+Methods returning `Ternary` return `Ternary.yes` upon success,
+`Ternary.no` upon failure, and `Ternary.unknown` if the primitive is not
 implemented by the allocator instance.
 */
 interface IAllocator
@@ -330,8 +330,8 @@ nothrow:
     bool alignedReallocate(ref void[] b, size_t size, uint alignment);
 
     /**
-    Returns $(D Ternary.yes) if the allocator owns $(D b), $(D Ternary.no) if
-    the allocator doesn't own $(D b), and $(D Ternary.unknown) if ownership
+    Returns `Ternary.yes` if the allocator owns `b`, `Ternary.no` if
+    the allocator doesn't own `b`, and `Ternary.unknown` if ownership
     cannot be determined. Implementations that don't support this primitive
     should always return `Ternary.unknown`.
     */
@@ -346,7 +346,7 @@ nothrow:
     /**
     Deallocates a memory block. Implementations that don't support this
     primitive should always return `false`. A simple way to check that an
-    allocator supports deallocation is to call $(D deallocate(null)).
+    allocator supports deallocation is to call `deallocate(null)`.
     */
     bool deallocate(void[] b);
 
@@ -357,9 +357,9 @@ nothrow:
     bool deallocateAll();
 
     /**
-    Returns $(D Ternary.yes) if no memory is currently allocated from this
-    allocator, $(D Ternary.no) if some allocations are currently active, or
-    $(D Ternary.unknown) if not supported.
+    Returns `Ternary.yes` if no memory is currently allocated from this
+    allocator, `Ternary.no` if some allocations are currently active, or
+    `Ternary.unknown` if not supported.
     */
     Ternary empty();
 
@@ -623,8 +623,8 @@ in $(MREF std,experimental,allocator,building_blocks),
 then adapt the composed
 allocator to `ISharedAllocator` (possibly by using $(LREF CSharedAllocatorImpl) below).
 
-Methods returning $(D Ternary) return $(D Ternary.yes) upon success,
-$(D Ternary.no) upon failure, and $(D Ternary.unknown) if the primitive is not
+Methods returning `Ternary` return `Ternary.yes` upon success,
+`Ternary.no` upon failure, and `Ternary.unknown` if the primitive is not
 implemented by the allocator instance.
 */
 interface ISharedAllocator
@@ -673,8 +673,8 @@ nothrow:
     bool alignedReallocate(ref void[] b, size_t size, uint alignment) shared;
 
     /**
-    Returns $(D Ternary.yes) if the allocator owns $(D b), $(D Ternary.no) if
-    the allocator doesn't own $(D b), and $(D Ternary.unknown) if ownership
+    Returns `Ternary.yes` if the allocator owns `b`, `Ternary.no` if
+    the allocator doesn't own `b`, and `Ternary.unknown` if ownership
     cannot be determined. Implementations that don't support this primitive
     should always return `Ternary.unknown`.
     */
@@ -689,7 +689,7 @@ nothrow:
     /**
     Deallocates a memory block. Implementations that don't support this
     primitive should always return `false`. A simple way to check that an
-    allocator supports deallocation is to call $(D deallocate(null)).
+    allocator supports deallocation is to call `deallocate(null)`.
     */
     bool deallocate(void[] b) shared;
 
@@ -700,9 +700,9 @@ nothrow:
     bool deallocateAll() shared;
 
     /**
-    Returns $(D Ternary.yes) if no memory is currently allocated from this
-    allocator, $(D Ternary.no) if some allocations are currently active, or
-    $(D Ternary.unknown) if not supported.
+    Returns `Ternary.yes` if no memory is currently allocated from this
+    allocator, `Ternary.no` if some allocations are currently active, or
+    `Ternary.unknown` if not supported.
     */
     Ternary empty() shared;
 
@@ -982,8 +982,8 @@ private ref RCIAllocator setupThreadAllocator()
 /**
 Gets/sets the allocator for the current thread. This is the default allocator
 that should be used for allocating thread-local memory. For allocating memory
-to be shared across threads, use $(D processAllocator) (below). By default,
-$(D theAllocator) ultimately fetches memory from $(D processAllocator), which
+to be shared across threads, use `processAllocator` (below). By default,
+`theAllocator` ultimately fetches memory from `processAllocator`, which
 in turn uses the garbage collected heap.
 */
 nothrow @safe @nogc
@@ -1019,7 +1019,7 @@ nothrow @system @nogc
 /**
 Gets/sets the allocator for the current process. This allocator must be used
 for allocating memory shared across threads. Objects created using this
-allocator can be cast to $(D shared).
+allocator can be cast to `shared`.
 */
 @trusted nothrow @nogc
 @property ref RCISharedAllocator processAllocator()
@@ -1096,65 +1096,75 @@ nothrow @system @nogc
 }
 
 /**
-Dynamically allocates (using $(D alloc)) and then creates in the memory
-allocated an object of type $(D T), using $(D args) (if any) for its
+Dynamically allocates (using `alloc`) and then creates in the memory
+allocated an object of type `T`, using `args` (if any) for its
 initialization. Initialization occurs in the memory allocated and is otherwise
-semantically the same as $(D T(args)).
-(Note that using $(D alloc.make!(T[])) creates a pointer to an (empty) array
-of $(D T)s, not an array. To use an allocator to allocate and initialize an
-array, use $(D alloc.makeArray!T) described below.)
+semantically the same as `T(args)`.
+(Note that using `alloc.make!(T[])` creates a pointer to an (empty) array
+of `T`s, not an array. To use an allocator to allocate and initialize an
+array, use `alloc.makeArray!T` described below.)
 
 Params:
 T = Type of the object being created.
 alloc = The allocator used for getting the needed memory. It may be an object
-implementing the static interface for allocators, or an $(D IAllocator)
+implementing the static interface for allocators, or an `IAllocator`
 reference.
 args = Optional arguments used for initializing the created object. If not
 present, the object is default constructed.
 
-Returns: If $(D T) is a class type, returns a reference to the created $(D T)
-object. Otherwise, returns a $(D T*) pointing to the created object. In all
-cases, returns $(D null) if allocation failed.
+Returns: If `T` is a class type, returns a reference to the created `T`
+object. Otherwise, returns a `T*` pointing to the created object. In all
+cases, returns `null` if allocation failed.
 
-Throws: If $(D T)'s constructor throws, deallocates the allocated memory and
+Throws: If `T`'s constructor throws, deallocates the allocated memory and
 propagates the exception.
 */
 auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
 {
     import std.algorithm.comparison : max;
-    import std.conv : emplace, emplaceRef;
-    auto m = alloc.allocate(max(stateSize!T, 1));
-    if (!m.ptr) return null;
-
-    // make can only be @safe if emplace or emplaceRef is `pure`
-    auto construct()
+    static if (!is(T == class) && !is(T == interface) && A.length == 0
+        && __traits(compiles, {T t;}) && isInitAllZeroBits!T
+        && is(typeof(alloc.allocateZeroed(size_t.max))))
     {
-        static if (is(T == class)) return emplace!T(m, args);
-        else
-        {
-            // Assume cast is safe as allocation succeeded for `stateSize!T`
-            auto p = () @trusted { return cast(T*) m.ptr; }();
-            emplaceRef(*p, args);
-            return p;
-        }
+        auto m = alloc.allocateZeroed(max(T.sizeof, 1));
+        return (() @trusted => cast(T*) m.ptr)();
     }
-
-    scope(failure)
+    else
     {
-        static if (is(typeof(() pure { return construct(); })))
-        {
-            // Assume deallocation is safe because:
-            // 1) in case of failure, `m` is the only reference to this memory
-            // 2) `m` is known to originate from `alloc`
-            () @trusted { alloc.deallocate(m); }();
-        }
-        else
-        {
-            alloc.deallocate(m);
-        }
-    }
+        import std.conv : emplace, emplaceRef;
+        auto m = alloc.allocate(max(stateSize!T, 1));
+        if (!m.ptr) return null;
 
-    return construct();
+        // make can only be @safe if emplace or emplaceRef is `pure`
+        auto construct()
+        {
+            static if (is(T == class)) return emplace!T(m, args);
+            else
+            {
+                // Assume cast is safe as allocation succeeded for `stateSize!T`
+                auto p = () @trusted { return cast(T*) m.ptr; }();
+                emplaceRef(*p, args);
+                return p;
+            }
+        }
+
+        scope(failure)
+        {
+            static if (is(typeof(() pure { return construct(); })))
+            {
+                // Assume deallocation is safe because:
+                // 1) in case of failure, `m` is the only reference to this memory
+                // 2) `m` is known to originate from `alloc`
+                () @trusted { alloc.deallocate(m); }();
+            }
+            else
+            {
+                alloc.deallocate(m);
+            }
+        }
+
+        return construct();
+    }
 }
 
 ///
@@ -1355,6 +1365,19 @@ nothrow @safe @nogc unittest
     assertThrown(make!InvalidImpureStruct(Mallocator.instance, 42));
 }
 
+// Don't allow zero-ctor-args `make` for structs with `@disable this();`
+@system unittest
+{
+    struct NoDefaultCtor
+    {
+        int i;
+        @disable this();
+    }
+    import std.experimental.allocator.mallocator : Mallocator;
+    static assert(!__traits(compiles, make!NoDefaultCtor(Mallocator.instance)),
+        "Don't allow zero-ctor-args `make` for structs with `@disable this();`");
+}
+
 private void fillWithMemcpy(T)(scope void[] array, auto ref T filler) nothrow
 if (T.sizeof == 1)
 {
@@ -1403,9 +1426,27 @@ if (T.sizeof != 1)
 
 private T[] uninitializedFillDefault(T)(T[] array) nothrow
 {
-    T t = T.init;
-    fillWithMemcpy(array, t);
-    return array;
+    static if (isInitAllZeroBits!T)
+    {
+        import core.stdc.string : memset;
+        if (array !is null)
+            memset(array.ptr, 0, T.sizeof * array.length);
+        return array;
+    }
+    else static if (isInitAllOneBits!T)
+    {
+        // Mostly for char and wchar.
+        import core.stdc.string : memset;
+        if (array !is null)
+            memset(array.ptr, 0xff, T.sizeof * array.length);
+        return array;
+    }
+    else
+    {
+        T t = T.init;
+        fillWithMemcpy(array, t);
+        return array;
+    }
 }
 
 pure nothrow @nogc
@@ -1424,10 +1465,28 @@ pure nothrow @nogc
     int[] a = [1, 2, 4];
     uninitializedFillDefault(a);
     assert(a == [0, 0, 0]);
+
+    char[] b = [1, 2, 4];
+    uninitializedFillDefault(b);
+    assert(b == [0xff, 0xff, 0xff]);
+
+    wchar[] c = [1, 2, 4];
+    uninitializedFillDefault(c);
+    assert(c == [0xffff, 0xffff, 0xffff]);
+}
+
+@system unittest
+{
+    static struct P { float x = 0; float y = 0; }
+
+    static assert(isInitAllZeroBits!P);
+    P[] a = [P(10, 11), P(20, 21), P(40, 41)];
+    uninitializedFillDefault(a);
+    assert(a == [P.init, P.init, P.init]);
 }
 
 /**
-Create an array of $(D T) with $(D length) elements using $(D alloc). The array is either default-initialized, filled with copies of $(D init), or initialized with values fetched from `range`.
+Create an array of `T` with `length` elements using `alloc`. The array is either default-initialized, filled with copies of `init`, or initialized with values fetched from `range`.
 
 Params:
 T = element type of the array being created
@@ -1437,7 +1496,7 @@ init = element used for filling the array
 range = range used for initializing the array elements
 
 Returns:
-The newly-created array, or $(D null) if either $(D length) was $(D 0) or
+The newly-created array, or `null` if either `length` was `0` or
 allocation failed.
 
 Throws:
@@ -1448,10 +1507,18 @@ exception if the copy operation throws.
 T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length)
 {
     if (!length) return null;
-    auto m = alloc.allocate(T.sizeof * length);
-    if (!m.ptr) return null;
-    alias U = Unqual!T;
-    return () @trusted { return cast(T[]) uninitializedFillDefault(cast(U[]) m); }();
+    static if (isInitAllZeroBits!T && hasMember!(T, "allocateZeroed"))
+    {
+        auto m = alloc.allocateZeroed(T.sizeof * length);
+        return (() @trusted => cast(T[]) m)();
+    }
+    else
+    {
+        auto m = alloc.allocate(T.sizeof * length);
+        if (!m.ptr) return null;
+        alias U = Unqual!T;
+        return () @trusted { return cast(T[]) uninitializedFillDefault(cast(U[]) m); }();
+    }
 }
 
 @system unittest
@@ -1967,23 +2034,23 @@ version(unittest)
 }
 
 /**
-Grows $(D array) by appending $(D delta) more elements. The needed memory is
-allocated using $(D alloc). The extra elements added are either default-
-initialized, filled with copies of $(D init), or initialized with values
+Grows `array` by appending `delta` more elements. The needed memory is
+allocated using `alloc`. The extra elements added are either default-
+initialized, filled with copies of `init`, or initialized with values
 fetched from `range`.
 
 Params:
 T = element type of the array being created
 alloc = the allocator used for getting memory
 array = a reference to the array being grown
-delta = number of elements to add (upon success the new length of $(D array) is
+delta = number of elements to add (upon success the new length of `array` is
 $(D array.length + delta))
 init = element used for filling the array
 range = range used for initializing the array elements
 
 Returns:
-$(D true) upon success, $(D false) if memory could not be allocated. In the
-latter case $(D array) is left unaffected.
+`true` upon success, `false` if memory could not be allocated. In the
+latter case `array` is left unaffected.
 
 Throws:
 The first two overloads throw only if `alloc`'s primitives do. The
@@ -2128,7 +2195,7 @@ if (isInputRange!R)
 }
 
 /**
-Shrinks an array by $(D delta) elements.
+Shrinks an array by `delta` elements.
 
 If $(D array.length < delta), does nothing and returns `false`. Otherwise,
 destroys the last $(D array.length - delta) elements in the array and then
@@ -2139,7 +2206,7 @@ Params:
 T = element type of the array being created
 alloc = the allocator used for getting memory
 array = a reference to the array being shrunk
-delta = number of elements to remove (upon success the new length of $(D array) is $(D array.length - delta))
+delta = number of elements to remove (upon success the new length of `array` is $(D array.length - delta))
 
 Returns:
 `true` upon success, `false` if memory could not be reallocated. In the latter
@@ -2217,8 +2284,8 @@ bool shrinkArray(T, Allocator)(auto ref Allocator alloc,
 
 /**
 
-Destroys and then deallocates (using $(D alloc)) the object pointed to by a
-pointer, the class object referred to by a $(D class) or $(D interface)
+Destroys and then deallocates (using `alloc`) the object pointed to by a
+pointer, the class object referred to by a `class` or `interface`
 reference, or an entire array. It is assumed the respective entities had been
 allocated with the same allocator.
 
@@ -2474,16 +2541,16 @@ void disposeMultidimensionalArray(T, Allocator)(auto ref Allocator alloc, auto r
 
 /**
 
-Returns a dynamically-typed $(D CAllocator) built around a given statically-
-typed allocator $(D a) of type $(D A). Passing a pointer to the allocator
+Returns a dynamically-typed `CAllocator` built around a given statically-
+typed allocator `a` of type `A`. Passing a pointer to the allocator
 creates a dynamic allocator around the allocator pointed to by the pointer,
 without attempting to copy or move it. Passing the allocator by value or
 reference behaves as follows.
 
 $(UL
-$(LI If $(D A) has no state, the resulting object is allocated in static
+$(LI If `A` has no state, the resulting object is allocated in static
 shared storage.)
-$(LI If $(D A) has state, the result will $(REF move, std,algorithm,mutation)
+$(LI If `A` has state, the result will $(REF move, std,algorithm,mutation)
 the supplied allocator $(D A a) within. The result itself is allocated in its
 own statically-typed allocator.)
 )
@@ -2496,8 +2563,8 @@ if (!isPointer!A)
     static if (stateSize!A == 0)
     {
         enum s = stateSize!(CAllocatorImpl!A).divideRoundUp(ulong.sizeof);
-        static __gshared ulong[s] state;
-        static __gshared RCIAllocator result;
+        __gshared ulong[s] state;
+        __gshared RCIAllocator result;
         if (result.isNull)
         {
             // Don't care about a few races
@@ -2579,19 +2646,19 @@ RCIAllocator allocatorObject(A)(A* pa)
 
 /**
 
-Returns a dynamically-typed $(D CSharedAllocator) built around a given statically-
-typed allocator $(D a) of type $(D A). Passing a pointer to the allocator
+Returns a dynamically-typed `CSharedAllocator` built around a given statically-
+typed allocator `a` of type `A`. Passing a pointer to the allocator
 creates a dynamic allocator around the allocator pointed to by the pointer,
 without attempting to copy or move it. Passing the allocator by value or
 reference behaves as follows.
 
 $(UL
-$(LI If $(D A) has no state, the resulting object is allocated in static
+$(LI If `A` has no state, the resulting object is allocated in static
 shared storage.)
-$(LI If $(D A) has state and is copyable, the result will
+$(LI If `A` has state and is copyable, the result will
 $(REF move, std,algorithm,mutation) the supplied allocator $(D A a) within.
 The result itself is allocated in its own statically-typed allocator.)
-$(LI If $(D A) has state and is not copyable, the result will move the
+$(LI If `A` has state and is not copyable, the result will move the
 passed-in argument into the result. The result itself is allocated in its own
 statically-typed allocator.)
 )
@@ -3144,13 +3211,13 @@ __EOF__
 
 /**
 
-Stores an allocator object in thread-local storage (i.e. non-$(D shared) D
-global). $(D ThreadLocal!A) is a subtype of $(D A) so it appears to implement
-$(D A)'s allocator primitives.
+Stores an allocator object in thread-local storage (i.e. non-`shared` D
+global). `ThreadLocal!A` is a subtype of `A` so it appears to implement
+`A`'s allocator primitives.
 
-$(D A) must hold state, otherwise $(D ThreadLocal!A) refuses instantiation. This
-means e.g. $(D ThreadLocal!Mallocator) does not work because $(D Mallocator)'s
-state is not stored as members of $(D Mallocator), but instead is hidden in the
+`A` must hold state, otherwise `ThreadLocal!A` refuses instantiation. This
+means e.g. `ThreadLocal!Mallocator` does not work because `Mallocator`'s
+state is not stored as members of `Mallocator`, but instead is hidden in the
 C library implementation.
 
 */
@@ -3198,10 +3265,10 @@ unittest
 (Not public.)
 
 A binary search tree that uses no allocation of its own. Instead, it relies on
-user code to allocate nodes externally. Then $(D EmbeddedTree)'s primitives wire
+user code to allocate nodes externally. Then `EmbeddedTree`'s primitives wire
 the nodes appropriately.
 
-Warning: currently $(D EmbeddedTree) is not using rebalancing, so it may
+Warning: currently `EmbeddedTree` is not using rebalancing, so it may
 degenerate. A red-black tree implementation storing the color with one of the
 pointers is planned for the future.
 */
@@ -3413,9 +3480,9 @@ unittest
 
 /*
 
-$(D InternalPointersTree) adds a primitive on top of another allocator: calling
-$(D resolveInternalPointer(p)) returns the block within which the internal
-pointer $(D p) lies. Pointers right after the end of allocated blocks are also
+`InternalPointersTree` adds a primitive on top of another allocator: calling
+`resolveInternalPointer(p)` returns the block within which the internal
+pointer `p` lies. Pointers right after the end of allocated blocks are also
 considered internal.
 
 The implementation stores three additional words with each allocation (one for
@@ -3496,7 +3563,7 @@ private struct InternalPointersTree(Allocator)
         return Ternary(blockMap.empty);
     }
 
-    /** Returns the block inside which $(D p) resides, or $(D null) if the
+    /** Returns the block inside which `p` resides, or `null` if the
     pointer does not belong.
     */
     pure nothrow @safe @nogc

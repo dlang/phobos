@@ -1,102 +1,80 @@
 // Written in the D programming language
 
 /++
-    Module containing Date/Time functionality.
+    $(SCRIPT inhibitQuickIndex = 1;)
 
-    This module provides:
+    Phobos provides the following functionality for time:
+
+    $(DIVC quickindex,
+    $(BOOKTABLE ,
+    $(TR $(TH Functionality) $(TH Symbols)
+    )
+    $(TR
+        $(TD Points in Time)
+        $(TD
+            $(REF_ALTTEXT Date, Date, std, datetime, date)$(NBSP)
+            $(REF_ALTTEXT TimeOfDay, TimeOfDay, std, datetime, date)$(NBSP)
+            $(REF_ALTTEXT DateTime, DateTime, std, datetime, date)$(NBSP)
+            $(REF_ALTTEXT SysTime, SysTime, std, datetime, systime)$(NBSP)
+        )
+    )
+    $(TR
+        $(TD Timezones)
+        $(TD
+            $(REF_ALTTEXT TimeZone, TimeZone, std, datetime, timezone)$(NBSP)
+            $(REF_ALTTEXT UTC, UTC, std, datetime, timezone)$(NBSP)
+            $(REF_ALTTEXT LocalTime, LocalTime, std, datetime, timezone)$(NBSP)
+            $(REF_ALTTEXT PosixTimeZone, PosixTimeZone, std, datetime, timezone)$(NBSP)
+            $(REF_ALTTEXT WindowsTimeZone, WindowsTimeZone, std, datetime, timezone)$(NBSP)
+            $(REF_ALTTEXT SimpleTimeZone, SimpleTimeZone, std, datetime, timezone)$(NBSP)
+        )
+    )
+    $(TR
+        $(TD Intervals and Ranges of Time)
+        $(TD
+            $(REF_ALTTEXT Interval, Interval, std, datetime, interval)$(NBSP)
+            $(REF_ALTTEXT PosInfInterval, PosInfInterval, std, datetime, interval)$(NBSP)
+            $(REF_ALTTEXT NegInfInterval, NegInfInterval, std, datetime, interval)$(NBSP)
+        )
+    )
+    $(TR
+        $(TD Durations of Time)
+        $(TD
+            $(REF_ALTTEXT Duration, Duration, core, time)$(NBSP)
+            $(REF_ALTTEXT weeks, weeks, core, time)$(NBSP)
+            $(REF_ALTTEXT days, days, core, time)$(NBSP)
+            $(REF_ALTTEXT hours, hours, core, time)$(NBSP)
+            $(REF_ALTTEXT minutes, minutes, core, time)$(NBSP)
+            $(REF_ALTTEXT seconds, seconds, core, time)$(NBSP)
+            $(REF_ALTTEXT msecs, msecs, core, time)$(NBSP)
+            $(REF_ALTTEXT usecs, usecs, core, time)$(NBSP)
+            $(REF_ALTTEXT hnsecs, hnsecs, core, time)$(NBSP)
+            $(REF_ALTTEXT nsecs, nsecs, core, time)$(NBSP)
+        )
+    )
+    $(TR
+        $(TD Time Measurement and Benchmarking)
+        $(TD
+            $(REF_ALTTEXT MonoTime, MonoTime, core, time)$(NBSP)
+            $(REF_ALTTEXT StopWatch, StopWatch, std, datetime, stopwatch)$(NBSP)
+            $(REF_ALTTEXT benchmark, benchmark, std, datetime, stopwatch)$(NBSP)
+        )
+    )
+    ))
+
+    This functionality is separated into the following modules
+
     $(UL
-        $(LI Types to represent points in time:
-             $(REF SysTime,std,_datetime,systime),
-             $(REF Date,std,_datetime,date),
-             $(REF TimeOfDay,std,_datetime,date),
-             $(REF DateTime,std,_datetime,date).)
-        $(LI Types to represent intervals of time.)
-        $(LI Types to represent ranges over intervals of time.)
-        $(LI Types to represent time zones (used by
-             $(REF SysTime,std,_datetime,systime)).)
-        $(LI A platform-independent, high precision stopwatch type:
-             $(LREF StopWatch))
-        $(LI Benchmarking functions.)
-        $(LI Various helper functions.)
+        $(LI $(MREF std, datetime, date) for points in time without timezones.)
+        $(LI $(MREF std, datetime, timezone) for classes which represent timezones.)
+        $(LI $(MREF std, datetime, systime) for a point in time with a timezone.)
+        $(LI $(MREF std, datetime, interval) for types which represent series of points in time.)
+        $(LI $(MREF std, datetime, stopwatch) for measuring time.)
     )
 
-    Closely related to std.datetime is <a href="core_time.html">$(D core.time)</a>,
-    and some of the time types used in std.datetime come from there - such as
-    $(REF Duration, core,time), $(REF TickDuration, core,time), and
-    $(REF FracSec, core,time).
-    core.time is publically imported into std.datetime, it isn't necessary
-    to import it separately.
-
-    Three of the main concepts used in this module are time points, time
-    durations, and time intervals.
-
-    A time point is a specific point in time. e.g. January 5th, 2010
-    or 5:00.
-
-    A time duration is a length of time with units. e.g. 5 days or 231 seconds.
-
-    A time interval indicates a period of time associated with a fixed point in
-    time. It is either two time points associated with each other,
-    indicating the time starting at the first point up to, but not including,
-    the second point - e.g. [January 5th, 2010 - March 10th, 2010$(RPAREN) - or
-    it is a time point and a time duration associated with one another. e.g.
-    January 5th, 2010 and 5 days, indicating [January 5th, 2010 -
-    January 10th, 2010$(RPAREN).
-
-    Various arithmetic operations are supported between time points and
-    durations (e.g. the difference between two time points is a time duration),
-    and ranges can be gotten from time intervals, so range-based operations may
-    be done on a series of time points.
-
-    The types that the typical user is most likely to be interested in are
-    $(REF Date,std,_datetime,date) (if they want dates but don't care about
-    time), $(REF DateTime,std,_datetime,date) (if they want dates and times
-    but don't care about time zones), $(REF SysTime,std,_datetime,systime) (if
-    they want the date and time from the OS and/or do care about time zones),
-    and StopWatch (a platform-independent, high precision stop watch).
-    $(REF Date,std,_datetime,date) and $(REF DateTime,std,_datetime,date) are
-    optimized for calendar-based operations, while
-    $(REF SysTime,std,_datetime,systime) is designed for dealing with time from
-    the OS. Check out their specific documentation for more details.
-
-    To get the current time, use $(REF Clock.currTime,std,_datetime,systime).
-    It will return the current time as a $(REF SysTime,std,_datetime,systime). To
-    print it, $(D toString) is sufficient, but if using $(D toISOString),
-    $(D toISOExtString), or $(D toSimpleString), use the corresponding
-    $(D fromISOString), $(D fromISOExtString), or $(D fromSimpleString) to
-    create a $(REF SysTime,std,_datetime,systime) from the string.
-
---------------------
-auto currentTime = Clock.currTime();
-auto timeString = currentTime.toISOExtString();
-auto restoredTime = SysTime.fromISOExtString(timeString);
---------------------
-
-    Various functions take a string (or strings) to represent a unit of time
-    (e.g. $(D convert!("days", "hours")(numDays))). The valid strings to use
-    with such functions are $(D "years"), $(D "months"), $(D "weeks"),
-    $(D "days"), $(D "hours"), $(D "minutes"), $(D "seconds"),
-    $(D "msecs") (milliseconds), $(D "usecs") (microseconds),
-    $(D "hnsecs") (hecto-nanoseconds - i.e. 100 ns), or some subset thereof.
-    There are a few functions in core.time which take $(D "nsecs"), but because
-    nothing in std.datetime has precision greater than hnsecs, and very little
-    in core.time does, no functions in std.datetime accept $(D "nsecs").
-    To remember which units are abbreviated and which aren't,
-    all units seconds and greater use their full names, and all
-    sub-second units are abbreviated (since they'd be rather long if they
-    weren't).
-
-    Note:
-        $(REF DateTimeException,std,_datetime,date) is an alias for
-        $(REF TimeException, core,time), so you don't need to worry about
-        core.time functions and std.datetime functions throwing different
-        exception types (except in the rare case that they throw something other
-        than $(REF TimeException, core,time) or
-        $(REF DateTimeException,std,_datetime,date)).
-
     See_Also:
-        $(DDLINK intro-to-_datetime, Introduction to std.datetime,
-                 Introduction to std&#46;_datetime)<br>
+        $(DDLINK intro-to-datetime, Introduction to std.datetime,
+                 Introduction to std&#46;datetime)<br>
         $(HTTP en.wikipedia.org/wiki/ISO_8601, ISO 8601)<br>
         $(HTTP en.wikipedia.org/wiki/Tz_database,
               Wikipedia entry on TZ Database)<br>
@@ -104,10 +82,47 @@ auto restoredTime = SysTime.fromISOExtString(timeString);
               List of Time Zones)<br>
 
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-    Authors:   Jonathan M Davis and Kato Shoichi
-    Source:    $(PHOBOSSRC std/_datetime/package.d)
+    Authors:   $(HTTP jmdavisprog.com, Jonathan M Davis) and Kato Shoichi
+    Source:    $(PHOBOSSRC std/datetime/package.d)
 +/
 module std.datetime;
+
+/// Get the current time from the system clock
+@safe unittest
+{
+    import std.datetime.systime : SysTime, Clock;
+
+    SysTime currentTime = Clock.currTime();
+}
+
+/**
+Construct a specific point in time without timezone information
+and get its ISO string.
+ */
+@safe unittest
+{
+    import std.datetime.date : DateTime;
+
+    auto dt = DateTime(2018, 1, 1, 12, 30, 10);
+    assert(dt.toISOString() == "20180101T123010");
+    assert(dt.toISOExtString() == "2018-01-01T12:30:10");
+}
+
+/**
+Construct a specific point in time in the UTC timezone and
+add two days.
+ */
+@safe unittest
+{
+    import std.datetime.systime : SysTime;
+    import std.datetime.timezone : UTC;
+    import core.time : days;
+
+    auto st = SysTime(DateTime(2018, 1, 1, 12, 30, 10), UTC());
+    assert(st.toISOExtString() == "2018-01-01T12:30:10Z");
+    st += 2.days;
+    assert(st.toISOExtString() == "2018-01-03T12:30:10Z");
+}
 
 public import core.time;
 public import std.datetime.date;
@@ -162,10 +177,10 @@ import std.typecons : Flag, Yes, No;
     Used by StopWatch to indicate whether it should start immediately upon
     construction.
 
-    If set to $(D AutoStart.no), then the stopwatch is not started when it is
+    If set to `AutoStart.no`, then the stopwatch is not started when it is
     constructed.
 
-    Otherwise, if set to $(D AutoStart.yes), then the stopwatch is started when
+    Otherwise, if set to `AutoStart.yes`, then the stopwatch is started when
     it is constructed.
   +/
 deprecated("Use std.datetime.stopwatch.AutoStart.") alias AutoStart = Flag!"autoStart";
@@ -181,17 +196,17 @@ deprecated("Use std.datetime.stopwatch.AutoStart.") alias AutoStart = Flag!"auto
           from the documentation in October 2018 and fully removed from Phobos
           in October 2019.)
 
-    $(D StopWatch) measures time as precisely as possible.
+    `StopWatch` measures time as precisely as possible.
 
     This class uses a high-performance counter. On Windows systems, it uses
-    $(D QueryPerformanceCounter), and on Posix systems, it uses
-    $(D clock_gettime) if available, and $(D gettimeofday) otherwise.
+    `QueryPerformanceCounter`, and on Posix systems, it uses
+    `clock_gettime` if available, and `gettimeofday` otherwise.
 
-    But the precision of $(D StopWatch) differs from system to system. It is
+    But the precision of `StopWatch` differs from system to system. It is
     impossible to for it to be the same from system to system since the precision
     of the system clock varies from system to system, and other system-dependent
     and situation-dependent stuff (such as the overhead of a context switch
-    between threads) can also affect $(D StopWatch)'s accuracy.
+    between threads) can also affect `StopWatch`'s accuracy.
   +/
 deprecated("Use std.datetime.stopwatch.StopWatch.")
 @safe struct StopWatch
@@ -445,9 +460,9 @@ deprecated @safe unittest
 
     Returns:
         The amount of time (as a $(REF TickDuration, core,time)) that it took to
-        call each function $(D n) times. The first value is the length of time
-        that it took to call $(D fun[0]) $(D n) times. The second value is the
-        length of time it took to call $(D fun[1]) $(D n) times. Etc.
+        call each function `n` times. The first value is the length of time
+        that it took to call `fun[0]` `n` times. The second value is the
+        length of time it took to call `fun[1]` `n` times. Etc.
 
     Note that casting the TickDurations to $(REF Duration, core,time)s will make
     the results easier to deal with (and it may change in the future that
@@ -509,7 +524,12 @@ deprecated @safe unittest
           removed from the documentation in October 2018 and fully removed from
           Phobos in October 2019.)
 
-    Return value of benchmark with two functions comparing.
+    Benchmark with two functions comparing.
+
+    Params:
+        baseFunc   = The function to become the base of the speed.
+        targetFunc = The function that wants to measure speed.
+        times      = The number of times each function is to be executed.
   +/
 deprecated("Use std.datetime.stopwatch.benchmark.") @safe struct ComparingBenchmarkResult
 {
@@ -557,23 +577,7 @@ private:
 
 
 // @@@DEPRECATED_2018-10@@@
-/++
-    $(RED The old benchmarking functionality in std.datetime (which uses
-          $(REF TickDuration,core,time)) has been deprecated. Use what's in
-          std.datetime.stopwatch instead. It uses $(REF MonoTime,core,time) and
-          $(REF Duration,core,time). Note that comparingBenchmark has
-          not been ported over, because it's a trivial wrapper around benchmark.
-          See $(REF benchmark,std,datetime,stopwatch). This symbol will be
-          removed from the documentation in October 2018 and fully removed from
-          Phobos in October 2019.)
-
-    Benchmark with two functions comparing.
-
-    Params:
-        baseFunc   = The function to become the base of the speed.
-        targetFunc = The function that wants to measure speed.
-        times      = The number of times each function is to be executed.
-  +/
+/// ditto
 deprecated("Use std.datetime.stopwatch.benchmark.")
 ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
                                             alias targetFunc,
@@ -624,31 +628,8 @@ deprecated @system unittest
     and stopping it when its return value goes out of scope and is destroyed.
 
     When the value that is returned by this function is destroyed,
-    $(D func) will run. $(D func) is a unary function that takes a
+    `func` will run. `func` is a unary function that takes a
     $(REF TickDuration, core,time).
-
-    Example:
---------------------
-{
-    auto mt = measureTime!((TickDuration a)
-        { /+ do something when the scope is exited +/ });
-    // do something that needs to be timed
-}
---------------------
-
-    which is functionally equivalent to
-
---------------------
-{
-    auto sw = StopWatch(Yes.autoStart);
-    scope(exit)
-    {
-        TickDuration a = sw.peek();
-        /+ do something when the scope is exited +/
-    }
-    // do something that needs to be timed
-}
---------------------
 
     See_Also:
         $(LREF benchmark)
@@ -690,7 +671,7 @@ if (!isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
     return Result(Yes.autoStart);
 }
 
-// Verify Example.
+///
 deprecated @safe unittest
 {
     {
@@ -699,6 +680,7 @@ deprecated @safe unittest
         // do something that needs to be timed
     }
 
+    // functionally equivalent to the above
     {
         auto sw = StopWatch(Yes.autoStart);
         scope(exit)

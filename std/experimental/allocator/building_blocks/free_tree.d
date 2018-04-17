@@ -16,10 +16,10 @@ previously freed blocks, it maintains a binary search tree. This allows the
 Free Tree allocator to manage blocks of arbitrary lengths and search them
 efficiently.
 
-Common uses of $(D FreeTree) include:
+Common uses of `FreeTree` include:
 
 $(UL
-$(LI Adding $(D deallocate) capability to an allocator that lacks it (such as simple regions).)
+$(LI Adding `deallocate` capability to an allocator that lacks it (such as simple regions).)
 $(LI Getting the benefits of multiple adaptable freelists that do not need to
 be tuned for one specific size but insted automatically adapts itself to
 frequently used sizes.)
@@ -27,14 +27,14 @@ frequently used sizes.)
 
 The free tree has special handling of duplicates (a singly-linked list per
 node) in anticipation of large number of duplicates. Allocation time from the
-free tree is expected to be $(BIGOH log n) where $(D n) is the number of
+free tree is expected to be $(BIGOH log n) where `n` is the number of
 distinct sizes (not total nodes) kept in the free tree.
 
 Allocation requests first search the tree for a buffer of suitable size
 deallocated in the past. If a match is found, the node is removed from the tree
 and the memory is returned. Otherwise, the allocation is directed to $(D
-ParentAllocator). If at this point $(D ParentAllocator) also fails to allocate,
-$(D FreeTree) frees everything and then tries the parent allocator again.
+ParentAllocator). If at this point `ParentAllocator` also fails to allocate,
+`FreeTree` frees everything and then tries the parent allocator again.
 
 Upon deallocation, the deallocated block is inserted in the internally
 maintained free tree (not returned to the parent). The free tree is not kept
@@ -43,12 +43,12 @@ blocks are rotated to the root of the tree. That way allocations are cache
 friendly and also frequently used sizes are more likely to be found quickly,
 whereas seldom used sizes migrate to the leaves of the tree.
 
-$(D FreeTree) rounds up small allocations to at least $(D 4 * size_t.sizeof),
+`FreeTree` rounds up small allocations to at least $(D 4 * size_t.sizeof),
 which on 64-bit system is one cache line size. If very small objects need to
-be efficiently allocated, the $(D FreeTree) should be fronted with an
+be efficiently allocated, the `FreeTree` should be fronted with an
 appropriate small object allocator.
 
-The following methods are defined if $(D ParentAllocator) defines them, and forward to it: $(D allocateAll), $(D expand), $(D owns), $(D reallocate).
+The following methods are defined if `ParentAllocator` defines them, and forward to it: `allocateAll`, `expand`, `owns`, `reallocate`.
 */
 struct FreeTree(ParentAllocator)
 {
@@ -243,17 +243,17 @@ struct FreeTree(ParentAllocator)
     }
 
     /**
-    The $(D FreeTree) is word aligned.
+    The `FreeTree` is word aligned.
     */
     enum uint alignment = size_t.alignof;
 
     /**
-    The $(D FreeTree) allocator is noncopyable.
+    The `FreeTree` allocator is noncopyable.
     */
     this(this) @disable;
 
     /**
-    The destructor of $(D FreeTree) releases all memory back to the parent
+    The destructor of `FreeTree` releases all memory back to the parent
     allocator.
     */
     static if (hasMember!(ParentAllocator, "deallocate"))
@@ -278,14 +278,14 @@ struct FreeTree(ParentAllocator)
 
     /**
 
-    Allocates $(D n) bytes of memory. First consults the free tree, and returns
+    Allocates `n` bytes of memory. First consults the free tree, and returns
     from it if a suitably sized block is found. Otherwise, the parent allocator
     is tried. If allocation from the parent succeeds, the allocated block is
     returned. Otherwise, the free tree tries an alternate strategy: If $(D
-    ParentAllocator) defines $(D deallocate), $(D FreeTree) releases all of its
+    ParentAllocator) defines `deallocate`, `FreeTree` releases all of its
     contents and tries again.
 
-    TODO: Splitting and coalescing should be implemented if $(D ParentAllocator) does not defined $(D deallocate).
+    TODO: Splitting and coalescing should be implemented if `ParentAllocator` does not defined `deallocate`.
 
     */
     void[] allocate(size_t n)
@@ -323,7 +323,7 @@ struct FreeTree(ParentAllocator)
     mixin(forwardToMember("parent",
         "allocateAll", "expand", "owns", "reallocate"));
 
-    /** Places $(D b) into the free tree. */
+    /** Places `b` into the free tree. */
     bool deallocate(void[] b)
     {
         if (!b.ptr) return true;
@@ -335,7 +335,6 @@ struct FreeTree(ParentAllocator)
         return true;
     }
 
-    version(unittest)
     @system unittest // test a few simple configurations
     {
         import std.experimental.allocator.gc_allocator;
@@ -357,7 +356,6 @@ struct FreeTree(ParentAllocator)
         assert(a.formatSizes == "(_)", a.formatSizes);
     }
 
-    version(unittest)
     @system unittest // build a complex free tree
     {
         import std.experimental.allocator.gc_allocator, std.range;
@@ -380,7 +378,7 @@ struct FreeTree(ParentAllocator)
         a.assertValid;
     }
 
-    /** Defined if $(D ParentAllocator.deallocate) exists, and returns to it
+    /** Defined if `ParentAllocator.deallocate` exists, and returns to it
     all memory held in the free tree. */
     static if (hasMember!(ParentAllocator, "deallocate"))
     void clear()
@@ -398,7 +396,7 @@ struct FreeTree(ParentAllocator)
 
     /**
 
-    Defined if $(D ParentAllocator.deallocateAll) exists, and forwards to it.
+    Defined if `ParentAllocator.deallocateAll` exists, and forwards to it.
     Also nullifies the free tree (it's assumed the parent frees all memory
     stil managed by the free tree).
 
@@ -497,8 +495,6 @@ struct FreeTree(ParentAllocator)
     FreeTree!GCAllocator a;
 
     assert((() nothrow @safe @nogc => a.goodAllocSize(1))() == typeof(*a.root).sizeof);
-    // goodAllocSize is not pure because we are calling through GCAllocator.instance
-    assert(!__traits(compiles, (() pure nothrow @safe @nogc => a.goodAllocSize(0))()));
 }
 
 @system unittest

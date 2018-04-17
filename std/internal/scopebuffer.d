@@ -74,11 +74,11 @@ string cat(string s1, string s2)
     return textbuf[].idup;
 }
 ---
- * ScopeBuffer is intended for high performance usages in $(D @system) and $(D @trusted) code.
+ * ScopeBuffer is intended for high performance usages in `@system` and `@trusted` code.
  * It is designed to fit into two 64 bit registers, again for high performance use.
  * If used incorrectly, memory leaks and corruption can result. Be sure to use
  * $(D scope(exit) textbuf.free();) for proper cleanup, and do not refer to a ScopeBuffer
- * instance's contents after $(D ScopeBuffer.free()) has been called.
+ * instance's contents after `ScopeBuffer.free()` has been called.
  *
  * The `realloc` parameter defaults to C's `realloc()`. Another can be supplied to override it.
  *
@@ -171,8 +171,8 @@ if (isAssignable!T &&
     /************************
      * Append array s to the buffer.
      *
-     * If $(D const(T)) can be converted to $(D T), then put will accept
-     * $(D const(T)[]) as input. It will accept a $(D T[]) otherwise.
+     * If `const(T)` can be converted to `T`, then put will accept
+     * `const(T)[]` as input. It will accept a `T[]` otherwise.
      */
     package alias CT = Select!(is(const(T) : T), const(T), T);
     /// ditto

@@ -26,7 +26,7 @@ $(TR $(TDNW Helpers) $(TD $(MYREF sha1Of))
  * This module conforms to the APIs defined in $(MREF std, digest). To understand the
  * differences between the template and the OOP API, see $(MREF std, digest).
  *
- * This module publicly imports $(D std.digest) and can be used as a stand-alone
+ * This module publicly imports `std.digest` and can be used as a stand-alone
  * module.
  *
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
@@ -117,13 +117,6 @@ else version(D_InlineAsm_X86_64)
 
 version(LittleEndian) import core.bitop : bswap;
 
-
-version(unittest)
-{
-    import std.exception;
-}
-
-
 public import std.digest;
 
 /*
@@ -193,7 +186,7 @@ private ulong rotateRight(ulong x, uint n) @safe pure nothrow @nogc
  * simply use the convenience aliases: SHA1, SHA224, SHA256, SHA384, SHA512,
  * SHA512_224 and SHA512_256.
  *
- * See $(D std.digest) for differences between template and OOP API.
+ * See `std.digest` for differences between template and OOP API.
  */
 struct SHA(uint hashBlockSize, uint digestSize)
 {
@@ -694,7 +687,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
         /**
          * Use this to feed the digest with data.
          * Also implements the $(REF isOutputRange, std,range,primitives)
-         * interface for $(D ubyte) and $(D const(ubyte)[]).
+         * interface for `ubyte` and `const(ubyte)[]`.
          */
         void put(scope const(ubyte)[] input...) @trusted pure nothrow @nogc
         {
@@ -820,14 +813,6 @@ struct SHA(uint hashBlockSize, uint digestSize)
         }
 }
 
-alias SHA1 = SHA!(512, 160);  /// SHA alias for SHA-1, hash is ubyte[20]
-alias SHA224 = SHA!(512, 224);  /// SHA alias for SHA-224, hash is ubyte[28]
-alias SHA256 = SHA!(512, 256);  /// SHA alias for SHA-256, hash is ubyte[32]
-alias SHA384 = SHA!(1024, 384); /// SHA alias for SHA-384, hash is ubyte[48]
-alias SHA512 = SHA!(1024, 512); /// SHA alias for SHA-512, hash is ubyte[64]
-alias SHA512_224 = SHA!(1024, 224); /// SHA alias for SHA-512/224, hash is ubyte[28]
-alias SHA512_256 = SHA!(1024, 256); /// SHA alias for SHA-512/256, hash is ubyte[32]
-
 ///
 @safe unittest
 {
@@ -868,6 +853,14 @@ alias SHA512_256 = SHA!(1024, 256); /// SHA alias for SHA-512/256, hash is ubyte
     doSomething(sha);
     assert(toHexString(sha.finish()) == "5BA93C9DB0CFF93F52B521D7420E43F6EDA2784F");
 }
+
+alias SHA1 = SHA!(512, 160);  /// SHA alias for SHA-1, hash is ubyte[20]
+alias SHA224 = SHA!(512, 224);  /// SHA alias for SHA-224, hash is ubyte[28]
+alias SHA256 = SHA!(512, 256);  /// SHA alias for SHA-256, hash is ubyte[32]
+alias SHA384 = SHA!(1024, 384); /// SHA alias for SHA-384, hash is ubyte[48]
+alias SHA512 = SHA!(1024, 512); /// SHA alias for SHA-512, hash is ubyte[64]
+alias SHA512_224 = SHA!(1024, 224); /// SHA alias for SHA-512/224, hash is ubyte[28]
+alias SHA512_256 = SHA!(1024, 256); /// SHA alias for SHA-512/256, hash is ubyte[32]
 
 @safe unittest
 {
@@ -1203,7 +1196,7 @@ auto sha512_256Of(T...)(T data)
 
 /**
  * OOP API SHA1 and SHA2 implementations.
- * See $(D std.digest) for differences between template and OOP API.
+ * See `std.digest` for differences between template and OOP API.
  *
  * This is an alias for $(D $(REF WrapperDigest, std,digest)!SHA1), see
  * there for more information.
@@ -1252,6 +1245,7 @@ alias SHA512_256Digest = WrapperDigest!SHA512_256; ///ditto
 @system unittest
 {
     import std.conv : hexString;
+    import std.exception;
     auto sha = new SHA1Digest();
 
     sha.put(cast(ubyte[])"abcdef");

@@ -77,10 +77,9 @@ module std.zip;
  */
 class ZipException : Exception
 {
-    this(string msg) @safe
-    {
-        super("ZipException: " ~ msg);
-    }
+    import std.exception : basicExceptionCtors;
+    ///
+    mixin basicExceptionCtors;
 }
 
 /**
@@ -128,21 +127,24 @@ final class ArchiveMember
     ushort flags;                  /// Read/Write: normally set to 0
     ushort internalAttributes;     /// Read/Write
 
-    @property ushort extractVersion()     { return _extractVersion; }    /// Read Only
-    @property uint crc32()         { return _crc32; }    /// Read Only: cyclic redundancy check (CRC) value
+    /// Read Only
+    @property @safe pure nothrow @nogc ushort extractVersion() const { return _extractVersion; }
+    /// Read Only: cyclic redundancy check (CRC) value
+    @property @safe pure nothrow @nogc uint crc32() const { return _crc32; }
 
     /// Read Only: size of data of member in compressed form.
-    @property uint compressedSize()     { return _compressedSize; }
+    @property @safe pure nothrow @nogc uint compressedSize() const { return _compressedSize; }
 
     /// Read Only: size of data of member in expanded form.
-    @property uint expandedSize()     { return _expandedSize; }
-    @property ushort diskNumber()     { return _diskNumber; }        /// Read Only: should be 0.
+    @property @safe pure nothrow @nogc uint expandedSize() const { return _expandedSize; }
+    /// Read Only: should be 0.
+    @property @safe pure nothrow @nogc ushort diskNumber() const { return _diskNumber; }
 
     /// Read Only: data of member in compressed form.
-    @property ubyte[] compressedData()     { return _compressedData; }
+    @property @safe pure nothrow @nogc ubyte[] compressedData() { return _compressedData; }
 
     /// Read data of member in uncompressed form.
-    @property ubyte[] expandedData()     { return _expandedData; }
+    @property @safe pure nothrow @nogc ubyte[] expandedData() { return _expandedData; }
 
     /// Write data of member in uncompressed form.
     @property @safe void expandedData(ubyte[] ed)
@@ -193,7 +195,7 @@ final class ArchiveMember
      * encoded for an incompatible OS (Windows vs. Posix).
      *
      */
-    @property uint fileAttributes() const
+    @property @nogc nothrow uint fileAttributes() const
     {
         version (Posix)
         {
@@ -220,13 +222,13 @@ final class ArchiveMember
     }
 
     /// ditto
-    @property void time(DosFileTime time)
+    @property void time(DosFileTime time) @safe pure nothrow @nogc
     {
         _time = time;
     }
 
     /// Get the last modification time for this member.
-    @property DosFileTime time() const
+    @property DosFileTime time() const @safe pure nothrow @nogc
     {
         return _time;
     }
@@ -236,14 +238,14 @@ final class ArchiveMember
      * See_Also:
      *     CompressionMethod
      **/
-    @property @safe CompressionMethod compressionMethod() { return _compressionMethod; }
+    @property @safe @nogc pure nothrow CompressionMethod compressionMethod() const { return _compressionMethod; }
 
     /**
      * Write compression method used for this member
      * See_Also:
      *     CompressionMethod
      **/
-    @property void compressionMethod(CompressionMethod cm)
+    @property @safe pure void compressionMethod(CompressionMethod cm)
     {
         if (cm == _compressionMethod) return;
 
@@ -256,8 +258,8 @@ final class ArchiveMember
     /**
       * The index of this archive member within the archive.
       */
-    @property uint index() const pure nothrow @nogc { return _index; }
-    @property uint index(uint value) pure nothrow @nogc { return _index = value; }
+    @property uint index() const @safe pure nothrow @nogc { return _index; }
+    @property uint index(uint value) @safe pure nothrow @nogc { return _index = value; }
 
     debug(print)
     {
@@ -307,23 +309,23 @@ final class ZipArchive
     static const int eocd64Length = 56;
 
     /// Read Only: array representing the entire contents of the archive.
-    @property @safe ubyte[] data() { return _data; }
+    @property @safe @nogc pure nothrow ubyte[] data() { return _data; }
 
     /// Read Only: 0 since multi-disk zip archives are not supported.
-    @property @safe uint diskNumber()    { return _diskNumber; }
+    @property @safe @nogc pure nothrow uint diskNumber() const { return _diskNumber; }
 
     /// Read Only: 0 since multi-disk zip archives are not supported
-    @property @safe uint diskStartDir()  { return _diskStartDir; }
+    @property @safe @nogc pure nothrow uint diskStartDir() const { return _diskStartDir; }
 
     /// Read Only: number of ArchiveMembers in the directory.
-    @property @safe uint numEntries()    { return _numEntries; }
-    @property @safe uint totalEntries()  { return _totalEntries; }    /// ditto
+    @property @safe @nogc pure nothrow uint numEntries() const { return _numEntries; }
+    @property @safe @nogc pure nothrow uint totalEntries() const { return _totalEntries; }    /// ditto
 
     /// True when the archive is in Zip64 format.
-    @property @safe bool isZip64()  { return _isZip64; }
+    @property @safe @nogc pure nothrow bool isZip64() const { return _isZip64; }
 
     /// Set this to true to force building a Zip64 archive.
-    @property @safe void isZip64(bool value) { _isZip64 = value; }
+    @property @safe @nogc pure nothrow void isZip64(bool value) { _isZip64 = value; }
     /**
      * Read Only: array indexed by the name of each member of the archive.
      *  All the members of the archive can be accessed with a foreach loop:
@@ -336,7 +338,7 @@ final class ZipArchive
      * }
      * --------------------
      */
-    @property @safe ArchiveMember[string] directory() { return _directory; }
+    @property @safe @nogc pure nothrow ArchiveMember[string] directory() { return _directory; }
 
     private ArchiveMember[string] _directory;
 
@@ -356,7 +358,7 @@ final class ZipArchive
 
     /** Constructor to use when creating a new archive.
      */
-    this() @safe
+    this() @safe @nogc pure nothrow
     {
     }
 
@@ -410,9 +412,12 @@ final class ZipArchive
      *
      * Returns: array representing the entire archive.
      */
-    void[] build()
+    void[] build() @safe pure
     {
+        import std.array : array;
         import std.algorithm.sorting : sort;
+        import std.string : representation;
+
         uint i;
         uint directoryOffset;
 
@@ -422,7 +427,7 @@ final class ZipArchive
         // Compress each member; compute size
         uint archiveSize = 0;
         uint directorySize = 0;
-        auto directory = _directory.values().sort!((x, y) => x.index < y.index).release;
+        auto directory = _directory.byValue.array.sort!((x, y) => x.index < y.index).release;
         foreach (ArchiveMember de; directory)
         {
             if (to!ulong(archiveSize) + 30 + de.name.length + de.extra.length + de.compressedSize
@@ -453,7 +458,7 @@ final class ZipArchive
         foreach (ArchiveMember de; directory)
         {
             de.offset = i;
-            _data[i .. i + 4] = cast(ubyte[])"PK\x03\x04";
+            _data[i .. i + 4] = "PK\x03\x04".representation;
             putUshort(i + 4,  de.extractVersion);
             putUshort(i + 6,  de.flags);
             putUshort(i + 8,  de._compressionMethod);
@@ -465,7 +470,7 @@ final class ZipArchive
             putUshort(i + 28, cast(ushort) de.extra.length);
             i += 30;
 
-            _data[i .. i + de.name.length] = (cast(ubyte[]) de.name)[];
+            _data[i .. i + de.name.length] = (de.name.representation)[];
             i += de.name.length;
             _data[i .. i + de.extra.length] = (cast(ubyte[]) de.extra)[];
             i += de.extra.length;
@@ -478,7 +483,7 @@ final class ZipArchive
         _numEntries = 0;
         foreach (ArchiveMember de; directory)
         {
-            _data[i .. i + 4] = cast(ubyte[])"PK\x01\x02";
+            _data[i .. i + 4] = "PK\x01\x02".representation;
             putUshort(i + 4,  de._madeVersion);
             putUshort(i + 6,  de.extractVersion);
             putUshort(i + 8,  de.flags);
@@ -496,11 +501,11 @@ final class ZipArchive
             putUint  (i + 42, de.offset);
             i += 46;
 
-            _data[i .. i + de.name.length] = (cast(ubyte[]) de.name)[];
+            _data[i .. i + de.name.length] = (de.name.representation)[];
             i += de.name.length;
             _data[i .. i + de.extra.length] = (cast(ubyte[]) de.extra)[];
             i += de.extra.length;
-            _data[i .. i + de.comment.length] = (cast(ubyte[]) de.comment)[];
+            _data[i .. i + de.comment.length] = (de.comment.representation)[];
             i += de.comment.length;
             _numEntries++;
         }
@@ -510,7 +515,7 @@ final class ZipArchive
         {
             // Write zip64 end of central directory record
             uint eocd64Offset = i;
-            _data[i .. i + 4] = cast(ubyte[])"PK\x06\x06";
+            _data[i .. i + 4] = "PK\x06\x06".representation;
             putUlong (i + 4,  eocd64Length - 12);
             putUshort(i + 12, zip64ExtractVersion);
             putUshort(i + 14, zip64ExtractVersion);
@@ -523,7 +528,7 @@ final class ZipArchive
             i += eocd64Length;
 
             // Write zip64 end of central directory record locator
-            _data[i .. i + 4] = cast(ubyte[])"PK\x06\x07";
+            _data[i .. i + 4] = "PK\x06\x07".representation;
             putUint  (i + 4,  diskNumber);
             putUlong (i + 8,  eocd64Offset);
             putUint  (i + 16, 1);
@@ -532,7 +537,7 @@ final class ZipArchive
 
         // Write end record
         endrecOffset = i;
-        _data[i .. i + 4] = cast(ubyte[])"PK\x05\x06";
+        _data[i .. i + 4] = "PK\x05\x06".representation;
         putUshort(i + 4,  cast(ushort) diskNumber);
         putUshort(i + 6,  cast(ushort) diskStartDir);
         putUshort(i + 8,  (numEntries > ushort.max ? ushort.max : cast(ushort) numEntries));
@@ -544,7 +549,7 @@ final class ZipArchive
 
         // Write archive comment
         assert(i + comment.length == data.length, "Writing the archive comment failed.");
-        _data[i .. data.length] = (cast(ubyte[]) comment)[];
+        _data[i .. data.length] = (comment.representation)[];
 
         return cast(void[]) data;
     }
@@ -728,10 +733,13 @@ final class ZipArchive
      * crc32, compressedSize, expandedSize, expandedData[], name[], extra[].
      */
     ubyte[] expand(ArchiveMember de)
-    {   uint namelen;
+    {
+        import std.string : representation;
+
+        uint namelen;
         uint extralen;
 
-        if (_data[de.offset .. de.offset + 4] != cast(ubyte[])"PK\x03\x04")
+        if (_data[de.offset .. de.offset + 4] != "PK\x03\x04".representation)
             throw new ZipException("invalid directory entry 4");
 
         // These values should match what is in the main zip archive directory
@@ -756,7 +764,7 @@ final class ZipArchive
         if (de.flags & 1)
             throw new ZipException("encryption not supported");
 
-        int i;
+        uint i;
         i = de.offset + 30 + namelen + extralen;
         if (i + de.compressedSize > endrecOffset)
             throw new ZipException("invalid directory entry 5");
@@ -785,35 +793,35 @@ final class ZipArchive
 
     /* ============ Utility =================== */
 
-    @safe ushort getUshort(int i)
+    @safe @nogc pure nothrow ushort getUshort(uint i)
     {
         ubyte[2] result = data[i .. i + 2];
         return littleEndianToNative!ushort(result);
     }
 
-    @safe uint getUint(int i)
+    @safe @nogc pure nothrow uint getUint(uint i)
     {
         ubyte[4] result = data[i .. i + 4];
         return littleEndianToNative!uint(result);
     }
 
-    @safe ulong getUlong(int i)
+    @safe @nogc pure nothrow ulong getUlong(uint i)
     {
         ubyte[8] result = data[i .. i + 8];
         return littleEndianToNative!ulong(result);
     }
 
-    @safe void putUshort(int i, ushort us)
+    @safe @nogc pure nothrow void putUshort(uint i, ushort us)
     {
         data[i .. i + 2] = nativeToLittleEndian(us);
     }
 
-    @safe void putUint(int i, uint ui)
+    @safe @nogc pure nothrow void putUint(uint i, uint ui)
     {
         data[i .. i + 4] = nativeToLittleEndian(ui);
     }
 
-    @safe void putUlong(int i, ulong ul)
+    @safe @nogc pure nothrow void putUlong(uint i, ulong ul)
     {
         data[i .. i + 8] = nativeToLittleEndian(ul);
     }

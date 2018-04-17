@@ -26,10 +26,45 @@ $(TR $(TD Conversion) $(TD
 )
 
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-    Authors:   Jonathan M Davis
+    Authors:   $(HTTP jmdavisprog.com, Jonathan M Davis)
     Source:    $(PHOBOSSRC std/datetime/_systime.d)
 +/
 module std.datetime.systime;
+
+/// Get the current time as a $(LREF SysTime)
+@safe unittest
+{
+    import std.datetime.timezone : LocalTime;
+    SysTime today = Clock.currTime();
+    assert(today.timezone is LocalTime());
+}
+
+/// Construct a $(LREF SysTime) from a ISO time string
+@safe unittest
+{
+    import std.datetime.date : DateTime;
+    import std.datetime.timezone : UTC;
+
+    auto st = SysTime.fromISOExtString("2018-01-01T10:30:00Z");
+    assert(st == SysTime(DateTime(2018, 1, 1, 10, 30, 0), UTC()));
+}
+
+/// Make a specific point in time in the New York timezone
+@safe unittest
+{
+    import core.time : hours;
+    import std.datetime.date : DateTime;
+    import std.datetime.timezone : SimpleTimeZone;
+
+    auto ny = SysTime(
+        DateTime(2018, 1, 1, 10, 30, 0),
+        new immutable SimpleTimeZone(-5.hours, "America/New_York")
+    );
+
+    // ISO standard time strings
+    assert(ny.toISOString() == "20180101T103000-05:00");
+    assert(ny.toISOExtString() == "2018-01-01T10:30:00-05:00");
+}
 
 // Note: reconsider using specific imports below after
 // https://issues.dlang.org/show_bug.cgi?id=17630 has been fixed
@@ -97,7 +132,6 @@ public:
     @safe unittest
     {
         import std.format : format;
-        import std.stdio : writefln;
         import core.time;
         assert(currTime().timezone is LocalTime());
         assert(currTime(UTC()).timezone is UTC());
@@ -123,11 +157,10 @@ public:
         import std.meta : AliasSeq;
         static foreach (ct; AliasSeq!(ClockType.coarse, ClockType.precise, ClockType.second))
         {{
-            scope(failure) writefln("ClockType.%s", ct);
             auto value1 = Clock.currTime!ct;
             auto value2 = Clock.currTime!ct(UTC());
-            assert(value1 <= value2, format("%s %s", value1, value2));
-            assert(abs(value1 - value2) <= seconds(2));
+            assert(value1 <= value2, format("%s %s (ClockType: %s)", value1, value2, ct));
+            assert(abs(value1 - value2) <= seconds(2), format("ClockType.%s", ct));
         }}
     }
 
@@ -288,7 +321,6 @@ public:
         import std.format : format;
         import std.math : abs;
         import std.meta : AliasSeq;
-        import std.stdio : writefln;
         enum limit = convert!("seconds", "hnsecs")(2);
 
         auto norm1 = Clock.currStdTime;
@@ -298,10 +330,9 @@ public:
 
         static foreach (ct; AliasSeq!(ClockType.coarse, ClockType.precise, ClockType.second))
         {{
-            scope(failure) writefln("ClockType.%s", ct);
             auto value1 = Clock.currStdTime!ct;
             auto value2 = Clock.currStdTime!ct;
-            assert(value1 <= value2, format("%s %s", value1, value2));
+            assert(value1 <= value2, format("%s %s (ClockType: %s)", value1, value2, ct));
             assert(abs(value1 - value2) <= limit);
         }}
     }
@@ -312,12 +343,20 @@ private:
     @disable this() {}
 }
 
+/// Get the current time as a $(LREF SysTime)
+@safe unittest
+{
+    import std.datetime.timezone : LocalTime;
+    SysTime today = Clock.currTime();
+    assert(today.timezone is LocalTime());
+}
+
 
 /++
-    $(D SysTime) is the type used to get the current time from the
+    `SysTime` is the type used to get the current time from the
     system or doing anything that involves time zones. Unlike
     $(REF DateTime,std,datetime,date), the time zone is an integral part of
-    $(D SysTime) (though for local time applications, time zones can be ignored
+    `SysTime` (though for local time applications, time zones can be ignored
     and it will work, since it defaults to using the local time zone). It holds
     its internal time in std time (hnsecs since midnight, January 1st, 1 A.D.
     UTC), so it interfaces well with the system time. However, that means that,
@@ -327,37 +366,37 @@ private:
 
     For calendar-based operations that don't
     care about time zones, then $(REF DateTime,std,datetime,date) would be
-    the type to use. For system time, use $(D SysTime).
+    the type to use. For system time, use `SysTime`.
 
-    $(LREF Clock.currTime) will return the current time as a $(D SysTime).
-    To convert a $(D SysTime) to a $(REF Date,std,datetime,date) or
+    $(LREF Clock.currTime) will return the current time as a `SysTime`.
+    To convert a `SysTime` to a $(REF Date,std,datetime,date) or
     $(REF DateTime,std,datetime,date), simply cast it. To convert a
     $(REF Date,std,datetime,date) or $(REF DateTime,std,datetime,date) to a
-    $(D SysTime), use $(D SysTime)'s constructor, and pass in the ntended time
+    `SysTime`, use `SysTime`'s constructor, and pass in the ntended time
     zone with it (or don't pass in a $(REF TimeZone,std,datetime,timezone), and
     the local time zone will be used). Be aware, however, that converting from a
-    $(REF DateTime,std,datetime,date) to a $(D SysTime) will not necessarily
+    $(REF DateTime,std,datetime,date) to a `SysTime` will not necessarily
     be 100% accurate due to DST (one hour of the year doesn't exist and another
     occurs twice). To not risk any conversion errors, keep times as
-    $(D SysTime)s. Aside from DST though, there shouldn't be any conversion
+    `SysTime`s. Aside from DST though, there shouldn't be any conversion
     problems.
 
     For using time zones other than local time or UTC, use
     $(REF PosixTimeZone,std,datetime,timezone) on Posix systems (or on Windows,
     if providing the TZ Database files), and use
     $(REF WindowsTimeZone,std,datetime,timezone) on Windows systems. The time in
-    $(D SysTime) is kept internally in hnsecs from midnight, January 1st, 1 A.D.
+    `SysTime` is kept internally in hnsecs from midnight, January 1st, 1 A.D.
     UTC. Conversion error cannot happen when changing the time zone of a
-    $(D SysTime). $(REF LocalTime,std,datetime,timezone) is the
+    `SysTime`. $(REF LocalTime,std,datetime,timezone) is the
     $(REF TimeZone,std,datetime,timezone) class which represents the local time,
-    and $(D UTC) is the $(REF TimeZone,std,datetime,timezone) class which
-    represents UTC. $(D SysTime) uses $(REF LocalTime,std,datetime,timezone) if
+    and `UTC` is the $(REF TimeZone,std,datetime,timezone) class which
+    represents UTC. `SysTime` uses $(REF LocalTime,std,datetime,timezone) if
     no $(REF TimeZone,std,datetime,timezone) is provided. For more details on
     time zones, see the documentation for $(REF TimeZone,std,datetime,timezone),
     $(REF PosixTimeZone,std,datetime,timezone), and
     $(REF WindowsTimeZone,std,datetime,timezone).
 
-    $(D SysTime)'s range is from approximately 29,000 B.C. to approximately
+    `SysTime`'s range is from approximately 29,000 B.C. to approximately
     29,000 A.D.
   +/
 struct SysTime
@@ -423,7 +462,7 @@ public:
                        be in the given time zone.
 
         Throws:
-            $(REF DateTimeException,std,datetime,date) if $(D fracSecs) is negative or if it's
+            $(REF DateTimeException,std,datetime,date) if `fracSecs` is negative or if it's
             greater than or equal to one second.
       +/
     this(in DateTime dateTime, in Duration fracSecs, immutable TimeZone tz = null) @safe
@@ -896,7 +935,7 @@ public:
         Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
 
         Throws:
-            $(REF DateTimeException,std,datetime,date) if $(D isAD) is true.
+            $(REF DateTimeException,std,datetime,date) if `isAD` is true.
      +/
     @property ushort yearBC() @safe const
     {
@@ -2013,7 +2052,7 @@ public:
 
     /++
         Returns a $(LREF SysTime) with the same std time as this one, but with
-        $(D UTC) as its time zone.
+        `UTC` as its time zone.
       +/
     SysTime toUTC() @safe const pure nothrow
     {
@@ -2073,8 +2112,8 @@ public:
         argument to get the desired size.
 
         If the return type is int, and the result can't fit in an int, then the
-        closest value that can be held in 32 bits will be used (so $(D int.max)
-        if it goes over and $(D int.min) if it goes under). However, no attempt
+        closest value that can be held in 32 bits will be used (so `int.max`
+        if it goes over and `int.min` if it goes under). However, no attempt
         is made to deal with integer overflow if the return type is long.
 
         Params:
@@ -2188,14 +2227,14 @@ public:
 
 
     /++
-        Returns a $(D timeval) which represents this $(LREF SysTime).
+        Returns a `timeval` which represents this $(LREF SysTime).
 
         Note that like all conversions in std.datetime, this is a truncating
         conversion.
 
-        If $(D timeval.tv_sec) is int, and the result can't fit in an int, then
+        If `timeval.tv_sec` is int, and the result can't fit in an int, then
         the closest value that can be held in 32 bits will be used for
-        $(D tv_sec). (so $(D int.max) if it goes over and $(D int.min) if it
+        `tv_sec`. (so `int.max` if it goes over and `int.min` if it
         goes under).
       +/
     timeval toTimeVal() @safe const pure nothrow
@@ -2234,7 +2273,7 @@ public:
     {
         private struct timespec {}
         /++
-            Returns a $(D timespec) which represents this $(LREF SysTime).
+            Returns a `timespec` which represents this $(LREF SysTime).
 
             $(BLUE This function is Posix-Only.)
           +/
@@ -2282,7 +2321,7 @@ public:
     }
 
     /++
-        Returns a $(D tm) which represents this $(LREF SysTime).
+        Returns a `tm` which represents this $(LREF SysTime).
       +/
     tm toTM() @safe const nothrow
     {
@@ -4394,9 +4433,9 @@ public:
         affect larger units. For instance, rolling a $(LREF SysTime) one
         year's worth of days gets the exact same $(LREF SysTime).
 
-        Accepted units are $(D "days"), $(D "minutes"), $(D "hours"),
-        $(D "minutes"), $(D "seconds"), $(D "msecs"), $(D "usecs"), and
-        $(D "hnsecs").
+        Accepted units are `"days"`, `"minutes"`, `"hours"`,
+        `"minutes"`, `"seconds"`, `"msecs"`, `"usecs"`, and
+        `"hnsecs"`.
 
         Note that when rolling msecs, usecs or hnsecs, they all add up to a
         second. So, for example, rolling 1000 msecs is exactly the same as
@@ -7619,7 +7658,7 @@ public:
 
         If this $(LREF SysTime)'s time zone is
         $(REF LocalTime,std,datetime,timezone), then TZ is empty. If its time
-        zone is $(D UTC), then it is "Z". Otherwise, it is the offset from UTC
+        zone is `UTC`, then it is "Z". Otherwise, it is the offset from UTC
         (e.g. +0100 or -0700). Note that the offset from UTC is $(I not) enough
         to uniquely identify the time zone.
 
@@ -7786,50 +7825,72 @@ public:
 
         If this $(LREF SysTime)'s time zone is
         $(REF LocalTime,std,datetime,timezone), then TZ is empty. If its time
-        zone is $(D UTC), then it is "Z". Otherwise, it is the offset from UTC
+        zone is `UTC`, then it is "Z". Otherwise, it is the offset from UTC
         (e.g. +01:00 or -07:00). Note that the offset from UTC is $(I not)
         enough to uniquely identify the time zone.
 
         Time zone offsets will be in the form +HH:MM or -HH:MM.
+
+        Params:
+            writer = A `char` accepting
+            $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+        Returns:
+            A `string` when not using an output range; `void` otherwise.
       +/
     string toISOExtString() @safe const nothrow
     {
+        import std.array : appender;
+        auto app = appender!string();
+        app.reserve(35);
         try
-        {
-            immutable adjustedTime = adjTime;
-            long hnsecs = adjustedTime;
-
-            auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
-
-            if (hnsecs < 0)
-            {
-                hnsecs += convert!("hours", "hnsecs")(24);
-                --days;
-            }
-
-            auto hour = splitUnitsFromHNSecs!"hours"(hnsecs);
-            auto minute = splitUnitsFromHNSecs!"minutes"(hnsecs);
-            auto second = splitUnitsFromHNSecs!"seconds"(hnsecs);
-
-            auto dateTime = DateTime(Date(cast(int) days), TimeOfDay(cast(int) hour,
-                                          cast(int) minute, cast(int) second));
-            auto fracSecStr = fracSecsToISOString(cast(int) hnsecs);
-
-            if (_timezone is LocalTime())
-                return dateTime.toISOExtString() ~ fracSecStr;
-
-            if (_timezone is UTC())
-                return dateTime.toISOExtString() ~ fracSecStr ~ "Z";
-
-            immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
-
-            return format("%s%s%s",
-                          dateTime.toISOExtString(),
-                          fracSecStr,
-                          SimpleTimeZone.toISOExtString(utcOffset));
-        }
+            toISOExtString(app);
         catch (Exception e)
-            assert(0, "format() threw.");
+            assert(0, "toISOExtString() threw.");
+        return app.data;
+    }
+
+    /// ditto
+    void toISOExtString(W)(ref W writer) const
+    if (isOutputRange!(W, char))
+    {
+        immutable adjustedTime = adjTime;
+        long hnsecs = adjustedTime;
+
+        auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
+
+        if (hnsecs < 0)
+        {
+            hnsecs += convert!("hours", "hnsecs")(24);
+            --days;
+        }
+
+        immutable hour = splitUnitsFromHNSecs!"hours"(hnsecs);
+        immutable minute = splitUnitsFromHNSecs!"minutes"(hnsecs);
+        immutable second = splitUnitsFromHNSecs!"seconds"(hnsecs);
+
+        immutable dateTime = DateTime(Date(cast(int) days), TimeOfDay(cast(int) hour,
+                                      cast(int) minute, cast(int) second));
+
+        if (_timezone is LocalTime())
+        {
+            dateTime.toISOExtString(writer);
+            fracSecsToISOString(writer, cast(int) hnsecs);
+            return;
+        }
+
+        if (_timezone is UTC())
+        {
+            dateTime.toISOExtString(writer);
+            fracSecsToISOString(writer, cast(int) hnsecs);
+            put(writer, 'Z');
+            return;
+        }
+
+        immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
+
+        dateTime.toISOExtString(writer);
+        fracSecsToISOString(writer, cast(int) hnsecs);
+        SimpleTimeZone.toISOExtString(writer, utcOffset);
     }
 
     ///
@@ -7923,50 +7984,72 @@ public:
 
         If this $(LREF SysTime)'s time zone is
         $(REF LocalTime,std,datetime,timezone), then TZ is empty. If its time
-        zone is $(D UTC), then it is "Z". Otherwise, it is the offset from UTC
+        zone is `UTC`, then it is "Z". Otherwise, it is the offset from UTC
         (e.g. +01:00 or -07:00). Note that the offset from UTC is $(I not)
         enough to uniquely identify the time zone.
 
         Time zone offsets will be in the form +HH:MM or -HH:MM.
+
+        Params:
+            writer = A `char` accepting
+            $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+        Returns:
+            A `string` when not using an output range; `void` otherwise.
       +/
     string toSimpleString() @safe const nothrow
     {
+        import std.array : appender;
+        auto app = appender!string();
+        app.reserve(35);
         try
-        {
-            immutable adjustedTime = adjTime;
-            long hnsecs = adjustedTime;
-
-            auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
-
-            if (hnsecs < 0)
-            {
-                hnsecs += convert!("hours", "hnsecs")(24);
-                --days;
-            }
-
-            auto hour = splitUnitsFromHNSecs!"hours"(hnsecs);
-            auto minute = splitUnitsFromHNSecs!"minutes"(hnsecs);
-            auto second = splitUnitsFromHNSecs!"seconds"(hnsecs);
-
-            auto dateTime = DateTime(Date(cast(int) days), TimeOfDay(cast(int) hour,
-                                          cast(int) minute, cast(int) second));
-            auto fracSecStr = fracSecsToISOString(cast(int) hnsecs);
-
-            if (_timezone is LocalTime())
-                return dateTime.toSimpleString() ~ fracSecStr;
-
-            if (_timezone is UTC())
-                return dateTime.toSimpleString() ~ fracSecStr ~ "Z";
-
-            immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
-
-            return format("%s%s%s",
-                          dateTime.toSimpleString(),
-                          fracSecStr,
-                          SimpleTimeZone.toISOExtString(utcOffset));
-        }
+            toSimpleString(app);
         catch (Exception e)
-            assert(0, "format() threw.");
+            assert(0, "toSimpleString() threw.");
+        return app.data;
+    }
+
+    /// ditto
+    void toSimpleString(W)(ref W writer) const
+    if (isOutputRange!(W, char))
+    {
+        immutable adjustedTime = adjTime;
+        long hnsecs = adjustedTime;
+
+        auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
+
+        if (hnsecs < 0)
+        {
+            hnsecs += convert!("hours", "hnsecs")(24);
+            --days;
+        }
+
+        immutable hour = splitUnitsFromHNSecs!"hours"(hnsecs);
+        immutable minute = splitUnitsFromHNSecs!"minutes"(hnsecs);
+        immutable second = splitUnitsFromHNSecs!"seconds"(hnsecs);
+
+        immutable dateTime = DateTime(Date(cast(int) days), TimeOfDay(cast(int) hour,
+                                      cast(int) minute, cast(int) second));
+
+        if (_timezone is LocalTime())
+        {
+            dateTime.toSimpleString(writer);
+            fracSecsToISOString(writer, cast(int) hnsecs);
+            return;
+        }
+
+        if (_timezone is UTC())
+        {
+            dateTime.toSimpleString(writer);
+            fracSecsToISOString(writer, cast(int) hnsecs);
+            put(writer, 'Z');
+            return;
+        }
+
+        immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
+
+        dateTime.toSimpleString(writer);
+        fracSecsToISOString(writer, cast(int) hnsecs);
+        SimpleTimeZone.toISOExtString(writer, utcOffset);
     }
 
     ///
@@ -8071,10 +8154,23 @@ public:
         `fromISOString`, `fromISOExtString`, and `fromSimpleString`.
 
         The format returned by toString may or may not change in the future.
+
+        Params:
+            writer = A `char` accepting
+            $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+        Returns:
+            A `string` when not using an output range; `void` otherwise.
       +/
     string toString() @safe const nothrow
     {
         return toSimpleString();
+    }
+
+    /// ditto
+    void toString(W)(ref W writer) const
+    if (isOutputRange!(W, char))
+    {
+        toSimpleString(writer);
     }
 
     @safe unittest
@@ -8094,7 +8190,7 @@ public:
         YYYYMMDDTHHMMSS.FFFFFFFTZ (where F is fractional seconds is the time
         zone). Whitespace is stripped from the given string.
 
-        The exact format is exactly as described in $(D toISOString) except that
+        The exact format is exactly as described in `toISOString` except that
         trailing zeroes are permitted - including having fractional seconds with
         all zeroes. However, a decimal point with nothing following it is
         invalid. Also, while $(LREF toISOString) will never generate a string
@@ -8105,7 +8201,7 @@ public:
 
         If there is no time zone in the string, then
         $(REF LocalTime,std,datetime,timezone) is used. If the time zone is "Z",
-        then $(D UTC) is used. Otherwise, a
+        then `UTC` is used. Otherwise, a
         $(REF SimpleTimeZone,std,datetime,timezone) which corresponds to the
         given offset from UTC is used. To get the returned $(LREF SysTime) to be
         a particular time zone, pass in that time zone and the $(LREF SysTime)
@@ -8399,7 +8495,7 @@ public:
         YYYY-MM-DDTHH:MM:SS.FFFFFFFTZ (where F is fractional seconds is the
         time zone). Whitespace is stripped from the given string.
 
-        The exact format is exactly as described in $(D toISOExtString)
+        The exact format is exactly as described in `toISOExtString`
         except that trailing zeroes are permitted - including having fractional
         seconds with all zeroes. However, a decimal point with nothing following
         it is invalid. Also, while $(LREF toISOExtString) will never generate a
@@ -8410,7 +8506,7 @@ public:
 
         If there is no time zone in the string, then
         $(REF LocalTime,std,datetime,timezone) is used. If the time zone is "Z",
-        then $(D UTC) is used. Otherwise, a
+        then `UTC` is used. Otherwise, a
         $(REF SimpleTimeZone,std,datetime,timezone) which corresponds to the
         given offset from UTC is used. To get the returned $(LREF SysTime) to be
         a particular time zone, pass in that time zone and the $(LREF SysTime)
@@ -8642,7 +8738,7 @@ public:
         YYYY-MM-DD HH:MM:SS.FFFFFFFTZ (where F is fractional seconds is the
         time zone). Whitespace is stripped from the given string.
 
-        The exact format is exactly as described in $(D toSimpleString) except
+        The exact format is exactly as described in `toSimpleString` except
         that trailing zeroes are permitted - including having fractional seconds
         with all zeroes. However, a decimal point with nothing following it is
         invalid. Also, while $(LREF toSimpleString) will never generate a
@@ -8653,7 +8749,7 @@ public:
 
         If there is no time zone in the string, then
         $(REF LocalTime,std,datetime,timezone) is used. If the time zone is "Z",
-        then $(D UTC) is used. Otherwise, a
+        then `UTC` is used. Otherwise, a
         $(REF SimpleTimeZone,std,datetime,timezone) which corresponds to the
         given offset from UTC is used. To get the returned $(LREF SysTime) to be
         a particular time zone, pass in that time zone and the $(LREF SysTime)
@@ -8665,7 +8761,7 @@ public:
 
         Params:
             simpleString = A string formatted in the way that
-                           $(D toSimpleString) formats dates and times.
+                           `toSimpleString` formats dates and times.
             tz           = The time zone to convert the given time to (no
                            conversion occurs if null).
 
@@ -8922,9 +9018,9 @@ public:
 private:
 
     /+
-        Returns $(D stdTime) converted to $(LREF SysTime)'s time zone.
+        Returns `stdTime` converted to $(LREF SysTime)'s time zone.
       +/
-    @property long adjTime() @safe const nothrow
+    @property long adjTime() @safe const nothrow scope
     {
         return _timezone.utcToTZ(_stdTime);
     }
@@ -8933,7 +9029,7 @@ private:
     /+
         Converts the given hnsecs from $(LREF SysTime)'s time zone to std time.
       +/
-    @property void adjTime(long adjTime) @safe nothrow
+    @property void adjTime(long adjTime) @safe nothrow scope
     {
         _stdTime = _timezone.tzToUTC(adjTime);
     }
@@ -8951,6 +9047,30 @@ private:
 
     long  _stdTime;
     Rebindable!(immutable TimeZone) _timezone;
+}
+
+///
+@safe unittest
+{
+    import core.time : days, hours, seconds;
+    import std.datetime.date : DateTime;
+    import std.datetime.timezone : SimpleTimeZone, UTC;
+
+    // make a specific point in time in the UTC timezone
+    auto st = SysTime(DateTime(2018, 1, 1, 10, 30, 0), UTC());
+    // make a specific point in time in the New York timezone
+    auto ny = SysTime(
+        DateTime(2018, 1, 1, 10, 30, 0),
+        new immutable SimpleTimeZone(-5.hours, "America/New_York")
+    );
+
+    // ISO standard time strings
+    assert(st.toISOString() == "20180101T103000Z");
+    assert(st.toISOExtString() == "2018-01-01T10:30:00Z");
+
+    // add two days and 30 seconds
+    st += 2.days + 30.seconds;
+    assert(st.toISOExtString() == "2018-01-03T10:30:30Z");
 }
 
 
@@ -9048,8 +9168,8 @@ long unixTimeToStdTime(long unixTime) @safe pure nothrow
     argument to get the desired size.
 
     If the return type is int, and the result can't fit in an int, then the
-    closest value that can be held in 32 bits will be used (so $(D int.max)
-    if it goes over and $(D int.min) if it goes under). However, no attempt
+    closest value that can be held in 32 bits will be used (so `int.max`
+    if it goes over and `int.min` if it goes under). However, no attempt
     is made to deal with integer overflow if the return type is long.
 
     Params:
@@ -9144,20 +9264,20 @@ version(StdDdoc)
     /++
         $(BLUE This function is Windows-Only.)
 
-        Converts a $(D SYSTEMTIME) struct to a $(LREF SysTime).
+        Converts a `SYSTEMTIME` struct to a $(LREF SysTime).
 
         Params:
-            st = The $(D SYSTEMTIME) struct to convert.
-            tz = The time zone that the time in the $(D SYSTEMTIME) struct is
-                 assumed to be (if the $(D SYSTEMTIME) was supplied by a Windows
-                 system call, the $(D SYSTEMTIME) will either be in local time
+            st = The `SYSTEMTIME` struct to convert.
+            tz = The time zone that the time in the `SYSTEMTIME` struct is
+                 assumed to be (if the `SYSTEMTIME` was supplied by a Windows
+                 system call, the `SYSTEMTIME` will either be in local time
                  or UTC, depending on the call).
 
         Throws:
             $(REF DateTimeException,std,datetime,date) if the given
-            $(D SYSTEMTIME) will not fit in a $(LREF SysTime), which is highly
-            unlikely to happen given that $(D SysTime.max) is in 29,228 A.D. and
-            the maximum $(D SYSTEMTIME) is in 30,827 A.D.
+            `SYSTEMTIME` will not fit in a $(LREF SysTime), which is highly
+            unlikely to happen given that `SysTime.max` is in 29,228 A.D. and
+            the maximum `SYSTEMTIME` is in 30,827 A.D.
       +/
     SysTime SYSTEMTIMEToSysTime(const SYSTEMTIME* st, immutable TimeZone tz = LocalTime()) @safe;
 
@@ -9165,10 +9285,10 @@ version(StdDdoc)
     /++
         $(BLUE This function is Windows-Only.)
 
-        Converts a $(LREF SysTime) to a $(D SYSTEMTIME) struct.
+        Converts a $(LREF SysTime) to a `SYSTEMTIME` struct.
 
-        The $(D SYSTEMTIME) which is returned will be set using the given
-        $(LREF SysTime)'s time zone, so to get the $(D SYSTEMTIME) in
+        The `SYSTEMTIME` which is returned will be set using the given
+        $(LREF SysTime)'s time zone, so to get the `SYSTEMTIME` in
         UTC, set the $(LREF SysTime)'s time zone to UTC.
 
         Params:
@@ -9176,7 +9296,7 @@ version(StdDdoc)
 
         Throws:
             $(REF DateTimeException,std,datetime,date) if the given
-            $(LREF SysTime) will not fit in a $(D SYSTEMTIME). This will only
+            $(LREF SysTime) will not fit in a `SYSTEMTIME`. This will only
             happen if the $(LREF SysTime)'s date is prior to 1601 A.D.
       +/
     SYSTEMTIME SysTimeToSYSTEMTIME(in SysTime sysTime) @safe;
@@ -9185,15 +9305,15 @@ version(StdDdoc)
     /++
         $(BLUE This function is Windows-Only.)
 
-        Converts a $(D FILETIME) struct to the number of hnsecs since midnight,
+        Converts a `FILETIME` struct to the number of hnsecs since midnight,
         January 1st, 1 A.D.
 
         Params:
-            ft = The $(D FILETIME) struct to convert.
+            ft = The `FILETIME` struct to convert.
 
         Throws:
             $(REF DateTimeException,std,datetime,date) if the given
-            $(D FILETIME) cannot be represented as the return value.
+            `FILETIME` cannot be represented as the return value.
       +/
     long FILETIMEToStdTime(scope const FILETIME* ft) @safe;
 
@@ -9201,16 +9321,16 @@ version(StdDdoc)
     /++
         $(BLUE This function is Windows-Only.)
 
-        Converts a $(D FILETIME) struct to a $(LREF SysTime).
+        Converts a `FILETIME` struct to a $(LREF SysTime).
 
         Params:
-            ft = The $(D FILETIME) struct to convert.
+            ft = The `FILETIME` struct to convert.
             tz = The time zone that the $(LREF SysTime) will be in
-                 ($(D FILETIME)s are in UTC).
+                 (`FILETIME`s are in UTC).
 
         Throws:
             $(REF DateTimeException,std,datetime,date) if the given
-            $(D FILETIME) will not fit in a $(LREF SysTime).
+            `FILETIME` will not fit in a $(LREF SysTime).
       +/
     SysTime FILETIMEToSysTime(scope const FILETIME* ft, immutable TimeZone tz = LocalTime()) @safe;
 
@@ -9219,7 +9339,7 @@ version(StdDdoc)
         $(BLUE This function is Windows-Only.)
 
         Converts a number of hnsecs since midnight, January 1st, 1 A.D. to a
-        $(D FILETIME) struct.
+        `FILETIME` struct.
 
         Params:
             stdTime = The number of hnsecs since midnight, January 1st, 1 A.D.
@@ -9227,7 +9347,7 @@ version(StdDdoc)
 
         Throws:
             $(REF DateTimeException,std,datetime,date) if the given value will
-            not fit in a $(D FILETIME).
+            not fit in a `FILETIME`.
       +/
     FILETIME stdTimeToFILETIME(long stdTime) @safe;
 
@@ -9235,16 +9355,16 @@ version(StdDdoc)
     /++
         $(BLUE This function is Windows-Only.)
 
-        Converts a $(LREF SysTime) to a $(D FILETIME) struct.
+        Converts a $(LREF SysTime) to a `FILETIME` struct.
 
-        $(D FILETIME)s are always in UTC.
+        `FILETIME`s are always in UTC.
 
         Params:
             sysTime = The $(LREF SysTime) to convert.
 
         Throws:
             $(REF DateTimeException,std,datetime,date) if the given
-            $(LREF SysTime) will not fit in a $(D FILETIME).
+            $(LREF SysTime) will not fit in a `FILETIME`.
       +/
     FILETIME SysTimeToFILETIME(SysTime sysTime) @safe;
 }
@@ -9436,7 +9556,7 @@ alias DosFileTime = uint;
         tz  = The time zone which the DOS file time is assumed to be in.
 
     Throws:
-        $(REF DateTimeException,std,datetime,date) if the $(D DosFileTime) is
+        $(REF DateTimeException,std,datetime,date) if the `DosFileTime` is
         invalid.
   +/
 SysTime DosFileTimeToSysTime(DosFileTime dft, immutable TimeZone tz = LocalTime()) @safe
@@ -9459,8 +9579,11 @@ SysTime DosFileTimeToSysTime(DosFileTime dft, immutable TimeZone tz = LocalTime(
         throw new DateTimeException("Invalid DosFileTime", __FILE__, __LINE__, dte);
 }
 
+///
 @safe unittest
 {
+    import std.datetime.date : DateTime;
+
     assert(DosFileTimeToSysTime(0b00000000001000010000000000000000) == SysTime(DateTime(1980, 1, 1, 0, 0, 0)));
     assert(DosFileTimeToSysTime(0b11111111100111111011111101111101) == SysTime(DateTime(2107, 12, 31, 23, 59, 58)));
     assert(DosFileTimeToSysTime(0x3E3F8456) == SysTime(DateTime(2011, 1, 31, 16, 34, 44)));
@@ -9475,7 +9598,7 @@ SysTime DosFileTimeToSysTime(DosFileTime dft, immutable TimeZone tz = LocalTime(
 
     Throws:
         $(REF DateTimeException,std,datetime,date) if the given
-        $(LREF SysTime) cannot be converted to a $(D DosFileTime).
+        $(LREF SysTime) cannot be converted to a `DosFileTime`.
   +/
 DosFileTime SysTimeToDosFileTime(SysTime sysTime) @safe
 {
@@ -9498,8 +9621,11 @@ DosFileTime SysTimeToDosFileTime(SysTime sysTime) @safe
     return cast(DosFileTime) retval;
 }
 
+///
 @safe unittest
 {
+    import std.datetime.date : DateTime;
+
     assert(SysTimeToDosFileTime(SysTime(DateTime(1980, 1, 1, 0, 0, 0))) == 0b00000000001000010000000000000000);
     assert(SysTimeToDosFileTime(SysTime(DateTime(2107, 12, 31, 23, 59, 58))) == 0b11111111100111111011111101111101);
     assert(SysTimeToDosFileTime(SysTime(DateTime(2011, 1, 31, 16, 34, 44))) == 0x3E3F8456);
@@ -9507,8 +9633,8 @@ DosFileTime SysTimeToDosFileTime(SysTime sysTime) @safe
 
 
 /++
-    The given array of $(D char) or random-access range of $(D char) or
-    $(D ubyte) is expected to be in the format specified in
+    The given array of `char` or random-access range of `char` or
+    `ubyte` is expected to be in the format specified in
     $(HTTP tools.ietf.org/html/rfc5322, RFC 5322) section 3.3 with the
     grammar rule $(I date-time). It is the date-time format commonly used in
     internet messages such as e-mail and HTTP. The corresponding
@@ -9523,10 +9649,10 @@ DosFileTime SysTimeToDosFileTime(SysTime sysTime) @safe
     of the given date (though it is technically invalid per the spec if the
     day of the week doesn't match the actual day of the week of the given date).
 
-    If the time zone is $(D "-0000") (or considered to be equivalent to
-    $(D "-0000") by section 4.3 of the spec), a
-    $(REF SimpleTimeZone,std,datetime,timezone) with a utc offset of $(D 0) is
-    used rather than $(REF UTC,std,datetime,timezone), whereas $(D "+0000") uses
+    If the time zone is `"-0000"` (or considered to be equivalent to
+    `"-0000"` by section 4.3 of the spec), a
+    $(REF SimpleTimeZone,std,datetime,timezone) with a utc offset of `0` is
+    used rather than $(REF UTC,std,datetime,timezone), whereas `"+0000"` uses
     $(REF UTC,std,datetime,timezone).
 
     Note that because $(LREF SysTime) does not currently support having a second
@@ -9534,7 +9660,7 @@ DosFileTime SysTimeToDosFileTime(SysTime sysTime) @safe
     does have a value of 60 for the seconds, it is treated as 59.
 
     The one area in which this function violates RFC 5322 is that it accepts
-    $(D "\n") in folding whitespace in the place of $(D "\r\n"), because the
+    `"\n"` in folding whitespace in the place of `"\r\n"`, because the
     HTTP spec requires it.
 
     Throws:
@@ -10494,7 +10620,7 @@ if (validTimeUnits(units) &&
 /+
     Strips what RFC 5322, section 3.2.2 refers to as CFWS from the left-hand
     side of the given range (it strips comments delimited by $(D '(') and
-    $(D ')') as well as folding whitespace).
+    `'`') as well as folding whitespace).
 
     It is assumed that the given range contains the value of a header field and
     no terminating CRLF for the line (though the CRLF for folding whitespace is
@@ -10701,16 +10827,13 @@ if (isIntegral!T && isSigned!T) // The constraints on R were already covered by 
 {
     import std.conv : to;
     import std.range : chain, iota;
-    import std.stdio : writeln;
     foreach (i; chain(iota(0, 101), [250, 999, 1000, 1001, 2345, 9999]))
     {
-        scope(failure) writeln(i);
-        assert(_convDigits!int(to!string(i)) == i);
+        assert(_convDigits!int(to!string(i)) == i, i.to!string);
     }
     foreach (str; ["-42", "+42", "1a", "1 ", " ", " 42 "])
     {
-        scope(failure) writeln(str);
-        assert(_convDigits!int(str) == -1);
+        assert(_convDigits!int(str) == -1, str);
     }
 }
 

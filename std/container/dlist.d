@@ -180,7 +180,7 @@ nothrow @safe pure:
 /**
 Implements a doubly-linked list.
 
-$(D DList) uses reference semantics.
+`DList` uses reference semantics.
  */
 struct DList(T)
 {
@@ -241,7 +241,7 @@ Constructor taking a number of nodes
     }
 
 /**
-Constructor taking an input range
+Constructor taking an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
      */
     this(Stuff)(Stuff stuff)
     if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
@@ -252,8 +252,8 @@ Constructor taking an input range
 /**
 Comparison for equality.
 
-Complexity: $(BIGOH min(n, n1)) where $(D n1) is the number of
-elements in $(D rhs).
+Complexity: $(BIGOH min(n, n1)) where `n1` is the number of
+elements in `rhs`.
      */
     bool opEquals()(ref const DList rhs) const
     if (is(typeof(front == front)))
@@ -316,7 +316,7 @@ elements in $(D rhs).
     }
 
 /**
-Property returning $(D true) if and only if the container has no
+Property returning `true` if and only if the container has no
 elements.
 
 Complexity: $(BIGOH 1)
@@ -327,9 +327,9 @@ Complexity: $(BIGOH 1)
     }
 
 /**
-Removes all contents from the $(D DList).
+Removes all contents from the `DList`.
 
-Postcondition: $(D empty)
+Postcondition: `empty`
 
 Complexity: $(BIGOH 1)
      */
@@ -365,7 +365,7 @@ Complexity: $(BIGOH 1)
     }
 
 /**
-Forward to $(D opSlice().front).
+Forward to `opSlice().front`.
 
 Complexity: $(BIGOH 1)
      */
@@ -376,7 +376,7 @@ Complexity: $(BIGOH 1)
     }
 
 /**
-Forward to $(D opSlice().back).
+Forward to `opSlice().back`.
 
 Complexity: $(BIGOH 1)
      */
@@ -391,8 +391,8 @@ Complexity: $(BIGOH 1)
 /+ ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ +/
 
 /**
-Returns a new $(D DList) that's the concatenation of $(D this) and its
-argument $(D rhs).
+Returns a new `DList` that's the concatenation of `this` and its
+argument `rhs`.
      */
     DList opBinary(string op, Stuff)(Stuff rhs)
     if (op == "~" && is(typeof(insertBack(rhs))))
@@ -403,8 +403,8 @@ argument $(D rhs).
     }
 
 /**
-Returns a new $(D DList) that's the concatenation of the argument $(D lhs)
-and $(D this).
+Returns a new `DList` that's the concatenation of the argument `lhs`
+and `this`.
      */
     DList opBinaryRight(string op, Stuff)(Stuff lhs)
     if (op == "~" && is(typeof(insertFront(lhs))))
@@ -415,7 +415,7 @@ and $(D this).
     }
 
 /**
-Appends the contents of the argument $(D rhs) into $(D this).
+Appends the contents of the argument `rhs` into `this`.
      */
     DList opOpAssign(string op, Stuff)(Stuff rhs)
     if (op == "~" && is(typeof(insertBack(rhs))))
@@ -429,8 +429,8 @@ Appends the contents of the argument $(D rhs) into $(D this).
 /+ ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ +/
 
 /**
-Inserts $(D stuff) to the front/back of the container. $(D stuff) can be a
-value convertible to $(D T) or a range of objects convertible to $(D
+Inserts `stuff` to the front/back of the container. `stuff` can be a
+value convertible to `T` or a range of objects convertible to $(D
 T). The stable version behaves the same, but guarantees that ranges
 iterating over the container are never invalidated.
 
@@ -464,18 +464,18 @@ Complexity: $(BIGOH log(n))
     alias stableInsertBack = insertBack;
 
 /**
-Inserts $(D stuff) after range $(D r), which must be a non-empty range
+Inserts `stuff` after range `r`, which must be a non-empty range
 previously extracted from this container.
 
-$(D stuff) can be a value convertible to $(D T) or a range of objects
-convertible to $(D T). The stable version behaves the same, but
+`stuff` can be a value convertible to `T` or a range of objects
+convertible to `T`. The stable version behaves the same, but
 guarantees that ranges iterating over the container are never
 invalidated.
 
 Returns: The number of values inserted.
 
-Complexity: $(BIGOH k + m), where $(D k) is the number of elements in
-$(D r) and $(D m) is the length of $(D stuff).
+Complexity: $(BIGOH k + m), where `k` is the number of elements in
+`r` and `m` is the length of `stuff`.
      */
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
     {
@@ -515,7 +515,7 @@ Picks one value in an unspecified position in the container, removes
 it from the container, and returns it. The stable version behaves the same,
 but guarantees that ranges iterating over the container are never invalidated.
 
-Precondition: $(D !empty)
+Precondition: `!empty`
 
 Returns: The element removed.
 
@@ -538,7 +538,7 @@ Removes the value at the front/back of the container. The stable version
 behaves the same, but guarantees that ranges iterating over the
 container are never invalidated.
 
-Precondition: $(D !empty)
+Precondition: `!empty`
 
 Complexity: $(BIGOH 1).
      */
@@ -564,9 +564,9 @@ Complexity: $(BIGOH 1).
     alias stableRemoveBack = removeBack;
 
 /**
-Removes $(D howMany) values at the front or back of the
+Removes `howMany` values at the front or back of the
 container. Unlike the unparameterized versions above, these functions
-do not throw if they could not remove $(D howMany) elements. Instead,
+do not throw if they could not remove `howMany` elements. Instead,
 if $(D howMany > n), all elements are removed. The returned value is
 the effective number of elements removed. The stable version behaves
 the same, but guarantees that ranges iterating over the container are
@@ -612,11 +612,11 @@ Complexity: $(BIGOH howMany).
     alias stableRemoveBack = removeBack;
 
 /**
-Removes all elements belonging to $(D r), which must be a range
+Removes all elements belonging to `r`, which must be a range
 obtained originally from this container.
 
 Returns: A range spanning the remaining elements in the container that
-initially were right after $(D r).
+initially were right after `r`.
 
 Complexity: $(BIGOH 1)
      */
@@ -643,8 +643,8 @@ Complexity: $(BIGOH 1)
     }
 
 /**
-Removes first element of $(D r), wich must be a range obtained originally
-from this container, from both DList instance and range $(D r).
+Removes first element of `r`, wich must be a range obtained originally
+from this container, from both DList instance and range `r`.
 
 Compexity: $(BIGOH 1)
      */
@@ -659,8 +659,8 @@ Compexity: $(BIGOH 1)
     }
 
 /**
-Removes last element of $(D r), wich must be a range obtained originally
-from this container, from both DList instance and range $(D r).
+Removes last element of `r`, wich must be a range obtained originally
+from this container, from both DList instance and range `r`.
 
 Compexity: $(BIGOH 1)
      */
@@ -675,8 +675,8 @@ Compexity: $(BIGOH 1)
     }
 
 /**
-$(D linearRemove) functions as $(D remove), but also accepts ranges that are
-result the of a $(D take) operation. This is a convenient way to remove a
+`linearRemove` functions as `remove`, but also accepts ranges that are
+result the of a `take` operation. This is a convenient way to remove a
 fixed amount of elements from the range.
 
 Complexity: $(BIGOH r.walkLength)

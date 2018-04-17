@@ -26,10 +26,6 @@ import std.range.primitives;
 import std.traits;
 import std.typecons;
 
-version(unittest)
-{
-    import std.stdio;
-}
 /// Format flags for CustomFloat.
 public enum CustomFloatFlags
 {
@@ -39,7 +35,7 @@ public enum CustomFloatFlags
     /**
      * Store values in normalized form by default. The actual precision of the
      * significand is extended by 1 bit by assuming an implicit leading bit of 1
-     * instead of 0. i.e. $(D 1.nnnn) instead of $(D 0.nnnn).
+     * instead of 0. i.e. `1.nnnn` instead of `0.nnnn`.
      * True for all $(LINK2 https://en.wikipedia.org/wiki/IEEE_floating_point, IEE754) types
      */
     storeNormalized = 2,
@@ -109,7 +105,7 @@ private template CustomFloatParams(uint precision, uint exponentWidth, CustomFlo
 /**
  * Allows user code to define custom floating-point formats. These formats are
  * for storage only; all operations on them are performed by first implicitly
- * extracting them to $(D real) first. After the operation is completed the
+ * extracting them to `real` first. After the operation is completed the
  * result can be stored in a custom floating-point value via assignment.
  */
 template CustomFloat(uint bits)
@@ -480,7 +476,7 @@ public:
     /// Returns: imaginary part
     static @property CustomFloat im() { return CustomFloat(0.0f); }
 
-    /// Initialize from any $(D real) compatible type.
+    /// Initialize from any `real` compatible type.
     this(F)(F input) if (__traits(compiles, cast(real) input ))
     {
         this = input;
@@ -495,7 +491,7 @@ public:
         significand = input.significand;
     }
 
-    /// Assigns from any $(D real) compatible type.
+    /// Assigns from any `real` compatible type.
     void opAssign(F)(F input)
         if (__traits(compiles, cast(real) input))
     {
@@ -529,7 +525,7 @@ public:
         significand = cast(T_sig) sig;
     }
 
-    /// Fetches the stored value either as a $(D float), $(D double) or $(D real).
+    /// Fetches the stored value either as a `float`, `double` or `real`.
     @property F get(F)()
         if (staticIndexOf!(Unqual!F, float, double, real) >= 0)
     {
@@ -660,24 +656,24 @@ public:
 
 /**
 Defines the fastest type to use when storing temporaries of a
-calculation intended to ultimately yield a result of type $(D F)
-(where $(D F) must be one of $(D float), $(D double), or $(D
+calculation intended to ultimately yield a result of type `F`
+(where `F` must be one of `float`, `double`, or $(D
 real)). When doing a multi-step computation, you may want to store
-intermediate results as $(D FPTemporary!F).
+intermediate results as `FPTemporary!F`.
 
-The necessity of $(D FPTemporary) stems from the optimized
+The necessity of `FPTemporary` stems from the optimized
 floating-point operations and registers present in virtually all
 processors. When adding numbers in the example above, the addition may
-in fact be done in $(D real) precision internally. In that case,
-storing the intermediate $(D result) in $(D double format) is not only
+in fact be done in `real` precision internally. In that case,
+storing the intermediate `result` in $(D double format) is not only
 less precise, it is also (surprisingly) slower, because a conversion
-from $(D real) to $(D double) is performed every pass through the
-loop. This being a lose-lose situation, $(D FPTemporary!F) has been
+from `real` to `double` is performed every pass through the
+loop. This being a lose-lose situation, `FPTemporary!F` has been
 defined as the $(I fastest) type to use for calculations at precision
-$(D F). There is no need to define a type for the $(I most accurate)
-calculations, as that is always $(D real).
+`F`. There is no need to define a type for the $(I most accurate)
+calculations, as that is always `real`.
 
-Finally, there is no guarantee that using $(D FPTemporary!F) will
+Finally, there is no guarantee that using `FPTemporary!F` will
 always be fastest, as the speed of floating-point calculations depends
 on very many factors.
  */
@@ -710,9 +706,9 @@ if (isFloatingPoint!F)
 
 /**
 Implements the $(HTTP tinyurl.com/2zb9yr, secant method) for finding a
-root of the function $(D fun) starting from points $(D [xn_1, x_n])
-(ideally close to the root). $(D Num) may be $(D float), $(D double),
-or $(D real).
+root of the function `fun` starting from points $(D [xn_1, x_n])
+(ideally close to the root). `Num` may be `float`, `double`,
+or `real`.
 */
 template secantMethod(alias fun)
 {
@@ -751,6 +747,7 @@ template secantMethod(alias fun)
 @system unittest
 {
     // @system because of __gshared stderr
+    import std.stdio;
     scope(failure) stderr.writeln("Failure testing secantMethod");
     float f(float x)
     {
@@ -837,16 +834,16 @@ T findRoot(T, DF)(scope DF f, in T a, in T b)
  * bx = Right bound of initial range of `f` known to contain the
  * root.
  *
- * fax = Value of $(D f(ax)).
+ * fax = Value of `f(ax)`.
  *
- * fbx = Value of $(D f(bx)). $(D fax) and $(D fbx) should have opposite signs.
- * ($(D f(ax)) and $(D f(bx)) are commonly known in advance.)
+ * fbx = Value of `f(bx)`. `fax` and `fbx` should have opposite signs.
+ * (`f(ax)` and `f(bx)` are commonly known in advance.)
  *
  *
  * tolerance = Defines an early termination condition. Receives the
  *             current upper and lower bounds on the root. The
- *             delegate must return $(D true) when these bounds are
- *             acceptable. If this function always returns $(D false),
+ *             delegate must return `true` when these bounds are
+ *             acceptable. If this function always returns `false`,
  *             full machine precision will be achieved.
  *
  * Returns:
@@ -1413,8 +1410,8 @@ Params:
 
 Preconditions:
     `ax` and `bx` shall be finite reals. $(BR)
-    $(D relTolerance) shall be normal positive real. $(BR)
-    $(D absTolerance) shall be normal positive real no less then $(D T.epsilon*2).
+    `relTolerance` shall be normal positive real. $(BR)
+    `absTolerance` shall be normal positive real no less then `T.epsilon*2`.
 
 Returns:
     A tuple consisting of `x`, `y = f(x)` and `error = 3 * (absTolerance * fabs(x) + relTolerance)`.
@@ -1629,10 +1626,10 @@ do
 
 /**
 Computes $(LINK2 https://en.wikipedia.org/wiki/Euclidean_distance,
-Euclidean distance) between input ranges $(D a) and
-$(D b). The two ranges must have the same length. The three-parameter
+Euclidean distance) between input ranges `a` and
+`b`. The two ranges must have the same length. The three-parameter
 version stops computation as soon as the distance is greater than or
-equal to $(D limit) (this is useful to save computation if a small
+equal to `limit` (this is useful to save computation if a small
 distance is sought).
  */
 CommonType!(ElementType!(Range1), ElementType!(Range2))
@@ -1690,7 +1687,7 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
 
 /**
 Computes the $(LINK2 https://en.wikipedia.org/wiki/Dot_product,
-dot product) of input ranges $(D a) and $(D
+dot product) of input ranges `a` and $(D
 b). The two ranges must have the same length. If both ranges define
 length, the check is done once; otherwise, it is done at each
 iteration.
@@ -1788,7 +1785,7 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
 
 /**
 Computes the $(LINK2 https://en.wikipedia.org/wiki/Cosine_similarity,
-cosine similarity) of input ranges $(D a) and $(D
+cosine similarity) of input ranges `a` and $(D
 b). The two ranges must have the same length. If both ranges define
 length, the check is done once; otherwise, it is done at each
 iteration. If either range has all-zero elements, return 0.
@@ -1826,14 +1823,14 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
 }
 
 /**
-Normalizes values in $(D range) by multiplying each element with a
-number chosen such that values sum up to $(D sum). If elements in $(D
+Normalizes values in `range` by multiplying each element with a
+number chosen such that values sum up to `sum`. If elements in $(D
 range) sum to zero, assigns $(D sum / range.length) to
-all. Normalization makes sense only if all elements in $(D range) are
-positive. $(D normalize) assumes that is the case without checking it.
+all. Normalization makes sense only if all elements in `range` are
+positive. `normalize` assumes that is the case without checking it.
 
-Returns: $(D true) if normalization completed normally, $(D false) if
-all elements in $(D range) were zero or if $(D range) is empty.
+Returns: `true` if normalization completed normally, `false` if
+all elements in `range` were zero or if `range` is empty.
  */
 bool normalize(R)(R range, ElementType!(R) sum = 1)
 if (isForwardRange!(R))
@@ -1889,7 +1886,7 @@ if (isForwardRange!(R))
 }
 
 /**
-Compute the sum of binary logarithms of the input range $(D r).
+Compute the sum of binary logarithms of the input range `r`.
 The error of this method is much smaller than with a naive sum of log2.
  */
 ElementType!Range sumOfLog2s(Range)(Range r)
@@ -1932,12 +1929,12 @@ if (isInputRange!Range && isFloatingPoint!(ElementType!Range))
 
 /**
 Computes $(LINK2 https://en.wikipedia.org/wiki/Entropy_(information_theory),
-_entropy) of input range $(D r) in bits. This
-function assumes (without checking) that the values in $(D r) are all
-in $(D [0, 1]). For the entropy to be meaningful, often $(D r) should
+_entropy) of input range `r` in bits. This
+function assumes (without checking) that the values in `r` are all
+in $(D [0, 1]). For the entropy to be meaningful, often `r` should
 be normalized too (i.e., its values should sum to 1). The
 two-parameter version stops evaluating as soon as the intermediate
-result is greater than or equal to $(D max).
+result is greater than or equal to `max`.
  */
 ElementType!Range entropy(Range)(Range r)
 if (isInputRange!Range)
@@ -1982,12 +1979,12 @@ if (isInputRange!Range &&
 /**
 Computes the $(LINK2 https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence,
 Kullback-Leibler divergence) between input ranges
-$(D a) and $(D b), which is the sum $(D ai * log(ai / bi)). The base
+`a` and `b`, which is the sum $(D ai * log(ai / bi)). The base
 of logarithm is 2. The ranges are assumed to contain elements in $(D
 [0, 1]). Usually the ranges are normalized probability distributions,
 but this is not required or checked by $(D
-kullbackLeiblerDivergence). If any element $(D bi) is zero and the
-corresponding element $(D ai) nonzero, returns infinity. (Otherwise,
+kullbackLeiblerDivergence). If any element `bi` is zero and the
+corresponding element `ai` nonzero, returns infinity. (Otherwise,
 if $(D ai == 0 && bi == 0), the term $(D ai * log(ai / bi)) is
 considered zero.) If the inputs are normalized, the result is
 positive.
@@ -2030,15 +2027,15 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
 
 /**
 Computes the $(LINK2 https://en.wikipedia.org/wiki/Jensen%E2%80%93Shannon_divergence,
-Jensen-Shannon divergence) between $(D a) and $(D
+Jensen-Shannon divergence) between `a` and $(D
 b), which is the sum $(D (ai * log(2 * ai / (ai + bi)) + bi * log(2 *
 bi / (ai + bi))) / 2). The base of logarithm is 2. The ranges are
 assumed to contain elements in $(D [0, 1]). Usually the ranges are
 normalized probability distributions, but this is not required or
-checked by $(D jensenShannonDivergence). If the inputs are normalized,
+checked by `jensenShannonDivergence`. If the inputs are normalized,
 the result is bounded within $(D [0, 1]). The three-parameter version
 stops evaluations as soon as the intermediate result is greater than
-or equal to $(D limit).
+or equal to `limit`.
  */
 CommonType!(ElementType!Range1, ElementType!Range2)
 jensenShannonDivergence(Range1, Range2)(Range1 a, Range2 b)
@@ -2114,18 +2111,18 @@ if (isInputRange!Range1 && isInputRange!Range2 &&
 
 /**
 The so-called "all-lengths gap-weighted string kernel" computes a
-similarity measure between $(D s) and $(D t) based on all of their
+similarity measure between `s` and `t` based on all of their
 common subsequences of all lengths. Gapped subsequences are also
 included.
 
 To understand what $(D gapWeightedSimilarity(s, t, lambda)) computes,
 consider first the case $(D lambda = 1) and the strings $(D s =
 ["Hello", "brave", "new", "world"]) and $(D t = ["Hello", "new",
-"world"]). In that case, $(D gapWeightedSimilarity) counts the
+"world"]). In that case, `gapWeightedSimilarity` counts the
 following matches:
 
-$(OL $(LI three matches of length 1, namely $(D "Hello"), $(D "new"),
-and $(D "world");) $(LI three matches of length 2, namely ($(D
+$(OL $(LI three matches of length 1, namely `"Hello"`, `"new"`,
+and `"world"`;) $(LI three matches of length 2, namely ($(D
 "Hello", "new")), ($(D "Hello", "world")), and ($(D "new", "world"));)
 $(LI one match of length 3, namely ($(D "Hello", "new", "world")).))
 
@@ -2156,12 +2153,12 @@ tally. That leaves only 4 matches.
 The most interesting case is when gapped matches still participate in
 the result, but not as strongly as ungapped matches. The result will
 be a smooth, fine-grained similarity measure between the input
-strings. This is where values of $(D lambda) between 0 and 1 enter
+strings. This is where values of `lambda` between 0 and 1 enter
 into play: gapped matches are $(I exponentially penalized with the
-number of gaps) with base $(D lambda). This means that an ungapped
+number of gaps) with base `lambda`. This means that an ungapped
 match adds 1 to the return value; a match with one gap in either
-string adds $(D lambda) to the return value; ...; a match with a total
-of $(D n) gaps in both strings adds $(D pow(lambda, n)) to the return
+string adds `lambda` to the return value; ...; a match with a total
+of `n` gaps in both strings adds $(D pow(lambda, n)) to the return
 value. In the example above, we have 4 matches without gaps, 2 matches
 with one gap, and 1 match with three gaps. The latter match is ($(D
 "Hello", "world")), which has two gaps in the first string and one gap
@@ -2174,11 +2171,11 @@ string[] t = ["Hello", "new", "world"];
 assert(gapWeightedSimilarity(s, t, 0.5) == 4 + 0.5 * 2 + 0.125);
 ----
 
-$(D gapWeightedSimilarity) is useful wherever a smooth similarity
+`gapWeightedSimilarity` is useful wherever a smooth similarity
 measure between sequences allowing for approximate matches is
 needed. The examples above are given with words, but any sequences
 with elements comparable for equality are allowed, e.g. characters or
-numbers. $(D gapWeightedSimilarity) uses a highly optimized dynamic
+numbers. `gapWeightedSimilarity` uses a highly optimized dynamic
 programming implementation that needs $(D 16 * min(s.length,
 t.length)) extra bytes of memory and $(BIGOH s.length * t.length) time
 to complete.
@@ -2242,25 +2239,25 @@ if (isRandomAccessRange!(R1) && hasLength!(R1) &&
 }
 
 /**
-The similarity per $(D gapWeightedSimilarity) has an issue in that it
+The similarity per `gapWeightedSimilarity` has an issue in that it
 grows with the lengths of the two strings, even though the strings are
 not actually very similar. For example, the range $(D ["Hello",
 "world"]) is increasingly similar with the range $(D ["Hello",
-"world", "world", "world",...]) as more instances of $(D "world") are
-appended. To prevent that, $(D gapWeightedSimilarityNormalized)
+"world", "world", "world",...]) as more instances of `"world"` are
+appended. To prevent that, `gapWeightedSimilarityNormalized`
 computes a normalized version of the similarity that is computed as
 $(D gapWeightedSimilarity(s, t, lambda) /
 sqrt(gapWeightedSimilarity(s, t, lambda) * gapWeightedSimilarity(s, t,
-lambda))). The function $(D gapWeightedSimilarityNormalized) (a
-so-called normalized kernel) is bounded in $(D [0, 1]), reaches $(D 0)
-only for ranges that don't match in any position, and $(D 1) only for
+lambda))). The function `gapWeightedSimilarityNormalized` (a
+so-called normalized kernel) is bounded in $(D [0, 1]), reaches `0`
+only for ranges that don't match in any position, and `1` only for
 identical ranges.
 
-The optional parameters $(D sSelfSim) and $(D tSelfSim) are meant for
+The optional parameters `sSelfSim` and `tSelfSim` are meant for
 avoiding duplicate computation. Many applications may have already
 computed $(D gapWeightedSimilarity(s, s, lambda)) and/or $(D
 gapWeightedSimilarity(t, t, lambda)). In that case, they can be passed
-as $(D sSelfSim) and $(D tSelfSim), respectively.
+as `sSelfSim` and `tSelfSim`, respectively.
  */
 Select!(isFloatingPoint!(F), F, double)
 gapWeightedSimilarityNormalized(alias comp = "a == b", R1, R2, F)
@@ -2301,7 +2298,7 @@ if (isRandomAccessRange!(R1) && hasLength!(R1) &&
 }
 
 /**
-Similar to $(D gapWeightedSimilarity), just works in an incremental
+Similar to `gapWeightedSimilarity`, just works in an incremental
 manner by first revealing the matches of length 1, then gapped matches
 of length 2, and so on. The memory requirement is $(BIGOH s.length *
 t.length). The time complexity is $(BIGOH s.length * t.length) time
@@ -2327,8 +2324,8 @@ private:
 
 public:
 /**
-Constructs an object given two ranges $(D s) and $(D t) and a penalty
-$(D lambda). Constructor completes in $(BIGOH s.length * t.length)
+Constructs an object given two ranges `s` and `t` and a penalty
+`lambda`. Constructor completes in $(BIGOH s.length * t.length)
 time and computes all matches of length 1.
  */
     this(Range s, Range t, F lambda)
@@ -2391,7 +2388,7 @@ time and computes all matches of length 1.
     }
 
     /**
-    Returns: $(D this).
+    Returns: `this`.
      */
     ref GapWeightedSimilarityIncremental opSlice()
     {
@@ -2484,7 +2481,7 @@ time and computes all matches of length 1.
 
     /**
     Returns: The gapped similarity at the current match length (initially
-    1, grows with each call to $(D popFront)).
+    1, grows with each call to `popFront`).
     */
     @property F front() { return currentValue; }
 
@@ -2598,7 +2595,7 @@ GapWeightedSimilarityIncremental!(R, F) gapWeightedSimilarityIncremental(R, F)
 }
 
 /**
-Computes the greatest common divisor of $(D a) and $(D b) by using
+Computes the greatest common divisor of `a` and `b` by using
 an efficient algorithm such as $(HTTPS en.wikipedia.org/wiki/Euclidean_algorithm, Euclid's)
 or $(HTTPS en.wikipedia.org/wiki/Binary_GCD_algorithm, Stein's) algorithm.
 
@@ -2610,7 +2607,7 @@ Returns:
     The greatest common divisor of the given arguments.
  */
 T gcd(T)(T a, T b)
-    if (isIntegral!T)
+if (isIntegral!T)
 {
     static if (is(T == const) || is(T == immutable))
     {
@@ -2667,7 +2664,7 @@ T gcd(T)(T a, T b)
 // user-defined types.
 /// ditto
 T gcd(T)(T a, T b)
-    if (!isIntegral!T &&
+if (!isIntegral!T &&
         is(typeof(T.init % T.init)) &&
         is(typeof(T.init == 0 || T.init > 0)))
 {
@@ -3065,8 +3062,8 @@ private:
     }
 
 public:
-    /**Create an $(D Fft) object for computing fast Fourier transforms of
-     * power of two sizes of $(D size) or smaller.  $(D size) must be a
+    /**Create an `Fft` object for computing fast Fourier transforms of
+     * power of two sizes of `size` or smaller.  `size` must be a
      * power of two.
      */
     this(size_t size)
@@ -3083,11 +3080,11 @@ public:
     }
 
     /**Compute the Fourier transform of range using the $(BIGOH N log N)
-     * Cooley-Tukey Algorithm.  $(D range) must be a random-access range with
-     * slicing and a length equal to $(D size) as provided at the construction of
+     * Cooley-Tukey Algorithm.  `range` must be a random-access range with
+     * slicing and a length equal to `size` as provided at the construction of
      * this object.  The contents of range can be either  numeric types,
      * which will be interpreted as pure real values, or complex types with
-     * properties or members $(D .re) and $(D .im) that can be read.
+     * properties or members `.re` and `.im` that can be read.
      *
      * Note:  Pure real FFTs are automatically detected and the relevant
      *        optimizations are performed.
@@ -3226,7 +3223,7 @@ private enum string MakeLocalFft = q{
     auto fftObj = scoped!Fft(lookupBuf);
 };
 
-/**Convenience functions that create an $(D Fft) object, run the FFT or inverse
+/**Convenience functions that create an `Fft` object, run the FFT or inverse
  * FFT and return the result.  Useful for one-off FFTs.
  *
  * Note:  In addition to convenience, these functions are slightly more

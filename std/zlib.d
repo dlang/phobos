@@ -75,9 +75,9 @@ enum
 
 class ZlibException : Exception
 {
-    this(int errnum)
-    {   string msg;
-
+    private static string getmsg(int errnum) nothrow @nogc pure @safe
+    {
+        string msg;
         switch (errnum)
         {
             case Z_STREAM_END:      msg = "stream end"; break;
@@ -90,7 +90,12 @@ class ZlibException : Exception
             case Z_VERSION_ERROR:   msg = "version error"; break;
             default:                msg = "unknown error";  break;
         }
-        super(msg);
+        return msg;
+    }
+
+    this(int errnum)
+    {
+        super(getmsg(errnum));
     }
 }
 
@@ -104,7 +109,7 @@ class ZlibException : Exception
  *     buf = buffer containing input data
  *
  * Returns:
- *     A $(D uint) checksum for the provided input data and starting checksum
+ *     A `uint` checksum for the provided input data and starting checksum
  *
  * See_Also:
  *     $(LINK http://en.wikipedia.org/wiki/Adler-32)
@@ -147,7 +152,7 @@ uint adler32(uint adler, const(void)[] buf)
  *     buf = buffer containing input data
  *
  * Returns:
- *     A $(D uint) checksum for the provided input data and starting checksum
+ *     A `uint` checksum for the provided input data and starting checksum
  *
  * See_Also:
  *     $(LINK http://en.wikipedia.org/wiki/Cyclic_redundancy_check)

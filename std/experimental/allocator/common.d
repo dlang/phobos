@@ -13,7 +13,7 @@ import std.algorithm.comparison, std.traits;
 
 /**
 Returns the size in bytes of the state that needs to be allocated to hold an
-object of type $(D T). $(D stateSize!T) is zero for $(D struct)s that are not
+object of type `T`. `stateSize!T` is zero for `struct`s that are not
 nested and have no nonstatic member variables.
  */
 template stateSize(T)
@@ -57,7 +57,7 @@ template hasStaticallyKnownAlignment(Allocator)
 }
 
 /**
-$(D chooseAtRuntime) is a compile-time constant of type $(D size_t) that several
+`chooseAtRuntime` is a compile-time constant of type `size_t` that several
 parameterized structures in this module recognize to mean deferral to runtime of
 the exact value. For example, $(D BitmappedBlock!(Allocator, 4096)) (described in
 detail below) defines a block allocator with block size of 4096 bytes, whereas
@@ -67,11 +67,11 @@ field storing the block size, initialized by the user.
 enum chooseAtRuntime = size_t.max - 1;
 
 /**
-$(D unbounded) is a compile-time constant of type $(D size_t) that several
+`unbounded` is a compile-time constant of type `size_t` that several
 parameterized structures in this module recognize to mean "infinite" bounds for
-the parameter. For example, $(D Freelist) (described in detail below) accepts a
-$(D maxNodes) parameter limiting the number of freelist items. If $(D unbounded)
-is passed for $(D maxNodes), then there is no limit and no checking for the
+the parameter. For example, `Freelist` (described in detail below) accepts a
+`maxNodes` parameter limiting the number of freelist items. If `unbounded`
+is passed for `maxNodes`, then there is no limit and no checking for the
 number of nodes.
 */
 enum unbounded = size_t.max;
@@ -83,7 +83,7 @@ current platform.
 enum uint platformAlignment = std.algorithm.comparison.max(double.alignof, real.alignof);
 
 /**
-The default good size allocation is deduced as $(D n) rounded up to the
+The default good size allocation is deduced as `n` rounded up to the
 allocator's alignment.
 */
 size_t goodAllocSize(A)(auto ref A a, size_t n)
@@ -213,7 +213,7 @@ nothrow pure
 }
 
 /*
-Returns $(D s) rounded up to the nearest power of 2.
+Returns `s` rounded up to the nearest power of 2.
 */
 @safe @nogc nothrow pure
 package size_t roundUpToPowerOf2(size_t s)
@@ -250,7 +250,7 @@ unittest
 }
 
 /*
-Returns the number of trailing zeros of $(D x).
+Returns the number of trailing zeros of `x`.
 */
 @safe @nogc nothrow pure
 package uint trailingZeros(ulong x)
@@ -339,15 +339,15 @@ package bool isGoodDynamicAlignment(uint x)
 }
 
 /**
-The default $(D reallocate) function first attempts to use $(D expand). If $(D
-Allocator.expand) is not defined or returns $(D false), $(D reallocate)
+The default `reallocate` function first attempts to use `expand`. If $(D
+Allocator.expand) is not defined or returns `false`, `reallocate`
 allocates a new block of memory of appropriate size and copies data from the old
-block to the new block. Finally, if $(D Allocator) defines $(D deallocate), $(D
+block to the new block. Finally, if `Allocator` defines `deallocate`, $(D
 reallocate) uses it to free the old memory block.
 
-$(D reallocate) does not attempt to use $(D Allocator.reallocate) even if
+`reallocate` does not attempt to use `Allocator.reallocate` even if
 defined. This is deliberate so allocators may use it internally within their own
-implementation of $(D reallocate).
+implementation of `reallocate`.
 
 */
 bool reallocate(Allocator)(ref Allocator a, ref void[] b, size_t s)
@@ -369,16 +369,16 @@ bool reallocate(Allocator)(ref Allocator a, ref void[] b, size_t s)
 
 /**
 
-The default $(D alignedReallocate) function first attempts to use $(D expand).
-If $(D Allocator.expand) is not defined or returns $(D false),  $(D
+The default `alignedReallocate` function first attempts to use `expand`.
+If `Allocator.expand` is not defined or returns `false`,  $(D
 alignedReallocate) allocates a new block of memory of appropriate size and
-copies data from the old block to the new block. Finally, if $(D Allocator)
-defines $(D deallocate), $(D alignedReallocate) uses it to free the old memory
+copies data from the old block to the new block. Finally, if `Allocator`
+defines `deallocate`, `alignedReallocate` uses it to free the old memory
 block.
 
-$(D alignedReallocate) does not attempt to use $(D Allocator.reallocate) even if
+`alignedReallocate` does not attempt to use `Allocator.reallocate` even if
 defined. This is deliberate so allocators may use it internally within their own
-implementation of $(D reallocate).
+implementation of `reallocate`.
 
 */
 bool alignedReallocate(Allocator)(ref Allocator alloc,
@@ -481,7 +481,6 @@ Forwards each of the methods in `funs` (if defined) to `member`.
 
 version(unittest)
 {
-    import std.experimental.allocator : RCIAllocator, RCISharedAllocator;
 
     package void testAllocator(alias make)()
     {
@@ -511,6 +510,18 @@ version(unittest)
         auto b2 = a.allocate(2);
         assert(b2.length == 2);
         assert(b2.ptr + b2.length <= b1.ptr || b1.ptr + b1.length <= b2.ptr);
+
+        // Test allocateZeroed
+        static if (hasMember!(A, "allocateZeroed"))
+        {{
+            auto b3 = a.allocateZeroed(8);
+            if (b3 !is null)
+            {
+                assert(b3.length == 8);
+                foreach (e; cast(ubyte[]) b3)
+                    assert(e == 0);
+            }
+        }}
 
         // Test alignedAllocate
         static if (hasMember!(A, "alignedAllocate"))
@@ -608,9 +619,13 @@ version(unittest)
     }
 
     package void testAllocatorObject(RCAllocInterface)(RCAllocInterface a)
-        if (is(RCAllocInterface == RCIAllocator)
-            || is (RCAllocInterface == shared RCISharedAllocator))
     {
+        // this used to be a template constraint, but moving it inside prevents
+        // unnecessary import of std.experimental.allocator
+        import std.experimental.allocator : RCIAllocator, RCISharedAllocator;
+        static assert(is(RCAllocInterface == RCIAllocator)
+            || is (RCAllocInterface == RCISharedAllocator));
+
         import std.conv : text;
         import std.math : isPowerOf2;
         import std.stdio : writeln, stderr;
@@ -742,4 +757,328 @@ version(unittest)
             }
         }
     }
+}
+
+/+
+Can the representation be determined at compile time to consist of nothing but
+zero bits? Padding between a struct's fields is not considered.
++/
+private template isAllZeroBits(T, T value)
+{
+    static if (isDynamicArray!(typeof(value)))
+        enum isAllZeroBits = value is null && value.length == 0;
+    else static if (is(typeof(value is null)))
+        enum isAllZeroBits = value is null;
+    else static if (is(typeof(value is 0)))
+        enum isAllZeroBits = value is 0;
+    else static if (isStaticArray!(typeof(value)))
+        enum isAllZeroBits = ()
+        {
+            bool b = true;
+            // Use index so this works when T.length is 0.
+            static foreach (i; 0 .. T.length)
+            {
+                b &= isAllZeroBits!(typeof(value[i]), value[i]);
+                if (b == false) return b;
+            }
+
+            return b;
+        }();
+    else static if (is(typeof(value) == struct) || is(typeof(value) == union))
+        enum isAllZeroBits = ()
+        {
+            bool b = true;
+            static foreach (e; value.tupleof)
+            {
+                b &= isAllZeroBits!(typeof(e), e);
+                if (b == false) return b;
+            }
+
+            return b;
+        }();
+    else
+        enum isAllZeroBits = false;
+}
+
+@nogc nothrow pure @safe unittest
+{
+    import std.meta : AliasSeq;
+    static foreach (Int; AliasSeq!(bool, char, wchar, dchar, byte, ubyte,
+        short, ushort, int, uint, long, ulong))
+    {
+        static assert(isAllZeroBits!(Int, Int(0)));
+        static assert(!isAllZeroBits!(Int, Int(1)));
+    }
+
+    foreach (Float; AliasSeq!(float, double, real))
+    {
+        assert(isAllZeroBits!(Float, 0.0));
+        assert(!isAllZeroBits!(Float, -0.0));
+        assert(!isAllZeroBits!(Float, Float.nan));
+    }
+
+    static assert(isAllZeroBits!(void*, null));
+    static assert(isAllZeroBits!(int*, null));
+    static assert(isAllZeroBits!(Object, null));
+}
+
+/+
+Is the representation of T.init known at compile time to consist of nothing but
+zero bits? Padding between a struct's fields is not considered.
++/
+package template isInitAllZeroBits(T)
+{
+    static if (isStaticArray!T && __traits(compiles, T.init[0]))
+        enum isInitAllZeroBits = __traits(compiles, {
+            static assert(isAllZeroBits!(typeof(T.init[0]), T.init[0]));
+        });
+    else
+        enum isInitAllZeroBits = __traits(compiles, {
+            static assert(isAllZeroBits!(T, T.init));
+        });
+}
+
+@nogc nothrow pure @safe unittest
+{
+    static assert(isInitAllZeroBits!(Object));
+    static assert(isInitAllZeroBits!(void*));
+    static assert(isInitAllZeroBits!uint);
+    static assert(isInitAllZeroBits!(uint[2]));
+
+    static assert(!isInitAllZeroBits!float);
+    static assert(isInitAllZeroBits!(float[0]));
+    static assert(!isInitAllZeroBits!(float[2]));
+
+    static struct S1
+    {
+        int a;
+    }
+    static assert(isInitAllZeroBits!S1);
+
+    static struct S2
+    {
+        int a = 1;
+    }
+    static assert(!isInitAllZeroBits!S2);
+
+    static struct S3
+    {
+        S1 a;
+        int b;
+    }
+    static assert(isInitAllZeroBits!S3);
+    static assert(isInitAllZeroBits!(S3[2]));
+
+    static struct S4
+    {
+        S1 a;
+        S2 b;
+    }
+    static assert(!isInitAllZeroBits!S4);
+
+    static struct S5
+    {
+        real r = 0;
+    }
+    static assert(isInitAllZeroBits!S5);
+
+    static struct S6
+    {
+
+    }
+    static assert(isInitAllZeroBits!S6);
+
+    static struct S7
+    {
+        float[0] a;
+    }
+    static assert(isInitAllZeroBits!S7);
+
+    static class C1
+    {
+        int a = 1;
+    }
+    static assert(isInitAllZeroBits!C1);
+
+    // Ensure Tuple can be read.
+    import std.typecons : Tuple;
+    static assert(isInitAllZeroBits!(Tuple!(int, int)));
+    static assert(!isInitAllZeroBits!(Tuple!(float, float)));
+
+    // Ensure private fields of structs from other modules
+    // are taken into account.
+    import std.random : Mt19937;
+    static assert(!isInitAllZeroBits!Mt19937);
+    // Check that it works with const.
+    static assert(isInitAllZeroBits!(const(Mt19937)) == isInitAllZeroBits!Mt19937);
+    static assert(isInitAllZeroBits!(const(S5)) == isInitAllZeroBits!S5);
+}
+
+/+
+Can the representation be determined at compile time to consist of nothing but
+1 bits? This is reported as $(B false) for structs with padding between
+their fields because `opEquals` and hashing may rely on those bits being
+zero.
+
+Note:
+A bool occupies 8 bits so `isAllOneBits!(bool, true) == false`
+
+See_Also:
+https://forum.dlang.org/post/hn11oh$1usk$1@digitalmars.com
++/
+private template isAllOneBits(T, T value)
+{
+    static if (isIntegral!T || isSomeChar!T)
+    {
+        import core.bitop : popcnt;
+        static if (T.min < T(0))
+            enum isAllOneBits = popcnt(cast(Unsigned!T) value) == T.sizeof * 8;
+        else
+            enum isAllOneBits = popcnt(value) == T.sizeof * 8;
+    }
+    else static if (isStaticArray!(typeof(value)))
+    {
+        enum isAllOneBits = ()
+        {
+            bool b = true;
+            // Use index so this works when T.length is 0.
+            static foreach (i; 0 .. T.length)
+            {
+                b &= isAllOneBits!(typeof(value[i]), value[i]);
+                if (b == false) return b;
+            }
+
+            return b;
+        }();
+    }
+    else static if (is(typeof(value) == struct))
+    {
+        enum isAllOneBits = ()
+        {
+            bool b = true;
+            size_t fieldSizeSum = 0;
+            static foreach (e; value.tupleof)
+            {
+                b &= isAllOneBits!(typeof(e), e);
+                if (b == false) return b;
+                fieldSizeSum += typeof(e).sizeof;
+            }
+            // If fieldSizeSum == T.sizeof then there can be no gaps
+            // between fields.
+            return b && fieldSizeSum == T.sizeof;
+        }();
+    }
+    else
+    {
+        enum isAllOneBits = false;
+    }
+}
+
+// If `isAllOneBits` becomes public document this unittest.
+@nogc nothrow pure @safe unittest
+{
+    static assert(isAllOneBits!(char, 0xff));
+    static assert(isAllOneBits!(wchar, 0xffff));
+    static assert(isAllOneBits!(byte, cast(byte) 0xff));
+    static assert(isAllOneBits!(int, 0xffff_ffff));
+    static assert(isAllOneBits!(char[4], [0xff, 0xff, 0xff, 0xff]));
+
+    static assert(!isAllOneBits!(bool, true));
+    static assert(!isAllOneBits!(wchar, 0xff));
+    static assert(!isAllOneBits!(Object, Object.init));
+}
+
+// Don't document this unittest.
+@nogc nothrow pure @safe unittest
+{
+    import std.meta : AliasSeq;
+    foreach (Int; AliasSeq!(char, wchar, byte, ubyte, short, ushort, int, uint,
+        long, ulong))
+    {
+        static assert(isAllOneBits!(Int, cast(Int) 0xffff_ffff_ffff_ffffUL));
+        static assert(!isAllOneBits!(Int, Int(1)));
+        static if (Int.sizeof > 1)
+            static assert(!isAllOneBits!(Int, cast(Int) 0xff));
+    }
+    static assert(!isAllOneBits!(dchar, 0xffff));
+}
+
+/+
+Can the representation be determined at compile time to consist of nothing but
+1 bits? This is reported as $(B false) for structs with padding between
+their fields because `opEquals` and hashing may rely on those bits being
+zero.
+
+See_Also:
+https://forum.dlang.org/post/hn11oh$1usk$1@digitalmars.com
++/
+package template isInitAllOneBits(T)
+{
+    static if (isStaticArray!T && __traits(compiles, T.init[0]))
+        enum isInitAllOneBits = __traits(compiles, {
+            static assert(isAllOneBits!(typeof(T.init[0]), T.init[0]));
+        });
+    else
+        enum isInitAllOneBits = __traits(compiles, {
+            static assert(isAllOneBits!(T, T.init));
+        });
+}
+
+@nogc nothrow pure @safe unittest
+{
+    static assert(isInitAllOneBits!char);
+    static assert(isInitAllOneBits!wchar);
+    static assert(!isInitAllOneBits!dchar);
+
+    static assert(isInitAllOneBits!(char[4]));
+    static assert(!isInitAllOneBits!(int[4]));
+    static assert(!isInitAllOneBits!Object);
+
+    static struct S1
+    {
+        char a;
+        char b;
+    }
+    static assert(isInitAllOneBits!S1);
+
+    static struct S2
+    {
+        char a = 1;
+    }
+    static assert(!isInitAllOneBits!S2);
+
+    static struct S3
+    {
+        S1 a;
+        char b;
+    }
+    static assert(isInitAllOneBits!S3);
+    static assert(isInitAllOneBits!(S3[2]));
+
+    static struct S4
+    {
+        S1 a;
+        S2 b;
+    }
+    static assert(!isInitAllOneBits!S4);
+
+    static struct S5
+    {
+        int r = 0xffff_ffff;
+    }
+    static assert(isInitAllOneBits!S5);
+
+    // Verify that when there is padding between fields isInitAllOneBits is false.
+    static struct S6
+    {
+        align(4) char a;
+        align(4) char b;
+    }
+    static assert(!isInitAllOneBits!S6);
+
+    static class C1
+    {
+        char c;
+    }
+    static assert(!isInitAllOneBits!C1);
 }

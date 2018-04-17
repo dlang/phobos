@@ -13,7 +13,7 @@
     To differentiate between these cases, use $(REF isDir, std,file) and
     $(REF exists, std,file).
 
-    Note that on Windows, both the backslash ($(D `\`)) and the slash ($(D `/`))
+    Note that on Windows, both the backslash (``\``) and the slash (``/``)
     are in principle valid directory separators.  This module treats them
     both on equal footing, but in cases where a $(I new) separator is
     added, a backslash will be used.  Furthermore, the $(LREF buildNormalizedPath)
@@ -141,8 +141,8 @@ else static assert(0, "unsupported platform");
 
 /** Determines whether the given character is a directory separator.
 
-    On Windows, this includes both $(D `\`) and $(D `/`).
-    On POSIX, it's just $(D `/`).
+    On Windows, this includes both ``\`` and ``/``.
+    On POSIX, it's just ``/``.
 */
 bool isDirSeparator(dchar c)  @safe pure nothrow @nogc
 {
@@ -315,7 +315,7 @@ if (isBidirectionalRange!R && isSomeChar!(ElementType!R) ||
     assert(trimDirSeparators(MockBiRange!char("//abc//")).array == "abc");
 }
 
-/** This $(D enum) is used as a template argument to functions which
+/** This `enum` is used as a template argument to functions which
     compare file names, and determines whether the comparison is
     case sensitive or not.
 */
@@ -328,7 +328,7 @@ enum CaseSensitive : bool
     yes = true,
 
     /** The default (or most common) setting for the current platform.
-        That is, $(D no) on Windows and Mac OS X, and $(D yes) on all
+        That is, `no` on Windows and Mac OS X, and `yes` on all
         POSIX systems except OS X (Linux, *BSD, etc.).
     */
     osDefault = osDefaultCaseSensitivity
@@ -350,9 +350,9 @@ else static assert(0);
     Returns: The name of the file in the path name, without any leading
         directory and with an optional suffix chopped off.
 
-    If $(D suffix) is specified, it will be compared to $(D path)
-    using $(D filenameCmp!cs),
-    where $(D cs) is an optional template parameter determining whether
+    If `suffix` is specified, it will be compared to `path`
+    using `filenameCmp!cs`,
+    where `cs` is an optional template parameter determining whether
     the comparison is case sensitive or not.  See the
     $(LREF filenameCmp) documentation for details.
 
@@ -515,7 +515,7 @@ if (isSomeChar!C && isSomeChar!C1)
         path = A path name.
 
     Returns:
-        A slice of $(D path) or ".".
+        A slice of `path` or ".".
 
     Standards:
     This function complies with
@@ -676,14 +676,14 @@ private auto _dirName(R)(R path)
 
 
 
-/** Returns the root directory of the specified path, or $(D null) if the
+/** Returns the root directory of the specified path, or `null` if the
     path is not rooted.
 
     Params:
         path = A path name.
 
     Returns:
-        A slice of $(D path).
+        A slice of `path`.
 */
 auto rootName(R)(R path)
 if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) && !isSomeString!R)
@@ -785,7 +785,7 @@ Lnull:
         path = string or range of characters
 
     Returns:
-        A slice of $(D _path) that is the drive, or an empty range if the drive
+        A slice of `_path` that is the drive, or an empty range if the drive
         is not specified.  In the case of UNC paths, the network share
         is returned.
 
@@ -1018,7 +1018,7 @@ if (isRandomAccessRange!R && hasLength!R && isSomeChar!(ElementType!R) ||
     Params: path = A path name.
     Returns: The _extension part of a file name, including the dot.
 
-    If there is no _extension, $(D null) is returned.
+    If there is no _extension, `null` is returned.
 */
 auto extension(R)(R path)
 if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
@@ -1132,7 +1132,7 @@ private auto _stripExtension(R)(R path)
 
     If the filename already has an extension, it is replaced. If not, the
     extension is simply appended to the filename. Including a leading dot
-    in $(D ext) is optional.
+    in `ext` is optional.
 
     If the extension is empty, this function is equivalent to
     $(LREF stripExtension).
@@ -1145,8 +1145,8 @@ private auto _stripExtension(R)(R path)
         path = A path name
         ext = The new extension
 
-    Returns: A string containing the _path given by $(D path), but where
-    the extension has been set to $(D ext).
+    Returns: A string containing the _path given by `path`, but where
+    the extension has been set to `ext`.
 
     See_Also:
         $(LREF withExtension) which does not allocate and returns a lazy range.
@@ -1221,8 +1221,8 @@ if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
  *      path = string or random access range representing a filespec
  *      ext = the new extension
  * Returns:
- *      Range with $(D path)'s extension (if any) replaced with $(D ext).
- *      The element encoding type of the returned range will be the same as $(D path)'s.
+ *      Range with `path`'s extension (if any) replaced with `ext`.
+ *      The element encoding type of the returned range will be the same as `path`'s.
  * See_Also:
  *      $(LREF setExtension)
  */
@@ -1283,7 +1283,7 @@ private auto _withExtension(R, C)(R path, C[] ext)
         path = A path name.
         ext = The default extension to use.
 
-    Returns: The _path given by $(D path), with the extension given by $(D ext)
+    Returns: The _path given by `path`, with the extension given by `ext`
     appended if the path doesn't already have one.
 
     Including the dot in the extension is optional.
@@ -1322,7 +1322,7 @@ if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
 
 
 /********************************
- * Set the extension of $(D path) to $(D ext) if $(D path) doesn't have one.
+ * Set the extension of `path` to `ext` if `path` doesn't have one.
  *
  * Params:
  *      path = filespec as string or range
@@ -1405,16 +1405,17 @@ private auto _withDefaultExtension(R, C)(R path, C[] ext)
     preceding segments will be dropped.
 
     On Windows, if one of the path segments are rooted, but not absolute
-    (e.g. $(D `\foo`)), all preceding path segments down to the previous
+    (e.g. ``\foo``), all preceding path segments down to the previous
     root will be dropped.  (See below for an example.)
 
     This function always allocates memory to hold the resulting path.
     The variadic overload is guaranteed to only perform a single
-    allocation, as is the range version if $(D paths) is a forward
+    allocation, as is the range version if `paths` is a forward
     range.
 
     Params:
-        segments = An input range of segments to assemble the path from.
+        segments = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+        of segments to assemble the path from.
     Returns: The assembled path.
 */
 immutable(ElementEncodingType!(ElementType!Range))[]
@@ -1707,7 +1708,7 @@ if (Ranges.length >= 2 &&
 
 /** Performs the same task as $(LREF buildPath),
     while at the same time resolving current/parent directory
-    symbols ($(D ".") and $(D "..")) and removing superfluous
+    symbols (`"."` and `".."`) and removing superfluous
     directory separators.
     It will return "." if the path leads to the starting directory.
     On Windows, slashes are replaced with backslashes.
@@ -1725,21 +1726,23 @@ if (Ranges.length >= 2 &&
     Returns: The assembled path.
 */
 immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
-    @trusted pure nothrow
+    @safe pure nothrow
 if (isSomeChar!C)
 {
     import std.array : array;
+    import std.exception : assumeUnique;
 
-    const(C)[] result;
+    const(C)[] chained;
     foreach (path; paths)
     {
-        if (result)
-            result = chainPath(result, path).array;
+        if (chained)
+            chained = chainPath(chained, path).array;
         else
-            result = path;
+            chained = path;
     }
-    result = asNormalizedPath(result).array;
-    return cast(typeof(return)) result;
+    auto result = asNormalizedPath(chained);
+    // .array returns a copy, so it is unique
+    return () @trusted { return assumeUnique(result.array); } ();
 }
 
 ///
@@ -1859,7 +1862,7 @@ if (isSomeChar!C)
 
 
 /** Normalize a path by resolving current/parent directory
-    symbols ($(D ".") and $(D "..")) and removing superfluous
+    symbols (`"."` and `".."`) and removing superfluous
     directory separators.
     It will return "." if the path leads to the starting directory.
     On Windows, slashes are replaced with backslashes.
@@ -2604,7 +2607,7 @@ if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
 
     Example:
     On POSIX, an absolute path starts at the root directory.
-    (In fact, $(D _isAbsolute) is just an alias for $(LREF isRooted).)
+    (In fact, `_isAbsolute` is just an alias for $(LREF isRooted).)
     ---
     version (Posix)
     {
@@ -2616,8 +2619,8 @@ if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
     ---
 
     On Windows, an absolute path starts at the root directory of
-    a specific drive.  Hence, it must start with $(D `d:\`) or $(D `d:/`),
-    where $(D d) is the drive letter.  Alternatively, it may be a
+    a specific drive.  Hence, it must start with ``d:\`` or ``d:/``,
+    where `d` is the drive letter.  Alternatively, it may be a
     network path, i.e. a path starting with a double (back)slash.
     ---
     version (Windows)
@@ -2689,14 +2692,14 @@ else version (Posix)
 
 
 
-/** Transforms $(D path) into an absolute _path.
+/** Transforms `path` into an absolute _path.
 
     The following algorithm is used:
     $(OL
-        $(LI If $(D path) is empty, return $(D null).)
-        $(LI If $(D path) is already absolute, return it.)
-        $(LI Otherwise, append $(D path) to $(D base) and return
-            the result. If $(D base) is not specified, the current
+        $(LI If `path` is empty, return `null`.)
+        $(LI If `path` is already absolute, return it.)
+        $(LI Otherwise, append `path` to `base` and return
+            the result. If `base` is not specified, the current
             working directory is used.)
     )
     The function allocates memory if and only if it gets to the third stage
@@ -2710,7 +2713,7 @@ else version (Posix)
         string of transformed path
 
     Throws:
-    $(D Exception) if the specified _base directory is not absolute.
+    `Exception` if the specified _base directory is not absolute.
 
     See_Also:
         $(LREF asAbsolutePath) which does not allocate
@@ -2762,13 +2765,13 @@ string absolutePath(string path, lazy string base = getcwd())
     assertThrown(absolutePath("bar", "foo"));
 }
 
-/** Transforms $(D path) into an absolute _path.
+/** Transforms `path` into an absolute _path.
 
     The following algorithm is used:
     $(OL
-        $(LI If $(D path) is empty, return $(D null).)
-        $(LI If $(D path) is already absolute, return it.)
-        $(LI Otherwise, append $(D path) to the current working directory,
+        $(LI If `path` is empty, return `null`.)
+        $(LI If `path` is already absolute, return it.)
+        $(LI Otherwise, append `path` to the current working directory,
         which allocates memory.)
     )
 
@@ -2820,27 +2823,27 @@ if (isConvertibleToString!R)
     assert(testAliasedString!asAbsolutePath(null));
 }
 
-/** Translates $(D path) into a relative _path.
+/** Translates `path` into a relative _path.
 
-    The returned _path is relative to $(D base), which is by default
+    The returned _path is relative to `base`, which is by default
     taken to be the current working directory.  If specified,
-    $(D base) must be an absolute _path, and it is always assumed
-    to refer to a directory.  If $(D path) and $(D base) refer to
-    the same directory, the function returns $(D `.`).
+    `base` must be an absolute _path, and it is always assumed
+    to refer to a directory.  If `path` and `base` refer to
+    the same directory, the function returns ``.``.
 
     The following algorithm is used:
     $(OL
-        $(LI If $(D path) is a relative directory, return it unaltered.)
-        $(LI Find a common root between $(D path) and $(D base).
-            If there is no common root, return $(D path) unaltered.)
-        $(LI Prepare a string with as many $(D `../`) or $(D `..\`) as
+        $(LI If `path` is a relative directory, return it unaltered.)
+        $(LI Find a common root between `path` and `base`.
+            If there is no common root, return `path` unaltered.)
+        $(LI Prepare a string with as many ``../`` or ``..\`` as
             necessary to reach the common root from base path.)
-        $(LI Append the remaining segments of $(D path) to the string
+        $(LI Append the remaining segments of `path` to the string
             and return.)
     )
 
-    In the second step, path components are compared using $(D filenameCmp!cs),
-    where $(D cs) is an optional template parameter determining whether
+    In the second step, path components are compared using `filenameCmp!cs`,
+    where `cs` is an optional template parameter determining whether
     the comparison is case sensitive or not.  See the
     $(LREF filenameCmp) documentation for details.
 
@@ -2858,7 +2861,7 @@ if (isConvertibleToString!R)
         $(LREF asRelativePath) which does not allocate memory
 
     Throws:
-    $(D Exception) if the specified _base directory is not absolute.
+    `Exception` if the specified _base directory is not absolute.
 */
 string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
     (string path, lazy string base = getcwd())
@@ -3074,10 +3077,10 @@ if (isConvertibleToString!R1 || isConvertibleToString!R2)
 /** Compares filename characters.
 
     This function can perform a case-sensitive or a case-insensitive
-    comparison.  This is controlled through the $(D cs) template parameter
-    which, if not specified, is given by $(LREF CaseSensitive)$(D .osDefault).
+    comparison.  This is controlled through the `cs` template parameter
+    which, if not specified, is given by $(LREF CaseSensitive)`.osDefault`.
 
-    On Windows, the backslash and slash characters ($(D `\`) and $(D `/`))
+    On Windows, the backslash and slash characters (``\`` and ``/``)
     are considered equal.
 
     Params:
@@ -3087,7 +3090,7 @@ if (isConvertibleToString!R1 || isConvertibleToString!R2)
 
     Returns:
         $(D < 0) if $(D a < b),
-        $(D 0) if $(D a == b), and
+        `0` if $(D a == b), and
         $(D > 0) if $(D a > b).
 */
 int filenameCharCmp(CaseSensitive cs = CaseSensitive.osDefault)(dchar a, dchar b)
@@ -3147,8 +3150,8 @@ int filenameCharCmp(CaseSensitive cs = CaseSensitive.osDefault)(dchar a, dchar b
 
 /** Compares file names and returns
 
-    Individual characters are compared using $(D filenameCharCmp!cs),
-    where $(D cs) is an optional template parameter determining whether
+    Individual characters are compared using `filenameCharCmp!cs`,
+    where `cs` is an optional template parameter determining whether
     the comparison is case sensitive or not.
 
     Treatment of invalid UTF encodings is implementation defined.
@@ -3160,7 +3163,7 @@ int filenameCharCmp(CaseSensitive cs = CaseSensitive.osDefault)(dchar a, dchar b
 
     Returns:
         $(D < 0) if $(D filename1 < filename2),
-        $(D 0) if $(D filename1 == filename2) and
+        `0` if $(D filename1 == filename2) and
         $(D > 0) if $(D filename1 > filename2).
 
     See_Also:
@@ -3273,22 +3276,22 @@ if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
     $(I meta-characters)) and can't be escaped. These are:
 
     $(BOOKTABLE,
-    $(TR $(TD $(D *))
+    $(TR $(TD `*`)
          $(TD Matches 0 or more instances of any character.))
-    $(TR $(TD $(D ?))
+    $(TR $(TD `?`)
          $(TD Matches exactly one instance of any character.))
-    $(TR $(TD $(D [)$(I chars)$(D ]))
+    $(TR $(TD `[`$(I chars)`]`)
          $(TD Matches one instance of any character that appears
               between the brackets.))
-    $(TR $(TD $(D [!)$(I chars)$(D ]))
+    $(TR $(TD `[!`$(I chars)`]`)
          $(TD Matches one instance of any character that does not
               appear between the brackets after the exclamation mark.))
-    $(TR $(TD $(D {)$(I string1)$(D ,)$(I string2)$(D ,)&hellip;$(D }))
+    $(TR $(TD `{`$(I string1)`,`$(I string2)`,`&hellip;`}`)
          $(TD Matches either of the specified strings.))
     )
 
-    Individual characters are compared using $(D filenameCharCmp!cs),
-    where $(D cs) is an optional template parameter determining whether
+    Individual characters are compared using `filenameCharCmp!cs`,
+    where `cs` is an optional template parameter determining whether
     the comparison is case sensitive or not.  See the
     $(LREF filenameCharCmp) documentation for details.
 
@@ -3302,7 +3305,7 @@ if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
         pattern = The glob pattern
 
     Returns:
-    $(D true) if pattern matches path, $(D false) otherwise.
+    `true` if pattern matches path, `false` otherwise.
 
     See_also:
     $(LINK2 http://en.wikipedia.org/wiki/Glob_%28programming%29,Wikipedia: _glob (programming))
@@ -3552,31 +3555,31 @@ if (isConvertibleToString!Range)
 
 /** Checks that the given file or directory name is valid.
 
-    The maximum length of $(D filename) is given by the constant
-    $(D core.stdc.stdio.FILENAME_MAX).  (On Windows, this number is
+    The maximum length of `filename` is given by the constant
+    `core.stdc.stdio.FILENAME_MAX`.  (On Windows, this number is
     defined as the maximum number of UTF-16 code points, and the
     test will therefore only yield strictly correct results when
-    $(D filename) is a string of $(D wchar)s.)
+    `filename` is a string of `wchar`s.)
 
     On Windows, the following criteria must be satisfied
     ($(LINK2 http://msdn.microsoft.com/en-us/library/aa365247(v=vs.85).aspx,source)):
     $(UL
-        $(LI $(D filename) must not contain any characters whose integer
+        $(LI `filename` must not contain any characters whose integer
             representation is in the range 0-31.)
-        $(LI $(D filename) must not contain any of the following $(I reserved
+        $(LI `filename` must not contain any of the following $(I reserved
             characters): <>:"/\|?*)
-        $(LI $(D filename) may not end with a space ($(D ' ')) or a period
-            ($(D '.')).)
+        $(LI `filename` may not end with a space ($(D ' ')) or a period
+            (`'.'`).)
     )
 
-    On POSIX, $(D filename) may not contain a forward slash ($(D '/')) or
-    the null character ($(D '\0')).
+    On POSIX, `filename` may not contain a forward slash (`'/'`) or
+    the null character (`'\0'`).
 
     Params:
         filename = string to check
 
     Returns:
-        $(D true) if and only if $(D filename) is not
+        `true` if and only if `filename` is not
         empty, not too long, and does not contain invalid characters.
 
 */
@@ -3692,28 +3695,28 @@ unittest
 
 
 
-/** Checks whether $(D path) is a valid _path.
+/** Checks whether `path` is a valid _path.
 
-    Generally, this function checks that $(D path) is not empty, and that
+    Generally, this function checks that `path` is not empty, and that
     each component of the path either satisfies $(LREF isValidFilename)
-    or is equal to $(D ".") or $(D "..").
+    or is equal to `"."` or `".."`.
 
     $(B It does $(I not) check whether the _path points to an existing file
     or directory; use $(REF exists, std,file) for this purpose.)
 
     On Windows, some special rules apply:
     $(UL
-        $(LI If the second character of $(D path) is a colon ($(D ':')),
+        $(LI If the second character of `path` is a colon (`':'`),
             the first character is interpreted as a drive letter, and
             must be in the range A-Z (case insensitive).)
-        $(LI If $(D path) is on the form $(D `\\$(I server)\$(I share)\...`)
+        $(LI If `path` is on the form $(D `\\$(I server)\$(I share)\...`)
             (UNC path), $(LREF isValidFilename) is applied to $(I server)
             and $(I share) as well.)
-        $(LI If $(D path) starts with $(D `\\?\`) (long UNC path), the
+        $(LI If `path` starts with ``\\?\`` (long UNC path), the
             only requirement for the rest of the string is that it does
             not contain the null character.)
-        $(LI If $(D path) starts with $(D `\\.\`) (Win32 device namespace)
-            this function returns $(D false); such paths are beyond the scope
+        $(LI If `path` starts with ``\\.\`` (Win32 device namespace)
+            this function returns `false`; such paths are beyond the scope
             of this module.)
     )
 
@@ -3721,7 +3724,7 @@ unittest
         path = string or Range of characters to check
 
     Returns:
-        true if $(D path) is a valid _path.
+        true if `path` is a valid _path.
 */
 bool isValidPath(Range)(Range path)
 if ((isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && isSomeChar!(ElementEncodingType!Range) ||
@@ -3876,16 +3879,16 @@ if (isConvertibleToString!Range)
     There are two ways of using tilde expansion in a path. One
     involves using the tilde alone or followed by a path separator. In
     this case, the tilde will be expanded with the value of the
-    environment variable $(D HOME).  The second way is putting
-    a username after the tilde (i.e. $(D ~john/Mail)). Here,
+    environment variable `HOME`.  The second way is putting
+    a username after the tilde (i.e. `~john/Mail`). Here,
     the username will be searched for in the user database
-    (i.e. $(D /etc/passwd) on Unix systems) and will expand to
+    (i.e. `/etc/passwd` on Unix systems) and will expand to
     whatever path is stored there.  The username is considered the
     string after the tilde ending at the first instance of a path
     separator.
 
-    Note that using the $(D ~user) syntax may give different
-    values from just $(D ~) if the environment variable doesn't
+    Note that using the `~user` syntax may give different
+    values from just `~` if the environment variable doesn't
     match the value stored in the user database.
 
     When the environment variable version is used, the path won't
@@ -3900,9 +3903,9 @@ if (isConvertibleToString!Range)
         inputPath = The path name to expand.
 
     Returns:
-    $(D inputPath) with the tilde expanded, or just $(D inputPath)
+    `inputPath` with the tilde expanded, or just `inputPath`
     if it could not be expanded.
-    For Windows, $(D expandTilde) merely returns its argument $(D inputPath).
+    For Windows, `expandTilde` merely returns its argument `inputPath`.
 
     Example:
     -----
@@ -4142,11 +4145,6 @@ version(unittest)
         C[] array;
     }
 
-    static assert( isRandomAccessRange!(MockRange!(const(char))) );
-}
-
-version(unittest)
-{
     /* Define a mock BidirectionalRange to use for unittesting.
      */
 
@@ -4167,6 +4165,11 @@ version(unittest)
         const(C)[] array;
     }
 
+}
+
+@safe unittest
+{
+    static assert( isRandomAccessRange!(MockRange!(const(char))) );
     static assert( isBidirectionalRange!(MockBiRange!(const(char))) );
 }
 

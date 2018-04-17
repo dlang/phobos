@@ -84,11 +84,6 @@ import std.typecons; // : tuple, Tuple;
 
 // bringToFront
 /**
-The `bringToFront` function has considerable flexibility and
-usefulness. It can rotate elements in one buffer left or right, swap
-buffers of equal length, and even move elements across disjoint
-buffers of different types and different lengths.
-
 `bringToFront` takes two ranges `front` and `back`, which may
 be of different types. Considering the concatenation of `front` and
 `back` one unified range, `bringToFront` rotates that unified
@@ -103,6 +98,10 @@ in ranges, not as a string function.
 
 Performs $(BIGOH max(front.length, back.length)) evaluations of $(D
 swap).
+
+The `bringToFront` function can rotate elements in one buffer left or right, swap
+buffers of equal length, and even move elements across disjoint
+buffers of different types and different lengths.
 
 Preconditions:
 
@@ -279,11 +278,11 @@ if (isInputRange!InputRange && isForwardRange!ForwardRange)
 {
     import std.algorithm.comparison : equal;
     import std.conv : text;
-    import std.random : Random, unpredictableSeed, uniform;
+    import std.random : Random = Xorshift, uniform;
 
     // a more elaborate test
     {
-        auto rnd = Random(unpredictableSeed);
+        auto rnd = Random(123_456_789);
         int[] a = new int[uniform(100, 200, rnd)];
         int[] b = new int[uniform(100, 200, rnd)];
         foreach (ref e; a) e = uniform(-100, 100, rnd);
@@ -536,21 +535,21 @@ $(LINK2 http://en.cppreference.com/w/cpp/algorithm/copy_backward, STL's `copy_ba
 }
 
 /**
-Assigns `value` to each element of input _range `range`.
+Assigns `value` to each element of input range `range`.
 
 Alternatively, instead of using a single `value` to fill the `range`,
-a `filter` $(REF_ALTTEXT forward _range, isForwardRange, std,_range,primitives)
+a `filter` $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
 can be provided. The length of `filler` and `range` do not need to match, but
 `filler` must not be empty.
 
 Params:
         range = An
-                $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
+                $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
                 that exposes references to its elements and has assignable
                 elements
         value = Assigned to each element of range
         filler = A
-                $(REF_ALTTEXT forward _range, isForwardRange, std,_range,primitives)
+                $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
                 representing the _fill pattern.
 
 Throws: If `filler` is empty.
@@ -833,7 +832,7 @@ Assumes that the elements of the range are uninitialized.
 
 Params:
         range = An
-                $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
+                $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
                 that exposes references to its elements and has assignable
                 elements
 
@@ -1668,8 +1667,6 @@ enum SwapStrategy
 ///
 @safe unittest
 {
-    import std.stdio;
-    import std.algorithm.sorting : partition;
     int[] a = [0, 1, 2, 3];
     assert(remove!(SwapStrategy.stable)(a, 1) == [0, 2, 3]);
     a = [0, 1, 2, 3];
@@ -1707,9 +1704,9 @@ a = a.remove(1); // remove element at offset 1
 assert(a == [ "a", "c", "d"]);
 ----
 
-Note that `remove` does not change the length of the original _range directly;
-instead, it returns the shortened _range. If its return value is not assigned to
-the original _range, the original _range will retain its original length, though
+Note that `remove` does not change the length of the original range directly;
+instead, it returns the shortened range. If its return value is not assigned to
+the original range, the original range will retain its original length, though
 its contents will have changed:
 
 ----
@@ -1782,7 +1779,7 @@ cases.))
 
 Params:
     s = a SwapStrategy to determine if the original order needs to be preserved
-    range = a $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,_range,primitives)
+    range = a $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives)
     with a length member
     offset = which element(s) to remove
 
@@ -2017,7 +2014,7 @@ if (s == SwapStrategy.stable
 
 /**
 Reduces the length of the
-$(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,_range,primitives) `range` by removing
+$(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives) `range` by removing
 elements that satisfy `pred`. If `s = SwapStrategy.unstable`,
 elements are moved from the right end of the range over the elements
 to eliminate. If `s = SwapStrategy.stable` (the default),
@@ -2818,9 +2815,9 @@ be of different types but must have the same element type and support
 swapping.
 
 Params:
-    r1 = an $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
+    r1 = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
          with swappable elements
-    r2 = an $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
+    r2 = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
          with swappable elements
 
 Returns:
@@ -2859,7 +2856,7 @@ uninitializedFill are equivalent).
 
 Params:
         range = An
-                $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
+                $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
                 that exposes references to its elements and has assignable
                 elements
         value = Assigned to each element of range

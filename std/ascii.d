@@ -4,8 +4,8 @@
     Functions which operate on ASCII characters.
 
     All of the functions in std._ascii accept Unicode characters but
-    effectively ignore them if they're not ASCII. All $(D isX) functions return
-    $(D false) for non-ASCII characters, and all $(D toX) functions do nothing
+    effectively ignore them if they're not ASCII. All `isX` functions return
+    `false` for non-ASCII characters, and all `toX` functions do nothing
     to non-ASCII characters.
 
     For functions which operate on Unicode characters, see
@@ -54,19 +54,11 @@ $(TR $(TD Enums) $(TD
         $(HTTP en.wikipedia.org/wiki/Ascii, Wikipedia)
 
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-    Authors:   $(HTTP digitalmars.com, Walter Bright) and Jonathan M Davis
+    Authors:   $(HTTP digitalmars.com, Walter Bright) and
+               $(HTTP jmdavisprog.com, Jonathan M Davis)
     Source:    $(PHOBOSSRC std/_ascii.d)
   +/
 module std.ascii;
-
-version(unittest)
-{
-    // FIXME: When dmd bug #314 is fixed, make these selective.
-    import std.meta; // : AliasSeq;
-    import std.range; // : chain;
-    import std.traits; // : functionAttributes, FunctionAttribute, isSafe;
-}
-
 
 immutable fullHexDigits  = "0123456789ABCDEFabcdef";     /// 0 .. 9A .. Fa .. f
 immutable hexDigits      = fullHexDigits[0 .. 16];         /// 0 .. 9A .. F
@@ -100,7 +92,7 @@ enum LetterCase : bool
 @safe unittest
 {
     import std.digest.hmac : hmac;
-    import std.digest.digest : toHexString;
+    import std.digest : toHexString;
     import std.digest.sha : SHA1;
     import std.string : representation;
 
@@ -121,7 +113,7 @@ else
 
 /++
     Params: c = The character to test.
-    Returns: Whether $(D c) is a letter or a number (0 .. 9, a .. z, A .. Z).
+    Returns: Whether `c` is a letter or a number (0 .. 9, a .. z, A .. Z).
   +/
 bool isAlphaNum(dchar c) @safe pure nothrow @nogc
 {
@@ -141,6 +133,7 @@ bool isAlphaNum(dchar c) @safe pure nothrow @nogc
 
 @safe unittest
 {
+    import std.range;
     foreach (c; chain(digits, octalDigits, fullHexDigits, letters, lowercase, uppercase))
         assert(isAlphaNum(c));
 
@@ -151,7 +144,7 @@ bool isAlphaNum(dchar c) @safe pure nothrow @nogc
 
 /++
     Params: c = The character to test.
-    Returns: Whether $(D c) is an ASCII letter (A .. Z, a .. z).
+    Returns: Whether `c` is an ASCII letter (A .. Z, a .. z).
   +/
 bool isAlpha(dchar c) @safe pure nothrow @nogc
 {
@@ -172,6 +165,7 @@ bool isAlpha(dchar c) @safe pure nothrow @nogc
 
 @safe unittest
 {
+    import std.range;
     foreach (c; chain(letters, lowercase, uppercase))
         assert(isAlpha(c));
 
@@ -182,7 +176,7 @@ bool isAlpha(dchar c) @safe pure nothrow @nogc
 
 /++
     Params: c = The character to test.
-    Returns: Whether $(D c) is a lowercase ASCII letter (a .. z).
+    Returns: Whether `c` is a lowercase ASCII letter (a .. z).
   +/
 bool isLower(dchar c) @safe pure nothrow @nogc
 {
@@ -203,6 +197,7 @@ bool isLower(dchar c) @safe pure nothrow @nogc
 
 @safe unittest
 {
+    import std.range;
     foreach (c; lowercase)
         assert(isLower(c));
 
@@ -213,7 +208,7 @@ bool isLower(dchar c) @safe pure nothrow @nogc
 
 /++
     Params: c = The character to test.
-    Returns: Whether $(D c) is an uppercase ASCII letter (A .. Z).
+    Returns: Whether `c` is an uppercase ASCII letter (A .. Z).
   +/
 bool isUpper(dchar c) @safe pure nothrow @nogc
 {
@@ -234,6 +229,7 @@ bool isUpper(dchar c) @safe pure nothrow @nogc
 
 @safe unittest
 {
+    import std.range;
     foreach (c; uppercase)
         assert(isUpper(c));
 
@@ -244,7 +240,7 @@ bool isUpper(dchar c) @safe pure nothrow @nogc
 
 /++
     Params: c = The character to test.
-    Returns: Whether $(D c) is a digit (0 .. 9).
+    Returns: Whether `c` is a digit (0 .. 9).
   +/
 bool isDigit(dchar c) @safe pure nothrow @nogc
 {
@@ -266,6 +262,7 @@ bool isDigit(dchar c) @safe pure nothrow @nogc
 
 @safe unittest
 {
+    import std.range;
     foreach (c; digits)
         assert(isDigit(c));
 
@@ -276,7 +273,7 @@ bool isDigit(dchar c) @safe pure nothrow @nogc
 
 /++
     Params: c = The character to test.
-    Returns: Whether $(D c) is a digit in base 8 (0 .. 7).
+    Returns: Whether `c` is a digit in base 8 (0 .. 7).
   +/
 bool isOctalDigit(dchar c) @safe pure nothrow @nogc
 {
@@ -295,6 +292,7 @@ bool isOctalDigit(dchar c) @safe pure nothrow @nogc
 
 @safe unittest
 {
+    import std.range;
     foreach (c; octalDigits)
         assert(isOctalDigit(c));
 
@@ -305,7 +303,7 @@ bool isOctalDigit(dchar c) @safe pure nothrow @nogc
 
 /++
     Params: c = The character to test.
-    Returns: Whether $(D c) is a digit in base 16 (0 .. 9, A .. F, a .. f).
+    Returns: Whether `c` is a digit in base 16 (0 .. 9, A .. F, a .. f).
   +/
 bool isHexDigit(dchar c) @safe pure nothrow @nogc
 {
@@ -325,6 +323,7 @@ bool isHexDigit(dchar c) @safe pure nothrow @nogc
 
 @safe unittest
 {
+    import std.range;
     foreach (c; fullHexDigits)
         assert(isHexDigit(c));
 
@@ -335,7 +334,7 @@ bool isHexDigit(dchar c) @safe pure nothrow @nogc
 
 /++
     Params: c = The character to test.
-    Returns: Whether or not $(D c) is a whitespace character. That includes the
+    Returns: Whether or not `c` is a whitespace character. That includes the
     space, tab, vertical tab, form feed, carriage return, and linefeed
     characters.
   +/
@@ -362,6 +361,7 @@ bool isWhite(dchar c) @safe pure nothrow @nogc
 
 @safe unittest
 {
+    import std.range;
     foreach (c; whitespace)
         assert(isWhite(c));
 
@@ -372,7 +372,7 @@ bool isWhite(dchar c) @safe pure nothrow @nogc
 
 /++
     Params: c = The character to test.
-    Returns: Whether $(D c) is a control character.
+    Returns: Whether `c` is a control character.
   +/
 bool isControl(dchar c) @safe pure nothrow @nogc
 {
@@ -398,6 +398,7 @@ bool isControl(dchar c) @safe pure nothrow @nogc
 
 @safe unittest
 {
+    import std.range;
     foreach (dchar c; 0 .. 32)
         assert(isControl(c));
     assert(isControl(127));
@@ -409,7 +410,7 @@ bool isControl(dchar c) @safe pure nothrow @nogc
 
 /++
     Params: c = The character to test.
-    Returns: Whether or not $(D c) is a punctuation character. That includes
+    Returns: Whether or not `c` is a punctuation character. That includes
     all ASCII characters which are not control characters, letters, digits, or
     whitespace.
   +/
@@ -454,7 +455,7 @@ bool isPunctuation(dchar c) @safe pure nothrow @nogc
 
 /++
     Params: c = The character to test.
-    Returns: Whether or not $(D c) is a printable character other than the
+    Returns: Whether or not `c` is a printable character other than the
     space character.
   +/
 bool isGraphical(dchar c) @safe pure nothrow @nogc
@@ -490,7 +491,7 @@ bool isGraphical(dchar c) @safe pure nothrow @nogc
 
 /++
     Params: c = The character to test.
-    Returns: Whether or not $(D c) is a printable character - including the
+    Returns: Whether or not `c` is a printable character - including the
     space character.
   +/
 bool isPrintable(dchar c) @safe pure nothrow @nogc
@@ -525,7 +526,7 @@ bool isPrintable(dchar c) @safe pure nothrow @nogc
 
 /++
     Params: c = The character to test.
-    Returns: Whether or not $(D c) is in the ASCII character set - i.e. in the
+    Returns: Whether or not `c` is in the ASCII character set - i.e. in the
     range 0 .. 0x7F.
   +/
 pragma(inline, true)
@@ -553,13 +554,13 @@ bool isASCII(dchar c) @safe pure nothrow @nogc
 /++
     Converts an ASCII letter to lowercase.
 
-    Params: c = A character of any type that implicitly converts to $(D dchar).
+    Params: c = A character of any type that implicitly converts to `dchar`.
     In the case where it's a built-in type, or an enum of a built-in type,
-    $(D Unqual!(OriginalType!C)) is returned, whereas if it's a user-defined
-    type, $(D dchar) is returned.
+    `Unqual!(OriginalType!C)` is returned, whereas if it's a user-defined
+    type, `dchar` is returned.
 
-    Returns: The corresponding lowercase letter, if $(D c) is an uppercase
-    ASCII character, otherwise $(D c) itself.
+    Returns: The corresponding lowercase letter, if `c` is an uppercase
+    ASCII character, otherwise `c` itself.
   +/
 auto toLower(C)(C c)
 if (is(C : dchar))
@@ -589,6 +590,7 @@ if (is(C : dchar))
 @safe pure nothrow unittest
 {
 
+    import std.meta;
     static foreach (C; AliasSeq!(char, wchar, dchar, immutable char, ubyte))
     {
         foreach (i, c; uppercase)
@@ -615,13 +617,13 @@ if (is(C : dchar))
 /++
     Converts an ASCII letter to uppercase.
 
-    Params: c = Any type which implicitly converts to $(D dchar). In the case
+    Params: c = Any type which implicitly converts to `dchar`. In the case
     where it's a built-in type, or an enum of a built-in type,
-    $(D Unqual!(OriginalType!C)) is returned, whereas if it's a user-defined
-    type, $(D dchar) is returned.
+    `Unqual!(OriginalType!C)` is returned, whereas if it's a user-defined
+    type, `dchar` is returned.
 
-    Returns: The corresponding uppercase letter, if $(D c) is a lowercase ASCII
-    character, otherwise $(D c) itself.
+    Returns: The corresponding uppercase letter, if `c` is a lowercase ASCII
+    character, otherwise `c` itself.
   +/
 auto toUpper(C)(C c)
 if (is(C : dchar))
@@ -650,6 +652,7 @@ if (is(C : dchar))
 
 @safe pure nothrow unittest
 {
+    import std.meta;
     static foreach (C; AliasSeq!(char, wchar, dchar, immutable char, ubyte))
     {
         foreach (i, c; lowercase)
@@ -675,6 +678,9 @@ if (is(C : dchar))
 
 @safe unittest //Test both toUpper and toLower with non-builtin
 {
+    import std.meta;
+    import std.traits;
+
     //User Defined [Char|Wchar|Dchar]
     static struct UDC {  char c; alias c this; }
     static struct UDW { wchar c; alias c this; }

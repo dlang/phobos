@@ -662,7 +662,7 @@ private struct RBRange(N)
     }
 
     /**
-     * Returns $(D true) if the range is _empty
+     * Returns `true` if the range is _empty
      */
     @property bool empty() const
     {
@@ -706,7 +706,7 @@ private struct RBRange(N)
     }
 
     /**
-     * Trivial _save implementation, needed for $(D isForwardRange).
+     * Trivial _save implementation, needed for `isForwardRange`.
      */
     @property RBRange save()
     {
@@ -723,15 +723,15 @@ private struct RBRange(N)
  *
  * To use a different comparison than $(D "a < b"), pass a different operator string
  * that can be used by $(REF binaryFun, std,functional), or pass in a
- * function, delegate, functor, or any type where $(D less(a, b)) results in a $(D bool)
+ * function, delegate, functor, or any type where $(D less(a, b)) results in a `bool`
  * value.
  *
  * Note that less should produce a strict ordering.  That is, for two unequal
- * elements $(D a) and $(D b), $(D less(a, b) == !less(b, a)). $(D less(a, a)) should
- * always equal $(D false).
+ * elements `a` and `b`, $(D less(a, b) == !less(b, a)). $(D less(a, a)) should
+ * always equal `false`.
  *
- * If $(D allowDuplicates) is set to $(D true), then inserting the same element more than
- * once continues to add more elements.  If it is $(D false), duplicate elements are
+ * If `allowDuplicates` is set to `true`, then inserting the same element more than
+ * once continues to add more elements.  If it is `false`, duplicate elements are
  * ignored on insertion.  If duplicates are allowed, then new elements are
  * inserted after all existing duplicate elements.
  */
@@ -804,7 +804,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
     }
 
     /**
-     * The range types for $(D RedBlackTree)
+     * The range types for `RedBlackTree`
      */
     alias Range = RBRange!(RBNode*);
     alias ConstRange = RBRange!(const(RBNode)*); /// Ditto
@@ -956,7 +956,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
 
 
     /**
-     * Check if any elements exist in the container.  Returns $(D false) if at least
+     * Check if any elements exist in the container.  Returns `false` if at least
      * one element exists.
      */
     @property bool empty()
@@ -1041,7 +1041,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
     }
 
     /++
-        $(D in) operator. Check to see if the given element exists in the
+        `in` operator. Check to see if the given element exists in the
         container.
 
        Complexity: $(BIGOH log(n))
@@ -1075,7 +1075,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
 
         auto thisRange = this[];
         auto thatRange = that[];
-        return equal!(function(Elem a, Elem b) => !_less(a,b) && !_less(b,a))
+        return equal!((Elem a, Elem b) => !_less(a,b) && !_less(b,a))
                      (thisRange, thatRange);
     }
 
@@ -1322,7 +1322,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
     }
 
     /++
-        Removes the given $(D Take!Range) from the container
+        Removes the given `Take!Range` from the container
 
         Returns: A range containing all of the elements that were after the
                  given range.
@@ -1377,7 +1377,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
     /++
        Removes elements from the container that are equal to the given values
        according to the less comparator. One element is removed for each value
-       given which is in the container. If $(D allowDuplicates) is true,
+       given which is in the container. If `allowDuplicates` is true,
        duplicates are removed only if duplicate values are given.
 
        Returns: The number of elements removed.
@@ -1819,7 +1819,7 @@ import std.range.primitives : isInputRange, ElementType;
 import std.traits : isArray, isSomeString;
 
 /++
-    Convenience function for creating a $(D RedBlackTree!E) from a list of
+    Convenience function for creating a `RedBlackTree!E` from a list of
     values.
 
     Params:
@@ -2063,4 +2063,14 @@ if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init
     t3.insert([1, 2, 3].map!(x => immutable S(new int(x))));
     static assert(!__traits(compiles, *t3.front.p = 4));
     assert(*t3.front.p == 1);
+}
+
+// make sure the comparator can be a delegate
+@safe pure unittest
+{
+    import std.algorithm.comparison : equal;
+
+    auto t = new RedBlackTree!(int, delegate(a, b) => a > b);
+    t.insert([1, 3, 5, 4, 2]);
+    assert(t[].equal([5, 4, 3, 2, 1]));
 }

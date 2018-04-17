@@ -21,13 +21,13 @@ version(unittest)
 
     package string[] rndstuff(T : string)()
     {
-        import std.random : Random, unpredictableSeed, uniform;
+        import std.random : Random = Xorshift, uniform;
 
         static Random rnd;
         static bool first = true;
         if (first)
         {
-            rnd = Random(unpredictableSeed);
+            rnd.seed(234_567_891);
             first = false;
         }
         string[] result =
@@ -46,13 +46,13 @@ version(unittest)
 
     package int[] rndstuff(T : int)()
     {
-        import std.random : Random, unpredictableSeed, uniform;
+        import std.random : Random = Xorshift, uniform;
 
         static Random rnd;
         static bool first = true;
         if (first)
         {
-            rnd = Random(unpredictableSeed);
+            rnd = Random(345_678_912);
             first = false;
         }
         int[] result = new int[uniform(minArraySize, maxArraySize, rnd)];

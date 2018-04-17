@@ -7,7 +7,6 @@ module std.experimental.allocator.building_blocks.allocator_list;
 import std.experimental.allocator.building_blocks.null_allocator;
 import std.experimental.allocator.common;
 import std.experimental.allocator.gc_allocator;
-version(unittest) import std.stdio;
 
 // Turn this on for debugging
 // debug = allocator_list;
@@ -24,7 +23,7 @@ An embedded list builds a most-recently-used strategy: the most recent
 allocators used in calls to either `allocate`, `owns` (successful calls
 only), or `deallocate` are tried for new allocations in order of their most
 recent use. Thus, although core operations take in theory $(BIGOH k) time for
-$(D k) allocators in current use, in many workloads the factor is sublinear.
+`k` allocators in current use, in many workloads the factor is sublinear.
 Details of the actual strategy may change in future releases.
 
 `AllocatorList` is primarily intended for coarse-grained handling of
@@ -48,18 +47,18 @@ needs state, a `Factory` object should be used.
 
 BookkeepingAllocator = Allocator used for storing bookkeeping data. The size of
 bookkeeping data is proportional to the number of allocators. If $(D
-BookkeepingAllocator) is $(D NullAllocator), then $(D AllocatorList) is
+BookkeepingAllocator) is `NullAllocator`, then `AllocatorList` is
 "ouroboros-style", i.e. it keeps the bookkeeping data in memory obtained from
 the allocators themselves. Note that for ouroboros-style management, the size
-$(D n) passed to $(D make) will be occasionally different from the size
+`n` passed to `make` will be occasionally different from the size
 requested by client code.
 
 Factory = Type of a factory object that returns new allocators on a need
-basis. For an object $(D sweatshop) of type $(D Factory), `sweatshop(n)` should
+basis. For an object `sweatshop` of type `Factory`, `sweatshop(n)` should
 return an allocator able to allocate at least `n` bytes (i.e. `Factory` must
 define `opCall(size_t)` to return an allocator object). Usually the capacity of
-allocators created should be much larger than $(D n) such that an allocator can
-be used for many subsequent allocations. $(D n) is passed only to ensure the
+allocators created should be much larger than `n` such that an allocator can
+be used for many subsequent allocations. `n` is passed only to ensure the
 minimum necessary for the next allocation. The factory object is allowed to hold
 state, which will be stored inside `AllocatorList` as a direct `public` member
 called `factory`.
@@ -100,7 +99,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
     }
 
     /**
-    If $(D BookkeepingAllocator) is not $(D NullAllocator), $(D bkalloc) is
+    If `BookkeepingAllocator` is not `NullAllocator`, `bkalloc` is
     defined and accessible.
     */
 
@@ -158,11 +157,11 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
     enum uint alignment = Allocator.alignment;
 
     /**
-    Allocate a block of size $(D s). First tries to allocate from the existing
+    Allocate a block of size `s`. First tries to allocate from the existing
     list of already-created allocators. If neither can satisfy the request,
-    creates a new allocator by calling $(D make(s)) and delegates the request
+    creates a new allocator by calling `make(s)` and delegates the request
     to it. However, if the allocation fresh off a newly created allocator
-    fails, subsequent calls to $(D allocate) will not cause more calls to $(D
+    fails, subsequent calls to `allocate` will not cause more calls to $(D
     make).
     */
     void[] allocate(size_t s)
@@ -376,8 +375,8 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
     }
 
     /**
-    Defined only if $(D Allocator.expand) is defined. Finds the owner of $(D b)
-    and calls $(D expand) for it. The owner is not brought to the head of the
+    Defined only if `Allocator.expand` is defined. Finds the owner of `b`
+    and calls `expand` for it. The owner is not brought to the head of the
     list.
     */
     static if (hasMember!(Allocator, "expand")
@@ -393,9 +392,9 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
     }
 
     /**
-    Defined only if $(D Allocator.reallocate) is defined. Finds the owner of
-    $(D b) and calls $(D reallocate) for it. If that fails, calls the global
-    $(D reallocate), which allocates a new block and moves memory.
+    Defined only if `Allocator.reallocate` is defined. Finds the owner of
+    `b` and calls `reallocate` for it. If that fails, calls the global
+    `reallocate`, which allocates a new block and moves memory.
     */
     static if (hasMember!(Allocator, "reallocate"))
     bool reallocate(ref void[] b, size_t s)
@@ -415,7 +414,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
     }
 
     /**
-     Defined if $(D Allocator.deallocate) and $(D Allocator.owns) are defined.
+     Defined if `Allocator.deallocate` and `Allocator.owns` are defined.
     */
     static if (hasMember!(Allocator, "deallocate")
         && hasMember!(Allocator, "owns"))
@@ -457,7 +456,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
     }
 
     /**
-    Defined only if $(D Allocator.owns) and $(D Allocator.deallocateAll) are
+    Defined only if `Allocator.owns` and `Allocator.deallocateAll` are
     defined.
     */
     static if (ouroboros && hasMember!(Allocator, "deallocateAll")

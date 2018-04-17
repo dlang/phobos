@@ -1,14 +1,18 @@
 // Written in the D programming language.
 
 /**
- * Templates to manipulate template argument lists (also known as type lists).
+ * Templates to manipulate
+ * $(DDSUBLINK spec/template, variadic-templates, template parameter sequences)
+ * (also known as $(I alias sequences)).
  *
- * Some operations on alias sequences are built in to the language,
- * such as TL[$(I n)] which gets the $(I n)th type from the
- * alias sequence. TL[$(I lwr) .. $(I upr)] returns a new type
- * list that is a slice of the old one.
+ * Some operations on alias sequences are built into the language,
+ * such as `S[i]`, which accesses the element at index `i` in the
+ * sequence. `S[low .. high]` returns a new alias
+ * sequence that is a slice of the old one.
  *
- * Several templates in this module use or operate on eponymous templates that
+ * For more information, see $(DDLINK ctarguments, Compile-time Sequences, Compile-time Sequences).
+ *
+ * $(B Note:) Several templates in this module use or operate on eponymous templates that
  * take a single argument and evaluate to a boolean constant. Such templates
  * are referred to as $(I template predicates).
  *
@@ -179,15 +183,15 @@ template AliasSeq(TList...)
  *
  * Not everything can be directly aliased. An alias cannot be declared
  * of - for example - a literal:
- *
- * `alias a = 4; //Error`
- *
+ * ---
+ * alias a = 4; //Error
+ * ---
  * With this template any single entity can be aliased:
- *
- * `alias b = Alias!4; //OK`
- *
+ * ---
+ * alias b = Alias!4; //OK
+ * ---
  * See_Also:
- * To alias more than one thing at once, use $(LREF AliasSeq)
+ * To alias more than one thing at once, use $(LREF AliasSeq).
  */
 alias Alias(alias a) = a;
 
@@ -758,7 +762,7 @@ template MostDerived(T, TList...)
 }
 
 /**
- * Returns the `AliasSeq` TList with the types sorted so that the most
+ * Returns an `AliasSeq` with the elements of TList sorted so that the most
  * derived types come first.
  */
 template DerivedToFront(TList...)
@@ -901,8 +905,8 @@ template anySatisfy(alias F, T...)
 
 
 /**
- * Filters an $(D AliasSeq) using a template predicate. Returns a
- * $(D AliasSeq) of the elements which satisfy the predicate.
+ * Filters an `AliasSeq` using a template predicate. Returns an
+ * `AliasSeq` of the elements which satisfy the predicate.
  */
 template Filter(alias pred, TList...)
 {
@@ -1033,7 +1037,7 @@ template templateAnd(Preds...)
     static assert(storesNegativeNumbers!int);
     static assert(!storesNegativeNumbers!string && !storesNegativeNumbers!uint);
 
-    // An empty list of predicates always yields true.
+    // An empty sequence of predicates always yields true.
     alias alwaysTrue = templateAnd!();
     static assert(alwaysTrue!int);
 }
@@ -1091,7 +1095,7 @@ template templateOr(Preds...)
     static assert( isPtrOrUnsigned!uint &&  isPtrOrUnsigned!(short*));
     static assert(!isPtrOrUnsigned!int  && !isPtrOrUnsigned!(string));
 
-    // An empty list of predicates never yields true.
+    // An empty sequence of predicates never yields true.
     alias alwaysFalse = templateOr!();
     static assert(!alwaysFalse!int);
 }
@@ -1117,7 +1121,8 @@ template templateOr(Preds...)
 }
 
 /**
- * Converts an input range $(D range) to an alias sequence.
+ * Converts an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+ * `range` to an alias sequence.
  */
 template aliasSeqOf(alias range)
 {
@@ -1333,7 +1338,7 @@ private template SmartAlias(T...)
 }
 
 /**
- * Creates an `AliasSeq` which repeats a type or an `AliasSeq` exactly `n` times.
+ * Creates an `AliasSeq` which repeats `TList` exactly `n` times.
  */
 template Repeat(size_t n, TList...)
 {
@@ -1400,11 +1405,11 @@ template Repeat(size_t n, TList...)
 }
 
 /**
- * Sorts a $(LREF AliasSeq) using $(D cmp).
+ * Sorts an $(LREF AliasSeq) using `cmp`.
  *
  * Parameters:
- *     cmp = A template that returns a $(D bool) (if its first argument is less than the second one)
- *         or an $(D int) (-1 means less than, 0 means equal, 1 means greater than)
+ *     cmp = A template that returns a `bool` (if its first argument is less than the second one)
+ *         or an `int` (-1 means less than, 0 means equal, 1 means greater than)
  *
  *     Seq = The  $(LREF AliasSeq) to sort
  *
@@ -1481,11 +1486,11 @@ if (Seq.length == 2)
 }
 
 /**
- * Checks if an $(LREF AliasSeq) is sorted according to $(D cmp).
+ * Checks if an $(LREF AliasSeq) is sorted according to `cmp`.
  *
  * Parameters:
- *     cmp = A template that returns a $(D bool) (if its first argument is less than the second one)
- *         or an $(D int) (-1 means less than, 0 means equal, 1 means greater than)
+ *     cmp = A template that returns a `bool` (if its first argument is less than the second one)
+ *         or an `int` (-1 means less than, 0 means equal, 1 means greater than)
  *
  *     Seq = The  $(LREF AliasSeq) to check
  *
@@ -1524,14 +1529,14 @@ template staticIsSorted(alias cmp, Seq...)
 }
 
 /**
-Selects a subset of the argument list by stepping with fixed `stepSize` over the list.
-A negative `stepSize` starts iteration with the last list element.
+Selects a subset of `Args` by stepping with fixed `stepSize` over the sequence.
+A negative `stepSize` starts iteration with the last element.
 
 Params:
     stepSize = Number of elements to increment on each iteration. Can't be `0`.
-    Args = Template arguments
+    Args = Template arguments.
 
-Returns: A template argument list filtered by the selected stride.
+Returns: An `AliasSeq` filtered by the selected stride.
 */
 template Stride(int stepSize, Args...)
 if (stepSize != 0)
@@ -1578,7 +1583,7 @@ if (stepSize != 0)
 }
 
 /**
- * Instantiates the given template with the given list of parameters.
+ * Instantiates the given template with the given parameters.
  *
  * Used to work around syntactic limitations of D with regard to instantiating
  * a template from an alias sequence (e.g. `T[0]!(...)` is not valid) or a

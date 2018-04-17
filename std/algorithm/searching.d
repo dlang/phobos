@@ -116,7 +116,7 @@ template all(alias pred = "a")
 {
     /++
     Returns `true` if and only if $(I _all) values `v` found in the
-    input _range `range` satisfy the predicate `pred`.
+    input range `range` satisfy the predicate `pred`.
     Performs (at most) $(BIGOH range.length) evaluations of `pred`.
      +/
     bool all(Range)(Range range)
@@ -163,7 +163,7 @@ template any(alias pred = "a")
 {
     /++
     Returns `true` if and only if $(I _any) value `v` found in the
-    input _range `range` satisfies the predicate `pred`.
+    input range `range` satisfies the predicate `pred`.
     Performs (at most) $(BIGOH range.length) evaluations of `pred`.
      +/
     bool any(Range)(Range range)
@@ -294,7 +294,7 @@ private:
     ptrdiff_t[ElementType!(Range)] occ;         // GC allocated
     Range needle;
 
-    ptrdiff_t occurrence(ElementType!(Range) c)
+    ptrdiff_t occurrence(ElementType!(Range) c) scope
     {
         auto p = c in occ;
         return p ? *p : -1;
@@ -357,7 +357,7 @@ public:
     }
 
     ///
-    Range beFound(Range haystack)
+    Range beFound(Range haystack) scope
     {
         import std.algorithm.comparison : max;
 
@@ -1268,6 +1268,16 @@ if (isInputRange!R &&
     }}
 }
 
+// Rebindable doesn't work with structs
+// see: https://github.com/dlang/phobos/pull/6136
+private template RebindableOrUnqual(T)
+{
+    static if (is(T == class) || is(T == interface) || isDynamicArray!T || isAssociativeArray!T)
+        alias RebindableOrUnqual = Rebindable!T;
+    else
+        alias RebindableOrUnqual = Unqual!T;
+}
+
 /**
 Iterates the passed range and selects the extreme element with `less`.
 If the extreme element occurs multiple time, the first occurrence will be
@@ -1292,7 +1302,7 @@ in
 do
 {
     alias Element = ElementType!Range;
-    Unqual!Element seed = r.front;
+    RebindableOrUnqual!Element seed = r.front;
     r.popFront();
     return extremum!(map, selector)(r, seed);
 }
@@ -1309,86 +1319,87 @@ if (isInputRange!Range && !isInfinite!Range &&
 
     alias Element = ElementType!Range;
     alias CommonElement = CommonType!(Element, RangeElementType);
-    Unqual!CommonElement extremeElement = seedElement;
+    RebindableOrUnqual!CommonElement extremeElement = seedElement;
 
-    alias MapType = Unqual!(typeof(mapFun(CommonElement.init)));
-    MapType extremeElementMapped = mapFun(extremeElement);
 
-    // direct access via a random access range is faster
-    static if (isRandomAccessRange!Range)
+    // if we only have one statement in the loop, it can be optimized a lot better
+    static if (__traits(isSame, map, a => a))
     {
-        foreach (const i; 0 .. r.length)
+
+        // direct access via a random access range is faster
+        static if (isRandomAccessRange!Range)
         {
-            MapType mapElement = mapFun(r[i]);
-            if (selectorFun(mapElement, extremeElementMapped))
+            foreach (const i; 0 .. r.length)
             {
-                extremeElement = r[i];
-                extremeElementMapped = mapElement;
+                if (selectorFun(r[i], extremeElement))
+                {
+                    extremeElement = r[i];
+                }
+            }
+        }
+        else
+        {
+            while (!r.empty)
+            {
+                if (selectorFun(r.front, extremeElement))
+                {
+                    extremeElement = r.front;
+                }
+                r.popFront();
             }
         }
     }
     else
     {
-        while (!r.empty)
+        alias MapType = Unqual!(typeof(mapFun(CommonElement.init)));
+        MapType extremeElementMapped = mapFun(extremeElement);
+
+        // direct access via a random access range is faster
+        static if (isRandomAccessRange!Range)
         {
-            MapType mapElement = mapFun(r.front);
-            if (selectorFun(mapElement, extremeElementMapped))
+            foreach (const i; 0 .. r.length)
             {
-                extremeElement = r.front;
-                extremeElementMapped = mapElement;
+                MapType mapElement = mapFun(r[i]);
+                if (selectorFun(mapElement, extremeElementMapped))
+                {
+                    extremeElement = r[i];
+                    extremeElementMapped = mapElement;
+                }
             }
-            r.popFront();
+        }
+        else
+        {
+            while (!r.empty)
+            {
+                MapType mapElement = mapFun(r.front);
+                if (selectorFun(mapElement, extremeElementMapped))
+                {
+                    extremeElement = r.front;
+                    extremeElementMapped = mapElement;
+                }
+                r.popFront();
+            }
         }
     }
     return extremeElement;
 }
 
 private auto extremum(alias selector = "a < b", Range)(Range r)
-    if (isInputRange!Range && !isInfinite!Range &&
-        !is(typeof(unaryFun!selector(ElementType!(Range).init))))
+if (isInputRange!Range && !isInfinite!Range &&
+    !is(typeof(unaryFun!selector(ElementType!(Range).init))))
 {
-    alias Element = ElementType!Range;
-    Unqual!Element seed = r.front;
-    r.popFront();
-    return extremum!selector(r, seed);
+    return extremum!(a => a, selector)(r);
 }
 
 // if we only have one statement in the loop it can be optimized a lot better
 private auto extremum(alias selector = "a < b", Range,
                       RangeElementType = ElementType!Range)
                      (Range r, RangeElementType seedElement)
-    if (isInputRange!Range && !isInfinite!Range &&
-        !is(CommonType!(ElementType!Range, RangeElementType) == void) &&
-        !is(typeof(unaryFun!selector(ElementType!(Range).init))))
+if (isInputRange!Range && !isInfinite!Range &&
+    !is(CommonType!(ElementType!Range, RangeElementType) == void) &&
+    !is(typeof(unaryFun!selector(ElementType!(Range).init))))
 {
-    alias Element = ElementType!Range;
-    alias CommonElement = CommonType!(Element, RangeElementType);
-    Unqual!CommonElement extremeElement = seedElement;
-    alias selectorFun = binaryFun!selector;
-
-    // direct access via a random access range is faster
-    static if (isRandomAccessRange!Range)
-    {
-        foreach (const i; 0 .. r.length)
-        {
-            if (selectorFun(r[i], extremeElement))
-            {
-                extremeElement = r[i];
-            }
-        }
-    }
-    else
-    {
-        while (!r.empty)
-        {
-            if (selectorFun(r.front, extremeElement))
-            {
-                extremeElement = r.front;
-            }
-            r.popFront();
-        }
-    }
-    return extremeElement;
+    return extremum!(a => a, selector)(r, seedElement);
 }
 
 @safe pure unittest
@@ -1464,6 +1475,26 @@ private auto extremum(alias selector = "a < b", Range,
 
     static immutable arr2d = [[1, 9], [3, 1], [4, 2]];
     assert(arr2d.extremum!"a[1]" == arr2d[1]);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=17982
+@safe unittest
+{
+    class B
+    {
+        int val;
+        this(int val){ this.val = val; }
+    }
+
+    const(B) doStuff(const(B)[] v)
+    {
+        return v.extremum!"a.val";
+    }
+    assert(doStuff([new B(1), new B(0), new B(2)]).val == 0);
+
+    const(B)[] arr = [new B(0), new B(1)];
+    // can't compare directly - https://issues.dlang.org/show_bug.cgi?id=1824
+    assert(arr.extremum!"a.val".val == 0);
 }
 
 // find
@@ -2084,8 +2115,7 @@ if (isForwardRange!R1 && isForwardRange!R2
 
 @safe unittest
 {
-    import std.range;
-    import std.stdio;
+    import std.range : assumeSorted;
 
     auto r1 = assumeSorted([1, 2, 3, 3, 3, 4, 5, 6, 7, 8, 8, 8, 10]);
     auto r2 = assumeSorted([3, 3, 4, 5, 6, 7, 8, 8]);
@@ -3371,35 +3401,19 @@ See_Also:
     $(LREF maxElement), $(REF min, std,algorithm,comparison), $(LREF minCount),
     $(LREF minIndex), $(LREF minPos)
 */
-auto minElement(alias map, Range)(Range r)
+auto minElement(alias map = (a => a), Range)(Range r)
 if (isInputRange!Range && !isInfinite!Range)
 {
     return extremum!map(r);
 }
 
 /// ditto
-auto minElement(Range)(Range r)
-    if (isInputRange!Range && !isInfinite!Range)
-{
-    return extremum(r);
-}
-
-/// ditto
-auto minElement(alias map, Range, RangeElementType = ElementType!Range)
+auto minElement(alias map = (a => a), Range, RangeElementType = ElementType!Range)
                (Range r, RangeElementType seed)
 if (isInputRange!Range && !isInfinite!Range &&
     !is(CommonType!(ElementType!Range, RangeElementType) == void))
 {
     return extremum!map(r, seed);
-}
-
-/// ditto
-auto minElement(Range, RangeElementType = ElementType!Range)
-               (Range r, RangeElementType seed)
-    if (isInputRange!Range && !isInfinite!Range &&
-        !is(CommonType!(ElementType!Range, RangeElementType) == void))
-{
-    return extremum(r, seed);
 }
 
 ///
@@ -3450,6 +3464,7 @@ auto minElement(Range, RangeElementType = ElementType!Range)
         DummyType d;
         assert(d.minElement == 1);
         assert(d.minElement!(a => a) == 1);
+        assert(d.minElement!(a => -a) == 10);
     }
 
     // with empty, but seeded ranges
@@ -3465,6 +3480,38 @@ auto minElement(Range, RangeElementType = ElementType!Range)
 
     static immutable arr2d = [[1, 9], [3, 1], [4, 2]];
     assert(arr2d.minElement!"a[1]" == arr2d[1]);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=17982
+@safe unittest
+{
+    struct A
+    {
+      int val;
+    }
+
+    const(A)[] v = [A(0)];
+    assert(v.minElement!"a.val" == A(0));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=17982
+@safe unittest
+{
+    class B
+    {
+        int val;
+        this(int val){ this.val = val; }
+    }
+
+    const(B) doStuff(const(B)[] v)
+    {
+        return v.minElement!"a.val";
+    }
+    assert(doStuff([new B(1), new B(0), new B(2)]).val == 0);
+
+    const(B)[] arr = [new B(0), new B(1)];
+    // can't compare directly - https://issues.dlang.org/show_bug.cgi?id=1824
+    assert(arr.minElement!"a.val".val == 0);
 }
 
 /**
@@ -3488,35 +3535,19 @@ See_Also:
     $(LREF minElement), $(REF max, std,algorithm,comparison), $(LREF maxCount),
     $(LREF maxIndex), $(LREF maxPos)
 */
-auto maxElement(alias map, Range)(Range r)
+auto maxElement(alias map = (a => a), Range)(Range r)
 if (isInputRange!Range && !isInfinite!Range)
 {
     return extremum!(map, "a > b")(r);
 }
 
 /// ditto
-auto maxElement(Range)(Range r)
-if (isInputRange!Range && !isInfinite!Range)
-{
-    return extremum!`a > b`(r);
-}
-
-/// ditto
-auto maxElement(alias map, Range, RangeElementType = ElementType!Range)
+auto maxElement(alias map = (a => a), Range, RangeElementType = ElementType!Range)
                (Range r, RangeElementType seed)
 if (isInputRange!Range && !isInfinite!Range &&
     !is(CommonType!(ElementType!Range, RangeElementType) == void))
 {
     return extremum!(map, "a > b")(r, seed);
-}
-
-/// ditto
-auto maxElement(Range, RangeElementType = ElementType!Range)
-               (Range r, RangeElementType seed)
-if (isInputRange!Range && !isInfinite!Range &&
-    !is(CommonType!(ElementType!Range, RangeElementType) == void))
-{
-    return extremum!`a > b`(r, seed);
 }
 
 ///
@@ -3568,6 +3599,7 @@ if (isInputRange!Range && !isInfinite!Range &&
         DummyType d;
         assert(d.maxElement == 10);
         assert(d.maxElement!(a => a) == 10);
+        assert(d.maxElement!(a => -a) == 1);
     }
 
     // with empty, but seeded ranges
@@ -3584,6 +3616,26 @@ if (isInputRange!Range && !isInfinite!Range &&
 
     static immutable arr2d = [[1, 3], [3, 9], [4, 2]];
     assert(arr2d.maxElement!"a[1]" == arr2d[1]);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=17982
+@safe unittest
+{
+    class B
+    {
+        int val;
+        this(int val){ this.val = val; }
+    }
+
+    const(B) doStuff(const(B)[] v)
+    {
+        return v.maxElement!"a.val";
+    }
+    assert(doStuff([new B(1), new B(0), new B(2)]).val == 2);
+
+    const(B)[] arr = [new B(0), new B(1)];
+    // can't compare directly - https://issues.dlang.org/show_bug.cgi?id=1824
+    assert(arr.maxElement!"a.val".val == 1);
 }
 
 // minPos
@@ -4473,7 +4525,7 @@ This is similar to `takeWhile` in other languages.
 
 Params:
     pred = Predicate to determine when to stop.
-    range = The $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
+    range = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
     to iterate over.
     sentinel = The element to stop at.
     openRight = Determines whether the element for which the given predicate is
@@ -4481,10 +4533,10 @@ Params:
         not (`Yes.openRight`).
 
 Returns:
-    An $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives) that
+    An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) that
     iterates over the original range's elements, but ends when the specified
     predicate becomes true. If the original range is a
-    $(REF_ALTTEXT forward _range, isForwardRange, std,_range,primitives) or
+    $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) or
     higher, this range will be a forward range.
  */
 Until!(pred, Range, Sentinel)

@@ -12,45 +12,44 @@ import std.experimental.allocator.common;
  */
 struct Mallocator
 {
-    version(unittest)
     @system unittest { testAllocator!(() => Mallocator.instance); }
 
     /**
-    The alignment is a static constant equal to $(D platformAlignment), which
+    The alignment is a static constant equal to `platformAlignment`, which
     ensures proper alignment for any D data type.
     */
     enum uint alignment = platformAlignment;
 
     /**
     Standard allocator methods per the semantics defined above. The
-    $(D deallocate) and $(D reallocate) methods are $(D @system) because they
+    `deallocate` and `reallocate` methods are `@system` because they
     may move memory around, leaving dangling pointers in user code. Somewhat
-    paradoxically, $(D malloc) is $(D @safe) but that's only useful to safe
+    paradoxically, `malloc` is `@safe` but that's only useful to safe
     programs that can afford to leak memory allocated.
     */
-    @trusted @nogc nothrow
+    @trusted @nogc nothrow pure
     void[] allocate(size_t bytes) shared
     {
-        import core.stdc.stdlib : malloc;
+        import core.memory : pureMalloc;
         if (!bytes) return null;
-        auto p = malloc(bytes);
+        auto p = pureMalloc(bytes);
         return p ? p[0 .. bytes] : null;
     }
 
     /// Ditto
-    @system @nogc nothrow
+    @system @nogc nothrow pure
     bool deallocate(void[] b) shared
     {
-        import core.stdc.stdlib : free;
-        free(b.ptr);
+        import core.memory : pureFree;
+        pureFree(b.ptr);
         return true;
     }
 
     /// Ditto
-    @system @nogc nothrow
+    @system @nogc nothrow pure
     bool reallocate(ref void[] b, size_t s) shared
     {
-        import core.stdc.stdlib : realloc;
+        import core.memory : pureRealloc;
         if (!s)
         {
             // fuzzy area in the C standard, see http://goo.gl/ZpWeSE
@@ -59,31 +58,40 @@ struct Mallocator
             b = null;
             return true;
         }
-        auto p = cast(ubyte*) realloc(b.ptr, s);
+        auto p = cast(ubyte*) pureRealloc(b.ptr, s);
         if (!p) return false;
         b = p[0 .. s];
         return true;
     }
 
+    @trusted @nogc nothrow pure
+    package void[] allocateZeroed(size_t bytes) shared
+    {
+        import core.memory : pureCalloc;
+        if (!bytes) return null;
+        auto p = pureCalloc(1, bytes);
+        return p ? p[0 .. bytes] : null;
+    }
+
     /**
     Returns the global instance of this allocator type. The C heap allocator is
     thread-safe, therefore all of its methods and `it` itself are
-    $(D shared).
+    `shared`.
     */
     static shared Mallocator instance;
 }
 
 ///
-@nogc @system nothrow unittest
+@nogc @system nothrow pure unittest
 {
     auto buffer = Mallocator.instance.allocate(1024 * 1024 * 4);
     scope(exit) Mallocator.instance.deallocate(buffer);
     //...
 }
 
-@nogc @system nothrow unittest
+@nogc @system nothrow pure unittest
 {
-    @nogc nothrow
+    @nogc nothrow pure
     static void test(A)()
     {
         int* p = null;
@@ -95,7 +103,7 @@ struct Mallocator
     test!Mallocator();
 }
 
-@nogc @system nothrow unittest
+@nogc @system nothrow pure unittest
 {
     static void test(A)()
     {
@@ -205,7 +213,7 @@ struct AlignedMallocator
     @system unittest { testAllocator!(() => typeof(this).instance); }
 
     /**
-    The default alignment is $(D platformAlignment).
+    The default alignment is `platformAlignment`.
     */
     enum uint alignment = platformAlignment;
 
@@ -221,9 +229,9 @@ struct AlignedMallocator
 
     /**
     Uses $(HTTP man7.org/linux/man-pages/man3/posix_memalign.3.html,
-    $(D posix_memalign)) on Posix and
+    `posix_memalign`) on Posix and
     $(HTTP msdn.microsoft.com/en-us/library/8z34s9c6(v=vs.80).aspx,
-    $(D __aligned_malloc)) on Windows.
+    `__aligned_malloc`) on Windows.
     */
     version(Posix)
     @trusted @nogc nothrow
@@ -234,6 +242,15 @@ struct AlignedMallocator
         assert(a.isGoodDynamicAlignment);
         void* result;
         auto code = posix_memalign(&result, a, bytes);
+
+version(OSX)
+version(LDC_AddressSanitizer)
+{
+        // The return value with AddressSanitizer may be -1 instead of ENOMEM
+        // or EINVAL. See https://bugs.llvm.org/show_bug.cgi?id=36510
+        if (code == -1)
+            return null;
+}
         if (code == ENOMEM)
             return null;
 
@@ -258,9 +275,9 @@ struct AlignedMallocator
     else static assert(0);
 
     /**
-    Calls $(D free(b.ptr)) on Posix and
+    Calls `free(b.ptr)` on Posix and
     $(HTTP msdn.microsoft.com/en-US/library/17b5h8td(v=vs.80).aspx,
-    $(D __aligned_free(b.ptr))) on Windows.
+    `__aligned_free(b.ptr)`) on Windows.
     */
     version (Posix)
     @system @nogc nothrow
@@ -340,7 +357,7 @@ struct AlignedMallocator
     /**
     Returns the global instance of this allocator type. The C heap allocator is
     thread-safe, therefore all of its methods and `instance` itself are
-    $(D shared).
+    `shared`.
     */
     static shared AlignedMallocator instance;
 }
@@ -353,10 +370,6 @@ struct AlignedMallocator
     scope(exit) AlignedMallocator.instance.deallocate(buffer);
     //...
 }
-
-version(unittest) version(CRuntime_DigitalMars)
-@nogc nothrow
-size_t addr(ref void* ptr) { return cast(size_t) ptr; }
 
 version(Posix)
 @nogc @system nothrow unittest
@@ -390,24 +403,26 @@ version(CRuntime_DigitalMars)
 {
     void* m;
 
+    size_t m_addr() { return cast(size_t) m; }
+
     m = _aligned_malloc(16, 0x10);
     if (m)
     {
-        assert((m.addr & 0xF) == 0);
+        assert((m_addr & 0xF) == 0);
         _aligned_free(m);
     }
 
     m = _aligned_malloc(16, 0x100);
     if (m)
     {
-        assert((m.addr & 0xFF) == 0);
+        assert((m_addr & 0xFF) == 0);
         _aligned_free(m);
     }
 
     m = _aligned_malloc(16, 0x1000);
     if (m)
     {
-        assert((m.addr & 0xFFF) == 0);
+        assert((m_addr & 0xFFF) == 0);
         _aligned_free(m);
     }
 
@@ -416,7 +431,7 @@ version(CRuntime_DigitalMars)
     {
         assert((cast(size_t) m & 0xF) == 0);
         m = _aligned_realloc(m, 32, 0x10000);
-        if (m) assert((m.addr & 0xFFFF) == 0);
+        if (m) assert((m_addr & 0xFFFF) == 0);
         _aligned_free(m);
     }
 

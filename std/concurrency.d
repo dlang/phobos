@@ -199,7 +199,7 @@ static ~this()
 // Exceptions
 
 /**
- * Thrown on calls to $(D receiveOnly) if a message other than the type
+ * Thrown on calls to `receiveOnly` if a message other than the type
  * the receiving thread expected is sent.
  */
 class MessageMismatch : Exception
@@ -212,7 +212,7 @@ class MessageMismatch : Exception
 }
 
 /**
- * Thrown on calls to $(D receive) if the thread that spawned the receiving
+ * Thrown on calls to `receive` if the thread that spawned the receiving
  * thread has terminated and no more messages exist.
  */
 class OwnerTerminated : Exception
@@ -264,7 +264,7 @@ class PriorityMessageException : Exception
 
 /**
  * Thrown on mailbox crowding if the mailbox is configured with
- * $(D OnCrowding.throwException).
+ * `OnCrowding.throwException`.
  */
 class MailboxFull : Exception
 {
@@ -279,7 +279,7 @@ class MailboxFull : Exception
 }
 
 /**
- * Thrown when a Tid is missing, e.g. when $(D ownerTid) doesn't
+ * Thrown when a Tid is missing, e.g. when `ownerTid` doesn't
  * find an owner thread.
  */
 class TidMissingException : Exception
@@ -355,7 +355,7 @@ public:
 /**
  * Return the Tid of the thread which spawned the caller's thread.
  *
- * Throws: A $(D TidMissingException) exception if
+ * Throws: A `TidMissingException` exception if
  * there is no owner thread.
  */
 @property Tid ownerTid()
@@ -412,10 +412,10 @@ private template isSpawnable(F, T...)
  * Starts fn(args) in a new logical thread.
  *
  * Executes the supplied function in a new logical thread represented by
- * $(D Tid).  The calling thread is designated as the owner of the new thread.
- * When the owner thread terminates an $(D OwnerTerminated) message will be
- * sent to the new thread, causing an $(D OwnerTerminated) exception to be
- * thrown on $(D receive()).
+ * `Tid`.  The calling thread is designated as the owner of the new thread.
+ * When the owner thread terminates an `OwnerTerminated` message will be
+ * sent to the new thread, causing an `OwnerTerminated` exception to be
+ * thrown on `receive()`.
  *
  * Params:
  *  fn   = The function to execute.
@@ -425,12 +425,13 @@ private template isSpawnable(F, T...)
  *  A Tid representing the new logical thread.
  *
  * Notes:
- *  $(D args) must not have unshared aliasing.  In other words, all arguments
- *  to $(D fn) must either be $(D shared) or $(D immutable) or have no
+ *  `args` must not have unshared aliasing.  In other words, all arguments
+ *  to `fn` must either be `shared` or `immutable` or have no
  *  pointer indirection.  This is necessary for enforcing isolation among
  *  threads.
  */
-Tid spawn(F, T...)(F fn, T args) if (isSpawnable!(F, T))
+Tid spawn(F, T...)(F fn, T args)
+if (isSpawnable!(F, T))
 {
     static assert(!hasLocalAliasing!(T), "Aliases to mutable thread-local data not allowed.");
     return _spawn(false, fn, args);
@@ -504,7 +505,8 @@ Tid spawn(F, T...)(F fn, T args) if (isSpawnable!(F, T))
  * Returns:
  *  A Tid representing the new thread.
  */
-Tid spawnLinked(F, T...)(F fn, T args) if (isSpawnable!(F, T))
+Tid spawnLinked(F, T...)(F fn, T args)
+if (isSpawnable!(F, T))
 {
     static assert(!hasLocalAliasing!(T), "Aliases to mutable thread-local data not allowed.");
     return _spawn(true, fn, args);
@@ -513,7 +515,8 @@ Tid spawnLinked(F, T...)(F fn, T args) if (isSpawnable!(F, T))
 /*
  *
  */
-private Tid _spawn(F, T...)(bool linked, F fn, T args) if (isSpawnable!(F, T))
+private Tid _spawn(F, T...)(bool linked, F fn, T args)
+if (isSpawnable!(F, T))
 {
     // TODO: MessageList and &exec should be shared.
     auto spawnTid = Tid(new MessageBox);
@@ -588,7 +591,7 @@ private Tid _spawn(F, T...)(bool linked, F fn, T args) if (isSpawnable!(F, T))
  * Places the values as a message at the back of tid's message queue.
  *
  * Sends the supplied value to the thread represented by tid.  As with
- * $(REF spawn, std,concurrency), $(D T) must not have unshared aliasing.
+ * $(REF spawn, std,concurrency), `T` must not have unshared aliasing.
  */
 void send(T...)(Tid tid, T vals)
 {
@@ -599,7 +602,7 @@ void send(T...)(Tid tid, T vals)
 /**
  * Places the values as a message on the front of tid's message queue.
  *
- * Send a message to $(D tid) but place it at the front of $(D tid)'s message
+ * Send a message to `tid` but place it at the front of `tid`'s message
  * queue instead of at the back.  This function is typically used for
  * out-of-band communication, to signal exceptional conditions, etc.
  */
@@ -635,9 +638,9 @@ private void _send(T...)(MsgType type, Tid tid, T vals)
  * a message against a set of delegates and executing the first match found.
  *
  * If a delegate that accepts a $(REF Variant, std,variant) is included as
- * the last argument to $(D receive), it will match any message that was not
+ * the last argument to `receive`, it will match any message that was not
  * matched by an earlier delegate.  If more than one argument is sent,
- * the $(D Variant) will contain a $(REF Tuple, std,typecons) of all values
+ * the `Variant` will contain a $(REF Tuple, std,typecons) of all values
  * sent.
  */
 void receive(T...)( T ops )
@@ -735,12 +738,12 @@ private template receiveOnlyRet(T...)
 }
 
 /**
- * Receives only messages with arguments of types $(D T).
+ * Receives only messages with arguments of types `T`.
  *
- * Throws:  $(D MessageMismatch) if a message of types other than $(D T)
+ * Throws:  `MessageMismatch` if a message of types other than `T`
  *          is received.
  *
- * Returns: The received message.  If $(D T.length) is greater than one,
+ * Returns: The received message.  If `T.length` is greater than one,
  *          the message will be packed into a $(REF Tuple, std,typecons).
  */
 receiveOnlyRet!(T) receiveOnly(T...)()
@@ -838,10 +841,10 @@ do
  * Tries to receive but will give up if no matches arrive within duration.
  * Won't wait at all if provided $(REF Duration, core,time) is negative.
  *
- * Same as $(D receive) except that rather than wait forever for a message,
+ * Same as `receive` except that rather than wait forever for a message,
  * it waits until either it receives a message or the given
- * $(REF Duration, core,time) has passed. It returns $(D true) if it received a
- * message and $(D false) if it timed out waiting for one.
+ * $(REF Duration, core,time) has passed. It returns `true` if it received a
+ * message and `false` if it timed out waiting for one.
  */
 bool receiveTimeout(T...)(Duration duration, T ops)
 in
@@ -2427,12 +2430,11 @@ private
     }
 }
 
-version(unittest)
+@system unittest
 {
-    import std.stdio;
     import std.typecons : tuple, Tuple;
 
-    void testfn(Tid tid)
+    static void testfn(Tid tid)
     {
         receive((float val) { assert(0); }, (int val, int val2) {
             assert(val == 42 && val2 == 86);
@@ -2447,7 +2449,7 @@ version(unittest)
         prioritySend(tid, "done");
     }
 
-    void runTest(Tid tid)
+    static void runTest(Tid tid)
     {
         send(tid, 42, 86);
         send(tid, tuple(42, 86));
@@ -2456,7 +2458,7 @@ version(unittest)
         receive((string val) { assert(val == "done"); });
     }
 
-    void simpleTest()
+    static void simpleTest()
     {
         auto tid = spawn(&testfn, thisTid);
         runTest(tid);
@@ -2467,17 +2469,11 @@ version(unittest)
         runTest(tid);
     }
 
-    @system unittest
-    {
-        simpleTest();
-    }
+    simpleTest();
 
-    @system unittest
-    {
-        scheduler = new ThreadScheduler;
-        simpleTest();
-        scheduler = null;
-    }
+    scheduler = new ThreadScheduler;
+    simpleTest();
+    scheduler = null;
 }
 
 private @property shared(Mutex) initOnceLock()
@@ -2519,7 +2515,7 @@ auto ref initOnce(alias var)(lazy typeof(var) init)
     {
         static MySingleton instance()
         {
-            static __gshared MySingleton inst;
+            __gshared MySingleton inst;
             return initOnce!inst(new MySingleton);
         }
     }
@@ -2533,14 +2529,14 @@ auto ref initOnce(alias var)(lazy typeof(var) init)
     {
         static MySingleton instance()
         {
-            static __gshared MySingleton inst;
+            __gshared MySingleton inst;
             return initOnce!inst(new MySingleton);
         }
 
     private:
         this() { val = ++cnt; }
         size_t val;
-        static __gshared size_t cnt;
+        __gshared size_t cnt;
     }
 
     foreach (_; 0 .. 10)

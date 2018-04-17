@@ -5,7 +5,8 @@
  *
  *  Copyright: Copyright Digital Mars 2000 - 2011
  *  License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
- *  Authors:   $(HTTP digitalmars.com, Walter Bright) and Jonathan M Davis
+ *  Authors:   $(HTTP digitalmars.com, Walter Bright) and
+               $(HTTP jmdavisprog.com, Jonathan M Davis)
  *  Source:    $(PHOBOSSRC std/_system.d)
  */
 module std.system;
@@ -18,8 +19,8 @@ immutable
         Note:
             This is for cases where you need a value representing the OS at
             runtime. If you're doing something which should compile differently
-            on different OSes, then please use $(D version(Windows)),
-            $(D version(linux)), etc.
+            on different OSes, then please use `version(Windows)`,
+            `version(linux)`, etc.
 
         See_Also:
             $(DDSUBLINK spec/version,PredefinedVersions, Predefined Versions)
@@ -57,8 +58,8 @@ immutable
             This is intended for cases where you need to deal with endianness at
             runtime. If you're doing something which should compile differently
             depending on whether you're compiling on a big endian or little
-            endian machine, then please use $(D version(BigEndian)) and
-            $(D version(LittleEndian)).
+            endian machine, then please use `version(BigEndian)` and
+            `version(LittleEndian)`.
 
         See_Also:
             $(DDSUBLINK spec/version,PredefinedVersions, Predefined Versions)

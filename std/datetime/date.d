@@ -35,7 +35,7 @@ $(TR $(TD Other) $(TD
 )
 
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-    Authors:   Jonathan M Davis
+    Authors:   $(HTTP jmdavisprog.com, Jonathan M Davis)
     Source:    $(PHOBOSSRC std/datetime/_date.d)
 +/
 module std.datetime.date;
@@ -82,6 +82,13 @@ enum Month : ubyte
     dec      ///
 }
 
+///
+@safe pure unittest
+{
+    assert(Date(2018, 10, 1).month == Month.oct);
+    assert(DateTime(1, 1, 1).month == Month.jan);
+}
+
 
 /++
     Represents the 7 days of the Gregorian week (Sunday is 0).
@@ -97,6 +104,12 @@ enum DayOfWeek : ubyte
     sat      ///
 }
 
+///
+@safe pure unittest
+{
+    assert(Date(2018, 10, 1).dayOfWeek == DayOfWeek.mon);
+    assert(DateTime(5, 5, 5).dayOfWeek == DayOfWeek.thu);
+}
 
 /++
     In some date calculations, adding months or years can cause the date to fall
@@ -110,9 +123,9 @@ enum DayOfWeek : ubyte
 
     AllowDayOverflow only applies to calculations involving months or years.
 
-    If set to $(D AllowDayOverflow.no), then day overflow is not allowed.
+    If set to `AllowDayOverflow.no`, then day overflow is not allowed.
 
-    Otherwise, if set to $(D AllowDayOverflow.yes), then day overflow is
+    Otherwise, if set to `AllowDayOverflow.yes`, then day overflow is
     allowed.
   +/
 alias AllowDayOverflow = Flag!"allowDayOverflow";
@@ -120,12 +133,12 @@ alias AllowDayOverflow = Flag!"allowDayOverflow";
 
 /++
     Array of the strings representing time units, starting with the smallest
-    unit and going to the largest. It does not include $(D "nsecs").
+    unit and going to the largest. It does not include `"nsecs"`.
 
-    Includes $(D "hnsecs") (hecto-nanoseconds (100 ns)),
-    $(D "usecs") (microseconds), $(D "msecs") (milliseconds), $(D "seconds"),
-    $(D "minutes"), $(D "hours"), $(D "days"), $(D "weeks"), $(D "months"), and
-    $(D "years")
+    Includes `"hnsecs"` (hecto-nanoseconds (100 ns)),
+    `"usecs"` (microseconds), `"msecs"` (milliseconds), `"seconds"`,
+    `"minutes"`, `"hours"`, `"days"`, `"weeks"`, `"months"`, and
+    `"years"`
   +/
 immutable string[] timeStrings = ["hnsecs", "usecs", "msecs", "seconds", "minutes",
                                   "hours", "days", "weeks", "months", "years"];
@@ -138,7 +151,7 @@ immutable string[] timeStrings = ["hnsecs", "usecs", "msecs", "seconds", "minute
     and has no concept of time zone. For an object which is optimized for time
     operations based on the system time, use
     $(REF SysTime,std,datetime,systime). $(REF SysTime,std,datetime,systime) has
-    a concept of time zone and has much higher precision (hnsecs). $(D DateTime)
+    a concept of time zone and has much higher precision (hnsecs). `DateTime`
     is intended primarily for calendar-based uses rather than precise time
     operations.
   +/
@@ -211,7 +224,7 @@ public:
 
 
     /++
-        Compares this $(LREF DateTime) with the given $(D DateTime.).
+        Compares this $(LREF DateTime) with the given `DateTime.`.
 
         Returns:
             $(BOOKTABLE,
@@ -607,7 +620,7 @@ public:
         Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
 
         Throws:
-            $(REF DateTimeException,std,datetime,date) if $(D isAD) is true.
+            $(REF DateTimeException,std,datetime,date) if `isAD` is true.
      +/
     @property short yearBC() const @safe pure
     {
@@ -1179,8 +1192,8 @@ public:
         affect larger units. For instance, rolling a $(LREF DateTime) one
         year's worth of days gets the exact same $(LREF DateTime).
 
-        Accepted units are $(D "days"), $(D "minutes"), $(D "hours"),
-        $(D "minutes"), and $(D "seconds").
+        Accepted units are `"days"`, `"minutes"`, `"hours"`,
+        `"minutes"`, and `"seconds"`.
 
         Params:
             units = The units to add.
@@ -3681,6 +3694,29 @@ private:
     TimeOfDay _tod;
 }
 
+///
+@safe pure unittest
+{
+    import core.time : days, seconds;
+
+    auto dt = DateTime(2000, 6, 1, 10, 30, 0);
+
+    assert(dt.date == Date(2000, 6, 1));
+    assert(dt.timeOfDay == TimeOfDay(10, 30, 0));
+    assert(dt.dayOfYear == 153);
+    assert(dt.dayOfWeek == DayOfWeek.thu);
+
+    dt += 10.days + 100.seconds;
+    assert(dt == DateTime(2000, 6, 11, 10, 31, 40));
+
+    assert(dt.toISOExtString() == "2000-06-11T10:31:40");
+    assert(dt.toISOString() == "20000611T103140");
+    assert(dt.toSimpleString() == "2000-Jun-11 10:31:40");
+
+    assert(DateTime.fromISOExtString("2018-01-01T12:00:00") == DateTime(2018, 1, 1, 12, 0, 0));
+    assert(DateTime.fromISOString("20180101T120000") == DateTime(2018, 1, 1, 12, 0, 0));
+    assert(DateTime.fromSimpleString("2018-Jan-01 12:00:00") == DateTime(2018, 1, 1, 12, 0, 0));
+}
 
 /++
     Represents a date in the
@@ -3688,10 +3724,10 @@ private:
     Gregorian Calendar) ranging from 32,768 B.C. to 32,767 A.D. Positive years
     are A.D. Non-positive years are B.C.
 
-    Year, month, and day are kept separately internally so that $(D Date) is
+    Year, month, and day are kept separately internally so that `Date` is
     optimized for calendar-based operations.
 
-    $(D Date) uses the Proleptic Gregorian Calendar, so it assumes the Gregorian
+    `Date` uses the Proleptic Gregorian Calendar, so it assumes the Gregorian
     leap year calculations for its entire length. As per
     $(HTTP en.wikipedia.org/wiki/ISO_8601, ISO 8601), it treats 1 B.C. as
     year 0, i.e. 1 B.C. is 0, 2 B.C. is -1, etc. Use $(LREF yearBC) to use B.C.
@@ -4113,7 +4149,7 @@ public:
         Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
 
         Throws:
-            $(REF DateTimeException,std,datetime,date) if $(D isAD) is true.
+            $(REF DateTimeException,std,datetime,date) if `isAD` is true.
      +/
     @property ushort yearBC() const @safe pure
     {
@@ -5834,10 +5870,10 @@ public:
         affect larger units. For instance, rolling a $(LREF Date) one
         year's worth of days gets the exact same $(LREF Date).
 
-        The only accepted units are $(D "days").
+        The only accepted units are `"days"`.
 
         Params:
-            units = The units to add. Must be $(D "days").
+            units = The units to add. Must be `"days"`.
             days  = The number of days to add to this $(LREF Date).
       +/
     ref Date roll(string units)(long days) @safe pure nothrow @nogc
@@ -7913,7 +7949,7 @@ package:
         decrease) to the month would cause it to overflow (or underflow) the
         current year.
 
-        $(D _addDays(numDays)) is effectively equivalent to
+        `_addDays(numDays)` is effectively equivalent to
         $(D date.dayOfGregorianCal = date.dayOfGregorianCal + days).
 
         Params:
@@ -8096,6 +8132,28 @@ package:
     short _year  = 1;
     Month _month = Month.jan;
     ubyte _day   = 1;
+}
+
+///
+@safe pure unittest
+{
+    import core.time : days;
+
+    auto d = Date(2000, 6, 1);
+
+    assert(d.dayOfYear == 153);
+    assert(d.dayOfWeek == DayOfWeek.thu);
+
+    d += 10.days;
+    assert(d == Date(2000, 6, 11));
+
+    assert(d.toISOExtString() == "2000-06-11");
+    assert(d.toISOString() == "20000611");
+    assert(d.toSimpleString() == "2000-Jun-11");
+
+    assert(Date.fromISOExtString("2018-01-01") == Date(2018, 1, 1));
+    assert(Date.fromISOString("20180101") == Date(2018, 1, 1));
+    assert(Date.fromSimpleString("2018-Jan-01") == Date(2018, 1, 1));
 }
 
 
@@ -8388,7 +8446,7 @@ public:
         one hours's worth of minutes gets the exact same
         $(LREF TimeOfDay).
 
-        Accepted units are $(D "hours"), $(D "minutes"), and $(D "seconds").
+        Accepted units are `"hours"`, `"minutes"`, and `"seconds"`.
 
         Params:
             units = The units to add.
@@ -9407,6 +9465,22 @@ package:
     enum ubyte maxSecond = 60 - 1;
 }
 
+///
+@safe pure unittest
+{
+    import core.time : minutes, seconds;
+
+    auto t = TimeOfDay(12, 30, 0);
+
+    t += 10.minutes + 100.seconds;
+    assert(t == TimeOfDay(12, 41, 40));
+
+    assert(t.toISOExtString() == "12:41:40");
+    assert(t.toISOString() == "124140");
+
+    assert(TimeOfDay.fromISOExtString("15:00:00") == TimeOfDay(15, 0, 0));
+    assert(TimeOfDay.fromISOString("015000") == TimeOfDay(1, 50, 0));
+}
 
 /++
     Returns whether the given value is valid for the given unit type when in a
@@ -9477,7 +9551,7 @@ if (units == "days")
                 thrown.
 
     Throws:
-        $(LREF DateTimeException) if $(D valid!units(value)) is false.
+        $(LREF DateTimeException) if `valid!units(value)` is false.
   +/
 void enforceValid(string units)(int value, string file = __FILE__, size_t line = __LINE__) @safe pure
 if (units == "months" ||
@@ -9509,8 +9583,26 @@ if (units == "months" ||
     }
 }
 
+///
+@safe pure unittest
+{
+    import std.exception : assertThrown, assertNotThrown;
+
+    assertNotThrown(enforceValid!"months"(10));
+    assertNotThrown(enforceValid!"seconds"(40));
+
+    assertThrown!DateTimeException(enforceValid!"months"(0));
+    assertThrown!DateTimeException(enforceValid!"hours"(24));
+    assertThrown!DateTimeException(enforceValid!"minutes"(60));
+    assertThrown!DateTimeException(enforceValid!"seconds"(60));
+}
+
 
 /++
+    Because the validity of the day number depends on both on the year
+    and month of which the day is occurring, take all three variables
+    to validate the day.
+
     Params:
         units = The units of time to validate.
         year  = The year of the day to validate.
@@ -9530,6 +9622,20 @@ if (units == "days")
     import std.format : format;
     if (!valid!"days"(year, month, day))
         throw new DateTimeException(format("%s is not a valid day in %s in %s", day, month, year), file, line);
+}
+
+///
+@safe pure unittest
+{
+    import std.exception : assertThrown, assertNotThrown;
+
+    assertNotThrown(enforceValid!"days"(2000, Month.jan, 1));
+    // leap year
+    assertNotThrown(enforceValid!"days"(2000, Month.feb, 29));
+
+    assertThrown!DateTimeException(enforceValid!"days"(2001, Month.feb, 29));
+    assertThrown!DateTimeException(enforceValid!"days"(2000, Month.jan, 32));
+    assertThrown!DateTimeException(enforceValid!"days"(2000, Month.apr, 31));
 }
 
 
@@ -9755,19 +9861,19 @@ bool yearIsLeapYear(int year) @safe pure nothrow @nogc
     Whether the given type defines all of the necessary functions for it to
     function as a time point.
 
-    1. $(D T) must define a static property named $(D min) which is the smallest
-       value of $(D T) as $(D Unqual!T).
+    1. `T` must define a static property named `min` which is the smallest
+       value of `T` as `Unqual!T`.
 
-    2. $(D T) must define a static property named $(D max) which is the largest
-       value of $(D T) as $(D Unqual!T).
+    2. `T` must define a static property named `max` which is the largest
+       value of `T` as `Unqual!T`.
 
-    3. $(D T) must define an $(D opBinary) for addition and subtraction that
-       accepts $(REF Duration, core,time) and returns $(D Unqual!T).
+    3. `T` must define an `opBinary` for addition and subtraction that
+       accepts $(REF Duration, core,time) and returns `Unqual!T`.
 
-    4. $(D T) must define an $(D opOpAssign) for addition and subtraction that
+    4. `T` must define an `opOpAssign` for addition and subtraction that
        accepts $(REF Duration, core,time) and returns $(D ref Unqual!T).
 
-    5. $(D T) must define a $(D opBinary) for subtraction which accepts $(D T)
+    5. `T` must define a `opBinary` for subtraction which accepts `T`
        and returns returns $(REF Duration, core,time).
   +/
 template isTimePoint(T)
@@ -9849,7 +9955,7 @@ private:
 /++
     Whether all of the given strings are valid units of time.
 
-    $(D "nsecs") is not considered a valid unit of time. Nothing in std.datetime
+    `"nsecs"` is not considered a valid unit of time. Nothing in std.datetime
     can handle precision greater than hnsecs, and the few functions in core.time
     which deal with "nsecs" deal with it explicitly.
   +/
@@ -9874,8 +9980,8 @@ bool validTimeUnits(string[] units...) @safe pure nothrow @nogc
 
 
 /++
-    Compares two time unit strings. $(D "years") are the largest units and
-    $(D "hnsecs") are the smallest.
+    Compares two time unit strings. `"years"` are the largest units and
+    `"hnsecs"` are the smallest.
 
     Returns:
         $(BOOKTABLE,
@@ -9940,11 +10046,11 @@ int cmpTimeUnits(string lhs, string rhs) @safe pure
 
 
 /++
-    Compares two time unit strings at compile time. $(D "years") are the largest
-    units and $(D "hnsecs") are the smallest.
+    Compares two time unit strings at compile time. `"years"` are the largest
+    units and `"hnsecs"` are the smallest.
 
-    This template is used instead of $(D cmpTimeUnits) because exceptions
-    can't be thrown at compile time and $(D cmpTimeUnits) must enforce that
+    This template is used instead of `cmpTimeUnits` because exceptions
+    can't be thrown at compile time and `cmpTimeUnits` must enforce that
     the strings it's given are valid time unit strings. This template uses a
     template constraint instead.
 
@@ -9961,6 +10067,13 @@ if (validTimeUnits(lhs, rhs))
     enum CmpTimeUnits = cmpTimeUnitsCTFE(lhs, rhs);
 }
 
+///
+@safe pure unittest
+{
+    static assert(CmpTimeUnits!("years", "weeks") > 0);
+    static assert(CmpTimeUnits!("days", "days") == 0);
+    static assert(CmpTimeUnits!("seconds", "hours") < 0);
+}
 
 // Helper function for CmpTimeUnits.
 private int cmpTimeUnitsCTFE(string lhs, string rhs) @safe pure nothrow @nogc
@@ -10288,19 +10401,17 @@ if (isSomeString!T)
 
 @safe unittest
 {
-    import std.stdio : writeln;
+    import std.conv : to;
     import std.traits : EnumMembers;
     foreach (badStr; ["Ja", "Janu", "Januar", "Januarys", "JJanuary", "JANUARY",
                       "JAN", "january", "jaNuary", "jaN", "jaNuaRy", "jAn"])
     {
-        scope(failure) writeln(badStr);
-        assertThrown!DateTimeException(monthFromString(badStr));
+        assertThrown!DateTimeException(monthFromString(badStr), badStr);
     }
 
     foreach (month; EnumMembers!Month)
     {
-        scope(failure) writeln(month);
-        assert(monthFromString(monthToString(month)) == month);
+        assert(monthFromString(monthToString(month)) == month, month.to!string);
     }
 }
 

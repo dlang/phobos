@@ -111,8 +111,9 @@ Params:
         sorted.
 */
 void completeSort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
-        RandomAccessRange1, RandomAccessRange2)(SortedRange!(RandomAccessRange1, less) lhs, RandomAccessRange2 rhs)
-if (hasLength!(RandomAccessRange2) && hasSlicing!(RandomAccessRange2))
+        Lhs , Rhs)(SortedRange!(Lhs, less) lhs, Rhs rhs)
+if (hasLength!(Rhs) && hasSlicing!(Rhs)
+        && hasSwappableElements!Lhs && hasSwappableElements!Rhs)
 {
     import std.algorithm.mutation : bringToFront;
     import std.range : chain, assumeSorted;
@@ -392,7 +393,8 @@ the relative ordering of all elements `a`, `b` in the left part of `r`
 for which `predicate(a) == predicate(b)`.
 */
 Range partition(alias predicate, SwapStrategy ss, Range)(Range r)
-if (ss == SwapStrategy.stable && isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
+if (ss == SwapStrategy.stable && isRandomAccessRange!(Range) && hasLength!Range &&
+        hasSlicing!Range && hasSwappableElements!Range)
 {
     import std.algorithm.mutation : bringToFront;
 
@@ -610,7 +612,7 @@ Keynote), Andrei Alexandrescu.
 */
 size_t pivotPartition(alias less = "a < b", Range)
 (Range r, size_t pivot)
-if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range)
+if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && hasAssignableElements!Range)
 {
     assert(pivot < r.length || r.length == 0 && pivot == 0);
     if (r.length <= 1) return 0;
@@ -630,7 +632,7 @@ if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range)
         auto p = r[0];
         // Plant the pivot in the end as well as a sentinel
         size_t lo = 0, hi = r.length - 1;
-        auto save = move(r[hi]);
+        auto save = r.moveAt(hi);
         r[hi] = p; // Vacancy is in r[$ - 1] now
         // Start process
         for (;;)
@@ -638,9 +640,12 @@ if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range)
             // Loop invariant
             version(unittest)
             {
-                import std.algorithm.searching : all;
-                assert(r[0 .. lo].all!(x => !lt(p, x)));
-                assert(r[hi + 1 .. r.length].all!(x => !lt(x, p)));
+                // this used to import std.algorithm.all, but we want to save
+                // imports when unittests are enabled if possible.
+                foreach (x; r[0 .. lo])
+                    assert(!lt(p, x));
+                foreach (x; r[hi+1 .. r.length])
+                    assert(!lt(x, p));
             }
             do ++lo; while (lt(r[lo], p));
             r[hi] = r[lo];
@@ -742,17 +747,16 @@ if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range)
         assert(a == [ 42, 42 ]);
 
         import std.algorithm.iteration : map;
+        import std.format : format;
         import std.random;
-        import std.stdio;
-        auto s = unpredictableSeed;
-        auto g = Random(s);
+        auto s = 123_456_789;
+        auto g = Xorshift(s);
         a = iota(0, uniform(1, 1000, g))
             .map!(_ => uniform(-1000, 1000, g))
             .array;
-        scope(failure) writeln("RNG seed was ", s);
         pivot = pivotPartition!less(a, a.length / 2);
-        assert(a[0 .. pivot].all!(x => x <= a[pivot]));
-        assert(a[pivot .. $].all!(x => x >= a[pivot]));
+        assert(a[0 .. pivot].all!(x => x <= a[pivot]), "RNG seed: %d".format(s));
+        assert(a[pivot .. $].all!(x => x >= a[pivot]), "RNG seed: %d".format(s));
     }
     test!"a < b";
     static bool myLess(int a, int b)
@@ -881,9 +885,9 @@ if (ss == SwapStrategy.unstable && isRandomAccessRange!Range
 
 @safe unittest
 {
-    import std.random : Random, uniform, unpredictableSeed;
+    import std.random : Random = Xorshift, uniform;
 
-    immutable uint[] seeds = [3923355730, 1927035882, unpredictableSeed];
+    immutable uint[] seeds = [3923355730, 1927035882];
     foreach (s; seeds)
     {
         auto r = Random(s);
@@ -955,7 +959,7 @@ makeIndex(
     RangeIndex)
 (Range r, RangeIndex index)
 if (isForwardRange!(Range) && isRandomAccessRange!(RangeIndex)
-    && is(ElementType!(RangeIndex) : ElementType!(Range)*))
+    && is(ElementType!(RangeIndex) : ElementType!(Range)*) && hasAssignableElements!RangeIndex)
 {
     import std.algorithm.internal : addressOf;
     import std.exception : enforce;
@@ -979,7 +983,7 @@ void makeIndex(
 (Range r, RangeIndex index)
 if (isRandomAccessRange!Range && !isInfinite!Range &&
     isRandomAccessRange!RangeIndex && !isInfinite!RangeIndex &&
-    isIntegral!(ElementType!RangeIndex))
+    isIntegral!(ElementType!RangeIndex) && hasAssignableElements!RangeIndex)
 {
     import std.conv : to;
     import std.exception : enforce;
@@ -1449,7 +1453,7 @@ Returns:
 template multiSort(less...) //if (less.length > 1)
 {
     auto multiSort(Range)(Range r)
-    if (validPredicates!(ElementType!Range, less))
+    if (validPredicates!(ElementType!Range, less) && hasSwappableElements!Range)
     {
         import std.meta : AliasSeq;
         import std.range : assumeSorted;
@@ -1708,7 +1712,7 @@ private void shortSort(alias less, Range)(Range r)
 
 @safe unittest
 {
-    import std.random : Random, uniform;
+    import std.random : Random = Xorshift, uniform;
 
     auto rnd = Random(1);
     auto a = new int[uniform(100, 200, rnd)];
@@ -1947,12 +1951,12 @@ if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
 {
     import std.algorithm.internal : rndstuff;
     import std.algorithm.mutation : swapRanges;
-    import std.random : Random, unpredictableSeed, uniform;
+    import std.random : Random = Xorshift, uniform;
     import std.uni : toUpper;
 
     // sort using delegate
     auto a = new int[100];
-    auto rnd = Random(unpredictableSeed);
+    auto rnd = Random(123_456_789);
     foreach (ref e; a)
     {
         e = uniform(-100, 100, rnd);
@@ -2899,7 +2903,7 @@ SortedRange!(R, ((a, b) => binaryFun!less(unaryFun!transform(a),
                                           unaryFun!transform(b))))
 schwartzSort(alias transform, alias less = "a < b",
         SwapStrategy ss = SwapStrategy.unstable, R)(R r)
-if (isRandomAccessRange!R && hasLength!R)
+if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R)
 {
     import std.conv : emplace;
     import std.range : zip, SortedRange;
@@ -3099,7 +3103,8 @@ Stable topN has not been implemented yet.
 auto topN(alias less = "a < b",
         SwapStrategy ss = SwapStrategy.unstable,
         Range)(Range r, size_t nth)
-if (isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
+if (isRandomAccessRange!(Range) && hasLength!Range &&
+    hasSlicing!Range && hasAssignableElements!Range)
 {
     static assert(ss == SwapStrategy.unstable,
             "Stable topN not yet implemented");
@@ -3130,6 +3135,16 @@ if (isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
     auto n = 4;
     topN!((a, b) => a < b)(v, n);
     assert(v[n] == 9);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=8341
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.typecons : tuple;
+    auto a = [10, 30, 20];
+    auto b = ["c", "b", "a"];
+    assert(topN!"a[0] > b[0]"(zip(a, b), 2).equal([tuple(20, "a"), tuple(30, "b")]));
 }
 
 private @trusted
@@ -3432,21 +3447,14 @@ done:
 {
     auto a = [ 10, 5, 3, 4, 8,  11,  13, 3, 9, 4, 10 ];
     assert(expandPartition!((a, b) => a < b)(a, 4, 5, 6) == 9);
-    a = randomArray;
+
+    import std.algorithm.iteration : map;
+    import std.random : uniform;
+    auto size = uniform(1, 1000);
+    a = iota(0, size).map!(_ => uniform(0, 1000)).array;
     if (a.length == 0) return;
     expandPartition!((a, b) => a < b)(a, a.length / 2, a.length / 2,
         a.length / 2 + 1);
-}
-
-version(unittest)
-private T[] randomArray(Flag!"exactSize" flag = No.exactSize, T = int)(
-    size_t maxSize = 1000,
-    T minValue = 0, T maxValue = 255)
-{
-    import std.algorithm.iteration : map;
-    import std.random : unpredictableSeed, Random, uniform;
-    auto size = flag == Yes.exactSize ? maxSize : uniform(1, maxSize);
-    return iota(0, size).map!(_ => uniform(minValue, maxValue)).array;
 }
 
 @safe unittest
@@ -3500,9 +3508,9 @@ private T[] randomArray(Flag!"exactSize" flag = No.exactSize, T = int)(
 {
     import std.algorithm.comparison : max, min;
     import std.algorithm.iteration : reduce;
-    import std.random : Random, uniform, unpredictableSeed;
+    import std.random : Random = Xorshift, uniform;
 
-    immutable uint[] seeds = [90027751, 2709791795, 1374631933, 995751648, 3541495258, 984840953, unpredictableSeed];
+    immutable uint[] seeds = [90027751, 2709791795, 1374631933, 995751648, 3541495258, 984840953];
     foreach (s; seeds)
     {
         auto r = Random(s);
@@ -3705,10 +3713,10 @@ if (isInputRange!(SRange) && isRandomAccessRange!(TRange)
 
 @system unittest
 {
-    import std.random : Random, unpredictableSeed, uniform, randomShuffle;
+    import std.random : Random = Xorshift, uniform, randomShuffle;
     import std.typecons : Yes;
 
-    auto r = Random(unpredictableSeed);
+    auto r = Random(123_456_789);
     ptrdiff_t[] a = new ptrdiff_t[uniform(1, 1000, r)];
     foreach (i, ref e; a) e = i;
     randomShuffle(a, r);
