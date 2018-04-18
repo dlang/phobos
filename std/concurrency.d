@@ -1702,9 +1702,9 @@ private:
 @system unittest
 {
     auto tid = spawn({
-        size_t i;
+        int i;
         while (i < 9)
-            i = receiveOnly!size_t;
+            i = receiveOnly!int;
 
         ownerTid.send(i * 2);
     });
@@ -1717,7 +1717,7 @@ private:
     foreach (e; r)
         tid.send(e);
 
-    assert(receiveOnly!size_t == 18);
+    assert(receiveOnly!int == 18);
 }
 
 /**
