@@ -179,13 +179,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
             }
             return result;
         }
-        // Can't allocate from the current pool. Check if we just added a new
-        // allocator, in that case it won't do any good to add yet another.
-        if (root && root.empty == Ternary.yes)
-        {
-            // no can do
-            return null;
-        }
+
         // Add a new allocator
         if (auto a = addAllocator(s))
         {
@@ -225,13 +219,6 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
                 root = n;
             }
             return result;
-        }
-        // Can't allocate from the current pool. Check if we just added a new
-        // allocator, in that case it won't do any good to add yet another.
-        if (root && root.empty == Ternary.yes)
-        {
-            // no can do
-            return null;
         }
 
         bool overflow = false;
@@ -962,6 +949,27 @@ version(Posix) @system unittest
 
     assert(a.allocate(4096 * 5).length == 4096 * 5);
     assert(a.allocators.length == 2);
+
+    assert(a.deallocateAll());
+}
+
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.ascending_page_allocator : AscendingPageAllocator;
+    import std.algorithm.comparison : max;
+
+    enum maxIter = 100;
+    enum pageSize = 4096;
+    enum numPages = 10;
+
+    AllocatorList!((n) => AscendingPageAllocator(max(n, numPages * pageSize)), NullAllocator) a;
+    foreach (i; 0 .. maxIter)
+    {
+        auto b1 = a.allocate(512);
+        assert(b1.length == 512);
+
+        assert(a.deallocate(b1));
+    }
 
     assert(a.deallocateAll());
 }
