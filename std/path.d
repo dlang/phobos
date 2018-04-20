@@ -151,6 +151,21 @@ bool isDirSeparator(dchar c)  @safe pure nothrow @nogc
     return false;
 }
 
+///
+@safe pure nothrow @nogc unittest
+{
+    version(Windows)
+    {
+        assert( '/'.isDirSeparator);
+        assert( '\\'.isDirSeparator);
+    }
+    else
+    {
+        assert( '/'.isDirSeparator);
+        assert(!'\\'.isDirSeparator);
+    }
+}
+
 
 /*  Determines whether the given character is a drive separator.
 
@@ -333,13 +348,23 @@ enum CaseSensitive : bool
     */
     osDefault = osDefaultCaseSensitivity
 }
+
+///
+@safe unittest
+{
+    assert(baseName!(CaseSensitive.no)("dir/file.EXT", ".ext") == "file");
+    assert(baseName!(CaseSensitive.yes)("dir/file.EXT", ".ext") != "file");
+
+    version(Posix)
+        assert(relativePath!(CaseSensitive.no)("/FOO/bar", "/foo/baz") == "../bar");
+    else
+        assert(relativePath!(CaseSensitive.no)(`c:\FOO\bar`, `c:\foo\baz`) == `..\bar`);
+}
+
 version (Windows)    private enum osDefaultCaseSensitivity = false;
 else version (OSX)   private enum osDefaultCaseSensitivity = false;
 else version (Posix) private enum osDefaultCaseSensitivity = true;
 else static assert(0);
-
-
-
 
 /**
     Params:
@@ -355,21 +380,6 @@ else static assert(0);
     where `cs` is an optional template parameter determining whether
     the comparison is case sensitive or not.  See the
     $(LREF filenameCmp) documentation for details.
-
-    Example:
-    ---
-    assert(baseName("dir/file.ext")         == "file.ext");
-    assert(baseName("dir/file.ext", ".ext") == "file");
-    assert(baseName("dir/file.ext", ".xyz") == "file.ext");
-    assert(baseName("dir/filename", "name") == "file");
-    assert(baseName("dir/subdir/")          == "subdir");
-
-    version (Windows)
-    {
-        assert(baseName(`d:file.ext`)      == "file.ext");
-        assert(baseName(`d:\dir\file.ext`) == "file.ext");
-    }
-    ---
 
     Note:
     This function $(I only) strips away the specified suffix, which
@@ -401,26 +411,6 @@ if (isSomeChar!C)
     return _baseName(path);
 }
 
-private R _baseName(R)(R path)
-if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) || isNarrowString!R)
-{
-    auto p1 = stripDrive(path);
-    if (p1.empty)
-    {
-        version (Windows) if (isUNC(path))
-            return path[0 .. 1];
-        static if (isSomeString!R)
-            return null;
-        else
-            return p1; // which is empty
-    }
-
-    auto p2 = rtrimDirSeparators(p1);
-    if (p2.empty) return p1[0 .. 1];
-
-    return p2[lastSeparator(p2)+1 .. p2.length];
-}
-
 /// ditto
 inout(C)[] baseName(CaseSensitive cs = CaseSensitive.osDefault, C, C1)
     (inout(C)[] path, in C1[] suffix)
@@ -434,6 +424,22 @@ if (isSomeChar!C && isSomeChar!C1)
         return p[0 .. $-suffix.length];
     }
     else return p;
+}
+
+///
+@safe unittest
+{
+    assert(baseName("dir/file.ext") == "file.ext");
+    assert(baseName("dir/file.ext", ".ext") == "file");
+    assert(baseName("dir/file.ext", ".xyz") == "file.ext");
+    assert(baseName("dir/filename", "name") == "file");
+    assert(baseName("dir/subdir/") == "subdir");
+
+    version (Windows)
+    {
+        assert(baseName(`d:file.ext`) == "file.ext");
+        assert(baseName(`d:\dir\file.ext`) == "file.ext");
+    }
 }
 
 @safe unittest
@@ -508,6 +514,26 @@ if (isSomeChar!C && isSomeChar!C1)
     assert(sa.baseName == "test");
 }
 
+private R _baseName(R)(R path)
+if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) || isNarrowString!R)
+{
+    auto p1 = stripDrive(path);
+    if (p1.empty)
+    {
+        version (Windows) if (isUNC(path))
+            return path[0 .. 1];
+        static if (isSomeString!R)
+            return null;
+        else
+            return p1; // which is empty
+    }
+
+    auto p2 = rtrimDirSeparators(p1);
+    if (p2.empty) return p1[0 .. 1];
+
+    return p2[lastSeparator(p2)+1 .. p2.length];
+}
+
 /** Returns the parent directory of path. On Windows, this
     includes the drive letter if present.
 
@@ -534,52 +560,6 @@ auto dirName(C)(C[] path)
 if (isSomeChar!C)
 {
     return _dirName(path);
-}
-
-private auto _dirName(R)(R path)
-{
-    static auto result(bool dot, typeof(path[0 .. 1]) p)
-    {
-        static if (isSomeString!R)
-            return dot ? "." : p;
-        else
-        {
-            import std.range : choose, only;
-            return choose(dot, only(cast(ElementEncodingType!R)'.'), p);
-        }
-    }
-
-    if (path.empty)
-        return result(true, path[0 .. 0]);
-
-    auto p = rtrimDirSeparators(path);
-    if (p.empty)
-        return result(false, path[0 .. 1]);
-
-    version (Windows)
-    {
-        if (isUNC(p) && uncRootLength(p) == p.length)
-            return result(false, p);
-
-        if (p.length == 2 && isDriveSeparator(p[1]) && path.length > 2)
-            return result(false, path[0 .. 3]);
-    }
-
-    auto i = lastSeparator(p);
-    if (i == -1)
-        return result(true, p);
-    if (i == 0)
-        return result(false, p[0 .. 1]);
-
-    version (Windows)
-    {
-        // If the directory part is either d: or d:\
-        // do not chop off the last symbol.
-        if (isDriveSeparator(p[i]) || isDriveSeparator(p[i-1]))
-            return result(false, p[0 .. i+1]);
-    }
-    // Remove any remaining trailing (back)slashes.
-    return result(false, rtrimDirSeparators(p[0 .. i]));
 }
 
 ///
@@ -673,8 +653,51 @@ private auto _dirName(R)(R path)
     //static assert(dirName("dir/file".byChar).array == "dir");
 }
 
+private auto _dirName(R)(R path)
+{
+    static auto result(bool dot, typeof(path[0 .. 1]) p)
+    {
+        static if (isSomeString!R)
+            return dot ? "." : p;
+        else
+        {
+            import std.range : choose, only;
+            return choose(dot, only(cast(ElementEncodingType!R)'.'), p);
+        }
+    }
 
+    if (path.empty)
+        return result(true, path[0 .. 0]);
 
+    auto p = rtrimDirSeparators(path);
+    if (p.empty)
+        return result(false, path[0 .. 1]);
+
+    version (Windows)
+    {
+        if (isUNC(p) && uncRootLength(p) == p.length)
+            return result(false, p);
+
+        if (p.length == 2 && isDriveSeparator(p[1]) && path.length > 2)
+            return result(false, path[0 .. 3]);
+    }
+
+    auto i = lastSeparator(p);
+    if (i == -1)
+        return result(true, p);
+    if (i == 0)
+        return result(false, p[0 .. 1]);
+
+    version (Windows)
+    {
+        // If the directory part is either d: or d:\
+        // do not chop off the last symbol.
+        if (isDriveSeparator(p[i]) || isDriveSeparator(p[i-1]))
+            return result(false, p[0 .. i+1]);
+    }
+    // Remove any remaining trailing (back)slashes.
+    return result(false, rtrimDirSeparators(p[0 .. i]));
+}
 
 /** Returns the root directory of the specified path, or `null` if the
     path is not rooted.
@@ -696,38 +719,6 @@ auto rootName(C)(C[] path)
 if (isSomeChar!C)
 {
     return _rootName(path);
-}
-
-private auto _rootName(R)(R path)
-{
-    if (path.empty)
-        goto Lnull;
-
-    version (Posix)
-    {
-        if (isDirSeparator(path[0])) return path[0 .. 1];
-    }
-    else version (Windows)
-    {
-        if (isDirSeparator(path[0]))
-        {
-            if (isUNC(path)) return path[0 .. uncRootLength(path)];
-            else return path[0 .. 1];
-        }
-        else if (path.length >= 3 && isDriveSeparator(path[1]) &&
-            isDirSeparator(path[2]))
-        {
-            return path[0 .. 3];
-        }
-    }
-    else static assert(0, "unsupported platform");
-
-    assert(!isRooted(path));
-Lnull:
-    static if (is(StringTypeOf!R))
-        return null; // legacy code may rely on null return rather than slice
-    else
-        return path[0 .. 0];
 }
 
 ///
@@ -777,6 +768,37 @@ Lnull:
     }
 }
 
+private auto _rootName(R)(R path)
+{
+    if (path.empty)
+        goto Lnull;
+
+    version (Posix)
+    {
+        if (isDirSeparator(path[0])) return path[0 .. 1];
+    }
+    else version (Windows)
+    {
+        if (isDirSeparator(path[0]))
+        {
+            if (isUNC(path)) return path[0 .. uncRootLength(path)];
+            else return path[0 .. 1];
+        }
+        else if (path.length >= 3 && isDriveSeparator(path[1]) &&
+            isDirSeparator(path[2]))
+        {
+            return path[0 .. 3];
+        }
+    }
+    else static assert(0, "unsupported platform");
+
+    assert(!isRooted(path));
+Lnull:
+    static if (is(StringTypeOf!R))
+        return null; // legacy code may rely on null return rather than slice
+    else
+        return path[0 .. 0];
+}
 
 /**
     Get the drive portion of a path.
@@ -802,21 +824,6 @@ auto driveName(C)(C[] path)
 if (isSomeChar!C)
 {
     return _driveName(path);
-}
-
-private auto _driveName(R)(R path)
-{
-    version (Windows)
-    {
-        if (hasDrive(path))
-            return path[0 .. 2];
-        else if (isUNC(path))
-            return path[0 .. uncRootLength(path)];
-    }
-    static if (isSomeString!R)
-        return cast(ElementEncodingType!R[]) null; // legacy code may rely on null return rather than slice
-    else
-        return path[0 .. 0];
 }
 
 ///
@@ -874,6 +881,20 @@ private auto _driveName(R)(R path)
     }
 }
 
+private auto _driveName(R)(R path)
+{
+    version (Windows)
+    {
+        if (hasDrive(path))
+            return path[0 .. 2];
+        else if (isUNC(path))
+            return path[0 .. uncRootLength(path)];
+    }
+    static if (isSomeString!R)
+        return cast(ElementEncodingType!R[]) null; // legacy code may rely on null return rather than slice
+    else
+        return path[0 .. 0];
+}
 
 /** Strips the drive from a Windows path.  On POSIX, the path is returned
     unaltered.
@@ -894,16 +915,6 @@ auto stripDrive(C)(C[] path)
 if (isSomeChar!C)
 {
     return _stripDrive(path);
-}
-
-private auto _stripDrive(R)(R path)
-{
-    version(Windows)
-    {
-        if (hasDrive!(BaseOf!R)(path))      return path[2 .. path.length];
-        else if (isUNC!(BaseOf!R)(path))    return path[uncRootLength!(BaseOf!R)(path) .. path.length];
-    }
-    return path;
 }
 
 ///
@@ -954,6 +965,16 @@ private auto _stripDrive(R)(R path)
         foreach (i, c; `d:\dir\file`)
             assert(s[i] == c);
     }
+}
+
+private auto _stripDrive(R)(R path)
+{
+    version(Windows)
+    {
+        if (hasDrive!(BaseOf!R)(path))      return path[2 .. path.length];
+        else if (isUNC!(BaseOf!R)(path))    return path[uncRootLength!(BaseOf!R)(path) .. path.length];
+    }
+    return path;
 }
 
 
@@ -1085,12 +1106,6 @@ if (isSomeChar!C)
     return _stripExtension(path);
 }
 
-private auto _stripExtension(R)(R path)
-{
-    immutable i = extSeparatorPos(path);
-    return i == -1 ? path : path[0 .. i];
-}
-
 ///
 @safe unittest
 {
@@ -1127,6 +1142,11 @@ private auto _stripExtension(R)(R path)
     assert(stripExtension("file.ext1.ext2"d.byDchar).array == "file.ext1");
 }
 
+private auto _stripExtension(R)(R path)
+{
+    immutable i = extSeparatorPos(path);
+    return i == -1 ? path : path[0 .. i];
+}
 
 /** Sets or replaces an extension.
 
@@ -1240,18 +1260,6 @@ if (isSomeChar!C1 && isSomeChar!C2)
     return _withExtension(path, ext);
 }
 
-private auto _withExtension(R, C)(R path, C[] ext)
-{
-    import std.range : only, chain;
-    import std.utf : byUTF;
-
-    alias CR = Unqual!(ElementEncodingType!R);
-    auto dot = only(CR('.'));
-    if (ext.length == 0 || ext[0] == '.')
-        dot.popFront();                 // so dot is an empty range, too
-    return chain(stripExtension(path).byUTF!CR, dot, ext.byUTF!CR);
-}
-
 ///
 @safe unittest
 {
@@ -1277,6 +1285,18 @@ private auto _withExtension(R, C)(R path, C[] ext)
 
     char[S.a.length] sa = S.a[];
     assert(equal(sa.withExtension(".txt"), "foo.txt"));
+}
+
+private auto _withExtension(R, C)(R path, C[] ext)
+{
+    import std.range : only, chain;
+    import std.utf : byUTF;
+
+    alias CR = Unqual!(ElementEncodingType!R);
+    auto dot = only(CR('.'));
+    if (ext.length == 0 || ext[0] == '.')
+        dot.popFront();                 // so dot is an empty range, too
+    return chain(stripExtension(path).byUTF!CR, dot, ext.byUTF!CR);
 }
 
 /** Params:
@@ -1344,28 +1364,6 @@ if (isSomeChar!C1 && isSomeChar!C2)
     return _withDefaultExtension(path, ext);
 }
 
-private auto _withDefaultExtension(R, C)(R path, C[] ext)
-{
-    import std.range : only, chain;
-    import std.utf : byUTF;
-
-    alias CR = Unqual!(ElementEncodingType!R);
-    auto dot = only(CR('.'));
-    immutable i = extSeparatorPos(path);
-    if (i == -1)
-    {
-        if (ext.length > 0 && ext[0] == '.')
-            ext = ext[1 .. $];              // remove any leading . from ext[]
-    }
-    else
-    {
-        // path already has an extension, so make these empty
-        ext = ext[0 .. 0];
-        dot.popFront();
-    }
-    return chain(path.byUTF!CR, dot, ext.byUTF!CR);
-}
-
 ///
 @safe unittest
 {
@@ -1393,6 +1391,28 @@ private auto _withDefaultExtension(R, C)(R path, C[] ext)
 
     char[S.a.length] sa = S.a[];
     assert(equal(sa.withDefaultExtension(".txt"), "foo.txt"));
+}
+
+private auto _withDefaultExtension(R, C)(R path, C[] ext)
+{
+    import std.range : only, chain;
+    import std.utf : byUTF;
+
+    alias CR = Unqual!(ElementEncodingType!R);
+    auto dot = only(CR('.'));
+    immutable i = extSeparatorPos(path);
+    if (i == -1)
+    {
+        if (ext.length > 0 && ext[0] == '.')
+            ext = ext[1 .. $];              // remove any leading . from ext[]
+    }
+    else
+    {
+        // path already has an extension, so make these empty
+        ext = ext[0 .. 0];
+        dot.popFront();
+    }
+    return chain(path.byUTF!CR, dot, ext.byUTF!CR);
 }
 
 /** Combines one or more path segments.
@@ -2532,35 +2552,17 @@ if (isConvertibleToString!R)
 
 /** Determines whether a path starts at a root directory.
 
-    Params: path = A path name.
-    Returns: Whether a path starts at a root directory.
+Params:
+    path = A path name.
+Returns:
+    Whether a path starts at a root directory.
 
     On POSIX, this function returns true if and only if the path starts
     with a slash (/).
-    ---
-    version (Posix)
-    {
-        assert(isRooted("/"));
-        assert(isRooted("/foo"));
-        assert(!isRooted("foo"));
-        assert(!isRooted("../foo"));
-    }
-    ---
 
     On Windows, this function returns true if the path starts at
     the root directory of the current drive, of some other drive,
     or of a network drive.
-    ---
-    version (Windows)
-    {
-        assert(isRooted(`\`));
-        assert(isRooted(`\foo`));
-        assert(isRooted(`d:\foo`));
-        assert(isRooted(`\\foo\bar`));
-        assert(!isRooted("foo"));
-        assert(!isRooted("d:foo"));
-    }
-    ---
 */
 bool isRooted(R)(R path)
 if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
@@ -2571,6 +2573,27 @@ if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
     else version (Windows)  return isAbsolute!(BaseOf!R)(path);
 }
 
+///
+@safe unittest
+{
+    version (Posix)
+    {
+        assert( isRooted("/"));
+        assert( isRooted("/foo"));
+        assert(!isRooted("foo"));
+        assert(!isRooted("../foo"));
+    }
+
+    version (Windows)
+    {
+        assert( isRooted(`\`));
+        assert( isRooted(`\foo`));
+        assert( isRooted(`d:\foo`));
+        assert( isRooted(`\\foo\bar`));
+        assert(!isRooted("foo"));
+        assert(!isRooted("d:foo"));
+    }
+}
 
 @safe unittest
 {
@@ -2595,9 +2618,6 @@ if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
     static struct DirEntry { string s; alias s this; }
     assert(!isRooted(DirEntry("foo")));
 }
-
-
-
 
 /** Determines whether a path is absolute or not.
 
@@ -4076,6 +4096,21 @@ string expandTilde(string inputPath) nothrow
     }
 }
 
+///
+@system unittest
+{
+    version (Posix)
+    {
+        import std.process : environment;
+
+        auto oldHome = environment["HOME"];
+        scope(exit) environment["HOME"] = oldHome;
+
+        environment["HOME"] = "dmd/test";
+        assert(expandTilde("~/") == "dmd/test/");
+        assert(expandTilde("~") == "dmd/test");
+    }
+}
 
 @system unittest
 {
