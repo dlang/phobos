@@ -2840,7 +2840,7 @@ Params:
 
 /**
 Gets the value if not null. If `this` is in the null state and the optional
-parameter `datum` is passed, then `datum` is returned, otherwise
+parameter `fallback` is passed, then `fallback` is returned, otherwise
 the function will throw an `AssertError`.
 This function is also called for the implicit conversion to `T`.
 
@@ -3446,6 +3446,7 @@ Params:
 Gets the value. `this` must not be in the null state.
 This function is also called for the implicit conversion to `T`.
 
+Throws: `AssertError` if `isNull`.
 Returns:
     The value held internally by this `Nullable`.
  */
