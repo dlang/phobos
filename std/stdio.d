@@ -3058,39 +3058,44 @@ is empty, throws an `Exception`. In case of an I/O error throws
             }
             else static if (c.sizeof == 2)
             {
-                import std.utf : encode, decode;
+                import std.utf : decode;
 
-                if (orientation_ <= 0)
+                if (c <= 0x7F)
                 {
-                    if (c <= 0x7F)
+                    highSurrogateShouldBeEmpty();
+                    if (orientation_ <= 0) trustedFPUTC(c, handle_);
+                    else trustedFPUTWC(c, handle_);
+                }
+                else if (0xD800 <= c && c <= 0xDBFF) // high surrogate
+                {
+                    highSurrogateShouldBeEmpty();
+                    highSurrogate = c;
+                }
+                else // standalone or low surrogate
+                {
+                    dchar d = c;
+                    if (highSurrogate != '\0')
                     {
-                        highSurrogateShouldBeEmpty();
-                        trustedFPUTC(c, handle_);
+                        immutable wchar[2] rbuf = [highSurrogate, c];
+                        size_t index = 0;
+                        d = decode(rbuf[], index);
+                        highSurrogate = 0;
                     }
-                    else if (0xD800 <= c && c <= 0xDBFF) // high surrogate
+                    if (orientation_ <= 0)
                     {
-                        highSurrogateShouldBeEmpty();
-                        highSurrogate = c;
-                    }
-                    else // standalone or low surrogate
-                    {
-                        dchar d = c;
-                        if (highSurrogate != '\0')
-                        {
-                            immutable wchar[2] rbuf = [highSurrogate, c];
-                            size_t index = 0;
-                            d = decode(rbuf[], index);
-                            highSurrogate = 0;
-                        }
                         char[4] wbuf;
                         immutable size = encode(wbuf, d);
                         foreach (i; 0 .. size)
                             trustedFPUTC(wbuf[i], handle_);
                     }
-                }
-                else
-                {
-                    trustedFPUTWC(c, handle_);
+                    else
+                    {
+                        wchar_t[4 / wchar_t.sizeof] wbuf;
+                        immutable size = encode(wbuf, d);
+                        foreach (i; 0 .. size)
+                            trustedFPUTWC(wbuf[i], handle_);
+                    }
+                    rbuf8Filled = 0;
                 }
             }
             else // 32-bit characters
@@ -3671,6 +3676,18 @@ void main()
         auto writer = File(deleteme, "w,ccs=UTF-16LE").lockingTextWriter();
         writer.put("ö");
         writer.put("\U0001F608");
+    }
+    assert(std.file.readText!wstring(deleteme) == "ö\U0001F608"w);
+}
+@safe unittest // wchar -> wchar_t
+{
+    static import std.file;
+    auto deleteme = testFilename();
+    scope(exit) std.file.remove(deleteme);
+    {
+        auto writer = File(deleteme, "w,ccs=UTF-16LE").lockingTextWriter();
+        writer.put("ö"w);
+        writer.put("\U0001F608"w);
     }
     assert(std.file.readText!wstring(deleteme) == "ö\U0001F608"w);
 }
