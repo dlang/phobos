@@ -472,6 +472,48 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         assert(!MyHook.thereWereErrors);
     }
 
+    // toHash
+    /**
+
+    Generates a hash for `this`. If `Hook` defines `hookToHash`, the call
+    immediately returns `hook.hookToHash(payload)`. If `Hook` does not
+    implement `hookToHash`, but it has state, a hash will be generated for
+    the `Hook` using the built-in function and it will be xored with the
+    hash of the `payload`. Otherwise, the hash of the payload is returned.
+
+    */
+    size_t toHash() const nothrow @safe
+    {
+        static size_t hashFunc(T)(T objToHash)
+        {
+            return (() @trusted => typeid(objToHash).getHash(&objToHash))();
+        }
+
+        static if (hasMember!(Hook, "hookToHash"))
+        {
+            return hook.hookToHash(payload);
+        }
+        else static if (stateSize!Hook > 0)
+        {
+            static if (hasMember!(typeof(payload), "toHash"))
+            {
+                return payload.toHash() ^ hashFunc(hook);
+            }
+            else
+            {
+                return hashFunc(payload) ^ hashFunc(hook);
+            }
+        }
+        else static if (hasMember!(typeof(payload), "toHash"))
+        {
+            return payload.toHash();
+        }
+        else
+        {
+            return hashFunc(payload);
+        }
+    }
+
     // opCmp
     /**
 
@@ -3062,4 +3104,91 @@ version(unittest) private struct CountOpBinary
     assert(y < x);
     x = -1;
     assert(x > y);
+}
+
+// toHash
+@system unittest
+{
+    assert(checked(42).toHash() == checked(42).toHash());
+    assert(checked(12).toHash() != checked(19).toHash());
+
+    static struct Hook1
+    {
+        static size_t hookToHash(T)(T payload)
+        {
+            static if (size_t.sizeof == 4)
+            {
+                return typeid(payload).getHash(&payload) ^ 0xFFFF_FFFF;
+            }
+            else
+            {
+                return typeid(payload).getHash(&payload) ^ 0xFFFF_FFFF_FFFF_FFFF;
+            }
+
+        }
+    }
+
+    auto a = checked!Hook1(78);
+    auto b = checked!Hook1(78);
+    assert(a.toHash() == b.toHash());
+
+    assert(checked!Hook1(12).toHash() != checked!Hook1(13).toHash());
+
+    static struct Hook2
+    {
+        static if (size_t.sizeof == 4)
+        {
+            static size_t hashMask = 0xFFFF_0000;
+        }
+        else
+        {
+            static size_t hashMask = 0xFFFF_0000_FFFF_0000;
+        }
+
+        static size_t hookToHash(T)(T payload)
+        {
+            return typeid(payload).getHash(&payload) ^ hashMask;
+        }
+    }
+
+    auto x = checked!Hook2(1901);
+    auto y = checked!Hook2(1989);
+
+    assert(x.toHash() == x.toHash());
+    assert(x.toHash() != y.toHash());
+    assert(checked!Hook1(1901).toHash() != x.toHash());
+
+    immutable z = checked!Hook1(1901);
+    immutable t = checked!Hook1(1901);
+    immutable w = checked!Hook2(1901);
+
+    assert(z.toHash() == t.toHash());
+    assert(z.toHash() != x.toHash());
+    assert(z.toHash() != w.toHash());
+
+    const long c = 0xF0F0F0F0;
+    const long d = 0xF0F0F0F0;
+
+    assert(checked!Hook1(c).toHash() != checked!Hook2(c));
+    assert(checked!Hook1(c).toHash() != checked!Hook1(d));
+
+    struct MyHook
+    {
+        static size_t hookToHash(T)(const T payload) nothrow @trusted
+        {
+            return typeid(payload).getHash(&payload);
+        }
+    }
+
+    int[Checked!(int, MyHook)] aa;
+    Checked!(int, MyHook) var = 42;
+    aa[var] = 100;
+
+    assert(aa[var] == 100);
+
+    int[Checked!(int, Abort)] bb;
+    Checked!(int, Abort) var2 = 42;
+    bb[var2] = 100;
+
+    assert(bb[var2] == 100);
 }
