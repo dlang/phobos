@@ -916,20 +916,25 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     Returns: A reference to `this`.
     */
     ref Checked opOpAssign(string op, Rhs)(const Rhs rhs) return
-    if (isIntegral!Rhs || isFloatingPoint!Rhs || is(Rhs == bool))
+    if (isIntegral!Rhs || isFloatingPoint!Rhs || is(Rhs == bool) ||
+        is(typeof(Checked!(Rhs, Hook)(rhs))))
     {
-        static assert(is(typeof(mixin("payload" ~ op ~ "=rhs")) == T));
-
-        static if (hasMember!(Hook, "hookOpOpAssign"))
+        static assert(is(typeof(mixin("payload" ~ op ~ "=rhs")) == T) ||
+            is(typeof(Checked!(Rhs, Hook)(rhs))));
+        static if (is(Rhs == Checked!(X, Y), X, Y))
+        {
+            return this.opOpAssign!op(rhs.get);
+        }
+        else static if (hasMember!(Hook, "hookOpOpAssign"))
         {
             hook.hookOpOpAssign!op(payload, rhs);
+            return this;
         }
         else
         {
             alias R = typeof(get + rhs);
             auto r = opBinary!op(rhs).get;
             import std.conv : unsigned;
-
             static if (ProperCompare.hookOpCmp(R.min, min.get) < 0 &&
                 hasMember!(Hook, "onLowerBound"))
             {
@@ -951,8 +956,8 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
                 }
             }
             payload = cast(T) r;
+            return this;
         }
-        return this;
     }
 
     ///
@@ -979,6 +984,17 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         x = byte.max;
         x += 1;
         assert(MyHook.thereWereErrors);
+    }
+
+    @system unittest
+    {
+        auto x1 = Checked!int(10);
+        auto x2 = Checked!int(10);
+        x1 += x2;
+        assert(x1.get == 20);
+        auto x3 = Checked!(Checked!int)(10);
+        x1 += x3;
+        assert(x1.get == 30);
     }
 }
 
