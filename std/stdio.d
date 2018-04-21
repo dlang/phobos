@@ -2923,7 +2923,7 @@ is empty, throws an `Exception`. In case of an I/O error throws
         // the file's orientation (byte- or wide-oriented)
         int orientation_;
 
-        // A buffer for when we need to transcode.
+        // Buffers for when we need to transcode.
         wchar highSurrogate = '\0'; // '\0' indicates empty
         void highSurrogateShouldBeEmpty() @safe
         {
@@ -2931,6 +2931,8 @@ is empty, throws an `Exception`. In case of an I/O error throws
             if (highSurrogate != '\0')
                 throw new UTFException("unpaired surrogate UTF-16 value");
         }
+        char[4] rbuf8;
+        size_t rbuf8Filled = 0;
     public:
 
         this(ref File f) @trusted
@@ -3018,6 +3020,7 @@ is empty, throws an `Exception`. In case of an I/O error throws
         void put(C)(scope C c) @safe if (isSomeChar!C || is(C : const(ubyte)))
         {
             import std.traits : Parameters;
+            import std.utf : decodeFront, encode, stride;
             static auto trustedFPUTC(int ch, _iobuf* h) @trusted
             {
                 return FPUTC(ch, h);
@@ -3029,10 +3032,29 @@ is empty, throws an `Exception`. In case of an I/O error throws
 
             static if (c.sizeof == 1)
             {
-                // simple char
                 highSurrogateShouldBeEmpty();
                 if (orientation_ <= 0) trustedFPUTC(c, handle_);
-                else trustedFPUTWC(c, handle_);
+                else if (c <= 0x7F) trustedFPUTWC(c, handle_);
+                else if (c >= 0b1100_0000) // start byte of multibyte sequence
+                {
+                    rbuf8[0] = c;
+                    rbuf8Filled = 1;
+                }
+                else // continuation byte of multibyte sequence
+                {
+                    rbuf8[rbuf8Filled] = c;
+                    ++rbuf8Filled;
+                    if (stride(rbuf8[]) == rbuf8Filled) // sequence is complete
+                    {
+                        char[] str = rbuf8[0 .. rbuf8Filled];
+                        immutable dchar d = decodeFront(str);
+                        wchar_t[4 / wchar_t.sizeof] wbuf;
+                        immutable size = encode(wbuf, d);
+                        foreach (i; 0 .. size)
+                            trustedFPUTWC(wbuf[i], handle_);
+                        rbuf8Filled = 0;
+                    }
+                }
             }
             else static if (c.sizeof == 2)
             {
@@ -3639,6 +3661,18 @@ void main()
         writer.put("bar");
     }
     assert(std.file.readText!string(deleteme).stripLeft("\uFEFF") == "foobar");
+}
+@safe unittest // char -> wchar_t
+{
+    static import std.file;
+    auto deleteme = testFilename();
+    scope(exit) std.file.remove(deleteme);
+    {
+        auto writer = File(deleteme, "w,ccs=UTF-16LE").lockingTextWriter();
+        writer.put("ö");
+        writer.put("\U0001F608");
+    }
+    assert(std.file.readText!wstring(deleteme) == "ö\U0001F608"w);
 }
 
 @safe unittest
