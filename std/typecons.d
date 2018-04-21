@@ -2839,9 +2839,9 @@ Params:
 }
 
 /**
-Gets the value if not null. If `this` is in the null state and the optional
-parameter `fallback` is passed, then `fallback` is returned, otherwise
-the function may throw an `AssertError`.
+Gets the value if not null. If `this` is in the null state, and the optional
+parameter `fallback` was provided, it will be returned. Without `fallback`,
+calling `get` with a null state is invalid.
 This function is also called for the implicit conversion to `T`.
 
 Params:
