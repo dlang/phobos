@@ -2841,7 +2841,7 @@ Params:
 /**
 Gets the value if not null. If `this` is in the null state and the optional
 parameter `fallback` is passed, then `fallback` is returned, otherwise
-the function will throw an `AssertError`.
+the function may throw an `AssertError`.
 This function is also called for the implicit conversion to `T`.
 
 Params:
@@ -3446,7 +3446,7 @@ Params:
 Gets the value. `this` must not be in the null state.
 This function is also called for the implicit conversion to `T`.
 
-Throws: `AssertError` if `isNull`.
+Preconditions: `isNull` must be `false`.
 Returns:
     The value held internally by this `Nullable`.
  */
