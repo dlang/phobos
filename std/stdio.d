@@ -2831,6 +2831,16 @@ is empty, throws an `Exception`. In case of an I/O error throws
 
         // the file's orientation (byte- or wide-oriented)
         int orientation_;
+
+        // A buffer for when we need to transcode.
+        wchar[2] rbuf16;
+        size_t rbuf16Filled = 0;
+        void rbuf16ShouldBeEmpty() @safe
+        {
+            import std.utf : UTFException;
+            if (rbuf16Filled > 0)
+                throw new UTFException("unpaired surrogate UTF-16 value");
+        }
     public:
 
         this(ref File f) @trusted
@@ -2851,6 +2861,7 @@ is empty, throws an `Exception`. In case of an I/O error throws
             {
                 if (p.handle) FUNLOCK(p.handle);
             }
+            rbuf16ShouldBeEmpty();
         }
 
         this(this) @trusted
@@ -2907,25 +2918,39 @@ is empty, throws an `Exception`. In case of an I/O error throws
             static if (c.sizeof == 1)
             {
                 // simple char
+                rbuf16ShouldBeEmpty();
                 if (orientation_ <= 0) trustedFPUTC(c, handle_);
                 else trustedFPUTWC(c, handle_);
             }
             else static if (c.sizeof == 2)
             {
                 import std.utf : encode;
+                import std.utf : decodeFront;
 
                 if (orientation_ <= 0)
                 {
                     if (c <= 0x7F)
                     {
+                        rbuf16ShouldBeEmpty();
                         trustedFPUTC(c, handle_);
                     }
-                    else
+                    else if (0xD800 <= c && c <= 0xDBFF) // high surrogate
                     {
-                        char[4] buf;
-                        immutable size = encode(buf, c);
-                        foreach (i ; 0 .. size)
-                            trustedFPUTC(buf[i], handle_);
+                        rbuf16ShouldBeEmpty();
+                        rbuf16[0] = c;
+                        rbuf16Filled = 1;
+                    }
+                    else // standalone or low surrogate
+                    {
+                        rbuf16[rbuf16Filled] = c;
+                        ++rbuf16Filled;
+                        wchar[] str = rbuf16[0 .. rbuf16Filled];
+                        rbuf16Filled = 0;
+                        immutable dchar d = decodeFront(str);
+                        char[4] wbuf;
+                        immutable size = encode(wbuf, d);
+                        foreach (i; 0 .. size)
+                            trustedFPUTC(wbuf[i], handle_);
                     }
                 }
                 else
@@ -2937,6 +2962,7 @@ is empty, throws an `Exception`. In case of an I/O error throws
             {
                 import std.utf : encode;
 
+                rbuf16ShouldBeEmpty();
                 if (orientation_ <= 0)
                 {
                     if (c <= 0x7F)
@@ -3417,6 +3443,49 @@ void main()
         writer.put(cast(immutable(ubyte)[])"日本語"); // Bug 17229
     }
     assert(File(deleteme).readln() == "日本語日本語日本語日本語############日本語");
+}
+
+@safe unittest // wchar -> char
+{
+    static import std.file;
+    import std.exception : assertThrown;
+    import std.utf : UTFException;
+
+    auto deleteme = testFilename();
+    scope(exit) std.file.remove(deleteme);
+
+    {
+        auto writer = File(deleteme, "w").lockingTextWriter();
+        writer.put("\U0001F608"w);
+    }
+    assert(std.file.readText!string(deleteme) == "\U0001F608");
+
+    // Test invalid input: unpaired high surrogate
+    {
+        immutable wchar surr = "\U0001F608"w[0];
+        auto f = File(deleteme, "w");
+        assertThrown!UTFException(() {
+            auto writer = f.lockingTextWriter();
+            writer.put('x');
+            writer.put(surr);
+            assertThrown!UTFException(writer.put(char('y')));
+            assertThrown!UTFException(writer.put(wchar('y')));
+            assertThrown!UTFException(writer.put(dchar('y')));
+            assertThrown!UTFException(writer.put(surr));
+        } ());
+        f.close(); // No idea why this is needed.
+    }
+    assert(std.file.readText!string(deleteme) == "x");
+
+    // Test invalid input: unpaired low surrogate
+    {
+        immutable wchar surr = "\U0001F608"w[1];
+        auto writer = File(deleteme, "w").lockingTextWriter();
+        assertThrown!UTFException(writer.put(surr));
+        writer.put('y');
+        assertThrown!UTFException(writer.put(surr));
+    }
+    assert(std.file.readText!string(deleteme) == "y");
 }
 
 @safe unittest
