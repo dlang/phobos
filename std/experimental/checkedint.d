@@ -1030,7 +1030,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
             assert(0);
         }
     }
-    assertThrown!AssertError(Checked!(int, MyHook)(0));
+    assertThrown!AssertError({ auto a = Checked!(int, MyHook)(0); }());
     assertThrown!AssertError({ auto a = Checked!(int, MyHook)(101); }());
     Checked!(int, MyHook) a = 10;
     assertThrown!AssertError(a = 101);
