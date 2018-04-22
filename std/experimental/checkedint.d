@@ -292,9 +292,28 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
             is(typeof(Checked!(T, Hook)(rhs.get))))
     {
         static if (isIntegral!U)
-            payload = rhs;
+        {
+            auto val = rhs;
+        }
         else
-            payload = rhs.payload;
+        {
+            auto val = rhs.payload;
+        }
+
+        static if (hasMember!(Hook, "min") && hasMember!(Hook, "onLowerBound") &&
+            (ProperCompare.hookOpCmp(val, hook.min!T) < 0))
+        {
+            payload = hook.onLowerBound(val, hook.min!T);
+        }
+        static if (hasMember!(Hook, "max") && hasMember!(Hook, "onUpperBound") &&
+            (ProperCompare.hookOpCmp(val, hook.max!T) > 0))
+        {
+            payload = hook.onUpperBound(val, hook.max!T);
+        }
+        else
+        {
+            payload = val;
+        }
     }
     ///
     @system unittest
@@ -311,9 +330,28 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     void opAssign(U)(U rhs) if (is(typeof(Checked!(T, Hook)(rhs))))
     {
         static if (isIntegral!U)
-            payload = rhs;
+        {
+            auto val = rhs;
+        }
         else
-            payload = rhs.payload;
+        {
+            auto val = rhs.payload;
+        }
+
+        static if (hasMember!(Hook, "min") && hasMember!(Hook, "onLowerBound") &&
+            (ProperCompare.hookOpCmp(val, hook.min!T) < 0))
+        {
+            payload = hook.onLowerBound(val, hook.min!T);
+        }
+        static if (hasMember!(Hook, "max") && hasMember!(Hook, "onUpperBound") &&
+            (ProperCompare.hookOpCmp(val, hook.max!T) > 0))
+        {
+            payload = hook.onUpperBound(val, hook.max!T);
+        }
+        else
+        {
+            payload = val;
+        }
     }
     ///
     @system unittest
@@ -982,6 +1020,30 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     }
 }
 
+@system unittest
+{
+    import core.exception : AssertError;
+    import std.exception : assertThrown;
+    static struct MyHook {
+        enum min(T) = 1;
+        enum max(T) = 100;
+
+        static B onLowerBound(T, B)(T value, B bound)
+        {
+            assert(0);
+        }
+
+        static B onUpperBound(T, B)(T value, B bound)
+        {
+            assert(0);
+        }
+    }
+    assertThrown!AssertError(Checked!(int, MyHook)(0));
+    assertThrown!AssertError({ auto a = Checked!(int, MyHook)(101); }());
+    Checked!(int, MyHook) a = 10;
+    assertThrown!AssertError(a = 101);
+    assertThrown!AssertError(a = 0);
+}
 /**
 
 Convenience function that turns an integral into the corresponding `Checked`
