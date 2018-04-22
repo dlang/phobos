@@ -293,26 +293,22 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     {
         static if (isIntegral!U)
         {
-            auto val = rhs;
+            payload = rhs;
         }
         else
         {
-            auto val = rhs.payload;
+            payload = rhs.payload;
         }
 
         static if (hasMember!(Hook, "min") && hasMember!(Hook, "onLowerBound") &&
-            (ProperCompare.hookOpCmp(val, hook.min!T) < 0))
+            (ProperCompare.hookOpCmp(payload, hook.min!T) < 0))
         {
-            payload = hook.onLowerBound(val, hook.min!T);
+            payload = hook.onLowerBound(payload, hook.min!T);
         }
         static if (hasMember!(Hook, "max") && hasMember!(Hook, "onUpperBound") &&
-            (ProperCompare.hookOpCmp(val, hook.max!T) > 0))
+            (ProperCompare.hookOpCmp(payload, hook.max!T) > 0))
         {
-            payload = hook.onUpperBound(val, hook.max!T);
-        }
-        else
-        {
-            payload = val;
+            payload = hook.onUpperBound(payload, hook.max!T);
         }
     }
     ///
@@ -331,26 +327,22 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     {
         static if (isIntegral!U)
         {
-            auto val = rhs;
+            payload = rhs;
         }
         else
         {
-            auto val = rhs.payload;
+            payload = rhs.payload;
         }
 
         static if (hasMember!(Hook, "min") && hasMember!(Hook, "onLowerBound") &&
-            (ProperCompare.hookOpCmp(val, hook.min!T) < 0))
+            (ProperCompare.hookOpCmp(payload, hook.min!T) < 0))
         {
-            payload = hook.onLowerBound(val, hook.min!T);
+            payload = hook.onLowerBound(payload, hook.min!T);
         }
         static if (hasMember!(Hook, "max") && hasMember!(Hook, "onUpperBound") &&
-            (ProperCompare.hookOpCmp(val, hook.max!T) > 0))
+            (ProperCompare.hookOpCmp(payload, hook.max!T) > 0))
         {
-            payload = hook.onUpperBound(val, hook.max!T);
-        }
-        else
-        {
-            payload = val;
+            payload = hook.onUpperBound(payload, hook.max!T);
         }
     }
     ///
