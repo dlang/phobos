@@ -391,7 +391,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      *  The number of times the output range's `put` method was invoked.
      */
     size_t encode(E, R)(scope const(E)[] source, auto ref R range)
-    if (is(E : ubyte) && isOutputRange!(R, char))
+    if (is(E : ubyte) && isOutputRange!(R, char) && !is(R == char[]))
     out(result)
     {
         assert(result == encodeLength(source.length), "The number of put is different from the length of Base64");

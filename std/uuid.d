@@ -880,12 +880,14 @@ public struct UUID
                 const uint lo = (entry) & 0x0F;
                 result[pos+1] = toChar!char(lo);
             }
-            foreach (i, c; result)
+            static if (!__traits(compiles, put(sink, result[])) || isSomeString!Writer)
             {
-                static if (__traits(compiles, put(sink, c)))
-                    put(sink, c);
-                else
+                foreach (i, c; result)
                     sink[i] = cast(typeof(sink[i]))c;
+            }
+            else
+            {
+                put(sink, result[]);
             }
         }
 
