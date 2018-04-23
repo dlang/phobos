@@ -2833,12 +2833,11 @@ is empty, throws an `Exception`. In case of an I/O error throws
         int orientation_;
 
         // A buffer for when we need to transcode.
-        wchar[2] rbuf16;
-        size_t rbuf16Filled = 0;
-        void rbuf16ShouldBeEmpty() @safe
+        wchar highSurrogate = '\0'; // '\0' indicates empty
+        void highSurrogateShouldBeEmpty() @safe
         {
             import std.utf : UTFException;
-            if (rbuf16Filled > 0)
+            if (highSurrogate != '\0')
                 throw new UTFException("unpaired surrogate UTF-16 value");
         }
     public:
@@ -2864,7 +2863,7 @@ is empty, throws an `Exception`. In case of an I/O error throws
             file_ = File.init;
                 /* Destroy file_ before possibly throwing. Else it wouldn't be
                 destroyed, and its reference count would be wrong. */
-            rbuf16ShouldBeEmpty();
+            highSurrogateShouldBeEmpty();
         }
 
         this(this) @trusted
@@ -2921,7 +2920,7 @@ is empty, throws an `Exception`. In case of an I/O error throws
             static if (c.sizeof == 1)
             {
                 // simple char
-                rbuf16ShouldBeEmpty();
+                highSurrogateShouldBeEmpty();
                 if (orientation_ <= 0) trustedFPUTC(c, handle_);
                 else trustedFPUTWC(c, handle_);
             }
@@ -2934,21 +2933,20 @@ is empty, throws an `Exception`. In case of an I/O error throws
                 {
                     if (c <= 0x7F)
                     {
-                        rbuf16ShouldBeEmpty();
+                        highSurrogateShouldBeEmpty();
                         trustedFPUTC(c, handle_);
                     }
                     else if (0xD800 <= c && c <= 0xDBFF) // high surrogate
                     {
-                        rbuf16ShouldBeEmpty();
-                        rbuf16[0] = c;
-                        rbuf16Filled = 1;
+                        highSurrogateShouldBeEmpty();
+                        highSurrogate = c;
                     }
                     else // standalone or low surrogate
                     {
-                        rbuf16[rbuf16Filled] = c;
-                        ++rbuf16Filled;
-                        wchar[] str = rbuf16[0 .. rbuf16Filled];
-                        rbuf16Filled = 0;
+                        immutable wchar[2] rbuf = [highSurrogate, c];
+                        wstring str = rbuf[highSurrogate == '\0' ? 1 : 0 .. $];
+                            // Skipping the high surrogate when there's none.
+                        highSurrogate = '\0';
                         immutable dchar d = decodeFront(str);
                         char[4] wbuf;
                         immutable size = encode(wbuf, d);
@@ -2965,7 +2963,7 @@ is empty, throws an `Exception`. In case of an I/O error throws
             {
                 import std.utf : encode;
 
-                rbuf16ShouldBeEmpty();
+                highSurrogateShouldBeEmpty();
                 if (orientation_ <= 0)
                 {
                     if (c <= 0x7F)
