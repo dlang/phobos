@@ -2926,8 +2926,7 @@ is empty, throws an `Exception`. In case of an I/O error throws
             }
             else static if (c.sizeof == 2)
             {
-                import std.utf : encode;
-                import std.utf : decodeFront;
+                import std.utf : decodeFront, encode;
 
                 if (orientation_ <= 0)
                 {
