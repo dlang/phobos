@@ -3475,6 +3475,9 @@ void main()
             assertThrown!UTFException(writer.put(wchar('y')));
             assertThrown!UTFException(writer.put(dchar('y')));
             assertThrown!UTFException(writer.put(surr));
+            // First `surr` is still unpaired at this point. `writer` gets
+            // destroyed now, and the destructor throws a UTFException for
+            // the unpaired surrogate.
         } ());
     }
     assert(std.file.readText!string(deleteme) == "x");
