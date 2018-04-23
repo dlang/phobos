@@ -2861,6 +2861,9 @@ is empty, throws an `Exception`. In case of an I/O error throws
             {
                 if (p.handle) FUNLOCK(p.handle);
             }
+            file_ = File.init;
+                /* Destroy file_ before possibly throwing. Else it wouldn't be
+                destroyed, and its reference count would be wrong. */
             rbuf16ShouldBeEmpty();
         }
 
@@ -3473,7 +3476,6 @@ void main()
             assertThrown!UTFException(writer.put(dchar('y')));
             assertThrown!UTFException(writer.put(surr));
         } ());
-        f.close(); // No idea why this is needed.
     }
     assert(std.file.readText!string(deleteme) == "x");
 
