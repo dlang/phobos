@@ -2839,9 +2839,9 @@ Params:
 }
 
 /**
-Gets the value if not null. If `this` is in the null state and the optional
-parameter `datum` is passed, then `datum` is returned, otherwise
-the function will throw an `AssertError`.
+Gets the value if not null. If `this` is in the null state, and the optional
+parameter `fallback` was provided, it will be returned. Without `fallback`,
+calling `get` with a null state is invalid.
 This function is also called for the implicit conversion to `T`.
 
 Params:
@@ -3446,6 +3446,7 @@ Params:
 Gets the value. `this` must not be in the null state.
 This function is also called for the implicit conversion to `T`.
 
+Preconditions: `isNull` must be `false`.
 Returns:
     The value held internally by this `Nullable`.
  */
