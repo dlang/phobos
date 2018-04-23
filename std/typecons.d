@@ -2781,6 +2781,36 @@ if (is(S == struct))
     assert(rs.ptr is null);
 }
 
+/// Using Rebindable in a generic algorithm:
+@safe unittest
+{
+    import std.range.primitives : front, popFront;
+
+    // simple version of std.algorithm.searching.maxElement
+    typeof(R.init.front) maxElement(R)(R r)
+    {
+        auto max = rebindable(r.front);
+        r.popFront;
+        foreach (e; r)
+            if (e > max)
+                max = e; // Rebindable allows const-correct reassignment
+        return max;
+    }
+    struct S
+    {
+        char[] arr;
+        alias arr this; // for comparison
+    }
+    // can't convert to mutable
+    const S cs;
+    static assert(!__traits(compiles, { S s = cs; }));
+
+    alias CS = const S;
+    CS[] arr = [CS("harp"), CS("apple"), CS("pot")];
+    CS ms = maxElement(arr);
+    assert(ms.arr == "pot");
+}
+
 // Test Rebindable!immutable
 @safe unittest
 {
