@@ -2926,7 +2926,7 @@ is empty, throws an `Exception`. In case of an I/O error throws
             }
             else static if (c.sizeof == 2)
             {
-                import std.utf : decodeFront, encode;
+                import std.utf : encode;
 
                 if (orientation_ <= 0)
                 {
@@ -2942,11 +2942,13 @@ is empty, throws an `Exception`. In case of an I/O error throws
                     }
                     else // standalone or low surrogate
                     {
-                        immutable wchar[2] rbuf = [highSurrogate, c];
-                        wstring str = rbuf[highSurrogate == '\0' ? 1 : 0 .. $];
-                            // Skipping the high surrogate when there's none.
-                        highSurrogate = '\0';
-                        immutable dchar d = decodeFront(str);
+                        dchar d = c;
+                        if (highSurrogate != '\0')
+                        {
+                            immutable wchar[2] rbuf = [highSurrogate, c];
+                            d = rbuf[].front;
+                            highSurrogate = 0;
+                        }
                         char[4] wbuf;
                         immutable size = encode(wbuf, d);
                         foreach (i; 0 .. size)
