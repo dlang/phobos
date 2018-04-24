@@ -467,21 +467,31 @@ void put(R, E)(ref R r, E e)
 }
 
 /**
- * Because of auto-decoding, the `front` of a `string` is a `dchar`,
- * so using `put` with `char` arrays is disallowed. In order to fill
- * any `char` type array, use $(REF byCodeUnit, std, utf).
+ * It's also possible to `put` any width strings or characters into narrow
+ * strings -- put does the conversion for you.
+ *
+ * Note that putting the same width character as the target buffer type is
+ * `nothrow`, but transcoding can throw a $(REF UTFException, std, utf).
  */
-@safe pure nothrow unittest
+@safe pure unittest
 {
-    import std.utf : byCodeUnit;
-
     // the elements must be mutable, so using string or const(char)[]
     // won't compile
     char[] s1 = new char[13];
-    auto r1 = s1.byCodeUnit;
+    auto r1 = s1;
+    put(r1, "Hello, World!"w);
+    assert(s1 == "Hello, World!");
+}
+
+@safe pure nothrow unittest
+{
+    // same thing, just using same character width.
+    char[] s1 = new char[13];
+    auto r1 = s1;
     put(r1, "Hello, World!");
     assert(s1 == "Hello, World!");
 }
+
 
 @safe pure nothrow @nogc unittest
 {
