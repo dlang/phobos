@@ -2889,10 +2889,8 @@ public:
 
     /**
      * Immediately drop any connections and release socket resources.
-     * Calling `shutdown` before `close` is recommended for
-     * connection-oriented sockets. The `Socket` object is no longer
-     * usable after `close`.
-     * Calling shutdown() before this is recommended
+     * The `Socket` object is no longer usable after `close`.
+     * Calling `shutdown` before `close` is recommended
      * for connection-oriented sockets.
      */
     void close() @trusted nothrow @nogc
