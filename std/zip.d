@@ -414,7 +414,7 @@ final class ZipArchive
      */
     void[] build() @safe pure
     {
-        import std.array : array;
+        import std.array : array, uninitializedArray;
         import std.algorithm.sorting : sort;
         import std.string : representation;
 
@@ -449,7 +449,7 @@ final class ZipArchive
         if (isZip64)
             dataSize += eocd64LocLength + eocd64Length;
 
-        _data = new ubyte[dataSize];
+        _data = uninitializedArray!(ubyte[])(dataSize);
 
         // Populate the data[]
 
