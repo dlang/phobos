@@ -335,7 +335,6 @@ struct FreeTree(ParentAllocator)
         return true;
     }
 
-    version(unittest)
     @system unittest // test a few simple configurations
     {
         import std.experimental.allocator.gc_allocator;
@@ -357,7 +356,6 @@ struct FreeTree(ParentAllocator)
         assert(a.formatSizes == "(_)", a.formatSizes);
     }
 
-    version(unittest)
     @system unittest // build a complex free tree
     {
         import std.experimental.allocator.gc_allocator, std.range;

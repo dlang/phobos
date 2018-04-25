@@ -1628,7 +1628,7 @@ private @property Logger defaultSharedLoggerImpl() @trusted
     import std.conv : emplace;
     import std.stdio : stderr;
 
-    static __gshared align(FileLogger.alignof) void[__traits(classInstanceSize, FileLogger)] _buffer;
+    __gshared align(FileLogger.alignof) void[__traits(classInstanceSize, FileLogger)] _buffer;
 
     import std.concurrency : initOnce;
     initOnce!stdSharedDefaultLogger({

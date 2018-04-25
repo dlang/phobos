@@ -77,41 +77,52 @@ enum Options : ulong
     */
     numDeallocateAll = 1u << 9,
     /**
+    Counts the number of calls to `alignedAllocate`. All calls are counted,
+    including requests for zero bytes or failed requests.
+    */
+    numAlignedAllocate = 1u << 10,
+    /**
+    Counts the number of calls to `alignedAllocate` that succeeded, i.e. they
+    returned a block as large as requested. (N.B. requests for zero bytes count
+    as successful.)
+    */
+    numAlignedAllocateOk = 1u << 11,
+    /**
     Chooses all `numXxx` flags.
     */
-    numAll = (1u << 10) - 1,
+    numAll = (1u << 12) - 1,
     /**
     Tracks bytes currently allocated by this allocator. This number goes up
     and down as memory is allocated and deallocated, and is zero if the
     allocator currently has no active allocation.
     */
-    bytesUsed = 1u << 10,
+    bytesUsed = 1u << 12,
     /**
     Tracks total cumulative bytes allocated by means of `allocate`,
     `expand`, and `reallocate` (when resulting in an expansion). This
     number always grows and indicates allocation traffic. To compute bytes
     deallocated cumulatively, subtract `bytesUsed` from `bytesAllocated`.
     */
-    bytesAllocated = 1u << 11,
+    bytesAllocated = 1u << 13,
     /**
     Tracks the sum of all `delta` values in calls of the form
     $(D expand(b, delta)) that succeed (return `true`).
     */
-    bytesExpanded = 1u << 12,
+    bytesExpanded = 1u << 14,
     /**
     Tracks the sum of all $(D b.length - s) with $(D b.length > s) in calls of
     the form $(D realloc(b, s)) that succeed (return `true`). In per-call
     statistics, also unambiguously counts the bytes deallocated with
     `deallocate`.
     */
-    bytesContracted = 1u << 13,
+    bytesContracted = 1u << 15,
     /**
     Tracks the sum of all bytes moved as a result of calls to `realloc` that
     were unable to reallocate in place. A large number (relative to $(D
     bytesAllocated)) indicates that the application should use larger
     preallocations.
     */
-    bytesMoved = 1u << 14,
+    bytesMoved = 1u << 16,
     /**
     Tracks the sum of all bytes NOT moved as result of calls to `realloc`
     that managed to reallocate in place. A large number (relative to $(D
@@ -120,26 +131,26 @@ enum Options : ulong
     small and `bytesSlack` is high, it means the application is
     overallocating for little benefit.
     */
-    bytesNotMoved = 1u << 15,
+    bytesNotMoved = 1u << 17,
     /**
     Measures the sum of extra bytes allocated beyond the bytes requested, i.e.
     the $(HTTP goo.gl/YoKffF, internal fragmentation). This is the current
     effective number of slack bytes, and it goes up and down with time.
     */
-    bytesSlack = 1u << 16,
+    bytesSlack = 1u << 18,
     /**
     Measures the maximum bytes allocated over the time. This is useful for
     dimensioning allocators.
     */
-    bytesHighTide = 1u << 17,
+    bytesHighTide = 1u << 19,
     /**
     Chooses all `byteXxx` flags.
     */
-    bytesAll = ((1u << 18) - 1) & ~numAll,
+    bytesAll = ((1u << 20) - 1) & ~numAll,
     /**
     Combines all flags above.
     */
-    all = (1u << 18) - 1
+    all = (1u << 20) - 1
 }
 
 /**
@@ -228,6 +239,10 @@ private:
         /// Ditto
         @property ulong numDeallocateAll() const;
         /// Ditto
+        @property ulong numAlignedAllocate() const;
+        /// Ditto
+        @property ulong numAlignedAllocateOk() const;
+        /// Ditto
         @property ulong bytesUsed() const;
         /// Ditto
         @property ulong bytesAllocated() const;
@@ -267,6 +282,8 @@ private:
         "numReallocateInPlace",
         "numDeallocate",
         "numDeallocateAll",
+        "numAlignedAllocate",
+        "numAlignedAllocateOk",
         "bytesUsed",
         "bytesAllocated",
         "bytesExpanded",
@@ -334,6 +351,50 @@ public:
         add!"numAllocateOK"(result.length == bytes); // allocating 0 bytes is OK
         addPerCall!(f, n, "numAllocate", "numAllocateOK", "bytesAllocated")
             (1, result.length == bytes, result.length);
+        return result;
+    }
+
+    /**
+    Forwards to `parent.alignedAllocate`. Affects per instance: `numAlignedAllocate`,
+    `bytesUsed`, `bytesAllocated`, `bytesSlack`, `numAlignedAllocateOk`,
+    and `bytesHighTide`. Affects per call: `numAlignedAllocate`, `numAlignedAllocateOk`,
+    and `bytesAllocated`.
+    */
+    static if (!(perCallFlags
+        & (Options.numAlignedAllocate | Options.numAlignedAllocateOk
+            | Options.bytesAllocated)))
+    {
+        void[] alignedAllocate(size_t n, uint a)
+        { return alignedAllocateImpl(n, a); }
+    }
+    else
+    {
+        void[] alignedAllocate(string f = __FILE__, ulong n = __LINE__)
+            (size_t bytes, uint a)
+        { return alignedAllocateImpl!(f, n)(bytes, a); }
+    }
+
+    private void[] alignedAllocateImpl(string f = null, ulong n = 0)(size_t bytes, uint a)
+    {
+        up!"numAlignedAllocate";
+        static if (!hasMember!(Allocator, "alignedAllocate"))
+        {
+            if (bytes == 0)
+                up!"numAlignedAllocateOk";
+            void[] result = null;
+        }
+        else
+        {
+            auto result = parent.alignedAllocate(bytes, a);
+            add!"bytesUsed"(result.length);
+            add!"bytesAllocated"(result.length);
+            immutable slack = this.goodAllocSize(result.length) - result.length;
+            add!"bytesSlack"(slack);
+            add!"numAlignedAllocateOk"(result.length == bytes); // allocating 0 bytes is OK
+        }
+        addPerCall!(f, n, "numAlignedAllocate", "numAlignedAllocateOk", "bytesAllocated")
+            (1, result.length == bytes, result.length);
+
         return result;
     }
 
@@ -677,7 +738,7 @@ public:
     scope(exit) remove(f);
     Allocator.reportPerCallStatistics(File(f, "w"));
     alloc.reportStatistics(File(f, "a"));
-    assert(File(f).byLine.walkLength == 22);
+    assert(File(f).byLine.walkLength == 24);
 }
 
 @system unittest
@@ -761,4 +822,36 @@ public:
     assert(b.length == 100);
     // Test that deallocateAll infers from parent
     assert((() nothrow @nogc => a.deallocateAll())());
+}
+
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+
+    auto a = StatsCollector!(Region!(), Options.all)(Region!()(new ubyte[1024 * 64]));
+    auto b = a.alignedAllocate(42, 128);
+    assert(b.length == 42);
+    assert(b.ptr.alignedAt(128));
+    assert(a.numAlignedAllocate == 1);
+    assert(a.numAlignedAllocateOk == 1);
+    assert(a.bytesUsed == 42);
+
+    b = a.alignedAllocate(23, 256);
+    assert(b.length == 23);
+    assert(b.ptr.alignedAt(256));
+    assert(a.numAlignedAllocate == 2);
+    assert(a.numAlignedAllocateOk == 2);
+    assert(a.bytesUsed == 65);
+
+    b = a.alignedAllocate(0, 512);
+    assert(b.length == 0);
+    assert(a.numAlignedAllocate == 3);
+    assert(a.numAlignedAllocateOk == 3);
+    assert(a.bytesUsed == 65);
+
+    b = a.alignedAllocate(1024 * 1024, 512);
+    assert(b is null);
+    assert(a.numAlignedAllocate == 4);
+    assert(a.numAlignedAllocateOk == 3);
+    assert(a.bytesUsed == 65);
 }

@@ -481,7 +481,6 @@ Forwards each of the methods in `funs` (if defined) to `member`.
 
 version(unittest)
 {
-    import std.experimental.allocator : RCIAllocator, RCISharedAllocator;
 
     package void testAllocator(alias make)()
     {
@@ -511,6 +510,18 @@ version(unittest)
         auto b2 = a.allocate(2);
         assert(b2.length == 2);
         assert(b2.ptr + b2.length <= b1.ptr || b1.ptr + b1.length <= b2.ptr);
+
+        // Test allocateZeroed
+        static if (hasMember!(A, "allocateZeroed"))
+        {{
+            auto b3 = a.allocateZeroed(8);
+            if (b3 !is null)
+            {
+                assert(b3.length == 8);
+                foreach (e; cast(ubyte[]) b3)
+                    assert(e == 0);
+            }
+        }}
 
         // Test alignedAllocate
         static if (hasMember!(A, "alignedAllocate"))
@@ -608,9 +619,13 @@ version(unittest)
     }
 
     package void testAllocatorObject(RCAllocInterface)(RCAllocInterface a)
-    if (is(RCAllocInterface == RCIAllocator)
-        || is (RCAllocInterface == shared RCISharedAllocator))
     {
+        // this used to be a template constraint, but moving it inside prevents
+        // unnecessary import of std.experimental.allocator
+        import std.experimental.allocator : RCIAllocator, RCISharedAllocator;
+        static assert(is(RCAllocInterface == RCIAllocator)
+            || is (RCAllocInterface == RCISharedAllocator));
+
         import std.conv : text;
         import std.math : isPowerOf2;
         import std.stdio : writeln, stderr;

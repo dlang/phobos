@@ -41,18 +41,6 @@ module std.internal.cstring;
 import std.range;
 import std.traits;
 
-version(unittest)
-@property inout(C)[] asArray(C)(inout C* cstr) pure nothrow @nogc @trusted
-if (isSomeChar!C)
-in { assert(cstr); }
-do
-{
-    size_t length = 0;
-    while (cstr[length])
-        ++length;
-    return cstr[0 .. length];
-}
-
 /**
 Creates temporary 0-terminated $(I C string) with copy of passed text.
 
@@ -157,14 +145,23 @@ nothrow @nogc @system unittest
 
 @safe pure nothrow @nogc unittest
 {
-    assert("abc".tempCString().asArray == "abc");
-    assert("abc"d.tempCString().ptr.asArray == "abc");
-    assert("abc".tempCString!wchar().buffPtr.asArray == "abc"w);
+    static inout(C)[] arrayFor(C)(inout(C)* cstr) pure nothrow @nogc @trusted
+    {
+        assert(cstr);
+        size_t length = 0;
+        while (cstr[length])
+            ++length;
+        return cstr[0 .. length];
+    }
+
+    assert(arrayFor("abc".tempCString()) == "abc");
+    assert(arrayFor("abc"d.tempCString().ptr) == "abc");
+    assert(arrayFor("abc".tempCString!wchar().buffPtr) == "abc"w);
 
     import std.utf : byChar, byWchar;
     char[300] abc = 'a';
-    assert(tempCString(abc[].byChar).buffPtr.asArray == abc);
-    assert(tempCString(abc[].byWchar).buffPtr.asArray == abc);
+    assert(arrayFor(tempCString(abc[].byChar).buffPtr) == abc);
+    assert(arrayFor(tempCString(abc[].byWchar).buffPtr) == abc);
     assert(tempCString(abc[].byChar)[] == abc);
 }
 

@@ -164,6 +164,16 @@ class FileException : Exception
      +/
     immutable uint errno;
 
+    private this(in char[] name, in char[] msg, string file, size_t line, uint errno) @safe pure
+    {
+        if (msg.empty)
+            super(name.idup, file, line);
+        else
+            super(text(name, ": ", msg), file, line);
+
+        this.errno = errno;
+    }
+
     /++
         Constructor which takes an error message.
 
@@ -175,12 +185,7 @@ class FileException : Exception
      +/
     this(in char[] name, in char[] msg, string file = __FILE__, size_t line = __LINE__) @safe pure
     {
-        if (msg.empty)
-            super(name.idup, file, line);
-        else
-            super(text(name, ": ", msg), file, line);
-
-        errno = 0;
+        this(name, msg, file, line, 0);
     }
 
     /++
@@ -200,8 +205,7 @@ class FileException : Exception
                           string file = __FILE__,
                           size_t line = __LINE__) @safe
     {
-        this(name, sysErrorString(errno), file, line);
-        this.errno = errno;
+        this(name, sysErrorString(errno), file, line, errno);
     }
     else version(Posix) this(in char[] name,
                              uint errno = .errno,
@@ -209,8 +213,7 @@ class FileException : Exception
                              size_t line = __LINE__) @trusted
     {
         import std.exception : errnoString;
-        this(name, errnoString(errno), file, line);
-        this.errno = errno;
+        this(name, errnoString(errno), file, line, errno);
     }
 }
 
@@ -481,6 +484,7 @@ version (linux) @safe unittest
     validation will fail.
 
     Params:
+        S = the string type of the file
         name = string or range of characters representing the file _name
 
     Returns: Array of characters read.
@@ -720,7 +724,7 @@ Params:
     name = string or range of characters representing the file _name
     buffer = data to be written to file
 
-Throws: `FileException` on error.
+Throws: $(LREF FileException) on error.
 
 See_also: $(REF toFile, std,stdio)
  */
@@ -769,7 +773,7 @@ Params:
     name = string or range of characters representing the file _name
     buffer = data to be appended to file
 
-Throws: `FileException` on error.
+Throws: $(LREF FileException) on error.
  */
 void append(R)(R name, const void[] buffer)
 if ((isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
@@ -888,7 +892,7 @@ version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez
  * Params:
  *    from = string or range of characters representing the existing file name
  *    to = string or range of characters representing the target file name
- * Throws: `FileException` on error.
+ * Throws: $(LREF FileException) on error.
  */
 void rename(RF, RT)(RF from, RT to)
 if ((isInputRange!RF && !isInfinite!RF && isSomeChar!(ElementEncodingType!RF) || isSomeString!RF)
@@ -999,7 +1003,7 @@ Delete file `name`.
 Params:
     name = string or range of characters representing the file _name
 
-Throws: `FileException` on error.
+Throws: $(LREF FileException) on error.
  */
 void remove(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -1097,13 +1101,15 @@ version(Windows) private ulong makeUlong(DWORD dwLow, DWORD dwHigh) @safe pure n
     return li.QuadPart;
 }
 
-/***************************************************
+/**
 Get size of file `name` in bytes.
 
 Params:
     name = string or range of characters representing the file _name
-
-Throws: `FileException` on error (e.g., file not found).
+Returns:
+    The size of file in bytes.
+Throws:
+    $(LREF FileException) on error (e.g., file not found).
  */
 ulong getSize(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -1201,7 +1207,7 @@ private SysTime statTimeToStdTime(char which)(ref stat_t statbuf)
         modificationTime = Time the file/folder was last modified.
 
     Throws:
-        `FileException` on error.
+        $(LREF FileException) on error.
  +/
 void getTimes(R)(R name,
               out SysTime accessTime,
@@ -1349,7 +1355,7 @@ version(StdDdoc)
      fileModificationTime = Time the file was last modified.
 
      Throws:
-     `FileException` on error.
+     $(LREF FileException) on error.
      +/
     void getTimesWin(R)(R name,
                         out SysTime fileCreationTime,
@@ -1467,7 +1473,7 @@ version(Windows) @system unittest
         modificationTime = Time the file/folder was last modified.
 
     Throws:
-        `FileException` on error.
+        $(LREF FileException) on error.
  +/
 void setTimes(R)(R name,
               SysTime accessTime,
@@ -1633,8 +1639,12 @@ if (isConvertibleToString!R)
 /++
     Returns the time that the given file was last modified.
 
+    Params:
+        name = the name of the file to check
+    Returns:
+        A $(REF SysTime,std,datetime,systime).
     Throws:
-        `FileException` if the given file does not exist.
+        $(LREF FileException) if the given file does not exist.
 +/
 SysTime timeLastModified(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -1702,14 +1712,16 @@ if (isConvertibleToString!R)
     en.wikipedia.org/wiki/Apache_Ant, ant). To check whether file $(D
     target) must be rebuilt from file `source` (i.e., `target` is
     older than `source` or does not exist), use the comparison
-    below. The code throws a `FileException` if `source` does not
+    below. The code throws a $(LREF FileException) if `source` does not
     exist (as it should). On the other hand, the `SysTime.min` default
     makes a non-existing `target` seem infinitely old so the test
     correctly prompts building it.
 
     Params:
-        name            = The _name of the file to get the modification time for.
+        name = The name of the file to get the modification time for.
         returnIfMissing = The time to return if the given file does not exist.
+    Returns:
+        A $(REF SysTime,std,datetime,systime).
 
 Example:
 --------------------
@@ -1913,8 +1925,8 @@ private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
  Note that the file attributes on Windows and Posix systems are
  completely different. On Windows, they're what is returned by
  $(HTTP msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx,
- GetFileAttributes), whereas on Posix systems, they're the $(LUCKY
- st_mode) value which is part of the $(D stat struct) gotten by
+ GetFileAttributes), whereas on Posix systems, they're the
+ `st_mode` value which is part of the $(D stat struct) gotten by
  calling the $(HTTP en.wikipedia.org/wiki/Stat_%28Unix%29, `stat`)
  function.
 
@@ -1923,9 +1935,10 @@ private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
  link.
 
  Params:
- name = The file to get the attributes of.
-
- Throws: `FileException` on error.
+    name = The file to get the attributes of.
+ Returns:
+    The attributes of the file as a `uint`.
+ Throws: $(LREF FileException) on error.
   +/
 uint getAttributes(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -2030,7 +2043,7 @@ if (isConvertibleToString!R)
         the attributes
 
     Throws:
-        `FileException` on error.
+        $(LREF FileException) on error.
  +/
 uint getLinkAttributes(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -2135,7 +2148,7 @@ if (isConvertibleToString!R)
         attributes = the _attributes to set the file to
 
     Throws:
-        `FileException` if the given file does not exist.
+        $(LREF FileException) if the given file does not exist.
  +/
 void setAttributes(R)(R name, uint attributes)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -2244,7 +2257,7 @@ if (isConvertibleToString!R)
         true if name specifies a directory
 
     Throws:
-        `FileException` if the given file does not exist.
+        $(LREF FileException) if the given file does not exist.
   +/
 @property bool isDir(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -2424,7 +2437,7 @@ bool attrIsDir(uint attributes) @safe pure nothrow @nogc
         true if name specifies a file
 
     Throws:
-        `FileException` if the given file does not exist.
+        $(LREF FileException) if the given file does not exist.
 +/
 @property bool isFile(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -2599,7 +2612,7 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
         true if name is a symbolic link
 
     Throws:
-        `FileException` if the given file does not exist.
+        $(LREF FileException) if the given file does not exist.
   +/
 @property bool isSymlink(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -2773,9 +2786,14 @@ bool attrIsSymlink(uint attributes) @safe pure nothrow @nogc
     }
 }
 
-/****************************************************
- * Change directory to `pathname`.
- * Throws: `FileException` on error.
+/**
+Change directory to `pathname`. Equivalent to `cd` on
+Windows and Posix.
+
+Params:
+    pathname = the directory to step into
+
+Throws: $(LREF FileException) on error.
  */
 void chdir(R)(R pathname)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -2836,11 +2854,15 @@ if (isConvertibleToString!R)
     static assert(__traits(compiles, chdir(TestAliasedString(null))));
 }
 
-/****************************************************
-Make directory `pathname`.
+/**
+Make a new directory `pathname`.
 
-Throws: `FileException` on Posix or `WindowsException` on Windows
-        if an error occured.
+Params:
+    pathname = the path of the directory to make
+
+Throws:
+    $(LREF FileException) on Posix or $(LREF WindowsException) on Windows
+    if an error occured.
  */
 void mkdir(R)(R pathname)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -2935,15 +2957,17 @@ private bool ensureDirExists()(in char[] pathname)
     return false;
 }
 
-/****************************************************
- * Make directory and all parent directories as needed.
- *
- * Does nothing if the directory specified by
- * `pathname` already exists.
- *
- * Throws: `FileException` on error.
- */
+/**
+Make directory and all parent directories as needed.
 
+Does nothing if the directory specified by
+`pathname` already exists.
+
+Params:
+    pathname = the full path of the directory to create
+
+Throws: $(LREF FileException) on error.
+ */
 void mkdirRecurse(in char[] pathname) @safe
 {
     import std.path : dirName, baseName;
@@ -3042,7 +3066,7 @@ Remove directory `pathname`.
 Params:
     pathname = Range or string specifying the directory name
 
-Throws: `FileException` on error.
+Throws: $(LREF FileException) on error.
  */
 void rmdir(R)(R pathname)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -3108,7 +3132,7 @@ if (isConvertibleToString!R)
             current working directory.
 
     Throws:
-        `FileException` on error (which includes if the _symlink already
+        $(LREF FileException) on error (which includes if the _symlink already
         exists).
   +/
 version(StdDdoc) void symlink(RO, RL)(RO original, RL link)
@@ -3198,7 +3222,7 @@ version(Posix) @safe unittest
     working directory.
 
     Throws:
-        `FileException` on error.
+        $(LREF FileException) on error.
   +/
 version(StdDdoc) string readLink(R)(R link)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) ||
@@ -3297,7 +3321,7 @@ version(Posix) @system unittest // input range of dchars
 
 /****************************************************
  * Get the current working directory.
- * Throws: `FileException` on error.
+ * Throws: $(LREF FileException) on error.
  */
 version(Windows) string getcwd() @trusted
 {
@@ -3369,10 +3393,13 @@ else version (NetBSD)
 /**
  * Returns the full path of the current executable.
  *
+ * Returns:
+ *     The path of the executable as a `string`.
+ *
  * Throws:
  * $(REF1 Exception, object)
  */
-@trusted string thisExePath ()
+@trusted string thisExePath()
 {
     version (OSX)
     {
@@ -3486,7 +3513,7 @@ version(StdDdoc)
                 path = The file (or directory) to get a DirEntry for.
 
             Throws:
-                `FileException` if the file does not exist.
+                $(LREF FileException) if the file does not exist.
         +/
         this(string path);
 
@@ -3594,6 +3621,14 @@ assert(!de2.isFile);
             last modified.
           +/
         @property SysTime timeLastModified();
+
+        /++
+            $(BLUE This function is Posix-Only.)
+
+            Returns the time that the file represented by this `DirEntry` was
+            last changed (not only in contents, but also in permissions or ownership).
+          +/
+        @property SysTime timeStatusChanged() const;
 
         /++
             Returns the _attributes of the file represented by this `DirEntry`.
@@ -4059,7 +4094,7 @@ Params:
     to = string or range of characters representing the target file name
     preserve = whether to _preserve the file attributes
 
-Throws: `FileException` on error.
+Throws: $(LREF FileException) on error.
  */
 void copy(RF, RT)(RF from, RT to, PreserveAttributes preserve = preserveAttributesDefault)
 if (isInputRange!RF && !isInfinite!RF && isSomeChar!(ElementEncodingType!RF) && !isConvertibleToString!RF &&
@@ -4246,8 +4281,12 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
     Remove directory and all of its content and subdirectories,
     recursively.
 
+    Params:
+        pathname = the path of the directory to completely remove
+        de = The $(LREF DirEntry) to remove
+
     Throws:
-        `FileException` if there is an error (including if the given
+        $(LREF FileException) if there is an error (including if the given
         file is not a directory).
  +/
 void rmdirRecurse(in char[] pathname)
@@ -4681,7 +4720,8 @@ public:
     void popFront() { impl.popFront(); }
 }
 /++
-    Returns an input range of `DirEntry` that lazily iterates a given directory,
+    Returns an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+    of `DirEntry` that lazily iterates a given directory,
     also provides two ways of foreach iteration. The iteration variable can be of
     type `string` if only the name is needed, or `DirEntry`
     if additional details are needed. The span _mode dictates how the
@@ -4707,8 +4747,12 @@ public:
                          should be treated as directories and their contents
                          iterated over.
 
+    Returns:
+        An $(REF_ALTTEXT input range, isInputRange,std,range,primitives) of
+        $(LREF DirEntries).
+
     Throws:
-        `FileException` if the directory does not exist.
+        $(LREF FileException) if the directory does not exist.
 
 Example:
 --------------------
@@ -5037,31 +5081,32 @@ slurp(Types...)(string filename, in char[] format)
 /**
 Returns the path to a directory for temporary files.
 
-On Windows, this function returns the result of calling the Windows API function
-$(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/aa364992.aspx, `GetTempPath`).
-
-On POSIX platforms, it searches through the following list of directories
-and returns the first one which is found to exist:
-$(OL
-    $(LI The directory given by the `TMPDIR` environment variable.)
-    $(LI The directory given by the `TEMP` environment variable.)
-    $(LI The directory given by the `TMP` environment variable.)
-    $(LI `/tmp`)
-    $(LI `/var/tmp`)
-    $(LI `/usr/tmp`)
-)
-
-On all platforms, `tempDir` returns `"."` on failure, representing
-the current working directory.
-
 The return value of the function is cached, so the procedures described
-above will only be performed the first time the function is called.  All
+below will only be performed the first time the function is called.  All
 subsequent runs will return the same string, regardless of whether
 environment variables and directory structures have changed in the
 meantime.
 
 The POSIX `tempDir` algorithm is inspired by Python's
 $(LINK2 http://docs.python.org/library/tempfile.html#tempfile.tempdir, `tempfile.tempdir`).
+
+Returns:
+    On Windows, this function returns the result of calling the Windows API function
+    $(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/aa364992.aspx, `GetTempPath`).
+
+    On POSIX platforms, it searches through the following list of directories
+    and returns the first one which is found to exist:
+    $(OL
+        $(LI The directory given by the `TMPDIR` environment variable.)
+        $(LI The directory given by the `TEMP` environment variable.)
+        $(LI The directory given by the `TMP` environment variable.)
+        $(LI `/tmp`)
+        $(LI `/var/tmp`)
+        $(LI `/usr/tmp`)
+    )
+
+    On all platforms, `tempDir` returns `"."` on failure, representing
+    the current working directory.
 */
 string tempDir() @trusted
 {

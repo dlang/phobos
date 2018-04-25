@@ -621,8 +621,8 @@ uint formattedWrite(Writer, Char, A...)(auto ref Writer w, in Char[] fmt, A args
 }
 
 /**
-Reads characters from input range `r`, converts them according
-to `fmt`, and writes them to `args`.
+Reads characters from $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+`r`, converts them according to `fmt`, and writes them to `args`.
 
 Params:
     r = The range to read from.
@@ -1836,7 +1836,7 @@ FormatSpec!Char singleSpec(Char)(Char[] fmt)
  * Otherwise, are formatted just as their type name.
  *
  * Params:
- *     w = The $(REF_ALTTEXT output range, isOutputRange, std,_range,primitives) to write to.
+ *     w = The $(REF_ALTTEXT output range, isOutputRange, std,range,primitives) to write to.
  *     val = The value to write.
  *     f = The $(REF FormatSpec, std, format) defining how to write the value.
  */

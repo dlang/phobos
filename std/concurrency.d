@@ -1515,35 +1515,6 @@ private interface IsGenerator {}
 /**
  * A Generator is a Fiber that periodically returns values of type T to the
  * caller via yield.  This is represented as an InputRange.
- *
- * Example:
- * ---
- * import std.concurrency;
- * import std.stdio;
- *
- *
- * void main()
- * {
- *     auto tid = spawn(
- *     {
- *         while (true)
- *         {
- *             writeln(receiveOnly!int());
- *         }
- *     });
- *
- *     auto r = new Generator!int(
- *     {
- *         foreach (i; 1 .. 10)
- *             yield(i);
- *     });
- *
- *     foreach (e; r)
- *     {
- *         tid.send(e);
- *     }
- * }
- * ---
  */
 class Generator(T) :
     Fiber, IsGenerator, InputRange!T
@@ -1725,6 +1696,28 @@ class Generator(T) :
     }
 private:
     T* m_value;
+}
+
+///
+@system unittest
+{
+    auto tid = spawn({
+        int i;
+        while (i < 9)
+            i = receiveOnly!int;
+
+        ownerTid.send(i * 2);
+    });
+
+    auto r = new Generator!int({
+        foreach (i; 1 .. 10)
+            yield(i);
+    });
+
+    foreach (e; r)
+        tid.send(e);
+
+    assert(receiveOnly!int == 18);
 }
 
 /**
@@ -2430,12 +2423,11 @@ private
     }
 }
 
-version(unittest)
+@system unittest
 {
-    import std.stdio;
     import std.typecons : tuple, Tuple;
 
-    void testfn(Tid tid)
+    static void testfn(Tid tid)
     {
         receive((float val) { assert(0); }, (int val, int val2) {
             assert(val == 42 && val2 == 86);
@@ -2450,7 +2442,7 @@ version(unittest)
         prioritySend(tid, "done");
     }
 
-    void runTest(Tid tid)
+    static void runTest(Tid tid)
     {
         send(tid, 42, 86);
         send(tid, tuple(42, 86));
@@ -2459,7 +2451,7 @@ version(unittest)
         receive((string val) { assert(val == "done"); });
     }
 
-    void simpleTest()
+    static void simpleTest()
     {
         auto tid = spawn(&testfn, thisTid);
         runTest(tid);
@@ -2470,17 +2462,11 @@ version(unittest)
         runTest(tid);
     }
 
-    @system unittest
-    {
-        simpleTest();
-    }
+    simpleTest();
 
-    @system unittest
-    {
-        scheduler = new ThreadScheduler;
-        simpleTest();
-        scheduler = null;
-    }
+    scheduler = new ThreadScheduler;
+    simpleTest();
+    scheduler = null;
 }
 
 private @property shared(Mutex) initOnceLock()
@@ -2522,7 +2508,7 @@ auto ref initOnce(alias var)(lazy typeof(var) init)
     {
         static MySingleton instance()
         {
-            static __gshared MySingleton inst;
+            __gshared MySingleton inst;
             return initOnce!inst(new MySingleton);
         }
     }
@@ -2536,14 +2522,14 @@ auto ref initOnce(alias var)(lazy typeof(var) init)
     {
         static MySingleton instance()
         {
-            static __gshared MySingleton inst;
+            __gshared MySingleton inst;
             return initOnce!inst(new MySingleton);
         }
 
     private:
         this() { val = ++cnt; }
         size_t val;
-        static __gshared size_t cnt;
+        __gshared size_t cnt;
     }
 
     foreach (_; 0 .. 10)

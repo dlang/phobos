@@ -281,6 +281,55 @@ import std.typecons;
         "\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD",
     ];
 
+    // HELPER FUNCTIONS
+    // we can probably do this better...
+    static char toHexDigit(int n)
+    {
+        return "0123456789ABCDEF"[n & 0xF];
+    }
+
+    static string makeReadable(string s)
+    {
+        string r = "\"";
+        foreach (char c;s)
+        {
+            if (c >= 0x20 && c < 0x80)
+            {
+                r ~= c;
+            }
+            else
+            {
+                r ~= "\\x";
+                r ~= toHexDigit(c >> 4);
+                r ~= toHexDigit(c);
+            }
+        }
+        r ~= "\"";
+        return r;
+    }
+
+    void transcodeReverse(Src,Dst)(immutable(Src)[] s, out immutable(Dst)[] r)
+    {
+        static if (is(Src == Dst))
+        {
+            return s;
+        }
+        else static if (is(Src == AsciiChar))
+        {
+            transcodeReverse!(char,Dst)(cast(string) s,r);
+        }
+        else
+        {
+            foreach_reverse (d;codePoints(s))
+            {
+                foreach_reverse (c;codeUnits!(Dst)(d))
+                {
+                    r = c ~ r;
+                }
+            }
+        }
+    }
+
     // Make sure everything that should be valid, is
     foreach (a;validStrings)
     {
@@ -3632,111 +3681,6 @@ class EncodingSchemeUtf32Native : EncodingScheme
 
 //=============================================================================
 
-
-// Helper functions
-version(unittest)
-{
-    void transcodeReverse(Src,Dst)(immutable(Src)[] s, out immutable(Dst)[] r)
-    {
-        static if (is(Src == Dst))
-        {
-            return s;
-        }
-        else static if (is(Src == AsciiChar))
-        {
-            transcodeReverse!(char,Dst)(cast(string) s,r);
-        }
-        else
-        {
-            foreach_reverse (d;codePoints(s))
-            {
-                foreach_reverse (c;codeUnits!(Dst)(d))
-                {
-                    r = c ~ r;
-                }
-            }
-        }
-    }
-
-    string makeReadable(string s)
-    {
-        string r = "\"";
-        foreach (char c;s)
-        {
-            if (c >= 0x20 && c < 0x80)
-            {
-                r ~= c;
-            }
-            else
-            {
-                r ~= "\\x";
-                r ~= toHexDigit(c >> 4);
-                r ~= toHexDigit(c);
-            }
-        }
-        r ~= "\"";
-        return r;
-    }
-
-    string makeReadable(wstring s)
-    {
-        string r = "\"";
-        foreach (wchar c;s)
-        {
-            if (c >= 0x20 && c < 0x80)
-            {
-                r ~= cast(char) c;
-            }
-            else
-            {
-                r ~= "\\u";
-                r ~= toHexDigit(c >> 12);
-                r ~= toHexDigit(c >> 8);
-                r ~= toHexDigit(c >> 4);
-                r ~= toHexDigit(c);
-            }
-        }
-        r ~= "\"w";
-        return r;
-    }
-
-    string makeReadable(dstring s)
-    {
-        string r = "\"";
-        foreach (dchar c; s)
-        {
-            if (c >= 0x20 && c < 0x80)
-            {
-                r ~= cast(char) c;
-            }
-            else if (c < 0x10000)
-            {
-                r ~= "\\u";
-                r ~= toHexDigit(c >> 12);
-                r ~= toHexDigit(c >> 8);
-                r ~= toHexDigit(c >> 4);
-                r ~= toHexDigit(c);
-            }
-            else
-            {
-                r ~= "\\U00";
-                r ~= toHexDigit(c >> 20);
-                r ~= toHexDigit(c >> 16);
-                r ~= toHexDigit(c >> 12);
-                r ~= toHexDigit(c >> 8);
-                r ~= toHexDigit(c >> 4);
-                r ~= toHexDigit(c);
-            }
-        }
-        r ~= "\"d";
-        return r;
-    }
-
-    char toHexDigit(int n)
-    {
-        return "0123456789ABCDEF"[n & 0xF];
-    }
-}
 
 /** Definitions of common Byte Order Marks.
 The elements of the `enum` can used as indices into `bomTable` to get

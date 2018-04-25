@@ -122,14 +122,10 @@ else
 
 version(unittest)
 {
-    static assert(is(uint32_t == uint));
-    static assert(is(uint16_t == ushort));
-
-    import std.stdio : writefln;
-
     // Print a message on exception instead of failing the unittest.
     private void softUnittest(void delegate() @safe test, int line = __LINE__) @trusted
     {
+        import std.stdio : writefln;
         try
             test();
         catch (Throwable e)
@@ -454,6 +450,7 @@ class Protocol
 version(CRuntime_Bionic) {} else
 @safe unittest
 {
+    // import std.stdio : writefln;
     softUnittest({
         Protocol proto = new Protocol;
         assert(proto.getProtocolByType(ProtocolType.TCP));
@@ -555,6 +552,7 @@ class Service
 
 @safe unittest
 {
+    import std.stdio : writefln;
     softUnittest({
         Service serv = new Service;
         if (serv.getServiceByName("epmap", "tcp"))

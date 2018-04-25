@@ -332,7 +332,7 @@ template isSeedable(Rng)
     static assert(isSeedable!(seedRng));
 }
 
-@safe pure nothrow unittest
+@safe @nogc pure nothrow unittest
 {
     struct NoRng
     {
@@ -624,7 +624,7 @@ alias MinstdRand0 = LinearCongruentialEngine!(uint, 16_807, 0, 2_147_483_647);
 alias MinstdRand = LinearCongruentialEngine!(uint, 48_271, 0, 2_147_483_647);
 
 ///
-@safe unittest
+@safe @nogc unittest
 {
     // seed with a constant
     auto rnd0 = MinstdRand0(1);
@@ -637,7 +637,7 @@ alias MinstdRand = LinearCongruentialEngine!(uint, 48_271, 0, 2_147_483_647);
     n = rnd0.front; // different across runs
 }
 
-@safe unittest
+@safe @nogc unittest
 {
     import std.range;
     static assert(isForwardRange!MinstdRand);
@@ -652,7 +652,7 @@ alias MinstdRand = LinearCongruentialEngine!(uint, 48_271, 0, 2_147_483_647);
 
     // The correct numbers are taken from The Database of Integer Sequences
     // http://www.research.att.com/~njas/sequences/eisBTfry00128.txt
-    auto checking0 = [
+    enum ulong[20] checking0 = [
         16807UL,282475249,1622650073,984943658,1144108930,470211272,
         101027544,1457850878,1458777923,2007237709,823564440,1115438165,
         1784484492,74243042,114807987,1137522503,1441282327,16531729,
@@ -673,7 +673,7 @@ alias MinstdRand = LinearCongruentialEngine!(uint, 48_271, 0, 2_147_483_647);
     assert(rnd0.front == 1043618065);
 
     // Test MinstdRand
-    auto checking = [48271UL,182605794,1291394886,1914720637,2078669041,
+    enum ulong[6] checking = [48271UL,182605794,1291394886,1914720637,2078669041,
                      407355683];
     //auto rnd = MinstdRand(1);
     MinstdRand rnd;
@@ -693,16 +693,18 @@ alias MinstdRand = LinearCongruentialEngine!(uint, 48_271, 0, 2_147_483_647);
     // Check .save works
     static foreach (Type; std.meta.AliasSeq!(MinstdRand0, MinstdRand))
     {{
-        auto rnd1 = Type(unpredictableSeed);
+        auto rnd1 = Type(123_456_789);
+        rnd1.popFront();
         auto rnd2 = rnd1.save;
         assert(rnd1 == rnd2);
         // Enable next test when RNGs are reference types
         version(none) { assert(rnd1 !is rnd2); }
-        assert(rnd1.take(100).array() == rnd2.take(100).array());
+        for (auto i = 0; i < 100; i++, rnd1.popFront, rnd2.popFront)
+            assert(rnd1.front() == rnd2.front());
     }}
 }
 
-@safe unittest
+@safe @nogc unittest
 {
     auto rnd0 = MinstdRand0(MinstdRand0.modulus);
     auto n = rnd0.front;
@@ -848,7 +850,7 @@ Parameters for the generator.
        Implementation of the seeding mechanism, which
        can be used with an arbitrary `State` instance
     */
-    private static void seedImpl(UIntType value, ref State mtState)
+    private static void seedImpl(UIntType value, ref State mtState) @nogc
     {
         mtState.data[$ - 1] = value;
         static if (this.max != UIntType.max)
@@ -931,7 +933,7 @@ Parameters for the generator.
        Internal implementation of `popFront()`, which
        can be used with an arbitrary `State` instance
     */
-    private static void popFrontImpl(ref State mtState)
+    private static void popFrontImpl(ref State mtState) @nogc
     {
         /* This function blends two nominally independent
            processes: (i) calculation of the next random
@@ -1030,7 +1032,7 @@ alias Mt19937 = MersenneTwisterEngine!(uint, 32, 624, 397, 31,
                                        0xefc60000, 18, 1_812_433_253);
 
 ///
-@safe unittest
+@safe @nogc unittest
 {
     // seed with a constant
     Mt19937 gen;
@@ -1073,7 +1075,7 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
                                           0xfff7eee000000000, 43, 6_364_136_223_846_793_005);
 
 ///
-@safe unittest
+@safe @nogc unittest
 {
     // Seed with a constant
     auto gen = Mt19937_64(12345);
@@ -1118,14 +1120,14 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
 
     Mt19937 gen;
 
-    assertThrown(gen.seed(map!((a) => unpredictableSeed)(repeat(0, 623))));
+    assertThrown(gen.seed(map!((a) => 123_456_789U)(repeat(0, 623))));
 
-    gen.seed(map!((a) => unpredictableSeed)(repeat(0, 624)));
+    gen.seed(123_456_789U.repeat(624));
     //infinite Range
-    gen.seed(map!((a) => unpredictableSeed)(repeat(0)));
+    gen.seed(123_456_789U.repeat);
 }
 
-@safe pure nothrow unittest
+@safe @nogc pure nothrow unittest
 {
     uint a, b;
     {
@@ -1141,32 +1143,33 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
     assert(a != b);
 }
 
-@safe unittest
+@safe @nogc unittest
 {
-    import std.range;
     // Check .save works
     static foreach (Type; std.meta.AliasSeq!(Mt19937, Mt19937_64))
     {{
-        auto gen1 = Type(unpredictableSeed);
+        auto gen1 = Type(123_456_789);
+        gen1.popFront();
         auto gen2 = gen1.save;
         assert(gen1 == gen2);  // Danger, Will Robinson -- no opEquals for MT
         // Enable next test when RNGs are reference types
         version(none) { assert(gen1 !is gen2); }
-        assert(gen1.take(100).array() == gen2.take(100).array());
+        for (auto i = 0; i < 100; i++, gen1.popFront, gen2.popFront)
+            assert(gen1.front() == gen2.front());
     }}
 }
 
-@safe pure nothrow unittest //11690
+@safe @nogc pure nothrow unittest //11690
 {
     alias MT(UIntType, uint w) = MersenneTwisterEngine!(UIntType, w, 624, 397, 31,
                                                         0x9908b0df, 11, 0xffffffff, 7,
                                                         0x9d2c5680, 15,
                                                         0xefc60000, 18, 1812433253);
 
-    ulong[] expectedFirstValue = [3499211612uL, 3499211612uL,
+    static immutable ulong[] expectedFirstValue = [3499211612uL, 3499211612uL,
                                   171143175841277uL, 1145028863177033374uL];
 
-    ulong[] expected10kValue = [4123659995uL, 4123659995uL,
+    static immutable ulong[] expected10kValue = [4123659995uL, 4123659995uL,
                                 51991688252792uL, 3031481165133029945uL];
 
     static foreach (i, R; std.meta.AliasSeq!(MT!(uint, 32), MT!(ulong, 32), MT!(ulong, 48), MT!(ulong, 64)))
@@ -1405,7 +1408,7 @@ alias Xorshift192 = XorshiftEngine!(uint, 192, 2,  1,  4);  /// ditto
 alias Xorshift    = Xorshift128;                            /// ditto
 
 ///
-@safe unittest
+@safe @nogc unittest
 {
     // Seed with a constant
     auto rnd = Xorshift(1);
@@ -1417,7 +1420,7 @@ alias Xorshift    = Xorshift128;                            /// ditto
     num = rnd.front; // different across rnd
 }
 
-@safe unittest
+@safe @nogc unittest
 {
     import std.range;
     static assert(isForwardRange!Xorshift);
@@ -1429,7 +1432,7 @@ alias Xorshift    = Xorshift128;                            /// ditto
     static assert(Xorshift32.min == 1);
 
     // Result from reference implementation.
-    auto checking = [
+    static ulong[][] checking = [
         [2463534242UL, 901999875, 3371835698, 2675058524, 1053936272, 3811264849,
         472493137, 3856898176, 2131710969, 2312157505],
         [362436069UL, 2113136921, 19051112, 3010520417, 951284840, 1213972223,
@@ -1460,12 +1463,14 @@ alias Xorshift    = Xorshift128;                            /// ditto
     // Check .save works
     foreach (Type; XorshiftTypes)
     {
-        auto rnd1 = Type(unpredictableSeed);
+        auto rnd1 = Type(123_456_789);
+        rnd1.popFront();
         auto rnd2 = rnd1.save;
         assert(rnd1 == rnd2);
         // Enable next test when RNGs are reference types
         version(none) { assert(rnd1 !is rnd2); }
-        assert(rnd1.take(100).array() == rnd2.take(100).array());
+        for (auto i = 0; i < 100; i++, rnd1.popFront, rnd2.popFront)
+            assert(rnd1.front() == rnd2.front());
     }
 }
 
@@ -1475,12 +1480,12 @@ alias Xorshift    = Xorshift128;                            /// ditto
  * object is compatible with all the pseudo-random number generators
  * available.  It is enabled only in unittest mode.
  */
-@safe unittest
+@safe @nogc unittest
 {
     foreach (Rng; PseudoRngTypes)
     {
         static assert(isUniformRNG!Rng);
-        auto rng = Rng(unpredictableSeed);
+        auto rng = Rng(123_456_789);
     }
 }
 
@@ -1564,7 +1569,7 @@ how excellent the source of entropy is.
 }
 
 ///
-@safe unittest
+@safe @nogc unittest
 {
     auto rnd = Random(unpredictableSeed);
     auto n = rnd.front;
@@ -1581,7 +1586,7 @@ method being used.
 
 alias Random = Mt19937;
 
-@safe unittest
+@safe @nogc unittest
 {
     static assert(isUniformRNG!Random);
     static assert(isUniformRNG!(Random, uint));
@@ -1597,7 +1602,7 @@ and initialized to an unpredictable value for each thread.
 Returns:
 A singleton instance of the default random number generator
  */
-@property ref Random rndGen() @safe
+@property ref Random rndGen() @safe @nogc
 {
     import std.algorithm.iteration : map;
     import std.range : repeat;
@@ -1878,7 +1883,7 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
 @safe unittest
 {
     import std.conv : to;
-    auto gen = Mt19937(unpredictableSeed);
+    auto gen = Mt19937(123_456_789);
     static assert(isForwardRange!(typeof(gen)));
 
     auto a = uniform(0, 1024, gen);
@@ -2205,7 +2210,7 @@ do
 }
 
 ///
-@safe unittest
+@safe @nogc unittest
 {
     import std.math : feqrel;
 
@@ -2215,7 +2220,7 @@ do
     assert(rnd.uniform01!float.feqrel(0.524587) > 20);
 }
 
-@safe unittest
+@safe @nogc unittest
 {
     import std.meta;
     static foreach (UniformRNG; PseudoRngTypes)
@@ -2223,7 +2228,7 @@ do
 
         static foreach (T; std.meta.AliasSeq!(float, double, real))
         {{
-            UniformRNG rng = UniformRNG(unpredictableSeed);
+            UniformRNG rng = UniformRNG(123_456_789);
 
             auto a = uniform01();
             assert(is(typeof(a) == double));
@@ -2407,7 +2412,7 @@ if (isRandomAccessRange!Range)
         // Also tests partialShuffle indirectly.
         auto a = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
         auto b = a.dup;
-        auto gen = RandomGen(unpredictableSeed);
+        auto gen = RandomGen(123_456_789);
         randomShuffle(a, gen);
         sort(a);
         assert(a == b);
@@ -2619,7 +2624,7 @@ do
 ///
 @safe unittest
 {
-    auto rnd = Random(unpredictableSeed);
+    auto rnd = Xorshift(123_456_789);
     auto i = dice(rnd, 0.0, 100.0);
     assert(i == 1);
     i = dice(rnd, 100.0, 0.0);
@@ -2645,7 +2650,8 @@ Params:
 Returns:
     Range whose elements consist of the elements of `r`,
     in random order.  Will be a forward range if both `r` and
-    `rng` are forward ranges, an input range otherwise.
+    `rng` are forward ranges, an
+    $(REF_ALTTEXT input range, isInputRange, std,range,primitives) otherwise.
 */
 struct RandomCover(Range, UniformRNG = void)
 if (isRandomAccessRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))
@@ -2804,11 +2810,11 @@ if (isRandomAccessRange!Range)
         }
         else
         {
-            auto rng = UniformRNG(unpredictableSeed);
+            auto rng = UniformRNG(123_456_789);
             auto rc = randomCover(a, rng);
             static assert(isForwardRange!(typeof(rc)));
             // check for constructor passed a value-type RNG
-            auto rc2 = RandomCover!(int[], UniformRNG)(a, UniformRNG(unpredictableSeed));
+            auto rc2 = RandomCover!(int[], UniformRNG)(a, UniformRNG(987_654_321));
             static assert(isForwardRange!(typeof(rc2)));
             auto rcEmpty = randomCover(c, rng);
             assert(rcEmpty.length == 0);
@@ -3350,7 +3356,7 @@ if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
         {
             auto sample =
                 RandomSample!(TestInputRange, UniformRNG)
-                             (TestInputRange(), 5, 10, UniformRNG(unpredictableSeed));
+                             (TestInputRange(), 5, 10, UniformRNG(987_654_321));
             static assert(isInputRange!(typeof(sample)));
             static assert(!isForwardRange!(typeof(sample)));
         }
@@ -3366,7 +3372,7 @@ if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
         {
             auto sample =
                 RandomSample!(typeof(TestInputRange().takeExactly(10)), UniformRNG)
-                             (TestInputRange().takeExactly(10), 5, 10, UniformRNG(unpredictableSeed));
+                             (TestInputRange().takeExactly(10), 5, 10, UniformRNG(654_321_987));
             static assert(isInputRange!(typeof(sample)));
             static assert(!isForwardRange!(typeof(sample)));
         }
@@ -3380,7 +3386,7 @@ if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
             {
                 auto sample =
                     RandomSample!(int[], UniformRNG)
-                                 (a, 5, UniformRNG(unpredictableSeed));
+                                 (a, 5, UniformRNG(321_987_654));
                 static assert(isForwardRange!(typeof(sample)));
             }
         }
@@ -3392,7 +3398,7 @@ if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
             {
                 auto sample =
                     RandomSample!(int[], UniformRNG)
-                                 (a, 5, UniformRNG(unpredictableSeed));
+                                 (a, 5, UniformRNG(789_123_456));
                 static assert(isInputRange!(typeof(sample)));
                 static assert(!isForwardRange!(typeof(sample)));
             }

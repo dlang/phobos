@@ -52,17 +52,9 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.bitmanip;
 
-//debug = bitarray;                // uncomment to turn on debugging printf's
-
 import std.range.primitives;
 public import std.system : Endian;
 import std.traits;
-
-version(unittest)
-{
-    import std.stdio;
-}
-
 
 private string myToString(ulong n)
 {
@@ -248,18 +240,73 @@ private template createTaggedReference(T, ulong a, string name, Ts...)
 Allows creating bit fields inside $(D_PARAM struct)s and $(D_PARAM
 class)es.
 
-The sum of all bit lengths in one $(D_PARAM bitfield) instantiation
-must be exactly 8, 16, 32, or 64. If padding is needed, just allocate
-one bitfield with an empty name.
-
 The type of a bit field can be any integral type or enumerated
 type. The most efficient type to store in bitfields is $(D_PARAM
 bool), followed by unsigned types, followed by signed types.
+
+See_Also: $(REF BitFlags, std,typecons)
 */
 
 template bitfields(T...)
 {
     enum { bitfields = createStorageAndFields!T.result }
+}
+
+/**
+Create a bitfield pack of eight bits, which fit in
+one $(D_PARAM ubyte). The bitfields are allocated starting from the
+least significant bit, i.e. x occupies the two least significant bits
+of the bitfields storage.
+*/
+@safe unittest
+{
+    struct A
+    {
+        int a;
+        mixin(bitfields!(
+            uint, "x",    2,
+            int,  "y",    3,
+            uint, "z",    2,
+            bool, "flag", 1));
+    }
+
+    A obj;
+    obj.x = 2;
+    obj.z = obj.x;
+
+    assert(obj.x == 2);
+    assert(obj.y == 0);
+    assert(obj.z == 2);
+}
+
+/**
+The sum of all bit lengths in one $(D_PARAM bitfield) instantiation
+must be exactly 8, 16, 32, or 64. If padding is needed, just allocate
+one bitfield with an empty name.
+*/
+@safe unittest
+{
+    struct A
+    {
+        mixin(bitfields!(
+            bool, "flag1",    1,
+            bool, "flag2",    1,
+            uint, "",         6));
+    }
+
+}
+
+/// enums can be used too
+@safe unittest
+{
+    enum ABC { A, B, C }
+    struct EnumTest
+    {
+        mixin(bitfields!(
+                  ABC, "x", 2,
+                  bool, "y", 1,
+                  ubyte, "z", 5));
+    }
 }
 
 /**
@@ -827,9 +874,9 @@ struct DoubleRep
     assert(rep.sign);
 }
 
+/// Reading
 @safe unittest
 {
-    // test reading
     DoubleRep x;
     x.value = 1.0;
     assert(x.fraction == 0 && x.exponent == 1023 && !x.sign);
@@ -837,22 +884,16 @@ struct DoubleRep
     assert(x.fraction == 0 && x.exponent == 1022 && x.sign);
     x.value = 0.5;
     assert(x.fraction == 0 && x.exponent == 1022 && !x.sign);
+}
 
-    // test writing
+/// Writing
+@safe unittest
+{
+    DoubleRep x;
     x.fraction = 1125899906842624;
     x.exponent = 1025;
     x.sign = true;
     assert(x.value == -5.0);
-
-    // test enums
-    enum ABC { A, B, C }
-    struct EnumTest
-    {
-        mixin(bitfields!(
-                  ABC, "x", 2,
-                  bool, "y", 1,
-                  ubyte, "z", 5));
-    }
 }
 
 @safe unittest
@@ -1121,11 +1162,10 @@ public:
         return cast(bool) bt(_ptr, i);
     }
 
+    ///
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opIndex.unittest\n");
-
-        void Fun(const BitArray arr)
+        static void fun(const BitArray arr)
         {
             auto x = arr[0];
             assert(x == 1);
@@ -1133,7 +1173,7 @@ public:
         BitArray a;
         a.length = 3;
         a[0] = 1;
-        Fun(a);
+        fun(a);
     }
 
     /**********************************************
@@ -1303,6 +1343,7 @@ public:
         bt(_ptr, i) ? btr(_ptr, i) : bts(_ptr, i);
     }
 
+    ///
     @system unittest
     {
         auto ax = BitArray([1, 0, 0, 1]);
@@ -1328,6 +1369,7 @@ public:
         return bitCount;
     }
 
+    ///
     @system unittest
     {
         auto a = BitArray([0, 1, 1, 0, 0, 1, 1]);
@@ -1352,22 +1394,18 @@ public:
         return ba;
     }
 
+    ///
     @system unittest
     {
         BitArray a;
         BitArray b;
-        int i;
-
-        debug(bitarray) printf("BitArray.dup.unittest\n");
 
         a.length = 3;
         a[0] = 1; a[1] = 0; a[2] = 1;
         b = a.dup;
         assert(b.length == 3);
-        for (i = 0; i < 3; i++)
-        {   debug(bitarray) printf("b[%d] = %d\n", i, b[i]);
+        foreach (i; 0 .. 3)
             assert(b[i] == (((i ^ 1) & 1) ? true : false));
-        }
     }
 
     /**********************************************
@@ -1434,11 +1472,10 @@ public:
         return result;
     }
 
+    ///
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opApply unittest\n");
-
-        static bool[] ba = [1,0,1];
+        bool[] ba = [1,0,1];
 
         auto a = BitArray(ba);
 
@@ -1495,20 +1532,16 @@ public:
         return this;
     }
 
+    ///
     @system unittest
     {
-        debug(bitarray) printf("BitArray.reverse.unittest\n");
-
         BitArray b;
-        static bool[5] data = [1,0,1,1,0];
-        int i;
+        bool[5] data = [1,0,1,1,0];
 
         b = BitArray(data);
         b.reverse;
-        for (i = 0; i < data.length; i++)
-        {
+        foreach (i; 0 .. data.length)
             assert(b[i] == data[4 - i]);
-        }
     }
 
 
@@ -1559,16 +1592,15 @@ public:
         return this;
     }
 
+    ///
     @system unittest
     {
-        debug(bitarray) printf("BitArray.sort.unittest\n");
-
-        __gshared size_t x = 0b1100011000;
-        __gshared ba = BitArray(10, &x);
+        size_t x = 0b1100011000;
+        auto ba = BitArray(10, &x);
         ba.sort;
-        for (size_t i = 0; i < 6; i++)
+        foreach (i; 0 .. 6)
             assert(ba[i] == false);
-        for (size_t i = 6; i < 10; i++)
+        foreach (i; 6 .. 10)
             assert(ba[i] == true);
     }
 
@@ -1593,17 +1625,16 @@ public:
         return (p1[i] & endMask) == (p2[i] & endMask);
     }
 
+    ///
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opEquals unittest\n");
-
-        static bool[] ba = [1,0,1,0,1];
-        static bool[] bb = [1,0,1];
-        static bool[] bc = [1,0,1,0,1,0,1];
-        static bool[] bd = [1,0,1,1,1];
-        static bool[] be = [1,0,1,0,1];
-        static bool[] bf = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
-        static bool[] bg = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1];
+        bool[] ba = [1,0,1,0,1];
+        bool[] bb = [1,0,1];
+        bool[] bc = [1,0,1,0,1,0,1];
+        bool[] bd = [1,0,1,1,1];
+        bool[] be = [1,0,1,0,1];
+        bool[] bf = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+        bool[] bg = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1];
 
         auto a = BitArray(ba);
         auto b = BitArray(bb);
@@ -1659,17 +1690,16 @@ public:
         return (this.length > a2.length) - (this.length < a2.length);
     }
 
+    ///
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opCmp unittest\n");
-
-        static bool[] ba = [1,0,1,0,1];
-        static bool[] bb = [1,0,1];
-        static bool[] bc = [1,0,1,0,1,0,1];
-        static bool[] bd = [1,0,1,1,1];
-        static bool[] be = [1,0,1,0,1];
-        static bool[] bf = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1];
-        static bool[] bg = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0];
+        bool[] ba = [1,0,1,0,1];
+        bool[] bb = [1,0,1];
+        bool[] bc = [1,0,1,0,1,0,1];
+        bool[] bd = [1,0,1,1,1];
+        bool[] be = [1,0,1,0,1];
+        bool[] bf = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1];
+        bool[] bg = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0];
 
         auto a = BitArray(ba);
         auto b = BitArray(bb);
@@ -1690,7 +1720,10 @@ public:
         assert(a >= e);
         assert(f <  g);
         assert(g <= g);
+    }
 
+    @system unittest
+    {
         bool[] v;
         foreach  (i; 1 .. 256)
         {
@@ -1757,16 +1790,17 @@ public:
         return _ptr[0 .. dim];
     }
 
+    ///
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opCast unittest\n");
+        import std.array : array;
+        import std.range : repeat, take;
 
-        static bool[] ba = [1,0,1,0,1];
-
-        auto a = BitArray(ba);
-        void[] v = cast(void[]) a;
-
-        assert(v.length == a.dim * size_t.sizeof);
+        // bit array with 300 elements
+        auto a = BitArray(true.repeat.take(300).array);
+        size_t[] v = cast(size_t[]) a;
+        const blockSize = size_t.sizeof * 8;
+        assert(v.length == (a.length + blockSize - 1) / blockSize);
     }
 
     /***************************************
@@ -1789,11 +1823,10 @@ public:
         return result;
     }
 
+    ///
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opCom unittest\n");
-
-        static bool[] ba = [1,0,1,0,1];
+        bool[] ba = [1,0,1,0,1];
 
         auto a = BitArray(ba);
         BitArray b = ~a;
@@ -1835,10 +1868,9 @@ public:
         return result;
     }
 
+    ///
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opAnd unittest\n");
-
         static bool[] ba = [1,0,1,0,1];
         static bool[] bb = [1,0,1,1,0];
 
@@ -1854,12 +1886,11 @@ public:
         assert(c[4] == 0);
     }
 
+    ///
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opOr unittest\n");
-
-        static bool[] ba = [1,0,1,0,1];
-        static bool[] bb = [1,0,1,1,0];
+        bool[] ba = [1,0,1,0,1];
+        bool[] bb = [1,0,1,1,0];
 
         auto a = BitArray(ba);
         auto b = BitArray(bb);
@@ -1873,12 +1904,11 @@ public:
         assert(c[4] == 1);
     }
 
+    ///
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opXor unittest\n");
-
-        static bool[] ba = [1,0,1,0,1];
-        static bool[] bb = [1,0,1,1,0];
+        bool[] ba = [1,0,1,0,1];
+        bool[] bb = [1,0,1,1,0];
 
         auto a = BitArray(ba);
         auto b = BitArray(bb);
@@ -1892,12 +1922,11 @@ public:
         assert(c[4] == 1);
     }
 
+    ///
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opSub unittest\n");
-
-        static bool[] ba = [1,0,1,0,1];
-        static bool[] bb = [1,0,1,1,0];
+        bool[] ba = [1,0,1,0,1];
+        bool[] bb = [1,0,1,1,0];
 
         auto a = BitArray(ba);
         auto b = BitArray(bb);
@@ -1944,10 +1973,11 @@ public:
         return this;
     }
 
+    ///
     @system unittest
     {
-        static bool[] ba = [1,0,1,0,1,1,0,1,0,1];
-        static bool[] bb = [1,0,1,1,0];
+        bool[] ba = [1,0,1,0,1,1,0,1,0,1];
+        bool[] bb = [1,0,1,1,0];
         auto a = BitArray(ba);
         auto b = BitArray(bb);
         BitArray c = a;
@@ -1960,12 +1990,11 @@ public:
         assert(a[9] == 1);
     }
 
+    ///
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opAndAssign unittest\n");
-
-        static bool[] ba = [1,0,1,0,1];
-        static bool[] bb = [1,0,1,1,0];
+        bool[] ba = [1,0,1,0,1];
+        bool[] bb = [1,0,1,1,0];
 
         auto a = BitArray(ba);
         auto b = BitArray(bb);
@@ -1978,12 +2007,11 @@ public:
         assert(a[4] == 0);
     }
 
+    ///
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opOrAssign unittest\n");
-
-        static bool[] ba = [1,0,1,0,1];
-        static bool[] bb = [1,0,1,1,0];
+        bool[] ba = [1,0,1,0,1];
+        bool[] bb = [1,0,1,1,0];
 
         auto a = BitArray(ba);
         auto b = BitArray(bb);
@@ -1996,12 +2024,11 @@ public:
         assert(a[4] == 1);
     }
 
+    ///
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opXorAssign unittest\n");
-
-        static bool[] ba = [1,0,1,0,1];
-        static bool[] bb = [1,0,1,1,0];
+        bool[] ba = [1,0,1,0,1];
+        bool[] bb = [1,0,1,1,0];
 
         auto a = BitArray(ba);
         auto b = BitArray(bb);
@@ -2014,12 +2041,11 @@ public:
         assert(a[4] == 1);
     }
 
+    ///
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opSubAssign unittest\n");
-
-        static bool[] ba = [1,0,1,0,1];
-        static bool[] bb = [1,0,1,1,0];
+        bool[] ba = [1,0,1,0,1];
+        bool[] bb = [1,0,1,1,0];
 
         auto a = BitArray(ba);
         auto b = BitArray(bb);
@@ -2047,11 +2073,10 @@ public:
         return this;
     }
 
+    ///
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opCatAssign unittest\n");
-
-        static bool[] ba = [1,0,1,0,1];
+        bool[] ba = [1,0,1,0,1];
 
         auto a = BitArray(ba);
         BitArray b;
@@ -2080,12 +2105,11 @@ public:
         return this;
     }
 
+    ///
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opCatAssign unittest\n");
-
-        static bool[] ba = [1,0];
-        static bool[] bb = [0,1,0];
+        bool[] ba = [1,0];
+        bool[] bb = [0,1,0];
 
         auto a = BitArray(ba);
         auto b = BitArray(bb);
@@ -2137,12 +2161,11 @@ public:
         return r;
     }
 
+    ///
     @system unittest
     {
-        debug(bitarray) printf("BitArray.opCat unittest\n");
-
-        static bool[] ba = [1,0];
-        static bool[] bb = [0,1,0];
+        bool[] ba = [1,0];
+        bool[] bb = [0,1,0];
 
         auto a = BitArray(ba);
         auto b = BitArray(bb);
@@ -2371,6 +2394,7 @@ public:
         assert(c.bitsSet.equal(iota(0, 2 * r - 10)));
     }
 
+    ///
     @system unittest
     {
         import std.format : format;
@@ -2502,7 +2526,6 @@ public:
     {
         import std.format : format;
 
-        debug(bitarray) printf("BitArray.toString unittest\n");
         auto b = BitArray([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]);
 
         auto s1 = format("%s", b);
@@ -2547,7 +2570,6 @@ public:
         import std.algorithm.comparison : equal;
         import std.range : iota;
 
-        debug(bitarray) printf("BitArray.bitsSet unittest\n");
         BitArray b;
         enum wordBits = size_t.sizeof * 8;
         b = BitArray([size_t.max], 0);
@@ -2651,6 +2673,7 @@ public:
     assert(format("%b", b) == "1_00001111_00001111");
 }
 
+///
 @system unittest
 {
     import std.format : format;
@@ -2741,6 +2764,7 @@ private ulong swapEndianImpl(ulong val) @trusted pure nothrow @nogc
 @safe unittest
 {
     import std.meta;
+    import std.stdio;
     static foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong, char, wchar, dchar))
     {{
         scope(failure) writeln("Failed type: ", T.stringof);
@@ -2793,9 +2817,9 @@ if (canSwapEndianness!T)
     Unqual!T value;
     ubyte[T.sizeof] array;
 
-    static if (is(FloatingPointTypeOf!T == float))
+    static if (is(FloatingPointTypeOf!(Unqual!T) == float))
         uint  intValue;
-    else static if (is(FloatingPointTypeOf!T == double))
+    else static if (is(FloatingPointTypeOf!(Unqual!T) == double))
         ulong intValue;
 
 }
@@ -2827,9 +2851,21 @@ if (canSwapEndianness!T)
     ubyte[4] swappedI = nativeToBigEndian(i);
     assert(i == bigEndianToNative!int(swappedI));
 
+    float f = 123.45f;
+    ubyte[4] swappedF = nativeToBigEndian(f);
+    assert(f == bigEndianToNative!float(swappedF));
+
+    const float cf = 123.45f;
+    ubyte[4] swappedCF = nativeToBigEndian(cf);
+    assert(cf == bigEndianToNative!float(swappedCF));
+
     double d = 123.45;
     ubyte[8] swappedD = nativeToBigEndian(d);
     assert(d == bigEndianToNative!double(swappedD));
+
+    const double cd = 123.45;
+    ubyte[8] swappedCD = nativeToBigEndian(cd);
+    assert(cd == bigEndianToNative!double(swappedCD));
 }
 
 private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow @nogc
@@ -2857,6 +2893,7 @@ if (isFloatOrDouble!T)
 @safe unittest
 {
     import std.meta;
+    import std.stdio;
     static foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
                          char, wchar, dchar
         /* The trouble here is with floats and doubles being compared against nan
@@ -3031,6 +3068,7 @@ if (isFloatOrDouble!T)
 @safe unittest
 {
     import std.meta;
+    import std.stdio;
     static foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
                          char, wchar, dchar/*,
                          float, double*/))
@@ -3307,6 +3345,17 @@ if (canSwapEndianness!T &&
     assert(index == 7);
 }
 
+///
+@safe unittest
+{
+    import std.algorithm.iteration : filter;
+    ubyte[] buffer = [1, 5, 22, 9, 44, 255, 7];
+    auto range = filter!"true"(buffer);
+    assert(range.peek!uint() == 17110537);
+    assert(range.peek!ushort() == 261);
+    assert(range.peek!ubyte() == 1);
+}
+
 @system unittest
 {
     {
@@ -3507,17 +3556,6 @@ if (canSwapEndianness!T &&
         static assert(!__traits(compiles, buffer.peek!Real()));
     }
 }
-
-@safe unittest
-{
-    import std.algorithm.iteration : filter;
-    ubyte[] buffer = [1, 5, 22, 9, 44, 255, 7];
-    auto range = filter!"true"(buffer);
-    assert(range.peek!uint() == 17110537);
-    assert(range.peek!ushort() == 261);
-    assert(range.peek!ubyte() == 1);
-}
-
 
 /++
     Takes a range of `ubyte`s and converts the first `T.sizeof` bytes to
@@ -3745,23 +3783,6 @@ if (canSwapEndianness!T && isInputRange!R && is(ElementType!R : const ubyte))
     }
 }
 
-@safe unittest
-{
-    import std.algorithm.iteration : filter;
-    ubyte[] buffer = [1, 5, 22, 9, 44, 255, 8];
-    auto range = filter!"true"(buffer);
-    assert(walkLength(range) == 7);
-
-    assert(range.read!ushort() == 261);
-    assert(walkLength(range) == 5);
-
-    assert(range.read!uint() == 369700095);
-    assert(walkLength(range) == 1);
-
-    assert(range.read!ubyte() == 8);
-    assert(range.empty);
-}
-
 // issue 17247
 @safe unittest
 {
@@ -3834,303 +3855,312 @@ if (canSwapEndianness!T &&
 ///
 @system unittest
 {
-    {
-        ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0];
-        buffer.write!uint(29110231u, 0);
-        assert(buffer == [1, 188, 47, 215, 0, 0, 0, 0]);
+    ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0];
+    buffer.write!uint(29110231u, 0);
+    assert(buffer == [1, 188, 47, 215, 0, 0, 0, 0]);
 
-        buffer.write!ushort(927, 0);
-        assert(buffer == [3, 159, 47, 215, 0, 0, 0, 0]);
+    buffer.write!ushort(927, 0);
+    assert(buffer == [3, 159, 47, 215, 0, 0, 0, 0]);
 
-        buffer.write!ubyte(42, 0);
-        assert(buffer == [42, 159, 47, 215, 0, 0, 0, 0]);
-    }
-
-    {
-        ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0, 0];
-        buffer.write!uint(142700095u, 2);
-        assert(buffer == [0, 0, 8, 129, 110, 63, 0, 0, 0]);
-
-        buffer.write!ushort(19839, 2);
-        assert(buffer == [0, 0, 77, 127, 110, 63, 0, 0, 0]);
-
-        buffer.write!ubyte(132, 2);
-        assert(buffer == [0, 0, 132, 127, 110, 63, 0, 0, 0]);
-    }
-
-    {
-        ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0];
-        size_t index = 0;
-        buffer.write!ushort(261, &index);
-        assert(buffer == [1, 5, 0, 0, 0, 0, 0, 0]);
-        assert(index == 2);
-
-        buffer.write!uint(369700095u, &index);
-        assert(buffer == [1, 5, 22, 9, 44, 255, 0, 0]);
-        assert(index == 6);
-
-        buffer.write!ubyte(8, &index);
-        assert(buffer == [1, 5, 22, 9, 44, 255, 8, 0]);
-        assert(index == 7);
-    }
+    buffer.write!ubyte(42, 0);
+    assert(buffer == [42, 159, 47, 215, 0, 0, 0, 0]);
 }
 
+///
 @system unittest
 {
+    ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+    buffer.write!uint(142700095u, 2);
+    assert(buffer == [0, 0, 8, 129, 110, 63, 0, 0, 0]);
+
+    buffer.write!ushort(19839, 2);
+    assert(buffer == [0, 0, 77, 127, 110, 63, 0, 0, 0]);
+
+    buffer.write!ubyte(132, 2);
+    assert(buffer == [0, 0, 132, 127, 110, 63, 0, 0, 0]);
+}
+
+///
+@system unittest
+{
+    ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0];
+    size_t index = 0;
+    buffer.write!ushort(261, &index);
+    assert(buffer == [1, 5, 0, 0, 0, 0, 0, 0]);
+    assert(index == 2);
+
+    buffer.write!uint(369700095u, &index);
+    assert(buffer == [1, 5, 22, 9, 44, 255, 0, 0]);
+    assert(index == 6);
+
+    buffer.write!ubyte(8, &index);
+    assert(buffer == [1, 5, 22, 9, 44, 255, 8, 0]);
+    assert(index == 7);
+}
+
+/// bool
+@system unittest
+{
+    ubyte[] buffer = [0, 0];
+    buffer.write!bool(false, 0);
+    assert(buffer == [0, 0]);
+
+    buffer.write!bool(true, 0);
+    assert(buffer == [1, 0]);
+
+    buffer.write!bool(true, 1);
+    assert(buffer == [1, 1]);
+
+    buffer.write!bool(false, 1);
+    assert(buffer == [1, 0]);
+
+    size_t index = 0;
+    buffer.write!bool(false, &index);
+    assert(buffer == [0, 0]);
+    assert(index == 1);
+
+    buffer.write!bool(true, &index);
+    assert(buffer == [0, 1]);
+    assert(index == 2);
+}
+
+/// char(8-bit)
+@system unittest
+{
+    ubyte[] buffer = [0, 0, 0];
+
+    buffer.write!char('a', 0);
+    assert(buffer == [97, 0, 0]);
+
+    buffer.write!char('b', 1);
+    assert(buffer == [97, 98, 0]);
+
+    size_t index = 0;
+    buffer.write!char('a', &index);
+    assert(buffer == [97, 98, 0]);
+    assert(index == 1);
+
+    buffer.write!char('b', &index);
+    assert(buffer == [97, 98, 0]);
+    assert(index == 2);
+
+    buffer.write!char('c', &index);
+    assert(buffer == [97, 98, 99]);
+    assert(index == 3);
+}
+
+/// wchar (16bit - 2x ubyte)
+@system unittest
+{
+    ubyte[] buffer = [0, 0, 0, 0];
+
+    buffer.write!wchar('ą', 0);
+    assert(buffer == [1, 5, 0, 0]);
+
+    buffer.write!wchar('”', 2);
+    assert(buffer == [1, 5, 32, 29]);
+
+    size_t index = 0;
+    buffer.write!wchar('ć', &index);
+    assert(buffer == [1, 7, 32, 29]);
+    assert(index == 2);
+
+    buffer.write!wchar('ą', &index);
+    assert(buffer == [1, 7, 1, 5]);
+    assert(index == 4);
+}
+
+/// dchar (32bit - 4x ubyte)
+@system unittest
+{
+    ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0];
+
+    buffer.write!dchar('ą', 0);
+    assert(buffer == [0, 0, 1, 5, 0, 0, 0, 0]);
+
+    buffer.write!dchar('”', 4);
+    assert(buffer == [0, 0, 1, 5, 0, 0, 32, 29]);
+
+    size_t index = 0;
+    buffer.write!dchar('ć', &index);
+    assert(buffer == [0, 0, 1, 7, 0, 0, 32, 29]);
+    assert(index == 4);
+
+    buffer.write!dchar('ą', &index);
+    assert(buffer == [0, 0, 1, 7, 0, 0, 1, 5]);
+    assert(index == 8);
+}
+
+/// float (32bit - 4x ubyte)
+@system unittest
+{
+    ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0];
+
+    buffer.write!float(32.0f, 0);
+    assert(buffer == [66, 0, 0, 0, 0, 0, 0, 0]);
+
+    buffer.write!float(25.0f, 4);
+    assert(buffer == [66, 0, 0, 0, 65, 200, 0, 0]);
+
+    size_t index = 0;
+    buffer.write!float(25.0f, &index);
+    assert(buffer == [65, 200, 0, 0, 65, 200, 0, 0]);
+    assert(index == 4);
+
+    buffer.write!float(32.0f, &index);
+    assert(buffer == [65, 200, 0, 0, 66, 0, 0, 0]);
+    assert(index == 8);
+}
+
+/// double (64bit - 8x ubyte)
+@system unittest
+{
+    ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+    buffer.write!double(32.0, 0);
+    assert(buffer == [64, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+
+    buffer.write!double(25.0, 8);
+    assert(buffer == [64, 64, 0, 0, 0, 0, 0, 0, 64, 57, 0, 0, 0, 0, 0, 0]);
+
+    size_t index = 0;
+    buffer.write!double(25.0, &index);
+    assert(buffer == [64, 57, 0, 0, 0, 0, 0, 0, 64, 57, 0, 0, 0, 0, 0, 0]);
+    assert(index == 8);
+
+    buffer.write!double(32.0, &index);
+    assert(buffer == [64, 57, 0, 0, 0, 0, 0, 0, 64, 64, 0, 0, 0, 0, 0, 0]);
+    assert(index == 16);
+}
+
+/// enum
+@system unittest
+{
+    ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+    enum Foo
     {
-        //bool
-        ubyte[] buffer = [0, 0];
-
-        buffer.write!bool(false, 0);
-        assert(buffer == [0, 0]);
-
-        buffer.write!bool(true, 0);
-        assert(buffer == [1, 0]);
-
-        buffer.write!bool(true, 1);
-        assert(buffer == [1, 1]);
-
-        buffer.write!bool(false, 1);
-        assert(buffer == [1, 0]);
-
-        size_t index = 0;
-        buffer.write!bool(false, &index);
-        assert(buffer == [0, 0]);
-        assert(index == 1);
-
-        buffer.write!bool(true, &index);
-        assert(buffer == [0, 1]);
-        assert(index == 2);
+        one = 10,
+        two = 20,
+        three = 30
     }
 
+    buffer.write!Foo(Foo.one, 0);
+    assert(buffer == [0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0]);
+
+    buffer.write!Foo(Foo.two, 4);
+    assert(buffer == [0, 0, 0, 10, 0, 0, 0, 20, 0, 0, 0, 0]);
+
+    buffer.write!Foo(Foo.three, 8);
+    assert(buffer == [0, 0, 0, 10, 0, 0, 0, 20, 0, 0, 0, 30]);
+
+    size_t index = 0;
+    buffer.write!Foo(Foo.three, &index);
+    assert(buffer == [0, 0, 0, 30, 0, 0, 0, 20, 0, 0, 0, 30]);
+    assert(index == 4);
+
+    buffer.write!Foo(Foo.one, &index);
+    assert(buffer == [0, 0, 0, 30, 0, 0, 0, 10, 0, 0, 0, 30]);
+    assert(index == 8);
+
+    buffer.write!Foo(Foo.two, &index);
+    assert(buffer == [0, 0, 0, 30, 0, 0, 0, 10, 0, 0, 0, 20]);
+    assert(index == 12);
+}
+
+// enum - bool
+@system unittest
+{
+    ubyte[] buffer = [0, 0];
+
+    enum Bool: bool
     {
-        //char (8bit)
-        ubyte[] buffer = [0, 0, 0];
-
-        buffer.write!char('a', 0);
-        assert(buffer == [97, 0, 0]);
-
-        buffer.write!char('b', 1);
-        assert(buffer == [97, 98, 0]);
-
-        size_t index = 0;
-        buffer.write!char('a', &index);
-        assert(buffer == [97, 98, 0]);
-        assert(index == 1);
-
-        buffer.write!char('b', &index);
-        assert(buffer == [97, 98, 0]);
-        assert(index == 2);
-
-        buffer.write!char('c', &index);
-        assert(buffer == [97, 98, 99]);
-        assert(index == 3);
+        bfalse = false,
+        btrue = true,
     }
 
+    buffer.write!Bool(Bool.btrue, 0);
+    assert(buffer == [1, 0]);
+
+    buffer.write!Bool(Bool.btrue, 1);
+    assert(buffer == [1, 1]);
+
+    size_t index = 0;
+    buffer.write!Bool(Bool.bfalse, &index);
+    assert(buffer == [0, 1]);
+    assert(index == 1);
+
+    buffer.write!Bool(Bool.bfalse, &index);
+    assert(buffer == [0, 0]);
+    assert(index == 2);
+}
+
+/// enum - float
+@system unittest
+{
+    ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0];
+
+    enum Float: float
     {
-        //wchar (16bit - 2x ubyte)
-        ubyte[] buffer = [0, 0, 0, 0];
-
-        buffer.write!wchar('ą', 0);
-        assert(buffer == [1, 5, 0, 0]);
-
-        buffer.write!wchar('”', 2);
-        assert(buffer == [1, 5, 32, 29]);
-
-        size_t index = 0;
-        buffer.write!wchar('ć', &index);
-        assert(buffer == [1, 7, 32, 29]);
-        assert(index == 2);
-
-        buffer.write!wchar('ą', &index);
-        assert(buffer == [1, 7, 1, 5]);
-        assert(index == 4);
+        one = 32.0f,
+        two = 25.0f
     }
 
+    buffer.write!Float(Float.one, 0);
+    assert(buffer == [66, 0, 0, 0, 0, 0, 0, 0]);
+
+    buffer.write!Float(Float.two, 4);
+    assert(buffer == [66, 0, 0, 0, 65, 200, 0, 0]);
+
+    size_t index = 0;
+    buffer.write!Float(Float.two, &index);
+    assert(buffer == [65, 200, 0, 0, 65, 200, 0, 0]);
+    assert(index == 4);
+
+    buffer.write!Float(Float.one, &index);
+    assert(buffer == [65, 200, 0, 0, 66, 0, 0, 0]);
+    assert(index == 8);
+}
+
+/// enum - double
+@system unittest
+{
+    ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+    enum Double: double
     {
-        //dchar (32bit - 4x ubyte)
-        ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0];
-
-        buffer.write!dchar('ą', 0);
-        assert(buffer == [0, 0, 1, 5, 0, 0, 0, 0]);
-
-        buffer.write!dchar('”', 4);
-        assert(buffer == [0, 0, 1, 5, 0, 0, 32, 29]);
-
-        size_t index = 0;
-        buffer.write!dchar('ć', &index);
-        assert(buffer == [0, 0, 1, 7, 0, 0, 32, 29]);
-        assert(index == 4);
-
-        buffer.write!dchar('ą', &index);
-        assert(buffer == [0, 0, 1, 7, 0, 0, 1, 5]);
-        assert(index == 8);
+        one = 32.0,
+        two = 25.0
     }
 
+    buffer.write!Double(Double.one, 0);
+    assert(buffer == [64, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+
+    buffer.write!Double(Double.two, 8);
+    assert(buffer == [64, 64, 0, 0, 0, 0, 0, 0, 64, 57, 0, 0, 0, 0, 0, 0]);
+
+    size_t index = 0;
+    buffer.write!Double(Double.two, &index);
+    assert(buffer == [64, 57, 0, 0, 0, 0, 0, 0, 64, 57, 0, 0, 0, 0, 0, 0]);
+    assert(index == 8);
+
+    buffer.write!Double(Double.one, &index);
+    assert(buffer == [64, 57, 0, 0, 0, 0, 0, 0, 64, 64, 0, 0, 0, 0, 0, 0]);
+    assert(index == 16);
+}
+
+/// enum - real
+@system unittest
+{
+    ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+    enum Real: real
     {
-        //float (32bit - 4x ubyte)
-        ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0];
-
-        buffer.write!float(32.0f, 0);
-        assert(buffer == [66, 0, 0, 0, 0, 0, 0, 0]);
-
-        buffer.write!float(25.0f, 4);
-        assert(buffer == [66, 0, 0, 0, 65, 200, 0, 0]);
-
-        size_t index = 0;
-        buffer.write!float(25.0f, &index);
-        assert(buffer == [65, 200, 0, 0, 65, 200, 0, 0]);
-        assert(index == 4);
-
-        buffer.write!float(32.0f, &index);
-        assert(buffer == [65, 200, 0, 0, 66, 0, 0, 0]);
-        assert(index == 8);
+        one = 32.0,
+        two = 25.0
     }
 
-    {
-        //double (64bit - 8x ubyte)
-        ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-
-        buffer.write!double(32.0, 0);
-        assert(buffer == [64, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-
-        buffer.write!double(25.0, 8);
-        assert(buffer == [64, 64, 0, 0, 0, 0, 0, 0, 64, 57, 0, 0, 0, 0, 0, 0]);
-
-        size_t index = 0;
-        buffer.write!double(25.0, &index);
-        assert(buffer == [64, 57, 0, 0, 0, 0, 0, 0, 64, 57, 0, 0, 0, 0, 0, 0]);
-        assert(index == 8);
-
-        buffer.write!double(32.0, &index);
-        assert(buffer == [64, 57, 0, 0, 0, 0, 0, 0, 64, 64, 0, 0, 0, 0, 0, 0]);
-        assert(index == 16);
-    }
-
-    {
-        //enum
-        ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-
-        enum Foo
-        {
-            one = 10,
-            two = 20,
-            three = 30
-        }
-
-        buffer.write!Foo(Foo.one, 0);
-        assert(buffer == [0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0]);
-
-        buffer.write!Foo(Foo.two, 4);
-        assert(buffer == [0, 0, 0, 10, 0, 0, 0, 20, 0, 0, 0, 0]);
-
-        buffer.write!Foo(Foo.three, 8);
-        assert(buffer == [0, 0, 0, 10, 0, 0, 0, 20, 0, 0, 0, 30]);
-
-        size_t index = 0;
-        buffer.write!Foo(Foo.three, &index);
-        assert(buffer == [0, 0, 0, 30, 0, 0, 0, 20, 0, 0, 0, 30]);
-        assert(index == 4);
-
-        buffer.write!Foo(Foo.one, &index);
-        assert(buffer == [0, 0, 0, 30, 0, 0, 0, 10, 0, 0, 0, 30]);
-        assert(index == 8);
-
-        buffer.write!Foo(Foo.two, &index);
-        assert(buffer == [0, 0, 0, 30, 0, 0, 0, 10, 0, 0, 0, 20]);
-        assert(index == 12);
-    }
-
-    {
-        //enum - bool
-        ubyte[] buffer = [0, 0];
-
-        enum Bool: bool
-        {
-            bfalse = false,
-            btrue = true,
-        }
-
-        buffer.write!Bool(Bool.btrue, 0);
-        assert(buffer == [1, 0]);
-
-        buffer.write!Bool(Bool.btrue, 1);
-        assert(buffer == [1, 1]);
-
-        size_t index = 0;
-        buffer.write!Bool(Bool.bfalse, &index);
-        assert(buffer == [0, 1]);
-        assert(index == 1);
-
-        buffer.write!Bool(Bool.bfalse, &index);
-        assert(buffer == [0, 0]);
-        assert(index == 2);
-    }
-
-    {
-        //enum - float
-        ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0];
-
-        enum Float: float
-        {
-            one = 32.0f,
-            two = 25.0f
-        }
-
-        buffer.write!Float(Float.one, 0);
-        assert(buffer == [66, 0, 0, 0, 0, 0, 0, 0]);
-
-        buffer.write!Float(Float.two, 4);
-        assert(buffer == [66, 0, 0, 0, 65, 200, 0, 0]);
-
-        size_t index = 0;
-        buffer.write!Float(Float.two, &index);
-        assert(buffer == [65, 200, 0, 0, 65, 200, 0, 0]);
-        assert(index == 4);
-
-        buffer.write!Float(Float.one, &index);
-        assert(buffer == [65, 200, 0, 0, 66, 0, 0, 0]);
-        assert(index == 8);
-    }
-
-    {
-        //enum - double
-        ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-
-        enum Double: double
-        {
-            one = 32.0,
-            two = 25.0
-        }
-
-        buffer.write!Double(Double.one, 0);
-        assert(buffer == [64, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-
-        buffer.write!Double(Double.two, 8);
-        assert(buffer == [64, 64, 0, 0, 0, 0, 0, 0, 64, 57, 0, 0, 0, 0, 0, 0]);
-
-        size_t index = 0;
-        buffer.write!Double(Double.two, &index);
-        assert(buffer == [64, 57, 0, 0, 0, 0, 0, 0, 64, 57, 0, 0, 0, 0, 0, 0]);
-        assert(index == 8);
-
-        buffer.write!Double(Double.one, &index);
-        assert(buffer == [64, 57, 0, 0, 0, 0, 0, 0, 64, 64, 0, 0, 0, 0, 0, 0]);
-        assert(index == 16);
-    }
-
-    {
-        //enum - real
-        ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-
-        enum Real: real
-        {
-            one = 32.0,
-            two = 25.0
-        }
-
-        static assert(!__traits(compiles, buffer.write!Real(Real.one)));
-    }
+    static assert(!__traits(compiles, buffer.write!Real(Real.one)));
 }
 
 
@@ -4172,135 +4202,147 @@ if (canSwapEndianness!T && isOutputRange!(R, ubyte))
     assert(buffer.data == [1, 5, 22, 9, 44, 255, 8]);
 }
 
+/// bool
 @safe unittest
 {
-    import std.array;
-    {
-        //bool
-        auto buffer = appender!(const ubyte[])();
+    import std.array : appender;
+    auto buffer = appender!(const ubyte[])();
 
-        buffer.append!bool(true);
-        assert(buffer.data == [1]);
+    buffer.append!bool(true);
+    assert(buffer.data == [1]);
 
-        buffer.append!bool(false);
-        assert(buffer.data == [1, 0]);
-    }
+    buffer.append!bool(false);
+    assert(buffer.data == [1, 0]);
+}
 
-    {
-        //char wchar dchar
-        auto buffer = appender!(const ubyte[])();
+/// char wchar dchar
+@safe unittest
+{
+    import std.array : appender;
+    auto buffer = appender!(const ubyte[])();
 
-        buffer.append!char('a');
-        assert(buffer.data == [97]);
+    buffer.append!char('a');
+    assert(buffer.data == [97]);
 
-        buffer.append!char('b');
-        assert(buffer.data == [97, 98]);
+    buffer.append!char('b');
+    assert(buffer.data == [97, 98]);
 
-        buffer.append!wchar('ą');
-        assert(buffer.data == [97, 98, 1, 5]);
+    buffer.append!wchar('ą');
+    assert(buffer.data == [97, 98, 1, 5]);
 
-        buffer.append!dchar('ą');
+    buffer.append!dchar('ą');
         assert(buffer.data == [97, 98, 1, 5, 0, 0, 1, 5]);
-    }
+}
 
+/// float double
+@safe unittest
+{
+    import std.array : appender;
+    auto buffer = appender!(const ubyte[])();
+
+    buffer.append!float(32.0f);
+    assert(buffer.data == [66, 0, 0, 0]);
+
+    buffer.append!double(32.0);
+    assert(buffer.data == [66, 0, 0, 0, 64, 64, 0, 0, 0, 0, 0, 0]);
+}
+
+/// enum
+@safe unittest
+{
+    import std.array : appender;
+    auto buffer = appender!(const ubyte[])();
+
+    enum Foo
     {
-        //float double
-        auto buffer = appender!(const ubyte[])();
-
-        buffer.append!float(32.0f);
-        assert(buffer.data == [66, 0, 0, 0]);
-
-        buffer.append!double(32.0);
-        assert(buffer.data == [66, 0, 0, 0, 64, 64, 0, 0, 0, 0, 0, 0]);
+        one = 10,
+        two = 20,
+        three = 30
     }
 
+    buffer.append!Foo(Foo.one);
+    assert(buffer.data == [0, 0, 0, 10]);
+
+    buffer.append!Foo(Foo.two);
+    assert(buffer.data == [0, 0, 0, 10, 0, 0, 0, 20]);
+
+    buffer.append!Foo(Foo.three);
+    assert(buffer.data == [0, 0, 0, 10, 0, 0, 0, 20, 0, 0, 0, 30]);
+}
+
+/// enum - bool
+@safe unittest
+{
+    import std.array : appender;
+    auto buffer = appender!(const ubyte[])();
+
+    enum Bool: bool
     {
-        //enum
-        auto buffer = appender!(const ubyte[])();
-
-        enum Foo
-        {
-            one = 10,
-            two = 20,
-            three = 30
-        }
-
-        buffer.append!Foo(Foo.one);
-        assert(buffer.data == [0, 0, 0, 10]);
-
-        buffer.append!Foo(Foo.two);
-        assert(buffer.data == [0, 0, 0, 10, 0, 0, 0, 20]);
-
-        buffer.append!Foo(Foo.three);
-        assert(buffer.data == [0, 0, 0, 10, 0, 0, 0, 20, 0, 0, 0, 30]);
+        bfalse = false,
+        btrue = true,
     }
 
+    buffer.append!Bool(Bool.btrue);
+    assert(buffer.data == [1]);
+
+    buffer.append!Bool(Bool.bfalse);
+    assert(buffer.data == [1, 0]);
+
+    buffer.append!Bool(Bool.btrue);
+    assert(buffer.data == [1, 0, 1]);
+}
+
+/// enum - float
+@safe unittest
+{
+    import std.array : appender;
+    auto buffer = appender!(const ubyte[])();
+
+    enum Float: float
     {
-        //enum - bool
-        auto buffer = appender!(const ubyte[])();
-
-        enum Bool: bool
-        {
-            bfalse = false,
-            btrue = true,
-        }
-
-        buffer.append!Bool(Bool.btrue);
-        assert(buffer.data == [1]);
-
-        buffer.append!Bool(Bool.bfalse);
-        assert(buffer.data == [1, 0]);
-
-        buffer.append!Bool(Bool.btrue);
-        assert(buffer.data == [1, 0, 1]);
+        one = 32.0f,
+        two = 25.0f
     }
 
+    buffer.append!Float(Float.one);
+    assert(buffer.data == [66, 0, 0, 0]);
+
+    buffer.append!Float(Float.two);
+    assert(buffer.data == [66, 0, 0, 0, 65, 200, 0, 0]);
+}
+
+/// enum - double
+@safe unittest
+{
+    import std.array : appender;
+    auto buffer = appender!(const ubyte[])();
+
+    enum Double: double
     {
-        //enum - float
-        auto buffer = appender!(const ubyte[])();
-
-        enum Float: float
-        {
-            one = 32.0f,
-            two = 25.0f
-        }
-
-        buffer.append!Float(Float.one);
-        assert(buffer.data == [66, 0, 0, 0]);
-
-        buffer.append!Float(Float.two);
-        assert(buffer.data == [66, 0, 0, 0, 65, 200, 0, 0]);
+        one = 32.0,
+        two = 25.0
     }
 
+    buffer.append!Double(Double.one);
+    assert(buffer.data == [64, 64, 0, 0, 0, 0, 0, 0]);
+
+    buffer.append!Double(Double.two);
+    assert(buffer.data == [64, 64, 0, 0, 0, 0, 0, 0, 64, 57, 0, 0, 0, 0, 0, 0]);
+}
+
+/// enum - real
+@safe unittest
+{
+    import std.array : appender;
+    auto buffer = appender!(const ubyte[])();
+
+    enum Real: real
     {
-        //enum - double
-        auto buffer = appender!(const ubyte[])();
-
-        enum Double: double
-        {
-            one = 32.0,
-            two = 25.0
-        }
-
-        buffer.append!Double(Double.one);
-        assert(buffer.data == [64, 64, 0, 0, 0, 0, 0, 0]);
-
-        buffer.append!Double(Double.two);
-        assert(buffer.data == [64, 64, 0, 0, 0, 0, 0, 0, 64, 57, 0, 0, 0, 0, 0, 0]);
+        one = 32.0,
+        two = 25.0
     }
 
-    {
-        //enum - real
-        auto buffer = appender!(const ubyte[])();
-
-        enum Real: real
-        {
-            one = 32.0,
-            two = 25.0
-        }
-
-        static assert(!__traits(compiles, buffer.append!Real(Real.one)));
-    }
+    static assert(!__traits(compiles, buffer.append!Real(Real.one)));
 }
 
 @system unittest

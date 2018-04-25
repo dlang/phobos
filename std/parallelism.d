@@ -1082,7 +1082,7 @@ private:
     Mutex waiterMutex;  // For waiterCondition
 
     // The instanceStartIndex of the next instance that will be created.
-    __gshared static size_t nextInstanceIndex = 1;
+    __gshared size_t nextInstanceIndex = 1;
 
     // The index of the current thread.
     static size_t threadIndex;
@@ -1835,7 +1835,8 @@ public:
 
         Params:
 
-        source = The input range to be mapped.  If `source` is not random
+        source = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+        to be mapped.  If `source` is not random
         access it will be lazily buffered to an array of size `bufSize` before
         the map function is evaluated.  (For an exception to this rule, see Notes.)
 
@@ -2164,8 +2165,8 @@ public:
 
     /**
     Given a `source` range that is expensive to iterate over, returns an
-    input range that asynchronously buffers the contents of
-    `source` into a buffer of `bufSize` elements in a worker thread,
+    $(REF_ALTTEXT input range, isInputRange, std,range,primitives) that
+    asynchronously buffers the contents of `source` into a buffer of `bufSize` elements in a worker thread,
     while making previously buffered elements from a second buffer, also of size
     `bufSize`, available via the range interface of the returned
     object.  The returned range has a length iff `hasLength!S`.
@@ -4107,8 +4108,6 @@ version(unittest)
 {
     // This was the only way I could get nested maps to work.
     __gshared TaskPool poolInstance;
-
-    import std.stdio;
 }
 
 // These test basic functionality but don't stress test for threading bugs.
@@ -4123,6 +4122,7 @@ version(unittest)
     import std.math : approxEqual, sqrt, log;
     import std.range : indexed, iota, join;
     import std.typecons : Tuple, tuple;
+    import std.stdio;
 
     poolInstance = new TaskPool(2);
     scope(exit) poolInstance.stop();
@@ -4770,9 +4770,9 @@ version(parallelismStressTest)
     }
 }
 
-version(unittest)
+@system unittest
 {
-    struct __S_12733
+    static struct __S_12733
     {
         invariant() { assert(checksum == 1_234_567_890); }
         this(ulong u){n = u;}
@@ -4782,10 +4782,6 @@ version(unittest)
     }
 
     static auto __genPair_12733(ulong n) { return __S_12733(n); }
-}
-
-@system unittest
-{
     immutable ulong[] data = [ 2UL^^59-1, 2UL^^59-1, 2UL^^59-1, 112_272_537_195_293UL ];
 
     auto result = taskPool.amap!__genPair_12733(data);

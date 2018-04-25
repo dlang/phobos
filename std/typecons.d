@@ -2096,36 +2096,45 @@ if (is(T == class) || is(T == interface) || isAssociativeArray!T)
         U stripped;
     }
 
-    @trusted pure nothrow @nogc
+    void opAssign(T another) @trusted pure nothrow @nogc
     {
-        void opAssign(T another)
-        {
-            stripped = cast(U) another;
-        }
+        stripped = cast(U) another;
+    }
 
-        void opAssign(typeof(this) another)
+    void opAssign(typeof(this) another) @trusted pure nothrow @nogc
+    {
+        stripped = another.stripped;
+    }
+
+    static if (is(T == const U) && is(T == const shared U))
+    {
+        // safely assign immutable to const / const shared
+        void opAssign(This!(immutable U) another) @trusted pure nothrow @nogc
         {
             stripped = another.stripped;
         }
+    }
 
-        static if (is(T == const U) && is(T == const shared U))
-        {
-            // safely assign immutable to const / const shared
-            void opAssign(This!(immutable U) another)
-            {
-                stripped = another.stripped;
-            }
-        }
+    this(T initializer) @trusted pure nothrow @nogc
+    {
+        opAssign(initializer);
+    }
 
-        this(T initializer)
-        {
-            opAssign(initializer);
-        }
+    @property inout(T) get() @trusted pure nothrow @nogc inout
+    {
+        return original;
+    }
 
-        @property inout(T) get() inout
-        {
-            return original;
-        }
+    bool opEquals()(auto ref const(typeof(this)) rhs) const
+    {
+        // Must forward explicitly because 'stripped' is part of a union.
+        // The necessary 'toHash' is forwarded to the class via alias this.
+        return stripped == rhs.stripped;
+    }
+
+    bool opEquals(const(U) rhs) const
+    {
+        return stripped == rhs;
     }
 
     alias get this;
@@ -2206,6 +2215,61 @@ if (is(T == class) || is(T == interface) || isDynamicArray!T || isAssociativeArr
     static assert(!__traits(compiles, &r.get()));
 }
 
+@safe unittest
+{
+    class CustomToHash
+    {
+        override size_t toHash() const nothrow @trusted { return 42; }
+    }
+    Rebindable!(immutable(CustomToHash)) a = new immutable CustomToHash();
+    assert(a.toHash() == 42, "Rebindable!A should offer toHash()"
+        ~ " by forwarding to A.toHash().");
+}
+
+@system unittest // issue 18615: Rebindable!A should use A.opEquals
+{
+    class CustomOpEq
+    {
+        int x;
+        override bool opEquals(Object rhsObj)
+        {
+            if (auto rhs = cast(const(CustomOpEq)) rhsObj)
+                return this.x == rhs.x;
+            else
+                return false;
+        }
+    }
+    CustomOpEq a = new CustomOpEq();
+    CustomOpEq b = new CustomOpEq();
+    assert(a !is b);
+    assert(a == b, "a.x == b.x should be true (0 == 0).");
+
+    Rebindable!(const(CustomOpEq)) ra = a;
+    Rebindable!(const(CustomOpEq)) rb = b;
+    assert(ra !is rb);
+    assert(ra == rb, "Rebindable should use CustomOpEq's opEquals, not 'is'.");
+    assert(ra == b, "Rebindable!(someQualifier(A)) should be comparable"
+        ~ " against const(A) via A.opEquals.");
+    assert(a == rb, "Rebindable!(someQualifier(A)) should be comparable"
+        ~ " against const(A) via A.opEquals.");
+
+    b.x = 1;
+    assert(a != b);
+    assert(ra != b, "Rebindable!(someQualifier(A)) should be comparable"
+        ~ " against const(A) via A.opEquals.");
+    assert(a != rb, "Rebindable!(someQualifier(A)) should be comparable"
+        ~ " against const(A) via A.opEquals.");
+
+    Rebindable!(const(Object)) o1 = new Object();
+    Rebindable!(const(Object)) o2 = new Object();
+    assert(o1 !is o2);
+    assert(o1 == o1, "When the class doesn't provide its own opEquals,"
+        ~ " Rebindable treats 'a == b' as 'a is b' like Object.opEquals.");
+    assert(o1 != o2, "When the class doesn't provide its own opEquals,"
+        ~ " Rebindable treats 'a == b' as 'a is b' like Object.opEquals.");
+    assert(o1 != new Object(), "Rebindable!(const(Object)) should be"
+        ~ " comparable against Object itself and use Object.opEquals.");
+}
 /**
 Convenience function for creating a `Rebindable` using automatic type
 inference.
@@ -2775,9 +2839,9 @@ Params:
 }
 
 /**
-Gets the value if not null. If `this` is in the null state and the optional
-parameter `datum` is passed, then `datum` is returned, otherwise
-the function will throw an `AssertError`.
+Gets the value if not null. If `this` is in the null state, and the optional
+parameter `fallback` was provided, it will be returned. Without `fallback`,
+calling `get` with a null state is invalid.
 This function is also called for the implicit conversion to `T`.
 
 Params:
@@ -3382,6 +3446,7 @@ Params:
 Gets the value. `this` must not be in the null state.
 This function is also called for the implicit conversion to `T`.
 
+Preconditions: `isNull` must be `false`.
 Returns:
     The value held internally by this `Nullable`.
  */

@@ -26,10 +26,6 @@ import std.range.primitives;
 import std.traits;
 import std.typecons;
 
-version(unittest)
-{
-    import std.stdio;
-}
 /// Format flags for CustomFloat.
 public enum CustomFloatFlags
 {
@@ -751,6 +747,7 @@ template secantMethod(alias fun)
 @system unittest
 {
     // @system because of __gshared stderr
+    import std.stdio;
     scope(failure) stderr.writeln("Failure testing secantMethod");
     float f(float x)
     {

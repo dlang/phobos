@@ -230,7 +230,7 @@ public import std.experimental.allocator.common,
 // in order to ensure that we use the `processAllocator` setter before the getter
 @system unittest
 {
-    import std.experimental.allocator.mallocator: Mallocator;
+    import std.experimental.allocator.mallocator : Mallocator;
     import std.experimental.allocator.gc_allocator : GCAllocator;
     auto newAlloc = sharedAllocatorObject(Mallocator.instance);
     processAllocator = newAlloc;
@@ -381,7 +381,7 @@ nothrow:
 
     For stateless allocators, this does nothing.
     */
-    @safe @nogc
+    @safe @nogc pure
     void incRef();
 
     /**
@@ -392,7 +392,7 @@ nothrow:
     Returns: `true` if the reference count is greater than `0` and `false` when
     it hits `0`. For stateless allocators, it always returns `true`.
     */
-    @safe @nogc
+    @safe @nogc pure
     bool decRef();
 }
 
@@ -417,14 +417,14 @@ struct RCIAllocator
     private IAllocator _alloc;
 
 nothrow:
-    private @nogc @safe
+    private @nogc pure @safe
     this(this _)(IAllocator alloc)
     {
         assert(alloc);
         _alloc = alloc;
     }
 
-    @nogc @safe
+    @nogc pure @safe
     this(this)
     {
         if (_alloc !is null)
@@ -433,7 +433,7 @@ nothrow:
         }
     }
 
-    @nogc @safe
+    @nogc pure @safe
     ~this()
     {
         if (_alloc !is null)
@@ -443,7 +443,7 @@ nothrow:
         }
     }
 
-    @nogc @safe
+    @nogc pure @safe
     auto ref opAssign()(typeof(this) rhs)
     {
         if (_alloc is rhs._alloc)
@@ -459,7 +459,7 @@ nothrow:
         return this;
     }
 
-    pure nothrow @safe @nogc
+    @nogc pure @safe
     bool isNull(this _)()
     {
         return _alloc is null;
@@ -724,7 +724,7 @@ nothrow:
 
     For stateless allocators, this does nothing.
     */
-    @safe @nogc
+    @safe @nogc pure
     void incRef() shared;
 
     /**
@@ -737,7 +737,7 @@ nothrow:
     Returns: `true` if the reference count is greater than `0` and `false` when
     it hits `0`. For stateless allocators, it always returns `true`.
     */
-    @safe @nogc
+    @safe @nogc pure
     bool decRef() shared;
 }
 
@@ -763,14 +763,14 @@ shared struct RCISharedAllocator
     private ISharedAllocator _alloc;
 
 nothrow:
-    private @nogc @safe
+    private @nogc pure @safe
     this(shared ISharedAllocator alloc)
     {
         assert(alloc);
         _alloc = alloc;
     }
 
-    @nogc @safe
+    @nogc pure @safe
     this(this)
     {
         if (_alloc !is null)
@@ -779,7 +779,7 @@ nothrow:
         }
     }
 
-    @nogc @safe
+    @nogc pure @safe
     ~this()
     {
         if (_alloc !is null)
@@ -789,7 +789,7 @@ nothrow:
         }
     }
 
-    @nogc @safe
+    @nogc pure @safe
     auto ref opAssign()(RCISharedAllocator rhs)
     {
         if (_alloc is rhs._alloc)
@@ -807,7 +807,7 @@ nothrow:
         return this;
     }
 
-    pure nothrow @safe @nogc
+    @nogc pure @safe
     bool isNull(this _)()
     {
         return _alloc is null;
@@ -895,7 +895,7 @@ nothrow:
 private RCISharedAllocator _processAllocator;
 private RCIAllocator _threadAllocator;
 
-nothrow @nogc @safe
+@nogc nothrow @safe
 private ref RCIAllocator setupThreadAllocator()
 {
     /*
@@ -904,91 +904,111 @@ private ref RCIAllocator setupThreadAllocator()
     static class ThreadAllocator : IAllocator
     {
     nothrow:
+        private RCISharedAllocator _allocator;
+
+        @nogc @safe
+        this(ref RCISharedAllocator procAlloc)
+        {
+            _allocator = procAlloc;
+        }
+
         override @property uint alignment()
         {
-            return processAllocator.alignment();
+            return _allocator.alignment();
         }
 
         override size_t goodAllocSize(size_t s)
         {
-            return processAllocator.goodAllocSize(s);
+            return _allocator.goodAllocSize(s);
         }
 
         override void[] allocate(size_t n, TypeInfo ti = null)
         {
-            return processAllocator.allocate(n, ti);
+            return _allocator.allocate(n, ti);
         }
 
         override void[] alignedAllocate(size_t n, uint a)
         {
-            return processAllocator.alignedAllocate(n, a);
+            return _allocator.alignedAllocate(n, a);
         }
 
         override void[] allocateAll()
         {
-            return processAllocator.allocateAll();
+            return _allocator.allocateAll();
         }
 
         override bool expand(ref void[] b, size_t size)
         {
-            return processAllocator.expand(b, size);
+            return _allocator.expand(b, size);
         }
 
         override bool reallocate(ref void[] b, size_t size)
         {
-            return processAllocator.reallocate(b, size);
+            return _allocator.reallocate(b, size);
         }
 
         override bool alignedReallocate(ref void[] b, size_t size, uint alignment)
         {
-            return processAllocator.alignedReallocate(b, size, alignment);
+            return _allocator.alignedReallocate(b, size, alignment);
         }
 
         override Ternary owns(void[] b)
         {
-            return processAllocator.owns(b);
+            return _allocator.owns(b);
         }
 
         override Ternary resolveInternalPointer(const void* p, ref void[] result)
         {
-            return processAllocator.resolveInternalPointer(p, result);
+            return _allocator.resolveInternalPointer(p, result);
         }
 
         override bool deallocate(void[] b)
         {
-            return processAllocator.deallocate(b);
+            return _allocator.deallocate(b);
         }
 
         override bool deallocateAll()
         {
-            return processAllocator.deallocateAll();
+            return _allocator.deallocateAll();
         }
 
         override Ternary empty()
         {
-            return processAllocator.empty();
+            return _allocator.empty();
         }
 
-        //nothrow @safe @nogc
-        @safe @nogc
+        @nogc pure @safe
         override void incRef()
         {
-            processAllocator._alloc.incRef();
+            _allocator._alloc.incRef();
         }
 
-        //nothrow @safe @nogc
-        @safe @nogc
+        @nogc pure @safe
         override bool decRef()
         {
-            return processAllocator._alloc.decRef();
+            return _allocator._alloc.decRef();
         }
     }
 
     assert(_threadAllocator.isNull);
     import std.conv : emplace;
     static ulong[stateSize!(ThreadAllocator).divideRoundUp(ulong.sizeof)] _threadAllocatorState;
-    () @trusted { _threadAllocator = RCIAllocator(emplace!(ThreadAllocator)(_threadAllocatorState[])); }();
+    () @trusted {
+        _threadAllocator = RCIAllocator(emplace!(ThreadAllocator)(_threadAllocatorState[], processAllocator()));
+    }();
     return _threadAllocator;
+}
+
+// Fix threadAllocator bug: the threadAllocator should hold an internal reference
+// to the processAllocator that it's using
+@system unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+
+    auto a = sharedAllocatorObject(Mallocator.instance);
+    auto buf = theAllocator.allocate(42);
+    processAllocator = a;
+    theAllocator.deallocate(buf);
 }
 
 /**
@@ -998,7 +1018,7 @@ to be shared across threads, use `processAllocator` (below). By default,
 `theAllocator` ultimately fetches memory from `processAllocator`, which
 in turn uses the garbage collected heap.
 */
-nothrow @safe @nogc
+@nogc nothrow @safe
 @property ref RCIAllocator theAllocator()
 {
     alias p = _threadAllocator;
@@ -1033,7 +1053,7 @@ Gets/sets the allocator for the current process. This allocator must be used
 for allocating memory shared across threads. Objects created using this
 allocator can be cast to `shared`.
 */
-@trusted nothrow @nogc
+@nogc nothrow @trusted
 @property ref RCISharedAllocator processAllocator()
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
@@ -1045,11 +1065,11 @@ allocator can be cast to `shared`.
                 sharedAllocatorObject(GCAllocator.instance));
     }
 
-    return *(cast(RCISharedAllocator* function() nothrow @nogc)(&forceAttributes))();
+    return *(cast(RCISharedAllocator* function() @nogc nothrow)(&forceAttributes))();
 }
 
 /// Ditto
-nothrow @system @nogc
+@nogc nothrow @system
 @property void processAllocator(ref RCISharedAllocator a)
 {
     assert(!a.isNull);
@@ -1134,39 +1154,49 @@ propagates the exception.
 auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
 {
     import std.algorithm.comparison : max;
-    import std.conv : emplace, emplaceRef;
-    auto m = alloc.allocate(max(stateSize!T, 1));
-    if (!m.ptr) return null;
-
-    // make can only be @safe if emplace or emplaceRef is `pure`
-    auto construct()
+    static if (!is(T == class) && !is(T == interface) && A.length == 0
+        && __traits(compiles, {T t;}) && isInitAllZeroBits!T
+        && is(typeof(alloc.allocateZeroed(size_t.max))))
     {
-        static if (is(T == class)) return emplace!T(m, args);
-        else
-        {
-            // Assume cast is safe as allocation succeeded for `stateSize!T`
-            auto p = () @trusted { return cast(T*) m.ptr; }();
-            emplaceRef(*p, args);
-            return p;
-        }
+        auto m = alloc.allocateZeroed(max(T.sizeof, 1));
+        return (() @trusted => cast(T*) m.ptr)();
     }
-
-    scope(failure)
+    else
     {
-        static if (is(typeof(() pure { return construct(); })))
-        {
-            // Assume deallocation is safe because:
-            // 1) in case of failure, `m` is the only reference to this memory
-            // 2) `m` is known to originate from `alloc`
-            () @trusted { alloc.deallocate(m); }();
-        }
-        else
-        {
-            alloc.deallocate(m);
-        }
-    }
+        import std.conv : emplace, emplaceRef;
+        auto m = alloc.allocate(max(stateSize!T, 1));
+        if (!m.ptr) return null;
 
-    return construct();
+        // make can only be @safe if emplace or emplaceRef is `pure`
+        auto construct()
+        {
+            static if (is(T == class)) return emplace!T(m, args);
+            else
+            {
+                // Assume cast is safe as allocation succeeded for `stateSize!T`
+                auto p = () @trusted { return cast(T*) m.ptr; }();
+                emplaceRef(*p, args);
+                return p;
+            }
+        }
+
+        scope(failure)
+        {
+            static if (is(typeof(() pure { return construct(); })))
+            {
+                // Assume deallocation is safe because:
+                // 1) in case of failure, `m` is the only reference to this memory
+                // 2) `m` is known to originate from `alloc`
+                () @trusted { alloc.deallocate(m); }();
+            }
+            else
+            {
+                alloc.deallocate(m);
+            }
+        }
+
+        return construct();
+    }
 }
 
 ///
@@ -1367,6 +1397,19 @@ nothrow @safe @nogc unittest
     assertThrown(make!InvalidImpureStruct(Mallocator.instance, 42));
 }
 
+// Don't allow zero-ctor-args `make` for structs with `@disable this();`
+@system unittest
+{
+    struct NoDefaultCtor
+    {
+        int i;
+        @disable this();
+    }
+    import std.experimental.allocator.mallocator : Mallocator;
+    static assert(!__traits(compiles, make!NoDefaultCtor(Mallocator.instance)),
+        "Don't allow zero-ctor-args `make` for structs with `@disable this();`");
+}
+
 private void fillWithMemcpy(T)(scope void[] array, auto ref T filler) nothrow
 if (T.sizeof == 1)
 {
@@ -1496,10 +1539,18 @@ exception if the copy operation throws.
 T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length)
 {
     if (!length) return null;
-    auto m = alloc.allocate(T.sizeof * length);
-    if (!m.ptr) return null;
-    alias U = Unqual!T;
-    return () @trusted { return cast(T[]) uninitializedFillDefault(cast(U[]) m); }();
+    static if (isInitAllZeroBits!T && hasMember!(T, "allocateZeroed"))
+    {
+        auto m = alloc.allocateZeroed(T.sizeof * length);
+        return (() @trusted => cast(T[]) m)();
+    }
+    else
+    {
+        auto m = alloc.allocate(T.sizeof * length);
+        if (!m.ptr) return null;
+        alias U = Unqual!T;
+        return () @trusted { return cast(T[]) uninitializedFillDefault(cast(U[]) m); }();
+    }
 }
 
 @system unittest
@@ -2544,8 +2595,8 @@ if (!isPointer!A)
     static if (stateSize!A == 0)
     {
         enum s = stateSize!(CAllocatorImpl!A).divideRoundUp(ulong.sizeof);
-        static __gshared ulong[s] state;
-        static __gshared RCIAllocator result;
+        __gshared ulong[s] state;
+        __gshared RCIAllocator result;
         if (result.isNull)
         {
             // Don't care about a few races
@@ -2724,11 +2775,14 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     {
     nothrow:
         private Allocator* pimpl;
-        @nogc
+
+        @nogc pure @safe
         ref Allocator impl()
         {
             return *pimpl;
         }
+
+        @nogc pure @safe
         this(Allocator* pa)
         {
             pimpl = pa;
@@ -2888,13 +2942,13 @@ nothrow:
         }
     }
 
-    nothrow @safe @nogc
+    @nogc nothrow pure @safe
     override void incRef()
     {
         static if (stateSize!Allocator) ++rc;
     }
 
-    nothrow @trusted @nogc
+    @nogc nothrow pure @trusted
     override bool decRef()
     {
         static if (stateSize!Allocator)
@@ -2951,11 +3005,14 @@ class CSharedAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     {
     nothrow:
         private shared Allocator* pimpl;
-        @nogc
+
+        @nogc pure @safe
         ref Allocator impl() shared
         {
             return *pimpl;
         }
+
+        @nogc pure @safe
         this(Allocator* pa) shared
         {
             pimpl = pa;
@@ -3115,13 +3172,13 @@ nothrow:
         }
     }
 
-    nothrow @safe @nogc
+    @nogc nothrow pure @safe
     override void incRef() shared
     {
         static if (stateSize!Allocator) atomicOp!"+="(rc, 1);
     }
 
-    nothrow @trusted @nogc
+    @nogc nothrow pure @trusted
     override bool decRef() shared
     {
         static if (stateSize!Allocator)
@@ -3139,9 +3196,11 @@ nothrow:
                 {
                     Allocator tmp;
                     memcpy(cast(void*) &tmp, cast(void*) &this.impl, Allocator.sizeof);
+                    Allocator empty;
+                    memcpy(cast(void*) &this.impl, cast(void*) &empty, Allocator.sizeof);
                 }
                 void[] support = (cast(void*) this)[0 .. stateSize!(typeof(this))];
-                tmp.deallocate(support);
+                (cast(bool delegate(void[]) @nogc nothrow pure)(&tmp.deallocate))(support);
                 return false;
             }
             return true;

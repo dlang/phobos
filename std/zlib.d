@@ -75,9 +75,9 @@ enum
 
 class ZlibException : Exception
 {
-    this(int errnum)
-    {   string msg;
-
+    private static string getmsg(int errnum) nothrow @nogc pure @safe
+    {
+        string msg;
         switch (errnum)
         {
             case Z_STREAM_END:      msg = "stream end"; break;
@@ -90,7 +90,12 @@ class ZlibException : Exception
             case Z_VERSION_ERROR:   msg = "version error"; break;
             default:                msg = "unknown error";  break;
         }
-        super(msg);
+        return msg;
+    }
+
+    this(int errnum)
+    {
+        super(getmsg(errnum));
     }
 }
 

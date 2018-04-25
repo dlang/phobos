@@ -1121,7 +1121,8 @@ template templateOr(Preds...)
 }
 
 /**
- * Converts an input range `range` to an alias sequence.
+ * Converts an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+ * `range` to an alias sequence.
  */
 template aliasSeqOf(alias range)
 {

@@ -187,7 +187,7 @@ Constructor taking a number of nodes
     }
 
 /**
-Constructor taking an input range
+Constructor taking an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
      */
     this(Stuff)(Stuff stuff)
     if (isInputRange!Stuff
