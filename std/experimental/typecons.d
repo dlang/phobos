@@ -1074,3 +1074,105 @@ pure nothrow @system unittest
         arr.ptr++
     ));
 }
+
+/**
+Unpacks the content of a `Nullable`, performs an operation and packs it again. Does nothing if isNull.
+
+When called on a `Nullable`, `apply` will unpack the value contained in the `Nullable`,
+pass it to the function you provide and wrap the result in another `Nullable` (if necessary).
+If the Nullable is null, `apply` will return null itself.
+
+Params:
+    t = a `Nullable`
+    fun = a function operating on the content of the nullable
+
+Returns:
+    `fun(t.get).nullable` if `!t.isNull`, else `Nullable.init`.
+
+See also:
+    $(HTTP en.wikipedia.org/wiki/Monad_(functional_programming)#The_Maybe_monad, The `Maybe` monad)
+ */
+template apply(alias fun)
+{
+    import std.functional : unaryFun;
+    import std.typecons : Nullable, nullable;
+
+    auto apply(T)(T t)
+    if (isInstanceOf!(Nullable, T) && is(typeof(unaryFun!fun(T.init.get))))
+    {
+        alias FunType = typeof(unaryFun!fun(T.init.get));
+
+        enum MustWrapReturn = !isInstanceOf!(Nullable, FunType);
+
+        static if (MustWrapReturn)
+        {
+            alias ReturnType = Nullable!FunType;
+        }
+        else
+        {
+            alias ReturnType = FunType;
+        }
+
+        if (!t.isNull)
+        {
+            static if (MustWrapReturn)
+            {
+                return fun(t.get).nullable;
+            }
+            else
+            {
+                return fun(t.get);
+            }
+        }
+        else
+        {
+            return ReturnType.init;
+        }
+    }
+}
+
+///
+nothrow pure @nogc @safe unittest
+{
+    import std.typecons : Nullable;
+
+    alias toFloat = i => cast(float) i;
+
+    Nullable!int sample;
+
+    // apply(null) results in a null `Nullable` of the function's return type.
+    Nullable!float f = sample.apply!toFloat;
+    assert(sample.isNull && f.isNull);
+
+    sample = 3;
+
+    // apply(non-null) calls the function and wraps the result in a `Nullable`.
+    f = sample.apply!toFloat;
+    assert(!sample.isNull && !f.isNull);
+    assert(f.get == 3.0f);
+}
+
+///
+nothrow pure @nogc @safe unittest
+{
+    import std.typecons : Nullable, nullable;
+
+    alias greaterThree = i => (i > 3) ? i.nullable : Nullable!(typeof(i)).init;
+
+    Nullable!int sample;
+
+    // when the function already returns a `Nullable`, that `Nullable` is not wrapped.
+    auto result = sample.apply!greaterThree;
+    assert(sample.isNull && result.isNull);
+
+    // The function may decide to return a null `Nullable`.
+    sample = 3;
+    result = sample.apply!greaterThree;
+    assert(!sample.isNull && result.isNull);
+
+    // Or it may return a value already wrapped in a `Nullable`.
+    sample = 4;
+    result = sample.apply!greaterThree;
+    assert(!sample.isNull && !result.isNull);
+    assert(result.get == 4);
+}
