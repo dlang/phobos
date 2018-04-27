@@ -4499,7 +4499,7 @@ emplace, but takes its argument by ref (as opposed to "by pointer").
 This makes it easier to use, easier to be safe, and faster in a non-inline
 build.
 
-Furthermore, emplaceRef optionally takes a type paremeter, which specifies
+Furthermore, emplaceRef optionally takes a type parameter, which specifies
 the type we want to build. This helps to build qualified objects on mutable
 buffer, without breaking the type system with unsafe casts.
 +/
@@ -4546,7 +4546,8 @@ package void emplaceRef(T, UT, Args...)(ref UT chunk, auto ref Args args)
         else
         {
             S* p = () @trusted { return cast(S*) &chunk; }();
-            emplaceInitializer(*p);
+            static if (UT.sizeof > 0)
+                emplaceInitializer(*p);
             p.__ctor(args);
         }
     }
