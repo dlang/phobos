@@ -128,6 +128,7 @@ aa[std.experimental.allocator.package]=-dip25 #    Linker errors: undefined refe
 aa[std.experimental.allocator.showcase]=-dip1000
 aa[std.experimental.allocator.typed]=-dip1000
 aa[std.experimental.allocator.building_blocks.affix_allocator]=-dip1000
+aa[std.experimental.allocator.building_blocks.aligned_block_list]=-dip1000
 aa[std.experimental.allocator.building_blocks.allocator_list]=-dip1000
 aa[std.experimental.allocator.building_blocks.ascending_page_allocator]=-dip1000
 aa[std.experimental.allocator.building_blocks.bitmapped_block]=-dip1000
