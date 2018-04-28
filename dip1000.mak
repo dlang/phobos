@@ -50,7 +50,7 @@ aa[std.typecons]=-dip1000 -version=DIP1000 # merged https://github.com/dlang/pho
 aa[std.typetuple]=-dip1000
 aa[std.uni]=-dip1000 # merged https://github.com/dlang/phobos/pull/6294, https://github.com/dlang/phobos/pull/6041 (see also TODO-list there); supersedes/includes https://github.com/dlang/phobos/pull/5045; see also https://github.com/dlang/phobos/pull/6104 for improvements proposed by Seb
 aa[std.uri]=-dip1000
-aa[std.utf]=-dip1000 # for me (carblue) std.utf is -dip1000 compilable even without applying https://github.com/dlang/phobos/pull/5915, i.e. I don't observe a depends on (?); after applying PR 5915 it's still dip1000
+aa[std.utf]=-dip1000
 aa[std.uuid]=-dip1000
 aa[std.variant]=-dip1000
 aa[std.xml]=-dip1000
@@ -59,8 +59,8 @@ aa[std.zlib]=-dip1000
 
 aa[std.algorithm.comparison]=-dip1000
 aa[std.algorithm.internal]=-dip1000
-aa[std.algorithm.iteration]=-dip25 # depends on std.container.slist (to be updated https://github.com/dlang/phobos/pull/6295)
-aa[std.algorithm.mutation]=-dip25 #  depends on std.container.slist (to be updated https://github.com/dlang/phobos/pull/6295)
+aa[std.algorithm.iteration]=-dip1000
+aa[std.algorithm.mutation]=-dip1000
 aa[std.algorithm.package]=-dip1000
 aa[std.algorithm.searching]=-dip25 # depends on https://github.com/dlang/phobos/pull/6246 merged and std.algorithm.comparison fixed
 aa[std.algorithm.setops]=-dip1000
@@ -95,7 +95,7 @@ aa[std.container.binaryheap]=-dip1000
 aa[std.container.dlist]=-dip1000
 aa[std.container.package]=-dip1000
 aa[std.container.rbtree]=-dip25 # DROP
-aa[std.container.slist]=-dip25 # -dip1000 -version=DIP1000   depends on an update (no insertFront's code duplication in constructor) and merge of https://github.com/dlang/phobos/pull/6295
+aa[std.container.slist]=-dip1000
 aa[std.container.util]=-dip25 # depends on rbtree and slist = -dip1000
 
 aa[std.datetime.date]=-dip1000
@@ -121,24 +121,28 @@ aa[std.experimental.allocator.common]=-dip1000
 aa[std.experimental.allocator.gc_allocator]=-dip1000
 aa[std.experimental.allocator.mallocator]=-dip1000
 aa[std.experimental.allocator.mmap_allocator]=-dip1000
-aa[std.experimental.allocator.package]=-dip25 #    Linker errors
+aa[std.experimental.allocator.package]=-dip25 #    Linker errors: undefined reference  pure nothrow @property @nogc return @safe std.internal.test.dummyrange.DummyRange!(0, 1, 1, uint[]).DummyRange std.internal.test.dummyrange.DummyRange!(0, 1, 1, uint[]).DummyRange.save()
+#                                                                                      pure nothrow @property @nogc return @safe std.internal.test.dummyrange.DummyRange!(0, 1, 2, uint[]).DummyRange std.internal.test.dummyrange.DummyRange!(0, 1, 2, uint[]).DummyRange.save()
+#                                                                                      pure nothrow @property @nogc return @safe std.internal.test.dummyrange.DummyRange!(1, 1, 1, uint[]).DummyRange std.internal.test.dummyrange.DummyRange!(1, 1, 1, uint[]).DummyRange.save()
+#                                                                                      pure nothrow @property @nogc return @safe std.internal.test.dummyrange.DummyRange!(1, 1, 2, uint[]).DummyRange std.internal.test.dummyrange.DummyRange!(1, 1, 2, uint[]).DummyRange.save()
 aa[std.experimental.allocator.showcase]=-dip1000
 aa[std.experimental.allocator.typed]=-dip1000
-aa[std.experimental.allocator.building_blocks.affix_allocator]=-dip25 #    Linker errors
+aa[std.experimental.allocator.building_blocks.affix_allocator]=-dip1000
+aa[std.experimental.allocator.building_blocks.aligned_block_list]=-dip1000
 aa[std.experimental.allocator.building_blocks.allocator_list]=-dip1000
 aa[std.experimental.allocator.building_blocks.ascending_page_allocator]=-dip1000
-aa[std.experimental.allocator.building_blocks.bitmapped_block]=-dip25 #    Linker error
-aa[std.experimental.allocator.building_blocks.bucketizer]=-dip25 #    Linker errors
-aa[std.experimental.allocator.building_blocks.fallback_allocator]=-dip25 #    Linker errors
+aa[std.experimental.allocator.building_blocks.bitmapped_block]=-dip1000
+aa[std.experimental.allocator.building_blocks.bucketizer]=-dip1000
+aa[std.experimental.allocator.building_blocks.fallback_allocator]=-dip1000
 aa[std.experimental.allocator.building_blocks.free_list]=-dip1000
 aa[std.experimental.allocator.building_blocks.free_tree]=-dip1000
 aa[std.experimental.allocator.building_blocks.kernighan_ritchie]=-dip1000
 aa[std.experimental.allocator.building_blocks.null_allocator]=-dip1000
 aa[std.experimental.allocator.building_blocks.package]=-dip1000
 aa[std.experimental.allocator.building_blocks.quantizer]=-dip1000
-aa[std.experimental.allocator.building_blocks.region]=-dip25 #    Linker errors
+aa[std.experimental.allocator.building_blocks.region]=-dip1000
 aa[std.experimental.allocator.building_blocks.scoped_allocator]=-dip1000
-aa[std.experimental.allocator.building_blocks.segregator]=-dip25 #    Linker errors
+aa[std.experimental.allocator.building_blocks.segregator]=-dip1000
 aa[std.experimental.allocator.building_blocks.stats_collector]=-dip1000
 aa[std.experimental.logger.core]=-dip1000 # merged https://github.com/dlang/phobos/pull/6266
 aa[std.experimental.logger.filelogger]=-dip25 # merged https://github.com/dlang/phobos/pull/6266; depends on https://github.com/dlang/phobos/pull/5915 ? and a fix for: std.format.formattedWrite
