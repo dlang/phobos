@@ -1218,7 +1218,7 @@ public:
 ///
 @system unittest
 {
-    alias Var = VariantN!(maxSize!(int, real, double));
+    alias Var = VariantN!(maxSize!(int, double, string));
 
     Var a; // Must assign before use, otherwise exception ensues
     // Initialize with an integer; make the type int

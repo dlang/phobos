@@ -3813,7 +3813,7 @@ real log1p(real x) @safe pure nothrow @nogc
     assert(log1p(1.0).feqrel(0.69314) > 16);
 
     assert(log1p(-1.0) == -real.infinity);
-    assert(log1p(-2.0) is -real.nan);
+    assert(isNaN(log1p(-2.0)));
     assert(log1p(real.nan) is real.nan);
     assert(log1p(-real.nan) is -real.nan);
     assert(log1p(real.infinity) == real.infinity);
