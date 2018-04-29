@@ -510,17 +510,12 @@ Throws: `ErrnoException` in case of error.
         import std.conv : text;
         import std.exception : errnoEnforce;
 
-        if (_p is null)
+        if (_p !is null)
         {
-            _p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
-        }
-        {
-            if (atomicOp!"-="(_p.refs, 1) == 0)
-                closeHandles();
-            else
-                _p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
+            detach();
         }
 
+        _p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
         FILE* handle;
         version (Posix)
         {
