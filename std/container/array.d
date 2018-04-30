@@ -324,7 +324,7 @@ if (!is(Unqual!T == bool))
                     auto newPayloadPtr = cast(T*) malloc(nbytes);
                     newPayloadPtr || assert(false, "std.container.Array.length failed to allocate memory.");
                     auto newPayload = newPayloadPtr[0 .. newLength];
-                    memcpy(newPayload.ptr, _payload.ptr, _payload.sizeof);
+                    memcpy(newPayload.ptr, _payload.ptr, startEmplace * T.sizeof);
                     memset(newPayload.ptr + startEmplace, 0,
                             (newLength - startEmplace) * T.sizeof);
                     GC.addRange(newPayload.ptr, nbytes);
@@ -1136,9 +1136,17 @@ if (!is(Unqual!T == bool))
 
 @safe unittest
 {
-    // REG https://issues.dlang.org/show_bug.cgi?id=13621
+    // https://issues.dlang.org/show_bug.cgi?id=13621
     import std.container : Array, BinaryHeap;
     alias Heap = BinaryHeap!(Array!int);
+}
+
+@system unittest
+{
+    // https://issues.dlang.org/show_bug.cgi?id=18800
+    static struct S { void* p; }
+    Array!S a;
+    a.length = 10;
 }
 
 @system unittest
