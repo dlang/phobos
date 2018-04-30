@@ -414,7 +414,8 @@ if (!areCopyCompatibleArrays!(SourceRange, TargetRange) &&
     }
     else
     {
-        put(target, source);
+        foreach (element; source)
+            put(target, element);
         return target;
     }
 }
@@ -533,6 +534,24 @@ $(LINK2 http://en.cppreference.com/w/cpp/algorithm/copy_backward, STL's `copy_ba
         assert(a1[] == "123");
         assert(a2[] == "123789");
     }}
+}
+
+@safe unittest // issue 18804
+{
+    static struct NullSink
+    {
+        void put(E)(E) {}
+    }
+    int line = 0;
+    struct R
+    {
+        int front;
+        @property bool empty() { return line == 1; }
+        void popFront() { line = 1; }
+    }
+    R r;
+    copy(r, NullSink());
+    assert(line == 1);
 }
 
 /**
