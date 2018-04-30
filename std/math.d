@@ -4948,77 +4948,61 @@ long lround(real x) @trusted nothrow @nogc
     }
 }
 
-version(StdDdoc)
+/**
+ Returns the integer portion of x, dropping the fractional portion.
+ This is also known as "chop" rounding.
+ `pure` on all platforms.
+ */
+real trunc(real x) @trusted nothrow @nogc pure
 {
-    /**
-     Returns the integer portion of x, dropping the fractional portion.
-
-     This is also known as "chop" rounding.
-
-     `pure` on all platforms but DragonFlyBSD.
-     */
-    real trunc(real x) @trusted nothrow @nogc pure;
-
-    ///
-    @safe pure unittest
+    version (Win64_DMD_InlineAsm)
     {
-        assert(trunc(0.01) == 0);
-        assert(trunc(0.49) == 0);
-        assert(trunc(0.5) == 0);
-        assert(trunc(1.5) == 1);
+        asm pure nothrow @nogc
+        {
+            naked                       ;
+            fld     real ptr [RCX]      ;
+            fstcw   8[RSP]              ;
+            mov     AL,9[RSP]           ;
+            mov     DL,AL               ;
+            and     AL,0xC3             ;
+            or      AL,0x0C             ; // round to 0
+            mov     9[RSP],AL           ;
+            fldcw   8[RSP]              ;
+            frndint                     ;
+            mov     9[RSP],DL           ;
+            fldcw   8[RSP]              ;
+            ret                         ;
+        }
     }
-}
-else version (DragonFlyBSD)
-{
-    real trunc(real x) @trusted nothrow @nogc
+    else version(CRuntime_Microsoft)
     {
+        short cw;
+        asm pure nothrow @nogc
+        {
+            fld     x                   ;
+            fstcw   cw                  ;
+            mov     AL,byte ptr cw+1    ;
+            mov     DL,AL               ;
+            and     AL,0xC3             ;
+            or      AL,0x0C             ; // round to 0
+            mov     byte ptr cw+1,AL    ;
+            fldcw   cw                  ;
+            frndint                     ;
+            mov     byte ptr cw+1,DL    ;
+            fldcw   cw                  ;
+        }
+    }
+    else
         return core.stdc.math.truncl(x);
-    }
 }
-else
+
+///
+@safe pure unittest
 {
-    real trunc(real x) @trusted nothrow @nogc pure
-    {
-        version (Win64_DMD_InlineAsm)
-        {
-            asm pure nothrow @nogc
-            {
-                naked                       ;
-                fld     real ptr [RCX]      ;
-                fstcw   8[RSP]              ;
-                mov     AL,9[RSP]           ;
-                mov     DL,AL               ;
-                and     AL,0xC3             ;
-                or      AL,0x0C             ; // round to 0
-                mov     9[RSP],AL           ;
-                fldcw   8[RSP]              ;
-                frndint                     ;
-                mov     9[RSP],DL           ;
-                fldcw   8[RSP]              ;
-                ret                         ;
-            }
-        }
-        else version(CRuntime_Microsoft)
-        {
-            short cw;
-            asm pure nothrow @nogc
-            {
-                fld     x                   ;
-                fstcw   cw                  ;
-                mov     AL,byte ptr cw+1    ;
-                mov     DL,AL               ;
-                and     AL,0xC3             ;
-                or      AL,0x0C             ; // round to 0
-                mov     byte ptr cw+1,AL    ;
-                fldcw   cw                  ;
-                frndint                     ;
-                mov     byte ptr cw+1,DL    ;
-                fldcw   cw                  ;
-            }
-        }
-        else
-            return core.stdc.math.truncl(x);
-    }
+    assert(trunc(0.01) == 0);
+    assert(trunc(0.49) == 0);
+    assert(trunc(0.5) == 0);
+    assert(trunc(1.5) == 1);
 }
 
 /****************************************************
