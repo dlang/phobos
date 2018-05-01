@@ -1,6 +1,0 @@
-std.math.rndtonl has been deprecated
-
-$(REF rndtonl, std, math) is a rounding function only available when using the
-Digital Mars C Runtime on Windows. As this function is not cross-platform, it
-has been deprecated, and will be removed on version 2.089. Please use
-$(REF round, std, math) instead.
