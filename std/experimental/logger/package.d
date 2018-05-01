@@ -122,8 +122,8 @@ calls before they reach the `sharedLog` `Logger`.
 
 $(H3 User Defined Logger)
 To customize the `Logger` behavior, create a new `class` that inherits from
-the abstract `Logger` `class`, and implements the `writeLogMsg`
-method.
+the abstract `Logger` `class`, and implements the methods
+`beginLogMsg`, `logMsgPart`, and `finishLogMsg`.
 -------------
 class MyCustomLogger : Logger
 {
@@ -132,19 +132,28 @@ class MyCustomLogger : Logger
         super(lv);
     }
 
-    override void writeLogMsg(ref LogEntry payload)
+    // Signals the begin of log call.
+    override void beginLogMsg(string file, int line, string funcName,
+        string prettyFuncName, string moduleName, LogLevel logLevel,
+        Tid threadId, SysTime timestamp, Logger logger)
+        @safe
     {
-        // log message in my custom way
+    }
+
+    // Logs a part of the log message.
+    override void logMsgPart(scope const(char)[] msg) @safe
+    {
+    }
+
+    // Signals that the log call has finished
+    override void finishLogMsg() @safe
+    {
     }
 }
 
 auto logger = new MyCustomLogger(LogLevel.info);
 logger.log("Awesome log message with LogLevel.info");
 -------------
-
-To gain more precise control over the logging process, additionally to
-overriding the `writeLogMsg` method the methods `beginLogMsg`,
-`logMsgPart` and `finishLogMsg` can be overridden.
 
 $(H3 Compile Time Disabling of `Logger`)
 In order to disable logging at compile time, pass `StdLoggerDisableLogging` as a

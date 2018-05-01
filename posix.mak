@@ -203,7 +203,7 @@ PACKAGE_std_container = array binaryheap dlist package rbtree slist util
 PACKAGE_std_datetime = date interval package stopwatch systime timezone
 PACKAGE_std_digest = crc hmac md murmurhash package ripemd sha
 PACKAGE_std_experimental_logger = core filelogger \
-  nulllogger multilogger package
+  nulllogger multilogger package alloclogger
 PACKAGE_std_experimental_allocator = \
   common gc_allocator mallocator mmap_allocator package showcase typed
 PACKAGE_std_experimental_allocator_building_blocks = \

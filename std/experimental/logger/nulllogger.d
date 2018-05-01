@@ -12,6 +12,8 @@ In case of a log message with `LogLevel.fatal` nothing will happen.
 */
 class NullLogger : Logger
 {
+    import std.concurrency : Tid;
+    import std.datetime.systime : SysTime;
     /** The default constructor for the `NullLogger`.
 
     Independent of the parameter this Logger will never log a message.
@@ -26,7 +28,21 @@ class NullLogger : Logger
         this.fatalHandler = delegate() {};
     }
 
-    override protected void writeLogMsg(ref LogEntry payload) @safe @nogc
+    override void beginLogMsg(string file, int line, string funcName,
+        string prettyFuncName, string moduleName, LogLevel logLevel,
+        Tid threadId, SysTime timestamp, Logger logger)
+        @safe
+    {
+    }
+
+    /** Logs a part of the log message. */
+    override void logMsgPart(scope const(char)[] msg) @safe
+    {
+    }
+
+    /** Signals that the message has been written and no more calls to
+    $(D logMsgPart) follow. */
+    override void finishLogMsg() @safe
     {
     }
 }
@@ -35,7 +51,8 @@ class NullLogger : Logger
 @safe unittest
 {
     import std.experimental.logger.core : LogLevel;
+
     auto nl1 = new NullLogger(LogLevel.all);
     nl1.info("You will never read this.");
-    nl1.fatal("You will never read this, either and it will not throw");
+    nl1.fatal("You will never read this, and it will not throw");
 }

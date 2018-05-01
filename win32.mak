@@ -320,6 +320,7 @@ SRC_STD_EXP_LOGGER= \
 	std\experimental\logger\filelogger.d \
 	std\experimental\logger\multilogger.d \
 	std\experimental\logger\nulllogger.d \
+	std\experimental\logger\alloclogger.d \
 	std\experimental\logger\package.d
 
 SRC_ETC=

@@ -27,6 +27,9 @@ be removed.
 */
 class MultiLogger : Logger
 {
+    import std.concurrency : Tid;
+    import std.datetime.systime : SysTime;
+
     /** A constructor for the `MultiLogger` Logger.
 
     Params:
@@ -89,19 +92,49 @@ class MultiLogger : Logger
         return null;
     }
 
-    /* The override to pass the payload to all children of the
-    `MultiLoggerBase`.
-    */
-    override protected void writeLogMsg(ref LogEntry payload) @safe
+    override void beginLogMsg(string file, int line, string funcName,
+        string prettyFuncName, string moduleName, LogLevel logLevel,
+        Tid threadId, SysTime timestamp, Logger logger)
+        @safe
     {
-        foreach (it; this.logger)
+        this.curMsgLogLevel = logLevel;
+        if (isLoggingEnabled(this.curMsgLogLevel, this.logLevel, globalLogLevel))
         {
-            /* We don't perform any checks here to avoid race conditions.
-            Instead the child will check on its own if its log level matches
-            and assume LogLevel.all for the globalLogLevel (since we already
-            know the message passes this test).
-            */
-            it.logger.forwardMsg(payload);
+            foreach (log; this.logger)
+            {
+                log.logger.beginLogMsg(file, line, funcName, prettyFuncName,
+                        moduleName, logLevel, threadId, timestamp, logger);
+            }
+        }
+    }
+
+    /** Logs a part of the log message. */
+    override void logMsgPart(scope const(char)[] msg) @safe
+    {
+        if (isLoggingEnabled(this.curMsgLogLevel, this.logLevel, globalLogLevel))
+        {
+            foreach (log; this.logger)
+            {
+                log.logger.logMsgPart(msg);
+            }
+        }
+    }
+
+    /** Signals that the message has been written and no more calls to
+    $(D logMsgPart) follow. */
+    override void finishLogMsg() @safe
+    {
+        if (isLoggingEnabled(this.curMsgLogLevel, this.logLevel, globalLogLevel))
+        {
+            foreach (log; this.logger)
+            {
+                log.logger.finishLogMsg();
+            }
+        }
+
+        if (this.logLevel == LogLevel.fatal)
+        {
+            this.executeFatalHandler();
         }
     }
 }
