@@ -1,29 +1,23 @@
-Added `staticArray` to construct a static array from input array / range / CT range.
+Added `staticArray` to construct a static array from array / input range. Includes a length-inferring compile-time variant.
 
-The type of elements can be specified implicitly (`[1,2].staticArray` of type int[2])
-or explicitly (`[1,2].staticArray!float` of type float[2]).
-When `a` is a range (not known at compile time), the number of elements has to be given as template argument
-(eg `myrange.staticArray!2`).
-Size and type can be combined (eg: `2.iota.staticArray!(byte[2])`).
+The type of elements can be specified implicitly so that $(D [1, 2].staticArray) results in `int[2]`,
+or explicitly, e.g. $(D [1, 2].staticArray!float) returns `float[2]`.
+When `a` is a range whose length is not known at compile time, the number of elements must be given as template argument
+(e.g. `myrange.staticArray!2`).
+Size and type can be combined, if the source range elements are implicitly
+convertible to the requested element type (eg: `2.iota.staticArray!(long[2])`).
 When the range `a` is known at compile time, it can also be specified as a
 template argument to avoid having to specify the number of elements
-(eg: `staticArray!(2.iota)` or `staticArray!(double, 2.iota)`).
-
-Note: `foo([1, 2, 3].staticArray)` may be inefficient because of the copies involved.
+(e.g.: `staticArray!(2.iota)` or `staticArray!(double, 2.iota)`).
 
 ---
-auto a1 = [0, 1].staticArray;
-static assert(is(typeof(a1) == int[2]));
-assert(a1 == [0, 1]);
-
-auto a2 = [0, 1].staticArray!byte;
-static assert(is(typeof(a2) == byte[2]));
-
 import std.range : iota;
-auto input = 2.iota;
-auto a3 = input.staticArray!2;
-auto a4 = input.staticArray!(byte[2]);
 
-auto a5 = staticArray!(2.iota);
-auto a6 = staticArray!(double, 2.iota);
+auto input = 3.iota;
+auto a = input.staticArray!2;
+static assert(is(typeof(a) == int[2]));
+assert(a == [0, 1]);
+auto b = input.staticArray!(long[4]);
+static assert(is(typeof(b) == long[4]));
+assert(b == [0, 1, 2, 0]);
 ---

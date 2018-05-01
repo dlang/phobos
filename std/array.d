@@ -4036,51 +4036,50 @@ unittest
 
 /++
 Constructs a static array from `a`.
-The type of elements can be specified implicitly (`[1,2].staticArray` of type int[2])
-or explicitly (`[1,2].staticArray!float` of type float[2]).
-When `a` is a range (not known at compile time), the number of elements has to be given as template argument
-(e.g. `myrange.staticArray!2`).
-Size and type can be combined (eg: `2.iota.staticArray!(byte[2])`).
+The type of elements can be specified implicitly so that $(D [1, 2].staticArray) results in `int[2]`,
+or explicitly, e.g. $(D [1, 2].staticArray!float) returns `float[2]`.
+When `a` is a range whose length is not known at compile time, the number of elements must be
+given as template argument (e.g. `myrange.staticArray!2`).
+Size and type can be combined, if the source range elements are implicitly
+convertible to the requested element type (eg: `2.iota.staticArray!(long[2])`).
 When the range `a` is known at compile time, it can also be specified as a
 template argument to avoid having to specify the number of elements
-(eg: `staticArray!(2.iota)` or `staticArray!(double, 2.iota)`).
+(e.g.: `staticArray!(2.iota)` or `staticArray!(double, 2.iota)`).
 
 Note: `staticArray` returns by value, so expressions involving large arrays may be inefficient.
 
-Params: a = The input elements
+Params:
+    a = The input elements. If there are less elements than the specified length of the static array,
+    the rest of it is default-initialized. If there are more than specified, the first elements
+    up to the specified length are used.
+    rangeLength = outputs the number of elements used from `a` to it. Optional.
 
 Returns: A static array constructed from `a`.
 +/
-
-pragma(inline, true) T[n] staticArray(T, size_t n)(auto ref T[n] a) nothrow @safe pure @nogc
+pragma(inline, true) T[n] staticArray(T, size_t n)(auto ref T[n] a)
 {
     return a;
 }
 
-/// ditto
-U[n] staticArray(U, T, size_t n)(auto ref T[n] a) nothrow
-if (!is(U == T))
-{
-    import std.conv : emplaceRef;
-
-    U[n] ret = void;
-    // TODO: ElementType vs ForeachType
-    static foreach (i; 0 .. n)
-    {
-        emplaceRef!U(ret[i], cast(U) a[i]);
-    }
-    return ret;
-}
-
-/// static array from array
+/// static array from array literal
 nothrow pure @safe unittest
 {
     auto a = [0, 1].staticArray;
     static assert(is(typeof(a) == int[2]));
     assert(a == [0, 1]);
+}
 
-    auto b = [0, 1].staticArray!byte;
-    static assert(is(typeof(b) == byte[2]));
+pragma(inline, true) U[n] staticArray(U, T, size_t n)(auto ref T[n] a)
+if (!is(T == U) && is(T : U))
+{
+    return a[].staticArray!(U[n]);
+}
+
+/// static array from array with implicit casting of elements
+nothrow pure @safe unittest
+{
+    auto b = [0, 1].staticArray!long;
+    static assert(is(typeof(b) == long[2]));
     assert(b == [0, 1]);
 }
 
@@ -4106,12 +4105,11 @@ nothrow pure @safe unittest
         const(int)[3] a2 = [1, 2, 3].staticArray;
     }
 
-    [1, 129].staticArray!byte.checkStaticArray!byte([1, -127]);
-
+    [cast(byte) 1, cast(byte) 129].staticArray.checkStaticArray!byte([1, -127]);
 }
 
 /// ditto
-auto staticArray(size_t n, T)(T a)
+auto staticArray(size_t n, T)(scope T a)
 if (isInputRange!T)
 {
     alias U = ElementType!T;
@@ -4119,19 +4117,66 @@ if (isInputRange!T)
 }
 
 /// ditto
-auto staticArray(Un : U[n], U, size_t n, T)(T a) nothrow
+auto staticArray(size_t n, T)(scope T a, out size_t rangeLength)
 if (isInputRange!T)
 {
+    alias U = ElementType!T;
+    return staticArray!(U[n], U, n)(a, rangeLength);
+}
+
+/// ditto
+auto staticArray(Un : U[n], U, size_t n, T)(scope T a)
+if (isInputRange!T && is(ElementType!T : U))
+{
+    size_t extraStackSpace;
+    return staticArray!(Un, U, n)(a, extraStackSpace);
+}
+
+/// ditto
+auto staticArray(Un : U[n], U, size_t n, T)(scope T a, out size_t rangeLength)
+if (isInputRange!T && is(ElementType!T : U))
+{
+    import std.algorithm.mutation : uninitializedFill;
+    import std.range : take;
     import std.conv : emplaceRef;
 
-    U[n] ret = void;
-    size_t i;
-    foreach (ref ai; a)
+    if (__ctfe)
     {
-        emplaceRef!U(ret[i++], cast(U) ai);
+        size_t i;
+        // Compile-time version to avoid unchecked memory access.
+        Unqual!U[n] ret;
+        for (auto iter = a.take(n); !iter.empty; iter.popFront())
+        {
+            ret[i] = iter.front;
+            i++;
+        }
+
+        rangeLength = i;
+        return (() @trusted => cast(U[n]) ret)();
     }
-    assert(i == n);
-    return ret;
+
+    auto ret = (() @trusted
+    {
+        Unqual!U[n] theArray = void;
+        return theArray;
+    }());
+
+    size_t i;
+    if (true)
+    {
+        // ret was void-initialized so let's initialize the unfilled part manually.
+        // also prevents destructors to be called on uninitialized memory if
+        // an exception is thrown
+        scope (exit) ret[i .. $].uninitializedFill(U.init);
+
+        for (auto iter = a.take(n); !iter.empty; iter.popFront())
+        {
+            emplaceRef!U(ret[i++], iter.front);
+        }
+    }
+
+    rangeLength = i;
+    return (() @trusted => cast(U[n]) ret)();
 }
 
 /// static array from range + size
@@ -4139,18 +4184,59 @@ nothrow pure @safe unittest
 {
     import std.range : iota;
 
-    auto input = 2.iota;
+    auto input = 3.iota;
     auto a = input.staticArray!2;
     static assert(is(typeof(a) == int[2]));
     assert(a == [0, 1]);
-    auto b = input.staticArray!(byte[2]);
-    static assert(is(typeof(b) == byte[2]));
-    assert(b == [0, 1]);
+    auto b = input.staticArray!(long[4]);
+    static assert(is(typeof(b) == long[4]));
+    assert(b == [0, 1, 2, 0]);
 }
+
+// Tests that code compiles when there is an elaborate destructor and exceptions
+// are thrown. Unfortunately can't test that memory is initialized
+// before having a destructor called on it.
+// @system required because of issue 18872.
+@system nothrow unittest
+{
+    // exists only to allow doing something in the destructor. Not tested
+    // at the end because value appears to depend on implementation of the.
+    // function.
+    static int preventersDestroyed = 0;
+
+    static struct CopyPreventer
+    {
+        bool on = false;
+        this(this)
+        {
+            if (on) throw new Exception("Thou shalt not copy past me!");
+        }
+
+        ~this()
+        {
+            preventersDestroyed++;
+        }
+    }
+    auto normalArray =
+    [
+        CopyPreventer(false),
+        CopyPreventer(false),
+        CopyPreventer(true),
+        CopyPreventer(false),
+        CopyPreventer(true),
+    ];
+
+    try
+    {
+        auto staticArray = normalArray.staticArray!5;
+        assert(false);
+    }
+    catch (Exception e){}
+}
+
 
 nothrow pure @safe unittest
 {
-
     auto a = [1, 2].staticArray;
     assert(is(typeof(a) == int[2]) && a == [1, 2]);
 
@@ -4158,34 +4244,31 @@ nothrow pure @safe unittest
 
     2.iota.staticArray!2.checkStaticArray!int([0, 1]);
     2.iota.staticArray!(double[2]).checkStaticArray!double([0, 1]);
-    2.iota.staticArray!(byte[2]).checkStaticArray!byte([0, 1]);
+    2.iota.staticArray!(long[2]).checkStaticArray!long([0, 1]);
 }
 
 nothrow pure @system unittest
 {
     import std.range : iota;
-
-    assert(isThrown!Error(2.iota.staticArray!1));
-    assert(isThrown!Error(2.iota.staticArray!3));
-
-    // NOTE: correctly issues a deprecation
-    // int[] a2 = [1, 2].staticArray;
+    size_t copiedAmount;
+    2.iota.staticArray!1(copiedAmount);
+    assert(copiedAmount == 1);
+    2.iota.staticArray!3(copiedAmount);
+    assert(copiedAmount == 2);
 }
 
 /// ditto
 auto staticArray(alias a)()
 if (isInputRange!(typeof(a)))
 {
-    // NOTE: without `cast`, getting error:
-    // cannot deduce function from argument types !(length)(Result)
-    return .staticArray!(cast(size_t) a.length)(a);
+    return .staticArray!(size_t(a.length))(a);
 }
 
 /// ditto
 auto staticArray(U, alias a)()
 if (isInputRange!(typeof(a)))
 {
-    return .staticArray!(U[cast(size_t) a.length])(a);
+    return .staticArray!(U[size_t(a.length)])(a);
 }
 
 /// static array from CT range
@@ -4197,8 +4280,8 @@ nothrow pure @safe unittest
     static assert(is(typeof(a) == int[2]));
     assert(a == [0, 1]);
 
-    enum b = staticArray!(byte, 2.iota);
-    static assert(is(typeof(b) == byte[2]));
+    enum b = staticArray!(long, 2.iota);
+    static assert(is(typeof(b) == long[2]));
     assert(b == [0, 1]);
 }
 
@@ -4209,42 +4292,11 @@ nothrow pure @safe unittest
     enum a = staticArray!(2.iota);
     staticArray!(2.iota).checkStaticArray!int([0, 1]);
     staticArray!(double, 2.iota).checkStaticArray!double([0, 1]);
-    staticArray!(byte, 2.iota).checkStaticArray!byte([0, 1]);
+    staticArray!(long, 2.iota).checkStaticArray!long([0, 1]);
 }
 
 version(unittest) private void checkStaticArray(T, T1, T2)(T1 a, T2 b) nothrow @safe pure @nogc
 {
     static assert(is(T1 == T[T1.length]));
     assert(a == b);
-}
-
-/+
-TODO: consider adding this to assertThrown in std.exception
-The alternatives are not nothrow (see https://issues.dlang.org/show_bug.cgi?id=12647)
----
-import std.exception : assertThrown;
-assertThrown!Error(expr_that_throws);
-
-// or
-import std.exception : ifThrown;
-scope(failure) assert(0);
-assert(ifThrown!Error({ expr_that_throws; return false; }(), true));
----
-Also, `isThrown` is easier to use than ifThrown and more flexible than assertThrown.
-+/
-version(unittest) private bool isThrown(T : Throwable = Exception, E)(lazy E expression) nothrow
-{
-    try
-    {
-        expression();
-        return false;
-    }
-    catch (T)
-    {
-        return true;
-    }
-    catch (Exception)
-    {
-        return false;
-    }
 }
