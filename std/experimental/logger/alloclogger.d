@@ -8,8 +8,11 @@ import std.experimental.logger.core;
 
 private struct AllocOutRange(Alloc)
 {
+    /// The used allocator
     Alloc* alloc;
+    /// the output
     char[]* str;
+
     static AllocOutRange!(Alloc) opCall(Alloc* alloc, char[]* str)
     {
         typeof(return) ret;
@@ -22,14 +25,14 @@ private struct AllocOutRange(Alloc)
     {
         import std.experimental.allocator : expandArray;
         import std.exception : enforce;
-        import std.stdio;
         size_t oldLen = str.length;
-        enforce(expandArray(*(this.alloc), *(this.str), msg.length));
+        enforce(expandArray(*(this.alloc), *(this.str), msg.length),
+                "couldn't expand the array");
         (*this.str)[oldLen - 1 .. $ - 1] = msg;
     }
 }
 
-unittest
+@safe unittest
 {
     import std.experimental.allocator : theAllocator;
     import std.experimental.allocator.gc_allocator : GCAllocator;
@@ -44,6 +47,9 @@ unittest
 
 /** The `AllocLogger` will save the log messages to the array `output`.
 This array is allocated by the passed Allocator `alloc`.
+
+Params:
+    Alloc = The allocator to be used by `AllocLogger`
 */
 class AllocLogger(Alloc) : Logger
 {
@@ -54,8 +60,10 @@ class AllocLogger(Alloc) : Logger
     /// The allocator used to alloc memory for log messages
     Alloc alloc;
 
+    /// The OutputRange used by formattedWrite
     AllocOutRange!(Alloc) oRange;
 
+    /// The output produced by `oRange`
     char[] output;
 
     /** The default constructor for the `AllocLogger`.
@@ -97,7 +105,6 @@ class AllocLogger(Alloc) : Logger
         }
     }
 
-    /** Logs a part of the log message. */
     override void logMsgPart(scope const(char)[] msg) @safe
     {
         if (isLoggingEnabled(this.curMsgLogLevel, this.logLevel, globalLogLevel))
@@ -109,8 +116,6 @@ class AllocLogger(Alloc) : Logger
         }
     }
 
-    /** Signals that the message has been written and no more calls to
-    $(D logMsgPart) follow. */
     override void finishLogMsg() @safe
     {
         if (isLoggingEnabled(this.curMsgLogLevel, this.logLevel, globalLogLevel))
@@ -124,7 +129,7 @@ class AllocLogger(Alloc) : Logger
 }
 
 ///
-unittest
+@system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator : theAllocator;

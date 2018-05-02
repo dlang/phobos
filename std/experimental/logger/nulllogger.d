@@ -35,13 +35,10 @@ class NullLogger : Logger
     {
     }
 
-    /** Logs a part of the log message. */
     override void logMsgPart(scope const(char)[] msg) @safe
     {
     }
 
-    /** Signals that the message has been written and no more calls to
-    $(D logMsgPart) follow. */
     override void finishLogMsg() @safe
     {
     }

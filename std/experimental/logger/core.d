@@ -1635,7 +1635,6 @@ class StdForwardLogger : Logger
         @safe
     {
 
-        import std.stdio;
         sharedLog.beginLogMsg(file, line, funcName, prettyFuncName,
                 moduleName, ll, threadId, timestamp, logger);
     }
@@ -1751,7 +1750,6 @@ package class TestLogger : Logger
         Tid threadId, SysTime timestamp, Logger logger)
         @safe
     {
-        import std.stdio;
         super.curMsgLogLevel = ll;
         if (isLoggingEnabled(super.curMsgLogLevel, this.logLevel, globalLogLevel))
         {
@@ -2111,7 +2109,7 @@ version(unittest) private void testFuncNames(Logger logger) @safe
     assert(tl.line == l+1, to!string(tl.line));
 }
 
-unittest
+@system unittest
 {
     import std.exception : assertThrown;
     globalLogLevel = LogLevel.fatal;
@@ -2120,7 +2118,7 @@ unittest
     assertThrown!Throwable(mem.fatal("This should throw"));
 }
 
-unittest
+@system unittest
 {
     import std.exception : assertThrown, assertNotThrown;
     import std.conv : to;
@@ -2180,22 +2178,29 @@ unittest
                                 //    gll, ll, cond, condValue, memOrG, prntf,
                                 //    ll2, shouldLog
                                 //);
-                                if(ll2 == LogLevel.fatal) {
-                                    if(shouldLog) {
+                                if (ll2 == LogLevel.fatal)
+                                {
+                                    if (shouldLog)
+                                    {
                                         assertThrown!Throwable(
                                         testLogger(mem, cond, condValue, memOrG,
                                                prntf, ll2, value)
                                         );
-                                    } else {
+                                    }
+                                    else
+                                    {
                                         assertNotThrown(
                                         testLogger(mem, cond, condValue, memOrG,
                                                prntf, ll2, value)
                                         );
                                     }
-                                } else {
+                                }
+                                else
+                                {
                                     int line = testLogger(mem, cond,
                                         condValue, memOrG, prntf, ll2, value);
-                                    if(shouldLog) {
+                                    if (shouldLog)
+                                    {
                                         assert(mem.msg == to!string(value));
                                         assert(mem.lvl == ll2);
                                         ++value;
@@ -2215,45 +2220,68 @@ private int testLogger(Logger mem, bool cond, bool condValue, bool memOrG,
         bool prntf, LogLevel ll2, int value) @safe
 {
     import std.conv : to;
-    import std.stdio;
-    if(prntf) {
-        if(cond) {
-            if(memOrG) {
+    import std.format : format;
+    if (prntf)
+    {
+        if (cond)
+        {
+            if (memOrG)
+            {
                 mem.logf(ll2, condValue, "%s", to!string(value));
                 return __LINE__ - 1;
-            } else {
+            }
+            else
+            {
                 logf(ll2, condValue, "%s", to!string(value));
                 return __LINE__ - 1;
             }
-        } else {
-            if(memOrG) {
+        }
+        else
+        {
+            if (memOrG)
+            {
                 mem.logf(ll2, "%s", to!string(value));
                 return __LINE__ - 1;
-            } else {
+            }
+            else
+            {
                 logf(ll2, "%s", to!string(value));
                 return __LINE__ - 1;
             }
         }
-    } else {
-        if(cond) {
-            if(memOrG) {
+    }
+    else
+    {
+        if (cond)
+        {
+            if (memOrG)
+            {
                 mem.log(ll2, condValue, to!string(value));
                 return __LINE__ - 1;
-            } else {
+            }
+            else
+            {
                 log(ll2, condValue, to!string(value));
                 return __LINE__ - 1;
             }
-        } else {
-            if(memOrG) {
+        }
+        else
+        {
+            if (memOrG)
+            {
                 mem.log(ll2, to!string(value));
                 return __LINE__ - 1;
-            } else {
+            }
+            else
+            {
                 log(ll2, to!string(value));
                 return __LINE__ - 1;
             }
         }
     }
-    assert(false);
+    assert(false, format("cond %s, condValue %s, memOrG %s, prntf %s,"
+            ~ " ll2 %s, value %s", cond, condValue, memOrG, prntf, ll2, value
+            ));
 }
 
 // testing more possible log conditions
