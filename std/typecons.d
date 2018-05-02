@@ -1174,11 +1174,19 @@ if (distinctFieldNames!(Specs))
             Returns:
                 A `size_t` representing the hash of this `Tuple`.
          */
-        size_t toHash() const nothrow @trusted
+        size_t toHash() const nothrow @safe
         {
             size_t h = 0;
-            foreach (i, T; Types)
-                h += typeid(T).getHash(cast(const void*)&field[i]);
+            static foreach (i, T; Types)
+            {{
+                const k = typeid(T).getHash((() @trusted => cast(const void*) &field[i])());
+                static if (i == 0)
+                    h = k;
+                else
+                    // As in boost::hash_combine
+                    // https://www.boost.org/doc/libs/1_55_0/doc/html/hash/reference.html#boost.hash_combine
+                    h ^= k + 0x9e3779b9 + (h << 6) + (h >>> 2);
+            }}
             return h;
         }
 
