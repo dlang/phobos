@@ -2508,7 +2508,17 @@ real expm1(real x) @trusted pure nothrow @nogc // TODO: @safe
 }
 
 /// ditto
-double expm1(double x) @safe pure nothrow @nogc { return __ctfe ? cast(double) expm1(cast(real) x) : expm1Impl(x); }
+double expm1(double x) @safe pure nothrow @nogc
+{
+    return __ctfe ? cast(double) expm1(cast(real) x) : expm1Impl(x);
+}
+
+/// ditto
+float expm1(float x) @safe pure nothrow @nogc
+{
+    // no single-precision version in Cephes => use double precision
+    return __ctfe ? cast(float) expm1(cast(real) x) : cast(float) expm1Impl(cast(double) x);
+}
 
 ///
 @safe unittest
