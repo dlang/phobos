@@ -2161,18 +2161,66 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
     {
         private RoR _items;
         private ElementType!RoR _current;
-        private Separator _sep, _currentSep;
+        static if (isRandomAccessRange!Separator)
+        {
+            static struct CurrentSep
+            {
+                private Separator _sep;
+                private size_t sepIndex;
+                private size_t sepLength; // cache the length for performance
+                auto front() { return _sep[sepIndex]; }
+                void popFront() { sepIndex++; }
+                auto empty() { return sepIndex >= sepLength; }
+                auto save()
+                {
+                    auto copy = this;
+                    copy._sep = _sep;
+                    return copy;
+                }
+                void reset()
+                {
+                    sepIndex = 0;
+                }
 
-        // This is a mixin instead of a function for the following reason (as
-        // explained by Kenji Hara): "This is necessary from 2.061.  If a
-        // struct has a nested struct member, it must be directly initialized
-        // in its constructor to avoid leaving undefined state.  If you change
-        // setItem to a function, the initialization of _current field is
-        // wrapped into private member function, then compiler could not detect
-        // that is correctly initialized while constructing.  To avoid the
-        // compiler error check, string mixin is used."
-        private enum setItem =
-        q{
+                void initialize(Separator sep)
+                {
+                    _sep = sep;
+                    sepIndex = sepLength = _sep.length;
+                }
+            }
+        }
+        else
+        {
+            static struct CurrentSep
+            {
+                private Separator _sep;
+                Separator payload;
+
+                alias payload this;
+
+                auto save()
+                {
+                    auto copy = this;
+                    copy._sep = _sep;
+                    return copy;
+                }
+
+                void reset()
+                {
+                    payload = _sep.save;
+                }
+
+                void initialize(Separator sep)
+                {
+                    _sep = sep;
+                }
+            }
+        }
+
+        private CurrentSep _currentSep;
+
+        private void setItem()
+        {
             if (!_items.empty)
             {
                 // If we're exporting .save, we must not consume any of the
@@ -2184,7 +2232,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
                 else
                     _current = _items.front;
             }
-        };
+        }
 
         private void useSeparator()
         {
@@ -2197,7 +2245,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
             // terminators.
             if (_items.empty) return;
 
-            if (_sep.empty)
+            if (_currentSep._sep.empty)
             {
                 // Advance to the next range in the
                 // input
@@ -2206,37 +2254,19 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
                     _items.popFront();
                     if (_items.empty) return;
                 }
-                mixin(setItem);
+                setItem;
             }
             else
             {
-                _currentSep = _sep.save;
+                _currentSep.reset;
                 assert(!_currentSep.empty);
             }
         }
 
-        private enum useItem =
-        q{
-            // FIXME: this will crash if either _currentSep or _current are
-            // class objects, because .init is null when the ctor invokes this
-            // mixin.
-            //assert(_currentSep.empty && _current.empty,
-            //        "joiner: internal error");
-
-            // Use the input
-            if (_items.empty) return;
-            mixin(setItem);
-            if (_current.empty)
-            {
-                // No data in the current item - toggle to use the separator
-                useSeparator();
-            }
-        };
-
         this(RoR items, Separator sep)
         {
             _items = items;
-            _sep = sep;
+            _currentSep.initialize(sep);
 
             //mixin(useItem); // _current should be initialized in place
             if (_items.empty)
@@ -2279,15 +2309,22 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
             if (!_currentSep.empty)
             {
                 _currentSep.popFront();
-                if (!_currentSep.empty) return;
-                mixin(useItem);
+                if (_currentSep.empty && !_items.empty)
+                {
+                    setItem;
+                    if (_current.empty)
+                    {
+                        // No data in the current item - toggle to use the separator
+                        useSeparator();
+                    }
+                }
             }
             else
             {
                 // we're using the range
                 _current.popFront();
-                if (!_current.empty) return;
-                useSeparator();
+                if (_current.empty)
+                    useSeparator();
             }
         }
 
@@ -2298,7 +2335,6 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
                 Result copy = this;
                 copy._items = _items.save;
                 copy._current = _current.save;
-                copy._sep = _sep.save;
                 copy._currentSep = _currentSep.save;
                 return copy;
             }
