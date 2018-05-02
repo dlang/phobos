@@ -887,7 +887,8 @@ version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez
 }
 
 /***************************************************
- * Rename file `from` _to `to`.
+ * Rename file `from` _to `to`. Note that this may fail if `from` and `to` are on
+ * different drives/filesystems, use `moveFile` to support these scenarios.
  * If the target file exists, it is overwritten.
  * Params:
  *    from = string or range of characters representing the existing file name
@@ -914,7 +915,7 @@ if ((isInputRange!RF && !isInfinite!RF && isSomeChar!(ElementEncodingType!RF) ||
     else
         enum string t = null;
 
-    renameImpl(f, t, fromz, toz);
+    moveFileImpl(f, t, fromz, toz, No.canCopy);
 }
 
 /// ditto
@@ -939,24 +940,96 @@ if (isConvertibleToString!RF || isConvertibleToString!RT)
 @safe unittest
 {
     auto t1 = deleteme, t2 = deleteme~"2";
-    scope(exit) foreach (t; [t1, t2]) if (t.exists) t.remove();
+    scope(exit) t2.remove();
 
     t1.write("1");
     t1.rename(t2);
     assert(t2.readText == "1");
+    assert(!t1.exists);
 
     t1.write("2");
     t1.rename(t2);
     assert(t2.readText == "2");
+    assert(!t1.exists);
 }
 
-private void renameImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, const(FSChar)* toz) @trusted
+@safe unittest
+{
+    import std.utf : byWchar;
+
+    auto t1 = deleteme, t2 = deleteme~"2";
+    scope(exit) t2.remove();
+
+    write(t1, "1");
+    rename(t1, t2);
+    assert(readText(t2) == "1");
+    assert(!t1.exists);
+
+    write(t1, "2");
+    rename(t1, t2.byWchar);
+    assert(readText(t2) == "2");
+    assert(!t1.exists);
+}
+
+
+/***************************************************
+Move file `from` _to `to`.
+If the target file exists, it is overwritten. Unlike `rename` this function supports
+moving files accross drives/filesystems.
+Params:
+   from = string or range of characters representing the existing file name
+   to = string or range of characters representing the target file name
+Throws: `FileException` on error.
+*/
+void moveFile(RF, RT)(RF from, RT to)
+if ((isInputRange!RF && !isInfinite!RF && isSomeChar!(ElementEncodingType!RF) || isSomeString!RF)
+    && !isConvertibleToString!RF &&
+    (isInputRange!RT && !isInfinite!RT && isSomeChar!(ElementEncodingType!RT) || isSomeString!RT)
+    && !isConvertibleToString!RT)
+{
+    // Place outside of @trusted block
+    auto fromz = from.tempCString!FSChar();
+    auto toz = to.tempCString!FSChar();
+
+    static if (isNarrowString!RF && is(Unqual!(ElementEncodingType!RF) == char))
+        alias f = from;
+    else
+        enum string f = null;
+
+    static if (isNarrowString!RT && is(Unqual!(ElementEncodingType!RT) == char))
+        alias t = to;
+    else
+        enum string t = null;
+
+    moveFileImpl(f, t, fromz, toz, Yes.canCopy);
+}
+
+///
+@safe unittest
+{
+    auto t1 = deleteme, t2 = deleteme~"2";
+    scope(exit) foreach (t; [t1, t2]) if (t.exists) t.remove();
+
+    t1.write("1");
+    t1.moveFile(t2);
+    assert(t2.readText == "1");
+    assert(!t1.exists);
+
+    t1.write("2");
+    t1.moveFile(t2);
+    assert(t2.readText == "2");
+    assert(!t1.exists);
+}
+
+private void moveFileImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz,
+    const(FSChar)* toz, Flag!"canCopy" canCopy) @trusted
 {
     version(Windows)
     {
         import std.exception : enforce;
 
-        const result = MoveFileExW(fromz, toz, MOVEFILE_REPLACE_EXISTING);
+        const result = MoveFileExW(fromz, toz, MOVEFILE_REPLACE_EXISTING |
+            (canCopy ? MOVEFILE_COPY_ALLOWED : 0));
         if (!result)
         {
             import core.stdc.wchar_ : wcslen;
@@ -970,14 +1043,23 @@ private void renameImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, 
 
             enforce(false,
                 new FileException(
-                    text("Attempting to rename file ", f, " to ", t)));
+                    text("Attempting to ", canCopy ? "move" : "rename" , " file ", f, " to ", t)));
         }
     }
     else version(Posix)
     {
         static import core.stdc.stdio;
-
-        cenforce(core.stdc.stdio.rename(fromz, toz) == 0, t, toz);
+        auto result = core.stdc.stdio.rename(fromz, toz);
+        if (result != 0)
+        {
+            if (canCopy && result == EXDEV)
+            {
+                copyImpl(f, t, fromz, toz, PreserveAttributes.yes);
+                removeImpl(f, fromz);
+            }
+            else
+                cenforce(false, t, toz);
+        }
     }
 }
 
@@ -986,16 +1068,19 @@ private void renameImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, 
     import std.utf : byWchar;
 
     auto t1 = deleteme, t2 = deleteme~"2";
-    scope(exit) foreach (t; [t1, t2]) if (t.exists) t.remove();
+    scope(exit) t2.remove();
 
     write(t1, "1");
-    rename(t1, t2);
+    moveFile(t1, t2);
     assert(readText(t2) == "1");
+    assert(!t1.exists);
 
     write(t1, "2");
-    rename(t1, t2.byWchar);
+    moveFile(t1, t2.byWchar);
     assert(readText(t2) == "2");
+    assert(!t1.exists);
 }
+
 
 /***************************************************
 Delete file `name`.
