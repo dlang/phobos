@@ -929,10 +929,10 @@ real tan(real x) @trusted pure nothrow @nogc // TODO: @safe
 }
 
 /// ditto
-double tan(double x) @safe pure nothrow @nogc { return tanImpl(x); }
+double tan(double x) @safe pure nothrow @nogc { return __ctfe ? cast(double) tan(cast(real) x) : tanImpl(x); }
 
 /// ditto
-float tan(float x) @safe pure nothrow @nogc { return tanImpl(x); }
+float tan(float x) @safe pure nothrow @nogc { return __ctfe ? cast(float) tan(cast(real) x) : tanImpl(x); }
 
 ///
 @safe unittest
@@ -1330,10 +1330,10 @@ real atan(real x) @safe pure nothrow @nogc
 }
 
 /// ditto
-double atan(double x) @safe pure nothrow @nogc { return atanImpl(x); }
+double atan(double x) @safe pure nothrow @nogc { return __ctfe ? cast(double) atan(cast(real) x) : atanImpl(x); }
 
 /// ditto
-float atan(float x) @safe pure nothrow @nogc { return atanImpl(x); }
+float atan(float x) @safe pure nothrow @nogc { return __ctfe ? cast(float) atan(cast(real) x) : atanImpl(x); }
 
 ///
 @safe unittest
@@ -1582,13 +1582,13 @@ real atan2(real y, real x) @trusted pure nothrow @nogc // TODO: @safe
 /// ditto
 double atan2(double y, double x) @safe pure nothrow @nogc
 {
-    return atan2Impl(y, x);
+    return __ctfe ? cast(double) atan2(cast(real) y, cast(real) x) : atan2Impl(y, x);
 }
 
 /// ditto
 float atan2(float y, float x) @safe pure nothrow @nogc
 {
-    return atan2Impl(y, x);
+    return __ctfe ? cast(float) atan2(cast(real) y, cast(real) x) : atan2Impl(y, x);
 }
 
 ///
@@ -2206,10 +2206,10 @@ real exp(real x) @trusted pure nothrow @nogc // TODO: @safe
 }
 
 /// ditto
-double exp(double x) @safe pure nothrow @nogc { return expImpl(x); }
+double exp(double x) @safe pure nothrow @nogc { return __ctfe ? cast(double) exp(cast(real) x) : expImpl(x); }
 
 /// ditto
-float exp(float x) @safe pure nothrow @nogc { return expImpl(x); }
+float exp(float x) @safe pure nothrow @nogc { return __ctfe ? cast(float) exp(cast(real) x) : expImpl(x); }
 
 ///
 @safe unittest
@@ -2508,7 +2508,7 @@ real expm1(real x) @trusted pure nothrow @nogc // TODO: @safe
 }
 
 /// ditto
-double expm1(double x) @safe pure nothrow @nogc { return expm1Impl(x); }
+double expm1(double x) @safe pure nothrow @nogc { return __ctfe ? cast(double) expm1(cast(real) x) : expm1Impl(x); }
 
 ///
 @safe unittest
@@ -2847,10 +2847,10 @@ real exp2(real x) @nogc @trusted pure nothrow // TODO: @safe
 }
 
 /// ditto
-double exp2(double x) @nogc @safe pure nothrow { return exp2Impl(x); }
+double exp2(double x) @nogc @safe pure nothrow { return __ctfe ? cast(double) exp2(cast(real) x) : exp2Impl(x); }
 
 /// ditto
-float exp2(float x) @nogc @safe pure nothrow { return exp2Impl(x); }
+float exp2(float x) @nogc @safe pure nothrow { return __ctfe ? cast(float) exp2(cast(real) x) : exp2Impl(x); }
 
 ///
 @safe unittest
