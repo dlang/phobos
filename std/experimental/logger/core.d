@@ -641,7 +641,7 @@ private struct MsgRange
         this.log = log;
     }
 
-    void put(T)(T msg) @safe
+    void put(T)(T msg)
         if (isSomeString!T)
     {
         log.logMsgPart(msg);
@@ -796,8 +796,7 @@ abstract class Logger
     */
     abstract void beginLogMsg(string file, int line, string funcName,
         string prettyFuncName, string moduleName, LogLevel logLevel,
-        Tid threadId, SysTime timestamp, Logger logger)
-        @safe;
+        Tid threadId, SysTime timestamp, Logger logger) @safe;
 
     /** Logs a part of the log message. */
     abstract void logMsgPart(scope const(char)[] msg) @safe;
@@ -1632,7 +1631,6 @@ class StdForwardLogger : Logger
     protected override void beginLogMsg(string file, int line, string funcName,
         string prettyFuncName, string moduleName, LogLevel ll,
         Tid threadId, SysTime timestamp, Logger logger)
-        @safe
     {
 
         sharedLog.beginLogMsg(file, line, funcName, prettyFuncName,
@@ -1748,7 +1746,6 @@ package class TestLogger : Logger
     protected override void beginLogMsg(string file, int line, string funcName,
         string prettyFuncName, string moduleName, LogLevel ll,
         Tid threadId, SysTime timestamp, Logger logger)
-        @safe
     {
         super.curMsgLogLevel = ll;
         if (isLoggingEnabled(super.curMsgLogLevel, this.logLevel, globalLogLevel))
@@ -1770,7 +1767,7 @@ package class TestLogger : Logger
         }
     }
 
-    override void finishLogMsg() @safe
+    override void finishLogMsg()
     {
         if (isLoggingEnabled(this.curMsgLogLevel, this.logLevel, globalLogLevel)
             && super.curMsgLogLevel == LogLevel.fatal)
@@ -2579,7 +2576,6 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
         override void beginLogMsg(string file, int line, string funcName,
             string prettyFuncName, string moduleName, LogLevel ll,
             Tid threadId, SysTime timestamp, Logger logger)
-            @safe
         {
             this.curMsgLogLevel = ll;
             () @trusted { assert(thisTid == this.tid); }();
@@ -2587,13 +2583,13 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
         }
 
         /** Logs a part of the log message. */
-        override void logMsgPart(scope const(char)[] msg) @safe
+        override void logMsgPart(scope const(char)[] msg)
         {
         }
 
         /** Signals that the message has been written and no more calls to
         $(D logMsgPart) follow. */
-        override void finishLogMsg() @safe
+        override void finishLogMsg()
         {
         }
     }
@@ -2608,20 +2604,19 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
         override void beginLogMsg(string file, int line, string funcName,
             string prettyFuncName, string moduleName, LogLevel ll,
             Tid threadId, SysTime timestamp, Logger logger)
-            @safe
         {
             assert(false);
         }
 
         /** Logs a part of the log message. */
-        override void logMsgPart(scope const(char)[] msg) @safe
+        override void logMsgPart(scope const(char)[] msg)
         {
             assert(false);
         }
 
         /** Signals that the message has been written and no more calls to
         $(D logMsgPart) follow. */
-        override void finishLogMsg() @safe
+        override void finishLogMsg()
         {
             assert(false);
         }
