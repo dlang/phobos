@@ -161,7 +161,7 @@ See_Also:
 
 Params:
     R = type to be tested
-    E = the element type of the range. `void` means "any".
+    E = the element type of the range. `void` means "any". Applies Unqual to E.
 
 Returns:
     `true` if R is an input range, `false` if not
@@ -235,8 +235,8 @@ enum bool isInputRange(R, E = void) =
         enum empty = false;
         @property int front();
     }
-    static assert(isInputRange!R);
-    static assert(isInputRange!(R, int));
+    static assert( isInputRange!R);
+    static assert( isInputRange!(R, int));
     static assert(!isInputRange!(R, double));
 }
 
