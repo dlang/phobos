@@ -229,6 +229,7 @@ Authors: $(HTTP erdani.com, Andrei Alexandrescu), David Simcha,
 module std.range;
 
 public import std.array;
+public import std.bigint : BigInt;
 public import std.range.interfaces;
 public import std.range.primitives;
 public import std.typecons : Flag, Yes, No;
@@ -9832,10 +9833,10 @@ Useful for using `foreach` with an index loop variable:
 ----
 */
 auto enumerate(Enumerator = size_t, Range)(Range range, Enumerator start = 0)
-if (isIntegral!Enumerator && isInputRange!Range)
+if ((isIntegral!Enumerator || is(Enumerator == BigInt)) && isInputRange!Range)
 in
 {
-    static if (hasLength!Range)
+    static if (hasLength!Range && !is(Enumerator == BigInt))
     {
         // TODO: core.checkedint supports mixed signedness yet?
         import core.checkedint : adds, addu;
@@ -10112,6 +10113,26 @@ pure @safe unittest
             assert(offsetEnumerated.equal(subset.zip(subset)));
         }
     }}
+}
+
+/// enumerate works with BigInt
+@system pure unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : iota;
+    immutable int[] values = [0, 1, 2, 3, 4];
+
+    auto enumerated = values.enumerate!BigInt();
+    static assert(is(typeof(enumerated.front.index) == BigInt));
+    assert(enumerated.equal(values[].zip(values)));
+
+    foreach (BigInt i; BigInt("0") .. BigInt("5"))
+    {
+        auto subset = values[cast(size_t) i .. $];
+        auto offsetEnumerated = subset.enumerate!BigInt(i);
+        static assert(is(typeof(enumerated.front.index) == BigInt));
+        assert(offsetEnumerated.equal(subset.zip(subset)));
+    }
 }
 
 version(none) // @@@BUG@@@ 10939
