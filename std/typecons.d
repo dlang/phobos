@@ -547,14 +547,14 @@ if (distinctFieldNames!(Specs))
     {
         static assert(tup1.field.length == tup2.field.length);
         static foreach (i; 0 .. Tup1.Types.length)
-        {
+        {{
             auto lhs = typeof(tup1.field[i]).init;
             auto rhs = typeof(tup2.field[i]).init;
             static if (op == "=")
                 lhs = rhs;
             else
                 auto result = mixin("lhs "~op~" rhs");
-        }
+        }}
     }));
 
     enum areBuildCompatibleTuples(Tup1, Tup2) = isTuple!Tup2 && is(typeof(
@@ -787,7 +787,7 @@ if (distinctFieldNames!(Specs))
         }
 
         /**
-         * Comparison for ordering.
+         * Lexical comparison for ordering.
          *
          * Params:
          *     rhs = The `Tuple` to compare against. It must meet the criteria
@@ -800,30 +800,29 @@ if (distinctFieldNames!(Specs))
          * $(UL
          *   $(LI A negative integer if the expression `v1 < v2` is true.)
          *   $(LI A positive integer if the expression `v1 > v2` is true.)
-         *   $(LI 0 if the expression `v1 == v2` is true.))
+         *   $(LI 0 if the expression `v1 == v2` is true.)
+         *   $(LI NaN in any other case.))
+         *
+         * The return type is int, if no field is a floating point type,
+         * otherwise it is the most general floating point type participating.
          */
-        int opCmp(R)(R rhs)
-        if (areCompatibleTuples!(typeof(this), R, "<"))
+        auto opCmp(R)(R rhs) inout
         {
-            static foreach (i; 0 .. Types.length)
+            import std.traits : isFloatingPoint;
+            static foreach (i, Type; Types)
             {
-                if (field[i] != rhs.field[i])
-                {
-                    return field[i] < rhs.field[i] ? -1 : 1;
-                }
-            }
-            return 0;
-        }
+                if (field[i] < rhs.field[i]) return -1;
+                if (field[i] > rhs.field[i]) return +1;
 
-        /// ditto
-        int opCmp(R)(R rhs) const
-        if (areCompatibleTuples!(typeof(this), R, "<"))
-        {
-            static foreach (i; 0 .. Types.length)
-            {
-                if (field[i] != rhs.field[i])
+                // for floating point types, if neither a < b nor a > b
+                // a == b or a and b are unordered
+                // (i.e. at least one of them is NaN)
+                static if (isFloatingPoint!Type)
                 {
-                    return field[i] < rhs.field[i] ? -1 : 1;
+                    if (field[i] != rhs.field[i])
+                    {
+                        return Type.nan;
+                    }
                 }
             }
             return 0;
@@ -1976,6 +1975,19 @@ private template ReverseTupleSpecs(T...)
     c = b = a;
     assert(a[0].length == b[0].length && b[0].length == c[0].length);
     assert(a[0].ptr == b[0].ptr && b[0].ptr == c[0].ptr);
+}
+
+// issue 18832
+pure @safe @nogc nothrow unittest
+{
+    import std.meta : AliasSeq;
+    static foreach (Float; AliasSeq!(float, double, real))
+    {{
+        auto tup = tuple(Float.nan);
+        assert(!(tup > tup));
+        assert(!(tup < tup));
+        assert(!(tup == tup));
+    }}
 }
 
 /**
