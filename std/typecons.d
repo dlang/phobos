@@ -781,8 +781,8 @@ if (distinctFieldNames!(Specs))
         {
             Tuple!(int, string) t1 = tuple(1, "test");
             Tuple!(double, string) t2 =  tuple(1.0, "test");
-            //Ok, int can be compared with double and
-            //both have a value of 1
+            // Ok, int can be compared with double and
+            // both have a value of 1
             assert(t1 == t2);
         }
 
@@ -829,18 +829,38 @@ if (distinctFieldNames!(Specs))
         }
 
         /**
-            The first `v1` for which `v1 > v2` is true determines
-            the result. This could lead to unexpected behaviour.
+            The first distinct entries determine the result.
+            This could lead to unexpected behavior.
          */
-        static if (Specs.length == 0) @safe unittest
+        static if (Specs.length == 0)
+        @safe pure @nogc nothrow unittest
         {
-            auto tup1 = tuple(1, 1, 1);
-            auto tup2 = tuple(1, 100, 100);
+            auto tup1 = tuple(1, 2, 10);
+            auto tup2 = tuple(1u, 100u, 3u);
             assert(tup1 < tup2);
+            // 1 == 1u, 2 < 100u so tup1 < tup2; 10 and 3u do not matter.
 
-            //Only the first result matters for comparison
             tup1[0] = 2;
             assert(tup1 > tup2);
+            // 2 > 1u so tup1 > tup2; 2 and 100u, 10 and 3u do not matter.
+        }
+
+        ///
+        static if (Specs.length == 0)
+        @safe pure @nogc nothrow unittest
+        {
+            auto tup1 = tuple(1, 1.0);
+            auto tup2 = tuple(1u, 2.0);
+            assert(tup1 < tup2); // by 1.0 < 2.0
+            tup1[1] = 2.0;
+            assert(tup1 == tup2);
+            // comparison with NaN is always false
+            tup1[1] = double.nan;
+            assert(!(tup1 < tup2 || tup1 == tup2 || tup1 > tup2));
+            tup2[1] = double.nan;
+            assert(!(tup1 < tup2 || tup1 == tup2 || tup1 > tup2));
+            tup1[0] = 0;
+            assert(tup1 < tup2); // decided by 0 < 1u
         }
 
         /**
@@ -1251,14 +1271,14 @@ if (distinctFieldNames!(Specs))
          *  );
          * ---
          */
-        void toString(DG)(scope DG sink) const
+        void toString(DG)(scope DG writer) const
         {
             auto f = FormatSpec!char();
-            toString(sink, f);
+            toString(writer, f);
         }
 
         /// ditto
-        void toString(DG, Char)(scope DG sink, FormatSpec!Char fmt) const
+        void toString(DG, Char)(scope DG writer, FormatSpec!Char fmt) const
         {
             import std.format : formatElement, formattedWrite, FormatException;
             if (fmt.nested)
@@ -1269,22 +1289,22 @@ if (distinctFieldNames!(Specs))
                     {
                         static if (i > 0)
                         {
-                            sink(fmt.sep);
+                            writer(fmt.sep);
                         }
                         // TODO: Change this once formattedWrite() works for shared objects.
                         static if (is(Type == class) && is(Type == shared))
                         {
-                            sink(Type.stringof);
+                            writer(Type.stringof);
                         }
                         else
                         {
-                            formattedWrite(sink, fmt.nested, this.field[i]);
+                            formattedWrite(writer, fmt.nested, this.field[i]);
                         }
                     }
                 }
                 else
                 {
-                    formattedWrite(sink, fmt.nested, staticMap!(sharedToString, this.expand));
+                    formattedWrite(writer, fmt.nested, staticMap!(sharedToString, this.expand));
                 }
             }
             else if (fmt.spec == 's')
@@ -1292,25 +1312,25 @@ if (distinctFieldNames!(Specs))
                 enum header = Unqual!(typeof(this)).stringof ~ "(",
                      footer = ")",
                      separator = ", ";
-                sink(header);
+                writer(header);
                 foreach (i, Type; Types)
                 {
                     static if (i > 0)
                     {
-                        sink(separator);
+                        writer(separator);
                     }
                     // TODO: Change this once formatElement() works for shared objects.
                     static if (is(Type == class) && is(Type == shared))
                     {
-                        sink(Type.stringof);
+                        writer(Type.stringof);
                     }
                     else
                     {
                         FormatSpec!Char f;
-                        formatElement(sink, field[i], f);
+                        formatElement(writer, field[i], f);
                     }
                 }
-                sink(footer);
+                writer(footer);
             }
             else
             {
@@ -1998,11 +2018,15 @@ pure @safe @nogc nothrow unittest
     the given arguments.
 
     Params:
-        Names = An optional list of strings naming each successive field of the `Tuple`.
-                Each name matches up with the corresponding field given by `Args`.
+        Names = An optional list of strings naming each successive field of the `Tuple`
+                or a list of types that the elements are being casted to.
+                For a list of names,
+                each name matches up with the corresponding field given by `Args`.
                 A name does not have to be provided for every field, but as
                 the names must proceed in order, it is not possible to skip
                 one field and name the next after it.
+                For a list of types,
+                there must be exactly as many types as parameters.
 */
 template tuple(Names...)
 {
