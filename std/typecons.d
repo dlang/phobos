@@ -546,21 +546,21 @@ if (distinctFieldNames!(Specs))
     (ref Tup1 tup1, ref Tup2 tup2)
     {
         static assert(tup1.field.length == tup2.field.length);
-        foreach (i, _; Tup1.Types)
-        {
+        static foreach (i; 0 .. Tup1.Types.length)
+        {{
             auto lhs = typeof(tup1.field[i]).init;
             auto rhs = typeof(tup2.field[i]).init;
             static if (op == "=")
                 lhs = rhs;
             else
                 auto result = mixin("lhs "~op~" rhs");
-        }
+        }}
     }));
 
     enum areBuildCompatibleTuples(Tup1, Tup2) = isTuple!Tup2 && is(typeof(
     {
         static assert(Tup1.Types.length == Tup2.Types.length);
-        static foreach (i, _; Tup1.Types)
+        static foreach (i; 0 .. Tup1.Types.length)
             static assert(isBuildable!(Tup1.Types[i], Tup2.Types[i]));
     }));
 
@@ -639,7 +639,7 @@ if (distinctFieldNames!(Specs))
             @property
             ref inout(Tuple!Types) _Tuple_super() inout @trusted
             {
-                foreach (i, _; Types)   // Rely on the field layout
+                static foreach (i; 0 .. Types.length)   // Rely on the field layout
                 {
                     static assert(typeof(return).init.tupleof[i].offsetof ==
                                                        expand[i].offsetof);
@@ -689,7 +689,7 @@ if (distinctFieldNames!(Specs))
         this(U, size_t n)(U[n] values)
         if (n == Types.length && allSatisfy!(isBuildableFrom!U, Types))
         {
-            foreach (i, _; Types)
+            static foreach (i; 0 .. Types.length)
             {
                 field[i] = values[i];
             }
@@ -769,7 +769,7 @@ if (distinctFieldNames!(Specs))
         bool opEquals(R...)(auto ref R rhs)
         if (R.length > 1 && areCompatibleTuples!(typeof(this), Tuple!R, "=="))
         {
-            static foreach (i, _; Types)
+            static foreach (i; 0 .. Types.length)
                 if (field[i] != rhs[i])
                     return false;
 
@@ -805,7 +805,7 @@ if (distinctFieldNames!(Specs))
         int opCmp(R)(R rhs)
         if (areCompatibleTuples!(typeof(this), R, "<"))
         {
-            foreach (i, Unused; Types)
+            static foreach (i; 0 .. Types.length)
             {
                 if (field[i] != rhs.field[i])
                 {
@@ -819,7 +819,7 @@ if (distinctFieldNames!(Specs))
         int opCmp(R)(R rhs) const
         if (areCompatibleTuples!(typeof(this), R, "<"))
         {
-            foreach (i, Unused; Types)
+            static foreach (i; 0 .. Types.length)
             {
                 if (field[i] != rhs.field[i])
                 {
@@ -8571,7 +8571,7 @@ private template replaceTypeInFunctionType(From, To, fun)
             result ~= " function";
 
         result ~= "(";
-        foreach (i, _; PX)
+        static foreach (i; 0 .. PX.length)
         {
             if (i)
                 result ~= ", ";
