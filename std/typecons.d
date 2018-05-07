@@ -452,11 +452,6 @@ function. If `obj` is a `Tuple`, the individual members are
 accessible with the syntax `obj[0]` for the first field, `obj[1]`
 for the second, and so on.
 
-The choice of zero-based indexing instead of one-base indexing was
-motivated by the ability to use value tuples with various compile-time
-loop constructs (e.g. $(REF AliasSeq, std,meta) iteration), all of which use
-zero-based indexing.
-
 See_Also: $(LREF tuple).
 
 Params:
