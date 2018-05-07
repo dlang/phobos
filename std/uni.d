@@ -4086,9 +4086,8 @@ public:
     */
     void putValue(Key key, Value v)
     {
-        import std.conv : text;
         auto idx = getIndex(key);
-        enforce(idx >= curIndex, text(errMsg, " ", idx));
+        enforce(idx >= curIndex, errMsg);
         putAt(idx, v);
     }
 
