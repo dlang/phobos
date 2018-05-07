@@ -1204,6 +1204,10 @@ if (distinctFieldNames!(Specs))
         /**
          * Formats `Tuple` with either `%s`, `%(inner%)` or `%(inner%|sep%)`.
          *
+         * Params:
+         *     sink = A `char` accepting delegate
+         *     fmt = A $(REF FormatSpec, std,format)
+         *
          * $(TABLE2 Formats supported by Tuple,
          * $(THEAD Format, Description)
          * $(TROW $(P `%s`), $(P Format like `Tuple!(types)(elements formatted with %s each)`.))
@@ -1212,6 +1216,8 @@ if (distinctFieldNames!(Specs))
          * $(TROW $(P `%(inner%|sep%)`), $(P The format `inner` is one format, that is applied
          *      on all fields of the `Tuple`. The inner format must be compatible to all
          *      of them.)))
+         *
+         * Example:
          * ---
          *  Tuple!(int, double)[3] tupList = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
          *
@@ -1979,11 +1985,15 @@ private template ReverseTupleSpecs(T...)
     the given arguments.
 
     Params:
-        Names = An optional list of strings naming each successive field of the `Tuple`.
-                Each name matches up with the corresponding field given by `Args`.
+        Names = An optional list of strings naming each successive field of the `Tuple`
+                or a list of types that the elements are being casted to.
+                For a list of names,
+                each name matches up with the corresponding field given by `Args`.
                 A name does not have to be provided for every field, but as
                 the names must proceed in order, it is not possible to skip
                 one field and name the next after it.
+                For a list of types,
+                there must be exactly as many types as parameters.
 */
 template tuple(Names...)
 {
