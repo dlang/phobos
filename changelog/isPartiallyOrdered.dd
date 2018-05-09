@@ -1,0 +1,55 @@
+Added `std.traits.isPartiallyOrdered`
+
+The term $(I partial) should be read as opposition to $(I total):
+A total comparison on the types `L` and `R` has the property
+`lhs <= rhs || lhs >= rhs` for all possible `L lhs` and `R rhs`, whereas a
+partial one may not. $(REF isPartiallyOrdered, std, traits) tests if the
+comparison between `L` and `R` may only be partial, i.e. if for `L lhs` and
+`R rhs` it is technically possible that `lhs <= rhs || lhs >= rhs` is not true.
+
+$(REF isPartiallyOrdered, std, traits) does not imply that some pair of `lhs`
+and `rhs` negating the totality condition exist;
+rather it implies that they could exist by static type introspection.
+
+The right-hand side type `R` is optional and defaults to `L`, so
+`isPartiallyOrdered!T` checks for comparisons between `T`s.
+
+Typical examples for partially ordered types are floating point types, where
+the above condition is false if `lhs` or `rhs` is a NaN value.
+-------
+assert(!(1.0 <= double.nan || 1.0 >= double.nan));
+static assert(isPartiallyOrdered!double);
+assert(!(float.nan <= float.nan));
+-------
+
+A user defined type can be partially ordered if `opCmp` returns a value of a
+partially ordered type; usually this is `float` or `double`.
+
+The example shows how to implement a `int` wrapper that uses `int.min` as a
+null value for which any comparison is wrong, including `==` on null values.
+-------
+/// Simple `int` with incomparable value int.min
+struct NanInt
+{
+    int value = int.min;
+
+    float opCmp(int rhs) const
+    {
+        if (value == int.min) return float.nan;
+        if (value < rhs) return -1;
+        if (value > rhs) return +1;
+        return 0;
+    }
+    float opCmp(NanInt rhs) const
+    {
+        if (rhs.value == int.min) return float.nan;
+        return this.opCmp(rhs.value);
+    }
+}
+-------
+
+Note that $(REF isPartiallyOrdered, std, traits) does not imply any of the
+typical mathematical conditions such as reflexivity, transitivity or
+anti-symmetry. In fact, the ordering `<=` on floating point types is neither
+reflexive nor anti-symmetric (not anti-symmetric because `==` is not equality,
+but rather a $(LINK2 https://en.wikipedia.org/wiki/Partial_equivalence_relation, partial equivalence relation)).

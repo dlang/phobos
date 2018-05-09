@@ -96,6 +96,7 @@
  *           $(LREF isConvertibleToString)
  *           $(LREF isNumeric)
  *           $(LREF isOrderingComparable)
+ *           $(LREF isPartiallyOrdered)
  *           $(LREF isPointer)
  *           $(LREF isScalarType)
  *           $(LREF isSigned)
@@ -6407,6 +6408,203 @@ deprecated
 @safe unittest
 {
     static assert(isEqualityComparable!creal);
+}
+
+/**
+ * Tests if the comparison between `L` and `R` may only be partial, i.e. if for
+ * `L l` and `R r` it is technically possible that `l <= r || l >= r` is false.
+ *
+ * Typical examples for partially ordered types are floating point types, where
+ * the above condition is false if `l` or `r` is a NaN value.
+ *
+ * A user defined type can be partially ordered if `opCmp` returns a value of a
+ * partially ordered type.
+ *
+ * Limitation:
+ * The compiler only supports total comparison for built-in arrays except for
+ * built-in floating point types. For arrays over a partially ordered aggregate
+ * type, the comparison does not compile.
+ */
+template isPartiallyOrdered(L, R = L)
+if (__traits(compiles, L.init < R.init))
+{
+    import std.traits : isFloatingPoint;
+
+    static if (is(typeof(L.init.opCmp(R.init))))
+    {
+        private alias CmpType = typeof(L.init.opCmp(R.init));
+    }
+    else static if (is(typeof(R.init.opCmp(L.init))))
+    {
+        private alias CmpType = typeof(R.init.opCmp(L.init));
+    }
+
+    static if (!is(CmpType))
+    {
+        import std.range.primitives : ElementType;
+        static if (isArray!L && isArray!R)
+        {
+            enum isPartiallyOrdered = isPartiallyOrdered!(ElementType!L, ElementType!R);
+        }
+        else static if (isArray!L)
+        {
+            enum isPartiallyOrdered = isPartiallyOrdered!(ElementType!L, R);
+        }
+        else static if (isArray!R)
+        {
+            enum isPartiallyOrdered = isPartiallyOrdered!(L, ElementType!R);
+        }
+        else
+        {
+            static if (isAggregateType!L && __traits(getAliasThis, L).length > 0)
+            {
+                private alias AliasThisType = typeof(mixin("L.init." ~ __traits(getAliasThis, L)[0]));
+                enum isPartiallyOrdered = isPartiallyOrdered!(AliasThisType, R);
+            }
+            else static if (isAggregateType!R && __traits(getAliasThis, R).length > 0)
+            {
+                private alias AliasThisType = typeof(mixin("R.init." ~ __traits(getAliasThis, R)[0]));
+                enum isPartiallyOrdered = isPartiallyOrdered!(L, AliasThisType);
+            }
+            else
+            {
+                enum isPartiallyOrdered = isFloatingPoint!L || isFloatingPoint!R;
+            }
+        }
+    }
+    else
+    {
+        enum isPartiallyOrdered = isPartiallyOrdered!CmpType;
+    }
+}
+
+@nogc nothrow pure @safe unittest
+{
+    struct F
+    {
+        float f;
+        alias f this;
+    }
+    static assert(isPartiallyOrdered!F);
+    static assert(isPartiallyOrdered!(F, float));
+    static assert(isPartiallyOrdered!(float, F));
+}
+
+/// Basic types.
+@nogc nothrow pure @safe unittest
+{
+    static assert(!isPartiallyOrdered!int);
+    static assert(!isPartiallyOrdered!bool);
+    static assert(!isPartiallyOrdered!(int, long));
+    static assert( isPartiallyOrdered!float);
+    static assert( isPartiallyOrdered!double);
+    static assert( isPartiallyOrdered!real);
+    static assert( isPartiallyOrdered!(int, float));
+    static assert( isPartiallyOrdered!(float, int));
+
+    static assert(!__traits(compiles,
+        isPartiallyOrdered!void
+    ));
+}
+
+/// Aggregate type without opCmp.
+@nogc nothrow pure @safe unittest
+{
+    struct S
+    {
+        bool opEquals(S) const { return true; }
+    }
+    // S is not ordered at all! opEquals does not suffice.
+    static assert(!__traits(compiles,
+        isPartiallyOrdered!S
+    ));
+}
+
+/// Aggregate type with opCmp.
+@nogc nothrow pure @safe unittest
+{
+    struct S
+    {
+        int opCmp(int) const { return 0; }
+        float opCmp(S) const { return 0; }
+    }
+    static assert(!isPartiallyOrdered!(S, int));
+    static assert(!isPartiallyOrdered!(int, S));
+    static assert( isPartiallyOrdered!S); // the same as isPartiallyOrdered!(S, S)
+}
+
+// Aggregate type with recursive opCmp cannot work.
+@nogc nothrow pure @safe unittest
+{
+    static struct S
+    {
+        S opCmp(S) const { return S(); }
+    }
+    // Compiler Error: recursive opCmp expansion
+    // 1 recursive step
+    static assert(!__traits(compiles,
+        isPartiallyOrdered!S
+    ));
+
+    // need scope with mutual declaration
+    static struct Test
+    {
+        struct S
+        {
+            T opCmp(S) const { return T(); }
+            T opCmp(int) const { return T(); }
+        }
+        struct T
+        {
+            S opCmp(T) const { return S(); }
+            T opCmp(int) const { return T(); }
+        }
+    }
+    // Compiler Error: recursive opCmp expansion
+    // 2 recursive step
+    static assert(!__traits(compiles,
+        isPartiallyOrdered!(Test.S)
+    ));
+    static assert(!__traits(compiles,
+        isPartiallyOrdered!(Test.T)
+    ));
+}
+
+/// Array types.
+@nogc nothrow pure @safe unittest
+{
+    static assert(!isPartiallyOrdered!(int[]));
+    static assert( isPartiallyOrdered!(float[]));
+    static assert(!isPartiallyOrdered!(int[2]));
+    static assert( isPartiallyOrdered!(float[2]));
+
+    struct S
+    {
+        int opCmp(S) const { return 0; }
+    }
+    static assert(!isPartiallyOrdered!(S[]));
+    static assert(!isPartiallyOrdered!(S[2]));
+}
+
+// Built-in array types currently don't support
+// opCmp returning a type other than `int`.
+@nogc nothrow pure @safe unittest
+{
+    // Once comparison on arrays supports partially ordered types,
+    // put this tests in.
+    // Error: incompatible types for ([S()]) < ([0]): S[] and int[]
+    static assert(!__traits(compiles,
+    {
+        struct S
+        {
+            int opCmp(int) const { return 0; }
+            float opCmp(S) const { return 0; }
+        }
+        static assert(!isPartiallyOrdered!(S[], int[]));
+        static assert(!isPartiallyOrdered!(int[][], S[][]));
+        static assert( isPartiallyOrdered!(S[]));
+        static assert( isPartiallyOrdered!(S[2]));
+    }));
 }
 
 /**
