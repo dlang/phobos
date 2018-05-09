@@ -781,13 +781,13 @@ if (distinctFieldNames!(Specs))
         {
             Tuple!(int, string) t1 = tuple(1, "test");
             Tuple!(double, string) t2 =  tuple(1.0, "test");
-            //Ok, int can be compared with double and
-            //both have a value of 1
+            // Ok, int can be compared with double and
+            // both have a value of 1
             assert(t1 == t2);
         }
 
         /**
-         * Comparison for ordering.
+         * Lexical comparison for ordering.
          *
          * Params:
          *     rhs = The `Tuple` to compare against. It must meet the criteria
@@ -800,48 +800,70 @@ if (distinctFieldNames!(Specs))
          * $(UL
          *   $(LI A negative integer if the expression `v1 < v2` is true.)
          *   $(LI A positive integer if the expression `v1 > v2` is true.)
-         *   $(LI 0 if the expression `v1 == v2` is true.))
+         *   $(LI Zero if the expression `v1 == v2` is true.)
+         *   $(LI A NaN value in any other case.))
+         *
+         * The return type is `int`, if no field has a floating point type,
+         * otherwise it is the most general floating point type participating
+         * on the left-hand side.
          */
-        int opCmp(R)(R rhs)
-        if (areCompatibleTuples!(typeof(this), R, "<"))
+        auto opCmp(this L, R)(R rhs)
+        if (areCompatibleTuples!(L, R, "<"))
         {
-            static foreach (i; 0 .. Types.length)
+            static foreach (i, Type; Types)
             {
-                if (field[i] != rhs.field[i])
-                {
-                    return field[i] < rhs.field[i] ? -1 : 1;
-                }
-            }
-            return 0;
-        }
+                if (this.field[i] < rhs.field[i]) return -1;
+                if (this.field[i] > rhs.field[i]) return +1;
 
-        /// ditto
-        int opCmp(R)(R rhs) const
-        if (areCompatibleTuples!(typeof(this), R, "<"))
-        {
-            static foreach (i; 0 .. Types.length)
-            {
-                if (field[i] != rhs.field[i])
+                // For floating point types, if neither a < b nor a > b
+                // either a == b or a and b are unordered. So, if a != b,
+                // they must be unordered which is only the case when at
+                // least one of them is NaN.
+                import std.traits : isFloatingPoint;
+                static if (isFloatingPoint!Type)
                 {
-                    return field[i] < rhs.field[i] ? -1 : 1;
+                    if (this.field[i] != rhs.field[i])
+                    {
+                        return Type.nan;
+                    }
                 }
             }
             return 0;
         }
 
         /**
-            The first `v1` for which `v1 > v2` is true determines
-            the result. This could lead to unexpected behaviour.
+            The first distinct entries determine the result.
+            This could lead to unexpected behavior.
          */
-        static if (Specs.length == 0) @safe unittest
+        static if (Specs.length == 0)
+        @safe pure @nogc nothrow unittest
         {
-            auto tup1 = tuple(1, 1, 1);
-            auto tup2 = tuple(1, 100, 100);
+            auto tup1 = tuple(1, 2, 10);
+            auto tup2 = tuple(1u, 100u, 3u);
             assert(tup1 < tup2);
+            // 1 == 1u, 2 < 100u so tup1 < tup2; 10 and 3u do not matter.
 
-            //Only the first result matters for comparison
             tup1[0] = 2;
             assert(tup1 > tup2);
+            // 2 > 1u so tup1 > tup2; 2 and 100u, 10 and 3u do not matter.
+        }
+
+        ///
+        static if (Specs.length == 0)
+        @safe pure @nogc nothrow unittest
+        {
+            auto tup1 = tuple(1, 1.0);
+            auto tup2 = tuple(1u, 2.0);
+            assert(tup1 < tup2); // by 1.0 < 2.0
+            tup1[1] = 2.0;
+            assert(tup1 == tup2);
+            // comparison with NaN is always false
+            tup1[1] = double.nan;
+            assert(!(tup1 < tup2 || tup1 == tup2 || tup1 > tup2));
+            tup2[1] = double.nan;
+            assert(!(tup1 < tup2 || tup1 == tup2 || tup1 > tup2));
+            tup1[0] = 0;
+            assert(tup1 < tup2); // decided by 0 < 1u
         }
 
         /**
@@ -1958,6 +1980,19 @@ private template ReverseTupleSpecs(T...)
     c = b = a;
     assert(a[0].length == b[0].length && b[0].length == c[0].length);
     assert(a[0].ptr == b[0].ptr && b[0].ptr == c[0].ptr);
+}
+
+// issue 18832
+pure @safe @nogc nothrow unittest
+{
+    import std.meta : AliasSeq;
+    static foreach (Float; AliasSeq!(float, double, real))
+    {{
+        auto tup = tuple(Float.nan);
+        assert(!(tup > tup));
+        assert(!(tup < tup));
+        assert(!(tup == tup));
+    }}
 }
 
 /**
