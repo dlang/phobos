@@ -794,7 +794,7 @@ float cos(float x) @safe pure nothrow @nogc { return cos(cast(real) x); }
 ///
 @safe unittest
 {
-    assert(cos(0.0).approxEqual(1.0));
+    assert(cos(0.0) == 1.0);
     assert(cos(1.0).approxEqual(0.540));
     assert(cos(3.0).approxEqual(-0.989));
 }
@@ -1169,7 +1169,7 @@ Lret: {}
 ///
 @safe unittest
 {
-    assert(tan(0.0).approxEqual(0));
+    assert(isIdentical(tan(0.0), 0.0));
     assert(tan(PI).approxEqual(0));
     assert(tan(PI / 3).approxEqual(sqrt(3.0)));
 }
@@ -1239,7 +1239,7 @@ float asin(float x) @safe pure nothrow @nogc  { return asin(cast(real) x); }
 ///
 @safe unittest
 {
-    assert(asin(0.0).approxEqual(0.0));
+    assert(isIdentical(asin(0.0), 0.0));
     assert(asin(0.5).approxEqual(PI / 6));
     assert(asin(PI).isNaN);
 }
@@ -1363,7 +1363,7 @@ float atan(float x)  @safe pure nothrow @nogc { return atan(cast(real) x); }
 ///
 @safe unittest
 {
-    assert(atan(0.0).approxEqual(0.0));
+    assert(isIdentical(atan(0.0), 0.0));
     assert(atan(sqrt(3.0)).approxEqual(PI / 3));
 }
 
@@ -1516,7 +1516,7 @@ float cosh(float x) @safe pure nothrow @nogc  { return cosh(cast(real) x); }
 ///
 @safe unittest
 {
-    assert(cosh(0.0).approxEqual(1.0));
+    assert(cosh(0.0) == 1.0);
     assert(cosh(1.0).approxEqual((E + 1.0 / E) / 2));
 }
 
@@ -1558,7 +1558,7 @@ float sinh(float x) @safe pure nothrow @nogc  { return sinh(cast(real) x); }
 ///
 @safe unittest
 {
-    assert(sinh(0.0).approxEqual(0.0));
+    assert(isIdentical(sinh(0.0), 0.0));
     assert(sinh(1.0).approxEqual((E - 1.0 / E) / 2));
 }
 
@@ -1597,7 +1597,7 @@ float tanh(float x) @safe pure nothrow @nogc { return tanh(cast(real) x); }
 ///
 @safe unittest
 {
-    assert(tanh(0.0).approxEqual(0.0));
+    assert(isIdentical(tanh(0.0), 0.0));
     assert(tanh(1.0).approxEqual(sinh(1.0) / cosh(1.0)));
 }
 
@@ -1674,7 +1674,7 @@ float acosh(float x) @safe pure nothrow @nogc  { return acosh(cast(real) x); }
 {
     assert(isNaN(acosh(0.9)));
     assert(isNaN(acosh(real.nan)));
-    assert(acosh(1.0) == 0.0);
+    assert(isIdentical(acosh(1.0), 0.0));
     assert(acosh(real.infinity) == real.infinity);
     assert(isNaN(acosh(0.5)));
 }
@@ -2062,7 +2062,7 @@ float exp(float x)  @safe pure nothrow @nogc   { return exp(cast(real) x); }
 ///
 @safe unittest
 {
-    assert(exp(0.0).feqrel(1.0) > 16);
+    assert(exp(0.0) == 1.0);
     assert(exp(3.0).feqrel(E * E * E) > 16);
 }
 
@@ -2339,7 +2339,7 @@ L_largenegative:
 ///
 @safe unittest
 {
-    assert(expm1(0.0).feqrel(0) > 16);
+    assert(isIdentical(expm1(0.0), 0.0));
     assert(expm1(1.0).feqrel(1.71828) > 16);
     assert(expm1(2.0).feqrel(6.3890) > 16);
 }
@@ -2373,7 +2373,7 @@ real exp2(real x) @nogc @trusted pure nothrow
 ///
 @safe unittest
 {
-    assert(exp2(0.0).feqrel(1.0) > 16);
+    assert(isIdentical(exp2(0.0), 1.0));
     assert(exp2(2.0).feqrel(4.0) > 16);
     assert(exp2(8.0).feqrel(256.0) > 16);
 }
@@ -3809,7 +3809,7 @@ real log1p(real x) @safe pure nothrow @nogc
 ///
 @safe pure unittest
 {
-    assert(log1p(0.0).feqrel(0.0) > 16);
+    assert(isIdentical(log1p(0.0), 0.0));
     assert(log1p(1.0).feqrel(0.69314) > 16);
 
     assert(log1p(-1.0) == -real.infinity);
@@ -3957,8 +3957,8 @@ real logb(real x) @trusted nothrow @nogc
 ///
 @safe @nogc nothrow unittest
 {
-    assert(logb(1.0).feqrel(0.0) > 16);
-    assert(logb(100.0).feqrel(6.0) > 16);
+    assert(logb(1.0) == 0);
+    assert(logb(100.0) == 6);
 
     assert(logb(0.0) == -real.infinity);
     assert(logb(real.infinity) == real.infinity);
@@ -3992,7 +3992,7 @@ real fmod(real x, real y) @trusted nothrow @nogc
 ///
 @safe unittest
 {
-    assert(fmod(0.0, 1.0).feqrel(0.0) > 16);
+    assert(isIdentical(fmod(0.0, 1.0), 0.0));
     assert(fmod(5.0, 3.0).feqrel(2.0) > 16);
     assert(isNaN(fmod(5.0, 0.0)));
 }
@@ -4132,8 +4132,8 @@ float fabs(float x) @safe pure nothrow @nogc { return fabs(cast(real) x); }
 ///
 @safe unittest
 {
-    assert(fabs(0.0) == 0.0);
-    assert(fabs(-0.0) == 0.0);
+    assert(isIdentical(fabs(0.0), 0.0));
+    assert(isIdentical(fabs(-0.0), 0.0));
     assert(fabs(-10.0) == 10.0);
 }
 
