@@ -5655,6 +5655,14 @@ private:
     {
         alias ControlState = uint;
     }
+    else version (SPARC64)
+    {
+        alias ControlState = ulong;
+    }
+    else version (SystemZ)
+    {
+        alias ControlState = uint;
+    }
     else version (X86_Any)
     {
         alias ControlState = ushort;
