@@ -5530,11 +5530,11 @@ nothrow @nogc:
     {
         enum : ExceptionMask
         {
-            inexactException      = 0x0800,
+            inexactException      = 0x0080,
             divByZeroException    = 0x0400,
             overflowException     = 0x0200,
             underflowException    = 0x0100,
-            invalidException      = 0x0080,
+            invalidException      = 0x0800,
             severeExceptions   = overflowException | divByZeroException
                                  | invalidException,
             allExceptions      = severeExceptions | underflowException
