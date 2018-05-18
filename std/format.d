@@ -4674,7 +4674,7 @@ void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, s
     import core.stdc.string : strlen;
     import std.array : appender;
     import std.conv : text, octal;
-    import std.c.stdio : snprintf;
+    import core.stdc.stdio : snprintf;
 
     debug(format) printf("std.format.format.unittest\n");
 

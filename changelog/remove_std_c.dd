@@ -1,0 +1,3 @@
+The deprecated `std.c` package has been removed.
+
+Use the `core.stdc` package instead.
