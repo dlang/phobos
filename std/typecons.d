@@ -7118,6 +7118,12 @@ struct Typedef(T, T init = T.init, string cookie=null)
 {
     private T Typedef_payload = init;
 
+    // issue 18415 : prevent default construction if original type does too.
+    static if ((is(T == struct) || is(T == union)) && !is(typeof({T t;})))
+    {
+        @disable this();
+    }
+
     this(T init)
     {
         Typedef_payload = init;
@@ -7344,6 +7350,14 @@ template TypedefType(T)
 
     Typedef!Dollar3 drange3;
     assert(drange3[$] == 123);
+}
+
+@safe @nogc pure nothrow unittest // Bugzilla 18415
+{
+    struct NoDefCtorS{@disable this();}
+    union NoDefCtorU{@disable this();}
+    static assert(!is(typeof({Typedef!NoDefCtorS s;})));
+    static assert(!is(typeof({Typedef!NoDefCtorU u;})));
 }
 
 @safe @nogc pure nothrow unittest // Bugzilla 11703
