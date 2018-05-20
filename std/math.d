@@ -5541,6 +5541,36 @@ nothrow @nogc:
                                  | inexactException,
         }
     }
+    else version (SPARC64)
+    {
+        enum : ExceptionMask
+        {
+            inexactException      = 0x0800000,
+            divByZeroException    = 0x1000000,
+            overflowException     = 0x4000000,
+            underflowException    = 0x2000000,
+            invalidException      = 0x8000000,
+            severeExceptions   = overflowException | divByZeroException
+                                 | invalidException,
+            allExceptions      = severeExceptions | underflowException
+                                 | inexactException,
+        }
+    }
+    else version (SystemZ)
+    {
+        enum : ExceptionMask
+        {
+            inexactException      = 0x08000000,
+            divByZeroException    = 0x40000000,
+            overflowException     = 0x20000000,
+            underflowException    = 0x10000000,
+            invalidException      = 0x80000000,
+            severeExceptions   = overflowException | divByZeroException
+                                 | invalidException,
+            allExceptions      = severeExceptions | underflowException
+                                 | inexactException,
+        }
+    }
     else version (X86_Any)
     {
         enum : ExceptionMask
@@ -5652,6 +5682,14 @@ private:
         alias ControlState = uint;
     }
     else version(MIPS_Any)
+    {
+        alias ControlState = uint;
+    }
+    else version (SPARC64)
+    {
+        alias ControlState = ulong;
+    }
+    else version (SystemZ)
     {
         alias ControlState = uint;
     }
