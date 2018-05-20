@@ -716,15 +716,9 @@ Returns:
  */
 template partial(alias fun, alias arg)
 {
-    static if (is(typeof(fun) == delegate) || is(typeof(fun) == function))
-    {
-        import std.traits : ReturnType;
-        ReturnType!fun partial(Parameters!fun[1..$] args2)
-        {
-            return fun(arg, args2);
-        }
-    }
-    else
+    import std.traits : isCallable;
+    // Check whether fun is a user defined type which implements opCall or a template.
+    static if (is(typeof(fun) == struct) || is(typeof(fun) == class) || __traits(isTemplate, fun))
     {
         auto partial(Ts...)(Ts args2)
         {
@@ -744,6 +738,36 @@ template partial(alias fun, alias arg)
                     return msg;
                 }
                 static assert(0, errormsg());
+            }
+        }
+    }
+    else static if (!isCallable!fun)
+    {
+        static assert(false, "Cannot apply partial to a non-callable '" ~ fun.stringof ~ "'.");
+    }
+    else // Assume fun is callable and uniquely defined.
+    {
+        static if (Parameters!fun.length == 0)
+        {
+            static assert(0, "Cannot partially apply '" ~ fun.stringof ~ "'." ~
+                "'" ~ fun.stringof ~ "' has 0 arguments.");
+        }
+        else static if (!is(typeof(arg) : Parameters!fun[0]))
+        {
+            string errorMsg()
+            {
+                string msg = "Argument mismatch for '" ~ fun.stringof ~ "': expected " ~
+                    Parameters!fun[0].stringof ~ ", but got " ~ typeof(arg).stringof ~ ".";
+                return msg;
+            }
+            static assert(0, errorMsg());
+        }
+        else
+        {
+            import std.traits : ReturnType;
+            ReturnType!fun partial(Parameters!fun[1..$] args2)
+            {
+                return fun(arg, args2);
             }
         }
     }
@@ -844,6 +868,28 @@ template partial(alias fun, alias arg)
 
     auto dg2 = &funOneArg1!();
     assert(dg2() == 1);
+}
+
+// Fix issue 15732
+@safe unittest
+{
+    // Test whether it works with functions.
+    auto partialFunction(){
+        auto fullFunction = (float a, float b, float c) => a + b / c;
+        alias apply1 = partial!(fullFunction, 1);
+        return &apply1;
+    }
+    auto result = partialFunction()(2, 4);
+    assert(result == 1.5f);
+
+    // And with delegates.
+    auto partialDelegate(float c){
+        auto fullDelegate = (float a, float b) => a + b / c;
+        alias apply1 = partial!(fullDelegate, 1);
+        return &apply1;
+    }
+    auto result2 = partialDelegate(4)(2);
+    assert(result2 == 1.5f);
 }
 
 /**
