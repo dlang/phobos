@@ -5588,7 +5588,7 @@ public:
             auto oldState = getControlState();
             // If exceptions are not supported, we set the bit but read it back as zero
             // https://sourceware.org/ml/libc-ports/2012-06/msg00091.html
-            setControlState(oldState | (divByZeroException & allExceptions));
+            setControlState(oldState | divByZeroException);
             immutable result = (getControlState() & allExceptions) != 0;
             setControlState(oldState);
             return result;
