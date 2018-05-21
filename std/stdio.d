@@ -3712,7 +3712,7 @@ private @property File trustedStdout() @trusted
 }
 
 /***********************************
-Writes its arguments in text format to `stdout`.
+Writes its arguments in text format to standard output (without a trailing newline).
 
 Params:
     args = the items to write to `stdout`
