@@ -3712,10 +3712,7 @@ private @property File trustedStdout() @trusted
 }
 
 /***********************************
-For each argument `arg` in `args`, format the argument (using
-$(REF to, std,conv)) and write the resulting
-string to `args[0]`. A call without any arguments will fail to
-compile.
+Writes its arguments in text format to standard output (without a trailing newline).
 
 Params:
     args = the items to write to `stdout`
