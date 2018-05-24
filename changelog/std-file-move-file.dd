@@ -1,0 +1,7 @@
+Added the moveFile function
+
+Example:
+---
+moveFile(from, to);
+---
+$(REF moveFile, std,file) will attempt to rename the file and fallback to copy/remove if it fails.  This can occur when renaming a file from one filesystem/drive to another.
