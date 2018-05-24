@@ -3749,7 +3749,7 @@ Returns:
 See_Also:
  $(REF _splitter, std,regex) for a version that splits using a regular
 expression defined separator and
- $(REF _splitter, std,array) for a version that splits eagerly.
+ $(REF _split, std,array) for a version that splits eagerly.
 */
 auto splitter(alias pred = "a == b", Range, Separator)(Range r, Separator s)
 if (is(typeof(binaryFun!pred(r.front, s)) : bool)
