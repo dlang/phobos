@@ -148,6 +148,8 @@ version (PPC)       version = PPC_Any;
 version (PPC64)     version = PPC_Any;
 version (MIPS32)    version = MIPS_Any;
 version (MIPS64)    version = MIPS_Any;
+version (AArch64)   version = ARM_Any;
+version (ARM)       version = ARM_Any;
 
 version(D_InlineAsm_X86)
 {
@@ -5308,11 +5310,7 @@ else version(MIPS_Any)
 {
     version = IeeeFlagsSupport;
 }
-else version(AArch64)
-{
-    version = IeeeFlagsSupport;
-}
-else version(ARM)
+else version(ARM_Any)
 {
     version = IeeeFlagsSupport;
 }
@@ -5480,22 +5478,7 @@ nothrow @nogc:
             allExceptions, /// ditto
         }
     }
-    else version(AArch64)
-    {
-        enum : ExceptionMask
-        {
-            inexactException      = 0x1000,
-            underflowException    = 0x0800,
-            overflowException     = 0x0400,
-            divByZeroException    = 0x0200,
-            invalidException      = 0x0100,
-            severeExceptions   = overflowException | divByZeroException
-                                 | invalidException,
-            allExceptions      = severeExceptions | underflowException
-                                 | inexactException,
-        }
-    }
-    else version(ARM)
+    else version(ARM_Any)
     {
         enum : ExceptionMask
         {
@@ -5600,22 +5583,12 @@ public:
             return true;
         else version(MIPS_Any)
             return true;
-        else version(AArch64)
-        {
-            auto oldState = getControlState();
-            // If exceptions are not supported, we set the bit but read it back as zero
-            // https://sourceware.org/git/?p=glibc.git;a=blob;f=sysdeps/aarch64/fpu/feenablxcpth.c
-            setControlState(oldState | (divByZeroException & allExceptions));
-            immutable result = (getControlState() & allExceptions) != 0;
-            setControlState(oldState);
-            return result;
-        }
-        else version(ARM)
+        else version(ARM_Any)
         {
             auto oldState = getControlState();
             // If exceptions are not supported, we set the bit but read it back as zero
             // https://sourceware.org/ml/libc-ports/2012-06/msg00091.html
-            setControlState(oldState | (divByZeroException & allExceptions));
+            setControlState(oldState | divByZeroException);
             immutable result = (getControlState() & allExceptions) != 0;
             setControlState(oldState);
             return result;
@@ -5669,11 +5642,7 @@ private:
 
     bool initialized = false;
 
-    version(AArch64)
-    {
-        alias ControlState = uint;
-    }
-    else version(ARM)
+    version(ARM_Any)
     {
         alias ControlState = uint;
     }
