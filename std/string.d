@@ -3744,7 +3744,7 @@ unittest
 /++
     Returns `str` without its last character, if there is one. If `str`
     ends with `"\r\n"`, then both are removed. If `str` is empty, then
-    then it is returned unchanged.
+    it is returned unchanged.
 
     Params:
         str = string (must be valid UTF)
