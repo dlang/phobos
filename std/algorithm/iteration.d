@@ -40,6 +40,8 @@ $(T2 joiner,
 $(T2 map,
         `map!(a => a * 2)([1, 2, 3])` lazily returns a range with the numbers
         `2`, `4`, `6`.)
+$(T2 mean,
+        Colloquially known as the average, `mean([1, 2, 3])` returns `2`.)
 $(T2 permutations,
         Lazily computes all permutations using Heap's algorithm.)
 $(T2 reduce,
