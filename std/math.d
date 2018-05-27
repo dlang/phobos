@@ -3406,7 +3406,8 @@ float ldexp(float n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real)
 
 @safe pure nothrow @nogc unittest
 {
-    static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
+    static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended ||
+               floatTraits!(real).realFormat == RealFormat.ieeeQuadruple)
     {
         assert(ldexp(1.0L, -16384) == 0x1p-16384L);
         assert(ldexp(1.0L, -16382) == 0x1p-16382L);
@@ -4832,6 +4833,7 @@ long lrint(real x) @trusted pure nothrow @nogc
             const j = sign ? -OF : OF;
             x = (j + x) - j;
 
+            const exp = (vu[F.EXPPOS_SHORT] & F.EXPMASK) - (F.EXPBIAS + 1);
             const implicitOne = 1UL << 48;
             auto vl = cast(ulong*)(&x);
             vl[MANTISSA_MSB] &= implicitOne - 1;
@@ -4839,7 +4841,6 @@ long lrint(real x) @trusted pure nothrow @nogc
 
             long result;
 
-            const exp = (vu[F.EXPPOS_SHORT] & F.EXPMASK) - (F.EXPBIAS + 1);
             if (exp < 0)
                 result = 0;
             else if (exp <= 48)
