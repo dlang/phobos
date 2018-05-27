@@ -5023,7 +5023,7 @@ real trunc(real x) @trusted nothrow @nogc pure
  *  $(TR $(TH x)               $(TH y)            $(TH remainder(x, y)) $(TH n)   $(TH invalid?))
  *  $(TR $(TD $(PLUSMN)0.0)    $(TD not 0.0)      $(TD $(PLUSMN)0.0)    $(TD 0.0) $(TD no))
  *  $(TR $(TD $(PLUSMNINF))    $(TD anything)     $(TD -$(NAN))         $(TD ?)   $(TD yes))
- *  $(TR $(TD anything)        $(TD $(PLUSMN)0.0) $(TD -$(NAN))         $(TD ?)   $(TD yes))
+ *  $(TR $(TD anything)        $(TD $(PLUSMN)0.0) $(TD $(PLUSMN)$(NAN)) $(TD ?)   $(TD yes))
  *  $(TR $(TD != $(PLUSMNINF)) $(TD $(PLUSMNINF)) $(TD x)               $(TD ?)   $(TD no))
  * )
  *
@@ -5058,8 +5058,8 @@ real remquo(real x, real y, out int n) @trusted nothrow @nogc  /// ditto
         assert(remainder(-5.1, 3.0).feqrel(0.9) > 16);
         assert(remainder(0.0, 3.0) == 0.0);
 
-        assert(remainder(1.0, 0.0) is -real.nan);
-        assert(remainder(-1.0, 0.0) is -real.nan);
+        assert(isNaN(remainder(1.0, 0.0)));
+        assert(isNaN(remainder(-1.0, 0.0)));
     }
 }
 
