@@ -5252,7 +5252,7 @@ public:
     assert(ieeeFlags == f);
 }
 
-version(D_HardFloat) @safe unittest
+@safe unittest
 {
     import std.meta : AliasSeq;
 
@@ -5750,19 +5750,22 @@ private:
 ///
 @safe unittest
 {
-    FloatingPointControl fpctrl;
+    version(D_HardFloat)
+    {
+        FloatingPointControl fpctrl;
 
-    fpctrl.rounding = FloatingPointControl.roundDown;
-    assert(lrint(1.5) == 1.0);
+        fpctrl.rounding = FloatingPointControl.roundDown;
+        assert(lrint(1.5) == 1.0);
 
-    fpctrl.rounding = FloatingPointControl.roundUp;
-    assert(lrint(1.4) == 2.0);
+        fpctrl.rounding = FloatingPointControl.roundUp;
+        assert(lrint(1.4) == 2.0);
 
-    fpctrl.rounding = FloatingPointControl.roundToNearest;
-    assert(lrint(1.5) == 2.0);
+        fpctrl.rounding = FloatingPointControl.roundToNearest;
+        assert(lrint(1.5) == 2.0);
+    }
 }
 
-@safe unittest
+version(D_HardFloat) @safe unittest
 {
     void ensureDefaults()
     {
@@ -5777,15 +5780,12 @@ private:
     }
     ensureDefaults();
 
-    version(D_HardFloat)
     {
-        {
-            FloatingPointControl ctrl;
-            ctrl.rounding = FloatingPointControl.roundDown;
-            assert(FloatingPointControl.rounding == FloatingPointControl.roundDown);
-        }
-        ensureDefaults();
+        FloatingPointControl ctrl;
+        ctrl.rounding = FloatingPointControl.roundDown;
+        assert(FloatingPointControl.rounding == FloatingPointControl.roundDown);
     }
+    ensureDefaults();
 
     if (FloatingPointControl.hasExceptionTraps)
     {
