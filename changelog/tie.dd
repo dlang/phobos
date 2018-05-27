@@ -1,0 +1,42 @@
+Added std.typecons.tie
+
+With `tie` you can deconstruct tuples in a convenient manner, that serves when functions
+return tuples, you want to swap values or simultaneously iterate variables.
+
+Note, however, that swapping with `tie` is basically using intermediate variables,
+in contrast to $(REF swap, std, algorithm, mutation).
+
+You can use `$` or `null` on the left-hand side to ignore right-hand side
+values. Use `tie` on the right-hand side for heterogeneous tuples; for
+type-homogeneous tuples, static arrays are fine, too.
+
+-------
+import std.typecons : tuple, tie;
+
+int x = 2, y = 3;
+
+// Swapping.
+tie[ x, y ] = tie[ y, x ];
+assert(x == 3 && y == 2);
+// Simultaneous iteration.
+tie[ x, y ] = tie[ y + 1, x * 2 ];
+assert(x == 3 && y == 6);
+// If all types support an operator op, you can use op=, too.
+tie[ x, y ] += tie[ 2, 1 ];
+assert(x == 5 && y == 7);
+
+// $ is used for discarding.
+tie[ $, x, $, y, $ ] = tie[ 0, 1, 2, 3, 4 ];
+assert(x == 1 && y == 3);
+
+static auto returnsTuple(int v) { return tuple(v * 2, v + 2); }
+static int[3] returnsStaticArray(int v) { return [ v - 1, v, v + 1 ]; }
+
+// Deconstruction.
+tie[ x, y ] = returnsTuple(3);
+assert(x == 6 && y == 5);
+tie[ x, $, y ] = returnsStaticArray(x);
+assert(x == 5 && y == 7);
+-------
+
+`tie` supports non-copyable and must-initialize types. For details see $(REF tie, std, typecons).

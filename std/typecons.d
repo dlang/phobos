@@ -11,6 +11,7 @@ $(TR $(TD Tuple) $(TD
     $(LREF isTuple)
     $(LREF Tuple)
     $(LREF tuple)
+    $(LREF tie)
     $(LREF reverse)
 ))
 $(TR $(TD Flags) $(TD
@@ -64,7 +65,8 @@ Authors:   $(HTTP erdani.org, Andrei Alexandrescu),
            $(HTTP bartoszmilewski.wordpress.com, Bartosz Milewski),
            Don Clugston,
            Shin Fujishiro,
-           Kenji Hara
+           Kenji Hara,
+           Quirin Schroll
  */
 module std.typecons;
 
@@ -461,6 +463,8 @@ See_Also: $(LREF tuple).
 
 Params:
     Specs = A list of types (and optionally, member names) that the `Tuple` contains.
+Limitations:
+    `Tuple` does not support non-copyable types.
 */
 template Tuple(Specs...)
 if (distinctFieldNames!(Specs))
@@ -1988,11 +1992,17 @@ private template ReverseTupleSpecs(T...)
     the given arguments.
 
     Params:
-        Names = An optional list of strings naming each successive field of the `Tuple`.
-                Each name matches up with the corresponding field given by `Args`.
+        Names = An optional list of strings naming each successive field of the `Tuple`
+                or a list of types that the elements are being casted to.
+                For a list of names,
+                each name matches up with the corresponding field given by `Args`.
                 A name does not have to be provided for every field, but as
                 the names must proceed in order, it is not possible to skip
                 one field and name the next after it.
+                For a list of types,
+                there must be exactly as many types as parameters.
+
+    Limitations: `tuple` does not support non-copyable types.
 */
 template tuple(Names...)
 {
@@ -2004,8 +2014,9 @@ template tuple(Names...)
     Returns:
         A new `Tuple` with its type inferred from the arguments given.
      */
-    auto tuple(Args...)(Args args)
+    auto tuple(Args...)(auto ref Args args)
     {
+        import std.functional : forward;
         static if (Names.length == 0)
         {
             // No specified names, just infer types from Args...
@@ -2092,6 +2103,344 @@ enum isTuple(T) = __traits(compiles,
 
     struct S {}
     static assert(!isTuple!(S));
+}
+
+/** Use `tie[ x0, ..., xn ]` to get an assignable tuple.
+ *  If the underlying types all support an operator `op`,
+ *  the assignment `tie[ x0, ..., xn ] op= expression` is possible.
+ *
+ *  `tie` not only supports non-copyable types (in contrast to `Tuple`/`tuple`)
+ *  it generally avoids unnecessary copies.
+ *
+ *  `tie` supports piecewise move extraction:
+ *  ---
+ *  auto t = tie[ move(x), y ];
+ *  tie[ a, $ ] = t; // extract x; t[0] reset to .init
+ *  tie[ $, b ] = t; // copy y; t[1] untouched
+ *  ---
+ *
+ *  Limitations:
+ *  `tie` cannot be used to declare variables.
+ *  Deconstruction from moved lvalue of static array of non-copyable types does not compile
+ *  because of how $(REF move, std, algorithm, mutation) is implemented for static arrays,
+ *  it copies their contents; rvalue static arrays work fine.
+ */
+struct tie
+{
+static:
+    /// Shorthand for null in `tie[ ... ]` expressions.
+    enum typeof(null) opDollar(size_t dimension) = null;
+
+    /// Used for `tie[ ... ] = expression` or `tie[ ... ] op= expression`.
+    auto opIndex(Ts...)(auto ref Ts xs)
+    {
+        import std.functional : forward;
+        return Tie!([ staticMap!(isRvalue, xs) ], Ts)(forward!xs);
+    }
+
+    /// ditto
+    alias opIndexAssign = opIndexOpAssign;
+
+    /// ditto
+    void opIndexOpAssign(string op = "", T, Ts...)(auto ref T t, auto ref Ts xs)
+    {
+        enum isTie = is(T == Tie!X, X...);
+        enum isStaticArray = is(T == E[n], E, size_t n);
+        static assert(isTie || isTuple!T || isStaticArray,
+            "Assigned value must be a tie, a std.typecons.Tuple or a static array; this is a " ~ T.stringof);
+        static assert(t.length == xs.length, "Length mismatch.");
+
+        import std.algorithm.mutation : move, swap;
+        static foreach (i, x; xs)
+        static if (!is(typeof(x) : typeof(null)))
+        {
+            import std.traits : isMutable;
+            static assert(__traits(isRef, x),
+                "Left-hand side objects must be lvalues or the constant null or $.");
+            static if (isTie && t.rvalues[i] || isStaticArray && !__traits(isRef, t) && isMutable!E)
+            {{
+                // Cannot do: x op= move(t[i]);
+                // Error: copying move(t.__values_field_0) into allocated
+                // memory escapes a reference to parameter variable t
+                mixin("x " ~ op ~ "= (ref x){ return move(x); }(t[i]);");
+            }}
+            else mixin("x " ~ op ~ "= t[i];");
+        }
+    }
+
+private:
+    // `Tie` is a basic tuple with bool annotations
+    // to remember which values were rvalues.
+    // It is necessary to make tie[...] op= tie[...]
+    // possible for non-copyable types.
+    struct Tie(bool[] rv, Types...)
+    {
+        static assert(rv.length == Types.length,
+            "critical: length mismatch in Tie; this is a bug");
+        alias rvalues = rv;
+        Types values;
+        alias values this;
+    pure nothrow @nogc @safe @disable:
+        void opAssign(T...)(T);
+        this(this);
+    }
+
+    enum bool isRvalue(alias value) = !__traits(isRef, value);
+}
+
+pure nothrow @nogc @safe
+unittest
+{
+    const int x;
+    int y;
+    tie[ y ] = tie[ x ];
+    tie[ y ] = tuple(x);
+    tie[ y ] = cast(const(int)[1]) [ x ];
+    tie[ y ] = cast(const(int[1])) [ x ];
+    const(int)[1] icar = [ x ];
+    tie[ y ] = icar;
+    const(int[1]) iarc = [ x ];
+    tie[ y ] = iarc;
+}
+
+/// Typical use cases.
+pure nothrow @nogc @safe
+unittest
+{
+    int x = 2, y = 3;
+
+    // Swapping.
+    tie[ x, y ] = tie[ y, x ];
+    assert(x == 3 && y == 2);
+    // Simultaneous iteration.
+    tie[ x, y ] = tie[ y + 1, x * 2 ];
+    assert(x == 3 && y == 6);
+    // If all types support op=, you can use op= on `tie`.
+    tie[ x, y ] += tie[ 2, 1 ];
+    assert(x == 5 && y == 7);
+
+    // $ is used for discarding.
+    tie[ $, x, $, y, $ ] = tie[ 0, 1, 2, 3, 4 ];
+    assert(x == 1 && y == 3);
+
+    static auto returnsTuple(int v) { return tuple(v * 2, v + 2); }
+    static int[3] returnsStaticArray(int v) { return [ v - 1, v, v + 1 ]; }
+
+    // Deconstruction.
+    tie[ x, y ] = returnsTuple(3);
+    assert(x == 6 && y == 5);
+    tie[ x, $, y ] = returnsStaticArray(x);
+    assert(x == 5 && y == 7);
+
+    // Errors with messages:
+    // Length mismatch.
+    static assert(!__traits(compiles, {
+        tie[ x, y ] = tie[ 1, 2, 3];
+    }));
+    // Left-hand side objects must be lvalues or the constant null or $.
+    static assert(!__traits(compiles, {
+        tie[ 1, x ] = tie[ y, 2 ];
+    }));
+    // Assigned value must be a tie, a std.typecons.Tuple or a static array; this is a int[]
+    static assert(!__traits(compiles, {
+        tie[ x, y ] = [ 1, 2 ]; // [ 1, 2 ] is a dynamic array.
+    }));
+    tie[ x, y ] = cast(int[2]) [ 1, 2 ]; // cast necessary
+    assert(x == 1 && y == 2);
+}
+
+/// Even complicated usages can be executed at compile-time.
+pure nothrow @safe
+unittest
+{
+    static string ctfeFunction() pure nothrow @safe
+    {
+        int[] ar = [ 1, 2, 3, 4 ];
+        string s = "Hello";
+        // Simultaneous iteration.
+        tie[ ar, s ] ~= tie[ cast(int) s.length, ", World!?"[0 .. ar[$ - 1] * 2] ];
+        assert(ar == [ 1, 2, 3, 4, 5 ] && s == "Hello, World!");
+
+        // op= with discard.
+        auto arx = [ 6, 7 ];
+        tie[ ar, $, s ] ~= tie[ arx, true, '?' ]; // `true` being discarded
+        import std.range : drop;
+        assert(ar.drop(5) == [ 6, 7 ]);
+
+        return s[0 .. $ - 1];
+    }
+    enum string hw = ctfeFunction(); // evaluated at compile-time
+    static assert(hw == "Hello, World!");
+}
+
+/// `tie` supports moving. It can be observed using an explicit destructor.
+pure nothrow @nogc @safe
+unittest
+{
+    static struct Move
+    {
+        int payload; // Some payload.
+        // Destructor to observe moving as
+        // the object will be reset to Move.init.
+        // Otherwise, the struct is too trivial
+        // and moving equals copying.
+        ~this() { }
+        // Check the value.
+        bool opEquals(int value) { return payload == value; }
+        // Check for reset.
+        bool isInit() { return payload == 0; }
+    }
+    // You can cache the result of tie[ ... ]
+    // but rvalues in right-hand side tie are moved out.
+    Move x = Move(5), y;
+    // Create the Tie
+    auto t = tie[ x, Move(2) ]; // Copies x, moves Move(2).
+
+    // Extract from the Tie #1.
+    tie[ y, $ ] = t;
+    assert(x == 5); // x was copied, not moved, to t[0] when creating t
+    assert(t[0] == 5); // t[0] was copied ...
+    assert(y == 5);  // ... to y.
+    assert(t[1] == 2); // t[1] untouched
+
+    y = Move(1);
+
+    // Extract from the Tie #2.
+    tie[ y, x ] = t;
+    assert(y == 5);  // t[0] was copied to y again.
+    assert(t[1].isInit); // t[1] moved ...
+    assert(x == 2); // ... to x
+
+    // Extract from the Tie manually.
+    import std.algorithm.mutation : move;
+    x = move(t[0]); // Move copied value manually.
+    assert(x == 5 && t[0].isInit);
+
+    // While the expression tie[ ... ] can be assigned,
+    // cached/returned results of tie[ ... ] cannot be assigned.
+    // Note that tie does not contain references and
+    // the expression
+    //     tie[ ... ] = source();
+    // does not create a Tie object; it calls opIndex(Op)Assign.
+    static assert(!__traits(compiles,
+    {
+        t = tie[ x, Move(2) ];
+    }));
+    static assert(!__traits(compiles,
+    {
+        t = t;
+    }));
+    // This is a feature. Tie does not use internal pointers,
+    // and is therefore inherently memory safe.
+
+    // Moving and static arrays.
+    assert(y == 5);
+    tie[ x ] = cast(Move[1]) [ move(y) ]; // rvalue (cast necessary)
+    assert(x == 5);
+    Move[2] marray = [ Move(3), Move(4) ];
+    tie[ x, $ ] = move(marray); // moved lvalue is being copied (see Limitations)
+    assert(x == 3);
+    // assert(marray[0].isInit); // Supposed to hold (see Limitations) ...
+    assert(marray[0] == 3); // ... instead of this.
+    // Warning: You should not rely on this behavior.
+
+    // Moving and Tuples.
+    auto mtuple = tuple(Move(2), Move(3));
+    tie[ x, $ ] = move(mtuple); // moved lvalue ...
+    assert(x == 2);
+    assert(mtuple[0].isInit); // ... from here
+    assert(mtuple[1].isInit); // destroyed
+    // Tuples do not support piecewise move extraction
+}
+
+/// `tie` supports non copyable and must-initialize types.
+pure nothrow @nogc @safe
+unittest
+{
+    import std.algorithm.mutation : move;
+
+    static struct NoCopy
+    {
+        int payload; // some payload
+        ~this() { } // destructor to observe moving
+        this(int value) { payload = value; } // necessary because must-initialize
+        bool opEquals(int value) { return payload == value; }
+        bool isInit() { return payload == 0; }
+        void opOpAssign(string op : "+")(NoCopy rhs) { payload += rhs.payload; }
+    @disable:
+        this(this); // make it non copyable
+        this(); // make it must-initialize
+    }
+
+    NoCopy nc = NoCopy(1), nc2 = NoCopy(3);
+
+    // This is copying assignment and therefore not allowed:
+    static assert(!__traits(compiles,
+    {
+        tie[ nc ] = tie[ nc ];
+    }));
+
+    // These are allowed moving assignments:
+    // right-hand side is rvalue
+    tie[ nc ] = tie[ NoCopy(2) ];
+    assert(nc == 2);
+    // right-hand side moved explicitly
+    tie[ nc ] = tie[ move(nc2) ];
+    assert(nc == 3);
+    // content of nc2 reset to init
+    assert(nc2.isInit);
+
+    nc2 = NoCopy(1);
+    // This is not allowed copying assignment ...
+    static assert(!__traits(compiles,
+    {
+        nc += nc2;
+    }));
+    // ... so it neither works in `tie`.
+    static assert(!__traits(compiles,
+    {
+        tie[ nc ] += tie[ nc2 ];
+    }));
+    // You need move-assignment.
+    tie[ nc ] += tie[ move(nc2) ];
+    assert(nc.payload == 4 && nc2.isInit);
+    nc2 = NoCopy(3);
+
+    // This is in no way real swapping:
+    static assert(!__traits(compiles,
+    {
+        tie[ nc, nc2 ] = tie[ nc2, nc ];
+    }));
+    // This roughly is, ...
+    tie[ nc, nc2 ] = tie[ move(nc2), move(nc) ];
+    assert(nc == 3 && nc2 == 4);
+    // ... but ...
+    import std.algorithm.mutation : swap;
+    swap(nc, nc2);
+    assert(nc == 4 && nc2 == 3);
+    // ... is preferred.
+
+    // Also works when NoCopy is inside a static array.
+    static NoCopy[2] f() { return [ NoCopy(1), NoCopy(2) ]; }
+    tie[ nc ] = cast(NoCopy[1]) [ move(nc2) ];
+    assert(nc == 3 && nc2.isInit);
+    tie[ nc, nc2 ] = f();
+    assert(nc == 1 && nc2 == 2);
+
+    NoCopy[2] ncarray = [ NoCopy(1), NoCopy(2) ];
+    static assert(!__traits(compiles, {
+        tie[ nc, $ ] = ncarray; // this copies!
+    }));
+    // These are supposed to work; see Limitations.
+    static assert(!__traits(compiles, {
+        tie[ nc, $ ] = move(ncarray);
+    }));
+    static assert(!__traits(compiles, {
+        tie[ nc ] = Tuple!NoCopy(NoCopy(2));
+    }));
+    static assert(!__traits(compiles, {
+        tie[ nc ] = tuple(NoCopy(2));
+    }));
 }
 
 // used by both Rebindable and UnqualRef
