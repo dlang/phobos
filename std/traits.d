@@ -8341,6 +8341,17 @@ template getSymbolsByUDA(alias symbol, alias attribute)
     static assert(res[0].stringof == "a");
 }
 
+// #18884: getSymbolsByUDA fails on AliasSeq members
+@safe unittest
+{
+    struct X
+    {
+        alias A = AliasSeq!(ulong, uint);
+    }
+
+    static assert(is(getSymbolsByUDA!(X, X) == AliasSeq!()));
+}
+
 // #18624: getSymbolsByUDA produces wrong result if one of the symbols having the UDA is a function
 @safe unittest
 {
@@ -8374,7 +8385,7 @@ private template getSymbolsByUDAImpl(alias symbol, alias attribute, names...)
         }
         else
         {
-            alias member = Alias!(__traits(getMember, symbol, names[0]));
+            alias member = AliasSeq!(__traits(getMember, symbol, names[0]));
 
             // Filtering not compiled members such as alias of basic types.
             static if (!__traits(compiles, hasUDA!(member, attribute)))
