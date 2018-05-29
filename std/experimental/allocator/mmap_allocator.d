@@ -34,9 +34,14 @@ struct MmapAllocator
             import core.sys.posix.sys.mman : MAP_ANON, PROT_READ,
                 PROT_WRITE, MAP_PRIVATE, MAP_FAILED;
             if (!bytes) return null;
-            auto p = (() @trusted => pureMmap(null, bytes, PROT_READ | PROT_WRITE,
+            const errnosave = (() @trusted => fakePureErrno())(); // For purity revert changes to errno.
+            auto p = (() @trusted => fakePureMmap(null, bytes, PROT_READ | PROT_WRITE,
                 MAP_PRIVATE | MAP_ANON, -1, 0))();
-            if (p is MAP_FAILED) return null;
+            if (p is MAP_FAILED)
+            {
+                (() @trusted => fakePureErrno() = errnosave)(); // errno only changed on MAP_FAILED.
+                return null;
+            }
             return (() @trusted => p[0 .. bytes])();
         }
 
@@ -44,7 +49,8 @@ struct MmapAllocator
         pure nothrow @nogc
         bool deallocate(void[] b) shared const
         {
-            if (b.ptr) pureMunmap(b.ptr, b.length) == 0 || assert(0);
+            // Because we assert(0) on error we don't need to reset errno for purity.
+            if (b.ptr) fakePureMunmap(b.ptr, b.length) == 0 || assert(0);
             return true;
         }
     }
@@ -78,28 +84,10 @@ struct MmapAllocator
 version(Posix)
 extern (C) private pure @system @nogc nothrow
 {
-    public import core.sys.posix.sys.types : off_t;
+    import core.sys.posix.sys.types : off_t;
     pragma(mangle, "fakePureErrnoImpl") ref int fakePureErrno();
     pragma(mangle, "mmap") void* fakePureMmap(void*, size_t, int, int, int, off_t);
     pragma(mangle, "munmap") int fakePureMunmap(void*, size_t);
-}
-
-version(Posix)
-private void* pureMmap(void* a, size_t b, int c, int d, int e, off_t f) @trusted pure @nogc nothrow
-{
-    const errnosave = fakePureErrno();
-    void* ret = fakePureMmap(a, b, c, d, e, f);
-    fakePureErrno() = errnosave;
-    return ret;
-}
-
-version(Posix)
-private int pureMunmap(void* a, size_t b) @trusted pure @nogc nothrow
-{
-    const errnosave = fakePureErrno();
-    const ret = fakePureMunmap(a, b);
-    fakePureErrno() = errnosave;
-    return ret;
 }
 
 pure nothrow @safe @nogc unittest
