@@ -56,17 +56,22 @@ struct MmapAllocator
     }
     else version(Windows)
     {
-        import core.sys.windows.windows : VirtualAlloc, VirtualFree, MEM_COMMIT,
-            PAGE_READWRITE, MEM_RELEASE;
+        import core.sys.windows.windows : MEM_COMMIT, PAGE_READWRITE, MEM_RELEASE;
 
         /// Allocator API.
         pure nothrow @nogc @safe
         void[] allocate(size_t bytes) shared const
         {
             if (!bytes) return null;
+            // For purity ensure last-error does not visibly change.
+            const lastErrorSave = (() @trusted => GetLastError())();
             auto p = (() @trusted => VirtualAlloc(null, bytes, MEM_COMMIT, PAGE_READWRITE))();
             if (p == null)
+            {
+                // Last-error only changed if allocation failed.
+                (() @trusted => SetLastError(lastErrorSave))();
                 return null;
+            }
             return (() @trusted => p[0 .. bytes])();
         }
 
@@ -74,6 +79,8 @@ struct MmapAllocator
         pure nothrow @nogc
         bool deallocate(void[] b) shared const
         {
+            const lastErrorSave = GetLastError(); // For purity ensure last-error does not visibly change.
+            scope(exit) SetLastError(lastErrorSave);
             return b.ptr is null || VirtualFree(b.ptr, 0, MEM_RELEASE) != 0;
         }
     }
@@ -88,6 +95,21 @@ extern (C) private pure @system @nogc nothrow
     pragma(mangle, "fakePureErrnoImpl") ref int fakePureErrno();
     pragma(mangle, "mmap") void* fakePureMmap(void*, size_t, int, int, int, off_t);
     pragma(mangle, "munmap") int fakePureMunmap(void*, size_t);
+}
+
+// Pure wrappers around VirtualAlloc/VirtualFree for use here only. Their use is sound
+// because when we call them we ensure that last-error is not visibly changed.
+version(Windows)
+extern (Windows) private pure @system @nogc nothrow
+{
+    import core.sys.windows.basetsd : SIZE_T;
+    import core.sys.windows.windef : BOOL, DWORD;
+    import core.sys.windows.winnt : LPVOID, PVOID;
+
+    DWORD GetLastError();
+    void SetLastError(DWORD);
+    PVOID VirtualAlloc(PVOID, SIZE_T, DWORD, DWORD);
+    BOOL VirtualFree(PVOID, SIZE_T, DWORD);
 }
 
 pure nothrow @safe @nogc unittest
