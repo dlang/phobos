@@ -73,17 +73,9 @@ struct MmapAllocator
     }
 }
 
-extern (C) private @system @nogc nothrow
-{
-    ref int fakePureErrnoImpl()
-    {
-        import core.stdc.errno : errno;
-        return errno();
-    }
-}
-
 // pure wrappers around `mmap` and `munmap` because they are used here locally
 // solely to perform allocation and deallocation which in this case is `pure`
+version(Posix)
 extern (C) private pure @system @nogc nothrow
 {
     public import core.sys.posix.sys.types : off_t;
@@ -92,6 +84,7 @@ extern (C) private pure @system @nogc nothrow
     pragma(mangle, "munmap") int fakePureMunmap(void*, size_t);
 }
 
+version(Posix)
 private void* pureMmap(void* a, size_t b, int c, int d, int e, off_t f) @trusted pure @nogc nothrow
 {
     const errnosave = fakePureErrno();
@@ -100,6 +93,7 @@ private void* pureMmap(void* a, size_t b, int c, int d, int e, off_t f) @trusted
     return ret;
 }
 
+version(Posix)
 private int pureMunmap(void* a, size_t b) @trusted pure @nogc nothrow
 {
     const errnosave = fakePureErrno();
