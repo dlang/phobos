@@ -2091,16 +2091,17 @@ enum isTuple(T) = __traits(compiles,
  *
  *  `tie` supports piecewise move extraction:
  *  ---
- *  auto t = tie[ move(x), y ];
+ *  auto t = tie[ move(x), move(y) ];
  *  tie[ a, $ ] = t; // extract x; t[0] reset to .init
- *  tie[ $, b ] = t; // copy y; t[1] untouched
+ *  tie[ $, b ] = t; // extract y; t[1] reset to .init
  *  ---
  *
  *  Limitations:
- *  `tie` cannot be used to declare variables.
- *  Deconstruction from moved lvalue of static array of non-copyable types does not compile
- *  because of how $(REF move, std, algorithm, mutation) is implemented for static arrays,
- *  it copies their contents; rvalue static arrays work fine.
+ *      Due to language limitations, `tie` cannot be used to declare variables.
+ *
+ *      Deconstruction from a moved lvalue of static array containing non-copyable values does not compile
+ *      because of how $(REF move, std, algorithm, mutation) is implemented for static arrays:
+ *      it copies their contents; rvalue static arrays work fine.
  */
 struct tie
 {
@@ -2119,29 +2120,28 @@ static:
     alias opIndexAssign = opIndexOpAssign;
 
     /// ditto
-    void opIndexOpAssign(string op = "", T, Ts...)(auto ref T t, auto ref Ts xs)
+    void opIndexOpAssign(string op = "", T, LhsTypes...)(auto ref T t, auto ref LhsTypes xs)
     {
-        enum isTie = is(T == Tie!X, X...);
+        enum isTie = is(T == Tie!(wasRvalues, RhsTypes), bool[] wasRvalues, RhsTypes...);
         enum isStaticArray = is(T == E[n], E, size_t n);
         static assert(isTie || isTuple!T || isStaticArray,
             "Assigned value must be a tie, a std.typecons.Tuple or a static array; this is a " ~ T.stringof);
         static assert(t.length == xs.length, "Length mismatch.");
 
-        import std.algorithm.mutation : move, swap;
+        import std.algorithm.mutation : move;
         static foreach (i, x; xs)
         static if (!is(typeof(x) : typeof(null)))
         {
             import std.traits : isMutable;
             static assert(__traits(isRef, x),
                 "Left-hand side objects must be lvalues or the constant null or $.");
-            static if (isTie && t.rvalues[i] || isStaticArray && !__traits(isRef, t) && isMutable!E)
-            {{
-                // Cannot do: x op= move(t[i]);
-                // Error: copying move(t.__values_field_0) into allocated
-                // memory escapes a reference to parameter variable t
+            // Cannot do: mixin("x " ~ op ~ "= move(t[i]);");
+            // Error: copying move(t.__values_field_0) into allocated
+            // memory escapes a reference to parameter variable t
+            static if (isTie && wasRvalues[i] || isStaticArray && !__traits(isRef, t) && isMutable!E)
                 mixin("x " ~ op ~ "= (ref x){ return move(x); }(t[i]);");
-            }}
-            else mixin("x " ~ op ~ "= t[i];");
+            else
+                mixin("x " ~ op ~ "= t[i];");
         }
     }
 
@@ -2154,7 +2154,6 @@ private:
     {
         static assert(rv.length == Types.length,
             "critical: length mismatch in Tie; this is a bug");
-        alias rvalues = rv;
         Types values;
         alias values this;
     pure nothrow @nogc @safe @disable:
@@ -2212,7 +2211,7 @@ unittest
     // Errors with messages:
     // Length mismatch.
     static assert(!__traits(compiles, {
-        tie[ x, y ] = tie[ 1, 2, 3];
+        tie[ x, y ] = tie[ 1, 2, 3 ];
     }));
     // Left-hand side objects must be lvalues or the constant null or $.
     static assert(!__traits(compiles, {
@@ -2250,7 +2249,41 @@ unittest
     static assert(hw == "Hello, World!");
 }
 
+/// While the expression `tie[ ... ]` can be assigned,
+/// cached/returned results of `tie[ ... ]` cannot be assigned.
+/// Note that `tie` does not contain references and
+/// the expression `tie[ ... ] = source()`
+/// does not create a `Tie` object; it calls `opIndexAssign`
+/// which is special syntax.
+///
+/// In fact, assignment is explicitly disallowed because it is
+/// ambiguous what it means.
+pure nothrow @nogc @safe
+unittest
+{
+    int x, y;
+    auto t = tie[ x, y ];
+    static assert(!__traits(compiles,
+    {
+        t = tie[ y, x ];
+    }));
+    static assert(!__traits(compiles,
+    {
+        t = t;
+    }));
+}
+
 /// `tie` supports moving. It can be observed using an explicit destructor.
+/// A right-hand side `tie[ ... ]` can be cached and used multiple times.
+/// Note that it is not a `Tuple` and behaves differently:
+///
+/// On extraction, lvalues in the cached `tie` will be copied,
+/// while rvalues will be moved. This is the most efficient behaviour
+/// for the `tie[ ... ] = tie[ ... ]` case and necessary to support non-copyable types.
+///
+/// You can move from lvalue positions
+/// using $(REF move, std, algorithm, mutation), and you can copy from
+/// rvalue positions just by indexing.
 pure nothrow @nogc @safe
 unittest
 {
@@ -2267,53 +2300,39 @@ unittest
         // Check for reset.
         bool isInit() { return payload == 0; }
     }
-    // You can cache the result of tie[ ... ]
-    // but rvalues in right-hand side tie are moved out.
+    // You can cache the result of tie[ ... ].
     Move x = Move(5), y;
-    // Create the Tie
-    auto t = tie[ x, Move(2) ]; // Copies x, moves Move(2).
+    // Create and cache a Tie.
+    auto t = tie[ x, Move(2), Move(3) ]; // Copies x, moves Move(2) and Move(3) when extracted.
 
     // Extract from the Tie #1.
-    tie[ y, $ ] = t;
+    tie[ y, $, $ ] = t;
     assert(x == 5); // x was copied, not moved, to t[0] when creating t
     assert(t[0] == 5); // t[0] was copied ...
     assert(y == 5);  // ... to y.
     assert(t[1] == 2); // t[1] untouched
+    assert(t[2] == 3); // t[2] untouched
 
-    y = Move(1);
+    x = t[2]; // Copying from rvalue position.
+    assert(x == 3);
+    assert(t[2] == 3); // t[2] untouched
 
     // Extract from the Tie #2.
-    tie[ y, x ] = t;
-    assert(y == 5);  // t[0] was copied to y again.
+    tie[ x, y, $ ] = t;
+    assert(x == 5);  // t[0] was copied to y again.
     assert(t[1].isInit); // t[1] moved ...
-    assert(x == 2); // ... to x
+    assert(y == 2); // ... to x
+    assert(t[2] == 3); // t[2] still untouched
 
     // Extract from the Tie manually.
     import std.algorithm.mutation : move;
     x = move(t[0]); // Move copied value manually.
     assert(x == 5 && t[0].isInit);
 
-    // While the expression tie[ ... ] can be assigned,
-    // cached/returned results of tie[ ... ] cannot be assigned.
-    // Note that tie does not contain references and
-    // the expression
-    //     tie[ ... ] = source();
-    // does not create a Tie object; it calls opIndex(Op)Assign.
-    static assert(!__traits(compiles,
-    {
-        t = tie[ x, Move(2) ];
-    }));
-    static assert(!__traits(compiles,
-    {
-        t = t;
-    }));
-    // This is a feature. Tie does not use internal pointers,
-    // and is therefore inherently memory safe.
-
     // Moving and static arrays.
-    assert(y == 5);
+    assert(y == 2);
     tie[ x ] = cast(Move[1]) [ move(y) ]; // rvalue (cast necessary)
-    assert(x == 5);
+    assert(x == 2 && y.isInit);
     Move[2] marray = [ Move(3), Move(4) ];
     tie[ x, $ ] = move(marray); // moved lvalue is being copied (see Limitations)
     assert(x == 3);
@@ -2364,11 +2383,11 @@ unittest
     // right-hand side moved explicitly
     tie[ nc ] = tie[ move(nc2) ];
     assert(nc == 3);
-    // content of nc2 reset to init
+    // content of nc2 reset to NoCopy.init
     assert(nc2.isInit);
 
     nc2 = NoCopy(1);
-    // This is not allowed copying assignment ...
+    // This is an illegal copying assignment ...
     static assert(!__traits(compiles,
     {
         nc += nc2;
