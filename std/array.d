@@ -2092,20 +2092,16 @@ if (isInputRange!RoR &&
 
 
 /++
-    Replace occurrences of `from` with `to` in `subject` in a new
-    array. If `sink` is defined, then output the new array into
-    `sink`.
+    Replace occurrences of `from` with `to` in `subject` in a new array.
 
     Params:
-        sink = an $(REF_ALTTEXT output range, isOutputRange, std,range,primitives)
         subject = the array to scan
         from = the item to replace
         to = the item to replace all instances of `from` with
 
     Returns:
-        If `sink` isn't defined, a new array without changing the
-        contents of `subject`, or the original array if no match
-        is found.
+        A new array without changing the contents of `subject`, or the original
+        array if no match is found.
 
     See_Also:
         $(REF substitute, std,algorithm,iteration) for a lazy replace.
@@ -2171,7 +2167,19 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
             .replace([[0], [1, 2]], [[4]]) == [[4], [0], [3], [1, 2], [4]]);
 }
 
-/// ditto
+/++
+    Replace occurrences of `from` with `to` in `subject` and output the result into
+    `sink`.
+
+    Params:
+        sink = an $(REF_ALTTEXT output range, isOutputRange, std,range,primitives)
+        subject = the array to scan
+        from = the item to replace
+        to = the item to replace all instances of `from` with
+
+    See_Also:
+        $(REF substitute, std,algorithm,iteration) for a lazy replace.
+ +/
 void replaceInto(E, Sink, R1, R2)(Sink sink, E[] subject, R1 from, R2 to)
 if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
     && isForwardRange!R1 && isForwardRange!R2
