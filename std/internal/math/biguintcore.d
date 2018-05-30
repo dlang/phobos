@@ -206,13 +206,13 @@ enum size_t FASTDIVLIMIT = 100; // crossover to recursive division
 // These constants are used by shift operations
 static if (BigDigit.sizeof == int.sizeof)
 {
-    enum { LG2BIGDIGITBITS = 5, BIGDIGITSHIFTMASK = 31 };
+    enum { LG2BIGDIGITBITS = 5, BIGDIGITSHIFTMASK = 31 }
     alias BIGHALFDIGIT = ushort;
 }
 else static if (BigDigit.sizeof == long.sizeof)
 {
     alias BIGHALFDIGIT = uint;
-    enum { LG2BIGDIGITBITS = 6, BIGDIGITSHIFTMASK = 63 };
+    enum { LG2BIGDIGITBITS = 6, BIGDIGITSHIFTMASK = 63 }
 }
 else static assert(0, "Unsupported BigDigit size");
 
