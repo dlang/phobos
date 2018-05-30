@@ -536,11 +536,11 @@ version(USE_SSSE3)
     // Offset into stack (see below)
     version(_32Bit)
     {
-        private enum { STATE_OFS = 4, WI_PLUS_KI_PTR = 8, WI_PTR = 72 };
+        private enum { STATE_OFS = 4, WI_PLUS_KI_PTR = 8, WI_PTR = 72 }
     }
     version(_64Bit)
     {
-        private enum { WI_PLUS_KI_PTR = 0 };
+        private enum { WI_PLUS_KI_PTR = 0 }
     }
 
     /** The prologue sequence. */

@@ -2791,13 +2791,13 @@ if (fun.length >= 1)
     Once S has been determined, then `S s = e;` and `s = f(s, e);`
     must both be legal.
 
-    If `r` is empty, an `Exception` is thrown.
-
     Params:
         r = an iterable value as defined by `isIterable`
 
     Returns:
         the final result of the accumulator applied to the iterable
+
+    Throws: `Exception` if `r` is empty
     +/
     auto reduce(R)(R r)
     if (isIterable!R)
