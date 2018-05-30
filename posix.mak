@@ -82,7 +82,7 @@ ROOT_OF_THEM_ALL = generated
 ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
 DUB=dub
 TOOLS_DIR=../tools
-DSCANNER_HASH=032ac7e3ed5ea7df5e097badcfcd91d3cb8f18da
+DSCANNER_HASH=39496ede1a2c00674c4e04b6513be7cc9aee6cef
 DSCANNER_DIR=$(ROOT_OF_THEM_ALL)/dscanner-$(DSCANNER_HASH)
 
 # Set DRUNTIME name and full path
