@@ -229,15 +229,15 @@ Returns:
     a `dchar[]`, `const(dchar)[]`, or `immutable(dchar)[]` depending on the constness of
     the input.
 */
-@trusted ElementType!String[] array(String)(scope String str)
+ElementType!String[] array(String)(scope String str)
 if (isNarrowString!String)
 {
     import std.utf : toUTF32;
-    /* This function is @trusted because the following cast
-     * is unsafe - converting a dstring[] to a dchar[], for example.
-     * Our special knowledge of toUTF32 is needed to know the cast is safe.
+    auto temp = str.toUTF32;
+    /* Unsafe cast. Allowed because toUTF32 makes a new array
+       and copies all the elements.
      */
-    return cast(typeof(return)) str.toUTF32;
+    return () @trusted { return cast(ElementType!String[]) temp; } ();
 }
 
 ///

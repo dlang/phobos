@@ -1550,14 +1550,14 @@ do
         //  update  a, b, v, w, and x
         if (fu <= fx)
         {
-            u < x ? b : a = x;
+            (u < x ? b : a) = x;
             v = w; fv = fw;
             w = x; fw = fx;
             x = u; fx = fu;
         }
         else
         {
-            u < x ? a : b = u;
+            (u < x ? a : b) = u;
             if (fu <= fw || w == x)
             {
                 v = w; fv = fw;

@@ -454,11 +454,6 @@ function. If `obj` is a `Tuple`, the individual members are
 accessible with the syntax `obj[0]` for the first field, `obj[1]`
 for the second, and so on.
 
-The choice of zero-based indexing instead of one-base indexing was
-motivated by the ability to use value tuples with various compile-time
-loop constructs (e.g. $(REF AliasSeq, std,meta) iteration), all of which use
-zero-based indexing.
-
 See_Also: $(LREF tuple).
 
 Params:
@@ -555,21 +550,21 @@ if (distinctFieldNames!(Specs))
     (ref Tup1 tup1, ref Tup2 tup2)
     {
         static assert(tup1.field.length == tup2.field.length);
-        foreach (i, _; Tup1.Types)
-        {
+        static foreach (i; 0 .. Tup1.Types.length)
+        {{
             auto lhs = typeof(tup1.field[i]).init;
             auto rhs = typeof(tup2.field[i]).init;
             static if (op == "=")
                 lhs = rhs;
             else
                 auto result = mixin("lhs "~op~" rhs");
-        }
+        }}
     }));
 
     enum areBuildCompatibleTuples(Tup1, Tup2) = isTuple!Tup2 && is(typeof(
     {
         static assert(Tup1.Types.length == Tup2.Types.length);
-        static foreach (i, _; Tup1.Types)
+        static foreach (i; 0 .. Tup1.Types.length)
             static assert(isBuildable!(Tup1.Types[i], Tup2.Types[i]));
     }));
 
@@ -648,7 +643,7 @@ if (distinctFieldNames!(Specs))
             @property
             ref inout(Tuple!Types) _Tuple_super() inout @trusted
             {
-                foreach (i, _; Types)   // Rely on the field layout
+                static foreach (i; 0 .. Types.length)   // Rely on the field layout
                 {
                     static assert(typeof(return).init.tupleof[i].offsetof ==
                                                        expand[i].offsetof);
@@ -698,7 +693,7 @@ if (distinctFieldNames!(Specs))
         this(U, size_t n)(U[n] values)
         if (n == Types.length && allSatisfy!(isBuildableFrom!U, Types))
         {
-            foreach (i, _; Types)
+            static foreach (i; 0 .. Types.length)
             {
                 field[i] = values[i];
             }
@@ -778,7 +773,7 @@ if (distinctFieldNames!(Specs))
         bool opEquals(R...)(auto ref R rhs)
         if (R.length > 1 && areCompatibleTuples!(typeof(this), Tuple!R, "=="))
         {
-            static foreach (i, _; Types)
+            static foreach (i; 0 .. Types.length)
                 if (field[i] != rhs[i])
                     return false;
 
@@ -814,7 +809,7 @@ if (distinctFieldNames!(Specs))
         int opCmp(R)(R rhs)
         if (areCompatibleTuples!(typeof(this), R, "<"))
         {
-            foreach (i, Unused; Types)
+            static foreach (i; 0 .. Types.length)
             {
                 if (field[i] != rhs.field[i])
                 {
@@ -828,7 +823,7 @@ if (distinctFieldNames!(Specs))
         int opCmp(R)(R rhs) const
         if (areCompatibleTuples!(typeof(this), R, "<"))
         {
-            foreach (i, Unused; Types)
+            static foreach (i; 0 .. Types.length)
             {
                 if (field[i] != rhs.field[i])
                 {
@@ -1194,137 +1189,150 @@ if (distinctFieldNames!(Specs))
             return h;
         }
 
-        ///
-        template toString()
+        /**
+         * Converts to string.
+         *
+         * Returns:
+         *     The string representation of this `Tuple`.
+         */
+        string toString()() const
         {
-            /**
-             * Converts to string.
-             *
-             * Returns:
-             *     The string representation of this `Tuple`.
-             */
-            string toString()() const
-            {
-                import std.array : appender;
-                auto app = appender!string();
-                this.toString((const(char)[] chunk) => app ~= chunk);
-                return app.data;
-            }
+            import std.array : appender;
+            auto app = appender!string();
+            this.toString((const(char)[] chunk) => app ~= chunk);
+            return app.data;
+        }
 
-            import std.format : FormatSpec;
+        import std.format : FormatSpec;
 
-            /**
-             * Formats `Tuple` with either `%s`, `%(inner%)` or `%(inner%|sep%)`.
-             *
-             * $(TABLE2 Formats supported by Tuple,
-             * $(THEAD Format, Description)
-             * $(TROW $(P `%s`), $(P Format like `Tuple!(types)(elements formatted with %s each)`.))
-             * $(TROW $(P `%(inner%)`), $(P The format `inner` is applied the expanded `Tuple`, so
-             *      it may contain as many formats as the `Tuple` has fields.))
-             * $(TROW $(P `%(inner%|sep%)`), $(P The format `inner` is one format, that is applied
-             *      on all fields of the `Tuple`. The inner format must be compatible to all
-             *      of them.)))
-             * ---
-             *  Tuple!(int, double)[3] tupList = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
-             *
-             *  // Default format
-             *  assert(format("%s", tuple("a", 1)) == `Tuple!(string, int)("a", 1)`);
-             *
-             *  // One Format for each individual component
-             *  assert(format("%(%#x v %.4f w %#x%)", tuple(1, 1.0, 10))         == `0x1 v 1.0000 w 0xa`);
-             *  assert(format(  "%#x v %.4f w %#x"  , tuple(1, 1.0, 10).expand)  == `0x1 v 1.0000 w 0xa`);
-             *
-             *  // One Format for all components
-             *  assert(format("%(>%s<%| & %)", tuple("abc", 1, 2.3, [4, 5])) == `>abc< & >1< & >2.3< & >[4, 5]<`);
-             *
-             *  // Array of Tuples
-             *  assert(format("%(%(f(%d) = %.1f%);  %)", tupList) == `f(1) = 1.0;  f(2) = 4.0;  f(3) = 9.0`);
-             *
-             *
-             *  // Error: %( %) missing.
-             *  assertThrown!FormatException(
-             *      format("%d, %f", tuple(1, 2.0)) == `1, 2.0`
-             *  );
-             *
-             *  // Error: %( %| %) missing.
-             *  assertThrown!FormatException(
-             *      format("%d", tuple(1, 2)) == `1, 2`
-             *  );
-             *
-             *  // Error: %d inadequate for double.
-             *  assertThrown!FormatException(
-             *      format("%(%d%|, %)", tuple(1, 2.0)) == `1, 2.0`
-             *  );
-             * ---
-             */
-            void toString(DG)(scope DG sink) const
-            {
-                auto f = FormatSpec!char();
-                toString(sink, f);
-            }
+        /**
+         * Formats `Tuple` with either `%s`, `%(inner%)` or `%(inner%|sep%)`.
+         *
+         * $(TABLE2 Formats supported by Tuple,
+         * $(THEAD Format, Description)
+         * $(TROW $(P `%s`), $(P Format like `Tuple!(types)(elements formatted with %s each)`.))
+         * $(TROW $(P `%(inner%)`), $(P The format `inner` is applied the expanded `Tuple`$(COMMA) so
+         *      it may contain as many formats as the `Tuple` has fields.))
+         * $(TROW $(P `%(inner%|sep%)`), $(P The format `inner` is one format$(COMMA) that is applied
+         *      on all fields of the `Tuple`. The inner format must be compatible to all
+         *      of them.)))
+         *
+         * Params:
+         *     sink = A `char` accepting delegate
+         *     fmt = A $(REF FormatSpec, std,format)
+         */
+        void toString(DG)(scope DG sink) const
+        {
+            auto f = FormatSpec!char();
+            toString(sink, f);
+        }
 
-            /// ditto
-            void toString(DG, Char)(scope DG sink, const ref FormatSpec!Char fmt) const
+        /// ditto
+        void toString(DG, Char)(scope DG sink, const ref FormatSpec!Char fmt) const
+        {
+            import std.format : formatElement, formattedWrite, FormatException;
+            if (fmt.nested)
             {
-                import std.format : formatElement, formattedWrite, FormatException;
-                if (fmt.nested)
+                if (fmt.sep)
                 {
-                    if (fmt.sep)
-                    {
-                        foreach (i, Type; Types)
-                        {
-                            static if (i > 0)
-                            {
-                                sink(fmt.sep);
-                            }
-                            // TODO: Change this once formattedWrite() works for shared objects.
-                            static if (is(Type == class) && is(Type == shared))
-                            {
-                                sink(Type.stringof);
-                            }
-                            else
-                            {
-                                formattedWrite(sink, fmt.nested, this.field[i]);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        formattedWrite(sink, fmt.nested, staticMap!(sharedToString, this.expand));
-                    }
-                }
-                else if (fmt.spec == 's')
-                {
-                    enum header = Unqual!(typeof(this)).stringof ~ "(",
-                         footer = ")",
-                         separator = ", ";
-                    sink(header);
                     foreach (i, Type; Types)
                     {
                         static if (i > 0)
                         {
-                            sink(separator);
+                            sink(fmt.sep);
                         }
-                        // TODO: Change this once formatElement() works for shared objects.
+                        // TODO: Change this once formattedWrite() works for shared objects.
                         static if (is(Type == class) && is(Type == shared))
                         {
                             sink(Type.stringof);
                         }
                         else
                         {
-                            FormatSpec!Char f;
-                            formatElement(sink, field[i], f);
+                            formattedWrite(sink, fmt.nested, this.field[i]);
                         }
                     }
-                    sink(footer);
                 }
                 else
                 {
-                    throw new FormatException(
-                        "Expected '%s' or '%(...%)' or '%(...%|...%)' format specifier for type '" ~
-                            Unqual!(typeof(this)).stringof ~ "', not '%" ~ fmt.spec ~ "'.");
+                    formattedWrite(sink, fmt.nested, staticMap!(sharedToString, this.expand));
                 }
             }
+            else if (fmt.spec == 's')
+            {
+                enum header = Unqual!(typeof(this)).stringof ~ "(",
+                     footer = ")",
+                     separator = ", ";
+                sink(header);
+                foreach (i, Type; Types)
+                {
+                    static if (i > 0)
+                    {
+                        sink(separator);
+                    }
+                    // TODO: Change this once formatElement() works for shared objects.
+                    static if (is(Type == class) && is(Type == shared))
+                    {
+                        sink(Type.stringof);
+                    }
+                    else
+                    {
+                        FormatSpec!Char f;
+                        formatElement(sink, field[i], f);
+                    }
+                }
+                sink(footer);
+            }
+            else
+            {
+                throw new FormatException(
+                    "Expected '%s' or '%(...%)' or '%(...%|...%)' format specifier for type '" ~
+                        Unqual!(typeof(this)).stringof ~ "', not '%" ~ fmt.spec ~ "'.");
+            }
+        }
+
+        ///
+        static if (Types.length == 0)
+        @safe unittest
+        {
+            import std.format : format;
+
+            Tuple!(int, double)[3] tupList = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
+
+            // Default format
+            assert(format("%s", tuple("a", 1)) == `Tuple!(string, int)("a", 1)`);
+
+            // One Format for each individual component
+            assert(format("%(%#x v %.4f w %#x%)", tuple(1, 1.0, 10))         == `0x1 v 1.0000 w 0xa`);
+            assert(format(  "%#x v %.4f w %#x"  , tuple(1, 1.0, 10).expand)  == `0x1 v 1.0000 w 0xa`);
+
+            // One Format for all components
+            assert(format("%(>%s<%| & %)", tuple("abc", 1, 2.3, [4, 5])) == `>abc< & >1< & >2.3< & >[4, 5]<`);
+
+            // Array of Tuples
+            assert(format("%(%(f(%d) = %.1f%);  %)", tupList) == `f(1) = 1.0;  f(2) = 4.0;  f(3) = 9.0`);
+        }
+
+        ///
+        static if (Types.length == 0)
+        @safe unittest
+        {
+            import std.exception : assertThrown;
+            import std.format : format, FormatException;
+
+            // Error: %( %) missing.
+            assertThrown!FormatException(
+                format("%d, %f", tuple(1, 2.0)) == `1, 2.0`
+            );
+
+            // Error: %( %| %) missing.
+            assertThrown!FormatException(
+                format("%d", tuple(1, 2)) == `1, 2`
+            );
+
+            // Error: %d inadequate for double
+            assertThrown!FormatException(
+                format("%(%d%|, %)", tuple(1, 2.0)) == `1, 2.0`
+            );
         }
     }
 }
@@ -1936,39 +1944,8 @@ private template ReverseTupleSpecs(T...)
     import std.format : format, FormatException;
     import std.exception : assertThrown;
 
-    // enum tupStr = tuple(1, 1.0).toString; // toString is *impure*.
+    //enum tupStr = tuple(1, 1.0).toString; // toString is *impure*.
     //static assert(tupStr == `Tuple!(int, double)(1, 1)`);
-
-    Tuple!(int, double)[3] tupList = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
-
-    // Default format
-    assert(format("%s", tuple("a", 1)) == `Tuple!(string, int)("a", 1)`);
-
-    // One Format for each individual component
-    assert(format("%(%#x v %.4f w %#x%)", tuple(1, 1.0, 10))         == `0x1 v 1.0000 w 0xa`);
-    assert(format(  "%#x v %.4f w %#x"  , tuple(1, 1.0, 10).expand)  == `0x1 v 1.0000 w 0xa`);
-
-    // One Format for all components
-    assert(format("%(>%s<%| & %)", tuple("abc", 1, 2.3, [4, 5])) == `>abc< & >1< & >2.3< & >[4, 5]<`);
-
-    // Array of Tuples
-    assert(format("%(%(f(%d) = %.1f%);  %)", tupList) == `f(1) = 1.0;  f(2) = 4.0;  f(3) = 9.0`);
-
-
-    // Error: %( %) missing.
-    assertThrown!FormatException(
-        format("%d, %f", tuple(1, 2.0)) == `1, 2.0`
-    );
-
-    // Error: %( %| %) missing.
-    assertThrown!FormatException(
-        format("%d", tuple(1, 2)) == `1, 2`
-    );
-
-    // Error: %d inadequate for double
-    assertThrown!FormatException(
-        format("%(%d%|, %)", tuple(1, 2.0)) == `1, 2.0`
-    );
 }
 
 // Issue 17803, parte uno
@@ -7486,6 +7463,12 @@ struct Typedef(T, T init = T.init, string cookie=null)
 {
     private T Typedef_payload = init;
 
+    // issue 18415 : prevent default construction if original type does too.
+    static if ((is(T == struct) || is(T == union)) && !is(typeof({T t;})))
+    {
+        @disable this();
+    }
+
     this(T init)
     {
         Typedef_payload = init;
@@ -7712,6 +7695,14 @@ template TypedefType(T)
 
     Typedef!Dollar3 drange3;
     assert(drange3[$] == 123);
+}
+
+@safe @nogc pure nothrow unittest // Bugzilla 18415
+{
+    struct NoDefCtorS{@disable this();}
+    union NoDefCtorU{@disable this();}
+    static assert(!is(typeof({Typedef!NoDefCtorS s;})));
+    static assert(!is(typeof({Typedef!NoDefCtorU u;})));
 }
 
 @safe @nogc pure nothrow unittest // Bugzilla 11703
@@ -8929,7 +8920,7 @@ private template replaceTypeInFunctionType(From, To, fun)
             result ~= " function";
 
         result ~= "(";
-        foreach (i, _; PX)
+        static foreach (i; 0 .. PX.length)
         {
             if (i)
                 result ~= ", ";

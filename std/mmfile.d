@@ -431,6 +431,11 @@ class MmFile
     }
 
     /**
+     * Forwards `length`.
+     */
+    alias opDollar = length;
+
+    /**
      * Read-only property returning the file mode.
      */
     Mode mode()
@@ -709,4 +714,10 @@ version(linux)
     auto fn = std.file.deleteme ~ "-testing.txt";
     scope(exit) std.file.remove(fn);
     verifyThrown(scoped!MmFile(fn, MmFile.Mode.readWrite, 0, null));
+}
+
+@system unittest
+{
+    MmFile shar = new MmFile(null, MmFile.Mode.readWrite, 10, null, 0);
+    void[] output = shar[0 .. $];
 }

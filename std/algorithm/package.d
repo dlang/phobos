@@ -79,6 +79,7 @@ $(TR
         $(SUBREF iteration, group)
         $(SUBREF iteration, joiner)
         $(SUBREF iteration, map)
+        $(SUBREF iteration, mean)
         $(SUBREF iteration, permutations)
         $(SUBREF iteration, reduce)
         $(SUBREF iteration, splitter)
