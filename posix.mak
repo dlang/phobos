@@ -528,11 +528,11 @@ $(DSCANNER_DIR):
 	git -C $@ checkout $(DSCANNER_HASH)
 	git -C $@ submodule update --init --recursive
 
-$(DSCANNER_DIR)/dsc: | $(DSCANNER_DIR) $(DMD) $(LIB)
+$(DSCANNER_DIR)/bin/dscanner: | $(DSCANNER_DIR) $(DMD) $(LIB)
 	# debug build is faster, but disable 'missing import' messages (missing core from druntime)
 	sed 's/dparse_verbose/StdLoggerDisableWarning/' $(DSCANNER_DIR)/makefile > $(DSCANNER_DIR)/dscanner_makefile_tmp
 	mv $(DSCANNER_DIR)/dscanner_makefile_tmp $(DSCANNER_DIR)/makefile
-	DC=$(abspath $(DMD)) DFLAGS="$(DFLAGS) -defaultlib=$(LIB)" $(MAKE) -C $(DSCANNER_DIR) githash debug
+	DC=$(abspath $(DMD)) DFLAGS="$(DFLAGS) -defaultlib=$(LIB)" $(MAKE) -C $(DSCANNER_DIR) githash all
 
 style: publictests style_lint
 
@@ -540,9 +540,9 @@ style: publictests style_lint
 dscanner:
 	@# The dscanner target is without dependencies to avoid constant rebuilds of Phobos (`make` always rebuilds order-only dependencies)
 	@# However, we still need to ensure that the DScanner binary is built once
-	@[ -f $(DSCANNER_DIR)/dsc ] || ${MAKE} -f posix.mak $(DSCANNER_DIR)/dsc
+	@[ -f $(DSCANNER_DIR)/bin/dscanner ] || ${MAKE} -f posix.mak $(DSCANNER_DIR)/bin/dscanner
 	@echo "Running DScanner"
-	$(DEBUGGER) -return-child-result -q -ex run -ex bt -batch --args $(DSCANNER_DIR)/dsc --config .dscanner.ini --styleCheck etc std -I.
+	$(DSCANNER_DIR)/bin/dscanner --config .dscanner.ini --styleCheck etc std -I.
 
 style_lint: dscanner $(LIB)
 	@echo "Check for trailing whitespace"
