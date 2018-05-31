@@ -247,42 +247,10 @@ SRC_STD_REGEX= \
 	std\regex\internal\kickstart.d \
 	std\regex\internal\generator.d
 
-SRC_STD_C= \
-	std\c\process.d \
-	std\c\stdlib.d \
-	std\c\time.d \
-	std\c\stdio.d \
-	std\c\math.d \
-	std\c\stdarg.d \
-	std\c\stddef.d \
-	std\c\fenv.d \
-	std\c\string.d \
-	std\c\locale.d \
-	std\c\wcharh.d
-
 SRC_STD_WIN= \
 	std\windows\registry.d \
 	std\windows\syserror.d \
 	std\windows\charset.d
-
-SRC_STD_C_WIN= \
-	std\c\windows\windows.d \
-	std\c\windows\com.d \
-	std\c\windows\winsock.d \
-	std\c\windows\stat.d
-
-SRC_STD_C_LINUX= \
-	std\c\linux\linux.d \
-	std\c\linux\socket.d \
-	std\c\linux\pthread.d \
-	std\c\linux\termios.d \
-	std\c\linux\tipc.d
-
-SRC_STD_C_OSX= \
-	std\c\osx\socket.d
-
-SRC_STD_C_FREEBSD= \
-	std\c\freebsd\socket.d
 
 SRC_STD_INTERNAL= \
 	std\internal\cstring.d \
