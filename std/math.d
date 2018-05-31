@@ -4882,14 +4882,11 @@ static if (real.mant_dig >= long.sizeof * 8)
 }
 
 /*******************************************
- * Return the value of x rounded to the nearest integer.
- * If the fractional part of x is exactly 0.5, the return value is
- * rounded away from zero.
- *
  * Returns:
- *     A `real`.
+ *     A `real`, which is the value of x rounded to the nearest integer. If the fractional
+ *     part of x is exactly 0.5, the it is rounded away from zero.
  */
-auto round(real x) @trusted nothrow @nogc
+real round(real x) @trusted nothrow @nogc
 {
     version (CRuntime_Microsoft)
     {
