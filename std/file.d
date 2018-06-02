@@ -323,7 +323,7 @@ if (isInputRange!R && isSomeChar!(ElementEncodingType!R) && !isInfinite!R &&
         remove(deleteme);
     }
 
-    write(deleteme, "1234"); // deleteme is the name of a temporary file
+    std.file.write(deleteme, "1234"); // deleteme is the name of a temporary file
     assert(read(deleteme, 2) == "12");
     assert(read(deleteme.byChar) == "1234");
     assert((cast(const(ubyte)[])read(deleteme)).length == 4);
