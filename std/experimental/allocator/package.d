@@ -1539,14 +1539,26 @@ exception if the copy operation throws.
 T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length)
 {
     if (!length) return null;
+    static if (T.sizeof <= 1)
+    {
+        const nAlloc = length * T.sizeof;
+    }
+    else
+    {
+        import core.checkedint : mulu;
+        bool overflow;
+        const nAlloc = mulu(length, T.sizeof, overflow);
+        if (overflow) return null;
+    }
+
     static if (isInitAllZeroBits!T && hasMember!(T, "allocateZeroed"))
     {
-        auto m = alloc.allocateZeroed(T.sizeof * length);
+        auto m = alloc.allocateZeroed(nAlloc);
         return (() @trusted => cast(T[]) m)();
     }
     else
     {
-        auto m = alloc.allocate(T.sizeof * length);
+        auto m = alloc.allocate(nAlloc);
         if (!m.ptr) return null;
         alias U = Unqual!T;
         return () @trusted { return cast(T[]) uninitializedFillDefault(cast(U[]) m); }();
