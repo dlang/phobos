@@ -759,6 +759,63 @@ version(unittest)
     }
 }
 
+/* Basically the `is` operator, but handles static arrays for which `is` is
+deprecated. For use in CTFE. */
+private bool bitwiseIdentical(T)(T a, T b)
+{
+    static if (isStaticArray!T)
+    {
+        foreach (i, e; a)
+        {
+            if (!.bitwiseIdentical(e, b[i])) return false;
+        }
+        return true;
+    }
+    else return a is b;
+}
+
+@nogc nothrow pure @safe unittest
+{
+    import std.meta : AliasSeq;
+
+    static struct NeverEq
+    {
+        int x;
+        bool opEquals(NeverEq other) { return false; }
+    }
+
+    static struct AlwaysEq
+    {
+        int x;
+        bool opEquals(AlwaysEq other) { return true; }
+    }
+
+    static foreach (x; AliasSeq!(-1, 0, 1, 2, "foo", NeverEq(0)))
+    {
+        assert(bitwiseIdentical(x, x));
+        static assert(bitwiseIdentical(x, x));
+    }
+
+    static foreach (pair; AliasSeq!([0, 1], [-1, 1], [2, 3], ["foo", "bar"],
+        [AlwaysEq(0), AlwaysEq(1)]))
+    {
+        assert(!bitwiseIdentical(pair[0], pair[1]));
+        static assert(!bitwiseIdentical(pair[0], pair[1]));
+    }
+
+    {
+        int[2][2][2] x = [[[1, 2], [3, 4]], [[5, 6], [7, 8]]];
+        int[2][2][2] y = [[[1, 2], [3, 4]], [[5, 6], [7, 8]]];
+        assert(bitwiseIdentical(x, y));
+    }
+
+    {
+        enum int[2][2][2] x = [[[1, 2], [3, 4]], [[5, 6], [7, 8]]];
+        enum int[2][2][2] y = [[[1, 2], [3, 4]], [[5, 6], [7, 8]]];
+        static assert(bitwiseIdentical(x, y));
+    }
+}
+
 /+
 Can the representation be determined at compile time to consist of nothing but
 zero bits? Padding between a struct's fields is not considered.
@@ -772,23 +829,20 @@ private template isAllZeroBits(T, T value)
     else static if (is(typeof(value is 0)))
         enum isAllZeroBits = value is 0;
     else static if (isStaticArray!(typeof(value)))
-    {
-        alias E = typeof(value[0]);
-        static if (value.length == 0)
-            enum isAllZeroBits = true;
-        else static if (!isAllZeroBits!(E, value[0]))
-            enum isAllZeroBits = false;
-        else static if (value.length == 1 || value == T.init)
-            enum isAllZeroBits = .isAllZeroBits!(E, value[0]);
-        else
+        enum isAllZeroBits = ()
         {
-            enum tail = value[1 .. $];
-            enum n = tail.length / 2;
-            enum isAllZeroBits = .isAllZeroBits!(E[n], tail[0 .. n]) &&
-                .isAllZeroBits!(E[tail.length - n], tail[n .. $]);
-        }
 
-    }
+            static if (value.length == 0) return true;
+            else static if (.isAllZeroBits!(typeof(value[0]), value[0]))
+            {
+                foreach (e; value[1 .. $])
+                {
+                    if (!bitwiseIdentical(e, value[0])) return false;
+                }
+                return true;
+            }
+            else return false;
+        }();
     else static if (is(typeof(value) == struct) || is(typeof(value) == union))
         enum isAllZeroBits = ()
         {
@@ -839,6 +893,39 @@ private template isAllZeroBits(T, T value)
 
     static assert(!isAllZeroBits!(char[n], (char[n]).init));
     static assert(isAllZeroBits!(char[n], [Repeat!(n, 0)]));
+}
+
+@nogc nothrow pure @safe unittest // nested static arrays
+{
+    static assert(isAllZeroBits!(int[2][2], [[0, 0], [0, 0]]));
+    static assert(!isAllZeroBits!(int[2][2], [[0, 0], [1, 0]]));
+}
+
+@nogc nothrow pure @safe unittest // funky opEquals
+{
+    static struct AlwaysEq
+    {
+        int x;
+        bool opEquals(AlwaysEq other) { return true; }
+    }
+    static assert(AlwaysEq(0) == AlwaysEq(0));
+    static assert(AlwaysEq(0) == AlwaysEq(1));
+    static assert(isAllZeroBits!(AlwaysEq, AlwaysEq(0)));
+    static assert(!isAllZeroBits!(AlwaysEq, AlwaysEq(1)));
+    static assert(isAllZeroBits!(AlwaysEq[1], [AlwaysEq(0)]));
+    static assert(!isAllZeroBits!(AlwaysEq[2], [AlwaysEq(0), AlwaysEq(1)]));
+
+    static struct NeverEq
+    {
+        int x;
+        bool opEquals(NeverEq other) { return false; }
+    }
+    static assert(NeverEq(0) != NeverEq(1));
+    static assert(NeverEq(0) != NeverEq(0));
+    static assert(isAllZeroBits!(NeverEq, NeverEq(0)));
+    static assert(!isAllZeroBits!(NeverEq, NeverEq(1)));
+    static assert(isAllZeroBits!(NeverEq[1], [NeverEq(0)]));
+    static assert(!isAllZeroBits!(NeverEq[2], [NeverEq(0), NeverEq(1)]));
 }
 
 /+
