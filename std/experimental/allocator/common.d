@@ -829,7 +829,7 @@ private template isAllZeroBits(T, T value)
 
 @nogc nothrow pure @safe unittest // large static arrays
 {
-    import std.meta: Repeat;
+    import std.meta : Repeat;
     enum n = 16 * 1024;
 
     static assert(isAllZeroBits!(ubyte[n], (ubyte[n]).init));
