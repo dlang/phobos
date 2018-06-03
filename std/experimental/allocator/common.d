@@ -772,18 +772,23 @@ private template isAllZeroBits(T, T value)
     else static if (is(typeof(value is 0)))
         enum isAllZeroBits = value is 0;
     else static if (isStaticArray!(typeof(value)))
-        enum isAllZeroBits = ()
+    {
+        alias E = typeof(value[0]);
+        static if (value.length == 0)
+            enum isAllZeroBits = true;
+        else static if (!isAllZeroBits!(E, value[0]))
+            enum isAllZeroBits = false;
+        else static if (value.length == 1 || value == T.init)
+            enum isAllZeroBits = .isAllZeroBits!(E, value[0]);
+        else
         {
-            bool b = true;
-            // Use index so this works when T.length is 0.
-            static foreach (i; 0 .. T.length)
-            {
-                b &= isAllZeroBits!(typeof(value[i]), value[i]);
-                if (b == false) return b;
-            }
+            enum tail = value[1 .. $];
+            enum n = tail.length / 2;
+            enum isAllZeroBits = .isAllZeroBits!(E[n], tail[0 .. n]) &&
+                .isAllZeroBits!(E[tail.length - n], tail[n .. $]);
+        }
 
-            return b;
-        }();
+    }
     else static if (is(typeof(value) == struct) || is(typeof(value) == union))
         enum isAllZeroBits = ()
         {
@@ -820,6 +825,20 @@ private template isAllZeroBits(T, T value)
     static assert(isAllZeroBits!(void*, null));
     static assert(isAllZeroBits!(int*, null));
     static assert(isAllZeroBits!(Object, null));
+}
+
+@nogc nothrow pure @safe unittest // large static arrays
+{
+    import std.meta: Repeat;
+    enum n = 16 * 1024;
+
+    static assert(isAllZeroBits!(ubyte[n], (ubyte[n]).init));
+    static assert(!isAllZeroBits!(ubyte[n], [Repeat!(n, 1)]));
+    static assert(!isAllZeroBits!(ubyte[n], [1, Repeat!(n - 1, 0)]));
+    static assert(!isAllZeroBits!(ubyte[n], [Repeat!(n - 1, 0), 1]));
+
+    static assert(!isAllZeroBits!(char[n], (char[n]).init));
+    static assert(isAllZeroBits!(char[n], [Repeat!(n, 0)]));
 }
 
 /+
