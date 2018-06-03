@@ -781,13 +781,13 @@ private bool bitwiseIdentical(T)(T a, T b)
     static struct NeverEq
     {
         int x;
-        bool opEquals(NeverEq other) { return false; }
+        bool opEquals(NeverEq other) const { return false; }
     }
 
     static struct AlwaysEq
     {
         int x;
-        bool opEquals(AlwaysEq other) { return true; }
+        bool opEquals(AlwaysEq other) const { return true; }
     }
 
     static foreach (x; AliasSeq!(-1, 0, 1, 2, "foo", NeverEq(0)))
@@ -906,7 +906,7 @@ private template isAllZeroBits(T, T value)
     static struct AlwaysEq
     {
         int x;
-        bool opEquals(AlwaysEq other) { return true; }
+        bool opEquals(AlwaysEq other) const { return true; }
     }
     static assert(AlwaysEq(0) == AlwaysEq(0));
     static assert(AlwaysEq(0) == AlwaysEq(1));
@@ -918,7 +918,7 @@ private template isAllZeroBits(T, T value)
     static struct NeverEq
     {
         int x;
-        bool opEquals(NeverEq other) { return false; }
+        bool opEquals(NeverEq other) const { return false; }
     }
     static assert(NeverEq(0) != NeverEq(1));
     static assert(NeverEq(0) != NeverEq(0));
