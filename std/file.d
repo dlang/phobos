@@ -1204,6 +1204,22 @@ private SysTime statTimeToStdTime(char which)(ref const stat_t statbuf)
     return SysTime(stdTime);
 }
 
+version(Posix) private void fillStatBuf(R)(R name, ref stat_t statbuf)
+{
+    auto namez = name.tempCString();
+
+    static auto trustedStat(const(FSChar)* namez, ref stat_t buf) @trusted
+    {
+        return stat(namez, &buf);
+    }
+
+    static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+        alias names = name;
+    else
+        string names = null;
+    cenforce(trustedStat(namez, statbuf) == 0, names, namez);
+}
+
 /++
     Get the access and modified times of file or folder `name`.
 
@@ -1233,19 +1249,8 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     }
     else version (Posix)
     {
-        auto namez = name.tempCString();
-
-        static auto trustedStat(const(FSChar)* namez, ref stat_t buf) @trusted
-        {
-            return stat(namez, &buf);
-        }
         stat_t statbuf = void;
-
-        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
-            alias names = name;
-        else
-            string names = null;
-        cenforce(trustedStat(namez, statbuf) == 0, names, namez);
+        fillStatBuf(name, statbuf);
 
         accessTime = statTimeToStdTime!'a'(statbuf);
         modificationTime = statTimeToStdTime!'m'(statbuf);
