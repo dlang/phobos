@@ -466,6 +466,176 @@ Throws: `ErrnoException` if the file could not be opened.
         std.file.remove(deleteme);
     }
 
+    /// Flags for file open mode.
+    enum OpenMode
+    {
+        read = 1 << 0, /// Open in read mode.
+        write = 1 << 1, /// Open in write mode, dont' truncate.
+        truncate = 1 << 2, /// Open in write mode, create if needed, truncate if exists.
+        append = 1 << 3, /// Open in write mode, create if needed. Append to the end on writing.
+        createNew = 1 << 4, /// Open in write mode, ensure the file did not exist.
+        /**
+         * Don't create file if it does not exist when opening in write mode.
+         * This flag is not necessary when opening a file in read-only mode.
+         * This flag can't be used together with OpenMode.createNew flag.
+         */
+        existingOnly = 1 << 5,
+    }
+
+    private static bool hasAnyWriteFlag(OpenMode openMode) @safe nothrow pure @nogc
+    {
+        return (openMode & (OpenMode.write | OpenMode.truncate | OpenMode.append | OpenMode.createNew)) != 0;
+    }
+
+    version(Posix) private static int openFd(string name, OpenMode openMode) @trusted
+    {
+        import std.exception : errnoEnforce;
+        import std.internal.cstring : tempCString;
+        import std.conv : octal;
+        import core.sys.posix.fcntl : O_RDWR, O_RDONLY, O_WRONLY, O_TRUNC, O_APPEND, O_EXCL, O_CREAT, mode_t;
+        static import core.sys.posix.fcntl;
+
+        mode_t mode;
+        const bool anyWrite = hasAnyWriteFlag(openMode);
+        const bool existing = (openMode & OpenMode.existingOnly) != 0;
+        const bool hasRead = (openMode & OpenMode.read) != 0;
+        if (hasRead && anyWrite)
+            mode |= O_RDWR;
+        else if (hasRead)
+            mode |= O_RDONLY;
+        else if (anyWrite)
+            mode |= O_WRONLY;
+
+        if (anyWrite && !existing)
+            mode |= O_CREAT;
+
+        if (openMode & OpenMode.truncate)
+            mode |= O_TRUNC;
+        if (openMode & OpenMode.append)
+            mode |= O_APPEND;
+        if (openMode & OpenMode.createNew)
+            mode |= O_EXCL;
+
+        auto namez = name.tempCString();
+        int fd;
+        if (mode & O_CREAT)
+            fd = core.sys.posix.fcntl.open(namez, mode, octal!666);
+        else
+            fd = core.sys.posix.fcntl.open(namez, mode);
+        errnoEnforce(fd >= 0);
+        return fd;
+    }
+
+    version(Posix) private static FILE* openFdFile(int fd, OpenMode openMode) @trusted
+    {
+        const bool anyWrite = hasAnyWriteFlag(openMode);
+        char[4] modez;
+        size_t i = 0;
+        if (openMode & OpenMode.read) {
+            if (anyWrite) {
+                if (openMode & OpenMode.append) {
+                    modez[i++] = 'a';
+                    modez[i++] = '+';
+                } else if (openMode & OpenMode.existingOnly) {
+                    modez[i++] = 'r';
+                    modez[i++] = '+';
+                } else {
+                    modez[i++] = 'w';
+                    modez[i++] = '+';
+                }
+            } else {
+                modez[i++] = 'r';
+            }
+        } else if (anyWrite) {
+            if (openMode & OpenMode.append)
+                modez[i++] = 'a';
+            else
+                modez[i++] = 'w';
+        }
+        assert(i < modez.length);
+        modez[i] = '\0';
+
+        import std.exception : errnoEnforce;
+        import core.sys.posix.stdio : fdopen;
+        return errnoEnforce(fdopen(fd, modez.ptr));
+    }
+
+    private static FILE* openFile(string name, OpenMode openMode) @trusted
+    {
+        version(Posix)
+        {
+            int fd = openFd(name, openMode);
+            return openFdFile(fd, openMode);
+        }
+        else version(Windows)
+        {
+            // TODO
+        }
+    }
+
+    this(string name, OpenMode openMode) @safe
+    {
+        import std.exception : enforce;
+        // TODO: these can be made into asserts?
+        enforce((openMode & OpenMode.read) != 0 || hasAnyWriteFlag(openMode),
+            "read flag or some of write flags must be provided in open mode");
+        enforce(!((openMode & OpenMode.createNew) != 0 && (openMode & OpenMode.existingOnly) != 0),
+                "createNew and existingOnly can't be used together in open mode");
+        this(openFile(name, openMode), name);
+    }
+
+    @system unittest
+    {
+        import std.exception : assertThrown, assertNotThrown;
+        static import std.file;
+
+        auto deleteme = testFilename();
+        scope(exit) std.file.remove(deleteme);
+
+        // should fail because createNew and existingOnly can't be used together
+        assertThrown(File(deleteme, OpenMode.write | OpenMode.createNew | OpenMode.existingOnly));
+        // should fail because file does not exist yet
+        assertThrown(File(deleteme, OpenMode.write | OpenMode.existingOnly));
+        assertThrown(File(deleteme, OpenMode.read));
+
+        auto f = File(deleteme, OpenMode.createNew);
+        f.write("foo");
+        f.close();
+
+        f = File(deleteme, OpenMode.read);
+        assert(f.readln() == "foo");
+        f.close();
+
+        assertThrown(File(deleteme, OpenMode.createNew));
+
+        f = File(deleteme, OpenMode.append);
+        f.write("bar");
+        f.close();
+
+        assert(std.file.read(deleteme) == "foobar");
+
+        f = File(deleteme, OpenMode.truncate);
+        f.write("baz");
+        f.close();
+
+        assert(std.file.read(deleteme) == "baz");
+
+        f = File(deleteme, OpenMode.read | OpenMode.append);
+        f.write("qux");
+        f.rewind();
+        assert(f.readln() == "bazqux");
+        f.close();
+
+        f = File(deleteme, OpenMode.write | OpenMode.existingOnly);
+        f.write("hello");
+        f.close();
+
+        assert(std.file.read(deleteme) == "hellox");
+
+        // should fail because no read nor any of write flags are provided
+        assertThrown(File(deleteme, OpenMode.existingOnly));
+    }
+
     ~this() @safe
     {
         detach();
@@ -501,6 +671,38 @@ Throws: `ErrnoException` in case of error.
     void open(string name, in char[] stdioOpenmode = "rb") @trusted
     {
         resetFile(name, stdioOpenmode, false);
+    }
+
+    /// ditto, but using symbolic constants instead of string open mode.
+    void open(string name, OpenMode openMode) @trusted
+    {
+        import core.stdc.stdlib : malloc;
+        import std.exception : enforce;
+        if (_p !is null)
+        {
+            detach();
+        }
+
+        _p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
+        FILE* handle = openFile(name, openMode);
+        initImpl(handle, name, 1, false);
+    }
+
+    @system unittest
+    {
+        static import std.file;
+
+        auto deleteme = testFilename();
+        scope(exit) std.file.remove(deleteme);
+
+        File f;
+        f.open(deleteme, OpenMode.write);
+        f.write("world");
+        f.close();
+
+        f.open(deleteme, OpenMode.read);
+        assert(f.readln() == "world");
+        f.close();
     }
 
     private void resetFile(string name, in char[] stdioOpenmode, bool isPopened) @trusted
