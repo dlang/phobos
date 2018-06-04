@@ -9101,7 +9101,7 @@ private:
     See_Also:
         SysTime.fromUnixTime
   +/
-long unixTimeToStdTime(long unixTime) @safe pure nothrow
+long unixTimeToStdTime(long unixTime) @safe pure nothrow @nogc
 {
     return 621_355_968_000_000_000L + convert!("seconds", "hnsecs")(unixTime);
 }
