@@ -7,7 +7,7 @@
  *  License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  *  Authors:   $(HTTP digitalmars.com, Walter Bright) and
                $(HTTP jmdavisprog.com, Jonathan M Davis)
- *  Source:    $(PHOBOSSRC std/_system.d)
+ *  Source:    $(PHOBOSSRC std/system.d)
  */
 module std.system;
 

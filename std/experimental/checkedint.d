@@ -188,7 +188,7 @@ and `>>>=` is larger than the largest value representable by `T`.)
 )
 )
 
-Source: $(PHOBOSSRC std/experimental/_checkedint.d)
+Source: $(PHOBOSSRC std/experimental/checkedint.d)
 */
 module std.experimental.checkedint;
 import std.traits : isFloatingPoint, isIntegral, isNumeric, isUnsigned, Unqual;

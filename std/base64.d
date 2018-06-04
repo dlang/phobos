@@ -51,7 +51,7 @@
  * Copyright: Masahiro Nakagawa 2010-.
  * License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   Masahiro Nakagawa, Daniel Murphy (Single value Encoder and Decoder)
- * Source:    $(PHOBOSSRC std/_base64.d)
+ * Source:    $(PHOBOSSRC std/base64.d)
  * Macros:
  *      LREF2=<a href="#$1">`$2`</a>
  */

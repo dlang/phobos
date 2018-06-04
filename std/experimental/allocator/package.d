@@ -69,7 +69,7 @@ to the type of the objects being allocated; they only deal in `void[]`, by
 necessity of the interface being dynamic (as opposed to type-parameterized).
 Each thread has a current allocator it uses by default, which is a thread-local
 variable $(LREF theAllocator) of type $(LREF IAllocator). The process has a
-global _allocator called $(LREF processAllocator), also of type $(LREF
+global allocator called $(LREF processAllocator), also of type $(LREF
 IAllocator). When a new thread is created, $(LREF processAllocator) is copied
 into $(LREF theAllocator). An application can change the objects to which these
 references point. By default, at application startup, $(LREF processAllocator)
@@ -82,7 +82,7 @@ $(LI A mid-level, statically-typed layer for assembling several allocators into
 one. It uses properties of the type of the objects being created to route
 allocation requests to possibly specialized allocators. This layer is relatively
 thin and implemented and documented in the $(MREF
-std,experimental,_allocator,typed) module. It allows an interested user to e.g.
+std,experimental,allocator,typed) module. It allows an interested user to e.g.
 use different allocators for arrays versus fixed-sized objects, to the end of
 better overall performance.)
 
@@ -91,27 +91,27 @@ Lego-like pieces that can be used to assemble application-specific allocators.
 The real allocation smarts are occurring at this level. This layer is of
 interest to advanced applications that want to configure their own allocators.
 A good illustration of typical uses of these building blocks is module $(MREF
-std,experimental,_allocator,showcase) which defines a collection of frequently-
+std,experimental,allocator,showcase) which defines a collection of frequently-
 used preassembled allocator objects. The implementation and documentation entry
-point is $(MREF std,experimental,_allocator,building_blocks). By design, the
+point is $(MREF std,experimental,allocator,building_blocks). By design, the
 primitives of the static interface have the same signatures as the $(LREF
 IAllocator) primitives but are for the most part optional and driven by static
 introspection. The parameterized class $(LREF CAllocatorImpl) offers an
-immediate and useful means to package a static low-level _allocator into an
+immediate and useful means to package a static low-level allocator into an
 implementation of $(LREF IAllocator).)
 
-$(LI Core _allocator objects that interface with D's garbage collected heap
-($(MREF std,experimental,_allocator,gc_allocator)), the C `malloc` family
-($(MREF std,experimental,_allocator,mallocator)), and the OS ($(MREF
-std,experimental,_allocator,mmap_allocator)). Most custom allocators would
+$(LI Core allocator objects that interface with D's garbage collected heap
+($(MREF std,experimental,allocator,gc_allocator)), the C `malloc` family
+($(MREF std,experimental,allocator,mallocator)), and the OS ($(MREF
+std,experimental,allocator,mmap_allocator)). Most custom allocators would
 ultimately obtain memory from one of these core allocators.)
 )
 
-$(H2 Idiomatic Use of `std.experimental._allocator`)
+$(H2 Idiomatic Use of `std.experimental.allocator`)
 
-As of this time, `std.experimental._allocator` is not integrated with D's
+As of this time, `std.experimental.allocator` is not integrated with D's
 built-in operators that allocate memory, such as `new`, array literals, or
-array concatenation operators. That means `std.experimental._allocator` is
+array concatenation operators. That means `std.experimental.allocator` is
 opt-in$(MDASH)applications need to make explicit use of it.
 
 For casual creation and disposal of dynamically-allocated objects, use $(LREF
@@ -133,9 +133,9 @@ void fun(size_t n)
 
 To experiment with alternative allocators, set $(LREF theAllocator) for the
 current thread. For example, consider an application that allocates many 8-byte
-objects. These are not well supported by the default _allocator, so a
-$(MREF_ALTTEXT free list _allocator,
-std,experimental,_allocator,building_blocks,free_list) would be recommended.
+objects. These are not well supported by the default allocator, so a
+$(MREF_ALTTEXT free list allocator,
+std,experimental,allocator,building_blocks,free_list) would be recommended.
 To install one in `main`, the application would use:
 
 ----
@@ -158,27 +158,27 @@ last through the application.
 
 To avoid this, long-lived objects that need to perform allocations,
 reallocations, and deallocations relatively often may want to store a reference
-to the _allocator object they use throughout their lifetime. Then, instead of
+to the allocator object they use throughout their lifetime. Then, instead of
 using `theAllocator` for internal allocation-related tasks, they'd use the
 internally held reference. For example, consider a user-defined hash table:
 
 ----
 struct HashTable
 {
-    private IAllocator _allocator;
+    private IAllocator allocator;
     this(size_t buckets, IAllocator allocator = theAllocator) {
-        this._allocator = allocator;
+        this.allocator = allocator;
         ...
     }
     // Getter and setter
-    IAllocator allocator() { return _allocator; }
-    void allocator(IAllocator a) { assert(empty); _allocator = a; }
+    IAllocator allocator() { return allocator; }
+    void allocator(IAllocator a) { assert(empty); allocator = a; }
 }
 ----
 
 Following initialization, the `HashTable` object would consistently use its
-`_allocator` object for acquiring memory. Furthermore, setting
-`HashTable._allocator` to point to a different _allocator should be legal but
+`allocator` object for acquiring memory. Furthermore, setting
+`HashTable.allocator` to point to a different allocator should be legal but
 only if the object is empty; otherwise, the object wouldn't be able to
 deallocate its existing state.
 
@@ -217,7 +217,7 @@ License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
 Authors: $(HTTP erdani.com, Andrei Alexandrescu)
 
-Source: $(PHOBOSSRC std/experimental/_allocator)
+Source: $(PHOBOSSRC std/experimental/allocator)
 
 */
 

@@ -36,7 +36,7 @@ $(TR $(TD Other) $(TD
 
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   $(HTTP jmdavisprog.com, Jonathan M Davis)
-    Source:    $(PHOBOSSRC std/datetime/_date.d)
+    Source:    $(PHOBOSSRC std/datetime/date.d)
 +/
 module std.datetime.date;
 

@@ -2,7 +2,7 @@
  * Copyright: 2014 by Digital Mars
  * License: $(LINK2 http://boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors: Walter Bright
- * Source: $(PHOBOSSRC std/internal/_scopebuffer.d)
+ * Source: $(PHOBOSSRC std/internal/scopebuffer.d)
  */
 
 module std.internal.scopebuffer;

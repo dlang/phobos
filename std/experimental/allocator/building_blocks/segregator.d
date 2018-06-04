@@ -1,6 +1,6 @@
 // Written in the D programming language.
 /**
-Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/_segregator.d)
+Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/segregator.d)
 */
 module std.experimental.allocator.building_blocks.segregator;
 

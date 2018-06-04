@@ -119,7 +119,7 @@
  * Copyright: Copyright Digital Mars 2000 - 2009.
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(HTTP digitalmars.com, Walter Bright)
- * Source:    $(PHOBOSSRC std/_stdint.d)
+ * Source:    $(PHOBOSSRC std/stdint.d)
  */
 /*          Copyright Digital Mars 2000 - 2009.
  * Distributed under the Boost Software License, Version 1.0.

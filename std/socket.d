@@ -39,7 +39,7 @@
  * License: $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors: Christopher E. Miller, $(HTTP klickverbot.at, David Nadlinger),
  *      $(HTTP thecybershadow.net, Vladimir Panteleev)
- * Source:  $(PHOBOSSRC std/_socket.d)
+ * Source:  $(PHOBOSSRC std/socket.d)
  */
 
 module std.socket;

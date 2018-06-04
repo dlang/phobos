@@ -26,7 +26,7 @@ This module conforms to the APIs defined in $(MREF std, digest).
 
 This module publicly imports $(MREF std, digest) and can be used as a stand-alone module.
 
-Source: $(PHOBOSSRC std/digest/_murmurhash.d)
+Source: $(PHOBOSSRC std/digest/murmurhash.d)
 License: $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors: Guillaume Chatelet
 References: $(LINK2 https://github.com/aappleby/smhasher, Reference implementation)

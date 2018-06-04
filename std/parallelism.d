@@ -1,17 +1,17 @@
 /**
-`std._parallelism` implements high-level primitives for SMP _parallelism.
+`std.parallelism` implements high-level primitives for SMP parallelism.
 These include parallel foreach, parallel reduce, parallel eager map, pipelining
-and future/promise _parallelism.  `std._parallelism` is recommended when the
+and future/promise parallelism.  `std.parallelism` is recommended when the
 same operation is to be executed in parallel on different data, or when a
 function is to be executed in a background thread and its result returned to a
 well-defined main thread.  For communication between arbitrary threads, see
 `std.concurrency`.
 
-`std._parallelism` is based on the concept of a `Task`.  A `Task` is an
+`std.parallelism` is based on the concept of a `Task`.  A `Task` is an
 object that represents the fundamental unit of work in this library and may be
 executed in parallel with any other `Task`.  Using `Task`
 directly allows programming with a future/promise paradigm.  All other
-supported _parallelism paradigms (parallel foreach, map, reduce, pipelining)
+supported parallelism paradigms (parallel foreach, map, reduce, pipelining)
 represent an additional level of abstraction over `Task`.  They
 automatically create one or more `Task` objects, or closely related types
 that are conceptually identical but not part of the public API.
@@ -33,7 +33,7 @@ Warning:  Unless marked as `@trusted` or `@safe`, artifacts in
           this module allow implicit data sharing between threads and cannot
           guarantee that client code is free from low level data races.
 
-Source:    $(PHOBOSSRC std/_parallelism.d)
+Source:    $(PHOBOSSRC std/parallelism.d)
 Author:  David Simcha
 Copyright:  Copyright (c) 2009-2011, David Simcha.
 License:    $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0)
@@ -399,7 +399,7 @@ private struct AbstractTask
 /**
 `Task` represents the fundamental unit of work.  A `Task` may be
 executed in parallel with any other `Task`.  Using this struct directly
-allows future/promise _parallelism.  In this paradigm, a function (or delegate
+allows future/promise parallelism.  In this paradigm, a function (or delegate
 or other callable) is executed in a thread other than the one it was called
 from.  The calling thread does not block while the function is being executed.
 A call to `workForce`, `yieldForce`, or `spinForce` is used to

@@ -2,7 +2,7 @@
 /**
 The C heap allocator.
 
-Source: $(PHOBOSSRC std/experimental/allocator/_mallocator.d)
+Source: $(PHOBOSSRC std/experimental/allocator/mallocator.d)
 */
 module std.experimental.allocator.mallocator;
 import std.experimental.allocator.common;

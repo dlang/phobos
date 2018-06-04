@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
-Networking client functionality as provided by $(HTTP _curl.haxx.se/libcurl,
+Networking client functionality as provided by $(HTTP curl.haxx.se/libcurl,
 libcurl). The libcurl library must be installed on the system in order to use
 this module.
 
@@ -139,13 +139,13 @@ the onReceive callback. See $(LREF onReceiveHeader)/$(LREF onReceive) for more
 information. Finally the HTTP request is effected by calling perform(), which is
 synchronous.
 
-Source: $(PHOBOSSRC std/net/_curl.d)
+Source: $(PHOBOSSRC std/net/curl.d)
 
 Copyright: Copyright Jonas Drewsen 2011-2012
 License: $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors: Jonas Drewsen. Some of the SMTP code contributed by Jimmy Cao.
 
-Credits: The functionally is based on $(HTTP _curl.haxx.se/libcurl, libcurl).
+Credits: The functionally is based on $(HTTP curl.haxx.se/libcurl, libcurl).
          LibCurl is licensed under an MIT/X derivative license.
 */
 /*

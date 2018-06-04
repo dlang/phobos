@@ -51,7 +51,7 @@
  * Copyright: Copyright Digital Mars 2000 - 2009.
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(HTTP digitalmars.com, Walter Bright)
- * Source:    $(PHOBOSSRC std/_signals.d)
+ * Source:    $(PHOBOSSRC std/signals.d)
  *
  * $(SCRIPT inhibitQuickIndex = 1;)
  */

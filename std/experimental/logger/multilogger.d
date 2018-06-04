@@ -1,6 +1,6 @@
 // Written in the D programming language.
 /**
-Source: $(PHOBOSSRC std/experimental/logger/_multilogger.d)
+Source: $(PHOBOSSRC std/experimental/logger/multilogger.d)
 */
 module std.experimental.logger.multilogger;
 

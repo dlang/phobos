@@ -72,7 +72,7 @@ $(TR $(TDNW UUID namespaces)
  * Use UUID's constructors or the UUID generator functions to get an initialized UUID.
  *
  * This is a port of $(LINK2 http://www.boost.org/doc/libs/1_42_0/libs/uuid/uuid.html,
- * boost._uuid) from the Boost project with some minor additions and API
+ * boost.uuid) from the Boost project with some minor additions and API
  * changes for a more D-like API.
  *
  * Standards:
@@ -84,7 +84,7 @@ $(TR $(TDNW UUID namespaces)
  * Copyright: Copyright Johannes Pfau 2011 - .
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   Johannes Pfau
- * Source:    $(PHOBOSSRC std/_uuid.d)
+ * Source:    $(PHOBOSSRC std/uuid.d)
  *
  * Macros:
  * MYREF2 = <a href="#$2">$(TT $1)</a>&nbsp;

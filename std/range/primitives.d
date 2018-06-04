@@ -103,7 +103,7 @@ $(BOOKTABLE ,
     ))
 )
 
-Source: $(PHOBOSSRC std/range/_primitives.d)
+Source: $(PHOBOSSRC std/range/primitives.d)
 
 License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 

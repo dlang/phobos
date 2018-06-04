@@ -8,12 +8,12 @@
  * $(DIVC quickindex,
  * $(BOOKTABLE ,
  * $(TR $(TH Category) $(TH Templates))
- * $(TR $(TD Symbol Name _traits) $(TD
+ * $(TR $(TD Symbol Name traits) $(TD
  *           $(LREF fullyQualifiedName)
  *           $(LREF moduleName)
  *           $(LREF packageName)
  * ))
- * $(TR $(TD Function _traits) $(TD
+ * $(TR $(TD Function traits) $(TD
  *           $(LREF isFunction)
  *           $(LREF arity)
  *           $(LREF functionAttributes)
@@ -31,7 +31,7 @@
  *           $(LREF SetFunctionAttributes)
  *           $(LREF variadicFunctionStyle)
  * ))
- * $(TR $(TD Aggregate Type _traits) $(TD
+ * $(TR $(TD Aggregate Type traits) $(TD
  *           $(LREF BaseClassesTuple)
  *           $(LREF BaseTypeTuple)
  *           $(LREF classInstanceAlignment)
@@ -156,7 +156,7 @@
  *            $(HTTP klickverbot.at, David Nadlinger),
  *            Kenji Hara,
  *            Shoichi Kato
- * Source:    $(PHOBOSSRC std/_traits.d)
+ * Source:    $(PHOBOSSRC std/traits.d)
  */
 /*          Copyright Digital Mars 2005 - 2009.
  * Distributed under the Boost Software License, Version 1.0.

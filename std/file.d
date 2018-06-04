@@ -2,7 +2,7 @@
 
 /**
 Utilities for manipulating files and scanning directories. Functions
-in this module handle files as a unit, e.g., read or write one _file
+in this module handle files as a unit, e.g., read or write one file
 at a time. For opening files and manipulating them via handles refer
 to module $(MREF std, stdio).
 
@@ -74,7 +74,7 @@ License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(HTTP digitalmars.com, Walter Bright),
            $(HTTP erdani.org, Andrei Alexandrescu),
            $(HTTP jmdavisprog.com, Jonathan M Davis)
-Source:    $(PHOBOSSRC std/_file.d)
+Source:    $(PHOBOSSRC std/file.d)
  */
 module std.file;
 
@@ -180,7 +180,7 @@ class FileException : Exception
         Params:
             name = Name of file for which the error occurred.
             msg  = Message describing the error.
-            file = The _file where the error occurred.
+            file = The file where the error occurred.
             line = The _line where the error occurred.
      +/
     this(in char[] name, in char[] msg, string file = __FILE__, size_t line = __LINE__) @safe pure
@@ -195,7 +195,7 @@ class FileException : Exception
         Params:
             name  = Name of file for which the error occurred.
             errno = The error number.
-            file  = The _file where the error occurred.
+            file  = The file where the error occurred.
                     Defaults to `__FILE__`.
             line  = The _line where the error occurred.
                     Defaults to `__LINE__`.

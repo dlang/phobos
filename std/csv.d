@@ -87,7 +87,7 @@
  *   Copyright: Copyright 2011
  *   License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  *   Authors:   Jesse Phillips
- *   Source:    $(PHOBOSSRC std/_csv.d)
+ *   Source:    $(PHOBOSSRC std/csv.d)
  */
 module std.csv;
 

@@ -42,7 +42,7 @@ Authors:   $(HTTP digitalmars.com, Walter Bright),
            Adam D. Ruppe,
            Kenji Hara
 
-Source:    $(PHOBOSSRC std/_conv.d)
+Source:    $(PHOBOSSRC std/conv.d)
 
 */
 module std.conv;

@@ -11,7 +11,7 @@ Macros:
 
 License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Source: $(PHOBOSSRC std/digest/_hmac.d)
+Source: $(PHOBOSSRC std/digest/hmac.d)
  */
 
 module std.digest.hmac;
