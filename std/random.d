@@ -1798,22 +1798,22 @@ If we start at `UpperType.max` and walk backwards `upperDist - 1` spaces, then
 the space we land on is the last acceptable position where a full bucket can
 fit:
 
-```
+---
    bucketFront     UpperType.max
       v                 v
 [..., 0, 1, 2, ..., upperDist - 1]
       ^~~ upperDist - 1 ~~^
-```
+---
 
 If the bucket starts any later, then it must have lost at least one number and
 at least that number won't be represented fairly.
 
-```
+---
                 bucketFront     UpperType.max
                      v                v
 [..., upperDist - 1, 0, 1, 2, ..., upperDist - 2]
           ^~~~~~~~ upperDist - 1 ~~~~~~~^
-```
+---
 
 Hence, our condition to reroll is
 `bucketFront > (UpperType.max - (upperDist - 1))`

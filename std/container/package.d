@@ -492,11 +492,6 @@ $(TR
     $(TD Removes an element from `c` by using its key `k`.
          The key's type is defined by the container.)
 )
-$(TR
-    $(TDNW ``)
-    $(TDNW ``)
-    $(TD )
-)
 )
 
 Source: $(PHOBOSSRC std/container/package.d)
