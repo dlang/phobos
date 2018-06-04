@@ -6,7 +6,7 @@ Serialize data to `ubyte` arrays.
  * Copyright: Copyright Digital Mars 2000 - 2015.
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(HTTP digitalmars.com, Walter Bright)
- * Source:    $(PHOBOSSRC std/_outbuffer.d)
+ * Source:    $(PHOBOSSRC std/outbuffer.d)
  *
  * $(SCRIPT inhibitQuickIndex = 1;)
  */

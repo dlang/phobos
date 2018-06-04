@@ -21,7 +21,7 @@
  *             $(LI $(LINK http://tools.ietf.org/html/rfc5322))
  *          )
  *
- * Source: $(PHOBOSSRC std/net/_isemail.d)
+ * Source: $(PHOBOSSRC std/net/isemail.d)
  */
 module std.net.isemail;
 

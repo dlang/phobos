@@ -51,7 +51,7 @@ $(TR $(TH Function Name) $(TH Description)
 Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
 License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(HTTP erdani.org, Andrei Alexandrescu)
-Source:    $(PHOBOSSRC std/_functional.d)
+Source:    $(PHOBOSSRC std/functional.d)
 */
 /*
          Copyright Andrei Alexandrescu 2008 - 2009.

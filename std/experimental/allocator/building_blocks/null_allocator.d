@@ -1,6 +1,6 @@
 // Written in the D programming language.
 /**
-Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/_null_allocator.d)
+Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/null_allocator.d)
 */
 module std.experimental.allocator.building_blocks.null_allocator;
 

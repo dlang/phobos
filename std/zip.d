@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
- * Read/write data in the $(LINK2 http://www.info-zip.org, _zip archive) format.
+ * Read/write data in the $(LINK2 http://www.info-zip.org, zip archive) format.
  * Makes use of the etc.c.zlib compression library.
  *
  * Bugs:
@@ -61,7 +61,7 @@ void main()
  * Copyright: Copyright Digital Mars 2000 - 2009.
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(HTTP digitalmars.com, Walter Bright)
- * Source:    $(PHOBOSSRC std/_zip.d)
+ * Source:    $(PHOBOSSRC std/zip.d)
  */
 
 /*          Copyright Digital Mars 2000 - 2009.

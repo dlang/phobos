@@ -12,7 +12,7 @@
         Created      15th March 2003,
         Updated      25th April 2004,
 
-    Source:    $(PHOBOSSRC std/windows/_registry.d)
+    Source:    $(PHOBOSSRC std/windows/registry.d)
 */
 /* /////////////////////////////////////////////////////////////////////////////
  *

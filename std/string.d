@@ -69,7 +69,7 @@ $(TR $(TDNW Miscellaneous)
     )
 )))
 
-Objects of types `_string`, `wstring`, and `dstring` are value types
+Objects of types `string`, `wstring`, and `dstring` are value types
 and cannot be mutated element-by-element. For using mutation during building
 strings, use `char[]`, `wchar[]`, or `dchar[]`. The `xxxstring`
 types are preferable because they don't exhibit undesired aliasing, thus
@@ -110,7 +110,7 @@ $(LEADINGROW Publicly imported functions)
     ))
 )
 
-There is a rich set of functions for _string handling defined in other modules.
+There is a rich set of functions for string handling defined in other modules.
 Functions related to Unicode and ASCII are found in $(MREF std, uni)
 and $(MREF std, ascii), respectively. Other functions that have a
 wider generality than just strings can be found in $(MREF std, algorithm)
@@ -138,7 +138,7 @@ Authors: $(HTTP digitalmars.com, Walter Bright),
          $(HTTP jmdavisprog.com, Jonathan M Davis),
          and David L. 'SpottedTiger' Davis
 
-Source:    $(PHOBOSSRC std/_string.d)
+Source:    $(PHOBOSSRC std/string.d)
 
 */
 module std.string;

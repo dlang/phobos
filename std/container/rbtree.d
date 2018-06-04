@@ -3,7 +3,7 @@ This module implements a red-black tree container.
 
 This module is a submodule of $(MREF std, container).
 
-Source: $(PHOBOSSRC std/container/_rbtree.d)
+Source: $(PHOBOSSRC std/container/rbtree.d)
 
 Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
 copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.

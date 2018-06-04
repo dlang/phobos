@@ -1,6 +1,6 @@
 // Written in the D programming language.
 /**
-Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/_affix_allocator.d)
+Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/affix_allocator.d)
 */
 module std.experimental.allocator.building_blocks.affix_allocator;
 

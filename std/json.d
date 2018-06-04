@@ -7,7 +7,7 @@ Copyright: Copyright Jeremie Pelletier 2008 - 2009.
 License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   Jeremie Pelletier, David Herberth
 References: $(LINK http://json.org/)
-Source:    $(PHOBOSSRC std/_json.d)
+Source:    $(PHOBOSSRC std/json.d)
 */
 /*
          Copyright Jeremie Pelletier 2008 - 2009.

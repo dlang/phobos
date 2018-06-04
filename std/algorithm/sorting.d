@@ -1,7 +1,7 @@
 // Written in the D programming language.
 /**
 This is a submodule of $(MREF std, algorithm).
-It contains generic _sorting algorithms.
+It contains generic sorting algorithms.
 
 $(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE Cheat Sheet,
@@ -67,7 +67,7 @@ License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
 Authors: $(HTTP erdani.com, Andrei Alexandrescu)
 
-Source: $(PHOBOSSRC std/algorithm/_sorting.d)
+Source: $(PHOBOSSRC std/algorithm/sorting.d)
 
 Macros:
 T2=$(TR $(TDNW $(LREF $1)) $(TD $+))

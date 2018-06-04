@@ -6,7 +6,7 @@ This module defines generic containers.
 Construction:
 
 To implement the different containers both struct and class based
-approaches have been used. $(REF make, std,_container,util) allows for
+approaches have been used. $(REF make, std,container,util) allows for
 uniform construction with either approach.
 
 ---
@@ -34,7 +34,7 @@ Reference_semantics:
 All containers have reference semantics, which means that after
 assignment both variables refer to the same underlying data.
 
-To make a copy of a _container, use the `c._dup` _container primitive.
+To make a copy of a container, use the `c._dup` container primitive.
 ---
 import std.container, std.range;
 Array!int originalArray = make!(Array!int)(1, 2, 3);
@@ -52,7 +52,7 @@ secondArray[0] = 1;
 assert(originalArray[0] == 12);
 ---
 
-$(B Attention:) If the _container is implemented as a class, using an
+$(B Attention:) If the container is implemented as a class, using an
 uninitialized instance can cause a null pointer dereference.
 
 ---
@@ -62,8 +62,8 @@ RedBlackTree!int rbTree;
 rbTree.insert(5); // null pointer dereference
 ---
 
-Using an uninitialized struct-based _container will work, because the struct
-intializes itself upon use; however, up to this point the _container will not
+Using an uninitialized struct-based container will work, because the struct
+intializes itself upon use; however, up to this point the container will not
 have an identity and assignment does not create two references to the same
 data.
 
@@ -85,9 +85,9 @@ array1.removeBack();
 assert(array2.empty);
 ---
 It is therefore recommended to always construct containers using
-$(REF make, std,_container,util).
+$(REF make, std,container,util).
 
-This is in fact necessary to put containers into another _container.
+This is in fact necessary to put containers into another container.
 For example, to construct an `Array` of ten empty `Array`s, use
 the following that calls `make` ten times.
 
@@ -103,47 +103,47 @@ This module consists of the following submodules:
 
 $(UL
     $(LI
-        The $(MREF std, _container, array) module provides
+        The $(MREF std, container, array) module provides
         an array type with deterministic control of memory, not reliant on
         the GC unlike built-in arrays.
     )
     $(LI
-        The $(MREF std, _container, binaryheap) module
+        The $(MREF std, container, binaryheap) module
         provides a binary heap implementation that can be applied to any
         user-provided random-access range.
     )
     $(LI
-        The $(MREF std, _container, dlist) module provides
+        The $(MREF std, container, dlist) module provides
         a doubly-linked list implementation.
     )
     $(LI
-        The $(MREF std, _container, rbtree) module
+        The $(MREF std, container, rbtree) module
         implements red-black trees.
     )
     $(LI
-        The $(MREF std, _container, slist) module
+        The $(MREF std, container, slist) module
         implements singly-linked lists.
     )
     $(LI
-        The $(MREF std, _container, util) module contains
-        some generic tools commonly used by _container implementations.
+        The $(MREF std, container, util) module contains
+        some generic tools commonly used by container implementations.
     )
 )
 
 The_primary_range_of_a_container:
 
-While some _containers offer direct access to their elements e.g. via
+While some containers offer direct access to their elements e.g. via
 `opIndex`, `c.front` or `c.back`, access
-and modification of a _container's contents is generally done through
+and modification of a container's contents is generally done through
 its primary $(MREF_ALTTEXT range, std, range) type,
 which is aliased as `C.Range`. For example, the primary range type of
 `Array!int` is `Array!int.Range`.
 
-If the documentation of a member function of a _container takes
+If the documentation of a member function of a container takes
 a parameter of type `Range`, then it refers to the primary range type of
-this _container. Oftentimes `Take!Range` will be used, in which case
-the range refers to a span of the elements in the _container. Arguments to
-these parameters $(B must) be obtained from the same _container instance
+this container. Oftentimes `Take!Range` will be used, in which case
+the range refers to a span of the elements in the container. Arguments to
+these parameters $(B must) be obtained from the same container instance
 as the one being worked with. It is important to note that many generic range
 algorithms return the same range type as their input range.
 
@@ -192,28 +192,28 @@ Container_primitives:
 Containers do not form a class hierarchy, instead they implement a
 common set of primitives (see table below). These primitives each guarantee
 a specific worst case complexity and thus allow generic code to be written
-independently of the _container implementation.
+independently of the container implementation.
 
 For example the primitives `c.remove(r)` and `c.linearRemove(r)` both
-remove the sequence of elements in range `r` from the _container `c`.
+remove the sequence of elements in range `r` from the container `c`.
 The primitive `c.remove(r)` guarantees
 $(BIGOH n$(SUBSCRIPT r) log n$(SUBSCRIPT c)) complexity in the worst case and
 `c.linearRemove(r)` relaxes this guarantee to $(BIGOH n$(SUBSCRIPT c)).
 
-Since a sequence of elements can be removed from a $(MREF_ALTTEXT doubly linked list,std,_container,dlist)
+Since a sequence of elements can be removed from a $(MREF_ALTTEXT doubly linked list,std,container,dlist)
 in constant time, `DList` provides the primitive `c.remove(r)`
 as well as `c.linearRemove(r)`. On the other hand
-$(MREF_ALTTEXT Array, std,_container, array) only offers `c.linearRemove(r)`.
+$(MREF_ALTTEXT Array, std,container, array) only offers `c.linearRemove(r)`.
 
 The following table describes the common set of primitives that containers
-implement.  A _container need not implement all primitives, but if a
+implement.  A container need not implement all primitives, but if a
 primitive is implemented, it must support the syntax described in the $(B
 syntax) column with the semantics described in the $(B description) column, and
 it must not have a worst-case complexity worse than denoted in big-O notation in
-the $(BIGOH &middot;) column.  Below, `C` means a _container type, `c` is
-a value of _container type, $(D n$(SUBSCRIPT x)) represents the effective length of
+the $(BIGOH &middot;) column.  Below, `C` means a container type, `c` is
+a value of container type, $(D n$(SUBSCRIPT x)) represents the effective length of
 value `x`, which could be a single element (in which case $(D n$(SUBSCRIPT x)) is
-`1`), a _container, or a range.
+`1`), a container, or a range.
 
 $(BOOKTABLE Container primitives,
 $(TR
@@ -224,13 +224,13 @@ $(TR
 $(TR
     $(TDNW `C(x)`)
     $(TDNW $(D n$(SUBSCRIPT x)))
-    $(TD Creates a _container of type `C` from either another _container or a range.
-    The created _container must not be a null reference even if x is empty.)
+    $(TD Creates a container of type `C` from either another container or a range.
+    The created container must not be a null reference even if x is empty.)
 )
 $(TR
     $(TDNW `c.dup`)
     $(TDNW $(D n$(SUBSCRIPT c)))
-    $(TD Returns a duplicate of the _container.)
+    $(TD Returns a duplicate of the container.)
 )
 $(TR
     $(TDNW $(D c ~ x))
@@ -249,43 +249,43 @@ $(LEADINGROWN 3, Iteration
 $(TR
     $(TD `c.Range`)
     $(TD)
-    $(TD The primary range type associated with the _container.)
+    $(TD The primary range type associated with the container.)
 )
 $(TR
     $(TD `c[]`)
     $(TDNW $(D log n$(SUBSCRIPT c)))
     $(TD Returns a range
-         iterating over the entire _container, in a _container-defined order.)
+         iterating over the entire container, in a container-defined order.)
 )
 $(TR
     $(TDNW $(D c[a .. b]))
     $(TDNW $(D log n$(SUBSCRIPT c)))
-    $(TD Fetches a portion of the _container from key `a` to key `b`.)
+    $(TD Fetches a portion of the container from key `a` to key `b`.)
 )
 $(LEADINGROWN 3, Capacity
 )
 $(TR
     $(TD `c.empty`)
     $(TD `1`)
-    $(TD Returns `true` if the _container has no elements, `false` otherwise.)
+    $(TD Returns `true` if the container has no elements, `false` otherwise.)
 )
 $(TR
     $(TD `c.length`)
     $(TDNW $(D log n$(SUBSCRIPT c)))
-    $(TD Returns the number of elements in the _container.)
+    $(TD Returns the number of elements in the container.)
 )
 $(TR
     $(TDNW $(D c.length = n))
     $(TDNW $(D n$(SUBSCRIPT c) + n))
-    $(TD Forces the number of elements in the _container to `n`.
-        If the _container ends up growing, the added elements are initialized
-        in a _container-dependent manner (usually with `T.init`).)
+    $(TD Forces the number of elements in the container to `n`.
+        If the container ends up growing, the added elements are initialized
+        in a container-dependent manner (usually with `T.init`).)
 )
 $(TR
     $(TD `c.capacity`)
     $(TDNW $(D log n$(SUBSCRIPT c)))
     $(TD Returns the maximum number of elements that can be stored in the
-    _container without triggering a reallocation.)
+    container without triggering a reallocation.)
 )
 $(TR
     $(TD `c.reserve(x)`)
@@ -297,63 +297,63 @@ $(LEADINGROWN 3, Access
 $(TR
     $(TDNW `c.front`)
     $(TDNW $(D log n$(SUBSCRIPT c)))
-    $(TD Returns the first element of the _container, in a _container-defined order.)
+    $(TD Returns the first element of the container, in a container-defined order.)
 )
 $(TR
     $(TDNW `c.moveFront`)
     $(TDNW $(D log n$(SUBSCRIPT c)))
     $(TD Destructively reads and returns the first element of the
-         _container. The slot is not removed from the _container; it is left
+         container. The slot is not removed from the container; it is left
          initialized with `T.init`. This routine need not be defined if $(D
          front) returns a `ref`.)
 )
 $(TR
     $(TDNW $(D c.front = v))
     $(TDNW $(D log n$(SUBSCRIPT c)))
-    $(TD Assigns `v` to the first element of the _container.)
+    $(TD Assigns `v` to the first element of the container.)
 )
 $(TR
     $(TDNW `c.back`)
     $(TDNW $(D log n$(SUBSCRIPT c)))
-    $(TD Returns the last element of the _container, in a _container-defined order.)
+    $(TD Returns the last element of the container, in a container-defined order.)
 )
 $(TR
     $(TDNW `c.moveBack`)
     $(TDNW $(D log n$(SUBSCRIPT c)))
     $(TD Destructively reads and returns the last element of the
-         _container. The slot is not removed from the _container; it is left
+         container. The slot is not removed from the container; it is left
          initialized with `T.init`. This routine need not be defined if $(D
          front) returns a `ref`.)
 )
 $(TR
     $(TDNW $(D c.back = v))
     $(TDNW $(D log n$(SUBSCRIPT c)))
-    $(TD Assigns `v` to the last element of the _container.)
+    $(TD Assigns `v` to the last element of the container.)
 )
 $(TR
     $(TDNW `c[x]`)
     $(TDNW $(D log n$(SUBSCRIPT c)))
-    $(TD Provides indexed access into the _container. The index type is
-         _container-defined. A _container may define several index types (and
+    $(TD Provides indexed access into the container. The index type is
+         container-defined. A container may define several index types (and
          consequently overloaded indexing).)
 )
 $(TR
     $(TDNW `c.moveAt(x)`)
     $(TDNW $(D log n$(SUBSCRIPT c)))
     $(TD Destructively reads and returns the value at position `x`. The slot
-         is not removed from the _container; it is left initialized with $(D
+         is not removed from the container; it is left initialized with $(D
          T.init).)
 )
 $(TR
     $(TDNW $(D c[x] = v))
     $(TDNW $(D log n$(SUBSCRIPT c)))
-    $(TD Sets element at specified index into the _container.)
+    $(TD Sets element at specified index into the container.)
 )
 $(TR
     $(TDNW $(D c[x] $(I op)= v))
     $(TDNW $(D log n$(SUBSCRIPT c)))
     $(TD Performs read-modify-write operation at specified index into the
-        _container.)
+        container.)
 )
 $(LEADINGROWN 3, Operations
 )
@@ -490,7 +490,7 @@ $(TR
     $(TDNW `c.removeKey(k)`)
     $(TDNW $(D log n$(SUBSCRIPT c)))
     $(TD Removes an element from `c` by using its key `k`.
-         The key's type is defined by the _container.)
+         The key's type is defined by the container.)
 )
 $(TR
     $(TDNW ``)
@@ -499,7 +499,7 @@ $(TR
 )
 )
 
-Source: $(PHOBOSSRC std/_container/package.d)
+Source: $(PHOBOSSRC std/container/package.d)
 
 Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
 copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.

@@ -4,7 +4,7 @@ It can be used as a stack.
 
 This module is a submodule of $(MREF std, container).
 
-Source: $(PHOBOSSRC std/container/_slist.d)
+Source: $(PHOBOSSRC std/container/slist.d)
 
 Copyright: 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
 

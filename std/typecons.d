@@ -59,7 +59,7 @@ $(TR $(TD Types) $(TD
 
 Copyright: Copyright the respective authors, 2008-
 License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
-Source:    $(PHOBOSSRC std/_typecons.d)
+Source:    $(PHOBOSSRC std/typecons.d)
 Authors:   $(HTTP erdani.org, Andrei Alexandrescu),
            $(HTTP bartoszmilewski.wordpress.com, Bartosz Milewski),
            Don Clugston,

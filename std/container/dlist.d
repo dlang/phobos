@@ -4,7 +4,7 @@ It can be used as a queue, dequeue or stack.
 
 This module is a submodule of $(MREF std, container).
 
-Source: $(PHOBOSSRC std/container/_dlist.d)
+Source: $(PHOBOSSRC std/container/dlist.d)
 
 Copyright: 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
 

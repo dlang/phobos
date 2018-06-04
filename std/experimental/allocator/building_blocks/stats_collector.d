@@ -4,7 +4,7 @@ Allocator that collects useful statistics about allocations, both global and per
 calling point. The statistics collected can be configured statically by choosing
 combinations of `Options` appropriately.
 
-Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/_stats_collector.d)
+Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/stats_collector.d)
 */
 module std.experimental.allocator.building_blocks.stats_collector;
 

@@ -1,6 +1,6 @@
 // Written in the D programming language.
 /**
-Source: $(PHOBOSSRC std/experimental/logger/_nulllogger.d)
+Source: $(PHOBOSSRC std/experimental/logger/nulllogger.d)
 */
 module std.experimental.logger.nulllogger;
 

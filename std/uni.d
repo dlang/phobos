@@ -691,7 +691,7 @@ $(TR $(TD Building blocks) $(TD
     Copyright: Copyright 2013 -
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Dmitry Olshansky
-    Source:    $(PHOBOSSRC std/_uni.d)
+    Source:    $(PHOBOSSRC std/uni.d)
     Standards: $(HTTP www.unicode.org/versions/Unicode6.2.0/, Unicode v6.2)
 
 Macros:
@@ -2435,8 +2435,8 @@ public:
         open-right intervals and feed it to `sink`.
         )
         $(P Used by various standard formatting facilities such as
-         $(REF formattedWrite, std,_format), $(REF write, std,_stdio),
-         $(REF writef, std,_stdio), $(REF to, std,_conv) and others.
+         $(REF formattedWrite, std,format), $(REF write, std,stdio),
+         $(REF writef, std,stdio), $(REF to, std,conv) and others.
         )
         Example:
         ---

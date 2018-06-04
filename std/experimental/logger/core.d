@@ -1,6 +1,6 @@
 // Written in the D programming language.
 /**
-Source: $(PHOBOSSRC std/experimental/logger/_core.d)
+Source: $(PHOBOSSRC std/experimental/logger/core.d)
 */
 module std.experimental.logger.core;
 

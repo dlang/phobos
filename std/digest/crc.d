@@ -38,7 +38,7 @@ $(TR $(TDNW Helpers) $(TD $(MYREF crcHexString) $(MYREF crc32Of) $(MYREF crc64EC
  * References:
  *      $(LINK2 http://en.wikipedia.org/wiki/Cyclic_redundancy_check, Wikipedia on CRC)
  *
- * Source: $(PHOBOSSRC std/digest/_crc.d)
+ * Source: $(PHOBOSSRC std/digest/crc.d)
  *
  * Standards:
  * Implements the 'common' IEEE CRC32 variant

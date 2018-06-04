@@ -42,7 +42,7 @@ Authors:   $(HTTP digitalmars.com, Walter Bright),
            Alex Rønne Petersen,
            Damian Ziemba,
            Amaury SECHET
-Source: $(PHOBOSSRC std/_bitmanip.d)
+Source: $(PHOBOSSRC std/bitmanip.d)
 */
 /*
          Copyright Digital Mars 2007 - 2012.

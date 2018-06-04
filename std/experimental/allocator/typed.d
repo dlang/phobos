@@ -6,7 +6,7 @@ properties of the types allocated. For example, distinct allocators may be used
 for thread-local vs. thread-shared data, or for fixed-size data (`struct`,
 `class` objects) vs. resizable data (arrays).
 
-Source: $(PHOBOSSRC std/experimental/allocator/_typed.d)
+Source: $(PHOBOSSRC std/experimental/allocator/typed.d)
 
 Macros:
 T2=$(TR <td style="text-align:left">`$1`</td> $(TD $(ARGS $+)))

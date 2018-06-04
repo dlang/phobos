@@ -4,7 +4,7 @@
 Standard I/O functions that extend $(B core.stdc.stdio).  $(B core.stdc.stdio)
 is $(D_PARAM public)ally imported when importing $(B std.stdio).
 
-Source: $(PHOBOSSRC std/_stdio.d)
+Source: $(PHOBOSSRC std/stdio.d)
 Copyright: Copyright Digital Mars 2007-.
 License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(HTTP digitalmars.com, Walter Bright),

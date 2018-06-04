@@ -2,33 +2,33 @@
 
 /**
 Functions for starting and interacting with other processes, and for
-working with the current _process' execution environment.
+working with the current process' execution environment.
 
 Process_handling:
 $(UL $(LI
-    $(LREF spawnProcess) spawns a new _process, optionally assigning it an
+    $(LREF spawnProcess) spawns a new process, optionally assigning it an
     arbitrary set of standard input, output, and error streams.
-    The function returns immediately, leaving the child _process to execute
+    The function returns immediately, leaving the child process to execute
     in parallel with its parent.  All other functions in this module that
     spawn processes are built around `spawnProcess`.)
 $(LI
-    $(LREF wait) makes the parent _process wait for a child _process to
+    $(LREF wait) makes the parent process wait for a child process to
     terminate.  In general one should always do this, to avoid
-    child processes becoming "zombies" when the parent _process exits.
+    child processes becoming "zombies" when the parent process exits.
     Scope guards are perfect for this – see the $(LREF spawnProcess)
     documentation for examples.  $(LREF tryWait) is similar to `wait`,
-    but does not block if the _process has not yet terminated.)
+    but does not block if the process has not yet terminated.)
 $(LI
-    $(LREF pipeProcess) also spawns a child _process which runs
+    $(LREF pipeProcess) also spawns a child process which runs
     in parallel with its parent.  However, instead of taking
     arbitrary streams, it automatically creates a set of
     pipes that allow the parent to communicate with the child
     through the child's standard input, output, and/or error streams.
     This function corresponds roughly to C's `popen` function.)
 $(LI
-    $(LREF execute) starts a new _process and waits for it
+    $(LREF execute) starts a new process and waits for it
     to complete before returning.  Additionally, it captures
-    the _process' standard output and error streams and returns
+    the process' standard output and error streams and returns
     the output of these as a string.)
 $(LI
     $(LREF spawnShell), $(LREF pipeShell) and $(LREF executeShell) work like
@@ -37,16 +37,16 @@ $(LI
     the current user's default command interpreter.
     `executeShell` corresponds roughly to C's `system` function.)
 $(LI
-    $(LREF kill) attempts to terminate a running _process.)
+    $(LREF kill) attempts to terminate a running process.)
 )
 
-The following table compactly summarises the different _process creation
+The following table compactly summarises the different process creation
 functions and how they relate to each other:
 $(BOOKTABLE,
     $(TR $(TH )
          $(TH Runs program directly)
          $(TH Runs shell command))
-    $(TR $(TD Low-level _process creation)
+    $(TR $(TD Low-level process creation)
          $(TD $(LREF spawnProcess))
          $(TD $(LREF spawnShell)))
     $(TR $(TD Automatic input/output redirection using pipes)
@@ -62,7 +62,7 @@ $(UL
 $(LI
     $(LREF pipe) is used to create unidirectional pipes.)
 $(LI
-    $(LREF environment) is an interface through which the current _process'
+    $(LREF environment) is an interface through which the current process'
     environment variables can be read and manipulated.)
 $(LI
     $(LREF escapeShellCommand) and $(LREF escapeShellFileName) are useful
@@ -78,7 +78,7 @@ Copyright:
 License:
    $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Source:
-    $(PHOBOSSRC std/_process.d)
+    $(PHOBOSSRC std/process.d)
 Macros:
     OBJECTREF=$(REF1 $0, object)
 */
@@ -160,10 +160,10 @@ private
 
 
 /**
-Spawns a new _process, optionally assigning it an arbitrary set of standard
+Spawns a new process, optionally assigning it an arbitrary set of standard
 input, output, and error streams.
 
-The function returns immediately, leaving the child _process to execute
+The function returns immediately, leaving the child process to execute
 in parallel with its parent.  It is recommended to always call $(LREF wait)
 on the returned $(LREF Pid) unless the process was spawned with
 `Config.detached` flag, as detailed in the documentation for `wait`.

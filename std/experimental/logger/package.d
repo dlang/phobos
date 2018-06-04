@@ -178,7 +178,7 @@ calls to its stored `Logger`. The `NullLogger` does not do anything. It
 will never log a message and will never throw on a log call with `LogLevel`
 `error`.
 
-Source: $(PHOBOSSRC std/experimental/logger/_package.d)
+Source: $(PHOBOSSRC std/experimental/logger/package.d)
 */
 module std.experimental.logger;
 

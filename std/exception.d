@@ -37,7 +37,7 @@ $(TR $(TD Other) $(TD
     License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0)
     Authors:   $(HTTP erdani.org, Andrei Alexandrescu) and
                $(HTTP jmdavisprog.com, Jonathan M Davis)
-    Source:    $(PHOBOSSRC std/_exception.d)
+    Source:    $(PHOBOSSRC std/exception.d)
 
  +/
 module std.exception;

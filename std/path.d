@@ -1,15 +1,15 @@
 // Written in the D programming language.
 
-/** This module is used to manipulate _path strings.
+/** This module is used to manipulate path strings.
 
     All functions, with the exception of $(LREF expandTilde) (and in some
     cases $(LREF absolutePath) and $(LREF relativePath)), are pure
     string manipulation functions; they don't depend on any state outside
     the program, nor do they perform any actual file system actions.
     This has the consequence that the module does not make any distinction
-    between a _path that points to a directory and a _path that points to a
+    between a path that points to a directory and a path that points to a
     file, and it does not know whether or not the object pointed to by the
-    _path actually exists in the file system.
+    path actually exists in the file system.
     To differentiate between these cases, use $(REF isDir, std,file) and
     $(REF exists, std,file).
 
@@ -21,9 +21,9 @@
 
     In general, the functions in this module assume that the input paths
     are well-formed.  (That is, they should not contain invalid characters,
-    they should follow the file system's _path format, etc.)  The result
-    of calling a function on an ill-formed _path is undefined.  When there
-    is a chance that a _path or a file name is invalid (for instance, when it
+    they should follow the file system's path format, etc.)  The result
+    of calling a function on an ill-formed path is undefined.  When there
+    is a chance that a path or a file name is invalid (for instance, when it
     has been input by the user), it may sometimes be desirable to use the
     $(LREF isValidFilename) and $(LREF isValidPath) functions to check
     this.
@@ -91,7 +91,7 @@ $(TR $(TD Other) $(TD
     License:
         $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0)
     Source:
-        $(PHOBOSSRC std/_path.d)
+        $(PHOBOSSRC std/path.d)
 */
 module std.path;
 
@@ -807,7 +807,7 @@ Lnull:
         path = string or range of characters
 
     Returns:
-        A slice of `_path` that is the drive, or an empty range if the drive
+        A slice of `path` that is the drive, or an empty range if the drive
         is not specified.  In the case of UNC paths, the network share
         is returned.
 
@@ -1165,7 +1165,7 @@ private auto _stripExtension(R)(R path)
         path = A path name
         ext = The new extension
 
-    Returns: A string containing the _path given by `path`, but where
+    Returns: A string containing the path given by `path`, but where
     the extension has been set to `ext`.
 
     See_Also:
@@ -1303,7 +1303,7 @@ private auto _withExtension(R, C)(R path, C[] ext)
         path = A path name.
         ext = The default extension to use.
 
-    Returns: The _path given by `path`, with the extension given by `ext`
+    Returns: The path given by `path`, with the extension given by `ext`
     appended if the path doesn't already have one.
 
     Including the dot in the extension is optional.
@@ -1895,7 +1895,7 @@ if (isSomeChar!C)
     Use $(LREF buildNormalizedPath) to allocate memory and return a string.
 
     Params:
-        path = string or random access range representing the _path to normalize
+        path = string or random access range representing the path to normalize
 
     Returns:
         normalized path as a forward range
@@ -2712,7 +2712,7 @@ else version (Posix)
 
 
 
-/** Transforms `path` into an absolute _path.
+/** Transforms `path` into an absolute path.
 
     The following algorithm is used:
     $(OL
@@ -2785,7 +2785,7 @@ string absolutePath(string path, lazy string base = getcwd())
     assertThrown(absolutePath("bar", "foo"));
 }
 
-/** Transforms `path` into an absolute _path.
+/** Transforms `path` into an absolute path.
 
     The following algorithm is used:
     $(OL
@@ -2843,11 +2843,11 @@ if (isConvertibleToString!R)
     assert(testAliasedString!asAbsolutePath(null));
 }
 
-/** Translates `path` into a relative _path.
+/** Translates `path` into a relative path.
 
-    The returned _path is relative to `base`, which is by default
+    The returned path is relative to `base`, which is by default
     taken to be the current working directory.  If specified,
-    `base` must be an absolute _path, and it is always assumed
+    `base` must be an absolute path, and it is always assumed
     to refer to a directory.  If `path` and `base` refer to
     the same directory, the function returns ``.``.
 
@@ -2939,11 +2939,11 @@ string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
     else static assert(0);
 }
 
-/** Transforms `path` into a _path relative to `base`.
+/** Transforms `path` into a path relative to `base`.
 
-    The returned _path is relative to `base`, which is usually
+    The returned path is relative to `base`, which is usually
     the current working directory.
-    `base` must be an absolute _path, and it is always assumed
+    `base` must be an absolute path, and it is always assumed
     to refer to a directory.  If `path` and `base` refer to
     the same directory, the function returns `'.'`.
 
@@ -2964,13 +2964,13 @@ string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
     $(LREF filenameCmp) documentation for details.
 
     Params:
-        path = _path to transform
+        path = path to transform
         base = absolute path
         cs = whether filespec comparisons are sensitive or not; defaults to
          `CaseSensitive.osDefault`
 
     Returns:
-        a random access range of the transformed _path
+        a random access range of the transformed path
 
     See_Also:
         $(LREF relativePath)
@@ -3715,13 +3715,13 @@ unittest
 
 
 
-/** Checks whether `path` is a valid _path.
+/** Checks whether `path` is a valid path.
 
     Generally, this function checks that `path` is not empty, and that
     each component of the path either satisfies $(LREF isValidFilename)
     or is equal to `"."` or `".."`.
 
-    $(B It does $(I not) check whether the _path points to an existing file
+    $(B It does $(I not) check whether the path points to an existing file
     or directory; use $(REF exists, std,file) for this purpose.)
 
     On Windows, some special rules apply:
@@ -3744,7 +3744,7 @@ unittest
         path = string or Range of characters to check
 
     Returns:
-        true if `path` is a valid _path.
+        true if `path` is a valid path.
 */
 bool isValidPath(Range)(Range path)
 if ((isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && isSomeChar!(ElementEncodingType!Range) ||
