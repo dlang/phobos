@@ -3796,7 +3796,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     import std.algorithm.searching : find;
     import std.conv : unsigned;
 
-    static struct Result
+    struct Result
     {
     private:
         Range _input;
@@ -3817,7 +3817,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 
         static if (isBidirectionalRange!Range)
         {
-            static size_t lastIndexOf(Range haystack, Separator needle)
+            size_t lastIndexOf(Range haystack, Separator needle)
             {
                 import std.range : retro;
                 auto r = haystack.retro().find!pred(needle);
@@ -4140,6 +4140,23 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     assert(equal(s.front, [4L, 3L, 2L, 1L]));
     s.popFront();
     assert(s.empty);
+}
+
+@safe unittest // issue 18470
+{
+    import std.algorithm.comparison : equal;
+
+    const w = [[0], [1], [2]];
+    assert(w.splitter!((a, b) => a.front() == b)(1).equal([[[0]], [[2]]]));
+}
+
+@safe unittest // issue 18470
+{
+    import std.algorithm.comparison : equal;
+    import std.ascii : toLower;
+
+    assert("abXcdxef".splitter!"a.toLower == b"('x').equal(["ab", "cd", "ef"]));
+    assert("abXcdxef".splitter!((a, b) => a.toLower == b)('x').equal(["ab", "cd", "ef"]));
 }
 
 /// ditto
