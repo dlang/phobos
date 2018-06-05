@@ -487,6 +487,40 @@ Throws: `ErrnoException` if the file could not be opened.
         return (openMode & (OpenMode.write | OpenMode.truncate | OpenMode.append | OpenMode.createNew)) != 0;
     }
 
+    private static const(char)[4] modezFromOpenMode(OpenMode openMode) @trusted
+    {
+        const bool anyWrite = hasAnyWriteFlag(openMode);
+        char[4] modez;
+        size_t i = 0;
+        if (openMode & OpenMode.read) {
+            if (anyWrite) {
+                if (openMode & OpenMode.append) {
+                    modez[i++] = 'a';
+                    modez[i++] = '+';
+                } else if (openMode & OpenMode.existingOnly) {
+                    modez[i++] = 'r';
+                    modez[i++] = '+';
+                } else if (openMode & OpenMode.truncate) {
+                    modez[i++] = 'r';
+                    modez[i++] = 'w';
+                } else {
+                    modez[i++] = 'w';
+                    modez[i++] = '+';
+                }
+            } else {
+                modez[i++] = 'r';
+            }
+        } else if (anyWrite) {
+            if (openMode & OpenMode.append)
+                modez[i++] = 'a';
+            else
+                modez[i++] = 'w';
+        }
+        assert(i < modez.length);
+        modez[i] = '\0';
+        return modez;
+    }
+
     version(Posix) private static int openFd(string name, OpenMode openMode) @trusted
     {
         import std.exception : errnoEnforce;
@@ -526,38 +560,76 @@ Throws: `ErrnoException` if the file could not be opened.
         return fd;
     }
 
-    version(Posix) private static FILE* openFdFile(int fd, OpenMode openMode) @trusted
+    version(Windows) private static HANDLE openHandle(string name, OpenMode openMode) @trusted
     {
-        const bool anyWrite = hasAnyWriteFlag(openMode);
-        char[4] modez;
-        size_t i = 0;
-        if (openMode & OpenMode.read) {
-            if (anyWrite) {
-                if (openMode & OpenMode.append) {
-                    modez[i++] = 'a';
-                    modez[i++] = '+';
-                } else if (openMode & OpenMode.existingOnly) {
-                    modez[i++] = 'r';
-                    modez[i++] = '+';
-                } else {
-                    modez[i++] = 'w';
-                    modez[i++] = '+';
-                }
-            } else {
-                modez[i++] = 'r';
-            }
-        } else if (anyWrite) {
-            if (openMode & OpenMode.append)
-                modez[i++] = 'a';
-            else
-                modez[i++] = 'w';
-        }
-        assert(i < modez.length);
-        modez[i] = '\0';
+        import std.internal.cstring : tempCString;
+        import core.sys.windows.windows;
 
+        auto namez = name.tempCString!FSChar();
+        const bool anyWrite = hasAnyWriteFlag(openMode);
+        const bool existing = (openMode & OpenMode.existingOnly) != 0;
+        const bool hasRead = (openMode & OpenMode.read) != 0;
+
+        DWORD desiredAccess = 0;
+        DWORD shareMode = 0;
+        DWORD creationDisposition = 0;
+        DWORD flags = FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN;
+
+        if (hasRead)
+            desiredAccess |= GENERIC_READ;
+        if (anyWrite)
+            desiredAccess |= GENERIC_WRITE;
+
+        if (hasRead && !anyWrite)
+            shareMode |= FILE_SHARE_READ;
+
+        if ((hasRead && !anyWrite) || existing)
+        {
+            creationDisposition = OPEN_EXISTING;
+        }
+        else if (openMode & OpenMode.truncate)
+        {
+            if (existing)
+                creationDisposition = TRUNCATE_EXISTING;
+            else
+                creationDisposition = CREATE_ALWAYS;
+        }
+        else if (openMode & OpenMode.createNew)
+        {
+            creationDisposition = CREATE_NEW;
+        }
+        else if (anyWrite)
+        {
+            creationDisposition = OPEN_ALWAYS;
+        }
+        HANDLE h = CreateFileW(namez, desiredAccess, shareMode, null, creationDisposition, flags, HANDLE.init);
+        wenforce(h != INVALID_HANDLE_VALUE, name);
+        if (openMode & OpenMode.append)
+            wenforce(SetFilePointer(h, 0, null, FILE_END) != INVALID_SET_FILE_POINTER, name);
+        return h;
+    }
+
+    version(Windows) private static FILE* windowsHandleToFile(HANDLE handle, OpenMode openMode) @trusted
+    {
+        import core.stdc.stdint : intptr_t;
         import std.exception : errnoEnforce;
-        import core.sys.posix.stdio : fdopen;
-        return errnoEnforce(fdopen(fd, modez.ptr));
+        import std.format : format;
+
+        // Create file descriptors from the handles
+        version (DIGITAL_MARS_STDIO)
+            auto fd = _handleToFD(handle, FHND_DEVICE);
+        else // MSVCRT
+        {
+            int mode = _O_BINARY;
+            if (openMode & OpenMode.append)
+                mode |= O_APPEND;
+            else if ((openMode & OpenMode.read) != 0 && !hasAnyWriteFlag(openMode))
+                mode |= O_RDONLY;
+
+            auto fd = _open_osfhandle(cast(intptr_t) handle, mode);
+        }
+        errnoEnforce(fd >= 0, "Cannot open Windows HANDLE");
+        return fdToFp(fd, openMode);
     }
 
     private static FILE* openFile(string name, OpenMode openMode) @trusted
@@ -565,11 +637,12 @@ Throws: `ErrnoException` if the file could not be opened.
         version(Posix)
         {
             int fd = openFd(name, openMode);
-            return openFdFile(fd, openMode);
+            return fdToFp(fd, openMode);
         }
         else version(Windows)
         {
-            // TODO
+            HANDLE handle = openHandle(name, openMode);
+            return windowsHandleToFile(handle, openMode);
         }
     }
 
@@ -599,6 +672,7 @@ Throws: `ErrnoException` if the file could not be opened.
         assertThrown(File(deleteme, OpenMode.read));
 
         auto f = File(deleteme, OpenMode.createNew);
+        assert(f.name == deleteme);
         f.write("foo");
         f.close();
 
@@ -894,14 +968,9 @@ Throws: `ErrnoException` in case of error.
         fdopen(fd, stdioOpenmode, null);
     }
 
-    package void fdopen(int fd, in char[] stdioOpenmode, string name) @trusted
+    static private FILE* fdToFp(int fd, const(char)* modez) @trusted
     {
         import std.exception : errnoEnforce;
-        import std.internal.cstring : tempCString;
-
-        auto modez = stdioOpenmode.tempCString();
-        detach();
-
         version (DIGITAL_MARS_STDIO)
         {
             // This is a re-implementation of DMC's fdopen, but without the
@@ -917,6 +986,7 @@ Throws: `ErrnoException` in case of error.
             iob._file = fd;
             iob._flag &= ~_IOTRAN;
             FUNLOCK(fp);
+            return fp;
         }
         else
         {
@@ -928,8 +998,23 @@ Throws: `ErrnoException` in case of error.
                 auto fp = fdopen(fd, modez);
             }
             errnoEnforce(fp);
+            return fp;
         }
-        this = File(fp, name);
+    }
+
+    static private FILE* fdToFp(int fd, OpenMode openMode) @trusted
+    {
+        auto modez = modezFromOpenMode(openMode);
+        return fdToFp(fd, modez.ptr);
+    }
+
+    package void fdopen(int fd, in char[] stdioOpenmode, string name) @trusted
+    {
+        import std.internal.cstring : tempCString;
+
+        auto modez = stdioOpenmode.tempCString();
+        detach();
+        this = File(fdToFp(fd, modez), name);
     }
 
     // Declare a dummy HANDLE to allow generating documentation
