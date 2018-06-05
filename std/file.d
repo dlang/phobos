@@ -1180,7 +1180,7 @@ if (isConvertibleToString!R)
 
 // Reads a time field from a stat_t with full precision.
 version(Posix)
-private SysTime statTimeToStdTime(char which)(ref stat_t statbuf)
+private SysTime statTimeToStdTime(char which)(ref const stat_t statbuf)
 {
     auto unixTime = mixin(`statbuf.st_` ~ which ~ `time`);
     long stdTime = unixTimeToStdTime(unixTime);
@@ -1793,7 +1793,7 @@ version(StdDdoc)
      Params:
         statbuf = stat_t retrieved from file.
      +/
-    SysTime timeLastModified(ref stat_t statbuf) pure nothrow;
+    SysTime timeLastModified()(auto ref stat_t statbuf) pure nothrow {assert(false);}
     /++
      $(BLUE This function is Posix-Only.)
 
@@ -1801,7 +1801,7 @@ version(StdDdoc)
      Params:
         statbuf = stat_t retrieved from file.
      +/
-    SysTime timeLastAccessed(ref stat_t statbuf) pure nothrow;
+    SysTime timeLastAccessed()(auto ref stat_t statbuf) pure nothrow {assert(false);}
     /++
      $(BLUE This function is Posix-Only.)
 
@@ -1809,22 +1809,29 @@ version(StdDdoc)
      Params:
         statbuf = stat_t retrieved from file.
      +/
-    SysTime timeStatusChanged(ref stat_t statbuf) pure nothrow;
+    SysTime timeStatusChanged()(auto ref stat_t statbuf) pure nothrow {assert(false);}
 }
-else
-version(Posix)
+else version(Posix)
 {
-    SysTime timeLastModified(ref stat_t statbuf) pure nothrow
+    SysTime timeLastModified()(auto ref stat_t statbuf) pure nothrow
     {
         return statTimeToStdTime!'m'(statbuf);
     }
-    SysTime timeLastAccessed(ref stat_t statbuf) pure nothrow
+    SysTime timeLastAccessed()(auto ref stat_t statbuf) pure nothrow
     {
         return statTimeToStdTime!'a'(statbuf);
     }
-    SysTime timeStatusChanged(ref stat_t statbuf) pure nothrow
+    SysTime timeStatusChanged()(auto ref stat_t statbuf) pure nothrow
     {
         return statTimeToStdTime!'c'(statbuf);
+    }
+
+    unittest
+    {
+        stat_t statbuf;
+        // check that both lvalues and rvalues work
+        timeLastAccessed(statbuf);
+        timeLastAccessed(stat_t.init);
     }
 }
 
