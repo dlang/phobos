@@ -506,41 +506,34 @@ Throws: `ErrnoException` if the file could not be opened.
 
     private static bool hasAnyWriteFlag(OpenMode openMode) @safe nothrow pure @nogc
     {
-        return (openMode & (OpenMode.write | OpenMode.truncate | OpenMode.append | OpenMode.createNew)) != 0;
+        with(OpenMode) return (openMode & (write | truncate | append | createNew)) != 0;
     }
 
-    private static const(char)[4] modezFromOpenMode(OpenMode openMode) @trusted
+    private static string modezFromOpenMode(OpenMode openMode) @safe
     {
         const bool anyWrite = hasAnyWriteFlag(openMode);
-        char[4] modez;
-        size_t i = 0;
         if (openMode & OpenMode.read) {
-            if (anyWrite) {
-                if (openMode & OpenMode.append) {
-                    modez[i++] = 'a';
-                    modez[i++] = '+';
-                } else if (openMode & OpenMode.existingOnly) {
-                    modez[i++] = 'r';
-                    modez[i++] = '+';
-                } else if (openMode & OpenMode.truncate) {
-                    modez[i++] = 'r';
-                    modez[i++] = 'w';
-                } else {
-                    modez[i++] = 'w';
-                    modez[i++] = '+';
-                }
-            } else {
-                modez[i++] = 'r';
+            if (anyWrite)
+            {
+                if (openMode & OpenMode.append)
+                    return "a+";
+                else if (openMode & OpenMode.existingOnly)
+                    return "r+";
+                else if (openMode & OpenMode.truncate)
+                    return "rw";
+                else
+                    return "w+";
             }
-        } else if (anyWrite) {
-            if (openMode & OpenMode.append)
-                modez[i++] = 'a';
-            else
-                modez[i++] = 'w';
+            else return "r";
         }
-        assert(i < modez.length);
-        modez[i] = '\0';
-        return modez;
+        else
+        {
+            assert(anyWrite);
+            if (openMode & OpenMode.append)
+                return "a";
+            else
+                return "w";
+        }
     }
 
     version(Posix) private static int openFd(string name, OpenMode openMode) @trusted
@@ -654,7 +647,7 @@ Throws: `ErrnoException` if the file could not be opened.
         return fdToFp(fd, openMode);
     }
 
-    private static FILE* openFile(string name, OpenMode openMode) @trusted
+    private static FILE* openFile(string name, OpenMode openMode) @safe
     {
         version(Posix)
         {
