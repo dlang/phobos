@@ -469,15 +469,37 @@ Throws: `ErrnoException` if the file could not be opened.
     /// Flags for file open mode.
     enum OpenMode
     {
-        read = 1 << 0, /// Open in read mode.
-        write = 1 << 1, /// Open in write mode, dont' truncate.
-        truncate = 1 << 2, /// Open in write mode, create if needed, truncate if exists.
-        append = 1 << 3, /// Open in write mode, create if needed. Append to the end on writing.
-        createNew = 1 << 4, /// Open in write mode, ensure the file did not exist.
+        /// Open in read mode.
+        read = 1 << 0,
+        /**
+         * Open in write mode, dont' truncate.
+         * Create a file if `existingOnly` flag is not provided.
+         */
+        write = 1 << 1,
+        /**
+         * Open in write mode, truncate if exists.
+         * Create a file if `existingOnly` flag is not provided.
+         */
+        truncate = 1 << 2,
+        /**
+         * Open in write mode. Append to the end on writing.
+         * Create a file if `existingOnly` flag is not provided.
+         *
+         * Note that it has a special meaning on Posix:
+         * the file opened in append mode will have write operations
+         * happening at the end of the file regardless of manual seek position changing.
+         */
+        append = 1 << 3,
+        /**
+         * Open in write mode. Create file only if it does not exist, error otherwise.
+         * The check for existence and the file creation is an atomical operation.
+         * Use this flag when need to ensure that the file with such name did not exist.
+         */
+        createNew = 1 << 4,
         /**
          * Don't create file if it does not exist when opening in write mode.
          * This flag is not necessary when opening a file in read-only mode.
-         * This flag can't be used together with OpenMode.createNew flag.
+         * This flag can't be used together with `OpenMode.createNew` flag.
          */
         existingOnly = 1 << 5,
     }
@@ -646,6 +668,17 @@ Throws: `ErrnoException` if the file could not be opened.
         }
     }
 
+    /**
+    Ditto, but takes the open mode in the symbolic form rather than in the string one.
+    It allows to open in modes that are not possible when specifying via string,
+    e.g. to create a new file only if the file with provided name does not already exist.
+
+    Params:
+        name = range or string representing the file _name
+        openMode = flags for the open mode
+
+    Throws: `ErrnoException` if the file could not be opened. On Windows it can also throw `WindowsException`.
+    */
     this(string name, OpenMode openMode) @safe
     {
         import std.exception : enforce;
@@ -688,7 +721,7 @@ Throws: `ErrnoException` if the file could not be opened.
 
         assert(std.file.read(deleteme) == "foobar");
 
-        f = File(deleteme, OpenMode.truncate);
+        f = File(deleteme, OpenMode.truncate | OpenMode.existingOnly);
         f.write("baz");
         f.close();
 
