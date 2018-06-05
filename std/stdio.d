@@ -578,7 +578,12 @@ Throws: `ErrnoException` if the file could not be opened.
     version(Windows) private static HANDLE openHandle(string name, OpenMode openMode) @trusted
     {
         import std.internal.cstring : tempCString;
-        import core.sys.windows.windows;
+        import core.sys.windows.windows : FILE_ATTRIBUTE_NORMAL, FILE_FLAG_SEQUENTIAL_SCAN,
+                                        GENERIC_READ, GENERIC_WRITE, FILE_SHARE_READ,
+                                        TRUNCATE_EXISTING, OPEN_EXISTING, CREATE_ALWAYS,
+                                        CREATE_NEW, OPEN_ALWAYS, INVALID_HANDLE_VALUE,
+                                        FILE_END, INVALID_SET_FILE_POINTER, DWORD,
+                                        CreateFileW, SetFilePointer;
 
         auto namez = name.tempCString!FSChar();
         const bool anyWrite = hasAnyWriteFlag(openMode);
@@ -600,14 +605,14 @@ Throws: `ErrnoException` if the file could not be opened.
 
         if ((hasRead && !anyWrite) || existing)
         {
-            creationDisposition = OPEN_EXISTING;
+            if (openMode & OpenMode.truncate)
+                creationDisposition = TRUNCATE_EXISTING;
+            else
+                creationDisposition = OPEN_EXISTING;
         }
         else if (openMode & OpenMode.truncate)
         {
-            if (existing)
-                creationDisposition = TRUNCATE_EXISTING;
-            else
-                creationDisposition = CREATE_ALWAYS;
+            creationDisposition = CREATE_ALWAYS;
         }
         else if (openMode & OpenMode.createNew)
         {
