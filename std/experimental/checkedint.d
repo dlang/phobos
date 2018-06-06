@@ -211,7 +211,7 @@ import std.traits : isFloatingPoint, isIntegral, isNumeric, isUnsigned, Unqual;
 }
 
 
-/// Saturate stops at an overflow
+/// `Saturate` stops at an overflow
 @safe unittest
 {
     auto x = (cast(byte) 127).checked!Saturate;
@@ -220,7 +220,7 @@ import std.traits : isFloatingPoint, isIntegral, isNumeric, isUnsigned, Unqual;
     assert(x == 127);
 }
 
-/// WithNaN has a special "Not a Number" (NaN) value akin to the homonym value reserved for floating-point values
+/// `WithNaN` has a special "Not a Number" (NaN) value akin to the homonym value reserved for floating-point values
 @safe unittest
 {
     auto x = 100.checked!WithNaN;
@@ -229,7 +229,7 @@ import std.traits : isFloatingPoint, isIntegral, isNumeric, isUnsigned, Unqual;
     assert(x.isNaN);
 }
 
-/// ProperCompare fixes the comparison operators ==, !=, <, <=, >, and >= to return correct results
+/// `ProperCompare` fixes the comparison operators ==, !=, <, <=, >, and >= to return correct results
 @safe unittest
 {
     uint x = 1;
@@ -238,7 +238,7 @@ import std.traits : isFloatingPoint, isIntegral, isNumeric, isUnsigned, Unqual;
     assert(y > -1); // ProperCompare
 }
 
-/// Throws fails every incorrect operation by throwing an exception
+/// `Throw` fails every incorrect operation by throwing an exception
 @safe unittest
 {
     import std.exception : assertThrown;
@@ -2219,7 +2219,7 @@ static:
     Returns: The saturated result of the operator.
 
     */
-    typeof(~Lhs()) onOverflow(string x, Lhs)(Lhs lhs)
+    auto onOverflow(string x, Lhs)(Lhs lhs)
     {
         static assert(x == "-" || x == "++" || x == "--");
         return x == "--" ? Lhs.min : Lhs.max;
