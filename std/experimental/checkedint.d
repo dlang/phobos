@@ -54,6 +54,9 @@ $(BOOKTABLE ,
     $(TR $(TD $(LREF Throw)) $(TD
         fails every incorrect operation by throwing an exception.
     ))
+    $(TR $(TD $(LREF Assert)) $(TD
+        fails every incorrect operation by throwing an assertion error.
+    ))
     $(TR $(TD $(LREF Warn)) $(TD
         prints incorrect operations to $(REF stderr, std, stdio)
         but otherwise preserves the built-in behavior.
@@ -1112,141 +1115,7 @@ Force all integral errors to fail by printing an error message to `stderr` and
 then abort the program. `Abort` is the default second argument for `Checked`.
 
 */
-struct Abort
-{
-static:
-    /**
-
-    Called automatically upon a bad cast (one that loses precision or attempts
-    to convert a negative value to an unsigned type). The source type is `Src`
-    and the destination type is `Dst`.
-
-    Params:
-    src = The source of the cast
-
-    Returns: Nominally the result is the desired value of the cast operation,
-    which will be forwarded as the result of the cast. For `Abort`, the
-    function never returns because it aborts the program.
-
-    */
-    Dst onBadCast(Dst, Src)(Src src)
-    {
-        Warn.onBadCast!Dst(src);
-        assert(0);
-    }
-
-    /**
-
-    Called automatically upon a bounds error.
-
-    Params:
-    rhs = The right-hand side value in the assignment, after the operator has
-    been evaluated
-    bound = The value of the bound being violated
-
-    Returns: Nominally the result is the desired value of the operator, which
-    will be forwarded as result. For `Abort`, the function never returns because
-    it aborts the program.
-
-    */
-    T onLowerBound(Rhs, T)(Rhs rhs, T bound)
-    {
-        Warn.onLowerBound(rhs, bound);
-        assert(0);
-    }
-    /// ditto
-    T onUpperBound(Rhs, T)(Rhs rhs, T bound)
-    {
-        Warn.onUpperBound(rhs, bound);
-        assert(0);
-    }
-
-    /**
-
-    Called automatically upon a comparison for equality. In case of a erroneous
-    comparison (one that would make a signed negative value appear equal to an
-    unsigned positive value), this hook issues `assert(0)` which terminates the
-    application.
-
-    Params:
-    lhs = The first argument of `Checked`, e.g. `int` if the left-hand side of
-      the operator is `Checked!int`
-    rhs = The right-hand side type involved in the operator
-
-    Returns: Upon a correct comparison, returns the result of the comparison.
-    Otherwise, the function terminates the application so it never returns.
-
-    */
-    static bool hookOpEquals(Lhs, Rhs)(Lhs lhs, Rhs rhs)
-    {
-        bool error;
-        auto result = opChecked!"=="(lhs, rhs, error);
-        if (error)
-        {
-            Warn.hookOpEquals(lhs, rhs);
-            assert(0);
-        }
-        return result;
-    }
-
-    /**
-
-    Called automatically upon a comparison for ordering using one of the
-    operators `<`, `<=`, `>`, or `>=`. In case the comparison is erroneous (i.e.
-    it would make a signed negative value appear greater than or equal to an
-    unsigned positive value), then application is terminated with `assert(0)`.
-    Otherwise, the three-state result is returned (positive if $(D lhs > rhs),
-    negative if $(D lhs < rhs), `0` otherwise).
-
-    Params:
-    lhs = The first argument of `Checked`, e.g. `int` if the left-hand side of
-      the operator is `Checked!int`
-    rhs = The right-hand side type involved in the operator
-
-    Returns: For correct comparisons, returns a positive integer if $(D lhs >
-    rhs), a negative integer if  $(D lhs < rhs), `0` if the two are equal. Upon
-    a mistaken comparison such as $(D int(-1) < uint(0)), the function never
-    returns because it aborts the program.
-
-    */
-    int hookOpCmp(Lhs, Rhs)(Lhs lhs, Rhs rhs)
-    {
-        bool error;
-        auto result = opChecked!"cmp"(lhs, rhs, error);
-        if (error)
-        {
-            Warn.hookOpCmp(lhs, rhs);
-            assert(0);
-        }
-        return result;
-    }
-
-    /**
-
-    Called automatically upon an overflow during a unary or binary operation.
-
-    Params:
-    x = The operator, e.g. `-`
-    lhs = The left-hand side (or sole) argument
-    rhs = The right-hand side type involved in the operator
-
-    Returns: Nominally the result is the desired value of the operator, which
-    will be forwarded as result. For `Abort`, the function never returns because
-    it aborts the program.
-
-    */
-    typeof(~Lhs()) onOverflow(string x, Lhs)(Lhs lhs)
-    {
-        Warn.onOverflow!x(lhs);
-        assert(0);
-    }
-    /// ditto
-    typeof(Lhs() + Rhs()) onOverflow(string x, Lhs, Rhs)(Lhs lhs, Rhs rhs)
-    {
-        Warn.onOverflow!x(lhs, rhs);
-        assert(0);
-    }
-}
+alias Abort(T) = Checked!(Checked!(T, Assert), Warn);
 
 @system unittest
 {
@@ -1448,6 +1317,155 @@ struct Throw
     test!short;
     test!(const short);
     test!(immutable short);
+}
+
+// Assert
+/**
+Force all integral errors to fail by failing with an assertion error which
+terminates the program.
+The message coming with the error is similar to the one printed by `Warn`.
+*/
+struct Assert
+{
+    import std.format : format;
+    /**
+
+    Called automatically upon a bad cast (one that loses precision or attempts
+    to convert a negative value to an unsigned type). The source type is `Src`
+    and the destination type is `Dst`.
+
+    Params:
+    src = The source of the cast
+
+    Returns: Nominally the result is the desired value of the cast operation,
+    which will be forwarded as the result of the cast. For `Assert`, the
+    function never returns because it terminates.
+
+    */
+    static Dst onBadCast(Dst, Src)(Src src)
+    {
+        assert(0, "Erroneous cast: cast(%s) %s(%s)".format(
+            Dst.stringof, Src.stringof, src));
+    }
+
+    /**
+
+    Called automatically upon a bounds error.
+
+    Params:
+    rhs = The right-hand side value in the assignment, after the operator has
+    been evaluated
+    bound = The value of the bound being violated
+
+    Returns: Nominally the result is the desired value of the operator, which
+    will be forwarded as result. For `Assert`, the function never returns because
+    it terminates.
+
+    */
+    static T onLowerBound(Rhs, T)(Rhs rhs, T bound)
+    {
+        assert(0, "Lower bound error: %s(%s) < %s(%s)".format(
+            Rhs.stringof, rhs, T.stringof, bound));
+    }
+    /// ditto
+    static T onUpperBound(Rhs, T)(Rhs rhs, T bound)
+    {
+        assert(0, "Upper bound error: %s(%s) > %s(%s)".format(
+            Rhs.stringof, rhs, T.stringof, bound));
+    }
+
+    /**
+
+    Called automatically upon a comparison for equality. Throws upon an
+    erroneous comparison (one that would make a signed negative value appear
+    equal to an unsigned positive value).
+
+    If the comparison is mathematically erroneous, the program gets terminated.
+
+    Params:
+    lhs = The first argument of `Checked`, e.g. `int` if the left-hand side of
+      the operator is `Checked!int`
+    rhs = The right-hand side type involved in the operator
+
+    Returns: The result of the comparison.
+    */
+    static bool hookOpEquals(L, R)(L lhs, R rhs)
+    {
+        bool error;
+        auto result = opChecked!"=="(lhs, rhs, error);
+        if (error)
+        {
+            assert(0, "Erroneous comparison: %s(%s) == %s(%s)".format(
+                L.stringof, lhs, R.stringof, rhs));
+        }
+        return result;
+    }
+
+    /**
+    Called automatically upon a comparison for ordering using one of the
+    operators `<`, `<=`, `>`, or `>=`. In case the comparison is erroneous (i.e.
+    it would make a signed negative value appear greater than or equal to an
+    unsigned positive value), throws a `Throw.CheckFailure` exception.
+    Otherwise, the three-state result is returned (positive if $(D lhs > rhs),
+    negative if $(D lhs < rhs), `0` otherwise).
+
+    Upon a mistaken comparison such as $(D int(-1) < uint(0)), the
+    function never returns because it terminates the program.
+
+    Params:
+    lhs = The first argument of `Checked`, e.g. `int` if the left-hand side of
+      the operator is `Checked!int`
+    rhs = The right-hand side type involved in the operator
+
+    Returns: For correct comparisons, returns a positive integer if $(D lhs >
+    rhs), a negative integer if  $(D lhs < rhs), `0` if the two are equal.
+    */
+    static int hookOpCmp(Lhs, Rhs)(Lhs lhs, Rhs rhs)
+    {
+        bool error;
+        auto result = opChecked!"cmp"(lhs, rhs, error);
+        if (error)
+        {
+            assert(0, "Erroneous ordering comparison: %s(%s) and %s(%s)".format(
+                Lhs.stringof, lhs, Rhs.stringof, rhs));
+        }
+        return result;
+    }
+
+    /**
+    Called automatically upon an overflow during a unary or binary operation.
+
+    Params:
+    x = The operator, e.g. `-`
+    lhs = The left-hand side (or sole) argument
+    rhs = The right-hand side type involved in the operator
+
+    Returns: Nominally the result is the desired value of the operator, which
+    will be forwarded as result. For `Assert`, the function never returns because
+    it terminates the program.
+    */
+    static typeof(~Lhs()) onOverflow(string x, Lhs)(Lhs lhs)
+    {
+        assert(0, "Overflow on unary operator: %s%s(%s)".format(
+            x, Lhs.stringof, lhs));
+    }
+
+    /// ditto
+    static typeof(Lhs() + Rhs()) onOverflow(string x, Lhs, Rhs)(Lhs lhs, Rhs rhs)
+    {
+        assert(0, "Overflow on binary operator: %s(%s) %s %s(%s)".format(
+            Lhs.stringof, lhs, x, Rhs.stringof, rhs));
+    }
+}
+
+///
+@safe pure nothrow unittest
+{
+    auto x = checked!Assert(42);
+    short x1 = cast(short) x;
+    //x += long(int.max);
+    auto y = checked!Assert(cast(const int) 42);
+    short y1 = cast(const byte) y;
 }
 
 // Warn
