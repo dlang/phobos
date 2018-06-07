@@ -338,10 +338,19 @@ struct KRRegion(ParentAllocator = NullAllocator)
     }
 
     /// Ditto
-    static if (!is(ParentAllocator == NullAllocator))
+    static if (!is(ParentAllocator == NullAllocator) && !stateSize!ParentAllocator)
     this(size_t n)
     {
         assert(n > Node.sizeof);
+        this(cast(ubyte[])(parent.allocate(n)));
+    }
+
+    /// Ditto
+    static if (!is(ParentAllocator == NullAllocator) && stateSize!ParentAllocator)
+    this(ParentAllocator parent, size_t n)
+    {
+        assert(n > Node.sizeof);
+        this.parent = parent;
         this(cast(ubyte[])(parent.allocate(n)));
     }
 

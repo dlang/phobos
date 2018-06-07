@@ -90,9 +90,17 @@ struct Region(ParentAllocator = NullAllocator,
     }
 
     /// Ditto
-    static if (!is(ParentAllocator == NullAllocator))
+    static if (!is(ParentAllocator == NullAllocator) && !stateSize!ParentAllocator)
     this(size_t n)
     {
+        this(cast(ubyte[]) (parent.allocate(n.roundUpToAlignment(alignment))));
+    }
+
+    /// Ditto
+    static if (!is(ParentAllocator == NullAllocator) && stateSize!ParentAllocator)
+    this(ParentAllocator parent, size_t n)
+    {
+        this.parent = parent;
         this(cast(ubyte[]) (parent.allocate(n.roundUpToAlignment(alignment))));
     }
 
