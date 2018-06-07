@@ -781,7 +781,11 @@ public:
 
     @safe unittest
     {
-        assert(LocalTime().dstName !is null);
+        // tzname, called from dstName, isn't set by default for Musl.
+        version(CRuntime_Musl)
+            assert(LocalTime().dstName is null);
+        else
+            assert(LocalTime().dstName !is null);
 
         version(Posix)
         {
