@@ -952,7 +952,7 @@ public struct UUID
             assert(u1.toString() == "8ab3060e-2cba-4f23-b74c-b52db3bdfb46");
 
             char[] buf;
-            void sink(const(char)[] data)
+            void sink(scope const(char)[] data)
             {
                 buf ~= data;
             }
