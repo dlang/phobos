@@ -7778,7 +7778,7 @@ static assert(Grapheme.sizeof == size_t.sizeof*4);
         $(LREF icmp)
         $(REF cmp, std,algorithm,comparison)
 +/
-int sicmp(S1, S2)(S1 r1, S2 r2)
+int sicmp(S1, S2)(scope S1 r1, scope S2 r2)
 if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
     && isInputRange!S2 && isSomeChar!(ElementEncodingType!S2))
 {
@@ -7888,11 +7888,13 @@ if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
 // overloads for the most common cases to reduce compile time
 @safe @nogc pure nothrow
 {
-    int sicmp(const(char)[] str1, const(char)[] str2)
+    int sicmp(scope const(char)[] str1, scope const(char)[] str2)
     { return sicmp!(const(char)[], const(char)[])(str1, str2); }
-    int sicmp(const(wchar)[] str1, const(wchar)[] str2)
+
+    int sicmp(scope const(wchar)[] str1, scope const(wchar)[] str2)
     { return sicmp!(const(wchar)[], const(wchar)[])(str1, str2); }
-    int sicmp(const(dchar)[] str1, const(dchar)[] str2)
+
+    int sicmp(scope const(dchar)[] str1, scope const(dchar)[] str2)
     { return sicmp!(const(dchar)[], const(dchar)[])(str1, str2); }
 }
 
