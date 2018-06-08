@@ -2870,7 +2870,7 @@ is empty, throws an `Exception`. In case of an I/O error throws
         }
 
         /// Range primitive implementations.
-        void put(A)(A writeme)
+        void put(A)(scope A writeme)
             if ((isSomeChar!(Unqual!(ElementType!A)) ||
                   is(ElementType!A : const(ubyte))) &&
                 isInputRange!A &&
