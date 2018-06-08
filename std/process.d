@@ -280,13 +280,13 @@ $(REF StdioException, std,stdio) on failure to pass one of the streams
     to the child process (Windows only).$(BR)
 $(REF RangeError, core,exception) if `args` is empty.
 */
-Pid spawnProcess(in char[][] args,
+Pid spawnProcess(scope const char[][] args,
                  File stdin = std.stdio.stdin,
                  File stdout = std.stdio.stdout,
                  File stderr = std.stdio.stderr,
                  const string[string] env = null,
                  Config config = Config.none,
-                 in char[] workDir = null)
+                 scope const char[] workDir = null)
     @trusted // TODO: Should be @safe
 {
     version (Windows)    auto  args2 = escapeShellArguments(args);
@@ -350,13 +350,13 @@ envz should be a zero-terminated array of zero-terminated strings
 on the form "var=value".
 */
 version (Posix)
-private Pid spawnProcessImpl(in char[][] args,
+private Pid spawnProcessImpl(scope const char[][] args,
                              File stdin,
                              File stdout,
                              File stderr,
-                             const string[string] env,
+                             scope const string[string] env,
                              Config config,
-                             in char[] workDir)
+                             scope const(char)[] workDir)
     @trusted // TODO: Should be @safe
 {
     import core.exception : RangeError;
@@ -680,13 +680,13 @@ envz must be a pointer to a block of UTF-16 characters on the form
 "var1=value1\0var2=value2\0...varN=valueN\0\0".
 */
 version (Windows)
-private Pid spawnProcessImpl(in char[] commandLine,
+private Pid spawnProcessImpl(scope const(char)[] commandLine,
                              File stdin,
                              File stdout,
                              File stderr,
                              const string[string] env,
                              Config config,
-                             in char[] workDir)
+                             scope const(char)[] workDir)
     @trusted
 {
     import core.exception : RangeError;
@@ -1275,14 +1275,14 @@ See_also:
 $(LREF escapeShellCommand), which may be helpful in constructing a
 properly quoted and escaped shell _command line for the current platform.
 */
-Pid spawnShell(in char[] command,
+Pid spawnShell(scope const(char)[] command,
                File stdin = std.stdio.stdin,
                File stdout = std.stdio.stdout,
                File stderr = std.stdio.stderr,
-               const string[string] env = null,
+               scope const string[string] env = null,
                Config config = Config.none,
-               in char[] workDir = null,
-               string shellPath = nativeShell)
+               scope const(char)[] workDir = null,
+               scope string shellPath = nativeShell)
     @trusted // TODO: Should be @safe
 {
     version (Windows)
@@ -1305,11 +1305,11 @@ Pid spawnShell(in char[] command,
 }
 
 /// ditto
-Pid spawnShell(in char[] command,
-               const string[string] env,
+Pid spawnShell(scope const(char)[] command,
+               scope const string[string] env,
                Config config = Config.none,
-               in char[] workDir = null,
-               string shellPath = nativeShell)
+               scope const(char)[] workDir = null,
+               scope string shellPath = nativeShell)
     @trusted // TODO: Should be @safe
 {
     return spawnShell(command,
@@ -3996,7 +3996,7 @@ version(StdDdoc)
     /****************************************
      * Start up the browser and set it to viewing the page at url.
      */
-    void browse(const(char)[] url);
+    void browse(scope const(char)[] url);
 }
 else
 version (Windows)
@@ -4005,7 +4005,7 @@ version (Windows)
 
     pragma(lib,"shell32.lib");
 
-    void browse(const(char)[] url)
+    void browse(scope const(char)[] url)
     {
         ShellExecuteW(null, "open", url.tempCStringW(), null, null, SW_SHOWNORMAL);
     }
@@ -4016,7 +4016,7 @@ else version (OSX)
     import core.stdc.string;
     import core.sys.posix.unistd;
 
-    void browse(const(char)[] url) nothrow @nogc
+    void browse(scope const(char)[] url) nothrow @nogc
     {
         const(char)*[5] args;
 
@@ -4052,7 +4052,7 @@ else version (Posix)
     import core.stdc.string;
     import core.sys.posix.unistd;
 
-    void browse(const(char)[] url) nothrow @nogc
+    void browse(scope const(char)[] url) nothrow @nogc
     {
         const(char)*[3] args;
 
