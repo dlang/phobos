@@ -2900,7 +2900,7 @@ is empty, throws an `Exception`. In case of an I/O error throws
         }
 
         /// ditto
-        void put(C)(C c) @safe if (isSomeChar!C || is(C : const(ubyte)))
+        void put(C)(scope C c) @safe if (isSomeChar!C || is(C : const(ubyte)))
         {
             import std.traits : Parameters;
             static auto trustedFPUTC(int ch, _iobuf* h) @trusted
@@ -3127,14 +3127,14 @@ is empty, throws an `Exception`. In case of an I/O error throws
             }
         }
 
-        void put(T)(auto ref in T value)
+        void put(T)(auto ref scope const T value)
         if (!hasIndirections!T &&
             !isInputRange!T)
         {
             rawWrite((&value)[0 .. 1]);
         }
 
-        void put(T)(in T[] array)
+        void put(T)(scope const(T)[] array)
         if (!hasIndirections!T &&
             !isInputRange!T)
         {
