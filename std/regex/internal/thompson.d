@@ -70,7 +70,7 @@ struct ThreadList(DataIndex)
         this(ThreadList tlist){ ct = tlist.tip; }
         @property bool empty(){ return ct is null; }
         @property const(Thread!DataIndex)* front(){ return ct; }
-        @property popFront()
+        void popFront()
         {
             assert(ct);
             ct = ct.next;
