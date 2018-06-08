@@ -164,7 +164,7 @@ class FileException : Exception
      +/
     immutable uint errno;
 
-    private this(in char[] name, in char[] msg, string file, size_t line, uint errno) @safe pure
+    private this(scope const(char)[] name, scope const(char)[] msg, string file, size_t line, uint errno) @safe pure
     {
         if (msg.empty)
             super(name.idup, file, line);
@@ -183,7 +183,7 @@ class FileException : Exception
             file = The file where the error occurred.
             line = The _line where the error occurred.
      +/
-    this(in char[] name, in char[] msg, string file = __FILE__, size_t line = __LINE__) @safe pure
+    this(scope const(char)[] name, scope const(char)[] msg, string file = __FILE__, size_t line = __LINE__) @safe pure
     {
         this(name, msg, file, line, 0);
     }
@@ -200,14 +200,14 @@ class FileException : Exception
             line  = The _line where the error occurred.
                     Defaults to `__LINE__`.
      +/
-    version(Windows) this(in char[] name,
+    version(Windows) this(scope const(char)[] name,
                           uint errno = .GetLastError(),
                           string file = __FILE__,
                           size_t line = __LINE__) @safe
     {
         this(name, sysErrorString(errno), file, line, errno);
     }
-    else version(Posix) this(in char[] name,
+    else version(Posix) this(scope const(char)[] name,
                              uint errno = .errno,
                              string file = __FILE__,
                              size_t line = __LINE__) @trusted
@@ -225,7 +225,7 @@ class FileException : Exception
     assertThrown!FileException("non.existing.file.".readText);
 }
 
-private T cenforce(T)(T condition, lazy const(char)[] name, string file = __FILE__, size_t line = __LINE__)
+private T cenforce(T)(T condition, lazy scope const(char)[] name, string file = __FILE__, size_t line = __LINE__)
 {
     if (condition)
         return condition;
@@ -241,7 +241,7 @@ private T cenforce(T)(T condition, lazy const(char)[] name, string file = __FILE
 
 version (Windows)
 @trusted
-private T cenforce(T)(T condition, const(char)[] name, const(FSChar)* namez,
+private T cenforce(T)(T condition, scope const(char)[] name, scope const(FSChar)* namez,
     string file = __FILE__, size_t line = __LINE__)
 {
     if (condition)
@@ -259,7 +259,7 @@ private T cenforce(T)(T condition, const(char)[] name, const(FSChar)* namez,
 
 version (Posix)
 @trusted
-private T cenforce(T)(T condition, const(char)[] name, const(FSChar)* namez,
+private T cenforce(T)(T condition, scope const(char)[] name, scope const(FSChar)* namez,
     string file = __FILE__, size_t line = __LINE__)
 {
     if (condition)
@@ -341,7 +341,8 @@ if (isConvertibleToString!R)
     static assert(__traits(compiles, read(TestAliasedString(null))));
 }
 
-version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez, size_t upTo = size_t.max) @trusted
+version (Posix) private void[] readImpl(scope const(char)[] name, scope const(FSChar)* namez,
+                                        size_t upTo = size_t.max) @trusted
 {
     import core.memory : GC;
     import std.algorithm.comparison : min;
@@ -392,12 +393,13 @@ version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez
 }
 
 
-version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* namez, size_t upTo = size_t.max) @safe
+version (Windows) private void[] readImpl(scope const(char)[] name, scope const(FSChar)* namez,
+                                          size_t upTo = size_t.max) @safe
 {
     import core.memory : GC;
     import std.algorithm.comparison : min;
     import std.array : uninitializedArray;
-    static trustedCreateFileW(const(wchar)* namez, DWORD dwDesiredAccess, DWORD dwShareMode,
+    static trustedCreateFileW(scope const(wchar)* namez, DWORD dwDesiredAccess, DWORD dwShareMode,
                               SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
                               DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) @trusted
     {
@@ -815,8 +817,8 @@ if (isConvertibleToString!R)
 
 // Posix implementation helper for write and append
 
-version(Posix) private void writeImpl(const(char)[] name, const(FSChar)* namez,
-        in void[] buffer, bool append) @trusted
+version(Posix) private void writeImpl(scope const(char)[] name, scope const(FSChar)* namez,
+        scope const(void)[] buffer, bool append) @trusted
 {
     import std.conv : octal;
 
@@ -846,8 +848,8 @@ version(Posix) private void writeImpl(const(char)[] name, const(FSChar)* namez,
 
 // Windows implementation helper for write and append
 
-version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez,
-        in void[] buffer, bool append) @trusted
+version(Windows) private void writeImpl(scope const(char)[] name, scope const(FSChar)* namez,
+        scope const(void)[] buffer, bool append) @trusted
 {
     HANDLE h;
     if (append)
@@ -950,7 +952,8 @@ if (isConvertibleToString!RF || isConvertibleToString!RT)
     assert(t2.readText == "2");
 }
 
-private void renameImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, const(FSChar)* toz) @trusted
+private void renameImpl(scope const(char)[] f, scope const(char)[] t,
+                        scope const(FSChar)* fromz, scope const(FSChar)* toz) @trusted
 {
     version(Windows)
     {
@@ -1039,7 +1042,7 @@ if (isConvertibleToString!R)
     static assert(__traits(compiles, remove(TestAliasedString("foo"))));
 }
 
-private void removeImpl(const(char)[] name, const(FSChar)* namez) @trusted
+private void removeImpl(scope const(char)[] name, scope const(FSChar)* namez) @trusted
 {
     version(Windows)
     {
@@ -1069,7 +1072,8 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R))
 
     static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
     {
-        static void getFA(const(char)[] name, const(FSChar)* namez, out WIN32_FILE_ATTRIBUTE_DATA fad) @trusted
+        static void getFA(scope const(char)[] name, scope const(FSChar)* namez,
+                          out WIN32_FILE_ATTRIBUTE_DATA fad) @trusted
         {
             import std.exception : enforce;
             enforce(GetFileAttributesExW(namez, GET_FILEEX_INFO_LEVELS.GetFileExInfoStandard, &fad),
@@ -1079,7 +1083,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R))
     }
     else
     {
-        static void getFA(const(FSChar)* namez, out WIN32_FILE_ATTRIBUTE_DATA fad) @trusted
+        static void getFA(scope const(FSChar)* namez, out WIN32_FILE_ATTRIBUTE_DATA fad) @trusted
         {
             import core.stdc.wchar_ : wcslen;
             import std.conv : to;
@@ -4152,8 +4156,9 @@ if (isConvertibleToString!RF || isConvertibleToString!RT)
     assert(__traits(compiles, copy("from.txt", "to.txt")));
 }
 
-private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, const(FSChar)* toz,
-        PreserveAttributes preserve) @trusted
+private void copyImpl(scope const(char)[] f, scope const(char)[] t,
+                      scope const(FSChar)* fromz, scope const(FSChar)* toz,
+                      PreserveAttributes preserve) @trusted
 {
     version(Windows)
     {
