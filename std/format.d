@@ -2046,7 +2046,7 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, const ref F
    {
        int x, y;
 
-       void toString(scope void delegate(const(char)[]) @safe sink,
+       void toString(scope void delegate(scope const(char)[]) @safe sink,
                      FormatSpec!char fmt) const
        {
            sink("(");
@@ -3656,15 +3656,15 @@ private template hasToString(T, Char)
     {
         enum hasToString = 5;
     }
-    else static if (is(typeof({ T val = void; FormatSpec!Char f; val.toString((const(char)[] s){}, f); })))
+    else static if (is(typeof({ T val = void; FormatSpec!Char f; val.toString((scope const(char)[] s){}, f); })))
     {
         enum hasToString = 4;
     }
-    else static if (is(typeof({ T val = void; val.toString((const(char)[] s){}, "%s"); })))
+    else static if (is(typeof({ T val = void; val.toString((scope const(char)[] s){}, "%s"); })))
     {
         enum hasToString = 3;
     }
-    else static if (is(typeof({ T val = void; val.toString((const(char)[] s){}); })))
+    else static if (is(typeof({ T val = void; val.toString((scope const(char)[] s){}); })))
     {
         enum hasToString = 2;
     }
@@ -3688,15 +3688,15 @@ private template hasToString(T, Char)
     }
     static struct B
     {
-        void toString(scope void delegate(const(char)[]) sink, FormatSpec!char fmt) {}
+        void toString(scope void delegate(scope const(char)[]) sink, FormatSpec!char fmt) {}
     }
     static struct C
     {
-        void toString(scope void delegate(const(char)[]) sink, string fmt) {}
+        void toString(scope void delegate(scope const(char)[]) sink, string fmt) {}
     }
     static struct D
     {
-        void toString(scope void delegate(const(char)[]) sink) {}
+        void toString(scope void delegate(scope const(char)[]) sink) {}
     }
     static struct E
     {
@@ -3778,17 +3778,17 @@ if (hasToString!(T, Char))
     // not using the overload enum to not break badly defined toString overloads
     // e.g. defining the FormatSpec as ref and not const ref led this function
     // to ignore that toString overload
-    else static if (is(typeof(val.toString((const(char)[] s){}, f))))
+    else static if (is(typeof(val.toString((scope const(char)[] s){}, f))))
     {
-        val.toString((const(char)[] s) { put(w, s); }, f);
+        val.toString((scope const(char)[] s) { put(w, s); }, f);
     }
-    else static if (is(typeof(val.toString((const(char)[] s){}, "%s"))))
+    else static if (is(typeof(val.toString((scope const(char)[] s){}, "%s"))))
     {
         val.toString((const(char)[] s) { put(w, s); }, f.getCurFmtStr());
     }
-    else static if (is(typeof(val.toString((const(char)[] s){}))))
+    else static if (is(typeof(val.toString((scope const(char)[] s){}))))
     {
-        val.toString((const(char)[] s) { put(w, s); });
+        val.toString((scope const(char)[] s) { put(w, s); });
     }
     else static if (is(typeof(val.toString()) S) && isSomeString!S)
     {
@@ -3823,17 +3823,17 @@ void enforceValidFormatSpec(T, Char)(const ref FormatSpec!Char f)
     static union UF2 { string toString() { return ""; } }
     static class CF2 { override string toString() { return ""; } }
 
-    static interface IK1 { void toString(scope void delegate(const(char)[]) sink,
+    static interface IK1 { void toString(scope void delegate(scope const(char)[]) sink,
                            FormatSpec!char) const; }
-    static class CIK1 : IK1 { override void toString(scope void delegate(const(char)[]) sink,
+    static class CIK1 : IK1 { override void toString(scope void delegate(scope const(char)[]) sink,
                               FormatSpec!char) const { sink("CIK1"); } }
-    static struct KS1 { void toString(scope void delegate(const(char)[]) sink,
+    static struct KS1 { void toString(scope void delegate(scope const(char)[]) sink,
                         FormatSpec!char) const { sink("KS1"); } }
 
-    static union KU1 { void toString(scope void delegate(const(char)[]) sink,
+    static union KU1 { void toString(scope void delegate(scope const(char)[]) sink,
                        FormatSpec!char) const { sink("KU1"); } }
 
-    static class KC1 { void toString(scope void delegate(const(char)[]) sink,
+    static class KC1 { void toString(scope void delegate(scope const(char)[]) sink,
                        FormatSpec!char) const { sink("KC1"); } }
 
     IF1 cif1 = new CIF1;
@@ -3948,7 +3948,7 @@ if (is(T == class) && !is(T == enum))
     class C1
     {
         mixin(inputRangeCode);
-        void toString(scope void delegate(const(char)[]) dg, const ref FormatSpec!char f) const { dg("[012]"); }
+        void toString(scope void delegate(scope const(char)[]) dg, const ref FormatSpec!char f) const { dg("[012]"); }
     }
     class C2
     {

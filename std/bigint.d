@@ -913,7 +913,7 @@ public:
      * $(TR $(TD null) $(TD Default formatting (same as "d") ))
      * )
      */
-    void toString(scope void delegate(const (char)[]) sink, string formatString) const
+    void toString(scope void delegate(scope const (char)[]) sink, string formatString) const
     {
         auto f = FormatSpec!char(formatString);
         f.writeUpToNextSpec(sink);
@@ -921,7 +921,7 @@ public:
     }
 
     /// ditto
-    void toString(scope void delegate(const(char)[]) sink, const ref FormatSpec!char f) const
+    void toString(scope void delegate(scope const(char)[]) sink, const ref FormatSpec!char f) const
     {
         immutable hex = (f.spec == 'x' || f.spec == 'X');
         if (!(f.spec == 's' || f.spec == 'd' || f.spec =='o' || hex))
@@ -1166,7 +1166,7 @@ Returns:
 string toHex(const(BigInt) x)
 {
     string outbuff="";
-    void sink(const(char)[] s) { outbuff ~= s; }
+    void sink(scope const(char)[] s) { outbuff ~= s; }
     x.toString(&sink, "%X");
     return outbuff;
 }
