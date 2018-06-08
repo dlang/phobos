@@ -364,7 +364,7 @@ Params:
 Returns:
     The unfilled part of target
  */
-TargetRange copy(SourceRange, TargetRange)(SourceRange source, TargetRange target)
+TargetRange copy(SourceRange, TargetRange)(scope SourceRange source, return scope TargetRange target)
 if (isInputRange!SourceRange && isOutputRange!(TargetRange, ElementType!SourceRange))
 {
     static if (areCopyCompatibleArrays!(SourceRange, TargetRange))
