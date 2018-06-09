@@ -2974,7 +2974,7 @@ auto nullable(T)(T t)
 }
 @safe unittest
 {
-    static int f(in Nullable!int x) {
+    static int f(scope const Nullable!int x) {
         return x.isNull ? 42 : x.get;
     }
     Nullable!int a;
@@ -3532,7 +3532,7 @@ if (is (typeof(nullValue) == T))
 
 @safe unittest
 {
-    static int f(in Nullable!(int, int.min) x) {
+    static int f(scope const Nullable!(int, int.min) x) {
         return x.isNull ? 42 : x.get;
     }
     Nullable!(int, int.min) a;
@@ -3931,7 +3931,7 @@ auto nullableRef(T)(T* t)
 }
 @system unittest
 {
-    static int f(in NullableRef!int x) {
+    static int f(scope const NullableRef!int x) {
         return x.isNull ? 42 : x.get;
     }
     int x = 5;
