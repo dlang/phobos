@@ -12252,7 +12252,7 @@ if (isInputRange!R && isIntegral!(ElementType!R))
  */
 struct NullSink
 {
-    void put(E)(E){}
+    void put(E)(scope const E) pure @safe @nogc nothrow {}
 }
 
 /// ditto
