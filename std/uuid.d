@@ -1117,13 +1117,13 @@ public struct UUID
  * for strings and wstrings. It's always possible to pass wstrings and dstrings
  * by using the ubyte[] function overload (but be aware of endianness issues!).
  */
-@safe pure nothrow @nogc UUID sha1UUID(in char[] name, const UUID namespace = UUID.init)
+@safe pure nothrow @nogc UUID sha1UUID(scope const(char)[] name, scope const UUID namespace = UUID.init)
 {
     return sha1UUID(cast(const(ubyte[]))name, namespace);
 }
 
 /// ditto
-@safe pure nothrow @nogc UUID sha1UUID(in ubyte[] data, const UUID namespace = UUID.init)
+@safe pure nothrow @nogc UUID sha1UUID(scope const(ubyte)[] data, scope const UUID namespace = UUID.init)
 {
     import std.digest.sha : SHA1;
 
