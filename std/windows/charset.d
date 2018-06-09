@@ -30,7 +30,7 @@ version (StdDdoc)
      * Authors:
      *      yaneurao, Walter Bright, Stewart Gordon
      */
-    const(char)* toMBSz(in char[] s, uint codePage = 0);
+    const(char)* toMBSz(scope const(char)[] s, uint codePage = 0);
 
     /**********************************************
      * Converts the null-terminated string s from a Windows 8-bit character set
@@ -57,7 +57,7 @@ import std.windows.syserror;
 
 import std.internal.cstring;
 
-const(char)* toMBSz(in char[] s, uint codePage = 0)
+const(char)* toMBSz(scope const(char)[] s, uint codePage = 0)
 {
     // Only need to do this if any chars have the high bit set
     foreach (char c; s)
@@ -88,7 +88,7 @@ const(char)* toMBSz(in char[] s, uint codePage = 0)
     return std.string.toStringz(s);
 }
 
-string fromMBSz(immutable(char)* s, int codePage = 0)
+string fromMBSz(return scope immutable(char)* s, int codePage = 0)
 {
     const(char)* c;
 
