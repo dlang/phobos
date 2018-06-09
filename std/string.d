@@ -308,7 +308,7 @@ if (isSomeChar!Char)
     garbage collection cycle and cause a nasty bug when the C code tries to use
     it.
   +/
-immutable(char)* toStringz(const(char)[] s) @trusted pure nothrow
+immutable(char)* toStringz(scope const(char)[] s) @trusted pure nothrow
 out (result)
 {
     import core.stdc.string : strlen, memcmp;
@@ -347,7 +347,7 @@ do
 }
 
 /++ Ditto +/
-immutable(char)* toStringz(in string s) @trusted pure nothrow
+immutable(char)* toStringz(return scope string s) @trusted pure nothrow
 {
     if (s.empty) return "".ptr;
     /* Peek past end of s[], if it's 0, no conversion necessary.
@@ -6613,7 +6613,7 @@ if (isConvertibleToString!Range)
  * See_Also:
  *  $(LREF soundexer)
  */
-char[] soundex(const(char)[] str, char[] buffer = null)
+char[] soundex(scope const(char)[] str, char[] buffer = null)
     @safe pure nothrow
 in
 {
