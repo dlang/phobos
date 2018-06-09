@@ -422,7 +422,7 @@ Params:
 
 Throws: `ErrnoException` if the file could not be opened.
  */
-    this(string name, in char[] stdioOpenmode = "rb") @safe
+    this(string name, scope const(char)[] stdioOpenmode = "rb") @safe
     {
         import std.conv : text;
         import std.exception : errnoEnforce;
@@ -498,12 +498,12 @@ cplusplus.com/reference/clibrary/cstdio/fopen.html, fopen) function.
 
 Throws: `ErrnoException` in case of error.
  */
-    void open(string name, in char[] stdioOpenmode = "rb") @trusted
+    void open(string name, scope const(char)[] stdioOpenmode = "rb") @trusted
     {
         resetFile(name, stdioOpenmode, false);
     }
 
-    private void resetFile(string name, in char[] stdioOpenmode, bool isPopened) @trusted
+    private void resetFile(string name, scope const(char)[] stdioOpenmode, bool isPopened) @trusted
     {
         import core.stdc.stdlib : malloc;
         import std.exception : enforce;
@@ -574,7 +574,7 @@ Throws: `ErrnoException` in case of error.
 
     version (MICROSOFT_STDIO)
     {
-        private void setAppendWin(in char[] stdioOpenmode) @safe
+        private void setAppendWin(scope const(char)[] stdioOpenmode) @safe
         {
             bool append, update;
             foreach (c; stdioOpenmode)
@@ -601,7 +601,7 @@ in all C runtimes.
 
 Throws: `ErrnoException` in case of error.
  */
-    void reopen(string name, in char[] stdioOpenmode = "rb") @trusted
+    void reopen(string name, scope const(char)[] stdioOpenmode = "rb") @trusted
     {
         import std.conv : text;
         import std.exception : enforce, errnoEnforce;
@@ -675,7 +675,7 @@ opengroup.org/onlinepubs/007908799/xsh/_popen.html, _popen).
 
 Throws: `ErrnoException` in case of error.
  */
-    version(Posix) void popen(string command, in char[] stdioOpenmode = "r") @safe
+    version(Posix) void popen(string command, scope const(char)[] stdioOpenmode = "r") @safe
     {
         resetFile(command, stdioOpenmode ,true);
     }
@@ -687,12 +687,12 @@ be compatible with the mode of the file descriptor.
 
 Throws: `ErrnoException` in case of error.
  */
-    void fdopen(int fd, in char[] stdioOpenmode = "rb") @safe
+    void fdopen(int fd, scope const(char)[] stdioOpenmode = "rb") @safe
     {
         fdopen(fd, stdioOpenmode, null);
     }
 
-    package void fdopen(int fd, in char[] stdioOpenmode, string name) @trusted
+    package void fdopen(int fd, scope const(char)[] stdioOpenmode, string name) @trusted
     {
         import std.exception : errnoEnforce;
         import std.internal.cstring : tempCString;
@@ -742,10 +742,10 @@ be compatible with the access attributes of the handle. Windows only.
 Throws: `ErrnoException` in case of error.
 */
     version(StdDdoc)
-    void windowsHandleOpen(HANDLE handle, in char[] stdioOpenmode);
+    void windowsHandleOpen(HANDLE handle, scope const(char)[] stdioOpenmode);
 
     version(Windows)
-    void windowsHandleOpen(HANDLE handle, in char[] stdioOpenmode)
+    void windowsHandleOpen(HANDLE handle, scope const(char)[] stdioOpenmode)
     {
         import core.stdc.stdint : intptr_t;
         import std.exception : errnoEnforce;
@@ -1908,7 +1908,7 @@ $(CONSOLE
     }
 
     /// ditto
-    uint readf(Data...)(in char[] format, auto ref Data data)
+    uint readf(Data...)(scope const(char)[] format, auto ref Data data)
     {
         import std.format : formattedRead;
 
@@ -4087,7 +4087,7 @@ if (isSomeString!(typeof(format)))
 }
 
 /// ditto
-uint readf(A...)(in char[] format, auto ref A args)
+uint readf(A...)(scope const(char)[] format, auto ref A args)
 {
     return stdin.readf(format, args);
 }
