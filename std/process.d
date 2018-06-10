@@ -280,7 +280,7 @@ $(REF StdioException, std,stdio) on failure to pass one of the streams
     to the child process (Windows only).$(BR)
 $(REF RangeError, core,exception) if `args` is empty.
 */
-Pid spawnProcess(scope const char[][] args,
+Pid spawnProcess(scope const(char[])[] args,
                  File stdin = std.stdio.stdin,
                  File stdout = std.stdio.stdout,
                  File stderr = std.stdio.stderr,
@@ -295,10 +295,10 @@ Pid spawnProcess(scope const char[][] args,
 }
 
 /// ditto
-Pid spawnProcess(in char[][] args,
+Pid spawnProcess(scope const(char[])[] args,
                  const string[string] env,
                  Config config = Config.none,
-                 in char[] workDir = null)
+                 scope const(char)[] workDir = null)
     @trusted // TODO: Should be @safe
 {
     return spawnProcess(args,
@@ -311,13 +311,13 @@ Pid spawnProcess(in char[][] args,
 }
 
 /// ditto
-Pid spawnProcess(in char[] program,
+Pid spawnProcess(scope const(char)[] program,
                  File stdin = std.stdio.stdin,
                  File stdout = std.stdio.stdout,
                  File stderr = std.stdio.stderr,
                  const string[string] env = null,
                  Config config = Config.none,
-                 in char[] workDir = null)
+                 scope const(char)[] workDir = null)
     @trusted
 {
     return spawnProcess((&program)[0 .. 1],
@@ -325,10 +325,10 @@ Pid spawnProcess(in char[] program,
 }
 
 /// ditto
-Pid spawnProcess(in char[] program,
+Pid spawnProcess(scope const(char)[] program,
                  const string[string] env,
                  Config config = Config.none,
-                 in char[] workDir = null)
+                 scope const(char)[] workDir = null)
     @trusted
 {
     return spawnProcess((&program)[0 .. 1], env, config, workDir);
@@ -350,7 +350,7 @@ envz should be a zero-terminated array of zero-terminated strings
 on the form "var=value".
 */
 version (Posix)
-private Pid spawnProcessImpl(scope const char[][] args,
+private Pid spawnProcessImpl(scope const(char[])[] args,
                              File stdin,
                              File stdout,
                              File stderr,
@@ -886,7 +886,7 @@ version (Windows) @system unittest
 // Searches the PATH variable for the given executable file,
 // (checking that it is in fact executable).
 version (Posix)
-private string searchPathFor(in char[] executable)
+private string searchPathFor(scope const(char)[] executable)
     @trusted //TODO: @safe nothrow
 {
     import std.algorithm.iteration : splitter;
@@ -908,7 +908,7 @@ private string searchPathFor(in char[] executable)
 // Checks whether the file exists and can be executed by the
 // current user.
 version (Posix)
-private bool isExecutable(in char[] path) @trusted nothrow @nogc //TODO: @safe
+private bool isExecutable(scope const(char)[] path) @trusted nothrow @nogc //TODO: @safe
 {
     return (access(path.tempCString(), X_OK) == 0);
 }
@@ -2106,33 +2106,33 @@ wait(pipes.pid);
 
 ---
 */
-ProcessPipes pipeProcess(in char[][] args,
+ProcessPipes pipeProcess(scope const(char[])[] args,
                          Redirect redirect = Redirect.all,
                          const string[string] env = null,
                          Config config = Config.none,
-                         in char[] workDir = null)
+                         scope const(char)[] workDir = null)
     @safe
 {
     return pipeProcessImpl!spawnProcess(args, redirect, env, config, workDir);
 }
 
 /// ditto
-ProcessPipes pipeProcess(in char[] program,
+ProcessPipes pipeProcess(scope const(char)[] program,
                          Redirect redirect = Redirect.all,
                          const string[string] env = null,
                          Config config = Config.none,
-                         in char[] workDir = null)
+                         scope const(char)[] workDir = null)
     @safe
 {
     return pipeProcessImpl!spawnProcess(program, redirect, env, config, workDir);
 }
 
 /// ditto
-ProcessPipes pipeShell(in char[] command,
+ProcessPipes pipeShell(scope const(char)[] command,
                        Redirect redirect = Redirect.all,
                        const string[string] env = null,
                        Config config = Config.none,
-                       in char[] workDir = null,
+                       scope const(char)[] workDir = null,
                        string shellPath = nativeShell)
     @safe
 {
@@ -2150,7 +2150,7 @@ private ProcessPipes pipeProcessImpl(alias spawnFunc, Cmd, ExtraSpawnFuncArgs...
                                      Redirect redirectFlags,
                                      const string[string] env = null,
                                      Config config = Config.none,
-                                     in char[] workDir = null,
+                                     scope const(char)[] workDir = null,
                                      ExtraSpawnFuncArgs extraArgs = ExtraSpawnFuncArgs.init)
     @trusted //TODO: @safe
 {
@@ -2455,33 +2455,33 @@ Throws:
 $(LREF ProcessException) on failure to start the process.$(BR)
 $(REF StdioException, std,stdio) on failure to capture output.
 */
-auto execute(in char[][] args,
+auto execute(scope const(char[])[] args,
              const string[string] env = null,
              Config config = Config.none,
              size_t maxOutput = size_t.max,
-             in char[] workDir = null)
+             scope const(char)[] workDir = null)
     @trusted //TODO: @safe
 {
     return executeImpl!pipeProcess(args, env, config, maxOutput, workDir);
 }
 
 /// ditto
-auto execute(in char[] program,
+auto execute(scope const(char)[] program,
              const string[string] env = null,
              Config config = Config.none,
              size_t maxOutput = size_t.max,
-             in char[] workDir = null)
+             scope const(char)[] workDir = null)
     @trusted //TODO: @safe
 {
     return executeImpl!pipeProcess(program, env, config, maxOutput, workDir);
 }
 
 /// ditto
-auto executeShell(in char[] command,
+auto executeShell(scope const(char)[] command,
                   const string[string] env = null,
                   Config config = Config.none,
                   size_t maxOutput = size_t.max,
-                  in char[] workDir = null,
+                  scope const(char)[] workDir = null,
                   string shellPath = nativeShell)
     @trusted //TODO: @safe
 {
@@ -2499,7 +2499,7 @@ private auto executeImpl(alias pipeFunc, Cmd, ExtraPipeFuncArgs...)(
     const string[string] env = null,
     Config config = Config.none,
     size_t maxOutput = size_t.max,
-    in char[] workDir = null,
+    scope const(char)[] workDir = null,
     ExtraPipeFuncArgs extraArgs = ExtraPipeFuncArgs.init)
 {
     import std.algorithm.comparison : min;
@@ -2836,7 +2836,7 @@ Throws:
 $(OBJECTREF Exception) if any part of the command line contains unescapable
 characters (NUL on all platforms, as well as CR and LF on Windows).
 */
-string escapeShellCommand(in char[][] args...) @safe pure
+string escapeShellCommand(scope const(char[])[] args...) @safe pure
 {
     if (args.empty)
         return null;
@@ -2910,7 +2910,7 @@ private string escapeShellCommandString(string command) @safe pure
         return command;
 }
 
-private string escapeWindowsShellCommand(in char[] command) @safe pure
+private string escapeWindowsShellCommand(scope const(char)[] command) @safe pure
 {
     import std.array : appender;
     auto result = appender!string();
@@ -2941,7 +2941,7 @@ private string escapeWindowsShellCommand(in char[] command) @safe pure
     return result.data;
 }
 
-private string escapeShellArguments(in char[][] args...)
+private string escapeShellArguments(scope const(char[])[] args...)
     @trusted pure nothrow
 {
     import std.exception : assumeUnique;
@@ -2966,7 +2966,7 @@ private string escapeShellArguments(in char[][] args...)
     return assumeUnique(buf);
 }
 
-private auto escapeShellArgument(alias allocator)(in char[] arg) @safe nothrow
+private auto escapeShellArgument(alias allocator)(scope const(char)[] arg) @safe nothrow
 {
     // The unittest for this function requires special
     // preparation - see below.
@@ -2982,7 +2982,7 @@ Quotes a command-line argument in a manner conforming to the behavior of
 $(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/bb776391(v=vs.85).aspx,
 CommandLineToArgvW).
 */
-string escapeWindowsArgument(in char[] arg) @trusted pure nothrow
+string escapeWindowsArgument(scope const(char)[] arg) @trusted pure nothrow
 {
     // Rationale for leaving this function as public:
     // this algorithm of escaping paths is also used in other software,
@@ -2999,7 +2999,7 @@ private char[] charAllocator(size_t size) @safe pure nothrow
 }
 
 
-private char[] escapeWindowsArgumentImpl(alias allocator)(in char[] arg)
+private char[] escapeWindowsArgumentImpl(alias allocator)(scope const(char)[] arg)
     @safe nothrow
 if (is(typeof(allocator(size_t.init)[0] = char.init)))
 {
@@ -3125,14 +3125,14 @@ version(Windows) version(unittest)
     }
 }
 
-private string escapePosixArgument(in char[] arg) @trusted pure nothrow
+private string escapePosixArgument(scope const(char)[] arg) @trusted pure nothrow
 {
     import std.exception : assumeUnique;
     auto buf = escapePosixArgumentImpl!charAllocator(arg);
     return assumeUnique(buf);
 }
 
-private char[] escapePosixArgumentImpl(alias allocator)(in char[] arg)
+private char[] escapePosixArgumentImpl(alias allocator)(scope const(char)[] arg)
     @safe nothrow
 if (is(typeof(allocator(size_t.init)[0] = char.init)))
 {
@@ -3168,7 +3168,7 @@ if (is(typeof(allocator(size_t.init)[0] = char.init)))
 Escapes a filename to be used for shell redirection with $(LREF spawnShell),
 $(LREF pipeShell) or $(LREF executeShell).
 */
-string escapeShellFileName(in char[] fileName) @trusted pure nothrow
+string escapeShellFileName(scope const(char)[] fileName) @trusted pure nothrow
 {
     // The unittest for this function requires special
     // preparation - see below.
@@ -3332,7 +3332,7 @@ static:
     See_also:
     $(LREF environment.get), which doesn't throw on failure.
     */
-    string opIndex(in char[] name) @safe
+    string opIndex(scope const(char)[] name) @safe
     {
         import std.exception : enforce;
         string value;
@@ -3372,7 +3372,7 @@ static:
     $(REF UTFException, std,utf) if the variable contains invalid UTF-16
     characters (Windows only).
     */
-    string get(in char[] name, string defaultValue = null) @safe
+    string get(scope const(char)[] name, string defaultValue = null) @safe
     {
         string value;
         auto found = getImpl(name, value);
@@ -3399,7 +3399,7 @@ static:
     multi-threaded programs. See e.g.
     $(LINK2 https://www.gnu.org/software/libc/manual/html_node/Environment-Access.html#Environment-Access, glibc).
     */
-    inout(char)[] opIndexAssign(inout char[] value, in char[] name) @trusted
+    inout(char)[] opIndexAssign(inout char[] value, scope const(char)[] name) @trusted
     {
         version (Posix)
         {
@@ -3444,7 +3444,7 @@ static:
     multi-threaded programs. See e.g.
     $(LINK2 https://www.gnu.org/software/libc/manual/html_node/Environment-Access.html#Environment-Access, glibc).
     */
-    void remove(in char[] name) @trusted nothrow @nogc // TODO: @safe
+    void remove(scope const(char)[] name) @trusted nothrow @nogc // TODO: @safe
     {
         version (Windows)    SetEnvironmentVariableW(name.tempCStringW(), null);
         else version (Posix) core.sys.posix.stdlib.unsetenv(name.tempCString());
@@ -3473,7 +3473,7 @@ static:
         doSomething(var);
     -------------
     */
-    bool opBinaryRight(string op : "in")(in char[] name) @trusted
+    bool opBinaryRight(string op : "in")(scope const(char)[] name) @trusted
     {
         version (Posix)
             return core.sys.posix.stdlib.getenv(name.tempCString()) !is null;
@@ -3569,7 +3569,7 @@ static:
 
 private:
     // Retrieves the environment variable, returns false on failure.
-    bool getImpl(in char[] name, out string value) @trusted
+    bool getImpl(scope const(char)[] name, out string value) @trusted
     {
         version (Windows)
         {
@@ -3797,7 +3797,7 @@ private void toAStringz(in string[] a, const(char)**az)
 // Incorporating idea (for spawnvp() on Posix) from Dave Fladebo
 
 enum { _P_WAIT, _P_NOWAIT, _P_OVERLAY }
-version(Windows) extern(C) int spawnvp(int, in char *, in char **);
+version(Windows) extern(C) int spawnvp(int, scope const(char) *, scope const(char*)*);
 alias P_WAIT = _P_WAIT;
 alias P_NOWAIT = _P_NOWAIT;
 
@@ -3897,10 +3897,10 @@ else version(Posix)
 // Move these C declarations to druntime if we decide to keep the D wrappers
 extern(C)
 {
-    int execv(in char *, in char **);
-    int execve(in char *, in char **, in char **);
-    int execvp(in char *, in char **);
-    version(Windows) int execvpe(in char *, in char **, in char **);
+    int execv(scope const(char) *, scope const(char *)*);
+    int execve(scope const(char)*, scope const(char*)*, scope const(char*)*);
+    int execvp(scope const(char)*, scope const(char*)*);
+    version(Windows) int execvpe(scope const(char)*, scope const(char*)*, scope const(char*)*);
 }
 
 private int execv_(in string pathname, in string[] argv)
