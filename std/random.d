@@ -2634,6 +2634,78 @@ do
     assert(i == 0);
 }
 
+private struct RandomCoverChoices
+{
+    private void* buffer;
+    private size_t _length;
+    private static immutable emsg = "No memory available to store random cover choices";
+
+    this(this) nothrow @nogc @trusted @property
+    {
+        import core.stdc.stdlib : malloc;
+        import core.stdc.string : memmove;
+
+        void* nbuffer = malloc(_length);
+        if (nbuffer is null)
+            assert(0, emsg);
+        buffer = memmove(nbuffer, buffer, _length);
+        if (buffer is null)
+            assert(0, emsg);
+    }
+
+    void length(size_t value) nothrow @nogc @trusted @property
+    {
+        import core.stdc.stdlib : calloc;
+
+        buffer = calloc(value, 1);
+        if (buffer is null)
+            assert(0, emsg);
+
+        _length = value;
+    }
+
+    size_t length() nothrow @nogc @safe @property {return _length;}
+
+    ~this() nothrow @nogc @trusted
+    {
+        import core.stdc.stdlib : free;
+        if (buffer !is null)
+            free(buffer);
+    }
+
+    bool opIndex(size_t index) pure nothrow @nogc @trusted
+    {
+        assert(index < _length);
+        return *((cast(bool*) buffer) + index);
+    }
+
+    void opIndexAssign(bool value, size_t index) pure nothrow @nogc @trusted
+    {
+        assert(index < _length);
+        *((cast(bool*) buffer) + index) = value;
+    }
+}
+
+@safe @nogc unittest
+{
+    RandomCoverChoices c;
+    c.length = 3;
+    c[0] = true;
+    c[2] = true;
+    assert(c[0]);
+    assert(!c[1]);
+    assert(c[2]);
+    c[0] = false;
+    c[1] = true;
+    c[2] = false;
+    assert(!c[0]);
+    assert(c[1]);
+    assert(!c[2]);
+
+    RandomCoverChoices d = c;
+    assert(d.buffer !is c.buffer);
+}
+
 /**
 Covers a given range `r` in a random manner, i.e. goes through each
 element of `r` once and only once, just in a random order. `r`
@@ -2657,7 +2729,7 @@ struct RandomCover(Range, UniformRNG = void)
 if (isRandomAccessRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))
 {
     private Range _input;
-    private bool[] _chosen;
+    private RandomCoverChoices _chosen;
     private size_t _current;
     private size_t _alreadyChosen = 0;
     private bool _isEmpty = false;
