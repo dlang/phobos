@@ -2938,7 +2938,7 @@ if (isConvertibleToString!R)
 // Same as mkdir but ignores "already exists" errors.
 // Returns: "true" if the directory was created,
 //   "false" if it already existed.
-private bool ensureDirExists()(in char[] pathname)
+private bool ensureDirExists()(scope const(char)[] pathname)
 {
     import std.exception : enforce;
     const pathz = pathname.tempCString!FSChar();
@@ -2972,7 +2972,7 @@ Params:
 
 Throws: $(LREF FileException) on error.
  */
-void mkdirRecurse(in char[] pathname) @safe
+void mkdirRecurse(scope const(char)[] pathname) @safe
 {
     import std.path : dirName, baseName;
 
@@ -4294,7 +4294,7 @@ private void copyImpl(scope const(char)[] f, scope const(char)[] t,
         $(LREF FileException) if there is an error (including if the given
         file is not a directory).
  +/
-void rmdirRecurse(in char[] pathname)
+void rmdirRecurse(scope const(char)[] pathname)
 {
     //No references to pathname will be kept after rmdirRecurse,
     //so the cast is safe
@@ -5038,7 +5038,7 @@ auto dirEntries(string path, string pattern, SpanMode mode,
  *     with extra characters are allowed.
  */
 Select!(Types.length == 1, Types[0][], Tuple!(Types)[])
-slurp(Types...)(string filename, in char[] format)
+slurp(Types...)(string filename, scope const(char)[] format)
 {
     import std.array : appender;
     import std.conv : text;
