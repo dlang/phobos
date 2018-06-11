@@ -2634,25 +2634,23 @@ do
     assert(i == 0);
 }
 
+/+ bool array designed for RandomCover.
+- constructed with an invariable length
+- small length means 0 allocation and bit field (up to 32 and 64 elements)
+- bigger length means non GC allocation(s) and dealloc. +/
 private struct RandomCoverChoices
 {
-
     private static immutable emsg = "No memory available to store random cover choices";
     private void* buffer;
-    private size_t _length;
-
-    pragma(inline, true)
-    bool hasPackedBits() const pure nothrow @nogc @safe
-    {
-        return _length <= size_t.sizeof * 8;
-    }
+    private immutable size_t _length;
+    private immutable bool _hasPackedBits;
 
     this(this) nothrow @nogc @trusted
     {
         import core.stdc.stdlib : malloc;
         import core.stdc.string : memmove;
 
-        if (!hasPackedBits())
+        if (!_hasPackedBits)
         {
             void* nbuffer = malloc(_length);
             if (nbuffer is null)
@@ -2663,36 +2661,35 @@ private struct RandomCoverChoices
         }
     }
 
-    void length(size_t value) nothrow @nogc @trusted @property
+    this(size_t value) nothrow @nogc @trusted @property
     {
         import core.stdc.stdlib : calloc;
 
         _length = value;
+        _hasPackedBits = _length <= size_t.sizeof * 8;
 
-        if (!hasPackedBits())
+        if (!_hasPackedBits)
         {
             buffer = calloc(value, 1);
             if (buffer is null)
                 assert(0, emsg);
         }
-
     }
 
-    size_t length() const pure nothrow @nogc @trusted @property
-    {return _length;}
+    size_t length() const pure nothrow @nogc @safe @property {return _length;}
 
     ~this() nothrow @nogc @trusted
     {
         import core.stdc.stdlib : free;
 
-        if (!hasPackedBits() && buffer !is null)
+        if (!_hasPackedBits && buffer !is null)
             free(buffer);
     }
 
     bool opIndex(size_t index) pure nothrow @nogc @trusted
     {
         assert(index < _length);
-        if (!hasPackedBits)
+        if (!_hasPackedBits)
             return *((cast(bool*) buffer) + index);
         else
             return ((cast(size_t) buffer) >> index) & size_t(1);
@@ -2701,7 +2698,7 @@ private struct RandomCoverChoices
     void opIndexAssign(bool value, size_t index) pure nothrow @nogc @trusted
     {
         assert(index < _length);
-        if (!hasPackedBits)
+        if (!_hasPackedBits)
         {
             *((cast(bool*) buffer) + index) = value;
         }
@@ -2715,28 +2712,13 @@ private struct RandomCoverChoices
     }
 }
 
-@safe @nogc unittest
+@safe @nogc nothrow unittest
 {
+    static immutable lengths = [3, 32, 65, 256];
+    foreach (length; lengths)
     {
-        RandomCoverChoices c;
-        c.length = 3;
-        assert(c.hasPackedBits);
-        c[0] = true;
-        c[2] = true;
-        assert(c[0]);
-        assert(!c[1]);
-        assert(c[2]);
-        c[0] = false;
-        c[1] = true;
-        c[2] = false;
-        assert(!c[0]);
-        assert(c[1]);
-        assert(!c[2]);
-    }
-    {
-        RandomCoverChoices c;
-        c.length = 65;
-        assert(!c.hasPackedBits);
+        RandomCoverChoices c = RandomCoverChoices(length);
+        assert(c._hasPackedBits == (length <= size_t.sizeof * 8));
         c[0] = true;
         c[2] = true;
         assert(c[0]);
@@ -2769,6 +2751,10 @@ Returns:
     in random order.  Will be a forward range if both `r` and
     `rng` are forward ranges, an
     $(REF_ALTTEXT input range, isInputRange, std,range,primitives) otherwise.
+
+Throws:
+    If a memory allocation fails and if the length to cover is bigger than 32
+    elements (X86) or 64 elements (X86_64) an AssertError.
 */
 struct RandomCover(Range, UniformRNG = void)
 if (isRandomAccessRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))
@@ -2784,7 +2770,7 @@ if (isRandomAccessRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == vo
         this(Range input)
         {
             _input = input;
-            _chosen.length = _input.length;
+            _chosen = RandomCoverChoices(_input.length);
             if (_input.empty)
             {
                 _isEmpty = true;
@@ -2803,7 +2789,7 @@ if (isRandomAccessRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == vo
         {
             _input = input;
             _rng = rng;
-            _chosen.length = _input.length;
+            _chosen = RandomCoverChoices(_input.length);
             if (_input.empty)
             {
                 _isEmpty = true;
