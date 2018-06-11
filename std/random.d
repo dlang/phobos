@@ -2634,23 +2634,23 @@ do
     assert(i == 0);
 }
 
-/+ bool array designed for RandomCover.
+/+ @nogc bool array designed for RandomCover.
 - constructed with an invariable length
-- small length means 0 allocation and bit field (up to 32 and 64 elements)
-- bigger length means non GC allocation(s) and dealloc. +/
+- small length means 0 alloc and bit field (if up to 32 and 64 elements to cover)
+- bigger length means non-GC heap allocation(s) and dealloc. +/
 private struct RandomCoverChoices
 {
     private static immutable emsg = "No memory available to store random cover choices";
     private void* buffer;
     private immutable size_t _length;
-    private immutable bool _hasPackedBits;
+    private immutable bool hasPackedBits;
 
     this(this) nothrow @nogc @trusted
     {
         import core.stdc.stdlib : malloc;
         import core.stdc.string : memmove;
 
-        if (!_hasPackedBits)
+        if (!hasPackedBits && buffer !is null)
         {
             void* nbuffer = malloc(_length);
             if (nbuffer is null)
@@ -2666,9 +2666,8 @@ private struct RandomCoverChoices
         import core.stdc.stdlib : calloc;
 
         _length = value;
-        _hasPackedBits = _length <= size_t.sizeof * 8;
-
-        if (!_hasPackedBits)
+        hasPackedBits = _length <= size_t.sizeof * 8;
+        if (!hasPackedBits)
         {
             buffer = calloc(value, 1);
             if (buffer is null)
@@ -2682,14 +2681,14 @@ private struct RandomCoverChoices
     {
         import core.stdc.stdlib : free;
 
-        if (!_hasPackedBits && buffer !is null)
+        if (!hasPackedBits && buffer !is null)
             free(buffer);
     }
 
-    bool opIndex(size_t index) pure nothrow @nogc @trusted
+    bool opIndex(size_t index) const pure nothrow @nogc @trusted
     {
         assert(index < _length);
-        if (!_hasPackedBits)
+        if (!hasPackedBits)
             return *((cast(bool*) buffer) + index);
         else
             return ((cast(size_t) buffer) >> index) & size_t(1);
@@ -2698,7 +2697,7 @@ private struct RandomCoverChoices
     void opIndexAssign(bool value, size_t index) pure nothrow @nogc @trusted
     {
         assert(index < _length);
-        if (!_hasPackedBits)
+        if (!hasPackedBits)
         {
             *((cast(bool*) buffer) + index) = value;
         }
@@ -2718,7 +2717,7 @@ private struct RandomCoverChoices
     foreach (length; lengths)
     {
         RandomCoverChoices c = RandomCoverChoices(length);
-        assert(c._hasPackedBits == (length <= size_t.sizeof * 8));
+        assert(c.hasPackedBits == (length <= size_t.sizeof * 8));
         c[0] = true;
         c[2] = true;
         assert(c[0]);
@@ -2753,8 +2752,7 @@ Returns:
     $(REF_ALTTEXT input range, isInputRange, std,range,primitives) otherwise.
 
 Throws:
-    If a memory allocation fails and if the length to cover is bigger than 32
-    elements (X86) or 64 elements (X86_64) an AssertError.
+    AssertError if a memory allocation fails.
 */
 struct RandomCover(Range, UniformRNG = void)
 if (isRandomAccessRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))
