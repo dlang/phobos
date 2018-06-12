@@ -3847,7 +3847,7 @@ enum hasMember(T, string name) = __traits(hasMember, T, name);
  *     member = Name of symbol to test that resides in `T`.
  *
  * Returns:
- *     `true` iff `member` exists and is static.
+ *     `true` if `member` exists and is static.
  */
 template hasStaticMember(T, string member)
 {
@@ -4968,7 +4968,7 @@ template isImplicitlyConvertible(From, To)
 }
 
 /**
-Returns `true` iff a value of type `Rhs` can be assigned to a variable of
+Returns `true` if a value of type `Rhs` can be assigned to a variable of
 type `Lhs`.
 
 `isAssignable` returns whether both an lvalue and rvalue can be assigned.
@@ -8451,7 +8451,7 @@ private template getSymbolsByUDAImpl(alias symbol, alias attribute, names...)
 }
 
 /**
-   Returns: `true` iff all types `T` are the same.
+   Returns: `true` if all types `T` are the same.
 */
 template allSameType(T...)
 {
@@ -8478,7 +8478,7 @@ template allSameType(T...)
 }
 
 /**
-   Returns: `true` iff the type `T` can be tested in an $(D
+   Returns: `true` if the type `T` can be tested in an $(D
    if)-expression, that is if $(D if (pred(T.init)) {}) is compilable.
 */
 enum ifTestable(T, alias pred = a => a) = __traits(compiles, { if (pred(T.init)) {} });
