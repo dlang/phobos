@@ -2171,12 +2171,16 @@ Returns:
  */
 enum Variadic
 {
-    no,       /// Function is not variadic.
-    c,        /// Function is a _C-style variadic function, which uses
-              /// core.stdc.stdarg
-              /// Function is a _D-style variadic function, which uses
-    d,        /// __argptr and __arguments.
-    typesafe, /// Function is a typesafe variadic function.
+    /// Function is not variadic.
+    no,
+    /// Function is a _C-style variadic function, which uses
+    /// `core.stdc.stdarg`
+    c,
+    /// Function is a _D-style variadic function, which uses
+    /// `__argptr` and `__arguments`.
+    d,
+    /// Function is a typesafe variadic function.
+    typesafe,
 }
 
 /// ditto
