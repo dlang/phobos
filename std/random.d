@@ -1083,7 +1083,7 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
     assert(n == 6597103971274460346);
 
     // Seed with an unpredictable value
-    gen.seed(unpredictableSeed);
+    gen.seed(unpredictableSeed!ulong);
     n = gen.front; // different across runs
 }
 
@@ -1095,13 +1095,7 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
     static assert(isUniformRNG!(Mt19937_64, ulong));
     static assert(isSeedable!Mt19937_64);
     static assert(isSeedable!(Mt19937_64, ulong));
-    // Issue 15147: this test demonstrates viably that Mt19937_64
-    // is seedable with an infinite range of `ulong` values
-    // but it's a poor example of how to actually seed the
-    // generator, since it can't cover the full range of
-    // possible seed values.  Ideally we need a 64-bit
-    // unpredictable seed to complement the 32-bit one!
-    static assert(isSeedable!(Mt19937_64, typeof(map!((a) => (cast(ulong) unpredictableSeed))(repeat(0)))));
+    static assert(isSeedable!(Mt19937_64, typeof(map!((a) => unpredictableSeed!ulong)(repeat(0)))));
     Mt19937_64 gen;
     assert(gen.front == 14514284786278117030uL);
     popFrontN(gen, 9999);
@@ -1529,6 +1523,29 @@ version (AnyARC4Random)
     extern(C) private @nogc nothrow
     {
         uint arc4random() @safe;
+        void arc4random_buf(scope void* buf, size_t nbytes) @system;
+    }
+}
+else
+{
+    private ulong bootstrapSeed() @nogc nothrow
+    {
+        ulong result = void;
+        enum ulong m = 0xc6a4_a793_5bd1_e995UL; // MurmurHash2_64A constant.
+        void updateResult(ulong x)
+        {
+            x *= m;
+            x = (x ^ (x >>> 47)) * m;
+            result = (result ^ x) * m;
+        }
+        import core.thread : getpid, Thread;
+        import core.time : MonoTime;
+
+        updateResult(cast(ulong) cast(void*) Thread.getThis());
+        updateResult(cast(ulong) getpid());
+        updateResult(cast(ulong) MonoTime.currTime.ticks);
+        result = (result ^ (result >>> 47)) * m;
+        return result ^ (result >>> 47);
     }
 }
 
@@ -1554,18 +1571,79 @@ how excellent the source of entropy is.
     }
     else
     {
-        import core.thread : Thread, getpid, MonoTime;
-        static bool seeded;
-        static MinstdRand0 rand;
-        if (!seeded)
-        {
-            uint threadID = cast(uint) cast(void*) Thread.getThis();
-            rand.seed((getpid() + threadID) ^ cast(uint) MonoTime.currTime.ticks);
-            seeded = true;
-        }
-        rand.popFront();
-        return cast(uint) (MonoTime.currTime.ticks ^ rand.front);
+        return cast(uint) unpredictableSeed!ulong;
     }
+}
+
+/// ditto
+template unpredictableSeed(UIntType)
+if (isUnsigned!UIntType)
+{
+    static if (is(UIntType == uint))
+        alias unpredictableSeed = .unpredictableSeed;
+    else static if (!is(Unqual!UIntType == UIntType))
+        alias unpredictableSeed = .unpredictableSeed!(Unqual!UIntType);
+    else
+        /// ditto
+        @property UIntType unpredictableSeed() @nogc nothrow @trusted
+        {
+            version (AnyARC4Random)
+            {
+                static if (UIntType.sizeof <= uint.sizeof)
+                {
+                    return cast(UIntType) arc4random();
+                }
+                else
+                {
+                    UIntType result = void;
+                    arc4random_buf(&result, UIntType.sizeof);
+                    return result;
+                }
+            }
+            else static if (!is(UIntType == ulong))
+            {
+                // The work occurs in the ulong implementation.
+                return cast(UIntType) unpredictableSeed!ulong;
+            }
+            else
+            {
+                // Bit avalanche function from MurmurHash3.
+                static ulong fmix64(ulong k) @nogc nothrow pure @safe
+                {
+                    k = (k ^ (k >>> 33)) * 0xff51afd7ed558ccd;
+                    k = (k ^ (k >>> 33)) * 0xc4ceb9fe1a85ec53;
+                    return k ^ (k >>> 33);
+                }
+                // Using SplitMix algorithm with constant gamma.
+                // Chosen gamma is the odd number closest to 2^^64
+                // divided by the silver ratio (1.0L + sqrt(2.0L)).
+                enum gamma = 0x6a09e667f3bcc909UL;
+                import core.atomic : has64BitCAS;
+                static if (has64BitCAS)
+                {
+                    import core.atomic : MemoryOrder, atomicLoad, atomicOp, atomicStore, cas;
+                    shared static ulong seed;
+                    shared static bool initialized;
+                    if (0 == atomicLoad!(MemoryOrder.raw)(initialized))
+                    {
+                        cas(&seed, 0UL, fmix64(bootstrapSeed()));
+                        atomicStore!(MemoryOrder.rel)(initialized, true);
+                    }
+                    return fmix64(atomicOp!"+="(seed, gamma));
+                }
+                else
+                {
+                    static ulong seed;
+                    static bool initialized;
+                    if (!initialized)
+                    {
+                        seed = fmix64(bootstrapSeed());
+                        initialized = true;
+                    }
+                    return fmix64(seed += gamma);
+                }
+            }
+        }
 }
 
 ///
@@ -1611,8 +1689,10 @@ A singleton instance of the default random number generator
     static bool initialized;
     if (!initialized)
     {
-        static if (isSeedable!(Random, ReturnType!unpredictableSeed))
-            result.seed(unpredictableSeed); // Avoid unnecessary copy.
+        static if (isSeedable!(Random, ulong))
+            result.seed(unpredictableSeed!ulong); // Avoid unnecessary copy.
+        else static if (isSeedable!(Random, uint))
+            result.seed(unpredictableSeed!uint); // Avoid unnecessary copy.
         else
             result = Random(unpredictableSeed);
         initialized = true;
