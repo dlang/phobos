@@ -134,6 +134,15 @@ publictests()
     make -f posix.mak -j$N publictests DUB=$DUB BUILD=$BUILD
 }
 
+# test stdx dub package
+dub_package()
+{
+    pushd test
+    dub -v --single dub_stdx_checkedint.d
+    dub -v --single dub_stdx_allocator.d
+    popd
+}
+
 case $1 in
     install-deps) install_deps ;;
     setup-repos) setup_repos ;;

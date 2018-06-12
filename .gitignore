@@ -21,3 +21,7 @@ obj/
 .vscode
 
 *.html
+
+.dub/
+libphobos_*
+source/
