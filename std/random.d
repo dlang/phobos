@@ -2895,6 +2895,14 @@ if (isRandomAccessRange!Range)
     assert(10.iota.randomCover(rnd).equal([7, 4, 2, 0, 1, 6, 8, 3, 9, 5]));
 }
 
+@safe unittest // cover RandomCoverChoices postblit for heap storage
+{
+    import std.array : array;
+    import std.range : iota;
+    auto a = 1337.iota.randomCover().array;
+    assert(a.length == 1337);
+}
+
 @safe unittest
 {
     import std.algorithm;
