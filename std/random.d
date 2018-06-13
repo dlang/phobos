@@ -2640,7 +2640,6 @@ do
 - bigger length means non-GC heap allocation(s) and dealloc. +/
 private struct RandomCoverChoices
 {
-    private static immutable emsg = "No memory available to store random cover choices";
     private void* buffer;
     private immutable size_t _length;
     private immutable bool hasPackedBits;
@@ -2649,21 +2648,21 @@ private struct RandomCoverChoices
     {
         import core.stdc.stdlib : malloc;
         import core.stdc.string : memmove;
+        import core.exception : onOutOfMemoryErrorNoGC;
 
         if (!hasPackedBits && buffer !is null)
         {
             void* nbuffer = malloc(_length);
             if (nbuffer is null)
-                assert(0, emsg);
+                onOutOfMemoryErrorNoGC();
             buffer = memmove(nbuffer, buffer, _length);
-            if (buffer is null)
-                assert(0, emsg);
         }
     }
 
     this(size_t value) nothrow @nogc @trusted @property
     {
         import core.stdc.stdlib : calloc;
+        import core.exception : onOutOfMemoryErrorNoGC;
 
         _length = value;
         hasPackedBits = _length <= size_t.sizeof * 8;
@@ -2671,7 +2670,7 @@ private struct RandomCoverChoices
         {
             buffer = calloc(value, 1);
             if (buffer is null)
-                assert(0, emsg);
+                onOutOfMemoryErrorNoGC();
         }
     }
 
