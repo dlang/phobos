@@ -2342,7 +2342,8 @@ public:
         {
             import std.utf : toUTFz;
             timeInfo.tm_gmtoff = cast(int) convert!("hnsecs", "seconds")(adjTime - _stdTime);
-            auto zone = _timezone is null ? "" : (timeInfo.tm_isdst ? _timezone.dstName : _timezone.stdName);
+            auto zone = _timezone is null ? "" :
+                (timeInfo.tm_isdst ? _timezone.dstName : _timezone.stdName);
             timeInfo.tm_zone = zone.toUTFz!(char*)();
         }
 
