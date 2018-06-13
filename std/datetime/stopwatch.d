@@ -393,7 +393,6 @@ private:
     auto timeElapsed = MonoTime.currTime - before;
 }
 
-
 /++
     Benchmarks code for speed assessment and comparison.
 
@@ -413,11 +412,25 @@ Duration[fun.length] benchmark(fun...)(uint n)
     Duration[fun.length] result;
     auto sw = StopWatch(AutoStart.yes);
 
-    foreach (i, unused; fun)
+    static foreach (i, unused; fun)
     {
         sw.reset();
         foreach (_; 0 .. n)
-            fun[i]();
+        {
+            static if (!is(typeof(fun[i]()) == void))
+            {
+                // avoid optimization
+                asm
+                {
+                    call [fun + i];
+                    ret;
+                }
+            }
+            else
+            {
+                fun[i]();
+            }
+        }
         result[i] = sw.peek();
     }
 
