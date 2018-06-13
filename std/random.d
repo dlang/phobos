@@ -2636,7 +2636,7 @@ do
 
 /+ @nogc bool array designed for RandomCover.
 - constructed with an invariable length
-- small length means 0 alloc and bit field (if up to 32 and 64 choices to cover)
+- small length means 0 alloc and bit field (if up to 32(x86) or 64(x64) choices to cover)
 - bigger length means non-GC heap allocation(s) and dealloc. +/
 private struct RandomCoverChoices
 {
@@ -2659,7 +2659,7 @@ private struct RandomCoverChoices
         }
     }
 
-    this(size_t numChoices) pure nothrow @nogc @trusted @property
+    this(size_t numChoices) pure nothrow @nogc @trusted
     {
         import core.memory : pureCalloc;
         import core.exception : onOutOfMemoryError;
@@ -2749,9 +2749,6 @@ Returns:
     in random order.  Will be a forward range if both `r` and
     `rng` are forward ranges, an
     $(REF_ALTTEXT input range, isInputRange, std,range,primitives) otherwise.
-
-Throws:
-    AssertError if a memory allocation fails.
 */
 struct RandomCover(Range, UniformRNG = void)
 if (isRandomAccessRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))
