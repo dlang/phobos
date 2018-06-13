@@ -2336,13 +2336,13 @@ public:
         timeInfo.tm_year = dateTime.year - 1900;
         timeInfo.tm_wday = dateTime.dayOfWeek;
         timeInfo.tm_yday = dateTime.dayOfYear - 1;
-        timeInfo.tm_isdst = _timezone.dstInEffect(_stdTime);
+        timeInfo.tm_isdst = _timezone ? _timezone.dstInEffect(_stdTime) : 0;
 
         version(Posix)
         {
             import std.utf : toUTFz;
             timeInfo.tm_gmtoff = cast(int) convert!("hnsecs", "seconds")(adjTime - _stdTime);
-            auto zone = (timeInfo.tm_isdst ? _timezone.dstName : _timezone.stdName);
+            auto zone = _timezone is null ? "" : (timeInfo.tm_isdst ? _timezone.dstName : _timezone.stdName);
             timeInfo.tm_zone = zone.toUTFz!(char*)();
         }
 
@@ -9022,7 +9022,7 @@ private:
       +/
     @property long adjTime() @safe const nothrow scope
     {
-        return _timezone.utcToTZ(_stdTime);
+        return _timezone ? _timezone.utcToTZ(_stdTime) : _stdTime;
     }
 
 
@@ -9031,7 +9031,7 @@ private:
       +/
     @property void adjTime(long adjTime) @safe nothrow scope
     {
-        _stdTime = _timezone.tzToUTC(adjTime);
+        _stdTime = _timezone ? _timezone.tzToUTC(adjTime) : adjTime;
     }
 
 
@@ -9071,6 +9071,13 @@ private:
     // add two days and 30 seconds
     st += 2.days + 30.seconds;
     assert(st.toISOExtString() == "2018-01-03T10:30:30Z");
+}
+
+@safe unittest
+{
+    // Issue 12507 - SysTime.init.toString should not segfault
+    // Issue 17732 - SysTime.init.toString segfaults because timezone is null
+    string s = SysTime.init.toString;
 }
 
 
