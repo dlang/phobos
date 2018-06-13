@@ -2636,7 +2636,7 @@ do
 
 /+ @nogc bool array designed for RandomCover.
 - constructed with an invariable length
-- small length means 0 alloc and bit field (if up to 32 and 64 elements to cover)
+- small length means 0 alloc and bit field (if up to 32 and 64 choices to cover)
 - bigger length means non-GC heap allocation(s) and dealloc. +/
 private struct RandomCoverChoices
 {
@@ -2644,44 +2644,44 @@ private struct RandomCoverChoices
     private immutable size_t _length;
     private immutable bool hasPackedBits;
 
-    this(this) nothrow @nogc @trusted
+    this(this) pure nothrow @nogc @trusted
     {
-        import core.stdc.stdlib : malloc;
+        import core.memory : pureMalloc;
         import core.stdc.string : memmove;
-        import core.exception : onOutOfMemoryErrorNoGC;
+        import core.exception : onOutOfMemoryError;
 
         if (!hasPackedBits && buffer !is null)
         {
-            void* nbuffer = malloc(_length);
+            void* nbuffer = pureMalloc(_length);
             if (nbuffer is null)
-                onOutOfMemoryErrorNoGC();
+                onOutOfMemoryError();
             buffer = memmove(nbuffer, buffer, _length);
         }
     }
 
-    this(size_t value) nothrow @nogc @trusted @property
+    this(size_t numChoices) pure nothrow @nogc @trusted @property
     {
-        import core.stdc.stdlib : calloc;
-        import core.exception : onOutOfMemoryErrorNoGC;
+        import core.memory : pureCalloc;
+        import core.exception : onOutOfMemoryError;
 
-        _length = value;
+        _length = numChoices;
         hasPackedBits = _length <= size_t.sizeof * 8;
         if (!hasPackedBits)
         {
-            buffer = calloc(value, 1);
+            buffer = pureCalloc(numChoices, 1);
             if (buffer is null)
-                onOutOfMemoryErrorNoGC();
+                onOutOfMemoryError();
         }
     }
 
     size_t length() const pure nothrow @nogc @safe @property {return _length;}
 
-    ~this() nothrow @nogc @trusted
+    ~this() pure nothrow @nogc @trusted
     {
-        import core.stdc.stdlib : free;
+        import core.memory : pureFree;
 
         if (!hasPackedBits && buffer !is null)
-            free(buffer);
+            pureFree(buffer);
     }
 
     bool opIndex(size_t index) const pure nothrow @nogc @trusted
