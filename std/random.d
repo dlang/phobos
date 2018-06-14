@@ -2644,10 +2644,12 @@ private struct RandomCoverChoices
     private immutable size_t _length;
     private immutable bool hasPackedBits;
 
+    void opAssign(T)(T) @disable;
+
     this(this) pure nothrow @nogc @trusted
     {
         import core.memory : pureMalloc;
-        import core.stdc.string : memmove;
+        import core.stdc.string : memcpy;
         import core.exception : onOutOfMemoryError;
 
         if (!hasPackedBits && buffer !is null)
@@ -2655,7 +2657,7 @@ private struct RandomCoverChoices
             void* nbuffer = pureMalloc(_length);
             if (nbuffer is null)
                 onOutOfMemoryError();
-            buffer = memmove(nbuffer, buffer, _length);
+            buffer = memcpy(nbuffer, buffer, _length);
         }
     }
 
