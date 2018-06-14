@@ -210,6 +210,44 @@ import std.traits : isFloatingPoint, isIntegral, isNumeric, isUnsigned, Unqual;
     assert(concatAndAdd([1, 2, 3], [4, 5], -1) == [0, 1, 2, 3, 4]);
 }
 
+
+/// `Saturate` stops at an overflow
+@safe unittest
+{
+    auto x = (cast(byte) 127).checked!Saturate;
+    assert(x == 127);
+    x++;
+    assert(x == 127);
+}
+
+/// `WithNaN` has a special "Not a Number" (NaN) value akin to the homonym value reserved for floating-point values
+@safe unittest
+{
+    auto x = 100.checked!WithNaN;
+    assert(x == 100);
+    x /= 0;
+    assert(x.isNaN);
+}
+
+/// `ProperCompare` fixes the comparison operators ==, !=, <, <=, >, and >= to return correct results
+@safe unittest
+{
+    uint x = 1;
+    auto y = x.checked!ProperCompare;
+    assert(x < -1); // built-in comparison
+    assert(y > -1); // ProperCompare
+}
+
+/// `Throw` fails every incorrect operation by throwing an exception
+@safe unittest
+{
+    import std.exception : assertThrown;
+    auto x = -1.checked!Throw;
+    assertThrown(x / 0);
+    assertThrown(x + int.min);
+    assertThrown(x == uint.max);
+}
+
 /**
 Checked integral type wraps an integral `T` and customizes its behavior with the
 help of a `Hook` type. The type wrapped must be one of the predefined integrals
@@ -2181,7 +2219,7 @@ static:
     Returns: The saturated result of the operator.
 
     */
-    typeof(~Lhs()) onOverflow(string x, Lhs)(Lhs lhs)
+    auto onOverflow(string x, Lhs)(Lhs lhs)
     {
         static assert(x == "-" || x == "++" || x == "--");
         return x == "--" ? Lhs.min : Lhs.max;
