@@ -3439,8 +3439,8 @@ Params:
     bool opEquals()(auto ref const(typeof(this)) rhs) const
     {
         if (isNull)
-            return rhs._isNull;
-        if (rhs._isNull)
+            return rhs.isNull;
+        if (rhs.isNull)
             return false;
         return _value == rhs._value;
     }
