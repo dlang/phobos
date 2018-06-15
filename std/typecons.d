@@ -3431,6 +3431,36 @@ Params:
     assert(!npi.isNull);
 }
 
+	/**
+      If they are both null, then they are equal. If one is null and the other
+      is not, then they are not equal. If they are both non-null, then they are
+      equal if their values are equal.
+      */
+    bool opEquals()(auto ref const(typeof(this)) rhs) const
+    {
+        if (isNull)
+            return rhs._isNull;
+        if (rhs._isNull)
+            return false;
+        return _value == rhs._value;
+    }
+
+    /// Ditto
+    bool opEquals(U)(auto ref const(U) rhs) const
+    if (is(typeof(this.get == rhs)))
+    {
+        return isNull ? false : rhs == _value;
+    }
+
+@safe unittest
+{
+	Nullable!(uint, uint.max) val3;
+	Nullable!(uint, uint.max) val4;
+	assert(val3.isNull);
+	assert(val4.isNull);
+	assert(val3 == val4);
+}
+
 /**
 Gets the value. `this` must not be in the null state.
 This function is also called for the implicit conversion to `T`.
