@@ -3452,7 +3452,7 @@ Params:
         return isNull ? false : rhs == _value;
     }
 
-@safe unittest
+@system unittest
 {
     Nullable!(uint, uint.max) val3;
     Nullable!(uint, uint.max) val4;
