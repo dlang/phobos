@@ -3454,11 +3454,11 @@ Params:
 
 @safe unittest
 {
-	Nullable!(uint, uint.max) val3;
-	Nullable!(uint, uint.max) val4;
-	assert(val3.isNull);
-	assert(val4.isNull);
-	assert(val3 == val4);
+    Nullable!(uint, uint.max) val3;
+    Nullable!(uint, uint.max) val4;
+    assert(val3.isNull);
+    assert(val4.isNull);
+    assert(val3 == val4);
 }
 
 /**
