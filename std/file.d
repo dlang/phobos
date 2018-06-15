@@ -1826,7 +1826,7 @@ else version(Posix)
         return statTimeToStdTime!'c'(statbuf);
     }
 
-    unittest
+    @safe unittest
     {
         stat_t statbuf;
         // check that both lvalues and rvalues work
