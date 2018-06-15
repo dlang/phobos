@@ -3431,7 +3431,7 @@ Params:
     assert(!npi.isNull);
 }
 
-	/**
+    /**
       If they are both null, then they are equal. If one is null and the other
       is not, then they are not equal. If they are both non-null, then they are
       equal if their values are equal.
