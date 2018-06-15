@@ -512,7 +512,8 @@ Throws: `ErrnoException` if the file could not be opened.
     private static string modezFromOpenMode(OpenMode openMode) @safe
     {
         const bool anyWrite = hasAnyWriteFlag(openMode);
-        if (openMode & OpenMode.read) {
+        if (openMode & OpenMode.read)
+        {
             if (anyWrite)
             {
                 if (openMode & OpenMode.append)
@@ -649,6 +650,12 @@ Throws: `ErrnoException` if the file could not be opened.
 
     private static FILE* openFile(string name, OpenMode openMode) @safe
     {
+        import std.exception : enforce;
+        // TODO: these can be made into asserts?
+        enforce((openMode & OpenMode.read) != 0 || hasAnyWriteFlag(openMode),
+            "read flag or some of write flags must be provided in open mode");
+        enforce(!((openMode & OpenMode.createNew) != 0 && (openMode & OpenMode.existingOnly) != 0),
+                "createNew and existingOnly can't be used together in open mode");
         version(Posix)
         {
             int fd = openFd(name, openMode);
@@ -674,12 +681,6 @@ Throws: `ErrnoException` if the file could not be opened.
     */
     this(string name, OpenMode openMode) @safe
     {
-        import std.exception : enforce;
-        // TODO: these can be made into asserts?
-        enforce((openMode & OpenMode.read) != 0 || hasAnyWriteFlag(openMode),
-            "read flag or some of write flags must be provided in open mode");
-        enforce(!((openMode & OpenMode.createNew) != 0 && (openMode & OpenMode.existingOnly) != 0),
-                "createNew and existingOnly can't be used together in open mode");
         this(openFile(name, openMode), name);
     }
 
@@ -692,7 +693,9 @@ Throws: `ErrnoException` if the file could not be opened.
         scope(exit) std.file.remove(deleteme);
 
         // should fail because createNew and existingOnly can't be used together
-        assertThrown(File(deleteme, OpenMode.write | OpenMode.createNew | OpenMode.existingOnly));
+        assertThrown(File(deleteme, OpenMode.createNew | OpenMode.existingOnly));
+        // should fail because no read nor write flag provided
+        assertThrown(File(deleteme, OpenMode.existingOnly));
         // should fail because file does not exist yet
         assertThrown(File(deleteme, OpenMode.write | OpenMode.existingOnly));
         assertThrown(File(deleteme, OpenMode.read));
@@ -791,11 +794,16 @@ Throws: `ErrnoException` in case of error.
     @system unittest
     {
         static import std.file;
+        import std.exception : assertThrown;
 
         auto deleteme = testFilename();
         scope(exit) std.file.remove(deleteme);
 
         File f;
+        // bad sets of flags
+        assertThrown(f.open(deleteme, OpenMode.createNew | OpenMode.existingOnly));
+        assertThrown(f.open(deleteme, OpenMode.existingOnly));
+
         f.open(deleteme, OpenMode.write);
         f.write("world");
         f.close();
