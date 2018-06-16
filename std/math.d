@@ -117,7 +117,7 @@ $(TR $(TDNW Hardware Control) $(TD
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(HTTP digitalmars.com, Walter Bright), Don Clugston,
  *            Conversion of CEPHES math library to D by Iain Buclaw and David Nadlinger
- * Source: $(PHOBOSSRC std/_math.d)
+ * Source: $(PHOBOSSRC std/math.d)
  */
 module std.math;
 
@@ -148,6 +148,8 @@ version (PPC)       version = PPC_Any;
 version (PPC64)     version = PPC_Any;
 version (MIPS32)    version = MIPS_Any;
 version (MIPS64)    version = MIPS_Any;
+version (AArch64)   version = ARM_Any;
+version (ARM)       version = ARM_Any;
 
 version(D_InlineAsm_X86)
 {
@@ -794,7 +796,7 @@ float cos(float x) @safe pure nothrow @nogc { return cos(cast(real) x); }
 ///
 @safe unittest
 {
-    assert(cos(0.0).approxEqual(1.0));
+    assert(cos(0.0) == 1.0);
     assert(cos(1.0).approxEqual(0.540));
     assert(cos(3.0).approxEqual(-0.989));
 }
@@ -1169,7 +1171,7 @@ Lret: {}
 ///
 @safe unittest
 {
-    assert(tan(0.0).approxEqual(0));
+    assert(isIdentical(tan(0.0), 0.0));
     assert(tan(PI).approxEqual(0));
     assert(tan(PI / 3).approxEqual(sqrt(3.0)));
 }
@@ -1239,7 +1241,7 @@ float asin(float x) @safe pure nothrow @nogc  { return asin(cast(real) x); }
 ///
 @safe unittest
 {
-    assert(asin(0.0).approxEqual(0.0));
+    assert(isIdentical(asin(0.0), 0.0));
     assert(asin(0.5).approxEqual(PI / 6));
     assert(asin(PI).isNaN);
 }
@@ -1363,7 +1365,7 @@ float atan(float x)  @safe pure nothrow @nogc { return atan(cast(real) x); }
 ///
 @safe unittest
 {
-    assert(atan(0.0).approxEqual(0.0));
+    assert(isIdentical(atan(0.0), 0.0));
     assert(atan(sqrt(3.0)).approxEqual(PI / 3));
 }
 
@@ -1516,7 +1518,7 @@ float cosh(float x) @safe pure nothrow @nogc  { return cosh(cast(real) x); }
 ///
 @safe unittest
 {
-    assert(cosh(0.0).approxEqual(1.0));
+    assert(cosh(0.0) == 1.0);
     assert(cosh(1.0).approxEqual((E + 1.0 / E) / 2));
 }
 
@@ -1558,7 +1560,7 @@ float sinh(float x) @safe pure nothrow @nogc  { return sinh(cast(real) x); }
 ///
 @safe unittest
 {
-    assert(sinh(0.0).approxEqual(0.0));
+    assert(isIdentical(sinh(0.0), 0.0));
     assert(sinh(1.0).approxEqual((E - 1.0 / E) / 2));
 }
 
@@ -1597,7 +1599,7 @@ float tanh(float x) @safe pure nothrow @nogc { return tanh(cast(real) x); }
 ///
 @safe unittest
 {
-    assert(tanh(0.0).approxEqual(0.0));
+    assert(isIdentical(tanh(0.0), 0.0));
     assert(tanh(1.0).approxEqual(sinh(1.0) / cosh(1.0)));
 }
 
@@ -1674,7 +1676,7 @@ float acosh(float x) @safe pure nothrow @nogc  { return acosh(cast(real) x); }
 {
     assert(isNaN(acosh(0.9)));
     assert(isNaN(acosh(real.nan)));
-    assert(acosh(1.0) == 0.0);
+    assert(isIdentical(acosh(1.0), 0.0));
     assert(acosh(real.infinity) == real.infinity);
     assert(isNaN(acosh(0.5)));
 }
@@ -2062,7 +2064,7 @@ float exp(float x)  @safe pure nothrow @nogc   { return exp(cast(real) x); }
 ///
 @safe unittest
 {
-    assert(exp(0.0).feqrel(1.0) > 16);
+    assert(exp(0.0) == 1.0);
     assert(exp(3.0).feqrel(E * E * E) > 16);
 }
 
@@ -2339,7 +2341,7 @@ L_largenegative:
 ///
 @safe unittest
 {
-    assert(expm1(0.0).feqrel(0) > 16);
+    assert(isIdentical(expm1(0.0), 0.0));
     assert(expm1(1.0).feqrel(1.71828) > 16);
     assert(expm1(2.0).feqrel(6.3890) > 16);
 }
@@ -2373,7 +2375,7 @@ real exp2(real x) @nogc @trusted pure nothrow
 ///
 @safe unittest
 {
-    assert(exp2(0.0).feqrel(1.0) > 16);
+    assert(isIdentical(exp2(0.0), 1.0));
     assert(exp2(2.0).feqrel(4.0) > 16);
     assert(exp2(8.0).feqrel(256.0) > 16);
 }
@@ -3809,7 +3811,7 @@ real log1p(real x) @safe pure nothrow @nogc
 ///
 @safe pure unittest
 {
-    assert(log1p(0.0).feqrel(0.0) > 16);
+    assert(isIdentical(log1p(0.0), 0.0));
     assert(log1p(1.0).feqrel(0.69314) > 16);
 
     assert(log1p(-1.0) == -real.infinity);
@@ -3957,8 +3959,8 @@ real logb(real x) @trusted nothrow @nogc
 ///
 @safe @nogc nothrow unittest
 {
-    assert(logb(1.0).feqrel(0.0) > 16);
-    assert(logb(100.0).feqrel(6.0) > 16);
+    assert(logb(1.0) == 0);
+    assert(logb(100.0) == 6);
 
     assert(logb(0.0) == -real.infinity);
     assert(logb(real.infinity) == real.infinity);
@@ -3992,7 +3994,7 @@ real fmod(real x, real y) @trusted nothrow @nogc
 ///
 @safe unittest
 {
-    assert(fmod(0.0, 1.0).feqrel(0.0) > 16);
+    assert(isIdentical(fmod(0.0, 1.0), 0.0));
     assert(fmod(5.0, 3.0).feqrel(2.0) > 16);
     assert(isNaN(fmod(5.0, 0.0)));
 }
@@ -4132,8 +4134,8 @@ float fabs(float x) @safe pure nothrow @nogc { return fabs(cast(real) x); }
 ///
 @safe unittest
 {
-    assert(fabs(0.0) == 0.0);
-    assert(fabs(-0.0) == 0.0);
+    assert(isIdentical(fabs(0.0), 0.0));
+    assert(isIdentical(fabs(-0.0), 0.0));
     assert(fabs(-10.0) == 10.0);
 }
 
@@ -4948,77 +4950,61 @@ long lround(real x) @trusted nothrow @nogc
     }
 }
 
-version(StdDdoc)
+/**
+ Returns the integer portion of x, dropping the fractional portion.
+ This is also known as "chop" rounding.
+ `pure` on all platforms.
+ */
+real trunc(real x) @trusted nothrow @nogc pure
 {
-    /**
-     Returns the integer portion of x, dropping the fractional portion.
-
-     This is also known as "chop" rounding.
-
-     `pure` on all platforms but DragonFlyBSD.
-     */
-    real trunc(real x) @trusted nothrow @nogc pure;
-
-    ///
-    @safe pure unittest
+    version (Win64_DMD_InlineAsm)
     {
-        assert(trunc(0.01) == 0);
-        assert(trunc(0.49) == 0);
-        assert(trunc(0.5) == 0);
-        assert(trunc(1.5) == 1);
+        asm pure nothrow @nogc
+        {
+            naked                       ;
+            fld     real ptr [RCX]      ;
+            fstcw   8[RSP]              ;
+            mov     AL,9[RSP]           ;
+            mov     DL,AL               ;
+            and     AL,0xC3             ;
+            or      AL,0x0C             ; // round to 0
+            mov     9[RSP],AL           ;
+            fldcw   8[RSP]              ;
+            frndint                     ;
+            mov     9[RSP],DL           ;
+            fldcw   8[RSP]              ;
+            ret                         ;
+        }
     }
-}
-else version (DragonFlyBSD)
-{
-    real trunc(real x) @trusted nothrow @nogc
+    else version(CRuntime_Microsoft)
     {
+        short cw;
+        asm pure nothrow @nogc
+        {
+            fld     x                   ;
+            fstcw   cw                  ;
+            mov     AL,byte ptr cw+1    ;
+            mov     DL,AL               ;
+            and     AL,0xC3             ;
+            or      AL,0x0C             ; // round to 0
+            mov     byte ptr cw+1,AL    ;
+            fldcw   cw                  ;
+            frndint                     ;
+            mov     byte ptr cw+1,DL    ;
+            fldcw   cw                  ;
+        }
+    }
+    else
         return core.stdc.math.truncl(x);
-    }
 }
-else
+
+///
+@safe pure unittest
 {
-    real trunc(real x) @trusted nothrow @nogc pure
-    {
-        version (Win64_DMD_InlineAsm)
-        {
-            asm pure nothrow @nogc
-            {
-                naked                       ;
-                fld     real ptr [RCX]      ;
-                fstcw   8[RSP]              ;
-                mov     AL,9[RSP]           ;
-                mov     DL,AL               ;
-                and     AL,0xC3             ;
-                or      AL,0x0C             ; // round to 0
-                mov     9[RSP],AL           ;
-                fldcw   8[RSP]              ;
-                frndint                     ;
-                mov     9[RSP],DL           ;
-                fldcw   8[RSP]              ;
-                ret                         ;
-            }
-        }
-        else version(CRuntime_Microsoft)
-        {
-            short cw;
-            asm pure nothrow @nogc
-            {
-                fld     x                   ;
-                fstcw   cw                  ;
-                mov     AL,byte ptr cw+1    ;
-                mov     DL,AL               ;
-                and     AL,0xC3             ;
-                or      AL,0x0C             ; // round to 0
-                mov     byte ptr cw+1,AL    ;
-                fldcw   cw                  ;
-                frndint                     ;
-                mov     byte ptr cw+1,DL    ;
-                fldcw   cw                  ;
-            }
-        }
-        else
-            return core.stdc.math.truncl(x);
-    }
+    assert(trunc(0.01) == 0);
+    assert(trunc(0.49) == 0);
+    assert(trunc(0.5) == 0);
+    assert(trunc(1.5) == 1);
 }
 
 /****************************************************
@@ -5324,11 +5310,7 @@ else version(MIPS_Any)
 {
     version = IeeeFlagsSupport;
 }
-else version(AArch64)
-{
-    version = IeeeFlagsSupport;
-}
-else version(ARM)
+else version(ARM_Any)
 {
     version = IeeeFlagsSupport;
 }
@@ -5496,22 +5478,7 @@ nothrow @nogc:
             allExceptions, /// ditto
         }
     }
-    else version(AArch64)
-    {
-        enum : ExceptionMask
-        {
-            inexactException      = 0x1000,
-            underflowException    = 0x0800,
-            overflowException     = 0x0400,
-            divByZeroException    = 0x0200,
-            invalidException      = 0x0100,
-            severeExceptions   = overflowException | divByZeroException
-                                 | invalidException,
-            allExceptions      = severeExceptions | underflowException
-                                 | inexactException,
-        }
-    }
-    else version(ARM)
+    else version(ARM_Any)
     {
         enum : ExceptionMask
         {
@@ -5546,11 +5513,41 @@ nothrow @nogc:
     {
         enum : ExceptionMask
         {
-            inexactException      = 0x0800,
+            inexactException      = 0x0080,
             divByZeroException    = 0x0400,
             overflowException     = 0x0200,
             underflowException    = 0x0100,
-            invalidException      = 0x0080,
+            invalidException      = 0x0800,
+            severeExceptions   = overflowException | divByZeroException
+                                 | invalidException,
+            allExceptions      = severeExceptions | underflowException
+                                 | inexactException,
+        }
+    }
+    else version (SPARC64)
+    {
+        enum : ExceptionMask
+        {
+            inexactException      = 0x0800000,
+            divByZeroException    = 0x1000000,
+            overflowException     = 0x4000000,
+            underflowException    = 0x2000000,
+            invalidException      = 0x8000000,
+            severeExceptions   = overflowException | divByZeroException
+                                 | invalidException,
+            allExceptions      = severeExceptions | underflowException
+                                 | inexactException,
+        }
+    }
+    else version (SystemZ)
+    {
+        enum : ExceptionMask
+        {
+            inexactException      = 0x08000000,
+            divByZeroException    = 0x40000000,
+            overflowException     = 0x20000000,
+            underflowException    = 0x10000000,
+            invalidException      = 0x80000000,
             severeExceptions   = overflowException | divByZeroException
                                  | invalidException,
             allExceptions      = severeExceptions | underflowException
@@ -5586,22 +5583,12 @@ public:
             return true;
         else version(MIPS_Any)
             return true;
-        else version(AArch64)
-        {
-            auto oldState = getControlState();
-            // If exceptions are not supported, we set the bit but read it back as zero
-            // https://sourceware.org/git/?p=glibc.git;a=blob;f=sysdeps/aarch64/fpu/feenablxcpth.c
-            setControlState(oldState | (divByZeroException & allExceptions));
-            immutable result = (getControlState() & allExceptions) != 0;
-            setControlState(oldState);
-            return result;
-        }
-        else version(ARM)
+        else version(ARM_Any)
         {
             auto oldState = getControlState();
             // If exceptions are not supported, we set the bit but read it back as zero
             // https://sourceware.org/ml/libc-ports/2012-06/msg00091.html
-            setControlState(oldState | (divByZeroException & allExceptions));
+            setControlState(oldState | divByZeroException);
             immutable result = (getControlState() & allExceptions) != 0;
             setControlState(oldState);
             return result;
@@ -5655,11 +5642,7 @@ private:
 
     bool initialized = false;
 
-    version(AArch64)
-    {
-        alias ControlState = uint;
-    }
-    else version(ARM)
+    version(ARM_Any)
     {
         alias ControlState = uint;
     }
@@ -5668,6 +5651,14 @@ private:
         alias ControlState = uint;
     }
     else version(MIPS_Any)
+    {
+        alias ControlState = uint;
+    }
+    else version (SPARC64)
+    {
+        alias ControlState = ulong;
+    }
+    else version (SystemZ)
     {
         alias ControlState = uint;
     }
@@ -6922,8 +6913,13 @@ real fdim(real x, real y) @safe pure nothrow @nogc { return (x > y) ? x - y : +0
 
 /**
  * Returns the larger of x and y.
+ *
+ * If one of the arguments is a NaN, the other is returned.
  */
-real fmax(real x, real y) @safe pure nothrow @nogc { return x > y ? x : y; }
+real fmax(real x, real y) @safe pure nothrow @nogc
+{
+    return (y > x || isNaN(x)) ? y : x;
+}
 
 ///
 @safe pure nothrow @nogc unittest
@@ -6932,13 +6928,18 @@ real fmax(real x, real y) @safe pure nothrow @nogc { return x > y ? x : y; }
     assert(fmax(-2.0, 0.0) == 0.0);
     assert(fmax(real.infinity, 2.0) == real.infinity);
     assert(fmax(real.nan, 2.0) == 2.0);
-    assert(fmax(2.0, real.nan) is real.nan);
+    assert(fmax(2.0, real.nan) == 2.0);
 }
 
 /**
  * Returns the smaller of x and y.
+ *
+ * If one of the arguments is a NaN, the other is returned.
  */
-real fmin(real x, real y) @safe pure nothrow @nogc { return x < y ? x : y; }
+real fmin(real x, real y) @safe pure nothrow @nogc
+{
+    return (y < x || isNaN(x)) ? y : x;
+}
 
 ///
 @safe pure nothrow @nogc unittest
@@ -6947,7 +6948,7 @@ real fmin(real x, real y) @safe pure nothrow @nogc { return x < y ? x : y; }
     assert(fmin(-2.0, 0.0) == -2.0);
     assert(fmin(real.infinity, 2.0) == 2.0);
     assert(fmin(real.nan, 2.0) == 2.0);
-    assert(fmin(2.0, real.nan) is real.nan);
+    assert(fmin(2.0, real.nan) == 2.0);
 }
 
 /**************************************

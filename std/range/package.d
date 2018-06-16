@@ -217,7 +217,7 @@ sort, std, algorithm, sorting) function also conveniently
 returns a $(LREF SortedRange). $(LREF SortedRange) objects provide some additional
 range operations that take advantage of the fact that the range is sorted.
 
-Source: $(PHOBOSSRC std/range/_package.d)
+Source: $(PHOBOSSRC std/range/package.d)
 
 License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
@@ -10998,15 +10998,15 @@ if (isInputRange!(Unqual!R))
     consumed as if it were a reference type.
 
     Note:
-        `save` works as normal and operates on a new _range, so if
+        `save` works as normal and operates on a new range, so if
         `save` is ever called on the `RefRange`, then no operations on the
-        saved _range will affect the original.
+        saved range will affect the original.
 
     Params:
         range = the range to construct the `RefRange` from
 
     Returns:
-        A `RefRange`. If the given _range is a class type
+        A `RefRange`. If the given range is a class type
         (and thus is already a reference type), then the original
         range is returned rather than a `RefRange`.
   +/
@@ -12252,7 +12252,7 @@ if (isInputRange!R && isIntegral!(ElementType!R))
  */
 struct NullSink
 {
-    void put(E)(E){}
+    void put(E)(scope const E) pure @safe @nogc nothrow {}
 }
 
 /// ditto

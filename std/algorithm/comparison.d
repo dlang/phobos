@@ -1,7 +1,7 @@
 // Written in the D programming language.
 /**
 This is a submodule of $(MREF std, algorithm).
-It contains generic _comparison algorithms.
+It contains generic comparison algorithms.
 
 $(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE Cheat Sheet,
@@ -29,12 +29,12 @@ $(T2 isSameLength,
 $(T2 levenshteinDistance,
         `levenshteinDistance("kitten", "sitting")` returns `3` by using
         the $(LINK2 https://en.wikipedia.org/wiki/Levenshtein_distance,
-        Levenshtein distance _algorithm).)
+        Levenshtein distance algorithm).)
 $(T2 levenshteinDistanceAndPath,
         `levenshteinDistanceAndPath("kitten", "sitting")` returns
         `tuple(3, "snnnsni")` by using the
         $(LINK2 https://en.wikipedia.org/wiki/Levenshtein_distance,
-        Levenshtein distance _algorithm).)
+        Levenshtein distance algorithm).)
 $(T2 max,
         `max(3, 4, 2)` returns `4`.)
 $(T2 min,
@@ -51,7 +51,7 @@ License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
 Authors: $(HTTP erdani.com, Andrei Alexandrescu)
 
-Source: $(PHOBOSSRC std/algorithm/_comparison.d)
+Source: $(PHOBOSSRC std/algorithm/comparison.d)
 
 Macros:
 T2=$(TR $(TDNW $(LREF $1)) $(TD $+))

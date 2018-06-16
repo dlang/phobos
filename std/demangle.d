@@ -7,7 +7,7 @@
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(HTTP digitalmars.com, Walter Bright),
  *                        Thomas K$(UUML)hne, Frits van Bommel
- * Source:    $(PHOBOSSRC std/_demangle.d)
+ * Source:    $(PHOBOSSRC std/demangle.d)
  * $(SCRIPT inhibitQuickIndex = 1;)
  */
 /*

@@ -1,14 +1,14 @@
 // Written in the D programming language.
 
 /**
-This module implements experimental additions/modifications to $(MREF std, _typecons).
+This module implements experimental additions/modifications to $(MREF std, typecons).
 
-Use this module to test out new functionality for $(REF wrap, std, _typecons)
+Use this module to test out new functionality for $(REF wrap, std, typecons)
 which allows for a struct to be wrapped against an interface; the
-implementation in $(MREF std, _typecons) only allows for classes to use the wrap
+implementation in $(MREF std, typecons) only allows for classes to use the wrap
 functionality.
 
-Source:    $(PHOBOSSRC std/experimental/_typecons.d)
+Source:    $(PHOBOSSRC std/experimental/typecons.d)
 
 Copyright: Copyright the respective authors, 2008-
 License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).

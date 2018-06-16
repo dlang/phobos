@@ -10,7 +10,7 @@ Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
 License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(HTTP erdani.org, Andrei Alexandrescu),
                    Don Clugston, Robert Jacques, Ilya Yaroshenko
-Source:    $(PHOBOSSRC std/_numeric.d)
+Source:    $(PHOBOSSRC std/numeric.d)
 */
 /*
          Copyright Andrei Alexandrescu 2008 - 2009.
@@ -1550,14 +1550,14 @@ do
         //  update  a, b, v, w, and x
         if (fu <= fx)
         {
-            u < x ? b : a = x;
+            (u < x ? b : a) = x;
             v = w; fv = fw;
             w = x; fw = fx;
             x = u; fx = fu;
         }
         else
         {
-            u < x ? a : b = u;
+            (u < x ? a : b) = u;
             if (fu <= fw || w == x)
             {
                 v = w; fv = fw;

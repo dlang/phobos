@@ -691,7 +691,7 @@ $(TR $(TD Building blocks) $(TD
     Copyright: Copyright 2013 -
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Dmitry Olshansky
-    Source:    $(PHOBOSSRC std/_uni.d)
+    Source:    $(PHOBOSSRC std/uni.d)
     Standards: $(HTTP www.unicode.org/versions/Unicode6.2.0/, Unicode v6.2)
 
 Macros:
@@ -2435,8 +2435,8 @@ public:
         open-right intervals and feed it to `sink`.
         )
         $(P Used by various standard formatting facilities such as
-         $(REF formattedWrite, std,_format), $(REF write, std,_stdio),
-         $(REF writef, std,_stdio), $(REF to, std,_conv) and others.
+         $(REF formattedWrite, std,format), $(REF write, std,stdio),
+         $(REF writef, std,stdio), $(REF to, std,conv) and others.
         )
         Example:
         ---
@@ -7778,7 +7778,7 @@ static assert(Grapheme.sizeof == size_t.sizeof*4);
         $(LREF icmp)
         $(REF cmp, std,algorithm,comparison)
 +/
-int sicmp(S1, S2)(S1 r1, S2 r2)
+int sicmp(S1, S2)(scope S1 r1, scope S2 r2)
 if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
     && isInputRange!S2 && isSomeChar!(ElementEncodingType!S2))
 {
@@ -7888,11 +7888,13 @@ if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
 // overloads for the most common cases to reduce compile time
 @safe @nogc pure nothrow
 {
-    int sicmp(const(char)[] str1, const(char)[] str2)
+    int sicmp(scope const(char)[] str1, scope const(char)[] str2)
     { return sicmp!(const(char)[], const(char)[])(str1, str2); }
-    int sicmp(const(wchar)[] str1, const(wchar)[] str2)
+
+    int sicmp(scope const(wchar)[] str1, scope const(wchar)[] str2)
     { return sicmp!(const(wchar)[], const(wchar)[])(str1, str2); }
-    int sicmp(const(dchar)[] str1, const(dchar)[] str2)
+
+    int sicmp(scope const(dchar)[] str1, scope const(dchar)[] str2)
     { return sicmp!(const(dchar)[], const(dchar)[])(str1, str2); }
 }
 
@@ -8996,20 +8998,24 @@ private alias UpperTriple = AliasSeq!(toUpperIndex, MAX_SIMPLE_UPPER, toUpperTab
 private alias LowerTriple = AliasSeq!(toLowerIndex, MAX_SIMPLE_LOWER, toLowerTab);
 
 // generic toUpper/toLower on whole string, creates new or returns as is
-private S toCase(alias indexFn, uint maxIdx, alias tableFn, alias asciiConvert, S)(S s) @trusted pure
-if (isSomeString!S)
+private ElementEncodingType!S[] toCase(alias indexFn, uint maxIdx, alias tableFn, alias asciiConvert, S)(S s)
+if (isSomeString!S || (isRandomAccessRange!S && hasLength!S && hasSlicing!S && isSomeChar!(ElementType!S)))
 {
-    import std.array : appender;
+    import std.array : appender, array;
     import std.ascii : isASCII;
+    import std.utf : byDchar;
 
-    foreach (i, dchar cOuter; s)
+    auto r = s.byDchar;
+    for (size_t i; !r.empty; ++i, r.popFront())
     {
+        auto cOuter = r.front;
         ushort idx = indexFn(cOuter);
         if (idx == ushort.max)
             continue;
-        auto result = appender!S(s[0 .. i]);
+        auto result = appender!(ElementEncodingType!S[])();
+        result.put(s[0 .. i]);
         result.reserve(s.length);
-        foreach (dchar c; s[i .. $])
+        foreach (dchar c; s[i .. $].byDchar)
         {
             if (c.isASCII)
             {
@@ -9038,7 +9044,11 @@ if (isSomeString!S)
         }
         return result.data;
     }
-    return s;
+
+    static if (isSomeString!S)
+        return s;
+    else
+        return s.array;
 }
 
 @safe unittest //12428
@@ -9782,16 +9792,28 @@ dchar toLower(dchar c)
 }
 
 /++
-    Returns a string which is identical to `s` except that all of its
+    Creates a new array which is identical to `s` except that all of its
     characters are converted to lowercase (by preforming Unicode lowercase mapping).
-    If none of `s` characters were affected, then `s` itself is returned.
+    If none of `s` characters were affected, then `s` itself is returned if `s` is a
+    `string`-like type.
+
+    Params:
+        s = A $(REF_ALTTEXT random access range, isRandomAccessRange, std,range,primitives)
+        of characters
+    Returns:
+        An array with the same element type as `s`.
 +/
-S toLower(S)(S s) @trusted pure
-if (isSomeString!S)
+ElementEncodingType!S[] toLower(S)(S s)
+if (isSomeString!S || (isRandomAccessRange!S && hasLength!S && hasSlicing!S && isSomeChar!(ElementType!S)))
 {
     static import std.ascii;
-    return toCase!(LowerTriple, std.ascii.toLower)(s);
+
+    static if (isSomeString!S)
+        return () @trusted { return toCase!(LowerTriple, std.ascii.toLower)(s); } ();
+    else
+        return toCase!(LowerTriple, std.ascii.toLower)(s);
 }
+
 // overloads for the most common cases to reduce compile time
 @safe pure /*TODO nothrow*/
 {
@@ -9899,6 +9921,15 @@ if (isSomeString!S)
     assert(toUpper(c) == '\u1F8F');
 }
 
+@safe pure unittest
+{
+    import std.algorithm.comparison : cmp, equal;
+    import std.utf : byCodeUnit;
+    auto r1 = "FoL".byCodeUnit;
+    assert(r1.toLower.cmp("fol") == 0);
+    auto r2 = "A\u0460B\u0461d".byCodeUnit;
+    assert(r2.toLower.cmp("a\u0461b\u0461d") == 0);
+}
 
 /++
     If `c` is a Unicode lowercase $(CHARACTER), then its uppercase equivalent
@@ -9964,16 +9995,28 @@ dchar toUpper(dchar c)
 }
 
 /++
-    Returns a string which is identical to `s` except that all of its
+    Allocates a new array which is identical to `s` except that all of its
     characters are converted to uppercase (by preforming Unicode uppercase mapping).
-    If none of `s` characters were affected, then `s` itself is returned.
+    If none of `s` characters were affected, then `s` itself is returned if `s`
+    is a `string`-like type.
+
+    Params:
+        s = A $(REF_ALTTEXT random access range, isRandomAccessRange, std,range,primitives)
+        of characters
+    Returns:
+        An new array with the same element type as `s`.
 +/
-S toUpper(S)(S s) @trusted pure
-if (isSomeString!S)
+ElementEncodingType!S[] toUpper(S)(S s)
+if (isSomeString!S || (isRandomAccessRange!S && hasLength!S && hasSlicing!S && isSomeChar!(ElementType!S)))
 {
     static import std.ascii;
-    return toCase!(UpperTriple, std.ascii.toUpper)(s);
+
+    static if (isSomeString!S)
+        return () @trusted { return toCase!(UpperTriple, std.ascii.toUpper)(s); } ();
+    else
+        return toCase!(UpperTriple, std.ascii.toUpper)(s);
 }
+
 // overloads for the most common cases to reduce compile time
 @safe pure /*TODO nothrow*/
 {
@@ -10087,6 +10130,16 @@ if (isSomeString!S)
     }}
 }
 
+// test random access ranges
+@safe pure unittest
+{
+    import std.algorithm.comparison : cmp;
+    import std.utf : byCodeUnit;
+    auto s1 = "FoL".byCodeUnit;
+    assert(s1.toUpper.cmp("FOL") == 0);
+    auto s2 = "a\u0460B\u0461d".byCodeUnit;
+    assert(s2.toUpper.cmp("A\u0460B\u0460D") == 0);
+}
 
 /++
     Returns whether `c` is a Unicode alphabetic $(CHARACTER)

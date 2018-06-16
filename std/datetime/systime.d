@@ -27,7 +27,7 @@ $(TR $(TD Conversion) $(TD
 
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   $(HTTP jmdavisprog.com, Jonathan M Davis)
-    Source:    $(PHOBOSSRC std/datetime/_systime.d)
+    Source:    $(PHOBOSSRC std/datetime/systime.d)
 +/
 module std.datetime.systime;
 
@@ -9101,7 +9101,7 @@ private:
     See_Also:
         SysTime.fromUnixTime
   +/
-long unixTimeToStdTime(long unixTime) @safe pure nothrow
+long unixTimeToStdTime(long unixTime) @safe pure nothrow @nogc
 {
     return 621_355_968_000_000_000L + convert!("seconds", "hnsecs")(unixTime);
 }

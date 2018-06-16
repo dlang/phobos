@@ -1,6 +1,6 @@
 // Written in the D programming language.
 /**
-Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/_allocator_list.d)
+Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/allocator_list.d)
 */
 module std.experimental.allocator.building_blocks.allocator_list;
 
@@ -179,17 +179,58 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
             }
             return result;
         }
-        // Can't allocate from the current pool. Check if we just added a new
-        // allocator, in that case it won't do any good to add yet another.
-        if (root && root.empty == Ternary.yes)
-        {
-            // no can do
-            return null;
-        }
+
         // Add a new allocator
         if (auto a = addAllocator(s))
         {
             auto result = a.allocate(s);
+            assert(owns(result) == Ternary.yes || !result.ptr);
+            return result;
+        }
+        return null;
+    }
+
+    /**
+    Allocate a block of size `s` with alignment `a`. First tries to allocate
+    from the existing list of already-created allocators. If neither can
+    satisfy the request, creates a new allocator by calling `make(s + a - 1)`
+    and delegates the request to it. However, if the allocation fresh off a
+    newly created allocator fails, subsequent calls to `alignedAllocate`
+    will not cause more calls to `make`.
+    */
+    static if (hasMember!(Allocator, "alignedAllocate"))
+    void[] alignedAllocate(size_t s, uint theAlignment)
+    {
+        import std.algorithm.comparison : max;
+        import core.checkedint : addu;
+
+        if (theAlignment == 0 || s == 0)
+            return null;
+
+        for (auto p = &root, n = *p; n; p = &n.next, n = *p)
+        {
+            auto result = n.alignedAllocate(s, theAlignment);
+            if (result.length != s) continue;
+            // Bring to front if not already
+            if (root != n)
+            {
+                *p = n.next;
+                n.next = root;
+                root = n;
+            }
+            return result;
+        }
+
+        bool overflow = false;
+        size_t maxSize = addu(s - 1, cast(size_t) theAlignment, overflow);
+        assert(!overflow, "Requested size is too large");
+        if (overflow)
+            return null;
+
+        // Add a new allocator
+        if (auto a = addAllocator(maxSize))
+        {
+            auto result = a.alignedAllocate(s, theAlignment);
             assert(owns(result) == Ternary.yes || !result.ptr);
             return result;
         }
@@ -263,7 +304,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         }
         if (expanded)
         {
-            import std.c.string : memcpy;
+            import core.stdc.string : memcpy;
             assert(t.length % Node.sizeof == 0);
             assert(t.ptr.alignedAt(Node.alignof));
             allocators = cast(Node[]) t;
@@ -611,6 +652,92 @@ version(Posix) @system unittest
     import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.region : Region;
     AllocatorList!((n) => Region!()(new ubyte[max(n, 1024 * 4096)])) a;
+    auto b1 = a.alignedAllocate(1024 * 8192, 1024);
+    assert(b1 !is null); // still works due to overdimensioning
+    assert(b1.length == 1024 * 8192);
+    assert(b1.ptr.alignedAt(1024));
+    assert(a.allocators.length == 1);
+
+    b1 = a.alignedAllocate(0, 1024);
+    assert(b1.length == 0);
+    assert(a.allocators.length == 1);
+
+    b1 = a.allocate(1024 * 10);
+    assert(b1.length == 1024 * 10);
+
+    assert(a.reallocate(b1, 1024));
+    assert(b1.length == 1024);
+
+    a.deallocateAll();
+}
+
+@system unittest
+{
+    import core.exception : AssertError;
+    import std.exception : assertThrown;
+
+    // Create an allocator based upon 4MB regions, fetched from the GC heap.
+    import std.algorithm.comparison : max;
+    import std.experimental.allocator.building_blocks.region : Region;
+    AllocatorList!((n) => Region!()(new ubyte[max(n, 1024 * 4096)])) a;
+    auto b1 = a.alignedAllocate(0, 1);
+    assert(b1 is null);
+
+    b1 = a.alignedAllocate(1, 0);
+    assert(b1 is null);
+
+    b1 = a.alignedAllocate(0, 0);
+    assert(b1 is null);
+
+    assertThrown!AssertError(a.alignedAllocate(size_t.max, 1024));
+    a.deallocateAll();
+}
+
+@system unittest
+{
+    import std.typecons : Ternary;
+
+    // Create an allocator based upon 4MB regions, fetched from the GC heap.
+    import std.algorithm.comparison : max;
+    import std.experimental.allocator.building_blocks.region : Region;
+    AllocatorList!((n) => Region!()(new ubyte[max(n, 1024 * 4096)])) a;
+    auto b0 = a.alignedAllocate(1, 1024);
+    assert(b0.length == 1);
+    assert(b0.ptr.alignedAt(1024));
+    assert(a.allocators.length == 1);
+
+    auto b1 = a.alignedAllocate(1024 * 4096, 1024);
+    assert(b1.length == 1024 * 4096);
+    assert(b1.ptr.alignedAt(1024));
+    assert(a.allocators.length == 2);
+
+    auto b2 = a.alignedAllocate(1024, 128);
+    assert(b2.length == 1024);
+    assert(b2.ptr.alignedAt(128));
+    assert(a.allocators.length == 2);
+
+    auto b3 = a.allocate(1024);
+    assert(b3.length == 1024);
+    assert(a.allocators.length == 2);
+
+    auto b4 = a.allocate(1024 * 4096);
+    assert(b4.length == 1024 * 4096);
+    assert(a.allocators.length == 3);
+
+    assert(a.root.empty == Ternary.no);
+    assert(a.deallocate(b4));
+    assert(a.root.empty == Ternary.yes);
+
+    assert(a.deallocate(b1));
+    a.deallocateAll();
+}
+
+@system unittest
+{
+    // Create an allocator based upon 4MB regions, fetched from the GC heap.
+    import std.algorithm.comparison : max;
+    import std.experimental.allocator.building_blocks.region : Region;
+    AllocatorList!((n) => Region!()(new ubyte[max(n, 1024 * 4096)])) a;
     auto b1 = a.allocate(1024 * 8192);
     assert(b1 !is null); // still works due to overdimensioning
     b1 = a.allocate(1024 * 10);
@@ -777,6 +904,72 @@ version(Posix) @system unittest
 
     assert(a.deallocate(b1));
     assert(a.deallocate(b2));
+
+    b3 = a.alignedAllocate(70 * pageSize, 70 * pageSize);
+    assert(b3.length == 70 * pageSize);
+    assert(b3.ptr.alignedAt(70 * pageSize));
+    testrw(b3);
+    assert(a.allocators.length == 4);
+    assert(a.deallocate(b3));
+
+
+    assert(a.deallocateAll());
+}
+
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.ascending_page_allocator : AscendingPageAllocator;
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.algorithm.comparison : max;
+    import std.typecons : Ternary;
+
+    enum pageSize = 4096;
+
+    static void testrw(void[] b)
+    {
+        ubyte* buf = cast(ubyte*) b.ptr;
+        for (int i = 0; i < b.length; i += pageSize)
+        {
+            buf[i] = cast(ubyte) (i % 256);
+            assert(buf[i] == cast(ubyte) (i % 256));
+        }
+    }
+
+    enum numPages = 5;
+    AllocatorList!((n) => AscendingPageAllocator(max(n, numPages * pageSize)), NullAllocator) a;
+    auto b = a.alignedAllocate(1, pageSize * 2);
+    assert(b.length == 1);
+    assert(a.expand(b, 4095));
+    assert(b.ptr.alignedAt(2 * 4096));
+    assert(b.length == 4096);
+
+    b = a.allocate(4096);
+    assert(b.length == 4096);
+    assert(a.allocators.length == 1);
+
+    assert(a.allocate(4096 * 5).length == 4096 * 5);
+    assert(a.allocators.length == 2);
+
+    assert(a.deallocateAll());
+}
+
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.ascending_page_allocator : AscendingPageAllocator;
+    import std.algorithm.comparison : max;
+
+    enum maxIter = 100;
+    enum pageSize = 4096;
+    enum numPages = 10;
+
+    AllocatorList!((n) => AscendingPageAllocator(max(n, numPages * pageSize)), NullAllocator) a;
+    foreach (i; 0 .. maxIter)
+    {
+        auto b1 = a.allocate(512);
+        assert(b1.length == 512);
+
+        assert(a.deallocate(b1));
+    }
 
     assert(a.deallocateAll());
 }

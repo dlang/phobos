@@ -1,7 +1,7 @@
 // Written in the D programming language.
 /**
 This is a submodule of $(MREF std, algorithm).
-It contains generic _iteration algorithms.
+It contains generic iteration algorithms.
 
 $(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE Cheat Sheet,
@@ -40,6 +40,8 @@ $(T2 joiner,
 $(T2 map,
         `map!(a => a * 2)([1, 2, 3])` lazily returns a range with the numbers
         `2`, `4`, `6`.)
+$(T2 mean,
+        Colloquially known as the average, `mean([1, 2, 3])` returns `2`.)
 $(T2 permutations,
         Lazily computes all permutations using Heap's algorithm.)
 $(T2 reduce,
@@ -61,7 +63,7 @@ License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
 Authors: $(HTTP erdani.com, Andrei Alexandrescu)
 
-Source: $(PHOBOSSRC std/algorithm/_iteration.d)
+Source: $(PHOBOSSRC std/algorithm/iteration.d)
 
 Macros:
 T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
@@ -2159,18 +2161,66 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
     {
         private RoR _items;
         private ElementType!RoR _current;
-        private Separator _sep, _currentSep;
+        static if (isRandomAccessRange!Separator)
+        {
+            static struct CurrentSep
+            {
+                private Separator _sep;
+                private size_t sepIndex;
+                private size_t sepLength; // cache the length for performance
+                auto front() { return _sep[sepIndex]; }
+                void popFront() { sepIndex++; }
+                auto empty() { return sepIndex >= sepLength; }
+                auto save()
+                {
+                    auto copy = this;
+                    copy._sep = _sep;
+                    return copy;
+                }
+                void reset()
+                {
+                    sepIndex = 0;
+                }
 
-        // This is a mixin instead of a function for the following reason (as
-        // explained by Kenji Hara): "This is necessary from 2.061.  If a
-        // struct has a nested struct member, it must be directly initialized
-        // in its constructor to avoid leaving undefined state.  If you change
-        // setItem to a function, the initialization of _current field is
-        // wrapped into private member function, then compiler could not detect
-        // that is correctly initialized while constructing.  To avoid the
-        // compiler error check, string mixin is used."
-        private enum setItem =
-        q{
+                void initialize(Separator sep)
+                {
+                    _sep = sep;
+                    sepIndex = sepLength = _sep.length;
+                }
+            }
+        }
+        else
+        {
+            static struct CurrentSep
+            {
+                private Separator _sep;
+                Separator payload;
+
+                alias payload this;
+
+                auto save()
+                {
+                    auto copy = this;
+                    copy._sep = _sep;
+                    return copy;
+                }
+
+                void reset()
+                {
+                    payload = _sep.save;
+                }
+
+                void initialize(Separator sep)
+                {
+                    _sep = sep;
+                }
+            }
+        }
+
+        private CurrentSep _currentSep;
+
+        private void setItem()
+        {
             if (!_items.empty)
             {
                 // If we're exporting .save, we must not consume any of the
@@ -2182,7 +2232,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
                 else
                     _current = _items.front;
             }
-        };
+        }
 
         private void useSeparator()
         {
@@ -2195,7 +2245,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
             // terminators.
             if (_items.empty) return;
 
-            if (_sep.empty)
+            if (_currentSep._sep.empty)
             {
                 // Advance to the next range in the
                 // input
@@ -2204,37 +2254,19 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
                     _items.popFront();
                     if (_items.empty) return;
                 }
-                mixin(setItem);
+                setItem;
             }
             else
             {
-                _currentSep = _sep.save;
+                _currentSep.reset;
                 assert(!_currentSep.empty);
             }
         }
 
-        private enum useItem =
-        q{
-            // FIXME: this will crash if either _currentSep or _current are
-            // class objects, because .init is null when the ctor invokes this
-            // mixin.
-            //assert(_currentSep.empty && _current.empty,
-            //        "joiner: internal error");
-
-            // Use the input
-            if (_items.empty) return;
-            mixin(setItem);
-            if (_current.empty)
-            {
-                // No data in the current item - toggle to use the separator
-                useSeparator();
-            }
-        };
-
         this(RoR items, Separator sep)
         {
             _items = items;
-            _sep = sep;
+            _currentSep.initialize(sep);
 
             //mixin(useItem); // _current should be initialized in place
             if (_items.empty)
@@ -2277,15 +2309,22 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
             if (!_currentSep.empty)
             {
                 _currentSep.popFront();
-                if (!_currentSep.empty) return;
-                mixin(useItem);
+                if (_currentSep.empty && !_items.empty)
+                {
+                    setItem;
+                    if (_current.empty)
+                    {
+                        // No data in the current item - toggle to use the separator
+                        useSeparator();
+                    }
+                }
             }
             else
             {
                 // we're using the range
                 _current.popFront();
-                if (!_current.empty) return;
-                useSeparator();
+                if (_current.empty)
+                    useSeparator();
             }
         }
 
@@ -2296,7 +2335,6 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
                 Result copy = this;
                 copy._items = _items.save;
                 copy._current = _current.save;
-                copy._sep = _sep.save;
                 copy._currentSep = _currentSep.save;
                 return copy;
             }
@@ -2789,13 +2827,13 @@ if (fun.length >= 1)
     Once S has been determined, then `S s = e;` and `s = f(s, e);`
     must both be legal.
 
-    If `r` is empty, an `Exception` is thrown.
-
     Params:
         r = an iterable value as defined by `isIterable`
 
     Returns:
         the final result of the accumulator applied to the iterable
+
+    Throws: `Exception` if `r` is empty
     +/
     auto reduce(R)(R r)
     if (isIterable!R)
@@ -3749,7 +3787,7 @@ Returns:
 See_Also:
  $(REF _splitter, std,regex) for a version that splits using a regular
 expression defined separator and
- $(REF _splitter, std,array) for a version that splits eagerly.
+ $(REF _split, std,array) for a version that splits eagerly.
 */
 auto splitter(alias pred = "a == b", Range, Separator)(Range r, Separator s)
 if (is(typeof(binaryFun!pred(r.front, s)) : bool)
@@ -3758,7 +3796,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     import std.algorithm.searching : find;
     import std.conv : unsigned;
 
-    static struct Result
+    struct Result
     {
     private:
         Range _input;
@@ -3779,7 +3817,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 
         static if (isBidirectionalRange!Range)
         {
-            static size_t lastIndexOf(Range haystack, Separator needle)
+            size_t lastIndexOf(Range haystack, Separator needle)
             {
                 import std.range : retro;
                 auto r = haystack.retro().find!pred(needle);
@@ -4102,6 +4140,23 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     assert(equal(s.front, [4L, 3L, 2L, 1L]));
     s.popFront();
     assert(s.empty);
+}
+
+@safe unittest // issue 18470
+{
+    import std.algorithm.comparison : equal;
+
+    const w = [[0], [1], [2]];
+    assert(w.splitter!((a, b) => a.front() == b)(1).equal([[[0]], [[2]]]));
+}
+
+@safe unittest // issue 18470
+{
+    import std.algorithm.comparison : equal;
+    import std.ascii : toLower;
+
+    assert("abXcdxef".splitter!"a.toLower == b"('x').equal(["ab", "cd", "ef"]));
+    assert("abXcdxef".splitter!((a, b) => a.toLower == b)('x').equal(["ab", "cd", "ef"]));
 }
 
 /// ditto

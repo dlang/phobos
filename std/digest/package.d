@@ -1,7 +1,7 @@
 /**
- * This module describes the _digest APIs used in Phobos. All digests follow
+ * This module describes the digest APIs used in Phobos. All digests follow
  * these APIs. Additionally, this module contains useful helper methods which
- * can be used with every _digest type.
+ * can be used with every digest type.
  *
 $(SCRIPT inhibitQuickIndex = 1;)
 
@@ -11,7 +11,7 @@ $(TR $(TH Category) $(TH Functions)
 )
 $(TR $(TDNW Template API) $(TD $(MYREF isDigest) $(MYREF DigestType) $(MYREF hasPeek)
   $(MYREF hasBlockSize)
-  $(MYREF ExampleDigest) $(MYREF _digest) $(MYREF hexDigest) $(MYREF makeDigest)
+  $(MYREF ExampleDigest) $(MYREF digest) $(MYREF hexDigest) $(MYREF makeDigest)
 )
 )
 $(TR $(TDNW OOP API) $(TD $(MYREF Digest)
@@ -36,10 +36,10 @@ $(TR $(TDNW Implementation helpers) $(TD $(MYREF digestLength) $(MYREF WrapperDi
  * buffer was provided. If you provide a buffer to the OOP APIs finish function, it doesn't allocate,
  * but the $(LREF Digest) classes still have to be created using `new` which allocates them using the GC.
  *
- * The OOP API is useful to change the _digest function and/or _digest backend at 'runtime'. The benefit here
+ * The OOP API is useful to change the digest function and/or digest backend at 'runtime'. The benefit here
  * is that switching e.g. Phobos MD5Digest and an OpenSSLMD5Digest implementation is ABI compatible.
  *
- * If just one specific _digest type and backend is needed, the template API is usually a good fit.
+ * If just one specific digest type and backend is needed, the template API is usually a good fit.
  * In this simplest case, the template API can even be used without templates: Just use the "$(B x)" structs
  * directly.
  *
@@ -47,7 +47,7 @@ $(TR $(TDNW Implementation helpers) $(TD $(MYREF digestLength) $(MYREF WrapperDi
  * Authors:
  * Johannes Pfau
  *
- * Source:    $(PHOBOSSRC std/_digest/_package.d)
+ * Source:    $(PHOBOSSRC std/digest/package.d)
  *
  * CTFE:
  * Digests do not work in CTFE

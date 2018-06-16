@@ -1,6 +1,6 @@
 // Written in the D programming language.
 /**
-Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/_kernighan_ritchie.d)
+Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/kernighan_ritchie.d)
 */
 module std.experimental.allocator.building_blocks.kernighan_ritchie;
 import std.experimental.allocator.building_blocks.null_allocator;
@@ -338,10 +338,19 @@ struct KRRegion(ParentAllocator = NullAllocator)
     }
 
     /// Ditto
-    static if (!is(ParentAllocator == NullAllocator))
+    static if (!is(ParentAllocator == NullAllocator) && !stateSize!ParentAllocator)
     this(size_t n)
     {
         assert(n > Node.sizeof);
+        this(cast(ubyte[])(parent.allocate(n)));
+    }
+
+    /// Ditto
+    static if (!is(ParentAllocator == NullAllocator) && stateSize!ParentAllocator)
+    this(ParentAllocator parent, size_t n)
+    {
+        assert(n > Node.sizeof);
+        this.parent = parent;
         this(cast(ubyte[])(parent.allocate(n)));
     }
 

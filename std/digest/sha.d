@@ -46,7 +46,7 @@ $(TR $(TDNW Helpers) $(TD $(MYREF sha1Of))
  * $(LI $(LINK2 http://en.wikipedia.org/wiki/Secure_Hash_Algorithm, Wikipedia article about SHA))
  * )
  *
- * Source: $(PHOBOSSRC std/digest/_sha.d)
+ * Source: $(PHOBOSSRC std/digest/sha.d)
  *
  */
 

@@ -72,7 +72,7 @@
  * Authors:
  *     $(HTTP digitalmars.com, Walter Bright),
  *     $(HTTP klickverbot.at, David Nadlinger)
- * Source:    $(PHOBOSSRC std/_meta.d)
+ * Source:    $(PHOBOSSRC std/meta.d)
  */
 
 module std.meta;

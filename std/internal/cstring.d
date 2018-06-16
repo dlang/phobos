@@ -24,7 +24,7 @@ module std.internal.cstring;
         import core.sys.posix.stdlib : setenv;
         import std.exception : enforce;
 
-        void setEnvironment(in char[] name, in char[] value)
+        void setEnvironment(scope const(char)[] name, scope const(char)[] value)
         { enforce(setenv(name.tempCString(), value.tempCString(), 1) != -1); }
     }
 
@@ -33,7 +33,7 @@ module std.internal.cstring;
         import core.sys.windows.windows : SetEnvironmentVariableW;
         import std.exception : enforce;
 
-        void setEnvironment(in char[] name, in char[] value)
+        void setEnvironment(scope const(char)[] name, scope const(char)[] value)
         { enforce(SetEnvironmentVariableW(name.tempCStringW(), value.tempCStringW())); }
     }
 }
@@ -74,7 +74,7 @@ lead to memory corruption.
 See $(RED WARNING) in $(B Examples) section.
 */
 
-auto tempCString(To = char, From)(From str)
+auto tempCString(To = char, From)(scope From str)
 if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
     isSomeChar!(ElementEncodingType!From))
 {
@@ -230,7 +230,7 @@ private:
     static TempCStringBuffer trustedVoidInit() { TempCStringBuffer res = void; return res; }
 }
 
-private To[] trustedRealloc(To)(To[] buf, size_t strLength, bool bufIsOnStack)
+private To[] trustedRealloc(To)(scope To[] buf, size_t strLength, bool bufIsOnStack)
     @trusted @nogc pure nothrow
 {
     pragma(inline, false);  // because it's rarely called

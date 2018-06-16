@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
- * Compress/decompress data using the $(HTTP www._zlib.net, _zlib library).
+ * Compress/decompress data using the $(HTTP www.zlib.net, zlib library).
  *
  * Examples:
  *
@@ -46,7 +46,7 @@
  * Copyright: Copyright Digital Mars 2000 - 2011.
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(HTTP digitalmars.com, Walter Bright)
- * Source:    $(PHOBOSSRC std/_zlib.d)
+ * Source:    $(PHOBOSSRC std/zlib.d)
  */
 /*          Copyright Digital Mars 2000 - 2011.
  * Distributed under the Boost Software License, Version 1.0.
@@ -201,8 +201,9 @@ in
 do
 {
     import core.memory : GC;
+    import std.array : uninitializedArray;
     auto destlen = srcbuf.length + ((srcbuf.length + 1023) / 1024) + 12;
-    auto destbuf = new ubyte[destlen];
+    auto destbuf = uninitializedArray!(ubyte[])(destlen);
     auto err = etc.c.zlib.compress2(destbuf.ptr, &destlen, cast(ubyte *) srcbuf.ptr, srcbuf.length, level);
     if (err)
     {
@@ -411,6 +412,7 @@ class Compress
     const(void)[] compress(const(void)[] buf)
     {
         import core.memory : GC;
+        import std.array : uninitializedArray;
         int err;
         ubyte[] destbuf;
 
@@ -425,7 +427,7 @@ class Compress
             inited = 1;
         }
 
-        destbuf = new ubyte[zs.avail_in + buf.length];
+        destbuf = uninitializedArray!(ubyte[])(zs.avail_in + buf.length);
         zs.next_out = destbuf.ptr;
         zs.avail_out = to!uint(destbuf.length);
 
@@ -586,6 +588,7 @@ class UnCompress
             return null;
 
         import core.memory : GC;
+        import std.array : uninitializedArray;
         int err;
 
         if (!inited)
@@ -604,7 +607,7 @@ class UnCompress
 
         if (!destbufsize)
             destbufsize = to!uint(buf.length) * 2;
-        auto destbuf = new ubyte[destbufsize];
+        auto destbuf = uninitializedArray!(ubyte[])(destbufsize);
         size_t destFill;
 
         zs.next_in = cast(ubyte*) buf.ptr;

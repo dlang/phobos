@@ -1,6 +1,6 @@
 // Written in the D programming language.
 /**
-Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/_ascending_page_allocator.d)
+Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/ascending_page_allocator.d)
 */
 module std.experimental.allocator.building_blocks.ascending_page_allocator;
 import std.experimental.allocator.common;

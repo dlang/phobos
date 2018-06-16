@@ -6,7 +6,7 @@ appropriate parts of `std`.
 
 Authors: $(HTTP erdani.com, Andrei Alexandrescu), Timon Gehr (`Ternary`)
 
-Source: $(PHOBOSSRC std/experimental/allocator/_common.d)
+Source: $(PHOBOSSRC std/experimental/allocator/common.d)
 */
 module std.experimental.allocator.common;
 import std.algorithm.comparison, std.traits;

@@ -1,6 +1,6 @@
 // Written in the D programming language.
 /**
-Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/_bitmapped_block.d)
+Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/bitmapped_block.d)
 */
 module std.experimental.allocator.building_blocks.bitmapped_block;
 
@@ -156,7 +156,7 @@ private mixin template BitmappedBlockImpl(bool isShared, bool multiBlock)
         this(data);
     }
 
-    static if (!is(ParentAllocator == NullAllocator))
+    static if (!is(ParentAllocator == NullAllocator) && !stateSize!ParentAllocator)
     this(size_t capacity)
     {
         size_t toAllocate = totalAllocation(capacity);
@@ -165,12 +165,31 @@ private mixin template BitmappedBlockImpl(bool isShared, bool multiBlock)
         assert(_blocks * blockSize >= capacity);
     }
 
+    static if (!is(ParentAllocator == NullAllocator) && stateSize!ParentAllocator)
+    this(ParentAllocator parent, size_t capacity)
+    {
+        this.parent = parent;
+        size_t toAllocate = totalAllocation(capacity);
+        auto data = cast(ubyte[])(parent.allocate(toAllocate));
+        this(data);
+    }
+
     static if (!is(ParentAllocator == NullAllocator) &&
-        chooseAtRuntime == theBlockSize)
+        chooseAtRuntime == theBlockSize &&
+        !stateSize!ParentAllocator)
     this(size_t capacity, uint blockSize)
     {
         this._blockSize = blockSize;
         this(capacity);
+    }
+
+    static if (!is(ParentAllocator == NullAllocator) &&
+        chooseAtRuntime == theBlockSize &&
+        stateSize!ParentAllocator)
+    this(ParentAllocator parent, size_t capacity, uint blockSize)
+    {
+        this._blockSize = blockSize;
+        this(parent, capacity);
     }
 
     static if (!is(ParentAllocator == NullAllocator)
@@ -1213,7 +1232,13 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         this(size_t capacity);
 
         /// Ditto
+        this(ParentAllocator parent, size_t capacity);
+
+        /// Ditto
         this(size_t capacity, uint blockSize);
+
+        /// Ditto
+        this(ParentAllocator parent, size_t capacity, uint blockSize);
 
         /**
         If `blockSize == chooseAtRuntime`, `BitmappedBlock` offers a read/write
@@ -1435,6 +1460,15 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     assert(a.deallocate(buf));
 }
 
+// Test instantiation with stateful allocators
+@system unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.experimental.allocator.building_blocks.region : Region;
+    auto r = Region!Mallocator(1024 * 96);
+    auto a = BitmappedBlock!(chooseAtRuntime, 8, Region!Mallocator*, No.multiblock)(&r, 1024 * 64, 1024);
+}
+
 /**
 The threadsafe version of the $(LREF BitmappedBlock).
 The semantics of the `SharedBitmappedBlock` are identical to the regular $(LREF BitmappedBlock).
@@ -1479,7 +1513,13 @@ shared struct SharedBitmappedBlock(size_t theBlockSize, uint theAlignment = plat
         this(size_t capacity);
 
         /// Ditto
+        this(ParentAllocator parent, size_t capacity);
+
+        /// Ditto
         this(size_t capacity, uint blockSize);
+
+        /// Ditto
+        this(ParentAllocator parent, size_t capacity, uint blockSize);
 
         /**
         If `blockSize == chooseAtRuntime`, `SharedBitmappedBlock` offers a read/write
@@ -2125,6 +2165,8 @@ struct BitmappedBlockWithInternalPointers(
 {
     import std.conv : text;
     import std.typecons : Ternary;
+
+    static if (!stateSize!ParentAllocator)
     @system unittest
     {
         import std.experimental.allocator.mallocator : AlignedMallocator;
@@ -2135,7 +2177,7 @@ struct BitmappedBlockWithInternalPointers(
     }
 
     // state {
-    private BitmappedBlock!(theBlockSize, theAlignment, NullAllocator) _heap;
+    private BitmappedBlock!(theBlockSize, theAlignment, ParentAllocator) _heap;
     private BitVector _allocStart;
     // }
 
@@ -2143,18 +2185,35 @@ struct BitmappedBlockWithInternalPointers(
     Constructors accepting desired capacity or a preallocated buffer, similar
     in semantics to those of `BitmappedBlock`.
     */
+    static if (!stateSize!ParentAllocator)
     this(ubyte[] data)
     {
         _heap = BitmappedBlock!(theBlockSize, theAlignment, ParentAllocator)(data);
     }
 
+    static if (stateSize!ParentAllocator)
+    this(ParentAllocator parent, ubyte[] data)
+    {
+        _heap = BitmappedBlock!(theBlockSize, theAlignment, ParentAllocator)(data);
+        _heap.parent = parent;
+    }
+
     /// Ditto
-    static if (!is(ParentAllocator == NullAllocator))
+    static if (!is(ParentAllocator == NullAllocator) && !stateSize!ParentAllocator)
     this(size_t capacity)
     {
         // Add room for the _allocStart vector
         _heap = BitmappedBlock!(theBlockSize, theAlignment, ParentAllocator)
             (capacity + capacity.divideRoundUp(64));
+    }
+
+    /// Ditto
+    static if (!is(ParentAllocator == NullAllocator) && stateSize!ParentAllocator)
+    this(ParentAllocator parent, size_t capacity)
+    {
+        // Add room for the _allocStart vector
+        _heap = BitmappedBlock!(theBlockSize, theAlignment, ParentAllocator)
+            (parent, capacity + capacity.divideRoundUp(64));
     }
 
     // Makes sure there's enough room for _allocStart
@@ -2373,6 +2432,15 @@ struct BitmappedBlockWithInternalPointers(
 {
     auto h = BitmappedBlockWithInternalPointers!(4096)(new ubyte[4096 * 1024]);
     assert((() pure nothrow @safe @nogc => h.goodAllocSize(1))() == 4096);
+}
+
+// Test instantiation with stateful allocators
+@system unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.experimental.allocator.building_blocks.region : Region;
+    auto r = Region!Mallocator(1024 * 1024);
+    auto h = BitmappedBlockWithInternalPointers!(4096, 8, Region!Mallocator*)(&r, 4096 * 1024);
 }
 
 /**

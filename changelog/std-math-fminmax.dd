@@ -1,0 +1,19 @@
+Changed semantics of std.math.{fmin,fmax} wrt. NaNs.
+
+The semantics of $(REF fmin, std, math) and $(REF fmax, std, math) have been
+streamlined with the C functions: if one of the arguments is a NaN, return the
+other. This involves an additional $(REF isNaN, std, math) check. Use
+$(REF min, std, algorithm, comparison) and $(REF max, std, algorithm, comparison)
+for the previous semantics performing a single comparison.
+
+---
+import std.math;
+assert(fmin(real.nan, 2.0L) == 2.0L);
+assert(fmin(2.0L, real.nan) == 2.0L); // previously: NaN
+assert(isNaN(fmin(real.nan, real.nan)));
+
+import std.algorithm.comparison;
+assert(min(real.nan, 2.0L) == 2.0L);
+assert(isNaN(min(2.0L, real.nan)));
+assert(isNaN(min(real.nan, real.nan)));
+---

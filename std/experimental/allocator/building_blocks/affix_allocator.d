@@ -1,6 +1,6 @@
 // Written in the D programming language.
 /**
-Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/_affix_allocator.d)
+Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/affix_allocator.d)
 */
 module std.experimental.allocator.building_blocks.affix_allocator;
 
@@ -71,10 +71,35 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         Allocator _parent;
         static if (is(Allocator == RCIAllocator))
         {
+            @nogc nothrow pure @safe
             Allocator parent()
             {
-                if (_parent.isNull) _parent = theAllocator;
-                assert(alignment <= _parent.alignment);
+                static @nogc nothrow
+                RCIAllocator wrapAllocatorObject()
+                {
+                    import std.experimental.allocator.gc_allocator : GCAllocator;
+                    import std.experimental.allocator : allocatorObject;
+
+                    return allocatorObject(GCAllocator.instance);
+                }
+
+                if (_parent.isNull)
+                {
+                    // If the `_parent` allocator is `null` we will assign
+                    // an object that references the GC as the `parent`.
+                    auto fn = (() @trusted =>
+                            cast(RCIAllocator function() @nogc nothrow pure @safe)(&wrapAllocatorObject))();
+                    _parent = fn();
+                }
+
+                // `RCIAllocator.alignment` currently doesn't have any attributes
+                // so we must cast; throughout the allocators module, `alignment`
+                // is defined as an `enum` for the existing allocators.
+                // `alignment` should always be `@nogc nothrow pure @safe`; once
+                // this is enforced by the interface we can remove the cast
+                auto pureAlign = (() @trusted =>
+                        cast(uint delegate() @nogc nothrow pure @safe)(&_parent.alignment))();
+                assert(alignment <= pureAlign());
                 return _parent;
             }
         }

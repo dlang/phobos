@@ -61,7 +61,7 @@ $(BOOKTABLE ,
 )
 
 
-Source: $(PHOBOSSRC std/range/_interfaces.d)
+Source: $(PHOBOSSRC std/range/interfaces.d)
 
 License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 

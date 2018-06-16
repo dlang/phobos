@@ -8,47 +8,47 @@ $(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)
 )
-    $(TR $(TD $(LREF _array))
-        $(TD Returns a copy of the input in a newly allocated dynamic _array.
+    $(TR $(TD $(LREF array))
+        $(TD Returns a copy of the input in a newly allocated dynamic array.
     ))
     $(TR $(TD $(LREF appender))
-        $(TD Returns a new $(LREF Appender) or $(LREF RefAppender) initialized with a given _array.
+        $(TD Returns a new $(LREF Appender) or $(LREF RefAppender) initialized with a given array.
     ))
     $(TR $(TD $(LREF assocArray))
-        $(TD Returns a newly allocated associative _array from a range of key/value tuples.
+        $(TD Returns a newly allocated associative array from a range of key/value tuples.
     ))
     $(TR $(TD $(LREF byPair))
-        $(TD Construct a range iterating over an associative _array by key/value tuples.
+        $(TD Construct a range iterating over an associative array by key/value tuples.
     ))
     $(TR $(TD $(LREF insertInPlace))
-        $(TD Inserts into an existing _array at a given position.
+        $(TD Inserts into an existing array at a given position.
     ))
     $(TR $(TD $(LREF join))
-        $(TD Concatenates a range of ranges into one _array.
+        $(TD Concatenates a range of ranges into one array.
     ))
     $(TR $(TD $(LREF minimallyInitializedArray))
-        $(TD Returns a new _array of type `T`.
+        $(TD Returns a new array of type `T`.
     ))
     $(TR $(TD $(LREF replace))
-        $(TD Returns a new _array with all occurrences of a certain subrange replaced.
+        $(TD Returns a new array with all occurrences of a certain subrange replaced.
     ))
     $(TR $(TD $(LREF replaceFirst))
-        $(TD Returns a new _array with the first occurrence of a certain subrange replaced.
+        $(TD Returns a new array with the first occurrence of a certain subrange replaced.
     ))
     $(TR $(TD $(LREF replaceInPlace))
-        $(TD Replaces all occurrences of a certain subrange and puts the result into a given _array.
+        $(TD Replaces all occurrences of a certain subrange and puts the result into a given array.
     ))
     $(TR $(TD $(LREF replaceInto))
         $(TD Replaces all occurrences of a certain subrange and puts the result into an output range.
     ))
     $(TR $(TD $(LREF replaceLast))
-        $(TD Returns a new _array with the last occurrence of a certain subrange replaced.
+        $(TD Returns a new array with the last occurrence of a certain subrange replaced.
     ))
     $(TR $(TD $(LREF replaceSlice))
-        $(TD Returns a new _array with a given slice replaced.
+        $(TD Returns a new array with a given slice replaced.
     ))
     $(TR $(TD $(LREF replicate))
-        $(TD Creates a new _array out of several copies of an input _array or range.
+        $(TD Creates a new array out of several copies of an input array or range.
     ))
     $(TR $(TD $(LREF sameHead))
         $(TD Checks if the initial segments of two arrays refer to the same
@@ -59,10 +59,10 @@ $(TR $(TH Function Name) $(TH Description)
         in memory.
     ))
     $(TR $(TD $(LREF split))
-        $(TD Eagerly split a range or string into an _array.
+        $(TD Eagerly split a range or string into an array.
     ))
     $(TR $(TD $(LREF uninitializedArray))
-        $(TD Returns a new _array of type `T` without initializing its elements.
+        $(TD Returns a new array of type `T` without initializing its elements.
     ))
 )
 
@@ -73,7 +73,7 @@ License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(HTTP erdani.org, Andrei Alexandrescu) and
            $(HTTP jmdavisprog.com, Jonathan M Davis)
 
-Source: $(PHOBOSSRC std/_array.d)
+Source: $(PHOBOSSRC std/array.d)
 */
 module std.array;
 
@@ -229,15 +229,15 @@ Returns:
     a `dchar[]`, `const(dchar)[]`, or `immutable(dchar)[]` depending on the constness of
     the input.
 */
-@trusted ElementType!String[] array(String)(scope String str)
+ElementType!String[] array(String)(scope String str)
 if (isNarrowString!String)
 {
     import std.utf : toUTF32;
-    /* This function is @trusted because the following cast
-     * is unsafe - converting a dstring[] to a dchar[], for example.
-     * Our special knowledge of toUTF32 is needed to know the cast is safe.
+    auto temp = str.toUTF32;
+    /* Unsafe cast. Allowed because toUTF32 makes a new array
+       and copies all the elements.
      */
-    return cast(typeof(return)) str.toUTF32;
+    return () @trusted { return cast(ElementType!String[]) temp; } ();
 }
 
 ///
@@ -382,7 +382,7 @@ if (isNarrowString!String)
 }
 
 /**
-Returns a newly allocated associative _array from a range of key/value tuples.
+Returns a newly allocated associative array from a range of key/value tuples.
 
 Params:
     r = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
@@ -2092,20 +2092,16 @@ if (isInputRange!RoR &&
 
 
 /++
-    Replace occurrences of `from` with `to` in `subject` in a new
-    array. If `sink` is defined, then output the new array into
-    `sink`.
+    Replace occurrences of `from` with `to` in `subject` in a new array.
 
     Params:
-        sink = an $(REF_ALTTEXT output range, isOutputRange, std,range,primitives)
         subject = the array to scan
         from = the item to replace
         to = the item to replace all instances of `from` with
 
     Returns:
-        If `sink` isn't defined, a new array without changing the
-        contents of `subject`, or the original array if no match
-        is found.
+        A new array without changing the contents of `subject`, or the original
+        array if no match is found.
 
     See_Also:
         $(REF substitute, std,algorithm,iteration) for a lazy replace.
@@ -2171,7 +2167,19 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
             .replace([[0], [1, 2]], [[4]]) == [[4], [0], [3], [1, 2], [4]]);
 }
 
-/// ditto
+/++
+    Replace occurrences of `from` with `to` in `subject` and output the result into
+    `sink`.
+
+    Params:
+        sink = an $(REF_ALTTEXT output range, isOutputRange, std,range,primitives)
+        subject = the array to scan
+        from = the item to replace
+        to = the item to replace all instances of `from` with
+
+    See_Also:
+        $(REF substitute, std,algorithm,iteration) for a lazy replace.
+ +/
 void replaceInto(E, Sink, R1, R2)(Sink sink, E[] subject, R1 from, R2 to)
 if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
     && isForwardRange!R1 && isForwardRange!R2
@@ -2416,7 +2424,7 @@ if (isInputRange!Range &&
     shrinks the array as needed.
 
     Params:
-        array = the _array to scan
+        array = the array to scan
         from = the starting index
         to = the ending index
         stuff = the items to replace in-between `from` and `to`

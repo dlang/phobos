@@ -22,7 +22,7 @@
  * Copyright: Copyright Sean Kelly 2009 - 2014.
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors:   Sean Kelly, Alex Rønne Petersen, Martin Nowak
- * Source:    $(PHOBOSSRC std/_concurrency.d)
+ * Source:    $(PHOBOSSRC std/concurrency.d)
  */
 /*          Copyright Sean Kelly 2009 - 2014.
  * Distributed under the Boost Software License, Version 1.0.
@@ -1515,35 +1515,6 @@ private interface IsGenerator {}
 /**
  * A Generator is a Fiber that periodically returns values of type T to the
  * caller via yield.  This is represented as an InputRange.
- *
- * Example:
- * ---
- * import std.concurrency;
- * import std.stdio;
- *
- *
- * void main()
- * {
- *     auto tid = spawn(
- *     {
- *         while (true)
- *         {
- *             writeln(receiveOnly!int());
- *         }
- *     });
- *
- *     auto r = new Generator!int(
- *     {
- *         foreach (i; 1 .. 10)
- *             yield(i);
- *     });
- *
- *     foreach (e; r)
- *     {
- *         tid.send(e);
- *     }
- * }
- * ---
  */
 class Generator(T) :
     Fiber, IsGenerator, InputRange!T
@@ -1725,6 +1696,28 @@ class Generator(T) :
     }
 private:
     T* m_value;
+}
+
+///
+@system unittest
+{
+    auto tid = spawn({
+        int i;
+        while (i < 9)
+            i = receiveOnly!int;
+
+        ownerTid.send(i * 2);
+    });
+
+    auto r = new Generator!int({
+        foreach (i; 1 .. 10)
+            yield(i);
+    });
+
+    foreach (e; r)
+        tid.send(e);
+
+    assert(receiveOnly!int == 18);
 }
 
 /**

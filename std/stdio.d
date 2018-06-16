@@ -4,7 +4,7 @@
 Standard I/O functions that extend $(B core.stdc.stdio).  $(B core.stdc.stdio)
 is $(D_PARAM public)ally imported when importing $(B std.stdio).
 
-Source: $(PHOBOSSRC std/_stdio.d)
+Source: $(PHOBOSSRC std/stdio.d)
 Copyright: Copyright Digital Mars 2007-.
 License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(HTTP digitalmars.com, Walter Bright),
@@ -422,7 +422,7 @@ Params:
 
 Throws: `ErrnoException` if the file could not be opened.
  */
-    this(string name, in char[] stdioOpenmode = "rb") @safe
+    this(string name, scope const(char)[] stdioOpenmode = "rb") @safe
     {
         import std.conv : text;
         import std.exception : errnoEnforce;
@@ -498,12 +498,12 @@ cplusplus.com/reference/clibrary/cstdio/fopen.html, fopen) function.
 
 Throws: `ErrnoException` in case of error.
  */
-    void open(string name, in char[] stdioOpenmode = "rb") @trusted
+    void open(string name, scope const(char)[] stdioOpenmode = "rb") @trusted
     {
         resetFile(name, stdioOpenmode, false);
     }
 
-    private void resetFile(string name, in char[] stdioOpenmode, bool isPopened) @trusted
+    private void resetFile(string name, scope const(char)[] stdioOpenmode, bool isPopened) @trusted
     {
         import core.stdc.stdlib : malloc;
         import std.exception : enforce;
@@ -574,7 +574,7 @@ Throws: `ErrnoException` in case of error.
 
     version (MICROSOFT_STDIO)
     {
-        private void setAppendWin(in char[] stdioOpenmode) @safe
+        private void setAppendWin(scope const(char)[] stdioOpenmode) @safe
         {
             bool append, update;
             foreach (c; stdioOpenmode)
@@ -601,7 +601,7 @@ in all C runtimes.
 
 Throws: `ErrnoException` in case of error.
  */
-    void reopen(string name, in char[] stdioOpenmode = "rb") @trusted
+    void reopen(string name, scope const(char)[] stdioOpenmode = "rb") @trusted
     {
         import std.conv : text;
         import std.exception : enforce, errnoEnforce;
@@ -675,7 +675,7 @@ opengroup.org/onlinepubs/007908799/xsh/_popen.html, _popen).
 
 Throws: `ErrnoException` in case of error.
  */
-    version(Posix) void popen(string command, in char[] stdioOpenmode = "r") @safe
+    version(Posix) void popen(string command, scope const(char)[] stdioOpenmode = "r") @safe
     {
         resetFile(command, stdioOpenmode ,true);
     }
@@ -687,12 +687,12 @@ be compatible with the mode of the file descriptor.
 
 Throws: `ErrnoException` in case of error.
  */
-    void fdopen(int fd, in char[] stdioOpenmode = "rb") @safe
+    void fdopen(int fd, scope const(char)[] stdioOpenmode = "rb") @safe
     {
         fdopen(fd, stdioOpenmode, null);
     }
 
-    package void fdopen(int fd, in char[] stdioOpenmode, string name) @trusted
+    package void fdopen(int fd, scope const(char)[] stdioOpenmode, string name) @trusted
     {
         import std.exception : errnoEnforce;
         import std.internal.cstring : tempCString;
@@ -742,10 +742,10 @@ be compatible with the access attributes of the handle. Windows only.
 Throws: `ErrnoException` in case of error.
 */
     version(StdDdoc)
-    void windowsHandleOpen(HANDLE handle, in char[] stdioOpenmode);
+    void windowsHandleOpen(HANDLE handle, scope const(char)[] stdioOpenmode);
 
     version(Windows)
-    void windowsHandleOpen(HANDLE handle, in char[] stdioOpenmode)
+    void windowsHandleOpen(HANDLE handle, scope const(char)[] stdioOpenmode)
     {
         import core.stdc.stdint : intptr_t;
         import std.exception : errnoEnforce;
@@ -1908,7 +1908,7 @@ $(CONSOLE
     }
 
     /// ditto
-    uint readf(Data...)(in char[] format, auto ref Data data)
+    uint readf(Data...)(scope const(char)[] format, auto ref Data data)
     {
         import std.format : formattedRead;
 
@@ -2826,6 +2826,15 @@ is empty, throws an `Exception`. In case of an I/O error throws
 
         // the file's orientation (byte- or wide-oriented)
         int orientation_;
+
+        // A buffer for when we need to transcode.
+        wchar highSurrogate = '\0'; // '\0' indicates empty
+        void highSurrogateShouldBeEmpty() @safe
+        {
+            import std.utf : UTFException;
+            if (highSurrogate != '\0')
+                throw new UTFException("unpaired surrogate UTF-16 value");
+        }
     public:
 
         this(ref File f) @trusted
@@ -2846,6 +2855,10 @@ is empty, throws an `Exception`. In case of an I/O error throws
             {
                 if (p.handle) FUNLOCK(p.handle);
             }
+            file_ = File.init;
+                /* Destroy file_ before possibly throwing. Else it wouldn't be
+                destroyed, and its reference count would be wrong. */
+            highSurrogateShouldBeEmpty();
         }
 
         this(this) @trusted
@@ -2857,7 +2870,7 @@ is empty, throws an `Exception`. In case of an I/O error throws
         }
 
         /// Range primitive implementations.
-        void put(A)(A writeme)
+        void put(A)(scope A writeme)
             if ((isSomeChar!(Unqual!(ElementType!A)) ||
                   is(ElementType!A : const(ubyte))) &&
                 isInputRange!A &&
@@ -2887,7 +2900,7 @@ is empty, throws an `Exception`. In case of an I/O error throws
         }
 
         /// ditto
-        void put(C)(C c) @safe if (isSomeChar!C || is(C : const(ubyte)))
+        void put(C)(scope C c) @safe if (isSomeChar!C || is(C : const(ubyte)))
         {
             import std.traits : Parameters;
             static auto trustedFPUTC(int ch, _iobuf* h) @trusted
@@ -2902,6 +2915,7 @@ is empty, throws an `Exception`. In case of an I/O error throws
             static if (c.sizeof == 1)
             {
                 // simple char
+                highSurrogateShouldBeEmpty();
                 if (orientation_ <= 0) trustedFPUTC(c, handle_);
                 else trustedFPUTWC(c, handle_);
             }
@@ -2913,14 +2927,27 @@ is empty, throws an `Exception`. In case of an I/O error throws
                 {
                     if (c <= 0x7F)
                     {
+                        highSurrogateShouldBeEmpty();
                         trustedFPUTC(c, handle_);
                     }
-                    else
+                    else if (0xD800 <= c && c <= 0xDBFF) // high surrogate
                     {
-                        char[4] buf;
-                        immutable size = encode(buf, c);
-                        foreach (i ; 0 .. size)
-                            trustedFPUTC(buf[i], handle_);
+                        highSurrogateShouldBeEmpty();
+                        highSurrogate = c;
+                    }
+                    else // standalone or low surrogate
+                    {
+                        dchar d = c;
+                        if (highSurrogate != '\0')
+                        {
+                            immutable wchar[2] rbuf = [highSurrogate, c];
+                            d = rbuf[].front;
+                            highSurrogate = 0;
+                        }
+                        char[4] wbuf;
+                        immutable size = encode(wbuf, d);
+                        foreach (i; 0 .. size)
+                            trustedFPUTC(wbuf[i], handle_);
                     }
                 }
                 else
@@ -2932,6 +2959,7 @@ is empty, throws an `Exception`. In case of an I/O error throws
             {
                 import std.utf : encode;
 
+                highSurrogateShouldBeEmpty();
                 if (orientation_ <= 0)
                 {
                     if (c <= 0x7F)
@@ -3099,14 +3127,14 @@ is empty, throws an `Exception`. In case of an I/O error throws
             }
         }
 
-        void put(T)(auto ref in T value)
+        void put(T)(auto ref scope const T value)
         if (!hasIndirections!T &&
             !isInputRange!T)
         {
             rawWrite((&value)[0 .. 1]);
         }
 
-        void put(T)(in T[] array)
+        void put(T)(scope const(T)[] array)
         if (!hasIndirections!T &&
             !isInputRange!T)
         {
@@ -3414,6 +3442,51 @@ void main()
     assert(File(deleteme).readln() == "日本語日本語日本語日本語############日本語");
 }
 
+@safe unittest // wchar -> char
+{
+    static import std.file;
+    import std.exception : assertThrown;
+    import std.utf : UTFException;
+
+    auto deleteme = testFilename();
+    scope(exit) std.file.remove(deleteme);
+
+    {
+        auto writer = File(deleteme, "w").lockingTextWriter();
+        writer.put("\U0001F608"w);
+    }
+    assert(std.file.readText!string(deleteme) == "\U0001F608");
+
+    // Test invalid input: unpaired high surrogate
+    {
+        immutable wchar surr = "\U0001F608"w[0];
+        auto f = File(deleteme, "w");
+        assertThrown!UTFException(() {
+            auto writer = f.lockingTextWriter();
+            writer.put('x');
+            writer.put(surr);
+            assertThrown!UTFException(writer.put(char('y')));
+            assertThrown!UTFException(writer.put(wchar('y')));
+            assertThrown!UTFException(writer.put(dchar('y')));
+            assertThrown!UTFException(writer.put(surr));
+            // First `surr` is still unpaired at this point. `writer` gets
+            // destroyed now, and the destructor throws a UTFException for
+            // the unpaired surrogate.
+        } ());
+    }
+    assert(std.file.readText!string(deleteme) == "x");
+
+    // Test invalid input: unpaired low surrogate
+    {
+        immutable wchar surr = "\U0001F608"w[1];
+        auto writer = File(deleteme, "w").lockingTextWriter();
+        assertThrown!UTFException(writer.put(surr));
+        writer.put('y');
+        assertThrown!UTFException(writer.put(surr));
+    }
+    assert(std.file.readText!string(deleteme) == "y");
+}
+
 @safe unittest
 {
     import std.exception : collectException;
@@ -3639,10 +3712,7 @@ private @property File trustedStdout() @trusted
 }
 
 /***********************************
-For each argument `arg` in `args`, format the argument (using
-$(REF to, std,conv)) and write the resulting
-string to `args[0]`. A call without any arguments will fail to
-compile.
+Writes its arguments in text format to standard output (without a trailing newline).
 
 Params:
     args = the items to write to `stdout`
@@ -4017,7 +4087,7 @@ if (isSomeString!(typeof(format)))
 }
 
 /// ditto
-uint readf(A...)(in char[] format, auto ref A args)
+uint readf(A...)(scope const(char)[] format, auto ref A args)
 {
     return stdin.readf(format, args);
 }

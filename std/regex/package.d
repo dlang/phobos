@@ -18,7 +18,7 @@ $(TR $(TD Matching) $(TD
 $(TR $(TD Building) $(TD
         $(LREF ctRegex)
         $(LREF escaper)
-        $(LREF _regex)
+        $(LREF regex)
 ))
 $(TR $(TD Replace) $(TD
         $(LREF replace)
@@ -284,7 +284,7 @@ $(TR $(TD Objects) $(TD
     API and utility constructs are modeled after the original `std.regex`
   by Walter Bright and Andrei Alexandrescu.
 
-  Source: $(PHOBOSSRC std/_regex/_package.d)
+  Source: $(PHOBOSSRC std/regex/package.d)
 
 Macros:
     REG_ROW = $(TR $(TD $(I $1 )) $(TD $+) )

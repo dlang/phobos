@@ -8,12 +8,12 @@
  * $(DIVC quickindex,
  * $(BOOKTABLE ,
  * $(TR $(TH Category) $(TH Templates))
- * $(TR $(TD Symbol Name _traits) $(TD
+ * $(TR $(TD Symbol Name traits) $(TD
  *           $(LREF fullyQualifiedName)
  *           $(LREF moduleName)
  *           $(LREF packageName)
  * ))
- * $(TR $(TD Function _traits) $(TD
+ * $(TR $(TD Function traits) $(TD
  *           $(LREF isFunction)
  *           $(LREF arity)
  *           $(LREF functionAttributes)
@@ -31,7 +31,7 @@
  *           $(LREF SetFunctionAttributes)
  *           $(LREF variadicFunctionStyle)
  * ))
- * $(TR $(TD Aggregate Type _traits) $(TD
+ * $(TR $(TD Aggregate Type traits) $(TD
  *           $(LREF BaseClassesTuple)
  *           $(LREF BaseTypeTuple)
  *           $(LREF classInstanceAlignment)
@@ -156,7 +156,7 @@
  *            $(HTTP klickverbot.at, David Nadlinger),
  *            Kenji Hara,
  *            Shoichi Kato
- * Source:    $(PHOBOSSRC std/_traits.d)
+ * Source:    $(PHOBOSSRC std/traits.d)
  */
 /*          Copyright Digital Mars 2005 - 2009.
  * Distributed under the Boost Software License, Version 1.0.
@@ -489,12 +489,14 @@ template packageName(alias T)
 {
     import std.algorithm.searching : startsWith;
 
+    enum bool isNotFunc = !isSomeFunction!(T);
+
     static if (__traits(compiles, parentOf!T))
         enum parent = packageName!(parentOf!T);
     else
         enum string parent = null;
 
-    static if (T.stringof.startsWith("package "))
+    static if (isNotFunc && T.stringof.startsWith("package "))
         enum packageName = (parent.length ? parent ~ '.' : "") ~ T.stringof[8 .. $];
     else static if (parent)
         enum packageName = parent;
@@ -512,8 +514,7 @@ template packageName(alias T)
 {
     import std.array;
 
-    // Commented out because of dmd @@@BUG8922@@@
-    // static assert(packageName!std == "std");  // this package (currently: "std.std")
+    static assert(packageName!std == "std");
     static assert(packageName!(std.traits) == "std");     // this module
     static assert(packageName!packageName == "std");      // symbol in this module
     static assert(packageName!(std.array) == "std");  // other module from same package
@@ -535,6 +536,24 @@ version (none) @safe unittest //Please uncomment me when changing packageName to
     static assert(packageName!Barrier == "core.sync");
 }
 
+///
+@safe unittest
+{
+    static assert(packageName!moduleName == "std");
+}
+
+@safe unittest // issue 13741
+{
+    import std.ascii : isWhite;
+    static assert(packageName!(isWhite) == "std");
+
+    struct Foo{void opCall(int){}}
+    static assert(packageName!(Foo.opCall) == "std");
+
+    @property void function(int) vf;
+    static assert(packageName!(vf) == "std");
+}
+
 /**
  * Get the module name (including package) for the given symbol.
  */
@@ -542,9 +561,13 @@ template moduleName(alias T)
 {
     import std.algorithm.searching : startsWith;
 
-    static assert(!T.stringof.startsWith("package "), "cannot get the module name for a package");
+    enum bool isNotFunc = !isSomeFunction!(T);
 
-    static if (T.stringof.startsWith("module "))
+    static if (isNotFunc)
+        static assert(!T.stringof.startsWith("package "),
+            "cannot get the module name for a package");
+
+    static if (isNotFunc && T.stringof.startsWith("module "))
     {
         static if (__traits(compiles, packageName!T))
             enum packagePrefix = packageName!T ~ '.';
@@ -580,6 +603,18 @@ template moduleName(alias T)
 
     struct X12287(T) { T i; }
     static assert(moduleName!(X12287!int.i) == "std.traits");
+}
+
+@safe unittest // issue 13741
+{
+    import std.ascii : isWhite;
+    static assert(moduleName!(isWhite) == "std.ascii");
+
+    struct Foo{void opCall(int){}}
+    static assert(moduleName!(Foo.opCall) == "std.traits");
+
+    @property void function(int) vf;
+    static assert(moduleName!(vf) == "std.traits");
 }
 
 version (none) @safe unittest //Please uncomment me when changing moduleName to test global imports
@@ -2136,12 +2171,16 @@ Returns:
  */
 enum Variadic
 {
-    no,       /// Function is not variadic.
-    c,        /// Function is a _C-style variadic function, which uses
-              /// core.stdc.stdarg
-              /// Function is a _D-style variadic function, which uses
-    d,        /// __argptr and __arguments.
-    typesafe, /// Function is a typesafe variadic function.
+    /// Function is not variadic.
+    no,
+    /// Function is a _C-style variadic function, which uses
+    /// `core.stdc.stdarg`
+    c,
+    /// Function is a _D-style variadic function, which uses
+    /// `__argptr` and `__arguments`.
+    d,
+    /// Function is a typesafe variadic function.
+    typesafe,
 }
 
 /// ditto

@@ -1,7 +1,7 @@
 // Written in the D programming language.
 /**
 This is a submodule of $(MREF std, algorithm).
-It contains generic _mutation algorithms.
+It contains generic mutation algorithms.
 
 $(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE Cheat Sheet,
@@ -70,7 +70,7 @@ License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
 Authors: $(HTTP erdani.com, Andrei Alexandrescu)
 
-Source: $(PHOBOSSRC std/algorithm/_mutation.d)
+Source: $(PHOBOSSRC std/algorithm/mutation.d)
 
 Macros:
 T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
@@ -78,7 +78,9 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 module std.algorithm.mutation;
 
 import std.range.primitives;
-import std.traits : isArray, isAssignable, isBlitAssignable, isNarrowString, Unqual, isSomeChar;
+import std.traits : isArray, isAssignable, isBlitAssignable, isNarrowString,
+       Unqual, isSomeChar, isMutable;
+import std.meta : allSatisfy;
 // FIXME
 import std.typecons; // : tuple, Tuple;
 
@@ -1692,11 +1694,27 @@ enum SwapStrategy
     assert(arr == [10, 9, 8, 4, 5, 6, 7, 3, 2, 1]);
 }
 
+private template isValidIntegralTuple(T)
+{
+    import std.traits : isIntegral;
+    import std.typecons : isTuple;
+    static if (isTuple!T)
+    {
+        enum isValidIntegralTuple = T.length == 2 &&
+                isIntegral!(typeof(T.init[0])) && isIntegral!(typeof(T.init[0]));
+    }
+    else
+    {
+        enum isValidIntegralTuple = isIntegral!T;
+    }
+}
+
+
 /**
 Eliminates elements at given offsets from `range` and returns the shortened
 range.
 
-For example, here is how to _remove a single element from an array:
+For example, here is how to remove a single element from an array:
 
 ----
 string[] a = [ "a", "b", "c", "d" ];
@@ -1715,7 +1733,7 @@ assert(remove(a, 1) == [ 3, 7, 8 ]);
 assert(a == [ 3, 7, 8, 8 ]);
 ----
 
-The element at _offset `1` has been removed and the rest of the elements have
+The element at offset `1` has been removed and the rest of the elements have
 shifted up to fill its place, however, the original array remains of the same
 length. This is because all functions in `std.algorithm` only change $(I
 content), not $(I topology). The value `8` is repeated because $(LREF move) was
@@ -1734,9 +1752,21 @@ assert(remove(a, 1, 3, 5) ==
 ----
 
 (Note that all indices refer to slots in the $(I original) array, not
-in the array as it is being progressively shortened.) Finally, any
-combination of integral offsets and tuples composed of two integral
-offsets can be passed in.
+in the array as it is being progressively shortened.)
+
+Tuples of two integral offsets can be used to remove an indices range:
+
+----
+int[] a = [ 3, 4, 5, 6, 7];
+assert(remove(a, 1, tuple(1, 3), 9) == [ 3, 6, 7 ]);
+----
+
+The tuple passes in a range closed to the left and open to
+the right (consistent with built-in slices), e.g. `tuple(1, 3)`
+means indices `1` and `2` but not `3`.
+
+Finally, any combination of integral offsets and tuples composed of two integral
+offsets can be passed in:
 
 ----
 int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
@@ -1744,9 +1774,7 @@ assert(remove(a, 1, tuple(3, 5), 9) == [ 0, 2, 5, 6, 7, 8, 10 ]);
 ----
 
 In this case, the slots at positions 1, 3, 4, and 9 are removed from
-the array. The tuple passes in a range closed to the left and open to
-the right (consistent with built-in slices), e.g. `tuple(3, 5)`
-means indices `3` and `4` but not `5`.
+the array.
 
 If the need is to remove some elements in the range but the order of
 the remaining elements does not have to be preserved, you may want to
@@ -1765,17 +1793,22 @@ movement to be done which improves the execution time of the function.
 
 The function `remove` works on bidirectional ranges that have assignable
 lvalue elements. The moving strategy is (listed from fastest to slowest):
-$(UL $(LI If $(D s == SwapStrategy.unstable && isRandomAccessRange!Range &&
+
+$(UL
+        $(LI If $(D s == SwapStrategy.unstable && isRandomAccessRange!Range &&
 hasLength!Range && hasLvalueElements!Range), then elements are moved from the
 end of the range into the slots to be filled. In this case, the absolute
-minimum of moves is performed.)  $(LI Otherwise, if $(D s ==
+minimum of moves is performed.)
+        $(LI Otherwise, if $(D s ==
 SwapStrategy.unstable && isBidirectionalRange!Range && hasLength!Range
 && hasLvalueElements!Range), then elements are still moved from the
 end of the range, but time is spent on advancing between slots by repeated
-calls to `range.popFront`.)  $(LI Otherwise, elements are moved
+calls to `range.popFront`.)
+        $(LI Otherwise, elements are moved
 incrementally towards the front of `range`; a given element is never
 moved several times, but more elements are moved than in the previous
-cases.))
+cases.)
+)
 
 Params:
     s = a SwapStrategy to determine if the original order needs to be preserved
@@ -1784,16 +1817,204 @@ Params:
     offset = which element(s) to remove
 
 Returns:
-    a range containing all of the elements of range with offset removed
- */
+    A range containing all of the elements of range with offset removed.
+*/
 Range remove
-(SwapStrategy s = SwapStrategy.stable, Range, Offset...)
+(SwapStrategy s = SwapStrategy.stable, Range, Offset ...)
 (Range range, Offset offset)
-if (s != SwapStrategy.stable
-    && isBidirectionalRange!Range
-    && hasLvalueElements!Range
-    && hasLength!Range
-    && Offset.length >= 1)
+if (Offset.length >= 1 && allSatisfy!(isValidIntegralTuple, Offset))
+{
+    // Activate this check when the deprecation of non-integral tuples is over
+    //import std.traits : isIntegral;
+    //import std.typecons : isTuple;
+    //static foreach (T; Offset)
+    //{
+        //static if (isTuple!T)
+        //{
+            //static assert(T.length == 2 &&
+                    //isIntegral!(typeof(T.init[0])) && isIntegral!(typeof(T.init[0])),
+                //"Each offset must be an integral or a tuple of two integrals." ~
+                //"Use `arr.remove(pos1, pos2)` or `arr.remove(tuple(start, begin))`");
+        //}
+        //else
+        //{
+            //static assert(isIntegral!T,
+                //"Each offset must be an integral or a tuple of two integrals." ~
+                //"Use `arr.remove(pos1, pos2)` or `arr.remove(tuple(start, begin))`");
+        //}
+    //}
+    return removeImpl!s(range, offset);
+}
+
+deprecated("Use of non-integral tuples is deprecated. Use remove(tuple(start, end).")
+Range remove
+(SwapStrategy s = SwapStrategy.stable, Range, Offset ...)
+(Range range, Offset offset)
+if (Offset.length >= 1 && !allSatisfy!(isValidIntegralTuple, Offset))
+{
+    return removeImpl!s(range, offset);
+}
+
+///
+@safe pure unittest
+{
+    import std.typecons : tuple;
+
+    auto a = [ 0, 1, 2, 3, 4, 5 ];
+    assert(remove!(SwapStrategy.stable)(a, 1) == [ 0, 2, 3, 4, 5 ]);
+    a = [ 0, 1, 2, 3, 4, 5 ];
+    assert(remove!(SwapStrategy.stable)(a, 1, 3) == [ 0, 2, 4, 5] );
+    a = [ 0, 1, 2, 3, 4, 5 ];
+    assert(remove!(SwapStrategy.stable)(a, 1, tuple(3, 6)) == [ 0, 2 ]);
+
+    a = [ 0, 1, 2, 3, 4, 5 ];
+    assert(remove!(SwapStrategy.unstable)(a, 1) == [0, 5, 2, 3, 4]);
+    a = [ 0, 1, 2, 3, 4, 5 ];
+    assert(remove!(SwapStrategy.unstable)(a, tuple(1, 4)) == [0, 5, 4]);
+}
+
+///
+@safe pure unittest
+{
+    import std.typecons : tuple;
+
+    // Delete an index
+    assert([4, 5, 6].remove(1) == [4, 6]);
+
+    // Delete multiple indices
+    assert([4, 5, 6, 7, 8].remove(1, 3) == [4, 6, 8]);
+
+    // Use an indices range
+    assert([4, 5, 6, 7, 8].remove(tuple(1, 3)) == [4, 7, 8]);
+
+    // Use an indices range and individual indices
+    assert([4, 5, 6, 7, 8].remove(0, tuple(1, 3), 4) == [7]);
+}
+
+/// `SwapStrategy.unstable` is faster, but doesn't guarantee the same order of the original array
+@safe pure unittest
+{
+    assert([5, 6, 7, 8].remove!(SwapStrategy.stable)(1) == [5, 7, 8]);
+    assert([5, 6, 7, 8].remove!(SwapStrategy.unstable)(1) == [5, 8, 7]);
+}
+
+private auto removeImpl(SwapStrategy s, Range, Offset...)(Range range, Offset offset)
+{
+    static if (isNarrowString!Range)
+    {
+        static assert(isMutable!(typeof(range[0])),
+                "Elements must be mutable to remove");
+        static assert(s == SwapStrategy.stable,
+                "Only stable removing can be done for character arrays");
+        return removeStableString(range, offset);
+    }
+    else
+    {
+        static assert(isBidirectionalRange!Range,
+                "Range must be bidirectional");
+        static assert(hasLvalueElements!Range,
+                "Range must have Lvalue elements (see std.range.hasLvalueElements)");
+
+        static if (s == SwapStrategy.unstable)
+        {
+            static assert(hasLength!Range,
+                    "Range must have `length` for unstable remove");
+            return removeUnstable(range, offset);
+        }
+        else static if (s == SwapStrategy.stable)
+            return removeStable(range, offset);
+        else
+            static assert(false,
+                    "Only SwapStrategy.stable and SwapStrategy.unstable are supported");
+    }
+}
+
+@safe unittest
+{
+    import std.exception : assertThrown;
+    import std.range;
+
+    // http://d.puremagic.com/issues/show_bug.cgi?id=10173
+    int[] test = iota(0, 10).array();
+    assertThrown(remove!(SwapStrategy.stable)(test, tuple(2, 4), tuple(1, 3)));
+    assertThrown(remove!(SwapStrategy.unstable)(test, tuple(2, 4), tuple(1, 3)));
+    assertThrown(remove!(SwapStrategy.stable)(test, 2, 4, 1, 3));
+    assertThrown(remove!(SwapStrategy.unstable)(test, 2, 4, 1, 3));
+}
+
+@safe unittest
+{
+    import std.range;
+    int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
+    a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
+    assert(remove!(SwapStrategy.stable)(a, 1) ==
+        [ 0, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]);
+
+    a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
+    assert(remove!(SwapStrategy.unstable)(a, 0, 10) ==
+           [ 9, 1, 2, 3, 4, 5, 6, 7, 8 ]);
+
+    a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
+    assert(remove!(SwapStrategy.unstable)(a, 0, tuple(9, 11)) ==
+            [ 8, 1, 2, 3, 4, 5, 6, 7 ]);
+    // http://d.puremagic.com/issues/show_bug.cgi?id=5224
+    a = [ 1, 2, 3, 4 ];
+    assert(remove!(SwapStrategy.unstable)(a, 2) ==
+           [ 1, 2, 4 ]);
+
+    a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
+    assert(remove!(SwapStrategy.stable)(a, 1, 5) ==
+        [ 0, 2, 3, 4, 6, 7, 8, 9, 10 ]);
+
+    a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
+    assert(remove!(SwapStrategy.stable)(a, 1, 3, 5)
+            == [ 0, 2, 4, 6, 7, 8, 9, 10]);
+    a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
+    assert(remove!(SwapStrategy.stable)(a, 1, tuple(3, 5))
+            == [ 0, 2, 5, 6, 7, 8, 9, 10]);
+
+    a = iota(0, 10).array();
+    assert(remove!(SwapStrategy.unstable)(a, tuple(1, 4), tuple(6, 7))
+            == [0, 9, 8, 7, 4, 5]);
+}
+
+@safe unittest
+{
+    // Issue 11576
+    auto arr = [1,2,3];
+    arr = arr.remove!(SwapStrategy.unstable)(2);
+    assert(arr == [1,2]);
+
+}
+
+@safe unittest
+{
+    import std.range;
+    // Bug# 12889
+    int[1][] arr = [[0], [1], [2], [3], [4], [5], [6]];
+    auto orig = arr.dup;
+    foreach (i; iota(arr.length))
+    {
+        assert(orig == arr.remove!(SwapStrategy.unstable)(tuple(i,i)));
+        assert(orig == arr.remove!(SwapStrategy.stable)(tuple(i,i)));
+    }
+}
+
+@safe unittest
+{
+    char[] chars = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+    remove(chars, 4);
+    assert(chars == ['a', 'b', 'c', 'd', 'f', 'g', 'h', 'h']);
+
+    char[] bigChars = "∑œ∆¬é˚˙ƒé∂ß¡¡".dup;
+    assert(remove(bigChars, tuple(4, 6), 8) == ("∑œ∆¬˙ƒ∂ß¡¡"));
+
+    import std.exception : assertThrown;
+    assertThrown(remove(bigChars.dup, 1, 0));
+    assertThrown(remove(bigChars.dup, tuple(4, 3)));
+}
+
+private Range removeUnstable(Range, Offset...)(Range range, Offset offset)
 {
     Tuple!(size_t, "pos", size_t, "len")[offset.length] blackouts;
     foreach (i, v; offset)
@@ -1872,14 +2093,7 @@ if (s != SwapStrategy.stable
     return range;
 }
 
-/// Ditto
-Range remove
-(SwapStrategy s = SwapStrategy.stable, Range, Offset...)
-(Range range, Offset offset)
-if (s == SwapStrategy.stable
-    && isBidirectionalRange!Range
-    && hasLvalueElements!Range
-    && Offset.length >= 1)
+private Range removeStable(Range, Offset...)(Range range, Offset offset)
 {
     auto result = range;
     auto src = range, tgt = range;
@@ -1923,93 +2137,76 @@ if (s == SwapStrategy.stable
     return result;
 }
 
-///
-@safe pure unittest
+private Range removeStableString(Range, Offset...)(Range range, Offset offsets)
 {
-    import std.typecons : tuple;
+    import std.utf : stride;
+    size_t charIdx = 0;
+    size_t dcharIdx = 0;
+    size_t charShift = 0;
 
-    auto a = [ 0, 1, 2, 3, 4, 5 ];
-    assert(remove!(SwapStrategy.stable)(a, 1) == [ 0, 2, 3, 4, 5 ]);
-    a = [ 0, 1, 2, 3, 4, 5 ];
-    assert(remove!(SwapStrategy.stable)(a, 1, 3) == [ 0, 2, 4, 5] );
-    a = [ 0, 1, 2, 3, 4, 5 ];
-    assert(remove!(SwapStrategy.stable)(a, 1, tuple(3, 6)) == [ 0, 2 ]);
-
-    a = [ 0, 1, 2, 3, 4, 5 ];
-    assert(remove!(SwapStrategy.unstable)(a, 1) == [0, 5, 2, 3, 4]);
-    a = [ 0, 1, 2, 3, 4, 5 ];
-    assert(remove!(SwapStrategy.unstable)(a, tuple(1, 4)) == [0, 5, 4]);
-}
-
-@safe unittest
-{
-    import std.exception : assertThrown;
-    import std.range;
-
-    // http://d.puremagic.com/issues/show_bug.cgi?id=10173
-    int[] test = iota(0, 10).array();
-    assertThrown(remove!(SwapStrategy.stable)(test, tuple(2, 4), tuple(1, 3)));
-    assertThrown(remove!(SwapStrategy.unstable)(test, tuple(2, 4), tuple(1, 3)));
-    assertThrown(remove!(SwapStrategy.stable)(test, 2, 4, 1, 3));
-    assertThrown(remove!(SwapStrategy.unstable)(test, 2, 4, 1, 3));
-}
-
-@safe unittest
-{
-    import std.range;
-    int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
-    a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
-    assert(remove!(SwapStrategy.stable)(a, 1) ==
-        [ 0, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]);
-
-    a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
-    assert(remove!(SwapStrategy.unstable)(a, 0, 10) ==
-           [ 9, 1, 2, 3, 4, 5, 6, 7, 8 ]);
-
-    a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
-    assert(remove!(SwapStrategy.unstable)(a, 0, tuple(9, 11)) ==
-            [ 8, 1, 2, 3, 4, 5, 6, 7 ]);
-    // http://d.puremagic.com/issues/show_bug.cgi?id=5224
-    a = [ 1, 2, 3, 4 ];
-    assert(remove!(SwapStrategy.unstable)(a, 2) ==
-           [ 1, 2, 4 ]);
-
-    a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
-    assert(remove!(SwapStrategy.stable)(a, 1, 5) ==
-        [ 0, 2, 3, 4, 6, 7, 8, 9, 10 ]);
-
-    a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
-    assert(remove!(SwapStrategy.stable)(a, 1, 3, 5)
-            == [ 0, 2, 4, 6, 7, 8, 9, 10]);
-    a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
-    assert(remove!(SwapStrategy.stable)(a, 1, tuple(3, 5))
-            == [ 0, 2, 5, 6, 7, 8, 9, 10]);
-
-    a = iota(0, 10).array();
-    assert(remove!(SwapStrategy.unstable)(a, tuple(1, 4), tuple(6, 7))
-            == [0, 9, 8, 7, 4, 5]);
-}
-
-@safe unittest
-{
-    // Issue 11576
-    auto arr = [1,2,3];
-    arr = arr.remove!(SwapStrategy.unstable)(2);
-    assert(arr == [1,2]);
-
-}
-
-@safe unittest
-{
-    import std.range;
-    // Bug# 12889
-    int[1][] arr = [[0], [1], [2], [3], [4], [5], [6]];
-    auto orig = arr.dup;
-    foreach (i; iota(arr.length))
+    void skipOne()
     {
-        assert(orig == arr.remove!(SwapStrategy.unstable)(tuple(i,i)));
-        assert(orig == arr.remove!(SwapStrategy.stable)(tuple(i,i)));
+        charIdx += stride(range[charIdx .. $]);
+        ++dcharIdx;
     }
+
+    void copyBackOne()
+    {
+        auto encodedLen = stride(range[charIdx .. $]);
+        foreach (j; charIdx .. charIdx + encodedLen)
+            range[j - charShift] = range[j];
+        charIdx += encodedLen;
+        ++dcharIdx;
+    }
+
+    foreach (pass, i; offsets)
+    {
+        static if (is(typeof(i[0])) && is(typeof(i[1])))
+        {
+            auto from = i[0];
+            auto delta = i[1] - i[0];
+        }
+        else
+        {
+            auto from = i;
+            enum delta = 1;
+        }
+
+        import std.exception : enforce;
+        enforce(dcharIdx <= from && delta >= 0,
+                "remove(): incorrect ordering of elements to remove");
+
+        while (dcharIdx < from)
+            static if (pass == 0)
+                skipOne();
+            else
+                copyBackOne();
+
+        auto mark = charIdx;
+        while (dcharIdx < from + delta)
+            skipOne();
+        charShift += charIdx - mark;
+    }
+
+    foreach (i; charIdx .. range.length)
+        range[i - charShift] = range[i];
+
+    return range[0 .. $ - charShift];
+}
+
+// Use of dynamic arrays as offsets is too error-prone
+// https://issues.dlang.org/show_bug.cgi?id=12086
+// Activate these tests once the deprecation period of remove with non-integral tuples is over
+@safe unittest
+{
+    //static assert(!__traits(compiles, [0, 1, 2, 3, 4].remove([1, 3]) == [0, 3, 4]));
+    static assert(__traits(compiles, [0, 1, 2, 3, 4].remove(1, 3) == [0, 2, 4]));
+    //static assert(!__traits(compiles, assert([0, 1, 2, 3, 4].remove([1, 3, 4]) == [0, 3, 4])));
+    //static assert(!__traits(compiles, assert([0, 1, 2, 3, 4].remove(tuple(1, 3, 4)) == [0, 3, 4])));
+
+    import std.range : only;
+    //static assert(!__traits(compiles, assert([0, 1, 2, 3, 4].remove(only(1, 3)) == [0, 3, 4])));
+    static assert(__traits(compiles, assert([0, 1, 2, 3, 4].remove(1, 3) == [0, 2, 4])));
 }
 
 /**
@@ -2023,49 +2220,38 @@ order is preserved. Returns the filtered range.
 
 Params:
     range = a bidirectional ranges with lvalue elements
+        or mutable character arrays
 
 Returns:
     the range with all of the elements where `pred` is `true`
     removed
 */
-Range remove(alias pred, SwapStrategy s = SwapStrategy.stable, Range)
-(Range range)
-if (isBidirectionalRange!Range
-    && hasLvalueElements!Range)
+Range remove(alias pred, SwapStrategy s = SwapStrategy.stable, Range)(Range range)
 {
     import std.functional : unaryFun;
-    auto result = range;
-    static if (s != SwapStrategy.stable)
+    alias pred_ = unaryFun!pred;
+    static if (isNarrowString!Range)
     {
-        for (;!range.empty;)
-        {
-            if (!unaryFun!pred(range.front))
-            {
-                range.popFront();
-                continue;
-            }
-            move(range.back, range.front);
-            range.popBack();
-            result.popBack();
-        }
+        static assert(isMutable!(typeof(range[0])),
+                "Elements must be mutable to remove");
+        static assert(s == SwapStrategy.stable,
+                "Only stable removing can be done for character arrays");
+        return removePredString!pred_(range);
     }
     else
     {
-        auto tgt = range;
-        for (; !range.empty; range.popFront())
-        {
-            if (unaryFun!(pred)(range.front))
-            {
-                // yank this guy
-                result.popBack();
-                continue;
-            }
-            // keep this guy
-            move(range.front, tgt.front);
-            tgt.popFront();
-        }
+        static assert(isBidirectionalRange!Range,
+                "Range must be bidirectional");
+        static assert(hasLvalueElements!Range,
+                "Range must have Lvalue elements (see std.range.hasLvalueElements)");
+        static if (s == SwapStrategy.unstable)
+            return removePredUnstable!pred_(range);
+        else static if (s == SwapStrategy.stable)
+            return removePredStable!pred_(range);
+        else
+            static assert(false,
+                    "Only SwapStrategy.stable and SwapStrategy.unstable are supported");
     }
-    return result;
 }
 
 ///
@@ -2118,19 +2304,20 @@ if (isBidirectionalRange!Range
     import std.meta : AliasSeq;
     import std.range : iota, only;
     import std.typecons : Tuple;
-    alias S = Tuple!(int[2]);
+    alias E = Tuple!(int, int);
+    alias S = Tuple!(E);
     S[] soffsets;
     foreach (start; 0 .. 5)
     foreach (end; min(start+1,5) .. 5)
-          soffsets ~= S([start,end]);
-    alias D = Tuple!(int[2],int[2]);
+          soffsets ~= S(E(start,end));
+    alias D = Tuple!(E, E);
     D[] doffsets;
     foreach (start1; 0 .. 10)
     foreach (end1; min(start1+1,10) .. 10)
     foreach (start2; end1 .. 10)
     foreach (end2; min(start2+1,10) .. 10)
-          doffsets ~= D([start1,end1],[start2,end2]);
-    alias T = Tuple!(int[2],int[2],int[2]);
+          doffsets ~= D(E(start1,end1),E(start2,end2));
+    alias T = Tuple!(E, E, E);
     T[] toffsets;
     foreach (start1; 0 .. 15)
     foreach (end1; min(start1+1,15) .. 15)
@@ -2138,7 +2325,7 @@ if (isBidirectionalRange!Range
     foreach (end2; min(start2+1,15) .. 15)
     foreach (start3; end2 .. 15)
     foreach (end3; min(start3+1,15) .. 15)
-            toffsets ~= T([start1,end1],[start2,end2],[start3,end3]);
+            toffsets ~= T(E(start1,end1),E(start2,end2),E(start3,end3));
 
     static void verify(O...)(int[] r, int len, int removed, bool stable, O offsets)
     {
@@ -2170,6 +2357,88 @@ if (isBidirectionalRange!Range
         assert(w == y);
         assert(x == z);
     }
+}
+
+@safe unittest
+{
+    char[] chars = "abcdefg".dup;
+    assert(chars.remove!(dc => dc == 'c' || dc == 'f') == "abdeg");
+    assert(chars == "abdegfg");
+
+    assert(chars.remove!"a == 'd'" == "abegfg");
+
+    char[] bigChars = "¥^¨^©é√∆π".dup;
+    assert(bigChars.remove!(dc => dc == "¨"d[0] || dc == "é"d[0]) ==  "¥^^©√∆π");
+}
+
+private Range removePredUnstable(alias pred, Range)(Range range)
+{
+    auto result = range;
+    for (;!range.empty;)
+    {
+        if (!pred(range.front))
+        {
+            range.popFront();
+            continue;
+        }
+        move(range.back, range.front);
+        range.popBack();
+        result.popBack();
+    }
+    return result;
+}
+
+private Range removePredStable(alias pred, Range)(Range range)
+{
+    auto result = range;
+    auto tgt = range;
+    for (; !range.empty; range.popFront())
+    {
+        if (pred(range.front))
+        {
+            // yank this guy
+            result.popBack();
+            continue;
+        }
+        // keep this guy
+        move(range.front, tgt.front);
+        tgt.popFront();
+    }
+    return result;
+}
+
+private Range removePredString(alias pred, SwapStrategy s = SwapStrategy.stable, Range)
+(Range range)
+{
+    import std.utf : decode;
+    import std.functional : unaryFun;
+
+    alias pred_ = unaryFun!pred;
+
+    size_t charIdx = 0;
+    size_t charShift = 0;
+    while (charIdx < range.length)
+    {
+        size_t start = charIdx;
+        if (pred_(decode(range, charIdx)))
+        {
+            charShift += charIdx - start;
+            break;
+        }
+    }
+    while (charIdx < range.length)
+    {
+        size_t start = charIdx;
+        auto doRemove = pred_(decode(range, charIdx));
+        auto encodedLen = charIdx - start;
+        if (doRemove)
+            charShift += encodedLen;
+        else
+            foreach (i; start .. charIdx)
+                range[i - charShift] = range[i];
+    }
+
+    return range[0 .. $ - charShift];
 }
 
 // reverse

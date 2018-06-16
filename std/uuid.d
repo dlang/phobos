@@ -72,7 +72,7 @@ $(TR $(TDNW UUID namespaces)
  * Use UUID's constructors or the UUID generator functions to get an initialized UUID.
  *
  * This is a port of $(LINK2 http://www.boost.org/doc/libs/1_42_0/libs/uuid/uuid.html,
- * boost._uuid) from the Boost project with some minor additions and API
+ * boost.uuid) from the Boost project with some minor additions and API
  * changes for a more D-like API.
  *
  * Standards:
@@ -84,7 +84,7 @@ $(TR $(TDNW UUID namespaces)
  * Copyright: Copyright Johannes Pfau 2011 - .
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   Johannes Pfau
- * Source:    $(PHOBOSSRC std/_uuid.d)
+ * Source:    $(PHOBOSSRC std/uuid.d)
  *
  * Macros:
  * MYREF2 = <a href="#$2">$(TT $1)</a>&nbsp;
@@ -952,7 +952,7 @@ public struct UUID
             assert(u1.toString() == "8ab3060e-2cba-4f23-b74c-b52db3bdfb46");
 
             char[] buf;
-            void sink(const(char)[] data)
+            void sink(scope const(char)[] data)
             {
                 buf ~= data;
             }
@@ -1117,13 +1117,13 @@ public struct UUID
  * for strings and wstrings. It's always possible to pass wstrings and dstrings
  * by using the ubyte[] function overload (but be aware of endianness issues!).
  */
-@safe pure nothrow @nogc UUID sha1UUID(in char[] name, const UUID namespace = UUID.init)
+@safe pure nothrow @nogc UUID sha1UUID(scope const(char)[] name, scope const UUID namespace = UUID.init)
 {
     return sha1UUID(cast(const(ubyte[]))name, namespace);
 }
 
 /// ditto
-@safe pure nothrow @nogc UUID sha1UUID(in ubyte[] data, const UUID namespace = UUID.init)
+@safe pure nothrow @nogc UUID sha1UUID(scope const(ubyte)[] data, scope const UUID namespace = UUID.init)
 {
     import std.digest.sha : SHA1;
 

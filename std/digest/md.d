@@ -36,7 +36,7 @@ $(TR $(TDNW Helpers) $(TD $(MYREF md5Of))
  * References:
  *      $(LINK2 http://en.wikipedia.org/wiki/Md5, Wikipedia on MD5)
  *
- * Source: $(PHOBOSSRC std/digest/_md.d)
+ * Source: $(PHOBOSSRC std/digest/md.d)
  *
  */
 

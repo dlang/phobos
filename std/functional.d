@@ -51,7 +51,7 @@ $(TR $(TH Function Name) $(TH Description)
 Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
 License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(HTTP erdani.org, Andrei Alexandrescu)
-Source:    $(PHOBOSSRC std/_functional.d)
+Source:    $(PHOBOSSRC std/functional.d)
 */
 /*
          Copyright Andrei Alexandrescu 2008 - 2009.
@@ -93,12 +93,19 @@ private template needOpCallAlias(alias fun)
 }
 
 /**
-Transforms a string representing an expression into a unary
-function. The string must either use symbol name `a` as
+Transforms a `string` representing an expression into a unary
+function. The `string` must either use symbol name `a` as
 the parameter or provide the symbol via the `parmName` argument.
-If `fun` is not a string, `unaryFun` aliases itself away to `fun`.
-*/
 
+Params:
+    fun = a `string` or a callable
+    parmName = the name of the parameter if `fun` is a string. Defaults
+    to `"a"`.
+Returns:
+    If `fun` is a `string`, a new single parameter function
+
+    If `fun` is not a `string`, an alias to `fun`.
+*/
 template unaryFun(alias fun, string parmName = "a")
 {
     static if (is(typeof(fun) : string))
@@ -176,13 +183,20 @@ template unaryFun(alias fun, string parmName = "a")
 }
 
 /**
-Transforms a string representing an expression into a binary function. The
-string must either use symbol names `a` and `b` as the parameters or
+Transforms a `string` representing an expression into a binary function. The
+`string` must either use symbol names `a` and `b` as the parameters or
 provide the symbols via the `parm1Name` and `parm2Name` arguments.
-If `fun` is not a string, `binaryFun` aliases itself away to
-`fun`.
-*/
 
+Params:
+    fun = a `string` or a callable
+    parm1Name = the name of the first parameter if `fun` is a string.
+    Defaults to `"a"`.
+    parm2Name = the name of the second parameter if `fun` is a string.
+    Defaults to `"b"`.
+Returns:
+    If `fun` is not a string, `binaryFun` aliases itself away to
+    `fun`.
+*/
 template binaryFun(alias fun, string parm1Name = "a",
         string parm2Name = "b")
 {
@@ -531,8 +545,13 @@ alias equalTo = safeOp!"==";
     assert(!equalTo(-1, ~0U));
 }
 /**
-   N-ary predicate that reverses the order of arguments, e.g., given
-   $(D pred(a, b, c)), returns $(D pred(c, b, a)).
+N-ary predicate that reverses the order of arguments, e.g., given
+$(D pred(a, b, c)), returns $(D pred(c, b, a)).
+
+Params:
+    pred = A callable
+Returns:
+    A function which calls `pred` after reversing the given parameters
 */
 template reverseArgs(alias pred)
 {
@@ -600,10 +619,15 @@ template reverseArgs(alias pred)
 
 // @@@DEPRECATED_2.089@@@
 /**
-   Binary predicate that reverses the order of arguments, e.g., given
-   $(D pred(a, b)), returns $(D pred(b, a)).
+Binary predicate that reverses the order of arguments, e.g., given
+$(D pred(a, b)), returns $(D pred(b, a)).
 
-   $(RED DEPRECATED: Use $(LREF reverseArgs))
+$(RED DEPRECATED: Use $(LREF reverseArgs))
+
+Params:
+    pred = A callable
+Returns:
+    A function which calls `pred` after reversing the given parameters
 */
 deprecated("Use `reverseArgs`. `binaryReverseArgs` will be removed in 2.089.")
 template binaryReverseArgs(alias pred)
@@ -637,6 +661,12 @@ deprecated
 
 /**
 Negates predicate `pred`.
+
+Params:
+    pred = A string or a callable
+Returns:
+    A function which calls `pred` and returns the logical negation of its
+    return value.
  */
 template not(alias pred)
 {
@@ -677,6 +707,12 @@ template not(alias pred)
 /**
 $(LINK2 http://en.wikipedia.org/wiki/Partial_application, Partially
 applies) $(D_PARAM fun) by tying its first argument to $(D_PARAM arg).
+
+Params:
+    fun = A callable
+    arg = The first argument to apply to `fun`
+Returns:
+    A new function which calls `fun` with `arg` plus the passed parameters.
  */
 template partial(alias fun, alias arg)
 {
@@ -811,10 +847,13 @@ template partial(alias fun, alias arg)
 }
 
 /**
-Takes multiple functions and adjoins them together. The result is a
-$(REF Tuple, std,typecons) with one element per passed-in function. Upon
-invocation, the returned tuple is the adjoined results of all
-functions.
+Takes multiple functions and adjoins them together.
+
+Params:
+    F = the call-able(s) to adjoin
+Returns:
+    A new function which returns a $(REF Tuple, std,typecons). Each of the
+    elements of the tuple will be the return values of `F`.
 
 Note: In the special case where only a single function is provided
 ($(D F.length == 1)), adjoin simply aliases to the single passed function
@@ -906,10 +945,12 @@ if (F.length > 1)
 }
 
 /**
-   Composes passed-in functions $(D fun[0], fun[1], ...) returning a
-   function `f(x)` that in turn returns $(D
-   fun[0](fun[1](...(x)))...). Each function can be a regular
-   functions, a delegate, or a string.
+   Composes passed-in functions $(D fun[0], fun[1], ...).
+
+   Params:
+        fun = the call-able(s) or `string`(s) to compose into one function
+    Returns:
+        A new function `f(x)` that in turn returns $(D fun[0](fun[1](...(x)))...).
 
    See_Also: $(LREF pipe)
 */
@@ -957,6 +998,11 @@ template compose(fun...)
    lead to more readable code in some situation because the order of
    execution is the same as lexical order.
 
+   Params:
+        fun = the call-able(s) or `string`(s) to compose into one function
+    Returns:
+        A new function `f(x)` that in turn returns $(D fun[0](fun[1](...(x)))...).
+
    Example:
 
 ----
@@ -970,6 +1016,7 @@ int[] a = pipe!(readText, split, map!(to!(int)))("file.txt");
  */
 alias pipe(fun...) = compose!(Reverse!(fun));
 
+///
 @safe unittest
 {
     import std.conv : to;
@@ -1009,10 +1056,16 @@ unittest
 }
 ----
 
-Technically the memoized function should be pure because `memoize` assumes it will
-always return the same result for a given tuple of arguments. However, `memoize` does not
-enforce that because sometimes it
-is useful to memoize an impure function, too.
+Params:
+    fun = the call-able to memozie
+    maxSize = The maximum size of the GC buffer to hold the return values
+Returns:
+    A new function which calls `fun` and caches its return values.
+
+Note:
+    Technically the memoized function should be pure because `memoize` assumes it will
+    always return the same result for a given tuple of arguments. However, `memoize` does not
+    enforce that because sometimes it is useful to memoize an impure function, too.
 */
 template memoize(alias fun)
 {
@@ -1329,6 +1382,11 @@ private struct DelegateFaker(F)
  * Convert a callable to a delegate with the same parameter list and
  * return type, avoiding heap allocations and use of auxiliary storage.
  *
+ * Params:
+ *     fp = a function pointer or an aggregate type with `opCall` defined.
+ * Returns:
+ *     A delegate with the context pointer pointing to nothing.
+ *
  * Example:
  * ----
  * void doStuff() {
@@ -1492,7 +1550,13 @@ if (isCallable!(F))
 }
 
 /**
-Forwards function arguments with saving ref-ness.
+Forwards function arguments while keeping `out`, `ref`, and `lazy` on
+the parameters.
+
+Params:
+    args = a parameter list or an $(REF AliasSeq,std,meta).
+Returns:
+    An `AliasSeq` of `args` with `out`, `ref`, and `lazy` saved.
 */
 template forward(args...)
 {
@@ -1528,11 +1592,19 @@ template forward(args...)
         static int foo(int n) { return 1; }
         static int foo(ref int n) { return 2; }
     }
+
+    // with forward
     int bar()(auto ref int x) { return C.foo(forward!x); }
 
-    assert(bar(1) == 1);
+    // without forward
+    int baz()(auto ref int x) { return C.foo(x); }
+
     int i;
+    assert(bar(1) == 1);
     assert(bar(i) == 2);
+
+    assert(baz(1) == 2);
+    assert(baz(i) == 2);
 }
 
 ///

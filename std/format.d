@@ -15,23 +15,23 @@ $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)
 )
     $(TR $(TD $(LREF formattedRead))
-        $(TD Reads values according to the _format string from an InputRange.
+        $(TD Reads values according to the format string from an InputRange.
     ))
     $(TR $(TD $(LREF formattedWrite))
-        $(TD Formats its arguments according to the _format string and puts them
+        $(TD Formats its arguments according to the format string and puts them
         to an OutputRange.
     ))
 )
 
    Please see the documentation of function $(LREF formattedWrite) for a
-   description of the _format string.
+   description of the format string.
 
    Two functions have been added for convenience:
 
 $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)
 )
-    $(TR $(TD $(LREF _format))
+    $(TR $(TD $(LREF format))
         $(TD Returns a GC-allocated string with the formatting result.
     ))
     $(TR $(TD $(LREF sformat))
@@ -51,7 +51,7 @@ $(TR $(TH Function Name) $(TH Description)
    Authors: $(HTTP walterbright.com, Walter Bright), $(HTTP erdani.com,
    Andrei Alexandrescu), and Kenji Hara
 
-   Source: $(PHOBOSSRC std/_format.d)
+   Source: $(PHOBOSSRC std/format.d)
  */
 module std.format;
 
@@ -1765,7 +1765,7 @@ FormatSpec!Char singleSpec(Char)(Char[] fmt)
     enforceFmt(fmt.front == '%', "fmt must start with a '%' character");
 
     static struct DummyOutputRange {
-        void put(C)(C[] buf) {} // eat elements
+        void put(C)(scope const C[] buf) {} // eat elements
     }
     auto a = DummyOutputRange();
     auto spec = FormatSpec!Char(fmt);
@@ -2046,7 +2046,7 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, const ref F
    {
        int x, y;
 
-       void toString(scope void delegate(const(char)[]) @safe sink,
+       void toString(scope void delegate(scope const(char)[]) @safe sink,
                      FormatSpec!char fmt) const
        {
            sink("(");
@@ -2477,7 +2477,7 @@ private void formatUnsigned(Writer, T, Char)
     }
 
     const(char)[] result;
-    void put(const char[] s){ result ~= s; }
+    void put(scope const char[] s){ result ~= s; }
 
     Foo foo;
     formattedWrite(&put, "%s", foo);    // OK
@@ -3635,7 +3635,7 @@ private template hasToString(T, Char)
     else static if (is(typeof(
         {T val = void;
         const FormatSpec!Char f;
-        static struct S {void put(Char s){}}
+        static struct S {void put(scope Char s){}}
         S s;
         val.toString(s, f);
         // force toString to take parameters by ref
@@ -3647,7 +3647,7 @@ private template hasToString(T, Char)
     }
     else static if (is(typeof(
         {T val = void;
-        static struct S {void put(Char s){}}
+        static struct S {void put(scope Char s){}}
         S s;
         val.toString(s);
         // force toString to take parameters by ref
@@ -3656,15 +3656,15 @@ private template hasToString(T, Char)
     {
         enum hasToString = 5;
     }
-    else static if (is(typeof({ T val = void; FormatSpec!Char f; val.toString((const(char)[] s){}, f); })))
+    else static if (is(typeof({ T val = void; FormatSpec!Char f; val.toString((scope const(char)[] s){}, f); })))
     {
         enum hasToString = 4;
     }
-    else static if (is(typeof({ T val = void; val.toString((const(char)[] s){}, "%s"); })))
+    else static if (is(typeof({ T val = void; val.toString((scope const(char)[] s){}, "%s"); })))
     {
         enum hasToString = 3;
     }
-    else static if (is(typeof({ T val = void; val.toString((const(char)[] s){}); })))
+    else static if (is(typeof({ T val = void; val.toString((scope const(char)[] s){}); })))
     {
         enum hasToString = 2;
     }
@@ -3688,15 +3688,15 @@ private template hasToString(T, Char)
     }
     static struct B
     {
-        void toString(scope void delegate(const(char)[]) sink, FormatSpec!char fmt) {}
+        void toString(scope void delegate(scope const(char)[]) sink, FormatSpec!char fmt) {}
     }
     static struct C
     {
-        void toString(scope void delegate(const(char)[]) sink, string fmt) {}
+        void toString(scope void delegate(scope const(char)[]) sink, string fmt) {}
     }
     static struct D
     {
-        void toString(scope void delegate(const(char)[]) sink) {}
+        void toString(scope void delegate(scope const(char)[]) sink) {}
     }
     static struct E
     {
@@ -3778,17 +3778,17 @@ if (hasToString!(T, Char))
     // not using the overload enum to not break badly defined toString overloads
     // e.g. defining the FormatSpec as ref and not const ref led this function
     // to ignore that toString overload
-    else static if (is(typeof(val.toString((const(char)[] s){}, f))))
+    else static if (is(typeof(val.toString((scope const(char)[] s){}, f))))
     {
-        val.toString((const(char)[] s) { put(w, s); }, f);
+        val.toString((scope const(char)[] s) { put(w, s); }, f);
     }
-    else static if (is(typeof(val.toString((const(char)[] s){}, "%s"))))
+    else static if (is(typeof(val.toString((scope const(char)[] s){}, "%s"))))
     {
         val.toString((const(char)[] s) { put(w, s); }, f.getCurFmtStr());
     }
-    else static if (is(typeof(val.toString((const(char)[] s){}))))
+    else static if (is(typeof(val.toString((scope const(char)[] s){}))))
     {
-        val.toString((const(char)[] s) { put(w, s); });
+        val.toString((scope const(char)[] s) { put(w, s); });
     }
     else static if (is(typeof(val.toString()) S) && isSomeString!S)
     {
@@ -3823,17 +3823,17 @@ void enforceValidFormatSpec(T, Char)(const ref FormatSpec!Char f)
     static union UF2 { string toString() { return ""; } }
     static class CF2 { override string toString() { return ""; } }
 
-    static interface IK1 { void toString(scope void delegate(const(char)[]) sink,
+    static interface IK1 { void toString(scope void delegate(scope const(char)[]) sink,
                            FormatSpec!char) const; }
-    static class CIK1 : IK1 { override void toString(scope void delegate(const(char)[]) sink,
+    static class CIK1 : IK1 { override void toString(scope void delegate(scope const(char)[]) sink,
                               FormatSpec!char) const { sink("CIK1"); } }
-    static struct KS1 { void toString(scope void delegate(const(char)[]) sink,
+    static struct KS1 { void toString(scope void delegate(scope const(char)[]) sink,
                         FormatSpec!char) const { sink("KS1"); } }
 
-    static union KU1 { void toString(scope void delegate(const(char)[]) sink,
+    static union KU1 { void toString(scope void delegate(scope const(char)[]) sink,
                        FormatSpec!char) const { sink("KU1"); } }
 
-    static class KC1 { void toString(scope void delegate(const(char)[]) sink,
+    static class KC1 { void toString(scope void delegate(scope const(char)[]) sink,
                        FormatSpec!char) const { sink("KC1"); } }
 
     IF1 cif1 = new CIF1;
@@ -3948,7 +3948,7 @@ if (is(T == class) && !is(T == enum))
     class C1
     {
         mixin(inputRangeCode);
-        void toString(scope void delegate(const(char)[]) dg, const ref FormatSpec!char f) const { dg("[012]"); }
+        void toString(scope void delegate(scope const(char)[]) dg, const ref FormatSpec!char f) const { dg("[012]"); }
     }
     class C2
     {
@@ -4674,7 +4674,7 @@ void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, s
     import core.stdc.string : strlen;
     import std.array : appender;
     import std.conv : text, octal;
-    import std.c.stdio : snprintf;
+    import core.stdc.stdio : snprintf;
 
     debug(format) printf("std.format.format.unittest\n");
 
@@ -6179,7 +6179,7 @@ package static const checkFormatException(alias fmt, Args...) =
  * better performance.
  *
  * Params: fmt  = Format string. For detailed specification, see $(LREF formattedWrite).
- *         args = Variadic list of arguments to _format into returned string.
+ *         args = Variadic list of arguments to format into returned string.
  *
  * Throws:
  *     $(LREF, FormatException) if the number of arguments doesn't match the number
@@ -6378,7 +6378,7 @@ if (isSomeString!(typeof(fmt)))
 }
 
 /// ditto
-char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
+char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, Args args)
 {
     import core.exception : RangeError;
     import std.utf : encode;
@@ -6398,7 +6398,7 @@ char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
             buf[i .. i + n] = enc[0 .. n];
             i += n;
         }
-        void put(const(char)[] s)
+        void put(scope const(char)[] s)
         {
             if (buf.length < i + s.length)
                 throw new RangeError(__FILE__, __LINE__);
@@ -6406,12 +6406,12 @@ char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
             buf[i .. i + s.length] = s[];
             i += s.length;
         }
-        void put(const(wchar)[] s)
+        void put(scope const(wchar)[] s)
         {
             for (; !s.empty; s.popFront())
                 put(s.front);
         }
-        void put(const(dchar)[] s)
+        void put(scope const(dchar)[] s)
         {
             for (; !s.empty; s.popFront())
                 put(s.front);

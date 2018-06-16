@@ -23,7 +23,7 @@ $(TR $(TD Utilities) $(TD
 
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   $(HTTP jmdavisprog.com, Jonathan M Davis)
-    Source:    $(PHOBOSSRC std/datetime/_timezone.d)
+    Source:    $(PHOBOSSRC std/datetime/timezone.d)
 +/
 module std.datetime.timezone;
 
@@ -781,7 +781,11 @@ public:
 
     @safe unittest
     {
-        assert(LocalTime().dstName !is null);
+        // tzname, called from dstName, isn't set by default for Musl.
+        version(CRuntime_Musl)
+            assert(LocalTime().dstName is null);
+        else
+            assert(LocalTime().dstName !is null);
 
         version(Posix)
         {

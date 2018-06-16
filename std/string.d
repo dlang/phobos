@@ -69,7 +69,7 @@ $(TR $(TDNW Miscellaneous)
     )
 )))
 
-Objects of types `_string`, `wstring`, and `dstring` are value types
+Objects of types `string`, `wstring`, and `dstring` are value types
 and cannot be mutated element-by-element. For using mutation during building
 strings, use `char[]`, `wchar[]`, or `dchar[]`. The `xxxstring`
 types are preferable because they don't exhibit undesired aliasing, thus
@@ -110,7 +110,7 @@ $(LEADINGROW Publicly imported functions)
     ))
 )
 
-There is a rich set of functions for _string handling defined in other modules.
+There is a rich set of functions for string handling defined in other modules.
 Functions related to Unicode and ASCII are found in $(MREF std, uni)
 and $(MREF std, ascii), respectively. Other functions that have a
 wider generality than just strings can be found in $(MREF std, algorithm)
@@ -138,7 +138,7 @@ Authors: $(HTTP digitalmars.com, Walter Bright),
          $(HTTP jmdavisprog.com, Jonathan M Davis),
          and David L. 'SpottedTiger' Davis
 
-Source:    $(PHOBOSSRC std/_string.d)
+Source:    $(PHOBOSSRC std/string.d)
 
 */
 module std.string;
@@ -213,23 +213,84 @@ class StringException : Exception
     Params:
         cString = A null-terminated c-style string.
 
-    Returns: A D-style array of `char` referencing the same string.  The
-    returned array will retain the same type qualifiers as the input.
+    Returns: A D-style array of `char`, `wchar` or `dchar` referencing the same
+    string. The returned array will retain the same type qualifiers as the input.
 
     $(RED Important Note:) The returned array is a slice of the original buffer.
     The original data is not changed and not copied.
 +/
+Char[] fromStringz(Char)(Char* cString) @nogc @system pure nothrow
+if (isSomeChar!Char)
+{
+    import core.stdc.stddef : wchar_t;
 
-inout(char)[] fromStringz(inout(char)* cString) @nogc @system pure nothrow {
-    import core.stdc.string : strlen;
-    return cString ? cString[0 .. strlen(cString)] : null;
+    static if (is(Unqual!Char == char))
+        import core.stdc.string : cstrlen = strlen;
+    else static if (is(Unqual!Char == wchar_t))
+        import core.stdc.wchar_ : cstrlen = wcslen;
+    else
+        static size_t cstrlen(const Char* s)
+        {
+            const(Char)* p = s;
+            while (*p)
+                ++p;
+            return p - s;
+        }
+
+    return cString ? cString[0 .. cstrlen(cString)] : null;
 }
 
 ///
 @system pure unittest
 {
-    assert(fromStringz(null) == null);
-    assert(fromStringz("foo") == "foo");
+    assert(fromStringz("foo\0"c.ptr) == "foo"c);
+    assert(fromStringz("foo\0"w.ptr) == "foo"w);
+    assert(fromStringz("foo\0"d.ptr) == "foo"d);
+
+    assert(fromStringz("福\0"c.ptr) == "福"c);
+    assert(fromStringz("福\0"w.ptr) == "福"w);
+    assert(fromStringz("福\0"d.ptr) == "福"d);
+}
+
+@system pure unittest
+{
+    char* a = null;
+    assert(fromStringz(a) == null);
+    wchar* b = null;
+    assert(fromStringz(b) == null);
+    dchar* c = null;
+    assert(fromStringz(c) == null);
+
+    const char* d = "foo\0";
+    assert(fromStringz(d) == "foo");
+
+    immutable char* e = "foo\0";
+    assert(fromStringz(e) == "foo");
+
+    const wchar* f = "foo\0";
+    assert(fromStringz(f) == "foo");
+
+    immutable wchar* g = "foo\0";
+    assert(fromStringz(g) == "foo");
+
+    const dchar* h = "foo\0";
+    assert(fromStringz(h) == "foo");
+
+    immutable dchar* i = "foo\0";
+    assert(fromStringz(i) == "foo");
+
+    immutable wchar z = 0x0000;
+    // Test some surrogate pairs
+    // high surrogates are in the range 0xD800 .. 0xDC00
+    // low surrogates are in the range  0xDC00 .. 0xE000
+    // since UTF16 doesn't specify endianness we test both.
+    foreach (wchar[] t; [[0xD800, 0xDC00], [0xD800, 0xE000], [0xDC00, 0xDC00],
+            [0xDC00, 0xE000], [0xDA00, 0xDE00]])
+    {
+        immutable hi = t[0], lo = t[1];
+        assert(fromStringz([hi, lo, z].ptr) == [hi, lo]);
+        assert(fromStringz([lo, hi, z].ptr) == [lo, hi]);
+    }
 }
 
 /++
@@ -247,7 +308,7 @@ inout(char)[] fromStringz(inout(char)* cString) @nogc @system pure nothrow {
     garbage collection cycle and cause a nasty bug when the C code tries to use
     it.
   +/
-immutable(char)* toStringz(const(char)[] s) @trusted pure nothrow
+immutable(char)* toStringz(scope const(char)[] s) @trusted pure nothrow
 out (result)
 {
     import core.stdc.string : strlen, memcmp;
@@ -286,7 +347,7 @@ do
 }
 
 /++ Ditto +/
-immutable(char)* toStringz(in string s) @trusted pure nothrow
+immutable(char)* toStringz(return scope string s) @trusted pure nothrow
 {
     if (s.empty) return "".ptr;
     /* Peek past end of s[], if it's 0, no conversion necessary.
@@ -3744,7 +3805,7 @@ unittest
 /++
     Returns `str` without its last character, if there is one. If `str`
     ends with `"\r\n"`, then both are removed. If `str` is empty, then
-    then it is returned unchanged.
+    it is returned unchanged.
 
     Params:
         str = string (must be valid UTF)
@@ -5281,7 +5342,8 @@ private void translateImpl(C1, T, C2, Buffer)(C1[] str,
                      to replace them with. It is generated by $(LREF makeTransTable).
         toRemove   = The characters to remove from the string.
   +/
-C[] translate(C = immutable char)(in char[] str, in char[] transTable, in char[] toRemove = null) @trusted pure nothrow
+C[] translate(C = immutable char)(scope const(char)[] str, scope const(char)[] transTable,
+              scope const(char)[] toRemove = null) @trusted pure nothrow
 if (is(Unqual!C == char))
 in
 {
@@ -5328,7 +5390,7 @@ do
  *
  * Use $(LREF makeTransTable) instead.
  */
-string makeTrans(in char[] from, in char[] to) @trusted pure nothrow
+string makeTrans(scope const(char)[] from, scope const(char)[] to) @trusted pure nothrow
 {
     return makeTransTable(from, to)[].idup;
 }
@@ -5352,7 +5414,7 @@ string makeTrans(in char[] from, in char[] to) @trusted pure nothrow
  * Returns:
  *      translation array
  */
-char[256] makeTransTable(in char[] from, in char[] to) @safe pure nothrow @nogc
+char[256] makeTransTable(scope const(char)[] from, scope const(char)[] to) @safe pure nothrow @nogc
 in
 {
     import std.ascii : isASCII;
@@ -5434,8 +5496,8 @@ do
         toRemove   = The characters to remove from the string.
         buffer     = An output range to write the contents to.
   +/
-void translate(C = immutable char, Buffer)(in char[] str, in char[] transTable,
-        in char[] toRemove, Buffer buffer) @trusted pure
+void translate(C = immutable char, Buffer)(scope const(char)[] str, scope const(char)[] transTable,
+        scope const(char)[] toRemove, Buffer buffer) @trusted pure
 if (is(Unqual!C == char) && isOutputRange!(Buffer, char))
 in
 {
@@ -6552,7 +6614,7 @@ if (isConvertibleToString!Range)
  * See_Also:
  *  $(LREF soundexer)
  */
-char[] soundex(const(char)[] str, char[] buffer = null)
+char[] soundex(scope const(char)[] str, char[] buffer = null)
     @safe pure nothrow
 in
 {

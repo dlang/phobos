@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
-Networking client functionality as provided by $(HTTP _curl.haxx.se/libcurl,
+Networking client functionality as provided by $(HTTP curl.haxx.se/libcurl,
 libcurl). The libcurl library must be installed on the system in order to use
 this module.
 
@@ -139,13 +139,13 @@ the onReceive callback. See $(LREF onReceiveHeader)/$(LREF onReceive) for more
 information. Finally the HTTP request is effected by calling perform(), which is
 synchronous.
 
-Source: $(PHOBOSSRC std/net/_curl.d)
+Source: $(PHOBOSSRC std/net/curl.d)
 
 Copyright: Copyright Jonas Drewsen 2011-2012
 License: $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors: Jonas Drewsen. Some of the SMTP code contributed by Jimmy Cao.
 
-Credits: The functionally is based on $(HTTP _curl.haxx.se/libcurl, libcurl).
+Credits: The functionally is based on $(HTTP curl.haxx.se/libcurl, libcurl).
          LibCurl is licensed under an MIT/X derivative license.
 */
 /*
@@ -374,7 +374,7 @@ CALLBACK_PARAMS = $(TABLE ,
   * ---
   * import std.net.curl;
   * // Two requests below will do the same.
-  * string content;
+  * char[] content;
   *
   * // Explicit connection provided
   * content = get!HTTP("dlang.org");
@@ -416,7 +416,7 @@ private template isCurlConn(Conn)
  * Example:
  * ----
  * import std.net.curl;
- * download("d-lang.appspot.com/testUrl2", "/tmp/downloaded-http-file");
+ * download("https://httpbin.org/get", "/tmp/downloaded-http-file");
  * ----
  */
 void download(Conn = AutoProtocol)(const(char)[] url, string saveToPath, Conn conn = Conn())
@@ -469,7 +469,7 @@ if (isCurlConn!Conn)
  * ----
  * import std.net.curl;
  * upload("/tmp/downloaded-ftp-file", "ftp.digitalmars.com/sieve.ds");
- * upload("/tmp/downloaded-http-file", "d-lang.appspot.com/testUrl2");
+ * upload("/tmp/downloaded-http-file", "https://httpbin.org/post");
  * ----
  */
 void upload(Conn = AutoProtocol)(string loadFromPath, const(char)[] url, Conn conn = Conn())
@@ -541,7 +541,7 @@ if (isCurlConn!Conn)
  * Example:
  * ----
  * import std.net.curl;
- * auto content = get("d-lang.appspot.com/testUrl2");
+ * auto content = get("https://httpbin.org/get");
  * ----
  *
  * Returns:
@@ -612,8 +612,8 @@ if ( isCurlConn!Conn && (is(T == char) || is(T == ubyte)) )
  * ----
  * import std.net.curl;
  *
- * auto content1 = post("d-lang.appspot.com/testUrl2", ["name1" : "value1", "name2" : "value2"]);
- * auto content2 = post("d-lang.appspot.com/testUrl2", [1,2,3,4]);
+ * auto content1 = post("https://httpbin.org/post", ["name1" : "value1", "name2" : "value2"]);
+ * auto content2 = post("https://httpbin.org/post", [1,2,3,4]);
  * ----
  *
  * Returns:
@@ -704,7 +704,7 @@ if (is(T == char) || is(T == ubyte))
  * Example:
  * ----
  * import std.net.curl;
- * auto content = put("d-lang.appspot.com/testUrl2",
+ * auto content = put("https://httpbin.org/put",
  *                      "Putting this data");
  * ----
  *
@@ -763,7 +763,7 @@ if ( isCurlConn!Conn && (is(T == char) || is(T == ubyte)) )
  * Example:
  * ----
  * import std.net.curl;
- * del("d-lang.appspot.com/testUrl2");
+ * del("https://httpbin.org/delete");
  * ----
  *
  * See_Also: $(LREF HTTP.Method)
@@ -833,7 +833,7 @@ if (isCurlConn!Conn)
  * ----
  * import std.net.curl;
  * auto http = HTTP();
- * options("d-lang.appspot.com/testUrl2", http);
+ * options("https://httpbin.org/headers", http);
  * writeln("Allow set to " ~ http.responseHeaders["Allow"]);
  * ----
  *
@@ -876,7 +876,7 @@ if (is(T == char) || is(T == ubyte))
  * Example:
  * ----
  * import std.net.curl;
- * trace("d-lang.appspot.com/testUrl1");
+ * trace("https://httpbin.org/headers");
  * ----
  *
  * Returns:
@@ -917,7 +917,7 @@ if (is(T == char) || is(T == ubyte))
  * Example:
  * ----
  * import std.net.curl;
- * connect("d-lang.appspot.com/testUrl1");
+ * connect("https://httpbin.org/headers");
  * ----
  *
  * Returns:
@@ -962,7 +962,7 @@ if (is(T == char) || is(T == ubyte))
  * ----
  * auto http = HTTP();
  * http.addRequestHeader("Content-Type", "application/json");
- * auto content = patch("d-lang.appspot.com/testUrl2", `{"title": "Patched Title"}`, http);
+ * auto content = patch("https://httpbin.org/patch", `{"title": "Patched Title"}`, http);
  * ----
  *
  * Returns:

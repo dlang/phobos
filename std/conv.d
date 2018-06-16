@@ -42,7 +42,7 @@ Authors:   $(HTTP digitalmars.com, Walter Bright),
            Adam D. Ruppe,
            Kenji Hara
 
-Source:    $(PHOBOSSRC std/_conv.d)
+Source:    $(PHOBOSSRC std/conv.d)
 
 */
 module std.conv;
@@ -1666,6 +1666,7 @@ if (!isImplicitlyConvertible!(S, T) && isAssociativeArray!S &&
     assert(a.to!(const(int)[int]).byPair.equal(a.byPair));
 }
 
+version(unittest)
 private void testIntegralToFloating(Integral, Floating)()
 {
     Integral a = 42;
@@ -1674,12 +1675,13 @@ private void testIntegralToFloating(Integral, Floating)()
     assert(a == to!Integral(b));
 }
 
+version(unittest)
 private void testFloatingToIntegral(Floating, Integral)()
 {
     bool convFails(Source, Target, E)(Source src)
     {
         try
-            auto t = to!Target(src);
+            cast(void) to!Target(src);
         catch (E)
             return true;
         return false;
@@ -4665,7 +4667,7 @@ if (is(T == struct) || Args.length == 1)
 }
 
 private @nogc pure nothrow @safe
-void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName)
+void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment)
 {
     assert(chunk.length >= typeSize, "emplace: Chunk size too small.");
     assert((cast(size_t) chunk.ptr) % typeAlignment == 0, "emplace: Chunk is not aligned.");
@@ -4795,7 +4797,7 @@ T emplace(T, Args...)(void[] chunk, auto ref Args args)
 if (is(T == class))
 {
     enum classSize = __traits(classInstanceSize, T);
-    testEmplaceChunk(chunk, classSize, classInstanceAlignment!T, T.stringof);
+    testEmplaceChunk(chunk, classSize, classInstanceAlignment!T);
     return emplace!T(cast(T)(chunk.ptr), args);
 }
 
@@ -4857,7 +4859,7 @@ Returns: A pointer to the newly constructed object.
 T* emplace(T, Args...)(void[] chunk, auto ref Args args)
 if (!is(T == class))
 {
-    testEmplaceChunk(chunk, T.sizeof, T.alignof, T.stringof);
+    testEmplaceChunk(chunk, T.sizeof, T.alignof);
     emplaceRef!(T, Unqual!T)(*cast(Unqual!T*) chunk.ptr, args);
     return cast(T*) chunk.ptr;
 }
@@ -6264,7 +6266,6 @@ private auto hexStrLiteral(String)(scope String hexData)
     auto r = result.ptr;
     r[0] = '"';
     size_t cnt = 0;
-    ubyte v;
     foreach (c; hexData)
     {
         if (c.isHexDigit)

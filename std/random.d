@@ -54,7 +54,7 @@ $(TR $(TD Traits) $(TD
 ))
 )
 
-$(RED Disclaimer:) The _random number generators and API provided in this
+$(RED Disclaimer:) The random number generators and API provided in this
 module are not designed to be cryptographically secure, and are therefore
 unsuitable for cryptographic or security-related purposes such as generating
 authentication tokens or network sequence numbers. For such needs, please use a
@@ -79,7 +79,7 @@ distributions, which skew a generator's output statistical
 distribution in various ways. So far the uniform distribution for
 integers and real numbers have been implemented.
 
-Source:    $(PHOBOSSRC std/_random.d)
+Source:    $(PHOBOSSRC std/random.d)
 
 Macros:
 
@@ -88,7 +88,7 @@ License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(HTTP erdani.org, Andrei Alexandrescu)
            Masahiro Nakagawa (Xorshift random generator)
            $(HTTP braingam.es, Joseph Rushton Wakeling) (Algorithm D for random sampling)
-           Ilya Yaroshenko (Mersenne Twister implementation, adapted from $(HTTPS github.com/libmir/mir-_random, mir-_random))
+           Ilya Yaroshenko (Mersenne Twister implementation, adapted from $(HTTPS github.com/libmir/mir-random, mir-random))
 Credits:   The entire random number library architecture is derived from the
            excellent $(HTTP open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2461.pdf, C++0X)
            random number facility proposed by Jens Maurer and contributed to by
@@ -332,7 +332,7 @@ template isSeedable(Rng)
     static assert(isSeedable!(seedRng));
 }
 
-@safe pure nothrow unittest
+@safe @nogc pure nothrow unittest
 {
     struct NoRng
     {
@@ -624,7 +624,7 @@ alias MinstdRand0 = LinearCongruentialEngine!(uint, 16_807, 0, 2_147_483_647);
 alias MinstdRand = LinearCongruentialEngine!(uint, 48_271, 0, 2_147_483_647);
 
 ///
-@safe unittest
+@safe @nogc unittest
 {
     // seed with a constant
     auto rnd0 = MinstdRand0(1);
@@ -637,7 +637,7 @@ alias MinstdRand = LinearCongruentialEngine!(uint, 48_271, 0, 2_147_483_647);
     n = rnd0.front; // different across runs
 }
 
-@safe unittest
+@safe @nogc unittest
 {
     import std.range;
     static assert(isForwardRange!MinstdRand);
@@ -652,7 +652,7 @@ alias MinstdRand = LinearCongruentialEngine!(uint, 48_271, 0, 2_147_483_647);
 
     // The correct numbers are taken from The Database of Integer Sequences
     // http://www.research.att.com/~njas/sequences/eisBTfry00128.txt
-    auto checking0 = [
+    enum ulong[20] checking0 = [
         16807UL,282475249,1622650073,984943658,1144108930,470211272,
         101027544,1457850878,1458777923,2007237709,823564440,1115438165,
         1784484492,74243042,114807987,1137522503,1441282327,16531729,
@@ -673,7 +673,7 @@ alias MinstdRand = LinearCongruentialEngine!(uint, 48_271, 0, 2_147_483_647);
     assert(rnd0.front == 1043618065);
 
     // Test MinstdRand
-    auto checking = [48271UL,182605794,1291394886,1914720637,2078669041,
+    enum ulong[6] checking = [48271UL,182605794,1291394886,1914720637,2078669041,
                      407355683];
     //auto rnd = MinstdRand(1);
     MinstdRand rnd;
@@ -699,11 +699,12 @@ alias MinstdRand = LinearCongruentialEngine!(uint, 48_271, 0, 2_147_483_647);
         assert(rnd1 == rnd2);
         // Enable next test when RNGs are reference types
         version(none) { assert(rnd1 !is rnd2); }
-        assert(rnd1.take(100).array() == rnd2.take(100).array());
+        for (auto i = 0; i < 100; i++, rnd1.popFront, rnd2.popFront)
+            assert(rnd1.front() == rnd2.front());
     }}
 }
 
-@safe unittest
+@safe @nogc unittest
 {
     auto rnd0 = MinstdRand0(MinstdRand0.modulus);
     auto n = rnd0.front;
@@ -849,7 +850,7 @@ Parameters for the generator.
        Implementation of the seeding mechanism, which
        can be used with an arbitrary `State` instance
     */
-    private static void seedImpl(UIntType value, ref State mtState)
+    private static void seedImpl(UIntType value, ref State mtState) @nogc
     {
         mtState.data[$ - 1] = value;
         static if (this.max != UIntType.max)
@@ -932,7 +933,7 @@ Parameters for the generator.
        Internal implementation of `popFront()`, which
        can be used with an arbitrary `State` instance
     */
-    private static void popFrontImpl(ref State mtState)
+    private static void popFrontImpl(ref State mtState) @nogc
     {
         /* This function blends two nominally independent
            processes: (i) calculation of the next random
@@ -1031,7 +1032,7 @@ alias Mt19937 = MersenneTwisterEngine!(uint, 32, 624, 397, 31,
                                        0xefc60000, 18, 1_812_433_253);
 
 ///
-@safe unittest
+@safe @nogc unittest
 {
     // seed with a constant
     Mt19937 gen;
@@ -1074,7 +1075,7 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
                                           0xfff7eee000000000, 43, 6_364_136_223_846_793_005);
 
 ///
-@safe unittest
+@safe @nogc unittest
 {
     // Seed with a constant
     auto gen = Mt19937_64(12345);
@@ -1126,7 +1127,7 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
     gen.seed(123_456_789U.repeat);
 }
 
-@safe pure nothrow unittest
+@safe @nogc pure nothrow unittest
 {
     uint a, b;
     {
@@ -1142,9 +1143,8 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
     assert(a != b);
 }
 
-@safe unittest
+@safe @nogc unittest
 {
-    import std.range;
     // Check .save works
     static foreach (Type; std.meta.AliasSeq!(Mt19937, Mt19937_64))
     {{
@@ -1154,21 +1154,22 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
         assert(gen1 == gen2);  // Danger, Will Robinson -- no opEquals for MT
         // Enable next test when RNGs are reference types
         version(none) { assert(gen1 !is gen2); }
-        assert(gen1.take(100).array() == gen2.take(100).array());
+        for (auto i = 0; i < 100; i++, gen1.popFront, gen2.popFront)
+            assert(gen1.front() == gen2.front());
     }}
 }
 
-@safe pure nothrow unittest //11690
+@safe @nogc pure nothrow unittest //11690
 {
     alias MT(UIntType, uint w) = MersenneTwisterEngine!(UIntType, w, 624, 397, 31,
                                                         0x9908b0df, 11, 0xffffffff, 7,
                                                         0x9d2c5680, 15,
                                                         0xefc60000, 18, 1812433253);
 
-    ulong[] expectedFirstValue = [3499211612uL, 3499211612uL,
+    static immutable ulong[] expectedFirstValue = [3499211612uL, 3499211612uL,
                                   171143175841277uL, 1145028863177033374uL];
 
-    ulong[] expected10kValue = [4123659995uL, 4123659995uL,
+    static immutable ulong[] expected10kValue = [4123659995uL, 4123659995uL,
                                 51991688252792uL, 3031481165133029945uL];
 
     static foreach (i, R; std.meta.AliasSeq!(MT!(uint, 32), MT!(ulong, 32), MT!(ulong, 48), MT!(ulong, 64)))
@@ -1407,7 +1408,7 @@ alias Xorshift192 = XorshiftEngine!(uint, 192, 2,  1,  4);  /// ditto
 alias Xorshift    = Xorshift128;                            /// ditto
 
 ///
-@safe unittest
+@safe @nogc unittest
 {
     // Seed with a constant
     auto rnd = Xorshift(1);
@@ -1419,7 +1420,7 @@ alias Xorshift    = Xorshift128;                            /// ditto
     num = rnd.front; // different across rnd
 }
 
-@safe unittest
+@safe @nogc unittest
 {
     import std.range;
     static assert(isForwardRange!Xorshift);
@@ -1431,7 +1432,7 @@ alias Xorshift    = Xorshift128;                            /// ditto
     static assert(Xorshift32.min == 1);
 
     // Result from reference implementation.
-    auto checking = [
+    static ulong[][] checking = [
         [2463534242UL, 901999875, 3371835698, 2675058524, 1053936272, 3811264849,
         472493137, 3856898176, 2131710969, 2312157505],
         [362436069UL, 2113136921, 19051112, 3010520417, 951284840, 1213972223,
@@ -1468,7 +1469,8 @@ alias Xorshift    = Xorshift128;                            /// ditto
         assert(rnd1 == rnd2);
         // Enable next test when RNGs are reference types
         version(none) { assert(rnd1 !is rnd2); }
-        assert(rnd1.take(100).array() == rnd2.take(100).array());
+        for (auto i = 0; i < 100; i++, rnd1.popFront, rnd2.popFront)
+            assert(rnd1.front() == rnd2.front());
     }
 }
 
@@ -1478,7 +1480,7 @@ alias Xorshift    = Xorshift128;                            /// ditto
  * object is compatible with all the pseudo-random number generators
  * available.  It is enabled only in unittest mode.
  */
-@safe unittest
+@safe @nogc unittest
 {
     foreach (Rng; PseudoRngTypes)
     {
@@ -1567,7 +1569,7 @@ how excellent the source of entropy is.
 }
 
 ///
-@safe unittest
+@safe @nogc unittest
 {
     auto rnd = Random(unpredictableSeed);
     auto n = rnd.front;
@@ -1584,7 +1586,7 @@ method being used.
 
 alias Random = Mt19937;
 
-@safe unittest
+@safe @nogc unittest
 {
     static assert(isUniformRNG!Random);
     static assert(isUniformRNG!(Random, uint));
@@ -1600,7 +1602,7 @@ and initialized to an unpredictable value for each thread.
 Returns:
 A singleton instance of the default random number generator
  */
-@property ref Random rndGen() @safe
+@property ref Random rndGen() @safe @nogc
 {
     import std.algorithm.iteration : map;
     import std.range : repeat;
@@ -2208,7 +2210,7 @@ do
 }
 
 ///
-@safe unittest
+@safe @nogc unittest
 {
     import std.math : feqrel;
 
@@ -2218,7 +2220,7 @@ do
     assert(rnd.uniform01!float.feqrel(0.524587) > 20);
 }
 
-@safe unittest
+@safe @nogc unittest
 {
     import std.meta;
     static foreach (UniformRNG; PseudoRngTypes)

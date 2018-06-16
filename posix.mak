@@ -82,7 +82,7 @@ ROOT_OF_THEM_ALL = generated
 ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
 DUB=dub
 TOOLS_DIR=../tools
-DSCANNER_HASH=032ac7e3ed5ea7df5e097badcfcd91d3cb8f18da
+DSCANNER_HASH=39496ede1a2c00674c4e04b6513be7cc9aee6cef
 DSCANNER_DIR=$(ROOT_OF_THEM_ALL)/dscanner-$(DSCANNER_HASH)
 
 # Set DRUNTIME name and full path
@@ -120,19 +120,20 @@ else
 endif
 
 # Set DFLAGS
-DFLAGS=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -dip25 $(MODEL_FLAG) $(PIC) -transition=complex
+DFLAGS=
+override DFLAGS+=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -dip25 $(MODEL_FLAG) $(PIC) -transition=complex
 ifeq ($(BUILD),debug)
-	DFLAGS += -g -debug
+override DFLAGS += -g -debug
 else
-	DFLAGS += -O -release
+override DFLAGS += -O -release
 endif
 
 ifdef ENABLE_COVERAGE
-DFLAGS  += -cov
+override DFLAGS  += -cov
 endif
 ifneq (,$(TZ_DATABASE_DIR))
 $(file > /tmp/TZDatabaseDirFile, ${TZ_DATABASE_DIR})
-DFLAGS += -version=TZDatabaseDir -J/tmp/
+override DFLAGS += -version=TZDatabaseDir -J/tmp/
 endif
 
 UDFLAGS=-unittest
@@ -218,19 +219,11 @@ PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
 # Modules in std (including those in packages)
 STD_MODULES=$(call P2MODULES,$(STD_PACKAGES))
 
-# OS-specific D modules
-EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
-EXTRA_MODULES_OSX := $(addprefix std/c/osx/, socket)
-EXTRA_MODULES_FREEBSD := $(addprefix std/c/freebsd/, socket)
-EXTRA_MODULES_WIN32 := $(addprefix std/c/windows/, com stat windows		\
-		winsock) $(addprefix std/windows/, charset syserror)
-
 # Other D modules that aren't under std/
 EXTRA_MODULES_COMMON := $(addprefix etc/c/,curl odbc/sql odbc/sqlext \
-  odbc/sqltypes odbc/sqlucode sqlite3 zlib) $(addprefix std/c/,fenv locale \
-  math process stdarg stddef stdio stdlib string time wcharh)
+  odbc/sqltypes odbc/sqlucode sqlite3 zlib)
 
-EXTRA_DOCUMENTABLES := $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_WIN32) $(EXTRA_MODULES_COMMON)
+EXTRA_DOCUMENTABLES := $(EXTRA_MODULES_COMMON)
 
 EXTRA_MODULES_INTERNAL := $(addprefix std/, \
 	algorithm/internal \
@@ -257,8 +250,7 @@ ALL_D_FILES = $(addsuffix .d, $(STD_MODULES) $(EXTRA_MODULES_COMMON) \
   $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_OSX) $(EXTRA_MODULES_FREEBSD) \
   $(EXTRA_MODULES_WIN32) $(EXTRA_MODULES_INTERNAL)) \
   std/internal/windows/advapi32.d \
-  std/windows/registry.d std/c/linux/pthread.d std/c/linux/termios.d \
-  std/c/linux/tipc.d
+  std/windows/registry.d
 
 # C files to be part of the build
 C_MODULES = $(addprefix etc/c/zlib/, adler32 compress crc32 deflate	\
@@ -348,7 +340,7 @@ UT_D_OBJS:=$(addprefix $(ROOT)/unittest/,$(addsuffix .o,$(D_MODULES)))
 $(UT_D_OBJS): $(ALL_D_FILES)
 $(UT_D_OBJS): $(ROOT)/unittest/%.o: %.d
 	@mkdir -p $(dir $@)
-	$(DMD) $(DFLAGS) $(UDFLAGS) $(aa[$(subst /,.,$(basename $<))]) -c -of$@ $<
+	$(DMD) $(DFLAGS) $(UDFLAGS) -c -of$@ $<
 
 ifneq (1,$(SHARED))
 

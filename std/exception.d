@@ -37,7 +37,7 @@ $(TR $(TD Other) $(TD
     License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0)
     Authors:   $(HTTP erdani.org, Andrei Alexandrescu) and
                $(HTTP jmdavisprog.com, Jonathan M Davis)
-    Source:    $(PHOBOSSRC std/_exception.d)
+    Source:    $(PHOBOSSRC std/exception.d)
 
  +/
 module std.exception;
@@ -508,7 +508,7 @@ T enforce(T)(T value, lazy Throwable ex)
     assertThrown!ConvException(convEnforce(false, "blah"));
 }
 
-private void bailOut(E : Throwable = Exception)(string file, size_t line, in char[] msg)
+private void bailOut(E : Throwable = Exception)(string file, size_t line, scope const(char)[] msg)
 {
     static if (is(typeof(new E(string.init, string.init, size_t.init))))
     {
@@ -1088,6 +1088,10 @@ Params:
     source = The source object
     target = The target object
 
+Bugs:
+    The function is explicitly annotated `@nogc` because inference could fail,
+    see $(LINK2 https://issues.dlang.org/show_bug.cgi?id=17084, issue 17084).
+
 Returns: `true` if `source`'s representation embeds a pointer
 that points to `target`'s representation or somewhere inside
 it.
@@ -1118,7 +1122,7 @@ internal pointers. This should only be done as an assertive test,
 as the language is free to assume objects don't have internal pointers
 (TDPL 7.1.3.5).
 */
-bool doesPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @trusted pure nothrow
+bool doesPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @nogc @trusted pure nothrow
 if (__traits(isRef, source) || isDynamicArray!S ||
     isPointer!S || is(S == class))
 {
@@ -1138,8 +1142,8 @@ if (__traits(isRef, source) || isDynamicArray!S ||
     }
     else static if (isStaticArray!S)
     {
-        foreach (size_t i; 0 .. S.length)
-            if (doesPointTo(source[i], target)) return true;
+        foreach (ref s; source)
+            if (doesPointTo(s, target)) return true;
         return false;
     }
     else static if (isDynamicArray!S)
@@ -1298,6 +1302,35 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
     // can be done:
     auto aLoc = cast(ubyte[__traits(classInstanceSize, C)]*) a;
     assert(b.doesPointTo(*aLoc)); // b points to where a is pointing
+}
+
+
+version(unittest)
+{
+    // 17084 : the bug doesn't happen if these declarations are
+    // in the unittest block (static or not).
+    private struct Page17084
+    {
+        URL17084 url;
+        int opCmp(P)(P) { return 0; }
+        int opCmp(P)(shared(P)) shared { return 0; }
+    }
+
+    private struct URL17084
+    {
+        int[] queryParams;
+        string toString()() const { return ""; }
+        alias toString this;
+    }
+}
+
+@system unittest // Bugzilla 17084
+{
+    import std.algorithm.sorting : sort;
+    Page17084[] s;
+    sort(s);
+    shared(Page17084)[] p;
+    sort(p);
 }
 
 @system unittest

@@ -3,7 +3,7 @@
 /++
     Functions which operate on ASCII characters.
 
-    All of the functions in std._ascii accept Unicode characters but
+    All of the functions in std.ascii accept Unicode characters but
     effectively ignore them if they're not ASCII. All `isX` functions return
     `false` for non-ASCII characters, and all `toX` functions do nothing
     to non-ASCII characters.
@@ -56,7 +56,7 @@ $(TR $(TD Enums) $(TD
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   $(HTTP digitalmars.com, Walter Bright) and
                $(HTTP jmdavisprog.com, Jonathan M Davis)
-    Source:    $(PHOBOSSRC std/_ascii.d)
+    Source:    $(PHOBOSSRC std/ascii.d)
   +/
 module std.ascii;
 

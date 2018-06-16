@@ -39,7 +39,7 @@
  * License: $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors: Christopher E. Miller, $(HTTP klickverbot.at, David Nadlinger),
  *      $(HTTP thecybershadow.net, Vladimir Panteleev)
- * Source:  $(PHOBOSSRC std/_socket.d)
+ * Source:  $(PHOBOSSRC std/socket.d)
  */
 
 module std.socket;
@@ -420,7 +420,7 @@ class Protocol
     }
 
     /** Returns: false on failure */
-    bool getProtocolByName(in char[] name) @trusted nothrow
+    bool getProtocolByName(scope const(char)[] name) @trusted nothrow
     {
         protoent* proto;
         proto = getprotobyname(name.tempCString());
@@ -526,7 +526,7 @@ class Service
      * If a protocol name is omitted, any protocol will be matched.
      * Returns: false on failure.
      */
-    bool getServiceByName(in char[] name, in char[] protocolName = null) @trusted nothrow
+    bool getServiceByName(scope const(char)[] name, scope const(char)[] protocolName = null) @trusted nothrow
     {
         servent* serv;
         serv = getservbyname(name.tempCString(), protocolName.tempCString());
@@ -538,7 +538,7 @@ class Service
 
 
     /// ditto
-    bool getServiceByPort(ushort port, in char[] protocolName = null) @trusted nothrow
+    bool getServiceByPort(ushort port, scope const(char)[] protocolName = null) @trusted nothrow
     {
         servent* serv;
         serv = getservbyport(port, protocolName.tempCString());
@@ -708,7 +708,7 @@ class InternetHost
      * Resolve host name.
      * Returns: false if unable to resolve.
      */
-    bool getHostByName(in char[] name) @trusted
+    bool getHostByName(scope const(char)[] name) @trusted
     {
         static if (is(typeof(gethostbyname_r)))
         {
@@ -758,7 +758,7 @@ class InternetHost
      * dotted-decimal form $(I a.b.c.d).
      * Returns: false if unable to resolve.
      */
-    bool getHostByAddr(in char[] addr) @trusted
+    bool getHostByAddr(scope const(char)[] addr) @trusted
     {
         return getHost!q{
             auto x = inet_addr(param.tempCString());
@@ -896,16 +896,16 @@ private string formatGaiError(int err) @trusted
  *     AddressFamily.INET6);
  * ---
  */
-AddressInfo[] getAddressInfo(T...)(in char[] node, T options)
+AddressInfo[] getAddressInfo(T...)(scope const(char)[] node, scope T options)
 {
     const(char)[] service = null;
     addrinfo hints;
     hints.ai_family = AF_UNSPEC;
 
-    foreach (option; options)
+    foreach (i, option; options)
     {
         static if (is(typeof(option) : const(char)[]))
-            service = option;
+            service = options[i];
         else
         static if (is(typeof(option) == AddressInfoFlags))
             hints.ai_flags |= option;
@@ -941,7 +941,7 @@ AddressInfo[] getAddressInfo(T...)(in char[] node, T options)
     }), "getAddressInfo breaks @safe");
 }
 
-private AddressInfo[] getAddressInfoImpl(in char[] node, in char[] service, addrinfo* hints) @system
+private AddressInfo[] getAddressInfoImpl(scope const(char)[] node, scope const(char)[] service, addrinfo* hints) @system
 {
         import std.array : appender;
 
@@ -1017,7 +1017,7 @@ private AddressInfo[] getAddressInfoImpl(in char[] node, in char[] service, addr
 }
 
 
-private ushort serviceToPort(in char[] service)
+private ushort serviceToPort(scope const(char)[] service)
 {
     if (service == "")
         return InternetAddress.PORT_ANY;
@@ -1054,7 +1054,7 @@ private ushort serviceToPort(in char[] service)
  *     writefln("  Lookup failed: %s", e.msg);
  * ---
  */
-Address[] getAddress(in char[] hostname, in char[] service = null)
+Address[] getAddress(scope const(char)[] hostname, scope const(char)[] service = null)
 {
     if (getaddrinfoPointer && freeaddrinfoPointer)
     {
@@ -1071,7 +1071,7 @@ Address[] getAddress(in char[] hostname, in char[] service = null)
 }
 
 /// ditto
-Address[] getAddress(in char[] hostname, ushort port)
+Address[] getAddress(scope const(char)[] hostname, ushort port)
 {
     if (getaddrinfoPointer && freeaddrinfoPointer)
         return getAddress(hostname, to!string(port));
@@ -1148,7 +1148,7 @@ Address[] getAddress(in char[] hostname, ushort port)
  * }
  * ---
  */
-Address parseAddress(in char[] hostaddr, in char[] service = null)
+Address parseAddress(scope const(char)[] hostaddr, scope const(char)[] service = null)
 {
     if (getaddrinfoPointer && freeaddrinfoPointer)
         return getAddressInfo(hostaddr, service, AddressInfoFlags.NUMERICHOST)[0].address;
@@ -1157,7 +1157,7 @@ Address parseAddress(in char[] hostaddr, in char[] service = null)
 }
 
 /// ditto
-Address parseAddress(in char[] hostaddr, ushort port)
+Address parseAddress(scope const(char)[] hostaddr, ushort port)
 {
     if (getaddrinfoPointer && freeaddrinfoPointer)
         return parseAddress(hostaddr, to!string(port));
@@ -1516,7 +1516,7 @@ public:
      *          object.
      *   port = port number, may be `PORT_ANY`.
      */
-    this(in char[] addr, ushort port)
+    this(scope const(char)[] addr, ushort port)
     {
         uint uiaddr = parse(addr);
         if (ADDR_NONE == uiaddr)
@@ -1634,7 +1634,7 @@ public:
      * Returns: If the string is not a legitimate IPv4 address,
      * `ADDR_NONE` is returned.
      */
-    static uint parse(in char[] addr) @trusted nothrow
+    static uint parse(scope const(char)[] addr) @trusted nothrow
     {
         return ntohl(inet_addr(addr.tempCString()));
     }
@@ -1786,7 +1786,7 @@ public:
      *             or a host name which will be resolved using `getAddressInfo`.
      *   service = (optional) service name.
      */
-    this(in char[] addr, in char[] service = null) @trusted
+    this(scope const(char)[] addr, scope const(char)[] service = null) @trusted
     {
         auto results = getAddressInfo(addr, service, AddressFamily.INET6);
         assert(results.length && results[0].family == AddressFamily.INET6);
@@ -1800,7 +1800,7 @@ public:
      *          or a host name which will be resolved using `getAddressInfo`.
      *   port = port number, may be `PORT_ANY`.
      */
-    this(in char[] addr, ushort port)
+    this(scope const(char)[] addr, ushort port)
     {
         if (port == PORT_ANY)
             this(addr);
@@ -1846,7 +1846,7 @@ public:
      * address.
      * Throws: `SocketException` on error.
      */
-    static ubyte[16] parse(in char[] addr) @trusted
+    static ubyte[16] parse(scope const(char)[] addr) @trusted
     {
         // Although we could use inet_pton here, it's only available on Windows
         // versions starting with Vista, so use getAddressInfo with NUMERICHOST
@@ -1916,7 +1916,7 @@ version(StdDdoc)
         private this() pure nothrow @nogc {}
 
         /// Construct a new `UnixAddress` from the specified path.
-        this(in char[] path) { }
+        this(scope const(char)[] path) { }
 
         /**
          * Construct a new `UnixAddress`.
@@ -1981,7 +1981,7 @@ static if (is(sockaddr_un))
             return _nameLen;
         }
 
-        this(in char[] path) @trusted pure
+        this(scope const(char)[] path) @trusted pure
         {
             enforce(path.length <= sun.sun_path.sizeof, new SocketParameterException("Path too long"));
             sun.sun_family = AddressFamily.UNIX;
@@ -2668,7 +2668,7 @@ public:
 
 
     /// ditto
-    this(AddressFamily af, SocketType type, in char[] protocolName) @trusted
+    this(AddressFamily af, SocketType type, scope const(char)[] protocolName) @trusted
     {
         protoent* proto;
         proto = getprotobyname(protocolName.tempCString());
@@ -2889,10 +2889,8 @@ public:
 
     /**
      * Immediately drop any connections and release socket resources.
-     * Calling `shutdown` before `close` is recommended for
-     * connection-oriented sockets. The `Socket` object is no longer
-     * usable after `close`.
-     * Calling shutdown() before this is recommended
+     * The `Socket` object is no longer usable after `close`.
+     * Calling `shutdown` before `close` is recommended
      * for connection-oriented sockets.
      */
     void close() @trusted nothrow @nogc

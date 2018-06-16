@@ -3,8 +3,8 @@
 /**
 Classes and functions for handling and transcoding between various encodings.
 
-For cases where the _encoding is known at compile-time, functions are provided
-for arbitrary _encoding and decoding of characters, arbitrary transcoding
+For cases where the encoding is known at compile-time, functions are provided
+for arbitrary encoding and decoding of characters, arbitrary transcoding
 between strings of different type, as well as validation and sanitization.
 
 Encodings currently supported are UTF-8, UTF-16, UTF-32, ASCII, ISO-8859-1
@@ -77,7 +77,7 @@ $(TR $(TD Exceptions) $(TD
 ))
 )
 
-For cases where the _encoding is not known at compile-time, but is
+For cases where the encoding is not known at compile-time, but is
 known at run-time, the abstract class $(LREF EncodingScheme)
 and its subclasses is provided.  To construct a run-time encoder/decoder,
 one does e.g.
@@ -92,12 +92,12 @@ WINDOWS-1251, WINDOWS-1252, UTF-8, and (on little-endian architectures)
 UTF-16LE and UTF-32LE; or (on big-endian architectures) UTF-16BE and UTF-32BE.
 
 This library provides a mechanism whereby other modules may add $(LREF
-EncodingScheme) subclasses for any other _encoding.
+EncodingScheme) subclasses for any other encoding.
 
 Copyright: Copyright Janice Caron 2008 - 2009.
 License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   Janice Caron
-Source:    $(PHOBOSSRC std/_encoding.d)
+Source:    $(PHOBOSSRC std/encoding.d)
 */
 /*
          Copyright Janice Caron 2008 - 2009.

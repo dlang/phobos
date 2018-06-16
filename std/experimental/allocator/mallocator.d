@@ -2,7 +2,7 @@
 /**
 The C heap allocator.
 
-Source: $(PHOBOSSRC std/experimental/allocator/_mallocator.d)
+Source: $(PHOBOSSRC std/experimental/allocator/mallocator.d)
 */
 module std.experimental.allocator.mallocator;
 import std.experimental.allocator.common;
@@ -140,7 +140,7 @@ version (Windows)
         @nogc nothrow
         private void* _aligned_malloc(size_t size, size_t alignment)
         {
-            import std.c.stdlib : malloc;
+            import core.stdc.stdlib : malloc;
             size_t offset = alignment + size_t.sizeof * 2 - 1;
 
             // unaligned chunk
@@ -162,8 +162,8 @@ version (Windows)
         @nogc nothrow
         private void* _aligned_realloc(void* ptr, size_t size, size_t alignment)
         {
-            import std.c.stdlib : free;
-            import std.c.string : memcpy;
+            import core.stdc.stdlib : free;
+            import core.stdc.string : memcpy;
 
             if (!ptr) return _aligned_malloc(size, alignment);
 
@@ -189,7 +189,7 @@ version (Windows)
         @nogc nothrow
         private void _aligned_free(void *ptr)
         {
-            import std.c.stdlib : free;
+            import core.stdc.stdlib : free;
             if (!ptr) return;
             AlignInfo* head = AlignInfo(ptr);
             free(head.basePtr);
