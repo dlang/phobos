@@ -299,7 +299,14 @@ private:
                 if (targetType != typeid(T))
                     continue;
 
-                static if (is(typeof(*cast(T*) target = *src)) ||
+                // SPECIAL NOTE: variant only will ever create a new value with
+                // tryPutting (effectively), and T is ALWAYS the same type of
+                // A, but with different modifiers (and a limited set of
+                // implicit targets). So this checks to see if we can construct
+                // a T from A, knowing that prerequisite. This handles issues
+                // where the type contains some constant data aside from the
+                // modifiers on the type itself.
+                static if (is(typeof(delegate T() {return *src;})) ||
                            is(T ==        const(U), U) ||
                            is(T ==       shared(U), U) ||
                            is(T == shared const(U), U) ||
@@ -3002,4 +3009,22 @@ if (isAlgebraic!VariantType && Handler.length > 0)
     // Bugzilla 15827
     static struct Foo15827 { Variant v; this(Foo15827 v) {} }
     Variant v = Foo15827.init;
+}
+
+@system unittest
+{
+    // Bugzilla 18934
+    static struct S
+    {
+        const int x;
+    }
+
+    auto s = S(42);
+    Variant v = s;
+    auto s2 = v.get!S;
+    assert(s2.x == 42);
+    Variant v2 = v; // support copying from one variant to the other
+    v2 = S(2);
+    v = v2;
+    assert(v.get!S.x == 2);
 }
