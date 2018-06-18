@@ -4012,6 +4012,27 @@ version(unittest)
     assert(s == "shared(std.format.C)");
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=19003
+@safe unittest
+{
+    struct S
+    {
+        int i;
+
+        @disable this();
+
+        invariant { assert(this.i); }
+
+        this(int i) @safe in { assert(i); } do { this.i = i; }
+
+        string toString() { return "S"; }
+    }
+
+    S s = S(1);
+
+    format!"%s"(s);
+}
+
 // https://issues.dlang.org/show_bug.cgi?id=7879
 @safe unittest
 {
