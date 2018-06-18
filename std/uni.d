@@ -9013,8 +9013,8 @@ if (isSomeString!S || (isRandomAccessRange!S && hasLength!S && hasSlicing!S && i
         if (idx == ushort.max)
             continue;
         auto result = appender!(ElementEncodingType!S[])();
-        result.put(s[0 .. i]);
         result.reserve(s.length);
+        result.put(s[0 .. i]);
         foreach (dchar c; s[i .. $].byDchar)
         {
             if (c.isASCII)
