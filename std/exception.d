@@ -1847,7 +1847,7 @@ expression.
 }
 
 version(unittest) package
-@property void assertCTFEable(alias dg)()
+void assertCTFEable(alias dg)()
 {
     static assert({ cast(void) dg(); return true; }());
     cast(void) dg();
