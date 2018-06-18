@@ -262,6 +262,15 @@ if (!is(Unqual!T == bool))
     import std.exception : enforce;
     import std.typecons : RefCounted, RefCountedAutoInitialize;
 
+    shared static this()
+    {
+        // issue 18996
+        static if (is(T == string) || is(T == wstring) || is(T == dstring))
+        {
+            GC.initialize();
+        }
+    }
+
     // This structure is not copyable.
     private struct Payload
     {
