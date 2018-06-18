@@ -2955,7 +2955,7 @@ if (isDynamicArray!A)
      * Params:
      *     newCapacity = the capacity the `Appender` should have
      */
-    void reserve(size_t newCapacity) @safe pure nothrow
+    void reserve(size_t newCapacity) @safe nothrow
     {
         if (_data)
         {
@@ -2967,6 +2967,7 @@ if (isDynamicArray!A)
             ensureAddable(newCapacity);
         }
     }
+
 
     /**
      * Returns: the capacity of the array (the maximum number of elements the
@@ -2990,7 +2991,7 @@ if (isDynamicArray!A)
     }
 
     // ensure we can add nelems elements, resizing as necessary
-    private void ensureAddable(size_t nelems) @trusted pure nothrow
+    private void ensureAddable(size_t nelems) @trusted nothrow
     {
         if (!_data)
             _data = new Data;
@@ -3337,6 +3338,69 @@ if (isDynamicArray!A)
     const(R)[1] r;
     app.put(r[0]);
     app.put(r[]);
+}
+
+@system unittest // Issue 13300
+{
+    // Issue 13300: appender must work with non pure postblit
+    import std.array : array;
+
+    struct Simple13300
+    {
+        @disable this();
+        this(this) { import std.stdio : stdout; stdout; }  // Not pure!
+
+        private:
+        this(int tmp) { }
+    }
+
+    struct Range13300
+    {
+        @property front() { return Simple13300(0); }
+        void popFront() { count++; }
+        @property empty() { return count > 3; }
+        size_t count;
+    }
+
+    Range13300 r;
+    assert(r.array.length == 4);
+}
+
+@safe pure unittest // Issue 13300.
+{
+    // Issue 13300: appender must work with pure code as well
+    import std.array : array;
+
+    struct Simple13300(bool disableDefaultCtor)
+    {
+        pure:
+        static if (disableDefaultCtor) @disable this();
+        this(this) {  }
+
+        private:
+        this(int tmp) { }
+    }
+
+    struct Range13300(bool disableDefaultCtor)
+    {
+        pure:
+
+        @property front() { return Simple13300!disableDefaultCtor(0); }
+        void popFront() { count++; }
+        @property empty() { return count > 3; }
+        size_t count;
+    }
+
+    // Test ensureAddable workaround for disable @this().
+    {
+        Range13300!true r;
+        assert(r.array.length == 4);
+    }
+
+    {
+        Range13300!false r;
+        assert(r.array.length == 4);
+    }
 }
 
 //Calculates an efficient growth scheme based on the old capacity
