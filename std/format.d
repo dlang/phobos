@@ -3769,38 +3769,46 @@ private template hasToString(T, Char)
     static assert(hasToString!(L, char) == 0);
 }
 
+// Like NullSink, but toString() isn't even called at all. Used to test the format string.
+private struct NoOpSink
+{
+    void put(E)(scope const E) pure @safe @nogc nothrow {}
+}
+
 // object formatting with toString
 private void formatObject(Writer, T, Char)(ref Writer w, ref T val, const ref FormatSpec!Char f)
 if (hasToString!(T, Char))
 {
     enum overload = hasToString!(T, Char);
 
+    enum noop = is(Writer == NoOpSink);
+
     static if (overload == 6)
     {
-        val.toString(w, f);
+        static if (!noop) val.toString(w, f);
     }
     else static if (overload == 5)
     {
-        val.toString(w);
+        static if (!noop) val.toString(w);
     }
     // not using the overload enum to not break badly defined toString overloads
     // e.g. defining the FormatSpec as ref and not const ref led this function
     // to ignore that toString overload
     else static if (is(typeof(val.toString((scope const(char)[] s){}, f))))
     {
-        val.toString((scope const(char)[] s) { put(w, s); }, f);
+        static if (!noop) val.toString((scope const(char)[] s) { put(w, s); }, f);
     }
     else static if (is(typeof(val.toString((scope const(char)[] s){}, "%s"))))
     {
-        val.toString((const(char)[] s) { put(w, s); }, f.getCurFmtStr());
+        static if (!noop) val.toString((const(char)[] s) { put(w, s); }, f.getCurFmtStr());
     }
     else static if (is(typeof(val.toString((scope const(char)[] s){}))))
     {
-        val.toString((scope const(char)[] s) { put(w, s); });
+        static if (!noop) val.toString((scope const(char)[] s) { put(w, s); });
     }
     else static if (is(typeof(val.toString()) S) && isSomeString!S)
     {
-        put(w, val.toString());
+        static if (!noop) put(w, val.toString());
     }
     else
     {
