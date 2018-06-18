@@ -6201,8 +6201,14 @@ deprecated
 // Used to check format strings are compatible with argument types
 package static const checkFormatException(alias fmt, Args...) =
 {
+    import std.conv : text;
+
     try
-        .format(fmt, Args.init);
+    {
+        auto n = .formattedWrite(NoOpSink(), fmt, Args.init);
+
+        enforceFmt(n == Args.length, text("Orphan format arguments: args[", n, "..", Args.length, "]"));
+    }
     catch (Exception e)
         return (e.msg == ctfpMessage) ? null : e;
     return null;
