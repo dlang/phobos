@@ -2967,7 +2967,7 @@ if (isDynamicArray!A)
             ensureAddable(newCapacity);
         }
     }
-    
+
 
     /**
      * Returns: the capacity of the array (the maximum number of elements the
@@ -3340,14 +3340,14 @@ if (isDynamicArray!A)
     app.put(r[]);
 }
 
-unittest // Issue 13300
-{ 
+@system unittest // Issue 13300
+{
     // Issue 13300: appender must work with non pure postblit
     import std.array : array;
 
     struct Simple13300
     {
-        @disable this(); 
+        @disable this();
         this(this) { import std.stdio : stdout; stdout; }  // Not pure!
 
         private:
@@ -3370,11 +3370,11 @@ unittest // Issue 13300
 {
     // Issue 13300: appender must work with pure code as well
     import std.array : array;
-   
+
     struct Simple13300(bool disableDefaultCtor)
     {
         pure:
-        static if(disableDefaultCtor) @disable this();
+        static if (disableDefaultCtor) @disable this();
         this(this) {  }
 
         private:
