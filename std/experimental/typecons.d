@@ -821,10 +821,7 @@ else
 {
     struct Final
     {
-        import std.typecons : Proxy;
-
         private T final_value;
-        mixin Proxy!final_value;
 
         /**
          * Construction is forwarded to the underlying type.
@@ -1008,9 +1005,6 @@ pure nothrow @safe unittest
     auto sboth = Final!S(42, "foo", 3.14);
     assert(sboth.i == 42);
 
-    sboth.i = 24;
-    assert(sboth.i == 24);
-
     struct NestedS
     {
         int i;
@@ -1021,7 +1015,7 @@ pure nothrow @safe unittest
     static assert(!__traits(compiles, Final!NestedS(6)));
     auto s = makeFinal(NestedS(6));
     assert(s.i == 6);
-    assert(s.get == 30);
+    assert(s.get == 48);
 
     class NestedC
     {
@@ -1034,7 +1028,7 @@ pure nothrow @safe unittest
 
     auto c = makeFinal(new NestedC(6));
     assert(c.i == 6);
-    assert(c.get == 30);
+    assert(c.get == 48);
 }
 
 pure nothrow @safe unittest
