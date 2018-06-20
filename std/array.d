@@ -219,6 +219,34 @@ if (isPointer!Range && isIterable!(PointerTarget!Range) && !isNarrowString!Range
     assert(a.length == 5);
 }
 
+version(unittest)
+    private extern(C) void _d_delarray_t(void[] *p, TypeInfo_Struct ti);
+
+@system unittest
+{
+    // Issue 18995
+    int nAlive = 0;
+    struct S
+    {
+        bool alive;
+        this(int) { alive = true; ++nAlive; }
+        this(this) { nAlive += alive; }
+        ~this() { nAlive -= alive; alive = false; }
+    }
+
+    import std.algorithm.iteration : map;
+    import std.range : iota;
+
+    auto arr = iota(3).map!(a => S(a)).array;
+    assert(nAlive == 3);
+
+    // No good way to ensure the GC frees this, just call the lifetime function
+    // directly. If delete wasn't deprecated, this is what delete would do.
+    _d_delarray_t(cast(void[]*)&arr, typeid(S));
+
+    assert(nAlive == 0);
+}
+
 /**
 Convert a narrow string to an array type that fully supports random access.
 This is handled as a special case and always returns an array of `dchar`
@@ -698,6 +726,9 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I))
     }
 }
 
+// from rt/lifetime.d
+private extern(C) void[] _d_newarrayU(const TypeInfo ti, size_t length) pure nothrow;
+
 private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
 {
     static assert(I.length <= nDimensions!T,
@@ -737,18 +768,24 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
         }
         else
         {
-            import core.memory : GC;
             import core.stdc.string : memset;
 
-            import core.checkedint : mulu;
-            bool overflow;
-            const nbytes = mulu(size, E.sizeof, overflow);
-            if (overflow) assert(0);
+            /+
+              NOTES:
+              _d_newarrayU is part of druntime, and creates an uninitialized
+              block, just like GC.malloc. However, it also sets the appropriate
+              bits, and sets up the block as an appendable array of type E[],
+              which will inform the GC how to destroy the items in the block
+              when it gets collected.
 
-            auto ptr = cast(E*) GC.malloc(nbytes, blockAttribute!E);
+              _d_newarrayU returns a void[], but with the length set according
+              to E.sizeof.
+            +/
+            *(cast(void[]*)&ret) = _d_newarrayU(typeid(E[]), size);
             static if (minimallyInitialized && hasIndirections!E)
-                memset(ptr, 0, nbytes);
-            ret = ptr[0 .. size];
+                // _d_newarrayU would have asserted if the multiplication below
+                // had overflowed, so we don't have to check it again.
+                memset(ret.ptr, 0, E.sizeof * ret.length);
         }
     }
     else static if (I.length > 1)
@@ -796,7 +833,15 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
         }
         ~this()
         {
-            assert(p != null);
+            // note, this assert is invalid -- a struct should always be able
+            // to run its dtor on the .init value, I'm leaving it here
+            // commented out because the original test case had it. I'm not
+            // sure what it's trying to prove.
+            //
+            // What happens now that minimallyInitializedArray adds the
+            // destructor run to the GC, is that this assert would fire in the
+            // GC, which triggers an invalid memory operation.
+            //assert(p != null);
         }
     }
     auto a = minimallyInitializedArray!(S[])(1);
