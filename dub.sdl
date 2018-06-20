@@ -1,0 +1,6 @@
+name "phobos"
+license "BSL-1.0"
+copyright "Copyright © 1999-2018, The D Language Foundation"
+targetType "library"
+sourcePaths "std" "etc"
+targetPath "generated"
