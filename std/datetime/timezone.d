@@ -66,7 +66,8 @@ public:
 
     /++
         The name of the time zone per the TZ Database. This is the name used to
-        get a $(LREF TimeZone) by name with `TimeZone.getTimeZone`.
+        get a $(LREF TimeZone) by name with `getTimeZone` on one of the 
+        implementations of 'TimeZone'.
 
         See_Also:
             $(HTTP en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
@@ -620,7 +621,8 @@ public:
     {
         /++
             The name of the time zone per the TZ Database. This is the name used
-            to get a $(LREF TimeZone) by name with `TimeZone.getTimeZone`.
+            to get a $(LREF TimeZone) by name with `getTimeZone` on one of the 
+            'TimeZone' implementations.
 
             Note that this always returns the empty string. This is because time
             zones cannot be uniquely identified by the attributes given by the
@@ -1939,10 +1941,8 @@ private:
     files on disk) on Windows by providing the TZ Database files and telling
     `PosixTimeZone.getTimeZone` where the directory holding them is.
 
-    To get a `PosixTimeZone`, either call `PosixTimeZone.getTimeZone`
-    (which allows specifying the location the time zone files) or call
-    `TimeZone.getTimeZone` (which will give a `PosixTimeZone` on Posix
-    systems and a $(LREF WindowsTimeZone) on Windows systems).
+    To get a `PosixTimeZone`, call `PosixTimeZone.getTimeZone`
+    (which allows specifying the location the time zone files).
 
     Note:
         Unless your system's local time zone deals with leap seconds (which is
@@ -2913,10 +2913,7 @@ version(StdDdoc)
 
         `WindowsTimeZone` does not exist on Posix systems.
 
-        To get a `WindowsTimeZone`, either call
-        `WindowsTimeZone.getTimeZone` or call `TimeZone.getTimeZone`
-        (which will give a $(LREF PosixTimeZone) on Posix systems and a
-         `WindowsTimeZone` on Windows systems).
+        To get a `WindowsTimeZone`, call `WindowsTimeZone.getTimeZone`.
 
         See_Also:
             $(HTTP www.iana.org/time-zones, Home of the TZ Database files)
