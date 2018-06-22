@@ -66,7 +66,7 @@ public:
 
     /++
         The name of the time zone per the TZ Database. This is the name used to
-        get a $(LREF TimeZone) by name with `getTimeZone` on one of the 
+        get a $(LREF TimeZone) by name with `getTimeZone` on one of the
         implementations of 'TimeZone'.
 
         See_Also:
@@ -621,7 +621,7 @@ public:
     {
         /++
             The name of the time zone per the TZ Database. This is the name used
-            to get a $(LREF TimeZone) by name with `getTimeZone` on one of the 
+            to get a $(LREF TimeZone) by name with `getTimeZone` on one of the
             'TimeZone' implementations.
 
             Note that this always returns the empty string. This is because time
