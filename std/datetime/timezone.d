@@ -65,9 +65,13 @@ abstract class TimeZone
 public:
 
     /++
-        The name of the time zone per the TZ Database. This is the name used to
-        get a $(LREF TimeZone) by name with `getTimeZone` on one of the
-        implementations of 'TimeZone'.
+        The name of the time zone. Exactly how the time zone name is formatted
+        depends on the derived class. In the case of $(LREF PosixTimeZone), it's
+        the TZ Database name, whereas with $(LREF WindowsTimeZone), it's the
+        name that Windows chose to give the registry key for that time zone
+        (typically the name that they give $(LREF stdTime) if the OS is in
+        English). For other time zone types, what it is depends on how they're
+        implemented.
 
         See_Also:
             $(HTTP en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
@@ -620,15 +624,12 @@ public:
     version(StdDdoc)
     {
         /++
-            The name of the time zone per the TZ Database. This is the name used
-            to get a $(LREF TimeZone) by name with `getTimeZone` on one of the
-            'TimeZone' implementations.
-
-            Note that this always returns the empty string. This is because time
-            zones cannot be uniquely identified by the attributes given by the
-            OS (such as the `stdName` and `dstName`), and neither Posix
-            systems nor Windows systems provide an easy way to get the TZ
-            Database name of the local time zone.
+            In principle, this is the name of the local time zone. However,
+            this always returns the empty string. This is because time zones
+            cannot be uniquely identified by the attributes given by the
+            OS (such as the `stdName` and `dstName`), and neither Posix systems
+            nor Windows systems provide an easy way to get the TZ Database name
+            of the local time zone.
 
             See_Also:
                 $(HTTP en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
