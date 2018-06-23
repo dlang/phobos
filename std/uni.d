@@ -1197,19 +1197,21 @@ struct PackedPtrImpl(T, size_t bits)
 pure nothrow:
     static assert(isPow2OrZero(bits));
 
+  scope
+  {
     this(inout(size_t)* ptr)inout @safe @nogc
     {
         origin = ptr;
     }
 
-    private T simpleIndex(size_t n) inout
+    private T simpleIndex(size_t n) inout @trusted
     {
         immutable q = n / factor;
         immutable r = n % factor;
         return cast(T)((origin[q] >> bits*r) & mask);
     }
 
-    private void simpleWrite(TypeOfBitPacked!T val, size_t n)
+    private void simpleWrite(TypeOfBitPacked!T val, size_t n) @trusted
     in
     {
         static if (isIntegral!T)
@@ -1239,7 +1241,7 @@ pure nothrow:
         else static if (size_t.sizeof == 8 && factor == bytesPerWord/8)
             alias U = ulong;
 
-        T opIndex(size_t idx) inout
+        T opIndex(size_t idx) inout @trusted
         {
             return __ctfe ? simpleIndex(idx) :
                 cast(inout(T))(cast(U*) origin)[idx];
@@ -1247,13 +1249,13 @@ pure nothrow:
 
         static if (isBitPacked!T) // lack of user-defined implicit conversion
         {
-            void opIndexAssign(T val, size_t idx)
+            void opIndexAssign(T val, size_t idx) @safe
             {
                 return opIndexAssign(cast(TypeOfBitPacked!T) val, idx);
             }
         }
 
-        void opIndexAssign(TypeOfBitPacked!T val, size_t idx)
+        void opIndexAssign(TypeOfBitPacked!T val, size_t idx) @trusted
         {
             if (__ctfe)
                 simpleWrite(val, idx);
@@ -1263,24 +1265,25 @@ pure nothrow:
     }
     else
     {
-        T opIndex(size_t n) inout
+        T opIndex(size_t n) inout @safe
         {
             return simpleIndex(n);
         }
 
         static if (isBitPacked!T) // lack of user-defined implicit conversion
         {
-            void opIndexAssign(T val, size_t idx)
+            void opIndexAssign(T val, size_t idx) @safe
             {
                 return opIndexAssign(cast(TypeOfBitPacked!T) val, idx);
             }
         }
 
-        void opIndexAssign(TypeOfBitPacked!T val, size_t n)
+        void opIndexAssign(TypeOfBitPacked!T val, size_t n) @safe
         {
             return simpleWrite(val, n);
         }
     }
+  }
 
 private:
     // factor - number of elements in one machine word
@@ -1296,14 +1299,14 @@ struct PackedArrayViewImpl(T, size_t bits)
 {
 pure nothrow:
 
-    this(inout(size_t)* origin, size_t offset, size_t items) inout @safe
+    this(return scope inout(size_t)* origin, size_t offset, size_t items) inout @trusted
     {
         ptr = inout(PackedPtr!(T))(origin);
         ofs = offset;
         limit = items;
     }
 
-    bool zeros(size_t s, size_t e)
+    bool zeros(size_t s, size_t e) scope @trusted
     in
     {
         assert(s <= e);
@@ -1335,7 +1338,7 @@ pure nothrow:
         return true;
     }
 
-    T opIndex(size_t idx) inout
+    T opIndex(size_t idx) scope inout @trusted
     in
     {
         assert(idx < limit);
@@ -1347,13 +1350,13 @@ pure nothrow:
 
     static if (isBitPacked!T) // lack of user-defined implicit conversion
     {
-        void opIndexAssign(T val, size_t idx)
+        void opIndexAssign(T val, size_t idx) scope @safe
         {
             return opIndexAssign(cast(TypeOfBitPacked!T) val, idx);
         }
     }
 
-    void opIndexAssign(TypeOfBitPacked!T val, size_t idx)
+    void opIndexAssign(TypeOfBitPacked!T val, size_t idx) scope @trusted
     in
     {
         assert(idx < limit);
@@ -1365,13 +1368,13 @@ pure nothrow:
 
     static if (isBitPacked!T) // lack of user-defined implicit conversions
     {
-        void opSliceAssign(T val, size_t start, size_t end)
+        void opSliceAssign(T val, size_t start, size_t end) scope @safe
         {
             opSliceAssign(cast(TypeOfBitPacked!T) val, start, end);
         }
     }
 
-    void opSliceAssign(TypeOfBitPacked!T val, size_t start, size_t end)
+    void opSliceAssign(TypeOfBitPacked!T val, size_t start, size_t end) scope @trusted
     in
     {
         assert(start <= end);
@@ -1406,7 +1409,7 @@ pure nothrow:
             ptr[i] = val;
     }
 
-    auto opSlice(size_t from, size_t to)inout
+    auto opSlice(size_t from, size_t to)inout return scope @safe
     in
     {
         assert(from <= to);
@@ -1417,9 +1420,9 @@ pure nothrow:
         return typeof(this)(ptr.origin, ofs + from, to - from);
     }
 
-    auto opSlice(){ return opSlice(0, length); }
+    auto opSlice() return scope @safe { return opSlice(0, length); }
 
-    bool opEquals(T)(auto ref T arr) const
+    bool opEquals(T)(scope auto ref T arr) scope const @trusted
     {
         if (limit != arr.limit)
            return false;
@@ -1436,9 +1439,10 @@ pure nothrow:
         return true;
     }
 
-    @property size_t length()const{ return limit; }
+    @property size_t length()scope const @safe { return limit; }
 
 private:
+@safe:
     auto roundUp()(size_t val){ return (val+factor-1)/factor*factor; }
     auto roundDown()(size_t val){ return val/factor*factor; }
     // factor - number of elements in one machine word
@@ -1452,6 +1456,9 @@ private struct SliceOverIndexed(T)
 {
     enum assignableIndex = is(typeof((){ T.init[0] = Item.init; }));
     enum assignableSlice = is(typeof((){ T.init[0 .. 0] = Item.init; }));
+
+  scope
+  {
     auto opIndex(size_t idx)const
     in
     {
@@ -1520,6 +1527,7 @@ private struct SliceOverIndexed(T)
                 return false;
         return true;
     }
+  }
 private:
     alias Item = typeof(T.init[0]);
     size_t from, to;
@@ -2380,28 +2388,29 @@ public:
     /**
         A range that spans each $(CODEPOINT) in this set.
     */
-    @property auto byCodepoint()
+    @property auto byCodepoint() @safe
     {
         static struct CodepointRange
         {
-            this(This set)
+          @safe:
+            this(scope This set)
             {
                 r = set.byInterval;
                 if (!r.empty)
                     cur = r.front.a;
             }
 
-            @property dchar front() const
+            @property dchar front() scope const
             {
                 return cast(dchar) cur;
             }
 
-            @property bool empty() const
+            @property bool empty() scope const
             {
                 return r.empty;
             }
 
-            void popFront()
+            void popFront() scope
             {
                 cur++;
                 while (cur >= r.front.b)
@@ -3221,7 +3230,7 @@ struct CowArray(SP=GcPolicy)
         copy(range, data[0..$-1]);
     }
 
-    this(Range)(Range range)
+    this(Range)(Range range) @trusted
         if (isForwardRange!Range && !hasLength!Range)
     {
         import std.algorithm.mutation : copy;
@@ -3231,7 +3240,7 @@ struct CowArray(SP=GcPolicy)
         copy(range, data[0..$-1]);
     }
 
-    this(this)
+    this(this) scope
     {
         if (!empty)
         {
@@ -3239,7 +3248,7 @@ struct CowArray(SP=GcPolicy)
         }
     }
 
-    ~this()
+    ~this() scope
     {
         if (!empty)
         {
@@ -5878,7 +5887,7 @@ if (isInputRange!Range && isIntegralPair!(ElementType!Range))
 }
 
 // Creates a range of `CodepointInterval` that lazily decodes compressed data.
-@safe package auto decompressIntervals(const(ubyte)[] data) pure
+@safe package auto decompressIntervals(return scope const(ubyte)[] data) pure
 {
     return DecompressedIntervals(data);
 }
@@ -5890,19 +5899,19 @@ pure:
     size_t _idx;
     CodepointInterval _front;
 
-    this(const(ubyte)[] stream)
+    this(return scope const(ubyte)[] stream) @trusted
     {
         _stream = stream;
         popFront();
     }
 
-    @property CodepointInterval front()
+    @property CodepointInterval front() return
     {
         assert(!empty);
         return _front;
     }
 
-    void popFront()
+    void popFront() scope
     {
         if (_idx == _stream.length)
         {
@@ -5920,12 +5929,12 @@ pure:
         }
     }
 
-    @property bool empty() const
+    @property bool empty() scope const
     {
         return _idx == size_t.max;
     }
 
-    @property DecompressedIntervals save() { return this; }
+    @property DecompressedIntervals save() return scope { return this; }
 }
 
 static assert(isInputRange!DecompressedIntervals);
@@ -7175,7 +7184,7 @@ if (isInputRange!Input && is(Unqual!(ElementType!Input) == dchar))
     See_Also:
         $(LREF byCodePoint)
 +/
-auto byGrapheme(Range)(Range range)
+auto byGrapheme(Range)(Range range) @safe
 if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 {
     // TODO: Bidirectional access
@@ -7184,6 +7193,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
         private R _range;
         private Grapheme _front;
 
+      scope:
         bool empty() @property
         {
             return _front.length == 0;
@@ -7235,6 +7245,7 @@ private static struct InputRangeString
 {
     private string s;
 
+  @safe scope:
     bool empty() @property { return s.empty; }
     dchar front() @property { return s.front; }
     void popFront() { s.popFront(); }
@@ -7423,7 +7434,7 @@ public:
     }
 
     /// Gets a $(CODEPOINT) at the given index in this cluster.
-    dchar opIndex(size_t index) const @nogc nothrow pure @trusted
+    dchar opIndex(size_t index) scope const @nogc nothrow pure @trusted
     {
         assert(index < length);
         return read24(isBig ? ptr_ : small_.ptr, index);
@@ -7436,7 +7447,7 @@ public:
         Use of this facility may invalidate grapheme cluster,
         see also $(LREF Grapheme.valid).
     +/
-    void opIndexAssign(dchar ch, size_t index) @nogc nothrow pure @trusted
+    void opIndexAssign(dchar ch, size_t index) scope @nogc nothrow pure @trusted
     {
         assert(index < length);
         write24(isBig ? ptr_ : small_.ptr, ch, index);
@@ -7459,19 +7470,23 @@ public:
         Warning: Invalidates when this Grapheme leaves the scope,
         attempts to use it then would lead to memory corruption.
     +/
-    SliceOverIndexed!Grapheme opSlice(size_t a, size_t b) @nogc nothrow pure return
+    SliceOverIndexed!Grapheme opSlice(size_t a, size_t b) scope @nogc nothrow pure return @trusted
     {
+        /* @trusted since we are taking the address of `this`, but it's ok
+         */
         return sliceOverIndexed(a, b, &this);
     }
 
     /// ditto
-    SliceOverIndexed!Grapheme opSlice() @nogc nothrow pure return
+    SliceOverIndexed!Grapheme opSlice() scope @nogc nothrow pure return @trusted
     {
+        /* @trusted since we are taking the address of `this`, but it's ok
+         */
         return sliceOverIndexed(0, length, &this);
     }
 
     /// Grapheme cluster length in $(CODEPOINTS).
-    @property size_t length() const @nogc nothrow pure
+    @property size_t length() scope const @nogc nothrow pure
     {
         return isBig ? len_ : slen_ & 0x7F;
     }
@@ -7484,7 +7499,7 @@ public:
 
         See_Also: $(LREF Grapheme.valid)
     +/
-    ref opOpAssign(string op)(dchar ch) @trusted
+    ref opOpAssign(string op)(dchar ch) scope @trusted
     {
         static if (op == "~")
         {
@@ -7537,7 +7552,7 @@ public:
     }
 
     /// Append all $(CHARACTERS) from the input range `inp` to this Grapheme.
-    ref opOpAssign(string op, Input)(scope Input inp)
+    ref opOpAssign(string op, Input)(scope Input inp) scope
         if (isInputRange!Input && is(ElementType!Input : dchar))
     {
         static if (op == "~")
@@ -7559,14 +7574,14 @@ public:
         Grapheme as a "small string" of any $(CODEPOINTS) and ignore this property
         entirely.
     +/
-    @property bool valid()() /*const*/
+    @property bool valid()() scope /*const*/
     {
         auto r = this[];
         genericDecodeGrapheme!false(r);
         return r.length == 0;
     }
 
-    this(this) @nogc nothrow pure @trusted
+    this(this) scope @nogc nothrow pure @trusted
     {
         import core.exception : onOutOfMemoryError;
         import core.memory : pureMalloc;
@@ -7584,7 +7599,7 @@ public:
         }
     }
 
-    ~this() @nogc nothrow pure @trusted
+    ~this() scope @nogc nothrow pure @trusted
     {
         import core.memory : pureFree;
         if (isBig)
@@ -7618,7 +7633,7 @@ private:
         }
     }
 
-    void convertToBig() @nogc nothrow pure @trusted
+    void convertToBig() scope @nogc nothrow pure @trusted
     {
         import core.exception : onOutOfMemoryError;
         import core.memory : pureMalloc;
@@ -7637,13 +7652,13 @@ private:
         setBig();
     }
 
-    void setBig() @nogc nothrow pure { slen_ |= small_flag; }
+    void setBig() scope @nogc nothrow pure { slen_ |= small_flag; }
 
-    @property size_t smallLength() const @nogc nothrow pure
+    @property size_t smallLength() scope const @nogc nothrow pure
     {
         return slen_ & small_mask;
     }
-    @property ubyte isBig() const @nogc nothrow pure
+    @property ubyte isBig() scope const @nogc nothrow pure
     {
         return slen_ & small_flag;
     }
@@ -10474,7 +10489,7 @@ private:
 // load static data from pre-generated tables into usable datastructures
 
 
-@safe auto asSet(const (ubyte)[] compressed) pure
+@safe auto asSet(scope const (ubyte)[] compressed) pure
 {
     return CodepointSet.fromIntervals(decompressIntervals(compressed));
 }
