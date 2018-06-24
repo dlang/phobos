@@ -419,7 +419,7 @@ public:
                        given $(REF DateTime,std,datetime,date) is assumed to
                        be in the given time zone.
       +/
-    this(in DateTime dateTime, immutable TimeZone tz = null) @safe nothrow
+    this(scope const DateTime dateTime, immutable TimeZone tz = null) @safe nothrow
     {
         try
             this(dateTime, Duration.zero, tz);
@@ -465,7 +465,7 @@ public:
             $(REF DateTimeException,std,datetime,date) if `fracSecs` is negative or if it's
             greater than or equal to one second.
       +/
-    this(in DateTime dateTime, in Duration fracSecs, immutable TimeZone tz = null) @safe
+    this(scope const DateTime dateTime, scope const Duration fracSecs, immutable TimeZone tz = null) @safe
     {
         enforce(fracSecs >= Duration.zero, new DateTimeException("A SysTime cannot have negative fractional seconds."));
         enforce(fracSecs < seconds(1), new DateTimeException("Fractional seconds must be less than one second."));
@@ -517,7 +517,7 @@ public:
                    given $(REF Date,std,datetime,date) is assumed to be in the
                    given time zone.
       +/
-    this(in Date date, immutable TimeZone tz = null) @safe nothrow
+    this(scope const Date date, immutable TimeZone tz = null) @safe nothrow
     {
         _timezone = tz is null ? LocalTime() : tz;
 
@@ -682,7 +682,7 @@ public:
             $(TR $(TD this &gt; rhs) $(TD &gt; 0))
             )
      +/
-    int opCmp(in SysTime rhs) @safe const pure nothrow
+    int opCmp(scope const SysTime rhs) @safe const pure nothrow
     {
         if (_stdTime < rhs._stdTime)
             return -1;
@@ -886,7 +886,7 @@ public:
     {
         import std.range : chain;
 
-        static void test(SysTime st, int year, in SysTime expected)
+        static void test(SysTime st, int year, scope const SysTime expected)
         {
             st.year = year;
             assert(st == expected);
@@ -1016,7 +1016,7 @@ public:
     @safe unittest
     {
         import std.range : chain;
-        static void test(SysTime st, int year, in SysTime expected)
+        static void test(SysTime st, int year, scope const SysTime expected)
         {
             st.yearBC = year;
             assert(st == expected, format("SysTime: %s", st));
@@ -1157,7 +1157,7 @@ public:
         import std.algorithm.iteration : filter;
         import std.range : chain;
 
-        static void test(SysTime st, Month month, in SysTime expected)
+        static void test(SysTime st, Month month, scope const SysTime expected)
         {
             st.month = cast(Month) month;
             assert(st == expected);
@@ -1757,7 +1757,7 @@ public:
         Fractional seconds past the second (i.e. the portion of a
         $(LREF SysTime) which is less than a second).
      +/
-    @property Duration fracSecs() @safe const nothrow
+    @property Duration fracSecs() scope @safe const nothrow
     {
         auto hnsecs = removeUnitsFromHNSecs!"days"(adjTime);
 
@@ -1944,7 +1944,7 @@ public:
     @safe unittest
     {
         import core.time;
-        static void test(long stdTime, in SysTime expected, size_t line = __LINE__)
+        static void test(long stdTime, scope const SysTime expected, size_t line = __LINE__)
         {
             auto st = SysTime(0, UTC());
             st.stdTime = stdTime;
@@ -4851,11 +4851,14 @@ public:
     @safe unittest
     {
         import core.time;
-        static void testST(SysTime orig, int hours, in SysTime expected, size_t line = __LINE__)
+        static void testST(SysTime orig, int hours, scope const SysTime expected, size_t line = __LINE__) @safe
         {
             orig.roll!"hours"(hours);
             if (orig != expected)
-                throw new AssertError(format("Failed. actual [%s] != expected [%s]", orig, expected), __FILE__, line);
+            {
+                string s = expected.toSimpleString();
+                throw new AssertError(format("Failed. actual [%s] != expected [%s]", orig, s), __FILE__, line);
+            }
         }
 
         // Test A.D.
@@ -5069,11 +5072,14 @@ public:
     @safe unittest
     {
         import core.time;
-        static void testST(SysTime orig, int minutes, in SysTime expected, size_t line = __LINE__)
+        static void testST(SysTime orig, int minutes, scope const SysTime expected, size_t line = __LINE__) @safe
         {
             orig.roll!"minutes"(minutes);
             if (orig != expected)
-                throw new AssertError(format("Failed. actual [%s] != expected [%s]", orig, expected), __FILE__, line);
+            {
+                string s = expected.toSimpleString();
+                throw new AssertError(format("Failed. actual [%s] != expected [%s]", orig, s), __FILE__, line);
+            }
         }
 
         // Test A.D.
@@ -5280,11 +5286,14 @@ public:
     @safe unittest
     {
         import core.time;
-        static void testST(SysTime orig, int seconds, in SysTime expected, size_t line = __LINE__)
+        static void testST(SysTime orig, int seconds, scope const SysTime expected, size_t line = __LINE__) @safe
         {
             orig.roll!"seconds"(seconds);
             if (orig != expected)
-                throw new AssertError(format("Failed. actual [%s] != expected [%s]", orig, expected), __FILE__, line);
+            {
+                string s = expected.toSimpleString();
+                throw new AssertError(format("Failed. actual [%s] != expected [%s]", orig, s), __FILE__, line);
+            }
         }
 
         // Test A.D.
@@ -5498,11 +5507,14 @@ public:
     @safe unittest
     {
         import core.time;
-        static void testST(SysTime orig, int milliseconds, in SysTime expected, size_t line = __LINE__)
+        static void testST(SysTime orig, int milliseconds, scope const SysTime expected, size_t line = __LINE__) @safe
         {
             orig.roll!"msecs"(milliseconds);
             if (orig != expected)
-                throw new AssertError(format("Failed. actual [%s] != expected [%s]", orig, expected), __FILE__, line);
+            {
+                string s = expected.toSimpleString();
+                throw new AssertError(format("Failed. actual [%s] != expected [%s]", orig, s), __FILE__, line);
+            }
         }
 
         // Test A.D.
@@ -5604,11 +5616,14 @@ public:
     @safe unittest
     {
         import core.time;
-        static void testST(SysTime orig, long microseconds, in SysTime expected, size_t line = __LINE__)
+        static void testST(SysTime orig, long microseconds, scope const SysTime expected, size_t line = __LINE__) @safe
         {
             orig.roll!"usecs"(microseconds);
             if (orig != expected)
-                throw new AssertError(format("Failed. actual [%s] != expected [%s]", orig, expected), __FILE__, line);
+            {
+                string s = expected.toSimpleString();
+                throw new AssertError(format("Failed. actual [%s] != expected [%s]", orig, s), __FILE__, line);
+            }
         }
 
         // Test A.D.
@@ -5734,11 +5749,14 @@ public:
     @safe unittest
     {
         import core.time;
-        static void testST(SysTime orig, long hnsecs, in SysTime expected, size_t line = __LINE__)
+        static void testST(SysTime orig, long hnsecs, scope const SysTime expected, size_t line = __LINE__) @safe
         {
             orig.roll!"hnsecs"(hnsecs);
             if (orig != expected)
-                throw new AssertError(format("Failed. actual [%s] != expected [%s]", orig, expected), __FILE__, line);
+            {
+                string s = expected.toSimpleString();
+                throw new AssertError(format("Failed. actual [%s] != expected [%s]", orig, s), __FILE__, line);
+            }
         }
 
         // Test A.D.
@@ -5956,11 +5974,15 @@ public:
         assert(st - dur!"hnsecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_685)));
         assert(st - dur!"hnsecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_671)));
 
-        static void testST(in SysTime orig, long hnsecs, in SysTime expected, size_t line = __LINE__)
+        static void testST(scope const SysTime orig,
+                           long hnsecs, scope const SysTime expected, size_t line = __LINE__) @safe
         {
             auto result = orig + dur!"hnsecs"(hnsecs);
             if (result != expected)
-                throw new AssertError(format("Failed. actual [%s] != expected [%s]", result, expected), __FILE__, line);
+            {
+                string s = expected.toSimpleString();
+                throw new AssertError(format("Failed. actual [%s] != expected [%s]", result, s), __FILE__, line);
+            }
         }
 
         // Test A.D.
@@ -6152,13 +6174,19 @@ public:
         assert(before - dur!"hnsecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(7)));
         assert(before - dur!"hnsecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 32), hnsecs(9_999_993)));
 
-        static void testST(SysTime orig, long hnsecs, in SysTime expected, size_t line = __LINE__)
+        static void testST(SysTime orig, long hnsecs, scope const SysTime expected, size_t line = __LINE__) @safe
         {
             auto r = orig += dur!"hnsecs"(hnsecs);
             if (orig != expected)
-                throw new AssertError(format("Failed 1. actual [%s] != expected [%s]", orig, expected), __FILE__, line);
+            {
+                string s = expected.toSimpleString();
+                throw new AssertError(format("Failed 1. actual [%s] != expected [%s]", orig, s), __FILE__, line);
+            }
             if (r != expected)
-                throw new AssertError(format("Failed 2. actual [%s] != expected [%s]", r, expected), __FILE__, line);
+            {
+                string s = expected.toSimpleString();
+                throw new AssertError(format("Failed 2. actual [%s] != expected [%s]", r, s), __FILE__, line);
+            }
         }
 
         // Test A.D.
@@ -6302,7 +6330,7 @@ public:
         $(TR $(TD SysTime) $(TD -) $(TD SysTime) $(TD -->) $(TD duration))
         )
       +/
-    Duration opBinary(string op)(in SysTime rhs) @safe const pure nothrow
+    Duration opBinary(string op)(scope const SysTime rhs) @safe const pure nothrow
         if (op == "-")
     {
         return dur!"hnsecs"(_stdTime - rhs._stdTime);
@@ -6420,7 +6448,7 @@ public:
         Params:
             rhs = The $(LREF SysTime) to subtract from this one.
       +/
-    int diffMonths(in SysTime rhs) @safe const nothrow
+    int diffMonths(scope const SysTime rhs) @safe const nothrow
     {
         return (cast(Date) this).diffMonths(cast(Date) rhs);
     }
@@ -7000,11 +7028,14 @@ public:
     @safe unittest
     {
         import core.time;
-        void testST(SysTime orig, int day, in SysTime expected, size_t line = __LINE__)
+        void testST(SysTime orig, int day, scope const SysTime expected, size_t line = __LINE__) @safe
         {
             orig.dayOfGregorianCal = day;
             if (orig != expected)
-                throw new AssertError(format("Failed. actual [%s] != expected [%s]", orig, expected), __FILE__, line);
+            {
+                string s = expected.toSimpleString();
+                throw new AssertError(format("Failed. actual [%s] != expected [%s]", orig, s), __FILE__, line);
+            }
         }
 
         // Test A.D.
@@ -7037,11 +7068,14 @@ public:
 
         auto st = SysTime(DateTime(1, 1, 1, 12, 2, 9), msecs(212));
 
-        void testST2(int day, in SysTime expected, size_t line = __LINE__)
+        void testST2(int day, scope const SysTime expected, size_t line = __LINE__) @safe
         {
             st.dayOfGregorianCal = day;
             if (st != expected)
-                throw new AssertError(format("Failed. actual [%s] != expected [%s]", st, expected), __FILE__, line);
+            {
+                string s = expected.toSimpleString();
+                throw new AssertError(format("Failed. actual [%s] != expected [%s]", st, s), __FILE__, line);
+            }
         }
 
         // Test A.D.
@@ -7489,7 +7523,7 @@ public:
     /++
         Returns a $(REF Date,std,datetime,date) equivalent to this $(LREF SysTime).
       +/
-    Date opCast(T)() @safe const nothrow
+    Date opCast(T)() scope @trusted const nothrow
         if (is(Unqual!T == Date))
     {
         return Date(dayOfGregorianCal);
@@ -7996,7 +8030,7 @@ public:
         Returns:
             A `string` when not using an output range; `void` otherwise.
       +/
-    string toSimpleString() @safe const nothrow
+    string toSimpleString() scope @trusted const nothrow
     {
         import std.array : appender;
         auto app = appender!string();
@@ -8233,7 +8267,7 @@ public:
             not in the ISO format or if the resulting $(LREF SysTime) would not
             be valid.
       +/
-    static SysTime fromISOString(S)(in S isoString, immutable TimeZone tz = null) @safe
+    static SysTime fromISOString(S)(scope const S isoString, immutable TimeZone tz = null) @safe
         if (isSomeString!S)
     {
         import std.algorithm.searching : startsWith, find;
@@ -8527,7 +8561,7 @@ public:
             not in the ISO format or if the resulting $(LREF SysTime) would not
             be valid.
       +/
-    static SysTime fromISOExtString(S)(in S isoExtString, immutable TimeZone tz = null) @safe
+    static SysTime fromISOExtString(S)(scope const S isoExtString, immutable TimeZone tz = null) @safe
         if (isSomeString!(S))
     {
         import std.algorithm.searching : countUntil, find;
@@ -8770,7 +8804,7 @@ public:
             not in the ISO format or if the resulting $(LREF SysTime) would not
             be valid.
       +/
-    static SysTime fromSimpleString(S)(in S simpleString, immutable TimeZone tz = null) @safe
+    static SysTime fromSimpleString(S)(scope const S simpleString, immutable TimeZone tz = null) @safe
         if (isSomeString!(S))
     {
         import std.algorithm.searching : find;
@@ -9299,7 +9333,7 @@ version(StdDdoc)
             $(LREF SysTime) will not fit in a `SYSTEMTIME`. This will only
             happen if the $(LREF SysTime)'s date is prior to 1601 A.D.
       +/
-    SYSTEMTIME SysTimeToSYSTEMTIME(in SysTime sysTime) @safe;
+    SYSTEMTIME SysTimeToSYSTEMTIME(scope const SysTime sysTime) @safe;
 
 
     /++
@@ -9429,7 +9463,7 @@ else version(Windows)
     }
 
 
-    SYSTEMTIME SysTimeToSYSTEMTIME(in SysTime sysTime) @safe
+    SYSTEMTIME SysTimeToSYSTEMTIME(scope const SysTime sysTime) @safe
     {
         immutable dt = cast(DateTime) sysTime;
 
@@ -9668,14 +9702,14 @@ DosFileTime SysTimeToDosFileTime(SysTime sysTime) @safe
         follow the grammar for a date-time field or if the resulting
         $(LREF SysTime) is invalid.
   +/
-SysTime parseRFC822DateTime()(in char[] value) @safe
+SysTime parseRFC822DateTime()(scope const char[] value) @safe
 {
     import std.string : representation;
     return parseRFC822DateTime(value.representation);
 }
 
 /++ Ditto +/
-SysTime parseRFC822DateTime(R)(R value) @safe
+SysTime parseRFC822DateTime(R)(scope R value) @trusted
 if (isRandomAccessRange!R && hasSlicing!R && hasLength!R &&
     (is(Unqual!(ElementType!R) == char) || is(Unqual!(ElementType!R) == ubyte)))
 {
@@ -10471,7 +10505,7 @@ void fracSecsToISOString(W)(ref W writer, int hnsecs)
     Returns a Duration corresponding to to the given ISO string of
     fractional seconds.
   +/
-static Duration fracSecsFromISOString(S)(in S isoString) @trusted pure
+static Duration fracSecsFromISOString(S)(scope const S isoString) @trusted pure
 if (isSomeString!S)
 {
     import std.algorithm.searching : all;
