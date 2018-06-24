@@ -4287,7 +4287,7 @@ Furthermore, emplaceRef optionally takes a type parameter, which specifies
 the type we want to build. This helps to build qualified objects on mutable
 buffer, without breaking the type system with unsafe casts.
 +/
-package void emplaceRef(T, UT, Args...)(ref UT chunk, auto ref Args args)
+package void emplaceRef(T, UT, Args...)(ref UT chunk, auto ref scope Args args)
 {
     static if (args.length == 0)
     {
@@ -4307,7 +4307,7 @@ package void emplaceRef(T, UT, Args...)(ref UT chunk, auto ref Args args)
         static struct S
         {
             T payload;
-            this(ref Args x)
+            this(ref Args x) scope
             {
                 static if (Args.length == 1)
                     static if (is(typeof(payload = x[0])))
