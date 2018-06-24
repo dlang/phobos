@@ -1,0 +1,19 @@
+The performance of `std.algorithm.iteration.joiner` has been improved
+
+$(H4 DMD)
+
+$(CONSOLE
+> dmd -O -inline -release ./joiner.d && ./joiner
+before.joiner   = 57 secs, 834 ms, 289 μs, and 3 hnsecs
+new.joiner      = 44 secs, 936 ms, 706 μs, and 5 hnsecs
+)
+
+$(H4 LDC)
+
+$(CONSOLE
+> ldmd -O3 -release -inline joiner.d && ./joiner
+before.joiner   = 5 secs, 180 ms, 193 μs, and 7 hnsecs
+new.joiner      = 3 secs, 168 ms, 560 μs, and 6 hnsecs
+)
+
+The benchmark code can be found $(LINK2 https://gist.github.com/wilzbach/ffd5d20639766a831fd4b1962572897a, here).
