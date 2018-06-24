@@ -65,8 +65,13 @@ abstract class TimeZone
 public:
 
     /++
-        The name of the time zone per the TZ Database. This is the name used to
-        get a $(LREF TimeZone) by name with `TimeZone.getTimeZone`.
+        The name of the time zone. Exactly how the time zone name is formatted
+        depends on the derived class. In the case of $(LREF PosixTimeZone), it's
+        the TZ Database name, whereas with $(LREF WindowsTimeZone), it's the
+        name that Windows chose to give the registry key for that time zone
+        (typically the name that they give $(LREF stdTime) if the OS is in
+        English). For other time zone types, what it is depends on how they're
+        implemented.
 
         See_Also:
             $(HTTP en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
@@ -619,14 +624,12 @@ public:
     version(StdDdoc)
     {
         /++
-            The name of the time zone per the TZ Database. This is the name used
-            to get a $(LREF TimeZone) by name with `TimeZone.getTimeZone`.
-
-            Note that this always returns the empty string. This is because time
-            zones cannot be uniquely identified by the attributes given by the
-            OS (such as the `stdName` and `dstName`), and neither Posix
-            systems nor Windows systems provide an easy way to get the TZ
-            Database name of the local time zone.
+            In principle, this is the name of the local time zone. However,
+            this always returns the empty string. This is because time zones
+            cannot be uniquely identified by the attributes given by the
+            OS (such as the `stdName` and `dstName`), and neither Posix systems
+            nor Windows systems provide an easy way to get the TZ Database name
+            of the local time zone.
 
             See_Also:
                 $(HTTP en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
@@ -1939,10 +1942,8 @@ private:
     files on disk) on Windows by providing the TZ Database files and telling
     `PosixTimeZone.getTimeZone` where the directory holding them is.
 
-    To get a `PosixTimeZone`, either call `PosixTimeZone.getTimeZone`
-    (which allows specifying the location the time zone files) or call
-    `TimeZone.getTimeZone` (which will give a `PosixTimeZone` on Posix
-    systems and a $(LREF WindowsTimeZone) on Windows systems).
+    To get a `PosixTimeZone`, call `PosixTimeZone.getTimeZone`
+    (which allows specifying the location the time zone files).
 
     Note:
         Unless your system's local time zone deals with leap seconds (which is
@@ -2913,10 +2914,7 @@ version(StdDdoc)
 
         `WindowsTimeZone` does not exist on Posix systems.
 
-        To get a `WindowsTimeZone`, either call
-        `WindowsTimeZone.getTimeZone` or call `TimeZone.getTimeZone`
-        (which will give a $(LREF PosixTimeZone) on Posix systems and a
-         `WindowsTimeZone` on Windows systems).
+        To get a `WindowsTimeZone`, call `WindowsTimeZone.getTimeZone`.
 
         See_Also:
             $(HTTP www.iana.org/time-zones, Home of the TZ Database files)
