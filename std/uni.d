@@ -9003,10 +9003,12 @@ if (isSomeString!S || (isRandomAccessRange!S && hasLength!S && hasSlicing!S && i
 {
     import std.array : appender, array;
     import std.ascii : isASCII;
-    import std.utf : byDchar;
+    import std.utf : byDchar, codeLength;
+
+    alias C = ElementEncodingType!S;
 
     auto r = s.byDchar;
-    for (size_t i; !r.empty; ++i, r.popFront())
+    for (size_t i; !r.empty; i += r.front.codeLength!C , r.popFront())
     {
         auto cOuter = r.front;
         ushort idx = indexFn(cOuter);
@@ -9060,6 +9062,11 @@ if (isSomeString!S || (isRandomAccessRange!S && hasLength!S && hasSlicing!S && i
     toUpper(s);
 
     assert(s == "abcdefghij");
+}
+
+@safe unittest // 18993
+{
+    static assert(`몬스터/A`.toLower.length == `몬스터/a`.toLower.length);
 }
 
 
