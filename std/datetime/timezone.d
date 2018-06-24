@@ -279,7 +279,7 @@ public:
             {
                 setTZEnvVar(tzName);
 
-                static void testTM(in SysTime st)
+                static void testTM(scope const SysTime st)
                 {
                     import core.stdc.time : tm;
                     import core.sys.posix.time : localtime_r;
@@ -1729,7 +1729,7 @@ package:
         import core.exception : AssertError;
         import std.format : format;
 
-        static void test(in string isoString, int expectedOffset, size_t line = __LINE__)
+        static void test(scope const string isoString, int expectedOffset, size_t line = __LINE__)
         {
             auto stz = SimpleTimeZone.fromISOExtString(isoString);
             if (stz.utcOffset != dur!"minutes"(expectedOffset))
@@ -1891,7 +1891,7 @@ package:
         import core.exception : AssertError;
         import std.format : format;
 
-        static void test(in string isoExtString, int expectedOffset, size_t line = __LINE__)
+        static void test(scope const string isoExtString, int expectedOffset, size_t line = __LINE__)
         {
             auto stz = SimpleTimeZone.fromISOExtString(isoExtString);
             if (stz.utcOffset != dur!"minutes"(expectedOffset))
@@ -2629,7 +2629,7 @@ private:
       +/
     struct TTInfo
     {
-        this(in TempTTInfo tempTTInfo, string abbrev) @safe immutable pure
+        this(scope const TempTTInfo tempTTInfo, string abbrev) @safe immutable pure
         {
             utcOffset = tempTTInfo.tt_gmtoff;
             isDST = tempTTInfo.tt_isdst;
