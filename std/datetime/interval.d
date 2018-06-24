@@ -135,7 +135,7 @@ public:
         Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
         --------------------
       +/
-    this(U)(in TP begin, in U end) pure
+    this(U)(scope const TP begin, scope const U end) pure
         if (is(Unqual!TP == Unqual!U))
     {
         if (!_valid(begin, end))
@@ -160,7 +160,7 @@ public:
                Interval!Date(Date(1996, 1, 2), Date(1996, 1, 5)));
         --------------------
       +/
-    this(D)(in TP begin, in D duration) pure
+    this(D)(scope const TP begin, scope const D duration) pure
         if (__traits(compiles, begin + duration))
     {
         _begin = cast(TP) begin;
@@ -311,7 +311,7 @@ public:
                     Date(2012, 3, 1)));
         --------------------
       +/
-    bool contains(in TP timePoint) const pure
+    bool contains(scope const TP timePoint) const pure
     {
         _enforceNotEmpty();
         return timePoint >= _begin && timePoint < _end;
@@ -340,7 +340,7 @@ public:
                     Interval!Date(Date(1998, 2, 28), Date(2013, 5, 1))));
         --------------------
       +/
-    bool contains(in Interval interval) const pure
+    bool contains(scope const Interval interval) const pure
     {
         _enforceNotEmpty();
         interval._enforceNotEmpty();
@@ -370,7 +370,7 @@ public:
                     PosInfInterval!Date(Date(1999, 5, 4))));
         --------------------
       +/
-    bool contains(in PosInfInterval!TP interval) const pure
+    bool contains(scope const PosInfInterval!TP interval) const pure
     {
         _enforceNotEmpty();
         return false;
@@ -397,7 +397,7 @@ public:
                     NegInfInterval!Date(Date(1996, 5, 4))));
         --------------------
       +/
-    bool contains(in NegInfInterval!TP interval) const pure
+    bool contains(scope const NegInfInterval!TP interval) const pure
     {
         _enforceNotEmpty();
         return false;
@@ -427,7 +427,7 @@ public:
                     Date(2012, 3, 1)));
         --------------------
       +/
-    bool isBefore(in TP timePoint) const pure
+    bool isBefore(scope const TP timePoint) const pure
     {
         _enforceNotEmpty();
         return _end <= timePoint;
@@ -457,7 +457,7 @@ public:
                     Interval!Date(Date(2012, 3, 1), Date(2013, 5, 1))));
         --------------------
       +/
-    bool isBefore(in Interval interval) const pure
+    bool isBefore(scope const Interval interval) const pure
     {
         _enforceNotEmpty();
         interval._enforceNotEmpty();
@@ -485,7 +485,7 @@ public:
                     PosInfInterval!Date(Date(2013, 3, 7))));
         --------------------
       +/
-    bool isBefore(in PosInfInterval!TP interval) const pure
+    bool isBefore(scope const PosInfInterval!TP interval) const pure
     {
         _enforceNotEmpty();
         return _end <= interval._begin;
@@ -512,7 +512,7 @@ public:
                     NegInfInterval!Date(Date(1996, 5, 4))));
         --------------------
       +/
-    bool isBefore(in NegInfInterval!TP interval) const pure
+    bool isBefore(scope const NegInfInterval!TP interval) const pure
     {
         _enforceNotEmpty();
         return false;
@@ -542,7 +542,7 @@ public:
                     Date(2012, 3, 1)));
         --------------------
       +/
-    bool isAfter(in TP timePoint) const pure
+    bool isAfter(scope const TP timePoint) const pure
     {
         _enforceNotEmpty();
         return timePoint < _begin;
@@ -572,7 +572,7 @@ public:
                     Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
         --------------------
       +/
-    bool isAfter(in Interval interval) const pure
+    bool isAfter(scope const Interval interval) const pure
     {
         _enforceNotEmpty();
         interval._enforceNotEmpty();
@@ -600,7 +600,7 @@ public:
                     PosInfInterval!Date(Date(1999, 5, 4))));
         --------------------
       +/
-    bool isAfter(in PosInfInterval!TP interval) const pure
+    bool isAfter(scope const PosInfInterval!TP interval) const pure
     {
         _enforceNotEmpty();
         return false;
@@ -624,7 +624,7 @@ public:
                     NegInfInterval!Date(Date(1996, 1, 2))));
         --------------------
       +/
-    bool isAfter(in NegInfInterval!TP interval) const pure
+    bool isAfter(scope const NegInfInterval!TP interval) const pure
     {
         _enforceNotEmpty();
         return _begin >= interval._end;
@@ -653,7 +653,7 @@ public:
                     Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
         --------------------
       +/
-    bool intersects(in Interval interval) const pure
+    bool intersects(scope const Interval interval) const pure
     {
         _enforceNotEmpty();
         interval._enforceNotEmpty();
@@ -680,7 +680,7 @@ public:
                     PosInfInterval!Date(Date(2012, 3, 1))));
         --------------------
       +/
-    bool intersects(in PosInfInterval!TP interval) const pure
+    bool intersects(scope const PosInfInterval!TP interval) const pure
     {
         _enforceNotEmpty();
         return _end > interval._begin;
@@ -706,7 +706,7 @@ public:
                     NegInfInterval!Date(Date(2000, 1, 2))));
         --------------------
       +/
-    bool intersects(in NegInfInterval!TP interval) const pure
+    bool intersects(scope const NegInfInterval!TP interval) const pure
     {
         _enforceNotEmpty();
         return _begin < interval._end;
@@ -734,7 +734,7 @@ public:
                Interval!Date(Date(1999, 1 , 12), Date(2011, 9, 17)));
         --------------------
       +/
-    Interval intersection(in Interval interval) const
+    Interval intersection(scope const Interval interval) const
     {
         import std.format : format;
 
@@ -769,7 +769,7 @@ public:
                Interval!Date(Date(1999, 1 , 12), Date(2012, 3, 1)));
         --------------------
       +/
-    Interval intersection(in PosInfInterval!TP interval) const
+    Interval intersection(scope const PosInfInterval!TP interval) const
     {
         import std.format : format;
 
@@ -801,7 +801,7 @@ public:
                Interval!Date(Date(1996, 1 , 2), Date(2012, 3, 1)));
         --------------------
       +/
-    Interval intersection(in NegInfInterval!TP interval) const
+    Interval intersection(scope const NegInfInterval!TP interval) const
     {
         import std.format : format;
 
@@ -835,7 +835,7 @@ public:
                     Interval!Date(Date(1989, 3, 1), Date(2012, 3, 1))));
         --------------------
       +/
-    bool isAdjacent(in Interval interval) const pure
+    bool isAdjacent(scope const Interval interval) const pure
     {
         _enforceNotEmpty();
         interval._enforceNotEmpty();
@@ -863,7 +863,7 @@ public:
                     PosInfInterval!Date(Date(2012, 3, 1))));
         --------------------
       +/
-    bool isAdjacent(in PosInfInterval!TP interval) const pure
+    bool isAdjacent(scope const PosInfInterval!TP interval) const pure
     {
         _enforceNotEmpty();
         return _end == interval._begin;
@@ -890,7 +890,7 @@ public:
                     NegInfInterval!Date(Date(2000, 1, 2))));
         --------------------
       +/
-    bool isAdjacent(in NegInfInterval!TP interval) const pure
+    bool isAdjacent(scope const NegInfInterval!TP interval) const pure
     {
         _enforceNotEmpty();
         return _begin == interval._end;
@@ -918,7 +918,7 @@ public:
                Interval!Date(Date(1996, 1 , 2), Date(2013, 5, 7)));
         --------------------
       +/
-    Interval merge(in Interval interval) const
+    Interval merge(scope const Interval interval) const
     {
         import std.format : format;
 
@@ -953,7 +953,7 @@ public:
                PosInfInterval!Date(Date(1996, 1 , 2)));
         --------------------
       +/
-    PosInfInterval!TP merge(in PosInfInterval!TP interval) const
+    PosInfInterval!TP merge(scope const PosInfInterval!TP interval) const
     {
         import std.format : format;
 
@@ -985,7 +985,7 @@ public:
                NegInfInterval!Date(Date(2013, 1 , 12)));
         --------------------
       +/
-    NegInfInterval!TP merge(in NegInfInterval!TP interval) const
+    NegInfInterval!TP merge(scope const NegInfInterval!TP interval) const
     {
         import std.format : format;
 
@@ -1019,7 +1019,7 @@ public:
                Interval!Date(Date(1996, 1 , 2), Date(2013, 5, 7)));
         --------------------
       +/
-    Interval span(in Interval interval) const pure
+    Interval span(scope const Interval interval) const pure
     {
         _enforceNotEmpty();
         interval._enforceNotEmpty();
@@ -1054,7 +1054,7 @@ public:
                PosInfInterval!Date(Date(1996, 1 , 2)));
         --------------------
       +/
-    PosInfInterval!TP span(in PosInfInterval!TP interval) const pure
+    PosInfInterval!TP span(scope const PosInfInterval!TP interval) const pure
     {
         _enforceNotEmpty();
         return PosInfInterval!TP(_begin < interval._begin ? _begin : interval._begin);
@@ -1084,7 +1084,7 @@ public:
                NegInfInterval!Date(Date(2013, 1 , 12)));
         --------------------
       +/
-    NegInfInterval!TP span(in NegInfInterval!TP interval) const pure
+    NegInfInterval!TP span(scope const NegInfInterval!TP interval) const pure
     {
         _enforceNotEmpty();
         return NegInfInterval!TP(_end > interval._end ? _end : interval._end);
@@ -1403,7 +1403,7 @@ public:
         Example:
         --------------------
         auto interval = Interval!Date(Date(2010, 9, 1), Date(2010, 9, 9));
-        auto func = delegate (in Date date) // For iterating over even-numbered days.
+        auto func = delegate (scope const Date date) // For iterating over even-numbered days.
                     {
                         if ((date.day & 1) == 0)
                             return date + dur!"days"(2);
@@ -1431,7 +1431,7 @@ public:
         assert(range.empty);
         --------------------
       +/
-    IntervalRange!(TP, Direction.fwd) fwdRange(TP delegate(in TP) func, PopFirst popFirst = PopFirst.no) const
+    IntervalRange!(TP, Direction.fwd) fwdRange(TP delegate(scope const TP) func, PopFirst popFirst = PopFirst.no) const
     {
         _enforceNotEmpty();
 
@@ -1497,7 +1497,7 @@ public:
         Example:
         --------------------
         auto interval = Interval!Date(Date(2010, 9, 1), Date(2010, 9, 9));
-        auto func = delegate (in Date date) // For iterating over even-numbered days.
+        auto func = delegate (scope const Date date) // For iterating over even-numbered days.
                     {
                         if ((date.day & 1) == 0)
                             return date - dur!"days"(2);
@@ -1525,7 +1525,7 @@ public:
         assert(range.empty);
         --------------------
       +/
-    IntervalRange!(TP, Direction.bwd) bwdRange(TP delegate(in TP) func, PopFirst popFirst = PopFirst.no) const
+    IntervalRange!(TP, Direction.bwd) bwdRange(TP delegate(scope const TP) func, PopFirst popFirst = PopFirst.no) const
     {
         _enforceNotEmpty();
 
@@ -1588,7 +1588,7 @@ private:
             begin = The starting point of the interval.
             end   = The end point of the interval.
      +/
-    static bool _valid(in TP begin, in TP end) pure nothrow
+    static bool _valid(scope const TP begin, scope const TP end) pure nothrow @trusted
     {
         return begin <= end;
     }
@@ -2368,7 +2368,7 @@ private:
 
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
-    static void testInterval(in Interval!Date interval1, in Interval!Date interval2)
+    static void testInterval(scope const Interval!Date interval1, scope const Interval!Date interval2)
     {
         interval1.isAdjacent(interval2);
     }
@@ -2477,7 +2477,7 @@ private:
 
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
-    static void testInterval(I)(in Interval!Date interval1, in I interval2)
+    static void testInterval(I)(scope const Interval!Date interval1, scope const I interval2)
     {
         interval1.merge(interval2);
     }
@@ -2622,7 +2622,7 @@ private:
 
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
-    static void testInterval(in Interval!Date interval1, in Interval!Date interval2)
+    static void testInterval(scope const Interval!Date interval1, scope const Interval!Date interval2)
     {
         interval1.span(interval2);
     }
@@ -2757,14 +2757,15 @@ private:
 
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
-    static void testIntervalFail(Interval!Date interval, in Duration duration)
+    static void testIntervalFail(Interval!Date interval, scope const Duration duration)
     {
         interval.shift(duration);
     }
 
     assertThrown!DateTimeException(testIntervalFail(Interval!Date(Date(2010, 7, 4), dur!"days"(0)), dur!"days"(1)));
 
-    static void testInterval(I)(I interval, in Duration duration, in I expected, size_t line = __LINE__)
+    static void testInterval(I)(I interval, scope const Duration duration,
+                                scope const I expected, size_t line = __LINE__)
     {
         interval.shift(duration);
         assert(interval == expected);
@@ -2850,7 +2851,7 @@ private:
 
     auto interval = Interval!Date(Date(2000, 7, 4), Date(2012, 1, 7));
 
-    static void testIntervalFail(I)(I interval, in Duration duration)
+    static void testIntervalFail(I)(I interval, scope const Duration duration)
     {
         interval.expand(duration);
     }
@@ -2858,7 +2859,8 @@ private:
     assertThrown!DateTimeException(testIntervalFail(Interval!Date(Date(2010, 7, 4), dur!"days"(0)), dur!"days"(1)));
     assertThrown!DateTimeException(testIntervalFail(Interval!Date(Date(2010, 7, 4), Date(2010, 7, 5)), dur!"days"(-5)));
 
-    static void testInterval(I)(I interval, in Duration duration, in I expected, size_t line = __LINE__)
+    static void testInterval(I)(I interval, scope const Duration duration,
+                                scope const I expected, size_t line = __LINE__)
     {
         interval.expand(duration);
         assert(interval == expected);
@@ -3029,7 +3031,7 @@ private:
     // Verify Examples.
     {
         auto interval = Interval!Date(Date(2010, 9, 1), Date(2010, 9, 9));
-        auto func = delegate (in Date date)
+        auto func = delegate (scope const Date date)
                     {
                         if ((date.day & 1) == 0)
                             return date + dur!"days"(2);
@@ -3097,7 +3099,7 @@ private:
     // Verify Examples.
     {
         auto interval = Interval!Date(Date(2010, 9, 1), Date(2010, 9, 9));
-        auto func = delegate (in Date date)
+        auto func = delegate (scope const Date date)
                     {
                         if ((date.day & 1) == 0)
                             return date - dur!"days"(2);
@@ -3164,7 +3166,7 @@ public:
 auto interval = PosInfInterval!Date(Date(1996, 1, 2));
 --------------------
       +/
-    this(in TP begin) pure nothrow
+    this(scope const TP begin) pure nothrow
     {
         _begin = cast(TP) begin;
     }
@@ -3269,7 +3271,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).contains(
             Interval!Date(Date(1998, 2, 28), Date(2013, 5, 1))));
 --------------------
       +/
-    bool contains(in Interval!TP interval) const pure
+    bool contains(scope const Interval!TP interval) const pure
     {
         interval._enforceNotEmpty();
         return interval._begin >= _begin;
@@ -3291,7 +3293,7 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).contains(
             PosInfInterval!Date(Date(1995, 7, 2))));
 --------------------
       +/
-    bool contains(in PosInfInterval interval) const pure nothrow
+    bool contains(scope const PosInfInterval interval) const pure nothrow
     {
         return interval._begin >= _begin;
     }
@@ -3312,7 +3314,7 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).contains(
             NegInfInterval!Date(Date(1996, 5, 4))));
 --------------------
       +/
-    bool contains(in NegInfInterval!TP interval) const pure nothrow
+    bool contains(scope const NegInfInterval!TP interval) const pure nothrow
     {
         return false;
     }
@@ -3334,7 +3336,7 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(Date(1994, 12, 24)));
 assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(Date(2000, 1, 5)));
 --------------------
       +/
-    bool isBefore(in TP timePoint) const pure nothrow
+    bool isBefore(scope const TP timePoint) const pure nothrow
     {
         return false;
     }
@@ -3364,7 +3366,7 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(
             Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
 --------------------
       +/
-    bool isBefore(in Interval!TP interval) const pure
+    bool isBefore(scope const Interval!TP interval) const pure
     {
         interval._enforceNotEmpty();
         return false;
@@ -3390,7 +3392,7 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(
             PosInfInterval!Date(Date(2013, 3, 7))));
 --------------------
       +/
-    bool isBefore(in PosInfInterval interval) const pure nothrow
+    bool isBefore(scope const PosInfInterval interval) const pure nothrow
     {
         return false;
     }
@@ -3412,7 +3414,7 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(
             NegInfInterval!Date(Date(1996, 5, 4))));
 --------------------
       +/
-    bool isBefore(in NegInfInterval!TP interval) const pure nothrow
+    bool isBefore(scope const NegInfInterval!TP interval) const pure nothrow
     {
         return false;
     }
@@ -3431,7 +3433,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).isAfter(Date(1994, 12, 24)));
 assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(Date(2000, 1, 5)));
 --------------------
       +/
-    bool isAfter(in TP timePoint) const pure nothrow
+    bool isAfter(scope const TP timePoint) const pure nothrow
     {
         return timePoint < _begin;
     }
@@ -3460,7 +3462,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
             Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
 --------------------
       +/
-    bool isAfter(in Interval!TP interval) const pure
+    bool isAfter(scope const Interval!TP interval) const pure
     {
         interval._enforceNotEmpty();
         return _begin >= interval._end;
@@ -3486,7 +3488,7 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
             PosInfInterval!Date(Date(1999, 5, 4))));
 --------------------
       +/
-    bool isAfter(in PosInfInterval interval) const pure nothrow
+    bool isAfter(scope const PosInfInterval interval) const pure nothrow
     {
         return false;
     }
@@ -3508,7 +3510,7 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
             NegInfInterval!Date(Date(2000, 7, 1))));
 --------------------
       +/
-    bool isAfter(in NegInfInterval!TP interval) const pure nothrow
+    bool isAfter(scope const NegInfInterval!TP interval) const pure nothrow
     {
         return _begin >= interval._end;
     }
@@ -3536,7 +3538,7 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).intersects(
             Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
 --------------------
       +/
-    bool intersects(in Interval!TP interval) const pure
+    bool intersects(scope const Interval!TP interval) const pure
     {
         interval._enforceNotEmpty();
         return interval._end > _begin;
@@ -3562,7 +3564,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(
             PosInfInterval!Date(Date(1999, 5, 4))));
 --------------------
       +/
-    bool intersects(in PosInfInterval interval) const pure nothrow
+    bool intersects(scope const PosInfInterval interval) const pure nothrow
     {
         return true;
     }
@@ -3584,7 +3586,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(
             NegInfInterval!Date(Date(2000, 7, 1))));
 --------------------
       +/
-    bool intersects(in NegInfInterval!TP interval) const pure nothrow
+    bool intersects(scope const NegInfInterval!TP interval) const pure nothrow
     {
         return _begin < interval._end;
     }
@@ -3611,7 +3613,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
        Interval!Date(Date(1999, 1 , 12), Date(2011, 9, 17)));
 --------------------
       +/
-    Interval!TP intersection(in Interval!TP interval) const
+    Interval!TP intersection(scope const Interval!TP interval) const
     {
         import std.format : format;
 
@@ -3641,7 +3643,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
        PosInfInterval!Date(Date(1999, 1 , 12)));
 --------------------
       +/
-    PosInfInterval intersection(in PosInfInterval interval) const pure nothrow
+    PosInfInterval intersection(scope const PosInfInterval interval) const pure nothrow
     {
         return PosInfInterval(_begin < interval._begin ? interval._begin : _begin);
     }
@@ -3668,7 +3670,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
        Interval!Date(Date(1996, 1 , 2), Date(2013, 1, 12)));
 --------------------
       +/
-    Interval!TP intersection(in NegInfInterval!TP interval) const
+    Interval!TP intersection(scope const NegInfInterval!TP interval) const
     {
         import std.format : format;
 
@@ -3699,7 +3701,7 @@ assert(!PosInfInterval!Date(Date(1999, 1, 12)).isAdjacent(
             Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
 --------------------
       +/
-    bool isAdjacent(in Interval!TP interval) const pure
+    bool isAdjacent(scope const Interval!TP interval) const pure
     {
         interval._enforceNotEmpty();
         return _begin == interval._end;
@@ -3725,7 +3727,7 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(
             PosInfInterval!Date(Date(1996, 1, 2))));
 --------------------
       +/
-    bool isAdjacent(in PosInfInterval interval) const pure nothrow
+    bool isAdjacent(scope const PosInfInterval interval) const pure nothrow
     {
         return false;
     }
@@ -3747,7 +3749,7 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(
             NegInfInterval!Date(Date(2000, 7, 1))));
 --------------------
       +/
-    bool isAdjacent(in NegInfInterval!TP interval) const pure nothrow
+    bool isAdjacent(scope const NegInfInterval!TP interval) const pure nothrow
     {
         return _begin == interval._end;
     }
@@ -3781,7 +3783,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(
        PosInfInterval!Date(Date(1996, 1 , 2)));
 --------------------
       +/
-    PosInfInterval merge(in Interval!TP interval) const
+    PosInfInterval merge(scope const Interval!TP interval) const
     {
         import std.format : format;
 
@@ -3815,7 +3817,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(
        PosInfInterval!Date(Date(1996, 1 , 2)));
 --------------------
       +/
-    PosInfInterval merge(in PosInfInterval interval) const pure nothrow
+    PosInfInterval merge(scope const PosInfInterval interval) const pure nothrow
     {
         return PosInfInterval(_begin < interval._begin ? _begin : interval._begin);
     }
@@ -3855,7 +3857,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).span(
        PosInfInterval!Date(Date(1996, 1 , 2)));
 --------------------
       +/
-    PosInfInterval span(in Interval!TP interval) const pure
+    PosInfInterval span(scope const Interval!TP interval) const pure
     {
         interval._enforceNotEmpty();
         return PosInfInterval(_begin < interval._begin ? _begin : interval._begin);
@@ -3888,7 +3890,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).span(
        PosInfInterval!Date(Date(1996, 1 , 2)));
 --------------------
       +/
-    PosInfInterval span(in PosInfInterval interval) const pure nothrow
+    PosInfInterval span(scope const PosInfInterval interval) const pure nothrow
     {
         return PosInfInterval(_begin < interval._begin ? _begin : interval._begin);
     }
@@ -4088,7 +4090,7 @@ assert(interval2 == PosInfInterval!Date(Date(1998, 1, 2)));
         Example:
 --------------------
 auto interval = PosInfInterval!Date(Date(2010, 9, 1));
-auto func = delegate (in Date date) //For iterating over even-numbered days.
+auto func = delegate (scope const Date date) //For iterating over even-numbered days.
             {
                 if ((date.day & 1) == 0)
                     return date + dur!"days"(2);
@@ -4116,7 +4118,7 @@ range.popFront();
 assert(!range.empty);
 --------------------
       +/
-    PosInfIntervalRange!(TP) fwdRange(TP delegate(in TP) func, PopFirst popFirst = PopFirst.no) const
+    PosInfIntervalRange!(TP) fwdRange(TP delegate(scope const TP) func, PopFirst popFirst = PopFirst.no) const
     {
         auto range = PosInfIntervalRange!(TP)(this, func);
 
@@ -4258,7 +4260,7 @@ private:
 
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
-    static void testInterval(in PosInfInterval!Date posInfInterval, in Interval!Date interval)
+    static void testInterval(scope const PosInfInterval!Date posInfInterval, scope const Interval!Date interval)
     {
         posInfInterval.contains(interval);
     }
@@ -4383,7 +4385,7 @@ private:
 
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
-    static void testInterval(in PosInfInterval!Date posInfInterval, in Interval!Date interval)
+    static void testInterval(scope const PosInfInterval!Date posInfInterval, scope const Interval!Date interval)
     {
         posInfInterval.isBefore(interval);
     }
@@ -4507,7 +4509,7 @@ private:
 
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
-    static void testInterval(in PosInfInterval!Date posInfInterval, in Interval!Date interval)
+    static void testInterval(scope const PosInfInterval!Date posInfInterval, scope const Interval!Date interval)
     {
         posInfInterval.isAfter(interval);
     }
@@ -4604,7 +4606,7 @@ private:
 
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
-    static void testInterval(in PosInfInterval!Date posInfInterval, in Interval!Date interval)
+    static void testInterval(scope const PosInfInterval!Date posInfInterval, scope const Interval!Date interval)
     {
         posInfInterval.intersects(interval);
     }
@@ -4701,7 +4703,7 @@ private:
 
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
-    static void testInterval(I, J)(in I interval1, in J interval2)
+    static void testInterval(I, J)(scope const I interval1, scope const J interval2)
     {
         interval1.intersection(interval2);
     }
@@ -4819,7 +4821,7 @@ private:
 
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
-    static void testInterval(in PosInfInterval!Date posInfInterval, in Interval!Date interval)
+    static void testInterval(scope const PosInfInterval!Date posInfInterval, scope const Interval!Date interval)
     {
         posInfInterval.isAdjacent(interval);
     }
@@ -4915,7 +4917,7 @@ private:
 
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
-    static void testInterval(in PosInfInterval!Date posInfInterval, in Interval!Date interval)
+    static void testInterval(scope const PosInfInterval!Date posInfInterval, scope const Interval!Date interval)
     {
         posInfInterval.merge(interval);
     }
@@ -5024,7 +5026,7 @@ private:
 
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
-    static void testInterval(in PosInfInterval!Date posInfInterval, in Interval!Date interval)
+    static void testInterval(scope const PosInfInterval!Date posInfInterval, scope const Interval!Date interval)
     {
         posInfInterval.span(interval);
     }
@@ -5135,7 +5137,8 @@ private:
 
     auto interval = PosInfInterval!Date(Date(2010, 7, 4));
 
-    static void testInterval(I)(I interval, in Duration duration, in I expected, size_t line = __LINE__)
+    static void testInterval(I)(I interval, scope const Duration duration,
+                                scope const I expected, size_t line = __LINE__)
     {
         interval.shift(duration);
         assert(interval == expected);
@@ -5214,7 +5217,8 @@ private:
 
     auto interval = PosInfInterval!Date(Date(2000, 7, 4));
 
-    static void testInterval(I)(I interval, in Duration duration, in I expected, size_t line = __LINE__)
+    static void testInterval(I)(I interval, scope const Duration duration,
+                                scope const I expected, size_t line = __LINE__)
     {
         interval.expand(duration);
         assert(interval == expected);
@@ -5308,7 +5312,7 @@ private:
 
     //Verify Examples.
     auto interval = PosInfInterval!Date(Date(2010, 9, 1));
-    auto func = delegate (in Date date)
+    auto func = delegate (scope const Date date)
                 {
                     if ((date.day & 1) == 0)
                         return date + dur!"days"(2);
@@ -5374,7 +5378,7 @@ public:
 auto interval = PosInfInterval!Date(Date(1996, 1, 2));
 --------------------
       +/
-    this(in TP end) pure nothrow
+    this(scope const TP end) pure nothrow
     {
         _end = cast(TP) end;
     }
@@ -5480,7 +5484,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(
             Interval!Date(Date(1998, 2, 28), Date(2013, 5, 1))));
 --------------------
       +/
-    bool contains(in Interval!TP interval) const pure
+    bool contains(scope const Interval!TP interval) const pure
     {
         interval._enforceNotEmpty();
         return interval._end <= _end;
@@ -5502,7 +5506,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(
             PosInfInterval!Date(Date(1999, 5, 4))));
 --------------------
       +/
-    bool contains(in PosInfInterval!TP interval) const pure nothrow
+    bool contains(scope const PosInfInterval!TP interval) const pure nothrow
     {
         return false;
     }
@@ -5523,7 +5527,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(
             NegInfInterval!Date(Date(2013, 7, 9))));
 --------------------
       +/
-    bool contains(in NegInfInterval interval) const pure nothrow
+    bool contains(scope const NegInfInterval interval) const pure nothrow
     {
         return interval._end <= _end;
     }
@@ -5543,7 +5547,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(2000, 1, 5)));
 assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(2012, 3, 1)));
 --------------------
       +/
-    bool isBefore(in TP timePoint) const pure nothrow
+    bool isBefore(scope const TP timePoint) const pure nothrow
     {
         return timePoint >= _end;
     }
@@ -5572,7 +5576,7 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
             Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
 --------------------
       +/
-    bool isBefore(in Interval!TP interval) const pure
+    bool isBefore(scope const Interval!TP interval) const pure
     {
         interval._enforceNotEmpty();
         return _end <= interval._begin;
@@ -5595,7 +5599,7 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
             PosInfInterval!Date(Date(2012, 3, 1))));
 --------------------
       +/
-    bool isBefore(in PosInfInterval!TP interval) const pure nothrow
+    bool isBefore(scope const PosInfInterval!TP interval) const pure nothrow
     {
         return _end <= interval._begin;
     }
@@ -5621,7 +5625,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
             NegInfInterval!Date(Date(2013, 7, 9))));
 --------------------
       +/
-    bool isBefore(in NegInfInterval interval) const pure nothrow
+    bool isBefore(scope const NegInfInterval interval) const pure nothrow
     {
         return false;
     }
@@ -5644,7 +5648,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(2000, 1, 5)));
 assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(2012, 3, 1)));
 --------------------
       +/
-    bool isAfter(in TP timePoint) const pure nothrow
+    bool isAfter(scope const TP timePoint) const pure nothrow
     {
         return false;
     }
@@ -5677,7 +5681,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
             Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
 --------------------
       +/
-    bool isAfter(in Interval!TP interval) const pure
+    bool isAfter(scope const Interval!TP interval) const pure
     {
         interval._enforceNotEmpty();
         return false;
@@ -5703,7 +5707,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
             PosInfInterval!Date(Date(2012, 3, 1))));
 --------------------
       +/
-    bool isAfter(in PosInfInterval!TP interval) const pure nothrow
+    bool isAfter(scope const PosInfInterval!TP interval) const pure nothrow
     {
         return false;
     }
@@ -5728,7 +5732,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
             NegInfInterval!Date(Date(2013, 7, 9))));
 --------------------
       +/
-    bool isAfter(in NegInfInterval interval) const pure nothrow
+    bool isAfter(scope const NegInfInterval interval) const pure nothrow
     {
         return false;
     }
@@ -5756,7 +5760,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).intersects(
             Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
 --------------------
       +/
-    bool intersects(in Interval!TP interval) const pure
+    bool intersects(scope const Interval!TP interval) const pure
     {
         interval._enforceNotEmpty();
         return interval._begin < _end;
@@ -5779,7 +5783,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).intersects(
             PosInfInterval!Date(Date(2012, 3, 1))));
 --------------------
       +/
-    bool intersects(in PosInfInterval!TP interval) const pure nothrow
+    bool intersects(scope const PosInfInterval!TP interval) const pure nothrow
     {
         return interval._begin < _end;
     }
@@ -5803,7 +5807,7 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
             NegInfInterval!Date(Date(2013, 7, 9))));
 --------------------
       +/
-    bool intersects(in NegInfInterval!TP interval) const pure nothrow
+    bool intersects(scope const NegInfInterval!TP interval) const pure nothrow
     {
         return true;
     }
@@ -5830,7 +5834,7 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
        Interval!Date(Date(1999, 1 , 12), Date(2012, 3, 1)));
 --------------------
       +/
-    Interval!TP intersection(in Interval!TP interval) const
+    Interval!TP intersection(scope const Interval!TP interval) const
     {
         import std.format : format;
 
@@ -5864,7 +5868,7 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
        Interval!Date(Date(1999, 1 , 12), Date(2012, 3, 1)));
 --------------------
       +/
-    Interval!TP intersection(in PosInfInterval!TP interval) const
+    Interval!TP intersection(scope const PosInfInterval!TP interval) const
     {
         import std.format : format;
 
@@ -5892,7 +5896,7 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
        NegInfInterval!Date(Date(2012, 3 , 1)));
 --------------------
       +/
-    NegInfInterval intersection(in NegInfInterval interval) const nothrow
+    NegInfInterval intersection(scope const NegInfInterval interval) const nothrow
     {
         return NegInfInterval(_end < interval._end ? _end : interval._end);
     }
@@ -5924,7 +5928,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
             Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
 --------------------
       +/
-    bool isAdjacent(in Interval!TP interval) const pure
+    bool isAdjacent(scope const Interval!TP interval) const pure
     {
         interval._enforceNotEmpty();
         return interval._begin == _end;
@@ -5947,7 +5951,7 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
             PosInfInterval!Date(Date(2012, 3, 1))));
 --------------------
       +/
-    bool isAdjacent(in PosInfInterval!TP interval) const pure nothrow
+    bool isAdjacent(scope const PosInfInterval!TP interval) const pure nothrow
     {
         return interval._begin == _end;
     }
@@ -5972,7 +5976,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
             NegInfInterval!Date(Date(2012, 3, 1))));
 --------------------
       +/
-    bool isAdjacent(in NegInfInterval interval) const pure nothrow
+    bool isAdjacent(scope const NegInfInterval interval) const pure nothrow
     {
         return false;
     }
@@ -6005,7 +6009,7 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
        NegInfInterval!Date(Date(2015, 9 , 2)));
 --------------------
       +/
-    NegInfInterval merge(in Interval!TP interval) const
+    NegInfInterval merge(scope const Interval!TP interval) const
     {
         import std.format : format;
 
@@ -6039,7 +6043,7 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
        NegInfInterval!Date(Date(2013, 1 , 12)));
 --------------------
       +/
-    NegInfInterval merge(in NegInfInterval interval) const pure nothrow
+    NegInfInterval merge(scope const NegInfInterval interval) const pure nothrow
     {
         return NegInfInterval(_end > interval._end ? _end : interval._end);
     }
@@ -6079,7 +6083,7 @@ assert(NegInfInterval!Date(Date(1600, 1, 7)).span(
        NegInfInterval!Date(Date(2017, 7 , 1)));
 --------------------
       +/
-    NegInfInterval span(in Interval!TP interval) const pure
+    NegInfInterval span(scope const Interval!TP interval) const pure
     {
         interval._enforceNotEmpty();
         return NegInfInterval(_end > interval._end ? _end : interval._end);
@@ -6112,7 +6116,7 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
        NegInfInterval!Date(Date(2013, 1 , 12)));
 --------------------
       +/
-    NegInfInterval span(in NegInfInterval interval) const pure nothrow
+    NegInfInterval span(scope const NegInfInterval interval) const pure nothrow
     {
         return NegInfInterval(_end > interval._end ? _end : interval._end);
     }
@@ -6311,7 +6315,7 @@ assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
         Example:
 --------------------
 auto interval = NegInfInterval!Date(Date(2010, 9, 9));
-auto func = delegate (in Date date) //For iterating over even-numbered days.
+auto func = delegate (scope const Date date) //For iterating over even-numbered days.
             {
                 if ((date.day & 1) == 0)
                     return date - dur!"days"(2);
@@ -6338,7 +6342,7 @@ range.popFront();
 assert(!range.empty);
 --------------------
       +/
-    NegInfIntervalRange!(TP) bwdRange(TP delegate(in TP) func, PopFirst popFirst = PopFirst.no) const
+    NegInfIntervalRange!(TP) bwdRange(TP delegate(scope const TP) func, PopFirst popFirst = PopFirst.no) const
     {
         auto range = NegInfIntervalRange!(TP)(this, func);
 
@@ -6478,7 +6482,7 @@ private:
 
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
-    static void testInterval(in NegInfInterval!Date negInfInterval, in Interval!Date interval)
+    static void testInterval(scope const NegInfInterval!Date negInfInterval, scope const Interval!Date interval)
     {
         negInfInterval.contains(interval);
     }
@@ -6604,7 +6608,7 @@ private:
 
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
-    static void testInterval(in NegInfInterval!Date negInfInterval, in Interval!Date interval)
+    static void testInterval(scope const NegInfInterval!Date negInfInterval, scope const Interval!Date interval)
     {
         negInfInterval.isBefore(interval);
     }
@@ -6726,7 +6730,7 @@ private:
 
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
-    static void testInterval(in NegInfInterval!Date negInfInterval, in Interval!Date interval)
+    static void testInterval(scope const NegInfInterval!Date negInfInterval, scope const Interval!Date interval)
     {
         negInfInterval.isAfter(interval);
     }
@@ -6827,7 +6831,7 @@ private:
 
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
-    static void testInterval(in NegInfInterval!Date negInfInterval, in Interval!Date interval)
+    static void testInterval(scope const NegInfInterval!Date negInfInterval, scope const Interval!Date interval)
     {
         negInfInterval.intersects(interval);
     }
@@ -6924,7 +6928,7 @@ private:
 
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
-    static void testInterval(I, J)(in I interval1, in J interval2)
+    static void testInterval(I, J)(scope const I interval1, scope const J interval2)
     {
         interval1.intersection(interval2);
     }
@@ -7042,7 +7046,7 @@ private:
 
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
-    static void testInterval(in NegInfInterval!Date negInfInterval, in Interval!Date interval)
+    static void testInterval(scope const NegInfInterval!Date negInfInterval, scope const Interval!Date interval)
     {
         negInfInterval.isAdjacent(interval);
     }
@@ -7140,7 +7144,7 @@ private:
 
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
-    static void testInterval(I, J)(in I interval1, in J interval2)
+    static void testInterval(I, J)(scope const I interval1, scope const J interval2)
     {
         interval1.merge(interval2);
     }
@@ -7249,7 +7253,7 @@ private:
 
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
-    static void testInterval(I, J)(in I interval1, in J interval2)
+    static void testInterval(I, J)(scope const I interval1, scope const J interval2)
     {
         interval1.span(interval2);
     }
@@ -7360,7 +7364,8 @@ private:
 
     auto interval = NegInfInterval!Date(Date(2012, 1, 7));
 
-    static void testInterval(I)(I interval, in Duration duration, in I expected, size_t line = __LINE__)
+    static void testInterval(I)(I interval, scope const Duration duration,
+                                scope const I expected, size_t line = __LINE__)
     {
         interval.shift(duration);
         assert(interval == expected);
@@ -7444,7 +7449,8 @@ private:
 
     auto interval = NegInfInterval!Date(Date(2012, 1, 7));
 
-    static void testInterval(I)(I interval, in Duration duration, in I expected, size_t line = __LINE__)
+    static void testInterval(I)(I interval,
+                                scope const Duration duration, scope const I expected, size_t line = __LINE__)
     {
         interval.expand(duration);
         assert(interval == expected);
@@ -7538,7 +7544,7 @@ private:
 
     //Verify Examples.
     auto interval = NegInfInterval!Date(Date(2010, 9, 9));
-    auto func = delegate (in Date date)
+    auto func = delegate (scope const Date date)
                 {
                     if ((date.day & 1) == 0)
                         return date - dur!"days"(2);
@@ -7601,14 +7607,14 @@ private:
                     `bwdRange`, use `Direction.bwd`.
         dayOfWeek = The week that each time point in the range will be.
   +/
-TP delegate(in TP) everyDayOfWeek(TP, Direction dir = Direction.fwd)(DayOfWeek dayOfWeek) nothrow
+TP delegate(scope const TP) everyDayOfWeek(TP, Direction dir = Direction.fwd)(DayOfWeek dayOfWeek) nothrow
 if (isTimePoint!TP &&
     (dir == Direction.fwd || dir == Direction.bwd) &&
     __traits(hasMember, TP, "dayOfWeek") &&
     !__traits(isStaticFunction, TP.dayOfWeek) &&
     is(typeof(TP.dayOfWeek) == DayOfWeek))
 {
-    TP func(in TP tp)
+    TP func(scope const TP tp)
     {
         TP retval = cast(TP) tp;
         immutable days = daysToDayOfWeek(retval.dayOfWeek, dayOfWeek);
@@ -7711,7 +7717,7 @@ if (isTimePoint!TP &&
         month = The month that each time point in the range will be in
                 (January is 1).
   +/
-TP delegate(in TP) everyMonth(TP, Direction dir = Direction.fwd)(int month)
+TP delegate(scope const TP) everyMonth(TP, Direction dir = Direction.fwd)(int month)
 if (isTimePoint!TP &&
     (dir == Direction.fwd || dir == Direction.bwd) &&
     __traits(hasMember, TP, "month") &&
@@ -7722,7 +7728,7 @@ if (isTimePoint!TP &&
 
     enforceValid!"months"(month);
 
-    TP func(in TP tp)
+    TP func(scope const TP tp)
     {
         TP retval = cast(TP) tp;
         immutable months = monthsToMonth(retval.month, month);
@@ -7841,12 +7847,12 @@ if (isTimePoint!TP &&
         duration = The duration which separates each successive time point in
                    the range.
   +/
-TP delegate(in TP) everyDuration(TP, Direction dir = Direction.fwd, D)(D duration) nothrow
+TP delegate(scope const TP) everyDuration(TP, Direction dir = Direction.fwd, D)(D duration) nothrow
 if (isTimePoint!TP &&
     __traits(compiles, TP.init + duration) &&
     (dir == Direction.fwd || dir == Direction.bwd))
 {
-    TP func(in TP tp)
+    TP func(scope const TP tp)
     {
         static if (dir == Direction.fwd)
             return tp + duration;
@@ -7946,7 +7952,7 @@ if (isTimePoint!TP &&
         duration      = The duration to add to the time point passed to the
                         delegate.
   +/
-TP delegate(in TP) everyDuration(TP, Direction dir = Direction.fwd, D)
+TP delegate(scope const TP) everyDuration(TP, Direction dir = Direction.fwd, D)
                                  (int years,
                                  int months = 0,
                                  AllowDayOverflow allowOverflow = AllowDayOverflow.yes,
@@ -7957,7 +7963,7 @@ if (isTimePoint!TP &&
     __traits(compiles, TP.init.add!"months"(months)) &&
     (dir == Direction.fwd || dir == Direction.bwd))
 {
-    TP func(in TP tp)
+    TP func(scope const TP tp)
     {
         static if (dir == Direction.fwd)
         {
@@ -8214,7 +8220,7 @@ public:
     /++
         The function used to generate the next time point in the range.
       +/
-    TP delegate(in TP) func() pure nothrow @property
+    TP delegate(scope const TP) func() pure nothrow @property
     {
         return _func;
     }
@@ -8237,7 +8243,7 @@ private:
             func     = The function used to generate the time points which are
                        iterated over.
       +/
-    this(in Interval!TP interval, TP delegate(in TP) func) pure nothrow
+    this(const Interval!TP interval, TP delegate(scope const TP) func) pure nothrow @safe
     {
         _func = func;
         _interval = interval;
@@ -8261,7 +8267,7 @@ private:
             $(REF DateTimeException,std,datetime,date) if $(D_PARAM newTP) is
             in the wrong direction.
       +/
-    void _enforceCorrectDirection(in TP newTP, size_t line = __LINE__) const
+    void _enforceCorrectDirection(scope const TP newTP, size_t line = __LINE__) const
     {
         import std.format : format;
 
@@ -8287,7 +8293,7 @@ private:
 
 
     Interval!TP        _interval;
-    TP delegate(in TP) _func;
+    TP delegate(scope const TP) _func;
 }
 
 //Test that IntervalRange satisfies the range predicates that it's supposed to satisfy.
@@ -8324,25 +8330,25 @@ private:
     import std.datetime.systime;
 
     {
-        Date dateFunc(in Date date) { return date; }
+        Date dateFunc(scope const Date date) { return date; }
         auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
         auto ir = IntervalRange!(Date, Direction.fwd)(interval, &dateFunc);
     }
 
     {
-        TimeOfDay todFunc(in TimeOfDay tod) { return tod; }
+        TimeOfDay todFunc(scope const TimeOfDay tod) { return tod; }
         auto interval = Interval!TimeOfDay(TimeOfDay(12, 1, 7), TimeOfDay(14, 0, 0));
         auto ir = IntervalRange!(TimeOfDay, Direction.fwd)(interval, &todFunc);
     }
 
     {
-        DateTime dtFunc(in DateTime dt) { return dt; }
+        DateTime dtFunc(scope const DateTime dt) { return dt; }
         auto interval = Interval!DateTime(DateTime(2010, 7, 4, 12, 1, 7), DateTime(2012, 1, 7, 14, 0, 0));
         auto ir = IntervalRange!(DateTime, Direction.fwd)(interval, &dtFunc);
     }
 
     {
-        SysTime stFunc(in SysTime st) { return cast(SysTime) st; }
+        SysTime stFunc(scope const SysTime st) { return cast(SysTime) st; }
         auto interval = Interval!SysTime(SysTime(DateTime(2010, 7, 4, 12, 1, 7)),
                                          SysTime(DateTime(2012, 1, 7, 14, 0, 0)));
         auto ir = IntervalRange!(SysTime, Direction.fwd)(interval, &stFunc);
@@ -8396,7 +8402,8 @@ private:
     {
         auto emptyRange = Interval!Date(Date(2010, 9, 19), Date(2010, 9, 20)).fwdRange(
             everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
-        assertThrown!DateTimeException((in IntervalRange!(Date, Direction.fwd) range){range.front;}(emptyRange));
+        assertThrown!DateTimeException(
+            (scope const IntervalRange!(Date, Direction.fwd) range){range.front;}(emptyRange));
 
         auto range = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed));
         assert(range.front == Date(2010, 7, 4));
@@ -8413,7 +8420,8 @@ private:
     {
         auto emptyRange = Interval!Date(Date(2010, 9, 19), Date(2010, 9, 20)).bwdRange(
             everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
-        assertThrown!DateTimeException((in IntervalRange!(Date, Direction.bwd) range){range.front;}(emptyRange));
+        assertThrown!DateTimeException(
+            (scope const IntervalRange!(Date, Direction.bwd) range){range.front;}(emptyRange));
 
         auto range = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).bwdRange(
             everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed));
@@ -8691,7 +8699,7 @@ public:
     /++
         The function used to generate the next time point in the range.
       +/
-    TP delegate(in TP) func() pure nothrow @property
+    TP delegate(scope const TP) func() pure nothrow @property
     {
         return _func;
     }
@@ -8705,7 +8713,7 @@ private:
             func     = The function used to generate the time points which are
                        iterated over.
       +/
-    this(in PosInfInterval!TP interval, TP delegate(in TP) func) pure nothrow
+    this(const PosInfInterval!TP interval, TP delegate(scope const TP) func) pure nothrow
     {
         _func = func;
         _interval = interval;
@@ -8717,7 +8725,7 @@ private:
             $(REF DateTimeException,std,datetime,date) if $(D_PARAM newTP) is
             in the wrong direction.
       +/
-    void _enforceCorrectDirection(in TP newTP, size_t line = __LINE__) const
+    void _enforceCorrectDirection(scope const TP newTP, size_t line = __LINE__) const
     {
         import std.format : format;
 
@@ -8731,7 +8739,7 @@ private:
 
 
     PosInfInterval!TP  _interval;
-    TP delegate(in TP) _func;
+    TP delegate(scope const TP) _func;
 }
 
 //Test that PosInfIntervalRange satisfies the range predicates that it's supposed to satisfy.
@@ -8767,25 +8775,25 @@ private:
     import std.datetime.systime;
 
     {
-        Date dateFunc(in Date date) { return date; }
+        Date dateFunc(scope const Date date) { return date; }
         auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
         auto ir = PosInfIntervalRange!Date(posInfInterval, &dateFunc);
     }
 
     {
-        TimeOfDay todFunc(in TimeOfDay tod) { return tod; }
+        TimeOfDay todFunc(scope const TimeOfDay tod) { return tod; }
         auto posInfInterval = PosInfInterval!TimeOfDay(TimeOfDay(12, 1, 7));
         auto ir = PosInfIntervalRange!(TimeOfDay)(posInfInterval, &todFunc);
     }
 
     {
-        DateTime dtFunc(in DateTime dt) { return dt; }
+        DateTime dtFunc(scope const DateTime dt) { return dt; }
         auto posInfInterval = PosInfInterval!DateTime(DateTime(2010, 7, 4, 12, 1, 7));
         auto ir = PosInfIntervalRange!(DateTime)(posInfInterval, &dtFunc);
     }
 
     {
-        SysTime stFunc(in SysTime st) { return cast(SysTime) st; }
+        SysTime stFunc(scope const SysTime st) { return cast(SysTime) st; }
         auto posInfInterval = PosInfInterval!SysTime(SysTime(DateTime(2010, 7, 4, 12, 1, 7)));
         auto ir = PosInfIntervalRange!SysTime(posInfInterval, &stFunc);
     }
@@ -8975,7 +8983,7 @@ public:
     /++
         The function used to generate the next time point in the range.
       +/
-    TP delegate(in TP) func() pure nothrow @property
+    TP delegate(scope const TP) func() pure nothrow @property
     {
         return _func;
     }
@@ -8989,7 +8997,7 @@ private:
             func     = The function used to generate the time points which are
                        iterated over.
       +/
-    this(in NegInfInterval!TP interval, TP delegate(in TP) func) pure nothrow
+    this(const NegInfInterval!TP interval, TP delegate(scope const TP) func) pure nothrow
     {
         _func = func;
         _interval = interval;
@@ -9001,7 +9009,7 @@ private:
             $(REF DateTimeException,std,datetime,date) if $(D_PARAM newTP) is
             in the wrong direction.
       +/
-    void _enforceCorrectDirection(in TP newTP, size_t line = __LINE__) const
+    void _enforceCorrectDirection(scope const TP newTP, size_t line = __LINE__) const
     {
         import std.format : format;
 
@@ -9015,7 +9023,7 @@ private:
 
 
     NegInfInterval!TP  _interval;
-    TP delegate(in TP) _func;
+    TP delegate(scope const TP) _func;
 }
 
 //Test that NegInfIntervalRange satisfies the range predicates that it's supposed to satisfy.
@@ -9049,25 +9057,25 @@ private:
     import std.datetime.systime;
 
     {
-        Date dateFunc(in Date date) { return date; }
+        Date dateFunc(scope const Date date) { return date; }
         auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
         auto ir = NegInfIntervalRange!Date(negInfInterval, &dateFunc);
     }
 
     {
-        TimeOfDay todFunc(in TimeOfDay tod) { return tod; }
+        TimeOfDay todFunc(scope const TimeOfDay tod) { return tod; }
         auto negInfInterval = NegInfInterval!TimeOfDay(TimeOfDay(14, 0, 0));
         auto ir = NegInfIntervalRange!(TimeOfDay)(negInfInterval, &todFunc);
     }
 
     {
-        DateTime dtFunc(in DateTime dt) { return dt; }
+        DateTime dtFunc(scope const DateTime dt) { return dt; }
         auto negInfInterval = NegInfInterval!DateTime(DateTime(2012, 1, 7, 14, 0, 0));
         auto ir = NegInfIntervalRange!(DateTime)(negInfInterval, &dtFunc);
     }
 
     {
-        SysTime stFunc(in SysTime st) { return cast(SysTime)(st); }
+        SysTime stFunc(scope const SysTime st) { return cast(SysTime)(st); }
         auto negInfInterval = NegInfInterval!SysTime(SysTime(DateTime(2012, 1, 7, 14, 0, 0)));
         auto ir = NegInfIntervalRange!(SysTime)(negInfInterval, &stFunc);
     }
