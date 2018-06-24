@@ -2836,7 +2836,7 @@ Returns:
 A sub-type of `Tuple!()` of the split portions of `haystack` (see above for
 details).  This sub-type of `Tuple!()` has `opCast` defined for `bool`.  This
 `opCast` returns `true` when the separating `needle` was found
-(`!result[1].empty`) and `false` otherwise.
+and `false` otherwise.
 
 See_Also: $(LREF find)
  */
@@ -2925,7 +2925,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
         Tuple!(S1, S2) asTuple;
         bool opCast(T : bool)()
         {
-            return !asTuple[0].empty;
+            return !asTuple[1].empty;
         }
         alias asTuple this;
     }
@@ -2991,7 +2991,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
         Tuple!(S1, S2) asTuple;
         bool opCast(T : bool)()
         {
-            return !asTuple[1].empty;
+            return !asTuple[0].empty;
         }
         alias asTuple this;
     }
@@ -3102,7 +3102,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(r[2] == a[3 .. $]);
 
     auto r1 = findSplitBefore(a, [9, 1]);
-    assert(r1);
+    assert(!r1);
     assert(r1[0] == a);
     assert(r1[1].empty);
     r1 = findSplitBefore(a, [3, 4]);
@@ -3111,7 +3111,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(r1[1] == a[2 .. $]);
 
     auto r2 = findSplitAfter(a, [9, 1]);
-    assert(r2);
+    assert(!r2);
     assert(r2[0].empty);
     assert(r2[1] == a);
     r2 = findSplitAfter(a, [3, 4]);
@@ -3144,7 +3144,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(r[2].empty);
 
     auto r1 = findSplitBefore(fwd, [9, 1]);
-    assert(r1);
+    assert(!r1);
     assert(equal(r1[0], a));
     assert(r1[1].empty);
     r1 = findSplitBefore(fwd, [3, 4]);
@@ -3152,11 +3152,12 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(equal(r1[0], a[0 .. 2]));
     assert(equal(r1[1], a[2 .. $]));
     r1 = findSplitBefore(fwd, [8, 9]);
+    assert(!r1);
     assert(equal(r1[0], a));
     assert(r1[1].empty);
 
     auto r2 = findSplitAfter(fwd, [9, 1]);
-    assert(r2);
+    assert(!r2);
     assert(r2[0].empty);
     assert(equal(r2[1], a));
     r2 = findSplitAfter(fwd, [3, 4]);
@@ -3164,6 +3165,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(equal(r2[0], a[0 .. 4]));
     assert(equal(r2[1], a[4 .. $]));
     r2 = findSplitAfter(fwd, [8, 9]);
+    assert(!r2);
     assert(r2[0].empty);
     assert(equal(r2[1], a));
 }
