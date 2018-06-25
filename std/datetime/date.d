@@ -164,7 +164,7 @@ public:
             date = The date portion of $(LREF DateTime).
             tod  = The time portion of $(LREF DateTime).
       +/
-    this(scope const Date date, scope const TimeOfDay tod = TimeOfDay.init) @safe pure nothrow @nogc
+    this(Date date, TimeOfDay tod = TimeOfDay.init) @safe pure nothrow @nogc
     {
         _date = date;
         _tod = tod;
@@ -233,7 +233,7 @@ public:
             $(TR $(TD this &gt; rhs) $(TD &gt; 0))
             )
      +/
-    int opCmp(scope const DateTime rhs) const @safe pure nothrow @nogc
+    int opCmp(DateTime rhs) const @safe pure nothrow @nogc
     {
         immutable dateResult = _date.opCmp(rhs._date);
 
@@ -473,7 +473,7 @@ public:
         Params:
             date = The Date to set this $(LREF DateTime)'s date portion to.
       +/
-    @property void date(scope const Date date) @safe pure nothrow @nogc
+    @property void date(Date date) @safe pure nothrow @nogc
     {
         _date = date;
     }
@@ -526,7 +526,7 @@ public:
             tod = The $(REF TimeOfDay,std,datetime,date) to set this
                   $(LREF DateTime)'s time portion to.
       +/
-    @property void timeOfDay(scope const TimeOfDay tod) @safe pure nothrow @nogc
+    @property void timeOfDay(TimeOfDay tod) @safe pure nothrow @nogc
     {
         _tod = tod;
     }
@@ -593,7 +593,7 @@ public:
 
     @safe unittest
     {
-        static void testDT(DateTime dt, int year, scope const DateTime expected, size_t line = __LINE__)
+        static void testDT(DateTime dt, int year, DateTime expected, size_t line = __LINE__)
         {
             dt.year = year;
             assert(dt == expected);
@@ -637,7 +637,7 @@ public:
 
     @safe unittest
     {
-        assertThrown!DateTimeException((scope const DateTime dt){dt.yearBC;}(DateTime(Date(1, 1, 1))));
+        assertThrown!DateTimeException((DateTime dt){dt.yearBC;}(DateTime(Date(1, 1, 1))));
 
         auto dt = DateTime(1999, 7, 6, 12, 30, 33);
         const cdt = DateTime(1999, 7, 6, 12, 30, 33);
@@ -735,8 +735,7 @@ public:
 
     @safe unittest
     {
-        static void testDT(DateTime dt, Month month,
-                           scope const DateTime expected = DateTime.init, size_t line = __LINE__)
+        static void testDT(DateTime dt, Month month, DateTime expected = DateTime.init, size_t line = __LINE__)
         {
             dt.month = month;
             assert(expected != DateTime.init);
@@ -1254,7 +1253,7 @@ public:
     // Test roll!"hours"().
     @safe unittest
     {
-        static void testDT(DateTime orig, int hours, scope const DateTime expected, size_t line = __LINE__)
+        static void testDT(DateTime orig, int hours, DateTime expected, size_t line = __LINE__)
         {
             orig.roll!"hours"(hours);
             assert(orig == expected);
@@ -1557,7 +1556,7 @@ public:
     // Test roll!"minutes"().
     @safe unittest
     {
-        static void testDT(DateTime orig, int minutes, scope const DateTime expected, size_t line = __LINE__)
+        static void testDT(DateTime orig, int minutes, DateTime expected, size_t line = __LINE__)
         {
             orig.roll!"minutes"(minutes);
             assert(orig == expected);
@@ -1857,7 +1856,7 @@ public:
     // Test roll!"seconds"().
     @safe unittest
     {
-        static void testDT(DateTime orig, int seconds, scope const DateTime expected, size_t line = __LINE__)
+        static void testDT(DateTime orig, int seconds, DateTime expected, size_t line = __LINE__)
         {
             orig.roll!"seconds"(seconds);
             assert(orig == expected);
@@ -2331,7 +2330,7 @@ public:
         $(TR $(TD DateTime) $(TD -) $(TD DateTime) $(TD -->) $(TD duration))
         )
       +/
-    Duration opBinary(string op)(scope const DateTime rhs) const @safe pure nothrow @nogc
+    Duration opBinary(string op)(DateTime rhs) const @safe pure nothrow @nogc
         if (op == "-")
     {
         immutable dateResult = _date - rhs.date;
@@ -2418,7 +2417,7 @@ public:
         Params:
             rhs = The $(LREF DateTime) to subtract from this one.
       +/
-    int diffMonths(scope const DateTime rhs) const @safe pure nothrow @nogc
+    int diffMonths(DateTime rhs) const @safe pure nothrow @nogc
     {
         return _date.diffMonths(rhs._date);
     }
@@ -3522,7 +3521,7 @@ private:
 
     @safe unittest
     {
-        static void testDT(DateTime orig, int seconds, scope const DateTime expected, size_t line = __LINE__)
+        static void testDT(DateTime orig, int seconds, DateTime expected, size_t line = __LINE__)
         {
             orig._addSeconds(seconds);
             assert(orig == expected);
@@ -3767,7 +3766,7 @@ public:
         import std.exception : assertNotThrown;
         assert(Date(1, 1, 1) == Date.init);
 
-        static void testDate(scope const Date date, int year, int month, int day)
+        static void testDate(Date date, int year, int month, int day)
         {
             assert(date._year == year);
             assert(date._month == month);
@@ -3962,7 +3961,7 @@ public:
             $(TR $(TD this &gt; rhs) $(TD &gt; 0))
             )
      +/
-    int opCmp(scope const Date rhs) const @safe pure nothrow @nogc
+    int opCmp(Date rhs) const @safe pure nothrow @nogc
     {
         if (_year < rhs._year)
             return -1;
@@ -4127,7 +4126,7 @@ public:
             date.year = year;
         }
 
-        static void testDate(Date date, int year, scope const Date expected)
+        static void testDate(Date date, int year, Date expected)
         {
             date.year = year;
             assert(date == expected);
@@ -4171,7 +4170,7 @@ public:
 
     @safe unittest
     {
-        assertThrown!DateTimeException((scope const Date date){date.yearBC;}(Date(1, 1, 1)));
+        assertThrown!DateTimeException((Date date){date.yearBC;}(Date(1, 1, 1)));
 
         auto date = Date(0, 7, 6);
         const cdate = Date(0, 7, 6);
@@ -4272,7 +4271,7 @@ public:
 
     @safe unittest
     {
-        static void testDate(Date date, Month month, scope const Date expected = Date.init)
+        static void testDate(Date date, Month month, Date expected = Date.init)
         {
             date.month = month;
             assert(expected != Date.init);
@@ -6280,7 +6279,7 @@ public:
         $(TR $(TD Date) $(TD -) $(TD Date) $(TD -->) $(TD duration))
         )
       +/
-    Duration opBinary(string op)(scope const Date rhs) const @safe pure nothrow @nogc
+    Duration opBinary(string op)(Date rhs) const @safe pure nothrow @nogc
         if (op == "-")
     {
         import core.time : dur;
@@ -6336,7 +6335,7 @@ public:
         Params:
             rhs = The $(LREF Date) to subtract from this one.
       +/
-    int diffMonths(scope const Date rhs) const @safe pure nothrow @nogc
+    int diffMonths(Date rhs) const @safe pure nothrow @nogc
     {
         immutable yearDiff = _year - rhs._year;
         immutable monthDiff = _month - rhs._month;
@@ -8228,7 +8227,7 @@ public:
             $(TR $(TD this &gt; rhs) $(TD &gt; 0))
             )
      +/
-    int opCmp(scope const TimeOfDay rhs) const @safe pure nothrow @nogc
+    int opCmp(TimeOfDay rhs) const @safe pure nothrow @nogc
     {
         if (_hour < rhs._hour)
             return -1;
@@ -8527,7 +8526,7 @@ public:
     // Test roll!"minutes"().
     @safe unittest
     {
-        static void testTOD(TimeOfDay orig, int minutes, scope const TimeOfDay expected, size_t line = __LINE__)
+        static void testTOD(TimeOfDay orig, int minutes, TimeOfDay expected, size_t line = __LINE__)
         {
             orig.roll!"minutes"(minutes);
             assert(orig == expected);
@@ -8611,7 +8610,7 @@ public:
     // Test roll!"seconds"().
     @safe unittest
     {
-        static void testTOD(TimeOfDay orig, int seconds, scope const TimeOfDay expected, size_t line = __LINE__)
+        static void testTOD(TimeOfDay orig, int seconds, TimeOfDay expected, size_t line = __LINE__)
         {
             orig.roll!"seconds"(seconds);
             assert(orig == expected);
@@ -8852,7 +8851,7 @@ public:
         Params:
             rhs = The $(LREF TimeOfDay) to subtract from this one.
       +/
-    Duration opBinary(string op)(scope const TimeOfDay rhs) const @safe pure nothrow @nogc
+    Duration opBinary(string op)(TimeOfDay rhs) const @safe pure nothrow @nogc
         if (op == "-")
     {
         immutable lhsSec = _hour * 3600 + _minute * 60 + _second;
@@ -9364,7 +9363,7 @@ private:
 
     @safe unittest
     {
-        static void testTOD(TimeOfDay orig, int seconds, scope const TimeOfDay expected, size_t line = __LINE__)
+        static void testTOD(TimeOfDay orig, int seconds, TimeOfDay expected, size_t line = __LINE__)
         {
             orig._addSeconds(seconds);
             assert(orig == expected);
