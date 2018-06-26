@@ -2003,7 +2003,14 @@ public:
     @property bool dstInEffect() @safe const nothrow
     {
         return _timezone.dstInEffect(_stdTime);
-        // This function's unit testing is done in the time zone classes.
+    }
+
+    // This function's full unit testing is done in the time zone classes, but
+    // this verifies that SysTime.init works correctly, since historically, it
+    // has segfaulted due to a null _timezone.
+    @safe unittest
+    {
+        assert(!SysTime.init.dstInEffect);
     }
 
 
@@ -2014,6 +2021,14 @@ public:
     @property Duration utcOffset() @safe const nothrow
     {
         return _timezone.utcOffsetAt(_stdTime);
+    }
+
+    // This function's full unit testing is done in the time zone classes, but
+    // this verifies that SysTime.init works correctly, since historically, it
+    // has segfaulted due to a null _timezone.
+    @safe unittest
+    {
+        assert(SysTime.init.utcOffset == Duration.zero);
     }
 
 
@@ -2342,7 +2357,7 @@ public:
         {
             import std.utf : toUTFz;
             timeInfo.tm_gmtoff = cast(int) convert!("hnsecs", "seconds")(adjTime - _stdTime);
-            auto zone = (timeInfo.tm_isdst ? _timezone.dstName : _timezone.stdName);
+            auto zone = timeInfo.tm_isdst ? _timezone.dstName : _timezone.stdName;
             timeInfo.tm_zone = zone.toUTFz!(char*)();
         }
 
@@ -2406,6 +2421,29 @@ public:
             {
                 assert(timeInfo.tm_gmtoff == -7 * 60 * 60);
                 assert(to!string(timeInfo.tm_zone) == "PDT");
+            }
+        }
+
+        // This is more to verify that SysTime.init.toTM() doesn't segfault and
+        // does something sane rather than that the value is anything
+        // particularly useful.
+        {
+            auto timeInfo = SysTime.init.toTM();
+
+            assert(timeInfo.tm_sec == 0);
+            assert(timeInfo.tm_min == 0);
+            assert(timeInfo.tm_hour == 0);
+            assert(timeInfo.tm_mday == 1);
+            assert(timeInfo.tm_mon == 0);
+            assert(timeInfo.tm_year == -1899);
+            assert(timeInfo.tm_wday == 1);
+            assert(timeInfo.tm_yday == 0);
+            assert(timeInfo.tm_isdst == 0);
+
+            version(Posix)
+            {
+                assert(timeInfo.tm_gmtoff == 0);
+                assert(to!string(timeInfo.tm_zone) == "SysTime.init's timezone");
             }
         }
     }
@@ -9069,18 +9107,65 @@ private:
     }
 
 
-    // Commented out due to bug http://d.puremagic.com/issues/show_bug.cgi?id=5058
-    /+
-    invariant()
+    final class InitTimeZone : TimeZone
     {
-        assert(_timezone !is null, "Invariant Failure: timezone is null. Were you foolish enough to use " ~
-                                   "SysTime.init? (since timezone for SysTime.init can't be set at compile time).");
+    public:
+
+        static immutable(InitTimeZone) opCall() @safe pure nothrow @nogc { return _initTimeZone; }
+
+        @property override bool hasDST() @safe const nothrow @nogc { return false; }
+
+        override bool dstInEffect(long stdTime) @safe const nothrow @nogc { return false; }
+
+        override long utcToTZ(long stdTime) @safe const nothrow @nogc { return 0; }
+
+        override long tzToUTC(long adjTime) @safe const nothrow @nogc { return 0; }
+
+        override Duration utcOffsetAt(long stdTime) @safe const nothrow @nogc { return Duration.zero; }
+
+    private:
+
+        this() @safe immutable pure
+        {
+            super("SysTime.init's timezone", "SysTime.init's timezone", "SysTime.init's timezone");
+        }
+
+        static immutable InitTimeZone _initTimeZone = new immutable(InitTimeZone);
     }
-    +/
+
+    // https://issues.dlang.org/show_bug.cgi?id=17732
+    @safe unittest
+    {
+        assert(SysTime.init.timezone is InitTimeZone());
+        assert(SysTime.init.toISOString() == "00010101T000000+00:00");
+        assert(SysTime.init.toISOExtString() == "0001-01-01T00:00:00+00:00");
+        assert(SysTime.init.toSimpleString() == "0001-Jan-01 00:00:00+00:00");
+        assert(SysTime.init.toString() == "0001-Jan-01 00:00:00+00:00");
+    }
+
+    // Assigning a value to _timezone in SysTime.init currently doesn't work due
+    // to https://issues.dlang.org/show_bug.cgi?id=17740. So, to hack around
+    // that problem, these accessors have been added so that we can insert a
+    // runtime check for null and then use InitTimeZone for SysTime.init (which
+    // which is the only case where _timezone would be null). This thus fixes
+    // the problem with segfaulting when using SysTime.init but at the cost of
+    // what should be an unnecessary null check. Once 17740 has finally been
+    // fixed, _timezoneStorage should be removed, these accessors should be
+    // removed, and the _timezone variable declaration should be restored.
+    pragma(inline, true) @property _timezone() @safe const pure nothrow @nogc
+    {
+        return _timezoneStorage is null ? InitTimeZone() : _timezoneStorage;
+    }
+
+    pragma(inline, true) @property void _timezone(immutable TimeZone tz) @safe pure nothrow @nogc scope
+    {
+        _timezoneStorage = tz;
+    }
 
 
     long  _stdTime;
-    Rebindable!(immutable TimeZone) _timezone;
+    Rebindable!(immutable TimeZone) _timezoneStorage;
+    //Rebindable!(immutable TimeZone) _timezone = InitTimeZone();
 }
 
 ///
