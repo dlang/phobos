@@ -621,7 +621,17 @@ $(TESTS_EXTRACTOR): $(TOOLS_DIR)/tests_extractor.d | $(LIB)
 .PHONY : auto-tester-build
 auto-tester-build: all checkwhitespace
 
+UNAME:= $(shell uname -s)
+JOBS=1
+ifeq ($(UNAME), Darwin)
+	JOBS=$(shell sysctl -n hw.ncpu)
+endif
+ifeq ($(UNAME), Linux)
+	JOBS=$(shell nproc)
+endif
+
 .PHONY : auto-tester-test
-auto-tester-test: unittest
+auto-tester-test:
+	$(MAKE) -f $(MAKEFILE) -j$(JOBS) unittest
 
 .DELETE_ON_ERROR: # GNU Make directive (delete output files on error)
