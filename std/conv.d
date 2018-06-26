@@ -4211,6 +4211,25 @@ if (T.length > 0) { return textImpl!dstring(args); }
     assert(dtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"d);
 }
 
+@safe unittest
+{
+    char  c = 'h';
+    wchar w = '你';
+    dchar d = 'እ';
+
+    assert( text(c, "ello", ' ', w, "好 ", d, "ው ሰላም ነው") == "hello 你好 እው ሰላም ነው"c);
+    assert(wtext(c, "ello", ' ', w, "好 ", d, "ው ሰላም ነው") == "hello 你好 እው ሰላም ነው"w);
+    assert(dtext(c, "ello", ' ', w, "好 ", d, "ው ሰላም ነው") == "hello 你好 እው ሰላም ነው"d);
+
+    string  cs = "今日は";
+    wstring ws = "여보세요";
+    dstring ds = "Здравствуйте";
+
+    assert( text(cs, ' ', ws, " ", ds) == "今日は 여보세요 Здравствуйте"c);
+    assert(wtext(cs, ' ', ws, " ", ds) == "今日は 여보세요 Здравствуйте"w);
+    assert(dtext(cs, ' ', ws, " ", ds) == "今日は 여보세요 Здравствуйте"d);
+}
+
 // @@@DEPRECATED_2018-06@@@
 deprecated("Calling `text` with 0 arguments is deprecated")
 string text(T...)(T args)
@@ -4239,6 +4258,7 @@ private S textImpl(S, U...)(U args)
     else
     {
         import std.array : appender;
+        import std.traits : isSomeChar, isSomeString;
 
         auto app = appender!S();
 
@@ -4249,6 +4269,12 @@ private S textImpl(S, U...)(U args)
         foreach (arg; args)
         {
             static if (
+                isSomeChar!(typeof(arg)) || isSomeString!(typeof(arg)) ||
+                ( isInputRange!(typeof(arg)) && isSomeChar!(ElementType!(typeof(arg))) )
+            )
+                app.put(arg);
+            else static if (
+
                 is(Unqual!(typeof(arg)) == uint) || is(Unqual!(typeof(arg)) == ulong) ||
                 is(Unqual!(typeof(arg)) == int) || is(Unqual!(typeof(arg)) == long)
             )
