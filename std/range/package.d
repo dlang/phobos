@@ -6064,7 +6064,7 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         }
         @property size_t length() const
         {
-            return cast(size_t)(pastLast - current);
+            return cast(size_t) pastLast - cast(size_t) current;
         }
 
         alias opDollar = length;
@@ -6446,6 +6446,34 @@ pure @safe nothrow unittest
             ++x;
         }
         assert(x == 2);
+    }
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=19027
+//@safe @nogc pure nothrow unittest
+unittest
+{
+    assert(iota(byte.min, byte.max).length == ubyte.max);
+    assert(iota(-1, byte.max).length == byte.max + 1);
+    assert(iota(0, ubyte.max).length == ubyte.max);
+    assert(iota(ubyte.max, 0, -1).length == ubyte.max);
+
+    assert(iota(short.min, short.max).length == ushort.max);
+    assert(iota(-1, short.max).length == short.max + 1);
+    assert(iota(0, ushort.max).length == ushort.max);
+    assert(iota(ushort.max, 0, -1).length == ushort.max);
+
+    assert(iota(int.min, int.max).length == uint.max);
+    assert(iota(-1, int.max).length == int.max + 1UL);
+    assert(iota(0, uint.max).length == uint.max);
+    assert(iota(uint.max, 0, -1).length == uint.max);
+
+    static if (size_t.sizeof == 8)
+    {
+        assert(iota(long.min, long.max).length == size_t.max);
+        assert(iota(-1, long.max).length == long.max + 1UL);
+        assert(iota(0, ulong.max).length == ulong.max);
+        assert(iota(ulong.max, 0, -1).length == ulong.max);
     }
 }
 
