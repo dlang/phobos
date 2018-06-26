@@ -36,8 +36,13 @@ subPackage {
 		auto destFile = file.replace(srcDir, destDir);
 		destFile.dirName.mkdirRecurse;
 		file.readText.replace("std.experimental.allocator", "stdx.allocator")
+			.replace("std.conv", "stdx.allocator.conv")
 		 	.toFile(destFile);
 	}
+	pkgDir.buildPath("std", "conv.d")
+		  .readText
+		  .replace("std.conv", "stdx.allocator.conv")
+		  .toFile(destDir.buildPath("conv.d"));
 	'`
 }
 

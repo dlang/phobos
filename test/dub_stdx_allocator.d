@@ -11,3 +11,16 @@ void main(string[] args)
     writeln("allocate: ", buf);
     scope(exit) Mallocator.instance.deallocate(buf);
 }
+
+void test()
+{
+    import stdx.allocator : make;
+    import stdx.allocator.mallocator : Mallocator;
+    alias alloc = Mallocator.instance;
+    struct Node
+    {
+        int x;
+        this(int, int){}
+    }
+    auto newNode = alloc.make!Node(2, 3);
+}
