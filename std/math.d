@@ -3406,7 +3406,8 @@ float ldexp(float n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real)
 
 @safe pure nothrow @nogc unittest
 {
-    static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
+    static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended ||
+               floatTraits!(real).realFormat == RealFormat.ieeeQuadruple)
     {
         assert(ldexp(1.0L, -16384) == 0x1p-16384L);
         assert(ldexp(1.0L, -16382) == 0x1p-16382L);
@@ -4832,6 +4833,7 @@ long lrint(real x) @trusted pure nothrow @nogc
             const j = sign ? -OF : OF;
             x = (j + x) - j;
 
+            const exp = (vu[F.EXPPOS_SHORT] & F.EXPMASK) - (F.EXPBIAS + 1);
             const implicitOne = 1UL << 48;
             auto vl = cast(ulong*)(&x);
             vl[MANTISSA_MSB] &= implicitOne - 1;
@@ -4839,7 +4841,6 @@ long lrint(real x) @trusted pure nothrow @nogc
 
             long result;
 
-            const exp = (vu[F.EXPPOS_SHORT] & F.EXPMASK) - (F.EXPBIAS + 1);
             if (exp < 0)
                 result = 0;
             else if (exp <= 48)
@@ -5023,7 +5024,7 @@ real trunc(real x) @trusted nothrow @nogc pure
  *  $(TR $(TH x)               $(TH y)            $(TH remainder(x, y)) $(TH n)   $(TH invalid?))
  *  $(TR $(TD $(PLUSMN)0.0)    $(TD not 0.0)      $(TD $(PLUSMN)0.0)    $(TD 0.0) $(TD no))
  *  $(TR $(TD $(PLUSMNINF))    $(TD anything)     $(TD -$(NAN))         $(TD ?)   $(TD yes))
- *  $(TR $(TD anything)        $(TD $(PLUSMN)0.0) $(TD -$(NAN))         $(TD ?)   $(TD yes))
+ *  $(TR $(TD anything)        $(TD $(PLUSMN)0.0) $(TD $(PLUSMN)$(NAN)) $(TD ?)   $(TD yes))
  *  $(TR $(TD != $(PLUSMNINF)) $(TD $(PLUSMNINF)) $(TD x)               $(TD ?)   $(TD no))
  * )
  *
@@ -5058,8 +5059,8 @@ real remquo(real x, real y, out int n) @trusted nothrow @nogc  /// ditto
         assert(remainder(-5.1, 3.0).feqrel(0.9) > 16);
         assert(remainder(0.0, 3.0) == 0.0);
 
-        assert(remainder(1.0, 0.0) is -real.nan);
-        assert(remainder(-1.0, 0.0) is -real.nan);
+        assert(isNaN(remainder(1.0, 0.0)));
+        assert(isNaN(remainder(-1.0, 0.0)));
     }
 }
 
@@ -5252,7 +5253,7 @@ public:
     assert(ieeeFlags == f);
 }
 
-version(D_HardFloat) @safe unittest
+@safe unittest
 {
     import std.meta : AliasSeq;
 
@@ -5750,19 +5751,22 @@ private:
 ///
 @safe unittest
 {
-    FloatingPointControl fpctrl;
+    version(D_HardFloat)
+    {
+        FloatingPointControl fpctrl;
 
-    fpctrl.rounding = FloatingPointControl.roundDown;
-    assert(lrint(1.5) == 1.0);
+        fpctrl.rounding = FloatingPointControl.roundDown;
+        assert(lrint(1.5) == 1.0);
 
-    fpctrl.rounding = FloatingPointControl.roundUp;
-    assert(lrint(1.4) == 2.0);
+        fpctrl.rounding = FloatingPointControl.roundUp;
+        assert(lrint(1.4) == 2.0);
 
-    fpctrl.rounding = FloatingPointControl.roundToNearest;
-    assert(lrint(1.5) == 2.0);
+        fpctrl.rounding = FloatingPointControl.roundToNearest;
+        assert(lrint(1.5) == 2.0);
+    }
 }
 
-@safe unittest
+version(D_HardFloat) @safe unittest
 {
     void ensureDefaults()
     {
@@ -5777,15 +5781,12 @@ private:
     }
     ensureDefaults();
 
-    version(D_HardFloat)
     {
-        {
-            FloatingPointControl ctrl;
-            ctrl.rounding = FloatingPointControl.roundDown;
-            assert(FloatingPointControl.rounding == FloatingPointControl.roundDown);
-        }
-        ensureDefaults();
+        FloatingPointControl ctrl;
+        ctrl.rounding = FloatingPointControl.roundDown;
+        assert(FloatingPointControl.rounding == FloatingPointControl.roundDown);
     }
+    ensureDefaults();
 
     if (FloatingPointControl.hasExceptionTraps)
     {
