@@ -2569,24 +2569,7 @@ Practically `Nullable!T` stores a `T` and a `bool`.
  */
 struct Nullable(T)
 {
-    // simple case: type is freely constructable
-    static if (__traits(compiles, { T _value; }))
-    {
-        private T _value;
-    }
-    // type is not constructable, but also has no way to notice
-    // that we're assigning to an uninitialized variable.
-    else static if (!hasElaborateAssign!T)
-    {
-        private T _value = T.init;
-    }
-    else
-    {
-        static assert(false,
-                      "Cannot construct " ~ typeof(this).stringof ~
-                      ": type has no default constructor and overloaded assignment."
-        );
-    }
+    private T _value = T.init;
 
     private bool _isNull = true;
 
@@ -2802,7 +2785,19 @@ Params:
  */
     void opAssign()(T value)
     {
-        _value = value;
+        import std.algorithm.mutation : moveEmplace, move;
+
+        if (_isNull)
+        {
+            // trusted since _value is known to be T.init here.
+            // the lifetime of value shall be managed by this Nullable;
+            // hence moveEmplace resets it to T.init.
+            () @trusted { moveEmplace(value, _value); }();
+        }
+        else
+        {
+            move(value, _value);
+        }
         _isNull = false;
     }
 
