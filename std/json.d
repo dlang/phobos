@@ -6,7 +6,7 @@ JavaScript Object Notation
 Copyright: Copyright Jeremie Pelletier 2008 - 2009.
 License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   Jeremie Pelletier, David Herberth
-References: $(LINK http://json.org/)
+References: $(LINK http://json.org/), $(LINK http://seriot.ch/parsing_json.html)
 Source:    $(PHOBOSSRC std/json.d)
 */
 /*
@@ -77,6 +77,7 @@ enum JSONOptions
     specialFloatLiterals = 0x1, /// encode NaN and Inf float values as strings
     escapeNonAsciiChars = 0x2,  /// encode non ascii characters with an unicode escape sequence
     doNotEscapeSlashes = 0x4,   /// do not escape slashes ('/')
+    strictParsing = 0x8,        /// Strictly follow RFC-8259 grammar when parsing
 }
 
 /**
@@ -694,7 +695,8 @@ struct JSONValue
 
 /**
 Parses a serialized string and returns a tree of JSON values.
-Throws: $(LREF JSONException) if the depth exceeds the max depth.
+Throws: $(LREF JSONException) if string does not follow the JSON grammar or the depth exceeds the max depth,
+        $(LREF ConvException) if a number in the input cannot be represented by a native D type.
 Params:
     json = json-formatted string to parse
     maxDepth = maximum depth of nesting allowed, -1 disables depth checking
@@ -703,8 +705,8 @@ Params:
 JSONValue parseJSON(T)(T json, int maxDepth = -1, JSONOptions options = JSONOptions.none)
 if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
 {
-    import std.ascii : isWhite, isDigit, isHexDigit, toUpper, toLower;
-    import std.typecons : Yes;
+    import std.ascii : isDigit, isHexDigit, toUpper, toLower;
+    import std.typecons : Nullable, Yes;
     JSONValue root;
     root.type_tag = JSON_TYPE.NULL;
 
@@ -715,15 +717,35 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
     else
         alias Char = Unqual!(ElementType!T);
 
-    if (json.empty) return root;
-
     int depth = -1;
-    Char next = 0;
+    Nullable!Char next;
     int line = 1, pos = 0;
+    immutable bool strict = (options & JSONOptions.strictParsing) != 0;
 
     void error(string msg)
     {
         throw new JSONException(msg, line, pos);
+    }
+
+    if (json.empty)
+    {
+        if (strict)
+        {
+            error("Empty JSON body");
+        }
+        return root;
+    }
+
+    bool isWhite(dchar c)
+    {
+        if (strict)
+        {
+            // RFC 7159 has a stricter definition of whitespace than general ASCII.
+            return c == ' ' || c == '\t' || c == '\n' || c == '\r';
+        }
+        import std.ascii : isWhite;
+        // Accept ASCII NUL as whitespace in non-strict mode.
+        return c == 0 || isWhite(c);
     }
 
     Char popChar()
@@ -755,9 +777,18 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
 
     Char peekChar()
     {
-        if (!next)
+        if (next.isNull)
         {
             if (json.empty) return '\0';
+            next = popChar();
+        }
+        return next.get;
+    }
+
+    Nullable!Char peekCharNullable()
+    {
+        if (next.isNull && !json.empty)
+        {
             next = popChar();
         }
         return next;
@@ -765,7 +796,16 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
 
     void skipWhitespace()
     {
-        while (isWhite(peekChar())) next = 0;
+        while (true)
+        {
+            auto c = peekCharNullable();
+            if (c.isNull ||
+                !isWhite(c.get))
+            {
+                return;
+            }
+            next.nullify();
+        }
     }
 
     Char getChar(bool SkipWhitespace = false)()
@@ -773,10 +813,10 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
         static if (SkipWhitespace) skipWhitespace();
 
         Char c;
-        if (next)
+        if (!next.isNull)
         {
-            c = next;
-            next = 0;
+            c = next.get;
+            next.nullify();
         }
         else
             c = popChar();
@@ -784,11 +824,11 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
         return c;
     }
 
-    void checkChar(bool SkipWhitespace = true, bool CaseSensitive = true)(char c)
+    void checkChar(bool SkipWhitespace = true)(char c, bool caseSensitive = true)
     {
         static if (SkipWhitespace) skipWhitespace();
         auto c2 = getChar();
-        static if (!CaseSensitive) c2 = toLower(c2);
+        if (!caseSensitive) c2 = toLower(c2);
 
         if (c2 != c) error(text("Found '", c2, "' when expecting '", c, "'."));
     }
@@ -819,7 +859,6 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
 
     string parseString()
     {
-        import std.ascii : isControl;
         import std.uni : isSurrogateHi, isSurrogateLo;
         import std.utf : encode, decode;
 
@@ -880,8 +919,12 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
             default:
                 // RFC 7159 states that control characters U+0000 through
                 // U+001F must not appear unescaped in a JSON string.
+                // Note: std.ascii.isControl can't be used for this test
+                // because it considers ASCII DEL (0x7f) to be a control
+                // character but RFC 7159 does not.
+                // Accept unescaped ASCII NULs in non-strict mode.
                 auto c = getChar();
-                if (isControl(c))
+                if (c < 0x20 && (strict || c != 0))
                     error("Illegal control character.");
                 str.put(c);
                 goto Next;
@@ -1001,7 +1044,18 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
                     isNegative = true;
                 }
 
-                readInteger();
+                if (strict && c == '0')
+                {
+                    number.put('0');
+                    if (isDigit(peekChar()))
+                    {
+                        error("Additional digits not allowed after initial zero digit");
+                    }
+                }
+                else
+                {
+                    readInteger();
+                }
 
                 if (testChar('.'))
                 {
@@ -1038,29 +1092,35 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
                 }
                 break;
 
-            case 't':
             case 'T':
+                if (strict) goto default;
+                goto case;
+            case 't':
                 value.type_tag = JSON_TYPE.TRUE;
-                checkChar!(false, false)('r');
-                checkChar!(false, false)('u');
-                checkChar!(false, false)('e');
+                checkChar!false('r', strict);
+                checkChar!false('u', strict);
+                checkChar!false('e', strict);
                 break;
 
-            case 'f':
             case 'F':
+                if (strict) goto default;
+                goto case;
+            case 'f':
                 value.type_tag = JSON_TYPE.FALSE;
-                checkChar!(false, false)('a');
-                checkChar!(false, false)('l');
-                checkChar!(false, false)('s');
-                checkChar!(false, false)('e');
+                checkChar!false('a', strict);
+                checkChar!false('l', strict);
+                checkChar!false('s', strict);
+                checkChar!false('e', strict);
                 break;
 
-            case 'n':
             case 'N':
+                if (strict) goto default;
+                goto case;
+            case 'n':
                 value.type_tag = JSON_TYPE.NULL;
-                checkChar!(false, false)('u');
-                checkChar!(false, false)('l');
-                checkChar!(false, false)('l');
+                checkChar!false('u', strict);
+                checkChar!false('l', strict);
+                checkChar!false('l', strict);
                 break;
 
             default:
@@ -1071,6 +1131,11 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
     }
 
     parseValue(root);
+    if (strict)
+    {
+        skipWhitespace();
+        if (!peekCharNullable().isNull) error("Trailing non-whitespace characters");
+    }
     return root;
 }
 
@@ -1848,4 +1913,73 @@ pure nothrow @safe unittest // issue 15884
     assert(parseJSON(`"\/"`).toString == `"\/"`);
     assert(parseJSON(`"/"`).toString(JSONOptions.doNotEscapeSlashes) == `"/"`);
     assert(parseJSON(`"\/"`).toString(JSONOptions.doNotEscapeSlashes) == `"/"`);
+}
+
+@safe unittest // JSONOptions.strictParsing (issue 16639)
+{
+    import std.exception : assertThrown;
+
+    // Unescaped ASCII NULs
+    assert(parseJSON("[\0]").type == JSON_TYPE.ARRAY);
+    assertThrown!JSONException(parseJSON("[\0]", JSONOptions.strictParsing));
+    assert(parseJSON("\"\0\"").str == "\0");
+    assertThrown!JSONException(parseJSON("\"\0\"", JSONOptions.strictParsing));
+
+    // Unescaped ASCII DEL (0x7f) in strings
+    assert(parseJSON("\"\x7f\"").str == "\x7f");
+    assert(parseJSON("\"\x7f\"", JSONOptions.strictParsing).str == "\x7f");
+
+    // "true", "false", "null" case sensitivity
+    assert(parseJSON("true").type == JSON_TYPE.TRUE);
+    assert(parseJSON("true", JSONOptions.strictParsing).type == JSON_TYPE.TRUE);
+    assert(parseJSON("True").type == JSON_TYPE.TRUE);
+    assertThrown!JSONException(parseJSON("True", JSONOptions.strictParsing));
+    assert(parseJSON("tRUE").type == JSON_TYPE.TRUE);
+    assertThrown!JSONException(parseJSON("tRUE", JSONOptions.strictParsing));
+
+    assert(parseJSON("false").type == JSON_TYPE.FALSE);
+    assert(parseJSON("false", JSONOptions.strictParsing).type == JSON_TYPE.FALSE);
+    assert(parseJSON("False").type == JSON_TYPE.FALSE);
+    assertThrown!JSONException(parseJSON("False", JSONOptions.strictParsing));
+    assert(parseJSON("fALSE").type == JSON_TYPE.FALSE);
+    assertThrown!JSONException(parseJSON("fALSE", JSONOptions.strictParsing));
+
+    assert(parseJSON("null").type == JSON_TYPE.NULL);
+    assert(parseJSON("null", JSONOptions.strictParsing).type == JSON_TYPE.NULL);
+    assert(parseJSON("Null").type == JSON_TYPE.NULL);
+    assertThrown!JSONException(parseJSON("Null", JSONOptions.strictParsing));
+    assert(parseJSON("nULL").type == JSON_TYPE.NULL);
+    assertThrown!JSONException(parseJSON("nULL", JSONOptions.strictParsing));
+
+    // Whitespace characters
+    assert(parseJSON("[\f\v]").type == JSON_TYPE.ARRAY);
+    assertThrown!JSONException(parseJSON("[\f\v]", JSONOptions.strictParsing));
+    assert(parseJSON("[ \t\r\n]").type == JSON_TYPE.ARRAY);
+    assert(parseJSON("[ \t\r\n]", JSONOptions.strictParsing).type == JSON_TYPE.ARRAY);
+
+    // Empty input
+    assert(parseJSON("").type == JSON_TYPE.NULL);
+    assertThrown!JSONException(parseJSON("", JSONOptions.strictParsing));
+
+    // Numbers with leading '0's
+    assert(parseJSON("01").integer == 1);
+    assertThrown!JSONException(parseJSON("01", JSONOptions.strictParsing));
+    assert(parseJSON("-01").integer == -1);
+    assertThrown!JSONException(parseJSON("-01", JSONOptions.strictParsing));
+    assert(parseJSON("0.01").floating == 0.01);
+    assert(parseJSON("0.01", JSONOptions.strictParsing).floating == 0.01);
+    assert(parseJSON("0e1").floating == 0);
+    assert(parseJSON("0e1", JSONOptions.strictParsing).floating == 0);
+
+    // Trailing characters after JSON value
+    assert(parseJSON(`""asdf`).str == "");
+    assertThrown!JSONException(parseJSON(`""asdf`, JSONOptions.strictParsing));
+    assert(parseJSON("987\0").integer == 987);
+    assertThrown!JSONException(parseJSON("987\0", JSONOptions.strictParsing));
+    assert(parseJSON("987\0\0").integer == 987);
+    assertThrown!JSONException(parseJSON("987\0\0", JSONOptions.strictParsing));
+    assert(parseJSON("[]]").type == JSON_TYPE.ARRAY);
+    assertThrown!JSONException(parseJSON("[]]", JSONOptions.strictParsing));
+    assert(parseJSON("123 \t\r\n").integer == 123); // Trailing whitespace is OK
+    assert(parseJSON("123 \t\r\n", JSONOptions.strictParsing).integer == 123);
 }
