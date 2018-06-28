@@ -58,14 +58,14 @@ if (is(T == class) || is(T == interface))
 
 @system unittest
 {
-    class C { @disable opCast(T)() {} }
+    class C { @disable void opCast(T)(); }
     auto c = new C;
     static assert(!__traits(compiles, cast(Object) c));
     auto o = dynamicCast!Object(c);
     assert(c is o);
 
-    interface I { @disable opCast(T)() {} Object instance(); }
-    interface J { @disable opCast(T)() {} Object instance(); }
+    interface I { @disable void opCast(T)(); Object instance(); }
+    interface J { @disable void opCast(T)(); Object instance(); }
     class D : I, J { Object instance() { return this; } }
     I i = new D();
     static assert(!__traits(compiles, cast(J) i));
