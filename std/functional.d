@@ -718,7 +718,9 @@ template partial(alias fun, alias arg)
 {
     import std.traits : isCallable;
     // Check whether fun is a user defined type which implements opCall or a template.
-    static if (is(typeof(fun) == struct) || is(typeof(fun) == class) || __traits(isTemplate, fun))
+    // As opCall itself can be templated, std.traits.isCallable does not work here.
+    enum isSomeFunctor = (is(typeof(fun) == struct) || is(typeof(fun) == class)) && __traits(hasMember, fun, "opCall");
+    static if (isSomeFunctor || __traits(isTemplate, fun))
     {
         auto partial(Ts...)(Ts args2)
         {
@@ -856,6 +858,11 @@ template partial(alias fun, alias arg)
     TCallable tcallable;
     assert(partial!(tcallable, 5)(6) == 11);
     static assert(!is(typeof(partial!(tcallable, "5")(6))));
+
+    static struct NonCallable{}
+    static assert(!__traits(compiles, partial!(NonCallable, 5)), "Partial should not work on non-callable structs.");
+    static assert(!__traits(compiles, partial!(NonCallable.init, 5)),
+        "Partial should not work on instances of non-callable structs.");
 
     static A funOneArg(A)(A a) { return a; }
     alias funOneArg1 = partial!(funOneArg, 1);
