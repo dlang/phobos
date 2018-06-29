@@ -620,6 +620,14 @@ uint formattedWrite(Writer, Char, A...)(auto ref Writer w, in Char[] fmt, A args
     assert(w.data == "@safe/pure 42");
 }
 
+@safe pure unittest
+{
+    char[20] buf;
+    auto w = buf[];
+    formattedWrite(w, "%s %d", "@safe/pure", 42);
+    assert(buf[0 .. $ - w.length] == "@safe/pure 42");
+}
+
 /**
 Reads characters from $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
 `r`, converts them according to `fmt`, and writes them to `args`.
