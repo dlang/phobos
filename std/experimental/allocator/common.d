@@ -287,9 +287,9 @@ Returns the effective alignment of `ptr`, i.e. the largest power of two that is
 a divisor of `ptr`.
 */
 @nogc nothrow pure
-package uint effectiveAlignment(void* ptr)
+package size_t effectiveAlignment(void* ptr)
 {
-    return 1U << trailingZeros(cast(size_t) ptr);
+    return (cast(size_t) 1) << trailingZeros(cast(size_t) ptr);
 }
 
 @nogc nothrow pure
@@ -297,6 +297,9 @@ package uint effectiveAlignment(void* ptr)
 {
     int x;
     assert(effectiveAlignment(&x) >= int.alignof);
+
+    const max = (cast(size_t) 1) << (size_t.sizeof * 8 - 1);
+    assert(effectiveAlignment(cast(void*) max) == max);
 }
 
 /*

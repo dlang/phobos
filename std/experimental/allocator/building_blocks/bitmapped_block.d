@@ -99,7 +99,7 @@ private mixin template BitmappedBlockImpl(bool isShared, bool multiBlock)
         auto leadingUlongs = blocks.divideRoundUp(64);
         import std.algorithm.comparison : min;
         immutable initialAlignment = min(parentAlignment,
-            1U << trailingZeros(leadingUlongs * 8));
+            1U << min(31U, trailingZeros(leadingUlongs * 8)));
         auto maxSlack = alignment <= initialAlignment
             ? 0
             : alignment - initialAlignment;
