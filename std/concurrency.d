@@ -1980,6 +1980,8 @@ private
                 enum timedWait = false;
             }
 
+            static assert(Ops.length); 
+
             bool onStandardMsg(ref Message msg)
             {
                 foreach (i, t; Ops)
@@ -1999,8 +2001,15 @@ private
                             return true;
                         }
                     }
+                    else
+                    {
+                        if(i + 1 == Ops.length)
+                        {
+                            return false; 
+                        }
+                    }
                 }
-                return false;
+                assert(0); 
             }
 
             bool onLinkDeadMsg(ref Message msg)
