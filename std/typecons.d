@@ -3269,6 +3269,80 @@ auto nullable(T)(T t)
 
     assert(foo.approxEqual(bar));
 }
+// bugzilla issue 19037
+@safe unittest
+{
+    import std.datetime : SysTime;
+
+    struct Test
+    {
+        bool b;
+
+        nothrow invariant { assert(b == true); }
+
+        SysTime _st;
+
+        static bool destroyed;
+
+        @disable this();
+        this(bool b) { this.b = b; }
+        ~this() @safe { destroyed = true; }
+
+        // mustn't call opAssign on Test.init in Nullable!Test, because the invariant
+        // will be called before opAssign on the Test.init that is in Nullable
+        // and Test.init violates its invariant.
+        void opAssign(Test rhs) @safe { assert(false); }
+    }
+
+    {
+        Nullable!Test nt;
+
+        nt = Test(true);
+
+        // destroy value
+        Test.destroyed = false;
+
+        nt.nullify;
+
+        assert(Test.destroyed);
+
+        Test.destroyed = false;
+    }
+    // don't run destructor on T.init in Nullable on scope exit!
+    assert(!Test.destroyed);
+}
+// check that the contained type's destructor is called on assignment
+@system unittest
+{
+    struct S
+    {
+        // can't be static, since we need a specific value's pointer
+        bool* destroyedRef;
+
+        ~this()
+        {
+            if (this.destroyedRef)
+            {
+                *this.destroyedRef = true;
+            }
+        }
+    }
+
+    Nullable!S ns;
+
+    bool destroyed;
+
+    ns = S(&destroyed);
+
+    // reset from rvalue destruction in Nullable's opAssign
+    destroyed = false;
+
+    // overwrite Nullable
+    ns = S(null);
+
+    // the original S should be destroyed.
+    assert(destroyed == true);
+}
 
 /**
 Just like `Nullable!T`, except that the null state is defined as a
