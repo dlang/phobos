@@ -427,7 +427,7 @@ Throws: `ErrnoException` if the file could not be opened.
         import std.conv : text;
         import std.exception : errnoEnforce;
 
-        this(errnoEnforce(.fopen(name, stdioOpenmode),
+        this(errnoEnforce(_fopen(name, stdioOpenmode),
                         text("Cannot open file `", name, "' in mode `",
                                 stdioOpenmode, "'")),
                 name);
@@ -521,12 +521,12 @@ Throws: `ErrnoException` in case of error.
         {
             if (isPopened)
             {
-                errnoEnforce(handle = .popen(name, stdioOpenmode),
+                errnoEnforce(handle = _popen(name, stdioOpenmode),
                              "Cannot run command `"~name~"'");
             }
             else
             {
-                errnoEnforce(handle = .fopen(name, stdioOpenmode),
+                errnoEnforce(handle = _fopen(name, stdioOpenmode),
                              text("Cannot open file `", name, "' in mode `",
                                   stdioOpenmode, "'"));
             }
@@ -534,7 +534,7 @@ Throws: `ErrnoException` in case of error.
         else
         {
             assert(isPopened == false);
-            errnoEnforce(handle = .fopen(name, stdioOpenmode),
+            errnoEnforce(handle = _fopen(name, stdioOpenmode),
                          text("Cannot open file `", name, "' in mode `",
                               stdioOpenmode, "'"));
         }
@@ -706,7 +706,6 @@ Throws: `ErrnoException` in case of error.
             // mucking with the file descriptor.  POSIX standard requires the
             // new fdopen'd file to retain the given file descriptor's
             // position.
-            import core.stdc.stdio : fopen;
             auto fp = fopen("NUL", modez);
             errnoEnforce(fp, "Cannot open placeholder NUL stream");
             FLOCK(fp);
@@ -4213,7 +4212,7 @@ if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum) &&
  * (to `_wfopen` on Windows)
  * with appropriately-constructed C-style strings.
  */
-private FILE* fopen(R1, R2)(R1 name, R2 mode = "r")
+private FILE* _fopen(R1, R2)(R1 name, R2 mode = "r")
 if ((isInputRange!R1 && isSomeChar!(ElementEncodingType!R1) || isSomeString!R1) &&
     (isInputRange!R2 && isSomeChar!(ElementEncodingType!R2) || isSomeString!R2))
 {
@@ -4222,7 +4221,7 @@ if ((isInputRange!R1 && isSomeChar!(ElementEncodingType!R1) || isSomeString!R1) 
     auto namez = name.tempCString!FSChar();
     auto modez = mode.tempCString!FSChar();
 
-    static fopenImpl(const(FSChar)* namez, const(FSChar)* modez) @trusted nothrow @nogc
+    static _fopenImpl(const(FSChar)* namez, const(FSChar)* modez) @trusted nothrow @nogc
     {
         version(Windows)
         {
@@ -4243,10 +4242,10 @@ if ((isInputRange!R1 && isSomeChar!(ElementEncodingType!R1) || isSomeString!R1) 
         }
         else
         {
-            return .fopen(namez, modez);
+            return fopen(namez, modez);
         }
     }
-    return fopenImpl(namez, modez);
+    return _fopenImpl(namez, modez);
 }
 
 version (Posix)
@@ -4255,7 +4254,7 @@ version (Posix)
      * Convenience function that forwards to `core.sys.posix.stdio.popen`
      * with appropriately-constructed C-style strings.
      */
-    FILE* popen(R1, R2)(R1 name, R2 mode = "r") @trusted nothrow @nogc
+    FILE* _popen(R1, R2)(R1 name, R2 mode = "r") @trusted nothrow @nogc
     if ((isInputRange!R1 && isSomeChar!(ElementEncodingType!R1) || isSomeString!R1) &&
         (isInputRange!R2 && isSomeChar!(ElementEncodingType!R2) || isSomeString!R2))
     {
