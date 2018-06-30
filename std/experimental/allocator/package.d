@@ -1410,6 +1410,22 @@ nothrow @safe @nogc unittest
         "Don't allow zero-ctor-args `make` for structs with `@disable this();`");
 }
 
+@safe unittest // issue 18937
+{
+    static struct S
+    {
+        ubyte[16 * 1024] data;
+    }
+
+    static struct SomeAllocator
+    {
+        ubyte[] allocate(size_t) { return []; }
+        void deallocate(void[]) {}
+    }
+
+    auto x = SomeAllocator().make!S();
+}
+
 private void fillWithMemcpy(T)(scope void[] array, auto ref T filler) nothrow
 if (T.sizeof == 1)
 {

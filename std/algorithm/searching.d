@@ -2748,6 +2748,21 @@ if (isForwardRange!R1 && isForwardRange!R2
     assert(findSkip(s, "def") && s.empty);
 }
 
+@safe unittest // issue 19020
+{
+    static struct WrapperRange
+    {
+        string _r;
+        @property auto empty() { return _r.empty(); }
+        @property auto front() { return _r.front(); }
+        auto popFront() { return _r.popFront(); }
+        @property auto save() { return WrapperRange(_r.save); }
+    }
+    auto tmp = WrapperRange("there is a bug here: *");
+    assert(!tmp.findSkip("*/"));
+    assert(tmp._r == "there is a bug here: *");
+}
+
 /// ditto
 size_t findSkip(alias pred, R1)(ref R1 haystack)
 if (isForwardRange!R1 && ifTestable!(typeof(haystack.front), unaryFun!pred))
@@ -2821,7 +2836,7 @@ Returns:
 A sub-type of `Tuple!()` of the split portions of `haystack` (see above for
 details).  This sub-type of `Tuple!()` has `opCast` defined for `bool`.  This
 `opCast` returns `true` when the separating `needle` was found
-(`!result[1].empty`) and `false` otherwise.
+and `false` otherwise.
 
 See_Also: $(LREF find)
  */
@@ -2881,6 +2896,10 @@ if (isForwardRange!R1 && isForwardRange!R2)
                 pos2 = ++pos1;
             }
         }
+        if (!n.empty) // incomplete match at the end of haystack
+        {
+            pos1 = pos2;
+        }
         return Result!(typeof(takeExactly(original, pos1)),
                        typeof(h))(takeExactly(original, pos1),
                                   takeExactly(haystack, pos2 - pos1),
@@ -2906,7 +2925,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
         Tuple!(S1, S2) asTuple;
         bool opCast(T : bool)()
         {
-            return !asTuple[0].empty;
+            return !asTuple[1].empty;
         }
         alias asTuple this;
     }
@@ -2926,24 +2945,30 @@ if (isForwardRange!R1 && isForwardRange!R2)
         auto original = haystack.save;
         auto h = haystack.save;
         auto n = needle.save;
-        size_t pos;
+        size_t pos1, pos2;
         while (!n.empty && !h.empty)
         {
             if (binaryFun!pred(h.front, n.front))
             {
                 h.popFront();
                 n.popFront();
+                ++pos2;
             }
             else
             {
                 haystack.popFront();
                 n = needle.save;
                 h = haystack.save;
-                ++pos;
+                pos2 = ++pos1;
             }
         }
-        return Result!(typeof(takeExactly(original, pos)),
-                       typeof(haystack))(takeExactly(original, pos),
+        if (!n.empty) // incomplete match at the end of haystack
+        {
+            pos1 = pos2;
+            haystack = h;
+        }
+        return Result!(typeof(takeExactly(original, pos1)),
+                       typeof(haystack))(takeExactly(original, pos1),
                                          haystack);
     }
 }
@@ -2966,7 +2991,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
         Tuple!(S1, S2) asTuple;
         bool opCast(T : bool)()
         {
-            return !asTuple[1].empty;
+            return !asTuple[0].empty;
         }
         alias asTuple this;
     }
@@ -3077,7 +3102,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(r[2] == a[3 .. $]);
 
     auto r1 = findSplitBefore(a, [9, 1]);
-    assert(r1);
+    assert(!r1);
     assert(r1[0] == a);
     assert(r1[1].empty);
     r1 = findSplitBefore(a, [3, 4]);
@@ -3086,7 +3111,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(r1[1] == a[2 .. $]);
 
     auto r2 = findSplitAfter(a, [9, 1]);
-    assert(r2);
+    assert(!r2);
     assert(r2[0].empty);
     assert(r2[1] == a);
     r2 = findSplitAfter(a, [3, 4]);
@@ -3112,24 +3137,37 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(equal(r[0],  a[0 .. 2]));
     assert(equal(r[1], a[2 .. 3]));
     assert(equal(r[2], a[3 .. $]));
+    r = findSplit(fwd, [8, 9]);
+    assert(!r);
+    assert(equal(r[0], a));
+    assert(r[1].empty);
+    assert(r[2].empty);
 
     auto r1 = findSplitBefore(fwd, [9, 1]);
-    assert(r1);
+    assert(!r1);
     assert(equal(r1[0], a));
     assert(r1[1].empty);
     r1 = findSplitBefore(fwd, [3, 4]);
     assert(r1);
     assert(equal(r1[0], a[0 .. 2]));
     assert(equal(r1[1], a[2 .. $]));
+    r1 = findSplitBefore(fwd, [8, 9]);
+    assert(!r1);
+    assert(equal(r1[0], a));
+    assert(r1[1].empty);
 
     auto r2 = findSplitAfter(fwd, [9, 1]);
-    assert(r2);
+    assert(!r2);
     assert(r2[0].empty);
     assert(equal(r2[1], a));
     r2 = findSplitAfter(fwd, [3, 4]);
     assert(r2);
     assert(equal(r2[0], a[0 .. 4]));
     assert(equal(r2[1], a[4 .. $]));
+    r2 = findSplitAfter(fwd, [8, 9]);
+    assert(!r2);
+    assert(r2[0].empty);
+    assert(equal(r2[1], a));
 }
 
 @safe pure nothrow @nogc unittest
