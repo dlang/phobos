@@ -2001,9 +2001,9 @@ if (isCallable!func)
     static assert(!isSafe!(Set.systemF));
 
     //Functions
-    @safe static safeFunc() {}
-    @trusted static trustedFunc() {}
-    @system static systemFunc() {}
+    @safe static void safeFunc() {}
+    @trusted static void trustedFunc() {}
+    @system static void systemFunc() {}
 
     static assert( isSafe!safeFunc);
     static assert( isSafe!trustedFunc);
@@ -2077,9 +2077,9 @@ template isUnsafe(alias func)
     static assert( isUnsafe!(Set.systemF));
 
     //Functions
-    @safe static safeFunc() {}
-    @trusted static trustedFunc() {}
-    @system static systemFunc() {}
+    @safe static void safeFunc() {}
+    @trusted static void trustedFunc() {}
+    @system static void systemFunc() {}
 
     static assert(!isUnsafe!safeFunc);
     static assert(!isUnsafe!trustedFunc);
