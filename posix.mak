@@ -361,7 +361,7 @@ UT_D_OBJS:=$(addprefix $(ROOT)/unittest/,$(addsuffix $(DOTOBJ),$(D_MODULES)))
 $(UT_D_OBJS): $(ALL_D_FILES)
 $(UT_D_OBJS): $(ROOT)/unittest/%$(DOTOBJ): %.d
 	@mkdir -p $(dir $@)
-	$(DMD) $(DFLAGS) $(UDFLAGS) -c -of$@ $<
+	$(DMD) $(DFLAGS) $(UDFLAGS) $(aa[$(subst /,.,$(basename $<))]) -c -of$@ $<
 
 ifneq (1,$(SHARED))
 
