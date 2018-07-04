@@ -7167,7 +7167,7 @@ if (isInputRange!Input && is(Unqual!(ElementType!Input) == dchar))
 }
 
 /++
-    $(P Iterate a string by grapheme.)
+    $(P Iterate a string by $(LREF Grapheme).)
 
     $(P Useful for doing string manipulation that needs to be aware
     of graphemes.)
