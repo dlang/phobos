@@ -407,7 +407,8 @@ package string urlEncode(scope string[string] values) @safe pure
     string[string] a;
     assert(urlEncode(a) == "");
     assert(urlEncode(["name1" : "value1"]) == "name1=value1");
-    assert(urlEncode(["name1" : "value1", "name2" : "value2"]) == "name1=value1&name2=value2");
+    auto enc = urlEncode(["name1" : "value1", "name2" : "value2"]);
+    assert(enc == "name1=value1&name2=value2" || enc == "name2=value2&name1=value1");
 }
 
 /***************************
