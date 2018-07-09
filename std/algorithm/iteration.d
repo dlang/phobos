@@ -2494,6 +2494,8 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
         {
             _items = items;
             _current = current;
+            static if (isBidirectional && hasNested!Result)
+                _currentBack = typeof(_currentBack).init;
         }
 
     public:
@@ -2501,6 +2503,8 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
         {
             _items = r;
 
+            static if (isBidirectional && hasNested!Result)
+                _currentBack = typeof(_currentBack).init;
             // field _current must be initialized in constructor, because it is nested struct
             mixin(popFrontEmptyElements);
             static if (isBidirectional)
@@ -2732,6 +2736,25 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
     import std.range.interfaces : inputRangeObject;
     static assert(isInputRange!(typeof(joiner([""]))));
     static assert(isForwardRange!(typeof(joiner([""]))));
+}
+
+@safe unittest
+{
+    // Initial version of PR #6115 caused a compilation failure for
+    // https://github.com/BlackEdder/ggplotd/blob/d4428c08db5ffdc05dfd29690bf7da9073ea1dc5/source/ggplotd/stat.d#L562-L583
+    import std.range : zip;
+    int[] xCoords = [1, 2, 3];
+    int[] yCoords = [4, 5, 6];
+    auto coords = zip(xCoords, xCoords[1..$]).map!( (xr) {
+            return zip(yCoords, yCoords[1..$]).map!( (yr) {
+                    return [
+                    [[xr[0], xr[0], xr[1]],
+                     [yr[0], yr[1], yr[1]]],
+                    [[xr[0], xr[1], xr[1]],
+                     [yr[0], yr[0], yr[1]]]
+                     ];
+            }).joiner;
+    }).joiner;
 }
 
 @system unittest
