@@ -1528,7 +1528,8 @@ Array-to-array conversion (except when target is a string type)
 converts each element in turn by using `to`.
  */
 private T toImpl(T, S)(S value)
-if (!isImplicitlyConvertible!(S, T) &&
+if (!(isArray!S && is(Unqual!(ElementType!S) == void)) &&
+    !isImplicitlyConvertible!(S, T) &&
     !isSomeString!S && isDynamicArray!S &&
     !isExactSomeString!T && isArray!T)
 {
@@ -1553,6 +1554,17 @@ if (!isImplicitlyConvertible!(S, T) &&
         }
         return w.data;
     }
+}
+
+/**
+Void array to const array of ubyte conversion, as a cast.
+Converting to a mutable arrayis not possible because source may contain pointers.
+ */
+private T toImpl(T, S)(S value) @trusted
+if (isArray!S && is(Unqual!(ElementType!S) == void) && !is(S == shared) &&
+    isArray!T && is(ElementType!T == const ubyte) || is(ElementType!T == immutable ubyte))
+{
+   return cast(const(ubyte)[]) value;
 }
 
 @safe pure unittest
@@ -6630,5 +6642,20 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
         {
             assert(original[i .. original.length - i].tupleof == r.tupleof);
         }
+    }
+}
+
+@safe unittest
+{
+    const void[] src = [ushort(1)];
+    version (LittleEndian)
+    {
+        assert(src.to!(const ubyte[]) == [1,0]);
+        assert(src.to!(immutable(ubyte)[]) == [1,0]);
+    }
+    else
+    {
+        assert(src.to!(const ubyte[]) == [0,1]);
+        assert(src.to!(immutable(ubyte)[]) == [0,1]);
     }
 }
