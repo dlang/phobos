@@ -290,6 +290,12 @@ SRC_STD_EXP_LOGGER= \
 	std\experimental\logger\nulllogger.d \
 	std\experimental\logger\package.d
 
+SRC_STD_EXP_COLLECTIONS= \
+	std\experimental\collections\array.d \
+	std\experimental\collections\common.d \
+	std\experimental\collections\rcstring.d \
+	std\experimental\collections\rcstring_phobos.d
+
 SRC_ETC=
 
 SRC_ETC_C= \
@@ -320,6 +326,7 @@ SRC_TO_COMPILE= \
 	$(SRC_STD_EXP) \
 	$(SRC_STD_EXP_ALLOC) \
 	$(SRC_STD_EXP_LOGGER) \
+	$(SRC_STD_EXP_COLLECTIONS) \
 	$(SRC_ETC) \
 	$(SRC_ETC_C)
 
@@ -384,7 +391,8 @@ UNITTEST_OBJS= \
 		unittest8c.obj \
 		unittest8d.obj \
 		unittest8e.obj \
-		unittest8f.obj
+		unittest8f.obj \
+		unittest9a.obj
 
 unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest1.obj $(SRC_STD_1)
@@ -405,6 +413,7 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest8d.obj $(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) $(SRC_STD_INTERNAL_WINDOWS)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest8e.obj $(SRC_ETC) $(SRC_ETC_C)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest8f.obj $(SRC_STD_EXP)
+	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest9a.obj $(SRC_STD_EXP_COLLECTIONS)
 	$(DMD) $(UDFLAGS) -L/co  unittest.d $(UNITTEST_OBJS) \
 		$(ZLIB) $(DRUNTIMELIB)
 	.\unittest.exe

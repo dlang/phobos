@@ -205,6 +205,7 @@ P2MODULES=$(foreach P,$1,$(addprefix $P/,$(PACKAGE_$(subst /,_,$P))))
 # packages and their modules.
 STD_PACKAGES = std $(addprefix std/,\
   algorithm container datetime digest experimental/allocator \
+  experimental/collections \
   experimental/allocator/building_blocks experimental/logger \
   net \
   experimental range regex windows)
@@ -232,6 +233,8 @@ PACKAGE_std_experimental_allocator_building_blocks = \
   bucketizer fallback_allocator free_list free_tree bitmapped_block \
   kernighan_ritchie null_allocator package quantizer \
   region scoped_allocator segregator stats_collector
+PACKAGE_std_experimental_collections = \
+  array common rcstring rcstring_phobos
 PACKAGE_std_net = curl isemail
 PACKAGE_std_range = interfaces package primitives
 PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
