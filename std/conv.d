@@ -2821,7 +2821,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     real ldval = 0.0;
     char dot = 0;                        /* if decimal point has been seen */
     int exp = 0;
-    long msdec = 0, lsdec = 0;
+    ulong msdec = 0, lsdec = 0;
     ulong msscale = 1;
 
     if (isHex)
@@ -2836,12 +2836,8 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
          * 3) Convert msdec and exp into native real format
          */
 
-        int guard = 0;
         // Used to enforce that any mantissa digits are present
         bool anydigits = false;
-        // Number of mantissa digits (digit: base 16) we have processed,
-        // ignoring leading 0s
-        uint ndigits = 0;
 
         p.popFront();
         while (!p.empty)
@@ -2856,33 +2852,18 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
                  * converts letter A to 10, letter B to 11, ...
                  */
                 i = isAlpha(i) ? ((i & ~0x20) - ('A' - 10)) : i - '0';
-                // 16*4 = 64: The max we can store in a long value
-                if (ndigits < 16)
+                if (msdec < (ulong.max-16)/16)
                 {
                     // base 16: Y = ... + y3*16^3 + y2*16^2 + y1*16^1 + y0*16^0
                     msdec = msdec * 16 + i;
-                    // ignore leading zeros
-                    if (msdec)
-                        ndigits++;
                 }
-                // All 64 bits of the long have been filled in now
-                else if (ndigits == 16)
+                else if (msscale < 0x1000_0000_0000_0000UL)
                 {
-                    while (msdec >= 0)
-                    {
-                        exp--;
-                        msdec <<= 1;
-                        i <<= 1;
-                        if (i & 0x10)
-                            msdec |= 1;
-                    }
-                    guard = i << 4;
-                    ndigits++;
-                    exp += 4;
+                    lsdec = lsdec * 16 + i;
+                    msscale *= 16;
                 }
                 else
                 {
-                    guard |= i;
                     exp += 4;
                 }
                 exp -= dot;
@@ -2907,17 +2888,6 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
                 break;
         }
 
-        // Round up if (guard && (sticky || odd))
-        if (guard & 0x80 && (guard & 0x7F || msdec & 1))
-        {
-            msdec++;
-            if (msdec == 0)                 // overflow
-            {
-                msdec = 0x8000000000000000L;
-                exp++;
-            }
-        }
-
         // Have we seen any mantissa digits so far?
         enforce(anydigits, bailOut());
         enforce(!p.empty && (p.front == 'p' || p.front == 'P'),
@@ -2940,7 +2910,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
                 default: {}
             }
         }
-        ndigits = 0;
+        bool foundExp = false;
         e = 0;
         while (!p.empty && isDigit(p.front))
         {
@@ -2949,171 +2919,19 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
                 e = e * 10 + p.front - '0';
             }
             p.popFront();
-            ndigits = 1;
+            foundExp = true;
         }
         exp += (sexp) ? -e : e;
-        enforce(ndigits, new ConvException("Error converting input"~
+        enforce(foundExp, new ConvException("Error converting input"~
                         " to floating point"));
 
-        import std.math : floatTraits, RealFormat;
+        ldval = msdec;
+        if (msscale != 1)               /* if stuff was accumulated in lsdec */
+            ldval = ldval * msscale + lsdec;
+        import std.math : ldexp;
 
-        static if (floatTraits!real.realFormat == RealFormat.ieeeQuadruple)
-        {
-            if (msdec)
-            {
-                /*
-                 * For quad precision, we currently allow max mantissa precision
-                 * of 64 bits, simply so we don't have to change the mantissa parser
-                 * in the code above. Feel free to adapt the parser to support full
-                 * 113 bit precision.
-                 */
-
-                // Exponent bias + 112:
-                // After shifting 112 times left, exp must be 1
-                int e2 = 0x3FFF + 112;
-
-                /*
-                 * left justify mantissa: The implicit bit (bit 112) must be 1
-                 * after this, (it is implicit and always defined as 1, so making
-                 * sure we end up with 1 at 112 means we adjust mantissa and eponent
-                 * to fit the ieee format)
-                 * For quadruple, this is especially fun as we have to use 2 longs
-                 * to store the mantissa and care about endianess...
-                 * quad_mant[0]               | quad_mant[1]
-                 * S.EEEEEEEEEEEEEEE.MMMMM .. | MMMMM .. 00000
-                 *                48       0  |
-                 */
-                ulong[2] quad_mant;
-                quad_mant[1] = msdec;
-                while ((quad_mant[0] & 0x0001_0000_0000_0000) == 0)
-                {
-                    // Shift high part one bit left
-                    quad_mant[0] <<= 1;
-                    // Transfer MSB from quad_mant[1] as new LSB
-                    quad_mant[0] |= (quad_mant[1] & 0x8000_0000_0000_0000) ? 0b1 : 0b0;
-                    // Now shift low part one bit left
-                    quad_mant[1] <<= 1;
-                    // Finally, decrease the exponent, as we increased the value
-                    // by shifting of the mantissa
-                    e2--;
-                }
-
-                ()@trusted {
-                    ulong* msw, lsw;
-                    version (LittleEndian)
-                    {
-                        lsw = &(cast(ulong*)&ldval)[0];
-                        msw = &(cast(ulong*)&ldval)[1];
-                    }
-                    else
-                    {
-                        msw = &(cast(ulong*)&ldval)[0];
-                        lsw = &(cast(ulong*)&ldval)[1];
-                    }
-
-                    // Stuff mantissa directly into double
-                    // (first including implicit bit)
-                    *msw = quad_mant[0];
-                    *lsw = quad_mant[1];
-
-                    // Store exponent, now overwriting implicit bit
-                    *msw &= 0x0000_FFFF_FFFF_FFFF;
-                    *msw |= ((e2 & 0xFFFFUL) << 48);
-                }();
-
-                import std.math : ldexp;
-
-                // Exponent is power of 2, not power of 10
-                ldval = ldexp(ldval, exp);
-            }
-        }
-        else static if (floatTraits!real.realFormat == RealFormat.ieeeExtended)
-        {
-            if (msdec)
-            {
-                int e2 = 0x3FFF + 63;
-
-                // left justify mantissa
-                while (msdec >= 0)
-                {
-                    msdec <<= 1;
-                    e2--;
-                }
-
-                // Stuff mantissa directly into real
-                ()@trusted{ *cast(long*)&ldval = msdec; }();
-                ()@trusted{ (cast(ushort*)&ldval)[4] = cast(ushort) e2; }();
-
-                import std.math : ldexp;
-
-                // Exponent is power of 2, not power of 10
-                ldval = ldexp(ldval,exp);
-            }
-        }
-        else static if (floatTraits!real.realFormat == RealFormat.ieeeDouble)
-        {
-            if (msdec)
-            {
-                // Exponent bias + 52:
-                // After shifting 52 times left, exp must be 1
-                int e2 = 0x3FF + 52;
-
-                // right justify mantissa
-                // first 11 bits must be zero, rest is implied bit + mantissa
-                // shift one time less, do rounding, shift again
-                while ((msdec & 0xFFC0_0000_0000_0000) != 0)
-                {
-                    msdec  = ((cast(ulong) msdec) >> 1);
-                    e2++;
-                }
-
-                // Have to shift one more time
-                // and do rounding
-                if ((msdec & 0xFFE0_0000_0000_0000) != 0)
-                {
-                    auto roundUp = (msdec & 0x1);
-
-                    msdec  = ((cast(ulong) msdec) >> 1);
-                    e2++;
-                    if (roundUp)
-                    {
-                        msdec += 1;
-                        // If mantissa was 0b1111... and we added +1
-                        // the mantissa should be 0b10000 (think of implicit bit)
-                        // and the exponent increased
-                        if ((msdec & 0x0020_0000_0000_0000) != 0)
-                        {
-                            msdec = 0x0010_0000_0000_0000;
-                            e2++;
-                        }
-                    }
-                }
-
-
-                // left justify mantissa
-                // bit 11 must be 1
-                while ((msdec & 0x0010_0000_0000_0000) == 0)
-                {
-                    msdec <<= 1;
-                    e2--;
-                }
-
-                // Stuff mantissa directly into double
-                // (first including implicit bit)
-                ()@trusted{ *cast(long *)&ldval = msdec; }();
-                // Store exponent, now overwriting implicit bit
-                ()@trusted{ *cast(long *)&ldval &= 0x000F_FFFF_FFFF_FFFF; }();
-                ()@trusted{ *cast(long *)&ldval |= ((e2 & 0xFFFUL) << 52); }();
-
-                import std.math : ldexp;
-
-                // Exponent is power of 2, not power of 10
-                ldval = ldexp(ldval,exp);
-            }
-        }
-        else
-            static assert(false, "Floating point format of real type not supported");
-
+        // Exponent is power of 2, not power of 10
+        ldval = ldexp(ldval,exp);
         goto L6;
     }
     else // not hex
@@ -3142,9 +2960,9 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
             while (isDigit(i))
             {
                 sawDigits = true;        /* must have at least 1 digit   */
-                if (msdec < (0x7FFFFFFFFFFFL-10)/10)
+                if (msdec < (ulong.max-10)/10)
                     msdec = msdec * 10 + (i - '0');
-                else if (msscale < (0xFFFFFFFF-10)/10)
+                else if (msscale < 10_000_000_000_000_000_000UL)
                 {
                     lsdec = lsdec * 10 + (i - '0');
                     msscale *= 10;
@@ -3340,6 +3158,14 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     }
     r = to!real(to!string(real.max));
     assert(to!string(r) == to!string(real.max));
+
+    real pi = 3.1415926535897932384626433832795028841971693993751;
+    string fullPrecision = "3.1415926535897932384626433832795028841971693993751";
+    assert(feq(parse!real(fullPrecision), pi, 2*real.epsilon));
+
+    real x = 0x1.FAFAFAFAFAFAFAFAFAFAFAFAFAFAFAFAAFAAFAFAFAFAFAFAFAP-252;
+    string full = "0x1.FAFAFAFAFAFAFAFAFAFAFAFAFAFAFAFAAFAAFAFAFAFAFAFAFAP-252";
+    assert(parse!real(full) == x);
 }
 
 // Tests for the double implementation
@@ -3448,8 +3274,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     int i;
 
     static if (floatTraits!real.realFormat == RealFormat.ieeeQuadruple)
-        // Our parser is currently limited to ieeeExtended precision
-        enum s = "0x1.FFFFFFFFFFFFFFFEp-16382";
+        enum s = "0x1.FFFFFFFFFFFFFFFFFFFFFFFFFFFFp-16382";
     else static if (floatTraits!real.realFormat == RealFormat.ieeeExtended)
         enum s = "0x1.FFFFFFFFFFFFFFFEp-16382";
     else static if (floatTraits!real.realFormat == RealFormat.ieeeDouble)
