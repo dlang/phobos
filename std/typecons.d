@@ -2569,7 +2569,12 @@ Practically `Nullable!T` stores a `T` and a `bool`.
  */
 struct Nullable(T)
 {
-    private T _value = T.init;
+    private union DontCallDestructorT
+    {
+        T payload;
+    }
+
+    private DontCallDestructorT _value = DontCallDestructorT.init;
 
     private bool _isNull = true;
 
@@ -2581,7 +2586,7 @@ Params:
  */
     this(inout T value) inout
     {
-        _value = value;
+        _value.payload = value;
         _isNull = false;
     }
 
@@ -2596,14 +2601,14 @@ Params:
             return rhs._isNull;
         if (rhs._isNull)
             return false;
-        return _value == rhs._value;
+        return _value.payload == rhs._value.payload;
     }
 
     /// Ditto
     bool opEquals(U)(auto ref const(U) rhs) const
     if (is(typeof(this.get == rhs)))
     {
-        return _isNull ? false : rhs == _value;
+        return _isNull ? false : rhs == _value.payload;
     }
 
     ///
@@ -2689,7 +2694,7 @@ Params:
         if (isNull)
             put(writer, "Nullable.null");
         else
-            formatValue(writer, _value, fmt);
+            formatValue(writer, _value.payload, fmt);
     }
 
     //@@@DEPRECATED_2.086@@@
@@ -2702,7 +2707,7 @@ Params:
         }
         else
         {
-            sink.formatValue(_value, fmt);
+            sink.formatValue(_value.payload, fmt);
         }
     }
 
@@ -2717,7 +2722,7 @@ Params:
         }
         else
         {
-            sink.formatValue(_value, fmt);
+            sink.formatValue(_value.payload, fmt);
         }
     }
 
@@ -2760,9 +2765,9 @@ Forces `this` to the null state.
     void nullify()()
     {
         static if (is(T == class) || is(T == interface))
-            _value = null;
+            _value.payload = null;
         else
-            .destroy(_value);
+            .destroy(_value.payload);
         _isNull = true;
     }
 
@@ -2787,16 +2792,18 @@ Params:
     {
         import std.algorithm.mutation : moveEmplace, move;
 
+        // the lifetime of the value in copy shall be managed by
+        // this Nullable, so we must avoid calling its destructor.
+        auto copy = DontCallDestructorT(value);
+
         if (_isNull)
         {
-            // trusted since _value is known to be T.init here.
-            // the lifetime of value shall be managed by this Nullable;
-            // hence moveEmplace resets it to T.init.
-            () @trusted { moveEmplace(value, _value); }();
+            // trusted since payload is known to be T.init here.
+            () @trusted { moveEmplace(copy.payload, _value.payload); }();
         }
         else
         {
-            move(value, _value);
+            move(copy.payload, _value.payload);
         }
         _isNull = false;
     }
@@ -2837,13 +2844,13 @@ Returns:
     {
         enum message = "Called `get' on null Nullable!" ~ T.stringof ~ ".";
         assert(!isNull, message);
-        return _value;
+        return _value.payload;
     }
 
     /// ditto
     @property get(U)(inout(U) fallback) inout @safe pure nothrow
     {
-        return isNull ? fallback : _value;
+        return isNull ? fallback : _value.payload;
     }
 
 ///
@@ -3475,7 +3482,9 @@ Params:
  */
     void opAssign()(T value)
     {
-        _value = value;
+        import std.algorithm.mutation : swap;
+
+        swap(value, _value);
     }
 
 /**
