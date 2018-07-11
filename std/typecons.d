@@ -2590,6 +2590,17 @@ Params:
         _isNull = false;
     }
 
+    static if (is(T == struct) && hasElaborateDestructor!T)
+    {
+        ~this()
+        {
+            if (!_isNull)
+            {
+                destroy(_value.payload);
+            }
+        }
+    }
+
     /**
       If they are both null, then they are equal. If one is null and the other
       is not, then they are not equal. If they are both non-null, then they are
@@ -3349,6 +3360,28 @@ auto nullable(T)(T t)
 
     // the original S should be destroyed.
     assert(destroyed == true);
+}
+// check that the contained type's destructor is still called when required
+@system unittest
+{
+    bool destructorCalled = false;
+
+    struct S
+    {
+        bool* destroyed;
+        ~this() { *this.destroyed = true; }
+    }
+
+    {
+        Nullable!S ns;
+    }
+    assert(!destructorCalled);
+    {
+        Nullable!S ns = Nullable!S(S(&destructorCalled));
+
+        destructorCalled = false; // reset after S was destroyed in the NS constructor
+    }
+    assert(destructorCalled);
 }
 
 /**
