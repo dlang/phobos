@@ -2777,29 +2777,24 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         enforce(!p.empty, bailOut());
         if (toLower(p.front) == 'i')
             goto case 'i';
-        enforce(!p.empty, bailOut());
         break;
     case '+':
         p.popFront();
         enforce(!p.empty, bailOut());
         break;
     case 'i': case 'I':
+        // inf
         p.popFront();
-        enforce(!p.empty, bailOut());
-        if (toLower(p.front) == 'n')
-        {
-            p.popFront();
-            enforce(!p.empty, bailOut());
-            if (toLower(p.front) == 'f')
-            {
-                // 'inf'
-                p.popFront();
-                static if (isNarrowString!Source)
-                    source = cast(Source) p;
-                return sign ? -Target.infinity : Target.infinity;
-            }
-        }
-        goto default;
+        enforce(!p.empty && toUpper(p.front) == 'N',
+               bailOut("error converting input to floating point"));
+        p.popFront();
+        enforce(!p.empty && toUpper(p.front) == 'F',
+               bailOut("error converting input to floating point"));
+        // skip past the last 'f'
+        p.popFront();
+        static if (isNarrowString!Source)
+            source = cast(Source) p;
+        return sign ? -Target.infinity : Target.infinity;
     default: {}
     }
 
@@ -2816,55 +2811,97 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         }
 
         isHex = p.front == 'x' || p.front == 'X';
+        if (isHex) p.popFront();
     }
+    else if (toLower(p.front) == 'n')
+    {
+        // nan
+        p.popFront();
+        enforce(!p.empty && toUpper(p.front) == 'A',
+               bailOut("error converting input to floating point"));
+        p.popFront();
+        enforce(!p.empty && toUpper(p.front) == 'N',
+               bailOut("error converting input to floating point"));
+        // skip past the last 'n'
+        p.popFront();
+        static if (isNarrowString!Source)
+            source = cast(Source) p;
+        return typeof(return).nan;
+    }
+
+    /*
+     * The following algorithm consists of 2 steps:
+     * 1) parseDigits processes the textual input into msdec and possibly
+     *    lsdec/msscale variables, followed by the exponent parser which sets
+     *    exp below.
+     *    Hex: input is 0xaaaaa...p+000... where aaaa is the mantissa in hex
+     *    and 000 is the exponent in decimal format with base 2.
+     *    Decimal: input is 0.00333...p+000... where 0.0033 is the mantissa
+     *    in decimal and 000 is the exponent in decimal format with base 10.
+     * 2) Convert msdec/lsdec and exp into native real format
+     */
 
     real ldval = 0.0;
     char dot = 0;                        /* if decimal point has been seen */
     int exp = 0;
     ulong msdec = 0, lsdec = 0;
     ulong msscale = 1;
+    bool sawDigits;
 
-    if (isHex)
+    enum { hex, decimal }
+
+    // sets msdec, lsdec/msscale, and sawDigits by parsing the mantissa digits
+    void parseDigits(alias FloatFormat)()
     {
-        /*
-         * The following algorithm consists of mainly 3 steps (and maybe should
-         * be refactored into functions accordingly)
-         * 1) Parse the textual input into msdec and exp variables:
-         *    input is 0xaaaaa...p+000... where aaaa is the mantissa in hex and
-         *    000 is the exponent in decimal format.
-         * 2) Rounding, ...
-         * 3) Convert msdec and exp into native real format
-         */
+        static if (FloatFormat == hex)
+        {
+            enum uint base = 16;
+            enum ulong msscaleMax = 0x1000_0000_0000_0000UL; // largest power of 16 a ulong holds
+            enum ubyte expIter = 4; // iterate the base-2 exponent by 4 for every hex digit
+            alias checkDigit = isHexDigit;
+            /*
+             * convert letter to binary representation: First clear bit
+             * to convert lower space chars to upperspace, then -('A'-10)
+             * converts letter A to 10, letter B to 11, ...
+             */
+            alias convertDigit = (int x) => isAlpha(x) ? ((x & ~0x20) - ('A' - 10)) : x - '0';
+            sawDigits = false;
+        }
+        else static if (FloatFormat == decimal)
+        {
+            enum uint base = 10;
+            enum ulong msscaleMax = 10_000_000_000_000_000_000UL; // largest power of 10 a ulong holds
+            enum ubyte expIter = 1; // iterate the base-10 exponent once for every decimal digit
+            alias checkDigit = isDigit;
+            alias convertDigit = (int x) => x - '0';
+            // Used to enforce that any mantissa digits are present
+            sawDigits = startsWithZero;
+        }
+        else
+            static assert(false, "Unrecognized floating-point format used.");
 
-        // Used to enforce that any mantissa digits are present
-        bool anydigits = false;
-
-        p.popFront();
         while (!p.empty)
         {
             int i = p.front;
-            while (isHexDigit(i))
+            while (checkDigit(i))
             {
-                anydigits = true;
-                /*
-                 * convert letter to binary representation: First clear bit
-                 * to convert lower space chars to upperspace, then -('A'-10)
-                 * converts letter A to 10, letter B to 11, ...
-                 */
-                i = isAlpha(i) ? ((i & ~0x20) - ('A' - 10)) : i - '0';
-                if (msdec < (ulong.max-16)/16)
+                sawDigits = true;        /* must have at least 1 digit   */
+
+                i = convertDigit(i);
+
+                if (msdec < (ulong.max - base)/base)
                 {
-                    // base 16: Y = ... + y3*16^3 + y2*16^2 + y1*16^1 + y0*16^0
-                    msdec = msdec * 16 + i;
+                    // For base 16: Y = ... + y3*16^3 + y2*16^2 + y1*16^1 + y0*16^0
+                    msdec = msdec * base + i;
                 }
-                else if (msscale < 0x1000_0000_0000_0000UL)
+                else if (msscale < msscaleMax)
                 {
-                    lsdec = lsdec * 16 + i;
-                    msscale *= 16;
+                    lsdec = lsdec * base + i;
+                    msscale *= base;
                 }
                 else
                 {
-                    exp += 4;
+                    exp += expIter;
                 }
                 exp -= dot;
                 p.popFront();
@@ -2882,126 +2919,29 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
             if (i == '.' && !dot)
             {
                 p.popFront();
-                dot = 4;
+                dot += expIter;
             }
             else
                 break;
         }
 
         // Have we seen any mantissa digits so far?
-        enforce(anydigits, bailOut());
-        enforce(!p.empty && (p.front == 'p' || p.front == 'P'),
-                bailOut("Floating point parsing: exponent is required"));
-        char sexp;
-        int e;
-
-        sexp = 0;
-        p.popFront();
-        if (!p.empty)
-        {
-            switch (p.front)
-            {
-                case '-':    sexp++;
-                             goto case;
-                case '+':    p.popFront(); enforce(!p.empty,
-                                new ConvException("Error converting input"~
-                                " to floating point"));
-                             break;
-                default: {}
-            }
-        }
-        bool foundExp = false;
-        e = 0;
-        while (!p.empty && isDigit(p.front))
-        {
-            if (e < 0x7FFFFFFF / 10 - 10) // prevent integer overflow
-            {
-                e = e * 10 + p.front - '0';
-            }
-            p.popFront();
-            foundExp = true;
-        }
-        exp += (sexp) ? -e : e;
-        enforce(foundExp, new ConvException("Error converting input"~
-                        " to floating point"));
-
-        ldval = msdec;
-        if (msscale != 1)               /* if stuff was accumulated in lsdec */
-            ldval = ldval * msscale + lsdec;
-        import std.math : ldexp;
-
-        // Exponent is power of 2, not power of 10
-        ldval = ldexp(ldval,exp);
-        goto L6;
+        enforce(sawDigits, bailOut("no digits seen"));
+        static if (FloatFormat == hex)
+            enforce(!p.empty && (p.front == 'p' || p.front == 'P'),
+                    bailOut("Floating point parsing: exponent is required"));
     }
-    else // not hex
+
+    if (isHex)
+        parseDigits!hex;
+    else
+        parseDigits!decimal;
+
+    if (isHex || (!p.empty && (p.front == 'e' || p.front == 'E')))
     {
-        if (toUpper(p.front) == 'N' && !startsWithZero)
-        {
-            // nan
-            p.popFront();
-            enforce(!p.empty && toUpper(p.front) == 'A',
-                   new ConvException("error converting input to floating point"));
-            p.popFront();
-            enforce(!p.empty && toUpper(p.front) == 'N',
-                   new ConvException("error converting input to floating point"));
-            // skip past the last 'n'
-            p.popFront();
-            static if (isNarrowString!Source)
-                source = cast(Source) p;
-            return typeof(return).nan;
-        }
+        char sexp = 0;
+        int e = 0;
 
-        bool sawDigits = startsWithZero;
-
-        while (!p.empty)
-        {
-            int i = p.front;
-            while (isDigit(i))
-            {
-                sawDigits = true;        /* must have at least 1 digit   */
-                if (msdec < (ulong.max-10)/10)
-                    msdec = msdec * 10 + (i - '0');
-                else if (msscale < 10_000_000_000_000_000_000UL)
-                {
-                    lsdec = lsdec * 10 + (i - '0');
-                    msscale *= 10;
-                }
-                else
-                {
-                    exp++;
-                }
-                exp -= dot;
-                p.popFront();
-                if (p.empty)
-                    break;
-                i = p.front;
-                if (i == '_')
-                {
-                    p.popFront();
-                    if (p.empty)
-                        break;
-                    i = p.front;
-                }
-            }
-            if (i == '.' && !dot)
-            {
-                p.popFront();
-                dot++;
-            }
-            else
-            {
-                break;
-            }
-        }
-        enforce(sawDigits, new ConvException("no digits seen"));
-    }
-    if (!p.empty && (p.front == 'e' || p.front == 'E'))
-    {
-        char sexp;
-        int e;
-
-        sexp = 0;
         p.popFront();
         enforce(!p.empty, new ConvException("Unexpected end of input"));
         switch (p.front)
@@ -3012,8 +2952,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
                          break;
             default: {}
         }
-        bool sawDigits = 0;
-        e = 0;
+        sawDigits = false;
         while (!p.empty && isDigit(p.front))
         {
             if (e < 0x7FFFFFFF / 10 - 10)   // prevent integer overflow
@@ -3021,7 +2960,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
                 e = e * 10 + p.front - '0';
             }
             p.popFront();
-            sawDigits = 1;
+            sawDigits = true;
         }
         exp += (sexp) ? -e : e;
         enforce(sawDigits, new ConvException("No digits seen."));
@@ -3030,7 +2969,14 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     ldval = msdec;
     if (msscale != 1)               /* if stuff was accumulated in lsdec */
         ldval = ldval * msscale + lsdec;
-    if (ldval)
+    if (isHex)
+    {
+        import std.math : ldexp;
+
+        // Exponent is power of 2, not power of 10
+        ldval = ldexp(ldval,exp);
+    }
+    else if (ldval)
     {
         uint u = 0;
         int pow = 4096;
@@ -3057,10 +3003,10 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
             u++;
         }
     }
-  L6: // if overflow occurred
+
+    // if overflow occurred
     enforce(ldval != HUGE_VAL, new ConvException("Range error"));
 
-  L1:
     static if (isNarrowString!Source)
         source = cast(Source) p;
     return sign ? -ldval : ldval;
