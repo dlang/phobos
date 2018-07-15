@@ -54,6 +54,8 @@ $(TR $(TD Timestamp) $(TD
           $(LREF getTimesWin)
           $(LREF setTimes)
           $(LREF timeLastModified)
+          $(LREF timeLastAccessed)
+          $(LREF timeStatusChanged)
 ))
 $(TR $(TD Other) $(TD
           $(LREF DirEntry)
@@ -1182,7 +1184,7 @@ if (isConvertibleToString!R)
 
 // Reads a time field from a stat_t with full precision.
 version(Posix)
-private SysTime statTimeToStdTime(char which)(ref stat_t statbuf)
+private SysTime statTimeToStdTime(char which)(ref const stat_t statbuf)
 {
     auto unixTime = mixin(`statbuf.st_` ~ which ~ `time`);
     long stdTime = unixTimeToStdTime(unixTime);
@@ -1784,6 +1786,57 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R))
     assert(target.timeLastModified(SysTime.min) < source.timeLastModified);
     target.write(".");
     assert(target.timeLastModified(SysTime.min) >= source.timeLastModified);
+}
+
+version(StdDdoc)
+{
+    /++
+     $(BLUE This function is Posix-Only.)
+
+     Returns the time that the given file was last modified.
+     Params:
+        statbuf = stat_t retrieved from file.
+     +/
+    SysTime timeLastModified()(auto ref stat_t statbuf) pure nothrow {assert(false);}
+    /++
+     $(BLUE This function is Posix-Only.)
+
+     Returns the time that the given file was last accessed.
+     Params:
+        statbuf = stat_t retrieved from file.
+     +/
+    SysTime timeLastAccessed()(auto ref stat_t statbuf) pure nothrow {assert(false);}
+    /++
+     $(BLUE This function is Posix-Only.)
+
+     Returns the time that the given file was last changed.
+     Params:
+        statbuf = stat_t retrieved from file.
+     +/
+    SysTime timeStatusChanged()(auto ref stat_t statbuf) pure nothrow {assert(false);}
+}
+else version(Posix)
+{
+    SysTime timeLastModified()(auto ref stat_t statbuf) pure nothrow
+    {
+        return statTimeToStdTime!'m'(statbuf);
+    }
+    SysTime timeLastAccessed()(auto ref stat_t statbuf) pure nothrow
+    {
+        return statTimeToStdTime!'a'(statbuf);
+    }
+    SysTime timeStatusChanged()(auto ref stat_t statbuf) pure nothrow
+    {
+        return statTimeToStdTime!'c'(statbuf);
+    }
+
+    @safe unittest
+    {
+        stat_t statbuf;
+        // check that both lvalues and rvalues work
+        timeLastAccessed(statbuf);
+        timeLastAccessed(stat_t.init);
+    }
 }
 
 @safe unittest
