@@ -2634,6 +2634,105 @@ do
     assert(i == 0);
 }
 
+/+ @nogc bool array designed for RandomCover.
+- constructed with an invariable length
+- small length means 0 alloc and bit field (if up to 32(x86) or 64(x64) choices to cover)
+- bigger length means non-GC heap allocation(s) and dealloc. +/
+private struct RandomCoverChoices
+{
+    private void* buffer;
+    private immutable size_t _length;
+    private immutable bool hasPackedBits;
+
+    void opAssign(T)(T) @disable;
+
+    this(this) pure nothrow @nogc @trusted
+    {
+        import core.memory : pureMalloc;
+        import core.stdc.string : memcpy;
+        import core.exception : onOutOfMemoryError;
+
+        if (!hasPackedBits && buffer !is null)
+        {
+            void* nbuffer = pureMalloc(_length);
+            if (nbuffer is null)
+                onOutOfMemoryError();
+            buffer = memcpy(nbuffer, buffer, _length);
+        }
+    }
+
+    this(size_t numChoices) pure nothrow @nogc @trusted
+    {
+        import core.memory : pureCalloc;
+        import core.exception : onOutOfMemoryError;
+
+        _length = numChoices;
+        hasPackedBits = _length <= size_t.sizeof * 8;
+        if (!hasPackedBits)
+        {
+            buffer = pureCalloc(numChoices, 1);
+            if (buffer is null)
+                onOutOfMemoryError();
+        }
+    }
+
+    size_t length() const pure nothrow @nogc @safe @property {return _length;}
+
+    ~this() pure nothrow @nogc @trusted
+    {
+        import core.memory : pureFree;
+
+        if (!hasPackedBits && buffer !is null)
+            pureFree(buffer);
+    }
+
+    bool opIndex(size_t index) const pure nothrow @nogc @trusted
+    {
+        assert(index < _length);
+        if (!hasPackedBits)
+            return *((cast(bool*) buffer) + index);
+        else
+            return ((cast(size_t) buffer) >> index) & size_t(1);
+    }
+
+    void opIndexAssign(bool value, size_t index) pure nothrow @nogc @trusted
+    {
+        assert(index < _length);
+        if (!hasPackedBits)
+        {
+            *((cast(bool*) buffer) + index) = value;
+        }
+        else
+        {
+            if (value)
+                (*cast(size_t*) &buffer) |= size_t(1) << index;
+            else
+                (*cast(size_t*) &buffer) &= ~(size_t(1) << index);
+        }
+    }
+}
+
+@safe @nogc nothrow unittest
+{
+    static immutable lengths = [3, 32, 65, 256];
+    foreach (length; lengths)
+    {
+        RandomCoverChoices c = RandomCoverChoices(length);
+        assert(c.hasPackedBits == (length <= size_t.sizeof * 8));
+        c[0] = true;
+        c[2] = true;
+        assert(c[0]);
+        assert(!c[1]);
+        assert(c[2]);
+        c[0] = false;
+        c[1] = true;
+        c[2] = false;
+        assert(!c[0]);
+        assert(c[1]);
+        assert(!c[2]);
+    }
+}
+
 /**
 Covers a given range `r` in a random manner, i.e. goes through each
 element of `r` once and only once, just in a random order. `r`
@@ -2657,7 +2756,7 @@ struct RandomCover(Range, UniformRNG = void)
 if (isRandomAccessRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))
 {
     private Range _input;
-    private bool[] _chosen;
+    private RandomCoverChoices _chosen;
     private size_t _current;
     private size_t _alreadyChosen = 0;
     private bool _isEmpty = false;
@@ -2667,7 +2766,7 @@ if (isRandomAccessRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == vo
         this(Range input)
         {
             _input = input;
-            _chosen.length = _input.length;
+            _chosen = RandomCoverChoices(_input.length);
             if (_input.empty)
             {
                 _isEmpty = true;
@@ -2686,7 +2785,7 @@ if (isRandomAccessRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == vo
         {
             _input = input;
             _rng = rng;
-            _chosen.length = _input.length;
+            _chosen = RandomCoverChoices(_input.length);
             if (_input.empty)
             {
                 _isEmpty = true;
@@ -2792,6 +2891,14 @@ if (isRandomAccessRange!Range)
 
     version(X86_64) // Issue 15147
     assert(10.iota.randomCover(rnd).equal([7, 4, 2, 0, 1, 6, 8, 3, 9, 5]));
+}
+
+@safe unittest // cover RandomCoverChoices postblit for heap storage
+{
+    import std.array : array;
+    import std.range : iota;
+    auto a = 1337.iota.randomCover().array;
+    assert(a.length == 1337);
 }
 
 @safe unittest
