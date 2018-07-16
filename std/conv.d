@@ -3284,9 +3284,11 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     assertThrown!ConvException(to!float("INF2"));
 
     //extra stress testing
-    auto ssOK    = ["1.", "1.1.1", "1.e5", "2e1e", "2a", "2e1_1",
-                    "inf", "-inf", "infa", "-infa", "inf2e2", "-inf2e2"];
-    auto ssKO    = ["", " ", "2e", "2e+", "2e-", "2ee", "2e++1", "2e--1", "2e_1", "+inf"];
+    auto ssOK    = ["1.", "1.1.1", "1.e5", "2e1e", "2a", "2e1_1", "3.4_",
+                    "inf", "-inf", "infa", "-infa", "inf2e2", "-inf2e2",
+                    "nan", "-NAN", "+NaN", "-nAna", "NAn2e2", "-naN2e2"];
+    auto ssKO    = ["", " ", "2e", "2e+", "2e-", "2ee", "2e++1", "2e--1", "2e_1",
+                    "+inf", "-in", "I", "+N", "-NaD", "0x3.F"];
     foreach (s; ssOK)
         parse!double(s);
     foreach (s; ssKO)
