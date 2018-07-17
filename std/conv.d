@@ -2730,7 +2730,7 @@ if (isSomeString!Source && !is(Source == enum) &&
  *     A floating point number of type `Target`
  *
  * Throws:
- *     A $(LREF ConvException) if `p` is empty, if no number could be
+ *     A $(LREF ConvException) if `source` is empty, if no number could be
  *     parsed, or if an overflow occurred.
  */
 Target parse(Target, Source)(ref Source source)
@@ -2762,7 +2762,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     {
         if (msg == null)
             msg = "Floating point conversion error";
-        return new ConvException(text(msg, " for input \"", p, "\"."), fn, ln);
+        return new ConvException(text(msg, " for input \"", source, "\"."), fn, ln);
     }
 
 
