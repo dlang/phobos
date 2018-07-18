@@ -241,8 +241,7 @@ $(TR $(TD Building blocks) $(TD
         assert(normalize!NFKD("2¹⁰") == "210");
     }
     ---
-    $(SECTION Terminology
-    )
+    $(SECTION Terminology)
     $(P The following is a list of important Unicode notions
     and definitions. Any conventions used specifically in this
     module alone are marked as such. The descriptions are based on the formal
@@ -383,8 +382,7 @@ $(TR $(TD Building blocks) $(TD
     )
     $(P $(DEF Spacing mark) A combining character that is not a nonspacing mark.
     )
-    $(SECTION Normalization
-    )
+    $(SECTION Normalization)
     $(P The concepts of $(S_LINK Canonical equivalent, canonical equivalent)
         or $(S_LINK Compatibility equivalent, compatibility equivalent)
         characters in the Unicode Standard make it necessary to have a full, formal
@@ -424,8 +422,7 @@ $(TR $(TD Building blocks) $(TD
         identifiers, especially where there are security concerns. NFD and NFKD
         are the most useful for internal processing.
     )
-    $(SECTION Construction of lookup tables
-    )
+    $(SECTION Construction of lookup tables)
     $(P The Unicode standard describes a set of algorithms that
         depend on having the ability to quickly look up various properties
         of a code point. Given the the codespace of about 1 million $(CODEPOINTS),
@@ -487,8 +484,7 @@ $(TR $(TD Building blocks) $(TD
         can be turned into a trie. The trie object in this module
         is read-only (immutable); it's effectively frozen after construction.
     )
-    $(SECTION Unicode properties
-    )
+    $(SECTION Unicode properties)
     $(P This is a full list of Unicode properties accessible through $(LREF unicode)
         with specific helpers per category nested within. Consult the
         $(HTTP www.unicode.org/cldr/utility/properties.jsp, CLDR utility)
