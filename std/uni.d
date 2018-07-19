@@ -2170,20 +2170,23 @@ public struct InversionList(SP=GcPolicy)
 
     /**
         Get range that spans all of the $(CODEPOINT) intervals in this $(LREF InversionList).
+    */
+    @property auto byInterval() scope
+    {
+        // TODO: change this to data[] once the -dip1000 errors have been fixed
+        // see e.g. https://github.com/dlang/phobos/pull/6638
+        import std.array : array;
+        return Intervals!(typeof(data.array))(data.array);
+    }
 
-        Example:
-        -----------
+    @safe unittest
+    {
         import std.algorithm.comparison : equal;
         import std.typecons : tuple;
 
         auto set = CodepointSet('A', 'D'+1, 'a', 'd'+1);
 
         assert(set.byInterval.equal([tuple('A','E'), tuple('a','e')]));
-        -----------
-    */
-    @property auto byInterval() scope return
-    {
-        return Intervals!(typeof(data))(data);
     }
 
     package @property const(CodepointInterval)[] intervals() const
@@ -2791,7 +2794,7 @@ private:
     // a random-access range of integral pairs
     static struct Intervals(Range)
     {
-        this(return scope Range sp) scope @trusted // FIXME
+        this(Range sp) scope
         {
             slice = sp;
             start = 0;
