@@ -2181,7 +2181,7 @@ public struct InversionList(SP=GcPolicy)
         assert(set.byInterval.equal([tuple('A','E'), tuple('a','e')]));
         -----------
     */
-    @property auto byInterval() scope
+    @property auto byInterval() scope return
     {
         return Intervals!(typeof(data))(data);
     }
@@ -2791,7 +2791,7 @@ private:
     // a random-access range of integral pairs
     static struct Intervals(Range)
     {
-        this(Range sp) scope
+        this(return scope Range sp) scope @trusted // FIXME
         {
             slice = sp;
             start = 0;
