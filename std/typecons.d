@@ -68,7 +68,6 @@ Authors:   $(HTTP erdani.org, Andrei Alexandrescu),
  */
 module std.typecons;
 
-import core.stdc.stdint : uintptr_t;
 import std.format : singleSpec, FormatSpec, formatValue;
 import std.meta; // : AliasSeq, allSatisfy;
 import std.range.primitives : isOutputRange;
@@ -7524,7 +7523,7 @@ if (is(T == class))
 
         @property inout(T) Scoped_payload() inout
         {
-            void* alignedStore = cast(void*) aligned(cast(uintptr_t) Scoped_store.ptr);
+            void* alignedStore = cast(void*) aligned(cast(size_t) Scoped_store.ptr);
             // As `Scoped` can be unaligned moved in memory class instance should be moved accordingly.
             immutable size_t d = alignedStore - Scoped_store.ptr;
             size_t* currD = cast(size_t*) &Scoped_store[$ - size_t.sizeof];
@@ -7557,7 +7556,7 @@ if (is(T == class))
         import std.conv : emplace;
 
         Scoped result = void;
-        void* alignedStore = cast(void*) aligned(cast(uintptr_t) result.Scoped_store.ptr);
+        void* alignedStore = cast(void*) aligned(cast(size_t) result.Scoped_store.ptr);
         immutable size_t d = alignedStore - result.Scoped_store.ptr;
         *cast(size_t*) &result.Scoped_store[$ - size_t.sizeof] = d;
         emplace!(Unqual!T)(result.Scoped_store[d .. $ - size_t.sizeof], args);
@@ -7647,7 +7646,7 @@ if (is(T == class))
     destroy(*b2); // calls A's destructor for b2.a
 }
 
-private uintptr_t _alignUp(uintptr_t alignment)(uintptr_t n)
+private size_t _alignUp(size_t alignment)(size_t n)
 if (alignment > 0 && !((alignment - 1) & alignment))
 {
     enum badEnd = alignment - 1; // 0b11, 0b111, ...
