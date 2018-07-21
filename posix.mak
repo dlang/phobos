@@ -427,13 +427,41 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 # Run separate -betterC tests
 ################################################################################
 
-test/betterC/%.run: test/betterC/%.d $(DMD) $(LIB)
+test/betterC/%.run: test/betterC/%.d $(DMD) $(DRUNTIME)
 	mkdir -p $(ROOT)/unittest/betterC
 	$(DMD) $(DFLAGS) -of$(ROOT)/unittest/betterC/$(notdir $(basename $<)) -betterC $(UDFLAGS) \
 		-defaultlib= -debuglib= $(LINKDL) $<
 	./$(ROOT)/unittest/betterC/$(notdir $(basename $<))
 
 betterC: $(subst .d,.run,$(wildcard test/betterC/*.d))
+
+################################################################################
+# Run separate baremetal tests (for now only on x86_64 Linux)
+################################################################################
+
+MINIMAL_RUNTIME=$(ROOT)/unittest/baremetal/runtime.a
+
+$(MINIMAL_RUNTIME): test/baremetal/runtime/runtime.d $(DMD) $(DRUNTIME)
+	mkdir -p $(ROOT)/unittest/baremetal
+	$(DMD) -betterC -c $(DFLAGS) -lib -of$@ $<
+
+test/baremetal/%.run: test/baremetal/%.d $(DMD) $(MINIMAL_RUNTIME)
+	mkdir -p $(ROOT)/unittest/baremetal
+	$(DMD) $(DFLAGS) -c -betterC -of$(ROOT)/unittest/baremetal/$(notdir $(basename $<)).o -betterC $(UDFLAGS) $<
+	ld $(ROOT)/unittest/baremetal/$(notdir $(basename $<)).o $(MINIMAL_RUNTIME) \
+		-o $(ROOT)/unittest/baremetal/$(notdir $(basename $<))
+	./$(ROOT)/unittest/baremetal/$(notdir $(basename $<))
+
+ifneq (linux, $(OS))
+baremetal:
+	@echo "Baremetal tests are currently only run on Linux x86_32 and x86_64"
+else
+ifeq (,$(findstring $(MODEL),64))
+baremetal:
+	@echo "Baremetal tests are currently only run on Linux x86_32 and x86_64"
+endif
+baremetal: $(subst .d,.run,$(wildcard test/baremetal/*.d))
+endif
 
 ################################################################################
 # More stuff
@@ -634,6 +662,6 @@ $(TESTS_EXTRACTOR): $(TOOLS_DIR)/tests_extractor.d | $(LIB)
 auto-tester-build: all checkwhitespace
 
 .PHONY : auto-tester-test
-auto-tester-test: unittest betterC
+auto-tester-test: unittest betterC baremetal
 
 .DELETE_ON_ERROR: # GNU Make directive (delete output files on error)
