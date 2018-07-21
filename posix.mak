@@ -424,6 +424,18 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 	 BUILD=debug $(MAKE) -f $(MAKEFILE) $(basename $<).debug_with_debugger
 
 ################################################################################
+# Run separate -betterC tests
+################################################################################
+
+test/betterC/%.run: test/betterC/%.d $(DMD) $(LIB)
+	mkdir -p $(ROOT)/unittest/betterC
+	$(DMD) $(DFLAGS) -of$(ROOT)/unittest/betterC/$(notdir $(basename $<)) -betterC $(UDFLAGS) \
+		-defaultlib= -debuglib= $(LINKDL) $<
+	./$(ROOT)/unittest/betterC/$(notdir $(basename $<))
+
+betterC: $(subst .d,.run,$(wildcard test/betterC/*.d))
+
+################################################################################
 # More stuff
 ################################################################################
 
@@ -622,6 +634,6 @@ $(TESTS_EXTRACTOR): $(TOOLS_DIR)/tests_extractor.d | $(LIB)
 auto-tester-build: all checkwhitespace
 
 .PHONY : auto-tester-test
-auto-tester-test: unittest
+auto-tester-test: unittest betterC
 
 .DELETE_ON_ERROR: # GNU Make directive (delete output files on error)
