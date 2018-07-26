@@ -10177,8 +10177,8 @@ template isTwoWayCompatible(alias fn, T1, T2)
             T1 foo();
             T2 bar();
 
-            fn(foo(), bar());
-            fn(bar(), foo());
+            cast(void) fn(foo(), bar());
+            cast(void) fn(bar(), foo());
         }
     ));
 }
