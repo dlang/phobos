@@ -23,6 +23,7 @@
  * $(TR $(TD Building blocks) $(TD
  *           $(LREF Alias)
  *           $(LREF AliasSeq)
+ *           $(LREF Quote)
  *           $(LREF aliasSeqOf)
  * ))
  * $(TR $(TD Alias sequence filtering) $(TD
@@ -76,6 +77,58 @@
  */
 
 module std.meta;
+
+/**
+Create a wrapper struct for a sequence of zero or more aliases. This
+can be used to pass multiple sequences as template arguments, because
+this prevent sequences from being coalesced together.
+
+Params:
+    TList = the sequence to be quoted
+
+See_Also: $(LREF AliasSeq)
+*/
+struct Quote(TList...)
+{
+    /// The sequence being quoted
+    alias quoted = TList;
+
+    static if (TList.length > 0)
+        /// A quoted tail of the tuple
+        alias tail = .Quote!(TList[1..$]);
+    else
+        /// ditto
+        alias tail = .Quote!();
+    alias quoted this;
+}
+
+///
+@safe unittest
+{
+    import std.meta, std.traits;
+
+    /// Compare two quoted lists
+    template isEqual(A, B)
+    if (isInstanceOf!(Quote, A) && isInstanceOf!(Quote, B))
+    {
+        static if (A.length == 0)
+        {
+            // One of the list is empty
+            static if (B.length == 0)
+                enum isEqual = true;
+            else
+                enum isEqual = false;
+        }
+        else static if (is(A.quoted[0] == B.quoted[0]))
+            // The heads match, check the rest of the lists
+            enum isEqual = isEqual!(A.tail, B.tail);
+        else
+            // The heads don't match
+            enum isEqual = false;
+    }
+
+    static assert(isEqual!(Quote!(int, double), Quote!(int, double)));
+}
 
 /**
  * Creates a sequence of zero or more aliases. This is most commonly
