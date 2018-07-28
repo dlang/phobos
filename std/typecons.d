@@ -2569,24 +2569,12 @@ Practically `Nullable!T` stores a `T` and a `bool`.
  */
 struct Nullable(T)
 {
-    // simple case: type is freely constructable
-    static if (__traits(compiles, { T _value; }))
+    private union DontCallDestructorT
     {
-        private T _value;
+        T payload;
     }
-    // type is not constructable, but also has no way to notice
-    // that we're assigning to an uninitialized variable.
-    else static if (!hasElaborateAssign!T)
-    {
-        private T _value = T.init;
-    }
-    else
-    {
-        static assert(false,
-                      "Cannot construct " ~ typeof(this).stringof ~
-                      ": type has no default constructor and overloaded assignment."
-        );
-    }
+
+    private DontCallDestructorT _value = DontCallDestructorT.init;
 
     private bool _isNull = true;
 
@@ -2598,8 +2586,19 @@ Params:
  */
     this(inout T value) inout
     {
-        _value = value;
+        _value.payload = value;
         _isNull = false;
+    }
+
+    static if (is(T == struct) && hasElaborateDestructor!T)
+    {
+        ~this()
+        {
+            if (!_isNull)
+            {
+                destroy(_value.payload);
+            }
+        }
     }
 
     /**
@@ -2613,14 +2612,14 @@ Params:
             return rhs._isNull;
         if (rhs._isNull)
             return false;
-        return _value == rhs._value;
+        return _value.payload == rhs._value.payload;
     }
 
     /// Ditto
     bool opEquals(U)(auto ref const(U) rhs) const
     if (is(typeof(this.get == rhs)))
     {
-        return _isNull ? false : rhs == _value;
+        return _isNull ? false : rhs == _value.payload;
     }
 
     ///
@@ -2706,7 +2705,7 @@ Params:
         if (isNull)
             put(writer, "Nullable.null");
         else
-            formatValue(writer, _value, fmt);
+            formatValue(writer, _value.payload, fmt);
     }
 
     //@@@DEPRECATED_2.086@@@
@@ -2719,7 +2718,7 @@ Params:
         }
         else
         {
-            sink.formatValue(_value, fmt);
+            sink.formatValue(_value.payload, fmt);
         }
     }
 
@@ -2734,7 +2733,7 @@ Params:
         }
         else
         {
-            sink.formatValue(_value, fmt);
+            sink.formatValue(_value.payload, fmt);
         }
     }
 
@@ -2777,9 +2776,9 @@ Forces `this` to the null state.
     void nullify()()
     {
         static if (is(T == class) || is(T == interface))
-            _value = null;
+            _value.payload = null;
         else
-            .destroy(_value);
+            .destroy(_value.payload);
         _isNull = true;
     }
 
@@ -2802,7 +2801,21 @@ Params:
  */
     void opAssign()(T value)
     {
-        _value = value;
+        import std.algorithm.mutation : moveEmplace, move;
+
+        // the lifetime of the value in copy shall be managed by
+        // this Nullable, so we must avoid calling its destructor.
+        auto copy = DontCallDestructorT(value);
+
+        if (_isNull)
+        {
+            // trusted since payload is known to be T.init here.
+            () @trusted { moveEmplace(copy.payload, _value.payload); }();
+        }
+        else
+        {
+            move(copy.payload, _value.payload);
+        }
         _isNull = false;
     }
 
@@ -2842,13 +2855,13 @@ Returns:
     {
         enum message = "Called `get' on null Nullable!" ~ T.stringof ~ ".";
         assert(!isNull, message);
-        return _value;
+        return _value.payload;
     }
 
     /// ditto
     @property get(U)(inout(U) fallback) inout @safe pure nothrow
     {
-        return isNull ? fallback : _value;
+        return isNull ? fallback : _value.payload;
     }
 
 ///
@@ -3274,6 +3287,102 @@ auto nullable(T)(T t)
 
     assert(foo.approxEqual(bar));
 }
+// bugzilla issue 19037
+@safe unittest
+{
+    import std.datetime : SysTime;
+
+    struct Test
+    {
+        bool b;
+
+        nothrow invariant { assert(b == true); }
+
+        SysTime _st;
+
+        static bool destroyed;
+
+        @disable this();
+        this(bool b) { this.b = b; }
+        ~this() @safe { destroyed = true; }
+
+        // mustn't call opAssign on Test.init in Nullable!Test, because the invariant
+        // will be called before opAssign on the Test.init that is in Nullable
+        // and Test.init violates its invariant.
+        void opAssign(Test rhs) @safe { assert(false); }
+    }
+
+    {
+        Nullable!Test nt;
+
+        nt = Test(true);
+
+        // destroy value
+        Test.destroyed = false;
+
+        nt.nullify;
+
+        assert(Test.destroyed);
+
+        Test.destroyed = false;
+    }
+    // don't run destructor on T.init in Nullable on scope exit!
+    assert(!Test.destroyed);
+}
+// check that the contained type's destructor is called on assignment
+@system unittest
+{
+    struct S
+    {
+        // can't be static, since we need a specific value's pointer
+        bool* destroyedRef;
+
+        ~this()
+        {
+            if (this.destroyedRef)
+            {
+                *this.destroyedRef = true;
+            }
+        }
+    }
+
+    Nullable!S ns;
+
+    bool destroyed;
+
+    ns = S(&destroyed);
+
+    // reset from rvalue destruction in Nullable's opAssign
+    destroyed = false;
+
+    // overwrite Nullable
+    ns = S(null);
+
+    // the original S should be destroyed.
+    assert(destroyed == true);
+}
+// check that the contained type's destructor is still called when required
+@system unittest
+{
+    bool destructorCalled = false;
+
+    struct S
+    {
+        bool* destroyed;
+        ~this() { *this.destroyed = true; }
+    }
+
+    {
+        Nullable!S ns;
+    }
+    assert(!destructorCalled);
+    {
+        Nullable!S ns = Nullable!S(S(&destructorCalled));
+
+        destructorCalled = false; // reset after S was destroyed in the NS constructor
+    }
+    assert(destructorCalled);
+}
 
 /**
 Just like `Nullable!T`, except that the null state is defined as a
@@ -3406,7 +3515,9 @@ Params:
  */
     void opAssign()(T value)
     {
-        _value = value;
+        import std.algorithm.mutation : swap;
+
+        swap(value, _value);
     }
 
 /**
