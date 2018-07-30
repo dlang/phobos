@@ -460,6 +460,11 @@ private Pid spawnProcessImpl(scope const(char[])[] args,
     pid_t id;
     version (linux)
     {
+        /*
+        If vfork() is used and the parent or child changes
+        effective UID or GID, different privileged process
+        shares memory. This causes security issues.
+         */
         bool hasPrivilege()
         {
             import core.sys.posix.unistd : getegid, geteuid, getgid, getuid;
