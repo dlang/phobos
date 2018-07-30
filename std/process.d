@@ -457,7 +457,44 @@ private Pid spawnProcessImpl(scope const(char[])[] args,
             close(pidPipe[1]);
     }
 
-    auto id = core.sys.posix.unistd.fork();
+    pid_t id;
+    version (linux)
+    {
+        bool hasPrivilege()
+        {
+            import core.sys.posix.unistd : getegid, geteuid, getgid, getuid;
+            const uid = getuid();
+            if (uid < 0)
+                throw ProcessException.newFromErrno("Could not get user id");
+            const euid = geteuid();
+            if (euid < 0)
+                throw ProcessException.newFromErrno("Could not get effective user id");
+            if (euid == 0 || euid != uid)
+            {
+                return true;
+            }
+            const gid = getgid();
+            if (gid < 0)
+                throw ProcessException.newFromErrno("Could not get group id");
+            const egid = getegid();
+            if (egid < 0)
+                throw ProcessException.newFromErrno("Could not get effective group id");
+            if (egid != gid)
+            {
+                return true;
+            }
+            return false;
+        }
+        if (!hasPrivilege())
+            id = core.sys.posix.unistd.vfork();
+        else
+            id = core.sys.posix.unistd.fork();
+
+    }
+    else
+    {
+        id = core.sys.posix.unistd.fork();
+    }
     if (id < 0)
     {
         closePipeWriteEnds();
