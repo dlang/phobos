@@ -286,6 +286,7 @@ SHARED=$(if $(findstring $(OS),linux freebsd),1,)
 
 TESTS_EXTRACTOR=$(ROOT)/tests_extractor
 PUBLICTESTS_DIR=$(ROOT)/publictests
+BETTERCTESTS_DIR=$(ROOT)/betterctests
 
 ################################################################################
 # Rules begin here
@@ -422,18 +423,6 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 # ddd in this case is a graphical frontend to gdb
 %.debug : %.d
 	 BUILD=debug $(MAKE) -f $(MAKEFILE) $(basename $<).debug_with_debugger
-
-################################################################################
-# Run separate -betterC tests
-################################################################################
-
-test/betterC/%.run: test/betterC/%.d $(DMD) $(LIB)
-	mkdir -p $(ROOT)/unittest/betterC
-	$(DMD) $(DFLAGS) -of$(ROOT)/unittest/betterC/$(notdir $(basename $<)) -betterC $(UDFLAGS) \
-		-defaultlib= -debuglib= $(LINKDL) $<
-	./$(ROOT)/unittest/betterC/$(notdir $(basename $<))
-
-betterC: $(subst .d,.run,$(wildcard test/betterC/*.d))
 
 ################################################################################
 # More stuff
@@ -613,9 +602,10 @@ style_lint: dscanner $(LIB)
 	$(DMD) $(DFLAGS) $(NODEFAULTLIB) $(LIB) -w -D -Df/dev/null -main -c -o- $$(find etc std -type f -name '*.d') 2>&1
 
 ################################################################################
-# Check for missing imports in public unittest examples.
+# Build the test extractor.
+# - extracts and runs public unittest examples to checks for missing imports
+# - extracts and runs @betterC unittests
 ################################################################################
-publictests: $(addsuffix .publictests,$(D_MODULES))
 
 $(TESTS_EXTRACTOR): $(TOOLS_DIR)/tests_extractor.d | $(LIB)
 	DFLAGS="$(DFLAGS) $(LIB) $(NODEFAULTLIB) $(LINKDL)" $(DUB) build --force --compiler=$${PWD}/$(DMD) --single $<
@@ -626,15 +616,52 @@ $(TESTS_EXTRACTOR): $(TOOLS_DIR)/tests_extractor.d | $(LIB)
 # This is done to check for potentially missing imports in the examples, e.g.
 # make -f posix.mak std/format.publictests
 ################################################################################
+
+publictests: $(addsuffix .publictests,$(D_MODULES))
+
 %.publictests: %.d $(LIB) $(TESTS_EXTRACTOR) | $(PUBLICTESTS_DIR)/.directory
 	@$(TESTS_EXTRACTOR) --inputdir  $< --outputdir $(PUBLICTESTS_DIR)
 	@$(DMD) $(DFLAGS) $(NODEFAULTLIB) $(LIB) -main $(UDFLAGS) -run $(PUBLICTESTS_DIR)/$(subst /,_,$<)
+
+################################################################################
+# Check and run @betterC tests
+# ----------------------------
+#
+# Extract @betterC tests of a module and run them in -betterC
+#
+#   make -f posix.mak std/format.betterc
+################################################################################
+
+betterc-phobos-tests: $(addsuffix .betterc,$(D_MODULES))
+betterc: betterc-phobos-tests betterc-run-tests
+
+%.betterc: %.d | $(BETTERCTESTS_DIR)/.directory
+	@# Due to the FORCE rule on druntime, make will always try to rebuild Phobos (even as an order-only dependency)
+	@# However, we still need to ensure that the test_extractor is built once
+	@[ -f "$(TESTS_EXTRACTOR)" ] || ${MAKE} -f posix.mak "$(TESTS_EXTRACTOR)"
+	@$(TESTS_EXTRACTOR) --betterC --attributes betterC \
+		--inputdir  $< --outputdir $(BETTERCTESTS_DIR)
+	@$(DMD) $(DFLAGS) $(NODEFAULTLIB) -betterC $(UDFLAGS) -run $(BETTERCTESTS_DIR)/$(subst /,_,$<)
+
+################################################################################
+# Run separate -betterC tests
+################################################################################
+
+test/betterC/%.run: test/betterC/%.d $(DMD) $(LIB)
+	mkdir -p $(ROOT)/unittest/betterC
+	$(DMD) $(DFLAGS) -of$(ROOT)/unittest/betterC/$(notdir $(basename $<)) -betterC $(UDFLAGS) \
+		$(NODEFAULTLIB) $(LINKDL) $<
+	./$(ROOT)/unittest/betterC/$(notdir $(basename $<))
+
+betterc-run-tests: $(subst .d,.run,$(wildcard test/betterC/*.d))
+
+################################################################################
 
 .PHONY : auto-tester-build
 auto-tester-build: all checkwhitespace
 
 .PHONY : auto-tester-test
-auto-tester-test: unittest betterC
+auto-tester-test: unittest betterc
 
 .PHONY: buildkite-test
 buildkite-test: unittest betterC
