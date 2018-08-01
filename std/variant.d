@@ -13,8 +13,8 @@ languages, and comfortable exploratory programming.
 A $(LREF Variant) object can hold a value of any type, with very few
 restrictions (such as `shared` types and noncopyable types). Setting the value
 is as immediate as assigning to the `Variant` object. To read back the value of
-the appropriate type `T`, use the $(LREF get!T) call. To query whether a
-`Variant` currently holds a value of type `T`, use $(LREF peek!T). To fetch the
+the appropriate type `T`, use the $(LREF get) method. To query whether a
+`Variant` currently holds a value of type `T`, use $(LREF peek). To fetch the
 exact type currently held, call $(LREF type), which returns the `TypeInfo` of
 the current value.
 
