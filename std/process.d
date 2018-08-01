@@ -490,8 +490,8 @@ private Pid spawnProcessImpl(scope const(char[])[] args,
             }
             return false;
         }
-        if (!(config & Config.inheritFDs) &&
-            (config & Config.detached) &&
+        if ((config & Config.inheritFDs) &&
+            !(config & Config.detached) &&
             !hasPrivilege())
             id = core.sys.posix.unistd.vfork();
         else
