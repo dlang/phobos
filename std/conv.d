@@ -4230,21 +4230,6 @@ if (T.length > 0) { return textImpl!dstring(args); }
     assert(dtext(cs, ' ', ws, " ", ds) == "今日は 여보세요 Здравствуйте"d);
 }
 
-// @@@DEPRECATED_2018-06@@@
-deprecated("Calling `text` with 0 arguments is deprecated")
-string text(T...)(T args)
-if (T.length == 0) { return textImpl!string(args); }
-
-// @@@DEPRECATED_2018-06@@@
-deprecated("Calling `wtext` with 0 arguments is deprecated")
-wstring wtext(T...)(T args)
-if (T.length == 0) { return textImpl!wstring(args); }
-
-// @@@DEPRECATED_2018-06@@@
-deprecated("Calling `dtext` with 0 arguments is deprecated")
-dstring dtext(T...)(T args)
-if (T.length == 0) { return textImpl!dstring(args); }
-
 private S textImpl(S, U...)(U args)
 {
     static if (U.length == 0)
