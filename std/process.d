@@ -339,7 +339,7 @@ version(Posix) private enum InternalError : ubyte
     noerror,
     exec,
     chdir,
-    getrlimit,
+    sysconf,
     doubleFork,
 }
 
@@ -509,47 +509,19 @@ private Pid spawnProcessImpl(scope const(char[])[] args,
 
             if (!(config & Config.inheritFDs))
             {
-                import core.stdc.stdlib : malloc;
-                import core.sys.posix.poll : pollfd, poll, POLLNVAL;
-                import core.sys.posix.sys.resource : rlimit, getrlimit, RLIMIT_NOFILE;
+                import core.sys.posix.unistd : sysconf, _SC_OPEN_MAX;
 
                 // Get the maximum number of file descriptors that could be open.
-                rlimit r;
-                if (getrlimit(RLIMIT_NOFILE, &r) != 0)
+                immutable maxDescriptors = cast(int) sysconf(_SC_OPEN_MAX);
+                if (maxDescriptors == -1)
                 {
-                    abortOnError(forkPipeOut, InternalError.getrlimit, .errno);
+                    abortOnError(forkPipeOut, InternalError.sysconf, .errno);
                 }
-                immutable maxDescriptors = cast(int) r.rlim_cur;
 
-                // The above, less stdin, stdout, and stderr
-                immutable maxToClose = maxDescriptors - 3;
-
-                // Call poll() to see which ones are actually open:
-                auto pfds = cast(pollfd*) malloc(pollfd.sizeof * maxToClose);
-                foreach (i; 0 .. maxToClose)
+                foreach (i; 3 .. maxDescriptors)
                 {
-                    pfds[i].fd = i + 3;
-                    pfds[i].events = 0;
-                    pfds[i].revents = 0;
-                }
-                if (poll(pfds, maxToClose, 0) >= 0)
-                {
-                    foreach (i; 0 .. maxToClose)
-                    {
-                        // don't close pipe write end
-                        if (pfds[i].fd == forkPipeOut) continue;
-                        // POLLNVAL will be set if the file descriptor is invalid.
-                        if (!(pfds[i].revents & POLLNVAL)) close(pfds[i].fd);
-                    }
-                }
-                else
-                {
-                    // Fall back to closing everything.
-                    foreach (i; 3 .. maxDescriptors)
-                    {
-                        if (i == forkPipeOut) continue;
-                        close(i);
-                    }
+                    if (i == forkPipeOut) continue;
+                    close(i);
                 }
             }
             else // This is already done if we don't inherit descriptors.
@@ -631,8 +603,8 @@ private Pid spawnProcessImpl(scope const(char[])[] args,
                 case InternalError.chdir:
                     errorMsg = "Failed to set working directory";
                     break;
-                case InternalError.getrlimit:
-                    errorMsg = "getrlimit failed";
+                case InternalError.sysconf:
+                    errorMsg = "sysconf failed";
                     break;
                 case InternalError.exec:
                     errorMsg = "Failed to execute program";
