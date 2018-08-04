@@ -8587,13 +8587,11 @@ public:
             *      gap: (7 - 4) % 2 = 3 % 2 = 1
             *      end: 7 - 1 = 6
             */
-            pragma(inline, true);
             return (source.length - windowSize)  % stepSize;
         }
 
         private size_t numberOfFullFrames()
         {
-            pragma(inline, true);
             /**
             5.iota.slides(2, 1) => [0, 1], [1, 2], [2, 3], [3, 4]       (4)
             7.iota.slides(2, 2) => [0, 1], [2, 3], [4, 5], [6]          (3)
@@ -8610,7 +8608,6 @@ public:
         // Whether the last slide frame size is less than windowSize
         private bool hasPartialElements()
         {
-            pragma(inline, true);
             static if (withPartial)
                 return gap != 0 && source.length > numberOfFullFrames * stepSize;
             else
@@ -9385,6 +9382,14 @@ public:
         assert(infDollar.slide!Partial(4)[0 .. $].front.equal([0, 1, 2, 3]));
         assert(infDollar.slide!Partial(4)[2 .. $].front.equal([2, 3, 4, 5]));
     }}
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=19082
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
+    assert([1].map!(x => x).slide(2).equal!equal([[1]]));
 }
 
 private struct OnlyResult(T, size_t arity)
