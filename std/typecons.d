@@ -7287,7 +7287,7 @@ struct Typedef(T, T init = T.init, string cookie=null)
     /**
      * Convert wrapped value to a human readable string
      */
-    string toString()
+    string toString(this T)()
     {
         import std.array : appender;
         auto app = appender!string();
@@ -7297,7 +7297,7 @@ struct Typedef(T, T init = T.init, string cookie=null)
     }
 
     /// ditto
-    void toString(W)(ref W writer, const ref FormatSpec!char fmt)
+    void toString(this T, W)(ref W writer, const ref FormatSpec!char fmt)
     if (isOutputRange!(W, char))
     {
         formatValue(writer, Typedef_payload, fmt);
@@ -7596,8 +7596,18 @@ template TypedefType(T)
                                  int*, int[], int[2], int[int]))
     {{
         T t;
+
         Typedef!T td;
+        Typedef!(const T) ctd;
+        Typedef!(immutable T) itd;
+
         assert(t.to!string() == td.to!string());
+
+        static if (!(is(T == TestS) || is(T == TestC)))
+        {
+            assert(t.to!string() == ctd.to!string());
+            assert(t.to!string() == itd.to!string());
+        }
     }}
 }
 
