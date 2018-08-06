@@ -2737,7 +2737,6 @@ Target parse(Target, Source)(ref Source source)
 if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
     isFloatingPoint!Target && !is(Target == enum))
 {
-    import core.stdc.math : HUGE_VAL;
     import std.ascii : isDigit, isAlpha, toLower, toUpper, isHexDigit;
     import std.exception : enforce;
 
@@ -3240,7 +3239,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         }
     }
   L6: // if overflow occurred
-    enforce(ldval != HUGE_VAL, new ConvException("Range error"));
+    enforce(ldval != real.infinity, new ConvException("Range error"));
 
   L1:
     static if (isNarrowString!Source)
