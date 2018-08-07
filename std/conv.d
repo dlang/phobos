@@ -2730,7 +2730,7 @@ if (isSomeString!Source && !is(Source == enum) &&
  *     A floating point number of type `Target`
  *
  * Throws:
- *     A $(LREF ConvException) if `p` is empty, if no number could be
+ *     A $(LREF ConvException) if `source` is empty, if no number could be
  *     parsed, or if an overflow occurred.
  */
 Target parse(Target, Source)(ref Source source)
@@ -2762,7 +2762,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     {
         if (msg == null)
             msg = "Floating point conversion error";
-        return new ConvException(text(msg, " for input \"", p, "\"."), fn, ln);
+        return new ConvException(text(msg, " for input \"", source, "\"."), fn, ln);
     }
 
 
@@ -2777,29 +2777,24 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         enforce(!p.empty, bailOut());
         if (toLower(p.front) == 'i')
             goto case 'i';
-        enforce(!p.empty, bailOut());
         break;
     case '+':
         p.popFront();
         enforce(!p.empty, bailOut());
         break;
     case 'i': case 'I':
+        // inf
         p.popFront();
-        enforce(!p.empty, bailOut());
-        if (toLower(p.front) == 'n')
-        {
-            p.popFront();
-            enforce(!p.empty, bailOut());
-            if (toLower(p.front) == 'f')
-            {
-                // 'inf'
-                p.popFront();
-                static if (isNarrowString!Source)
-                    source = cast(Source) p;
-                return sign ? -Target.infinity : Target.infinity;
-            }
-        }
-        goto default;
+        enforce(!p.empty && toUpper(p.front) == 'N',
+               bailOut("error converting input to floating point"));
+        p.popFront();
+        enforce(!p.empty && toUpper(p.front) == 'F',
+               bailOut("error converting input to floating point"));
+        // skip past the last 'f'
+        p.popFront();
+        static if (isNarrowString!Source)
+            source = cast(Source) p;
+        return sign ? -Target.infinity : Target.infinity;
     default: {}
     }
 
@@ -2816,74 +2811,97 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         }
 
         isHex = p.front == 'x' || p.front == 'X';
+        if (isHex) p.popFront();
     }
+    else if (toLower(p.front) == 'n')
+    {
+        // nan
+        p.popFront();
+        enforce(!p.empty && toUpper(p.front) == 'A',
+               bailOut("error converting input to floating point"));
+        p.popFront();
+        enforce(!p.empty && toUpper(p.front) == 'N',
+               bailOut("error converting input to floating point"));
+        // skip past the last 'n'
+        p.popFront();
+        static if (isNarrowString!Source)
+            source = cast(Source) p;
+        return typeof(return).nan;
+    }
+
+    /*
+     * The following algorithm consists of 2 steps:
+     * 1) parseDigits processes the textual input into msdec and possibly
+     *    lsdec/msscale variables, followed by the exponent parser which sets
+     *    exp below.
+     *    Hex: input is 0xaaaaa...p+000... where aaaa is the mantissa in hex
+     *    and 000 is the exponent in decimal format with base 2.
+     *    Decimal: input is 0.00333...p+000... where 0.0033 is the mantissa
+     *    in decimal and 000 is the exponent in decimal format with base 10.
+     * 2) Convert msdec/lsdec and exp into native real format
+     */
 
     real ldval = 0.0;
     char dot = 0;                        /* if decimal point has been seen */
     int exp = 0;
-    long msdec = 0, lsdec = 0;
+    ulong msdec = 0, lsdec = 0;
     ulong msscale = 1;
+    bool sawDigits;
 
-    if (isHex)
+    enum { hex, decimal }
+
+    // sets msdec, lsdec/msscale, and sawDigits by parsing the mantissa digits
+    void parseDigits(alias FloatFormat)()
     {
-        /*
-         * The following algorithm consists of mainly 3 steps (and maybe should
-         * be refactored into functions accordingly)
-         * 1) Parse the textual input into msdec and exp variables:
-         *    input is 0xaaaaa...p+000... where aaaa is the mantissa in hex and
-         *    000 is the exponent in decimal format.
-         * 2) Rounding, ...
-         * 3) Convert msdec and exp into native real format
-         */
+        static if (FloatFormat == hex)
+        {
+            enum uint base = 16;
+            enum ulong msscaleMax = 0x1000_0000_0000_0000UL; // largest power of 16 a ulong holds
+            enum ubyte expIter = 4; // iterate the base-2 exponent by 4 for every hex digit
+            alias checkDigit = isHexDigit;
+            /*
+             * convert letter to binary representation: First clear bit
+             * to convert lower space chars to upperspace, then -('A'-10)
+             * converts letter A to 10, letter B to 11, ...
+             */
+            alias convertDigit = (int x) => isAlpha(x) ? ((x & ~0x20) - ('A' - 10)) : x - '0';
+            sawDigits = false;
+        }
+        else static if (FloatFormat == decimal)
+        {
+            enum uint base = 10;
+            enum ulong msscaleMax = 10_000_000_000_000_000_000UL; // largest power of 10 a ulong holds
+            enum ubyte expIter = 1; // iterate the base-10 exponent once for every decimal digit
+            alias checkDigit = isDigit;
+            alias convertDigit = (int x) => x - '0';
+            // Used to enforce that any mantissa digits are present
+            sawDigits = startsWithZero;
+        }
+        else
+            static assert(false, "Unrecognized floating-point format used.");
 
-        int guard = 0;
-        // Used to enforce that any mantissa digits are present
-        bool anydigits = false;
-        // Number of mantissa digits (digit: base 16) we have processed,
-        // ignoring leading 0s
-        uint ndigits = 0;
-
-        p.popFront();
         while (!p.empty)
         {
             int i = p.front;
-            while (isHexDigit(i))
+            while (checkDigit(i))
             {
-                anydigits = true;
-                /*
-                 * convert letter to binary representation: First clear bit
-                 * to convert lower space chars to upperspace, then -('A'-10)
-                 * converts letter A to 10, letter B to 11, ...
-                 */
-                i = isAlpha(i) ? ((i & ~0x20) - ('A' - 10)) : i - '0';
-                // 16*4 = 64: The max we can store in a long value
-                if (ndigits < 16)
+                sawDigits = true;        /* must have at least 1 digit   */
+
+                i = convertDigit(i);
+
+                if (msdec < (ulong.max - base)/base)
                 {
-                    // base 16: Y = ... + y3*16^3 + y2*16^2 + y1*16^1 + y0*16^0
-                    msdec = msdec * 16 + i;
-                    // ignore leading zeros
-                    if (msdec)
-                        ndigits++;
+                    // For base 16: Y = ... + y3*16^3 + y2*16^2 + y1*16^1 + y0*16^0
+                    msdec = msdec * base + i;
                 }
-                // All 64 bits of the long have been filled in now
-                else if (ndigits == 16)
+                else if (msscale < msscaleMax)
                 {
-                    while (msdec >= 0)
-                    {
-                        exp--;
-                        msdec <<= 1;
-                        i <<= 1;
-                        if (i & 0x10)
-                            msdec |= 1;
-                    }
-                    guard = i << 4;
-                    ndigits++;
-                    exp += 4;
+                    lsdec = lsdec * base + i;
+                    msscale *= base;
                 }
                 else
                 {
-                    guard |= i;
-                    exp += 4;
+                    exp += expIter;
                 }
                 exp -= dot;
                 p.popFront();
@@ -2901,289 +2919,29 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
             if (i == '.' && !dot)
             {
                 p.popFront();
-                dot = 4;
+                dot += expIter;
             }
             else
                 break;
-        }
-
-        // Round up if (guard && (sticky || odd))
-        if (guard & 0x80 && (guard & 0x7F || msdec & 1))
-        {
-            msdec++;
-            if (msdec == 0)                 // overflow
-            {
-                msdec = 0x8000000000000000L;
-                exp++;
-            }
         }
 
         // Have we seen any mantissa digits so far?
-        enforce(anydigits, bailOut());
-        enforce(!p.empty && (p.front == 'p' || p.front == 'P'),
-                bailOut("Floating point parsing: exponent is required"));
-        char sexp;
-        int e;
-
-        sexp = 0;
-        p.popFront();
-        if (!p.empty)
-        {
-            switch (p.front)
-            {
-                case '-':    sexp++;
-                             goto case;
-                case '+':    p.popFront(); enforce(!p.empty,
-                                new ConvException("Error converting input"~
-                                " to floating point"));
-                             break;
-                default: {}
-            }
-        }
-        ndigits = 0;
-        e = 0;
-        while (!p.empty && isDigit(p.front))
-        {
-            if (e < 0x7FFFFFFF / 10 - 10) // prevent integer overflow
-            {
-                e = e * 10 + p.front - '0';
-            }
-            p.popFront();
-            ndigits = 1;
-        }
-        exp += (sexp) ? -e : e;
-        enforce(ndigits, new ConvException("Error converting input"~
-                        " to floating point"));
-
-        import std.math : floatTraits, RealFormat;
-
-        static if (floatTraits!real.realFormat == RealFormat.ieeeQuadruple)
-        {
-            if (msdec)
-            {
-                /*
-                 * For quad precision, we currently allow max mantissa precision
-                 * of 64 bits, simply so we don't have to change the mantissa parser
-                 * in the code above. Feel free to adapt the parser to support full
-                 * 113 bit precision.
-                 */
-
-                // Exponent bias + 112:
-                // After shifting 112 times left, exp must be 1
-                int e2 = 0x3FFF + 112;
-
-                /*
-                 * left justify mantissa: The implicit bit (bit 112) must be 1
-                 * after this, (it is implicit and always defined as 1, so making
-                 * sure we end up with 1 at 112 means we adjust mantissa and eponent
-                 * to fit the ieee format)
-                 * For quadruple, this is especially fun as we have to use 2 longs
-                 * to store the mantissa and care about endianess...
-                 * quad_mant[0]               | quad_mant[1]
-                 * S.EEEEEEEEEEEEEEE.MMMMM .. | MMMMM .. 00000
-                 *                48       0  |
-                 */
-                ulong[2] quad_mant;
-                quad_mant[1] = msdec;
-                while ((quad_mant[0] & 0x0001_0000_0000_0000) == 0)
-                {
-                    // Shift high part one bit left
-                    quad_mant[0] <<= 1;
-                    // Transfer MSB from quad_mant[1] as new LSB
-                    quad_mant[0] |= (quad_mant[1] & 0x8000_0000_0000_0000) ? 0b1 : 0b0;
-                    // Now shift low part one bit left
-                    quad_mant[1] <<= 1;
-                    // Finally, decrease the exponent, as we increased the value
-                    // by shifting of the mantissa
-                    e2--;
-                }
-
-                ()@trusted {
-                    ulong* msw, lsw;
-                    version (LittleEndian)
-                    {
-                        lsw = &(cast(ulong*)&ldval)[0];
-                        msw = &(cast(ulong*)&ldval)[1];
-                    }
-                    else
-                    {
-                        msw = &(cast(ulong*)&ldval)[0];
-                        lsw = &(cast(ulong*)&ldval)[1];
-                    }
-
-                    // Stuff mantissa directly into double
-                    // (first including implicit bit)
-                    *msw = quad_mant[0];
-                    *lsw = quad_mant[1];
-
-                    // Store exponent, now overwriting implicit bit
-                    *msw &= 0x0000_FFFF_FFFF_FFFF;
-                    *msw |= ((e2 & 0xFFFFUL) << 48);
-                }();
-
-                import std.math : ldexp;
-
-                // Exponent is power of 2, not power of 10
-                ldval = ldexp(ldval, exp);
-            }
-        }
-        else static if (floatTraits!real.realFormat == RealFormat.ieeeExtended)
-        {
-            if (msdec)
-            {
-                int e2 = 0x3FFF + 63;
-
-                // left justify mantissa
-                while (msdec >= 0)
-                {
-                    msdec <<= 1;
-                    e2--;
-                }
-
-                // Stuff mantissa directly into real
-                ()@trusted{ *cast(long*)&ldval = msdec; }();
-                ()@trusted{ (cast(ushort*)&ldval)[4] = cast(ushort) e2; }();
-
-                import std.math : ldexp;
-
-                // Exponent is power of 2, not power of 10
-                ldval = ldexp(ldval,exp);
-            }
-        }
-        else static if (floatTraits!real.realFormat == RealFormat.ieeeDouble)
-        {
-            if (msdec)
-            {
-                // Exponent bias + 52:
-                // After shifting 52 times left, exp must be 1
-                int e2 = 0x3FF + 52;
-
-                // right justify mantissa
-                // first 11 bits must be zero, rest is implied bit + mantissa
-                // shift one time less, do rounding, shift again
-                while ((msdec & 0xFFC0_0000_0000_0000) != 0)
-                {
-                    msdec  = ((cast(ulong) msdec) >> 1);
-                    e2++;
-                }
-
-                // Have to shift one more time
-                // and do rounding
-                if ((msdec & 0xFFE0_0000_0000_0000) != 0)
-                {
-                    auto roundUp = (msdec & 0x1);
-
-                    msdec  = ((cast(ulong) msdec) >> 1);
-                    e2++;
-                    if (roundUp)
-                    {
-                        msdec += 1;
-                        // If mantissa was 0b1111... and we added +1
-                        // the mantissa should be 0b10000 (think of implicit bit)
-                        // and the exponent increased
-                        if ((msdec & 0x0020_0000_0000_0000) != 0)
-                        {
-                            msdec = 0x0010_0000_0000_0000;
-                            e2++;
-                        }
-                    }
-                }
-
-
-                // left justify mantissa
-                // bit 11 must be 1
-                while ((msdec & 0x0010_0000_0000_0000) == 0)
-                {
-                    msdec <<= 1;
-                    e2--;
-                }
-
-                // Stuff mantissa directly into double
-                // (first including implicit bit)
-                ()@trusted{ *cast(long *)&ldval = msdec; }();
-                // Store exponent, now overwriting implicit bit
-                ()@trusted{ *cast(long *)&ldval &= 0x000F_FFFF_FFFF_FFFF; }();
-                ()@trusted{ *cast(long *)&ldval |= ((e2 & 0xFFFUL) << 52); }();
-
-                import std.math : ldexp;
-
-                // Exponent is power of 2, not power of 10
-                ldval = ldexp(ldval,exp);
-            }
-        }
-        else
-            static assert(false, "Floating point format of real type not supported");
-
-        goto L6;
+        enforce(sawDigits, bailOut("no digits seen"));
+        static if (FloatFormat == hex)
+            enforce(!p.empty && (p.front == 'p' || p.front == 'P'),
+                    bailOut("Floating point parsing: exponent is required"));
     }
-    else // not hex
+
+    if (isHex)
+        parseDigits!hex;
+    else
+        parseDigits!decimal;
+
+    if (isHex || (!p.empty && (p.front == 'e' || p.front == 'E')))
     {
-        if (toUpper(p.front) == 'N' && !startsWithZero)
-        {
-            // nan
-            p.popFront();
-            enforce(!p.empty && toUpper(p.front) == 'A',
-                   new ConvException("error converting input to floating point"));
-            p.popFront();
-            enforce(!p.empty && toUpper(p.front) == 'N',
-                   new ConvException("error converting input to floating point"));
-            // skip past the last 'n'
-            p.popFront();
-            static if (isNarrowString!Source)
-                source = cast(Source) p;
-            return typeof(return).nan;
-        }
+        char sexp = 0;
+        int e = 0;
 
-        bool sawDigits = startsWithZero;
-
-        while (!p.empty)
-        {
-            int i = p.front;
-            while (isDigit(i))
-            {
-                sawDigits = true;        /* must have at least 1 digit   */
-                if (msdec < (0x7FFFFFFFFFFFL-10)/10)
-                    msdec = msdec * 10 + (i - '0');
-                else if (msscale < (0xFFFFFFFF-10)/10)
-                {
-                    lsdec = lsdec * 10 + (i - '0');
-                    msscale *= 10;
-                }
-                else
-                {
-                    exp++;
-                }
-                exp -= dot;
-                p.popFront();
-                if (p.empty)
-                    break;
-                i = p.front;
-                if (i == '_')
-                {
-                    p.popFront();
-                    if (p.empty)
-                        break;
-                    i = p.front;
-                }
-            }
-            if (i == '.' && !dot)
-            {
-                p.popFront();
-                dot++;
-            }
-            else
-            {
-                break;
-            }
-        }
-        enforce(sawDigits, new ConvException("no digits seen"));
-    }
-    if (!p.empty && (p.front == 'e' || p.front == 'E'))
-    {
-        char sexp;
-        int e;
-
-        sexp = 0;
         p.popFront();
         enforce(!p.empty, new ConvException("Unexpected end of input"));
         switch (p.front)
@@ -3194,8 +2952,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
                          break;
             default: {}
         }
-        bool sawDigits = 0;
-        e = 0;
+        sawDigits = false;
         while (!p.empty && isDigit(p.front))
         {
             if (e < 0x7FFFFFFF / 10 - 10)   // prevent integer overflow
@@ -3203,7 +2960,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
                 e = e * 10 + p.front - '0';
             }
             p.popFront();
-            sawDigits = 1;
+            sawDigits = true;
         }
         exp += (sexp) ? -e : e;
         enforce(sawDigits, new ConvException("No digits seen."));
@@ -3212,7 +2969,14 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     ldval = msdec;
     if (msscale != 1)               /* if stuff was accumulated in lsdec */
         ldval = ldval * msscale + lsdec;
-    if (ldval)
+    if (isHex)
+    {
+        import std.math : ldexp;
+
+        // Exponent is power of 2, not power of 10
+        ldval = ldexp(ldval,exp);
+    }
+    else if (ldval)
     {
         uint u = 0;
         int pow = 4096;
@@ -3239,10 +3003,10 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
             u++;
         }
     }
-  L6: // if overflow occurred
+
+    // if overflow occurred
     enforce(ldval != HUGE_VAL, new ConvException("Range error"));
 
-  L1:
     static if (isNarrowString!Source)
         source = cast(Source) p;
     return sign ? -ldval : ldval;
@@ -3340,6 +3104,14 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     }
     r = to!real(to!string(real.max));
     assert(to!string(r) == to!string(real.max));
+
+    real pi = 3.1415926535897932384626433832795028841971693993751;
+    string fullPrecision = "3.1415926535897932384626433832795028841971693993751";
+    assert(feq(parse!real(fullPrecision), pi, 2*real.epsilon));
+
+    real x = 0x1.FAFAFAFAFAFAFAFAFAFAFAFAFAFAFAFAAFAAFAFAFAFAFAFAFAP-252;
+    string full = "0x1.FAFAFAFAFAFAFAFAFAFAFAFAFAFAFAFAAFAAFAFAFAFAFAFAFAP-252";
+    assert(parse!real(full) == x);
 }
 
 // Tests for the double implementation
@@ -3448,8 +3220,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     int i;
 
     static if (floatTraits!real.realFormat == RealFormat.ieeeQuadruple)
-        // Our parser is currently limited to ieeeExtended precision
-        enum s = "0x1.FFFFFFFFFFFFFFFEp-16382";
+        enum s = "0x1.FFFFFFFFFFFFFFFFFFFFFFFFFFFFp-16382";
     else static if (floatTraits!real.realFormat == RealFormat.ieeeExtended)
         enum s = "0x1.FFFFFFFFFFFFFFFEp-16382";
     else static if (floatTraits!real.realFormat == RealFormat.ieeeDouble)
@@ -3465,8 +3236,6 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     static if (floatTraits!real.realFormat == RealFormat.ieeeExtended)
     {
         version (CRuntime_Microsoft)
-            ld1 = 0x1.FFFFFFFFFFFFFFFEp-16382L; // strtold currently mapped to strtod
-        else version (CRuntime_Bionic)
             ld1 = 0x1.FFFFFFFFFFFFFFFEp-16382L; // strtold currently mapped to strtod
         else
             ld1 = strtold(s.ptr, null);
@@ -3515,9 +3284,11 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     assertThrown!ConvException(to!float("INF2"));
 
     //extra stress testing
-    auto ssOK    = ["1.", "1.1.1", "1.e5", "2e1e", "2a", "2e1_1",
-                    "inf", "-inf", "infa", "-infa", "inf2e2", "-inf2e2"];
-    auto ssKO    = ["", " ", "2e", "2e+", "2e-", "2ee", "2e++1", "2e--1", "2e_1", "+inf"];
+    auto ssOK    = ["1.", "1.1.1", "1.e5", "2e1e", "2a", "2e1_1", "3.4_",
+                    "inf", "-inf", "infa", "-infa", "inf2e2", "-inf2e2",
+                    "nan", "-NAN", "+NaN", "-nAna", "NAn2e2", "-naN2e2"];
+    auto ssKO    = ["", " ", "2e", "2e+", "2e-", "2ee", "2e++1", "2e--1", "2e_1",
+                    "+inf", "-in", "I", "+N", "-NaD", "0x3.F"];
     foreach (s; ssOK)
         parse!double(s);
     foreach (s; ssKO)
