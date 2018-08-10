@@ -2015,6 +2015,49 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
     }
 }
 
+/+
+Generates an unsigned integer in the half-open range `[0, k)`.
+Non-public because we locally guarantee `k > 0`.
+
+Params:
+    k = unsigned exclusive upper bound; caller guarantees this is non-zero
+    rng = random number generator to use
+
+Returns:
+    Pseudo-random unsigned integer strictly less than `k`.
++/
+private UInt _uniformIndex(UniformRNG, UInt = size_t)(const UInt k, ref UniformRNG rng)
+if (isUnsigned!UInt && isUniformRNG!UniformRNG)
+{
+    alias ResultType = UInt;
+    alias UpperType = Unsigned!(typeof(k - 0));
+    alias upperDist = k;
+
+    assert(upperDist != 0);
+
+    // For backwards compatibility use same algorithm as uniform(0, k, rng).
+    UpperType offset, rnum, bucketFront;
+    do
+    {
+        rnum = uniform!UpperType(rng);
+        offset = rnum % upperDist;
+        bucketFront = rnum - offset;
+    } // while we're in an unfair bucket...
+    while (bucketFront > (UpperType.max - (upperDist - 1)));
+
+    return cast(ResultType) offset;
+}
+
+pure @safe unittest
+{
+    // For backwards compatibility check that _uniformIndex(k, rng)
+    // has the same result as uniform(0, k, rng).
+    auto rng1 = Xorshift(123_456_789);
+    auto rng2 = rng1.save();
+    const size_t k = (1U << 31) - 1;
+    assert(_uniformIndex(k, rng1) == uniform(0, k, rng2));
+}
+
 /**
 Generates a uniformly-distributed number in the range $(D [T.min,
 T.max]) for any integral or character type `T`. If no random
@@ -2384,7 +2427,13 @@ Returns:
 Range randomShuffle(Range, RandomGen)(Range r, ref RandomGen gen)
 if (isRandomAccessRange!Range && isUniformRNG!RandomGen)
 {
-    return partialShuffle!(Range, RandomGen)(r, r.length, gen);
+    import std.algorithm.mutation : swapAt;
+    const n = r.length;
+    foreach (i; 0 .. n)
+    {
+        r.swapAt(i, i + _uniformIndex(n - i, gen));
+    }
+    return r;
 }
 
 /// ditto
@@ -2406,12 +2455,14 @@ if (isRandomAccessRange!Range)
 
 @safe unittest
 {
+    int[10] sa = void;
+    int[10] sb = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
     import std.algorithm.sorting : sort;
     foreach (RandomGen; PseudoRngTypes)
     {
-        // Also tests partialShuffle indirectly.
-        auto a = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-        auto b = a.dup;
+        sa[] = sb[];
+        auto a = sa[];
+        auto b = sb[];
         auto gen = RandomGen(123_456_789);
         randomShuffle(a, gen);
         sort(a);
@@ -2420,6 +2471,15 @@ if (isRandomAccessRange!Range)
         sort(a);
         assert(a == b);
     }
+    // For backwards compatibility verify randomShuffle(r, gen)
+    // is equivalent to partialShuffle(r, 0, r.length, gen).
+    auto gen1 = Xorshift(123_456_789);
+    auto gen2 = gen1.save();
+    sa[] = sb[];
+    // Issue 19156 - @nogc std.random.randomShuffle.
+    () @nogc nothrow pure { randomShuffle(sa[], gen1); }();
+    partialShuffle(sb[], sb.length, gen2);
+    assert(sa[] == sb[]);
 }
 
 @safe unittest // bugzilla 18501
@@ -2773,7 +2833,7 @@ if (isRandomAccessRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == vo
             }
             else
             {
-                _current = uniform(0, _chosen.length);
+                _current = _uniformIndex(_chosen.length, rndGen);
             }
         }
     }
@@ -2792,7 +2852,7 @@ if (isRandomAccessRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == vo
             }
             else
             {
-                _current = uniform(0, _chosen.length, rng);
+                _current = _uniformIndex(_chosen.length, rng);
             }
         }
 
@@ -2835,11 +2895,11 @@ if (isRandomAccessRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == vo
             // Roll a dice with k faces
             static if (is(UniformRNG == void))
             {
-                auto chooseMe = uniform(0, k) == 0;
+                auto chooseMe = _uniformIndex(k, rndGen) == 0;
             }
             else
             {
-                auto chooseMe = uniform(0, k, _rng) == 0;
+                auto chooseMe = _uniformIndex(k, _rng) == 0;
             }
             assert(k > 1 || chooseMe);
             if (chooseMe)
@@ -2899,6 +2959,20 @@ if (isRandomAccessRange!Range)
     import std.range : iota;
     auto a = 1337.iota.randomCover().array;
     assert(a.length == 1337);
+}
+
+@nogc nothrow pure @safe unittest
+{
+    // Issue 14001 - Optionally @nogc std.random.randomCover
+    auto rng = Xorshift(123_456_789);
+    int[5] sa = [1, 2, 3, 4, 5];
+    auto r = randomCover(sa[], rng);
+    assert(!r.empty);
+    const x = r.front;
+    r.popFront();
+    assert(!r.empty);
+    const y = r.front;
+    assert(x != y);
 }
 
 @safe unittest
