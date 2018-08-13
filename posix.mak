@@ -566,7 +566,7 @@ dscanner:
 	@# However, we still need to ensure that the DScanner binary is built once
 	@[ -f $(DSCANNER_DIR)/dsc ] || ${MAKE} -f posix.mak $(DSCANNER_DIR)/dsc
 	@echo "Running DScanner"
-	$(DEBUGGER) -return-child-result -q -ex run -ex bt -batch --args $(DSCANNER_DIR)/dsc --config .dscanner.ini --styleCheck etc std -I.
+	$(DSCANNER_DIR)/dsc --config .dscanner.ini --styleCheck etc std -I.
 
 style_lint: dscanner $(LIB)
 	@echo "Check for trailing whitespace"
