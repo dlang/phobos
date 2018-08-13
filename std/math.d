@@ -392,11 +392,6 @@ template floatTraits(T)
             enum EXPPOS_SHORT = 0;
             enum SIGNPOS_BYTE = 0;
         }
-        // For IBM doubledouble the larger magnitude double comes first.
-        // It's really a double[2] and arrays don't index differently
-        // between little and big-endian targets.
-        enum DOUBLEPAIR_MSB = 0;
-        enum DOUBLEPAIR_LSB = 1;
     }
     else
         static assert(false, "No traits support for " ~ T.stringof);
