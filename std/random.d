@@ -2182,8 +2182,7 @@ do
         immutable T u = (rng.front - rng.min) * factor;
         rng.popFront();
 
-        import core.stdc.limits : CHAR_BIT;  // CHAR_BIT is always 8
-        static if (isIntegral!R && T.mant_dig >= (CHAR_BIT * R.sizeof))
+        static if (isIntegral!R && T.mant_dig >= (8 * R.sizeof))
         {
             /* If RNG variates are integral and T has enough precision to hold
              * R without loss, we're guaranteed by the definition of factor
