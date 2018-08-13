@@ -4034,7 +4034,8 @@ private S textImpl(S, U...)(U args)
                 is(Unqual!(typeof(arg)) == uint) || is(Unqual!(typeof(arg)) == ulong) ||
                 is(Unqual!(typeof(arg)) == int) || is(Unqual!(typeof(arg)) == long)
             )
-                app.put(arg.toChars);
+                // https://issues.dlang.org/show_bug.cgi?id=17712#c15
+                app.put(textImpl!(S)(arg));
             else
                 app.put(to!S(arg));
         }
