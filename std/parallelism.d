@@ -3560,6 +3560,22 @@ ParallelForeach!R parallel(R)(R range, size_t workUnitSize)
     return taskPool.parallel(range, workUnitSize);
 }
 
+// #17019: `each` should be usable with parallel
+@system unittest
+{
+    import std.algorithm.iteration : each, sum;
+    import std.range : iota;
+
+    // check behavior with parallel
+    auto arr = new int[10];
+    parallel(arr).each!((ref e) => e += 1);
+    assert(arr.sum == 10);
+
+    auto arrIndex = new int[10];
+    parallel(arrIndex).each!((i, ref e) => e += i);
+    assert(arrIndex.sum == 10.iota.sum);
+}
+
 // Thrown when a parallel foreach loop is broken from.
 class ParallelForeachError : Error
 {
