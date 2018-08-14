@@ -1,0 +1,25 @@
+`std.algorithm.iteration.joiner` can now be used for bidirectional ranges
+
+$(REF joiner, std,algorithm,iteration) can now be requested to be a bidirectional range.
+
+---
+import std.algorithm.iteration : joiner;
+import std.range : retro;
+[[1, 2], [3, 4]].joiner.retro; // [4, 3, 2, 1]
+---
+
+A more complex example of inserting a format delimiter fully lazily:
+
+---
+import std.algorithm.comparison : equal;
+import std.range : chain, cycle, iota, only, retro, take, zip;
+import std.format : format;
+
+static immutable number = "12345678";
+static immutable delimiter = ",";
+auto formatted = number.retro
+    .zip(3.iota.cycle.take(number.length))
+    .map!(z => chain(z[0].only, z[1] == 2 ? delimiter : null))
+    .joiner
+    .retro; // "12,345,678"
+---
