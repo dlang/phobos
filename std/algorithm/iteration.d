@@ -948,8 +948,7 @@ public:
                             Flag!"each"))
                         cast(void) binaryFun!BinaryArgs(i, r.front);
                     else
-                        if (binaryFun!BinaryArgs(i, r.front) == No.each)
-                            return No.each;
+                        if (binaryFun!BinaryArgs(i, r.front) == No.each) return No.each;
                     r.popFront();
                     i++;
                 }
@@ -959,8 +958,12 @@ public:
         {
             // range interface with >2 parameters.
             for (auto range = r; !range.empty; range.popFront())
-                if (pred(range.front.expand)
-                    return No.each;
+            {
+                static if (!is(typeof(fun(r.front.expand)) == Flag!"each"))
+                    cast(void) fun(range.front.expand);
+                else
+                    if (fun(range.front.expand)) return No.each;
+            }
         }
         return Yes.each;
     }
@@ -1006,8 +1009,7 @@ public:
             // opApply with >2 parameters. count the delegate args.
             // only works if it is not templated (otherwise we cannot count the args)
             auto result = Yes.each;
-            auto dg(Parameters!(Parameters!(r.opApply)) params) {
-                pred(params);
+            auto dg(Parameters!(Parameters!(r.opApply)) params)
             {
                 static if (!is(typeof(binaryFun!BinaryArgs(i, e)) == Flag!"each"))
                 {
@@ -1023,7 +1025,7 @@ public:
             r.opApply(&dg);
             return result;
         }
-
+        return Yes.each;
     }
 }
 
