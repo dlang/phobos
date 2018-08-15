@@ -1,0 +1,13 @@
+`std.algorithm.iteration.each` is now capable of early-stopping
+
+$(REF each, std,algorithm,iteration) is now capable of exiting early.
+When a `No.each` $(REF Flag, std,typecons) is returned from the function that
+is called by `each`, the iteration will be aborted early.
+Analogously, returning `Yes.each` will continue the iteration.
+For example:
+
+---
+auto arr = [10, 20, 30];
+arr.each!((n) { arr ~= n; return (n == 20) ? No.each : Yes.each; }); // aborts after the second iteration
+assert(arr == [10, 20, 30, 10, 20]);
+---
