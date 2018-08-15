@@ -2669,9 +2669,10 @@ if (isSomeString!Source && !is(Source == enum) &&
 @safe pure nothrow @nogc unittest
 {
     enum EnumType : bool { a = true, b = false, c = a }
+
     auto str = "a";
     auto expected = tryParse!EnumType(str);
-    // TODO how can this compile in a nothrow function when `get` may throw?:
+
     assert(!expected.isNull &&
            expected.get == EnumType.a);
 }
