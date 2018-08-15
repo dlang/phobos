@@ -4005,62 +4005,125 @@ if (isInputRange!Range && !isInfinite!Range &&
 }
 
 /**
-Skip over the initial portion of the first given range that matches the second
-range, or if no second range is given skip over the elements that fullfil pred.
+Skip over the initial portion of the first given range (`haystack`) that matches
+any of the additionally given ranges (`needles`) fully, or
+if no second range is given skip over the elements that fulfill pred.
 Do nothing if there is no match.
 
 Params:
     pred = The predicate that determines whether elements from each respective
         range match. Defaults to equality `"a == b"`.
 */
-template skipOver(alias pred = "a == b")
+template skipOver(alias pred = (a, b) => a == b)
 {
+    import std.meta : allSatisfy;
+
+    enum bool isPredComparable(T) = ifTestable!(T, binaryFun!pred);
+
     /**
-    r1 = The $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to
-        move forward.
-    r2 = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
-        representing the initial segment of `r1` to skip over.
-    e = The element to match.
+    Params:
+        haystack = The $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to
+                   move forward.
+        needles = The $(REF_ALTTEXT input ranges, isInputRange, std,range,primitives)
+                  representing the prefix of `r1` to skip over.
+        es = The element to match.
 
     Returns:
-    true if the initial segment of `r1` matches `r2` or `pred` evaluates to true,
-    and `r1` has been advanced to the point past this segment; otherwise false, and
-    `r1` is left in its original position.
+        `true` if the prefix of `haystack` matches any range of `needles` fully
+        or `pred` evaluates to true, and `haystack` has been advanced to the point past this segment;
+        otherwise false, and `haystack` is left in its original position.
+
+    Note:
+        By definition, empty ranges are matched fully and if `needles` contains an empty range,
+        `skipOver` will return `true`.
     */
-    bool skipOver(R1, R2)(ref R1 r1, R2 r2)
-    if (is(typeof(binaryFun!pred(r1.front, r2.front))) &&
-        isForwardRange!R1 &&
-        isInputRange!R2)
+    bool skipOver(Haystack, Needles...)(ref Haystack haystack, Needles needles)
+    if (is(typeof(binaryFun!pred(haystack.front, needles[0].front))) &&
+        isForwardRange!Haystack &&
+        allSatisfy!(isInputRange, Needles) &&
+        !is(CommonType!(staticMap!(ElementType, staticMap!(Unqual, Needles))) == void))
     {
-        static if (is(typeof(pred) : string) && pred == "a == b"
-                && is(typeof(r1[0 .. $] == r2) : bool)
-                && is(typeof(r2.length > r1.length) : bool)
-                && is(typeof(r1 = r1[r2.length .. $])))
+        static if (__traits(isSame, pred, (a, b) => a == b)
+                && is(typeof(haystack[0 .. $] == needles[0]) : bool)
+                && is(typeof(haystack = haystack[0 .. $]))
+                && hasLength!Haystack && allSatisfy!(hasLength, Needles))
         {
-            if (r2.length > r1.length || r1[0 .. r2.length] != r2)
+            ptrdiff_t longestMatch = -1;
+            static foreach (r2; needles)
             {
-                return false;
+                if (r2.length <= haystack.length && longestMatch < ptrdiff_t(r2.length)
+                        && (haystack[0 .. r2.length] == r2 || r2.length == 0))
+                    longestMatch = r2.length;
             }
-            r1 = r1[r2.length .. $];
-            return true;
+            if (longestMatch >= 0)
+            {
+                if (longestMatch > 0)
+                    haystack = haystack[longestMatch .. $];
+
+                return true;
+            }
+            return false;
         }
         else
         {
-            static if (hasLength!R1 && hasLength!R2)
+            import std.algorithm.comparison : min;
+            auto r = haystack.save;
+
+            static if (hasLength!Haystack && allSatisfy!(hasLength, Needles))
             {
+                import std.algorithm.iteration : map;
+                import std.algorithm.searching : minElement;
                 // Shortcut opportunity!
-                if (r2.length > r1.length)
+                if (needles.map!(a => a.length).minElement > haystack.length)
                     return false;
             }
-            auto r = r1.save;
-            while (!r2.empty && !r.empty && binaryFun!pred(r.front, r2.front))
+
+            // compatibility: return true if any range was empty
+            bool hasEmptyRanges;
+            static foreach (i, r2; needles)
             {
-                r.popFront();
-                r2.popFront();
+                if (r2.empty)
+                    hasEmptyRanges = true;
             }
-            if (r2.empty)
-                r1 = r;
-            return r2.empty;
+
+            bool hasNeedleMatch;
+            size_t inactiveNeedlesLen;
+            bool[Needles.length] inactiveNeedles;
+            for (; !r.empty; r.popFront)
+            {
+                static foreach (i, r2; needles)
+                {
+                    if (!r2.empty && !inactiveNeedles[i])
+                    {
+                        if (binaryFun!pred(r.front, r2.front))
+                        {
+                            r2.popFront;
+                            if (r2.empty)
+                            {
+                                // we skipped over a new match
+                                hasNeedleMatch = true;
+                                inactiveNeedlesLen++;
+                                // skip over haystack
+                                haystack = r;
+                            }
+                        }
+                        else
+                        {
+                            inactiveNeedles[i] = true;
+                            inactiveNeedlesLen++;
+                        }
+                    }
+                }
+
+                // are we done?
+                if (inactiveNeedlesLen == needles.length)
+                    break;
+            }
+
+            if (hasNeedleMatch)
+                haystack.popFront;
+
+            return hasNeedleMatch || hasEmptyRanges;
         }
     }
 
@@ -4079,13 +4142,21 @@ template skipOver(alias pred = "a == b")
     }
 
     /// Ditto
-    bool skipOver(R, E)(ref R r, E e)
-    if (is(typeof(binaryFun!pred(r.front, e))) && isInputRange!R)
+    bool skipOver(R, Es...)(ref R r, Es es)
+    if (isInputRange!R && is(typeof(binaryFun!pred(r.front, es[0]))))
     {
-        if (r.empty || !binaryFun!pred(r.front, e))
+        if (r.empty)
             return false;
-        r.popFront();
-        return true;
+
+        static foreach (e; es)
+        {
+            if (binaryFun!pred(r.front, e))
+            {
+                r.popFront();
+                return true;
+            }
+        }
+        return false;
     }
 }
 
@@ -4097,15 +4168,19 @@ template skipOver(alias pred = "a == b")
     auto s1 = "Hello world";
     assert(!skipOver(s1, "Ha"));
     assert(s1 == "Hello world");
-    assert(skipOver(s1, "Hell") && s1 == "o world");
+    assert(skipOver(s1, "Hell") && s1 == "o world", s1);
 
     string[]  r1 = ["abc", "def", "hij"];
     dstring[] r2 = ["abc"d];
-    assert(!skipOver!((a, b) => a.equal(b))(r1, ["def"d]));
+    assert(!skipOver!((a, b) => a.equal(b))(r1, ["def"d]), r1[0]);
     assert(r1 == ["abc", "def", "hij"]);
     assert(skipOver!((a, b) => a.equal(b))(r1, r2));
     assert(r1 == ["def", "hij"]);
+}
 
+///
+@safe unittest
+{
     import std.ascii : isWhite;
     import std.range.primitives : empty;
 
@@ -4115,6 +4190,18 @@ template skipOver(alias pred = "a == b")
     assert(s2.skipOver!isWhite && s2 == "value");
     assert(!s3.skipOver!isWhite);
     assert(s4.skipOver!isWhite && s3.empty);
+}
+
+/// Variadic skipOver
+@safe unittest
+{
+    auto s = "Hello world";
+    assert(!skipOver(s, "hello", "HellO"));
+    assert(s == "Hello world");
+
+    // the range is skipped over the longest matching needle is skipped
+    assert(skipOver(s, "foo", "hell", "Hello "));
+    assert(s == "world");
 }
 
 ///
@@ -4152,6 +4239,118 @@ template skipOver(alias pred = "a == b")
     assert(whitespaceSkiper(s2) && s2 == "value");
     assert(!whitespaceSkiper(s2));
     assert(whitespaceSkiper(s4) && s3.empty);
+}
+
+// variadic skipOver
+@safe unittest
+{
+    auto s = "DLang.rocks";
+    assert(!s.skipOver("dlang", "DLF", "DLang "));
+    assert(s == "DLang.rocks");
+
+    assert(s.skipOver("dlang", "DLANG", "DLF", "D", "DL", "DLanpp"));
+    assert(s == "ang.rocks");
+    s = "DLang.rocks";
+
+    assert(s.skipOver("DLang", "DLANG", "DLF", "D", "DL", "DLang "));
+    assert(s == ".rocks");
+    s = "DLang.rocks";
+
+    assert(s.skipOver("dlang", "DLANG", "DLF", "D", "DL", "DLang."));
+    assert(s == "rocks");
+}
+
+// variadic with custom pred
+@safe unittest
+{
+    import std.ascii : toLower;
+
+    auto s = "DLang.rocks";
+    assert(!s.skipOver("dlang", "DLF", "DLang "));
+    assert(s == "DLang.rocks");
+
+    assert(s.skipOver!((a, b) => a.toLower == b.toLower)("dlang", "DLF", "DLang "));
+    assert(s == ".rocks");
+}
+
+// variadic skipOver with mixed needles
+@safe unittest
+{
+    auto s = "DLang.rocks";
+    assert(!s.skipOver("dlang"d, "DLF", "DLang "w));
+    assert(s == "DLang.rocks");
+
+    assert(s.skipOver("dlang", "DLANG"d, "DLF"w, "D"d, "DL", "DLanp"));
+    assert(s == "ang.rocks");
+    s = "DLang.rocks";
+
+    assert(s.skipOver("DLang", "DLANG"w, "DLF"d, "D"d, "DL", "DLang "));
+    assert(s == ".rocks");
+    s = "DLang.rocks";
+
+    assert(s.skipOver("dlang", "DLANG"w, "DLF", "D"d, "DL"w, "DLang."d));
+    assert(s == "rocks");
+
+    import std.algorithm.iteration : filter;
+    s = "DLang.rocks";
+    assert(s.skipOver("dlang", "DLang".filter!(a => true)));
+    assert(s == ".rocks");
+}
+
+// variadic skipOver with auto-decoding
+@safe unittest
+{
+    auto s = "☢☣☠.☺";
+    assert(s.skipOver("a", "☢", "☢☣☠"));
+    assert(s == ".☺");
+}
+
+// skipOver with @nogc
+@safe @nogc pure nothrow unittest
+{
+    static immutable s = [0, 1, 2];
+    immutable(int)[] s2 = s[];
+
+    static immutable skip1 = [0, 2];
+    static immutable skip2 = [0, 1];
+    assert(s2.skipOver(skip1, skip2));
+    assert(s2 == s[2 .. $]);
+}
+
+// variadic skipOver with single elements
+@safe unittest
+{
+    auto s = "DLang.rocks";
+    assert(!s.skipOver('a', 'd', 'e'));
+    assert(s == "DLang.rocks");
+
+    assert(s.skipOver('a', 'D', 'd', 'D'));
+    assert(s == "Lang.rocks");
+    s = "DLang.rocks";
+
+    assert(s.skipOver(wchar('a'), dchar('D'), 'd'));
+    assert(s == "Lang.rocks");
+
+    dstring dstr = "+Foo";
+    assert(!dstr.skipOver('.', '-'));
+    assert(dstr == "+Foo");
+
+    assert(dstr.skipOver('+', '-'));
+    assert(dstr == "Foo");
+}
+
+// skipOver with empty ranges must return true (compatibility)
+@safe unittest
+{
+    auto s = "DLang.rocks";
+    assert(s.skipOver(""));
+    assert(s.skipOver("", ""));
+    assert(s.skipOver("", "foo"));
+
+    auto s2 = "DLang.rocks"d;
+    assert(s2.skipOver(""));
+    assert(s2.skipOver("", ""));
+    assert(s2.skipOver("", "foo"));
 }
 
 /**
