@@ -2636,43 +2636,6 @@ do
     assert(parse!uint(str) == 0);
 }
 
-struct Expected(Result, Error)
-{
-    this(Result result) @trusted
-    {
-        this.result = result;
-        this._hasResult = true;
-    }
-    static typeof(this) asError(Error error) @trusted
-    {
-        typeof(this) that = void;
-        that.error = error;
-        that._hasResult = false;
-        return that;
-    }
-
-    ~this() @trusted
-    {
-        if (_hasResult)
-        {
-            destroy(error);
-        }
-        else
-        {
-            destroy(result);
-        }
-    }
-
-    @property hasResult() const { return _hasResult; }
-
-    union
-    {
-        Result result;
-        Error error;
-    }
-    bool _hasResult;            // TODO don't waste bool here
-}
-
 import std.typecons : Nullable;
 
 Nullable!(Target) tryParse(Target, Source)(ref Source s)
