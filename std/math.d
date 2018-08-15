@@ -628,8 +628,8 @@ template isDeprecatedComplex(T)
  */
 auto abs(Num)(Num x)
 if (!isDeprecatedComplex!Num &&
-    (is(typeof(Num.init >= 0)) && is(typeof(-Num.init)) ||
-    (is(Unqual!Num == short) || is(Unqual!Num == byte))))
+    (is(Unqual!Num == short) || is(Unqual!Num == byte)) ||
+    (is(typeof(Num.init >= 0)) && is(typeof(-Num.init))))
 {
     static if (isFloatingPoint!(Num))
         return fabs(x);
@@ -723,7 +723,7 @@ static foreach (Num; AliasSeq!(cfloat, cdouble, creal, ifloat, idouble, ireal))
     {
         return v;
     }
-    Vector!(float, 3) v;
+    Vector!(int, 3) v;
     assert(abs(v) == v);
 }
 
