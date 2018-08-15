@@ -2669,11 +2669,14 @@ if (isSomeString!Source && !is(Source == enum) &&
 {
     enum EnumType : bool { a = true, b = false, c = a }
 
-    auto str = "a";
-    auto expected = tryParse!EnumType(str);
+    auto a_str = "a";
+    auto a_result = tryParse!EnumType(a_str);
+    assert(!a_result.isNull &&
+           a_result.get == EnumType.a);
 
-    assert(!expected.isNull &&
-           expected.get == EnumType.a);
+    auto z_str = "z";
+    auto z_result = tryParse!EnumType(z_str);
+    assert(z_result.isNull);
 }
 
 /**
