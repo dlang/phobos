@@ -2636,21 +2636,46 @@ do
     assert(parse!uint(str) == 0);
 }
 
-/**
- * Takes a string representing an `enum` type and returns that type.
- *
- * Params:
- *     Target = the `enum` type to convert to
- *     s = the lvalue of the range to _parse
- *
- * Returns:
- *     An `enum` of type `Target`
- *
- * Throws:
- *     A $(LREF ConvException) if type `Target` does not have a member
- *     represented by `s`.
- */
-Target parse(Target, Source)(ref Source s)
+struct Expected(Result, Error)
+{
+    this(Result result) @trusted
+    {
+        this.result = result;
+        this._hasResult = true;
+    }
+    static typeof(this) asError(Error error) @trusted
+    {
+        typeof(this) that = void;
+        that.error = error;
+        that._hasResult = false;
+        return that;
+    }
+
+    ~this() @trusted
+    {
+        if (_hasResult)
+        {
+            destroy(error);
+        }
+        else
+        {
+            destroy(result);
+        }
+    }
+
+    @property hasResult() const { return _hasResult; }
+
+    union
+    {
+        Result result;
+        Error error;
+    }
+    bool _hasResult;            // TODO don't waste bool here
+}
+
+import std.typecons : Nullable;
+
+Nullable!(Target) tryParse(Target, Source)(ref Source s)
 if (isSomeString!Source && !is(Source == enum) &&
     is(Target == enum))
 {
@@ -2671,12 +2696,51 @@ if (isSomeString!Source && !is(Source == enum) &&
     if (longest_match > 0)
     {
         s = s[longest_match .. $];
-        return result ;
+        return typeof(return)(result);
     }
 
-    throw new ConvException(
-        Target.stringof ~ " does not have a member named '"
-        ~ to!string(s) ~ "'");
+    return typeof(return).init;
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    enum EnumType : bool { a = true, b = false, c = a }
+    auto str = "a";
+    auto expected = tryParse!EnumType(str);
+    // TODO how can this compile in a nothrow function when `get` may throw?:
+    assert(!expected.isNull &&
+           expected.get == EnumType.a);
+}
+
+/**
+ * Takes a string representing an `enum` type and returns that type.
+ *
+ * Params:
+ *     Target = the `enum` type to convert to
+ *     s = the lvalue of the range to _parse
+ *
+ * Returns:
+ *     An `enum` of type `Target`
+ *
+ * Throws:
+ *     A $(LREF ConvException) if type `Target` does not have a member
+ *     represented by `s`.
+ */
+Target parse(Target, Source)(ref Source s)
+if (isSomeString!Source && !is(Source == enum) &&
+    is(Target == enum))
+{
+    auto result = tryParse!(Target, Source)(s);
+    if (!result.isNull)
+    {
+        return result.get(Target.init); // TODO remove `Target.init` parameter?
+    }
+    else
+    {
+        throw new ConvException(Target.stringof ~ " does not have a member named '"
+                                ~ to!string(s) ~ "'");
+    }
 }
 
 ///
