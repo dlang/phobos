@@ -627,10 +627,9 @@ template isDeprecatedComplex(T)
  *     the return type will be the same as the input;
  */
 auto abs(Num)(Num x)
-// workaround for https://issues.dlang.org/show_bug.cgi?id=18251
-//if (!isDeprecatedComplex!Num &&
-    //(is(typeof(Num.init >= 0)) && is(typeof(-Num.init)) ||
-    //(is(Unqual!Num == short) || is(Unqual!Num == byte))))
+if (!isDeprecatedComplex!Num &&
+    (is(typeof(Num.init >= 0)) && is(typeof(-Num.init)) ||
+    (is(Unqual!Num == short) || is(Unqual!Num == byte))))
 {
     static if (isFloatingPoint!(Num))
         return fabs(x);
