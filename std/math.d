@@ -711,6 +711,22 @@ static foreach (Num; AliasSeq!(cfloat, cdouble, creal, ifloat, idouble, ireal))
     }
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=19162
+@safe unittest
+{
+    struct Vector(T, int size)
+    {
+        T x, y, z;
+    }
+
+    static auto abs(T, int size)(auto ref const Vector!(T, size) v)
+    {
+        return v;
+    }
+    Vector!(float, 3) v;
+    assert(abs(v) == v);
+}
+
 /*
  * Complex conjugate
  *
