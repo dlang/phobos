@@ -2698,7 +2698,7 @@ if (isSomeString!Source && !is(Source == enum) &&
     auto result = tryParse!(Target, Source)(s);
     if (!result.isNull)
     {
-        return result.get(Target.init); // TODO remove `Target.init` parameter?
+        return result.get;    // safe to call when !result.isNull
     }
     else
     {
