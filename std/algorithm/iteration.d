@@ -900,13 +900,13 @@ private:
     enum isForeachUnaryWithIndexIterable(R) =
         is(typeof((R r) {
             foreach (i, ref a; r)
-                cast(void) unaryFun!pred(i, a);
+                cast(void) binaryFun!BinaryArgs(i, a);
         }));
 
     enum isForeachBinaryIterable(R) =
         is(typeof((R r) {
             foreach (ref a, ref b; r)
-                cast(void) binaryFun!BinaryArgs(a, b);
+                cast(void) binaryFun!fun(a, b);
         }));
 
     enum isForeachIterable(R) =
@@ -932,9 +932,13 @@ public:
                 while (!r.empty)
                 {
                     static if (!is(typeof(unaryFun!fun(r.front)) == Flag!"each"))
+                    {
                         cast(void) unaryFun!fun(r.front);
+                    }
                     else
+                    {
                         if (unaryFun!fun(r.front) == No.each) return No.each;
+                    }
 
                     r.popFront();
                 }
@@ -944,11 +948,14 @@ public:
                 size_t i = 0;
                 while (!r.empty)
                 {
-                    static if (!is(typeof(binaryFun!BinaryArgs(i, r.front)) ==
-                            Flag!"each"))
+                    static if (!is(typeof(binaryFun!BinaryArgs(i, r.front)) == Flag!"each"))
+                    {
                         cast(void) binaryFun!BinaryArgs(i, r.front);
+                    }
                     else
+                    {
                         if (binaryFun!BinaryArgs(i, r.front) == No.each) return No.each;
+                    }
                     r.popFront();
                     i++;
                 }
@@ -960,49 +967,77 @@ public:
             for (auto range = r; !range.empty; range.popFront())
             {
                 static if (!is(typeof(fun(r.front.expand)) == Flag!"each"))
+                {
                     cast(void) fun(range.front.expand);
+                }
                 else
+                {
                     if (fun(range.front.expand)) return No.each;
+                }
             }
         }
         return Yes.each;
     }
 
-    /**
-    Params:
-        r = range or iterable over which each iterates
-     */
+    /// ditto
     Flag!"each" each(Iterable)(auto ref Iterable r)
     if (isForeachIterable!Iterable ||
         __traits(compiles, Parameters!(Parameters!(r.opApply))))
     {
         static if (isForeachIterable!Iterable)
         {
-            debug(each) pragma(msg, "Using foreach for ", Iterable.stringof);
             static if (isForeachUnaryIterable!Iterable)
             {
-                foreach (ref e; r)
+                debug(each) pragma(msg, "Using foreach UNARY for ", Iterable.stringof);
                 {
-                    static if (!is(typeof(unaryFun!fun(e)) == Flag!"each"))
-                        cast(void) unaryFun!fun(e);
-                    else
-                        if (unaryFun!fun(e) == No.each) return No.each;
+                    foreach (ref e; r)
+                    {
+                        static if (!is(typeof(unaryFun!fun(e)) == Flag!"each"))
+                        {
+                            cast(void) unaryFun!fun(e);
+                        }
+                        else
+                        {
+                            if (unaryFun!fun(e) == No.each) return No.each;
+                        }
+                    }
                 }
             }
-        else static if (isForeachBinaryIterable!Iterable)
-        {
-            foreach (ref a, ref b; r)
+            else static if (isForeachBinaryIterable!Iterable)
             {
-                static if (!is(typeof(binaryFun!BinaryArgs(i, e)) == Flag!"each"))
-                    cast(void) binaryFun!BinaryArgs(i, e);
-                else
-                    if (binaryFun!BinaryArgs(i, e) == No.each) return No.each;
+                debug(each) pragma(msg, "Using foreach BINARY for ", Iterable.stringof);
+                foreach (ref a, ref b; r)
+                {
+                    static if (!is(typeof(binaryFun!fun(a, b)) == Flag!"each"))
+                    {
+                        cast(void) binaryFun!fun(a, b);
+                    }
+                    else
+                    {
+                        if (binaryFun!fun(a, b) == No.each) return No.each;
+                    }
+                }
             }
-        else static if (isForeachUnaryWithIndexIterable!Iterable)
-        {
-            foreach (i, ref e; r)
+            else static if (isForeachUnaryWithIndexIterable!Iterable)
             {
+                debug(each) pragma(msg, "Using foreach INDEX for ", Iterable.stringof);
+                foreach (i, ref e; r)
+                {
+                    static if (!is(typeof(binaryFun!BinaryArgs(i, e)) == Flag!"each"))
+                    {
+                        cast(void) binaryFun!BinaryArgs(i, e);
+                    }
+                    else
+                    {
+                        if (binaryFun!BinaryArgs(i, e) == No.each) return No.each;
+                    }
+                }
             }
+            else
+            {
+                static assert(0, "Invalid foreach iteratable type " ~ Iterable.stringof ~ " met.");
+            }
+            return Yes.each;
         }
         else
         {
@@ -1025,7 +1060,6 @@ public:
             r.opApply(&dg);
             return result;
         }
-        return Yes.each;
     }
 }
 
