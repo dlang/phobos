@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
-A one-stop shop for converting values from one type to another.
+   A one-stop shop for converting values from one type to another.
 
 $(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE,
@@ -52,6 +52,7 @@ public import std.ascii : LetterCase;
 import std.meta;
 import std.range.primitives;
 import std.traits;
+import std.typecons : Nullable;
 
 // Same as std.string.format, but "self-importing".
 // Helps reduce code and imports, particularly in static asserts.
@@ -2635,8 +2636,6 @@ do
     auto str = "0=\x00\x02\x55\x40&\xff\xf0\n\x00\x04\x55\x40\xff\xf0~4+10\n";
     assert(parse!uint(str) == 0);
 }
-
-import std.typecons : Nullable;
 
 Nullable!(Target) tryParse(Target, Source)(ref Source s)
 if (isSomeString!Source && !is(Source == enum) &&
