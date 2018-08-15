@@ -2707,7 +2707,7 @@ if (isSomeString!Source && !is(Source == enum) &&
 }
 
 ///
-@safe unittest
+@safe pure unittest
 {
     enum EnumType : bool { a = true, b = false, c = a }
 
