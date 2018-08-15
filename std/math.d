@@ -627,8 +627,7 @@ template isDeprecatedComplex(T)
  *     the return type will be the same as the input;
  */
 auto abs(Num)(Num x)
-if (!isDeprecatedComplex!Num &&
-    (is(Unqual!Num == short) || is(Unqual!Num == byte)) ||
+if ((is(Unqual!Num == short) || is(Unqual!Num == byte)) ||
     (is(typeof(Num.init >= 0)) && is(typeof(-Num.init))))
 {
     static if (isFloatingPoint!(Num))
@@ -652,6 +651,7 @@ if (!isDeprecatedComplex!Num &&
     assert(abs(2321312L)  == 2321312L);
 }
 
+version(TestComplex)
 deprecated
 @safe pure nothrow @nogc unittest
 {
@@ -681,6 +681,7 @@ deprecated
     }}
 }
 
+version(TestComplex)
 deprecated
 @safe pure nothrow @nogc unittest
 {
