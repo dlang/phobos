@@ -842,7 +842,7 @@ if (isForwardRange!R && is(ElementType!R : dchar))
         {
         case '*', '?', '+', '|', '{', '}':
             error("'*', '+', '?', '{', '}' not allowed in atom");
-            //break;
+            //break; // https://github.com/dlang/phobos/pull/6621
         case '.':
             if (re_flags & RegexOption.singleline)
                 g.put(Bytecode(IR.Any, 0));

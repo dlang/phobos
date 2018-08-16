@@ -1984,7 +1984,7 @@ private
 
             bool onStandardMsg(ref Message msg)
             {
-                foreach (i, t; Ops)
+                static foreach (i, t; Ops)
                 {
                     alias Args = Parameters!(t);
                     auto op = ops[i];
@@ -2003,13 +2003,13 @@ private
                     }
                     else
                     {
-                        if(i + 1 == Ops.length)
+                        if (i + 1 == Ops.length)
                         {
                             return false;
                         }
                     }
                 }
-                assert(0);
+                assert(0, "Received an unknown message type");
             }
 
             bool onLinkDeadMsg(ref Message msg)
