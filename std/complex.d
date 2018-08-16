@@ -34,7 +34,7 @@ import std.traits;
         be `Complex!double`.  Otherwise, the return type is
         deduced using $(D std.traits.CommonType!(R, I)).
 */
-auto complex(R)(R re)  @safe pure nothrow @nogc
+auto complex(R)(const R re)  @safe pure nothrow @nogc
 if (is(R : double))
 {
     static if (isFloatingPoint!R)
@@ -44,7 +44,7 @@ if (is(R : double))
 }
 
 /// ditto
-auto complex(R, I)(R re, I im)  @safe pure nothrow @nogc
+auto complex(R, I)(const R re, const I im)  @safe pure nothrow @nogc
 if (is(R : double) && is(I : double))
 {
     static if (isFloatingPoint!R || isFloatingPoint!I)
@@ -173,14 +173,14 @@ if (isFloatingPoint!T)
     }
 
     /// ditto
-    this(Rx : T, Ry : T)(Rx x, Ry y)
+    this(Rx : T, Ry : T)(const Rx x, const Ry y)
     {
         re = x;
         im = y;
     }
 
     /// ditto
-    this(R : T)(R r)
+    this(R : T)(const R r)
     {
         re = r;
         im = 0;
@@ -197,7 +197,7 @@ if (isFloatingPoint!T)
     }
 
     // this = numeric
-    ref Complex opAssign(R : T)(R r)
+    ref Complex opAssign(R : T)(const R r)
     {
         re = r;
         im = 0;
@@ -213,7 +213,7 @@ if (isFloatingPoint!T)
     }
 
     // this == numeric
-    bool opEquals(R : T)(R r) const
+    bool opEquals(R : T)(const R r) const
     {
         return re == r && im == 0;
     }
@@ -245,7 +245,7 @@ if (isFloatingPoint!T)
     }
 
     // complex op numeric
-    Complex!(CommonType!(T,R)) opBinary(string op, R)(R r) const
+    Complex!(CommonType!(T,R)) opBinary(string op, R)(const R r) const
         if (isNumeric!R)
     {
         alias C = typeof(return);
@@ -254,21 +254,21 @@ if (isFloatingPoint!T)
     }
 
     // numeric + complex,  numeric * complex
-    Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R r) const
+    Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(const R r) const
         if ((op == "+" || op == "*") && (isNumeric!R))
     {
         return opBinary!(op)(r);
     }
 
     // numeric - complex
-    Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R r) const
+    Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(const R r) const
         if (op == "-" && isNumeric!R)
     {
         return Complex(r - re, -im);
     }
 
     // numeric / complex
-    Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R r) const
+    Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(const R r) const
         if (op == "/" && isNumeric!R)
     {
         import std.math : fabs;
@@ -294,7 +294,7 @@ if (isFloatingPoint!T)
     }
 
     // numeric ^^ complex
-    Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R lhs) const
+    Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(const R lhs) const
         if (op == "^^" && isNumeric!R)
     {
         import std.math : cos, exp, log, sin, PI;
@@ -321,7 +321,7 @@ if (isFloatingPoint!T)
     // OP-ASSIGN OPERATORS
 
     // complex += complex,  complex -= complex
-    ref Complex opOpAssign(string op, C)(C z)
+    ref Complex opOpAssign(string op, C)(const C z)
         if ((op == "+" || op == "-") && is(C R == Complex!R))
     {
         mixin ("re "~op~"= z.re;");
@@ -330,7 +330,7 @@ if (isFloatingPoint!T)
     }
 
     // complex *= complex
-    ref Complex opOpAssign(string op, C)(C z)
+    ref Complex opOpAssign(string op, C)(const C z)
         if (op == "*" && is(C R == Complex!R))
     {
         auto temp = re*z.re - im*z.im;
@@ -340,7 +340,7 @@ if (isFloatingPoint!T)
     }
 
     // complex /= complex
-    ref Complex opOpAssign(string op, C)(C z)
+    ref Complex opOpAssign(string op, C)(const C z)
         if (op == "/" && is(C R == Complex!R))
     {
         import std.math : fabs;
@@ -366,7 +366,7 @@ if (isFloatingPoint!T)
     }
 
     // complex ^^= complex
-    ref Complex opOpAssign(string op, C)(C z)
+    ref Complex opOpAssign(string op, C)(const C z)
         if (op == "^^" && is(C R == Complex!R))
     {
         import std.math : exp, log, cos, sin;
@@ -381,7 +381,7 @@ if (isFloatingPoint!T)
     }
 
     // complex += numeric,  complex -= numeric
-    ref Complex opOpAssign(string op, U : T)(U a)
+    ref Complex opOpAssign(string op, U : T)(const U a)
         if (op == "+" || op == "-")
     {
         mixin ("re "~op~"= a;");
@@ -389,7 +389,7 @@ if (isFloatingPoint!T)
     }
 
     // complex *= numeric,  complex /= numeric
-    ref Complex opOpAssign(string op, U : T)(U a)
+    ref Complex opOpAssign(string op, U : T)(const U a)
         if (op == "*" || op == "/")
     {
         mixin ("re "~op~"= a;");
@@ -398,7 +398,7 @@ if (isFloatingPoint!T)
     }
 
     // complex ^^= real
-    ref Complex opOpAssign(string op, R)(R r)
+    ref Complex opOpAssign(string op, R)(const R r)
         if (op == "^^" && isFloatingPoint!R)
     {
         import std.math : cos, sin;
@@ -410,7 +410,7 @@ if (isFloatingPoint!T)
     }
 
     // complex ^^= int
-    ref Complex opOpAssign(string op, U)(U i)
+    ref Complex opOpAssign(string op, U)(const U i)
         if (op == "^^" && isIntegral!U)
     {
         switch (i)
@@ -735,7 +735,7 @@ T sqAbs(T)(Complex!T z) @safe pure nothrow @nogc
 }
 
 /// ditto
-T sqAbs(T)(T x) @safe pure nothrow @nogc
+T sqAbs(T)(const T x) @safe pure nothrow @nogc
 if (isFloatingPoint!T)
 {
     return x*x;
@@ -795,7 +795,7 @@ Complex!T conj(T)(Complex!T z) @safe pure nothrow @nogc
     argument = The argument
   Returns: The complex number with the given modulus and argument.
 */
-Complex!(CommonType!(T, U)) fromPolar(T, U)(T modulus, U argument)
+Complex!(CommonType!(T, U)) fromPolar(T, U)(const T modulus, const U argument)
     @safe pure nothrow @nogc
 {
     import std.math : sin, cos;

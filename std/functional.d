@@ -716,15 +716,11 @@ Returns:
  */
 template partial(alias fun, alias arg)
 {
-    static if (is(typeof(fun) == delegate) || is(typeof(fun) == function))
-    {
-        import std.traits : ReturnType;
-        ReturnType!fun partial(Parameters!fun[1..$] args2)
-        {
-            return fun(arg, args2);
-        }
-    }
-    else
+    import std.traits : isCallable;
+    // Check whether fun is a user defined type which implements opCall or a template.
+    // As opCall itself can be templated, std.traits.isCallable does not work here.
+    enum isSomeFunctor = (is(typeof(fun) == struct) || is(typeof(fun) == class)) && __traits(hasMember, fun, "opCall");
+    static if (isSomeFunctor || __traits(isTemplate, fun))
     {
         auto partial(Ts...)(Ts args2)
         {
@@ -744,6 +740,36 @@ template partial(alias fun, alias arg)
                     return msg;
                 }
                 static assert(0, errormsg());
+            }
+        }
+    }
+    else static if (!isCallable!fun)
+    {
+        static assert(false, "Cannot apply partial to a non-callable '" ~ fun.stringof ~ "'.");
+    }
+    else // Assume fun is callable and uniquely defined.
+    {
+        static if (Parameters!fun.length == 0)
+        {
+            static assert(0, "Cannot partially apply '" ~ fun.stringof ~ "'." ~
+                "'" ~ fun.stringof ~ "' has 0 arguments.");
+        }
+        else static if (!is(typeof(arg) : Parameters!fun[0]))
+        {
+            string errorMsg()
+            {
+                string msg = "Argument mismatch for '" ~ fun.stringof ~ "': expected " ~
+                    Parameters!fun[0].stringof ~ ", but got " ~ typeof(arg).stringof ~ ".";
+                return msg;
+            }
+            static assert(0, errorMsg());
+        }
+        else
+        {
+            import std.traits : ReturnType;
+            ReturnType!fun partial(Parameters!fun[1..$] args2)
+            {
+                return fun(arg, args2);
             }
         }
     }
@@ -833,6 +859,11 @@ template partial(alias fun, alias arg)
     assert(partial!(tcallable, 5)(6) == 11);
     static assert(!is(typeof(partial!(tcallable, "5")(6))));
 
+    static struct NonCallable{}
+    static assert(!__traits(compiles, partial!(NonCallable, 5)), "Partial should not work on non-callable structs.");
+    static assert(!__traits(compiles, partial!(NonCallable.init, 5)),
+        "Partial should not work on instances of non-callable structs.");
+
     static A funOneArg(A)(A a) { return a; }
     alias funOneArg1 = partial!(funOneArg, 1);
     assert(funOneArg1() == 1);
@@ -844,6 +875,28 @@ template partial(alias fun, alias arg)
 
     auto dg2 = &funOneArg1!();
     assert(dg2() == 1);
+}
+
+// Fix issue 15732
+@safe unittest
+{
+    // Test whether it works with functions.
+    auto partialFunction(){
+        auto fullFunction = (float a, float b, float c) => a + b / c;
+        alias apply1 = partial!(fullFunction, 1);
+        return &apply1;
+    }
+    auto result = partialFunction()(2, 4);
+    assert(result == 1.5f);
+
+    // And with delegates.
+    auto partialDelegate(float c){
+        auto fullDelegate = (float a, float b) => a + b / c;
+        alias apply1 = partial!(fullDelegate, 1);
+        return &apply1;
+    }
+    auto result2 = partialDelegate(4)(2);
+    assert(result2 == 1.5f);
 }
 
 /**

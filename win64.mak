@@ -39,8 +39,8 @@ CFLAGS=/O2 /nologo /I"$(VCDIR)\INCLUDE" /I"$(SDKDIR)\Include"
 
 ## Location of druntime tree
 
-DRUNTIME=..\druntime
-DRUNTIMELIB=$(DRUNTIME)\lib\druntime$(MODEL).lib
+DRUNTIME=../druntime
+DRUNTIMELIB=$(DRUNTIME)/lib/druntime$(MODEL).lib
 
 ## Flags for dmd D compiler
 
@@ -61,10 +61,10 @@ MAKE=make
 
 ## D compiler
 
-DMD_DIR=..\dmd
+DMD_DIR=../dmd
 BUILD=release
 OS=windows
-DMD=$(DMD_DIR)\generated\$(OS)\$(BUILD)\$(MODEL)\dmd
+DMD="$(DMD_DIR)/generated/$(OS)/$(BUILD)/$(MODEL)/dmd"
 
 ## Zlib library
 
@@ -506,4 +506,9 @@ install: phobos.zip
 
 auto-tester-build: targets
 
-auto-tester-test: unittest
+JOBS=$(NUMBER_OF_PROCESSORS)
+GMAKE=gmake
+
+auto-tester-test:
+	$(GMAKE) -j$(JOBS) -f posix.mak unittest BUILD=release DMD="$(DMD)" OS=win$(MODEL) \
+	CUSTOM_DRUNTIME=1 PIC=0 MODEL=$(MODEL) DRUNTIME=$(DRUNTIMELIB) CC=$(CC)

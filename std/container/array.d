@@ -1664,8 +1664,9 @@ if (is(Unqual!T == bool))
         /// ditto
         Range opSlice(size_t low, size_t high)
         {
+            // Note: indexes start at 0, which is equivalent to _a
             assert(
-                _a <= low && low <= high && high <= _b,
+                low <= high && high <= (_b - _a),
                 "Using out of bounds indexes on an Array"
             );
             return Range(_outer, _a + low, _a + high);
@@ -2178,6 +2179,7 @@ if (is(Unqual!T == bool))
     slice.front = true;
     slice.back = true;
     slice[1] = true;
+    slice = slice[0 .. $]; // bug 19171
     assert(slice.front == true);
     assert(slice.back == true);
     assert(slice[1] == true);

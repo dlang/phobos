@@ -1,0 +1,55 @@
+name "phobos"
+license "BSL-1.0"
+description "D Standard Library"
+authors "DLang Community"
+copyright "Copyright © 1999-2018, The D Language Foundation"
+
+targetType "library"
+sourcePaths "std" "etc"
+targetPath "generated"
+
+subPackage {
+  name "checkedint"
+  targetType "library"
+  preGenerateCommands `rdmd --eval='
+	auto pkgDir = environment.get("DUB_PACKAGE_DIR");
+	auto destDir = pkgDir.buildPath("source", "stdx");
+	mkdirRecurse(destDir);
+	pkgDir.buildPath("std", "experimental", "checkedint.d")
+		  .readText
+		  .replace("std.experimental.checkedint", "stdx.checkedint")
+		  .toFile(destDir.buildPath("checkedint.d"));'`
+  sourceFiles "source/stdx/checkedint.d"
+  importPaths "source"
+}
+
+// This meta package is needed because dub searches for the source files _before_ it evaluates preGenerateCommands
+// However, it does run its dependencies _before_ searching through its source paths
+subPackage {
+  name "allocator-generator"
+  targetType "none"
+  preGenerateCommands `rdmd --eval='
+	auto pkgDir = environment.get("DUB_PACKAGE_DIR");
+	auto destDir = pkgDir.buildPath("source", "stdx", "allocator");
+	auto srcDir = pkgDir.buildPath("std", "experimental", "allocator");
+	foreach (file; srcDir.dirEntries("*.d", SpanMode.depth)) {
+		auto destFile = file.replace(srcDir, destDir);
+		destFile.dirName.mkdirRecurse;
+		file.readText.replace("std.experimental.allocator", "stdx.allocator")
+			.replace("std.conv", "stdx.allocator.conv")
+		 	.toFile(destFile);
+	}
+	pkgDir.buildPath("std", "conv.d")
+		  .readText
+		  .replace("std.conv", "stdx.allocator.conv")
+		  .toFile(destDir.buildPath("conv.d"));
+	'`
+}
+
+subPackage {
+  name "allocator"
+  targetType "library"
+  dependency "phobos:allocator-generator" version="*"
+  sourcePaths "source/stdx/allocator"
+  importPaths "source"
+}

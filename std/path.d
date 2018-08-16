@@ -13,7 +13,7 @@
     To differentiate between these cases, use $(REF isDir, std,file) and
     $(REF exists, std,file).
 
-    Note that on Windows, both the backslash (``\``) and the slash (``/``)
+    Note that on Windows, both the backslash ($(D `\`)) and the slash ($(D `/`))
     are in principle valid directory separators.  This module treats them
     both on equal footing, but in cases where a $(I new) separator is
     added, a backslash will be used.  Furthermore, the $(LREF buildNormalizedPath)
@@ -141,8 +141,8 @@ else static assert(0, "unsupported platform");
 
 /** Determines whether the given character is a directory separator.
 
-    On Windows, this includes both ``\`` and ``/``.
-    On POSIX, it's just ``/``.
+    On Windows, this includes both $(D `\`) and $(D `/`).
+    On POSIX, it's just $(D `/`).
 */
 bool isDirSeparator(dchar c)  @safe pure nothrow @nogc
 {
@@ -1425,7 +1425,7 @@ private auto _withDefaultExtension(R, C)(R path, C[] ext)
     preceding segments will be dropped.
 
     On Windows, if one of the path segments are rooted, but not absolute
-    (e.g. ``\foo``), all preceding path segments down to the previous
+    (e.g. $(D `\foo`)), all preceding path segments down to the previous
     root will be dropped.  (See below for an example.)
 
     This function always allocates memory to hold the resulting path.
@@ -2639,7 +2639,7 @@ if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
     ---
 
     On Windows, an absolute path starts at the root directory of
-    a specific drive.  Hence, it must start with ``d:\`` or ``d:/``,
+    a specific drive.  Hence, it must start with $(D `d:\`) or $(D `d:/`),
     where `d` is the drive letter.  Alternatively, it may be a
     network path, i.e. a path starting with a double (back)slash.
     ---
@@ -2849,14 +2849,14 @@ if (isConvertibleToString!R)
     taken to be the current working directory.  If specified,
     `base` must be an absolute path, and it is always assumed
     to refer to a directory.  If `path` and `base` refer to
-    the same directory, the function returns ``.``.
+    the same directory, the function returns $(D `.`).
 
     The following algorithm is used:
     $(OL
         $(LI If `path` is a relative directory, return it unaltered.)
         $(LI Find a common root between `path` and `base`.
             If there is no common root, return `path` unaltered.)
-        $(LI Prepare a string with as many ``../`` or ``..\`` as
+        $(LI Prepare a string with as many $(D `../`) or $(D `..\`) as
             necessary to reach the common root from base path.)
         $(LI Append the remaining segments of `path` to the string
             and return.)
@@ -3100,7 +3100,7 @@ if (isConvertibleToString!R1 || isConvertibleToString!R2)
     comparison.  This is controlled through the `cs` template parameter
     which, if not specified, is given by $(LREF CaseSensitive)`.osDefault`.
 
-    On Windows, the backslash and slash characters (``\`` and ``/``)
+    On Windows, the backslash and slash characters ($(D `\`) and $(D `/`))
     are considered equal.
 
     Params:
@@ -3732,10 +3732,10 @@ unittest
         $(LI If `path` is on the form $(D `\\$(I server)\$(I share)\...`)
             (UNC path), $(LREF isValidFilename) is applied to $(I server)
             and $(I share) as well.)
-        $(LI If `path` starts with ``\\?\`` (long UNC path), the
+        $(LI If `path` starts with $(D `\\?\`) (long UNC path), the
             only requirement for the rest of the string is that it does
             not contain the null character.)
-        $(LI If `path` starts with ``\\.\`` (Win32 device namespace)
+        $(LI If `path` starts with $(D `\\.\`) (Win32 device namespace)
             this function returns `false`; such paths are beyond the scope
             of this module.)
     )

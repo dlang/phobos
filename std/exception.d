@@ -622,15 +622,19 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, scope 
     $(D new ErrnoException(msg)) is thrown.  It is assumed that the last
     operation set `errno` to an error code corresponding with the failed
     condition.
-
-    Example:
-    --------------------
-    auto f = errnoEnforce(fopen("data.txt"));
-    auto line = readln(f);
-    enforce(line.length); // expect a non-empty line
-    --------------------
  +/
 alias errnoEnforce = enforce!ErrnoException;
+
+///
+@system unittest
+{
+    import core.stdc.stdio : fclose, fgets, fopen;
+    auto f = fopen(__FILE__, "r").errnoEnforce;
+    scope(exit) fclose(f);
+    char[100] buf;
+    auto line = fgets(buf.ptr, buf.length, f);
+    enforce(line !is null); // expect a non-empty line
+}
 
 // @@@DEPRECATED_2.089@@@
 /++
@@ -1847,7 +1851,7 @@ expression.
 }
 
 version(unittest) package
-@property void assertCTFEable(alias dg)()
+void assertCTFEable(alias dg)()
 {
     static assert({ cast(void) dg(); return true; }());
     cast(void) dg();

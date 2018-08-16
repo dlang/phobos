@@ -68,7 +68,6 @@ Authors:   $(HTTP erdani.org, Andrei Alexandrescu),
  */
 module std.typecons;
 
-import core.stdc.stdint : uintptr_t;
 import std.format : singleSpec, FormatSpec, formatValue;
 import std.meta; // : AliasSeq, allSatisfy;
 import std.range.primitives : isOutputRange;
@@ -2570,24 +2569,12 @@ Practically `Nullable!T` stores a `T` and a `bool`.
  */
 struct Nullable(T)
 {
-    // simple case: type is freely constructable
-    static if (__traits(compiles, { T _value; }))
+    private union DontCallDestructorT
     {
-        private T _value;
+        T payload;
     }
-    // type is not constructable, but also has no way to notice
-    // that we're assigning to an uninitialized variable.
-    else static if (!hasElaborateAssign!T)
-    {
-        private T _value = T.init;
-    }
-    else
-    {
-        static assert(false,
-                      "Cannot construct " ~ typeof(this).stringof ~
-                      ": type has no default constructor and overloaded assignment."
-        );
-    }
+
+    private DontCallDestructorT _value = DontCallDestructorT.init;
 
     private bool _isNull = true;
 
@@ -2599,8 +2586,19 @@ Params:
  */
     this(inout T value) inout
     {
-        _value = value;
+        _value.payload = value;
         _isNull = false;
+    }
+
+    static if (is(T == struct) && hasElaborateDestructor!T)
+    {
+        ~this()
+        {
+            if (!_isNull)
+            {
+                destroy(_value.payload);
+            }
+        }
     }
 
     /**
@@ -2614,14 +2612,14 @@ Params:
             return rhs._isNull;
         if (rhs._isNull)
             return false;
-        return _value == rhs._value;
+        return _value.payload == rhs._value.payload;
     }
 
     /// Ditto
     bool opEquals(U)(auto ref const(U) rhs) const
     if (is(typeof(this.get == rhs)))
     {
-        return _isNull ? false : rhs == _value;
+        return _isNull ? false : rhs == _value.payload;
     }
 
     ///
@@ -2707,7 +2705,7 @@ Params:
         if (isNull)
             put(writer, "Nullable.null");
         else
-            formatValue(writer, _value, fmt);
+            formatValue(writer, _value.payload, fmt);
     }
 
     //@@@DEPRECATED_2.086@@@
@@ -2720,7 +2718,7 @@ Params:
         }
         else
         {
-            sink.formatValue(_value, fmt);
+            sink.formatValue(_value.payload, fmt);
         }
     }
 
@@ -2735,7 +2733,7 @@ Params:
         }
         else
         {
-            sink.formatValue(_value, fmt);
+            sink.formatValue(_value.payload, fmt);
         }
     }
 
@@ -2778,9 +2776,9 @@ Forces `this` to the null state.
     void nullify()()
     {
         static if (is(T == class) || is(T == interface))
-            _value = null;
+            _value.payload = null;
         else
-            .destroy(_value);
+            .destroy(_value.payload);
         _isNull = true;
     }
 
@@ -2803,7 +2801,21 @@ Params:
  */
     void opAssign()(T value)
     {
-        _value = value;
+        import std.algorithm.mutation : moveEmplace, move;
+
+        // the lifetime of the value in copy shall be managed by
+        // this Nullable, so we must avoid calling its destructor.
+        auto copy = DontCallDestructorT(value);
+
+        if (_isNull)
+        {
+            // trusted since payload is known to be T.init here.
+            () @trusted { moveEmplace(copy.payload, _value.payload); }();
+        }
+        else
+        {
+            move(copy.payload, _value.payload);
+        }
         _isNull = false;
     }
 
@@ -2843,13 +2855,13 @@ Returns:
     {
         enum message = "Called `get' on null Nullable!" ~ T.stringof ~ ".";
         assert(!isNull, message);
-        return _value;
+        return _value.payload;
     }
 
     /// ditto
     @property get(U)(inout(U) fallback) inout @safe pure nothrow
     {
-        return isNull ? fallback : _value;
+        return isNull ? fallback : _value.payload;
     }
 
 ///
@@ -3275,6 +3287,102 @@ auto nullable(T)(T t)
 
     assert(foo.approxEqual(bar));
 }
+// bugzilla issue 19037
+@safe unittest
+{
+    import std.datetime : SysTime;
+
+    struct Test
+    {
+        bool b;
+
+        nothrow invariant { assert(b == true); }
+
+        SysTime _st;
+
+        static bool destroyed;
+
+        @disable this();
+        this(bool b) { this.b = b; }
+        ~this() @safe { destroyed = true; }
+
+        // mustn't call opAssign on Test.init in Nullable!Test, because the invariant
+        // will be called before opAssign on the Test.init that is in Nullable
+        // and Test.init violates its invariant.
+        void opAssign(Test rhs) @safe { assert(false); }
+    }
+
+    {
+        Nullable!Test nt;
+
+        nt = Test(true);
+
+        // destroy value
+        Test.destroyed = false;
+
+        nt.nullify;
+
+        assert(Test.destroyed);
+
+        Test.destroyed = false;
+    }
+    // don't run destructor on T.init in Nullable on scope exit!
+    assert(!Test.destroyed);
+}
+// check that the contained type's destructor is called on assignment
+@system unittest
+{
+    struct S
+    {
+        // can't be static, since we need a specific value's pointer
+        bool* destroyedRef;
+
+        ~this()
+        {
+            if (this.destroyedRef)
+            {
+                *this.destroyedRef = true;
+            }
+        }
+    }
+
+    Nullable!S ns;
+
+    bool destroyed;
+
+    ns = S(&destroyed);
+
+    // reset from rvalue destruction in Nullable's opAssign
+    destroyed = false;
+
+    // overwrite Nullable
+    ns = S(null);
+
+    // the original S should be destroyed.
+    assert(destroyed == true);
+}
+// check that the contained type's destructor is still called when required
+@system unittest
+{
+    bool destructorCalled = false;
+
+    struct S
+    {
+        bool* destroyed;
+        ~this() { *this.destroyed = true; }
+    }
+
+    {
+        Nullable!S ns;
+    }
+    assert(!destructorCalled);
+    {
+        Nullable!S ns = Nullable!S(S(&destructorCalled));
+
+        destructorCalled = false; // reset after S was destroyed in the NS constructor
+    }
+    assert(destructorCalled);
+}
 
 /**
 Just like `Nullable!T`, except that the null state is defined as a
@@ -3407,7 +3515,9 @@ Params:
  */
     void opAssign()(T value)
     {
-        _value = value;
+        import std.algorithm.mutation : swap;
+
+        swap(value, _value);
     }
 
 /**
@@ -7177,7 +7287,7 @@ struct Typedef(T, T init = T.init, string cookie=null)
     /**
      * Convert wrapped value to a human readable string
      */
-    string toString()
+    string toString(this T)()
     {
         import std.array : appender;
         auto app = appender!string();
@@ -7187,7 +7297,7 @@ struct Typedef(T, T init = T.init, string cookie=null)
     }
 
     /// ditto
-    void toString(W)(ref W writer, const ref FormatSpec!char fmt)
+    void toString(this T, W)(ref W writer, const ref FormatSpec!char fmt)
     if (isOutputRange!(W, char))
     {
         formatValue(writer, Typedef_payload, fmt);
@@ -7486,8 +7596,18 @@ template TypedefType(T)
                                  int*, int[], int[2], int[int]))
     {{
         T t;
+
         Typedef!T td;
+        Typedef!(const T) ctd;
+        Typedef!(immutable T) itd;
+
         assert(t.to!string() == td.to!string());
+
+        static if (!(is(T == TestS) || is(T == TestC)))
+        {
+            assert(t.to!string() == ctd.to!string());
+            assert(t.to!string() == itd.to!string());
+        }
     }}
 }
 
@@ -7524,7 +7644,7 @@ if (is(T == class))
 
         @property inout(T) Scoped_payload() inout
         {
-            void* alignedStore = cast(void*) aligned(cast(uintptr_t) Scoped_store.ptr);
+            void* alignedStore = cast(void*) aligned(cast(size_t) Scoped_store.ptr);
             // As `Scoped` can be unaligned moved in memory class instance should be moved accordingly.
             immutable size_t d = alignedStore - Scoped_store.ptr;
             size_t* currD = cast(size_t*) &Scoped_store[$ - size_t.sizeof];
@@ -7557,7 +7677,7 @@ if (is(T == class))
         import std.conv : emplace;
 
         Scoped result = void;
-        void* alignedStore = cast(void*) aligned(cast(uintptr_t) result.Scoped_store.ptr);
+        void* alignedStore = cast(void*) aligned(cast(size_t) result.Scoped_store.ptr);
         immutable size_t d = alignedStore - result.Scoped_store.ptr;
         *cast(size_t*) &result.Scoped_store[$ - size_t.sizeof] = d;
         emplace!(Unqual!T)(result.Scoped_store[d .. $ - size_t.sizeof], args);
@@ -7647,7 +7767,7 @@ if (is(T == class))
     destroy(*b2); // calls A's destructor for b2.a
 }
 
-private uintptr_t _alignUp(uintptr_t alignment)(uintptr_t n)
+private size_t _alignUp(size_t alignment)(size_t n)
 if (alignment > 0 && !((alignment - 1) & alignment))
 {
     enum badEnd = alignment - 1; // 0b11, 0b111, ...

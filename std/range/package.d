@@ -10182,8 +10182,8 @@ template isTwoWayCompatible(alias fn, T1, T2)
             T1 foo();
             T2 bar();
 
-            fn(foo(), bar());
-            fn(bar(), foo());
+            cast(void) fn(foo(), bar());
+            cast(void) fn(bar(), foo());
         }
     ));
 }
@@ -10904,7 +10904,20 @@ cost $(BIGOH n), use $(REF isSorted, std,algorithm,sorting).
 auto assumeSorted(alias pred = "a < b", R)(R r)
 if (isInputRange!(Unqual!R))
 {
-    return SortedRange!(Unqual!R, pred)(r);
+    // Avoid senseless `SortedRange!(SortedRange!(...), pred)` nesting.
+    static if (is(R == SortedRange!(RRange, RPred), RRange, alias RPred))
+    {
+        static if (isInputRange!R && __traits(isSame, pred, RPred))
+            // If the predicate is the same and we don't need to cast away
+            // constness for the result to be an input range.
+            return r;
+        else
+            return SortedRange!(Unqual!(typeof(r._input)), pred)(r._input);
+    }
+    else
+    {
+        return SortedRange!(Unqual!R, pred)(r);
+    }
 }
 
 ///
@@ -10930,6 +10943,10 @@ if (isInputRange!(Unqual!R))
     assert(equal(p, [4, 4, 5, 6 ]));
     p = assumeSorted(a).upperBound(4.2);
     assert(equal(p, [ 5, 6 ]));
+
+    // Issue 18933 - don't create senselessly nested SortedRange types.
+    assert(is(typeof(assumeSorted(a)) == typeof(assumeSorted(assumeSorted(a)))));
+    assert(is(typeof(assumeSorted(a)) == typeof(assumeSorted(assumeSorted!"a > b"(a)))));
 }
 
 @safe unittest

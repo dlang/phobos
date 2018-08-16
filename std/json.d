@@ -6,7 +6,7 @@ JavaScript Object Notation
 Copyright: Copyright Jeremie Pelletier 2008 - 2009.
 License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   Jeremie Pelletier, David Herberth
-References: $(LINK http://json.org/)
+References: $(LINK http://json.org/), $(LINK http://seriot.ch/parsing_json.html)
 Source:    $(PHOBOSSRC std/json.d)
 */
 /*
@@ -39,7 +39,7 @@ import std.traits;
     long x;
     if (const(JSONValue)* code = "code" in j)
     {
-        if (code.type() == JSON_TYPE.INTEGER)
+        if (code.type() == JSONType.integer)
             x = code.integer;
         else
             x = to!int(code.str);
@@ -77,24 +77,38 @@ enum JSONOptions
     specialFloatLiterals = 0x1, /// encode NaN and Inf float values as strings
     escapeNonAsciiChars = 0x2,  /// encode non ascii characters with an unicode escape sequence
     doNotEscapeSlashes = 0x4,   /// do not escape slashes ('/')
+    strictParsing = 0x8,        /// Strictly follow RFC-8259 grammar when parsing
 }
 
 /**
 JSON type enumeration
 */
-enum JSON_TYPE : byte
+enum JSONType : byte
 {
     /// Indicates the type of a `JSONValue`.
-    NULL,
-    STRING,  /// ditto
-    INTEGER, /// ditto
-    UINTEGER,/// ditto
-    FLOAT,   /// ditto
-    OBJECT,  /// ditto
-    ARRAY,   /// ditto
-    TRUE,    /// ditto
-    FALSE    /// ditto
+    null_,
+    string,   /// ditto
+    integer,  /// ditto
+    uinteger, /// ditto
+    float_,   /// ditto
+    array,    /// ditto
+    object,   /// ditto
+    true_,    /// ditto
+    false_,   /// ditto
+    /// These symbols will be deprecated after 2.082.
+    NULL = null_,
+    STRING = string,
+    INTEGER = integer,
+    UINTEGER = uinteger,
+    FLOAT = float_,
+    ARRAY = array,
+    OBJECT = object,
+    TRUE = true_,
+    FALSE = false_,
 }
+
+/// This alias will be deprecated after 2.082.
+alias JSON_TYPE = JSONType;
 
 /**
 JSON value node
@@ -113,12 +127,12 @@ struct JSONValue
         JSONValue[]                     array;
     }
     private Store store;
-    private JSON_TYPE type_tag;
+    private JSONType type_tag;
 
     /**
-      Returns the JSON_TYPE of the value stored in this structure.
+      Returns the JSONType of the value stored in this structure.
     */
-    @property JSON_TYPE type() const pure nothrow @safe @nogc
+    @property JSONType type() const pure nothrow @safe @nogc
     {
         return type_tag;
     }
@@ -127,18 +141,18 @@ struct JSONValue
     {
           string s = "{ \"language\": \"D\" }";
           JSONValue j = parseJSON(s);
-          assert(j.type == JSON_TYPE.OBJECT);
-          assert(j["language"].type == JSON_TYPE.STRING);
+          assert(j.type == JSONType.object);
+          assert(j["language"].type == JSONType.string);
     }
 
     /***
-     * Value getter/setter for `JSON_TYPE.STRING`.
+     * Value getter/setter for `JSONType.string`.
      * Throws: `JSONException` for read access if `type` is not
-     * `JSON_TYPE.STRING`.
+     * `JSONType.string`.
      */
     @property string str() const pure @trusted
     {
-        enforce!JSONException(type == JSON_TYPE.STRING,
+        enforce!JSONException(type == JSONType.string,
                                 "JSONValue is not a string");
         return store.str;
     }
@@ -162,13 +176,13 @@ struct JSONValue
     }
 
     /***
-     * Value getter/setter for `JSON_TYPE.INTEGER`.
+     * Value getter/setter for `JSONType.integer`.
      * Throws: `JSONException` for read access if `type` is not
-     * `JSON_TYPE.INTEGER`.
+     * `JSONType.integer`.
      */
     @property inout(long) integer() inout pure @safe
     {
-        enforce!JSONException(type == JSON_TYPE.INTEGER,
+        enforce!JSONException(type == JSONType.integer,
                                 "JSONValue is not an integer");
         return store.integer;
     }
@@ -180,13 +194,13 @@ struct JSONValue
     }
 
     /***
-     * Value getter/setter for `JSON_TYPE.UINTEGER`.
+     * Value getter/setter for `JSONType.uinteger`.
      * Throws: `JSONException` for read access if `type` is not
-     * `JSON_TYPE.UINTEGER`.
+     * `JSONType.uinteger`.
      */
     @property inout(ulong) uinteger() inout pure @safe
     {
-        enforce!JSONException(type == JSON_TYPE.UINTEGER,
+        enforce!JSONException(type == JSONType.uinteger,
                                 "JSONValue is not an unsigned integer");
         return store.uinteger;
     }
@@ -198,14 +212,14 @@ struct JSONValue
     }
 
     /***
-     * Value getter/setter for `JSON_TYPE.FLOAT`. Note that despite
+     * Value getter/setter for `JSONType.float_`. Note that despite
      * the name, this is a $(B 64)-bit `double`, not a 32-bit `float`.
      * Throws: `JSONException` for read access if `type` is not
-     * `JSON_TYPE.FLOAT`.
+     * `JSONType.float_`.
      */
     @property inout(double) floating() inout pure @safe
     {
-        enforce!JSONException(type == JSON_TYPE.FLOAT,
+        enforce!JSONException(type == JSONType.float_,
                                 "JSONValue is not a floating type");
         return store.floating;
     }
@@ -217,9 +231,9 @@ struct JSONValue
     }
 
     /***
-     * Value getter/setter for `JSON_TYPE.OBJECT`.
+     * Value getter/setter for `JSONType.object`.
      * Throws: `JSONException` for read access if `type` is not
-     * `JSON_TYPE.OBJECT`.
+     * `JSONType.object`.
      * Note: this is @system because of the following pattern:
        ---
        auto a = &(json.object());
@@ -229,7 +243,7 @@ struct JSONValue
      */
     @property ref inout(JSONValue[string]) object() inout pure @system
     {
-        enforce!JSONException(type == JSON_TYPE.OBJECT,
+        enforce!JSONException(type == JSONType.object,
                                 "JSONValue is not an object");
         return store.object;
     }
@@ -241,7 +255,7 @@ struct JSONValue
     }
 
     /***
-     * Value getter for `JSON_TYPE.OBJECT`.
+     * Value getter for `JSONType.object`.
      * Unlike `object`, this retrieves the object by value and can be used in @safe code.
      *
      * A caveat is that, if the returned value is null, modifications will not be visible:
@@ -253,19 +267,19 @@ struct JSONValue
      * ---
      *
      * Throws: `JSONException` for read access if `type` is not
-     * `JSON_TYPE.OBJECT`.
+     * `JSONType.object`.
      */
     @property inout(JSONValue[string]) objectNoRef() inout pure @trusted
     {
-        enforce!JSONException(type == JSON_TYPE.OBJECT,
+        enforce!JSONException(type == JSONType.object,
                                 "JSONValue is not an object");
         return store.object;
     }
 
     /***
-     * Value getter/setter for `JSON_TYPE.ARRAY`.
+     * Value getter/setter for `JSONType.array`.
      * Throws: `JSONException` for read access if `type` is not
-     * `JSON_TYPE.ARRAY`.
+     * `JSONType.array`.
      * Note: this is @system because of the following pattern:
        ---
        auto a = &(json.array());
@@ -275,7 +289,7 @@ struct JSONValue
      */
     @property ref inout(JSONValue[]) array() inout pure @system
     {
-        enforce!JSONException(type == JSON_TYPE.ARRAY,
+        enforce!JSONException(type == JSONType.array,
                                 "JSONValue is not an array");
         return store.array;
     }
@@ -287,7 +301,7 @@ struct JSONValue
     }
 
     /***
-     * Value getter for `JSON_TYPE.ARRAY`.
+     * Value getter for `JSONType.array`.
      * Unlike `array`, this retrieves the array by value and can be used in @safe code.
      *
      * A caveat is that, if you append to the returned array, the new values aren't visible in the
@@ -300,37 +314,37 @@ struct JSONValue
      * ---
      *
      * Throws: `JSONException` for read access if `type` is not
-     * `JSON_TYPE.ARRAY`.
+     * `JSONType.array`.
      */
     @property inout(JSONValue[]) arrayNoRef() inout pure @trusted
     {
-        enforce!JSONException(type == JSON_TYPE.ARRAY,
+        enforce!JSONException(type == JSONType.array,
                                 "JSONValue is not an array");
         return store.array;
     }
 
-    /// Test whether the type is `JSON_TYPE.NULL`
+    /// Test whether the type is `JSONType.null_`
     @property bool isNull() const pure nothrow @safe @nogc
     {
-        return type == JSON_TYPE.NULL;
+        return type == JSONType.null_;
     }
 
     private void assign(T)(T arg) @safe
     {
         static if (is(T : typeof(null)))
         {
-            type_tag = JSON_TYPE.NULL;
+            type_tag = JSONType.null_;
         }
         else static if (is(T : string))
         {
-            type_tag = JSON_TYPE.STRING;
+            type_tag = JSONType.string;
             string t = arg;
             () @trusted { store.str = t; }();
         }
         else static if (isSomeString!T) // issue 15884
         {
-            type_tag = JSON_TYPE.STRING;
-            // FIXME: std.array.array(Range) is not deduced as 'pure'
+            type_tag = JSONType.string;
+            // FIXME: std.Array.Array(Range) is not deduced as 'pure'
             () @trusted {
                 import std.utf : byUTF;
                 store.str = cast(immutable)(arg.byUTF!char.array);
@@ -338,27 +352,27 @@ struct JSONValue
         }
         else static if (is(T : bool))
         {
-            type_tag = arg ? JSON_TYPE.TRUE : JSON_TYPE.FALSE;
+            type_tag = arg ? JSONType.true_ : JSONType.false_;
         }
         else static if (is(T : ulong) && isUnsigned!T)
         {
-            type_tag = JSON_TYPE.UINTEGER;
+            type_tag = JSONType.uinteger;
             store.uinteger = arg;
         }
         else static if (is(T : long))
         {
-            type_tag = JSON_TYPE.INTEGER;
+            type_tag = JSONType.integer;
             store.integer = arg;
         }
         else static if (isFloatingPoint!T)
         {
-            type_tag = JSON_TYPE.FLOAT;
+            type_tag = JSONType.float_;
             store.floating = arg;
         }
         else static if (is(T : Value[Key], Key, Value))
         {
             static assert(is(Key : string), "AA key must be string");
-            type_tag = JSON_TYPE.OBJECT;
+            type_tag = JSONType.object;
             static if (is(Value : JSONValue))
             {
                 JSONValue[string] t = arg;
@@ -374,7 +388,7 @@ struct JSONValue
         }
         else static if (isArray!T)
         {
-            type_tag = JSON_TYPE.ARRAY;
+            type_tag = JSONType.array;
             static if (is(ElementEncodingType!T : JSONValue))
             {
                 JSONValue[] t = arg;
@@ -395,13 +409,13 @@ struct JSONValue
         }
         else
         {
-            static assert(false, text(`unable to convert type "`, T.stringof, `" to json`));
+            static assert(false, text(`unable to convert type "`, T.Stringof, `" to json`));
         }
     }
 
     private void assignRef(T)(ref T arg) if (isStaticArray!T)
     {
-        type_tag = JSON_TYPE.ARRAY;
+        type_tag = JSONType.array;
         static if (is(ElementEncodingType!T : JSONValue))
         {
             store.array = arg;
@@ -418,8 +432,8 @@ struct JSONValue
     /**
      * Constructor for `JSONValue`. If `arg` is a `JSONValue`
      * its value and type will be copied to the new `JSONValue`.
-     * Note that this is a shallow copy: if type is `JSON_TYPE.OBJECT`
-     * or `JSON_TYPE.ARRAY` then only the reference to the data will
+     * Note that this is a shallow copy: if type is `JSONType.object`
+     * or `JSONType.array` then only the reference to the data will
      * be copied.
      * Otherwise, `arg` must be implicitly convertible to one of the
      * following types: `typeof(null)`, `string`, `ulong`,
@@ -449,10 +463,10 @@ struct JSONValue
         j = JSONValue(42);
 
         j = JSONValue( [1, 2, 3] );
-        assert(j.type == JSON_TYPE.ARRAY);
+        assert(j.type == JSONType.array);
 
         j = JSONValue( ["language": "D"] );
-        assert(j.type == JSON_TYPE.OBJECT);
+        assert(j.type == JSONType.object);
     }
 
     void opAssign(T)(T arg) if (!isStaticArray!T && !is(T : JSONValue))
@@ -467,7 +481,7 @@ struct JSONValue
 
     /***
      * Array syntax for json arrays.
-     * Throws: `JSONException` if `type` is not `JSON_TYPE.ARRAY`.
+     * Throws: `JSONException` if `type` is not `JSONType.array`.
      */
     ref inout(JSONValue) opIndex(size_t i) inout pure @safe
     {
@@ -486,7 +500,7 @@ struct JSONValue
 
     /***
      * Hash syntax for json objects.
-     * Throws: `JSONException` if `type` is not `JSON_TYPE.OBJECT`.
+     * Throws: `JSONException` if `type` is not `JSONType.object`.
      */
     ref inout(JSONValue) opIndex(string k) inout pure @safe
     {
@@ -507,15 +521,15 @@ struct JSONValue
      * If JSON value is null, then operator initializes it with object and then
      * sets `value` for it.
      *
-     * Throws: `JSONException` if `type` is not `JSON_TYPE.OBJECT`
-     * or `JSON_TYPE.NULL`.
+     * Throws: `JSONException` if `type` is not `JSONType.object`
+     * or `JSONType.null_`.
      */
     void opIndexAssign(T)(auto ref T value, string key) pure
     {
-        enforce!JSONException(type == JSON_TYPE.OBJECT || type == JSON_TYPE.NULL,
+        enforce!JSONException(type == JSONType.object || type == JSONType.null_,
                                 "JSONValue must be object or null");
         JSONValue[string] aa = null;
-        if (type == JSON_TYPE.OBJECT)
+        if (type == JSONType.object)
         {
             aa = this.objectNoRef;
         }
@@ -591,8 +605,8 @@ struct JSONValue
      *      when found, the `const(JSONValue)*` that matches to the key,
      *      otherwise `null`.
      *
-     * Throws: `JSONException` if the right hand side argument `JSON_TYPE`
-     * is not `OBJECT`.
+     * Throws: `JSONException` if the right hand side argument `JSONType`
+     * is not `object`.
      */
     auto opBinaryRight(string op : "in")(string k) const @safe
     {
@@ -619,21 +633,21 @@ struct JSONValue
 
         final switch (type_tag)
         {
-        case JSON_TYPE.STRING:
+        case JSONType.string:
             return store.str == rhs.store.str;
-        case JSON_TYPE.INTEGER:
+        case JSONType.integer:
             return store.integer == rhs.store.integer;
-        case JSON_TYPE.UINTEGER:
+        case JSONType.uinteger:
             return store.uinteger == rhs.store.uinteger;
-        case JSON_TYPE.FLOAT:
+        case JSONType.float_:
             return store.floating == rhs.store.floating;
-        case JSON_TYPE.OBJECT:
+        case JSONType.object:
             return store.object == rhs.store.object;
-        case JSON_TYPE.ARRAY:
+        case JSONType.array:
             return store.array == rhs.store.array;
-        case JSON_TYPE.TRUE:
-        case JSON_TYPE.FALSE:
-        case JSON_TYPE.NULL:
+        case JSONType.true_:
+        case JSONType.false_:
+        case JSONType.null_:
             return true;
         }
     }
@@ -656,7 +670,7 @@ struct JSONValue
     /// Implements the foreach `opApply` interface for json objects.
     int opApply(scope int delegate(string key, ref JSONValue) dg) @system
     {
-        enforce!JSONException(type == JSON_TYPE.OBJECT,
+        enforce!JSONException(type == JSONType.object,
                                 "JSONValue is not an object");
         int result;
 
@@ -694,7 +708,8 @@ struct JSONValue
 
 /**
 Parses a serialized string and returns a tree of JSON values.
-Throws: $(LREF JSONException) if the depth exceeds the max depth.
+Throws: $(LREF JSONException) if string does not follow the JSON grammar or the depth exceeds the max depth,
+        $(LREF ConvException) if a number in the input cannot be represented by a native D type.
 Params:
     json = json-formatted string to parse
     maxDepth = maximum depth of nesting allowed, -1 disables depth checking
@@ -703,10 +718,10 @@ Params:
 JSONValue parseJSON(T)(T json, int maxDepth = -1, JSONOptions options = JSONOptions.none)
 if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
 {
-    import std.ascii : isWhite, isDigit, isHexDigit, toUpper, toLower;
-    import std.typecons : Yes;
+    import std.ascii : isDigit, isHexDigit, toUpper, toLower;
+    import std.typecons : Nullable, Yes;
     JSONValue root;
-    root.type_tag = JSON_TYPE.NULL;
+    root.type_tag = JSONType.null_;
 
     // Avoid UTF decoding when possible, as it is unnecessary when
     // processing JSON.
@@ -715,15 +730,35 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
     else
         alias Char = Unqual!(ElementType!T);
 
-    if (json.empty) return root;
-
     int depth = -1;
-    Char next = 0;
+    Nullable!Char next;
     int line = 1, pos = 0;
+    immutable bool strict = (options & JSONOptions.strictParsing) != 0;
 
     void error(string msg)
     {
         throw new JSONException(msg, line, pos);
+    }
+
+    if (json.empty)
+    {
+        if (strict)
+        {
+            error("Empty JSON body");
+        }
+        return root;
+    }
+
+    bool isWhite(dchar c)
+    {
+        if (strict)
+        {
+            // RFC 7159 has a stricter definition of whitespace than general ASCII.
+            return c == ' ' || c == '\t' || c == '\n' || c == '\r';
+        }
+        import std.ascii : isWhite;
+        // Accept ASCII NUL as whitespace in non-strict mode.
+        return c == 0 || isWhite(c);
     }
 
     Char popChar()
@@ -755,9 +790,18 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
 
     Char peekChar()
     {
-        if (!next)
+        if (next.isNull)
         {
             if (json.empty) return '\0';
+            next = popChar();
+        }
+        return next.get;
+    }
+
+    Nullable!Char peekCharNullable()
+    {
+        if (next.isNull && !json.empty)
+        {
             next = popChar();
         }
         return next;
@@ -765,7 +809,16 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
 
     void skipWhitespace()
     {
-        while (isWhite(peekChar())) next = 0;
+        while (true)
+        {
+            auto c = peekCharNullable();
+            if (c.isNull ||
+                !isWhite(c.get))
+            {
+                return;
+            }
+            next.nullify();
+        }
     }
 
     Char getChar(bool SkipWhitespace = false)()
@@ -773,10 +826,10 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
         static if (SkipWhitespace) skipWhitespace();
 
         Char c;
-        if (next)
+        if (!next.isNull)
         {
-            c = next;
-            next = 0;
+            c = next.get;
+            next.nullify();
         }
         else
             c = popChar();
@@ -784,11 +837,11 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
         return c;
     }
 
-    void checkChar(bool SkipWhitespace = true, bool CaseSensitive = true)(char c)
+    void checkChar(bool SkipWhitespace = true)(char c, bool caseSensitive = true)
     {
         static if (SkipWhitespace) skipWhitespace();
         auto c2 = getChar();
-        static if (!CaseSensitive) c2 = toLower(c2);
+        if (!caseSensitive) c2 = toLower(c2);
 
         if (c2 != c) error(text("Found '", c2, "' when expecting '", c, "'."));
     }
@@ -819,7 +872,6 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
 
     string parseString()
     {
-        import std.ascii : isControl;
         import std.uni : isSurrogateHi, isSurrogateLo;
         import std.utf : encode, decode;
 
@@ -880,8 +932,12 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
             default:
                 // RFC 7159 states that control characters U+0000 through
                 // U+001F must not appear unescaped in a JSON string.
+                // Note: std.ascii.isControl can't be used for this test
+                // because it considers ASCII DEL (0x7f) to be a control
+                // character but RFC 7159 does not.
+                // Accept unescaped ASCII NULs in non-strict mode.
                 auto c = getChar();
-                if (isControl(c))
+                if (c < 0x20 && (strict || c != 0))
                     error("Illegal control character.");
                 str.put(c);
                 goto Next;
@@ -943,7 +999,7 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
             case '[':
                 if (testChar(']'))
                 {
-                    value.type_tag = JSON_TYPE.ARRAY;
+                    value.type_tag = JSONType.array;
                     break;
                 }
 
@@ -968,11 +1024,11 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
                     tryGetSpecialFloat(str, value.store.floating))
                 {
                     // found a special float, its value was placed in value.store.floating
-                    value.type_tag = JSON_TYPE.FLOAT;
+                    value.type_tag = JSONType.float_;
                     break;
                 }
 
-                value.type_tag = JSON_TYPE.STRING;
+                value.type_tag = JSONType.string;
                 value.store.str = str;
                 break;
 
@@ -1001,7 +1057,18 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
                     isNegative = true;
                 }
 
-                readInteger();
+                if (strict && c == '0')
+                {
+                    number.put('0');
+                    if (isDigit(peekChar()))
+                    {
+                        error("Additional digits not allowed after initial zero digit");
+                    }
+                }
+                else
+                {
+                    readInteger();
+                }
 
                 if (testChar('.'))
                 {
@@ -1023,7 +1090,7 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
                 string data = number.data;
                 if (isFloat)
                 {
-                    value.type_tag = JSON_TYPE.FLOAT;
+                    value.type_tag = JSONType.float_;
                     value.store.floating = parse!double(data);
                 }
                 else
@@ -1034,33 +1101,39 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
                         value.store.uinteger = parse!ulong(data);
 
                     value.type_tag = !isNegative && value.store.uinteger & (1UL << 63) ?
-                        JSON_TYPE.UINTEGER : JSON_TYPE.INTEGER;
+                        JSONType.uinteger : JSONType.integer;
                 }
                 break;
 
-            case 't':
             case 'T':
-                value.type_tag = JSON_TYPE.TRUE;
-                checkChar!(false, false)('r');
-                checkChar!(false, false)('u');
-                checkChar!(false, false)('e');
+                if (strict) goto default;
+                goto case;
+            case 't':
+                value.type_tag = JSONType.true_;
+                checkChar!false('r', strict);
+                checkChar!false('u', strict);
+                checkChar!false('e', strict);
                 break;
 
-            case 'f':
             case 'F':
-                value.type_tag = JSON_TYPE.FALSE;
-                checkChar!(false, false)('a');
-                checkChar!(false, false)('l');
-                checkChar!(false, false)('s');
-                checkChar!(false, false)('e');
+                if (strict) goto default;
+                goto case;
+            case 'f':
+                value.type_tag = JSONType.false_;
+                checkChar!false('a', strict);
+                checkChar!false('l', strict);
+                checkChar!false('s', strict);
+                checkChar!false('e', strict);
                 break;
 
-            case 'n':
             case 'N':
-                value.type_tag = JSON_TYPE.NULL;
-                checkChar!(false, false)('u');
-                checkChar!(false, false)('l');
-                checkChar!(false, false)('l');
+                if (strict) goto default;
+                goto case;
+            case 'n':
+                value.type_tag = JSONType.null_;
+                checkChar!false('u', strict);
+                checkChar!false('l', strict);
+                checkChar!false('l', strict);
                 break;
 
             default:
@@ -1071,16 +1144,21 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
     }
 
     parseValue(root);
+    if (strict)
+    {
+        skipWhitespace();
+        if (!peekCharNullable().isNull) error("Trailing non-whitespace characters");
+    }
     return root;
 }
 
 @safe unittest
 {
     enum issue15742objectOfObject = `{ "key1": { "key2": 1 }}`;
-    static assert(parseJSON(issue15742objectOfObject).type == JSON_TYPE.OBJECT);
+    static assert(parseJSON(issue15742objectOfObject).type == JSONType.object);
 
     enum issue15742arrayOfArray = `[[1]]`;
-    static assert(parseJSON(issue15742arrayOfArray).type == JSON_TYPE.ARRAY);
+    static assert(parseJSON(issue15742arrayOfArray).type == JSONType.array);
 }
 
 @safe unittest
@@ -1228,7 +1306,7 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
 
         final switch (value.type)
         {
-            case JSON_TYPE.OBJECT:
+            case JSONType.object:
                 auto obj = value.objectNoRef;
                 if (!obj.length)
                 {
@@ -1275,7 +1353,7 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
                 }
                 break;
 
-            case JSON_TYPE.ARRAY:
+            case JSONType.array:
                 auto arr = value.arrayNoRef;
                 if (arr.empty)
                 {
@@ -1297,19 +1375,19 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
                 }
                 break;
 
-            case JSON_TYPE.STRING:
+            case JSONType.string:
                 toString(value.str);
                 break;
 
-            case JSON_TYPE.INTEGER:
+            case JSONType.integer:
                 json.put(to!string(value.store.integer));
                 break;
 
-            case JSON_TYPE.UINTEGER:
+            case JSONType.uinteger:
                 json.put(to!string(value.store.uinteger));
                 break;
 
-            case JSON_TYPE.FLOAT:
+            case JSONType.float_:
                 import std.math : isNaN, isInfinity;
 
                 auto val = value.store.floating;
@@ -1349,15 +1427,15 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
                 }
                 break;
 
-            case JSON_TYPE.TRUE:
+            case JSONType.true_:
                 json.put("true");
                 break;
 
-            case JSON_TYPE.FALSE:
+            case JSONType.false_:
                 json.put("false");
                 break;
 
-            case JSON_TYPE.NULL:
+            case JSONType.null_:
                 json.put("null");
                 break;
         }
@@ -1405,7 +1483,7 @@ class JSONException : Exception
 {
     import std.exception;
     JSONValue jv = "123";
-    assert(jv.type == JSON_TYPE.STRING);
+    assert(jv.type == JSONType.string);
     assertNotThrown(jv.str);
     assertThrown!JSONException(jv.integer);
     assertThrown!JSONException(jv.uinteger);
@@ -1416,19 +1494,19 @@ class JSONException : Exception
     assertThrown!JSONException(jv[2]);
 
     jv = -3;
-    assert(jv.type == JSON_TYPE.INTEGER);
+    assert(jv.type == JSONType.integer);
     assertNotThrown(jv.integer);
 
     jv = cast(uint) 3;
-    assert(jv.type == JSON_TYPE.UINTEGER);
+    assert(jv.type == JSONType.uinteger);
     assertNotThrown(jv.uinteger);
 
     jv = 3.0;
-    assert(jv.type == JSON_TYPE.FLOAT);
+    assert(jv.type == JSONType.float_);
     assertNotThrown(jv.floating);
 
     jv = ["key" : "value"];
-    assert(jv.type == JSON_TYPE.OBJECT);
+    assert(jv.type == JSONType.object);
     assertNotThrown(jv.object);
     assertNotThrown(jv["key"]);
     assert("key" in jv);
@@ -1442,39 +1520,39 @@ class JSONException : Exception
     {
         static assert(is(typeof(value) == JSONValue));
         assert(key == "key");
-        assert(value.type == JSON_TYPE.STRING);
+        assert(value.type == JSONType.string);
         assertNotThrown(value.str);
         assert(value.str == "value");
     }
 
     jv = [3, 4, 5];
-    assert(jv.type == JSON_TYPE.ARRAY);
+    assert(jv.type == JSONType.array);
     assertNotThrown(jv.array);
     assertNotThrown(jv[2]);
     foreach (size_t index, value; jv)
     {
         static assert(is(typeof(value) == JSONValue));
-        assert(value.type == JSON_TYPE.INTEGER);
+        assert(value.type == JSONType.integer);
         assertNotThrown(value.integer);
         assert(index == (value.integer-3));
     }
 
     jv = null;
-    assert(jv.type == JSON_TYPE.NULL);
+    assert(jv.type == JSONType.null_);
     assert(jv.isNull);
     jv = "foo";
     assert(!jv.isNull);
 
     jv = JSONValue("value");
-    assert(jv.type == JSON_TYPE.STRING);
+    assert(jv.type == JSONType.string);
     assert(jv.str == "value");
 
     JSONValue jv2 = JSONValue("value");
-    assert(jv2.type == JSON_TYPE.STRING);
+    assert(jv2.type == JSONType.string);
     assert(jv2.str == "value");
 
     JSONValue jv3 = JSONValue("\u001c");
-    assert(jv3.type == JSON_TYPE.STRING);
+    assert(jv3.type == JSONType.string);
     assert(jv3.str == "\u001C");
 }
 
@@ -1483,41 +1561,41 @@ class JSONException : Exception
     // Bugzilla 11504
 
     JSONValue jv = 1;
-    assert(jv.type == JSON_TYPE.INTEGER);
+    assert(jv.type == JSONType.integer);
 
     jv.str = "123";
-    assert(jv.type == JSON_TYPE.STRING);
+    assert(jv.type == JSONType.string);
     assert(jv.str == "123");
 
     jv.integer = 1;
-    assert(jv.type == JSON_TYPE.INTEGER);
+    assert(jv.type == JSONType.integer);
     assert(jv.integer == 1);
 
     jv.uinteger = 2u;
-    assert(jv.type == JSON_TYPE.UINTEGER);
+    assert(jv.type == JSONType.uinteger);
     assert(jv.uinteger == 2u);
 
     jv.floating = 1.5;
-    assert(jv.type == JSON_TYPE.FLOAT);
+    assert(jv.type == JSONType.float_);
     assert(jv.floating == 1.5);
 
     jv.object = ["key" : JSONValue("value")];
-    assert(jv.type == JSON_TYPE.OBJECT);
+    assert(jv.type == JSONType.object);
     assert(jv.object == ["key" : JSONValue("value")]);
 
     jv.array = [JSONValue(1), JSONValue(2), JSONValue(3)];
-    assert(jv.type == JSON_TYPE.ARRAY);
+    assert(jv.type == JSONType.array);
     assert(jv.array == [JSONValue(1), JSONValue(2), JSONValue(3)]);
 
     jv = true;
-    assert(jv.type == JSON_TYPE.TRUE);
+    assert(jv.type == JSONType.true_);
 
     jv = false;
-    assert(jv.type == JSON_TYPE.FALSE);
+    assert(jv.type == JSONType.false_);
 
     enum E{True = true}
     jv = E.True;
-    assert(jv.type == JSON_TYPE.TRUE);
+    assert(jv.type == JSONType.true_);
 }
 
 @system pure unittest
@@ -1658,27 +1736,27 @@ class JSONException : Exception
     JSONValue jv;
     jv["int"] = 123;
 
-    assert(jv.type == JSON_TYPE.OBJECT);
+    assert(jv.type == JSONType.object);
     assert("int" in jv);
     assert(jv["int"].integer == 123);
 
     jv["array"] = [1, 2, 3, 4, 5];
 
-    assert(jv["array"].type == JSON_TYPE.ARRAY);
+    assert(jv["array"].type == JSONType.array);
     assert(jv["array"][2].integer == 3);
 
     jv["str"] = "D language";
-    assert(jv["str"].type == JSON_TYPE.STRING);
+    assert(jv["str"].type == JSONType.string);
     assert(jv["str"].str == "D language");
 
     jv["bool"] = false;
-    assert(jv["bool"].type == JSON_TYPE.FALSE);
+    assert(jv["bool"].type == JSONType.false_);
 
     assert(jv.object.length == 4);
 
     jv = [5, 4, 3, 2, 1];
-    assert( jv.type == JSON_TYPE.ARRAY );
-    assert( jv[3].integer == 2 );
+    assert(jv.type == JSONType.array);
+    assert(jv[3].integer == 2);
 }
 
 @safe unittest
@@ -1759,9 +1837,9 @@ pure nothrow @safe unittest // issue 15884
     void Test(C)() {
         C[] a = ['x'];
         JSONValue testVal = a;
-        assert(testVal.type == JSON_TYPE.STRING);
+        assert(testVal.type == JSONType.string);
         testVal = a.idup;
-        assert(testVal.type == JSON_TYPE.STRING);
+        assert(testVal.type == JSONType.string);
     }
     Test!char();
     Test!wchar();
@@ -1848,4 +1926,73 @@ pure nothrow @safe unittest // issue 15884
     assert(parseJSON(`"\/"`).toString == `"\/"`);
     assert(parseJSON(`"/"`).toString(JSONOptions.doNotEscapeSlashes) == `"/"`);
     assert(parseJSON(`"\/"`).toString(JSONOptions.doNotEscapeSlashes) == `"/"`);
+}
+
+@safe unittest // JSONOptions.strictParsing (issue 16639)
+{
+    import std.exception : assertThrown;
+
+    // Unescaped ASCII NULs
+    assert(parseJSON("[\0]").type == JSONType.array);
+    assertThrown!JSONException(parseJSON("[\0]", JSONOptions.strictParsing));
+    assert(parseJSON("\"\0\"").str == "\0");
+    assertThrown!JSONException(parseJSON("\"\0\"", JSONOptions.strictParsing));
+
+    // Unescaped ASCII DEL (0x7f) in strings
+    assert(parseJSON("\"\x7f\"").str == "\x7f");
+    assert(parseJSON("\"\x7f\"", JSONOptions.strictParsing).str == "\x7f");
+
+    // "true", "false", "null" case sensitivity
+    assert(parseJSON("true").type == JSONType.true_);
+    assert(parseJSON("true", JSONOptions.strictParsing).type == JSONType.true_);
+    assert(parseJSON("True").type == JSONType.true_);
+    assertThrown!JSONException(parseJSON("True", JSONOptions.strictParsing));
+    assert(parseJSON("tRUE").type == JSONType.true_);
+    assertThrown!JSONException(parseJSON("tRUE", JSONOptions.strictParsing));
+
+    assert(parseJSON("false").type == JSONType.false_);
+    assert(parseJSON("false", JSONOptions.strictParsing).type == JSONType.false_);
+    assert(parseJSON("False").type == JSONType.false_);
+    assertThrown!JSONException(parseJSON("False", JSONOptions.strictParsing));
+    assert(parseJSON("fALSE").type == JSONType.false_);
+    assertThrown!JSONException(parseJSON("fALSE", JSONOptions.strictParsing));
+
+    assert(parseJSON("null").type == JSONType.null_);
+    assert(parseJSON("null", JSONOptions.strictParsing).type == JSONType.null_);
+    assert(parseJSON("Null").type == JSONType.null_);
+    assertThrown!JSONException(parseJSON("Null", JSONOptions.strictParsing));
+    assert(parseJSON("nULL").type == JSONType.null_);
+    assertThrown!JSONException(parseJSON("nULL", JSONOptions.strictParsing));
+
+    // Whitespace characters
+    assert(parseJSON("[\f\v]").type == JSONType.array);
+    assertThrown!JSONException(parseJSON("[\f\v]", JSONOptions.strictParsing));
+    assert(parseJSON("[ \t\r\n]").type == JSONType.array);
+    assert(parseJSON("[ \t\r\n]", JSONOptions.strictParsing).type == JSONType.array);
+
+    // Empty input
+    assert(parseJSON("").type == JSONType.null_);
+    assertThrown!JSONException(parseJSON("", JSONOptions.strictParsing));
+
+    // Numbers with leading '0's
+    assert(parseJSON("01").integer == 1);
+    assertThrown!JSONException(parseJSON("01", JSONOptions.strictParsing));
+    assert(parseJSON("-01").integer == -1);
+    assertThrown!JSONException(parseJSON("-01", JSONOptions.strictParsing));
+    assert(parseJSON("0.01").floating == 0.01);
+    assert(parseJSON("0.01", JSONOptions.strictParsing).floating == 0.01);
+    assert(parseJSON("0e1").floating == 0);
+    assert(parseJSON("0e1", JSONOptions.strictParsing).floating == 0);
+
+    // Trailing characters after JSON value
+    assert(parseJSON(`""asdf`).str == "");
+    assertThrown!JSONException(parseJSON(`""asdf`, JSONOptions.strictParsing));
+    assert(parseJSON("987\0").integer == 987);
+    assertThrown!JSONException(parseJSON("987\0", JSONOptions.strictParsing));
+    assert(parseJSON("987\0\0").integer == 987);
+    assertThrown!JSONException(parseJSON("987\0\0", JSONOptions.strictParsing));
+    assert(parseJSON("[]]").type == JSONType.array);
+    assertThrown!JSONException(parseJSON("[]]", JSONOptions.strictParsing));
+    assert(parseJSON("123 \t\r\n").integer == 123); // Trailing whitespace is OK
+    assert(parseJSON("123 \t\r\n", JSONOptions.strictParsing).integer == 123);
 }

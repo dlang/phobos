@@ -219,6 +219,34 @@ if (isPointer!Range && isIterable!(PointerTarget!Range) && !isNarrowString!Range
     assert(a.length == 5);
 }
 
+version(unittest)
+    private extern(C) void _d_delarray_t(void[] *p, TypeInfo_Struct ti);
+
+@system unittest
+{
+    // Issue 18995
+    int nAlive = 0;
+    struct S
+    {
+        bool alive;
+        this(int) { alive = true; ++nAlive; }
+        this(this) { nAlive += alive; }
+        ~this() { nAlive -= alive; alive = false; }
+    }
+
+    import std.algorithm.iteration : map;
+    import std.range : iota;
+
+    auto arr = iota(3).map!(a => S(a)).array;
+    assert(nAlive == 3);
+
+    // No good way to ensure the GC frees this, just call the lifetime function
+    // directly. If delete wasn't deprecated, this is what delete would do.
+    _d_delarray_t(cast(void[]*)&arr, typeid(S));
+
+    assert(nAlive == 0);
+}
+
 /**
 Convert a narrow string to an array type that fully supports random access.
 This is handled as a special case and always returns an array of `dchar`
@@ -698,6 +726,9 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I))
     }
 }
 
+// from rt/lifetime.d
+private extern(C) void[] _d_newarrayU(const TypeInfo ti, size_t length) pure nothrow;
+
 private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
 {
     static assert(I.length <= nDimensions!T,
@@ -737,18 +768,24 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
         }
         else
         {
-            import core.memory : GC;
             import core.stdc.string : memset;
 
-            import core.checkedint : mulu;
-            bool overflow;
-            const nbytes = mulu(size, E.sizeof, overflow);
-            if (overflow) assert(0);
+            /+
+              NOTES:
+              _d_newarrayU is part of druntime, and creates an uninitialized
+              block, just like GC.malloc. However, it also sets the appropriate
+              bits, and sets up the block as an appendable array of type E[],
+              which will inform the GC how to destroy the items in the block
+              when it gets collected.
 
-            auto ptr = cast(E*) GC.malloc(nbytes, blockAttribute!E);
+              _d_newarrayU returns a void[], but with the length set according
+              to E.sizeof.
+            +/
+            *(cast(void[]*)&ret) = _d_newarrayU(typeid(E[]), size);
             static if (minimallyInitialized && hasIndirections!E)
-                memset(ptr, 0, nbytes);
-            ret = ptr[0 .. size];
+                // _d_newarrayU would have asserted if the multiplication below
+                // had overflowed, so we don't have to check it again.
+                memset(ret.ptr, 0, E.sizeof * ret.length);
         }
     }
     else static if (I.length > 1)
@@ -796,7 +833,15 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
         }
         ~this()
         {
-            assert(p != null);
+            // note, this assert is invalid -- a struct should always be able
+            // to run its dtor on the .init value, I'm leaving it here
+            // commented out because the original test case had it. I'm not
+            // sure what it's trying to prove.
+            //
+            // What happens now that minimallyInitializedArray adds the
+            // destructor run to the GC, is that this assert would fire in the
+            // GC, which triggers an invalid memory operation.
+            //assert(p != null);
         }
     }
     auto a = minimallyInitializedArray!(S[])(1);
@@ -3987,4 +4032,271 @@ unittest
     a ~= 'a'; //Clobbers here?
     assert(appS.data == "hellow");
     assert(appA.data == "hellow");
+}
+
+/++
+Constructs a static array from `a`.
+The type of elements can be specified implicitly so that $(D [1, 2].staticArray) results in `int[2]`,
+or explicitly, e.g. $(D [1, 2].staticArray!float) returns `float[2]`.
+When `a` is a range whose length is not known at compile time, the number of elements must be
+given as template argument (e.g. `myrange.staticArray!2`).
+Size and type can be combined, if the source range elements are implicitly
+convertible to the requested element type (eg: `2.iota.staticArray!(long[2])`).
+When the range `a` is known at compile time, it can also be specified as a
+template argument to avoid having to specify the number of elements
+(e.g.: `staticArray!(2.iota)` or `staticArray!(double, 2.iota)`).
+
+Note: `staticArray` returns by value, so expressions involving large arrays may be inefficient.
+
+Params:
+    a = The input elements. If there are less elements than the specified length of the static array,
+    the rest of it is default-initialized. If there are more than specified, the first elements
+    up to the specified length are used.
+    rangeLength = outputs the number of elements used from `a` to it. Optional.
+
+Returns: A static array constructed from `a`.
++/
+pragma(inline, true) T[n] staticArray(T, size_t n)(auto ref T[n] a)
+{
+    return a;
+}
+
+/// static array from array literal
+nothrow pure @safe unittest
+{
+    auto a = [0, 1].staticArray;
+    static assert(is(typeof(a) == int[2]));
+    assert(a == [0, 1]);
+}
+
+pragma(inline, true) U[n] staticArray(U, T, size_t n)(auto ref T[n] a)
+if (!is(T == U) && is(T : U))
+{
+    return a[].staticArray!(U[n]);
+}
+
+/// static array from array with implicit casting of elements
+nothrow pure @safe unittest
+{
+    auto b = [0, 1].staticArray!long;
+    static assert(is(typeof(b) == long[2]));
+    assert(b == [0, 1]);
+}
+
+nothrow pure @safe unittest
+{
+    int val = 3;
+    static immutable gold = [1, 2, 3];
+    [1, 2, val].staticArray.checkStaticArray!int([1, 2, 3]);
+
+    @nogc void checkNogc()
+    {
+        [1, 2, val].staticArray.checkStaticArray!int(gold);
+    }
+
+    checkNogc();
+
+    [1, 2, val].staticArray!double.checkStaticArray!double(gold);
+    [1, 2, 3].staticArray!int.checkStaticArray!int(gold);
+
+    [1, 2, 3].staticArray!(const(int)).checkStaticArray!(const(int))(gold);
+    [1, 2, 3].staticArray!(const(double)).checkStaticArray!(const(double))(gold);
+    {
+        const(int)[3] a2 = [1, 2, 3].staticArray;
+    }
+
+    [cast(byte) 1, cast(byte) 129].staticArray.checkStaticArray!byte([1, -127]);
+}
+
+/// ditto
+auto staticArray(size_t n, T)(scope T a)
+if (isInputRange!T)
+{
+    alias U = ElementType!T;
+    return staticArray!(U[n], U, n)(a);
+}
+
+/// ditto
+auto staticArray(size_t n, T)(scope T a, out size_t rangeLength)
+if (isInputRange!T)
+{
+    alias U = ElementType!T;
+    return staticArray!(U[n], U, n)(a, rangeLength);
+}
+
+/// ditto
+auto staticArray(Un : U[n], U, size_t n, T)(scope T a)
+if (isInputRange!T && is(ElementType!T : U))
+{
+    size_t extraStackSpace;
+    return staticArray!(Un, U, n)(a, extraStackSpace);
+}
+
+/// ditto
+auto staticArray(Un : U[n], U, size_t n, T)(scope T a, out size_t rangeLength)
+if (isInputRange!T && is(ElementType!T : U))
+{
+    import std.algorithm.mutation : uninitializedFill;
+    import std.range : take;
+    import std.conv : emplaceRef;
+
+    if (__ctfe)
+    {
+        size_t i;
+        // Compile-time version to avoid unchecked memory access.
+        Unqual!U[n] ret;
+        for (auto iter = a.take(n); !iter.empty; iter.popFront())
+        {
+            ret[i] = iter.front;
+            i++;
+        }
+
+        rangeLength = i;
+        return (() @trusted => cast(U[n]) ret)();
+    }
+
+    auto ret = (() @trusted
+    {
+        Unqual!U[n] theArray = void;
+        return theArray;
+    }());
+
+    size_t i;
+    if (true)
+    {
+        // ret was void-initialized so let's initialize the unfilled part manually.
+        // also prevents destructors to be called on uninitialized memory if
+        // an exception is thrown
+        scope (exit) ret[i .. $].uninitializedFill(U.init);
+
+        for (auto iter = a.take(n); !iter.empty; iter.popFront())
+        {
+            emplaceRef!U(ret[i++], iter.front);
+        }
+    }
+
+    rangeLength = i;
+    return (() @trusted => cast(U[n]) ret)();
+}
+
+/// static array from range + size
+nothrow pure @safe unittest
+{
+    import std.range : iota;
+
+    auto input = 3.iota;
+    auto a = input.staticArray!2;
+    static assert(is(typeof(a) == int[2]));
+    assert(a == [0, 1]);
+    auto b = input.staticArray!(long[4]);
+    static assert(is(typeof(b) == long[4]));
+    assert(b == [0, 1, 2, 0]);
+}
+
+// Tests that code compiles when there is an elaborate destructor and exceptions
+// are thrown. Unfortunately can't test that memory is initialized
+// before having a destructor called on it.
+// @system required because of issue 18872.
+@system nothrow unittest
+{
+    // exists only to allow doing something in the destructor. Not tested
+    // at the end because value appears to depend on implementation of the.
+    // function.
+    static int preventersDestroyed = 0;
+
+    static struct CopyPreventer
+    {
+        bool on = false;
+        this(this)
+        {
+            if (on) throw new Exception("Thou shalt not copy past me!");
+        }
+
+        ~this()
+        {
+            preventersDestroyed++;
+        }
+    }
+    auto normalArray =
+    [
+        CopyPreventer(false),
+        CopyPreventer(false),
+        CopyPreventer(true),
+        CopyPreventer(false),
+        CopyPreventer(true),
+    ];
+
+    try
+    {
+        auto staticArray = normalArray.staticArray!5;
+        assert(false);
+    }
+    catch (Exception e){}
+}
+
+
+nothrow pure @safe unittest
+{
+    auto a = [1, 2].staticArray;
+    assert(is(typeof(a) == int[2]) && a == [1, 2]);
+
+    import std.range : iota;
+
+    2.iota.staticArray!2.checkStaticArray!int([0, 1]);
+    2.iota.staticArray!(double[2]).checkStaticArray!double([0, 1]);
+    2.iota.staticArray!(long[2]).checkStaticArray!long([0, 1]);
+}
+
+nothrow pure @system unittest
+{
+    import std.range : iota;
+    size_t copiedAmount;
+    2.iota.staticArray!1(copiedAmount);
+    assert(copiedAmount == 1);
+    2.iota.staticArray!3(copiedAmount);
+    assert(copiedAmount == 2);
+}
+
+/// ditto
+auto staticArray(alias a)()
+if (isInputRange!(typeof(a)))
+{
+    return .staticArray!(size_t(a.length))(a);
+}
+
+/// ditto
+auto staticArray(U, alias a)()
+if (isInputRange!(typeof(a)))
+{
+    return .staticArray!(U[size_t(a.length)])(a);
+}
+
+/// static array from CT range
+nothrow pure @safe unittest
+{
+    import std.range : iota;
+
+    enum a = staticArray!(2.iota);
+    static assert(is(typeof(a) == int[2]));
+    assert(a == [0, 1]);
+
+    enum b = staticArray!(long, 2.iota);
+    static assert(is(typeof(b) == long[2]));
+    assert(b == [0, 1]);
+}
+
+nothrow pure @safe unittest
+{
+    import std.range : iota;
+
+    enum a = staticArray!(2.iota);
+    staticArray!(2.iota).checkStaticArray!int([0, 1]);
+    staticArray!(double, 2.iota).checkStaticArray!double([0, 1]);
+    staticArray!(long, 2.iota).checkStaticArray!long([0, 1]);
+}
+
+version(unittest) private void checkStaticArray(T, T1, T2)(T1 a, T2 b) nothrow @safe pure @nogc
+{
+    static assert(is(T1 == T[T1.length]));
+    assert(a == b);
 }

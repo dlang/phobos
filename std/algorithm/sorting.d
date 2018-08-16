@@ -583,8 +583,8 @@ $(LI All elements `e` in subrange `r[0 .. k]` satisfy `!less(r[k], e)`
 (i.e. `r[k]` is greater than or equal to each element to its left according to
 predicate `less`))
 
-$(LI All elements `e` in subrange `r[0 .. k]` satisfy `!less(e$D(
-r[k])) (i.e. `r[k]` is less than or equal to each element to its right
+$(LI All elements `e` in subrange `r[k .. $]` satisfy `!less(e, r[k])`
+(i.e. `r[k]` is less than or equal to each element to its right
 according to predicate `less`)))
 
 If `r` contains equivalent elements, multiple permutations of `r` satisfy these

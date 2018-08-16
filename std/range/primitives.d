@@ -253,7 +253,7 @@ enum bool isInputRange(R) =
 puts the whole raw element `e` into `r`. doPut will not attempt to
 iterate, slice or transcode `e` in any way shape or form. It will $(B only)
 call the correct primitive (`r.put(e)`,  $(D r.front = e) or
-`r(0)` once.
+`r(e)` once.
 
 This can be important when `e` needs to be placed in `r` unchanged.
 Furthermore, it can be useful when working with `InputRange`s, as doPut
@@ -271,6 +271,20 @@ private void doPut(R, E)(ref R r, auto ref E e)
         static assert(is(typeof(r.put(e))),
             "Cannot put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
         r.put(e);
+    }
+    else static if (isNarrowString!R && is(const(E) == const(typeof(r[0]))))
+    {
+        // one character, we can put it
+        r[0] = e;
+        r = r[1 .. $];
+    }
+    else static if (isNarrowString!R && isNarrowString!E && is(typeof(r[] = e)))
+    {
+        // slice assign. Note that this is a duplicate from put, but because
+        // putChar uses doPut exclusively, we have to copy it here.
+        immutable len = e.length;
+        r[0 .. len] = e;
+        r = r[len .. $];
     }
     else static if (isInputRange!R)
     {
@@ -308,7 +322,7 @@ private void doPut(R, E)(ref R r, auto ref E e)
     static assert( isNativeOutputRange!(int[4][], int)); //Scary!
     static assert( isNativeOutputRange!(int[4][], int[4]));
 
-    static assert(!isNativeOutputRange!( char[],   char));
+    static assert( isNativeOutputRange!( char[],   char));
     static assert(!isNativeOutputRange!( char[],  dchar));
     static assert( isNativeOutputRange!(dchar[],   char));
     static assert( isNativeOutputRange!(dchar[],  dchar));
@@ -453,21 +467,31 @@ void put(R, E)(ref R r, E e)
 }
 
 /**
- * Because of auto-decoding, the `front` of a `string` is a `dchar`,
- * so using `put` with `char` arrays is disallowed. In order to fill
- * any `char` type array, use $(REF byCodeUnit, std, utf).
+ * It's also possible to `put` any width strings or characters into narrow
+ * strings -- put does the conversion for you.
+ *
+ * Note that putting the same width character as the target buffer type is
+ * `nothrow`, but transcoding can throw a $(REF UTFException, std, utf).
  */
-@safe pure nothrow unittest
+@safe pure unittest
 {
-    import std.utf : byCodeUnit;
-
     // the elements must be mutable, so using string or const(char)[]
     // won't compile
     char[] s1 = new char[13];
-    auto r1 = s1.byCodeUnit;
+    auto r1 = s1;
+    put(r1, "Hello, World!"w);
+    assert(s1 == "Hello, World!");
+}
+
+@safe pure nothrow unittest
+{
+    // same thing, just using same character width.
+    char[] s1 = new char[13];
+    auto r1 = s1;
     put(r1, "Hello, World!");
     assert(s1 == "Hello, World!");
 }
+
 
 @safe pure nothrow @nogc unittest
 {
@@ -486,9 +510,9 @@ if (isSomeChar!E)
     ref const(wchar)[] wstringInit();
     ref const(dchar)[] dstringInit();
 
-    enum csCond = !isDynamicArray!R && is(typeof(doPut(r, cstringInit())));
-    enum wsCond = !isDynamicArray!R && is(typeof(doPut(r, wstringInit())));
-    enum dsCond = !isDynamicArray!R && is(typeof(doPut(r, dstringInit())));
+    enum csCond = is(typeof(doPut(r, cstringInit())));
+    enum wsCond = is(typeof(doPut(r, wstringInit())));
+    enum dsCond = is(typeof(doPut(r, dstringInit())));
 
     //Use "max" to avoid static type demotion
     enum ccCond = is(typeof(doPut(r,  char.max)));
@@ -585,9 +609,64 @@ pure @safe unittest
     char[] a = new char[10];
     static assert(!__traits(compiles, put(a, 1.0L)));
     static assert(!__traits(compiles, put(a, 1)));
-    // char[] is NOT output range.
-    static assert(!__traits(compiles, put(a, 'a')));
-    static assert(!__traits(compiles, put(a, "ABC")));
+    //char[] is now an output range for char, wchar, dchar, and ranges of such.
+    static assert(__traits(compiles, putChar(a, 'a')));
+    static assert(__traits(compiles, put(a, wchar('a'))));
+    static assert(__traits(compiles, put(a, dchar('a'))));
+    static assert(__traits(compiles, put(a, "ABC")));
+    static assert(__traits(compiles, put(a, "ABC"w)));
+    static assert(__traits(compiles, put(a, "ABC"d)));
+}
+
+@safe unittest
+{
+    // attempt putting into narrow strings by transcoding
+    char[] a = new char[10];
+    auto b = a;
+    put(a, "ABC"w);
+    assert(b[0 .. 3] == "ABC");
+    assert(a.length == 7);
+
+    a = b; // reset
+    put(a, 'λ');
+    assert(b[0 .. 2] == "λ");
+    assert(a.length == 8);
+
+    a = b; // reset
+    put(a, "ABC"d);
+    assert(b[0 .. 3] == "ABC");
+    assert(a.length == 7);
+
+    a = b; // reset
+    put(a, '𐐷');
+    assert(b[0 .. 4] == "𐐷");
+    assert(a.length == 6);
+
+    wchar[] aw = new wchar[10];
+    auto bw = aw;
+    put(aw, "ABC");
+    assert(bw[0 .. 3] == "ABC"w);
+    assert(aw.length == 7);
+
+    aw = bw; // reset
+    put(aw, 'λ');
+    assert(bw[0 .. 1] == "λ"w);
+    assert(aw.length == 9);
+
+    aw = bw; // reset
+    put(aw, "ABC"d);
+    assert(bw[0 .. 3] == "ABC"w);
+    assert(aw.length == 7);
+
+    aw = bw; // reset
+    put(aw, '𐐷');
+    assert(bw[0 .. 2] == "𐐷"w);
+    assert(aw.length == 8);
+
+    aw = bw; // reset
+    put(aw, "𐐷"); // try transcoding from char[]
+    assert(bw[0 .. 2] == "𐐷"w);
+    assert(aw.length == 8);
 }
 
 @safe unittest
@@ -833,7 +912,7 @@ enum bool isOutputRange(R, E) =
     void myprint(in char[] s) { }
     static assert(isOutputRange!(typeof(&myprint), char));
 
-    static assert(!isOutputRange!(char[], char));
+    static assert( isOutputRange!(char[], char));
     static assert( isOutputRange!(dchar[], wchar));
     static assert( isOutputRange!(dchar[], dchar));
 }
@@ -848,7 +927,7 @@ enum bool isOutputRange(R, E) =
     static assert( isOutputRange!(Appender!string, string));
     static assert( isOutputRange!(Appender!string*, string));
     static assert(!isOutputRange!(Appender!string, int));
-    static assert(!isOutputRange!(wchar[], wchar));
+    static assert( isOutputRange!(wchar[], wchar));
     static assert( isOutputRange!(dchar[], char));
     static assert( isOutputRange!(dchar[], string));
     static assert( isOutputRange!(dchar[], wstring));
