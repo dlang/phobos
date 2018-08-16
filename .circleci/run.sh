@@ -126,6 +126,10 @@ publictests()
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"
 
     make -f posix.mak -j$N publictests DUB=$DUB BUILD=$BUILD
+
+    # run -betterC tests
+    make -f posix.mak test_extractor # build in single-threaded mode
+    make -f posix.mak -j$N betterc
 }
 
 # test stdx dub package

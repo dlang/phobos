@@ -611,6 +611,8 @@ $(TESTS_EXTRACTOR): $(TOOLS_DIR)/tests_extractor.d | $(LIB)
 	DFLAGS="$(DFLAGS) $(LIB) $(NODEFAULTLIB) $(LINKDL)" $(DUB) build --force --compiler=$${PWD}/$(DMD) --single $<
 	mv $(TOOLS_DIR)/tests_extractor $@
 
+test_extractor: $(TESTS_EXTRACTOR)
+
 ################################################################################
 # Extract public tests of a module and test them in an separate file (i.e. without its module)
 # This is done to check for potentially missing imports in the examples, e.g.
@@ -647,7 +649,7 @@ betterc: betterc-phobos-tests betterc-run-tests
 # Run separate -betterC tests
 ################################################################################
 
-test/betterC/%.run: test/betterC/%.d $(DMD) $(LIB)
+test/betterC/%.run: test/betterC/%.d $(DRUNTIME)
 	mkdir -p $(ROOT)/unittest/betterC
 	$(DMD) $(DFLAGS) -of$(ROOT)/unittest/betterC/$(notdir $(basename $<)) -betterC $(UDFLAGS) \
 		$(NODEFAULTLIB) $(LINKDL) $<
@@ -661,9 +663,9 @@ betterc-run-tests: $(subst .d,.run,$(wildcard test/betterC/*.d))
 auto-tester-build: all checkwhitespace
 
 .PHONY : auto-tester-test
-auto-tester-test: unittest betterc
+auto-tester-test: unittest
 
 .PHONY: buildkite-test
-buildkite-test: unittest betterC
+buildkite-test: unittest betterc
 
 .DELETE_ON_ERROR: # GNU Make directive (delete output files on error)
