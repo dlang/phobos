@@ -1980,7 +1980,7 @@ private
                 enum timedWait = false;
             }
 
-            static assert(Ops.length); 
+            static assert(Ops.length);
 
             bool onStandardMsg(ref Message msg)
             {
@@ -2005,11 +2005,11 @@ private
                     {
                         if(i + 1 == Ops.length)
                         {
-                            return false; 
+                            return false;
                         }
                     }
                 }
-                assert(0); 
+                assert(0);
             }
 
             bool onLinkDeadMsg(ref Message msg)
