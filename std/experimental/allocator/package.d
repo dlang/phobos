@@ -1629,6 +1629,16 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length)
     assert(c.equal([0, 0, 0, 0, 0]));
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=19085 - makeArray with void
+@system unittest
+{
+    auto b = theAllocator.makeArray!void(5);
+    scope(exit) theAllocator.dispose(b);
+    auto c = cast(ubyte[]) b;
+    assert(c.length == 5);
+    assert(c == [0, 0, 0, 0, 0]); // default initialization
+}
+
 private enum hasPurePostblit(T) = !hasElaborateCopyConstructor!T ||
     is(typeof(() pure { T.init.__xpostblit(); }));
 
