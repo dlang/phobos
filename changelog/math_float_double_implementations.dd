@@ -1,0 +1,15 @@
+Single- and double-precision implementations for (a)tan and exp function families
+
+The `float` and `double` overloads of
+$(REF atan, std, math), $(REF atan2, std, math), $(REF tan, std, math),
+$(REF exp, std, math), $(REF expm1, std, math) and $(REF exp2, std, math)
+previously forwarded to the `real` implementation (inline assembly) and
+now got proper 'software' implementations in the corresponding precision.
+
+While this may result in a slowdown in some cases for DMD (especially for
+`exp()` and `exp2()`), the overall speed-up factor for LDC is > 3, for
+both `double` and `float`.
+
+This also implies less precise results, especially in single-precision,
+so if your code depended on more accurate results via 80-bit intermediate
+precision, you'll have to cast the argument(s) explicitly now.
