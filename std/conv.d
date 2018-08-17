@@ -2671,11 +2671,13 @@ if (isSomeString!Source && !is(Source == enum) &&
 
     auto a_str = "a";
     auto a_result = tryParse!EnumType(a_str);
+    assert(a_str == "");        // should be consumed
     assert(!a_result.isNull &&
            a_result.get == EnumType.a);
 
     auto z_str = "z";
-    auto z_result = tryParse!EnumType(z_str);
+    const z_result = tryParse!EnumType(z_str);
+    assert(z_str == "z");       // sholdn't be consumed
     assert(z_result.isNull);
 }
 
