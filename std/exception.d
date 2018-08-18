@@ -629,7 +629,7 @@ alias errnoEnforce = enforce!ErrnoException;
 @system unittest
 {
     import core.stdc.stdio : fclose, fgets, fopen;
-    auto f = fopen(__FILE__, "r").errnoEnforce;
+    auto f = fopen(__FILE_FULL_PATH__, "r").errnoEnforce;
     scope(exit) fclose(f);
     char[100] buf;
     auto line = fgets(buf.ptr, buf.length, f);
