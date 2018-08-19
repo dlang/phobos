@@ -2356,13 +2356,14 @@ private void formatUnsigned(Writer, T, Char)
     size_t leftpad = 0;
     size_t rightpad = 0;
 
+    immutable size_t dlen = digits.length == 0 ? 0 : digits.length - 1;
     immutable ptrdiff_t spacesToPrint =
         fs.width - (
               (prefix1 != 0)
             + (prefix2 != 0)
             + zerofill
             + digits.length
-            + ((fs.flSeparator != 0) * ((digits.length - 1) / fs.separators))
+            + ((fs.flSeparator != 0) * (dlen / fs.separators))
         );
     if (spacesToPrint > 0) // need to do some padding
     {
@@ -2427,6 +2428,11 @@ private void formatUnsigned(Writer, T, Char)
 
     foreach (i ; 0 .. rightpad)
         put(w, ' ');
+}
+
+@safe pure unittest  // bugzilla 18838
+{
+    assert("%12,d".format(0) == "           0");
 }
 
 @safe pure unittest
