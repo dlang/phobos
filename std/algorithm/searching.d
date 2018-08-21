@@ -4073,8 +4073,9 @@ template skipOver(alias pred = (a, b) => a == b)
             {
                 import std.algorithm.iteration : map;
                 import std.algorithm.searching : minElement;
+                import std.range : only;
                 // Shortcut opportunity!
-                if (needles.map!(a => a.length).minElement > haystack.length)
+                if (needles.only.map!(a => a.length).minElement > haystack.length)
                     return false;
             }
 
@@ -4351,6 +4352,21 @@ template skipOver(alias pred = (a, b) => a == b)
     assert(s2.skipOver(""));
     assert(s2.skipOver("", ""));
     assert(s2.skipOver("", "foo"));
+}
+
+// dxml regression
+@safe unittest
+{
+    import std.utf : byCodeUnit;
+    import std.algorithm.comparison : equal;
+
+    bool stripStartsWith(Text)(ref Text text, string needle)
+    {
+        return text.skipOver(needle.byCodeUnit());
+    }
+    auto text = "<xml></xml>"d.byCodeUnit;
+    assert(stripStartsWith(text, "<xml>"));
+    assert(text.equal("</xml>"));
 }
 
 /**
