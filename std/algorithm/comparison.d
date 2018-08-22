@@ -66,6 +66,8 @@ import std.traits;
 import std.meta : allSatisfy;
 import std.typecons; // : tuple, Tuple, Flag, Yes;
 
+import std.internal.attributes : betterC;
+
 /**
 Find `value` _among `values`, returning the 1-based index
 of the first matching value in `values`, or `0` if `value`
@@ -116,7 +118,7 @@ if (isExpressionTuple!values)
 }
 
 ///
-@safe unittest
+@safe @betterC unittest
 {
     assert(3.among(1, 42, 24, 3, 2));
 
@@ -133,7 +135,7 @@ if (isExpressionTuple!values)
 Alternatively, `values` can be passed at compile-time, allowing for a more
 efficient search, but one that only supports matching on equality:
 */
-@safe unittest
+@safe @betterC unittest
 {
     assert(3.among!(2, 3, 4));
     assert("bar".among!("foo", "bar", "baz") == 2);
@@ -541,7 +543,7 @@ do
 }
 
 ///
-@safe unittest
+@safe @betterC unittest
 {
     assert(clamp(2, 1, 3) == 2);
     assert(clamp(0, 1, 3) == 1);
@@ -1575,7 +1577,7 @@ if (T.length >= 2)
 }
 
 ///
-@safe unittest
+@safe @betterC unittest
 {
     int a = 5;
     short b = 6;
@@ -1687,7 +1689,7 @@ if (T.length >= 2)
 }
 
 ///
-@safe unittest
+@safe @betterC unittest
 {
     int a = 5;
     short b = 6;
@@ -1698,15 +1700,23 @@ if (T.length >= 2)
     auto e = min(a, b, c);
     static assert(is(typeof(e) == double));
     assert(e == 2);
+}
 
-    // With arguments of mixed signedness, the return type is the one that can
-    // store the lowest values.
-    a = -10;
+/**
+With arguments of mixed signedness, the return type is the one that can
+store the lowest values.
+*/
+@safe @betterC unittest
+{
+    int a = -10;
     uint f = 10;
     static assert(is(typeof(min(a, f)) == int));
     assert(min(a, f) == -10);
+}
 
-    // User-defined types that support comparison with < are supported.
+/// User-defined types that support comparison with < are supported.
+@safe unittest
+{
     import std.datetime;
     assert(min(Date(2012, 12, 21), Date(1982, 1, 4)) == Date(1982, 1, 4));
     assert(min(Date(1982, 1, 4), Date(2012, 12, 21)) == Date(1982, 1, 4));
@@ -1985,7 +1995,7 @@ if (isInputRange!Range1 &&
 }
 
 // Test CTFE
-@safe pure unittest
+@safe pure @betterC unittest
 {
     enum result1 = isSameLength([1, 2, 3], [4, 5, 6]);
     static assert(result1);
@@ -2273,7 +2283,7 @@ if (alternatives.length >= 1 &&
 }
 
 ///
-@safe pure unittest
+@safe pure @betterC unittest
 {
     const a = 1;
     const b = 2;
@@ -2292,7 +2302,11 @@ if (alternatives.length >= 1 &&
     auto ef = either(e, f);
     static assert(is(typeof(ef) == int));
     assert(ef == f);
+}
 
+///
+@safe pure unittest
+{
     immutable p = 1;
     immutable q = 2;
     auto pq = either(p, q);
@@ -2303,7 +2317,11 @@ if (alternatives.length >= 1 &&
     assert(either(0, 4) == 4);
     assert(either(0, 0) == 0);
     assert(either("", "a") == "");
+}
 
+///
+@safe pure unittest
+{
     string r = null;
     assert(either(r, "a") == "a");
     assert(either("a", "") == "a");

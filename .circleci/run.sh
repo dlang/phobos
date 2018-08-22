@@ -73,7 +73,7 @@ setup_repos()
         git checkout -f FETCH_HEAD
     fi
 
-    for proj in dmd druntime ; do
+    for proj in dmd druntime tools ; do
         if [ $base_branch != master ] && [ $base_branch != stable ] &&
             ! git ls-remote --exit-code --heads https://github.com/dlang/$proj.git $base_branch > /dev/null; then
             # use master as fallback for other repos to test feature branches
@@ -125,13 +125,11 @@ publictests()
 {
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"
 
-    # checkout a specific version of https://github.com/dlang/tools
-    if [ ! -d ../tools ] ; then
-        clone https://github.com/dlang/tools.git ../tools master
-    fi
-    git -C ../tools checkout 6ad91215253b52e6ecfc39fe1854815867c66f23
-
     make -f posix.mak -j$N publictests DUB=$DUB BUILD=$BUILD
+
+    # run -betterC tests
+    make -f posix.mak test_extractor # build in single-threaded mode
+    make -f posix.mak -j$N betterc
 }
 
 # test stdx dub package
