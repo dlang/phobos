@@ -5106,9 +5106,8 @@ slurp(Types...)(string filename, scope const(char)[] format)
     scope(exit) f.close();
     foreach (line; f.byLine())
     {
-        line = stripRight(line, "\r");
         formattedRead(line, format, &toAdd);
-        enforce(line.empty,
+        enforce(line.stripRight("\r").empty,
                 text("Trailing characters at the end of line: `", line,
                         "'"));
         app.put(toAdd);
