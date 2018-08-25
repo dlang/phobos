@@ -3368,6 +3368,7 @@ if (isSomeChar!C)
 // Ranges of code units for testing.
 version(unittest)
 {
+private:
     struct InputCU(C)
     {
         import std.conv : to;
@@ -4122,7 +4123,7 @@ pure @safe nothrow @nogc unittest
 }
 
 version(unittest)
-int impureVariable;
+private int impureVariable;
 
 @system unittest
 {

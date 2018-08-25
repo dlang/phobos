@@ -10417,7 +10417,7 @@ afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
     assertThrown!DateTimeException(parseRFC822DateTime(badStr));
 }
 
-version(unittest) void testParse822(alias cr)(string str, SysTime expected, size_t line = __LINE__)
+version(unittest) private void testParse822(alias cr)(string str, SysTime expected, size_t line = __LINE__)
 {
     import std.format : format;
     auto value = cr(str);
@@ -10426,7 +10426,7 @@ version(unittest) void testParse822(alias cr)(string str, SysTime expected, size
         throw new AssertError(format("wrong result. expected [%s], actual[%s]", expected, result), __FILE__, line);
 }
 
-version(unittest) void testBadParse822(alias cr)(string str, size_t line = __LINE__)
+version(unittest) private void testBadParse822(alias cr)(string str, size_t line = __LINE__)
 {
     try
         parseRFC822DateTime(cr(str));
@@ -11365,6 +11365,7 @@ if (isIntegral!T && isSigned!T) // The constraints on R were already covered by 
 
 version(unittest)
 {
+private:
     // Variables to help in testing.
     Duration currLocalDiffFromUTC;
     immutable (TimeZone)[] testTZs;

@@ -1340,7 +1340,7 @@ int highestPowerBelowUlongMax(uint x) pure nothrow @safe
 version(unittest)
 {
 
-int slowHighestPowerBelowUintMax(uint x) pure nothrow @safe
+private int slowHighestPowerBelowUintMax(uint x) pure nothrow @safe
 {
      int pwr = 1;
      for (ulong q = x;x*q < cast(ulong) uint.max; )

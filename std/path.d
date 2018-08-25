@@ -4154,6 +4154,7 @@ string expandTilde(string inputPath) @safe nothrow
 
 version(unittest)
 {
+private:
     /* Define a mock RandomAccessRange to use for unittesting.
      */
 

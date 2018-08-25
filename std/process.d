@@ -3078,6 +3078,7 @@ if (is(typeof(allocator(size_t.init)[0] = char.init)))
 
 version(Windows) version(unittest)
 {
+private:
     import core.stdc.stddef;
     import core.stdc.wchar_ : wcslen;
     import core.sys.windows.shellapi : CommandLineToArgvW;

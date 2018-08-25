@@ -5125,7 +5125,7 @@ version(unittest) private class __conv_EmplaceTestClass
 version(unittest)
 {
     //Ambiguity
-    struct __std_conv_S
+    private struct __std_conv_S
     {
         int i;
         this(__std_conv_SS ss)         {assert(0);}
@@ -5135,7 +5135,7 @@ version(unittest)
             return s;
         }
     }
-    struct __std_conv_SS
+    private struct __std_conv_SS
     {
         int j;
         __std_conv_S s;

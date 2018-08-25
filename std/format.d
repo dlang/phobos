@@ -4582,7 +4582,7 @@ private T getNth(string kind, alias Condition, T, A...)(uint index, A args)
 /* ======================== Unit Tests ====================================== */
 
 version(unittest)
-void formatTest(T)(T val, string expected, size_t ln = __LINE__, string fn = __FILE__)
+private void formatTest(T)(T val, string expected, size_t ln = __LINE__, string fn = __FILE__)
 {
     import core.exception : AssertError;
     import std.array : appender;
@@ -4596,7 +4596,7 @@ void formatTest(T)(T val, string expected, size_t ln = __LINE__, string fn = __F
 }
 
 version(unittest)
-void formatTest(T)(string fmt, T val, string expected, size_t ln = __LINE__, string fn = __FILE__) @safe
+private void formatTest(T)(string fmt, T val, string expected, size_t ln = __LINE__, string fn = __FILE__) @safe
 {
     import core.exception : AssertError;
     import std.array : appender;
@@ -4609,7 +4609,7 @@ void formatTest(T)(string fmt, T val, string expected, size_t ln = __LINE__, str
 }
 
 version(unittest)
-void formatTest(T)(T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__)
+private void formatTest(T)(T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__)
 {
     import core.exception : AssertError;
     import std.array : appender;
@@ -4627,7 +4627,7 @@ void formatTest(T)(T val, string[] expected, size_t ln = __LINE__, string fn = _
 }
 
 version(unittest)
-void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__) @safe
+private void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__) @safe
 {
     import core.exception : AssertError;
     import std.array : appender;
@@ -5109,7 +5109,7 @@ here:
 }
 
 version(unittest)
-void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = __FILE__, size_t ln = __LINE__)
+private void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = __FILE__, size_t ln = __LINE__)
 {
     import core.exception : AssertError;
     import std.array : appender;
@@ -5151,7 +5151,7 @@ void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = _
 }
 
 version(unittest)
-void formatReflectTest(T)(ref T val, string fmt, string[] formatted, string fn = __FILE__, size_t ln = __LINE__)
+private void formatReflectTest(T)(ref T val, string fmt, string[] formatted, string fn = __FILE__, size_t ln = __LINE__)
 {
     import core.exception : AssertError;
     import std.array : appender;

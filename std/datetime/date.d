@@ -10418,6 +10418,7 @@ if (isSomeString!T)
 
 version(unittest)
 {
+private:
     // All of these helper arrays are sorted in ascending order.
     auto testYearsBC = [-1999, -1200, -600, -4, -1, 0];
     auto testYearsAD = [1, 4, 1000, 1999, 2000, 2012];
