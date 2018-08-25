@@ -2290,6 +2290,13 @@ if ((isRandomAccessRange!R && hasSlicing!R ||
 {
     static struct PathSplitter
     {
+        T opCast(T)() const @safe pure nothrow
+        if (is(T == R[]))
+        {
+            import std.array : array;
+            return array(typeof(cast() this)(_path));
+        }
+
         @property bool empty() const { return pe == 0; }
 
         @property R front()
@@ -2469,6 +2476,14 @@ if ((isRandomAccessRange!R && hasSlicing!R ||
         assert(equal(pathSplitter(`c:\foo\bar`), [`c:\`, "foo", "bar"]));
         assert(equal(pathSplitter(`c:foo\bar`), ["c:foo", "bar"]));
     }
+}
+
+@safe pure nothrow unittest
+{
+    import std.conv : to;
+    assert("foo/bar".pathSplitter.to!(string[]) == ["foo", "bar"]);
+    const(char)[] p = "foo/bar";
+    const(char)[][] splt = p.pathSplitter.to!(const(char)[][]);
 }
 
 auto pathSplitter(R)(auto ref R path)
