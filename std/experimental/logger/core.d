@@ -685,19 +685,27 @@ that logger is called.
 */
 enum LogLevel : ubyte
 {
-    all = 1, /** Lowest possible assignable `LogLevel`. */
-    trace = 32, /** `LogLevel` for tracing the execution of the program. */
-    info = 64, /** This level is used to display information about the
-                program. */
-    warning = 96, /** warnings about the program should be displayed with this
-                   level. */
-    error = 128, /** Information about errors should be logged with this
-                   level.*/
-    critical = 160, /** Messages that inform about critical errors should be
-                    logged with this level. */
-    fatal = 192,   /** Log messages that describe fatal errors should use this
-                  level. */
-    off = ubyte.max /** Highest possible `LogLevel`. */
+    /** Lowest possible assignable `LogLevel`. */
+    all = 1,
+    /** `LogLevel` for tracing the execution of the program. */
+    trace = 32,
+    /** This level is used to display information about the
+    program. */
+    info = 64,
+    /** warnings about the program should be displayed with this
+    level. */
+    warning = 96,
+    /** Information about errors should be logged with this
+    level.*/
+    error = 128,
+    /** Messages that inform about critical errors should be
+    logged with this level. */
+    critical = 160,
+    /** Log messages that describe fatal errors should use this
+    level. */
+    fatal = 192,
+    /** Highest possible `LogLevel`. */
+    off = ubyte.max
 }
 
 /** This class is the base of every logger. In order to create a new kind of
