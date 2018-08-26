@@ -5098,6 +5098,7 @@ slurp(Types...)(string filename, scope const(char)[] format)
     import std.exception : enforce;
     import std.format : formattedRead;
     import std.stdio : File;
+    import std.string : stripRight;
 
     auto app = appender!(typeof(return))();
     ElementType!(typeof(return)) toAdd;
@@ -5106,7 +5107,7 @@ slurp(Types...)(string filename, scope const(char)[] format)
     foreach (line; f.byLine())
     {
         formattedRead(line, format, &toAdd);
-        enforce(line.empty,
+        enforce(line.stripRight("\r").empty,
                 text("Trailing characters at the end of line: `", line,
                         "'"));
         app.put(toAdd);
@@ -5133,6 +5134,19 @@ slurp(Types...)(string filename, scope const(char)[] format)
     assert(a.length == 2);
     assert(a[0] == tuple(12, 12.25));
     assert(a[1] == tuple(345, 1.125));
+}
+
+@system unittest
+{
+    import std.typecons : tuple;
+
+    scope(exit)
+    {
+        assert(exists(deleteme));
+        remove(deleteme);
+    }
+    write(deleteme, "10\r\n20");
+    assert(slurp!(int)(deleteme, "%d") == [10, 20]);
 }
 
 
