@@ -2438,6 +2438,7 @@ if (is(T == function))
 
 version(unittest)
 {
+private:
     // Some function types to test.
     int sc(scope int, ref int, out int, lazy int, int);
     extern(System) int novar();
@@ -7873,7 +7874,7 @@ if (sth.length == 1)
     static assert(TL == AliasSeq!("i", "xi", "yi"));
 }
 
-version(unittest) void freeFunc(string);
+version(unittest) private void freeFunc(string);
 
 @safe unittest
 {
