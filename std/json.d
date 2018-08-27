@@ -180,7 +180,7 @@ struct JSONValue
      * Throws: `JSONException` for read access if `type` is not
      * `JSONType.integer`.
      */
-    @property inout(long) integer() inout pure @safe
+    @property long integer() const pure @safe
     {
         enforce!JSONException(type == JSONType.integer,
                                 "JSONValue is not an integer");
@@ -198,7 +198,7 @@ struct JSONValue
      * Throws: `JSONException` for read access if `type` is not
      * `JSONType.uinteger`.
      */
-    @property inout(ulong) uinteger() inout pure @safe
+    @property ulong uinteger() const pure @safe
     {
         enforce!JSONException(type == JSONType.uinteger,
                                 "JSONValue is not an unsigned integer");
@@ -217,7 +217,7 @@ struct JSONValue
      * Throws: `JSONException` for read access if `type` is not
      * `JSONType.float_`.
      */
-    @property inout(double) floating() inout pure @safe
+    @property double floating() const pure @safe
     {
         enforce!JSONException(type == JSONType.float_,
                                 "JSONValue is not a floating type");
