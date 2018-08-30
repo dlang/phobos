@@ -1123,7 +1123,7 @@ if (!isInstanceOf!(Unexpected, T)) // an `Unexpected` cannot be `Expected` :)
     // - _ok = true (better to have _isError so default is zero bits here aswell?)
 
     /// Construct from expected value `expectedValue.`
-    this(T expectedValue) @trusted
+    this()(auto ref T expectedValue) @trusted
     {
         // TODO reuse opAssign?
         _expectedValue = expectedValue;       // TODO use `moveEmplace` here aswell?
@@ -1139,7 +1139,7 @@ if (!isInstanceOf!(Unexpected, T)) // an `Unexpected` cannot be `Expected` :)
     }
 
     /// Assign from expected value `expectedValue.`
-    void opAssign(T expectedValue) @trusted
+    void opAssign()(auto ref T expectedValue) @trusted
     {
         // TODO is this ok?:
         clear();
