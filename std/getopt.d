@@ -1617,6 +1617,9 @@ foreach (it; opt)
 }
 ------------
 
+For printing on `stderr` instead, see the documentation of the function
+`defaultGetoptFormatter`.
+
 Params:
     text = The text to printed at the beginning of the help output.
     opt = The `Option` extracted from the `getopt` parameter.
@@ -1631,6 +1634,13 @@ void defaultGetoptPrinter(string text, Option[] opt)
 /** This function writes the passed text and `Option` into an output range
 in the manner described in the documentation of function
 `defaultGetoptPrinter`.
+
+The following prints `text` and `Option`s `opt` on `stderr`:
+
+------------
+import std.stdio : stderr;
+defaultGetoptFormatter(stderr.lockingTextWriter, text, opt);
+------------
 
 Params:
     output = The output range used to write the help information.
