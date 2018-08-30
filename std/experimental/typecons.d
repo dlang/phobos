@@ -1327,5 +1327,5 @@ inout(string) threeUnderscores(inout(string) x) @safe pure nothrow @nogc
 
 import std.traits : isPointer;
 
-private enum isAddress(T) = (is(T == class) || // a class is memory-wise
-                             isPointer!T);     // just a pointer, consistent with opCmp
+private enum isAddress(T) = (is(T == class) ||
+                             isPointer!T);
