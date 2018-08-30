@@ -1118,6 +1118,8 @@ private struct Unexpected(E)
 struct Expected(T, E = Exception)
 if (!isInstanceOf!(Unexpected, T)) // an `Unexpected` cannot be `Expected` :)
 {
+    import std.algorithm.mutation : moveEmplace;
+
     // TODO ok for default construction to initialize
     // - _expectedValue = T.init (zeros)
     // - _ok = true (better to have _isError so default is zero bits here aswell?)
@@ -1126,7 +1128,7 @@ if (!isInstanceOf!(Unexpected, T)) // an `Unexpected` cannot be `Expected` :)
     this()(auto ref T expectedValue) @trusted
     {
         // TODO reuse opAssign?
-        _expectedValue = expectedValue;       // TODO use `moveEmplace` here aswell?
+        moveEmplace(expectedValue, _expectedValue);
         _ok = true;
     }
 
@@ -1134,7 +1136,7 @@ if (!isInstanceOf!(Unexpected, T)) // an `Unexpected` cannot be `Expected` :)
     this(Unexpected!E unexpectedValue) @trusted
     {
         // TODO reuse opAssign?
-        _unexpectedValue = unexpectedValue; // TODO use `moveEmplace` here aswell?
+        moveEmplace(unexpectedValue, _unexpectedValue);
         _ok = false;
     }
 
@@ -1143,7 +1145,6 @@ if (!isInstanceOf!(Unexpected, T)) // an `Unexpected` cannot be `Expected` :)
     {
         // TODO is this ok?:
         clear();
-        import std.algorithm.mutation : moveEmplace;
         moveEmplace(expectedValue, _expectedValue);
         _ok = true;
     }
@@ -1152,7 +1153,6 @@ if (!isInstanceOf!(Unexpected, T)) // an `Unexpected` cannot be `Expected` :)
     void opAssign(E unexpectedValue) @trusted
     {
         clear();
-        import std.algorithm.mutation : moveEmplace;
         moveEmplace(unexpectedValue, _unexpectedValue);
         _ok = false;
     }
