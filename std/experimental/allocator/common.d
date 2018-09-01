@@ -832,6 +832,7 @@ private template isAllZeroBits(T, T value)
     else static if (is(typeof(value is 0)))
         enum isAllZeroBits = value is 0;
     else static if (isStaticArray!(typeof(value)))
+    {
         enum isAllZeroBits = ()
         {
 
@@ -846,6 +847,7 @@ private template isAllZeroBits(T, T value)
             }
             else return false;
         }();
+    }
     else static if (is(typeof(value) == struct) || is(typeof(value) == union))
         enum isAllZeroBits = ()
         {
@@ -937,8 +939,10 @@ zero bits? Padding between a struct's fields is not considered.
 +/
 package template isInitAllZeroBits(T)
 {
-    static if (isStaticArray!T && __traits(compiles, T.init[0]))
-        enum isInitAllZeroBits = __traits(compiles, {
+    static if (is(Unqual!T == void))
+        enum isInitAllZeroBits = true;
+    else static if (isStaticArray!T && __traits(compiles, T.init[0]))
+        enum isInitAllZeroBits = is(Unqual!(typeof(T.init[0])) == void) || __traits(compiles, {
             static assert(isAllZeroBits!(typeof(T.init[0]), T.init[0]));
         });
     else
@@ -1021,6 +1025,14 @@ package template isInitAllZeroBits(T)
     // Check that it works with const.
     static assert(isInitAllZeroBits!(const(Mt19937)) == isInitAllZeroBits!Mt19937);
     static assert(isInitAllZeroBits!(const(S5)) == isInitAllZeroBits!S5);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=19085
+@safe unittest
+{
+    static assert(isInitAllZeroBits!(void[]));
+    static assert(isInitAllZeroBits!(void[10]));
+    static assert(isInitAllZeroBits!(void));
 }
 
 /+
