@@ -1101,47 +1101,12 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
      */
     override size_t toHash() nothrow @safe
     {
-        import std.traits : hasMember;
-
-        auto thisRange = this[];
-
-        static if (hasMember!(Elem, "toHash"))
-        {
-            size_t hash = 0;
-
-            static if (is(T == class) || is(T == interface))
-            {
-                foreach (ref e; thisRange)
-                {
-                    hash += (e is null ? 0 : e.toHash()) + 0x9e3779b9 + (hash << 6) + (hash >>> 2);
-                }
-            }
-            else
-            {
-                foreach (ref e; thisRange)
-                {
-                    hash += e.toHash() + 0x9e3779b9 + (hash << 6) + (hash >>> 2);
-                }
-            }
-
-            return hash;
-        }
-        else
-        {
-            static size_t hashOf(T)(ref T objToHash)
-            {
-                return (() @trusted => typeid(objToHash).getHash(&objToHash))();
-            }
-
-            size_t hash = 0;
-
-            foreach (ref e; thisRange)
-            {
-                hash += hashOf(e) + 0x9e3779b9 + (hash << 6) + (hash >>> 2);
-            }
-
-            return hash;
-        }
+        size_t hash = cast(size_t) 0x6b63_616c_4264_6552UL;
+        foreach (ref e; this[])
+            // As in boost::hash_combine
+            // https://www.boost.org/doc/libs/1_55_0/doc/html/hash/reference.html#boost.hash_combine
+            hash += .hashOf(e) + 0x9e3779b9 + (hash << 6) + (hash >>> 2);
+        return hash;
     }
 
     static if (doUnittest) @system unittest
