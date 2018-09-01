@@ -146,7 +146,7 @@
  * )
  * )
  *
- * Copyright: Copyright Digital Mars 2005 - 2009.
+ * Copyright: Copyright The D Language Foundation 2005 - 2009.
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(HTTP digitalmars.com, Walter Bright),
  *            Tomasz Stachowiak (`isExpressions`),
@@ -158,7 +158,7 @@
  *            Shoichi Kato
  * Source:    $(PHOBOSSRC std/traits.d)
  */
-/*          Copyright Digital Mars 2005 - 2009.
+/*          Copyright The D Language Foundation 2005 - 2009.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)

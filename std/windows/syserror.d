@@ -3,12 +3,12 @@
 /**
  * Convert Win32 error code to string.
  *
- * Copyright: Copyright Digital Mars 2006 - 2013.
+ * Copyright: Copyright The D Language Foundation" 2006 - 2013.
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(HTTP digitalmars.com, Walter Bright)
  * Credits:   Based on code written by Regan Heath
  */
-/*          Copyright Digital Mars 2006 - 2013.
+/*          Copyright The D Language Foundation" 2006 - 2013.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)

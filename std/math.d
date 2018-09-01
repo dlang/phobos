@@ -106,7 +106,7 @@ $(TR $(TDNW Hardware Control) $(TD
  *      SQRT = &radic;
  *      HALF = &frac12;
  *
- * Copyright: Copyright Digital Mars 2000 - 2011.
+ * Copyright: Copyright The D Language Foundation 2000 - 2011.
  *            D implementations of tan, atan, atan2, exp, expm1, exp2, log, log10, log1p,
  *            log2, floor, ceil and lrint functions are based on the CEPHES math library,
  *            which is Copyright (C) 2001 Stephen L. Moshier $(LT)steve@moshier.net$(GT)
