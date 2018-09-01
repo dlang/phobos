@@ -1022,14 +1022,24 @@ public:
      * arithmetic conversions.
      */
     VariantN opBinary(string op, T)(T rhs)
-    if ((op == "+" || op == "-" || op == "*" || op == "/" || op == "^^") && 
+    if ((op == "+" || op == "-" || op == "*" || op == "/" || op == "^^" || op == "%") &&
         is(typeof(opArithmetic!(T, op)(rhs))))
     { return opArithmetic!(T, op)(rhs); }
     ///ditto
     VariantN opBinary(string op, T)(T rhs)
-    if ((op == "&" || op == "|" || op == "^" || op == ">>" || op == "<<" || op == ">>>") && 
+    if ((op == "&" || op == "|" || op == "^" || op == ">>" || op == "<<" || op == ">>>") &&
         is(typeof(opLogic!(T, op)(rhs))))
     { return opLogic!(T, op)(rhs); }
+    ///ditto
+    VariantN opBinaryRight(string op, T)(T lhs)
+    if ((op == "+" || op == "*") &&
+        is(typeof(opArithmetic!(T, op)(lhs))))
+    { return opArithmetic!(T, op)(lhs); }
+    ///ditto
+    VariantN opBinaryRight(string op, T)(T lhs)
+    if ((op == "&" || op == "|" || op == "^") &&
+        is(typeof(opLogic!(T, op)(lhs))))
+    { return opLogic!(T, op)(lhs); }
     ///ditto
     VariantN opCat(T)(T rhs)
     {
@@ -2994,4 +3004,5 @@ if (isAlgebraic!VariantType && Handler.length > 0)
     S s;
     Variant v;
     auto b = v | s;
+    assert(b == 3);
 }
