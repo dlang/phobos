@@ -945,6 +945,10 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     Hook).max) and if `Hook` defines `onUpperBound`, the payload is assigned
     from $(D hook.onUpperBound(result, min)).
 
+    If the right-hand side is also a Checked but with a different hook or
+    underlying type, the hook and underlying type of this Checked takes
+    precedence.
+
     In all other cases, the built-in behavior is carried out.
 
     Params:
@@ -991,6 +995,13 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
             payload = cast(T) r;
         }
         return this;
+    }
+
+    /// ditto
+    ref Checked opOpAssign(string op, Rhs)(const Rhs rhs) return
+    if (is(Rhs == Checked!(RhsT, RhsHook), RhsT, RhsHook))
+    {
+        return opOpAssign!(op, typeof(rhs.payload))(rhs.payload);
     }
 
     ///
@@ -3100,4 +3111,17 @@ version(unittest) private struct CountOpBinary
     assert(y < x);
     x = -1;
     assert(x > y);
+}
+
+@nogc nothrow pure @safe unittest
+{
+    alias cint = Checked!(int, void);
+    cint a = 1, b = 2;
+    a += b;
+    assert(a == cint(3));
+
+    alias ccint = Checked!(cint, Saturate);
+    ccint c = 14;
+    a += c;
+    assert(a == cint(17));
 }
