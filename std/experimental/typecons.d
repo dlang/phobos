@@ -1315,7 +1315,7 @@ auto unexpected(T, E)(auto ref E unexpectedValue)
            Esi("abcabc"[3 .. 6]));
 
     const s = "abc";
-    auto x = Esi(s);
+    auto x = Esi(s);            // construct with ref parameter
     assert(s == "abc");
 
     assert(x.hasExpectedValue);
