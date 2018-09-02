@@ -1131,7 +1131,7 @@ if (!isInstanceOf!(Unexpected, T)) // an `Unexpected` cannot be `Expected` :)
         _ok = true;
     }
     /// ditto
-    this(const scope ref T expectedValue)
+    this(ref T expectedValue)
     {
         _expectedValue = expectedValue; // TODO do we need to care about `_expectedValue` init value??
         _ok = true;
@@ -1144,7 +1144,7 @@ if (!isInstanceOf!(Unexpected, T)) // an `Unexpected` cannot be `Expected` :)
         _ok = false;
     }
     /// ditto
-    this(const scope ref Unexpected!E unexpectedValue)
+    this(ref Unexpected!E unexpectedValue)
     {
         _unexpectedValue = unexpectedValue; // TODO do we need to care about `_unexpectedValue` init value??
         _ok = false;
