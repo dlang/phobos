@@ -1113,6 +1113,10 @@ private struct Unexpected(E)
  * "collectively" for instance when both are pointers or classes (use trait
  * `isAddress`)
  *
+ * TODO ok for default construction to initialize
+ * - _expectedValue = T.init (zeros)
+ * - _ok = true (better to have _isError so default is zero bits here aswell?)
+ *
  * TODO ok to default `E` to `Exception`?
  */
 struct Expected(T, E = Exception)
@@ -1120,23 +1124,23 @@ if (!isInstanceOf!(Unexpected, T)) // an `Unexpected` cannot be `Expected` :)
 {
     import std.algorithm.mutation : moveEmplace;
 
-    // TODO ok for default construction to initialize
-    // - _expectedValue = T.init (zeros)
-    // - _ok = true (better to have _isError so default is zero bits here aswell?)
-
     /// Construct from expected value `expectedValue.`
     this()(auto ref T expectedValue) @trusted
     {
-        // TODO reuse opAssign?
-        moveEmplace(expectedValue, _expectedValue);
+        static if (__traits(isRef, expectedValue))
+            _expectedValue = expectedValue; // TODO do we need to care about `_expectedValue` init value??
+        else
+            moveEmplace(expectedValue, _expectedValue);
         _ok = true;
     }
 
     /// Construct from unexpected value `unexpectedValue.`
     this(Unexpected!E unexpectedValue) @trusted
     {
-        // TODO reuse opAssign?
-        moveEmplace(unexpectedValue, _unexpectedValue);
+        static if (__traits(isRef, unexpectedValue))
+            _unexpectedValue = unexpectedValue; // TODO do we need to care about `_unexpectedValue` init value??
+        else
+            moveEmplace(unexpectedValue, _unexpectedValue);
         _ok = false;
     }
 
@@ -1264,9 +1268,9 @@ if (!isInstanceOf!(Unexpected, T)) // an `Unexpected` cannot be `Expected` :)
     }
 
 private:
-    union
+    union                 // TODO can we be sure this union is zero-initialized before constructor call?
     {
-        T _expectedValue;         // TODO do we need to default-initialize this somehow?
+        T _expectedValue;
         Unexpected!E _unexpectedValue;
     }
 
