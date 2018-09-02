@@ -1268,7 +1268,7 @@ if (!isInstanceOf!(Unexpected, T)) // an `Unexpected` cannot be `Expected` :)
     }
 
 private:
-    union                 // TODO can we be sure this union is zero-initialized before constructor call?
+    union // TODO can we be sure this union is zero-initialized before constructor call?
     {
         T _expectedValue;
         Unexpected!E _unexpectedValue;
@@ -1308,7 +1308,10 @@ auto unexpected(T, E)(auto ref E unexpectedValue)
     assert(Esi("abcabc"[0 .. 3]) ==
            Esi("abcabc"[3 .. 6]));
 
-    auto x = Esi("abc");
+    auto s = "abc";
+    auto x = Esi(s);
+    assert(s == "abc");
+
     assert(x.hasExpectedValue);
     assert(!x.empty);
     assert(x.apply!(threeUnderscores) == Esi("___"));
