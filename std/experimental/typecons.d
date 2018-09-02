@@ -1314,7 +1314,7 @@ auto unexpected(T, E)(auto ref E unexpectedValue)
     assert(Esi("abcabc"[0 .. 3]) ==
            Esi("abcabc"[3 .. 6]));
 
-    auto s = "abc";
+    const s = "abc";
     auto x = Esi(s);
     assert(s == "abc");
 
