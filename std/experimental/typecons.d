@@ -1125,22 +1125,28 @@ if (!isInstanceOf!(Unexpected, T)) // an `Unexpected` cannot be `Expected` :)
     import std.algorithm.mutation : moveEmplace;
 
     /// Construct from expected value `expectedValue.`
-    this()(auto ref T expectedValue) @trusted
+    this(T expectedValue) @trusted
     {
-        static if (__traits(isRef, expectedValue))
-            _expectedValue = expectedValue; // TODO do we need to care about `_expectedValue` init value??
-        else
-            moveEmplace(expectedValue, _expectedValue);
+        moveEmplace(expectedValue, _expectedValue);
+        _ok = true;
+    }
+    /// ditto
+    this(const scope ref T expectedValue)
+    {
+        _expectedValue = expectedValue; // TODO do we need to care about `_expectedValue` init value??
         _ok = true;
     }
 
     /// Construct from unexpected value `unexpectedValue.`
     this(Unexpected!E unexpectedValue) @trusted
     {
-        static if (__traits(isRef, unexpectedValue))
-            _unexpectedValue = unexpectedValue; // TODO do we need to care about `_unexpectedValue` init value??
-        else
-            moveEmplace(unexpectedValue, _unexpectedValue);
+        moveEmplace(unexpectedValue, _unexpectedValue);
+        _ok = false;
+    }
+    /// ditto
+    this(const scope ref Unexpected!E unexpectedValue)
+    {
+        _unexpectedValue = unexpectedValue; // TODO do we need to care about `_unexpectedValue` init value??
         _ok = false;
     }
 
