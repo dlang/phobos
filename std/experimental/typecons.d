@@ -1212,25 +1212,6 @@ if (!isInstanceOf!(Unexpected, T)) // an `Unexpected` cannot be `Expected` :)
         return _ok;
     }
 
-    import std.traits : CommonType;
-
-    /** Get current value if any or call function `elseWorkFun` with compatible return value.
-     *
-     * TODO is this anywhere near what we want?
-     */
-    CommonType!(T, typeof(elseWorkFun())) valueOr(alias elseWorkFun)() const
-    if (is(CommonType!(T, typeof(elseWorkFun()))))
-    {
-        if (hasExpectedValue)
-        {
-            return expectedValue;
-        }
-        else
-        {
-            return elseWorkFun(); // TODO is this correct
-        }
-    }
-
     import std.functional : unaryFun;
 
     /** If `this` is an expected value (of type `T`) apply `fun` on it and
@@ -1289,6 +1270,25 @@ private:
     bool _ok = true;
 }
 
+import std.traits : CommonType;
+
+/** Get value of `self` if any or return call function to `elseFun` with return
+ * value of a type common to `T`.
+ */
+CommonType!(T, typeof(elseFun()))
+valueOr(alias elseFun, T, E)(Expected!(T, E) self)
+if (is(CommonType!(T, typeof(elseFun()))))
+{
+    if (self.hasExpectedValue)
+    {
+        return self._expectedValue;
+    }
+    else
+    {
+        return elseFun();
+    }
+}
+
 /// Insantiator for `Expected` from an expected value `expectedValue.`
 auto expected(T, E)(auto ref T expectedValue)
 {
@@ -1318,6 +1318,12 @@ auto unexpected(T, E)(auto ref E unexpectedValue)
     auto x = Esi(s);            // construct with ref parameter
     assert(s == "abc");
 
+    auto unexpectedByte = unexpected!(T, byte)(byte.init);
+
+    alias elseFun = () => { return "def"; };
+    assert(unexpectedByte.valueOr!(elseFun()) == "def");
+    assert(x.valueOr!(elseFun()) == "abc");
+
     assert(x.hasExpectedValue);
     assert(!x.empty);
     assert(x.apply!(threeUnderscores) == Esi("___"));
@@ -1326,10 +1332,9 @@ auto unexpected(T, E)(auto ref E unexpectedValue)
     assert(!x.hasExpectedValue);
     assert(x.empty);
 
-    auto y = unexpected!(T, byte)(byte.init);
-    assert(!y.hasExpectedValue);
+    assert(!unexpectedByte.hasExpectedValue);
     assert(x.empty);
-    assert(y.apply!(threeUnderscores) == Esi(Unexpected!byte(byte.init)));
+    assert(unexpectedByte.apply!(threeUnderscores) == Esi(Unexpected!byte(byte.init)));
 }
 
 version(unittest)
