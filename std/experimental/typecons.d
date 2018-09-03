@@ -1127,26 +1127,26 @@ if (!isInstanceOf!(Unexpected, T)) // an `Unexpected` cannot be `Expected` :)
     /// Construct from expected value `expectedValue.`
     this(T expectedValue) @trusted
     {
-        moveEmplace(expectedValue, _expectedValue);
+        moveEmplace(expectedValue, _store.expectedValue);
         _ok = true;
     }
     /// ditto
     this(ref T expectedValue)
     {
-        _expectedValue = expectedValue; // TODO do we need to care about `_expectedValue` init value??
+        _store.expectedValue = expectedValue; // TODO do we need to care about `_store.expectedValue` init value??
         _ok = true;
     }
 
     /// Construct from unexpected value `unexpectedValue.`
     this(Unexpected!E unexpectedValue) @trusted
     {
-        moveEmplace(unexpectedValue, _unexpectedValue);
+        moveEmplace(unexpectedValue, _store.unexpectedValue);
         _ok = false;
     }
     /// ditto
     this(ref Unexpected!E unexpectedValue)
     {
-        _unexpectedValue = unexpectedValue; // TODO do we need to care about `_unexpectedValue` init value??
+        _store.unexpectedValue = unexpectedValue; // TODO do we need to care about `_store.unexpectedValue` init value??
         _ok = false;
     }
 
@@ -1155,7 +1155,7 @@ if (!isInstanceOf!(Unexpected, T)) // an `Unexpected` cannot be `Expected` :)
     {
         // TODO is this ok?:
         clear();
-        moveEmplace(expectedValue, _expectedValue);
+        moveEmplace(expectedValue, _store.expectedValue);
         _ok = true;
     }
 
@@ -1163,7 +1163,7 @@ if (!isInstanceOf!(Unexpected, T)) // an `Unexpected` cannot be `Expected` :)
     void opAssign(E unexpectedValue) @trusted
     {
         clear();
-        moveEmplace(unexpectedValue, _unexpectedValue);
+        moveEmplace(unexpectedValue, _store.unexpectedValue);
         _ok = false;
     }
 
@@ -1173,7 +1173,7 @@ if (!isInstanceOf!(Unexpected, T)) // an `Unexpected` cannot be `Expected` :)
         release();
         static if (isAddress!T)
         {
-            _expectedValue = null;
+            _store.expectedValue = null;
         }
     }
 
@@ -1187,7 +1187,7 @@ if (!isInstanceOf!(Unexpected, T)) // an `Unexpected` cannot be `Expected` :)
             {
                 static if (hasElaborateDestructor!T)
                 {
-                    destroy(_expectedValue);
+                    destroy(_store.expectedValue);
                 }
             }
             _ok = false;
@@ -1198,10 +1198,10 @@ if (!isInstanceOf!(Unexpected, T)) // an `Unexpected` cannot be `Expected` :)
             {
                 static if (hasElaborateDestructor!E)
                 {
-                    destroy(_unexpectedValue);
+                    destroy(_store.unexpectedValue);
                 }
             }
-            destroy(_unexpectedValue);
+            destroy(_store.unexpectedValue);
             // TODO change _ok?
         }
     }
@@ -1224,11 +1224,11 @@ if (!isInstanceOf!(Unexpected, T)) // an `Unexpected` cannot be `Expected` :)
         alias fn = unaryFun!fun;
         if (hasExpectedValue)
         {
-            return typeof(return)(fn(_expectedValue));
+            return typeof(return)(fn(_store.expectedValue));
         }
         else
         {
-            return typeof(return)(Unexpected!E(_unexpectedValue));
+            return typeof(return)(Unexpected!E(_store.unexpectedValue));
         }
     }
 
@@ -1244,7 +1244,7 @@ if (!isInstanceOf!(Unexpected, T)) // an `Unexpected` cannot be `Expected` :)
     @property inout(T) front() inout @trusted
     {
         assert(_ok);
-        return _expectedValue;
+        return _store.expectedValue;
     }
 
     /// Pop (clear) current value.
@@ -1255,13 +1255,14 @@ if (!isInstanceOf!(Unexpected, T)) // an `Unexpected` cannot be `Expected` :)
     }
 
 private:
-    union // TODO can we be sure this union is zero-initialized before constructor call?
+    union Store // TODO can we be sure this union is zero-initialized before constructor call?
     {
-        T _expectedValue;
-        Unexpected!E _unexpectedValue;
+        T expectedValue;
+        Unexpected!E unexpectedValue;
     }
+    Store _store;
 
-    /** Is true if `_expectedValue` is defined, otherwise `_unexpectedValue` is
+    /** Is true if `_store.expectedValue` is defined, otherwise `_store.unexpectedValue` is
      * defined.
      *
      * According to @andralex its ok to be opportunistic and default to
@@ -1281,7 +1282,7 @@ if (is(CommonType!(T, typeof(elseFun()))))
 {
     if (self.hasExpectedValue)
     {
-        return self._expectedValue;
+        return self._store.expectedValue;
     }
     else
     {
