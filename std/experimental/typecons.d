@@ -1318,7 +1318,7 @@ auto unexpected(T, E)(auto ref E unexpectedValue)
     auto x = Esi(s);            // construct with ref parameter
     assert(s == "abc");
 
-    auto unexpectedByte = unexpected!(T, byte)(byte.init);
+    auto unexpectedByte = unexpected!(T, E)(E.init);
 
     alias elseFun = () => { return "def"; };
     assert(unexpectedByte.valueOr!(elseFun()) == "def");
@@ -1334,7 +1334,7 @@ auto unexpected(T, E)(auto ref E unexpectedValue)
 
     assert(!unexpectedByte.hasExpectedValue);
     assert(x.empty);
-    assert(unexpectedByte.apply!(threeUnderscores) == Esi(Unexpected!byte(byte.init)));
+    assert(unexpectedByte.apply!(threeUnderscores) == Esi(Unexpected!E(E.init)));
 }
 
 version(unittest)
