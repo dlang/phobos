@@ -74,6 +74,19 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
         return null;
     }
 
+    static if (hasMember!(Allocator, "allocateZeroed"))
+    package(std) void[] allocateZeroed()(size_t bytes)
+    {
+        if (!bytes) return null;
+        if (auto a = allocatorFor(bytes))
+        {
+            const actual = goodAllocSize(bytes);
+            auto result = a.allocateZeroed(actual);
+            return result.ptr ? result.ptr[0 .. bytes] : null;
+        }
+        return null;
+    }
+
     /**
     Allocates the requested `bytes` of memory with specified `alignment`.
     Directs the call to either one of the `buckets` allocators. Defined only
