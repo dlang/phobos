@@ -666,6 +666,6 @@ auto-tester-build: all checkwhitespace
 auto-tester-test: unittest
 
 .PHONY: buildkite-test
-buildkite-test: unittest betterc
+buildkite-test: betterc
 
 .DELETE_ON_ERROR: # GNU Make directive (delete output files on error)
