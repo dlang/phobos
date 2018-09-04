@@ -1056,33 +1056,18 @@ public:
     // }
 
     ///ditto
-    VariantN opAddAssign(T)(T rhs)  { return this = this + rhs; }
-    ///ditto
-    VariantN opSubAssign(T)(T rhs)  { return this = this - rhs; }
-    ///ditto
-    VariantN opMulAssign(T)(T rhs)  { return this = this * rhs; }
-    ///ditto
-    VariantN opDivAssign(T)(T rhs)  { return this = this / rhs; }
-    ///ditto
-    VariantN opModAssign(T)(T rhs)  { return this = this % rhs; }
-    ///ditto
-    VariantN opAndAssign(T)(T rhs)  { return this = this & rhs; }
-    ///ditto
-    VariantN opOrAssign(T)(T rhs)   { return this = this | rhs; }
-    ///ditto
-    VariantN opXorAssign(T)(T rhs)  { return this = this ^ rhs; }
-    ///ditto
-    VariantN opShlAssign(T)(T rhs)  { return this = this << rhs; }
-    ///ditto
-    VariantN opShrAssign(T)(T rhs)  { return this = this >> rhs; }
-    ///ditto
-    VariantN opUShrAssign(T)(T rhs) { return this = this >>> rhs; }
-    ///ditto
-    VariantN opCatAssign(T)(T rhs)
+    VariantN opOpAssign(string op, T)(T rhs)
     {
-        auto toAppend = Variant(rhs);
-        fptr(OpID.catAssign, &store, &toAppend) == 0 || assert(false);
-        return this;
+        static if (op != "~")
+        {
+            mixin("return this = this" ~ op ~ "rhs;");
+        }
+        else
+        {
+            auto toAppend = Variant(rhs);
+            fptr(OpID.catAssign, &store, &toAppend) == 0 || assert(false);
+            return this;
+        }
     }
 
     /**
