@@ -5466,7 +5466,7 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
                     else
                     {
                         // find with one needle returns the range
-                        auto hitValue = needles[0];
+                        auto hitValue = match;
                         hitNr = match.empty ? 0 : 1;
                     }
 
@@ -5813,6 +5813,17 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
         dummyRange.substitute (2, 22, 5, 55, 7, 77).equal([1, 22, 3, 4, 55, 6, 77, 8, 9, 10]);
         dummyRange.substitute!(2, 22, 5, 55, 7, 77).equal([1, 22, 3, 4, 55, 6, 77, 8, 9, 10]);
     }}
+}
+
+// issue 19207
+@safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+    assert([1, 2, 3, 4].substitute([1], [7]).equal([7, 2, 3, 4]));
+    assert([1, 2, 3, 4].substitute([2], [7]).equal([1, 7, 3, 4]));
+    assert([1, 2, 3, 4].substitute([4], [7]).equal([1, 2, 3, 7]));
+    assert([1, 2, 3, 4].substitute([2, 3], [7]).equal([1, 7, 4]));
+    assert([1, 2, 3, 4].substitute([3, 4], [7, 8]).equal([1, 2, 7, 8]));
 }
 
 // sum
