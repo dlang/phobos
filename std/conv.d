@@ -32,7 +32,7 @@ $(TR $(TD Exceptions) $(TD
 ))
 )
 
-Copyright: Copyright Digital Mars 2007-.
+Copyright: Copyright The D Language Foundation 2007-.
 
 License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 

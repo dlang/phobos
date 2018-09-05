@@ -44,7 +44,7 @@ $(TR $(TH Function Name) $(TH Description)
 
    The functions $(LREF formatValue) and $(LREF unformatValue) are
    used for the plumbing.
-   Copyright: Copyright Digital Mars 2000-2013.
+   Copyright: Copyright The D Language Foundation 2000-2013.
 
    License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 

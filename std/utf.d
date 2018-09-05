@@ -52,7 +52,7 @@ $(TR $(TD Miscellaneous) $(TD
         $(LINK2 http://en.wikipedia.org/wiki/Unicode, Wikipedia)<br>
         $(LINK http://www.cl.cam.ac.uk/~mgk25/unicode.html#utf-8)<br>
         $(LINK http://anubis.dkuug.dk/JTC1/SC2/WG2/docs/n1335)
-    Copyright: Copyright Digital Mars 2000 - 2012.
+    Copyright: Copyright The D Language Foundation 2000 - 2012.
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   $(HTTP digitalmars.com, Walter Bright) and
                $(HTTP jmdavisprog.com, Jonathan M Davis)

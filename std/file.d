@@ -66,7 +66,7 @@ $(TR $(TD Other) $(TD
 )
 
 
-Copyright: Copyright Digital Mars 2007 - 2011.
+Copyright: Copyright The D Language Foundation 2007 - 2011.
 See_Also:  The $(HTTP ddili.org/ders/d.en/files.html, official tutorial) for an
 introduction to working with files in D, module
 $(MREF std, stdio) for opening files and manipulating them via handles,
