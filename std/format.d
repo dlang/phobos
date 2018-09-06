@@ -3920,6 +3920,11 @@ if (is(T == class) && !is(T == enum))
             {
                 formatObject(w, val, f);
             }
+            else static if (isForwardRange!T)
+            {
+                auto tmp = val.save;
+                formatRange(w, tmp, f);
+            }
             else static if (isInputRange!T)
             {
                 formatRange(w, val, f);
@@ -3944,7 +3949,6 @@ if (is(T == class) && !is(T == enum))
     // class range (issue 5154)
     auto c = inputRangeObject([1,2,3,4]);
     formatTest( c, "[1, 2, 3, 4]" );
-    assert(c.empty);
     c = null;
     formatTest( c, "null" );
 }
@@ -4084,6 +4088,11 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is
         {
             formatObject(w, val, f);
         }
+        else static if (isForwardRange!T)
+        {
+            auto tmp = val.save;
+            formatRange(w, tmp, f);
+        }
         else static if (isInputRange!T)
         {
             formatRange(w, val, f);
@@ -4164,6 +4173,11 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
     static if (hasToString!(T, Char))
     {
         formatObject(w, val, f);
+    }
+    else static if (isForwardRange!T)
+    {
+        auto tmp = val.save;
+        formatRange(w, tmp, f);
     }
     else static if (isInputRange!T)
     {
@@ -6673,4 +6687,12 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
     cmp = "0100,000";
     tmp  = format("%08,d", 100_000);
     assert(tmp == cmp, tmp);
+}
+
+// Issue 19229
+@safe unittest
+{
+    import std.algorithm.sorting : sort;
+    auto a = [sort([1,2,3])];
+    assert(format("%s", a) == format("%s", a));
 }
