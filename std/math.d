@@ -6063,6 +6063,20 @@ nothrow @nogc:
     else
         static assert(false, "Not implemented for this architecture");
 
+    version (ARM_Any)
+    {
+        static bool hasExceptionTraps_impl() @safe
+        {
+            auto oldState = getControlState();
+            // If exceptions are not supported, we set the bit but read it back as zero
+            // https://sourceware.org/ml/libc-ports/2012-06/msg00091.html
+            setControlState(oldState | divByZeroException);
+            immutable result = (getControlState() & allExceptions) != 0;
+            setControlState(oldState);
+            return result;
+        }
+    }
+
 public:
     /// Returns: true if the current FPU supports exception trapping
     @property static bool hasExceptionTraps() @safe pure
@@ -6075,13 +6089,11 @@ public:
             return true;
         else version(ARM_Any)
         {
-            auto oldState = getControlState();
-            // If exceptions are not supported, we set the bit but read it back as zero
-            // https://sourceware.org/ml/libc-ports/2012-06/msg00091.html
-            setControlState(oldState | divByZeroException);
-            immutable result = (getControlState() & allExceptions) != 0;
-            setControlState(oldState);
-            return result;
+            // The hasExceptionTraps_impl function is basically pure,
+            // as it restores all global state
+            auto fptr = ( () @trusted => cast(bool function() @safe
+                pure nothrow @nogc)&hasExceptionTraps_impl)();
+            return fptr();
         }
         else
             assert(0, "Not yet supported");
