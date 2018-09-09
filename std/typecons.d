@@ -6162,11 +6162,13 @@ if (!is(T == class) && !(is(T == interface)))
                 else
                     enum sz = T.sizeof;
 
-                auto init = typeid(T).initializer();
-                if (init.ptr is null) // null ptr means initialize to 0s
+                static if (__traits(isZeroInit, T))
                     memset(&source, 0, sz);
                 else
+                {
+                    auto init = typeid(T).initializer();
                     memcpy(&source, init.ptr, sz);
+                }
             }
 
             _store._count = 1;

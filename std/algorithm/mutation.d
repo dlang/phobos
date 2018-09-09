@@ -875,9 +875,9 @@ if (isInputRange!Range && hasLvalueElements!Range && hasAssignableElements!Range
         //We avoid calling emplace here, because our goal is to initialize to
         //the static state of T.init,
         //So we want to avoid any un-necassarilly CC'ing of T.init
-        auto p = typeid(T).initializer();
-        if (p.ptr)
+        static if (!__traits(isZeroInit, T))
         {
+            auto p = typeid(T).initializer();
             for ( ; !range.empty ; range.popFront() )
             {
                 static if (__traits(isStaticArray, T))
@@ -1409,11 +1409,13 @@ void moveEmplace(T)(ref T source, ref T target) @system
             else
                 enum sz = T.sizeof;
 
-            auto init = typeid(T).initializer();
-            if (init.ptr is null) // null ptr means initialize to 0s
+            static if (__traits(isZeroInit, T))
                 memset(&source, 0, sz);
             else
+            {
+                auto init = typeid(T).initializer();
                 memcpy(&source, init.ptr, sz);
+            }
         }
     }
     else
