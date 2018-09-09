@@ -2675,6 +2675,11 @@ Params:
         assert(e != 12);
     }
 
+    size_t toHash() const @safe nothrow
+    {
+        return _isNull ? 0 : typeid(T).getHash(&_value.payload);
+    }
+
     /**
      * Gives the string `"Nullable.null"` if `isNull` is `true`. Otherwise, the
      * result is equivalent to calling $(REF formattedWrite, std,format) on the
@@ -3382,6 +3387,21 @@ auto nullable(T)(T t)
         destructorCalled = false; // reset after S was destroyed in the NS constructor
     }
     assert(destructorCalled);
+}
+
+// check that toHash on Nullable is forwarded to the contained type
+@safe unittest
+{
+    struct S
+    {
+        size_t toHash() const @safe pure nothrow { return 5; }
+    }
+
+    Nullable!S s1 = S();
+    Nullable!S s2 = Nullable!S();
+
+    assert(typeid(Nullable!S).getHash(&s1) == 5);
+    assert(typeid(Nullable!S).getHash(&s2) == 0);
 }
 
 /**
