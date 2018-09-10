@@ -1155,7 +1155,7 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
 {
     import std.algorithm.comparison : max;
     static if (!is(T == class) && !is(T == interface) && A.length == 0
-        && __traits(compiles, {T t;}) && __traits(isZeroInit, T)
+        && __traits(compiles, {T t;}) && isInitAllZeroBits!T
         && is(typeof(alloc.allocateZeroed(size_t.max))))
     {
         auto m = alloc.allocateZeroed(max(T.sizeof, 1));
@@ -1474,15 +1474,16 @@ if (T.sizeof != 1)
 
 private T[] uninitializedFillDefault(T)(T[] array) nothrow
 {
-    static if (__traits(isZeroInit, T))
+    static if (isInitAllZeroBits!T)
     {
         import core.stdc.string : memset;
         if (array !is null)
             memset(array.ptr, 0, T.sizeof * array.length);
         return array;
     }
-    else static if (is(Unqual!T == char) || is(Unqual!T == wchar))
+    else static if (isInitAllOneBits!T)
     {
+        // Mostly for char and wchar.
         import core.stdc.string : memset;
         if (array !is null)
             memset(array.ptr, 0xff, T.sizeof * array.length);
@@ -1526,7 +1527,7 @@ pure nothrow @nogc
 {
     static struct P { float x = 0; float y = 0; }
 
-    static assert(__traits(isZeroInit, P));
+    static assert(isInitAllZeroBits!P);
     P[] a = [P(10, 11), P(20, 21), P(40, 41)];
     uninitializedFillDefault(a);
     assert(a == [P.init, P.init, P.init]);
@@ -1566,7 +1567,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length)
         if (overflow) return null;
     }
 
-    static if (__traits(isZeroInit, T) && hasMember!(Allocator, "allocateZeroed"))
+    static if (isInitAllZeroBits!T && hasMember!(T, "allocateZeroed"))
     {
         auto m = alloc.allocateZeroed(nAlloc);
         return (() @trusted => cast(T[]) m)();
