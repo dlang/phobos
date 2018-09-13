@@ -256,7 +256,7 @@ $(TR $(TD Objects) $(TD
     The format string can reference parts of match using the following notation.
     $(REG_TABLE
         $(REG_TITLE Format specifier, Replaced by )
-        $(REG_ROW $$(AMP), the whole match. )
+        $(REG_ROW $(DOLLAR)$(AMP), the whole match. )
         $(REG_ROW $(DOLLAR)$(BACKTICK), part of input $(I preceding) the match. )
         $(REG_ROW $', part of input $(I following) the match. )
         $(REG_ROW $$, '$' character. )
