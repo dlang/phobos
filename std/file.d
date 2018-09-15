@@ -48,6 +48,7 @@ $(TR $(TD Attributes) $(TD
           $(LREF getLinkAttributes)
           $(LREF getSize)
           $(LREF setAttributes)
+          $(LREF FileAttribute)
 ))
 $(TR $(TD Timestamp) $(TD
           $(LREF getTimes)
@@ -1008,8 +1009,11 @@ Delete file `name`.
 Params:
     name = string or range of characters representing the file _name
 
-Throws: $(LREF FileException) on error.
- */
+Throws:
+    $(LREF FileException) on error.
+
+    On Windows it may also give an "Access denied" error, which may require you to call $(LREF setAttributes) beforehand with $(LREF FileAttribute).normal
+*/
 void remove(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     !isConvertibleToString!R)
@@ -2301,6 +2305,39 @@ if (isConvertibleToString!R)
         attributes = dir.getAttributes;
 
         assert((attributes & 1023) == octal!777);
+    }
+}
+
+version (Windows)
+{
+    /// File attributes that can be used on Windows usng ex. $(LREF setAttributes)
+    enum FileAttribute
+    {
+      /// A file or directory that is an archive file or directory. Applications typically use this attribute to mark files for backup or removal.
+      archive = 0x20,
+      /// The file or directory is hidden. It is not included in an ordinary directory listing.
+      hidden = 0x2,
+      /// A file that does not have other attributes set. This attribute is valid only when used alone.
+      normal = 0x80,
+      /// The file or directory is not to be indexed by the content indexing service.
+      notContentIndexed = 0x2000,
+      /**
+        The data of a file is not available immediately.
+        This attribute indicates that the file data is physically moved to offline storage.
+        This attribute is used by Remote Storage, which is the hierarchical storage management software. Applications should not arbitrarily change this attribute.
+      */
+      offline = 0x1000,
+      /// A file that is read-only. Applications can read the file, but cannot write to it or delete it. This attribute is not honored on directories.
+      readOnly = 0x1,
+      /// A file or directory that the operating system uses a part of, or uses exclusively.
+      system = 0x4,
+      /**
+        A file that is being used for temporary storage.
+        File systems avoid writing data back to mass storage if sufficient cache memory is available, because typically, an application deletes a temporary file after the handle is closed.
+        In that scenario, the system can entirely avoid writing the data.
+        Otherwise, the data is written after the handle is closed.
+      */
+      temporary = 0x100
     }
 }
 
