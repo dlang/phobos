@@ -240,10 +240,8 @@ version(LittleEndian)
 }
 else
 {
-    static assert(real.mant_dig == 53 || real.mant_dig == 106
-               || real.mant_dig == 113,
-    "Only 64-bit and 128-bit reals are supported for BigEndian CPUs."~
-    " double-double reals have partial support");
+    static assert(real.mant_dig == 53 || real.mant_dig == 113,
+    "Only 64-bit and 128-bit reals are supported for BigEndian CPUs.");
 }
 
 // Underlying format exposed through floatTraits
@@ -425,139 +423,91 @@ T floorImpl(T)(const T x) @trusted pure nothrow @nogc
         // Other kinds of extractors for real formats.
         static if (F.realFormat == RealFormat.ieeeSingle)
             int vi;
-
-        static if (F.realFormat == RealFormat.ibmExtended)
-            double[2] vd;
     }
     floatBits y = void;
     y.rv = x;
 
-    static if (F.realFormat == RealFormat.ibmExtended)
+    // Find the exponent (power of 2)
+    // Do this by shifting the raw value so that the exponent lies in the low bits,
+    // then mask out the sign bit, and subtract the bias.
+    static if (F.realFormat == RealFormat.ieeeSingle)
     {
-        // The real format is made up of two IEEE doubles.
-        // Call floor() on each part separately.
-        double hi = floorImpl(y.vd[F.DOUBLEPAIR_MSB]);
+        int exp = ((y.vi >> (T.mant_dig - 1)) & 0xff) - 0x7f;
+    }
+    else static if (F.realFormat == RealFormat.ieeeDouble)
+    {
+        int exp = ((y.vu[F.EXPPOS_SHORT] >> 4) & 0x7ff) - 0x3ff;
 
-        if (hi != y.vd[F.DOUBLEPAIR_MSB])
-        {
-            // High part is not an integer, the low part doesn't affect the result
-            y.vd[F.DOUBLEPAIR_MSB] = hi;
-            y.vd[F.DOUBLEPAIR_LSB] = 0;
-        }
+        version (LittleEndian)
+            int pos = 0;
         else
+            int pos = 3;
+    }
+    else static if (F.realFormat == RealFormat.ieeeExtended)
+    {
+        int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+
+        version (LittleEndian)
+            int pos = 0;
+        else
+            int pos = 4;
+    }
+    else static if (F.realFormat == RealFormat.ieeeQuadruple)
+    {
+        int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+
+        version (LittleEndian)
+            int pos = 0;
+        else
+            int pos = 7;
+    }
+    else
+        static assert(false, "Not implemented for this architecture");
+
+    if (exp < 0)
+    {
+        if (x < 0.0)
+            return -1.0;
+        else
+            return 0.0;
+    }
+
+    static if (F.realFormat == RealFormat.ieeeSingle)
+    {
+        if (exp < (T.mant_dig - 1))
         {
-            // High part is a non zero integer
-            double lo = floorImpl(y.vd[F.DOUBLEPAIR_LSB]);
+            // Clear all bits representing the fraction part.
+            const uint fraction_mask = F.MANTISSAMASK_INT >> exp;
 
-            // Canonicalize the result
-            const long xh = *cast(long*)&hi;
-            const long xl = *cast(long*)&lo;
-            const int expdiff = ((xh >> 52) & 0x7ff) - ((xl >> 52) & 0x7ff);
-
-            if (expdiff < 53)
+            if ((y.vi & fraction_mask) != 0)
             {
-                // The sum can be represented in a single double
-                hi += lo;
-                lo = 0;
+                // If 'x' is negative, then first substract 1.0 from the value.
+                if (y.vi < 0)
+                    y.vi += 0x00800000 >> exp;
+                y.vi &= ~fraction_mask;
             }
-            else if (expdiff == 53)
-            {
-                // Half way between two double values.
-                // Non-canonical if the low bit of the high part's mantissa is 1.
-                if ((xh & 1) != 0)
-                {
-                    hi += 2 * lo;
-                    lo = -lo;
-                }
-            }
-            y.vd[F.DOUBLEPAIR_MSB] = hi;
-            y.vd[F.DOUBLEPAIR_LSB] = lo;
         }
     }
     else
     {
-        // Find the exponent (power of 2)
-        // Do this by shifting the raw value so that the exponent lies in the low bits,
-        // then mask out the sign bit, and subtract the bias.
-        static if (F.realFormat == RealFormat.ieeeSingle)
-        {
-            int exp = ((y.vi >> (T.mant_dig - 1)) & 0xff) - 0x7f;
-        }
-        else static if (F.realFormat == RealFormat.ieeeDouble)
-        {
-            int exp = ((y.vu[F.EXPPOS_SHORT] >> 4) & 0x7ff) - 0x3ff;
+        exp = (T.mant_dig - 1) - exp;
 
+        // Zero 16 bits at a time.
+        while (exp >= 16)
+        {
             version (LittleEndian)
-                int pos = 0;
+                y.vu[pos++] = 0;
             else
-                int pos = 3;
-        }
-        else static if (F.realFormat == RealFormat.ieeeExtended)
-        {
-            int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
-
-            version (LittleEndian)
-                int pos = 0;
-            else
-                int pos = 4;
-        }
-        else static if (F.realFormat == RealFormat.ieeeQuadruple)
-        {
-            int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
-
-            version (LittleEndian)
-                int pos = 0;
-            else
-                int pos = 7;
-        }
-        else
-            static assert(false, "Not implemented for this architecture");
-
-        if (exp < 0)
-        {
-            if (x < 0.0)
-                return -1.0;
-            else
-                return 0.0;
+                y.vu[pos--] = 0;
+            exp -= 16;
         }
 
-        static if (F.realFormat == RealFormat.ieeeSingle)
-        {
-            if (exp < (T.mant_dig - 1))
-            {
-                // Clear all bits representing the fraction part.
-                const uint fraction_mask = F.MANTISSAMASK_INT >> exp;
+        // Clear the remaining bits.
+        if (exp > 0)
+            y.vu[pos] &= 0xffff ^ ((1 << exp) - 1);
 
-                if ((y.vi & fraction_mask) != 0)
-                {
-                    // If 'x' is negative, then first substract 1.0 from the value.
-                    if (y.vi < 0)
-                        y.vi += 0x00800000 >> exp;
-                    y.vi &= ~fraction_mask;
-                }
-            }
-        }
-        else
-        {
-            exp = (T.mant_dig - 1) - exp;
-
-            // Zero 16 bits at a time.
-            while (exp >= 16)
-            {
-                version (LittleEndian)
-                    y.vu[pos++] = 0;
-                else
-                    y.vu[pos--] = 0;
-                exp -= 16;
-            }
-
-            // Clear the remaining bits.
-            if (exp > 0)
-                y.vu[pos] &= 0xffff ^ ((1 << exp) - 1);
-
-            if ((x < 0.0) && (x != y.rv))
-                y.rv -= 1.0;
-        }
+        if ((x < 0.0) && (x != y.rv))
+            y.rv -= 1.0;
     }
 
     return y.rv;
@@ -3743,7 +3693,7 @@ if (isFloatingPoint!T)
     }
     else // static if (F.realFormat == RealFormat.ibmExtended)
     {
-        core.stdc.math.ilogbl(x);
+        assert(0, "ilogb not implemented");
     }
 }
 /// ditto
@@ -6490,16 +6440,8 @@ bool isFinite(X)(X x) @trusted pure nothrow @nogc
 bool isNormal(X)(X x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(X);
-    static if (F.realFormat == RealFormat.ibmExtended)
-    {
-        // doubledouble is normal if the least significant part is normal.
-        return isNormal((cast(double*)&x)[F.DOUBLEPAIR_LSB]);
-    }
-    else
-    {
-        ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
-        return (e != F.EXPMASK && e != 0);
-    }
+    ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
+    return (e != F.EXPMASK && e != 0);
 }
 
 ///
@@ -6565,10 +6507,6 @@ bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
 
         return (pe[F.EXPPOS_SHORT] & F.EXPMASK) == 0 && *ps > 0;
     }
-    else static if (F.realFormat == RealFormat.ibmExtended)
-    {
-        return isSubnormal((cast(double*)&x)[F.DOUBLEPAIR_MSB]);
-    }
     else
     {
         static assert(false, "Not implemented for this architecture");
@@ -6615,11 +6553,6 @@ if (isFloatingPoint!(X))
 
         // On Motorola 68K, infinity can have hidden bit = 1 or 0. On x86, it is always 1.
         return e == F.EXPMASK && (ps & 0x7FFF_FFFF_FFFF_FFFF) == 0;
-    }
-    else static if (F.realFormat == RealFormat.ibmExtended)
-    {
-        return (((cast(ulong *)&x)[F.DOUBLEPAIR_MSB]) & 0x7FFF_FFFF_FFFF_FFFF)
-            == 0x7FF8_0000_0000_0000;
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
@@ -6722,16 +6655,19 @@ bool isIdentical(real x, real y) @trusted pure nothrow @nogc
     {
         return pxs[0] == pys[0];
     }
-    else static if (F.realFormat == RealFormat.ieeeQuadruple
-                 || F.realFormat == RealFormat.ibmExtended)
+    else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
         return pxs[0] == pys[0] && pxs[1] == pys[1];
     }
-    else
+    else static if (F.realFormat == RealFormat.ieeeExtended)
     {
         ushort* pxe = cast(ushort *)&x;
         ushort* pye = cast(ushort *)&y;
         return pxe[4] == pye[4] && pxs[0] == pys[0];
+    }
+    else
+    {
+        assert(0, "isIdentical not implemented");
     }
 }
 
@@ -8166,27 +8102,11 @@ if (isFloatingPoint!(X))
     /* Public Domain. Author: Don Clugston, 18 Aug 2005.
      */
     alias F = floatTraits!(X);
-    static if (F.realFormat == RealFormat.ibmExtended)
+    static if (F.realFormat == RealFormat.ieeeSingle
+            || F.realFormat == RealFormat.ieeeDouble
+            || F.realFormat == RealFormat.ieeeExtended
+            || F.realFormat == RealFormat.ieeeQuadruple)
     {
-        if ((cast(double*)&x)[F.DOUBLEPAIR_MSB] == (cast(double*)&y)[F.DOUBLEPAIR_MSB])
-        {
-            return double.mant_dig
-            + feqrel((cast(double*)&x)[F.DOUBLEPAIR_LSB],
-                    (cast(double*)&y)[F.DOUBLEPAIR_LSB]);
-        }
-        else
-        {
-            return feqrel((cast(double*)&x)[F.DOUBLEPAIR_MSB],
-                    (cast(double*)&y)[F.DOUBLEPAIR_MSB]);
-        }
-    }
-    else
-    {
-        static assert(F.realFormat == RealFormat.ieeeSingle
-                    || F.realFormat == RealFormat.ieeeDouble
-                    || F.realFormat == RealFormat.ieeeExtended
-                    || F.realFormat == RealFormat.ieeeQuadruple);
-
         if (x == y)
             return X.mant_dig; // ensure diff != 0, cope with INF.
 
@@ -8229,6 +8149,10 @@ if (isFloatingPoint!(X))
         {
             return 1;
         } else return 0;
+    }
+    else
+    {
+        static assert(false, "Not implemented for this architecture");
     }
 }
 
