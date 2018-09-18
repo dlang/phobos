@@ -431,9 +431,9 @@ if (!is(typeof(field) == shared))
 
 private enum bool distinctFieldNames(names...) = __traits(compiles,
 {
-    static foreach (name; names)
-        static if (is(typeof(name) : string))
-            mixin("enum int" ~ name ~ " = 0;");
+    static foreach (__name; names)
+        static if (is(typeof(__name) : string))
+            mixin("enum int " ~ __name ~ " = 0;");
 });
 
 @safe unittest
@@ -441,6 +441,8 @@ private enum bool distinctFieldNames(names...) = __traits(compiles,
     static assert(!distinctFieldNames!(string, "abc", string, "abc"));
     static assert(distinctFieldNames!(string, "abc", int, "abd"));
     static assert(!distinctFieldNames!(int, "abc", string, "abd", int, "abc"));
+    // Issue 19240
+    static assert(!distinctFieldNames!(int, "int"));
 }
 
 /**
