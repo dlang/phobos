@@ -6321,8 +6321,11 @@ private size_t guessLength(Char, S)(S fmtString)
 
         if (spec.width == spec.precision)
             len += spec.width;
-        else if (spec.width > 0 && (spec.precision == spec.UNSPECIFIED || spec.width > spec.precision))
+        else if (spec.width > 0 && spec.width != spec.DYNAMIC &&
+                 (spec.precision == spec.UNSPECIFIED || spec.width > spec.precision))
+        {
             len += spec.width;
+        }
         else if (spec.precision != spec.UNSPECIFIED && spec.precision > spec.width)
             len += spec.precision;
     }
@@ -6345,6 +6348,7 @@ unittest
     assert(guessLength!char("%2.4f") == 4);
     assert(guessLength!char("%02d:%02d:%02d") == 8);
     assert(guessLength!char("%0.2f") == 7);
+    assert(guessLength!char("%0*d") == 0);
 }
 
 /// ditto
