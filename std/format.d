@@ -1531,7 +1531,7 @@ if (is(Unqual!Char == Char))
                 }
                 else
                 {
-                    enforce(!r.empty,
+                    enforceFmt(!r.empty,
                             text("parseToFormatSpec: Cannot find character '",
                                     c, "' in the input string."));
                     if (r.front != trailing.front) break;
