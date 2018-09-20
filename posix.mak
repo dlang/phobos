@@ -635,7 +635,7 @@ publictests: $(addsuffix .publictests,$(D_MODULES))
 ################################################################################
 
 betterc-phobos-tests: $(addsuffix .betterc,$(D_MODULES))
-betterc: betterc-phobos-tests betterc-run-tests
+betterc: betterc-phobos-tests
 
 %.betterc: %.d | $(BETTERCTESTS_DIR)/.directory
 	@# Due to the FORCE rule on druntime, make will always try to rebuild Phobos (even as an order-only dependency)
@@ -644,18 +644,6 @@ betterc: betterc-phobos-tests betterc-run-tests
 	@$(TESTS_EXTRACTOR) --betterC --attributes betterC \
 		--inputdir  $< --outputdir $(BETTERCTESTS_DIR)
 	@$(DMD) $(DFLAGS) $(NODEFAULTLIB) -betterC $(UDFLAGS) -run $(BETTERCTESTS_DIR)/$(subst /,_,$<)
-
-################################################################################
-# Run separate -betterC tests
-################################################################################
-
-test/betterC/%.run: test/betterC/%.d $(DRUNTIME)
-	mkdir -p $(ROOT)/unittest/betterC
-	$(DMD) $(DFLAGS) -of$(ROOT)/unittest/betterC/$(notdir $(basename $<)) -betterC $(UDFLAGS) \
-		$(NODEFAULTLIB) $(LINKDL) $<
-	./$(ROOT)/unittest/betterC/$(notdir $(basename $<))
-
-betterc-run-tests: $(subst .d,.run,$(wildcard test/betterC/*.d))
 
 ################################################################################
 
