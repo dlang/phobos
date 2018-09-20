@@ -669,19 +669,27 @@ if (is(T == char) || is(T == ubyte))
 {
     import std.uri : urlEncode;
 
-    return post(url, urlEncode(postDict), conn);
+    return post!T(url, urlEncode(postDict), conn);
 }
 
 @system unittest
 {
+    import std.algorithm.searching : canFind;
+    import std.meta : AliasSeq;
+
+    static immutable expected = ["name1=value1&name2=value2", "name2=value2&name1=value1"];
+
     foreach (host; [testServer.addr, "http://" ~ testServer.addr])
     {
-        testServer.handle((s) {
-            auto req = s.recvReq!char;
-            s.send(httpOK(req.bdy));
-        });
-        auto res = post(host ~ "/path", ["name1" : "value1", "name2" : "value2"]);
-        assert(res == "name1=value1&name2=value2" || res == "name2=value2&name1=value1");
+        foreach (T; AliasSeq!(char, ubyte))
+        {
+            testServer.handle((s) {
+                auto req = s.recvReq!char;
+                s.send(httpOK(req.bdy));
+            });
+            auto res = post!T(host ~ "/path", ["name1" : "value1", "name2" : "value2"]);
+            assert(canFind(expected, res));
+        }
     }
 }
 
