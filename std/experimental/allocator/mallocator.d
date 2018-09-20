@@ -65,7 +65,7 @@ struct Mallocator
     }
 
     @trusted @nogc nothrow pure
-    package void[] allocateZeroed(size_t bytes) shared
+    package void[] allocateZeroed()(size_t bytes) shared
     {
         import core.memory : pureCalloc;
         if (!bytes) return null;

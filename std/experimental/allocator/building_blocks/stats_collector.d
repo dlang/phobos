@@ -340,9 +340,9 @@ public:
         { return allocateImpl!(f, n)(bytes); }
     }
 
-    private void[] allocateImpl(string f = null, ulong n = 0)(size_t bytes)
-    {
-        auto result = parent.allocate(bytes);
+    // Common code currently shared between allocateImpl and allocateZeroedImpl.
+    private enum _updateStatsForAllocateResult =
+    q{
         add!"bytesUsed"(result.length);
         add!"bytesAllocated"(result.length);
         immutable slack = this.goodAllocSize(result.length) - result.length;
@@ -351,7 +351,40 @@ public:
         add!"numAllocateOK"(result.length == bytes); // allocating 0 bytes is OK
         addPerCall!(f, n, "numAllocate", "numAllocateOK", "bytesAllocated")
             (1, result.length == bytes, result.length);
+    };
+
+    private void[] allocateImpl(string f = null, ulong n = 0)(size_t bytes)
+    {
+        auto result = parent.allocate(bytes);
+        mixin(_updateStatsForAllocateResult);
         return result;
+    }
+
+    static if (hasMember!(Allocator, "allocateZeroed"))
+    {
+        static if (!(perCallFlags
+            & (Options.numAllocate | Options.numAllocateOK
+                | Options.bytesAllocated)))
+        {
+            package(std) void[] allocateZeroed()(size_t n)
+            { return allocateZeroedImpl(n); }
+        }
+        else
+        {
+            package(std) void[] allocateZeroed(string f = __FILE__, ulong n = __LINE__)
+                (size_t bytes)
+            { return allocateZeroedImpl!(f, n)(bytes); }
+        }
+
+        private void[] allocateZeroedImpl(string f = null, ulong n = 0)(size_t bytes)
+        {
+            auto result = parent.allocateZeroed(bytes);
+            // Note: calls to `allocateZeroed` are counted for statistical purposes
+            // as if they were calls to `allocate`. If/when `allocateZeroed` is made
+            // public it might be of interest to count such calls separately.
+            mixin(_updateStatsForAllocateResult);
+            return result;
+        }
     }
 
     /**
