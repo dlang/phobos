@@ -119,12 +119,12 @@ struct JSONValue
 
     union Store
     {
+        JSONValue[string]               object;
+        JSONValue[]                     array;
         string                          str;
         long                            integer;
         ulong                           uinteger;
         double                          floating;
-        JSONValue[string]               object;
-        JSONValue[]                     array;
     }
     private Store store;
     private JSONType type_tag;
@@ -772,6 +772,26 @@ struct JSONValue
     string toPrettyString(in JSONOptions options = JSONOptions.none) const @safe
     {
         return toJSON(this, true, options);
+    }
+}
+
+// regression test for issue 19256
+@safe unittest
+{
+    const JSONValue object = JSONValue(["foo": JSONValue(1)]);
+
+    // Usually, this should fail, as object is const.
+    static if (__traits(compiles, { JSONValue copy = object; }))
+    {
+        // Even if it works, for instance because JSONValue has gained a copy constructor,
+        // we should be fine as long as the constructor actually copies the contained references.
+        JSONValue copy = object;
+
+        // However, with issue 19256 we are able to affect the const original through the mutable copy.
+        copy["foo"] = JSONValue(2);
+
+        // Check for that.
+        assert(object["foo"] == JSONValue(1));
     }
 }
 
