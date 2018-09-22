@@ -2963,7 +2963,7 @@ public:
         {
             flags = cast(SocketFlags)(flags | MSG_NOSIGNAL);
         }
-        version ( Windows )
+        version (Windows)
             auto sent = .send(sock, buf.ptr, capToInt(buf.length), cast(int) flags);
         else
             auto sent = .send(sock, buf.ptr, buf.length, cast(int) flags);
@@ -2989,7 +2989,7 @@ public:
         {
             flags = cast(SocketFlags)(flags | MSG_NOSIGNAL);
         }
-        version ( Windows )
+        version (Windows)
             return .sendto(
                        sock, buf.ptr, capToInt(buf.length),
                        cast(int) flags, to.name, to.nameLen
