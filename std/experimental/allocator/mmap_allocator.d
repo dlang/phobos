@@ -25,7 +25,7 @@ struct MmapAllocator
     */
     enum size_t alignment = 4096;
 
-    version(Posix)
+    version (Posix)
     {
         /// Allocator API.
         pure nothrow @nogc @safe
@@ -56,20 +56,20 @@ struct MmapAllocator
 
         // Anonymous mmap might be zero-filled on all Posix systems but
         // not all commit to this in the documentation.
-        version(linux)
+        version (linux)
             // http://man7.org/linux/man-pages/man2/mmap.2.html
             package alias allocateZeroed = allocate;
-        else version(NetBSD)
+        else version (NetBSD)
             // http://netbsd.gw.com/cgi-bin/man-cgi?mmap+2+NetBSD-current
             package alias allocateZeroed = allocate;
-        else version(Solaris)
+        else version (Solaris)
             // https://docs.oracle.com/cd/E88353_01/html/E37841/mmap-2.html
             package alias allocateZeroed = allocate;
-        else version(AIX)
+        else version (AIX)
             // https://www.ibm.com/support/knowledgecenter/en/ssw_aix_71/com.ibm.aix.basetrf1/mmap.htm
             package alias allocateZeroed = allocate;
     }
-    else version(Windows)
+    else version (Windows)
     {
         import core.sys.windows.windows : MEM_COMMIT, PAGE_READWRITE, MEM_RELEASE;
 
@@ -105,7 +105,7 @@ struct MmapAllocator
 
 // pure wrappers around `mmap` and `munmap` because they are used here locally
 // solely to perform allocation and deallocation which in this case is `pure`
-version(Posix)
+version (Posix)
 extern (C) private pure @system @nogc nothrow
 {
     import core.sys.posix.sys.types : off_t;
@@ -116,7 +116,7 @@ extern (C) private pure @system @nogc nothrow
 
 // Pure wrappers around VirtualAlloc/VirtualFree for use here only. Their use is sound
 // because when we call them we ensure that last-error is not visibly changed.
-version(Windows)
+version (Windows)
 extern (Windows) private pure @system @nogc nothrow
 {
     import core.sys.windows.basetsd : SIZE_T;

@@ -707,7 +707,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     assert((() nothrow @nogc => r2.deallocateAll())());
 }
 
-version(CRuntime_Musl)
+version (CRuntime_Musl)
 {
     // sbrk and brk are disabled in Musl:
     // https://git.musl-libc.org/cgit/musl/commit/?id=7a995fe706e519a4f55399776ef0df9596101f93
@@ -729,8 +729,8 @@ that uncontrolled calls to `brk` and `sbrk` may affect the workings of $(D
 SbrkRegion) adversely.
 
 */
-version(CRuntime_Musl) {} else
-version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
+version (CRuntime_Musl) {} else
+version (Posix) struct SbrkRegion(uint minAlign = platformAlignment)
 {
     import core.sys.posix.pthread : pthread_mutex_init, pthread_mutex_destroy,
         pthread_mutex_t, pthread_mutex_lock, pthread_mutex_unlock,
@@ -910,8 +910,8 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
     }
 }
 
-version(CRuntime_Musl) {} else
-version(Posix) @system nothrow @nogc unittest
+version (CRuntime_Musl) {} else
+version (Posix) @system nothrow @nogc unittest
 {
     // Let's test the assumption that sbrk(n) returns the old address
     const p1 = sbrk(0);
@@ -923,8 +923,8 @@ version(Posix) @system nothrow @nogc unittest
     sbrk(-4096);
 }
 
-version(CRuntime_Musl) {} else
-version(Posix) @system nothrow @nogc unittest
+version (CRuntime_Musl) {} else
+version (Posix) @system nothrow @nogc unittest
 {
     import std.typecons : Ternary;
     import std.algorithm.comparison : min;
@@ -947,7 +947,7 @@ version(Posix) @system nothrow @nogc unittest
     assert((() nothrow @safe @nogc => alloc.owns(a))() == Ternary.yes);
     assert((() nothrow @safe @nogc => alloc.owns(b))() == Ternary.yes);
     // reducing the brk does not work on OSX
-    version(OSX) {} else
+    version (OSX) {} else
     {
         assert((() nothrow @nogc => alloc.deallocate(b))());
         // Check that expand and deallocate work well

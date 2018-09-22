@@ -99,7 +99,7 @@ else version (Posix)
 else
     static assert(0);
 
-version(Windows)
+version (Windows)
 {
     // core.stdc.stdio.fopen expects file names to be
     // encoded in CP_ACP on Windows instead of UTF-8.
@@ -250,7 +250,7 @@ else
     static assert(0, "unsupported C I/O system");
 }
 
-version(HAS_GETDELIM) extern(C) nothrow @nogc
+version (HAS_GETDELIM) extern(C) nothrow @nogc
 {
     ptrdiff_t getdelim(char**, size_t*, int, FILE*);
     // getline() always comes together with getdelim()
@@ -675,7 +675,7 @@ opengroup.org/onlinepubs/007908799/xsh/_popen.html, _popen).
 
 Throws: `ErrnoException` in case of error.
  */
-    version(Posix) void popen(string command, scope const(char)[] stdioOpenmode = "r") @safe
+    version (Posix) void popen(string command, scope const(char)[] stdioOpenmode = "r") @safe
     {
         resetFile(command, stdioOpenmode ,true);
     }
@@ -731,7 +731,7 @@ Throws: `ErrnoException` in case of error.
 
     // Declare a dummy HANDLE to allow generating documentation
     // for Windows-only methods.
-    version(StdDdoc) { version(Windows) {} else alias HANDLE = int; }
+    version (StdDdoc) { version (Windows) {} else alias HANDLE = int; }
 
 /**
 First calls `detach` (throwing on failure), and then attempts to
@@ -740,10 +740,10 @@ be compatible with the access attributes of the handle. Windows only.
 
 Throws: `ErrnoException` in case of error.
 */
-    version(StdDdoc)
+    version (StdDdoc)
     void windowsHandleOpen(HANDLE handle, scope const(char)[] stdioOpenmode);
 
-    version(Windows)
+    version (Windows)
     void windowsHandleOpen(HANDLE handle, scope const(char)[] stdioOpenmode)
     {
         import core.stdc.stdint : intptr_t;
@@ -982,12 +982,12 @@ Throws: `Exception` if `buffer` is empty.
 
         if (!buffer.length)
             throw new Exception("rawRead must take a non-empty buffer");
-        version(Windows)
+        version (Windows)
         {
             immutable fd = ._fileno(_p.handle);
             immutable mode = ._setmode(fd, _O_BINARY);
             scope(exit) ._setmode(fd, mode);
-            version(DIGITAL_MARS_STDIO)
+            version (DIGITAL_MARS_STDIO)
             {
                 import core.atomic : atomicOp;
 
@@ -1037,13 +1037,13 @@ Throws: `ErrnoException` if the file is not opened or if the call to `fwrite` fa
         import std.conv : text;
         import std.exception : errnoEnforce;
 
-        version(Windows)
+        version (Windows)
         {
             flush(); // before changing translation mode
             immutable fd = ._fileno(_p.handle);
             immutable mode = ._setmode(fd, _O_BINARY);
             scope(exit) ._setmode(fd, mode);
-            version(DIGITAL_MARS_STDIO)
+            version (DIGITAL_MARS_STDIO)
             {
                 import core.atomic : atomicOp;
 
@@ -1232,7 +1232,7 @@ Throws: `Exception` if the file is not opened.
     }
 
 
-    version(Windows)
+    version (Windows)
     {
         import core.sys.windows.windows : ULARGE_INTEGER, OVERLAPPED, BOOL;
 
@@ -1261,7 +1261,7 @@ Throws: `Exception` if the file is not opened.
             throw new Exception(str ~ ": " ~ sysErrorString(GetLastError()));
         }
     }
-    version(Posix)
+    version (Posix)
     {
         private int lockImpl(int operation, short l_type,
             ulong start, ulong length)
@@ -1310,7 +1310,7 @@ $(UL
                     "Could not set lock for file `"~_name~"'");
         }
         else
-        version(Windows)
+        version (Windows)
         {
             import core.sys.windows.windows : LockFileEx, LOCKFILE_EXCLUSIVE_LOCK;
             immutable type = lockType == LockType.readWrite ?
@@ -1348,7 +1348,7 @@ specified file segment was already locked.
             return true;
         }
         else
-        version(Windows)
+        version (Windows)
         {
             import core.sys.windows.windows : GetLastError, LockFileEx, LOCKFILE_EXCLUSIVE_LOCK,
                 ERROR_IO_PENDING, ERROR_LOCK_VIOLATION, LOCKFILE_FAIL_IMMEDIATELY;
@@ -1382,7 +1382,7 @@ Removes the lock over the specified file segment.
                     "Could not remove lock for file `"~_name~"'");
         }
         else
-        version(Windows)
+        version (Windows)
         {
             import core.sys.windows.windows : UnlockFileEx;
             wenforce(lockImpl!UnlockFileEx(start, length),
@@ -1392,7 +1392,7 @@ Removes the lock over the specified file segment.
             static assert(false);
     }
 
-    version(Windows)
+    version (Windows)
     @system unittest
     {
         static import std.file;
@@ -1411,7 +1411,7 @@ Removes the lock over the specified file segment.
         g.unlock();
     }
 
-    version(Posix)
+    version (Posix)
     @system unittest
     {
         static import std.file;
@@ -2054,10 +2054,10 @@ Returns the file number corresponding to this object.
 /**
 Returns the underlying operating system `HANDLE` (Windows only).
 */
-    version(StdDdoc)
+    version (StdDdoc)
     @property HANDLE windowsHandle();
 
-    version(Windows)
+    version (Windows)
     @property HANDLE windowsHandle()
     {
         version (DIGITAL_MARS_STDIO)
@@ -2491,7 +2491,7 @@ $(REF readText, std,file)
         import std.algorithm.comparison : equal;
         import std.range : drop, take;
 
-        version(Win64)
+        version (Win64)
         {
             static import std.file;
 
@@ -2500,7 +2500,7 @@ $(REF readText, std,file)
             auto file = File(deleteme, "w+");
             scope(success) std.file.remove(deleteme);
         }
-        else version(CRuntime_Bionic)
+        else version (CRuntime_Bionic)
         {
             static import std.file;
 
@@ -2641,7 +2641,7 @@ $(REF readText, std,file)
         @property nothrow
         ubyte[] front()
         {
-            version(assert)
+            version (assert)
             {
                 import core.exception : RangeError;
                 if (empty)
@@ -2653,7 +2653,7 @@ $(REF readText, std,file)
         /// Ditto
         void popFront()
         {
-            version(assert)
+            version (assert)
             {
                 import core.exception : RangeError;
                 if (empty)
@@ -3493,7 +3493,7 @@ void main()
     assert(e && e.msg == "Attempting to write to closed File");
 }
 
-version(StdStressTest)
+version (StdStressTest)
 {
     // issue 15768
     @system unittest
@@ -3588,7 +3588,7 @@ struct LockingTextReader
     {
         if (!_hasChar)
         {
-            version(assert)
+            version (assert)
             {
                 import core.exception : RangeError;
                 if (empty)
@@ -4223,11 +4223,11 @@ if ((isInputRange!R1 && isSomeChar!(ElementEncodingType!R1) || isSomeString!R1) 
 
     static _fopenImpl(const(FSChar)* namez, const(FSChar)* modez) @trusted nothrow @nogc
     {
-        version(Windows)
+        version (Windows)
         {
             return _wfopen(namez, modez);
         }
-        else version(Posix)
+        else version (Posix)
         {
             /*
              * The new opengroup large file support API is transparently
@@ -5408,7 +5408,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
         Bugs:
                 Only works on Linux
 */
-version(linux)
+version (linux)
 {
     File openNetwork(string host, ushort port)
     {
@@ -5451,7 +5451,7 @@ version(linux)
     }
 }
 
-version(unittest) private string testFilename(string file = __FILE__, size_t line = __LINE__) @safe
+version (unittest) private string testFilename(string file = __FILE__, size_t line = __LINE__) @safe
 {
     import std.conv : text;
     import std.file : deleteme;

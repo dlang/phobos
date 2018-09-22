@@ -1079,7 +1079,7 @@ if (is(Unqual!Char == Char))
     */
     ubyte indexEnd;
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         /**
          The format specifier contained a `'-'` (`printf`
@@ -2559,7 +2559,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 
         if (s.length > 0)
         {
-          version(none)
+          version (none)
           {
             return formatValueImpl(w, s, f);
           }
@@ -2753,7 +2753,7 @@ if (is(Unqual!T : creal) && !is(T == enum) && !hasToString!(T, Char))
     put(w, 'i');
 }
 
-version(TestComplex)
+version (TestComplex)
 deprecated
 @safe /*pure*/ unittest     // formatting floating point values is now impure
 {
@@ -2772,7 +2772,7 @@ deprecated
     }
 }
 
-version(TestComplex)
+version (TestComplex)
 deprecated
 @system unittest
 {
@@ -2804,7 +2804,7 @@ if (is(Unqual!T : ireal) && !is(T == enum) && !hasToString!(T, Char))
     put(w, 'i');
 }
 
-version(TestComplex)
+version (TestComplex)
 deprecated
 @safe /*pure*/ unittest     // formatting floating point values is now impure
 {
@@ -2817,7 +2817,7 @@ deprecated
     }
 }
 
-version(TestComplex)
+version (TestComplex)
 deprecated
 @system unittest
 {
@@ -4001,7 +4001,7 @@ if (is(T == class) && !is(T == enum))
 
 // outside the unittest block, otherwise the FQN of the
 // class contains the line number of the unittest
-version(unittest)
+version (unittest)
 {
     private class C {}
 }
@@ -4581,7 +4581,7 @@ private T getNth(string kind, alias Condition, T, A...)(uint index, A args)
 
 /* ======================== Unit Tests ====================================== */
 
-version(unittest)
+version (unittest)
 private void formatTest(T)(T val, string expected, size_t ln = __LINE__, string fn = __FILE__)
 {
     import core.exception : AssertError;
@@ -4595,7 +4595,7 @@ private void formatTest(T)(T val, string expected, size_t ln = __LINE__, string 
             text("expected = `", expected, "`, result = `", w.data, "`"), fn, ln);
 }
 
-version(unittest)
+version (unittest)
 private void formatTest(T)(string fmt, T val, string expected, size_t ln = __LINE__, string fn = __FILE__) @safe
 {
     import core.exception : AssertError;
@@ -4608,7 +4608,7 @@ private void formatTest(T)(string fmt, T val, string expected, size_t ln = __LIN
             text("expected = `", expected, "`, result = `", w.data, "`"), fn, ln);
 }
 
-version(unittest)
+version (unittest)
 private void formatTest(T)(T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__)
 {
     import core.exception : AssertError;
@@ -4626,7 +4626,7 @@ private void formatTest(T)(T val, string[] expected, size_t ln = __LINE__, strin
             text("expected one of `", expected, "`, result = `", w.data, "`"), fn, ln);
 }
 
-version(unittest)
+version (unittest)
 private void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__) @safe
 {
     import core.exception : AssertError;
@@ -5108,7 +5108,7 @@ here:
     assert(a == "hello" && b == 124 && c == 34.5);
 }
 
-version(unittest)
+version (unittest)
 private void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = __FILE__, size_t ln = __LINE__)
 {
     import core.exception : AssertError;
@@ -5150,7 +5150,7 @@ private void formatReflectTest(T)(ref T val, string fmt, string formatted, strin
             input, fn, ln);
 }
 
-version(unittest)
+version (unittest)
 private void formatReflectTest(T)(ref T val, string fmt, string[] formatted, string fn = __FILE__, size_t ln = __LINE__)
 {
     import core.exception : AssertError;
@@ -5899,7 +5899,7 @@ private bool needToSwapEndianess(Char)(const ref FormatSpec!Char f)
     assert(s == "1193135 2947526575");
 }
 
-version(TestComplex)
+version (TestComplex)
 deprecated
 @system unittest
 {

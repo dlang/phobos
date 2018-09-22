@@ -177,7 +177,7 @@ T wenforce(T)(T condition, const(char)[] name, const(wchar)* namez, string file 
     throw new WindowsException(GetLastError(), names, file, line);
 }
 
-version(Windows)
+version (Windows)
 @system unittest
 {
     import std.algorithm.searching : startsWith, endsWith;

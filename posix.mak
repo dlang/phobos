@@ -562,7 +562,7 @@ style_lint: dscanner $(LIB)
 	grep -nr '[[:blank:]]$$' etc std ; test $$? -eq 1
 
 	@echo "Enforce whitespace before opening parenthesis"
-	grep -nrE "(for|foreach|foreach_reverse|if|while|switch|catch)\(" $$(find etc std -name '*.d') ; test $$? -eq 1
+	grep -nrE "\<(for|foreach|foreach_reverse|if|while|switch|catch|version)\(" $$(find etc std -name '*.d') ; test $$? -eq 1
 
 	@echo "Enforce whitespace between colon(:) for import statements (doesn't catch everything)"
 	grep -nr 'import [^/,=]*:.*;' $$(find etc std -name '*.d') | grep -vE "import ([^ ]+) :\s"; test $$? -eq 1

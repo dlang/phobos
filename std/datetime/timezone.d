@@ -34,7 +34,7 @@ import std.datetime.systime;// : Clock, stdTimeToUnixTime, SysTime;
 import std.range.primitives;// : back, front, empty, popFront;
 import std.traits : isIntegral, isSomeString, Unqual;
 
-version(Windows)
+version (Windows)
 {
     import core.stdc.time : time_t;
     import core.sys.windows.windows;
@@ -47,13 +47,13 @@ version(Windows)
     // for updating the translations.
     // version = UpdateWindowsTZTranslations;
 }
-else version(Posix)
+else version (Posix)
 {
     import core.sys.posix.signal : timespec;
     import core.sys.posix.sys.types : time_t;
 }
 
-version(unittest) import std.exception : assertThrown;
+version (unittest) import std.exception : assertThrown;
 
 
 /++
@@ -198,10 +198,10 @@ public:
         import std.stdio : writefln;
         import std.typecons : tuple;
 
-        version(Posix) alias getTimeZone = PosixTimeZone.getTimeZone;
-        else version(Windows) alias getTimeZone = WindowsTimeZone.getTimeZone;
+        version (Posix) alias getTimeZone = PosixTimeZone.getTimeZone;
+        else version (Windows) alias getTimeZone = WindowsTimeZone.getTimeZone;
 
-        version(Posix) scope(exit) clearTZEnvVar();
+        version (Posix) scope(exit) clearTZEnvVar();
 
         static immutable(TimeZone) testTZ(string tzName,
                                           string stdName,
@@ -212,12 +212,12 @@ public:
         {
             scope(failure) writefln("Failed time zone: %s", tzName);
 
-            version(Posix)
+            version (Posix)
             {
                 immutable tz = PosixTimeZone.getTimeZone(tzName);
                 assert(tz.name == tzName);
             }
-            else version(Windows)
+            else version (Windows)
             {
                 immutable tz = WindowsTimeZone.getTimeZone(tzName);
                 assert(tz.name == stdName);
@@ -246,7 +246,7 @@ public:
             assert(cast(DateTime) dst == dstDate);
             assert(std == stdUTC);
 
-            version(Posix)
+            version (Posix)
             {
                 setTZEnvVar(tzName);
 
@@ -321,14 +321,14 @@ public:
                             /+Australia/Adelaide+/  tuple(DateTime(2012, 10, 7),  DateTime(2012, 4, 1), 2, 3)];
 
         import std.datetime.date : DateTimeException;
-        version(Posix)
+        version (Posix)
         {
-            version(FreeBSD)            enum utcZone = "Etc/UTC";
-            else version(NetBSD)        enum utcZone = "UTC";
-            else version(DragonFlyBSD)  enum utcZone = "UTC";
-            else version(linux)         enum utcZone = "UTC";
-            else version(OSX)           enum utcZone = "UTC";
-            else version(Solaris)       enum utcZone = "UTC";
+            version (FreeBSD)            enum utcZone = "Etc/UTC";
+            else version (NetBSD)        enum utcZone = "UTC";
+            else version (DragonFlyBSD)  enum utcZone = "UTC";
+            else version (linux)         enum utcZone = "UTC";
+            else version (OSX)           enum utcZone = "UTC";
+            else version (Solaris)       enum utcZone = "UTC";
             else static assert(0, "The location of the UTC timezone file on this Posix platform must be set.");
 
             auto tzs = [testTZ("America/Los_Angeles", "PST", "PDT", dur!"hours"(-8), dur!"hours"(1)),
@@ -346,7 +346,7 @@ public:
             testTZ(utcZone, "UTC", "UTC", dur!"hours"(0), dur!"hours"(0));
             assertThrown!DateTimeException(PosixTimeZone.getTimeZone("hello_world"));
         }
-        else version(Windows)
+        else version (Windows)
         {
             auto tzs = [testTZ("Pacific Standard Time", "Pacific Standard Time",
                                "Pacific Daylight Time", dur!"hours"(-8), dur!"hours"(1)),
@@ -539,7 +539,7 @@ public:
     }
 
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         /++
             In principle, this is the name of the local time zone. However,
@@ -573,7 +573,7 @@ public:
       +/
     @property override string stdName() @trusted const nothrow
     {
-        version(Posix)
+        version (Posix)
         {
             import core.stdc.time : tzname;
             import std.conv : to;
@@ -582,7 +582,7 @@ public:
             catch (Exception e)
                 assert(0, "to!string(tzname[0]) failed.");
         }
-        else version(Windows)
+        else version (Windows)
         {
             TIME_ZONE_INFORMATION tzInfo;
             GetTimeZoneInformation(&tzInfo);
@@ -617,12 +617,12 @@ public:
 
     @safe unittest
     {
-        version(FreeBSD)
+        version (FreeBSD)
         {
             // A bug on FreeBSD 9+ makes it so that this test fails.
             // https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=168862
         }
-        else version(NetBSD)
+        else version (NetBSD)
         {
             // The same bug on NetBSD 7+
         }
@@ -630,7 +630,7 @@ public:
         {
             assert(LocalTime().stdName !is null);
 
-            version(Posix)
+            version (Posix)
             {
                 scope(exit) clearTZEnvVar();
 
@@ -658,7 +658,7 @@ public:
       +/
     @property override string dstName() @trusted const nothrow
     {
-        version(Posix)
+        version (Posix)
         {
             import core.stdc.time : tzname;
             import std.conv : to;
@@ -667,7 +667,7 @@ public:
             catch (Exception e)
                 assert(0, "to!string(tzname[1]) failed.");
         }
-        else version(Windows)
+        else version (Windows)
         {
             TIME_ZONE_INFORMATION tzInfo;
             GetTimeZoneInformation(&tzInfo);
@@ -703,21 +703,21 @@ public:
     @safe unittest
     {
         // tzname, called from dstName, isn't set by default for Musl.
-        version(CRuntime_Musl)
+        version (CRuntime_Musl)
             assert(LocalTime().dstName is null);
         else
             assert(LocalTime().dstName !is null);
 
-        version(Posix)
+        version (Posix)
         {
             scope(exit) clearTZEnvVar();
 
-            version(FreeBSD)
+            version (FreeBSD)
             {
                 // A bug on FreeBSD 9+ makes it so that this test fails.
                 // https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=168862
             }
-            else version(NetBSD)
+            else version (NetBSD)
             {
                 // The same bug on NetBSD 7+
             }
@@ -741,7 +741,7 @@ public:
       +/
     @property override bool hasDST() @trusted const nothrow
     {
-        version(Posix)
+        version (Posix)
         {
             static if (is(typeof(daylight)))
                 return cast(bool)(daylight);
@@ -762,7 +762,7 @@ public:
                     assert(0, "Clock.currTime() threw.");
             }
         }
-        else version(Windows)
+        else version (Windows)
         {
             TIME_ZONE_INFORMATION tzInfo;
             GetTimeZoneInformation(&tzInfo);
@@ -775,7 +775,7 @@ public:
     {
         LocalTime().hasDST;
 
-        version(Posix)
+        version (Posix)
         {
             scope(exit) clearTZEnvVar();
 
@@ -806,7 +806,7 @@ public:
 
         time_t unixTime = stdTimeToUnixTime(stdTime);
 
-        version(Posix)
+        version (Posix)
         {
             import core.sys.posix.time : localtime_r;
 
@@ -815,7 +815,7 @@ public:
 
             return cast(bool)(timeInfo.tm_isdst);
         }
-        else version(Windows)
+        else version (Windows)
         {
             import core.stdc.time : localtime;
 
@@ -856,9 +856,9 @@ public:
       +/
     override long utcToTZ(long stdTime) @trusted const nothrow
     {
-        version(Solaris)
+        version (Solaris)
             return stdTime + convert!("seconds", "hnsecs")(tm_gmtoff(stdTime));
-        else version(Posix)
+        else version (Posix)
         {
             import core.stdc.time : tm;
             import core.sys.posix.time : localtime_r;
@@ -868,7 +868,7 @@ public:
 
             return stdTime + convert!("seconds", "hnsecs")(timeInfo.tm_gmtoff);
         }
-        else version(Windows)
+        else version (Windows)
         {
             TIME_ZONE_INFORMATION tzInfo;
             GetTimeZoneInformation(&tzInfo);
@@ -897,7 +897,7 @@ public:
       +/
     override long tzToUTC(long adjTime) @trusted const nothrow
     {
-        version(Posix)
+        version (Posix)
         {
             import core.stdc.time : tm;
             import core.sys.posix.time : localtime_r;
@@ -923,7 +923,7 @@ public:
 
             return adjTime - convert!("seconds", "hnsecs")(timeInfo.tm_gmtoff);
         }
-        else version(Windows)
+        else version (Windows)
         {
             TIME_ZONE_INFORMATION tzInfo;
             GetTimeZoneInformation(&tzInfo);
@@ -944,7 +944,7 @@ public:
         assert(LocalTime().tzToUTC(LocalTime().utcToTZ(0)) == 0);
         assert(LocalTime().utcToTZ(LocalTime().tzToUTC(0)) == 0);
 
-        version(Posix)
+        version (Posix)
         {
             scope(exit) clearTZEnvVar();
 
@@ -1101,7 +1101,7 @@ private:
 
 
     // The Solaris version of struct tm has no tm_gmtoff field, so do it here
-    version(Solaris)
+    version (Solaris)
     {
         long tm_gmtoff(long stdTime) @trusted const nothrow
         {
@@ -1175,7 +1175,7 @@ public:
     {
         assert(UTC().utcToTZ(0) == 0);
 
-        version(Posix)
+        version (Posix)
         {
             scope(exit) clearTZEnvVar();
 
@@ -1208,7 +1208,7 @@ public:
     {
         assert(UTC().tzToUTC(0) == 0);
 
-        version(Posix)
+        version (Posix)
         {
             scope(exit) clearTZEnvVar();
 
@@ -1997,7 +1997,7 @@ public:
     }
 
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         /++
             The default directory where the TZ Database files are stored. It's
@@ -2009,24 +2009,24 @@ public:
           +/
         enum defaultTZDatabaseDir = "";
     }
-    else version(TZDatabaseDir)
+    else version (TZDatabaseDir)
     {
         import std.string : strip;
         enum defaultTZDatabaseDir = strip(import("TZDatabaseDirFile"));
     }
-    else version(Android)
+    else version (Android)
     {
         enum defaultTZDatabaseDir = "/system/usr/share/zoneinfo/";
     }
-    else version(Solaris)
+    else version (Solaris)
     {
         enum defaultTZDatabaseDir = "/usr/share/lib/zoneinfo/";
     }
-    else version(Posix)
+    else version (Posix)
     {
         enum defaultTZDatabaseDir = "/usr/share/zoneinfo/";
     }
-    else version(Windows)
+    else version (Windows)
     {
         enum defaultTZDatabaseDir = "";
     }
@@ -2073,7 +2073,7 @@ public:
         enforce(tzDatabaseDir.exists(), new DateTimeException(format("Directory %s does not exist.", tzDatabaseDir)));
         enforce(tzDatabaseDir.isDir, new DateTimeException(format("%s is not a directory.", tzDatabaseDir)));
 
-        version(Android)
+        version (Android)
         {
             auto tzfileOffset = name in tzdataIndex(tzDatabaseDir);
             enforce(tzfileOffset, new DateTimeException(format("The time zone %s is not listed.", name)));
@@ -2087,7 +2087,7 @@ public:
         enforce(file.isFile, new DateTimeException(format("%s is not a file.", file)));
 
         auto tzFile = File(file);
-        version(Android) tzFile.seek(*tzfileOffset);
+        version (Android) tzFile.seek(*tzfileOffset);
         immutable gmtZone = name.representation().canFind("GMT");
 
         import std.datetime.date : DateTimeException;
@@ -2273,7 +2273,7 @@ public:
 
             cast(void) tzFile.readln();
 
-            version(Android)
+            version (Android)
             {
                 // Android uses a single file for all timezone data, so the file
                 // doesn't end here.
@@ -2383,7 +2383,7 @@ public:
     ///
     @safe unittest
     {
-        version(Posix)
+        version (Posix)
         {
             auto tz = PosixTimeZone.getTimeZone("America/Los_Angeles");
 
@@ -2416,9 +2416,9 @@ public:
         import std.exception : enforce;
         import std.format : format;
 
-        version(Posix)
+        version (Posix)
             subName = strip(subName);
-        else version(Windows)
+        else version (Windows)
         {
             import std.array : replace;
             import std.path : dirSeparator;
@@ -2431,7 +2431,7 @@ public:
 
         auto timezones = appender!(string[])();
 
-        version(Android)
+        version (Android)
         {
             import std.algorithm.iteration : filter;
             import std.algorithm.mutation : copy;
@@ -2464,7 +2464,7 @@ public:
         return timezones.data;
     }
 
-    version(Posix) @system unittest
+    version (Posix) @system unittest
     {
         import std.exception : assertNotThrown;
         import std.stdio : writefln;
@@ -2489,7 +2489,7 @@ public:
             assertNotThrown!DateTimeException(testPTZSuccess(tzName));
 
         // No timezone directories on Android, just a single tzdata file
-        version(Android)
+        version (Android)
         {}
         else
         {
@@ -2728,7 +2728,7 @@ private:
     // tzdata, along with an index to jump to each timezone's offset.  In older
     // versions of Android, the index was stored in a separate file, zoneinfo.idx,
     // whereas now it's stored at the beginning of tzdata.
-    version(Android)
+    version (Android)
     {
         // Keep track of whether there's a separate index, zoneinfo.idx.  Only
         // check this after calling tzdataIndex, as it's initialized there.
@@ -2809,7 +2809,7 @@ private:
 }
 
 
-version(StdDdoc)
+version (StdDdoc)
 {
     /++
         $(BLUE This class is Windows-Only.)
@@ -2923,7 +2923,7 @@ version(StdDdoc)
 
     private:
 
-        version(Windows)
+        version (Windows)
         {}
         else
             alias TIME_ZONE_INFORMATION = void*;
@@ -2939,7 +2939,7 @@ version(StdDdoc)
     }
 
 }
-else version(Windows)
+else version (Windows)
 {
     final class WindowsTimeZone : TimeZone
     {
@@ -3262,7 +3262,7 @@ else version(Windows)
 }
 
 
-version(StdDdoc)
+version (StdDdoc)
 {
     /++
         $(BLUE This function is Posix-Only.)
@@ -3283,7 +3283,7 @@ version(StdDdoc)
       +/
     void clearTZEnvVar() @safe nothrow;
 }
-else version(Posix)
+else version (Posix)
 {
     void setTZEnvVar(string tzDatabaseName) @trusted nothrow
     {
@@ -3292,7 +3292,7 @@ else version(Posix)
         import std.internal.cstring : tempCString;
         import std.path : asNormalizedPath, chainPath;
 
-        version(Android)
+        version (Android)
             auto value = asNormalizedPath(tzDatabaseName);
         else
             auto value = asNormalizedPath(chainPath(PosixTimeZone.defaultTZDatabaseDir, tzDatabaseName));

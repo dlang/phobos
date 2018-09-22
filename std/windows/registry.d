@@ -81,7 +81,7 @@ class Win32Exception : WindowsException
     @property int error() { return super.code; }
 }
 
-version(unittest) import std.string : startsWith, endsWith;
+version (unittest) import std.string : startsWith, endsWith;
 
 @safe unittest
 {
@@ -560,14 +560,14 @@ do
             break;
 
         case REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN:
-            version(LittleEndian)
+            version (LittleEndian)
                 value = to!string(u.dw);
             else
                 value = to!string(bswap(u.dw));
             break;
 
         case REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
-            version(LittleEndian)
+            version (LittleEndian)
                 value = to!string(bswap(u.dw));
             else
                 value = to!string(u.dw);
@@ -646,14 +646,14 @@ do
     switch (type)
     {
         case REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN:
-            version(LittleEndian)
+            version (LittleEndian)
                 static assert(REG_VALUE_TYPE.REG_DWORD == REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN);
             else
                 value = bswap(value);
             break;
 
         case REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
-            version(LittleEndian)
+            version (LittleEndian)
                 value = bswap(value);
             else
                 static assert(REG_VALUE_TYPE.REG_DWORD == REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN);

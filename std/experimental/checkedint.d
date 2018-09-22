@@ -2709,7 +2709,7 @@ if (isIntegral!T && T.sizeof >= 4)
     testPow!ulong(3, 41);
 }
 
-version(unittest) private struct CountOverflows
+version (unittest) private struct CountOverflows
 {
     uint calls;
     auto onOverflow(string op, Lhs)(Lhs lhs)
@@ -2734,7 +2734,7 @@ version(unittest) private struct CountOverflows
     }
 }
 
-version(unittest) private struct CountOpBinary
+version (unittest) private struct CountOpBinary
 {
     uint calls;
     auto hookOpBinary(string op, Lhs, Rhs)(Lhs lhs, Rhs rhs)
