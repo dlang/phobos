@@ -712,7 +712,7 @@ public:
     }
 
     ///
-    version(unittest)
+    version(StdDdoc)
     @system unittest
     {
         Variant a;
@@ -745,7 +745,7 @@ public:
     }
 
     ///
-    version(unittest)
+    version(StdDdoc)
     @system unittest
     {
         Variant a = 5;
@@ -1083,7 +1083,7 @@ public:
     }
 
     ///
-    version(unittest)
+    version(StdDdoc)
     @system unittest
     {
         Variant a = new int[10];
