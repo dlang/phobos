@@ -1120,8 +1120,6 @@ import std.exception;
  * TODO ok for default construction to initialize
  * - _expectedValue = T.init (zeros)
  * - _ok = true (better to have _isError so default is zero bits here aswell?)
- *
- * TODO ok to default `E` to `Exception`?
  */
 struct Expected(T, E = Exception)
 if (!isInstanceOf!(Unexpected, T)) // an `Unexpected` cannot be `Expected` :)
