@@ -1098,6 +1098,8 @@ import std.exception;
  *
  * TODO https://dlang.org/phobos/std_typecons.html#.apply
  *
+ * TODO provide a member function `value()` or `expectedValue()` aswell?
+ *
  * TODO I'm not convinced about the naming
  * - `Expected`: instead call it something that tells us that it can be either expected or unexpected?
  * - `Unexpected`: if so why shouldn't we have a similar value wrapper `Expected`?
@@ -1338,6 +1340,34 @@ auto unexpected(T, E = Exception)(auto ref E unexpectedValue)
     assert(!unexpectedByte.hasExpectedValue);
     assert(x.empty);
     assert(unexpectedByte.apply!(threeUnderscores) == Esi(Unexpected!E(E.init)));
+}
+
+///
+@trusted pure unittest
+{
+    import std.math : approxEqual;
+    import std.exception : assertThrown;
+    import core.exception : AssertError;
+
+    Expected!double relative(double a, double b) @safe pure
+    {
+        if (a == 0)
+        {
+            return unexpected!double(new Exception("Division by zero")); // make static?
+        }
+        else
+        {
+            return expected((b - a)/a);
+        }
+    }
+
+    auto x23 = relative(2, 3);
+    assert(x23.hasExpectedValue);
+    assert(x23.front.approxEqual(0.5));
+
+    auto x01 = relative(0, 1);
+    assert(!x01.hasExpectedValue);
+    assertThrown!AssertError(x01.front);
 }
 
 version(unittest)
