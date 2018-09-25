@@ -1085,6 +1085,8 @@ private struct Unexpected(E)
     alias value this;
 }
 
+import std.exception;
+
 /** Union (sum) type of either an expected (most probable) value of type `T` or
  * an unexpected value of type `E` (being an instance of type `Unexpected!E`).
  *
@@ -1291,13 +1293,13 @@ if (is(CommonType!(T, typeof(elseFun()))))
 }
 
 /// Insantiator for `Expected` from an expected value `expectedValue.`
-auto expected(T, E)(auto ref T expectedValue)
+auto expected(T, E = Exception)(auto ref T expectedValue)
 {
     return Expected!(T, E)(expectedValue);
 }
 
 /// Insantiator for `Expected` from an unexpected value `unexpectedValue.`
-auto unexpected(T, E)(auto ref E unexpectedValue)
+auto unexpected(T, E = Exception)(auto ref E unexpectedValue)
 {
     return Expected!(T, E)(Unexpected!E(unexpectedValue));
 }
