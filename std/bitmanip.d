@@ -2707,10 +2707,10 @@ public:
 }
 
 /++
-    Swaps the endianness of the given integral value or character.
+    Swaps the endianness of the given integral, float or character.
   +/
-T swapEndian(T)(T val) @safe pure nothrow @nogc
-if (isIntegral!T || isSomeChar!T || isBoolean!T)
+T swapEndian(T)(const T val) @safe pure nothrow @nogc
+if (canSwapEndianness!T)
 {
     static if (val.sizeof == 1)
         return val;
@@ -2718,6 +2718,13 @@ if (isIntegral!T || isSomeChar!T || isBoolean!T)
         return swapEndianImpl(val);
     else static if (isIntegral!T)
         return cast(T) swapEndianImpl(cast(Unsigned!T) val);
+    else static if (isFloatOrDouble!T)
+    {
+        EndianSwapper!T es = void;
+        es.value = val;
+        es.intValue = swapEndianImpl(es.intValue);
+        return es.value;
+    }
     else static if (is(Unqual!T == wchar))
         return cast(T) swapEndian(cast(ushort) val);
     else static if (is(Unqual!T == dchar))
@@ -2740,6 +2747,8 @@ if (isIntegral!T || isSomeChar!T || isBoolean!T)
     assert(ushort(10).swapEndian == 2560);
     assert(long(10).swapEndian == 720575940379279360);
     assert(ulong(10).swapEndian == 720575940379279360);
+
+    assert(swapEndian(0x1.00007ep+0f) == 0x1.01007ep-1f);
 }
 
 private ushort swapEndianImpl(ushort val) @safe pure nothrow @nogc
@@ -2817,11 +2826,11 @@ if (canSwapEndianness!T)
     Unqual!T value;
     ubyte[T.sizeof] array;
 
-    static if (is(FloatingPointTypeOf!(Unqual!T) == float))
-        uint  intValue;
-    else static if (is(FloatingPointTypeOf!(Unqual!T) == double))
-        ulong intValue;
-
+    static if (isFloatOrDouble!(Unqual!T))
+    {
+        import std.meta : AliasSeq;
+        AliasSeq!(uint, ulong)[is(FloatingPointTypeOf!(Unqual!T) == double)] intValue;
+    }
 }
 
 
