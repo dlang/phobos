@@ -60,7 +60,7 @@ nothrow:
   (b) compiler bugs prevent the use of .ptr when a frame pointer is used.
 */
 
-version(D_InlineAsm_X86)
+version (D_InlineAsm_X86)
 {
 
 private:
@@ -573,7 +573,7 @@ uint multibyteMul(uint[] dest, const uint[] src, uint multiplier, uint carry)
     enum { LASTPARAM = 4*4 } // 4* pushes + return address.
     // We'll use p2 (load unit) instead of the overworked p0 or p1 (ALU units)
     // when initializing variables to zero.
-    version(D_PIC)
+    version (D_PIC)
     {
         enum { zero = 0 }
     }
@@ -658,7 +658,7 @@ string asmMulAdd_innerloop(string OP, string M_ADDRESS) pure {
         // The first member of 'dest' which will be modified is [EDI+4*EBX].
         // EAX must already contain the first member of 'src', [ESI+4*EBX].
 
-    version(D_PIC) { bool using_PIC = true; } else { bool using_PIC = false; }
+    version (D_PIC) { bool using_PIC = true; } else { bool using_PIC = false; }
     return "
         // Entry point for even length
         add EBX, 1;
@@ -746,7 +746,7 @@ uint multibyteMulAdd(char op)(uint [] dest, const uint [] src, uint
     // ESI = src
 
     enum string OP = (op=='+')? "add" : "sub";
-    version(D_PIC)
+    version (D_PIC)
     {
         enum { zero = 0 }
     }
@@ -830,7 +830,7 @@ void multibyteMultiplyAccumulate(uint [] dest, const uint[] left,
     // ESI = end of left. never changes
     // [ESP] = M = right[i] = multiplier for this pass through the loop.
     // right.length is changed into dest.ptr+dest.length
-    version(D_PIC)
+    version (D_PIC)
     {
         enum { zero = 0 }
     }
@@ -1114,7 +1114,7 @@ void multibyteTriangleAccumulateAsm(uint[] dest, const uint[] src) pure
     // ESI = end of src. never changes
     // [ESP] = M = src[i] = multiplier for this pass through the loop.
     // dest.length is changed into dest.ptr+dest.length
-    version(D_PIC)
+    version (D_PIC)
     {
         enum { zero = 0 }
     }
@@ -1276,7 +1276,7 @@ void multibyteSquare(BigDigit[] result, const BigDigit [] x) pure
     multibyteAddDiagonalSquares(result, x);
 }
 
-version(BignumPerformanceTest)
+version (BignumPerformanceTest)
 {
 import core.stdc.stdio;
 int clock() { asm { push EBX; xor EAX, EAX; cpuid; pop EBX; rdtsc; } }
@@ -1350,4 +1350,4 @@ static this()
 }
 }
 
-} // version(D_InlineAsm_X86)
+} // version (D_InlineAsm_X86)

@@ -143,7 +143,7 @@ Source:    $(PHOBOSSRC std/string.d)
 */
 module std.string;
 
-version(unittest)
+version (unittest)
 {
 private:
     struct TestAliasedString
@@ -6420,7 +6420,7 @@ if (isSomeString!S ||
     assert(!isNumeric("+"));
 }
 
-version(TestComplex)
+version (TestComplex)
 deprecated
 @safe unittest
 {

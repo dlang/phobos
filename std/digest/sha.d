@@ -101,21 +101,21 @@ module std.digest.sha;
     hash1 = sha1.finish();
 }
 
-version(Win64)
+version (Win64)
 {
     // wrong calling convention
 }
-else version(D_InlineAsm_X86)
+else version (D_InlineAsm_X86)
 {
     version (D_PIC) {} // Bugzilla 9378
     else private version = USE_SSSE3;
 }
-else version(D_InlineAsm_X86_64)
+else version (D_InlineAsm_X86_64)
 {
     private version = USE_SSSE3;
 }
 
-version(LittleEndian) import core.bitop : bswap;
+version (LittleEndian) import core.bitop : bswap;
 
 public import std.digest;
 
@@ -125,7 +125,7 @@ public import std.digest;
  */
 private ubyte[8] nativeToBigEndian(ulong val) @trusted pure nothrow @nogc
 {
-    version(LittleEndian)
+    version (LittleEndian)
         immutable ulong res = (cast(ulong)  bswap(cast(uint) val)) << 32 | bswap(cast(uint) (val >> 32));
     else
         immutable ulong res = val;
@@ -134,7 +134,7 @@ private ubyte[8] nativeToBigEndian(ulong val) @trusted pure nothrow @nogc
 
 private ubyte[4] nativeToBigEndian(uint val) @trusted pure nothrow @nogc
 {
-    version(LittleEndian)
+    version (LittleEndian)
         immutable uint res = bswap(val);
     else
         immutable uint res = val;
@@ -143,7 +143,7 @@ private ubyte[4] nativeToBigEndian(uint val) @trusted pure nothrow @nogc
 
 private ulong bigEndianToNative(ubyte[8] val) @trusted pure nothrow @nogc
 {
-    version(LittleEndian)
+    version (LittleEndian)
     {
         import std.bitmanip : bigEndianToNative;
         return bigEndianToNative!ulong(val);
@@ -154,7 +154,7 @@ private ulong bigEndianToNative(ubyte[8] val) @trusted pure nothrow @nogc
 
 private uint bigEndianToNative(ubyte[4] val) @trusted pure nothrow @nogc
 {
-    version(LittleEndian)
+    version (LittleEndian)
         return bswap(*cast(uint*) &val);
     else
         return *cast(uint*) &val;
@@ -203,7 +203,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
 
     static if (digestSize == 160) /* SHA-1 */
     {
-        version(USE_SSSE3)
+        version (USE_SSSE3)
         {
             import core.cpuid : ssse3;
             import std.internal.digest.sha_SSSE3 : sse3_constants=constants, transformSSSE3;
@@ -1188,7 +1188,7 @@ auto sha512_256Of(T...)(T data)
     string a = "Mary has ", b = "a little lamb";
     int[] c = [ 1, 2, 3, 4, 5 ];
     auto d = toHexString(sha1Of(a, b, c));
-    version(LittleEndian)
+    version (LittleEndian)
         assert(d[] == "CDBB611D00AC2387B642D3D7BDF4C3B342237110", d);
     else
         assert(d[] == "A0F1196C7A379C09390476D9CA4AA11B71FD11C8", d);

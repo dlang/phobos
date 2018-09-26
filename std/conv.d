@@ -1666,7 +1666,7 @@ if (!isImplicitlyConvertible!(S, T) && isAssociativeArray!S &&
     assert(a.to!(const(int)[int]).byPair.equal(a.byPair));
 }
 
-version(unittest)
+version (unittest)
 private void testIntegralToFloating(Integral, Floating)()
 {
     Integral a = 42;
@@ -1675,7 +1675,7 @@ private void testIntegralToFloating(Integral, Floating)()
     assert(a == to!Integral(b));
 }
 
-version(unittest)
+version (unittest)
 private void testFloatingToIntegral(Floating, Integral)()
 {
     bool convFails(Source, Target, E)(Source src)
@@ -3086,7 +3086,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 
     // min and max
     real r = to!real(to!string(real.min_normal));
-    version(NetBSD)
+    version (NetBSD)
     {
         // NetBSD notice
         // to!string returns 3.3621e-4932L. It is less than real.min_normal and it is subnormal value
@@ -4689,7 +4689,7 @@ if (!is(T == class))
     assert(u1.a == "hello");
 }
 
-version(unittest) private struct __conv_EmplaceTest
+version (unittest) private struct __conv_EmplaceTest
 {
     int i = 3;
     this(int i)
@@ -4710,7 +4710,7 @@ version(unittest) private struct __conv_EmplaceTest
     void opAssign();
 }
 
-version(unittest) private class __conv_EmplaceTestClass
+version (unittest) private class __conv_EmplaceTestClass
 {
     int i = 3;
     this(int i) @nogc @safe pure nothrow
@@ -5131,7 +5131,7 @@ version(unittest) private class __conv_EmplaceTestClass
     }
 }
 
-version(unittest)
+version (unittest)
 {
     //Ambiguity
     private struct __std_conv_S

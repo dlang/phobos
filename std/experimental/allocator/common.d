@@ -482,7 +482,7 @@ Forwards each of the methods in `funs` (if defined) to `member`.
     return result;
 }
 
-version(unittest)
+version (unittest)
 {
 
     package void testAllocator(alias make)()

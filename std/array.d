@@ -219,7 +219,7 @@ if (isPointer!Range && isIterable!(PointerTarget!Range) && !isNarrowString!Range
     assert(a.length == 5);
 }
 
-version(unittest)
+version (unittest)
     private extern(C) void _d_delarray_t(void[] *p, TypeInfo_Struct ti);
 
 @system unittest
@@ -456,7 +456,7 @@ if (isInputRange!Range)
     assert(b == ["foo":"bar", "baz":"quux"]);
 }
 
-// @@@11053@@@ - Cannot be version(unittest) - recursive instantiation error
+// @@@11053@@@ - Cannot be version (unittest) - recursive instantiation error
 @safe unittest
 {
     import std.typecons;
@@ -4295,7 +4295,7 @@ nothrow pure @safe unittest
     staticArray!(long, 2.iota).checkStaticArray!long([0, 1]);
 }
 
-version(unittest) private void checkStaticArray(T, T1, T2)(T1 a, T2 b) nothrow @safe pure @nogc
+version (unittest) private void checkStaticArray(T, T1, T2)(T1 a, T2 b) nothrow @safe pure @nogc
 {
     static assert(is(T1 == T[T1.length]));
     assert(a == b);

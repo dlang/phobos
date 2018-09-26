@@ -616,7 +616,7 @@ template AllocatorList(alias factoryFunction,
 }
 
 ///
-version(Posix) @system unittest
+version (Posix) @system unittest
 {
     import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.free_list : ContiguousFreeList;

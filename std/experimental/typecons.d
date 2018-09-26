@@ -184,7 +184,7 @@ if (Targets.length >= 1 && allSatisfy!(isInterface, Targets))
 {
     import std.meta : ApplyLeft, staticMap;
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         /**
          * Wrap src in an anonymous class implementing $(D_PARAM Targets).
@@ -406,7 +406,7 @@ private string unwrapExceptionText(Source, Target)()
     return Target.stringof~ " not wrapped into "~ Source.stringof;
 }
 
-version(StdDdoc)
+version (StdDdoc)
 {
     /**
      * Extract object previously wrapped by $(LREF wrap).

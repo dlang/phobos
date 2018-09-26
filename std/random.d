@@ -153,15 +153,15 @@ import std.traits;
     assert(10.iota.randomSample(3, rnd2).equal([7, 8, 9]));
 
     // Cover all elements in an array in random order
-    version(X86_64) // Issue 15147
+    version (X86_64) // Issue 15147
     assert(10.iota.randomCover(rnd2).equal([7, 4, 2, 0, 1, 6, 8, 3, 9, 5]));
 
     // Shuffle an array
-    version(X86_64) // Issue 15147
+    version (X86_64) // Issue 15147
     assert([0, 1, 2, 4, 5].randomShuffle(rnd2).equal([2, 0, 4, 5, 1]));
 }
 
-version(unittest)
+version (unittest)
 {
     static import std.meta;
     package alias PseudoRngTypes = std.meta.AliasSeq!(MinstdRand0, MinstdRand, Mt19937, Xorshift32, Xorshift64,
@@ -698,7 +698,7 @@ alias MinstdRand = LinearCongruentialEngine!(uint, 48_271, 0, 2_147_483_647);
         auto rnd2 = rnd1.save;
         assert(rnd1 == rnd2);
         // Enable next test when RNGs are reference types
-        version(none) { assert(rnd1 !is rnd2); }
+        version (none) { assert(rnd1 !is rnd2); }
         for (auto i = 0; i < 100; i++, rnd1.popFront, rnd2.popFront)
             assert(rnd1.front() == rnd2.front());
     }}
@@ -1153,7 +1153,7 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
         auto gen2 = gen1.save;
         assert(gen1 == gen2);  // Danger, Will Robinson -- no opEquals for MT
         // Enable next test when RNGs are reference types
-        version(none) { assert(gen1 !is gen2); }
+        version (none) { assert(gen1 !is gen2); }
         for (auto i = 0; i < 100; i++, gen1.popFront, gen2.popFront)
             assert(gen1.front() == gen2.front());
     }}
@@ -1468,7 +1468,7 @@ alias Xorshift    = Xorshift128;                            /// ditto
         auto rnd2 = rnd1.save;
         assert(rnd1 == rnd2);
         // Enable next test when RNGs are reference types
-        version(none) { assert(rnd1 !is rnd2); }
+        version (none) { assert(rnd1 !is rnd2); }
         for (auto i = 0; i < 100; i++, rnd1.popFront, rnd2.popFront)
             assert(rnd1.front() == rnd2.front());
     }
@@ -2119,7 +2119,7 @@ if (!is(T == enum) && (isIntegral!T || isSomeChar!T))
     assert(rnd.uniform!ulong == 4838462006927449017);
 
     enum Fruit { apple, mango, pear }
-    version(X86_64) // Issue 15147
+    version (X86_64) // Issue 15147
     assert(rnd.uniform!Fruit == Fruit.mango);
 }
 
@@ -2366,7 +2366,7 @@ auto ref choice(Range)(auto ref Range range)
     auto rnd = MinstdRand0(42);
 
     auto elem  = [1, 2, 3, 4, 5].choice(rnd);
-    version(X86_64) // Issue 15147
+    version (X86_64) // Issue 15147
     assert(elem == 3);
 }
 
@@ -2448,7 +2448,7 @@ if (isRandomAccessRange!Range)
     auto rnd = MinstdRand0(42);
 
     auto arr = [1, 2, 3, 4, 5].randomShuffle(rnd);
-    version(X86_64) // Issue 15147
+    version (X86_64) // Issue 15147
     assert(arr == [3, 5, 2, 4, 1]);
 }
 
@@ -2536,15 +2536,15 @@ if (isRandomAccessRange!Range)
     auto arr = [1, 2, 3, 4, 5, 6];
     arr = arr.dup.partialShuffle(1, rnd);
 
-    version(X86_64) // Issue 15147
+    version (X86_64) // Issue 15147
     assert(arr == [2, 1, 3, 4, 5, 6]); // 1<->2
 
     arr = arr.dup.partialShuffle(2, rnd);
-    version(X86_64) // Issue 15147
+    version (X86_64) // Issue 15147
     assert(arr == [1, 4, 3, 2, 5, 6]); // 1<->2, 2<->4
 
     arr = arr.dup.partialShuffle(3, rnd);
-    version(X86_64) // Issue 15147
+    version (X86_64) // Issue 15147
     assert(arr == [5, 4, 6, 2, 1, 3]); // 1<->5, 2<->4, 3<->6
 }
 
@@ -2948,7 +2948,7 @@ if (isRandomAccessRange!Range)
     import std.range : iota;
     auto rnd = MinstdRand0(42);
 
-    version(X86_64) // Issue 15147
+    version (X86_64) // Issue 15147
     assert(10.iota.randomCover(rnd).equal([7, 4, 2, 0, 1, 6, 8, 3, 9, 5]));
 }
 

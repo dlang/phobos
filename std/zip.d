@@ -973,8 +973,8 @@ the quick brown fox jumps over the lazy dog\r
 
 // Non-Android Posix-only, because we can't rely on the unzip command being
 // available on Android or Windows
-version(Android) {} else
-version(Posix) @system unittest
+version (Android) {} else
+version (Posix) @system unittest
 {
     import std.datetime, std.file, std.format, std.path, std.process, std.stdio;
 

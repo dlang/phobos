@@ -365,18 +365,18 @@ private struct _Cache(R, bool bidir)
 
     E front() @property
     {
-        version(assert) if (empty) throw new RangeError();
+        version (assert) if (empty) throw new RangeError();
         return caches[0];
     }
     static if (bidir) E back() @property
     {
-        version(assert) if (empty) throw new RangeError();
+        version (assert) if (empty) throw new RangeError();
         return caches[1];
     }
 
     void popFront()
     {
-        version(assert) if (empty) throw new RangeError();
+        version (assert) if (empty) throw new RangeError();
         source.popFront();
         if (!source.empty)
             caches[0] = source.front;
@@ -385,7 +385,7 @@ private struct _Cache(R, bool bidir)
     }
     static if (bidir) void popBack()
     {
-        version(assert) if (empty) throw new RangeError();
+        version (assert) if (empty) throw new RangeError();
         source.popBack();
         if (!source.empty)
             caches[1] = source.back;
@@ -2137,7 +2137,7 @@ if (isInputRange!Range)
     ]));
 }
 
-version(none) // this example requires support for non-equivalence relations
+version (none) // this example requires support for non-equivalence relations
 @safe unittest
 {
     // Grouping by maximum adjacent difference:
@@ -2278,7 +2278,7 @@ version(none) // this example requires support for non-equivalence relations
 }
 
 // Issue 13595
-version(none) // This requires support for non-equivalence relations
+version (none) // This requires support for non-equivalence relations
 @system unittest
 {
     import std.algorithm.comparison : equal;
@@ -4849,7 +4849,7 @@ private struct SplitterResult(alias isTerminator, Range)
 
     @property auto front()
     {
-        version(assert)
+        version (assert)
         {
             import core.exception : RangeError;
             if (empty)
@@ -4866,7 +4866,7 @@ private struct SplitterResult(alias isTerminator, Range)
 
     void popFront()
     {
-        version(assert)
+        version (assert)
         {
             import core.exception : RangeError;
             if (empty)
@@ -5043,14 +5043,14 @@ if (isSomeChar!C)
 
         @property C[] front() pure @safe
         {
-            version(assert) if (empty) throw new RangeError();
+            version (assert) if (empty) throw new RangeError();
             return _s[0 .. _frontLength];
         }
 
         void popFront() pure @safe
         {
             import std.string : stripLeft;
-            version(assert) if (empty) throw new RangeError();
+            version (assert) if (empty) throw new RangeError();
             _s = _s[_frontLength .. $].stripLeft();
             getFirst();
         }

@@ -6,7 +6,7 @@
  * intended for internal use only.
  * This module is intended only to assist development of high-speed routines
  * on currently unsupported processors.
- * The X86 asm version is about 30 times faster than the D version(DMD).
+ * The X86 asm version is about 30 times faster than the D version (DMD).
  */
 
 /*          Copyright Don Clugston 2008 - 2010.

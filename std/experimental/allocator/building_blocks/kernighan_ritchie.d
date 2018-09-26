@@ -494,7 +494,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
             return true;
         }
 
-        version(assert) foreach (test; byNodePtr)
+        version (assert) foreach (test; byNodePtr)
         {
             assert(test != n);
         }
