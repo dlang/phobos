@@ -2053,7 +2053,7 @@ $(OL
     $(LI It advances the input to the position following the conversion.)
     $(LI It does not throw if it could not convert the entire input.))
 
-This overload converts an character input range to a `bool`.
+This overload converts a character input range to a `bool`.
 
 Params:
     Target = the type to convert to
