@@ -854,7 +854,10 @@ deprecated
 @safe pure nothrow unittest
 {
     import std.math;
-    assert(cos(complex(0, 5.2L)) == cosh(5.2L));
+    auto c1 = cos(complex(0, 5.2L));
+    auto c2 = cosh(5.2L);
+    assert(feqrel(c1.re, c2.re) >= real.mant_dig - 1 &&
+        feqrel(c1.im, c2.im) >= real.mant_dig - 1);
     assert(cos(complex(1.3L)) == std.math.cos(1.3L));
 }
 
