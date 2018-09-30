@@ -7219,6 +7219,17 @@ if (isForwardRange!RangeOfRanges &&
     this(RangeOfRanges input)
     {
         this._input = input;
+        static if (opt == TransverseOptions.enforceNotJagged)
+        {
+            import std.exception : enforce;
+
+            if (empty) return;
+            immutable commonLength = _input.front.length;
+            foreach (e; _input)
+            {
+                enforce(e.length == commonLength);
+            }
+        }
     }
 
     @property auto front()
@@ -7324,6 +7335,14 @@ private:
     assert(z.front.equal([1,4]));
     assert(z[0].equal([1,4]));
     assert(!is(typeof(z[0][0])));
+}
+
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    auto r = [[1,2], [3], [4,5], [], [6]];
+    assertThrown(r.transposed!(TransverseOptions.enforceNotJagged));
 }
 
 /**
