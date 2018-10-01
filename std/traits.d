@@ -4308,6 +4308,10 @@ if (is(T == class))
     {
         alias BaseClassesTuple = AliasSeq!Object;
     }
+    else static if (!is(BaseTypeTuple!T[0] == Object) && !is(BaseTypeTuple!T[0] == class))
+    {
+        alias BaseClassesTuple = AliasSeq!();
+    }
     else
     {
         alias BaseClassesTuple =
@@ -4328,6 +4332,21 @@ if (is(T == class))
     static assert(is(BaseClassesTuple!C1 == AliasSeq!(Object)));
     static assert(is(BaseClassesTuple!C2 == AliasSeq!(C1, Object)));
     static assert(is(BaseClassesTuple!C3 == AliasSeq!(C2, C1, Object)));
+}
+
+@safe unittest // issue 17276
+{
+    extern (C++) static interface Ext
+    {
+        void someext();
+    }
+
+    extern (C++) static class E : Ext
+    {
+        void someext() {}
+    }
+
+    alias BaseClassesWithNoObject = BaseClassesTuple!E;
 }
 
 @safe unittest
