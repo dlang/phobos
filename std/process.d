@@ -706,12 +706,13 @@ private Pid spawnProcessImpl(scope const(char)[] commandLine,
     static void prepareStream(ref File file, DWORD stdHandle, string which,
                               out int fileDescriptor, out HANDLE handle)
     {
+        enum _NO_CONSOLE_FILENO = cast(HANDLE)-2;
         fileDescriptor = getFD(file);
         handle = null;
         if (fileDescriptor >= 0)
             handle = file.windowsHandle;
         // Windows GUI applications have a fd but not a valid Windows HANDLE.
-        if (handle is null || handle == INVALID_HANDLE_VALUE)
+        if (handle is null || handle == INVALID_HANDLE_VALUE || handle == _NO_CONSOLE_FILENO)
             handle = GetStdHandle(stdHandle);
 
         DWORD dwFlags;
