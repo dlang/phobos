@@ -1917,7 +1917,15 @@ if (isInputRange!RoR &&
     isInputRange!(Unqual!(ElementType!RoR)))
 {
     alias RetType = typeof(return);
-    alias RetTypeElement = Unqual!(ElementEncodingType!RetType);
+    alias ConstRetTypeElement = ElementEncodingType!RetType;
+    static if (isAssignable!(Unqual!ConstRetTypeElement, ConstRetTypeElement))
+    {
+        alias RetTypeElement = Unqual!ConstRetTypeElement;
+    }
+    else
+    {
+        alias RetTypeElement = ConstRetTypeElement;
+    }
     alias RoRElem = ElementType!RoR;
 
     if (ror.empty)
@@ -1934,7 +1942,7 @@ if (isInputRange!RoR &&
         size_t len;
         foreach (r; ror)
             foreach (e; r)
-                emplaceRef(result[len++], e);
+                emplaceRef!RetTypeElement(result[len++], e);
         assert(len == result.length);
         return (() @trusted => cast(RetType) result)();
     }
@@ -1998,6 +2006,16 @@ if (isInputRange!RoR &&
 
     const string[] arr = ["apple", "banana"];
     assert(arr.join(',') == "apple,banana");
+}
+
+@safe unittest
+{
+    class A { }
+
+    const A[][] array;
+    auto result = array.join; // can't remove constness, so don't try
+
+    static assert(is(typeof(result) == const(A)[]));
 }
 
 @safe unittest
