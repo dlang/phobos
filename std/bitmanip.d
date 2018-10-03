@@ -2710,7 +2710,8 @@ public:
     Swaps the endianness of the given integral, float or character.
   +/
 T swapEndian(T)(const T val) @safe pure nothrow @nogc
-if (canSwapEndianness!T)
+if (isIntegral!T || isSomeChar!T || isBoolean!T ||
+    (isFloatOrDouble!T && size_t.sizeof == 8))
 {
     static if (val.sizeof == 1)
         return val;
@@ -2749,6 +2750,19 @@ if (canSwapEndianness!T)
     assert(ulong(10).swapEndian == 720575940379279360);
 
     assert(swapEndian(0x1.00007ep+0f) == 0x1.01007ep-1f);
+}
+
+/// ditto
+// This overload prevents the value to swap to travel in the FPU's ST(0)
+// and to mess it up. This is only done for x86 since x86_64 uses XMM0.
+T swapEndian(T)(const T[] val...) @safe pure nothrow @nogc
+if (isFloatOrDouble!T && size_t.sizeof == 4)
+{
+    assert(val.length == 1, "attempt to swap several " ~ T.stringof);
+    EndianSwapper!T es = void;
+    es.value = val[0];
+    es.intValue = swapEndianImpl(es.intValue);
+    return es.value;
 }
 
 private ushort swapEndianImpl(ushort val) @safe pure nothrow @nogc
