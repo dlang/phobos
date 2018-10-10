@@ -2937,26 +2937,90 @@ if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
 {
     static import std.ascii;
     static import std.uni;
-    import std.utf : decodeFront;
 
-    while (!input.empty)
+    static if (is(Unqual!(ElementEncodingType!Range) == dchar)
+        || is(Unqual!(ElementEncodingType!Range) == wchar))
     {
-        auto c = input.front;
-        if (std.ascii.isASCII(c))
+        // Decoding is never needed for dchar. It happens not to be needed
+        // here for wchar because no whitepace is outside the basic
+        // multilingual plane meaning every whitespace character is encoded
+        // with a single wchar and due to the design of UTF-16 those wchars
+        // will not occur as part of the encoding of multi-wchar codepoints.
+        static if (isDynamicArray!Range)
         {
-            if (!std.ascii.isWhite(c))
-                break;
-            input.popFront();
+            foreach (i; 0 .. input.length)
+            {
+                if (!std.uni.isWhite(input[i]))
+                    return input[i .. $];
+            }
+            return input[$ .. $];
         }
         else
         {
-            auto save = input.save;
-            auto dc = decodeFront(input);
-            if (!std.uni.isWhite(dc))
-                return save;
+            while (!input.empty)
+            {
+                if (!std.uni.isWhite(input.front))
+                    break;
+                input.popFront();
+            }
+            return input;
         }
     }
-    return input;
+    else
+    {
+        static if (isDynamicArray!Range)
+        {
+            // ASCII optimization for dynamic arrays.
+            size_t i = 0;
+            for (const size_t end = input.length; i < end; ++i)
+            {
+                auto c = input[i];
+                if (c >= 0x80) goto NonAsciiPath;
+                if (!std.ascii.isWhite(c)) break;
+            }
+            input = input[i .. $];
+            return input;
+
+        NonAsciiPath:
+            input = input[i .. $];
+            // Fall through to standard case.
+        }
+
+        static if (ElementType!Range.sizeof > ElementEncodingType!Range.sizeof)
+        {
+            // Type performs its own decoding.
+            while (!input.empty)
+            {
+                if (!std.uni.isWhite(input.front))
+                    break;
+                input.popFront();
+            }
+            return input;
+        }
+        else
+        {
+            // Type doesn't perform its own decoding.
+            import std.utf : decodeFront, UseReplacementDchar;
+            while (!input.empty)
+            {
+                auto c = input.front;
+                if (std.ascii.isASCII(c))
+                {
+                    if (!std.ascii.isWhite(c))
+                        break;
+                    input.popFront();
+                }
+                else
+                {
+                    auto save = input.save;
+                    auto dc = decodeFront!(UseReplacementDchar.yes)(input);
+                    if (!std.uni.isWhite(dc))
+                        return save;
+                }
+            }
+            return input;
+        }
+    }
 }
 
 ///
@@ -2967,6 +3031,8 @@ if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
            "hello world     ");
     assert(stripLeft("\n\t\v\rhello world\n\t\v\r") ==
            "hello world\n\t\v\r");
+    assert(stripLeft(" \u2028hello world") ==
+           "hello world");
     assert(stripLeft("hello world") ==
            "hello world");
     assert(stripLeft([lineSep] ~ "hello world" ~ lineSep) ==
@@ -2978,6 +3044,8 @@ if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
     import std.utf : byChar;
     assert(stripLeft("     hello world     "w.byChar).array ==
            "hello world     ");
+    assert(stripLeft("     \u2022hello world     ".byChar).array ==
+           "\u2022hello world     ");
 }
 
 auto stripLeft(Range)(auto ref Range str)
