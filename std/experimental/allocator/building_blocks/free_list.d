@@ -257,14 +257,17 @@ struct FreeList(ParentAllocator,
         return parent.goodAllocSize(bytes);
     }
 
-    private void[] allocateEligible(size_t bytes)
+    private void[] allocateEligible(string fillMode)(size_t bytes)
+    if (fillMode == "void" || fillMode == "zero")
     {
+        enum bool isFillZero = fillMode == "zero";
         assert(bytes);
         if (root)
         {
             // faster
             auto result = (cast(ubyte*) root)[0 .. bytes];
             root = root.next;
+            static if (isFillZero) result[0 .. bytes] = 0;
             return result;
         }
         // slower
@@ -277,7 +280,10 @@ struct FreeList(ParentAllocator,
             alias toAllocate = bytes;
         }
         assert(toAllocate == max || max == unbounded);
-        auto result = parent.allocate(toAllocate);
+        static if (isFillZero)
+            auto result = parent.allocateZeroed(toAllocate);
+        else
+            auto result = parent.allocate(toAllocate);
         static if (hasTolerance)
         {
             if (result) result = result.ptr[0 .. bytes];
@@ -317,7 +323,7 @@ struct FreeList(ParentAllocator,
         // fast path
         if (freeListEligible(n))
         {
-            return allocateEligible(n);
+            return allocateEligible!"void"(n);
         }
         // slower
         static if (adaptive == Yes.adaptive)
@@ -325,6 +331,24 @@ struct FreeList(ParentAllocator,
             updateStats;
         }
         return parent.allocate(n);
+    }
+
+    static if (hasMember!(ParentAllocator, "allocateZeroed"))
+    package(std) void[] allocateZeroed()(size_t n)
+    {
+        static if (adaptive == Yes.adaptive) ++accumSamples;
+        assert(n < size_t.max / 2);
+        // fast path
+        if (freeListEligible(n))
+        {
+            return allocateEligible!"zero"(n);
+        }
+        // slower
+        static if (adaptive == Yes.adaptive)
+        {
+            updateStats;
+        }
+        return parent.allocateZeroed(n);
     }
 
     // Forwarding methods

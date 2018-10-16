@@ -3,12 +3,12 @@
 /**
  * Identify the compiler used and its various features.
  *
- * Copyright: Copyright Digital Mars 2000 - 2011.
+ * Copyright: Copyright The D Language Foundation 2000 - 2011.
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(HTTP digitalmars.com, Walter Bright), Alex Rønne Petersen
  * Source:    $(PHOBOSSRC std/compiler.d)
  */
-/*          Copyright Digital Mars 2000 - 2011.
+/*          Copyright The D Language Foundation 2000 - 2011.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
@@ -32,12 +32,12 @@ immutable
     }
 
     /// Which vendor produced this compiler.
-    version(StdDdoc)          Vendor vendor;
-    else version(DigitalMars) Vendor vendor = Vendor.digitalMars;
-    else version(GNU)         Vendor vendor = Vendor.gnu;
-    else version(LDC)         Vendor vendor = Vendor.llvm;
-    else version(D_NET)       Vendor vendor = Vendor.dotNET;
-    else version(SDC)         Vendor vendor = Vendor.sdc;
+    version (StdDdoc)          Vendor vendor;
+    else version (DigitalMars) Vendor vendor = Vendor.digitalMars;
+    else version (GNU)         Vendor vendor = Vendor.gnu;
+    else version (LDC)         Vendor vendor = Vendor.llvm;
+    else version (D_NET)       Vendor vendor = Vendor.dotNET;
+    else version (SDC)         Vendor vendor = Vendor.sdc;
     else                      Vendor vendor = Vendor.unknown;
 
 

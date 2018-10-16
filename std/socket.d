@@ -55,7 +55,7 @@ import std.internal.cstring;
 
 @safe:
 
-version(Windows)
+version (Windows)
 {
     pragma (lib, "ws2_32.lib");
     pragma (lib, "wsock32.lib");
@@ -74,9 +74,9 @@ version(Windows)
         return WSAGetLastError();
     }
 }
-else version(Posix)
+else version (Posix)
 {
-    version(linux)
+    version (linux)
     {
         enum : int
         {
@@ -120,7 +120,7 @@ else
     static assert(0);     // No socket support yet.
 }
 
-version(unittest)
+version (unittest)
 {
     // Print a message on exception instead of failing the unittest.
     private void softUnittest(void delegate() @safe test, int line = __LINE__) @trusted
@@ -153,7 +153,7 @@ version (CRuntime_UClibc) version = GNU_STRERROR;
  */
 string formatSocketError(int err) @trusted
 {
-    version(Posix)
+    version (Posix)
     {
         char[80] buf;
         const(char)* cs;
@@ -179,7 +179,7 @@ string formatSocketError(int err) @trusted
         return cs[0 .. len].idup;
     }
     else
-    version(Windows)
+    version (Windows)
     {
         return sysErrorString(err);
     }
@@ -263,9 +263,9 @@ class SocketFeatureException: SocketException
  */
 bool wouldHaveBlocked() nothrow @nogc
 {
-    version(Windows)
+    version (Windows)
         return _lasterr() == WSAEWOULDBLOCK;
-    else version(Posix)
+    else version (Posix)
         return _lasterr() == EAGAIN;
     else
         static assert(0);
@@ -281,7 +281,7 @@ private immutable
 
 shared static this() @system
 {
-    version(Windows)
+    version (Windows)
     {
         WSADATA wd;
 
@@ -305,7 +305,7 @@ shared static this() @system
                                  GetProcAddress(ws2Lib, "freeaddrinfo");
         }
     }
-    else version(Posix)
+    else version (Posix)
     {
         getnameinfoPointer = &getnameinfo;
         getaddrinfoPointer = &getaddrinfo;
@@ -316,7 +316,7 @@ shared static this() @system
 
 shared static ~this() @system nothrow @nogc
 {
-    version(Windows)
+    version (Windows)
     {
         WSACleanup();
     }
@@ -447,7 +447,7 @@ class Protocol
 
 // Skip this test on Android because getprotobyname/number are
 // unimplemented in bionic.
-version(CRuntime_Bionic) {} else
+version (CRuntime_Bionic) {} else
 @safe unittest
 {
     // import std.stdio : writefln;
@@ -691,7 +691,7 @@ class InternetHost
         return true;
     }
 
-    version(Windows)
+    version (Windows)
         alias getHost = getHostNoSync;
     else
     {
@@ -833,7 +833,7 @@ enum AddressInfoFlags: int
  */
 private string formatGaiError(int err) @trusted
 {
-    version(Windows)
+    version (Windows)
     {
         return sysErrorString(err);
     }
@@ -1281,7 +1281,7 @@ abstract class Address
             {
                 if (ret == EAI_NONAME)
                     return null;
-                version(Windows)
+                version (Windows)
                     if (ret == WSANO_DATA)
                         return null;
             }
@@ -1880,7 +1880,7 @@ public:
 }
 
 
-version(StdDdoc)
+version (StdDdoc)
 {
     static if (!is(sockaddr_un))
     {
@@ -2415,7 +2415,7 @@ public:
 {
     softUnittest({
         enum PAIRS = 768;
-        version(Posix)
+        version (Posix)
         () @trusted
         {
             enum LIMIT = 2048;
@@ -2585,7 +2585,7 @@ private:
     socket_t sock;
     AddressFamily _family;
 
-    version(Windows)
+    version (Windows)
         bool _blocking = false;         /// Property to get or set whether the socket is blocking or nonblocking.
 
     // The WinSock timeouts seem to be effectively skewed by a constant
@@ -2597,7 +2597,7 @@ private:
 
     @safe unittest
     {
-        version(SlowTests)
+        version (SlowTests)
         softUnittest({
             import std.datetime.stopwatch;
             import std.typecons;
@@ -2717,11 +2717,11 @@ public:
      */
     @property bool blocking() @trusted const nothrow @nogc
     {
-        version(Windows)
+        version (Windows)
         {
             return _blocking;
         }
-        else version(Posix)
+        else version (Posix)
         {
             return !(fcntl(handle, F_GETFL, 0) & O_NONBLOCK);
         }
@@ -2730,14 +2730,14 @@ public:
     /// ditto
     @property void blocking(bool byes) @trusted
     {
-        version(Windows)
+        version (Windows)
         {
             uint num = !byes;
             if (_SOCKET_ERROR == ioctlsocket(sock, FIONBIO, &num))
                 goto err;
             _blocking = byes;
         }
-        else version(Posix)
+        else version (Posix)
         {
             int x = fcntl(sock, F_GETFL, 0);
             if (-1 == x)
@@ -2791,12 +2791,12 @@ public:
 
             if (!blocking)
             {
-                version(Windows)
+                version (Windows)
                 {
                     if (WSAEWOULDBLOCK == err)
                         return;
                 }
-                else version(Posix)
+                else version (Posix)
                 {
                     if (EINPROGRESS == err)
                         return;
@@ -2854,7 +2854,7 @@ public:
             assert(newSocket.sock == socket_t.init);
 
             newSocket.setSock(newsock);
-            version(Windows)
+            version (Windows)
                 newSocket._blocking = _blocking;                 //inherits blocking mode
             newSocket._family = _family;             //same family
         }
@@ -2876,11 +2876,11 @@ public:
 
     private static void _close(socket_t sock) @system nothrow @nogc
     {
-        version(Windows)
+        version (Windows)
         {
             .closesocket(sock);
         }
-        else version(Posix)
+        else version (Posix)
         {
             .close(sock);
         }
@@ -2963,7 +2963,7 @@ public:
         {
             flags = cast(SocketFlags)(flags | MSG_NOSIGNAL);
         }
-        version( Windows )
+        version (Windows)
             auto sent = .send(sock, buf.ptr, capToInt(buf.length), cast(int) flags);
         else
             auto sent = .send(sock, buf.ptr, buf.length, cast(int) flags);
@@ -2989,7 +2989,7 @@ public:
         {
             flags = cast(SocketFlags)(flags | MSG_NOSIGNAL);
         }
-        version( Windows )
+        version (Windows)
             return .sendto(
                        sock, buf.ptr, capToInt(buf.length),
                        cast(int) flags, to.name, to.nameLen
@@ -3013,7 +3013,7 @@ public:
         {
             flags = cast(SocketFlags)(flags | MSG_NOSIGNAL);
         }
-        version(Windows)
+        version (Windows)
             return .sendto(sock, buf.ptr, capToInt(buf.length), cast(int) flags, null, 0);
         else
             return .sendto(sock, buf.ptr, buf.length, cast(int) flags, null, 0);
@@ -3036,7 +3036,7 @@ public:
      */
     ptrdiff_t receive(void[] buf, SocketFlags flags) @trusted
     {
-        version(Windows)         // Does not use size_t
+        version (Windows)         // Does not use size_t
         {
             return buf.length
                    ? .recv(sock, buf.ptr, capToInt(buf.length), cast(int) flags)
@@ -3070,7 +3070,7 @@ public:
         if (from is null || from.addressFamily != _family)
             from = createAddress();
         socklen_t nameLen = from.nameLen;
-        version(Windows)
+        version (Windows)
         {
             auto read = .recvfrom(sock, buf.ptr, capToInt(buf.length), cast(int) flags, from.name, &nameLen);
             from.setNameLen(nameLen);
@@ -3102,7 +3102,7 @@ public:
     {
         if (!buf.length)         //return 0 and don't think the connection closed
             return 0;
-        version(Windows)
+        version (Windows)
         {
             auto read = .recvfrom(sock, buf.ptr, capToInt(buf.length), cast(int) flags, null, null);
             // if (!read) //connection closed
@@ -3294,7 +3294,7 @@ public:
      */
     void setKeepAlive(int time, int interval) @trusted
     {
-        version(Windows)
+        version (Windows)
         {
             tcp_keepalive options;
             options.onoff = 1;
@@ -3376,7 +3376,7 @@ public:
         fd_set* fr, fw, fe;
         int n = 0;
 
-        version(Windows)
+        version (Windows)
         {
             // Windows has a problem with empty fd_set`s that aren't null.
             fr = checkRead  && checkRead.count  ? checkRead.toFd_set()  : null;
@@ -3430,12 +3430,12 @@ public:
 
         int result = .select(n, fr, fw, fe, &timeout.ctimeval);
 
-        version(Windows)
+        version (Windows)
         {
             if (_SOCKET_ERROR == result && WSAGetLastError() == WSAEINTR)
                 return -1;
         }
-        else version(Posix)
+        else version (Posix)
         {
             if (_SOCKET_ERROR == result && errno == EINTR)
                 return -1;
@@ -3585,7 +3585,7 @@ class UdpSocket: Socket
  */
 Socket[2] socketPair() @trusted
 {
-    version(Posix)
+    version (Posix)
     {
         int[2] socks;
         if (socketpair(AF_UNIX, SOCK_STREAM, 0, socks) == -1)
@@ -3601,7 +3601,7 @@ Socket[2] socketPair() @trusted
 
         return [toSocket(0), toSocket(1)];
     }
-    else version(Windows)
+    else version (Windows)
     {
         // We do not have socketpair() on Windows, just manually create a
         // pair of sockets connected over some localhost port.

@@ -82,6 +82,13 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
         return result.ptr ? result.ptr[0 .. n] : null;
     }
 
+    static if (hasMember!(ParentAllocator, "allocateZeroed"))
+    package(std) void[] allocateZeroed()(size_t n)
+    {
+        auto result = parent.allocateZeroed(goodAllocSize(n));
+        return result.ptr ? result.ptr[0 .. n] : null;
+    }
+
     /**
     Defined only if `parent.alignedAllocate` exists and works similarly to
     `allocate` by forwarding to

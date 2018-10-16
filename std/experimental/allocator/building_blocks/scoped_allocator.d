@@ -84,14 +84,10 @@ struct ScopedAllocator(ParentAllocator)
         return parent.goodAllocSize(n);
     }
 
-    /**
-    Allocates memory. For management it actually allocates extra memory from
-    the parent.
-    */
-    void[] allocate(size_t n)
-    {
-        auto b = parent.allocate(n);
-        if (!b.ptr) return b;
+    // Common code shared between allocate and allocateZeroed.
+    private enum _processAndReturnAllocateResult =
+    q{
+       if (!b.ptr) return b;
         Node* toInsert = & parent.prefix(b);
         toInsert.prev = null;
         toInsert.next = root;
@@ -100,6 +96,23 @@ struct ScopedAllocator(ParentAllocator)
         if (root) root.prev = toInsert;
         root = toInsert;
         return b;
+    };
+
+    /**
+    Allocates memory. For management it actually allocates extra memory from
+    the parent.
+    */
+    void[] allocate(size_t n)
+    {
+        auto b = parent.allocate(n);
+        mixin(_processAndReturnAllocateResult);
+    }
+
+    static if (hasMember!(Allocator, "allocateZeroed"))
+    package(std) void[] allocateZeroed()(size_t n)
+    {
+        auto b = parent.allocateZeroed(n);
+        mixin(_processAndReturnAllocateResult);
     }
 
     /**

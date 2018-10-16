@@ -146,7 +146,7 @@
  * )
  * )
  *
- * Copyright: Copyright Digital Mars 2005 - 2009.
+ * Copyright: Copyright The D Language Foundation 2005 - 2009.
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(HTTP digitalmars.com, Walter Bright),
  *            Tomasz Stachowiak (`isExpressions`),
@@ -158,7 +158,7 @@
  *            Shoichi Kato
  * Source:    $(PHOBOSSRC std/traits.d)
  */
-/*          Copyright Digital Mars 2005 - 2009.
+/*          Copyright The D Language Foundation 2005 - 2009.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
@@ -468,7 +468,7 @@ template QualifierOf(T)
     alias Qual7 = QualifierOf!(   immutable int);   static assert(is(Qual7!long ==    immutable long));
 }
 
-version(unittest)
+version (unittest)
 {
     alias TypeQualifierList = AliasSeq!(MutableOf, ConstOf, SharedOf, SharedConstOf, ImmutableOf);
 
@@ -651,7 +651,7 @@ if (T.length == 1)
     static assert(fullyQualifiedName!fullyQualifiedName == "std.traits.fullyQualifiedName");
 }
 
-version(unittest)
+version (unittest)
 {
     // Used for both fqnType and fqnSym unittests
     private struct QualifiedNameTests
@@ -2436,8 +2436,9 @@ if (is(T == function))
     }
 }
 
-version(unittest)
+version (unittest)
 {
+private:
     // Some function types to test.
     int sc(scope int, ref int, out int, lazy int, int);
     extern(System) int novar();
@@ -2885,6 +2886,8 @@ private template hasRawAliasing(T...)
         {
             static if (is(T[0] foo : U*, U) && !isFunctionPointer!(T[0]))
                 enum has = !is(U == immutable);
+            else static if (is(T[0] foo : U[N], U, size_t N))
+                enum has = hasRawAliasing!U;
             else static if (is(T[0] foo : U[], U) && !isStaticArray!(T[0]))
                 enum has = !is(U == immutable);
             else static if (isAssociativeArray!(T[0]))
@@ -2915,6 +2918,16 @@ private template hasRawAliasing(T...)
     // indirect aggregation
     struct S2 { S1 a; double b; }
     static assert(!hasRawAliasing!S2);
+}
+
+// Issue 19228
+@safe unittest
+{
+    static struct C
+    {
+        int*[1] a;
+    }
+    static assert(hasRawAliasing!C);
 }
 
 @safe unittest
@@ -4295,6 +4308,10 @@ if (is(T == class))
     {
         alias BaseClassesTuple = AliasSeq!Object;
     }
+    else static if (!is(BaseTypeTuple!T[0] == Object) && !is(BaseTypeTuple!T[0] == class))
+    {
+        alias BaseClassesTuple = AliasSeq!();
+    }
     else
     {
         alias BaseClassesTuple =
@@ -4315,6 +4332,21 @@ if (is(T == class))
     static assert(is(BaseClassesTuple!C1 == AliasSeq!(Object)));
     static assert(is(BaseClassesTuple!C2 == AliasSeq!(C1, Object)));
     static assert(is(BaseClassesTuple!C3 == AliasSeq!(C2, C1, Object)));
+}
+
+@safe unittest // issue 17276
+{
+    extern (C++) static interface Ext
+    {
+        void someext();
+    }
+
+    extern (C++) static class E : Ext
+    {
+        void someext() {}
+    }
+
+    alias BaseClassesWithNoObject = BaseClassesTuple!E;
 }
 
 @safe unittest
@@ -6441,7 +6473,7 @@ enum bool isEqualityComparable(T) = ifTestable!(T, unaryFun!"a == a");
     assert(b1 != b3);
 }
 
-version(TestComplex)
+version (TestComplex)
 deprecated
 @safe unittest
 {
@@ -7873,7 +7905,7 @@ if (sth.length == 1)
     static assert(TL == AliasSeq!("i", "xi", "yi"));
 }
 
-version(unittest) void freeFunc(string);
+version (unittest) private void freeFunc(string);
 
 @safe unittest
 {

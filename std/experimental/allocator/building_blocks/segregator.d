@@ -216,6 +216,34 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
             return .alignedReallocate(this, b, s, a);
         }
 
+        static if (hasMember!(SmallAllocator, "allocateZeroed")
+                || hasMember!(LargeAllocator, "allocateZeroed"))
+        package(std) void[] allocateZeroed()(size_t s)
+        {
+            if (s <= threshold)
+            {
+                static if (hasMember!(SmallAllocator, "allocateZeroed"))
+                    return _small.allocateZeroed(s);
+                else
+                {
+                    auto b = _small.allocate(s);
+                    (() @trusted => (cast(ubyte[]) b)[] = 0)(); // OK even if b is null.
+                    return b;
+                }
+            }
+            else
+            {
+                static if (hasMember!(LargeAllocator, "allocateZeroed"))
+                    return _large.allocateZeroed(s);
+                else
+                {
+                    auto b = _large.allocate(s);
+                    (() @trusted => (cast(ubyte[]) b)[] = 0)(); // OK even if b is null.
+                    return b;
+                }
+            }
+        }
+
         static if (hasMember!(SmallAllocator, "owns")
                 && hasMember!(LargeAllocator, "owns"))
         Ternary owns(void[] b)

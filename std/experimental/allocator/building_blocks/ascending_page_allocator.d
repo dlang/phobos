@@ -11,7 +11,7 @@ private mixin template AscendingPageAllocatorImpl(bool isShared)
     bool deallocate(void[] buf) nothrow @nogc
     {
         size_t goodSize = goodAllocSize(buf.length);
-        version(Posix)
+        version (Posix)
         {
             import core.sys.posix.sys.mman : mmap, MAP_FAILED, MAP_PRIVATE,
                 MAP_ANON, MAP_FIXED, PROT_NONE, munmap;
@@ -20,7 +20,7 @@ private mixin template AscendingPageAllocatorImpl(bool isShared)
             if (ptr == MAP_FAILED)
                  return false;
         }
-        else version(Windows)
+        else version (Windows)
         {
             import core.sys.windows.windows : VirtualFree, MEM_RELEASE, MEM_DECOMMIT;
 
@@ -50,14 +50,14 @@ private mixin template AscendingPageAllocatorImpl(bool isShared)
 
     bool deallocateAll() nothrow @nogc
     {
-        version(Posix)
+        version (Posix)
         {
             import core.sys.posix.sys.mman : munmap;
             auto ret = munmap(cast(void*) data, numPages * pageSize);
             if (ret != 0)
                 assert(0, "Failed to unmap memory, munmap failure");
         }
-        else version(Windows)
+        else version (Windows)
         {
             import core.sys.windows.windows : VirtualFree, MEM_RELEASE;
             auto ret = VirtualFree(cast(void*) data, 0, MEM_RELEASE);
@@ -85,7 +85,7 @@ private mixin template AscendingPageAllocatorImpl(bool isShared)
             lock = SpinLock(SpinLock.Contention.brief);
         }
 
-        version(Posix)
+        version (Posix)
         {
             import core.sys.posix.sys.mman : mmap, MAP_ANON, PROT_NONE,
                 MAP_PRIVATE, MAP_FAILED;
@@ -98,7 +98,7 @@ private mixin template AscendingPageAllocatorImpl(bool isShared)
             if (data == MAP_FAILED)
                 assert(0, "Failed to mmap memory");
         }
-        else version(Windows)
+        else version (Windows)
         {
             import core.sys.windows.windows : VirtualAlloc, PAGE_NOACCESS,
                 MEM_RESERVE, GetSystemInfo, SYSTEM_INFO;
@@ -139,14 +139,14 @@ private mixin template AscendingPageAllocatorImpl(bool isShared)
     // Sets the protection of a memory range to read/write
     private bool extendMemoryProtection(void* start, size_t size) nothrow @nogc
     {
-        version(Posix)
+        version (Posix)
         {
             import core.sys.posix.sys.mman : mprotect, PROT_WRITE, PROT_READ;
 
             auto ret = mprotect(start, size, PROT_WRITE | PROT_READ);
             return ret == 0;
         }
-        else version(Windows)
+        else version (Windows)
         {
             import core.sys.windows.windows : VirtualAlloc, MEM_COMMIT, PAGE_READWRITE;
 
@@ -660,9 +660,9 @@ public:
     tg.joinAll();
 }
 
-version(unittest)
+version (unittest)
 {
-    static void testrw(void[] b) @nogc nothrow
+    private static void testrw(void[] b) @nogc nothrow
     {
         ubyte* buf = cast(ubyte*) b.ptr;
         buf[0] = 100;
@@ -671,16 +671,16 @@ version(unittest)
         assert(buf[b.length - 1] == 101);
     }
 
-    static size_t getPageSize() @nogc nothrow
+    private static size_t getPageSize() @nogc nothrow
     {
         size_t pageSize;
-        version(Posix)
+        version (Posix)
         {
             import core.sys.posix.unistd : sysconf, _SC_PAGESIZE;
 
             pageSize = cast(size_t) sysconf(_SC_PAGESIZE);
         }
-        else version(Windows)
+        else version (Windows)
         {
             import core.sys.windows.windows : GetSystemInfo, SYSTEM_INFO;
 

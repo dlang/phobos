@@ -137,7 +137,7 @@ else
 
 public:
     // Deferred in case we get some language support for checking uniqueness.
-    version(None)
+    version (None)
     /**
     Allows safe construction of `Unique`. It creates the resource and
     guarantees unique ownership of it (unless `T` publishes aliases of
@@ -431,9 +431,9 @@ if (!is(typeof(field) == shared))
 
 private enum bool distinctFieldNames(names...) = __traits(compiles,
 {
-    static foreach (name; names)
-        static if (is(typeof(name) : string))
-            mixin("enum int" ~ name ~ " = 0;");
+    static foreach (__name; names)
+        static if (is(typeof(__name) : string))
+            mixin("enum int " ~ __name ~ " = 0;");
 });
 
 @safe unittest
@@ -441,6 +441,8 @@ private enum bool distinctFieldNames(names...) = __traits(compiles,
     static assert(!distinctFieldNames!(string, "abc", string, "abc"));
     static assert(distinctFieldNames!(string, "abc", int, "abd"));
     static assert(!distinctFieldNames!(int, "abc", string, "abd", int, "abc"));
+    // Issue 19240
+    static assert(!distinctFieldNames!(int, "int"));
 }
 
 /**
@@ -3390,7 +3392,7 @@ auto nullable(T)(T t)
 }
 
 // check that toHash on Nullable is forwarded to the contained type
-@safe unittest
+@system unittest
 {
     struct S
     {
@@ -4831,7 +4833,7 @@ private static:
     alias Implementation = AutoImplement!(Issue17177, how, templateNot!isFinalFunction);
 }
 
-version(unittest)
+version (unittest)
 {
     // Issue 10647
     // Add prefix "issue10647_" as a workaround for issue 1238
@@ -5842,7 +5844,7 @@ private template TypeMod(T)
     enum TypeMod = cast(TypeModifier)(mod1 | mod2);
 }
 
-version(unittest)
+version (unittest)
 {
     private template UnittestFuncInfo(alias f)
     {
@@ -6182,11 +6184,13 @@ if (!is(T == class) && !(is(T == interface)))
                 else
                     enum sz = T.sizeof;
 
-                auto init = typeid(T).initializer();
-                if (init.ptr is null) // null ptr means initialize to 0s
+                static if (__traits(isZeroInit, T))
                     memset(&source, 0, sz);
                 else
+                {
+                    auto init = typeid(T).initializer();
                     memcpy(&source, init.ptr, sz);
+                }
             }
 
             _store._count = 1;
@@ -6307,7 +6311,7 @@ Assignment operators
     }
 
     //version to have a single properly ddoc'ed function (w/ correct sig)
-    version(StdDdoc)
+    version (StdDdoc)
     {
         /**
         Returns a reference to the payload. If (autoInit ==
@@ -7157,7 +7161,7 @@ mixin template Proxy(alias a)
 }
 
 // excludes struct S; it's 'mixin Proxy!foo' doesn't compile with -dip1000
-version(DIP1000) {} else
+version (DIP1000) {} else
 @system unittest
 {
     // bug14213, using function for the payload
@@ -7735,14 +7739,14 @@ if (is(T == class))
 
     // Here the temporary scoped A is immediately destroyed.
     // This means the reference is then invalid.
-    version(Bug)
+    version (Bug)
     {
         // Wrong, should use `auto`
         A invalid = scoped!A();
     }
 
     // Restrictions
-    version(Bug)
+    version (Bug)
     {
         import std.algorithm.mutation : move;
         auto invalid = a1.move; // illegal, scoped objects can't be moved
@@ -7834,7 +7838,7 @@ if (alignment > 0 && !((alignment - 1) & alignment))
 
     alignmentTest();
 
-    version(DigitalMars)
+    version (DigitalMars)
     {
         void test(size_t size)
         {

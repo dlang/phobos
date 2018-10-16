@@ -32,7 +32,7 @@ $(TR $(TD Exceptions) $(TD
 ))
 )
 
-Copyright: Copyright Digital Mars 2007-.
+Copyright: Copyright The D Language Foundation 2007-.
 
 License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
@@ -1666,7 +1666,7 @@ if (!isImplicitlyConvertible!(S, T) && isAssociativeArray!S &&
     assert(a.to!(const(int)[int]).byPair.equal(a.byPair));
 }
 
-version(unittest)
+version (unittest)
 private void testIntegralToFloating(Integral, Floating)()
 {
     Integral a = 42;
@@ -1675,7 +1675,7 @@ private void testIntegralToFloating(Integral, Floating)()
     assert(a == to!Integral(b));
 }
 
-version(unittest)
+version (unittest)
 private void testFloatingToIntegral(Floating, Integral)()
 {
     bool convFails(Source, Target, E)(Source src)
@@ -2053,7 +2053,7 @@ $(OL
     $(LI It advances the input to the position following the conversion.)
     $(LI It does not throw if it could not convert the entire input.))
 
-This overload converts an character input range to a `bool`.
+This overload converts a character input range to a `bool`.
 
 Params:
     Target = the type to convert to
@@ -3086,7 +3086,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 
     // min and max
     real r = to!real(to!string(real.min_normal));
-    version(NetBSD)
+    version (NetBSD)
     {
         // NetBSD notice
         // to!string returns 3.3621e-4932L. It is less than real.min_normal and it is subnormal value
@@ -4033,7 +4033,8 @@ private S textImpl(S, U...)(U args)
                 is(Unqual!(typeof(arg)) == uint) || is(Unqual!(typeof(arg)) == ulong) ||
                 is(Unqual!(typeof(arg)) == int) || is(Unqual!(typeof(arg)) == long)
             )
-                app.put(arg.toChars);
+                // https://issues.dlang.org/show_bug.cgi?id=17712#c15
+                app.put(textImpl!(S)(arg));
             else
                 app.put(to!S(arg));
         }
@@ -4359,15 +4360,23 @@ if (is(UT == Unqual!UT))
 }
 
 //emplace helper functions
-private void emplaceInitializer(T)(ref T chunk) @trusted pure nothrow
+private void emplaceInitializer(T)(scope ref T chunk) @trusted pure nothrow
 {
     static if (!hasElaborateAssign!T && isAssignable!T)
         chunk = T.init;
     else
     {
-        import core.stdc.string : memcpy;
-        static immutable T init = T.init;
-        memcpy(&chunk, &init, T.sizeof);
+        static if (__traits(isZeroInit, T))
+        {
+            import core.stdc.string : memset;
+            memset(&chunk, 0, T.sizeof);
+        }
+        else
+        {
+            import core.stdc.string : memcpy;
+            static immutable T init = T.init;
+            memcpy(&chunk, &init, T.sizeof);
+        }
     }
 }
 
@@ -4680,7 +4689,7 @@ if (!is(T == class))
     assert(u1.a == "hello");
 }
 
-version(unittest) private struct __conv_EmplaceTest
+version (unittest) private struct __conv_EmplaceTest
 {
     int i = 3;
     this(int i)
@@ -4701,7 +4710,7 @@ version(unittest) private struct __conv_EmplaceTest
     void opAssign();
 }
 
-version(unittest) private class __conv_EmplaceTestClass
+version (unittest) private class __conv_EmplaceTestClass
 {
     int i = 3;
     this(int i) @nogc @safe pure nothrow
@@ -5122,10 +5131,10 @@ version(unittest) private class __conv_EmplaceTestClass
     }
 }
 
-version(unittest)
+version (unittest)
 {
     //Ambiguity
-    struct __std_conv_S
+    private struct __std_conv_S
     {
         int i;
         this(__std_conv_SS ss)         {assert(0);}
@@ -5135,7 +5144,7 @@ version(unittest)
             return s;
         }
     }
-    struct __std_conv_SS
+    private struct __std_conv_SS
     {
         int j;
         __std_conv_S s;

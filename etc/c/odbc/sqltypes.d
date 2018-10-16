@@ -175,11 +175,11 @@ alias GUID     = SQLGUID;
 alias BOOKMARK = uint;
 alias SQLWCHAR = ushort;
 
-version( UNICODE )
+version (UNICODE)
 {
 alias SQLTCHAR = SQLWCHAR;
 }
 else
 {
 alias SQLTCHAR = SQLCHAR;
-} // end version( UNICODE )
+} // end version (UNICODE)

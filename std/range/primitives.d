@@ -1566,7 +1566,7 @@ template hasLength(R)
         static assert(!hasLength!(A));
         static assert(hasLength!(B));
     }
-    else version(X86_64)
+    else version (X86_64)
     {
         static assert(hasLength!(A));
         static assert(!hasLength!(B));

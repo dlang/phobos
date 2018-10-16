@@ -52,7 +52,7 @@ $(TR $(TD Miscellaneous) $(TD
         $(LINK2 http://en.wikipedia.org/wiki/Unicode, Wikipedia)<br>
         $(LINK http://www.cl.cam.ac.uk/~mgk25/unicode.html#utf-8)<br>
         $(LINK http://anubis.dkuug.dk/JTC1/SC2/WG2/docs/n1335)
-    Copyright: Copyright Digital Mars 2000 - 2012.
+    Copyright: Copyright The D Language Foundation 2000 - 2012.
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   $(HTTP digitalmars.com, Walter Bright) and
                $(HTTP jmdavisprog.com, Jonathan M Davis)
@@ -1839,7 +1839,7 @@ unittest
 }
 
 
-version(unittest) private void testDecode(R)(R range,
+version (unittest) private void testDecode(R)(R range,
                                              size_t index,
                                              dchar expectedChar,
                                              size_t expectedIndex,
@@ -1868,7 +1868,7 @@ version(unittest) private void testDecode(R)(R range,
     }
 }
 
-version(unittest) private void testDecodeFront(R)(ref R range,
+version (unittest) private void testDecodeFront(R)(ref R range,
                                                   dchar expectedChar,
                                                   size_t expectedNumCodeUnits,
                                                   size_t line = __LINE__)
@@ -1893,7 +1893,7 @@ version(unittest) private void testDecodeFront(R)(ref R range,
     }
 }
 
-version(unittest) private void testDecodeBack(R)(ref R range,
+version (unittest) private void testDecodeBack(R)(ref R range,
                                                  dchar expectedChar,
                                                  size_t expectedNumCodeUnits,
                                                  size_t line = __LINE__)
@@ -1924,7 +1924,7 @@ version(unittest) private void testDecodeBack(R)(ref R range,
     }
 }
 
-version(unittest) private void testAllDecode(R)(R range,
+version (unittest) private void testAllDecode(R)(R range,
                                                 dchar expectedChar,
                                                 size_t expectedIndex,
                                                 size_t line = __LINE__)
@@ -1938,7 +1938,7 @@ version(unittest) private void testAllDecode(R)(R range,
     testDecodeFront(range, expectedChar, expectedIndex, line);
 }
 
-version(unittest) private void testBadDecode(R)(R range, size_t index, size_t line = __LINE__)
+version (unittest) private void testBadDecode(R)(R range, size_t index, size_t line = __LINE__)
 {
     import core.exception : AssertError;
     import std.string : format;
@@ -1964,7 +1964,7 @@ version(unittest) private void testBadDecode(R)(R range, size_t index, size_t li
         assertThrown!UTFException(decodeFront(range, index), null, __FILE__, line);
 }
 
-version(unittest) private void testBadDecodeBack(R)(R range, size_t line = __LINE__)
+version (unittest) private void testBadDecodeBack(R)(R range, size_t line = __LINE__)
 {
     // This condition is to allow unit testing all `decode` functions together
     static if (!isBidirectionalRange!R)
@@ -3366,8 +3366,9 @@ if (isSomeChar!C)
 
 
 // Ranges of code units for testing.
-version(unittest)
+version (unittest)
 {
+private:
     struct InputCU(C)
     {
         import std.conv : to;
@@ -4121,8 +4122,8 @@ pure @safe nothrow @nogc unittest
     foreach (c; s[].byDchar()) { }
 }
 
-version(unittest)
-int impureVariable;
+version (unittest)
+private int impureVariable;
 
 @system unittest
 {

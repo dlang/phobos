@@ -7219,6 +7219,17 @@ if (isForwardRange!RangeOfRanges &&
     this(RangeOfRanges input)
     {
         this._input = input;
+        static if (opt == TransverseOptions.enforceNotJagged)
+        {
+            import std.exception : enforce;
+
+            if (empty) return;
+            immutable commonLength = _input.front.length;
+            foreach (e; _input)
+            {
+                enforce(e.length == commonLength);
+            }
+        }
     }
 
     @property auto front()
@@ -7324,6 +7335,14 @@ private:
     assert(z.front.equal([1,4]));
     assert(z[0].equal([1,4]));
     assert(!is(typeof(z[0][0])));
+}
+
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    auto r = [[1,2], [3], [4,5], [], [6]];
+    assertThrown(r.transposed!(TransverseOptions.enforceNotJagged));
 }
 
 /**
@@ -9474,7 +9493,7 @@ private struct OnlyResult(T, size_t arity)
     private size_t backIndex = 0;
 
     // @@@BUG@@@ 10643
-    version(none)
+    version (none)
     {
         import std.traits : hasElaborateAssign;
         static if (hasElaborateAssign!T)
@@ -10119,7 +10138,7 @@ pure @safe unittest
     }}
 }
 
-version(none) // @@@BUG@@@ 10939
+version (none) // @@@BUG@@@ 10939
 {
     // Re-enable (or remove) if 10939 is resolved.
     /+pure+/ @safe unittest // Impure because of std.conv.to
@@ -11079,7 +11098,7 @@ public:
     }
 
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         /++ +/
         @property auto front() {assert(0);}
@@ -11107,7 +11126,7 @@ public:
     }
 
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         @property bool empty(); ///
         @property bool empty() const; ///Ditto
@@ -11135,7 +11154,7 @@ public:
     }
 
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         /++
             Only defined if `isForwardRange!R` is `true`.
@@ -11205,7 +11224,7 @@ public:
     }
 
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         /++
             Only defined if `isBidirectionalRange!R` is `true`.
@@ -11242,7 +11261,7 @@ public:
     }
 
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         /++
             Only defined if `isRandomAccesRange!R` is `true`.
@@ -11298,7 +11317,7 @@ public:
     }
 
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         /++
             Only defined if `hasLength!R` is `true`.
@@ -11327,7 +11346,7 @@ public:
     }
 
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         /++
             Only defined if `hasSlicing!R` is `true`.

@@ -219,7 +219,7 @@ if (isPointer!Range && isIterable!(PointerTarget!Range) && !isNarrowString!Range
     assert(a.length == 5);
 }
 
-version(unittest)
+version (unittest)
     private extern(C) void _d_delarray_t(void[] *p, TypeInfo_Struct ti);
 
 @system unittest
@@ -456,7 +456,7 @@ if (isInputRange!Range)
     assert(b == ["foo":"bar", "baz":"quux"]);
 }
 
-// @@@11053@@@ - Cannot be version(unittest) - recursive instantiation error
+// @@@11053@@@ - Cannot be version (unittest) - recursive instantiation error
 @safe unittest
 {
     import std.typecons;
@@ -1917,7 +1917,15 @@ if (isInputRange!RoR &&
     isInputRange!(Unqual!(ElementType!RoR)))
 {
     alias RetType = typeof(return);
-    alias RetTypeElement = Unqual!(ElementEncodingType!RetType);
+    alias ConstRetTypeElement = ElementEncodingType!RetType;
+    static if (isAssignable!(Unqual!ConstRetTypeElement, ConstRetTypeElement))
+    {
+        alias RetTypeElement = Unqual!ConstRetTypeElement;
+    }
+    else
+    {
+        alias RetTypeElement = ConstRetTypeElement;
+    }
     alias RoRElem = ElementType!RoR;
 
     if (ror.empty)
@@ -1934,7 +1942,7 @@ if (isInputRange!RoR &&
         size_t len;
         foreach (r; ror)
             foreach (e; r)
-                emplaceRef(result[len++], e);
+                emplaceRef!RetTypeElement(result[len++], e);
         assert(len == result.length);
         return (() @trusted => cast(RetType) result)();
     }
@@ -1998,6 +2006,16 @@ if (isInputRange!RoR &&
 
     const string[] arr = ["apple", "banana"];
     assert(arr.join(',') == "apple,banana");
+}
+
+@safe unittest
+{
+    class A { }
+
+    const A[][] array;
+    auto result = array.join; // can't remove constness, so don't try
+
+    static assert(is(typeof(result) == const(A)[]));
 }
 
 @safe unittest
@@ -4295,7 +4313,7 @@ nothrow pure @safe unittest
     staticArray!(long, 2.iota).checkStaticArray!long([0, 1]);
 }
 
-version(unittest) private void checkStaticArray(T, T1, T2)(T1 a, T2 b) nothrow @safe pure @nogc
+version (unittest) private void checkStaticArray(T, T1, T2)(T1 a, T2 b) nothrow @safe pure @nogc
 {
     static assert(is(T1 == T[T1.length]));
     assert(a == b);

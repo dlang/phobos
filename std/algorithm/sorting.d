@@ -638,7 +638,7 @@ if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && hasAssig
         for (;;)
         {
             // Loop invariant
-            version(unittest)
+            version (unittest)
             {
                 // this used to import std.algorithm.all, but we want to save
                 // imports when unittests are enabled if possible.
@@ -3964,7 +3964,7 @@ if (isRandomAccessRange!Range && hasLength!Range &&
     else static if (k == 5)
     {
         // Credit: Teppo Niinimäki
-        version(unittest) scope(success)
+        version (unittest) scope(success)
         {
             assert(!lt(r[c], r[a]));
             assert(!lt(r[c], r[b]));

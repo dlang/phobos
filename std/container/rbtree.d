@@ -61,7 +61,7 @@ import std.functional : binaryFun;
 
 public import std.container.util;
 
-version(unittest) debug = RBDoChecks;
+version (unittest) debug = RBDoChecks;
 
 //debug = RBDoChecks;
 
@@ -745,7 +745,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
 
     alias _less = binaryFun!less;
 
-    version(unittest)
+    version (unittest)
     {
         static if (is(typeof(less) == string))
         {
@@ -1092,6 +1092,132 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
         assert(t1 != t3);
         assert(t1 != t4);
         assert(t1 != o);  // pathological case, must not crash
+    }
+
+    /**
+     * Generates a hash for the tree. Note that with a custom comparison function
+     * it may not hold that if two rbtrees are equal, the hashes of the trees
+     * will be equal.
+     */
+    override size_t toHash() nothrow @safe
+    {
+        size_t hash = cast(size_t) 0x6b63_616c_4264_6552UL;
+        foreach (ref e; this[])
+            // As in boost::hash_combine
+            // https://www.boost.org/doc/libs/1_55_0/doc/html/hash/reference.html#boost.hash_combine
+            hash += .hashOf(e) + 0x9e3779b9 + (hash << 6) + (hash >>> 2);
+        return hash;
+    }
+
+    static if (doUnittest) @system unittest
+    {
+        auto t1 = new RedBlackTree(1,2,3,4);
+        auto t2 = new RedBlackTree(1,2,3,4);
+        auto t3 = new RedBlackTree(1,2,3,5);
+        auto t4 = new RedBlackTree(1,2,3,4,5);
+
+        assert(t1.toHash() == t2.toHash);
+
+        assert(t1.toHash() != t3.toHash);
+        assert(t2.toHash() != t3.toHash);
+
+        assert(t3.toHash() != t4.toHash);
+        assert(t1.toHash() != t4.toHash);
+
+        // empty tree
+        auto t5 = new RedBlackTree();
+        auto t6 = new RedBlackTree();
+
+        assert(t5.toHash() == t6.toHash());
+
+        auto t7 = new RedBlackTree!string("red", "black");
+        auto t8 = new RedBlackTree!string("white", "black");
+        auto t9 = new RedBlackTree!string("red", "black");
+
+        assert(t7.toHash() == t9.toHash());
+        assert(t7.toHash() != t8.toHash());
+
+        static struct MyInt
+        {
+            int x;
+
+            this(int init_x)
+            {
+                x = init_x;
+            }
+
+            size_t toHash() const @safe nothrow
+            {
+                return typeid(x).getHash(&x) ^ 0xF0F0_F0F0;
+            }
+
+            int opCmp(const MyInt that) const
+            {
+                return (x > that.x) - (x < that.x);
+            }
+
+            bool opEquals(const MyInt that) const
+            {
+                return (this.x == that.x);
+            }
+        }
+
+        auto rbt1 = new RedBlackTree!MyInt(MyInt(1), MyInt(2), MyInt(3), MyInt(4));
+        auto rbt2 = new RedBlackTree!MyInt(MyInt(1), MyInt(2), MyInt(3), MyInt(4));
+
+        assert(rbt1.toHash() == rbt2.toHash());
+        assert(rbt1.toHash() != t1.toHash());
+
+        auto rbt3 = new RedBlackTree!MyInt(MyInt(4), MyInt(2), MyInt(3), MyInt(4));
+
+        assert(rbt1.toHash() != rbt3.toHash());
+
+        class MyInt2
+        {
+            int x;
+
+            this(int init_x)
+            {
+                x = init_x;
+            }
+
+            override size_t toHash() const @safe nothrow
+            {
+                return typeid(x).getHash(&x) ^ 0xF0F0_F0F0;
+            }
+
+            int opCmp(const MyInt2 that) const
+            {
+                return (x > that.x) - (x < that.x);
+            }
+
+            bool opEquals(const MyInt2 that) const
+            {
+                return (this.x == that.x);
+            }
+        }
+
+        static bool nullSafeLess(scope const MyInt2 a, scope const MyInt2 b)
+        {
+            return a is null ? b !is null : (b !is null && a < b);
+        }
+
+        auto rbt4 = new RedBlackTree!MyInt2(new MyInt2(1), new MyInt2(9), new MyInt2(3), new MyInt2(42));
+        auto rbt5 = new RedBlackTree!MyInt2(new MyInt2(1), new MyInt2(9), new MyInt2(3), new MyInt2(42));
+        auto rbt6 = new RedBlackTree!(MyInt2, nullSafeLess)(new MyInt2(9), new MyInt2(3), new MyInt2(42));
+        auto rbt7 = new RedBlackTree!(MyInt2, nullSafeLess)(null);
+
+        assert(rbt6.toHash() != rbt5.toHash());
+        assert(rbt6.toHash() != rbt4.toHash());
+        assert(rbt6.toHash() != rbt7.toHash());
+        assert(rbt4.toHash() == rbt5.toHash());
+
+        auto rbt8 = new RedBlackTree!(MyInt2, nullSafeLess)(null, new MyInt2(9), null, new MyInt2(42));
+        auto rbt9 = new RedBlackTree!(MyInt2, nullSafeLess)(null, new MyInt2(9), null, new MyInt2(42));
+        auto rbt10 = new RedBlackTree!(MyInt2, nullSafeLess)(new MyInt2(94), null, new MyInt2(147));
+
+        assert(rbt8.toHash() == rbt9.toHash());
+        assert(rbt8.toHash() != rbt10.toHash());
     }
 
     /**

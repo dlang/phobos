@@ -65,7 +65,7 @@ struct Mallocator
     }
 
     @trusted @nogc nothrow pure
-    package void[] allocateZeroed(size_t bytes) shared
+    package void[] allocateZeroed()(size_t bytes) shared
     {
         import core.memory : pureCalloc;
         if (!bytes) return null;
@@ -120,7 +120,7 @@ version (Windows)
 {
     // DMD Win 32 bit, DigitalMars C standard library misses the _aligned_xxx
     // functions family (snn.lib)
-    version(CRuntime_DigitalMars)
+    version (CRuntime_DigitalMars)
     {
         // Helper to cast the infos written before the aligned pointer
         // this header keeps track of the size (required to realloc) and of
@@ -233,7 +233,7 @@ struct AlignedMallocator
     $(HTTP msdn.microsoft.com/en-us/library/8z34s9c6(v=vs.80).aspx,
     `__aligned_malloc`) on Windows.
     */
-    version(Posix)
+    version (Posix)
     @trusted @nogc nothrow
     void[] alignedAllocate(size_t bytes, uint a) shared
     {
@@ -243,8 +243,8 @@ struct AlignedMallocator
         void* result;
         auto code = posix_memalign(&result, a, bytes);
 
-version(OSX)
-version(LDC_AddressSanitizer)
+version (OSX)
+version (LDC_AddressSanitizer)
 {
         // The return value with AddressSanitizer may be -1 instead of ENOMEM
         // or EINVAL. See https://bugs.llvm.org/show_bug.cgi?id=36510
@@ -265,7 +265,7 @@ version(LDC_AddressSanitizer)
         else
             return result[0 .. bytes];
     }
-    else version(Windows)
+    else version (Windows)
     @trusted @nogc nothrow
     void[] alignedAllocate(size_t bytes, uint a) shared
     {
@@ -371,7 +371,7 @@ version(LDC_AddressSanitizer)
     //...
 }
 
-version(Posix)
+version (Posix)
 @nogc @system nothrow unittest
 {
     // 16398 : test the "pseudo" alignedReallocate for Posix
@@ -398,7 +398,7 @@ version(Posix)
     AlignedMallocator.instance.deallocate(c);
 }
 
-version(CRuntime_DigitalMars)
+version (CRuntime_DigitalMars)
 @nogc @system nothrow unittest
 {
     void* m;

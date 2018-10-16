@@ -129,7 +129,7 @@ See_Also:
     for functions that work with unicode strings
     )
 
-Copyright: Copyright Digital Mars 2007-.
+Copyright: Copyright The D Language Foundation 2007-.
 
 License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
@@ -143,7 +143,7 @@ Source:    $(PHOBOSSRC std/string.d)
 */
 module std.string;
 
-version(unittest)
+version (unittest)
 {
 private:
     struct TestAliasedString
@@ -6420,7 +6420,7 @@ if (isSomeString!S ||
     assert(!isNumeric("+"));
 }
 
-version(TestComplex)
+version (TestComplex)
 deprecated
 @safe unittest
 {

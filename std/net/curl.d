@@ -167,14 +167,14 @@ import std.typecons : Flag, Yes, No, Tuple;
 // Curl tests for FreeBSD 32-bit are temporarily disabled.
 // https://github.com/braddr/d-tester/issues/70
 // https://issues.dlang.org/show_bug.cgi?id=18519
-version(unittest)
-version(FreeBSD)
-version(X86)
+version (unittest)
+version (FreeBSD)
+version (X86)
     version = DisableCurlTests;
 
-version(DisableCurlTests) {} else:
+version (DisableCurlTests) {} else:
 
-version(unittest)
+version (unittest)
 {
     import std.socket : Socket;
 
@@ -332,7 +332,7 @@ version(unittest)
 
     private enum httpContinue = "HTTP/1.1 100 Continue\r\n\r\n";
 }
-version(StdDdoc) import std.stdio;
+version (StdDdoc) import std.stdio;
 
 // Default data timeout for Protocols
 private enum _defaultDataTimeout = dur!"minutes"(2);

@@ -680,7 +680,7 @@ on very many factors.
 template FPTemporary(F)
 if (isFloatingPoint!F)
 {
-    version(X86)
+    version (X86)
         alias FPTemporary = real;
     else
         alias FPTemporary = Unqual!F;
@@ -2613,7 +2613,7 @@ if (isIntegral!T)
     {
         return gcd!(Unqual!T)(a, b);
     }
-    else version(DigitalMars)
+    else version (DigitalMars)
     {
         static if (T.min < 0)
         {

@@ -180,7 +180,7 @@ struct JSONValue
      * Throws: `JSONException` for read access if `type` is not
      * `JSONType.integer`.
      */
-    @property inout(long) integer() inout pure @safe
+    @property long integer() const pure @safe
     {
         enforce!JSONException(type == JSONType.integer,
                                 "JSONValue is not an integer");
@@ -198,7 +198,7 @@ struct JSONValue
      * Throws: `JSONException` for read access if `type` is not
      * `JSONType.uinteger`.
      */
-    @property inout(ulong) uinteger() inout pure @safe
+    @property ulong uinteger() const pure @safe
     {
         enforce!JSONException(type == JSONType.uinteger,
                                 "JSONValue is not an unsigned integer");
@@ -217,7 +217,7 @@ struct JSONValue
      * Throws: `JSONException` for read access if `type` is not
      * `JSONType.float_`.
      */
-    @property inout(double) floating() inout pure @safe
+    @property double floating() const pure @safe
     {
         enforce!JSONException(type == JSONType.float_,
                                 "JSONValue is not a floating type");
@@ -228,6 +228,38 @@ struct JSONValue
     {
         assign(v);
         return store.floating;
+    }
+
+    /***
+     * Value getter/setter for boolean stored in JSON.
+     * Throws: `JSONException` for read access if `this.type` is not
+     * `JSONType.true_` or `JSONType.false_`.
+     */
+    @property bool boolean() const pure @safe
+    {
+        if (type == JSONType.true_) return true;
+        if (type == JSONType.false_) return false;
+
+        throw new JSONException("JSONValue is not a boolean type");
+    }
+    /// ditto
+    @property bool boolean(bool v) pure nothrow @safe @nogc
+    {
+        assign(v);
+        return v;
+    }
+    ///
+    @safe unittest
+    {
+        JSONValue j = true;
+        assert(j.boolean == true);
+
+        j.boolean = false;
+        assert(j.boolean == false);
+
+        j.integer = 12;
+        import std.exception : assertThrown;
+        assertThrown!JSONException(j.boolean);
     }
 
     /***
