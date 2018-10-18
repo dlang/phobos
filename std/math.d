@@ -576,7 +576,7 @@ template isDeprecatedComplex(T)
  *     The absolute value of the number.  If floating-point or integral,
  *     the return type will be the same as the input;
  */
-auto abs(Num)(Num x)
+auto abs(Num)(const Num x)
 if ((is(Unqual!Num == short) || is(Unqual!Num == byte)) ||
     (is(typeof(Num.init >= 0)) && is(typeof(-Num.init))))
 {
@@ -584,10 +584,11 @@ if ((is(Unqual!Num == short) || is(Unqual!Num == byte)) ||
         return fabs(x);
     else
     {
+        alias ReturnType = Unqual!Num; // Stop the return type from being inferred const.
         static if (is(Unqual!Num == short) || is(Unqual!Num == byte))
-            return x >= 0 ? x : cast(Num) -int(x);
+            return x >= 0 ? cast(ReturnType) x : cast(ReturnType) -int(x);
         else
-            return x >= 0 ? x : -x;
+            return x >= 0 ? cast(ReturnType) x :  cast(ReturnType) -x;
     }
 }
 
@@ -687,7 +688,7 @@ static foreach (Num; AliasSeq!(cfloat, cdouble, creal, ifloat, idouble, ireal))
  * is always a real number
  */
 deprecated("Please use std.complex.conj")
-auto conj(Num)(Num z) @safe pure nothrow @nogc
+auto conj(Num)(const Num z) @safe pure nothrow @nogc
 if (is(Num* : const(cfloat*)) || is(Num* : const(cdouble*))
     || is(Num* : const(creal*)))
 {
@@ -700,7 +701,7 @@ if (is(Num* : const(cfloat*)) || is(Num* : const(cdouble*))
 }
 
 deprecated("Please use std.complex.conj")
-auto conj(Num)(Num y) @safe pure nothrow @nogc
+auto conj(Num)(const Num y) @safe pure nothrow @nogc
 if (is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
     || is(Num* : const(ireal*)))
 {
@@ -1586,7 +1587,7 @@ private real atan2Asm(real y, real x) @trusted pure nothrow @nogc
     }
 }
 
-private T atan2Impl(T)(T y, T x) @safe pure nothrow @nogc
+private T atan2Impl(T)(const T y, const T x) @safe pure nothrow @nogc
 {
     // Special cases.
     if (isNaN(x) || isNaN(y))
@@ -6302,34 +6303,34 @@ version (D_HardFloat) @safe unittest // rounding
  * Returns:
  *  `true` if $(D_PARAM x) is Nan.
  */
-bool isNaN(X)(X x) @nogc @trusted pure nothrow
+bool isNaN(X)(const X x) @nogc @trusted pure nothrow
 if (isFloatingPoint!(X))
 {
     alias F = floatTraits!(X);
     static if (F.realFormat == RealFormat.ieeeSingle)
     {
-        const uint p = *cast(uint *)&x;
+        const uint p = *cast(const uint*)&x;
         return ((p & 0x7F80_0000) == 0x7F80_0000)
             && p & 0x007F_FFFF; // not infinity
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
-        const ulong  p = *cast(ulong *)&x;
+        const ulong  p = *cast(const ulong*)&x;
         return ((p & 0x7FF0_0000_0000_0000) == 0x7FF0_0000_0000_0000)
             && p & 0x000F_FFFF_FFFF_FFFF; // not infinity
     }
     else static if (F.realFormat == RealFormat.ieeeExtended)
     {
-        const ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
-        const ulong ps = *cast(ulong *)&x;
+        const ushort e = F.EXPMASK & (cast(const ushort*)&x)[F.EXPPOS_SHORT];
+        const ulong ps = *cast(const ulong*)&x;
         return e == F.EXPMASK &&
             ps & 0x7FFF_FFFF_FFFF_FFFF; // not infinity
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
-        const ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
-        const ulong psLsb = (cast(ulong *)&x)[MANTISSA_LSB];
-        const ulong psMsb = (cast(ulong *)&x)[MANTISSA_MSB];
+        const ushort e = F.EXPMASK & (cast(const ushort*)&x)[F.EXPPOS_SHORT];
+        const ulong psLsb = (cast(const ulong*)&x)[MANTISSA_LSB];
+        const ulong psMsb = (cast(const ulong*)&x)[MANTISSA_MSB];
         return e == F.EXPMASK &&
             (psLsb | (psMsb& 0x0000_FFFF_FFFF_FFFF)) != 0;
     }
@@ -6390,10 +6391,10 @@ if (isFloatingPoint!(X))
  * Returns:
  *  `true` if $(D_PARAM x) is finite.
  */
-bool isFinite(X)(X x) @trusted pure nothrow @nogc
+bool isFinite(X)(const X x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(X);
-    ushort* pe = cast(ushort *)&x;
+    const ushort* pe = cast(const ushort*)&x;
     return (pe[F.EXPPOS_SHORT] & F.EXPMASK) != F.EXPMASK;
 }
 
@@ -6437,10 +6438,10 @@ bool isFinite(X)(X x) @trusted pure nothrow @nogc
 /* Need one for each format because subnormal floats might
  * be converted to normal reals.
  */
-bool isNormal(X)(X x) @trusted pure nothrow @nogc
+bool isNormal(X)(const X x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(X);
-    ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
+    ushort e = F.EXPMASK & (cast(const ushort*)&x)[F.EXPPOS_SHORT];
     return (e != F.EXPMASK && e != 0);
 }
 
@@ -6475,7 +6476,7 @@ bool isNormal(X)(X x) @trusted pure nothrow @nogc
  * Returns:
  *  `true` if $(D_PARAM x) is a denormal number.
  */
-bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
+bool isSubnormal(X)(const X x) @trusted pure nothrow @nogc
 {
     /*
         Need one for each format because subnormal floats might
@@ -6484,26 +6485,26 @@ bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
     alias F = floatTraits!(X);
     static if (F.realFormat == RealFormat.ieeeSingle)
     {
-        uint *p = cast(uint *)&x;
+        const uint* p = cast(const uint*)&x;
         return (*p & F.EXPMASK_INT) == 0 && *p & F.MANTISSAMASK_INT;
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
-        uint *p = cast(uint *)&x;
+        const uint* p = cast(const uint*)&x;
         return (p[MANTISSA_MSB] & F.EXPMASK_INT) == 0
             && (p[MANTISSA_LSB] || p[MANTISSA_MSB] & F.MANTISSAMASK_INT);
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
-        ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
-        long*   ps = cast(long *)&x;
+        ushort e = F.EXPMASK & (cast(const ushort*)&x)[F.EXPPOS_SHORT];
+        const long* ps = cast(const long*)&x;
         return (e == 0 &&
           ((ps[MANTISSA_LSB]|(ps[MANTISSA_MSB]& 0x0000_FFFF_FFFF_FFFF)) != 0));
     }
     else static if (F.realFormat == RealFormat.ieeeExtended)
     {
-        ushort* pe = cast(ushort *)&x;
-        long*   ps = cast(long *)&x;
+        const ushort* pe = cast(const ushort*)&x;
+        const long* ps = cast(const long*)&x;
 
         return (pe[F.EXPPOS_SHORT] & F.EXPMASK) == 0 && *ps > 0;
     }
@@ -6533,31 +6534,31 @@ bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
  * Returns:
  *  `true` if $(D_PARAM x) is $(PLUSMN)$(INFIN).
  */
-bool isInfinity(X)(X x) @nogc @trusted pure nothrow
+bool isInfinity(X)(const X x) @nogc @trusted pure nothrow
 if (isFloatingPoint!(X))
 {
     alias F = floatTraits!(X);
     static if (F.realFormat == RealFormat.ieeeSingle)
     {
-        return ((*cast(uint *)&x) & 0x7FFF_FFFF) == 0x7F80_0000;
+        return ((*cast(const uint*)&x) & 0x7FFF_FFFF) == 0x7F80_0000;
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
-        return ((*cast(ulong *)&x) & 0x7FFF_FFFF_FFFF_FFFF)
+        return ((*cast(const ulong*)&x) & 0x7FFF_FFFF_FFFF_FFFF)
             == 0x7FF0_0000_0000_0000;
     }
     else static if (F.realFormat == RealFormat.ieeeExtended)
     {
-        const ushort e = cast(ushort)(F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT]);
-        const ulong ps = *cast(ulong *)&x;
+        const ushort e = cast(ushort)(F.EXPMASK & (cast(const ushort*)&x)[F.EXPPOS_SHORT]);
+        const ulong ps = *cast(const ulong*)&x;
 
         // On Motorola 68K, infinity can have hidden bit = 1 or 0. On x86, it is always 1.
         return e == F.EXPMASK && (ps & 0x7FFF_FFFF_FFFF_FFFF) == 0;
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
-        const long psLsb = (cast(long *)&x)[MANTISSA_LSB];
-        const long psMsb = (cast(long *)&x)[MANTISSA_MSB];
+        const long psLsb = (cast(const long*)&x)[MANTISSA_LSB];
+        const long psMsb = (cast(const long*)&x)[MANTISSA_MSB];
         return (psLsb == 0)
             && (psMsb & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FFF_0000_0000_0000;
     }
@@ -6687,10 +6688,10 @@ bool isIdentical(real x, real y) @trusted pure nothrow @nogc
 /*********************************
  * Return 1 if sign bit of e is set, 0 if not.
  */
-int signbit(X)(X x) @nogc @trusted pure nothrow
+int signbit(X)(const X x) @nogc @trusted pure nothrow
 {
     alias F = floatTraits!(X);
-    return ((cast(ubyte *)&x)[F.SIGNPOS_BYTE] & 0x80) != 0;
+    return ((cast(const ubyte *)&x)[F.SIGNPOS_BYTE] & 0x80) != 0;
 }
 
 ///
@@ -6732,11 +6733,11 @@ Params:
 Returns:
     a value composed of to with from's sign bit.
  */
-R copysign(R, X)(R to, X from) @trusted pure nothrow @nogc
+R copysign(R, X)(R to, const X from) @trusted pure nothrow @nogc
 if (isFloatingPoint!(R) && isFloatingPoint!(X))
 {
     ubyte* pto   = cast(ubyte *)&to;
-    const ubyte* pfrom = cast(ubyte *)&from;
+    const ubyte* pfrom = cast(const ubyte*)&from;
 
     alias T = floatTraits!(R);
     alias F = floatTraits!(X);
@@ -6746,7 +6747,7 @@ if (isFloatingPoint!(R) && isFloatingPoint!(X))
 }
 
 /// ditto
-R copysign(R, X)(X to, R from) @trusted pure nothrow @nogc
+R copysign(R, X)(const X to, const R from) @trusted pure nothrow @nogc
 if (isIntegral!(X) && isFloatingPoint!(R))
 {
     return copysign(cast(R) to, from);
@@ -6806,7 +6807,7 @@ if (isIntegral!(X) && isFloatingPoint!(R))
 Returns `-1` if $(D x < 0), `x` if $(D x == 0), `1` if
 $(D x > 0), and $(NAN) if x==$(NAN).
  */
-F sgn(F)(F x) @safe pure nothrow @nogc
+F sgn(F)(const F x) @safe pure nothrow @nogc
 {
     // @@@TODO@@@: make this faster
     return x > 0 ? 1 : x < 0 ? -1 : x;
@@ -7522,7 +7523,7 @@ if (isFloatingPoint!(F) && isIntegral!(G))
  *  If n is negative, an integer divide error will occur at runtime,
  * regardless of the value of x.
  */
-typeof(Unqual!(F).init * Unqual!(G).init) pow(F, G)(F x, G n) @nogc @trusted pure nothrow
+typeof(Unqual!(F).init * Unqual!(G).init) pow(F, G)(const F x, const G n) @nogc @trusted pure nothrow
 if (isIntegral!(F) && isIntegral!(G))
 {
     if (n<0) return x/0; // Only support positive powers
@@ -7579,7 +7580,7 @@ if (isIntegral!(F) && isIntegral!(G))
 }
 
 /**Computes integer to floating point powers.*/
-real pow(I, F)(I x, F y) @nogc @trusted pure nothrow
+real pow(I, F)(const I x, const F y) @nogc @trusted pure nothrow
 if (isIntegral!I && isFloatingPoint!F)
 {
     return pow(cast(real) x, cast(Unqual!F) y);
@@ -7636,7 +7637,7 @@ if (isIntegral!I && isFloatingPoint!F)
  *      $(TD no)        $(TD no) )
  * )
  */
-Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @nogc @trusted pure nothrow
+Unqual!(Largest!(F, G)) pow(F, G)(F x, const G y) @nogc @trusted pure nothrow
 if (isFloatingPoint!(F) && isFloatingPoint!(G))
 {
     alias Float = typeof(return);
@@ -7940,7 +7941,7 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
  *
  * The function requires that all values have unsigned types.
  */
-Unqual!(Largest!(F, H)) powmod(F, G, H)(F x, G n, H m)
+Unqual!(Largest!(F, H)) powmod(F, G, H)(const F x, const G n, const H m)
 if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
 {
     import std.meta : AliasSeq;
@@ -8381,7 +8382,7 @@ public:
  *      x =     the value to evaluate.
  *      A =     array of coefficients $(SUB a, 0), $(SUB a, 1), etc.
  */
-Unqual!(CommonType!(T1, T2)) poly(T1, T2)(T1 x, in T2[] A) @trusted pure nothrow @nogc
+Unqual!(CommonType!(T1, T2)) poly(T1, T2)(const T1 x, scope const T2[] A) @trusted pure nothrow @nogc
 if (isFloatingPoint!T1 && isFloatingPoint!T2)
 in
 {
@@ -8400,7 +8401,7 @@ do
 }
 
 /// ditto
-Unqual!(CommonType!(T1, T2)) poly(T1, T2, int N)(T1 x, ref const T2[N] A) @safe pure nothrow @nogc
+Unqual!(CommonType!(T1, T2)) poly(T1, T2, int N)(const T1 x, scope ref const T2[N] A) @safe pure nothrow @nogc
 if (isFloatingPoint!T1 && isFloatingPoint!T2 && N > 0 && N <= 10)
 {
     // statically unrolled version for up to 10 coefficients
@@ -8439,7 +8440,7 @@ if (isFloatingPoint!T1 && isFloatingPoint!T2 && N > 0 && N <= 10)
     static assert(poly(3.0, [1.0, 2.0, 3.0]) == 34);
 }
 
-private Unqual!(CommonType!(T1, T2)) polyImplBase(T1, T2)(T1 x, in T2[] A) @trusted pure nothrow @nogc
+private Unqual!(CommonType!(T1, T2)) polyImplBase(T1, T2)(const T1 x, scope const T2[] A) @trusted pure nothrow @nogc
 if (isFloatingPoint!T1 && isFloatingPoint!T2)
 {
     ptrdiff_t i = A.length - 1;
@@ -9094,7 +9095,7 @@ private enum PowType
 }
 
 pragma(inline, true)
-private T powIntegralImpl(PowType type, T)(T val)
+private T powIntegralImpl(PowType type, T)(const T val)
 {
     import core.bitop : bsr;
 
@@ -9109,7 +9110,7 @@ private T powIntegralImpl(PowType type, T)(T val)
     }
 }
 
-private T powFloatingPointImpl(PowType type, T)(T x)
+private T powFloatingPointImpl(PowType type, T)(const T x)
 {
     if (!x.isFinite)
         return x;
