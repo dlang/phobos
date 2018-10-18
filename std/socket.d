@@ -3034,7 +3034,7 @@ public:
      * Returns: The number of bytes actually received, `0` if the remote side
      * has closed the connection, or `Socket.ERROR` on failure.
      */
-    ptrdiff_t receive(void[] buf, SocketFlags flags) @trusted
+    ptrdiff_t receive(void[] buf, SocketFlags flags) @trusted @nogc
     {
         version (Windows)         // Does not use size_t
         {
@@ -3051,7 +3051,7 @@ public:
     }
 
     /// ditto
-    ptrdiff_t receive(void[] buf)
+    ptrdiff_t receive(void[] buf) @nogc
     {
         return receive(buf, SocketFlags.NONE);
     }
