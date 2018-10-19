@@ -5001,53 +5001,113 @@ private struct SplitterResult(alias isTerminator, Range)
 }
 
 /++
-Lazily splits the string `s` into words, using whitespace as the delimiter.
+Lazily splits the character-based range `s` into words, using whitespace as the
+delimiter.
 
-This function is string specific and, contrary to
+This function is character-range specific and, contrary to
 `splitter!(std.uni.isWhite)`, runs of whitespace will be merged together
 (no empty tokens will be produced).
 
 Params:
-    s = The string to be split.
+    s = The character-based range to be split. Must be a string, or a
+    random-access range of character types.
 
 Returns:
     An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of slices of
-    the original string split by whitespace.
+    the original range split by whitespace.
  +/
-auto splitter(C)(C[] s)
-if (isSomeChar!C)
+auto splitter(Range)(Range s)
+if (isSomeString!Range ||
+    isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
+    !isConvertibleToString!Range &&
+    isSomeChar!(ElementEncodingType!Range))
 {
     import std.algorithm.searching : find;
     static struct Result
     {
     private:
         import core.exception : RangeError;
-        C[] _s;
+        Range _s;
         size_t _frontLength;
 
-        void getFirst() pure @safe
+        void getFirst()
         {
             import std.uni : isWhite;
+            import std.traits : Unqual;
 
-            auto r = find!(isWhite)(_s);
-            _frontLength = _s.length - r.length;
+            static if (is(Unqual!(ElementEncodingType!Range) == wchar) &&
+                       is(Unqual!(ElementType!Range) == dchar))
+            {
+                // all unicode whitespace characters fit into a wchar. However,
+                // this range is a wchar array, so we will treat it like a
+                // wchar array instead of decoding each code point.
+                _frontLength = _s.length; // default condition, no spaces
+                foreach (i; 0 .. _s.length)
+                    if (isWhite(_s[i]))
+                    {
+                        _frontLength = i;
+                        break;
+                    }
+            }
+            else static if (is(Unqual!(ElementType!Range) == dchar) ||
+                            is(Unqual!(ElementType!Range) == wchar))
+            {
+                // dchar or wchar range, we can just use find.
+                auto r = find!(isWhite)(_s.save);
+                _frontLength = _s.length - r.length;
+            }
+            else
+            {
+                // need to decode the characters until we find a space. This is
+                // ported from std.string.stripLeft.
+                static import std.ascii;
+                static import std.uni;
+                import std.utf : decodeFront;
+
+                auto input = _s.save;
+                size_t iLength = input.length;
+
+                while (!input.empty)
+                {
+                    auto c = input.front;
+                    if (std.ascii.isASCII(c))
+                    {
+                        if (std.ascii.isWhite(c))
+                            break;
+                        input.popFront();
+                        --iLength;
+                    }
+                    else
+                    {
+                        auto dc = decodeFront(input);
+                        if (std.uni.isWhite(dc))
+                            break;
+                        iLength = input.length;
+                    }
+                }
+
+                // sanity check
+                assert(iLength <= _s.length);
+
+                _frontLength = _s.length - iLength;
+            }
         }
 
     public:
-        this(C[] s) pure @safe
+        this(Range s)
         {
-            import std.string : strip;
-            _s = s.strip();
+            import std.string : stripLeft;
+            _s = s.stripLeft();
             getFirst();
         }
 
-        @property C[] front() pure @safe
+        @property auto front()
         {
             version (assert) if (empty) throw new RangeError();
             return _s[0 .. _frontLength];
         }
 
-        void popFront() pure @safe
+        void popFront()
         {
             import std.string : stripLeft;
             version (assert) if (empty) throw new RangeError();
@@ -5055,7 +5115,7 @@ if (isSomeChar!C)
             getFirst();
         }
 
-        @property bool empty() const @safe pure nothrow
+        @property bool empty() const
         {
             return _s.empty;
         }
@@ -5083,7 +5143,7 @@ if (isSomeChar!C)
     static foreach (S; AliasSeq!(string, wstring, dstring))
     {{
         import std.conv : to;
-        S a = " a     bcd   ef gh ";
+        S a = " a  \u2028   bcd   ef gh ";
         assert(equal(splitter(a), [to!S("a"), to!S("bcd"), to!S("ef"), to!S("gh")]));
         a = "";
         assert(splitter(a).empty);
@@ -5119,6 +5179,56 @@ if (isSomeChar!C)
     assert(dictionary["two"]== 2);
     assert(dictionary["yah"]== 3);
     assert(dictionary["last"]== 4);
+
+}
+
+@safe unittest
+{
+    // do it with byCodeUnit
+    import std.conv : to;
+    import std.string : strip;
+    import std.utf : byCodeUnit;
+
+    alias BCU = typeof("abc".byCodeUnit());
+
+    // TDPL example, page 8
+    uint[BCU] dictionary;
+    BCU[3] lines;
+    lines[0] = "line one".byCodeUnit;
+    lines[1] = "line \ttwo".byCodeUnit;
+    lines[2] = "yah            last   line\ryah".byCodeUnit;
+    foreach (line; lines)
+    {
+       foreach (word; splitter(strip(line)))
+       {
+           static assert(is(typeof(word) == BCU));
+            if (word in dictionary) continue; // Nothing to do
+            auto newID = dictionary.length;
+            dictionary[word] = cast(uint) newID;
+        }
+    }
+    assert(dictionary.length == 5);
+    assert(dictionary["line".byCodeUnit]== 0);
+    assert(dictionary["one".byCodeUnit]== 1);
+    assert(dictionary["two".byCodeUnit]== 2);
+    assert(dictionary["yah".byCodeUnit]== 3);
+    assert(dictionary["last".byCodeUnit]== 4);
+}
+
+@safe pure unittest
+{
+    // issue 19238
+    import std.utf : byCodeUnit;
+    import std.algorithm.comparison : equal;
+    auto range = "hello    world".byCodeUnit.splitter;
+    static assert(is(typeof(range.front()) == typeof("hello".byCodeUnit())));
+    assert(range.equal(["hello".byCodeUnit, "world".byCodeUnit]));
+
+    // test other space types, including unicode
+    auto u = " a\t\v\r bcd\u3000 \u2028\t\nef\U00010001 gh";
+    assert(equal(splitter(u), ["a", "bcd", "ef\U00010001", "gh"][]));
+    assert(equal(splitter(u.byCodeUnit), ["a".byCodeUnit, "bcd".byCodeUnit,
+                 "ef\U00010001".byCodeUnit, "gh".byCodeUnit][]));
 }
 
 @safe unittest
