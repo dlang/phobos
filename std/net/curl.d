@@ -776,13 +776,13 @@ if ( isCurlConn!Conn && (is(T == char) || is(T == ubyte)) )
  *
  * See_Also: $(LREF HTTP.Method)
  */
-void del(Conn = AutoProtocol)(const(char)[] url, Conn conn = Conn())
+T[] del(Conn = AutoProtocol, T = char)(const(char)[] url, Conn conn = Conn())
 if (isCurlConn!Conn)
 {
     static if (is(Conn : HTTP))
     {
         conn.method = HTTP.Method.del;
-        _basicHTTP!char(url, cast(void[]) null, conn);
+        return _basicHTTP!char(url, cast(void[]) null, conn);
     }
     else static if (is(Conn : FTP))
     {
@@ -801,6 +801,7 @@ if (isCurlConn!Conn)
                                 text("No filename specified to delete for URL ", url));
         conn.addCommand("DELE " ~ t[1]);
         conn.perform();
+	return "DELE" ~ t[1];
     }
     else
     {
