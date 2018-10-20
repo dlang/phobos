@@ -2883,6 +2883,32 @@ if (isSomeString!S)
     }());
 }
 
+bool isValidUTF(S)(in S str) @safe pure
+if (isSomeString!S)
+{
+    try
+        str.validate();
+    catch(UTFException)
+        return false;
+    return true;
+}
+
+///
+@safe unittest // bugzilla 15710
+{
+    import std.exception : assertThrown;
+    char[] a = ['a', 'b', 'c'];
+    assert(isValidUTF(a));
+}
+
+///
+@safe unittest // bugzilla 15710
+{
+    import std.exception : assertThrown;
+    char[] a = [167, 133, 175];
+    assert(!isValidUTF(a));
+}
+
 /**
  * Encodes the elements of `s` to UTF-8 and returns a newly allocated
  * string of the elements.
