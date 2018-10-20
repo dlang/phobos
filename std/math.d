@@ -7525,9 +7525,12 @@ if (isFloatingPoint!(F) && isIntegral!(G))
 typeof(Unqual!(F).init * Unqual!(G).init) pow(F, G)(F x, G n) @nogc @trusted pure nothrow
 if (isIntegral!(F) && isIntegral!(G))
 {
-    if (n<0) return x/0; // Only support positive powers
     typeof(return) p, v = void;
     Unqual!G m = n;
+
+    if (x == 0) {
+        return x;
+    }
 
     switch (m)
     {
@@ -7539,9 +7542,18 @@ if (isIntegral!(F) && isIntegral!(G))
         p = x;
         break;
 
+    case -1:
+        p = 1 / x;
+        break;
+
+    case -2:
+        p = 1 / (x * x);
+        break;
+
     case 2:
         p = x * x;
         break;
+
 
     default:
         v = x;
@@ -7549,9 +7561,14 @@ if (isIntegral!(F) && isIntegral!(G))
         while (1)
         {
             if (m & 1)
-                p *= v;
+            {
+                if (m > 0)
+                    p *= v;
+                else
+                    p /= v;
+            }
             m >>= 1;
-            if (!m)
+            if (!m || m == -1)
                 break;
             v *= v;
         }
@@ -7575,7 +7592,13 @@ if (isIntegral!(F) && isIntegral!(G))
     assert(pow(ten, four) == 10_000);
     assert(pow(four, 10) == 1_048_576);
     assert(pow(three, four) == 81);
+    assert(pow(0, ten) == 0);
 
+    assert(pow(two, -3) == 0);
+    assert(pow(one, -1) == 1);
+    assert(pow(one, -5) == 1);
+    assert(pow(ten, -2) == 0);
+    assert(pow(0, -2) == 0);
 }
 
 /**Computes integer to floating point powers.*/
