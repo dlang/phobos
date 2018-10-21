@@ -1175,7 +1175,7 @@ if (distinctFieldNames!(Specs))
             size_t h = 0;
             static foreach (i, T; Types)
             {{
-                const k = typeid(T).getHash((() @trusted => cast(const void*) &field[i])());
+                const k = hashOf((() @trusted => cast(const void*) &field[i])());
                 static if (i == 0)
                     h = k;
                 else
