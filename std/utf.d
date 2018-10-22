@@ -41,6 +41,7 @@ $(TR $(TD Index) $(TD
 $(TR $(TD Validation) $(TD
     $(LREF isValidDchar)
     $(LREF validate)
+    $(LREF isValidUTF)
 ))
 $(TR $(TD Miscellaneous) $(TD
     $(LREF replacementDchar)
@@ -2883,20 +2884,24 @@ if (isSomeString!S)
     }());
 }
 
-bool isValidUTF(S)(in S str) @safe pure
-if (isSomeString!S)
+/++
+    Returns `true` if `str` is well-formed unicode.
++/
+bool isValidUTF(C)(scope const C[] str) @nogc nothrow pure @safe
+if (isSomeChar!C)
 {
-    try
-        str.validate();
-    catch(UTFException)
-        return false;
+    immutable len = str.length;
+    for (size_t i = 0; i < len; )
+    {
+        if (decode!(UseReplacementDchar.yes)(str, i) == replacementDchar)
+            return false;
+    }
     return true;
 }
 
 ///
 @safe unittest // bugzilla 15710
 {
-    import std.exception : assertThrown;
     char[] a = ['a', 'b', 'c'];
     assert(isValidUTF(a));
 }
@@ -2904,7 +2909,6 @@ if (isSomeString!S)
 ///
 @safe unittest // bugzilla 15710
 {
-    import std.exception : assertThrown;
     char[] a = [167, 133, 175];
     assert(!isValidUTF(a));
 }
