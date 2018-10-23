@@ -6931,17 +6931,20 @@ template isInstanceOf(alias S, alias T)
  *
  * See_Also: $(LREF isTypeTuple).
  */
-template isExpressions(T ...)
+template isExpressions(T...)
 {
-    static if (T.length >= 2)
-        enum bool isExpressions =
-            isExpressions!(T[0 .. $/2]) &&
-            isExpressions!(T[$/2 .. $]);
-    else static if (T.length == 1)
-        enum bool isExpressions =
-            !is(T[0]) && __traits(compiles, { auto ex = T[0]; });
-    else
-        enum bool isExpressions = true; // default
+    static foreach (Ti; T)
+    {
+        static if (!is(typeof(isExpressions) == bool) && // not yet defined
+                   (is(Ti) || !__traits(compiles, { auto ex = Ti; })))
+        {
+            enum isExpressions = false;
+        }
+    }
+    static if (!is(typeof(isExpressions) == bool)) // if not yet defined
+    {
+        enum isExpressions = true;
+    }
 }
 
 ///
@@ -8487,13 +8490,18 @@ private template getSymbolsByUDAImpl(alias symbol, alias attribute, names...)
 */
 template allSameType(T...)
 {
-    static if (T.length <= 1)
+    static foreach (idx, Ti; T)
+    {
+        static if (idx + 1 < T.length &&
+                   !is(typeof(allSameType) == bool) &&
+                   !is(T[idx] == T[idx + 1]))
+        {
+            enum bool allSameType = false;
+        }
+    }
+    static if (!is(typeof(allSameType) == bool))
     {
         enum bool allSameType = true;
-    }
-    else
-    {
-        enum bool allSameType = is(T[0] == T[1]) && allSameType!(T[1..$]);
     }
 }
 
