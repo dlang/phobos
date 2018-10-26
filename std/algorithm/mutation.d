@@ -1644,8 +1644,8 @@ concerns the swapping of elements that are not the core concern of the
 algorithm. For example, consider an algorithm that sorts $(D [ "abc",
 "b", "aBc" ]) according to `toUpper(a) < toUpper(b)`. That
 algorithm might choose to swap the two equivalent strings `"abc"`
-and `"aBc"`. That does not affect the sorting since both `$D(
-"abc", "aBc", "b" ]) and `[ "aBc", "abc", "b" ]` are valid
+and `"aBc"`. That does not affect the sorting since both
+`["abc", "aBc", "b" ]` and `[ "aBc", "abc", "b" ]` are valid
 outcomes.
 
 Some situations require that the algorithm must NOT ever change the

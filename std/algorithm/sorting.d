@@ -387,8 +387,9 @@ Returns:
 The right part of `r` after partitioning.
 
 If `ss == SwapStrategy.stable`, `partition` preserves the relative
-ordering of all elements `a`, `b` in `r` for which `predicate(a) =$D(
-predicate(b)). If `ss == SwapStrategy.semistable`, `partition` preserves
+ordering of all elements `a`, `b` in `r` for which
+`predicate(a) == predicate(b)`.
+If `ss == SwapStrategy.semistable`, `partition` preserves
 the relative ordering of all elements `a`, `b` in the left part of `r`
 for which `predicate(a) == predicate(b)`.
 */
@@ -943,8 +944,9 @@ Params:
     index = The resulting index.
 
 Returns: The pointer-based version returns a `SortedRange` wrapper
-over index, of type `SortedRange!(RangeIndex, (a, b) =$D(
-binaryFun!less(*a, *b))) thus reflecting the ordering of the
+over index, of type
+`SortedRange!(RangeIndex, (a, b) => binaryFun!less(*a, *b))`
+thus reflecting the ordering of the
 index. The index-based version returns `void` because the ordering
 relation involves not only `index` but also `r`.
 
@@ -2896,8 +2898,7 @@ Params:
     r = The range to sort.
 
 Returns: The initial range wrapped as a `SortedRange` with the
-predicate `(a, b) => binaryFun!less(transform(a)$D(
-transform(b))).
+predicate `(a, b) => binaryFun!less(transform(a), transform(b))`.
  */
 SortedRange!(R, ((a, b) => binaryFun!less(unaryFun!transform(a),
                                           unaryFun!transform(b))))
@@ -3014,8 +3015,8 @@ if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R)
 
 // partialSort
 /**
-Reorders the random-access range `r` such that the range `r[$D(
-.. mid]) is the same as if the entire `r` were sorted, and leaves
+Reorders the random-access range `r` such that the range `r[0 .. mid]`
+is the same as if the entire `r` were sorted, and leaves
 the range `r[mid .. r.length]` in no particular order. Performs
 $(BIGOH r.length * log(mid)) evaluations of `pred`. The
 implementation simply calls `topN!(less, ss)(r, n)` and then $(D
@@ -3669,8 +3670,8 @@ if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
 /**
 Copies the top `n` elements of the
 $(REF_ALTTEXT input range, isInputRange, std,range,primitives) `source` into the
-random-access range `target`, where `n $D(
-target.length). Elements of `source` are not touched. If $(D
+random-access range `target`, where `n = target.length`.
+Elements of `source` are not touched. If $(D
 sorted) is `true`, the target is sorted. Otherwise, the target
 respects the $(HTTP en.wikipedia.org/wiki/Binary_heap, heap property).
 
