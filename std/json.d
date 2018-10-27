@@ -661,27 +661,64 @@ struct JSONValue
         // Default doesn't work well since store is a union.  Compare only
         // what should be in store.
         // This is @trusted to remain nogc, nothrow, fast, and usable from @safe code.
-        if (type_tag != rhs.type_tag) return false;
 
         final switch (type_tag)
         {
-        case JSONType.string:
-            return store.str == rhs.store.str;
         case JSONType.integer:
-            return store.integer == rhs.store.integer;
+            switch (rhs.type_tag)
+            {
+                case JSONType.integer:
+                    return store.integer == rhs.store.integer;
+                case JSONType.uinteger:
+                    return store.integer == rhs.store.uinteger;
+                case JSONType.float_:
+                    return store.integer == rhs.store.floating;
+                default:
+                    return false;
+            }
         case JSONType.uinteger:
-            return store.uinteger == rhs.store.uinteger;
+            switch (rhs.type_tag)
+            {
+                case JSONType.integer:
+                    return store.uinteger == rhs.store.integer;
+                case JSONType.uinteger:
+                    return store.uinteger == rhs.store.uinteger;
+                case JSONType.float_:
+                    return store.uinteger == rhs.store.floating;
+                default:
+                    return false;
+            }
         case JSONType.float_:
-            return store.floating == rhs.store.floating;
+            switch (rhs.type_tag)
+            {
+                case JSONType.integer:
+                    return store.floating == rhs.store.integer;
+                case JSONType.uinteger:
+                    return store.floating == rhs.store.uinteger;
+                case JSONType.float_:
+                    return store.floating == rhs.store.floating;
+                default:
+                    return false;
+            }
+        case JSONType.string:
+            return type_tag == rhs.type_tag && store.str == rhs.store.str;
         case JSONType.object:
-            return store.object == rhs.store.object;
+            return type_tag == rhs.type_tag && store.object == rhs.store.object;
         case JSONType.array:
-            return store.array == rhs.store.array;
+            return type_tag == rhs.type_tag && store.array == rhs.store.array;
         case JSONType.true_:
         case JSONType.false_:
         case JSONType.null_:
-            return true;
+            return type_tag == rhs.type_tag;
         }
+    }
+
+    ///
+    @safe unittest
+    {
+        assert(JSONValue(0u) == JSONValue(0));
+        assert(JSONValue(0u) == JSONValue(0.0));
+        assert(JSONValue(0) == JSONValue(0.0));
     }
 
     /// Implements the foreach `opApply` interface for json arrays.
