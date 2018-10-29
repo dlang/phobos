@@ -708,8 +708,12 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I))
 
     auto arr = minimallyInitializedArray!(int[])(42);
     assert(arr.length == 42);
-    // Elements aren't necessarily initialized to 0
-    assert(!arr.equal(0.repeat(42)));
+
+    // Elements aren't necessarily initialized to 0, so don't do this:
+    // assert(arr.equal(0.repeat(42)));
+    // If that is needed, initialize the array normally instead:
+    auto arr2 = new int[42];
+    assert(arr2.equal(0.repeat(42)));
 }
 
 @safe pure nothrow unittest
