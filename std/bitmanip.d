@@ -1362,11 +1362,18 @@ public:
      */
     size_t count()
     {
-        size_t bitCount;
-        foreach (i; 0 .. fullWords)
-            bitCount += countBitsSet(_ptr[i]);
-        bitCount += countBitsSet(_ptr[fullWords] & endMask);
-        return bitCount;
+        if (_ptr)
+        {
+            size_t bitCount;
+            foreach (i; 0 .. fullWords)
+                bitCount += countBitsSet(_ptr[i]);
+            bitCount += countBitsSet(_ptr[fullWords] & endMask);
+            return bitCount;
+        }
+        else
+        {
+            return 0;
+        }
     }
 
     ///
@@ -1374,6 +1381,9 @@ public:
     {
         auto a = BitArray([0, 1, 1, 0, 0, 1, 1]);
         assert(a.count == 4);
+
+        BitArray b;
+        assert(b.count == 0);
 
         bool[200] boolArray;
         boolArray[45 .. 130] = true;
