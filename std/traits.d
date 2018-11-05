@@ -4972,16 +4972,7 @@ template ImplicitConversionTargets(T)
 /**
 Is `From` implicitly convertible to `To`?
  */
-template isImplicitlyConvertible(From, To)
-{
-    enum bool isImplicitlyConvertible = is(typeof({
-        void fun(ref From v)
-        {
-            void gun(To) {}
-            gun(v);
-        }
-    }));
-}
+enum bool isImplicitlyConvertible(From, To) = is(From : To);
 
 ///
 @safe unittest
