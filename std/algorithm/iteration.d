@@ -5518,10 +5518,13 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
 
             this(R haystack, Ins needles)
             {
-                hasHit = !haystack.empty;
                 this.rest = haystack.drop(0);
                 this.needles = needles;
-                popFront;
+                if (!haystack.empty)
+                {
+                    hasHit = true;
+                    popFront;
+                }
                 static if (hasNested!(typeof(skip)))
                     skip = rest.take(0);
             }
@@ -5934,6 +5937,25 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
     assert([1, 2, 3, 4].substitute([4], [7]).equal([1, 2, 3, 7]));
     assert([1, 2, 3, 4].substitute([2, 3], [7]).equal([1, 7, 4]));
     assert([1, 2, 3, 4].substitute([3, 4], [7, 8]).equal([1, 2, 7, 8]));
+}
+
+// tests recognizing empty base ranges
+nothrow pure @safe unittest
+{
+    import std.utf : byCodeUnit;
+    import std.algorithm.comparison : equal;
+
+    assert("".byCodeUnit.substitute('4', 'A').empty);
+    assert("".byCodeUnit.substitute('0', 'O', '5', 'S', '1', 'l').empty);
+    assert("".byCodeUnit.substitute("PKM".byCodeUnit, "PoKeMon".byCodeUnit).empty);
+    assert("".byCodeUnit.substitute
+    (   "ding".byCodeUnit,
+        "dong".byCodeUnit,
+        "click".byCodeUnit,
+        "clack".byCodeUnit,
+        "ping".byCodeUnit,
+        "latency".byCodeUnit
+    ).empty);
 }
 
 // sum
