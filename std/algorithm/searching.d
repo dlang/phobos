@@ -1268,6 +1268,8 @@ if (isInputRange!R &&
     }}
 }
 
+private enum bool hasConstEmptyMember(T) = is(typeof(((const T* a) => (*a).empty)(null)) : bool);
+
 // Rebindable doesn't work with structs
 // see: https://github.com/dlang/phobos/pull/6136
 private template RebindableOrUnqual(T)
@@ -2855,9 +2857,19 @@ if (isForwardRange!R1 && isForwardRange!R2)
             asTuple = rhs;
         }
         Tuple!(S1, S1, S2) asTuple;
-        bool opCast(T : bool)()
+        static if (hasConstEmptyMember!(typeof(asTuple[1])))
         {
-            return !asTuple[1].empty;
+            bool opCast(T : bool)() const
+            {
+                return !asTuple[1].empty;
+            }
+        }
+        else
+        {
+            bool opCast(T : bool)()
+            {
+                return !asTuple[1].empty;
+            }
         }
         alias asTuple this;
     }
@@ -2923,9 +2935,19 @@ if (isForwardRange!R1 && isForwardRange!R2)
             asTuple = rhs;
         }
         Tuple!(S1, S2) asTuple;
-        bool opCast(T : bool)()
+        static if (hasConstEmptyMember!(typeof(asTuple[1])))
         {
-            return !asTuple[1].empty;
+            bool opCast(T : bool)() const
+            {
+                return !asTuple[1].empty;
+            }
+        }
+        else
+        {
+            bool opCast(T : bool)()
+            {
+                return !asTuple[1].empty;
+            }
         }
         alias asTuple this;
     }
@@ -2989,9 +3011,19 @@ if (isForwardRange!R1 && isForwardRange!R2)
             asTuple = rhs;
         }
         Tuple!(S1, S2) asTuple;
-        bool opCast(T : bool)()
+        static if (hasConstEmptyMember!(typeof(asTuple[1])))
         {
-            return !asTuple[0].empty;
+            bool opCast(T : bool)() const
+            {
+                return !asTuple[0].empty;
+            }
+        }
+        else
+        {
+            bool opCast(T : bool)()
+            {
+                return !asTuple[0].empty;
+            }
         }
         alias asTuple this;
     }
@@ -3047,7 +3079,21 @@ if (isForwardRange!R1 && isForwardRange!R2)
 {
     // findSplit returns a triplet
     if (auto split = "dlang-rocks".findSplit("-"))
+    {
+        assert(split[0] == "dlang");
+        assert(split[1] == "-");
         assert(split[2] == "rocks");
+    }
+    else assert(0);
+
+    // works with const aswell
+    if (const split = "dlang-rocks".findSplit("-"))
+    {
+        assert(split[0] == "dlang");
+        assert(split[1] == "-");
+        assert(split[2] == "rocks");
+    }
+    else assert(0);
 }
 
 ///
@@ -3068,14 +3114,18 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(r[0] == "Carl");
     assert(r[1] == " ");
     assert(r[2] == "Sagan Memorial Station");
-    auto r1 = findSplitBefore(a, "Sagan");
-    assert(r1);
-    assert(r1[0] == "Carl ");
-    assert(r1[1] == "Sagan Memorial Station");
-    auto r2 = findSplitAfter(a, "Sagan");
-    assert(r2);
-    assert(r2[0] == "Carl Sagan");
-    assert(r2[1] == " Memorial Station");
+    if (const r1 = findSplitBefore(a, "Sagan"))
+    {
+        assert(r1);
+        assert(r1[0] == "Carl ");
+        assert(r1[1] == "Sagan Memorial Station");
+    }
+    if (const r2 = findSplitAfter(a, "Sagan"))
+    {
+        assert(r2);
+        assert(r2[0] == "Carl Sagan");
+        assert(r2[1] == " Memorial Station");
+    }
 }
 
 /// Use $(REF only, std,range) to find single elements:
@@ -3089,7 +3139,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
 {
     import std.range.primitives : empty;
 
-    auto a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
+    immutable a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
     auto r = findSplit(a, [9, 1]);
     assert(!r);
     assert(r[0] == a);
@@ -3101,23 +3151,35 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(r[1] == a[2 .. 3]);
     assert(r[2] == a[3 .. $]);
 
-    auto r1 = findSplitBefore(a, [9, 1]);
-    assert(!r1);
-    assert(r1[0] == a);
-    assert(r1[1].empty);
-    r1 = findSplitBefore(a, [3, 4]);
-    assert(r1);
-    assert(r1[0] == a[0 .. 2]);
-    assert(r1[1] == a[2 .. $]);
+    {
+        const r1 = findSplitBefore(a, [9, 1]);
+        assert(!r1);
+        assert(r1[0] == a);
+        assert(r1[1].empty);
+    }
 
-    auto r2 = findSplitAfter(a, [9, 1]);
-    assert(!r2);
-    assert(r2[0].empty);
-    assert(r2[1] == a);
-    r2 = findSplitAfter(a, [3, 4]);
-    assert(r2);
-    assert(r2[0] == a[0 .. 4]);
-    assert(r2[1] == a[4 .. $]);
+    if (immutable r1 = findSplitBefore(a, [3, 4]))
+    {
+        assert(r1);
+        assert(r1[0] == a[0 .. 2]);
+        assert(r1[1] == a[2 .. $]);
+    }
+    else assert(0);
+
+    {
+        const r2 = findSplitAfter(a, [9, 1]);
+        assert(!r2);
+        assert(r2[0].empty);
+        assert(r2[1] == a);
+    }
+
+    if (immutable r3 = findSplitAfter(a, [3, 4]))
+    {
+        assert(r3);
+        assert(r3[0] == a[0 .. 4]);
+        assert(r3[1] == a[4 .. $]);
+    }
+    else assert(0);
 }
 
 @safe pure nothrow unittest
@@ -3143,31 +3205,50 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(r[1].empty);
     assert(r[2].empty);
 
-    auto r1 = findSplitBefore(fwd, [9, 1]);
-    assert(!r1);
-    assert(equal(r1[0], a));
-    assert(r1[1].empty);
-    r1 = findSplitBefore(fwd, [3, 4]);
-    assert(r1);
-    assert(equal(r1[0], a[0 .. 2]));
-    assert(equal(r1[1], a[2 .. $]));
-    r1 = findSplitBefore(fwd, [8, 9]);
-    assert(!r1);
-    assert(equal(r1[0], a));
-    assert(r1[1].empty);
+    // auto variable `r2` cannot be `const` because `fwd.front` is mutable
+    {
+        auto r1 = findSplitBefore(fwd, [9, 1]);
+        assert(!r1);
+        assert(equal(r1[0], a));
+        assert(r1[1].empty);
+    }
 
-    auto r2 = findSplitAfter(fwd, [9, 1]);
-    assert(!r2);
-    assert(r2[0].empty);
-    assert(equal(r2[1], a));
-    r2 = findSplitAfter(fwd, [3, 4]);
-    assert(r2);
-    assert(equal(r2[0], a[0 .. 4]));
-    assert(equal(r2[1], a[4 .. $]));
-    r2 = findSplitAfter(fwd, [8, 9]);
-    assert(!r2);
-    assert(r2[0].empty);
-    assert(equal(r2[1], a));
+    if (auto r1 = findSplitBefore(fwd, [3, 4]))
+    {
+        assert(r1);
+        assert(equal(r1[0], a[0 .. 2]));
+        assert(equal(r1[1], a[2 .. $]));
+    }
+    else assert(0);
+
+    {
+        auto r1 = findSplitBefore(fwd, [8, 9]);
+        assert(!r1);
+        assert(equal(r1[0], a));
+        assert(r1[1].empty);
+    }
+
+    {
+        auto r2 = findSplitAfter(fwd, [9, 1]);
+        assert(!r2);
+        assert(r2[0].empty);
+        assert(equal(r2[1], a));
+    }
+
+    if (auto r2 = findSplitAfter(fwd, [3, 4]))
+    {
+        assert(r2);
+        assert(equal(r2[0], a[0 .. 4]));
+        assert(equal(r2[1], a[4 .. $]));
+    }
+    else assert(0);
+
+    {
+        auto r2 = findSplitAfter(fwd, [8, 9]);
+        assert(!r2);
+        assert(r2[0].empty);
+        assert(equal(r2[1], a));
+    }
 }
 
 @safe pure nothrow @nogc unittest
