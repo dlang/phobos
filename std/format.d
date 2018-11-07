@@ -149,6 +149,7 @@ $(I FormatStringItem):
     $(B '%%')
     $(B '%') $(I Position) $(I Flags) $(I Width) $(I Separator) $(I Precision) $(I FormatChar)
     $(B '%$(LPAREN)') $(I FormatString) $(B '%$(RPAREN)')
+    $(B '%-$(LPAREN)') $(I FormatString) $(B '%$(RPAREN)')
     $(I OtherCharacterExceptPercent)
 $(I Position):
     $(I empty)
