@@ -1175,7 +1175,12 @@ if (distinctFieldNames!(Specs))
             size_t h = 0;
             static foreach (i, T; Types)
             {{
-                const k = typeid(T).getHash((() @trusted => cast(const void*) &field[i])());
+                static if (__traits(compiles, h = .hashOf(field[i])))
+                    const k = .hashOf(field[i]);
+                else
+                    // Workaround for when .hashOf is not both @safe and nothrow.
+                    // BUG: Improperly casts away `shared`!
+                    const k = typeid(T).getHash((() @trusted => cast(const void*) &field[i])());
                 static if (i == 0)
                     h = k;
                 else
@@ -2679,7 +2684,11 @@ Params:
 
     size_t toHash() const @safe nothrow
     {
-        return _isNull ? 0 : typeid(T).getHash(&_value.payload);
+        static if (__traits(compiles, .hashOf(_value.payload)))
+            return _isNull ? 0 : .hashOf(_value.payload);
+        else
+            // Workaround for when .hashOf is not both @safe and nothrow.
+            return _isNull ? 0 : typeid(T).getHash(&_value.payload);
     }
 
     /**
@@ -6592,13 +6601,20 @@ mixin template Proxy(alias a)
 
         static if (accessibleFrom!(const typeof(this)))
         {
-            override hash_t toHash() const nothrow @trusted
+            override hash_t toHash() const nothrow @safe
             {
-                static if (is(typeof(&a) == ValueType*))
-                    alias v = a;
+                static if (__traits(compiles, .hashOf(a)))
+                    return .hashOf(a);
                 else
-                    auto v = a;     // if a is (property) function
-                return typeid(ValueType).getHash(cast(const void*)&v);
+                // Workaround for when .hashOf is not both @safe and nothrow.
+                {
+                    static if (is(typeof(&a) == ValueType*))
+                        alias v = a;
+                    else
+                        auto v = a; // if a is (property) function
+                    // BUG: Improperly casts away `shared`!
+                    return typeid(ValueType).getHash((() @trusted => cast(const void*) &v)());
+                }
             }
         }
     }
@@ -6629,13 +6645,20 @@ mixin template Proxy(alias a)
 
         static if (accessibleFrom!(const typeof(this)))
         {
-            hash_t toHash() const nothrow @trusted
+            hash_t toHash() const nothrow @safe
             {
-                static if (is(typeof(&a) == ValueType*))
-                    alias v = a;
+                static if (__traits(compiles, .hashOf(a)))
+                    return .hashOf(a);
                 else
-                    auto v = a;     // if a is (property) function
-                return typeid(ValueType).getHash(cast(const void*)&v);
+                // Workaround for when .hashOf is not both @safe and nothrow.
+                {
+                    static if (is(typeof(&a) == ValueType*))
+                        alias v = a;
+                    else
+                        auto v = a; // if a is (property) function
+                    // BUG: Improperly casts away `shared`!
+                    return typeid(ValueType).getHash((() @trusted => cast(const void*) &v)());
+                }
             }
         }
     }

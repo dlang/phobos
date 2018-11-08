@@ -1161,7 +1161,7 @@ class Tag
          */
         override size_t toHash()
         {
-            return typeid(name).getHash(&name);
+            return .hashOf(name);
         }
 
         /**
@@ -2989,10 +2989,7 @@ private
         return ch;
     }
 
-    size_t hash(string s,size_t h=0) @trusted nothrow
-    {
-        return typeid(s).getHash(&s) + h;
-    }
+    alias hash = .hashOf;
 
     // Definitions from the XML specification
     immutable CharTable=[0x9,0x9,0xA,0xA,0xD,0xD,0x20,0xD7FF,0xE000,0xFFFD,
