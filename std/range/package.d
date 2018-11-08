@@ -235,7 +235,7 @@ public import std.typecons : Flag, Yes, No;
 
 import std.meta; // allSatisfy, staticMap
 import std.traits; // CommonType, isCallable, isFloatingPoint, isIntegral,
-    // isPointer, isSomeFunction, isStaticArray, Unqual
+    // isPointer, isSomeFunction, isStaticArray, Unqual, isInstanceOf
 
 
 /**
@@ -10300,7 +10300,7 @@ corresponding `SortedRange`. To construct a `SortedRange` from a range
 below.
 */
 struct SortedRange(Range, alias pred = "a < b")
-if (isInputRange!Range)
+if (isInputRange!Range && !isInstanceOf!(SortedRange, Range))
 {
     import std.functional : binaryFun;
 
@@ -10750,6 +10750,14 @@ sorting relation.
     }
 }
 
+/// ditto
+template SortedRange(Range, alias pred = "a < b")
+if (isInstanceOf!(SortedRange, Range))
+{
+    // Avoid nesting SortedRange types (see Issue 18933);
+    alias SortedRange = SortedRange!(Unqual!(typeof(Range._input)), pred);
+}
+
 ///
 @safe unittest
 {
@@ -10905,6 +10913,14 @@ that break its sorted-ness, `SortedRange` will work erratically.
     auto r1 = r.upperBound!(SearchPolicy.linear)("def");
     assert(r1.front == "ghi", r1.front);
     f.close();
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=19337
+@safe unittest
+{
+    import std.algorithm.sorting : sort;
+    auto a = [ 1, 2, 3, 42, 52, 64 ];
+    a.sort.sort!"a > b";
 }
 
 /**
