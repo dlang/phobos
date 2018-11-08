@@ -553,7 +553,7 @@ public:
     ///ditto
     T opCast(T)() if (__traits(compiles, get!T )) { return get!T; }
 
-    /// Convert the CustomFloat to a real and perform the relavent operator on the result
+    /// Convert the CustomFloat to a real and perform the relevant operator on the result
     real opUnary(string op)()
         if (__traits(compiles, mixin(op~`(get!real)`)) || op=="++" || op=="--")
     {
