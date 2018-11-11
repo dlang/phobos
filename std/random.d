@@ -1621,7 +1621,7 @@ A singleton instance of the default random number generator
 }
 
 ///
-@safe unittest
+@safe nothrow @nogc unittest
 {
     import std.algorithm.iteration : sum;
     import std.range : take;
