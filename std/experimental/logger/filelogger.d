@@ -125,14 +125,18 @@ class FileLogger : Logger
         Tid threadId, SysTime timestamp, Logger logger)
         @safe
     {
-        import std.string : lastIndexOf;
-        ptrdiff_t fnIdx = file.lastIndexOf('/') + 1;
-        ptrdiff_t funIdx = funcName.lastIndexOf('.') + 1;
+        this.curMsgLogLevel = logLevel;
+        if (isLoggingEnabled(this.curMsgLogLevel, this.logLevel, globalLogLevel))
+        {
+            import std.string : lastIndexOf;
+            ptrdiff_t fnIdx = file.lastIndexOf('/') + 1;
+            ptrdiff_t funIdx = funcName.lastIndexOf('.') + 1;
 
-        auto lt = this.file_.lockingTextWriter();
-        systimeToISOString(lt, timestamp);
-        formattedWrite(lt, ":%s:%s:%u ", file[fnIdx .. $],
-            funcName[funIdx .. $], line);
+            auto lt = this.file_.lockingTextWriter();
+            systimeToISOString(lt, timestamp);
+            formattedWrite(lt, ":%s:%s:%u ", file[fnIdx .. $],
+                funcName[funIdx .. $], line);
+        }
     }
 
     /* This methods overrides the base class method and writes the parts of
@@ -140,7 +144,10 @@ class FileLogger : Logger
     */
     override protected void logMsgPart(scope const(char)[] msg)
     {
-        formattedWrite(this.file_.lockingTextWriter(), "%s", msg);
+        if (isLoggingEnabled(this.curMsgLogLevel, this.logLevel, globalLogLevel))
+        {
+            formattedWrite(this.file_.lockingTextWriter(), "%s", msg);
+        }
     }
 
     /* This methods overrides the base class method and finalizes the active
@@ -149,20 +156,16 @@ class FileLogger : Logger
     */
     override protected void finishLogMsg()
     {
-        this.file_.lockingTextWriter().put("\n");
-        this.file_.flush();
-    }
+        if (isLoggingEnabled(this.curMsgLogLevel, this.logLevel, globalLogLevel))
+        {
+            this.file_.lockingTextWriter().put("\n");
+            this.file_.flush();
+        }
 
-    /* This methods overrides the base class method and delegates the
-    `LogEntry` data to the actual implementation.
-    */
-    override protected void writeLogMsg(ref LogEntry payload)
-    {
-        this.beginLogMsg(payload.file, payload.line, payload.funcName,
-            payload.prettyFuncName, payload.moduleName, payload.logLevel,
-            payload.threadId, payload.timestamp, payload.logger);
-        this.logMsgPart(payload.msg);
-        this.finishLogMsg();
+        if (this.logLevel == LogLevel.fatal)
+        {
+            this.executeFatalHandler();
+        }
     }
 
     /** If the `FileLogger` was constructed with a filename, this method
