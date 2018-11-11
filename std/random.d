@@ -1602,7 +1602,7 @@ and initialized to an unpredictable value for each thread.
 Returns:
 A singleton instance of the default random number generator
  */
-@property ref Random rndGen() @safe @nogc
+@property ref Random rndGen() @safe nothrow @nogc
 {
     import std.algorithm.iteration : map;
     import std.range : repeat;
@@ -1621,7 +1621,7 @@ A singleton instance of the default random number generator
 }
 
 ///
-@safe unittest
+@safe nothrow @nogc unittest
 {
     import std.algorithm.iteration : sum;
     import std.range : take;
