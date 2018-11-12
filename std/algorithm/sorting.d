@@ -4473,9 +4473,9 @@ shapes. Here's a non-trivial example:
 /** Permutes `range` into the `perm` permutation.
 The algorithm has a constant runtime complexity with respect to the number of
 permutations created.
-Duo to the number of unique values of `ulong` only the first 21 elements of
+Due to the number of unique values of `ulong` only the first 21 elements of
 `range` can be permuted. The rest of the range will therefore not be
-permutated.
+permuted.
 This algorithm uses the $(HTTP en.wikipedia.org/wiki/Lehmer_code, Lehmer
 Code).
 
