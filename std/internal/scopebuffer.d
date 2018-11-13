@@ -12,6 +12,7 @@ module std.internal.scopebuffer;
 
 import core.stdc.stdlib : realloc;
 import std.traits;
+import std.internal.attributes : betterC;
 
 /**************************************
  * ScopeBuffer encapsulates using a local array as a temporary buffer.
@@ -128,7 +129,7 @@ if (isAssignable!T &&
         this.bufLen = cast(uint) buf.length;
     }
 
-    @system unittest
+    @system @betterC unittest
     {
         ubyte[10] tmpbuf = void;
         auto sbuf = ScopeBuffer!ubyte(tmpbuf);
@@ -289,7 +290,7 @@ if (isAssignable!T &&
     }
 }
 
-@system unittest
+@system @betterC unittest
 {
     import core.stdc.stdio;
     import std.range;
@@ -350,7 +351,7 @@ if (isAssignable!T &&
 }
 
 // const
-@system unittest
+@system @betterC unittest
 {
     char[10] tmpbuf = void;
     auto textbuf = ScopeBuffer!char(tmpbuf);
@@ -377,14 +378,14 @@ auto scopeBuffer(T)(T[] tmpbuf)
 }
 
 ///
-@system unittest
+@system @betterC unittest
 {
     ubyte[10] tmpbuf = void;
     auto sb = scopeBuffer(tmpbuf);
     scope(exit) sb.free();
 }
 
-@system unittest
+@system @betterC unittest
 {
     ScopeBuffer!(int*) b;
     int*[] s;
