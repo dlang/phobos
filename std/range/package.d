@@ -1718,12 +1718,12 @@ if (Ranges.length >= 2
     static struct RefAccessRange
     {
         int[] r;
-        ref front() @property { return r[0]; }
-        ref back() @property { return r[$ - 1]; }
+        scope ref front() @property { return r[0]; }
+        scope ref back() @property { return r[$ - 1]; }
         void popFront() { r = r[1 .. $]; }
         void popBack() { r = r[0 .. $ - 1]; }
         auto empty() @property { return r.empty; }
-        ref opIndex(size_t i) { return r[i]; }
+        scope ref opIndex(size_t i) { return r[i]; }
         auto length() @property { return r.length; }
         alias opDollar = length;
         auto save() { return this; }
@@ -5059,15 +5059,15 @@ nothrow pure @system unittest
     static struct NonSliceableRandomAccess
     {
         private int[] a;
-        @property ref front()
+        @property scope ref front()
         {
             return a.front;
         }
-        @property ref back()
+        @property scope ref back()
         {
             return a.back;
         }
-        ref opIndex(size_t i)
+        scope ref opIndex(size_t i)
         {
             return a[i];
         }
