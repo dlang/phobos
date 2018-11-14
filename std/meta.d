@@ -834,18 +834,8 @@ template predicate must be instantiable with all the given items.
  */
 template allSatisfy(alias F, T...)
 {
-    static foreach (Ti; T)
-    {
-        static if (!is(typeof(allSatisfy) == bool) && // not yet defined
-                   !F!(Ti))
-        {
-            enum allSatisfy = false;
-        }
-    }
-    static if (!is(typeof(allSatisfy) == bool)) // if not yet defined
-    {
-        enum allSatisfy = true;
-    }
+    import core.internal.traits : allSat = allSatisfy;
+    alias allSatisfy = allSat!(F, T);
 }
 
 ///
