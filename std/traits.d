@@ -3606,19 +3606,8 @@ template hasUnsharedAliasing(T...)
  */
 template hasElaborateCopyConstructor(S)
 {
-    import std.meta : anySatisfy;
-    static if (isStaticArray!S && S.length)
-    {
-        enum bool hasElaborateCopyConstructor = hasElaborateCopyConstructor!(typeof(S.init[0]));
-    }
-    else static if (is(S == struct))
-    {
-        enum hasElaborateCopyConstructor = hasMember!(S, "__xpostblit");
-    }
-    else
-    {
-        enum bool hasElaborateCopyConstructor = false;
-    }
+    import core.internal.traits : hasElabCCtor = hasElaborateCopyConstructor;
+    alias hasElaborateCopyConstructor = hasElabCCtor!(S);
 }
 
 ///
