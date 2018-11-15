@@ -5491,8 +5491,8 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
             }
 
         public:
-            mixin mixinAll!(
-                staticMap!(generateFun, staticIota!(0, TargetMembers.length)));
+            static foreach (i; 0 .. TargetMembers.length)
+                mixin(generateFun!i);
         }
     }
 }
@@ -6006,47 +6006,6 @@ package template DerivedFunctionType(T...)
     static assert(is(DerivedFunctionType!(F16, F17) == void));
     static assert(is(DerivedFunctionType!(F16, F18) == void));
     static assert(is(DerivedFunctionType!(F17, F18) == void));
-}
-
-package template staticIota(int beg, int end)
-{
-    static if (beg + 1 >= end)
-    {
-        static if (beg >= end)
-        {
-            alias staticIota = AliasSeq!();
-        }
-        else
-        {
-            alias staticIota = AliasSeq!(+beg);
-        }
-    }
-    else
-    {
-        enum mid = beg + (end - beg) / 2;
-        alias staticIota = AliasSeq!(staticIota!(beg, mid), staticIota!(mid, end));
-    }
-}
-
-package template mixinAll(mixins...)
-{
-    static if (mixins.length == 1)
-    {
-        static if (is(typeof(mixins[0]) == string))
-        {
-            mixin(mixins[0]);
-        }
-        else
-        {
-            alias it = mixins[0];
-            mixin it;
-        }
-    }
-    else static if (mixins.length >= 2)
-    {
-        mixin mixinAll!(mixins[ 0 .. $/2]);
-        mixin mixinAll!(mixins[$/2 .. $ ]);
-    }
 }
 
 package template Bind(alias Template, args1...)
