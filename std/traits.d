@@ -3738,20 +3738,8 @@ template hasElaborateAssign(S)
  */
 template hasElaborateDestructor(S)
 {
-    import std.meta : anySatisfy;
-    static if (isStaticArray!S && S.length)
-    {
-        enum bool hasElaborateDestructor = hasElaborateDestructor!(typeof(S.init[0]));
-    }
-    else static if (is(S == struct))
-    {
-        enum hasElaborateDestructor = hasMember!(S, "__dtor")
-            || anySatisfy!(.hasElaborateDestructor, FieldTypeTuple!S);
-    }
-    else
-    {
-        enum bool hasElaborateDestructor = false;
-    }
+    import core.internal.traits : hasElabDest = hasElaborateDestructor;
+    alias hasElaborateDestructor = hasElabDest!(S);
 }
 
 ///
