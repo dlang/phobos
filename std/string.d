@@ -3140,51 +3140,58 @@ if (isSomeString!Range ||
 
     static if (isSomeString!(typeof(str)))
     {
-        import std.utf : codeLength;
-
-        foreach_reverse (i, dchar c; str)
+        static if (C.sizeof >= 2)
         {
-            if (!isWhite(c))
-                return str[0 .. i + codeLength!C(c)];
+            // No whitespace takes multiple wchars to encode and due to
+            // the design of UTF-16 those wchars will not occur as part
+            // of the encoding of multi-wchar codepoints.
+            foreach_reverse (i, C c; str)
+            {
+                if (!isWhite(c))
+                    return str[0 .. i + 1];
+            }
+            return str[0 .. 0];
         }
+        else
+        {
+            static import std.ascii;
+            import std.utf : codeLength;
+            // ASCII optimization.
+            foreach_reverse (i, C c; str)
+            {
+                if (c >= 0x80)
+                {
+                    str = str[0 .. i + 1];
+                    goto NonAsciiPath;
+                }
+                if (!std.ascii.isWhite(c))
+                {
+                    return str[0 .. i + 1];
+                }
+            }
+            return str[0 .. 0];
 
-        return str[0 .. 0];
+        NonAsciiPath:
+            foreach_reverse (i, dchar c; str)
+            {
+                if (!isWhite(c))
+                    return str[0 .. i + codeLength!C(c)];
+            }
+            return str[0 .. 0];
+        }
     }
     else
     {
         size_t i = str.length;
         while (i--)
         {
-            static if (C.sizeof == 4)
+            static if (C.sizeof >= 2)
             {
+                // No whitespace takes multiple wchars to encode and due to
+                // the design of UTF-16 those wchars will not occur as part
+                // of the encoding of multi-wchar codepoints.
                 if (isWhite(str[i]))
                     continue;
-                break;
-            }
-            else static if (C.sizeof == 2)
-            {
-                auto c2 = str[i];
-                if (c2 < 0xD800 || c2 >= 0xE000)
-                {
-                    if (isWhite(c2))
-                        continue;
-                }
-                else if (c2 >= 0xDC00)
-                {
-                    if (i)
-                    {
-                        immutable c1 = str[i - 1];
-                        if (c1 >= 0xD800 && c1 < 0xDC00)
-                        {
-                            immutable dchar c = ((c1 - 0xD7C0) << 10) + (c2 - 0xDC00);
-                            if (isWhite(c))
-                            {
-                                --i;
-                                continue;
-                            }
-                        }
-                    }
-                }
                 break;
             }
             else static if (C.sizeof == 1)
