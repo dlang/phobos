@@ -1205,7 +1205,7 @@ private SysTime statTimeToStdTime(char which)(ref const stat_t statbuf)
     return SysTime(stdTime);
 }
 
-version(Posix) private void fillStatBuf(R)(R name, ref stat_t statbuf)
+version (Posix) private void fillStatBuf(R)(R name, ref stat_t statbuf)
 {
     auto namez = name.tempCString();
 
@@ -1400,7 +1400,7 @@ version (StdDdoc)
     if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         !isConvertibleToString!R);
 }
-else version(Posix)
+else version (Posix)
 {
     void getTimesPosix(R)(R name,
               out SysTime accessTime,
@@ -1525,7 +1525,7 @@ version (Windows) @system unittest
     }
 }
 
-version(Posix) @system unittest
+version (Posix) @system unittest
 {
     import std.stdio : writefln;
 
@@ -1554,7 +1554,7 @@ version(Posix) @system unittest
         assert(abs(diffc) <= leeway);
     }
 
-    version(fullFileTests)
+    version (fullFileTests)
     {
         import core.thread;
         enum sleepTime = dur!"seconds"(2);
