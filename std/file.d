@@ -51,7 +51,6 @@ $(TR $(TD Attributes) $(TD
 ))
 $(TR $(TD Timestamp) $(TD
           $(LREF getTimes)
-          $(LREF getTimesPosix)
           $(LREF getTimesWin)
           $(LREF setTimes)
           $(LREF timeLastModified)
@@ -1205,22 +1204,6 @@ private SysTime statTimeToStdTime(char which)(ref const stat_t statbuf)
     return SysTime(stdTime);
 }
 
-version (Posix) private void fillStatBuf(R)(R name, ref stat_t statbuf)
-{
-    auto namez = name.tempCString();
-
-    static auto trustedStat(const(FSChar)* namez, ref stat_t buf) @trusted
-    {
-        return stat(namez, &buf);
-    }
-
-    static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
-        alias names = name;
-    else
-        string names = null;
-    cenforce(trustedStat(namez, statbuf) == 0, names, namez);
-}
-
 /++
     Get the access and modified times of file or folder `name`.
 
@@ -1250,8 +1233,19 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     }
     else version (Posix)
     {
+        auto namez = name.tempCString();
+
+        static auto trustedStat(const(FSChar)* namez, ref stat_t buf) @trusted
+        {
+            return stat(namez, &buf);
+        }
         stat_t statbuf = void;
-        fillStatBuf(name, statbuf);
+
+        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            alias names = name;
+        else
+            string names = null;
+        cenforce(trustedStat(namez, statbuf) == 0, names, namez);
 
         accessTime = statTimeToStdTime!'a'(statbuf);
         modificationTime = statTimeToStdTime!'m'(statbuf);
@@ -1375,56 +1369,6 @@ version (StdDdoc)
                         out SysTime fileModificationTime)
     if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         !isConvertibleToString!R);
-
-    /++
-     $(BLUE This function is Posix-Only.)
-
-     Get access/modified/change times of file `name`.
-
-     This is the same as `getTimes` except that it also gives you the file
-     status change time.
-
-     Params:
-     name             = File _name to get times for.
-     accessTime       = Time the file was last accessed.
-     modificationTime = Time the file was last modified.
-     changeTime       = Time the file status was last changed.
-
-     Throws:
-     $(LREF FileException) on error.
-     +/
-    void getTimesPosix(R)(R name,
-              out SysTime accessTime,
-              out SysTime modificationTime,
-              out SysTime changeTime)
-    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R);
-}
-else version (Posix)
-{
-    void getTimesPosix(R)(R name,
-              out SysTime accessTime,
-              out SysTime modificationTime,
-              out SysTime changeTime)
-    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
-    {
-        stat_t statbuf = void;
-        fillStatBuf(name, statbuf);
-
-        accessTime = statTimeToStdTime!'a'(statbuf);
-        modificationTime = statTimeToStdTime!'m'(statbuf);
-        changeTime = statTimeToStdTime!'c'(statbuf);
-    }
-
-    void getTimesPosix(R)(auto ref R name,
-              out SysTime accessTime,
-              out SysTime modificationTime,
-              out SysTime changeTime)
-    if (isConvertibleToString!R)
-    {
-        return getTimesPosix!(StringTypeOf!R)(name, accessTime, modificationTime);
-    }
 }
 else version (Windows)
 {
@@ -1525,68 +1469,6 @@ version (Windows) @system unittest
     }
 }
 
-version (Posix) @system unittest
-{
-    import std.stdio : writefln;
-
-    auto currTime = Clock.currTime();
-
-    write(deleteme, "a");
-    scope(exit) assert(deleteme.exists), deleteme.remove;
-
-    SysTime accessTime1 = void;
-    SysTime modificationTime1 = void;
-    SysTime changeTime1 = void;
-
-    getTimesPosix(deleteme, accessTime1, modificationTime1, changeTime1);
-
-    enum leeway = 5.seconds;
-
-    {
-        auto diffa = accessTime1 - currTime;
-        auto diffm = modificationTime1 - currTime;
-        auto diffc = changeTime1 - currTime;
-        scope(failure) writefln("[%s] [%s] [%s] [%s] [%s] [%s] [%s]",
-                                accessTime1, modificationTime1, changeTime1, currTime, diffa, diffm, diffc);
-
-        assert(abs(diffa) <= leeway);
-        assert(abs(diffm) <= leeway);
-        assert(abs(diffc) <= leeway);
-    }
-
-    version (fullFileTests)
-    {
-        import core.thread;
-        enum sleepTime = dur!"seconds"(2);
-        Thread.sleep(sleepTime);
-
-        currTime = Clock.currTime();
-        write(deleteme, "b");
-
-        SysTime accessTime2 = void;
-        SysTime modificationTime2 = void;
-        SysTime changeTime2 = void;
-
-        getTimesPosix(deleteme, accessTime2, modificationTime2, changeTime2);
-
-        {
-            auto diffa = accessTime2 - currTime;
-            auto diffm = modificationTime2 - currTime;
-            auto diffc = changeTime2 - currTime;
-            scope(failure) writefln("[%s] [%s] [%s] [%s] [%s] [%s] [%s]",
-                                    accessTime2, modificationTime2, changeTime2, currTime, diffa, diffm, diffc);
-
-            //There is no guarantee that the access time will be updated.
-            assert(abs(diffa) <= leeway + sleepTime);
-            assert(abs(diffm) <= leeway);
-            assert(abs(diffc) <= leeway);
-        }
-
-        assert(accessTime1 <= accessTime2);
-        assert(modificationTime1 <= modificationTime2);
-        assert(changeTime1 <= changeTime2);
-    }
-}
 
 /++
     Set access/modified times of file or folder `name`.
