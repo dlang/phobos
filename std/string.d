@@ -3138,25 +3138,24 @@ if (isSomeString!Range ||
     import std.uni : isWhite;
     alias C = Unqual!(ElementEncodingType!(typeof(str)));
 
-    static if (isSomeString!(typeof(str)))
+    static if (isSomeString!(typeof(str)) && C.sizeof >= 2)
     {
-        static if (C.sizeof >= 2)
+        // No whitespace takes multiple wchars to encode and due to
+        // the design of UTF-16 those wchars will not occur as part
+        // of the encoding of multi-wchar codepoints.
+        foreach_reverse (i, C c; str)
         {
-            // No whitespace takes multiple wchars to encode and due to
-            // the design of UTF-16 those wchars will not occur as part
-            // of the encoding of multi-wchar codepoints.
-            foreach_reverse (i, C c; str)
-            {
-                if (!isWhite(c))
-                    return str[0 .. i + 1];
-            }
-            return str[0 .. 0];
+            if (!isWhite(c))
+                return str[0 .. i + 1];
         }
-        else
+        return str[0 .. 0];
+    }
+    else
+    {
+        // ASCII optimization for dynamic arrays.
+        static if (isDynamicArray!(typeof(str)))
         {
             static import std.ascii;
-            import std.utf : codeLength;
-            // ASCII optimization.
             foreach_reverse (i, C c; str)
             {
                 if (c >= 0x80)
@@ -3170,18 +3169,10 @@ if (isSomeString!Range ||
                 }
             }
             return str[0 .. 0];
-
-        NonAsciiPath:
-            foreach_reverse (i, dchar c; str)
-            {
-                if (!isWhite(c))
-                    return str[0 .. i + codeLength!C(c)];
-            }
-            return str[0 .. 0];
         }
-    }
-    else
-    {
+
+    NonAsciiPath:
+
         size_t i = str.length;
         while (i--)
         {
@@ -3196,9 +3187,7 @@ if (isSomeString!Range ||
             }
             else static if (C.sizeof == 1)
             {
-                import std.utf : byDchar;
-
-                char cx = str[i];
+                const cx = str[i];
                 if (cx <= 0x7F)
                 {
                     if (isWhite(cx))
@@ -3207,21 +3196,30 @@ if (isSomeString!Range ||
                 }
                 else
                 {
-                    size_t stride = 0;
-
-                    while (1)
+                    if (i == 0 || (0b1100_0000 & cx) != 0b1000_0000)
+                        break;
+                    const uint d = 0b0011_1111 & cx;
+                    const c2 = str[i - 1];
+                    if ((c2 & 0b1110_0000) == 0b1100_0000) // 2 byte encoding.
                     {
-                        ++stride;
-                        if (!i || (cx & 0xC0) == 0xC0 || stride == 4)
-                            break;
-                        cx = str[i - 1];
-                        if (!(cx & 0x80))
-                            break;
-                        --i;
+                        if (isWhite(d + (uint(c2 & 0b0001_1111) << 6)))
+                        {
+                            i--;
+                            continue;
+                        }
+                        break;
                     }
-
-                    if (!str[i .. i + stride].byDchar.front.isWhite)
-                        return str[0 .. i + stride];
+                    if (i == 1 || (c2 & 0b1100_0000) != 0b1000_0000)
+                        break;
+                    const c3 = str[i - 2];
+                    // In UTF-8 all whitespace is encoded in 3 bytes or fewer.
+                    if ((c3 & 0b1111_0000) == 0b1110_0000 &&
+                        isWhite(d + (uint(c2 & 0b0011_1111) << 6) + (uint(c3 & 0b0000_1111) << 12)))
+                    {
+                        i -= 2;
+                        continue;
+                    }
+                    break;
                 }
             }
             else
@@ -3233,7 +3231,7 @@ if (isSomeString!Range ||
 }
 
 ///
-@safe pure
+nothrow @safe pure
 unittest
 {
     import std.uni : lineSep, paraSep;
@@ -3255,7 +3253,7 @@ if (isConvertibleToString!Range)
     return stripRight!(StringTypeOf!Range)(str);
 }
 
-@safe pure unittest
+@nogc nothrow @safe pure unittest
 {
     assert(testAliasedString!stripRight("hello   "));
 }
