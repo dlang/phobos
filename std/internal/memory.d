@@ -15,16 +15,16 @@ else
 // (below comments are non-DDOC, but are written in similar style)
 
 /+
-Pure variants of C's memory allocation functions `malloc`, `calloc`, and
-`realloc` that achieve purity by aborting the program on failure so
-they never visibly change errno.
+Mnemonic for `enforce!OutOfMemoryError(malloc(size))` that (unlike malloc)
+can be considered pure because it causes the program to abort if the result
+of the allocation is null, with the consequence that errno will not be
+visibly changed by calling this function. Note that `malloc` can also
+return `null` in non-failure situations if given an argument of 0. Hence,
+it is a programmer error to use this function if the requested allocation
+size is logically permitted to be zero. `enforceCalloc` and `enforceRealloc`
+work analogously.
 
-The functions may terminate the program using `onOutOfMemoryError` or
-`assert(0)`. These functions' purity guarantees no longer hold if
-the program continues execution after catching AssertError or
-OutOfMemoryError.
-
-See_Also: $(REF pureMalloc, core,memory)
+All these functions are usable in `betterC`.
 +/
 void* enforceMalloc()(size_t size) @nogc nothrow pure @safe
 {
