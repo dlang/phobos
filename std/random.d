@@ -2914,31 +2914,25 @@ private struct RandomCoverChoices
 
     this(this) pure nothrow @nogc @trusted
     {
-        import core.memory : pureMalloc;
         import core.stdc.string : memcpy;
-        import core.exception : onOutOfMemoryError;
+        import std.internal.memory : enforceMalloc;
 
         if (!hasPackedBits && buffer !is null)
         {
-            void* nbuffer = pureMalloc(_length);
-            if (nbuffer is null)
-                onOutOfMemoryError();
+            void* nbuffer = enforceMalloc(_length);
             buffer = memcpy(nbuffer, buffer, _length);
         }
     }
 
     this(size_t numChoices) pure nothrow @nogc @trusted
     {
-        import core.memory : pureCalloc;
-        import core.exception : onOutOfMemoryError;
+        import std.internal.memory : enforceCalloc;
 
         _length = numChoices;
         hasPackedBits = _length <= size_t.sizeof * 8;
         if (!hasPackedBits)
         {
-            buffer = pureCalloc(numChoices, 1);
-            if (buffer is null)
-                onOutOfMemoryError();
+            buffer = enforceCalloc(numChoices, 1);
         }
     }
 

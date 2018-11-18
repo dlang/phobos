@@ -6098,7 +6098,6 @@ if (!is(T == class) && !(is(T == interface)))
     /// `RefCounted` storage implementation.
     struct RefCountedStore
     {
-        import core.memory : pureMalloc;
         private struct Impl
         {
             T _payload;
@@ -6109,12 +6108,10 @@ if (!is(T == class) && !(is(T == interface)))
 
         private void initialize(A...)(auto ref A args)
         {
-            import core.exception : onOutOfMemoryError;
+            import std.internal.memory : enforceMalloc;
             import std.conv : emplace;
 
-            _store = cast(Impl*) pureMalloc(Impl.sizeof);
-            if (_store is null)
-                onOutOfMemoryError();
+            _store = cast(Impl*) enforceMalloc(Impl.sizeof);
             static if (hasIndirections!T)
                 pureGcAddRange(&_store._payload, T.sizeof);
             emplace(&_store._payload, args);
@@ -6123,12 +6120,10 @@ if (!is(T == class) && !(is(T == interface)))
 
         private void move(ref T source)
         {
-            import core.exception : onOutOfMemoryError;
+            import std.internal.memory : enforceMalloc;
             import core.stdc.string : memcpy, memset;
 
-            _store = cast(Impl*) pureMalloc(Impl.sizeof);
-            if (_store is null)
-                onOutOfMemoryError();
+            _store = cast(Impl*) enforceMalloc(Impl.sizeof);
             static if (hasIndirections!T)
                 pureGcAddRange(&_store._payload, T.sizeof);
 
