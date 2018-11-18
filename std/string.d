@@ -2986,21 +2986,20 @@ if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
             // Fall through to standard case.
         }
 
-        static if (ElementType!Range.sizeof > ElementEncodingType!Range.sizeof)
+        import std.utf : decode, decodeFront, UseReplacementDchar;
+
+        static if (isNarrowString!Range)
         {
-            // Type performs its own decoding.
-            while (!input.empty)
+            for (size_t index = 0; index < input.length;)
             {
-                if (!std.uni.isWhite(input.front))
-                    break;
-                input.popFront();
+                const saveIndex = index;
+                if (!std.uni.isWhite(decode!(UseReplacementDchar.yes)(input, index)))
+                    return input[saveIndex .. $];
             }
-            return input;
+            return input[$ .. $];
         }
         else
         {
-            // Type doesn't perform its own decoding.
-            import std.utf : decodeFront, UseReplacementDchar;
             while (!input.empty)
             {
                 auto c = input.front;
@@ -3024,7 +3023,7 @@ if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
 }
 
 ///
-@safe pure unittest
+nothrow @safe pure unittest
 {
     import std.uni : lineSep, paraSep;
     assert(stripLeft("     hello world     ") ==
@@ -3054,7 +3053,7 @@ if (isConvertibleToString!Range)
     return stripLeft!(StringTypeOf!Range)(str);
 }
 
-@safe pure unittest
+@nogc nothrow @safe pure unittest
 {
     assert(testAliasedString!stripLeft("  hello"));
 }
