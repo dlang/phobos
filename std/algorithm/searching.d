@@ -120,8 +120,10 @@ template all(alias pred = "a")
     Performs (at most) $(BIGOH range.length) evaluations of `pred`.
      +/
     bool all(Range)(Range range)
-    if (isInputRange!Range && is(typeof(unaryFun!pred(range.front))))
+    if (isInputRange!Range)
     {
+        static assert(is(typeof(unaryFun!pred(range.front))),
+                "`" ~ pred.stringof[1..$-1] ~ "` isn't a unary predicate function for range.front");
         import std.functional : not;
 
         return find!(not!(unaryFun!pred))(range).empty;
