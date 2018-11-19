@@ -219,7 +219,7 @@ class StringException : Exception
     $(RED Important Note:) The returned array is a slice of the original buffer.
     The original data is not changed and not copied.
 +/
-Char[] fromStringz(Char)(Char* cString) @nogc @system pure nothrow
+inout(Char)[] fromStringz(Char)(return scope inout(Char)* cString) @nogc @system pure nothrow
 if (isSomeChar!Char)
 {
     import core.stdc.stddef : wchar_t;
@@ -229,7 +229,7 @@ if (isSomeChar!Char)
     else static if (is(Unqual!Char == wchar_t))
         import core.stdc.wchar_ : cstrlen = wcslen;
     else
-        static size_t cstrlen(const Char* s)
+        static size_t cstrlen(scope const Char* s)
         {
             const(Char)* p = s;
             while (*p)
@@ -432,7 +432,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && !isSomeString!Range)
 }
 
 /// Ditto
-ptrdiff_t indexOf(C)(C[] s, dchar c, CaseSensitive cs = Yes.caseSensitive)
+ptrdiff_t indexOf(C)(scope const(C)[] s, dchar c, CaseSensitive cs = Yes.caseSensitive)
 if (isSomeChar!C)
 {
     return _indexOf(s, c, cs);
@@ -446,7 +446,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && !isSomeString!Range)
 }
 
 /// Ditto
-ptrdiff_t indexOf(C)(C[] s, dchar c, size_t startIdx, CaseSensitive cs = Yes.caseSensitive)
+ptrdiff_t indexOf(C)(scope const(C)[] s, dchar c, size_t startIdx, CaseSensitive cs = Yes.caseSensitive)
 if (isSomeChar!C)
 {
     return _indexOf(s, c, startIdx, cs);
@@ -5300,7 +5300,7 @@ if (isSomeChar!C1 && isSomeString!S && isSomeChar!C2)
         toRemove   = The characters to remove from the string.
         buffer     = An output range to write the contents to.
   +/
-void translate(C1, C2 = immutable char, Buffer)(C1[] str,
+void translate(C1, C2 = immutable char, Buffer)(const(C1)[] str,
                                         in dchar[dchar] transTable,
                                         const(C2)[] toRemove,
                                         Buffer buffer)
@@ -5356,7 +5356,7 @@ if (isSomeChar!C1 && isSomeString!S && isSomeChar!C2 && isOutputRange!(Buffer, S
     translateImpl(str, transTable, toRemove, buffer);
 }
 
-private void translateImpl(C1, T, C2, Buffer)(C1[] str,
+private void translateImpl(C1, T, C2, Buffer)(const(C1)[] str,
                                       T transTable,
                                       const(C2)[] toRemove,
                                       Buffer buffer)
