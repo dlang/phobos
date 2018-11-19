@@ -2124,7 +2124,7 @@ Determine the linkage attribute of the function.
 Params:
     func = the function symbol, or the type of a function, delegate, or pointer to function
 Returns:
-    one of the strings "D", "C", "Windows", "Pascal", or "Objective-C"
+    one of the strings "D", "C", "Windows", or "Objective-C"
 */
 template functionLinkage(func...)
 if (func.length == 1 && isCallable!func)
@@ -2349,7 +2349,7 @@ if (isFunctionPointer!T || isDelegate!T)
             !(attrs & FunctionAttribute.safe),
             "Cannot have a function/delegate that is both trusted and safe.");
 
-        static immutable linkages = ["D", "C", "Windows", "Pascal", "C++", "System"];
+        static immutable linkages = ["D", "C", "Windows", "C++", "System"];
         static assert(canFind(linkages, linkage), "Invalid linkage '" ~
             linkage ~ "', must be one of " ~ linkages.stringof ~ ".");
 
@@ -2465,7 +2465,7 @@ private:
             // Check that all linkage types work (D-style variadics require D linkage).
             static if (variadicFunctionStyle!T != Variadic.d)
             {
-                static foreach (newLinkage; AliasSeq!("D", "C", "Windows", "Pascal", "C++"))
+                static foreach (newLinkage; AliasSeq!("D", "C", "Windows", "C++"))
                 {{
                     alias New = SetFunctionAttributes!(T, newLinkage, attrs);
                     static assert(functionLinkage!New == newLinkage,
