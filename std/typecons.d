@@ -5108,7 +5108,7 @@ private static:
             {
                 preamble ~= "alias self = " ~ name ~ ";\n";
                 if (WITH_BASE_CLASS && !__traits(isAbstractFunction, func))
-                    preamble ~= "alias parent = AliasSeq!(__traits(getMember, super, \"" ~ name ~ "\"))[0];";
+                    preamble ~= `alias parent = __traits(getMember, super, "` ~ name ~ `");`;
             }
 
             // Function body
@@ -5765,7 +5765,7 @@ package template GetOverloadedMethods(T)
 {
     import std.meta : Filter;
 
-    alias allMembers = AliasSeq!(__traits(allMembers, T));
+    alias allMembers = __traits(allMembers, T);
     template follows(size_t i = 0)
     {
         static if (i >= allMembers.length)
