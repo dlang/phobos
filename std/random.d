@@ -580,14 +580,6 @@ Always `false` (random generators are infinite ranges).
  */
     enum bool empty = false;
 
-/**
-   Compares against $(D_PARAM rhs) for equality.
- */
-    bool opEquals(ref const LinearCongruentialEngine rhs) const @safe pure nothrow @nogc
-    {
-        return _x == rhs._x;
-    }
-
     private UIntType _x = m ? (a + c) % m : (a + c);
 }
 
