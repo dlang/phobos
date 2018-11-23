@@ -852,7 +852,7 @@ private template _indexOfStr(CaseSensitive cs)
         s = string or ForwardRange of characters to search in correct UTF format
         sub = substring to search for
         startIdx = the index into s to start searching from
-        cs = `Yes.caseSensitive` or `No.caseSensitive`
+        cs = `Yes.caseSensitive` (default) or `No.caseSensitive`
 
     Returns:
         the index of the first occurrence of `sub` in `s` with
@@ -871,20 +871,44 @@ private template _indexOfStr(CaseSensitive cs)
         Does not work with case insensitive strings where the mapping of
         tolower and toupper is not 1:1.
   +/
-ptrdiff_t indexOf(Range, Char)(Range s, const(Char)[] sub,
-        in CaseSensitive cs = Yes.caseSensitive)
+ptrdiff_t indexOf(Range, Char)(Range s, const(Char)[] sub)
+if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+    isSomeChar!Char)
+{
+    return _indexOfStr!(Yes.caseSensitive)(s, sub);
+}
+
+/// Ditto
+ptrdiff_t indexOf(Range, Char)(Range s, const(Char)[] sub, in CaseSensitive cs)
 if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
     isSomeChar!Char)
 {
     if (cs == Yes.caseSensitive)
-        return _indexOfStr!(Yes.caseSensitive)(s, sub);
+        return indexOf(s, sub);
     else
         return _indexOfStr!(No.caseSensitive)(s, sub);
 }
 
 /// Ditto
 ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
-        in size_t startIdx, in CaseSensitive cs = Yes.caseSensitive)
+        in size_t startIdx)
+@safe
+if (isSomeChar!Char1 && isSomeChar!Char2)
+{
+    if (startIdx < s.length)
+    {
+        ptrdiff_t foundIdx = indexOf(s[startIdx .. $], sub);
+        if (foundIdx != -1)
+        {
+            return foundIdx + cast(ptrdiff_t) startIdx;
+        }
+    }
+    return -1;
+}
+
+/// Ditto
+ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
+        in size_t startIdx, in CaseSensitive cs)
 @safe
 if (isSomeChar!Char1 && isSomeChar!Char2)
 {
@@ -921,8 +945,25 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
     assert(indexOf(s, "wO", No.caseSensitive) == 6);
 }
 
+@safe pure nothrow @nogc unittest
+{
+    string s = "Hello World";
+    assert(indexOf(s, "Wo", 4) == 6);
+    assert(indexOf(s, "Zo", 100) == -1);
+    assert(indexOf(s, "Wo") == 6);
+    assert(indexOf(s, "Zo") == -1);
+}
+
+ptrdiff_t indexOf(Range, Char)(auto ref Range s, const(Char)[] sub)
+if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+    isSomeChar!Char) &&
+    is(StringTypeOf!Range))
+{
+    return indexOf!(StringTypeOf!Range)(s, sub);
+}
+
 ptrdiff_t indexOf(Range, Char)(auto ref Range s, const(Char)[] sub,
-        in CaseSensitive cs = Yes.caseSensitive)
+        in CaseSensitive cs)
 if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
     isSomeChar!Char) &&
     is(StringTypeOf!Range))
@@ -930,7 +971,7 @@ if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
     return indexOf!(StringTypeOf!Range)(s, sub, cs);
 }
 
-@safe pure unittest
+@safe pure nothrow @nogc unittest
 {
     assert(testAliasedString!indexOf("std/string.d", "string"));
 }
