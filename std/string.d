@@ -766,20 +766,28 @@ private template _indexOfStr(CaseSensitive cs)
 
         static if (isSomeString!Range)
         {
-            import std.algorithm.searching : find;
-
-            const(Char1)[] balance;
-            static if (cs == Yes.caseSensitive)
+            static if (is(Char1 == Char) && cs == Yes.caseSensitive)
             {
-                balance = find(s, sub);
+                import std.algorithm.searching : countUntil;
+                return s.representation.countUntil(sub.representation);
             }
             else
             {
-                balance = find!
-                    ((a, b) => toLower(a) == toLower(b))
-                    (s, sub);
+                import std.algorithm.searching : find;
+
+                const(Char1)[] balance;
+                static if (cs == Yes.caseSensitive)
+                {
+                    balance = find(s, sub);
+                }
+                else
+                {
+                    balance = find!
+                        ((a, b) => toLower(a) == toLower(b))
+                        (s, sub);
+                }
+                return () @trusted { return balance.empty ? -1 : balance.ptr - s.ptr; } ();
             }
-            return () @trusted { return balance.empty ? -1 : balance.ptr - s.ptr; } ();
         }
         else
         {
