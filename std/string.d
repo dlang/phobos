@@ -895,15 +895,12 @@ ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 @safe
 if (isSomeChar!Char1 && isSomeChar!Char2)
 {
-    if (startIdx < s.length)
-    {
-        ptrdiff_t foundIdx = indexOf(s[startIdx .. $], sub);
-        if (foundIdx != -1)
-        {
-            return foundIdx + cast(ptrdiff_t) startIdx;
-        }
-    }
-    return -1;
+    if (startIdx >= s.length)
+        return -1;
+    ptrdiff_t foundIdx = indexOf(s[startIdx .. $], sub);
+    if (foundIdx == -1)
+        return -1;
+    return foundIdx + cast(ptrdiff_t) startIdx;
 }
 
 /// Ditto
@@ -912,15 +909,12 @@ ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 @safe
 if (isSomeChar!Char1 && isSomeChar!Char2)
 {
-    if (startIdx < s.length)
-    {
-        ptrdiff_t foundIdx = indexOf(s[startIdx .. $], sub, cs);
-        if (foundIdx != -1)
-        {
-            return foundIdx + cast(ptrdiff_t) startIdx;
-        }
-    }
-    return -1;
+    if (startIdx >= s.length)
+        return -1;
+    ptrdiff_t foundIdx = indexOf(s[startIdx .. $], sub, cs);
+    if (foundIdx == -1)
+        return -1;
+    return foundIdx + cast(ptrdiff_t) startIdx;
 }
 
 ///
