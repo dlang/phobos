@@ -8488,7 +8488,6 @@ private real polyImpl(real x, in real[] A) @trusted pure nothrow @nogc
                 fstp    ST(0)                   ; // dump x
                 align   4                       ;
         return_ST:                              ;
-                ;
             }
         }
         else version (linux)
@@ -8516,7 +8515,6 @@ private real polyImpl(real x, in real[] A) @trusted pure nothrow @nogc
                 fstp    ST(0)                   ; // dump x
                 align   4                       ;
         return_ST:                              ;
-                ;
             }
         }
         else version (OSX)
@@ -8544,7 +8542,6 @@ private real polyImpl(real x, in real[] A) @trusted pure nothrow @nogc
                 fstp    ST(0)                   ; // dump x
                 align   4                       ;
         return_ST:                              ;
-                ;
             }
         }
         else version (FreeBSD)
@@ -8572,7 +8569,6 @@ private real polyImpl(real x, in real[] A) @trusted pure nothrow @nogc
                 fstp    ST(0)                   ; // dump x
                 align   4                       ;
         return_ST:                              ;
-                ;
             }
         }
         else version (Solaris)
@@ -8600,7 +8596,6 @@ private real polyImpl(real x, in real[] A) @trusted pure nothrow @nogc
                 fstp    ST(0)                   ; // dump x
                 align   4                       ;
         return_ST:                              ;
-                ;
             }
         }
         else version (DragonFlyBSD)
@@ -8628,7 +8623,6 @@ private real polyImpl(real x, in real[] A) @trusted pure nothrow @nogc
                 fstp    ST(0)                   ; // dump x
                 align   4                       ;
         return_ST:                              ;
-                ;
             }
         }
         else
