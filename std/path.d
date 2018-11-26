@@ -2294,12 +2294,12 @@ in(isValidPath(path))
 {
     import std.algorithm.searching : canFind, skipOver, endsWith;
 
-    version(Posix)
+    version (Posix)
     {
         if (path.canFind("//"))
             return false;
     }
-    else version(Windows)
+    else version (Windows)
     {
         if (path.canFind(["//", `\/`, `/\`]))
             return false;
@@ -2307,15 +2307,15 @@ in(isValidPath(path))
     else
         static assert(false);
 
-    while(!path.empty && path.front == '.')
+    while (!path.empty && path.front == '.')
         path.popFront();
 
-    if(path.canFind('.'))
+    if (path.canFind('.'))
         return false;
 
     version (Posix)
         return !path.endsWith('/');
-    else version(Windows)
+    else version (Windows)
         return !path.endsWith(['/', `\`]);
     else
         static assert(false);
