@@ -2275,6 +2275,75 @@ if (isConvertibleToString!R)
     else static assert(false);
 }
 
+/** Determines whether the given path is normalized.
+
+    A path is considered to be normalized if it does not contain any
+    redundant (consecutive or trailing) directory separators or useless (non-leading)
+    current/parent directory symbols (".", "..").
+
+    Params:
+        path = string or slicable random access range
+
+    Returns:
+        whether `path` is normalized
+*/
+@safe
+bool isNormalizedPath(R)(R path)
+if (isSomeString!R)
+in(isValidPath(path))
+{
+    import std.algorithm.searching : canFind, skipOver, endsWith;
+
+    version(Posix)
+    {
+        if (path.canFind("//"))
+            return false;
+    }
+    else version(Windows)
+    {
+        if (path.canFind(["//", `\/`, `/\`]))
+            return false;
+    }
+    else
+        static assert(false);
+
+    while(!path.empty && path.front == '.')
+        path.popFront();
+
+    if(path.canFind('.'))
+        return false;
+
+    version (Posix)
+        return !path.endsWith('/');
+    else version(Windows)
+        return !path.endsWith(['/', `\`]);
+    else
+        static assert(false);
+}
+
+///
+@safe unittest
+{
+    assert(isNormalizedPath("foo"));
+    assert(isNormalizedPath("/foo"));
+    assert(isNormalizedPath("."));
+    assert(isNormalizedPath(".."));
+    assert(isNormalizedPath("/foo/bar/john"));
+
+    assert(!isNormalizedPath("../."));
+    assert(!isNormalizedPath("foo/"));
+    assert(!isNormalizedPath("foo/."));
+    assert(!isNormalizedPath("/foo//bar"));
+    assert(!isNormalizedPath("/foo/../bar"));
+
+    version (Windows)
+    {
+        assert(isNormalizedPath("foo\\bar/john"));
+        assert(!isNormalizedPath("foo/\\bar"));
+        assert(!isNormalizedPath("foo\\\\bar"));
+    }
+}
+
 /** Slice up a path into its elements.
 
     Params:
