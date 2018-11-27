@@ -756,6 +756,95 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
     return -1;
 }
 
+private template _indexOfStr(CaseSensitive cs)
+{
+    private ptrdiff_t _indexOfStr(Range, Char)(Range s, const(Char)[] sub)
+    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+        isSomeChar!Char)
+    {
+        alias Char1 = Unqual!(ElementEncodingType!Range);
+
+        static if (isSomeString!Range)
+        {
+            static if (is(Char1 == Char) && cs == Yes.caseSensitive)
+            {
+                import std.algorithm.searching : countUntil;
+                return s.representation.countUntil(sub.representation);
+            }
+            else
+            {
+                import std.algorithm.searching : find;
+
+                const(Char1)[] balance;
+                static if (cs == Yes.caseSensitive)
+                {
+                    balance = find(s, sub);
+                }
+                else
+                {
+                    balance = find!
+                        ((a, b) => toLower(a) == toLower(b))
+                        (s, sub);
+                }
+                return () @trusted { return balance.empty ? -1 : balance.ptr - s.ptr; } ();
+            }
+        }
+        else
+        {
+            if (s.empty)
+                return -1;
+            if (sub.empty)
+                return 0;                   // degenerate case
+
+            import std.utf : byDchar, codeLength;
+            auto subr = sub.byDchar;        // decode sub[] by dchar's
+            dchar sub0 = subr.front;        // cache first character of sub[]
+            subr.popFront();
+
+            // Special case for single character search
+            if (subr.empty)
+                return indexOf(s, sub0, cs);
+
+            static if (cs == No.caseSensitive)
+                sub0 = toLower(sub0);
+
+            /* Classic double nested loop search algorithm
+             */
+            ptrdiff_t index = 0;            // count code unit index into s
+            for (auto sbydchar = s.byDchar(); !sbydchar.empty; sbydchar.popFront())
+            {
+                dchar c2 = sbydchar.front;
+                static if (cs == No.caseSensitive)
+                    c2 = toLower(c2);
+                if (c2 == sub0)
+                {
+                    auto s2 = sbydchar.save;        // why s must be a forward range
+                    foreach (c; subr.save)
+                    {
+                        s2.popFront();
+                        if (s2.empty)
+                            return -1;
+                        static if (cs == Yes.caseSensitive)
+                        {
+                            if (c != s2.front)
+                                goto Lnext;
+                        }
+                        else
+                        {
+                            if (toLower(c) != toLower(s2.front))
+                                goto Lnext;
+                        }
+                    }
+                    return index;
+                }
+              Lnext:
+                index += codeLength!Char1(c2);
+            }
+            return -1;
+        }
+    }
+}
+
 /++
     Searches for substring in `s`.
 
@@ -763,7 +852,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
         s = string or ForwardRange of characters to search in correct UTF format
         sub = substring to search for
         startIdx = the index into s to start searching from
-        cs = `Yes.caseSensitive` or `No.caseSensitive`
+        cs = `Yes.caseSensitive` (default) or `No.caseSensitive`
 
     Returns:
         the index of the first occurrence of `sub` in `s` with
@@ -782,94 +871,50 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
         Does not work with case insensitive strings where the mapping of
         tolower and toupper is not 1:1.
   +/
-ptrdiff_t indexOf(Range, Char)(Range s, const(Char)[] sub,
-        in CaseSensitive cs = Yes.caseSensitive)
+ptrdiff_t indexOf(Range, Char)(Range s, const(Char)[] sub)
 if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
     isSomeChar!Char)
 {
-    alias Char1 = Unqual!(ElementEncodingType!Range);
+    return _indexOfStr!(Yes.caseSensitive)(s, sub);
+}
 
-    static if (isSomeString!Range)
-    {
-        import std.algorithm.searching : find;
-
-        const(Char1)[] balance;
-        if (cs == Yes.caseSensitive)
-        {
-            balance = find(s, sub);
-        }
-        else
-        {
-            balance = find!
-                ((a, b) => toLower(a) == toLower(b))
-                (s, sub);
-        }
-        return () @trusted { return balance.empty ? -1 : balance.ptr - s.ptr; } ();
-    }
+/// Ditto
+ptrdiff_t indexOf(Range, Char)(Range s, const(Char)[] sub, in CaseSensitive cs)
+if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+    isSomeChar!Char)
+{
+    if (cs == Yes.caseSensitive)
+        return indexOf(s, sub);
     else
-    {
-        if (s.empty)
-            return -1;
-        if (sub.empty)
-            return 0;                   // degenerate case
-
-        import std.utf : byDchar, codeLength;
-        auto subr = sub.byDchar;        // decode sub[] by dchar's
-        dchar sub0 = subr.front;        // cache first character of sub[]
-        subr.popFront();
-
-        // Special case for single character search
-        if (subr.empty)
-            return indexOf(s, sub0, cs);
-
-        if (cs == No.caseSensitive)
-            sub0 = toLower(sub0);
-
-        /* Classic double nested loop search algorithm
-         */
-        ptrdiff_t index = 0;            // count code unit index into s
-        for (auto sbydchar = s.byDchar(); !sbydchar.empty; sbydchar.popFront())
-        {
-            dchar c2 = sbydchar.front;
-            if (cs == No.caseSensitive)
-                c2 = toLower(c2);
-            if (c2 == sub0)
-            {
-                auto s2 = sbydchar.save;        // why s must be a forward range
-                foreach (c; subr.save)
-                {
-                    s2.popFront();
-                    if (s2.empty)
-                        return -1;
-                    if (cs == Yes.caseSensitive ? c != s2.front
-                                                : toLower(c) != toLower(s2.front)
-                       )
-                        goto Lnext;
-                }
-                return index;
-            }
-          Lnext:
-            index += codeLength!Char1(c2);
-        }
-        return -1;
-    }
+        return _indexOfStr!(No.caseSensitive)(s, sub);
 }
 
 /// Ditto
 ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
-        in size_t startIdx, in CaseSensitive cs = Yes.caseSensitive)
+        in size_t startIdx)
 @safe
 if (isSomeChar!Char1 && isSomeChar!Char2)
 {
-    if (startIdx < s.length)
-    {
-        ptrdiff_t foundIdx = indexOf(s[startIdx .. $], sub, cs);
-        if (foundIdx != -1)
-        {
-            return foundIdx + cast(ptrdiff_t) startIdx;
-        }
-    }
-    return -1;
+    if (startIdx >= s.length)
+        return -1;
+    ptrdiff_t foundIdx = indexOf(s[startIdx .. $], sub);
+    if (foundIdx == -1)
+        return -1;
+    return foundIdx + cast(ptrdiff_t) startIdx;
+}
+
+/// Ditto
+ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
+        in size_t startIdx, in CaseSensitive cs)
+@safe
+if (isSomeChar!Char1 && isSomeChar!Char2)
+{
+    if (startIdx >= s.length)
+        return -1;
+    ptrdiff_t foundIdx = indexOf(s[startIdx .. $], sub, cs);
+    if (foundIdx == -1)
+        return -1;
+    return foundIdx + cast(ptrdiff_t) startIdx;
 }
 
 ///
@@ -894,8 +939,25 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
     assert(indexOf(s, "wO", No.caseSensitive) == 6);
 }
 
+@safe pure nothrow @nogc unittest
+{
+    string s = "Hello World";
+    assert(indexOf(s, "Wo", 4) == 6);
+    assert(indexOf(s, "Zo", 100) == -1);
+    assert(indexOf(s, "Wo") == 6);
+    assert(indexOf(s, "Zo") == -1);
+}
+
+ptrdiff_t indexOf(Range, Char)(auto ref Range s, const(Char)[] sub)
+if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+    isSomeChar!Char) &&
+    is(StringTypeOf!Range))
+{
+    return indexOf!(StringTypeOf!Range)(s, sub);
+}
+
 ptrdiff_t indexOf(Range, Char)(auto ref Range s, const(Char)[] sub,
-        in CaseSensitive cs = Yes.caseSensitive)
+        in CaseSensitive cs)
 if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
     isSomeChar!Char) &&
     is(StringTypeOf!Range))
@@ -903,7 +965,7 @@ if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
     return indexOf!(StringTypeOf!Range)(s, sub, cs);
 }
 
-@safe pure unittest
+@safe pure nothrow @nogc unittest
 {
     assert(testAliasedString!indexOf("std/string.d", "string"));
 }
