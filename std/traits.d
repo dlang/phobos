@@ -2313,7 +2313,7 @@ if (func.length == 1 && isCallable!func)
         int  test(int);
         int  test() @property;
     }
-    alias ov = AliasSeq!(__traits(getVirtualFunctions, Overloads, "test"));
+    alias ov = __traits(getVirtualFunctions, Overloads, "test");
     alias F_ov0 = FunctionTypeOf!(ov[0]);
     alias F_ov1 = FunctionTypeOf!(ov[1]);
     alias F_ov2 = FunctionTypeOf!(ov[2]);
@@ -4457,7 +4457,7 @@ if (is(C == class) || is(C == interface))
             static if (__traits(hasMember, Node, name) && __traits(compiles, __traits(getMember, Node, name)))
             {
                 // Get all overloads in sight (not hidden).
-                alias inSight = AliasSeq!(__traits(getVirtualFunctions, Node, name));
+                alias inSight = __traits(getVirtualFunctions, Node, name);
 
                 // And collect all overloads in ancestor classes to reveal hidden
                 // methods.  The result may contain duplicates.
@@ -4500,7 +4500,7 @@ if (is(C == class) || is(C == interface))
                 static if (isCovariantWith!(Target, Rest0) && isCovariantWith!(Rest0, Target))
                 {
                     // One of these overrides the other. Choose the one from the most derived parent.
-                    static if (is(AliasSeq!(__traits(parent, target))[0] : AliasSeq!(__traits(parent, rest[0]))[0]))
+                    static if (is(__traits(parent, target) : __traits(parent, rest[0])))
                         alias shrinkOne = shrinkOne!(target, rest[1 .. $]);
                     else
                         alias shrinkOne = shrinkOne!(rest[0], rest[1 .. $]);
@@ -4575,7 +4575,7 @@ if (is(C == class) || is(C == interface))
         override void f(int){}
     }
     alias fs = MemberFunctionsTuple!(B, "f");
-    alias bfs = AliasSeq!(__traits(getOverloads, B, "f"));
+    alias bfs = __traits(getOverloads, B, "f");
     assert(__traits(isSame, fs[0], bfs[0]) || __traits(isSame, fs[0], bfs[1]));
     assert(__traits(isSame, fs[1], bfs[0]) || __traits(isSame, fs[1], bfs[1]));
 }
@@ -5452,7 +5452,7 @@ Note: Trying to use returned value will result in a
 private template AliasThisTypeOf(T)
 if (isAggregateType!T)
 {
-    alias members = AliasSeq!(__traits(getAliasThis, T));
+    alias members = __traits(getAliasThis, T);
 
     static if (members.length == 1)
     {
@@ -8409,7 +8409,7 @@ private template getSymbolsByUDAImpl(alias symbol, alias attribute, names...)
         }
         else
         {
-            alias member = AliasSeq!(__traits(getMember, symbol, names[0]));
+            alias member = __traits(getMember, symbol, names[0]);
 
             // Filtering not compiled members such as alias of basic types.
             static if (!__traits(compiles, hasUDA!(member, attribute)))
