@@ -300,13 +300,9 @@ install :
 		DMD=$(DMD) install2
 
 .PHONY : unittest
-ifeq (1,$(BUILD_WAS_SPECIFIED))
-unittest : $(addsuffix .run,$(addprefix unittest/,$(D_MODULES)))
-else
-unittest : unittest-debug unittest-release
-unittest-%:
-	$(MAKE) -f $(MAKEFILE) unittest OS=$(OS) MODEL=$(MODEL) DMD=$(DMD) BUILD=$*
-endif
+# Disable unittests for Phobos.
+unittest :
+	@echo "Phobos unittests disabled"
 
 ################################################################################
 # Patterns begin here
@@ -622,6 +618,8 @@ $(TESTS_EXTRACTOR): $(TOOLS_DIR)/tests_extractor.d | $(LIB)
 auto-tester-build: all checkwhitespace
 
 .PHONY : auto-tester-test
-auto-tester-test: unittest
+# Disable unittests for Phobos.
+auto-tester-test:
+	@echo "Phobos unittests disabled"
 
 .DELETE_ON_ERROR: # GNU Make directive (delete output files on error)
