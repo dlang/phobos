@@ -1181,4 +1181,5 @@ install: phobos.zip
 
 auto-tester-build: targets
 
-auto-tester-test: unittest
+# Disable unittests for Phobos.
+auto-tester-test:
