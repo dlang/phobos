@@ -6108,55 +6108,36 @@ if (!is(T == class) && !(is(T == interface)))
 
         private void initialize(A...)(auto ref A args)
         {
-            import std.internal.memory : enforceMalloc;
             import std.conv : emplace;
 
-            _store = cast(Impl*) enforceMalloc(Impl.sizeof);
-            static if (hasIndirections!T)
-                pureGcAddRange(&_store._payload, T.sizeof);
+            allocateStore();
             emplace(&_store._payload, args);
             _store._count = 1;
         }
 
-        private void move(ref T source)
+        private void move(ref T source) nothrow pure
         {
-            import std.internal.memory : enforceMalloc;
-            import core.stdc.string : memcpy, memset;
+            import std.algorithm.mutation : moveEmplace;
 
-            _store = cast(Impl*) enforceMalloc(Impl.sizeof);
-            static if (hasIndirections!T)
-                pureGcAddRange(&_store._payload, T.sizeof);
-
-            // Can't use std.algorithm.move(source, _store._payload)
-            // here because it requires the target to be initialized.
-            // Might be worth to add this as `moveEmplace`
-
-            // Can avoid destructing result.
-            static if (hasElaborateAssign!T || !isAssignable!T)
-                memcpy(&_store._payload, &source, T.sizeof);
-            else
-                _store._payload = source;
-
-            // If the source defines a destructor or a postblit hook, we must obliterate the
-            // object in order to avoid double freeing and undue aliasing
-            static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
-            {
-                // If T is nested struct, keep original context pointer
-                static if (__traits(isNested, T))
-                    enum sz = T.sizeof - (void*).sizeof;
-                else
-                    enum sz = T.sizeof;
-
-                static if (__traits(isZeroInit, T))
-                    memset(&source, 0, sz);
-                else
-                {
-                    auto init = typeid(T).initializer();
-                    memcpy(&source, init.ptr, sz);
-                }
-            }
-
+            allocateStore();
+            moveEmplace(source, _store._payload);
             _store._count = 1;
+        }
+
+        // 'nothrow': can only generate an Error
+        private void allocateStore() nothrow pure
+        {
+            static if (hasIndirections!T)
+            {
+                import std.internal.memory : enforceCalloc;
+                _store = cast(Impl*) enforceCalloc(1, Impl.sizeof);
+                pureGcAddRange(&_store._payload, T.sizeof);
+            }
+            else
+            {
+                import std.internal.memory : enforceMalloc;
+                _store = cast(Impl*) enforceMalloc(Impl.sizeof);
+            }
         }
 
         /**
