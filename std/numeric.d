@@ -553,7 +553,7 @@ public:
     ///ditto
     T opCast(T)() if (__traits(compiles, get!T )) { return get!T; }
 
-    /// Convert the CustomFloat to a real and perform the relavent operator on the result
+    /// Convert the CustomFloat to a real and perform the relevant operator on the result
     real opUnary(string op)()
         if (__traits(compiles, mixin(op~`(get!real)`)) || op=="++" || op=="--")
     {
@@ -568,8 +568,19 @@ public:
     }
 
     /// ditto
+    // Define an opBinary `CustomFloat op CustomFloat` so that those below
+    // do not match equally, which is disallowed by the spec:
+    // https://dlang.org/spec/operatoroverloading.html#binary
     real opBinary(string op,T)(T b)
-        if (__traits(compiles, mixin(`get!real`~op~`b`)))
+         if (__traits(compiles, mixin(`get!real`~op~`b.get!real`)))
+     {
+         return mixin(`get!real`~op~`b.get!real`);
+     }
+
+    /// ditto
+    real opBinary(string op,T)(T b)
+        if ( __traits(compiles, mixin(`get!real`~op~`b`)) &&
+            !__traits(compiles, mixin(`get!real`~op~`b.get!real`)))
     {
         return mixin(`get!real`~op~`b`);
     }
@@ -577,7 +588,8 @@ public:
     /// ditto
     real opBinaryRight(string op,T)(T a)
         if ( __traits(compiles, mixin(`a`~op~`get!real`)) &&
-            !__traits(compiles, mixin(`get!real`~op~`b`)))
+            !__traits(compiles, mixin(`get!real`~op~`b`)) &&
+            !__traits(compiles, mixin(`get!real`~op~`b.get!real`)))
     {
         return mixin(`a`~op~`get!real`);
     }

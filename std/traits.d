@@ -2887,7 +2887,11 @@ private template hasRawAliasing(T...)
             static if (is(T[0] foo : U*, U) && !isFunctionPointer!(T[0]))
                 enum has = !is(U == immutable);
             else static if (is(T[0] foo : U[N], U, size_t N))
-                enum has = hasRawAliasing!U;
+                // separate static ifs to avoid forward reference
+                static if (is(U == class) || is(U == interface))
+                    enum has = false;
+                else
+                    enum has = hasRawAliasing!U;
             else static if (is(T[0] foo : U[], U) && !isStaticArray!(T[0]))
                 enum has = !is(U == immutable);
             else static if (isAssociativeArray!(T[0]))
@@ -3310,6 +3314,10 @@ template hasAliasing(T...)
     static assert( hasAliasing!S12);
     static assert( hasAliasing!S13);
     static assert(!hasAliasing!S14);
+
+    class S15 { S15[1] a; }
+    static assert( hasAliasing!S15);
+    static assert(!hasAliasing!(immutable(S15)));
 }
 /**
 Returns `true` if and only if `T`'s representation includes at
