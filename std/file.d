@@ -466,7 +466,7 @@ version (Windows) private void[] readImpl(scope const(char)[] name, scope const(
 version (linux) @safe unittest
 {
     // A file with "zero" length that doesn't have 0 length at all
-    auto s = std.file.readText("/proc/sys/kernel/osrelease");
+    auto s = std.file.readText("/proc/cpuinfo");
     assert(s.length > 0);
     //writefln("'%s'", s);
 }
