@@ -4759,7 +4759,7 @@ template TemplateArgsOf(T : Base!Args, alias Base, Args...)
 }
 
 
-private template maxAlignment(U...)
+package template maxAlignment(U...)
 if (isTypeTuple!U)
 {
     import std.meta : staticMap;

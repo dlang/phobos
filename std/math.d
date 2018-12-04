@@ -4110,7 +4110,7 @@ real log(real x) @safe pure nothrow @nogc
 ///
 @safe pure nothrow @nogc unittest
 {
-    assert(log(E) == 1);
+    assert(feqrel(log(E), 1) >= real.mant_dig - 1);
 }
 
 /**************************************

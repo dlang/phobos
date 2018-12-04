@@ -932,7 +932,7 @@ deprecated
     assert(coshisinh(3.0L) == complex(std.math.cosh(3.0L), std.math.sinh(3.0L)));
     auto z1 = coshisinh(1.234);
     auto z2 = std.math.coshisinh(1.234);
-    static if (real.mant_dig == 53)
+    static if (real.mant_dig == 53 || real.mant_dig == 113)
     {
         assert(std.math.feqrel(z1.re, z2.re) >= real.mant_dig - 1 &&
                std.math.feqrel(z1.im, z2.im) >= real.mant_dig - 1);
