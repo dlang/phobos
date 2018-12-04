@@ -3230,6 +3230,10 @@ creal expi(real y) @trusted pure nothrow @nogc
             {
                 fld y;
                 fsincos;
+            }
+            version (X86_64) {}
+            else asm pure nothrow @nogc
+            {
                 fxch ST(1), ST(0);
             }
         }
