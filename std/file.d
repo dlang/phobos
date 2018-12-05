@@ -106,7 +106,7 @@ else
 // Character type used for operating system filesystem APIs
 version (Windows)
 {
-    private alias FSChar = wchar;
+    private alias FSChar = WCHAR;       // WCHAR can be aliased to wchar or wchar_t
 }
 else version (Posix)
 {
