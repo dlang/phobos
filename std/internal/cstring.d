@@ -175,7 +175,10 @@ pure nothrow @nogc @safe unittest
 }
 
 version (Windows)
-    alias tempCStringW = tempCString!(wchar, const(char)[]);
+{
+    import core.sys.windows.windows : WCHAR;
+    alias tempCStringW = tempCString!(WCHAR, const(char)[]);
+}
 
 private struct TempCStringBuffer(To = char)
 {
