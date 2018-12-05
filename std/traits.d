@@ -2124,7 +2124,7 @@ Determine the linkage attribute of the function.
 Params:
     func = the function symbol, or the type of a function, delegate, or pointer to function
 Returns:
-    one of the strings "D", "C", "Windows", or "Objective-C"
+    one of the strings "D", "C", "C++", "Windows", "Objective-C", or "System".
 */
 template functionLinkage(func...)
 if (func.length == 1 && isCallable!func)
