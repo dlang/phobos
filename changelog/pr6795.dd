@@ -1,0 +1,33 @@
+Fix Issue 10706: std.algorithm.setops functions require SortedRange arguments.
+
+The functions
+
+$(UL
+    $(LI largestPartialIntersection)
+    $(LI largestPartialIntersectionWeighted)
+    $(LI multiwayMerge)
+    $(LI multiwayUnion)
+    $(LI setDifference)
+    $(LI setIntersection)
+    $(LI setSymmetricDifference)
+)
+
+of $(MREF std,algorithm,setops) require that the elements of the passed
+Range/Ranges are sorted.
+This is easily overlooked as stated in
+https://issues.dlang.org/show_bug.cgi?id=10706
+
+Due to this change, ranges passed to any of the above listed function need to
+be of type $(REF SortedRange, std,algorithm,sorting).
+A `SortedRange` can either be obtainted by $(REF sort, std,algorithm,sorting)
+or $(REF assumeSorted, std,range).
+
+-------
+import std.algorithm : equal, sort;
+import std.range : assumeSorted;
+
+// sets
+auto a = sort([ 1, 2, 4, 5, 7, 9 ]);
+auto b = assumeUnique([ 0, 1, 2, 4, 7, 8 ]);
+auto intersection = setIntersection(assumeSorted(a), assumeSorted(b));
+-------

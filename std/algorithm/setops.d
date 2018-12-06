@@ -53,7 +53,8 @@ import std.functional : unaryFun, binaryFun;
 import std.traits;
 import std.meta : AliasSeq, staticMap, allSatisfy, anySatisfy;
 
-import std.algorithm.sorting : Merge;
+import std.algorithm.sorting : Merge, sort;
+import std.range : ElementEncodingType, SortedRange, assumeSorted;
 import std.typecons : No;
 
 // cartesianProduct
@@ -643,13 +644,13 @@ void largestPartialIntersection
 
     // Figure which number can be found in most arrays of the set of
     // arrays below.
-    double[][] a =
+    auto a =
     [
-        [ 1, 4, 7, 8 ],
-        [ 1, 7 ],
-        [ 1, 7, 8],
-        [ 4 ],
-        [ 7 ],
+        assumeSorted([ 1.0, 4.0, 7.0, 8.0 ]),
+        assumeSorted([ 1.0, 7.0 ]),
+        assumeSorted([ 1.0, 7.0, 8.0]),
+        assumeSorted([ 4.0 ]),
+        assumeSorted([ 7.0 ]),
     ];
     auto b = new Tuple!(double, uint)[1];
     // it will modify the input range, hence we need to create a duplicate
@@ -666,13 +667,13 @@ void largestPartialIntersection
     // 1.0 occurs in 3 inputs
 
     // multiset
-    double[][] x =
+    auto x =
     [
-        [1, 1, 1, 1, 4, 7, 8],
-        [1, 7],
-        [1, 7, 8],
-        [4, 7],
-        [7]
+        assumeSorted([1.0, 1.0, 1.0, 1.0, 4.0, 7.0, 8.0]),
+        assumeSorted([1.0, 7.0]),
+        assumeSorted([1.0, 7.0, 8.0]),
+        assumeSorted([4.0, 7.0]),
+        assumeSorted([7.0])
     ];
     auto y = new Tuple!(double, uint)[2];
     largestPartialIntersection(x.dup, y);
@@ -726,13 +727,13 @@ void largestPartialIntersectionWeighted
 
     // Figure which number can be found in most arrays of the set of
     // arrays below, with specific per-element weights
-    double[][] a =
+    auto a =
     [
-        [ 1, 4, 7, 8 ],
-        [ 1, 7 ],
-        [ 1, 7, 8],
-        [ 4 ],
-        [ 7 ],
+        assumeSorted([ 1.0, 4.0, 7.0, 8.0 ]),
+        assumeSorted([ 1.0, 7.0 ]),
+        assumeSorted([ 1.0, 7.0, 8.0]),
+        assumeSorted([ 4.0 ]),
+        assumeSorted([ 7.0 ]),
     ];
     auto b = new Tuple!(double, uint)[1];
     double[double] weights = [ 1:1.2, 4:2.3, 7:1.1, 8:1.1 ];
@@ -742,14 +743,14 @@ void largestPartialIntersectionWeighted
     // 4.0 occurs 2 times -> 4.6 (2 * 2.3)
     // 7.0 occurs 3 times -> 4.4 (3 * 1.1)
 
-   // multiset
-    double[][] x =
+    // multiset
+    auto x =
     [
-        [ 1, 1, 1, 4, 7, 8 ],
-        [ 1, 7 ],
-        [ 1, 7, 8],
-        [ 4 ],
-        [ 7 ],
+        assumeSorted([ 1.0, 1.0, 1.0, 4.0, 7.0, 8.0 ]),
+        assumeSorted([ 1.0, 7.0 ]),
+        assumeSorted([ 1.0, 7.0, 8.0]),
+        assumeSorted([ 4.0 ]),
+        assumeSorted([ 7.0 ]),
     ];
     auto y = new Tuple!(double, uint)[1];
     largestPartialIntersectionWeighted(x, y, weights);
@@ -762,13 +763,13 @@ void largestPartialIntersectionWeighted
     import std.conv : text;
     import std.typecons : tuple, Tuple, Yes;
 
-    double[][] a =
+    auto a =
         [
-            [ 1, 4, 7, 8 ],
-            [ 1, 7 ],
-            [ 1, 7, 8],
-            [ 4 ],
-            [ 7 ],
+            assumeSorted([ 1.0, 4.0, 7.0, 8.0 ]),
+            assumeSorted([ 1.0, 7.0 ]),
+            assumeSorted([ 1.0, 7.0, 8.0]),
+            assumeSorted([ 4.0 ]),
+            assumeSorted([ 7.0 ]),
         ];
     auto b = new Tuple!(double, uint)[2];
     largestPartialIntersection(a, b, Yes.sortOutput);
@@ -781,13 +782,13 @@ void largestPartialIntersectionWeighted
     import std.conv : text;
     import std.typecons : tuple, Tuple, Yes;
 
-    string[][] a =
+    auto a =
         [
-            [ "1", "4", "7", "8" ],
-            [ "1", "7" ],
-            [ "1", "7", "8"],
-            [ "4" ],
-            [ "7" ],
+            assumeSorted([ "1", "4", "7", "8" ]),
+            assumeSorted([ "1", "7" ]),
+            assumeSorted([ "1", "7", "8"]),
+            assumeSorted([ "4" ]),
+            assumeSorted([ "7" ]),
         ];
     auto b = new Tuple!(string, uint)[2];
     largestPartialIntersection(a, b, Yes.sortOutput);
@@ -800,14 +801,14 @@ void largestPartialIntersectionWeighted
 
     // Figure which number can be found in most arrays of the set of
     // arrays below, with specific per-element weights
-    double[][] a =
+    auto a =
         [
-            [ 1, 4, 7, 8 ],
-            [ 1, 7 ],
-            [ 1, 7, 8],
-            [ 4 ],
-            [ 7 ],
-            ];
+            assumeSorted([ 1.0, 4.0, 7.0, 8.0 ]),
+            assumeSorted([ 1.0, 7.0 ]),
+            assumeSorted([ 1.0, 7.0, 8.0]),
+            assumeSorted([ 4.0 ]),
+            assumeSorted([ 7.0 ]),
+        ];
     auto b = new Tuple!(double, uint)[1];
     double[double] weights = [ 1:1.2, 4:2.3, 7:1.1, 8:1.1 ];
     largestPartialIntersectionWeighted(a, b, weights);
@@ -825,6 +826,22 @@ void largestPartialIntersectionWeighted
     const Array!T arrayTwo = Array!T([ T(1,2), T(3,4) ] );
 
     assert(arrayOne == arrayTwo);
+}
+
+
+private MultiwayMerge!(less, RangeOfRanges) multiwayMergeSortedRange
+(alias less = "a < b", RangeOfRanges)
+(RangeOfRanges ror)
+{
+    return typeof(return)(ror);
+}
+
+deprecated("multiwayMerge requires the passed ranges to be sorted")
+private MultiwayMerge!(less, RangeOfRanges) multiwayMergeUnknownRange
+(alias less = "a < b", RangeOfRanges)
+(RangeOfRanges ror)
+{
+    return typeof(return)(ror);
 }
 
 // MultiwayMerge
@@ -930,7 +947,14 @@ MultiwayMerge!(less, RangeOfRanges) multiwayMerge
 (alias less = "a < b", RangeOfRanges)
 (RangeOfRanges ror)
 {
-    return typeof(return)(ror);
+    static if (isSortedRange!(ElementEncodingType!(RangeOfRanges)))
+    {
+        return multiwayMergeSortedRange!less(ror);
+    }
+    else
+    {
+        return multiwayMergeUnknownRange!less(ror);
+    }
 }
 
 ///
@@ -938,27 +962,27 @@ MultiwayMerge!(less, RangeOfRanges) multiwayMerge
 {
     import std.algorithm.comparison : equal;
 
-    double[][] a =
+    auto a =
     [
-        [ 1, 4, 7, 8 ],
-        [ 1, 7 ],
-        [ 1, 7, 8],
-        [ 4 ],
-        [ 7 ],
+        assumeSorted([ 1, 4, 7, 8 ]),
+        assumeSorted([ 1, 7 ]),
+        assumeSorted([ 1, 7, 8]),
+        assumeSorted([ 4 ]),
+        assumeSorted([ 7 ]),
     ];
     auto witness = [
         1, 1, 1, 4, 4, 7, 7, 7, 7, 8, 8
     ];
     assert(equal(multiwayMerge(a), witness));
 
-    double[][] b =
+    auto b =
     [
         // range with duplicates
-        [ 1, 1, 4, 7, 8 ],
-        [ 7 ],
-        [ 1, 7, 8],
-        [ 4 ],
-        [ 7 ],
+        assumeSorted([ 1, 1, 4, 7, 8 ]),
+        assumeSorted([ 7 ]),
+        assumeSorted([ 1, 7, 8]),
+        assumeSorted([ 4 ]),
+        assumeSorted([ 7 ]),
     ];
     // duplicates are propagated to the resulting range
     assert(equal(multiwayMerge(b), witness));
@@ -998,37 +1022,51 @@ auto multiwayUnion(alias less = "a < b", RangeOfRanges)(RangeOfRanges ror)
     import std.algorithm.comparison : equal;
 
     // sets
-    double[][] a =
+    auto a =
     [
-        [ 1, 4, 7, 8 ],
-        [ 1, 7 ],
-        [ 1, 7, 8],
-        [ 4 ],
-        [ 7 ],
+        assumeSorted([ 1, 4, 7, 8 ]),
+        assumeSorted([ 1, 7 ]),
+        assumeSorted([ 1, 7, 8]),
+        assumeSorted([ 4 ]),
+        assumeSorted([ 7 ]),
     ];
 
     auto witness = [1, 4, 7, 8];
     assert(equal(multiwayUnion(a), witness));
 
     // multisets
-    double[][] b =
+    auto b =
     [
-        [ 1, 1, 1, 4, 7, 8 ],
-        [ 1, 7 ],
-        [ 1, 7, 7, 8],
-        [ 4 ],
-        [ 7 ],
+        assumeSorted([ 1, 1, 1, 4, 7, 8 ]),
+        assumeSorted([ 1, 7 ]),
+        assumeSorted([ 1, 7, 7, 8]),
+        assumeSorted([ 4 ]),
+        assumeSorted([ 7 ]),
     ];
     assert(equal(multiwayUnion(b), witness));
 
-    double[][] c =
+    enum lessPred = "a > b";
+    auto c =
     [
-        [9, 8, 8, 8, 7, 6],
-        [9, 8, 6],
-        [9, 8, 5]
+        sort!lessPred([9, 8, 8, 8, 7, 6]),
+        sort!lessPred([9, 8, 6]),
+        sort!lessPred([9, 8, 5])
     ];
     auto witness2 = [9, 8, 7, 6, 5];
-    assert(equal(multiwayUnion!"a > b"(c), witness2));
+    assert(equal(multiwayUnion!lessPred(c), witness2));
+}
+
+private SetDifference!(less, R1, R2) setDifferenceSortedRange(alias less = "a < b", R1, R2)
+(R1 r1, R2 r2)
+{
+    return typeof(return)(r1, r2);
+}
+
+deprecated("setDifference requires the passed ranges to be sorted")
+private SetDifference!(less, R1, R2) setDifferenceUnknownRange(alias less = "a < b", R1, R2)
+(R1 r1, R2 r2)
+{
+    return typeof(return)(r1, r2);
 }
 
 /**
@@ -1121,27 +1159,36 @@ public:
 SetDifference!(less, R1, R2) setDifference(alias less = "a < b", R1, R2)
 (R1 r1, R2 r2)
 {
-    return typeof(return)(r1, r2);
+    static if (isSortedRangeByPred!(R1, less)
+            && isSortedRangeByPred!(R2, less))
+    {
+        return setDifferenceSortedRange!(less)(r1, r2);
+    }
+    else
+    {
+        return setDifferenceUnknownRange!(less)(r1, r2);
+    }
 }
 
 ///
 @safe unittest
 {
+    import std.array : array;
     import std.algorithm.comparison : equal;
     import std.range.primitives : isForwardRange;
 
     //sets
-    int[] a = [ 1, 2, 4, 5, 7, 9 ];
-    int[] b = [ 0, 1, 2, 4, 7, 8 ];
+    auto a = assumeSorted([ 1, 2, 4, 5, 7, 9 ]);
+    auto b = assumeSorted([ 0, 1, 2, 4, 7, 8 ]);
     assert(equal(setDifference(a, b), [5, 9]));
     static assert(isForwardRange!(typeof(setDifference(a, b))));
 
     // multisets
-    int[] x = [1, 1, 1, 2, 3];
-    int[] y = [1, 1, 2, 4, 5];
+    auto x = assumeSorted([1, 1, 1, 2, 3]);
+    auto y = assumeSorted([1, 1, 2, 4, 5]);
     auto r = setDifference(x, y);
     assert(equal(r, [1, 3]));
-    assert(setDifference(r, x).empty);
+    assert(setDifference(r.array.sort(), x).empty);
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=10460
@@ -1149,16 +1196,142 @@ SetDifference!(less, R1, R2) setDifference(alias less = "a < b", R1, R2)
 {
     import std.algorithm.comparison : equal;
 
-    int[] a = [1, 2, 3, 4, 5];
-    int[] b = [2, 4];
+    auto a = assumeSorted([1, 2, 3, 4, 5]);
+    auto b = assumeSorted([2, 4]);
     foreach (ref e; setDifference(a, b))
         e = 0;
     assert(equal(a, [0, 2, 0, 4, 0]));
 }
 
+private template stringTupleToString(S...)
+{
+    static if (S.length == 1)
+    {
+        enum stringTupleToString = S[0];
+    }
+    else
+    {
+        enum stringTupleToString = S[0] ~ ", "
+            ~ stringTupleToString!(S[1 ..$]);
+    }
+}
+
+private template isSortedRangeByPred(R, alias pred)
+{
+    static if (is(R : SortedRange!F, F...))
+    {
+        static if (is(typeof(F[1]) == string) || is(typeof(pred) == string))
+        {
+            enum isSortedRangeByPred = F[1] == pred;
+        }
+        else
+        {
+            enum isSortedRangeByPred = true;
+        }
+    }
+    else
+    {
+        enum isSortedRangeByPred = false;
+    }
+}
+
+@safe unittest
+{
+    enum pred = "a < b";
+    alias T = typeof(sort!pred([1,2]));
+    static assert( isSortedRangeByPred!(T, pred));
+    static assert(!isSortedRangeByPred!(T, "a > b"));
+}
+
+@safe unittest
+{
+    auto pred = function(int a, int b) { return a < b; };
+    alias T = typeof(sort!pred([1,2]));
+    static assert( isSortedRangeByPred!(T, pred));
+}
+
+private template extractSortedRangeStringPredicate(R)
+{
+    static if (is(R : SortedRange!F, F...))
+    {
+        static if (is(typeof(F[1]) == string))
+        {
+            enum extractSortedRangeStringPredicate = F[1];
+        }
+        else
+        {
+            enum extractSortedRangeStringPredicate = "";
+        }
+    }
+    else
+    {
+        enum extractSortedRangeStringPredicate = "";
+    }
+}
+
+private bool areSame(string[] words...)
+{
+    if (words.length == 1 || words.length == 0)
+    {
+        return true;
+    }
+    else
+    {
+        foreach (idx; 0 .. words.length - 1)
+        {
+            if (words[0] != words[idx + 1])
+            {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+
+private SetIntersection!(less, Rs) setIntersectionSortedRange(alias less = "a < b", Rs...)(Rs ranges)
+{
+    enum allPreds = staticMap!(extractSortedRangeStringPredicate, Rs);
+    static assert(areSame(allPreds),
+            "All string comparison predicates must be the same, not " ~
+            stringTupleToString!allPreds);
+    return typeof(return)(ranges);
+}
+
+deprecated("setIntersection requires the passed ranges to be sorted")
+private SetIntersection!(less, Rs) setIntersectionUnknownRange(alias less = "a < b", Rs...)(Rs ranges)
+{
+    return typeof(return)(ranges);
+}
+
+/**
+Determines whether `T` is a $(LREF SortedRange).
+
+Params:
+    T = type to test
+
+Returns:
+`true` if `T` is a $(LREF SortedRange);
+`false` otherwise
+*/
+private template isSortedRange(T) {
+    import std.range : SortedRange;
+    enum isSortedRange = is(T : SortedRange!U, U...);
+}
+
+///
+@safe unittest
+{
+    auto r = assumeSorted([0, 1, 2, 3]);
+    static assert(isSortedRange!(typeof(r)));
+
+    auto r2 = sort([0, 1, 2, 3]);
+    static assert(isSortedRange!(typeof(r2)));
+}
+
 /**
 Lazily computes the intersection of two or more
-$(REF_ALTTEXT input ranges, isInputRange, std,range,primitives)
+$(REF_ALTTEXT input ranges, isSortedRange, std,range)
 `ranges`. The ranges are assumed to be sorted by `less`. The element
 types of the ranges must have a common type.
 
@@ -1174,7 +1347,7 @@ Returns:
     A range containing the intersection of the given ranges.
  */
 struct SetIntersection(alias less = "a < b", Rs...)
-if (Rs.length >= 2 && allSatisfy!(isInputRange, Rs) &&
+if (Rs.length >= 2 && allSatisfy!(isSortedRange, Rs) &&
     !is(CommonType!(staticMap!(ElementType, Rs)) == void))
 {
 private:
@@ -1269,10 +1442,19 @@ public:
 
 /// Ditto
 SetIntersection!(less, Rs) setIntersection(alias less = "a < b", Rs...)(Rs ranges)
-if (Rs.length >= 2 && allSatisfy!(isInputRange, Rs) &&
-    !is(CommonType!(staticMap!(ElementType, Rs)) == void))
 {
-    return typeof(return)(ranges);
+    static assert(Rs.length >= 2);
+    static assert(allSatisfy!(isInputRange, Rs));
+    static assert(!is(CommonType!(staticMap!(ElementType, Rs)) == void));
+
+    static if (allSatisfy!(isSortedRange, Rs))
+    {
+        return setIntersectionSortedRange!(less)(ranges);
+    }
+    else
+    {
+        return setIntersectionUnknownRange!(less)(ranges);
+    }
 }
 
 ///
@@ -1281,16 +1463,16 @@ if (Rs.length >= 2 && allSatisfy!(isInputRange, Rs) &&
     import std.algorithm.comparison : equal;
 
     // sets
-    int[] a = [ 1, 2, 4, 5, 7, 9 ];
-    int[] b = [ 0, 1, 2, 4, 7, 8 ];
-    int[] c = [ 0, 1, 4, 5, 7, 8 ];
+    auto a = assumeSorted([ 1, 2, 4, 5, 7, 9 ]);
+    auto b = assumeSorted([ 0, 1, 2, 4, 7, 8 ]);
+    auto c = assumeSorted([ 0, 1, 4, 5, 7, 8 ]);
     assert(equal(setIntersection(a, a), a));
     assert(equal(setIntersection(a, b), [1, 2, 4, 7]));
     assert(equal(setIntersection(a, b, c), [1, 4, 7]));
 
     // multisets
-    int[] d = [ 1, 1, 2, 2, 7, 7 ];
-    int[] e = [ 1, 1, 1, 7];
+    auto d = assumeSorted([ 1, 1, 2, 2, 7, 7 ]);
+    auto e = assumeSorted([ 1, 1, 1, 7]);
     assert(equal(setIntersection(a, d), [1, 2, 7]));
     assert(equal(setIntersection(d, e), [1, 1, 7]));
 }
@@ -1300,11 +1482,11 @@ if (Rs.length >= 2 && allSatisfy!(isInputRange, Rs) &&
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter;
 
-    int[] a = [ 1, 2, 4, 5, 7, 9 ];
-    int[] b = [ 0, 1, 2, 4, 7, 8 ];
-    int[] c = [ 0, 1, 4, 5, 7, 8 ];
-    int[] d = [ 1, 3, 4 ];
-    int[] e = [ 4, 5 ];
+    auto a = assumeSorted([ 1, 2, 4, 5, 7, 9 ]);
+    auto b = assumeSorted([ 0, 1, 2, 4, 7, 8 ]);
+    auto c = assumeSorted([ 0, 1, 4, 5, 7, 8 ]);
+    auto d = assumeSorted([ 1, 3, 4 ]);
+    auto e = assumeSorted([ 4, 5 ]);
 
     assert(equal(setIntersection(a, a), a));
     assert(equal(setIntersection(a, a, a), a));
@@ -1313,8 +1495,10 @@ if (Rs.length >= 2 && allSatisfy!(isInputRange, Rs) &&
     assert(equal(setIntersection(a, b, c, d), [1, 4]));
     assert(equal(setIntersection(a, b, c, d, e), [4]));
 
-    auto inpA = a.filter!(_ => true), inpB = b.filter!(_ => true);
-    auto inpC = c.filter!(_ => true), inpD = d.filter!(_ => true);
+    auto inpA = a.filter!(_ => true).assumeSorted;
+    auto inpB = b.filter!(_ => true).assumeSorted;
+    auto inpC = c.filter!(_ => true).assumeSorted;
+    auto inpD = d.filter!(_ => true).assumeSorted;
     assert(equal(setIntersection(inpA, inpB, inpC, inpD), [1, 4]));
 
     assert(equal(setIntersection(a, b, b, a), [1, 2, 4, 7]));
