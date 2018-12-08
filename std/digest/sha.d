@@ -101,11 +101,7 @@ module std.digest.sha;
     hash1 = sha1.finish();
 }
 
-version (Win64)
-{
-    // wrong calling convention
-}
-else version (D_InlineAsm_X86)
+version (D_InlineAsm_X86)
 {
     version (D_PIC) {} // Bugzilla 9378
     else private version = USE_SSSE3;

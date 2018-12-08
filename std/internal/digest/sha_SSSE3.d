@@ -594,7 +594,56 @@ version (USE_SSSE3)
                     "push EBP",
             ];
         }
-        version (_64Bit)
+        else version (Win64)
+        {
+            /*
+            * Parameters:
+            *   R8 contains pointer to state
+            *   RDX contains pointer to input buffer
+            *   RCX contains pointer to constants
+            *
+            * Stack layout as follows:
+            * +----------------+
+            * | return address |
+            * +----------------+
+            * | RBP            |
+            * +----------------+
+            * | RBX            |
+            * +----------------+
+            * | RSI            |
+            * +----------------+
+            * | RDI            |
+            * +----------------+
+            * | Unused         |
+            * +----------------+
+            * | XMM6-XMM13     | 8*16 bytes
+            * +----------------+
+            * | Space for      |
+            * | Wi+Ki          | <- RSP
+            * +----------------+ <- 16byte aligned
+            */
+            return [// Save registers according to calling convention
+                    "push RBP",
+                    "push RBX",
+                    "push RSI",
+                    "push RDI",
+                    // Save parameters
+                    "mov "~STATE_PTR~", R8", //pointer to state
+                    "mov "~BUFFER_PTR~", RDX", //pointer to buffer
+                    "mov "~CONSTANTS_PTR~", RCX", //pointer to constants to avoid absolute addressing
+                    // Align stack
+                    "sub RSP, 4*16+8+8*16",
+                    "movdqa [RSP+4*16], XMM6",
+                    "movdqa [RSP+5*16], XMM7",
+                    "movdqa [RSP+6*16], XMM8",
+                    "movdqa [RSP+7*16], XMM9",
+                    "movdqa [RSP+8*16], XMM10",
+                    "movdqa [RSP+9*16], XMM11",
+                    "movdqa [RSP+10*16], XMM12",
+                    "movdqa [RSP+11*16], XMM13",
+            ];
+        }
+        else version (_64Bit)
         {
             /*
              * Parameters:
@@ -644,7 +693,25 @@ version (USE_SSSE3)
                     "ret 4",
                    ];
         }
-        version (_64Bit)
+        else version (Win64)
+        {
+            return ["movdqa XMM6,[RSP+4*16]",
+                    "movdqa XMM7,[RSP+5*16]",
+                    "movdqa XMM8,[RSP+6*16]",
+                    "movdqa XMM9,[RSP+7*16]",
+                    "movdqa XMM10,[RSP+8*16]",
+                    "movdqa XMM11,[RSP+9*16]",
+                    "movdqa XMM12,[RSP+10*16]",
+                    "movdqa XMM13,[RSP+11*16]",
+                    "add RSP,4*16+8+8*16",
+                    "pop RDI",
+                    "pop RSI",
+                    "pop RBX",
+                    "pop RBP",
+                    "ret 0",
+                    ];
+        }
+        else version (_64Bit)
         {
             return ["add RSP,4*16+8",
                     "pop RBX",
