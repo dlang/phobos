@@ -1381,7 +1381,9 @@ if (func.length == 1 && isCallable!func)
         {
             static if (!isFunctionPointer!func && !isDelegate!func
                        // Unnamed parameters yield CT error.
-                       && is(typeof(__traits(identifier, PT[i .. i+1]))))
+                       && is(typeof(__traits(identifier, PT[i .. i+1])))
+                       // Filter out unnamed args, which look like (Type) instead of (Type name).
+                       && PT[i].stringof != PT[i .. i+1].stringof[1..$-1])
             {
                 enum Get = __traits(identifier, PT[i .. i+1]);
             }
@@ -1416,6 +1418,16 @@ if (func.length == 1 && isCallable!func)
 {
     int foo(int num, string name, int);
     static assert([ParameterIdentifierTuple!foo] == ["num", "name", ""]);
+}
+
+// Issue 19456
+@safe unittest
+{
+    struct SomeType {}
+    void foo(SomeType);
+    void bar(int);
+    static assert([ParameterIdentifierTuple!foo] == [""]);
+    static assert([ParameterIdentifierTuple!bar] == [""]);
 }
 
 @safe unittest
