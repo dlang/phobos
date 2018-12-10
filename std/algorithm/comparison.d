@@ -1566,9 +1566,9 @@ if (T.length >= 2)
         auto b = max(args[($+1)/2 .. $]);
     alias T1 = typeof(b);
 
-    import std.algorithm.internal : algoFormat;
     static assert(is(typeof(a < b)),
-        algoFormat("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
+        "Invalid arguments: Cannot compare types " ~ T0.stringof ~
+        " and " ~ T1.stringof ~ ".");
 
     //Do the "max" proper with a and b
     import std.functional : lessThan;
@@ -1678,9 +1678,9 @@ if (T.length >= 2)
         auto b = min(args[($+1)/2 .. $]);
     alias T1 = typeof(b);
 
-    import std.algorithm.internal : algoFormat;
     static assert(is(typeof(a < b)),
-        algoFormat("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
+        "Invalid arguments: Cannot compare types " ~ T0.stringof ~
+        " and " ~ T1.stringof ~ ".");
 
     //Do the "min" proper with a and b
     import std.functional : lessThan;
