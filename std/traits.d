@@ -2525,11 +2525,20 @@ Returns:
 template isInnerClass(T)
 if (is(T == class))
 {
-    import std.meta : staticIndexOf;
-
     static if (is(typeof(T.outer)))
-        enum isInnerClass = __traits(isSame, typeof(T.outer), __traits(parent, T))
-                         && (staticIndexOf!(__traits(allMembers, T), "outer") == -1);
+    {
+        bool hasOuterMember(string[] members...)
+        {
+            foreach (m; members)
+            {
+                if (m == "outer")
+                    return true;
+            }
+            return false;
+        }
+        enum isInnerClass = __traits(isSame, typeof(T.outer), __traits(parent, T)) &&
+                            !hasOuterMember(__traits(allMembers, T));
+    }
     else
         enum isInnerClass = false;
 }
