@@ -270,25 +270,22 @@ if (!isAggregateType!T || is(Unqual!T == T))
     static assert(OldAlias!abc == 123);
 }
 
+import std.typecons : Flag;
 
 /**
  * Used to indicate the direction of the $(LREF staticIndexOf) overload
  * that takes a predicate.
  */
-enum IndexOf_Direction
-{
-    first,
-    last
-}
+alias FromEnd = Flag!"reverse";
 
 /**
  * Retrieve the index of the first or last occurrence of the element that
  * verifies a predicate.
  *
  * Params:
- *      pred = The predicate.
- *      dir  = Indicates wether the first or the last matching element index is returned.
- *      T    = A list of compile-time stuff.
+ *      pred    = The predicate.
+ *      fromEnd = Indicates if the index is searched from the end.
+ *      T       = A list of compile-time stuff.
  *
  * Returns:
  *      `-1` if no element verifies the predicate and its index otherwise.
@@ -297,13 +294,13 @@ enum IndexOf_Direction
  *      The specialization $(LREF firstStaticIndexOf) and $(LREF lastStaticIndexOf)
  *      of this template.
  */
-template staticIndexOf(alias pred, alias IndexOf_Direction dir, T...)
+template staticIndexOf(alias pred, FromEnd fromEnd, T...)
 {
     enum callPredOnElem = q{
         static if (!is(typeof(_local_idx)) && pred!(T[i]))
             enum ptrdiff_t _local_idx = i;
     };
-    static if (dir == IndexOf_Direction.first)
+    static if (!fromEnd)
         static foreach (i; 0 .. T.length)
             mixin(callPredOnElem);
     else
@@ -317,11 +314,11 @@ template staticIndexOf(alias pred, alias IndexOf_Direction dir, T...)
     static struct Element{int i, j;}
     alias Elements = AliasSeq!(Element(0,1), Element(1,1), Element(1,0));
     enum cmp(Element e) = e.i == 1;
-    static assert(staticIndexOf!(cmp, IndexOf_Direction.first, Elements) == 1);
+    static assert(staticIndexOf!(cmp, FromEnd.no , Elements) == 1);
 }
 
 /// Alias of `staticIndexOf` taking a predicate and starting from the beginning of the haystack.
-alias firstStaticIndexOf(alias pred, T...) = staticIndexOf!(pred, IndexOf_Direction.first, T);
+alias firstStaticIndexOf(alias pred, T...) = staticIndexOf!(pred, FromEnd.no, T);
 ///
 @safe unittest
 {
@@ -332,7 +329,7 @@ alias firstStaticIndexOf(alias pred, T...) = staticIndexOf!(pred, IndexOf_Direct
 }
 
 /// Alias of `staticIndexOf` taking a predicate and starting at the end of the haystack.
-alias lastStaticIndexOf(alias pred, T...) = staticIndexOf!(pred, IndexOf_Direction.last, T);
+alias lastStaticIndexOf(alias pred, T...) = staticIndexOf!(pred, FromEnd.yes, T);
 ///
 @safe unittest
 {
