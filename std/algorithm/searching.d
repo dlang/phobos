@@ -2557,6 +2557,17 @@ template canFind(alias pred="a == b")
     assert( canFind!((string a, string b) => a.startsWith(b))(words, "bees"));
 }
 
+/// Search for mutliple items in an array of items (search for needles in an array of hay stacks)
+@safe unittest
+{
+    string s1 = "aaa111aaa";
+    string s2 = "aaa222aaa";
+    string s3 = "aaa333aaa";
+    string s4 = "aaa444aaa";
+    const hay = [s1, s2, s3, s4];
+    assert(hay.canFind!(e => (e.canFind("111", "222"))));
+}
+
 @safe unittest
 {
     import std.algorithm.internal : rndstuff;
