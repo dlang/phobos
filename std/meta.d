@@ -270,6 +270,70 @@ if (!isAggregateType!T || is(Unqual!T == T))
     static assert(OldAlias!abc == 123);
 }
 
+
+/**
+ * Used to indicate the direction of the $(LREF staticIndexOf) overload
+ * that takes a predicate.
+ */
+enum IndexOfDirection
+{
+    first,
+    last
+}
+
+/**
+ * Retrieve the index of the first or last occurrence of the element that
+ * verifies a predicate.
+ *
+ * Params:
+ *      pred = The predicate.
+ *      dir  = Indicates wether the first or the last matching element index is returned.
+ *      T    = A list of compile-time stuff.
+ *
+ * Returns:
+ *      `-1` if no element verifies the predicates and its index otherwise.
+ *
+ * See_Also:
+ *      The specialization $(LREF firstStaticIndexOf) and $(LREF lastStaticIndexOf)
+ *      of this template.
+ */
+template staticIndexOf(alias pred, alias IndexOfDirection dir, T...)
+{
+    enum callPredOnElem = q{
+        static if (!is(typeof(_local_idx)) && pred!(T[i]))
+            enum ptrdiff_t _local_idx = i;
+    };
+    static if (dir == IndexOfDirection.first)
+        static foreach (i; 0 .. T.length)
+            mixin(callPredOnElem);
+    else
+        static foreach_reverse (i; 0 .. T.length)
+            mixin(callPredOnElem);
+    enum ptrdiff_t staticIndexOf = is(typeof(_local_idx)) ? _local_idx : -1;
+}
+
+/// Alias of `staticIndexOf` taking a predicate and starting from the beginning of the haystack.
+alias firstStaticIndexOf(alias pred, T...) = staticIndexOf!(pred, IndexOfDirection.first, T);
+///
+unittest
+{
+    static struct Element{int i, j;}
+    alias Elements = AliasSeq!(Element(0,1), Element(1,1), Element(1,0));
+    enum cmp(Element e) = e.i == 1;
+    static assert(firstStaticIndexOf!(cmp, Elements) == 1);
+}
+
+/// Alias of `staticIndexOf` taking a predicate and starting at the end of the haystack.
+alias lastStaticIndexOf(alias pred, T...) = staticIndexOf!(pred, IndexOfDirection.last, T);
+///
+unittest
+{
+    static struct Element{int i, j;}
+    alias Elements = AliasSeq!(Element(0,1), Element(1,1), Element(1,0));
+    enum cmp(Element e) = e.i == 1;
+    static assert(lastStaticIndexOf!(cmp, Elements) == 2);
+}
+
 /**
  * Returns the index of the first occurrence of type T in the
  * sequence of zero or more types TList.
