@@ -306,7 +306,10 @@ template staticIndexOf(alias pred, FromEnd fromEnd, T...)
     else
         static foreach_reverse (i; 0 .. T.length)
             mixin(callPredOnElem);
-    enum ptrdiff_t staticIndexOf = is(typeof(_local_idx)) ? _local_idx : -1;
+    static if (is(typeof(_local_idx)))
+        enum ptrdiff_t staticIndexOf = _local_idx;
+    else
+        enum ptrdiff_t staticIndexOf = -1;
 }
 ///
 @safe unittest
