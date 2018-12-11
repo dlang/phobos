@@ -1455,9 +1455,7 @@ if (
      */
     alias bitMask = AliasSeq!((1 << 7) - 1, (1 << 11) - 1, (1 << 16) - 1, (1 << 21) - 1);
 
-    static if (is(S : const char[]))
-        auto pstr = str.ptr + index;    // this is what makes decodeImpl() @system code
-    else static if (isRandomAccessRange!S && hasSlicing!S && hasLength!S)
+    static if (is(S : const char[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S))
         auto pstr = str[index .. str.length];
     else
         alias pstr = str;
@@ -1671,9 +1669,7 @@ private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar 
 (auto ref S str, ref size_t index)
 if (is(S : const wchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == wchar)))
 {
-    static if (is(S : const wchar[]))
-        auto pstr = str.ptr + index;
-    else static if (isRandomAccessRange!S && hasSlicing!S && hasLength!S)
+    static if (is(S : const wchar[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S))
         auto pstr = str[index .. str.length];
     else
         alias pstr = str;
@@ -1788,14 +1784,9 @@ private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar 
     auto ref S str, ref size_t index)
 if (is(S : const dchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == dchar)))
 {
-    static if (is(S : const dchar[]))
-        auto pstr = str.ptr;
-    else
-        alias pstr = str;
-
     static if (is(S : const dchar[]) || isRandomAccessRange!S)
     {
-        dchar dc = pstr[index];
+        dchar dc = str[index];
         if (!isValidDchar(dc))
         {
             static if (useReplacementDchar)
@@ -1808,7 +1799,7 @@ if (is(S : const dchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S
     }
     else
     {
-        dchar dc = pstr.front;
+        dchar dc = str.front;
         if (!isValidDchar(dc))
         {
             static if (useReplacementDchar)
@@ -1817,7 +1808,7 @@ if (is(S : const dchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S
                 throw new UTFException("Invalid UTF-32 value").setSequence(dc);
         }
         ++index;
-        pstr.popFront();
+        str.popFront();
         return dc;
     }
 }
@@ -1846,6 +1837,21 @@ unittest
         assert(dc == replacementDchar);
         assert(1 <= index && index <= s.length);
     }
+}
+
+@nogc nothrow pure @safe
+unittest
+{
+    static foreach (S; AliasSeq!(char, wchar, dchar))
+    {{
+        foreach (s; invalidUTFstrings!S())
+        {
+            size_t index;
+            dchar dc = decodeImpl!(true, Yes.useReplacementDchar)(s, index);
+            assert(dc == replacementDchar);
+            assert(1 <= index && index <= s.length);
+        }
+    }}
 }
 
 
