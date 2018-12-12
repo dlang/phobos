@@ -2706,21 +2706,24 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
 
         private enum popFrontEmptyElements = q{
             // Skip over empty subranges.
-            if (_items.empty) goto end;
-            while (_items.front.empty)
+            while (!_items.empty && _items.front.empty)
             {
                 _items.popFront();
-                if (_items.empty) goto end;
             }
-            // We cannot export .save method unless we ensure subranges are not
-            // consumed when a .save'd copy of ourselves is iterated over. So
-            // we need to .save each subrange we traverse.
-            static if (isForwardRange!RoR && isForwardRange!(ElementType!RoR))
-                _current = _items.front.save;
+            if (!_items.empty)
+            {
+                // We cannot export .save method unless we ensure subranges are not
+                // consumed when a .save'd copy of ourselves is iterated over. So
+                // we need to .save each subrange we traverse.
+                static if (isForwardRange!RoR && isForwardRange!(ElementType!RoR))
+                    _current = _items.front.save;
+                else
+                    _current = _items.front;
+            }
             else
-                _current = _items.front;
-        end:
-            assert(1); // required to avoid 'EOF instead of statement' error
+            {
+                _current = typeof(_current).init;
+            }
         };
 
         static if (isForwardRange!RoR && isForwardRange!(ElementType!RoR))
@@ -2800,32 +2803,36 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
 
             private enum popBackEmptyElements = q{
                 // Skip over empty subranges.
-                if (_items.empty) goto end2;
-                while (_items.back.empty)
+                while (!_items.empty && _items.back.empty)
                 {
                     _items.popBack();
-                    if (_items.empty) goto end2;
                 }
-                checkFinalElement;
-                // We cannot export .save method unless we ensure subranges are not
-                // consumed when a .save'd copy of ourselves is iterated over. So
-                // we need to .save each subrange we traverse.
-                static if (isForwardRange!RoR && isForwardRange!(ElementType!RoR))
+                if (!_items.empty)
                 {
-                    if (reachedFinalElement)
-                        _current = _items.back.save;
+                    checkFinalElement;
+                    // We cannot export .save method unless we ensure subranges are not
+                    // consumed when a .save'd copy of ourselves is iterated over. So
+                    // we need to .save each subrange we traverse.
+                    static if (isForwardRange!RoR && isForwardRange!(ElementType!RoR))
+                    {
+                        if (reachedFinalElement)
+                            _current = _items.back.save;
+                        else
+                            _currentBack = _items.back.save;
+                    }
                     else
-                        _currentBack = _items.back.save;
+                    {
+                        if (reachedFinalElement)
+                            _current = _items.back;
+                        else
+                            _currentBack = _items.back;
+                    }
                 }
                 else
                 {
-                    if (reachedFinalElement)
-                        _current = _items.back;
-                    else
-                        _currentBack = _items.back;
+                    _current = typeof(_current).init;
+                    _currentBack = typeof(_currentBack).init;
                 }
-            end2:
-                assert(1);
             };
 
             static if (hasAssignableElements!(ElementType!RoR))
@@ -2946,6 +2953,15 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
     js.popFront();
     assert(equal(jb, js));
     assert(!equal(js2, js));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=19213
+@system unittest
+{
+    auto results = [[1,2], [3,4]].map!(q => q.chunkBy!"a").joiner;
+    int i = 1;
+    foreach (ref e; results)
+        assert(e[0] == i++);
 }
 
 /// joiner can be bidirectional
