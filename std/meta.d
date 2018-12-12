@@ -48,6 +48,8 @@
  *           $(LREF allSatisfy)
  *           $(LREF anySatisfy)
  *           $(LREF staticIndexOf)
+ *           $(LREF firstStaticIndexOf)
+ *           $(LREF lastStaticIndexOf)
  * ))
  * $(TR $(TD Template predicates) $(TD
  *           $(LREF templateAnd)
@@ -288,10 +290,10 @@ alias FromEnd = Flag!"reverse";
  *      T       = A list of compile-time stuff.
  *
  * Returns:
- *      `-1` if no element verifies the predicate and its index otherwise.
+ *      `-1` if no element verifies the predicate and the element index otherwise.
  *
  * See_Also:
- *      The specialization $(LREF firstStaticIndexOf) and $(LREF lastStaticIndexOf)
+ *      The specializations $(LREF firstStaticIndexOf) and $(LREF lastStaticIndexOf)
  *      of this template.
  */
 template staticIndexOf(alias pred, FromEnd fromEnd, T...)
