@@ -3092,16 +3092,12 @@ else version (Posix)
         {
             import std.path : buildPath;
 
-            static if (is(typeof(fd.d_reclen)))
-            {
-                immutable len = (() @trusted => cast(char*) fd + fd.d_reclen - &fd.d_name[0])();
-                _name = buildPath(path, (() @trusted => (&fd.d_name[0])[0 .. len])());
-            }
+            static if (is(typeof(fd.d_namlen)))
+                immutable len = fd.d_namlen;
             else
-            {
-                immutable len = (() @trusted => core.stdc.string.strlen(&fd.d_name[0]))();
-                _name = buildPath(path, fd.d_name[0 .. len]);
-            }
+                immutable len = (() @trusted => core.stdc.string.strlen(fd.d_name.ptr))();
+
+            _name = buildPath(path, (() @trusted => fd.d_name.ptr[0 .. len])());
 
             _didLStat = false;
             _didStat = false;
