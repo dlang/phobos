@@ -410,16 +410,25 @@ if (isNarrowString!String)
 }
 
 /**
-Returns a newly allocated associative array from a range of key/value tuples.
+Returns a newly allocated associative array from a range of key/value tuples
+or from a range of keys and a range of values.
 
 Params:
     r = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
     of tuples of keys and values.
-Returns: A newly allocated associative array out of elements of the input
-range, which must be a range of tuples (Key, Value). Returns a null associative
-array reference when given an empty range.
-Duplicates: Associative arrays have unique keys. If r contains duplicate keys,
-then the result will contain the value of the last pair for that key in r.
+    keys = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of keys
+    values = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of values
+
+Returns:
+
+    A newly allocated associative array out of elements of the input
+    range, which must be a range of tuples (Key, Value) or
+    a range of keys and a range of values. If given two ranges of unequal
+    lengths after the elements of the shorter are exhausted the remaining
+    elements of the longer will not be considered.
+    Returns a null associative array reference when given an empty range.
+    Duplicates: Associative arrays have unique keys. If r contains duplicate keys,
+    then the result will contain the value of the last pair for that key in r.
 
 See_Also: $(REF Tuple, std,typecons), $(REF zip, std,range)
  */
@@ -442,18 +451,98 @@ if (isInputRange!Range)
     return aa;
 }
 
+/// ditto
+auto assocArray(Keys, Values)(Keys keys, Values values)
+if (isInputRange!Values && isInputRange!Keys)
+{
+    static if (isDynamicArray!Keys && isDynamicArray!Values
+        && !isNarrowString!Keys && !isNarrowString!Values)
+    {
+        void* aa;
+        {
+            // aaLiteral is nothrow when the destructors don't throw
+            static if (is(typeof(() nothrow
+            {
+                import std.range : ElementType;
+                import std.traits : hasElaborateDestructor;
+                alias KeyElement = ElementType!Keys;
+                static if (hasElaborateDestructor!KeyElement)
+                    KeyElement.init.__xdtor();
+
+                alias ValueElement = ElementType!Values;
+                static if (hasElaborateDestructor!ValueElement)
+                    ValueElement.init.__xdtor();
+            })))
+            {
+                scope(failure) assert(0);
+            }
+            if (values.length > keys.length)
+                values = values[0 .. keys.length];
+            else if (keys.length > values.length)
+                keys = keys[0 .. values.length];
+            aa = aaLiteral(keys, values);
+        }
+        alias Key = typeof(keys[0]);
+        alias Value = typeof(values[0]);
+        return (() @trusted => cast(Value[Key]) aa)();
+    }
+    else
+    {
+        // zip is not always able to infer nothrow
+        alias Key = ElementType!Keys;
+        alias Value = ElementType!Values;
+        static assert(isMutable!Value, "assocArray: value type must be mutable");
+        Value[Key] aa;
+        foreach (key; keys)
+        {
+            if (values.empty) break;
+
+            // aa[key] is incorrectly not @safe if the destructor throws
+            // https://issues.dlang.org/show_bug.cgi?id=18592
+            static if (is(typeof(() @safe
+            {
+                import std.range : ElementType;
+                import std.traits : hasElaborateDestructor;
+                alias KeyElement = ElementType!Keys;
+                static if (hasElaborateDestructor!KeyElement)
+                    KeyElement.init.__xdtor();
+
+                alias ValueElement = ElementType!Values;
+                static if (hasElaborateDestructor!ValueElement)
+                    ValueElement.init.__xdtor();
+            })))
+            {
+                () @trusted {
+                    aa[key] = values.front;
+                }();
+            }
+            else
+            {
+                aa[key] = values.front;
+            }
+            values.popFront();
+        }
+        return aa;
+    }
+}
+
 ///
 @safe pure /*nothrow*/ unittest
 {
-    import std.range;
-    import std.typecons;
+    import std.range : repeat, zip;
+    import std.typecons : tuple;
     auto a = assocArray(zip([0, 1, 2], ["a", "b", "c"])); // aka zipMap
-    assert(is(typeof(a) == string[int]));
+    static assert(is(typeof(a) == string[int]));
     assert(a == [0:"a", 1:"b", 2:"c"]);
 
     auto b = assocArray([ tuple("foo", "bar"), tuple("baz", "quux") ]);
-    assert(is(typeof(b) == string[string]));
+    static assert(is(typeof(b) == string[string]));
     assert(b == ["foo":"bar", "baz":"quux"]);
+
+    auto c = assocArray("ABCD", true.repeat);
+    static assert(is(typeof(c) == bool[dchar]));
+    bool[dchar] expected = ['D':true, 'A':true, 'B':true, 'C':true];
+    assert(c == expected);
 }
 
 // @@@11053@@@ - Cannot be version (unittest) - recursive instantiation error
@@ -474,6 +563,79 @@ if (isInputRange!Range)
     assert(a == b);
     assert(assocArray(a) == [cast(const(string)) "foo": "bar"]);
     static assert(!__traits(compiles, assocArray(b)));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=5502
+@safe unittest
+{
+    auto a = assocArray([0, 1, 2], ["a", "b", "c"]);
+    static assert(is(typeof(a) == string[int]));
+    assert(a == [0:"a", 1:"b", 2:"c"]);
+
+    auto b = assocArray([0, 1, 2], [3L, 4, 5]);
+    static assert(is(typeof(b) == long[int]));
+    assert(b == [0: 3L, 1: 4, 2: 5]);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=5502
+@safe unittest
+{
+    import std.algorithm.iteration : filter, map;
+    import std.range : enumerate;
+
+    auto r = "abcde".enumerate.filter!(a => a.index == 2);
+    auto a = assocArray(r.map!(a => a.value), r.map!(a => a.index));
+    assert(is(typeof(a) == size_t[dchar]));
+    assert(a == [dchar('c'): size_t(2)]);
+}
+
+@safe nothrow pure unittest
+{
+    import std.range : iota;
+    auto b = assocArray(3.iota, 3.iota(6));
+    static assert(is(typeof(b) == int[int]));
+    assert(b == [0: 3, 1: 4, 2: 5]);
+
+    b = assocArray([0, 1, 2], [3, 4, 5]);
+    assert(b == [0: 3, 1: 4, 2: 5]);
+}
+
+@safe unittest
+{
+    struct ThrowingElement
+    {
+        int i;
+        static bool b;
+        ~this(){
+            if (b)
+                throw new Exception("");
+        }
+    }
+    static assert(!__traits(compiles, () nothrow { assocArray([ThrowingElement()], [0]);}));
+    assert(assocArray([ThrowingElement()], [0]) == [ThrowingElement(): 0]);
+
+    static assert(!__traits(compiles, () nothrow { assocArray([0], [ThrowingElement()]);}));
+    assert(assocArray([0], [ThrowingElement()]) == [0: ThrowingElement()]);
+
+    import std.range : iota;
+    static assert(!__traits(compiles, () nothrow { assocArray(1.iota, [ThrowingElement()]);}));
+    assert(assocArray(1.iota, [ThrowingElement()]) == [0: ThrowingElement()]);
+}
+
+@system unittest
+{
+    import std.range : iota;
+    struct UnsafeElement
+    {
+        int i;
+        static bool b;
+        ~this(){
+            int[] arr;
+            void* p = arr.ptr + 1; // unsafe
+        }
+    }
+    static assert(!__traits(compiles, () @safe { assocArray(1.iota, [UnsafeElement()]);}));
+    assert(assocArray(1.iota, [UnsafeElement()]) == [0: UnsafeElement()]);
 }
 
 /**
@@ -708,8 +870,12 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I))
 
     auto arr = minimallyInitializedArray!(int[])(42);
     assert(arr.length == 42);
-    // Elements aren't necessarily initialized to 0
-    assert(!arr.equal(0.repeat(42)));
+
+    // Elements aren't necessarily initialized to 0, so don't do this:
+    // assert(arr.equal(0.repeat(42)));
+    // If that is needed, initialize the array normally instead:
+    auto arr2 = new int[42];
+    assert(arr2.equal(0.repeat(42)));
 }
 
 @safe pure nothrow unittest
@@ -2170,21 +2336,29 @@ if (isInputRange!RoR &&
         $(REF substitute, std,algorithm,iteration) for a lazy replace.
  +/
 E[] replace(E, R1, R2)(E[] subject, R1 from, R2 to)
-if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
-        && (hasLength!R2 || isSomeString!R2))
+if ((isForwardRange!R1 && isForwardRange!R2 && (hasLength!R2 || isSomeString!R2)) ||
+    is(Unqual!E : Unqual!R1))
 {
     import std.algorithm.searching : find;
     import std.range : dropOne;
 
-    if (from.empty) return subject;
+    static if (isInputRange!R1)
+    {
+        if (from.empty) return subject;
+        alias rSave = a => a.save;
+    }
+    else
+    {
+        alias rSave = a => a;
+    }
 
-    auto balance = find(subject, from.save);
+    auto balance = find(subject, rSave(from));
     if (balance.empty)
         return subject;
 
     auto app = appender!(E[])();
     app.put(subject[0 .. subject.length - balance.length]);
-    app.put(to.save);
+    app.put(rSave(to));
     // replacing an element in an array is different to a range replacement
     static if (is(Unqual!E : Unqual!R1))
         replaceInto(app, balance.dropOne, from, to);
@@ -2230,6 +2404,20 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
             .replace([[0], [1, 2]], [[4]]) == [[4], [0], [3], [1, 2], [4]]);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=10930
+@safe unittest
+{
+    assert([0, 1, 2].replace(1, 4) == [0, 4, 2]);
+    assert("äbö".replace('ä', 'a') == "abö");
+}
+
+// empty array
+@safe unittest
+{
+    int[] arr;
+    assert(replace(arr, 1, 2) == []);
+}
+
 /++
     Replace occurrences of `from` with `to` in `subject` and output the result into
     `sink`.
@@ -2244,28 +2432,36 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
         $(REF substitute, std,algorithm,iteration) for a lazy replace.
  +/
 void replaceInto(E, Sink, R1, R2)(Sink sink, E[] subject, R1 from, R2 to)
-if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
-    && isForwardRange!R1 && isForwardRange!R2
-    && (hasLength!R2 || isSomeString!R2))
+if (isOutputRange!(Sink, E) &&
+    ((isForwardRange!R1 && isForwardRange!R2 && (hasLength!R2 || isSomeString!R2)) ||
+    is(Unqual!E : Unqual!R1)))
 {
     import std.algorithm.searching : find;
     import std.range : dropOne;
 
-    if (from.empty)
+    static if (isInputRange!R1)
     {
-        sink.put(subject);
-        return;
+        if (from.empty)
+        {
+            sink.put(subject);
+            return;
+        }
+        alias rSave = a => a.save;
+    }
+    else
+    {
+        alias rSave = a => a;
     }
     for (;;)
     {
-        auto balance = find(subject, from.save);
+        auto balance = find(subject, rSave(from));
         if (balance.empty)
         {
             sink.put(subject);
             break;
         }
         sink.put(subject[0 .. subject.length - balance.length]);
-        sink.put(to.save);
+        sink.put(rSave(to));
         // replacing an element in an array is different to a range replacement
         static if (is(Unqual!E : Unqual!R1))
             subject = balance.dropOne;
@@ -2285,6 +2481,15 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
     replaceInto(sink, arr, from, to);
 
     assert(sink.data == [1, 4, 6, 4, 5]);
+}
+
+// empty array
+@safe unittest
+{
+    auto sink = appender!(int[])();
+    int[] arr;
+    replaceInto(sink, arr, 1, 2);
+    assert(sink.data == []);
 }
 
 @safe unittest
@@ -2338,6 +2543,18 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
         replaceInto(CheckOutput!(Char)(to!S("some dummy text, some ..."))
                     , s, from, into);
     }}
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=10930
+@safe unittest
+{
+    auto sink = appender!(int[])();
+    replaceInto(sink, [0, 1, 2], 1, 5);
+    assert(sink.data == [0, 5, 2]);
+
+    auto sink2 = appender!(dchar[])();
+    replaceInto(sink2, "äbö", 'ä', 'a');
+    assert(sink2.data == "abö");
 }
 
 /++

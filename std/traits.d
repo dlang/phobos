@@ -1381,7 +1381,9 @@ if (func.length == 1 && isCallable!func)
         {
             static if (!isFunctionPointer!func && !isDelegate!func
                        // Unnamed parameters yield CT error.
-                       && is(typeof(__traits(identifier, PT[i .. i+1]))))
+                       && is(typeof(__traits(identifier, PT[i .. i+1])))
+                       // Filter out unnamed args, which look like (Type) instead of (Type name).
+                       && PT[i].stringof != PT[i .. i+1].stringof[1..$-1])
             {
                 enum Get = __traits(identifier, PT[i .. i+1]);
             }
@@ -1416,6 +1418,16 @@ if (func.length == 1 && isCallable!func)
 {
     int foo(int num, string name, int);
     static assert([ParameterIdentifierTuple!foo] == ["num", "name", ""]);
+}
+
+// Issue 19456
+@safe unittest
+{
+    struct SomeType {}
+    void foo(SomeType);
+    void bar(int);
+    static assert([ParameterIdentifierTuple!foo] == [""]);
+    static assert([ParameterIdentifierTuple!bar] == [""]);
 }
 
 @safe unittest
@@ -2124,7 +2136,7 @@ Determine the linkage attribute of the function.
 Params:
     func = the function symbol, or the type of a function, delegate, or pointer to function
 Returns:
-    one of the strings "D", "C", "Windows", "Pascal", or "Objective-C"
+    one of the strings "D", "C", "C++", "Windows", "Objective-C", or "System".
 */
 template functionLinkage(func...)
 if (func.length == 1 && isCallable!func)
@@ -2313,7 +2325,7 @@ if (func.length == 1 && isCallable!func)
         int  test(int);
         int  test() @property;
     }
-    alias ov = AliasSeq!(__traits(getVirtualFunctions, Overloads, "test"));
+    alias ov = __traits(getVirtualFunctions, Overloads, "test");
     alias F_ov0 = FunctionTypeOf!(ov[0]);
     alias F_ov1 = FunctionTypeOf!(ov[1]);
     alias F_ov2 = FunctionTypeOf!(ov[2]);
@@ -2349,7 +2361,7 @@ if (isFunctionPointer!T || isDelegate!T)
             !(attrs & FunctionAttribute.safe),
             "Cannot have a function/delegate that is both trusted and safe.");
 
-        static immutable linkages = ["D", "C", "Windows", "Pascal", "C++", "System"];
+        static immutable linkages = ["D", "C", "Windows", "C++", "System"];
         static assert(canFind(linkages, linkage), "Invalid linkage '" ~
             linkage ~ "', must be one of " ~ linkages.stringof ~ ".");
 
@@ -2465,7 +2477,7 @@ private:
             // Check that all linkage types work (D-style variadics require D linkage).
             static if (variadicFunctionStyle!T != Variadic.d)
             {
-                static foreach (newLinkage; AliasSeq!("D", "C", "Windows", "Pascal", "C++"))
+                static foreach (newLinkage; AliasSeq!("D", "C", "Windows", "C++"))
                 {{
                     alias New = SetFunctionAttributes!(T, newLinkage, attrs);
                     static assert(functionLinkage!New == newLinkage,
@@ -3614,19 +3626,8 @@ template hasUnsharedAliasing(T...)
  */
 template hasElaborateCopyConstructor(S)
 {
-    import std.meta : anySatisfy;
-    static if (isStaticArray!S && S.length)
-    {
-        enum bool hasElaborateCopyConstructor = hasElaborateCopyConstructor!(typeof(S.init[0]));
-    }
-    else static if (is(S == struct))
-    {
-        enum hasElaborateCopyConstructor = hasMember!(S, "__xpostblit");
-    }
-    else
-    {
-        enum bool hasElaborateCopyConstructor = false;
-    }
+    import core.internal.traits : hasElabCCtor = hasElaborateCopyConstructor;
+    alias hasElaborateCopyConstructor = hasElabCCtor!(S);
 }
 
 ///
@@ -3757,20 +3758,8 @@ template hasElaborateAssign(S)
  */
 template hasElaborateDestructor(S)
 {
-    import std.meta : anySatisfy;
-    static if (isStaticArray!S && S.length)
-    {
-        enum bool hasElaborateDestructor = hasElaborateDestructor!(typeof(S.init[0]));
-    }
-    else static if (is(S == struct))
-    {
-        enum hasElaborateDestructor = hasMember!(S, "__dtor")
-            || anySatisfy!(.hasElaborateDestructor, FieldTypeTuple!S);
-    }
-    else
-    {
-        enum bool hasElaborateDestructor = false;
-    }
+    import core.internal.traits : hasElabDest = hasElaborateDestructor;
+    alias hasElaborateDestructor = hasElabDest!(S);
 }
 
 ///
@@ -4488,7 +4477,7 @@ if (is(C == class) || is(C == interface))
             static if (__traits(hasMember, Node, name) && __traits(compiles, __traits(getMember, Node, name)))
             {
                 // Get all overloads in sight (not hidden).
-                alias inSight = AliasSeq!(__traits(getVirtualFunctions, Node, name));
+                alias inSight = __traits(getVirtualFunctions, Node, name);
 
                 // And collect all overloads in ancestor classes to reveal hidden
                 // methods.  The result may contain duplicates.
@@ -4531,7 +4520,7 @@ if (is(C == class) || is(C == interface))
                 static if (isCovariantWith!(Target, Rest0) && isCovariantWith!(Rest0, Target))
                 {
                     // One of these overrides the other. Choose the one from the most derived parent.
-                    static if (is(AliasSeq!(__traits(parent, target))[0] : AliasSeq!(__traits(parent, rest[0]))[0]))
+                    static if (is(__traits(parent, target) : __traits(parent, rest[0])))
                         alias shrinkOne = shrinkOne!(target, rest[1 .. $]);
                     else
                         alias shrinkOne = shrinkOne!(rest[0], rest[1 .. $]);
@@ -4606,7 +4595,7 @@ if (is(C == class) || is(C == interface))
         override void f(int){}
     }
     alias fs = MemberFunctionsTuple!(B, "f");
-    alias bfs = AliasSeq!(__traits(getOverloads, B, "f"));
+    alias bfs = __traits(getOverloads, B, "f");
     assert(__traits(isSame, fs[0], bfs[0]) || __traits(isSame, fs[0], bfs[1]));
     assert(__traits(isSame, fs[1], bfs[0]) || __traits(isSame, fs[1], bfs[1]));
 }
@@ -4980,16 +4969,7 @@ template ImplicitConversionTargets(T)
 /**
 Is `From` implicitly convertible to `To`?
  */
-template isImplicitlyConvertible(From, To)
-{
-    enum bool isImplicitlyConvertible = is(typeof({
-        void fun(ref From v)
-        {
-            void gun(To) {}
-            gun(v);
-        }
-    }));
-}
+enum bool isImplicitlyConvertible(From, To) = is(From : To);
 
 ///
 @safe unittest
@@ -5492,7 +5472,7 @@ Note: Trying to use returned value will result in a
 private template AliasThisTypeOf(T)
 if (isAggregateType!T)
 {
-    alias members = AliasSeq!(__traits(getAliasThis, T));
+    alias members = __traits(getAliasThis, T);
 
     static if (members.length == 1)
     {
@@ -6939,17 +6919,20 @@ template isInstanceOf(alias S, alias T)
  *
  * See_Also: $(LREF isTypeTuple).
  */
-template isExpressions(T ...)
+template isExpressions(T...)
 {
-    static if (T.length >= 2)
-        enum bool isExpressions =
-            isExpressions!(T[0 .. $/2]) &&
-            isExpressions!(T[$/2 .. $]);
-    else static if (T.length == 1)
-        enum bool isExpressions =
-            !is(T[0]) && __traits(compiles, { auto ex = T[0]; });
-    else
-        enum bool isExpressions = true; // default
+    static foreach (Ti; T)
+    {
+        static if (!is(typeof(isExpressions) == bool) && // not yet defined
+                   (is(Ti) || !__traits(compiles, { auto ex = Ti; })))
+        {
+            enum isExpressions = false;
+        }
+    }
+    static if (!is(typeof(isExpressions) == bool)) // if not yet defined
+    {
+        enum isExpressions = true;
+    }
 }
 
 ///
@@ -7363,26 +7346,8 @@ Removes all qualifiers, if any, from type `T`.
  */
 template Unqual(T)
 {
-    version (none) // Error: recursive alias declaration @@@BUG1308@@@
-    {
-             static if (is(T U ==     const U)) alias Unqual = Unqual!U;
-        else static if (is(T U == immutable U)) alias Unqual = Unqual!U;
-        else static if (is(T U ==     inout U)) alias Unqual = Unqual!U;
-        else static if (is(T U ==    shared U)) alias Unqual = Unqual!U;
-        else                                    alias Unqual =        T;
-    }
-    else // workaround
-    {
-             static if (is(T U ==          immutable U)) alias Unqual = U;
-        else static if (is(T U == shared inout const U)) alias Unqual = U;
-        else static if (is(T U == shared inout       U)) alias Unqual = U;
-        else static if (is(T U == shared       const U)) alias Unqual = U;
-        else static if (is(T U == shared             U)) alias Unqual = U;
-        else static if (is(T U ==        inout const U)) alias Unqual = U;
-        else static if (is(T U ==        inout       U)) alias Unqual = U;
-        else static if (is(T U ==              const U)) alias Unqual = U;
-        else                                             alias Unqual = T;
-    }
+    import core.internal.traits : CoreUnqual = Unqual;
+    alias Unqual = CoreUnqual!(T);
 }
 
 ///
@@ -8464,7 +8429,7 @@ private template getSymbolsByUDAImpl(alias symbol, alias attribute, names...)
         }
         else
         {
-            alias member = AliasSeq!(__traits(getMember, symbol, names[0]));
+            alias member = __traits(getMember, symbol, names[0]);
 
             // Filtering not compiled members such as alias of basic types.
             static if (!__traits(compiles, hasUDA!(member, attribute)))
@@ -8495,13 +8460,18 @@ private template getSymbolsByUDAImpl(alias symbol, alias attribute, names...)
 */
 template allSameType(T...)
 {
-    static if (T.length <= 1)
+    static foreach (idx, Ti; T)
+    {
+        static if (idx + 1 < T.length &&
+                   !is(typeof(allSameType) == bool) &&
+                   !is(T[idx] == T[idx + 1]))
+        {
+            enum bool allSameType = false;
+        }
+    }
+    static if (!is(typeof(allSameType) == bool))
     {
         enum bool allSameType = true;
-    }
-    else
-    {
-        enum bool allSameType = is(T[0] == T[1]) && allSameType!(T[1..$]);
     }
 }
 

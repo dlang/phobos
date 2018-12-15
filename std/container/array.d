@@ -251,10 +251,8 @@ private struct RangeT(A)
 struct Array(T)
 if (!is(Unqual!T == bool))
 {
-    import core.memory : pureMalloc, pureRealloc, pureFree;
-    private alias malloc = pureMalloc;
-    private alias realloc = pureRealloc;
-    private alias free = pureFree;
+    import core.memory : free = pureFree;
+    import std.internal.memory : enforceMalloc, enforceRealloc;
     import core.stdc.string : memcpy, memmove, memset;
 
     import core.memory : GC;
@@ -321,8 +319,7 @@ if (!is(Unqual!T == bool))
 
                 static if (hasIndirections!T)
                 {
-                    auto newPayloadPtr = cast(T*) malloc(nbytes);
-                    newPayloadPtr || assert(false, "std.container.Array.length failed to allocate memory.");
+                    auto newPayloadPtr = cast(T*) enforceMalloc(nbytes);
                     auto newPayload = newPayloadPtr[0 .. newLength];
                     memcpy(newPayload.ptr, _payload.ptr, startEmplace * T.sizeof);
                     memset(newPayload.ptr + startEmplace, 0,
@@ -334,7 +331,7 @@ if (!is(Unqual!T == bool))
                 }
                 else
                 {
-                    _payload = (cast(T*) realloc(_payload.ptr,
+                    _payload = (cast(T*) enforceRealloc(_payload.ptr,
                             nbytes))[0 .. newLength];
                 }
                 _capacity = newLength;
@@ -368,8 +365,7 @@ if (!is(Unqual!T == bool))
                  */
                 immutable oldLength = length;
 
-                auto newPayloadPtr = cast(T*) malloc(sz);
-                newPayloadPtr || assert(false, "std.container.Array.reserve failed to allocate memory");
+                auto newPayloadPtr = cast(T*) enforceMalloc(sz);
                 auto newPayload = newPayloadPtr[0 .. oldLength];
 
                 // copy old data over to new array
@@ -386,8 +382,7 @@ if (!is(Unqual!T == bool))
             else
             {
                 // These can't have pointers, so no need to zero unused region
-                auto newPayloadPtr = cast(T*) realloc(_payload.ptr, sz);
-                newPayloadPtr || assert(false, "std.container.Array.reserve failed to allocate memory");
+                auto newPayloadPtr = cast(T*) enforceRealloc(_payload.ptr, sz);
                 auto newPayload = newPayloadPtr[0 .. length];
                 _payload = newPayload;
             }
@@ -445,7 +440,7 @@ if (!is(Unqual!T == bool))
         bool overflow;
         const nbytes = mulu(values.length, T.sizeof, overflow);
         if (overflow) assert(0);
-        auto p = cast(T*) malloc(nbytes);
+        auto p = cast(T*) enforceMalloc(nbytes);
         static if (hasIndirections!T)
         {
             if (p)
@@ -567,8 +562,7 @@ if (!is(Unqual!T == bool))
             bool overflow;
             const sz = mulu(elements, T.sizeof, overflow);
             if (overflow) assert(0);
-            auto p = malloc(sz);
-            p || assert(false, "std.container.Array.reserve failed to allocate memory");
+            auto p = enforceMalloc(sz);
             static if (hasIndirections!T)
             {
                 GC.addRange(p, sz);

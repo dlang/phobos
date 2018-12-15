@@ -748,7 +748,8 @@ private Pid spawnProcessImpl(scope const(char)[] commandLine,
         CREATE_UNICODE_ENVIRONMENT |
         ((config & Config.suppressConsole) ? CREATE_NO_WINDOW : 0);
     auto pworkDir = workDir.tempCStringW();     // workaround until Bugzilla 14696 is fixed
-    if (!CreateProcessW(null, commandLine.tempCStringW().buffPtr, null, null, true, dwCreationFlags,
+    if (!CreateProcessW(null, commandLine.tempCStringW().buffPtr,
+                        null, null, true, dwCreationFlags,
                         envz, workDir.length ? pworkDir : null, &startinfo, &pi))
         throw ProcessException.newFromLastError("Failed to spawn new process");
 
@@ -3090,9 +3091,9 @@ private:
     {
         import std.algorithm.iteration : map;
         import std.array : array;
-        LPWSTR lpCommandLine = (to!(wchar[])(line) ~ "\0"w).ptr;
+        auto lpCommandLine = (to!(WCHAR[])(line) ~ '\0').ptr;
         int numArgs;
-        LPWSTR* args = CommandLineToArgvW(lpCommandLine, &numArgs);
+        auto args = CommandLineToArgvW(lpCommandLine, &numArgs);
         scope(exit) LocalFree(args);
         return args[0 .. numArgs]
             .map!(arg => to!string(arg[0 .. wcslen(arg)]))

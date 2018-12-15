@@ -72,13 +72,26 @@ import std.traits;
 
 private
 {
-    template hasLocalAliasing(T...)
+    bool hasLocalAliasing(Types...)()
     {
-        static if (!T.length)
-            enum hasLocalAliasing = false;
-        else
-            enum hasLocalAliasing = (std.traits.hasUnsharedAliasing!(T[0]) && !is(T[0] == Tid)) ||
-                                     std.concurrency.hasLocalAliasing!(T[1 .. $]);
+        // Works around "statement is not reachable"
+        bool doesIt = false;
+        static foreach (T; Types)
+        {
+            static if (is(T == Tid))
+            { /* Allowed */ }
+            else static if (is(T == struct))
+                doesIt |= hasLocalAliasing!(typeof(T.tupleof));
+            else
+                doesIt |= std.traits.hasUnsharedAliasing!(T);
+        }
+        return doesIt;
+    }
+
+    @safe unittest
+    {
+        static struct Container { Tid t; }
+        static assert(!hasLocalAliasing!(Tid, Container, int));
     }
 
     enum MsgType

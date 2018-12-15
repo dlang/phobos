@@ -1175,7 +1175,12 @@ if (distinctFieldNames!(Specs))
             size_t h = 0;
             static foreach (i, T; Types)
             {{
-                const k = typeid(T).getHash((() @trusted => cast(const void*) &field[i])());
+                static if (__traits(compiles, h = .hashOf(field[i])))
+                    const k = .hashOf(field[i]);
+                else
+                    // Workaround for when .hashOf is not both @safe and nothrow.
+                    // BUG: Improperly casts away `shared`!
+                    const k = typeid(T).getHash((() @trusted => cast(const void*) &field[i])());
                 static if (i == 0)
                     h = k;
                 else
@@ -2679,7 +2684,11 @@ Params:
 
     size_t toHash() const @safe nothrow
     {
-        return _isNull ? 0 : typeid(T).getHash(&_value.payload);
+        static if (__traits(compiles, .hashOf(_value.payload)))
+            return _isNull ? 0 : .hashOf(_value.payload);
+        else
+            // Workaround for when .hashOf is not both @safe and nothrow.
+            return _isNull ? 0 : typeid(T).getHash(&_value.payload);
     }
 
     /**
@@ -5099,7 +5108,7 @@ private static:
             {
                 preamble ~= "alias self = " ~ name ~ ";\n";
                 if (WITH_BASE_CLASS && !__traits(isAbstractFunction, func))
-                    preamble ~= "alias parent = AliasSeq!(__traits(getMember, super, \"" ~ name ~ "\"))[0];";
+                    preamble ~= `alias parent = __traits(getMember, super, "` ~ name ~ `");`;
             }
 
             // Function body
@@ -5482,8 +5491,8 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
             }
 
         public:
-            mixin mixinAll!(
-                staticMap!(generateFun, staticIota!(0, TargetMembers.length)));
+            static foreach (i; 0 .. TargetMembers.length)
+                mixin(generateFun!i);
         }
     }
 }
@@ -5756,7 +5765,7 @@ package template GetOverloadedMethods(T)
 {
     import std.meta : Filter;
 
-    alias allMembers = AliasSeq!(__traits(allMembers, T));
+    alias allMembers = __traits(allMembers, T);
     template follows(size_t i = 0)
     {
         static if (i >= allMembers.length)
@@ -5999,47 +6008,6 @@ package template DerivedFunctionType(T...)
     static assert(is(DerivedFunctionType!(F17, F18) == void));
 }
 
-package template staticIota(int beg, int end)
-{
-    static if (beg + 1 >= end)
-    {
-        static if (beg >= end)
-        {
-            alias staticIota = AliasSeq!();
-        }
-        else
-        {
-            alias staticIota = AliasSeq!(+beg);
-        }
-    }
-    else
-    {
-        enum mid = beg + (end - beg) / 2;
-        alias staticIota = AliasSeq!(staticIota!(beg, mid), staticIota!(mid, end));
-    }
-}
-
-package template mixinAll(mixins...)
-{
-    static if (mixins.length == 1)
-    {
-        static if (is(typeof(mixins[0]) == string))
-        {
-            mixin(mixins[0]);
-        }
-        else
-        {
-            alias it = mixins[0];
-            mixin it;
-        }
-    }
-    else static if (mixins.length >= 2)
-    {
-        mixin mixinAll!(mixins[ 0 .. $/2]);
-        mixin mixinAll!(mixins[$/2 .. $ ]);
-    }
-}
-
 package template Bind(alias Template, args1...)
 {
     alias Bind(args2...) = Template!(args1, args2);
@@ -6130,7 +6098,6 @@ if (!is(T == class) && !(is(T == interface)))
     /// `RefCounted` storage implementation.
     struct RefCountedStore
     {
-        import core.memory : pureMalloc;
         private struct Impl
         {
             T _payload;
@@ -6141,59 +6108,36 @@ if (!is(T == class) && !(is(T == interface)))
 
         private void initialize(A...)(auto ref A args)
         {
-            import core.exception : onOutOfMemoryError;
             import std.conv : emplace;
 
-            _store = cast(Impl*) pureMalloc(Impl.sizeof);
-            if (_store is null)
-                onOutOfMemoryError();
-            static if (hasIndirections!T)
-                pureGcAddRange(&_store._payload, T.sizeof);
+            allocateStore();
             emplace(&_store._payload, args);
             _store._count = 1;
         }
 
-        private void move(ref T source)
+        private void move(ref T source) nothrow pure
         {
-            import core.exception : onOutOfMemoryError;
-            import core.stdc.string : memcpy, memset;
+            import std.algorithm.mutation : moveEmplace;
 
-            _store = cast(Impl*) pureMalloc(Impl.sizeof);
-            if (_store is null)
-                onOutOfMemoryError();
-            static if (hasIndirections!T)
-                pureGcAddRange(&_store._payload, T.sizeof);
-
-            // Can't use std.algorithm.move(source, _store._payload)
-            // here because it requires the target to be initialized.
-            // Might be worth to add this as `moveEmplace`
-
-            // Can avoid destructing result.
-            static if (hasElaborateAssign!T || !isAssignable!T)
-                memcpy(&_store._payload, &source, T.sizeof);
-            else
-                _store._payload = source;
-
-            // If the source defines a destructor or a postblit hook, we must obliterate the
-            // object in order to avoid double freeing and undue aliasing
-            static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
-            {
-                // If T is nested struct, keep original context pointer
-                static if (__traits(isNested, T))
-                    enum sz = T.sizeof - (void*).sizeof;
-                else
-                    enum sz = T.sizeof;
-
-                static if (__traits(isZeroInit, T))
-                    memset(&source, 0, sz);
-                else
-                {
-                    auto init = typeid(T).initializer();
-                    memcpy(&source, init.ptr, sz);
-                }
-            }
-
+            allocateStore();
+            moveEmplace(source, _store._payload);
             _store._count = 1;
+        }
+
+        // 'nothrow': can only generate an Error
+        private void allocateStore() nothrow pure
+        {
+            static if (hasIndirections!T)
+            {
+                import std.internal.memory : enforceCalloc;
+                _store = cast(Impl*) enforceCalloc(1, Impl.sizeof);
+                pureGcAddRange(&_store._payload, T.sizeof);
+            }
+            else
+            {
+                import std.internal.memory : enforceMalloc;
+                _store = cast(Impl*) enforceMalloc(Impl.sizeof);
+            }
         }
 
         /**
@@ -6592,13 +6536,20 @@ mixin template Proxy(alias a)
 
         static if (accessibleFrom!(const typeof(this)))
         {
-            override hash_t toHash() const nothrow @trusted
+            override hash_t toHash() const nothrow @safe
             {
-                static if (is(typeof(&a) == ValueType*))
-                    alias v = a;
+                static if (__traits(compiles, .hashOf(a)))
+                    return .hashOf(a);
                 else
-                    auto v = a;     // if a is (property) function
-                return typeid(ValueType).getHash(cast(const void*)&v);
+                // Workaround for when .hashOf is not both @safe and nothrow.
+                {
+                    static if (is(typeof(&a) == ValueType*))
+                        alias v = a;
+                    else
+                        auto v = a; // if a is (property) function
+                    // BUG: Improperly casts away `shared`!
+                    return typeid(ValueType).getHash((() @trusted => cast(const void*) &v)());
+                }
             }
         }
     }
@@ -6629,13 +6580,20 @@ mixin template Proxy(alias a)
 
         static if (accessibleFrom!(const typeof(this)))
         {
-            hash_t toHash() const nothrow @trusted
+            hash_t toHash() const nothrow @safe
             {
-                static if (is(typeof(&a) == ValueType*))
-                    alias v = a;
+                static if (__traits(compiles, .hashOf(a)))
+                    return .hashOf(a);
                 else
-                    auto v = a;     // if a is (property) function
-                return typeid(ValueType).getHash(cast(const void*)&v);
+                // Workaround for when .hashOf is not both @safe and nothrow.
+                {
+                    static if (is(typeof(&a) == ValueType*))
+                        alias v = a;
+                    else
+                        auto v = a; // if a is (property) function
+                    // BUG: Improperly casts away `shared`!
+                    return typeid(ValueType).getHash((() @trusted => cast(const void*) &v)());
+                }
             }
         }
     }

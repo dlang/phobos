@@ -966,7 +966,7 @@ if (!hasElaborateDestructor!T)
         return internalSlice[] == a.internalSlice[];
     }
 
-    size_t toHash()
+    size_t toHash() const
     {
         return hashOf(internalSlice[]);
     }

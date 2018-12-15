@@ -149,6 +149,7 @@ $(I FormatStringItem):
     $(B '%%')
     $(B '%') $(I Position) $(I Flags) $(I Width) $(I Separator) $(I Precision) $(I FormatChar)
     $(B '%$(LPAREN)') $(I FormatString) $(B '%$(RPAREN)')
+    $(B '%-$(LPAREN)') $(I FormatString) $(B '%$(RPAREN)')
     $(I OtherCharacterExceptPercent)
 $(I Position):
     $(I empty)
@@ -3346,11 +3347,24 @@ if (isInputRange!T)
         for (;;)
         {
             auto fmt = FormatSpec!Char(f.nested);
-            fmt.writeUpToNextSpec(w);
-            if (f.flDash)
-                formatValue(w, val.front, fmt);
-            else
-                formatElement(w, val.front, fmt);
+            w: while (true)
+            {
+                immutable r = fmt.writeUpToNextSpec(w);
+                // There was no format specifier, so break
+                if (!r)
+                    break;
+                if (f.flDash)
+                    formatValue(w, val.front, fmt);
+                else
+                    formatElement(w, val.front, fmt);
+                // Check if there will be a format specifier farther on in the
+                // string. If so, continue the loop, otherwise break. This
+                // prevents extra copies of the `sep` from showing up.
+                foreach (size_t i; 0 .. fmt.trailing.length)
+                    if (fmt.trailing[i] == '%')
+                        continue w;
+                break w;
+            }
             if (f.sep !is null)
             {
                 put(w, fmt.trailing);
@@ -3370,6 +3384,11 @@ if (isInputRange!T)
     }
     else
         throw new FormatException(text("Incorrect format specifier for range: %", f.spec));
+}
+
+@safe pure unittest // Issue 18778
+{
+    assert(format("%-(%1$s - %1$s, %)", ["A", "B", "C"]) == "A - A, B - B, C - C");
 }
 
 @safe pure unittest

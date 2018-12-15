@@ -175,7 +175,10 @@ pure nothrow @nogc @safe unittest
 }
 
 version (Windows)
-    alias tempCStringW = tempCString!(wchar, const(char)[]);
+{
+    import core.sys.windows.windows : WCHAR;
+    alias tempCStringW = tempCString!(WCHAR, const(char)[]);
+}
 
 private struct TempCStringBuffer(To = char)
 {
@@ -235,8 +238,7 @@ private To[] trustedRealloc(To)(scope To[] buf, size_t strLength, bool bufIsOnSt
 {
     pragma(inline, false);  // because it's rarely called
 
-    import core.exception : onOutOfMemoryError;
-    import core.memory : pureMalloc, pureRealloc;
+    import std.internal.memory : enforceMalloc, enforceRealloc;
 
     size_t newlen = buf.length * 3 / 2;
 
@@ -244,19 +246,25 @@ private To[] trustedRealloc(To)(scope To[] buf, size_t strLength, bool bufIsOnSt
     {
         if (newlen <= strLength)
             newlen = strLength + 1; // +1 for terminating 0
-        auto ptr = cast(To*) pureMalloc(newlen * To.sizeof);
-        if (!ptr)
-            onOutOfMemoryError();
+        auto ptr = cast(To*) enforceMalloc(newlen * To.sizeof);
         ptr[0 .. buf.length] = buf[];
         return ptr[0 .. newlen];
     }
     else
     {
         if (buf.length >= size_t.max / (2 * To.sizeof))
-            onOutOfMemoryError();
-        auto ptr = cast(To*) pureRealloc(buf.ptr, newlen * To.sizeof);
-        if (!ptr)
-            onOutOfMemoryError();
+        {
+            version (D_Exceptions)
+            {
+                import core.exception : onOutOfMemoryError;
+                onOutOfMemoryError();
+            }
+            else
+            {
+                assert(0, "Memory allocation failed");
+            }
+        }
+        auto ptr = cast(To*) enforceRealloc(buf.ptr, newlen * To.sizeof);
         return ptr[0 .. newlen];
     }
 }

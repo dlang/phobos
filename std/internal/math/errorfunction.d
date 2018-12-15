@@ -1002,7 +1002,7 @@ real normalDistributionImpl(real a)
 
 @safe unittest
 {
-assert(fabs(normalDistributionImpl(1L) - (0.841344746068543))< 0.0000000000000005);
+assert(fabs(normalDistributionImpl(1L) - (0.841344746068543)) < 0.0000000000000005);
 assert(isIdentical(normalDistributionImpl(NaN(0x325)), NaN(0x325)));
 }
 
@@ -1130,8 +1130,8 @@ static immutable real[8] Q3 =
 {
     // TODO: Use verified test points.
     // The values below are from Excel 2003.
-    assert(fabs(normalDistributionInvImpl(0.001) - (-3.09023230616779))< 0.00000000000005);
-    assert(fabs(normalDistributionInvImpl(1e-50) - (-14.9333375347885))< 0.00000000000005);
+    assert(fabs(normalDistributionInvImpl(0.001) - (-3.09023230616779)) < 0.00000000000005);
+    assert(fabs(normalDistributionInvImpl(1e-50) - (-14.9333375347885)) < 0.00000000000005);
     assert(feqrel(normalDistributionInvImpl(0.999), -normalDistributionInvImpl(0.001)) > real.mant_dig-6);
 
     // Excel 2003 gets all the following values wrong!

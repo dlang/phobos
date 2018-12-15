@@ -3347,6 +3347,89 @@ C swapRealImag(C)(C input)
     return C(input.im, input.re);
 }
 
+/** This function transforms `decimal` value into a value in the factorial number
+system stored in `fac`.
+
+A factorial number is constructed as:
+$(D fac[0] * 0! + fac[1] * 1! + ... fac[20] * 20!)
+
+Params:
+    decimal = The decimal value to convert into the factorial number system.
+    fac = The array to store the factorial number. The array is of size 21 as
+        `ulong.max` requires 21 digits in the factorial number system.
+Returns:
+    A variable storing the number of digits of the factorial number stored in
+    `fac`.
+*/
+size_t decimalToFactorial(ulong decimal, ref ubyte[21] fac)
+        @safe pure nothrow @nogc
+{
+    import std.algorithm.mutation : reverse;
+    size_t idx;
+
+    for (ulong i = 1; decimal != 0; ++i)
+    {
+        auto temp = decimal % i;
+        decimal /= i;
+        fac[idx++] = cast(ubyte)(temp);
+    }
+
+    if (idx == 0)
+    {
+        fac[idx++] = cast(ubyte) 0;
+    }
+
+    reverse(fac[0 .. idx]);
+
+    // first digit of the number in factorial will always be zero
+    assert(fac[idx - 1] == 0);
+
+    return idx;
+}
+
+///
+@safe pure @nogc unittest
+{
+    ubyte[21] fac;
+    size_t idx = decimalToFactorial(2982, fac);
+
+    assert(fac[0] == 4);
+    assert(fac[1] == 0);
+    assert(fac[2] == 4);
+    assert(fac[3] == 1);
+    assert(fac[4] == 0);
+    assert(fac[5] == 0);
+    assert(fac[6] == 0);
+}
+
+@safe pure unittest
+{
+    ubyte[21] fac;
+    size_t idx = decimalToFactorial(0UL, fac);
+    assert(idx == 1);
+    assert(fac[0] == 0);
+
+    fac[] = 0;
+    idx = 0;
+    idx = decimalToFactorial(ulong.max, fac);
+    assert(idx == 21);
+    auto t = [7, 11, 12, 4, 3, 15, 3, 5, 3, 5, 0, 8, 3, 5, 0, 0, 0, 2, 1, 1, 0];
+    foreach (i, it; fac[0 .. 21])
+    {
+        assert(it == t[i]);
+    }
+
+    fac[] = 0;
+    idx = decimalToFactorial(2982, fac);
+
+    assert(idx == 7);
+    t = [4, 0, 4, 1, 0, 0, 0];
+    foreach (i, it; fac[0 .. idx])
+    {
+        assert(it == t[i]);
+    }
+}
+
 private:
 // The reasons I couldn't use std.algorithm were b/c its stride length isn't
 // modifiable on the fly and because range has grown some performance hacks

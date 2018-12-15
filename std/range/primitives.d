@@ -2192,7 +2192,7 @@ the first argument using the dot notation, `array.save` is
 equivalent to `save(array)`. The function does not duplicate the
 content of the array, it simply returns its argument.
  */
-@property T[] save(T)(T[] a) @safe pure nothrow @nogc
+@property inout(T)[] save(T)(return scope inout(T)[] a) @safe pure nothrow @nogc
 {
     return a;
 }
@@ -2213,7 +2213,7 @@ equivalent to `popFront(array)`. For $(GLOSSARY narrow strings),
 `popFront` automatically advances to the next $(GLOSSARY code
 point).
 */
-void popFront(T)(ref T[] a) @safe pure nothrow @nogc
+void popFront(T)(scope ref inout(T)[] a) @safe pure nothrow @nogc
 if (!isNarrowString!(T[]) && !is(T[] == void[]))
 {
     assert(a.length, "Attempting to popFront() past the end of an array of " ~ T.stringof);
@@ -2236,7 +2236,7 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
 }
 
 /// ditto
-void popFront(C)(ref C[] str) @trusted pure nothrow
+void popFront(C)(scope ref inout(C)[] str) @trusted pure nothrow
 if (isNarrowString!(C[]))
 {
     import std.algorithm.comparison : min;
@@ -2334,7 +2334,7 @@ the first argument using the dot notation, `array.popBack` is
 equivalent to `popBack(array)`. For $(GLOSSARY narrow strings), $(D
 popFront) automatically eliminates the last $(GLOSSARY code point).
 */
-void popBack(T)(ref T[] a) @safe pure nothrow @nogc
+void popBack(T)(scope ref inout(T)[] a) @safe pure nothrow @nogc
 if (!isNarrowString!(T[]) && !is(T[] == void[]))
 {
     assert(a.length);
@@ -2357,7 +2357,7 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
 }
 
 /// ditto
-void popBack(T)(ref T[] a) @safe pure
+void popBack(T)(scope ref inout(T)[] a) @safe pure
 if (isNarrowString!(T[]))
 {
     import std.utf : strideBack;
@@ -2401,8 +2401,15 @@ equivalent to `front(array)`. For $(GLOSSARY narrow strings), $(D
 front) automatically returns the first $(GLOSSARY code point) as _a $(D
 dchar).
 */
-@property ref T front(T)(T[] a) @safe pure nothrow @nogc
+@property ref T front(T)(return scope T[] a) @safe pure nothrow @nogc
 if (!isNarrowString!(T[]) && !is(T[] == void[]))
+// We would have preferred to write the function template
+// ---
+//     @property ref inout(T) front(T)(return scope inout(T)[] a)
+//        if (/* same constraint */)
+// ---
+// as that would cause fewer distinct functions to be generated with
+// IFTI, but that caused a linker error in the test suite on Win32_64.
 {
     assert(a.length, "Attempting to fetch the front of an empty array of " ~ T.stringof);
     return a[0];
@@ -2430,7 +2437,7 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
 }
 
 /// ditto
-@property dchar front(T)(T[] a) @safe pure
+@property dchar front(T)(scope const(T)[] a) @safe pure
 if (isNarrowString!(T[]))
 {
     import std.utf : decode;
@@ -2447,7 +2454,7 @@ equivalent to `back(array)`. For $(GLOSSARY narrow strings), $(D
 back) automatically returns the last $(GLOSSARY code point) as _a $(D
 dchar).
 */
-@property ref T back(T)(T[] a) @safe pure nothrow @nogc
+@property ref inout(T) back(T)(return scope inout(T)[] a) @safe pure nothrow @nogc
 if (!isNarrowString!(T[]) && !is(T[] == void[]))
 {
     assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);
@@ -2474,7 +2481,7 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
 
 /// ditto
 // Specialization for strings
-@property dchar back(T)(T[] a) @safe pure
+@property dchar back(T)(scope const(T)[] a) @safe pure
 if (isNarrowString!(T[]))
 {
     import std.utf : decode, strideBack;
