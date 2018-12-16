@@ -1841,7 +1841,7 @@ else version (Posix)
 
 @safe unittest
 {
-    //std.process.system("echo a > deleteme") == 0 || assert(false);
+    //std.process.executeShell("echo a > deleteme");
     if (exists(deleteme))
         remove(deleteme);
 
@@ -4842,7 +4842,7 @@ foreach (d; parallel(dFiles, 1)) //passes by 1 file to each thread
 {
     string cmd = "dmd -c "  ~ d.name;
     writeln(cmd);
-    std.process.system(cmd);
+    std.process.executeShell(cmd);
 }
 
 // Iterate over all D source files in current directory and all its
