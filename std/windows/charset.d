@@ -50,7 +50,7 @@ else:
 
 version (Windows):
 
-import core.sys.windows.windows;
+import core.sys.windows.winbase, core.sys.windows.winnls;
 import std.conv;
 import std.string;
 import std.windows.syserror;

@@ -93,7 +93,7 @@ import std.typecons;
 
 version (Windows)
 {
-    import core.sys.windows.windows, std.windows.syserror;
+    import core.sys.windows.winbase, core.sys.windows.winnt, std.windows.syserror;
 }
 else version (Posix)
 {

@@ -37,7 +37,7 @@ import std.traits : isIntegral, isSomeString, Unqual;
 version (Windows)
 {
     import core.stdc.time : time_t;
-    import core.sys.windows.windows;
+    import core.sys.windows.winbase;
     import core.sys.windows.winsock2;
     import std.windows.registry;
 

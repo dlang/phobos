@@ -12,7 +12,7 @@ module std.internal.windows.advapi32;
 
 version (Windows):
 
-import core.sys.windows.windows;
+import core.sys.windows.winbase, core.sys.windows.winnt, core.sys.windows.winreg;
 
 pragma(lib, "advapi32.lib");
 

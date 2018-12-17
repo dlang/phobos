@@ -65,7 +65,7 @@ else:
 
 version (Windows):
 
-import core.sys.windows.windows;
+import core.sys.windows.winbase, core.sys.windows.winnt;
 import std.array : appender;
 import std.conv : to;
 import std.format : formattedWrite;
@@ -117,7 +117,7 @@ bool putSysError(Writer)(DWORD code, Writer w, /*WORD*/int langId = 0)
 
 class WindowsException : Exception
 {
-    import core.sys.windows.windows : DWORD;
+    import core.sys.windows.windef : DWORD;
 
     final @property DWORD code() { return _code; } /// `GetLastError`'s return value.
     private DWORD _code;

@@ -4152,7 +4152,7 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is
     version (Windows)
     {
         import core.sys.windows.com : IUnknown, IID;
-        import core.sys.windows.windows : HRESULT;
+        import core.sys.windows.windef : HRESULT;
 
         interface IUnknown2 : IUnknown { }
 

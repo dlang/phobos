@@ -22,7 +22,8 @@ private mixin template AscendingPageAllocatorImpl(bool isShared)
         }
         else version (Windows)
         {
-            import core.sys.windows.windows : VirtualFree, MEM_RELEASE, MEM_DECOMMIT;
+            import core.sys.windows.winbase : VirtualFree;
+            import core.sys.windows.winnt : MEM_DECOMMIT;
 
             auto ret = VirtualFree(buf.ptr, goodSize, MEM_DECOMMIT);
             if (ret == 0)
@@ -59,7 +60,8 @@ private mixin template AscendingPageAllocatorImpl(bool isShared)
         }
         else version (Windows)
         {
-            import core.sys.windows.windows : VirtualFree, MEM_RELEASE;
+            import core.sys.windows.winbase : VirtualFree;
+            import core.sys.windows.winnt : MEM_RELEASE;
             auto ret = VirtualFree(cast(void*) data, 0, MEM_RELEASE);
             if (ret == 0)
                 assert(0, "Failed to unmap memory, VirtualFree failure");
@@ -100,8 +102,8 @@ private mixin template AscendingPageAllocatorImpl(bool isShared)
         }
         else version (Windows)
         {
-            import core.sys.windows.windows : VirtualAlloc, PAGE_NOACCESS,
-                MEM_RESERVE, GetSystemInfo, SYSTEM_INFO;
+            import core.sys.windows.winbase : GetSystemInfo, SYSTEM_INFO, VirtualAlloc;
+            import core.sys.windows.winnt : MEM_RESERVE, PAGE_NOACCESS;
 
             SYSTEM_INFO si;
             GetSystemInfo(&si);
@@ -148,7 +150,8 @@ private mixin template AscendingPageAllocatorImpl(bool isShared)
         }
         else version (Windows)
         {
-            import core.sys.windows.windows : VirtualAlloc, MEM_COMMIT, PAGE_READWRITE;
+            import core.sys.windows.winbase : VirtualAlloc;
+            import core.sys.windows.winnt : MEM_COMMIT, PAGE_READWRITE;
 
             auto ret = VirtualAlloc(start, size, MEM_COMMIT, PAGE_READWRITE);
             return ret != null;
@@ -682,7 +685,7 @@ version (unittest)
         }
         else version (Windows)
         {
-            import core.sys.windows.windows : GetSystemInfo, SYSTEM_INFO;
+            import core.sys.windows.winbase : GetSystemInfo, SYSTEM_INFO;
 
             SYSTEM_INFO si;
             GetSystemInfo(&si);

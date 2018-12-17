@@ -38,7 +38,7 @@
 module std.windows.registry;
 version (Windows):
 
-import core.sys.windows.windows;
+import core.sys.windows.winbase, core.sys.windows.windef, core.sys.windows.winreg;
 import std.array;
 import std.conv;
 import std.exception;

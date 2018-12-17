@@ -60,7 +60,7 @@ version (Windows)
     pragma (lib, "ws2_32.lib");
     pragma (lib, "wsock32.lib");
 
-    import core.sys.windows.windows, std.windows.syserror;
+    import core.sys.windows.winbase, std.windows.syserror;
     public import core.sys.windows.winsock2;
     private alias _ctimeval = core.sys.windows.winsock2.timeval;
     private alias _clinger = core.sys.windows.winsock2.linger;
