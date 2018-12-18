@@ -102,6 +102,20 @@ struct This;
 
 private alias This2Variant(V, T...) = AliasSeq!(ReplaceType!(This, V, T));
 
+// We can't just use maxAlignment because no types might be specified
+// to VariantN, so handle that here and then pass along the rest.
+private template maxVariantAlignment(U...)
+if (isTypeTuple!U)
+{
+    static if (U.length == 0)
+    {
+        import std.algorithm.comparison : max;
+        enum maxVariantAlignment = max(real.alignof, size_t.alignof);
+    }
+    else
+        enum maxVariantAlignment = maxAlignment!(U);
+}
+
 /**
  * Back-end type seldom used directly by user
  * code. Two commonly-used types using `VariantN` are:
@@ -169,7 +183,7 @@ private:
         = &handler!(void);
     union
     {
-        ubyte[size] store;
+        align(maxVariantAlignment!(AllowedTypes)) ubyte[size] store;
         // conservatively mark the region as pointers
         static if (size >= (void*).sizeof)
             void*[size / (void*).sizeof] p;
