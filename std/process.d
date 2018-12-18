@@ -92,7 +92,8 @@ version (Posix)
 version (Windows)
 {
     import core.stdc.stdio;
-    import core.sys.windows.windows;
+    import core.sys.windows.winbase;
+    import core.sys.windows.winnt;
     import std.utf;
     import std.windows.syserror;
 }
@@ -3084,7 +3085,8 @@ private:
     import core.stdc.stddef;
     import core.stdc.wchar_ : wcslen;
     import core.sys.windows.shellapi : CommandLineToArgvW;
-    import core.sys.windows.windows;
+    import core.sys.windows.winbase;
+    import core.sys.windows.winnt;
     import std.array;
 
     string[] parseCommandLine(string line)
@@ -4004,7 +4006,7 @@ version (StdDdoc)
 else
 version (Windows)
 {
-    import core.sys.windows.windows;
+    import core.sys.windows.shellapi, core.sys.windows.winuser;
 
     pragma(lib,"shell32.lib");
 

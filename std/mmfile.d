@@ -31,7 +31,8 @@ import std.internal.cstring;
 
 version (Windows)
 {
-    import core.sys.windows.windows;
+    import core.sys.windows.winbase;
+    import core.sys.windows.winnt;
     import std.utf;
     import std.windows.syserror;
 }

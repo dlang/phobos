@@ -962,7 +962,7 @@ uint totalCPUsImpl() @nogc nothrow @trusted
     version (Windows)
     {
         // BUGS:  Only works on Windows 2000 and above.
-        import core.sys.windows.windows : SYSTEM_INFO, GetSystemInfo;
+        import core.sys.windows.winbase : SYSTEM_INFO, GetSystemInfo;
         import std.algorithm.comparison : max;
         SYSTEM_INFO si;
         GetSystemInfo(&si);

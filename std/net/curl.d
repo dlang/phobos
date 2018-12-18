@@ -4154,7 +4154,7 @@ private struct CurlAPI
         }
         else version (Windows)
         {
-            import core.sys.windows.windows : GetProcAddress, GetModuleHandleA,
+            import core.sys.windows.winbase : GetProcAddress, GetModuleHandleA,
                 LoadLibraryA;
             alias loadSym = GetProcAddress;
         }
@@ -4219,7 +4219,7 @@ private struct CurlAPI
             }
             else version (Windows)
             {
-                import core.sys.windows.windows : FreeLibrary;
+                import core.sys.windows.winbase : FreeLibrary;
                 FreeLibrary(_handle);
             }
             else

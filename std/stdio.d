@@ -108,7 +108,7 @@ version (Windows)
     extern (C) nothrow @nogc FILE* _wfopen(in wchar* filename, in wchar* mode);
     extern (C) nothrow @nogc FILE* _wfreopen(in wchar* filename, in wchar* mode, FILE* fp);
 
-    import core.sys.windows.windows : HANDLE;
+    import core.sys.windows.basetsd : HANDLE;
 }
 
 version (DIGITAL_MARS_STDIO)
@@ -942,7 +942,7 @@ Throws: `Exception` if the file is not opened or if the OS call fails.
 
         version (Windows)
         {
-            import core.sys.windows.windows : FlushFileBuffers;
+            import core.sys.windows.winbase : FlushFileBuffers;
             wenforce(FlushFileBuffers(windowsHandle), "FlushFileBuffers failed");
         }
         else
@@ -1225,7 +1225,8 @@ Throws: `Exception` if the file is not opened.
 
     version (Windows)
     {
-        import core.sys.windows.windows : ULARGE_INTEGER, OVERLAPPED, BOOL;
+        import core.sys.windows.winbase : OVERLAPPED;
+        import core.sys.windows.winnt : BOOL, ULARGE_INTEGER;
 
         private BOOL lockImpl(alias F, Flags...)(ulong start, ulong length,
             Flags flags)
@@ -1245,7 +1246,7 @@ Throws: `Exception` if the file is not opened.
 
         private static T wenforce(T)(T cond, string str)
         {
-            import core.sys.windows.windows : GetLastError;
+            import core.sys.windows.winbase : GetLastError;
             import std.windows.syserror : sysErrorString;
 
             if (cond) return cond;
@@ -1303,7 +1304,7 @@ $(UL
         else
         version (Windows)
         {
-            import core.sys.windows.windows : LockFileEx, LOCKFILE_EXCLUSIVE_LOCK;
+            import core.sys.windows.winbase : LockFileEx, LOCKFILE_EXCLUSIVE_LOCK;
             immutable type = lockType == LockType.readWrite ?
                 LOCKFILE_EXCLUSIVE_LOCK : 0;
             wenforce(lockImpl!LockFileEx(start, length, type),
@@ -1341,8 +1342,9 @@ specified file segment was already locked.
         else
         version (Windows)
         {
-            import core.sys.windows.windows : GetLastError, LockFileEx, LOCKFILE_EXCLUSIVE_LOCK,
-                ERROR_IO_PENDING, ERROR_LOCK_VIOLATION, LOCKFILE_FAIL_IMMEDIATELY;
+            import core.sys.windows.winbase : GetLastError, LockFileEx, LOCKFILE_EXCLUSIVE_LOCK,
+                LOCKFILE_FAIL_IMMEDIATELY;
+            import core.sys.windows.winerror : ERROR_IO_PENDING, ERROR_LOCK_VIOLATION;
             immutable type = lockType == LockType.readWrite
                 ? LOCKFILE_EXCLUSIVE_LOCK : 0;
             immutable res = lockImpl!LockFileEx(start, length,
@@ -1375,7 +1377,7 @@ Removes the lock over the specified file segment.
         else
         version (Windows)
         {
-            import core.sys.windows.windows : UnlockFileEx;
+            import core.sys.windows.winbase : UnlockFileEx;
             wenforce(lockImpl!UnlockFileEx(start, length),
                 "Could not remove lock for file `"~_name~"'");
         }

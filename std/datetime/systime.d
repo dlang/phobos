@@ -81,7 +81,8 @@ import std.traits : isIntegral, isSigned, isSomeString, Unqual, isNarrowString;
 version (Windows)
 {
     import core.stdc.time : time_t;
-    import core.sys.windows.windows;
+    import core.sys.windows.winbase;
+    import core.sys.windows.winnt;
     import core.sys.windows.winsock2;
 }
 else version (Posix)
