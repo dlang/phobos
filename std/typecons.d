@@ -856,7 +856,7 @@ if (distinctFieldNames!(Specs))
          Returns: A concatenation of this tuple and `t`
          */
         auto opBinary(string op, T)(auto ref T t)
-        if (op == "~")
+        if (op == "~" && !(is(T : U[], U) && isTuple!U))
         {
             static if (isTuple!T)
             {
@@ -873,7 +873,7 @@ if (distinctFieldNames!(Specs))
 
         /// ditto
         auto opBinaryRight(string op, T)(auto ref T t)
-        if (op == "~")
+        if (op == "~" && !(is(T : U[], U) && isTuple!U))
         {
             static if (isTuple!T)
             {
@@ -1414,6 +1414,23 @@ if (distinctFieldNames!(Specs))
     static assert(t.fieldNames == tuple("foo", "bar"));
     assert(t.foo == 1.0);
     assert(t.bar == "3");
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=18824
+// tuple concat
+@safe unittest
+{
+    alias Type = Tuple!(int, string);
+    Type[] arr;
+    auto t = tuple(2, "s");
+    // Test opBinaryRight
+    arr = arr ~ t;
+    // Test opBinary
+    arr = t ~ arr;
+    static assert(is(typeof(arr) == Type[]));
+    immutable Type[] b;
+    auto c = b ~ t;
+    static assert(is(typeof(c) == immutable(Type)[]));
 }
 
 // tuple concat
