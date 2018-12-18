@@ -3018,7 +3018,7 @@ if (isDynamicArray!A)
      * Params:
      *     newCapacity = the capacity the `Appender` should have
      */
-    void reserve(size_t newCapacity) @safe pure nothrow
+    void reserve(size_t newCapacity) @safe nothrow
     {
         if (_data)
         {
@@ -3053,7 +3053,7 @@ if (isDynamicArray!A)
     }
 
     // ensure we can add nelems elements, resizing as necessary
-    private void ensureAddable(size_t nelems) @trusted pure nothrow
+    private void ensureAddable(size_t nelems) @trusted nothrow
     {
         if (!_data)
             _data = new Data;
@@ -3400,6 +3400,41 @@ if (isDynamicArray!A)
     const(R)[1] r;
     app.put(r[0]);
     app.put(r[]);
+}
+
+@safe unittest // issue 13300
+{
+    static test(bool isPurePostblit)()
+    {
+        static if (!isPurePostblit)
+            static int i;
+
+        struct Simple
+        {
+            @disable this(); // Without this, it works.
+            static if (!isPurePostblit)
+                this(this) { i++; }
+            else
+                pure this(this) { }
+
+            private:
+            this(int tmp) { }
+        }
+
+        struct Range
+        {
+            @property Simple front() { return Simple(0); }
+            void popFront() { count++; }
+            @property empty() { return count < 3; }
+            size_t count;
+        }
+
+        Range r;
+        auto a = r.array();
+    }
+
+    static assert(__traits(compiles, () pure { test!true(); }));
+    static assert(!__traits(compiles, () pure { test!false(); }));
 }
 
 //Calculates an efficient growth scheme based on the old capacity
