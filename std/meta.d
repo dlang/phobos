@@ -272,16 +272,10 @@ if (!isAggregateType!T || is(Unqual!T == T))
     static assert(OldAlias!abc == 123);
 }
 
-import std.typecons : Flag;
+public import std.typecons : Flag, Yes, No;
 
 /**
- * Used to indicate the direction of the $(LREF staticIndexOf) overload
- * that takes a predicate.
- */
-alias FromEnd = Flag!"reverse";
-
-/**
- * Retrieve the index of the first or last occurrence of the element that
+ * Retrieves the index of the first or last occurrence of the element that
  * verifies a predicate.
  *
  * Params:
@@ -296,7 +290,7 @@ alias FromEnd = Flag!"reverse";
  *      The specializations $(LREF firstStaticIndexOf) and $(LREF lastStaticIndexOf)
  *      of this template.
  */
-template staticIndexOf(alias pred, FromEnd fromEnd, T...)
+template staticIndexOf(alias pred, Flag!"Reverse" fromEnd, T...)
 {
     enum callPredOnElem = q{
         static if (!is(typeof(_local_idx)) && pred!(T[i]))
@@ -319,11 +313,11 @@ template staticIndexOf(alias pred, FromEnd fromEnd, T...)
     static struct Element{int i, j;}
     alias Elements = AliasSeq!(Element(0,1), Element(1,1), Element(1,0));
     enum cmp(Element e) = e.i == 1;
-    static assert(staticIndexOf!(cmp, FromEnd.no , Elements) == 1);
+    static assert(staticIndexOf!(cmp, No.Reverse , Elements) == 1);
 }
 
 /// Alias of `staticIndexOf` taking a predicate and starting from the beginning of the haystack.
-alias firstStaticIndexOf(alias pred, T...) = staticIndexOf!(pred, FromEnd.no, T);
+alias firstStaticIndexOf(alias pred, T...) = staticIndexOf!(pred, No.Reverse, T);
 ///
 @safe unittest
 {
@@ -334,7 +328,7 @@ alias firstStaticIndexOf(alias pred, T...) = staticIndexOf!(pred, FromEnd.no, T)
 }
 
 /// Alias of `staticIndexOf` taking a predicate and starting at the end of the haystack.
-alias lastStaticIndexOf(alias pred, T...) = staticIndexOf!(pred, FromEnd.yes, T);
+alias lastStaticIndexOf(alias pred, T...) = staticIndexOf!(pred, Yes.Reverse, T);
 ///
 @safe unittest
 {
