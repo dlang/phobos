@@ -285,6 +285,7 @@ public:
                 {
                     import core.sys.netbsd.time : clock_gettime, CLOCK_REALTIME;
                     timespec ts = void;
+                    immutable error = clock_gettime(CLOCK_REALTIME, &ts);
                     // Posix clock_gettime called with a valid address and valid clock_id is only
                     // permitted to fail if the number of seconds does not fit in time_t. If tv_sec
                     // is long or larger overflow won't happen before 292 billion years A.D.
