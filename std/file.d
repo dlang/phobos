@@ -348,7 +348,6 @@ version (Posix) private void[] readImpl(scope const(char)[] name, scope const(FS
 {
     import core.memory : GC;
     import std.algorithm.comparison : min;
-    import std.array : uninitializedArray;
     import std.conv : to;
     import std.experimental.checkedint : checked;
 
@@ -371,7 +370,7 @@ version (Posix) private void[] readImpl(scope const(char)[] name, scope const(FS
     immutable initialAlloc = min(upTo, to!size_t(statbuf.st_size
         ? min(statbuf.st_size + 1, maxInitialAlloc)
         : minInitialAlloc));
-    void[] result = uninitializedArray!(ubyte[])(initialAlloc);
+    void[] result = GC.malloc(initialAlloc, GC.BlkAttr.NO_SCAN)[0 .. initialAlloc];
     scope(failure) GC.free(result.ptr);
 
     auto size = checked(size_t(0));
@@ -400,7 +399,6 @@ version (Windows) private void[] readImpl(scope const(char)[] name, scope const(
 {
     import core.memory : GC;
     import std.algorithm.comparison : min;
-    import std.array : uninitializedArray;
     static trustedCreateFileW(scope const(wchar)* namez, DWORD dwDesiredAccess, DWORD dwShareMode,
                               SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
                               DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) @trusted
@@ -451,7 +449,7 @@ version (Windows) private void[] readImpl(scope const(char)[] name, scope const(
     ulong fileSize = void;
     cenforce(trustedGetFileSize(h, fileSize), name, namez);
     size_t size = min(upTo, fileSize);
-    auto buf = uninitializedArray!(ubyte[])(size);
+    auto buf = () @trusted { return GC.malloc(size, GC.BlkAttr.NO_SCAN)[0 .. size]; } ();
 
     scope(failure)
     {
