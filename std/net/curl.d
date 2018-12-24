@@ -1633,6 +1633,8 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
             final switch (state)
             {
             case State.needUnits:
+                import std.typecons : Rebindable;
+                Rebindable!(immutable CurlException) ex;
                 receiveTimeout(d,
                         (Tid origin, CurlMessage!(immutable(Unit)[]) _data)
                         {
@@ -1648,8 +1650,14 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
                                 return false;
                             state = state.done;
                             return true;
-                        }
-                        );
+                        },
+                        (immutable CurlException e)
+                        {
+                            ex = e;
+                        },
+                    );
+                if (ex)
+                    throw ex.get;
                 break;
             case State.gotUnits: return true;
             case State.done:
@@ -1677,6 +1685,8 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
             final switch (state)
             {
             case State.needUnits:
+                import std.typecons : Rebindable;
+                Rebindable!(immutable CurlException) ex;
                 receive(
                         (Tid origin, CurlMessage!(immutable(Unit)[]) _data)
                         {
@@ -1692,8 +1702,14 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
                                 return false;
                             state = state.done;
                             return true;
-                        }
-                        );
+                        },
+                        (immutable CurlException e)
+                        {
+                            ex = e;
+                        },
+                    );
+                if (ex)
+                    throw ex.get;
                 break;
             case State.gotUnits: return;
             case State.done:
@@ -1760,6 +1776,11 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
  * Returns:
  * A range of Char[] with the content of the resource pointer to by the
  * URL.
+ *
+ * Throws:
+ *
+ * `CurlException` on error.
+ * `HTTPStatusException` when the response has a non-2xx status
  */
 auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char, PostUnit)
             (const(char)[] url, const(PostUnit)[] postData,
@@ -1830,6 +1851,57 @@ auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char)
     }
 }
 
+@system unittest
+{
+    import std.exception : collectException;
+
+    testServer.handle((s) {
+        auto req = s.recvReq;
+        s.close;
+    });
+    auto e = collectException!CurlException(byLineAsync(testServer.addr).empty);
+    assert(e !is null);
+}
+
+@system unittest
+{
+    import std.exception : collectException;
+
+    testServer.handle((s) {
+        auto req = s.recvReq;
+        s.send(httpNotFound());
+    });
+    auto e = collectException!HTTPStatusException(byLineAsync(testServer.addr).empty);
+    assert(e.status == 404);
+}
+
+@system unittest
+{
+    import core.time : seconds;
+    import std.algorithm.comparison : equal;
+    import std.exception : collectException;
+
+    testServer.handle((s) {
+        auto req = s.recvReq;
+        s.send(httpNotFound("Not\nFound\nPage"));
+    });
+    auto rng = byLineAsync(testServer.addr);
+    auto e = collectException!HTTPStatusException(rng.wait(1.seconds));
+    assert(e.status == 404);
+
+    testServer.handle((s) {
+        auto req = s.recvReq;
+        s.send(httpNotFound("Not\nFound\nPage"));
+    });
+    bool empty;
+    rng = byLineAsync(testServer.addr);
+    // http status exceptions sent early on, but range can still be iterated for content
+    e = collectException!HTTPStatusException(empty = rng.empty);
+    assert(e.status == 404);
+    assert(!empty);
+    assert(rng.equal(["Not", "Found", "Page"]));
+}
+
 /** HTTP/FTP fetch content as a range of chunks asynchronously.
  *
  * A range of chunks is returned immediately and the request that fetches the
@@ -1885,6 +1957,12 @@ auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char)
  * Returns:
  * A range of ubyte[chunkSize] with the content of the resource pointer to by
  * the URL.
+ *
+ * Throws:
+ *
+ * `CurlException` on error.
+ * `HTTPStatusException` when the response has a non-2xx status
+ *
  */
 auto byChunkAsync(Conn = AutoProtocol, PostUnit)
            (const(char)[] url, const(PostUnit)[] postData,
@@ -1952,6 +2030,56 @@ if (isCurlConn!(Conn))
     }
 }
 
+@system unittest
+{
+    import std.exception : collectException;
+
+    testServer.handle((s) {
+        auto req = s.recvReq;
+        s.close;
+    });
+    auto e = collectException!CurlException(byChunkAsync(testServer.addr, 2).empty);
+    assert(e !is null);
+}
+
+@system unittest
+{
+    import std.exception : collectException;
+
+    testServer.handle((s) {
+        auto req = s.recvReq;
+        s.send(httpNotFound());
+    });
+    auto e = collectException!HTTPStatusException(byChunkAsync(testServer.addr, 2).empty);
+    assert(e.status == 404);
+}
+
+@system unittest
+{
+    import core.time : seconds;
+    import std.algorithm.comparison : equal;
+    import std.exception : collectException;
+
+    testServer.handle((s) {
+        auto req = s.recvReq;
+        s.send(httpNotFound(cast(ubyte[])[0, 1, 2, 3, 4, 5]));
+    });
+    auto rng = byChunkAsync(testServer.addr, 2);
+    auto e = collectException!HTTPStatusException(rng.wait(1.seconds));
+    assert(e.status == 404);
+
+    testServer.handle((s) {
+        auto req = s.recvReq;
+        s.send(httpNotFound(cast(ubyte[])[0, 1, 2, 3, 4, 5]));
+    });
+    rng = byChunkAsync(testServer.addr, 2);
+    bool empty;
+    // http status exceptions sent early on, but range can still be iterated for content
+    e = collectException!HTTPStatusException(empty = rng.empty);
+    assert(e.status == 404);
+    assert(!empty);
+    assert(rng.equal([[0, 1], [2, 3], [4, 5]]));
+}
 
 /*
   Mixin template for all supported curl protocols. This is the commom
@@ -5328,14 +5456,24 @@ static:
                                     fromTid, aborted);
         };
 
-        static if ( is(Conn == HTTP) )
+        static if (is(Conn : HTTP))
         {
+            HTTP.StatusLine statusLine;
             client.method = method;
             // register dummy header handler
             client.onReceiveHeader = (in char[] key, in char[] value)
             {
                 if (key == "content-type")
                     encodingScheme = EncodingScheme.create(client.p.charset);
+            };
+            client.onReceiveStatusLine = (HTTP.StatusLine statusLine)
+            {
+                 // http status exceptions are sent immediately but do not abort sending the response
+                if (statusLine.code / 100 != 2)
+                {
+                    immutable ex = new HTTPStatusException(statusLine);
+                    fromTid.prioritySend(ex);
+                }
             };
         }
         else
@@ -5351,7 +5489,7 @@ static:
         }
         catch (Exception ex)
         {
-            prioritySend(fromTid, cast(immutable(Exception)) ex);
+            fromTid.prioritySend(cast(immutable(Exception)) ex);
             fromTid.send(thisTid, curlMessage(true)); // signal done
             return;
         }
@@ -5364,9 +5502,8 @@ static:
                 fromTid.send(thisTid, curlMessage(true)); // signal done
                 return;
             }
-            prioritySend(fromTid, cast(immutable(CurlException))
-                         new CurlException(client.p.curl.errorString(code)));
-
+            immutable ex = new CurlException(client.p.curl.errorString(code));
+            fromTid.prioritySend(ex);
             fromTid.send(thisTid, curlMessage(true)); // signal done
             return;
         }
