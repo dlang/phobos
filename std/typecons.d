@@ -856,7 +856,7 @@ if (distinctFieldNames!(Specs))
          Returns: A concatenation of this tuple and `t`
          */
         auto opBinary(string op, T)(auto ref T t)
-        if (op == "~")
+        if (op == "~" && !(is(T : U[], U) && isTuple!U))
         {
             static if (isTuple!T)
             {
@@ -873,7 +873,7 @@ if (distinctFieldNames!(Specs))
 
         /// ditto
         auto opBinaryRight(string op, T)(auto ref T t)
-        if (op == "~")
+        if (op == "~" && !(is(T : U[], U) && isTuple!U))
         {
             static if (isTuple!T)
             {
@@ -1414,6 +1414,23 @@ if (distinctFieldNames!(Specs))
     static assert(t.fieldNames == tuple("foo", "bar"));
     assert(t.foo == 1.0);
     assert(t.bar == "3");
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=18824
+// tuple concat
+@safe unittest
+{
+    alias Type = Tuple!(int, string);
+    Type[] arr;
+    auto t = tuple(2, "s");
+    // Test opBinaryRight
+    arr = arr ~ t;
+    // Test opBinary
+    arr = t ~ arr;
+    static assert(is(typeof(arr) == Type[]));
+    immutable Type[] b;
+    auto c = b ~ t;
+    static assert(is(typeof(c) == immutable(Type)[]));
 }
 
 // tuple concat
@@ -2091,9 +2108,16 @@ if (is(T == class) || is(T == interface) || isAssociativeArray!T)
         U stripped;
     }
 
-    void opAssign(T another) @trusted pure nothrow @nogc
+    void opAssign(T another) pure nothrow @nogc
     {
-        stripped = cast(U) another;
+        // If `T` defines `opCast` we must infer the safety
+        static if (hasMember!(T, "opCast"))
+        {
+            // This will allow the compiler to infer the safety of `T.opCast!U`
+            // without generating any runtime cost
+            if (false) { stripped = cast(U) another; }
+        }
+        () @trusted { stripped = cast(U) another; }();
     }
 
     void opAssign(typeof(this) another) @trusted pure nothrow @nogc
@@ -2110,8 +2134,9 @@ if (is(T == class) || is(T == interface) || isAssociativeArray!T)
         }
     }
 
-    this(T initializer) @trusted pure nothrow @nogc
+    this(T initializer) pure nothrow @nogc
     {
+        // Infer safety from opAssign
         opAssign(initializer);
     }
 
@@ -2265,6 +2290,26 @@ if (is(T == class) || is(T == interface) || isDynamicArray!T || isAssociativeArr
     assert(o1 != new Object(), "Rebindable!(const(Object)) should be"
         ~ " comparable against Object itself and use Object.opEquals.");
 }
+
+@safe unittest // issue 18755
+{
+    static class Foo
+    {
+        auto opCast(T)() @system immutable pure nothrow
+        {
+            *(cast(uint*) 0xdeadbeef) = 0xcafebabe;
+            return T.init;
+        }
+    }
+
+    static assert(!__traits(compiles, () @safe {
+        auto r = Rebindable!(immutable Foo)(new Foo);
+    }));
+    static assert(__traits(compiles, () @system {
+        auto r = Rebindable!(immutable Foo)(new Foo);
+    }));
+}
+
 /**
 Convenience function for creating a `Rebindable` using automatic type
 inference.

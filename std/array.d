@@ -3235,7 +3235,7 @@ if (isDynamicArray!A)
      * Params:
      *     newCapacity = the capacity the `Appender` should have
      */
-    void reserve(size_t newCapacity) @safe pure nothrow
+    void reserve(size_t newCapacity)
     {
         if (_data)
         {
@@ -3270,7 +3270,7 @@ if (isDynamicArray!A)
     }
 
     // ensure we can add nelems elements, resizing as necessary
-    private void ensureAddable(size_t nelems) @trusted pure nothrow
+    private void ensureAddable(size_t nelems)
     {
         if (!_data)
             _data = new Data;
@@ -3306,7 +3306,7 @@ if (isDynamicArray!A)
             // first, try extending the current block
             if (_data.canExtend)
             {
-                immutable u = GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof);
+                immutable u = (() @trusted => GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof))();
                 if (u)
                 {
                     // extend worked, update the capacity
@@ -3322,12 +3322,12 @@ if (isDynamicArray!A)
             const nbytes = mulu(newlen, T.sizeof, overflow);
             if (overflow) assert(0);
 
-            auto bi = GC.qalloc(nbytes, blockAttribute!T);
+            auto bi = (() @trusted => GC.qalloc(nbytes, blockAttribute!T))();
             _data.capacity = bi.size / T.sizeof;
             import core.stdc.string : memcpy;
             if (len)
-                memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
-            _data.arr = (cast(Unqual!T*) bi.base)[0 .. len];
+                () @trusted { memcpy(bi.base, _data.arr.ptr, len * T.sizeof); }();
+            _data.arr = (() @trusted => (cast(Unqual!T*) bi.base)[0 .. len])();
             _data.canExtend = true;
             // leave the old data, for safety reasons
         }
@@ -3422,10 +3422,10 @@ if (isDynamicArray!A)
             }
 
             // make sure we have enough space, then add the items
-            @trusted auto bigDataFun(size_t extra)
+            auto bigDataFun(size_t extra)
             {
                 ensureAddable(extra);
-                return _data.arr.ptr[0 .. _data.arr.length + extra];
+                return (() @trusted => _data.arr.ptr[0 .. _data.arr.length + extra])();
             }
             auto bigData = bigDataFun(items.length);
 
@@ -3617,6 +3617,41 @@ if (isDynamicArray!A)
     const(R)[1] r;
     app.put(r[0]);
     app.put(r[]);
+}
+
+@safe unittest // issue 13300
+{
+    static test(bool isPurePostblit)()
+    {
+        static if (!isPurePostblit)
+            static int i;
+
+        struct Simple
+        {
+            @disable this(); // Without this, it works.
+            static if (!isPurePostblit)
+                this(this) { i++; }
+            else
+                pure this(this) { }
+
+            private:
+            this(int tmp) { }
+        }
+
+        struct Range
+        {
+            @property Simple front() { return Simple(0); }
+            void popFront() { count++; }
+            @property empty() { return count < 3; }
+            size_t count;
+        }
+
+        Range r;
+        auto a = r.array();
+    }
+
+    static assert(__traits(compiles, () pure { test!true(); }));
+    static assert(!__traits(compiles, () pure { test!false(); }));
 }
 
 //Calculates an efficient growth scheme based on the old capacity
