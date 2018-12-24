@@ -1,0 +1,6 @@
+std.net.curl methods now throw on non-2xx status codes
+
+The methods $(REF get,std,net,curl), $(REF post,std,net,curl), $(REF put,std,net,curl), $(REF del,std,net,curl), $(REF trace,std,net,curl), $(REF connect,std,net,curl), $(REF patch,std,net,curl), $(REF byLine,std,net,curl), $(REF byChunk,std,net,curl), $(REF byLineAsync,std,net,curl), and $(REF byChunkAsync,std,net,curl) were changed to throw an $(REF HTTPStatusException,std,net,curl) when the server responds with a non-success status code.
+
+For download, byLineAsync, and byChunkAsync the exception is thrown
+after receiving any error response body.
