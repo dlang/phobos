@@ -645,9 +645,10 @@ private:
          win = sysinfo.dwAllocationGranularity;
          +/
     }
-    else version (linux)
+    else version (Posix)
     {
-        // getpagesize() is not defined in the unix D headers so use the guess
+        import core.sys.posix.unistd;
+        win = cast(size_t) sysconf(_SC_PAGESIZE);
     }
     string test_file = std.file.deleteme ~ "-testing.txt";
     MmFile mf = new MmFile(test_file,MmFile.Mode.readWriteNew,
