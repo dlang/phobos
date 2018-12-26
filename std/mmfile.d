@@ -648,7 +648,7 @@ private:
     else version (Posix)
     {
         import core.sys.posix.unistd;
-        win = cast(size_t)sysconf(_SC_PAGESIZE);
+        win = cast(size_t) sysconf(_SC_PAGESIZE);
     }
     string test_file = std.file.deleteme ~ "-testing.txt";
     MmFile mf = new MmFile(test_file,MmFile.Mode.readWriteNew,
