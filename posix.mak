@@ -22,10 +22,6 @@
 #
 # make std/somemodule.test => only builds and unittests std.somemodule
 #
-# make TZ_DATABASE_DIR=path to the TZDatabase directory => This is useful to
-# overwrite the hardcoded path to the TZDatabase directory needed
-# for std/datetime/timezone.d
-
 ################################################################################
 # Configurable stuff, usually from the command line
 #
@@ -151,10 +147,6 @@ endif
 
 ifdef ENABLE_COVERAGE
 override DFLAGS  += -cov
-endif
-ifneq (,$(TZ_DATABASE_DIR))
-$(file > /tmp/TZDatabaseDirFile, ${TZ_DATABASE_DIR})
-override DFLAGS += -version=TZDatabaseDir -J/tmp/
 endif
 
 UDFLAGS=-unittest
