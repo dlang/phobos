@@ -4175,7 +4175,12 @@ private struct CurlAPI
             version (Posix)
                 dlclose(handle);
 
-            version (OSX)
+            version (LibcurlPath)
+            {
+                import std.string : strip;
+                static immutable names = [strip(import("LibcurlPathFile"))];
+            }
+            else version (OSX)
                 static immutable names = ["libcurl.4.dylib"];
             else version (Posix)
             {
