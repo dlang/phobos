@@ -512,7 +512,7 @@ if (distinctFieldNames!(Specs))
     //      :
     // NOTE: field[k] is an expression (which yields a symbol of a
     //       variable) and can't be aliased directly.
-    string injectNamedFields()
+    enum injectNamedFields = ()
     {
         string decl = "";
         static foreach (i, val; fieldSpecs)
@@ -525,7 +525,7 @@ if (distinctFieldNames!(Specs))
             }
         }}
         return decl;
-    }
+    };
 
     // Returns Specs for a subtuple this[from .. to] preserving field
     // names if any.
@@ -1496,6 +1496,26 @@ if (distinctFieldNames!(Specs))
 
     //Error: mutable method Bad.opEquals is not callable using a const object
     assert(t == AliasSeq!(1, Bad(1), "asdf"));
+}
+
+// Ensure Tuple.toHash works
+@safe unittest
+{
+    Tuple!(int, int) point;
+    assert(point.toHash == typeof(point).init.toHash);
+    assert(tuple(1, 2) != point);
+    assert(tuple(1, 2) == tuple(1, 2));
+    point[0] = 1;
+    assert(tuple(1, 2) != point);
+    point[1] = 2;
+    assert(tuple(1, 2) == point);
+}
+
+@safe @betterC unittest
+{
+    auto t = tuple(1, 2);
+    assert(t == tuple(1, 2));
+    auto t3 = tuple(1, 'd');
 }
 
 /**
