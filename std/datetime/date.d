@@ -11,7 +11,7 @@ import core.time;
 import std.traits : isSomeString, Unqual;
 import std.typecons : Flag;
 
-version(unittest) import std.exception : assertThrown;
+version (unittest) import std.exception : assertThrown;
 
 
 @safe unittest
@@ -10285,7 +10285,7 @@ Month monthFromString(string monthStr) @safe pure
 }
 
 
-version(unittest)
+version (unittest)
 {
     // All of these helper arrays are sorted in ascending order.
     auto testYearsBC = [-1999, -1200, -600, -4, -1, 0];

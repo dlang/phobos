@@ -478,7 +478,7 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
             enum expect =
                 (BodySafe || !EncloseSafe) && (!EnclosePure || BodyPure);
 
-            version(none)
+            version (none)
             pragma(msg, "safe = ", EncloseSafe?1:0, "/", BodySafe?1:0, ", ",
                         "pure = ", EnclosePure?1:0, "/", BodyPure?1:0, ", ",
                         "expect = ", expect?"OK":"NG", ", ",
@@ -930,7 +930,7 @@ immutable(T[U]) assumeUnique(T, U)(ref T[U] array) pure nothrow
 }
 
 // @@@BUG@@@
-version(none) @system unittest
+version (none) @system unittest
 {
     int[string] arr = ["a":1];
     auto arr1 = assumeUnique(arr);
@@ -1742,7 +1742,7 @@ CommonType!(T1, T2) ifThrown(T1, T2)(lazy scope T1 expression, scope T2 delegate
     static assert(!__traits(compiles, (new Object()).ifThrown(e=>1)));
 }
 
-version(unittest) package
+version (unittest) package
 @property void assertCTFEable(alias dg)()
 {
     static assert({ cast(void) dg(); return true; }());

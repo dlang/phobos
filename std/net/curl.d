@@ -171,7 +171,7 @@ import std.internal.cstring;
 
 public import etc.c.curl : CurlOption;
 
-version(unittest)
+version (unittest)
 {
     // Run unit test with the PHOBOS_TEST_ALLOW_NET=1 set in order to
     // allow net traffic
@@ -310,7 +310,7 @@ version(unittest)
 
     private enum httpContinue = "HTTP/1.1 100 Continue\r\n\r\n";
 }
-version(StdDdoc) import std.stdio;
+version (StdDdoc) import std.stdio;
 
 // Default data timeout for Protocols
 private enum _defaultDataTimeout = dur!"minutes"(2);

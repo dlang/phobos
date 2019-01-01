@@ -1053,7 +1053,7 @@ if (is(Unqual!Char == Char))
     */
     ubyte indexEnd;
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         /**
          The format specifier contained a $(D '-') ($(D printf)
@@ -2165,7 +2165,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 
         if (s.length > 0)
         {
-          version(none)
+          version (none)
           {
             return formatValue(w, s, f);
           }
@@ -4079,7 +4079,7 @@ private T getNth(string kind, alias Condition, T, A...)(uint index, A args)
 
 /* ======================== Unit Tests ====================================== */
 
-version(unittest)
+version (unittest)
 void formatTest(T)(T val, string expected, size_t ln = __LINE__, string fn = __FILE__)
 {
     import core.exception : AssertError;
@@ -4093,7 +4093,7 @@ void formatTest(T)(T val, string expected, size_t ln = __LINE__, string fn = __F
             text("expected = `", expected, "`, result = `", w.data, "`"), fn, ln);
 }
 
-version(unittest)
+version (unittest)
 void formatTest(T)(string fmt, T val, string expected, size_t ln = __LINE__, string fn = __FILE__) @safe
 {
     import core.exception : AssertError;
@@ -4106,7 +4106,7 @@ void formatTest(T)(string fmt, T val, string expected, size_t ln = __LINE__, str
             text("expected = `", expected, "`, result = `", w.data, "`"), fn, ln);
 }
 
-version(unittest)
+version (unittest)
 void formatTest(T)(T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__)
 {
     import core.exception : AssertError;
@@ -4124,7 +4124,7 @@ void formatTest(T)(T val, string[] expected, size_t ln = __LINE__, string fn = _
             text("expected one of `", expected, "`, result = `", w.data, "`"), fn, ln);
 }
 
-version(unittest)
+version (unittest)
 void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__) @safe
 {
     import core.exception : AssertError;
@@ -4215,7 +4215,7 @@ void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, s
     import core.stdc.string : strlen;
     import std.array : appender;
     import std.conv : text, octal;
-    import std.c.stdio : snprintf;
+    import core.stdc.stdio : snprintf;
 
     debug(format) printf("std.format.format.unittest\n");
 
@@ -4606,7 +4606,7 @@ here:
     assert(a == "hello" && b == 124 && c == 34.5);
 }
 
-version(unittest)
+version (unittest)
 void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = __FILE__, size_t ln = __LINE__)
 {
     import core.exception : AssertError;
@@ -4648,7 +4648,7 @@ void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = _
             input, fn, ln);
 }
 
-version(unittest)
+version (unittest)
 void formatReflectTest(T)(ref T val, string fmt, string[] formatted, string fn = __FILE__, size_t ln = __LINE__)
 {
     import core.exception : AssertError;
@@ -5430,7 +5430,7 @@ private bool needToSwapEndianess(Char)(const ref FormatSpec!Char f)
     s = format("%d %s", 0x1234AF, 0xAFAFAFAF);
     assert(s == "1193135 2947526575");
 
-    //version(X86_64)
+    //version (X86_64)
     //{
     //    pragma(msg, "several format tests disabled on x86_64 due to bug 5625");
     //}

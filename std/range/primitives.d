@@ -2064,7 +2064,7 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
     assert(a == [ 2, 3 ]);
 }
 
-version(unittest)
+version (unittest)
 {
     static assert(!is(typeof({          int[4] a; popFront(a); })));
     static assert(!is(typeof({ immutable int[] a; popFront(a); })));
@@ -2185,7 +2185,7 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
     assert(a == [ 1, 2 ]);
 }
 
-version(unittest)
+version (unittest)
 {
     static assert(!is(typeof({ immutable int[] a; popBack(a); })));
     static assert(!is(typeof({          int[4] a; popBack(a); })));

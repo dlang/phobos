@@ -115,12 +115,12 @@ alias CURL = void;
 alias curl_socket_t = socket_t;
 
 /// jdrewsen - Would like to get socket error constant from std.socket by it is private atm.
-version(Windows)
+version (Windows)
 {
   import core.sys.windows.windows, core.sys.windows.winsock2;
   enum CURL_SOCKET_BAD = SOCKET_ERROR;
 }
-version(Posix) enum CURL_SOCKET_BAD = -1;
+version (Posix) enum CURL_SOCKET_BAD = -1;
 
 ///
 extern (C) struct curl_httppost

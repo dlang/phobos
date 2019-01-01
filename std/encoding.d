@@ -3208,8 +3208,8 @@ class EncodingSchemeUtf16Native : EncodingScheme
 
     const
     {
-        version(LittleEndian) { enum string NAME = "UTF-16LE"; }
-        version(BigEndian)    { enum string NAME = "UTF-16BE"; }
+        version (LittleEndian) { enum string NAME = "UTF-16LE"; }
+        version (BigEndian)    { enum string NAME = "UTF-16BE"; }
 
         override string[] names() @safe pure nothrow
         {
@@ -3271,12 +3271,12 @@ class EncodingSchemeUtf16Native : EncodingScheme
 }
 @system unittest
 {
-    version(LittleEndian)
+    version (LittleEndian)
     {
         auto efrom = EncodingScheme.create("utf-16le");
         ubyte[6] sample = [154,1, 155,1, 156,1];
     }
-    version(BigEndian)
+    version (BigEndian)
     {
         auto efrom = EncodingScheme.create("utf-16be");
         ubyte[6] sample = [1,154, 1,155, 1,156];
@@ -3304,8 +3304,8 @@ class EncodingSchemeUtf32Native : EncodingScheme
 
     const
     {
-        version(LittleEndian) { enum string NAME = "UTF-32LE"; }
-        version(BigEndian)    { enum string NAME = "UTF-32BE"; }
+        version (LittleEndian) { enum string NAME = "UTF-32LE"; }
+        version (BigEndian)    { enum string NAME = "UTF-32BE"; }
 
         override string[] names() @safe pure nothrow
         {
@@ -3367,12 +3367,12 @@ class EncodingSchemeUtf32Native : EncodingScheme
 }
 @system unittest
 {
-    version(LittleEndian)
+    version (LittleEndian)
     {
         auto efrom = EncodingScheme.create("utf-32le");
         ubyte[12] sample = [154,1,0,0, 155,1,0,0, 156,1,0,0];
     }
-    version(BigEndian)
+    version (BigEndian)
     {
         auto efrom = EncodingScheme.create("utf-32be");
         ubyte[12] sample = [0,0,1,154, 0,0,1,155, 0,0,1,156];
@@ -3387,7 +3387,7 @@ class EncodingSchemeUtf32Native : EncodingScheme
 
 
 // Helper functions
-version(unittest)
+version (unittest)
 {
     void transcodeReverse(Src,Dst)(immutable(Src)[] s, out immutable(Dst)[] r)
     {
@@ -3575,7 +3575,7 @@ if (isForwardRange!Range && is(Unqual!(ElementType!Range) == ubyte))
     auto ts = dchar(0x0000FEFF) ~ "Hello World"d;
 
     auto entry = getBOM(cast(ubyte[]) ts);
-    version(BigEndian)
+    version (BigEndian)
     {
         assert(entry.schema == BOM.utf32be, format("%s", entry.schema));
     }

@@ -401,7 +401,7 @@ if (isInputRange!Range)
     assert(b == ["foo":"bar", "baz":"quux"]);
 }
 
-// @@@11053@@@ - Cannot be version(unittest) - recursive instantiation error
+// @@@11053@@@ - Cannot be version (unittest) - recursive instantiation error
 @safe unittest
 {
     import std.typecons;
@@ -514,7 +514,7 @@ private template blockAttribute(T)
         enum blockAttribute = GC.BlkAttr.NO_SCAN;
     }
 }
-version(unittest)
+version (unittest)
 {
     import core.memory : UGC = GC;
     static assert(!(blockAttribute!void & UGC.BlkAttr.NO_SCAN));
@@ -533,7 +533,7 @@ private template nDimensions(T)
     }
 }
 
-version(unittest)
+version (unittest)
 {
     static assert(nDimensions!(uint[]) == 1);
     static assert(nDimensions!(float[][]) == 2);

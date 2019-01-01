@@ -334,7 +334,7 @@ template QualifierOf(T)
     alias Qual7 = QualifierOf!(   immutable int);   static assert(is(Qual7!long ==    immutable long));
 }
 
-version(unittest)
+version (unittest)
 {
     alias TypeQualifierList = AliasSeq!(MutableOf, ConstOf, SharedOf, SharedConstOf, ImmutableOf);
 
@@ -394,7 +394,7 @@ template packageName(alias T)
     static assert(packageName!(X12287!int.i) == "std");
 }
 
-version (none) version(unittest) //Please uncomment me when changing packageName to test global imports
+version (none) version (unittest) //Please uncomment me when changing packageName to test global imports
 {
     import core.sync.barrier;  // global import
     static assert(packageName!core == "core");
@@ -450,7 +450,7 @@ template moduleName(alias T)
     static assert(moduleName!(X12287!int.i) == "std.traits");
 }
 
-version (none) version(unittest) //Please uncomment me when changing moduleName to test global imports
+version (none) version (unittest) //Please uncomment me when changing moduleName to test global imports
 {
     import core.sync.barrier;  // global import
     static assert(!__traits(compiles, moduleName!(core.sync)));
@@ -484,7 +484,7 @@ template fullyQualifiedName(T...)
     static assert(fullyQualifiedName!fullyQualifiedName == "std.traits.fullyQualifiedName");
 }
 
-version(unittest)
+version (unittest)
 {
     // Used for both fqnType and fqnSym unittests
     private struct QualifiedNameTests
@@ -7388,7 +7388,7 @@ template mangledName(sth...)
     static assert(TL == AliasSeq!("i", "xi", "yi"));
 }
 
-version(unittest) void freeFunc(string);
+version (unittest) void freeFunc(string);
 
 @safe unittest
 {

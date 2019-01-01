@@ -25,7 +25,7 @@ struct MmapAllocator
     */
     enum size_t alignment = 4096;
 
-    version(Posix)
+    version (Posix)
     {
         /// Allocator API.
         void[] allocate(size_t bytes) shared
@@ -47,7 +47,7 @@ struct MmapAllocator
             return true;
         }
     }
-    else version(Windows)
+    else version (Windows)
     {
         import core.sys.windows.windows : VirtualAlloc, VirtualFree, MEM_COMMIT,
             PAGE_READWRITE, MEM_RELEASE;

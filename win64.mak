@@ -255,43 +255,10 @@ SRC_STD_REGEX= \
 	std\regex\internal\kickstart.d \
 	std\regex\internal\generator.d
 
-SRC_STD_C= \
-	std\c\process.d \
-	std\c\stdlib.d \
-	std\c\time.d \
-	std\c\stdio.d \
-	std\c\math.d \
-	std\c\stdarg.d \
-	std\c\stddef.d \
-	std\c\fenv.d \
-	std\c\string.d \
-	std\c\locale.d \
-	std\c\wcharh.d
-
 SRC_STD_WIN= \
 	std\windows\registry.d \
-	std\windows\iunknown.d \
 	std\windows\syserror.d \
 	std\windows\charset.d
-
-SRC_STD_C_WIN= \
-	std\c\windows\windows.d \
-	std\c\windows\com.d \
-	std\c\windows\winsock.d \
-	std\c\windows\stat.d
-
-SRC_STD_C_LINUX= \
-	std\c\linux\linux.d \
-	std\c\linux\socket.d \
-	std\c\linux\pthread.d \
-	std\c\linux\termios.d \
-	std\c\linux\tipc.d
-
-SRC_STD_C_OSX= \
-	std\c\osx\socket.d
-
-SRC_STD_C_FREEBSD= \
-	std\c\freebsd\socket.d
 
 SRC_STD_INTERNAL= \
 	std\internal\cstring.d \
@@ -551,17 +518,6 @@ DOCS= \
 	$(DOC)\std_experimental_typecons.html \
 	$(DOC)\std_windows_charset.html \
 	$(DOC)\std_windows_registry.html \
-	$(DOC)\std_c_fenv.html \
-	$(DOC)\std_c_locale.html \
-	$(DOC)\std_c_math.html \
-	$(DOC)\std_c_process.html \
-	$(DOC)\std_c_stdarg.html \
-	$(DOC)\std_c_stddef.html \
-	$(DOC)\std_c_stdio.html \
-	$(DOC)\std_c_stdlib.html \
-	$(DOC)\std_c_string.html \
-	$(DOC)\std_c_time.html \
-	$(DOC)\std_c_wcharh.html \
 	$(DOC)\etc_c_curl.html \
 	$(DOC)\etc_c_sqlite3.html \
 	$(DOC)\etc_c_zlib.html \
@@ -1068,39 +1024,6 @@ $(DOC)\std_windows_charset.html : $(STDDOC) std\windows\charset.d
 
 $(DOC)\std_windows_registry.html : $(STDDOC) std\windows\registry.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_windows_registry.html $(STDDOC) std\windows\registry.d
-
-$(DOC)\std_c_fenv.html : $(STDDOC) std\c\fenv.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_c_fenv.html $(STDDOC) std\c\fenv.d
-
-$(DOC)\std_c_locale.html : $(STDDOC) std\c\locale.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_c_locale.html $(STDDOC) std\c\locale.d
-
-$(DOC)\std_c_math.html : $(STDDOC) std\c\math.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_c_math.html $(STDDOC) std\c\math.d
-
-$(DOC)\std_c_process.html : $(STDDOC) std\c\process.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_c_process.html $(STDDOC) std\c\process.d
-
-$(DOC)\std_c_stdarg.html : $(STDDOC) std\c\stdarg.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_c_stdarg.html $(STDDOC) std\c\stdarg.d
-
-$(DOC)\std_c_stddef.html : $(STDDOC) std\c\stddef.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_c_stddef.html $(STDDOC) std\c\stddef.d
-
-$(DOC)\std_c_stdio.html : $(STDDOC) std\c\stdio.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_c_stdio.html $(STDDOC) std\c\stdio.d
-
-$(DOC)\std_c_stdlib.html : $(STDDOC) std\c\stdlib.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_c_stdlib.html $(STDDOC) std\c\stdlib.d
-
-$(DOC)\std_c_string.html : $(STDDOC) std\c\string.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_c_string.html $(STDDOC) std\c\string.d
-
-$(DOC)\std_c_time.html : $(STDDOC) std\c\time.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_c_time.html $(STDDOC) std\c\time.d
-
-$(DOC)\std_c_wcharh.html : $(STDDOC) std\c\wcharh.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_c_wcharh.html $(STDDOC) std\c\wcharh.d
 
 $(DOC)\etc_c_curl.html : $(STDDOC) etc\c\curl.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\etc_c_curl.html $(STDDOC) etc\c\curl.d

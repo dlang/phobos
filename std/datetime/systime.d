@@ -15,19 +15,19 @@ import std.format : format;
 import std.range.primitives;
 import std.traits : isIntegral, isSigned, isSomeString, Unqual;
 
-version(Windows)
+version (Windows)
 {
     import core.stdc.time : time_t;
     import core.sys.windows.windows;
     import core.sys.windows.winsock2;
 }
-else version(Posix)
+else version (Posix)
 {
     import core.sys.posix.signal : timespec;
     import core.sys.posix.sys.types : time_t;
 }
 
-version(unittest)
+version (unittest)
 {
     import core.exception : AssertError;
     import std.exception : assertThrown;
@@ -77,7 +77,7 @@ public:
         // In particular, dmc does not use unix time. If we can guarantee that
         // the MS runtime uses unix time, then we may be able run this test
         // then, but for now, we're just not going to run this test on Windows.
-        version(Posix)
+        version (Posix)
         {
             static import core.stdc.time;
             static import std.math;
@@ -126,7 +126,7 @@ public:
             static assert(0, format("ClockType.%s is not supported by Clock.currTime or Clock.currStdTime", clockType));
         }
 
-        version(Windows)
+        version (Windows)
         {
             FILETIME fileTime;
             GetSystemTimeAsFileTime(&fileTime);
@@ -143,12 +143,12 @@ public:
             else
                 return result;
         }
-        else version(Posix)
+        else version (Posix)
         {
             static import core.stdc.time;
             enum hnsecsToUnixEpoch = unixTimeToStdTime(0);
 
-            version(OSX)
+            version (OSX)
             {
                 static if (clockType == ClockType.second)
                     return unixTimeToStdTime(core.stdc.time.time(null));
@@ -163,7 +163,7 @@ public:
                            hnsecsToUnixEpoch;
                 }
             }
-            else version(linux)
+            else version (linux)
             {
                 static if (clockType == ClockType.second)
                     return unixTimeToStdTime(core.stdc.time.time(null));
@@ -183,7 +183,7 @@ public:
                            hnsecsToUnixEpoch;
                 }
             }
-            else version(FreeBSD)
+            else version (FreeBSD)
             {
                 import core.sys.freebsd.time : clock_gettime, CLOCK_REALTIME,
                     CLOCK_REALTIME_FAST, CLOCK_REALTIME_PRECISE, CLOCK_SECOND;
@@ -199,7 +199,7 @@ public:
                        ts.tv_nsec / 100 +
                        hnsecsToUnixEpoch;
             }
-            else version(NetBSD)
+            else version (NetBSD)
             {
                 static if (clockType == ClockType.second)
                     return unixTimeToStdTime(core.stdc.time.time(null));
@@ -214,7 +214,7 @@ public:
                            hnsecsToUnixEpoch;
                 }
             }
-            else version(Solaris)
+            else version (Solaris)
             {
                 static if (clockType == ClockType.second)
                     return unixTimeToStdTime(core.stdc.time.time(null));
@@ -346,7 +346,7 @@ private:
 struct SysTime
 {
     import core.stdc.time : tm;
-    version(Posix) import core.sys.posix.sys.time : timeval;
+    version (Posix) import core.sys.posix.sys.time : timeval;
     import std.typecons : Rebindable;
 
 public:
@@ -2366,7 +2366,7 @@ public:
     }
 
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         private struct timespec {}
         /++
@@ -2376,7 +2376,7 @@ public:
           +/
         timespec toTimeSpec() @safe const pure nothrow;
     }
-    else version(Posix)
+    else version (Posix)
     {
         timespec toTimeSpec() @safe const pure nothrow
         {
@@ -2434,7 +2434,7 @@ public:
         timeInfo.tm_yday = dateTime.dayOfYear - 1;
         timeInfo.tm_isdst = _timezone.dstInEffect(_stdTime);
 
-        version(Posix)
+        version (Posix)
         {
             import std.utf : toUTFz;
             timeInfo.tm_gmtoff = cast(int) convert!("hnsecs", "seconds")(adjTime - _stdTime);
@@ -2449,7 +2449,7 @@ public:
     {
         import std.conv : to;
 
-        version(Posix)
+        version (Posix)
         {
             scope(exit) clearTZEnvVar();
             setTZEnvVar("America/Los_Angeles");
@@ -2467,12 +2467,12 @@ public:
             assert(timeInfo.tm_wday == 4);
             assert(timeInfo.tm_yday == 0);
 
-            version(Posix)
+            version (Posix)
                 assert(timeInfo.tm_isdst == 0);
-            else version(Windows)
+            else version (Windows)
                 assert(timeInfo.tm_isdst == 0 || timeInfo.tm_isdst == 1);
 
-            version(Posix)
+            version (Posix)
             {
                 assert(timeInfo.tm_gmtoff == -8 * 60 * 60);
                 assert(to!string(timeInfo.tm_zone) == "PST");
@@ -2491,12 +2491,12 @@ public:
             assert(timeInfo.tm_wday == 0);
             assert(timeInfo.tm_yday == 184);
 
-            version(Posix)
+            version (Posix)
                 assert(timeInfo.tm_isdst == 1);
-            else version(Windows)
+            else version (Windows)
                 assert(timeInfo.tm_isdst == 0 || timeInfo.tm_isdst == 1);
 
-            version(Posix)
+            version (Posix)
             {
                 assert(timeInfo.tm_gmtoff == -7 * 60 * 60);
                 assert(to!string(timeInfo.tm_zone) == "PDT");
@@ -6508,9 +6508,9 @@ public:
         assert(SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(9_999_999)) - SysTime(DateTime(1, 1, 1, 0, 0, 0)) ==
                dur!"hnsecs"(-1));
 
-        version(Posix)
+        version (Posix)
             immutable tz = PosixTimeZone.getTimeZone("America/Los_Angeles");
-        else version(Windows)
+        else version (Windows)
             immutable tz = WindowsTimeZone.getTimeZone("Pacific Standard Time");
 
         {
@@ -9229,9 +9229,9 @@ if (is(T == int) || is(T == long))
 }
 
 
-version(StdDdoc)
+version (StdDdoc)
 {
-    version(Windows)
+    version (Windows)
     {}
     else
     {
@@ -9346,7 +9346,7 @@ version(StdDdoc)
       +/
     FILETIME SysTimeToFILETIME(SysTime sysTime) @safe;
 }
-else version(Windows)
+else version (Windows)
 {
     SysTime SYSTEMTIMEToSysTime(const SYSTEMTIME* st, immutable TimeZone tz = LocalTime()) @safe
     {
@@ -9867,7 +9867,7 @@ afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
     assertThrown!DateTimeException(parseRFC822DateTime(badStr));
 }
 
-version(unittest) void testParse822(alias cr)(string str, SysTime expected, size_t line = __LINE__)
+version (unittest) void testParse822(alias cr)(string str, SysTime expected, size_t line = __LINE__)
 {
     import std.format : format;
     auto value = cr(str);
@@ -9876,7 +9876,7 @@ version(unittest) void testParse822(alias cr)(string str, SysTime expected, size
         throw new AssertError(format("wrong result. expected [%s], actual[%s]", expected, result), __FILE__, line);
 }
 
-version(unittest) void testBadParse822(alias cr)(string str, size_t line = __LINE__)
+version (unittest) void testBadParse822(alias cr)(string str, size_t line = __LINE__)
 {
     try
         parseRFC822DateTime(cr(str));
@@ -10801,7 +10801,7 @@ if (isIntegral!T && isSigned!T) // The constraints on R were already covered by 
 }
 
 
-version(unittest)
+version (unittest)
 {
     // Variables to help in testing.
     Duration currLocalDiffFromUTC;
@@ -11083,12 +11083,12 @@ version(unittest)
         immutable lt = LocalTime().utcToTZ(0);
         currLocalDiffFromUTC = dur!"hnsecs"(lt);
 
-        version(Posix)
+        version (Posix)
         {
             immutable otherTZ = lt < 0 ? PosixTimeZone.getTimeZone("Australia/Sydney")
                                        : PosixTimeZone.getTimeZone("America/Denver");
         }
-        else version(Windows)
+        else version (Windows)
         {
             immutable otherTZ = lt < 0 ? WindowsTimeZone.getTimeZone("AUS Eastern Standard Time")
                                        : WindowsTimeZone.getTimeZone("Mountain Standard Time");

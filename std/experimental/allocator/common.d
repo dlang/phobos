@@ -417,7 +417,7 @@ Forwards each of the methods in `funs` (if defined) to `member`.
     return result;
 }
 
-version(unittest)
+version (unittest)
 {
     import std.experimental.allocator : IAllocator, ISharedAllocator;
 

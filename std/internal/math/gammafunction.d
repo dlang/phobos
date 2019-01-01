@@ -249,7 +249,9 @@ real igammaTemmeLarge(real a, real x)
 
 public:
 /// The maximum value of x for which gamma(x) < real.infinity.
-static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
+static if (floatTraits!(real).realFormat == RealFormat.ieeeQuadruple)
+    enum real MAXGAMMA = 1755.5483429L;
+else static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
     enum real MAXGAMMA = 1755.5483429L;
 else static if (floatTraits!(real).realFormat == RealFormat.ieeeDouble)
     enum real MAXGAMMA = 171.6243769L;
@@ -575,7 +577,28 @@ real logGamma(real x)
 
 
 private {
-static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
+/*
+ * These value can be calculated like this:
+ * 1) Get exact real.max/min_normal/epsilon from compiler:
+ *    writefln!"%a"(real.max/min_normal_epsilon)
+ * 2) Convert for Wolfram Alpha
+ *    0xf.fffffffffffffffp+16380 ==> (f.fffffffffffffff base 16) * 2^16380
+ * 3) Calculate result on wofram alpha:
+ *    http://www.wolframalpha.com/input/?i=ln((1.ffffffffffffffffffffffffffff+base+16)+*+2%5E16383)+in+base+2
+ * 4) Convert to proper format:
+ *    string mantissa = "1.011...";
+ *    write(mantissa[0 .. 2]); mantissa = mantissa[2 .. $];
+ *    for (size_t i = 0; i < mantissa.length/4; i++)
+ *    {
+ *        writef!"%x"(to!ubyte(mantissa[0 .. 4], 2)); mantissa = mantissa[4 .. $];
+ *    }
+ */
+static if (floatTraits!(real).realFormat == RealFormat.ieeeQuadruple)
+{
+    enum real MAXLOG = 0x1.62e42fefa39ef35793c7673007e6p+13;  // log(real.max)
+    enum real MINLOG = -0x1.6546282207802c89d24d65e96274p+13; // log(real.min_normal*real.epsilon) = log(smallest denormal)
+}
+else static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
 {
     enum real MAXLOG = 0x1.62e42fefa39ef358p+13L;  // log(real.max)
     enum real MINLOG = -0x1.6436716d5406e6d8p+13L; // log(real.min_normal*real.epsilon) = log(smallest denormal)
