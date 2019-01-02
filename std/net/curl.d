@@ -451,7 +451,11 @@ if (isCurlConn!Conn)
             s.send(httpOK("Hello world"));
         });
         auto fn = std.file.deleteme;
-        scope (exit) std.file.remove(fn);
+        scope (exit)
+        {
+            if (std.file.exists(fn))
+                std.file.remove(fn);
+        }
         download(host, fn);
         assert(std.file.readText(fn) == "Hello world");
     }
@@ -513,7 +517,11 @@ if (isCurlConn!Conn)
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         auto fn = std.file.deleteme;
-        scope (exit) std.file.remove(fn);
+        scope (exit)
+        {
+            if (std.file.exists(fn))
+                std.file.remove(fn);
+        }
         std.file.write(fn, "upload data\n");
         testServer.handle((s) {
             auto req = s.recvReq;
