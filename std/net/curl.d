@@ -178,7 +178,7 @@ version (unittest)
     import std.range;
     import std.stdio;
 
-    import std.socket : Address, INADDR_LOOPBACK, Socket, TcpSocket;
+    import std.socket : Address, INADDR_LOOPBACK, Socket, SocketShutdown, TcpSocket;
 
     private struct TestServer
     {
@@ -238,7 +238,10 @@ version (unittest)
         // terminate server from a thread local dtor of the thread that started it,
         //  because thread_joinall is called before shared module dtors
         if (tlsInit && server.sock)
+        {
+            server.sock.shutdown(SocketShutdown.RECEIVE);
             server.sock.close();
+        }
     }
 
     private struct Request(T)
