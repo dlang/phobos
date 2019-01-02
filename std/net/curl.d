@@ -176,7 +176,7 @@ version (DisableCurlTests) {} else:
 
 version (unittest)
 {
-    import std.socket : Socket;
+    import std.socket : Socket, SocketShutdown;
 
     private struct TestServer
     {
@@ -248,7 +248,10 @@ version (unittest)
         // terminate server from a thread local dtor of the thread that started it,
         //  because thread_joinall is called before shared module dtors
         if (tlsInit && server.sock)
+        {
+            server.sock.shutdown(SocketShutdown.RECEIVE);
             server.sock.close();
+        }
     }
 
     private struct Request(T)
