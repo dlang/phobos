@@ -122,8 +122,8 @@ private:
 /** String used to separate directory names in a path.  Under
     POSIX this is a slash, under Windows a backslash.
 */
-version(Posix)          enum string dirSeparator = "/";
-else version(Windows)   enum string dirSeparator = "\\";
+version (Posix)          enum string dirSeparator = "/";
+else version (Windows)   enum string dirSeparator = "\\";
 else static assert(0, "unsupported platform");
 
 
@@ -132,8 +132,8 @@ else static assert(0, "unsupported platform");
 /** Path separator string.  A colon under POSIX, a semicolon
     under Windows.
 */
-version(Posix)          enum string pathSeparator = ":";
-else version(Windows)   enum string pathSeparator = ";";
+version (Posix)          enum string pathSeparator = ":";
+else version (Windows)   enum string pathSeparator = ";";
 else static assert(0, "unsupported platform");
 
 
@@ -147,7 +147,7 @@ else static assert(0, "unsupported platform");
 bool isDirSeparator(dchar c)  @safe pure nothrow @nogc
 {
     if (c == '/') return true;
-    version(Windows) if (c == '\\') return true;
+    version (Windows) if (c == '\\') return true;
     return false;
 }
 
@@ -160,17 +160,17 @@ bool isDirSeparator(dchar c)  @safe pure nothrow @nogc
 */
 private bool isDriveSeparator(dchar c)  @safe pure nothrow @nogc
 {
-    version(Windows) return c == ':';
+    version (Windows) return c == ':';
     else return false;
 }
 
 
 /*  Combines the isDirSeparator and isDriveSeparator tests. */
-version(Windows) private bool isSeparator(dchar c)  @safe pure nothrow @nogc
+version (Windows) private bool isSeparator(dchar c)  @safe pure nothrow @nogc
 {
     return isDirSeparator(c) || isDriveSeparator(c);
 }
-version(Posix) private alias isSeparator = isDirSeparator;
+version (Posix) private alias isSeparator = isDirSeparator;
 
 
 /*  Helper function that determines the position of the last
@@ -868,7 +868,7 @@ if ((isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
     isNarrowString!R) &&
     !isConvertibleToString!R)
 {
-    version(Windows)
+    version (Windows)
     {
         if (hasDrive!(BaseOf!R)(path))      return path[2 .. path.length];
         else if (isUNC!(BaseOf!R)(path))    return path[uncRootLength!(BaseOf!R)(path) .. path.length];
@@ -899,7 +899,7 @@ if (isConvertibleToString!R)
 
 @safe unittest
 {
-    version(Windows)
+    version (Windows)
     {
         assert(stripDrive(`d:\dir\file`) == `\dir\file`);
         assert(stripDrive(`\\server\share\dir\file`) == `\dir\file`);
@@ -910,7 +910,7 @@ if (isConvertibleToString!R)
         foreach (i, c; `\dir\file`)
             assert(s[i] == c);
     }
-    version(Posix)
+    version (Posix)
     {
         assert(stripDrive(`d:\dir\file`) == `d:\dir\file`);
 
@@ -959,7 +959,7 @@ if (isRandomAccessRange!R && hasLength!R && isSomeChar!(ElementType!R) ||
     assert(extSeparatorPos("dir/.foo"d) == -1);
     assert(extSeparatorPos("dir/.foo.ext".dup) == 8);
 
-    version(Windows)
+    version (Windows)
     {
         assert(extSeparatorPos("dir\\file") == -1);
         assert(extSeparatorPos("dir\\file.ext") == 8);
@@ -3847,7 +3847,7 @@ if (isConvertibleToString!Range)
 */
 string expandTilde(string inputPath) nothrow
 {
-    version(Posix)
+    version (Posix)
     {
         import core.exception : onOutOfMemoryError;
         import core.stdc.errno : errno, ERANGE;
@@ -3907,7 +3907,7 @@ string expandTilde(string inputPath) nothrow
         {
             // bionic doesn't really support this, as getpwnam_r
             // isn't provided and getpwnam is basically just a stub
-            version(CRuntime_Bionic)
+            version (CRuntime_Bionic)
             {
                 return path;
             }
@@ -3993,7 +3993,7 @@ string expandTilde(string inputPath) nothrow
         else
             return expandFromDatabase(inputPath);
     }
-    else version(Windows)
+    else version (Windows)
     {
         // Put here real windows implementation.
         return inputPath;
@@ -4005,7 +4005,7 @@ string expandTilde(string inputPath) nothrow
 }
 
 
-version(unittest) import std.process : environment;
+version (unittest) import std.process : environment;
 @system unittest
 {
     version (Posix)

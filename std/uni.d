@@ -766,9 +766,9 @@ void copyForward(T,U)(T[] src, U[] dest)
 }
 
 // TODO: update to reflect all major CPUs supporting unaligned reads
-version(X86)
+version (X86)
     enum hasUnalignedReads = true;
-else version(X86_64)
+else version (X86_64)
     enum hasUnalignedReads = true;
 else
     enum hasUnalignedReads = false; // better be safe then sorry
@@ -3121,7 +3121,7 @@ private:
 @system private uint safeRead24(scope const ubyte* ptr, size_t idx) pure nothrow @nogc
 {
     idx *= 3;
-    version(LittleEndian)
+    version (LittleEndian)
         return ptr[idx] + (cast(uint) ptr[idx+1]<<8)
              + (cast(uint) ptr[idx+2]<<16);
     else
@@ -3133,7 +3133,7 @@ private:
 @system private void safeWrite24(scope ubyte* ptr, uint val, size_t idx) pure nothrow @nogc
 {
     idx *= 3;
-    version(LittleEndian)
+    version (LittleEndian)
     {
         ptr[idx] = val & 0xFF;
         ptr[idx+1] = (val >> 8) & 0xFF;
@@ -3151,7 +3151,7 @@ private:
 @system private uint unalignedRead24(scope const ubyte* ptr, size_t idx) pure nothrow @nogc
 {
     uint* src = cast(uint*)(ptr+3*idx);
-    version(LittleEndian)
+    version (LittleEndian)
         return *src & 0xFF_FFFF;
     else
         return *src >> 8;
@@ -3161,7 +3161,7 @@ private:
 @system private void unalignedWrite24(scope ubyte* ptr, uint val, size_t idx) pure nothrow @nogc
 {
     uint* dest = cast(uint*)(cast(ubyte*) ptr + 3*idx);
-    version(LittleEndian)
+    version (LittleEndian)
         *dest = val | (*dest & 0xFF00_0000);
     else
         *dest = (val << 8) | (*dest & 0xFF);
@@ -3483,7 +3483,7 @@ private:
     }
 }
 
-version(unittest)
+version (unittest)
 {
     private alias AllSets = AliasSeq!(InversionList!GcPolicy, InversionList!ReallocPolicy);
 }
@@ -3737,7 +3737,7 @@ version(unittest)
             ), text(a.byInterval));
 
         // same @@@BUG as in issue 8949 ?
-        version(bug8949)
+        version (bug8949)
         {
             import std.range : retro;
             assert(equal(retro(a.byInterval),
@@ -3962,7 +3962,7 @@ private:
             {
                 // get index to it, reuse ptr space for the next block
                 next_lvl_index = force!NextIdx(j/pageSize);
-                version(none)
+                version (none)
                 {
                 import std.stdio : writefln, writeln;
                 writefln("LEVEL(%s) page mapped idx: %s: 0..%s  ---> [%s..%s]"
@@ -3986,7 +3986,7 @@ private:
                 state[level].idx_zeros = next_lvl_index;
             }
             // allocate next page
-            version(none)
+            version (none)
             {
             import std.stdio : writefln;
             writefln("LEVEL(%s) page allocated: %s"
@@ -5617,7 +5617,7 @@ template Sequence(size_t start, size_t end)
     import std.range : iota;
     static trieStats(TRIE)(TRIE t)
     {
-        version(std_uni_stats)
+        version (std_uni_stats)
         {
             import std.stdio : writefln, writeln;
             writeln("---TRIE FOOTPRINT STATS---");
@@ -5627,7 +5627,7 @@ template Sequence(size_t start, size_t end)
                          , i, t.bytes!i, t.pages!i);
             }
             writefln("TOTAL: %s bytes", t.bytes);
-            version(none)
+            version (none)
             {
                 writeln("INDEX (excluding value level):");
                 foreach (i; staticIota!(0, t.table.dim-1) )
@@ -5915,7 +5915,7 @@ static assert(isInputRange!DecompressedIntervals);
 static assert(isForwardRange!DecompressedIntervals);
 //============================================================================
 
-version(std_uni_bootstrap){}
+version (std_uni_bootstrap){}
 else
 {
 
@@ -6554,7 +6554,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 }
 
 // For testing non-forward-range input ranges
-version(unittest)
+version (unittest)
 private static struct InputRangeString
 {
     private string s;
@@ -8061,7 +8061,7 @@ private bool notAllowedIn(NormalizationForm norm)(dchar ch)
 
 }
 
-version(std_uni_bootstrap)
+version (std_uni_bootstrap)
 {
     // old version used for bootstrapping of gen_uni.d that generates
     // up to date optimal versions of all of isXXX functions
@@ -9753,4 +9753,4 @@ private:
 
 }
 
-}// version(!std_uni_bootstrap)
+}// version (!std_uni_bootstrap)

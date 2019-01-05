@@ -61,7 +61,7 @@ import std.functional : binaryFun;
 
 public import std.container.util;
 
-version(unittest) debug = RBDoChecks;
+version (unittest) debug = RBDoChecks;
 
 //debug = RBDoChecks;
 
@@ -745,7 +745,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
 
     alias _less = binaryFun!less;
 
-    version(unittest)
+    version (unittest)
     {
         static if (is(typeof(less) == string))
         {

@@ -31,7 +31,7 @@ auto makeRegex(S, CG)(Parser!(S, CG) p)
         }
         //@@@BUG@@@ (not reduced)
         //somehow just using validate _collides_ with std.utf.validate (!)
-        version(assert) re.validateRe();
+        version (assert) re.validateRe();
     }
     return re;
 }

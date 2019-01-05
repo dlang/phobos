@@ -32,12 +32,12 @@ immutable
     }
 
     /// Which vendor produced this compiler.
-    version(StdDdoc)          Vendor vendor;
-    else version(DigitalMars) Vendor vendor = Vendor.digitalMars;
-    else version(GNU)         Vendor vendor = Vendor.gnu;
-    else version(LDC)         Vendor vendor = Vendor.llvm;
-    else version(D_NET)       Vendor vendor = Vendor.dotNET;
-    else version(SDC)         Vendor vendor = Vendor.sdc;
+    version (StdDdoc)          Vendor vendor;
+    else version (DigitalMars) Vendor vendor = Vendor.digitalMars;
+    else version (GNU)         Vendor vendor = Vendor.gnu;
+    else version (LDC)         Vendor vendor = Vendor.llvm;
+    else version (D_NET)       Vendor vendor = Vendor.dotNET;
+    else version (SDC)         Vendor vendor = Vendor.sdc;
     else                      Vendor vendor = Vendor.unknown;
 
 

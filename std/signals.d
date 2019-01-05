@@ -639,7 +639,7 @@ void linkin() { }
    a.emit(); // should not raise segfault since &o.watch2 is no longer connected
 }
 
-version(none) // Disabled because of dmd @@@BUG5028@@@
+version (none) // Disabled because of dmd @@@BUG5028@@@
 @system unittest
 {
     class A

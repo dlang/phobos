@@ -4,7 +4,7 @@ module std.experimental.allocator.building_blocks.allocator_list;
 import std.experimental.allocator.building_blocks.null_allocator;
 import std.experimental.allocator.common;
 import std.experimental.allocator.gc_allocator;
-version(unittest) import std.stdio;
+version (unittest) import std.stdio;
 
 // Turn this on for debugging
 // debug = allocator_list;
@@ -261,7 +261,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         }
         if (expanded)
         {
-            import std.c.string : memcpy;
+            import core.stdc.string : memcpy;
             assert(t.length % Node.sizeof == 0);
             assert(t.ptr.alignedAt(Node.alignof));
             allocators = cast(Node[]) t;
@@ -533,7 +533,7 @@ template AllocatorList(alias factoryFunction,
 }
 
 ///
-version(Posix) @system unittest
+version (Posix) @system unittest
 {
     import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.free_list : ContiguousFreeList;

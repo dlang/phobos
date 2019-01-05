@@ -188,7 +188,7 @@ struct MD5
 
             uint[16] x = void;
 
-            version(BigEndian)
+            version (BigEndian)
             {
                 import std.bitmanip : littleEndianToNative;
 

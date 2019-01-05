@@ -220,19 +220,11 @@ PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
 # Modules in std (including those in packages)
 STD_MODULES=$(call P2MODULES,$(STD_PACKAGES))
 
-# OS-specific D modules
-EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
-EXTRA_MODULES_OSX := $(addprefix std/c/osx/, socket)
-EXTRA_MODULES_FREEBSD := $(addprefix std/c/freebsd/, socket)
-EXTRA_MODULES_WIN32 := $(addprefix std/c/windows/, com stat windows		\
-		winsock) $(addprefix std/windows/, charset iunknown syserror)
-
 # Other D modules that aren't under std/
 EXTRA_MODULES_COMMON := $(addprefix etc/c/,curl odbc/sql odbc/sqlext \
-  odbc/sqltypes odbc/sqlucode sqlite3 zlib) $(addprefix std/c/,fenv locale \
-  math process stdarg stddef stdio stdlib string time wcharh)
+  odbc/sqltypes odbc/sqlucode sqlite3 zlib)
 
-EXTRA_DOCUMENTABLES := $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_WIN32) $(EXTRA_MODULES_COMMON)
+EXTRA_DOCUMENTABLES := $(EXTRA_MODULES_COMMON)
 
 EXTRA_MODULES_INTERNAL := $(addprefix std/, \
 	algorithm/internal \
@@ -258,8 +250,7 @@ ALL_D_FILES = $(addsuffix .d, $(STD_MODULES) $(EXTRA_MODULES_COMMON) \
   $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_OSX) $(EXTRA_MODULES_FREEBSD) \
   $(EXTRA_MODULES_WIN32) $(EXTRA_MODULES_INTERNAL)) \
   std/internal/windows/advapi32.d \
-  std/windows/registry.d std/c/linux/pthread.d std/c/linux/termios.d \
-  std/c/linux/tipc.d
+  std/windows/registry.d
 
 # C files to be part of the build
 C_MODULES = $(addprefix etc/c/zlib/, adler32 compress crc32 deflate	\
@@ -300,9 +291,13 @@ install :
 		DMD=$(DMD) install2
 
 .PHONY : unittest
-# Disable unittests for Phobos.
-unittest :
-	@echo "Phobos unittests disabled"
+ifeq (1,$(BUILD_WAS_SPECIFIED))
+unittest : $(addsuffix .run,$(addprefix unittest/,$(D_MODULES)))
+else
+unittest : unittest-debug unittest-release
+unittest-%:
+	$(MAKE) -f $(MAKEFILE) unittest OS=$(OS) MODEL=$(MODEL) DMD=$(DMD) BUILD=$*
+endif
 
 ################################################################################
 # Patterns begin here

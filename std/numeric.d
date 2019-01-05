@@ -26,7 +26,7 @@ import std.range.primitives;
 import std.traits;
 import std.typecons;
 
-version(unittest)
+version (unittest)
 {
     import std.stdio;
 }
@@ -684,7 +684,7 @@ on very many factors.
 template FPTemporary(F)
 if (isFloatingPoint!F)
 {
-    version(X86)
+    version (X86)
         alias FPTemporary = real;
     else
         alias FPTemporary = Unqual!F;
@@ -2616,7 +2616,7 @@ T gcd(T)(T a, T b)
     {
         return gcd!(Unqual!T)(a, b);
     }
-    else version(DigitalMars)
+    else version (DigitalMars)
     {
         static if (T.min < 0)
         {

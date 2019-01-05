@@ -33,7 +33,7 @@ Idioms:
 */
 module std.internal.math.biguintcore;
 
-version(D_InlineAsm_X86)
+version (D_InlineAsm_X86)
 {
     import std.internal.math.biguintx86;
 }
@@ -1172,7 +1172,7 @@ int highestPowerBelowUlongMax(uint x) pure nothrow @safe
      return 2;
 }
 
-version(unittest)
+version (unittest)
 {
 
 int slowHighestPowerBelowUintMax(uint x) pure nothrow @safe
@@ -2204,7 +2204,7 @@ void schoolbookDivMod(BigDigit [] quotient, BigDigit [] u, in BigDigit [] v)
         else
         {
             uint ulo = u[j + v.length - 2];
-            version(D_InlineAsm_X86)
+            version (D_InlineAsm_X86)
             {
                 // Note: On DMD, this is only ~10% faster than the non-asm code.
                 uint *p = &u[j + v.length - 1];
@@ -2230,7 +2230,7 @@ div3by2done:    ;
                 }
             }
             else
-            { // version(InlineAsm)
+            { // version (InlineAsm)
                 ulong uu = (cast(ulong)(u[j + v.length]) << 32) | u[j + v.length - 1];
                 immutable bigqhat = uu / vhi;
                 ulong rhat =  uu - bigqhat * vhi;
@@ -2243,7 +2243,7 @@ again:
                     if (!(rhat & 0xFFFF_FFFF_0000_0000L))
                         goto again;
                 }
-            } // version(InlineAsm)
+            } // version (InlineAsm)
         }
         // Multiply and subtract.
         uint carry = multibyteMulAdd!('-')(u[j .. j + v.length], v, qhat, 0);

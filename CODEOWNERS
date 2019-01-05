@@ -21,7 +21,6 @@ std/ascii.d @JackStouffer @wilzbach
 # std/base64.d
 std/bigint.d @Biotronic
 # std/bitmanip.d
-std/c/windows/* @CyberShadow
 # std/compiler.d
 std/complex.d @kyllingstad
 std/concurrency.d @MartinNowak
