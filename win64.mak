@@ -41,8 +41,8 @@ CFLAGS=/O2 /nologo /I"$(VCDIR)\INCLUDE" /I"$(SDKDIR)\Include"
 
 ## Location of druntime tree
 
-DRUNTIME=..\druntime
-DRUNTIMELIB=$(DRUNTIME)\lib\druntime$(MODEL).lib
+DRUNTIME=../druntime
+DRUNTIMELIB=$(DRUNTIME)/lib/druntime$(MODEL).lib
 
 ## Flags for dmd D compiler
 
@@ -63,9 +63,10 @@ MAKE=make
 
 ## D compiler
 
-DMD=$(DIR)\bin\dmd
-#DMD=..\dmd
-DMD=dmd
+DMD_DIR=../dmd
+BUILD=release
+OS=windows
+DMD="$(DMD_DIR)/generated/$(OS)/$(BUILD)/$(MODEL)/dmd"
 
 ## Location of where to write the html documentation files
 
