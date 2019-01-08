@@ -529,3 +529,4 @@ auto-tester-build: targets
 
 # Disable unittests for Phobos.
 auto-tester-test:
+	@echo "Phobos unittests disabled"
