@@ -502,7 +502,8 @@ install: phobos.zip
 	+rd/s/q $(DIR)\src\phobos
 	unzip -o phobos.zip -d $(DIR)\src\phobos
 
-auto-tester-build: targets
+auto-tester-build:
+	$(MAKE) -f win64.mak "DMD=$(DMD)" "VCDIR=\"$(VCINSTALLDIR)\"" "SDKDIR=\"$(WindowsSdkDir)\"" "CC=\"$(VCBIN_DIR)\cl\"" "LD=\"$(VCBIN_DIR)\link\"" "AR=\"$(VCBIN_DIR)\lib\"" targets
 
 # Disable unittests for Phobos.
 auto-tester-test:
