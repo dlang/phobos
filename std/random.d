@@ -3310,7 +3310,7 @@ if (isInputRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))
 
         static if (hasLength!Range)
         {
-            this(Range input, size_t howMany, ref UniformRNG rng)
+            this(Range input, size_t howMany, ref scope UniformRNG rng)
             {
                 _rng = rng;
                 _input = input;
@@ -3323,7 +3323,7 @@ if (isInputRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))
             }
         }
 
-        this(Range input, size_t howMany, size_t total, ref UniformRNG rng)
+        this(Range input, size_t howMany, size_t total, ref scope UniformRNG rng)
         {
             _rng = rng;
             _input = input;
