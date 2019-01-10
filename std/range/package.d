@@ -9413,7 +9413,7 @@ public:
 
 private struct OnlyResult(T, size_t arity)
 {
-    private this(Values...)(auto ref Values values)
+    private this(Values...)(return auto ref Values values)
     {
         this.data = [values];
         this.backIndex = arity;
