@@ -5030,6 +5030,21 @@ struct FloatingPointControl
                                  | inexactException | subnormalException,
         }
     }
+    else version (HPPA)
+    {
+        enum : ExceptionMask
+        {
+            inexactException      = 0x01,
+            underflowException    = 0x02,
+            overflowException     = 0x04,
+            divByZeroException    = 0x08,
+            invalidException      = 0x10,
+            severeExceptions   = overflowException | divByZeroException
+                                 | invalidException,
+            allExceptions      = severeExceptions | underflowException
+                                 | inexactException,
+        }
+    }
     else version (MIPS_Any)
     {
         enum : ExceptionMask
@@ -5179,6 +5194,10 @@ private:
     bool initialized = false;
 
     version (ARM_Any)
+    {
+        alias ControlState = uint;
+    }
+    else version (HPPA)
     {
         alias ControlState = uint;
     }
