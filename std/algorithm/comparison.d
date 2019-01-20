@@ -894,97 +894,300 @@ nothrow pure @safe unittest
     auto t = task!cmp("foo", "bar");
 }
 
+private static template allSameTypeIterative(V...)
+{
+    static if (V.length >= 2)
+    {
+        static foreach (Vi; V[1 .. $])
+        {
+            static if (!is(typeof(allSameTypeIterative) == bool) && // not yet defined
+                       !is(V[0] == Vi)) // 10% faster than `!isSame(V[0], Vi)`
+            {
+                enum allSameTypeIterative = false;
+            }
+        }
+    }
+    static if (!is(typeof(allSameTypeIterative) == bool)) // if not yet defined
+    {
+        enum allSameTypeIterative = true;
+    }
+}
+
+/* Check if `pred` is a standard equality string or lambda predicate.
+ *
+ * See also: https://github.com/dlang/phobos/pull/3373#pullrequestreview-102956739
+ */
+private static template isEqualityPredicate(alias pred)
+{
+    static if (is(typeof(pred) == string))
+    {
+        // TODO remove when string lambdas become deprecated
+        enum isEqualityPredicate = (pred == "a == b");
+    }
+    else
+    {
+        enum isEqualityPredicate = __traits(isSame, pred, (a, b) => a == b);
+    }
+}
+
+/** Returns: `xs` forwarded through calls to `fun` and packed into a `std.typecons.Tuple`.
+ *
+ * See also: https://forum.dlang.org/post/zjxmreegqkxgdzvihvyk@forum.dlang.org
+ */
+private static auto forwardMap(alias fun, Ts...)(Ts xs) @trusted
+if (is(typeof(unaryFun!(fun))))
+{
+    import std.meta : staticMap;
+    alias MappedTypeOf(T) = typeof(fun(T.init));
+    alias NewTypes = staticMap!(MappedTypeOf, Ts);
+
+    import std.typecons : Tuple;
+    Tuple!NewTypes ys = void;
+
+    alias fun_ = unaryFun!(fun);
+
+    import std.conv : emplaceRef;
+    static foreach (immutable i, x; xs)
+    {
+        emplaceRef(ys[i], fun_(x));
+    }
+
+    return ys;
+}
+
 // equal
 /**
-Compares two ranges for equality, as defined by predicate `pred`
-(which is `==` by default).
+Compares two or more ranges `rs` for equality, as defined by predicate `pred`
+(which is `a == b` by default).
 */
 template equal(alias pred = "a == b")
 {
-    enum isEmptyRange(R) =
-        isInputRange!R && __traits(compiles, {static assert(R.empty, "");});
+    import std.meta : anySatisfy, allSatisfy;
 
-    enum hasFixedLength(T) = hasLength!T || isNarrowString!T;
+    /** Check if `T` is always empty (`empty` is an `enum` always being `true`)
+     */
+    enum isAlwaysEmpty(T) = (__traits(compiles, { static assert(T.empty); }));
 
-    /++
-    Compares two ranges for equality. The ranges may have
-    different element types, as long as `pred(r1.front, r2.front)`
-    evaluates to `bool`.
-    Performs $(BIGOH min(r1.length, r2.length)) evaluations of `pred`.
+    enum areAllEquableRanges(Rs...) = is(typeof(binaryFun!pred(ElementType!(Rs[0]).init, // TODO check all `Rs`
+                                                               ElementType!(Rs[1]).init)));
 
-    Params:
-        r1 = The first range to be compared.
-        r2 = The second range to be compared.
+    static alias ElementEncodingTypeUnqual(R) = Unqual!(ElementEncodingType!R);
 
-    Returns:
-        `true` if and only if the two ranges compare _equal element
-        for element, according to binary predicate `pred`.
-    +/
-    bool equal(Range1, Range2)(Range1 r1, Range2 r2)
-    if (isInputRange!Range1 && isInputRange!Range2 &&
-        is(typeof(binaryFun!pred(r1.front, r2.front))))
+    enum hasIndexingAndLength(T) = (is(typeof(T.init[0])) &&
+                                    is(typeof(T.length)));
+
+    /// TODO better name, anyone?
+    static auto maybeByCodeUnit(T)(T x)
     {
-        static assert(!(isInfinite!Range1 && isInfinite!Range2),
-            "Both ranges are known to be infinite");
-
-        //No pred calls necessary
-        static if (isEmptyRange!Range1 || isEmptyRange!Range2)
-        {
-            return r1.empty && r2.empty;
-        }
-        else static if ((isInfinite!Range1 && hasFixedLength!Range2) ||
-            (hasFixedLength!Range1 && isInfinite!Range2))
-        {
-            return false;
-        }
-        //Detect default pred and compatible dynamic array
-        else static if (is(typeof(pred) == string) && pred == "a == b" &&
-            isArray!Range1 && isArray!Range2 && is(typeof(r1 == r2)))
-        {
-            return r1 == r2;
-        }
-        // if one of the arguments is a string and the other isn't, then auto-decoding
-        // can be avoided if they have the same ElementEncodingType
-        else static if (is(typeof(pred) == string) && pred == "a == b" &&
-            isAutodecodableString!Range1 != isAutodecodableString!Range2 &&
-            is(ElementEncodingType!Range1 == ElementEncodingType!Range2))
+        static if (isAutodecodableString!T)
         {
             import std.utf : byCodeUnit;
-
-            static if (isAutodecodableString!Range1)
-            {
-                return equal(r1.byCodeUnit, r2);
-            }
-            else
-            {
-                return equal(r2.byCodeUnit, r1);
-            }
-        }
-        //Try a fast implementation when the ranges have comparable lengths
-        else static if (hasLength!Range1 && hasLength!Range2 && is(typeof(r1.length == r2.length)))
-        {
-            immutable len1 = r1.length;
-            immutable len2 = r2.length;
-            if (len1 != len2) return false; //Short circuit return
-
-            //Lengths are the same, so we need to do an actual comparison
-            //Good news is we can squeeze out a bit of performance by not checking if r2 is empty
-            for (; !r1.empty; r1.popFront(), r2.popFront())
-            {
-                if (!binaryFun!(pred)(r1.front, r2.front)) return false;
-            }
-            return true;
+            return x.byCodeUnit;
         }
         else
         {
-            //Generic case, we have to walk both ranges making sure neither is empty
-            for (; !r1.empty; r1.popFront(), r2.popFront())
+            return x;
+        }
+    }
+
+    /++
+     This function compares two ore more ranges `rs` for equality. The
+    ranges may have different element types, as long as `pred(a, b)`
+    evaluates to `bool` for every combination elements of `a` and `b` at the same position in the ranges
+    `rs`.  Performs $(BIGOH min(r1.length, rs.length)) TODO BIG differently
+    evaluations of `pred`.
+
+    Params:
+        rs = The ranges to be compared.
+
+    Returns:
+        `true` if and only if all the ranges compare _equal element
+        for element, according to binary predicate `pred`.
+    +/
+    bool equal(Rs...)(Rs rs)
+    if (rs.length >= 2 &&
+        areAllEquableRanges!(Rs) &&
+        allSatisfy!(isInputRange, Rs) &&
+        !allSatisfy!(isInfinite, Rs))
+    {
+        // if comparing two arrays
+        static if (rs.length == 2 && // builtin array comparison can only support binary case
+                   isArray!(Rs[0]) &&
+                   isArray!(Rs[1]) &&
+                   isEqualityPredicate!pred &&
+                   is(typeof(Rs[0].init == Rs[1].init)))
+        {
+            return rs[0] == rs[1]; // use fast builtin array comparison
+        }
+        // avoid calls to `pred` when some range is always `empty` (`enum`)
+        else static if (anySatisfy!(isAlwaysEmpty, Rs))
+        {
+            static foreach (r; rs)
             {
-                if (r2.empty) return false;
-                if (!binaryFun!(pred)(r1.front, r2.front)) return false;
+                if (!r.empty)
+                {
+                    return false;
+                }
             }
-            static if (!isInfinite!Range1)
-                return r2.empty;
+            return true;
+        }
+        // if one of the arguments is a `string` or `wstring` and the other
+        // isn't, then auto-decoding can be avoided if they have the same
+        // `ElementEncodingType`
+        else static if (isEqualityPredicate!pred &&
+                        anySatisfy!(isAutodecodableString, Rs) && // some `Rs` is a `string` or `wstring`
+                        allSameTypeIterative!(staticMap!(ElementEncodingTypeUnqual, Rs))) // and all can be decoded as either `char` or `wchar`
+        {
+            return equal(forwardMap!maybeByCodeUnit(rs).tupleof); // compare by char or wchar
+        }
+        else
+        {
+            import std.meta : staticMap, staticIndexOf;
+
+            // get lengths
+            alias hasLengthBits = staticMap!(hasLength, Rs);
+            enum indexOfFirstLength = staticIndexOf!(true, hasLengthBits);
+
+            // if `true`, at least one of `Rs` has a `length` property
+            enum someHasLength = indexOfFirstLength != -1;
+
+            static if (someHasLength && // if one range has a (finite) length and
+                       anySatisfy!(isInfinite, Rs)) // another is infinite
+            {
+                return false;   // they can't be equal
+            }
+            else
+            {
+                enum someHasIndexingAndLength = anySatisfy!(hasIndexingAndLength, Rs);
+
+                static if (someHasLength)
+                {
+                    /* if any `rs` `hasLength` then `primaryRangeIndex` will index the
+                     * first of them */
+                    enum primaryRangeIndex = indexOfFirstLength;
+                    const length = rs[indexOfFirstLength].length;
+                }
+                else
+                {
+                    enum primaryRangeIndex = 0; // just pick first
+                }
+                alias primaryRange = rs[primaryRangeIndex]; // shorthand
+
+                // check that all the range lengths available are equal
+                static if (someHasLength)
+                {
+                    static foreach (idx, r; rs)
+                    {
+                        static if (idx != indexOfFirstLength)
+                        {
+                            static if (hasLength!(typeof(r)))
+                            {
+                                if (length != r.length) return false;
+                            }
+                        }
+                    }
+                }
+
+                // check equal contents
+                static if (someHasIndexingAndLength) // if some `Rs` needs a element offset counter
+                {
+                    size_t ei = 0; // element offset counter
+                }
+                while (true) // for each element in primary range `r`
+                {
+                    static if (hasIndexingAndLength!(typeof(primaryRange)))
+                    {
+                        if (ei == primaryRange.length) break;
+                    }
+                    else
+                    {
+                        if (primaryRange.empty) break;
+                    }
+
+                    /* compare current element in primary range `primaryRange` with each
+                     * non-primary range `r` in `rs` */
+                    static foreach (idx, r; rs)
+                    {
+                        static if (idx != primaryRangeIndex) // avoid checking the primary range with itself
+                        {
+                            static if (!isInfinite!(typeof(r))) // `r` is finite
+                            {
+                                static if (hasLength!(typeof(primaryRange)) &&
+                                           hasLength!(typeof(r)))
+                                {
+                                    /* primaryRange and `r` have already been
+                                     * checked above to have equal lengths so
+                                     * safe to skip empty check for `r` */
+                                }
+                                else
+                                {
+                                    if (r.empty) return false; // check for premature emptying of `r`
+                                }
+                                if (!binaryFun!(pred)(primaryRange.front, r.front)) { return false; }
+                                static if (hasIndexingAndLength!(typeof(r)))
+                                {
+                                    static if (hasIndexingAndLength!(typeof(primaryRange)))
+                                    {
+                                        if (!binaryFun!(pred)(primaryRange[ei], r[ei])) return false;
+                                    }
+                                    else
+                                    {
+                                        if (!binaryFun!(pred)(primaryRange.front, r[ei])) return false;
+                                    }
+                                }
+                                else
+                                {
+                                    static if (hasIndexingAndLength!(typeof(primaryRange)))
+                                    {
+                                        if (!binaryFun!(pred)(primaryRange[ei], r.front)) return false;
+                                    }
+                                    else
+                                    {
+                                        if (!binaryFun!(pred)(primaryRange.front, r.front)) return false;
+                                    }
+                                    r.popFront();
+                                }
+                            }
+                            else    // `r` is infinite
+                            {
+                                if (!binaryFun!(pred)(primaryRange.front, r.front)) return false;
+                                r.popFront();
+                            }
+                        }
+                    }
+                    static if (!hasIndexingAndLength!(typeof(primaryRange)))
+                    {
+                        primaryRange.popFront();
+                    }
+                    static if (someHasIndexingAndLength)
+                    {
+                        ei += 1;
+                    }
+                }
+
+                // check that all other ranges are empty
+                static if (!isInfinite!(Rs[primaryRangeIndex])) // line only reached when previous `for`-loop terminated (`r.empty` not enum false)
+                {
+                    static foreach (idx, r; rs)
+                    {
+                        static if (idx != primaryRangeIndex)    // not primary
+                        {
+                            static if (!isInfinite!(typeof(r))) // finite range
+                            {
+                                static if (hasIndexingAndLength!(typeof(r)))
+                                {
+                                    if (ei != r.length) return false;
+                                }
+                                else
+                                {
+                                    if (!r.empty) return false;
+                                }
+                            }
+                        }
+                    }
+                    return true;
+                }
+            }
         }
     }
 }
@@ -992,18 +1195,66 @@ template equal(alias pred = "a == b")
 ///
 @safe unittest
 {
+    assert(equal([1], [1]));
+    import std.algorithm.iteration: map;
+    auto s = "hello world";
+    auto x = s.map!(a => cast(dchar)a);
+    assert(equal(x, s, s)); // `front` is handled,
+}
+
+///
+@safe unittest
+{
+    int[] x = [ 1 ];
+
+    int[] a = [ 1, 2, 4, 3 ];
+    short[] b = [ 1, 2, 4, 3 ];
+    float[] c = [ 1, 2, 4, 3 ];
+    double[] d = [ 1, 2, 4, 3 ];
+
+    double[] d3 = [ 1, 2, 4 ]; // only three elements
+
+    // 1. all are arrays
+    assert(!equal(a, b, c, d3)); // lengths should differ
+    assert(equal(a, b, c, d)); // all equal
+    assert(!equal(x, b, c, d)); // first differs
+    assert(!equal(a, b, c, x)); // last differs
+
+    import std.algorithm.iteration: map, filter;
+
+    // 2. all have hasLengths and they are all comparable
+    assert(!equal(a.map!"a", b.map!"a", c.map!"a", d3.map!"a"));
+    assert(equal(a.map!"a", b.map!"a", c.map!"a", d.map!"a"));
+    assert(!equal(x.map!"a", b.map!"a", c.map!"a", d.map!"a"));
+    assert(!equal(a.map!"a", b.map!"a", c.map!"a", x.map!"a"));
+
+    // 3. not all have hasLength
+    assert(!equal(a.filter!(a => true), b.filter!(a => true), c.filter!(a => true), d3.filter!(a => true)));
+    assert(equal(a.filter!(a => true), b.filter!(a => true), c.filter!(a => true), d.filter!(a => true)));
+    assert(!equal(x.filter!(a => true), b.filter!(a => true), c.filter!(a => true), d.filter!(a => true)));
+    assert(!equal(a.filter!(a => true), b.filter!(a => true), c.filter!(a => true), x.filter!(a => true)));
+}
+
+///
+@safe unittest
+{
+    import std.math : approxEqual;
     import std.algorithm.comparison : equal;
     import std.math : approxEqual;
 
     int[] a = [ 1, 2, 4, 3 ];
     assert(!equal(a, a[1..$]));
     assert(equal(a, a));
+
+    // different formats of predicate (lambda)
     assert(equal!((a, b) => a == b)(a, a));
+    assert(equal!("a == b")(a, a));
 
     // different types
     double[] b = [ 1.0, 2, 4, 3];
     assert(!equal(a, b[1..$]));
-    assert(equal(a, b));
+    assert(equal!((a, b) => a == b)(a, b));
+    assert(equal!("a == b")(a, b));
 
     // predicated: ensure that two vectors are approximately equal
     double[] c = [ 1.005, 2, 4, 3];
@@ -1051,27 +1302,30 @@ range of range (of range...) comparisons.
     assert(!equal!("a == b")("???"d, "æøå"d));//UTF32 vs UTF32
     assert(!equal!("a == b")("hello", "world"));
 
-    //Array of string
+    // array of string
     assert(equal(["hello", "world"], ["hello", "world"]));
     assert(!equal(["hello", "world"], ["hello"]));
     assert(!equal(["hello", "world"], ["hello", "Bob!"]));
 
-    //Should not compile, because "string == dstring" is illegal
+    // should not compile, because "string == dstring" is illegal
     static assert(!is(typeof(equal(["hello", "world"], ["hello"d, "world"d]))));
     //However, arrays of non-matching string can be compared using equal!equal. Neat-o!
     equal!equal(["hello", "world"], ["hello"d, "world"d]);
 
-    //Tests, with more fancy map ranges
+    // tests, with more fancy map ranges
     int[] a = [ 1, 2, 4, 3 ];
     assert(equal([2, 4, 8, 6], map!"a*2"(a)));
+    assert(equal([2, 4, 8, 6], map!"a*2"(a), map!"a*2"(a)));
+    assert(equal([2, 4, 8, 6], [2, 4, 8, 6], map!"a*2"(a)));
     double[] b = [ 1.0, 2, 4, 3];
     double[] c = [ 1.005, 2, 4, 3];
     assert(equal!approxEqual(map!"a*2"(b), map!"a*2"(c)));
+    assert(equal!approxEqual(map!"a*2"(b), map!"a*2"(c), map!"a*2"(c)));
     assert(!equal([2, 4, 1, 3], map!"a*2"(a)));
     assert(!equal([2, 4, 1], map!"a*2"(a)));
     assert(!equal!approxEqual(map!"a*3"(b), map!"a*2"(c)));
 
-    //Tests with some fancy reference ranges.
+    // tests with some fancy reference
     ReferenceInputRange!int cir = new ReferenceInputRange!int([1, 2, 4, 3]);
     ReferenceForwardRange!int cfr = new ReferenceForwardRange!int([1, 2, 4, 3]);
     assert(equal(cir, a));
@@ -1081,11 +1335,11 @@ range of range (of range...) comparisons.
     cir = new ReferenceInputRange!int([1, 2, 8, 1]);
     assert(!equal(cir, cfr));
 
-    //Test with an infinite range
+    // test with an infinite range
     auto ifr = new ReferenceInfiniteForwardRange!int;
     assert(!equal(a, ifr));
     assert(!equal(ifr, a));
-    //Test InputRange without length
+    // test InputRange without length
     assert(!equal(ifr, cir));
     assert(!equal(cir, ifr));
 }
@@ -1095,32 +1349,81 @@ range of range (of range...) comparisons.
     import std.utf : byChar, byWchar, byDchar;
 
     assert(equal("æøå".byChar, "æøå"));
+    assert(equal("æøå".byChar, "æøå", "æøå"));
+    assert(equal("æøå".byChar, "æøå".byChar, "æøå"));
+
     assert(equal("æøå", "æøå".byChar));
+    assert(equal("æøå", "æøå", "æøå".byChar));
+
     assert(equal("æøå".byWchar, "æøå"w));
+    assert(equal("æøå".byWchar, "æøå".byWchar, "æøå"w));
+    assert(equal("æøå".byWchar, "æøå"w, "æøå"w));
     assert(equal("æøå"w, "æøå".byWchar));
+    assert(equal("æøå"w, "æøå".byWchar, "æøå".byWchar));
+
     assert(equal("æøå".byDchar, "æøå"d));
     assert(equal("æøå"d, "æøå".byDchar));
 }
 
+@system pure unittest
+{
+    import std.utf : byChar, byWchar, byDchar;
+    assert(equal("æøå".byChar, cast(char[])("æøå"))); // exercise ElementEncodingTypeUnqual
+}
+
 @safe pure unittest
 {
+    /* special kind of range where `empty` is either always `false` or `true` */
     struct R(bool _empty) {
         enum empty = _empty;
         @property char front(){assert(0);}
         void popFront(){assert(0);}
     }
-    alias I = R!false;
+
+    alias I = R!false;          // infinite range when (`empty` is always `false`)
+    static assert(isInfinite!I);
+
+    /* two infinite ranges cannot be compared */
     static assert(!__traits(compiles, I().equal(I())));
-    // strings have fixed length so don't need to compare elements
+
+    /* strings have fixed length so don't need to compare elements so ok to
+     * compare with an infinite range */
     assert(!I().equal("foo"));
+
     assert(!"bar".equal(I()));
 
-    alias E = R!true;
+    alias E = R!true;           // always empty range (`empty` is always `true`)
+    static assert(!isInfinite!E);
+
     assert(E().equal(E()));
+
     assert(E().equal(""));
+
     assert("".equal(E()));
+
     assert(!E().equal("foo"));
+
     assert(!"bar".equal(E()));
+}
+
+@safe pure unittest             // borrowed from std.range
+{
+    import std.range : evenChunks;
+
+    int[] source = [];
+
+    auto chunks = source.evenChunks(0);
+    assert(chunks.length == 0);
+
+    chunks = source.evenChunks(3);
+    assert(chunks.empty);
+    assert(chunks.length == 3);
+    assert(equal(chunks, [[], [], []]));
+
+    chunks = [1, 2, 3].evenChunks(5);
+    assert(!chunks.empty);
+    assert(chunks.length == 5);
+    assert(equal(chunks, [[1], [2], [3], [], []]));
 }
 
 // MaxType

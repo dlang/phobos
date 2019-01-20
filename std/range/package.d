@@ -12848,7 +12848,7 @@ if (
             E opIndex(size_t index)
             {
                 assert(index <= this.length, "Index out of bounds");
-                return (index > data.length && index <= maxSize) ? element :
+                return (index >= data.length && index <= maxSize) ? element :
                     data[index];
             }
         }
