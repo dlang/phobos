@@ -3472,11 +3472,7 @@ if (isDynamicArray!A)
      *     op = the assignment operator `~`
      *     rhs = Element or range.
      */
-    void opOpAssign(string op : "~", U)(U rhs)
-    if (__traits(compiles, put(rhs)))
-    {
-        put(rhs);
-    }
+    alias opOpAssign(string op : "~") = put;
 
     // only allow overwriting data on non-immutable and non-const data
     static if (isMutable!T)
