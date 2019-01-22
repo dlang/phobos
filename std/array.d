@@ -3467,10 +3467,11 @@ if (isDynamicArray!A)
     }
 
     /**
-     * Appends `rhs` to the managed array.
+     * Appends to the managed array.
      * Params:
      *     op = the assignment operator `~`
-     *     rhs = Element or range.
+     *
+     * See_Also: $(LREF Appender.put)
      */
     alias opOpAssign(string op : "~") = put;
 
