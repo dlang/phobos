@@ -339,9 +339,10 @@ private struct _Cache(R, bool bidir)
         );
     }
 
-    this(R range)
+    this(R range) @trusted
     {
-        source = range;
+        import std.algorithm.mutation : moveEmplace;
+        moveEmplace(range, this.source);
         if (!range.empty)
         {
              caches[0] = source.front;
@@ -395,9 +396,10 @@ private struct _Cache(R, bool bidir)
 
     static if (isForwardRange!R)
     {
-        private this(R source, ref CacheTypes caches)
+        private this(R source, ref CacheTypes caches) @trusted
         {
-            this.source = source;
+            import std.algorithm.mutation : moveEmplace;
+            moveEmplace(source, this.source);
             this.caches = caches;
         }
         typeof(this) save() @property
@@ -497,7 +499,8 @@ if (fun.length >= 1)
                 "Mapping function(s) must not return void: " ~ _funs.stringof);
         }
 
-        return MapResult!(_fun, Range)(r);
+        import std.algorithm.mutation : move;
+        return MapResult!(_fun, Range)(move(r));
     }
 }
 
@@ -575,9 +578,10 @@ private struct MapResult(alias fun, Range)
         }
     }
 
-    this(R input)
+    this(R input) @trusted
     {
-        _input = input;
+        import std.algorithm.mutation : moveEmplace;
+        moveEmplace(input, _input);
     }
 
     static if (isInfinite!R)
@@ -1286,7 +1290,8 @@ if (is(typeof(unaryFun!predicate)))
      */
     auto filter(Range)(Range range) if (isInputRange!(Unqual!Range))
     {
-        return FilterResult!(unaryFun!predicate, Range)(range);
+        import std.algorithm.mutation : move;
+        return FilterResult!(unaryFun!predicate, Range)(move(range));
     }
 }
 
@@ -1321,6 +1326,8 @@ if (is(typeof(unaryFun!predicate)))
 
 private struct FilterResult(alias pred, Range)
 {
+    import std.algorithm.mutation : moveEmplace;
+
     alias R = Unqual!Range;
     R _input;
     private bool _primed;
@@ -1335,18 +1342,21 @@ private struct FilterResult(alias pred, Range)
         _primed = true;
     }
 
-    this(R r)
+    this(R r) @trusted
     {
-        _input = r;
+        moveEmplace(r, _input);
     }
 
-    private this(R r, bool primed)
+    private this(R r, bool primed) @trusted
     {
-        _input = r;
+        moveEmplace(r, _input);
         _primed = primed;
     }
 
-    auto opSlice() { return this; }
+    static if (isCopyable!Range)
+    {
+        auto opSlice() { return this; }
+    }
 
     static if (isInfinite!Range)
     {
@@ -1534,9 +1544,10 @@ private struct FilterBidiResult(alias pred, Range)
     alias R = Unqual!Range;
     R _input;
 
-    this(R r)
+    this(R r) @trusted
     {
-        _input = r;
+        import std.algorithm.mutation : moveEmplace;
+        moveEmplace(r, _input);
         while (!_input.empty && !pred(_input.front)) _input.popFront();
         while (!_input.empty && !pred(_input.back)) _input.popBack();
     }
@@ -1635,9 +1646,10 @@ if (isInputRange!R)
     private Tuple!(MutableE, uint) _current;
 
     ///
-    this(R input)
+    this(R input) @trusted
     {
-        _input = input;
+        import std.algorithm.mutation : moveEmplace;
+        moveEmplace(input, _input);
         if (!_input.empty) popFront();
     }
 
@@ -1793,9 +1805,10 @@ if (isInputRange!Range && !isForwardRange!Range)
     private Range r;
     private ElementType!Range prev;
 
-    this(Range range, ElementType!Range _prev)
+    this(Range range, ElementType!Range _prev) @trusted
     {
-        r = range;
+        import std.algorithm.mutation : moveEmplace;
+        moveEmplace(range, r);
         prev = _prev;
     }
 
@@ -1837,9 +1850,10 @@ if (isInputRange!Range && !isForwardRange!Range)
     private Range r;
     private ElementType!Range _prev;
 
-    this(Range _r)
+    this(Range _r) @trusted
     {
-        r = _r;
+        import std.algorithm.mutation : moveEmplace;
+        moveEmplace(_r, r);
         if (!empty)
         {
             // Check reflexivity if predicate is claimed to be an equivalence
@@ -1966,7 +1980,8 @@ if (isForwardRange!Range)
 
     this(Range r)
     {
-        impl = RefCounted!Impl(0, r, r.save);
+        import std.algorithm.mutation : move;
+        impl = RefCounted!Impl(0, move(r), r.save);
     }
 
     @property bool empty() { return impl.current.empty; }
@@ -2432,9 +2447,10 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
             }
         }
 
-        this(RoR items, Separator sep)
+        this(RoR items, Separator sep) @trusted
         {
-            _items = items;
+            import std.algorithm.mutation : moveEmplace;
+            moveEmplace(items, _items);
             _currentSep.initialize(sep);
 
             //mixin(useItem); // _current should be initialized in place
@@ -2656,18 +2672,20 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
             bool reachedFinalElement;
         }
 
-        this(RoR items, ElementType!RoR current)
+        this(RoR items, ElementType!RoR current) @trusted
         {
-            _items = items;
+            import std.algorithm.mutation : moveEmplace;
+            moveEmplace(items, _items);
             _current = current;
             static if (isBidirectional && hasNested!Result)
                 _currentBack = typeof(_currentBack).init;
         }
 
     public:
-        this(RoR r)
+        this(RoR r) @trusted
         {
-            _items = r;
+            import std.algorithm.mutation : moveEmplace;
+            moveEmplace(r, _items);
 
             static if (isBidirectional && hasNested!Result)
                 _currentBack = typeof(_currentBack).init;
@@ -3917,9 +3935,10 @@ if (fun.length >= 1)
             R source;
             State state;
 
-            this(R range, ref Args args)
+            this(R range, ref Args args) @trusted
             {
-                source = range;
+                import std.algorithm.mutation : moveEmplace;
+                moveEmplace(range, source);
                 if (source.empty)
                     return;
 
@@ -4286,9 +4305,10 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
         }
 
     public:
-        this(Range input, Separator separator)
+        this(Range input, Separator separator) @trusted
         {
-            _input = input;
+            import std.algorithm.mutation : moveEmplace;
+            moveEmplace(input, _input);
             _separator = separator;
 
             static if (isNarrowString!Range)
@@ -4649,9 +4669,10 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
         }
 
     public:
-        this(Range input, Separator separator)
+        this(Range input, Separator separator) @trusted
         {
-            _input = input;
+            import std.algorithm.mutation : moveEmplace;
+            moveEmplace(input, _input);
             _separator = separator;
         }
 
@@ -4839,9 +4860,10 @@ private struct SplitterResult(alias isTerminator, Range)
             }
     }
 
-    this(Range input)
+    this(Range input) @trusted
     {
-        _input = input;
+        import std.algorithm.mutation : moveEmplace;
+        moveEmplace(input, _input);
         static if (!fullSlicing)
             _next = _input.save;
 
@@ -6449,14 +6471,15 @@ private struct UniqResult(alias pred, Range)
 {
     Range _input;
 
-    this(Range input)
+    this(Range input) @trusted
     {
-        _input = input;
+        import std.algorithm.mutation : moveEmplace;
+        moveEmplace(input, _input);
     }
 
-    auto opSlice()
+    static if (isCopyable!Range)
     {
-        return this;
+        auto opSlice() { return this; }
     }
 
     void popFront()
@@ -6579,12 +6602,14 @@ if (isRandomAccessRange!Range && hasLength!Range)
     private bool _empty;
 
     ///
-    this(Range r)
+    this(Range r) @trusted
     {
         import std.array : array;
         import std.range : iota;
 
-        this._r = r;
+        import std.algorithm.mutation : moveEmplace;
+        moveEmplace(r, this._r);
+
         _state = r.length ? new size_t[r.length-1] : null;
         _indices = iota(size_t(r.length)).array;
         _empty = r.length == 0;
