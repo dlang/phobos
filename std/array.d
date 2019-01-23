@@ -3468,8 +3468,6 @@ if (isDynamicArray!A)
 
     /**
      * Appends to the managed array.
-     * Params:
-     *     op = the assignment operator `~`
      *
      * See_Also: $(LREF Appender.put)
      */
