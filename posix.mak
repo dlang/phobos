@@ -339,7 +339,17 @@ endif
 # Unittests
 ################################################################################
 
-$(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
+DISABLED_TESTS =
+ifeq ($(OS),freebsd)
+    ifeq ($(MODEL),32)
+    # Curl tests for FreeBSD 32-bit are temporarily disabled.
+    # https://github.com/braddr/d-tester/issues/70
+    # https://issues.dlang.org/show_bug.cgi?id=18519
+    DISABLED_TESTS += std/net/curl
+    endif
+endif
+
+$(addsuffix .run,$(addprefix unittest/,$(DISABLED_TESTS))) :
 	@echo Testing $@ - disabled
 
 UT_D_OBJS:=$(addprefix $(ROOT)/unittest/,$(addsuffix .o,$(D_MODULES)))

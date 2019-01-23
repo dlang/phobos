@@ -156,6 +156,8 @@ version (MIPS32)    version = MIPS_Any;
 version (MIPS64)    version = MIPS_Any;
 version (AArch64)   version = ARM_Any;
 version (ARM)       version = ARM_Any;
+version (SPARC)     version = SPARC_Any;
+version (SPARC64)   version = SPARC_Any;
 
 version (D_InlineAsm_X86)
 {
@@ -376,15 +378,22 @@ template floatTraits(T)
         enum ushort EXPMASK = 0x7FF0;
         enum ushort EXPSHIFT = 4;
         enum realFormat = RealFormat.ibmExtended;
-        // the exponent byte is not unique
+
+        // For IBM doubledouble the larger magnitude double comes first.
+        // It's really a double[2] and arrays don't index differently
+        // between little and big-endian targets.
+        enum DOUBLEPAIR_MSB = 0;
+        enum DOUBLEPAIR_LSB = 1;
+
+        // The exponent/sign byte is for most significant part.
         version (LittleEndian)
         {
-            enum EXPPOS_SHORT = 7; // [3] is also an exp short
-            enum SIGNPOS_BYTE = 15;
+            enum EXPPOS_SHORT = 3;
+            enum SIGNPOS_BYTE = 7;
         }
         else
         {
-            enum EXPPOS_SHORT = 0; // [4] is also an exp short
+            enum EXPPOS_SHORT = 0;
             enum SIGNPOS_BYTE = 0;
         }
     }
@@ -416,19 +425,20 @@ T floorImpl(T)(const T x) @trusted pure nothrow @nogc
     {
         T rv;
         ushort[T.sizeof/2] vu;
+
+        // Other kinds of extractors for real formats.
+        static if (F.realFormat == RealFormat.ieeeSingle)
+            int vi;
     }
     floatBits y = void;
     y.rv = x;
 
     // Find the exponent (power of 2)
+    // Do this by shifting the raw value so that the exponent lies in the low bits,
+    // then mask out the sign bit, and subtract the bias.
     static if (F.realFormat == RealFormat.ieeeSingle)
     {
-        int exp = ((y.vu[F.EXPPOS_SHORT] >> 7) & 0xff) - 0x7f;
-
-        version (LittleEndian)
-            int pos = 0;
-        else
-            int pos = 3;
+        int exp = ((y.vi >> (T.mant_dig - 1)) & 0xff) - 0x7f;
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
@@ -468,24 +478,43 @@ T floorImpl(T)(const T x) @trusted pure nothrow @nogc
             return 0.0;
     }
 
-    exp = (T.mant_dig - 1) - exp;
-
-    // Zero 16 bits at a time.
-    while (exp >= 16)
+    static if (F.realFormat == RealFormat.ieeeSingle)
     {
-        version (LittleEndian)
-            y.vu[pos++] = 0;
-        else
-            y.vu[pos--] = 0;
-        exp -= 16;
+        if (exp < (T.mant_dig - 1))
+        {
+            // Clear all bits representing the fraction part.
+            const uint fraction_mask = F.MANTISSAMASK_INT >> exp;
+
+            if ((y.vi & fraction_mask) != 0)
+            {
+                // If 'x' is negative, then first substract 1.0 from the value.
+                if (y.vi < 0)
+                    y.vi += 0x00800000 >> exp;
+                y.vi &= ~fraction_mask;
+            }
+        }
     }
+    else
+    {
+        exp = (T.mant_dig - 1) - exp;
 
-    // Clear the remaining bits.
-    if (exp > 0)
-        y.vu[pos] &= 0xffff ^ ((1 << exp) - 1);
+        // Zero 16 bits at a time.
+        while (exp >= 16)
+        {
+            version (LittleEndian)
+                y.vu[pos++] = 0;
+            else
+                y.vu[pos--] = 0;
+            exp -= 16;
+        }
 
-    if ((x < 0.0) && (x != y.rv))
-        y.rv -= 1.0;
+        // Clear the remaining bits.
+        if (exp > 0)
+            y.vu[pos] &= 0xffff ^ ((1 << exp) - 1);
+
+        if ((x < 0.0) && (x != y.rv))
+            y.rv -= 1.0;
+    }
 
     return y.rv;
 }
@@ -4858,10 +4887,6 @@ version (X86_Any)
 {
     version = IeeeFlagsSupport;
 }
-version (X86_Any)
-{
-    version = IeeeFlagsSupport;
-}
 else version (PPC_Any)
 {
     version = IeeeFlagsSupport;
@@ -5030,6 +5055,21 @@ struct FloatingPointControl
                                  | inexactException | subnormalException,
         }
     }
+    else version (HPPA)
+    {
+        enum : ExceptionMask
+        {
+            inexactException      = 0x01,
+            underflowException    = 0x02,
+            overflowException     = 0x04,
+            divByZeroException    = 0x08,
+            invalidException      = 0x10,
+            severeExceptions   = overflowException | divByZeroException
+                                 | invalidException,
+            allExceptions      = severeExceptions | underflowException
+                                 | inexactException,
+        }
+    }
     else version (MIPS_Any)
     {
         enum : ExceptionMask
@@ -5060,7 +5100,7 @@ struct FloatingPointControl
                                  | inexactException,
         }
     }
-    else version (SPARC64)
+    else version (SPARC_Any)
     {
         enum : ExceptionMask
         {
@@ -5182,6 +5222,10 @@ private:
     {
         alias ControlState = uint;
     }
+    else version (HPPA)
+    {
+        alias ControlState = uint;
+    }
     else version (PPC_Any)
     {
         alias ControlState = uint;
@@ -5190,7 +5234,7 @@ private:
     {
         alias ControlState = uint;
     }
-    else version (SPARC64)
+    else version (SPARC_Any)
     {
         alias ControlState = ulong;
     }
@@ -5283,7 +5327,7 @@ private:
     }
 }
 
-@system unittest
+version (D_HardFloat) @system unittest
 {
     void ensureDefaults()
     {
@@ -5298,15 +5342,12 @@ private:
     }
     ensureDefaults();
 
-    version (D_HardFloat)
     {
-        {
-            FloatingPointControl ctrl;
-            ctrl.rounding = FloatingPointControl.roundDown;
-            assert(FloatingPointControl.rounding == FloatingPointControl.roundDown);
-        }
-        ensureDefaults();
+        FloatingPointControl ctrl;
+        ctrl.rounding = FloatingPointControl.roundDown;
+        assert(FloatingPointControl.rounding == FloatingPointControl.roundDown);
     }
+    ensureDefaults();
 
     if (FloatingPointControl.hasExceptionTraps)
     {
@@ -5323,7 +5364,7 @@ private:
     ensureDefaults();
 }
 
-@system unittest // rounding
+version (D_HardFloat) @system unittest // rounding
 {
     import std.meta : AliasSeq;
 
@@ -6460,15 +6501,13 @@ if (isFloatingPoint!(F) && isIntegral!(G))
 
     assert(pow(x, neg1) == 1 / x);
 
-    version (X86_64)
-    {
-        pragma(msg, "test disabled on x86_64, see bug 5628");
-    }
-    else version (ARM)
-    {
-        pragma(msg, "test disabled on ARM, see bug 5628");
-    }
-    else
+    // Test disabled on most targets.
+    // See https://issues.dlang.org/show_bug.cgi?id=5628
+    version (X86_64)   enum BUG5628 = false;
+    else version (ARM) enum BUG5628 = false;
+    else               enum BUG5628 = true;
+
+    static if (BUG5628)
     {
         assert(pow(xd, neg2) == 1 / (x * x));
         assert(pow(xf, neg8) == 1 / ((x * x) * (x * x) * (x * x) * (x * x)));
