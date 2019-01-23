@@ -3467,16 +3467,11 @@ if (isDynamicArray!A)
     }
 
     /**
-     * Appends `rhs` to the managed array.
-     * Params:
-     *     op = the assignment operator `~`
-     *     rhs = Element or range.
+     * Appends to the managed array.
+     *
+     * See_Also: $(LREF Appender.put)
      */
-    void opOpAssign(string op : "~", U)(U rhs)
-    if (__traits(compiles, put(rhs)))
-    {
-        put(rhs);
-    }
+    alias opOpAssign(string op : "~") = put;
 
     // only allow overwriting data on non-immutable and non-const data
     static if (isMutable!T)
