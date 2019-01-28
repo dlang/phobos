@@ -871,7 +871,7 @@ deprecated
     x87 $(I fsincos) instruction when possible, this function is no faster
     than calculating cos(y) and sin(y) separately.
 */
-Complex!real expi(real y)  @trusted pure nothrow @nogc
+Complex!real expi()(real y)  @trusted pure nothrow @nogc
 {
     import std.math : cos, sin;
     return Complex!real(cos(y), sin(y));
@@ -904,7 +904,7 @@ deprecated
     `coshisinh` is included here for convenience and for easy migration of code
     that uses $(REF _coshisinh, std,math).
 */
-Complex!real coshisinh(real y) @safe pure nothrow @nogc
+Complex!real coshisinh()(real y) @safe pure nothrow @nogc
 {
     static import std.math;
     if (std.math.fabs(y) <= 0.5)
