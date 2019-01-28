@@ -378,7 +378,7 @@ if (isSomeChar!Char)
  * Returns:
  *      A string encoded using www-form-urlencoding.
  */
-package string urlEncode(scope string[string] values) @safe pure
+package string urlEncode()(scope string[string] values) @safe pure
 {
     if (values.length == 0)
         return "";
