@@ -42,6 +42,58 @@ $(TR $(TD Other) $(TD
  +/
 module std.exception;
 
+private
+{
+
+template isModuleImport(string import_)
+{
+    enum isModuleImport = __traits(compiles, { mixin("import ", import_, ";"); });
+}
+
+template isSymbolInModule(string module_, string symbol)
+{
+    static if (isModuleImport!module_) {
+        enum import_ = module_ ~ ":" ~ symbol;
+        enum isSymbolInModule = __traits(compiles, { mixin("import ", import_, ";"); });
+    } else {
+        enum isSymbolInModule = false;
+    }
+}
+
+template FailedSymbol(string symbol, string module_)
+{
+    auto FailedSymbol(Args...)(auto ref Args args)
+    {
+        static assert(0, "Symbol \"" ~ symbol ~ "\" not found in " ~ module_);
+    }
+}
+
+struct FromImpl(string module_)
+{
+    template opDispatch(string symbol)
+    {
+        static if (isSymbolInModule!(module_, symbol)) {
+            mixin("import ", module_, "; alias opDispatch = ", symbol, ";");
+        } else {
+            static if (module_.length == 0) {
+                enum opDispatch = FromImpl!(symbol)();
+            } else {
+                enum import_ = module_ ~ "." ~ symbol;
+                static if (isModuleImport!import_) {
+                    enum opDispatch = FromImpl!(import_)();
+                } else {
+                    alias opDispatch = FailedSymbol!(symbol, module_);
+                }
+            }
+        }
+    }
+}
+
+enum from = FromImpl!null();
+enum _std = from.std;
+
+}
+
 /// Synopis
 @system unittest
 {
@@ -108,9 +160,6 @@ module std.exception;
     immutable res = assumeUnique(str);
     assert(res == "immutable");
 }
-
-import std.range.primitives;
-import std.traits;
 
 /++
     Asserts that the given expression does $(I not) throw the given type
@@ -441,7 +490,7 @@ if (is(typeof(new E("", string.init, size_t.init)) : Throwable) ||
 /// ditto
 T enforce(T, Dg, string file = __FILE__, size_t line = __LINE__)
     (T value, scope Dg dg)
-if (isSomeFunction!Dg && is(typeof( dg() )) &&
+if (_std.traits.isSomeFunction!Dg && is(typeof( dg() )) &&
     is(typeof({ if (!value) {} })))
 {
     if (!value) dg();
@@ -1127,9 +1176,11 @@ as the language is free to assume objects don't have internal pointers
 (TDPL 7.1.3.5).
 */
 bool doesPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @nogc @trusted pure nothrow
-if (__traits(isRef, source) || isDynamicArray!S ||
-    isPointer!S || is(S == class))
+if (__traits(isRef, source) || _std.traits.isDynamicArray!S ||
+    _std.traits.isPointer!S || is(S == class))
 {
+    import std.traits;
+
     static if (isPointer!S || is(S == class) || is(S == interface))
     {
         const m = *cast(void**) &source;
@@ -1170,9 +1221,11 @@ bool doesPointTo(S, T)(auto ref const shared S source, ref const shared T target
 
 /// ditto
 bool mayPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @trusted pure nothrow
-if (__traits(isRef, source) || isDynamicArray!S ||
-    isPointer!S || is(S == class))
+if (__traits(isRef, source) || _std.traits.isDynamicArray!S ||
+    _std.traits.isPointer!S || is(S == class))
 {
+    import std.traits;
+
     static if (isPointer!S || is(S == class) || is(S == interface))
     {
         const m = *cast(void**) &source;
@@ -1666,7 +1719,8 @@ class ErrnoException : Exception
         errorHandler.
 +/
 //lazy version
-CommonType!(T1, T2) ifThrown(E : Throwable = Exception, T1, T2)(lazy scope T1 expression, lazy scope T2 errorHandler)
+_std.traits.CommonType!(T1, T2) ifThrown(E : Throwable = Exception, T1, T2)(lazy scope T1 expression,
+                                                                            lazy scope T2 errorHandler)
 {
     static assert(!is(typeof(return) == void),
         "The error handler's return value("
@@ -1687,7 +1741,8 @@ CommonType!(T1, T2) ifThrown(E : Throwable = Exception, T1, T2)(lazy scope T1 ex
 
 ///ditto
 //delegate version
-CommonType!(T1, T2) ifThrown(E : Throwable, T1, T2)(lazy scope T1 expression, scope T2 delegate(E) errorHandler)
+_std.traits.CommonType!(T1, T2) ifThrown(E : Throwable, T1, T2)(lazy scope T1 expression,
+                                                                scope T2 delegate(E) errorHandler)
 {
     static assert(!is(typeof(return) == void),
         "The error handler's return value("
@@ -1708,7 +1763,8 @@ CommonType!(T1, T2) ifThrown(E : Throwable, T1, T2)(lazy scope T1 expression, sc
 
 ///ditto
 //delegate version, general overload to catch any Exception
-CommonType!(T1, T2) ifThrown(T1, T2)(lazy scope T1 expression, scope T2 delegate(Exception) errorHandler)
+_std.traits.CommonType!(T1, T2) ifThrown(T1, T2)(lazy scope T1 expression,
+                                                 scope T2 delegate(Exception) errorHandler)
 {
     static assert(!is(typeof(return) == void),
         "The error handler's return value("
@@ -1945,8 +2001,10 @@ this by `take`ing 0 from the return value of the handler function and
 returning that when an exception is caught.
 */
 auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Range)(Range input)
-if (isInputRange!Range)
+if (_std.range.primitives.isInputRange!Range)
 {
+    import std.range.primitives;
+
     static struct Handler
     {
         private Range range;
@@ -2212,6 +2270,8 @@ pure @safe unittest
 
 pure nothrow @safe unittest
 {
+    import std.range.primitives;
+
     static struct ThrowingRange
     {
         pure @safe:
