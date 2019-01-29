@@ -5736,6 +5736,17 @@ private:
         {
             assert(false, "Not yet supported.");
         }
+        else version (RISCV_Any)
+        {
+            mixin(`
+            uint result = void;
+            asm pure nothrow @nogc
+            {
+                "frflags %0" : "=r" (result);
+            }
+            return result;
+            `);
+        }
         else
             assert(0, "Not yet supported");
     }
@@ -5757,6 +5768,16 @@ private:
                 mxcsr &= ~EXCEPTIONS_MASK;
                 asm nothrow @nogc { ldmxcsr mxcsr; }
             }
+        }
+        else version (RISCV_Any)
+        {
+            mixin(`
+            uint newValues = 0x0;
+            asm pure nothrow @nogc
+            {
+                "fsflags %0" : : "r" (newValues);
+            }
+            `);
         }
         else
         {
@@ -6098,6 +6119,21 @@ nothrow @nogc:
                                  | inexactException,
         }
     }
+    else version (RISCV_Any)
+    {
+        enum : ExceptionMask
+        {
+            inexactException      = 0x01,
+            divByZeroException    = 0x02,
+            underflowException    = 0x04,
+            overflowException     = 0x08,
+            invalidException      = 0x10,
+            severeExceptions   = overflowException | divByZeroException
+                                 | invalidException,
+            allExceptions      = severeExceptions | underflowException
+                                 | inexactException,
+        }
+    }
     else version (HPPA)
     {
         enum : ExceptionMask
@@ -6285,6 +6321,10 @@ private:
     {
         alias ControlState = uint;
     }
+    else version (RISCV_Any)
+    {
+        alias ControlState = uint;
+    }
     else version (MIPS_Any)
     {
         alias ControlState = uint;
@@ -6350,6 +6390,17 @@ private:
             }
             return cont;
         }
+        else version (RISCV_Any)
+        {
+            mixin(`
+            ControlState cont;
+            asm pure nothrow @nogc
+            {
+                "frcsr %0" : "=r" (cont);
+            }
+            return cont;
+            `);
+        }
         else
             assert(0, "Not yet supported");
     }
@@ -6383,6 +6434,15 @@ private:
 
                 asm nothrow @nogc { ldmxcsr mxcsr; }
             }
+        }
+        else version (RISCV_Any)
+        {
+            mixin(`
+            asm pure nothrow @nogc
+            {
+                "fscsr %0" : : "r" (newState);
+            }
+            `);
         }
         else
             assert(0, "Not yet supported");
