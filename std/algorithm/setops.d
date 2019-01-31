@@ -1001,7 +1001,7 @@ ranges must have a common type.
 
 In the case of multisets, considering that element `a` appears `x`
 times in `r1` and `y` times and `r2`, the number of occurences
-of `a` in the resulting range is going to be `x-y` if x > y or 0 othwerise.
+of `a` in the resulting range is going to be `x-y` if x > y or 0 otherwise.
 
 Params:
     less = Predicate the given ranges are sorted by.
