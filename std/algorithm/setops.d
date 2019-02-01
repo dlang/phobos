@@ -830,6 +830,9 @@ of `ror` and discretionarily swaps and advances elements of it. If
 you want `ror` to preserve its contents after the call, you may
 want to pass a duplicate to `MultiwayMerge` (and perhaps cache the
 duplicate in between calls).
+
+See_Also: $(REF merge, std,algorithm,sorting) for an analogous function that
+    takes a static number of ranges of possibly disparate types.
  */
 struct MultiwayMerge(alias less, RangeOfRanges)
 {

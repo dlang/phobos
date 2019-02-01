@@ -1312,6 +1312,9 @@ All of its inputs are assumed to be sorted. This can mean that inputs are
 
    If any of the inputs `rs` is infinite so is the result (`empty` being always
    `false`).
+
+See_Also: $(REF multiwayMerge, std,algorithm,setops) for an analogous function
+   that merges a dynamic number of ranges.
 */
 Merge!(less, Rs) merge(alias less = "a < b", Rs...)(Rs rs)
 if (Rs.length >= 2 &&
