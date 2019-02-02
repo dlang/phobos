@@ -1784,6 +1784,29 @@ if (isInputRange!R)
     assert(equal(g6.front[0], [1]));
 }
 
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.typecons : tuple;
+
+    int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
+    auto r = arr.group;
+    assert(r.equal([ tuple(1,1u), tuple(2, 4u), tuple(3, 1u), tuple(4, 3u), tuple(5, 1u) ]));
+    r.popFront;
+    assert(r.equal([ tuple(2, 4u), tuple(3, 1u), tuple(4, 3u), tuple(5, 1u) ]));
+    auto s = r.save;
+    r.popFrontN(2);
+    assert(r.equal([ tuple(4, 3u), tuple(5, 1u) ]));
+    assert(s.equal([ tuple(2, 4u), tuple(3, 1u), tuple(4, 3u), tuple(5, 1u) ]));
+    s.popFront;
+    auto t = s.save;
+    r.popFront;
+    s.popFront;
+    assert(r.equal([ tuple(5, 1u) ]));
+    assert(s.equal([ tuple(4, 3u), tuple(5, 1u) ]));
+    assert(t.equal([ tuple(3, 1u), tuple(4, 3u), tuple(5, 1u) ]));
+}
+
 // Used by implementation of chunkBy for non-forward input ranges.
 private struct ChunkByChunkImpl(alias pred, Range)
 if (isInputRange!Range && !isForwardRange!Range)
