@@ -2446,6 +2446,19 @@ if (is(T == function))
         enum attrs = functionAttributes!T | FunctionAttribute.pure_;
         return cast(SetFunctionAttributes!(T, functionLinkage!T, attrs)) t;
     }
+
+    int f()
+    {
+        import core.thread : getpid;
+        return getpid();
+    }
+
+    int g() pure @trusted
+    {
+        auto pureF = assumePure(&f);
+        return pureF();
+    }
+    assert(g() > 0);
 }
 
 version (unittest)
