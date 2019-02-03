@@ -1613,28 +1613,8 @@ Returns:
 */
 template forward(args...)
 {
-    static if (args.length)
-    {
-        import std.algorithm.mutation : move;
-
-        alias arg = args[0];
-        // by ref || lazy || const/immutable
-        static if (__traits(isRef,  arg) ||
-                   __traits(isOut,  arg) ||
-                   __traits(isLazy, arg) ||
-                   !is(typeof(move(arg))))
-            alias fwd = arg;
-        // (r)value
-        else
-            @property auto fwd(){ return move(arg); }
-
-        static if (args.length == 1)
-            alias forward = fwd;
-        else
-            alias forward = AliasSeq!(fwd, forward!(args[1..$]));
-    }
-    else
-        alias forward = AliasSeq!();
+    import core.lifetime : fun = forward;
+    alias forward = fun!args;
 }
 
 ///
@@ -1676,49 +1656,6 @@ template forward(args...)
     assert(s == "Hello");
     baz(s, 2);
     assert(s == "HelloHello");
-}
-
-@safe unittest
-{
-    auto foo(TL...)(auto ref TL args)
-    {
-        string result = "";
-        foreach (i, _; args)
-        {
-            //pragma(msg, "[",i,"] ", __traits(isRef, args[i]) ? "L" : "R");
-            result ~= __traits(isRef, args[i]) ? "L" : "R";
-        }
-        return result;
-    }
-
-    string bar(TL...)(auto ref TL args)
-    {
-        return foo(forward!args);
-    }
-    string baz(TL...)(auto ref TL args)
-    {
-        int x;
-        return foo(forward!args[3], forward!args[2], 1, forward!args[1], forward!args[0], x);
-    }
-
-    struct S {}
-    S makeS(){ return S(); }
-    int n;
-    string s;
-    assert(bar(S(), makeS(), n, s) == "RRLL");
-    assert(baz(S(), makeS(), n, s) == "LLRRRL");
-}
-
-@safe unittest
-{
-    ref int foo(return ref int a) { return a; }
-    ref int bar(Args)(auto ref Args args)
-    {
-        return foo(forward!args);
-    }
-    static assert(!__traits(compiles, { auto x1 = bar(3); })); // case of NG
-    int value = 3;
-    auto x2 = bar(value); // case of OK
 }
 
 ///
@@ -1786,50 +1723,4 @@ template forward(args...)
     Z z4 = constX();
     // const rvalue, copy
     assert(z4.x_.i == 1);
-}
-
-// lazy -> lazy
-@safe unittest
-{
-    int foo1(lazy int i) { return i; }
-    int foo2(A)(auto ref A i) { return foo1(forward!i); }
-    int foo3(lazy int i) { return foo2(i); }
-
-    int numCalls = 0;
-    assert(foo3({ ++numCalls; return 42; }()) == 42);
-    assert(numCalls == 1);
-}
-
-// lazy -> non-lazy
-@safe unittest
-{
-    int foo1(int a, int b) { return a + b; }
-    int foo2(A...)(auto ref A args) { return foo1(forward!args); }
-    int foo3(int a, lazy int b) { return foo2(a, b); }
-
-    int numCalls;
-    assert(foo3(11, { ++numCalls; return 31; }()) == 42);
-    assert(numCalls == 1);
-}
-
-// non-lazy -> lazy
-@safe unittest
-{
-    int foo1(int a, lazy int b) { return a + b; }
-    int foo2(A...)(auto ref A args) { return foo1(forward!args); }
-    int foo3(int a, int b) { return foo2(a, b); }
-
-    assert(foo3(11, 31) == 42);
-}
-
-// out
-@safe unittest
-{
-    void foo1(int a, out int b) { b = a; }
-    void foo2(A...)(auto ref A args) { foo1(forward!args); }
-    void foo3(int a, out int b) { foo2(a, b); }
-
-    int b;
-    foo3(42, b);
-    assert(b == 42);
 }
