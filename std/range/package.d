@@ -2655,8 +2655,15 @@ if (isInputRange!R)
             }
             auto opSlice(size_t m, size_t n)
             {
-                assert(m <= n && n < length, "Attempting to index a takeOne out of bounds");
-                return n > m ? this : Result(_source, false);
+                assert(
+                    m <= n,
+                    "Attempting to slice a takeOne range with a larger first argument than the second."
+                );
+                assert(
+                    n <= length,
+                    "Attempting to slice using an out of bounds index on a takeOne range."
+                    );
+                return n > m ? this : Result(_source, true);
             }
             // Non-standard property
             @property R source() { return _source; }
@@ -2688,15 +2695,123 @@ pure @safe nothrow @nogc unittest
     struct NonForwardRange
     {
         enum empty = false;
-        int front() { return 42; }
+        @property int front() { return 42; }
         void popFront() {}
     }
 
     static assert(!isForwardRange!NonForwardRange);
 
     auto s = takeOne(NonForwardRange());
+    assert(s.length == 1);
+    assert(!s.empty);
     assert(s.front == 42);
+    assert(s.back == 42);
+    assert(s[0] == 42);
+
+    auto t = s[0 .. 0];
+    assert(t.empty);
+    assert(t.length == 0);
+
+    auto u = s[1 .. 1];
+    assert(u.empty);
+    assert(u.length == 0);
+
+    auto v = s[0 .. 1];
+    s.popFront();
+    assert(s.length == 0);
+    assert(s.empty);
+    assert(!v.empty);
+    assert(v.front == 42);
+    v.popBack();
+    assert(v.empty);
+    assert(v.length == 0);
 }
+
+pure @safe nothrow @nogc unittest
+{
+    struct NonSlicingForwardRange
+    {
+        enum empty = false;
+        @property int front() { return 42; }
+        void popFront() {}
+        @property auto save() { return this; }
+    }
+
+    static assert(isForwardRange!NonSlicingForwardRange);
+    static assert(!hasSlicing!NonSlicingForwardRange);
+
+    auto s = takeOne(NonSlicingForwardRange());
+    assert(s.length == 1);
+    assert(!s.empty);
+    assert(s.front == 42);
+    assert(s.back == 42);
+    assert(s[0] == 42);
+    auto t = s.save;
+    s.popFront();
+    assert(s.length == 0);
+    assert(s.empty);
+    assert(!t.empty);
+    assert(t.front == 42);
+    t.popBack();
+    assert(t.empty);
+    assert(t.length == 0);
+}
+
+// Test that asserts trigger correctly
+@system unittest
+{
+    import core.exception : AssertError;
+
+    struct NonForwardRange
+    {
+        enum empty = false;
+        @property int front() { return 42; }
+        void popFront() {}
+    }
+
+    auto s = takeOne(NonForwardRange());
+
+    bool thrown = false;
+    try s[1];
+    catch (AssertError) thrown = true;
+    assert(thrown);
+
+    thrown = false;
+    try s[0 .. 2];
+    catch (AssertError) thrown = true;
+    assert(thrown);
+
+    thrown = false;
+    size_t one = 1;     // Avoid style warnings triggered by literals
+    size_t zero = 0;
+    try s[one .. zero];
+    catch (AssertError) thrown = true;
+    assert(thrown);
+
+    s.popFront;
+    assert(s.empty);
+
+    thrown = false;
+    try s.front;
+    catch (AssertError) thrown = true;
+    assert(thrown);
+
+    thrown = false;
+    try s.back;
+    catch (AssertError) thrown = true;
+    assert(thrown);
+
+    thrown = false;
+    try s.popFront;
+    catch (AssertError) thrown = true;
+    assert(thrown);
+
+    thrown = false;
+    try s.popBack;
+    catch (AssertError) thrown = true;
+    assert(thrown);
+}
+
 
 //guards against issue 16999
 pure @safe unittest
