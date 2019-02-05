@@ -178,9 +178,10 @@ bool isAlpha(dchar c) @safe pure nothrow @nogc
     Params: c = The character to test.
     Returns: Whether `c` is a lowercase ASCII letter (a .. z).
   +/
+pragma(inline, true)
 bool isLower(dchar c) @safe pure nothrow @nogc
 {
-    return c >= 'a' && c <= 'z';
+    return c  - 'a' <=  'z' - 'a' ;
 }
 
 ///
@@ -210,9 +211,10 @@ bool isLower(dchar c) @safe pure nothrow @nogc
     Params: c = The character to test.
     Returns: Whether `c` is an uppercase ASCII letter (A .. Z).
   +/
+pragma(inline, true)
 bool isUpper(dchar c) @safe pure nothrow @nogc
 {
-    return c <= 'Z' && 'A' <= c;
+    return c  - 'A' <=  'Z' - 'A' ;
 }
 
 ///
@@ -242,9 +244,10 @@ bool isUpper(dchar c) @safe pure nothrow @nogc
     Params: c = The character to test.
     Returns: Whether `c` is a digit (0 .. 9).
   +/
+pragma(inline, true)
 bool isDigit(dchar c) @safe pure nothrow @nogc
 {
-    return '0' <= c && c <= '9';
+    return c  - '0' <=  '9' - '0' ;
 }
 
 ///
@@ -275,9 +278,10 @@ bool isDigit(dchar c) @safe pure nothrow @nogc
     Params: c = The character to test.
     Returns: Whether `c` is a digit in base 8 (0 .. 7).
   +/
+pragma(inline, true)
 bool isOctalDigit(dchar c) @safe pure nothrow @nogc
 {
-    return c >= '0' && c <= '7';
+    return c  - '0' <=  '7' - '0' ;
 }
 
 ///
@@ -458,9 +462,10 @@ bool isPunctuation(dchar c) @safe pure nothrow @nogc
     Returns: Whether or not `c` is a printable character other than the
     space character.
   +/
+pragma(inline, true)
 bool isGraphical(dchar c) @safe pure nothrow @nogc
 {
-    return '!' <= c && c <= '~';
+    return c  - '!' <=  '~' - '!' ;
 }
 
 ///
@@ -573,7 +578,7 @@ if (is(C : dchar))
     else
         alias R = Unqual!OC;
 
-    return isUpper(c) ? cast(R)(cast(R) c + 'a' - 'A') : cast(R) c;
+    return isUpper(c) ? cast(R)(cast(R) c ^ 32) : cast(R) c;
 }
 
 ///
@@ -636,7 +641,7 @@ if (is(C : dchar))
     else
         alias R = Unqual!OC;
 
-    return isLower(c) ? cast(R)(cast(R) c - ('a' - 'A')) : cast(R) c;
+    return isLower(c) ? cast(R)(cast(R) c ^ 32) : cast(R) c;
 }
 
 ///
