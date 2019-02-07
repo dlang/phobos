@@ -2695,7 +2695,7 @@ pure @safe nothrow @nogc unittest
     struct NonForwardRange
     {
         enum empty = false;
-        @property int front() { return 42; }
+        int front() { return 42; }
         void popFront() {}
     }
 
@@ -2732,7 +2732,7 @@ pure @safe nothrow @nogc unittest
     struct NonSlicingForwardRange
     {
         enum empty = false;
-        @property int front() { return 42; }
+        int front() { return 42; }
         void popFront() {}
         @property auto save() { return this; }
     }
@@ -2760,58 +2760,32 @@ pure @safe nothrow @nogc unittest
 // Test that asserts trigger correctly
 @system unittest
 {
+    import std.exception : assertThrown;
     import core.exception : AssertError;
 
     struct NonForwardRange
     {
         enum empty = false;
-        @property int front() { return 42; }
+        int front() { return 42; }
         void popFront() {}
     }
 
     auto s = takeOne(NonForwardRange());
 
-    bool thrown = false;
-    try s[1];
-    catch (AssertError) thrown = true;
-    assert(thrown);
+    assertThrown!AssertError(s[1]);
+    assertThrown!AssertError(s[0 .. 2]);
 
-    thrown = false;
-    try s[0 .. 2];
-    catch (AssertError) thrown = true;
-    assert(thrown);
-
-    thrown = false;
     size_t one = 1;     // Avoid style warnings triggered by literals
     size_t zero = 0;
-    try s[one .. zero];
-    catch (AssertError) thrown = true;
-    assert(thrown);
+    assertThrown!AssertError(s[one .. zero]);
 
     s.popFront;
     assert(s.empty);
-
-    thrown = false;
-    try s.front;
-    catch (AssertError) thrown = true;
-    assert(thrown);
-
-    thrown = false;
-    try s.back;
-    catch (AssertError) thrown = true;
-    assert(thrown);
-
-    thrown = false;
-    try s.popFront;
-    catch (AssertError) thrown = true;
-    assert(thrown);
-
-    thrown = false;
-    try s.popBack;
-    catch (AssertError) thrown = true;
-    assert(thrown);
+    assertThrown!AssertError(s.front);
+    assertThrown!AssertError(s.back);
+    assertThrown!AssertError(s.popFront);
+    assertThrown!AssertError(s.popBack);
 }
-
 
 //guards against issue 16999
 pure @safe unittest
