@@ -211,23 +211,7 @@ public:
             static import core.stdc.time;
             enum hnsecsToUnixEpoch = unixTimeToStdTime(0);
 
-            version (OSX)
-            {
-                static if (clockType == ClockType.second)
-                    return unixTimeToStdTime(core.stdc.time.time(null));
-                else
-                {
-                    import core.sys.posix.sys.time : gettimeofday, timeval;
-                    timeval tv = void;
-                    // Posix gettimeofday called with a valid timeval address
-                    // and a null second parameter doesn't fail.
-                    gettimeofday(&tv, null);
-                    return convert!("seconds", "hnsecs")(tv.tv_sec) +
-                           tv.tv_usec * 10 +
-                           hnsecsToUnixEpoch;
-                }
-            }
-            else version (linux)
+            version (linux)
             {
                 static if (clockType == ClockType.second)
                     return unixTimeToStdTime(core.stdc.time.time(null));
@@ -348,7 +332,33 @@ public:
                            hnsecsToUnixEpoch;
                 }
             }
-            else static assert(0, "Unsupported OS");
+            else
+            {
+                // Fallback case that works on all posix systems.
+                static if (clockType == ClockType.second)
+                    return unixTimeToStdTime(core.stdc.time.time(null));
+                else
+                {
+                    import core.sys.posix.sys.time : gettimeofday, timeval;
+                    version (OSX) { /+ macOS does not have clock_gettime. +/ }
+                    else
+                    {
+                        pragma(msg, __FUNCTION__ ~ " has no specialization " ~
+                            "for target operating system indicating whether " ~
+                            "clock_gettime is available so instead using " ~
+                            "gettimeofday. Consider opening an enhancement " ~
+                            "request at https://issues.dlang.org/.");
+                    }
+
+                    timeval tv = void;
+                    // Posix gettimeofday called with a valid timeval address
+                    // and a null second parameter doesn't fail.
+                    gettimeofday(&tv, null);
+                    return convert!("seconds", "hnsecs")(tv.tv_sec) +
+                           tv.tv_usec * 10 +
+                           hnsecsToUnixEpoch;
+                }
+            }
         }
         else static assert(0, "Unsupported OS");
     }
