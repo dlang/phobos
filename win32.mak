@@ -41,13 +41,17 @@ DRUNTIMELIB=$(DRUNTIME)/lib/druntime.lib
 
 ## Flags for dmd D compiler
 
-DFLAGS=-conf= -O -release -w -de -preview=dip1000 -preview=dtorfields -I$(DRUNTIME)\import
+DFLAGS=-conf= -O -release -w -de -preview=dip1000 -preview=dtorfields -preview=fieldwise -I$(DRUNTIME)\import
 #DFLAGS=-unittest -g
 #DFLAGS=-unittest -cov -g
 
 ## Flags for compiling unittests
 
+<<<<<<< HEAD
 UDFLAGS=-unittest -version=StdUnittest -version=CoreUnittest -conf= -O -w -preview=dip1000 -I$(DRUNTIME)\import
+=======
+UDFLAGS=-unittest -conf= -O -w -dip25 -preview=fieldwise -I$(DRUNTIME)\import
+>>>>>>> add -preview=fieldwise to build
 
 ## C compiler
 
