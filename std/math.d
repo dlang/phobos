@@ -5055,6 +5055,21 @@ struct FloatingPointControl
                                  | inexactException | subnormalException,
         }
     }
+    else version (PPC_Any)
+    {
+        enum : ExceptionMask
+        {
+            inexactException      = 0x0008,
+            divByZeroException    = 0x0010,
+            underflowException    = 0x0020,
+            overflowException     = 0x0040,
+            invalidException      = 0x0080,
+            severeExceptions   = overflowException | divByZeroException
+                                 | invalidException,
+            allExceptions      = severeExceptions | underflowException
+                                 | inexactException,
+        }
+    }
     else version (HPPA)
     {
         enum : ExceptionMask
@@ -5075,25 +5090,10 @@ struct FloatingPointControl
         enum : ExceptionMask
         {
             inexactException      = 0x0080,
-            underflowException    = 0x0100,
-            overflowException     = 0x0200,
             divByZeroException    = 0x0400,
+            overflowException     = 0x0200,
+            underflowException    = 0x0100,
             invalidException      = 0x0800,
-            severeExceptions   = overflowException | divByZeroException
-                                 | invalidException,
-            allExceptions      = severeExceptions | underflowException
-                                 | inexactException,
-        }
-    }
-    else version (PPC_Any)
-    {
-        enum : ExceptionMask
-        {
-            inexactException      = 0x08,
-            divByZeroException    = 0x10,
-            underflowException    = 0x20,
-            overflowException     = 0x40,
-            invalidException      = 0x80,
             severeExceptions   = overflowException | divByZeroException
                                  | invalidException,
             allExceptions      = severeExceptions | underflowException
