@@ -4799,7 +4799,7 @@ public:
                   std,_path).
 
         mode = Whether the directory's sub-directories should be
-               iterated in depth-first port-order ($(LREF depth)),
+               iterated in depth-first post-order ($(LREF depth)),
                depth-first pre-order ($(LREF breadth)), or not at all
                ($(LREF shallow)).
 
