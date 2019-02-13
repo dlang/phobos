@@ -4809,7 +4809,7 @@ public:
 
     Returns:
         An $(REF_ALTTEXT input range, isInputRange,std,range,primitives) of
-        $(LREF DirEntries).
+        $(LREF DirEntry).
 
     Throws:
         $(LREF FileException) if the directory does not exist.
