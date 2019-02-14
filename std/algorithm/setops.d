@@ -830,6 +830,9 @@ of `ror` and discretionarily swaps and advances elements of it. If
 you want `ror` to preserve its contents after the call, you may
 want to pass a duplicate to `MultiwayMerge` (and perhaps cache the
 duplicate in between calls).
+
+See_Also: $(REF merge, std,algorithm,sorting) for an analogous function that
+    takes a static number of ranges of possibly disparate types.
  */
 struct MultiwayMerge(alias less, RangeOfRanges)
 {
@@ -1001,7 +1004,7 @@ ranges must have a common type.
 
 In the case of multisets, considering that element `a` appears `x`
 times in `r1` and `y` times and `r2`, the number of occurences
-of `a` in the resulting range is going to be `x-y` if x > y or 0 othwerise.
+of `a` in the resulting range is going to be `x-y` if x > y or 0 otherwise.
 
 Params:
     less = Predicate the given ranges are sorted by.

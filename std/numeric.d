@@ -551,9 +551,9 @@ public:
     }
 
     ///ditto
-    T opCast(T)() if (__traits(compiles, get!T )) { return get!T; }
+    alias opCast = get;
 
-    /// Convert the CustomFloat to a real and perform the relavent operator on the result
+    /// Convert the CustomFloat to a real and perform the relevant operator on the result
     real opUnary(string op)()
         if (__traits(compiles, mixin(op~`(get!real)`)) || op=="++" || op=="--")
     {
@@ -568,8 +568,19 @@ public:
     }
 
     /// ditto
+    // Define an opBinary `CustomFloat op CustomFloat` so that those below
+    // do not match equally, which is disallowed by the spec:
+    // https://dlang.org/spec/operatoroverloading.html#binary
     real opBinary(string op,T)(T b)
-        if (__traits(compiles, mixin(`get!real`~op~`b`)))
+         if (__traits(compiles, mixin(`get!real`~op~`b.get!real`)))
+     {
+         return mixin(`get!real`~op~`b.get!real`);
+     }
+
+    /// ditto
+    real opBinary(string op,T)(T b)
+        if ( __traits(compiles, mixin(`get!real`~op~`b`)) &&
+            !__traits(compiles, mixin(`get!real`~op~`b.get!real`)))
     {
         return mixin(`get!real`~op~`b`);
     }
@@ -577,7 +588,8 @@ public:
     /// ditto
     real opBinaryRight(string op,T)(T a)
         if ( __traits(compiles, mixin(`a`~op~`get!real`)) &&
-            !__traits(compiles, mixin(`get!real`~op~`b`)))
+            !__traits(compiles, mixin(`get!real`~op~`b`)) &&
+            !__traits(compiles, mixin(`get!real`~op~`b.get!real`)))
     {
         return mixin(`a`~op~`get!real`);
     }
@@ -680,7 +692,7 @@ on very many factors.
 template FPTemporary(F)
 if (isFloatingPoint!F)
 {
-    version(X86)
+    version (X86)
         alias FPTemporary = real;
     else
         alias FPTemporary = Unqual!F;
@@ -2613,7 +2625,7 @@ if (isIntegral!T)
     {
         return gcd!(Unqual!T)(a, b);
     }
-    else version(DigitalMars)
+    else version (DigitalMars)
     {
         static if (T.min < 0)
         {
@@ -3333,6 +3345,89 @@ void inverseFft(Ret, R)(R range, Ret buf)
 C swapRealImag(C)(C input)
 {
     return C(input.im, input.re);
+}
+
+/** This function transforms `decimal` value into a value in the factorial number
+system stored in `fac`.
+
+A factorial number is constructed as:
+$(D fac[0] * 0! + fac[1] * 1! + ... fac[20] * 20!)
+
+Params:
+    decimal = The decimal value to convert into the factorial number system.
+    fac = The array to store the factorial number. The array is of size 21 as
+        `ulong.max` requires 21 digits in the factorial number system.
+Returns:
+    A variable storing the number of digits of the factorial number stored in
+    `fac`.
+*/
+size_t decimalToFactorial(ulong decimal, ref ubyte[21] fac)
+        @safe pure nothrow @nogc
+{
+    import std.algorithm.mutation : reverse;
+    size_t idx;
+
+    for (ulong i = 1; decimal != 0; ++i)
+    {
+        auto temp = decimal % i;
+        decimal /= i;
+        fac[idx++] = cast(ubyte)(temp);
+    }
+
+    if (idx == 0)
+    {
+        fac[idx++] = cast(ubyte) 0;
+    }
+
+    reverse(fac[0 .. idx]);
+
+    // first digit of the number in factorial will always be zero
+    assert(fac[idx - 1] == 0);
+
+    return idx;
+}
+
+///
+@safe pure @nogc unittest
+{
+    ubyte[21] fac;
+    size_t idx = decimalToFactorial(2982, fac);
+
+    assert(fac[0] == 4);
+    assert(fac[1] == 0);
+    assert(fac[2] == 4);
+    assert(fac[3] == 1);
+    assert(fac[4] == 0);
+    assert(fac[5] == 0);
+    assert(fac[6] == 0);
+}
+
+@safe pure unittest
+{
+    ubyte[21] fac;
+    size_t idx = decimalToFactorial(0UL, fac);
+    assert(idx == 1);
+    assert(fac[0] == 0);
+
+    fac[] = 0;
+    idx = 0;
+    idx = decimalToFactorial(ulong.max, fac);
+    assert(idx == 21);
+    auto t = [7, 11, 12, 4, 3, 15, 3, 5, 3, 5, 0, 8, 3, 5, 0, 0, 0, 2, 1, 1, 0];
+    foreach (i, it; fac[0 .. 21])
+    {
+        assert(it == t[i]);
+    }
+
+    fac[] = 0;
+    idx = decimalToFactorial(2982, fac);
+
+    assert(idx == 7);
+    t = [4, 0, 4, 1, 0, 0, 0];
+    foreach (i, it; fac[0 .. idx])
+    {
+        assert(it == t[i]);
+    }
 }
 
 private:

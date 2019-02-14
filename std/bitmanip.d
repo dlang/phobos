@@ -34,7 +34,7 @@ $(TR $(TD Tagging) $(TD
 ))
 )
 
-Copyright: Copyright Digital Mars 2007 - 2011.
+Copyright: Copyright The D Language Foundation 2007 - 2011.
 License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(HTTP digitalmars.com, Walter Bright),
            $(HTTP erdani.org, Andrei Alexandrescu),
@@ -45,7 +45,7 @@ Authors:   $(HTTP digitalmars.com, Walter Bright),
 Source: $(PHOBOSSRC std/bitmanip.d)
 */
 /*
-         Copyright Digital Mars 2007 - 2012.
+         Copyright The D Language Foundation 2007 - 2012.
 Distributed under the Boost Software License, Version 1.0.
    (See accompanying file LICENSE_1_0.txt or copy at
          http://www.boost.org/LICENSE_1_0.txt)
@@ -1362,11 +1362,18 @@ public:
      */
     size_t count()
     {
-        size_t bitCount;
-        foreach (i; 0 .. fullWords)
-            bitCount += countBitsSet(_ptr[i]);
-        bitCount += countBitsSet(_ptr[fullWords] & endMask);
-        return bitCount;
+        if (_ptr)
+        {
+            size_t bitCount;
+            foreach (i; 0 .. fullWords)
+                bitCount += countBitsSet(_ptr[i]);
+            bitCount += countBitsSet(_ptr[fullWords] & endMask);
+            return bitCount;
+        }
+        else
+        {
+            return 0;
+        }
     }
 
     ///
@@ -1374,6 +1381,9 @@ public:
     {
         auto a = BitArray([0, 1, 1, 0, 0, 1, 1]);
         assert(a.count == 4);
+
+        BitArray b;
+        assert(b.count == 0);
 
         bool[200] boolArray;
         boolArray[45 .. 130] = true;
@@ -2873,7 +2883,7 @@ if (isIntegral!T || isSomeChar!T || isBoolean!T)
 {
     EndianSwapper!T es = void;
 
-    version(LittleEndian)
+    version (LittleEndian)
         es.value = swapEndian(val);
     else
         es.value = val;
@@ -2884,7 +2894,7 @@ if (isIntegral!T || isSomeChar!T || isBoolean!T)
 private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow @nogc
 if (isFloatOrDouble!T)
 {
-    version(LittleEndian)
+    version (LittleEndian)
         return floatEndianImpl!(T, true)(val);
     else
         return floatEndianImpl!(T, false)(val);
@@ -2998,7 +3008,7 @@ if ((isIntegral!T || isSomeChar!T || isBoolean!T) &&
     EndianSwapper!T es = void;
     es.array = val;
 
-    version(LittleEndian)
+    version (LittleEndian)
         immutable retval = swapEndian(es.value);
     else
         immutable retval = es.value;
@@ -3009,7 +3019,7 @@ if ((isIntegral!T || isSomeChar!T || isBoolean!T) &&
 private T bigEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
 if (isFloatOrDouble!T && n == T.sizeof)
 {
-    version(LittleEndian)
+    version (LittleEndian)
         return cast(T) floatEndianImpl!(n, true)(val);
     else
         return cast(T) floatEndianImpl!(n, false)(val);
@@ -3048,7 +3058,7 @@ if (isIntegral!T || isSomeChar!T || isBoolean!T)
 {
     EndianSwapper!T es = void;
 
-    version(BigEndian)
+    version (BigEndian)
         es.value = swapEndian(val);
     else
         es.value = val;
@@ -3059,7 +3069,7 @@ if (isIntegral!T || isSomeChar!T || isBoolean!T)
 private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow @nogc
 if (isFloatOrDouble!T)
 {
-    version(BigEndian)
+    version (BigEndian)
         return floatEndianImpl!(T, true)(val);
     else
         return floatEndianImpl!(T, false)(val);
@@ -3146,7 +3156,7 @@ if ((isIntegral!T || isSomeChar!T || isBoolean!T) &&
     EndianSwapper!T es = void;
     es.array = val;
 
-    version(BigEndian)
+    version (BigEndian)
         immutable retval = swapEndian(es.value);
     else
         immutable retval = es.value;
@@ -3158,7 +3168,7 @@ private T littleEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow
 if (((isFloatOrDouble!T) &&
     n == T.sizeof))
 {
-    version(BigEndian)
+    version (BigEndian)
         return floatEndianImpl!(n, true)(val);
     else
         return floatEndianImpl!(n, false)(val);

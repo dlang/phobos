@@ -111,8 +111,12 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
             else
             {
                 enum foundFunc = findCovariantFunction!(TargetMembers[i], Source, SourceMembers);
-                static if (foundFunc == -1)
-                    pragma(msg, "Could not locate matching function for: " ~ TargetMembers[i].stringof);
+                debug
+                {
+                    static if (foundFunc == -1)
+                        pragma(msg, "Could not locate matching function for: ",
+                               TargetMembers[i].stringof);
+                }
                 enum hasRequiredMethods =
                     foundFunc != -1 &&
                     hasRequiredMethods!(i + 1);
@@ -184,7 +188,7 @@ if (Targets.length >= 1 && allSatisfy!(isInterface, Targets))
 {
     import std.meta : ApplyLeft, staticMap;
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         /**
          * Wrap src in an anonymous class implementing $(D_PARAM Targets).
@@ -406,7 +410,7 @@ private string unwrapExceptionText(Source, Target)()
     return Target.stringof~ " not wrapped into "~ Source.stringof;
 }
 
-version(StdDdoc)
+version (StdDdoc)
 {
     /**
      * Extract object previously wrapped by $(LREF wrap).

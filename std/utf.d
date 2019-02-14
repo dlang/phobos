@@ -52,7 +52,7 @@ $(TR $(TD Miscellaneous) $(TD
         $(LINK2 http://en.wikipedia.org/wiki/Unicode, Wikipedia)<br>
         $(LINK http://www.cl.cam.ac.uk/~mgk25/unicode.html#utf-8)<br>
         $(LINK http://anubis.dkuug.dk/JTC1/SC2/WG2/docs/n1335)
-    Copyright: Copyright Digital Mars 2000 - 2012.
+    Copyright: Copyright The D Language Foundation 2000 - 2012.
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   $(HTTP digitalmars.com, Walter Bright) and
                $(HTTP jmdavisprog.com, Jonathan M Davis)
@@ -1065,6 +1065,15 @@ if (isSomeChar!C)
 /// Whether or not to replace invalid UTF with $(LREF replacementDchar)
 alias UseReplacementDchar = Flag!"useReplacementDchar";
 
+// Reduce distinct instantiations of decodeImpl.
+private template TypeForDecode(T)
+{
+    static if (isDynamicArray!T && is(T : E[], E) && __traits(isArithmetic, E) && !is(E == shared))
+        alias TypeForDecode = const(Unqual!E)[];
+    else
+        alias TypeForDecode = T;
+}
+
 /++
     Decodes and returns the code point starting at `str[index]`. `index`
     is advanced to one past the decoded code point. If the code point is not
@@ -1103,7 +1112,7 @@ do
     if (str[index] < codeUnitLimit!S)
         return str[index++];
     else
-        return decodeImpl!(true, useReplacementDchar)(str, index);
+        return decodeImpl!(true, useReplacementDchar)(cast(TypeForDecode!S) str, index);
 }
 
 /// ditto
@@ -1123,7 +1132,7 @@ do
     if (str[index] < codeUnitLimit!S)
         return str[index++];
     else
-        return decodeImpl!(true, useReplacementDchar)(str, index);
+        return decodeImpl!(true, useReplacementDchar)(cast(TypeForDecode!S) str, index);
 }
 
 ///
@@ -1200,7 +1209,7 @@ do
         //is undesirable, since not all overloads of decodeImpl need it. So, it
         //should be moved back into decodeImpl once bug# 8521 has been fixed.
         enum canIndex = isRandomAccessRange!S && hasSlicing!S && hasLength!S;
-        immutable retval = decodeImpl!(canIndex, useReplacementDchar)(str, numCodeUnits);
+        immutable retval = decodeImpl!(canIndex, useReplacementDchar)(cast(TypeForDecode!S) str, numCodeUnits);
 
         // The other range types were already popped by decodeImpl.
         static if (isRandomAccessRange!S && hasSlicing!S && hasLength!S)
@@ -1233,7 +1242,7 @@ do
     }
     else
     {
-        immutable retval = decodeImpl!(true, useReplacementDchar)(str, numCodeUnits);
+        immutable retval = decodeImpl!(true, useReplacementDchar)(cast(TypeForDecode!S) str, numCodeUnits);
         str = str[numCodeUnits .. $];
         return retval;
     }
@@ -1307,7 +1316,7 @@ do
         numCodeUnits = strideBack(str);
         immutable newLength = str.length - numCodeUnits;
         size_t index = newLength;
-        immutable retval = decodeImpl!(true, useReplacementDchar)(str, index);
+        immutable retval = decodeImpl!(true, useReplacementDchar)(cast(TypeForDecode!S) str, index);
         str = str[0 .. newLength];
         return retval;
     }
@@ -1341,7 +1350,7 @@ do
         static if (isRandomAccessRange!S)
         {
             size_t index = str.length - numCodeUnits;
-            immutable retval = decodeImpl!(true, useReplacementDchar)(str, index);
+            immutable retval = decodeImpl!(true, useReplacementDchar)(cast(TypeForDecode!S) str, index);
             str.popBackExactly(numCodeUnits);
             return retval;
         }
@@ -1357,7 +1366,8 @@ do
             }
             const Char[] codePoint = codeUnits[0 .. numCodeUnits];
             size_t index = 0;
-            immutable retval = decodeImpl!(true, useReplacementDchar)(codePoint, index);
+            immutable retval = decodeImpl!(true, useReplacementDchar)(
+                cast(TypeForDecode!(typeof(codePoint))) codePoint, index);
             str = tmp;
             return retval;
         }
@@ -1839,7 +1849,7 @@ unittest
 }
 
 
-version(unittest) private void testDecode(R)(R range,
+version (unittest) private void testDecode(R)(R range,
                                              size_t index,
                                              dchar expectedChar,
                                              size_t expectedIndex,
@@ -1868,7 +1878,7 @@ version(unittest) private void testDecode(R)(R range,
     }
 }
 
-version(unittest) private void testDecodeFront(R)(ref R range,
+version (unittest) private void testDecodeFront(R)(ref R range,
                                                   dchar expectedChar,
                                                   size_t expectedNumCodeUnits,
                                                   size_t line = __LINE__)
@@ -1893,7 +1903,7 @@ version(unittest) private void testDecodeFront(R)(ref R range,
     }
 }
 
-version(unittest) private void testDecodeBack(R)(ref R range,
+version (unittest) private void testDecodeBack(R)(ref R range,
                                                  dchar expectedChar,
                                                  size_t expectedNumCodeUnits,
                                                  size_t line = __LINE__)
@@ -1924,7 +1934,7 @@ version(unittest) private void testDecodeBack(R)(ref R range,
     }
 }
 
-version(unittest) private void testAllDecode(R)(R range,
+version (unittest) private void testAllDecode(R)(R range,
                                                 dchar expectedChar,
                                                 size_t expectedIndex,
                                                 size_t line = __LINE__)
@@ -1938,7 +1948,7 @@ version(unittest) private void testAllDecode(R)(R range,
     testDecodeFront(range, expectedChar, expectedIndex, line);
 }
 
-version(unittest) private void testBadDecode(R)(R range, size_t index, size_t line = __LINE__)
+version (unittest) private void testBadDecode(R)(R range, size_t index, size_t line = __LINE__)
 {
     import core.exception : AssertError;
     import std.string : format;
@@ -1964,7 +1974,7 @@ version(unittest) private void testBadDecode(R)(R range, size_t index, size_t li
         assertThrown!UTFException(decodeFront(range, index), null, __FILE__, line);
 }
 
-version(unittest) private void testBadDecodeBack(R)(R range, size_t line = __LINE__)
+version (unittest) private void testBadDecodeBack(R)(R range, size_t line = __LINE__)
 {
     // This condition is to allow unit testing all `decode` functions together
     static if (!isBidirectionalRange!R)
@@ -3366,8 +3376,9 @@ if (isSomeChar!C)
 
 
 // Ranges of code units for testing.
-version(unittest)
+version (unittest)
 {
+private:
     struct InputCU(C)
     {
         import std.conv : to;
@@ -4121,8 +4132,8 @@ pure @safe nothrow @nogc unittest
     foreach (c; s[].byDchar()) { }
 }
 
-version(unittest)
-int impureVariable;
+version (unittest)
+private int impureVariable;
 
 @system unittest
 {

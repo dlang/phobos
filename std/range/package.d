@@ -235,7 +235,7 @@ public import std.typecons : Flag, Yes, No;
 
 import std.meta; // allSatisfy, staticMap
 import std.traits; // CommonType, isCallable, isFloatingPoint, isIntegral,
-    // isPointer, isSomeFunction, isStaticArray, Unqual
+    // isPointer, isSomeFunction, isStaticArray, Unqual, isInstanceOf
 
 
 /**
@@ -2655,8 +2655,15 @@ if (isInputRange!R)
             }
             auto opSlice(size_t m, size_t n)
             {
-                assert(m <= n && n < length, "Attempting to index a takeOne out of bounds");
-                return n > m ? this : Result(_source, false);
+                assert(
+                    m <= n,
+                    "Attempting to slice a takeOne range with a larger first argument than the second."
+                );
+                assert(
+                    n <= length,
+                    "Attempting to slice using an out of bounds index on a takeOne range."
+                    );
+                return n > m ? this : Result(_source, true);
             }
             // Non-standard property
             @property R source() { return _source; }
@@ -2695,7 +2702,89 @@ pure @safe nothrow @nogc unittest
     static assert(!isForwardRange!NonForwardRange);
 
     auto s = takeOne(NonForwardRange());
+    assert(s.length == 1);
+    assert(!s.empty);
     assert(s.front == 42);
+    assert(s.back == 42);
+    assert(s[0] == 42);
+
+    auto t = s[0 .. 0];
+    assert(t.empty);
+    assert(t.length == 0);
+
+    auto u = s[1 .. 1];
+    assert(u.empty);
+    assert(u.length == 0);
+
+    auto v = s[0 .. 1];
+    s.popFront();
+    assert(s.length == 0);
+    assert(s.empty);
+    assert(!v.empty);
+    assert(v.front == 42);
+    v.popBack();
+    assert(v.empty);
+    assert(v.length == 0);
+}
+
+pure @safe nothrow @nogc unittest
+{
+    struct NonSlicingForwardRange
+    {
+        enum empty = false;
+        int front() { return 42; }
+        void popFront() {}
+        @property auto save() { return this; }
+    }
+
+    static assert(isForwardRange!NonSlicingForwardRange);
+    static assert(!hasSlicing!NonSlicingForwardRange);
+
+    auto s = takeOne(NonSlicingForwardRange());
+    assert(s.length == 1);
+    assert(!s.empty);
+    assert(s.front == 42);
+    assert(s.back == 42);
+    assert(s[0] == 42);
+    auto t = s.save;
+    s.popFront();
+    assert(s.length == 0);
+    assert(s.empty);
+    assert(!t.empty);
+    assert(t.front == 42);
+    t.popBack();
+    assert(t.empty);
+    assert(t.length == 0);
+}
+
+// Test that asserts trigger correctly
+@system unittest
+{
+    import std.exception : assertThrown;
+    import core.exception : AssertError;
+
+    struct NonForwardRange
+    {
+        enum empty = false;
+        int front() { return 42; }
+        void popFront() {}
+    }
+
+    auto s = takeOne(NonForwardRange());
+
+    assertThrown!AssertError(s[1]);
+    assertThrown!AssertError(s[0 .. 2]);
+
+    size_t one = 1;     // Avoid style warnings triggered by literals
+    size_t zero = 0;
+    assertThrown!AssertError(s[one .. zero]);
+
+    s.popFront;
+    assert(s.empty);
+    assertThrown!AssertError(s.front);
+    assertThrown!AssertError(s.back);
+    assertThrown!AssertError(s.popFront);
+    assertThrown!AssertError(s.popBack);
 }
 
 //guards against issue 16999
@@ -5422,7 +5511,7 @@ if (allSatisfy!(isInputRange, Ranges))
     // Just make sure 1-range case instantiates.  This hangs the compiler
     // when no explicit stopping policy is specified due to Bug 4652.
     auto stuff = lockstep([1,2,3,4,5], StoppingPolicy.shortest);
-    foreach (int i, a; stuff)
+    foreach (i, a; stuff)
     {
         assert(stuff[i] == a);
     }
@@ -7219,6 +7308,17 @@ if (isForwardRange!RangeOfRanges &&
     this(RangeOfRanges input)
     {
         this._input = input;
+        static if (opt == TransverseOptions.enforceNotJagged)
+        {
+            import std.exception : enforce;
+
+            if (empty) return;
+            immutable commonLength = _input.front.length;
+            foreach (e; _input)
+            {
+                enforce(e.length == commonLength);
+            }
+        }
     }
 
     @property auto front()
@@ -7324,6 +7424,14 @@ private:
     assert(z.front.equal([1,4]));
     assert(z[0].equal([1,4]));
     assert(!is(typeof(z[0][0])));
+}
+
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    auto r = [[1,2], [3], [4,5], [], [6]];
+    assertThrown(r.transposed!(TransverseOptions.enforceNotJagged));
 }
 
 /**
@@ -8587,13 +8695,11 @@ public:
             *      gap: (7 - 4) % 2 = 3 % 2 = 1
             *      end: 7 - 1 = 6
             */
-            pragma(inline, true);
             return (source.length - windowSize)  % stepSize;
         }
 
         private size_t numberOfFullFrames()
         {
-            pragma(inline, true);
             /**
             5.iota.slides(2, 1) => [0, 1], [1, 2], [2, 3], [3, 4]       (4)
             7.iota.slides(2, 2) => [0, 1], [2, 3], [4, 5], [6]          (3)
@@ -8610,7 +8716,6 @@ public:
         // Whether the last slide frame size is less than windowSize
         private bool hasPartialElements()
         {
-            pragma(inline, true);
             static if (withPartial)
                 return gap != 0 && source.length > numberOfFullFrames * stepSize;
             else
@@ -9387,6 +9492,14 @@ public:
     }}
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=19082
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
+    assert([1].map!(x => x).slide(2).equal!equal([[1]]));
+}
+
 private struct OnlyResult(T, size_t arity)
 {
     private this(Values...)(auto ref Values values)
@@ -9469,7 +9582,7 @@ private struct OnlyResult(T, size_t arity)
     private size_t backIndex = 0;
 
     // @@@BUG@@@ 10643
-    version(none)
+    version (none)
     {
         import std.traits : hasElaborateAssign;
         static if (hasElaborateAssign!T)
@@ -10114,7 +10227,7 @@ pure @safe unittest
     }}
 }
 
-version(none) // @@@BUG@@@ 10939
+version (none) // @@@BUG@@@ 10939
 {
     // Re-enable (or remove) if 10939 is resolved.
     /+pure+/ @safe unittest // Impure because of std.conv.to
@@ -10177,8 +10290,8 @@ template isTwoWayCompatible(alias fn, T1, T2)
             T1 foo();
             T2 bar();
 
-            fn(foo(), bar());
-            fn(bar(), foo());
+            cast(void) fn(foo(), bar());
+            cast(void) fn(bar(), foo());
         }
     ));
 }
@@ -10276,7 +10389,7 @@ corresponding `SortedRange`. To construct a `SortedRange` from a range
 below.
 */
 struct SortedRange(Range, alias pred = "a < b")
-if (isInputRange!Range)
+if (isInputRange!Range && !isInstanceOf!(SortedRange, Range))
 {
     import std.functional : binaryFun;
 
@@ -10726,6 +10839,14 @@ sorting relation.
     }
 }
 
+/// ditto
+template SortedRange(Range, alias pred = "a < b")
+if (isInstanceOf!(SortedRange, Range))
+{
+    // Avoid nesting SortedRange types (see Issue 18933);
+    alias SortedRange = SortedRange!(Unqual!(typeof(Range._input)), pred);
+}
+
 ///
 @safe unittest
 {
@@ -10881,6 +11002,14 @@ that break its sorted-ness, `SortedRange` will work erratically.
     auto r1 = r.upperBound!(SearchPolicy.linear)("def");
     assert(r1.front == "ghi", r1.front);
     f.close();
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=19337
+@safe unittest
+{
+    import std.algorithm.sorting : sort;
+    auto a = [ 1, 2, 3, 42, 52, 64 ];
+    a.sort.sort!"a > b";
 }
 
 /**
@@ -11074,7 +11203,7 @@ public:
     }
 
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         /++ +/
         @property auto front() {assert(0);}
@@ -11102,7 +11231,7 @@ public:
     }
 
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         @property bool empty(); ///
         @property bool empty() const; ///Ditto
@@ -11130,7 +11259,7 @@ public:
     }
 
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         /++
             Only defined if `isForwardRange!R` is `true`.
@@ -11200,7 +11329,7 @@ public:
     }
 
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         /++
             Only defined if `isBidirectionalRange!R` is `true`.
@@ -11237,7 +11366,7 @@ public:
     }
 
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         /++
             Only defined if `isRandomAccesRange!R` is `true`.
@@ -11293,7 +11422,7 @@ public:
     }
 
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         /++
             Only defined if `hasLength!R` is `true`.
@@ -11322,7 +11451,7 @@ public:
     }
 
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         /++
             Only defined if `hasSlicing!R` is `true`.

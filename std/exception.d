@@ -554,7 +554,7 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, scope 
             enum expect =
                 (BodySafe || !EncloseSafe) && (!EnclosePure || BodyPure);
 
-            version(none)
+            version (none)
             pragma(msg, "safe = ", EncloseSafe?1:0, "/", BodySafe?1:0, ", ",
                         "pure = ", EnclosePure?1:0, "/", BodyPure?1:0, ", ",
                         "expect = ", expect?"OK":"NG", ", ",
@@ -622,15 +622,19 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, scope 
     $(D new ErrnoException(msg)) is thrown.  It is assumed that the last
     operation set `errno` to an error code corresponding with the failed
     condition.
-
-    Example:
-    --------------------
-    auto f = errnoEnforce(fopen("data.txt"));
-    auto line = readln(f);
-    enforce(line.length); // expect a non-empty line
-    --------------------
  +/
 alias errnoEnforce = enforce!ErrnoException;
+
+///
+@system unittest
+{
+    import core.stdc.stdio : fclose, fgets, fopen;
+    auto f = fopen(__FILE_FULL_PATH__, "r").errnoEnforce;
+    scope(exit) fclose(f);
+    char[100] buf;
+    auto line = fgets(buf.ptr, buf.length, f);
+    enforce(line !is null); // expect a non-empty line
+}
 
 // @@@DEPRECATED_2.089@@@
 /++
@@ -1305,7 +1309,7 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
 }
 
 
-version(unittest)
+version (unittest)
 {
     // 17084 : the bug doesn't happen if these declarations are
     // in the unittest block (static or not).
@@ -1846,7 +1850,7 @@ expression.
     static assert(!__traits(compiles, (new Object()).ifThrown(e=>1)));
 }
 
-version(unittest) package
+version (unittest) package
 void assertCTFEable(alias dg)()
 {
     static assert({ cast(void) dg(); return true; }());

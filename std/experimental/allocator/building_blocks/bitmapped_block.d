@@ -1208,7 +1208,7 @@ Params:
 struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
    ParentAllocator = NullAllocator, Flag!"multiblock" f = Yes.multiblock)
 {
-    version(StdDdoc)
+    version (StdDdoc)
     {
         /**
         Constructs a block allocator given a hunk of memory, or a desired capacity
@@ -1489,7 +1489,7 @@ Params:
 shared struct SharedBitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
    ParentAllocator = NullAllocator, Flag!"multiblock" f = Yes.multiblock)
 {
-    version(StdDdoc)
+    version (StdDdoc)
     {
         /**
         Constructs a block allocator given a hunk of memory, or a desired capacity
@@ -1640,7 +1640,7 @@ shared struct SharedBitmappedBlock(size_t theBlockSize, uint theAlignment = plat
     }
     else
     {
-        version(unittest)
+        version (unittest)
         @system unittest
         {
             import std.algorithm.comparison : max;

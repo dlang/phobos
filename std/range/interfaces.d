@@ -187,7 +187,7 @@ interface RandomAccessFinite(E) : BidirectionalRange!(E) {
 
     // Can't support slicing until issues with requiring slicing for all
     // finite random access ranges are fully resolved.
-    version(none)
+    version (none)
     {
         ///
         RandomAccessFinite!E opSlice(size_t, size_t);
@@ -442,7 +442,7 @@ if (isInputRange!(Unqual!R))
                     // Can't support slicing until all the issues with
                     // requiring slicing support for finite random access
                     // ranges are resolved.
-                    version(none)
+                    version (none)
                     {
                         typeof(this) opSlice(size_t lower, size_t upper) {
                             return new typeof(this)(_range[lower .. upper]);

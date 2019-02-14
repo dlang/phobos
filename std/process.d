@@ -92,7 +92,8 @@ version (Posix)
 version (Windows)
 {
     import core.stdc.stdio;
-    import core.sys.windows.windows;
+    import core.sys.windows.winbase;
+    import core.sys.windows.winnt;
     import std.utf;
     import std.windows.syserror;
 }
@@ -334,7 +335,7 @@ Pid spawnProcess(scope const(char)[] program,
     return spawnProcess((&program)[0 .. 1], env, config, workDir);
 }
 
-version(Posix) private enum InternalError : ubyte
+version (Posix) private enum InternalError : ubyte
 {
     noerror,
     exec,
@@ -706,12 +707,13 @@ private Pid spawnProcessImpl(scope const(char)[] commandLine,
     static void prepareStream(ref File file, DWORD stdHandle, string which,
                               out int fileDescriptor, out HANDLE handle)
     {
+        enum _NO_CONSOLE_FILENO = cast(HANDLE)-2;
         fileDescriptor = getFD(file);
         handle = null;
         if (fileDescriptor >= 0)
             handle = file.windowsHandle;
         // Windows GUI applications have a fd but not a valid Windows HANDLE.
-        if (handle is null || handle == INVALID_HANDLE_VALUE)
+        if (handle is null || handle == INVALID_HANDLE_VALUE || handle == _NO_CONSOLE_FILENO)
             handle = GetStdHandle(stdHandle);
 
         DWORD dwFlags;
@@ -747,7 +749,8 @@ private Pid spawnProcessImpl(scope const(char)[] commandLine,
         CREATE_UNICODE_ENVIRONMENT |
         ((config & Config.suppressConsole) ? CREATE_NO_WINDOW : 0);
     auto pworkDir = workDir.tempCStringW();     // workaround until Bugzilla 14696 is fixed
-    if (!CreateProcessW(null, commandLine.tempCStringW().buffPtr, null, null, true, dwCreationFlags,
+    if (!CreateProcessW(null, commandLine.tempCStringW().buffPtr,
+                        null, null, true, dwCreationFlags,
                         envz, workDir.length ? pworkDir : null, &startinfo, &pi))
         throw ProcessException.newFromLastError("Failed to spawn new process");
 
@@ -1146,7 +1149,7 @@ version (Posix) @system unittest
     assertThrown!ProcessException(spawnProcess("./rgiuhrifuheiohnmnvqweoijwf", null, Config.detached));
 
     // can't execute malformed file with executable permissions
-    version(Posix)
+    version (Posix)
     {
         import std.path : buildPath;
         import std.file : remove, write, setAttributes;
@@ -1189,7 +1192,7 @@ version (Posix) @system unittest
     assertThrown!ProcessException(spawnProcess([prog.path], null, Config.detached, directory));
 
     // can't run in directory if user does not have search permission on this directory
-    version(Posix)
+    version (Posix)
     {
         if (core.sys.posix.unistd.getuid() != 0)
         {
@@ -1335,7 +1338,7 @@ Pid spawnShell(scope const(char)[] command,
     auto env = ["foo" : "bar"];
     assert(wait(spawnShell(cmd~redir, env)) == 0);
     auto f = File(tmpFile, "a");
-    version(CRuntime_Microsoft) f.seek(0, SEEK_END); // MSVCRT probably seeks to the end when writing, not before
+    version (CRuntime_Microsoft) f.seek(0, SEEK_END); // MSVCRT probably seeks to the end when writing, not before
     assert(wait(spawnShell(cmd, std.stdio.stdin, f, std.stdio.stderr, env)) == 0);
     f.close();
     auto output = std.file.readText(tmpFile);
@@ -1879,7 +1882,7 @@ void kill(Pid pid, int codeOrSignal)
     */
     Thread.sleep(1.seconds);
     assert(!pid.owned);
-    version(Windows) assert(pid.osHandle == INVALID_HANDLE_VALUE);
+    version (Windows) assert(pid.osHandle == INVALID_HANDLE_VALUE);
     assertThrown!ProcessException(wait(pid));
     assertThrown!ProcessException(kill(pid));
 }
@@ -2734,7 +2737,7 @@ version (Windows) private immutable string shellSwitch = "/C";
 // file. On Windows the file name gets a .cmd extension, while on
 // POSIX its executable permission bit is set.  The file is
 // automatically deleted when the object goes out of scope.
-version(unittest)
+version (unittest)
 private struct TestScript
 {
     this(string code) @system
@@ -2777,7 +2780,7 @@ private struct TestScript
     string path;
 }
 
-version(unittest)
+version (unittest)
 private string uniqueTempPath() @safe
 {
     import std.file : tempDir;
@@ -3076,21 +3079,23 @@ if (is(typeof(allocator(size_t.init)[0] = char.init)))
     return buf;
 }
 
-version(Windows) version(unittest)
+version (Windows) version (unittest)
 {
+private:
     import core.stdc.stddef;
     import core.stdc.wchar_ : wcslen;
     import core.sys.windows.shellapi : CommandLineToArgvW;
-    import core.sys.windows.windows;
+    import core.sys.windows.winbase;
+    import core.sys.windows.winnt;
     import std.array;
 
     string[] parseCommandLine(string line)
     {
         import std.algorithm.iteration : map;
         import std.array : array;
-        LPWSTR lpCommandLine = (to!(wchar[])(line) ~ "\0"w).ptr;
+        auto lpCommandLine = (to!(WCHAR[])(line) ~ '\0').ptr;
         int numArgs;
-        LPWSTR* args = CommandLineToArgvW(lpCommandLine, &numArgs);
+        auto args = CommandLineToArgvW(lpCommandLine, &numArgs);
         scope(exit) LocalFree(args);
         return args[0 .. numArgs]
             .map!(arg => to!string(arg[0 .. wcslen(arg)]))
@@ -3194,7 +3199,7 @@ string escapeShellFileName(scope const(char)[] fileName) @trusted pure nothrow
 // Loop generating strings with random characters
 //version = unittest_burnin;
 
-version(unittest_burnin)
+version (unittest_burnin)
 @system unittest
 {
     // There are no readily-available commands on all platforms suitable
@@ -3734,7 +3739,7 @@ private:
 
 
 /*
-Copyright: Copyright Digital Mars 2007 - 2009.
+Copyright: Copyright The D Language Foundation 2007 - 2009.
 License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(HTTP digitalmars.com, Walter Bright),
            $(HTTP erdani.org, Andrei Alexandrescu),
@@ -3742,7 +3747,7 @@ Authors:   $(HTTP digitalmars.com, Walter Bright),
 Source:    $(PHOBOSSRC std/_process.d)
 */
 /*
-         Copyright Digital Mars 2007 - 2009.
+         Copyright The D Language Foundation 2007 - 2009.
 Distributed under the Boost Software License, Version 1.0.
    (See accompanying file LICENSE_1_0.txt or copy at
          http://www.boost.org/LICENSE_1_0.txt)
@@ -3762,7 +3767,7 @@ version (Posix)
 {
     import core.sys.posix.stdlib;
 }
-version(unittest)
+version (unittest)
 {
     import std.conv, std.file, std.random;
 }
@@ -3797,7 +3802,7 @@ private void toAStringz(in string[] a, const(char)**az)
 // Incorporating idea (for spawnvp() on Posix) from Dave Fladebo
 
 enum { _P_WAIT, _P_NOWAIT, _P_OVERLAY }
-version(Windows) extern(C) int spawnvp(int, scope const(char) *, scope const(char*)*);
+version (Windows) extern(C) int spawnvp(int, scope const(char) *, scope const(char*)*);
 alias P_WAIT = _P_WAIT;
 alias P_NOWAIT = _P_NOWAIT;
 
@@ -3874,7 +3879,7 @@ version (StdDdoc)
     /// ditto
     int execvpe(in string pathname, in string[] argv, in string[] envp);
 }
-else version(Posix)
+else version (Posix)
 {
     int execv(in string pathname, in string[] argv)
     {
@@ -3900,7 +3905,7 @@ extern(C)
     int execv(scope const(char) *, scope const(char *)*);
     int execve(scope const(char)*, scope const(char*)*, scope const(char*)*);
     int execvp(scope const(char)*, scope const(char*)*);
-    version(Windows) int execvpe(scope const(char)*, scope const(char*)*, scope const(char*)*);
+    version (Windows) int execvpe(scope const(char)*, scope const(char*)*, scope const(char*)*);
 }
 
 private int execv_(in string pathname, in string[] argv)
@@ -3938,7 +3943,7 @@ private int execvp_(in string pathname, in string[] argv)
 
 private int execvpe_(in string pathname, in string[] argv, in string[] envp)
 {
-version(Posix)
+version (Posix)
 {
     import std.array : split;
     import std.conv : to;
@@ -3973,7 +3978,7 @@ version(Posix)
         return iRet;
     }
 }
-else version(Windows)
+else version (Windows)
 {
     auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
     scope(exit) core.stdc.stdlib.free(argv_);
@@ -3991,7 +3996,7 @@ else
 } // version
 }
 
-version(StdDdoc)
+version (StdDdoc)
 {
     /****************************************
      * Start up the browser and set it to viewing the page at url.
@@ -4001,7 +4006,7 @@ version(StdDdoc)
 else
 version (Windows)
 {
-    import core.sys.windows.windows;
+    import core.sys.windows.shellapi, core.sys.windows.winuser;
 
     pragma(lib,"shell32.lib");
 

@@ -1908,7 +1908,7 @@ class Base64Exception : Exception
 
     // @@@9543@@@ These tests were disabled because they actually relied on the input range having length.
     // The implementation (currently) doesn't support encoding/decoding from a length-less source.
-    version(none)
+    version (none)
     { // with InputRange
         // InputRange to ubyte[] or char[]
         auto encoded = Base64.encode(map!(to!(ubyte))(["20", "251", "156", "3", "217", "126"]));

@@ -35,6 +35,9 @@ $(T2 nextEvenPermutation,
 $(T2 nextPermutation,
         Computes the next lexicographically greater permutation of a range
         in-place.)
+$(T2 nthPermutation,
+        Computes the nth permutation of a range
+        in-place.)
 $(T2 partialSort,
         If `a = [5, 4, 3, 2, 1]`, then `partialSort(a, 3)` leaves
         `a[0 .. 3] = [1, 2, 3]`.
@@ -387,8 +390,9 @@ Returns:
 The right part of `r` after partitioning.
 
 If `ss == SwapStrategy.stable`, `partition` preserves the relative
-ordering of all elements `a`, `b` in `r` for which `predicate(a) =$D(
-predicate(b)). If `ss == SwapStrategy.semistable`, `partition` preserves
+ordering of all elements `a`, `b` in `r` for which
+`predicate(a) == predicate(b)`.
+If `ss == SwapStrategy.semistable`, `partition` preserves
 the relative ordering of all elements `a`, `b` in the left part of `r`
 for which `predicate(a) == predicate(b)`.
 */
@@ -638,7 +642,7 @@ if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && hasAssig
         for (;;)
         {
             // Loop invariant
-            version(unittest)
+            version (unittest)
             {
                 // this used to import std.algorithm.all, but we want to save
                 // imports when unittests are enabled if possible.
@@ -943,8 +947,9 @@ Params:
     index = The resulting index.
 
 Returns: The pointer-based version returns a `SortedRange` wrapper
-over index, of type `SortedRange!(RangeIndex, (a, b) =$D(
-binaryFun!less(*a, *b))) thus reflecting the ordering of the
+over index, of type
+`SortedRange!(RangeIndex, (a, b) => binaryFun!less(*a, *b))`
+thus reflecting the ordering of the
 index. The index-based version returns `void` because the ordering
 relation involves not only `index` but also `r`.
 
@@ -1307,6 +1312,9 @@ All of its inputs are assumed to be sorted. This can mean that inputs are
 
    If any of the inputs `rs` is infinite so is the result (`empty` being always
    `false`).
+
+See_Also: $(REF multiwayMerge, std,algorithm,setops) for an analogous function
+   that merges a dynamic number of ranges.
 */
 Merge!(less, Rs) merge(alias less = "a < b", Rs...)(Rs rs)
 if (Rs.length >= 2 &&
@@ -2896,8 +2904,7 @@ Params:
     r = The range to sort.
 
 Returns: The initial range wrapped as a `SortedRange` with the
-predicate `(a, b) => binaryFun!less(transform(a)$D(
-transform(b))).
+predicate `(a, b) => binaryFun!less(transform(a), transform(b))`.
  */
 SortedRange!(R, ((a, b) => binaryFun!less(unaryFun!transform(a),
                                           unaryFun!transform(b))))
@@ -3014,8 +3021,8 @@ if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R)
 
 // partialSort
 /**
-Reorders the random-access range `r` such that the range `r[$D(
-.. mid]) is the same as if the entire `r` were sorted, and leaves
+Reorders the random-access range `r` such that the range `r[0 .. mid]`
+is the same as if the entire `r` were sorted, and leaves
 the range `r[mid .. r.length]` in no particular order. Performs
 $(BIGOH r.length * log(mid)) evaluations of `pred`. The
 implementation simply calls `topN!(less, ss)(r, n)` and then $(D
@@ -3669,8 +3676,8 @@ if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
 /**
 Copies the top `n` elements of the
 $(REF_ALTTEXT input range, isInputRange, std,range,primitives) `source` into the
-random-access range `target`, where `n $D(
-target.length). Elements of `source` are not touched. If $(D
+random-access range `target`, where `n = target.length`.
+Elements of `source` are not touched. If $(D
 sorted) is `true`, the target is sorted. Otherwise, the target
 respects the $(HTTP en.wikipedia.org/wiki/Binary_heap, heap property).
 
@@ -3964,7 +3971,7 @@ if (isRandomAccessRange!Range && hasLength!Range &&
     else static if (k == 5)
     {
         // Credit: Teppo Niinimäki
-        version(unittest) scope(success)
+        version (unittest) scope(success)
         {
             assert(!lt(r[c], r[a]));
             assert(!lt(r[c], r[b]));
@@ -4464,4 +4471,176 @@ shapes. Here's a non-trivial example:
         } while (nextEvenPermutation(seed));
     }
     assert(n == 60);
+}
+
+/** Permutes `range` into the `perm` permutation.
+The algorithm has a constant runtime complexity with respect to the number of
+permutations created.
+Due to the number of unique values of `ulong` only the first 21 elements of
+`range` can be permuted. The rest of the range will therefore not be
+permuted.
+This algorithm uses the $(HTTP en.wikipedia.org/wiki/Lehmer_code, Lehmer
+Code).
+
+The algorithm works as follows:
+$(D_CODE
+    auto pem = [4,0,4,1,0,0,0]; // permutation 2982 in factorial
+    auto src = [0,1,2,3,4,5,6]; // the range to permutate
+
+    auto i = 0;                    // range index
+    // range index iterates pem and src in sync
+    // pem[i] + i is used as index into src
+    // first src[pem[i] + i] is stored in t
+    auto t = 4;                    // tmp value
+    src = [0,1,2,3,n,5,6];
+
+    // then the values between i and pem[i] + i are moved one
+    // to the right
+    src = [n,0,1,2,3,5,6];
+    // at last t is inserted into position i
+    src = [4,0,1,2,3,5,6];
+    // finally i is incremented
+    ++i;
+
+    // this process is repeated while i < pem.length
+
+    t = 0;
+    src = [4,n,1,2,3,5,6];
+    src = [4,0,1,2,3,5,6];
+    ++i;
+    t = 6;
+    src = [4,0,1,2,3,5,n];
+    src = [4,0,n,1,2,3,5];
+    src = [4,0,6,1,2,3,5];
+)
+
+Returns:
+    The permuted range.
+
+Params:
+    range = The Range to permute. The original ordering will be lost.
+    perm = The permutation to permutate `range` to.
+*/
+auto ref Range nthPermutation(Range)
+                             (auto ref Range range, const ulong perm)
+if (isRandomAccessRange!Range && hasLength!Range)
+{
+    if (!nthPermutationImpl(range, perm))
+    {
+        throw new Exception(
+            "The range to permutate must not have less"
+            ~ " elements than the factorial number has digits");
+    }
+
+    return range;
+}
+
+///
+pure @safe unittest
+{
+    auto src = [0, 1, 2, 3, 4, 5, 6];
+    auto rslt = [4, 0, 6, 2, 1, 3, 5];
+
+    src = nthPermutation(src, 2982);
+    assert(src == rslt);
+}
+
+/**
+Returns: `true` in case the permutation worked, `false` in case `perm` had
+    more digits in the factorial number system than range had elements.
+    This case must not occur as this would lead to out of range accesses.
+*/
+bool nthPermutationImpl(Range)
+                       (auto ref Range range, ulong perm)
+if (isRandomAccessRange!Range && hasLength!Range)
+{
+    import std.range.primitives : ElementType;
+    import std.numeric : decimalToFactorial;
+
+    // ulong.max has 21 digits in the factorial number system
+    ubyte[21] fac;
+    size_t idx = decimalToFactorial(perm, fac);
+
+    if (idx > range.length)
+    {
+        return false;
+    }
+
+    ElementType!Range tmp;
+    size_t i = 0;
+
+    for (; i < idx; ++i)
+    {
+        size_t re = fac[i];
+        tmp = range[re + i];
+        for (size_t j = re + i; j > i; --j)
+        {
+            range[j] = range[j - 1];
+        }
+        range[i] = tmp;
+    }
+
+    return true;
+}
+
+///
+pure @safe unittest
+{
+    auto src = [0, 1, 2, 3, 4, 5, 6];
+    auto rslt = [4, 0, 6, 2, 1, 3, 5];
+
+    bool worked = nthPermutationImpl(src, 2982);
+    assert(worked);
+    assert(src == rslt);
+}
+
+pure @safe unittest
+{
+    auto rslt = [4, 0, 6, 2, 1, 3, 5];
+
+    auto src = nthPermutation([0, 1, 2, 3, 4, 5, 6], 2982);
+    assert(src == rslt);
+}
+
+pure @safe unittest
+{
+    auto src = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    auto rslt = [4, 0, 6, 2, 1, 3, 5, 7, 8, 9, 10];
+
+    src = nthPermutation(src, 2982);
+    assert(src == rslt);
+}
+
+pure @safe unittest
+{
+    import std.exception : assertThrown;
+
+    auto src = [0, 1, 2, 3];
+
+    assertThrown(nthPermutation(src, 2982));
+}
+
+pure @safe unittest
+{
+    import std.internal.test.dummyrange;
+    import std.meta : AliasSeq;
+
+    auto src = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    auto rsl = [4, 0, 6, 2, 1, 3, 5, 7, 8, 9, 10];
+
+    foreach (T; AliasSeq!(
+            DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random, int[]),
+            DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random, int[])))
+    {
+        static assert(isRandomAccessRange!(T));
+        static assert(hasLength!(T));
+        auto dr = T(src.dup);
+        dr = nthPermutation(dr, 2982);
+
+        int idx;
+        foreach (it; dr)
+        {
+            assert(it == rsl[idx++]);
+        }
+    }
 }

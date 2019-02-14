@@ -131,8 +131,9 @@ class FileLogger : Logger
 
         auto lt = this.file_.lockingTextWriter();
         systimeToISOString(lt, timestamp);
-        formattedWrite(lt, ":%s:%s:%u ", file[fnIdx .. $],
-            funcName[funIdx .. $], line);
+        import std.conv : to;
+        formattedWrite(lt, " [%s] %s:%u:%s ", logLevel.to!string,
+                file[fnIdx .. $], line, funcName[funIdx .. $]);
     }
 
     /* This methods overrides the base class method and writes the parts of

@@ -11,12 +11,12 @@
  * See_Also:
  *  $(LINK2 http://www.ietf.org/rfc/rfc3986.txt, RFC 3986)<br>
  *  $(LINK2 http://en.wikipedia.org/wiki/Uniform_resource_identifier, Wikipedia)
- * Copyright: Copyright Digital Mars 2000 - 2009.
+ * Copyright: Copyright The D Language Foundation 2000 - 2009.
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(HTTP digitalmars.com, Walter Bright)
  * Source:    $(PHOBOSSRC std/uri.d)
  */
-/*          Copyright Digital Mars 2000 - 2009.
+/*          Copyright The D Language Foundation 2000 - 2009.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)

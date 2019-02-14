@@ -241,8 +241,7 @@ $(TR $(TD Building blocks) $(TD
         assert(normalize!NFKD("2¹⁰") == "210");
     }
     ---
-    $(SECTION Terminology
-    )
+    $(SECTION Terminology)
     $(P The following is a list of important Unicode notions
     and definitions. Any conventions used specifically in this
     module alone are marked as such. The descriptions are based on the formal
@@ -383,8 +382,7 @@ $(TR $(TD Building blocks) $(TD
     )
     $(P $(DEF Spacing mark) A combining character that is not a nonspacing mark.
     )
-    $(SECTION Normalization
-    )
+    $(SECTION Normalization)
     $(P The concepts of $(S_LINK Canonical equivalent, canonical equivalent)
         or $(S_LINK Compatibility equivalent, compatibility equivalent)
         characters in the Unicode Standard make it necessary to have a full, formal
@@ -424,8 +422,7 @@ $(TR $(TD Building blocks) $(TD
         identifiers, especially where there are security concerns. NFD and NFKD
         are the most useful for internal processing.
     )
-    $(SECTION Construction of lookup tables
-    )
+    $(SECTION Construction of lookup tables)
     $(P The Unicode standard describes a set of algorithms that
         depend on having the ability to quickly look up various properties
         of a code point. Given the the codespace of about 1 million $(CODEPOINTS),
@@ -487,8 +484,7 @@ $(TR $(TD Building blocks) $(TD
         can be turned into a trie. The trie object in this module
         is read-only (immutable); it's effectively frozen after construction.
     )
-    $(SECTION Unicode properties
-    )
+    $(SECTION Unicode properties)
     $(P This is a full list of Unicode properties accessible through $(LREF unicode)
         with specific helpers per category nested within. Consult the
         $(HTTP www.unicode.org/cldr/utility/properties.jsp, CLDR utility)
@@ -719,7 +715,7 @@ debug(std_uni) import std.stdio; // writefln, writeln
 
 private:
 
-version(unittest)
+version (unittest)
 {
 private:
     struct TestAliasedString
@@ -762,9 +758,9 @@ void copyForward(T,U)(T[] src, U[] dest)
 }
 
 // TODO: update to reflect all major CPUs supporting unaligned reads
-version(X86)
+version (X86)
     enum hasUnalignedReads = true;
-else version(X86_64)
+else version (X86_64)
     enum hasUnalignedReads = true;
 else
     enum hasUnalignedReads = false; // better be safe then sorry
@@ -1822,22 +1818,20 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
 
     static T[] alloc(T)(size_t size) @trusted
     {
-        import core.memory : pureMalloc;
-        import std.exception : enforce;
+        import std.internal.memory : enforceMalloc;
 
         import core.checkedint : mulu;
         bool overflow;
         size_t nbytes = mulu(size, T.sizeof, overflow);
         if (overflow) assert(0);
 
-        auto ptr = cast(T*) enforce(pureMalloc(nbytes), "out of memory on C heap");
+        auto ptr = cast(T*) enforceMalloc(nbytes);
         return ptr[0 .. size];
     }
 
     static T[] realloc(T)(scope T[] arr, size_t size) @trusted
     {
-        import core.memory : pureRealloc;
-        import std.exception : enforce;
+        import std.internal.memory : enforceRealloc;
         if (!size)
         {
             destroy(arr);
@@ -1849,7 +1843,7 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
         size_t nbytes = mulu(size, T.sizeof, overflow);
         if (overflow) assert(0);
 
-        auto ptr = cast(T*) enforce(pureRealloc(arr.ptr, nbytes), "out of memory on C heap");
+        auto ptr = cast(T*) enforceRealloc(arr.ptr, nbytes);
         return ptr[0 .. size];
     }
 
@@ -2174,20 +2168,23 @@ public struct InversionList(SP=GcPolicy)
 
     /**
         Get range that spans all of the $(CODEPOINT) intervals in this $(LREF InversionList).
+    */
+    @property auto byInterval() scope
+    {
+        // TODO: change this to data[] once the -dip1000 errors have been fixed
+        // see e.g. https://github.com/dlang/phobos/pull/6638
+        import std.array : array;
+        return Intervals!(typeof(data.array))(data.array);
+    }
 
-        Example:
-        -----------
+    @safe unittest
+    {
         import std.algorithm.comparison : equal;
         import std.typecons : tuple;
 
         auto set = CodepointSet('A', 'D'+1, 'a', 'd'+1);
 
         assert(set.byInterval.equal([tuple('A','E'), tuple('a','e')]));
-        -----------
-    */
-    @property auto byInterval() scope
-    {
-        return Intervals!(typeof(data))(data);
     }
 
     package @property const(CodepointInterval)[] intervals() const
@@ -2942,7 +2939,7 @@ private:
     }
 
     //
-    Marker addInterval(int a, int b, Marker hint=Marker.init)
+    Marker addInterval(int a, int b, Marker hint=Marker.init) scope
     in
     {
         assert(a <= b);
@@ -3136,7 +3133,7 @@ pure @system unittest
 @system private uint safeRead24(scope const ubyte* ptr, size_t idx) pure nothrow @nogc
 {
     idx *= 3;
-    version(LittleEndian)
+    version (LittleEndian)
         return ptr[idx] + (cast(uint) ptr[idx+1]<<8)
              + (cast(uint) ptr[idx+2]<<16);
     else
@@ -3148,7 +3145,7 @@ pure @system unittest
 @system private void safeWrite24(scope ubyte* ptr, uint val, size_t idx) pure nothrow @nogc
 {
     idx *= 3;
-    version(LittleEndian)
+    version (LittleEndian)
     {
         ptr[idx] = val & 0xFF;
         ptr[idx+1] = (val >> 8) & 0xFF;
@@ -3166,7 +3163,7 @@ pure @system unittest
 @system private uint unalignedRead24(scope const ubyte* ptr, size_t idx) pure nothrow @nogc
 {
     uint* src = cast(uint*)(ptr+3*idx);
-    version(LittleEndian)
+    version (LittleEndian)
         return *src & 0xFF_FFFF;
     else
         return *src >> 8;
@@ -3176,7 +3173,7 @@ pure @system unittest
 @system private void unalignedWrite24(scope ubyte* ptr, uint val, size_t idx) pure nothrow @nogc
 {
     uint* dest = cast(uint*)(cast(ubyte*) ptr + 3*idx);
-    version(LittleEndian)
+    version (LittleEndian)
         *dest = val | (*dest & 0xFF00_0000);
     else
         *dest = (val << 8) | (*dest & 0xFF);
@@ -3498,7 +3495,7 @@ pure @safe unittest// Uint24 tests
     }}
 }
 
-version(unittest)
+version (unittest)
 {
     private alias AllSets = AliasSeq!(InversionList!GcPolicy, InversionList!ReallocPolicy);
 }
@@ -3752,7 +3749,7 @@ pure @safe unittest// iteration & opIndex
             ), text(a.byInterval));
 
         // same @@@BUG as in issue 8949 ?
-        version(bug8949)
+        version (bug8949)
         {
             import std.range : retro;
             assert(equal(retro(a.byInterval),
@@ -3977,7 +3974,7 @@ private:
             {
                 // get index to it, reuse ptr space for the next block
                 next_lvl_index = force!NextIdx(j/pageSize);
-                version(none)
+                version (none)
                 {
                 import std.stdio : writefln, writeln;
                 writefln("LEVEL(%s) page mapped idx: %s: 0..%s  ---> [%s..%s]"
@@ -4001,7 +3998,7 @@ private:
                 state[level].idx_zeros = next_lvl_index;
             }
             // allocate next page
-            version(none)
+            version (none)
             {
             import std.stdio : writefln;
             writefln("LEVEL(%s) page allocated: %s"
@@ -5634,7 +5631,7 @@ template Sequence(size_t start, size_t end)
     import std.range : iota;
     static trieStats(TRIE)(TRIE t)
     {
-        version(std_uni_stats)
+        version (std_uni_stats)
         {
             import std.stdio : writefln, writeln;
             writeln("---TRIE FOOTPRINT STATS---");
@@ -5644,7 +5641,7 @@ template Sequence(size_t start, size_t end)
                          , i, t.bytes!i, t.pages!i);
             }
             writefln("TOTAL: %s bytes", t.bytes);
-            version(none)
+            version (none)
             {
                 writeln("INDEX (excluding value level):");
                 static foreach (i; 0 .. t.table.dim-1)
@@ -5932,7 +5929,7 @@ static assert(isInputRange!DecompressedIntervals);
 static assert(isForwardRange!DecompressedIntervals);
 //============================================================================
 
-version(std_uni_bootstrap){}
+version (std_uni_bootstrap){}
 else
 {
 
@@ -7167,7 +7164,7 @@ if (isInputRange!Input && is(Unqual!(ElementType!Input) == dchar))
 }
 
 /++
-    $(P Iterate a string by grapheme.)
+    $(P Iterate a string by $(LREF Grapheme).)
 
     $(P Useful for doing string manipulation that needs to be aware
     of graphemes.)
@@ -7230,7 +7227,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 }
 
 // For testing non-forward-range input ranges
-version(unittest)
+version (unittest)
 private static struct InputRangeString
 {
     private string s;
@@ -7488,8 +7485,7 @@ public:
     {
         static if (op == "~")
         {
-            import core.exception : onOutOfMemoryError;
-            import core.memory : pureRealloc;
+            import std.internal.memory : enforceRealloc;
             if (!isBig)
             {
                 if (slen_ == small_cap)
@@ -7510,8 +7506,7 @@ public:
                 cap_ = addu(cap_, grow, overflow);
                 auto nelems = mulu(3, addu(cap_, 1, overflow), overflow);
                 if (overflow) assert(0);
-                ptr_ = cast(ubyte*) pureRealloc(ptr_, nelems);
-                if (ptr_ is null) onOutOfMemoryError();
+                ptr_ = cast(ubyte*) enforceRealloc(ptr_, nelems);
             }
             write24(ptr_, ch, len_++);
             return this;
@@ -7568,8 +7563,7 @@ public:
 
     this(this) @nogc nothrow pure @trusted
     {
-        import core.exception : onOutOfMemoryError;
-        import core.memory : pureMalloc;
+        import std.internal.memory : enforceMalloc;
         if (isBig)
         {// dup it
             import core.checkedint : addu, mulu;
@@ -7577,8 +7571,7 @@ public:
             auto raw_cap = mulu(3, addu(cap_, 1, overflow), overflow);
             if (overflow) assert(0);
 
-            auto p = cast(ubyte*) pureMalloc(raw_cap);
-            if (p is null) onOutOfMemoryError();
+            auto p = cast(ubyte*) enforceMalloc(raw_cap);
             p[0 .. raw_cap] = ptr_[0 .. raw_cap];
             ptr_ = p;
         }
@@ -7620,13 +7613,11 @@ private:
 
     void convertToBig() @nogc nothrow pure @trusted
     {
-        import core.exception : onOutOfMemoryError;
-        import core.memory : pureMalloc;
+        import std.internal.memory : enforceMalloc;
         static assert(grow.max / 3 - 1 >= grow);
         enum nbytes = 3 * (grow + 1);
         size_t k = smallLength;
-        ubyte* p = cast(ubyte*) pureMalloc(nbytes);
-        if (p is null) onOutOfMemoryError();
+        ubyte* p = cast(ubyte*) enforceMalloc(nbytes);
         for (int i=0; i<k; i++)
             write24(p, read24(small_.ptr, i), i);
         // now we can overwrite small array data
@@ -8857,7 +8848,7 @@ private bool notAllowedIn(NormalizationForm norm)(dchar ch)
 
 }
 
-version(std_uni_bootstrap)
+version (std_uni_bootstrap)
 {
     // old version used for bootstrapping of gen_uni.d that generates
     // up to date optimal versions of all of isXXX functions
@@ -10609,4 +10600,4 @@ private:
 
 }
 
-}// version(!std_uni_bootstrap)
+}// version (!std_uni_bootstrap)

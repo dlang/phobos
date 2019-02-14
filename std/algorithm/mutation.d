@@ -875,9 +875,9 @@ if (isInputRange!Range && hasLvalueElements!Range && hasAssignableElements!Range
         //We avoid calling emplace here, because our goal is to initialize to
         //the static state of T.init,
         //So we want to avoid any un-necassarilly CC'ing of T.init
-        auto p = typeid(T).initializer();
-        if (p.ptr)
+        static if (!__traits(isZeroInit, T))
         {
+            auto p = typeid(T).initializer();
             for ( ; !range.empty ; range.popFront() )
             {
                 static if (__traits(isStaticArray, T))
@@ -1382,7 +1382,7 @@ void moveEmplace(T)(ref T source, ref T target) @system
     import core.stdc.string : memcpy, memset;
     import std.traits : hasAliasing, hasElaborateAssign,
                         hasElaborateCopyConstructor, hasElaborateDestructor,
-                        isAssignable;
+                        isAssignable, isStaticArray;
 
     static if (!is(T == class) && hasAliasing!T) if (!__ctfe)
     {
@@ -1409,12 +1409,19 @@ void moveEmplace(T)(ref T source, ref T target) @system
             else
                 enum sz = T.sizeof;
 
-            auto init = typeid(T).initializer();
-            if (init.ptr is null) // null ptr means initialize to 0s
+            static if (__traits(isZeroInit, T))
                 memset(&source, 0, sz);
             else
+            {
+                auto init = typeid(T).initializer();
                 memcpy(&source, init.ptr, sz);
+            }
         }
+    }
+    else static if (isStaticArray!T)
+    {
+        for (size_t i = 0; i < source.length; ++i)
+            move(source[i], target[i]);
     }
     else
     {
@@ -1447,6 +1454,24 @@ pure nothrow @nogc @system unittest
     assert(foo1._ptr is &val);
     assert(foo2._ptr is null);
     assert(val == 0);
+}
+
+// issue 18913
+@safe unittest
+{
+    static struct NoCopy
+    {
+        int payload;
+        ~this() { }
+        @disable this(this);
+    }
+
+    static void f(NoCopy[2]) { }
+
+    NoCopy[2] ncarray = [ NoCopy(1), NoCopy(2) ];
+
+    static assert(!__traits(compiles, f(ncarray)));
+    f(move(ncarray));
 }
 
 // moveAll
@@ -1642,8 +1667,8 @@ concerns the swapping of elements that are not the core concern of the
 algorithm. For example, consider an algorithm that sorts $(D [ "abc",
 "b", "aBc" ]) according to `toUpper(a) < toUpper(b)`. That
 algorithm might choose to swap the two equivalent strings `"abc"`
-and `"aBc"`. That does not affect the sorting since both `$D(
-"abc", "aBc", "b" ]) and `[ "aBc", "abc", "b" ]` are valid
+and `"aBc"`. That does not affect the sorting since both
+`["abc", "aBc", "b" ]` and `[ "aBc", "abc", "b" ]` are valid
 outcomes.
 
 Some situations require that the algorithm must NOT ever change the
