@@ -6235,7 +6235,7 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
             Result opSlice(size_t lwr, size_t upr)
             {
                 Result result = void;
-                result.value = value >>> ((len - upr) * SHIFT);
+                result.value = value >>> cast(int)((len - upr) * SHIFT);
                 result.len = cast(ubyte)(upr - lwr);
                 return result;
             }

@@ -855,7 +855,8 @@ Parameters for the generator.
 
         foreach_reverse (size_t i, ref e; mtState.data[0 .. $ - 1])
         {
-            e = f * (mtState.data[i + 1] ^ (mtState.data[i + 1] >> (w - 2))) + cast(UIntType)(n - (i + 1));
+            e = cast(UIntType) (f * (mtState.data[i + 1] ^ (mtState.data[i + 1] >> (w - 2)))
+                + cast(UIntType)(n - (i + 1)));
             static if (this.max != UIntType.max)
             {
                 e &= this.max;
