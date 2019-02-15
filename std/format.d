@@ -3658,12 +3658,23 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     formatTest(e2, "[A, B, C]");
 }
 
+private enum HasToStringResult
+{
+    none,
+    hasSomeToString,
+    constCharSink,
+    constCharSinkFormatString,
+    constCharSinkFormatSpec,
+    customPutWriter,
+    customPutWriterFormatSpec,
+}
+
 private template hasToString(T, Char)
 {
     static if (isPointer!T && !isAggregateType!T)
     {
         // X* does not have toString, even if X is aggregate type has toString.
-        enum hasToString = 0;
+        enum hasToString = HasToStringResult.none;
     }
     else static if (is(typeof(
         {T val = void;
@@ -3676,7 +3687,7 @@ private template hasToString(T, Char)
         static assert(!__traits(compiles, val.toString(S(), f)));}
     )))
     {
-        enum hasToString = 6;
+        enum hasToString = HasToStringResult.customPutWriterFormatSpec;
     }
     else static if (is(typeof(
         {T val = void;
@@ -3687,27 +3698,27 @@ private template hasToString(T, Char)
         static assert(!__traits(compiles, val.toString(S())));}
     )))
     {
-        enum hasToString = 5;
+        enum hasToString = HasToStringResult.customPutWriter;
     }
     else static if (is(typeof({ T val = void; FormatSpec!Char f; val.toString((scope const(char)[] s){}, f); })))
     {
-        enum hasToString = 4;
+        enum hasToString = HasToStringResult.constCharSinkFormatSpec;
     }
     else static if (is(typeof({ T val = void; val.toString((scope const(char)[] s){}, "%s"); })))
     {
-        enum hasToString = 3;
+        enum hasToString = HasToStringResult.constCharSinkFormatString;
     }
     else static if (is(typeof({ T val = void; val.toString((scope const(char)[] s){}); })))
     {
-        enum hasToString = 2;
+        enum hasToString = HasToStringResult.constCharSink;
     }
     else static if (is(typeof({ T val = void; return val.toString(); }()) S) && isSomeString!S)
     {
-        enum hasToString = 1;
+        enum hasToString = HasToStringResult.hasSomeToString;
     }
     else
     {
-        enum hasToString = 0;
+        enum hasToString = HasToStringResult.none;
     }
 }
 
@@ -3780,18 +3791,21 @@ private template hasToString(T, Char)
         {}
     }
 
-    static assert(hasToString!(A, char) == 5);
-    static assert(hasToString!(B, char) == 4);
-    static assert(hasToString!(C, char) == 3);
-    static assert(hasToString!(D, char) == 2);
-    static assert(hasToString!(E, char) == 1);
-    static assert(hasToString!(F, char) == 6);
-    static assert(hasToString!(G, char) == 5);
-    static assert(hasToString!(H, char) == 6);
-    static assert(hasToString!(I, char) == 6);
-    static assert(hasToString!(J, char) == 1);
-    static assert(hasToString!(K, char) == 4);
-    static assert(hasToString!(L, char) == 0);
+    with(HasToStringResult)
+    {
+        static assert(hasToString!(A, char) == customPutWriter);
+        static assert(hasToString!(B, char) == constCharSinkFormatSpec);
+        static assert(hasToString!(C, char) == constCharSinkFormatString);
+        static assert(hasToString!(D, char) == constCharSink);
+        static assert(hasToString!(E, char) == hasSomeToString);
+        static assert(hasToString!(F, char) == customPutWriterFormatSpec);
+        static assert(hasToString!(G, char) == customPutWriter);
+        static assert(hasToString!(H, char) == customPutWriterFormatSpec);
+        static assert(hasToString!(I, char) == customPutWriterFormatSpec);
+        static assert(hasToString!(J, char) == hasSomeToString);
+        static assert(hasToString!(K, char) == constCharSinkFormatSpec);
+        static assert(hasToString!(L, char) == none);
+    }
 }
 
 // Like NullSink, but toString() isn't even called at all. Used to test the format string.
@@ -3808,30 +3822,27 @@ if (hasToString!(T, Char))
 
     enum noop = is(Writer == NoOpSink);
 
-    static if (overload == 6)
+    static if (overload == HasToStringResult.customPutWriterFormatSpec)
     {
         static if (!noop) val.toString(w, f);
     }
-    else static if (overload == 5)
+    else static if (overload == HasToStringResult.customPutWriter)
     {
         static if (!noop) val.toString(w);
     }
-    // not using the overload enum to not break badly defined toString overloads
-    // e.g. defining the FormatSpec as ref and not const ref led this function
-    // to ignore that toString overload
-    else static if (is(typeof(val.toString((scope const(char)[] s){}, f))))
+    else static if (overload == HasToStringResult.constCharSinkFormatSpec)
     {
         static if (!noop) val.toString((scope const(char)[] s) { put(w, s); }, f);
     }
-    else static if (is(typeof(val.toString((scope const(char)[] s){}, "%s"))))
+    else static if (overload == HasToStringResult.constCharSinkFormatString)
     {
-        static if (!noop) val.toString((const(char)[] s) { put(w, s); }, f.getCurFmtStr());
+        static if (!noop) val.toString((scope const(char)[] s) { put(w, s); }, f.getCurFmtStr());
     }
-    else static if (is(typeof(val.toString((scope const(char)[] s){}))))
+    else static if (overload == HasToStringResult.constCharSink)
     {
         static if (!noop) val.toString((scope const(char)[] s) { put(w, s); });
     }
-    else static if (is(typeof(val.toString()) S) && isSomeString!S)
+    else static if (overload == HasToStringResult.hasSomeToString)
     {
         static if (!noop) put(w, val.toString());
     }
@@ -3843,7 +3854,10 @@ if (hasToString!(T, Char))
 
 void enforceValidFormatSpec(T, Char)(const ref FormatSpec!Char f)
 {
-    static if (!isInputRange!T && hasToString!(T, Char) < 4)
+    enum overload = hasToString!(T, Char);
+    static if (!isInputRange!T &&
+            overload != HasToStringResult.constCharSinkFormatSpec &&
+            overload != HasToStringResult.customPutWriterFormatSpec)
     {
         enforceFmt(f.spec == 's',
             "Expected '%s' format specifier for type '" ~ T.stringof ~ "'");
@@ -3913,7 +3927,10 @@ if (is(T == class) && !is(T == enum))
         put(w, "null");
     else
     {
-        static if ((is(T == immutable) || is(T == const) || is(T == shared)) && hasToString!(T, Char) == 0)
+        import std.algorithm.comparison : among;
+        enum overload = hasToString!(T, Char);
+        with(HasToStringResult)
+        static if ((is(T == immutable) || is(T == const) || is(T == shared)) && overload == none)
         {
             // issue 7879, remove this when Object gets const toString
             static if (is(T == immutable))
@@ -3926,7 +3943,8 @@ if (is(T == class) && !is(T == enum))
             put(w, typeid(Unqual!T).name);
             put(w, ')');
         }
-        else static if (hasToString!(T, Char) > 1 || !isInputRange!T && !is(BuiltinTypeOf!T))
+        else static if (overload.among(constCharSink, constCharSinkFormatString, constCharSinkFormatSpec) ||
+                       (!isInputRange!T && !is(BuiltinTypeOf!T)))
         {
             formatObject!(Writer, T, Char)(w, val, f);
         }
@@ -4099,7 +4117,7 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is
             static assert(!__traits(isDisabled, T.toString), T.stringof ~
                 " cannot be formatted because its `toString` is marked with `@disable`");
 
-        static if (hasToString!(T, Char))
+        static if (hasToString!(T, Char) != HasToStringResult.none)
         {
             formatObject(w, val, f);
         }
@@ -4152,7 +4170,7 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is
     version (Windows)
     {
         import core.sys.windows.com : IUnknown, IID;
-        import core.sys.windows.windows : HRESULT;
+        import core.sys.windows.windef : HRESULT;
 
         interface IUnknown2 : IUnknown { }
 

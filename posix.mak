@@ -78,7 +78,7 @@ ROOT_OF_THEM_ALL = generated
 ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
 DUB=dub
 TOOLS_DIR=../tools
-DSCANNER_HASH=9ef6d0aec11c972be0a90d05b9f3a4fe9922ed61
+DSCANNER_HASH=383fcb84d892e5169c134e282878ee2c51e4265f
 DSCANNER_DIR=$(ROOT_OF_THEM_ALL)/dscanner-$(DSCANNER_HASH)
 
 # Set DRUNTIME name and full path
@@ -344,7 +344,17 @@ endif
 # Unittests
 ################################################################################
 
-$(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
+DISABLED_TESTS =
+ifeq ($(OS),freebsd)
+    ifeq ($(MODEL),32)
+    # Curl tests for FreeBSD 32-bit are temporarily disabled.
+    # https://github.com/braddr/d-tester/issues/70
+    # https://issues.dlang.org/show_bug.cgi?id=18519
+    DISABLED_TESTS += std/net/curl
+    endif
+endif
+
+$(addsuffix .run,$(addprefix unittest/,$(DISABLED_TESTS))) :
 	@echo Testing $@ - disabled
 
 include dip1000.mak

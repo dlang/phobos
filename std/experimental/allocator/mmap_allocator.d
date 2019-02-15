@@ -71,7 +71,7 @@ struct MmapAllocator
     }
     else version (Windows)
     {
-        import core.sys.windows.windows : MEM_COMMIT, PAGE_READWRITE, MEM_RELEASE;
+        import core.sys.windows.winnt : MEM_COMMIT, PAGE_READWRITE, MEM_RELEASE;
 
         /// Allocator API.
         pure nothrow @nogc @safe

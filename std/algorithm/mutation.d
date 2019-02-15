@@ -1382,7 +1382,7 @@ void moveEmplace(T)(ref T source, ref T target) @system
     import core.stdc.string : memcpy, memset;
     import std.traits : hasAliasing, hasElaborateAssign,
                         hasElaborateCopyConstructor, hasElaborateDestructor,
-                        isAssignable;
+                        isAssignable, isStaticArray;
 
     static if (!is(T == class) && hasAliasing!T) if (!__ctfe)
     {
@@ -1418,6 +1418,11 @@ void moveEmplace(T)(ref T source, ref T target) @system
             }
         }
     }
+    else static if (isStaticArray!T)
+    {
+        for (size_t i = 0; i < source.length; ++i)
+            move(source[i], target[i]);
+    }
     else
     {
         // Primitive data (including pointers and arrays) or class -
@@ -1449,6 +1454,24 @@ pure nothrow @nogc @system unittest
     assert(foo1._ptr is &val);
     assert(foo2._ptr is null);
     assert(val == 0);
+}
+
+// issue 18913
+@safe unittest
+{
+    static struct NoCopy
+    {
+        int payload;
+        ~this() { }
+        @disable this(this);
+    }
+
+    static void f(NoCopy[2]) { }
+
+    NoCopy[2] ncarray = [ NoCopy(1), NoCopy(2) ];
+
+    static assert(!__traits(compiles, f(ncarray)));
+    f(move(ncarray));
 }
 
 // moveAll

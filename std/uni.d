@@ -2939,7 +2939,7 @@ private:
     }
 
     //
-    Marker addInterval(int a, int b, Marker hint=Marker.init)
+    Marker addInterval(int a, int b, Marker hint=Marker.init) scope
     in
     {
         assert(a <= b);

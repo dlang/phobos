@@ -1784,18 +1784,41 @@ if (isInputRange!R)
     assert(equal(g6.front[0], [1]));
 }
 
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.typecons : tuple;
+
+    int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
+    auto r = arr.group;
+    assert(r.equal([ tuple(1,1u), tuple(2, 4u), tuple(3, 1u), tuple(4, 3u), tuple(5, 1u) ]));
+    r.popFront;
+    assert(r.equal([ tuple(2, 4u), tuple(3, 1u), tuple(4, 3u), tuple(5, 1u) ]));
+    auto s = r.save;
+    r.popFrontN(2);
+    assert(r.equal([ tuple(4, 3u), tuple(5, 1u) ]));
+    assert(s.equal([ tuple(2, 4u), tuple(3, 1u), tuple(4, 3u), tuple(5, 1u) ]));
+    s.popFront;
+    auto t = s.save;
+    r.popFront;
+    s.popFront;
+    assert(r.equal([ tuple(5, 1u) ]));
+    assert(s.equal([ tuple(4, 3u), tuple(5, 1u) ]));
+    assert(t.equal([ tuple(3, 1u), tuple(4, 3u), tuple(5, 1u) ]));
+}
+
 // Used by implementation of chunkBy for non-forward input ranges.
 private struct ChunkByChunkImpl(alias pred, Range)
 if (isInputRange!Range && !isForwardRange!Range)
 {
     alias fun = binaryFun!pred;
 
-    private Range r;
+    private Range *r;
     private ElementType!Range prev;
 
-    this(Range range, ElementType!Range _prev)
+    this(ref Range range, ElementType!Range _prev)
     {
-        r = range;
+        r = &range;
         prev = _prev;
     }
 
@@ -1804,8 +1827,17 @@ if (isInputRange!Range && !isForwardRange!Range)
         return r.empty || !fun(prev, r.front);
     }
 
-    @property ElementType!Range front() { return r.front; }
-    void popFront() { r.popFront(); }
+    @property ElementType!Range front()
+    {
+        assert(!empty, "Attempting to fetch the front of an empty chunkBy chunk.");
+        return r.front;
+    }
+
+    void popFront()
+    {
+        assert(!empty, "Attempting to popFront an empty chunkBy chunk.");
+        r.popFront();
+    }
 }
 
 private template ChunkByImplIsUnary(alias pred, Range)
@@ -1836,6 +1868,7 @@ if (isInputRange!Range && !isForwardRange!Range)
 
     private Range r;
     private ElementType!Range _prev;
+    private bool openChunk = false;
 
     this(Range _r)
     {
@@ -1857,10 +1890,12 @@ if (isInputRange!Range && !isForwardRange!Range)
             _prev = typeof(_prev).init;
         }
     }
-    @property bool empty() { return r.empty; }
+    @property bool empty() { return r.empty && !openChunk; }
 
     @property auto front()
     {
+        assert(!empty, "Attempting to fetch the front of an empty chunkBy.");
+        openChunk = true;
         static if (isUnary)
         {
             import std.typecons : tuple;
@@ -1875,6 +1910,8 @@ if (isInputRange!Range && !isForwardRange!Range)
 
     void popFront()
     {
+        assert(!empty, "Attempting to popFront an empty chunkBy.");
+        openChunk = false;
         while (!r.empty)
         {
             if (!eq(_prev, r.front))
@@ -2216,10 +2253,21 @@ version (none) // this example requires support for non-equivalence relations
         R data;
         this(R _data) pure @safe nothrow { data = _data; }
         @property bool empty() pure @safe nothrow { return data.empty; }
-        @property auto front() pure @safe nothrow { return data.front; }
-        void popFront() pure @safe nothrow { data.popFront(); }
+        @property auto front() pure @safe nothrow { assert(!empty); return data.front; }
+        void popFront() pure @safe nothrow { assert(!empty); data.popFront(); }
     }
     auto refInputRange(R)(R range) { return new RefInputRange!R(range); }
+
+    // An input range API with value semantics.
+    struct ValInputRange(R)
+    {
+        R data;
+        this(R _data) pure @safe nothrow { data = _data; }
+        @property bool empty() pure @safe nothrow { return data.empty; }
+        @property auto front() pure @safe nothrow { assert(!empty); return data.front; }
+        void popFront() pure @safe nothrow { assert(!empty); data.popFront(); }
+    }
+    auto valInputRange(R)(R range) { return ValInputRange!R(range); }
 
     {
         auto arr = [ Item(1,2), Item(1,3), Item(2,3) ];
@@ -2251,7 +2299,7 @@ version (none) // this example requires support for non-equivalence relations
         assert(byY2.front[1].equal([ Item(1,2) ]));
     }
 
-    // Test non-forward input ranges.
+    // Test non-forward input ranges with reference semantics.
     {
         auto range = refInputRange([ Item(1,1), Item(1,2), Item(2,2) ]);
         auto byX = chunkBy!(a => a.x)(range);
@@ -2275,6 +2323,256 @@ version (none) // this example requires support for non-equivalence relations
         assert(byY.empty);
         assert(range.empty);
     }
+
+    // Test non-forward input ranges with value semantics.
+    {
+        auto range = valInputRange([ Item(1,1), Item(1,2), Item(2,2) ]);
+        auto byX = chunkBy!(a => a.x)(range);
+        assert(byX.front[0] == 1);
+        assert(byX.front[1].equal([ Item(1,1), Item(1,2) ]));
+        byX.popFront();
+        assert(byX.front[0] == 2);
+        assert(byX.front[1].equal([ Item(2,2) ]));
+        byX.popFront();
+        assert(byX.empty);
+        assert(!range.empty);    // Opposite of refInputRange test
+
+        range = valInputRange([ Item(1,1), Item(1,2), Item(2,2) ]);
+        auto byY = chunkBy!(a => a.y)(range);
+        assert(byY.front[0] == 1);
+        assert(byY.front[1].equal([ Item(1,1) ]));
+        byY.popFront();
+        assert(byY.front[0] == 2);
+        assert(byY.front[1].equal([ Item(1,2), Item(2,2) ]));
+        byY.popFront();
+        assert(byY.empty);
+        assert(!range.empty);    // Opposite of refInputRange test
+    }
+
+    /* Issue 93532 - General behavior of non-forward input ranges.
+     * - If the same chunk is retrieved multiple times via front, the separate chunk
+     *   instances refer to a shared range segment that advances as a single range.
+     * - Emptying a chunk via popFront does not implicitly popFront the chunk off
+     *   main range. The chunk is still available via front, it is just empty.
+     */
+    {
+        import std.algorithm.comparison : equal;
+        import core.exception : AssertError;
+        import std.exception : assertThrown;
+
+        auto a = [[0, 0], [0, 1],
+                  [1, 2], [1, 3], [1, 4],
+                  [2, 5], [2, 6],
+                  [3, 7],
+                  [4, 8]];
+
+        // Value input range
+        {
+            auto r = valInputRange(a).chunkBy!((a, b) => a[0] == b[0]);
+
+            size_t numChunks = 0;
+            while (!r.empty)
+            {
+                ++numChunks;
+                auto chunk = r.front;
+                while (!chunk.empty)
+                {
+                    assert(r.front.front[1] == chunk.front[1]);
+                    chunk.popFront;
+                }
+                assert(!r.empty);
+                assert(r.front.empty);
+                r.popFront;
+            }
+
+            assert(numChunks == 5);
+
+            // Now front and popFront should assert.
+            bool thrown = false;
+            try r.front;
+            catch (AssertError) thrown = true;
+            assert(thrown);
+
+            thrown = false;
+            try r.popFront;
+            catch (AssertError) thrown = true;
+            assert(thrown);
+        }
+
+        // Reference input range
+        {
+            auto r = refInputRange(a).chunkBy!((a, b) => a[0] == b[0]);
+
+            size_t numChunks = 0;
+            while (!r.empty)
+            {
+                ++numChunks;
+                auto chunk = r.front;
+                while (!chunk.empty)
+                {
+                    assert(r.front.front[1] == chunk.front[1]);
+                    chunk.popFront;
+                }
+                assert(!r.empty);
+                assert(r.front.empty);
+                r.popFront;
+            }
+
+            assert(numChunks == 5);
+
+            // Now front and popFront should assert.
+            bool thrown = false;
+            try r.front;
+            catch (AssertError) thrown = true;
+            assert(thrown);
+
+            thrown = false;
+            try r.popFront;
+            catch (AssertError) thrown = true;
+            assert(thrown);
+        }
+
+        // Ensure that starting with an empty range doesn't create an empty chunk.
+        {
+            int[] emptyRange = [];
+
+            auto r1 = valInputRange(emptyRange).chunkBy!((a, b) => a == b);
+            auto r2 = refInputRange(emptyRange).chunkBy!((a, b) => a == b);
+
+            assert(r1.empty);
+            assert(r2.empty);
+
+            bool thrown = false;
+            try r1.front;
+            catch (AssertError) thrown = true;
+            assert(thrown);
+
+            thrown = false;
+            try r1.popFront;
+            catch (AssertError) thrown = true;
+            assert(thrown);
+
+            thrown = false;
+            try r2.front;
+            catch (AssertError) thrown = true;
+            assert(thrown);
+
+            thrown = false;
+            try r2.popFront;
+            catch (AssertError) thrown = true;
+            assert(thrown);
+        }
+    }
+
+    // Issue 93532 - Using roundRobin/chunkBy
+    {
+        import std.algorithm.comparison : equal;
+        import std.range : roundRobin;
+
+        auto a0 = [0, 1, 3, 6];
+        auto a1 = [0, 2, 4, 6, 7];
+        auto a2 = [1, 2, 4, 6, 8, 8, 9];
+
+        auto expected =
+            [[0, 0], [1, 1], [2, 2], [3], [4, 4], [6, 6, 6], [7], [8, 8], [9]];
+
+        auto r1 = roundRobin(valInputRange(a0), valInputRange(a1), valInputRange(a2))
+            .chunkBy!((a, b) => a == b);
+        assert(r1.equal!equal(expected));
+
+        auto r2 = roundRobin(refInputRange(a0), refInputRange(a1), refInputRange(a2))
+            .chunkBy!((a, b) => a == b);
+        assert(r2.equal!equal(expected));
+
+        auto r3 = roundRobin(a0, a1, a2).chunkBy!((a, b) => a == b);
+        assert(r3.equal!equal(expected));
+    }
+
+    // Issue 93532 - Using merge/chunkBy
+    {
+        import std.algorithm.comparison : equal;
+        import std.algorithm.sorting : merge;
+
+        auto a0 = [2, 3, 5];
+        auto a1 = [2, 4, 5];
+        auto a2 = [1, 2, 4, 5];
+
+        auto expected = [[1], [2, 2, 2], [3], [4, 4], [5, 5, 5]];
+
+        auto r1 = merge(valInputRange(a0), valInputRange(a1), valInputRange(a2))
+            .chunkBy!((a, b) => a == b);
+        assert(r1.equal!equal(expected));
+
+        auto r2 = merge(refInputRange(a0), refInputRange(a1), refInputRange(a2))
+            .chunkBy!((a, b) => a == b);
+        assert(r2.equal!equal(expected));
+
+        auto r3 = merge(a0, a1, a2).chunkBy!((a, b) => a == b);
+        assert(r3.equal!equal(expected));
+    }
+
+    // Issue 93532 - Using chunkBy/map-fold
+    {
+        import std.algorithm.comparison : equal;
+        import std.algorithm.iteration : fold, map;
+
+        auto a = [0, 0, 1, 1, 1, 2, 2, 3, 3, 4, 4, 5, 6, 6, 6, 7, 8, 8, 9];
+        auto expected = [0, 3, 4, 6, 8, 5, 18, 7, 16, 9];
+
+        auto r1 = a
+            .chunkBy!((a, b) => a == b)
+            .map!(c => c.fold!((a, b) => a + b));
+        assert(r1.equal(expected));
+
+        auto r2 = valInputRange(a)
+            .chunkBy!((a, b) => a == b)
+            .map!(c => c.fold!((a, b) => a + b));
+        assert(r2.equal(expected));
+
+        auto r3 = refInputRange(a)
+            .chunkBy!((a, b) => a == b)
+            .map!(c => c.fold!((a, b) => a + b));
+        assert(r3.equal(expected));
+    }
+
+    // Issues 16169, 17966, 93532 - Using multiwayMerge/chunkBy
+    {
+        import std.algorithm.comparison : equal;
+        import std.algorithm.setops : multiwayMerge;
+
+        {
+            auto a0 = [2, 3, 5];
+            auto a1 = [2, 4, 5];
+            auto a2 = [1, 2, 4, 5];
+
+            auto expected = [[1], [2, 2, 2], [3], [4, 4], [5, 5, 5]];
+            auto r = multiwayMerge([a0, a1, a2]).chunkBy!((a, b) => a == b);
+            assert(r.equal!equal(expected));
+        }
+        {
+            auto a0 = [2, 3, 5];
+            auto a1 = [2, 4, 5];
+            auto a2 = [1, 2, 4, 5];
+
+            auto expected = [[1], [2, 2, 2], [3], [4, 4], [5, 5, 5]];
+            auto r =
+                multiwayMerge([valInputRange(a0), valInputRange(a1), valInputRange(a2)])
+                .chunkBy!((a, b) => a == b);
+            assert(r.equal!equal(expected));
+        }
+        {
+            auto a0 = [2, 3, 5];
+            auto a1 = [2, 4, 5];
+            auto a2 = [1, 2, 4, 5];
+
+            auto expected = [[1], [2, 2, 2], [3], [4, 4], [5, 5, 5]];
+            auto r =
+                multiwayMerge([refInputRange(a0), refInputRange(a1), refInputRange(a2)])
+                .chunkBy!((a, b) => a == b);
+            assert(r.equal!equal(expected));
+        }
+    }
+
 }
 
 // Issue 13595

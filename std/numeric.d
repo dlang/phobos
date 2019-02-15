@@ -551,7 +551,7 @@ public:
     }
 
     ///ditto
-    T opCast(T)() if (__traits(compiles, get!T )) { return get!T; }
+    alias opCast = get;
 
     /// Convert the CustomFloat to a real and perform the relevant operator on the result
     real opUnary(string op)()

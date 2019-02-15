@@ -30,7 +30,7 @@ module std.internal.cstring;
 
     version (Windows)
     {
-        import core.sys.windows.windows : SetEnvironmentVariableW;
+        import core.sys.windows.winbase : SetEnvironmentVariableW;
         import std.exception : enforce;
 
         void setEnvironment(scope const(char)[] name, scope const(char)[] value)
@@ -176,7 +176,7 @@ pure nothrow @nogc @safe unittest
 
 version (Windows)
 {
-    import core.sys.windows.windows : WCHAR;
+    import core.sys.windows.winnt : WCHAR;
     alias tempCStringW = tempCString!(WCHAR, const(char)[]);
 }
 

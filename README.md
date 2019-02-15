@@ -3,9 +3,9 @@
 
 [![GitHub tag](https://img.shields.io/github/tag/dlang/phobos.svg?maxAge=86400)](https://github.com/dlang/phobos/releases)
 [![Bugzilla Issues](https://img.shields.io/badge/issues-Bugzilla-green.svg)](https://issues.dlang.org/buglist.cgi?component=phobos&list_id=220147&product=D&resolution=---)
-[![Build status](https://img.shields.io/circleci/project/dlang/phobos/master.svg?maxAge=86400)](https://circleci.com/gh/dlang/phobos)
+[![CircleCi](https://img.shields.io/circleci/project/dlang/phobos/master.svg?maxAge=86400)](https://circleci.com/gh/dlang/phobos)
+[![Buildkite](https://badge.buildkite.com/01509e75200b3e9576028fe52c4546d6a6a9ad81aaf31a8790.svg?branch=master)](https://buildkite.com/dlang/phobos)
 [![Code coverage](https://img.shields.io/codecov/c/github/dlang/phobos.svg?maxAge=86400)](https://codecov.io/gh/dlang/phobos)
-[![Issue Stats](https://img.shields.io/issuestats/p/github/dlang/phobos.svg?maxAge=2592000)](http://www.issuestats.com/github/dlang/phobos)
 [![license](https://img.shields.io/github/license/dlang/phobos.svg)](https://github.com/dlang/phobos/blob/master/LICENSE_1_0.txt)
 
 Phobos is the standard library that comes with the

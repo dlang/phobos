@@ -164,19 +164,9 @@ import std.encoding : EncodingScheme;
 import std.traits : isSomeChar;
 import std.typecons : Flag, Yes, No, Tuple;
 
-// Curl tests for FreeBSD 32-bit are temporarily disabled.
-// https://github.com/braddr/d-tester/issues/70
-// https://issues.dlang.org/show_bug.cgi?id=18519
-version (unittest)
-version (FreeBSD)
-version (X86)
-    version = DisableCurlTests;
-
-version (DisableCurlTests) {} else:
-
 version (unittest)
 {
-    import std.socket : Socket;
+    import std.socket : Socket, SocketShutdown;
 
     private struct TestServer
     {
@@ -248,7 +238,10 @@ version (unittest)
         // terminate server from a thread local dtor of the thread that started it,
         //  because thread_joinall is called before shared module dtors
         if (tlsInit && server.sock)
+        {
+            server.sock.shutdown(SocketShutdown.RECEIVE);
             server.sock.close();
+        }
     }
 
     private struct Request(T)
@@ -451,7 +444,11 @@ if (isCurlConn!Conn)
             s.send(httpOK("Hello world"));
         });
         auto fn = std.file.deleteme;
-        scope (exit) std.file.remove(fn);
+        scope (exit)
+        {
+            if (std.file.exists(fn))
+                std.file.remove(fn);
+        }
         download(host, fn);
         assert(std.file.readText(fn) == "Hello world");
     }
@@ -513,7 +510,11 @@ if (isCurlConn!Conn)
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         auto fn = std.file.deleteme;
-        scope (exit) std.file.remove(fn);
+        scope (exit)
+        {
+            if (std.file.exists(fn))
+                std.file.remove(fn);
+        }
         std.file.write(fn, "upload data\n");
         testServer.handle((s) {
             auto req = s.recvReq;
@@ -4154,7 +4155,7 @@ private struct CurlAPI
         }
         else version (Windows)
         {
-            import core.sys.windows.windows : GetProcAddress, GetModuleHandleA,
+            import core.sys.windows.winbase : GetProcAddress, GetModuleHandleA,
                 LoadLibraryA;
             alias loadSym = GetProcAddress;
         }
@@ -4224,7 +4225,7 @@ private struct CurlAPI
             }
             else version (Windows)
             {
-                import core.sys.windows.windows : FreeLibrary;
+                import core.sys.windows.winbase : FreeLibrary;
                 FreeLibrary(_handle);
             }
             else

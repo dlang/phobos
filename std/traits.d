@@ -2446,6 +2446,19 @@ if (is(T == function))
         enum attrs = functionAttributes!T | FunctionAttribute.pure_;
         return cast(SetFunctionAttributes!(T, functionLinkage!T, attrs)) t;
     }
+
+    int f()
+    {
+        import core.thread : getpid;
+        return getpid();
+    }
+
+    int g() pure @trusted
+    {
+        auto pureF = assumePure(&f);
+        return pureF();
+    }
+    assert(g() > 0);
 }
 
 version (unittest)
@@ -2525,11 +2538,20 @@ Returns:
 template isInnerClass(T)
 if (is(T == class))
 {
-    import std.meta : staticIndexOf;
-
     static if (is(typeof(T.outer)))
-        enum isInnerClass = __traits(isSame, typeof(T.outer), __traits(parent, T))
-                         && (staticIndexOf!(__traits(allMembers, T), "outer") == -1);
+    {
+        bool hasOuterMember(string[] members...)
+        {
+            foreach (m; members)
+            {
+                if (m == "outer")
+                    return true;
+            }
+            return false;
+        }
+        enum isInnerClass = __traits(isSame, typeof(T.outer), __traits(parent, T)) &&
+                            !hasOuterMember(__traits(allMembers, T));
+    }
     else
         enum isInnerClass = false;
 }
@@ -4751,15 +4773,17 @@ template TemplateArgsOf(T : Base!Args, alias Base, Args...)
 package template maxAlignment(U...)
 if (isTypeTuple!U)
 {
-    import std.meta : staticMap;
     static if (U.length == 0)
         static assert(0);
     else static if (U.length == 1)
         enum maxAlignment = U[0].alignof;
+    else static if (U.length == 2)
+        enum maxAlignment = U[0].alignof > U[1].alignof ? U[0].alignof : U[1].alignof;
     else
     {
-        import std.algorithm.comparison : max;
-        enum maxAlignment = max(staticMap!(.maxAlignment, U));
+        enum a = maxAlignment!(U[0 .. ($+1)/2]);
+        enum b = maxAlignment!(U[($+1)/2 .. $]);
+        enum maxAlignment = a > b ? a : b;
     }
 }
 

@@ -61,6 +61,9 @@ $(TR $(TH Function Name) $(TH Description)
     $(TR $(TD $(LREF split))
         $(TD Eagerly split a range or string into an array.
     ))
+    $(TR $(TD $(LREF staticArray))
+        $(TD Creates a new static array from given data.
+    ))
     $(TR $(TD $(LREF uninitializedArray))
         $(TD Returns a new array of type `T` without initializing its elements.
     ))
@@ -3336,7 +3339,7 @@ if (isDynamicArray!A)
     private template canPutItem(U)
     {
         enum bool canPutItem =
-            isImplicitlyConvertible!(U, T) ||
+            isImplicitlyConvertible!(Unqual!U, Unqual!T) ||
             isSomeChar!T && isSomeChar!U;
     }
     private template canPutConstRange(Range)
@@ -3381,7 +3384,7 @@ if (isDynamicArray!A)
             immutable len = _data.arr.length;
 
             auto bigData = (() @trusted => _data.arr.ptr[0 .. len + 1])();
-            emplaceRef!(Unqual!T)(bigData[len], cast(Unqual!T) item);
+            emplaceRef!(Unqual!T)(bigData[len], cast() item);
             //We do this at the end, in case of exceptions
             _data.arr = bigData;
         }
@@ -3464,16 +3467,11 @@ if (isDynamicArray!A)
     }
 
     /**
-     * Appends `rhs` to the managed array.
-     * Params:
-     *     op = the assignment operator `~`
-     *     rhs = Element or range.
+     * Appends to the managed array.
+     *
+     * See_Also: $(LREF Appender.put)
      */
-    void opOpAssign(string op : "~", U)(U rhs)
-    if (__traits(compiles, put(rhs)))
-    {
-        put(rhs);
-    }
+    alias opOpAssign(string op : "~") = put;
 
     // only allow overwriting data on non-immutable and non-const data
     static if (isMutable!T)
@@ -3652,6 +3650,26 @@ if (isDynamicArray!A)
 
     static assert(__traits(compiles, () pure { test!true(); }));
     static assert(!__traits(compiles, () pure { test!false(); }));
+}
+
+@system unittest // issue 19572
+{
+    static struct Struct
+    {
+        int value;
+
+        int fun() const { return 23; }
+
+        alias fun this;
+    }
+
+    Appender!(Struct[]) appender;
+
+    appender.put(const(Struct)(42));
+
+    auto result = appender.data[0];
+
+    assert(result.value != 23);
 }
 
 //Calculates an efficient growth scheme based on the old capacity

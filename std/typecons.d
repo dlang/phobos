@@ -72,6 +72,7 @@ import std.format : singleSpec, FormatSpec, formatValue;
 import std.meta; // : AliasSeq, allSatisfy;
 import std.range.primitives : isOutputRange;
 import std.traits;
+import std.internal.attributes : betterC;
 
 ///
 @safe unittest
@@ -511,7 +512,7 @@ if (distinctFieldNames!(Specs))
     //      :
     // NOTE: field[k] is an expression (which yields a symbol of a
     //       variable) and can't be aliased directly.
-    string injectNamedFields()
+    enum injectNamedFields = ()
     {
         string decl = "";
         static foreach (i, val; fieldSpecs)
@@ -524,7 +525,7 @@ if (distinctFieldNames!(Specs))
             }
         }}
         return decl;
-    }
+    };
 
     // Returns Specs for a subtuple this[from .. to] preserving field
     // names if any.
@@ -1495,6 +1496,26 @@ if (distinctFieldNames!(Specs))
 
     //Error: mutable method Bad.opEquals is not callable using a const object
     assert(t == AliasSeq!(1, Bad(1), "asdf"));
+}
+
+// Ensure Tuple.toHash works
+@safe unittest
+{
+    Tuple!(int, int) point;
+    assert(point.toHash == typeof(point).init.toHash);
+    assert(tuple(1, 2) != point);
+    assert(tuple(1, 2) == tuple(1, 2));
+    point[0] = 1;
+    assert(tuple(1, 2) != point);
+    point[1] = 2;
+    assert(tuple(1, 2) == point);
+}
+
+@safe @betterC unittest
+{
+    auto t = tuple(1, 2);
+    assert(t == tuple(1, 2));
+    auto t3 = tuple(1, 'd');
 }
 
 /**
@@ -6133,11 +6154,23 @@ struct RefCounted(T, RefCountedAutoInitialize autoInit =
         RefCountedAutoInitialize.yes)
 if (!is(T == class) && !(is(T == interface)))
 {
+    version (D_BetterC)
+    {
+        private enum enableGCScan = false;
+    }
+    else
+    {
+        private enum enableGCScan = hasIndirections!T;
+    }
+
     extern(C) private pure nothrow @nogc static // TODO remove pure when https://issues.dlang.org/show_bug.cgi?id=15862 has been fixed
     {
         pragma(mangle, "free") void pureFree( void *ptr );
-        pragma(mangle, "gc_addRange") void pureGcAddRange( in void* p, size_t sz, const TypeInfo ti = null );
-        pragma(mangle, "gc_removeRange") void pureGcRemoveRange( in void* p );
+        static if (enableGCScan)
+        {
+            pragma(mangle, "gc_addRange") void pureGcAddRange( in void* p, size_t sz, const TypeInfo ti = null );
+            pragma(mangle, "gc_removeRange") void pureGcRemoveRange( in void* p );
+        }
     }
 
     /// `RefCounted` storage implementation.
@@ -6172,7 +6205,7 @@ if (!is(T == class) && !(is(T == interface)))
         // 'nothrow': can only generate an Error
         private void allocateStore() nothrow pure
         {
-            static if (hasIndirections!T)
+            static if (enableGCScan)
             {
                 import std.internal.memory : enforceCalloc;
                 _store = cast(Impl*) enforceCalloc(1, Impl.sizeof);
@@ -6264,7 +6297,7 @@ to deallocate the corresponding resource.
             return;
         // Done, deallocate
         .destroy(_refCounted._store._payload);
-        static if (hasIndirections!T)
+        static if (enableGCScan)
         {
             pureGcRemoveRange(&_refCounted._store._payload);
         }
@@ -6354,7 +6387,7 @@ assert(refCountedStore.isInitialized)).
 }
 
 ///
-pure @system nothrow @nogc unittest
+@betterC pure @system nothrow @nogc unittest
 {
     // A pair of an `int` and a `size_t` - the latter being the
     // reference count - will be dynamically allocated
@@ -6407,7 +6440,7 @@ pure @system unittest
     assert(a.x._refCounted._store._count == 2, "BUG 4356 still unfixed");
 }
 
-pure @system nothrow @nogc unittest
+@betterC pure @system nothrow @nogc unittest
 {
     import std.algorithm.mutation : swap;
 
@@ -6416,7 +6449,7 @@ pure @system nothrow @nogc unittest
 }
 
 // 6606
-@safe pure nothrow @nogc unittest
+@betterC @safe pure nothrow @nogc unittest
 {
     union U {
        size_t i;
@@ -6431,7 +6464,7 @@ pure @system nothrow @nogc unittest
 }
 
 // 6436
-@system pure unittest
+@betterC @system pure unittest
 {
     struct S { this(ref int val) { assert(val == 3); ++val; } }
 
@@ -6441,14 +6474,14 @@ pure @system nothrow @nogc unittest
 }
 
 // gc_addRange coverage
-@system pure unittest
+@betterC @system pure unittest
 {
     struct S { int* p; }
 
     auto s = RefCounted!S(null);
 }
 
-@system pure nothrow @nogc unittest
+@betterC @system pure nothrow @nogc unittest
 {
     RefCounted!int a;
     a = 5; //This should not assert

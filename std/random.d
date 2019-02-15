@@ -1649,7 +1649,11 @@ else
 {
     private ulong bootstrapSeed() @nogc nothrow
     {
-        ulong result = void;
+        // Issue 19580 - previously used `ulong result = void` to start with
+        // an arbitary value but using an uninitialized variable's value is
+        // undefined behavior and enabled unwanted optimizations on non-DMD
+        // compilers.
+        ulong result;
         enum ulong m = 0xc6a4_a793_5bd1_e995UL; // MurmurHash2_64A constant.
         void updateResult(ulong x)
         {
@@ -3310,7 +3314,7 @@ if (isInputRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))
 
         static if (hasLength!Range)
         {
-            this(Range input, size_t howMany, ref UniformRNG rng)
+            this(Range input, size_t howMany, ref scope UniformRNG rng)
             {
                 _rng = rng;
                 _input = input;
@@ -3323,7 +3327,7 @@ if (isInputRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))
             }
         }
 
-        this(Range input, size_t howMany, size_t total, ref UniformRNG rng)
+        this(Range input, size_t howMany, size_t total, ref scope UniformRNG rng)
         {
             _rng = rng;
             _input = input;

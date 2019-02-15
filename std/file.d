@@ -93,7 +93,7 @@ import std.typecons;
 
 version (Windows)
 {
-    import core.sys.windows.windows, std.windows.syserror;
+    import core.sys.windows.winbase, core.sys.windows.winnt, std.windows.syserror;
 }
 else version (Posix)
 {
@@ -1839,7 +1839,7 @@ else version (Posix)
 
 @safe unittest
 {
-    //std.process.system("echo a > deleteme") == 0 || assert(false);
+    //std.process.executeShell("echo a > deleteme");
     if (exists(deleteme))
         remove(deleteme);
 
@@ -4799,7 +4799,7 @@ public:
                   std,_path).
 
         mode = Whether the directory's sub-directories should be
-               iterated in depth-first port-order ($(LREF depth)),
+               iterated in depth-first post-order ($(LREF depth)),
                depth-first pre-order ($(LREF breadth)), or not at all
                ($(LREF shallow)).
 
@@ -4809,7 +4809,7 @@ public:
 
     Returns:
         An $(REF_ALTTEXT input range, isInputRange,std,range,primitives) of
-        $(LREF DirEntries).
+        $(LREF DirEntry).
 
     Throws:
         $(LREF FileException) if the directory does not exist.
@@ -4844,7 +4844,7 @@ foreach (d; parallel(dFiles, 1)) //passes by 1 file to each thread
 {
     string cmd = "dmd -c "  ~ d.name;
     writeln(cmd);
-    std.process.system(cmd);
+    std.process.executeShell(cmd);
 }
 
 // Iterate over all D source files in current directory and all its
