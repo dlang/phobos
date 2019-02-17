@@ -34,6 +34,9 @@ module etc.c.sqlite3;
 
 import core.stdc.stdarg : va_list;
 
+// @@@DEPRECATED_2.090@@@
+deprecated("etc.c.sqlite3 is unmaintained, and will be removed in 2.090"):
+
 extern (C) __gshared nothrow:
 
 /**
