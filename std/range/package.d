@@ -10493,7 +10493,7 @@ if (isInputRange!Range && !isInstanceOf!(SortedRange, Range))
 
     /// Ditto
     static if (hasSlicing!Range)
-        auto opSlice(size_t a, size_t b) return scope @trusted
+        auto opSlice(size_t a, size_t b) return scope
         {
             assert(
                 a <= b,
