@@ -12863,14 +12863,27 @@ if (
         private:
         R data;
         E element;
-        size_t counter;
-        static if (isBidirectionalRange!R && hasLength!R) size_t backPosition;
-        size_t maxSize;
+        static if (hasLength!R)
+        {
+            size_t padLength;
+        }
+        else
+        {
+            size_t minLength;
+            size_t consumed;
+        }
 
         public:
         bool empty() @property
         {
-            return data.empty && counter >= maxSize;
+            static if (hasLength!R)
+            {
+                return data.empty && padLength == 0;
+            }
+            else
+            {
+                return data.empty && consumed >= minLength;
+            }
         }
 
         auto front() @property
@@ -12882,11 +12895,25 @@ if (
         void popFront()
         {
             assert(!empty, "Attempting to popFront an empty padRight");
-            ++counter;
 
-            if (!data.empty)
+            static if (hasLength!R)
             {
-                data.popFront;
+                if (!data.empty)
+                {
+                    data.popFront;
+                }
+                else
+                {
+                    --padLength;
+                }
+            }
+            else
+            {
+                ++consumed;
+                if (!data.empty)
+                {
+                    data.popFront;
+                }
             }
         }
 
@@ -12894,8 +12921,7 @@ if (
         {
             size_t length() @property
             {
-                import std.algorithm.comparison : max;
-                return max(data.length, maxSize);
+                return data.length + padLength;
             }
         }
 
@@ -12914,16 +12940,15 @@ if (
             auto back() @property
             {
                 assert(!empty, "Attempting to fetch the back of an empty padRight");
-                return backPosition > data.length ? element : data.back;
+                return padLength > 0 ? element : data.back;
             }
 
             void popBack()
             {
                 assert(!empty, "Attempting to popBack an empty padRight");
-                if (backPosition > data.length)
+                if (padLength > 0)
                 {
-                    --backPosition;
-                    --maxSize;
+                    --padLength;
                 }
                 else
                 {
@@ -12937,8 +12962,7 @@ if (
             E opIndex(size_t index)
             {
                 assert(index <= this.length, "Index out of bounds");
-                return (index > data.length && index <= maxSize) ? element :
-                    data[index];
+                return index >= data.length ? element : data[index];
             }
         }
 
@@ -12954,20 +12978,26 @@ if (
                     b <= length,
                     "Attempting to slice using an out of bounds index on a padRight"
                 );
-                return Result((b <= data.length) ? data[a .. b] : data[a .. data.length],
+                return Result(
+                    a >= data.length ? data[0 .. 0] : b <= data.length ? data[a .. b] : data[a .. data.length],
                     element, b - a);
             }
 
             alias opDollar = length;
         }
 
-        this(R r, E e, size_t max)
+        this(R r, E e, size_t n)
         {
             data = r;
             element = e;
-            maxSize = max;
-            static if (isBidirectionalRange!R && hasLength!R)
-                backPosition = max;
+            static if (hasLength!R)
+            {
+                padLength = n > data.length ? n - data.length : 0;
+            }
+            else
+            {
+                minLength = n;
+            }
         }
 
         @disable this();
@@ -13011,6 +13041,8 @@ pure @safe unittest
             RangeType r3;
             assert(r3.padRight(0, 12)[0] == 1);
             assert(r3.padRight(0, 12)[2] == 3);
+            assert(r3.padRight(0, 12)[9] == 10);
+            assert(r3.padRight(0, 12)[10] == 0);
             assert(r3.padRight(0, 12)[11] == 0);
         }
 
@@ -13023,6 +13055,14 @@ pure @safe unittest
                 .equal([1, 2, 3])
             );
             assert(r4
+                .padRight(0, 12)[0 .. 10]
+                .equal([1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U, 9U, 10U])
+            );
+            assert(r4
+                .padRight(0, 12)[0 .. 11]
+                .equal([1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U, 9U, 10U, 0])
+            );
+            assert(r4
                 .padRight(0, 12)[2 .. $]
                 .equal([3U, 4U, 5U, 6U, 7U, 8U, 9U, 10U, 0, 0])
             );
@@ -13031,6 +13071,10 @@ pure @safe unittest
                 .equal([1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U, 9U, 10U, 0, 0])
             );
         }
+
+        // drop & dropBack test opslice ranges when available, popFront/popBack otherwise
+        RangeType r5;
+        foreach (i; 1 .. 13) assert(r5.padRight(0, 12).drop(i).walkLength == 12 - i);
     }
 }
 
@@ -13042,4 +13086,55 @@ pure @safe unittest
     static immutable r1 = [1, 2, 3, 4];
     static immutable r2 = [1, 2, 3, 4, 0, 0];
     assert(r1.padRight(0, 6).equal(r2));
+}
+
+// Test back, popBack, and save
+@safe pure unittest
+{
+    import std.algorithm.comparison : equal;
+
+    auto r1 = [1, 2, 3, 4].padRight(0, 6);
+    assert(r1.back == 0);
+
+    r1.popBack;
+    auto r2 = r1.save;
+    assert(r1.equal([1, 2, 3, 4, 0]));
+    assert(r2.equal([1, 2, 3, 4, 0]));
+
+    r1.popBackN(2);
+    assert(r1.back == 3);
+    assert(r1.length == 3);
+    assert(r2.length == 5);
+    assert(r2.equal([1, 2, 3, 4, 0]));
+
+    r2.popFront;
+    assert(r2.length == 4);
+    assert(r2[0] == 2);
+    assert(r2[1] == 3);
+    assert(r2[2] == 4);
+    assert(r2[3] == 0);
+    assert(r2.equal([2, 3, 4, 0]));
+
+    r2.popBack;
+    assert(r2.equal([2, 3, 4]));
+
+    auto r3 = [1, 2, 3, 4].padRight(0, 6);
+    size_t len = 0;
+    while (!r3.empty)
+    {
+        ++len;
+        r3.popBack;
+    }
+    assert(len == 6);
+}
+
+// Issue 19042
+@safe pure unittest
+{
+    import std.algorithm.comparison : equal;
+
+    assert([2, 5, 13].padRight(42, 10).chunks(5)
+           .equal!equal([[2, 5, 13, 42, 42], [42, 42, 42, 42, 42]]));
+
+    assert([1, 2, 3, 4].padRight(0, 10)[7 .. 9].equal([0, 0]));
 }
