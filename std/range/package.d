@@ -9502,7 +9502,7 @@ public:
 
 private struct OnlyResult(T, size_t arity)
 {
-    private this(Values...)(auto ref Values values)
+    private this(Values...)(return scope auto ref Values values)
     {
         this.data = [values];
         this.backIndex = arity;
@@ -9622,7 +9622,7 @@ private struct OnlyResult(T, size_t arity : 1)
     }
     alias opDollar = length;
 
-    private this()(auto ref T value)
+    private this()(return scope auto ref T value)
     {
         this._value = value;
         this._empty = false;
@@ -9706,7 +9706,7 @@ Returns:
 
 See_Also: $(LREF chain) to chain ranges
  */
-auto only(Values...)(auto ref Values values)
+auto only(Values...)(return scope auto ref Values values)
 if (!is(CommonType!Values == void) || Values.length == 0)
 {
     return OnlyResult!(CommonType!Values, Values.length)(values);
