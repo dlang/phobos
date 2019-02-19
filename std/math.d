@@ -6828,6 +6828,7 @@ Returns `-1` if $(D x < 0), `x` if $(D x == 0), `1` if
 $(D x > 0), and $(NAN) if x==$(NAN).
  */
 F sgn(F)(F x) @safe pure nothrow @nogc
+if (isFloatingPoint!F || isIntegral!F)
 {
     // @@@TODO@@@: make this faster
     return x > 0 ? 1 : x < 0 ? -1 : x;
