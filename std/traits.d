@@ -165,7 +165,7 @@
  */
 module std.traits;
 
-import std.meta : AliasSeq, allSatisfy;
+import std.meta : AliasSeq, allSatisfy, anySatisfy;
 import std.functional : unaryFun;
 
 // Legacy inheritance from std.typetuple
@@ -2613,7 +2613,7 @@ have a context pointer.
 */
 template hasNested(T)
 {
-    import std.meta : anySatisfy, Filter;
+    import std.meta : Filter;
 
     static if (isStaticArray!T && T.length)
         enum hasNested = hasNested!(typeof(T.init[0]));
@@ -2822,41 +2822,13 @@ topological order.
 */
 template RepresentationTypeTuple(T)
 {
-    template Impl(T...)
-    {
-        static if (T.length == 0)
-        {
-            alias Impl = AliasSeq!();
-        }
-        else
-        {
-            import std.typecons : Rebindable;
-
-            static if (is(T[0] R: Rebindable!R))
-            {
-                alias Impl = Impl!(Impl!R, T[1 .. $]);
-            }
-            else  static if (is(T[0] == struct) || is(T[0] == union))
-            {
-                // @@@BUG@@@ this should work
-                //alias .RepresentationTypes!(T[0].tupleof)
-                //    RepresentationTypes;
-                alias Impl = Impl!(FieldTypeTuple!(T[0]), T[1 .. $]);
-            }
-            else
-            {
-                alias Impl = AliasSeq!(T[0], Impl!(T[1 .. $]));
-            }
-        }
-    }
-
     static if (is(T == struct) || is(T == union) || is(T == class))
     {
-        alias RepresentationTypeTuple = Impl!(FieldTypeTuple!T);
+        alias RepresentationTypeTuple = staticMapMeta!(RepresentationTypeTupleImpl, FieldTypeTuple!T);
     }
     else
     {
-        alias RepresentationTypeTuple = Impl!T;
+        alias RepresentationTypeTuple = RepresentationTypeTupleImpl!T;
     }
 }
 
@@ -2902,42 +2874,55 @@ template RepresentationTypeTuple(T)
     static assert(R2.length == 2 && is(R2[0] == int) && is(R2[1] == immutable(Object)));
 }
 
+@safe unittest
+{
+    struct VeryLargeType
+    {
+        import std.format : format;
+        import std.range : iota;
+
+        static foreach (i; 500.iota)
+        {
+            mixin(format!"int v%s;"(i));
+        }
+    }
+
+    alias BigList = RepresentationTypeTuple!VeryLargeType;
+}
+
+private template RepresentationTypeTupleImpl(T)
+{
+    import std.typecons : Rebindable;
+
+    static if (is(T R: Rebindable!R))
+    {
+        alias RepresentationTypeTupleImpl
+            = staticMapMeta!(.RepresentationTypeTupleImpl, RepresentationTypeTupleImpl!R);
+    }
+    else  static if (is(T == struct) || is(T == union))
+    {
+        // @@@BUG@@@ this should work
+        //alias .RepresentationTypes!(T[0].tupleof)
+        //    RepresentationTypes;
+        alias RepresentationTypeTupleImpl
+            = staticMapMeta!(.RepresentationTypeTupleImpl, FieldTypeTuple!(T));
+    }
+    else
+    {
+        alias RepresentationTypeTupleImpl
+            = AliasSeq!T;
+    }
+}
+
 /*
 Statically evaluates to `true` if and only if `T`'s
 representation contains at least one field of pointer or array type.
 Members of class types are not considered raw pointers. Pointers to
 immutable objects are not considered raw aliasing.
 */
-private template hasRawAliasing(T...)
+private template hasRawAliasing(T)
 {
-    template Impl(T...)
-    {
-        static if (T.length == 0)
-        {
-            enum Impl = false;
-        }
-        else
-        {
-            static if (is(T[0] foo : U*, U) && !isFunctionPointer!(T[0]))
-                enum has = !is(U == immutable);
-            else static if (is(T[0] foo : U[N], U, size_t N))
-                // separate static ifs to avoid forward reference
-                static if (is(U == class) || is(U == interface))
-                    enum has = false;
-                else
-                    enum has = hasRawAliasing!U;
-            else static if (is(T[0] foo : U[], U) && !isStaticArray!(T[0]))
-                enum has = !is(U == immutable);
-            else static if (isAssociativeArray!(T[0]))
-                enum has = !is(T[0] == immutable);
-            else
-                enum has = false;
-
-            enum Impl = has || Impl!(T[1 .. $]);
-        }
-    }
-
-    enum hasRawAliasing = Impl!(RepresentationTypeTuple!T);
+    enum hasRawAliasing = anySatisfy!(hasRawAliasingImpl, RepresentationTypeTuple!T);
 }
 
 //
@@ -3014,36 +2999,33 @@ private template hasRawAliasing(T...)
     static assert(!hasRawAliasing!(immutable(int[string])));
 }
 
+private template hasRawAliasingImpl(T)
+{
+    static if (is(T foo : U*, U) && !isFunctionPointer!T)
+        enum hasRawAliasingImpl = !is(U == immutable);
+    else static if (is(T foo : U[N], U, size_t N))
+        // separate static ifs to avoid forward reference
+        static if (is(U == class) || is(U == interface))
+            enum hasRawAliasingImpl = false;
+        else
+            enum hasRawAliasingImpl = hasRawAliasingImpl!U;
+    else static if (is(T foo : U[], U) && !isStaticArray!(T))
+        enum hasRawAliasingImpl = !is(U == immutable);
+    else static if (isAssociativeArray!(T))
+        enum hasRawAliasingImpl = !is(T == immutable);
+    else
+        enum hasRawAliasingImpl = false;
+}
+
 /*
 Statically evaluates to `true` if and only if `T`'s
 representation contains at least one non-shared field of pointer or
 array type.  Members of class types are not considered raw pointers.
 Pointers to immutable objects are not considered raw aliasing.
 */
-private template hasRawUnsharedAliasing(T...)
+private template hasRawUnsharedAliasing(T)
 {
-    template Impl(T...)
-    {
-        static if (T.length == 0)
-        {
-            enum Impl = false;
-        }
-        else
-        {
-            static if (is(T[0] foo : U*, U) && !isFunctionPointer!(T[0]))
-                enum has = !is(U == immutable) && !is(U == shared);
-            else static if (is(T[0] foo : U[], U) && !isStaticArray!(T[0]))
-                enum has = !is(U == immutable) && !is(U == shared);
-            else static if (isAssociativeArray!(T[0]))
-                enum has = !is(T[0] == immutable) && !is(T[0] == shared);
-            else
-                enum has = false;
-
-            enum Impl = has || Impl!(T[1 .. $]);
-        }
-    }
-
-    enum hasRawUnsharedAliasing = Impl!(RepresentationTypeTuple!T);
+    enum hasRawUnsharedAliasing = anySatisfy!(hasRawUnsharedAliasingImpl, RepresentationTypeTuple!T);
 }
 
 //
@@ -3196,26 +3178,32 @@ private template hasRawUnsharedAliasing(T...)
     static assert(!hasRawUnsharedAliasing!S28);
 }
 
+private template hasRawUnsharedAliasingImpl(T)
+{
+    static if (is(T foo : U*, U) && !isFunctionPointer!T)
+        enum hasRawUnsharedAliasingImpl = !is(U == immutable) && !is(U == shared);
+    else static if (is(T foo : U[], U) && !isStaticArray!T)
+        enum hasRawUnsharedAliasingImpl = !is(U == immutable) && !is(U == shared);
+    else static if (isAssociativeArray!T)
+        enum hasRawUnsharedAliasingImpl = !is(T == immutable) && !is(T == shared);
+    else
+        enum hasRawUnsharedAliasingImpl = false;
+}
+
 /*
 Statically evaluates to `true` if and only if `T`'s
 representation includes at least one non-immutable object reference.
 */
 
-private template hasObjects(T...)
+private template hasObjects(T)
 {
-    static if (T.length == 0)
+    static if (is(T == struct))
     {
-        enum hasObjects = false;
-    }
-    else static if (is(T[0] == struct))
-    {
-        enum hasObjects = hasObjects!(
-            RepresentationTypeTuple!(T[0]), T[1 .. $]);
+        enum hasObjects = anySatisfy!(.hasObjects, RepresentationTypeTuple!T);
     }
     else
     {
-        enum hasObjects = ((is(T[0] == class) || is(T[0] == interface))
-            && !is(T[0] == immutable)) || hasObjects!(T[1 .. $]);
+        enum hasObjects = (is(T == class) || is(T == interface)) && !is(T == immutable);
     }
 }
 
@@ -3224,22 +3212,16 @@ Statically evaluates to `true` if and only if `T`'s
 representation includes at least one non-immutable non-shared object
 reference.
 */
-private template hasUnsharedObjects(T...)
+private template hasUnsharedObjects(T)
 {
-    static if (T.length == 0)
+    static if (is(T == struct))
     {
-        enum hasUnsharedObjects = false;
-    }
-    else static if (is(T[0] == struct))
-    {
-        enum hasUnsharedObjects = hasUnsharedObjects!(
-            RepresentationTypeTuple!(T[0]), T[1 .. $]);
+        enum hasUnsharedObjects = anySatisfy!(.hasUnsharedObjects, RepresentationTypeTuple!T);
     }
     else
     {
-        enum hasUnsharedObjects = ((is(T[0] == class) || is(T[0] == interface)) &&
-                                !is(T[0] == immutable) && !is(T[0] == shared)) ||
-            hasUnsharedObjects!(T[1 .. $]);
+        enum hasUnsharedObjects = (is(T == class) || is(T == interface)) &&
+                                  !is(T == immutable) && !is(T == shared);
     }
 }
 
@@ -3253,24 +3235,7 @@ $(LI a delegate.))
 */
 template hasAliasing(T...)
 {
-    import std.meta : anySatisfy;
-    import std.typecons : Rebindable;
-
-    static if (T.length && is(T[0] : Rebindable!R, R))
-    {
-        enum hasAliasing = hasAliasing!(R, T[1 .. $]);
-    }
-    else
-    {
-        template isAliasingDelegate(T)
-        {
-            enum isAliasingDelegate = isDelegate!T
-                                  && !is(T == immutable)
-                                  && !is(FunctionTypeOf!T == immutable);
-        }
-        enum hasAliasing = hasRawAliasing!T || hasObjects!T ||
-            anySatisfy!(isAliasingDelegate, T, RepresentationTypeTuple!T);
-    }
+    enum hasAliasing = anySatisfy!(hasAliasingImpl, T);
 }
 
 ///
@@ -3353,6 +3318,28 @@ template hasAliasing(T...)
     static assert( hasAliasing!S15);
     static assert(!hasAliasing!(immutable(S15)));
 }
+
+private template hasAliasingImpl(T)
+{
+    import std.typecons : Rebindable;
+
+    static if (is(T : Rebindable!R, R))
+    {
+        enum hasAliasingImpl = hasAliasingImpl!R;
+    }
+    else
+    {
+        template isAliasingDelegate(T)
+        {
+            enum isAliasingDelegate = isDelegate!T
+                                  && !is(T == immutable)
+                                  && !is(FunctionTypeOf!T == immutable);
+        }
+        enum hasAliasingImpl = hasRawAliasing!T || hasObjects!T ||
+            anySatisfy!(isAliasingDelegate, T, RepresentationTypeTuple!T);
+    }
+}
+
 /**
 Returns `true` if and only if `T`'s representation includes at
 least one of the following: $(OL $(LI a raw pointer `U*`;) $(LI an
@@ -3361,7 +3348,6 @@ $(LI an associative array.) $(LI a delegate.))
  */
 template hasIndirections(T)
 {
-    import std.meta : anySatisfy;
     static if (is(T == struct) || is(T == union))
         enum hasIndirections = anySatisfy!(.hasIndirections, FieldTypeTuple!T);
     else static if (isStaticArray!T && is(T : E[N], E, size_t N))
@@ -3472,35 +3458,7 @@ immutable or shared.) $(LI a delegate that is not shared.))
 
 template hasUnsharedAliasing(T...)
 {
-    import std.meta : anySatisfy;
-    import std.typecons : Rebindable;
-
-    static if (!T.length)
-    {
-        enum hasUnsharedAliasing = false;
-    }
-    else static if (is(T[0] R: Rebindable!R))
-    {
-        enum hasUnsharedAliasing = hasUnsharedAliasing!R;
-    }
-    else
-    {
-        template unsharedDelegate(T)
-        {
-            enum bool unsharedDelegate = isDelegate!T
-                                     && !is(T == shared)
-                                     && !is(T == shared)
-                                     && !is(T == immutable)
-                                     && !is(FunctionTypeOf!T == shared)
-                                     && !is(FunctionTypeOf!T == immutable);
-        }
-
-        enum hasUnsharedAliasing =
-            hasRawUnsharedAliasing!(T[0]) ||
-            anySatisfy!(unsharedDelegate, RepresentationTypeTuple!(T[0])) ||
-            hasUnsharedObjects!(T[0]) ||
-            hasUnsharedAliasing!(T[1..$]);
-    }
+    enum hasUnsharedAliasing = anySatisfy!(hasUnsharedAliasingImpl, T);
 }
 
 ///
@@ -3639,6 +3597,32 @@ template hasUnsharedAliasing(T...)
     static assert(!hasUnsharedAliasing!S20);
 }
 
+private template hasUnsharedAliasingImpl(T)
+{
+    import std.typecons : Rebindable;
+
+    static if (is(T R: Rebindable!R))
+    {
+        enum hasUnsharedAliasingImpl = hasUnsharedAliasingImpl!R;
+    }
+    else
+    {
+        template unsharedDelegate(T)
+        {
+            enum bool unsharedDelegate = isDelegate!T
+                                     && !is(T == shared)
+                                     && !is(T == immutable)
+                                     && !is(FunctionTypeOf!T == shared)
+                                     && !is(FunctionTypeOf!T == immutable);
+        }
+
+        enum hasUnsharedAliasingImpl =
+            hasRawUnsharedAliasing!T ||
+            anySatisfy!(unsharedDelegate, RepresentationTypeTuple!T) ||
+            hasUnsharedObjects!T;
+    }
+}
+
 /**
  True if `S` or any type embedded directly in the representation of `S`
  defines an elaborate copy constructor. Elaborate copy constructors are
@@ -3693,7 +3677,6 @@ template hasElaborateCopyConstructor(S)
  */
 template hasElaborateAssign(S)
 {
-    import std.meta : anySatisfy;
     static if (isStaticArray!S && S.length)
     {
         enum bool hasElaborateAssign = hasElaborateAssign!(typeof(S.init[0]));
