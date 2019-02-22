@@ -5089,7 +5089,10 @@ private static:
 
         static string generateTestMethod(C, alias fun)() @property
         {
-            return "return this.boilerplate[0 .. a0];";
+            return `
+                static assert(__traits(parent, parent).stringof == "I_10");
+                return this.boilerplate[0 .. a0];
+            `;
         }
 
         auto o = new AutoImplement!(I_10, C_9, generateTestMethod)("Testing");
@@ -5424,8 +5427,8 @@ private static:
             if (!isCtor)
             {
                 preamble ~= "alias self = " ~ name ~ ";\n";
-                if (WITH_BASE_CLASS && !__traits(isAbstractFunction, func))
-                    preamble ~= `alias parent = __traits(getMember, super, "` ~ name ~ `");`;
+                static if (WITH_BASE_CLASS)
+                    preamble ~= `alias parent = __traits(getMember, ` ~ Policy.BASE_CLASS_ID ~ `, "` ~ name ~ `");`;
             }
 
             // Function body
