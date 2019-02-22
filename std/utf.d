@@ -3279,7 +3279,7 @@ if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
 
     Encodes string `s` into UTF-16 and returns the encoded string.
     `toUTF16z` is suitable for calling the 'W' functions in the Win32 API
-    that take an `LPWSTR` or `LPCWSTR` argument.
+    that take an `LPCWSTR` argument.
   +/
 const(wchar)* toUTF16z(C)(const(C)[] str) @safe pure
 if (isSomeChar!C)
