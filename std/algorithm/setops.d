@@ -393,7 +393,7 @@ if (ranges.length >= 2 &&
             return mixin(algoFormat("tuple(%(current[%d].front%|,%))",
                                     iota(0, current.length)));
         }
-        void popFront()
+        void popFront() scope @trusted // @trusted until dmd #9220 is pulled
         {
             foreach_reverse (i, ref r; current)
             {
@@ -406,12 +406,12 @@ if (ranges.length >= 2 &&
                     r = ranges[i].save; // rollover
             }
         }
-        @property Result save()
+        @property Result save() scope return
         {
             Result copy = this;
             foreach (i, r; ranges)
             {
-                copy.ranges[i] = r.save;
+                copy.ranges[i] = ranges[i].save;
                 copy.current[i] = current[i].save;
             }
             return copy;
