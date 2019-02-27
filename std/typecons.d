@@ -8653,6 +8653,11 @@ replacement.
 */
 template ReplaceType(From, To, T...)
 {
+    template isAliasThis(T, U) {
+        enum checkAlias(string name) = is(typeof(__traits(getMember, T, name)) : U);
+        enum isAliasThis = anySatisfy!(checkAlias, __traits(getAliasThis, T));
+    }
+
     static if (T.length == 1)
     {
         static if (is(T[0] == From))
@@ -8679,7 +8684,7 @@ template ReplaceType(From, To, T...)
             static assert(0, "Function types not supported," ~
                 " use a function pointer type instead of " ~ T[0].stringof);
         }
-        else static if (is(T[0] : U!V, alias U, V...))
+        else static if (is(T[0] : U!V, alias U, V...) && !isAliasThis!(T, U!V))
         {
             template replaceTemplateArgs(T...)
             {
@@ -8904,6 +8909,17 @@ private template replaceTypeInFunctionType(From, To, fun)
     alias B = void delegate(int) const;
     alias A = ReplaceType!(float, int, ConstDg);
     static assert(is(B == A));
+}
+
+@safe unittest // Bugzilla 19703
+{
+    struct S1(int n) { }
+    struct S2 {
+        S1!4 s1;
+        alias s1 this;
+    }
+
+    static assert(is(ReplaceType!(int, int, S2) == S2));
 }
 
 /**
