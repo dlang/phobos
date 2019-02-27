@@ -656,7 +656,12 @@ betterc: betterc-phobos-tests
 auto-tester-build: all checkwhitespace
 
 .PHONY : auto-tester-test
+ifneq (,$(findstring Darwin_64_32, $(PWD)))
+auto-tester-test:
+	echo "Darwin_64_32_disabled"
+else
 auto-tester-test: unittest
+endif
 
 .PHONY: buildkite-test
 buildkite-test: unittest betterc
