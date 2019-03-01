@@ -7359,7 +7359,12 @@ T nextafter(T)(const T x, const T y) @safe pure nothrow @nogc
  *      $(TR $(TD x $(LT)= y) $(TD +0.0))
  *      )
  */
-real fdim(real x, real y) @safe pure nothrow @nogc { return (x > y) ? x - y : +0.0; }
+real fdim(real x, real y) @safe pure nothrow @nogc
+{   
+    if(isNaN(x) || isNaN(y))
+        return real.nan;
+    return (x > y) ? x - y : +0.0;
+}
 
 ///
 @safe pure nothrow @nogc unittest
@@ -7367,8 +7372,8 @@ real fdim(real x, real y) @safe pure nothrow @nogc { return (x > y) ? x - y : +0
     assert(fdim(2.0, 0.0) == 2.0);
     assert(fdim(-2.0, 0.0) == 0.0);
     assert(fdim(real.infinity, 2.0) == real.infinity);
-    assert(fdim(real.nan, 2.0) == 0.0);
-    assert(fdim(2.0, real.nan) == 0.0);
+    assert(isNaN(fdim(real.nan, 2.0)));
+    assert(isNaN(fdim(2.0, real.nan)));
 }
 
 /**
@@ -7717,9 +7722,7 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
                 }
             }
             else
-            {
-                if (y > 0.0)
-                    return F.infinity;
+            { if (y > 0.0) return F.infinity;
                 else if (y < 0.0)
                     return +0.0;
             }
