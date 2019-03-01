@@ -751,10 +751,10 @@ deprecated
 real cos(real x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.cos(x); }
 //FIXME
 ///ditto
-double cos(double x) @safe pure nothrow @nogc { return cos(cast(real) x); }
+double cos(double x) @safe pure nothrow @nogc { return core.stdc.math.cos(x); }
 //FIXME
 ///ditto
-float cos(float x) @safe pure nothrow @nogc { return cos(cast(real) x); }
+float cos(float x) @safe pure nothrow @nogc { return core.stdc.math.cosf(x); }
 
 ///
 @safe unittest
@@ -793,10 +793,10 @@ float cos(float x) @safe pure nothrow @nogc { return cos(cast(real) x); }
 real sin(real x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.sin(x); }
 //FIXME
 ///ditto
-double sin(double x) @safe pure nothrow @nogc { return sin(cast(real) x); }
+double sin(double x) @safe pure nothrow @nogc { return core.stdc.math.sin(x); }
 //FIXME
 ///ditto
-float sin(float x) @safe pure nothrow @nogc { return sin(cast(real) x); }
+float sin(float x) @safe pure nothrow @nogc { return core.stdc.math.sinf(x); }
 
 ///
 @safe unittest
