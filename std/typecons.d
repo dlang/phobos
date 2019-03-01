@@ -5089,10 +5089,7 @@ private static:
 
         static string generateTestMethod(C, alias fun)() @property
         {
-            return `
-                static assert(__traits(parent, parent).stringof == "I_10");
-                return this.boilerplate[0 .. a0];
-            `;
+            return "return this.boilerplate[0 .. a0];";
         }
 
         auto o = new AutoImplement!(I_10, C_9, generateTestMethod)("Testing");
@@ -5110,6 +5107,44 @@ private static:
         static abstract class C_9 : K {}
         auto o = new BlackHole!C_9;
     }+/
+    // test `parent` alias
+    {
+        interface I_11
+        {
+            void simple(int) @safe;
+            int anotherSimple(string);
+            int overloaded(int);
+            void overloaded(string) @safe;
+        }
+
+        static class C_11
+        {
+            import std.traits : Parameters, ReturnType;
+            import std.meta : Alias;
+
+            protected ReturnType!fn _impl(alias fn)(Parameters!fn)
+            if (is(Alias!(__traits(parent, fn)) == interface))
+            {
+                static if (!is(typeof(return) == void))
+                    return typeof(return).init;
+            }
+        }
+
+        template tpl(I, alias fn)
+        if (is(I == interface) && __traits(isSame, __traits(parent, fn), I))
+        {
+            enum string tpl = q{
+                enum bool haveReturn = !is(typeof(return) == void);
+
+                static if (is(typeof(return) == void))
+                    _impl!parent(args);
+                else
+                    return _impl!parent(args);
+            };
+        }
+
+        auto o = new AutoImplement!(I_11, C_11, tpl);
+    }
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=17177
@@ -5191,6 +5226,7 @@ version (StdUnittest)
         void bar(int a) { }
     }
 }
+
 @system unittest
 {
     auto foo = new issue10647_DoNothing!issue10647_Foo();
