@@ -653,7 +653,12 @@ betterc: betterc-phobos-tests
 ################################################################################
 
 .PHONY : auto-tester-build
+ifneq (,$(findstring Darwin_64_32, $(PWD)))
+auto-tester-build:
+	echo "Darwin_64_32_disabled"
+else
 auto-tester-build: all checkwhitespace
+endif
 
 .PHONY : auto-tester-test
 ifneq (,$(findstring Darwin_64_32, $(PWD)))
