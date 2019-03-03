@@ -4784,11 +4784,6 @@ private void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __L
         assert(stream.data == "1.67 -0X1.47AE147AE147BP+0 nan",
                 stream.data);
     }
-    else version (MinGW)
-    {
-        assert(stream.data == "1.67 -0XA.3D70A3D70A3D8P-3 nan",
-                stream.data);
-    }
     else version (CRuntime_Microsoft)
     {
         assert(stream.data == "1.67 -0X1.47AE14P+0 nan"
@@ -5264,10 +5259,7 @@ private void formatReflectTest(T)(ref T val, string fmt, string[] formatted, str
     {
         auto f = 3.14;
         formatReflectTest(f, "%s",  `3.14`);
-        version (MinGW)
-            formatReflectTest(f, "%e",  `3.140000e+000`);
-        else
-            formatReflectTest(f, "%e",  `3.140000e+00`);
+        formatReflectTest(f, "%e",  `3.140000e+00`);
         formatReflectTest(f, "%f",  `3.140000`);
         formatReflectTest(f, "%g",  `3.14`);
     }
@@ -5918,9 +5910,7 @@ private bool needToSwapEndianess(Char)(const ref FormatSpec!Char f)
     //else version (OSX)
     //    assert(s == "1.67 -0XA.3D70A3D70A3D8P-3 nan", s);
     //else
-    version (MinGW)
-        assert(s == "1.67 -0XA.3D70A3D70A3D8P-3 nan", s);
-    else version (CRuntime_Microsoft)
+    version (CRuntime_Microsoft)
         assert(s == "1.67 -0X1.47AE14P+0 nan"
             || s == "1.67 -0X1.47AE147AE147BP+0 nan", s); // MSVCRT 14+ (VS 2015)
     else

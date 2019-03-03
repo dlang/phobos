@@ -1732,10 +1732,7 @@ class JSONException : Exception
     ];
 
     enum dbl1_844 = `1.8446744073709568`;
-    version (MinGW)
-        jsons ~= dbl1_844 ~ `e+019`;
-    else
-        jsons ~= dbl1_844 ~ `e+19`;
+    jsons ~= dbl1_844 ~ `e+19`;
 
     JSONValue val;
     string result;
