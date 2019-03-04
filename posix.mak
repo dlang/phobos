@@ -206,10 +206,10 @@ STD_PACKAGES = std $(addprefix std/,\
 PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
   conv csv demangle encoding exception file format \
   functional getopt json math mathspecial meta mmfile numeric \
-  outbuffer parallelism path process random signals socket stdint \
+  outbuffer package parallelism path process random signals socket stdint \
   stdio string system traits typecons uni \
   uri utf uuid variant xml zip zlib
-PACKAGE_std_experimental = all checkedint typecons
+PACKAGE_std_experimental = checkedint typecons
 PACKAGE_std_algorithm = comparison iteration mutation package searching setops \
   sorting
 PACKAGE_std_container = array binaryheap dlist package rbtree slist util
