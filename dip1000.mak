@@ -18,7 +18,7 @@ aa[std.bigint]=-dip1000
 aa[std.bitmanip]=-dip1000 # merged https://github.com/dlang/phobos/pull/6174
 aa[std.compiler]=-dip1000
 aa[std.complex]=-dip1000
-aa[std.concurrency]=-dip1000
+aa[std.concurrency]=-dip25
 aa[std.conv]=-dip1000
 aa[std.csv]=-dip1000
 aa[std.demangle]=-dip1000
@@ -168,7 +168,7 @@ aa[std.internal.test.range]=-dip1000
 aa[std.internal.test.uda]=-dip1000
 aa[std.internal.windows.advapi32]=-dip1000
 
-aa[std.net.curl]=-dip1000 # TODO have a look into open https://github.com/dlang/phobos/pull/5052: std.net.curl: fix for -dip1000
+aa[std.net.curl]=-dip25 # TODO have a look into open https://github.com/dlang/phobos/pull/5052: std.net.curl: fix for -dip1000
 aa[std.net.isemail]=-dip1000
 
 aa[std.range.interfaces]=-dip1000
