@@ -1396,7 +1396,7 @@ Params:
 Returns:
     A range type dependent on `R1` and `R2`.
  */
-auto choose(R1, R2)(bool condition, R1 r1, R2 r2)
+auto choose(R1, R2)(bool condition, return scope R1 r1, return scope R2 r2)
 if (isInputRange!(Unqual!R1) && isInputRange!(Unqual!R2) &&
     !is(CommonType!(ElementType!(Unqual!R1), ElementType!(Unqual!R2)) == void))
 {
@@ -1455,8 +1455,9 @@ private struct ChooseResult(R1, R2)
             return foo(r.r2, extraArgs);
     }
 
-    this(bool r1Chosen, R1 r1, R2 r2)
+    this(bool r1Chosen, return scope R1 r1, return scope R2 r2) @trusted
     {
+        // @trusted because of assignment of r1 and r2 which overlap each other
         import std.conv : emplace;
 
         // This should be the only place r1Chosen is ever assigned
@@ -1511,7 +1512,7 @@ private struct ChooseResult(R1, R2)
     }
 
     static if (isForwardRange!R1 && isForwardRange!R2)
-        @property auto save()
+        @property auto save() return scope
         {
             auto result = this;
             actOnChosen!((ref r) { r = r.save; })(result);
@@ -1616,7 +1617,7 @@ Returns:
     The indexed range. If rs consists of only one range, the return type is an
     alias of that range's type.
  */
-auto chooseAmong(Ranges...)(size_t index, Ranges rs)
+auto chooseAmong(Ranges...)(size_t index, return scope Ranges rs)
 if (Ranges.length >= 2
         && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges))
         && !is(CommonType!(staticMap!(ElementType, Ranges)) == void))
