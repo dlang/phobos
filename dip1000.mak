@@ -172,7 +172,7 @@ aa[std.net.curl]=-dip25 # TODO have a look into open https://github.com/dlang/ph
 aa[std.net.isemail]=-dip1000
 
 aa[std.range.interfaces]=-dip1000
-aa[std.range.package]=-dip25 # reference to local variable a / b assigned to non-scope parameter _param_1 / _param_2 calling std.range.chooseAmong!(RefAccessRange, RefAccessRange).chooseAmong
+aa[std.range.package]=-dip1000
 aa[std.range.primitives]=-dip1000
 
 aa[std.regex.package]=-dip1000
