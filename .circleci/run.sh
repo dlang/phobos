@@ -91,15 +91,6 @@ setup_repos()
     make -j$N -C ../druntime -f posix.mak MODEL=$MODEL HOST_DMD=$DMD BUILD=$BUILD
 }
 
-# verify style guide
-style_lint()
-{
-    # dscanner needs a more up-to-date DMD version
-    source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"
-
-    make -f posix.mak style_lint DUB=$DUB BUILD=$BUILD
-}
-
 # run unittest with coverage
 coverage()
 {
@@ -146,7 +137,7 @@ case $1 in
     setup-repos) setup_repos ;;
     coverage) coverage ;;
     publictests) publictests ;;
-    style_lint) style_lint ;;
+    style_lint) echo "style_lint is now run at Buildkite";;
     # has_public_example has been removed and is kept for compatibility with older PRs
     has_public_example) echo "OK" ;;
     *) echo "Unknown command"; exit 1;;
