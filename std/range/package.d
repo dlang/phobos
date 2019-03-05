@@ -282,7 +282,7 @@ if (isBidirectionalRange!(Unqual!Range))
             alias Source = R;
 
             @property bool empty() { return source.empty; }
-            @property auto save()
+            @property auto save() return scope
             {
                 return Result(source.save);
             }
@@ -556,7 +556,7 @@ do
 
             static if (isForwardRange!R)
             {
-                @property auto save()
+                @property auto save() return scope
                 {
                     return Result(source.save, _n);
                 }
@@ -942,11 +942,11 @@ if (Ranges.length > 0 &&
             // TODO: use a vtable (or more) instead of linear iteration
 
         public:
-            this(R input)
+            this(return scope R input)
             {
                 foreach (i, v; input)
                 {
-                    source[i] = v;
+                    source[i] = input[i].save();
                 }
             }
 
@@ -972,12 +972,7 @@ if (Ranges.length > 0 &&
             static if (allSatisfy!(isForwardRange, R))
                 @property auto save()
                 {
-                    typeof(this) result = this;
-                    foreach (i, Unused; R)
-                    {
-                        result.source[i] = result.source[i].save;
-                    }
-                    return result;
+                    return Result(source);
                 }
 
             void popFront()
@@ -1446,7 +1441,7 @@ private struct ChooseResult(R1, R2)
     }
     private bool r1Chosen;
 
-    private static auto ref actOnChosen(alias foo, ExtraArgs ...)(ref ChooseResult r,
+    private static auto ref actOnChosen(alias foo, ExtraArgs ...)(return scope ref ChooseResult r,
             auto ref ExtraArgs extraArgs)
     {
         if (r.r1Chosen)
@@ -1527,7 +1522,7 @@ private struct ChooseResult(R1, R2)
     }
 
     static if (isForwardRange!R1 && isForwardRange!R2)
-        @property auto save() return scope
+        @property auto save()
         {
             auto result = this;
             actOnChosen!((ref r) { r = r.save; })(result);
@@ -1742,7 +1737,7 @@ if (Ranges.length >= 2
         ref opIndex(size_t i) { return r[i]; }
         auto length() @property { return r.length; }
         alias opDollar = length;
-        auto save() { return this; }
+        auto save() return scope { return this; }
     }
     static assert(isRandomAccessRange!RefAccessRange);
     static assert(isRandomAccessRange!RefAccessRange);
@@ -1836,7 +1831,7 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
         }
 
         static if (allSatisfy!(isForwardRange, staticMap!(Unqual, Rs)))
-            @property auto save()
+            @property auto save() return scope
             {
                 Result result = this;
                 foreach (i, Unused; Rs)
@@ -2055,6 +2050,29 @@ if (isInputRange!(Unqual!Range) &&
 
     alias Source = R;
 
+    this(return scope R source, size_t maxAvailable)
+    {
+        this.source = source;
+        this._maxAvailable = maxAvailable;
+    }
+
+    this(return scope ref Take r)
+    {
+        source = r.source;
+        _maxAvailable = r._maxAvailable;
+    }
+
+    static if (__traits(compiles,
+        ((Take r) { r.source = r.source; })
+    ))
+    {
+        void opAssign(return scope Take r)
+        {
+            source = r.source;
+            _maxAvailable = r._maxAvailable;
+        }
+    }
+
     /// Range primitives
     @property bool empty()
     {
@@ -2082,7 +2100,7 @@ if (isInputRange!(Unqual!Range) &&
 
     static if (isForwardRange!R)
         /// ditto
-        @property Take save()
+        @property Take save() return scope
         {
             return Take(source.save, _maxAvailable);
         }
@@ -2447,7 +2465,7 @@ if (isInputRange!R)
             alias _takeExactly_Result_asTake this;
 
             static if (isForwardRange!R)
-                @property auto save()
+                @property auto save() return scope
                 {
                     return Result(_input.save, _n);
                 }
@@ -2655,7 +2673,7 @@ if (isInputRange!R)
             }
             static if (isForwardRange!(Unqual!R))
             {
-                @property auto save() { return Result(_source.save, empty); }
+                @property auto save() return scope { return Result(_source.save, empty); }
             }
             @property auto ref back()
             {
@@ -2750,7 +2768,7 @@ pure @safe nothrow @nogc unittest
         enum empty = false;
         int front() { return 42; }
         void popFront() {}
-        @property auto save() { return this; }
+        @property auto save() return scope { return this; }
     }
 
     static assert(isForwardRange!NonSlicingForwardRange);
@@ -2920,7 +2938,7 @@ pure @safe nothrow unittest
         @disable this();
         this(int[] arr) { _arr = arr; }
         mixin genInput;
-        @property auto save() { return this; }
+        @property auto save() return scope { return this; }
         auto opSlice(size_t i, size_t j) { return typeof(this)(_arr[i .. j]); }
         @property size_t length() { return _arr.length; }
         int[] _arr;
@@ -2953,7 +2971,7 @@ pure @safe nothrow unittest
     @safe:
         this(int[] arr) { _arr = arr; }
         mixin genInput;
-        @property auto save() { return new typeof(this)(_arr); }
+        @property auto save() return scope { return new typeof(this)(_arr); }
         auto opSlice(size_t i, size_t j) { return new typeof(this)(_arr[i .. j]); }
         @property size_t length() { return _arr.length; }
         int[] _arr;
@@ -3349,6 +3367,25 @@ private:
     UT _value;
 
 public:
+    static if (!(is(T == const) || is(T == immutable)))
+    {
+        void opAssign(return scope Repeat r)
+        {
+            _value = r._value;
+        }
+    }
+
+/+
+    this(return scope ref Repeat r)
+    {
+        _value = r._value;
+    }
+
+    this(return scope UT v)
+    {
+        _value = v;
+    }
++/
     /// Range primitives
     @property inout(T) front() inout { return _value; }
 
@@ -3365,7 +3402,7 @@ public:
     void popBack() {}
 
     /// ditto
-    @property auto save() inout { return this; }
+    @property auto save() return scope { return this; }
 
     /// ditto
     inout(T) opIndex(size_t) inout { return _value; }
@@ -3723,7 +3760,7 @@ if (isForwardRange!R && !isInfinite!R)
         }
 
         /// ditto
-        @property Cycle save()
+        @property Cycle save() return scope
         {
             //No need to call _original.save, because Cycle never actually modifies _original
             return Cycle(_original, _index);
@@ -3802,7 +3839,7 @@ if (isForwardRange!R && !isInfinite!R)
         }
 
         /// ditto
-        @property Cycle save()
+        @property Cycle save() return scope
         {
             //No need to call _original.save, because Cycle never actually modifies _original
             Cycle ret = this;
@@ -3869,7 +3906,7 @@ nothrow:
     }
 
     /// ditto
-    @property inout(Cycle) save() inout @safe
+    @property inout(Cycle) save() return scope inout @safe
     {
         return this;
     }
@@ -4030,7 +4067,7 @@ if (isStaticArray!R)
         void popFront() { }
         @property int front() { return 0; }
         enum empty = false;
-        auto save() { return this; }
+        auto save() return scope { return this; }
     }
     struct NonForwardInfRange
     {
@@ -4227,7 +4264,7 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
     static if (allSatisfy!(isForwardRange, R))
     {
         ///
-        @property Zip save()
+        @property Zip save() return scope
         {
             //Zip(ranges[0].save, ranges[1].save, ..., stoppingPolicy)
             return mixin (q{Zip(%(ranges[%s].save%|, %), stoppingPolicy)}.format(iota(0, R.length)));
@@ -4686,11 +4723,16 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
     private Ranges ranges;
     alias ElementType = Tuple!(staticMap!(.ElementType, Ranges));
 
+    void opAssign(scope ZipShortest z)
+    {
+        ranges[] = z.ranges[];
+    }
+
     /+
        Builds an object. Usually this is invoked indirectly by using the
        $(LREF zip) function.
     +/
-    this(Ranges rs)
+    this(return scope Ranges rs)
     {
         ranges[] = rs[];
     }
@@ -4728,7 +4770,7 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
        forward range.
     +/
     static if (allSatisfy!(isForwardRange, Ranges))
-    @property typeof(this) save()
+    @property typeof(this) save() return scope
     {
         return mixin(`typeof(return)(%(ranges[%s].save%|, %))`.format(iota(0, Ranges.length)));
     }
@@ -5137,7 +5179,7 @@ nothrow pure @safe unittest
         enum empty = false;
         void popFront(){}
         int front(){return 1;} @property
-        R save(){return this;} @property
+        R save() return scope {return this;} @property
         void opAssign(R) @disable;
     }
     R r;
@@ -5204,7 +5246,7 @@ nothrow pure @system unittest
         {
             return a.length;
         }
-        typeof(this) save()
+        typeof(this) save() return scope
         {
             return this;
         }
@@ -5692,7 +5734,7 @@ struct Recurrence(alias fun, StateType, size_t stateSize)
         return _state[_n % stateSize];
     }
 
-    @property typeof(this) save()
+    @property typeof(this) save() return scope
     {
         return this;
     }
@@ -5826,7 +5868,7 @@ public:
 
     enum bool empty = false;
 
-    @property Sequence save() { return this; }
+    @property Sequence save() return scope { return this; }
 }
 
 /// Ditto
@@ -6057,7 +6099,7 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
             else last -= step;
         }
 
-        @property auto save() { return this; }
+        @property auto save() return scope { return this; }
 
         inout(Value) opIndex(ulong n) inout
         {
@@ -6143,7 +6185,7 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         @property inout(Value) back() inout { assert(!empty); return cast(inout(Value))(pastLast - 1); }
         void popBack() { assert(!empty); --pastLast; }
 
-        @property auto save() { return this; }
+        @property auto save() return scope { return this; }
 
         inout(Value) opIndex(size_t n) inout
         {
@@ -6242,7 +6284,7 @@ do
             --count;
         }
 
-        @property auto save() { return this; }
+        @property auto save() return scope { return this; }
 
         Value opIndex(size_t n) const
         {
@@ -6782,7 +6824,7 @@ struct FrontTransversal(Ror,
 */
     static if (isForwardRange!RangeOfRanges)
     {
-        @property FrontTransversal save()
+        @property FrontTransversal save() return scope
         {
             return FrontTransversal(_input.save);
         }
@@ -7114,7 +7156,7 @@ struct Transversal(Ror,
     /// Ditto
     static if (isForwardRange!RangeOfRanges)
     {
-        @property typeof(this) save()
+        @property typeof(this) save() return scope
         {
             auto ret = this;
             ret._input = _input.save;
@@ -7381,7 +7423,7 @@ if (isForwardRange!RangeOfRanges &&
     }
 
     deprecated("This function is incorrect and will be removed November 2018. See the docs for more details.")
-    @property Transposed save()
+    @property Transposed save() return scope
     {
         return Transposed(_input.save);
     }
@@ -7568,7 +7610,7 @@ if (isRandomAccessRange!Source && isInputRange!Indices &&
     static if (isForwardRange!Indices)
     {
         /// Ditto
-        @property typeof(this) save()
+        @property typeof(this) save() return scope
         {
             // Don't need to save _source because it's never consumed.
             return typeof(this)(_source, _indices.save);
@@ -7839,7 +7881,7 @@ if (isInputRange!Source)
             enum empty = false;
 
         /// Forward range primitives. Only present if `Source` is a forward range.
-        @property typeof(this) save()
+        @property typeof(this) save() return scope
         {
             return typeof(this)(_source.save, _chunkSize);
         }
@@ -8240,7 +8282,7 @@ if (isForwardRange!Source && hasLength!Source)
     }
 
     /// Ditto
-    @property typeof(this) save()
+    @property typeof(this) save() return scope
     {
         return typeof(this)(_source.save, _chunkCount);
     }
@@ -8660,7 +8702,7 @@ public:
     }
 
     /// Ditto
-    @property typeof(this) save()
+    @property typeof(this) save() return scope
     {
         return typeof(this)(source.save, windowSize, stepSize);
     }
@@ -9411,7 +9453,7 @@ public:
                                  Flag!"withInfiniteness" withInfiniteness = No.withInfiniteness)
     {
         Range arr = 10.iota.array; // similar to DummyRange
-        @property auto save() { return typeof(this)(arr); }
+        @property auto save() return scope { return typeof(this)(arr); }
         @property auto front() { return arr[0]; }
         void popFront() { arr.popFront(); }
         auto opSlice(size_t i, size_t j)
@@ -9553,7 +9595,7 @@ private struct OnlyResult(T, size_t arity)
         --backIndex;
     }
 
-    OnlyResult save() @property
+    OnlyResult save() return scope @property
     {
         return this;
     }
@@ -9625,7 +9667,7 @@ private struct OnlyResult(T, size_t arity : 1)
     }
     @property bool empty() const { return _empty; }
     @property size_t length() const { return !_empty; }
-    @property auto save() { return this; }
+    @property auto save() return scope { return this; }
     void popFront()
     {
         assert(!_empty, "Attempting to popFront an empty Only range");
@@ -9686,7 +9728,7 @@ private struct OnlyResult(T, size_t arity : 0)
     void popFront() { assert(false); }
     EmptyElementType back() @property { assert(false); }
     void popBack() { assert(false); }
-    OnlyResult save() @property { return this; }
+    OnlyResult save() return scope @property { return this; }
 
     EmptyElementType opIndex(size_t i)
     {
@@ -10034,7 +10076,7 @@ do
 
         static if (isForwardRange!Range)
         {
-            Result save() @property
+            Result save() return scope @property
             {
                 return typeof(return)(range.save, index);
             }
@@ -10465,7 +10507,7 @@ if (isInputRange!Range && !isInstanceOf!(SortedRange, Range))
 
     /// Ditto
     static if (isForwardRange!Range)
-    @property auto save()
+    @property auto save() return scope
     {
         // Avoid the constructor
         typeof(this) result = this;
@@ -11280,9 +11322,9 @@ public:
         /++
             Only defined if `isForwardRange!R` is `true`.
           +/
-        @property auto save() {assert(0);}
+        @property auto save() return scope {assert(0);}
         /++ Ditto +/
-        @property auto save() const {assert(0);}
+        @property auto save() return scope const {assert(0);}
         /++ Ditto +/
         auto opSlice() {assert(0);}
         /++ Ditto +/
@@ -11298,24 +11340,24 @@ public:
 
         static if (isSafe!((R* r) => (*r).save))
         {
-            @property RefRange!S save() @trusted
+            @property RefRange!S save() return scope @trusted
             {
                 mixin(_genSave());
             }
 
-            static if (is(typeof((*cast(const R*)_range).save))) @property RefRange!CS save() @trusted const
+            static if (is(typeof((*cast(const R*)_range).save))) @property RefRange!CS save() return scope @trusted const
             {
                 mixin(_genSave());
             }
         }
         else
         {
-            @property RefRange!S save()
+            @property RefRange!S save() return scope
             {
                 mixin(_genSave());
             }
 
-            static if (is(typeof((*cast(const R*)_range).save))) @property RefRange!CS save() const
+            static if (is(typeof((*cast(const R*)_range).save))) @property RefRange!CS save() return scope const
             {
                 mixin(_genSave());
             }
@@ -11832,7 +11874,7 @@ private:
         @property int front() @safe const pure nothrow { return 0; }
         enum bool empty = false;
         void popFront() @safe pure nothrow { }
-        @property auto save() @safe pure nothrow { return this; }
+        @property auto save() return scope @safe pure nothrow { return this; }
     }
 
     S s;
@@ -11847,7 +11889,7 @@ private:
         @property int front() @safe const pure nothrow { return 0; }
         @property bool empty() @safe const pure nothrow { return false; }
         void popFront() @safe pure nothrow { }
-        @property auto save() @safe pure nothrow { return this; }
+        @property auto save() return scope @safe pure nothrow { return this; }
     }
     static assert(isForwardRange!C);
 
@@ -11879,7 +11921,7 @@ private:
         bool empty = false;
         void popFront() {empty = true;}
         alias popBack = popFront;
-        @property R save() {return this;}
+        @property R save() return scope {return this;}
     }
     static assert(isBidirectionalRange!R);
     R r;
@@ -11893,7 +11935,7 @@ private:
         bool empty = false;
         void popFront() {empty = true;}
         alias popBack = popFront;
-        @property R2 save() {return this;}
+        @property R2 save() return scope {return this;}
     }
     static assert(isBidirectionalRange!R2);
     R2 r2;
@@ -11927,7 +11969,7 @@ if (isInputRange!R)
         @property empty() { return input.empty; }
         @property front() { return input.front; }
         void popFront()   { input.popFront(); }
-        @property save()  { return NRAR(input.save); }
+        @property save() return scope  { return NRAR(input.save); }
     }
     auto n1 = NRAR(r);
     cycle(n1);  // non random access range version
@@ -11942,7 +11984,7 @@ if (isInputRange!R)
         @property empty() { return true; }
         @property front() { return input; }
         void popFront() { }
-        @property save()  { return NRAR2(input.save); }
+        @property save() return scope  { return NRAR2(input.save); }
     }
     auto n2 = NRAR2(n1);
     joiner(n2);
@@ -12053,7 +12095,7 @@ public:
 
     static if (isForwardRange!R)
     {
-        typeof(this) save()
+        typeof(this) save() return scope
         {
             auto result = this;
             result.parent = parent.save;
@@ -12943,7 +12985,7 @@ if (
 
         static if (isForwardRange!R)
         {
-            auto save() @property
+            auto save() return scope @property
             {
                 typeof(this) result = this;
                 data = data.save;

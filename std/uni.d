@@ -1501,7 +1501,7 @@ private struct SliceOverIndexed(T)
     static if (assignableIndex)
     @property void back(Item val) { (*arr)[to-1] = val; }
 
-    @property auto save() inout { return this; }
+    @property auto save() return scope inout { return this; }
 
     void popFront() {   from++; }
 
@@ -2871,7 +2871,7 @@ private:
 
         @property bool empty()const { return start == end; }
 
-        @property auto save(){ return this; }
+        @property auto save() return scope{ return this; }
     private:
         size_t start, end;
         Range slice;
@@ -5296,7 +5296,7 @@ if (is(C : wchar) || is(C : char))
         void popBack(){ str = str[0..$-1]; }
         void popFrontN(size_t n){ idx += n; }
         @property bool empty(){ return idx == str.length; }
-        @property auto save(){ return this; }
+        @property auto save() return scope{ return this; }
         auto opIndex(size_t i){ return str[idx+i]; }
         @property size_t length(){ return str.length - idx; }
         alias opDollar = length;
@@ -5922,7 +5922,7 @@ pure:
         return _idx == size_t.max;
     }
 
-    @property DecompressedIntervals save() { return this; }
+    @property DecompressedIntervals save() return scope { return this; }
 }
 
 static assert(isInputRange!DecompressedIntervals);
@@ -7198,7 +7198,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 
         static if (isForwardRange!R)
         {
-            Result save() @property
+            Result save() return scope @property
             {
                 return Result(_range.save, _front);
             }
@@ -7307,7 +7307,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == Grapheme))
 
         static if (isForwardRange!Range)
         {
-            Result save() @property
+            Result save() return scope @property
             {
                 return Result(_range.save, i);
             }
@@ -7329,7 +7329,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
             @property bool empty() { return _range.empty; }
             @property dchar front(){ return _range.front; }
             void popFront(){ _range.popFront; }
-            @property auto save() { return Result(_range.save); }
+            @property auto save() return scope { return Result(_range.save); }
             @property dchar back(){ return _range.back; }
             void popBack(){ _range.popBack; }
         }
@@ -9129,7 +9129,7 @@ if (isInputRange!Range &&
 
         static if (isForwardRange!Range)
         {
-            @property auto save()
+            @property auto save() return scope
             {
                 auto ret = this;
                 ret.r = r.save;
@@ -9342,7 +9342,7 @@ if (isInputRange!Range &&
 
         static if (isForwardRange!Range)
         {
-            @property auto save()
+            @property auto save() return scope
             {
                 auto ret = this;
                 ret.r = r.save;

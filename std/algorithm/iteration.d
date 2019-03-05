@@ -400,7 +400,7 @@ private struct _Cache(R, bool bidir)
             this.source = source;
             this.caches = caches;
         }
-        typeof(this) save() @property
+        typeof(this) save() return scope @property
         {
             return typeof(this)(source.save, caches);
         }
@@ -580,6 +580,11 @@ private struct MapResult(alias fun, Range)
         _input = input;
     }
 
+    void opAssign(return scope MapResult m)
+    {
+        _input = m._input;
+    }
+
     static if (isInfinite!R)
     {
         // Propagate infinite-ness.
@@ -661,7 +666,7 @@ private struct MapResult(alias fun, Range)
 
     static if (isForwardRange!R)
     {
-        @property auto save()
+        @property auto save() return scope
         {
             return typeof(this)(_input.save);
         }
@@ -1375,7 +1380,7 @@ private struct FilterResult(alias pred, Range)
 
     static if (isForwardRange!R)
     {
-        @property auto save()
+        @property auto save() return scope
         {
             return typeof(this)(_input.save, _primed);
         }
@@ -1571,7 +1576,7 @@ private struct FilterBidiResult(alias pred, Range)
         return _input.back;
     }
 
-    @property auto save()
+    @property auto save() return scope
     {
         return typeof(this)(_input.save);
     }
@@ -1684,7 +1689,7 @@ if (isInputRange!R)
     static if (isForwardRange!R)
     {
         ///
-        @property typeof(this) save() {
+        @property typeof(this) save() return scope {
             typeof(this) ret = this;
             ret._input = this._input.save;
             ret._current = this._current;
@@ -1990,7 +1995,7 @@ if (isForwardRange!Range)
             }
         }
 
-        @property auto save()
+        @property auto save() return scope
         {
             auto copy = this;
             copy.current = current.save;
@@ -2037,7 +2042,7 @@ if (isForwardRange!Range)
         impl.groupNum++;
     }
 
-    @property auto save()
+    @property auto save() return scope
     {
         // Note: the new copy of the range will be detached from any existing
         // satellite Groups, and will not benefit from the .next acceleration.
@@ -2066,7 +2071,7 @@ if (isForwardRange!Range)
             impl.popFront();
             popCount++;
         }
-        @property auto save() { return new RefFwdRange(impl); }
+        @property auto save() return scope { return new RefFwdRange(impl); }
     }
     static assert(isForwardRange!RefFwdRange);
 
@@ -2638,7 +2643,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
                 auto front() { return _sep[sepIndex]; }
                 void popFront() { sepIndex++; }
                 auto empty() { return sepIndex >= sepLength; }
-                auto save()
+                auto save() return scope
                 {
                     auto copy = this;
                     copy._sep = _sep;
@@ -2665,7 +2670,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
 
                 alias payload this;
 
-                auto save()
+                auto save() return scope
                 {
                     auto copy = this;
                     copy._sep = _sep;
@@ -2797,7 +2802,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
 
         static if (isForwardRange!RoR && isForwardRange!(ElementType!RoR))
         {
-            @property auto save()
+            @property auto save() return scope
             {
                 Result copy = this;
                 copy._items = _items.save;
@@ -2805,6 +2810,13 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
                 copy._currentSep = _currentSep.save;
                 return copy;
             }
+        }
+
+        void opAssign(return scope Result r)
+        {
+            _items = r._items;
+            _current = r._current;
+            _currentSep = r._currentSep;
         }
     }
     return Result(r, sep);
@@ -2974,6 +2986,11 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
             static if (isBidirectional)
                 mixin(popBackEmptyElements);
         }
+        void opAssign(return scope Result r)
+        {
+            _items = r._items;
+            _current = r._current;
+        }
         static if (isInfinite!RoR)
         {
             enum bool empty = false;
@@ -3026,7 +3043,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
 
         static if (isForwardRange!RoR && isForwardRange!(ElementType!RoR))
         {
-            @property auto save()
+            @property auto save() return scope
             {
                 auto r = Result(_items.save, _current.save);
                 static if (isBidirectional)
@@ -3488,7 +3505,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
 
         enum empty = false;
 
-        auto save()
+        auto save() return scope
         {
             return this;
         }
@@ -4264,7 +4281,7 @@ if (fun.length >= 1)
 
             static if (isForwardRange!R)
             {
-                @property auto save()
+                @property auto save() return scope
                 {
                     auto result = this;
                     result.source = source.save;
@@ -4647,7 +4664,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 
         static if (isForwardRange!Range)
         {
-            @property typeof(this) save()
+            @property typeof(this) save() return scope
             {
                 auto ret = this;
                 ret._input = _input.save;
@@ -5000,7 +5017,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
 
         static if (isForwardRange!Range)
         {
-            @property typeof(this) save()
+            @property typeof(this) save() return scope
             {
                 auto ret = this;
                 ret._input = _input.save;
@@ -5211,7 +5228,7 @@ private struct SplitterResult(alias isTerminator, Range)
         findTerminator();
     }
 
-    @property typeof(this) save()
+    @property typeof(this) save() return scope
     {
         auto ret = this;
         ret._input = _input.save;
@@ -5434,7 +5451,7 @@ if (isSomeString!Range ||
             return _s.empty;
         }
 
-        @property inout(Result) save() inout @safe pure nothrow
+        @property inout(Result) save() return scope inout @safe pure nothrow
         {
             return this;
         }
@@ -6805,7 +6822,7 @@ private struct UniqResult(alias pred, Range)
 
     static if (isForwardRange!Range)
     {
-        @property typeof(this) save() {
+        @property typeof(this) save() return scope {
             return typeof(this)(_input.save);
         }
     }

@@ -4566,7 +4566,7 @@ if (isConvertibleToString!Range)
             @property bool empty() { return str.length == 0; }
             @property dchar front() { return str[0]; }
             void popFront() { str = str[1 .. $]; }
-            @property FRange save() { return this; }
+            @property FRange save() return scope { return this; }
         }
         return FRange(s);
     }

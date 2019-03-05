@@ -87,7 +87,7 @@ Returns:
     A forward range of $(REF Tuple, std,typecons) representing elements of the
     cartesian product of the given ranges.
 */
-auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
+auto cartesianProduct(R1, R2)(return scope R1 range1, return scope R2 range2)
 if (!allSatisfy!(isForwardRange, R1, R2) ||
     anySatisfy!(isInfinite, R1, R2))
 {
@@ -279,7 +279,12 @@ if (!allSatisfy!(isForwardRange, R1, R2) ||
             @property bool empty() { return impl.empty; }
 
         // Forward range API
-        @property auto save() { return typeof(this)(impl.save); }
+        @property auto save() return scope { return FwdRangeWrapper(impl.save); }
+
+        void opAssign(return scope FwdRangeWrapper r)
+        {
+            impl = r.impl;
+        }
     }
     auto fwdWrap(R)(R range) { return FwdRangeWrapper!R(range); }
 
@@ -386,6 +391,15 @@ if (ranges.length >= 2 &&
                     empty = true;
             }
         }
+        this(return scope ref Result r)
+        {
+            empty = r.empty;
+            foreach (i, const ref v; r.ranges)
+            {
+                ranges[i] = r.ranges[i].save;
+                current[i] = r.current[i].save;
+            }
+        }
         @property auto front()
         {
             import std.algorithm.internal : algoFormat;
@@ -408,13 +422,13 @@ if (ranges.length >= 2 &&
         }
         @property Result save() scope return
         {
-            Result copy = this;
-            foreach (i, r; ranges)
-            {
-                copy.ranges[i] = ranges[i].save;
-                copy.current[i] = current[i].save;
-            }
-            return copy;
+            return Result(this);
+        }
+        void opAssign(return scope Result r)
+        {
+            ranges = r.ranges;
+            current = r.current;
+            empty = r.empty;
         }
     }
     static assert(isForwardRange!Result);
@@ -1069,7 +1083,7 @@ public:
     static if (isForwardRange!R1 && isForwardRange!R2)
     {
         ///
-        @property typeof(this) save()
+        @property typeof(this) save() return scope
         {
             auto ret = this;
             ret.r1 = r1.save;
@@ -1218,7 +1232,7 @@ public:
     static if (allSatisfy!(isForwardRange, Rs))
     {
         ///
-        @property SetIntersection save()
+        @property SetIntersection save() return scope
         {
             auto ret = this;
             foreach (i, ref r; _input)
@@ -1382,7 +1396,7 @@ public:
     static if (isForwardRange!R1 && isForwardRange!R2)
     {
         ///
-        @property typeof(this) save()
+        @property typeof(this) save() return scope
         {
             auto ret = this;
             ret.r1 = r1.save;
