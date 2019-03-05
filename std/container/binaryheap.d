@@ -517,10 +517,6 @@ BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
     {
         int[] a;
         @disable StructWithoutDup dup();
-        //{
-        //    StructWithoutDup d;
-        //    return d;
-        //}
         alias a this;
     }
 
