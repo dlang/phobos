@@ -558,10 +558,7 @@ struct Task(alias fun, Args...)
     }
     else
     {
-        @disable typeof(this) opAssign(typeof(this) rhs)
-        {
-            assert(0);
-        }
+        @disable typeof(this) opAssign(typeof(this) rhs);
     }
 
     /**

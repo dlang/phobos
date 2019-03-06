@@ -8646,7 +8646,7 @@ enum isCopyable(S) = is(typeof(
 {
     struct S1 {}                        // Fine. Can be copied
     struct S2 {         this(this) {}}  // Fine. Can be copied
-    struct S3 {@disable this(this) {}}  // Not fine. Copying is disabled.
+    struct S3 {@disable this(this);  }  // Not fine. Copying is disabled.
     struct S4 {S3 s;}                   // Not fine. A field has copying disabled.
 
     class C1 {}
