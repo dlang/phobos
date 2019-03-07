@@ -2738,17 +2738,23 @@ else version (Posix)
     See_Also:
         $(LREF asAbsolutePath) which does not allocate
 */
-string absolutePath(string path, lazy string base = getcwd())
+string absolutePath(string path, string base)
     @safe pure
 {
     import std.array : array;
-    if (path.empty)  return null;
-    if (isAbsolute(path))  return path;
     auto baseVar = base;
     if (!isAbsolute(baseVar)) throw new Exception("Base directory must be absolute");
     return chainPath(baseVar, path).array;
 }
 
+/// ditto
+string absolutePath(string path)
+    @safe
+{
+    if (path.empty) return null;
+    if (isAbsolute(path)) return path;
+    return absolutePath(path, getcwd());
+}
 ///
 @safe unittest
 {
