@@ -1363,7 +1363,7 @@ Returns the $(HTTP wikipedia.org/wiki/Levenshtein_distance, Levenshtein
 distance) between `s` and `t`. The Levenshtein distance computes
 the minimal amount of edit operations necessary to transform `s`
 into `t`.  Performs $(BIGOH s.length * t.length) evaluations of $(D
-equals) and occupies $(BIGOH s.length * t.length) storage.
+equals) and occupies $(BIGOH min(s.length, t.length)) storage.
 
 Params:
     equals = The binary predicate to compare the elements of the two ranges.
@@ -1411,7 +1411,7 @@ if (isForwardRange!(Range1) && isForwardRange!(Range2))
         return eq(s.front, t.front) ? 0 : 1;
     }
 
-    if (slen > tlen)
+    if (slen < tlen)
     {
         Levenshtein!(Range1, eq, size_t) lev;
         return lev.distanceLowMem(s, t, slen, tlen);
