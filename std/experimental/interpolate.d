@@ -1,9 +1,3 @@
-//
-//
-// TODO: move into std/experimental/typecons.d
-//
-//
-
 /**
 Interpolates the given string into a code that creates a tuple of string literals and expressions.
 The code returned should be passed to `mixin` in order to create the tuple.
@@ -131,11 +125,6 @@ private string interpExpression(string str, string file, size_t line) pure @safe
         throw new InterpolateException("interpolated expression $ currently requires parens $(...)", file, line);
 }
 
-unittest
-{
-    // TODO: add more unittests
-}
-
 /**
 Thrown when an invalid string is passed to `interp`.
 */
@@ -174,11 +163,9 @@ unittest
         assert("42 + 93 = 135" == text(mixin(interp(  `$(a) + $(b) = $(a + b)`))));  // wysiwyg (alt)
         assert("42 + 93 = 135" == text(mixin(interp( q{$(a) + $(b) = $(a + b)}))));  // token
         assert("42 + 93 = 135" == text(mixin(interp(q"!$(a) + $(b) = $(a + b)!")))); // delimited (char)
-        /* NOT WORKING
         assert("42 + 93 = 135\n" == text(mixin(interp(q"ABC
-    $(a) + $(b) = $(a + b)
-    ABC")))); // delimited (heredoc)
-    */
+$(a) + $(b) = $(a + b)
+ABC")))); // delimited (heredoc)
 
         // Escaping double dollar
         assert("$" == mixin(interp("$$"))[0]);
