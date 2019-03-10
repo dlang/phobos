@@ -142,8 +142,6 @@ unittest
     
     static assert(mixin(interp("$()")).length == 0);
     static assert(mixin(interp("$(/* a comment!*/)")).length == 0);
-    // DOESN'T WORK
-    //static assert(mixin(interp("$(// another comment)")).length == 0);
     static assert(mixin(interp("$(/+ yet another comment+/)")).length == 0);
 
     // DOESN'T WORK (see "HANDLE EMPTY EXPRESSIONS")
