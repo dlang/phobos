@@ -201,30 +201,3 @@ unittest
         assert(928 == add(900, 28));
     }
 }
-
-/**
-NOTE: this is the original interpolate function which requires that the caller have imported
-the std.typecons.tuple symbol.  This has been replaced with a different version that wraps
-the tuple creation inside a function literal so it can import std.typecons.tuple itself, meaning
-the caller no longer has to import it.
-
-Interpolates the given string into a code that creates a tuple of string literals and expressions.
-The code returned should be passed to `mixin` in order to create the tuple. The `tuple` symbol
-from `std.typecons` should also be imported since the code returned depends on this function.
-
-Example:
----
-int a = 42;
-
-writeln(mixin(interp("a is $(a)")));
-// same as: writeln(mixin(`tuple("a is ", a).expand`));
-
-// Output:
-// a is 42
----
-*/
-string interp_REMOVE_ME(string str, string file = __FILE__, size_t line = __LINE__) pure @safe
-{
-    import std.typecons : tuple;
-    return "tuple(" ~ interpToCommaExpression(str, file, line) ~ ").expand";
-}
