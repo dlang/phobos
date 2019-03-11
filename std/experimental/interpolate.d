@@ -119,7 +119,7 @@ private string interpExpression(string str, string file, size_t line) pure @safe
         // HANDLE EMPTY EXPRESSIONS
         // TODO: need a way of determining whether `str[1 .. i]` contains an expression or just a comment
         //       or something.  If it contains nothing, then this will result in an "empty" comma expression
-        return str[1 .. i] ~ `,` ~ interpToCommaExpression(str[i + 1 .. $], file, line);
+        return (str[1 .. i] == "" ? "" : str[1 .. i] ~ `,`) ~ interpToCommaExpression(str[i + 1 .. $], file, line);
     }
     else
         throw new InterpolateException("interpolated expression $ currently requires parens $(...)", file, line);
@@ -143,11 +143,7 @@ unittest
     static assert(mixin(interp("$()")).length == 0);
     static assert(mixin(interp("$(/* a comment!*/)")).length == 0);
     static assert(mixin(interp("$(/+ yet another comment+/)")).length == 0);
-
-    // DOESN'T WORK (see "HANDLE EMPTY EXPRESSIONS")
-    //static assert(mixin(interp("$()foo")).length == 1);
-    //static assert(mixin(interp("$(/* a comment!*/)foo")).length == 1);
-    //static assert(mixin(interp("$(/+ another comment!+/)foo")).length == 1);
+    static assert(mixin(interp("$()foo")).length == 1);
 
     {
         int a = 42;
