@@ -110,15 +110,10 @@ private string interpExpression(string str, string file, size_t line) pure @safe
             {
                 depth++;
             }
-            // TODO: handle parens inside comments/string literals, etc
-            //       need a simple lexer that ignore comments/string literals
         }
         if (i == str.length - 1)
             return str[1 .. i];
 
-        // HANDLE EMPTY EXPRESSIONS
-        // TODO: need a way of determining whether `str[1 .. i]` contains an expression or just a comment
-        //       or something.  If it contains nothing, then this will result in an "empty" comma expression
         return (str[1 .. i] == "" ? "" : str[1 .. i] ~ `,`) ~ interpToCommaExpression(str[i + 1 .. $], file, line);
     }
     else
