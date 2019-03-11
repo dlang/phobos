@@ -7361,7 +7361,7 @@ T nextafter(T)(const T x, const T y) @safe pure nothrow @nogc
  */
 real fdim(real x, real y) @safe pure nothrow @nogc
 {
-    return (isNaN(x) || isNaN(y)) ? real.nan : ((x > y) ? x - y : +0.0);
+    return (x < y) ? +0.0 : x - y;
 }
 
 ///
@@ -7369,7 +7369,7 @@ real fdim(real x, real y) @safe pure nothrow @nogc
 {
     assert(fdim(2.0, 0.0) == 2.0);
     assert(fdim(-2.0, 0.0) == 0.0);
-    assert(isInfinity(fdim(real.infinity, 2.0)));
+    assert(fdim(real.infinity, 2.0) == real.infinity);
     assert(isNaN(fdim(real.nan, 2.0)));
     assert(isNaN(fdim(2.0, real.nan)));
     assert(isNaN(fdim(real.nan, real.nan)));
