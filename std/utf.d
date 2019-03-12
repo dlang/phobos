@@ -4270,6 +4270,19 @@ if (isSomeChar!C)
         {
             static struct Result
             {
+                this(return R r)
+                {
+                    this.r = r;
+                }
+
+                this(return R r, ushort pos, ushort fill, C[4 / C.sizeof] buf)
+                {
+                    this.r = r;
+                    this.pos = pos;
+                    this.fill = fill;
+                    this.buf = buf;
+                }
+
                 @property bool empty()
                 {
                     return pos == fill && r.empty;
@@ -4316,22 +4329,17 @@ if (isSomeChar!C)
 
                 static if (isForwardRange!R)
                 {
-                    @property auto save() return scope
-                    /* `return scope` cannot be inferred because compiler does not
-                     * track it backwards from assignment to local `ret`
-                     */
+                    @property auto save()
                     {
-                        auto ret = this;
-                        ret.r = r.save;
-                        return ret;
+                        return Result(r.save, pos, fill, buf);
                     }
                 }
 
             private:
 
                 R r;
-                C[4 / C.sizeof] buf = void;
                 ushort pos, fill;
+                C[4 / C.sizeof] buf = void;
             }
 
             return Result(r);
