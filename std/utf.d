@@ -4208,46 +4208,46 @@ if (isSomeChar!C)
         {
             static struct Result
             {
+                enum Empty = uint.max;  // range is empty or just constructed
+
                 this(R val)
                 {
                     r = val;
-                    popFront();
                 }
 
                 @property bool empty()
                 {
-                    return buff == uint.max;
+                    return buff == Empty && r.empty;
                 }
 
-                @property auto front()
+                @property dchar front() scope // 'scope' required by call to decodeFront() below
                 {
-                    assert(!empty, "Attempting to access the front of an empty byUTF");
-                    return cast(dchar) buff;
-                }
+                    if (buff == Empty)
+                    {
+                        auto c = r.front;
 
-                void popFront() scope
-                {
-                    assert(!empty, "Attempting to popFront an empty byUTF");
-                    if (r.empty)
-                    {
-                        buff = uint.max;
-                    }
-                    else
-                    {
                         static if (is(RC == wchar))
                             enum firstMulti = 0xD800; // First high surrogate.
                         else
                             enum firstMulti = 0x80; // First non-ASCII.
-                        if (r.front < firstMulti)
+                        if (c < firstMulti)
                         {
-                            buff = r.front;
                             r.popFront;
+                            buff = cast(dchar) c;
                         }
                         else
                         {
                             buff = () @trusted { return decodeFront!(Yes.useReplacementDchar)(r); }();
                         }
                     }
+                    return cast(dchar) buff;
+                }
+
+                void popFront()
+                {
+                    if (buff == Empty)
+                        front();
+                    buff = Empty;
                 }
 
                 static if (isForwardRange!R)
@@ -4260,8 +4260,10 @@ if (isSomeChar!C)
                     }
                 }
 
-                uint buff;
+            private:
+
                 R r;
+                uint buff = Empty;      // one character lookahead buffer
             }
 
             return Result(r);
