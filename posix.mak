@@ -138,7 +138,7 @@ endif
 
 # Set DFLAGS
 DFLAGS=
-override DFLAGS+=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -dip25 $(MODEL_FLAG) $(PIC) -transition=complex
+override DFLAGS+=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -dip25 -preview=fieldwise $(MODEL_FLAG) $(PIC) -transition=complex
 ifeq ($(BUILD),debug)
 override DFLAGS += -g -debug
 else

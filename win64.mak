@@ -44,13 +44,13 @@ DRUNTIMELIB=$(DRUNTIME)/lib/druntime$(MODEL).lib
 
 ## Flags for dmd D compiler
 
-DFLAGS=-conf= -m$(MODEL) -O -release -w -de -dip25 -I$(DRUNTIME)\import
+DFLAGS=-conf= -m$(MODEL) -O -release -w -de -dip25 -preview=fieldwise -I$(DRUNTIME)\import
 #DFLAGS=-m$(MODEL) -unittest -g
 #DFLAGS=-m$(MODEL) -unittest -cov -g
 
 ## Flags for compiling unittests
 
-UDFLAGS=-conf= -g -m$(MODEL) -O -w -dip25 -I$(DRUNTIME)\import -unittest
+UDFLAGS=-conf= -g -m$(MODEL) -O -w -dip25 -preview=fieldwise -I$(DRUNTIME)\import -unittest
 
 ## C compiler, linker, librarian
 
