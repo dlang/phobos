@@ -4210,10 +4210,17 @@ if (isSomeChar!C)
             {
                 enum Empty = uint.max;  // range is empty or just constructed
 
-                this(R val)
+                this(return R r)
                 {
-                    r = val;
+                    this.r = r;
                 }
+
+                this(return R r, uint buff)
+                {
+                    this.r = r;
+                    this.buff = buff;
+                }
+
 
                 @property bool empty()
                 {
@@ -4252,11 +4259,9 @@ if (isSomeChar!C)
 
                 static if (isForwardRange!R)
                 {
-                    @property auto save() return scope
+                    @property auto save()
                     {
-                        auto ret = this;
-                        ret.r = r.save;
-                        return ret;
+                        return Result(r.save, buff);
                     }
                 }
 
