@@ -4514,7 +4514,7 @@ $(UL
  $(LI Variadic arguments to constructors are not forwarded to super.)
  $(LI Deep interface inheritance causes compile error with messages like
       "Error: function std.typecons._AutoImplement!(Foo)._AutoImplement.bar
-      does not override any function".  [$(BUGZILLA 2525), $(BUGZILLA 3525)] )
+      does not override any function".  [$(BUGZILLA 2525)] )
  $(LI The `parent` keyword is actually a delegate to the super class'
       corresponding member function.  [$(BUGZILLA 2540)] )
  $(LI Using alias template parameter in `how` and/or `what` may cause
