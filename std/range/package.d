@@ -1450,9 +1450,15 @@ private struct ChooseResult(R1, R2)
             auto ref ExtraArgs extraArgs)
     {
         if (r.r1Chosen)
-            return foo(r.r1, extraArgs);
+        {
+            ref get1(return ref ChooseResult r) @trusted { return r.r1; }
+            return foo(get1(r), extraArgs);
+        }
         else
-            return foo(r.r2, extraArgs);
+        {
+            ref get2(return ref ChooseResult r) @trusted { return r.r2; }
+            return foo(get2(r), extraArgs);
+        }
     }
 
     this(bool r1Chosen, return scope R1 r1, return scope R2 r2) @trusted
@@ -1473,6 +1479,15 @@ private struct ChooseResult(R1, R2)
             this.r1 = R1.init;
             emplace(&this.r2, r2);
         }
+    }
+
+    void opAssign(return scope ChooseResult r) @trusted
+    {
+        r1Chosen = r.r1Chosen;
+        if (r1Chosen)
+            r1 = r.r1;  // assigning to union members is @system
+        else
+            r2 = r.r2;
     }
 
     // Carefully defined postblit to postblit the appropriate range
