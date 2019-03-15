@@ -1,0 +1,20 @@
+Added getOverload to `std.traits`
+
+The `getOverload` template aliases itself to a specific overlad of a method
+by matching argument types and function attributes against the ones specified.
+
+Example:
+------
+import std.traits : FunctionAttribute, getOverload;
+
+interface I
+{
+    int foo(int);
+    float foo(float);
+    float foo(float) @nogc;
+}
+
+// Note: attributes default to FunctionAttribute.system
+alias fooWithFloat = getOverload!(I.foo, float);
+alias fooNoGcWithFloat = getOverload!(I.foo, (FunctionAttribute.system | FunctionAttribute.nogc), float);
+------

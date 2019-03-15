@@ -20,6 +20,7 @@
  *           $(LREF hasFunctionAttributes)
  *           $(LREF functionLinkage)
  *           $(LREF FunctionTypeOf)
+ *           $(LREF getOverload)
  *           $(LREF isSafe)
  *           $(LREF isUnsafe)
  *           $(LREF isFinal)
@@ -2476,6 +2477,73 @@ private:
     }
 }
 
+/**
+ * Get an alias to a specific overload of a method.
+ *
+ * Params:
+ *    overloadSet = alias to the method's overload set
+ *    attrs = (optional) $(LREF FunctionAttribute)s of the overload to be aliased.
+ *        This is matched exactly! Note that one of @system, @trusted and @safe
+ *        is always there. Defaults to `FunctionAttribute.system`.
+ *    ParamTypes = Types of the parameters of the overload to be aliased.
+ */
+template getOverload(alias overloadSet, FunctionAttribute attrs, ParamTypes...)
+{
+    import std.meta : Filter;
+
+    private enum bool isMatch(alias fun) = (functionAttributes!fun == attrs
+        && is(ParamTypes == Parameters!fun));
+
+    private alias matches = Filter!(isMatch, __traits(getOverloads,
+        __traits(parent, overloadSet), __traits(identifier, overloadSet)));
+
+    static assert(matches.length <= 1, "getOverload matched more than one overload.");
+
+    static if (matches.length != 0)
+        alias getOverload = matches[0];
+    else
+    {
+        pragma(msg, "No matching overload found for " ~
+            __traits(identifier, overloadSet) ~ ParamTypes.stringof);
+        alias getOverload = AliasSeq!();
+    }
+}
+
+/// ditto
+template getOverload(alias overloadSet, ParamTypes...)
+{
+    alias getOverload = getOverload!(overloadSet, FunctionAttribute.system, ParamTypes);
+}
+
+///
+@nogc @safe unittest
+{
+    import std.meta : AliasSeq;
+
+    interface I
+    {
+        void foo();
+        int foo(int);
+        float foo(float);
+        float foo(float) @nogc;
+    }
+
+    alias a = getOverload!(I.foo);
+    static assert(is(Parameters!a == AliasSeq!())
+        && functionAttributes!a == FunctionAttribute.system);
+
+    alias b = getOverload!(I.foo, int);
+    static assert(is(Parameters!b == AliasSeq!(int))
+        && functionAttributes!b == FunctionAttribute.system);
+
+    alias c = getOverload!(I.foo, float);
+    static assert(is(Parameters!c == AliasSeq!(float))
+        && functionAttributes!c == FunctionAttribute.system);
+
+    alias d = getOverload!(I.foo, (FunctionAttribute.system | FunctionAttribute.nogc), float);
+    static assert(is(Parameters!d == AliasSeq!(float))
+        && functionAttributes!d == (FunctionAttribute.system | FunctionAttribute.nogc));
+}
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 // Aggregate Types
