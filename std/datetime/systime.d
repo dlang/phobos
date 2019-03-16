@@ -377,7 +377,7 @@ public:
 
 private:
 
-    @disable this() {}
+    @disable this();
 }
 
 /// Get the current time as a $(LREF SysTime)

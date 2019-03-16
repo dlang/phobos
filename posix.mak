@@ -78,7 +78,7 @@ ROOT_OF_THEM_ALL = generated
 ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
 DUB=dub
 TOOLS_DIR=../tools
-DSCANNER_HASH=383fcb84d892e5169c134e282878ee2c51e4265f
+DSCANNER_HASH=b51ee472fe29c05cc33359ab8de52297899131fe
 DSCANNER_DIR=$(ROOT_OF_THEM_ALL)/dscanner-$(DSCANNER_HASH)
 
 # Set DRUNTIME name and full path
@@ -653,10 +653,20 @@ betterc: betterc-phobos-tests
 ################################################################################
 
 .PHONY : auto-tester-build
+ifneq (,$(findstring Darwin_64_32, $(PWD)))
+auto-tester-build:
+	echo "Darwin_64_32_disabled"
+else
 auto-tester-build: all checkwhitespace
+endif
 
 .PHONY : auto-tester-test
+ifneq (,$(findstring Darwin_64_32, $(PWD)))
+auto-tester-test:
+	echo "Darwin_64_32_disabled"
+else
 auto-tester-test: unittest
+endif
 
 .PHONY: buildkite-test
 buildkite-test: unittest betterc

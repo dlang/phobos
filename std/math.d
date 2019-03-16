@@ -6828,6 +6828,7 @@ Returns `-1` if $(D x < 0), `x` if $(D x == 0), `1` if
 $(D x > 0), and $(NAN) if x==$(NAN).
  */
 F sgn(F)(F x) @safe pure nothrow @nogc
+if (isFloatingPoint!F || isIntegral!F)
 {
     // @@@TODO@@@: make this faster
     return x > 0 ? 1 : x < 0 ? -1 : x;
@@ -7358,7 +7359,10 @@ T nextafter(T)(const T x, const T y) @safe pure nothrow @nogc
  *      $(TR $(TD x $(LT)= y) $(TD +0.0))
  *      )
  */
-real fdim(real x, real y) @safe pure nothrow @nogc { return (x > y) ? x - y : +0.0; }
+real fdim(real x, real y) @safe pure nothrow @nogc
+{
+    return (x < y) ? +0.0 : x - y;
+}
 
 ///
 @safe pure nothrow @nogc unittest
@@ -7366,8 +7370,9 @@ real fdim(real x, real y) @safe pure nothrow @nogc { return (x > y) ? x - y : +0
     assert(fdim(2.0, 0.0) == 2.0);
     assert(fdim(-2.0, 0.0) == 0.0);
     assert(fdim(real.infinity, 2.0) == real.infinity);
-    assert(fdim(real.nan, 2.0) == 0.0);
-    assert(fdim(2.0, real.nan) == 0.0);
+    assert(isNaN(fdim(real.nan, 2.0)));
+    assert(isNaN(fdim(2.0, real.nan)));
+    assert(isNaN(fdim(real.nan, real.nan)));
 }
 
 /**
