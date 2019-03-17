@@ -25,7 +25,7 @@ aa[std.demangle]=-dip1000
 aa[std.encoding]=-dip1000
 aa[std.exception]=-dip1000 # merged https://github.com/dlang/phobos/pull/6323; a workaround for https://issues.dlang.org/show_bug.cgi?id=18637
 aa[std.file]=-dip25 # probably already fixed (std.uni); currently: undefined symbol  pure nothrow @nogc return @safe std.uni.SliceOverIndexed!(std.uni.Grapheme).SliceOverIndexed std.uni.SliceOverIndexed!(std.uni.Grapheme).SliceOverIndexed.opSlice()
-aa[std.format]=-dip25 # @system function std.range.primitives.put
+aa[std.format]=-dip1000
 aa[std.functional]=-dip1000 # merged https://github.com/dlang/phobos/pull/6351
 aa[std.getopt]=-dip1000
 aa[std.json]=-dip1000

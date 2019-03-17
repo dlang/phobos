@@ -2898,7 +2898,7 @@ if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 /*
     Strings are formatted like $(REF printf, core, stdc, stdio)
  */
-private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, scope T obj, const ref FormatSpec!Char f)
 if (is(StringTypeOf!T) && !is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     Unqual!(StringTypeOf!T) val = obj;  // for `alias this`, see bug5371
@@ -3198,7 +3198,7 @@ if (isInputRange!T)
         {
             static if (is(StringTypeOf!T))
             {
-                auto s = val[0 .. f.precision < $ ? f.precision : $];
+                scope s = val[0 .. f.precision < $ ? f.precision : $];
 
                 size_t width;
                 if (f.width > 0)
@@ -3326,7 +3326,8 @@ if (isInputRange!T)
         static if (is(DynamicArrayTypeOf!T))
         {
             alias ARR = DynamicArrayTypeOf!T;
-            foreach (e ; cast(ARR) val)
+            scope a = cast(ARR) val;
+            foreach (e ; a)
             {
                 formatValue(w, e, f);
             }
@@ -3953,7 +3954,8 @@ if (is(T == class) && !is(T == enum))
           //string delegate() dg = &val.toString;
             Object o = val;     // workaround
             string delegate() dg = &o.toString;
-            if (dg.funcptr != &Object.toString) // toString is overridden
+            scope Object object = new Object();
+            if (dg.funcptr != (&object.toString).funcptr) // toString is overridden
             {
                 formatObject(w, val, f);
             }
@@ -4397,7 +4399,7 @@ if (is(T == enum))
 /*
    Pointers are formatted as hex integers.
  */
-private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T val, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, scope T val, const ref FormatSpec!Char f)
 if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
 {
     static if (isInputRange!T)
