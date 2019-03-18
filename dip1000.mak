@@ -34,7 +34,7 @@ aa[std.mathspecial]=-dip1000
 aa[std.meta]=-dip1000
 aa[std.mmfile]=-dip1000
 aa[std.numeric]=-dip1000
-aa[std.outbuffer]=-dip25 # DROP: cannot call @system function std.outbuffer.OutBuffer.writef!(char, int).writef
+aa[std.outbuffer]=-dip1000
 aa[std.parallelism]=-dip1000
 aa[std.path]=-dip1000
 aa[std.process]=-dip1000
@@ -48,7 +48,7 @@ aa[std.system]=-dip1000
 aa[std.traits]=-dip1000
 aa[std.typecons]=-dip1000 -version=DIP1000 # merged https://github.com/dlang/phobos/pull/6338; COMPROMISE: check the reason for non-dip1000: static struct S. mixin Proxy!foo;
 aa[std.typetuple]=-dip1000
-aa[std.uni]=-dip1000 # merged https://github.com/dlang/phobos/pull/6294, https://github.com/dlang/phobos/pull/6041 (see also TODO-list there); supersedes/includes https://github.com/dlang/phobos/pull/5045; see also https://github.com/dlang/phobos/pull/6104 for improvements proposed by Seb
+aa[std.uni]=-dip1000 # merged https://github.com/dlang/phobos/pull/6041 (see also TODO-list there); supersedes/includes https://github.com/dlang/phobos/pull/5045; see also https://github.com/dlang/phobos/pull/6104 for improvements proposed by Seb
 aa[std.uri]=-dip1000
 aa[std.utf]=-dip1000
 aa[std.uuid]=-dip1000
