@@ -2502,32 +2502,34 @@ public:
      *     fmt = A $(REF FormatSpec, std,format) which controls how the data
      *     is displayed.
      */
-    void toString(W)(ref W sink, const ref FormatSpec!char fmt) const
+    void toString(W)(ref W sink, scope const ref FormatSpec!char fmt) const
     if (isOutputRange!(W, char))
     {
-        switch (fmt.spec)
+        const spec = fmt.spec;
+        switch (spec)
         {
             case 'b':
                 return formatBitString(sink);
             case 's':
                 return formatBitArray(sink);
             default:
-                throw new Exception("Unknown format specifier: %" ~ fmt.spec);
+                throw new Exception("Unknown format specifier: %" ~ spec);
         }
     }
 
     // @@@DEPRECATED_2.089@@@
     deprecated("To be removed by 2.089. Please use the writer overload instead.")
-    void toString(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt) const
+    void toString(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char fmt) const
     {
-        switch (fmt.spec)
+        const spec = fmt.spec;
+        switch (spec)
         {
             case 'b':
                 return formatBitString(sink);
             case 's':
                 return formatBitArray(sink);
             default:
-                throw new Exception("Unknown format specifier: %" ~ fmt.spec);
+                throw new Exception("Unknown format specifier: %" ~ spec);
         }
     }
 

@@ -3544,7 +3544,7 @@ if (isDynamicArray!A)
     }
 
     /// ditto
-    void toString(Writer)(ref Writer w, const ref FormatSpec!char fmt) const
+    void toString(Writer)(ref Writer w, scope const ref FormatSpec!char fmt) const
     if (isOutputRange!(Writer, char))
     {
         import std.format : formatValue;
