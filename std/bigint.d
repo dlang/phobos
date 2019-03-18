@@ -921,22 +921,23 @@ public:
     }
 
     /// ditto
-    void toString(scope void delegate(const(char)[]) sink, const ref FormatSpec!char f) const
+    void toString(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char f) const
     {
-        immutable hex = (f.spec == 'x' || f.spec == 'X');
-        if (!(f.spec == 's' || f.spec == 'd' || f.spec =='o' || hex))
-            throw new FormatException("Format specifier not understood: %" ~ f.spec);
+        const spec = f.spec;
+        immutable hex = (spec == 'x' || spec == 'X');
+        if (!(spec == 's' || spec == 'd' || spec =='o' || hex))
+            throw new FormatException("Format specifier not understood: %" ~ spec);
 
         char[] buff;
-        if (f.spec == 'X')
+        if (spec == 'X')
         {
             buff = data.toHexString(0, '_', 0, f.flZero ? '0' : ' ', LetterCase.upper);
         }
-        else if (f.spec == 'x')
+        else if (spec == 'x')
         {
             buff = data.toHexString(0, '_', 0, f.flZero ? '0' : ' ', LetterCase.lower);
         }
-        else if (f.spec == 'o')
+        else if (spec == 'o')
         {
             buff = data.toOctalString();
         }
