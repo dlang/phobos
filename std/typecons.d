@@ -1231,7 +1231,7 @@ if (distinctFieldNames!(Specs))
         }
 
         /// ditto
-        void toString(DG, Char)(scope DG sink, const ref FormatSpec!Char fmt) const
+        void toString(DG, Char)(scope DG sink, scope const ref FormatSpec!Char fmt) const
         {
             import std.format : formatElement, formattedWrite, FormatException;
             if (fmt.nested)
@@ -1287,9 +1287,10 @@ if (distinctFieldNames!(Specs))
             }
             else
             {
+                const spec = fmt.spec;
                 throw new FormatException(
                     "Expected '%s' or '%(...%)' or '%(...%|...%)' format specifier for type '" ~
-                        Unqual!(typeof(this)).stringof ~ "', not '%" ~ fmt.spec ~ "'.");
+                        Unqual!(typeof(this)).stringof ~ "', not '%" ~ spec ~ "'.");
             }
         }
 
@@ -2780,7 +2781,7 @@ Params:
     }
 
     /// ditto
-    void toString(W)(ref W writer, const ref FormatSpec!char fmt)
+    void toString(W)(ref W writer, scope const ref FormatSpec!char fmt)
     if (isOutputRange!(W, char))
     {
         import std.range.primitives : put;
@@ -2792,7 +2793,7 @@ Params:
 
     //@@@DEPRECATED_2.086@@@
     deprecated("To be removed after 2.086. Please use the output range overload instead.")
-    void toString()(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt)
+    void toString()(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char fmt)
     {
         if (isNull)
         {
@@ -2807,7 +2808,7 @@ Params:
     // Issue 14940
     //@@@DEPRECATED_2.086@@@
     deprecated("To be removed after 2.086. Please use the output range overload instead.")
-    void toString()(scope void delegate(const(char)[]) @safe sink, const ref FormatSpec!char fmt)
+    void toString()(scope void delegate(const(char)[]) @safe sink, scope const ref FormatSpec!char fmt)
     {
         if (isNull)
         {
@@ -3513,7 +3514,7 @@ Params:
     {
         import std.format : FormatSpec, formatValue;
         // Needs to be a template because of DMD @@BUG@@ 13737.
-        void toString()(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt)
+        void toString()(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char fmt)
         {
             if (isNull)
             {
@@ -3967,7 +3968,7 @@ Params:
     {
         import std.format : FormatSpec, formatValue;
         // Needs to be a template because of DMD @@BUG@@ 13737.
-        void toString()(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt)
+        void toString()(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char fmt)
         {
             if (isNull)
             {
@@ -7357,7 +7358,7 @@ struct Typedef(T, T init = T.init, string cookie=null)
     }
 
     /// ditto
-    void toString(this T, W)(ref W writer, const ref FormatSpec!char fmt)
+    void toString(this T, W)(ref W writer, scope const ref FormatSpec!char fmt)
     if (isOutputRange!(W, char))
     {
         formatValue(writer, Typedef_payload, fmt);
