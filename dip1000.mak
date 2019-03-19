@@ -121,10 +121,7 @@ aa[std.experimental.allocator.common]=-dip1000
 aa[std.experimental.allocator.gc_allocator]=-dip1000
 aa[std.experimental.allocator.mallocator]=-dip1000
 aa[std.experimental.allocator.mmap_allocator]=-dip1000
-aa[std.experimental.allocator.package]=-dip25 #    Linker errors: undefined reference  pure nothrow @property @nogc return @safe std.internal.test.dummyrange.DummyRange!(0, 1, 1, uint[]).DummyRange std.internal.test.dummyrange.DummyRange!(0, 1, 1, uint[]).DummyRange.save()
-#                                                                                      pure nothrow @property @nogc return @safe std.internal.test.dummyrange.DummyRange!(0, 1, 2, uint[]).DummyRange std.internal.test.dummyrange.DummyRange!(0, 1, 2, uint[]).DummyRange.save()
-#                                                                                      pure nothrow @property @nogc return @safe std.internal.test.dummyrange.DummyRange!(1, 1, 1, uint[]).DummyRange std.internal.test.dummyrange.DummyRange!(1, 1, 1, uint[]).DummyRange.save()
-#                                                                                      pure nothrow @property @nogc return @safe std.internal.test.dummyrange.DummyRange!(1, 1, 2, uint[]).DummyRange std.internal.test.dummyrange.DummyRange!(1, 1, 2, uint[]).DummyRange.save()
+aa[std.experimental.allocator.package]=-dip1000
 aa[std.experimental.allocator.showcase]=-dip1000
 aa[std.experimental.allocator.typed]=-dip1000
 aa[std.experimental.allocator.building_blocks.affix_allocator]=-dip1000
