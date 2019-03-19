@@ -557,9 +557,11 @@ Throws: `ErrnoException` in case of error.
         }
         if (_p.handle)
         {
-            errnoEnforce(.fclose(_p.handle) == 0,
-                    "Could not close file `"~_name~"'");
+            auto handle = _p.handle;
             _p.handle = null;
+            // fclose disassociates the FILE* even in case of error (issue 19751)
+            errnoEnforce(.fclose(handle) == 0,
+                    "Could not close file `"~_name~"'");
         }
     }
 
