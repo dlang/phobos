@@ -96,7 +96,7 @@ aa[std.container.dlist]=-dip1000
 aa[std.container.package]=-dip1000
 aa[std.container.rbtree]=-dip25 # DROP
 aa[std.container.slist]=-dip1000
-aa[std.container.util]=-dip25 # depends on rbtree and slist = -dip1000
+aa[std.container.util]=-dip1000
 
 aa[std.datetime.date]=-dip1000
 aa[std.datetime.interval]=-dip1000
