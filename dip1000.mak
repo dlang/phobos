@@ -64,7 +64,7 @@ aa[std.algorithm.mutation]=-dip1000
 aa[std.algorithm.package]=-dip1000
 aa[std.algorithm.searching]=-dip1000
 aa[std.algorithm.setops]=-dip1000
-aa[std.algorithm.sorting]=-dip25 # i.a. depends on std.algorithm.searching? and a fix for writefln
+aa[std.algorithm.sorting]=-dip1000
 
 aa[std.c.fenv]=-dip1000
 aa[std.c.locale]=-dip1000
