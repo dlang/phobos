@@ -62,7 +62,7 @@ aa[std.algorithm.internal]=-dip1000
 aa[std.algorithm.iteration]=-dip1000
 aa[std.algorithm.mutation]=-dip1000
 aa[std.algorithm.package]=-dip1000
-aa[std.algorithm.searching]=-dip25 # depends on https://github.com/dlang/phobos/pull/6246 merged and std.algorithm.comparison fixed
+aa[std.algorithm.searching]=-dip1000
 aa[std.algorithm.setops]=-dip1000
 aa[std.algorithm.sorting]=-dip25 # i.a. depends on std.algorithm.searching? and a fix for writefln
 
