@@ -879,7 +879,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
      * Returns:
      *   true if node was added
      */
-    private bool _add(Elem n)
+    private bool _add(return Elem n)
     {
         Node result;
         static if (!allowDuplicates)
@@ -887,7 +887,8 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
 
         if (!_end.left)
         {
-            _end.left = _begin = result = allocate(n);
+            result = allocate(n);
+            (() @trusted { _end.left = _begin = result; }) ();
         }
         else
         {
@@ -903,7 +904,8 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
                         //
                         // add to right of new parent
                         //
-                        newParent.left = result = allocate(n);
+                        result = allocate(n);
+                        (() @trusted { newParent.left = result; }) ();
                         break;
                     }
                 }
@@ -924,7 +926,8 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
                         //
                         // add to right of new parent
                         //
-                        newParent.right = result = allocate(n);
+                        result = allocate(n);
+                        (() @trusted { newParent.right = result; }) ();
                         break;
                     }
                 }
@@ -933,7 +936,6 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
             if (_begin.left)
                 _begin = _begin.left;
         }
-
         static if (allowDuplicates)
         {
             result.setColor(_end);
@@ -944,8 +946,6 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
         }
         else
         {
-            import std.typecons : Tuple;
-
             if (added)
             {
                 ++_length;
@@ -1144,12 +1144,14 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
         {
             int x;
 
+          @safe:
+
             this(int init_x)
             {
                 x = init_x;
             }
 
-            size_t toHash() const @safe nothrow
+            size_t toHash() const nothrow
             {
                 return typeid(x).getHash(&x) ^ 0xF0F0_F0F0;
             }
@@ -1272,7 +1274,9 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
      *
      * Complexity: $(BIGOH m * log(n))
      */
-    size_t stableInsert(Stuff)(Stuff stuff) if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, Elem))
+    size_t stableInsert(Stuff)(scope Stuff stuff)
+        if (isInputRange!Stuff &&
+            isImplicitlyConvertible!(ElementType!Stuff, Elem))
     {
         size_t result = 0;
         static if (allowDuplicates)
@@ -1529,7 +1533,7 @@ assert(equal(rbt[], [5]));
     }
 
     /++ Ditto +/
-    size_t removeKey(U)(U[] elems)
+    size_t removeKey(U)(scope U[] elems)
         if (isImplicitlyConvertible!(U, Elem))
     {
         immutable lenBefore = length;
@@ -1777,7 +1781,7 @@ assert(equal(rbt[], [5]));
          * Check the tree for validity.  This is called after every add or remove.
          * This should only be enabled to debug the implementation of the RB Tree.
          */
-        void check()
+        void check() @trusted
         {
             //
             // check implementation of the tree

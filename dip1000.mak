@@ -94,7 +94,7 @@ aa[std.container.array]=-dip1000
 aa[std.container.binaryheap]=-dip1000
 aa[std.container.dlist]=-dip1000
 aa[std.container.package]=-dip1000
-aa[std.container.rbtree]=-dip25 # DROP
+aa[std.container.rbtree]=-dip25
 aa[std.container.slist]=-dip1000
 aa[std.container.util]=-dip25 # depends on rbtree and slist = -dip1000
 
