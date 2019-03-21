@@ -7197,8 +7197,14 @@ mixin template Proxy(alias a)
     bool* b = Name("a") in names;
 }
 
+// workaround for https://issues.dlang.org/show_bug.cgi?id=19669
+private enum isDIP1000 = __traits(compiles, () @safe {
+     int x;
+     int* p;
+     p = &x;
+});
 // excludes struct S; it's 'mixin Proxy!foo' doesn't compile with -dip1000
-version (DIP1000) {} else
+static if (isDIP1000) {} else
 @system unittest
 {
     // bug14213, using function for the payload
