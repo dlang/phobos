@@ -690,7 +690,7 @@ private struct RBRange(N)
      *
      * Complexity: amortized $(BIGOH 1)
      */
-    void popFront()
+    void popFront() @safe
     {
         _begin = _begin.next;
     }
