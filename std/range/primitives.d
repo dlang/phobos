@@ -377,7 +377,7 @@ void put(R, E)(ref R r, E e)
     }
     //Optional optimization block for straight up array to array copy.
     else static if (isDynamicArray!R &&
-                    !(Autodecoding && isNarrowString!R) &&
+                    !(autodecodeStrings && isNarrowString!R) &&
                     isDynamicArray!E &&
                     is(typeof(r[] = e[])))
     {
@@ -407,7 +407,7 @@ void put(R, E)(ref R r, E e)
     {
         //Special optimization: If E is a narrow string, and r accepts characters no-wider than the string's
         //Then simply feed the characters 1 by 1.
-        static if (Autodecoding && isNarrowString!E && (
+        static if (autodecodeStrings && isNarrowString!E && (
             (is(E : const  char[]) && is(typeof(doPut(r,  char.max))) && !is(typeof(doPut(r, dchar.max))) &&
                 !is(typeof(doPut(r, wchar.max)))) ||
             (is(E : const wchar[]) && is(typeof(doPut(r, wchar.max))) && !is(typeof(doPut(r, dchar.max)))) ) )
@@ -1080,7 +1080,7 @@ See_Also:
  */
 enum bool isRandomAccessRange(R) =
     is(typeof(lvalueOf!R[1]) == ElementType!R)
-    && !(Autodecoding && isNarrowString!R)
+    && !(autodecodeStrings && isNarrowString!R)
     && isForwardRange!R
     && (isBidirectionalRange!R || isInfinite!R)
     && (hasLength!R || isInfinite!R)
@@ -1102,7 +1102,7 @@ enum bool isRandomAccessRange(R) =
     auto e = r[1]; // can index
     auto f = r.front;
     static assert(is(typeof(e) == typeof(f))); // same type for indexed and front
-    static assert(!(Autodecoding && isNarrowString!R)); // narrow strings cannot be indexed as ranges
+    static assert(!(autodecodeStrings && isNarrowString!R)); // narrow strings cannot be indexed as ranges
     static assert(hasLength!R || isInfinite!R); // must have length or be infinite
 
     // $ must work as it does with arrays if opIndex works with $
@@ -1541,7 +1541,7 @@ template hasLength(R)
 {
     static if (is(typeof(((R* r) => r.length)(null)) Length))
         enum bool hasLength = is(Length == size_t) &&
-                              !(Autodecoding && isNarrowString!R);
+                              !(autodecodeStrings && isNarrowString!R);
     else
         enum bool hasLength = false;
 }
@@ -1652,7 +1652,7 @@ The following expression must be true for `hasSlicing` to be `true`:
 ----
  */
 enum bool hasSlicing(R) = isForwardRange!R
-    && !(Autodecoding && isNarrowString!R)
+    && !(autodecodeStrings && isNarrowString!R)
     && is(ReturnType!((R r) => r[1 .. 1].length) == size_t)
     && (is(typeof(lvalueOf!R[1 .. 1]) == R) || isInfinite!R)
     && (!is(typeof(lvalueOf!R[0 .. $])) || is(typeof(lvalueOf!R[0 .. $]) == R))
@@ -2218,7 +2218,7 @@ equivalent to `popFront(array)`. For $(GLOSSARY narrow strings),
 point).
 */
 void popFront(T)(scope ref inout(T)[] a) @safe pure nothrow @nogc
-if (!(Autodecoding && isNarrowString!(T[])) && !is(T[] == void[]))
+if (!(autodecodeStrings && isNarrowString!(T[])) && !is(T[] == void[]))
 {
     assert(a.length, "Attempting to popFront() past the end of an array of " ~ T.stringof);
     a = a[1 .. $];
@@ -2241,7 +2241,7 @@ if (!(Autodecoding && isNarrowString!(T[])) && !is(T[] == void[]))
 
 /// ditto
 void popFront(C)(scope ref inout(C)[] str) @trusted pure nothrow
-if (Autodecoding && isNarrowString!(C[]))
+if (autodecodeStrings && isNarrowString!(C[]))
 {
     import std.algorithm.comparison : min;
 
@@ -2339,7 +2339,7 @@ equivalent to `popBack(array)`. For $(GLOSSARY narrow strings), $(D
 popFront) automatically eliminates the last $(GLOSSARY code point).
 */
 void popBack(T)(scope ref inout(T)[] a) @safe pure nothrow @nogc
-if (!(Autodecoding && isNarrowString!(T[])) && !is(T[] == void[]))
+if (!(autodecodeStrings && isNarrowString!(T[])) && !is(T[] == void[]))
 {
     assert(a.length);
     a = a[0 .. $ - 1];
@@ -2362,7 +2362,7 @@ if (!(Autodecoding && isNarrowString!(T[])) && !is(T[] == void[]))
 
 /// ditto
 void popBack(T)(scope ref inout(T)[] a) @safe pure
-if (Autodecoding && isNarrowString!(T[]))
+if (autodecodeStrings && isNarrowString!(T[]))
 {
     import std.utf : strideBack;
     assert(a.length, "Attempting to popBack() past the front of an array of " ~ T.stringof);
@@ -2401,7 +2401,7 @@ if (Autodecoding && isNarrowString!(T[]))
 Autodecoding is enabled if this is set to true.
 */
 
-enum Autodecoding = true;
+enum autodecodeStrings = true;
 
 /**
 Implements the range interface primitive `front` for built-in
@@ -2412,7 +2412,7 @@ front) automatically returns the first $(GLOSSARY code point) as _a $(D
 dchar).
 */
 @property ref T front(T)(return scope T[] a) @safe pure nothrow @nogc
-if (!(Autodecoding && isNarrowString!(T[])) && !is(T[] == void[]))
+if (!(autodecodeStrings && isNarrowString!(T[])) && !is(T[] == void[]))
 // We would have preferred to write the function template
 // ---
 //     @property ref inout(T) front(T)(return scope inout(T)[] a)
@@ -2448,7 +2448,7 @@ if (!(Autodecoding && isNarrowString!(T[])) && !is(T[] == void[]))
 
 /// ditto
 @property dchar front(T)(scope const(T)[] a) @safe pure
-if (Autodecoding && isNarrowString!(T[]))
+if (autodecodeStrings && isNarrowString!(T[]))
 {
     import std.utf : decode;
     assert(a.length, "Attempting to fetch the front of an empty array of " ~ T.stringof);
@@ -2465,7 +2465,7 @@ back) automatically returns the last $(GLOSSARY code point) as _a $(D
 dchar).
 */
 @property ref inout(T) back(T)(return scope inout(T)[] a) @safe pure nothrow @nogc
-if (!(Autodecoding && isNarrowString!(T[])) && !is(T[] == void[]))
+if (!(autodecodeStrings && isNarrowString!(T[])) && !is(T[] == void[]))
 {
     assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);
     return a[$ - 1];
@@ -2492,7 +2492,7 @@ if (!(Autodecoding && isNarrowString!(T[])) && !is(T[] == void[]))
 /// ditto
 // Specialization for strings
 @property dchar back(T)(scope const(T)[] a) @safe pure
-if (Autodecoding && isNarrowString!(T[]))
+if (autodecodeStrings && isNarrowString!(T[]))
 {
     import std.utf : decode, strideBack;
     assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);

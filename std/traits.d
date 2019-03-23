@@ -6585,9 +6585,10 @@ package template convertToString(T)
  */
 template isAutodecodableString(T)
 {
-    import std.range.primitives : Autodecoding;
+    import std.range.primitives : autodecodeStrings;
 
-    enum isAutodecodableString = Autodecoding && (is(T : const char[]) || is(T : const wchar[])) && !isStaticArray!T;
+    enum isAutodecodableString = autodecodeStrings &&
+        (is(T : const char[]) || is(T : const wchar[])) && !isStaticArray!T;
 }
 
 ///
