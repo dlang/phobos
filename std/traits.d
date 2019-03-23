@@ -6583,7 +6583,12 @@ package template convertToString(T)
  * See Also:
  *      $(LREF isNarrowString)
  */
-enum bool isAutodecodableString(T) = (is(T : const char[]) || is(T : const wchar[])) && !isStaticArray!T;
+template isAutodecodableString(T)
+{
+    import std.range.primitives : Autodecoding;
+
+    enum isAutodecodableString = Autodecoding && (is(T : const char[]) || is(T : const wchar[])) && !isStaticArray!T;
+}
 
 ///
 @safe unittest
