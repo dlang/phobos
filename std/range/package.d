@@ -1434,6 +1434,28 @@ if (isInputRange!(Unqual!R1) && isInputRange!(Unqual!R2) &&
     assert(result.equal(only(6, 7, 8, 9)));
 }
 
+//https://issues.dlang.org/show_bug.cgi?id=19738
+@safe nothrow pure @nogc unittest
+{
+    struct EvilRange
+    {
+        enum empty = true;
+        int front;
+        void popFront() @safe {}
+        auto opAssign(const ref EvilRange other)
+        {
+            *(cast(uint*)0xcafebabe) = 0xdeadbeef;
+            return this;
+        }
+    }
+
+    static assert(!__traits(compiles, () @safe
+    {
+        auto c1 = choose(true, EvilRange(), EvilRange());
+        auto c2 = c1;
+        c1 = c2;
+    }));
+}
 
 private struct ChooseResult(R1, R2)
 {
@@ -1446,17 +1468,18 @@ private struct ChooseResult(R1, R2)
     }
     private bool r1Chosen;
 
+    private static ref get1(return ref ChooseResult r) @trusted { return r.r1; }
+    private static ref get2(return ref ChooseResult r) @trusted { return r.r2; }
+
     private static auto ref actOnChosen(alias foo, ExtraArgs ...)(ref ChooseResult r,
             auto ref ExtraArgs extraArgs)
     {
         if (r.r1Chosen)
         {
-            ref get1(return ref ChooseResult r) @trusted { return r.r1; }
             return foo(get1(r), extraArgs);
         }
         else
         {
-            ref get2(return ref ChooseResult r) @trusted { return r.r2; }
             return foo(get2(r), extraArgs);
         }
     }
@@ -1481,13 +1504,13 @@ private struct ChooseResult(R1, R2)
         }
     }
 
-    void opAssign(return scope ChooseResult r) @trusted
+    void opAssign(return scope ChooseResult r)
     {
         r1Chosen = r.r1Chosen;
         if (r1Chosen)
-            r1 = r.r1;  // assigning to union members is @system
+            get1(this) = r.r1;  // assigning to union members is @system
         else
-            r2 = r.r2;
+            get2(this) = r.r2;
     }
 
     // Carefully defined postblit to postblit the appropriate range
