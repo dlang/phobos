@@ -2710,7 +2710,7 @@ if (isInputRange!InputRange && isForwardRange!ForwardRange)
 
 @system unittest // issue 19765
 {
-    import std.range.interfaces: inputRangeObject;
+    import std.range.interfaces : inputRangeObject;
     auto choices = inputRangeObject("b");
     auto f = "foobar".findAmong(choices);
     assert(f == "bar");
