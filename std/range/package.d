@@ -3810,10 +3810,12 @@ if (isForwardRange!R && !isInfinite!R)
         /// ditto
         @property Cycle save()
         {
+            import std.algorithm.mutation : move;
             //No need to call _original.save, because Cycle never actually modifies _original
             Cycle ret = this;
             ret._original = _original;
-            ret._current =  _current.save;
+            auto saved =  _current.save;
+            move(saved, _current);
             return ret;
         }
     }
@@ -4124,6 +4126,14 @@ if (isStaticArray!R)
     import core.exception : AssertError;
     import std.exception : assertThrown;
     assertThrown!AssertError(cycle([0, 1, 2][0 .. 0]));
+}
+
+pure @safe unittest // issue 18657
+{
+    import std.algorithm.comparison : equal;
+    auto r = refRange(&["foo"][0]).cycle.take(4);
+    assert(equal(r.save, "foof"));
+    assert(equal(r.save, "foof"));
 }
 
 private alias lengthType(R) = typeof(R.init.length.init);
