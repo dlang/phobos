@@ -1844,10 +1844,12 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
         static if (allSatisfy!(isForwardRange, staticMap!(Unqual, Rs)))
             @property auto save()
             {
+                import std.algorithm.mutation : move;
                 Result result = this;
                 foreach (i, Unused; Rs)
                 {
-                    result.source[i] = result.source[i].save;
+                    auto saved = result.source[i].save;
+                    move(saved, result.source[i]);
                 }
                 return result;
             }
@@ -1905,6 +1907,14 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
     }
 
     assert(interleave([1, 2, 3], 0).equal([1, 0, 2, 0, 3]));
+}
+
+pure @safe unittest
+{
+    import std.algorithm.comparison : equal;
+    auto r = roundRobin(refRange(&["foo"][0]), refRange(&["bar"][0]));
+    assert(equal(r.save, "fboaor"));
+    assert(equal(r.save, "fboaor"));
 }
 
 /**
