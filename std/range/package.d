@@ -972,10 +972,12 @@ if (Ranges.length > 0 &&
             static if (allSatisfy!(isForwardRange, R))
                 @property auto save()
                 {
+                    import std.algorithm.mutation : move;
                     typeof(this) result = this;
                     foreach (i, Unused; R)
                     {
-                        result.source[i] = result.source[i].save;
+                        auto saved = result.source[i].save;
+                        move(saved, result.source[i]);
                     }
                     return result;
                 }
@@ -1380,6 +1382,14 @@ pure @safe nothrow @nogc unittest
     assert(chain(a, b).empty);
 }
 
+pure @safe unittest // issue 18657
+{
+    import std.algorithm.comparison : equal;
+    auto r = refRange(&["foo"][0]).chain("bar");
+    assert(equal(r.save, "foobar"));
+    assert(equal(r, "foobar"));
+}
+
 /**
 Choose one of two ranges at runtime depending on a Boolean condition.
 
@@ -1514,7 +1524,11 @@ private struct ChooseResult(R1, R2)
         @property auto save()
         {
             auto result = this;
-            actOnChosen!((ref r) { r = r.save; })(result);
+            actOnChosen!((ref r) {
+                import std.algorithm.mutation : move;
+                auto saved = r.save;
+                move(saved, r);
+            })(result);
             return result;
         }
 
@@ -1600,6 +1614,14 @@ private struct ChooseResult(R1, R2)
                         return choose(false, Slice1.init, r[begin .. end]);
                 })(this, begin, end);
         }
+}
+
+pure @safe unittest // issue 18657
+{
+    import std.algorithm.comparison : equal;
+    auto r = choose(true, refRange(&["foo"][0]), "bar");
+    assert(equal(r.save, "foo"));
+    assert(equal(r, "foo"));
 }
 
 /**
