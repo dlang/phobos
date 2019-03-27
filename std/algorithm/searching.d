@@ -2684,7 +2684,7 @@ InputRange findAmong(alias pred = "a == b", InputRange, ForwardRange)(
     InputRange seq, ForwardRange choices)
 if (isInputRange!InputRange && isForwardRange!ForwardRange)
 {
-    for (; !seq.empty && find!pred(choices, seq.front).empty; seq.popFront())
+    for (; !seq.empty && find!pred(choices.save, seq.front).empty; seq.popFront())
     {
     }
     return seq;
@@ -2706,6 +2706,14 @@ if (isInputRange!InputRange && isForwardRange!ForwardRange)
     assert(findAmong(b, [ 4, 6, 7 ][]).empty);
     assert(findAmong!("a == b")(a, b).length == a.length - 2);
     assert(findAmong!("a == b")(b, [ 4, 6, 7 ][]).empty);
+}
+
+@system unittest // issue 19765
+{
+    import std.range.interfaces : inputRangeObject;
+    auto choices = inputRangeObject("b");
+    auto f = "foobar".findAmong(choices);
+    assert(f == "bar");
 }
 
 // findSkip
