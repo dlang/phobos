@@ -4983,8 +4983,10 @@ if (isInputRange!Range)
             ///
             @property Until save()
             {
+                import std.algorithm.mutation : move;
                 Until result = this;
-                result._input     = _input.save;
+                auto saved = _input.save;
+                move(saved, result._input);
                 result._sentinel  = _sentinel;
                 result._openRight = _openRight;
                 result._done      = _done;
@@ -4994,8 +4996,10 @@ if (isInputRange!Range)
             ///
             @property Until save()
             {
+                import std.algorithm.mutation : move;
                 Until result = this;
-                result._input     = _input.save;
+                auto saved = _input.save;
+                move(saved, result._input);
                 result._openRight = _openRight;
                 result._done      = _done;
                 return result;
@@ -5050,4 +5054,20 @@ if (isInputRange!Range)
     import std.algorithm.comparison : among, equal;
     auto s = "hello how\nare you";
     assert(equal(s.until!(c => c.among!('\n', '\r')), "hello how"));
+}
+
+pure @safe unittest // issue 18657
+{
+    import std.algorithm.comparison : equal;
+    import std.range : refRange;
+    {
+        auto r = refRange(&["foobar"][0]).until("bar");
+        assert(equal(r.save, "foo"));
+        assert(equal(r.save, "foo"));
+    }
+    {
+        auto r = refRange(&["foobar"][0]).until!(e => e == 'b');
+        assert(equal(r.save, "foo"));
+        assert(equal(r.save, "foo"));
+    }
 }
