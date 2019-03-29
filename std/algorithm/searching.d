@@ -4921,6 +4921,7 @@ if (isInputRange!Range)
     private bool _done;
 
     static if (!is(Sentinel == void))
+    {
         ///
         this(Range input, Sentinel sentinel,
                 OpenRight openRight = Yes.openRight)
@@ -4930,7 +4931,17 @@ if (isInputRange!Range)
             _openRight = openRight;
             _done = _input.empty || openRight && predSatisfied();
         }
+        private this(Range input, Sentinel sentinel, OpenRight openRight,
+            bool done)
+        {
+            _input = input;
+            _sentinel = sentinel;
+            _openRight = openRight;
+            _done = done;
+        }
+    }
     else
+    {
         ///
         this(Range input, OpenRight openRight = Yes.openRight)
         {
@@ -4938,6 +4949,13 @@ if (isInputRange!Range)
             _openRight = openRight;
             _done = _input.empty || openRight && predSatisfied();
         }
+        private this(Range input, OpenRight openRight, bool done)
+        {
+            _input = input;
+            _openRight = openRight;
+            _done = done;
+        }
+    }
 
     ///
     @property bool empty()
@@ -4979,31 +4997,14 @@ if (isInputRange!Range)
 
     static if (isForwardRange!Range)
     {
-        static if (!is(Sentinel == void))
-            ///
-            @property Until save()
-            {
-                import std.algorithm.mutation : move;
-                Until result = this;
-                auto saved = _input.save;
-                move(saved, result._input);
-                result._sentinel  = _sentinel;
-                result._openRight = _openRight;
-                result._done      = _done;
-                return result;
-            }
-        else
-            ///
-            @property Until save()
-            {
-                import std.algorithm.mutation : move;
-                Until result = this;
-                auto saved = _input.save;
-                move(saved, result._input);
-                result._openRight = _openRight;
-                result._done      = _done;
-                return result;
-            }
+        ///
+        @property Until save()
+        {
+            static if (is(Sentinel == void))
+                return Until(_input.save, _openRight, _done);
+            else
+                return Until(_input.save, _sentinel, _openRight, _done);
+        }
     }
 }
 

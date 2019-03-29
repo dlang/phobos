@@ -972,14 +972,20 @@ if (Ranges.length > 0 &&
             static if (allSatisfy!(isForwardRange, R))
                 @property auto save()
                 {
-                    import std.algorithm.mutation : move;
-                    typeof(this) result = this;
-                    foreach (i, Unused; R)
+                    auto saveSource(size_t len)()
                     {
-                        auto saved = result.source[i].save;
-                        move(saved, result.source[i]);
+                        import std.typecons : tuple;
+                        static if (len == 0)
+                        {
+                            return tuple();
+                        }
+                        else
+                        {
+                            return saveSource!(len - 1)() ~
+                                tuple(source[len - 1].save);
+                        }
                     }
-                    return result;
+                    return Result(saveSource!(R.length).expand);
                 }
 
             void popFront()
@@ -1523,13 +1529,9 @@ private struct ChooseResult(R1, R2)
     static if (isForwardRange!R1 && isForwardRange!R2)
         @property auto save()
         {
-            auto result = this;
-            actOnChosen!((ref r) {
-                import std.algorithm.mutation : move;
-                auto saved = r.save;
-                move(saved, r);
-            })(result);
-            return result;
+            return r1Chosen
+                ? ChooseResult(r1Chosen, r1.save, r2)
+                : ChooseResult(r1Chosen, r1, r2.save);
         }
 
     @property void front(T)(T v)
@@ -1844,14 +1846,20 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
         static if (allSatisfy!(isForwardRange, staticMap!(Unqual, Rs)))
             @property auto save()
             {
-                import std.algorithm.mutation : move;
-                Result result = this;
-                foreach (i, Unused; Rs)
+                auto saveSource(size_t len)()
                 {
-                    auto saved = result.source[i].save;
-                    move(saved, result.source[i]);
+                    import std.typecons : tuple;
+                    static if (len == 0)
+                    {
+                        return tuple();
+                    }
+                    else
+                    {
+                        return saveSource!(len - 1)() ~
+                            tuple(source[len - 1].save);
+                    }
                 }
-                return result;
+                return Result(saveSource!(Rs.length).expand, _current);
             }
 
         static if (allSatisfy!(hasLength, Rs))
@@ -3782,6 +3790,12 @@ if (isForwardRange!R && !isInfinite!R)
             _current = input.save;
         }
 
+        private this(R original, R current)
+        {
+            _original = original;
+            _current = current;
+        }
+
         /// ditto
         @property auto ref front()
         {
@@ -3820,13 +3834,8 @@ if (isForwardRange!R && !isInfinite!R)
         /// ditto
         @property Cycle save()
         {
-            import std.algorithm.mutation : move;
             //No need to call _original.save, because Cycle never actually modifies _original
-            Cycle ret = this;
-            ret._original = _original;
-            auto saved =  _current.save;
-            move(saved, _current);
-            return ret;
+            return Cycle(_original, _current.save);
         }
     }
 }
