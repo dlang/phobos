@@ -3738,7 +3738,7 @@ if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
     const(int)[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
 
     foreach (UniformRNG; PseudoRngTypes)
-    {
+    (){ // avoid workaround optimizations for large functions @@@BUG@@@ 2396
         auto rng = UniformRNG(1234);
         /* First test the most general case: randomSample of input range, with and
          * without a specified random number generator.
@@ -4044,5 +4044,5 @@ if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
             while (sample!UniformRNG(++n) == fst && n < n.max) {}
             assert(n < n.max);
         }
-    }
+    }();
 }

@@ -1194,7 +1194,7 @@ if (isInputRange!R &&
     import std.meta : AliasSeq;
 
     static foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
-    {
+    (){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
         assert(!endsWith(to!S("abc"), 'a'));
         assert(endsWith(to!S("abc"), 'a', 'c') == 2);
         assert(!endsWith(to!S("abc"), 'x', 'n', 'b'));
@@ -1233,7 +1233,7 @@ if (isInputRange!R &&
             assert(endsWith(to!S("a"), T.init, 'a') == 1);
             assert(endsWith(to!S("a"), 'a', T.init) == 2);
         }
-    }
+    }();
 
     static foreach (T; AliasSeq!(int, short))
     {{
@@ -4775,7 +4775,7 @@ if (isInputRange!R &&
     import std.range;
 
     static foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
-    {
+    (){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
         assert(!startsWith(to!S("abc"), 'c'));
         assert(startsWith(to!S("abc"), 'a', 'c') == 1);
         assert(!startsWith(to!S("abc"), 'x', 'n', 'b'));
@@ -4817,7 +4817,7 @@ if (isInputRange!R &&
             assert(startsWith(to!S("a"), T.init, 'a') == 1);
             assert(startsWith(to!S("a"), 'a', T.init) == 2);
         }
-    }
+    }();
 
     //Length but no RA
     assert(!startsWith("abc".takeExactly(3), "abcd".takeExactly(4)));
