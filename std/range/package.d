@@ -1332,7 +1332,7 @@ pure @safe nothrow unittest
     // pair of DummyRange types, in either order.
 
     foreach (DummyType1; AllDummyRanges)
-    {
+    (){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
         DummyType1 dummy1;
         foreach (DummyType2; AllDummyRanges)
         {
@@ -1369,7 +1369,7 @@ pure @safe nothrow unittest
                 static assert(!hasLvalueElements!(typeof(myChain)));
             }
         }
-    }
+    }();
 }
 
 pure @safe nothrow @nogc unittest
