@@ -5225,15 +5225,10 @@ private struct SplitterResult(alias isTerminator, Range)
 
     @property typeof(this) save()
     {
-        import std.algorithm.mutation : move;
         auto ret = this;
-        auto savedInput = _input.save;
-        move(savedInput, ret._input);
+        ret._input = _input.save;
         static if (!fullSlicing)
-        {
-            auto savedNext = _next.save;
-            move(savedNext, ret._next);
-        }
+            ret._next = _next.save;
         return ret;
     }
 }
@@ -5329,15 +5324,6 @@ private struct SplitterResult(alias isTerminator, Range)
         ["là", "dove", "terminava", "quella", "valle"]
     ));
     assert(equal(splitter!"a=='本'"("日本語"), ["日", "語"]));
-}
-
-pure @safe unittest // issue 18657
-{
-    import std.algorithm.comparison : equal;
-    import std.range : refRange;
-    auto r = refRange(&["foobar"][0]).splitter!(c => c == 'b');
-    assert(equal!equal(r.save, ["foo", "ar"]));
-    assert(equal!equal(r.save, ["foo", "ar"]));
 }
 
 /++

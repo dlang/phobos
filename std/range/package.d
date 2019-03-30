@@ -1844,12 +1844,10 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
         static if (allSatisfy!(isForwardRange, staticMap!(Unqual, Rs)))
             @property auto save()
             {
-                import std.algorithm.mutation : move;
                 Result result = this;
                 foreach (i, Unused; Rs)
                 {
-                    auto saved = result.source[i].save;
-                    move(saved, result.source[i]);
+                    result.source[i] = result.source[i].save;
                 }
                 return result;
             }
@@ -1907,14 +1905,6 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
     }
 
     assert(interleave([1, 2, 3], 0).equal([1, 0, 2, 0, 3]));
-}
-
-pure @safe unittest
-{
-    import std.algorithm.comparison : equal;
-    auto r = roundRobin(refRange(&["foo"][0]), refRange(&["bar"][0]));
-    assert(equal(r.save, "fboaor"));
-    assert(equal(r.save, "fboaor"));
 }
 
 /**
@@ -3820,12 +3810,10 @@ if (isForwardRange!R && !isInfinite!R)
         /// ditto
         @property Cycle save()
         {
-            import std.algorithm.mutation : move;
             //No need to call _original.save, because Cycle never actually modifies _original
             Cycle ret = this;
             ret._original = _original;
-            auto saved =  _current.save;
-            move(saved, _current);
+            ret._current =  _current.save;
             return ret;
         }
     }
@@ -4136,14 +4124,6 @@ if (isStaticArray!R)
     import core.exception : AssertError;
     import std.exception : assertThrown;
     assertThrown!AssertError(cycle([0, 1, 2][0 .. 0]));
-}
-
-pure @safe unittest // issue 18657
-{
-    import std.algorithm.comparison : equal;
-    auto r = refRange(&["foo"][0]).cycle.take(4);
-    assert(equal(r.save, "foof"));
-    assert(equal(r.save, "foof"));
 }
 
 private alias lengthType(R) = typeof(R.init.length.init);
