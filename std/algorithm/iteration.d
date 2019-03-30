@@ -1684,12 +1684,9 @@ if (isInputRange!R)
     static if (isForwardRange!R)
     {
         ///
-        @property typeof(this) save()
-        {
-            import std.algorithm.mutation : move;
+        @property typeof(this) save() {
             typeof(this) ret = this;
-            auto saved = this._input.save;
-            move(saved, ret._input);
+            ret._input = this._input.save;
             ret._current = this._current;
             return ret;
         }
@@ -1808,15 +1805,6 @@ if (isInputRange!R)
     assert(r.equal([ tuple(5, 1u) ]));
     assert(s.equal([ tuple(4, 3u), tuple(5, 1u) ]));
     assert(t.equal([ tuple(3, 1u), tuple(4, 3u), tuple(5, 1u) ]));
-}
-
-pure @safe unittest // issue 18657
-{
-    import std.algorithm.comparison : equal;
-    import std.range : refRange;
-    auto r = refRange(&["foo"][0]).group;
-    assert(equal(r.save, "foo".group));
-    assert(equal(r, "foo".group));
 }
 
 // Used by implementation of chunkBy for non-forward input ranges.
