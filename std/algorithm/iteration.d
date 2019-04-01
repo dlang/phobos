@@ -1641,6 +1641,12 @@ if (isInputRange!R)
         if (!_input.empty) popFront();
     }
 
+    private this(R input, Tuple!(MutableE, uint) current)
+    {
+        _input = input;
+        _current = current;
+    }
+
     ///
     void popFront()
     {
@@ -1686,12 +1692,7 @@ if (isInputRange!R)
         ///
         @property typeof(this) save()
         {
-            import std.algorithm.mutation : move;
-            typeof(this) ret = this;
-            auto saved = this._input.save;
-            move(saved, ret._input);
-            ret._current = this._current;
-            return ret;
+            return Group(_input.save, _current);
         }
     }
 }
@@ -5161,6 +5162,24 @@ private struct SplitterResult(alias isTerminator, Range)
             _end = size_t.max;
     }
 
+    static if (fullSlicing)
+    {
+        private this(Range input, size_t end)
+        {
+            _input = input;
+            _end = end;
+        }
+    }
+    else
+    {
+        private this(Range input, size_t end, Range next)
+        {
+            _input = input;
+            _end = end;
+            _next = next;
+        }
+    }
+
     static if (isInfinite!Range)
     {
         enum bool empty = false;  // Propagate infiniteness.
@@ -5225,16 +5244,10 @@ private struct SplitterResult(alias isTerminator, Range)
 
     @property typeof(this) save()
     {
-        import std.algorithm.mutation : move;
-        auto ret = this;
-        auto savedInput = _input.save;
-        move(savedInput, ret._input);
-        static if (!fullSlicing)
-        {
-            auto savedNext = _next.save;
-            move(savedNext, ret._next);
-        }
-        return ret;
+        static if (fullSlicing)
+            return SplitterResult(_input.save, _end);
+        else
+            return SplitterResult(_input.save, _end, _next.save);
     }
 }
 
