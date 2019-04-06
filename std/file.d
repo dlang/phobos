@@ -3851,9 +3851,7 @@ else version (Posix)
 
         private this(string path, core.sys.posix.dirent.dirent* fd) @safe
         {
-            import std.algorithm.searching : countUntil;
             import std.path : buildPath;
-            import std.string : representation;
 
             static if (is(typeof(fd.d_namlen)))
                 immutable len = fd.d_namlen;
