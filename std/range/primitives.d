@@ -2170,7 +2170,7 @@ obey $(LREF hasLength) property and for narrow strings. Due to the
 fact that nonmember functions can be called with the first argument
 using the dot notation, `a.empty` is equivalent to `empty(a)`.
  */
-@property bool empty(T)(auto ref scope const(T) a)
+@property bool empty(T)(auto ref scope T a)
 if (is(typeof(a.length) : size_t))
 {
     return !a.length;
