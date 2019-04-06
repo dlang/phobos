@@ -972,12 +972,20 @@ if (Ranges.length > 0 &&
             static if (allSatisfy!(isForwardRange, R))
                 @property auto save()
                 {
-                    typeof(this) result = this;
-                    foreach (i, Unused; R)
+                    auto saveSource(size_t len)()
                     {
-                        result.source[i] = result.source[i].save;
+                        import std.typecons : tuple;
+                        static if (len == 0)
+                        {
+                            return tuple();
+                        }
+                        else
+                        {
+                            return saveSource!(len - 1)() ~
+                                tuple(source[len - 1].save);
+                        }
                     }
-                    return result;
+                    return Result(saveSource!(R.length).expand);
                 }
 
             void popFront()
@@ -1380,6 +1388,14 @@ pure @safe nothrow @nogc unittest
     assert(chain(a, b).empty);
 }
 
+pure @safe unittest // issue 18657
+{
+    import std.algorithm.comparison : equal;
+    auto r = refRange(&["foo"][0]).chain("bar");
+    assert(equal(r.save, "foobar"));
+    assert(equal(r, "foobar"));
+}
+
 /**
 Choose one of two ranges at runtime depending on a Boolean condition.
 
@@ -1529,9 +1545,9 @@ private struct ChooseResult(R1, R2)
     static if (isForwardRange!R1 && isForwardRange!R2)
         @property auto save() return scope
         {
-            auto result = this;
-            actOnChosen!((ref r) { r = r.save; })(result);
-            return result;
+            return r1Chosen
+                ? ChooseResult(r1Chosen, r1.save, r2)
+                : ChooseResult(r1Chosen, r1, r2.save);
         }
 
     @property void front(T)(T v)
@@ -1616,6 +1632,14 @@ private struct ChooseResult(R1, R2)
                         return choose(false, Slice1.init, r[begin .. end]);
                 })(this, begin, end);
         }
+}
+
+pure @safe unittest // issue 18657
+{
+    import std.algorithm.comparison : equal;
+    auto r = choose(true, refRange(&["foo"][0]), "bar");
+    assert(equal(r.save, "foo"));
+    assert(equal(r, "foo"));
 }
 
 /**
@@ -1838,12 +1862,20 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
         static if (allSatisfy!(isForwardRange, staticMap!(Unqual, Rs)))
             @property auto save()
             {
-                Result result = this;
-                foreach (i, Unused; Rs)
+                auto saveSource(size_t len)()
                 {
-                    result.source[i] = result.source[i].save;
+                    import std.typecons : tuple;
+                    static if (len == 0)
+                    {
+                        return tuple();
+                    }
+                    else
+                    {
+                        return saveSource!(len - 1)() ~
+                            tuple(source[len - 1].save);
+                    }
                 }
-                return result;
+                return Result(saveSource!(Rs.length).expand, _current);
             }
 
         static if (allSatisfy!(hasLength, Rs))
@@ -1899,6 +1931,14 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
     }
 
     assert(interleave([1, 2, 3], 0).equal([1, 0, 2, 0, 3]));
+}
+
+pure @safe unittest
+{
+    import std.algorithm.comparison : equal;
+    auto r = roundRobin(refRange(&["foo"][0]), refRange(&["bar"][0]));
+    assert(equal(r.save, "fboaor"));
+    assert(equal(r.save, "fboaor"));
 }
 
 /**
@@ -3766,6 +3806,12 @@ if (isForwardRange!R && !isInfinite!R)
             _current = input.save;
         }
 
+        private this(R original, R current)
+        {
+            _original = original;
+            _current = current;
+        }
+
         /// ditto
         @property auto ref front()
         {
@@ -3805,10 +3851,7 @@ if (isForwardRange!R && !isInfinite!R)
         @property Cycle save()
         {
             //No need to call _original.save, because Cycle never actually modifies _original
-            Cycle ret = this;
-            ret._original = _original;
-            ret._current =  _current.save;
-            return ret;
+            return Cycle(_original, _current.save);
         }
     }
 }
@@ -4118,6 +4161,14 @@ if (isStaticArray!R)
     import core.exception : AssertError;
     import std.exception : assertThrown;
     assertThrown!AssertError(cycle([0, 1, 2][0 .. 0]));
+}
+
+pure @safe unittest // issue 18657
+{
+    import std.algorithm.comparison : equal;
+    auto r = refRange(&["foo"][0]).cycle.take(4);
+    assert(equal(r.save, "foof"));
+    assert(equal(r.save, "foof"));
 }
 
 private alias lengthType(R) = typeof(R.init.length.init);

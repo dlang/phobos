@@ -2684,7 +2684,7 @@ InputRange findAmong(alias pred = "a == b", InputRange, ForwardRange)(
     InputRange seq, ForwardRange choices)
 if (isInputRange!InputRange && isForwardRange!ForwardRange)
 {
-    for (; !seq.empty && find!pred(choices, seq.front).empty; seq.popFront())
+    for (; !seq.empty && find!pred(choices.save, seq.front).empty; seq.popFront())
     {
     }
     return seq;
@@ -2706,6 +2706,14 @@ if (isInputRange!InputRange && isForwardRange!ForwardRange)
     assert(findAmong(b, [ 4, 6, 7 ][]).empty);
     assert(findAmong!("a == b")(a, b).length == a.length - 2);
     assert(findAmong!("a == b")(b, [ 4, 6, 7 ][]).empty);
+}
+
+@system unittest // issue 19765
+{
+    import std.range.interfaces : inputRangeObject;
+    auto choices = inputRangeObject("b");
+    auto f = "foobar".findAmong(choices);
+    assert(f == "bar");
 }
 
 // findSkip
@@ -4947,6 +4955,7 @@ if (isInputRange!Range)
     private bool _done;
 
     static if (!is(Sentinel == void))
+    {
         ///
         this(Range input, Sentinel sentinel,
                 OpenRight openRight = Yes.openRight)
@@ -4956,7 +4965,17 @@ if (isInputRange!Range)
             _openRight = openRight;
             _done = _input.empty || openRight && predSatisfied();
         }
+        private this(Range input, Sentinel sentinel, OpenRight openRight,
+            bool done)
+        {
+            _input = input;
+            _sentinel = sentinel;
+            _openRight = openRight;
+            _done = done;
+        }
+    }
     else
+    {
         ///
         this(Range input, OpenRight openRight = Yes.openRight)
         {
@@ -4964,6 +4983,13 @@ if (isInputRange!Range)
             _openRight = openRight;
             _done = _input.empty || openRight && predSatisfied();
         }
+        private this(Range input, OpenRight openRight, bool done)
+        {
+            _input = input;
+            _openRight = openRight;
+            _done = done;
+        }
+    }
 
     ///
     @property bool empty()
@@ -5005,27 +5031,14 @@ if (isInputRange!Range)
 
     static if (isForwardRange!Range)
     {
-        static if (!is(Sentinel == void))
-            ///
-            @property Until save()
-            {
-                Until result = this;
-                result._input     = _input.save;
-                result._sentinel  = _sentinel;
-                result._openRight = _openRight;
-                result._done      = _done;
-                return result;
-            }
-        else
-            ///
-            @property Until save()
-            {
-                Until result = this;
-                result._input     = _input.save;
-                result._openRight = _openRight;
-                result._done      = _done;
-                return result;
-            }
+        ///
+        @property Until save()
+        {
+            static if (is(Sentinel == void))
+                return Until(_input.save, _openRight, _done);
+            else
+                return Until(_input.save, _sentinel, _openRight, _done);
+        }
     }
 }
 
@@ -5076,4 +5089,20 @@ if (isInputRange!Range)
     import std.algorithm.comparison : among, equal;
     auto s = "hello how\nare you";
     assert(equal(s.until!(c => c.among!('\n', '\r')), "hello how"));
+}
+
+pure @safe unittest // issue 18657
+{
+    import std.algorithm.comparison : equal;
+    import std.range : refRange;
+    {
+        auto r = refRange(&["foobar"][0]).until("bar");
+        assert(equal(r.save, "foo"));
+        assert(equal(r.save, "foo"));
+    }
+    {
+        auto r = refRange(&["foobar"][0]).until!(e => e == 'b');
+        assert(equal(r.save, "foo"));
+        assert(equal(r.save, "foo"));
+    }
 }
