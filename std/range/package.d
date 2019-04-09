@@ -1495,9 +1495,9 @@ private struct ChooseResult(R1, R2)
         || hasElaborateCopyConstructor!R2)
     this(this)
     {
-        this.actOnChosen!((ref r) {
+        actOnChosen!((ref r) {
                 static if (hasElaborateCopyConstructor!(typeof(r))) r.__postblit();
-            });
+            })(this);
     }
 
     static if (hasElaborateDestructor!R1 || hasElaborateDestructor!R2)
@@ -1527,12 +1527,39 @@ private struct ChooseResult(R1, R2)
     }
 
     static if (isForwardRange!R1 && isForwardRange!R2)
-        @property auto save()
+    {
+        private auto systemSave()
         {
             return r1Chosen
                 ? ChooseResult(r1Chosen, r1.save, r2)
                 : ChooseResult(r1Chosen, r1, r2.save);
         }
+        private auto trustedSave()() @trusted return scope
+        {
+            /*
+            Unsafe operations in this function:
+            - copying r1/r2 (postblit or copy constructor),
+            - r1.save/r2.save,
+            - accessing the union of r1 and r2.
+            The first two cannot be trusted, because they involve calling user
+            code. So they're only called via @safe wrappers.
+            The last one can be trusted. We're not returning a reference into
+            the union.
+            */
+            R safeSave(R)(ref R r) @safe { return r.save; }
+            R safeCopy(R)(ref R r) @safe { return r; }
+            return r1Chosen
+                ? ChooseResult(r1Chosen, safeSave(r1), safeCopy(r2))
+                : ChooseResult(r1Chosen, safeCopy(r1), safeSave(r2));
+        }
+        @property auto save()
+        {
+            static if (__traits(compiles, trustedSave()))
+                return trustedSave();
+            else
+                return systemSave();
+        }
+    }
 
     @property void front(T)(T v)
     if (is(typeof({ r1.front = v; r2.front = v; })))
@@ -1624,6 +1651,78 @@ pure @safe unittest // issue 18657
     auto r = choose(true, refRange(&["foo"][0]), "bar");
     assert(equal(r.save, "foo"));
     assert(equal(r, "foo"));
+}
+
+@safe unittest
+{
+    static void* p;
+    static struct R
+    {
+        void* q;
+        int front;
+        bool empty;
+        void popFront() {}
+        @property R save() { p = q; return this; }
+            // `p = q;` is only there to prevent inference of `scope return`.
+    }
+    R r;
+    choose(true, r, r).save;
+}
+
+// Make sure ChooseResult.save doesn't trust @system user code.
+@system unittest // copy is @system
+{
+    static struct R
+    {
+        int front;
+        bool empty;
+        void popFront() {}
+        this(this) @system {}
+        @property R save() { return R(front, empty); }
+    }
+    choose(true, R(), R()).save;
+    choose(true, [0], R()).save;
+    choose(true, R(), [0]).save;
+}
+@safe unittest // copy is @system
+{
+    static struct R
+    {
+        int front;
+        bool empty;
+        void popFront() {}
+        this(this) @system {}
+        @property R save() { return R(front, empty); }
+    }
+    static assert(!__traits(compiles, choose(true, R(), R()).save));
+    static assert(!__traits(compiles, choose(true, [0], R()).save));
+    static assert(!__traits(compiles, choose(true, R(), [0]).save));
+}
+@system unittest // .save is @system
+{
+    static struct R
+    {
+        int front;
+        bool empty;
+        void popFront() {}
+        @property R save() @system { return this; }
+    }
+    choose(true, R(), R()).save;
+    choose(true, [0], R()).save;
+    choose(true, R(), [0]).save;
+}
+@safe unittest // .save is @system
+{
+    static struct R
+    {
+        int front;
+        bool empty;
+        void popFront() {}
+        @property R save() @system { return this; }
+    }
+    static assert(!__traits(compiles, choose(true, R(), R()).save));
+    static assert(!__traits(compiles, choose(true, [0], R()).save));
+    static assert(!__traits(compiles, choose(true, R(), [0]).save));
 }
 
 /**
