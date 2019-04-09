@@ -1479,27 +1479,7 @@ if (func.length == 1 && isCallable!func)
     {
         template Get(size_t i)
         {
-            // `PT[i .. i+1]` declares a parameter with an arbitrary name.
-            // To avoid a name clash, generate local names that are distinct
-            // from the parameter name, and mix them in.
-            enum name = param_names[i];
-            enum args = "args" ~ (name == "args" ? "_" : "");
-            enum val = "val" ~ (name == "val" ? "_" : "");
-            enum ptr = "ptr" ~ (name == "ptr" ? "_" : "");
-            mixin("
-                // workaround scope escape check, see
-                // https://issues.dlang.org/show_bug.cgi?id=16582
-                // should use return scope once available
-                enum get = (PT[i .. i+1] " ~ args ~ ") @trusted
-                {
-                    // If the parameter is lazy, we force it to be evaluated
-                    // like this.
-                    auto " ~ val ~ " = " ~ args ~ "[0];
-                    auto " ~ ptr ~ " = &" ~ val ~ ";
-                        // workaround Bugzilla 16582
-                    return *" ~ ptr ~ ";
-                };
-            ");
+            enum get = (PT[i .. i + 1] param) => param;
             static if (is(typeof(get())))
                 enum Get = get();
             else
