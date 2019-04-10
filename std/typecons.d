@@ -2781,7 +2781,28 @@ Params:
     }
 
     /// ditto
+    string toString() const
+    {
+        import std.array : appender;
+        auto app = appender!string();
+        auto spec = singleSpec("%s");
+        toString(app, spec);
+        return app.data;
+    }
+
+    /// ditto
     void toString(W)(ref W writer, scope const ref FormatSpec!char fmt)
+    if (isOutputRange!(W, char))
+    {
+        import std.range.primitives : put;
+        if (isNull)
+            put(writer, "Nullable.null");
+        else
+            formatValue(writer, _value.payload, fmt);
+    }
+
+    /// ditto
+    void toString(W)(ref W writer, scope const ref FormatSpec!char fmt) const
     if (isOutputRange!(W, char))
     {
         import std.range.primitives : put;
@@ -2851,6 +2872,16 @@ Returns:
     Nullable!int a = 1;
     formattedWrite(app, "%s", a);
     assert(app.data == "1");
+}
+
+// Issue 19799
+@safe unittest
+{
+    import std.format : format;
+
+    const Nullable!string a = const(Nullable!string)();
+
+    format!"%s"(a);
 }
 
 /**
@@ -3291,6 +3322,7 @@ auto nullable(T)(T t)
 
     Nullable!int ni;
     assert(ni.to!string() == "Nullable.null");
+    assert((cast(const) ni).to!string() == "Nullable.null");
 
     struct Test { string s; }
     alias NullableTest = Nullable!Test;
@@ -3300,6 +3332,8 @@ auto nullable(T)(T t)
     assert(nt.to!string() == `Test("test")`);
     // test appender version
     assert(nt.toString() == `Test("test")`);
+    // test const version
+    assert((cast(const) nt).toString() == `const(Test)("test")`);
 
     NullableTest ntn = Test("null");
     assert(ntn.to!string() == `Test("null")`);
