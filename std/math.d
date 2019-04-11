@@ -158,6 +158,8 @@ version (AArch64)   version = ARM_Any;
 version (ARM)       version = ARM_Any;
 version (SPARC)     version = SPARC_Any;
 version (SPARC64)   version = SPARC_Any;
+version (RISCV32)   version = RISCV_Any;
+version (RISCV64)   version = RISCV_Any;
 
 version (D_InlineAsm_X86)
 {
@@ -4679,6 +4681,7 @@ private:
     // The Pentium SSE2 status register is 32 bits.
     // The ARM and PowerPC FPSCR is a 32-bit register.
     // The SPARC FSR is a 32bit register (64 bits for SPARC 7 & 8, but high bits are uninteresting).
+    // The RISC-V (32 & 64 bit) fcsr is 32-bit register.
     uint flags;
 
     version (CRuntime_Microsoft)
@@ -4888,6 +4891,10 @@ version (X86_Any)
     version = IeeeFlagsSupport;
 }
 else version (PPC_Any)
+{
+    version = IeeeFlagsSupport;
+}
+else version (RISCV_Any)
 {
     version = IeeeFlagsSupport;
 }
@@ -5130,6 +5137,21 @@ struct FloatingPointControl
                                  | inexactException,
         }
     }
+    else version (RISCV_Any)
+    {
+        enum : ExceptionMask
+        {
+            inexactException      = 0x01,
+            divByZeroException    = 0x02,
+            underflowException    = 0x04,
+            overflowException     = 0x08,
+            invalidException      = 0x10,
+            severeExceptions   = overflowException | divByZeroException
+                                 | invalidException,
+            allExceptions      = severeExceptions | underflowException
+                                 | inexactException,
+        }
+    }
     else version (X86_Any)
     {
         enum : ExceptionMask
@@ -5239,6 +5261,10 @@ private:
         alias ControlState = ulong;
     }
     else version (SystemZ)
+    {
+        alias ControlState = uint;
+    }
+    else version (RISCV_Any)
     {
         alias ControlState = uint;
     }
