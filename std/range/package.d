@@ -972,10 +972,12 @@ if (Ranges.length > 0 &&
             static if (allSatisfy!(isForwardRange, R))
                 @property auto save()
                 {
+                    import std.algorithm.mutation : move;
                     typeof(this) result = this;
                     foreach (i, Unused; R)
                     {
-                        result.source[i] = result.source[i].save;
+                        auto saved = result.source[i].save;
+                        move(saved, result.source[i]);
                     }
                     return result;
                 }
@@ -1380,6 +1382,14 @@ pure @safe nothrow @nogc unittest
     assert(chain(a, b).empty);
 }
 
+pure @safe unittest // issue 18657
+{
+    import std.algorithm.comparison : equal;
+    auto r = refRange(&["foo"][0]).chain("bar");
+    assert(equal(r.save, "foobar"));
+    assert(equal(r, "foobar"));
+}
+
 /**
 Choose one of two ranges at runtime depending on a Boolean condition.
 
@@ -1530,7 +1540,11 @@ private struct ChooseResult(R1, R2)
         @property auto save() return scope
         {
             auto result = this;
-            actOnChosen!((ref r) { r = r.save; })(result);
+            actOnChosen!((ref r) {
+                import std.algorithm.mutation : move;
+                auto saved = r.save;
+                move(saved, r);
+            })(result);
             return result;
         }
 
@@ -1616,6 +1630,14 @@ private struct ChooseResult(R1, R2)
                         return choose(false, Slice1.init, r[begin .. end]);
                 })(this, begin, end);
         }
+}
+
+pure @safe unittest // issue 18657
+{
+    import std.algorithm.comparison : equal;
+    auto r = choose(true, refRange(&["foo"][0]), "bar");
+    assert(equal(r.save, "foo"));
+    assert(equal(r, "foo"));
 }
 
 /**
@@ -1838,10 +1860,12 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
         static if (allSatisfy!(isForwardRange, staticMap!(Unqual, Rs)))
             @property auto save()
             {
+                import std.algorithm.mutation : move;
                 Result result = this;
                 foreach (i, Unused; Rs)
                 {
-                    result.source[i] = result.source[i].save;
+                    auto saved = result.source[i].save;
+                    move(saved, result.source[i]);
                 }
                 return result;
             }
@@ -1899,6 +1923,14 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
     }
 
     assert(interleave([1, 2, 3], 0).equal([1, 0, 2, 0, 3]));
+}
+
+pure @safe unittest
+{
+    import std.algorithm.comparison : equal;
+    auto r = roundRobin(refRange(&["foo"][0]), refRange(&["bar"][0]));
+    assert(equal(r.save, "fboaor"));
+    assert(equal(r.save, "fboaor"));
 }
 
 /**
@@ -3804,10 +3836,12 @@ if (isForwardRange!R && !isInfinite!R)
         /// ditto
         @property Cycle save()
         {
+            import std.algorithm.mutation : move;
             //No need to call _original.save, because Cycle never actually modifies _original
             Cycle ret = this;
             ret._original = _original;
-            ret._current =  _current.save;
+            auto saved =  _current.save;
+            move(saved, _current);
             return ret;
         }
     }
@@ -4118,6 +4152,14 @@ if (isStaticArray!R)
     import core.exception : AssertError;
     import std.exception : assertThrown;
     assertThrown!AssertError(cycle([0, 1, 2][0 .. 0]));
+}
+
+pure @safe unittest // issue 18657
+{
+    import std.algorithm.comparison : equal;
+    auto r = refRange(&["foo"][0]).cycle.take(4);
+    assert(equal(r.save, "foof"));
+    assert(equal(r.save, "foof"));
 }
 
 private alias lengthType(R) = typeof(R.init.length.init);

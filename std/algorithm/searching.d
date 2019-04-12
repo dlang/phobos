@@ -2684,7 +2684,7 @@ InputRange findAmong(alias pred = "a == b", InputRange, ForwardRange)(
     InputRange seq, ForwardRange choices)
 if (isInputRange!InputRange && isForwardRange!ForwardRange)
 {
-    for (; !seq.empty && find!pred(choices, seq.front).empty; seq.popFront())
+    for (; !seq.empty && find!pred(choices.save, seq.front).empty; seq.popFront())
     {
     }
     return seq;
@@ -2706,6 +2706,14 @@ if (isInputRange!InputRange && isForwardRange!ForwardRange)
     assert(findAmong(b, [ 4, 6, 7 ][]).empty);
     assert(findAmong!("a == b")(a, b).length == a.length - 2);
     assert(findAmong!("a == b")(b, [ 4, 6, 7 ][]).empty);
+}
+
+@system unittest // issue 19765
+{
+    import std.range.interfaces : inputRangeObject;
+    auto choices = inputRangeObject("b");
+    auto f = "foobar".findAmong(choices);
+    assert(f == "bar");
 }
 
 // findSkip
@@ -5009,8 +5017,10 @@ if (isInputRange!Range)
             ///
             @property Until save()
             {
+                import std.algorithm.mutation : move;
                 Until result = this;
-                result._input     = _input.save;
+                auto saved = _input.save;
+                move(saved, result._input);
                 result._sentinel  = _sentinel;
                 result._openRight = _openRight;
                 result._done      = _done;
@@ -5020,8 +5030,10 @@ if (isInputRange!Range)
             ///
             @property Until save()
             {
+                import std.algorithm.mutation : move;
                 Until result = this;
-                result._input     = _input.save;
+                auto saved = _input.save;
+                move(saved, result._input);
                 result._openRight = _openRight;
                 result._done      = _done;
                 return result;
@@ -5076,4 +5088,20 @@ if (isInputRange!Range)
     import std.algorithm.comparison : among, equal;
     auto s = "hello how\nare you";
     assert(equal(s.until!(c => c.among!('\n', '\r')), "hello how"));
+}
+
+pure @safe unittest // issue 18657
+{
+    import std.algorithm.comparison : equal;
+    import std.range : refRange;
+    {
+        auto r = refRange(&["foobar"][0]).until("bar");
+        assert(equal(r.save, "foo"));
+        assert(equal(r.save, "foo"));
+    }
+    {
+        auto r = refRange(&["foobar"][0]).until!(e => e == 'b');
+        assert(equal(r.save, "foo"));
+        assert(equal(r.save, "foo"));
+    }
 }
