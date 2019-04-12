@@ -975,9 +975,10 @@ if (Ranges.length > 0 &&
                     auto saveSource(size_t len)()
                     {
                         import std.typecons : tuple;
-                        static if (len == 0)
+                        static assert(len > 0);
+                        static if (len == 1)
                         {
-                            return tuple();
+                            return tuple(source[0].save);
                         }
                         else
                         {
@@ -1948,9 +1949,10 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
                 auto saveSource(size_t len)()
                 {
                     import std.typecons : tuple;
-                    static if (len == 0)
+                    static assert(len > 0);
+                    static if (len == 1)
                     {
-                        return tuple();
+                        return tuple(source[0].save);
                     }
                     else
                     {
