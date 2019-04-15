@@ -124,9 +124,10 @@ template all(alias pred = "a")
     {
         static assert(is(typeof(unaryFun!pred(range.front))),
                 "`" ~ pred.stringof[1..$-1] ~ "` isn't a unary predicate function for range.front");
-        import std.functional : not;
-
-        return find!(not!(unaryFun!pred))(range).empty;
+        foreach (ref e; range)
+            if (!unaryFun!pred(e))
+                return false;
+        return true;
     }
 }
 
@@ -171,7 +172,10 @@ template any(alias pred = "a")
     bool any(Range)(Range range)
     if (isInputRange!Range && is(typeof(unaryFun!pred(range.front))))
     {
-        return !find!pred(range).empty;
+        foreach (ref e; range)
+            if (unaryFun!pred(e))
+                return true;
+        return false;
     }
 }
 
