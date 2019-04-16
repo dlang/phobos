@@ -5594,203 +5594,100 @@ private template ContravariantRhsT(Rhs)
 
 mixin template ImplementOrdered(M...)
 {
-    //isAggregateType ? (support interface and union?)
     static assert(is(typeof(this) == struct) || is(typeof(this) == class));
 
-    static if (is(typeof(this) == class))
+    int opCmp(ContravariantRhsT!(typeof(this)) rhso)
     {
-        override
-        int opCmp(ContravariantRhsT!(typeof(this)) rhso)
+        int compare(U1, U2)(U1 u1, U2 u2)
         {
-            int compare(U1, U2)(U1 u1, U2 u2)
+            int r = 0;
+            static if (__traits(compiles, __cmp(u1, u2)))
             {
-                int r = 0;
-                static if (__traits(compiles, __cmp(u1, u2)))
+                r = __cmp(u1, u2);
+            }
+            else static if (__traits(compiles, u1.opCmp(u2)))
+            {
+                r = u1.opCmp(u2);
+            }
+            else static if (__traits(compiles, u1.opCmp((() @trusted => cast(Unqual!U2) u2)())) &&
+                            is(U2 == class))
+            {
+                // Required because of `object.opCmp(Object)` doesn't accept qualified types.
+                r = u1.opCmp((() @trusted => cast(Unqual!U2) u2)());
+            }
+            else static if (__traits(compiles, u1 < u2))
+            {
+                if (u1 != u2)
+                    r = u1 < u2 ? -1 : 1;
+            }
+            else
+            {
+                // TODO: fix this legacy bad behavior, see
+                // https://issues.dlang.org/show_bug.cgi?id=17244
+                static assert(is(U1 == U2), "Internal error.");
+                import core.stdc.string : memcmp;
+                r = (() @trusted => memcmp(&u1, &u2, U1.sizeof))();
+            }
+            return r;
+        }
+
+        alias T = typeof(this);
+        static if (is(T == class))
+        {
+            auto rhs = (() @trusted => cast(T) rhso)();
+            if (rhs is null) return 1;
+        }
+        else
+        {
+            alias rhs = rhso;
+        }
+
+        static if (M.length == 0)
+        {
+            alias U = GetAllFields!T;
+        }
+        else
+        {
+            alias U = M;
+        }
+        enum len = U.length;
+
+        int r = 0;
+        static foreach (i; 0 .. len)
+        {{
+
+            static if (is(typeof(U[i]) == string))
+            {
+                enum fieldName = U[i];
+                // If assert fails, propagate compiler error
+                static assert(is(typeof(__traits(getMember, this, fieldName))),
+                              typeof(__traits(getMember, this, fieldName)));
+
+                static if (((i + 1) < len) && !is(typeof(U[i + 1]) == string))
                 {
-                    r = __cmp(u1, u2);
-                }
-                else static if (__traits(compiles, u1.opCmp(u2)))
-                {
-                    r = u1.opCmp(u2);
-                }
-                else static if (__traits(compiles, u1.opCmp((() @trusted => cast(Unqual!U2) u2)())) &&
-                                is(U2 == class))
-                {
-                    // Required because of `object.opCmp(Object)` doesn't accept qualified types.
-                    r = u1.opCmp((() @trusted => cast(Unqual!U2) u2)());
-                }
-                else static if (__traits(compiles, u1 < u2))
-                {
-                    if (u1 != u2)
-                        r = u1 < u2 ? -1 : 1;
+                    // If the next element is not a string, then it must be the comparator
+                    alias compareFun = U[i + 1];
                 }
                 else
                 {
-                    // TODO: fix this legacy bad behavior, see
-                    // https://issues.dlang.org/show_bug.cgi?id=17244
-                    static assert(is(U1 == U2), "Internal error.");
-                    import core.stdc.string : memcmp;
-                    r = (() @trusted => memcmp(&u1, &u2, U1.sizeof))();
+                    alias compareFun = compare;
                 }
-                return r;
-            }
 
-            alias T = typeof(this);
-            static if (is(T == class))
-            {
-                auto rhs = (() @trusted => cast(T) rhso)();
-                if (rhs is null) return 1;
-            }
-            else
-            {
-                alias rhs = rhso;
-            }
+                alias thisMember = __traits(getMember, this, fieldName);
+                alias rhsMember = __traits(getMember, rhs, fieldName);
 
-            static if (M.length == 0)
-            {
-                alias U = GetAllFields!T;
-            }
-            else
-            {
-                alias U = M;
-            }
-            enum len = U.length;
+                // If we can't call the function with the args, throw the compiler error
+                static assert(is(typeof({compareFun(thisMember, rhsMember);})),
+                        typeof({compareFun(thisMember, rhsMember);}));
 
-            int r = 0;
-            import std.range : iota;
-            //static foreach (i; 0 .. len)
-            static foreach (i; iota(0, len))
-            {{
-
-                static if (is(typeof(U[i]) == string))
+                r = compareFun(__traits(getMember, this, fieldName), __traits(getMember, rhs, fieldName));
+                if (r != 0)
                 {
-                    enum fieldName = U[i];
-                    // If assert fails, propagate compiler error
-                    static assert(is(typeof(__traits(getMember, this, fieldName))),
-                                  typeof(__traits(getMember, this, fieldName)));
-
-                    static if (((i + 1) < len) && !is(typeof(U[i + 1]) == string))
-                    {
-                        // If the next element is not a string, then it must be the comparator
-                        alias compareFun = U[i + 1];
-                    }
-                    else
-                    {
-                        alias compareFun = compare;
-                    }
-
-                    alias thisMember = __traits(getMember, this, fieldName);
-                    alias rhsMember = __traits(getMember, rhs, fieldName);
-
-                    // If we can't call the function with the args, throw the compiler error
-                    static assert(is(typeof({compareFun(thisMember, rhsMember);})),
-                            typeof({compareFun(thisMember, rhsMember);}));
-
-                    r = compareFun(__traits(getMember, this, fieldName), __traits(getMember, rhs, fieldName));
-                    if (r != 0)
-                    {
-                        return r;
-                    }
+                    return r;
                 }
-            }}
-            return r;
-        }
-    }
-    else
-    {
-        int opCmp(ContravariantRhsT!(typeof(this)) rhso)
-        {
-            int compare(U1, U2)(U1 u1, U2 u2)
-            {
-                int r = 0;
-                static if (__traits(compiles, __cmp(u1, u2)))
-                {
-                    r = __cmp(u1, u2);
-                }
-                else static if (__traits(compiles, u1.opCmp(u2)))
-                {
-                    r = u1.opCmp(u2);
-                }
-                else static if (__traits(compiles, u1.opCmp((() @trusted => cast(Unqual!U2) u2)())) &&
-                                is(U2 == class))
-                {
-                    // Required because of `object.opCmp(Object)` doesn't accept qualified types.
-                    r = u1.opCmp((() @trusted => cast(Unqual!U2) u2)());
-                }
-                else static if (__traits(compiles, u1 < u2))
-                {
-                    if (u1 != u2)
-                        r = u1 < u2 ? -1 : 1;
-                }
-                else
-                {
-                    // TODO: fix this legacy bad behavior, see
-                    // https://issues.dlang.org/show_bug.cgi?id=17244
-                    static assert(is(U1 == U2), "Internal error.");
-                    import core.stdc.string : memcmp;
-                    r = (() @trusted => memcmp(&u1, &u2, U1.sizeof))();
-                }
-                return r;
             }
-
-            alias T = typeof(this);
-            static if (is(T == class))
-            {
-                auto rhs = (() @trusted => cast(T) rhso)();
-                if (rhs is null) return 1;
-            }
-            else
-            {
-                alias rhs = rhso;
-            }
-
-            static if (M.length == 0)
-            {
-                alias U = GetAllFields!T;
-            }
-            else
-            {
-                alias U = M;
-            }
-            enum len = U.length;
-
-            int r = 0;
-            static foreach (i; 0 .. len)
-            {{
-
-                static if (is(typeof(U[i]) == string))
-                {
-                    enum fieldName = U[i];
-                    // If assert fails, propagate compiler error
-                    static assert(is(typeof(__traits(getMember, this, fieldName))),
-                                  typeof(__traits(getMember, this, fieldName)));
-
-                    static if (((i + 1) < len) && !is(typeof(U[i + 1]) == string))
-                    {
-                        // If the next element is not a string, then it must be the comparator
-                        alias compareFun = U[i + 1];
-                    }
-                    else
-                    {
-                        alias compareFun = compare;
-                    }
-
-                    alias thisMember = __traits(getMember, this, fieldName);
-                    alias rhsMember = __traits(getMember, rhs, fieldName);
-
-                    // If we can't call the function with the args, throw the compiler error
-                    static assert(is(typeof({compareFun(thisMember, rhsMember);})),
-                            typeof({compareFun(thisMember, rhsMember);}));
-
-                    r = compareFun(__traits(getMember, this, fieldName), __traits(getMember, rhs, fieldName));
-                    if (r != 0)
-                    {
-                        return r;
-                    }
-                }
-            }}
-            return r;
-        }
+        }}
+        return r;
     }
 }
 
@@ -5798,12 +5695,11 @@ mixin template ImplementOrdered(M...)
 {
     class Widget
     {
-        //@safe
-        @safe @nogc
-    //const @nogc nothrow pure @safe scope
+        override const /*@nogc*/ nothrow pure @safe scope
         {
             mixin ImplementOrdered;
             mixin ImplementEquals;
+            mixin ImplementHash;
         }
         int x;
         int y;
@@ -5817,69 +5713,51 @@ mixin template ImplementOrdered(M...)
 
     class TextWidget : Widget
     {
-        @safe @nogc
-    //const @nogc nothrow pure @safe scope
+        override const /*@nogc*/ nothrow pure @safe scope
         {
             mixin ImplementOrdered;
             mixin ImplementEquals;
+            mixin ImplementHash;
         }
         this(int x, int y) { super(x, y); }
     }
 
-    auto w1 = new Widget(10, 20);
-    auto w2 = new TextWidget(10, 21);
-    assert(w1.opCmp(w2) != w2.opCmp(w1));
-    assert((w1 < w2) != (w2 < w1));
-    assert((() @trusted => w1 != w2)());
-    assert(!w1.opEquals(w2));
-    Widget w3;
-    assert(!(w1 < w3) && (w1 > w3) && (w1.opCmp(w3) == 1));
-}
-
-@safe unittest
-{
-    class Widget
-    {
-        @safe
-        {
-            mixin ImplementOrdered!("x");
-        }
-        //mixin ImplementEquals!("x");
-        int x;
-        int y;
-
-        this(int x, int y)
-        {
-            this.x = x;
-            this.y = y;
-        }
-    }
-
-    class TextWidget : Widget
-    {
-        @safe
-        {
-            mixin ImplementOrdered!("x");
-        }
-        //mixin ImplementEquals!("x");
-        this(int x, int y) { super(x, y); }
-    }
+    //auto w1 = new Widget(10, 20);
+    //auto w2 = new TextWidget(10, 21);
+    //assert(w1.opCmp(w2) != w2.opCmp(w1));
+    //assert((w1 < w2) != (w2 < w1));
+    //assert((() @trusted => w1 != w2)());
+    //assert(!w1.opEquals(w2));
+    //Widget w3;
+    //assert(!(w1 < w3) && (w1 > w3) && (w1.opCmp(w3) == 1));
 
     auto w1 = new Widget(10, 20);
-    auto w2 = new TextWidget(10, 21);
+    auto w2 = new Widget(10, 20);
     assert(w1.opCmp(w2) == 0);
-    assert(w1.opCmp(w2) != w2.opCmp(w1)); // TextWidget is not impl conv to Widget
-    //assert(w1.equals(w2));
-    //assert(!w2.equals(w1)); // TextWidget is not impl conv to Widget
+
+    auto w3 = new TextWidget(10, 21);
+    assert(w1.opCmp(w3) != w3.opCmp(w1));
+    assert((w1 < w3) != (w3 < w1));
+
+    Widget w4;
+    assert(w4 is null);
+    assert(w1.opCmp(w4) != 0);
+
+    assert(w1.opEquals(w2));
+    assert(w1.toHash() == w2.toHash());
+    assert(!w1.opEquals(w3) && !w3.opEquals(w1));
+    assert(w1.toHash() != w3.toHash());
 }
 
 @safe unittest
 {
     class Widget
     {
-        @safe
+        override const /*@nogc*/ nothrow pure @safe scope
         {
-            mixin ImplementOrdered!("x", (int a, int b) => a - b);
+            mixin ImplementOrdered!("x");
+            mixin ImplementEquals!("x");
+            mixin ImplementHash!("x");
         }
         int x;
         int y;
@@ -5893,9 +5771,11 @@ mixin template ImplementOrdered(M...)
 
     class TextWidget : Widget
     {
-        @safe
+        override const /*@nogc*/ nothrow pure @safe scope
         {
-            mixin ImplementOrdered!("x", (int a, int b) => a - b);
+            mixin ImplementOrdered!("x");
+            mixin ImplementEquals!("x");
+            mixin ImplementHash!("x");
         }
         this(int x, int y) { super(x, y); }
     }
@@ -5904,6 +5784,70 @@ mixin template ImplementOrdered(M...)
     auto w2 = new TextWidget(10, 21);
     assert(w1.opCmp(w2) == 0);
     assert(w1.opCmp(w2) != w2.opCmp(w1)); // TextWidget is not impl conv to Widget
+    assert(w1.opEquals(w2));
+    assert(!w2.opEquals(w1)); // TextWidget is not impl conv to Widget
+    assert(w1.toHash() == w2.toHash());
+}
+
+@safe unittest
+{
+    class Widget
+    {
+        static int cmp(int a, int b) { return a - b + 1; };
+        static bool eq(int a, int b) { return (a - b + 1) == 0; };
+        static size_t hashfn(int a, size_t seed) { return hashOf(a, seed); }
+
+        override const /*@nogc*/ nothrow pure @safe scope
+        {
+            mixin ImplementOrdered!("x", "y", cmp);
+            mixin ImplementEquals!("x", "y", eq);
+            mixin ImplementHash!("x", hashfn);
+        }
+        int x;
+        int y;
+        int z;
+
+        this(int x, int y, int z)
+        {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+        }
+    }
+
+    auto w1 = new Widget(10, 20, 30);
+    auto w2 = new Widget(10, 21, 31);
+    assert(w1.opCmp(w2) == 0);
+    assert(w1.opEquals(w2));
+    assert(w1.toHash() == w2.toHash());
+}
+
+@safe unittest
+{
+    // Use properties instead of fields
+    class Test
+    {
+
+        override const /*@nogc*/ nothrow pure @safe scope
+        {
+            mixin ImplementOrdered!"length";
+            mixin ImplementEquals!"length";
+            mixin ImplementHash!"length";
+        }
+
+        int x;
+
+        const pure nothrow @safe @nogc scope
+        int length() { return 42; }
+
+        this(int x) { this.x = x; }
+    }
+
+    auto t1 = new Test(1);
+    auto t2 = new Test(2);
+    assert((t1 < t2) == 0);
+    assert((() @trusted => t1 == t2)());
+    assert(t1.toHash() == t2.toHash());
 }
 
 template GetAllFields(T)
@@ -5930,6 +5874,18 @@ template GetAllFields(T)
         }
     }
     enum GetAllFields = Filter!(FilterPred, __traits(allMembers, T));
+}
+
+@safe unittest
+{
+    struct S
+    {
+        int x, y;
+        float z;
+        void foo();
+    }
+    static assert(GetAllFields!S == AliasSeq!("x", "y", "z"));
+    static assert(GetAllFieldsExcept!(S, "y") == AliasSeq!("x", "z"));
 }
 
 template GetAllFieldsExcept(T, M...)
@@ -5962,6 +5918,11 @@ mixin template ImplementEqualsExcept(M...)
     mixin ImplementEquals!(GetAllFieldsExcept!(typeof(this), M));
 }
 
+mixin template ImplementHashExcept(M...)
+{
+    mixin ImplementHash!(GetAllFieldsExcept!(typeof(this), M));
+}
+
 @safe unittest
 {
     class Book
@@ -5983,11 +5944,12 @@ mixin template ImplementEqualsExcept(M...)
             this.format = format;
         }
 
-        @safe
+        override const /*@nogc*/ nothrow pure @safe scope
         {
             mixin ImplementOrderedExcept!("format");
+            mixin ImplementEqualsExcept!("format");
+            mixin ImplementHashExcept!("format");
         }
-        //mixin ImplementEqualsExcept!("format");
     }
 
     auto b1 = new Book(12345, Book.BookFormat.pdf);
@@ -5996,14 +5958,9 @@ mixin template ImplementEqualsExcept(M...)
     assert(b1.opCmp(b2) == 0);
     assert(b1.format != b2.format);
     assert((b1 < b2) == 0);
-    auto r = b1 < b2;
-    //assert(b1.equals(b2));
-
-    // Compare through __cmp(Object, Object)
-    //assert(__cmp(b1, b2) == 0);
-    //auto po = new ProtoObject();
-    //assert(__cmp(b1, po) == 1);
-    //assert(__cmp(po, b1) == -1);
+    assert(b1.opEquals(b2));
+    assert((() @trusted => b1 == b2)());
+    assert(b1.toHash() == b2.toHash());
 }
 
 @safe unittest
@@ -6013,6 +5970,7 @@ mixin template ImplementEqualsExcept(M...)
         override @safe
         {
             mixin ImplementOrdered;
+            mixin ImplementEquals;
         }
         int x;
         int y;
@@ -6029,6 +5987,7 @@ mixin template ImplementEqualsExcept(M...)
         override @safe
         {
             mixin ImplementOrdered;
+            mixin ImplementEquals;
         }
         Widget w;
 
@@ -6039,6 +5998,7 @@ mixin template ImplementEqualsExcept(M...)
     auto co2 = new Composer(new Widget(10, 20));
     //assert(__cmp(c1, c2) == 0);
     assert((co1 < co2) == 0);
+    assert((() @trusted => co1 == co2)());
 
     struct SComposer
     {
@@ -6054,35 +6014,34 @@ mixin template ImplementEqualsExcept(M...)
     auto sco1 = SComposer(new Widget(10, 20));
     auto sco2 = SComposer(new Widget(10, 20));
     assert((sco1 < sco2) == 0);
+    assert((() @trusted => sco1 == sco2)());
 }
 
 mixin template ImplementEquals(M...)
 {
-    //isAggregateType ? (support interface and union?)
     static assert(is(typeof(this) == struct) || is(typeof(this) == class));
 
-    static if (is(typeof(this) == class))
-    {
-        override
     bool opEquals(ContravariantRhsT!(typeof(this)) rhso)
     {
-        bool compareEqual(U1, U2)(const U1 u1, const U2 u2)
+        // TODO EDI: removing @safe infers @system. Why?
+        @safe
+        static bool compareEqual(U1, U2)(const U1 u1, const U2 u2)
         {
             static if (__traits(compiles, __equals(u1, u2)))
             {
-                auto r = __equals(u1, u2);
+                bool r = __equals(u1, u2);
             }
             else static if (__traits(compiles, u1.equals(u2)))
             {
-                auto r = u1.equals(u2);
+                bool r = u1.equals(u2);
             }
             else static if (__traits(compiles, u1.opEquals(u2)))
             {
-                auto r = u1.opEquals(u2);
+                bool r = u1.opEquals(u2);
             }
             else static if (__traits(compiles, u1 == u2))
             {
-                auto r = u1 == u2;
+                bool r = u1 == u2;
             }
             else
             {
@@ -6090,9 +6049,9 @@ mixin template ImplementEquals(M...)
                 // https://issues.dlang.org/show_bug.cgi?id=17244
                 static assert(is(U1 == U2), "Internal error.");
                 import core.stdc.string : memcmp;
-                auto r = (() @trusted => memcmp(&u1, &u2, U1.sizeof))();
+                bool r = (() @trusted => cast(bool) memcmp(&u1, &u2, U1.sizeof))();
             }
-            return r;
+            return (() @trusted => cast(bool) r)();
         }
 
         alias T = typeof(this);
@@ -6117,7 +6076,7 @@ mixin template ImplementEquals(M...)
         }
         enum len = U.length;
 
-        bool r = true;
+        size_t r = 0;
         static foreach (i; 0 .. len)
         {{
 
@@ -6154,102 +6113,62 @@ mixin template ImplementEquals(M...)
         }}
         return r;
     }
-    }
-    else
-    {
-    bool opEquals(ContravariantRhsT!(typeof(this)) rhso)
-    {
-        bool compareEqual(U1, U2)(const U1 u1, const U2 u2)
-        {
-            static if (__traits(compiles, __equals(u1, u2)))
-            {
-                auto r = __equals(u1, u2);
-            }
-            else static if (__traits(compiles, u1.equals(u2)))
-            {
-                auto r = u1.equals(u2);
-            }
-            else static if (__traits(compiles, u1.opEquals(u2)))
-            {
-                auto r = u1.opEquals(u2);
-            }
-            else static if (__traits(compiles, u1 == u2))
-            {
-                auto r = u1 == u2;
-            }
-            else
-            {
-                // TODO: fix this legacy bad behavior, see
-                // https://issues.dlang.org/show_bug.cgi?id=17244
-                static assert(is(U1 == U2), "Internal error.");
-                import core.stdc.string : memcmp;
-                auto r = (() @trusted => memcmp(&u1, &u2, U1.sizeof))();
-            }
-            return r;
-        }
-
-        alias T = typeof(this);
-        static if (is(T == class))
-        {
-            if (this is rhso) return 1;
-            auto rhs = (() @trusted => cast(T) rhso)();
-            if (rhs is null) return 0;
-        }
-        else
-        {
-            alias rhs = rhso;
-        }
-
-        static if (M.length == 0)
-        {
-            alias U = GetAllFields!T;
-        }
-        else
-        {
-            alias U = M;
-        }
-        enum len = U.length;
-
-        bool r = true;
-        static foreach (i; 0 .. len)
-        {{
-
-            static if (is(typeof(U[i]) == string))
-            {
-                enum fieldName = U[i];
-                // If assert fails, propagate compiler error
-                static assert(is(typeof(__traits(getMember, this, fieldName))),
-                              typeof(__traits(getMember, this, fieldName)));
-
-                static if (((i + 1) < len) && !is(typeof(U[i + 1]) == string))
-                {
-                    // If the next element is not a string, then it must be the comparator
-                    alias compareFun = U[i + 1];
-                }
-                else
-                {
-                    alias compareFun = compareEqual;
-                }
-
-                alias thisMember = __traits(getMember, this, fieldName);
-                alias rhsMember = __traits(getMember, rhs, fieldName);
-
-                // If we can't call the function with the args, throw the compiler error
-                static assert(is(typeof({compareFun(thisMember, rhsMember);})),
-                        typeof({compareFun(thisMember, rhsMember);}));
-
-                r = compareFun(__traits(getMember, this, fieldName), __traits(getMember, rhs, fieldName));
-                if (!r)
-                {
-                    return r;
-                }
-            }
-        }}
-        return r;
-    }
-    }
-
 }
+
+mixin template ImplementHash(M...)
+{
+    static assert(is(typeof(this) == struct) || is(typeof(this) == class));
+
+    size_t toHash()
+    {
+        alias T = typeof(this);
+
+        static if (M.length == 0)
+        {
+            alias U = GetAllFields!T;
+        }
+        else
+        {
+            alias U = M;
+        }
+        enum len = U.length;
+
+        bool r = true;
+        static foreach (i; 0 .. len)
+        {{
+
+            static if (is(typeof(U[i]) == string))
+            {
+                enum fieldName = U[i];
+                // If assert fails, propagate compiler error
+                static assert(is(typeof(__traits(getMember, this, fieldName))),
+                              typeof(__traits(getMember, this, fieldName)));
+
+                static if (((i + 1) < len) && !is(typeof(U[i + 1]) == string))
+                {
+                    // If the next element is not a string, then it must be the comparator
+                    alias hashFun = U[i + 1];
+                }
+                else
+                {
+                    //import core.internal.hash : hashOf;
+                    //return core.internal.hash.hashOf(arg, seed);
+                    alias hashFun = hashOf;
+                }
+
+                alias thisMember = __traits(getMember, this, fieldName);
+
+                // If we can't call the function with the args, throw the compiler error
+                static assert(is(typeof({hashFun(thisMember, r);})),
+                        typeof({hashFun(thisMember, r);}));
+
+                r = hashFun(__traits(getMember, this, fieldName), r);
+            }
+        }}
+        return r;
+    }
+}
+
 
 // End addition
 
