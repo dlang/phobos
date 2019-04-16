@@ -1,0 +1,5 @@
+Added curry to std.functional
+
+Converts a function of multiple parameters to a function of 1 parameter that
+returns a function of 1 parameter... until it runs out of parameters and
+evaluates the function.  Essentially:  f(x, y, z) == curry(f)(x)(y)(z)

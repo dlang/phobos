@@ -36,6 +36,10 @@ $(TR $(TH Function Name) $(TH Description)
         $(TD Creates a function that binds the first argument of a given function
         to a given value.
     ))
+    $(TR $(TD $(LREF curry))
+        $(TD Converts a multi-argument function into a series of single-argument
+        functions.  f(x, y) == curry(f)(x)(y)
+    ))
     $(TR $(TD $(LREF reverseArgs))
         $(TD Predicate that reverses the order of its arguments.
     ))
@@ -856,6 +860,152 @@ template partial(alias fun, alias arg)
     auto result2 = partialDelegate(4)(2);
     assert(result2 == 1.5f);
 }
+
+/**
+Takes a function of (potentially) many arguments, and returns a function taking
+one argument and returns a callable taking the rest.  f(x, y) == curry(f)(x)(y)
+
+Params:
+    F = a function taking at least one argument
+    t = a callable object whose opCall takes at least 1 object
+Returns:
+    A single parameter callable object
+*/
+template curry(alias F)
+{
+    //inspired from the implementation from Artur Skawina here:
+    //https://forum.dlang.org/post/mailman.1626.1340110492.24740.digitalmars-d@puremagic.com
+    //This implementation stores a copy of all filled in arguments with each curried result
+    //this way, the curried functions are independent and don't share any references
+    //eg: auto fc = curry!f;  auto fc1 = fc(1); auto fc2 = fc(2); fc1(3) != fc2(3)
+    import std.traits : isCallable;
+    static if (isCallable!F)
+    {
+        auto curry()
+        {
+            import std.traits : Parameters;
+            alias FParams = Parameters!F;
+
+            struct CurryImpl(size_t N)
+            {
+                FParams[0 .. N] storedArguments;
+                static if (N > 0)
+                {
+                    this(const ref CurryImpl!(N-1) prev, auto ref FParams[N] arg)
+                    {
+                        static foreach (i; 0 .. N-1)
+                        {
+                            storedArguments[i] = prev.storedArguments[i];
+                        }
+                        storedArguments[N-1] = arg;
+                    }
+                }
+
+                auto opCall(auto ref FParams[N] arg) const
+                {
+                    static if (N == FParams.length -1)
+                    {
+                        return F(storedArguments, arg);
+                    }
+                    else
+                    {
+                        return CurryImpl!(N+1)(this, arg);
+                    }
+                }
+            }
+            CurryImpl!0 result;
+            return result;
+        }
+    }
+}
+
+///
+pure @safe nothrow unittest
+{
+    int f(int x, int y, int z)
+    {
+        return x + y + z;
+    }
+    auto cf = curry!f;
+    auto cf1 = cf(1);
+    auto cf2 = cf(2);
+
+    assert(cf1(2)(3) == f(1, 2, 3));
+    assert(cf2(2)(3) == f(2, 2, 3));
+}
+
+///ditto
+auto curry(T)(T t)
+{
+    alias toc = t.opCall;
+    auto fun(Parameters!toc args)
+    {
+        return t(args);
+    }
+    return curry!fun;
+}
+
+///
+pure @safe @nogc nothrow unittest
+{
+    //works with callable structs too
+    struct S
+    {
+        int w;
+        int opCall(int x, int y, int z)
+        {
+            return w + x + y + z;
+        }
+    }
+
+    S s;
+    s.w = 5;
+
+    auto cs = curry(s);
+    auto cs1 = cs(1);
+    auto cs2 = cs(2);
+
+    assert(cs1(2)(3) == s(1, 2, 3));
+    assert(cs1(2)(3) == (1 + 2 + 3 + 5));
+    assert(cs2(2)(3) ==s(2, 2, 3));
+}
+
+
+@safe pure nothrow unittest
+{
+    //currying a single argument function does nothing
+    int pork(int a){ return a*2;}
+    auto curryPork = curry!pork;
+    assert(curryPork(0) == pork(0));
+    assert(curryPork(1) == pork(1));
+    assert(curryPork(-1) == pork(-1));
+    assert(curryPork(1000) == pork(1000));
+
+    //test 2 argument function
+    int mixedVeggies(int a, int b)
+    {
+        return a + b;
+    }
+
+    auto mixedCurry = curry!mixedVeggies;
+    assert(mixedCurry(10)(20) == mixedVeggies(10,20));
+    assert(mixedCurry(100)(200) == mixedVeggies(100,200));
+
+    //struct with opCall
+    struct S
+    {
+        int opCall(int x, int y, int z) const pure nothrow @nogc
+        {
+            return x*y*z;
+        }
+    }
+
+    S s;
+    auto curriedStruct = curry(s);
+    assert(curriedStruct(1)(2)(3) == s(1, 2, 3));
+    assert(curriedStruct(300)(20)(10) == s(300, 20, 10));
+}
+
 
 /**
 Takes multiple functions and adjoins them together.
