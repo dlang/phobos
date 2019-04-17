@@ -1411,7 +1411,7 @@ void moveEmplace(T)(ref T source, ref T target) @system
                 memset(&source, 0, sz);
             else
             {
-                const init = T.init;
+                const T init;
                 memcpy(&source, &init, sz);
             }
         }
