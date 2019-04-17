@@ -972,12 +972,21 @@ if (Ranges.length > 0 &&
             static if (allSatisfy!(isForwardRange, R))
                 @property auto save()
                 {
-                    typeof(this) result = this;
-                    foreach (i, Unused; R)
+                    auto saveSource(size_t len)()
                     {
-                        result.source[i] = result.source[i].save;
+                        import std.typecons : tuple;
+                        static assert(len > 0);
+                        static if (len == 1)
+                        {
+                            return tuple(source[0].save);
+                        }
+                        else
+                        {
+                            return saveSource!(len - 1)() ~
+                                tuple(source[len - 1].save);
+                        }
                     }
-                    return result;
+                    return Result(saveSource!(R.length).expand);
                 }
 
             void popFront()
@@ -1332,7 +1341,7 @@ pure @safe nothrow unittest
     // pair of DummyRange types, in either order.
 
     foreach (DummyType1; AllDummyRanges)
-    {
+    (){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
         DummyType1 dummy1;
         foreach (DummyType2; AllDummyRanges)
         {
@@ -1369,7 +1378,7 @@ pure @safe nothrow unittest
                 static assert(!hasLvalueElements!(typeof(myChain)));
             }
         }
-    }
+    }();
 }
 
 pure @safe nothrow @nogc unittest
@@ -1378,6 +1387,14 @@ pure @safe nothrow @nogc unittest
     immutable(Foo)[] a;
     immutable(Foo)[] b;
     assert(chain(a, b).empty);
+}
+
+pure @safe unittest // issue 18657
+{
+    import std.algorithm.comparison : equal;
+    auto r = refRange(&["foo"][0]).chain("bar");
+    assert(equal(r.save, "foobar"));
+    assert(equal(r, "foobar"));
 }
 
 /**
@@ -1495,9 +1512,9 @@ private struct ChooseResult(R1, R2)
         || hasElaborateCopyConstructor!R2)
     this(this)
     {
-        this.actOnChosen!((ref r) {
+        actOnChosen!((ref r) {
                 static if (hasElaborateCopyConstructor!(typeof(r))) r.__postblit();
-            });
+            })(this);
     }
 
     static if (hasElaborateDestructor!R1 || hasElaborateDestructor!R2)
@@ -1527,12 +1544,39 @@ private struct ChooseResult(R1, R2)
     }
 
     static if (isForwardRange!R1 && isForwardRange!R2)
+    {
+        private auto systemSave() return scope
+        {
+            return r1Chosen
+                ? ChooseResult(r1Chosen, r1.save, r2)
+                : ChooseResult(r1Chosen, r1, r2.save);
+        }
+        private auto trustedSave()() @trusted return scope
+        {
+            /*
+            Unsafe operations in this function:
+            - copying r1/r2 (postblit or copy constructor),
+            - r1.save/r2.save,
+            - accessing the union of r1 and r2.
+            The first two cannot be trusted, because they involve calling user
+            code. So they're only called via @safe wrappers.
+            The last one can be trusted. We're not returning a reference into
+            the union.
+            */
+            R safeSave(R)(ref R r) @safe { return r.save; }
+            R safeCopy(R)(ref R r) @safe { return r; }
+            return r1Chosen
+                ? ChooseResult(r1Chosen, safeSave(r1), safeCopy(r2))
+                : ChooseResult(r1Chosen, safeCopy(r1), safeSave(r2));
+        }
         @property auto save() return scope
         {
-            auto result = this;
-            actOnChosen!((ref r) { r = r.save; })(result);
-            return result;
+            static if (__traits(compiles, trustedSave()))
+                return trustedSave();
+            else
+                return systemSave();
         }
+    }
 
     @property void front(T)(T v)
     if (is(typeof({ r1.front = v; r2.front = v; })))
@@ -1616,6 +1660,86 @@ private struct ChooseResult(R1, R2)
                         return choose(false, Slice1.init, r[begin .. end]);
                 })(this, begin, end);
         }
+}
+
+pure @safe unittest // issue 18657
+{
+    import std.algorithm.comparison : equal;
+    auto r = choose(true, refRange(&["foo"][0]), "bar");
+    assert(equal(r.save, "foo"));
+    assert(equal(r, "foo"));
+}
+
+@safe unittest
+{
+    static void* p;
+    static struct R
+    {
+        void* q;
+        int front;
+        bool empty;
+        void popFront() {}
+        @property R save() { p = q; return this; }
+            // `p = q;` is only there to prevent inference of `scope return`.
+    }
+    R r;
+    choose(true, r, r).save;
+}
+
+// Make sure ChooseResult.save doesn't trust @system user code.
+@system unittest // copy is @system
+{
+    static struct R
+    {
+        int front;
+        bool empty;
+        void popFront() {}
+        this(this) @system {}
+        @property R save() { return R(front, empty); }
+    }
+    choose(true, R(), R()).save;
+    choose(true, [0], R()).save;
+    choose(true, R(), [0]).save;
+}
+@safe unittest // copy is @system
+{
+    static struct R
+    {
+        int front;
+        bool empty;
+        void popFront() {}
+        this(this) @system {}
+        @property R save() { return R(front, empty); }
+    }
+    static assert(!__traits(compiles, choose(true, R(), R()).save));
+    static assert(!__traits(compiles, choose(true, [0], R()).save));
+    static assert(!__traits(compiles, choose(true, R(), [0]).save));
+}
+@system unittest // .save is @system
+{
+    static struct R
+    {
+        int front;
+        bool empty;
+        void popFront() {}
+        @property R save() @system { return this; }
+    }
+    choose(true, R(), R()).save;
+    choose(true, [0], R()).save;
+    choose(true, R(), [0]).save;
+}
+@safe unittest // .save is @system
+{
+    static struct R
+    {
+        int front;
+        bool empty;
+        void popFront() {}
+        @property R save() @system { return this; }
+    }
+    static assert(!__traits(compiles, choose(true, R(), R()).save));
+    static assert(!__traits(compiles, choose(true, [0], R()).save));
+    static assert(!__traits(compiles, choose(true, R(), [0]).save));
 }
 
 /**
@@ -1838,12 +1962,21 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
         static if (allSatisfy!(isForwardRange, staticMap!(Unqual, Rs)))
             @property auto save()
             {
-                Result result = this;
-                foreach (i, Unused; Rs)
+                auto saveSource(size_t len)()
                 {
-                    result.source[i] = result.source[i].save;
+                    import std.typecons : tuple;
+                    static assert(len > 0);
+                    static if (len == 1)
+                    {
+                        return tuple(source[0].save);
+                    }
+                    else
+                    {
+                        return saveSource!(len - 1)() ~
+                            tuple(source[len - 1].save);
+                    }
                 }
-                return result;
+                return Result(saveSource!(Rs.length).expand, _current);
             }
 
         static if (allSatisfy!(hasLength, Rs))
@@ -1899,6 +2032,14 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
     }
 
     assert(interleave([1, 2, 3], 0).equal([1, 0, 2, 0, 3]));
+}
+
+pure @safe unittest
+{
+    import std.algorithm.comparison : equal;
+    auto r = roundRobin(refRange(&["foo"][0]), refRange(&["bar"][0]));
+    assert(equal(r.save, "fboaor"));
+    assert(equal(r.save, "fboaor"));
 }
 
 /**
@@ -3766,6 +3907,12 @@ if (isForwardRange!R && !isInfinite!R)
             _current = input.save;
         }
 
+        private this(R original, R current)
+        {
+            _original = original;
+            _current = current;
+        }
+
         /// ditto
         @property auto ref front()
         {
@@ -3805,10 +3952,7 @@ if (isForwardRange!R && !isInfinite!R)
         @property Cycle save()
         {
             //No need to call _original.save, because Cycle never actually modifies _original
-            Cycle ret = this;
-            ret._original = _original;
-            ret._current =  _current.save;
-            return ret;
+            return Cycle(_original, _current.save);
         }
     }
 }
@@ -4118,6 +4262,14 @@ if (isStaticArray!R)
     import core.exception : AssertError;
     import std.exception : assertThrown;
     assertThrown!AssertError(cycle([0, 1, 2][0 .. 0]));
+}
+
+pure @safe unittest // issue 18657
+{
+    import std.algorithm.comparison : equal;
+    auto r = refRange(&["foo"][0]).cycle.take(4);
+    assert(equal(r.save, "foof"));
+    assert(equal(r.save, "foof"));
 }
 
 private alias lengthType(R) = typeof(R.init.length.init);

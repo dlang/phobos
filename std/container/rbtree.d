@@ -874,9 +874,12 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
         }
     }
 
-    // add an element to the tree, returns the node added, or the existing node
-    // if it has already been added and allowDuplicates is false
-    private auto _add(Elem n)
+    /* add an element to the tree, returns the node added, or the existing node
+     * if it has already been added and allowDuplicates is false
+     * Returns:
+     *   true if node was added
+     */
+    private bool _add(return Elem n)
     {
         Node result;
         static if (!allowDuplicates)
@@ -884,7 +887,8 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
 
         if (!_end.left)
         {
-            _end.left = _begin = result = allocate(n);
+            result = allocate(n);
+            (() @trusted { _end.left = _begin = result; }) ();
         }
         else
         {
@@ -900,7 +904,8 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
                         //
                         // add to right of new parent
                         //
-                        newParent.left = result = allocate(n);
+                        result = allocate(n);
+                        (() @trusted { newParent.left = result; }) ();
                         break;
                     }
                 }
@@ -921,7 +926,8 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
                         //
                         // add to right of new parent
                         //
-                        newParent.right = result = allocate(n);
+                        result = allocate(n);
+                        (() @trusted { newParent.right = result; }) ();
                         break;
                     }
                 }
@@ -930,19 +936,16 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
             if (_begin.left)
                 _begin = _begin.left;
         }
-
         static if (allowDuplicates)
         {
             result.setColor(_end);
             debug(RBDoChecks)
                 check();
             ++_length;
-            return result;
+            return true;
         }
         else
         {
-            import std.typecons : Tuple;
-
             if (added)
             {
                 ++_length;
@@ -950,7 +953,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
             }
             debug(RBDoChecks)
                 check();
-            return Tuple!(bool, "added", Node, "n")(added, result);
+            return added;
         }
     }
 
@@ -1141,12 +1144,14 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
         {
             int x;
 
+          @safe:
+
             this(int init_x)
             {
                 x = init_x;
             }
 
-            size_t toHash() const @safe nothrow
+            size_t toHash() const nothrow
             {
                 return typeid(x).getHash(&x) ^ 0xF0F0_F0F0;
             }
@@ -1257,7 +1262,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
         }
         else
         {
-            return(_add(stuff).added ? 1 : 0);
+            return _add(stuff);
         }
     }
 
@@ -1269,7 +1274,9 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
      *
      * Complexity: $(BIGOH m * log(n))
      */
-    size_t stableInsert(Stuff)(Stuff stuff) if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, Elem))
+    size_t stableInsert(Stuff)(scope Stuff stuff)
+        if (isInputRange!Stuff &&
+            isImplicitlyConvertible!(ElementType!Stuff, Elem))
     {
         size_t result = 0;
         static if (allowDuplicates)
@@ -1284,8 +1291,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
         {
             foreach (e; stuff)
             {
-                if (_add(e).added)
-                    ++result;
+                result += _add(e);
             }
         }
         return result;
@@ -1527,7 +1533,7 @@ assert(equal(rbt[], [5]));
     }
 
     /++ Ditto +/
-    size_t removeKey(U)(U[] elems)
+    size_t removeKey(U)(scope U[] elems)
         if (isImplicitlyConvertible!(U, Elem))
     {
         immutable lenBefore = length;
@@ -1775,7 +1781,7 @@ assert(equal(rbt[], [5]));
          * Check the tree for validity.  This is called after every add or remove.
          * This should only be enabled to debug the implementation of the RB Tree.
          */
-        void check()
+        void check() @trusted
         {
             //
             // check implementation of the tree
@@ -1838,7 +1844,7 @@ assert(equal(rbt[], [5]));
      */
     static if (is(typeof((){FormatSpec!(char) fmt; formatValue((const(char)[]) {}, ConstRange.init, fmt);})))
     {
-        void toString(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt) const
+        void toString(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char fmt) const
         {
             sink("RedBlackTree(");
             sink.formatValue(this[], fmt);

@@ -15,10 +15,12 @@ case $CIRCLE_NODE_INDEX in
 esac
 
 install_deps() {
+    sudo apt-get update
     if [ $MODEL -eq 32 ]; then
-        sudo apt-get update
         sudo apt-get install g++-multilib
     fi
+    # required for: "core.time.TimeException@std/datetime/timezone.d(2073): Directory /usr/share/zoneinfo/ does not exist."
+    sudo apt-get install --reinstall tzdata
 
     for i in {0..4}; do
         if curl -fsS -A "$CURL_USER_AGENT" --max-time 5 https://dlang.org/install.sh -O ||

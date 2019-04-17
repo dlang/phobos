@@ -470,7 +470,7 @@ if (isSomeString!(typeof(fmt)))
 }
 
 /// ditto
-uint formattedWrite(Writer, Char, A...)(auto ref Writer w, in Char[] fmt, A args)
+uint formattedWrite(Writer, Char, A...)(auto ref Writer w, const scope Char[] fmt, A args)
 {
     import std.conv : text;
 
@@ -1190,7 +1190,7 @@ if (is(Unqual!Char == Char))
         trailing = fmt;
     }
 
-    bool writeUpToNextSpec(OutputRange)(ref OutputRange writer)
+    bool writeUpToNextSpec(OutputRange)(ref OutputRange writer) scope
     {
         if (trailing.empty)
             return false;
@@ -1251,7 +1251,7 @@ if (is(Unqual!Char == Char))
         assert(w.data == "a%b%c" && f.trailing == "%");
     }
 
-    private void fillUp()
+    private void fillUp() scope
     {
         // Reset content
         if (__ctfe)
@@ -1475,7 +1475,7 @@ if (is(Unqual!Char == Char))
     }
 
     //--------------------------------------------------------------------------
-    private bool readUpToNextSpec(R)(ref R r)
+    private bool readUpToNextSpec(R)(ref R r) scope
     {
         import std.ascii : isLower, isWhite;
         import std.utf : stride;
@@ -1812,7 +1812,7 @@ FormatSpec!Char singleSpec(Char)(Char[] fmt)
  * `toString` should have one of the following signatures:
  *
  * ---
- * void toString(W)(ref W w, const ref FormatSpec fmt)
+ * void toString(W)(ref W w, scope const ref FormatSpec fmt)
  * void toString(W)(ref W w)
  * string toString();
  * ---
@@ -1849,7 +1849,7 @@ FormatSpec!Char singleSpec(Char)(Char[] fmt)
  *     val = The value to write.
  *     f = The $(REF FormatSpec, std, format) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, const ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const ref FormatSpec!Char f)
 {
     formatValueImpl(w, val, f);
 }
@@ -2022,7 +2022,7 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, const ref F
     {
         int x, y;
 
-        void toString(W)(ref W writer, const ref FormatSpec!char f)
+        void toString(W)(ref W writer, scope const ref FormatSpec!char f)
         if (isOutputRange!(W, char))
         {
             // std.range.primitives.put
@@ -2056,7 +2056,7 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, const ref F
        int x, y;
 
        void toString(scope void delegate(scope const(char)[]) @safe sink,
-                     FormatSpec!char fmt) const
+                     scope const FormatSpec!char fmt) const
        {
            sink("(");
            sink.formatValue(x, fmt);
@@ -2136,7 +2136,7 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, const ref F
     `bool`s are formatted as `"true"` or `"false"` with `%s` and as `1` or
     `0` with integral-specific format specs.
  */
-private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
 if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     BooleanTypeOf!T val = obj;
@@ -2202,11 +2202,12 @@ if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 /*
     `null` literal is formatted as `"null"`
 */
-private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
 if (is(Unqual!T == typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
 {
-    enforceFmt(f.spec == 's',
-        "null literal cannot match %" ~ f.spec);
+    const spec = f.spec;
+    enforceFmt(spec == 's',
+        "null literal cannot match %" ~ spec);
 
     put(w, "null");
 }
@@ -2224,13 +2225,14 @@ if (is(Unqual!T == typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
 /*
     Integrals are formatted like $(REF printf, core, stdc, stdio).
 */
-private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
 if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     alias U = IntegralTypeOf!T;
     U val = obj;    // Extracting alias this may be impure/system/may-throw
 
-    if (f.spec == 'r')
+    const spec = f.spec;
+    if (spec == 'r')
     {
         // raw write, skip all else and write the thing
         auto raw = (ref val)@trusted{
@@ -2250,13 +2252,13 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     }
 
     immutable uint base =
-        f.spec == 'x' || f.spec == 'X' ? 16 :
-        f.spec == 'o' ? 8 :
-        f.spec == 'b' ? 2 :
-        f.spec == 's' || f.spec == 'd' || f.spec == 'u' ? 10 :
+        spec == 'x' || spec == 'X' ? 16 :
+        spec == 'o' ? 8 :
+        spec == 'b' ? 2 :
+        spec == 's' || spec == 'd' || spec == 'u' ? 10 :
         0;
     enforceFmt(base > 0,
-        "incompatible format character for integral argument: %" ~ f.spec);
+        "incompatible format character for integral argument: %" ~ spec);
 
     // Forward on to formatIntegral to handle both U and const(U)
     // Saves duplication of code for both versions.
@@ -2269,7 +2271,7 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     formatIntegral(w, cast(C) val, f, base, Unsigned!U.max);
 }
 
-private void formatIntegral(Writer, T, Char)(ref Writer w, const(T) val, const ref FormatSpec!Char fs,
+private void formatIntegral(Writer, T, Char)(ref Writer w, const(T) val, scope const ref FormatSpec!Char fs,
     uint base, ulong mask)
 {
     T arg = val;
@@ -2288,7 +2290,7 @@ private void formatIntegral(Writer, T, Char)(ref Writer w, const(T) val, const r
 }
 
 private void formatUnsigned(Writer, T, Char)
-(ref Writer w, T arg, const ref FormatSpec!Char fs, uint base, bool negative)
+(ref Writer w, T arg, scope const ref FormatSpec!Char fs, uint base, bool negative)
 {
     /* Write string:
      *    leftpad prefix1 prefix2 zerofill digits rightpad
@@ -2516,17 +2518,17 @@ private enum ctfpMessage = "Cannot format floating point types at compile-time";
 /*
     Floating-point values are formatted like $(REF printf, core, stdc, stdio)
  */
-private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
 if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     import std.algorithm.comparison : min;
     import std.algorithm.searching : find;
     import std.string : indexOf, indexOfAny, indexOfNeither;
 
-    FormatSpec!Char fs = f; // fs is copy for change its values.
     FloatingPointTypeOf!T val = obj;
+    const spec = f.spec;
 
-    if (fs.spec == 'r')
+    if (spec == 'r')
     {
         // raw write, skip all else and write the thing
         auto raw = (ref val)@trusted{
@@ -2544,8 +2546,8 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         }
         return;
     }
-    enforceFmt(find("fgFGaAeEs", fs.spec).length,
-        "incompatible format character for floating point argument: %" ~ fs.spec);
+    enforceFmt(find("fgFGaAeEs", spec).length,
+        "incompatible format character for floating point argument: %" ~ spec);
     enforceFmt(!__ctfe, ctfpMessage);
 
     version (CRuntime_Microsoft)
@@ -2587,7 +2589,8 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     }
     else
         alias tval = val;
-    if (fs.spec == 's') fs.spec = 'g';
+    FormatSpec!Char fs = f; // fs is copy for change its values.
+    const spec2 = spec == 's' ? 'g' : spec;
     char[1 /*%*/ + 5 /*flags*/ + 3 /*width.prec*/ + 2 /*format*/
                      + 1 /*\0*/] sprintfSpec = void;
     sprintfSpec[0] = '%';
@@ -2600,7 +2603,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     sprintfSpec[i .. i + 3] = "*.*";
     i += 3;
     if (is(Unqual!(typeof(val)) == real)) sprintfSpec[i++] = 'L';
-    sprintfSpec[i++] = fs.spec;
+    sprintfSpec[i++] = spec2;
     sprintfSpec[i] = 0;
     //printf("format: '%s'; geeba: %g\n", sprintfSpec.ptr, val);
     char[512] buf = void;
@@ -2740,7 +2743,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     Formatting a `creal` is deprecated but still kept around for a while.
  */
 deprecated("Use of complex types is deprecated. Use std.complex")
-private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
 if (is(Unqual!T : creal) && !is(T == enum) && !hasToString!(T, Char))
 {
     immutable creal val = obj;
@@ -2796,7 +2799,7 @@ deprecated
     Formatting an `ireal` is deprecated but still kept around for a while.
  */
 deprecated("Use of imaginary types is deprecated. Use std.complex")
-private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
 if (is(Unqual!T : ireal) && !is(T == enum) && !hasToString!(T, Char))
 {
     immutable ireal val = obj;
@@ -2841,7 +2844,7 @@ deprecated
     Individual characters are formatted as Unicode characters with `%s`
     and as integers with integral-specific format specs
  */
-private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
 if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     CharTypeOf!T val = obj;
@@ -2898,7 +2901,7 @@ if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 /*
     Strings are formatted like $(REF printf, core, stdc, stdio)
  */
-private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, scope T obj, scope const ref FormatSpec!Char f)
 if (is(StringTypeOf!T) && !is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     Unqual!(StringTypeOf!T) val = obj;  // for `alias this`, see bug5371
@@ -2960,7 +2963,7 @@ if (is(StringTypeOf!T) && !is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToSt
 /*
     Static-size arrays are formatted as dynamic arrays.
  */
-private void formatValueImpl(Writer, T, Char)(auto ref Writer w, auto ref T obj, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, auto ref T obj, scope const ref FormatSpec!Char f)
 if (is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     formatValueImpl(w, obj[], f);
@@ -2982,7 +2985,7 @@ if (is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 /*
     Dynamic arrays are formatted as input ranges.
  */
-private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
 if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     static if (is(const(ArrayTypeOf!T) == const(void[])))
@@ -3184,7 +3187,7 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
 }
 
 // input range formatting
-private void formatRange(Writer, T, Char)(ref Writer w, ref T val, const ref FormatSpec!Char f)
+private void formatRange(Writer, T, Char)(ref Writer w, ref T val, scope const ref FormatSpec!Char f)
 if (isInputRange!T)
 {
     import std.conv : text;
@@ -3198,7 +3201,7 @@ if (isInputRange!T)
         {
             static if (is(StringTypeOf!T))
             {
-                auto s = val[0 .. f.precision < $ ? f.precision : $];
+                scope s = val[0 .. f.precision < $ ? f.precision : $];
 
                 size_t width;
                 if (f.width > 0)
@@ -3326,7 +3329,8 @@ if (isInputRange!T)
         static if (is(DynamicArrayTypeOf!T))
         {
             alias ARR = DynamicArrayTypeOf!T;
-            foreach (e ; cast(ARR) val)
+            scope a = cast(ARR) val;
+            foreach (e ; a)
             {
                 formatValue(w, e, f);
             }
@@ -3435,7 +3439,7 @@ private void formatChar(Writer)(ref Writer w, in dchar c, in char quote)
 
 // undocumented because of deprecation
 // string elements are formatted like UTF-8 string literals.
-void formatElement(Writer, T, Char)(auto ref Writer w, T val, const ref FormatSpec!Char f)
+void formatElement(Writer, T, Char)(auto ref Writer w, T val, scope const ref FormatSpec!Char f)
 if (is(StringTypeOf!T) && !is(T == enum))
 {
     import std.array : appender;
@@ -3520,7 +3524,7 @@ if (is(StringTypeOf!T) && !is(T == enum))
 
 // undocumented because of deprecation
 // Character elements are formatted like UTF-8 character literals.
-void formatElement(Writer, T, Char)(auto ref Writer w, T val, const ref FormatSpec!Char f)
+void formatElement(Writer, T, Char)(auto ref Writer w, T val, scope const ref FormatSpec!Char f)
 if (is(CharTypeOf!T) && !is(T == enum))
 {
     if (f.spec == 's')
@@ -3546,7 +3550,7 @@ if (is(CharTypeOf!T) && !is(T == enum))
 
 // undocumented
 // Maybe T is noncopyable struct, so receive it by 'auto ref'.
-void formatElement(Writer, T, Char)(auto ref Writer w, auto ref T val, const ref FormatSpec!Char f)
+void formatElement(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const ref FormatSpec!Char f)
 if (!is(StringTypeOf!T) && !is(CharTypeOf!T) || is(T == enum))
 {
     formatValue(w, val, f);
@@ -3556,21 +3560,22 @@ if (!is(StringTypeOf!T) && !is(CharTypeOf!T) || is(T == enum))
    Associative arrays are formatted by using `':'` and $(D ", ") as
    separators, and enclosed by `'['` and `']'`.
  */
-private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
 if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     AssocArrayTypeOf!T val = obj;
+    const spec = f.spec;
 
-    enforceFmt(f.spec == 's' || f.spec == '(',
-        "incompatible format character for associative array argument: %" ~ f.spec);
+    enforceFmt(spec == 's' || spec == '(',
+        "incompatible format character for associative array argument: %" ~ spec);
 
     enum const(Char)[] defSpec = "%s" ~ f.keySeparator ~ "%s" ~ f.seqSeparator;
-    auto fmtSpec = f.spec == '(' ? f.nested : defSpec;
+    auto fmtSpec = spec == '(' ? f.nested : defSpec;
 
     size_t i = 0;
     immutable end = val.length;
 
-    if (f.spec == 's')
+    if (spec == 's')
         put(w, f.seqBefore);
     foreach (k, ref v; val)
     {
@@ -3600,7 +3605,7 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
                 fmt.writeUpToNextSpec(w);
         }
     }
-    if (f.spec == 's')
+    if (spec == 's')
         put(w, f.seqAfter);
 }
 
@@ -3732,7 +3737,7 @@ private template hasToString(T, Char)
     }
     static struct B
     {
-        void toString(scope void delegate(scope const(char)[]) sink, FormatSpec!char fmt) {}
+        void toString(scope void delegate(scope const(char)[]) sink, scope FormatSpec!char fmt) {}
     }
     static struct C
     {
@@ -3748,7 +3753,7 @@ private template hasToString(T, Char)
     }
     static struct F
     {
-        void toString(Writer)(ref Writer w, const ref FormatSpec!char fmt)
+        void toString(Writer)(ref Writer w, scope const ref FormatSpec!char fmt)
         if (isOutputRange!(Writer, string))
         {}
     }
@@ -3760,33 +3765,33 @@ private template hasToString(T, Char)
     static struct H
     {
         string toString() {return "";}
-        void toString(Writer)(ref Writer w, const ref FormatSpec!char fmt)
+        void toString(Writer)(ref Writer w, scope const ref FormatSpec!char fmt)
         if (isOutputRange!(Writer, string))
         {}
     }
     static struct I
     {
         void toString(Writer)(ref Writer w) if (isOutputRange!(Writer, string)) {}
-        void toString(Writer)(ref Writer w, const ref FormatSpec!char fmt)
+        void toString(Writer)(ref Writer w, scope const ref FormatSpec!char fmt)
         if (isOutputRange!(Writer, string))
         {}
     }
     static struct J
     {
         string toString() {return "";}
-        void toString(Writer)(ref Writer w, ref FormatSpec!char fmt)
+        void toString(Writer)(ref Writer w, scope ref FormatSpec!char fmt)
         if (isOutputRange!(Writer, string))
         {}
     }
     static struct K
     {
-        void toString(Writer)(Writer w, const ref FormatSpec!char fmt)
+        void toString(Writer)(Writer w, scope const ref FormatSpec!char fmt)
         if (isOutputRange!(Writer, string))
         {}
     }
     static struct L
     {
-        void toString(Writer)(ref Writer w, const FormatSpec!char fmt)
+        void toString(Writer)(ref Writer w, scope const FormatSpec!char fmt)
         if (isOutputRange!(Writer, string))
         {}
     }
@@ -3815,7 +3820,7 @@ private struct NoOpSink
 }
 
 // object formatting with toString
-private void formatObject(Writer, T, Char)(ref Writer w, ref T val, const ref FormatSpec!Char f)
+private void formatObject(Writer, T, Char)(ref Writer w, ref T val, scope const ref FormatSpec!Char f)
 if (hasToString!(T, Char))
 {
     enum overload = hasToString!(T, Char);
@@ -3852,7 +3857,7 @@ if (hasToString!(T, Char))
     }
 }
 
-void enforceValidFormatSpec(T, Char)(const ref FormatSpec!Char f)
+void enforceValidFormatSpec(T, Char)(scope const ref FormatSpec!Char f)
 {
     enum overload = hasToString!(T, Char);
     static if (!isInputRange!T &&
@@ -3913,7 +3918,7 @@ void enforceValidFormatSpec(T, Char)(const ref FormatSpec!Char f)
 /*
    Aggregates
  */
-private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T val, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T val, scope const ref FormatSpec!Char f)
 if (is(T == class) && !is(T == enum))
 {
     enforceValidFormatSpec!(T, Char)(f);
@@ -3953,7 +3958,8 @@ if (is(T == class) && !is(T == enum))
           //string delegate() dg = &val.toString;
             Object o = val;     // workaround
             string delegate() dg = &o.toString;
-            if (dg.funcptr != &Object.toString) // toString is overridden
+            scope Object object = new Object();
+            if (dg.funcptr != (&object.toString).funcptr) // toString is overridden
             {
                 formatObject(w, val, f);
             }
@@ -4007,7 +4013,11 @@ if (is(T == class) && !is(T == enum))
     class C1
     {
         mixin(inputRangeCode);
-        void toString(scope void delegate(scope const(char)[]) dg, const ref FormatSpec!char f) const { dg("[012]"); }
+        void toString(scope void delegate(scope const(char)[]) dg,
+                      scope const ref FormatSpec!char f) const
+        {
+            dg("[012]");
+        }
     }
     class C2
     {
@@ -4105,7 +4115,7 @@ version (unittest)
 }
 
 // ditto
-private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T val, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T val, scope const ref FormatSpec!Char f)
 if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is(T == enum))
 {
     enforceValidFormatSpec!(T, Char)(f);
@@ -4189,7 +4199,7 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is
 
 /// ditto
 // Maybe T is noncopyable struct, so receive it by 'auto ref'.
-private void formatValueImpl(Writer, T, Char)(auto ref Writer w, auto ref T val, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const ref FormatSpec!Char f)
 if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is(T == enum))
 {
 
@@ -4342,7 +4352,7 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
 /*
     `enum`s are formatted like their base value
  */
-private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T val, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T val, scope const ref FormatSpec!Char f)
 if (is(T == enum))
 {
     if (f.spec == 's')
@@ -4397,7 +4407,7 @@ if (is(T == enum))
 /*
    Pointers are formatted as hex integers.
  */
-private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T val, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, scope T val, scope const ref FormatSpec!Char f)
 if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
 {
     static if (isInputRange!T)
@@ -4439,7 +4449,7 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
 /*
    SIMD vectors are formatted as arrays.
  */
-private void formatValueImpl(Writer, V, Char)(auto ref Writer w, V val, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, V, Char)(auto ref Writer w, V val, scope const ref FormatSpec!Char f)
 if (isSIMDVector!V)
 {
     formatValueImpl(w, val.array, f);
@@ -4532,7 +4542,7 @@ if (isSIMDVector!V)
 /*
    Delegates are formatted by `ReturnType delegate(Parameters) FunctionAttributes`
  */
-private void formatValueImpl(Writer, T, Char)(auto ref Writer w, scope T, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, scope T, scope const ref FormatSpec!Char f)
 if (isDelegate!T)
 {
     formatValueImpl(w, T.stringof, f);
@@ -5333,7 +5343,7 @@ private void formatReflectTest(T)(ref T val, string fmt, string[] formatted, str
 }
 
 //------------------------------------------------------------------------------
-private void skipData(Range, Char)(ref Range input, const ref FormatSpec!Char spec)
+private void skipData(Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 {
     import std.ascii : isDigit;
     import std.conv : text;
@@ -5376,7 +5386,7 @@ private template acceptedSpecs(T)
  * See_Also:
  *     $(REF parse, std, conv) and $(REF to, std, conv)
  */
-T unformatValue(T, Range, Char)(ref Range input, const ref FormatSpec!Char spec)
+T unformatValue(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 {
     return unformatValueImpl!T(input, spec);
 }
@@ -5488,7 +5498,7 @@ T unformatValue(T, Range, Char)(ref Range input, const ref FormatSpec!Char spec)
     assert(result[0] == 'a');
 }
 
-private T unformatValueImpl(T, Range, Char)(ref Range input, const ref FormatSpec!Char spec)
+private T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 if (isInputRange!Range && is(Unqual!T == bool))
 {
     import std.algorithm.searching : find;
@@ -5502,7 +5512,7 @@ if (isInputRange!Range && is(Unqual!T == bool))
     return unformatValue!long(input, spec) != 0;
 }
 
-private T unformatValueImpl(T, Range, Char)(ref Range input, const ref FormatSpec!Char spec)
+private T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 if (isInputRange!Range && is(T == typeof(null)))
 {
     import std.conv : parse, text;
@@ -5513,7 +5523,7 @@ if (isInputRange!Range && is(T == typeof(null)))
 }
 
 /// ditto
-private T unformatValueImpl(T, Range, Char)(ref Range input, const ref FormatSpec!Char spec)
+private T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementType!Range))
 {
 
@@ -5549,7 +5559,7 @@ if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementT
 }
 
 /// ditto
-private T unformatValueImpl(T, Range, Char)(ref Range input, const ref FormatSpec!Char spec)
+private T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 if (isFloatingPoint!T && !is(T == enum) && isInputRange!Range
     && isSomeChar!(ElementType!Range)&& !is(Range == enum))
 {
@@ -5575,7 +5585,7 @@ if (isFloatingPoint!T && !is(T == enum) && isInputRange!Range
 }
 
 /// ditto
-private T unformatValueImpl(T, Range, Char)(ref Range input, const ref FormatSpec!Char spec)
+private T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 if (isInputRange!Range && isSomeChar!T && !is(T == enum) && isSomeChar!(ElementType!Range))
 {
     import std.algorithm.searching : find;
@@ -5600,17 +5610,18 @@ if (isInputRange!Range && isSomeChar!T && !is(T == enum) && isSomeChar!(ElementT
 }
 
 /// ditto
-private T unformatValueImpl(T, Range, Char)(ref Range input, const ref FormatSpec!Char spec)
+private T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char fmt)
 if (isInputRange!Range && is(StringTypeOf!T) && !isAggregateType!T && !is(T == enum))
 {
     import std.conv : text;
 
-    if (spec.spec == '(')
+    const spec = fmt.spec;
+    if (spec == '(')
     {
-        return unformatRange!T(input, spec);
+        return unformatRange!T(input, fmt);
     }
-    enforceFmt(spec.spec == 's',
-            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+    enforceFmt(spec == 's',
+            text("Wrong unformat specifier '%", spec , "' for ", T.stringof));
 
     static if (isStaticArray!T)
     {
@@ -5622,7 +5633,7 @@ if (isInputRange!Range && is(StringTypeOf!T) && !isAggregateType!T && !is(T == e
         import std.array : appender;
         auto app = appender!T();
     }
-    if (spec.trailing.empty)
+    if (fmt.trailing.empty)
     {
         for (; !input.empty; input.popFront())
         {
@@ -5634,7 +5645,7 @@ if (isInputRange!Range && is(StringTypeOf!T) && !isAggregateType!T && !is(T == e
     }
     else
     {
-        immutable end = spec.trailing.front;
+        immutable end = fmt.trailing.front;
         for (; !input.empty && input.front != end; input.popFront())
         {
             static if (isStaticArray!T)
@@ -5653,31 +5664,33 @@ if (isInputRange!Range && is(StringTypeOf!T) && !isAggregateType!T && !is(T == e
 }
 
 /// ditto
-private T unformatValueImpl(T, Range, Char)(ref Range input, const ref FormatSpec!Char spec)
+private T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char fmt)
 if (isInputRange!Range && isArray!T && !is(StringTypeOf!T) && !isAggregateType!T && !is(T == enum))
 {
     import std.conv : parse, text;
-    if (spec.spec == '(')
+    const spec = fmt.spec;
+    if (spec == '(')
     {
-        return unformatRange!T(input, spec);
+        return unformatRange!T(input, fmt);
     }
-    enforceFmt(spec.spec == 's',
-            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+    enforceFmt(spec == 's',
+            text("Wrong unformat specifier '%", spec , "' for ", T.stringof));
 
     return parse!T(input);
 }
 
 /// ditto
-private T unformatValueImpl(T, Range, Char)(ref Range input, const ref FormatSpec!Char spec)
+private T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char fmt)
 if (isInputRange!Range && isAssociativeArray!T && !is(T == enum))
 {
     import std.conv : parse, text;
-    if (spec.spec == '(')
+    const spec = fmt.spec;
+    if (spec == '(')
     {
-        return unformatRange!T(input, spec);
+        return unformatRange!T(input, fmt);
     }
-    enforceFmt(spec.spec == 's',
-            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+    enforceFmt(spec == 's',
+            text("Wrong unformat specifier '%", spec , "' for ", T.stringof));
 
     return parse!T(input);
 }
@@ -5716,7 +5729,7 @@ if (is(Unqual!(ElementEncodingType!Range) == char)
 
 //debug = unformatRange;
 
-private T unformatRange(T, Range, Char)(ref Range input, const ref FormatSpec!Char spec)
+private T unformatRange(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 in
 {
     assert(spec.spec == '(');
@@ -5817,7 +5830,7 @@ do
 }
 
 // Undocumented
-T unformatElement(T, Range, Char)(ref Range input, const ref FormatSpec!Char spec)
+T unformatElement(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 if (isInputRange!Range)
 {
     import std.conv : parseElement;
@@ -5886,7 +5899,7 @@ enum Mangle : char
     Timmutable = 'y',
 }
 
-private bool needToSwapEndianess(Char)(const ref FormatSpec!Char f)
+private bool needToSwapEndianess(Char)(scope const ref FormatSpec!Char f)
 {
     import std.system : endian, Endian;
 

@@ -118,20 +118,16 @@ else
 // Purposefully not documented. Use at your own risk
 @property string deleteme() @safe
 {
-    import std.conv : to;
+    import std.conv : text;
     import std.path : buildPath;
     import std.process : thisProcessID;
 
-    static _deleteme = "deleteme.dmd.unittest.pid";
-    static _first = true;
+    enum base = "deleteme.dmd.unittest.pid";
+    static string fileName;
 
-    if (_first)
-    {
-        _deleteme = buildPath(tempDir(), _deleteme) ~ to!string(thisProcessID);
-        _first = false;
-    }
-
-    return _deleteme;
+    if (!fileName)
+        fileName = text(buildPath(tempDir(), base), thisProcessID);
+    return fileName;
 }
 
 version (unittest) private struct TestAliasedString
@@ -3855,9 +3851,7 @@ else version (Posix)
 
         private this(string path, core.sys.posix.dirent.dirent* fd) @safe
         {
-            import std.algorithm.searching : countUntil;
             import std.path : buildPath;
-            import std.string : representation;
 
             static if (is(typeof(fd.d_namlen)))
                 immutable len = fd.d_namlen;

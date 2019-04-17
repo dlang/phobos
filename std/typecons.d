@@ -1231,7 +1231,7 @@ if (distinctFieldNames!(Specs))
         }
 
         /// ditto
-        void toString(DG, Char)(scope DG sink, const ref FormatSpec!Char fmt) const
+        void toString(DG, Char)(scope DG sink, scope const ref FormatSpec!Char fmt) const
         {
             import std.format : formatElement, formattedWrite, FormatException;
             if (fmt.nested)
@@ -1287,9 +1287,10 @@ if (distinctFieldNames!(Specs))
             }
             else
             {
+                const spec = fmt.spec;
                 throw new FormatException(
                     "Expected '%s' or '%(...%)' or '%(...%|...%)' format specifier for type '" ~
-                        Unqual!(typeof(this)).stringof ~ "', not '%" ~ fmt.spec ~ "'.");
+                        Unqual!(typeof(this)).stringof ~ "', not '%" ~ spec ~ "'.");
             }
         }
 
@@ -2780,7 +2781,28 @@ Params:
     }
 
     /// ditto
-    void toString(W)(ref W writer, const ref FormatSpec!char fmt)
+    string toString() const
+    {
+        import std.array : appender;
+        auto app = appender!string();
+        auto spec = singleSpec("%s");
+        toString(app, spec);
+        return app.data;
+    }
+
+    /// ditto
+    void toString(W)(ref W writer, scope const ref FormatSpec!char fmt)
+    if (isOutputRange!(W, char))
+    {
+        import std.range.primitives : put;
+        if (isNull)
+            put(writer, "Nullable.null");
+        else
+            formatValue(writer, _value.payload, fmt);
+    }
+
+    /// ditto
+    void toString(W)(ref W writer, scope const ref FormatSpec!char fmt) const
     if (isOutputRange!(W, char))
     {
         import std.range.primitives : put;
@@ -2792,7 +2814,7 @@ Params:
 
     //@@@DEPRECATED_2.086@@@
     deprecated("To be removed after 2.086. Please use the output range overload instead.")
-    void toString()(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt)
+    void toString()(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char fmt)
     {
         if (isNull)
         {
@@ -2807,7 +2829,7 @@ Params:
     // Issue 14940
     //@@@DEPRECATED_2.086@@@
     deprecated("To be removed after 2.086. Please use the output range overload instead.")
-    void toString()(scope void delegate(const(char)[]) @safe sink, const ref FormatSpec!char fmt)
+    void toString()(scope void delegate(const(char)[]) @safe sink, scope const ref FormatSpec!char fmt)
     {
         if (isNull)
         {
@@ -2850,6 +2872,16 @@ Returns:
     Nullable!int a = 1;
     formattedWrite(app, "%s", a);
     assert(app.data == "1");
+}
+
+// Issue 19799
+@safe unittest
+{
+    import std.format : format;
+
+    const Nullable!string a = const(Nullable!string)();
+
+    format!"%s"(a);
 }
 
 /**
@@ -3290,6 +3322,7 @@ auto nullable(T)(T t)
 
     Nullable!int ni;
     assert(ni.to!string() == "Nullable.null");
+    assert((cast(const) ni).to!string() == "Nullable.null");
 
     struct Test { string s; }
     alias NullableTest = Nullable!Test;
@@ -3299,6 +3332,8 @@ auto nullable(T)(T t)
     assert(nt.to!string() == `Test("test")`);
     // test appender version
     assert(nt.toString() == `Test("test")`);
+    // test const version
+    assert((cast(const) nt).toString() == `const(Test)("test")`);
 
     NullableTest ntn = Test("null");
     assert(ntn.to!string() == `Test("null")`);
@@ -3513,7 +3548,7 @@ Params:
     {
         import std.format : FormatSpec, formatValue;
         // Needs to be a template because of DMD @@BUG@@ 13737.
-        void toString()(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt)
+        void toString()(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char fmt)
         {
             if (isNull)
             {
@@ -3967,7 +4002,7 @@ Params:
     {
         import std.format : FormatSpec, formatValue;
         // Needs to be a template because of DMD @@BUG@@ 13737.
-        void toString()(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt)
+        void toString()(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char fmt)
         {
             if (isNull)
             {
@@ -7196,8 +7231,14 @@ mixin template Proxy(alias a)
     bool* b = Name("a") in names;
 }
 
+// workaround for https://issues.dlang.org/show_bug.cgi?id=19669
+private enum isDIP1000 = __traits(compiles, () @safe {
+     int x;
+     int* p;
+     p = &x;
+});
 // excludes struct S; it's 'mixin Proxy!foo' doesn't compile with -dip1000
-version (DIP1000) {} else
+static if (isDIP1000) {} else
 @system unittest
 {
     // bug14213, using function for the payload
@@ -7357,7 +7398,7 @@ struct Typedef(T, T init = T.init, string cookie=null)
     }
 
     /// ditto
-    void toString(this T, W)(ref W writer, const ref FormatSpec!char fmt)
+    void toString(this T, W)(ref W writer, scope const ref FormatSpec!char fmt)
     if (isOutputRange!(W, char))
     {
         formatValue(writer, Typedef_payload, fmt);

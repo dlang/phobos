@@ -557,9 +557,11 @@ Throws: `ErrnoException` in case of error.
         }
         if (_p.handle)
         {
-            errnoEnforce(.fclose(_p.handle) == 0,
-                    "Could not close file `"~_name~"'");
+            auto handle = _p.handle;
             _p.handle = null;
+            // fclose disassociates the FILE* even in case of error (issue 19751)
+            errnoEnforce(.fclose(handle) == 0,
+                    "Could not close file `"~_name~"'");
         }
     }
 
@@ -1069,7 +1071,17 @@ Throws: `ErrnoException` if the file is not opened or if the call to `fwrite` fa
 
 /**
 Calls $(HTTP cplusplus.com/reference/clibrary/cstdio/fseek.html, fseek)
-for the file handle.
+for the file handle to move its position indicator.
+
+Params:
+    offset = Binary files: Number of bytes to offset from origin.$(BR)
+             Text files: Either zero, or a value returned by $(LREF tell).
+    origin = Binary files: Position used as reference for the offset, must be
+             one of $(REF_ALTTEXT SEEK_SET, SEEK_SET, core,stdc,stdio),
+             $(REF_ALTTEXT SEEK_CUR, SEEK_CUR, core,stdc,stdio) or
+             $(REF_ALTTEXT SEEK_END, SEEK_END, core,stdc,stdio).$(BR)
+             Text files: Shall necessarily be
+             $(REF_ALTTEXT SEEK_SET, SEEK_SET, core,stdc,stdio).
 
 Throws: `Exception` if the file is not opened.
         `ErrnoException` if the call to `fseek` fails.
@@ -1086,6 +1098,9 @@ Throws: `Exception` if the file is not opened.
             {
                 alias fseekFun = _fseeki64;
                 alias off_t = long;
+                // Issue 19797
+                enforce(origin >= SEEK_SET && origin <= SEEK_END,
+                        "Could not seek in file `"~_name~"' (Invalid argument)");
             }
             else
             {
@@ -1106,6 +1121,7 @@ Throws: `Exception` if the file is not opened.
     {
         import std.conv : text;
         static import std.file;
+        import std.exception;
 
         auto deleteme = testFilename();
         auto f = File(deleteme, "w+");
@@ -1128,6 +1144,7 @@ Throws: `Exception` if the file is not opened.
         // f.rawWrite("abcdefghijklmnopqrstuvwxyz");
         // f.seek(-3, SEEK_END);
         // assert(f.readln() == "xyz");
+        assertThrown(f.seek(0, 3));
     }
 
 /**
