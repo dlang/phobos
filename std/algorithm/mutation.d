@@ -1411,8 +1411,8 @@ void moveEmplace(T)(ref T source, ref T target) @system
                 memset(&source, 0, sz);
             else
             {
-                auto init = typeid(T).initializer();
-                memcpy(&source, init.ptr, sz);
+                const init = T.init;
+                memcpy(&source, &init, sz);
             }
         }
     }
