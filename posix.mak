@@ -78,7 +78,7 @@ ROOT_OF_THEM_ALL = generated
 ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
 DUB=dub
 TOOLS_DIR=../tools
-DSCANNER_HASH=383fcb84d892e5169c134e282878ee2c51e4265f
+DSCANNER_HASH=b51ee472fe29c05cc33359ab8de52297899131fe
 DSCANNER_DIR=$(ROOT_OF_THEM_ALL)/dscanner-$(DSCANNER_HASH)
 
 # Set DRUNTIME name and full path
@@ -138,7 +138,7 @@ endif
 
 # Set DFLAGS
 DFLAGS=
-override DFLAGS+=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -dip25 $(MODEL_FLAG) $(PIC) -transition=complex
+override DFLAGS+=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -preview=dip25 $(MODEL_FLAG) $(PIC) -transition=complex
 ifeq ($(BUILD),debug)
 override DFLAGS += -g -debug
 else
@@ -206,10 +206,10 @@ STD_PACKAGES = std $(addprefix std/,\
 PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
   conv csv demangle encoding exception file format \
   functional getopt json math mathspecial meta mmfile numeric \
-  outbuffer parallelism path process random signals socket stdint \
+  outbuffer package parallelism path process random signals socket stdint \
   stdio string system traits typecons uni \
   uri utf uuid variant xml zip zlib
-PACKAGE_std_experimental = all checkedint typecons
+PACKAGE_std_experimental = checkedint typecons
 PACKAGE_std_algorithm = comparison iteration mutation package searching setops \
   sorting
 PACKAGE_std_container = array binaryheap dlist package rbtree slist util
@@ -357,14 +357,12 @@ endif
 $(addsuffix .run,$(addprefix unittest/,$(DISABLED_TESTS))) :
 	@echo Testing $@ - disabled
 
-include dip1000.mak
-
 UT_D_OBJS:=$(addprefix $(ROOT)/unittest/,$(addsuffix $(DOTOBJ),$(D_MODULES)))
 # need to recompile all unittest objects whenever sth. changes
 $(UT_D_OBJS): $(ALL_D_FILES)
 $(UT_D_OBJS): $(ROOT)/unittest/%$(DOTOBJ): %.d
 	@mkdir -p $(dir $@)
-	$(DMD) $(DFLAGS) $(UDFLAGS) $(aa[$(subst /,.,$(basename $<))]) -c -of$@ $<
+	$(DMD) $(DFLAGS) $(UDFLAGS) -preview=dip1000 -c -of$@ $<
 
 ifneq (1,$(SHARED))
 
@@ -401,7 +399,7 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 %.test : %.d $(LIB)
 	T=`mktemp -d /tmp/.dmd-run-test.XXXXXX` &&                                                              \
 	  (                                                                                                     \
-	    $(DMD) -od$$T $(DFLAGS) $(aa[$(subst /,.,$(basename $<))]) -main $(UDFLAGS) $(LIB) $(NODEFAULTLIB) $(LINKDL) -cov -run $< ;     \
+	    $(DMD) -od$$T $(DFLAGS) -main $(UDFLAGS) $(LIB) $(NODEFAULTLIB) $(LINKDL) -cov -run $< ;     \
 	    RET=$$? ; rm -rf $$T ; exit $$RET                                                                   \
 	  )
 
@@ -648,15 +646,25 @@ betterc: betterc-phobos-tests
 	@[ -f "$(TESTS_EXTRACTOR)" ] || ${MAKE} -f posix.mak "$(TESTS_EXTRACTOR)"
 	@$(TESTS_EXTRACTOR) --betterC --attributes betterC \
 		--inputdir  $< --outputdir $(BETTERCTESTS_DIR)
-	@$(DMD) $(DFLAGS) $(NODEFAULTLIB) -betterC $(UDFLAGS) -run $(BETTERCTESTS_DIR)/$(subst /,_,$<)
+	@$(DMD) $(DFLAGS) $(NODEFAULTLIB) -betterC $(UDFLAGS) -preview=dip1000 -run $(BETTERCTESTS_DIR)/$(subst /,_,$<)
 
 ################################################################################
 
 .PHONY : auto-tester-build
+ifneq (,$(findstring Darwin_64_32, $(PWD)))
+auto-tester-build:
+	echo "Darwin_64_32_disabled"
+else
 auto-tester-build: all checkwhitespace
+endif
 
 .PHONY : auto-tester-test
+ifneq (,$(findstring Darwin_64_32, $(PWD)))
+auto-tester-test:
+	echo "Darwin_64_32_disabled"
+else
 auto-tester-test: unittest
+endif
 
 .PHONY: buildkite-test
 buildkite-test: unittest betterc

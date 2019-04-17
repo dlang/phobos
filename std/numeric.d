@@ -615,7 +615,7 @@ public:
     {
         import std.format : FormatSpec, formatValue;
         // Needs to be a template because of DMD @@BUG@@ 13737.
-        void toString()(scope void delegate(const(char)[]) sink, FormatSpec!char fmt)
+        void toString()(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char fmt)
         {
             sink.formatValue(get!real, fmt);
         }

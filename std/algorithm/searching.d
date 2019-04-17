@@ -124,9 +124,10 @@ template all(alias pred = "a")
     {
         static assert(is(typeof(unaryFun!pred(range.front))),
                 "`" ~ pred.stringof[1..$-1] ~ "` isn't a unary predicate function for range.front");
-        import std.functional : not;
-
-        return find!(not!(unaryFun!pred))(range).empty;
+        foreach (ref e; range)
+            if (!unaryFun!pred(e))
+                return false;
+        return true;
     }
 }
 
@@ -171,7 +172,10 @@ template any(alias pred = "a")
     bool any(Range)(Range range)
     if (isInputRange!Range && is(typeof(unaryFun!pred(range.front))))
     {
-        return !find!pred(range).empty;
+        foreach (ref e; range)
+            if (unaryFun!pred(e))
+                return true;
+        return false;
     }
 }
 
@@ -1194,7 +1198,7 @@ if (isInputRange!R &&
     import std.meta : AliasSeq;
 
     static foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
-    {
+    (){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
         assert(!endsWith(to!S("abc"), 'a'));
         assert(endsWith(to!S("abc"), 'a', 'c') == 2);
         assert(!endsWith(to!S("abc"), 'x', 'n', 'b'));
@@ -1233,7 +1237,7 @@ if (isInputRange!R &&
             assert(endsWith(to!S("a"), T.init, 'a') == 1);
             assert(endsWith(to!S("a"), 'a', T.init) == 2);
         }
-    }
+    }();
 
     static foreach (T; AliasSeq!(int, short))
     {{
@@ -3797,7 +3801,7 @@ irreflexive (`pred(a, a)` is `false`).
 Params:
     pred = The ordering predicate to use to determine the extremum (minimum or
         maximum) element.
-    range = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to search.
+    range = The $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to search.
 
 Returns: The position of the minimum (respectively maximum) element of forward
 range `range`, i.e. a subrange of `range` starting at the position of  its
@@ -3917,7 +3921,7 @@ See_Also:
     $(LREF maxIndex), $(REF min, std,algorithm,comparison), $(LREF minCount), $(LREF minElement), $(LREF minPos)
  */
 sizediff_t minIndex(alias pred = "a < b", Range)(Range range)
-if (isForwardRange!Range && !isInfinite!Range &&
+if (isInputRange!Range && !isInfinite!Range &&
     is(typeof(binaryFun!pred(range.front, range.front))))
 {
     if (range.empty) return -1;
@@ -4015,6 +4019,40 @@ if (isForwardRange!Range && !isInfinite!Range &&
 
     static immutable arr2d = [[1, 3], [3, 9], [4, 2]];
     assert(arr2d.minIndex!"a[1] < b[1]" == 2);
+}
+
+@safe nothrow pure unittest
+{
+    // InputRange test
+
+    static struct InRange
+    {
+        @property int front()
+        {
+            return arr[index];
+        }
+
+        bool empty() const
+        {
+            return arr.length == index;
+        }
+
+        void popFront()
+        {
+            index++;
+        }
+
+        int[] arr;
+        size_t index = 0;
+    }
+
+    static assert(isInputRange!InRange);
+
+    auto arr1 = InRange([5, 2, 3, 4, 5, 3, 6]);
+    auto arr2 = InRange([7, 3, 8, 2, 1, 4]);
+
+    assert(arr1.minIndex == 1);
+    assert(arr2.minIndex == 4);
 }
 
 /**
@@ -4749,7 +4787,7 @@ if (isInputRange!R &&
     import std.range;
 
     static foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
-    {
+    (){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
         assert(!startsWith(to!S("abc"), 'c'));
         assert(startsWith(to!S("abc"), 'a', 'c') == 1);
         assert(!startsWith(to!S("abc"), 'x', 'n', 'b'));
@@ -4791,7 +4829,7 @@ if (isInputRange!R &&
             assert(startsWith(to!S("a"), T.init, 'a') == 1);
             assert(startsWith(to!S("a"), 'a', T.init) == 2);
         }
-    }
+    }();
 
     //Length but no RA
     assert(!startsWith("abc".takeExactly(3), "abcd".takeExactly(4)));

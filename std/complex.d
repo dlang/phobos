@@ -146,7 +146,7 @@ if (isFloatingPoint!T)
     }
 
     /// ditto
-    void toString(Writer, Char)(scope Writer w, const ref FormatSpec!Char formatSpec) const
+    void toString(Writer, Char)(scope Writer w, scope const ref FormatSpec!Char formatSpec) const
         if (isOutputRange!(Writer, const(Char)[]))
     {
         import std.format : formatValue;

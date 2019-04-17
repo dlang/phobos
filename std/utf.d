@@ -3279,7 +3279,7 @@ if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
 
     Encodes string `s` into UTF-16 and returns the encoded string.
     `toUTF16z` is suitable for calling the 'W' functions in the Win32 API
-    that take an `LPWSTR` or `LPCWSTR` argument.
+    that take an `LPCWSTR` argument.
   +/
 const(wchar)* toUTF16z(C)(const(C)[] str) @safe pure
 if (isSomeChar!C)
@@ -4208,60 +4208,67 @@ if (isSomeChar!C)
         {
             static struct Result
             {
-                this(R val)
+                enum Empty = uint.max;  // range is empty or just constructed
+
+                this(return R r)
                 {
-                    r = val;
-                    popFront();
+                    this.r = r;
                 }
+
+                this(return R r, uint buff)
+                {
+                    this.r = r;
+                    this.buff = buff;
+                }
+
 
                 @property bool empty()
                 {
-                    return buff == uint.max;
+                    return buff == Empty && r.empty;
                 }
 
-                @property auto front()
+                @property dchar front() scope // 'scope' required by call to decodeFront() below
                 {
-                    assert(!empty, "Attempting to access the front of an empty byUTF");
-                    return cast(dchar) buff;
-                }
+                    if (buff == Empty)
+                    {
+                        auto c = r.front;
 
-                void popFront() scope
-                {
-                    assert(!empty, "Attempting to popFront an empty byUTF");
-                    if (r.empty)
-                    {
-                        buff = uint.max;
-                    }
-                    else
-                    {
                         static if (is(RC == wchar))
                             enum firstMulti = 0xD800; // First high surrogate.
                         else
                             enum firstMulti = 0x80; // First non-ASCII.
-                        if (r.front < firstMulti)
+                        if (c < firstMulti)
                         {
-                            buff = r.front;
                             r.popFront;
+                            buff = cast(dchar) c;
                         }
                         else
                         {
                             buff = () @trusted { return decodeFront!(Yes.useReplacementDchar)(r); }();
                         }
                     }
+                    return cast(dchar) buff;
+                }
+
+                void popFront()
+                {
+                    if (buff == Empty)
+                        front();
+                    buff = Empty;
                 }
 
                 static if (isForwardRange!R)
                 {
-                    @property auto save() return scope
+                    @property auto save()
                     {
-                        auto ret = this;
-                        ret.r = r.save;
-                        return ret;
+                        return Result(r.save, buff);
                     }
                 }
 
-                uint buff;
+            private:
+
                 R r;
+                uint buff = Empty;      // one character lookahead buffer
             }
 
             return Result(r);
@@ -4270,6 +4277,19 @@ if (isSomeChar!C)
         {
             static struct Result
             {
+                this(return R r)
+                {
+                    this.r = r;
+                }
+
+                this(return R r, ushort pos, ushort fill, C[4 / C.sizeof] buf)
+                {
+                    this.r = r;
+                    this.pos = pos;
+                    this.fill = fill;
+                    this.buf = buf;
+                }
+
                 @property bool empty()
                 {
                     return pos == fill && r.empty;
@@ -4316,22 +4336,17 @@ if (isSomeChar!C)
 
                 static if (isForwardRange!R)
                 {
-                    @property auto save() return scope
-                    /* `return scope` cannot be inferred because compiler does not
-                     * track it backwards from assignment to local `ret`
-                     */
+                    @property auto save()
                     {
-                        auto ret = this;
-                        ret.r = r.save;
-                        return ret;
+                        return Result(r.save, pos, fill, buf);
                     }
                 }
 
             private:
 
                 R r;
-                C[4 / C.sizeof] buf = void;
                 ushort pos, fill;
+                C[4 / C.sizeof] buf = void;
             }
 
             return Result(r);

@@ -717,37 +717,10 @@ enum Order : bool
 char[num*2] toHexString(Order order = Order.increasing, size_t num, LetterCase letterCase = LetterCase.upper)
 (in ubyte[num] digest)
 {
-    static if (letterCase == LetterCase.upper)
-    {
-        import std.ascii : hexDigits = hexDigits;
-    }
-    else
-    {
-        import std.ascii : hexDigits = lowerHexDigits;
-    }
-
 
     char[num*2] result;
     size_t i;
-
-    static if (order == Order.increasing)
-    {
-        foreach (u; digest)
-        {
-            result[i++] = hexDigits[u >> 4];
-            result[i++] = hexDigits[u & 15];
-        }
-    }
-    else
-    {
-        size_t j = num - 1;
-        while (i < num*2)
-        {
-            result[i++] = hexDigits[digest[j] >> 4];
-            result[i++] = hexDigits[digest[j] & 15];
-            j--;
-        }
-    }
+    toHexStringImpl!(order, letterCase)(digest, result);
     return result;
 }
 
@@ -761,35 +734,8 @@ char[num*2] toHexString(LetterCase letterCase, Order order = Order.increasing, s
 string toHexString(Order order = Order.increasing, LetterCase letterCase = LetterCase.upper)
 (in ubyte[] digest)
 {
-    static if (letterCase == LetterCase.upper)
-    {
-        import std.ascii : hexDigits = hexDigits;
-    }
-    else
-    {
-        import std.ascii : hexDigits = lowerHexDigits;
-    }
-
     auto result = new char[digest.length*2];
-    size_t i;
-
-    static if (order == Order.increasing)
-    {
-        foreach (u; digest)
-        {
-            result[i++] = hexDigits[u >> 4];
-            result[i++] = hexDigits[u & 15];
-        }
-    }
-    else
-    {
-        import std.range : retro;
-        foreach (u; retro(digest))
-        {
-            result[i++] = hexDigits[u >> 4];
-            result[i++] = hexDigits[u & 15];
-        }
-    }
+    toHexStringImpl!(order, letterCase)(digest, result);
     import std.exception : assumeUnique;
     // memory was just created, so casting to immutable is safe
     return () @trusted { return assumeUnique(result); }();
@@ -850,6 +796,42 @@ ref T[N] asArray(size_t N, T)(ref T[] source, string errorMsg = "")
      assert(source.length >= N, errorMsg);
      return *cast(T[N]*) source.ptr;
 }
+
+/*
+ * Fill in a preallocated buffer with the ASCII hex representation from a byte buffer
+ */
+private void toHexStringImpl(Order order, LetterCase letterCase, BB, HB)
+(const ref BB byteBuffer, ref HB hexBuffer){
+    static if (letterCase == LetterCase.upper)
+    {
+        import std.ascii : hexDigits = hexDigits;
+    }
+    else
+    {
+        import std.ascii : hexDigits = lowerHexDigits;
+    }
+
+    size_t i;
+    static if (order == Order.increasing)
+    {
+        foreach (u; byteBuffer)
+        {
+            hexBuffer[i++] = hexDigits[u >> 4];
+            hexBuffer[i++] = hexDigits[u & 15];
+        }
+    }
+    else
+    {
+        size_t j = byteBuffer.length -1;
+        while (i < byteBuffer.length*2)
+        {
+            hexBuffer[i++] = hexDigits[byteBuffer[j] >> 4];
+            hexBuffer[i++] = hexDigits[byteBuffer[j] & 15];
+            j--;
+        }
+    }
+}
+
 
 /*
  * Returns the length (in bytes) of the hash value produced by T.

@@ -2453,7 +2453,7 @@ public:
      * $(LI $(B %x) formats the intervals as a [low .. high$(RPAREN) range of lowercase hex characters)
      * $(LI $(B %X) formats the intervals as a [low .. high$(RPAREN) range of uppercase hex characters)
      */
-    void toString(Writer)(scope Writer sink, const ref FormatSpec!char fmt) /* const */
+    void toString(Writer)(scope Writer sink, scope const ref FormatSpec!char fmt) /* const */
     {
         import std.format : formatValue;
         auto range = byInterval;

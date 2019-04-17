@@ -570,7 +570,7 @@ Constructs a $(D_PARAM LinearCongruentialEngine) generator seeded with
     }
 
 ///
-    @property typeof(this) save() @safe pure nothrow @nogc
+    @property typeof(this) save() const @safe pure nothrow @nogc
     {
         return this;
     }
@@ -690,11 +690,11 @@ alias MinstdRand = LinearCongruentialEngine!(uint, 48_271, 0, 2_147_483_647);
     {{
         auto rnd1 = Type(123_456_789);
         rnd1.popFront();
-        auto rnd2 = rnd1.save;
+        auto rnd2 = ((const ref Type a) => a.save())(rnd1); // Issue 15853.
         assert(rnd1 == rnd2);
         // Enable next test when RNGs are reference types
         version (none) { assert(rnd1 !is rnd2); }
-        for (auto i = 0; i < 100; i++, rnd1.popFront, rnd2.popFront)
+        for (auto i = 0; i < 3; i++, rnd1.popFront, rnd2.popFront)
             assert(rnd1.front() == rnd2.front());
     }}
 }
@@ -989,7 +989,7 @@ Parameters for the generator.
     }
 
 ///
-    @property typeof(this) save() @safe pure nothrow @nogc
+    @property typeof(this) save() @safe const pure nothrow @nogc
     {
         return this;
     }
@@ -1139,7 +1139,7 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
     {{
         auto gen1 = Type(123_456_789);
         gen1.popFront();
-        auto gen2 = gen1.save;
+        auto gen2 = ((const ref Type a) => a.save())(gen1); // Issue 15853.
         assert(gen1 == gen2);  // Danger, Will Robinson -- no opEquals for MT
         // Enable next test when RNGs are reference types
         version (none) { assert(gen1 !is gen2); }
@@ -1170,7 +1170,6 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
         assert(a.front == expected10kValue[i]);
     }}
 }
-
 
 /++
 Xorshift generator.
@@ -1465,7 +1464,7 @@ if (isUnsigned!UIntType && !(sa > 0 && sb > 0 && sc > 0))
      * Captures a range state.
      */
     @property
-    typeof(this) save() @safe pure nothrow @nogc
+    typeof(this) save() const @safe pure nothrow @nogc
     {
         return this;
     }
@@ -1578,11 +1577,11 @@ alias Xorshift    = Xorshift128;                            /// ditto
     {
         auto rnd1 = Type(123_456_789);
         rnd1.popFront();
-        auto rnd2 = rnd1.save;
+        auto rnd2 = ((const ref Type a) => a.save())(rnd1); // Issue 15853.
         assert(rnd1 == rnd2);
         // Enable next test when RNGs are reference types
         version (none) { assert(rnd1 !is rnd2); }
-        for (auto i = 0; i < 100; i++, rnd1.popFront, rnd2.popFront)
+        for (auto i = 0; i <= Type.sizeof / 4; i++, rnd1.popFront, rnd2.popFront)
             assert(rnd1.front() == rnd2.front());
     }
 }
@@ -3121,7 +3120,7 @@ if (isRandomAccessRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == vo
         }
     }
 
-    @property bool empty() { return _isEmpty; }
+    @property bool empty() const { return _isEmpty; }
 }
 
 /// Ditto
@@ -3418,17 +3417,36 @@ if (isInputRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))
 /// Ditto
     static if (isForwardRange!Range && isForwardRange!UniformRNG)
     {
-        @property typeof(this) save()
+        static if (is(typeof(((const UniformRNG* p) => (*p).save)(null)) : UniformRNG)
+            && is(typeof(((const Range* p) => (*p).save)(null)) : Range))
         {
-            auto ret = this;
-            ret._input = _input.save;
-            ret._rng = _rng.save;
-            return ret;
+            @property typeof(this) save() const
+            {
+                auto ret = RandomSample.init;
+                foreach (fieldIndex, ref val; this.tupleof)
+                {
+                    static if (is(typeof(val) == const(Range)) || is(typeof(val) == const(UniformRNG)))
+                        ret.tupleof[fieldIndex] = val.save;
+                    else
+                        ret.tupleof[fieldIndex] = val;
+                }
+                return ret;
+            }
+        }
+        else
+        {
+            @property typeof(this) save()
+            {
+                auto ret = this;
+                ret._input = _input.save;
+                ret._rng = _rng.save;
+                return ret;
+            }
         }
     }
 
 /// Ditto
-    @property size_t length()
+    @property size_t length() const
     {
         return _toSelect;
     }
@@ -3717,10 +3735,10 @@ if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
     static assert(isInputRange!TestInputRange);
     static assert(!isForwardRange!TestInputRange);
 
-    int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
+    const(int)[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
 
     foreach (UniformRNG; PseudoRngTypes)
-    {
+    (){ // avoid workaround optimizations for large functions @@@BUG@@@ 2396
         auto rng = UniformRNG(1234);
         /* First test the most general case: randomSample of input range, with and
          * without a specified random number generator.
@@ -3762,7 +3780,7 @@ if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
             // ... and test with range initialized directly
             {
                 auto sample =
-                    RandomSample!(int[], UniformRNG)
+                    RandomSample!(const(int)[], UniformRNG)
                                  (a, 5, UniformRNG(321_987_654));
                 static assert(isForwardRange!(typeof(sample)));
             }
@@ -3774,7 +3792,7 @@ if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
             // ... and test with range initialized directly
             {
                 auto sample =
-                    RandomSample!(int[], UniformRNG)
+                    RandomSample!(const(int)[], UniformRNG)
                                  (a, 5, UniformRNG(789_123_456));
                 static assert(isInputRange!(typeof(sample)));
                 static assert(!isForwardRange!(typeof(sample)));
@@ -4012,7 +4030,7 @@ if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
         static if (isForwardRange!UniformRNG)
         {
             auto sample1 = randomSample(a, 5, rng);
-            auto sample2 = sample1.save;
+            auto sample2 = ((const ref typeof(sample1) a) => a.save)(sample1); // Issue 15853.
             assert(sample1.array() == sample2.array());
         }
 
@@ -4026,5 +4044,5 @@ if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
             while (sample!UniformRNG(++n) == fst && n < n.max) {}
             assert(n < n.max);
         }
-    }
+    }();
 }

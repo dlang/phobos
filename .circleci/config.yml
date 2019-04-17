@@ -3,7 +3,7 @@ jobs:
   build:
     working_directory: ~/phobos
     docker:
-      - image: circleci/node:4.8.2
+      - image: circleci/buildpack-deps:18.04
     parallelism: 1
     steps:
       - checkout
@@ -16,9 +16,6 @@ jobs:
       - run:
           command: sudo apt-get update && sudo apt-get install -y gdb
           name: Install gdb
-      - run:
-          command: ./.circleci/run.sh style_lint
-          name: Run code style & linter
       - run:
           command: ./.circleci/run.sh publictests
           name: Run all public unittests

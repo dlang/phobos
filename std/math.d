@@ -152,6 +152,8 @@ version (AArch64)   version = ARM_Any;
 version (ARM)       version = ARM_Any;
 version (SPARC)     version = SPARC_Any;
 version (SPARC64)   version = SPARC_Any;
+version (RISCV32)   version = RISCV_Any;
+version (RISCV64)   version = RISCV_Any;
 
 version (D_InlineAsm_X86)
 {
@@ -5535,6 +5537,7 @@ private:
     // The Pentium SSE2 status register is 32 bits.
     // The ARM and PowerPC FPSCR is a 32-bit register.
     // The SPARC FSR is a 32bit register (64 bits for SPARC 7 & 8, but high bits are uninteresting).
+    // The RISC-V (32 & 64 bit) fcsr is 32-bit register.
     uint flags;
 
     version (CRuntime_Microsoft)
@@ -5745,6 +5748,10 @@ version (X86_Any)
     version = IeeeFlagsSupport;
 }
 else version (PPC_Any)
+{
+    version = IeeeFlagsSupport;
+}
+else version (RISCV_Any)
 {
     version = IeeeFlagsSupport;
 }
@@ -6011,6 +6018,21 @@ nothrow @nogc:
                                  | inexactException,
         }
     }
+    else version (RISCV_Any)
+    {
+        enum : ExceptionMask
+        {
+            inexactException      = 0x01,
+            divByZeroException    = 0x02,
+            underflowException    = 0x04,
+            overflowException     = 0x08,
+            invalidException      = 0x10,
+            severeExceptions   = overflowException | divByZeroException
+                                 | invalidException,
+            allExceptions      = severeExceptions | underflowException
+                                 | inexactException,
+        }
+    }
     else version (X86_Any)
     {
         enum : ExceptionMask
@@ -6132,6 +6154,10 @@ private:
         alias ControlState = ulong;
     }
     else version (SystemZ)
+    {
+        alias ControlState = uint;
+    }
+    else version (RISCV_Any)
     {
         alias ControlState = uint;
     }
@@ -6828,6 +6854,7 @@ Returns `-1` if $(D x < 0), `x` if $(D x == 0), `1` if
 $(D x > 0), and $(NAN) if x==$(NAN).
  */
 F sgn(F)(F x) @safe pure nothrow @nogc
+if (isFloatingPoint!F || isIntegral!F)
 {
     // @@@TODO@@@: make this faster
     return x > 0 ? 1 : x < 0 ? -1 : x;
@@ -7358,7 +7385,10 @@ T nextafter(T)(const T x, const T y) @safe pure nothrow @nogc
  *      $(TR $(TD x $(LT)= y) $(TD +0.0))
  *      )
  */
-real fdim(real x, real y) @safe pure nothrow @nogc { return (x > y) ? x - y : +0.0; }
+real fdim(real x, real y) @safe pure nothrow @nogc
+{
+    return (x < y) ? +0.0 : x - y;
+}
 
 ///
 @safe pure nothrow @nogc unittest
@@ -7366,8 +7396,9 @@ real fdim(real x, real y) @safe pure nothrow @nogc { return (x > y) ? x - y : +0
     assert(fdim(2.0, 0.0) == 2.0);
     assert(fdim(-2.0, 0.0) == 0.0);
     assert(fdim(real.infinity, 2.0) == real.infinity);
-    assert(fdim(real.nan, 2.0) == 0.0);
-    assert(fdim(2.0, real.nan) == 0.0);
+    assert(isNaN(fdim(real.nan, 2.0)));
+    assert(isNaN(fdim(2.0, real.nan)));
+    assert(isNaN(fdim(real.nan, real.nan)));
 }
 
 /**

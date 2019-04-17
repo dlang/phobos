@@ -619,7 +619,19 @@ Note:
 auto cmp(R1, R2)(R1 r1, R2 r2)
 if (isInputRange!R1 && isInputRange!R2)
 {
-    static if (!(isSomeString!R1 && isSomeString!R2))
+    alias E1 = ElementEncodingType!R1;
+    alias E2 = ElementEncodingType!R2;
+
+    static if (isDynamicArray!R1 && isDynamicArray!R2
+        && __traits(isUnsigned, E1) && __traits(isUnsigned, E2)
+        && E1.sizeof == 1 && E2.sizeof == 1
+        && (is(Unqual!E1 == char) == is(Unqual!E2 == char))) // Both or neither must auto-decode.
+    {
+        // dstrcmp algorithm is correct for both ubyte[] and for char[].
+        import core.internal.string : dstrcmp;
+        return dstrcmp(cast(const char[]) r1, cast(const char[]) r2);
+    }
+    else static if (!(isSomeString!R1 && isSomeString!R2))
     {
         for (;; r1.popFront(), r2.popFront())
         {
@@ -644,66 +656,33 @@ if (isInputRange!R1 && isInputRange!R2)
     }
     else
     {
-        import core.stdc.string : memcmp;
-        import std.utf : decode;
-
-        // For speed only
-        static int threeWay(size_t a, size_t b)
-        {
-            static if (size_t.sizeof == int.sizeof)
-                return a - b;
-            else
-                // Faster than return b < a ? 1 : a < b ? -1 : 0;
-                return (a > b) - (a < b);
-        }
-        // For speed only
-        // @@@BUG@@@ overloading should be allowed for nested functions
-        static int threeWayInt(int a, int b)
-        {
-            return a - b;
-        }
-
         static if (typeof(r1[0]).sizeof == typeof(r2[0]).sizeof)
         {
-            static if (typeof(r1[0]).sizeof == 1)
+            return () @trusted
             {
-                immutable len = min(r1.length, r2.length);
-                int result = __ctfe ?
-                    {
-                        foreach (i; 0 .. len)
-                        {
-                            if (r1[i] != r2[i])
-                                return threeWayInt(r1[i], r2[i]);
-                        }
-                        return 0;
-                    }()
-                    : () @trusted { return memcmp(r1.ptr, r2.ptr, len); }();
-                if (result) return result;
-                return threeWay(r1.length, r2.length);
-            }
-            else
-            {
-                return () @trusted
+                auto p1 = r1.ptr, p2 = r2.ptr,
+                    pEnd = p1 + min(r1.length, r2.length);
+                for (; p1 != pEnd; ++p1, ++p2)
                 {
-                    auto p1 = r1.ptr, p2 = r2.ptr,
-                        pEnd = p1 + min(r1.length, r2.length);
-                    for (; p1 != pEnd; ++p1, ++p2)
-                    {
-                        if (*p1 != *p2) return threeWayInt(int(*p1), int(*p2));
-                    }
-                    return threeWay(r1.length, r2.length);
-                }();
-            }
+                    if (*p1 != *p2) return cast(int) *p1 - cast(int) *p2;
+                }
+                static if (typeof(r1[0]).sizeof >= 2 && size_t.sizeof <= uint.sizeof)
+                    return cast(int) r1.length - cast(int) r2.length;
+                else
+                    return int(r1.length > r2.length) - int(r1.length < r2.length);
+            }();
         }
         else
         {
+            import std.utf : decode;
+
             for (size_t i1, i2;;)
             {
-                if (i1 == r1.length) return threeWay(i2, r2.length);
-                if (i2 == r2.length) return threeWay(r1.length, i1);
+                if (i1 == r1.length) return -int(i2 < r2.length);
+                if (i2 == r2.length) return int(1);
                 immutable c1 = decode(r1, i1),
                     c2 = decode(r2, i2);
-                if (c1 != c2) return threeWayInt(int(c1), int(c2));
+                if (c1 != c2) return cast(int) c1 - cast(int) c2;
             }
         }
     }
@@ -1363,7 +1342,7 @@ Returns the $(HTTP wikipedia.org/wiki/Levenshtein_distance, Levenshtein
 distance) between `s` and `t`. The Levenshtein distance computes
 the minimal amount of edit operations necessary to transform `s`
 into `t`.  Performs $(BIGOH s.length * t.length) evaluations of $(D
-equals) and occupies $(BIGOH s.length * t.length) storage.
+equals) and occupies $(BIGOH min(s.length, t.length)) storage.
 
 Params:
     equals = The binary predicate to compare the elements of the two ranges.
@@ -1411,7 +1390,7 @@ if (isForwardRange!(Range1) && isForwardRange!(Range2))
         return eq(s.front, t.front) ? 0 : 1;
     }
 
-    if (slen > tlen)
+    if (slen < tlen)
     {
         Levenshtein!(Range1, eq, size_t) lev;
         return lev.distanceLowMem(s, t, slen, tlen);

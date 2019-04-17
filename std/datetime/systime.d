@@ -377,7 +377,7 @@ public:
 
 private:
 
-    @disable this() {}
+    @disable this();
 }
 
 /// Get the current time as a $(LREF SysTime)
@@ -10503,7 +10503,7 @@ version (unittest) private void testBadParse822(alias cr)(string str, size_t lin
                            function(string a){return cast(ubyte[]) a;},
                            function(string a){return a;},
                            function(string a){return map!(b => cast(char) b)(a.representation);}))
-    {{
+    {(){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
         scope(failure) writeln(typeof(cr).stringof);
         alias test = testParse822!cr;
         alias testBad = testBadParse822!cr;
@@ -10741,7 +10741,7 @@ version (unittest) private void testBadParse822(alias cr)(string str, size_t lin
             testBad(cast(string) currStr);
             testBad((cast(string) currStr) ~ "                                    ");
         }
-    }}
+    }();}
 
     static void testScope(scope ref string str) @safe
     {
@@ -10774,7 +10774,7 @@ version (unittest) private void testBadParse822(alias cr)(string str, size_t lin
                            function(string a){return cast(ubyte[]) a;},
                            function(string a){return a;},
                            function(string a){return map!(b => cast(char) b)(a.representation);}))
-    {{
+    {(){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
         scope(failure) writeln(typeof(cr).stringof);
         alias test = testParse822!cr;
         {
@@ -10964,7 +10964,7 @@ version (unittest) private void testBadParse822(alias cr)(string str, size_t lin
                 assert(collectExceptionMsg!DateTimeException(parseRFC822DateTime(value)) == tooShortMsg);
             }
         }
-    }}
+    }();}
 }
 
 

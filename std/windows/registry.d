@@ -1322,7 +1322,7 @@ private:
 final class Registry
 {
 private:
-    @disable this() { }
+    @disable this();
 
 public:
     /// Returns the root key for the HKEY_CLASSES_ROOT hive

@@ -3842,8 +3842,8 @@ version (StdDdoc)
     }
     else version (Windows)
     {
-        import core.stdc.stdlib : _exit;
-        _exit(wait(spawnProcess(commandLine)));
+        import core.stdc.stdlib : _Exit;
+        _Exit(wait(spawnProcess(commandLine)));
     }
     ---
     This is, however, NOT equivalent to POSIX' `execv*`.  For one thing, the
