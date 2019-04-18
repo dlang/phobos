@@ -2300,10 +2300,12 @@ void mulKaratsuba(BigDigit [] result, const(BigDigit) [] x,
     BigDigit[] R2 = result[half*2 .. half*3];
     BigDigit[] R3 = result[half*3..$];
     BigDigit c1 = multibyteAdd(R2, R2, R1, 0); // c1:R2 = R2 + R1
+    BigDigit[] t_R1 = R1.dup;
+    BigDigit t_c2 = multibyteAdd(t_R1, R2, [ ], 0);
     BigDigit c2 = multibyteAdd(R1, R2, result[0 .. half], 0); // c2:R1 = R2 + R1 + R0
     BigDigit c3 = addAssignSimple(R2, R3); // R2 = R2 + R1 + R3
     if (c1+c2)
-        multibyteIncrementAssign!('+')(result[half*2..$], c1+c2);
+        multibyteIncrementAssign!('+')(result[half * 2..$], c1 + c2 + t_c2);
     if (c1+c3)
         multibyteIncrementAssign!('+')(R3, c1+c3);
 
@@ -2351,9 +2353,11 @@ void squareKaratsuba(BigDigit [] result, const BigDigit [] x,
     BigDigit[] R2 = result[half*2 .. half*3];
     BigDigit[] R3 = result[half*3..$];
     BigDigit c1 = multibyteAdd(R2, R2, R1, 0); // c1:R2 = R2 + R1
+    BigDigit[] t_R1 = R1.dup;
+    BigDigit t_c2 = multibyteAdd(t_R1, R2, [ ], 0);
     BigDigit c2 = multibyteAdd(R1, R2, result[0 .. half], 0); // c2:R1 = R2 + R1 + R0
     BigDigit c3 = addAssignSimple(R2, R3); // R2 = R2 + R1 + R3
-    if (c1+c2) multibyteIncrementAssign!('+')(result[half*2..$], c1+c2);
+    if (c1+c2) multibyteIncrementAssign!('+')(result[half * 2..$], c1 + c2 + t_c2);
     if (c1+c3) multibyteIncrementAssign!('+')(R3, c1+c3);
 
     // And finally we subtract mid, which is always positive
