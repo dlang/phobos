@@ -1910,3 +1910,42 @@ void divMod(const BigInt dividend, const BigInt divisor, out BigInt quotient, ou
     BigInt c = a * b;
     assert (c == BigInt("16883721089480688747229011802283756823349870758229387365814728471518346136944894862961035756393632618073413910091006778604956808730652275328822700182498926542563654351871390166691461743896850906716336187966456064270200717632811001335602400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"));
 }
+
+
+/**
+ * Fast power modulus calculation for operands.
+ *
+ * Params:
+ *     base = Basic operands
+ *     exponent = Power exponent
+ *     modulus = Modules to be modular
+ */
+BigInt powMod(BigInt base, BigInt exponent, BigInt modulus) pure nothrow
+{
+    assert(base >= 1 && exponent >= 0 && modulus >= 1);
+
+    BigInt result = 1;
+
+    while (exponent > 0)
+    {
+        if (exponent & 1)
+        {
+            result = (result * base) % modulus;
+        }
+
+        base = ((base % modulus) * (base % modulus)) % modulus;
+        exponent >>= 1;
+    }
+
+    return result;
+}
+
+@system unittest // for powMod
+{
+    BigInt base = BigInt("123456789012345678901234567890");
+    BigInt exponent = BigInt("1234567890123456789012345678901234567");
+    BigInt modulus = BigInt("1234567");
+
+    BigInt result = powMod(base, exponent, modulus);
+    assert(result == 359079);
+}
