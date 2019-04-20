@@ -25,3 +25,4 @@ obj/
 .dub/
 libphobos_*
 source/
+/.project
