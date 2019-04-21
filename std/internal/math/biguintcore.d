@@ -1585,7 +1585,8 @@ void mulInternal(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
             mulKaratsuba(result[0 .. half + y.length], y, x[0 .. half], scratchbuff);
             partial[] = result[half .. half + y.length];
             mulKaratsuba(result[half .. $], y, x[half .. $], scratchbuff);
-            addAssignSimple(result[half .. half + y.length], partial);
+            BigDigit c = addAssignSimple(result[half .. half + y.length], partial);
+            if (c) multibyteIncrementAssign!('+')(result[half + y.length..$], c);
             () @trusted { GC.free(scratchbuff.ptr); } ();
         }
         else
