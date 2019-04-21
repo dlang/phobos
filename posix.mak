@@ -451,7 +451,8 @@ install2 : all
 	cp $(LIB) $(INSTALL_DIR)/$(OS)/$(lib_dir)/
 ifeq (1,$(SHARED))
 	cp -P $(LIBSO) $(INSTALL_DIR)/$(OS)/$(lib_dir)/
-	ln -sf $(notdir $(LIBSO)) $(INSTALL_DIR)/$(OS)/$(lib_dir)/libphobos2.so
+	cp -P $(ROOT)/$(SONAME) $(INSTALL_DIR)/$(OS)/$(lib_dir)/
+	cp -P $(ROOT)/libphobos2.so $(INSTALL_DIR)/$(OS)/$(lib_dir)/
 endif
 	mkdir -p $(INSTALL_DIR)/src/phobos/etc
 	mkdir -p $(INSTALL_DIR)/src/phobos/std
