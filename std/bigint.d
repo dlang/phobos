@@ -1928,6 +1928,8 @@ void divMod(const BigInt dividend, const BigInt divisor, out BigInt quotient, ou
  *     base = Basic operands
  *     exponent = Power exponent
  *     modulus = Modules to be modular
+ * Returns:
+ *     The power modulus result.
  */
 BigInt powMod(BigInt base, BigInt exponent, BigInt modulus) pure nothrow
 {
