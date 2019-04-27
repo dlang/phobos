@@ -170,6 +170,12 @@ else version (D_InlineAsm_X86_64)
     version = InlineAsm_X86_Any;
 }
 
+version (CRuntime_Microsoft)
+{
+    version (InlineAsm_X86_Any)
+        version = MSVC_InlineAsm;
+}
+
 version (X86_64) version = StaticallyHaveSSE;
 version (X86) version (OSX) version = StaticallyHaveSSE;
 
@@ -3688,7 +3694,7 @@ real logb(real x) @trusted nothrow @nogc
             ret                         ;
         }
     }
-    else version (CRuntime_Microsoft)
+    else version (MSVC_InlineAsm)
     {
         asm pure nothrow @nogc
         {
@@ -3975,7 +3981,7 @@ real ceil(real x) @trusted pure nothrow @nogc
             ret                         ;
         }
     }
-    else version (CRuntime_Microsoft)
+    else version (MSVC_InlineAsm)
     {
         short cw;
         asm pure nothrow @nogc
@@ -4103,7 +4109,7 @@ real floor(real x) @trusted pure nothrow @nogc
             ret                         ;
         }
     }
-    else version (CRuntime_Microsoft)
+    else version (MSVC_InlineAsm)
     {
         short cw;
         asm pure nothrow @nogc
@@ -4603,7 +4609,7 @@ real trunc(real x) @trusted nothrow @nogc
             ret                         ;
         }
     }
-    else version (CRuntime_Microsoft)
+    else version (MSVC_InlineAsm)
     {
         short cw;
         asm pure nothrow @nogc
