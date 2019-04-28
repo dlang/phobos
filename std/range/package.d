@@ -1170,7 +1170,7 @@ if (Ranges.length > 0 &&
             }
 
             static if (allSatisfy!(hasLength, R) && allSatisfy!(hasSlicing, R))
-                auto opSlice(size_t begin, size_t end)
+                auto opSlice(size_t begin, size_t end) return scope
                 {
                     auto result = this;
                     foreach (i, Unused; R)
@@ -10661,7 +10661,7 @@ if (isInputRange!Range && !isInstanceOf!(SortedRange, Range))
 
     /// Ditto
     static if (hasSlicing!Range)
-        auto opSlice(size_t a, size_t b) return scope @trusted
+        auto opSlice(size_t a, size_t b) return scope
         {
             assert(
                 a <= b,
