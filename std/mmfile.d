@@ -335,7 +335,6 @@ class MmFile
             else
             {
                 fd = -1;
-                version (CRuntime_Glibc) import core.sys.linux.sys.mman : MAP_ANON;
                 flags |= MAP_ANON;
             }
             this.size = size;
