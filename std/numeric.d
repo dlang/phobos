@@ -1774,6 +1774,24 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
     return sum0;
 }
 
+/// ditto
+F dotProduct(F, uint N)(const ref scope F[N] a, const ref scope F[N] b)
+if (N <= 16)
+{
+    F sum0 = 0;
+    F sum1 = 0;
+    static foreach (i; 0 .. N / 2)
+    {
+        sum0 += a[i*2] * b[i*2];
+        sum1 += a[i*2+1] * b[i*2+1];
+    }
+    static if (N % 2 == 1)
+    {
+        sum0 += a[N-1] * b[N-1];
+    }
+    return sum0 + sum1;
+}
+
 @system unittest
 {
     // @system due to dotProduct and assertCTFEable
@@ -1785,6 +1803,13 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
         T[] b = [ 4.0, 6.0, ];
         assert(dotProduct(a, b) == 16);
         assert(dotProduct([1, 3, -5], [4, -2, -1]) == 3);
+        // Test with fixed-length arrays.
+        T[2] c = [ 1.0, 2.0, ];
+        T[2] d = [ 4.0, 6.0, ];
+        assert(dotProduct(c, d) == 16);
+        T[3] e = [1,  3, -5];
+        T[3] f = [4, -2, -1];
+        assert(dotProduct(e, f) == 3);
     }}
 
     // Make sure the unrolled loop codepath gets tested.
