@@ -124,10 +124,9 @@ template all(alias pred = "a")
     {
         static assert(is(typeof(unaryFun!pred(range.front))),
                 "`" ~ pred.stringof[1..$-1] ~ "` isn't a unary predicate function for range.front");
-        foreach (ref e; range)
-            if (!unaryFun!pred(e))
-                return false;
-        return true;
+        import std.functional : not;
+
+        return find!(not!(unaryFun!pred))(range).empty;
     }
 }
 
@@ -154,6 +153,7 @@ are true.
 {
     int x = 1;
     assert(all!(a => a > x)([2, 3]));
+    assert(all!"a == 0x00c9"("\xc3\x89")); // Test that `all` auto-decodes.
 }
 
 /++
@@ -172,10 +172,7 @@ template any(alias pred = "a")
     bool any(Range)(Range range)
     if (isInputRange!Range && is(typeof(unaryFun!pred(range.front))))
     {
-        foreach (ref e; range)
-            if (unaryFun!pred(e))
-                return true;
-        return false;
+        return !find!pred(range).empty;
     }
 }
 
@@ -211,6 +208,7 @@ evaluate to true.
 {
     auto a = [ 1, 2, 0, 4 ];
     assert(any!"a == 2"(a));
+    assert(any!"a == 0x3000"("\xe3\x80\x80")); // Test that `any` auto-decodes.
 }
 
 // balancedParens
