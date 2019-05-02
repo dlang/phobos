@@ -366,7 +366,8 @@ Returns:
     The unfilled part of target
  */
 TargetRange copy(SourceRange, TargetRange)(SourceRange source, TargetRange target)
-if (isInputRange!SourceRange && isOutputRange!(TargetRange, ElementType!SourceRange))
+if (isInputRange!SourceRange && isOutputRange!(TargetRange, ElementType!SourceRange)
+    && !(isArray!SourceRange && isArray!TargetRange))
 {
     static if (areCopyCompatibleArrays!(SourceRange, TargetRange))
     {
@@ -417,6 +418,74 @@ if (isInputRange!SourceRange && isOutputRange!(TargetRange, ElementType!SourceRa
             return target;
         }
     }
+}
+
+/// ditto
+// This overload is allows fixed-length arrays to be automatically
+// reinterpreted as variable-length arrays, which in combination with
+// the next overload lets us detect some length mismatches at compile time.
+TargetElement[] copy(SourceElement, TargetElement)(SourceElement[] source, TargetElement[] target)
+if (isOutputRange!(TargetElement[], SourceElement))
+{
+    alias SourceRange = typeof(source);
+    alias TargetRange = typeof(target);
+    static if (areCopyCompatibleArrays!(SourceRange, TargetRange))
+    {
+        const tlen = target.length;
+        const slen = source.length;
+        assert(tlen >= slen,
+                "Cannot copy a source range into a smaller target range.");
+
+        immutable overlaps = __ctfe || () @trusted {
+            return source.ptr < target.ptr + tlen &&
+                target.ptr < source.ptr + slen; }();
+
+        if (overlaps)
+        {
+            foreach (idx; 0 .. slen)
+                target[idx] = source[idx];
+            return target[slen .. tlen];
+        }
+        else
+        {
+            // Array specialization.  This uses optimized memory copying
+            // routines under the hood and is about 10-20x faster than the
+            // generic implementation.
+            target[0 .. slen] = source[];
+            return target[slen .. $];
+        }
+    }
+    else
+    {
+        // Specialize for 2 random access ranges.
+        // Typically 2 random access ranges are faster iterated by common
+        // index than by x.popFront(), y.popFront() pair
+        static if (isRandomAccessRange!SourceRange &&
+                hasLength!SourceRange &&
+                hasSlicing!TargetRange &&
+                isRandomAccessRange!TargetRange &&
+                hasLength!TargetRange)
+        {
+            auto len = source.length;
+            foreach (idx; 0 .. len)
+                target[idx] = source[idx];
+            return target[len .. target.length];
+        }
+        else
+        {
+            foreach (element; source)
+                put(target, element);
+            return target;
+        }
+    }
+}
+
+// This overload is just to detect length violations at compile time.
+TargetElement[N2] copy(SourceElement, size_t N1, TargetElement, size_t N2)
+(ref SourceElement[N1] source, ref TargetElement[N2] target)
+if (N1 > N2 && !isNarrowString!(SourceElement[]) && !isNarrowString!(TargetElement[]))
+{
+    static assert(0, "std.algorithm.copy: cannot copy a source range into a smaller target range.");
 }
 
 ///
@@ -488,6 +557,16 @@ $(LINK2 http://en.cppreference.com/w/cpp/algorithm/copy_backward, STL's `copy_ba
 {
     enum c = copy([1,2,3], [4,5,6,7]);
     assert(c == [7]);
+}
+
+// Test compile time length checking (issue 13882).
+@safe unittest
+{
+    const uint[3] a = [1,2,3];
+    uint[2] b = [4,5];
+
+    copy(b, a); // Accepts fixed-length array arguments.
+    static assert(!__traits(compiles, copy(a, b))); // Length mismatch.
 }
 
 
