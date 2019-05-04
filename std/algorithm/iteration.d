@@ -6320,7 +6320,7 @@ b)(r, 0), `sum` uses specialized algorithms to maximize accuracy,
 as follows.
 
 $(UL
-$(LI If `$(REF ElementType, std,range,primitives)!R` is a floating-point
+$(LI If $(REF ElementType, std,range,primitives)!R is a floating-point
 type and `R` is a
 $(REF_ALTTEXT random-access range, isRandomAccessRange, std,range,primitives) with
 length and slicing, then `sum` uses the
