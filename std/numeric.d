@@ -145,6 +145,27 @@ if (((flags & flags.signed) + precision + exponentWidth) % 8 == 0 && precision +
     auto p = Probability(0.5);
 }
 
+// Facilitate converting numeric types to custom float
+private union ToBinary(F)
+if (is(typeof(CustomFloatParams!(F.sizeof*8))) || is(F == real))
+{
+    F set;
+
+    // If on Linux or Mac, where 80-bit reals are padded, ignore the
+    // padding.
+    import std.algorithm.comparison : min;
+    CustomFloat!(CustomFloatParams!(min(F.sizeof*8, 80))) get;
+
+    // Convert F to the correct binary type.
+    static typeof(get) opCall(F value)
+    {
+        ToBinary r;
+        r.set = value;
+        return r.get;
+    }
+    alias get this;
+}
+
 /// ditto
 struct CustomFloat(uint             precision,  // fraction bits (23 for float)
                    uint             exponentWidth,  // exponent bits (8 for float)  Exponent width
@@ -175,27 +196,6 @@ private:
     alias T_signed_exp = sType!exponentWidth;
 
     alias Flags = CustomFloatFlags;
-
-    // Facilitate converting numeric types to custom float
-    union ToBinary(F)
-        if (is(typeof(CustomFloatParams!(F.sizeof*8))) || is(F == real))
-    {
-        F set;
-
-        // If on Linux or Mac, where 80-bit reals are padded, ignore the
-        // padding.
-        import std.algorithm.comparison : min;
-        CustomFloat!(CustomFloatParams!(min(F.sizeof*8, 80))) get;
-
-        // Convert F to the correct binary type.
-        static typeof(get) opCall(F value)
-        {
-            ToBinary r;
-            r.set = value;
-            return r.get;
-        }
-        alias get this;
-    }
 
     // Perform IEEE rounding with round to nearest detection
     void roundedShift(T,U)(ref T sig, U shift)
