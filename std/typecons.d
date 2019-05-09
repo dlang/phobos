@@ -3577,7 +3577,7 @@ Returns:
         }
         //Need to use 'is' if T is a float type
         //because NaN != NaN
-        else static if (isFloatingPoint!T)
+        else static if (__traits(isFloating, T) || __traits(compiles, { static assert(!(nullValue == nullValue)); }))
         {
             return _value is nullValue;
         }
@@ -3596,6 +3596,14 @@ Returns:
 
     ni = 0;
     assert(!ni.isNull);
+}
+
+@system unittest
+{
+    assert(typeof(this).init.isNull, typeof(this).stringof ~
+        ".isNull does not work correctly because " ~ T.stringof ~
+        " has an == operator that is non-reflexive and could not be" ~
+        " determined before runtime to be non-reflexive!");
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=11135
@@ -3770,6 +3778,25 @@ if (is (typeof(nullValue) == T))
     assert(a == 8);
     a.nullify();
     assert(a.isNull);
+}
+
+@nogc nothrow pure @safe unittest
+{
+    // issue 19226 - fully handle non-self-equal nullValue
+    static struct Fraction
+    {
+        int denominator;
+        bool isNaN() const
+        {
+            return denominator == 0;
+        }
+        bool opEquals(const Fraction rhs) const
+        {
+            return !isNaN && denominator == rhs.denominator;
+        }
+    }
+    alias N = Nullable!(Fraction, Fraction.init);
+    assert(N.init.isNull);
 }
 
 @safe unittest
