@@ -498,7 +498,7 @@ void put(R, E)(ref R r, E e)
 
 @safe pure nothrow @nogc unittest
 {
-    static struct R() { void put(in char[]) {} }
+    static struct R() { void put(scope const(char)[]) {} }
     R!() r;
     put(r, 'a');
 }
@@ -559,7 +559,7 @@ pure @safe unittest
 
 @safe pure unittest
 {
-    static struct R() { void put(in char[]) {} }
+    static struct R() { void put(scope const(char)[]) {} }
     R!() r;
     putChar(r, 'a');
 }
@@ -586,7 +586,7 @@ pure @safe unittest
 
 @safe unittest
 {
-    void myprint(in char[] s) { }
+    void myprint(scope const(char)[] s) { }
     auto r = &myprint;
     put(r, 'a');
 }
@@ -812,7 +812,7 @@ pure @safe unittest
     // issue 10571
     import std.format;
     string buf;
-    formattedWrite((in char[] s) { buf ~= s; }, "%s", "hello");
+    formattedWrite((scope const(char)[] s) { buf ~= s; }, "%s", "hello");
     assert(buf == "hello");
 }
 
@@ -912,7 +912,7 @@ enum bool isOutputRange(R, E) =
 ///
 @safe unittest
 {
-    void myprint(in char[] s) { }
+    void myprint(scope const(char)[] s) { }
     static assert(isOutputRange!(typeof(&myprint), char));
 
     static assert( isOutputRange!(char[], char));
