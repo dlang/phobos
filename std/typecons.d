@@ -2812,35 +2812,6 @@ Params:
             formatValue(writer, _value.payload, fmt);
     }
 
-    //@@@DEPRECATED_2.086@@@
-    deprecated("To be removed after 2.086. Please use the output range overload instead.")
-    void toString()(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char fmt)
-    {
-        if (isNull)
-        {
-            sink.formatValue("Nullable.null", fmt);
-        }
-        else
-        {
-            sink.formatValue(_value.payload, fmt);
-        }
-    }
-
-    // Issue 14940
-    //@@@DEPRECATED_2.086@@@
-    deprecated("To be removed after 2.086. Please use the output range overload instead.")
-    void toString()(scope void delegate(const(char)[]) @safe sink, scope const ref FormatSpec!char fmt)
-    {
-        if (isNull)
-        {
-            sink.formatValue("Nullable.null", fmt);
-        }
-        else
-        {
-            sink.formatValue(_value.payload, fmt);
-        }
-    }
-
 /**
 Check if `this` is in the null state.
 

@@ -1,0 +1,4 @@
+deprecated Nullable.toString removed
+
+The deprecated overload of $(D Nullable)'s $(D toString) which took a sink has
+been removed. The overload which takes an output range should be used instead.

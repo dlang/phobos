@@ -1,0 +1,5 @@
+deprecated functions in std.string removed
+
+The deprecated functions $(D inPattern), $(D countchars), $(D removechars),
+$(D squeeze), and $(D munch) in $(D std.string) have now been removed. Any code
+that still needs them can use $(LINK2 https://github.com/dlang/undeaD, undeaD).
