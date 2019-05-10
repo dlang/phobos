@@ -1,0 +1,4 @@
+std.digest.digest removed
+
+The deprecated std.digest.digest has been removed. std.digest should be
+imported instead.
