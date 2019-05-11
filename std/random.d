@@ -1350,15 +1350,15 @@ if (isUnsigned!UIntType && !(sa > 0 && sb > 0 && sc > 0))
         static if (UIntType.sizeof == uint.sizeof)
         {
             // Initialization routine from MersenneTwisterEngine.
-            foreach (uint i, ref e; _state)
+            foreach (size_t i, ref e; _state)
             {
-                e = (x0 = (1_812_433_253U * (x0 ^ (x0 >> 30)) + i + 1));
+                e = (x0 = (1_812_433_253U * (x0 ^ (x0 >> 30)) + cast(uint) i + 1));
                 // Xorshift requires merely that not every word of the internal
                 // array is 0. For historical compatibility the 32-bit word version
                 // has the stronger requirement that not any word of the state
                 // array is 0 after initial seeding.
                 if (e == 0)
-                    e = (i + 1);
+                    e = (cast(uint) i + 1);
             }
         }
         else static if (UIntType.sizeof == ulong.sizeof)
