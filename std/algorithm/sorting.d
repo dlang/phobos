@@ -3035,6 +3035,28 @@ if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R)
     schwartzSort!("a[0]", SwapStrategy.stable)(chars);
 }
 
+@safe unittest
+{
+    // issue 13965
+    import std.algorithm.iteration : map;
+    import std.numeric : entropy;
+
+    auto lowEnt = [ 1.0, 0, 0 ],
+        midEnt = [ 0.1, 0.1, 0.8 ],
+        highEnt = [ 0.31, 0.29, 0.4 ];
+    auto arr = new double[][3];
+    arr[0] = midEnt;
+    arr[1] = lowEnt;
+    arr[2] = highEnt;
+
+    schwartzSort!(entropy, SwapStrategy.stable)(arr);
+
+    assert(arr[0] == lowEnt);
+    assert(arr[1] == midEnt);
+    assert(arr[2] == highEnt);
+    assert(isSorted!("a < b")(map!(entropy)(arr)));
+}
+
 // partialSort
 /**
 Reorders the random-access range `r` such that the range `r[0 .. mid]`
