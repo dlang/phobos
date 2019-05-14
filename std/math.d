@@ -150,6 +150,12 @@ version (MIPS32)    version = MIPS_Any;
 version (MIPS64)    version = MIPS_Any;
 version (AArch64)   version = ARM_Any;
 version (ARM)       version = ARM_Any;
+version (S390)      version = IBMZ_Any;
+version (SPARC)     version = SPARC_Any;
+version (SPARC64)   version = SPARC_Any;
+version (SystemZ)   version = IBMZ_Any;
+version (RISCV32)   version = RISCV_Any;
+version (RISCV64)   version = RISCV_Any;
 
 version (D_InlineAsm_X86)
 {
@@ -158,6 +164,12 @@ version (D_InlineAsm_X86)
 else version (D_InlineAsm_X86_64)
 {
     version = InlineAsm_X86_Any;
+}
+
+version (CRuntime_Microsoft)
+{
+    version (InlineAsm_X86_Any)
+        version = MSVC_InlineAsm;
 }
 
 version (X86_64) version = StaticallyHaveSSE;
@@ -4110,7 +4122,7 @@ real log(real x) @safe pure nothrow @nogc
 ///
 @safe pure nothrow @nogc unittest
 {
-    assert(log(E) == 1);
+    assert(feqrel(log(E), 1) >= real.mant_dig - 1);
 }
 
 /**************************************
@@ -4383,7 +4395,7 @@ real logb(real x) @trusted nothrow @nogc
             ret                         ;
         }
     }
-    else version (CRuntime_Microsoft)
+    else version (MSVC_InlineAsm)
     {
         asm pure nothrow @nogc
         {
@@ -4724,7 +4736,7 @@ real ceil(real x) @trusted pure nothrow @nogc
             ret                         ;
         }
     }
-    else version (CRuntime_Microsoft)
+    else version (MSVC_InlineAsm)
     {
         short cw;
         asm pure nothrow @nogc
@@ -4852,7 +4864,7 @@ real floor(real x) @trusted pure nothrow @nogc
             ret                         ;
         }
     }
-    else version (CRuntime_Microsoft)
+    else version (MSVC_InlineAsm)
     {
         short cw;
         asm pure nothrow @nogc
@@ -5416,7 +5428,7 @@ real trunc(real x) @trusted nothrow @nogc pure
             ret                         ;
         }
     }
-    else version (CRuntime_Microsoft)
+    else version (MSVC_InlineAsm)
     {
         short cw;
         asm pure nothrow @nogc
@@ -5533,6 +5545,7 @@ private:
     // The Pentium SSE2 status register is 32 bits.
     // The ARM and PowerPC FPSCR is a 32-bit register.
     // The SPARC FSR is a 32bit register (64 bits for SPARC 7 & 8, but high bits are uninteresting).
+    // The RISC-V (32 & 64 bit) fcsr is 32-bit register.
     uint flags;
 
     version (CRuntime_Microsoft)
@@ -5746,6 +5759,10 @@ else version (PPC_Any)
 {
     version = IeeeFlagsSupport;
 }
+else version (RISCV_Any)
+{
+    version = IeeeFlagsSupport;
+}
 else version (MIPS_Any)
 {
     version = IeeeFlagsSupport;
@@ -5949,6 +5966,21 @@ nothrow @nogc:
                                  | inexactException,
         }
     }
+    else version (HPPA)
+    {
+        enum : ExceptionMask
+        {
+            inexactException      = 0x01,
+            underflowException    = 0x02,
+            overflowException     = 0x04,
+            divByZeroException    = 0x08,
+            invalidException      = 0x10,
+            severeExceptions   = overflowException | divByZeroException
+                                 | invalidException,
+            allExceptions      = severeExceptions | underflowException
+                                 | inexactException,
+        }
+    }
     else version (MIPS_Any)
     {
         enum : ExceptionMask
@@ -5964,7 +5996,7 @@ nothrow @nogc:
                                  | inexactException,
         }
     }
-    else version (SPARC64)
+    else version (SPARC_Any)
     {
         enum : ExceptionMask
         {
@@ -5979,7 +6011,7 @@ nothrow @nogc:
                                  | inexactException,
         }
     }
-    else version (SystemZ)
+    else version (IBMZ_Any)
     {
         enum : ExceptionMask
         {
@@ -5988,6 +6020,21 @@ nothrow @nogc:
             overflowException     = 0x20000000,
             underflowException    = 0x10000000,
             invalidException      = 0x80000000,
+            severeExceptions   = overflowException | divByZeroException
+                                 | invalidException,
+            allExceptions      = severeExceptions | underflowException
+                                 | inexactException,
+        }
+    }
+    else version (RISCV_Any)
+    {
+        enum : ExceptionMask
+        {
+            inexactException      = 0x01,
+            divByZeroException    = 0x02,
+            underflowException    = 0x04,
+            overflowException     = 0x08,
+            invalidException      = 0x10,
             severeExceptions   = overflowException | divByZeroException
                                  | invalidException,
             allExceptions      = severeExceptions | underflowException
@@ -6098,6 +6145,10 @@ private:
     {
         alias ControlState = uint;
     }
+    else version (HPPA)
+    {
+        alias ControlState = uint;
+    }
     else version (PPC_Any)
     {
         alias ControlState = uint;
@@ -6106,11 +6157,15 @@ private:
     {
         alias ControlState = uint;
     }
-    else version (SPARC64)
+    else version (SPARC_Any)
     {
         alias ControlState = ulong;
     }
-    else version (SystemZ)
+    else version (IBMZ_Any)
+    {
+        alias ControlState = uint;
+    }
+    else version (RISCV_Any)
     {
         alias ControlState = uint;
     }
@@ -6807,6 +6862,7 @@ Returns `-1` if $(D x < 0), `x` if $(D x == 0), `1` if
 $(D x > 0), and $(NAN) if x==$(NAN).
  */
 F sgn(F)(F x) @safe pure nothrow @nogc
+if (isFloatingPoint!F || isIntegral!F)
 {
     // @@@TODO@@@: make this faster
     return x > 0 ? 1 : x < 0 ? -1 : x;
@@ -7337,7 +7393,10 @@ T nextafter(T)(const T x, const T y) @safe pure nothrow @nogc
  *      $(TR $(TD x $(LT)= y) $(TD +0.0))
  *      )
  */
-real fdim(real x, real y) @safe pure nothrow @nogc { return (x > y) ? x - y : +0.0; }
+real fdim(real x, real y) @safe pure nothrow @nogc
+{
+    return (x < y) ? +0.0 : x - y;
+}
 
 ///
 @safe pure nothrow @nogc unittest
@@ -7345,8 +7404,9 @@ real fdim(real x, real y) @safe pure nothrow @nogc { return (x > y) ? x - y : +0
     assert(fdim(2.0, 0.0) == 2.0);
     assert(fdim(-2.0, 0.0) == 0.0);
     assert(fdim(real.infinity, 2.0) == real.infinity);
-    assert(fdim(real.nan, 2.0) == 0.0);
-    assert(fdim(2.0, real.nan) == 0.0);
+    assert(isNaN(fdim(real.nan, 2.0)));
+    assert(isNaN(fdim(2.0, real.nan)));
+    assert(isNaN(fdim(real.nan, real.nan)));
 }
 
 /**
@@ -7493,15 +7553,13 @@ if (isFloatingPoint!(F) && isIntegral!(G))
 
     assert(pow(x, neg1) == 1 / x);
 
-    version (X86_64)
-    {
-        pragma(msg, "test disabled on x86_64, see bug 5628");
-    }
-    else version (ARM)
-    {
-        pragma(msg, "test disabled on ARM, see bug 5628");
-    }
-    else
+    // Test disabled on most targets.
+    // See https://issues.dlang.org/show_bug.cgi?id=5628
+    version (X86_64)   enum BUG5628 = false;
+    else version (ARM) enum BUG5628 = false;
+    else               enum BUG5628 = true;
+
+    static if (BUG5628)
     {
         assert(pow(xd, neg2) == 1 / (x * x));
         assert(pow(xf, neg8) == 1 / ((x * x) * (x * x) * (x * x) * (x * x)));
@@ -8486,7 +8544,6 @@ private real polyImpl(real x, in real[] A) @trusted pure nothrow @nogc
                 fstp    ST(0)                   ; // dump x
                 align   4                       ;
         return_ST:                              ;
-                ;
             }
         }
         else version (linux)
@@ -8514,7 +8571,6 @@ private real polyImpl(real x, in real[] A) @trusted pure nothrow @nogc
                 fstp    ST(0)                   ; // dump x
                 align   4                       ;
         return_ST:                              ;
-                ;
             }
         }
         else version (OSX)
@@ -8542,7 +8598,6 @@ private real polyImpl(real x, in real[] A) @trusted pure nothrow @nogc
                 fstp    ST(0)                   ; // dump x
                 align   4                       ;
         return_ST:                              ;
-                ;
             }
         }
         else version (FreeBSD)
@@ -8570,7 +8625,6 @@ private real polyImpl(real x, in real[] A) @trusted pure nothrow @nogc
                 fstp    ST(0)                   ; // dump x
                 align   4                       ;
         return_ST:                              ;
-                ;
             }
         }
         else version (Solaris)
@@ -8598,7 +8652,6 @@ private real polyImpl(real x, in real[] A) @trusted pure nothrow @nogc
                 fstp    ST(0)                   ; // dump x
                 align   4                       ;
         return_ST:                              ;
-                ;
             }
         }
         else version (DragonFlyBSD)
@@ -8626,7 +8679,6 @@ private real polyImpl(real x, in real[] A) @trusted pure nothrow @nogc
                 fstp    ST(0)                   ; // dump x
                 align   4                       ;
         return_ST:                              ;
-                ;
             }
         }
         else

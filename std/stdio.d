@@ -108,7 +108,7 @@ version (Windows)
     extern (C) nothrow @nogc FILE* _wfopen(in wchar* filename, in wchar* mode);
     extern (C) nothrow @nogc FILE* _wfreopen(in wchar* filename, in wchar* mode, FILE* fp);
 
-    import core.sys.windows.windows : HANDLE;
+    import core.sys.windows.basetsd : HANDLE;
 }
 
 version (DIGITAL_MARS_STDIO)
@@ -557,9 +557,11 @@ Throws: `ErrnoException` in case of error.
         }
         if (_p.handle)
         {
-            errnoEnforce(.fclose(_p.handle) == 0,
-                    "Could not close file `"~_name~"'");
+            auto handle = _p.handle;
             _p.handle = null;
+            // fclose disassociates the FILE* even in case of error (issue 19751)
+            errnoEnforce(.fclose(handle) == 0,
+                    "Could not close file `"~_name~"'");
         }
     }
 
@@ -942,7 +944,7 @@ Throws: `Exception` if the file is not opened or if the OS call fails.
 
         version (Windows)
         {
-            import core.sys.windows.windows : FlushFileBuffers;
+            import core.sys.windows.winbase : FlushFileBuffers;
             wenforce(FlushFileBuffers(windowsHandle), "FlushFileBuffers failed");
         }
         else
@@ -1069,7 +1071,17 @@ Throws: `ErrnoException` if the file is not opened or if the call to `fwrite` fa
 
 /**
 Calls $(HTTP cplusplus.com/reference/clibrary/cstdio/fseek.html, fseek)
-for the file handle.
+for the file handle to move its position indicator.
+
+Params:
+    offset = Binary files: Number of bytes to offset from origin.$(BR)
+             Text files: Either zero, or a value returned by $(LREF tell).
+    origin = Binary files: Position used as reference for the offset, must be
+             one of $(REF_ALTTEXT SEEK_SET, SEEK_SET, core,stdc,stdio),
+             $(REF_ALTTEXT SEEK_CUR, SEEK_CUR, core,stdc,stdio) or
+             $(REF_ALTTEXT SEEK_END, SEEK_END, core,stdc,stdio).$(BR)
+             Text files: Shall necessarily be
+             $(REF_ALTTEXT SEEK_SET, SEEK_SET, core,stdc,stdio).
 
 Throws: `Exception` if the file is not opened.
         `ErrnoException` if the call to `fseek` fails.
@@ -1086,6 +1098,9 @@ Throws: `Exception` if the file is not opened.
             {
                 alias fseekFun = _fseeki64;
                 alias off_t = long;
+                // Issue 19797
+                enforce(origin >= SEEK_SET && origin <= SEEK_END,
+                        "Could not seek in file `"~_name~"' (Invalid argument)");
             }
             else
             {
@@ -1106,6 +1121,7 @@ Throws: `Exception` if the file is not opened.
     {
         import std.conv : text;
         static import std.file;
+        import std.exception;
 
         auto deleteme = testFilename();
         auto f = File(deleteme, "w+");
@@ -1128,6 +1144,7 @@ Throws: `Exception` if the file is not opened.
         // f.rawWrite("abcdefghijklmnopqrstuvwxyz");
         // f.seek(-3, SEEK_END);
         // assert(f.readln() == "xyz");
+        assertThrown(f.seek(0, 3));
     }
 
 /**
@@ -1225,7 +1242,8 @@ Throws: `Exception` if the file is not opened.
 
     version (Windows)
     {
-        import core.sys.windows.windows : ULARGE_INTEGER, OVERLAPPED, BOOL;
+        import core.sys.windows.winbase : OVERLAPPED;
+        import core.sys.windows.winnt : BOOL, ULARGE_INTEGER;
 
         private BOOL lockImpl(alias F, Flags...)(ulong start, ulong length,
             Flags flags)
@@ -1245,7 +1263,7 @@ Throws: `Exception` if the file is not opened.
 
         private static T wenforce(T)(T cond, string str)
         {
-            import core.sys.windows.windows : GetLastError;
+            import core.sys.windows.winbase : GetLastError;
             import std.windows.syserror : sysErrorString;
 
             if (cond) return cond;
@@ -1303,7 +1321,7 @@ $(UL
         else
         version (Windows)
         {
-            import core.sys.windows.windows : LockFileEx, LOCKFILE_EXCLUSIVE_LOCK;
+            import core.sys.windows.winbase : LockFileEx, LOCKFILE_EXCLUSIVE_LOCK;
             immutable type = lockType == LockType.readWrite ?
                 LOCKFILE_EXCLUSIVE_LOCK : 0;
             wenforce(lockImpl!LockFileEx(start, length, type),
@@ -1341,8 +1359,9 @@ specified file segment was already locked.
         else
         version (Windows)
         {
-            import core.sys.windows.windows : GetLastError, LockFileEx, LOCKFILE_EXCLUSIVE_LOCK,
-                ERROR_IO_PENDING, ERROR_LOCK_VIOLATION, LOCKFILE_FAIL_IMMEDIATELY;
+            import core.sys.windows.winbase : GetLastError, LockFileEx, LOCKFILE_EXCLUSIVE_LOCK,
+                LOCKFILE_FAIL_IMMEDIATELY;
+            import core.sys.windows.winerror : ERROR_IO_PENDING, ERROR_LOCK_VIOLATION;
             immutable type = lockType == LockType.readWrite
                 ? LOCKFILE_EXCLUSIVE_LOCK : 0;
             immutable res = lockImpl!LockFileEx(start, length,
@@ -1375,7 +1394,7 @@ Removes the lock over the specified file segment.
         else
         version (Windows)
         {
-            import core.sys.windows.windows : UnlockFileEx;
+            import core.sys.windows.winbase : UnlockFileEx;
             wenforce(lockImpl!UnlockFileEx(start, length),
                 "Could not remove lock for file `"~_name~"'");
         }

@@ -1362,11 +1362,18 @@ public:
      */
     size_t count()
     {
-        size_t bitCount;
-        foreach (i; 0 .. fullWords)
-            bitCount += countBitsSet(_ptr[i]);
-        bitCount += countBitsSet(_ptr[fullWords] & endMask);
-        return bitCount;
+        if (_ptr)
+        {
+            size_t bitCount;
+            foreach (i; 0 .. fullWords)
+                bitCount += countBitsSet(_ptr[i]);
+            bitCount += countBitsSet(_ptr[fullWords] & endMask);
+            return bitCount;
+        }
+        else
+        {
+            return 0;
+        }
     }
 
     ///
@@ -1374,6 +1381,9 @@ public:
     {
         auto a = BitArray([0, 1, 1, 0, 0, 1, 1]);
         assert(a.count == 4);
+
+        BitArray b;
+        assert(b.count == 0);
 
         bool[200] boolArray;
         boolArray[45 .. 130] = true;
@@ -2492,32 +2502,34 @@ public:
      *     fmt = A $(REF FormatSpec, std,format) which controls how the data
      *     is displayed.
      */
-    void toString(W)(ref W sink, const ref FormatSpec!char fmt) const
+    void toString(W)(ref W sink, scope const ref FormatSpec!char fmt) const
     if (isOutputRange!(W, char))
     {
-        switch (fmt.spec)
+        const spec = fmt.spec;
+        switch (spec)
         {
             case 'b':
                 return formatBitString(sink);
             case 's':
                 return formatBitArray(sink);
             default:
-                throw new Exception("Unknown format specifier: %" ~ fmt.spec);
+                throw new Exception("Unknown format specifier: %" ~ spec);
         }
     }
 
     // @@@DEPRECATED_2.089@@@
     deprecated("To be removed by 2.089. Please use the writer overload instead.")
-    void toString(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt) const
+    void toString(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char fmt) const
     {
-        switch (fmt.spec)
+        const spec = fmt.spec;
+        switch (spec)
         {
             case 'b':
                 return formatBitString(sink);
             case 's':
                 return formatBitArray(sink);
             default:
-                throw new Exception("Unknown format specifier: %" ~ fmt.spec);
+                throw new Exception("Unknown format specifier: %" ~ spec);
         }
     }
 

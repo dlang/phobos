@@ -164,8 +164,11 @@ import std.traits;
 version (unittest)
 {
     static import std.meta;
+    package alias Xorshift64_64 = XorshiftEngine!(ulong, 64, -12, 25, -27);
+    package alias Xorshift128_64 = XorshiftEngine!(ulong, 128, 23, -18, -5);
     package alias PseudoRngTypes = std.meta.AliasSeq!(MinstdRand0, MinstdRand, Mt19937, Xorshift32, Xorshift64,
-                                                      Xorshift96, Xorshift128, Xorshift160, Xorshift192);
+                                                      Xorshift96, Xorshift128, Xorshift160, Xorshift192,
+                                                      Xorshift64_64, Xorshift128_64);
 }
 
 // Segments of the code in this file Copyright (c) 1997 by Rick Booth
@@ -567,7 +570,7 @@ Constructs a $(D_PARAM LinearCongruentialEngine) generator seeded with
     }
 
 ///
-    @property typeof(this) save() @safe pure nothrow @nogc
+    @property typeof(this) save() const @safe pure nothrow @nogc
     {
         return this;
     }
@@ -576,14 +579,6 @@ Constructs a $(D_PARAM LinearCongruentialEngine) generator seeded with
 Always `false` (random generators are infinite ranges).
  */
     enum bool empty = false;
-
-/**
-   Compares against $(D_PARAM rhs) for equality.
- */
-    bool opEquals(ref const LinearCongruentialEngine rhs) const @safe pure nothrow @nogc
-    {
-        return _x == rhs._x;
-    }
 
     private UIntType _x = m ? (a + c) % m : (a + c);
 }
@@ -695,11 +690,11 @@ alias MinstdRand = LinearCongruentialEngine!(uint, 48_271, 0, 2_147_483_647);
     {{
         auto rnd1 = Type(123_456_789);
         rnd1.popFront();
-        auto rnd2 = rnd1.save;
+        auto rnd2 = ((const ref Type a) => a.save())(rnd1); // Issue 15853.
         assert(rnd1 == rnd2);
         // Enable next test when RNGs are reference types
         version (none) { assert(rnd1 !is rnd2); }
-        for (auto i = 0; i < 100; i++, rnd1.popFront, rnd2.popFront)
+        for (auto i = 0; i < 3; i++, rnd1.popFront, rnd2.popFront)
             assert(rnd1.front() == rnd2.front());
     }}
 }
@@ -994,7 +989,7 @@ Parameters for the generator.
     }
 
 ///
-    @property typeof(this) save() @safe pure nothrow @nogc
+    @property typeof(this) save() @safe const pure nothrow @nogc
     {
         return this;
     }
@@ -1083,7 +1078,7 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
     assert(n == 6597103971274460346);
 
     // Seed with an unpredictable value
-    gen.seed(unpredictableSeed);
+    gen.seed(unpredictableSeed!ulong);
     n = gen.front; // different across runs
 }
 
@@ -1095,13 +1090,7 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
     static assert(isUniformRNG!(Mt19937_64, ulong));
     static assert(isSeedable!Mt19937_64);
     static assert(isSeedable!(Mt19937_64, ulong));
-    // Issue 15147: this test demonstrates viably that Mt19937_64
-    // is seedable with an infinite range of `ulong` values
-    // but it's a poor example of how to actually seed the
-    // generator, since it can't cover the full range of
-    // possible seed values.  Ideally we need a 64-bit
-    // unpredictable seed to complement the 32-bit one!
-    static assert(isSeedable!(Mt19937_64, typeof(map!((a) => (cast(ulong) unpredictableSeed))(repeat(0)))));
+    static assert(isSeedable!(Mt19937_64, typeof(map!((a) => unpredictableSeed!ulong)(repeat(0)))));
     Mt19937_64 gen;
     assert(gen.front == 14514284786278117030uL);
     popFrontN(gen, 9999);
@@ -1150,7 +1139,7 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
     {{
         auto gen1 = Type(123_456_789);
         gen1.popFront();
-        auto gen2 = gen1.save;
+        auto gen2 = ((const ref Type a) => a.save())(gen1); // Issue 15853.
         assert(gen1 == gen2);  // Danger, Will Robinson -- no opEquals for MT
         // Enable next test when RNGs are reference types
         version (none) { assert(gen1 !is gen2); }
@@ -1182,29 +1171,68 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
     }}
 }
 
+/++
+Xorshift generator.
+Implemented according to $(HTTP www.jstatsoft.org/v08/i14/paper, Xorshift RNGs)
+(Marsaglia, 2003) when the size is small. For larger sizes the generator
+uses Sebastino Vigna's optimization of using an index to avoid needing
+to rotate the internal array.
 
-/**
- * Xorshift generator using 32bit algorithm.
- *
- * Implemented according to $(HTTP www.jstatsoft.org/v08/i14/paper, Xorshift RNGs).
- * Supporting bits are below, `bits` means second parameter of XorshiftEngine.
- *
- * $(BOOKTABLE ,
- *  $(TR $(TH bits) $(TH period))
- *  $(TR $(TD 32)   $(TD 2^32 - 1))
- *  $(TR $(TD 64)   $(TD 2^64 - 1))
- *  $(TR $(TD 96)   $(TD 2^96 - 1))
- *  $(TR $(TD 128)  $(TD 2^128 - 1))
- *  $(TR $(TD 160)  $(TD 2^160 - 1))
- *  $(TR $(TD 192)  $(TD 2^192 - 2^32))
- * )
- */
-struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType c)
-if (isUnsigned!UIntType)
+Period is `2 ^^ nbits - 1` except for a legacy 192-bit uint version (see
+note below).
+
+Params:
+    UIntType = Word size of this xorshift generator and the return type
+               of `opCall`.
+    nbits = The number of bits of state of this generator. This must be
+           a positive multiple of the size in bits of UIntType. If
+           nbits is large this struct may occupy slightly more memory
+           than this so it can use a circular counter instead of
+           shifting the entire array.
+    sa = The direction and magnitude of the 1st shift. Positive
+         means left, negative means right.
+    sb = The direction and magnitude of the 2nd shift. Positive
+         means left, negative means right.
+    sc = The direction and magnitude of the 3rd shift. Positive
+         means left, negative means right.
+
+Note:
+For historical compatibility when `nbits == 192` and `UIntType` is `uint`
+a legacy hybrid PRNG is used consisting of a 160-bit xorshift combined
+with a 32-bit counter. This combined generator has period equal to the
+least common multiple of `2^^160 - 1` and `2^^32`.
+
+Previous versions of `XorshiftEngine` did not provide any mechanism to specify
+the directions of the shifts, taking each shift as an unsigned magnitude.
+For backwards compatibility, because three shifts in the same direction
+cannot result in a full-period XorshiftEngine, when all three of `sa`, `sb`,
+`sc, are positive `XorshiftEngine` treats them as unsigned magnitudes and
+uses shift directions to match the old behavior of `XorshiftEngine`.
+
+Not every set of shifts results in a full-period xorshift generator.
+The template does not currently at compile-time perform a full check
+for maximum period but in a future version might reject parameters
+resulting in shorter periods.
++/
+struct XorshiftEngine(UIntType, uint nbits, int sa, int sb, int sc)
+if (isUnsigned!UIntType && !(sa > 0 && sb > 0 && sc > 0))
 {
-    static assert(bits == 32 || bits == 64 || bits == 96 || bits == 128 || bits == 160 || bits == 192,
-                  "Xorshift supports only 32, 64, 96, 128, 160 and 192 bit versions. "
-                  ~ to!string(bits) ~ " is not supported.");
+    static assert(nbits > 0 && nbits % (UIntType.sizeof * 8) == 0,
+        "nbits must be an even multiple of "~UIntType.stringof
+        ~".sizeof * 8, not "~nbits.stringof~".");
+
+    static assert(!((sa >= 0) == (sb >= 0) && (sa >= 0) == (sc >= 0))
+        && (sa * sb * sc != 0),
+        "shifts cannot be zero and cannot all be in same direction: cannot be ["
+        ~sa.stringof~", "~sb.stringof~", "~sc.stringof~"].");
+
+    static assert(sa != sb && sb != sc,
+        "consecutive shifts with the same magnitude and direction would partially or completely cancel!");
+
+    static assert(UIntType.sizeof == uint.sizeof || UIntType.sizeof == ulong.sizeof,
+        "XorshiftEngine currently does not support type " ~ UIntType.sizeof
+        ~ " because it does not have a `seed` implementation for arrays "
+        ~ " of element types other than uint and ulong.");
 
   public:
     ///Mark this as a Rng
@@ -1212,57 +1240,161 @@ if (isUnsigned!UIntType)
     /// Always `false` (random generators are infinite ranges).
     enum empty = false;
     /// Smallest generated value.
-    enum UIntType min = seeds_.length == 1 ? 1 : 0;
+    enum UIntType min = _state.length == 1 ? 1 : 0;
     /// Largest generated value.
     enum UIntType max = UIntType.max;
 
 
   private:
-    enum size = bits / 32;
+    // Legacy 192 bit uint hybrid counter/xorshift.
+    enum bool isLegacy192Bit = UIntType.sizeof == uint.sizeof && nbits == 192;
 
-    static if (bits == 32)
-        UIntType[size] seeds_ = [2_463_534_242];
-    else static if (bits == 64)
-        UIntType[size] seeds_ = [123_456_789, 362_436_069];
-    else static if (bits == 96)
-        UIntType[size] seeds_ = [123_456_789, 362_436_069, 521_288_629];
-    else static if (bits == 128)
-        UIntType[size] seeds_ = [123_456_789, 362_436_069, 521_288_629, 88_675_123];
-    else static if (bits == 160)
-        UIntType[size] seeds_ = [123_456_789, 362_436_069, 521_288_629, 88_675_123, 5_783_321];
-    else static if (bits == 192)
+    // Shift magnitudes.
+    enum a = (sa < 0 ? -sa : sa);
+    enum b = (sb < 0 ? -sb : sb);
+    enum c = (sc < 0 ? -sc : sc);
+
+    // Shift expressions to mix in.
+    enum shiftA(string expr) = `((`~expr~`) `~(sa > 0 ? `<< a)` : ` >>> a)`);
+    enum shiftB(string expr) = `((`~expr~`) `~(sb > 0 ? `<< b)` : ` >>> b)`);
+    enum shiftC(string expr) = `((`~expr~`) `~(sc > 0 ? `<< c)` : ` >>> c)`);
+
+    enum N = nbits / (UIntType.sizeof * 8);
+
+    // For N <= 2 it is strictly worse to use an index.
+    // Informal third-party benchmarks suggest that for `ulong` it is
+    // faster to use an index when N == 4. For `uint` we err on the side
+    // of not increasing the struct's size and only switch to the other
+    // implementation when N > 4.
+    enum useIndex = !isLegacy192Bit && (UIntType.sizeof >= ulong.sizeof ? N > 3 : N > 4);
+    static if (useIndex)
     {
-        UIntType[size] seeds_ = [123_456_789, 362_436_069, 521_288_629, 88_675_123, 5_783_321, 6_615_241];
+        enum initialIndex = N - 1;
+        uint _index = initialIndex;
+    }
+
+    static if (N == 1 && UIntType.sizeof <= uint.sizeof)
+    {
+        UIntType[N] _state = [cast(UIntType) 2_463_534_242];
+    }
+    else static if (isLegacy192Bit)
+    {
+        UIntType[N] _state = [123_456_789, 362_436_069, 521_288_629, 88_675_123, 5_783_321, 6_615_241];
         UIntType       value_;
+    }
+    else static if (N <= 5 && UIntType.sizeof <= uint.sizeof)
+    {
+        UIntType[N] _state = [
+            cast(UIntType) 123_456_789,
+            cast(UIntType) 362_436_069,
+            cast(UIntType) 521_288_629,
+            cast(UIntType)  88_675_123,
+            cast(UIntType)   5_783_321][0 .. N];
     }
     else
     {
-        static assert(false, "Phobos Error: Xorshift has no instantiation rule for "
-                             ~ to!string(bits) ~ " bits.");
+        UIntType[N] _state = ()
+        {
+            static if (UIntType.sizeof < ulong.sizeof)
+            {
+                uint x0 = 123_456_789;
+                enum uint m = 1_812_433_253U;
+            }
+            else static if (UIntType.sizeof <= ulong.sizeof)
+            {
+                ulong x0 = 123_456_789;
+                enum ulong m = 6_364_136_223_846_793_005UL;
+            }
+            else
+            {
+                static assert(0, "Phobos Error: Xorshift has no instantiation rule for "
+                    ~ UIntType.stringof);
+            }
+            enum uint rshift = typeof(x0).sizeof * 8 - 2;
+            UIntType[N] result = void;
+            foreach (i, ref e; result)
+            {
+                e = cast(UIntType) (x0 = (m * (x0 ^ (x0 >>> rshift)) + i + 1));
+                if (e == 0)
+                    e = cast(UIntType) (i + 1);
+            }
+            return result;
+        }();
     }
 
 
   public:
-    /**
-     * Constructs a `XorshiftEngine` generator seeded with $(D_PARAM x0).
-     */
-    this(UIntType x0) @safe pure nothrow @nogc
+    /++
+    Constructs a `XorshiftEngine` generator seeded with $(D_PARAM x0).
+
+    Params:
+        x0 = value used to deterministically initialize internal state
+    +/
+    this()(UIntType x0) @safe pure nothrow @nogc
     {
         seed(x0);
     }
 
 
-    /**
-     * (Re)seeds the generator.
-     */
-    void seed(UIntType x0) @safe pure nothrow @nogc
-    {
-        // Initialization routine from MersenneTwisterEngine.
-        foreach (i, e; seeds_)
-            seeds_[i] = x0 = cast(UIntType)(1_812_433_253U * (x0 ^ (x0 >> 30)) + i + 1);
+    /++
+    (Re)seeds the generator.
 
-        // All seeds must not be 0.
-        sanitizeSeeds(seeds_);
+    Params:
+        x0 = value used to deterministically initialize internal state
+    +/
+    void seed()(UIntType x0) @safe pure nothrow @nogc
+    {
+        static if (useIndex)
+            _index = initialIndex;
+
+        static if (UIntType.sizeof == uint.sizeof)
+        {
+            // Initialization routine from MersenneTwisterEngine.
+            foreach (uint i, ref e; _state)
+            {
+                e = (x0 = (1_812_433_253U * (x0 ^ (x0 >> 30)) + i + 1));
+                // Xorshift requires merely that not every word of the internal
+                // array is 0. For historical compatibility the 32-bit word version
+                // has the stronger requirement that not any word of the state
+                // array is 0 after initial seeding.
+                if (e == 0)
+                    e = (i + 1);
+            }
+        }
+        else static if (UIntType.sizeof == ulong.sizeof)
+        {
+            static if (N > 1)
+            {
+                // Initialize array using splitmix64 as recommended by Sebastino Vigna.
+                // By construction the array will not be all zeroes.
+                // http://xoroshiro.di.unimi.it/splitmix64.c
+                foreach (ref e; _state)
+                {
+                    ulong z = (x0 += 0x9e37_79b9_7f4a_7c15UL);
+                    z = (z ^ (z >>> 30)) * 0xbf58_476d_1ce4_e5b9UL;
+                    z = (z ^ (z >>> 27)) * 0x94d0_49bb_1331_11ebUL;
+                    e = z ^ (z >>> 31);
+                }
+            }
+            else
+            {
+                // Apply a transformation when N == 1 instead of just copying x0
+                // directly because it's not unlikely that a user might initialize
+                // a PRNG with small counting numbers (e.g. 1, 2, 3) that have the
+                // statistically rare property of having only 1 or 2 non-zero bits.
+                // Additionally we need to ensure that the internal state is not
+                // entirely zero.
+                if (x0 != 0)
+                    _state[0] = x0 * 6_364_136_223_846_793_005UL;
+                else
+                    _state[0] = typeof(this).init._state[0];
+            }
+        }
+        else
+        {
+            static assert(0, "Phobos Error: Xorshift has no `seed` implementation for "
+                ~ UIntType.stringof);
+        }
 
         popFront();
     }
@@ -1274,10 +1406,12 @@ if (isUnsigned!UIntType)
     @property
     UIntType front() const @safe pure nothrow @nogc
     {
-        static if (bits == 192)
+        static if (isLegacy192Bit)
             return value_;
+        else static if (!useIndex)
+            return _state[N-1];
         else
-            return seeds_[size - 1];
+            return _state[_index];
     }
 
 
@@ -1286,58 +1420,42 @@ if (isUnsigned!UIntType)
      */
     void popFront() @safe pure nothrow @nogc
     {
-        UIntType temp;
-
-        static if (bits == 32)
+        alias s = _state;
+        static if (isLegacy192Bit)
         {
-            temp      = seeds_[0] ^ (seeds_[0] << a);
-            temp      = temp ^ (temp >> b);
-            seeds_[0] = temp ^ (temp << c);
+            auto x = _state[0] ^ mixin(shiftA!`s[0]`);
+            static foreach (i; 0 .. N-2)
+                s[i] = s[i + 1];
+            s[N-2] = s[N-2] ^ mixin(shiftC!`s[N-2]`) ^ x ^ mixin(shiftB!`x`);
+            value_ = s[N-2] + (s[N-1] += 362_437);
         }
-        else static if (bits == 64)
+        else static if (N == 1)
         {
-            temp      = seeds_[0] ^ (seeds_[0] << a);
-            seeds_[0] = seeds_[1];
-            seeds_[1] = seeds_[1] ^ (seeds_[1] >> c) ^ temp ^ (temp >> b);
+            s[0] ^= mixin(shiftA!`s[0]`);
+            s[0] ^= mixin(shiftB!`s[0]`);
+            s[0] ^= mixin(shiftC!`s[0]`);
         }
-        else static if (bits == 96)
+        else static if (!useIndex)
         {
-            temp      = seeds_[0] ^ (seeds_[0] << a);
-            seeds_[0] = seeds_[1];
-            seeds_[1] = seeds_[2];
-            seeds_[2] = seeds_[2] ^ (seeds_[2] >> c) ^ temp ^ (temp >> b);
-        }
-        else static if (bits == 128)
-        {
-            temp      = seeds_[0] ^ (seeds_[0] << a);
-            seeds_[0] = seeds_[1];
-            seeds_[1] = seeds_[2];
-            seeds_[2] = seeds_[3];
-            seeds_[3] = seeds_[3] ^ (seeds_[3] >> c) ^ temp ^ (temp >> b);
-        }
-        else static if (bits == 160)
-        {
-            temp      = seeds_[0] ^ (seeds_[0] << a);
-            seeds_[0] = seeds_[1];
-            seeds_[1] = seeds_[2];
-            seeds_[2] = seeds_[3];
-            seeds_[3] = seeds_[4];
-            seeds_[4] = seeds_[4] ^ (seeds_[4] >> c) ^ temp ^ (temp >> b);
-        }
-        else static if (bits == 192)
-        {
-            temp      = seeds_[0] ^ (seeds_[0] >> a);
-            seeds_[0] = seeds_[1];
-            seeds_[1] = seeds_[2];
-            seeds_[2] = seeds_[3];
-            seeds_[3] = seeds_[4];
-            seeds_[4] = seeds_[4] ^ (seeds_[4] << c) ^ temp ^ (temp << b);
-            value_    = seeds_[4] + (seeds_[5] += 362_437);
+            auto x = s[0] ^ mixin(shiftA!`s[0]`);
+            static foreach (i; 0 .. N-1)
+                s[i] = s[i + 1];
+            s[N-1] = s[N-1] ^ mixin(shiftC!`s[N-1]`) ^ x ^ mixin(shiftB!`x`);
         }
         else
         {
-            static assert(false, "Phobos Error: Xorshift has no popFront() update for "
-                                 ~ to!string(bits) ~ " bits.");
+            assert(_index < N); // Invariant.
+            const sIndexMinus1 = s[_index];
+            static if ((N & (N - 1)) == 0)
+                _index = (_index + 1) & typeof(_index)(N - 1);
+            else
+            {
+                if (++_index >= N)
+                    _index = 0;
+            }
+            auto x = s[_index];
+            x ^= mixin(shiftA!`x`);
+            s[_index] = sIndexMinus1 ^ mixin(shiftC!`sIndexMinus1`) ^ x ^ mixin(shiftB!`x`);
         }
     }
 
@@ -1346,43 +1464,28 @@ if (isUnsigned!UIntType)
      * Captures a range state.
      */
     @property
-    typeof(this) save() @safe pure nothrow @nogc
+    typeof(this) save() const @safe pure nothrow @nogc
     {
         return this;
     }
 
+private:
+    // Workaround for a DScanner bug. If we remove this `private:` DScanner
+    // gives erroneous warnings about missing documentation for public symbols
+    // later in the module.
+}
 
-    /**
-     * Compares against $(D_PARAM rhs) for equality.
-     */
-    bool opEquals(ref const XorshiftEngine rhs) const @safe pure nothrow @nogc
-    {
-        return seeds_ == rhs.seeds_;
-    }
-
-
-  private:
-    static void sanitizeSeeds(ref UIntType[size] seeds) @safe pure nothrow @nogc
-    {
-        for (uint i; i < seeds.length; i++)
-        {
-            if (seeds[i] == 0)
-                seeds[i] = i + 1;
-        }
-    }
-
-
-    @safe pure nothrow unittest
-    {
-        static if (size  ==  4)  // Other bits too
-        {
-            UIntType[size] seeds = [1, 0, 0, 4];
-
-            sanitizeSeeds(seeds);
-
-            assert(seeds == [1, 2, 3, 4]);
-        }
-    }
+/// ditto
+template XorshiftEngine(UIntType, int bits, int a, int b, int c)
+if (isUnsigned!UIntType && a > 0 && b > 0 && c > 0)
+{
+    // Compatibility with old parameterizations without explicit shift directions.
+    static if (bits == UIntType.sizeof * 8)
+        alias XorshiftEngine = .XorshiftEngine!(UIntType, bits, a, -b, c);//left, right, left
+    else static if (bits == 192 && UIntType.sizeof == uint.sizeof)
+        alias XorshiftEngine = .XorshiftEngine!(UIntType, bits, -a, b, c);//right, left, left
+    else
+        alias XorshiftEngine = .XorshiftEngine!(UIntType, bits, a, -b, -c);//left, right, right
 }
 
 ///
@@ -1444,10 +1547,19 @@ alias Xorshift    = Xorshift128;                            /// ditto
         [5783321UL, 393427209, 1947109840, 565829276, 1006220149, 971147905,
         1436324242, 2800460115, 1484058076, 3823330032],
         [0UL, 246875399, 3690007200, 1264581005, 3906711041, 1866187943, 2481925219,
-        2464530826, 1604040631, 3653403911]
+        2464530826, 1604040631, 3653403911],
+        [16749904790159980466UL, 14489774923612894650UL, 148813570191443371UL,
+            6529783008780612886UL, 10182425759614080046UL, 16549659571055687844UL,
+            542957868271744939UL, 9459127085596028450UL, 16001049981702441780UL,
+            7351634712593111741],
+        [14750058843113249055UL, 17731577314455387619UL, 1314705253499959044UL,
+            3113030620614841056UL, 9468075444678629182UL, 13962152036600088141UL,
+            9030205609946043947UL, 1856726150434672917UL, 8098922200110395314UL,
+            2772699174618556175UL],
     ];
 
-    alias XorshiftTypes = std.meta.AliasSeq!(Xorshift32, Xorshift64, Xorshift96, Xorshift128, Xorshift160, Xorshift192);
+    alias XorshiftTypes = std.meta.AliasSeq!(Xorshift32, Xorshift64, Xorshift96,
+        Xorshift128, Xorshift160, Xorshift192, Xorshift64_64, Xorshift128_64);
 
     foreach (I, Type; XorshiftTypes)
     {
@@ -1465,11 +1577,11 @@ alias Xorshift    = Xorshift128;                            /// ditto
     {
         auto rnd1 = Type(123_456_789);
         rnd1.popFront();
-        auto rnd2 = rnd1.save;
+        auto rnd2 = ((const ref Type a) => a.save())(rnd1); // Issue 15853.
         assert(rnd1 == rnd2);
         // Enable next test when RNGs are reference types
         version (none) { assert(rnd1 !is rnd2); }
-        for (auto i = 0; i < 100; i++, rnd1.popFront, rnd2.popFront)
+        for (auto i = 0; i <= Type.sizeof / 4; i++, rnd1.popFront, rnd2.popFront)
             assert(rnd1.front() == rnd2.front());
     }
 }
@@ -1529,6 +1641,33 @@ version (AnyARC4Random)
     extern(C) private @nogc nothrow
     {
         uint arc4random() @safe;
+        void arc4random_buf(scope void* buf, size_t nbytes) @system;
+    }
+}
+else
+{
+    private ulong bootstrapSeed() @nogc nothrow
+    {
+        // Issue 19580 - previously used `ulong result = void` to start with
+        // an arbitary value but using an uninitialized variable's value is
+        // undefined behavior and enabled unwanted optimizations on non-DMD
+        // compilers.
+        ulong result;
+        enum ulong m = 0xc6a4_a793_5bd1_e995UL; // MurmurHash2_64A constant.
+        void updateResult(ulong x)
+        {
+            x *= m;
+            x = (x ^ (x >>> 47)) * m;
+            result = (result ^ x) * m;
+        }
+        import core.thread : getpid, Thread;
+        import core.time : MonoTime;
+
+        updateResult(cast(ulong) cast(void*) Thread.getThis());
+        updateResult(cast(ulong) getpid());
+        updateResult(cast(ulong) MonoTime.currTime.ticks);
+        result = (result ^ (result >>> 47)) * m;
+        return result ^ (result >>> 47);
     }
 }
 
@@ -1554,18 +1693,79 @@ how excellent the source of entropy is.
     }
     else
     {
-        import core.thread : Thread, getpid, MonoTime;
-        static bool seeded;
-        static MinstdRand0 rand;
-        if (!seeded)
-        {
-            uint threadID = cast(uint) cast(void*) Thread.getThis();
-            rand.seed((getpid() + threadID) ^ cast(uint) MonoTime.currTime.ticks);
-            seeded = true;
-        }
-        rand.popFront();
-        return cast(uint) (MonoTime.currTime.ticks ^ rand.front);
+        return cast(uint) unpredictableSeed!ulong;
     }
+}
+
+/// ditto
+template unpredictableSeed(UIntType)
+if (isUnsigned!UIntType)
+{
+    static if (is(UIntType == uint))
+        alias unpredictableSeed = .unpredictableSeed;
+    else static if (!is(Unqual!UIntType == UIntType))
+        alias unpredictableSeed = .unpredictableSeed!(Unqual!UIntType);
+    else
+        /// ditto
+        @property UIntType unpredictableSeed() @nogc nothrow @trusted
+        {
+            version (AnyARC4Random)
+            {
+                static if (UIntType.sizeof <= uint.sizeof)
+                {
+                    return cast(UIntType) arc4random();
+                }
+                else
+                {
+                    UIntType result = void;
+                    arc4random_buf(&result, UIntType.sizeof);
+                    return result;
+                }
+            }
+            else static if (!is(UIntType == ulong))
+            {
+                // The work occurs in the ulong implementation.
+                return cast(UIntType) unpredictableSeed!ulong;
+            }
+            else
+            {
+                // Bit avalanche function from MurmurHash3.
+                static ulong fmix64(ulong k) @nogc nothrow pure @safe
+                {
+                    k = (k ^ (k >>> 33)) * 0xff51afd7ed558ccd;
+                    k = (k ^ (k >>> 33)) * 0xc4ceb9fe1a85ec53;
+                    return k ^ (k >>> 33);
+                }
+                // Using SplitMix algorithm with constant gamma.
+                // Chosen gamma is the odd number closest to 2^^64
+                // divided by the silver ratio (1.0L + sqrt(2.0L)).
+                enum gamma = 0x6a09e667f3bcc909UL;
+                import core.atomic : has64BitCAS;
+                static if (has64BitCAS)
+                {
+                    import core.atomic : MemoryOrder, atomicLoad, atomicOp, atomicStore, cas;
+                    shared static ulong seed;
+                    shared static bool initialized;
+                    if (0 == atomicLoad!(MemoryOrder.raw)(initialized))
+                    {
+                        cas(&seed, 0UL, fmix64(bootstrapSeed()));
+                        atomicStore!(MemoryOrder.rel)(initialized, true);
+                    }
+                    return fmix64(atomicOp!"+="(seed, gamma));
+                }
+                else
+                {
+                    static ulong seed;
+                    static bool initialized;
+                    if (!initialized)
+                    {
+                        seed = fmix64(bootstrapSeed());
+                        initialized = true;
+                    }
+                    return fmix64(seed += gamma);
+                }
+            }
+        }
 }
 
 ///
@@ -1602,7 +1802,7 @@ and initialized to an unpredictable value for each thread.
 Returns:
 A singleton instance of the default random number generator
  */
-@property ref Random rndGen() @safe @nogc
+@property ref Random rndGen() @safe nothrow @nogc
 {
     import std.algorithm.iteration : map;
     import std.range : repeat;
@@ -1611,8 +1811,12 @@ A singleton instance of the default random number generator
     static bool initialized;
     if (!initialized)
     {
-        static if (isSeedable!(Random, ReturnType!unpredictableSeed))
-            result.seed(unpredictableSeed); // Avoid unnecessary copy.
+        static if (isSeedable!(Random, ulong))
+            result.seed(unpredictableSeed!ulong); // Avoid unnecessary copy.
+        else static if (size_t.sizeof >= ulong.sizeof && is(Random : MersenneTwisterEngine!Params, Params...))
+            initMTEngine(result); // 64-bit multiplication is fast, so use a 64-bit seed.
+        else static if (isSeedable!(Random, uint))
+            result.seed(unpredictableSeed!uint); // Avoid unnecessary copy.
         else
             result = Random(unpredictableSeed);
         initialized = true;
@@ -1621,12 +1825,40 @@ A singleton instance of the default random number generator
 }
 
 ///
-@safe unittest
+@safe nothrow @nogc unittest
 {
     import std.algorithm.iteration : sum;
     import std.range : take;
     auto rnd = rndGen;
     assert(rnd.take(3).sum > 0);
+}
+
+/+
+Initialize a 32-bit MersenneTwisterEngine from 64 bits of entropy.
+This is private and accepts no seed as a parameter, freeing the internal
+implementaton from any need for stability across releases.
++/
+private void initMTEngine(MTEngine)(scope ref MTEngine mt)
+if (is(MTEngine : MersenneTwisterEngine!Params, Params...))
+{
+    pragma(inline, false); // Called no more than once per thread by rndGen.
+    ulong x = unpredictableSeed!ulong;
+    alias UIntType = typeof(mt.front());
+    foreach (size_t i, ref e; mt.state.data)
+    {
+        x = (x ^ (x >> 62)) * 6_364_136_223_846_793_005UL + i;
+        e = cast(UIntType) x;
+        static if (MTEngine.max != UIntType.max)
+        {
+            e &= MTEngine.max;
+        }
+    }
+    mt.state.index = mt.state.data.length - 1;
+    // double popFront() to guarantee both `mt.state.z`
+    // and `mt.state.front` are derived from the newly
+    // set values in `mt.state.data`.
+    mt.popFront();
+    mt.popFront();
 }
 
 /**
@@ -2707,31 +2939,25 @@ private struct RandomCoverChoices
 
     this(this) pure nothrow @nogc @trusted
     {
-        import core.memory : pureMalloc;
         import core.stdc.string : memcpy;
-        import core.exception : onOutOfMemoryError;
+        import std.internal.memory : enforceMalloc;
 
         if (!hasPackedBits && buffer !is null)
         {
-            void* nbuffer = pureMalloc(_length);
-            if (nbuffer is null)
-                onOutOfMemoryError();
+            void* nbuffer = enforceMalloc(_length);
             buffer = memcpy(nbuffer, buffer, _length);
         }
     }
 
     this(size_t numChoices) pure nothrow @nogc @trusted
     {
-        import core.memory : pureCalloc;
-        import core.exception : onOutOfMemoryError;
+        import std.internal.memory : enforceCalloc;
 
         _length = numChoices;
         hasPackedBits = _length <= size_t.sizeof * 8;
         if (!hasPackedBits)
         {
-            buffer = pureCalloc(numChoices, 1);
-            if (buffer is null)
-                onOutOfMemoryError();
+            buffer = enforceCalloc(numChoices, 1);
         }
     }
 
@@ -2924,7 +3150,7 @@ if (isRandomAccessRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == vo
         }
     }
 
-    @property bool empty() { return _isEmpty; }
+    @property bool empty() const { return _isEmpty; }
 }
 
 /// Ditto
@@ -3117,7 +3343,7 @@ if (isInputRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))
 
         static if (hasLength!Range)
         {
-            this(Range input, size_t howMany, ref UniformRNG rng)
+            this(Range input, size_t howMany, ref scope UniformRNG rng)
             {
                 _rng = rng;
                 _input = input;
@@ -3130,7 +3356,7 @@ if (isInputRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))
             }
         }
 
-        this(Range input, size_t howMany, size_t total, ref UniformRNG rng)
+        this(Range input, size_t howMany, size_t total, ref scope UniformRNG rng)
         {
             _rng = rng;
             _input = input;
@@ -3221,17 +3447,36 @@ if (isInputRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))
 /// Ditto
     static if (isForwardRange!Range && isForwardRange!UniformRNG)
     {
-        @property typeof(this) save()
+        static if (is(typeof(((const UniformRNG* p) => (*p).save)(null)) : UniformRNG)
+            && is(typeof(((const Range* p) => (*p).save)(null)) : Range))
         {
-            auto ret = this;
-            ret._input = _input.save;
-            ret._rng = _rng.save;
-            return ret;
+            @property typeof(this) save() const
+            {
+                auto ret = RandomSample.init;
+                foreach (fieldIndex, ref val; this.tupleof)
+                {
+                    static if (is(typeof(val) == const(Range)) || is(typeof(val) == const(UniformRNG)))
+                        ret.tupleof[fieldIndex] = val.save;
+                    else
+                        ret.tupleof[fieldIndex] = val;
+                }
+                return ret;
+            }
+        }
+        else
+        {
+            @property typeof(this) save()
+            {
+                auto ret = this;
+                ret._input = _input.save;
+                ret._rng = _rng.save;
+                return ret;
+            }
         }
     }
 
 /// Ditto
-    @property size_t length()
+    @property size_t length() const
     {
         return _toSelect;
     }
@@ -3520,10 +3765,10 @@ if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
     static assert(isInputRange!TestInputRange);
     static assert(!isForwardRange!TestInputRange);
 
-    int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
+    const(int)[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
 
     foreach (UniformRNG; PseudoRngTypes)
-    {
+    (){ // avoid workaround optimizations for large functions @@@BUG@@@ 2396
         auto rng = UniformRNG(1234);
         /* First test the most general case: randomSample of input range, with and
          * without a specified random number generator.
@@ -3565,7 +3810,7 @@ if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
             // ... and test with range initialized directly
             {
                 auto sample =
-                    RandomSample!(int[], UniformRNG)
+                    RandomSample!(const(int)[], UniformRNG)
                                  (a, 5, UniformRNG(321_987_654));
                 static assert(isForwardRange!(typeof(sample)));
             }
@@ -3577,7 +3822,7 @@ if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
             // ... and test with range initialized directly
             {
                 auto sample =
-                    RandomSample!(int[], UniformRNG)
+                    RandomSample!(const(int)[], UniformRNG)
                                  (a, 5, UniformRNG(789_123_456));
                 static assert(isInputRange!(typeof(sample)));
                 static assert(!isForwardRange!(typeof(sample)));
@@ -3815,7 +4060,7 @@ if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
         static if (isForwardRange!UniformRNG)
         {
             auto sample1 = randomSample(a, 5, rng);
-            auto sample2 = sample1.save;
+            auto sample2 = ((const ref typeof(sample1) a) => a.save)(sample1); // Issue 15853.
             assert(sample1.array() == sample2.array());
         }
 
@@ -3829,5 +4074,5 @@ if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
             while (sample!UniformRNG(++n) == fst && n < n.max) {}
             assert(n < n.max);
         }
-    }
+    }();
 }

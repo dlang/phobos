@@ -366,58 +366,56 @@ Returns:
     The unfilled part of target
  */
 TargetRange copy(SourceRange, TargetRange)(SourceRange source, TargetRange target)
-if (areCopyCompatibleArrays!(SourceRange, TargetRange))
+if (isInputRange!SourceRange && isOutputRange!(TargetRange, ElementType!SourceRange))
 {
-    const tlen = target.length;
-    const slen = source.length;
-    assert(tlen >= slen,
-            "Cannot copy a source range into a smaller target range.");
-
-    immutable overlaps = __ctfe || () @trusted {
-        return source.ptr < target.ptr + tlen &&
-               target.ptr < source.ptr + slen; }();
-
-    if (overlaps)
+    static if (areCopyCompatibleArrays!(SourceRange, TargetRange))
     {
-        foreach (idx; 0 .. slen)
-            target[idx] = source[idx];
-        return target[slen .. tlen];
+        const tlen = target.length;
+        const slen = source.length;
+        assert(tlen >= slen,
+                "Cannot copy a source range into a smaller target range.");
+
+        immutable overlaps = __ctfe || () @trusted {
+            return source.ptr < target.ptr + tlen &&
+                target.ptr < source.ptr + slen; }();
+
+        if (overlaps)
+        {
+            foreach (idx; 0 .. slen)
+                target[idx] = source[idx];
+            return target[slen .. tlen];
+        }
+        else
+        {
+            // Array specialization.  This uses optimized memory copying
+            // routines under the hood and is about 10-20x faster than the
+            // generic implementation.
+            target[0 .. slen] = source[];
+            return target[slen .. $];
+        }
     }
     else
     {
-        // Array specialization.  This uses optimized memory copying
-        // routines under the hood and is about 10-20x faster than the
-        // generic implementation.
-        target[0 .. slen] = source[];
-        return target[slen .. $];
-    }
-}
-
-/// ditto
-TargetRange copy(SourceRange, TargetRange)(SourceRange source, TargetRange target)
-if (!areCopyCompatibleArrays!(SourceRange, TargetRange) &&
-    isInputRange!SourceRange &&
-    isOutputRange!(TargetRange, ElementType!SourceRange))
-{
-    // Specialize for 2 random access ranges.
-    // Typically 2 random access ranges are faster iterated by common
-    // index than by x.popFront(), y.popFront() pair
-    static if (isRandomAccessRange!SourceRange &&
-               hasLength!SourceRange &&
-               hasSlicing!TargetRange &&
-               isRandomAccessRange!TargetRange &&
-               hasLength!TargetRange)
-    {
-        auto len = source.length;
-        foreach (idx; 0 .. len)
-            target[idx] = source[idx];
-        return target[len .. target.length];
-    }
-    else
-    {
-        foreach (element; source)
-            put(target, element);
-        return target;
+        // Specialize for 2 random access ranges.
+        // Typically 2 random access ranges are faster iterated by common
+        // index than by x.popFront(), y.popFront() pair
+        static if (isRandomAccessRange!SourceRange &&
+                hasLength!SourceRange &&
+                hasSlicing!TargetRange &&
+                isRandomAccessRange!TargetRange &&
+                hasLength!TargetRange)
+        {
+            auto len = source.length;
+            foreach (idx; 0 .. len)
+                target[idx] = source[idx];
+            return target[len .. target.length];
+        }
+        else
+        {
+            foreach (element; source)
+                put(target, element);
+            return target;
+        }
     }
 }
 
@@ -1382,7 +1380,7 @@ void moveEmplace(T)(ref T source, ref T target) @system
     import core.stdc.string : memcpy, memset;
     import std.traits : hasAliasing, hasElaborateAssign,
                         hasElaborateCopyConstructor, hasElaborateDestructor,
-                        isAssignable;
+                        isAssignable, isStaticArray;
 
     static if (!is(T == class) && hasAliasing!T) if (!__ctfe)
     {
@@ -1418,6 +1416,11 @@ void moveEmplace(T)(ref T source, ref T target) @system
             }
         }
     }
+    else static if (isStaticArray!T)
+    {
+        for (size_t i = 0; i < source.length; ++i)
+            move(source[i], target[i]);
+    }
     else
     {
         // Primitive data (including pointers and arrays) or class -
@@ -1449,6 +1452,24 @@ pure nothrow @nogc @system unittest
     assert(foo1._ptr is &val);
     assert(foo2._ptr is null);
     assert(val == 0);
+}
+
+// issue 18913
+@safe unittest
+{
+    static struct NoCopy
+    {
+        int payload;
+        ~this() { }
+        @disable this(this);
+    }
+
+    static void f(NoCopy[2]) { }
+
+    NoCopy[2] ncarray = [ NoCopy(1), NoCopy(2) ];
+
+    static assert(!__traits(compiles, f(ncarray)));
+    f(move(ncarray));
 }
 
 // moveAll

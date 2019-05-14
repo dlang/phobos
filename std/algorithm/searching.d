@@ -120,8 +120,10 @@ template all(alias pred = "a")
     Performs (at most) $(BIGOH range.length) evaluations of `pred`.
      +/
     bool all(Range)(Range range)
-    if (isInputRange!Range && is(typeof(unaryFun!pred(range.front))))
+    if (isInputRange!Range)
     {
+        static assert(is(typeof(unaryFun!pred(range.front))),
+                "`" ~ pred.stringof[1..$-1] ~ "` isn't a unary predicate function for range.front");
         import std.functional : not;
 
         return find!(not!(unaryFun!pred))(range).empty;
@@ -151,6 +153,7 @@ are true.
 {
     int x = 1;
     assert(all!(a => a > x)([2, 3]));
+    assert(all!"a == 0x00c9"("\xc3\x89")); // Test that `all` auto-decodes.
 }
 
 /++
@@ -205,6 +208,7 @@ evaluate to true.
 {
     auto a = [ 1, 2, 0, 4 ];
     assert(any!"a == 2"(a));
+    assert(any!"a == 0x3000"("\xe3\x80\x80")); // Test that `any` auto-decodes.
 }
 
 // balancedParens
@@ -1192,7 +1196,7 @@ if (isInputRange!R &&
     import std.meta : AliasSeq;
 
     static foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
-    {
+    (){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
         assert(!endsWith(to!S("abc"), 'a'));
         assert(endsWith(to!S("abc"), 'a', 'c') == 2);
         assert(!endsWith(to!S("abc"), 'x', 'n', 'b'));
@@ -1231,7 +1235,7 @@ if (isInputRange!R &&
             assert(endsWith(to!S("a"), T.init, 'a') == 1);
             assert(endsWith(to!S("a"), 'a', T.init) == 2);
         }
-    }
+    }();
 
     static foreach (T; AliasSeq!(int, short))
     {{
@@ -1267,6 +1271,8 @@ if (isInputRange!R &&
         assert(!endsWith!("a%10 == b%10")(arr, [15, 14]));
     }}
 }
+
+private enum bool hasConstEmptyMember(T) = is(typeof(((const T* a) => (*a).empty)(null)) : bool);
 
 // Rebindable doesn't work with structs
 // see: https://github.com/dlang/phobos/pull/6136
@@ -2553,6 +2559,17 @@ template canFind(alias pred="a == b")
     assert( canFind!((string a, string b) => a.startsWith(b))(words, "bees"));
 }
 
+/// Search for mutliple items in an array of items (search for needles in an array of hay stacks)
+@safe unittest
+{
+    string s1 = "aaa111aaa";
+    string s2 = "aaa222aaa";
+    string s3 = "aaa333aaa";
+    string s4 = "aaa444aaa";
+    const hay = [s1, s2, s3, s4];
+    assert(hay.canFind!(e => (e.canFind("111", "222"))));
+}
+
 @safe unittest
 {
     import std.algorithm.internal : rndstuff;
@@ -2669,7 +2686,7 @@ InputRange findAmong(alias pred = "a == b", InputRange, ForwardRange)(
     InputRange seq, ForwardRange choices)
 if (isInputRange!InputRange && isForwardRange!ForwardRange)
 {
-    for (; !seq.empty && find!pred(choices, seq.front).empty; seq.popFront())
+    for (; !seq.empty && find!pred(choices.save, seq.front).empty; seq.popFront())
     {
     }
     return seq;
@@ -2691,6 +2708,14 @@ if (isInputRange!InputRange && isForwardRange!ForwardRange)
     assert(findAmong(b, [ 4, 6, 7 ][]).empty);
     assert(findAmong!("a == b")(a, b).length == a.length - 2);
     assert(findAmong!("a == b")(b, [ 4, 6, 7 ][]).empty);
+}
+
+@system unittest // issue 19765
+{
+    import std.range.interfaces : inputRangeObject;
+    auto choices = inputRangeObject("b");
+    auto f = "foobar".findAmong(choices);
+    assert(f == "bar");
 }
 
 // findSkip
@@ -2855,9 +2880,19 @@ if (isForwardRange!R1 && isForwardRange!R2)
             asTuple = rhs;
         }
         Tuple!(S1, S1, S2) asTuple;
-        bool opCast(T : bool)()
+        static if (hasConstEmptyMember!(typeof(asTuple[1])))
         {
-            return !asTuple[1].empty;
+            bool opCast(T : bool)() const
+            {
+                return !asTuple[1].empty;
+            }
+        }
+        else
+        {
+            bool opCast(T : bool)()
+            {
+                return !asTuple[1].empty;
+            }
         }
         alias asTuple this;
     }
@@ -2923,9 +2958,19 @@ if (isForwardRange!R1 && isForwardRange!R2)
             asTuple = rhs;
         }
         Tuple!(S1, S2) asTuple;
-        bool opCast(T : bool)()
+        static if (hasConstEmptyMember!(typeof(asTuple[1])))
         {
-            return !asTuple[1].empty;
+            bool opCast(T : bool)() const
+            {
+                return !asTuple[1].empty;
+            }
+        }
+        else
+        {
+            bool opCast(T : bool)()
+            {
+                return !asTuple[1].empty;
+            }
         }
         alias asTuple this;
     }
@@ -2989,9 +3034,19 @@ if (isForwardRange!R1 && isForwardRange!R2)
             asTuple = rhs;
         }
         Tuple!(S1, S2) asTuple;
-        bool opCast(T : bool)()
+        static if (hasConstEmptyMember!(typeof(asTuple[1])))
         {
-            return !asTuple[0].empty;
+            bool opCast(T : bool)() const
+            {
+                return !asTuple[0].empty;
+            }
+        }
+        else
+        {
+            bool opCast(T : bool)()
+            {
+                return !asTuple[0].empty;
+            }
         }
         alias asTuple this;
     }
@@ -3047,7 +3102,21 @@ if (isForwardRange!R1 && isForwardRange!R2)
 {
     // findSplit returns a triplet
     if (auto split = "dlang-rocks".findSplit("-"))
+    {
+        assert(split[0] == "dlang");
+        assert(split[1] == "-");
         assert(split[2] == "rocks");
+    }
+    else assert(0);
+
+    // works with const aswell
+    if (const split = "dlang-rocks".findSplit("-"))
+    {
+        assert(split[0] == "dlang");
+        assert(split[1] == "-");
+        assert(split[2] == "rocks");
+    }
+    else assert(0);
 }
 
 ///
@@ -3068,14 +3137,18 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(r[0] == "Carl");
     assert(r[1] == " ");
     assert(r[2] == "Sagan Memorial Station");
-    auto r1 = findSplitBefore(a, "Sagan");
-    assert(r1);
-    assert(r1[0] == "Carl ");
-    assert(r1[1] == "Sagan Memorial Station");
-    auto r2 = findSplitAfter(a, "Sagan");
-    assert(r2);
-    assert(r2[0] == "Carl Sagan");
-    assert(r2[1] == " Memorial Station");
+    if (const r1 = findSplitBefore(a, "Sagan"))
+    {
+        assert(r1);
+        assert(r1[0] == "Carl ");
+        assert(r1[1] == "Sagan Memorial Station");
+    }
+    if (const r2 = findSplitAfter(a, "Sagan"))
+    {
+        assert(r2);
+        assert(r2[0] == "Carl Sagan");
+        assert(r2[1] == " Memorial Station");
+    }
 }
 
 /// Use $(REF only, std,range) to find single elements:
@@ -3089,7 +3162,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
 {
     import std.range.primitives : empty;
 
-    auto a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
+    immutable a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
     auto r = findSplit(a, [9, 1]);
     assert(!r);
     assert(r[0] == a);
@@ -3101,23 +3174,35 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(r[1] == a[2 .. 3]);
     assert(r[2] == a[3 .. $]);
 
-    auto r1 = findSplitBefore(a, [9, 1]);
-    assert(!r1);
-    assert(r1[0] == a);
-    assert(r1[1].empty);
-    r1 = findSplitBefore(a, [3, 4]);
-    assert(r1);
-    assert(r1[0] == a[0 .. 2]);
-    assert(r1[1] == a[2 .. $]);
+    {
+        const r1 = findSplitBefore(a, [9, 1]);
+        assert(!r1);
+        assert(r1[0] == a);
+        assert(r1[1].empty);
+    }
 
-    auto r2 = findSplitAfter(a, [9, 1]);
-    assert(!r2);
-    assert(r2[0].empty);
-    assert(r2[1] == a);
-    r2 = findSplitAfter(a, [3, 4]);
-    assert(r2);
-    assert(r2[0] == a[0 .. 4]);
-    assert(r2[1] == a[4 .. $]);
+    if (immutable r1 = findSplitBefore(a, [3, 4]))
+    {
+        assert(r1);
+        assert(r1[0] == a[0 .. 2]);
+        assert(r1[1] == a[2 .. $]);
+    }
+    else assert(0);
+
+    {
+        const r2 = findSplitAfter(a, [9, 1]);
+        assert(!r2);
+        assert(r2[0].empty);
+        assert(r2[1] == a);
+    }
+
+    if (immutable r3 = findSplitAfter(a, [3, 4]))
+    {
+        assert(r3);
+        assert(r3[0] == a[0 .. 4]);
+        assert(r3[1] == a[4 .. $]);
+    }
+    else assert(0);
 }
 
 @safe pure nothrow unittest
@@ -3143,31 +3228,50 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(r[1].empty);
     assert(r[2].empty);
 
-    auto r1 = findSplitBefore(fwd, [9, 1]);
-    assert(!r1);
-    assert(equal(r1[0], a));
-    assert(r1[1].empty);
-    r1 = findSplitBefore(fwd, [3, 4]);
-    assert(r1);
-    assert(equal(r1[0], a[0 .. 2]));
-    assert(equal(r1[1], a[2 .. $]));
-    r1 = findSplitBefore(fwd, [8, 9]);
-    assert(!r1);
-    assert(equal(r1[0], a));
-    assert(r1[1].empty);
+    // auto variable `r2` cannot be `const` because `fwd.front` is mutable
+    {
+        auto r1 = findSplitBefore(fwd, [9, 1]);
+        assert(!r1);
+        assert(equal(r1[0], a));
+        assert(r1[1].empty);
+    }
 
-    auto r2 = findSplitAfter(fwd, [9, 1]);
-    assert(!r2);
-    assert(r2[0].empty);
-    assert(equal(r2[1], a));
-    r2 = findSplitAfter(fwd, [3, 4]);
-    assert(r2);
-    assert(equal(r2[0], a[0 .. 4]));
-    assert(equal(r2[1], a[4 .. $]));
-    r2 = findSplitAfter(fwd, [8, 9]);
-    assert(!r2);
-    assert(r2[0].empty);
-    assert(equal(r2[1], a));
+    if (auto r1 = findSplitBefore(fwd, [3, 4]))
+    {
+        assert(r1);
+        assert(equal(r1[0], a[0 .. 2]));
+        assert(equal(r1[1], a[2 .. $]));
+    }
+    else assert(0);
+
+    {
+        auto r1 = findSplitBefore(fwd, [8, 9]);
+        assert(!r1);
+        assert(equal(r1[0], a));
+        assert(r1[1].empty);
+    }
+
+    {
+        auto r2 = findSplitAfter(fwd, [9, 1]);
+        assert(!r2);
+        assert(r2[0].empty);
+        assert(equal(r2[1], a));
+    }
+
+    if (auto r2 = findSplitAfter(fwd, [3, 4]))
+    {
+        assert(r2);
+        assert(equal(r2[0], a[0 .. 4]));
+        assert(equal(r2[1], a[4 .. $]));
+    }
+    else assert(0);
+
+    {
+        auto r2 = findSplitAfter(fwd, [8, 9]);
+        assert(!r2);
+        assert(r2[0].empty);
+        assert(equal(r2[1], a));
+    }
 }
 
 @safe pure nothrow @nogc unittest
@@ -3695,7 +3799,7 @@ irreflexive (`pred(a, a)` is `false`).
 Params:
     pred = The ordering predicate to use to determine the extremum (minimum or
         maximum) element.
-    range = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to search.
+    range = The $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to search.
 
 Returns: The position of the minimum (respectively maximum) element of forward
 range `range`, i.e. a subrange of `range` starting at the position of  its
@@ -3815,7 +3919,7 @@ See_Also:
     $(LREF maxIndex), $(REF min, std,algorithm,comparison), $(LREF minCount), $(LREF minElement), $(LREF minPos)
  */
 sizediff_t minIndex(alias pred = "a < b", Range)(Range range)
-if (isForwardRange!Range && !isInfinite!Range &&
+if (isInputRange!Range && !isInfinite!Range &&
     is(typeof(binaryFun!pred(range.front, range.front))))
 {
     if (range.empty) return -1;
@@ -3913,6 +4017,40 @@ if (isForwardRange!Range && !isInfinite!Range &&
 
     static immutable arr2d = [[1, 3], [3, 9], [4, 2]];
     assert(arr2d.minIndex!"a[1] < b[1]" == 2);
+}
+
+@safe nothrow pure unittest
+{
+    // InputRange test
+
+    static struct InRange
+    {
+        @property int front()
+        {
+            return arr[index];
+        }
+
+        bool empty() const
+        {
+            return arr.length == index;
+        }
+
+        void popFront()
+        {
+            index++;
+        }
+
+        int[] arr;
+        size_t index = 0;
+    }
+
+    static assert(isInputRange!InRange);
+
+    auto arr1 = InRange([5, 2, 3, 4, 5, 3, 6]);
+    auto arr2 = InRange([7, 3, 8, 2, 1, 4]);
+
+    assert(arr1.minIndex == 1);
+    assert(arr2.minIndex == 4);
 }
 
 /**
@@ -4647,7 +4785,7 @@ if (isInputRange!R &&
     import std.range;
 
     static foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
-    {
+    (){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
         assert(!startsWith(to!S("abc"), 'c'));
         assert(startsWith(to!S("abc"), 'a', 'c') == 1);
         assert(!startsWith(to!S("abc"), 'x', 'n', 'b'));
@@ -4689,7 +4827,7 @@ if (isInputRange!R &&
             assert(startsWith(to!S("a"), T.init, 'a') == 1);
             assert(startsWith(to!S("a"), 'a', T.init) == 2);
         }
-    }
+    }();
 
     //Length but no RA
     assert(!startsWith("abc".takeExactly(3), "abcd".takeExactly(4)));
@@ -4819,6 +4957,7 @@ if (isInputRange!Range)
     private bool _done;
 
     static if (!is(Sentinel == void))
+    {
         ///
         this(Range input, Sentinel sentinel,
                 OpenRight openRight = Yes.openRight)
@@ -4828,7 +4967,17 @@ if (isInputRange!Range)
             _openRight = openRight;
             _done = _input.empty || openRight && predSatisfied();
         }
+        private this(Range input, Sentinel sentinel, OpenRight openRight,
+            bool done)
+        {
+            _input = input;
+            _sentinel = sentinel;
+            _openRight = openRight;
+            _done = done;
+        }
+    }
     else
+    {
         ///
         this(Range input, OpenRight openRight = Yes.openRight)
         {
@@ -4836,6 +4985,13 @@ if (isInputRange!Range)
             _openRight = openRight;
             _done = _input.empty || openRight && predSatisfied();
         }
+        private this(Range input, OpenRight openRight, bool done)
+        {
+            _input = input;
+            _openRight = openRight;
+            _done = done;
+        }
+    }
 
     ///
     @property bool empty()
@@ -4877,27 +5033,14 @@ if (isInputRange!Range)
 
     static if (isForwardRange!Range)
     {
-        static if (!is(Sentinel == void))
-            ///
-            @property Until save()
-            {
-                Until result = this;
-                result._input     = _input.save;
-                result._sentinel  = _sentinel;
-                result._openRight = _openRight;
-                result._done      = _done;
-                return result;
-            }
-        else
-            ///
-            @property Until save()
-            {
-                Until result = this;
-                result._input     = _input.save;
-                result._openRight = _openRight;
-                result._done      = _done;
-                return result;
-            }
+        ///
+        @property Until save()
+        {
+            static if (is(Sentinel == void))
+                return Until(_input.save, _openRight, _done);
+            else
+                return Until(_input.save, _sentinel, _openRight, _done);
+        }
     }
 }
 
@@ -4948,4 +5091,20 @@ if (isInputRange!Range)
     import std.algorithm.comparison : among, equal;
     auto s = "hello how\nare you";
     assert(equal(s.until!(c => c.among!('\n', '\r')), "hello how"));
+}
+
+pure @safe unittest // issue 18657
+{
+    import std.algorithm.comparison : equal;
+    import std.range : refRange;
+    {
+        auto r = refRange(&["foobar"][0]).until("bar");
+        assert(equal(r.save, "foo"));
+        assert(equal(r.save, "foo"));
+    }
+    {
+        auto r = refRange(&["foobar"][0]).until!(e => e == 'b');
+        assert(equal(r.save, "foo"));
+        assert(equal(r.save, "foo"));
+    }
 }

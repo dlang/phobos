@@ -145,6 +145,27 @@ if (((flags & flags.signed) + precision + exponentWidth) % 8 == 0 && precision +
     auto p = Probability(0.5);
 }
 
+// Facilitate converting numeric types to custom float
+private union ToBinary(F)
+if (is(typeof(CustomFloatParams!(F.sizeof*8))) || is(F == real))
+{
+    F set;
+
+    // If on Linux or Mac, where 80-bit reals are padded, ignore the
+    // padding.
+    import std.algorithm.comparison : min;
+    CustomFloat!(CustomFloatParams!(min(F.sizeof*8, 80))) get;
+
+    // Convert F to the correct binary type.
+    static typeof(get) opCall(F value)
+    {
+        ToBinary r;
+        r.set = value;
+        return r.get;
+    }
+    alias get this;
+}
+
 /// ditto
 struct CustomFloat(uint             precision,  // fraction bits (23 for float)
                    uint             exponentWidth,  // exponent bits (8 for float)  Exponent width
@@ -175,27 +196,6 @@ private:
     alias T_signed_exp = sType!exponentWidth;
 
     alias Flags = CustomFloatFlags;
-
-    // Facilitate converting numeric types to custom float
-    union ToBinary(F)
-        if (is(typeof(CustomFloatParams!(F.sizeof*8))) || is(F == real))
-    {
-        F set;
-
-        // If on Linux or Mac, where 80-bit reals are padded, ignore the
-        // padding.
-        import std.algorithm.comparison : min;
-        CustomFloat!(CustomFloatParams!(min(F.sizeof*8, 80))) get;
-
-        // Convert F to the correct binary type.
-        static typeof(get) opCall(F value)
-        {
-            ToBinary r;
-            r.set = value;
-            return r.get;
-        }
-        alias get this;
-    }
 
     // Perform IEEE rounding with round to nearest detection
     void roundedShift(T,U)(ref T sig, U shift)
@@ -551,7 +551,7 @@ public:
     }
 
     ///ditto
-    T opCast(T)() if (__traits(compiles, get!T )) { return get!T; }
+    alias opCast = get;
 
     /// Convert the CustomFloat to a real and perform the relevant operator on the result
     real opUnary(string op)()
@@ -615,7 +615,7 @@ public:
     {
         import std.format : FormatSpec, formatValue;
         // Needs to be a template because of DMD @@BUG@@ 13737.
-        void toString()(scope void delegate(const(char)[]) sink, FormatSpec!char fmt)
+        void toString()(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char fmt)
         {
             sink.formatValue(get!real, fmt);
         }
@@ -1774,6 +1774,24 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
     return sum0;
 }
 
+/// ditto
+F dotProduct(F, uint N)(const ref scope F[N] a, const ref scope F[N] b)
+if (N <= 16)
+{
+    F sum0 = 0;
+    F sum1 = 0;
+    static foreach (i; 0 .. N / 2)
+    {
+        sum0 += a[i*2] * b[i*2];
+        sum1 += a[i*2+1] * b[i*2+1];
+    }
+    static if (N % 2 == 1)
+    {
+        sum0 += a[N-1] * b[N-1];
+    }
+    return sum0 + sum1;
+}
+
 @system unittest
 {
     // @system due to dotProduct and assertCTFEable
@@ -1785,6 +1803,13 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
         T[] b = [ 4.0, 6.0, ];
         assert(dotProduct(a, b) == 16);
         assert(dotProduct([1, 3, -5], [4, -2, -1]) == 3);
+        // Test with fixed-length arrays.
+        T[2] c = [ 1.0, 2.0, ];
+        T[2] d = [ 4.0, 6.0, ];
+        assert(dotProduct(c, d) == 16);
+        T[3] e = [1,  3, -5];
+        T[3] f = [4, -2, -1];
+        assert(dotProduct(e, f) == 3);
     }}
 
     // Make sure the unrolled loop codepath gets tested.
@@ -3345,6 +3370,89 @@ void inverseFft(Ret, R)(R range, Ret buf)
 C swapRealImag(C)(C input)
 {
     return C(input.im, input.re);
+}
+
+/** This function transforms `decimal` value into a value in the factorial number
+system stored in `fac`.
+
+A factorial number is constructed as:
+$(D fac[0] * 0! + fac[1] * 1! + ... fac[20] * 20!)
+
+Params:
+    decimal = The decimal value to convert into the factorial number system.
+    fac = The array to store the factorial number. The array is of size 21 as
+        `ulong.max` requires 21 digits in the factorial number system.
+Returns:
+    A variable storing the number of digits of the factorial number stored in
+    `fac`.
+*/
+size_t decimalToFactorial(ulong decimal, ref ubyte[21] fac)
+        @safe pure nothrow @nogc
+{
+    import std.algorithm.mutation : reverse;
+    size_t idx;
+
+    for (ulong i = 1; decimal != 0; ++i)
+    {
+        auto temp = decimal % i;
+        decimal /= i;
+        fac[idx++] = cast(ubyte)(temp);
+    }
+
+    if (idx == 0)
+    {
+        fac[idx++] = cast(ubyte) 0;
+    }
+
+    reverse(fac[0 .. idx]);
+
+    // first digit of the number in factorial will always be zero
+    assert(fac[idx - 1] == 0);
+
+    return idx;
+}
+
+///
+@safe pure @nogc unittest
+{
+    ubyte[21] fac;
+    size_t idx = decimalToFactorial(2982, fac);
+
+    assert(fac[0] == 4);
+    assert(fac[1] == 0);
+    assert(fac[2] == 4);
+    assert(fac[3] == 1);
+    assert(fac[4] == 0);
+    assert(fac[5] == 0);
+    assert(fac[6] == 0);
+}
+
+@safe pure unittest
+{
+    ubyte[21] fac;
+    size_t idx = decimalToFactorial(0UL, fac);
+    assert(idx == 1);
+    assert(fac[0] == 0);
+
+    fac[] = 0;
+    idx = 0;
+    idx = decimalToFactorial(ulong.max, fac);
+    assert(idx == 21);
+    auto t = [7, 11, 12, 4, 3, 15, 3, 5, 3, 5, 0, 8, 3, 5, 0, 0, 0, 2, 1, 1, 0];
+    foreach (i, it; fac[0 .. 21])
+    {
+        assert(it == t[i]);
+    }
+
+    fac[] = 0;
+    idx = decimalToFactorial(2982, fac);
+
+    assert(idx == 7);
+    t = [4, 0, 4, 1, 0, 0, 0];
+    foreach (i, it; fac[0 .. idx])
+    {
+        assert(it == t[i]);
+    }
 }
 
 private:

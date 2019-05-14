@@ -921,22 +921,23 @@ public:
     }
 
     /// ditto
-    void toString(scope void delegate(const(char)[]) sink, const ref FormatSpec!char f) const
+    void toString(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char f) const
     {
-        immutable hex = (f.spec == 'x' || f.spec == 'X');
-        if (!(f.spec == 's' || f.spec == 'd' || f.spec =='o' || hex))
-            throw new FormatException("Format specifier not understood: %" ~ f.spec);
+        const spec = f.spec;
+        immutable hex = (spec == 'x' || spec == 'X');
+        if (!(spec == 's' || spec == 'd' || spec =='o' || hex))
+            throw new FormatException("Format specifier not understood: %" ~ spec);
 
         char[] buff;
-        if (f.spec == 'X')
+        if (spec == 'X')
         {
             buff = data.toHexString(0, '_', 0, f.flZero ? '0' : ' ', LetterCase.upper);
         }
-        else if (f.spec == 'x')
+        else if (spec == 'x')
         {
             buff = data.toHexString(0, '_', 0, f.flZero ? '0' : ' ', LetterCase.lower);
         }
-        else if (f.spec == 'o')
+        else if (spec == 'o')
         {
             buff = data.toOctalString();
         }
@@ -1898,4 +1899,24 @@ void divMod(const BigInt dividend, const BigInt divisor, out BigInt quotient, ou
     assert(q == -10);
     assert(r == -24);
     assert(q * d + r == -c);
+}
+
+// Issue 19740
+@system unittest
+{
+    BigInt a = BigInt(
+        "241127122100380210001001124020210001001100000200003101000062221012075223052000021042250111300200000000000" ~
+        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
+    BigInt b = BigInt(
+        "700200000000500418321000401140010110000022007221432000000141020011323301104104060202100200457210001600142" ~
+        "000001012245300100001110215200000000120000000000000000000000000000000000000000000000000000000000000000000" ~
+        "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
+
+    BigInt c = a * b;
+    assert(c == BigInt(
+        "1688372108948068874722901180228375682334987075822938736581472847151834613694489486296103575639363261807341" ~
+        "3910091006778604956808730652275328822700182498926542563654351871390166691461743896850906716336187966456064" ~
+        "2702007176328110013356024000000000000000000000000000000000000000000000000000000000000000000000000000000000" ~
+        "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" ~
+        "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000"));
 }

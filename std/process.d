@@ -92,7 +92,8 @@ version (Posix)
 version (Windows)
 {
     import core.stdc.stdio;
-    import core.sys.windows.windows;
+    import core.sys.windows.winbase;
+    import core.sys.windows.winnt;
     import std.utf;
     import std.windows.syserror;
 }
@@ -748,7 +749,8 @@ private Pid spawnProcessImpl(scope const(char)[] commandLine,
         CREATE_UNICODE_ENVIRONMENT |
         ((config & Config.suppressConsole) ? CREATE_NO_WINDOW : 0);
     auto pworkDir = workDir.tempCStringW();     // workaround until Bugzilla 14696 is fixed
-    if (!CreateProcessW(null, commandLine.tempCStringW().buffPtr, null, null, true, dwCreationFlags,
+    if (!CreateProcessW(null, commandLine.tempCStringW().buffPtr,
+                        null, null, true, dwCreationFlags,
                         envz, workDir.length ? pworkDir : null, &startinfo, &pi))
         throw ProcessException.newFromLastError("Failed to spawn new process");
 
@@ -3083,16 +3085,17 @@ private:
     import core.stdc.stddef;
     import core.stdc.wchar_ : wcslen;
     import core.sys.windows.shellapi : CommandLineToArgvW;
-    import core.sys.windows.windows;
+    import core.sys.windows.winbase;
+    import core.sys.windows.winnt;
     import std.array;
 
     string[] parseCommandLine(string line)
     {
         import std.algorithm.iteration : map;
         import std.array : array;
-        LPWSTR lpCommandLine = (to!(wchar[])(line) ~ "\0"w).ptr;
+        auto lpCommandLine = (to!(WCHAR[])(line) ~ '\0').ptr;
         int numArgs;
-        LPWSTR* args = CommandLineToArgvW(lpCommandLine, &numArgs);
+        auto args = CommandLineToArgvW(lpCommandLine, &numArgs);
         scope(exit) LocalFree(args);
         return args[0 .. numArgs]
             .map!(arg => to!string(arg[0 .. wcslen(arg)]))
@@ -3839,8 +3842,8 @@ version (StdDdoc)
     }
     else version (Windows)
     {
-        import core.stdc.stdlib : _exit;
-        _exit(wait(spawnProcess(commandLine)));
+        import core.stdc.stdlib : _Exit;
+        _Exit(wait(spawnProcess(commandLine)));
     }
     ---
     This is, however, NOT equivalent to POSIX' `execv*`.  For one thing, the
@@ -4003,7 +4006,7 @@ version (StdDdoc)
 else
 version (Windows)
 {
-    import core.sys.windows.windows;
+    import core.sys.windows.shellapi, core.sys.windows.winuser;
 
     pragma(lib,"shell32.lib");
 

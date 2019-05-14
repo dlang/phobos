@@ -1053,8 +1053,8 @@ public:
 
 
     /++
-        Adds the given number of years or months to this $(LREF DateTime). A
-        negative number will subtract.
+        Adds the given number of years or months to this $(LREF DateTime),
+        mutating it. A negative number will subtract.
 
         Note that if day overflow is allowed, and the date with the adjusted
         year/month overflows the number of days in the new month, then the month
@@ -1070,6 +1070,9 @@ public:
                             $(LREF DateTime).
             allowOverflow = Whether the days should be allowed to overflow,
                             causing the month to increment.
+
+        Returns:
+            A reference to the `DateTime` (`this`).
       +/
     ref DateTime add(string units)
                     (long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe pure nothrow @nogc
@@ -1115,8 +1118,8 @@ public:
 
 
     /++
-        Adds the given number of years or months to this $(LREF DateTime). A
-        negative number will subtract.
+        Adds the given number of years or months to this $(LREF DateTime),
+        mutating it. A negative number will subtract.
 
         The difference between rolling and adding is that rolling does not
         affect larger units. Rolling a $(LREF DateTime) 12 months
@@ -1132,6 +1135,9 @@ public:
                             $(LREF DateTime).
             allowOverflow = Whether the days should be allowed to overflow,
                             causing the month to increment.
+
+        Returns:
+            A reference to the `DateTime` (`this`).
       +/
     ref DateTime roll(string units)
                      (long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe pure nothrow @nogc
@@ -1185,8 +1191,8 @@ public:
 
 
     /++
-        Adds the given number of units to this $(LREF DateTime). A negative
-        number will subtract.
+        Adds the given number of units to this $(LREF DateTime), mutating it. A
+        negative number will subtract.
 
         The difference between rolling and adding is that rolling does not
         affect larger units. For instance, rolling a $(LREF DateTime) one
@@ -1199,6 +1205,9 @@ public:
             units = The units to add.
             value = The number of $(D_PARAM units) to add to this
                     $(LREF DateTime).
+
+        Returns:
+            A reference to the `DateTime` (`this`).
       +/
     ref DateTime roll(string units)(long value) @safe pure nothrow @nogc
         if (units == "days")
@@ -4436,8 +4445,8 @@ public:
 
 
     /++
-        Adds the given number of years or months to this $(LREF Date). A
-        negative number will subtract.
+        Adds the given number of years or months to this $(LREF Date), mutating
+        it. A negative number will subtract.
 
         Note that if day overflow is allowed, and the date with the adjusted
         year/month overflows the number of days in the new month, then the month
@@ -4453,6 +4462,9 @@ public:
                             $(LREF Date).
             allowOverflow = Whether the day should be allowed to overflow,
                             causing the month to increment.
+
+        Returns:
+            A reference to the `Date` (`this`).
       +/
     @safe pure nothrow @nogc
     ref Date add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes)
@@ -5218,8 +5230,8 @@ public:
 
 
     /++
-        Adds the given number of years or months to this $(LREF Date). A negative
-        number will subtract.
+        Adds the given number of years or months to this $(LREF Date), mutating
+        it. A negative number will subtract.
 
         The difference between rolling and adding is that rolling does not
         affect larger units. Rolling a $(LREF Date) 12 months gets
@@ -5235,6 +5247,9 @@ public:
                             $(LREF Date).
             allowOverflow = Whether the day should be allowed to overflow,
                             causing the month to increment.
+
+        Returns:
+            A reference to the `Date` (`this`).
       +/
     @safe pure nothrow @nogc
     ref Date roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes)
@@ -5863,8 +5878,8 @@ public:
 
 
     /++
-        Adds the given number of units to this $(LREF Date). A negative number
-        will subtract.
+        Adds the given number of units to this $(LREF Date), mutating it. A
+        negative number will subtract.
 
         The difference between rolling and adding is that rolling does not
         affect larger units. For instance, rolling a $(LREF Date) one
@@ -5875,6 +5890,9 @@ public:
         Params:
             units = The units to add. Must be `"days"`.
             days  = The number of days to add to this $(LREF Date).
+
+        Returns:
+            A reference to the `Date` (`this`).
       +/
     ref Date roll(string units)(long days) @safe pure nothrow @nogc
         if (units == "days")
@@ -8438,8 +8456,8 @@ public:
 
 
     /++
-        Adds the given number of units to this $(LREF TimeOfDay). A negative
-        number will subtract.
+        Adds the given number of units to this $(LREF TimeOfDay), mutating it. A
+        negative number will subtract.
 
         The difference between rolling and adding is that rolling does not
         affect larger units. For instance, rolling a $(LREF TimeOfDay)
@@ -8452,6 +8470,9 @@ public:
             units = The units to add.
             value = The number of $(D_PARAM units) to add to this
                     $(LREF TimeOfDay).
+
+        Returns:
+            A reference to the `TimeOfDay` (`this`).
       +/
     ref TimeOfDay roll(string units)(long value) @safe pure nothrow @nogc
         if (units == "hours")

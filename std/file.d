@@ -93,7 +93,7 @@ import std.typecons;
 
 version (Windows)
 {
-    import core.sys.windows.windows, std.windows.syserror;
+    import core.sys.windows.winbase, core.sys.windows.winnt, std.windows.syserror;
 }
 else version (Posix)
 {
@@ -106,7 +106,7 @@ else
 // Character type used for operating system filesystem APIs
 version (Windows)
 {
-    private alias FSChar = wchar;
+    private alias FSChar = WCHAR;       // WCHAR can be aliased to wchar or wchar_t
 }
 else version (Posix)
 {
@@ -118,20 +118,16 @@ else
 // Purposefully not documented. Use at your own risk
 @property string deleteme() @safe
 {
-    import std.conv : to;
+    import std.conv : text;
     import std.path : buildPath;
     import std.process : thisProcessID;
 
-    static _deleteme = "deleteme.dmd.unittest.pid";
-    static _first = true;
+    enum base = "deleteme.dmd.unittest.pid";
+    static string fileName;
 
-    if (_first)
-    {
-        _deleteme = buildPath(tempDir(), _deleteme) ~ to!string(thisProcessID);
-        _first = false;
-    }
-
-    return _deleteme;
+    if (!fileName)
+        fileName = text(buildPath(tempDir(), base), thisProcessID);
+    return fileName;
 }
 
 version (unittest) private struct TestAliasedString
@@ -348,7 +344,6 @@ version (Posix) private void[] readImpl(scope const(char)[] name, scope const(FS
 {
     import core.memory : GC;
     import std.algorithm.comparison : min;
-    import std.array : uninitializedArray;
     import std.conv : to;
     import std.experimental.checkedint : checked;
 
@@ -371,7 +366,7 @@ version (Posix) private void[] readImpl(scope const(char)[] name, scope const(FS
     immutable initialAlloc = min(upTo, to!size_t(statbuf.st_size
         ? min(statbuf.st_size + 1, maxInitialAlloc)
         : minInitialAlloc));
-    void[] result = uninitializedArray!(ubyte[])(initialAlloc);
+    void[] result = GC.malloc(initialAlloc, GC.BlkAttr.NO_SCAN)[0 .. initialAlloc];
     scope(failure) GC.free(result.ptr);
 
     auto size = checked(size_t(0));
@@ -400,7 +395,6 @@ version (Windows) private void[] readImpl(scope const(char)[] name, scope const(
 {
     import core.memory : GC;
     import std.algorithm.comparison : min;
-    import std.array : uninitializedArray;
     static trustedCreateFileW(scope const(wchar)* namez, DWORD dwDesiredAccess, DWORD dwShareMode,
                               SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
                               DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) @trusted
@@ -451,7 +445,7 @@ version (Windows) private void[] readImpl(scope const(char)[] name, scope const(
     ulong fileSize = void;
     cenforce(trustedGetFileSize(h, fileSize), name, namez);
     size_t size = min(upTo, fileSize);
-    auto buf = uninitializedArray!(ubyte[])(size);
+    auto buf = () @trusted { return GC.malloc(size, GC.BlkAttr.NO_SCAN)[0 .. size]; } ();
 
     scope(failure)
     {
@@ -466,7 +460,7 @@ version (Windows) private void[] readImpl(scope const(char)[] name, scope const(
 version (linux) @safe unittest
 {
     // A file with "zero" length that doesn't have 0 length at all
-    auto s = std.file.readText("/proc/sys/kernel/osrelease");
+    auto s = std.file.readText("/proc/cpuinfo");
     assert(s.length > 0);
     //writefln("'%s'", s);
 }
@@ -1841,7 +1835,7 @@ else version (Posix)
 
 @safe unittest
 {
-    //std.process.system("echo a > deleteme") == 0 || assert(false);
+    //std.process.executeShell("echo a > deleteme");
     if (exists(deleteme))
         remove(deleteme);
 
@@ -3857,12 +3851,14 @@ else version (Posix)
 
         private this(string path, core.sys.posix.dirent.dirent* fd) @safe
         {
-            import std.algorithm.searching : countUntil;
             import std.path : buildPath;
-            import std.string : representation;
 
-            immutable len = fd.d_name[].representation.countUntil(0);
-            _name = buildPath(path, fd.d_name[0 .. len]);
+            static if (is(typeof(fd.d_namlen)))
+                immutable len = fd.d_namlen;
+            else
+                immutable len = (() @trusted => core.stdc.string.strlen(fd.d_name.ptr))();
+
+            _name = buildPath(path, (() @trusted => fd.d_name.ptr[0 .. len])());
 
             _didLStat = false;
             _didStat = false;
@@ -4797,7 +4793,7 @@ public:
                   std,_path).
 
         mode = Whether the directory's sub-directories should be
-               iterated in depth-first port-order ($(LREF depth)),
+               iterated in depth-first post-order ($(LREF depth)),
                depth-first pre-order ($(LREF breadth)), or not at all
                ($(LREF shallow)).
 
@@ -4807,7 +4803,7 @@ public:
 
     Returns:
         An $(REF_ALTTEXT input range, isInputRange,std,range,primitives) of
-        $(LREF DirEntries).
+        $(LREF DirEntry).
 
     Throws:
         $(LREF FileException) if the directory does not exist.
@@ -4842,7 +4838,7 @@ foreach (d; parallel(dFiles, 1)) //passes by 1 file to each thread
 {
     string cmd = "dmd -c "  ~ d.name;
     writeln(cmd);
-    std.process.system(cmd);
+    std.process.executeShell(cmd);
 }
 
 // Iterate over all D source files in current directory and all its

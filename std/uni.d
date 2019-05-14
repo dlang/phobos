@@ -762,6 +762,8 @@ version (X86)
     enum hasUnalignedReads = true;
 else version (X86_64)
     enum hasUnalignedReads = true;
+else version (SystemZ)
+    enum hasUnalignedReads = true;
 else
     enum hasUnalignedReads = false; // better be safe then sorry
 
@@ -1237,8 +1239,13 @@ pure nothrow:
 
         T opIndex(size_t idx) inout
         {
-            return __ctfe ? simpleIndex(idx) :
-                cast(inout(T))(cast(U*) origin)[idx];
+            T ret;
+            version (LittleEndian)
+                ret = __ctfe ? simpleIndex(idx) :
+                    cast(inout(T))(cast(U*) origin)[idx];
+            else
+                ret = simpleIndex(idx);
+            return ret;
         }
 
         static if (isBitPacked!T) // lack of user-defined implicit conversion
@@ -1251,10 +1258,15 @@ pure nothrow:
 
         void opIndexAssign(TypeOfBitPacked!T val, size_t idx)
         {
-            if (__ctfe)
-                simpleWrite(val, idx);
+            version (LittleEndian)
+            {
+                if (__ctfe)
+                    simpleWrite(val, idx);
+                else
+                    (cast(U*) origin)[idx] = cast(U) val;
+            }
             else
-                (cast(U*) origin)[idx] = cast(U) val;
+                simpleWrite(val, idx);
         }
     }
     else
@@ -1818,22 +1830,20 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
 
     static T[] alloc(T)(size_t size) @trusted
     {
-        import core.memory : pureMalloc;
-        import std.exception : enforce;
+        import std.internal.memory : enforceMalloc;
 
         import core.checkedint : mulu;
         bool overflow;
         size_t nbytes = mulu(size, T.sizeof, overflow);
         if (overflow) assert(0);
 
-        auto ptr = cast(T*) enforce(pureMalloc(nbytes), "out of memory on C heap");
+        auto ptr = cast(T*) enforceMalloc(nbytes);
         return ptr[0 .. size];
     }
 
     static T[] realloc(T)(scope T[] arr, size_t size) @trusted
     {
-        import core.memory : pureRealloc;
-        import std.exception : enforce;
+        import std.internal.memory : enforceRealloc;
         if (!size)
         {
             destroy(arr);
@@ -1845,7 +1855,7 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
         size_t nbytes = mulu(size, T.sizeof, overflow);
         if (overflow) assert(0);
 
-        auto ptr = cast(T*) enforce(pureRealloc(arr.ptr, nbytes), "out of memory on C heap");
+        auto ptr = cast(T*) enforceRealloc(arr.ptr, nbytes);
         return ptr[0 .. size];
     }
 
@@ -2455,7 +2465,7 @@ public:
      * $(LI $(B %x) formats the intervals as a [low .. high$(RPAREN) range of lowercase hex characters)
      * $(LI $(B %X) formats the intervals as a [low .. high$(RPAREN) range of uppercase hex characters)
      */
-    void toString(Writer)(scope Writer sink, const ref FormatSpec!char fmt) /* const */
+    void toString(Writer)(scope Writer sink, scope const ref FormatSpec!char fmt) /* const */
     {
         import std.format : formatValue;
         auto range = byInterval;
@@ -2941,7 +2951,7 @@ private:
     }
 
     //
-    Marker addInterval(int a, int b, Marker hint=Marker.init)
+    Marker addInterval(int a, int b, Marker hint=Marker.init) scope
     in
     {
         assert(a <= b);
@@ -7487,8 +7497,7 @@ public:
     {
         static if (op == "~")
         {
-            import core.exception : onOutOfMemoryError;
-            import core.memory : pureRealloc;
+            import std.internal.memory : enforceRealloc;
             if (!isBig)
             {
                 if (slen_ == small_cap)
@@ -7509,8 +7518,7 @@ public:
                 cap_ = addu(cap_, grow, overflow);
                 auto nelems = mulu(3, addu(cap_, 1, overflow), overflow);
                 if (overflow) assert(0);
-                ptr_ = cast(ubyte*) pureRealloc(ptr_, nelems);
-                if (ptr_ is null) onOutOfMemoryError();
+                ptr_ = cast(ubyte*) enforceRealloc(ptr_, nelems);
             }
             write24(ptr_, ch, len_++);
             return this;
@@ -7567,8 +7575,7 @@ public:
 
     this(this) @nogc nothrow pure @trusted
     {
-        import core.exception : onOutOfMemoryError;
-        import core.memory : pureMalloc;
+        import std.internal.memory : enforceMalloc;
         if (isBig)
         {// dup it
             import core.checkedint : addu, mulu;
@@ -7576,8 +7583,7 @@ public:
             auto raw_cap = mulu(3, addu(cap_, 1, overflow), overflow);
             if (overflow) assert(0);
 
-            auto p = cast(ubyte*) pureMalloc(raw_cap);
-            if (p is null) onOutOfMemoryError();
+            auto p = cast(ubyte*) enforceMalloc(raw_cap);
             p[0 .. raw_cap] = ptr_[0 .. raw_cap];
             ptr_ = p;
         }
@@ -7619,13 +7625,11 @@ private:
 
     void convertToBig() @nogc nothrow pure @trusted
     {
-        import core.exception : onOutOfMemoryError;
-        import core.memory : pureMalloc;
+        import std.internal.memory : enforceMalloc;
         static assert(grow.max / 3 - 1 >= grow);
         enum nbytes = 3 * (grow + 1);
         size_t k = smallLength;
-        ubyte* p = cast(ubyte*) pureMalloc(nbytes);
-        if (p is null) onOutOfMemoryError();
+        ubyte* p = cast(ubyte*) enforceMalloc(nbytes);
         for (int i=0; i<k; i++)
             write24(p, read24(small_.ptr, i), i);
         // now we can overwrite small array data

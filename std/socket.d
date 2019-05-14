@@ -60,7 +60,7 @@ version (Windows)
     pragma (lib, "ws2_32.lib");
     pragma (lib, "wsock32.lib");
 
-    import core.sys.windows.windows, std.windows.syserror;
+    import core.sys.windows.winbase, std.windows.syserror;
     public import core.sys.windows.winsock2;
     private alias _ctimeval = core.sys.windows.winsock2.timeval;
     private alias _clinger = core.sys.windows.winsock2.linger;
@@ -1749,16 +1749,19 @@ public:
     /// Any IPv6 host address.
     static @property ref const(ubyte)[16] ADDR_ANY() pure nothrow @nogc
     {
-        const(ubyte)[16]* addr;
         static if (is(typeof(IN6ADDR_ANY)))
         {
-            addr = &IN6ADDR_ANY.s6_addr;
-            return *addr;
+            version (Windows)
+            {
+                static immutable addr = IN6ADDR_ANY.s6_addr;
+                return addr;
+            }
+            else
+                return IN6ADDR_ANY.s6_addr;
         }
         else static if (is(typeof(in6addr_any)))
         {
-            addr = &in6addr_any.s6_addr;
-            return *addr;
+            return in6addr_any.s6_addr;
         }
         else
             static assert(0);
