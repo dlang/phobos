@@ -4072,6 +4072,9 @@ Params:
 Returns:
     Static tuple composed of the members of the enumerated type `E`.
     The members are arranged in the same order as declared in `E`.
+    The name of the enum can be found by querying the compiler for the
+    name of the identifier, i.e. `__traits(identifier, EnumMembers!MyEnum[i])`.
+    For enumerations with unique values, $(REF to, std,conv) can also be used.
 
 Note:
     An enum can have multiple members which have the same value. If you want
@@ -4178,6 +4181,39 @@ template for finding a member `e` in an enumerated type `E`.
     assert(rank(Mode.read) == 0);
     assert(rank(Mode.write) == 1);
     assert(rank(Mode.map) == 2);
+}
+
+/**
+Use EnumMembers to generate a switch statement using static foreach.
+*/
+
+@safe unittest
+{
+    import std.conv : to;
+    class FooClass
+    {
+        string calledMethod;
+        void foo() @safe { calledMethod = "foo"; }
+        void bar() @safe { calledMethod = "bar"; }
+        void baz() @safe { calledMethod = "baz"; }
+    }
+
+    enum FooEnum { foo, bar, baz }
+
+    auto var = FooEnum.bar;
+    auto fooObj = new FooClass();
+    s: final switch (var)
+    {
+        static foreach (member; EnumMembers!FooEnum)
+        {
+            case member: // Generate a case for each enum value.
+                // Call fooObj.{name of enum value}().
+                __traits(getMember, fooObj, to!string(member))();
+                break s;
+        }
+    }
+    // As we pass in FooEnum.bar, the bar() method gets called.
+    assert(fooObj.calledMethod == "bar");
 }
 
 @safe unittest
