@@ -1932,7 +1932,7 @@ Params:
 Returns:
      The power modulus value of (base ^ exponent) % modulus.
 */
-BigInt powMod(BigInt base, BigInt exponent, BigInt modulus) pure nothrow
+BigInt powmod(BigInt base, BigInt exponent, BigInt modulus) pure nothrow
 {
     BigInt result = 1;
 
@@ -1950,13 +1950,13 @@ BigInt powMod(BigInt base, BigInt exponent, BigInt modulus) pure nothrow
     return result;
 }
 
-/// for powMod
+/// for powmod
 @system unittest
 {
     BigInt base = BigInt("123456789012345678901234567890");
     BigInt exponent = BigInt("1234567890123456789012345678901234567");
     BigInt modulus = BigInt("1234567");
 
-    BigInt result = powMod(base, exponent, modulus);
+    BigInt result = powmod(base, exponent, modulus);
     assert(result == 359079);
 }
