@@ -1813,6 +1813,8 @@ A singleton instance of the default random number generator
     {
         static if (isSeedable!(Random, ulong))
             result.seed(unpredictableSeed!ulong); // Avoid unnecessary copy.
+        else static if (size_t.sizeof >= ulong.sizeof && is(Random : MersenneTwisterEngine!Params, Params...))
+            initMTEngine(result); // 64-bit multiplication is fast, so use a 64-bit seed.
         else static if (isSeedable!(Random, uint))
             result.seed(unpredictableSeed!uint); // Avoid unnecessary copy.
         else
@@ -1829,6 +1831,34 @@ A singleton instance of the default random number generator
     import std.range : take;
     auto rnd = rndGen;
     assert(rnd.take(3).sum > 0);
+}
+
+/+
+Initialize a 32-bit MersenneTwisterEngine from 64 bits of entropy.
+This is private and accepts no seed as a parameter, freeing the internal
+implementaton from any need for stability across releases.
++/
+private void initMTEngine(MTEngine)(scope ref MTEngine mt)
+if (is(MTEngine : MersenneTwisterEngine!Params, Params...))
+{
+    pragma(inline, false); // Called no more than once per thread by rndGen.
+    ulong x = unpredictableSeed!ulong;
+    alias UIntType = typeof(mt.front());
+    foreach (size_t i, ref e; mt.state.data)
+    {
+        x = (x ^ (x >> 62)) * 6_364_136_223_846_793_005UL + i;
+        e = cast(UIntType) x;
+        static if (MTEngine.max != UIntType.max)
+        {
+            e &= MTEngine.max;
+        }
+    }
+    mt.state.index = mt.state.data.length - 1;
+    // double popFront() to guarantee both `mt.state.z`
+    // and `mt.state.front` are derived from the newly
+    // set values in `mt.state.data`.
+    mt.popFront();
+    mt.popFront();
 }
 
 /**

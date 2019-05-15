@@ -442,7 +442,8 @@ if (isInputRange!Range)
     import std.typecons : isTuple;
 
     alias E = ElementType!Range;
-    static assert(isTuple!E, "assocArray: argument must be a range of tuples");
+    static assert(isTuple!E, "assocArray: argument must be a range of tuples,"
+        ~" but was a range of "~E.stringof);
     static assert(E.length == 2, "assocArray: tuple dimension must be 2");
     alias KeyType = E.Types[0];
     alias ValueType = E.Types[1];
@@ -552,6 +553,7 @@ if (isInputRange!Values && isInputRange!Keys)
 @safe unittest
 {
     import std.typecons;
+    static assert(!__traits(compiles, [ 1, 2, 3 ].assocArray()));
     static assert(!__traits(compiles, [ tuple("foo", "bar", "baz") ].assocArray()));
     static assert(!__traits(compiles, [ tuple("foo") ].assocArray()));
     assert([ tuple("foo", "bar") ].assocArray() == ["foo": "bar"]);

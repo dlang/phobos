@@ -145,6 +145,27 @@ if (((flags & flags.signed) + precision + exponentWidth) % 8 == 0 && precision +
     auto p = Probability(0.5);
 }
 
+// Facilitate converting numeric types to custom float
+private union ToBinary(F)
+if (is(typeof(CustomFloatParams!(F.sizeof*8))) || is(F == real))
+{
+    F set;
+
+    // If on Linux or Mac, where 80-bit reals are padded, ignore the
+    // padding.
+    import std.algorithm.comparison : min;
+    CustomFloat!(CustomFloatParams!(min(F.sizeof*8, 80))) get;
+
+    // Convert F to the correct binary type.
+    static typeof(get) opCall(F value)
+    {
+        ToBinary r;
+        r.set = value;
+        return r.get;
+    }
+    alias get this;
+}
+
 /// ditto
 struct CustomFloat(uint             precision,  // fraction bits (23 for float)
                    uint             exponentWidth,  // exponent bits (8 for float)  Exponent width
@@ -175,27 +196,6 @@ private:
     alias T_signed_exp = sType!exponentWidth;
 
     alias Flags = CustomFloatFlags;
-
-    // Facilitate converting numeric types to custom float
-    union ToBinary(F)
-        if (is(typeof(CustomFloatParams!(F.sizeof*8))) || is(F == real))
-    {
-        F set;
-
-        // If on Linux or Mac, where 80-bit reals are padded, ignore the
-        // padding.
-        import std.algorithm.comparison : min;
-        CustomFloat!(CustomFloatParams!(min(F.sizeof*8, 80))) get;
-
-        // Convert F to the correct binary type.
-        static typeof(get) opCall(F value)
-        {
-            ToBinary r;
-            r.set = value;
-            return r.get;
-        }
-        alias get this;
-    }
 
     // Perform IEEE rounding with round to nearest detection
     void roundedShift(T,U)(ref T sig, U shift)
@@ -1774,6 +1774,24 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
     return sum0;
 }
 
+/// ditto
+F dotProduct(F, uint N)(const ref scope F[N] a, const ref scope F[N] b)
+if (N <= 16)
+{
+    F sum0 = 0;
+    F sum1 = 0;
+    static foreach (i; 0 .. N / 2)
+    {
+        sum0 += a[i*2] * b[i*2];
+        sum1 += a[i*2+1] * b[i*2+1];
+    }
+    static if (N % 2 == 1)
+    {
+        sum0 += a[N-1] * b[N-1];
+    }
+    return sum0 + sum1;
+}
+
 @system unittest
 {
     // @system due to dotProduct and assertCTFEable
@@ -1785,6 +1803,13 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
         T[] b = [ 4.0, 6.0, ];
         assert(dotProduct(a, b) == 16);
         assert(dotProduct([1, 3, -5], [4, -2, -1]) == 3);
+        // Test with fixed-length arrays.
+        T[2] c = [ 1.0, 2.0, ];
+        T[2] d = [ 4.0, 6.0, ];
+        assert(dotProduct(c, d) == 16);
+        T[3] e = [1,  3, -5];
+        T[3] f = [4, -2, -1];
+        assert(dotProduct(e, f) == 3);
     }}
 
     // Make sure the unrolled loop codepath gets tested.

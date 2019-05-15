@@ -1,6 +1,0 @@
-Fixed comparison bug in `std.algorithm.comparison.levenshteinDistance`
-
-Previously the algorithm was allocating the amount of memory which was equal to
-the size of the biggest range, that is $(BIGOH max(s.length, t.length)).
-This is now fixed to be $(BIGOH min(s.length, t.length)).
-For more details see $(REF levenshteinDistance, std, algorithm, comparison).
