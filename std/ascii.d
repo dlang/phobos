@@ -46,6 +46,7 @@ $(TR $(TD Constants) $(TD
         $(LREF whitespace)
 ))
 $(TR $(TD Enums) $(TD
+        $(LREF ControlChar)
         $(LREF LetterCase)
 ))
 ))
@@ -100,6 +101,70 @@ enum LetterCase : bool
         .hmac!SHA1("secret".representation)
         .toHexString!(LetterCase.lower);
     assert(sha1HMAC == "49f2073c7bf58577e8c9ae59fe8cfd37c9ab94e5");
+}
+
+/++
+    All the control characters in ASCII table
++/
+enum ControlChar : char
+{
+    NUL = '\x00', /// Null
+    SOH = '\x01', /// Start of heading
+    STX = '\x02', /// Start of text
+    ETX = '\x03', /// End of text
+    EOT = '\x04', /// End of transmission
+    ENQ = '\x05', /// Enquiry
+    ACK = '\x06', /// Acknowledge
+    BEL = '\x07', /// Bell
+    BS  = '\x08', /// Backspace
+    TAB = '\x09', /// Horizontal tab
+    LF  = '\x0A', /// NL line feed, new line
+    VT  = '\x0B', /// Vertical tab
+    FF  = '\x0C', /// NP form feed, new page
+    CR  = '\x0D', /// Carriage return
+    SO  = '\x0E', /// Shift out
+    SI  = '\x0F', /// Shift in
+    DLE = '\x10', /// Data link escape
+    DC1 = '\x11', /// Device control 1
+    DC2 = '\x12', /// Device control 2
+    DC3 = '\x13', /// Device control 3
+    DC4 = '\x14', /// Device control 4
+    NAK = '\x15', /// Negative acknowledge
+    SYN = '\x16', /// Synchronous idle
+    ETB = '\x17', /// End of transmission block
+    CAN = '\x18', /// Cancel
+    EM  = '\x19', /// End of medium
+    SUB = '\x1A', /// Substitute
+    ESC = '\x1B', /// Escape
+    FS  = '\x1C', /// File separator
+    GS  = '\x1D', /// Group separator
+    RS  = '\x1E', /// Record separator
+    US  = '\x1F', /// Unit separator
+    DEL = '\x7F' /// Delete
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    // Because all ASCII characters fit in char, so do these
+    static assert(ControlChar.ACK.sizeof == 1);
+
+    static assert(ControlChar.NUL == '\0');
+    static assert(ControlChar.BEL == '\a');
+    static assert(ControlChar.BS  == '\b');
+    static assert(ControlChar.FF  == '\f');
+    static assert(ControlChar.LF  == '\n');
+    static assert(ControlChar.CR  == '\r');
+    static assert(ControlChar.TAB == '\t');
+    static assert(ControlChar.VT  == '\v');
+}
+
+///
+@safe pure nothrow unittest
+{
+    import std.conv;
+    //Control character table can be used in place of hexcodes.
+    with (ControlChar) assert(text("Phobos", US, "Deimos", US, "Tango", RS) == "Phobos\x1FDeimos\x1FTango\x1E");
 }
 
 /// Newline sequence for this system.
