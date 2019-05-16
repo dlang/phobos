@@ -6364,14 +6364,18 @@ if (isFloatingPoint!(X))
     static if (F.realFormat == RealFormat.ieeeSingle)
     {
         const uint p = *cast(uint *)&x;
-        return ((p & 0x7F80_0000) == 0x7F80_0000)
-            && p & 0x007F_FFFF; // not infinity
+        // Sign bit (MSB) is irrelevant so mask it out.
+        // Next 8 bits should be all set.
+        // At least one bit among the least significant 23 bits should be set.
+        return (p & 0x7FFF_FFFF) > 0x7F80_0000;
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
         const ulong  p = *cast(ulong *)&x;
-        return ((p & 0x7FF0_0000_0000_0000) == 0x7FF0_0000_0000_0000)
-            && p & 0x000F_FFFF_FFFF_FFFF; // not infinity
+        // Sign bit (MSB) is irrelevant so mask it out.
+        // Next 11 bits should be all set.
+        // At least one bit among the least significant 52 bits should be set.
+        return (p & 0x7FFF_FFFF_FFFF_FFFF) > 0x7FF0_0000_0000_0000;
     }
     else static if (F.realFormat == RealFormat.ieeeExtended)
     {
