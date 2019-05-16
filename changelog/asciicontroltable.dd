@@ -6,5 +6,5 @@ of `char`, allowing for alternative markup of strings with control
 characters:
 -------
 import std.ascii, std.conv;
-with (ControlChar) assert(text("Phobos", US, "Deimos", US, "Tango", RS) == "Phobos\x1FDeimos\x1FTango\x1E");
+with (ControlChar) assert(text("Phobos", us, "Deimos", us, "Tango", rs) == "Phobos\x1FDeimos\x1FTango\x1E");
 -------

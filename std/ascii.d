@@ -108,55 +108,55 @@ enum LetterCase : bool
 +/
 enum ControlChar : char
 {
-    NUL = '\x00', /// Null
-    SOH = '\x01', /// Start of heading
-    STX = '\x02', /// Start of text
-    ETX = '\x03', /// End of text
-    EOT = '\x04', /// End of transmission
-    ENQ = '\x05', /// Enquiry
-    ACK = '\x06', /// Acknowledge
-    BEL = '\x07', /// Bell
-    BS  = '\x08', /// Backspace
-    TAB = '\x09', /// Horizontal tab
-    LF  = '\x0A', /// NL line feed, new line
-    VT  = '\x0B', /// Vertical tab
-    FF  = '\x0C', /// NP form feed, new page
-    CR  = '\x0D', /// Carriage return
-    SO  = '\x0E', /// Shift out
-    SI  = '\x0F', /// Shift in
-    DLE = '\x10', /// Data link escape
-    DC1 = '\x11', /// Device control 1
-    DC2 = '\x12', /// Device control 2
-    DC3 = '\x13', /// Device control 3
-    DC4 = '\x14', /// Device control 4
-    NAK = '\x15', /// Negative acknowledge
-    SYN = '\x16', /// Synchronous idle
-    ETB = '\x17', /// End of transmission block
-    CAN = '\x18', /// Cancel
-    EM  = '\x19', /// End of medium
-    SUB = '\x1A', /// Substitute
-    ESC = '\x1B', /// Escape
-    FS  = '\x1C', /// File separator
-    GS  = '\x1D', /// Group separator
-    RS  = '\x1E', /// Record separator
-    US  = '\x1F', /// Unit separator
-    DEL = '\x7F' /// Delete
+    nul = '\x00', /// Null
+    soh = '\x01', /// Start of heading
+    stx = '\x02', /// Start of text
+    etx = '\x03', /// End of text
+    eot = '\x04', /// End of transmission
+    enq = '\x05', /// Enquiry
+    ack = '\x06', /// Acknowledge
+    bel = '\x07', /// Bell
+    bs  = '\x08', /// Backspace
+    tab = '\x09', /// Horizontal tab
+    lf  = '\x0A', /// NL line feed, new line
+    vt  = '\x0B', /// Vertical tab
+    ff  = '\x0C', /// NP form feed, new page
+    cr  = '\x0D', /// Carriage return
+    sO  = '\x0E', /// Shift out
+    sI  = '\x0F', /// Shift in
+    dle = '\x10', /// Data link escape
+    dc1 = '\x11', /// Device control 1
+    dc2 = '\x12', /// Device control 2
+    dc3 = '\x13', /// Device control 3
+    dc4 = '\x14', /// Device control 4
+    nak = '\x15', /// Negative acknowledge
+    syn = '\x16', /// Synchronous idle
+    etb = '\x17', /// End of transmission block
+    can = '\x18', /// Cancel
+    em  = '\x19', /// End of medium
+    sub = '\x1A', /// Substitute
+    esc = '\x1B', /// Escape
+    fs  = '\x1C', /// File separator
+    gs  = '\x1D', /// Group separator
+    rs  = '\x1E', /// Record separator
+    us  = '\x1F', /// Unit separator
+    del = '\x7F' /// Delete
 }
 
 ///
 @safe pure nothrow @nogc unittest
 {
     // Because all ASCII characters fit in char, so do these
-    static assert(ControlChar.ACK.sizeof == 1);
+    static assert(ControlChar.ack.sizeof == 1);
 
-    static assert(ControlChar.NUL == '\0');
-    static assert(ControlChar.BEL == '\a');
-    static assert(ControlChar.BS  == '\b');
-    static assert(ControlChar.FF  == '\f');
-    static assert(ControlChar.LF  == '\n');
-    static assert(ControlChar.CR  == '\r');
-    static assert(ControlChar.TAB == '\t');
-    static assert(ControlChar.VT  == '\v');
+    static assert(ControlChar.nul == '\0');
+    static assert(ControlChar.bel == '\a');
+    static assert(ControlChar.bs  == '\b');
+    static assert(ControlChar.ff  == '\f');
+    static assert(ControlChar.lf  == '\n');
+    static assert(ControlChar.cr  == '\r');
+    static assert(ControlChar.tab == '\t');
+    static assert(ControlChar.vt  == '\v');
 }
 
 ///
@@ -164,7 +164,7 @@ enum ControlChar : char
 {
     import std.conv;
     //Control character table can be used in place of hexcodes.
-    with (ControlChar) assert(text("Phobos", US, "Deimos", US, "Tango", RS) == "Phobos\x1FDeimos\x1FTango\x1E");
+    with (ControlChar) assert(text("Phobos", us, "Deimos", us, "Tango", rs) == "Phobos\x1FDeimos\x1FTango\x1E");
 }
 
 /// Newline sequence for this system.
