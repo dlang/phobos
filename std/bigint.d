@@ -1949,7 +1949,7 @@ BigInt powmod(BigInt base, BigInt exponent, BigInt modulus) pure nothrow
 }
 
 /// for powmod
-@system pure nothrow unittest
+@system pure unittest
 {
     BigInt base = BigInt("123456789012345678901234567890");
     BigInt exponent = BigInt("1234567890123456789012345678901234567");
