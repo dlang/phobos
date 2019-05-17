@@ -1804,9 +1804,6 @@ A singleton instance of the default random number generator
  */
 @property ref Random rndGen() @safe nothrow @nogc
 {
-    import std.algorithm.iteration : map;
-    import std.range : repeat;
-
     static Random result;
     static bool initialized;
     if (!initialized)
