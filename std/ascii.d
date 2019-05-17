@@ -146,8 +146,13 @@ enum ControlChar : char
 ///
 @safe pure nothrow @nogc unittest
 {
+    import std.algorithm.comparison, std.algorithm.searching, std.range, std.traits;
+
     // Because all ASCII characters fit in char, so do these
     static assert(ControlChar.ack.sizeof == 1);
+
+    // All control characters except del are in row starting from 0
+    static assert(EnumMembers!ControlChar.only.until(ControlChar.del).equal(iota(32)));
 
     static assert(ControlChar.nul == '\0');
     static assert(ControlChar.bel == '\a');
