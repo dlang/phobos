@@ -89,6 +89,13 @@ struct Mallocator
     //...
 }
 
+static int global;
+
+@nogc @system nothrow pure unittest
+{
+    assert (++global == 42, "This should fail to compile on the auto-tester as well");
+}
+
 @nogc @system nothrow pure unittest
 {
     @nogc nothrow pure
