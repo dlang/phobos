@@ -1,0 +1,12 @@
+Add overload `std.algorithm.sorting.schwartzSort!(alias transform, SwapStrategy ss, R)`
+
+$(REF schwartzSort, std,algorithm,sorting) now has an overloaded version that can be
+used to provide a `SwapStrategy` without also explicitly specifying the predicate to
+sort by.
+
+-------
+auto s1 = a.schwartzSort!(abs, SwapStrategy.stable);
+
+// The old syntax still works.
+auto s2 = a.schwartzSort!(abs, "a < b", SwapStrategy.stable);
+-------

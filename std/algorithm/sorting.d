@@ -2910,7 +2910,8 @@ SortedRange!(R, ((a, b) => binaryFun!less(unaryFun!transform(a),
                                           unaryFun!transform(b))))
 schwartzSort(alias transform, alias less = "a < b",
         SwapStrategy ss = SwapStrategy.unstable, R)(R r)
-if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R)
+if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R &&
+    !is(typeof(binaryFun!less) == SwapStrategy))
 {
     import std.conv : emplace;
     import std.range : zip, SortedRange;
@@ -2958,6 +2959,13 @@ if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R)
     }
     zip(xform, r).sort!((a, b) => binaryFun!less(a[0], b[0]), ss)();
     return typeof(return)(r);
+}
+
+/// ditto
+auto schwartzSort(alias transform, SwapStrategy ss, R)(R r)
+if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R)
+{
+    return schwartzSort!(transform, "a < b", ss, R)(r);
 }
 
 ///
@@ -3017,6 +3025,36 @@ if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R)
     import std.typecons : Tuple;
     Tuple!(char)[] chars;
     schwartzSort!((Tuple!(char) c){ return c[0]; })(chars);
+}
+
+@safe unittest
+{
+    // issue 13965
+    import std.typecons : Tuple;
+    Tuple!(char)[] chars;
+    schwartzSort!("a[0]", SwapStrategy.stable)(chars);
+}
+
+@safe unittest
+{
+    // issue 13965
+    import std.algorithm.iteration : map;
+    import std.numeric : entropy;
+
+    auto lowEnt = [ 1.0, 0, 0 ],
+        midEnt = [ 0.1, 0.1, 0.8 ],
+        highEnt = [ 0.31, 0.29, 0.4 ];
+    auto arr = new double[][3];
+    arr[0] = midEnt;
+    arr[1] = lowEnt;
+    arr[2] = highEnt;
+
+    schwartzSort!(entropy, SwapStrategy.stable)(arr);
+
+    assert(arr[0] == lowEnt);
+    assert(arr[1] == midEnt);
+    assert(arr[2] == highEnt);
+    assert(isSorted!("a < b")(map!(entropy)(arr)));
 }
 
 // partialSort

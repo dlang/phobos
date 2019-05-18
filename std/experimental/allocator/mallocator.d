@@ -82,7 +82,7 @@ struct Mallocator
 }
 
 ///
-@nogc @system nothrow pure unittest
+@nogc @system nothrow unittest
 {
     auto buffer = Mallocator.instance.allocate(1024 * 1024 * 4);
     scope(exit) Mallocator.instance.deallocate(buffer);
