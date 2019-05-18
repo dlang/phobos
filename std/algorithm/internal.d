@@ -21,15 +21,9 @@ version (unittest)
 
     package string[] rndstuff(T : string)()
     {
-        import std.random : Random = Xorshift, uniform;
+        import std.random : Xorshift, uniform;
 
-        static Random rnd;
-        static bool first = true;
-        if (first)
-        {
-            rnd.seed(234_567_891);
-            first = false;
-        }
+        static rnd = Xorshift(234_567_891);
         string[] result =
             new string[uniform(minArraySize, maxArraySize, rnd)];
         string alpha = "abcdefghijABCDEFGHIJ";
@@ -46,15 +40,9 @@ version (unittest)
 
     package int[] rndstuff(T : int)()
     {
-        import std.random : Random = Xorshift, uniform;
+        import std.random : Xorshift, uniform;
 
-        static Random rnd;
-        static bool first = true;
-        if (first)
-        {
-            rnd = Random(345_678_912);
-            first = false;
-        }
+        static rnd = Xorshift(345_678_912);
         int[] result = new int[uniform(minArraySize, maxArraySize, rnd)];
         foreach (ref i; result)
         {
