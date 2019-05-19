@@ -95,20 +95,18 @@ enum JSONType : byte
     object,   /// ditto
     true_,    /// ditto
     false_,   /// ditto
-    /// These symbols will be deprecated after 2.082.
-    NULL = null_,
-    STRING = string,
-    INTEGER = integer,
-    UINTEGER = uinteger,
-    FLOAT = float_,
-    ARRAY = array,
-    OBJECT = object,
-    TRUE = true_,
-    FALSE = false_,
+    deprecated("Use .null_")    NULL = null_,
+    deprecated("Use .string")   STRING = string,
+    deprecated("Use .integer")  INTEGER = integer,
+    deprecated("Use .uinteger") UINTEGER = uinteger,
+    deprecated("Use .float_")   FLOAT = float_,
+    deprecated("Use .array")    ARRAY = array,
+    deprecated("Use .object")   OBJECT = object,
+    deprecated("Use .true_")    TRUE = true_,
+    deprecated("Use .false_")   FALSE = false_,
 }
 
-/// This alias will be deprecated after 2.082.
-alias JSON_TYPE = JSONType;
+deprecated("Use JSONType") alias JSON_TYPE = JSONType;
 
 /**
 JSON value node
