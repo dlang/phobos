@@ -443,7 +443,7 @@ struct Task(alias fun, Args...)
         {
             fun(myCastedTask._args);
         }
-        else static if (is(typeof(addressOf(fun(myCastedTask._args)))))
+        else static if (is(typeof(&(fun(myCastedTask._args)))))
         {
             myCastedTask.returnVal = addressOf(fun(myCastedTask._args));
         }
