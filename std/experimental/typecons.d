@@ -978,9 +978,6 @@ pure nothrow @safe unittest
     Final!A a = new A;
     static assert(!__traits(compiles, a = new A));
 
-    static void foo(ref A a) pure nothrow @safe @nogc {}
-    static assert(!__traits(compiles, foo(a)));
-
     assert(a.i == 0);
     a.i = 42;
     assert(a.i == 42);
