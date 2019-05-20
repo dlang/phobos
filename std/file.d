@@ -4562,7 +4562,8 @@ private struct DirIteratorImpl
 
             static auto trustedFindFirstFileW(typeof(searchPattern) pattern, WIN32_FIND_DATAW* findinfo) @trusted
             {
-                return FindFirstFileW(pattern.tempCString!FSChar(), findinfo);
+                return FindFirstFileExW(pattern.tempCString!FSChar(), FINDEX_INFO_LEVELS.FindExInfoBasic, findinfo,
+                    FINDEX_SEARCH_OPS.FindExSearchNameMatch, null, 0);
             }
 
             HANDLE h = trustedFindFirstFileW(searchPattern, &_findinfo);
