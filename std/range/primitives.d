@@ -1486,11 +1486,19 @@ static if (isRandomAccessRange!R) passByRef(r[0]);
 ----
 */
 enum bool hasLvalueElements(R) = isInputRange!R
-    && is(typeof(((ref x) => x)(lvalueOf!R.front)))
+    && is(typeof(isLvalue(lvalueOf!R.front)))
     && (!isBidirectionalRange!R
-        || is(typeof(((ref x) => x)(lvalueOf!R.back))))
+        || is(typeof(isLvalue(lvalueOf!R.back))))
     && (!isRandomAccessRange!R
-        || is(typeof(((ref x) => x)(lvalueOf!R[0]))));
+        || is(typeof(isLvalue(lvalueOf!R[0]))));
+
+/* Compile successfully if argument of type T is an lvalue
+ */
+private void isLvalue(T)(T)
+if (0);
+
+private void isLvalue(T)(ref T)
+if (1);
 
 ///
 @safe unittest
