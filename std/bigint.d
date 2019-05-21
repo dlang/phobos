@@ -65,7 +65,7 @@ public:
         isBidirectionalRange!Range &&
         isSomeChar!(ElementType!Range) &&
         !isInfinite!Range &&
-        !isSomeString!Range)
+        !isNarrowString!Range)
     {
         import std.algorithm.iteration : filterBidirectional;
         import std.algorithm.searching : startsWith;
@@ -116,7 +116,8 @@ public:
     }
 
     /// ditto
-    this(Range)(Range s) pure if (isSomeString!Range)
+    this(Range)(Range s) pure
+    if (isNarrowString!Range)
     {
         import std.utf : byCodeUnit;
         this(s.byCodeUnit);
@@ -1919,4 +1920,9 @@ void divMod(const BigInt dividend, const BigInt divisor, out BigInt quotient, ou
         "2702007176328110013356024000000000000000000000000000000000000000000000000000000000000000000000000000000000" ~
         "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" ~
         "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000"));
+}
+
+@system unittest
+{
+    auto n = BigInt("1234"d);
 }
