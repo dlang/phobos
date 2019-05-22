@@ -112,6 +112,7 @@ OUTFILEFLAG = -o
 NODEFAULTLIB=-defaultlib= -debuglib=
 ifeq (,$(findstring win,$(OS)))
 	CFLAGS=$(MODEL_FLAG) -fPIC -DHAVE_UNISTD_H
+	NODEFAULTLIB += -L-lpthread
 	ifeq ($(BUILD),debug)
 		CFLAGS += -g
 	else
