@@ -12,7 +12,7 @@ Serialize data to `ubyte` arrays.
  */
 module std.outbuffer;
 
-import core.stdc.stdarg; // : va_list;
+import core.stdc.stdarg;
 
 /*********************************************
  * OutBuffer provides a way to build up an array of bytes out

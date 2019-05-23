@@ -61,8 +61,8 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.functional;
 
-import std.meta; // AliasSeq, Reverse
-import std.traits; // isCallable, Parameters
+import std.meta : AliasSeq, Reverse;
+import std.traits : isCallable, Parameters;
 
 
 private template needOpCallAlias(alias fun)
