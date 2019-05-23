@@ -49,13 +49,11 @@ module std.algorithm.setops;
 
 import std.range.primitives;
 
-// FIXME
-import std.functional; // : unaryFun, binaryFun;
+import std.functional : unaryFun, binaryFun;
 import std.traits;
-// FIXME
-import std.meta; // : AliasSeq, staticMap, allSatisfy, anySatisfy;
+import std.meta : AliasSeq, staticMap, allSatisfy, anySatisfy;
 
-import std.algorithm.sorting; // : Merge;
+import std.algorithm.sorting : Merge;
 import std.typecons : No;
 
 // cartesianProduct

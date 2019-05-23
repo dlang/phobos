@@ -81,8 +81,7 @@ import std.range.primitives;
 import std.traits : isArray, isAssignable, isBlitAssignable, isNarrowString,
        Unqual, isSomeChar, isMutable;
 import std.meta : allSatisfy;
-// FIXME
-import std.typecons; // : tuple, Tuple;
+import std.typecons : tuple, Tuple;
 
 // bringToFront
 /**
