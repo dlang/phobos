@@ -40,9 +40,7 @@ $(TR $(TD Other) $(TD
 +/
 module std.datetime.date;
 
-// Note: reconsider using specific imports below after
-// https://issues.dlang.org/show_bug.cgi?id=17630 has been fixed
-import core.time;// : TimeException;
+import core.time : TimeException;
 import std.traits : isSomeString, Unqual;
 import std.typecons : Flag;
 import std.range.primitives : isOutputRange;
