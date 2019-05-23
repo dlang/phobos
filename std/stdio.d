@@ -13,14 +13,14 @@ Authors:   $(HTTP digitalmars.com, Walter Bright),
  */
 module std.stdio;
 
-import core.stdc.stddef; // wchar_t
+import core.stdc.stddef : wchar_t;
 public import core.stdc.stdio;
-import std.algorithm.mutation; // copy
-import std.meta; // allSatisfy
-import std.range.primitives; // ElementEncodingType, empty, front,
-    // isBidirectionalRange, isInputRange, put
-import std.traits; // isSomeChar, isSomeString, Unqual, isPointer
-import std.typecons; // Flag
+import std.algorithm.mutation : copy;
+import std.meta : allSatisfy;
+import std.range.primitives : ElementEncodingType, empty, front,
+    isBidirectionalRange, isInputRange, put;
+import std.traits : isSomeChar, isSomeString, Unqual, isPointer;
+import std.typecons : Flag, No, Yes;
 
 /++
 If flag `KeepTerminator` is set to `KeepTerminator.yes`, then the delimiter
