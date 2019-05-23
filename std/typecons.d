@@ -69,7 +69,7 @@ Authors:   $(HTTP erdani.org, Andrei Alexandrescu),
 module std.typecons;
 
 import std.format : singleSpec, FormatSpec, formatValue;
-import std.meta; // : AliasSeq, allSatisfy;
+import std.meta : AliasSeq, allSatisfy;
 import std.range.primitives : isOutputRange;
 import std.traits;
 import std.internal.attributes : betterC;
@@ -949,6 +949,8 @@ if (distinctFieldNames!(Specs))
                 static assert(nN <= nT, "Cannot have more names than tuple members");
                 alias allNames = AliasSeq!(names, fieldNames[nN .. $]);
 
+                import std.meta : Alias, aliasSeqOf;
+
                 template GetItem(size_t idx)
                 {
                     import std.array : empty;
@@ -1021,6 +1023,7 @@ if (distinctFieldNames!(Specs))
         if (is(typeof(translate) : V[K], V, K) && isSomeString!V &&
                 (isSomeString!K || is(K : size_t)))
         {
+            import std.meta : aliasSeqOf;
             import std.range : ElementType;
             static if (isSomeString!(ElementType!(typeof(translate.keys))))
             {
@@ -4967,6 +4970,7 @@ private static:
         }
     }
 
+    import std.meta : templateNot;
     alias Implementation = AutoImplement!(Issue17177, how, templateNot!isFinalFunction);
 }
 
@@ -5482,6 +5486,7 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
         template OnlyVirtual(members...)
         {
             enum notFinal(alias T) = !__traits(isFinalFunction, T);
+            import std.meta : Filter;
             alias OnlyVirtual = Filter!(notFinal, members);
         }
 
