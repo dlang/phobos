@@ -1926,3 +1926,41 @@ void divMod(const BigInt dividend, const BigInt divisor, out BigInt quotient, ou
 {
     auto n = BigInt("1234"d);
 }
+
+/**
+Fast power modulus calculation for $(LREF BigInt) operands.
+Params:
+     base = the $(LREF BigInt) is basic operands.
+     exponent = the $(LREF BigInt) is power exponent of base.
+     modulus = the $(LREF BigInt) is modules to be modular of base ^ exponent.
+Returns:
+     The power modulus value of (base ^ exponent) % modulus.
+*/
+BigInt powmod(BigInt base, BigInt exponent, BigInt modulus) pure nothrow
+{
+    BigInt result = 1;
+
+    while (exponent)
+    {
+        if (exponent & 1)
+        {
+            result = (result * base) % modulus;
+        }
+
+        base = ((base % modulus) * (base % modulus)) % modulus;
+        exponent >>= 1;
+    }
+
+    return result;
+}
+
+/// for powmod
+@system unittest
+{
+    BigInt base = BigInt("123456789012345678901234567890");
+    BigInt exponent = BigInt("1234567890123456789012345678901234567");
+    BigInt modulus = BigInt("1234567");
+
+    BigInt result = powmod(base, exponent, modulus);
+    assert(result == 359079);
+}
