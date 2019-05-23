@@ -92,7 +92,7 @@
 module std.csv;
 
 import std.conv;
-import std.exception;  // basicExceptionCtors
+import std.exception : basicExceptionCtors;
 import std.range.primitives;
 import std.traits;
 

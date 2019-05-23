@@ -130,7 +130,8 @@ version (Win64)
 static import core.math;
 static import core.stdc.math;
 static import core.stdc.fenv;
-import std.traits; // CommonType, isFloatingPoint, isIntegral, isSigned, isUnsigned, Largest, Unqual
+import std.traits :  CommonType, isFloatingPoint, isIntegral, isNumeric,
+    isSigned, isUnsigned, Largest, Unqual;
 
 version (LDC)
 {

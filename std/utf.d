@@ -60,11 +60,12 @@ $(TR $(TD Miscellaneous) $(TD
    +/
 module std.utf;
 
-import std.exception;  // basicExceptionCtors
-import std.meta;       // AliasSeq
+import std.exception : basicExceptionCtors;
+import std.meta : AliasSeq;
 import std.range.primitives;
-import std.traits;     // isSomeChar, isSomeString
-import std.typecons;   // Flag, Yes, No
+import std.traits : isAutodecodableString, isPointer, isSomeChar,
+    isSomeString, isStaticArray, Unqual;
+import std.typecons : Flag, Yes, No;
 
 
 /++
@@ -363,6 +364,7 @@ if (is(S : const char[]) ||
     import std.conv : to;
     import std.exception;
     import std.string : format;
+    import std.traits : FunctionAttribute, functionAttributes, isSafe;
     static void test(string s, dchar c, size_t i = 0, size_t line = __LINE__)
     {
         enforce(stride(s, i) == codeLength!char(c),
@@ -471,6 +473,7 @@ if (isInputRange!S && is(Unqual!(ElementType!S) == wchar))
     import std.conv : to;
     import std.exception;
     import std.string : format;
+    import std.traits : FunctionAttribute, functionAttributes, isSafe;
     static void test(wstring s, dchar c, size_t i = 0, size_t line = __LINE__)
     {
         enforce(stride(s, i) == codeLength!wchar(c),
@@ -560,6 +563,7 @@ if (is(S : const dchar[]) ||
     import std.conv : to;
     import std.exception;
     import std.string : format;
+    import std.traits : FunctionAttribute, functionAttributes, isSafe;
     static void test(dstring s, dchar c, size_t i = 0, size_t line = __LINE__)
     {
         enforce(stride(s, i) == codeLength!dchar(c),
@@ -717,6 +721,7 @@ if (isBidirectionalRange!S && is(Unqual!(ElementType!S) == char) && !isRandomAcc
     import std.conv : to;
     import std.exception;
     import std.string : format;
+    import std.traits : FunctionAttribute, functionAttributes, isSafe;
     static void test(string s, dchar c, size_t i = size_t.max, size_t line = __LINE__)
     {
         enforce(strideBack(s, i == size_t.max ? s.length : i) == codeLength!char(c),
@@ -814,6 +819,7 @@ if (is(S : const wchar[]) ||
     import std.conv : to;
     import std.exception;
     import std.string : format;
+    import std.traits : FunctionAttribute, functionAttributes, isSafe;
     static void test(wstring s, dchar c, size_t i = size_t.max, size_t line = __LINE__)
     {
         enforce(strideBack(s, i == size_t.max ? s.length : i) == codeLength!wchar(c),
@@ -909,6 +915,7 @@ if (isBidirectionalRange!S && is(Unqual!(ElementEncodingType!S) == dchar))
     import std.conv : to;
     import std.exception;
     import std.string : format;
+    import std.traits : FunctionAttribute, functionAttributes, isSafe;
     static void test(dstring s, dchar c, size_t i = size_t.max, size_t line = __LINE__)
     {
         enforce(strideBack(s, i == size_t.max ? s.length : i) == codeLength!dchar(c),
@@ -1068,6 +1075,7 @@ alias UseReplacementDchar = Flag!"useReplacementDchar";
 // Reduce distinct instantiations of decodeImpl.
 private template TypeForDecode(T)
 {
+    import std.traits : isDynamicArray;
     static if (isDynamicArray!T && is(T : E[], E) && __traits(isArithmetic, E) && !is(E == shared))
         alias TypeForDecode = const(Unqual!E)[];
     else
@@ -1856,6 +1864,7 @@ version (unittest) private void testDecode(R)(R range,
                                              size_t line = __LINE__)
 {
     import core.exception : AssertError;
+    import std.exception : enforce;
     import std.string : format;
 
     static if (hasLength!R)
@@ -1884,6 +1893,7 @@ version (unittest) private void testDecodeFront(R)(ref R range,
                                                   size_t line = __LINE__)
 {
     import core.exception : AssertError;
+    import std.exception : enforce;
     import std.string : format;
 
     static if (hasLength!R)
@@ -1914,6 +1924,7 @@ version (unittest) private void testDecodeBack(R)(ref R range,
     else
     {
         import core.exception : AssertError;
+        import std.exception : enforce;
         import std.string : format;
 
         static if (hasLength!R)
@@ -1951,6 +1962,7 @@ version (unittest) private void testAllDecode(R)(R range,
 version (unittest) private void testBadDecode(R)(R range, size_t index, size_t line = __LINE__)
 {
     import core.exception : AssertError;
+    import std.exception : assertThrown, enforce;
     import std.string : format;
 
     immutable initialIndex = index;
@@ -1982,6 +1994,7 @@ version (unittest) private void testBadDecodeBack(R)(R range, size_t line = __LI
     else
     {
         import core.exception : AssertError;
+        import std.exception : assertThrown, enforce;
         import std.string : format;
 
         static if (hasLength!R)
@@ -2198,6 +2211,7 @@ version (unittest) private void testBadDecodeBack(R)(R range, size_t line = __LI
 @safe unittest
 {
     import std.exception;
+    import std.traits : FunctionAttribute, functionAttributes, isSafe;
     assertCTFEable!(
     {
     foreach (S; AliasSeq!( char[], const( char)[],  string,
@@ -3535,6 +3549,7 @@ if (isAutodecodableString!R ||
     isInputRange!R && isSomeChar!(ElementEncodingType!R) ||
     (is(R : const dchar[]) && !isStaticArray!R))
 {
+    import std.traits : isNarrowString, StringTypeOf;
     static if (isNarrowString!R ||
                // This would be cleaner if we had a way to check whether a type
                // was a range without any implicit conversions.

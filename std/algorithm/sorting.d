@@ -78,12 +78,11 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 module std.algorithm.sorting;
 
 import std.algorithm.mutation : SwapStrategy;
-import std.functional; // : unaryFun, binaryFun;
+import std.functional : unaryFun, binaryFun;
 import std.range.primitives;
-import std.typecons : Flag;
-// FIXME
-import std.meta; // : allSatisfy;
-import std.range; // : SortedRange;
+import std.typecons : Flag, No, Yes;
+import std.meta : allSatisfy;
+import std.range : SortedRange;
 import std.traits;
 
 /**
@@ -751,8 +750,10 @@ if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && hasAssig
         assert(a == [ 42, 42 ]);
 
         import std.algorithm.iteration : map;
+        import std.array : array;
         import std.format : format;
-        import std.random;
+        import std.random : Random, uniform, Xorshift;
+        import std.range : iota;
         auto s = 123_456_789;
         auto g = Xorshift(s);
         a = iota(0, uniform(1, 1000, g))
@@ -1063,6 +1064,7 @@ if (isRandomAccessRange!Range && !isInfinite!Range &&
 @safe unittest
 {
     import std.algorithm.comparison : equal;
+    import std.range : iota;
 
     ubyte[256] index = void;
     iota(256).makeIndex(index[]);
@@ -1791,6 +1793,7 @@ private void sort5(alias lt, Range)(Range r)
 {
     import std.algorithm.iteration : permutations;
     import std.algorithm.mutation : copy;
+    import std.range : iota;
 
     int[5] buf;
     foreach (per; iota(5).permutations)
@@ -1931,7 +1934,10 @@ if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
 @safe unittest
 {
     // Simple regression benchmark
-    import std.algorithm.iteration, std.algorithm.mutation, std.random;
+    import std.algorithm.iteration, std.algorithm.mutation;
+    import std.array : array;
+    import std.random : Random, uniform;
+    import std.range : iota;
     Random rng;
     int[] a = iota(20148).map!(_ => uniform(-1000, 1000, rng)).array;
     static uint comps;
@@ -3186,6 +3192,7 @@ if (isRandomAccessRange!(Range) && hasLength!Range &&
 @safe unittest
 {
     import std.algorithm.comparison : equal;
+    import std.range : zip;
     import std.typecons : tuple;
     auto a = [10, 30, 20];
     auto b = ["c", "b", "a"];
@@ -3494,7 +3501,9 @@ done:
     assert(expandPartition!((a, b) => a < b)(a, 4, 5, 6) == 9);
 
     import std.algorithm.iteration : map;
+    import std.array : array;
     import std.random : uniform;
+    import std.range : iota;
     auto size = uniform(1, 1000);
     a = iota(0, size).map!(_ => uniform(0, 1000)).array;
     if (a.length == 0) return;

@@ -703,12 +703,12 @@ CLUSTER = $(S_LINK Grapheme cluster, grapheme cluster)
 +/
 module std.uni;
 
-import std.meta; // AliasSeq
-import std.range.primitives; // back, ElementEncodingType, ElementType, empty,
-    // front, isForwardRange, isInputRange, isRandomAccessRange, popFront, put,
-    // save
-import std.traits; // isConvertibleToString, isIntegral, isSomeChar,
-    // isSomeString, Unqual
+import std.meta : AliasSeq;
+import std.range.primitives : back, ElementEncodingType, ElementType, empty,
+    front, hasLength, hasSlicing, isForwardRange, isInputRange,
+    isRandomAccessRange, popFront, put, save;
+import std.traits : isConvertibleToString, isIntegral, isSomeChar,
+    isSomeString, Unqual;
 // debug = std_uni;
 
 debug(std_uni) import std.stdio; // writefln, writeln
@@ -2804,6 +2804,8 @@ private:
     // a random-access range of integral pairs
     static struct Intervals(Range)
     {
+        import std.range.primitives : hasAssignableElements;
+
         this(Range sp) scope
         {
             slice = sp;
@@ -4943,6 +4945,7 @@ template Utf8Matcher()
 
         bool lookup(int size, Mode mode, Range)(ref Range inp) const
         {
+            import std.range : popFrontN;
             if (inp.length < size)
             {
                 badEncoding();
@@ -5208,6 +5211,7 @@ template Utf16Matcher()
             }
             else
             {
+                import std.range : popFrontN;
                 static if (sizeFlags & 2)
                 {
                     if (inp.length < 2)
@@ -7333,6 +7337,8 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == Grapheme))
 auto byCodePoint(Range)(Range range)
 if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 {
+    import std.range.primitives : isBidirectionalRange, popBack;
+    import std.traits : isNarrowString;
     static if (isNarrowString!Range)
     {
         static struct Result
@@ -7786,7 +7792,9 @@ if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
     && isInputRange!S2 && isSomeChar!(ElementEncodingType!S2))
 {
     import std.internal.unicode_tables : sTable = simpleCaseTable; // generated file
+    import std.range.primitives : isInfinite;
     import std.utf : decodeFront;
+    import std.traits : isDynamicArray;
     import std.typecons : Yes;
     static import std.ascii;
 
@@ -7963,6 +7971,8 @@ int icmp(S1, S2)(S1 r1, S2 r2)
 if (isForwardRange!S1 && isSomeChar!(ElementEncodingType!S1)
     && isForwardRange!S2 && isSomeChar!(ElementEncodingType!S2))
 {
+    import std.range.primitives : isInfinite;
+    import std.traits : isDynamicArray;
     import std.utf : byDchar;
     static import std.ascii;
 
