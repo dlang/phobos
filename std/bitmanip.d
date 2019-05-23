@@ -2790,6 +2790,9 @@ private ulong swapEndianImpl(ulong val) @trusted pure nothrow @nogc
         assert(swapEndian(swapEndian(T.min)) == T.min);
         assert(swapEndian(swapEndian(T.max)) == T.max);
 
+        // Check CTFE compiles.
+        static assert(swapEndian(swapEndian(T(1))) is T(1));
+
         foreach (i; 2 .. 10)
         {
             immutable T maxI = cast(T)(T.max / i);
@@ -2836,6 +2839,44 @@ if (canSwapEndianness!T)
 
 }
 
+// Can't use EndianSwapper union during CTFE.
+private auto ctfeRead(T)(const ubyte[T.sizeof] array)
+if (__traits(isIntegral, T))
+{
+    Unqual!T result;
+    version (LittleEndian)
+        foreach_reverse (b; array)
+            result = cast(Unqual!T) ((result << 8) | b);
+    else
+        foreach (b; array)
+            result = cast(Unqual!T) ((result << 8) | b);
+    return cast(T) result;
+}
+
+// Can't use EndianSwapper union during CTFE.
+private auto ctfeBytes(T)(const T value)
+if (__traits(isIntegral, T))
+{
+    ubyte[T.sizeof] result;
+    Unqual!T tmp = value;
+    version (LittleEndian)
+    {
+        foreach (i; 0 .. T.sizeof)
+        {
+            result[i] = cast(ubyte) tmp;
+            tmp = cast(Unqual!T) (tmp >>> 8);
+        }
+    }
+    else
+    {
+        foreach_reverse (i; 0 .. T.sizeof)
+        {
+            result[i] = cast(ubyte) tmp;
+            tmp = cast(Unqual!T) (tmp >>> 8);
+        }
+    }
+    return result;
+}
 
 /++
     Converts the given value from the native endianness to big endian and
@@ -2883,14 +2924,20 @@ if (canSwapEndianness!T)
 private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow @nogc
 if (isIntegral!T || isSomeChar!T || isBoolean!T)
 {
-    EndianSwapper!T es = void;
-
-    version (LittleEndian)
-        es.value = swapEndian(val);
+    if (!__ctfe)
+    {
+        version (LittleEndian)
+            return EndianSwapper!T(swapEndian(val)).array;
+        else
+            return EndianSwapper!T(val).array;
+    }
     else
-        es.value = val;
-
-    return es.array;
+    {
+        version (LittleEndian)
+            return ctfeBytes(swapEndian(val));
+        else
+            return ctfeBytes(val);
+    }
 }
 
 private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow @nogc
@@ -2930,6 +2977,9 @@ if (isFloatOrDouble!T)
         assert(bigEndianToNative!T(nativeToBigEndian(ival)) is ival);
         assert(bigEndianToNative!T(nativeToBigEndian(T.min)) == T.min);
         assert(bigEndianToNative!T(nativeToBigEndian(T.max)) == T.max);
+
+        //Check CTFE compiles.
+        static assert(bigEndianToNative!T(nativeToBigEndian(T(1))) is T(1));
 
         static if (isSigned!T)
             assert(bigEndianToNative!T(nativeToBigEndian(cast(T) 0)) == 0);
@@ -3007,15 +3057,21 @@ private T bigEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow @n
 if ((isIntegral!T || isSomeChar!T || isBoolean!T) &&
     n == T.sizeof)
 {
-    EndianSwapper!T es = void;
-    es.array = val;
-
-    version (LittleEndian)
-        immutable retval = swapEndian(es.value);
+    if (!__ctfe)
+    {
+        EndianSwapper!T es = { array: val };
+        version (LittleEndian)
+            return swapEndian(es.value);
+        else
+            return es.value;
+    }
     else
-        immutable retval = es.value;
-
-    return retval;
+    {
+        version (LittleEndian)
+            return swapEndian(ctfeRead!T(val));
+        else
+            return ctfeRead!T(val);
+    }
 }
 
 private T bigEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
@@ -3058,14 +3114,20 @@ if (canSwapEndianness!T)
 private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow @nogc
 if (isIntegral!T || isSomeChar!T || isBoolean!T)
 {
-    EndianSwapper!T es = void;
-
-    version (BigEndian)
-        es.value = swapEndian(val);
+    if (!__ctfe)
+    {
+        version (BigEndian)
+            return EndianSwapper!T(swapEndian(val)).array;
+        else
+            return EndianSwapper!T(val).array;
+    }
     else
-        es.value = val;
-
-    return es.array;
+    {
+        version (BigEndian)
+            return ctfeBytes(swapEndian(val));
+        else
+            return ctfeBytes(val);
+    }
 }
 
 private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow @nogc
@@ -3096,6 +3158,9 @@ if (isFloatOrDouble!T)
         assert(littleEndianToNative!T(nativeToLittleEndian(ival)) is ival);
         assert(littleEndianToNative!T(nativeToLittleEndian(T.min)) == T.min);
         assert(littleEndianToNative!T(nativeToLittleEndian(T.max)) == T.max);
+
+        //Check CTFE compiles.
+        static assert(littleEndianToNative!T(nativeToLittleEndian(T(1))) is T(1));
 
         static if (isSigned!T)
             assert(littleEndianToNative!T(nativeToLittleEndian(cast(T) 0)) == 0);
@@ -3155,15 +3220,21 @@ private T littleEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow
 if ((isIntegral!T || isSomeChar!T || isBoolean!T) &&
     n == T.sizeof)
 {
-    EndianSwapper!T es = void;
-    es.array = val;
-
-    version (BigEndian)
-        immutable retval = swapEndian(es.value);
+    if (!__ctfe)
+    {
+        EndianSwapper!T es = { array: val };
+        version (BigEndian)
+            return swapEndian(es.value);
+        else
+            return es.value;
+    }
     else
-        immutable retval = es.value;
-
-    return retval;
+    {
+        version (BigEndian)
+            return swapEndian(ctfeRead!T(val));
+        else
+            return ctfeRead!T(val);
+    }
 }
 
 private T littleEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
@@ -3176,30 +3247,47 @@ if (((isFloatOrDouble!T) &&
         return floatEndianImpl!(n, false)(val);
 }
 
-private auto floatEndianImpl(T, bool swap)(T val) @safe pure nothrow @nogc
+private auto floatEndianImpl(T, bool swap)(T val) @trusted pure nothrow @nogc
 if (isFloatOrDouble!T)
 {
-    EndianSwapper!T es = void;
-    es.value = val;
-
-    static if (swap)
-        es.intValue = swapEndian(es.intValue);
-
-    return es.array;
+    if (!__ctfe)
+    {
+        EndianSwapper!T es = EndianSwapper!T(val);
+        static if (swap)
+            es.intValue = swapEndian(es.intValue);
+        return es.array;
+    }
+    else
+    {
+        static if (T.sizeof == 4)
+            uint intValue = *cast(const uint*) &val;
+        else static if (T.sizeof == 8)
+            ulong intValue = *cast(const ulong*) & val;
+        static if (swap)
+            intValue = swapEndian(intValue);
+        return ctfeBytes(intValue);
+    }
 }
 
-private auto floatEndianImpl(size_t n, bool swap)(ubyte[n] val) @safe pure nothrow @nogc
+private auto floatEndianImpl(size_t n, bool swap)(ubyte[n] val) @trusted pure nothrow @nogc
 if (n == 4 || n == 8)
 {
-    static if (n == 4)       EndianSwapper!float es = void;
-    else static if (n == 8)  EndianSwapper!double es = void;
-
-    es.array = val;
-
-    static if (swap)
-        es.intValue = swapEndian(es.intValue);
-
-    return es.value;
+    static if (n == 4) { alias Float = float; alias Int = uint; }
+    else static if (n == 8) { alias Float = double; alias Int = ulong; }
+    if (!__ctfe)
+    {
+        EndianSwapper!Float es = { array: val };
+        static if (swap)
+            es.intValue = swapEndian(es.intValue);
+        return es.value;
+    }
+    else
+    {
+        Int x = ctfeRead!Int(val);
+        static if (swap)
+            x = swapEndian(x);
+        return *cast(const Float*) &x;
+    }
 }
 
 private template isFloatOrDouble(T)
