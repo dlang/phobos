@@ -4492,24 +4492,17 @@ For signed integers, the sign bit is included in the count.
 private uint countBitsSet(T)(T value) @nogc pure nothrow
 if (isIntegral!T)
 {
-    // http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
     static if (T.sizeof == 8)
     {
-        T c = value - ((value >> 1) & 0x55555555_55555555);
-        c = ((c >> 2) & 0x33333333_33333333) + (c & 0x33333333_33333333);
-        c = ((c >> 4) + c) & 0x0F0F0F0F_0F0F0F0F;
-        c = ((c >> 8) + c) & 0x00FF00FF_00FF00FF;
-        c = ((c >> 16) + c) & 0x0000FFFF_0000FFFF;
-        c = ((c >> 32) + c) & 0x00000000_FFFFFFFF;
+        import core.bitop : popcnt;
+        const c = popcnt(cast(ulong) value);
     }
     else static if (T.sizeof == 4)
     {
-        T c = value - ((value >> 1) & 0x55555555);
-        c = ((c >> 2) & 0x33333333) + (c & 0x33333333);
-        c = ((c >> 4) + c) & 0x0F0F0F0F;
-        c = ((c >> 8) + c) & 0x00FF00FF;
-        c = ((c >> 16) + c) & 0x0000FFFF;
+        import core.bitop : popcnt;
+        const c = popcnt(cast(uint) value);
     }
+    // http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
     else static if (T.sizeof == 2)
     {
         uint c = value - ((value >> 1) & 0x5555);
@@ -4559,6 +4552,8 @@ if (isIntegral!T)
         {
             assert(countBitsSet(T.max) == 8 * T.sizeof);
         }
+        // Check CTFE compiles.
+        static assert(countBitsSet(cast(T) 1) == 1);
     }
     assert(countBitsSet(1_000_000) == 7);
     foreach (i; 0 .. 63)
