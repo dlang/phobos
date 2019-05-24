@@ -104,7 +104,7 @@ enum LetterCase : bool
 }
 
 /++
-    All the control characters in ASCII table
+    All the control characters in ASCII table. Source: http://www.asciitable.com/
 +/
 enum ControlChar : char
 {
