@@ -2721,7 +2721,7 @@ public:
 /++
     Swaps the endianness of the given integral value or character.
   +/
-T swapEndian(T)(T val) @safe pure nothrow @nogc
+T swapEndian(T)(const T val) @safe pure nothrow @nogc
 if (isIntegral!T || isSomeChar!T || isBoolean!T)
 {
     static if (val.sizeof == 1)
@@ -2891,7 +2891,7 @@ if (__traits(isIntegral, T))
     and therefore could vary from machine to machine (which could make it
     unusable if you tried to transfer it to another machine).
   +/
-auto nativeToBigEndian(T)(T val) @safe pure nothrow @nogc
+auto nativeToBigEndian(T)(const T val) @safe pure nothrow @nogc
 if (canSwapEndianness!T)
 {
     return nativeToBigEndianImpl(val);
@@ -3093,7 +3093,7 @@ if (isFloatOrDouble!T && n == T.sizeof)
     because the FPU will mess up any swapped floating point values. So, you
     can't actually have swapped floating point values as floating point values).
   +/
-auto nativeToLittleEndian(T)(T val) @safe pure nothrow @nogc
+auto nativeToLittleEndian(T)(const T val) @safe pure nothrow @nogc
 if (canSwapEndianness!T)
 {
     return nativeToLittleEndianImpl(val);
@@ -3923,7 +3923,7 @@ if (canSwapEndianness!T && isInputRange!R && is(ElementType!R : const ubyte))
         index = The index to start writing to. If index is a pointer, then it
                 is updated to the index after the bytes read.
   +/
-void write(T, Endian endianness = Endian.bigEndian, R)(R range, T value, size_t index)
+void write(T, Endian endianness = Endian.bigEndian, R)(R range, const T value, size_t index)
 if (canSwapEndianness!T &&
     isForwardRange!R &&
     hasSlicing!R &&
@@ -3933,7 +3933,7 @@ if (canSwapEndianness!T &&
 }
 
 /++ Ditto +/
-void write(T, Endian endianness = Endian.bigEndian, R)(R range, T value, size_t* index)
+void write(T, Endian endianness = Endian.bigEndian, R)(R range, const T value, size_t* index)
 if (canSwapEndianness!T &&
     isForwardRange!R &&
     hasSlicing!R &&
@@ -4276,7 +4276,7 @@ if (canSwapEndianness!T &&
         range = The range to _append to.
         value = The value to _append.
   +/
-void append(T, Endian endianness = Endian.bigEndian, R)(R range, T value)
+void append(T, Endian endianness = Endian.bigEndian, R)(R range, const T value)
 if (canSwapEndianness!T && isOutputRange!(R, ubyte))
 {
     static if (endianness == Endian.bigEndian)
@@ -4489,7 +4489,7 @@ if (canSwapEndianness!T && isOutputRange!(R, ubyte))
 Counts the number of set bits in the binary representation of `value`.
 For signed integers, the sign bit is included in the count.
 */
-private uint countBitsSet(T)(T value) @nogc pure nothrow
+private uint countBitsSet(T)(const T value) @nogc pure nothrow
 if (isIntegral!T)
 {
     // http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
@@ -4628,7 +4628,7 @@ Range that iterates the indices of the set bits in `value`.
 Index 0 corresponds to the least significant bit.
 For signed integers, the highest index corresponds to the sign bit.
 */
-auto bitsSet(T)(T value) @nogc pure nothrow
+auto bitsSet(T)(const T value) @nogc pure nothrow
 if (isIntegral!T)
 {
     return BitsSet!T(value);
