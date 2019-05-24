@@ -175,13 +175,13 @@ public import std.format : format, sformat;
 import std.typecons : Flag, Yes, No;
 public import std.uni : icmp, toLower, toLowerInPlace, toUpper, toUpperInPlace;
 
-import std.meta; // AliasSeq, staticIndexOf
-import std.range.primitives; // back, ElementEncodingType, ElementType, front,
-    // hasLength, hasSlicing, isBidirectionalRange, isForwardRange, isInfinite,
-    // isInputRange, isOutputRange, isRandomAccessRange, popBack, popFront, put,
-    // save;
-import std.traits; // isConvertibleToString, isNarrowString, isSomeChar,
-    // isSomeString, StringTypeOf, Unqual
+import std.meta : AliasSeq, staticIndexOf;
+import std.range.primitives : back, ElementEncodingType, ElementType, front,
+    hasLength, hasSlicing, isBidirectionalRange, isForwardRange, isInfinite,
+    isInputRange, isOutputRange, isRandomAccessRange, popBack, popFront, put,
+    save;
+import std.traits : isConvertibleToString, isNarrowString, isSomeChar,
+    isSomeString, StringTypeOf, Unqual;
 
 //public imports for backward compatibility
 public import std.algorithm.comparison : cmp;
@@ -2997,6 +2997,7 @@ auto stripLeft(Range)(Range input)
 if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
     !isInfinite!Range && !isConvertibleToString!Range)
 {
+    import std.traits : isDynamicArray;
     static import std.ascii;
     static import std.uni;
 
@@ -3196,6 +3197,7 @@ if (isSomeString!Range ||
     !isConvertibleToString!Range &&
     isSomeChar!(ElementEncodingType!Range))
 {
+    import std.traits : isDynamicArray;
     import std.uni : isWhite;
     alias C = Unqual!(ElementEncodingType!(typeof(str)));
 
