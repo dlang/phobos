@@ -911,13 +911,17 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
                 }
                 else static if (is(typeof(receiver("")) : void))
                 {
-                    static assert(is(typeof(receiver("")) : void));
+                    alias RType = typeof(receiver(""));
+                    static assert(is(RType : void),
+                            "Invalid receiver return type " ~ RType.stringof);
                     // boolean-style receiver
                     receiver(option);
                 }
                 else
                 {
-                    static assert(is(typeof(receiver()) : void));
+                    alias RType = typeof(receiver());
+                    static assert(is(RType : void),
+                            "Invalid receiver return type " ~ RType.stringof);
                     // boolean-style receiver without argument
                     receiver();
                 }
