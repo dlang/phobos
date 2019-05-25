@@ -717,6 +717,15 @@ version (CRuntime_Musl)
     // https://git.musl-libc.org/cgit/musl/commit/?id=7a995fe706e519a4f55399776ef0df9596101f93
     // https://git.musl-libc.org/cgit/musl/commit/?id=863d628d93ea341b6a32661a1654320ce69f6a07
 }
+version (DragonFlyBSD)
+{
+    // sbrk is deprecated in favor of mmap   (we could implement a mmap + MAP_NORESERVE + PROT_NONE version)
+    // brk has been removed
+    // https://www.dragonflydigest.com/2019/02/22/22586.html
+    // http://gitweb.dragonflybsd.org/dragonfly.git/commitdiff/dc676eaefa61b0f47bbea1c53eab86fd5ccd78c6
+    // http://gitweb.dragonflybsd.org/dragonfly.git/commitdiff/4b5665564ef37dc939a3a9ffbafaab9894c18885
+    // http://gitweb.dragonflybsd.org/dragonfly.git/commitdiff/8618d94a0e2ff8303ad93c123a3fa598c26a116e
+}
 else
 {
     private extern(C) void* sbrk(long) nothrow @nogc;
@@ -734,11 +743,13 @@ SbrkRegion) adversely.
 
 */
 version (CRuntime_Musl) {} else
+version (DragonFlyBSD) {} else
 version (Posix) struct SbrkRegion(uint minAlign = platformAlignment)
 {
     import core.sys.posix.pthread : pthread_mutex_init, pthread_mutex_destroy,
         pthread_mutex_t, pthread_mutex_lock, pthread_mutex_unlock,
-        PTHREAD_MUTEX_INITIALIZER;
+
+    PTHREAD_MUTEX_INITIALIZER;
     private static shared pthread_mutex_t sbrkMutex = PTHREAD_MUTEX_INITIALIZER;
     import std.typecons : Ternary;
 
@@ -915,6 +926,7 @@ version (Posix) struct SbrkRegion(uint minAlign = platformAlignment)
 }
 
 version (CRuntime_Musl) {} else
+version (DragonFlyBSD) {} else
 version (Posix) @system nothrow @nogc unittest
 {
     // Let's test the assumption that sbrk(n) returns the old address
@@ -928,6 +940,7 @@ version (Posix) @system nothrow @nogc unittest
 }
 
 version (CRuntime_Musl) {} else
+version (DragonFlyBSD) {} else
 version (Posix) @system nothrow @nogc unittest
 {
     import std.typecons : Ternary;
