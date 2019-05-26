@@ -2226,7 +2226,7 @@ if (is(Unqual!T == typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
     Integrals are formatted like $(REF printf, core, stdc, stdio).
 */
 private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
-if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
+if (is(IntegralTypeOf!T) && !isBoolean!T && !is(T == enum) && !hasToString!(T, Char))
 {
     alias U = IntegralTypeOf!T;
     U val = obj;    // Extracting alias this may be impure/system/may-throw
@@ -5365,7 +5365,7 @@ private void skipData(Range, Char)(ref Range input, scope const ref FormatSpec!C
 
 private template acceptedSpecs(T)
 {
-         static if (isIntegral!T)       enum acceptedSpecs = "bdosuxX";
+         static if (isIntegral!T && !isBoolean!T) enum acceptedSpecs = "bdosuxX";
     else static if (isFloatingPoint!T)  enum acceptedSpecs = "seEfgG";
     else static if (isSomeChar!T)       enum acceptedSpecs = "bcdosuxX";    // integral + 'c'
     else                                enum acceptedSpecs = "";
@@ -5524,7 +5524,7 @@ if (isInputRange!Range && is(T == typeof(null)))
 
 /// ditto
 private T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
-if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementType!Range))
+if (isInputRange!Range && isIntegral!T && !isBoolean!T && !is(T == enum) && isSomeChar!(ElementType!Range))
 {
 
     import std.algorithm.searching : find;

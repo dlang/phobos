@@ -271,9 +271,9 @@ private
         alias UnsignedCentTypeList = AliasSeq!();
     }
 
-    alias IntegralTypeList      = AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong, CentTypeList);
+    alias IntegralTypeList      = AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong, CentTypeList);
     alias SignedIntTypeList     = AliasSeq!(byte, short, int, long, SignedCentTypeList);
-    alias UnsignedIntTypeList   = AliasSeq!(ubyte, ushort, uint, ulong, UnsignedCentTypeList);
+    alias UnsignedIntTypeList   = AliasSeq!(bool, ubyte, ushort, uint, ulong, UnsignedCentTypeList);
     alias FloatingPointTypeList = AliasSeq!(float, double, real);
     alias ImaginaryTypeList     = AliasSeq!(ifloat, idouble, ireal);
     alias ComplexTypeList       = AliasSeq!(cfloat, cdouble, creal);
@@ -5986,12 +5986,12 @@ enum bool isBoolean(T) = is(BooleanTypeOf!T) && !isAggregateType!T;
         T t;
         alias t this;
     }
-    static assert(!isIntegral!(S!bool));
+    static assert(!isBoolean!(S!bool));
 }
 
 /**
- * Detect whether `T` is a built-in integral type. Types `bool`,
- * `char`, `wchar`, and `dchar` are not considered integral.
+ * Detect whether `T` is a built-in integral type.
+ * Types `char`, `wchar`, and `dchar` are not considered integral.
  */
 enum bool isIntegral(T) = is(IntegralTypeOf!T) && !isAggregateType!T;
 
@@ -5999,6 +5999,7 @@ enum bool isIntegral(T) = is(IntegralTypeOf!T) && !isAggregateType!T;
 @safe unittest
 {
     static assert(
+        isIntegral!bool &&
         isIntegral!byte &&
         isIntegral!short &&
         isIntegral!int &&
@@ -6008,7 +6009,6 @@ enum bool isIntegral(T) = is(IntegralTypeOf!T) && !isAggregateType!T;
     );
 
     static assert(
-        !isIntegral!bool &&
         !isIntegral!char &&
         !isIntegral!double
     );
@@ -6118,8 +6118,7 @@ enum bool isFloatingPoint(T) = __traits(isFloating, T) && !(is(Unqual!T == cfloa
  * Detect whether `T` is a built-in numeric type (integral or floating
  * point).
  */
-enum bool isNumeric(T) = __traits(isArithmetic, T) && !(is(Unqual!T == bool) ||
-                                                        is(Unqual!T == char) ||
+enum bool isNumeric(T) = __traits(isArithmetic, T) && !(is(Unqual!T == char) ||
                                                         is(Unqual!T == wchar) ||
                                                         is(Unqual!T == dchar));
 
@@ -6127,6 +6126,7 @@ enum bool isNumeric(T) = __traits(isArithmetic, T) && !(is(Unqual!T == bool) ||
 @safe unittest
 {
     static assert(
+        isNumeric!bool &&
         isNumeric!byte &&
         isNumeric!short &&
         isNumeric!int &&
@@ -6140,7 +6140,6 @@ enum bool isNumeric(T) = __traits(isArithmetic, T) && !(is(Unqual!T == bool) ||
 
     static assert(
         !isNumeric!void &&
-        !isNumeric!bool &&
         !isNumeric!char &&
         !isNumeric!wchar &&
         !isNumeric!dchar
