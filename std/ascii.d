@@ -122,8 +122,8 @@ enum ControlChar : char
     vt  = '\x0B', /// Vertical tab
     ff  = '\x0C', /// NP form feed, new page
     cr  = '\x0D', /// Carriage return
-    sO  = '\x0E', /// Shift out
-    sI  = '\x0F', /// Shift in
+    so  = '\x0E', /// Shift out
+    si  = '\x0F', /// Shift in
     dle = '\x10', /// Data link escape
     dc1 = '\x11', /// Device control 1
     dc2 = '\x12', /// Device control 2
