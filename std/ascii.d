@@ -104,7 +104,7 @@ enum LetterCase : bool
 }
 
 /++
-    All the control characters in ASCII table. Source: $(HTTPS www.asciitable.com).
+    All control characters in the ASCII table ($(HTTPS www.asciitable.com, source)).
 +/
 enum ControlChar : char
 {
