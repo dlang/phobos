@@ -2969,7 +2969,11 @@ Returns:
     {
         enum message = "Called `get' on null Nullable!" ~ T.stringof ~ ".";
         assert(!isNull, message);
-        return _value.payload;
+        inout(T)* get2() inout @trusted
+        {
+            return &_value.payload;
+        }
+        return *get2();
     }
 
     /// ditto
