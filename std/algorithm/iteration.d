@@ -1321,13 +1321,16 @@ if (is(typeof(unaryFun!predicate)))
 private struct FilterResult(alias pred, Range)
 {
     alias R = Unqual!Range;
+    alias E = Unqual!(ElementType!R);
+
     R _input;
     private bool _primed;
+    private E _front;
 
     private void prime()
     {
         if (_primed) return;
-        while (!_input.empty && !pred(_input.front))
+        while (!_input.empty && !pred(_front = _input.front))
         {
             _input.popFront();
         }
@@ -1361,15 +1364,15 @@ private struct FilterResult(alias pred, Range)
         do
         {
             _input.popFront();
-        } while (!_input.empty && !pred(_input.front));
+        } while (!_input.empty && !pred(_front = _input.front));
         _primed = true;
     }
 
     @property auto ref front()
     {
-        prime;
+        prime();
         assert(!empty, "Attempting to fetch the front of an empty filter.");
-        return _input.front;
+        return _front;
     }
 
     static if (isForwardRange!R)
@@ -1379,6 +1382,15 @@ private struct FilterResult(alias pred, Range)
             return typeof(this)(_input.save, _primed);
         }
     }
+}
+
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+
+    int i = 0;
+    auto r = [1, 2, 3].map!(e => i++).filter!"a < 3";
+    assert(equal(r, [0, 1, 2]));
 }
 
 @safe unittest
