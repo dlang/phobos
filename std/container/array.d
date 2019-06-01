@@ -310,12 +310,19 @@ if (!is(Unqual!T == bool))
             if (_capacity < newLength)
             {
                 // enlarge
-                import core.checkedint : mulu;
+                static if (T.sizeof == 1)
+                {
+                    const nbytes = newLength;
+                }
+                else
+                {
+                    import core.checkedint : mulu;
 
-                bool overflow;
-                const nbytes = mulu(newLength, T.sizeof, overflow);
-                if (overflow)
-                    assert(0);
+                    bool overflow;
+                    const nbytes = mulu(newLength, T.sizeof, overflow);
+                    if (overflow)
+                        assert(0);
+                }
 
                 static if (hasIndirections!T)
                 {
@@ -351,11 +358,18 @@ if (!is(Unqual!T == bool))
         void reserve(size_t elements)
         {
             if (elements <= capacity) return;
-            import core.checkedint : mulu;
-            bool overflow;
-            const sz = mulu(elements, T.sizeof, overflow);
-            if (overflow)
-                assert(0);
+            static if (T.sizeof == 1)
+            {
+                const sz = elements;
+            }
+            else
+            {
+                import core.checkedint : mulu;
+                bool overflow;
+                const sz = mulu(elements, T.sizeof, overflow);
+                if (overflow)
+                    assert(0);
+            }
             static if (hasIndirections!T)
             {
                 /* Because of the transactional nature of this
@@ -435,11 +449,19 @@ if (!is(Unqual!T == bool))
     this(U)(U[] values...)
     if (isImplicitlyConvertible!(U, T))
     {
-        import core.checkedint : mulu;
         import std.conv : emplace;
-        bool overflow;
-        const nbytes = mulu(values.length, T.sizeof, overflow);
-        if (overflow) assert(0);
+
+        static if (T.sizeof == 1)
+        {
+            const nbytes = values.length;
+        }
+        else
+        {
+            import core.checkedint : mulu;
+            bool overflow;
+            const nbytes = mulu(values.length, T.sizeof, overflow);
+            if (overflow) assert(0);
+        }
         auto p = cast(T*) enforceMalloc(nbytes);
         static if (hasIndirections!T)
         {
@@ -558,10 +580,17 @@ if (!is(Unqual!T == bool))
         if (!_data.refCountedStore.isInitialized)
         {
             if (!elements) return;
-            import core.checkedint : mulu;
-            bool overflow;
-            const sz = mulu(elements, T.sizeof, overflow);
-            if (overflow) assert(0);
+            static if (T.sizeof == 1)
+            {
+                const sz = elements;
+            }
+            else
+            {
+                import core.checkedint : mulu;
+                bool overflow;
+                const sz = mulu(elements, T.sizeof, overflow);
+                if (overflow) assert(0);
+            }
             auto p = enforceMalloc(sz);
             static if (hasIndirections!T)
             {
