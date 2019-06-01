@@ -255,8 +255,6 @@ if (!is(Unqual!T == bool))
     import std.internal.memory : enforceMalloc, enforceRealloc;
     import core.stdc.string : memcpy, memmove, memset;
 
-    import core.memory : GC;
-
     import std.exception : enforce;
     import std.typecons : RefCounted, RefCountedAutoInitialize;
 
@@ -277,9 +275,9 @@ if (!is(Unqual!T == bool))
                 foreach (ref e; _payload)
                     .destroy(e);
 
-            static if (hasIndirections!T)
-                GC.removeRange(_payload.ptr);
-
+            // The RefCounted wrapper will register this struct
+            // for scanning by the GC so we don't need to separately
+            // register/deregister the payload.
             free(_payload.ptr);
         }
 
@@ -317,23 +315,11 @@ if (!is(Unqual!T == bool))
                 if (overflow)
                     assert(0);
 
-                static if (hasIndirections!T)
-                {
-                    auto newPayloadPtr = cast(T*) enforceMalloc(nbytes);
-                    auto newPayload = newPayloadPtr[0 .. newLength];
-                    memcpy(newPayload.ptr, _payload.ptr, startEmplace * T.sizeof);
-                    memset(newPayload.ptr + startEmplace, 0,
-                            (newLength - startEmplace) * T.sizeof);
-                    GC.addRange(newPayload.ptr, nbytes);
-                    GC.removeRange(_payload.ptr);
-                    free(_payload.ptr);
-                    _payload = newPayload;
-                }
-                else
-                {
-                    _payload = (cast(T*) enforceRealloc(_payload.ptr,
-                            nbytes))[0 .. newLength];
-                }
+                // The RefCounted wrapper will register this struct
+                // for scanning by the GC so we don't need to separately
+                // register/deregister the payload.
+                _payload = (cast(T*) enforceRealloc(_payload.ptr,
+                    nbytes))[0 .. newLength];
                 _capacity = newLength;
             }
             else
@@ -356,36 +342,10 @@ if (!is(Unqual!T == bool))
             const sz = mulu(elements, T.sizeof, overflow);
             if (overflow)
                 assert(0);
-            static if (hasIndirections!T)
-            {
-                /* Because of the transactional nature of this
-                 * relative to the garbage collector, ensure no
-                 * threading bugs by using malloc/copy/free rather
-                 * than realloc.
-                 */
-                immutable oldLength = length;
-
-                auto newPayloadPtr = cast(T*) enforceMalloc(sz);
-                auto newPayload = newPayloadPtr[0 .. oldLength];
-
-                // copy old data over to new array
-                memcpy(newPayload.ptr, _payload.ptr, T.sizeof * oldLength);
-                // Zero out unused capacity to prevent gc from seeing false pointers
-                memset(newPayload.ptr + oldLength,
-                        0,
-                        (elements - oldLength) * T.sizeof);
-                GC.addRange(newPayload.ptr, sz);
-                GC.removeRange(_payload.ptr);
-                free(_payload.ptr);
-                _payload = newPayload;
-            }
-            else
-            {
-                // These can't have pointers, so no need to zero unused region
-                auto newPayloadPtr = cast(T*) enforceRealloc(_payload.ptr, sz);
-                auto newPayload = newPayloadPtr[0 .. length];
-                _payload = newPayload;
-            }
+            // The RefCounted wrapper will register this struct
+            // for scanning by the GC so we don't need to separately
+            // register/deregister the payload.
+            _payload = (cast(T*) enforceRealloc(_payload.ptr, sz))[0 .. length];
             _capacity = elements;
         }
 
@@ -441,12 +401,9 @@ if (!is(Unqual!T == bool))
         const nbytes = mulu(values.length, T.sizeof, overflow);
         if (overflow) assert(0);
         auto p = cast(T*) enforceMalloc(nbytes);
-        static if (hasIndirections!T)
-        {
-            if (p)
-                GC.addRange(p, T.sizeof * values.length);
-        }
-
+        // The RefCounted wrapper will register _data
+        // for scanning by the GC so we don't need to separately
+        // register/deregister the payload.
         foreach (i, e; values)
         {
             emplace(p + i, e);
@@ -563,10 +520,9 @@ if (!is(Unqual!T == bool))
             const sz = mulu(elements, T.sizeof, overflow);
             if (overflow) assert(0);
             auto p = enforceMalloc(sz);
-            static if (hasIndirections!T)
-            {
-                GC.addRange(p, sz);
-            }
+            // The RefCounted wrapper will register _data
+            // for scanning by the GC so we don't need to separately
+            // register/deregister the payload.
             _data = Data(cast(T[]) p[0 .. 0]);
             _data._capacity = elements;
         }
