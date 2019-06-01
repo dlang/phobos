@@ -186,6 +186,7 @@ ifeq (,$(findstring win,$(OS)))
 else
 	LIB:=$(ROOT)/phobos.lib
 endif
+CONF:=$(ROOT)/defaultlib.conf
 
 ################################################################################
 MAIN = $(ROOT)/emptymain.d
@@ -310,7 +311,7 @@ endif
 ################################################################################
 
 .PHONY: lib dll
-lib: $(LIB)
+lib: $(LIB) $(CONF)
 dll: $(ROOT)/libphobos2.so
 
 $(ROOT)/%$(DOTOBJ): %.c
@@ -340,6 +341,16 @@ $(ROOT_OF_THEM_ALL)/osx/release/libphobos2.a:
 		$(ROOT_OF_THEM_ALL)/osx/release/64/libphobos2.a \
 		-create -output $@
 endif
+
+
+define DEFAULTLIB_CONF_CONTENT
+[Environment]
+DFLAGS=-I%@P%/../../../../../druntime/import -I%@P%/../../../../ -L-L%@P% -L-lpthread -L-lm
+endef
+export DEFAULTLIB_CONF_CONTENT
+
+$(CONF): posix.mak
+	echo "$$DEFAULTLIB_CONF_CONTENT" > $@
 
 ################################################################################
 # Unittests
