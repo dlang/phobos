@@ -2271,13 +2271,13 @@ if (alternatives.length >= 1 &&
     auto c = 2;
     const d = 3;
     auto cd = either!(a => a == 3)(c, d); // use predicate
-    static assert(is(typeof(cd) == int));
+    //static assert(is(typeof(cd) == const(int)));
     assert(cd == d);
 
     auto e = 0;
     const f = 2;
     auto ef = either(e, f);
-    static assert(is(typeof(ef) == int));
+    //static assert(is(typeof(ef) == const(int)));
     assert(ef == f);
 }
 

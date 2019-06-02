@@ -11729,7 +11729,7 @@ private @safe:
 
         immutable ot = otherTZ.utcToTZ(0);
 
-        auto diffs = [0L, lt, ot];
+        auto diffs = [0L, cast()lt, cast()ot];
         auto diffAA = [0L : Rebindable!(immutable TimeZone)(UTC())];
         diffAA[lt] = Rebindable!(immutable TimeZone)(LocalTime());
         diffAA[ot] = Rebindable!(immutable TimeZone)(otherTZ);
