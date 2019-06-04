@@ -5574,8 +5574,8 @@ private
     extern(C) pure nothrow Object typecons_d_toObject(void* p);
 }
 
-// Begin addition
 
+// Implement{Ordered, Equals, Hash} helper function
 private template ContravariantRhsT(Rhs)
 {
     static if (is (Rhs == class))
@@ -5592,6 +5592,16 @@ private template ContravariantRhsT(Rhs)
     }
 }
 
+/**
+ * Utility $(B template mixin) that can be used inside both `struct`s and `class`es
+ * to automatically implement `opCmp`.
+ *
+ * Params:
+ *     M = an optional list of the names of the fields to be compared by the `opCmp`.
+ *         If omitted, all the fields will be taken into account. If a custom `function`
+ *         is desired to be applied for a given field, it can be passed next to the
+ *         field name in the list.
+ */
 mixin template ImplementOrdered(M...)
 {
     static assert(is(typeof(this) == struct) || is(typeof(this) == class));
@@ -5682,6 +5692,65 @@ mixin template ImplementOrdered(M...)
         }}
         return r;
     }
+}
+
+///
+@safe unittest
+{
+    class Widget
+    {
+        override const @nogc nothrow pure @safe scope
+        {
+            mixin ImplementOrdered;
+        }
+
+        int x;
+        int y;
+
+        this(int x, int y)
+        {
+            this.x = x;
+            this.y = y;
+        }
+    }
+
+    auto w1 = new Widget(10, 20);
+    auto w2 = new Widget(10, 20);
+    assert((w1 < w2) == 0);
+
+    auto w3 = new Widget(11, 20);
+    assert(w1 < w3);
+
+    class ComplexWidget
+    {
+        override const @nogc nothrow pure @safe scope
+        {
+            mixin ImplementOrdered!("x", "z", (int a, int b) => a - b, "t", compFn);
+        }
+
+        static @nogc nothrow pure @safe
+        int compFn(int a, int b)
+        {
+            return a - b;
+        }
+
+        int x;
+        int y;
+        int z;
+        int t;
+
+        this(int x, int y, int z, int t)
+        {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.t = t;
+        }
+    }
+
+    auto cw1 = new ComplexWidget(10, 20, 30, 42);
+    auto cw2 = new ComplexWidget(10, 20, 30, 42);
+    assert((cw1 < cw2) == 0);
 }
 
 @safe unittest
@@ -6001,6 +6070,16 @@ mixin template ImplementHashExcept(M...)
     assert((() @trusted => sco1 == sco2)());
 }
 
+/**
+ * Utility $(B template mixin) that can be used inside both `struct`s and `class`es
+ * to automatically implement `opEquals`.
+ *
+ * Params:
+ *     M = an optional list of the names of the fields to be compared by the `opEquals`.
+ *         If omitted, all the fields will be taken into account. If a custom `function`
+ *         is desired to be applied for a given field, it can be passed next to the
+ *         field name in the list.
+ */
 mixin template ImplementEquals(M...)
 {
     static assert(is(typeof(this) == struct) || is(typeof(this) == class));
@@ -6093,6 +6172,75 @@ mixin template ImplementEquals(M...)
     }
 }
 
+///
+@safe unittest
+{
+    class Widget
+    {
+        override const @nogc nothrow pure @safe scope
+        {
+            mixin ImplementEquals;
+        }
+
+        int x;
+        int y;
+
+        this(int x, int y)
+        {
+            this.x = x;
+            this.y = y;
+        }
+    }
+
+    auto w1 = new Widget(10, 20);
+    auto w2 = new Widget(10, 20);
+    assert(w1.opEquals(w2));
+
+    auto w3 = new Widget(11, 20);
+    assert(!w1.opEquals(w3));
+
+    class ComplexWidget
+    {
+        override const @nogc nothrow pure @safe scope
+        {
+            mixin ImplementEquals!("x", "z", (int a, int b) => a == b, "t", compFn);
+        }
+
+        static @nogc nothrow pure @safe
+        bool compFn(int a, int b)
+        {
+            return (a - b) == 0;
+        }
+
+        int x;
+        int y;
+        int z;
+        int t;
+
+        this(int x, int y, int z, int t)
+        {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.t = t;
+        }
+    }
+
+    auto cw1 = new ComplexWidget(10, 20, 30, 42);
+    auto cw2 = new ComplexWidget(10, 20, 30, 42);
+    assert(cw1.opEquals(cw2));
+}
+
+/**
+ * Utility $(B template mixin) that can be used inside both `struct`s and `class`es
+ * to automatically implement `toHash`.
+ *
+ * Params:
+ *     M = an optional list of the names of the fields to be compared by the `toHash`.
+ *         If omitted, all the fields will be taken into account. If a custom hash
+ *         `function` is desired to be applied for a given field, it can be passed next
+ *         to the field name in the list.
+ */
 mixin template ImplementHash(M...)
 {
     static assert(is(typeof(this) == struct) || is(typeof(this) == class));
@@ -6147,8 +6295,57 @@ mixin template ImplementHash(M...)
     }
 }
 
+///
+@safe unittest
+{
+    class Widget
+    {
+        override const @nogc nothrow pure @safe scope
+        {
+            mixin ImplementHash;
+        }
 
-// End addition
+        int x;
+        int y;
+
+        this(int x, int y)
+        {
+            this.x = x;
+            this.y = y;
+        }
+    }
+
+    auto w1 = new Widget(10, 20);
+    auto w2 = new Widget(10, 20);
+    assert(w1.toHash() == w2.toHash());
+
+    auto w3 = new Widget(11, 20);
+    assert(w1.toHash() != w3.toHash());
+
+    class ComplexWidget
+    {
+        override const @nogc nothrow pure @safe scope
+        {
+            mixin ImplementHash!("x", "z");
+        }
+
+        int x;
+        int y;
+        int z;
+
+        this(int x, int y, int z)
+        {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+        }
+    }
+
+    auto cw1 = new ComplexWidget(10, 20, 30);
+    auto cw2 = new ComplexWidget(10, 21, 30);
+    assert(cw1.toHash() == cw2.toHash());
+}
+
 
 /*
  * Avoids opCast operator overloading.
