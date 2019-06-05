@@ -2874,7 +2874,7 @@ public:
     }
 
     /// ditto
-    void toISOString(W)(ref W writer) const
+    void toISOString(W)(auto ref W writer) const
     if (isOutputRange!(W, char))
     {
         import std.format : formattedWrite;
@@ -2951,7 +2951,7 @@ public:
     }
 
     /// ditto
-    void toISOExtString(W)(ref W writer) const
+    void toISOExtString(W)(auto ref W writer) const
     if (isOutputRange!(W, char))
     {
         import std.format : formattedWrite;
@@ -3027,7 +3027,7 @@ public:
     }
 
     /// ditto
-    void toSimpleString(W)(ref W writer) const
+    void toSimpleString(W)(auto ref W writer) const
     if (isOutputRange!(W, char))
     {
         import std.format : formattedWrite;
@@ -3119,7 +3119,7 @@ public:
     }
 
     /// ditto
-    void toString(W)(ref W writer) const
+    void toString(W)(auto ref W writer) const
     if (isOutputRange!(W, char))
     {
         toSimpleString(writer);
@@ -7233,7 +7233,7 @@ public:
     }
 
     /// ditto
-    void toISOString(W)(ref W writer) const
+    void toISOString(W)(auto ref W writer) const
     if (isOutputRange!(W, char))
     {
         import std.format : formattedWrite;
@@ -7317,7 +7317,7 @@ public:
     }
 
     /// ditto
-    void toISOExtString(W)(ref W writer) const
+    void toISOExtString(W)(auto ref W writer) const
     if (isOutputRange!(W, char))
     {
         import std.format : formattedWrite;
@@ -7401,7 +7401,7 @@ public:
     }
 
     /// ditto
-    void toSimpleString(W)(ref W writer) const
+    void toSimpleString(W)(auto ref W writer) const
     if (isOutputRange!(W, char))
     {
         import std.format : formattedWrite;
@@ -7469,7 +7469,7 @@ public:
     }
 
     /// ditto
-    void toString(W)(ref W writer) const
+    void toString(W)(auto ref W writer) const
     if (isOutputRange!(W, char))
     {
         toSimpleString(writer);
@@ -8932,7 +8932,7 @@ public:
     }
 
     /// ditto
-    void toISOString(W)(ref W writer) const
+    void toISOString(W)(auto ref W writer) const
     if (isOutputRange!(W, char))
     {
         import std.format : formattedWrite;
@@ -8979,7 +8979,7 @@ public:
     }
 
     /// ditto
-    void toISOExtString(W)(ref W writer) const
+    void toISOExtString(W)(auto ref W writer) const
     if (isOutputRange!(W, char))
     {
         import std.format : formattedWrite;
@@ -9038,7 +9038,7 @@ public:
     }
 
     /// ditto
-    void toString(W)(ref W writer) const
+    void toString(W)(auto ref W writer) const
     if (isOutputRange!(W, char))
     {
         toISOExtString(writer);

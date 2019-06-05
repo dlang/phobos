@@ -1557,7 +1557,7 @@ public:
     }
 
     /// ditto
-    void toString(Writer)(ref Writer w) const
+    void toString(Writer)(auto ref Writer w) const
     if (isOutputRange!(Writer, char))
     {
         import std.range.primitives : put;

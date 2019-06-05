@@ -8134,7 +8134,7 @@ public:
     }
 
     /// ditto
-    void toISOString(W)(ref W writer) const scope
+    void toISOString(W)(auto ref W writer) const scope
     if (isOutputRange!(W, char))
     {
         immutable adjustedTime = adjTime;
@@ -8294,7 +8294,7 @@ public:
     }
 
     /// ditto
-    void toISOExtString(W)(ref W writer) const scope
+    void toISOExtString(W)(auto ref W writer) const scope
     if (isOutputRange!(W, char))
     {
         immutable adjustedTime = adjTime;
@@ -8458,7 +8458,7 @@ public:
     }
 
     /// ditto
-    void toSimpleString(W)(ref W writer) const scope
+    void toSimpleString(W)(auto ref W writer) const scope
     if (isOutputRange!(W, char))
     {
         immutable adjustedTime = adjTime;
@@ -8621,7 +8621,7 @@ public:
     }
 
     /// ditto
-    void toString(W)(ref W writer) const scope
+    void toString(W)(auto ref W writer) const scope
     if (isOutputRange!(W, char))
     {
         toSimpleString(writer);

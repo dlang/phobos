@@ -1405,7 +1405,7 @@ package:
     }
 
     // ditto
-    static void toISOString(W)(ref W writer, Duration utcOffset)
+    static void toISOString(W)(auto ref W writer, Duration utcOffset)
     if (isOutputRange!(W, char))
     {
         import std.datetime.date : DateTimeException;
