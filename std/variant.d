@@ -285,7 +285,14 @@ private:
         static bool tryPutting(A* src, TypeInfo targetType, void* target)
         {
             alias UA = Unqual!A;
-            alias MutaTypes = AliasSeq!(UA, ImplicitConversionTargets!UA);
+            static if (isStaticArray!A && is(typeof(UA.init[0])))
+            {
+                alias MutaTypes = AliasSeq!(UA, typeof(UA.init[0])[], ImplicitConversionTargets!UA);
+            }
+            else
+            {
+                alias MutaTypes = AliasSeq!(UA, ImplicitConversionTargets!UA);
+            }
             alias ConstTypes = staticMap!(ConstOf, MutaTypes);
             alias SharedTypes = staticMap!(SharedOf, MutaTypes);
             alias SharedConstTypes = staticMap!(SharedConstOf, MutaTypes);
@@ -334,7 +341,15 @@ private:
                         static if (T.sizeof > 0)
                             assert(target, "target must be non-null");
 
-                        emplaceRef(*cast(Unqual!T*) zat, *cast(UA*) src);
+                        static if (isStaticArray!A && isDynamicArray!T)
+                        {
+                            auto this_ = (*src)[];
+                            emplaceRef(*cast(Unqual!T*) zat, cast(Unqual!T) this_);
+                        }
+                        else
+                        {
+                            emplaceRef(*cast(Unqual!T*) zat, *cast(UA*) src);
+                        }
                     }
                 }
                 else
@@ -624,7 +639,6 @@ public:
 
     VariantN opAssign(T)(T rhs)
     {
-        //writeln(typeid(rhs));
         static assert(allowed!(T), "Cannot store a " ~ T.stringof
             ~ " in a " ~ VariantN.stringof ~ ". Valid types are "
                 ~ AllowedTypes.stringof);
@@ -3004,4 +3018,34 @@ if (isAlgebraic!VariantType && Handler.length > 0)
     Variant v;
     auto b = v | s;
     assert(b == 3);
+}
+
+@system unittest
+{
+    // Bugzilla 11061
+    int[4] el = [0, 1, 2, 3];
+    int[3] nl = [0, 1, 2];
+    Variant v1 = el;
+    assert(v1 == el); // Compare Var(static) to static
+    assert(v1 != nl); // Compare static arrays of different length
+    assert(v1 == [0, 1, 2, 3]); // Compare Var(static) to dynamic.
+    assert(v1 != [0, 1, 2]);
+    int[] dyn = [0, 1, 2, 3];
+    v1 = dyn;
+    assert(v1 == el); // Compare Var(dynamic) to static.
+    assert(v1 == [0, 1] ~ [2, 3]); // Compare Var(dynamic) to dynamic
+}
+
+@system unittest
+{
+    // Test if we don't have scoping issues.
+    Variant createVariant(int[] input)
+    {
+        int[2] el = [input[0], input[1]];
+        Variant v = el;
+        return v;
+    }
+    Variant v = createVariant([0, 1]);
+    createVariant([2, 3]);
+    assert(v == [0,1]);
 }
