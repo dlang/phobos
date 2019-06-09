@@ -503,7 +503,7 @@ uint formattedWrite(Writer, Char, A...)(auto ref Writer w, const scope Char[] fm
         {
             // means: get width as a positional parameter
             auto index = cast(uint) -spec.width;
-            assert(index > 0);
+            assert(index > 0, "The index must be greater than zero");
             auto width = getNthInt!"integer width"(index - 1, args);
             if (currentArg < index) currentArg = index;
             if (width < 0)
@@ -526,7 +526,7 @@ uint formattedWrite(Writer, Char, A...)(auto ref Writer w, const scope Char[] fm
         {
             // means: get precision as a positional parameter
             auto index = cast(uint) -spec.precision;
-            assert(index > 0);
+            assert(index > 0, "The precision must be greater than zero");
             auto precision = getNthInt!"integer precision"(index- 1, args);
             if (currentArg < index) currentArg = index;
             if (precision >= 0) spec.precision = precision;
@@ -1506,7 +1506,7 @@ if (is(Unqual!Char == Char))
                 const c2 = trailing[1];
                 if (c2 == '%')
                 {
-                    assert(!r.empty);
+                    assert(!r.empty, "Required at least one more input");
                     // Require a '%'
                     if (r.front != '%') break;
                     trailing = trailing[2 .. $];
@@ -2995,7 +2995,7 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
     else static if (!isInputRange!T)
     {
         alias U = Unqual!(ArrayTypeOf!T);
-        static assert(isInputRange!U);
+        static assert(isInputRange!U, U.stringof ~ " must be an InputRange");
         U val = obj;
         formatValueImpl(w, val, f);
     }
@@ -3853,7 +3853,7 @@ if (hasToString!(T, Char))
     }
     else
     {
-        static assert(0);
+        static assert(0, "No way found to format " ~ T.stringof ~ " as string");
     }
 }
 
@@ -4368,7 +4368,8 @@ if (is(T == enum))
 
         // val is not a member of T, output cast(T) rawValue instead.
         put(w, "cast(" ~ T.stringof ~ ")");
-        static assert(!is(OriginalType!T == T));
+        static assert(!is(OriginalType!T == T), "OriginalType!" ~ T.stringof ~
+                "must not be equal to " ~ T.stringof);
     }
     formatValueImpl(w, cast(OriginalType!T) val, f);
 }
@@ -5552,7 +5553,7 @@ if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementT
         spec.spec == 'o' ? 8 :
         spec.spec == 'b' ? 2 :
         spec.spec == 's' || spec.spec == 'd' || spec.spec == 'u' ? 10 : 0;
-    assert(base != 0);
+    assert(base != 0, "base must be not equal to zero");
 
     return parse!T(input, base);
 
@@ -5606,7 +5607,8 @@ if (isInputRange!Range && isSomeChar!T && !is(T == enum) && isSomeChar!(ElementT
     else static if (T.sizeof == 4)
         return unformatValue!uint(input, spec);
     else
-        static assert(0);
+        static assert(false, T.stringof ~ ".sizeof must be 1, 2, or 4 not " ~
+                to!string(T.sizeof));
 }
 
 /// ditto
@@ -5732,7 +5734,8 @@ if (is(Unqual!(ElementEncodingType!Range) == char)
 private T unformatRange(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 in
 {
-    assert(spec.spec == '(');
+    const char ss = spec.spec;
+    assert(ss == '(', "spec.spec must be '(' not " ~ ss);
 }
 do
 {
