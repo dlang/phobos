@@ -64,6 +64,7 @@
  *           $(LREF isAssignable)
  *           $(LREF isCovariantWith)
  *           $(LREF isImplicitlyConvertible)
+ *           $(LREF substituteInout)
  * ))
  * $(TR $(TD SomethingTypeOf) $(TD
  *           $(LREF rvalueOf)
@@ -5028,6 +5029,34 @@ enum bool isImplicitlyConvertible(From, To) = is(From : To);
 
     static assert(!isImplicitlyConvertible!(const(char)[], string));
     static assert( isImplicitlyConvertible!(string, const(char)[]));
+}
+
+/**
+ Copy the mutability of `FromType` where `inout` appears in `ToType`.
+ */
+
+template substituteInout(ToType, FromType)
+{
+    static if (is(ToType == inout(SubType), SubType))
+        alias SubstituteInout = CopyTypeQualifiers!(FromType, SubType);
+    else static if (is(ToType == SubType*, SubType))
+        alias SubstituteInout = SubstituteInout!(FromType, SubType)*;
+    else static if (is(ToType == SubType[], SubType))
+        alias SubstituteInout = SubstituteInout!(FromType, SubType)[];
+    else static if (is(ToType == SubType[n], SubType, size_t n))
+        alias SubstituteInout = SubstituteInout!(FromType, SubType)[n];
+    else static if (is(ToType == SubType[KeyType], SubType, KeyType))
+        alias SubstituteInout = SubstituteInout!(FromType, SubType)[SubstituteInout!(FromType, KeyType)];
+    else
+        alias SubstituteInout = ToType;
+}
+
+@safe unittest
+{
+    static assert(is(SubstituteInout!(const(string), inout(int)[]) == const(int)[]));
+    static assert(is(SubstituteInout!(const(string), inout(int)) == const(int)));
+    static assert(is(SubstituteInout!(const(string), inout(int)*[][3][int]) == const(int)*[][3][int]));
+    static assert(is(SubstituteInout!(const(string), inout(int)[inout(string)]) == const(int)[const(string)]));
 }
 
 /**
