@@ -1,0 +1,4 @@
+ErrnoException.errno is now nothrow pure @nogc @safe
+
+Before, it was just @system. As it turns out, all it does is return the value
+of an integer field, so it can have all these attributes.
