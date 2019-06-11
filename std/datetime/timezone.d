@@ -532,7 +532,7 @@ public:
       +/
     static immutable(LocalTime) opCall() @trusted pure nothrow
     {
-        alias FuncType = @safe pure nothrow immutable(LocalTime) function();
+        alias FuncType = immutable(LocalTime) function() @safe pure nothrow;
         return (cast(FuncType)&singleton)();
     }
 
