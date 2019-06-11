@@ -3909,6 +3909,375 @@ if (is (typeof(nullValue) == T))
     assert(ntts.to!string() == "2.5");
 }
 
+/**
+Defines a type that combines its parameter `T` and a value where that
+parameter is absent. Its distinction to `Nullable` is that an
+`Optional` value may be either present or absent, whereas a `Nullable`
+value is assumed to be non-null. This shows in that `Optional!T`
+does not implicitly convert to `T`.
+
+Practically `Optional!T` stores a `T` and a `bool`.
+ */
+struct Optional(T)
+{
+    private union DontCallDestructorT
+    {
+        T payload;
+    }
+
+    private DontCallDestructorT _value = DontCallDestructorT.init;
+
+    private bool _present = false;
+
+/**
+Constructor initializing `this` with `value`.
+
+Params:
+    value = The value to initialize this `Optional` with.
+ */
+    this(inout T value) inout
+    {
+        _value.payload = value;
+        _present = true;
+    }
+
+    static if (is(T == struct) && hasElaborateDestructor!T)
+    {
+        ~this()
+        {
+            if (_present)
+            {
+                destroy(_value.payload);
+            }
+        }
+    }
+
+    /**
+      If they are both absent, then they are equal. If one is absent and the other
+      is present, then they are not equal. If they are both present, then they are
+      equal if their values are equal.
+      */
+    bool opEquals()(auto ref const(typeof(this)) rhs) const
+    {
+        if (!_present)
+            return !rhs._present;
+        if (!rhs._present)
+            return false;
+        return _value.payload == rhs._value.payload;
+    }
+
+    /// Ditto
+    bool opEquals(U)(auto ref const(U) rhs) const
+    if (is(typeof(this.value == rhs)))
+    {
+        return _present ? rhs == _value.payload : false;
+    }
+
+    ///
+    @safe unittest
+    {
+        Optional!int absent;
+        Optional!int a = 42;
+        Optional!int b = 42;
+        Optional!int c = 27;
+
+        assert(absent == absent);
+        assert(absent == Optional!int.init);
+        assert(absent != a);
+        assert(absent != b);
+        assert(absent != c);
+
+        assert(a == b);
+        assert(a != c);
+
+        assert(absent != 42);
+        assert(a == 42);
+        assert(c != 42);
+    }
+
+    @safe unittest
+    {
+        // Test constness
+        immutable Optional!int a = 42;
+        Optional!int b = 42;
+        immutable Optional!int c = 29;
+        Optional!int d = 29;
+        immutable e = 42;
+        int f = 29;
+        assert(a == a);
+        assert(a == b);
+        assert(a != c);
+        assert(a != d);
+        assert(a == e);
+        assert(a != f);
+
+        // Test rvalue
+        assert(a == const Optional!int(42));
+        assert(a != Optional!int(29));
+    }
+
+    // Issue 17482
+    @system unittest
+    {
+        import std.variant : Variant;
+
+        Optional!Variant a = Variant(12);
+        assert(a == 12);
+        Optional!Variant e;
+        assert(e != 12);
+    }
+
+    size_t toHash() const @safe nothrow
+    {
+        static if (__traits(compiles, .hashOf(_value.payload)))
+            return _present ? .hashOf(_value.payload) : 0;
+        else
+            // Workaround for when .hashOf is not both @safe and nothrow.
+            return _present ? typeid(T).getHash(&_value.payload) : 0;
+    }
+
+    /**
+     * Gives the string `"Optional.absent"` if `present` is `false`. Otherwise, the
+     * result is equivalent to calling $(REF formattedWrite, std,format) on the
+     * underlying value.
+     *
+     * Params:
+     *     writer = A `char` accepting
+     *     $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+     *     fmt = A $(REF FormatSpec, std,format) which is used to represent
+     *     the value if this Optional is present
+     * Returns:
+     *     A `string` if `writer` and `fmt` are not set; `void` otherwise.
+     */
+    string toString()
+    {
+        import std.array : appender;
+        auto app = appender!string();
+        auto spec = singleSpec("%s");
+        toString(app, spec);
+        return app.data;
+    }
+
+    /// ditto
+    string toString() const
+    {
+        import std.array : appender;
+        auto app = appender!string();
+        auto spec = singleSpec("%s");
+        toString(app, spec);
+        return app.data;
+    }
+
+    /// ditto
+    void toString(W)(ref W writer, scope const ref FormatSpec!char fmt)
+    if (isOutputRange!(W, char))
+    {
+        import std.range.primitives : put;
+        if (present)
+            formatValue(writer, _value.payload, fmt);
+        else
+            put(writer, "Optional.absent");
+    }
+
+    /// ditto
+    void toString(W)(ref W writer, scope const ref FormatSpec!char fmt) const
+    if (isOutputRange!(W, char))
+    {
+        import std.range.primitives : put;
+        if (present)
+            formatValue(writer, _value.payload, fmt);
+        else
+            put(writer, "Optional.absent");
+    }
+
+/**
+Check if `this` contains a value of `T`.
+
+Returns:
+    true $(B iff) `this` is present, otherwise false.
+ */
+    @property bool present() const @safe pure nothrow
+    {
+        return _present;
+    }
+
+///
+@safe unittest
+{
+    Optional!int optional;
+    assert(!optional.present);
+
+    optional = 0;
+    assert(optional.present);
+}
+
+// Issue 14940
+@safe unittest
+{
+    import std.array : appender;
+    import std.format : formattedWrite;
+
+    auto app = appender!string();
+    Optional!int a = 1;
+    formattedWrite(app, "%s", a);
+    assert(app.data == "1");
+}
+
+// Issue 19799
+@safe unittest
+{
+    import std.format : format;
+
+    const Optional!string a = const(Optional!string)();
+
+    format!"%s"(a);
+}
+
+/**
+Assigns `value` to the internally-held state. If the assignment
+succeeds, `this` becomes present.
+
+Params:
+    value = A value of type `T` to assign to this `Optional`.
+ */
+    void opAssign()(T value)
+    {
+        import std.algorithm.mutation : moveEmplace, move;
+
+        // the lifetime of the value in copy shall be managed by
+        // this Optional, so we must avoid calling its destructor.
+        auto copy = DontCallDestructorT(value);
+
+        if (_present)
+        {
+            move(copy.payload, _value.payload);
+        }
+        else
+        {
+            // trusted since payload is known to be T.init here.
+            () @trusted { moveEmplace(copy.payload, _value.payload); }();
+        }
+        _present = true;
+    }
+
+    immutable static missingValueException_ = new MissingValueException(
+        "Called `value' on absent Optional!" ~ T.stringof ~ ".");
+
+/**
+Returns the value if present. If `this` is in the absent state, `value` shall
+throw a `MissingValueException`.
+
+Returns:
+    The value held by this `Optional`.
+ */
+    @property ref inout(T) value() inout @nogc pure @safe
+    {
+        if (!_present)
+        {
+            throw missingValueException_;
+        }
+        return _value.payload;
+    }
+
+/**
+Returns the value if present. If `this` is in the absent state, the effect
+is undefined.
+
+This function acts as a "backdoor" into `Optional`. Use it at your own risk.
+*/
+    @property ref inout(T) valueUnsafe() inout @nogc pure @safe
+    {
+        assert(_present);
+        return _value.payload;
+    }
+
+///
+@safe pure unittest
+{
+    import std.exception : assertThrown, assertNotThrown;
+
+    Optional!int oi2;
+    assertThrown!MissingValueException(oi2.value);
+
+    oi2 = 7;
+    assert(oi2.value == 7);
+}
+
+/**
+Returns an instance of `Optional` in the absent state.
+*/
+    static @property Optional absent()
+    {
+        return Optional();
+    }
+
+///
+@safe pure nothrow unittest
+{
+    auto oi = Optional!int.absent;
+    assert(!oi.present);
+}
+
+}
+
+/// ditto
+auto optional(T)(T t)
+{
+    return Optional!T(t);
+}
+
+///
+@safe unittest
+{
+    struct CustomerRecord
+    {
+        string name;
+        string address;
+        int customerNum;
+    }
+
+    Optional!CustomerRecord getByName(string name)
+    {
+        //A bunch of hairy stuff
+
+        return Optional!CustomerRecord.absent;
+    }
+
+    auto queryResult = getByName("Doe, John");
+    if (queryResult.present)
+    {
+        //Process Mr. Doe's customer record
+        auto address = queryResult.value.address;
+        auto customerNum = queryResult.value.customerNum;
+
+        //Do some things with this customer's info
+    }
+    else
+    {
+        //Add the customer to the database
+    }
+}
+
+/**
+ * Thrown when attempting to access the absent value of an `Optional`.
+ */
+class MissingValueException : Exception
+{
+    ///
+    this(string msg) @safe pure nothrow @nogc
+    {
+        super(msg);
+    }
+}
+
+///
+@safe unittest
+{
+    import std.exception : collectException;
+    auto ex = collectException!MissingValueException(Optional!int.absent.value);
+    assert(ex.msg == "Called `value' on absent Optional!int.");
+}
+
 // apply
 /**
 Unpacks the content of a `Nullable`, performs an operation and packs it again. Does nothing if isNull.
@@ -3916,6 +4285,8 @@ Unpacks the content of a `Nullable`, performs an operation and packs it again. D
 When called on a `Nullable`, `apply` will unpack the value contained in the `Nullable`,
 pass it to the function you provide and wrap the result in another `Nullable` (if necessary).
 If the `Nullable` is null, `apply` will return null itself.
+
+Note: `apply` works analogously for `Optional`.
 
 Params:
     t = a `Nullable`
@@ -3932,30 +4303,54 @@ template apply(alias fun)
     import std.functional : unaryFun;
 
     auto apply(T)(auto ref T t)
-    if (isInstanceOf!(Nullable, T) && is(typeof(unaryFun!fun(T.init.get))))
+    if (isInstanceOf!(Nullable, T) && is(typeof(unaryFun!fun(T.init.get)))
+        || isInstanceOf!(Optional, T) && is(typeof(unaryFun!fun(T.init.value))))
     {
-        alias FunType = typeof(unaryFun!fun(T.init.get));
+        // My kingdom for a monad!
+        static if (isInstanceOf!(Nullable, T))
+        {
+            enum isNullable = true;
+            alias WrapperType = Nullable;
+            alias ValueType = typeof(T.init.get);
+            bool containsValue = !t.isNull;
+        }
+        else
+        {
+            enum isNullable = false;
+            alias WrapperType = Optional;
+            alias ValueType = typeof(T.init.value);
+            bool containsValue = t.present;
+        }
 
-        enum MustWrapReturn = !isInstanceOf!(Nullable, FunType);
+        alias FunType = typeof(unaryFun!fun(ValueType.init));
+
+        enum MustWrapReturn = !isInstanceOf!(WrapperType, FunType);
 
         static if (MustWrapReturn)
         {
-            alias ReturnType = Nullable!FunType;
+            alias ReturnType = WrapperType!FunType;
         }
         else
         {
             alias ReturnType = FunType;
         }
 
-        if (!t.isNull)
+        if (containsValue)
         {
-            static if (MustWrapReturn)
+            static if (isNullable)
             {
-                return fun(t.get).nullable;
+                static if (MustWrapReturn)
+                {
+                    return fun(t.get).nullable;
+                }
+                else
+                {
+                    return fun(t.get);
+                }
             }
             else
             {
-                return fun(t.get);
+                return ReturnType(fun(t.valueUnsafe));
             }
         }
         else
@@ -4005,6 +4400,25 @@ nothrow pure @nogc @safe unittest
     result = sample.apply!greaterThree;
     assert(!sample.isNull && !result.isNull);
     assert(result.get == 4);
+}
+
+///
+pure @nogc @safe unittest
+{
+    alias toFloat = i => cast(float) i;
+
+    Optional!int sample = Optional!int.absent;
+
+    // apply(absent) results in an absent `Optional` of the function's return type.
+    Optional!float f = sample.apply!toFloat;
+    assert(!sample.present && !f.present);
+
+    sample = 3;
+
+    // apply(present) calls the function and wraps the result in an `Optional`.
+    f = sample.apply!toFloat;
+    assert(sample.present && f.present);
+    assert(f.value == 3.0f);
 }
 
 /**
