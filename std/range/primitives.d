@@ -1,6 +1,9 @@
 /**
 This module is a submodule of $(MREF std, range).
 
+It defines the bidirectional and forward range primitives for arrays:
+$(LREF empty), $(LREF front), $(LREF back), $(LREF popFront), $(LREF popBack) and $(LREF save).
+
 It provides basic range functionality by defining several templates for testing
 whether a given object is a range, and what kind of range it is:
 
