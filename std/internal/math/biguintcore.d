@@ -1111,6 +1111,28 @@ public:
         return .hashOf(data);
     }
 
+    /**
+    Random generate of the number of specified uintLength.
+    Params:
+        uintLength = the specified uintLength.
+    */
+    void randomGenerate(const size_t uintLength)
+    {
+        assert(uintLength > 0);
+
+        import std.random : Mt19937, unpredictableSeed, uniform;
+        Mt19937 rnd;
+        rnd.seed(unpredictableSeed);
+
+        BigDigit[] d = new BigDigit[uintLength];
+
+        for (size_t i = 0; i < uintLength; i++)
+        {
+            d[i] = uniform!("[]", uint, uint, typeof(rnd))(uint.min, uint.max, rnd);
+        }
+
+        data = cast(immutable(BigDigit)[])d;
+    }
 } // end BigUint
 
 @safe pure nothrow unittest
@@ -1221,6 +1243,14 @@ pure @system unittest
     assert(r.toHexString(0, '#', 9, '0', LetterCase.lower) == "0#00000000");
     assert(r.toHexString(0, 'Z', 9, '0', LetterCase.lower) == "0Z00000000");
     assert(r.toHexString(0, 0, 9, '0', LetterCase.lower) == "000000000");
+}
+
+/// for randomGenerate
+@system unittest
+{
+    BigUint r;
+    r.randomGenerate(4);
+    assert(r.uintLength == 4);
 }
 
 
