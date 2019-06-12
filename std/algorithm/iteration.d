@@ -3042,7 +3042,10 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
             {
                 auto r = Result(_items.save, _current.save);
                 static if (isBidirectional)
+                {
                     r._currentBack = _currentBack.save;
+                    r.reachedFinalElement = reachedFinalElement;
+                }
                 return r;
             }
         }
@@ -3546,6 +3549,12 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
         assert(range.element == byRef);
         assert(joined.back == byRef);
     }
+}
+
+// Issue 19850
+@safe pure unittest
+{
+    assert([[0]].joiner.save.back == 0);
 }
 
 /++

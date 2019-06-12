@@ -2331,7 +2331,7 @@ private T expImpl(T)(T x) @safe pure nothrow @nogc
     return x;
 }
 
-@safe @nogc nothrow unittest
+version (InlineAsm_X86_Any) @safe @nogc nothrow unittest
 {
     FloatingPointControl ctrl;
     if (FloatingPointControl.hasExceptionTraps)
@@ -5109,17 +5109,20 @@ float rint(float x) @safe pure nothrow @nogc { return rint(cast(real) x); }
 ///
 @safe unittest
 {
-    resetIeeeFlags();
-    assert(rint(0.4) == 0);
-    assert(ieeeFlags.inexact);
+    version (InlineAsm_X86_Any)
+    {
+        resetIeeeFlags();
+        assert(rint(0.4) == 0);
+        assert(ieeeFlags.inexact);
 
-    assert(rint(0.5) == 0);
-    assert(rint(0.6) == 1);
-    assert(rint(100.0) == 100);
+        assert(rint(0.5) == 0);
+        assert(rint(0.6) == 1);
+        assert(rint(100.0) == 100);
 
-    assert(isNaN(rint(real.nan)));
-    assert(rint(real.infinity) == real.infinity);
-    assert(rint(-real.infinity) == -real.infinity);
+        assert(isNaN(rint(real.nan)));
+        assert(rint(real.infinity) == real.infinity);
+        assert(rint(-real.infinity) == -real.infinity);
+    }
 }
 
 @safe unittest
@@ -5682,31 +5685,34 @@ public:
 ///
 @safe unittest
 {
-    static void func() {
-        int a = 10 * 10;
+    version (InlineAsm_X86_Any)
+    {
+        static void func() {
+            int a = 10 * 10;
+        }
+
+        real a = 3.5;
+        // Set all the flags to zero
+        resetIeeeFlags();
+        assert(!ieeeFlags.divByZero);
+        // Perform a division by zero.
+        a /= 0.0L;
+        assert(a == real.infinity);
+        assert(ieeeFlags.divByZero);
+        // Create a NaN
+        a *= 0.0L;
+        assert(ieeeFlags.invalid);
+        assert(isNaN(a));
+
+        // Check that calling func() has no effect on the
+        // status flags.
+        IeeeFlags f = ieeeFlags;
+        func();
+        assert(ieeeFlags == f);
     }
-
-    real a = 3.5;
-    // Set all the flags to zero
-    resetIeeeFlags();
-    assert(!ieeeFlags.divByZero);
-    // Perform a division by zero.
-    a /= 0.0L;
-    assert(a == real.infinity);
-    assert(ieeeFlags.divByZero);
-    // Create a NaN
-    a *= 0.0L;
-    assert(ieeeFlags.invalid);
-    assert(isNaN(a));
-
-    // Check that calling func() has no effect on the
-    // status flags.
-    IeeeFlags f = ieeeFlags;
-    func();
-    assert(ieeeFlags == f);
 }
 
-@safe unittest
+version (InlineAsm_X86_Any) @safe unittest
 {
     import std.meta : AliasSeq;
 
@@ -5782,14 +5788,17 @@ void resetIeeeFlags() @trusted nothrow @nogc
 ///
 @safe unittest
 {
-    resetIeeeFlags();
-    real a = 3.5;
-    a /= 0.0L;
-    assert(a == real.infinity);
-    assert(ieeeFlags.divByZero);
+    version (InlineAsm_X86_Any)
+    {
+        resetIeeeFlags();
+        real a = 3.5;
+        a /= 0.0L;
+        assert(a == real.infinity);
+        assert(ieeeFlags.divByZero);
 
-    resetIeeeFlags();
-    assert(!ieeeFlags.divByZero);
+        resetIeeeFlags();
+        assert(!ieeeFlags.divByZero);
+    }
 }
 
 /// Returns: snapshot of the current state of the floating-point status flags
@@ -5801,16 +5810,19 @@ void resetIeeeFlags() @trusted nothrow @nogc
 ///
 @safe nothrow unittest
 {
-    resetIeeeFlags();
-    real a = 3.5;
+    version (InlineAsm_X86_Any)
+    {
+        resetIeeeFlags();
+        real a = 3.5;
 
-    a /= 0.0L;
-    assert(a == real.infinity);
-    assert(ieeeFlags.divByZero);
+        a /= 0.0L;
+        assert(a == real.infinity);
+        assert(ieeeFlags.divByZero);
 
-    a *= 0.0L;
-    assert(isNaN(a));
-    assert(ieeeFlags.invalid);
+        a *= 0.0L;
+        assert(isNaN(a));
+        assert(ieeeFlags.invalid);
+    }
 }
 
 /** Control the Floating point hardware
@@ -6258,7 +6270,7 @@ private:
 ///
 @safe unittest
 {
-    version (D_HardFloat)
+    version (InlineAsm_X86_Any)
     {
         FloatingPointControl fpctrl;
 
@@ -6273,7 +6285,7 @@ private:
     }
 }
 
-version (D_HardFloat) @safe unittest
+version (InlineAsm_X86_Any) @safe unittest
 {
     void ensureDefaults()
     {
@@ -6310,7 +6322,7 @@ version (D_HardFloat) @safe unittest
     ensureDefaults();
 }
 
-version (D_HardFloat) @safe unittest // rounding
+version (InlineAsm_X86_Any) @safe unittest // rounding
 {
     import std.meta : AliasSeq;
 
