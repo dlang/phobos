@@ -2632,7 +2632,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 
         ptrdiff_t firstLen = dotIdx - firstDigit;
 
-        size_t separatorScoreCnt = firstLen / fs.separators;
+        size_t separatorScoreCnt = (firstLen > 0) ? (firstLen - 1) / fs.separators : 0;
 
         size_t afterDotIdx;
         if (ePos != -1)
@@ -2737,6 +2737,19 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
                 string toString() const { return "S"; } }
     formatTest( S1(2.25), "2.25" );
     formatTest( S2(2.25), "S" );
+}
+
+// bugzilla 19939
+@safe unittest
+{
+    assert(format("^%13,3.2f$",          1.00) == "^         1.00$");
+    assert(format("^%13,3.2f$",         10.00) == "^        10.00$");
+    assert(format("^%13,3.2f$",        100.00) == "^       100.00$");
+    assert(format("^%13,3.2f$",      1_000.00) == "^     1,000.00$");
+    assert(format("^%13,3.2f$",     10_000.00) == "^    10,000.00$");
+    assert(format("^%13,3.2f$",    100_000.00) == "^   100,000.00$");
+    assert(format("^%13,3.2f$",  1_000_000.00) == "^ 1,000,000.00$");
+    assert(format("^%13,3.2f$", 10_000_000.00) == "^10,000,000.00$");
 }
 
 /*
