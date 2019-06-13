@@ -1,6 +1,9 @@
 /**
 This module is a submodule of $(MREF std, range).
 
+It defines the bidirectional and forward range primitives for arrays:
+$(LREF empty), $(LREF front), $(LREF back), $(LREF popFront), $(LREF popBack) and $(LREF save).
+
 It provides basic range functionality by defining several templates for testing
 whether a given object is a range, and what kind of range it is:
 
@@ -498,7 +501,7 @@ void put(R, E)(ref R r, E e)
 
 @safe pure nothrow @nogc unittest
 {
-    static struct R() { void put(in char[]) {} }
+    static struct R() { void put(scope const(char)[]) {} }
     R!() r;
     put(r, 'a');
 }
@@ -559,7 +562,7 @@ pure @safe unittest
 
 @safe pure unittest
 {
-    static struct R() { void put(in char[]) {} }
+    static struct R() { void put(scope const(char)[]) {} }
     R!() r;
     putChar(r, 'a');
 }
@@ -586,7 +589,7 @@ pure @safe unittest
 
 @safe unittest
 {
-    void myprint(in char[] s) { }
+    void myprint(scope const(char)[] s) { }
     auto r = &myprint;
     put(r, 'a');
 }
@@ -812,7 +815,7 @@ pure @safe unittest
     // issue 10571
     import std.format;
     string buf;
-    formattedWrite((in char[] s) { buf ~= s; }, "%s", "hello");
+    formattedWrite((scope const(char)[] s) { buf ~= s; }, "%s", "hello");
     assert(buf == "hello");
 }
 
@@ -912,7 +915,7 @@ enum bool isOutputRange(R, E) =
 ///
 @safe unittest
 {
-    void myprint(in char[] s) { }
+    void myprint(scope const(char)[] s) { }
     static assert(isOutputRange!(typeof(&myprint), char));
 
     static assert( isOutputRange!(char[], char));
@@ -1486,11 +1489,19 @@ static if (isRandomAccessRange!R) passByRef(r[0]);
 ----
 */
 enum bool hasLvalueElements(R) = isInputRange!R
-    && is(typeof(((ref x) => x)(lvalueOf!R.front)))
+    && is(typeof(isLvalue(lvalueOf!R.front)))
     && (!isBidirectionalRange!R
-        || is(typeof(((ref x) => x)(lvalueOf!R.back))))
+        || is(typeof(isLvalue(lvalueOf!R.back))))
     && (!isRandomAccessRange!R
-        || is(typeof(((ref x) => x)(lvalueOf!R[0]))));
+        || is(typeof(isLvalue(lvalueOf!R[0]))));
+
+/* Compile successfully if argument of type T is an lvalue
+ */
+private void isLvalue(T)(T)
+if (0);
+
+private void isLvalue(T)(ref T)
+if (1);
 
 ///
 @safe unittest
@@ -2411,15 +2422,8 @@ equivalent to `front(array)`. For $(GLOSSARY narrow strings), $(D
 front) automatically returns the first $(GLOSSARY code point) as _a $(D
 dchar).
 */
-@property ref T front(T)(return scope T[] a) @safe pure nothrow @nogc
+@property ref inout(T) front(T)(return scope inout(T)[] a) @safe pure nothrow @nogc
 if (!(autodecodeStrings && isNarrowString!(T[])) && !is(T[] == void[]))
-// We would have preferred to write the function template
-// ---
-//     @property ref inout(T) front(T)(return scope inout(T)[] a)
-//        if (/* same constraint */)
-// ---
-// as that would cause fewer distinct functions to be generated with
-// IFTI, but that caused a linker error in the test suite on Win32_64.
 {
     assert(a.length, "Attempting to fetch the front of an empty array of " ~ T.stringof);
     return a[0];

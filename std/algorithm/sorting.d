@@ -78,12 +78,11 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 module std.algorithm.sorting;
 
 import std.algorithm.mutation : SwapStrategy;
-import std.functional; // : unaryFun, binaryFun;
+import std.functional : unaryFun, binaryFun;
 import std.range.primitives;
-import std.typecons : Flag;
-// FIXME
-import std.meta; // : allSatisfy;
-import std.range; // : SortedRange;
+import std.typecons : Flag, No, Yes;
+import std.meta : allSatisfy;
+import std.range : SortedRange;
 import std.traits;
 
 /**
@@ -751,8 +750,10 @@ if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && hasAssig
         assert(a == [ 42, 42 ]);
 
         import std.algorithm.iteration : map;
+        import std.array : array;
         import std.format : format;
-        import std.random;
+        import std.random : Random, uniform, Xorshift;
+        import std.range : iota;
         auto s = 123_456_789;
         auto g = Xorshift(s);
         a = iota(0, uniform(1, 1000, g))
@@ -1063,6 +1064,7 @@ if (isRandomAccessRange!Range && !isInfinite!Range &&
 @safe unittest
 {
     import std.algorithm.comparison : equal;
+    import std.range : iota;
 
     ubyte[256] index = void;
     iota(256).makeIndex(index[]);
@@ -1791,6 +1793,7 @@ private void sort5(alias lt, Range)(Range r)
 {
     import std.algorithm.iteration : permutations;
     import std.algorithm.mutation : copy;
+    import std.range : iota;
 
     int[5] buf;
     foreach (per; iota(5).permutations)
@@ -1931,7 +1934,10 @@ if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
 @safe unittest
 {
     // Simple regression benchmark
-    import std.algorithm.iteration, std.algorithm.mutation, std.random;
+    import std.algorithm.iteration, std.algorithm.mutation;
+    import std.array : array;
+    import std.random : Random, uniform;
+    import std.range : iota;
     Random rng;
     int[] a = iota(20148).map!(_ => uniform(-1000, 1000, rng)).array;
     static uint comps;
@@ -2910,7 +2916,8 @@ SortedRange!(R, ((a, b) => binaryFun!less(unaryFun!transform(a),
                                           unaryFun!transform(b))))
 schwartzSort(alias transform, alias less = "a < b",
         SwapStrategy ss = SwapStrategy.unstable, R)(R r)
-if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R)
+if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R &&
+    !is(typeof(binaryFun!less) == SwapStrategy))
 {
     import std.conv : emplace;
     import std.range : zip, SortedRange;
@@ -2958,6 +2965,13 @@ if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R)
     }
     zip(xform, r).sort!((a, b) => binaryFun!less(a[0], b[0]), ss)();
     return typeof(return)(r);
+}
+
+/// ditto
+auto schwartzSort(alias transform, SwapStrategy ss, R)(R r)
+if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R)
+{
+    return schwartzSort!(transform, "a < b", ss, R)(r);
 }
 
 ///
@@ -3017,6 +3031,36 @@ if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R)
     import std.typecons : Tuple;
     Tuple!(char)[] chars;
     schwartzSort!((Tuple!(char) c){ return c[0]; })(chars);
+}
+
+@safe unittest
+{
+    // issue 13965
+    import std.typecons : Tuple;
+    Tuple!(char)[] chars;
+    schwartzSort!("a[0]", SwapStrategy.stable)(chars);
+}
+
+@safe unittest
+{
+    // issue 13965
+    import std.algorithm.iteration : map;
+    import std.numeric : entropy;
+
+    auto lowEnt = [ 1.0, 0, 0 ],
+        midEnt = [ 0.1, 0.1, 0.8 ],
+        highEnt = [ 0.31, 0.29, 0.4 ];
+    auto arr = new double[][3];
+    arr[0] = midEnt;
+    arr[1] = lowEnt;
+    arr[2] = highEnt;
+
+    schwartzSort!(entropy, SwapStrategy.stable)(arr);
+
+    assert(arr[0] == lowEnt);
+    assert(arr[1] == midEnt);
+    assert(arr[2] == highEnt);
+    assert(isSorted!("a < b")(map!(entropy)(arr)));
 }
 
 // partialSort
@@ -3148,6 +3192,7 @@ if (isRandomAccessRange!(Range) && hasLength!Range &&
 @safe unittest
 {
     import std.algorithm.comparison : equal;
+    import std.range : zip;
     import std.typecons : tuple;
     auto a = [10, 30, 20];
     auto b = ["c", "b", "a"];
@@ -3456,7 +3501,9 @@ done:
     assert(expandPartition!((a, b) => a < b)(a, 4, 5, 6) == 9);
 
     import std.algorithm.iteration : map;
+    import std.array : array;
     import std.random : uniform;
+    import std.range : iota;
     auto size = uniform(1, 1000);
     a = iota(0, size).map!(_ => uniform(0, 1000)).array;
     if (a.length == 0) return;

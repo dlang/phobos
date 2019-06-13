@@ -11400,9 +11400,12 @@ if (isIntegral!T && isSigned!T) // The constraints on R were already covered by 
 }
 
 
+// NOTE: all the non-simple array literals are wrapped in functions, because
+// otherwise importing causes re-evaluation of the static initializers using
+// CTFE with unittests enabled
 version (unittest)
 {
-private:
+private @safe:
     // Variables to help in testing.
     Duration currLocalDiffFromUTC;
     immutable (TimeZone)[] testTZs;
@@ -11424,31 +11427,43 @@ private:
         }
     }
 
-    MonthDay[] testMonthDays = [MonthDay(1, 1),
+    MonthDay[] testMonthDays()
+    {
+       static result = [MonthDay(1, 1),
                                 MonthDay(1, 2),
                                 MonthDay(3, 17),
                                 MonthDay(7, 4),
                                 MonthDay(10, 27),
                                 MonthDay(12, 30),
                                 MonthDay(12, 31)];
+       return result;
+    }
 
     auto testDays = [1, 2, 9, 10, 16, 20, 25, 28, 29, 30, 31];
 
-    auto testTODs = [TimeOfDay(0, 0, 0),
+    TimeOfDay[] testTODs()
+    {
+       static result = [TimeOfDay(0, 0, 0),
                      TimeOfDay(0, 0, 1),
                      TimeOfDay(0, 1, 0),
                      TimeOfDay(1, 0, 0),
                      TimeOfDay(13, 13, 13),
                      TimeOfDay(23, 59, 59)];
+       return result;
+    }
 
     auto testHours = [0, 1, 12, 22, 23];
     auto testMinSecs = [0, 1, 30, 58, 59];
 
     // Throwing exceptions is incredibly expensive, so we want to use a smaller
     // set of values for tests using assertThrown.
-    auto testTODsThrown = [TimeOfDay(0, 0, 0),
+    TimeOfDay[] testTODsThrown()
+    {
+       static result = [TimeOfDay(0, 0, 0),
                            TimeOfDay(13, 13, 13),
                            TimeOfDay(23, 59, 59)];
+       return result;
+    }
 
     Date[] testDatesBC;
     Date[] testDatesAD;
@@ -11463,7 +11478,9 @@ private:
 
     // I'd use a Tuple, but I get forward reference errors if I try.
     struct GregDay { int day; Date date; }
-    auto testGregDaysBC = [GregDay(-1_373_427, Date(-3760, 9, 7)), // Start of the Hebrew Calendar
+    GregDay[] testGregDaysBC()
+    {
+       static result = [GregDay(-1_373_427, Date(-3760, 9, 7)), // Start of the Hebrew Calendar
                            GregDay(-735_233, Date(-2012, 1, 1)),
                            GregDay(-735_202, Date(-2012, 2, 1)),
                            GregDay(-735_175, Date(-2012, 2, 28)),
@@ -11545,8 +11562,12 @@ private:
                            GregDay(-30, Date(0, 12, 1)),
                            GregDay(-1, Date(0, 12, 30)),
                            GregDay(0, Date(0, 12, 31))];
+       return result;
+    }
 
-    auto testGregDaysAD = [GregDay(1, Date(1, 1, 1)),
+    GregDay[] testGregDaysAD()
+    {
+       static result = [GregDay(1, Date(1, 1, 1)),
                            GregDay(2, Date(1, 1, 2)),
                            GregDay(32, Date(1, 2, 1)),
                            GregDay(365, Date(1, 12, 31)),
@@ -11614,10 +11635,14 @@ private:
                            GregDay(734_562, Date(2012, 2, 29)),
                            GregDay(734_563, Date(2012, 3, 1)),
                            GregDay(734_858, Date(2012, 12, 21))];
+       return result;
+    }
 
     // I'd use a Tuple, but I get forward reference errors if I try.
     struct DayOfYear { int day; MonthDay md; }
-    auto testDaysOfYear = [DayOfYear(1, MonthDay(1, 1)),
+    DayOfYear[] testDaysOfYear()
+    {
+       static result = [DayOfYear(1, MonthDay(1, 1)),
                            DayOfYear(2, MonthDay(1, 2)),
                            DayOfYear(3, MonthDay(1, 3)),
                            DayOfYear(31, MonthDay(1, 31)),
@@ -11645,8 +11670,12 @@ private:
                            DayOfYear(363, MonthDay(12, 29)),
                            DayOfYear(364, MonthDay(12, 30)),
                            DayOfYear(365, MonthDay(12, 31))];
+       return result;
+    }
 
-    auto testDaysOfLeapYear = [DayOfYear(1, MonthDay(1, 1)),
+    DayOfYear[] testDaysOfLeapYear()
+    {
+       static result = [DayOfYear(1, MonthDay(1, 1)),
                                DayOfYear(2, MonthDay(1, 2)),
                                DayOfYear(3, MonthDay(1, 3)),
                                DayOfYear(31, MonthDay(1, 31)),
@@ -11675,8 +11704,10 @@ private:
                                DayOfYear(364, MonthDay(12, 29)),
                                DayOfYear(365, MonthDay(12, 30)),
                                DayOfYear(366, MonthDay(12, 31))];
+       return result;
+    }
 
-    void initializeTests() @safe
+    void initializeTests()
     {
         import std.algorithm.sorting : sort;
         import std.typecons : Rebindable;

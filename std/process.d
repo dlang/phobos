@@ -468,7 +468,6 @@ private Pid spawnProcessImpl(scope const(char[])[] args,
     void forkChild() nothrow @nogc
     {
         static import core.sys.posix.stdio;
-        pragma(inline, true);
 
         // Child process
 

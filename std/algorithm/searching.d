@@ -102,12 +102,10 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
  */
 module std.algorithm.searching;
 
-// FIXME
-import std.functional; // : unaryFun, binaryFun;
+import std.functional : unaryFun, binaryFun;
 import std.range.primitives;
 import std.traits;
-// FIXME
-import std.typecons; // : Tuple, Flag, Yes, No;
+import std.typecons : Tuple, Flag, Yes, No, tuple;
 
 /++
 Checks if $(I _all) of the elements verify `pred`.
@@ -124,10 +122,9 @@ template all(alias pred = "a")
     {
         static assert(is(typeof(unaryFun!pred(range.front))),
                 "`" ~ pred.stringof[1..$-1] ~ "` isn't a unary predicate function for range.front");
-        foreach (ref e; range)
-            if (!unaryFun!pred(e))
-                return false;
-        return true;
+        import std.functional : not;
+
+        return find!(not!(unaryFun!pred))(range).empty;
     }
 }
 
@@ -154,6 +151,7 @@ are true.
 {
     int x = 1;
     assert(all!(a => a > x)([2, 3]));
+    assert(all!"a == 0x00c9"("\xc3\x89")); // Test that `all` auto-decodes.
 }
 
 /++
@@ -172,10 +170,7 @@ template any(alias pred = "a")
     bool any(Range)(Range range)
     if (isInputRange!Range && is(typeof(unaryFun!pred(range.front))))
     {
-        foreach (ref e; range)
-            if (unaryFun!pred(e))
-                return true;
-        return false;
+        return !find!pred(range).empty;
     }
 }
 
@@ -211,6 +206,7 @@ evaluate to true.
 {
     auto a = [ 1, 2, 0, 4 ];
     assert(any!"a == 2"(a));
+    assert(any!"a == 0x3000"("\xe3\x80\x80")); // Test that `any` auto-decodes.
 }
 
 // balancedParens
@@ -1280,6 +1276,7 @@ private enum bool hasConstEmptyMember(T) = is(typeof(((const T* a) => (*a).empty
 // see: https://github.com/dlang/phobos/pull/6136
 private template RebindableOrUnqual(T)
 {
+    import std.typecons : Rebindable;
     static if (is(T == class) || is(T == interface) || isDynamicArray!T || isAssociativeArray!T)
         alias RebindableOrUnqual = Rebindable!T;
     else

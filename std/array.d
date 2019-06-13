@@ -442,7 +442,8 @@ if (isInputRange!Range)
     import std.typecons : isTuple;
 
     alias E = ElementType!Range;
-    static assert(isTuple!E, "assocArray: argument must be a range of tuples");
+    static assert(isTuple!E, "assocArray: argument must be a range of tuples,"
+        ~" but was a range of "~E.stringof);
     static assert(E.length == 2, "assocArray: tuple dimension must be 2");
     alias KeyType = E.Types[0];
     alias ValueType = E.Types[1];
@@ -477,7 +478,7 @@ if (isInputRange!Values && isInputRange!Keys)
                     ValueElement.init.__xdtor();
             })))
             {
-                scope(failure) assert(0);
+                scope(failure) assert(false, "aaLiteral must not throw");
             }
             if (values.length > keys.length)
                 values = values[0 .. keys.length];
@@ -552,6 +553,7 @@ if (isInputRange!Values && isInputRange!Keys)
 @safe unittest
 {
     import std.typecons;
+    static assert(!__traits(compiles, [ 1, 2, 3 ].assocArray()));
     static assert(!__traits(compiles, [ tuple("foo", "bar", "baz") ].assocArray()));
     static assert(!__traits(compiles, [ tuple("foo") ].assocArray()));
     assert([ tuple("foo", "bar") ].assocArray() == ["foo": "bar"]);
@@ -909,7 +911,8 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
 
     static if (I.length != 0)
     {
-        static assert(is(I[0] == size_t));
+        static assert(is(I[0] == size_t), "I[0] must be of type size_t not "
+                ~ I[0].stringof);
         alias size = sizes[0];
     }
 
@@ -1150,8 +1153,10 @@ if (is(typeof(a.ptr < b.ptr) == bool))
 private void copyBackwards(T)(T[] src, T[] dest)
 {
     import core.stdc.string : memmove;
+    import std.format : format;
 
-    assert(src.length == dest.length);
+    assert(src.length == dest.length, format!
+            "src.length %s must equal dest.length %s"(src.length, dest.length));
 
     if (!__ctfe || hasElaborateCopyConstructor!T)
     {
@@ -1290,7 +1295,8 @@ if (isSomeString!(T[]) && allSatisfy!(isCharOrStringOrDcharRange, U))
 
         @trusted static void moveToRight(T[] arr, size_t gap)
         {
-            static assert(!hasElaborateCopyConstructor!T);
+            static assert(!hasElaborateCopyConstructor!T,
+                    "T must not have an elaborate copy constructor");
             import core.stdc.string : memmove;
             if (__ctfe)
             {
@@ -2018,6 +2024,7 @@ if (isInputRange!RoR &&
         else
         {
             import std.conv : emplaceRef;
+            import std.format : format;
             size_t length;
             size_t rorLength;
             foreach (r; ror.save)
@@ -2041,7 +2048,8 @@ if (isInputRange!RoR &&
                 foreach (e; r)
                     emplaceRef(result[len++], e);
             }
-            assert(len == result.length);
+            assert(len == result.length, format!
+                    "len %s must equal result.lenght %s"(len, result.length));
             return (() @trusted => cast(RetType) result)();
         }
     }
@@ -2112,7 +2120,8 @@ if (isInputRange!RoR &&
         foreach (r; ror)
             foreach (e; r)
                 emplaceRef!RetTypeElement(result[len++], e);
-        assert(len == result.length);
+        assert(len == result.length,
+                "emplaced an unexpected number of elements");
         return (() @trusted => cast(RetType) result)();
     }
     else
@@ -2584,7 +2593,7 @@ if (isInputRange!Range &&
     static if (hasLength!Range && is(ElementEncodingType!Range : T))
     {
         import std.algorithm.mutation : copy;
-        assert(from <= to);
+        assert(from <= to, "from must be before or equal to to");
         immutable sliceLen = to - from;
         auto retval = new Unqual!(T)[](subject.length - sliceLen + stuff.length);
         retval[0 .. from] = subject[0 .. from];
@@ -3135,7 +3144,7 @@ inout(T)[] replaceSlice(T)(inout(T)[] s, in T[] slice, in T[] replacement)
 in
 {
     // Verify that slice[] really is a slice of s[]
-    assert(overlap(s, slice) is slice);
+    assert(overlap(s, slice) is slice, "slice[] is not a subslice of s[]");
 }
 do
 {
@@ -3323,7 +3332,8 @@ if (isDynamicArray!A)
             import core.checkedint : mulu;
             bool overflow;
             const nbytes = mulu(newlen, T.sizeof, overflow);
-            if (overflow) assert(0);
+            if (overflow) assert(false, "the reallocation would exceed the "
+                    ~ "available pointer range");
 
             auto bi = (() @trusted => GC.qalloc(nbytes, blockAttribute!T))();
             _data.capacity = bi.size / T.sizeof;
@@ -4586,5 +4596,5 @@ nothrow pure @safe unittest
 version (unittest) private void checkStaticArray(T, T1, T2)(T1 a, T2 b) nothrow @safe pure @nogc
 {
     static assert(is(T1 == T[T1.length]));
-    assert(a == b);
+    assert(a == b, "a must be equal to b");
 }

@@ -46,6 +46,7 @@ $(TR $(TD Constants) $(TD
         $(LREF whitespace)
 ))
 $(TR $(TD Enums) $(TD
+        $(LREF ControlChar)
         $(LREF LetterCase)
 ))
 ))
@@ -100,6 +101,75 @@ enum LetterCase : bool
         .hmac!SHA1("secret".representation)
         .toHexString!(LetterCase.lower);
     assert(sha1HMAC == "49f2073c7bf58577e8c9ae59fe8cfd37c9ab94e5");
+}
+
+/++
+    All control characters in the ASCII table ($(HTTPS www.asciitable.com, source)).
++/
+enum ControlChar : char
+{
+    nul = '\x00', /// Null
+    soh = '\x01', /// Start of heading
+    stx = '\x02', /// Start of text
+    etx = '\x03', /// End of text
+    eot = '\x04', /// End of transmission
+    enq = '\x05', /// Enquiry
+    ack = '\x06', /// Acknowledge
+    bel = '\x07', /// Bell
+    bs  = '\x08', /// Backspace
+    tab = '\x09', /// Horizontal tab
+    lf  = '\x0A', /// NL line feed, new line
+    vt  = '\x0B', /// Vertical tab
+    ff  = '\x0C', /// NP form feed, new page
+    cr  = '\x0D', /// Carriage return
+    so  = '\x0E', /// Shift out
+    si  = '\x0F', /// Shift in
+    dle = '\x10', /// Data link escape
+    dc1 = '\x11', /// Device control 1
+    dc2 = '\x12', /// Device control 2
+    dc3 = '\x13', /// Device control 3
+    dc4 = '\x14', /// Device control 4
+    nak = '\x15', /// Negative acknowledge
+    syn = '\x16', /// Synchronous idle
+    etb = '\x17', /// End of transmission block
+    can = '\x18', /// Cancel
+    em  = '\x19', /// End of medium
+    sub = '\x1A', /// Substitute
+    esc = '\x1B', /// Escape
+    fs  = '\x1C', /// File separator
+    gs  = '\x1D', /// Group separator
+    rs  = '\x1E', /// Record separator
+    us  = '\x1F', /// Unit separator
+    del = '\x7F' /// Delete
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.algorithm.comparison, std.algorithm.searching, std.range, std.traits;
+
+    // Because all ASCII characters fit in char, so do these
+    static assert(ControlChar.ack.sizeof == 1);
+
+    // All control characters except del are in row starting from 0
+    static assert(EnumMembers!ControlChar.only.until(ControlChar.del).equal(iota(32)));
+
+    static assert(ControlChar.nul == '\0');
+    static assert(ControlChar.bel == '\a');
+    static assert(ControlChar.bs  == '\b');
+    static assert(ControlChar.ff  == '\f');
+    static assert(ControlChar.lf  == '\n');
+    static assert(ControlChar.cr  == '\r');
+    static assert(ControlChar.tab == '\t');
+    static assert(ControlChar.vt  == '\v');
+}
+
+///
+@safe pure nothrow unittest
+{
+    import std.conv;
+    //Control character table can be used in place of hexcodes.
+    with (ControlChar) assert(text("Phobos", us, "Deimos", us, "Tango", rs) == "Phobos\x1FDeimos\x1FTango\x1E");
 }
 
 /// Newline sequence for this system.

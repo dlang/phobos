@@ -25,8 +25,7 @@
  */
 module std.net.isemail;
 
-// FIXME
-import std.range.primitives; // : ElementType;
+import std.range.primitives : back, front, ElementType, popFront, popBack;
 import std.traits;
 import std.typecons : Flag, Yes, No;
 

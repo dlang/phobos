@@ -28,7 +28,7 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.getopt;
 
-import std.exception;  // basicExceptionCtors
+import std.exception : basicExceptionCtors;
 import std.traits;
 
 /**
@@ -659,6 +659,7 @@ private template optionValidator(A...)
 
 @system unittest // bugzilla 15914
 {
+    import std.exception : assertThrown;
     bool opt;
     string[] args = ["program", "-a"];
     getopt(args, config.passThrough, 'a', &opt);
@@ -910,13 +911,17 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
                 }
                 else static if (is(typeof(receiver("")) : void))
                 {
-                    static assert(is(typeof(receiver("")) : void));
+                    alias RType = typeof(receiver(""));
+                    static assert(is(RType : void),
+                            "Invalid receiver return type " ~ RType.stringof);
                     // boolean-style receiver
                     receiver(option);
                 }
                 else
                 {
-                    static assert(is(typeof(receiver()) : void));
+                    alias RType = typeof(receiver());
+                    static assert(is(RType : void),
+                            "Invalid receiver return type " ~ RType.stringof);
                     // boolean-style receiver without argument
                     receiver();
                 }
@@ -1743,7 +1748,8 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
 // throw on duplicate options
 @system unittest
 {
-    import core.exception;
+    import core.exception : AssertError;
+    import std.exception : assertNotThrown, assertThrown;
     auto args = ["prog", "--abc", "1"];
     int abc, def;
     assertThrown!AssertError(getopt(args, "abc", &abc, "abc", &abc));

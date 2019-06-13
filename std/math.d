@@ -130,7 +130,8 @@ version (Win64)
 static import core.math;
 static import core.stdc.math;
 static import core.stdc.fenv;
-import std.traits; // CommonType, isFloatingPoint, isIntegral, isSigned, isUnsigned, Largest, Unqual
+import std.traits :  CommonType, isFloatingPoint, isIntegral, isNumeric,
+    isSigned, isUnsigned, Largest, Unqual;
 
 version (LDC)
 {
@@ -150,8 +151,10 @@ version (MIPS32)    version = MIPS_Any;
 version (MIPS64)    version = MIPS_Any;
 version (AArch64)   version = ARM_Any;
 version (ARM)       version = ARM_Any;
+version (S390)      version = IBMZ_Any;
 version (SPARC)     version = SPARC_Any;
 version (SPARC64)   version = SPARC_Any;
+version (SystemZ)   version = IBMZ_Any;
 version (RISCV32)   version = RISCV_Any;
 version (RISCV64)   version = RISCV_Any;
 
@@ -162,6 +165,12 @@ version (D_InlineAsm_X86)
 else version (D_InlineAsm_X86_64)
 {
     version = InlineAsm_X86_Any;
+}
+
+version (CRuntime_Microsoft)
+{
+    version (InlineAsm_X86_Any)
+        version = MSVC_InlineAsm;
 }
 
 version (X86_64) version = StaticallyHaveSSE;
@@ -4387,7 +4396,7 @@ real logb(real x) @trusted nothrow @nogc
             ret                         ;
         }
     }
-    else version (CRuntime_Microsoft)
+    else version (MSVC_InlineAsm)
     {
         asm pure nothrow @nogc
         {
@@ -4728,7 +4737,7 @@ real ceil(real x) @trusted pure nothrow @nogc
             ret                         ;
         }
     }
-    else version (CRuntime_Microsoft)
+    else version (MSVC_InlineAsm)
     {
         short cw;
         asm pure nothrow @nogc
@@ -4856,7 +4865,7 @@ real floor(real x) @trusted pure nothrow @nogc
             ret                         ;
         }
     }
-    else version (CRuntime_Microsoft)
+    else version (MSVC_InlineAsm)
     {
         short cw;
         asm pure nothrow @nogc
@@ -5420,7 +5429,7 @@ real trunc(real x) @trusted nothrow @nogc pure
             ret                         ;
         }
     }
-    else version (CRuntime_Microsoft)
+    else version (MSVC_InlineAsm)
     {
         short cw;
         asm pure nothrow @nogc
@@ -6003,7 +6012,7 @@ nothrow @nogc:
                                  | inexactException,
         }
     }
-    else version (SystemZ)
+    else version (IBMZ_Any)
     {
         enum : ExceptionMask
         {
@@ -6153,7 +6162,7 @@ private:
     {
         alias ControlState = ulong;
     }
-    else version (SystemZ)
+    else version (IBMZ_Any)
     {
         alias ControlState = uint;
     }
@@ -6352,37 +6361,55 @@ version (D_HardFloat) @safe unittest // rounding
 bool isNaN(X)(X x) @nogc @trusted pure nothrow
 if (isFloatingPoint!(X))
 {
-    alias F = floatTraits!(X);
-    static if (F.realFormat == RealFormat.ieeeSingle)
+    version (all)
     {
-        const uint p = *cast(uint *)&x;
-        return ((p & 0x7F80_0000) == 0x7F80_0000)
-            && p & 0x007F_FFFF; // not infinity
-    }
-    else static if (F.realFormat == RealFormat.ieeeDouble)
-    {
-        const ulong  p = *cast(ulong *)&x;
-        return ((p & 0x7FF0_0000_0000_0000) == 0x7FF0_0000_0000_0000)
-            && p & 0x000F_FFFF_FFFF_FFFF; // not infinity
-    }
-    else static if (F.realFormat == RealFormat.ieeeExtended)
-    {
-        const ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
-        const ulong ps = *cast(ulong *)&x;
-        return e == F.EXPMASK &&
-            ps & 0x7FFF_FFFF_FFFF_FFFF; // not infinity
-    }
-    else static if (F.realFormat == RealFormat.ieeeQuadruple)
-    {
-        const ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
-        const ulong psLsb = (cast(ulong *)&x)[MANTISSA_LSB];
-        const ulong psMsb = (cast(ulong *)&x)[MANTISSA_MSB];
-        return e == F.EXPMASK &&
-            (psLsb | (psMsb& 0x0000_FFFF_FFFF_FFFF)) != 0;
+        return x != x;
     }
     else
     {
-        return x != x;
+        /*
+        Code kept for historical context. At least on Intel, the simple test
+        x != x uses one dedicated instruction (ucomiss/ucomisd) that runs in one
+        cycle. Code for 80- and 128-bits is larger but still smaller than the
+        integrals-based solutions below. Future revisions may enable the code
+        below conditionally depending on hardware.
+        */
+        alias F = floatTraits!(X);
+        static if (F.realFormat == RealFormat.ieeeSingle)
+        {
+            const uint p = *cast(uint *)&x;
+            // Sign bit (MSB) is irrelevant so mask it out.
+            // Next 8 bits should be all set.
+            // At least one bit among the least significant 23 bits should be set.
+            return (p & 0x7FFF_FFFF) > 0x7F80_0000;
+        }
+        else static if (F.realFormat == RealFormat.ieeeDouble)
+        {
+            const ulong  p = *cast(ulong *)&x;
+            // Sign bit (MSB) is irrelevant so mask it out.
+            // Next 11 bits should be all set.
+            // At least one bit among the least significant 52 bits should be set.
+            return (p & 0x7FFF_FFFF_FFFF_FFFF) > 0x7FF0_0000_0000_0000;
+        }
+        else static if (F.realFormat == RealFormat.ieeeExtended)
+        {
+            const ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
+            const ulong ps = *cast(ulong *)&x;
+            return e == F.EXPMASK &&
+                ps & 0x7FFF_FFFF_FFFF_FFFF; // not infinity
+        }
+        else static if (F.realFormat == RealFormat.ieeeQuadruple)
+        {
+            const ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
+            const ulong psLsb = (cast(ulong *)&x)[MANTISSA_LSB];
+            const ulong psMsb = (cast(ulong *)&x)[MANTISSA_MSB];
+            return e == F.EXPMASK &&
+                (psLsb | (psMsb& 0x0000_FFFF_FFFF_FFFF)) != 0;
+        }
+        else
+        {
+            return x != x;
+        }
     }
 }
 

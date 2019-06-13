@@ -57,9 +57,10 @@
  */
 module std.base64;
 
-import std.exception;  // enforce
-import std.range.primitives;      // isInputRange, isOutputRange, isForwardRange, ElementType, hasLength
-import std.traits;     // isArray
+import std.exception : enforce;
+import std.range.primitives : empty, front, isInputRange, isOutputRange,
+    isForwardRange, ElementType, hasLength, popFront, put, save;
+import std.traits : isArray;
 
 // Make sure module header code examples work correctly.
 @safe unittest
@@ -1764,6 +1765,7 @@ class Base64Exception : Exception
     import std.algorithm.comparison : equal;
     import std.algorithm.sorting : sort;
     import std.conv;
+    import std.exception : assertThrown;
     import std.file;
     import std.stdio;
 
