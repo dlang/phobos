@@ -3426,7 +3426,7 @@ if (isBidirectionalRange!R)
 R dropOne(R)(R range)
 if (isInputRange!R)
 {
-    range.popFront();
+    range.popFrontN(1);
     return range;
 }
 /// ditto
@@ -3459,6 +3459,23 @@ pure @safe nothrow unittest
     auto bd = filterBidirectional!"true"([1, 2, 3]);
     assert(bd.dropOne().equal([2, 3]));
     assert(bd.dropBackOne().equal([1, 2]));
+}
+
+// issue 19823
+@safe unittest
+{
+    import std.format : format;
+
+    auto a = [1, 2, 3, 4];
+    assert(format("%s", a.filter!(a => a != 1).dropOne) == "[3, 4]");
+    assert(format("%s", a.filter!(a => a != 2).dropOne) == "[3, 4]");
+    assert(format("%s", a.filter!(a => a != 3).dropOne) == "[2, 4]");
+    assert(format("%s", a.filter!(a => a != 4).dropOne) == "[2, 3]");
+    assert(format("%s", a.filter!(a => a == 1).dropOne) == "[]");
+    assert(format("%s", a.filter!(a => a == 2).dropOne) == "[]");
+    assert(format("%s", a.filter!(a => a == 3).dropOne) == "[]");
+    assert(format("%s", a.filter!(a => a == 4).dropOne) == "[]");
+    assert(a.filter!(a => a != 1).array.dropOne == [3, 4]);
 }
 
 /**
