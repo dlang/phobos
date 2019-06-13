@@ -2980,34 +2980,6 @@ Returns:
         return isNull ? fallback : _value.payload;
     }
 
-//@@@DEPRECATED_2.096@@@
-deprecated(
-    "Implicit conversion with `alias Nullable.get this` will be removed after 2.096. Please use `.get` explicitly.")
-@system unittest
-{
-    import core.exception : AssertError;
-    import std.exception : assertThrown, assertNotThrown;
-
-    Nullable!int ni;
-    int i = 42;
-    //`get` is implicitly called. Will throw
-    //an AssertError in non-release mode
-    assertThrown!AssertError(i = ni);
-    assert(i == 42);
-
-    ni = 5;
-    assertNotThrown!AssertError(i = ni);
-    assert(i == 5);
-}
-
-    //@@@DEPRECATED_2.096@@@
-    deprecated(
-        "Implicit conversion with `alias Nullable.get this` will be removed after 2.096. Please use `.get` explicitly.")
-    @property ref inout(T) get_() inout @safe pure nothrow
-    {
-        return get;
-    }
-
 ///
 @safe pure nothrow unittest
 {
@@ -3020,13 +2992,6 @@ deprecated(
     x = ni.get(i);
     assert(x == 7);
 }
-
-/**
-Implicitly converts to `T`.
-`this` must not be in the null state.
-This feature is deprecated and will be removed after 2.096.
- */
-    alias get_ this;
 }
 
 /// ditto
@@ -3081,32 +3046,6 @@ auto nullable(T)(T t)
     assertThrown!Throwable(a.get);
 }
 
-//@@@DEPRECATED_2.096@@@
-deprecated(
-    "Implicit conversion with `alias Nullable.get this` will be removed after 2.096. Please use `.get` explicitly.")
-@system unittest
-{
-    import std.exception : assertThrown;
-
-    Nullable!int a;
-    assert(a.isNull);
-    assertThrown!Throwable(a.get);
-    a = 5;
-    assert(!a.isNull);
-    assert(a == 5);
-    assert(a != 3);
-    assert(a.get != 3);
-    a.nullify();
-    assert(a.isNull);
-    a = 3;
-    assert(a == 3);
-    a *= 6;
-    assert(a == 18);
-    a = a;
-    assert(a == 18);
-    a.nullify();
-    assertThrown!Throwable(a += 2);
-}
 @safe unittest
 {
     auto k = Nullable!int(74);
