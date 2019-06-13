@@ -1050,6 +1050,11 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
                 JSONValue[string] obj;
                 do
                 {
+                    skipWhitespace();
+                    if (!strict && peekChar() == '}')
+                    {
+                        break;
+                    }
                     checkChar('"');
                     string name = parseString();
                     checkChar(':');
@@ -1073,6 +1078,11 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
                 JSONValue[] arr;
                 do
                 {
+                    skipWhitespace();
+                    if (!strict && peekChar() == ']')
+                    {
+                        break;
+                    }
                     JSONValue element;
                     parseValue(element);
                     arr ~= element;
@@ -2062,4 +2072,32 @@ pure nothrow @safe unittest // issue 15884
     assertThrown!JSONException(parseJSON("[]]", JSONOptions.strictParsing));
     assert(parseJSON("123 \t\r\n").integer == 123); // Trailing whitespace is OK
     assert(parseJSON("123 \t\r\n", JSONOptions.strictParsing).integer == 123);
+}
+
+@system unittest
+{
+    import std.algorithm.iteration : map;
+    import std.array : array;
+    import std.exception : assertThrown;
+
+    string s = `{ "a" : [1,2,3,], }`;
+    JSONValue j = parseJSON(s);
+    assert(j["a"].array().map!(i => i.integer()).array == [1,2,3]);
+
+    assertThrown(parseJSON(s, -1, JSONOptions.strictParsing));
+}
+
+@system unittest
+{
+    import std.algorithm.iteration : map;
+    import std.array : array;
+    import std.exception : assertThrown;
+
+    string s = `{ "a" : { }  , }`;
+    JSONValue j = parseJSON(s);
+    assert("a" in j);
+    auto t = j["a"].object();
+    assert(t.empty);
+
+    assertThrown(parseJSON(s, -1, JSONOptions.strictParsing));
 }
