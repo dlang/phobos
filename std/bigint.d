@@ -65,7 +65,7 @@ public:
         isBidirectionalRange!Range &&
         isSomeChar!(ElementType!Range) &&
         !isInfinite!Range &&
-        !isSomeString!Range)
+        !isNarrowString!Range)
     {
         import std.algorithm.iteration : filterBidirectional;
         import std.algorithm.searching : startsWith;
@@ -116,7 +116,8 @@ public:
     }
 
     /// ditto
-    this(Range)(Range s) pure if (isSomeString!Range)
+    this(Range)(Range s) pure
+    if (isNarrowString!Range)
     {
         import std.utf : byCodeUnit;
         this(s.byCodeUnit);
@@ -1899,4 +1900,67 @@ void divMod(const BigInt dividend, const BigInt divisor, out BigInt quotient, ou
     assert(q == -10);
     assert(r == -24);
     assert(q * d + r == -c);
+}
+
+// Issue 19740
+@system unittest
+{
+    BigInt a = BigInt(
+        "241127122100380210001001124020210001001100000200003101000062221012075223052000021042250111300200000000000" ~
+        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
+    BigInt b = BigInt(
+        "700200000000500418321000401140010110000022007221432000000141020011323301104104060202100200457210001600142" ~
+        "000001012245300100001110215200000000120000000000000000000000000000000000000000000000000000000000000000000" ~
+        "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
+
+    BigInt c = a * b;
+    assert(c == BigInt(
+        "1688372108948068874722901180228375682334987075822938736581472847151834613694489486296103575639363261807341" ~
+        "3910091006778604956808730652275328822700182498926542563654351871390166691461743896850906716336187966456064" ~
+        "2702007176328110013356024000000000000000000000000000000000000000000000000000000000000000000000000000000000" ~
+        "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" ~
+        "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000"));
+}
+
+@system unittest
+{
+    auto n = BigInt("1234"d);
+}
+
+/**
+Fast power modulus calculation for $(LREF BigInt) operands.
+Params:
+     base = the $(LREF BigInt) is basic operands.
+     exponent = the $(LREF BigInt) is power exponent of base.
+     modulus = the $(LREF BigInt) is modules to be modular of base ^ exponent.
+Returns:
+     The power modulus value of (base ^ exponent) % modulus.
+*/
+BigInt powmod(BigInt base, BigInt exponent, BigInt modulus) pure nothrow
+{
+    BigInt result = 1;
+
+    while (exponent)
+    {
+        if (exponent & 1)
+        {
+            result = (result * base) % modulus;
+        }
+
+        base = ((base % modulus) * (base % modulus)) % modulus;
+        exponent >>= 1;
+    }
+
+    return result;
+}
+
+/// for powmod
+@system unittest
+{
+    BigInt base = BigInt("123456789012345678901234567890");
+    BigInt exponent = BigInt("1234567890123456789012345678901234567");
+    BigInt modulus = BigInt("1234567");
+
+    BigInt result = powmod(base, exponent, modulus);
+    assert(result == 359079);
 }

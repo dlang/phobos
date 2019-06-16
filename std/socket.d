@@ -117,7 +117,7 @@ else version (Posix)
 }
 else
 {
-    static assert(0);     // No socket support yet.
+    static assert(0, "No socket support for this platform yet.");
 }
 
 version (unittest)
@@ -268,7 +268,7 @@ bool wouldHaveBlocked() nothrow @nogc
     else version (Posix)
         return _lasterr() == EAGAIN;
     else
-        static assert(0);
+        static assert(0, "No socket support for this platform yet.");
 }
 
 
@@ -1561,7 +1561,7 @@ public:
      */
     this(sockaddr_in addr) pure nothrow @nogc
     {
-        assert(addr.sin_family == AddressFamily.INET);
+        assert(addr.sin_family == AddressFamily.INET, "Socket address is not of INET family.");
         sin = addr;
     }
 

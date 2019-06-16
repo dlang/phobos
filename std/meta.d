@@ -77,6 +77,9 @@
 
 module std.meta;
 
+import std.traits : isAggregateType, Unqual, isIterable;
+import std.range.primitives : isInfinite;
+
 /**
  * Creates a sequence of zero or more aliases. This is most commonly
  * used as template parameters or arguments.
@@ -251,8 +254,6 @@ package template OldAlias(alias a)
     else
         static assert(0, "Cannot alias " ~ a.stringof);
 }
-
-import std.traits : isAggregateType, Unqual;
 
 package template OldAlias(T)
 if (!isAggregateType!T || is(Unqual!T == T))
@@ -1087,42 +1088,26 @@ template templateOr(Preds...)
 }
 
 /**
- * Converts an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
- * `range` to an alias sequence.
+ * Converts any foreach-iterable entity (e.g. an input range) to an alias sequence.
+ *
+ * Params:
+ *     iter = the entity to convert into an `AliasSeq`. It must be able to be able to be iterated over using
+ *            a $(LINK2 https://dlang.org/spec/statement.html#foreach-statement, foreach-statement).
+ *
+ * Returns:
+ *     An `AliasSeq` containing the values produced by iterating over `iter`.
  */
-template aliasSeqOf(alias range)
+template aliasSeqOf(alias iter)
+if (isIterable!(typeof(iter)) && !isInfinite!(typeof(iter)))
 {
-    import std.traits : isArray, isNarrowString;
+    import std.array : array;
 
-    alias ArrT = typeof(range);
-    static if (isArray!ArrT && !isNarrowString!ArrT)
+    struct Impl
     {
-        static if (range.length == 0)
-        {
-            alias aliasSeqOf = AliasSeq!();
-        }
-        else static if (range.length == 1)
-        {
-            alias aliasSeqOf = AliasSeq!(range[0]);
-        }
-        else
-        {
-            alias aliasSeqOf = AliasSeq!(aliasSeqOf!(range[0 .. $/2]), aliasSeqOf!(range[$/2 .. $]));
-        }
+        static foreach (size_t i, el; iter.array)
+            mixin(`auto e` ~ i.stringof ~ ` = el;`);
     }
-    else
-    {
-        import std.range.primitives : isInputRange;
-        static if (isInputRange!ArrT)
-        {
-            import std.array : array;
-            alias aliasSeqOf = aliasSeqOf!(array(range));
-        }
-        else
-        {
-            static assert(false, "Cannot transform range of type " ~ ArrT.stringof ~ " into a AliasSeq.");
-        }
-    }
+    enum aliasSeqOf = Impl.init.tupleof;
 }
 
 ///
@@ -1179,6 +1164,34 @@ template aliasSeqOf(alias range)
     {
         static assert(V == REF[I]);
     }
+}
+
+@safe unittest
+{
+    struct S
+    {
+        int opApply(scope int delegate(ref int) dg)
+        {
+            foreach (int i; 3 .. 5)
+                if (auto r = dg(i))
+                    return r;
+            return 0;
+        }
+    }
+    static assert(aliasSeqOf!(S.init) == AliasSeq!(3, 4));
+}
+
+@safe unittest
+{
+    struct Infinite
+    {
+        int front();
+        void popFront();
+        enum empty = false;
+    }
+    enum infinite = Infinite();
+    static assert(isInfinite!Infinite);
+    static assert(!__traits(compiles, aliasSeqOf!infinite));
 }
 
 /**

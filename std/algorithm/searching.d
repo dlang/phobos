@@ -102,12 +102,10 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
  */
 module std.algorithm.searching;
 
-// FIXME
-import std.functional; // : unaryFun, binaryFun;
+import std.functional : unaryFun, binaryFun;
 import std.range.primitives;
 import std.traits;
-// FIXME
-import std.typecons; // : Tuple, Flag, Yes, No;
+import std.typecons : Tuple, Flag, Yes, No, tuple;
 
 /++
 Checks if $(I _all) of the elements verify `pred`.
@@ -1278,6 +1276,7 @@ private enum bool hasConstEmptyMember(T) = is(typeof(((const T* a) => (*a).empty
 // see: https://github.com/dlang/phobos/pull/6136
 private template RebindableOrUnqual(T)
 {
+    import std.typecons : Rebindable;
     static if (is(T == class) || is(T == interface) || isDynamicArray!T || isAssociativeArray!T)
         alias RebindableOrUnqual = Rebindable!T;
     else

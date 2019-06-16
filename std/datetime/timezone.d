@@ -27,11 +27,9 @@ $(TR $(TD Utilities) $(TD
 +/
 module std.datetime.timezone;
 
-// Note: reconsider using specific imports below after
-// https://issues.dlang.org/show_bug.cgi?id=17630 has been fixed
-import core.time;// : abs, convert, dur, Duration, hours, minutes;
-import std.datetime.systime;// : Clock, stdTimeToUnixTime, SysTime;
-import std.range.primitives;// : back, front, empty, popFront;
+import core.time : abs, convert, dur, Duration, hours, minutes;
+import std.datetime.systime : Clock, stdTimeToUnixTime, SysTime;
+import std.range.primitives : back, empty, front, isOutputRange, popFront;
 import std.traits : isIntegral, isSomeString, Unqual;
 
 version (Windows)
@@ -534,7 +532,7 @@ public:
       +/
     static immutable(LocalTime) opCall() @trusted pure nothrow
     {
-        alias FuncType = @safe pure nothrow immutable(LocalTime) function();
+        alias FuncType = immutable(LocalTime) function() @safe pure nothrow;
         return (cast(FuncType)&singleton)();
     }
 

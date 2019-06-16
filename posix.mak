@@ -112,6 +112,7 @@ OUTFILEFLAG = -o
 NODEFAULTLIB=-defaultlib= -debuglib=
 ifeq (,$(findstring win,$(OS)))
 	CFLAGS=$(MODEL_FLAG) -fPIC -DHAVE_UNISTD_H
+	NODEFAULTLIB += -L-lpthread -L-lm
 	ifeq ($(BUILD),debug)
 		CFLAGS += -g
 	else
@@ -138,7 +139,7 @@ endif
 
 # Set DFLAGS
 DFLAGS=
-override DFLAGS+=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -preview=dip25 $(MODEL_FLAG) $(PIC) -transition=complex
+override DFLAGS+=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -preview=dip1000 $(MODEL_FLAG) $(PIC) -transition=complex
 ifeq ($(BUILD),debug)
 override DFLAGS += -g -debug
 else
@@ -362,7 +363,7 @@ UT_D_OBJS:=$(addprefix $(ROOT)/unittest/,$(addsuffix $(DOTOBJ),$(D_MODULES)))
 $(UT_D_OBJS): $(ALL_D_FILES)
 $(UT_D_OBJS): $(ROOT)/unittest/%$(DOTOBJ): %.d
 	@mkdir -p $(dir $@)
-	$(DMD) $(DFLAGS) $(UDFLAGS) -preview=dip1000 -c -of$@ $<
+	$(DMD) $(DFLAGS) $(UDFLAGS) -c -of$@ $<
 
 ifneq (1,$(SHARED))
 
@@ -451,7 +452,8 @@ install2 : all
 	cp $(LIB) $(INSTALL_DIR)/$(OS)/$(lib_dir)/
 ifeq (1,$(SHARED))
 	cp -P $(LIBSO) $(INSTALL_DIR)/$(OS)/$(lib_dir)/
-	ln -sf $(notdir $(LIBSO)) $(INSTALL_DIR)/$(OS)/$(lib_dir)/libphobos2.so
+	cp -P $(ROOT)/$(SONAME) $(INSTALL_DIR)/$(OS)/$(lib_dir)/
+	cp -P $(ROOT)/libphobos2.so $(INSTALL_DIR)/$(OS)/$(lib_dir)/
 endif
 	mkdir -p $(INSTALL_DIR)/src/phobos/etc
 	mkdir -p $(INSTALL_DIR)/src/phobos/std
@@ -646,7 +648,7 @@ betterc: betterc-phobos-tests
 	@[ -f "$(TESTS_EXTRACTOR)" ] || ${MAKE} -f posix.mak "$(TESTS_EXTRACTOR)"
 	@$(TESTS_EXTRACTOR) --betterC --attributes betterC \
 		--inputdir  $< --outputdir $(BETTERCTESTS_DIR)
-	@$(DMD) $(DFLAGS) $(NODEFAULTLIB) -betterC $(UDFLAGS) -preview=dip1000 -run $(BETTERCTESTS_DIR)/$(subst /,_,$<)
+	@$(DMD) $(DFLAGS) $(NODEFAULTLIB) -betterC $(UDFLAGS) -run $(BETTERCTESTS_DIR)/$(subst /,_,$<)
 
 ################################################################################
 

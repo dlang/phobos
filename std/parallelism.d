@@ -443,7 +443,7 @@ struct Task(alias fun, Args...)
         {
             fun(myCastedTask._args);
         }
-        else static if (is(typeof(addressOf(fun(myCastedTask._args)))))
+        else static if (is(typeof(&(fun(myCastedTask._args)))))
         {
             myCastedTask.returnVal = addressOf(fun(myCastedTask._args));
         }
@@ -967,7 +967,16 @@ uint totalCPUsImpl() @nogc nothrow @trusted
     }
     else version (linux)
     {
+        import core.sys.linux.sched : CPU_COUNT, cpu_set_t, sched_getaffinity;
         import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
+
+        cpu_set_t set = void;
+        if (sched_getaffinity(0, cpu_set_t.sizeof, &set) == 0)
+        {
+            int count = CPU_COUNT(&set);
+            if (count > 0)
+                return cast(uint) count;
+        }
         return cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
     }
     else version (Solaris)

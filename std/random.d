@@ -1813,15 +1813,14 @@ A singleton instance of the default random number generator
  */
 @property ref Random rndGen() @safe nothrow @nogc
 {
-    import std.algorithm.iteration : map;
-    import std.range : repeat;
-
     static Random result;
     static bool initialized;
     if (!initialized)
     {
         static if (isSeedable!(Random, ulong))
             result.seed(unpredictableSeed!ulong); // Avoid unnecessary copy.
+        else static if (is(Random : MersenneTwisterEngine!Params, Params...))
+            initMTEngine(result);
         else static if (isSeedable!(Random, uint))
             result.seed(unpredictableSeed!uint); // Avoid unnecessary copy.
         else
@@ -1838,6 +1837,47 @@ A singleton instance of the default random number generator
     import std.range : take;
     auto rnd = rndGen;
     assert(rnd.take(3).sum > 0);
+}
+
+/+
+Initialize a 32-bit MersenneTwisterEngine from 64 bits of entropy.
+This is private and accepts no seed as a parameter, freeing the internal
+implementaton from any need for stability across releases.
++/
+private void initMTEngine(MTEngine)(scope ref MTEngine mt)
+if (is(MTEngine : MersenneTwisterEngine!Params, Params...))
+{
+    pragma(inline, false); // Called no more than once per thread by rndGen.
+    ulong seed = unpredictableSeed!ulong;
+    static if (is(typeof(mt.seed(seed))))
+    {
+        mt.seed(seed);
+    }
+    else
+    {
+        alias UIntType = typeof(mt.front());
+        if (seed == 0) seed = -1; // Any number but 0 is fine.
+        uint s0 = cast(uint) seed;
+        uint s1 = cast(uint) (seed >> 32);
+        foreach (ref e; mt.state.data)
+        {
+            //http://xoshiro.di.unimi.it/xoroshiro64starstar.c
+            const tmp = s0 * 0x9E3779BB;
+            e = ((tmp << 5) | (tmp >> (32 - 5))) * 5;
+            static if (MTEngine.max != UIntType.max) { e &= MTEngine.max; }
+
+            const tmp1 = s0 ^ s1;
+            s0 = ((s0 << 26) | (s0 >> (32 - 26))) ^ tmp1 ^ (tmp1 << 9);
+            s1 = (tmp1 << 13) | (tmp1 >> (32 - 13));
+        }
+
+        mt.state.index = mt.state.data.length - 1;
+        // double popFront() to guarantee both `mt.state.z`
+        // and `mt.state.front` are derived from the newly
+        // set values in `mt.state.data`.
+        mt.popFront();
+        mt.popFront();
+    }
 }
 
 /**

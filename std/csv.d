@@ -92,7 +92,7 @@
 module std.csv;
 
 import std.conv;
-import std.exception;  // basicExceptionCtors
+import std.exception : basicExceptionCtors;
 import std.range.primitives;
 import std.traits;
 
@@ -989,7 +989,7 @@ public:
      */
     @property auto front()
     {
-        assert(!empty);
+        assert(!empty, "Attempting to fetch the front of an empty CsvReader");
         static if (is(Contents == struct) || is(Contents == class))
         {
             return recordContent;
@@ -1224,7 +1224,7 @@ public:
      */
     @property Contents front() @safe pure
     {
-        assert(!empty);
+        assert(!empty, "Attempting to fetch the front of an empty CsvRecord");
         return curContentsoken;
     }
 
@@ -1425,7 +1425,8 @@ if (isSomeChar!Separator && isInputRange!Range
 
     while (!input.empty)
     {
-        assert(!(quoted && escQuote));
+        assert(!(quoted && escQuote),
+            "Invalid quotation state in csvNextToken");
         if (!quoted)
         {
             // When not quoted the token ends at sep

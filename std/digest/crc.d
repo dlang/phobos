@@ -203,15 +203,19 @@ if (N == 32 || N == 64)
                     enum hasLittleEndianUnalignedReads = true;
                 else
                     enum hasLittleEndianUnalignedReads = false; // leave decision to optimizer
-                static if (hasLittleEndianUnalignedReads)
+
+                uint one = void;
+                uint two = void;
+
+                if (!__ctfe && hasLittleEndianUnalignedReads)
                 {
-                    uint one = (cast(uint*) data.ptr)[0];
-                    uint two = (cast(uint*) data.ptr)[1];
+                    one = (cast(uint*) data.ptr)[0];
+                    two = (cast(uint*) data.ptr)[1];
                 }
                 else
                 {
-                    uint one = (data.ptr[3] << 24 | data.ptr[2] << 16 | data.ptr[1] << 8 | data.ptr[0]);
-                    uint two = (data.ptr[7] << 24 | data.ptr[6] << 16 | data.ptr[5] << 8 | data.ptr[4]);
+                    one = (data.ptr[3] << 24 | data.ptr[2] << 16 | data.ptr[1] << 8 | data.ptr[0]);
+                    two = (data.ptr[7] << 24 | data.ptr[6] << 16 | data.ptr[5] << 8 | data.ptr[4]);
                 }
 
                 static if (N == 32)
@@ -277,6 +281,22 @@ if (N == 32 || N == 64)
             //Complement, LSB first / Little Endian, see http://rosettacode.org/wiki/CRC-32
             return nativeToLittleEndian(~_state);
         }
+}
+
+@safe unittest
+{
+    // https://issues.dlang.org/show_bug.cgi?id=13471
+    static ubyte[4] foo(string str)
+    {
+        ubyte[4] result = str.crc32Of();
+        if (result == (ubyte[4]).init)
+            throw new Exception("this should not be thrown");
+        return result;
+    }
+    enum buggy1 = foo("Hello World!");
+    enum buggy2 = crc32Of("Hello World!");
+    assert(buggy1 == buggy2);
+    assert(buggy1 == "Hello World!".crc32Of());
 }
 
 ///

@@ -1,0 +1,10 @@
+Count processors via sched_getaffinity on Linux
+
+On GNU/Linux usable number of processors may be restricted if a process runs in containers.
+In case it's better to use sched_getaffinity(2).
+-------
+import std.parallelism;
+
+writeln(totalCPUs); // 4
+writeln(totalCPUs); // 1: runs on `taskset -c 0`
+-------

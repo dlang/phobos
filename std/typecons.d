@@ -69,7 +69,7 @@ Authors:   $(HTTP erdani.org, Andrei Alexandrescu),
 module std.typecons;
 
 import std.format : singleSpec, FormatSpec, formatValue;
-import std.meta; // : AliasSeq, allSatisfy;
+import std.meta : AliasSeq, allSatisfy;
 import std.range.primitives : isOutputRange;
 import std.traits;
 import std.internal.attributes : betterC;
@@ -949,6 +949,8 @@ if (distinctFieldNames!(Specs))
                 static assert(nN <= nT, "Cannot have more names than tuple members");
                 alias allNames = AliasSeq!(names, fieldNames[nN .. $]);
 
+                import std.meta : Alias, aliasSeqOf;
+
                 template GetItem(size_t idx)
                 {
                     import std.array : empty;
@@ -1021,6 +1023,7 @@ if (distinctFieldNames!(Specs))
         if (is(typeof(translate) : V[K], V, K) && isSomeString!V &&
                 (isSomeString!K || is(K : size_t)))
         {
+            import std.meta : aliasSeqOf;
             import std.range : ElementType;
             static if (isSomeString!(ElementType!(typeof(translate.keys))))
             {
@@ -3577,7 +3580,7 @@ Returns:
         }
         //Need to use 'is' if T is a float type
         //because NaN != NaN
-        else static if (isFloatingPoint!T)
+        else static if (__traits(isFloating, T) || __traits(compiles, { static assert(!(nullValue == nullValue)); }))
         {
             return _value is nullValue;
         }
@@ -3596,6 +3599,14 @@ Returns:
 
     ni = 0;
     assert(!ni.isNull);
+}
+
+@system unittest
+{
+    assert(typeof(this).init.isNull, typeof(this).stringof ~
+        ".isNull does not work correctly because " ~ T.stringof ~
+        " has an == operator that is non-reflexive and could not be" ~
+        " determined before runtime to be non-reflexive!");
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=11135
@@ -3770,6 +3781,25 @@ if (is (typeof(nullValue) == T))
     assert(a == 8);
     a.nullify();
     assert(a.isNull);
+}
+
+@nogc nothrow pure @safe unittest
+{
+    // issue 19226 - fully handle non-self-equal nullValue
+    static struct Fraction
+    {
+        int denominator;
+        bool isNaN() const
+        {
+            return denominator == 0;
+        }
+        bool opEquals(const Fraction rhs) const
+        {
+            return !isNaN && denominator == rhs.denominator;
+        }
+    }
+    alias N = Nullable!(Fraction, Fraction.init);
+    assert(N.init.isNull);
 }
 
 @safe unittest
@@ -4514,7 +4544,7 @@ $(UL
  $(LI Variadic arguments to constructors are not forwarded to super.)
  $(LI Deep interface inheritance causes compile error with messages like
       "Error: function std.typecons._AutoImplement!(Foo)._AutoImplement.bar
-      does not override any function".  [$(BUGZILLA 2525), $(BUGZILLA 3525)] )
+      does not override any function".  [$(BUGZILLA 2525)] )
  $(LI The `parent` keyword is actually a delegate to the super class'
       corresponding member function.  [$(BUGZILLA 2540)] )
  $(LI Using alias template parameter in `how` and/or `what` may cause
@@ -4940,6 +4970,7 @@ private static:
         }
     }
 
+    import std.meta : templateNot;
     alias Implementation = AutoImplement!(Issue17177, how, templateNot!isFinalFunction);
 }
 
@@ -4995,10 +5026,11 @@ package template OverloadSet(string nam, T...)
 /*
 Used by MemberFunctionGenerator.
  */
-package template FuncInfo(alias func, /+[BUG 4217 ?]+/ T = typeof(&func))
+package template FuncInfo(alias func)
+if (is(typeof(&func)))
 {
-    alias RT = ReturnType!T;
-    alias PT = Parameters!T;
+    alias RT = ReturnType!(typeof(&func));
+    alias PT = Parameters!(typeof(&func));
 }
 package template FuncInfo(Func)
 {
@@ -5454,6 +5486,7 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
         template OnlyVirtual(members...)
         {
             enum notFinal(alias T) = !__traits(isFinalFunction, T);
+            import std.meta : Filter;
             alias OnlyVirtual = Filter!(notFinal, members);
         }
 

@@ -96,8 +96,7 @@ $(TR $(TD Other) $(TD
 module std.path;
 
 
-// FIXME
-import std.file; //: getcwd;
+import std.file : getcwd;
 static import std.meta;
 import std.range.primitives;
 import std.traits;

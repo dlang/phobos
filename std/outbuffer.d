@@ -12,7 +12,7 @@ Serialize data to `ubyte` arrays.
  */
 module std.outbuffer;
 
-import core.stdc.stdarg; // : va_list;
+import core.stdc.stdarg;
 
 /*********************************************
  * OutBuffer provides a way to build up an array of bytes out
@@ -408,11 +408,17 @@ class OutBuffer
   {
     OutBuffer buf = new OutBuffer();
     "hello"w.copy(buf);
-    assert(buf.toBytes() == "h\x00e\x00l\x00l\x00o\x00");
+    version (LittleEndian)
+        assert(buf.toBytes() == "h\x00e\x00l\x00l\x00o\x00");
+    version (BigEndian)
+        assert(buf.toBytes() == "\x00h\x00e\x00l\x00l\x00o");
   }
   {
     OutBuffer buf = new OutBuffer();
     "hello"d.copy(buf);
-    assert(buf.toBytes() == "h\x00\x00\x00e\x00\x00\x00l\x00\x00\x00l\x00\x00\x00o\x00\x00\x00");
+    version (LittleEndian)
+        assert(buf.toBytes() == "h\x00\x00\x00e\x00\x00\x00l\x00\x00\x00l\x00\x00\x00o\x00\x00\x00");
+    version (BigEndian)
+        assert(buf.toBytes() == "\x00\x00\x00h\x00\x00\x00e\x00\x00\x00l\x00\x00\x00l\x00\x00\x00o");
   }
 }

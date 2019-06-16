@@ -233,9 +233,9 @@ public import std.range.interfaces;
 public import std.range.primitives;
 public import std.typecons : Flag, Yes, No;
 
-import std.meta; // allSatisfy, staticMap
-import std.traits; // CommonType, isCallable, isFloatingPoint, isIntegral,
-    // isPointer, isSomeFunction, isStaticArray, Unqual, isInstanceOf
+import std.meta : allSatisfy, staticMap;
+import std.traits : CommonType, isCallable, isFloatingPoint, isIntegral,
+    isPointer, isSomeFunction, isStaticArray, Unqual, isInstanceOf;
 
 
 /**
@@ -1274,8 +1274,8 @@ pure @safe nothrow unittest
     auto s3 = "string three".byCodeUnit;
     static assert(is(typeof(s3.front) == immutable char));
     auto r2 = s1.chain(s3);
-    // type is promoted
-    static assert(is(typeof(r2.front) == uint));
+    // chaining ranges of mixed character types gives `dchar`
+    static assert(is(typeof(r2.front) == dchar));
 
     // use byChar on character ranges to correctly convert them to UTF-8
     auto r3 = s1.byChar.chain(s3);
@@ -3674,6 +3674,7 @@ private struct Generator(Fun...)
 {
     static assert(Fun.length == 1);
     static assert(isInputRange!Generator);
+    import std.traits : FunctionAttribute, functionAttributes, ReturnType;
 
 private:
     static if (is(Fun[0]))
@@ -4650,6 +4651,7 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
 auto zip(Ranges...)(Ranges ranges)
 if (Ranges.length && allSatisfy!(isInputRange, Ranges))
 {
+    import std.meta : anySatisfy, templateOr;
     static if (allSatisfy!(isInfinite, Ranges) || Ranges.length == 1)
     {
         return ZipShortest!(Ranges)(ranges);
@@ -4831,6 +4833,7 @@ package struct ZipShortest(Flag!"allKnownSameLength" allKnownSameLength, Ranges.
 if (Ranges.length && allSatisfy!(isInputRange, Ranges))
 {
     import std.format : format; //for generic mixins
+    import std.meta : anySatisfy, templateOr;
     import std.typecons : Tuple;
 
     deprecated("Use of an undocumented alias R.")
@@ -6448,6 +6451,7 @@ pure @safe unittest
 
 pure nothrow @nogc @safe unittest
 {
+    import std.traits : Signed;
    //float overloads use std.conv.to so can't be @nogc or nothrow
     alias ssize_t = Signed!size_t;
     assert(iota(ssize_t.max, 0, -1).length == ssize_t.max);
@@ -9603,6 +9607,7 @@ public:
         }
     }
 
+    import std.meta : Filter,  templateNot;
     alias SliceableDummyRanges = Filter!(hasSlicing, AllDummyRanges);
 
     static foreach (Partial; [Yes.withPartial, No.withPartial])
@@ -12109,6 +12114,7 @@ if (isInputRange!R)
 private struct Bitwise(R)
 if (isInputRange!R && isIntegral!(ElementType!R))
 {
+    import std.traits : Unsigned;
 private:
     alias ElemType = ElementType!R;
     alias UnsignedElemType = Unsigned!ElemType;
@@ -12424,6 +12430,7 @@ if (isInputRange!R && isIntegral!(ElementType!R))
 // Test all range types over all integral types
 @safe pure nothrow unittest
 {
+    import std.meta : AliasSeq;
     import std.internal.test.dummyrange;
 
     alias IntegralTypes = AliasSeq!(byte, ubyte, short, ushort, int, uint,
@@ -12520,6 +12527,7 @@ if (isInputRange!R && isIntegral!(ElementType!R))
 // Test opIndex and opSlice
 @system unittest
 {
+    import std.meta : AliasSeq;
     alias IntegralTypes = AliasSeq!(byte, ubyte, short, ushort, int, uint,
             long, ulong);
     foreach (IntegralType; IntegralTypes)
