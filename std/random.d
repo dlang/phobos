@@ -232,12 +232,8 @@ version (unittest)
  */
 template isUniformRNG(Rng, ElementType)
 {
-    enum bool isUniformRNG = isInputRange!Rng &&
-        is(typeof(Rng.front) == ElementType) &&
-        is(typeof(
-        {
-            static assert(Rng.isUniformRandom); //tag
-        }));
+    enum bool isUniformRNG = .isUniformRNG!Rng &&
+        is(std.range.primitives.ElementType!Rng == ElementType);
 }
 
 /**
@@ -273,6 +269,19 @@ template isUniformRNG(Rng)
     }
     static assert(isUniformRNG!(validRng, uint));
     static assert(isUniformRNG!(validRng));
+}
+
+@safe unittest
+{
+    // Issue 19837: two-argument predicate should not require @property on `front`.
+    struct Rng
+    {
+        float front() {return 0;}
+        void popFront() {}
+        enum empty = false;
+        enum isUniformRandom = true;
+    }
+    static assert(isUniformRNG!(Rng, float));
 }
 
 /**
