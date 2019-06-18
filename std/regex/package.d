@@ -667,6 +667,11 @@ public:
     assert(c.empty);
 
     assert(!matchFirst("nothing", "something"));
+
+    // Captures that are not matched will be null.
+    c = matchFirst("ac", regex(`a(b)?c`));
+    assert(c);
+    assert(!c[1]);
 }
 
 @system unittest
