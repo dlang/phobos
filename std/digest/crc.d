@@ -135,13 +135,13 @@ alias CRC32 = CRC!(32, 0xEDB88320);
 
 /**
  * Template API CRC64-ECMA implementation.
- * See `std.digest.digest` for differences between template and OOP API.
+ * See `std.digest` for differences between template and OOP API.
  */
 alias CRC64ECMA = CRC!(64, 0xC96C5795D7870F42);
 
 /**
  * Template API CRC64-ISO implementation.
- * See `std.digest.digest` for differences between template and OOP API.
+ * See `std.digest` for differences between template and OOP API.
  */
 alias CRC64ISO = CRC!(64, 0xD800000000000000);
 
@@ -154,7 +154,7 @@ alias CRC64ISO = CRC!(64, 0xD800000000000000);
  * You may want to use the CRC32, CRC65ECMA and CRC64ISO aliases
  * for convenience.
  *
- * See `std.digest.digest` for differences between template and OOP API.
+ * See `std.digest` for differences between template and OOP API.
  */
 struct CRC(uint N, ulong P)
 if (N == 32 || N == 64)
@@ -555,7 +555,7 @@ ubyte[8] crc64ECMAOf(T...)(T data)
 }
 
 /**
- * This is a convenience alias for $(REF digest, std,digest,digest) using the
+ * This is a convenience alias for $(REF digest, std,digest) using the
  * CRC64-ISO implementation.
  *
  * Params:
@@ -609,18 +609,18 @@ alias CRC32Digest = WrapperDigest!CRC32;
 
 /**
  * OOP API CRC64-ECMA implementation.
- * See `std.digest.digest` for differences between template and OOP API.
+ * See `std.digest` for differences between template and OOP API.
  *
- * This is an alias for $(D $(REF WrapperDigest, std,digest,digest)!CRC64ECMA),
+ * This is an alias for $(D $(REF WrapperDigest, std,digest)!CRC64ECMA),
  * see there for more information.
  */
 alias CRC64ECMADigest = WrapperDigest!CRC64ECMA;
 
 /**
  * OOP API CRC64-ISO implementation.
- * See `std.digest.digest` for differences between template and OOP API.
+ * See `std.digest` for differences between template and OOP API.
  *
- * This is an alias for $(D $(REF WrapperDigest, std,digest,digest)!CRC64ISO),
+ * This is an alias for $(D $(REF WrapperDigest, std,digest)!CRC64ISO),
  * see there for more information.
  */
 alias CRC64ISODigest = WrapperDigest!CRC64ISO;

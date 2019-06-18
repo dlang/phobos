@@ -1,0 +1,3 @@
+Remove deprecated std.digest.digest
+
+std.digsest.digest was deprecated in 2.077 and scheduled to be removed in 2.084.
