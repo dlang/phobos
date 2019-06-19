@@ -5268,7 +5268,7 @@ ulong getAvailableDiskSpace(scope const(char)[] path) @safe
 
         version (FreeBSD)
         {
-            import core.sys.posix.sys.statvfs : statfs, statfs_t;
+            import core.sys.freebsd.sys.mount : statfs, statfs_t;
 
             statfs_t stats;
             auto err = () @trusted {
