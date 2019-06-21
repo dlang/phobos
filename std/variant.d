@@ -1236,10 +1236,7 @@ public:
 
 @safe unittest
 {
-    alias Var = VariantN!(24);
-
-    Var a;
-    assert(a.sizeof == 24 + (void*).sizeof);
+    assert(VariantN!(24).sizeof == 24 + (void*).sizeof);
 }
 
 /// Can also assign class values
