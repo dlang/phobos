@@ -179,8 +179,6 @@ private:
             apply, postblit, destruct }
 
     // state
-    ptrdiff_t function(OpID selector, ubyte[size]* store, void* data) fptr
-        = &handler!(void);
     union
     {
         align(maxVariantAlignment!(AllowedTypes)) ubyte[size] store;
@@ -188,6 +186,8 @@ private:
         static if (size >= (void*).sizeof)
             void*[size / (void*).sizeof] p;
     }
+    ptrdiff_t function(OpID selector, ubyte[size]* store, void* data) fptr
+        = &handler!(void);
 
     // internals
     // Handler for an uninitialized value
@@ -1232,6 +1232,14 @@ public:
     assert(a.length == 42);
     a[5] = 7;
     assert(a[5] == 7);
+}
+
+@safe unittest
+{
+    alias Var = VariantN!(24);
+
+    Var a;
+    assert(a.sizeof == 24 + (void*).sizeof);
 }
 
 /// Can also assign class values
