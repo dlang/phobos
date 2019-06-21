@@ -2467,7 +2467,7 @@ do
     Latin1String ls;
     // transcode from UTF-16 to ISO-8859-1
     transcode(ws, ls);
-    assert(ws == "hello world");
+    assert(ls == "hello world");
 }
 
 @system pure unittest
