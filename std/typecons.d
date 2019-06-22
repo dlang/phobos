@@ -8708,6 +8708,8 @@ public:
     assert(flags.A && !flags.B && !flags.C);
 }
 
+private enum false_(T) = false;
+
 // ReplaceType
 /**
 Replaces all occurrences of `From` into `To`, in one or more types `T`. For
@@ -8725,68 +8727,7 @@ placeholder type `This` in $(REF Algebraic, std,variant).
 Returns: `ReplaceType` aliases itself to the type(s) that result after
 replacement.
 */
-template ReplaceType(From, To, T...)
-{
-    static if (T.length == 1)
-    {
-        static if (is(T[0] == From))
-            alias ReplaceType = To;
-        else static if (is(T[0] == const(U), U))
-            alias ReplaceType = const(ReplaceType!(From, To, U));
-        else static if (is(T[0] == immutable(U), U))
-            alias ReplaceType = immutable(ReplaceType!(From, To, U));
-        else static if (is(T[0] == shared(U), U))
-            alias ReplaceType = shared(ReplaceType!(From, To, U));
-        else static if (is(T[0] == U*, U))
-        {
-            static if (is(U == function))
-                alias ReplaceType = replaceTypeInFunctionType!(From, To, T[0]);
-            else
-                alias ReplaceType = ReplaceType!(From, To, U)*;
-        }
-        else static if (is(T[0] == delegate))
-        {
-            alias ReplaceType = replaceTypeInFunctionType!(From, To, T[0]);
-        }
-        else static if (is(T[0] == function))
-        {
-            static assert(0, "Function types not supported," ~
-                " use a function pointer type instead of " ~ T[0].stringof);
-        }
-        else static if (is(T[0] : U!V, alias U, V...))
-        {
-            template replaceTemplateArgs(T...)
-            {
-                static if (is(typeof(T[0])))    // template argument is value or symbol
-                    enum replaceTemplateArgs = T[0];
-                else
-                    alias replaceTemplateArgs = ReplaceType!(From, To, T[0]);
-            }
-            alias ReplaceType = U!(staticMap!(replaceTemplateArgs, V));
-        }
-        else static if (is(T[0] == struct))
-            // don't match with alias this struct below (Issue 15168)
-            alias ReplaceType = T[0];
-        else static if (is(T[0] == U[], U))
-            alias ReplaceType = ReplaceType!(From, To, U)[];
-        else static if (is(T[0] == U[n], U, size_t n))
-            alias ReplaceType = ReplaceType!(From, To, U)[n];
-        else static if (is(T[0] == U[V], U, V))
-            alias ReplaceType =
-                ReplaceType!(From, To, U)[ReplaceType!(From, To, V)];
-        else
-            alias ReplaceType = T[0];
-    }
-    else static if (T.length > 1)
-    {
-        alias ReplaceType = AliasSeq!(ReplaceType!(From, To, T[0]),
-            ReplaceType!(From, To, T[1 .. $]));
-    }
-    else
-    {
-        alias ReplaceType = AliasSeq!();
-    }
-}
+alias ReplaceType(From, To, T...) = ReplaceTypeUnless!(false_, From, To, T);
 
 ///
 @safe unittest
@@ -8800,10 +8741,94 @@ template ReplaceType(From, To, T...)
     );
 }
 
-private template replaceTypeInFunctionType(From, To, fun)
+/**
+Like $(LREF ReplaceType), but does not perform replacement in types for which
+`pred` evaluates to `true`.
+*/
+template ReplaceTypeUnless(alias pred, From, To, T...)
 {
-    alias RX = ReplaceType!(From, To, ReturnType!fun);
-    alias PX = AliasSeq!(ReplaceType!(From, To, Parameters!fun));
+    import std.meta;
+
+    static if (T.length == 1)
+    {
+        static if (pred!(T[0]))
+            alias ReplaceTypeUnless = T[0];
+        else static if (is(T[0] == From))
+            alias ReplaceTypeUnless = To;
+        else static if (is(T[0] == const(U), U))
+            alias ReplaceTypeUnless = const(ReplaceTypeUnless!(pred, From, To, U));
+        else static if (is(T[0] == immutable(U), U))
+            alias ReplaceTypeUnless = immutable(ReplaceTypeUnless!(pred, From, To, U));
+        else static if (is(T[0] == shared(U), U))
+            alias ReplaceTypeUnless = shared(ReplaceTypeUnless!(pred, From, To, U));
+        else static if (is(T[0] == U*, U))
+        {
+            static if (is(U == function))
+                alias ReplaceTypeUnless = replaceTypeInFunctionTypeUnless!(pred, From, To, T[0]);
+            else
+                alias ReplaceTypeUnless = ReplaceTypeUnless!(pred, From, To, U)*;
+        }
+        else static if (is(T[0] == delegate))
+        {
+            alias ReplaceTypeUnless = replaceTypeInFunctionTypeUnless!(pred, From, To, T[0]);
+        }
+        else static if (is(T[0] == function))
+        {
+            static assert(0, "Function types not supported," ~
+                " use a function pointer type instead of " ~ T[0].stringof);
+        }
+        else static if (is(T[0] : U!V, alias U, V...))
+        {
+            template replaceTemplateArgs(T...)
+            {
+                static if (is(typeof(T[0])))    // template argument is value or symbol
+                    enum replaceTemplateArgs = T[0];
+                else
+                    alias replaceTemplateArgs = ReplaceTypeUnless!(pred, From, To, T[0]);
+            }
+            alias ReplaceTypeUnless = U!(staticMap!(replaceTemplateArgs, V));
+        }
+        else static if (is(T[0] == struct))
+            // don't match with alias this struct below (Issue 15168)
+            alias ReplaceTypeUnless = T[0];
+        else static if (is(T[0] == U[], U))
+            alias ReplaceTypeUnless = ReplaceTypeUnless!(pred, From, To, U)[];
+        else static if (is(T[0] == U[n], U, size_t n))
+            alias ReplaceTypeUnless = ReplaceTypeUnless!(pred, From, To, U)[n];
+        else static if (is(T[0] == U[V], U, V))
+            alias ReplaceTypeUnless =
+                ReplaceTypeUnless!(pred, From, To, U)[ReplaceTypeUnless!(pred, From, To, V)];
+        else
+            alias ReplaceTypeUnless = T[0];
+    }
+    else static if (T.length > 1)
+    {
+        alias ReplaceTypeUnless = AliasSeq!(ReplaceTypeUnless!(pred, From, To, T[0]),
+            ReplaceTypeUnless!(pred, From, To, T[1 .. $]));
+    }
+    else
+    {
+        alias ReplaceTypeUnless = AliasSeq!();
+    }
+}
+
+///
+@safe unittest
+{
+    import std.traits : isArray;
+
+    static assert(
+        is(ReplaceTypeUnless!(isArray, int, string, int*) == string*) &&
+        is(ReplaceTypeUnless!(isArray, int, string, int[]) == int[]) &&
+        is(ReplaceTypeUnless!(isArray, int, string, Tuple!(int, int[]))
+            == Tuple!(string, int[]))
+   );
+}
+
+private template replaceTypeInFunctionTypeUnless(alias pred, From, To, fun)
+{
+    alias RX = ReplaceTypeUnless!(pred, From, To, ReturnType!fun);
+    alias PX = AliasSeq!(ReplaceTypeUnless!(pred, From, To, Parameters!fun));
     // Wrapping with AliasSeq is neccesary because ReplaceType doesn't return
     // tuple if Parameters!fun.length == 1
 
@@ -8879,9 +8904,8 @@ private template replaceTypeInFunctionType(From, To, fun)
 
         return result;
     }
-    //pragma(msg, "gen ==> ", gen());
 
-    mixin("alias replaceTypeInFunctionType = " ~ gen() ~ ";");
+    mixin("alias replaceTypeInFunctionTypeUnless = " ~ gen() ~ ";");
 }
 
 @safe unittest
