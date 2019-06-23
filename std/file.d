@@ -5264,7 +5264,7 @@ ulong getAvailableDiskSpace(scope const(char)[] path) @safe
     }
     else version (Posix)
     {
-        import std.string : toStringz;
+        import std.internal.cstring : tempCString;
 
         version (FreeBSD)
         {
@@ -5272,7 +5272,7 @@ ulong getAvailableDiskSpace(scope const(char)[] path) @safe
 
             statfs_t stats;
             auto err = () @trusted {
-                return statfs(path.toStringz(), &stats);
+                return statfs(path.tempCString(), &stats);
             } ();
             cenforce(err == 0, "Cannot get available disk space");
 
@@ -5284,7 +5284,7 @@ ulong getAvailableDiskSpace(scope const(char)[] path) @safe
 
             statvfs_t stats;
             auto err = () @trusted {
-                return statvfs(path.toStringz(), &stats);
+                return statvfs(path.tempCString(), &stats);
             } ();
             cenforce(err == 0, "Cannot get available disk space");
 
