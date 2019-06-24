@@ -78,7 +78,7 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 module std.algorithm.mutation;
 
 import std.range.primitives;
-import std.traits : isArray, isAssignable, isBlitAssignable, isNarrowString,
+import std.traits : isArray, isStaticArray, isAssignable, isBlitAssignable, isNarrowString,
        Unqual, isSomeChar, isMutable;
 import std.meta : allSatisfy;
 import std.typecons : tuple, Tuple;
@@ -365,7 +365,7 @@ Returns:
     The unfilled part of target
  */
 TargetRange copy(SourceRange, TargetRange)(SourceRange source, TargetRange target)
-if (isInputRange!SourceRange && isOutputRange!(TargetRange, ElementType!SourceRange))
+if ((isInputRange!SourceRange || isStaticArray!SourceRange) && isOutputRange!(TargetRange, ElementType!SourceRange))
 {
     static if (areCopyCompatibleArrays!(SourceRange, TargetRange))
     {
@@ -550,6 +550,18 @@ $(LINK2 http://en.cppreference.com/w/cpp/algorithm/copy_backward, STL's `copy_ba
     R r;
     copy(r, NullSink());
     assert(line == 1);
+}
+
+// issue 19835
+@safe unittest
+{
+    ubyte[2] a = [ 1, 5 ];
+    ubyte[] buf;
+    buf.length = 10;
+
+    auto rem = a.copy(buf);
+    assert(buf == [1, 5, 0, 0, 0, 0, 0, 0, 0, 0]);
+    assert(rem == [0, 0, 0, 0, 0, 0, 0, 0]);
 }
 
 /**
