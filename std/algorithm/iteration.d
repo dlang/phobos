@@ -1989,7 +1989,7 @@ if (isForwardRange!Range)
 
             start = origin.current.save;
             current = origin.current.save;
-            assert(!start.empty);
+            assert(!start.empty, "Passed range 'r' must not be empty");
 
             mothership = origin;
 
@@ -2073,7 +2073,8 @@ if (isForwardRange!Range)
         return typeof(this)(impl.current.save);
     }
 
-    static assert(isForwardRange!(typeof(this)));
+    static assert(isForwardRange!(typeof(this)), typeof(this).stringof
+            ~ " must be a forward range");
 }
 
 @system unittest
@@ -2755,7 +2756,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
             else
             {
                 _currentSep.reset;
-                assert(!_currentSep.empty);
+                assert(!_currentSep.empty, "seperator must not be empty");
             }
         }
 
@@ -4667,7 +4668,8 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
             {
                 front;
             }
-            assert(_frontLength <= _input.length);
+            assert(_frontLength <= _input.length, "The front position must"
+                    ~ " not exceed the input.length");
             if (_frontLength == _input.length)
             {
                 // no more input and need to fetch => done
@@ -4721,7 +4723,8 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
                     // evaluate back to make sure it's computed
                     back;
                 }
-                assert(_backLength <= _input.length);
+                assert(_backLength <= _input.length, "The end index must not"
+                        ~ " exceed the length of the input");
                 if (_backLength == _input.length)
                 {
                     // no more input and need to fetch => done
@@ -4978,7 +4981,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
         void ensureFrontLength()
         {
             if (_frontLength != _frontLength.max) return;
-            assert(!_input.empty);
+            assert(!_input.empty, "The input must not be empty");
             // compute front length
             _frontLength = (_separator.empty) ? 1 :
                            _input.length - find!pred(_input, _separator).length;
@@ -5465,7 +5468,8 @@ if (isSomeString!Range ||
                 }
 
                 // sanity check
-                assert(iLength <= _s.length);
+                assert(iLength <= _s.length, "The current index must not"
+                        ~ " exceed the length of the input");
 
                 _frontLength = _s.length - iLength;
             }
@@ -6533,7 +6537,7 @@ private auto sumPairwiseN(size_t N, bool needEmptyChecks, F, R)(ref R r)
 if (isForwardRange!R && !isRandomAccessRange!R)
 {
     import std.math : isPowerOf2;
-    static assert(isPowerOf2(N));
+    static assert(isPowerOf2(N), "N must be a power of 2");
     static if (N == 2) return sumPair!(needEmptyChecks, F)(r);
     else return sumPairwiseN!(N/2, needEmptyChecks, F)(r)
         + sumPairwiseN!(N/2, needEmptyChecks, F)(r);
@@ -6542,7 +6546,9 @@ if (isForwardRange!R && !isRandomAccessRange!R)
 // Kahan algo http://en.wikipedia.org/wiki/Kahan_summation_algorithm
 private auto sumKahan(Result, R)(Result result, R r)
 {
-    static assert(isFloatingPoint!Result && isMutable!Result);
+    static assert(isFloatingPoint!Result && isMutable!Result, "The type of"
+            ~ " Result must be a mutable floating point, not "
+            ~ Result.stringof);
     Result c = 0;
     for (; !r.empty; r.popFront())
     {
