@@ -848,7 +848,7 @@ if (isForwardRange!R
     }
 
     //Because of @@@8804@@@: Avoids both "unreachable code" or "no return statement"
-    static if (isInfinite!R) assert(false, R.stringof ~ "must not be an"
+    static if (isInfinite!R) assert(false, R.stringof ~ " must not be an"
             ~ " infinite range");
     else return -1;
 }
