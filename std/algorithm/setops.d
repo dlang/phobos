@@ -415,7 +415,8 @@ if (ranges.length >= 2 &&
             return copy;
         }
     }
-    static assert(isForwardRange!Result);
+    static assert(isForwardRange!Result, Result.stringof ~ " must be a forward"
+            ~ " range");
 
     return Result(ranges);
 }
@@ -884,7 +885,8 @@ struct MultiwayMerge(alias less, RangeOfRanges)
             return;
         }
         // Put the popped range back in the heap
-        _heap.conditionalInsert(_ror.back) || assert(false);
+        const bool worked = _heap.conditionalInsert(_ror.back);
+        assert(worked, "Failed to insert item into heap");
     }
 }
 
@@ -1060,7 +1062,7 @@ public:
     ///
     @property auto ref front()
     {
-        assert(!empty);
+        assert(!empty, "Can not get front of empty SetDifference");
         return r1.front;
     }
 
@@ -1192,11 +1194,12 @@ public:
     ///
     void popFront()
     {
-        assert(!empty);
+        assert(!empty, "Can not popFront of empty SetIntersection");
         static if (Rs.length > 1) foreach (i, ref r; _input)
         {
             alias next = _input[(i + 1) % Rs.length];
-            assert(!comp(r.front, next.front));
+            assert(!comp(r.front, next.front), "Set elements must not"
+                    ~ " contradict the less predicate");
         }
 
         foreach (ref r; _input)
@@ -1209,7 +1212,7 @@ public:
     ///
     @property ElementType front()
     {
-        assert(!empty);
+        assert(!empty, "Can not get front of empty SetIntersection");
         return _input[0].front;
     }
 
@@ -1349,7 +1352,7 @@ public:
     ///
     void popFront()
     {
-        assert(!empty);
+        assert(!empty, "Can not popFront of empty SetSymmetricDifference");
         if (r1.empty) r2.popFront();
         else if (r2.empty) r1.popFront();
         else
@@ -1361,7 +1364,8 @@ public:
             }
             else
             {
-                assert(comp(r2.front, r1.front));
+                assert(comp(r2.front, r1.front), "Elements of R1 and R2"
+                        ~ " must be different");
                 r2.popFront();
             }
         }
@@ -1371,9 +1375,11 @@ public:
     ///
     @property auto ref front()
     {
-        assert(!empty);
+        assert(!empty, "Can not get the front of an empty"
+                ~ " SetSymmetricDifference");
         immutable chooseR1 = r2.empty || !r1.empty && comp(r1.front, r2.front);
-        assert(chooseR1 || r1.empty || comp(r2.front, r1.front));
+        assert(chooseR1 || r1.empty || comp(r2.front, r1.front), "Failed to"
+                ~ " get appropriate front");
         return chooseR1 ? r1.front : r2.front;
     }
 
