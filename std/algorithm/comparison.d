@@ -1218,7 +1218,8 @@ private:
         import core.checkedint : mulu;
         bool overflow;
         const rc = mulu(r, c, overflow);
-        if (overflow) assert(0);
+        assert(!overflow, "Overflow during multiplication to determine number "
+                ~ " of matrix elements");
         rows = r;
         cols = c;
         if (_matrix.length < rc)
@@ -1226,7 +1227,8 @@ private:
             import core.exception : onOutOfMemoryError;
             import core.stdc.stdlib : realloc;
             const nbytes = mulu(rc, _matrix[0].sizeof, overflow);
-            if (overflow) assert(0);
+            assert(!overflow, "Overflow during multiplication to determine "
+                ~ " number of bytes of matrix");
             auto m = cast(CostType *) realloc(_matrix.ptr, nbytes);
             if (!m)
                 onOutOfMemoryError();
