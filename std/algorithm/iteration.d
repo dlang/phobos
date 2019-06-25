@@ -1358,11 +1358,11 @@ private struct FilterResult(alias pred, Range)
 
     void popFront()
     {
+        prime;
         do
         {
             _input.popFront();
         } while (!_input.empty && !pred(_input.front));
-        _primed = true;
     }
 
     @property auto ref front()
@@ -1478,6 +1478,23 @@ private struct FilterResult(alias pred, Range)
     int underX(int a) { return a < x; }
     const(int)[] list = [ 1, 2, 10, 11, 3, 4 ];
     assert(equal(filter!underX(list), [ 1, 2, 3, 4 ]));
+}
+
+// issue 19823
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : dropOne;
+
+    auto a = [1, 2, 3, 4];
+    assert(a.filter!(a => a != 1).dropOne.equal([3, 4]));
+    assert(a.filter!(a => a != 2).dropOne.equal([3, 4]));
+    assert(a.filter!(a => a != 3).dropOne.equal([2, 4]));
+    assert(a.filter!(a => a != 4).dropOne.equal([2, 3]));
+    assert(a.filter!(a => a == 1).dropOne.empty);
+    assert(a.filter!(a => a == 2).dropOne.empty);
+    assert(a.filter!(a => a == 3).dropOne.empty);
+    assert(a.filter!(a => a == 4).dropOne.empty);
 }
 
 /**
