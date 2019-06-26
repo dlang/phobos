@@ -529,7 +529,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     union
     {
         private ubyte[size] _store = void;
-        private double _forAlignmentOnly1 = void;
+        private double _forAlignmentOnly1;
     }
     // }
 
