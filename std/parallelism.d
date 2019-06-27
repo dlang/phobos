@@ -480,7 +480,7 @@ struct Task(alias fun, Args...)
         static if (isFunctionPointer!(_args[0]))
         {
             private enum bool isPure =
-            functionAttributes!(Args[0]) & FunctionAttribute.pure_;
+            (functionAttributes!(Args[0]) & FunctionAttribute.pure_) != 0;
         }
         else
         {
