@@ -325,7 +325,7 @@ shared static ~this() @system nothrow @nogc
 /**
  * The communication domain used to resolve an address.
  */
-enum AddressFamily: int
+enum AddressFamily: ushort
 {
     UNSPEC =     AF_UNSPEC,     /// Unspecified address family
     UNIX =       AF_UNIX,       /// Local communication
