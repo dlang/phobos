@@ -975,8 +975,13 @@ object with `save` and using it later.
 See_Also:
     The header of $(MREF std,range) for tutorials on ranges.
  */
-enum bool isForwardRange(R) = isInputRange!R
-    && is(ReturnType!((R r) => r.save) == R);
+template isForwardRange(R)
+{
+    static if (isInputRange!R && is(typeof((R r) => r.save) RT))
+        enum bool isForwardRange = is(R : ReturnType!RT);
+    else
+        enum bool isForwardRange = false;
+}
 
 ///
 @safe unittest
@@ -998,6 +1003,27 @@ enum bool isForwardRange(R) = isInputRange!R
     }
 
     static assert( isForwardRange!R14544 );
+}
+
+/// issue 20009
+@safe unittest
+{
+    struct FR
+    {
+        bool empty = true;
+        void popFront() {}
+        auto front() { return 0; }
+        FR save() { return this; }
+    }
+
+    struct S
+    {
+        FR range;
+        alias range this;
+    }
+
+    assert(isInputRange!S);
+    assert(isForwardRange!S);
 }
 
 /**
