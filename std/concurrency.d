@@ -1377,7 +1377,7 @@ private:
                  !notified && !period.isNegative;
                  period = limit - MonoTime.currTime)
             {
-                yield();
+                this.outer.yield();
             }
             return notified;
         }
@@ -1399,7 +1399,7 @@ private:
         {
             mutex_nothrow.unlock_nothrow();
             scope (exit) mutex_nothrow.lock_nothrow();
-            yield();
+            this.outer.yield();
         }
 
         private bool notified;
