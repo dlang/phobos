@@ -1,7 +1,0 @@
-Phobos is now compiled with -preview=dip1000
-
-Phobos and Druntime are now compiled with -preview=dip1000.
-
-This is a major milestone in the transition to $(LINK2 https://github.com/dlang/DIPs/blob/master/DIPs/other/DIP1000.md, DIP1000). Hence, end users can now start using `-preview=dip1000` in their own code bases.
-
-As always, any encountered issue should be reported to the $(LINK2 https://issues.dlang.org, issue tracker).
