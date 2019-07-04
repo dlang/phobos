@@ -1816,7 +1816,8 @@ public:
     /***************************************
      * Support for unary operator ~ for `BitArray`.
      */
-    BitArray opCom() const pure nothrow
+    BitArray opUnary(string op)() const pure nothrow
+        if (op == "~")
     {
         auto dim = this.dim;
 
