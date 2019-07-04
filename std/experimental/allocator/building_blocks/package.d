@@ -235,8 +235,8 @@ $(TR $(TDC2 BitmappedBlock, bitmapped_block) $(TD Organizes one contiguous chunk
 equal-size blocks and tracks allocation status at the cost of one bit per
 block.))
 
-$(TR $(TDC2 FallbackAllocator, fallback_allocator) $(TD Allocator that combines two other allocators
- - primary and fallback. Allocation requests are first tried with primary, and
+$(TR $(TDC2 FallbackAllocator, fallback_allocator) $(TD Allocator that combines two other
+ allocators - primary and fallback. Allocation requests are first tried with primary, and
  upon failure are passed to the fallback. Useful for small and fast allocators
  fronting general-purpose ones.))
 

@@ -8461,11 +8461,11 @@ public:
 
 
 /***********************************
- * Evaluate polynomial A(x) = $(SUB a, 0) + $(SUB a, 1)x + $(SUB a, 2)$(POWER x,2)
- *                          + $(SUB a,3)$(POWER x,3); ...
+ * Evaluate polynomial A(x) = $(SUB a, 0) + $(SUB a, 1)x + $(SUB a, 2)$(POWER x,2) +
+ *                          $(SUB a,3)$(POWER x,3); ...
  *
- * Uses Horner's rule A(x) = $(SUB a, 0) + x($(SUB a, 1) + x($(SUB a, 2)
- *                         + x($(SUB a, 3) + ...)))
+ * Uses Horner's rule A(x) = $(SUB a, 0) + x($(SUB a, 1) + x($(SUB a, 2) +
+ *                         x($(SUB a, 3) + ...)))
  * Params:
  *      x =     the value to evaluate.
  *      A =     array of coefficients $(SUB a, 0), $(SUB a, 1), etc.

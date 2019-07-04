@@ -8714,8 +8714,8 @@ public:
 // ReplaceType
 /**
 Replaces all occurrences of `From` into `To`, in one or more types `T`. For
-example, $(D ReplaceType!(int, uint, Tuple!(int, float)[string])) yields
-$(D Tuple!(uint, float)[string]). The types in which replacement is performed
+example, `ReplaceType!(int, uint, Tuple!(int, float)[string])` yields
+`Tuple!(uint, float)[string]`. The types in which replacement is performed
 may be arbitrarily complex, including qualifiers, built-in type constructors
 (pointers, arrays, associative arrays, functions, and delegates), and template
 instantiations; replacement proceeds transitively through the type definition.

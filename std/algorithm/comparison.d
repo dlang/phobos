@@ -1751,8 +1751,8 @@ expression.
 
 `choices` needs to be composed of pairs of test expressions and return
 expressions. Each test-expression is compared with `switchExpression` using
-`pred`(`switchExpression` is the first argument) and if that yields true
-- the return expression is returned.
+`pred`(`switchExpression` is the first argument) and if that yields true -
+the return expression is returned.
 
 Both the test and the return expressions are lazily evaluated.
 
