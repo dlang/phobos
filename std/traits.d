@@ -8353,6 +8353,7 @@ Note:
     nested structs or unions.
  */
 template getSymbolsByUDA(alias symbol, alias attribute)
+if (isAggregateType!symbol)
 {
     alias membersWithUDA = getSymbolsByUDAImpl!(symbol, attribute, __traits(allMembers, symbol));
 
@@ -8477,6 +8478,15 @@ template getSymbolsByUDA(alias symbol, alias attribute)
 
     static assert(getSymbolsByUDA!(A, attr1).length == 2);
     static assert(getSymbolsByUDA!(A, attr2).length == 1);
+}
+
+// Issue 19105
+@safe unittest
+{
+    struct A(Args...) {}
+    struct B {}
+    // modules cannot be passed as the first argument of getSymbolsByUDA
+    static assert(!__traits(compiles, A!( getSymbolsByUDA!(traits, B))));
 }
 
 // #15335: getSymbolsByUDA fails if type has private members
