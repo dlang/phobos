@@ -277,10 +277,11 @@ public:
             else if ((y > 0) == (op=="<<"))
             {
                 // Sign never changes during left shift
-                data = data.opShl(u);
-            } else
+                data = data.opBinary!(op)(u);
+            }
+            else
             {
-                data = data.opShr(u);
+                data = data.opBinary!(op)(u);
                 if (data.isZero())
                     sign = false;
             }

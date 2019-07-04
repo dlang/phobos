@@ -1069,14 +1069,16 @@ public:
         is(typeof(opLogic!(T, op)(lhs))))
     { return opLogic!(T, op)(lhs); }
     ///ditto
-    VariantN opCat(T)(T rhs)
+    VariantN opBinary(string op, T)(T rhs)
+        if (op == "~")
     {
         auto temp = this;
         temp ~= rhs;
         return temp;
     }
     // ///ditto
-    // VariantN opCat_r(T)(T rhs)
+    // VariantN opBinaryRight(string op, T)(T rhs)
+    //     if (op == "~")
     // {
     //     VariantN temp = rhs;
     //     temp ~= this;
