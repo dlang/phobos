@@ -344,9 +344,18 @@ struct NamedGroup
 //holds pair of start-end markers for a submatch
 struct Group(DataIndex)
 {
-    DataIndex begin, end;
+    DataIndex begin = DataIndex.max;
+    DataIndex end   = DataIndex.min;
+
+    bool opCast(T : bool)() const
+    {
+        return begin <= end;
+    }
+
     @trusted string toString()() const
     {
+        if (begin < end)
+            return "(unmatched)";
         import std.array : appender;
         import std.format : formattedWrite;
         auto a = appender!string();
@@ -971,7 +980,7 @@ if (!hasElaborateDestructor!T)
         return hashOf(internalSlice[]);
     }
 
-    T opIndex(size_t idx) inout
+    ref inout(T) opIndex(size_t idx) inout
     {
         return internalSlice[idx];
     }

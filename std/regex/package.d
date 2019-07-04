@@ -526,6 +526,12 @@ private:
         _f = 0;
     }
 
+    inout(R) getMatch(size_t index) inout
+    {
+        auto m = &matches[index];
+        return *m ? _input[m.begin .. m.end] : null;
+    }
+
 public:
     ///Slice of input prior to the match.
     @property R pre()
@@ -550,14 +556,14 @@ public:
     @property R front()
     {
         assert(_nMatch, "attempted to get front of an empty match");
-        return _input[matches[_f].begin .. matches[_f].end];
+        return getMatch(_f);
     }
 
     ///ditto
     @property R back()
     {
         assert(_nMatch, "attempted to get back of an empty match");
-        return _input[matches[_b - 1].begin .. matches[_b - 1].end];
+        return getMatch(_b - 1);
     }
 
     ///ditto
@@ -581,9 +587,7 @@ public:
     inout(R) opIndex()(size_t i) inout
     {
         assert(_f + i < _b,text("requested submatch number ", i," is out of range"));
-        assert(matches[_f + i].begin <= matches[_f + i].end,
-            text("wrong match: ", matches[_f + i].begin, "..", matches[_f + i].end));
-        return _input[matches[_f + i].begin .. matches[_f + i].end];
+        return getMatch(_f + i);
     }
 
     /++
@@ -633,7 +637,7 @@ public:
         if (isSomeString!String)
     {
         size_t index = lookupNamedGroup(_names, i);
-        return _input[matches[index].begin .. matches[index].end];
+        return getMatch(index);
     }
 
     ///Number of matches in this object.
@@ -663,6 +667,11 @@ public:
     assert(c.empty);
 
     assert(!matchFirst("nothing", "something"));
+
+    // Captures that are not matched will be null.
+    c = matchFirst("ac", regex(`a(b)?c`));
+    assert(c);
+    assert(!c[1]);
 }
 
 @system unittest
@@ -671,6 +680,15 @@ public:
     string s = "abc";
     assert(cast(bool)(c = matchFirst(s, regex("d")))
         || cast(bool)(c = matchFirst(s, regex("a"))));
+}
+
+@system unittest // Issue 19979
+{
+    auto c = matchFirst("bad", regex(`(^)(not )?bad($)`));
+    assert(c[0] && c[0].length == "bad".length);
+    assert(c[1] && !c[1].length);
+    assert(!c[2]);
+    assert(c[3] && !c[3].length);
 }
 
 /++
