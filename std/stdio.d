@@ -2131,6 +2131,7 @@ Allows to directly use range operations on lines of a file.
             Char[] buffer;
             Terminator terminator;
             KeepTerminator keepTerminator;
+            bool haveLine;
 
         public:
             this(File f, KeepTerminator kt, Terminator terminator)
@@ -2138,22 +2139,32 @@ Allows to directly use range operations on lines of a file.
                 file = f;
                 this.terminator = terminator;
                 keepTerminator = kt;
-                popFront();
             }
 
             // Range primitive implementations.
             @property bool empty()
             {
+                needLine();
                 return line is null;
             }
 
             @property Char[] front()
             {
+                needLine();
                 return line;
             }
 
             void popFront()
             {
+                needLine();
+                haveLine = false;
+            }
+
+        private:
+            void needLine()
+            {
+                if (haveLine)
+                    return;
                 import std.algorithm.searching : endsWith;
                 assert(file.isOpen);
                 line = buffer;
@@ -2182,6 +2193,7 @@ Allows to directly use range operations on lines of a file.
                         static assert(false);
                     line = line[0 .. line.length - tlen];
                 }
+                haveLine = true;
             }
         }
     }
@@ -2285,6 +2297,18 @@ the contents may well have changed).
             // check front is cached
             assert(blc.front is blc.front);
         }}
+    }
+
+    @system unittest // Issue 19980
+    {
+        static import std.file;
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "Line 1\nLine 2\nLine 3\n");
+
+        auto f = File(deleteme);
+        f.byLine();
+        f.byLine();
+        assert(f.byLine().front == "Line 1");
     }
 
     private struct ByLineCopy(Char, Terminator)
