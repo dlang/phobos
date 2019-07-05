@@ -4218,11 +4218,19 @@ private void copyImpl(scope const(char)[] f, scope const(char)[] t,
         {
             import core.stdc.wchar_ : wcslen;
             import std.conv : to;
+            import std.format : format;
 
+            /++
+            Reference resources: https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-copyfilew
+            Because OS copyfilew handles both source and destination paths,
+            the GetLastError does not accurately locate whether the error is for the source or destination.
+            +/
+            if (!f)
+                f = to!(typeof(f))(fromz[0 .. wcslen(fromz)]);
             if (!t)
                 t = to!(typeof(t))(toz[0 .. wcslen(toz)]);
 
-            throw new FileException(t);
+            throw new FileException(format!"Copy from %s to %s"(f, t));
         }
     }
     else version (Posix)
@@ -4330,6 +4338,19 @@ private void copyImpl(scope const(char)[] f, scope const(char)[] t,
     scope(exit) t.remove();
     assertThrown!FileException(copy(t, t));
     assert(readText(t) == "a");
+}
+
+// issue 19834
+version (Windows) @safe unittest
+{
+    import std.exception : collectException;
+    import std.algorithm.searching : startsWith;
+    import std.format : format;
+
+    auto f = deleteme;
+    auto t = f ~ "2";
+    auto ex = collectException(copy(f, t));
+    assert(ex.msg.startsWith(format!"Copy from %s to %s"(f, t)));
 }
 
 /++
