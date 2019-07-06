@@ -2133,7 +2133,7 @@ bool expandArray(T, Allocator)(auto ref Allocator alloc, ref T[] array,
     if (array is null) return false;
     immutable oldLength = array.length;
     void[] buf = array;
-    if (!alloc.reallocate(buf, buf.length + T.sizeof * delta)) return false;
+    if (!implExpandArray(alloc, buf, T.sizeof * delta)) return false;
     array = cast(T[]) buf;
     array[oldLength .. $].uninitializedFillDefault;
     return true;
@@ -2159,7 +2159,7 @@ bool expandArray(T, Allocator)(auto ref Allocator alloc, ref T[] array,
     if (!delta) return true;
     if (array is null) return false;
     void[] buf = array;
-    if (!alloc.reallocate(buf, buf.length + T.sizeof * delta)) return false;
+    if (!implExpandArray(alloc, buf, T.sizeof * delta)) return false;
     immutable oldLength = array.length;
     array = cast(T[]) buf;
     scope(failure) array[oldLength .. $].uninitializedFillDefault;
@@ -2195,7 +2195,7 @@ if (isInputRange!R)
 
         // Reallocate support memory
         void[] buf = array;
-        if (!alloc.reallocate(buf, buf.length + T.sizeof * delta))
+        if (!implExpandArray(alloc, buf, T.sizeof * delta))
         {
             return false;
         }
@@ -2261,6 +2261,19 @@ if (isInputRange!R)
     r.array = &temp;
     assert(theAllocator.expandArray(arr, r));
     assert(arr == [1, 2, 3, 1, 2, 3, 4]);
+}
+
+private bool implExpandArray(Allocator)(auto ref Allocator alloc, ref void[] buf,
+        size_t delta)
+{
+    static if (__traits(hasMember, Allocator, "expand"))
+    {
+        return alloc.expand(buf, delta);
+    }
+    else
+    {
+        return alloc.reallocate(buf, buf.length + delta);
+    }
 }
 
 /**
