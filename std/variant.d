@@ -100,7 +100,7 @@ template maxSize(T...)
 
 struct This;
 
-private alias This2Variant(V, T...) = AliasSeq!(ReplaceType!(This, V, T));
+private alias This2Variant(V, T...) = AliasSeq!(ReplaceTypeUnless!(isAlgebraic, This, V, T));
 
 // We can't just use maxAlignment because no types might be specified
 // to VariantN, so handle that here and then pass along the rest.
@@ -3055,4 +3055,13 @@ if (isAlgebraic!VariantType && Handler.length > 0)
     Variant v = createVariant([0, 1]);
     createVariant([2, 3]);
     assert(v == [0,1]);
+}
+
+@safe unittest
+{
+    // Bugzilla 19994
+    alias Inner = Algebraic!(This*);
+    alias Outer = Algebraic!(Inner, This*);
+
+    static assert(is(Outer.AllowedTypes == AliasSeq!(Inner, Outer*)));
 }
