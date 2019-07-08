@@ -690,12 +690,14 @@ public:
                 }
                 else static if (is(T == U[n], U, size_t n))
                 {
-                    auto p = cast(T*)(new U[n]).ptr;
-                    *p = rhs;
+                    alias UT = Unqual!T;
+                    auto p = cast(UT*)(new U[n]).ptr;
+                    *p = cast(UT) rhs;
                 }
                 else
                 {
-                    auto p = new T;
+                    alias UT = Unqual!T;
+                    auto p = new UT;
                     *p = rhs;
                 }
                 memcpy(&store, &p, p.sizeof);
@@ -1522,6 +1524,21 @@ pure nothrow @nogc
     }
 
     Algebraic!(SafeS) y;
+}
+
+// issue 19986
+@system unittest
+{
+    VariantN!32 v;
+    v = const(ubyte[33]).init;
+
+    struct S
+    {
+        ubyte[33] s;
+    }
+
+    VariantN!32 v2;
+    v2 = const(S).init;
 }
 
 /**
