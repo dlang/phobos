@@ -478,7 +478,7 @@ public:
     auto opBinary(string op, T)(T y) pure nothrow const
         if (op == "%" && isIntegral!T)
     {
-        assert(y != 0);
+        assert(y != 0, "% 0 not allowed");
 
         // BigInt % uint => long
         // BigInt % long => long
@@ -947,7 +947,7 @@ public:
         {
             buff = data.toDecimalString(0);
         }
-        assert(buff.length > 0);
+        assert(buff.length > 0, "Invalid buffer length");
 
         char signChar = isNegative() ? '-' : 0;
         auto minw = buff.length + (signChar ? 1 : 0);
