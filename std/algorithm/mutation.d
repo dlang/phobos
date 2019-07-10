@@ -1374,7 +1374,7 @@ private T moveImpl(T)(ref T source)
  *   source = value to be moved into target
  *   target = uninitialized value to be filled by source
  */
-void moveEmplace(T)(ref T source, ref T target) @system
+void moveEmplace(T)(ref T source, ref T target) pure @system
 {
     import core.stdc.string : memcpy, memset;
     import std.traits : hasAliasing, hasElaborateAssign,
