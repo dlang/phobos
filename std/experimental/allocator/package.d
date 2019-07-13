@@ -1175,7 +1175,7 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
             {
                 // Assume cast is safe as allocation succeeded for `stateSize!T`
                 auto p = () @trusted { return cast(T*) m.ptr; }();
-                emplaceRef(*p, args);
+                emplaceRef!T(*p, args);
                 return p;
             }
         }
@@ -1470,6 +1470,14 @@ if (T.sizeof != 1)
     a = [ 1, 2, 3, 4, 5 ];
     fillWithMemcpy(a, 42);
     assert(a == [ 42, 42, 42, 42, 42]);
+}
+
+//Make shared object
+@system unittest
+{
+    import core.atomic : atomicLoad;
+    auto psi = theAllocator.make!(shared(int))(10);
+    assert(10 == (*psi).atomicLoad());
 }
 
 private T[] uninitializedFillDefault(T)(T[] array) nothrow
