@@ -1500,8 +1500,8 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         {
             return CloseHandle(hObject);
         }
-        static auto trustedSetFileTime(HANDLE hFile, in FILETIME *lpCreationTime,
-                                       in ref FILETIME lpLastAccessTime, in ref FILETIME lpLastWriteTime) @trusted
+        static auto trustedSetFileTime(HANDLE hFile, const scope FILETIME *lpCreationTime,
+                                       const scope ref FILETIME lpLastAccessTime, const scope ref FILETIME lpLastWriteTime) @trusted
         {
             return SetFileTime(hFile, lpCreationTime, &lpLastAccessTime, &lpLastWriteTime);
         }
