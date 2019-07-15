@@ -1433,7 +1433,7 @@ Removes the lock over the specified file segment.
         static void runForked(void delegate() code)
         {
             import core.stdc.stdlib : exit;
-            import core.sys.posix.sys.wait : wait;
+            import core.sys.posix.sys.wait : waitpid;
             import core.sys.posix.unistd : fork;
             int child, status;
             if ((child = fork()) == 0)
@@ -1443,7 +1443,7 @@ Removes the lock over the specified file segment.
             }
             else
             {
-                assert(wait(&status) != -1);
+                assert(waitpid(child, &status, 0) != -1);
                 assert(status == 0, "Fork crashed");
             }
         }
