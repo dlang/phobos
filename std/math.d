@@ -5913,7 +5913,22 @@ nothrow @nogc:
         }
     }
 
-    //// Change the floating-point hardware rounding mode
+    /***
+     * Change the floating-point hardware rounding mode
+     *
+     * Changing the rounding mode in the middle of a function can interfere
+     * with optimizations of floating point expressions, as the optimizer assumes
+     * that the rounding mode does not change.
+     * It is best to change the rounding mode only at the
+     * beginning of the function, and keep it until the function returns.
+     * It is also best to add the line:
+     * ---
+     * pragma(inline, false);
+     * ---
+     * as the first line of the function so it will not get inlined.
+     * Params:
+     *    newMode = the new rounding mode
+     */
     @property void rounding(RoundingMode newMode) @trusted
     {
         initialize();
@@ -6328,37 +6343,48 @@ version (InlineAsm_X86_Any) @safe unittest // rounding
 
     static foreach (T; AliasSeq!(float, double, real))
     {{
-        FloatingPointControl fpctrl;
+        /* Be careful with changing the rounding mode, it interferes
+         * with common subexpressions. Changing rounding modes should
+         * be done with separate functions that are not inlined.
+         */
 
-        fpctrl.rounding = FloatingPointControl.roundUp;
-        T u = 1;
-        u += 0.1;
+        {
+            static T addRound(T)(uint rm)
+            {
+                pragma(inline, false);
+                FloatingPointControl fpctrl;
+                fpctrl.rounding = rm;
+                T x = 1;
+                x += 0.1;
+                return x;
+            }
 
-        fpctrl.rounding = FloatingPointControl.roundDown;
-        T d = 1;
-        d += 0.1;
+            T u = addRound!(T)(FloatingPointControl.roundUp);
+            T d = addRound!(T)(FloatingPointControl.roundDown);
+            T z = addRound!(T)(FloatingPointControl.roundToZero);
 
-        fpctrl.rounding = FloatingPointControl.roundToZero;
-        T z = 1;
-        z += 0.1;
+            assert(u > d);
+            assert(z == d);
+        }
 
-        assert(u > d);
-        assert(z == d);
+        {
+            static T subRound(T)(uint rm)
+            {
+                pragma(inline, false);
+                FloatingPointControl fpctrl;
+                fpctrl.rounding = rm;
+                T x = -1;
+                x -= 0.1;
+                return x;
+            }
 
-        fpctrl.rounding = FloatingPointControl.roundUp;
-        u = -1;
-        u -= 0.1;
+            T u = subRound!(T)(FloatingPointControl.roundUp);
+            T d = subRound!(T)(FloatingPointControl.roundDown);
+            T z = subRound!(T)(FloatingPointControl.roundToZero);
 
-        fpctrl.rounding = FloatingPointControl.roundDown;
-        d = -1;
-        d -= 0.1;
-
-        fpctrl.rounding = FloatingPointControl.roundToZero;
-        z = -1;
-        z -= 0.1;
-
-        assert(u > d);
-        assert(z == u);
+            assert(u > d);
+            assert(z == u);
+        }
     }}
 }
 
