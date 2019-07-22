@@ -602,7 +602,7 @@ less = The predicate used for comparison, modeled as a
         equivalence)
 r = The range being partitioned
 pivot = The index of the pivot for partitioning, must be less than `r.length` or
-`0` is `r.length` is `0`
+`0` if `r.length` is `0`
 
 Returns:
 The new position of the pivot
