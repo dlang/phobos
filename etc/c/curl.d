@@ -867,7 +867,7 @@ enum CurlOption {
   /** We want the referrer field set automatically when following locations */
   autoreferer = 58,
   /** Port of the proxy, can be set in the proxy string as well with:
-     "[host]:[port]" */
+     `[host]:[port]` */
   proxyport,
   /** size of the POST input data, if strlen() is not good to use */
   postfieldsize,

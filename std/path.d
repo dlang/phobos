@@ -3586,7 +3586,7 @@ if (isConvertibleToString!Range)
         $(LI `filename` must not contain any characters whose integer
             representation is in the range 0-31.)
         $(LI `filename` must not contain any of the following $(I reserved
-            characters): <>:"/\|?*)
+            characters): `<>:"/\|?*`)
         $(LI `filename` may not end with a space ($(D ' ')) or a period
             (`'.'`).)
     )
