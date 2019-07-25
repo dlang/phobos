@@ -603,7 +603,7 @@ uint formattedWrite(Writer, Char, A...)(auto ref Writer w, const scope Char[] fm
 @safe unittest
 {
     assert(format("%,d", 1000) == "1,000");
-    assert(format("%,f", 1234567.891011) == "1,234,567.891,011");
+    assert(format("%,f", 1234567.891011) == "1,234,567.891011");
     assert(format("%,?d", '?', 1000) == "1?000");
     assert(format("%,1d", 1000) == "1,0,0,0", format("%,1d", 1000));
     assert(format("%,*d", 4, -12345) == "-1,2345");
@@ -2668,45 +2668,57 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     enforceFmt(n >= 0,
         "floating point formatting failure");
 
-    auto len = min(n, buf.length-1);
-    ptrdiff_t dot = buf[0 .. len].indexOf('.');
+    size_t len = min(n, buf.length-1);
     if (fs.flSeparator)
     {
-        ptrdiff_t firstDigit = buf[0 .. len].indexOfAny("0123456789");
-        ptrdiff_t ePos = buf[0 .. len].indexOf('e');
-        auto dotIdx = dot == -1 ? ePos == -1 ? len : ePos : dot;
-        size_t j;
-
-        ptrdiff_t firstLen = dotIdx - firstDigit;
-
-        size_t separatorScoreCnt = (firstLen > 0) ? (firstLen - 1) / fs.separators : 0;
-
-        size_t afterDotIdx;
-        if (ePos != -1)
+        ptrdiff_t indexOfRemovable()
         {
-            afterDotIdx = ePos;
-        }
-        else
-        {
-            afterDotIdx = len;
+            if (len < 2)
+                return -1;
+
+            size_t start = (buf[0 .. 1].indexOfAny(" 0123456789") == -1) ? 1 : 0;
+            if (len < 2 + start)
+                return -1;
+            if ((buf[start] == ' ') || (buf[start] == '0' && buf[start + 1] != '.'))
+                return start;
+
+            return -1;
         }
 
-        if (dot != -1)
+        ptrdiff_t dot, firstDigit, ePos, dotIdx, firstLen;
+        size_t separatorScoreCnt;
+
+        while (true)
         {
-            ptrdiff_t mantissaLen = afterDotIdx - (dot + 1);
-            separatorScoreCnt += (mantissaLen > 0) ? (mantissaLen - 1) / fs.separators : 0;
+            dot = buf[0 .. len].indexOf('.');
+            firstDigit = buf[0 .. len].indexOfAny("0123456789");
+            ePos = buf[0 .. len].indexOf('e');
+            dotIdx = dot == -1 ? ePos == -1 ? len : ePos : dot;
+
+            firstLen = dotIdx - firstDigit;
+            separatorScoreCnt = (firstLen > 0) ? (firstLen - 1) / fs.separators : 0;
+
+            ptrdiff_t removableIdx = (len + separatorScoreCnt > fs.width) ? indexOfRemovable() : -1;
+            if ((removableIdx != -1) &&
+                ((firstLen - (buf[removableIdx] == '0' ? 2 : 1)) / fs.separators + len - 1 >= fs.width))
+            {
+                buf[removableIdx .. $ - 1] = buf.dup[removableIdx + 1 .. $];
+                len--;
+            }
+            else
+                break;
         }
 
-        // plus, minus prefix
-        ptrdiff_t digitsBegin = buf[0 .. separatorScoreCnt].indexOfNeither(" ");
-        if (digitsBegin == -1)
+        immutable afterDotIdx = (ePos != -1) ? ePos : len;
+
+        // plus, minus, prefix
+        if (firstDigit > 0)
         {
-            digitsBegin = separatorScoreCnt;
+            put(w, buf[0 .. firstDigit]);
         }
-        put(w, buf[digitsBegin .. firstDigit]);
 
         // digits until dot with separator
-        for (j = 0; j < firstLen; ++j)
+        for (auto j = 0; j < firstLen; ++j)
         {
             if (j > 0 && (firstLen - j) % fs.separators == 0)
             {
@@ -2722,13 +2734,8 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         }
 
         // digits after dot
-        for (j = dotIdx + 1; j < afterDotIdx; ++j)
+        for (auto j = dotIdx + 1; j < afterDotIdx; ++j)
         {
-            auto realJ = (j - (dotIdx + 1));
-            if (realJ != 0 && realJ % fs.separators == 0)
-            {
-                put(w, fs.separatorChar);
-            }
             put(w, buf[j]);
         }
 
@@ -2749,7 +2756,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     assert(format("%.1f", 1337.7) == "1337.7");
     assert(format("%,3.2f", 1331.982) == "1,331.98");
     assert(format("%,3.0f", 1303.1982) == "1,303");
-    assert(format("%#,3.4f", 1303.1982) == "1,303.198,2");
+    assert(format("%#,3.4f", 1303.1982) == "1,303.1982");
     assert(format("%#,3.0f", 1303.1982) == "1,303.");
 }
 
@@ -2797,6 +2804,37 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     assert(format("^%13,3.2f$",    100_000.00) == "^   100,000.00$");
     assert(format("^%13,3.2f$",  1_000_000.00) == "^ 1,000,000.00$");
     assert(format("^%13,3.2f$", 10_000_000.00) == "^10,000,000.00$");
+}
+
+// bugzilla 20069
+@safe unittest
+{
+    assert(format("%012,f",   -1234.0) ==    "-1,234.000000");
+    assert(format("%013,f",   -1234.0) ==    "-1,234.000000");
+    assert(format("%014,f",   -1234.0) ==   "-01,234.000000");
+    assert(format("%011,f",    1234.0) ==     "1,234.000000");
+    assert(format("%012,f",    1234.0) ==     "1,234.000000");
+    assert(format("%013,f",    1234.0) ==    "01,234.000000");
+    assert(format("%014,f",    1234.0) ==   "001,234.000000");
+    assert(format("%015,f",    1234.0) == "0,001,234.000000");
+    assert(format("%016,f",    1234.0) == "0,001,234.000000");
+
+    assert(format( "%08,.2f", -1234.0) ==        "-1,234.00");
+    assert(format( "%09,.2f", -1234.0) ==        "-1,234.00");
+    assert(format("%010,.2f", -1234.0) ==       "-01,234.00");
+    assert(format("%011,.2f", -1234.0) ==      "-001,234.00");
+    assert(format("%012,.2f", -1234.0) ==    "-0,001,234.00");
+    assert(format("%013,.2f", -1234.0) ==    "-0,001,234.00");
+    assert(format("%014,.2f", -1234.0) ==   "-00,001,234.00");
+    assert(format( "%08,.2f",  1234.0) ==         "1,234.00");
+    assert(format( "%09,.2f",  1234.0) ==        "01,234.00");
+    assert(format("%010,.2f",  1234.0) ==       "001,234.00");
+    assert(format("%011,.2f",  1234.0) ==     "0,001,234.00");
+    assert(format("%012,.2f",  1234.0) ==     "0,001,234.00");
+    assert(format("%013,.2f",  1234.0) ==    "00,001,234.00");
+    assert(format("%014,.2f",  1234.0) ==   "000,001,234.00");
+    assert(format("%015,.2f",  1234.0) == "0,000,001,234.00");
+    assert(format("%016,.2f",  1234.0) == "0,000,001,234.00");
 }
 
 /*
@@ -6672,28 +6710,28 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
 @safe unittest
 {
     auto tmp = format("%,f", 1000.0);
-    assert(tmp == "1,000.000,000", "'" ~ tmp ~ "'");
+    assert(tmp == "1,000.000000", "'" ~ tmp ~ "'");
 
     tmp = format("%,f", 1234567.891011);
-    assert(tmp == "1,234,567.891,011", "'" ~ tmp ~ "'");
+    assert(tmp == "1,234,567.891011", "'" ~ tmp ~ "'");
 
     tmp = format("%,f", -1234567.891011);
-    assert(tmp == "-1,234,567.891,011", "'" ~ tmp ~ "'");
+    assert(tmp == "-1,234,567.891011", "'" ~ tmp ~ "'");
 
     tmp = format("%,2f", 1234567.891011);
-    assert(tmp == "1,23,45,67.89,10,11", "'" ~ tmp ~ "'");
+    assert(tmp == "1,23,45,67.891011", "'" ~ tmp ~ "'");
 
     tmp = format("%18,f", 1234567.891011);
-    assert(tmp == " 1,234,567.891,011", "'" ~ tmp ~ "'");
+    assert(tmp == "  1,234,567.891011", "'" ~ tmp ~ "'");
 
     tmp = format("%18,?f", '.', 1234567.891011);
-    assert(tmp == " 1.234.567.891.011", "'" ~ tmp ~ "'");
+    assert(tmp == "  1.234.567.891011", "'" ~ tmp ~ "'");
 
     tmp = format("%,?.3f", 'ä', 1234567.891011);
     assert(tmp == "1ä234ä567.891", "'" ~ tmp ~ "'");
 
     tmp = format("%,*?.3f", 1, 'ä', 1234567.891011);
-    assert(tmp == "1ä2ä3ä4ä5ä6ä7.8ä9ä1", "'" ~ tmp ~ "'");
+    assert(tmp == "1ä2ä3ä4ä5ä6ä7.891", "'" ~ tmp ~ "'");
 
     tmp = format("%,4?.3f", '_', 1234567.891011);
     assert(tmp == "123_4567.891", "'" ~ tmp ~ "'");
@@ -6702,19 +6740,19 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
     assert(tmp == "   1,234.568", "'" ~ tmp ~ "'");
 
     tmp = format("%,e", 3.141592653589793238462);
-    assert(tmp == "3.141,593e+00", "'" ~ tmp ~ "'");
+    assert(tmp == "3.141593e+00", "'" ~ tmp ~ "'");
 
     tmp = format("%15,e", 3.141592653589793238462);
-    assert(tmp == "  3.141,593e+00", "'" ~ tmp ~ "'");
+    assert(tmp == "   3.141593e+00", "'" ~ tmp ~ "'");
 
     tmp = format("%15,e", -3.141592653589793238462);
-    assert(tmp == " -3.141,593e+00", "'" ~ tmp ~ "'");
+    assert(tmp == "  -3.141593e+00", "'" ~ tmp ~ "'");
 
     tmp = format("%.4,*e", 2, 3.141592653589793238462);
-    assert(tmp == "3.14,16e+00", "'" ~ tmp ~ "'");
+    assert(tmp == "3.1416e+00", "'" ~ tmp ~ "'");
 
     tmp = format("%13.4,*e", 2, 3.141592653589793238462);
-    assert(tmp == "  3.14,16e+00", "'" ~ tmp ~ "'");
+    assert(tmp == "   3.1416e+00", "'" ~ tmp ~ "'");
 
     tmp = format("%,.0f", 3.14);
     assert(tmp == "3", "'" ~ tmp ~ "'");
@@ -6723,7 +6761,7 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
     assert(tmp == "1e+06", "'" ~ tmp ~ "'");
 
     tmp = format("%19,?f", '.', -1234567.891011);
-    assert(tmp == " -1.234.567.891.011", "'" ~ tmp ~ "'");
+    assert(tmp == "  -1.234.567.891011", "'" ~ tmp ~ "'");
 }
 
 // Test for multiple indexes
