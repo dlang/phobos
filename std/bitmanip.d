@@ -1028,8 +1028,10 @@ public:
     this(void[] v, size_t numbits) @nogc nothrow pure
     in
     {
-        assert(numbits <= v.length * 8);
-        assert(v.length % size_t.sizeof == 0);
+        assert(numbits <= v.length * 8,
+                "numbits must be less than or equal to v.length * 8");
+        assert(v.length % size_t.sizeof == 0,
+                "v.length must be a multiple of the size of size_t");
     }
     do
     {
@@ -1155,7 +1157,7 @@ public:
     bool opIndex(size_t i) const @nogc pure nothrow
     in
     {
-        assert(i < _len);
+        assert(i < _len, "i must be less than the length");
     }
     do
     {
@@ -1182,7 +1184,7 @@ public:
     bool opIndexAssign(bool b, size_t i) @nogc pure nothrow
     in
     {
-        assert(i < _len);
+        assert(i < _len, "i must be less than the length");
     }
     do
     {
@@ -1233,8 +1235,8 @@ public:
     void opSliceAssign(bool val, size_t start, size_t end)
     in
     {
-        assert(start <= end);
-        assert(end <= length);
+        assert(start <= end, "start must be less or equal to end");
+        assert(end <= length, "end must be less or equal to the length");
     }
     do
     {
@@ -1521,7 +1523,7 @@ public:
     @property BitArray reverse() @nogc pure nothrow
     out (result)
     {
-        assert(result == this);
+        assert(result == this, "the result must be equal to this");
     }
     do
     {
@@ -1561,7 +1563,7 @@ public:
     @property BitArray sort() @nogc pure nothrow
     out (result)
     {
-        assert(result == this);
+        assert(result == this, "the result must be equal to this");
     }
     do
     {
@@ -1857,7 +1859,7 @@ public:
         if (op == "-" || op == "&" || op == "|" || op == "^")
     in
     {
-        assert(_len == e2.length);
+        assert(e2.length == _len, "e2 must have the same length as this");
     }
     do
     {
@@ -1959,7 +1961,7 @@ public:
         if (op == "-" || op == "&" || op == "|" || op == "^")
     in
     {
-        assert(_len == e2.length);
+        assert(e2.length == _len, "e2 must have the same length as this");
     }
     do
     {
@@ -2212,7 +2214,7 @@ public:
         pure @safe nothrow @nogc
     in
     {
-        assert(nbits < bitsPerSizeT);
+        assert(nbits < bitsPerSizeT, "nbits must be less than bitsPerSizeT");
     }
     do
     {
@@ -2249,7 +2251,7 @@ public:
         pure @safe nothrow @nogc
     in
     {
-        assert(nbits < bitsPerSizeT);
+        assert(nbits < bitsPerSizeT, "nbits must be less than bitsPerSizeT");
     }
     do
     {
@@ -3328,7 +3330,7 @@ if (canSwapEndianness!T &&
     hasSlicing!R &&
     is(ElementType!R : const ubyte))
 {
-    assert(index);
+    assert(index, "index must not point to null");
 
     immutable begin = *index;
     immutable end = begin + T.sizeof;
@@ -3858,7 +3860,7 @@ if (canSwapEndianness!T &&
     hasSlicing!R &&
     is(ElementType!R : ubyte))
 {
-    assert(index);
+    assert(index, "index must not point to null");
 
     static if (endianness == Endian.bigEndian)
         immutable bytes = nativeToBigEndian!T(value);
