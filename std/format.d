@@ -2359,14 +2359,29 @@ private void formatUnsigned(Writer, T, Char)
     size_t leftpad = 0;
     size_t rightpad = 0;
 
-    immutable size_t dlen = digits.length == 0 ? 0 : digits.length - 1;
+    immutable prefixWidth = (prefix1 != 0) + (prefix2 != 0);
+    size_t finalWidth, separatorsCount;
+    if (fs.flSeparator != 0)
+    {
+        finalWidth = prefixWidth + digits.length + ((digits.length > 0) ? (digits.length - 1) / fs.separators : 0);
+        if (finalWidth < fs.width)
+            finalWidth = fs.width + (padChar == '0') * (((fs.width - prefixWidth) % (fs.separators + 1) == 0) ? 1 : 0);
+
+        separatorsCount = (padChar == '0') ? (finalWidth - prefixWidth - 1) / (fs.separators + 1) :
+                         ((digits.length > 0) ? (digits.length - 1) / fs.separators : 0);
+    }
+    else
+    {
+        import std.algorithm.comparison : max;
+        finalWidth = max(fs.width, prefixWidth + digits.length);
+    }
+
     immutable ptrdiff_t spacesToPrint =
-        fs.width - (
-              (prefix1 != 0)
-            + (prefix2 != 0)
+        finalWidth - (
+            + prefixWidth
             + zerofill
             + digits.length
-            + ((fs.flSeparator != 0) * (dlen / fs.separators))
+            + separatorsCount
         );
     if (spacesToPrint > 0) // need to do some padding
     {
@@ -2393,18 +2408,14 @@ private void formatUnsigned(Writer, T, Char)
             --zerofill;
         }
 
-        int j = fs.width;
+        int j = cast(int) (finalWidth - prefixWidth - separatorsCount - 1);
         for (size_t i = 0; i < zerofill; ++i, --j)
         {
-            if (j != fs.width && j % fs.separators == 0)
+            if (j % fs.separators == 0)
             {
                 put(w, fs.separatorChar);
-                ++i;
             }
-            if (i < zerofill)
-            {
-                   put(w, '0');
-            }
+            put(w, '0');
         }
     }
     else
@@ -2417,7 +2428,7 @@ private void formatUnsigned(Writer, T, Char)
     {
         for (size_t j = 0; j < digits.length; ++j)
         {
-            if (j != 0 && (digits.length - j) % fs.separators == 0)
+            if (((j != 0) || ((spacesToPrint > 0) && (padChar == '0'))) && (digits.length - j) % fs.separators == 0)
             {
                 put(w, fs.separatorChar);
             }
@@ -2511,6 +2522,42 @@ private void formatUnsigned(Writer, T, Char)
     int i = 9;
     formattedWrite(&put, "%s", 9);
     assert(result == "9");
+}
+
+// bugzilla 20064
+@safe unittest
+{
+    assert(format( "%03,d",  1234) ==              "1,234");
+    assert(format( "%04,d",  1234) ==              "1,234");
+    assert(format( "%05,d",  1234) ==              "1,234");
+    assert(format( "%06,d",  1234) ==             "01,234");
+    assert(format( "%07,d",  1234) ==            "001,234");
+    assert(format( "%08,d",  1234) ==          "0,001,234");
+    assert(format( "%09,d",  1234) ==          "0,001,234");
+    assert(format("%010,d",  1234) ==         "00,001,234");
+    assert(format("%011,d",  1234) ==        "000,001,234");
+    assert(format("%012,d",  1234) ==      "0,000,001,234");
+    assert(format("%013,d",  1234) ==      "0,000,001,234");
+    assert(format("%014,d",  1234) ==     "00,000,001,234");
+    assert(format("%015,d",  1234) ==    "000,000,001,234");
+    assert(format("%016,d",  1234) ==  "0,000,000,001,234");
+    assert(format("%017,d",  1234) ==  "0,000,000,001,234");
+
+    assert(format( "%03,d", -1234) ==             "-1,234");
+    assert(format( "%04,d", -1234) ==             "-1,234");
+    assert(format( "%05,d", -1234) ==             "-1,234");
+    assert(format( "%06,d", -1234) ==             "-1,234");
+    assert(format( "%07,d", -1234) ==            "-01,234");
+    assert(format( "%08,d", -1234) ==           "-001,234");
+    assert(format( "%09,d", -1234) ==         "-0,001,234");
+    assert(format("%010,d", -1234) ==         "-0,001,234");
+    assert(format("%011,d", -1234) ==        "-00,001,234");
+    assert(format("%012,d", -1234) ==       "-000,001,234");
+    assert(format("%013,d", -1234) ==     "-0,000,001,234");
+    assert(format("%014,d", -1234) ==     "-0,000,001,234");
+    assert(format("%015,d", -1234) ==    "-00,000,001,234");
+    assert(format("%016,d", -1234) ==   "-000,000,001,234");
+    assert(format("%017,d", -1234) == "-0,000,000,001,234");
 }
 
 private enum ctfpMessage = "Cannot format floating point types at compile-time";
@@ -6708,23 +6755,23 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
     tmp  = format("%04d", 100);
     assert(tmp == cmp, tmp);
 
-    cmp = "0000,000,100";
+    cmp = "0,000,000,100";
     tmp  = format("%012,3d", 100);
     assert(tmp == cmp, tmp);
 
-    cmp = "0000,001,000";
+    cmp = "0,000,001,000";
     tmp = format("%012,3d", 1_000);
     assert(tmp == cmp, tmp);
 
-    cmp = "0000,100,000";
+    cmp = "0,000,100,000";
     tmp = format("%012,3d", 100_000);
     assert(tmp == cmp, tmp);
 
-    cmp = "0001,000,000";
+    cmp = "0,001,000,000";
     tmp = format("%012,3d", 1_000_000);
     assert(tmp == cmp, tmp);
 
-    cmp = "0100,000,000";
+    cmp = "0,100,000,000";
     tmp = format("%012,3d", 100_000_000);
     assert(tmp == cmp, tmp);
 }
@@ -6740,7 +6787,7 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
     tmp  = format("%07,d", 100_000);
     assert(tmp == cmp, tmp);
 
-    cmp = "0100,000";
+    cmp = "0,100,000";
     tmp  = format("%08,d", 100_000);
     assert(tmp == cmp, tmp);
 }
