@@ -10163,7 +10163,7 @@ do
         private:
         alias ElemType = Tuple!(Enumerator, "index", ElementType!Range, "value");
         Range range;
-        Enumerator index;
+        Unqual!Enumerator index;
 
         public:
         ElemType front() @property
@@ -10270,6 +10270,14 @@ pure @safe nothrow unittest
     assert(aa[-1]);
     assert(aa[0]);
     assert(aa[1]);
+}
+
+// Make sure passing qualified types works
+pure @safe nothrow unittest
+{
+    char[4] v;
+    immutable start = 2;
+    v[2 .. $].enumerate(start);
 }
 
 pure @safe nothrow unittest
