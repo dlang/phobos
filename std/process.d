@@ -132,6 +132,7 @@ else version (WatchOS)
 // to convert between Windows file handles and FILE*s.
 version (Win32) version (CRuntime_DigitalMars) version = DMC_RUNTIME;
 
+version (linux) version (X86_64) version = USE_CLONE;
 
 // Some of the following should be moved to druntime.
 private
@@ -176,6 +177,11 @@ private
         {
             import core.thread : Thread;
             new Thread({assert(getEnvironPtr !is null);}).start();
+        }
+
+        version (USE_CLONE)
+        {
+            extern (C) long syscall(long nr, long n1, long n2, long n3) nothrow @nogc;
         }
     }
 } // private
@@ -509,7 +515,7 @@ private:
             const vz = core.sys.posix.stdlib.getenv(name.tempCString());
             if (vz == null) return sink(null);
             return sink(vz[0 .. strlen(vz)]);
-       }
+        }
         else static assert(0);
     }
 
@@ -873,6 +879,8 @@ version (Posix) private enum InternalError : ubyte
     getrlimit,
     doubleFork,
     malloc,
+    sysconf,
+    pthread_sigmask,
     preExec,
 }
 
@@ -985,7 +993,210 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
             close(pidPipe[1]);
     }
 
-    auto id = core.sys.posix.unistd.fork();
+    pid_t id;
+    version (USE_CLONE)
+    {
+        auto ruid = core.sys.posix.unistd.getuid();
+        auto euid = core.sys.posix.unistd.geteuid();
+
+        if (!(config.flags & Config.Flags.detached)
+            && euid != 0
+            && ruid == euid
+            && core.sys.posix.unistd.getgid() == core.sys.posix.unistd.getegid()
+            && workDirFD < 0)
+        {
+            import core.sys.linux.sched : clone, CLONE_VFORK, CLONE_VM;
+            import core.sys.linux.sys.mman : mmap, munmap, MAP_PRIVATE, MAP_ANONYMOUS,
+                MAP_STACK, MAP_FAILED, PROT_READ, PROT_WRITE;
+
+            struct clone_args
+            {
+                const(char*)[] argz;
+                const(char*)* envz;
+                int stdinFD;
+                int stdoutFD;
+                int stderrFD;
+                Config config;
+                int forkPipeIn;
+                int forkPipeOut;
+                sigset_t oldmask;
+            }
+
+            extern (C) int cloneChild(void* arguments) nothrow @nogc
+            {
+                auto argv = cast(clone_args*) arguments;
+
+                close(argv.forkPipeIn);
+
+                // The child process must ensure that no signal handler are
+                // enabled because it shares memory with parent.
+                enum _NSIG = 32;
+                foreach (int signum; 1 .. _NSIG)
+                {
+                    signal(signum, SIG_DFL);
+                }
+
+                // Redirect streams and close the old file descriptors.
+                // In the case that stderr is redirected to stdout, we need
+                // to backup the file descriptor since stdout may be redirected
+                // as well.
+                if (argv.stderrFD == STDOUT_FILENO)
+                    argv.stderrFD = dup(argv.stderrFD);
+                dup2(argv.stdinFD,  STDIN_FILENO);
+                dup2(argv.stdoutFD, STDOUT_FILENO);
+                dup2(argv.stderrFD, STDERR_FILENO);
+
+                // Ensure that the standard streams aren't closed on execute, and
+                // optionally close all other file descriptors.
+                setCLOEXEC(STDIN_FILENO, false);
+                setCLOEXEC(STDOUT_FILENO, false);
+                setCLOEXEC(STDERR_FILENO, false);
+
+                if (!(argv.config.flags & Config.Flags.inheritFDs))
+                {
+                    int posIntFromAscii(const(char)* name) nothrow @nogc
+                    {
+                        int num = 0;
+                        while (*name >= '0' && *name <= '9')
+                        {
+                            num = num * 10 + (*name - '0');
+                            name++;
+                        }
+                        if (*name)
+                            return -1;
+                        return num;
+                    }
+
+                    int closeOpenFileDescriptorsSafe(int forkPipeOut) nothrow @nogc
+                    {
+                        import core.sys.posix.fcntl : open, O_RDONLY;
+                        enum SYS_getdents64 = 217;
+                        struct linux_dirent64
+                        {
+                            ulong d_ino;
+                            long d_off;
+                            ushort d_reclen;  // Length of this linux_dirent
+                            char d_type;
+                            char[256] d_name;  // Filename(null-terminated)
+                        }
+
+                        int dfd = open("/proc/self/fd\0", O_RDONLY);
+                        if (dfd < 0)
+                            return dfd;
+                        char[linux_dirent64.sizeof] buffer;
+                        long bytes;
+                        while ((bytes = syscall(SYS_getdents64, dfd,
+                                                cast(long)cast(linux_dirent64*)buffer,
+                                                buffer.sizeof)) > 0)
+                        {
+                            linux_dirent64* entry;
+                            for (int offset; offset < bytes; offset += entry.d_reclen)
+                            {
+                                int fd;
+                                entry = cast(linux_dirent64*)(buffer.ptr + offset);
+                                if ((fd = posIntFromAscii(entry.d_name.ptr)) < 0)
+                                    continue; // Not a number
+                                if (fd != dfd && fd > 2 && fd != forkPipeOut)
+                                    close(fd);
+                            }
+                        }
+                        close(dfd);
+                        return 0;
+                    }
+
+                    if (closeOpenFileDescriptorsSafe(argv.forkPipeOut) < 0)
+                    {
+                        // Fall back to closing everything.
+                        immutable maxDescriptors = cast(int) sysconf(_SC_OPEN_MAX);
+                        if (maxDescriptors == -1)
+                        {
+                            abortOnError(argv.forkPipeOut, InternalError.sysconf, .errno);
+                        }
+                        foreach (i; 3 .. maxDescriptors)
+                        {
+                            if (i == argv.forkPipeOut) continue;
+                            close(i);
+                        }
+                    }
+                }
+                else
+                {
+                    // Close the old file descriptors, unless they are
+                    // either of the standard streams.
+                    if (argv.stdinFD  > STDERR_FILENO)  close(argv.stdinFD);
+                    if (argv.stdoutFD > STDERR_FILENO)  close(argv.stdoutFD);
+                    if (argv.stderrFD > STDERR_FILENO)  close(argv.stderrFD);
+                }
+
+                int rc = pthread_sigmask(SIG_SETMASK, &argv.oldmask, null);
+                if (rc != 0)
+                    abortOnError(argv.forkPipeOut, InternalError.pthread_sigmask, rc);
+
+                // Execute program.
+                core.sys.posix.unistd.execve(argv.argz[0], argv.argz.ptr, argv.envz);
+                // If execution fails, exit as quickly as possible.
+                abortOnError(argv.forkPipeOut, InternalError.exec, .errno);
+                assert(false);
+            }
+
+            // Add a slack area for child's stack.
+            // just ported from glibc's posix_spawn.
+            size_t stackSize = (argz.length * (void*).sizeof) + 512;
+            stackSize += (32 * 1024);
+
+            // Align up.
+            immutable pageSize = sysconf(_SC_PAGESIZE);
+            stackSize = (stackSize + pageSize) & ~(pageSize - 1);
+
+            void* stack = mmap(null, stackSize, PROT_READ | PROT_WRITE,
+                               MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK,
+                               -1, 0);
+            if (stack == MAP_FAILED)
+                throw ProcessException.newFromErrno("Failed to allocate child stack");
+
+
+            sigset_t all = void;
+            sigset_t oldmask = void;
+            int rc = sigfillset(&all);
+            if (rc < 0)
+                throw ProcessException.newFromErrno("Failed sigfillset()");
+            rc = pthread_sigmask(SIG_SETMASK, &all, &oldmask);
+            if (rc != 0)
+                throw ProcessException.newFromErrno("Failed pthread_sigmask()");
+
+            clone_args cArgs;
+            cArgs.config = config;
+            cArgs.argz = argz;
+            cArgs.envz = envz;
+            cArgs.stdinFD = stdinFD;
+            cArgs.stdoutFD = stdoutFD;
+            cArgs.stderrFD = stderrFD;
+            cArgs.forkPipeIn = forkPipe[0];
+            cArgs.forkPipeOut = forkPipe[1];
+            cArgs.oldmask = oldmask;
+
+            id = clone(&cloneChild, stack + stackSize,
+                       CLONE_VM | CLONE_VFORK | SIGCHLD,
+                       cast(void*)&cArgs);
+
+            rc = munmap(stack, stackSize);
+            if (rc != 0)
+                throw ProcessException.newFromErrno("Failed munmap()");
+
+            rc = pthread_sigmask(SIG_SETMASK, &oldmask, null);
+            if (rc != 0)
+                throw ProcessException.newFromErrno("Failed pthread_sigmask()");
+
+            if (id == 0)
+                abort();
+        }
+        else
+            id = core.sys.posix.unistd.fork();
+    }
+    else
+    {
+        id = core.sys.posix.unistd.fork();
+    }
     if (id < 0)
     {
         closePipeWriteEnds();
@@ -1139,6 +1350,7 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
         }
     }
 
+    // On linux, never comes here if clone() used.
     if (id == 0)
     {
         forkChild();
@@ -1190,6 +1402,12 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
                     break;
                 case InternalError.preExec:
                     errorMsg = "Failed to execute preExecFunction";
+                    break;
+                case InternalError.sysconf:
+                    errorMsg = "sysconf failed";
+                    break;
+                case InternalError.pthread_sigmask:
+                    errorMsg = "pthread_sigmask failed";
                     break;
                 case InternalError.noerror:
                     assert(false);
