@@ -74,12 +74,16 @@ private
 {
     bool hasLocalAliasing(Types...)()
     {
+        import std.typecons : Rebindable;
+
         // Works around "statement is not reachable"
         bool doesIt = false;
         static foreach (T; Types)
         {
             static if (is(T == Tid))
             { /* Allowed */ }
+            else static if (is(T : Rebindable!R, R))
+                doesIt |= hasLocalAliasing!R;
             else static if (is(T == struct))
                 doesIt |= hasLocalAliasing!(typeof(T.tupleof));
             else
@@ -92,6 +96,14 @@ private
     {
         static struct Container { Tid t; }
         static assert(!hasLocalAliasing!(Tid, Container, int));
+    }
+
+    @safe unittest
+    {
+        /* Issue 20097 */
+        import std.datetime.systime : SysTime;
+        static struct Container { SysTime time; }
+        static assert(!hasLocalAliasing!(SysTime, Container));
     }
 
     enum MsgType
