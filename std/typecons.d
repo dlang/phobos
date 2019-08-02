@@ -8762,7 +8762,7 @@ template ReplaceType(From, To, T...)
             static assert(0, "Function types not supported," ~
                 " use a function pointer type instead of " ~ T[0].stringof);
         }
-        else static if (is(T[0] : U!V, alias U, V...))
+        else static if (is(T[0] == U!V, alias U, V...))
         {
             template replaceTemplateArgs(T...)
             {
@@ -8987,6 +8987,28 @@ private template replaceTypeInFunctionType(From, To, fun)
     alias B = void delegate(int) const;
     alias A = ReplaceType!(float, int, ConstDg);
     static assert(is(B == A));
+}
+
+
+@safe unittest // Bugzilla 19696
+{
+    static struct T(U) {}
+    static struct S { T!int t; alias t this; }
+    static assert(is(ReplaceType!(float, float, S) == S));
+}
+
+@safe unittest // Bugzilla 19697
+{
+    class D(T) {}
+    class C : D!C {}
+    static assert(is(ReplaceType!(float, float, C)));
+}
+
+@safe unittest // Bugzilla 16132
+{
+    interface I(T) {}
+    class C : I!int {}
+    static assert(is(ReplaceType!(int, string, C) == C));
 }
 
 /**
