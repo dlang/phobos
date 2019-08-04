@@ -413,6 +413,18 @@ if (isSomeString!(S))
     assert(m.front[1] == "12");
 }
 
+@system unittest
+{
+    import std.conv : to;
+    import std.string : indexOf;
+
+    immutable pattern = "s+";
+    auto regexString = to!string(regex(pattern, "U"));
+    assert(regexString.length <= pattern.length + 100, "String representation shouldn't be unreasonably bloated.");
+    assert(indexOf(regexString, "s+") >= 0, "String representation should include pattern.");
+    assert(indexOf(regexString, 'U') >= 0, "String representation should include flags.");
+}
+
 public auto regexImpl(S)(S pattern, const(char)[] flags="")
 if (isSomeString!(S))
 {
