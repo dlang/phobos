@@ -1061,7 +1061,7 @@ if (!(isImplicitlyConvertible!(S, T) &&
 private T toImpl(T, S)(ref S value)
 if (!(isImplicitlyConvertible!(S, T) &&
     !isEnumStrToStr!(S, T) && !isNullToStr!(S, T)) &&
-    !isInfinite!S && isExactSomeString!T && !isCopyable!S)
+    !isInfinite!S && isExactSomeString!T && !isCopyable!S && !isStaticArray!S)
 {
     import std.array : appender;
     import std.format : FormatSpec, formatValue;
@@ -1098,6 +1098,18 @@ if (!(isImplicitlyConvertible!(S, T) &&
 
     auto b = B();
     assert(to!string(b) == "B(0, false)");
+}
+
+// Bugzilla 20070
+@safe unittest
+{
+    void writeThem(T)(ref inout(T) them)
+    {
+        assert(them.to!string == "[1, 2, 3, 4]");
+    }
+
+    const(uint)[4] vals = [ 1, 2, 3, 4 ];
+    writeThem(vals);
 }
 
 /*
