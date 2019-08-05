@@ -1682,13 +1682,13 @@ must copy the previous contents if you wish to retain them.
 
 Params:
 buf = Buffer used to store the resulting line data. buf is
-resized as necessary.
+resized to exactly contain the line.
 terminator = Line terminator (by default, `'\n'`). Use
 $(REF newline, std,ascii) for portability (unless the file was opened in
 text mode).
 
 Returns:
-0 for end of file, otherwise number of characters read
+0 for end of file, otherwise number of characters read (i.e., buf.length)
 
 Throws: `StdioException` on I/O error, or `UnicodeException` on Unicode
 conversion error.
