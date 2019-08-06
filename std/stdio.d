@@ -1688,7 +1688,8 @@ $(REF newline, std,ascii) for portability (unless the file was opened in
 text mode).
 
 Returns:
-0 for end of file, otherwise number of characters read (i.e., buf.length)
+0 for end of file, otherwise number of characters read.
+The return value will always be equal to `buf.length`.
 
 Throws: `StdioException` on I/O error, or `UnicodeException` on Unicode
 conversion error.
