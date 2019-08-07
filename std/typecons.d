@@ -935,7 +935,7 @@ if (distinctFieldNames!(Specs))
          * It is an compile-time error to pass more names than
          * there are members of the $(LREF Tuple).
          */
-        ref rename(names...)() return
+        ref rename(names...)() inout return
         if (names.length == 0 || allSatisfy!(isSomeString, typeof(names)))
         {
             import std.algorithm.comparison : equal;
@@ -1007,6 +1007,10 @@ if (distinctFieldNames!(Specs))
                 .map!(t => t.a * t.b)
                 .sum;
             assert(res == 68);
+
+            const tup = Tuple!(int, "a", int, "b")(2, 3);
+            const renamed = tup.rename!("c", "d");
+            assert(renamed.c + renamed.d == 5);
         }
 
         /**
@@ -1019,7 +1023,7 @@ if (distinctFieldNames!(Specs))
          * The same rules for empty strings apply as for the variadic
          * template overload of $(LREF _rename).
         */
-        ref rename(alias translate)()
+        ref rename(alias translate)() inout
         if (is(typeof(translate) : V[K], V, K) && isSomeString!V &&
                 (isSomeString!K || is(K : size_t)))
         {
@@ -1087,6 +1091,11 @@ if (distinctFieldNames!(Specs))
             auto t2Named = t2.rename!(["a": "b", "b": "c"]);
             assert(t2Named.b == 3);
             assert(t2Named.c == 4);
+
+            const t3 = Tuple!(int, "a", int, "b")(3, 4);
+            const t3Named = t3.rename!(["a": "b", "b": "c"]);
+            assert(t3Named.b == 3);
+            assert(t3Named.c == 4);
         }
 
         ///
@@ -8780,7 +8789,7 @@ template ReplaceTypeUnless(alias pred, From, To, T...)
             static assert(0, "Function types not supported," ~
                 " use a function pointer type instead of " ~ T[0].stringof);
         }
-        else static if (is(T[0] : U!V, alias U, V...))
+        else static if (is(T[0] == U!V, alias U, V...))
         {
             template replaceTemplateArgs(T...)
             {
@@ -9005,6 +9014,28 @@ private template replaceTypeInFunctionTypeUnless(alias pred, From, To, fun)
     alias B = void delegate(int) const;
     alias A = ReplaceType!(float, int, ConstDg);
     static assert(is(B == A));
+}
+
+
+@safe unittest // Bugzilla 19696
+{
+    static struct T(U) {}
+    static struct S { T!int t; alias t this; }
+    static assert(is(ReplaceType!(float, float, S) == S));
+}
+
+@safe unittest // Bugzilla 19697
+{
+    class D(T) {}
+    class C : D!C {}
+    static assert(is(ReplaceType!(float, float, C)));
+}
+
+@safe unittest // Bugzilla 16132
+{
+    interface I(T) {}
+    class C : I!int {}
+    static assert(is(ReplaceType!(int, string, C) == C));
 }
 
 /**
