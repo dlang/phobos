@@ -1284,6 +1284,24 @@ public:
         assert(b.getDigit!uint(2) == 108420217);
     }
 
+    /**
+    Random generate a `BigInt` of specified uintLength.
+    Params:
+        uintLength = the specified uintLength.
+    */
+    void randomGenerate(const size_t uintLength) @safe
+    {
+        data.randomGenerate(uintLength);
+    }
+
+    /// for randomGenerate
+    @safe unittest
+    {
+        auto a = BigInt(0);
+        a.randomGenerate(4);
+        assert(a >= 0);
+    }
+
 private:
     void negate() @safe pure nothrow @nogc
     {
@@ -2172,4 +2190,228 @@ BigInt powmod(BigInt base, BigInt exponent, BigInt modulus) pure nothrow
 
     BigInt result = powmod(base, exponent, modulus);
     assert(result == 359079);
+}
+
+/**
+Random generate a $(LREF BigInt) between min and max (min <= x <= max).
+Params:
+    min = the specified minimum.
+    max = the specified maximum.
+Returns:
+    The random $(LREF BigInt) between min and max (min <= x <= max).
+*/
+BigInt randomGenerate(const BigInt min, const BigInt max)
+{
+    import std.exception : enforce;
+    import std.conv : text;
+    enforce(max >= min, text("std.bigint.randomGenerate(): invalid bounding interval ", min, ", ", max));
+
+    BigInt r = BigInt(0);
+    r.randomGenerate(max.uintLength + 1);
+
+    return r % (max - min + 1) + min;
+}
+
+/// for randomGenerate
+@system unittest
+{
+    auto a = randomGenerate(BigInt(2), BigInt(1000));
+    assert((a >= 2) && (a <= 1000));
+}
+
+/**
+Using mille-rabin prime test to test whether it is a possible prime of the $(LREF BigInt) operand.
+Params:
+    n = the $(LREF BigInt) operands to test.
+    confidence = reliability of prime test.
+Returns:
+    The test result.
+*/
+bool millerRabinPrimeTest(const BigInt n, const size_t confidence)
+{
+    import std.exception : enforce;
+    enforce(confidence > 0, "confidence must be a positive integer greater than 0.");
+
+    if (n < 2)
+        return false;
+    if (n == 2)
+        return true;
+    if (n % 2 == 0)
+        return false;
+
+    BigInt[] bases;
+    if (n < 1_373_653)
+        bases = [BigInt(2), BigInt(3)];
+    else if (n <= 9_080_191)
+        bases = [BigInt(31), BigInt(73)];
+    else if (n <= 4_759_123_141)
+        bases = [BigInt(2), BigInt(7), BigInt(61)];
+    else if (n <= 2_152_302_898_747)
+        bases = [BigInt(2), BigInt(3), BigInt(5), BigInt(7), BigInt(11)];
+    else if (n <= 341_550_071_728_320)
+    {
+        if (n == 46_856_248_255_981)
+            return false;
+
+        bases = [BigInt(2), BigInt(3), BigInt(5), BigInt(7), BigInt(11), BigInt(13), BigInt(17)];
+    }
+    else if (n < 10_000_000_000_000_000)
+        bases = [BigInt(2), BigInt(3), BigInt(7), BigInt(61), BigInt(24251)];
+    else
+    {
+        // Generate random numbers between 2 and n - 1.
+        bases = new BigInt[confidence];
+        import std.algorithm.iteration : each;
+        bases.each!((ref b) => (b = randomGenerate(BigInt(2), n - 1)));
+    }
+
+    import std.algorithm.searching : all;
+    return (bases.all!((base) => (powmod(base, n - 1, n) == 1)));
+}
+
+/// for millerRabinPrimeTest
+@system unittest
+{
+    BigInt n = BigInt("46856248255981");
+    assert(!millerRabinPrimeTest(n, 3));
+}
+
+/**
+Using lucas-Lehmer prime test to test whether it is a possible prime of the $(LREF BigInt) operand.
+Params:
+    n = the $(LREF BigInt) operands to test.
+        The following assumptions are made: BigInt n is a positive, odd number.
+Returns:
+    The test result.
+*/
+bool lucasLehmerPrimeTest(const BigInt n)
+{
+    if (n < 2)
+        return false;
+    if (n == 2)
+        return true;
+    if (n % 2 == 0)
+        return false;
+
+    import std.math : abs;
+    immutable BigInt nPlusOne = n + 1;
+
+    int d = 5;
+    while (jacobiSymbol(d, n) != -1)
+    {
+        // 5, -7, 9, -11, ...
+        d = (d < 0) ? abs(d) + 2 : -(d + 2);
+    }
+
+    return lucasLehmerSequence(d, nPlusOne, n) % n == 0;
+}
+
+/// for lucasLehmerPrimeTest
+@system unittest
+{
+    BigInt n = BigInt("46856248255981");
+    assert(!lucasLehmerPrimeTest(n));
+}
+
+private int jacobiSymbol(int p, const BigInt n)
+{
+    if (p == 0)
+        return 0;
+
+    int j = 1;
+    int u = cast(int) (n.getDigit!uint(0));
+
+    // Make p positive
+    if (p < 0)
+    {
+        p = -p;
+        immutable n8 = u & 7;
+        if ((n8 == 3) || (n8 == 7))
+            j = -j; // 3 (011) or 7 (111) mod 8
+    }
+
+    // Get rid of factors of 2 in p
+    while ((p & 3) == 0)
+        p >>= 2;
+    if ((p & 1) == 0)
+    {
+        p >>= 1;
+        if (((u ^ (u >> 1)) & 2) != 0)
+            j = -j; // 3 (011) or 5 (101) mod 8
+    }
+    if (p == 1)
+        return j;
+
+    // Then, apply quadratic reciprocity
+    if ((p & u & 2) != 0)   // p = u = 3 (mod 4)?
+        j = -j;
+    // And reduce u mod p
+    u = n % p;
+
+    // Now compute Jacobi(u,p), u < p
+    while (u != 0)
+    {
+        while ((u & 3) == 0)
+            u >>= 2;
+        if ((u & 1) == 0)
+        {
+            u >>= 1;
+            if (((p ^ (p >> 1)) & 2) != 0)
+                j = -j;     // 3 (011) or 5 (101) mod 8
+        }
+        if (u == 1)
+            return j;
+
+        // Now both u and p are odd, so use quadratic reciprocity
+        assert(u < p);
+        import std.algorithm.mutation : swap;
+        swap(u, p);
+        if ((u & p & 2) != 0) // u = p = 3 (mod 4)?
+            j = -j;
+
+        // Now u >= p, so it can be reduced
+        u %= p;
+    }
+
+    return 0;
+}
+
+private BigInt lucasLehmerSequence(const int z, const BigInt k, const BigInt n)
+{
+    bool testBit(const BigInt n, const int m)
+    {
+        int digit = cast(int) (n.getDigit!uint(m >>> 5));
+        return (digit & (1 << (m & 31))) != 0;
+    }
+
+    BigInt d = z;
+    BigInt u = 1, u2;
+    BigInt v = 1, v2;
+
+    for (int i = cast(int)(k.uintLength * uint.sizeof * 8 - 2); i >= 0; i--)
+    {
+        u2 = (u * v) % n;
+        v2 = (v * v + d * u * u) % n;
+        if (testBit(v2, 0))
+            v2 -= n;
+        v2 >>= 1;
+
+        u = u2; v = v2;
+        if (testBit(k, i))
+        {
+            u2 = (u + v) % n;
+            if (testBit(u2, 0))
+                u2 -= n;
+
+            u2 >>= 1;
+            v2 = (v + d * u) % n;
+            if (testBit(v2, 0))
+                v2 -= n;
+            v2 >>= 1;
+
+            u = u2; v = v2;
+        }
+    }
+
+    return u;
 }
