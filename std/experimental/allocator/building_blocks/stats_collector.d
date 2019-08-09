@@ -729,7 +729,7 @@ public:
         private void addPerCall(string f, uint n, names...)(ulong[] values...)
         {
             import std.array : join;
-            enum uint mask = mixin("Options."~[names].join("|Options."));
+            enum ulong mask = mixin("Options."~[names].join("|Options."));
             static if (perCallFlags & mask)
             {
                 // Per allocation info

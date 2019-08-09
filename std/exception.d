@@ -1610,16 +1610,17 @@ package string errnoString(int errno) nothrow @trusted
  */
 class ErrnoException : Exception
 {
-    final @property uint errno() { return _errno; } /// Operating system error code.
+    /// Operating system error code.
+    final @property uint errno() nothrow pure @nogc @safe { return _errno; }
     private uint _errno;
     /// Constructor which takes an error message. The current global $(REF errno, core,stdc,errno) value is used as error code.
-    this(string msg, string file = null, size_t line = 0) @trusted
+    this(string msg, string file = null, size_t line = 0) @safe
     {
         import core.stdc.errno : errno;
         this(msg, errno, file, line);
     }
     /// Constructor which takes an error message and error code.
-    this(string msg, int errno, string file = null, size_t line = 0) @trusted
+    this(string msg, int errno, string file = null, size_t line = 0) @safe
     {
         _errno = errno;
         super(msg ~ " (" ~ errnoString(errno) ~ ")", file, line);
@@ -1627,7 +1628,7 @@ class ErrnoException : Exception
 }
 
 ///
-@system unittest
+@safe unittest
 {
     import core.stdc.errno : EAGAIN;
     auto ex = new ErrnoException("oh no", EAGAIN);
@@ -1635,7 +1636,7 @@ class ErrnoException : Exception
 }
 
 /// errno is used by default if no explicit error code is provided
-@system unittest
+@safe unittest
 {
     import core.stdc.errno : errno, EAGAIN;
 

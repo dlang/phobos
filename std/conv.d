@@ -1451,6 +1451,12 @@ if (!isImplicitlyConvertible!(S, T) &&
     (isNumeric!S || isSomeChar!S || isBoolean!S) &&
     (isNumeric!T || isSomeChar!T || isBoolean!T) && !is(T == enum))
 {
+    static if (isFloatingPoint!S && isIntegral!T)
+    {
+        import std.math : isNaN;
+        if (value.isNaN) throw new ConvException("Input was NaN");
+    }
+
     enum sSmallest = mostNegative!S;
     enum tSmallest = mostNegative!T;
     static if (sSmallest < 0)
@@ -1533,6 +1539,21 @@ if (!isImplicitlyConvertible!(S, T) &&
     assertThrown!ConvOverflowException(to!bool(E3.C));
     assert(to!bool(E3.D) == false);
 
+}
+
+@safe unittest
+{
+    import std.exception;
+    import std.math : isNaN;
+
+    double d = double.nan;
+    float f = to!float(d);
+    assert(f.isNaN);
+    assert(to!double(f).isNaN);
+    assertThrown!ConvException(to!int(d));
+    assertThrown!ConvException(to!int(f));
+    auto ex = collectException(d.to!int);
+    assert(ex.msg == "Input was NaN");
 }
 
 /**
@@ -2053,6 +2074,14 @@ template roundTo(Target)
         assertThrown!ConvOverflowException(roundTo!Int(Int.min - 0.5L));
         assertThrown!ConvOverflowException(roundTo!Int(Int.max + 0.5L));
     }
+}
+
+@safe unittest
+{
+    import std.exception;
+    assertThrown!ConvException(roundTo!int(float.init));
+    auto ex = collectException(roundTo!int(float.init));
+    assert(ex.msg == "Input was NaN");
 }
 
 /**

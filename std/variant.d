@@ -100,7 +100,7 @@ template maxSize(T...)
 
 struct This;
 
-private alias This2Variant(V, T...) = AliasSeq!(ReplaceType!(This, V, T));
+private alias This2Variant(V, T...) = AliasSeq!(ReplaceTypeUnless!(isAlgebraic, This, V, T));
 
 // We can't just use maxAlignment because no types might be specified
 // to VariantN, so handle that here and then pass along the rest.
@@ -179,8 +179,6 @@ private:
             apply, postblit, destruct }
 
     // state
-    ptrdiff_t function(OpID selector, ubyte[size]* store, void* data) fptr
-        = &handler!(void);
     union
     {
         align(maxVariantAlignment!(AllowedTypes)) ubyte[size] store;
@@ -188,6 +186,8 @@ private:
         static if (size >= (void*).sizeof)
             void*[size / (void*).sizeof] p;
     }
+    ptrdiff_t function(OpID selector, ubyte[size]* store, void* data) fptr
+        = &handler!(void);
 
     // internals
     // Handler for an uninitialized value
@@ -690,12 +690,14 @@ public:
                 }
                 else static if (is(T == U[n], U, size_t n))
                 {
-                    auto p = cast(T*)(new U[n]).ptr;
-                    *p = rhs;
+                    alias UT = Unqual!T;
+                    auto p = cast(UT*)(new U[n]).ptr;
+                    *p = cast(UT) rhs;
                 }
                 else
                 {
-                    auto p = new T;
+                    alias UT = Unqual!T;
+                    auto p = new UT;
                     *p = rhs;
                 }
                 memcpy(&store, &p, p.sizeof);
@@ -1069,14 +1071,16 @@ public:
         is(typeof(opLogic!(T, op)(lhs))))
     { return opLogic!(T, op)(lhs); }
     ///ditto
-    VariantN opCat(T)(T rhs)
+    VariantN opBinary(string op, T)(T rhs)
+        if (op == "~")
     {
         auto temp = this;
         temp ~= rhs;
         return temp;
     }
     // ///ditto
-    // VariantN opCat_r(T)(T rhs)
+    // VariantN opBinaryRight(string op, T)(T rhs)
+    //     if (op == "~")
     // {
     //     VariantN temp = rhs;
     //     temp ~= this;
@@ -1232,6 +1236,11 @@ public:
     assert(a.length == 42);
     a[5] = 7;
     assert(a[5] == 7);
+}
+
+@safe unittest
+{
+    assert(VariantN!(24).sizeof == 24 + (void*).sizeof);
 }
 
 /// Can also assign class values
@@ -1515,6 +1524,21 @@ pure nothrow @nogc
     }
 
     Algebraic!(SafeS) y;
+}
+
+// issue 19986
+@system unittest
+{
+    VariantN!32 v;
+    v = const(ubyte[33]).init;
+
+    struct S
+    {
+        ubyte[33] s;
+    }
+
+    VariantN!32 v2;
+    v2 = const(S).init;
 }
 
 /**
@@ -3048,4 +3072,13 @@ if (isAlgebraic!VariantType && Handler.length > 0)
     Variant v = createVariant([0, 1]);
     createVariant([2, 3]);
     assert(v == [0,1]);
+}
+
+@safe unittest
+{
+    // Bugzilla 19994
+    alias Inner = Algebraic!(This*);
+    alias Outer = Algebraic!(Inner, This*);
+
+    static assert(is(Outer.AllowedTypes == AliasSeq!(Inner, Outer*)));
 }

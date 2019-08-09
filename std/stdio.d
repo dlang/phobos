@@ -1433,7 +1433,7 @@ Removes the lock over the specified file segment.
         static void runForked(void delegate() code)
         {
             import core.stdc.stdlib : exit;
-            import core.sys.posix.sys.wait : wait;
+            import core.sys.posix.sys.wait : waitpid;
             import core.sys.posix.unistd : fork;
             int child, status;
             if ((child = fork()) == 0)
@@ -1443,7 +1443,7 @@ Removes the lock over the specified file segment.
             }
             else
             {
-                assert(wait(&status) != -1);
+                assert(waitpid(child, &status, 0) != -1);
                 assert(status == 0, "Fork crashed");
             }
         }
@@ -1682,13 +1682,14 @@ must copy the previous contents if you wish to retain them.
 
 Params:
 buf = Buffer used to store the resulting line data. buf is
-resized as necessary.
+enlarged if necessary, then set to the slice exactly containing the line.
 terminator = Line terminator (by default, `'\n'`). Use
 $(REF newline, std,ascii) for portability (unless the file was opened in
 text mode).
 
 Returns:
-0 for end of file, otherwise number of characters read
+0 for end of file, otherwise number of characters read.
+The return value will always be equal to `buf.length`.
 
 Throws: `StdioException` on I/O error, or `UnicodeException` on Unicode
 conversion error.
@@ -2131,6 +2132,7 @@ Allows to directly use range operations on lines of a file.
             Char[] buffer;
             Terminator terminator;
             KeepTerminator keepTerminator;
+            bool haveLine;
 
         public:
             this(File f, KeepTerminator kt, Terminator terminator)
@@ -2138,22 +2140,32 @@ Allows to directly use range operations on lines of a file.
                 file = f;
                 this.terminator = terminator;
                 keepTerminator = kt;
-                popFront();
             }
 
             // Range primitive implementations.
             @property bool empty()
             {
+                needLine();
                 return line is null;
             }
 
             @property Char[] front()
             {
+                needLine();
                 return line;
             }
 
             void popFront()
             {
+                needLine();
+                haveLine = false;
+            }
+
+        private:
+            void needLine()
+            {
+                if (haveLine)
+                    return;
                 import std.algorithm.searching : endsWith;
                 assert(file.isOpen);
                 line = buffer;
@@ -2182,6 +2194,7 @@ Allows to directly use range operations on lines of a file.
                         static assert(false);
                     line = line[0 .. line.length - tlen];
                 }
+                haveLine = true;
             }
         }
     }
@@ -2285,6 +2298,18 @@ the contents may well have changed).
             // check front is cached
             assert(blc.front is blc.front);
         }}
+    }
+
+    @system unittest // Issue 19980
+    {
+        static import std.file;
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "Line 1\nLine 2\nLine 3\n");
+
+        auto f = File(deleteme);
+        f.byLine();
+        f.byLine();
+        assert(f.byLine().front == "Line 1");
     }
 
     private struct ByLineCopy(Char, Terminator)

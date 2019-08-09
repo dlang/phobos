@@ -848,7 +848,8 @@ if (isForwardRange!R
     }
 
     //Because of @@@8804@@@: Avoids both "unreachable code" or "no return statement"
-    static if (isInfinite!R) assert(0);
+    static if (isInfinite!R) assert(false, R.stringof ~ " must not be an"
+            ~ " infinite range");
     else return -1;
 }
 
@@ -951,7 +952,8 @@ if (isInputRange!R &&
     }
 
     //Because of @@@8804@@@: Avoids both "unreachable code" or "no return statement"
-    static if (isInfinite!R) assert(0);
+    static if (isInfinite!R) assert(false, R.stringof ~ " must not be an"
+            ~ " inifite range");
     else return -1;
 }
 
@@ -2221,7 +2223,7 @@ private R1 simpleMindedFind(alias pred, R1, R2)(R1 haystack, scope R2 needle)
             }
             else
             {
-                assert(haystack.empty);
+                assert(haystack.empty, "Haystack must be empty by now");
                 return haystack;
             }
         }
@@ -5001,7 +5003,7 @@ if (isInputRange!Range)
     ///
     @property auto ref front()
     {
-        assert(!empty);
+        assert(!empty, "Can not get the front of an empty Until");
         return _input.front;
     }
 
@@ -5016,7 +5018,7 @@ if (isInputRange!Range)
     ///
     void popFront()
     {
-        assert(!empty);
+        assert(!empty, "Can not popFront of an empty Until");
         if (!_openRight)
         {
             _done = predSatisfied();

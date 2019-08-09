@@ -1218,7 +1218,8 @@ private:
         import core.checkedint : mulu;
         bool overflow;
         const rc = mulu(r, c, overflow);
-        if (overflow) assert(0);
+        assert(!overflow, "Overflow during multiplication to determine number "
+                ~ " of matrix elements");
         rows = r;
         cols = c;
         if (_matrix.length < rc)
@@ -1226,7 +1227,8 @@ private:
             import core.exception : onOutOfMemoryError;
             import core.stdc.stdlib : realloc;
             const nbytes = mulu(rc, _matrix[0].sizeof, overflow);
-            if (overflow) assert(0);
+            assert(!overflow, "Overflow during multiplication to determine "
+                ~ " number of bytes of matrix");
             auto m = cast(CostType *) realloc(_matrix.ptr, nbytes);
             if (!m)
                 onOutOfMemoryError();
@@ -1749,8 +1751,8 @@ expression.
 
 `choices` needs to be composed of pairs of test expressions and return
 expressions. Each test-expression is compared with `switchExpression` using
-`pred`(`switchExpression` is the first argument) and if that yields true
-- the return expression is returned.
+`pred`(`switchExpression` is the first argument) and if that yields true -
+the return expression is returned.
 
 Both the test and the return expressions are lazily evaluated.
 

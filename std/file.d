@@ -62,6 +62,7 @@ $(TR $(TD Other) $(TD
           $(LREF FileException)
           $(LREF PreserveAttributes)
           $(LREF SpanMode)
+          $(LREF getAvailableDiskSpace)
 ))
 )
 
@@ -1499,8 +1500,9 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         {
             return CloseHandle(hObject);
         }
-        static auto trustedSetFileTime(HANDLE hFile, in FILETIME *lpCreationTime,
-                                       in ref FILETIME lpLastAccessTime, in ref FILETIME lpLastWriteTime) @trusted
+        static auto trustedSetFileTime(HANDLE hFile, const scope FILETIME *lpCreationTime,
+                                       const scope ref FILETIME lpLastAccessTime,
+                                       const scope ref FILETIME lpLastWriteTime) @trusted
         {
             return SetFileTime(hFile, lpCreationTime, &lpLastAccessTime, &lpLastWriteTime);
         }
@@ -4217,11 +4219,19 @@ private void copyImpl(scope const(char)[] f, scope const(char)[] t,
         {
             import core.stdc.wchar_ : wcslen;
             import std.conv : to;
+            import std.format : format;
 
+            /++
+            Reference resources: https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-copyfilew
+            Because OS copyfilew handles both source and destination paths,
+            the GetLastError does not accurately locate whether the error is for the source or destination.
+            +/
+            if (!f)
+                f = to!(typeof(f))(fromz[0 .. wcslen(fromz)]);
             if (!t)
                 t = to!(typeof(t))(toz[0 .. wcslen(toz)]);
 
-            throw new FileException(t);
+            throw new FileException(format!"Copy from %s to %s"(f, t));
         }
     }
     else version (Posix)
@@ -4329,6 +4339,19 @@ private void copyImpl(scope const(char)[] f, scope const(char)[] t,
     scope(exit) t.remove();
     assertThrown!FileException(copy(t, t));
     assert(readText(t) == "a");
+}
+
+// issue 19834
+version (Windows) @safe unittest
+{
+    import std.exception : collectException;
+    import std.algorithm.searching : startsWith;
+    import std.format : format;
+
+    auto f = deleteme;
+    auto t = f ~ "2";
+    auto ex = collectException(copy(f, t));
+    assert(ex.msg.startsWith(format!"Copy from %s to %s"(f, t)));
 }
 
 /++
@@ -5231,4 +5254,75 @@ string tempDir() @trusted
 
     myFile.write("hello");
     assert(myFile.readText == "hello");
+}
+
+/**
+Returns the available disk space based on a given path.
+On Windows, `path` must be a directory; on Posix systems, it can be a file or directory.
+
+Params:
+    path = on Windows, it must be a directory; on Posix it can be a file or directory
+Returns:
+    Available space in bytes
+
+Throws:
+    $(LREF FileException) in case of failure
+*/
+ulong getAvailableDiskSpace(scope const(char)[] path) @safe
+{
+    version (Windows)
+    {
+        import core.sys.windows.winbase : GetDiskFreeSpaceExW;
+        import core.sys.windows.winnt : ULARGE_INTEGER;
+        import std.internal.cstring : tempCStringW;
+
+        ULARGE_INTEGER freeBytesAvailable;
+        auto err = () @trusted {
+            return GetDiskFreeSpaceExW(path.tempCStringW(), &freeBytesAvailable, null, null);
+        } ();
+        cenforce(err != 0, "Cannot get available disk space");
+
+        return freeBytesAvailable.QuadPart;
+    }
+    else version (Posix)
+    {
+        import std.internal.cstring : tempCString;
+
+        version (FreeBSD)
+        {
+            import core.sys.freebsd.sys.mount : statfs, statfs_t;
+
+            statfs_t stats;
+            auto err = () @trusted {
+                return statfs(path.tempCString(), &stats);
+            } ();
+            cenforce(err == 0, "Cannot get available disk space");
+
+            return stats.f_bavail * stats.f_bsize;
+        }
+        else
+        {
+            import core.sys.posix.sys.statvfs : statvfs, statvfs_t;
+
+            statvfs_t stats;
+            auto err = () @trusted {
+                return statvfs(path.tempCString(), &stats);
+            } ();
+            cenforce(err == 0, "Cannot get available disk space");
+
+            return stats.f_bavail * stats.f_frsize;
+        }
+    }
+    else static assert(0, "Unsupported platform");
+}
+
+///
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    auto space = getAvailableDiskSpace(".");
+    assert(space > 0);
+
+    assertThrown!FileException(getAvailableDiskSpace("ThisFileDoesNotExist123123"));
 }

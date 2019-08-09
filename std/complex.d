@@ -998,6 +998,7 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
     assert(sqrt(complex(0.0)) == 0.0);
     assert(sqrt(complex(1.0L, 0)) == std.math.sqrt(1.0L));
     assert(sqrt(complex(-1.0L, 0)) == complex(0, 1.0L));
+    assert(sqrt(complex(-8.0, -6.0)) == complex(1.0, -3.0));
 }
 
 @safe pure nothrow unittest

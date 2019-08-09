@@ -1,0 +1,15 @@
+Allow std.json to overlook trailing comma
+
+The JSON grammar does not allow trailing commas, however they are accepted by many JSON parsers.
+$(MREF std,json) now ignores trailing commas as well. Use $(REF_SHORT JSONOptions.strictParsing, std,json) to disable this behavior.
+
+-------
+import std.json;
+import std.exception : assertThrown, assertNotThrown;
+
+// before
+assertThrown(parseJSON(`{ "a" : { } , }`));
+
+// after
+assertNotThrown(parseJSON(`{ "a" : { } , }`));
+-------

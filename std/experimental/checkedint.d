@@ -1984,8 +1984,8 @@ static:
     left-hand side operand. If $(D lhs == WithNaN.defaultValue!Lhs), returns
     $(D WithNaN.defaultValue!(typeof(lhs + rhs))) without evaluating the
     operand. Otherwise, evaluates the operand. If evaluation does not overflow,
-    returns the result. Otherwise, returns $(D WithNaN.defaultValue!(typeof(lhs
-    + rhs))).
+    returns the result. Otherwise, returns $(D WithNaN.defaultValue!(typeof(lhs +
+    rhs))).
 
     Params:
     x = The operator symbol
@@ -2023,8 +2023,8 @@ static:
     right-hand side operand. If $(D rhs == WithNaN.defaultValue!Rhs), returns
     $(D WithNaN.defaultValue!(typeof(lhs + rhs))) without evaluating the
     operand. Otherwise, evaluates the operand. If evaluation does not overflow,
-    returns the result. Otherwise, returns $(D WithNaN.defaultValue!(typeof(lhs
-    + rhs))).
+    returns the result. Otherwise, returns $(D WithNaN.defaultValue!(typeof(lhs +
+    rhs))).
 
     Params:
     x = The operator symbol

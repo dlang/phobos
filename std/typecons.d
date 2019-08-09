@@ -2969,7 +2969,6 @@ Params:
 Gets the value if not null. If `this` is in the null state, and the optional
 parameter `fallback` was provided, it will be returned. Without `fallback`,
 calling `get` with a null state is invalid.
-This function is also called for the implicit conversion to `T`.
 
 Params:
     fallback = the value to return in case the `Nullable` is null.
@@ -2990,7 +2989,9 @@ Returns:
         return isNull ? fallback : _value.payload;
     }
 
-///
+//@@@DEPRECATED_2.096@@@
+deprecated(
+    "Implicit conversion with `alias Nullable.get this` will be removed after 2.096. Please use `.get` explicitly.")
 @system unittest
 {
     import core.exception : AssertError;
@@ -3008,24 +3009,33 @@ Returns:
     assert(i == 5);
 }
 
+    //@@@DEPRECATED_2.096@@@
+    deprecated(
+        "Implicit conversion with `alias Nullable.get this` will be removed after 2.096. Please use `.get` explicitly.")
+    @property ref inout(T) get_() inout @safe pure nothrow
+    {
+        return get;
+    }
+
 ///
 @safe pure nothrow unittest
 {
     int i = 42;
-    Nullable!int ni2;
-    int x = ni2.get(i);
+    Nullable!int ni;
+    int x = ni.get(i);
     assert(x == i);
 
-    ni2 = 7;
-    x = ni2.get(i);
+    ni = 7;
+    x = ni.get(i);
     assert(x == 7);
 }
 
 /**
 Implicitly converts to `T`.
 `this` must not be in the null state.
+This feature is deprecated and will be removed after 2.096.
  */
-    alias get this;
+    alias get_ this;
 }
 
 /// ditto
@@ -3055,8 +3065,8 @@ auto nullable(T)(T t)
     if (!queryResult.isNull)
     {
         //Process Mr. Doe's customer record
-        auto address = queryResult.address;
-        auto customerNum = queryResult.customerNum;
+        auto address = queryResult.get.address;
+        auto customerNum = queryResult.get.customerNum;
 
         //Do some things with this customer's info
     }
@@ -3080,6 +3090,9 @@ auto nullable(T)(T t)
     assertThrown!Throwable(a.get);
 }
 
+//@@@DEPRECATED_2.096@@@
+deprecated(
+    "Implicit conversion with `alias Nullable.get this` will be removed after 2.096. Please use `.get` explicitly.")
 @system unittest
 {
     import std.exception : assertThrown;
@@ -3133,10 +3146,10 @@ auto nullable(T)(T t)
     assert(s == S(6));
     assert(s != S(0));
     assert(s.get != S(0));
-    s.x = 9190;
-    assert(s.x == 9190);
+    s.get.x = 9190;
+    assert(s.get.x == 9190);
     s.nullify();
-    assertThrown!Throwable(s.x = 9441);
+    assertThrown!Throwable(s.get.x = 9441);
 }
 @safe unittest
 {
@@ -3165,7 +3178,7 @@ auto nullable(T)(T t)
     assert(s.isNull);
     s = S(5);
     assert(!s.isNull);
-    assert(s.x == 5);
+    assert(s.get.x == 5);
     s.nullify();
     assert(s.isNull);
 }
@@ -3285,10 +3298,10 @@ auto nullable(T)(T t)
         auto x2 = immutable Nullable!S1(sm);
         auto x3 =           Nullable!S1(si);
         auto x4 = immutable Nullable!S1(si);
-        assert(x1.val == 1);
-        assert(x2.val == 1);
-        assert(x3.val == 1);
-        assert(x4.val == 1);
+        assert(x1.get.val == 1);
+        assert(x2.get.val == 1);
+        assert(x3.get.val == 1);
+        assert(x4.get.val == 1);
     }
 
     auto nm = 10;
@@ -3301,8 +3314,8 @@ auto nullable(T)(T t)
         static assert(!__traits(compiles, { auto x2 = immutable Nullable!S2(sm); }));
         static assert(!__traits(compiles, { auto x3 =           Nullable!S2(si); }));
         auto x4 = immutable Nullable!S2(si);
-        assert(*x1.val == 10);
-        assert(*x4.val == 10);
+        assert(*x1.get.val == 10);
+        assert(*x4.get.val == 10);
     }
 
     {
@@ -3312,10 +3325,10 @@ auto nullable(T)(T t)
         auto x2 = immutable Nullable!S3(sm);
         auto x3 =           Nullable!S3(si);
         auto x4 = immutable Nullable!S3(si);
-        assert(*x1.val == 10);
-        assert(*x2.val == 10);
-        assert(*x3.val == 10);
-        assert(*x4.val == 10);
+        assert(*x1.get.val == 10);
+        assert(*x2.get.val == 10);
+        assert(*x3.get.val == 10);
+        assert(*x4.get.val == 10);
     }
 }
 @safe unittest
@@ -3406,16 +3419,6 @@ auto nullable(T)(T t)
     assert(c.canary == 0xA71FE);
 }
 
-// Regression test for issue 18539
-@safe unittest
-{
-    import std.math : approxEqual;
-
-    auto foo = nullable(2.0);
-    auto bar = nullable(2.0);
-
-    assert(foo.approxEqual(bar));
-}
 // bugzilla issue 19037
 @safe unittest
 {
@@ -8717,11 +8720,13 @@ public:
     assert(flags.A && !flags.B && !flags.C);
 }
 
+private enum false_(T) = false;
+
 // ReplaceType
 /**
 Replaces all occurrences of `From` into `To`, in one or more types `T`. For
-example, $(D ReplaceType!(int, uint, Tuple!(int, float)[string])) yields
-$(D Tuple!(uint, float)[string]). The types in which replacement is performed
+example, `ReplaceType!(int, uint, Tuple!(int, float)[string])` yields
+`Tuple!(uint, float)[string]`. The types in which replacement is performed
 may be arbitrarily complex, including qualifiers, built-in type constructors
 (pointers, arrays, associative arrays, functions, and delegates), and template
 instantiations; replacement proceeds transitively through the type definition.
@@ -8734,68 +8739,7 @@ placeholder type `This` in $(REF Algebraic, std,variant).
 Returns: `ReplaceType` aliases itself to the type(s) that result after
 replacement.
 */
-template ReplaceType(From, To, T...)
-{
-    static if (T.length == 1)
-    {
-        static if (is(T[0] == From))
-            alias ReplaceType = To;
-        else static if (is(T[0] == const(U), U))
-            alias ReplaceType = const(ReplaceType!(From, To, U));
-        else static if (is(T[0] == immutable(U), U))
-            alias ReplaceType = immutable(ReplaceType!(From, To, U));
-        else static if (is(T[0] == shared(U), U))
-            alias ReplaceType = shared(ReplaceType!(From, To, U));
-        else static if (is(T[0] == U*, U))
-        {
-            static if (is(U == function))
-                alias ReplaceType = replaceTypeInFunctionType!(From, To, T[0]);
-            else
-                alias ReplaceType = ReplaceType!(From, To, U)*;
-        }
-        else static if (is(T[0] == delegate))
-        {
-            alias ReplaceType = replaceTypeInFunctionType!(From, To, T[0]);
-        }
-        else static if (is(T[0] == function))
-        {
-            static assert(0, "Function types not supported," ~
-                " use a function pointer type instead of " ~ T[0].stringof);
-        }
-        else static if (is(T[0] == U!V, alias U, V...))
-        {
-            template replaceTemplateArgs(T...)
-            {
-                static if (is(typeof(T[0])))    // template argument is value or symbol
-                    enum replaceTemplateArgs = T[0];
-                else
-                    alias replaceTemplateArgs = ReplaceType!(From, To, T[0]);
-            }
-            alias ReplaceType = U!(staticMap!(replaceTemplateArgs, V));
-        }
-        else static if (is(T[0] == struct))
-            // don't match with alias this struct below (Issue 15168)
-            alias ReplaceType = T[0];
-        else static if (is(T[0] == U[], U))
-            alias ReplaceType = ReplaceType!(From, To, U)[];
-        else static if (is(T[0] == U[n], U, size_t n))
-            alias ReplaceType = ReplaceType!(From, To, U)[n];
-        else static if (is(T[0] == U[V], U, V))
-            alias ReplaceType =
-                ReplaceType!(From, To, U)[ReplaceType!(From, To, V)];
-        else
-            alias ReplaceType = T[0];
-    }
-    else static if (T.length > 1)
-    {
-        alias ReplaceType = AliasSeq!(ReplaceType!(From, To, T[0]),
-            ReplaceType!(From, To, T[1 .. $]));
-    }
-    else
-    {
-        alias ReplaceType = AliasSeq!();
-    }
-}
+alias ReplaceType(From, To, T...) = ReplaceTypeUnless!(false_, From, To, T);
 
 ///
 @safe unittest
@@ -8809,10 +8753,94 @@ template ReplaceType(From, To, T...)
     );
 }
 
-private template replaceTypeInFunctionType(From, To, fun)
+/**
+Like $(LREF ReplaceType), but does not perform replacement in types for which
+`pred` evaluates to `true`.
+*/
+template ReplaceTypeUnless(alias pred, From, To, T...)
 {
-    alias RX = ReplaceType!(From, To, ReturnType!fun);
-    alias PX = AliasSeq!(ReplaceType!(From, To, Parameters!fun));
+    import std.meta;
+
+    static if (T.length == 1)
+    {
+        static if (pred!(T[0]))
+            alias ReplaceTypeUnless = T[0];
+        else static if (is(T[0] == From))
+            alias ReplaceTypeUnless = To;
+        else static if (is(T[0] == const(U), U))
+            alias ReplaceTypeUnless = const(ReplaceTypeUnless!(pred, From, To, U));
+        else static if (is(T[0] == immutable(U), U))
+            alias ReplaceTypeUnless = immutable(ReplaceTypeUnless!(pred, From, To, U));
+        else static if (is(T[0] == shared(U), U))
+            alias ReplaceTypeUnless = shared(ReplaceTypeUnless!(pred, From, To, U));
+        else static if (is(T[0] == U*, U))
+        {
+            static if (is(U == function))
+                alias ReplaceTypeUnless = replaceTypeInFunctionTypeUnless!(pred, From, To, T[0]);
+            else
+                alias ReplaceTypeUnless = ReplaceTypeUnless!(pred, From, To, U)*;
+        }
+        else static if (is(T[0] == delegate))
+        {
+            alias ReplaceTypeUnless = replaceTypeInFunctionTypeUnless!(pred, From, To, T[0]);
+        }
+        else static if (is(T[0] == function))
+        {
+            static assert(0, "Function types not supported," ~
+                " use a function pointer type instead of " ~ T[0].stringof);
+        }
+        else static if (is(T[0] == U!V, alias U, V...))
+        {
+            template replaceTemplateArgs(T...)
+            {
+                static if (is(typeof(T[0])))    // template argument is value or symbol
+                    enum replaceTemplateArgs = T[0];
+                else
+                    alias replaceTemplateArgs = ReplaceTypeUnless!(pred, From, To, T[0]);
+            }
+            alias ReplaceTypeUnless = U!(staticMap!(replaceTemplateArgs, V));
+        }
+        else static if (is(T[0] == struct))
+            // don't match with alias this struct below (Issue 15168)
+            alias ReplaceTypeUnless = T[0];
+        else static if (is(T[0] == U[], U))
+            alias ReplaceTypeUnless = ReplaceTypeUnless!(pred, From, To, U)[];
+        else static if (is(T[0] == U[n], U, size_t n))
+            alias ReplaceTypeUnless = ReplaceTypeUnless!(pred, From, To, U)[n];
+        else static if (is(T[0] == U[V], U, V))
+            alias ReplaceTypeUnless =
+                ReplaceTypeUnless!(pred, From, To, U)[ReplaceTypeUnless!(pred, From, To, V)];
+        else
+            alias ReplaceTypeUnless = T[0];
+    }
+    else static if (T.length > 1)
+    {
+        alias ReplaceTypeUnless = AliasSeq!(ReplaceTypeUnless!(pred, From, To, T[0]),
+            ReplaceTypeUnless!(pred, From, To, T[1 .. $]));
+    }
+    else
+    {
+        alias ReplaceTypeUnless = AliasSeq!();
+    }
+}
+
+///
+@safe unittest
+{
+    import std.traits : isArray;
+
+    static assert(
+        is(ReplaceTypeUnless!(isArray, int, string, int*) == string*) &&
+        is(ReplaceTypeUnless!(isArray, int, string, int[]) == int[]) &&
+        is(ReplaceTypeUnless!(isArray, int, string, Tuple!(int, int[]))
+            == Tuple!(string, int[]))
+   );
+}
+
+private template replaceTypeInFunctionTypeUnless(alias pred, From, To, fun)
+{
+    alias RX = ReplaceTypeUnless!(pred, From, To, ReturnType!fun);
+    alias PX = AliasSeq!(ReplaceTypeUnless!(pred, From, To, Parameters!fun));
     // Wrapping with AliasSeq is neccesary because ReplaceType doesn't return
     // tuple if Parameters!fun.length == 1
 
@@ -8888,9 +8916,8 @@ private template replaceTypeInFunctionType(From, To, fun)
 
         return result;
     }
-    //pragma(msg, "gen ==> ", gen());
 
-    mixin("alias replaceTypeInFunctionType = " ~ gen() ~ ";");
+    mixin("alias replaceTypeInFunctionTypeUnless = " ~ gen() ~ ";");
 }
 
 @safe unittest

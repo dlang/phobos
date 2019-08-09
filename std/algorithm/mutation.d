@@ -1046,8 +1046,8 @@ to its `.init` value after it is moved into target, otherwise it is
 left unchanged.
 
 Preconditions:
-If source has internal pointers that point to itself, it cannot be moved, and
-will trigger an assertion failure.
+If source has internal pointers that point to itself and doesn't define
+opPostMove, it cannot be moved, and will trigger an assertion failure.
 
 Params:
     source = Data to copy.
@@ -1196,6 +1196,24 @@ pure nothrow @safe @nogc unittest
     S s2 = move(s1);
     assert(s1.a == 1);
     assert(s2.a == 2);
+}
+
+/// `opPostMove` will be called if defined:
+pure nothrow @safe @nogc unittest
+{
+    struct S
+    {
+        int a;
+        void opPostMove(const ref S old)
+        {
+            assert(a == old.a);
+            a++;
+        }
+    }
+    S s1;
+    s1.a = 41;
+    S s2 = move(s1);
+    assert(s2.a == 42);
 }
 
 private void trustedMoveImpl(T)(ref T source, ref T target) @trusted
@@ -1379,12 +1397,14 @@ void moveEmplace(T)(ref T source, ref T target) pure @system
     import core.stdc.string : memcpy, memset;
     import std.traits : hasAliasing, hasElaborateAssign,
                         hasElaborateCopyConstructor, hasElaborateDestructor,
+                        hasElaborateMove,
                         isAssignable, isStaticArray;
 
     static if (!is(T == class) && hasAliasing!T) if (!__ctfe)
     {
         import std.exception : doesPointTo;
-        assert(!doesPointTo(source, source), "Cannot move object with internal pointer.");
+        assert(!(doesPointTo(source, source) && !hasElaborateMove!T),
+            "Cannot move object with internal pointer unless `opPostMove` is defined.");
     }
 
     static if (is(T == struct))
@@ -1395,6 +1415,9 @@ void moveEmplace(T)(ref T source, ref T target) pure @system
             memcpy(&target, &source, T.sizeof);
         else
             target = source;
+
+        static if (hasElaborateMove!T)
+            __move_post_blt(target, source);
 
         // If the source defines a destructor or a postblit hook, we must obliterate the
         // object in order to avoid double freeing and undue aliasing

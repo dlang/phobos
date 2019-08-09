@@ -480,7 +480,7 @@ struct Task(alias fun, Args...)
         static if (isFunctionPointer!(_args[0]))
         {
             private enum bool isPure =
-            functionAttributes!(Args[0]) & FunctionAttribute.pure_;
+            (functionAttributes!(Args[0]) & FunctionAttribute.pure_) != 0;
         }
         else
         {
@@ -3007,9 +3007,9 @@ public:
     The main uses cases for `WorkerLocalStorageStorage` are:
 
     1.  Performing parallel reductions with an imperative, as opposed to
-    functional, programming style.  In this case, it's useful to treat
-    `WorkerLocalStorageStorage` as local to each thread for only the parallel
-    portion of an algorithm.
+        functional, programming style.  In this case, it's useful to treat
+        `WorkerLocalStorageStorage` as local to each thread for only the parallel
+        portion of an algorithm.
 
     2.  Recycling temporary buffers across iterations of a parallel foreach loop.
 

@@ -72,6 +72,20 @@ enum RegexOption: uint {
 //do not reorder this list
 alias RegexOptionNames = AliasSeq!('g', 'i', 'x', 'U', 'm', 's');
 static assert( RegexOption.max < 0x80);
+
+package(std) string regexOptionsToString()(uint flags) nothrow pure @safe
+{
+    flags &= (RegexOption.max << 1) - 1;
+    if (!flags)
+        return "";
+    char[RegexOptionNames.length] buffer = void;
+    size_t pos = 0;
+    foreach (i, flag; __traits(allMembers, RegexOption))
+        if (flags & __traits(getMember, RegexOption, flag))
+            buffer[pos++] = RegexOptionNames[i];
+    return buffer[0 .. pos].idup;
+}
+
 // flags that allow guide execution of engine
 enum RegexInfo : uint { oneShot = 0x80 }
 
@@ -344,9 +358,18 @@ struct NamedGroup
 //holds pair of start-end markers for a submatch
 struct Group(DataIndex)
 {
-    DataIndex begin, end;
+    DataIndex begin = DataIndex.max;
+    DataIndex end   = DataIndex.min;
+
+    bool opCast(T : bool)() const
+    {
+        return begin <= end;
+    }
+
     @trusted string toString()() const
     {
+        if (begin < end)
+            return "(unmatched)";
         import std.array : appender;
         import std.format : formattedWrite;
         auto a = appender!string();
@@ -700,6 +723,20 @@ package(std.regex):
         writeln("Max counter nesting depth: ", maxCounterDepth);
     }
 
+    public string toString()() const
+    {
+        import std.format : format;
+        static if (is(typeof(pattern) : string))
+            alias patternString = pattern;
+        else
+        {
+            import std.conv : to;
+            auto patternString = conv.to!string(pattern);
+        }
+        auto quotedEscapedPattern = format("%(%s %)", [patternString]);
+        auto flagString = regexOptionsToString(flags);
+        return "Regex!" ~ Char.stringof ~ "(" ~ quotedEscapedPattern ~ ", \"" ~ flagString ~ "\")";
+    }
 }
 
 // The stuff below this point is temporarrily part of IR module
@@ -971,7 +1008,7 @@ if (!hasElaborateDestructor!T)
         return hashOf(internalSlice[]);
     }
 
-    T opIndex(size_t idx) inout
+    ref inout(T) opIndex(size_t idx) inout
     {
         return internalSlice[idx];
     }

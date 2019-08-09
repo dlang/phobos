@@ -509,6 +509,10 @@ private Pid spawnProcessImpl(scope const(char[])[] args,
 
             if (!(config & Config.inheritFDs))
             {
+                // NOTE: malloc() and getrlimit() are not on the POSIX async
+                // signal safe functions list, but practically this should not
+                // be a problem. Tha Java VM and CPython also use malloc() in
+                // its own implementation.
                 import core.stdc.stdlib : malloc;
                 import core.sys.posix.poll : pollfd, poll, POLLNVAL;
                 import core.sys.posix.sys.resource : rlimit, getrlimit, RLIMIT_NOFILE;

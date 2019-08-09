@@ -693,7 +693,7 @@ class Element : Item
     this(string name, string interior=null) @safe pure
     {
         this(new Tag(name));
-        if (interior.length != 0) opCatAssign(new Text(interior));
+        if (interior.length != 0) opOpAssign!("~")(new Text(interior));
     }
 
     /**
@@ -722,7 +722,8 @@ class Element : Item
      * element ~= new Text("hello");
      * --------------
      */
-    void opCatAssign(Text item) @safe pure
+    void opOpAssign(string op)(Text item) @safe pure
+        if (op == "~")
     {
         texts ~= item;
         appendItem(item);
@@ -740,7 +741,8 @@ class Element : Item
      * element ~= new CData("hello");
      * --------------
      */
-    void opCatAssign(CData item) @safe pure
+    void opOpAssign(string op)(CData item) @safe pure
+        if (op == "~")
     {
         cdatas ~= item;
         appendItem(item);
@@ -758,7 +760,8 @@ class Element : Item
      * element ~= new Comment("hello");
      * --------------
      */
-    void opCatAssign(Comment item) @safe pure
+    void opOpAssign(string op)(Comment item) @safe pure
+        if (op == "~")
     {
         comments ~= item;
         appendItem(item);
@@ -776,7 +779,8 @@ class Element : Item
      * element ~= new ProcessingInstruction("hello");
      * --------------
      */
-    void opCatAssign(ProcessingInstruction item) @safe pure
+    void opOpAssign(string op)(ProcessingInstruction item) @safe pure
+        if (op == "~")
     {
         pis ~= item;
         appendItem(item);
@@ -796,7 +800,8 @@ class Element : Item
      *    // appends element representing <br />
      * --------------
      */
-    void opCatAssign(Element item) @safe pure
+    void opOpAssign(string op)(Element item) @safe pure
+        if (op == "~")
     {
         elements ~= item;
         appendItem(item);
@@ -811,16 +816,16 @@ class Element : Item
 
     private void parse(ElementParser xml)
     {
-        xml.onText = (string s) { opCatAssign(new Text(s)); };
-        xml.onCData = (string s) { opCatAssign(new CData(s)); };
-        xml.onComment = (string s) { opCatAssign(new Comment(s)); };
-        xml.onPI = (string s) { opCatAssign(new ProcessingInstruction(s)); };
+        xml.onText = (string s) { opOpAssign!("~")(new Text(s)); };
+        xml.onCData = (string s) { opOpAssign!("~")(new CData(s)); };
+        xml.onComment = (string s) { opOpAssign!("~")(new Comment(s)); };
+        xml.onPI = (string s) { opOpAssign!("~")(new ProcessingInstruction(s)); };
 
         xml.onStartTag[null] = (ElementParser xml)
         {
             auto e = new Element(xml.tag);
             e.parse(xml);
-            opCatAssign(e);
+            opOpAssign!("~")(e);
         };
 
         xml.parse();

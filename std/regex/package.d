@@ -136,7 +136,7 @@ $(TR $(TD Objects) $(TD
     $(REG_ROW \W, Matches any non-word character.)
     $(REG_ROW \s, Matches whitespace, same as \p{White_Space}.)
     $(REG_ROW \S, Matches any character except those recognized as $(I \s ). )
-    $(REG_ROW \\, Matches \ character. )
+    $(REG_ROW \\\\, Matches \ character. )
     $(REG_ROW \c where c is one of [|*+?(), Matches the character c itself. )
     $(REG_ROW \p{PropertyName}, Matches a character that belongs
         to the Unicode PropertyName set.
@@ -261,7 +261,7 @@ $(TR $(TD Objects) $(TD
         $(REG_ROW $', part of input $(I following) the match. )
         $(REG_ROW $$, '$' character. )
         $(REG_ROW \c $(COMMA) where c is any character, the character c itself. )
-        $(REG_ROW \\, '\' character. )
+        $(REG_ROW \\\\, '\\' character. )
         $(REG_ROW $(DOLLAR)1 .. $(DOLLAR)99, submatch number 1 to 99 respectively. )
     )
 
@@ -413,6 +413,18 @@ if (isSomeString!(S))
     assert(m.front[1] == "12");
 }
 
+@system unittest
+{
+    import std.conv : to;
+    import std.string : indexOf;
+
+    immutable pattern = "s+";
+    auto regexString = to!string(regex(pattern, "U"));
+    assert(regexString.length <= pattern.length + 100, "String representation shouldn't be unreasonably bloated.");
+    assert(indexOf(regexString, "s+") >= 0, "String representation should include pattern.");
+    assert(indexOf(regexString, 'U') >= 0, "String representation should include flags.");
+}
+
 public auto regexImpl(S)(S pattern, const(char)[] flags="")
 if (isSomeString!(S))
 {
@@ -526,6 +538,12 @@ private:
         _f = 0;
     }
 
+    inout(R) getMatch(size_t index) inout
+    {
+        auto m = &matches[index];
+        return *m ? _input[m.begin .. m.end] : null;
+    }
+
 public:
     ///Slice of input prior to the match.
     @property R pre()
@@ -550,14 +568,14 @@ public:
     @property R front()
     {
         assert(_nMatch, "attempted to get front of an empty match");
-        return _input[matches[_f].begin .. matches[_f].end];
+        return getMatch(_f);
     }
 
     ///ditto
     @property R back()
     {
         assert(_nMatch, "attempted to get back of an empty match");
-        return _input[matches[_b - 1].begin .. matches[_b - 1].end];
+        return getMatch(_b - 1);
     }
 
     ///ditto
@@ -581,9 +599,7 @@ public:
     inout(R) opIndex()(size_t i) inout
     {
         assert(_f + i < _b,text("requested submatch number ", i," is out of range"));
-        assert(matches[_f + i].begin <= matches[_f + i].end,
-            text("wrong match: ", matches[_f + i].begin, "..", matches[_f + i].end));
-        return _input[matches[_f + i].begin .. matches[_f + i].end];
+        return getMatch(_f + i);
     }
 
     /++
@@ -633,7 +649,7 @@ public:
         if (isSomeString!String)
     {
         size_t index = lookupNamedGroup(_names, i);
-        return _input[matches[index].begin .. matches[index].end];
+        return getMatch(index);
     }
 
     ///Number of matches in this object.
@@ -663,6 +679,11 @@ public:
     assert(c.empty);
 
     assert(!matchFirst("nothing", "something"));
+
+    // Captures that are not matched will be null.
+    c = matchFirst("ac", regex(`a(b)?c`));
+    assert(c);
+    assert(!c[1]);
 }
 
 @system unittest
@@ -671,6 +692,15 @@ public:
     string s = "abc";
     assert(cast(bool)(c = matchFirst(s, regex("d")))
         || cast(bool)(c = matchFirst(s, regex("a"))));
+}
+
+@system unittest // Issue 19979
+{
+    auto c = matchFirst("bad", regex(`(^)(not )?bad($)`));
+    assert(c[0] && c[0].length == "bad".length);
+    assert(c[1] && !c[1].length);
+    assert(!c[2]);
+    assert(c[3] && !c[3].length);
 }
 
 /++

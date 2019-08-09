@@ -74,12 +74,16 @@ private
 {
     bool hasLocalAliasing(Types...)()
     {
+        import std.typecons : Rebindable;
+
         // Works around "statement is not reachable"
         bool doesIt = false;
         static foreach (T; Types)
         {
             static if (is(T == Tid))
             { /* Allowed */ }
+            else static if (is(T : Rebindable!R, R))
+                doesIt |= hasLocalAliasing!R;
             else static if (is(T == struct))
                 doesIt |= hasLocalAliasing!(typeof(T.tupleof));
             else
@@ -92,6 +96,14 @@ private
     {
         static struct Container { Tid t; }
         static assert(!hasLocalAliasing!(Tid, Container, int));
+    }
+
+    @safe unittest
+    {
+        /* Issue 20097 */
+        import std.datetime.systime : SysTime;
+        static struct Container { SysTime time; }
+        static assert(!hasLocalAliasing!(SysTime, Container));
     }
 
     enum MsgType
@@ -1334,6 +1346,15 @@ class FiberScheduler : Scheduler
 
     /**
      * Returns a Condition analog that yields when wait or notify is called.
+     *
+     * Bug:
+     * For the default implementation, `notifyAll`will behave like `notify`.
+     *
+     * Params:
+     *   m = A `Mutex` to use for locking if the condition needs to be waited on
+     *       or notified from multiple `Thread`s.
+     *       If `null`, no `Mutex` will be used and it is assumed that the
+     *       `Condition` is only waited on/notified from one `Thread`.
      */
     Condition newCondition(Mutex m) nothrow
     {
@@ -1377,7 +1398,7 @@ private:
                  !notified && !period.isNegative;
                  period = limit - MonoTime.currTime)
             {
-                yield();
+                this.outer.yield();
             }
             return notified;
         }
@@ -1397,9 +1418,11 @@ private:
     private:
         void switchContext() nothrow
         {
-            mutex_nothrow.unlock_nothrow();
-            scope (exit) mutex_nothrow.lock_nothrow();
-            yield();
+            if (mutex_nothrow) mutex_nothrow.unlock_nothrow();
+            scope (exit)
+                if (mutex_nothrow)
+                    mutex_nothrow.lock_nothrow();
+            this.outer.yield();
         }
 
         private bool notified;

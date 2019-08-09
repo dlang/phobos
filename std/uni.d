@@ -2027,8 +2027,8 @@ pure:
     ---
     $(P
     The way to read this is: start with negative meaning that all numbers
-    smaller then the next one are not present in this set (and positive
-    - the contrary). Then switch positive/negative after each
+    smaller then the next one are not present in this set (and positive -
+    the contrary). Then switch positive/negative after each
     number passed from left to right.
     )
     $(P This way negative spans until 10, then positive until 50,

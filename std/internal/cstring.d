@@ -84,41 +84,76 @@ if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
 
     // Note: res._ptr can't point to res._buff as structs are movable.
 
-    To[] p = res._buff;
-    size_t i;
-
-    size_t strLength;
-    static if (hasLength!From)
+    static if (isSomeString!From) // Bugzilla 1498
     {
-        strLength = str.length;
-    }
-    import std.utf : byUTF;
-    static if (isSomeString!From)
-    {
-        auto r = cast(const(CF)[])str;  // because inout(CF) causes problems with byUTF
-        if (r is null)  // Bugzilla 14980
+        if (str is null)
         {
             res._length = 0;
             res._ptr = null;
             return res;
         }
     }
-    else
-        alias r = str;
-    To[] heapBuffer;
-    foreach (const c; byUTF!(Unqual!To)(r))
+
+    // Use slice assignment if available.
+    static if (To.sizeof == CF.sizeof && is(typeof(res._buff[0 .. str.length] = str[])))
     {
-        if (i + 1 == p.length)
+        if (str.length < res._buff.length)
         {
-            heapBuffer = trustedRealloc(p, strLength, heapBuffer is null);
-            p = heapBuffer;
+            res._buff[0 .. str.length] = str[];
+            res._buff[str.length] = 0;
+            res._ptr = res.useStack;
         }
-        p[i++] = c;
+        else
+        {
+            import std.internal.memory : enforceMalloc;
+            if (false)
+            {
+                // This code is removed by the compiler but causes `@safe`ty
+                // to be inferred correctly.
+                CF[0] x;
+                x[] = str[0 .. 0];
+            }
+            res._ptr = () @trusted {
+                auto p = cast(CF*) enforceMalloc((str.length + 1) * CF.sizeof);
+                p[0 .. str.length] = str[];
+                p[str.length] = 0;
+                return cast(To*) p;
+            }();
+        }
+        res._length = str.length;
+        return res;
     }
-    p[i] = 0;
-    res._length = i;
-    res._ptr = (heapBuffer is null ? res.useStack : &heapBuffer[0]);
-    return res;
+    else
+    {
+        static assert(!(isSomeString!From && CF.sizeof == To.sizeof), "Should be using slice assignment.");
+        To[] p = res._buff;
+        size_t i;
+
+        size_t strLength;
+        static if (hasLength!From)
+        {
+            strLength = str.length;
+        }
+        import std.utf : byUTF;
+        static if (isSomeString!From)
+            auto r = cast(const(CF)[])str;  // because inout(CF) causes problems with byUTF
+        else
+            alias r = str;
+        To[] heapBuffer;
+        foreach (const c; byUTF!(Unqual!To)(r))
+        {
+            if (i + 1 == p.length)
+            {
+                heapBuffer = trustedRealloc(p, strLength, heapBuffer is null);
+                p = heapBuffer;
+            }
+            p[i++] = c;
+        }
+        p[i] = 0;
+        res._length = i;
+        res._ptr = (heapBuffer is null ? res.useStack : &heapBuffer[0]);
+        return res;
+    }
 }
 
 ///
