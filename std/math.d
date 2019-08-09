@@ -5690,15 +5690,17 @@ public:
         static void func() {
             int a = 10 * 10;
         }
-
+        pragma(inline, false) static void blockopt(ref real x) {}
         real a = 3.5;
         // Set all the flags to zero
         resetIeeeFlags();
         assert(!ieeeFlags.divByZero);
+        blockopt(a); // avoid constant propagation by the optimizer
         // Perform a division by zero.
         a /= 0.0L;
         assert(a == real.infinity);
         assert(ieeeFlags.divByZero);
+        blockopt(a); // avoid constant propagation by the optimizer
         // Create a NaN
         a *= 0.0L;
         assert(ieeeFlags.invalid);
@@ -5790,9 +5792,12 @@ void resetIeeeFlags() @trusted nothrow @nogc
 {
     version (InlineAsm_X86_Any)
     {
+        pragma(inline, false) static void blockopt(ref real x) {}
         resetIeeeFlags();
         real a = 3.5;
+        blockopt(a); // avoid constant propagation by the optimizer
         a /= 0.0L;
+        blockopt(a); // avoid constant propagation by the optimizer
         assert(a == real.infinity);
         assert(ieeeFlags.divByZero);
 
@@ -5812,12 +5817,15 @@ void resetIeeeFlags() @trusted nothrow @nogc
 {
     version (InlineAsm_X86_Any)
     {
+        pragma(inline, false) static void blockopt(ref real x) {}
         resetIeeeFlags();
         real a = 3.5;
+        blockopt(a); // avoid constant propagation by the optimizer
 
         a /= 0.0L;
         assert(a == real.infinity);
         assert(ieeeFlags.divByZero);
+        blockopt(a); // avoid constant propagation by the optimizer
 
         a *= 0.0L;
         assert(isNaN(a));
@@ -6351,10 +6359,12 @@ version (InlineAsm_X86_Any) @safe unittest // rounding
         {
             static T addRound(T)(uint rm)
             {
+                pragma(inline, false) static void blockopt(ref T x) {}
                 pragma(inline, false);
                 FloatingPointControl fpctrl;
                 fpctrl.rounding = rm;
                 T x = 1;
+                blockopt(x); // avoid constant propagation by the optimizer
                 x += 0.1;
                 return x;
             }
@@ -6370,10 +6380,12 @@ version (InlineAsm_X86_Any) @safe unittest // rounding
         {
             static T subRound(T)(uint rm)
             {
+                pragma(inline, false) static void blockopt(ref T x) {}
                 pragma(inline, false);
                 FloatingPointControl fpctrl;
                 fpctrl.rounding = rm;
                 T x = -1;
+                blockopt(x); // avoid constant propagation by the optimizer
                 x -= 0.1;
                 return x;
             }
