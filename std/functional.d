@@ -1054,7 +1054,7 @@ template compose(fun...)
    Params:
         fun = the call-able(s) or `string`(s) to compose into one function
     Returns:
-        A new function `f(x)` that in turn returns `fun[0](fun[1](...(x)))...`.
+        A new function `f(x)` that in turn returns `fun[$-1](...fun[1](fun[0](x)))...`.
 
    Example:
 
