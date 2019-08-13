@@ -474,11 +474,18 @@ Assigns a file to another. The target of the assignment gets detached
 from whatever file it was attached to, and attaches itself to the new
 file.
  */
-    void opAssign(File rhs) @safe
+    ref File opAssign(File rhs) @safe return
     {
         import std.algorithm.mutation : swap;
 
         swap(this, rhs);
+        return this;
+    }
+
+    @safe unittest // bugzilla 20129
+    {
+        File[int] aa;
+        aa.require(0, File.init);
     }
 
 /**
