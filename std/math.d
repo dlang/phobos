@@ -3228,12 +3228,15 @@ creal expi(real y) @trusted pure nothrow @nogc
     {
         version (Win64)
         {
+            enum offset_ = creal.sizeof / 2;
             asm pure nothrow @nogc
             {
                 naked;
-                fld     real ptr [ECX];
+                fld     real ptr [RDX];
                 fsincos;
-                fxch    ST(1), ST(0);
+                fstp    real ptr [RCX];
+                fstp    real ptr [RCX+offset_];
+                mov     RAX,RCX;
                 ret;
             }
         }
