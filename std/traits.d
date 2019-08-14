@@ -6648,9 +6648,19 @@ package template convertToString(T)
 /**
  * Detect whether type `T` is a string that will be autodecoded.
  *
- * All arrays that use char, wchar, and their qualified versions are narrow
- * strings. (Those include string and wstring).
- * Aggregates that implicitly cast to narrow strings are included.
+ * Given a type `S` that is one of:
+ * $(OL
+ *  $(LI `const(char)[]`)
+ *  $(LI `const(wchar)[]`)
+ * )
+ * Type `T` can be one of:
+ * $(OL
+ *    $(LI `S`)
+ *    $(LI implicitly convertible to `T`)
+ *    $(LI an enum with a base type `T`)
+ *    $(LI an aggregate with a base type `T`)
+ * )
+ * with the proviso that `T` cannot be a static array.
  *
  * Params:
  *      T = type to be tested
@@ -6677,9 +6687,30 @@ template isAutodecodableString(T)
         string s;
         alias s this;
     }
-    assert(isAutodecodableString!wstring);
-    assert(isAutodecodableString!Stringish);
-    assert(!isAutodecodableString!dstring);
+    static assert(isAutodecodableString!wstring);
+    static assert(isAutodecodableString!Stringish);
+    static assert(!isAutodecodableString!dstring);
+
+    enum E : const(char)[3] { X = "abc" }
+    enum F : const(char)[] { X = "abc" }
+    enum G : F { X = F.init }
+
+    static assert(isAutodecodableString!(char[]));
+    static assert(!isAutodecodableString!(E));
+    static assert(isAutodecodableString!(F));
+    static assert(isAutodecodableString!(G));
+
+    struct Stringish2
+    {
+        Stringish s;
+        alias s this;
+    }
+
+    enum H : Stringish { X = Stringish() }
+    enum I : Stringish2 { X = Stringish2() }
+
+    static assert(isAutodecodableString!(H));
+    static assert(isAutodecodableString!(I));
 }
 
 /**
