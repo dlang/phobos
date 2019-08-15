@@ -3971,7 +3971,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 // ditto
 Target parseElement(Target, Source)(ref Source s)
 if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
-    isSomeChar!Target && !is(Target == enum))
+    is(CharTypeOf!Target == dchar) && !is(Target == enum))
 {
     Unqual!Target c;
 
