@@ -3364,7 +3364,7 @@ version (Posix) @system unittest // input range of dchars
     import std.utf : byChar;
     immutable string link = deleteme ~ "/l";
     symlink("f", link);
-    InputRange!dchar linkr = inputRangeObject(link);
+    InputRange!(ElementType!string) linkr = inputRangeObject(link);
     alias R = typeof(linkr);
     static assert(isInputRange!R);
     static assert(!isForwardRange!R);
