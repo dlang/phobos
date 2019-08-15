@@ -2962,7 +2962,7 @@ is empty, throws an `Exception`. In case of an I/O error throws
             }
             else static if (c.sizeof == 2)
             {
-                import std.utf : encode;
+                import std.utf : encode, decode;
 
                 if (orientation_ <= 0)
                 {
@@ -2982,7 +2982,8 @@ is empty, throws an `Exception`. In case of an I/O error throws
                         if (highSurrogate != '\0')
                         {
                             immutable wchar[2] rbuf = [highSurrogate, c];
-                            d = rbuf[].front;
+                            size_t index = 0;
+                            d = decode(rbuf[], index);
                             highSurrogate = 0;
                         }
                         char[4] wbuf;
