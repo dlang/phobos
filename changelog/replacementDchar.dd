@@ -1,0 +1,31 @@
+# Change autodecode from throwing `UTFException` on invalid encodings to returning `std.utf.replacementDchar` `('\uFFFD')` instead.
+
+When `char` and `wchar` slices are iterated, they are autodecoded meaning the UTF-8 and
+UTF-16 code unit sequences are automatically consumed and decoded into `dchar` code points.
+If an invalid sequence is encountered, a
+$(LINK2 https://dlang.org/phobos/std_utf.html#UTFExceptions,`UTFException`)
+is raised.
+
+This change instead causes
+$(LINK2 https://dlang.org/phobos/std_utf.html#replacementDchar, `std.utf.replacementDchar`)
+to be the decoded result of an invalid sequence.
+
+If the old behavior is desired, the autodecoding iteration can be replaced with
+$(LINK2 https://dlang.org/phobos/std_utf.html#byUTF, `std.utf.byUTF!(dchar, UseReplacementDchar.no)`)
+to detect the invalid sequences and throw the exception, as in the following example:
+
+---
+import std.utf;
+import std.stdio;
+
+void test(string s)
+{
+    s.byDchar!(dchar, UseReplacementDchar.no)().write();
+}
+
+void main()
+{
+    test("hello");
+    test("\xFFbetty");
+}
+---

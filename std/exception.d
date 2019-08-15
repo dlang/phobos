@@ -1908,17 +1908,21 @@ pure @safe unittest
 ///
 pure @safe unittest
 {
-    import std.algorithm.comparison : equal;
-    import std.range : retro;
-    import std.utf : UTFException;
+    version (none) // autodecode no longer throws on invalid UTF sequences
+                   // issues.dlang.org/show_bug.cgi?id=20134
+    {
+        import std.algorithm.comparison : equal;
+        import std.range : retro;
+        import std.utf : UTFException;
 
-    auto str = "hello\xFFworld"; // 0xFF is an invalid UTF-8 code unit
+        auto str = "hello\xFFworld"; // 0xFF is an invalid UTF-8 code unit
 
-    auto handled = str.handle!(UTFException, RangePrimitive.access,
-            (e, r) => ' '); // Replace invalid code points with spaces
+        auto handled = str.handle!(UTFException, RangePrimitive.access,
+                (e, r) => ' '); // Replace invalid code points with spaces
 
-    assert(handled.equal("hello world")); // `front` is handled,
-    assert(handled.retro.equal("dlrow olleh")); // as well as `back`
+        assert(handled.equal("hello world")); // `front` is handled,
+        assert(handled.retro.equal("dlrow olleh")); // as well as `back`
+    }
 }
 
 /** Handle exceptions thrown from range primitives.
@@ -2201,17 +2205,21 @@ pure @safe unittest
 ///
 pure @safe unittest
 {
-    import std.algorithm.comparison : equal;
-    import std.range : retro;
-    import std.utf : UTFException;
+    version (none) // autodecode no longer throws on invalid UTF sequences
+                   // issues.dlang.org/show_bug.cgi?id=20134
+    {
+        import std.algorithm.comparison : equal;
+        import std.range : retro;
+        import std.utf : UTFException;
 
-    auto str = "hello\xFFworld"; // 0xFF is an invalid UTF-8 code unit
+        auto str = "hello\xFFworld"; // 0xFF is an invalid UTF-8 code unit
 
-    auto handled = str.handle!(UTFException, RangePrimitive.access,
-            (e, r) => ' '); // Replace invalid code points with spaces
+        auto handled = str.handle!(UTFException, RangePrimitive.access,
+                (e, r) => ' '); // Replace invalid code points with spaces
 
-    assert(handled.equal("hello world")); // `front` is handled,
-    assert(handled.retro.equal("dlrow olleh")); // as well as `back`
+        assert(handled.equal("hello world")); // `front` is handled,
+        assert(handled.retro.equal("dlrow olleh")); // as well as `back`
+    }
 }
 
 pure nothrow @safe unittest

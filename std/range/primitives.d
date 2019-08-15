@@ -2498,10 +2498,10 @@ if (!isAutodecodableString!(T[]) && !is(T[] == void[]))
 @property dchar front(T)(scope const(T)[] a) @safe pure
 if (isAutodecodableString!(T[]))
 {
-    import std.utf : decode;
+    import std.utf;
     assert(a.length, "Attempting to fetch the front of an empty array of " ~ T.stringof);
     size_t i = 0;
-    return decode(a, i);
+    return decode!(UseReplacementDchar.yes)(a, i);
 }
 
 /**
@@ -2542,10 +2542,10 @@ if (!isAutodecodableString!(T[]) && !is(T[] == void[]))
 @property dchar back(T)(scope const(T)[] a) @safe pure
 if (isAutodecodableString!(T[]))
 {
-    import std.utf : decode, strideBack;
+    import std.utf;
     assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);
     size_t i = a.length - strideBack(a, a.length);
-    return decode(a, i);
+    return decode!(UseReplacementDchar.yes)(a, i);
 }
 
 /*
