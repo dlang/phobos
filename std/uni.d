@@ -708,7 +708,7 @@ import std.range.primitives : back, ElementEncodingType, ElementType, empty,
     front, hasLength, hasSlicing, isForwardRange, isInputRange,
     isRandomAccessRange, popFront, put, save;
 import std.traits : isConvertibleToString, isIntegral, isSomeChar,
-    isSomeString, Unqual;
+    isSomeString, Unqual, isDynamicArray;
 // debug = std_uni;
 
 debug(std_uni) import std.stdio; // writefln, writeln
@@ -4843,7 +4843,8 @@ template Utf8Matcher()
         enum dispatch = genDispatch();
 
         public bool match(Range)(ref Range inp) const
-            if (isRandomAccessRange!Range && is(ElementType!Range : char))
+            if (isRandomAccessRange!Range && is(ElementType!Range : char) &&
+                !isDynamicArray!Range)
         {
             enum mode = Mode.skipOnMatch;
             assert(!inp.empty);
@@ -4867,7 +4868,8 @@ template Utf8Matcher()
         static if (Sizes.length == 4) // can skip iff can detect all encodings
         {
             public bool skip(Range)(ref Range inp) const
-                if (isRandomAccessRange!Range && is(ElementType!Range : char))
+                if (isRandomAccessRange!Range && is(ElementType!Range : char) &&
+                    !isDynamicArray!Range)
             {
                 enum mode = Mode.alwaysSkip;
                 assert(!inp.empty);
@@ -4888,7 +4890,8 @@ template Utf8Matcher()
         }
 
         public bool test(Range)(ref Range inp) const
-            if (isRandomAccessRange!Range && is(ElementType!Range : char))
+            if (isRandomAccessRange!Range && is(ElementType!Range : char) &&
+                !isDynamicArray!Range)
         {
             enum mode = Mode.neverSkip;
             assert(!inp.empty);
@@ -5073,7 +5076,8 @@ template Utf16Matcher()
     mixin template DefMatcher()
     {
         public bool match(Range)(ref Range inp) const
-            if (isRandomAccessRange!Range && is(ElementType!Range : wchar))
+            if (isRandomAccessRange!Range && is(ElementType!Range : wchar) &&
+                !isDynamicArray!Range)
         {
             enum mode = Mode.skipOnMatch;
             assert(!inp.empty);
@@ -5099,7 +5103,8 @@ template Utf16Matcher()
         static if (Sizes.length == 2)
         {
             public bool skip(Range)(ref Range inp) const
-                if (isRandomAccessRange!Range && is(ElementType!Range : wchar))
+                if (isRandomAccessRange!Range && is(ElementType!Range : wchar) &&
+                    !isDynamicArray!Range)
             {
                 enum mode = Mode.alwaysSkip;
                 assert(!inp.empty);
@@ -5120,7 +5125,8 @@ template Utf16Matcher()
         }
 
         public bool test(Range)(ref Range inp) const
-            if (isRandomAccessRange!Range && is(ElementType!Range : wchar))
+            if (isRandomAccessRange!Range && is(ElementType!Range : wchar) &&
+                !isDynamicArray!Range)
         {
             enum mode = Mode.neverSkip;
             assert(!inp.empty);
