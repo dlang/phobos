@@ -534,6 +534,7 @@ if (isInputRange!Values && isInputRange!Keys)
 {
     import std.range : repeat, zip;
     import std.typecons : tuple;
+    import std.range.primitives : autodecodeStrings;
     auto a = assocArray(zip([0, 1, 2], ["a", "b", "c"])); // aka zipMap
     static assert(is(typeof(a) == string[int]));
     assert(a == [0:"a", 1:"b", 2:"c"]);
@@ -542,9 +543,13 @@ if (isInputRange!Values && isInputRange!Keys)
     static assert(is(typeof(b) == string[string]));
     assert(b == ["foo":"bar", "baz":"quux"]);
 
+    static if (autodecodeStrings)
+        alias achar = dchar;
+    else
+        alias achar = immutable(char);
     auto c = assocArray("ABCD", true.repeat);
-    static assert(is(typeof(c) == bool[dchar]));
-    bool[dchar] expected = ['D':true, 'A':true, 'B':true, 'C':true];
+    static assert(is(typeof(c) == bool[achar]));
+    bool[achar] expected = ['D':true, 'A':true, 'B':true, 'C':true];
     assert(c == expected);
 }
 
@@ -586,11 +591,16 @@ if (isInputRange!Values && isInputRange!Keys)
 {
     import std.algorithm.iteration : filter, map;
     import std.range : enumerate;
+    import std.range.primitives : autodecodeStrings;
 
     auto r = "abcde".enumerate.filter!(a => a.index == 2);
     auto a = assocArray(r.map!(a => a.value), r.map!(a => a.index));
     assert(is(typeof(a) == size_t[dchar]));
-    assert(a == [dchar('c'): size_t(2)]);
+    static if (autodecodeStrings)
+        alias achar = dchar;
+    else
+        alias achar = immutable(char);
+    assert(a == [achar('c'): size_t(2)]);
 }
 
 @safe nothrow pure unittest
