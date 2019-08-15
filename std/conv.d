@@ -3973,7 +3973,7 @@ Target parseElement(Target, Source)(ref Source s)
 if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
     isSomeChar!Target && !is(Target == enum))
 {
-    Target c;
+    Unqual!Target c;
 
     parseCheck!s('\'');
     if (s.empty)
