@@ -2150,18 +2150,28 @@ if (isInputRange!RoR &&
 @safe pure unittest
 {
     import std.conv : to;
+    import std.range.primitives : autodecodeStrings;
 
     static foreach (T; AliasSeq!(string,wstring,dstring))
     {{
         auto arr2 = "Здравствуй Мир Unicode".to!(T);
         auto arr = ["Здравствуй", "Мир", "Unicode"].to!(T[]);
         assert(join(arr) == "ЗдравствуйМирUnicode");
-        static foreach (S; AliasSeq!(char,wchar,dchar))
-        {{
-            auto jarr = arr.join(to!S(' '));
-            static assert(is(typeof(jarr) == T));
-            assert(jarr == arr2);
-        }}
+        static if (autodecodeStrings)
+        {
+            static foreach (S; AliasSeq!(char,wchar,dchar))
+            {{
+                auto jarr = arr.join(to!S(' '));
+                static assert(is(typeof(jarr) == T));
+                assert(jarr == arr2);
+            }}
+        }
+        else
+        {
+            // Turning off autodecode means the join() won't
+            // just convert arr[] to dchar, so mixing char
+            // types fails to compile.
+        }
         static foreach (S; AliasSeq!(string,wstring,dstring))
         {{
             auto jarr = arr.join(to!S(" "));
