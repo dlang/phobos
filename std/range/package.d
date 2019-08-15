@@ -1392,7 +1392,8 @@ pure @safe nothrow @nogc unittest
 pure @safe unittest // issue 18657
 {
     import std.algorithm.comparison : equal;
-    auto r = refRange(&["foo"][0]).chain("bar");
+    string s = "foo";
+    auto r = refRange(&s).chain("bar");
     assert(equal(r.save, "foobar"));
     assert(equal(r, "foobar"));
 }
@@ -1665,7 +1666,8 @@ private struct ChooseResult(R1, R2)
 pure @safe unittest // issue 18657
 {
     import std.algorithm.comparison : equal;
-    auto r = choose(true, refRange(&["foo"][0]), "bar");
+    string s = "foo";
+    auto r = choose(true, refRange(&s), "bar");
     assert(equal(r.save, "foo"));
     assert(equal(r, "foo"));
 }
@@ -2037,7 +2039,8 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
 pure @safe unittest
 {
     import std.algorithm.comparison : equal;
-    auto r = roundRobin(refRange(&["foo"][0]), refRange(&["bar"][0]));
+    string f = "foo", b = "bar";
+    auto r = roundRobin(refRange(&f), refRange(&b));
     assert(equal(r.save, "fboaor"));
     assert(equal(r.save, "fboaor"));
 }
@@ -4268,7 +4271,8 @@ if (isStaticArray!R)
 pure @safe unittest // issue 18657
 {
     import std.algorithm.comparison : equal;
-    auto r = refRange(&["foo"][0]).cycle.take(4);
+    string s = "foo";
+    auto r = refRange(&s).cycle.take(4);
     assert(equal(r.save, "foof"));
     assert(equal(r.save, "foof"));
 }

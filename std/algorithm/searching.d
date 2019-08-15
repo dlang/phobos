@@ -5099,12 +5099,14 @@ pure @safe unittest // issue 18657
     import std.algorithm.comparison : equal;
     import std.range : refRange;
     {
-        auto r = refRange(&["foobar"][0]).until("bar");
+        string s = "foobar";
+        auto r = refRange(&s).until("bar");
         assert(equal(r.save, "foo"));
         assert(equal(r.save, "foo"));
     }
     {
-        auto r = refRange(&["foobar"][0]).until!(e => e == 'b');
+        string s = "foobar";
+        auto r = refRange(&s).until!(e => e == 'b');
         assert(equal(r.save, "foo"));
         assert(equal(r.save, "foo"));
     }

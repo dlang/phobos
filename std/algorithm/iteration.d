@@ -1831,7 +1831,8 @@ pure @safe unittest // issue 18657
 {
     import std.algorithm.comparison : equal;
     import std.range : refRange;
-    auto r = refRange(&["foo"][0]).group;
+    string s = "foo";
+    auto r = refRange(&s).group;
     assert(equal(r.save, "foo".group));
     assert(equal(r, "foo".group));
 }
@@ -5376,7 +5377,8 @@ pure @safe unittest // issue 18657
 {
     import std.algorithm.comparison : equal;
     import std.range : refRange;
-    auto r = refRange(&["foobar"][0]).splitter!(c => c == 'b');
+    string s = "foobar";
+    auto r = refRange(&s).splitter!(c => c == 'b');
     assert(equal!equal(r.save, ["foo", "ar"]));
     assert(equal!equal(r.save, ["foo", "ar"]));
 }
