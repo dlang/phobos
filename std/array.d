@@ -260,7 +260,7 @@ Returns:
     a `dchar[]`, `const(dchar)[]`, or `immutable(dchar)[]` depending on the constness of
     the input.
 */
-ElementType!String[] array(String)(scope String str)
+CopyTypeQualifiers!(ElementType!String,dchar)[] array(String)(scope String str)
 if (isNarrowString!String)
 {
     import std.utf : toUTF32;
@@ -268,7 +268,7 @@ if (isNarrowString!String)
     /* Unsafe cast. Allowed because toUTF32 makes a new array
        and copies all the elements.
      */
-    return () @trusted { return cast(ElementType!String[]) temp; } ();
+    return () @trusted { return cast(CopyTypeQualifiers!(ElementType!String, dchar)[]) temp; } ();
 }
 
 ///
@@ -277,7 +277,6 @@ if (isNarrowString!String)
     import std.range.primitives : isRandomAccessRange;
 
     assert("Hello D".array == "Hello D"d);
-    static assert(isRandomAccessRange!string == false);
 
     assert("Hello D"w.array == "Hello D"d);
     static assert(isRandomAccessRange!dstring == true);
