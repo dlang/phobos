@@ -3547,7 +3547,7 @@ if (isSomeString!Source && !is(Source == enum) &&
     {
         if (!s.empty && s.front == rbracket)
             break;
-        result ~= parseElement!(ElementType!Target)(s);
+        result ~= parseElement!(WideElementType!Target)(s);
         skipWS(s);
         if (s.empty)
             throw convError!(Source, Target)(s);
@@ -3996,6 +3996,17 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
     !isSomeString!Target && !isSomeChar!Target)
 {
     return parse!Target(s);
+}
+
+// Use this when parsing a type that will ultimately be appended to a
+// string.
+package template WideElementType(T)
+{
+    alias E = ElementType!T;
+    static if (isSomeChar!E)
+        alias WideElementType = dchar;
+    else
+        alias WideElementType = E;
 }
 
 

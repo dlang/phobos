@@ -5878,7 +5878,8 @@ do
             }
             else static if (isDynamicArray!T)
             {
-                result ~= unformatElement!(ElementType!T)(input, fmt);
+                import std.conv : WideElementType;
+                result ~= unformatElement!(WideElementType!T)(input, fmt);
             }
             else static if (isAssociativeArray!T)
             {
