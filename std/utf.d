@@ -61,6 +61,7 @@ $(TR $(TD Miscellaneous) $(TD
 module std.utf;
 
 import std.exception : basicExceptionCtors;
+import core.exception : UnicodeException;
 import std.meta : AliasSeq;
 import std.range.primitives;
 import std.traits : isAutodecodableString, isPointer, isSomeChar,
@@ -71,7 +72,7 @@ import std.typecons : Flag, Yes, No;
 /++
     Exception thrown on errors in std.utf functions.
   +/
-class UTFException : Exception
+class UTFException : UnicodeException
 {
     import core.internal.string : unsignedToTempString, UnsignedStringBuf;
 
@@ -97,7 +98,7 @@ class UTFException : Exception
     this(string msg, string file = __FILE__, size_t line = __LINE__,
          Throwable next = null) @nogc @safe pure nothrow
     {
-        super(msg, file, line, next);
+        super(msg, 0, file, line, next);
     }
     /// ditto
     this(string msg, size_t index, string file = __FILE__,
@@ -105,7 +106,7 @@ class UTFException : Exception
     {
         UnsignedStringBuf buf = void;
         msg ~= " (at index " ~ unsignedToTempString(index, buf, 10) ~ ")";
-        super(msg, file, line, next);
+        super(msg, index, file, line, next);
     }
 
     /**
