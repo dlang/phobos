@@ -2521,10 +2521,10 @@ Rebindable!T rebindable(T)(Rebindable!T obj)
 template UnqualRef(T)
 if (is(T == class) || is(T == interface))
 {
-    static if (is(T == const U, U)
-        || is(T == immutable U, U)
-        || is(T == shared U, U)
-        || is(T == const shared U, U))
+    static if (is(T == immutable U, U)
+        || is(T == const shared U, U)
+        || is(T == const U, U)
+        || is(T == shared U, U))
     {
         struct UnqualRef
         {
