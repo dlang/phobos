@@ -100,6 +100,7 @@ version (Windows)
 
 import core.exception : OutOfMemoryError;
 
+import std.exception : enforce;
 import std.internal.cstring;
 import std.range.primitives;
 import std.stdio;
@@ -1526,7 +1527,6 @@ private:
     version (Posix)
     int performWait(bool block) @trusted
     {
-        import std.exception : enforce;
         enforce!ProcessException(owned, "Can't wait on a detached process");
         if (_processID == terminated) return _exitCode;
         int exitCode;
@@ -1576,7 +1576,6 @@ private:
     {
         int performWait(bool block) @trusted
         {
-            import std.exception : enforce;
             enforce!ProcessException(owned, "Can't wait on a detached process");
             if (_processID == terminated) return _exitCode;
             assert(_handle != INVALID_HANDLE_VALUE);
@@ -1822,7 +1821,6 @@ void kill(Pid pid)
 /// ditto
 void kill(Pid pid, int codeOrSignal)
 {
-    import std.exception : enforce;
     enforce!ProcessException(pid.owned, "Can't kill detached process");
     version (Windows)
     {
@@ -3352,7 +3350,6 @@ static:
     */
     string opIndex(scope const(char)[] name) @safe
     {
-        import std.exception : enforce;
         string value;
         enforce(getImpl(name, value), "Environment variable not found: "~name);
         return value;
@@ -3421,7 +3418,7 @@ static:
     {
         version (Posix)
         {
-            import std.exception : enforce, errnoEnforce;
+            import std.exception : errnoEnforce;
             if (value is null)
             {
                 remove(name);
@@ -3441,7 +3438,6 @@ static:
         }
         else version (Windows)
         {
-            import std.exception : enforce;
             enforce(
                 SetEnvironmentVariableW(name.tempCStringW(), value.tempCStringW()),
                 sysErrorString(GetLastError())
@@ -3551,7 +3547,6 @@ static:
         }
         else version (Windows)
         {
-            import std.exception : enforce;
             import std.uni : toUpper;
             auto envBlock = GetEnvironmentStringsW();
             enforce(envBlock, "Failed to retrieve environment variables.");
@@ -3924,7 +3919,7 @@ extern(C)
 private int execv_(in string pathname, in string[] argv)
 {
     auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
-    if (!argv_) throw new OutOfMemoryError("Out of memory in std.process.");
+    enforce!OutOfMemoryError(argv_ !is null, "Out of memory in std.process.");
     scope(exit) core.stdc.stdlib.free(argv_);
 
     toAStringz(argv, argv_);
@@ -3935,10 +3930,10 @@ private int execv_(in string pathname, in string[] argv)
 private int execve_(in string pathname, in string[] argv, in string[] envp)
 {
     auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
-    if (!argv_) throw new OutOfMemoryError("Out of memory in std.process.");
+    enforce!OutOfMemoryError(argv_ !is null, "Out of memory in std.process.");
     scope(exit) core.stdc.stdlib.free(argv_);
     auto envp_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + envp.length));
-    if (!envp_) throw new OutOfMemoryError("Out of memory in std.process.");
+    enforce!OutOfMemoryError(envp_ !is null, "Out of memory in std.process.");
     scope(exit) core.stdc.stdlib.free(envp_);
 
     toAStringz(argv, argv_);
@@ -3950,7 +3945,7 @@ private int execve_(in string pathname, in string[] argv, in string[] envp)
 private int execvp_(in string pathname, in string[] argv)
 {
     auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
-    if (!argv_) throw new OutOfMemoryError("Out of memory in std.process.");
+    enforce!OutOfMemoryError(argv_ !is null, "Out of memory in std.process.");
     scope(exit) core.stdc.stdlib.free(argv_);
 
     toAStringz(argv, argv_);
@@ -3998,10 +3993,10 @@ version (Posix)
 else version (Windows)
 {
     auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
-    if (!argv_) throw new OutOfMemoryError("Out of memory in std.process.");
+    enforce!OutOfMemoryError(argv_ !is null, "Out of memory in std.process.");
     scope(exit) core.stdc.stdlib.free(argv_);
     auto envp_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + envp.length));
-    if (!envp_) throw new OutOfMemoryError("Out of memory in std.process.");
+    enforce!OutOfMemoryError(envp_ !is null, "Out of memory in std.process.");
     scope(exit) core.stdc.stdlib.free(envp_);
 
     toAStringz(argv, argv_);
