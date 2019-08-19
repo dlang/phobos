@@ -2675,12 +2675,8 @@ template hasNested(T)
  */
 template Fields(T)
 {
-    static if (is(T == struct) || is(T == union))
-        alias Fields = typeof(T.tupleof[0 .. $ - isNested!T]);
-    else static if (is(T == class) || is(T == interface))
-        alias Fields = typeof(T.tupleof);
-    else
-        alias Fields = AliasSeq!T;
+    import core.internal.traits : _Fields = Fields;
+    alias Fields = _Fields!T;
 }
 
 ///
@@ -3324,15 +3320,8 @@ $(LI a [context pointer][isNested].))
  */
 template hasIndirections(T)
 {
-    static if (is(T == struct) || is(T == union))
-        enum hasIndirections = anySatisfy!(.hasIndirections, typeof(T.tupleof));
-    else static if (isStaticArray!T && is(T : E[N], E, size_t N))
-        enum hasIndirections = is(E == void) ? true : hasIndirections!E;
-    else static if (isFunctionPointer!T)
-        enum hasIndirections = false;
-    else
-        enum hasIndirections = isPointer!T || isDelegate!T || isDynamicArray!T ||
-            isAssociativeArray!T || is (T == class) || is(T == interface);
+    import core.internal.traits : _hasIndirections = hasIndirections;
+    alias hasIndirections = _hasIndirections!T;
 }
 
 ///
@@ -6025,17 +6014,8 @@ template StaticArrayTypeOf(T)
  */
 template DynamicArrayTypeOf(T)
 {
-    static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
-        alias X = DynamicArrayTypeOf!AT;
-    else
-        alias X = OriginalType!T;
-
-    static if (is(X == E[], E))
-    {
-        alias DynamicArrayTypeOf = X;
-    }
-    else
-        static assert(0, T.stringof~" is not a dynamic array");
+    import core.internal.traits : _DynamicArrayTypeOf = DynamicArrayTypeOf;
+    alias DynamicArrayTypeOf = _DynamicArrayTypeOf!T;
 }
 
 @safe unittest
@@ -7880,29 +7860,8 @@ else
 // [For internal use]
 package template ModifyTypePreservingTQ(alias Modifier, T)
 {
-         static if (is(T U ==          immutable U)) alias ModifyTypePreservingTQ =          immutable Modifier!U;
-    else static if (is(T U == shared inout const U)) alias ModifyTypePreservingTQ = shared inout const Modifier!U;
-    else static if (is(T U == shared inout       U)) alias ModifyTypePreservingTQ = shared inout       Modifier!U;
-    else static if (is(T U == shared       const U)) alias ModifyTypePreservingTQ = shared       const Modifier!U;
-    else static if (is(T U == shared             U)) alias ModifyTypePreservingTQ = shared             Modifier!U;
-    else static if (is(T U ==        inout const U)) alias ModifyTypePreservingTQ =        inout const Modifier!U;
-    else static if (is(T U ==        inout       U)) alias ModifyTypePreservingTQ =              inout Modifier!U;
-    else static if (is(T U ==              const U)) alias ModifyTypePreservingTQ =              const Modifier!U;
-    else                                             alias ModifyTypePreservingTQ =                    Modifier!T;
-}
-
-@safe unittest
-{
-    alias Intify(T) = int;
-    static assert(is(ModifyTypePreservingTQ!(Intify,                    real) ==                    int));
-    static assert(is(ModifyTypePreservingTQ!(Intify,              const real) ==              const int));
-    static assert(is(ModifyTypePreservingTQ!(Intify,        inout       real) ==        inout       int));
-    static assert(is(ModifyTypePreservingTQ!(Intify,        inout const real) ==        inout const int));
-    static assert(is(ModifyTypePreservingTQ!(Intify, shared             real) == shared             int));
-    static assert(is(ModifyTypePreservingTQ!(Intify, shared       const real) == shared       const int));
-    static assert(is(ModifyTypePreservingTQ!(Intify, shared inout       real) == shared inout       int));
-    static assert(is(ModifyTypePreservingTQ!(Intify, shared inout const real) == shared inout const int));
-    static assert(is(ModifyTypePreservingTQ!(Intify,          immutable real) ==          immutable int));
+    import core.internal.traits : _ModifyTypePreservingTQ = ModifyTypePreservingTQ;
+    alias ModifyTypePreservingTQ = _ModifyTypePreservingTQ!(Modifier, T);
 }
 
 /**
@@ -8049,20 +8008,8 @@ template ForeachType(T)
  */
 template OriginalType(T)
 {
-    static if (is(T == enum))
-    {
-        template Impl(T)
-        {
-            static if (is(T U == enum)) alias Impl = OriginalType!U;
-            else                        alias Impl =              T;
-        }
-
-        alias OriginalType = ModifyTypePreservingTQ!(Impl, T);
-    }
-    else
-    {
-        alias OriginalType = T;
-    }
+    import core.internal.traits : _OriginalType = OriginalType;
+    alias OriginalType = _OriginalType!T;
 }
 
 ///
