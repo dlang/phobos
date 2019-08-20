@@ -2349,7 +2349,7 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
   * auto http = HTTP();
   * http.method = HTTP.Method.get;
   * http.url = "http://upload.wikimedia.org/wikipedia/commons/" ~
-               "5/53/Wikipedia-logo-en-big.png";
+  *            "5/53/Wikipedia-logo-en-big.png";
   * http.onReceive = (ubyte[] data) { return data.length; };
   * http.onProgress = (size_t dltotal, size_t dlnow,
   *                    size_t ultotal, size_t ulnow)
