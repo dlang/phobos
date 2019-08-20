@@ -2308,7 +2308,7 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
   * import std.net.curl, std.stdio;
   *
   * // Get with custom data receivers
-  * auto http = HTTP("dlang.org");
+  * auto http = HTTP("https://dlang.org");
   * http.onReceiveHeader =
   *     (in char[] key, in char[] value) { writeln(key ~ ": " ~ value); };
   * http.onReceive = (ubyte[] data) { /+ drop +/ return data.length; };
@@ -2323,7 +2323,7 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
   * ---
   * import std.net.curl, std.stdio;
   *
-  * auto http = HTTP("dlang.org");
+  * auto http = HTTP("https://dlang.org");
   * auto msg = "Hello world";
   * http.contentLength = msg.length;
   * http.onSend = (void[] data)
