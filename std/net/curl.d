@@ -2328,7 +2328,7 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
   *     return len;
   * };
   * http.perform();
-  *
+  * ---
   * // Track progress
   * auto http = HTTP();
   * http.method = HTTP.Method.get;
