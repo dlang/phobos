@@ -2304,7 +2304,6 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
 /**
   * HTTP client functionality.
   *
-  * Example:
   * ---
   * import std.net.curl, std.stdio;
   *
@@ -2321,7 +2320,6 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
 /**
   * Put with data senders:
   *
-  * Example:
   * ---
   * import std.net.curl, std.stdio;
   *
@@ -2345,7 +2343,6 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
 /**
   * Tracking progress:
   *
-  * Example:
   * ---
   * import std.net.curl, std.stdio;
   *
