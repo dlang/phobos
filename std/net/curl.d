@@ -2319,7 +2319,7 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
   */
 
 /**
-  * HTTP Put with data senders
+  * Put with data senders:
   *
   * Example:
   * ---
@@ -2343,7 +2343,7 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
   */
 
 /**
-  * HTTP Track progress
+  * Tracking progress:
   *
   * Example:
   * ---
