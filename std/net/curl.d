@@ -2314,8 +2314,17 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
   *     (in char[] key, in char[] value) { writeln(key ~ ": " ~ value); };
   * http.onReceive = (ubyte[] data) { /+ drop +/ return data.length; };
   * http.perform();
+  * ---
   *
-  * // Put with data senders
+  */
+
+/**
+  * HTTP Put with data senders
+  *
+  * Example:
+  * ---
+  * import std.net.curl, std.stdio;
+  *
   * auto msg = "Hello world";
   * http.contentLength = msg.length;
   * http.onSend = (void[] data)
@@ -2328,8 +2337,17 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
   *     return len;
   * };
   * http.perform();
+  *
   * ---
-  * // Track progress
+  */
+
+/**
+  * HTTP Track progress
+  *
+  * Example:
+  * ---
+  * import std.net.curl, std.stdio;
+  *
   * auto http = HTTP();
   * http.method = HTTP.Method.get;
   * http.url = "http://upload.wikimedia.org/wikipedia/commons/" ~
