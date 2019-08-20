@@ -2325,6 +2325,7 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
   * ---
   * import std.net.curl, std.stdio;
   *
+  * auto http = HTTP();
   * auto msg = "Hello world";
   * http.contentLength = msg.length;
   * http.onSend = (void[] data)
