@@ -2337,8 +2337,8 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
   *     return len;
   * };
   * http.perform();
-  *
   * ---
+  *
   */
 
 /**
