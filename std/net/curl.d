@@ -2303,6 +2303,9 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
 
 /**
   * HTTP client functionality.
+  *
+  * Example:
+  *
   * Get with custom data receivers
   *
   * ---
