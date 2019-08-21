@@ -2306,7 +2306,7 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
   *
   * Example:
   *
-  * Get with custom data receivers
+  * Get with custom data receivers:
   *
   * ---
   * import std.net.curl, std.stdio;
