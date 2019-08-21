@@ -2303,11 +2303,11 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
 
 /**
   * HTTP client functionality.
+  * Get with custom data receivers
   *
   * ---
   * import std.net.curl, std.stdio;
   *
-  * // Get with custom data receivers
   * auto http = HTTP("https://dlang.org");
   * http.onReceiveHeader =
   *     (in char[] key, in char[] value) { writeln(key ~ ": " ~ value); };
