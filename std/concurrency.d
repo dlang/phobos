@@ -1108,7 +1108,8 @@ struct ThreadInfo
     {
         static ThreadInfo val;
 
-        if (val.ident == Tid.init) {
+        // initialize ident on first use
+        if (val.ident.mbox is null) {
             val.ident = Tid(new MessageBox);
         }
 
