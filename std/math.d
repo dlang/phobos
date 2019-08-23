@@ -4499,6 +4499,22 @@ real modf(real x, ref real i) @trusted nothrow @nogc
  */
 real scalbn(real x, int n) @trusted nothrow @nogc
 {
+    if (__ctfe)
+    {
+        version (FreeBSD)
+        {
+            // Other path overflows on FreeBSD even though it shouldn't.
+            if (n > 999)
+                return scalbn(x * 0x1.0p999L, n - 999);
+            if (n < -999)
+                return scalbn(x * 0x1.0p-999L, n + 999);
+        }
+        if (n >= real.max_exp || n <= real.min_exp) // When 2.0L ^^ n is not representable.
+            return (x * (2.0L ^^ (n / 2))) * (2.0L ^^ (n - (n / 2)));
+        else
+            return x * (2.0L ^^ n);
+    }
+
     version (InlineAsm_X86_Any)
     {
         // scalbnl is not supported on DMD-Windows, so use asm pure nothrow @nogc.
@@ -4533,7 +4549,22 @@ real scalbn(real x, int n) @trusted nothrow @nogc
 ///
 @safe nothrow @nogc unittest
 {
+    assert(scalbn(0x1.2345678abcdefp0, 999) == 0x1.2345678abcdefp999);
     assert(scalbn(-real.infinity, 5) == -real.infinity);
+}
+
+@safe nothrow @nogc unittest
+{
+    // CTFE-able test
+    static assert(scalbn(0x1.2345678abcdefp0, 999) == 0x1.2345678abcdefp999);
+    static assert(scalbn(-real.infinity, 5) == -real.infinity);
+    // Test with large exponent delta n where the result is in bounds but 2.0L ^^ n is not.
+    enum initialExponent = real.min_exp + 2, resultExponent = real.max_exp - 2;
+    enum int n = resultExponent - initialExponent;
+    enum real x = 0x1.2345678abcdefp0 * (2.0L ^^ initialExponent);
+    enum staticResult = scalbn(x, n);
+    static assert(staticResult == 0x1.2345678abcdefp0 * (2.0L ^^ resultExponent));
+    assert(scalbn(x, n) == staticResult);
 }
 
 /***************
