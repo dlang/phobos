@@ -370,9 +370,6 @@ public:
     // TODO: remove when concurrency is safe
     static auto trus() @trusted
     {
-        if (thisInfo.ident != Tid.init)
-            return thisInfo.ident;
-        thisInfo.ident = Tid(new MessageBox);
         return thisInfo.ident;
     }
 
@@ -1110,6 +1107,11 @@ struct ThreadInfo
     static @property ref thisInfo() nothrow
     {
         static ThreadInfo val;
+
+        if (val.ident == Tid.init) {
+            val.ident = Tid(new MessageBox);
+        }
+
         return val;
     }
 
