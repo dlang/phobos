@@ -4501,16 +4501,15 @@ real scalbn(real x, int n) @trusted nothrow @nogc
 {
     if (__ctfe)
     {
-        version (FreeBSD)
-        {
-            // Other path overflows on FreeBSD even though it shouldn't.
-            if (n > 999)
-                return scalbn(x * 0x1.0p999L, n - 999);
-            if (n < -999)
-                return scalbn(x * 0x1.0p-999L, n + 999);
-        }
-        if (n >= real.max_exp || n <= real.min_exp) // When 2.0L ^^ n is not representable.
-            return (x * (2.0L ^^ (n / 2))) * (2.0L ^^ (n - (n / 2)));
+        //if (n >= real.max_exp || n <= real.min_exp) // When 2.0L ^^ n is not representable.
+        //    return (x * (2.0L ^^ (n / 2))) * (2.0L ^^ (n - (n / 2)));
+        // We'd rather use the above code but it doesn't work on all compiler +
+        // architecture + OS combinations. The issue might be that 80 bit reals
+        // are advertised to exist but CTFE reals are 64 bit.
+        if (n > 999)
+            return scalbn(x * 0x1.0p999L, n - 999);
+        else if (n < -999)
+            return scalbn(x * 0x1.0p-999L, n + 999);
         else
             return x * (2.0L ^^ n);
     }
