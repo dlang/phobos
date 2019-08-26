@@ -1240,7 +1240,9 @@ public:
 
 @safe unittest
 {
-    assert(VariantN!(24).sizeof == 24 + (void*).sizeof);
+    alias V = VariantN!24;
+    const alignMask = V.alignof - 1;
+    assert(V.sizeof == ((24 + (void*).sizeof + alignMask) & ~alignMask));
 }
 
 /// Can also assign class values
