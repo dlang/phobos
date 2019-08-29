@@ -8,6 +8,7 @@ DUB=${DUB:-dub}
 N=2
 CIRCLE_NODE_INDEX=${CIRCLE_NODE_INDEX:-0}
 BUILD="debug"
+PIC=1
 
 case $CIRCLE_NODE_INDEX in
     0) MODEL=64 ;;
@@ -89,7 +90,7 @@ setup_repos()
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"
 
     # build dmd and druntime
-    make -j$N -C ../dmd/src -f posix.mak MODEL=$MODEL HOST_DMD=$DMD BUILD=$BUILD all
+    pushd ../dmd && ./src/build.d MODEL=$MODEL HOST_DMD=$DMD BUILD=$BUILD PIC="$PIC" all && popd
     make -j$N -C ../druntime -f posix.mak MODEL=$MODEL HOST_DMD=$DMD BUILD=$BUILD
 }
 
