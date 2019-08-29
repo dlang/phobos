@@ -2,12 +2,13 @@
 
 set -uexo pipefail
 
-HOST_DMD_VER=2.078.1
+HOST_DMD_VER=2.079.1
 CURL_USER_AGENT="CirleCI $(curl --version | head -n 1)"
 DUB=${DUB:-dub}
 N=2
 CIRCLE_NODE_INDEX=${CIRCLE_NODE_INDEX:-0}
 BUILD="debug"
+PIC=1
 
 case $CIRCLE_NODE_INDEX in
     0) MODEL=64 ;;
@@ -20,7 +21,7 @@ install_deps() {
         sudo apt-get install g++-multilib
     fi
     # required for: "core.time.TimeException@std/datetime/timezone.d(2073): Directory /usr/share/zoneinfo/ does not exist."
-    sudo apt-get install --reinstall tzdata
+    sudo apt-get install --reinstall tzdata gdb
 
     for i in {0..4}; do
         if curl -fsS -A "$CURL_USER_AGENT" --max-time 5 https://dlang.org/install.sh -O ||
@@ -89,7 +90,7 @@ setup_repos()
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"
 
     # build dmd and druntime
-    make -j$N -C ../dmd/src -f posix.mak MODEL=$MODEL HOST_DMD=$DMD BUILD=$BUILD all
+    pushd ../dmd && ./src/build.d MODEL=$MODEL HOST_DMD=$DMD BUILD=$BUILD PIC="$PIC" all && popd
     make -j$N -C ../druntime -f posix.mak MODEL=$MODEL HOST_DMD=$DMD BUILD=$BUILD
 }
 
