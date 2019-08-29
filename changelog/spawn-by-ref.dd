@@ -1,0 +1,20 @@
+Allows passing by reference through spawn* if is a shared type
+
+Now it will be possible to pass variables to the thread created with spawn/spawnLinked by reference,
+to do this you need the shared type and add ref to the attributes of the arguments of the function to be executed.
+
+---
+import std.concurrency : spawn;
+import core.atomic : atomicOp;
+import core.thread : thread_joinAll;
+
+static void f1(ref shared(int) number)
+{
+  atomicOp!"+="(number, 1);
+}
+
+shared(int) number = 10;
+spawn(&f1, number);
+thread_joinAll();
+assert(number == 11);
+---

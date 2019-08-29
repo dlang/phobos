@@ -106,6 +106,30 @@ private
         static assert(!hasLocalAliasing!(SysTime, Container));
     }
 
+    bool hasLocalReferencePassing(F, Types...)()
+    {
+        bool doesIt = false;
+        static foreach (i, T; Types)
+        {
+            static if (!is(T == shared) && !is(T == Tid))
+            {
+                static if (ParameterStorageClassTuple!F[i] == ParameterStorageClass.ref_)
+                {
+                    doesIt = true;
+                }
+            }
+        }
+
+        return doesIt;
+    }
+
+    @safe unittest
+    {
+        static void fun(ref int) {}
+        static assert(hasLocalReferencePassing!(typeof(fun), int));
+        static assert(!hasLocalReferencePassing!(typeof(fun), shared(int)));
+    }
+
     enum MsgType
     {
         standard,
@@ -457,11 +481,13 @@ private template isSpawnable(F, T...)
  *  pointer indirection.  This is necessary for enforcing isolation among
  *  threads.
  */
-Tid spawn(F, T...)(F fn, T args)
+Tid spawn(F, T...)(F fn, auto ref T args)
 if (isSpawnable!(F, T))
 {
+    import std.functional : forward;
     static assert(!hasLocalAliasing!(T), "Aliases to mutable thread-local data not allowed.");
-    return _spawn(false, fn, args);
+    static assert(!hasLocalReferencePassing!(F, T), "Passing by reference thread-local data is not allowed.");
+    return _spawn(false, fn, forward!args);
 }
 
 ///
@@ -513,6 +539,36 @@ if (isSpawnable!(F, T))
     assert(receivedMessage == "Hello World");
 }
 
+@system unittest
+{
+    import core.atomic : atomicOp;
+    import core.thread : thread_joinAll;
+    import std.stdio;
+
+    static void f1(ref shared(int) number)
+    {
+        atomicOp!"+="(number, 1);
+    }
+
+    shared(int) number = 10;
+    spawn(&f1, number);
+    thread_joinAll();
+    assert(number == 11);
+}
+
+@system unittest
+{
+    import core.atomic : atomicOp;
+
+    static void f1(ref shared(int) number)
+    {
+        atomicOp!"+="(number, 1);
+    }
+
+    int number = 10;
+    static assert(!__traits(compiles, spawn(&f1, number)));
+}
+
 /**
  * Starts fn(args) in a logical thread and will receive a LinkTerminated
  * message when the operation terminates.
@@ -532,19 +588,23 @@ if (isSpawnable!(F, T))
  * Returns:
  *  A Tid representing the new thread.
  */
-Tid spawnLinked(F, T...)(F fn, T args)
+Tid spawnLinked(F, T...)(F fn, auto ref T args)
 if (isSpawnable!(F, T))
 {
+    import std.functional : forward;
     static assert(!hasLocalAliasing!(T), "Aliases to mutable thread-local data not allowed.");
-    return _spawn(true, fn, args);
+    static assert(!hasLocalReferencePassing!(F, T), "Passing by reference thread-local data is not allowed.");
+    return _spawn(true, fn, forward!args);
 }
 
 /*
  *
  */
-private Tid _spawn(F, T...)(bool linked, F fn, T args)
+private Tid _spawn(F, T...)(bool linked, F fn, auto ref T args)
 if (isSpawnable!(F, T))
 {
+    import std.functional : forward;
+
     // TODO: MessageList and &exec should be shared.
     auto spawnTid = Tid(new MessageBox);
     auto ownerTid = thisTid;
@@ -553,7 +613,7 @@ if (isSpawnable!(F, T))
     {
         thisInfo.ident = spawnTid;
         thisInfo.owner = ownerTid;
-        fn(args);
+        fn(forward!args);
     }
 
     // TODO: MessageList and &exec should be shared.
