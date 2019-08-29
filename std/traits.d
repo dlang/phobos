@@ -8409,7 +8409,7 @@ private template isDesiredUDA(alias attribute)
 
 /**
 Params:
-    symbol = The aggregate type to search
+    symbol = The aggregate type or module to search
     attribute = The user-defined attribute to search for
 
 Returns:
@@ -8598,6 +8598,14 @@ template getSymbolsByUDA(alias symbol, alias attribute)
     }
 
     static assert(getSymbolsByUDA!(A, Attr).stringof == "tuple(a, a, c)");
+}
+
+// Issue 20054: getSymbolsByUDA no longer works on modules
+version (unittest)
+{
+    @("Issue20054")
+    void issue20054() {}
+    static assert(__traits(compiles, getSymbolsByUDA!(mixin(__MODULE__), "Issue20054")));
 }
 
 private template getSymbolsByUDAImpl(alias symbol, alias attribute, names...)
