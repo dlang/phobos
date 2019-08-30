@@ -12272,7 +12272,7 @@ public:
         {
             immutable size_t remainingBits = bitsNum - maskPos + 1;
             // If n >= maskPos, then the bit sign will be 1, otherwise 0
-            immutable sizediff_t sign = (remainingBits - n - 1) >> (sizediff_t.sizeof * 8 - 1);
+            immutable ptrdiff_t sign = (remainingBits - n - 1) >> (ptrdiff_t.sizeof * 8 - 1);
             /*
                By truncating n with remainingBits bits we have skipped the
                remaining bits in parent[0], so we need to add 1 to elemIndex.
@@ -12312,7 +12312,7 @@ public:
                 import core.bitop : bsf;
 
                 immutable size_t remainingBits = bitsNum - maskPos + 1;
-                immutable sizediff_t sign = (remainingBits - n - 1) >> (sizediff_t.sizeof * 8 - 1);
+                immutable ptrdiff_t sign = (remainingBits - n - 1) >> (ptrdiff_t.sizeof * 8 - 1);
                 immutable size_t elemIndex = sign * (((n - remainingBits) >> bitsNum.bsf) + 1);
                 immutable size_t elemMaskPos = (sign ^ 1) * (maskPos + n)
                     + sign * (1 + ((n - remainingBits) & (bitsNum - 1)));
@@ -12339,14 +12339,14 @@ public:
             import core.bitop : bsf;
 
             size_t remainingBits = bitsNum - maskPos + 1;
-            sizediff_t sign = (remainingBits - start - 1) >> (sizediff_t.sizeof * 8 - 1);
+            ptrdiff_t sign = (remainingBits - start - 1) >> (ptrdiff_t.sizeof * 8 - 1);
             immutable size_t startElemIndex = sign * (((start - remainingBits) >> bitsNum.bsf) + 1);
             immutable size_t startElemMaskPos = (sign ^ 1) * (maskPos + start)
                                               + sign * (1 + ((start - remainingBits) & (bitsNum - 1)));
 
             immutable size_t sliceLen = end - start - 1;
             remainingBits = bitsNum - startElemMaskPos + 1;
-            sign = (remainingBits - sliceLen - 1) >> (sizediff_t.sizeof * 8 - 1);
+            sign = (remainingBits - sliceLen - 1) >> (ptrdiff_t.sizeof * 8 - 1);
             immutable size_t endElemIndex = startElemIndex
                                           + sign * (((sliceLen - remainingBits) >> bitsNum.bsf) + 1);
             immutable size_t endElemMaskPos = (sign ^ 1) * (startElemMaskPos + sliceLen)

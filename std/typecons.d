@@ -6694,7 +6694,7 @@ mixin template Proxy(alias a)
 
         static if (accessibleFrom!(const typeof(this)))
         {
-            override hash_t toHash() const nothrow @safe
+            override size_t toHash() const nothrow @safe
             {
                 static if (__traits(compiles, .hashOf(a)))
                     return .hashOf(a);
@@ -6738,7 +6738,7 @@ mixin template Proxy(alias a)
 
         static if (accessibleFrom!(const typeof(this)))
         {
-            hash_t toHash() const nothrow @safe
+            size_t toHash() const nothrow @safe
             {
                 static if (__traits(compiles, .hashOf(a)))
                     return .hashOf(a);
