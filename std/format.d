@@ -3541,7 +3541,7 @@ void formatElement(Writer, T, Char)(auto ref Writer w, T val, scope const ref Fo
 if (is(StringTypeOf!T) && !is(T == enum))
 {
     import std.array : appender;
-    import std.utf : UTFException;
+    import std.utf : decode, UTFException;
 
     StringTypeOf!T str = val;   // bug 8015
 
@@ -3550,21 +3550,21 @@ if (is(StringTypeOf!T) && !is(T == enum))
         try
         {
             // ignore other specifications and quote
-            auto app = appender!(typeof(val[0])[])();
-            put(app, '\"');
             for (size_t i = 0; i < str.length; )
             {
-                import std.utf : decode;
-
                 auto c = decode(str, i);
                 // \uFFFE and \uFFFF are considered valid by isValidDchar,
                 // so need checking for interchange.
                 if (c == 0xFFFE || c == 0xFFFF)
                     goto LinvalidSeq;
-                formatChar(app, c, '"');
             }
-            put(app, '\"');
-            put(w, app.data);
+            put(w, '\"');
+            for (size_t i = 0; i < str.length; )
+            {
+                auto c = decode(str, i);
+                formatChar(w, c, '"');
+            }
+            put(w, '\"');
             return;
         }
         catch (UTFException)
@@ -6588,10 +6588,10 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
     import core.exception : RangeError;
     import std.utf : encode;
 
-    size_t i;
-
-    struct Sink
+    static struct Sink
     {
+        char[] buf;
+        size_t i;
         void put(dchar c)
         {
             char[4] enc;
@@ -6622,7 +6622,8 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
                 put(s.front);
         }
     }
-    auto n = formattedWrite(Sink(), fmt, args);
+    auto sink = Sink(buf);
+    auto n = formattedWrite(sink, fmt, args);
     version (all)
     {
         // In the future, this check will be removed to increase consistency
@@ -6633,7 +6634,7 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
             text("Orphan format arguments: args[", n, " .. ", args.length, "]")
         );
     }
-    return buf[0 .. i];
+    return buf[0 .. sink.i];
 }
 
 /// The format string can be checked at compile-time (see $(LREF format) for details):
@@ -6669,6 +6670,17 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
 
     assert(sformat(buf[], "%s %s %s", "c"c, "w"w, "d"d) == "c w d");
     });
+}
+
+@system unittest // ensure that sformat avoids the GC
+{
+    import core.memory : GC;
+    const a = ["foo", "bar"];
+    const u = GC.stats().usedSize;
+    char[20] buf;
+    sformat(buf, "%d", 123);
+    sformat(buf, "%s", a);
+    assert(u == GC.stats().usedSize);
 }
 
 /*****************************
