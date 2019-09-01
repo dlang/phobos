@@ -3216,7 +3216,6 @@ struct Appender(A)
 if (isDynamicArray!A)
 {
     import core.memory : GC;
-    import std.format : FormatSpec;
 
     private alias T = ElementEncodingType!A;
 
@@ -3559,7 +3558,7 @@ if (isDynamicArray!A)
      * Returns:
      *     A `string` if `writer` is not set; `void` otherwise.
      */
-    string toString() const
+    string toString()() const
     {
         import std.format : singleSpec;
 
@@ -3582,15 +3581,20 @@ if (isDynamicArray!A)
     }
 
     /// ditto
-    void toString(Writer)(ref Writer w, scope const ref FormatSpec!char fmt) const
+    template toString(Writer)
     if (isOutputRange!(Writer, char))
     {
-        import std.format : formatValue;
-        import std.range.primitives : put;
-        put(w, Unqual!(typeof(this)).stringof);
-        put(w, '(');
-        formatValue(w, data, fmt);
-        put(w, ')');
+        import std.format : FormatSpec;
+
+        void toString(ref Writer w, scope const ref std.format.FormatSpec!char fmt) const
+        {
+            import std.format : formatValue;
+            import std.range.primitives : put;
+            put(w, Unqual!(typeof(this)).stringof);
+            put(w, '(');
+            formatValue(w, data, fmt);
+            put(w, ')');
+        }
     }
 
     // @@@DEPRECATED_2.089@@@
