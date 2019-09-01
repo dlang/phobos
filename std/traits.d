@@ -129,6 +129,7 @@
  *           $(LREF OriginalType)
  *           $(LREF PointerTarget)
  *           $(LREF Signed)
+ *           $(LREF Unconst)
  *           $(LREF Unqual)
  *           $(LREF Unsigned)
  *           $(LREF ValueType)
@@ -7490,6 +7491,41 @@ if (T.length == 1)
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 // General Types
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
+
+/**
+Removes `const`, `inout` and `immutable` qualifiers, if any, from type `T`.
+ */
+template Unconst(T)
+{
+    import core.internal.traits : CoreUnconst = Unconst;
+    alias Unconst = CoreUnconst!(T);
+}
+
+///
+@safe unittest
+{
+    static assert(is(Unconst!int == int));
+    static assert(is(Unconst!(const int) == int));
+    static assert(is(Unconst!(immutable int) == int));
+    static assert(is(Unconst!(shared int) == shared int));
+    static assert(is(Unconst!(shared(const int)) == shared int));
+}
+
+@safe unittest
+{
+    static assert(is(Unconst!(                   int) == int));
+    static assert(is(Unconst!(             const int) == int));
+    static assert(is(Unconst!(       inout       int) == int));
+    static assert(is(Unconst!(       inout const int) == int));
+    static assert(is(Unconst!(shared             int) == shared int));
+    static assert(is(Unconst!(shared       const int) == shared int));
+    static assert(is(Unconst!(shared inout       int) == shared int));
+    static assert(is(Unconst!(shared inout const int) == shared int));
+    static assert(is(Unconst!(         immutable int) == int));
+
+    alias ImmIntArr = immutable(int[]);
+    static assert(is(Unconst!ImmIntArr == immutable(int)[]));
+}
 
 /**
 Removes all qualifiers, if any, from type `T`.
