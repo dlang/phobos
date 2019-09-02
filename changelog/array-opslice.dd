@@ -1,8 +1,0 @@
-std.array.Appender and RefAppender: use .opSlice() instead of data()
-
-Previonsly, Appender.data() was used to extract a slice of the Appender's array.
-Now use the [] slice operator instead.
-The same goes for RefAppender.
-
-$(REF Appender, std, array)
-$(REF RefAppender, std, array)
