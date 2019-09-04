@@ -6546,6 +6546,9 @@ if (isFloatingPoint!(X))
  */
 bool isFinite(X)(X x) @trusted pure nothrow @nogc
 {
+    static if (__traits(isFloating, X))
+        if (__ctfe)
+            return x == x && x != X.infinity && x != -X.infinity;
     alias F = floatTraits!(X);
     ushort* pe = cast(ushort *)&x;
     return (pe[F.EXPPOS_SHORT] & F.EXPMASK) != F.EXPMASK;
@@ -6574,6 +6577,19 @@ bool isFinite(X)(X x) @trusted pure nothrow @nogc
     assert(isFinite(real.min_normal));
     assert(!isFinite(real.nan));
     assert(!isFinite(real.infinity));
+
+    //CTFE
+    static assert(isFinite(1.23));
+    static assert(isFinite(double.max));
+    static assert(isFinite(double.min_normal));
+    static assert(!isFinite(double.nan));
+    static assert(!isFinite(double.infinity));
+
+    static assert(isFinite(1.23L));
+    static assert(isFinite(real.max));
+    static assert(isFinite(real.min_normal));
+    static assert(!isFinite(real.nan));
+    static assert(!isFinite(real.infinity));
 }
 
 
