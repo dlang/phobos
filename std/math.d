@@ -6631,6 +6631,9 @@ bool isNormal(X)(X x) @trusted pure nothrow @nogc
  */
 bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
 {
+    static if (__traits(isFloating, X))
+        if (__ctfe)
+            return -X.min_normal < x && x < X.min_normal;
     /*
         Need one for each format because subnormal floats might
         be converted to normal reals.
@@ -6678,6 +6681,21 @@ bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
         for (f = 1.0; !isSubnormal(f); f /= 2)
             assert(f != 0);
     }}
+}
+
+@safe pure nothrow @nogc unittest
+{
+    static bool subnormalTest(T)()
+    {
+        T f;
+        for (f = 1.0; !isSubnormal(f); f /= 2)
+            if (f == 0)
+                return false;
+        return true;
+    }
+    static assert(subnormalTest!float());
+    static assert(subnormalTest!double());
+    static assert(subnormalTest!real());
 }
 
 /*********************************
