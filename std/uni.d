@@ -2009,8 +2009,8 @@ pure:
     {
         return this[0] == val[0] && this[1] == val[1];
     }
-    @property ref inout(uint) a() inout { return _tuple[0]; }
-    @property ref inout(uint) b() inout { return _tuple[1]; }
+    @property ref inout(uint) a() inout return { return _tuple[0]; }
+    @property ref inout(uint) b() inout return { return _tuple[1]; }
 }
 
 /**
@@ -2083,8 +2083,10 @@ public struct InversionList(SP=GcPolicy)
         uint[] arr;
         foreach (v; set.byInterval)
         {
-            arr ~= v.a;
-            arr ~= v.b;
+            uint tmp;
+
+            arr ~= tmp = v.a;
+            arr ~= tmp = v.b;
         }
         data = CowArray!(SP).reuse(arr);
     }
