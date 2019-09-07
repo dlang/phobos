@@ -8927,11 +8927,11 @@ bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff = 1e-2, V maxAbsDiff = 1e-5
     assert(approxEqual(arr1, arr2));
 
     real num = real.infinity;
-    assert(num == real.infinity);  // Passes.
-    assert(approxEqual(num, real.infinity));  // Fails.
+    assert(num == real.infinity);
+    assert(approxEqual(num, real.infinity));
     num = -real.infinity;
-    assert(num == -real.infinity);  // Passes.
-    assert(approxEqual(num, -real.infinity));  // Fails.
+    assert(num == -real.infinity);
+    assert(approxEqual(num, -real.infinity));
 
     assert(!approxEqual(3, 0));
     assert(approxEqual(3, 3));
