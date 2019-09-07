@@ -44,7 +44,7 @@ module std.parallelism;
 @system unittest
 {
     import std.algorithm.iteration : map;
-    import std.math : approxEqual;
+    import std.math : approxEqual2;
     import std.parallelism : taskPool;
     import std.range : iota;
 
@@ -73,7 +73,7 @@ module std.parallelism;
 
     immutable pi = 4.0 * taskPool.reduce!"a + b"(n.iota.map!getTerm);
 
-    assert(pi.approxEqual(3.1415926));
+    assert(pi.approxEqual2(3.1415926,1e-5));
 }
 
 import core.atomic;
@@ -4141,7 +4141,7 @@ version (unittest)
     import std.array : split;
     import std.conv : text;
     import std.exception : assertThrown;
-    import std.math : approxEqual, sqrt, log;
+    import std.math : approxEqual2, sqrt, log;
     import std.range : indexed, iota, join;
     import std.typecons : Tuple, tuple;
     import std.stdio;
@@ -4274,7 +4274,7 @@ version (unittest)
 
     foreach (i, elem; logs)
     {
-        assert(approxEqual(elem, cast(double) log(i + 1)));
+        assert(approxEqual2(elem, cast(double) log(i + 1)));
     }
 
     assert(poolInstance.amap!"a * a"([1,2,3,4,5]) == [1,4,9,16,25]);
@@ -4453,7 +4453,7 @@ version (unittest)
     int ii;
     foreach ( elem; (lmchain))
     {
-        if (!approxEqual(elem, ii))
+        if (!approxEqual2(elem, ii))
         {
             stderr.writeln(ii, '\t', elem);
         }
@@ -4701,7 +4701,7 @@ version (parallelismStressTest)
                 foreach (j, elem; row)
                 {
                     real shouldBe = sqrt( cast(real) i * j);
-                    assert(approxEqual(shouldBe, elem));
+                    assert(approxEqual2(shouldBe, elem));
                     sqrtMatrix[i][j] = shouldBe;
                 }
             }
@@ -4728,7 +4728,7 @@ version (parallelismStressTest)
                                )
                            );
 
-            assert(approxEqual(sumSqrt, 4.437e8));
+            assert(approxEqual2(sumSqrt, 4.437e8));
             stderr.writeln("Done sum of square roots.");
 
             // Test whether tasks work with function pointers.
