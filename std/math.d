@@ -8944,14 +8944,6 @@ bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff = 1e-2, V maxAbsDiff = 1e-5
 
 @safe pure nothrow @nogc unittest
 {
-    real num = real.infinity;
-    assert(num == real.infinity);  // Passes.
-    assert(approxEqual(num, real.infinity));  // Fails.
-}
-
-
-@safe pure nothrow @nogc unittest
-{
     float f = sqrt(2.0f);
     assert(fabs(f * f - 2.0f) < .00001);
 
