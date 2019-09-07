@@ -8942,6 +8942,128 @@ bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff = 1e-2, V maxAbsDiff = 1e-5
     assert(approxEqual(10, a));
 }
 
+bool approxEqual2(T, U, V)(T lhs, U rhs, V maxRelDiff = 1e-9, V maxAbsDiff = 0)
+{
+    import std.range.primitives : empty, front, isInputRange, popFront;
+    static if (isInputRange!T)
+    {
+        static if (isInputRange!U)
+        {
+            // Two ranges
+            for (;; lhs.popFront(), rhs.popFront())
+            {
+                if (lhs.empty) return rhs.empty;
+                if (rhs.empty) return lhs.empty;
+                if (!approxEqual2(lhs.front, rhs.front, maxRelDiff, maxAbsDiff))
+                    return false;
+            }
+        }
+        else static if (isIntegral!U)
+        {
+            // convert rhs to real
+            return approxEqual2(lhs, real(rhs), maxRelDiff, maxAbsDiff);
+        }
+        else
+        {
+            // lhs is range, rhs is number
+            for (; !lhs.empty; lhs.popFront())
+            {
+                if (!approxEqual2(lhs.front, rhs, maxRelDiff, maxAbsDiff))
+                    return false;
+            }
+            return true;
+        }
+    }
+    else
+    {
+        static if (isInputRange!U)
+        {
+            // lhs is number, rhs is range
+            for (; !rhs.empty; rhs.popFront())
+            {
+                if (!approxEqual2(lhs, rhs.front, maxRelDiff, maxAbsDiff))
+                    return false;
+            }
+            return true;
+        }
+        else static if (isIntegral!T || isIntegral!U)
+        {
+            // convert both lhs and rhs to real
+            return approxEqual2(real(lhs), real(rhs), maxRelDiff, maxAbsDiff);
+        }
+        else
+        {
+            // two numbers
+            //static assert(is(T : real) && is(U : real));
+
+            // shortcut
+            if (lhs==rhs) return true;
+
+            static if (is(typeof(lhs.infinity)) && is(typeof(rhs.infinity)))
+            {
+                if (lhs == lhs.infinity || rhs == rhs.infinity ||
+                    lhs == -lhs.infinity || rhs == -rhs.infinity) return false;
+            }
+
+            auto diff = fabs(lhs - rhs);
+
+            return diff <= maxRelDiff*fabs(lhs)
+                || diff <= maxRelDiff*fabs(rhs)
+                || diff <= maxAbsDiff;
+        }
+    }
+}
+
+///
+@safe pure nothrow unittest
+{
+    assert(approxEqual2(1.0,1.0));
+    assert(approxEqual2(1.0, 1.00000000099));
+    assert(!approxEqual2(1.0, 1.0000000011));
+    assert(!approxEqual2(3, 0));
+    assert(approxEqual2(3, 3));
+    assert(approxEqual2(3.0, 3));
+    assert(approxEqual2(3, 3.0));
+    int a = 10;
+    assert(approxEqual2(10, a));
+
+    assert(approxEqual2(0.0,0.0));
+    assert(approxEqual2(-0.0,0.0));
+
+    assert(!approxEqual2(0.0,1e-15)); // use maxAbsDiff for comparing to 0.0
+    assert(approxEqual2(0.0,1e-15,1e-9,1e-9));
+
+    assert(approxEqual2(1.0,1.0099,1e-2));
+    assert(!approxEqual2(1.0,1.011,1e-2));
+
+    real num = real.infinity;
+    assert(approxEqual2(num, real.infinity));
+    assert(!approxEqual2(num, real.max));
+    num = -real.infinity;
+    assert(approxEqual2(num, -real.infinity));
+
+    assert(!approxEqual2(real.nan,real.nan));
+}
+
+///
+@safe pure nothrow unittest
+{
+    float[] arr1 = [ 1.0, 2.0, 3.0 ];
+    double[] arr2 = [ 1.0000000001, 1.9999999999, 3 ];
+    assert(approxEqual2(arr1, arr2));
+
+    assert(approxEqual2([3, 3, 3], 3.0));
+    assert(approxEqual2([3.0, 3.0, 3.0], 3));
+    assert(approxEqual2(3.0, [3, 3, 3]));
+    assert(approxEqual2(3, [3.0, 3.0, 3.0]));
+
+    assert(!approxEqual2([1.0,2.0,3.0],[1.0,2.0]));
+    assert(!approxEqual2([1.0,2.0],[1.0,2.0,3.0]));
+
+//    assert(approxEqual2([],[])); //does not work yet
+    assert(approxEqual2(cast(real[])[],cast(real[])[]));
+}
+
 @safe pure nothrow @nogc unittest
 {
     float f = sqrt(2.0f);
