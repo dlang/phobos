@@ -701,6 +701,8 @@ if (isFloatingPoint!F)
 ///
 @safe unittest
 {
+    import std.math : approxEqual;
+
     // Average numbers in an array
     double avg(in double[] a)
     {
@@ -711,7 +713,7 @@ if (isFloatingPoint!F)
     }
 
     auto a = [1.0, 2.0, 3.0];
-    assert(approxEqual2(avg(a), 2));
+    assert(approxEqual(avg(a), 2));
 }
 
 /**
@@ -729,7 +731,7 @@ template secantMethod(alias fun)
         typeof(fxn) fxn_1;
 
         xn = xn_1;
-        while (!approxEqual2(d, 0,0,1e-9) && isFinite(d))
+        while (!approxEqual(d, 0,0,1e-9) && isFinite(d))
         {
             xn_1 = xn;
             xn -= d;
@@ -744,12 +746,14 @@ template secantMethod(alias fun)
 ///
 @safe unittest
 {
+    import std.math : approxEqual, cos;
+
     float f(float x)
     {
         return cos(x) - x*x*x;
     }
     auto x = secantMethod!(f)(0f, 1f);
-    assert(approxEqual2(x, 0.8654740453));
+    assert(approxEqual(x, 0.8654740453));
 }
 
 @system unittest
@@ -762,10 +766,10 @@ template secantMethod(alias fun)
         return cos(x) - x*x*x;
     }
     immutable x = secantMethod!(f)(0f, 1f);
-    assert(approxEqual2(x, 0.8654740453));
+    assert(approxEqual(x, 0.8654740453));
     auto d = &f;
     immutable y = secantMethod!(d)(0f, 1f);
-    assert(approxEqual2(y, 0.8654740453));
+    assert(approxEqual(y, 0.8654740453));
 }
 
 
@@ -1583,9 +1587,11 @@ do
 ///
 @safe unittest
 {
+    import std.math : approxEqual;
+
     auto ret = findLocalMin((double x) => (x-4)^^2, -1e7, 1e7);
-    assert(ret.x.approxEqual2(4.0));
-    assert(ret.y.approxEqual2(0.0));
+    assert(ret.x.approxEqual(4.0));
+    assert(ret.y.approxEqual(0.0));
 }
 
 @safe unittest
@@ -1594,7 +1600,7 @@ do
     static foreach (T; AliasSeq!(double, float, real))
     {
         {
-            static if (is (T==float))
+            static if (is (T == float))
             {
                 T precision = 1e-5;
             }
@@ -1605,13 +1611,13 @@ do
 
             {
                 auto ret = findLocalMin!T((T x) => (x-4)^^2, T.min_normal, 1e7);
-                assert(ret.x.approxEqual2(T(4),precision,precision));
-                assert(ret.y.approxEqual2(T(0),precision,precision));
+                assert(ret.x.approxEqual(T(4),precision,precision));
+                assert(ret.y.approxEqual(T(0),precision,precision));
             }
             {
                 auto ret = findLocalMin!T((T x) => fabs(x-1), -T.max/4, T.max/4, T.min_normal, 2*T.epsilon);
-                assert(approxEqual2(ret.x, T(1),precision,precision));
-                assert(approxEqual2(ret.y, T(0),precision,precision));
+                assert(approxEqual(ret.x, T(1),precision,precision));
+                assert(approxEqual(ret.y, T(0),precision,precision));
                 assert(ret.error <= 10 * T.epsilon);
             }
             {
@@ -1633,9 +1639,9 @@ do
             }
             {
                 auto ret = findLocalMin!T((T x) => -fabs(x), -1, 1, T.min_normal, 2*T.epsilon);
-                assert(ret.x.fabs.approxEqual2(T(1),precision,precision));
-                assert(ret.y.fabs.approxEqual2(T(1),precision,precision));
-                assert(ret.error.approxEqual2(T(0),precision,precision));
+                assert(ret.x.fabs.approxEqual(T(1),precision,precision));
+                assert(ret.y.fabs.approxEqual(T(1),precision,precision));
+                assert(ret.error.approxEqual(T(0),precision,precision));
             }
         }
     }
@@ -1858,7 +1864,7 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
     {{
         T[] a = [ 1.0, 2.0, ];
         T[] b = [ 4.0, 3.0, ];
-        assert(approxEqual2(
+        assert(approxEqual(
                     cosineSimilarity(a, b), 10.0 / sqrt(5.0 * 25),
                     0.01));
     }}
@@ -2054,6 +2060,8 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
 ///
 @safe unittest
 {
+    import std.math : approxEqual;
+
     double[] p = [ 0.0, 0, 0, 1 ];
     assert(kullbackLeiblerDivergence(p, p) == 0);
     double[] p1 = [ 0.25, 0.25, 0.25, 0.25 ];
@@ -2061,8 +2069,8 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
     assert(kullbackLeiblerDivergence(p, p1) == 2);
     assert(kullbackLeiblerDivergence(p1, p) == double.infinity);
     double[] p2 = [ 0.2, 0.2, 0.2, 0.4 ];
-    assert(approxEqual2(kullbackLeiblerDivergence(p1, p2), 0.0719280949));
-    assert(approxEqual2(kullbackLeiblerDivergence(p2, p1), 0.0780719051));
+    assert(approxEqual(kullbackLeiblerDivergence(p1, p2), 0.0719280949));
+    assert(approxEqual(kullbackLeiblerDivergence(p2, p1), 0.0780719051));
 }
 
 /**
@@ -2136,15 +2144,17 @@ if (isInputRange!Range1 && isInputRange!Range2 &&
 ///
 @safe unittest
 {
+    import std.math : approxEqual;
+
     double[] p = [ 0.0, 0, 0, 1 ];
     assert(jensenShannonDivergence(p, p) == 0);
     double[] p1 = [ 0.25, 0.25, 0.25, 0.25 ];
     assert(jensenShannonDivergence(p1, p1) == 0);
-    assert(approxEqual2(jensenShannonDivergence(p1, p), 0.5487949407));
+    assert(approxEqual(jensenShannonDivergence(p1, p), 0.5487949407));
     double[] p2 = [ 0.2, 0.2, 0.2, 0.4 ];
-    assert(approxEqual2(jensenShannonDivergence(p1, p2), 0.01862176307));
-    assert(approxEqual2(jensenShannonDivergence(p2, p1), 0.01862176307));
-    assert(approxEqual2(jensenShannonDivergence(p2, p1, 0.005), 0.006023659609));
+    assert(approxEqual(jensenShannonDivergence(p1, p2), 0.01862176307));
+    assert(approxEqual(jensenShannonDivergence(p2, p1), 0.01862176307));
+    assert(approxEqual(jensenShannonDivergence(p2, p1, 0.005), 0.006023659609));
 }
 
 /**
@@ -2324,12 +2334,14 @@ if (isRandomAccessRange!(R1) && hasLength!(R1) &&
 ///
 @system unittest
 {
+    import std.math : approxEqual, sqrt;
+
     string[] s = ["Hello", "brave", "new", "world"];
     string[] t = ["Hello", "new", "world"];
     assert(gapWeightedSimilarity(s, s, 1) == 15);
     assert(gapWeightedSimilarity(t, t, 1) == 7);
     assert(gapWeightedSimilarity(s, t, 1) == 7);
-    assert(approxEqual2(gapWeightedSimilarityNormalized(s, t, 1),
+    assert(approxEqual(gapWeightedSimilarityNormalized(s, t, 1),
                     7.0 / sqrt(15.0 * 7), 0.01));
 }
 
@@ -3302,37 +3314,37 @@ void inverseFft(Ret, R)(R range, Ret buf)
     // Test values from R and Octave.
     auto arr = [1,2,3,4,5,6,7,8];
     auto fft1 = fft(arr);
-    assert(approxEqual2(map!"a.re"(fft1),
+    assert(approxEqual(map!"a.re"(fft1),
         [36.0, -4, -4, -4, -4, -4, -4, -4]));
-    assert(approxEqual2(map!"a.im"(fft1),
+    assert(approxEqual(map!"a.im"(fft1),
         [0, 9.6568, 4, 1.6568, 0, -1.6568, -4, -9.6568],1e-4,1e-4));
 
     auto fft1Retro = fft(retro(arr));
-    assert(approxEqual2(map!"a.re"(fft1Retro),
+    assert(approxEqual(map!"a.re"(fft1Retro),
         [36.0, 4, 4, 4, 4, 4, 4, 4]));
-    assert(approxEqual2(map!"a.im"(fft1Retro),
+    assert(approxEqual(map!"a.im"(fft1Retro),
         [0, -9.6568, -4, -1.6568, 0, 1.6568, 4, 9.6568],1e-4,1e-4));
 
     auto fft1Float = fft(to!(float[])(arr));
-    assert(approxEqual2(map!"a.re"(fft1), map!"a.re"(fft1Float)));
-    assert(approxEqual2(map!"a.im"(fft1), map!"a.im"(fft1Float)));
+    assert(approxEqual(map!"a.re"(fft1), map!"a.re"(fft1Float)));
+    assert(approxEqual(map!"a.im"(fft1), map!"a.im"(fft1Float)));
 
     alias C = Complex!float;
     auto arr2 = [C(1,2), C(3,4), C(5,6), C(7,8), C(9,10),
         C(11,12), C(13,14), C(15,16)];
     auto fft2 = fft(arr2);
-    assert(approxEqual2(map!"a.re"(fft2),
+    assert(approxEqual(map!"a.re"(fft2),
         [64.0, -27.3137, -16, -11.3137, -8, -4.6862, 0, 11.3137],1e-4,1e-4));
-    assert(approxEqual2(map!"a.im"(fft2),
+    assert(approxEqual(map!"a.im"(fft2),
         [72, 11.3137, 0, -4.686, -8, -11.3137, -16, -27.3137],1e-4,1e-4));
 
     auto inv1 = inverseFft(fft1);
-    assert(approxEqual2(map!"a.re"(inv1), arr,1e-4,1e-4));
+    assert(approxEqual(map!"a.re"(inv1), arr,1e-4,1e-4));
     assert(reduce!max(map!"a.im"(inv1)) < 1e-10);
 
     auto inv2 = inverseFft(fft2);
-    assert(approxEqual2(map!"a.re"(inv2), map!"a.re"(arr2),1e-4,1e-4));
-    assert(approxEqual2(map!"a.im"(inv2), map!"a.im"(arr2),1e-4,1e-4));
+    assert(approxEqual(map!"a.re"(inv2), map!"a.re"(arr2),1e-4,1e-4));
+    assert(approxEqual(map!"a.im"(inv2), map!"a.im"(arr2),1e-4,1e-4));
 
     // FFTs of size 0, 1 and 2 are handled as special cases.  Test them here.
     ushort[] empty;
@@ -3347,21 +3359,21 @@ void inverseFft(Ret, R)(R range, Ret buf)
 
     auto oneInv = inverseFft(oneFft);
     assert(oneInv.length == 1);
-    assert(approxEqual2(oneInv[0].re, 4.5,1e-4,1e-4));
-    assert(approxEqual2(oneInv[0].im, 0,1e-4,1e-4));
+    assert(approxEqual(oneInv[0].re, 4.5,1e-4,1e-4));
+    assert(approxEqual(oneInv[0].im, 0,1e-4,1e-4));
 
     long[2] twoElems = [8, 4];
     auto twoFft = fft(twoElems[]);
     assert(twoFft.length == 2);
-    assert(approxEqual2(twoFft[0].re, 12,1e-4,1e-4));
-    assert(approxEqual2(twoFft[0].im, 0,1e-4,1e-4));
-    assert(approxEqual2(twoFft[1].re, 4,1e-4,1e-4));
-    assert(approxEqual2(twoFft[1].im, 0,1e-4,1e-4));
+    assert(approxEqual(twoFft[0].re, 12,1e-4,1e-4));
+    assert(approxEqual(twoFft[0].im, 0,1e-4,1e-4));
+    assert(approxEqual(twoFft[1].re, 4,1e-4,1e-4));
+    assert(approxEqual(twoFft[1].im, 0,1e-4,1e-4));
     auto twoInv = inverseFft(twoFft);
-    assert(approxEqual2(twoInv[0].re, 8,1e-4,1e-4));
-    assert(approxEqual2(twoInv[0].im, 0,1e-4,1e-4));
-    assert(approxEqual2(twoInv[1].re, 4,1e-4,1e-4));
-    assert(approxEqual2(twoInv[1].im, 0,1e-4,1e-4));
+    assert(approxEqual(twoInv[0].re, 8,1e-4,1e-4));
+    assert(approxEqual(twoInv[0].im, 0,1e-4,1e-4));
+    assert(approxEqual(twoInv[1].re, 4,1e-4,1e-4));
+    assert(approxEqual(twoInv[1].im, 0,1e-4,1e-4));
 }
 
 // Swaps the real and imaginary parts of a complex number.  This is useful

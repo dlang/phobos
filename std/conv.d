@@ -3055,10 +3055,10 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 ///
 @safe unittest
 {
-    import std.math : approxEqual2;
+    import std.math : approxEqual;
     auto str = "123.456";
 
-    assert(parse!double(str).approxEqual2(123.456));
+    assert(parse!double(str).approxEqual(123.456));
 }
 
 @safe unittest
@@ -3181,7 +3181,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         //60 bit mantissa, round up
         s = "0xFFF_FFFF_FFFF_FFFFp10";
         x = parse!real(s);
-        assert(approxEqual2(x, 0xFFF_FFFF_FFFF_FFFFp10));
+        assert(approxEqual(x, 0xFFF_FFFF_FFFF_FFFFp10));
         //1 bit is implicit
         assert(((*cast(ulong*)&x) & 0x000F_FFFF_FFFF_FFFF) == 0x0000_0000_0000_0000);
         assert(strtod("0xFFFFFFFFFFFFFFFp10", null) == x);
@@ -3189,7 +3189,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         //60 bit mantissa, round down
         s = "0xFFF_FFFF_FFFF_FF90p10";
         x = parse!real(s);
-        assert(approxEqual2(x, 0xFFF_FFFF_FFFF_FF90p10));
+        assert(approxEqual(x, 0xFFF_FFFF_FFFF_FF90p10));
         //1 bit is implicit
         assert(((*cast(ulong*)&x) & 0x000F_FFFF_FFFF_FFFF) == 0x000F_FFFF_FFFF_FFFF);
         assert(strtod("0xFFFFFFFFFFFFF90p10", null) == x);
@@ -3197,7 +3197,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         //61 bit mantissa, round up 2
         s = "0x1F0F_FFFF_FFFF_FFFFp10";
         x = parse!real(s);
-        assert(approxEqual2(x, 0x1F0F_FFFF_FFFF_FFFFp10));
+        assert(approxEqual(x, 0x1F0F_FFFF_FFFF_FFFFp10));
         //1 bit is implicit
         assert(((*cast(ulong*)&x) & 0x000F_FFFF_FFFF_FFFF) == 0x000F_1000_0000_0000);
         assert(strtod("0x1F0FFFFFFFFFFFFFp10", null) == x);
@@ -3205,7 +3205,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         //61 bit mantissa, round down 2
         s = "0x1F0F_FFFF_FFFF_FF10p10";
         x = parse!real(s);
-        assert(approxEqual2(x, 0x1F0F_FFFF_FFFF_FF10p10));
+        assert(approxEqual(x, 0x1F0F_FFFF_FFFF_FF10p10));
         //1 bit is implicit
         assert(((*cast(ulong*)&x) & 0x000F_FFFF_FFFF_FFFF) == 0x000F_0FFF_FFFF_FFFF);
         assert(strtod("0x1F0FFFFFFFFFFF10p10", null) == x);

@@ -464,16 +464,16 @@ if (isFloatingPoint!T)
     assert(cmc.im == c1.im - c2.im);
 
     auto ctc = c1 * c2;
-    assert(approxEqual2(abs(ctc), abs(c1)*abs(c2), EPS));
-    assert(approxEqual2(arg(ctc), arg(c1)+arg(c2), EPS));
+    assert(approxEqual(abs(ctc), abs(c1)*abs(c2), EPS));
+    assert(approxEqual(arg(ctc), arg(c1)+arg(c2), EPS));
 
     auto cdc = c1 / c2;
-    assert(approxEqual2(abs(cdc), abs(c1)/abs(c2), EPS));
-    assert(approxEqual2(arg(cdc), arg(c1)-arg(c2), EPS));
+    assert(approxEqual(abs(cdc), abs(c1)/abs(c2), EPS));
+    assert(approxEqual(arg(cdc), arg(c1)-arg(c2), EPS));
 
     auto cec = c1^^c2;
-    assert(approxEqual2(cec.re, 0.11524131979943839881, EPS, 1e-15));
-    assert(approxEqual2(cec.im, 0.21870790452746026696, EPS, 1e-15));
+    assert(approxEqual(cec.re, 0.11524131979943839881, EPS, 1e-15));
+    assert(approxEqual(cec.im, 0.21870790452746026696, EPS, 1e-15));
 
     // Check complex-real operations.
     double a = 123.456;
@@ -491,12 +491,12 @@ if (isFloatingPoint!T)
     assert(ctr.im == c1.im*a);
 
     auto cdr = c1 / a;
-    assert(approxEqual2(abs(cdr), abs(c1)/a, EPS));
-    assert(approxEqual2(arg(cdr), arg(c1), EPS));
+    assert(approxEqual(abs(cdr), abs(c1)/a, EPS));
+    assert(approxEqual(arg(cdr), arg(c1), EPS));
 
     auto cer = c1^^3.0;
-    assert(approxEqual2(abs(cer), abs(c1)^^3, EPS));
-    assert(approxEqual2(arg(cer), arg(c1)*3, EPS));
+    assert(approxEqual(abs(cer), abs(c1)^^3, EPS));
+    assert(approxEqual(arg(cer), arg(c1)*3, EPS));
 
     auto rpc = a + c1;
     assert(rpc == cpr);
@@ -509,12 +509,12 @@ if (isFloatingPoint!T)
     assert(rtc == ctr);
 
     auto rdc = a / c1;
-    assert(approxEqual2(abs(rdc), a/abs(c1), EPS));
-    assert(approxEqual2(arg(rdc), -arg(c1), EPS));
+    assert(approxEqual(abs(rdc), a/abs(c1), EPS));
+    assert(approxEqual(arg(rdc), -arg(c1), EPS));
 
     rdc = a / c2;
-    assert(approxEqual2(abs(rdc), a/abs(c2), EPS));
-    assert(approxEqual2(arg(rdc), -arg(c2), EPS));
+    assert(approxEqual(abs(rdc), a/abs(c2), EPS));
+    assert(approxEqual(arg(rdc), -arg(c2), EPS));
 
     auto rec1a = 1.0 ^^ c1;
     assert(rec1a.re == 1.0);
@@ -525,26 +525,26 @@ if (isFloatingPoint!T)
     assert(rec2a.im == 0.0);
 
     auto rec1b = (-1.0) ^^ c1;
-    assert(approxEqual2(abs(rec1b), std.math.exp(-PI * c1.im), EPS));
+    assert(approxEqual(abs(rec1b), std.math.exp(-PI * c1.im), EPS));
     auto arg1b = arg(rec1b);
     /* The argument _should_ be PI, but floating-point rounding error
      * means that in fact the imaginary part is very slightly negative.
      */
-    assert(approxEqual2(arg1b, PI, EPS) || approxEqual2(arg1b, -PI, EPS));
+    assert(approxEqual(arg1b, PI, EPS) || approxEqual(arg1b, -PI, EPS));
 
     auto rec2b = (-1.0) ^^ c2;
-    assert(approxEqual2(abs(rec2b), std.math.exp(-2 * PI), EPS));
-    assert(approxEqual2(arg(rec2b), PI_2, EPS));
+    assert(approxEqual(abs(rec2b), std.math.exp(-2 * PI), EPS));
+    assert(approxEqual(arg(rec2b), PI_2, EPS));
 
     auto rec3a = 0.79 ^^ complex(6.8, 5.7);
     auto rec3b = complex(0.79, 0.0) ^^ complex(6.8, 5.7);
-    assert(approxEqual2(rec3a.re, rec3b.re, EPS));
-    assert(approxEqual2(rec3a.im, rec3b.im, EPS));
+    assert(approxEqual(rec3a.re, rec3b.re, EPS));
+    assert(approxEqual(rec3a.im, rec3b.im, EPS));
 
     auto rec4a = (-0.79) ^^ complex(6.8, 5.7);
     auto rec4b = complex(-0.79, 0.0) ^^ complex(6.8, 5.7);
-    assert(approxEqual2(rec4a.re, rec4b.re, EPS, 1e-15));
-    assert(approxEqual2(rec4a.im, rec4b.im, EPS, 1e-15));
+    assert(approxEqual(rec4a.re, rec4b.re, EPS, 1e-15));
+    assert(approxEqual(rec4a.im, rec4b.im, EPS, 1e-15));
 
     auto rer = a ^^ complex(2.0, 0.0);
     auto rcheck = a ^^ 2.0;
@@ -557,13 +557,13 @@ if (isFloatingPoint!T)
     rcheck = (-a) ^^ 2.0;
     assert(feqrel(rer2.re, rcheck) == double.mant_dig);
     assert(isIdentical(rer2.re, rcheck));
-    assert(approxEqual2(rer2.im, 0.0, EPS, 1e-9));
+    assert(approxEqual(rer2.im, 0.0, EPS, 1e-9));
 
     auto rer3 = (-a) ^^ complex(-2.0, 0.0);
     rcheck = (-a) ^^ (-2.0);
     assert(feqrel(rer3.re, rcheck) == double.mant_dig);
     assert(isIdentical(rer3.re, rcheck));
-    assert(approxEqual2(rer3.im, 0.0, EPS, 1e-9));
+    assert(approxEqual(rer3.im, 0.0, EPS, 1e-9));
 
     auto rer4 = a ^^ complex(-2.0, 0.0);
     rcheck = a ^^ (-2.0);
@@ -575,10 +575,10 @@ if (isFloatingPoint!T)
     foreach (i; 0 .. 6)
     {
         auto cei = c1^^i;
-        assert(approxEqual2(abs(cei), abs(c1)^^i, EPS));
+        assert(approxEqual(abs(cei), abs(c1)^^i, EPS));
         // Use cos() here to deal with arguments that go outside
         // the (-pi,pi] interval (only an issue for i>3).
-        assert(approxEqual2(std.math.cos(arg(cei)), std.math.cos(arg(c1)*i), EPS, 1e-15));
+        assert(approxEqual(std.math.cos(arg(cei)), std.math.cos(arg(c1)*i), EPS, 1e-15));
     }
 
     // Check operations between different complex types.
@@ -595,22 +595,22 @@ if (isFloatingPoint!T)
     auto c2c = c2;
 
     c1c /= c1;
-    assert(approxEqual2(c1c.re, 1.0, EPS));
-    assert(approxEqual2(c1c.im, 0.0, EPS));
+    assert(approxEqual(c1c.re, 1.0, EPS));
+    assert(approxEqual(c1c.im, 0.0, EPS));
 
     c1c = c1;
     c1c /= c2;
-    assert(approxEqual2(c1c.re, 0.5882352941, EPS, 1e-9));
-    assert(approxEqual2(c1c.im, -0.3529411765, EPS, 1e-9));
+    assert(approxEqual(c1c.re, 0.5882352941, EPS, 1e-9));
+    assert(approxEqual(c1c.im, -0.3529411765, EPS, 1e-9));
 
     c2c /= c1;
-    assert(approxEqual2(c2c.re, 1.25, EPS));
-    assert(approxEqual2(c2c.im, 0.75, EPS));
+    assert(approxEqual(c2c.re, 1.25, EPS));
+    assert(approxEqual(c2c.im, 0.75, EPS));
 
     c2c = c2;
     c2c /= c2;
-    assert(approxEqual2(c2c.re, 1.0, EPS));
-    assert(approxEqual2(c2c.im, 0.0, EPS));
+    assert(approxEqual(c2c.re, 1.0, EPS));
+    assert(approxEqual(c2c.im, 0.0, EPS));
 }
 
 @safe pure nothrow unittest
@@ -729,9 +729,9 @@ T sqAbs(T)(Complex!T z) @safe pure nothrow @nogc
     assert(sqAbs(complex(0.0)) == 0.0);
     assert(sqAbs(complex(1.0)) == 1.0);
     assert(sqAbs(complex(0.0, 1.0)) == 1.0);
-    assert(approxEqual2(sqAbs(complex(1.0L, -2.0L)), 5.0L));
-    assert(approxEqual2(sqAbs(complex(-3.0L, 1.0L)), 10.0L));
-    assert(approxEqual2(sqAbs(complex(1.0f,-1.0f)), 2.0f));
+    assert(approxEqual(sqAbs(complex(1.0L, -2.0L)), 5.0L));
+    assert(approxEqual(sqAbs(complex(-3.0L, 1.0L)), 10.0L));
+    assert(approxEqual(sqAbs(complex(1.0f,-1.0f)), 2.0f));
 }
 
 /// ditto
@@ -746,8 +746,8 @@ if (isFloatingPoint!T)
     import std.math;
     assert(sqAbs(0.0) == 0.0);
     assert(sqAbs(-1.0) == 1.0);
-    assert(approxEqual2(sqAbs(-3.0L), 9.0L));
-    assert(approxEqual2(sqAbs(-5.0f), 25.0f));
+    assert(approxEqual(sqAbs(-3.0L), 9.0L));
+    assert(approxEqual(sqAbs(-5.0f), 25.0f));
 }
 
 
@@ -808,8 +808,8 @@ Complex!(CommonType!(T, U)) fromPolar(T, U)(const T modulus, const U argument)
 {
     import std.math;
     auto z = fromPolar(std.math.sqrt(2.0), PI_4);
-    assert(approxEqual2(z.re, 1.0L, real.epsilon, 1e-15));
-    assert(approxEqual2(z.im, 1.0L, real.epsilon, 1e-15));
+    assert(approxEqual(z.re, 1.0L, real.epsilon, 1e-15));
+    assert(approxEqual(z.im, 1.0L, real.epsilon, 1e-15));
 }
 
 
@@ -1003,18 +1003,18 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
 
 @safe pure nothrow unittest
 {
-    import std.math : approxEqual2;
+    import std.math : approxEqual;
 
     auto c1 = complex(1.0, 1.0);
     auto c2 = Complex!double(0.5, 2.0);
 
     auto c1s = sqrt(c1);
-    assert(approxEqual2(c1s.re, 1.0986841135));
-    assert(approxEqual2(c1s.im, 0.4550898606));
+    assert(approxEqual(c1s.re, 1.0986841135));
+    assert(approxEqual(c1s.im, 0.4550898606));
 
     auto c2s = sqrt(c2);
-    assert(approxEqual2(c2s.re, 1.131713924));
-    assert(approxEqual2(c2s.im, 0.8836155309));
+    assert(approxEqual(c2s.re, 1.131713924));
+    assert(approxEqual(c2s.im, 0.8836155309));
 }
 
 // Issue 10881: support %f formatting of complex numbers
