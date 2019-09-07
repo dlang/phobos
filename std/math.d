@@ -8849,7 +8849,7 @@ private real polyImpl(real x, in real[] A) @trusted pure nothrow @nogc
     See_Also:
         Use $(LREF feqrel) to get the number of equal bits in the mantissa.
  */
-bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
+bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff = 1e-2, V maxAbsDiff = 1e-5)
 {
     import std.range.primitives : empty, front, isInputRange, popFront;
     static if (isInputRange!T)
@@ -8915,12 +8915,6 @@ bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
                 || maxAbsDiff != 0 && fabs(lhs - rhs) <= maxAbsDiff;
         }
     }
-}
-
-/// ditto
-bool approxEqual(T, U)(T lhs, U rhs)
-{
-    return approxEqual(lhs, rhs, 1e-2, 1e-5);
 }
 
 ///
