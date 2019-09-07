@@ -6436,7 +6436,7 @@ do
 pure @safe unittest
 {
     import std.algorithm.comparison : equal;
-    import std.math : approxEqual;
+    import std.math : approxEqual2;
 
     auto r = iota(0, 10, 1);
     assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]));
@@ -6450,7 +6450,7 @@ pure @safe unittest
     assert(r[2] == 6);
     assert(!(2 in r));
     auto rf = iota(0.0, 0.5, 0.1);
-    assert(approxEqual(rf, [0.0, 0.1, 0.2, 0.3, 0.4]));
+    assert(approxEqual2(rf, [0.0, 0.1, 0.2, 0.3, 0.4]));
 }
 
 pure nothrow @nogc @safe unittest
@@ -6498,7 +6498,7 @@ pure @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.searching : count;
-    import std.math : approxEqual, nextUp, nextDown;
+    import std.math : approxEqual2, nextUp, nextDown;
     import std.meta : AliasSeq;
 
     static assert(is(ElementType!(typeof(iota(0f))) == float));
@@ -6556,7 +6556,7 @@ pure @safe unittest
     assert(equal(rSlice, [3, 6]));
 
     auto rf = iota(0.0, 0.5, 0.1);
-    assert(approxEqual(rf, [0.0, 0.1, 0.2, 0.3, 0.4][]));
+    assert(approxEqual2(rf, [0.0, 0.1, 0.2, 0.3, 0.4][]));
     assert(rf.length == 5);
 
     rf.popFront();
@@ -6564,35 +6564,35 @@ pure @safe unittest
 
     auto rfSlice = rf[1 .. 4];
     assert(rfSlice.length == 3);
-    assert(approxEqual(rfSlice, [0.2, 0.3, 0.4]));
+    assert(approxEqual2(rfSlice, [0.2, 0.3, 0.4]));
 
     rfSlice.popFront();
-    assert(approxEqual(rfSlice[0], 0.3));
+    assert(approxEqual2(rfSlice[0], 0.3));
 
     rf.popFront();
     assert(rf.length == 3);
 
     rfSlice = rf[1 .. 3];
     assert(rfSlice.length == 2);
-    assert(approxEqual(rfSlice, [0.3, 0.4]));
-    assert(approxEqual(rfSlice[0], 0.3));
+    assert(approxEqual2(rfSlice, [0.3, 0.4]));
+    assert(approxEqual2(rfSlice[0], 0.3));
 
     // With something just above 0.5
     rf = iota(0.0, nextUp(0.5), 0.1);
-    assert(approxEqual(rf, [0.0, 0.1, 0.2, 0.3, 0.4, 0.5][]));
+    assert(approxEqual2(rf, [0.0, 0.1, 0.2, 0.3, 0.4, 0.5][]));
     rf.popBack();
     assert(rf[rf.length - 1] == rf.back);
-    assert(approxEqual(rf.back, 0.4));
+    assert(approxEqual2(rf.back, 0.4));
     assert(rf.length == 5);
 
     // going down
     rf = iota(0.0, -0.5, -0.1);
-    assert(approxEqual(rf, [0.0, -0.1, -0.2, -0.3, -0.4][]));
+    assert(approxEqual2(rf, [0.0, -0.1, -0.2, -0.3, -0.4][]));
     rfSlice = rf[2 .. 5];
-    assert(approxEqual(rfSlice, [-0.2, -0.3, -0.4]));
+    assert(approxEqual2(rfSlice, [-0.2, -0.3, -0.4]));
 
     rf = iota(0.0, nextDown(-0.5), -0.1);
-    assert(approxEqual(rf, [0.0, -0.1, -0.2, -0.3, -0.4, -0.5][]));
+    assert(approxEqual2(rf, [0.0, -0.1, -0.2, -0.3, -0.4, -0.5][]));
 
     // iota of longs
     auto rl = iota(5_000_000L);
