@@ -2734,6 +2734,8 @@ if (!isIntegral!T &&
             shift++;
         }
 
+        if ((a & 1) == 0) swap(a, b);
+
         do
         {
             assert((a & 1) != 0);
@@ -2787,6 +2789,13 @@ if (!isIntegral!T &&
         int opCmp(int i) { return (impl < i) ? -1 : (impl > i) ? 1 : 0; }
     }
     assert(gcd(CrippledInt(2310), CrippledInt(1309)) == CrippledInt(77));
+}
+
+// Issue 19514
+@system pure unittest
+{
+    import std.bigint : BigInt;
+    assert(gcd(BigInt(2), BigInt(1)) == BigInt(1));
 }
 
 // This is to make tweaking the speed/size vs. accuracy tradeoff easy,
