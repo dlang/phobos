@@ -6609,6 +6609,9 @@ bool isFinite(X)(X x) @trusted pure nothrow @nogc
  */
 bool isNormal(X)(X x) @trusted pure nothrow @nogc
 {
+    static if (__traits(isFloating, X))
+        if (__ctfe)
+            return (x <= -X.min_normal && x != -X.infinity) || (x >= X.min_normal && x != X.infinity);
     alias F = floatTraits!(X);
     ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
     return (e != F.EXPMASK && e != 0);
@@ -6632,6 +6635,25 @@ bool isNormal(X)(X x) @trusted pure nothrow @nogc
     assert(isNormal(-real.max));
     assert(!isNormal(real.min_normal/4));
 
+}
+
+@safe pure nothrow @nogc unittest
+{
+    // CTFE
+    enum float f = 3;
+    enum double d = 500;
+    enum real e = 10e+48;
+
+    static assert(isNormal(f));
+    static assert(isNormal(d));
+    static assert(isNormal(e));
+
+    static assert(!isNormal(0.0f));
+    static assert(!isNormal(0.0));
+    static assert(!isNormal(0.0L));
+    static assert(!isNormal(real.infinity));
+    static assert(isNormal(-real.max));
+    static assert(!isNormal(real.min_normal/4));
 }
 
 /*********************************
