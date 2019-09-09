@@ -8927,10 +8927,70 @@ bool approxEqual(T, U, V)(T value, U reference, V maxRelDiff = 1e-2, V maxAbsDif
 {
     assert(approxEqual(1.0, 1.0099));
     assert(!approxEqual(1.0, 1.011));
+    assert(approxEqual(0.00001, 0.0));
+    assert(!approxEqual(0.00002, 0.0));
+
+    assert(approxEqual(3.0, [3, 3.01, 2.99])); // several reference values is strange
+    assert(approxEqual([3, 3.01, 2.99], 3.0)); // better
+
     float[] arr1 = [ 1.0, 2.0, 3.0 ];
     double[] arr2 = [ 1.001, 1.999, 3 ];
     assert(approxEqual(arr1, arr2));
+}
 
+///
+@safe pure nothrow unittest
+{
+    // relative comparison depends on reference, make sure proper
+    // side is used when comparing range to single value. Based on
+    // bugzilla issue 15763
+    auto a = [2e-3 - 1e-5];
+    auto b = 2e-3 + 1e-5;
+    assert(a[0].approxEqual(b));
+    assert(!b.approxEqual(a[0]));
+    assert(a.approxEqual(b));
+    assert(!b.approxEqual(a));
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert(!approxEqual(0.0,1e-15,1e-9,0.0));
+    assert(approxEqual(0.0,1e-15,1e-9,1e-9));
+    assert(!approxEqual(1.0,3.0,0.0,1.0));
+
+    assert(approxEqual(1.00000000099,1.0,1e-9,0.0));
+    assert(!approxEqual(1.0000000011,1.0,1e-9,0.0));
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    // maybe unintuitive behavior
+    assert(approxEqual(1000.0,1010.0));
+    assert(approxEqual(9_090_000_000.0,9_000_000_000.0));
+    assert(approxEqual(0.0,1e30,1.0));
+    assert(approxEqual(0.00001,1e-30));
+    assert(!approxEqual(-1e-30,1e-30,1e-2,0.0));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    int a = 10;
+    assert(approxEqual(10, a));
+
+    assert(!approxEqual(3, 0));
+    assert(approxEqual(3, 3));
+    assert(approxEqual(3.0, 3));
+    assert(approxEqual(3, 3.0));
+
+    assert(approxEqual(0.0,0.0));
+    assert(approxEqual(-0.0,0.0));
+    assert(approxEqual(0.0f,0.0));
+}
+
+@safe pure nothrow @nogc unittest
+{
     real num = real.infinity;
     assert(num == real.infinity);
     assert(approxEqual(num, real.infinity));
@@ -8938,14 +8998,20 @@ bool approxEqual(T, U, V)(T value, U reference, V maxRelDiff = 1e-2, V maxAbsDif
     assert(num == -real.infinity);
     assert(approxEqual(num, -real.infinity));
 
-    assert(!approxEqual(3, 0));
-    assert(approxEqual(3, 3));
-    assert(approxEqual(3.0, 3));
-    assert(approxEqual([3, 3, 3], 3.0));
-    assert(approxEqual([3.0, 3.0, 3.0], 3));
-    int a = 10;
-    assert(approxEqual(10, a));
+    assert(!approxEqual(1,real.nan));
+    assert(!approxEqual(real.nan,real.max));
+    assert(!approxEqual(real.nan,real.nan));
 }
+
+@safe pure nothrow unittest
+{
+    assert(!approxEqual([1.0,2.0,3.0],[1.0,2.0]));
+    assert(!approxEqual([1.0,2.0],[1.0,2.0,3.0]));
+
+//    assert(approxEqual([],[])); //FIXME: does not work yet
+    assert(approxEqual(cast(real[])[],cast(real[])[]));
+}
+
 
 @safe pure nothrow @nogc unittest
 {
@@ -9021,19 +9087,6 @@ bool approxEqual(T, U, V)(T value, U reference, V maxRelDiff = 1e-2, V maxAbsDif
     // issue 6381: floor/ceil should be usable in pure function.
     auto x = floor(1.2);
     auto y = ceil(1.2);
-}
-
-@safe pure nothrow unittest
-{
-    // relative comparison depends on reference, make sure proper
-    // side is used when comparing range to single value. Based on
-    // bugzilla issue 15763    
-    auto a = [2e-3 - 1e-5];
-    auto b = 2e-3 + 1e-5;
-    assert(a[0].approxEqual(b));
-    assert(!b.approxEqual(a[0]));
-    assert(a.approxEqual(b));
-    assert(!b.approxEqual(a));
 }
 
 /***********************************
