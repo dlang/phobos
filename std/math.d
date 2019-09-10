@@ -4497,62 +4497,20 @@ real modf(real x, ref real i) @trusted nothrow @nogc
  *      $(TR $(TD $(PLUSMN)0.0)      $(TD $(PLUSMN)0.0) )
  *      )
  */
-real scalbn(real x, int n) @trusted nothrow @nogc
+real scalbn(real x, int n) @safe pure nothrow @nogc
 {
-    if (__ctfe)
-    {
-        //if (n >= real.max_exp || n <= real.min_exp) // When 2.0L ^^ n is not representable.
-        //    return (x * (2.0L ^^ (n / 2))) * (2.0L ^^ (n - (n / 2)));
-        // We'd rather use the above code but it doesn't work on all compiler +
-        // architecture + OS combinations. The issue might be that 80 bit reals
-        // are advertised to exist but CTFE reals are 64 bit.
-        if (n > 999)
-            return scalbn(x * 0x1.0p999L, n - 999);
-        else if (n < -999)
-            return scalbn(x * 0x1.0p-999L, n + 999);
-        else
-            return x * (2.0L ^^ n);
-    }
-
-    version (InlineAsm_X86_Any)
-    {
-        // scalbnl is not supported on DMD-Windows, so use asm pure nothrow @nogc.
-        version (Win64)
-        {
-            asm pure nothrow @nogc {
-                naked                           ;
-                mov     16[RSP],RCX             ;
-                fild    word ptr 16[RSP]        ;
-                fld     real ptr [RDX]          ;
-                fscale                          ;
-                fstp    ST(1)                   ;
-                ret                             ;
-            }
-        }
-        else
-        {
-            asm pure nothrow @nogc {
-                fild n;
-                fld x;
-                fscale;
-                fstp ST(1);
-            }
-        }
-    }
-    else
-    {
-        return core.stdc.math.scalbnl(x, n);
-    }
+    pragma(inline, true);
+    return core.math.ldexp(x, n);
 }
 
 ///
-@safe nothrow @nogc unittest
+@safe pure nothrow @nogc unittest
 {
     assert(scalbn(0x1.2345678abcdefp0, 999) == 0x1.2345678abcdefp999);
     assert(scalbn(-real.infinity, 5) == -real.infinity);
 }
 
-@safe nothrow @nogc unittest
+@safe pure nothrow @nogc unittest
 {
     // CTFE-able test
     static assert(scalbn(0x1.2345678abcdefp0, 999) == 0x1.2345678abcdefp999);
