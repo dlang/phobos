@@ -6877,6 +6877,12 @@ bool isIdentical(real x, real y) @trusted pure nothrow @nogc
  */
 int signbit(X)(X x) @nogc @trusted pure nothrow
 {
+    if (__ctfe)
+    {
+        double dval = cast(double) x; // Precision can increase or decrease but sign won't change (even NaN).
+        return 0 > *cast(long*) &dval;
+    }
+
     alias F = floatTraits!(X);
     return ((cast(ubyte *)&x)[F.SIGNPOS_BYTE] & 0x80) != 0;
 }
@@ -6912,6 +6918,36 @@ int signbit(X)(X x) @nogc @trusted pure nothrow
     assert(!signbit(real.max));
 }
 
+@nogc @safe pure nothrow unittest
+{
+    // CTFE
+    static assert(!signbit(float.nan));
+    static assert(signbit(-float.nan));
+    static assert(!signbit(168.1234f));
+    static assert(signbit(-168.1234f));
+    static assert(!signbit(0.0f));
+    static assert(signbit(-0.0f));
+    static assert(signbit(-float.max));
+    static assert(!signbit(float.max));
+
+    static assert(!signbit(double.nan));
+    static assert(signbit(-double.nan));
+    static assert(!signbit(168.1234));
+    static assert(signbit(-168.1234));
+    static assert(!signbit(0.0));
+    static assert(signbit(-0.0));
+    static assert(signbit(-double.max));
+    static assert(!signbit(double.max));
+
+    static assert(!signbit(real.nan));
+    static assert(signbit(-real.nan));
+    static assert(!signbit(168.1234L));
+    static assert(signbit(-168.1234L));
+    static assert(!signbit(0.0L));
+    static assert(signbit(-0.0L));
+    static assert(signbit(-real.max));
+    static assert(!signbit(real.max));
+}
 
 /**
 Params:
@@ -6923,6 +6959,10 @@ Returns:
 R copysign(R, X)(R to, X from) @trusted pure nothrow @nogc
 if (isFloatingPoint!(R) && isFloatingPoint!(X))
 {
+    if (__ctfe)
+    {
+        return signbit(to) == signbit(from) ? to : -to;
+    }
     ubyte* pto   = cast(ubyte *)&to;
     const ubyte* pfrom = cast(ubyte *)&from;
 
@@ -6985,6 +7025,26 @@ if (isIntegral!(X) && isFloatingPoint!(R))
 
                 e = copysign(X.nan, -y);
                 assert(isNaN(e) && signbit(e));
+            }
+        }}
+    }
+    // CTFE
+    static foreach (X; AliasSeq!(float, double, real, int, long))
+    {
+        static foreach (Y; AliasSeq!(float, double, real))
+        {{
+            enum X x = 21;
+            enum Y y = 23.8;
+
+            assert(21.0 == copysign(x, y));
+            assert(21.0 == copysign(-x, y));
+            assert(-21.0 == copysign(x, -y));
+            assert(-21.0 == copysign(-x, -y));
+
+            static if (isFloatingPoint!X)
+            {
+                static assert(isNaN(copysign(X.nan, y)) && !signbit(copysign(X.nan, y)));
+                assert(isNaN(copysign(X.nan, -y)) && signbit(copysign(X.nan, -y)));
             }
         }}
     }
