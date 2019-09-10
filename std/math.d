@@ -3281,6 +3281,50 @@ deprecated
 T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
 if (isFloatingPoint!T)
 {
+    if (__ctfe)
+    {
+        // Handle special cases.
+        if (value == 0) { exp = 0; return value; }
+        if (value == T.infinity) { exp = int.max; return value; }
+        if (value == -T.infinity || value != value) { exp = int.min; return value; }
+        // Handle ordinary cases.
+        // In CTFE there is no performance advantage for having separate
+        // paths for different floating point types.
+        T absValue = value < 0 ? -value : value;
+        int expCount;
+        static if (T.mant_dig > double.mant_dig)
+        {
+            for (; absValue >= 0x1.0p+1024L; absValue *= 0x1.0p-1024L)
+                expCount += 1024;
+            for (; absValue < 0x1.0p-1021L; absValue *= 0x1.0p+1021L)
+                expCount -= 1021;
+        }
+        const double dval = cast(double) absValue;
+        int dexp = cast(int) (((*cast(const long*) &dval) >>> 52) & 0x7FF) + double.min_exp - 2;
+        dexp++;
+        expCount += dexp;
+        absValue *= 2.0 ^^ -dexp;
+        // If the original value was subnormal or if it was a real
+        // then absValue can still be outside the [0.5, 1.0) range.
+        if (absValue < 0.5)
+        {
+            assert(T.mant_dig > double.mant_dig || isSubnormal(value));
+            do
+            {
+                absValue += absValue;
+                expCount--;
+            } while (absValue < 0.5);
+        }
+        else
+        {
+            assert(absValue < 1 || T.mant_dig > double.mant_dig);
+            for (; absValue >= 1; absValue *= T(0.5))
+                expCount++;
+        }
+        exp = expCount;
+        return value < 0 ? -absValue : absValue;
+    }
+
     Unqual!T vf = value;
     ushort* vu = cast(ushort*)&vf;
     static if (is(Unqual!T == float))
@@ -3536,6 +3580,53 @@ if (isFloatingPoint!T)
                 assert(isIdentical(e, v));
                 assert(exp == eptr);
 
+            }
+        }
+    }}
+
+    // CTFE
+    alias CtfeFrexpResult= Tuple!(real, int);
+    static CtfeFrexpResult ctfeFrexp(T)(const T value)
+    {
+        int exp;
+        auto significand = frexp(value, exp);
+        return CtfeFrexpResult(significand, exp);
+    }
+    static foreach (T; AliasSeq!(real, double, float))
+    {{
+        enum Tuple!(T, T, int)[] vals =     // x,frexp,exp
+            [
+             tuple(T(0.0),  T( 0.0 ), 0),
+             tuple(T(-0.0), T( -0.0), 0),
+             tuple(T(1.0),  T( .5  ), 1),
+             tuple(T(-1.0), T( -.5 ), 1),
+             tuple(T(2.0),  T( .5  ), 2),
+             tuple(T(float.min_normal/2.0f), T(.5), -126),
+             tuple(T.infinity, T.infinity, int.max),
+             tuple(-T.infinity, -T.infinity, int.min),
+             tuple(T.nan, T.nan, int.min),
+             tuple(-T.nan, -T.nan, int.min),
+
+             // Phobos issue #16026:
+             tuple(3 * (T.min_normal * T.epsilon), T( .75), (T.min_exp - T.mant_dig) + 2)
+             ];
+
+        static foreach (elem; vals)
+        {
+            static assert(ctfeFrexp(elem[0]) is CtfeFrexpResult(elem[1], elem[2]));
+        }
+
+        static if (floatTraits!(T).realFormat == RealFormat.ieeeExtended)
+        {
+            enum T[3][] extendedvals = [ // x,frexp,exp
+                [0x1.a5f1c2eb3fe4efp+73L,    0x1.A5F1C2EB3FE4EFp-1L,     74],    // normal
+                [0x1.fa01712e8f0471ap-1064L, 0x1.fa01712e8f0471ap-1L, -1063],
+                [T.min_normal,      .5, -16381],
+                [T.min_normal/2.0L, .5, -16382]    // subnormal
+            ];
+            static foreach (elem; extendedvals)
+            {
+                static assert(ctfeFrexp(elem[0]) is CtfeFrexpResult(elem[1], cast(int) elem[2]));
             }
         }
     }}
@@ -9670,10 +9761,10 @@ if (isNumeric!X)
 {
     import std.meta : AliasSeq;
 
-    immutable smallP2 = pow(2.0L, -62);
-    immutable bigP2 = pow(2.0L, 50);
-    immutable smallP7 = pow(7.0L, -35);
-    immutable bigP7 = pow(7.0L, 30);
+    enum smallP2 = pow(2.0L, -62);
+    enum bigP2 = pow(2.0L, 50);
+    enum smallP7 = pow(7.0L, -35);
+    enum bigP7 = pow(7.0L, 30);
 
     static foreach (X; AliasSeq!(float, double, real))
     {{
@@ -9704,5 +9795,37 @@ if (isNumeric!X)
 
         foreach (x; [0, 3, 5, 13, 77, X.min, X.max])
             assert(!isPowerOf2(cast(X) x));
+    }}
+
+    // CTFE
+    static foreach (X; AliasSeq!(float, double, real))
+    {{
+        enum min_sub = X.min_normal * X.epsilon;
+
+        static foreach (x; [smallP2, min_sub, X.min_normal, .25L, 0.5L, 1.0L,
+                              2.0L, 8.0L, pow(2.0L, X.max_exp - 1), bigP2])
+        {
+            static assert( isPowerOf2(cast(X) x));
+            static assert(!isPowerOf2(cast(X)-x));
+        }
+
+        static foreach (x; [0.0L, 3 * min_sub, smallP7, 0.1L, 1337.0L, bigP7, X.max, real.nan, real.infinity])
+        {
+            static assert(!isPowerOf2(cast(X) x));
+            static assert(!isPowerOf2(cast(X)-x));
+        }
+    }}
+
+    static foreach (X; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    {{
+        static foreach (x; [1, 2, 4, 8, (X.max >>> 1) + 1])
+        {
+            static assert( isPowerOf2(cast(X) x));
+            static if (isSigned!X)
+                static assert(!isPowerOf2(cast(X)-x));
+        }
+
+        static foreach (x; [0, 3, 5, 13, 77, X.min, X.max])
+            static assert(!isPowerOf2(cast(X) x));
     }}
 }
