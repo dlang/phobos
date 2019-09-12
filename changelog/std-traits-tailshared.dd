@@ -1,0 +1,11 @@
+`TailShared` was added to `std.traits`
+
+$(REF TailShared, std, traits) changes a type's qualifiers such that its tail is shared, but its head isn't.
+
+---
+import std.traits;
+
+static assert(is(TailShared!int == int));
+static assert(is(TailShared!(int*) == shared(int)*));
+static assert(is(TailShared!(shared int**) == shared(int*)*));
+---
