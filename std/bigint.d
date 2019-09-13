@@ -1302,8 +1302,7 @@ private:
     // Generate a runtime error if division by zero occurs
     void checkDivByZero() pure const nothrow @safe
     {
-        if (isZero())
-            throw new Error("BigInt division by zero");
+        assert(!isZero(), "BigInt division by zero");
     }
 }
 
