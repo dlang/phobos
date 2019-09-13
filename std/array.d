@@ -941,7 +941,7 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
                         ret ~= E.init;
                 }
                 catch (Exception e)
-                    throw new Error(e.msg);
+                    assert(0, e.msg);
             }
             else
                 assert(0, "No postblit nor default init on " ~ E.stringof ~
