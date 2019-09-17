@@ -3288,6 +3288,9 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
 private void formatRange(Writer, T, Char)(ref Writer w, ref T val, scope const ref FormatSpec!Char f)
 if (isInputRange!T)
 {
+    // in this mode, we just want to do a representative print to discover if the format spec is valid
+    enum formatTestMode = is(Writer == NoOpSink);
+
     import std.conv : text;
 
     // Formatting character ranges like string
@@ -3390,7 +3393,10 @@ if (isInputRange!T)
                         {
                             printed = 0;
                             for (; !val.empty; val.popFront(), ++printed)
+                            {
                                 put(w, val.front);
+                                static if (formatTestMode) break; // one is enough to test
+                            }
                         }
                     }
                     else
@@ -3417,6 +3423,7 @@ if (isInputRange!T)
                 {
                     put(w, f.seqSeparator);
                     formatElement(w, val.front, f);
+                    static if (formatTestMode) break; // one is enough to test
                 }
             }
             static if (!isInfinite!T) put(w, f.seqAfter);
@@ -3431,6 +3438,7 @@ if (isInputRange!T)
             foreach (e ; a)
             {
                 formatValue(w, e, f);
+                static if (formatTestMode) break; // one is enough to test
             }
         }
         else
@@ -3438,6 +3446,7 @@ if (isInputRange!T)
             for (size_t i; !val.empty; val.popFront(), ++i)
             {
                 formatValue(w, val.front, f);
+                static if (formatTestMode) break; // one is enough to test
             }
         }
     }
@@ -3467,20 +3476,27 @@ if (isInputRange!T)
                         continue w;
                 break w;
             }
-            if (f.sep !is null)
+            static if (formatTestMode)
             {
-                put(w, fmt.trailing);
-                val.popFront();
-                if (val.empty)
-                    break;
-                put(w, f.sep);
+                break; // one is enough to test
             }
             else
             {
-                val.popFront();
-                if (val.empty)
-                    break;
-                put(w, fmt.trailing);
+                if (f.sep !is null)
+                {
+                    put(w, fmt.trailing);
+                    val.popFront();
+                    if (val.empty)
+                        break;
+                    put(w, f.sep);
+                }
+                else
+                {
+                    val.popFront();
+                    if (val.empty)
+                        break;
+                    put(w, fmt.trailing);
+                }
             }
         }
     }
@@ -4190,6 +4206,20 @@ version (unittest)
     S s = S(1);
 
     format!"%s"(s);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=20218
+@safe pure unittest
+{
+    void notCalled()
+    {
+        import std.range : repeat;
+
+        auto value = 1.repeat;
+
+        // test that range is not evaluated to completion at compiletime
+        format!"%s"(value);
+    }
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=7879
