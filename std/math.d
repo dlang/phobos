@@ -40,7 +40,7 @@ $(TR $(TDNW Modulus) $(TD
 ))
 $(TR $(TDNW Floating-point operations) $(TD
     $(MYREF approxEqual) $(MYREF feqrel) $(MYREF fdim) $(MYREF fmax)
-    $(MYREF fmin) $(MYREF fma) $(MYREF nextDown) $(MYREF nextUp)
+    $(MYREF fmin) $(MYREF fma) $(MYREF isClose) $(MYREF nextDown) $(MYREF nextUp)
     $(MYREF nextafter) $(MYREF NaN) $(MYREF getNaNPayload)
     $(MYREF cmp)
 ))
@@ -9155,6 +9155,254 @@ bool approxEqual(T, U, V)(T value, U reference, V maxRelDiff = 1e-2, V maxAbsDif
 
 //    assert(approxEqual([],[])); //FIXME: does not work yet
     assert(approxEqual(cast(real[])[],cast(real[])[]));
+}
+
+
+/**
+   Computes whether two values are approximately equal, admitting a maximum
+   relative difference, and a maximum absolute difference.
+
+   Params:
+        lhs = First item to compare.
+        rhs = Second item to compare.
+        maxRelDiff = Maximum allowable relative difference.
+        Setting to 0.0 disables this check. Default depends on the type of
+        `lhs` and `rhs`: It is approximately half the number of decimal digits of
+        precision of the smaller type.
+        maxAbsDiff = Maximum absolute difference. This is mainly usefull
+        for comparing values to zero. Setting to 0.0 disables this check.
+        Defaults to `0.0`.
+
+   Returns:
+       `true` if the two items are approximately equal under either criterium.
+       It is sufficient, when `value ` satisfies one of the two criteria.
+
+       If one item is a range, and the other is a single value, then
+       the result is the logical and-ing of calling `isClose` on
+       each element of the ranged item against the single item. If
+       both items are ranges, then `isClose` returns `true` if
+       and only if the ranges have the same number of elements and if
+       `isClose` evaluates to `true` for each pair of elements.
+
+    See_Also:
+        Use $(LREF feqrel) to get the number of equal bits in the mantissa.
+ */
+bool isClose(T, U)(T lhs, U rhs, real maxRelDiff = CommonDefaultFor!(T,U), real maxAbsDiff = 0.0)
+{
+    import std.range.primitives : empty, front, isInputRange, popFront;
+    static if (isInputRange!T)
+    {
+        static if (isInputRange!U)
+        {
+            // Two ranges
+            for (;; lhs.popFront(), rhs.popFront())
+            {
+                if (lhs.empty) return rhs.empty;
+                if (rhs.empty) return lhs.empty;
+                if (!isClose(lhs.front, rhs.front, maxRelDiff, maxAbsDiff))
+                    return false;
+            }
+        }
+        else
+        {
+            // lhs is range, rhs is number
+            for (; !lhs.empty; lhs.popFront())
+            {
+                if (!isClose(lhs.front, rhs, maxRelDiff, maxAbsDiff))
+                    return false;
+            }
+            return true;
+        }
+    }
+    else
+    {
+        static if (isInputRange!U)
+        {
+            // lhs is number, rhs is range
+            for (; !rhs.empty; rhs.popFront())
+            {
+                if (!isClose(lhs, rhs.front, maxRelDiff, maxAbsDiff))
+                    return false;
+            }
+            return true;
+        }
+        else
+        {
+            // two numbers
+            if (lhs == rhs) return true;
+
+            static if (is(typeof(lhs.infinity)) && is(typeof(rhs.infinity)))
+            {
+                if (lhs == lhs.infinity || rhs == rhs.infinity ||
+                    lhs == -lhs.infinity || rhs == -rhs.infinity) return false;
+            }
+
+            auto diff = abs(lhs - rhs);
+
+            return diff <= maxRelDiff*abs(lhs)
+                || diff <= maxRelDiff*abs(rhs)
+                || diff <= maxAbsDiff;
+        }
+    }
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert(isClose(1.0,0.999_999_999));
+    assert(isClose(0.001, 0.000_999_999_999));
+    assert(isClose(1_000_000_000.0,999_999_999.0));
+
+    assert(isClose(17.123_456_789, 17.123_456_78));
+    assert(!isClose(17.123_456_789, 17.123_45));
+
+    // use explicit 3rd parameter for less (or more) accuracy
+    assert(isClose(17.123_456_789, 17.123_45, 1e-6));
+    assert(!isClose(17.123_456_789, 17.123_45, 1e-7));
+
+    // use 4th parameter when comparing close to zero
+    assert(!isClose(1e-100, 0.0));
+    assert(isClose(1e-100, 0.0, 0.0, 1e-90));
+    assert(!isClose(1e-10, -1e-10));
+    assert(isClose(1e-10, -1e-10, 0.0, 1e-9));
+    assert(!isClose(1e-300, 1e-298));
+    assert(isClose(1e-300, 1e-298, 0.0, 1e-200));
+
+    // different default limits for different floating point types
+    assert(isClose(1.0f,0.999_99f));
+    assert(!isClose(1.0,0.999_99));
+    assert(!isClose(1.0L,0.999_999_999L));
+}
+
+///
+@safe pure nothrow unittest
+{
+    assert(isClose([1.0, 2.0, 3.0], [0.999_999_999, 2.000_000_001, 3.0]));
+    assert(!isClose([1.0, 2.0], [0.999_999_999, 2.000_000_001, 3.0]));
+    assert(!isClose([1.0, 2.0, 3.0], [0.999_999_999, 2.000_000_001]));
+
+    assert(isClose([2.0, 1.999_999_999, 2.000_000_001], 2.0));
+    assert(isClose(2.0, [2.0, 1.999_999_999, 2.000_000_001]));
+}
+
+@safe pure nothrow unittest
+{
+    assert(!isClose([1.0, 2.0, 3.0], [0.999_999_999, 3.0, 3.0]));
+    assert(!isClose([2.0, 1.999_999, 2.000_000_001], 2.0));
+    assert(!isClose(2.0, [2.0, 1.999_999_999, 2.000_000_999]));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    immutable a = 1.00001f;
+    const b = 1.000019;
+    assert(isClose(a,b));
+
+    assert(isClose(1.00001f,1.000019f));
+    assert(isClose(1.00001f,1.000019));
+    assert(isClose(1.00001,1.000019f));
+    assert(!isClose(1.00001,1.000019));
+
+    import std.math : nextUp;
+    real a1 = 1e-400L;
+    real a2 = a1.nextUp;
+    assert(isClose(a1,a2));
+}
+
+@safe pure nothrow unittest
+{
+    float[] arr1 = [ 1.0, 2.0, 3.0 ];
+    double[] arr2 = [ 1.00001, 1.99999, 3 ];
+    assert(isClose(arr1, arr2));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    assert(!isClose(1000.0,1010.0));
+    assert(!isClose(9_090_000_000.0,9_000_000_000.0));
+    assert(isClose(0.0,1e30,1.0));
+    assert(!isClose(0.00001,1e-30));
+    assert(!isClose(-1e-30,1e-30,1e-2,0.0));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    assert(!isClose(3, 0));
+    assert(isClose(3, 3));
+    assert(isClose(3.0, 3));
+    assert(isClose(3, 3.0));
+
+    assert(isClose(0.0,0.0));
+    assert(isClose(-0.0,0.0));
+    assert(isClose(0.0f,0.0));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    real num = real.infinity;
+    assert(num == real.infinity);
+    assert(isClose(num, real.infinity));
+    num = -real.infinity;
+    assert(num == -real.infinity);
+    assert(isClose(num, -real.infinity));
+
+    assert(!isClose(1,real.nan));
+    assert(!isClose(real.nan,real.max));
+    assert(!isClose(real.nan,real.nan));
+}
+
+@safe pure nothrow @nogc unittest
+{
+//    assert(isClose([],[])); //FIXME: does not work yet
+    assert(isClose(cast(real[])[],cast(real[])[]));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.conv : to;
+
+    float f = 31.79f;
+    double d = 31.79;
+    double f2d = f.to!double;
+
+    assert(isClose(f,f2d));
+    assert(!isClose(d,f2d));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.conv : to;
+
+    double d = 31.79;
+    float f = d.to!float;
+    double f2d = f.to!double;
+
+    assert(isClose(f,f2d));
+    assert(!isClose(d,f2d));
+    assert(isClose(d,f2d,1e-4));
+}
+
+private template CommonDefaultFor(T,U)
+{
+    import std.algorithm.comparison : min;
+    enum CommonDefaultFor = 10.0L ^^ -((min(FloatingPointBaseType!T.dig, FloatingPointBaseType!U.dig) + 1) / 2 + 1);
+}
+
+private template FloatingPointBaseType(T)
+{
+    import std.range.primitives : ElementType;
+    static if (isFloatingPoint!T)
+    {
+        alias FloatingPointBaseType = Unqual!T;
+    }
+    else static if (isFloatingPoint!(ElementType!(Unqual!T)))
+    {
+        alias FloatingPointBaseType = Unqual!(ElementType!(Unqual!T));
+    }
+    else
+    {
+        alias FloatingPointBaseType = real;
+    }
 }
 
 
