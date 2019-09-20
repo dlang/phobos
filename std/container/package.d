@@ -582,77 +582,77 @@ Generally a container may define several types of ranges.
         +/
         @property bool empty()
         {
-            assert(0);
+            assert(0, "Not implemented");
         }
         /// Ditto
         @property ref T front() //ref return optional
         {
-            assert(0);
+            assert(0, "Not implemented");
         }
         /// Ditto
         @property void front(T value) //Only when front does not return by ref
         {
-            assert(0);
+            assert(0, "Not implemented");
         }
         /// Ditto
         T moveFront()
         {
-            assert(0);
+            assert(0, "Not implemented");
         }
         /// Ditto
         void popFront()
         {
-            assert(0);
+            assert(0, "Not implemented");
         }
         /// Ditto
         @property ref T back() //ref return optional
         {
-            assert(0);
+            assert(0, "Not implemented");
         }
         /// Ditto
         @property void back(T value) //Only when front does not return by ref
         {
-            assert(0);
+            assert(0, "Not implemented");
         }
         /// Ditto
         T moveBack()
         {
-            assert(0);
+            assert(0, "Not implemented");
         }
         /// Ditto
         void popBack()
         {
-            assert(0);
+            assert(0, "Not implemented");
         }
         /// Ditto
         T opIndex(size_t i) //ref return optional
         {
-            assert(0);
+            assert(0, "Not implemented");
         }
         /// Ditto
         void opIndexAssign(size_t i, T value) //Only when front does not return by ref
         {
-            assert(0);
+            assert(0, "Not implemented");
         }
         /// Ditto
         T opIndexUnary(string op)(size_t i) //Only when front does not return by ref
         {
-            assert(0);
+            assert(0, "Not implemented");
         }
         /// Ditto
         void opIndexOpAssign(string op)(size_t i, T value) //Only when front does not return by ref
         {
-            assert(0);
+            assert(0, "Not implemented");
         }
         /// Ditto
         T moveAt(size_t i)
         {
-            assert(0);
+            assert(0, "Not implemented");
         }
         /// Ditto
         @property size_t length()
         {
-            assert(0);
+            assert(0, "Not implemented");
         }
     }
 
@@ -664,7 +664,7 @@ Complexity: $(BIGOH 1)
  */
     @property bool empty()
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
 
 /**
@@ -675,7 +675,7 @@ Complexity: $(BIGOH n).
  */
     @property TotalContainer dup()
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
 
 /**
@@ -685,7 +685,7 @@ Complexity: $(BIGOH log(n)).
 */
     @property size_t length()
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
 
 /**
@@ -696,7 +696,7 @@ Complexity: $(BIGOH log(n)).
  */
     @property size_t capacity()
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
 
 /**
@@ -709,7 +709,7 @@ $(BIGOH 1).
  */
     void reserve(size_t e)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
 
 /**
@@ -721,7 +721,7 @@ Complexity: $(BIGOH log(n))
  */
     Range opSlice()
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
 
     /**
@@ -732,7 +732,7 @@ Complexity: $(BIGOH log(n))
      */
     Range opSlice(size_t a, size_t b)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
 
 /**
@@ -742,32 +742,32 @@ Complexity: $(BIGOH log(n))
  */
     @property ref T front() //ref return optional
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
     /// Ditto
     @property void front(T value) //Only when front does not return by ref
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
     /// Ditto
     T moveFront()
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
     /// Ditto
     @property ref T back() //ref return optional
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
     /// Ditto
     @property void back(T value) //Only when front does not return by ref
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
     /// Ditto
     T moveBack()
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
 
 /**
@@ -775,27 +775,27 @@ Indexing operators yield or modify the value at a specified index.
  */
     ref T opIndex(KeyType) //ref return optional
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
     /// ditto
     void opIndexAssign(KeyType i, T value) //Only when front does not return by ref
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
     /// ditto
     T opIndexUnary(string op)(KeyType i) //Only when front does not return by ref
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
     /// ditto
     void opIndexOpAssign(string op)(KeyType i, T value) //Only when front does not return by ref
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
     /// ditto
     T moveAt(KeyType i)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
 
 /**
@@ -803,7 +803,7 @@ $(D k in container) returns true if the given key is in the container.
  */
     bool opBinaryRight(string op)(KeyType k) if (op == "in")
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
 
 /**
@@ -812,7 +812,7 @@ singleton range).
  */
     Range equalRange(KeyType k)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
 
 /**
@@ -822,7 +822,7 @@ data sorted at all times.
  */
     Range lowerBound(KeyType k)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
 
 /**
@@ -832,7 +832,7 @@ data sorted at all times.
  */
     Range upperBound(KeyType k)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
 
 /**
@@ -845,13 +845,13 @@ stuff)
  */
     TotalContainer opBinary(string op)(Stuff rhs) if (op == "~")
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
 
     /// ditto
     TotalContainer opBinaryRight(string op)(Stuff lhs) if (op == "~")
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
 
 /**
@@ -859,7 +859,7 @@ Forwards to $(D insertAfter(this[], stuff)).
  */
     void opOpAssign(string op)(Stuff stuff) if (op == "~")
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
 
 /**
@@ -872,7 +872,7 @@ Complexity: $(BIGOH n)
  */
     void clear()
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
 
 /**
@@ -887,7 +887,7 @@ Postcondition: $(D _length == newLength)
  */
     @property void length(size_t newLength)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
 
 /**
@@ -909,12 +909,12 @@ elements in `stuff`
  */
     size_t insert(Stuff)(Stuff stuff)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
     ///ditto
     size_t stableInsert(Stuff)(Stuff stuff)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
 
 /**
@@ -923,12 +923,12 @@ but relax the complexity constraint to linear.
  */
     size_t linearInsert(Stuff)(Stuff stuff)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
     ///ditto
     size_t stableLinearInsert(Stuff)(Stuff stuff)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
 
 /**
@@ -946,12 +946,12 @@ Complexity: $(BIGOH log(n)).
  */
     T removeAny()
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
     /// ditto
     T stableRemoveAny()
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
 
 /**
@@ -967,22 +967,22 @@ Complexity: $(BIGOH log(n)).
  */
     size_t insertFront(Stuff)(Stuff stuff)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
     /// ditto
     size_t stableInsertFront(Stuff)(Stuff stuff)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
     /// ditto
     size_t insertBack(Stuff)(Stuff stuff)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
     /// ditto
     size_t stableInsertBack(T value)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
 
 /**
@@ -998,22 +998,22 @@ Complexity: $(BIGOH log(n)).
  */
     void removeFront()
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
     /// ditto
     void stableRemoveFront()
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
     /// ditto
     void removeBack()
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
     /// ditto
     void stableRemoveBack()
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
 
 /**
@@ -1031,22 +1031,22 @@ Complexity: $(BIGOH howMany * log(n)).
  */
     size_t removeFront(size_t howMany)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
     /// ditto
     size_t stableRemoveFront(size_t howMany)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
     /// ditto
     size_t removeBack(size_t howMany)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
     /// ditto
     size_t stableRemoveBack(size_t howMany)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
 
 /**
@@ -1059,7 +1059,7 @@ Returns: The number of elements removed.
  */
     size_t removeKey(KeyType k)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
 
 /**
@@ -1076,32 +1076,32 @@ Complexity: $(BIGOH n + m), where `m` is the length of `stuff`
  */
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
     /// ditto
     size_t stableInsertBefore(Stuff)(Range r, Stuff stuff)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
     /// ditto
     size_t insertAfter(Stuff)(Range r, Stuff stuff)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
     /// ditto
     size_t stableInsertAfter(Stuff)(Range r, Stuff stuff)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
     /// ditto
     size_t replace(Stuff)(Range r, Stuff stuff)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
     /// ditto
     size_t stableReplace(Stuff)(Range r, Stuff stuff)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
 
 /**
@@ -1118,12 +1118,12 @@ elements in `r`
  */
     Range remove(Range r)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
     /// ditto
     Range stableRemove(Range r)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
 
 /**
@@ -1136,12 +1136,12 @@ Complexity: $(BIGOH n)
  */
     Range linearRemove(Range r)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
     /// ditto
     Range stableLinearRemove(Range r)
     {
-        assert(0);
+        assert(0, "Not implemented");
     }
 }
 
