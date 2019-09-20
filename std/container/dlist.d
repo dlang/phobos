@@ -222,12 +222,12 @@ struct DList(T)
     }
     ref inout(BaseNode*) _first() @property @safe nothrow pure inout
     {
-        assert(_root);
+        assert(_root, "Root pointer most not be null");
         return _root._next;
     }
     ref inout(BaseNode*) _last() @property @safe nothrow pure inout
     {
-        assert(_root);
+        assert(_root, "Root pointer most not be null");
         return _root._prev;
     }
   } //end private
@@ -286,7 +286,8 @@ elements in `rhs`.
      */
     struct Range
     {
-        static assert(isBidirectionalRange!Range);
+        static assert(isBidirectionalRange!Range,
+                "Range is not a bidirectional range");
 
         DRange _base;
         alias _base this;
