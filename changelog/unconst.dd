@@ -1,0 +1,5 @@
+Added std.traits.Unconst
+
+$(REF Unconst, std, traits) works like $(REF Unqual, std, traits), but removes
+only `const`, `inout` and `immutable` qualifiers from a type.
+
