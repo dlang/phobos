@@ -1122,8 +1122,9 @@ public:
     /**********************************************
      * Sets the amount of bits in the `BitArray`.
      * $(RED Warning: increasing length may overwrite bits in
-     * final word up to the next word boundary. i.e. D dynamic
-     * array extension semantics are not followed.)
+     * the final word of the current underlying data regardless
+     * of whether it is shared between BitArray objects. i.e. D
+     * dynamic array extension semantics are not followed.)
      */
     @property size_t length(size_t newlen) pure nothrow @system
     {
