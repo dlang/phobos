@@ -598,9 +598,7 @@ public:
      */
 
     this(void[] buffer)
-    {   uint iend;
-        uint i;
-        int endcommentlength;
+    {
         uint directorySize;
         uint directoryOffset;
 
@@ -609,32 +607,17 @@ public:
         if (data.length > uint.max - 2)
             throw new ZipException("zip files bigger than 4 GB are unsupported");
 
-        // Find 'end record index' by searching backwards for signature
-        iend = (data.length > 66_000 ? to!uint(data.length - 66_000) : 0);
-        for (i = to!uint(data.length) - endOfCentralDirLength; 1; i--)
+        findEndOfCentralDirRecord();
+        uint i = endrecOffset;
+
+        int endcommentlength = getUshort(i + 20);
+        comment = cast(string)(_data[i + 22 .. i + 22 + endcommentlength]);
+
+        uint k = i - zip64EndOfCentralDirLocatorLength;
+        if (k < i && _data[k .. k + 4] == cast(ubyte[])"PK\x06\x07")
         {
-            if (i < iend || i >= data.length)
-                throw new ZipException("no end record");
-
-            if (_data[i .. i + 4] == endOfCentralDirSignature)
-            {
-                endcommentlength = getUshort(i + 20);
-                if (i + endOfCentralDirLength + endcommentlength > data.length
-                        || i + endOfCentralDirLength + endcommentlength < i)
-                    continue;
-                comment = cast(string)(_data[i + endOfCentralDirLength ..
-                                             i + endOfCentralDirLength + endcommentlength]);
-                endrecOffset = i;
-
-                uint k = i - zip64EndOfCentralDirLocatorLength;
-                if (k < i && _data[k .. k + 4] == zip64EndOfCentralDirLocatorSignature)
-                {
-                    _isZip64 = true;
-                    i = k;
-                }
-
-                break;
-            }
+            _isZip64 = true;
+            i = k;
         }
 
         if (isZip64)
@@ -677,21 +660,21 @@ public:
         }
         else
         {
-        // Read end record data
-        _diskNumber = getUshort(i + 4);
-        _diskStartDir = getUshort(i + 6);
+            // Read end record data
+            _diskNumber = getUshort(i + 4);
+            _diskStartDir = getUshort(i + 6);
 
-        _numEntries = getUshort(i + 8);
-        _totalEntries = getUshort(i + 10);
+            _numEntries = getUshort(i + 8);
+            _totalEntries = getUshort(i + 10);
 
-        if (numEntries != totalEntries)
-            throw new ZipException("multiple disk zips not supported");
+            if (numEntries != totalEntries)
+                throw new ZipException("multiple disk zips not supported");
 
-        directorySize = getUint(i + 12);
-        directoryOffset = getUint(i + 16);
+            directorySize = getUint(i + 12);
+            directoryOffset = getUint(i + 16);
 
-        if (directoryOffset + directorySize > i)
-            throw new ZipException("corrupted directory");
+            if (directoryOffset + directorySize > i)
+                throw new ZipException("corrupted directory");
         }
 
         i = directoryOffset;
@@ -750,6 +733,51 @@ public:
         }
         if (i != directoryOffset + directorySize)
             throw new ZipException("invalid directory entry 3");
+    }
+
+    private void findEndOfCentralDirRecord()
+    {
+        // end of central dir record can be followed by a comment of up to 2^^16-1 bytes
+        // therefore we have to scan 2^^16 positions
+
+        endrecOffset = to!uint(data.length);
+        foreach (i; 0 .. 2 ^^ 16)
+        {
+            if (endOfCentralDirLength + i > data.length) break;
+            uint start = to!uint(data.length) - endOfCentralDirLength - i;
+
+            if (data[start .. start + 4] != cast(ubyte[])"PK\x05\x06") continue;
+
+            auto numberOfThisDisc = getUshort(start + 4);
+            if (numberOfThisDisc != 0) continue; // no support for multiple volumes yet
+
+            auto numberOfStartOfCentralDirectory = getUshort(start + 6);
+            if (numberOfStartOfCentralDirectory != 0) continue; // dito
+
+            if (numberOfThisDisc < numberOfStartOfCentralDirectory) continue;
+
+            auto totalNumberOfEntriesOnThisDisk = getUshort(start + 8);
+            auto totalNumberOfEntriesInCentralDir = getUshort(start + 10);
+
+            if (totalNumberOfEntriesOnThisDisk > totalNumberOfEntriesInCentralDir) continue;
+
+            auto sizeOfCentralDirectory = getUint(start + 12);
+            if (sizeOfCentralDirectory > start) continue;
+
+            auto offsetOfCentralDirectory = getUint(start + 16);
+            if (offsetOfCentralDirectory > start - sizeOfCentralDirectory) continue;
+
+            auto zipfileCommentLength = getUshort(start + 20);
+            if (start + zipfileCommentLength + endOfCentralDirLength != data.length) continue;
+
+            if (endrecOffset != to!uint(data.length))
+                throw new ZipException("found more than one valid 'end of central dir record'");
+
+            endrecOffset = start;
+        }
+
+        if (endrecOffset == to!uint(data.length))
+            throw new ZipException("found no valid 'end of central dir record'");
     }
 
     /*****
@@ -1071,6 +1099,55 @@ the quick brown fox jumps over the lazy dog\r
     assert(amAfter.name == am.name);
     assert(amAfter.expandedData == am.expandedData);
     assert(amAfter.time == am.time);
+}
+
+@system unittest
+{
+    // invalid format of end of central directory entry
+    import std.exception : assertThrown;
+    assertThrown!ZipException(new ZipArchive(cast(void[]) "\x50\x4B\x05\x06aaaaaaaaaaaaaaaaaaaa"));
+}
+
+@system unittest
+{
+    // minimum (empty) archive should pass
+    auto za = new ZipArchive(cast(void[]) "\x50\x4B\x05\x06\x00\x00\x00\x00\x00\x00\x00"~
+                                          "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00");
+    assert(za.directory.length == 0);
+
+    // one byte too short or too long should not pass
+    import std.exception : assertThrown;
+    assertThrown!ZipException(new ZipArchive(cast(void[]) "\x50\x4B\x05\x06\x00\x00\x00\x00\x00\x00\x00"~
+                                                          "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"));
+    assertThrown!ZipException(new ZipArchive(cast(void[]) "\x50\x4B\x05\x06\x00\x00\x00\x00\x00\x00\x00"~
+                                                          "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"));
+}
+
+@system unittest
+{
+    // issue #20239: chameleon file, containing two valid end of central directory entries
+    auto file =
+        "\x50\x4B\x03\x04\x0A\x00\x00\x00\x00\x00\x89\x36\x39\x4F\x04\x6A\xB3\xA3\x01\x00"~
+        "\x00\x00\x01\x00\x00\x00\x0D\x00\x1C\x00\x62\x65\x73\x74\x5F\x6C\x61\x6E\x67\x75"~
+        "\x61\x67\x65\x55\x54\x09\x00\x03\x82\xF2\x8A\x5D\x82\xF2\x8A\x5D\x75\x78\x0B\x00"~
+        "\x01\x04\xEB\x03\x00\x00\x04\xEB\x03\x00\x00\x44\x50\x4B\x01\x02\x1E\x03\x0A\x00"~
+        "\x00\x00\x00\x00\x89\x36\x39\x4F\x04\x6A\xB3\xA3\x01\x00\x00\x00\x01\x00\x00\x00"~
+        "\x0D\x00\x18\x00\x00\x00\x00\x00\x01\x00\x00\x00\xB0\x81\x00\x00\x00\x00\x62\x65"~
+        "\x73\x74\x5F\x6C\x61\x6E\x67\x75\x61\x67\x65\x55\x54\x05\x00\x03\x82\xF2\x8A\x5D"~
+        "\x75\x78\x0B\x00\x01\x04\xEB\x03\x00\x00\x04\xEB\x03\x00\x00\x50\x4B\x05\x06\x00"~
+        "\x00\x00\x00\x01\x00\x01\x00\x53\x00\x00\x00\x48\x00\x00\x00\xB7\x00\x50\x4B\x03"~
+        "\x04\x0A\x00\x00\x00\x00\x00\x94\x36\x39\x4F\xD7\xCB\x3B\x55\x07\x00\x00\x00\x07"~
+        "\x00\x00\x00\x0D\x00\x1C\x00\x62\x65\x73\x74\x5F\x6C\x61\x6E\x67\x75\x61\x67\x65"~
+        "\x55\x54\x09\x00\x03\x97\xF2\x8A\x5D\x8C\xF2\x8A\x5D\x75\x78\x0B\x00\x01\x04\xEB"~
+        "\x03\x00\x00\x04\xEB\x03\x00\x00\x46\x4F\x52\x54\x52\x41\x4E\x50\x4B\x01\x02\x1E"~
+        "\x03\x0A\x00\x00\x00\x00\x00\x94\x36\x39\x4F\xD7\xCB\x3B\x55\x07\x00\x00\x00\x07"~
+        "\x00\x00\x00\x0D\x00\x18\x00\x00\x00\x00\x00\x01\x00\x00\x00\xB0\x81\xB1\x00\x00"~
+        "\x00\x62\x65\x73\x74\x5F\x6C\x61\x6E\x67\x75\x61\x67\x65\x55\x54\x05\x00\x03\x97"~
+        "\xF2\x8A\x5D\x75\x78\x0B\x00\x01\x04\xEB\x03\x00\x00\x04\xEB\x03\x00\x00\x50\x4B"~
+        "\x05\x06\x00\x00\x00\x00\x01\x00\x01\x00\x53\x00\x00\x00\xFF\x00\x00\x00\x00\x00";
+
+    import std.exception : assertThrown;
+    assertThrown!ZipException(new ZipArchive(cast(void[]) file));
 }
 
 // Non-Android Posix-only, because we can't rely on the unzip command being
