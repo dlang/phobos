@@ -1146,9 +1146,35 @@ public:
                 _ptr = b.ptr;
             }
 
+            auto oldlen = _len;
             _len = newlen;
+            if (oldlen < newlen)
+            {
+                auto end = ((oldlen / bitsPerSizeT) + 1) * bitsPerSizeT;
+                if (end > newlen)
+                    end = newlen;
+                this[oldlen .. end] = 0;
+            }
         }
         return _len;
+    }
+
+    // Issue 20240
+    @system unittest
+    {
+        BitArray ba;
+
+        ba.length = 1;
+        ba[0] = 1;
+        ba.length = 0;
+        ba.length = 1;
+        assert(ba[0] == 0); // OK
+
+        ba.length = 2;
+        ba[1] = 1;
+        ba.length = 1;
+        ba.length = 2;
+        assert(ba[1] == 0); // Fail
     }
 
     /**********************************************
@@ -1232,7 +1258,7 @@ public:
       at index `start` and ends at index ($D end - 1)
       with the values specified by `val`.
      */
-    void opSliceAssign(bool val, size_t start, size_t end)
+    void opSliceAssign(bool val, size_t start, size_t end) pure nothrow
     in
     {
         assert(start <= end, "start must be less or equal to end");
