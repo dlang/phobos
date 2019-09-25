@@ -847,7 +847,7 @@ void main()
 {
     // Create and execute a Task for reading
     // foo.txt.
-    auto file1Task = task(&read, "foo.txt");
+    auto file1Task = task(&read!string, "foo.txt", size_t.max);
     file1Task.executeInNewThread();
 
     // Read bar.txt in parallel.
