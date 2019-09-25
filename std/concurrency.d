@@ -1363,7 +1363,30 @@ class FiberScheduler : Scheduler
         return new FiberCondition(m);
     }
 
-private:
+protected:
+    /**
+     * Creates a new Fiber which calls the given delegate.
+     *
+     * Params:
+     *   op = The delegate the fiber should call
+     */
+    void create(void delegate() op) nothrow
+    {
+        void wrap()
+        {
+            scope (exit)
+            {
+                thisInfo.cleanup();
+            }
+            op();
+        }
+
+        m_fibers ~= new InfoFiber(&wrap);
+    }
+
+    /**
+     * Fiber which embeds a ThreadInfo
+     */
     static class InfoFiber : Fiber
     {
         ThreadInfo info;
@@ -1372,8 +1395,14 @@ private:
         {
             super(op);
         }
+
+        this(void delegate() op, size_t sz) nothrow
+        {
+            super(op, sz);
+        }
     }
 
+private:
     class FiberCondition : Condition
     {
         this(Mutex m) nothrow
@@ -1452,20 +1481,6 @@ private:
                 m_pos = 0;
             }
         }
-    }
-
-    void create(void delegate() op) nothrow
-    {
-        void wrap()
-        {
-            scope (exit)
-            {
-                thisInfo.cleanup();
-            }
-            op();
-        }
-
-        m_fibers ~= new InfoFiber(&wrap);
     }
 
 private:
