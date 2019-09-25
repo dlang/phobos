@@ -410,6 +410,7 @@ template to(T)
  *   $(LI Pointer to string conversions prints the pointer as a `size_t` value.
  *        If pointer is `char*`, treat it as C-style strings.
  *        In that case, this function is `@system`.))
+ * See $(REF formatValue, std,format) on how toString should be defined.
  */
 @system pure unittest // @system due to cast and ptr
 {
