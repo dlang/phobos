@@ -1018,8 +1018,6 @@ public:
 
     This constructor is the inverse of $(LREF opCast).
 
-    $(RED Warning: All unmapped bits in the final word will be set to 0.)
-
     Params:
         v = Source array. `v.length` must be a multple of `size_t.sizeof`.
         numbits = Number of bits to be mapped from the source array, i.e.
@@ -1037,11 +1035,6 @@ public:
     {
         _ptr = cast(size_t*) v.ptr;
         _len = numbits;
-        if (endBits)
-        {
-            // Need to mask away extraneous bits from v.
-            _ptr[dim - 1] &= endMask;
-        }
     }
 
     ///
@@ -1080,7 +1073,8 @@ public:
     @system unittest
     {
         // Example from the doc for this constructor.
-        size_t[] source = [1, 0b101, 3, 3424234, 724398, 230947, 389492];
+        static immutable size_t[] sourceData = [1, 0b101, 3, 3424234, 724398, 230947, 389492];
+        size_t[] source = sourceData.dup;
         enum sbits = size_t.sizeof * 8;
         auto ba = BitArray(source, source.length * sbits);
         foreach (n; 0 .. source.length * sbits)
@@ -1094,8 +1088,8 @@ public:
 
         auto bc = BitArray(source, sbits + 1);
         assert(bc.bitsSet.equal([0, sbits]));
-        // The unmapped bits from the final word have been cleared.
-        assert(source[1] == 1);
+        // Source array has not been modified.
+        assert(source == sourceData);
     }
 
     // Deliberately undocumented: raw initialization of bit array.
