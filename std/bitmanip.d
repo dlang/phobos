@@ -2585,12 +2585,16 @@ public:
     @property auto bitsSet() const nothrow
     {
         import std.algorithm.iteration : filter, map, joiner;
-        import std.range : iota;
+        import std.range : iota, chain;
 
-        return iota(dim).
-               filter!(i => _ptr[i])().
-               map!(i => BitsSet!size_t(_ptr[i], i * bitsPerSizeT))().
-               joiner();
+        return chain(
+            iota(fullWords)
+                .filter!(i => _ptr[i])()
+                .map!(i => BitsSet!size_t(_ptr[i], i * bitsPerSizeT))()
+                .joiner(),
+            iota(fullWords * bitsPerSizeT, _len)
+                .filter!(i => this[i])()
+        );
     }
 
     ///
@@ -2628,6 +2632,16 @@ public:
         assert(b.bitsSet.equal(iota(wordBits + 1)));
         b = BitArray([size_t.max, size_t.max], wordBits * 2);
         assert(b.bitsSet.equal(iota(wordBits * 2)));
+    }
+
+    // Issue 20241
+    @system unittest
+    {
+        BitArray ba;
+        ba.length = 2;
+        ba[1] = 1;
+        ba.length = 1;
+        assert(ba.bitsSet.empty);
     }
 
     private void formatBitString(Writer)(auto ref Writer sink) const
