@@ -8972,29 +8972,34 @@ private real polyImpl(real x, in real[] A) @trusted pure nothrow @nogc
 
 
 /**
-   Computes whether two values are approximately equal, admitting a maximum
-   relative difference, and a maximum absolute difference.
+   Computes whether a values is approximately equal to a reference value,
+   admitting a maximum relative difference, and a maximum absolute difference.
 
    Params:
-        lhs = First item to compare.
-        rhs = Second item to compare.
-        maxRelDiff = Maximum allowable difference relative to `rhs`.
-        Defaults to `1e-2`.
-        maxAbsDiff = Maximum absolute difference. Defaults to `1e-5`.
+        value = Value to compare.
+        reference = Reference value.
+        maxRelDiff = Maximum allowable difference relative to `reference`.
+        Setting to 0.0 disables this check. Defaults to `1e-2`.
+        maxAbsDiff = Maximum absolute difference. This is mainly usefull
+        for comparing values to zero. Setting to 0.0 disables this check.
+        Defaults to `1e-5`.
 
    Returns:
-       `true` if the two items are approximately equal under either criterium.
-       If one item is a range, and the other is a single value, then the result
-       is the logical and-ing of calling `approxEqual` on each element of the
-       ranged item against the single item. If both items are ranges, then
-       `approxEqual` returns `true` if and only if the ranges have the same
-       number of elements and if `approxEqual` evaluates to `true` for each
-       pair of elements.
+       `true` if `value` is approximately equal to `reference` under
+       either criterium. It is sufficient, when `value ` satisfies
+       one of the two criteria.
+
+       If one item is a range, and the other is a single value, then
+       the result is the logical and-ing of calling `approxEqual` on
+       each element of the ranged item against the single item. If
+       both items are ranges, then `approxEqual` returns `true` if
+       and only if the ranges have the same number of elements and if
+       `approxEqual` evaluates to `true` for each pair of elements.
 
     See_Also:
         Use $(LREF feqrel) to get the number of equal bits in the mantissa.
  */
-bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
+bool approxEqual(T, U, V)(T value, U reference, V maxRelDiff = 1e-2, V maxAbsDiff = 1e-5)
 {
     import std.range.primitives : empty, front, isInputRange, popFront;
     static if (isInputRange!T)
@@ -9002,25 +9007,25 @@ bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
         static if (isInputRange!U)
         {
             // Two ranges
-            for (;; lhs.popFront(), rhs.popFront())
+            for (;; value.popFront(), reference.popFront())
             {
-                if (lhs.empty) return rhs.empty;
-                if (rhs.empty) return lhs.empty;
-                if (!approxEqual(lhs.front, rhs.front, maxRelDiff, maxAbsDiff))
+                if (value.empty) return reference.empty;
+                if (reference.empty) return value.empty;
+                if (!approxEqual(value.front, reference.front, maxRelDiff, maxAbsDiff))
                     return false;
             }
         }
         else static if (isIntegral!U)
         {
-            // convert rhs to real
-            return approxEqual(lhs, real(rhs), maxRelDiff, maxAbsDiff);
+            // convert reference to real
+            return approxEqual(value, real(reference), maxRelDiff, maxAbsDiff);
         }
         else
         {
-            // lhs is range, rhs is number
-            for (; !lhs.empty; lhs.popFront())
+            // value is range, reference is number
+            for (; !value.empty; value.popFront())
             {
-                if (!approxEqual(lhs.front, rhs, maxRelDiff, maxAbsDiff))
+                if (!approxEqual(value.front, reference, maxRelDiff, maxAbsDiff))
                     return false;
             }
             return true;
@@ -9030,42 +9035,36 @@ bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
     {
         static if (isInputRange!U)
         {
-            // lhs is number, rhs is range
-            for (; !rhs.empty; rhs.popFront())
+            // value is number, reference is range
+            for (; !reference.empty; reference.popFront())
             {
-                if (!approxEqual(lhs, rhs.front, maxRelDiff, maxAbsDiff))
+                if (!approxEqual(value, reference.front, maxRelDiff, maxAbsDiff))
                     return false;
             }
             return true;
         }
         else static if (isIntegral!T || isIntegral!U)
         {
-            // convert both lhs and rhs to real
-            return approxEqual(real(lhs), real(rhs), maxRelDiff, maxAbsDiff);
+            // convert both value and reference to real
+            return approxEqual(real(value), real(reference), maxRelDiff, maxAbsDiff);
         }
         else
         {
             // two numbers
             //static assert(is(T : real) && is(U : real));
-            if (rhs == 0)
+            if (reference == 0)
             {
-                return fabs(lhs) <= maxAbsDiff;
+                return fabs(value) <= maxAbsDiff;
             }
-            static if (is(typeof(lhs.infinity)) && is(typeof(rhs.infinity)))
+            static if (is(typeof(value.infinity)) && is(typeof(reference.infinity)))
             {
-                if (lhs == lhs.infinity && rhs == rhs.infinity ||
-                    lhs == -lhs.infinity && rhs == -rhs.infinity) return true;
+                if (value == value.infinity && reference == reference.infinity ||
+                    value == -value.infinity && reference == -reference.infinity) return true;
             }
-            return fabs((lhs - rhs) / rhs) <= maxRelDiff
-                || maxAbsDiff != 0 && fabs(lhs - rhs) <= maxAbsDiff;
+            return fabs((value - reference) / reference) <= maxRelDiff
+                || maxAbsDiff != 0 && fabs(value - reference) <= maxAbsDiff;
         }
     }
-}
-
-/// ditto
-bool approxEqual(T, U)(T lhs, U rhs)
-{
-    return approxEqual(lhs, rhs, 1e-2, 1e-5);
 }
 
 ///
@@ -9073,31 +9072,89 @@ bool approxEqual(T, U)(T lhs, U rhs)
 {
     assert(approxEqual(1.0, 1.0099));
     assert(!approxEqual(1.0, 1.011));
+    assert(approxEqual(0.00001, 0.0));
+    assert(!approxEqual(0.00002, 0.0));
+
+    assert(approxEqual(3.0, [3, 3.01, 2.99])); // several reference values is strange
+    assert(approxEqual([3, 3.01, 2.99], 3.0)); // better
+
     float[] arr1 = [ 1.0, 2.0, 3.0 ];
     double[] arr2 = [ 1.001, 1.999, 3 ];
     assert(approxEqual(arr1, arr2));
+}
 
-    real num = real.infinity;
-    assert(num == real.infinity);  // Passes.
-    assert(approxEqual(num, real.infinity));  // Fails.
-    num = -real.infinity;
-    assert(num == -real.infinity);  // Passes.
-    assert(approxEqual(num, -real.infinity));  // Fails.
+///
+@safe pure nothrow unittest
+{
+    // relative comparison depends on reference, make sure proper
+    // side is used when comparing range to single value. Based on
+    // bugzilla issue 15763
+    auto a = [2e-3 - 1e-5];
+    auto b = 2e-3 + 1e-5;
+    assert(a[0].approxEqual(b));
+    assert(!b.approxEqual(a[0]));
+    assert(a.approxEqual(b));
+    assert(!b.approxEqual(a));
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert(!approxEqual(0.0,1e-15,1e-9,0.0));
+    assert(approxEqual(0.0,1e-15,1e-9,1e-9));
+    assert(!approxEqual(1.0,3.0,0.0,1.0));
+
+    assert(approxEqual(1.00000000099,1.0,1e-9,0.0));
+    assert(!approxEqual(1.0000000011,1.0,1e-9,0.0));
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    // maybe unintuitive behavior
+    assert(approxEqual(1000.0,1010.0));
+    assert(approxEqual(9_090_000_000.0,9_000_000_000.0));
+    assert(approxEqual(0.0,1e30,1.0));
+    assert(approxEqual(0.00001,1e-30));
+    assert(!approxEqual(-1e-30,1e-30,1e-2,0.0));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    int a = 10;
+    assert(approxEqual(10, a));
 
     assert(!approxEqual(3, 0));
     assert(approxEqual(3, 3));
     assert(approxEqual(3.0, 3));
-    assert(approxEqual([3, 3, 3], 3.0));
-    assert(approxEqual([3.0, 3.0, 3.0], 3));
-    int a = 10;
-    assert(approxEqual(10, a));
+    assert(approxEqual(3, 3.0));
+
+    assert(approxEqual(0.0,0.0));
+    assert(approxEqual(-0.0,0.0));
+    assert(approxEqual(0.0f,0.0));
 }
 
 @safe pure nothrow @nogc unittest
 {
     real num = real.infinity;
-    assert(num == real.infinity);  // Passes.
-    assert(approxEqual(num, real.infinity));  // Fails.
+    assert(num == real.infinity);
+    assert(approxEqual(num, real.infinity));
+    num = -real.infinity;
+    assert(num == -real.infinity);
+    assert(approxEqual(num, -real.infinity));
+
+    assert(!approxEqual(1,real.nan));
+    assert(!approxEqual(real.nan,real.max));
+    assert(!approxEqual(real.nan,real.nan));
+}
+
+@safe pure nothrow unittest
+{
+    assert(!approxEqual([1.0,2.0,3.0],[1.0,2.0]));
+    assert(!approxEqual([1.0,2.0],[1.0,2.0,3.0]));
+
+//    assert(approxEqual([],[])); //FIXME: does not work yet
+    assert(approxEqual(cast(real[])[],cast(real[])[]));
 }
 
 
@@ -9175,18 +9232,6 @@ bool approxEqual(T, U)(T lhs, U rhs)
     // issue 6381: floor/ceil should be usable in pure function.
     auto x = floor(1.2);
     auto y = ceil(1.2);
-}
-
-@safe pure nothrow unittest
-{
-    // relative comparison depends on rhs, make sure proper side is used when
-    // comparing range to single value. Based on bugzilla issue 15763
-    auto a = [2e-3 - 1e-5];
-    auto b = 2e-3 + 1e-5;
-    assert(a[0].approxEqual(b));
-    assert(!b.approxEqual(a[0]));
-    assert(a.approxEqual(b));
-    assert(!b.approxEqual(a));
 }
 
 /***********************************
