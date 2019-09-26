@@ -291,6 +291,27 @@ final class ZipArchive
     import std.conv : to;
     import std.datetime.systime : DosFileTime;
 
+private:
+    // names are taken directly from the specification
+    // https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT
+    static immutable ubyte[] centralFileHeaderSignature = [ 0x50, 0x4b, 0x01, 0x02 ];
+    static immutable ubyte[] localFileHeaderSignature = [ 0x50, 0x4b, 0x03, 0x04 ];
+    static immutable ubyte[] endOfCentralDirSignature = [ 0x50, 0x4b, 0x05, 0x06 ];
+    static immutable ubyte[] archiveExtraDataSignature = [ 0x50, 0x4b, 0x06, 0x08 ];
+    static immutable ubyte[] digitalSignatureSignature = [ 0x50, 0x4b, 0x05, 0x05 ];
+    static immutable ubyte[] zip64EndOfCentralDirSignature = [ 0x50, 0x4b, 0x06, 0x06 ];
+    static immutable ubyte[] zip64EndOfCentralDirLocatorSignature = [ 0x50, 0x4b, 0x06, 0x07 ];
+
+    enum centralFileHeaderLength = 46;
+    enum localFileHeaderLength = 30;
+    enum endOfCentralDirLength = 22;
+    enum archiveExtraDataLength = 8;
+    enum digitalSignatureLength = 6;
+    enum zip64EndOfCentralDirLength = 56;
+    enum zip64EndOfCentralDirLocatorLength = 20;
+    enum dataDescriptorLength = 12;
+
+public:
     string comment;     /// Read/Write: the archive comment. Must be less than 65536 bytes in length.
 
     private ubyte[] _data;
@@ -302,8 +323,12 @@ final class ZipArchive
     private uint _totalEntries;
     private bool _isZip64;
     static const ushort zip64ExtractVersion = 45;
+
+    deprecated("Use digitalSignatureLength instead; will be removed in 2.098.0")
     static const int digiSignLength = 6;
+    deprecated("Use zip64EndOfCentralDirLocatorLength instead; will be removed in 2.098.0")
     static const int eocd64LocLength = 20;
+    deprecated("Use zip64EndOfCentralDirLength instead; will be removed in 2.098.0")
     static const int eocd64Length = 56;
 
     /// Read Only: array representing the entire contents of the archive.
@@ -428,24 +453,25 @@ final class ZipArchive
         auto directory = _directory.byValue.array.sort!((x, y) => x.index < y.index).release;
         foreach (ArchiveMember de; directory)
         {
-            if (to!ulong(archiveSize) + 30 + de.name.length + de.extra.length + de.compressedSize
-                    + directorySize + 46 + de.name.length + de.extra.length + de.comment.length
-                    + 22 + comment.length + eocd64LocLength + eocd64Length > uint.max)
+            if (to!ulong(archiveSize) + localFileHeaderLength + de.name.length + de.extra.length + de.compressedSize
+                    + directorySize + centralFileHeaderLength + de.name.length + de.extra.length + de.comment.length
+                    + endOfCentralDirLength + comment.length + zip64EndOfCentralDirLocatorLength
+                    + zip64EndOfCentralDirLength > uint.max)
                 throw new ZipException("zip files bigger than 4 GB are unsupported");
 
-            archiveSize += 30 + de.name.length +
+            archiveSize += localFileHeaderLength + de.name.length +
                                 de.extra.length +
                                 de.compressedSize;
-            directorySize += 46 + de.name.length +
+            directorySize += centralFileHeaderLength + de.name.length +
                                 de.extra.length +
                                 de.comment.length;
         }
 
         if (!isZip64 && _directory.length > ushort.max)
             _isZip64 = true;
-        uint dataSize = archiveSize + directorySize + 22 + cast(uint) comment.length;
+        uint dataSize = archiveSize + directorySize + endOfCentralDirLength + cast(uint) comment.length;
         if (isZip64)
-            dataSize += eocd64LocLength + eocd64Length;
+            dataSize += zip64EndOfCentralDirLocatorLength + zip64EndOfCentralDirLength;
 
         _data = uninitializedArray!(ubyte[])(dataSize);
 
@@ -456,7 +482,7 @@ final class ZipArchive
         foreach (ArchiveMember de; directory)
         {
             de.offset = i;
-            _data[i .. i + 4] = "PK\x03\x04".representation;
+            _data[i .. i + 4] = localFileHeaderSignature;
             putUshort(i + 4,  de.extractVersion);
             putUshort(i + 6,  de.flags);
             putUshort(i + 8,  de._compressionMethod);
@@ -466,7 +492,7 @@ final class ZipArchive
             putUint  (i + 22, to!uint(de.expandedSize));
             putUshort(i + 26, cast(ushort) de.name.length);
             putUshort(i + 28, cast(ushort) de.extra.length);
-            i += 30;
+            i += localFileHeaderLength;
 
             _data[i .. i + de.name.length] = (de.name.representation)[];
             i += de.name.length;
@@ -481,7 +507,7 @@ final class ZipArchive
         _numEntries = 0;
         foreach (ArchiveMember de; directory)
         {
-            _data[i .. i + 4] = "PK\x01\x02".representation;
+            _data[i .. i + 4] = centralFileHeaderSignature;
             putUshort(i + 4,  de._madeVersion);
             putUshort(i + 6,  de.extractVersion);
             putUshort(i + 8,  de.flags);
@@ -497,7 +523,7 @@ final class ZipArchive
             putUshort(i + 36, de.internalAttributes);
             putUint  (i + 38, de._externalAttributes);
             putUint  (i + 42, de.offset);
-            i += 46;
+            i += centralFileHeaderLength;
 
             _data[i .. i + de.name.length] = (de.name.representation)[];
             i += de.name.length;
@@ -513,8 +539,8 @@ final class ZipArchive
         {
             // Write zip64 end of central directory record
             uint eocd64Offset = i;
-            _data[i .. i + 4] = "PK\x06\x06".representation;
-            putUlong (i + 4,  eocd64Length - 12);
+            _data[i .. i + 4] = zip64EndOfCentralDirSignature;
+            putUlong (i + 4,  zip64EndOfCentralDirLength - 12);
             putUshort(i + 12, zip64ExtractVersion);
             putUshort(i + 14, zip64ExtractVersion);
             putUint  (i + 16, diskNumber);
@@ -523,19 +549,19 @@ final class ZipArchive
             putUlong (i + 32, totalEntries);
             putUlong (i + 40, directorySize);
             putUlong (i + 48, directoryOffset);
-            i += eocd64Length;
+            i += zip64EndOfCentralDirLength;
 
             // Write zip64 end of central directory record locator
-            _data[i .. i + 4] = "PK\x06\x07".representation;
+            _data[i .. i + 4] = zip64EndOfCentralDirLocatorSignature;
             putUint  (i + 4,  diskNumber);
             putUlong (i + 8,  eocd64Offset);
             putUint  (i + 16, 1);
-            i += eocd64LocLength;
+            i += zip64EndOfCentralDirLocatorLength;
         }
 
         // Write end record
         endrecOffset = i;
-        _data[i .. i + 4] = "PK\x05\x06".representation;
+        _data[i .. i + 4] = endOfCentralDirSignature;
         putUshort(i + 4,  cast(ushort) diskNumber);
         putUshort(i + 6,  cast(ushort) diskStartDir);
         putUshort(i + 8,  (numEntries > ushort.max ? ushort.max : cast(ushort) numEntries));
@@ -543,7 +569,7 @@ final class ZipArchive
         putUint  (i + 12, directorySize);
         putUint  (i + 16, directoryOffset);
         putUshort(i + 20, cast(ushort) comment.length);
-        i += 22;
+        i += endOfCentralDirLength;
 
         // Write archive comment
         assert(i + comment.length == data.length, "Writing the archive comment failed.");
@@ -583,22 +609,23 @@ final class ZipArchive
 
         // Find 'end record index' by searching backwards for signature
         iend = (data.length > 66_000 ? to!uint(data.length - 66_000) : 0);
-        for (i = to!uint(data.length) - 22; 1; i--)
+        for (i = to!uint(data.length) - endOfCentralDirLength; 1; i--)
         {
             if (i < iend || i >= data.length)
                 throw new ZipException("no end record");
 
-            if (_data[i .. i + 4] == cast(ubyte[])"PK\x05\x06")
+            if (_data[i .. i + 4] == endOfCentralDirSignature)
             {
                 endcommentlength = getUshort(i + 20);
-                if (i + 22 + endcommentlength > data.length
-                        || i + 22 + endcommentlength < i)
+                if (i + endOfCentralDirLength + endcommentlength > data.length
+                        || i + endOfCentralDirLength + endcommentlength < i)
                     continue;
-                comment = cast(string)(_data[i + 22 .. i + 22 + endcommentlength]);
+                comment = cast(string)(_data[i + endOfCentralDirLength ..
+                                             i + endOfCentralDirLength + endcommentlength]);
                 endrecOffset = i;
 
-                uint k = i - eocd64LocLength;
-                if (k < i && _data[k .. k + 4] == cast(ubyte[])"PK\x06\x07")
+                uint k = i - zip64EndOfCentralDirLocatorLength;
+                if (k < i && _data[k .. k + 4] == zip64EndOfCentralDirLocatorSignature)
                 {
                     _isZip64 = true;
                     i = k;
@@ -612,11 +639,11 @@ final class ZipArchive
         {
             // Read Zip64 record data
             ulong eocdOffset = getUlong(i + 8);
-            if (eocdOffset + eocd64Length > _data.length)
+            if (eocdOffset + zip64EndOfCentralDirLength > _data.length)
                 throw new ZipException("corrupted directory");
 
             i = to!uint(eocdOffset);
-            if (_data[i .. i + 4] != cast(ubyte[])"PK\x06\x06")
+            if (_data[i .. i + 4] != zip64EndOfCentralDirSignature)
                 throw new ZipException("invalid Zip EOCD64 signature");
 
             ulong eocd64Size = getUlong(i + 4);
@@ -680,7 +707,7 @@ final class ZipArchive
             uint extralen;
             uint commentlen;
 
-            if (_data[i .. i + 4] != cast(ubyte[])"PK\x01\x02")
+            if (_data[i .. i + 4] != centralFileHeaderSignature)
                 throw new ZipException("invalid directory entry 1");
             ArchiveMember de = new ArchiveMember();
             de._index = n;
@@ -699,7 +726,7 @@ final class ZipArchive
             de.internalAttributes = getUshort(i + 36);
             de._externalAttributes = getUint(i + 38);
             de.offset = getUint(i + 42);
-            i += 46;
+            i += centralFileHeaderLength;
 
             if (i + namelen + extralen + commentlen > directoryOffset + directorySize)
                 throw new ZipException("invalid directory entry 2");
@@ -711,7 +738,7 @@ final class ZipArchive
             de.comment = cast(string)(_data[i .. i + commentlen]);
             i += commentlen;
 
-            immutable uint dataOffset = de.offset + 30 + namelen + extralen;
+            immutable uint dataOffset = de.offset + localFileHeaderLength + namelen + extralen;
             if (dataOffset + de.compressedSize > endrecOffset)
                 throw new ZipException("Invalid directory entry offset or size.");
             de._compressedData = _data[dataOffset .. dataOffset + de.compressedSize];
@@ -737,7 +764,7 @@ final class ZipArchive
         uint namelen;
         uint extralen;
 
-        if (_data[de.offset .. de.offset + 4] != "PK\x03\x04".representation)
+        if (_data[de.offset .. de.offset + 4] != localFileHeaderSignature)
             throw new ZipException("invalid directory entry 4");
 
         // These values should match what is in the main zip archive directory
@@ -763,7 +790,7 @@ final class ZipArchive
             throw new ZipException("encryption not supported");
 
         uint i;
-        i = de.offset + 30 + namelen + extralen;
+        i = de.offset + localFileHeaderLength + namelen + extralen;
         if (i + de.compressedSize > endrecOffset)
             throw new ZipException("invalid directory entry 5");
 
