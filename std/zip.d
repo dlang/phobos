@@ -1,17 +1,15 @@
 // Written in the D programming language.
 
 /**
- * Read/write data in the $(LINK2 http://www.info-zip.org, zip archive) format.
+ * Read/write data in the $(LINK2 https://en.wikipedia.org/wiki/Zip_%28file_format%29, zip archive) format.
  * Makes use of the etc.c.zlib compression library.
  *
- * Bugs:
+ * Limitations:
  *      $(UL
  *      $(LI Multi-disk zips not supported.)
  *      $(LI Only Zip version 20 formats are supported.)
  *      $(LI Only supports compression modes 0 (no compression) and 8 (deflate).)
  *      $(LI Does not support encryption.)
- *      $(LI $(BUGZILLA 592))
- *      $(LI $(BUGZILLA 2137))
  *      )
  *
  * Example:
