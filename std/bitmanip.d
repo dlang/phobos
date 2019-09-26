@@ -13,6 +13,7 @@ $(TR $(TD Bit constructs) $(TD
 ))
 $(TR $(TD Endianness conversion) $(TD
     $(LREF bigEndianToNative)
+    $(LREF littleEndian)
     $(LREF littleEndianToNative)
     $(LREF nativeToBigEndian)
     $(LREF nativeToLittleEndian)
@@ -3270,6 +3271,106 @@ private template canSwapEndianness(T)
         static assert(!canSwapEndianness!(shared(const T)));
         static assert(!canSwapEndianness!(shared(immutable T)));
     }
+}
+
+/++
+    A type, that is always stored in little endian order.
+
+    This is helpful, for dealing with data structures, where numbers have to be
+    stored in little endian order.
+  +/
+struct LittleEndian(T)
+if (canSwapEndianness!T)
+{
+    version (LittleEndian)
+    {
+        private T value;
+    }
+    else
+    {
+        private T le_value;
+
+        private T value()
+        {
+            return le_value.swapEndian;
+        }
+
+        private void value(T v)
+        {
+            le_value = v.swapEndian;
+        }
+    }
+
+    alias value this;
+
+    string toString()
+    {
+        import std.conv : to;
+        return to!string(value);
+    }
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    union Test
+    {
+        ubyte[4] a;
+        LittleEndian!ushort b;
+        LittleEndian!short c;
+        LittleEndian!uint d;
+    }
+
+    auto test = Test();
+    test.b = 3940;
+
+    version (LittleEndian)
+    {
+        assert(test.a[0]==100 && test.a[1]==15);
+    }
+    else
+    {
+        assert(test.a[0]==15 && test.a[1]==100);
+    }
+
+    test.c = -3940;
+
+    version (LittleEndian)
+    {
+        assert(test.a[0]==156 && test.a[1]==240);
+    }
+    else
+    {
+        assert(test.a[0]==240 && test.a[1]==156);
+    }
+
+    test.d = 1;
+
+    version (LittleEndian)
+    {
+        assert(test.a[0]==1 && test.a[1]==0 && test.a[2]==0 && test.a[3]==0);
+    }
+    else
+    {
+        assert(test.a[0]==0 && test.a[1]==0 && test.a[2]==0 && test.a[3]==1);
+    }
+
+    test.a = [ 0x81, 0x82, 0x83, 0x84 ];
+
+    version (LittleEndian)
+    {
+        assert(test.b == 0x8281 && test.c == 0x8281-65536 && test.d == 0x84838281);
+    }
+    else
+    {
+        assert(test.b == 0x8182 && test.c == 0x8182-65536 && test.d == 0x81828384);
+    }
+}
+
+@safe pure nothrow unittest
+{
+    auto a = LittleEndian!short(333);
+    assert(a.toString()=="333");
 }
 
 /++
