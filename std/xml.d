@@ -1022,7 +1022,7 @@ class Tag
             s = k;
             try { checkName(s,t); }
             catch (Err e)
-                { assert(false,"Invalid atrribute name:" ~ e.toString()); }
+                { assert(false,"Invalid attribute name:" ~ e.toString()); }
         }
     }
 
