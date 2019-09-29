@@ -306,6 +306,8 @@ final class ZipArchive
     static const int eocd64LocLength = 20;
     static const int eocd64Length = 56;
 
+    private Segment[] _segs;
+
     /// Read Only: array representing the entire contents of the archive.
     @property @safe @nogc pure nothrow ubyte[] data() { return _data; }
 
@@ -822,6 +824,81 @@ final class ZipArchive
     @safe @nogc pure nothrow void putUlong(uint i, ulong ul)
     {
         data[i .. i + 8] = nativeToLittleEndian(ul);
+    }
+
+    /* ============== for detecting overlaps =============== */
+
+private:
+
+    // defines a segment of the zip file, including start, excluding end
+    struct Segment
+    {
+        uint start;
+        uint end;
+    }
+
+    // removes Segment start .. end from _segs
+    // throws zipException if start .. end is not completely available in _segs;
+    void removeSegment(uint start, uint end) pure @safe
+    in (start < end, "segment invalid")
+    {
+        auto found = false;
+        size_t pos;
+        foreach (i,seg;_segs)
+            if (seg.start <= start && seg.end >= end
+                && (!found || seg.start > _segs[pos].start))
+            {
+                found = true;
+                pos = i;
+            }
+
+        if (!found)
+            throw new ZipException("overlapping data detected");
+
+        if (start>_segs[pos].start)
+            _segs ~= Segment(_segs[pos].start, start);
+        if (end<_segs[pos].end)
+            _segs ~= Segment(end, _segs[pos].end);
+        _segs = _segs[0 .. pos] ~ _segs[pos + 1 .. $];
+    }
+
+    pure @safe unittest
+    {
+        with (new ZipArchive())
+        {
+            _segs = [Segment(0,100)];
+            removeSegment(10,20);
+            assert(_segs == [Segment(0,10),Segment(20,100)]);
+
+            _segs = [Segment(0,100)];
+            removeSegment(0,20);
+            assert(_segs == [Segment(20,100)]);
+
+            _segs = [Segment(0,100)];
+            removeSegment(10,100);
+            assert(_segs == [Segment(0,10)]);
+
+            _segs = [Segment(0,100), Segment(200,300), Segment(400,500)];
+            removeSegment(220,230);
+            assert(_segs == [Segment(0,100),Segment(400,500),Segment(200,220),Segment(230,300)]);
+
+            _segs = [Segment(200,300), Segment(0,100), Segment(400,500)];
+            removeSegment(20,30);
+            assert(_segs == [Segment(200,300),Segment(400,500),Segment(0,20),Segment(30,100)]);
+
+            import std.exception : assertThrown;
+
+            _segs = [Segment(0,100), Segment(200,300), Segment(400,500)];
+            assertThrown(removeSegment(120,230));
+
+            _segs = [Segment(0,100), Segment(200,300), Segment(400,500)];
+            removeSegment(0,100);
+            assertThrown(removeSegment(0,100));
+
+            _segs = [Segment(0,100)];
+            removeSegment(0,100);
+            assertThrown(removeSegment(0,100));
+        }
     }
 }
 
