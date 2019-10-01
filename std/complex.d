@@ -864,12 +864,6 @@ deprecated
 /**
     Params: y = A real number.
     Returns: The value of cos(y) + i sin(y).
-
-    Note:
-    `expi` is included here for convenience and for easy migration of code
-    that uses $(REF _expi, std,math).  Unlike $(REF _expi, std,math), which uses the
-    x87 $(I fsincos) instruction when possible, this function is no faster
-    than calculating cos(y) and sin(y) separately.
 */
 Complex!real expi(real y)  @trusted pure nothrow @nogc
 {
