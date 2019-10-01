@@ -70,10 +70,10 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
  */
 module std.algorithm.iteration;
 
-// FIXME
-import std.functional; // : unaryFun, binaryFun;
+import std.functional : unaryFun, binaryFun;
 import std.range.primitives;
 import std.traits;
+import std.typecons : Flag;
 
 private template aggregate(fun...)
 if (fun.length >= 1)
@@ -364,18 +364,18 @@ private struct _Cache(R, bool bidir)
 
     E front() @property
     {
-        version(assert) if (empty) throw new RangeError();
+        version (assert) if (empty) throw new RangeError();
         return caches[0];
     }
     static if (bidir) E back() @property
     {
-        version(assert) if (empty) throw new RangeError();
+        version (assert) if (empty) throw new RangeError();
         return caches[1];
     }
 
     void popFront()
     {
-        version(assert) if (empty) throw new RangeError();
+        version (assert) if (empty) throw new RangeError();
         source.popFront();
         if (!source.empty)
             caches[0] = source.front;
@@ -384,7 +384,7 @@ private struct _Cache(R, bool bidir)
     }
     static if (bidir) void popBack()
     {
-        version(assert) if (empty) throw new RangeError();
+        version (assert) if (empty) throw new RangeError();
         source.popBack();
         if (!source.empty)
             caches[1] = source.back;
@@ -848,32 +848,40 @@ private struct MapResult(alias fun, Range)
 
 // each
 /**
-Eagerly iterates over `r` and calls `pred` over _each element.
+Eagerly iterates over `r` and calls `fun` over _each element.
 
-If no predicate is specified, `each` will default to doing nothing
-but consuming the entire range. `.front` will be evaluated, but this
-can be avoided by explicitly specifying a predicate lambda with a
-`lazy` parameter.
+If no function to call is specified, `each` defaults to doing nothing but
+consuming the entire range. `r.front` will be evaluated, but that can be avoided
+by specifying a lambda with a `lazy` parameter.
 
-`each` also supports `opApply`-based iterators, so it will work
-with e.g. $(REF parallel, std,parallelism).
+`each` also supports `opApply`-based types, so it works with e.g. $(REF
+parallel, std,parallelism).
+
+Normally the entire range is iterated. If partial iteration (early stopping) is
+desired, `fun` needs to return a value of type $(REF Flag,
+std,typecons)`!"each"` (`Yes.each` to continue iteration, or `No.each` to stop
+iteration).
 
 Params:
-    pred = predicate to apply to each element of the range
-    r = range or iterable over which each iterates
+    fun = function to apply to _each element of the range
+    r = range or iterable over which `each` iterates
+
+Returns: `Yes.each` if the entire range was iterated, `No.each` in case of early
+stopping.
 
 See_Also: $(REF tee, std,range)
  */
-template each(alias pred = "a")
+template each(alias fun = "a")
 {
     import std.meta : AliasSeq;
     import std.traits : Parameters;
+    import std.typecons : Flag, Yes, No;
 
 private:
-    alias BinaryArgs = AliasSeq!(pred, "i", "a");
+    alias BinaryArgs = AliasSeq!(fun, "i", "a");
 
     enum isRangeUnaryIterable(R) =
-        is(typeof(unaryFun!pred(R.init.front)));
+        is(typeof(unaryFun!fun(R.init.front)));
 
     enum isRangeBinaryIterable(R) =
         is(typeof(binaryFun!BinaryArgs(0, R.init.front)));
@@ -885,25 +893,32 @@ private:
     enum isForeachUnaryIterable(R) =
         is(typeof((R r) {
             foreach (ref a; r)
-                cast(void) unaryFun!pred(a);
+                cast(void) unaryFun!fun(a);
+        }));
+
+    enum isForeachUnaryWithIndexIterable(R) =
+        is(typeof((R r) {
+            foreach (i, ref a; r)
+                cast(void) binaryFun!BinaryArgs(i, a);
         }));
 
     enum isForeachBinaryIterable(R) =
         is(typeof((R r) {
-            foreach (ref i, ref a; r)
-                cast(void) binaryFun!BinaryArgs(i, a);
+            foreach (ref a, ref b; r)
+                cast(void) binaryFun!fun(a, b);
         }));
 
     enum isForeachIterable(R) =
         (!isForwardRange!R || isDynamicArray!R) &&
-        (isForeachUnaryIterable!R || isForeachBinaryIterable!R);
+        (isForeachUnaryIterable!R || isForeachBinaryIterable!R ||
+         isForeachUnaryWithIndexIterable!R);
 
 public:
     /**
     Params:
         r = range or iterable over which each iterates
      */
-    void each(Range)(Range r)
+    Flag!"each" each(Range)(Range r)
     if (!isForeachIterable!Range && (
         isRangeIterable!Range ||
         __traits(compiles, typeof(r.front).length)))
@@ -915,7 +930,15 @@ public:
             {
                 while (!r.empty)
                 {
-                    cast(void) unaryFun!pred(r.front);
+                    static if (!is(typeof(unaryFun!fun(r.front)) == Flag!"each"))
+                    {
+                        cast(void) unaryFun!fun(r.front);
+                    }
+                    else
+                    {
+                        if (unaryFun!fun(r.front) == No.each) return No.each;
+                    }
+
                     r.popFront();
                 }
             }
@@ -924,7 +947,14 @@ public:
                 size_t i = 0;
                 while (!r.empty)
                 {
-                    cast(void) binaryFun!BinaryArgs(i, r.front);
+                    static if (!is(typeof(binaryFun!BinaryArgs(i, r.front)) == Flag!"each"))
+                    {
+                        cast(void) binaryFun!BinaryArgs(i, r.front);
+                    }
+                    else
+                    {
+                        if (binaryFun!BinaryArgs(i, r.front) == No.each) return No.each;
+                    }
                     r.popFront();
                     i++;
                 }
@@ -934,41 +964,100 @@ public:
         {
             // range interface with >2 parameters.
             for (auto range = r; !range.empty; range.popFront())
-                pred(range.front.expand);
+            {
+                static if (!is(typeof(fun(r.front.expand)) == Flag!"each"))
+                {
+                    cast(void) fun(range.front.expand);
+                }
+                else
+                {
+                    if (fun(range.front.expand)) return No.each;
+                }
+            }
         }
+        return Yes.each;
     }
 
-    /**
-    Params:
-        r = range or iterable over which each iterates
-     */
-    void each(Iterable)(auto ref Iterable r)
+    /// ditto
+    Flag!"each" each(Iterable)(auto ref Iterable r)
     if (isForeachIterable!Iterable ||
         __traits(compiles, Parameters!(Parameters!(r.opApply))))
     {
         static if (isForeachIterable!Iterable)
         {
-            debug(each) pragma(msg, "Using foreach for ", Iterable.stringof);
             static if (isForeachUnaryIterable!Iterable)
             {
-                foreach (ref e; r)
-                    cast(void) unaryFun!pred(e);
+                debug(each) pragma(msg, "Using foreach UNARY for ", Iterable.stringof);
+                {
+                    foreach (ref e; r)
+                    {
+                        static if (!is(typeof(unaryFun!fun(e)) == Flag!"each"))
+                        {
+                            cast(void) unaryFun!fun(e);
+                        }
+                        else
+                        {
+                            if (unaryFun!fun(e) == No.each) return No.each;
+                        }
+                    }
+                }
             }
-            else // if (isForeachBinaryIterable!Iterable)
+            else static if (isForeachBinaryIterable!Iterable)
             {
-                foreach (ref i, ref e; r)
-                    cast(void) binaryFun!BinaryArgs(i, e);
+                debug(each) pragma(msg, "Using foreach BINARY for ", Iterable.stringof);
+                foreach (ref a, ref b; r)
+                {
+                    static if (!is(typeof(binaryFun!fun(a, b)) == Flag!"each"))
+                    {
+                        cast(void) binaryFun!fun(a, b);
+                    }
+                    else
+                    {
+                        if (binaryFun!fun(a, b) == No.each) return No.each;
+                    }
+                }
             }
+            else static if (isForeachUnaryWithIndexIterable!Iterable)
+            {
+                debug(each) pragma(msg, "Using foreach INDEX for ", Iterable.stringof);
+                foreach (i, ref e; r)
+                {
+                    static if (!is(typeof(binaryFun!BinaryArgs(i, e)) == Flag!"each"))
+                    {
+                        cast(void) binaryFun!BinaryArgs(i, e);
+                    }
+                    else
+                    {
+                        if (binaryFun!BinaryArgs(i, e) == No.each) return No.each;
+                    }
+                }
+            }
+            else
+            {
+                static assert(0, "Invalid foreach iteratable type " ~ Iterable.stringof ~ " met.");
+            }
+            return Yes.each;
         }
         else
         {
             // opApply with >2 parameters. count the delegate args.
             // only works if it is not templated (otherwise we cannot count the args)
-            auto dg(Parameters!(Parameters!(r.opApply)) params) {
-                pred(params);
-                return 0; // tells opApply to continue iteration
+            auto result = Yes.each;
+            auto dg(Parameters!(Parameters!(r.opApply)) params)
+            {
+                static if (!is(typeof(binaryFun!BinaryArgs(i, e)) == Flag!"each"))
+                {
+                    fun(params);
+                    return 0; // tells opApply to continue iteration
+                }
+                else
+                {
+                    result = fun(params);
+                    return result == Yes.each ? 0 : -1;
+                }
             }
             r.opApply(&dg);
+            return result;
         }
     }
 }
@@ -977,17 +1066,20 @@ public:
 @system unittest
 {
     import std.range : iota;
+    import std.typecons : Flag, Yes, No;
 
     long[] arr;
     iota(5).each!(n => arr ~= n);
     assert(arr == [0, 1, 2, 3, 4]);
+    iota(5).each!((n) { arr ~= n; return No.each; });
+    assert(arr == [0, 1, 2, 3, 4, 0]);
 
     // If the range supports it, the value can be mutated in place
     arr.each!((ref n) => n++);
-    assert(arr == [1, 2, 3, 4, 5]);
+    assert(arr == [1, 2, 3, 4, 5, 1]);
 
     arr.each!"a++";
-    assert(arr == [2, 3, 4, 5, 6]);
+    assert(arr == [2, 3, 4, 5, 6, 2]);
 
     // by-ref lambdas are not allowed for non-ref ranges
     static assert(!is(typeof(arr.map!(n => n).each!((ref n) => n++))));
@@ -1000,7 +1092,7 @@ public:
     // Indexes are also available for in-place mutations
     arr[] = 0;
     arr.each!"a=i"();
-    assert(arr == [0, 1, 2, 3, 4]);
+    assert(arr == [0, 1, 2, 3, 4, 5]);
 
     // opApply iterators work as well
     static class S
@@ -1088,6 +1180,80 @@ public:
     assert(s.x == 1);
     s.each!"++a";
     assert(s.x == 2);
+}
+
+// #15357: `each` should behave similar to foreach
+/// `each` works with iterable objects which provide an index variable, along with each element
+@safe unittest
+{
+    import std.range : iota, lockstep;
+
+    auto arr = [1, 2, 3, 4];
+
+    // 1 ref parameter
+    arr.each!((ref e) => e = 0);
+    assert(arr.sum == 0);
+
+    // 1 ref parameter and index
+    arr.each!((i, ref e) => e = cast(int) i);
+    assert(arr.sum == 4.iota.sum);
+}
+
+// #15357: `each` should behave similar to foreach
+@system unittest
+{
+    import std.range : iota, lockstep;
+
+    // 2 ref parameters and index
+    auto arrA = [1, 2, 3, 4];
+    auto arrB = [5, 6, 7, 8];
+    lockstep(arrA, arrB).each!((ref a, ref b) {
+        a = 0;
+        b = 1;
+    });
+    assert(arrA.sum == 0);
+    assert(arrB.sum == 4);
+
+    // 3 ref parameters
+    auto arrC = [3, 3, 3, 3];
+    lockstep(arrA, arrB, arrC).each!((ref a, ref b, ref c) {
+        a = 1;
+        b = 2;
+        c = 3;
+    });
+    assert(arrA.sum == 4);
+    assert(arrB.sum == 8);
+    assert(arrC.sum == 12);
+}
+
+// #15357: `each` should behave similar to foreach
+@system unittest
+{
+    import std.range : lockstep;
+    import std.typecons : Tuple;
+
+    auto a = "abc";
+    auto b = "def";
+
+    // print each character with an index
+    {
+        alias Element = Tuple!(size_t, "index", dchar, "value");
+        Element[] rForeach, rEach;
+        foreach (i, c ; a) rForeach ~= Element(i, c);
+        a.each!((i, c) => rEach ~= Element(i, c));
+        assert(rForeach == rEach);
+        assert(rForeach == [Element(0, 'a'), Element(1, 'b'), Element(2, 'c')]);
+    }
+
+    // print pairs of characters
+    {
+        alias Element = Tuple!(dchar, "a", dchar, "b");
+        Element[] rForeach, rEach;
+        foreach (c1, c2 ; a.lockstep(b)) rForeach ~= Element(c1, c2);
+        a.lockstep(b).each!((c1, c2) => rEach ~= Element(c1, c2));
+        assert(rForeach == rEach);
+        assert(rForeach == [Element('a', 'd'), Element('b', 'e'), Element('c', 'f')]);
+    }
 }
 
 // filter
@@ -1192,11 +1358,11 @@ private struct FilterResult(alias pred, Range)
 
     void popFront()
     {
+        prime;
         do
         {
             _input.popFront();
         } while (!_input.empty && !pred(_input.front));
-        _primed = true;
     }
 
     @property auto ref front()
@@ -1312,6 +1478,23 @@ private struct FilterResult(alias pred, Range)
     int underX(int a) { return a < x; }
     const(int)[] list = [ 1, 2, 10, 11, 3, 4 ];
     assert(equal(filter!underX(list), [ 1, 2, 3, 4 ]));
+}
+
+// issue 19823
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : dropOne;
+
+    auto a = [1, 2, 3, 4];
+    assert(a.filter!(a => a != 1).dropOne.equal([3, 4]));
+    assert(a.filter!(a => a != 2).dropOne.equal([3, 4]));
+    assert(a.filter!(a => a != 3).dropOne.equal([2, 4]));
+    assert(a.filter!(a => a != 4).dropOne.equal([2, 3]));
+    assert(a.filter!(a => a == 1).dropOne.empty);
+    assert(a.filter!(a => a == 2).dropOne.empty);
+    assert(a.filter!(a => a == 3).dropOne.empty);
+    assert(a.filter!(a => a == 4).dropOne.empty);
 }
 
 /**
@@ -1474,6 +1657,12 @@ if (isInputRange!R)
         if (!_input.empty) popFront();
     }
 
+    private this(R input, Tuple!(MutableE, uint) current)
+    {
+        _input = input;
+        _current = current;
+    }
+
     ///
     void popFront()
     {
@@ -1517,11 +1706,9 @@ if (isInputRange!R)
     static if (isForwardRange!R)
     {
         ///
-        @property typeof(this) save() {
-            typeof(this) ret = this;
-            ret._input = this._input.save;
-            ret._current = this._current;
-            return ret;
+        @property typeof(this) save()
+        {
+            return Group(_input.save, _current);
         }
     }
 }
@@ -1617,18 +1804,51 @@ if (isInputRange!R)
     assert(equal(g6.front[0], [1]));
 }
 
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.typecons : tuple;
+
+    int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
+    auto r = arr.group;
+    assert(r.equal([ tuple(1,1u), tuple(2, 4u), tuple(3, 1u), tuple(4, 3u), tuple(5, 1u) ]));
+    r.popFront;
+    assert(r.equal([ tuple(2, 4u), tuple(3, 1u), tuple(4, 3u), tuple(5, 1u) ]));
+    auto s = r.save;
+    r.popFrontN(2);
+    assert(r.equal([ tuple(4, 3u), tuple(5, 1u) ]));
+    assert(s.equal([ tuple(2, 4u), tuple(3, 1u), tuple(4, 3u), tuple(5, 1u) ]));
+    s.popFront;
+    auto t = s.save;
+    r.popFront;
+    s.popFront;
+    assert(r.equal([ tuple(5, 1u) ]));
+    assert(s.equal([ tuple(4, 3u), tuple(5, 1u) ]));
+    assert(t.equal([ tuple(3, 1u), tuple(4, 3u), tuple(5, 1u) ]));
+}
+
+pure @safe unittest // issue 18657
+{
+    import std.algorithm.comparison : equal;
+    import std.range : refRange;
+    string s = "foo";
+    auto r = refRange(&s).group;
+    assert(equal(r.save, "foo".group));
+    assert(equal(r, "foo".group));
+}
+
 // Used by implementation of chunkBy for non-forward input ranges.
 private struct ChunkByChunkImpl(alias pred, Range)
 if (isInputRange!Range && !isForwardRange!Range)
 {
     alias fun = binaryFun!pred;
 
-    private Range r;
+    private Range *r;
     private ElementType!Range prev;
 
-    this(Range range, ElementType!Range _prev)
+    this(ref Range range, ElementType!Range _prev)
     {
-        r = range;
+        r = &range;
         prev = _prev;
     }
 
@@ -1637,8 +1857,17 @@ if (isInputRange!Range && !isForwardRange!Range)
         return r.empty || !fun(prev, r.front);
     }
 
-    @property ElementType!Range front() { return r.front; }
-    void popFront() { r.popFront(); }
+    @property ElementType!Range front()
+    {
+        assert(!empty, "Attempting to fetch the front of an empty chunkBy chunk.");
+        return r.front;
+    }
+
+    void popFront()
+    {
+        assert(!empty, "Attempting to popFront an empty chunkBy chunk.");
+        r.popFront();
+    }
 }
 
 private template ChunkByImplIsUnary(alias pred, Range)
@@ -1669,6 +1898,7 @@ if (isInputRange!Range && !isForwardRange!Range)
 
     private Range r;
     private ElementType!Range _prev;
+    private bool openChunk = false;
 
     this(Range _r)
     {
@@ -1690,10 +1920,12 @@ if (isInputRange!Range && !isForwardRange!Range)
             _prev = typeof(_prev).init;
         }
     }
-    @property bool empty() { return r.empty; }
+    @property bool empty() { return r.empty && !openChunk; }
 
     @property auto front()
     {
+        assert(!empty, "Attempting to fetch the front of an empty chunkBy.");
+        openChunk = true;
         static if (isUnary)
         {
             import std.typecons : tuple;
@@ -1708,6 +1940,8 @@ if (isInputRange!Range && !isForwardRange!Range)
 
     void popFront()
     {
+        assert(!empty, "Attempting to popFront an empty chunkBy.");
+        openChunk = false;
         while (!r.empty)
         {
             if (!eq(_prev, r.front))
@@ -1756,7 +1990,7 @@ if (isForwardRange!Range)
 
             start = origin.current.save;
             current = origin.current.save;
-            assert(!start.empty);
+            assert(!start.empty, "Passed range 'r' must not be empty");
 
             mothership = origin;
 
@@ -1840,7 +2074,8 @@ if (isForwardRange!Range)
         return typeof(this)(impl.current.save);
     }
 
-    static assert(isForwardRange!(typeof(this)));
+    static assert(isForwardRange!(typeof(this)), typeof(this).stringof
+            ~ " must be a forward range");
 }
 
 @system unittest
@@ -1970,7 +2205,7 @@ if (isInputRange!Range)
     ]));
 }
 
-version(none) // this example requires support for non-equivalence relations
+version (none) // this example requires support for non-equivalence relations
 @safe unittest
 {
     // Grouping by maximum adjacent difference:
@@ -2049,10 +2284,21 @@ version(none) // this example requires support for non-equivalence relations
         R data;
         this(R _data) pure @safe nothrow { data = _data; }
         @property bool empty() pure @safe nothrow { return data.empty; }
-        @property auto front() pure @safe nothrow { return data.front; }
-        void popFront() pure @safe nothrow { data.popFront(); }
+        @property auto front() pure @safe nothrow { assert(!empty); return data.front; }
+        void popFront() pure @safe nothrow { assert(!empty); data.popFront(); }
     }
     auto refInputRange(R)(R range) { return new RefInputRange!R(range); }
+
+    // An input range API with value semantics.
+    struct ValInputRange(R)
+    {
+        R data;
+        this(R _data) pure @safe nothrow { data = _data; }
+        @property bool empty() pure @safe nothrow { return data.empty; }
+        @property auto front() pure @safe nothrow { assert(!empty); return data.front; }
+        void popFront() pure @safe nothrow { assert(!empty); data.popFront(); }
+    }
+    auto valInputRange(R)(R range) { return ValInputRange!R(range); }
 
     {
         auto arr = [ Item(1,2), Item(1,3), Item(2,3) ];
@@ -2084,7 +2330,7 @@ version(none) // this example requires support for non-equivalence relations
         assert(byY2.front[1].equal([ Item(1,2) ]));
     }
 
-    // Test non-forward input ranges.
+    // Test non-forward input ranges with reference semantics.
     {
         auto range = refInputRange([ Item(1,1), Item(1,2), Item(2,2) ]);
         auto byX = chunkBy!(a => a.x)(range);
@@ -2108,10 +2354,260 @@ version(none) // this example requires support for non-equivalence relations
         assert(byY.empty);
         assert(range.empty);
     }
+
+    // Test non-forward input ranges with value semantics.
+    {
+        auto range = valInputRange([ Item(1,1), Item(1,2), Item(2,2) ]);
+        auto byX = chunkBy!(a => a.x)(range);
+        assert(byX.front[0] == 1);
+        assert(byX.front[1].equal([ Item(1,1), Item(1,2) ]));
+        byX.popFront();
+        assert(byX.front[0] == 2);
+        assert(byX.front[1].equal([ Item(2,2) ]));
+        byX.popFront();
+        assert(byX.empty);
+        assert(!range.empty);    // Opposite of refInputRange test
+
+        range = valInputRange([ Item(1,1), Item(1,2), Item(2,2) ]);
+        auto byY = chunkBy!(a => a.y)(range);
+        assert(byY.front[0] == 1);
+        assert(byY.front[1].equal([ Item(1,1) ]));
+        byY.popFront();
+        assert(byY.front[0] == 2);
+        assert(byY.front[1].equal([ Item(1,2), Item(2,2) ]));
+        byY.popFront();
+        assert(byY.empty);
+        assert(!range.empty);    // Opposite of refInputRange test
+    }
+
+    /* Issue 93532 - General behavior of non-forward input ranges.
+     * - If the same chunk is retrieved multiple times via front, the separate chunk
+     *   instances refer to a shared range segment that advances as a single range.
+     * - Emptying a chunk via popFront does not implicitly popFront the chunk off
+     *   main range. The chunk is still available via front, it is just empty.
+     */
+    {
+        import std.algorithm.comparison : equal;
+        import core.exception : AssertError;
+        import std.exception : assertThrown;
+
+        auto a = [[0, 0], [0, 1],
+                  [1, 2], [1, 3], [1, 4],
+                  [2, 5], [2, 6],
+                  [3, 7],
+                  [4, 8]];
+
+        // Value input range
+        {
+            auto r = valInputRange(a).chunkBy!((a, b) => a[0] == b[0]);
+
+            size_t numChunks = 0;
+            while (!r.empty)
+            {
+                ++numChunks;
+                auto chunk = r.front;
+                while (!chunk.empty)
+                {
+                    assert(r.front.front[1] == chunk.front[1]);
+                    chunk.popFront;
+                }
+                assert(!r.empty);
+                assert(r.front.empty);
+                r.popFront;
+            }
+
+            assert(numChunks == 5);
+
+            // Now front and popFront should assert.
+            bool thrown = false;
+            try r.front;
+            catch (AssertError) thrown = true;
+            assert(thrown);
+
+            thrown = false;
+            try r.popFront;
+            catch (AssertError) thrown = true;
+            assert(thrown);
+        }
+
+        // Reference input range
+        {
+            auto r = refInputRange(a).chunkBy!((a, b) => a[0] == b[0]);
+
+            size_t numChunks = 0;
+            while (!r.empty)
+            {
+                ++numChunks;
+                auto chunk = r.front;
+                while (!chunk.empty)
+                {
+                    assert(r.front.front[1] == chunk.front[1]);
+                    chunk.popFront;
+                }
+                assert(!r.empty);
+                assert(r.front.empty);
+                r.popFront;
+            }
+
+            assert(numChunks == 5);
+
+            // Now front and popFront should assert.
+            bool thrown = false;
+            try r.front;
+            catch (AssertError) thrown = true;
+            assert(thrown);
+
+            thrown = false;
+            try r.popFront;
+            catch (AssertError) thrown = true;
+            assert(thrown);
+        }
+
+        // Ensure that starting with an empty range doesn't create an empty chunk.
+        {
+            int[] emptyRange = [];
+
+            auto r1 = valInputRange(emptyRange).chunkBy!((a, b) => a == b);
+            auto r2 = refInputRange(emptyRange).chunkBy!((a, b) => a == b);
+
+            assert(r1.empty);
+            assert(r2.empty);
+
+            bool thrown = false;
+            try r1.front;
+            catch (AssertError) thrown = true;
+            assert(thrown);
+
+            thrown = false;
+            try r1.popFront;
+            catch (AssertError) thrown = true;
+            assert(thrown);
+
+            thrown = false;
+            try r2.front;
+            catch (AssertError) thrown = true;
+            assert(thrown);
+
+            thrown = false;
+            try r2.popFront;
+            catch (AssertError) thrown = true;
+            assert(thrown);
+        }
+    }
+
+    // Issue 93532 - Using roundRobin/chunkBy
+    {
+        import std.algorithm.comparison : equal;
+        import std.range : roundRobin;
+
+        auto a0 = [0, 1, 3, 6];
+        auto a1 = [0, 2, 4, 6, 7];
+        auto a2 = [1, 2, 4, 6, 8, 8, 9];
+
+        auto expected =
+            [[0, 0], [1, 1], [2, 2], [3], [4, 4], [6, 6, 6], [7], [8, 8], [9]];
+
+        auto r1 = roundRobin(valInputRange(a0), valInputRange(a1), valInputRange(a2))
+            .chunkBy!((a, b) => a == b);
+        assert(r1.equal!equal(expected));
+
+        auto r2 = roundRobin(refInputRange(a0), refInputRange(a1), refInputRange(a2))
+            .chunkBy!((a, b) => a == b);
+        assert(r2.equal!equal(expected));
+
+        auto r3 = roundRobin(a0, a1, a2).chunkBy!((a, b) => a == b);
+        assert(r3.equal!equal(expected));
+    }
+
+    // Issue 93532 - Using merge/chunkBy
+    {
+        import std.algorithm.comparison : equal;
+        import std.algorithm.sorting : merge;
+
+        auto a0 = [2, 3, 5];
+        auto a1 = [2, 4, 5];
+        auto a2 = [1, 2, 4, 5];
+
+        auto expected = [[1], [2, 2, 2], [3], [4, 4], [5, 5, 5]];
+
+        auto r1 = merge(valInputRange(a0), valInputRange(a1), valInputRange(a2))
+            .chunkBy!((a, b) => a == b);
+        assert(r1.equal!equal(expected));
+
+        auto r2 = merge(refInputRange(a0), refInputRange(a1), refInputRange(a2))
+            .chunkBy!((a, b) => a == b);
+        assert(r2.equal!equal(expected));
+
+        auto r3 = merge(a0, a1, a2).chunkBy!((a, b) => a == b);
+        assert(r3.equal!equal(expected));
+    }
+
+    // Issue 93532 - Using chunkBy/map-fold
+    {
+        import std.algorithm.comparison : equal;
+        import std.algorithm.iteration : fold, map;
+
+        auto a = [0, 0, 1, 1, 1, 2, 2, 3, 3, 4, 4, 5, 6, 6, 6, 7, 8, 8, 9];
+        auto expected = [0, 3, 4, 6, 8, 5, 18, 7, 16, 9];
+
+        auto r1 = a
+            .chunkBy!((a, b) => a == b)
+            .map!(c => c.fold!((a, b) => a + b));
+        assert(r1.equal(expected));
+
+        auto r2 = valInputRange(a)
+            .chunkBy!((a, b) => a == b)
+            .map!(c => c.fold!((a, b) => a + b));
+        assert(r2.equal(expected));
+
+        auto r3 = refInputRange(a)
+            .chunkBy!((a, b) => a == b)
+            .map!(c => c.fold!((a, b) => a + b));
+        assert(r3.equal(expected));
+    }
+
+    // Issues 16169, 17966, 93532 - Using multiwayMerge/chunkBy
+    {
+        import std.algorithm.comparison : equal;
+        import std.algorithm.setops : multiwayMerge;
+
+        {
+            auto a0 = [2, 3, 5];
+            auto a1 = [2, 4, 5];
+            auto a2 = [1, 2, 4, 5];
+
+            auto expected = [[1], [2, 2, 2], [3], [4, 4], [5, 5, 5]];
+            auto r = multiwayMerge([a0, a1, a2]).chunkBy!((a, b) => a == b);
+            assert(r.equal!equal(expected));
+        }
+        {
+            auto a0 = [2, 3, 5];
+            auto a1 = [2, 4, 5];
+            auto a2 = [1, 2, 4, 5];
+
+            auto expected = [[1], [2, 2, 2], [3], [4, 4], [5, 5, 5]];
+            auto r =
+                multiwayMerge([valInputRange(a0), valInputRange(a1), valInputRange(a2)])
+                .chunkBy!((a, b) => a == b);
+            assert(r.equal!equal(expected));
+        }
+        {
+            auto a0 = [2, 3, 5];
+            auto a1 = [2, 4, 5];
+            auto a2 = [1, 2, 4, 5];
+
+            auto expected = [[1], [2, 2, 2], [3], [4, 4], [5, 5, 5]];
+            auto r =
+                multiwayMerge([refInputRange(a0), refInputRange(a1), refInputRange(a2)])
+                .chunkBy!((a, b) => a == b);
+            assert(r.equal!equal(expected));
+        }
+    }
+
 }
 
 // Issue 13595
-version(none) // This requires support for non-equivalence relations
+version (none) // This requires support for non-equivalence relations
 @system unittest
 {
     import std.algorithm.comparison : equal;
@@ -2146,7 +2642,9 @@ Params:
 Returns:
 A range of elements in the joined range. This will be a forward range if
 both outer and inner ranges of `RoR` are forward ranges; otherwise it will
-be only an input range.
+be only an input range. The
+$(REF_ALTTEXT range bidirectionality, isBidirectionalRange, std,range,primitives)
+is propagated if no separator is specified.
 
 See_also:
 $(REF chain, std,range), which chains a sequence of ranges with compatible elements
@@ -2259,7 +2757,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
             else
             {
                 _currentSep.reset;
-                assert(!_currentSep.empty);
+                assert(!_currentSep.empty, "seperator must not be empty");
             }
         }
 
@@ -2479,50 +2977,33 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
     private:
         RoR _items;
         ElementType!RoR _current;
-        enum prepare =
-        q{
-            // Skip over empty subranges.
-            if (_items.empty) return;
-            while (_items.front.empty)
-            {
-                _items.popFront();
-                if (_items.empty) return;
-            }
-            // We cannot export .save method unless we ensure subranges are not
-            // consumed when a .save'd copy of ourselves is iterated over. So
-            // we need to .save each subrange we traverse.
-            static if (isForwardRange!RoR && isForwardRange!(ElementType!RoR))
-                _current = _items.front.save;
-            else
-                _current = _items.front;
-        };
+        enum isBidirectional = isForwardRange!RoR && isForwardRange!(ElementType!RoR) &&
+                               isBidirectionalRange!RoR && isBidirectionalRange!(ElementType!RoR);
+        static if (isBidirectional)
+        {
+            ElementType!RoR _currentBack;
+            bool reachedFinalElement;
+        }
+
         this(RoR items, ElementType!RoR current)
         {
             _items = items;
             _current = current;
+            static if (isBidirectional && hasNested!Result)
+                _currentBack = typeof(_currentBack).init;
         }
+
     public:
         this(RoR r)
         {
             _items = r;
-            //mixin(prepare); // _current should be initialized in place
 
-            // Skip over empty subranges.
-            while (!_items.empty && _items.front.empty)
-                _items.popFront();
-
-            if (_items.empty)
-                _current = _current.init;   // set invalid state
-            else
-            {
-                // We cannot export .save method unless we ensure subranges are not
-                // consumed when a .save'd copy of ourselves is iterated over. So
-                // we need to .save each subrange we traverse.
-                static if (isForwardRange!RoR && isForwardRange!(ElementType!RoR))
-                    _current = _items.front.save;
-                else
-                    _current = _items.front;
-            }
+            static if (isBidirectional && hasNested!Result)
+                _currentBack = typeof(_currentBack).init;
+            // field _current must be initialized in constructor, because it is nested struct
+            mixin(popFrontEmptyElements);
+            static if (isBidirectional)
+                mixin(popBackEmptyElements);
         }
         static if (isInfinite!RoR)
         {
@@ -2546,16 +3027,45 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
             _current.popFront();
             if (_current.empty)
             {
-                assert(!_items.empty);
+                assert(!_items.empty, "Attempting to popFront an empty joiner.");
                 _items.popFront();
-                mixin(prepare);
+                mixin(popFrontEmptyElements);
             }
         }
+
+        private enum popFrontEmptyElements = q{
+            // Skip over empty subranges.
+            while (!_items.empty && _items.front.empty)
+            {
+                _items.popFront();
+            }
+            if (!_items.empty)
+            {
+                // We cannot export .save method unless we ensure subranges are not
+                // consumed when a .save'd copy of ourselves is iterated over. So
+                // we need to .save each subrange we traverse.
+                static if (isForwardRange!RoR && isForwardRange!(ElementType!RoR))
+                    _current = _items.front.save;
+                else
+                    _current = _items.front;
+            }
+            else
+            {
+                _current = typeof(_current).init;
+            }
+        };
+
         static if (isForwardRange!RoR && isForwardRange!(ElementType!RoR))
         {
             @property auto save()
             {
-                return Result(_items.save, _current.save);
+                auto r = Result(_items.save, _current.save);
+                static if (isBidirectional)
+                {
+                    r._currentBack = _currentBack.save;
+                    r.reachedFinalElement = reachedFinalElement;
+                }
+                return r;
             }
         }
 
@@ -2573,28 +3083,134 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
                 _current.front = element;
             }
         }
+
+        static if (isBidirectional)
+        {
+            bool checkFinalElement()
+            {
+                import std.range : dropOne;
+
+                if (reachedFinalElement)
+                    return true;
+
+                static if (hasLength!(typeof(_items)))
+                {
+                    if (_items.length == 1)
+                        reachedFinalElement = true;
+                }
+                else
+                {
+                    if (_items.save.dropOne.empty)
+                        reachedFinalElement = true;
+                }
+
+                return false;
+            }
+
+            @property auto ref back()
+            {
+                assert(!empty, "Attempting to fetch the back of an empty joiner.");
+                if (reachedFinalElement)
+                    return _current.back;
+                else
+                    return _currentBack.back;
+            }
+
+            void popBack()
+            {
+                assert(!_current.empty, "Attempting to popBack an empty joiner.");
+                if (checkFinalElement)
+                    _current.popBack();
+                else
+                    _currentBack.popBack();
+
+                bool isEmpty = reachedFinalElement ? _current.empty : _currentBack.empty;
+                if (isEmpty)
+                {
+                    assert(!_items.empty, "Attempting to popBack an empty joiner.");
+                    _items.popBack();
+                    mixin(popBackEmptyElements);
+                }
+            }
+
+            private enum popBackEmptyElements = q{
+                // Skip over empty subranges.
+                while (!_items.empty && _items.back.empty)
+                {
+                    _items.popBack();
+                }
+                if (!_items.empty)
+                {
+                    checkFinalElement;
+                    // We cannot export .save method unless we ensure subranges are not
+                    // consumed when a .save'd copy of ourselves is iterated over. So
+                    // we need to .save each subrange we traverse.
+                    static if (isForwardRange!RoR && isForwardRange!(ElementType!RoR))
+                    {
+                        if (reachedFinalElement)
+                            _current = _items.back.save;
+                        else
+                            _currentBack = _items.back.save;
+                    }
+                    else
+                    {
+                        if (reachedFinalElement)
+                            _current = _items.back;
+                        else
+                            _currentBack = _items.back;
+                    }
+                }
+                else
+                {
+                    _current = typeof(_current).init;
+                    _currentBack = typeof(_currentBack).init;
+                }
+            };
+
+            static if (hasAssignableElements!(ElementType!RoR))
+            {
+                @property void back(ElementType!(ElementType!RoR) element)
+                {
+                    assert(!empty, "Attempting to assign to back of an empty joiner.");
+                    if (reachedFinalElement)
+                        _current.back = element;
+                    else
+                        _currentBack.back = element;
+                }
+
+                @property void back(ref ElementType!(ElementType!RoR) element)
+                {
+                    assert(!empty, "Attempting to assign to back of an empty joiner.");
+                    if (reachedFinalElement)
+                        _current.back = element;
+                    else
+                        _currentBack.back = element;
+                }
+            }
+        }
     }
     return Result(r);
 }
 
+///
 @safe unittest
 {
     import std.algorithm.comparison : equal;
-    import std.range.interfaces : inputRangeObject;
     import std.range : repeat;
 
-    static assert(isInputRange!(typeof(joiner([""]))));
-    static assert(isForwardRange!(typeof(joiner([""]))));
-    assert(equal(joiner([""]), ""));
-    assert(equal(joiner(["", ""]), ""));
-    assert(equal(joiner(["", "abc"]), "abc"));
-    assert(equal(joiner(["abc", ""]), "abc"));
-    assert(equal(joiner(["abc", "def"]), "abcdef"));
-    assert(equal(joiner(["Mary", "has", "a", "little", "lamb"]),
-                    "Maryhasalittlelamb"));
-    assert(equal(joiner(repeat("abc", 3)), "abcabcabc"));
+    assert([""].joiner.equal(""));
+    assert(["", ""].joiner.equal(""));
+    assert(["", "abc"].joiner.equal("abc"));
+    assert(["abc", ""].joiner.equal("abc"));
+    assert(["abc", "def"].joiner.equal("abcdef"));
+    assert(["Mary", "has", "a", "little", "lamb"].joiner.equal("Maryhasalittlelamb"));
+    assert("abc".repeat(3).joiner.equal("abcabcabc"));
+}
 
-    // joiner allows in-place mutation!
+/// joiner allows in-place mutation!
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
     auto a = [ [1, 2, 3], [42, 43] ];
     auto j = joiner(a);
     j.front = 44;
@@ -2602,14 +3218,59 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
     assert(equal(j, [44, 2, 3, 42, 43]));
 }
 
+/// insert characters fully lazily into a string
+@safe pure unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : chain, cycle, iota, only, retro, take, zip;
+    import std.format : format;
+
+    static immutable number = "12345678";
+    static immutable delimiter = ",";
+    auto formatted = number.retro
+        .zip(3.iota.cycle.take(number.length))
+        .map!(z => chain(z[0].only, z[1] == 2 ? delimiter : null))
+        .joiner
+        .retro;
+    static immutable expected = "12,345,678";
+    assert(formatted.equal(expected));
+}
+
+@safe unittest
+{
+    import std.range.interfaces : inputRangeObject;
+    static assert(isInputRange!(typeof(joiner([""]))));
+    static assert(isForwardRange!(typeof(joiner([""]))));
+}
+
+@safe unittest
+{
+    // Initial version of PR #6115 caused a compilation failure for
+    // https://github.com/BlackEdder/ggplotd/blob/d4428c08db5ffdc05dfd29690bf7da9073ea1dc5/source/ggplotd/stat.d#L562-L583
+    import std.range : zip;
+    int[] xCoords = [1, 2, 3];
+    int[] yCoords = [4, 5, 6];
+    auto coords = zip(xCoords, xCoords[1..$]).map!( (xr) {
+            return zip(yCoords, yCoords[1..$]).map!( (yr) {
+                    return [
+                    [[xr[0], xr[0], xr[1]],
+                     [yr[0], yr[1], yr[1]]],
+                    [[xr[0], xr[1], xr[1]],
+                     [yr[0], yr[0], yr[1]]]
+                     ];
+            }).joiner;
+    }).joiner;
+}
 
 @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.range.interfaces : inputRangeObject;
+    import std.range : retro;
 
     // bugzilla 8240
     assert(equal(joiner([inputRangeObject("")]), ""));
+    assert(equal(joiner([inputRangeObject("")]).retro, ""));
 
     // issue 8792
     auto b = [[1], [2], [3]];
@@ -2624,6 +3285,118 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
     js.popFront();
     assert(equal(jb, js));
     assert(!equal(js2, js));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=19213
+@system unittest
+{
+    auto results = [[1,2], [3,4]].map!(q => q.chunkBy!"a").joiner;
+    int i = 1;
+    foreach (ref e; results)
+        assert(e[0] == i++);
+}
+
+/// joiner can be bidirectional
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : retro;
+
+    auto a = [[1, 2, 3], [4, 5]];
+    auto j = a.joiner;
+    j.back = 44;
+    assert(a == [[1, 2, 3], [4, 44]]);
+    assert(equal(j.retro, [44, 4, 3, 2, 1]));
+}
+
+// bidirectional joiner: test for filtering empty elements
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : retro;
+
+    alias El = (e) => new int(e);
+    auto a = [null, [null, El(1), null, El(2), null, El(3), null], null, [null, El(4), null, El(5), null]];
+    auto j = a.joiner;
+
+    alias deref = a => a is null ? -1 : *a;
+    auto expected = [-1, 5, -1, 4, -1, -1, 3, -1, 2, -1, 1, -1];
+    // works with .save.
+    assert(j.save.retro.map!deref.equal(expected));
+    // and without .save
+    assert(j.retro.map!deref.equal(expected));
+    assert(j.retro.map!deref.equal(expected));
+}
+
+// bidirectional joiner is @nogc
+@safe @nogc unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : iota, only, retro;
+
+    auto a = only(iota(1, 4), iota(4, 6));
+    auto j = a.joiner;
+    static immutable expected = [5 , 4, 3, 2, 1];
+    assert(equal(j.retro, expected));
+}
+
+// bidirectional joiner supports assignment to the back
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : popBackN;
+
+    auto a = [[1, 2, 3], [4, 5]];
+    auto j = a.joiner;
+    j.back = 55;
+    assert(a == [[1, 2, 3], [4, 55]]);
+    j.popBackN(2);
+    j.back = 33;
+    assert(a == [[1, 2, 33], [4, 55]]);
+}
+
+// bidirectional joiner works with auto-decoding
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : retro;
+
+    auto a = ["😀😐", "😠"];
+    auto j = a.joiner;
+    assert(j.retro.equal("😠😐😀"));
+}
+
+// test two-side iteration
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : popBackN;
+
+    auto arrs = [
+        [[1], [2], [3], [4], [5]],
+        [[1], [2, 3, 4], [5]],
+        [[1, 2, 3, 4, 5]],
+    ];
+    foreach (arr; arrs)
+    {
+        auto a = arr.joiner;
+        assert(a.front == 1);
+        assert(a.back == 5);
+        a.popFront;
+        assert(a.front == 2);
+        assert(a.back == 5);
+        a.popBack;
+        assert(a.front == 2);
+        assert(a.back == 4);
+        a.popFront;
+        assert(a.front == 3);
+        assert(a.back == 4);
+        a.popBack;
+        assert(a.front == 3);
+        assert(a.back == 3);
+        a.popBack;
+        assert(a.empty);
+    }
 }
 
 @safe unittest
@@ -2745,17 +3518,23 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
         {
             return element;
         }
+        alias back = front;
 
         enum empty = false;
 
-        void popFront()
+        auto save()
         {
+            return this;
         }
+
+        void popFront() {}
+        alias popBack = popFront;
 
         @property void front(int newValue)
         {
             element = newValue;
         }
+        alias back = front;
     }
 
     static assert(isInputRange!AssignableRange);
@@ -2765,17 +3544,36 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
 
     auto range = new AssignableRange();
     assert(range.element == 0);
+    {
+        auto joined = joiner(repeat(range));
+        joined.front = 5;
+        assert(range.element == 5);
+        assert(joined.front == 5);
 
-    auto joined = joiner(repeat(range));
-    joined.front = 5;
-    assert(range.element == 5);
-    assert(joined.front == 5);
+        joined.popFront;
+        int byRef = 7;
+        joined.front = byRef;
+        assert(range.element == byRef);
+        assert(joined.front == byRef);
+    }
+    {
+        auto joined = joiner(repeat(range));
+        joined.back = 5;
+        assert(range.element == 5);
+        assert(joined.back == 5);
 
-    joined.popFront;
-    int byRef = 7;
-    joined.front = byRef;
-    assert(range.element == byRef);
-    assert(joined.front == byRef);
+        joined.popBack;
+        int byRef = 7;
+        joined.back = byRef;
+        assert(range.element == byRef);
+        assert(joined.back == byRef);
+    }
+}
+
+// Issue 19850
+@safe pure unittest
+{
+    assert([[0]].joiner.save.back == 0);
 }
 
 /++
@@ -3871,7 +4669,8 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
             {
                 front;
             }
-            assert(_frontLength <= _input.length);
+            assert(_frontLength <= _input.length, "The front position must"
+                    ~ " not exceed the input.length");
             if (_frontLength == _input.length)
             {
                 // no more input and need to fetch => done
@@ -3925,7 +4724,8 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
                     // evaluate back to make sure it's computed
                     back;
                 }
-                assert(_backLength <= _input.length);
+                assert(_backLength <= _input.length, "The end index must not"
+                        ~ " exceed the length of the input");
                 if (_backLength == _input.length)
                 {
                     // no more input and need to fetch => done
@@ -4182,7 +4982,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
         void ensureFrontLength()
         {
             if (_frontLength != _frontLength.max) return;
-            assert(!_input.empty);
+            assert(!_input.empty, "The input must not be empty");
             // compute front length
             _frontLength = (_separator.empty) ? 1 :
                            _input.length - find!pred(_input, _separator).length;
@@ -4391,6 +5191,24 @@ private struct SplitterResult(alias isTerminator, Range)
             _end = size_t.max;
     }
 
+    static if (fullSlicing)
+    {
+        private this(Range input, size_t end)
+        {
+            _input = input;
+            _end = end;
+        }
+    }
+    else
+    {
+        private this(Range input, size_t end, Range next)
+        {
+            _input = input;
+            _end = end;
+            _next = next;
+        }
+    }
+
     static if (isInfinite!Range)
     {
         enum bool empty = false;  // Propagate infiniteness.
@@ -4405,7 +5223,7 @@ private struct SplitterResult(alias isTerminator, Range)
 
     @property auto front()
     {
-        version(assert)
+        version (assert)
         {
             import core.exception : RangeError;
             if (empty)
@@ -4422,7 +5240,7 @@ private struct SplitterResult(alias isTerminator, Range)
 
     void popFront()
     {
-        version(assert)
+        version (assert)
         {
             import core.exception : RangeError;
             if (empty)
@@ -4455,11 +5273,10 @@ private struct SplitterResult(alias isTerminator, Range)
 
     @property typeof(this) save()
     {
-        auto ret = this;
-        ret._input = _input.save;
-        static if (!fullSlicing)
-            ret._next = _next.save;
-        return ret;
+        static if (fullSlicing)
+            return SplitterResult(_input.save, _end);
+        else
+            return SplitterResult(_input.save, _end, _next.save);
     }
 }
 
@@ -4556,62 +5373,133 @@ private struct SplitterResult(alias isTerminator, Range)
     assert(equal(splitter!"a=='本'"("日本語"), ["日", "語"]));
 }
 
-/++
-Lazily splits the string `s` into words, using whitespace as the delimiter.
+pure @safe unittest // issue 18657
+{
+    import std.algorithm.comparison : equal;
+    import std.range : refRange;
+    string s = "foobar";
+    auto r = refRange(&s).splitter!(c => c == 'b');
+    assert(equal!equal(r.save, ["foo", "ar"]));
+    assert(equal!equal(r.save, ["foo", "ar"]));
+}
 
-This function is string specific and, contrary to
+/++
+Lazily splits the character-based range `s` into words, using whitespace as the
+delimiter.
+
+This function is character-range specific and, contrary to
 `splitter!(std.uni.isWhite)`, runs of whitespace will be merged together
 (no empty tokens will be produced).
 
 Params:
-    s = The string to be split.
+    s = The character-based range to be split. Must be a string, or a
+    random-access range of character types.
 
 Returns:
     An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of slices of
-    the original string split by whitespace.
+    the original range split by whitespace.
  +/
-auto splitter(C)(C[] s)
-if (isSomeChar!C)
+auto splitter(Range)(Range s)
+if (isSomeString!Range ||
+    isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
+    !isConvertibleToString!Range &&
+    isSomeChar!(ElementEncodingType!Range))
 {
     import std.algorithm.searching : find;
     static struct Result
     {
     private:
         import core.exception : RangeError;
-        C[] _s;
+        Range _s;
         size_t _frontLength;
 
-        void getFirst() pure @safe
+        void getFirst()
         {
             import std.uni : isWhite;
+            import std.traits : Unqual;
 
-            auto r = find!(isWhite)(_s);
-            _frontLength = _s.length - r.length;
+            static if (is(Unqual!(ElementEncodingType!Range) == wchar) &&
+                       is(Unqual!(ElementType!Range) == dchar))
+            {
+                // all unicode whitespace characters fit into a wchar. However,
+                // this range is a wchar array, so we will treat it like a
+                // wchar array instead of decoding each code point.
+                _frontLength = _s.length; // default condition, no spaces
+                foreach (i; 0 .. _s.length)
+                    if (isWhite(_s[i]))
+                    {
+                        _frontLength = i;
+                        break;
+                    }
+            }
+            else static if (is(Unqual!(ElementType!Range) == dchar) ||
+                            is(Unqual!(ElementType!Range) == wchar))
+            {
+                // dchar or wchar range, we can just use find.
+                auto r = find!(isWhite)(_s.save);
+                _frontLength = _s.length - r.length;
+            }
+            else
+            {
+                // need to decode the characters until we find a space. This is
+                // ported from std.string.stripLeft.
+                static import std.ascii;
+                static import std.uni;
+                import std.utf : decodeFront;
+
+                auto input = _s.save;
+                size_t iLength = input.length;
+
+                while (!input.empty)
+                {
+                    auto c = input.front;
+                    if (std.ascii.isASCII(c))
+                    {
+                        if (std.ascii.isWhite(c))
+                            break;
+                        input.popFront();
+                        --iLength;
+                    }
+                    else
+                    {
+                        auto dc = decodeFront(input);
+                        if (std.uni.isWhite(dc))
+                            break;
+                        iLength = input.length;
+                    }
+                }
+
+                // sanity check
+                assert(iLength <= _s.length, "The current index must not"
+                        ~ " exceed the length of the input");
+
+                _frontLength = _s.length - iLength;
+            }
         }
 
     public:
-        this(C[] s) pure @safe
+        this(Range s)
         {
-            import std.string : strip;
-            _s = s.strip();
+            import std.string : stripLeft;
+            _s = s.stripLeft();
             getFirst();
         }
 
-        @property C[] front() pure @safe
+        @property auto front()
         {
-            version(assert) if (empty) throw new RangeError();
+            version (assert) if (empty) throw new RangeError();
             return _s[0 .. _frontLength];
         }
 
-        void popFront() pure @safe
+        void popFront()
         {
             import std.string : stripLeft;
-            version(assert) if (empty) throw new RangeError();
+            version (assert) if (empty) throw new RangeError();
             _s = _s[_frontLength .. $].stripLeft();
             getFirst();
         }
 
-        @property bool empty() const @safe pure nothrow
+        @property bool empty() const
         {
             return _s.empty;
         }
@@ -4639,7 +5527,7 @@ if (isSomeChar!C)
     static foreach (S; AliasSeq!(string, wstring, dstring))
     {{
         import std.conv : to;
-        S a = " a     bcd   ef gh ";
+        S a = " a  \u2028   bcd   ef gh ";
         assert(equal(splitter(a), [to!S("a"), to!S("bcd"), to!S("ef"), to!S("gh")]));
         a = "";
         assert(splitter(a).empty);
@@ -4675,6 +5563,56 @@ if (isSomeChar!C)
     assert(dictionary["two"]== 2);
     assert(dictionary["yah"]== 3);
     assert(dictionary["last"]== 4);
+
+}
+
+@safe unittest
+{
+    // do it with byCodeUnit
+    import std.conv : to;
+    import std.string : strip;
+    import std.utf : byCodeUnit;
+
+    alias BCU = typeof("abc".byCodeUnit());
+
+    // TDPL example, page 8
+    uint[BCU] dictionary;
+    BCU[3] lines;
+    lines[0] = "line one".byCodeUnit;
+    lines[1] = "line \ttwo".byCodeUnit;
+    lines[2] = "yah            last   line\ryah".byCodeUnit;
+    foreach (line; lines)
+    {
+       foreach (word; splitter(strip(line)))
+       {
+           static assert(is(typeof(word) == BCU));
+            if (word in dictionary) continue; // Nothing to do
+            auto newID = dictionary.length;
+            dictionary[word] = cast(uint) newID;
+        }
+    }
+    assert(dictionary.length == 5);
+    assert(dictionary["line".byCodeUnit]== 0);
+    assert(dictionary["one".byCodeUnit]== 1);
+    assert(dictionary["two".byCodeUnit]== 2);
+    assert(dictionary["yah".byCodeUnit]== 3);
+    assert(dictionary["last".byCodeUnit]== 4);
+}
+
+@safe pure unittest
+{
+    // issue 19238
+    import std.utf : byCodeUnit;
+    import std.algorithm.comparison : equal;
+    auto range = "hello    world".byCodeUnit.splitter;
+    static assert(is(typeof(range.front()) == typeof("hello".byCodeUnit())));
+    assert(range.equal(["hello".byCodeUnit, "world".byCodeUnit]));
+
+    // test other space types, including unicode
+    auto u = " a\t\v\r bcd\u3000 \u2028\t\nef\U00010001 gh";
+    assert(equal(splitter(u), ["a", "bcd", "ef\U00010001", "gh"][]));
+    assert(equal(splitter(u.byCodeUnit), ["a".byCodeUnit, "bcd".byCodeUnit,
+                 "ef\U00010001".byCodeUnit, "gh".byCodeUnit][]));
 }
 
 @safe unittest
@@ -4964,10 +5902,13 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
 
             this(R haystack, Ins needles)
             {
-                hasHit = !haystack.empty;
                 this.rest = haystack.drop(0);
                 this.needles = needles;
-                popFront;
+                if (!haystack.empty)
+                {
+                    hasHit = true;
+                    popFront;
+                }
                 static if (hasNested!(typeof(skip)))
                     skip = rest.take(0);
             }
@@ -5022,7 +5963,7 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
                     else
                     {
                         // find with one needle returns the range
-                        auto hitValue = needles[0];
+                        auto hitValue = match;
                         hitNr = match.empty ? 0 : 1;
                     }
 
@@ -5371,6 +6312,36 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
     }}
 }
 
+// issue 19207
+@safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+    assert([1, 2, 3, 4].substitute([1], [7]).equal([7, 2, 3, 4]));
+    assert([1, 2, 3, 4].substitute([2], [7]).equal([1, 7, 3, 4]));
+    assert([1, 2, 3, 4].substitute([4], [7]).equal([1, 2, 3, 7]));
+    assert([1, 2, 3, 4].substitute([2, 3], [7]).equal([1, 7, 4]));
+    assert([1, 2, 3, 4].substitute([3, 4], [7, 8]).equal([1, 2, 7, 8]));
+}
+
+// tests recognizing empty base ranges
+nothrow pure @safe unittest
+{
+    import std.utf : byCodeUnit;
+    import std.algorithm.comparison : equal;
+
+    assert("".byCodeUnit.substitute('4', 'A').empty);
+    assert("".byCodeUnit.substitute('0', 'O', '5', 'S', '1', 'l').empty);
+    assert("".byCodeUnit.substitute("PKM".byCodeUnit, "PoKeMon".byCodeUnit).empty);
+    assert("".byCodeUnit.substitute
+    (   "ding".byCodeUnit,
+        "dong".byCodeUnit,
+        "click".byCodeUnit,
+        "clack".byCodeUnit,
+        "ping".byCodeUnit,
+        "latency".byCodeUnit
+    ).empty);
+}
+
 // sum
 /**
 Sums elements of `r`, which must be a finite
@@ -5380,7 +6351,7 @@ b)(r, 0), `sum` uses specialized algorithms to maximize accuracy,
 as follows.
 
 $(UL
-$(LI If `$(REF ElementType, std,range,primitives)!R` is a floating-point
+$(LI If $(REF ElementType, std,range,primitives)!R is a floating-point
 type and `R` is a
 $(REF_ALTTEXT random-access range, isRandomAccessRange, std,range,primitives) with
 length and slicing, then `sum` uses the
@@ -5568,7 +6539,7 @@ private auto sumPairwiseN(size_t N, bool needEmptyChecks, F, R)(ref R r)
 if (isForwardRange!R && !isRandomAccessRange!R)
 {
     import std.math : isPowerOf2;
-    static assert(isPowerOf2(N));
+    static assert(isPowerOf2(N), "N must be a power of 2");
     static if (N == 2) return sumPair!(needEmptyChecks, F)(r);
     else return sumPairwiseN!(N/2, needEmptyChecks, F)(r)
         + sumPairwiseN!(N/2, needEmptyChecks, F)(r);
@@ -5577,7 +6548,9 @@ if (isForwardRange!R && !isRandomAccessRange!R)
 // Kahan algo http://en.wikipedia.org/wiki/Kahan_summation_algorithm
 private auto sumKahan(Result, R)(Result result, R r)
 {
-    static assert(isFloatingPoint!Result && isMutable!Result);
+    static assert(isFloatingPoint!Result && isMutable!Result, "The type of"
+            ~ " Result must be a mutable floating point, not "
+            ~ Result.stringof);
     Result c = 0;
     for (; !r.empty; r.popFront())
     {

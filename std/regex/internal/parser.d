@@ -42,7 +42,7 @@ auto makeRegex(S, CG)(Parser!(S, CG) p)
         }
         //@@@BUG@@@ (not reduced)
         //somehow just using validate _collides_ with std.utf.validate (!)
-        version(assert) re.validateRe();
+        version (assert) re.validateRe();
     }
     return re;
 }
@@ -842,7 +842,6 @@ if (isForwardRange!R && is(ElementType!R : dchar))
         {
         case '*', '?', '+', '|', '{', '}':
             error("'*', '+', '?', '{', '}' not allowed in atom");
-            break;
         case '.':
             if (re_flags & RegexOption.singleline)
                 g.put(Bytecode(IR.Any, 0));

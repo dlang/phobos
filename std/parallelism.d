@@ -86,19 +86,19 @@ import std.meta;
 import std.range.primitives;
 import std.traits;
 
-version(OSX)
+version (OSX)
 {
     version = useSysctlbyname;
 }
-else version(FreeBSD)
+else version (FreeBSD)
 {
     version = useSysctlbyname;
 }
-else version(DragonFlyBSD)
+else version (DragonFlyBSD)
 {
     version = useSysctlbyname;
 }
-else version(NetBSD)
+else version (NetBSD)
 {
     version = useSysctlbyname;
 }
@@ -443,7 +443,7 @@ struct Task(alias fun, Args...)
         {
             fun(myCastedTask._args);
         }
-        else static if (is(typeof(addressOf(fun(myCastedTask._args)))))
+        else static if (is(typeof(&(fun(myCastedTask._args)))))
         {
             myCastedTask.returnVal = addressOf(fun(myCastedTask._args));
         }
@@ -480,7 +480,7 @@ struct Task(alias fun, Args...)
         static if (isFunctionPointer!(_args[0]))
         {
             private enum bool isPure =
-            functionAttributes!(Args[0]) & FunctionAttribute.pure_;
+            (functionAttributes!(Args[0]) & FunctionAttribute.pure_) != 0;
         }
         else
         {
@@ -558,10 +558,7 @@ struct Task(alias fun, Args...)
     }
     else
     {
-        @disable typeof(this) opAssign(typeof(this) rhs)
-        {
-            assert(0);
-        }
+        @disable typeof(this) opAssign(typeof(this) rhs);
     }
 
     /**
@@ -681,7 +678,7 @@ struct Task(alias fun, Args...)
             if (job !is null)
             {
 
-                version(verboseUnittest)
+                version (verboseUnittest)
                 {
                     stderr.writeln("Doing workForce work.");
                 }
@@ -702,7 +699,7 @@ struct Task(alias fun, Args...)
             }
             else
             {
-                version(verboseUnittest)
+                version (verboseUnittest)
                 {
                     stderr.writeln("Yield from workForce.");
                 }
@@ -850,7 +847,7 @@ void main()
 {
     // Create and execute a Task for reading
     // foo.txt.
-    auto file1Task = task(&read, "foo.txt");
+    auto file1Task = task(&read!string, "foo.txt", size_t.max);
     file1Task.executeInNewThread();
 
     // Read bar.txt in parallel.
@@ -945,7 +942,7 @@ if (is(typeof(fun(args))) && isSafeTask!F)
     return ret;
 }
 
-version(useSysctlbyname)
+version (useSysctlbyname)
     private extern(C) int sysctlbyname(
         const char *, void *, size_t *, void *, size_t
     ) @nogc nothrow;
@@ -959,40 +956,49 @@ alias totalCPUs =
 
 uint totalCPUsImpl() @nogc nothrow @trusted
 {
-    version(Windows)
+    version (Windows)
     {
         // BUGS:  Only works on Windows 2000 and above.
-        import core.sys.windows.windows : SYSTEM_INFO, GetSystemInfo;
+        import core.sys.windows.winbase : SYSTEM_INFO, GetSystemInfo;
         import std.algorithm.comparison : max;
         SYSTEM_INFO si;
         GetSystemInfo(&si);
         return max(1, cast(uint) si.dwNumberOfProcessors);
     }
-    else version(linux)
+    else version (linux)
+    {
+        import core.sys.linux.sched : CPU_COUNT, cpu_set_t, sched_getaffinity;
+        import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
+
+        cpu_set_t set = void;
+        if (sched_getaffinity(0, cpu_set_t.sizeof, &set) == 0)
+        {
+            int count = CPU_COUNT(&set);
+            if (count > 0)
+                return cast(uint) count;
+        }
+        return cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
+    }
+    else version (Solaris)
     {
         import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
         return cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
     }
-    else version(Solaris)
+    else version (useSysctlbyname)
     {
-        import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
-        return cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
-    }
-    else version(useSysctlbyname)
-    {
-        version(OSX)
+        version (OSX)
         {
             auto nameStr = "machdep.cpu.core_count\0".ptr;
         }
-        else version(FreeBSD)
+        else version (FreeBSD)
         {
             auto nameStr = "hw.ncpu\0".ptr;
         }
-        else version(DragonFlyBSD)
+        else version (DragonFlyBSD)
         {
             auto nameStr = "hw.ncpu\0".ptr;
         }
-        else version(NetBSD)
+        else version (NetBSD)
         {
             auto nameStr = "hw.ncpu\0".ptr;
         }
@@ -3001,9 +3007,9 @@ public:
     The main uses cases for `WorkerLocalStorageStorage` are:
 
     1.  Performing parallel reductions with an imperative, as opposed to
-    functional, programming style.  In this case, it's useful to treat
-    `WorkerLocalStorageStorage` as local to each thread for only the parallel
-    portion of an algorithm.
+        functional, programming style.  In this case, it's useful to treat
+        `WorkerLocalStorageStorage` as local to each thread for only the parallel
+        portion of an algorithm.
 
     2.  Recycling temporary buffers across iterations of a parallel foreach loop.
 
@@ -3560,6 +3566,22 @@ ParallelForeach!R parallel(R)(R range, size_t workUnitSize)
     return taskPool.parallel(range, workUnitSize);
 }
 
+// #17019: `each` should be usable with parallel
+@system unittest
+{
+    import std.algorithm.iteration : each, sum;
+    import std.range : iota;
+
+    // check behavior with parallel
+    auto arr = new int[10];
+    parallel(arr).each!((ref e) => e += 1);
+    assert(arr.sum == 10);
+
+    auto arrIndex = new int[10];
+    parallel(arrIndex).each!((i, ref e) => e += i);
+    assert(arrIndex.sum == 10.iota.sum);
+}
+
 // Thrown when a parallel foreach loop is broken from.
 class ParallelForeachError : Error
 {
@@ -4104,10 +4126,10 @@ private struct RoundRobinBuffer(C1, C2)
     }
 }
 
-version(unittest)
+version (unittest)
 {
     // This was the only way I could get nested maps to work.
-    __gshared TaskPool poolInstance;
+    private __gshared TaskPool poolInstance;
 }
 
 // These test basic functionality but don't stress test for threading bugs.
@@ -4523,7 +4545,7 @@ version(unittest)
 
 // These are more like stress tests than real unit tests.  They print out
 // tons of stuff and should not be run every time make unittest is run.
-version(parallelismStressTest)
+version (parallelismStressTest)
 {
     @safe unittest
     {

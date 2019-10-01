@@ -251,10 +251,8 @@ private struct RangeT(A)
 struct Array(T)
 if (!is(Unqual!T == bool))
 {
-    import core.memory : pureMalloc, pureRealloc, pureFree;
-    private alias malloc = pureMalloc;
-    private alias realloc = pureRealloc;
-    private alias free = pureFree;
+    import core.memory : free = pureFree;
+    import std.internal.memory : enforceMalloc, enforceRealloc;
     import core.stdc.string : memcpy, memmove, memset;
 
     import core.memory : GC;
@@ -312,17 +310,23 @@ if (!is(Unqual!T == bool))
             if (_capacity < newLength)
             {
                 // enlarge
-                import core.checkedint : mulu;
+                static if (T.sizeof == 1)
+                {
+                    const nbytes = newLength;
+                }
+                else
+                {
+                    import core.checkedint : mulu;
 
-                bool overflow;
-                const nbytes = mulu(newLength, T.sizeof, overflow);
-                if (overflow)
-                    assert(0);
+                    bool overflow;
+                    const nbytes = mulu(newLength, T.sizeof, overflow);
+                    if (overflow)
+                        assert(0);
+                }
 
                 static if (hasIndirections!T)
                 {
-                    auto newPayloadPtr = cast(T*) malloc(nbytes);
-                    newPayloadPtr || assert(false, "std.container.Array.length failed to allocate memory.");
+                    auto newPayloadPtr = cast(T*) enforceMalloc(nbytes);
                     auto newPayload = newPayloadPtr[0 .. newLength];
                     memcpy(newPayload.ptr, _payload.ptr, startEmplace * T.sizeof);
                     memset(newPayload.ptr + startEmplace, 0,
@@ -334,7 +338,7 @@ if (!is(Unqual!T == bool))
                 }
                 else
                 {
-                    _payload = (cast(T*) realloc(_payload.ptr,
+                    _payload = (cast(T*) enforceRealloc(_payload.ptr,
                             nbytes))[0 .. newLength];
                 }
                 _capacity = newLength;
@@ -354,11 +358,18 @@ if (!is(Unqual!T == bool))
         void reserve(size_t elements)
         {
             if (elements <= capacity) return;
-            import core.checkedint : mulu;
-            bool overflow;
-            const sz = mulu(elements, T.sizeof, overflow);
-            if (overflow)
-                assert(0);
+            static if (T.sizeof == 1)
+            {
+                const sz = elements;
+            }
+            else
+            {
+                import core.checkedint : mulu;
+                bool overflow;
+                const sz = mulu(elements, T.sizeof, overflow);
+                if (overflow)
+                    assert(0);
+            }
             static if (hasIndirections!T)
             {
                 /* Because of the transactional nature of this
@@ -368,8 +379,7 @@ if (!is(Unqual!T == bool))
                  */
                 immutable oldLength = length;
 
-                auto newPayloadPtr = cast(T*) malloc(sz);
-                newPayloadPtr || assert(false, "std.container.Array.reserve failed to allocate memory");
+                auto newPayloadPtr = cast(T*) enforceMalloc(sz);
                 auto newPayload = newPayloadPtr[0 .. oldLength];
 
                 // copy old data over to new array
@@ -386,8 +396,7 @@ if (!is(Unqual!T == bool))
             else
             {
                 // These can't have pointers, so no need to zero unused region
-                auto newPayloadPtr = cast(T*) realloc(_payload.ptr, sz);
-                newPayloadPtr || assert(false, "std.container.Array.reserve failed to allocate memory");
+                auto newPayloadPtr = cast(T*) enforceRealloc(_payload.ptr, sz);
                 auto newPayload = newPayloadPtr[0 .. length];
                 _payload = newPayload;
             }
@@ -440,12 +449,20 @@ if (!is(Unqual!T == bool))
     this(U)(U[] values...)
     if (isImplicitlyConvertible!(U, T))
     {
-        import core.checkedint : mulu;
         import std.conv : emplace;
-        bool overflow;
-        const nbytes = mulu(values.length, T.sizeof, overflow);
-        if (overflow) assert(0);
-        auto p = cast(T*) malloc(nbytes);
+
+        static if (T.sizeof == 1)
+        {
+            const nbytes = values.length;
+        }
+        else
+        {
+            import core.checkedint : mulu;
+            bool overflow;
+            const nbytes = mulu(values.length, T.sizeof, overflow);
+            if (overflow) assert(0);
+        }
+        auto p = cast(T*) enforceMalloc(nbytes);
         static if (hasIndirections!T)
         {
             if (p)
@@ -563,12 +580,18 @@ if (!is(Unqual!T == bool))
         if (!_data.refCountedStore.isInitialized)
         {
             if (!elements) return;
-            import core.checkedint : mulu;
-            bool overflow;
-            const sz = mulu(elements, T.sizeof, overflow);
-            if (overflow) assert(0);
-            auto p = malloc(sz);
-            p || assert(false, "std.container.Array.reserve failed to allocate memory");
+            static if (T.sizeof == 1)
+            {
+                const sz = elements;
+            }
+            else
+            {
+                import core.checkedint : mulu;
+                bool overflow;
+                const sz = mulu(elements, T.sizeof, overflow);
+                if (overflow) assert(0);
+            }
+            auto p = enforceMalloc(sz);
             static if (hasIndirections!T)
             {
                 GC.addRange(p, sz);
@@ -1664,8 +1687,9 @@ if (is(Unqual!T == bool))
         /// ditto
         Range opSlice(size_t low, size_t high)
         {
+            // Note: indexes start at 0, which is equivalent to _a
             assert(
-                _a <= low && low <= high && high <= _b,
+                low <= high && high <= (_b - _a),
                 "Using out of bounds indexes on an Array"
             );
             return Range(_outer, _a + low, _a + high);
@@ -2178,6 +2202,7 @@ if (is(Unqual!T == bool))
     slice.front = true;
     slice.back = true;
     slice[1] = true;
+    slice = slice[0 .. $]; // bug 19171
     assert(slice.front == true);
     assert(slice.back == true);
     assert(slice[1] == true);

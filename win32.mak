@@ -36,18 +36,18 @@ CFLAGS=-mn -6 -r
 
 ## Location of druntime tree
 
-DRUNTIME=..\druntime
-DRUNTIMELIB=$(DRUNTIME)\lib\druntime.lib
+DRUNTIME=../druntime
+DRUNTIMELIB=$(DRUNTIME)/lib/druntime.lib
 
 ## Flags for dmd D compiler
 
-DFLAGS=-conf= -O -release -w -de -dip25 -I$(DRUNTIME)\import
+DFLAGS=-conf= -O -release -w -de -preview=dip1000 -transition=complex -I$(DRUNTIME)\import
 #DFLAGS=-unittest -g
 #DFLAGS=-unittest -cov -g
 
 ## Flags for compiling unittests
 
-UDFLAGS=-unittest -conf= -O -w -dip25 -I$(DRUNTIME)\import
+UDFLAGS=-unittest -conf= -O -w -preview=dip1000 -transition=complex -I$(DRUNTIME)\import
 
 ## C compiler
 
@@ -57,10 +57,10 @@ MAKE=make
 
 ## D compiler
 
-DMD_DIR=..\dmd
+DMD_DIR=../dmd
 BUILD=release
 OS=windows
-DMD=$(DMD_DIR)\generated\$(OS)\$(BUILD)\$(MODEL)\dmd
+DMD=$(DMD_DIR)/generated/$(OS)/$(BUILD)/$(MODEL)/dmd
 
 ## Zlib library
 
@@ -154,7 +154,8 @@ SRC_STD_7= \
 	std\json.d \
 	std\parallelism.d \
 	std\mathspecial.d \
-	std\process.d
+	std\process.d \
+	std\package.d
 
 SRC_STD= \
 	$(SRC_STD_1) \
@@ -534,4 +535,9 @@ install: phobos.zip
 
 auto-tester-build: targets
 
-auto-tester-test: unittest
+JOBS=$(NUMBER_OF_PROCESSORS)
+GMAKE=gmake
+
+auto-tester-test:
+	$(GMAKE) -j$(JOBS) -f posix.mak unittest BUILD=release DMD="$(DMD)" OS=win$(MODEL) \
+	CUSTOM_DRUNTIME=1 PIC=0 MODEL=$(MODEL) DRUNTIME=$(DRUNTIMELIB) CC=$(CC)

@@ -58,13 +58,13 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
  */
 module std.algorithm.comparison;
 
-// FIXME
-import std.functional; // : unaryFun, binaryFun;
+import std.functional : unaryFun, binaryFun;
 import std.range.primitives;
 import std.traits;
-// FIXME
 import std.meta : allSatisfy;
-import std.typecons; // : tuple, Tuple, Flag, Yes;
+import std.typecons : tuple, Tuple, Flag, Yes;
+
+import std.internal.attributes : betterC;
 
 /**
 Find `value` _among `values`, returning the 1-based index
@@ -116,7 +116,7 @@ if (isExpressionTuple!values)
 }
 
 ///
-@safe unittest
+@safe @betterC unittest
 {
     assert(3.among(1, 42, 24, 3, 2));
 
@@ -133,7 +133,7 @@ if (isExpressionTuple!values)
 Alternatively, `values` can be passed at compile-time, allowing for a more
 efficient search, but one that only supports matching on equality:
 */
-@safe unittest
+@safe @betterC unittest
 {
     assert(3.among!(2, 3, 4));
     assert("bar".among!("foo", "bar", "baz") == 2);
@@ -541,7 +541,7 @@ do
 }
 
 ///
-@safe unittest
+@safe @betterC unittest
 {
     assert(clamp(2, 1, 3) == 2);
     assert(clamp(0, 1, 3) == 1);
@@ -617,7 +617,19 @@ Note:
 auto cmp(R1, R2)(R1 r1, R2 r2)
 if (isInputRange!R1 && isInputRange!R2)
 {
-    static if (!(isSomeString!R1 && isSomeString!R2))
+    alias E1 = ElementEncodingType!R1;
+    alias E2 = ElementEncodingType!R2;
+
+    static if (isDynamicArray!R1 && isDynamicArray!R2
+        && __traits(isUnsigned, E1) && __traits(isUnsigned, E2)
+        && E1.sizeof == 1 && E2.sizeof == 1
+        && (is(Unqual!E1 == char) == is(Unqual!E2 == char))) // Both or neither must auto-decode.
+    {
+        // dstrcmp algorithm is correct for both ubyte[] and for char[].
+        import core.internal.string : dstrcmp;
+        return dstrcmp(cast(const char[]) r1, cast(const char[]) r2);
+    }
+    else static if (!(isSomeString!R1 && isSomeString!R2))
     {
         for (;; r1.popFront(), r2.popFront())
         {
@@ -642,66 +654,33 @@ if (isInputRange!R1 && isInputRange!R2)
     }
     else
     {
-        import core.stdc.string : memcmp;
-        import std.utf : decode;
-
-        // For speed only
-        static int threeWay(size_t a, size_t b)
-        {
-            static if (size_t.sizeof == int.sizeof)
-                return a - b;
-            else
-                // Faster than return b < a ? 1 : a < b ? -1 : 0;
-                return (a > b) - (a < b);
-        }
-        // For speed only
-        // @@@BUG@@@ overloading should be allowed for nested functions
-        static int threeWayInt(int a, int b)
-        {
-            return a - b;
-        }
-
         static if (typeof(r1[0]).sizeof == typeof(r2[0]).sizeof)
         {
-            static if (typeof(r1[0]).sizeof == 1)
+            return () @trusted
             {
-                immutable len = min(r1.length, r2.length);
-                int result = __ctfe ?
-                    {
-                        foreach (i; 0 .. len)
-                        {
-                            if (r1[i] != r2[i])
-                                return threeWayInt(r1[i], r2[i]);
-                        }
-                        return 0;
-                    }()
-                    : () @trusted { return memcmp(r1.ptr, r2.ptr, len); }();
-                if (result) return result;
-                return threeWay(r1.length, r2.length);
-            }
-            else
-            {
-                return () @trusted
+                auto p1 = r1.ptr, p2 = r2.ptr,
+                    pEnd = p1 + min(r1.length, r2.length);
+                for (; p1 != pEnd; ++p1, ++p2)
                 {
-                    auto p1 = r1.ptr, p2 = r2.ptr,
-                        pEnd = p1 + min(r1.length, r2.length);
-                    for (; p1 != pEnd; ++p1, ++p2)
-                    {
-                        if (*p1 != *p2) return threeWayInt(int(*p1), int(*p2));
-                    }
-                    return threeWay(r1.length, r2.length);
-                }();
-            }
+                    if (*p1 != *p2) return cast(int) *p1 - cast(int) *p2;
+                }
+                static if (typeof(r1[0]).sizeof >= 2 && size_t.sizeof <= uint.sizeof)
+                    return cast(int) r1.length - cast(int) r2.length;
+                else
+                    return int(r1.length > r2.length) - int(r1.length < r2.length);
+            }();
         }
         else
         {
+            import std.utf : decode;
+
             for (size_t i1, i2;;)
             {
-                if (i1 == r1.length) return threeWay(i2, r2.length);
-                if (i2 == r2.length) return threeWay(r1.length, i1);
+                if (i1 == r1.length) return -int(i2 < r2.length);
+                if (i2 == r2.length) return int(1);
                 immutable c1 = decode(r1, i1),
                     c2 = decode(r2, i2);
-                if (c1 != c2) return threeWayInt(int(c1), int(c2));
+                if (c1 != c2) return cast(int) c1 - cast(int) c2;
             }
         }
     }
@@ -1239,7 +1218,8 @@ private:
         import core.checkedint : mulu;
         bool overflow;
         const rc = mulu(r, c, overflow);
-        if (overflow) assert(0);
+        assert(!overflow, "Overflow during multiplication to determine number "
+                ~ " of matrix elements");
         rows = r;
         cols = c;
         if (_matrix.length < rc)
@@ -1247,7 +1227,8 @@ private:
             import core.exception : onOutOfMemoryError;
             import core.stdc.stdlib : realloc;
             const nbytes = mulu(rc, _matrix[0].sizeof, overflow);
-            if (overflow) assert(0);
+            assert(!overflow, "Overflow during multiplication to determine "
+                ~ " number of bytes of matrix");
             auto m = cast(CostType *) realloc(_matrix.ptr, nbytes);
             if (!m)
                 onOutOfMemoryError();
@@ -1361,7 +1342,7 @@ Returns the $(HTTP wikipedia.org/wiki/Levenshtein_distance, Levenshtein
 distance) between `s` and `t`. The Levenshtein distance computes
 the minimal amount of edit operations necessary to transform `s`
 into `t`.  Performs $(BIGOH s.length * t.length) evaluations of $(D
-equals) and occupies $(BIGOH s.length * t.length) storage.
+equals) and occupies $(BIGOH min(s.length, t.length)) storage.
 
 Params:
     equals = The binary predicate to compare the elements of the two ranges.
@@ -1409,7 +1390,7 @@ if (isForwardRange!(Range1) && isForwardRange!(Range2))
         return eq(s.front, t.front) ? 0 : 1;
     }
 
-    if (slen > tlen)
+    if (slen < tlen)
     {
         Levenshtein!(Range1, eq, size_t) lev;
         return lev.distanceLowMem(s, t, slen, tlen);
@@ -1564,9 +1545,9 @@ if (T.length >= 2)
         auto b = max(args[($+1)/2 .. $]);
     alias T1 = typeof(b);
 
-    import std.algorithm.internal : algoFormat;
     static assert(is(typeof(a < b)),
-        algoFormat("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
+        "Invalid arguments: Cannot compare types " ~ T0.stringof ~
+        " and " ~ T1.stringof ~ ".");
 
     //Do the "max" proper with a and b
     import std.functional : lessThan;
@@ -1575,7 +1556,7 @@ if (T.length >= 2)
 }
 
 ///
-@safe unittest
+@safe @betterC unittest
 {
     int a = 5;
     short b = 6;
@@ -1676,9 +1657,9 @@ if (T.length >= 2)
         auto b = min(args[($+1)/2 .. $]);
     alias T1 = typeof(b);
 
-    import std.algorithm.internal : algoFormat;
     static assert(is(typeof(a < b)),
-        algoFormat("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
+        "Invalid arguments: Cannot compare types " ~ T0.stringof ~
+        " and " ~ T1.stringof ~ ".");
 
     //Do the "min" proper with a and b
     import std.functional : lessThan;
@@ -1687,7 +1668,7 @@ if (T.length >= 2)
 }
 
 ///
-@safe unittest
+@safe @betterC unittest
 {
     int a = 5;
     short b = 6;
@@ -1698,15 +1679,23 @@ if (T.length >= 2)
     auto e = min(a, b, c);
     static assert(is(typeof(e) == double));
     assert(e == 2);
+}
 
-    // With arguments of mixed signedness, the return type is the one that can
-    // store the lowest values.
-    a = -10;
+/**
+With arguments of mixed signedness, the return type is the one that can
+store the lowest values.
+*/
+@safe @betterC unittest
+{
+    int a = -10;
     uint f = 10;
     static assert(is(typeof(min(a, f)) == int));
     assert(min(a, f) == -10);
+}
 
-    // User-defined types that support comparison with < are supported.
+/// User-defined types that support comparison with < are supported.
+@safe unittest
+{
     import std.datetime;
     assert(min(Date(2012, 12, 21), Date(1982, 1, 4)) == Date(1982, 1, 4));
     assert(min(Date(1982, 1, 4), Date(2012, 12, 21)) == Date(1982, 1, 4));
@@ -1762,8 +1751,8 @@ expression.
 
 `choices` needs to be composed of pairs of test expressions and return
 expressions. Each test-expression is compared with `switchExpression` using
-`pred`(`switchExpression` is the first argument) and if that yields true
-- the return expression is returned.
+`pred`(`switchExpression` is the first argument) and if that yields true -
+the return expression is returned.
 
 Both the test and the return expressions are lazily evaluated.
 
@@ -1985,7 +1974,7 @@ if (isInputRange!Range1 &&
 }
 
 // Test CTFE
-@safe pure unittest
+@safe pure @betterC unittest
 {
     enum result1 = isSameLength([1, 2, 3], [4, 5, 6]);
     static assert(result1);
@@ -2273,7 +2262,7 @@ if (alternatives.length >= 1 &&
 }
 
 ///
-@safe pure unittest
+@safe pure @betterC unittest
 {
     const a = 1;
     const b = 2;
@@ -2292,7 +2281,11 @@ if (alternatives.length >= 1 &&
     auto ef = either(e, f);
     static assert(is(typeof(ef) == int));
     assert(ef == f);
+}
 
+///
+@safe pure unittest
+{
     immutable p = 1;
     immutable q = 2;
     auto pq = either(p, q);
@@ -2303,7 +2296,11 @@ if (alternatives.length >= 1 &&
     assert(either(0, 4) == 4);
     assert(either(0, 0) == 0);
     assert(either("", "a") == "");
+}
 
+///
+@safe pure unittest
+{
     string r = null;
     assert(either(r, "a") == "a");
     assert(either("a", "") == "a");

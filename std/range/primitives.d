@@ -1,6 +1,9 @@
 /**
 This module is a submodule of $(MREF std, range).
 
+It defines the bidirectional and forward range primitives for arrays:
+$(LREF empty), $(LREF front), $(LREF back), $(LREF popFront), $(LREF popBack) and $(LREF save).
+
 It provides basic range functionality by defining several templates for testing
 whether a given object is a range, and what kind of range it is:
 
@@ -253,7 +256,7 @@ enum bool isInputRange(R) =
 puts the whole raw element `e` into `r`. doPut will not attempt to
 iterate, slice or transcode `e` in any way shape or form. It will $(B only)
 call the correct primitive (`r.put(e)`,  $(D r.front = e) or
-`r(0)` once.
+`r(e)` once.
 
 This can be important when `e` needs to be placed in `r` unchanged.
 Furthermore, it can be useful when working with `InputRange`s, as doPut
@@ -271,6 +274,20 @@ private void doPut(R, E)(ref R r, auto ref E e)
         static assert(is(typeof(r.put(e))),
             "Cannot put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
         r.put(e);
+    }
+    else static if (isNarrowString!R && is(const(E) == const(typeof(r[0]))))
+    {
+        // one character, we can put it
+        r[0] = e;
+        r = r[1 .. $];
+    }
+    else static if (isNarrowString!R && isNarrowString!E && is(typeof(r[] = e)))
+    {
+        // slice assign. Note that this is a duplicate from put, but because
+        // putChar uses doPut exclusively, we have to copy it here.
+        immutable len = e.length;
+        r[0 .. len] = e;
+        r = r[len .. $];
     }
     else static if (isInputRange!R)
     {
@@ -308,7 +325,7 @@ private void doPut(R, E)(ref R r, auto ref E e)
     static assert( isNativeOutputRange!(int[4][], int)); //Scary!
     static assert( isNativeOutputRange!(int[4][], int[4]));
 
-    static assert(!isNativeOutputRange!( char[],   char));
+    static assert( isNativeOutputRange!( char[],   char));
     static assert(!isNativeOutputRange!( char[],  dchar));
     static assert( isNativeOutputRange!(dchar[],   char));
     static assert( isNativeOutputRange!(dchar[],  dchar));
@@ -362,7 +379,10 @@ void put(R, E)(ref R r, E e)
         doPut(r, e);
     }
     //Optional optimization block for straight up array to array copy.
-    else static if (isDynamicArray!R && !isNarrowString!R && isDynamicArray!E && is(typeof(r[] = e[])))
+    else static if (isDynamicArray!R &&
+                    !(isAutodecodableString!R && !isAggregateType!R) &&
+                    isDynamicArray!E &&
+                    is(typeof(r[] = e[])))
     {
         immutable len = e.length;
         r[0 .. len] = e[];
@@ -390,7 +410,7 @@ void put(R, E)(ref R r, E e)
     {
         //Special optimization: If E is a narrow string, and r accepts characters no-wider than the string's
         //Then simply feed the characters 1 by 1.
-        static if (isNarrowString!E && (
+        static if (isAutodecodableString!E && !isAggregateType!E && (
             (is(E : const  char[]) && is(typeof(doPut(r,  char.max))) && !is(typeof(doPut(r, dchar.max))) &&
                 !is(typeof(doPut(r, wchar.max)))) ||
             (is(E : const wchar[]) && is(typeof(doPut(r, wchar.max))) && !is(typeof(doPut(r, dchar.max)))) ) )
@@ -453,25 +473,35 @@ void put(R, E)(ref R r, E e)
 }
 
 /**
- * Because of auto-decoding, the `front` of a `string` is a `dchar`,
- * so using `put` with `char` arrays is disallowed. In order to fill
- * any `char` type array, use $(REF byCodeUnit, std, utf).
+ * It's also possible to `put` any width strings or characters into narrow
+ * strings -- put does the conversion for you.
+ *
+ * Note that putting the same width character as the target buffer type is
+ * `nothrow`, but transcoding can throw a $(REF UTFException, std, utf).
  */
-@safe pure nothrow unittest
+@safe pure unittest
 {
-    import std.utf : byCodeUnit;
-
     // the elements must be mutable, so using string or const(char)[]
     // won't compile
     char[] s1 = new char[13];
-    auto r1 = s1.byCodeUnit;
+    auto r1 = s1;
+    put(r1, "Hello, World!"w);
+    assert(s1 == "Hello, World!");
+}
+
+@safe pure nothrow unittest
+{
+    // same thing, just using same character width.
+    char[] s1 = new char[13];
+    auto r1 = s1;
     put(r1, "Hello, World!");
     assert(s1 == "Hello, World!");
 }
 
+
 @safe pure nothrow @nogc unittest
 {
-    static struct R() { void put(in char[]) {} }
+    static struct R() { void put(scope const(char)[]) {} }
     R!() r;
     put(r, 'a');
 }
@@ -486,9 +516,9 @@ if (isSomeChar!E)
     ref const(wchar)[] wstringInit();
     ref const(dchar)[] dstringInit();
 
-    enum csCond = !isDynamicArray!R && is(typeof(doPut(r, cstringInit())));
-    enum wsCond = !isDynamicArray!R && is(typeof(doPut(r, wstringInit())));
-    enum dsCond = !isDynamicArray!R && is(typeof(doPut(r, dstringInit())));
+    enum csCond = is(typeof(doPut(r, cstringInit())));
+    enum wsCond = is(typeof(doPut(r, wstringInit())));
+    enum dsCond = is(typeof(doPut(r, dstringInit())));
 
     //Use "max" to avoid static type demotion
     enum ccCond = is(typeof(doPut(r,  char.max)));
@@ -532,7 +562,7 @@ pure @safe unittest
 
 @safe pure unittest
 {
-    static struct R() { void put(in char[]) {} }
+    static struct R() { void put(scope const(char)[]) {} }
     R!() r;
     putChar(r, 'a');
 }
@@ -559,7 +589,7 @@ pure @safe unittest
 
 @safe unittest
 {
-    void myprint(in char[] s) { }
+    void myprint(scope const(char)[] s) { }
     auto r = &myprint;
     put(r, 'a');
 }
@@ -585,9 +615,64 @@ pure @safe unittest
     char[] a = new char[10];
     static assert(!__traits(compiles, put(a, 1.0L)));
     static assert(!__traits(compiles, put(a, 1)));
-    // char[] is NOT output range.
-    static assert(!__traits(compiles, put(a, 'a')));
-    static assert(!__traits(compiles, put(a, "ABC")));
+    //char[] is now an output range for char, wchar, dchar, and ranges of such.
+    static assert(__traits(compiles, putChar(a, 'a')));
+    static assert(__traits(compiles, put(a, wchar('a'))));
+    static assert(__traits(compiles, put(a, dchar('a'))));
+    static assert(__traits(compiles, put(a, "ABC")));
+    static assert(__traits(compiles, put(a, "ABC"w)));
+    static assert(__traits(compiles, put(a, "ABC"d)));
+}
+
+@safe unittest
+{
+    // attempt putting into narrow strings by transcoding
+    char[] a = new char[10];
+    auto b = a;
+    put(a, "ABC"w);
+    assert(b[0 .. 3] == "ABC");
+    assert(a.length == 7);
+
+    a = b; // reset
+    put(a, 'λ');
+    assert(b[0 .. 2] == "λ");
+    assert(a.length == 8);
+
+    a = b; // reset
+    put(a, "ABC"d);
+    assert(b[0 .. 3] == "ABC");
+    assert(a.length == 7);
+
+    a = b; // reset
+    put(a, '𐐷');
+    assert(b[0 .. 4] == "𐐷");
+    assert(a.length == 6);
+
+    wchar[] aw = new wchar[10];
+    auto bw = aw;
+    put(aw, "ABC");
+    assert(bw[0 .. 3] == "ABC"w);
+    assert(aw.length == 7);
+
+    aw = bw; // reset
+    put(aw, 'λ');
+    assert(bw[0 .. 1] == "λ"w);
+    assert(aw.length == 9);
+
+    aw = bw; // reset
+    put(aw, "ABC"d);
+    assert(bw[0 .. 3] == "ABC"w);
+    assert(aw.length == 7);
+
+    aw = bw; // reset
+    put(aw, '𐐷');
+    assert(bw[0 .. 2] == "𐐷"w);
+    assert(aw.length == 8);
+
+    aw = bw; // reset
+    put(aw, "𐐷"); // try transcoding from char[]
+    assert(bw[0 .. 2] == "𐐷"w);
+    assert(aw.length == 8);
 }
 
 @safe unittest
@@ -730,7 +815,7 @@ pure @safe unittest
     // issue 10571
     import std.format;
     string buf;
-    formattedWrite((in char[] s) { buf ~= s; }, "%s", "hello");
+    formattedWrite((scope const(char)[] s) { buf ~= s; }, "%s", "hello");
     assert(buf == "hello");
 }
 
@@ -830,10 +915,10 @@ enum bool isOutputRange(R, E) =
 ///
 @safe unittest
 {
-    void myprint(in char[] s) { }
+    void myprint(scope const(char)[] s) { }
     static assert(isOutputRange!(typeof(&myprint), char));
 
-    static assert(!isOutputRange!(char[], char));
+    static assert( isOutputRange!(char[], char));
     static assert( isOutputRange!(dchar[], wchar));
     static assert( isOutputRange!(dchar[], dchar));
 }
@@ -848,7 +933,7 @@ enum bool isOutputRange(R, E) =
     static assert( isOutputRange!(Appender!string, string));
     static assert( isOutputRange!(Appender!string*, string));
     static assert(!isOutputRange!(Appender!string, int));
-    static assert(!isOutputRange!(wchar[], wchar));
+    static assert( isOutputRange!(wchar[], wchar));
     static assert( isOutputRange!(dchar[], char));
     static assert( isOutputRange!(dchar[], string));
     static assert( isOutputRange!(dchar[], wstring));
@@ -998,7 +1083,7 @@ See_Also:
  */
 enum bool isRandomAccessRange(R) =
     is(typeof(lvalueOf!R[1]) == ElementType!R)
-    && !isNarrowString!R
+    && !(isAutodecodableString!R && !isAggregateType!R)
     && isForwardRange!R
     && (isBidirectionalRange!R || isInfinite!R)
     && (hasLength!R || isInfinite!R)
@@ -1008,7 +1093,7 @@ enum bool isRandomAccessRange(R) =
 ///
 @safe unittest
 {
-    import std.traits : isNarrowString;
+    import std.traits : isAggregateType, isAutodecodableString;
 
     alias R = int[];
 
@@ -1020,7 +1105,7 @@ enum bool isRandomAccessRange(R) =
     auto e = r[1]; // can index
     auto f = r.front;
     static assert(is(typeof(e) == typeof(f))); // same type for indexed and front
-    static assert(!isNarrowString!R); // narrow strings cannot be indexed as ranges
+    static assert(!(isAutodecodableString!R && !isAggregateType!R)); // narrow strings cannot be indexed as ranges
     static assert(hasLength!R || isInfinite!R); // must have length or be infinite
 
     // $ must work as it does with arrays if opIndex works with $
@@ -1404,11 +1489,19 @@ static if (isRandomAccessRange!R) passByRef(r[0]);
 ----
 */
 enum bool hasLvalueElements(R) = isInputRange!R
-    && is(typeof(((ref x) => x)(lvalueOf!R.front)))
+    && is(typeof(isLvalue(lvalueOf!R.front)))
     && (!isBidirectionalRange!R
-        || is(typeof(((ref x) => x)(lvalueOf!R.back))))
+        || is(typeof(isLvalue(lvalueOf!R.back))))
     && (!isRandomAccessRange!R
-        || is(typeof(((ref x) => x)(lvalueOf!R[0]))));
+        || is(typeof(isLvalue(lvalueOf!R[0]))));
+
+/* Compile successfully if argument of type T is an lvalue
+ */
+private void isLvalue(T)(T)
+if (0);
+
+private void isLvalue(T)(ref T)
+if (1);
 
 ///
 @safe unittest
@@ -1458,7 +1551,8 @@ length, use $(REF representation, std, string) or $(REF byCodeUnit, std, utf).
 template hasLength(R)
 {
     static if (is(typeof(((R* r) => r.length)(null)) Length))
-        enum bool hasLength = is(Length == size_t) && !isNarrowString!R;
+        enum bool hasLength = is(Length == size_t) &&
+                              !(isAutodecodableString!R && !isAggregateType!R);
     else
         enum bool hasLength = false;
 }
@@ -1487,7 +1581,7 @@ template hasLength(R)
         static assert(!hasLength!(A));
         static assert(hasLength!(B));
     }
-    else version(X86_64)
+    else version (X86_64)
     {
         static assert(hasLength!(A));
         static assert(!hasLength!(B));
@@ -1569,7 +1663,7 @@ The following expression must be true for `hasSlicing` to be `true`:
 ----
  */
 enum bool hasSlicing(R) = isForwardRange!R
-    && !isNarrowString!R
+    && !(isAutodecodableString!R && !isAggregateType!R)
     && is(ReturnType!((R r) => r[1 .. 1].length) == size_t)
     && (is(typeof(lvalueOf!R[1 .. 1]) == R) || isInfinite!R)
     && (!is(typeof(lvalueOf!R[0 .. $])) || is(typeof(lvalueOf!R[0 .. $]) == R))
@@ -2087,8 +2181,8 @@ obey $(LREF hasLength) property and for narrow strings. Due to the
 fact that nonmember functions can be called with the first argument
 using the dot notation, `a.empty` is equivalent to `empty(a)`.
  */
-@property bool empty(T)(auto ref scope const(T) a)
-if (is(typeof(a.length) : size_t) || isNarrowString!T)
+@property bool empty(T)(auto ref scope T a)
+if (is(typeof(a.length) : size_t))
 {
     return !a.length;
 }
@@ -2113,7 +2207,7 @@ the first argument using the dot notation, `array.save` is
 equivalent to `save(array)`. The function does not duplicate the
 content of the array, it simply returns its argument.
  */
-@property T[] save(T)(T[] a) @safe pure nothrow @nogc
+@property inout(T)[] save(T)(return scope inout(T)[] a) @safe pure nothrow @nogc
 {
     return a;
 }
@@ -2134,8 +2228,8 @@ equivalent to `popFront(array)`. For $(GLOSSARY narrow strings),
 `popFront` automatically advances to the next $(GLOSSARY code
 point).
 */
-void popFront(T)(ref T[] a) @safe pure nothrow @nogc
-if (!isNarrowString!(T[]) && !is(T[] == void[]))
+void popFront(T)(scope ref inout(T)[] a) @safe pure nothrow @nogc
+if (!(isAutodecodableString!(T[]) && !isAggregateType!(T[])) && !is(T[] == void[]))
 {
     assert(a.length, "Attempting to popFront() past the end of an array of " ~ T.stringof);
     a = a[1 .. $];
@@ -2157,8 +2251,8 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
 }
 
 /// ditto
-void popFront(C)(ref C[] str) @trusted pure nothrow
-if (isNarrowString!(C[]))
+void popFront(C)(scope ref inout(C)[] str) @trusted pure nothrow
+if (isAutodecodableString!(C[]) && !isAggregateType!(C[]))
 {
     import std.algorithm.comparison : min;
 
@@ -2255,8 +2349,8 @@ the first argument using the dot notation, `array.popBack` is
 equivalent to `popBack(array)`. For $(GLOSSARY narrow strings), $(D
 popFront) automatically eliminates the last $(GLOSSARY code point).
 */
-void popBack(T)(ref T[] a) @safe pure nothrow @nogc
-if (!isNarrowString!(T[]) && !is(T[] == void[]))
+void popBack(T)(scope ref inout(T)[] a) @safe pure nothrow @nogc
+if (!(isAutodecodableString!(T[]) && !isAggregateType!(T[])) && !is(T[] == void[]))
 {
     assert(a.length);
     a = a[0 .. $ - 1];
@@ -2278,8 +2372,8 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
 }
 
 /// ditto
-void popBack(T)(ref T[] a) @safe pure
-if (isNarrowString!(T[]))
+void popBack(T)(scope ref inout(T)[] a) @safe pure
+if (isAutodecodableString!(T[]) && !isAggregateType!(T[]))
 {
     import std.utf : strideBack;
     assert(a.length, "Attempting to popBack() past the front of an array of " ~ T.stringof);
@@ -2315,6 +2409,12 @@ if (isNarrowString!(T[]))
 }
 
 /**
+Autodecoding is enabled if this is set to true.
+*/
+
+enum autodecodeStrings = true;
+
+/**
 Implements the range interface primitive `front` for built-in
 arrays. Due to the fact that nonmember functions can be called with
 the first argument using the dot notation, `array.front` is
@@ -2322,8 +2422,8 @@ equivalent to `front(array)`. For $(GLOSSARY narrow strings), $(D
 front) automatically returns the first $(GLOSSARY code point) as _a $(D
 dchar).
 */
-@property ref T front(T)(T[] a) @safe pure nothrow @nogc
-if (!isNarrowString!(T[]) && !is(T[] == void[]))
+@property ref inout(T) front(T)(return scope inout(T)[] a) @safe pure nothrow @nogc
+if (!(isAutodecodableString!(T[]) && !isAggregateType!(T[])) && !is(T[] == void[]))
 {
     assert(a.length, "Attempting to fetch the front of an empty array of " ~ T.stringof);
     return a[0];
@@ -2351,8 +2451,8 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
 }
 
 /// ditto
-@property dchar front(T)(T[] a) @safe pure
-if (isNarrowString!(T[]))
+@property dchar front(T)(scope const(T)[] a) @safe pure
+if (isAutodecodableString!(T[]) && !isAggregateType!(T[]))
 {
     import std.utf : decode;
     assert(a.length, "Attempting to fetch the front of an empty array of " ~ T.stringof);
@@ -2368,8 +2468,8 @@ equivalent to `back(array)`. For $(GLOSSARY narrow strings), $(D
 back) automatically returns the last $(GLOSSARY code point) as _a $(D
 dchar).
 */
-@property ref T back(T)(T[] a) @safe pure nothrow @nogc
-if (!isNarrowString!(T[]) && !is(T[] == void[]))
+@property ref inout(T) back(T)(return scope inout(T)[] a) @safe pure nothrow @nogc
+if (!(isAutodecodableString!(T[]) && !isAggregateType!(T[])) && !is(T[] == void[]))
 {
     assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);
     return a[$ - 1];
@@ -2395,8 +2495,8 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
 
 /// ditto
 // Specialization for strings
-@property dchar back(T)(T[] a) @safe pure
-if (isNarrowString!(T[]))
+@property dchar back(T)(scope const(T)[] a) @safe pure
+if (isAutodecodableString!(T[]) && !isAggregateType!(T[]))
 {
     import std.utf : decode, strideBack;
     assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);

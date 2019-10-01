@@ -880,12 +880,14 @@ public struct UUID
                 const uint lo = (entry) & 0x0F;
                 result[pos+1] = toChar!char(lo);
             }
-            foreach (i, c; result)
+            static if (!__traits(compiles, put(sink, result[])) || isSomeString!Writer)
             {
-                static if (__traits(compiles, put(sink, c)))
-                    put(sink, c);
-                else
+                foreach (i, c; result)
                     sink[i] = cast(typeof(sink[i]))c;
+            }
+            else
+            {
+                put(sink, result[]);
             }
         }
 
@@ -1208,7 +1210,25 @@ public struct UUID
 @safe UUID randomUUID()
 {
     import std.random : rndGen;
-    return randomUUID(rndGen);
+    // A PRNG with fewer than `n` bytes of state cannot produce
+    // every distinct `n` byte sequence.
+    static if (typeof(rndGen).sizeof >= UUID.sizeof)
+    {
+        return randomUUID(rndGen);
+    }
+    else
+    {
+        import std.random : unpredictableSeed, Xorshift192;
+        static assert(Xorshift192.sizeof >= UUID.sizeof);
+        static Xorshift192 rng;
+        static bool initialized;
+        if (!initialized)
+        {
+            rng.seed(unpredictableSeed);
+            initialized = true;
+        }
+        return randomUUID(rng);
+    }
 }
 
 /// ditto
@@ -1256,18 +1276,6 @@ if (isInputRange!RNG && isIntegral!(ElementType!RNG))
 
     gen.seed(unpredictableSeed);
     auto uuid3 = randomUUID(gen);
-}
-
-/*
- * Original boost.uuid used Mt19937, we don't want
- * to use anything worse than that. If Random is changed
- * to something else, this assert and the randomUUID function
- * have to be updated.
- */
-@safe unittest
-{
-    import std.random : rndGen, Mt19937;
-    static assert(is(typeof(rndGen) == Mt19937));
 }
 
 @safe unittest

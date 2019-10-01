@@ -81,8 +81,7 @@ import std.range.primitives;
 import std.traits : isArray, isAssignable, isBlitAssignable, isNarrowString,
        Unqual, isSomeChar, isMutable;
 import std.meta : allSatisfy;
-// FIXME
-import std.typecons; // : tuple, Tuple;
+import std.typecons : tuple, Tuple;
 
 // bringToFront
 /**
@@ -366,57 +365,56 @@ Returns:
     The unfilled part of target
  */
 TargetRange copy(SourceRange, TargetRange)(SourceRange source, TargetRange target)
-if (areCopyCompatibleArrays!(SourceRange, TargetRange))
+if (isInputRange!SourceRange && isOutputRange!(TargetRange, ElementType!SourceRange))
 {
-    const tlen = target.length;
-    const slen = source.length;
-    assert(tlen >= slen,
-            "Cannot copy a source range into a smaller target range.");
-
-    immutable overlaps = __ctfe || () @trusted {
-        return source.ptr < target.ptr + tlen &&
-               target.ptr < source.ptr + slen; }();
-
-    if (overlaps)
+    static if (areCopyCompatibleArrays!(SourceRange, TargetRange))
     {
-        foreach (idx; 0 .. slen)
-            target[idx] = source[idx];
-        return target[slen .. tlen];
+        const tlen = target.length;
+        const slen = source.length;
+        assert(tlen >= slen,
+                "Cannot copy a source range into a smaller target range.");
+
+        immutable overlaps = __ctfe || () @trusted {
+            return source.ptr < target.ptr + tlen &&
+                target.ptr < source.ptr + slen; }();
+
+        if (overlaps)
+        {
+            foreach (idx; 0 .. slen)
+                target[idx] = source[idx];
+            return target[slen .. tlen];
+        }
+        else
+        {
+            // Array specialization.  This uses optimized memory copying
+            // routines under the hood and is about 10-20x faster than the
+            // generic implementation.
+            target[0 .. slen] = source[];
+            return target[slen .. $];
+        }
     }
     else
     {
-        // Array specialization.  This uses optimized memory copying
-        // routines under the hood and is about 10-20x faster than the
-        // generic implementation.
-        target[0 .. slen] = source[];
-        return target[slen .. $];
-    }
-}
-
-/// ditto
-TargetRange copy(SourceRange, TargetRange)(SourceRange source, TargetRange target)
-if (!areCopyCompatibleArrays!(SourceRange, TargetRange) &&
-    isInputRange!SourceRange &&
-    isOutputRange!(TargetRange, ElementType!SourceRange))
-{
-    // Specialize for 2 random access ranges.
-    // Typically 2 random access ranges are faster iterated by common
-    // index than by x.popFront(), y.popFront() pair
-    static if (isRandomAccessRange!SourceRange &&
-               hasLength!SourceRange &&
-               hasSlicing!TargetRange &&
-               isRandomAccessRange!TargetRange &&
-               hasLength!TargetRange)
-    {
-        auto len = source.length;
-        foreach (idx; 0 .. len)
-            target[idx] = source[idx];
-        return target[len .. target.length];
-    }
-    else
-    {
-        put(target, source);
-        return target;
+        // Specialize for 2 random access ranges.
+        // Typically 2 random access ranges are faster iterated by common
+        // index than by x.popFront(), y.popFront() pair
+        static if (isRandomAccessRange!SourceRange &&
+                hasLength!SourceRange &&
+                hasSlicing!TargetRange &&
+                isRandomAccessRange!TargetRange &&
+                hasLength!TargetRange)
+        {
+            auto len = source.length;
+            foreach (idx; 0 .. len)
+                target[idx] = source[idx];
+            return target[len .. target.length];
+        }
+        else
+        {
+            foreach (element; source)
+                put(target, element);
+            return target;
+        }
     }
 }
 
@@ -534,6 +532,24 @@ $(LINK2 http://en.cppreference.com/w/cpp/algorithm/copy_backward, STL's `copy_ba
         assert(a1[] == "123");
         assert(a2[] == "123789");
     }}
+}
+
+@safe unittest // issue 18804
+{
+    static struct NullSink
+    {
+        void put(E)(E) {}
+    }
+    int line = 0;
+    struct R
+    {
+        int front;
+        @property bool empty() { return line == 1; }
+        void popFront() { line = 1; }
+    }
+    R r;
+    copy(r, NullSink());
+    assert(line == 1);
 }
 
 /**
@@ -856,9 +872,9 @@ if (isInputRange!Range && hasLvalueElements!Range && hasAssignableElements!Range
         //We avoid calling emplace here, because our goal is to initialize to
         //the static state of T.init,
         //So we want to avoid any un-necassarilly CC'ing of T.init
-        auto p = typeid(T).initializer();
-        if (p.ptr)
+        static if (!__traits(isZeroInit, T))
         {
+            auto p = typeid(T).initializer();
             for ( ; !range.empty ; range.popFront() )
             {
                 static if (__traits(isStaticArray, T))
@@ -1030,8 +1046,8 @@ to its `.init` value after it is moved into target, otherwise it is
 left unchanged.
 
 Preconditions:
-If source has internal pointers that point to itself, it cannot be moved, and
-will trigger an assertion failure.
+If source has internal pointers that point to itself and doesn't define
+opPostMove, it cannot be moved, and will trigger an assertion failure.
 
 Params:
     source = Data to copy.
@@ -1180,6 +1196,24 @@ pure nothrow @safe @nogc unittest
     S s2 = move(s1);
     assert(s1.a == 1);
     assert(s2.a == 2);
+}
+
+/// `opPostMove` will be called if defined:
+pure nothrow @safe @nogc unittest
+{
+    struct S
+    {
+        int a;
+        void opPostMove(const ref S old)
+        {
+            assert(a == old.a);
+            a++;
+        }
+    }
+    S s1;
+    s1.a = 41;
+    S s2 = move(s1);
+    assert(s2.a == 42);
 }
 
 private void trustedMoveImpl(T)(ref T source, ref T target) @trusted
@@ -1358,17 +1392,19 @@ private T moveImpl(T)(ref T source)
  *   source = value to be moved into target
  *   target = uninitialized value to be filled by source
  */
-void moveEmplace(T)(ref T source, ref T target) @system
+void moveEmplace(T)(ref T source, ref T target) pure @system
 {
     import core.stdc.string : memcpy, memset;
     import std.traits : hasAliasing, hasElaborateAssign,
                         hasElaborateCopyConstructor, hasElaborateDestructor,
-                        isAssignable;
+                        hasElaborateMove,
+                        isAssignable, isStaticArray;
 
     static if (!is(T == class) && hasAliasing!T) if (!__ctfe)
     {
         import std.exception : doesPointTo;
-        assert(!doesPointTo(source, source), "Cannot move object with internal pointer.");
+        assert(!(doesPointTo(source, source) && !hasElaborateMove!T),
+            "Cannot move object with internal pointer unless `opPostMove` is defined.");
     }
 
     static if (is(T == struct))
@@ -1380,6 +1416,9 @@ void moveEmplace(T)(ref T source, ref T target) @system
         else
             target = source;
 
+        static if (hasElaborateMove!T)
+            __move_post_blt(target, source);
+
         // If the source defines a destructor or a postblit hook, we must obliterate the
         // object in order to avoid double freeing and undue aliasing
         static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
@@ -1390,12 +1429,19 @@ void moveEmplace(T)(ref T source, ref T target) @system
             else
                 enum sz = T.sizeof;
 
-            auto init = typeid(T).initializer();
-            if (init.ptr is null) // null ptr means initialize to 0s
+            static if (__traits(isZeroInit, T))
                 memset(&source, 0, sz);
             else
+            {
+                auto init = typeid(T).initializer();
                 memcpy(&source, init.ptr, sz);
+            }
         }
+    }
+    else static if (isStaticArray!T)
+    {
+        for (size_t i = 0; i < source.length; ++i)
+            move(source[i], target[i]);
     }
     else
     {
@@ -1428,6 +1474,24 @@ pure nothrow @nogc @system unittest
     assert(foo1._ptr is &val);
     assert(foo2._ptr is null);
     assert(val == 0);
+}
+
+// issue 18913
+@safe unittest
+{
+    static struct NoCopy
+    {
+        int payload;
+        ~this() { }
+        @disable this(this);
+    }
+
+    static void f(NoCopy[2]) { }
+
+    NoCopy[2] ncarray = [ NoCopy(1), NoCopy(2) ];
+
+    static assert(!__traits(compiles, f(ncarray)));
+    f(move(ncarray));
 }
 
 // moveAll
@@ -1623,8 +1687,8 @@ concerns the swapping of elements that are not the core concern of the
 algorithm. For example, consider an algorithm that sorts $(D [ "abc",
 "b", "aBc" ]) according to `toUpper(a) < toUpper(b)`. That
 algorithm might choose to swap the two equivalent strings `"abc"`
-and `"aBc"`. That does not affect the sorting since both `$D(
-"abc", "aBc", "b" ]) and `[ "aBc", "abc", "b" ]` are valid
+and `"aBc"`. That does not affect the sorting since both
+`["abc", "aBc", "b" ]` and `[ "aBc", "abc", "b" ]` are valid
 outcomes.
 
 Some situations require that the algorithm must NOT ever change the

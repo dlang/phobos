@@ -102,12 +102,10 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
  */
 module std.algorithm.searching;
 
-// FIXME
-import std.functional; // : unaryFun, binaryFun;
+import std.functional : unaryFun, binaryFun;
 import std.range.primitives;
 import std.traits;
-// FIXME
-import std.typecons; // : Tuple, Flag, Yes, No;
+import std.typecons : Tuple, Flag, Yes, No, tuple;
 
 /++
 Checks if $(I _all) of the elements verify `pred`.
@@ -120,8 +118,10 @@ template all(alias pred = "a")
     Performs (at most) $(BIGOH range.length) evaluations of `pred`.
      +/
     bool all(Range)(Range range)
-    if (isInputRange!Range && is(typeof(unaryFun!pred(range.front))))
+    if (isInputRange!Range)
     {
+        static assert(is(typeof(unaryFun!pred(range.front))),
+                "`" ~ pred.stringof[1..$-1] ~ "` isn't a unary predicate function for range.front");
         import std.functional : not;
 
         return find!(not!(unaryFun!pred))(range).empty;
@@ -151,6 +151,7 @@ are true.
 {
     int x = 1;
     assert(all!(a => a > x)([2, 3]));
+    assert(all!"a == 0x00c9"("\xc3\x89")); // Test that `all` auto-decodes.
 }
 
 /++
@@ -205,6 +206,7 @@ evaluate to true.
 {
     auto a = [ 1, 2, 0, 4 ];
     assert(any!"a == 2"(a));
+    assert(any!"a == 0x3000"("\xe3\x80\x80")); // Test that `any` auto-decodes.
 }
 
 // balancedParens
@@ -373,7 +375,7 @@ public:
                 if (npos == 0) return haystack[hpos .. $];
                 --npos;
             }
-            hpos += max(skip[npos], cast(sizediff_t) npos - occurrence(haystack[npos+hpos]));
+            hpos += max(skip[npos], cast(ptrdiff_t) npos - occurrence(haystack[npos+hpos]));
         }
         return haystack[$ .. $];
     }
@@ -846,7 +848,8 @@ if (isForwardRange!R
     }
 
     //Because of @@@8804@@@: Avoids both "unreachable code" or "no return statement"
-    static if (isInfinite!R) assert(0);
+    static if (isInfinite!R) assert(false, R.stringof ~ " must not be an"
+            ~ " infinite range");
     else return -1;
 }
 
@@ -949,7 +952,8 @@ if (isInputRange!R &&
     }
 
     //Because of @@@8804@@@: Avoids both "unreachable code" or "no return statement"
-    static if (isInfinite!R) assert(0);
+    static if (isInfinite!R) assert(false, R.stringof ~ " must not be an"
+            ~ " inifite range");
     else return -1;
 }
 
@@ -1192,7 +1196,7 @@ if (isInputRange!R &&
     import std.meta : AliasSeq;
 
     static foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
-    {
+    (){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
         assert(!endsWith(to!S("abc"), 'a'));
         assert(endsWith(to!S("abc"), 'a', 'c') == 2);
         assert(!endsWith(to!S("abc"), 'x', 'n', 'b'));
@@ -1231,7 +1235,7 @@ if (isInputRange!R &&
             assert(endsWith(to!S("a"), T.init, 'a') == 1);
             assert(endsWith(to!S("a"), 'a', T.init) == 2);
         }
-    }
+    }();
 
     static foreach (T; AliasSeq!(int, short))
     {{
@@ -1268,10 +1272,13 @@ if (isInputRange!R &&
     }}
 }
 
+private enum bool hasConstEmptyMember(T) = is(typeof(((const T* a) => (*a).empty)(null)) : bool);
+
 // Rebindable doesn't work with structs
 // see: https://github.com/dlang/phobos/pull/6136
 private template RebindableOrUnqual(T)
 {
+    import std.typecons : Rebindable;
     static if (is(T == class) || is(T == interface) || isDynamicArray!T || isAssociativeArray!T)
         alias RebindableOrUnqual = Rebindable!T;
     else
@@ -2216,7 +2223,7 @@ private R1 simpleMindedFind(alias pred, R1, R2)(R1 haystack, scope R2 needle)
             }
             else
             {
-                assert(haystack.empty);
+                assert(haystack.empty, "Haystack must be empty by now");
                 return haystack;
             }
         }
@@ -2553,6 +2560,17 @@ template canFind(alias pred="a == b")
     assert( canFind!((string a, string b) => a.startsWith(b))(words, "bees"));
 }
 
+/// Search for mutliple items in an array of items (search for needles in an array of hay stacks)
+@safe unittest
+{
+    string s1 = "aaa111aaa";
+    string s2 = "aaa222aaa";
+    string s3 = "aaa333aaa";
+    string s4 = "aaa444aaa";
+    const hay = [s1, s2, s3, s4];
+    assert(hay.canFind!(e => (e.canFind("111", "222"))));
+}
+
 @safe unittest
 {
     import std.algorithm.internal : rndstuff;
@@ -2669,7 +2687,7 @@ InputRange findAmong(alias pred = "a == b", InputRange, ForwardRange)(
     InputRange seq, ForwardRange choices)
 if (isInputRange!InputRange && isForwardRange!ForwardRange)
 {
-    for (; !seq.empty && find!pred(choices, seq.front).empty; seq.popFront())
+    for (; !seq.empty && find!pred(choices.save, seq.front).empty; seq.popFront())
     {
     }
     return seq;
@@ -2691,6 +2709,14 @@ if (isInputRange!InputRange && isForwardRange!ForwardRange)
     assert(findAmong(b, [ 4, 6, 7 ][]).empty);
     assert(findAmong!("a == b")(a, b).length == a.length - 2);
     assert(findAmong!("a == b")(b, [ 4, 6, 7 ][]).empty);
+}
+
+@system unittest // issue 19765
+{
+    import std.range.interfaces : inputRangeObject;
+    auto choices = inputRangeObject("b");
+    auto f = "foobar".findAmong(choices);
+    assert(f == "bar");
 }
 
 // findSkip
@@ -2746,6 +2772,21 @@ if (isForwardRange!R1 && isForwardRange!R2
     // If the needle occurs at the end of the range, the range is left empty.
     s = "abcdef";
     assert(findSkip(s, "def") && s.empty);
+}
+
+@safe unittest // issue 19020
+{
+    static struct WrapperRange
+    {
+        string _r;
+        @property auto empty() { return _r.empty(); }
+        @property auto front() { return _r.front(); }
+        auto popFront() { return _r.popFront(); }
+        @property auto save() { return WrapperRange(_r.save); }
+    }
+    auto tmp = WrapperRange("there is a bug here: *");
+    assert(!tmp.findSkip("*/"));
+    assert(tmp._r == "there is a bug here: *");
 }
 
 /// ditto
@@ -2821,7 +2862,7 @@ Returns:
 A sub-type of `Tuple!()` of the split portions of `haystack` (see above for
 details).  This sub-type of `Tuple!()` has `opCast` defined for `bool`.  This
 `opCast` returns `true` when the separating `needle` was found
-(`!result[1].empty`) and `false` otherwise.
+and `false` otherwise.
 
 See_Also: $(LREF find)
  */
@@ -2840,9 +2881,19 @@ if (isForwardRange!R1 && isForwardRange!R2)
             asTuple = rhs;
         }
         Tuple!(S1, S1, S2) asTuple;
-        bool opCast(T : bool)()
+        static if (hasConstEmptyMember!(typeof(asTuple[1])))
         {
-            return !asTuple[1].empty;
+            bool opCast(T : bool)() const
+            {
+                return !asTuple[1].empty;
+            }
+        }
+        else
+        {
+            bool opCast(T : bool)()
+            {
+                return !asTuple[1].empty;
+            }
         }
         alias asTuple this;
     }
@@ -2881,6 +2932,10 @@ if (isForwardRange!R1 && isForwardRange!R2)
                 pos2 = ++pos1;
             }
         }
+        if (!n.empty) // incomplete match at the end of haystack
+        {
+            pos1 = pos2;
+        }
         return Result!(typeof(takeExactly(original, pos1)),
                        typeof(h))(takeExactly(original, pos1),
                                   takeExactly(haystack, pos2 - pos1),
@@ -2904,9 +2959,19 @@ if (isForwardRange!R1 && isForwardRange!R2)
             asTuple = rhs;
         }
         Tuple!(S1, S2) asTuple;
-        bool opCast(T : bool)()
+        static if (hasConstEmptyMember!(typeof(asTuple[1])))
         {
-            return !asTuple[0].empty;
+            bool opCast(T : bool)() const
+            {
+                return !asTuple[1].empty;
+            }
+        }
+        else
+        {
+            bool opCast(T : bool)()
+            {
+                return !asTuple[1].empty;
+            }
         }
         alias asTuple this;
     }
@@ -2926,24 +2991,30 @@ if (isForwardRange!R1 && isForwardRange!R2)
         auto original = haystack.save;
         auto h = haystack.save;
         auto n = needle.save;
-        size_t pos;
+        size_t pos1, pos2;
         while (!n.empty && !h.empty)
         {
             if (binaryFun!pred(h.front, n.front))
             {
                 h.popFront();
                 n.popFront();
+                ++pos2;
             }
             else
             {
                 haystack.popFront();
                 n = needle.save;
                 h = haystack.save;
-                ++pos;
+                pos2 = ++pos1;
             }
         }
-        return Result!(typeof(takeExactly(original, pos)),
-                       typeof(haystack))(takeExactly(original, pos),
+        if (!n.empty) // incomplete match at the end of haystack
+        {
+            pos1 = pos2;
+            haystack = h;
+        }
+        return Result!(typeof(takeExactly(original, pos1)),
+                       typeof(haystack))(takeExactly(original, pos1),
                                          haystack);
     }
 }
@@ -2964,9 +3035,19 @@ if (isForwardRange!R1 && isForwardRange!R2)
             asTuple = rhs;
         }
         Tuple!(S1, S2) asTuple;
-        bool opCast(T : bool)()
+        static if (hasConstEmptyMember!(typeof(asTuple[1])))
         {
-            return !asTuple[1].empty;
+            bool opCast(T : bool)() const
+            {
+                return !asTuple[0].empty;
+            }
+        }
+        else
+        {
+            bool opCast(T : bool)()
+            {
+                return !asTuple[0].empty;
+            }
         }
         alias asTuple this;
     }
@@ -3022,7 +3103,21 @@ if (isForwardRange!R1 && isForwardRange!R2)
 {
     // findSplit returns a triplet
     if (auto split = "dlang-rocks".findSplit("-"))
+    {
+        assert(split[0] == "dlang");
+        assert(split[1] == "-");
         assert(split[2] == "rocks");
+    }
+    else assert(0);
+
+    // works with const aswell
+    if (const split = "dlang-rocks".findSplit("-"))
+    {
+        assert(split[0] == "dlang");
+        assert(split[1] == "-");
+        assert(split[2] == "rocks");
+    }
+    else assert(0);
 }
 
 ///
@@ -3043,14 +3138,18 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(r[0] == "Carl");
     assert(r[1] == " ");
     assert(r[2] == "Sagan Memorial Station");
-    auto r1 = findSplitBefore(a, "Sagan");
-    assert(r1);
-    assert(r1[0] == "Carl ");
-    assert(r1[1] == "Sagan Memorial Station");
-    auto r2 = findSplitAfter(a, "Sagan");
-    assert(r2);
-    assert(r2[0] == "Carl Sagan");
-    assert(r2[1] == " Memorial Station");
+    if (const r1 = findSplitBefore(a, "Sagan"))
+    {
+        assert(r1);
+        assert(r1[0] == "Carl ");
+        assert(r1[1] == "Sagan Memorial Station");
+    }
+    if (const r2 = findSplitAfter(a, "Sagan"))
+    {
+        assert(r2);
+        assert(r2[0] == "Carl Sagan");
+        assert(r2[1] == " Memorial Station");
+    }
 }
 
 /// Use $(REF only, std,range) to find single elements:
@@ -3064,7 +3163,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
 {
     import std.range.primitives : empty;
 
-    auto a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
+    immutable a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
     auto r = findSplit(a, [9, 1]);
     assert(!r);
     assert(r[0] == a);
@@ -3076,23 +3175,35 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(r[1] == a[2 .. 3]);
     assert(r[2] == a[3 .. $]);
 
-    auto r1 = findSplitBefore(a, [9, 1]);
-    assert(r1);
-    assert(r1[0] == a);
-    assert(r1[1].empty);
-    r1 = findSplitBefore(a, [3, 4]);
-    assert(r1);
-    assert(r1[0] == a[0 .. 2]);
-    assert(r1[1] == a[2 .. $]);
+    {
+        const r1 = findSplitBefore(a, [9, 1]);
+        assert(!r1);
+        assert(r1[0] == a);
+        assert(r1[1].empty);
+    }
 
-    auto r2 = findSplitAfter(a, [9, 1]);
-    assert(r2);
-    assert(r2[0].empty);
-    assert(r2[1] == a);
-    r2 = findSplitAfter(a, [3, 4]);
-    assert(r2);
-    assert(r2[0] == a[0 .. 4]);
-    assert(r2[1] == a[4 .. $]);
+    if (immutable r1 = findSplitBefore(a, [3, 4]))
+    {
+        assert(r1);
+        assert(r1[0] == a[0 .. 2]);
+        assert(r1[1] == a[2 .. $]);
+    }
+    else assert(0);
+
+    {
+        const r2 = findSplitAfter(a, [9, 1]);
+        assert(!r2);
+        assert(r2[0].empty);
+        assert(r2[1] == a);
+    }
+
+    if (immutable r3 = findSplitAfter(a, [3, 4]))
+    {
+        assert(r3);
+        assert(r3[0] == a[0 .. 4]);
+        assert(r3[1] == a[4 .. $]);
+    }
+    else assert(0);
 }
 
 @safe pure nothrow unittest
@@ -3112,24 +3223,56 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(equal(r[0],  a[0 .. 2]));
     assert(equal(r[1], a[2 .. 3]));
     assert(equal(r[2], a[3 .. $]));
+    r = findSplit(fwd, [8, 9]);
+    assert(!r);
+    assert(equal(r[0], a));
+    assert(r[1].empty);
+    assert(r[2].empty);
 
-    auto r1 = findSplitBefore(fwd, [9, 1]);
-    assert(r1);
-    assert(equal(r1[0], a));
-    assert(r1[1].empty);
-    r1 = findSplitBefore(fwd, [3, 4]);
-    assert(r1);
-    assert(equal(r1[0], a[0 .. 2]));
-    assert(equal(r1[1], a[2 .. $]));
+    // auto variable `r2` cannot be `const` because `fwd.front` is mutable
+    {
+        auto r1 = findSplitBefore(fwd, [9, 1]);
+        assert(!r1);
+        assert(equal(r1[0], a));
+        assert(r1[1].empty);
+    }
 
-    auto r2 = findSplitAfter(fwd, [9, 1]);
-    assert(r2);
-    assert(r2[0].empty);
-    assert(equal(r2[1], a));
-    r2 = findSplitAfter(fwd, [3, 4]);
-    assert(r2);
-    assert(equal(r2[0], a[0 .. 4]));
-    assert(equal(r2[1], a[4 .. $]));
+    if (auto r1 = findSplitBefore(fwd, [3, 4]))
+    {
+        assert(r1);
+        assert(equal(r1[0], a[0 .. 2]));
+        assert(equal(r1[1], a[2 .. $]));
+    }
+    else assert(0);
+
+    {
+        auto r1 = findSplitBefore(fwd, [8, 9]);
+        assert(!r1);
+        assert(equal(r1[0], a));
+        assert(r1[1].empty);
+    }
+
+    {
+        auto r2 = findSplitAfter(fwd, [9, 1]);
+        assert(!r2);
+        assert(r2[0].empty);
+        assert(equal(r2[1], a));
+    }
+
+    if (auto r2 = findSplitAfter(fwd, [3, 4]))
+    {
+        assert(r2);
+        assert(equal(r2[0], a[0 .. 4]));
+        assert(equal(r2[1], a[4 .. $]));
+    }
+    else assert(0);
+
+    {
+        auto r2 = findSplitAfter(fwd, [8, 9]);
+        assert(!r2);
+        assert(r2[0].empty);
+        assert(equal(r2[1], a));
+    }
 }
 
 @safe pure nothrow @nogc unittest
@@ -3657,7 +3800,7 @@ irreflexive (`pred(a, a)` is `false`).
 Params:
     pred = The ordering predicate to use to determine the extremum (minimum or
         maximum) element.
-    range = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to search.
+    range = The $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to search.
 
 Returns: The position of the minimum (respectively maximum) element of forward
 range `range`, i.e. a subrange of `range` starting at the position of  its
@@ -3776,13 +3919,13 @@ Returns:
 See_Also:
     $(LREF maxIndex), $(REF min, std,algorithm,comparison), $(LREF minCount), $(LREF minElement), $(LREF minPos)
  */
-sizediff_t minIndex(alias pred = "a < b", Range)(Range range)
-if (isForwardRange!Range && !isInfinite!Range &&
+ptrdiff_t minIndex(alias pred = "a < b", Range)(Range range)
+if (isInputRange!Range && !isInfinite!Range &&
     is(typeof(binaryFun!pred(range.front, range.front))))
 {
     if (range.empty) return -1;
 
-    sizediff_t minPos = 0;
+    ptrdiff_t minPos = 0;
 
     static if (isRandomAccessRange!Range && hasLength!Range)
     {
@@ -3796,7 +3939,7 @@ if (isForwardRange!Range && !isInfinite!Range &&
     }
     else
     {
-        sizediff_t curPos = 0;
+        ptrdiff_t curPos = 0;
         Unqual!(typeof(range.front)) min = range.front;
         for (range.popFront(); !range.empty; range.popFront())
         {
@@ -3877,6 +4020,40 @@ if (isForwardRange!Range && !isInfinite!Range &&
     assert(arr2d.minIndex!"a[1] < b[1]" == 2);
 }
 
+@safe nothrow pure unittest
+{
+    // InputRange test
+
+    static struct InRange
+    {
+        @property int front()
+        {
+            return arr[index];
+        }
+
+        bool empty() const
+        {
+            return arr.length == index;
+        }
+
+        void popFront()
+        {
+            index++;
+        }
+
+        int[] arr;
+        size_t index = 0;
+    }
+
+    static assert(isInputRange!InRange);
+
+    auto arr1 = InRange([5, 2, 3, 4, 5, 3, 6]);
+    auto arr2 = InRange([7, 3, 8, 2, 1, 4]);
+
+    assert(arr1.minIndex == 1);
+    assert(arr2.minIndex == 4);
+}
+
 /**
 Computes the index of the first occurrence of `range`'s maximum element.
 
@@ -3894,7 +4071,7 @@ Returns:
 See_Also:
     $(LREF minIndex), $(REF max, std,algorithm,comparison), $(LREF maxCount), $(LREF maxElement), $(LREF maxPos)
  */
-sizediff_t maxIndex(alias pred = "a < b", Range)(Range range)
+ptrdiff_t maxIndex(alias pred = "a < b", Range)(Range range)
 if (isInputRange!Range && !isInfinite!Range &&
     is(typeof(binaryFun!pred(range.front, range.front))))
 {
@@ -3967,62 +4144,126 @@ if (isInputRange!Range && !isInfinite!Range &&
 }
 
 /**
-Skip over the initial portion of the first given range that matches the second
-range, or if no second range is given skip over the elements that fullfil pred.
+Skip over the initial portion of the first given range (`haystack`) that matches
+any of the additionally given ranges (`needles`) fully, or
+if no second range is given skip over the elements that fulfill pred.
 Do nothing if there is no match.
 
 Params:
     pred = The predicate that determines whether elements from each respective
         range match. Defaults to equality `"a == b"`.
 */
-template skipOver(alias pred = "a == b")
+template skipOver(alias pred = (a, b) => a == b)
 {
+    import std.meta : allSatisfy;
+
+    enum bool isPredComparable(T) = ifTestable!(T, binaryFun!pred);
+
     /**
-    r1 = The $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to
-        move forward.
-    r2 = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
-        representing the initial segment of `r1` to skip over.
-    e = The element to match.
+    Params:
+        haystack = The $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to
+                   move forward.
+        needles = The $(REF_ALTTEXT input ranges, isInputRange, std,range,primitives)
+                  representing the prefix of `r1` to skip over.
+        es = The element to match.
 
     Returns:
-    true if the initial segment of `r1` matches `r2` or `pred` evaluates to true,
-    and `r1` has been advanced to the point past this segment; otherwise false, and
-    `r1` is left in its original position.
+        `true` if the prefix of `haystack` matches any range of `needles` fully
+        or `pred` evaluates to true, and `haystack` has been advanced to the point past this segment;
+        otherwise false, and `haystack` is left in its original position.
+
+    Note:
+        By definition, empty ranges are matched fully and if `needles` contains an empty range,
+        `skipOver` will return `true`.
     */
-    bool skipOver(R1, R2)(ref R1 r1, R2 r2)
-    if (is(typeof(binaryFun!pred(r1.front, r2.front))) &&
-        isForwardRange!R1 &&
-        isInputRange!R2)
+    bool skipOver(Haystack, Needles...)(ref Haystack haystack, Needles needles)
+    if (is(typeof(binaryFun!pred(haystack.front, needles[0].front))) &&
+        isForwardRange!Haystack &&
+        allSatisfy!(isInputRange, Needles) &&
+        !is(CommonType!(staticMap!(ElementType, staticMap!(Unqual, Needles))) == void))
     {
-        static if (is(typeof(pred) : string) && pred == "a == b"
-                && is(typeof(r1[0 .. $] == r2) : bool)
-                && is(typeof(r2.length > r1.length) : bool)
-                && is(typeof(r1 = r1[r2.length .. $])))
+        static if (__traits(isSame, pred, (a, b) => a == b)
+                && is(typeof(haystack[0 .. $] == needles[0]) : bool)
+                && is(typeof(haystack = haystack[0 .. $]))
+                && hasLength!Haystack && allSatisfy!(hasLength, Needles))
         {
-            if (r2.length > r1.length || r1[0 .. r2.length] != r2)
+            ptrdiff_t longestMatch = -1;
+            static foreach (r2; needles)
             {
-                return false;
+                if (r2.length <= haystack.length && longestMatch < ptrdiff_t(r2.length)
+                        && (haystack[0 .. r2.length] == r2 || r2.length == 0))
+                    longestMatch = r2.length;
             }
-            r1 = r1[r2.length .. $];
-            return true;
+            if (longestMatch >= 0)
+            {
+                if (longestMatch > 0)
+                    haystack = haystack[longestMatch .. $];
+
+                return true;
+            }
+            return false;
         }
         else
         {
-            static if (hasLength!R1 && hasLength!R2)
+            import std.algorithm.comparison : min;
+            auto r = haystack.save;
+
+            static if (hasLength!Haystack && allSatisfy!(hasLength, Needles))
             {
+                import std.algorithm.iteration : map;
+                import std.algorithm.searching : minElement;
+                import std.range : only;
                 // Shortcut opportunity!
-                if (r2.length > r1.length)
+                if (needles.only.map!(a => a.length).minElement > haystack.length)
                     return false;
             }
-            auto r = r1.save;
-            while (!r2.empty && !r.empty && binaryFun!pred(r.front, r2.front))
+
+            // compatibility: return true if any range was empty
+            bool hasEmptyRanges;
+            static foreach (i, r2; needles)
             {
-                r.popFront();
-                r2.popFront();
+                if (r2.empty)
+                    hasEmptyRanges = true;
             }
-            if (r2.empty)
-                r1 = r;
-            return r2.empty;
+
+            bool hasNeedleMatch;
+            size_t inactiveNeedlesLen;
+            bool[Needles.length] inactiveNeedles;
+            for (; !r.empty; r.popFront)
+            {
+                static foreach (i, r2; needles)
+                {
+                    if (!r2.empty && !inactiveNeedles[i])
+                    {
+                        if (binaryFun!pred(r.front, r2.front))
+                        {
+                            r2.popFront;
+                            if (r2.empty)
+                            {
+                                // we skipped over a new match
+                                hasNeedleMatch = true;
+                                inactiveNeedlesLen++;
+                                // skip over haystack
+                                haystack = r;
+                            }
+                        }
+                        else
+                        {
+                            inactiveNeedles[i] = true;
+                            inactiveNeedlesLen++;
+                        }
+                    }
+                }
+
+                // are we done?
+                if (inactiveNeedlesLen == needles.length)
+                    break;
+            }
+
+            if (hasNeedleMatch)
+                haystack.popFront;
+
+            return hasNeedleMatch || hasEmptyRanges;
         }
     }
 
@@ -4041,13 +4282,21 @@ template skipOver(alias pred = "a == b")
     }
 
     /// Ditto
-    bool skipOver(R, E)(ref R r, E e)
-    if (is(typeof(binaryFun!pred(r.front, e))) && isInputRange!R)
+    bool skipOver(R, Es...)(ref R r, Es es)
+    if (isInputRange!R && is(typeof(binaryFun!pred(r.front, es[0]))))
     {
-        if (r.empty || !binaryFun!pred(r.front, e))
+        if (r.empty)
             return false;
-        r.popFront();
-        return true;
+
+        static foreach (e; es)
+        {
+            if (binaryFun!pred(r.front, e))
+            {
+                r.popFront();
+                return true;
+            }
+        }
+        return false;
     }
 }
 
@@ -4059,15 +4308,19 @@ template skipOver(alias pred = "a == b")
     auto s1 = "Hello world";
     assert(!skipOver(s1, "Ha"));
     assert(s1 == "Hello world");
-    assert(skipOver(s1, "Hell") && s1 == "o world");
+    assert(skipOver(s1, "Hell") && s1 == "o world", s1);
 
     string[]  r1 = ["abc", "def", "hij"];
     dstring[] r2 = ["abc"d];
-    assert(!skipOver!((a, b) => a.equal(b))(r1, ["def"d]));
+    assert(!skipOver!((a, b) => a.equal(b))(r1, ["def"d]), r1[0]);
     assert(r1 == ["abc", "def", "hij"]);
     assert(skipOver!((a, b) => a.equal(b))(r1, r2));
     assert(r1 == ["def", "hij"]);
+}
 
+///
+@safe unittest
+{
     import std.ascii : isWhite;
     import std.range.primitives : empty;
 
@@ -4077,6 +4330,18 @@ template skipOver(alias pred = "a == b")
     assert(s2.skipOver!isWhite && s2 == "value");
     assert(!s3.skipOver!isWhite);
     assert(s4.skipOver!isWhite && s3.empty);
+}
+
+/// Variadic skipOver
+@safe unittest
+{
+    auto s = "Hello world";
+    assert(!skipOver(s, "hello", "HellO"));
+    assert(s == "Hello world");
+
+    // the range is skipped over the longest matching needle is skipped
+    assert(skipOver(s, "foo", "hell", "Hello "));
+    assert(s == "world");
 }
 
 ///
@@ -4114,6 +4379,133 @@ template skipOver(alias pred = "a == b")
     assert(whitespaceSkiper(s2) && s2 == "value");
     assert(!whitespaceSkiper(s2));
     assert(whitespaceSkiper(s4) && s3.empty);
+}
+
+// variadic skipOver
+@safe unittest
+{
+    auto s = "DLang.rocks";
+    assert(!s.skipOver("dlang", "DLF", "DLang "));
+    assert(s == "DLang.rocks");
+
+    assert(s.skipOver("dlang", "DLANG", "DLF", "D", "DL", "DLanpp"));
+    assert(s == "ang.rocks");
+    s = "DLang.rocks";
+
+    assert(s.skipOver("DLang", "DLANG", "DLF", "D", "DL", "DLang "));
+    assert(s == ".rocks");
+    s = "DLang.rocks";
+
+    assert(s.skipOver("dlang", "DLANG", "DLF", "D", "DL", "DLang."));
+    assert(s == "rocks");
+}
+
+// variadic with custom pred
+@safe unittest
+{
+    import std.ascii : toLower;
+
+    auto s = "DLang.rocks";
+    assert(!s.skipOver("dlang", "DLF", "DLang "));
+    assert(s == "DLang.rocks");
+
+    assert(s.skipOver!((a, b) => a.toLower == b.toLower)("dlang", "DLF", "DLang "));
+    assert(s == ".rocks");
+}
+
+// variadic skipOver with mixed needles
+@safe unittest
+{
+    auto s = "DLang.rocks";
+    assert(!s.skipOver("dlang"d, "DLF", "DLang "w));
+    assert(s == "DLang.rocks");
+
+    assert(s.skipOver("dlang", "DLANG"d, "DLF"w, "D"d, "DL", "DLanp"));
+    assert(s == "ang.rocks");
+    s = "DLang.rocks";
+
+    assert(s.skipOver("DLang", "DLANG"w, "DLF"d, "D"d, "DL", "DLang "));
+    assert(s == ".rocks");
+    s = "DLang.rocks";
+
+    assert(s.skipOver("dlang", "DLANG"w, "DLF", "D"d, "DL"w, "DLang."d));
+    assert(s == "rocks");
+
+    import std.algorithm.iteration : filter;
+    s = "DLang.rocks";
+    assert(s.skipOver("dlang", "DLang".filter!(a => true)));
+    assert(s == ".rocks");
+}
+
+// variadic skipOver with auto-decoding
+@safe unittest
+{
+    auto s = "☢☣☠.☺";
+    assert(s.skipOver("a", "☢", "☢☣☠"));
+    assert(s == ".☺");
+}
+
+// skipOver with @nogc
+@safe @nogc pure nothrow unittest
+{
+    static immutable s = [0, 1, 2];
+    immutable(int)[] s2 = s[];
+
+    static immutable skip1 = [0, 2];
+    static immutable skip2 = [0, 1];
+    assert(s2.skipOver(skip1, skip2));
+    assert(s2 == s[2 .. $]);
+}
+
+// variadic skipOver with single elements
+@safe unittest
+{
+    auto s = "DLang.rocks";
+    assert(!s.skipOver('a', 'd', 'e'));
+    assert(s == "DLang.rocks");
+
+    assert(s.skipOver('a', 'D', 'd', 'D'));
+    assert(s == "Lang.rocks");
+    s = "DLang.rocks";
+
+    assert(s.skipOver(wchar('a'), dchar('D'), 'd'));
+    assert(s == "Lang.rocks");
+
+    dstring dstr = "+Foo";
+    assert(!dstr.skipOver('.', '-'));
+    assert(dstr == "+Foo");
+
+    assert(dstr.skipOver('+', '-'));
+    assert(dstr == "Foo");
+}
+
+// skipOver with empty ranges must return true (compatibility)
+@safe unittest
+{
+    auto s = "DLang.rocks";
+    assert(s.skipOver(""));
+    assert(s.skipOver("", ""));
+    assert(s.skipOver("", "foo"));
+
+    auto s2 = "DLang.rocks"d;
+    assert(s2.skipOver(""));
+    assert(s2.skipOver("", ""));
+    assert(s2.skipOver("", "foo"));
+}
+
+// dxml regression
+@safe unittest
+{
+    import std.utf : byCodeUnit;
+    import std.algorithm.comparison : equal;
+
+    bool stripStartsWith(Text)(ref Text text, string needle)
+    {
+        return text.skipOver(needle.byCodeUnit());
+    }
+    auto text = "<xml></xml>"d.byCodeUnit;
+    assert(stripStartsWith(text, "<xml>"));
+    assert(text.equal("</xml>"));
 }
 
 /**
@@ -4394,7 +4786,7 @@ if (isInputRange!R &&
     import std.range;
 
     static foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
-    {
+    (){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
         assert(!startsWith(to!S("abc"), 'c'));
         assert(startsWith(to!S("abc"), 'a', 'c') == 1);
         assert(!startsWith(to!S("abc"), 'x', 'n', 'b'));
@@ -4436,7 +4828,7 @@ if (isInputRange!R &&
             assert(startsWith(to!S("a"), T.init, 'a') == 1);
             assert(startsWith(to!S("a"), 'a', T.init) == 2);
         }
-    }
+    }();
 
     //Length but no RA
     assert(!startsWith("abc".takeExactly(3), "abcd".takeExactly(4)));
@@ -4566,6 +4958,7 @@ if (isInputRange!Range)
     private bool _done;
 
     static if (!is(Sentinel == void))
+    {
         ///
         this(Range input, Sentinel sentinel,
                 OpenRight openRight = Yes.openRight)
@@ -4575,7 +4968,17 @@ if (isInputRange!Range)
             _openRight = openRight;
             _done = _input.empty || openRight && predSatisfied();
         }
+        private this(Range input, Sentinel sentinel, OpenRight openRight,
+            bool done)
+        {
+            _input = input;
+            _sentinel = sentinel;
+            _openRight = openRight;
+            _done = done;
+        }
+    }
     else
+    {
         ///
         this(Range input, OpenRight openRight = Yes.openRight)
         {
@@ -4583,6 +4986,13 @@ if (isInputRange!Range)
             _openRight = openRight;
             _done = _input.empty || openRight && predSatisfied();
         }
+        private this(Range input, OpenRight openRight, bool done)
+        {
+            _input = input;
+            _openRight = openRight;
+            _done = done;
+        }
+    }
 
     ///
     @property bool empty()
@@ -4593,7 +5003,7 @@ if (isInputRange!Range)
     ///
     @property auto ref front()
     {
-        assert(!empty);
+        assert(!empty, "Can not get the front of an empty Until");
         return _input.front;
     }
 
@@ -4608,7 +5018,7 @@ if (isInputRange!Range)
     ///
     void popFront()
     {
-        assert(!empty);
+        assert(!empty, "Can not popFront of an empty Until");
         if (!_openRight)
         {
             _done = predSatisfied();
@@ -4624,27 +5034,14 @@ if (isInputRange!Range)
 
     static if (isForwardRange!Range)
     {
-        static if (!is(Sentinel == void))
-            ///
-            @property Until save()
-            {
-                Until result = this;
-                result._input     = _input.save;
-                result._sentinel  = _sentinel;
-                result._openRight = _openRight;
-                result._done      = _done;
-                return result;
-            }
-        else
-            ///
-            @property Until save()
-            {
-                Until result = this;
-                result._input     = _input.save;
-                result._openRight = _openRight;
-                result._done      = _done;
-                return result;
-            }
+        ///
+        @property Until save()
+        {
+            static if (is(Sentinel == void))
+                return Until(_input.save, _openRight, _done);
+            else
+                return Until(_input.save, _sentinel, _openRight, _done);
+        }
     }
 }
 
@@ -4695,4 +5092,22 @@ if (isInputRange!Range)
     import std.algorithm.comparison : among, equal;
     auto s = "hello how\nare you";
     assert(equal(s.until!(c => c.among!('\n', '\r')), "hello how"));
+}
+
+pure @safe unittest // issue 18657
+{
+    import std.algorithm.comparison : equal;
+    import std.range : refRange;
+    {
+        string s = "foobar";
+        auto r = refRange(&s).until("bar");
+        assert(equal(r.save, "foo"));
+        assert(equal(r.save, "foo"));
+    }
+    {
+        string s = "foobar";
+        auto r = refRange(&s).until!(e => e == 'b');
+        assert(equal(r.save, "foo"));
+        assert(equal(r.save, "foo"));
+    }
 }

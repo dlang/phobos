@@ -67,7 +67,7 @@
  *  $(LINK2 http://amazon.com/exec/obidos/ASIN/0201704315/ref=ase_classicempire/102-2957199-2585768,
  *      Modern C++ Design),
  *   Andrei Alexandrescu (Addison-Wesley Professional, 2001)
- * Copyright: Copyright Digital Mars 2005 - 2015.
+ * Copyright: Copyright The D Language Foundation 2005 - 2015.
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:
  *     $(HTTP digitalmars.com, Walter Bright),
@@ -76,6 +76,9 @@
  */
 
 module std.meta;
+
+import std.traits : isAggregateType, Unqual, isIterable;
+import std.range.primitives : isInfinite;
 
 /**
  * Creates a sequence of zero or more aliases. This is most commonly
@@ -252,8 +255,6 @@ package template OldAlias(alias a)
         static assert(0, "Cannot alias " ~ a.stringof);
 }
 
-import std.traits : isAggregateType, Unqual;
-
 package template OldAlias(T)
 if (!isAggregateType!T || is(Unqual!T == T))
 {
@@ -277,13 +278,13 @@ if (!isAggregateType!T || is(Unqual!T == T))
  */
 template staticIndexOf(T, TList...)
 {
-    enum staticIndexOf = genericIndexOf!(T, TList).index;
+    enum staticIndexOf = genericIndexOf!(T, TList);
 }
 
 /// Ditto
 template staticIndexOf(alias T, TList...)
 {
-    enum staticIndexOf = genericIndexOf!(T, TList).index;
+    enum staticIndexOf = genericIndexOf!(T, TList);
 }
 
 ///
@@ -303,27 +304,17 @@ template staticIndexOf(alias T, TList...)
 private template genericIndexOf(args...)
 if (args.length >= 1)
 {
-    alias e     = OldAlias!(args[0]);
-    alias tuple = args[1 .. $];
-
-    static if (tuple.length)
+    static foreach (idx, arg; args[1 .. $])
     {
-        alias head = OldAlias!(tuple[0]);
-        alias tail = tuple[1 .. $];
-
-        static if (isSame!(e, head))
+        static if (is(typeof(genericIndexOf) == void) && // not yet defined
+                   isSame!(args[0], arg))
         {
-            enum index = 0;
-        }
-        else
-        {
-            enum next  = genericIndexOf!(e, tail).index;
-            enum index = (next == -1) ? -1 : 1 + next;
+            enum genericIndexOf = idx;
         }
     }
-    else
+    static if (is(typeof(genericIndexOf) == void)) // no hit
     {
-        enum index = -1;
+        enum genericIndexOf = -1;
     }
 }
 
@@ -844,20 +835,8 @@ template predicate must be instantiable with all the given items.
  */
 template allSatisfy(alias F, T...)
 {
-    static if (T.length == 0)
-    {
-        enum allSatisfy = true;
-    }
-    else static if (T.length == 1)
-    {
-        enum allSatisfy = F!(T[0]);
-    }
-    else
-    {
-        enum allSatisfy =
-            allSatisfy!(F, T[ 0  .. $/2]) &&
-            allSatisfy!(F, T[$/2 ..  $ ]);
-    }
+    import core.internal.traits : allSat = allSatisfy;
+    alias allSatisfy = allSat!(F, T);
 }
 
 ///
@@ -878,20 +857,8 @@ template predicate must be instantiable with one of the given items.
  */
 template anySatisfy(alias F, T...)
 {
-    static if (T.length == 0)
-    {
-        enum anySatisfy = false;
-    }
-    else static if (T.length == 1)
-    {
-        enum anySatisfy = F!(T[0]);
-    }
-    else
-    {
-        enum anySatisfy =
-            anySatisfy!(F, T[ 0  .. $/2]) ||
-            anySatisfy!(F, T[$/2 ..  $ ]);
-    }
+    import core.internal.traits : anySat = anySatisfy;
+    alias anySatisfy = anySat!(F, T);
 }
 
 ///
@@ -954,7 +921,7 @@ template Filter(alias pred, TList...)
 
 
 // Used in template predicate unit tests below.
-private version(unittest)
+private version (unittest)
 {
     template testAlways(T...)
     {
@@ -1121,42 +1088,26 @@ template templateOr(Preds...)
 }
 
 /**
- * Converts an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
- * `range` to an alias sequence.
+ * Converts any foreach-iterable entity (e.g. an input range) to an alias sequence.
+ *
+ * Params:
+ *     iter = the entity to convert into an `AliasSeq`. It must be able to be able to be iterated over using
+ *            a $(LINK2 https://dlang.org/spec/statement.html#foreach-statement, foreach-statement).
+ *
+ * Returns:
+ *     An `AliasSeq` containing the values produced by iterating over `iter`.
  */
-template aliasSeqOf(alias range)
+template aliasSeqOf(alias iter)
+if (isIterable!(typeof(iter)) && !isInfinite!(typeof(iter)))
 {
-    import std.traits : isArray, isNarrowString;
+    import std.array : array;
 
-    alias ArrT = typeof(range);
-    static if (isArray!ArrT && !isNarrowString!ArrT)
+    struct Impl
     {
-        static if (range.length == 0)
-        {
-            alias aliasSeqOf = AliasSeq!();
-        }
-        else static if (range.length == 1)
-        {
-            alias aliasSeqOf = AliasSeq!(range[0]);
-        }
-        else
-        {
-            alias aliasSeqOf = AliasSeq!(aliasSeqOf!(range[0 .. $/2]), aliasSeqOf!(range[$/2 .. $]));
-        }
+        static foreach (size_t i, el; iter.array)
+            mixin(`auto e` ~ i.stringof ~ ` = el;`);
     }
-    else
-    {
-        import std.range.primitives : isInputRange;
-        static if (isInputRange!ArrT)
-        {
-            import std.array : array;
-            alias aliasSeqOf = aliasSeqOf!(array(range));
-        }
-        else
-        {
-            static assert(false, "Cannot transform range of type " ~ ArrT.stringof ~ " into a AliasSeq.");
-        }
-    }
+    enum aliasSeqOf = Impl.init.tupleof;
 }
 
 ///
@@ -1213,6 +1164,34 @@ template aliasSeqOf(alias range)
     {
         static assert(V == REF[I]);
     }
+}
+
+@safe unittest
+{
+    struct S
+    {
+        int opApply(scope int delegate(ref int) dg)
+        {
+            foreach (int i; 3 .. 5)
+                if (auto r = dg(i))
+                    return r;
+            return 0;
+        }
+    }
+    static assert(aliasSeqOf!(S.init) == AliasSeq!(3, 4));
+}
+
+@safe unittest
+{
+    struct Infinite
+    {
+        int front();
+        void popFront();
+        enum empty = false;
+    }
+    enum infinite = Infinite();
+    static assert(isInfinite!Infinite);
+    static assert(!__traits(compiles, aliasSeqOf!infinite));
 }
 
 /**

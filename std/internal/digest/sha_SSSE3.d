@@ -15,7 +15,7 @@
  */
 module std.internal.digest.sha_SSSE3;
 
-version(D_InlineAsm_X86)
+version (D_InlineAsm_X86)
 {
     version (D_PIC) {} // Bugzilla 9378
     else
@@ -24,7 +24,7 @@ version(D_InlineAsm_X86)
         private version = _32Bit;
     }
 }
-else version(D_InlineAsm_X86_64)
+else version (D_InlineAsm_X86_64)
 {
     private version = USE_SSSE3;
     private version = _64Bit;
@@ -65,7 +65,7 @@ else version(D_InlineAsm_X86_64)
  * computed values.
  */
 
-version(USE_SSSE3)
+version (USE_SSSE3)
 {
     /*
      * The general idea is to use the XMM registers as a sliding window over
@@ -91,7 +91,7 @@ version(USE_SSSE3)
     private immutable string E = "EDX";
 
     /* */
-    version(_32Bit)
+    version (_32Bit)
     {
         private immutable string SP = "ESP";
         private immutable string BUFFER_PTR = "EAX";
@@ -103,7 +103,7 @@ version(USE_SSSE3)
         // Round constant (only used in round 0-15)
         private immutable string X_CONSTANT = "XMM7";
     }
-    version(_64Bit)
+    version (_64Bit)
     {
         private immutable string SP = "RSP";
         private immutable string BUFFER_PTR = "R9";
@@ -196,11 +196,11 @@ version(USE_SSSE3)
      */
     private nothrow pure string[] swt3264(string[] insn32, string[] insn64)
     {
-        version(_32Bit)
+        version (_32Bit)
         {
             return insn32;
         }
-        version(_64Bit)
+        version (_64Bit)
         {
             return insn64;
         }
@@ -318,7 +318,7 @@ version(USE_SSSE3)
                             ["movdqa "~X_SHUFFLECTL~","~bswap_shufb_ctl(),
                              "movdqa "~X_CONSTANT~","~constant(i)]);
         }
-        version(_64Bit)
+        version (_64Bit)
         {
             if (i%20 == 0)
             {
@@ -339,11 +339,11 @@ version(USE_SSSE3)
         int regno = regno(i);
 
         string W = "XMM" ~ to_string(regno);
-        version(_32Bit)
+        version (_32Bit)
         {
             string W_TMP = "XMM" ~ to_string(regno+2);
         }
-        version(_64Bit)
+        version (_64Bit)
         {
             string W_TMP = "XMM" ~ to_string(regno+8);
         }
@@ -392,7 +392,7 @@ version(USE_SSSE3)
         string W_minus_8 = "XMM" ~ to_string((regno-2)&7);
         string W_minus_12 = "XMM" ~ to_string((regno-3)&7);
         string W_minus_16 = "XMM" ~ to_string((regno-4)&7);
-        version(_32Bit)
+        version (_32Bit)
         {
             string W_TMP = "XMM" ~ to_string((regno+1)&7);
             string W_TMP2 = "XMM" ~ to_string((regno+2)&7);
@@ -447,14 +447,14 @@ version(USE_SSSE3)
         string W_minus_4 = "XMM" ~ to_string((regno-1)&7);
         string W_minus_8 = "XMM" ~ to_string((regno-2)&7);
         string W_minus_16 = "XMM" ~ to_string((regno-4)&7);
-        version(_32Bit)
+        version (_32Bit)
         {
             string W_minus_28 = "[ESP + WI_PTR + "~ to_string((regno-7)&7)~"*16]";
             string W_minus_32 = "[ESP + WI_PTR + "~ to_string((regno-8)&7)~"*16]";
             string W_TMP = "XMM" ~ to_string((regno+1)&7);
             string W_TMP2 = "XMM" ~ to_string((regno+2)&7);
         }
-        version(_64Bit)
+        version (_64Bit)
         {
             string W_minus_28 = "XMM" ~ to_string((regno-7)&7);
             string W_minus_32 = "XMM" ~ to_string((regno-8)&7);
@@ -534,11 +534,11 @@ version(USE_SSSE3)
     }
 
     // Offset into stack (see below)
-    version(_32Bit)
+    version (_32Bit)
     {
         private enum { STATE_OFS = 4, WI_PLUS_KI_PTR = 8, WI_PTR = 72 }
     }
-    version(_64Bit)
+    version (_64Bit)
     {
         private enum { WI_PLUS_KI_PTR = 0 }
     }
@@ -546,7 +546,7 @@ version(USE_SSSE3)
     /** The prologue sequence. */
     private nothrow pure string[] prologue()
     {
-        version(_32Bit)
+        version (_32Bit)
         {
             /*
              * Parameters:
@@ -594,7 +594,56 @@ version(USE_SSSE3)
                     "push EBP",
             ];
         }
-        version(_64Bit)
+        else version (Win64)
+        {
+            /*
+            * Parameters:
+            *   R8 contains pointer to state
+            *   RDX contains pointer to input buffer
+            *   RCX contains pointer to constants
+            *
+            * Stack layout as follows:
+            * +----------------+
+            * | return address |
+            * +----------------+
+            * | RBP            |
+            * +----------------+
+            * | RBX            |
+            * +----------------+
+            * | RSI            |
+            * +----------------+
+            * | RDI            |
+            * +----------------+
+            * | Unused         |
+            * +----------------+
+            * | XMM6-XMM13     | 8*16 bytes
+            * +----------------+
+            * | Space for      |
+            * | Wi+Ki          | <- RSP
+            * +----------------+ <- 16byte aligned
+            */
+            return [// Save registers according to calling convention
+                    "push RBP",
+                    "push RBX",
+                    "push RSI",
+                    "push RDI",
+                    // Save parameters
+                    "mov "~STATE_PTR~", R8", //pointer to state
+                    "mov "~BUFFER_PTR~", RDX", //pointer to buffer
+                    "mov "~CONSTANTS_PTR~", RCX", //pointer to constants to avoid absolute addressing
+                    // Align stack
+                    "sub RSP, 4*16+8+8*16",
+                    "movdqa [RSP+4*16], XMM6",
+                    "movdqa [RSP+5*16], XMM7",
+                    "movdqa [RSP+6*16], XMM8",
+                    "movdqa [RSP+7*16], XMM9",
+                    "movdqa [RSP+8*16], XMM10",
+                    "movdqa [RSP+9*16], XMM11",
+                    "movdqa [RSP+10*16], XMM12",
+                    "movdqa [RSP+11*16], XMM13",
+            ];
+        }
+        else version (_64Bit)
         {
             /*
              * Parameters:
@@ -634,7 +683,7 @@ version(USE_SSSE3)
       */
     private nothrow pure string[] epilogue()
     {
-        version(_32Bit)
+        version (_32Bit)
         {
             return ["pop ESP",
                     "pop EBX",
@@ -644,7 +693,25 @@ version(USE_SSSE3)
                     "ret 4",
                    ];
         }
-        version(_64Bit)
+        else version (Win64)
+        {
+            return ["movdqa XMM6,[RSP+4*16]",
+                    "movdqa XMM7,[RSP+5*16]",
+                    "movdqa XMM8,[RSP+6*16]",
+                    "movdqa XMM9,[RSP+7*16]",
+                    "movdqa XMM10,[RSP+8*16]",
+                    "movdqa XMM11,[RSP+9*16]",
+                    "movdqa XMM12,[RSP+10*16]",
+                    "movdqa XMM13,[RSP+11*16]",
+                    "add RSP,4*16+8+8*16",
+                    "pop RDI",
+                    "pop RSI",
+                    "pop RBX",
+                    "pop RBP",
+                    "ret 0",
+                    ];
+        }
+        else version (_64Bit)
         {
             return ["add RSP,4*16+8",
                     "pop RBX",
@@ -718,7 +785,7 @@ version(USE_SSSE3)
         mixin(wrap(round(74, B, C, D, E, A)));
         mixin(wrap(round(76, E, A, B, C, D)));
         mixin(wrap(round(78, C, D, E, A, B)));
-        version(_32Bit)
+        version (_32Bit)
         {
             // Load pointer to state
             mixin(wrap(["mov "~STATE_PTR~",[ESP + STATE_OFS]"]));

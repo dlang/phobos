@@ -693,7 +693,7 @@ class Element : Item
     this(string name, string interior=null) @safe pure
     {
         this(new Tag(name));
-        if (interior.length != 0) opCatAssign(new Text(interior));
+        if (interior.length != 0) opOpAssign!("~")(new Text(interior));
     }
 
     /**
@@ -722,7 +722,8 @@ class Element : Item
      * element ~= new Text("hello");
      * --------------
      */
-    void opCatAssign(Text item) @safe pure
+    void opOpAssign(string op)(Text item) @safe pure
+        if (op == "~")
     {
         texts ~= item;
         appendItem(item);
@@ -740,7 +741,8 @@ class Element : Item
      * element ~= new CData("hello");
      * --------------
      */
-    void opCatAssign(CData item) @safe pure
+    void opOpAssign(string op)(CData item) @safe pure
+        if (op == "~")
     {
         cdatas ~= item;
         appendItem(item);
@@ -758,7 +760,8 @@ class Element : Item
      * element ~= new Comment("hello");
      * --------------
      */
-    void opCatAssign(Comment item) @safe pure
+    void opOpAssign(string op)(Comment item) @safe pure
+        if (op == "~")
     {
         comments ~= item;
         appendItem(item);
@@ -776,7 +779,8 @@ class Element : Item
      * element ~= new ProcessingInstruction("hello");
      * --------------
      */
-    void opCatAssign(ProcessingInstruction item) @safe pure
+    void opOpAssign(string op)(ProcessingInstruction item) @safe pure
+        if (op == "~")
     {
         pis ~= item;
         appendItem(item);
@@ -796,7 +800,8 @@ class Element : Item
      *    // appends element representing <br />
      * --------------
      */
-    void opCatAssign(Element item) @safe pure
+    void opOpAssign(string op)(Element item) @safe pure
+        if (op == "~")
     {
         elements ~= item;
         appendItem(item);
@@ -811,16 +816,16 @@ class Element : Item
 
     private void parse(ElementParser xml)
     {
-        xml.onText = (string s) { opCatAssign(new Text(s)); };
-        xml.onCData = (string s) { opCatAssign(new CData(s)); };
-        xml.onComment = (string s) { opCatAssign(new Comment(s)); };
-        xml.onPI = (string s) { opCatAssign(new ProcessingInstruction(s)); };
+        xml.onText = (string s) { opOpAssign!("~")(new Text(s)); };
+        xml.onCData = (string s) { opOpAssign!("~")(new CData(s)); };
+        xml.onComment = (string s) { opOpAssign!("~")(new Comment(s)); };
+        xml.onPI = (string s) { opOpAssign!("~")(new ProcessingInstruction(s)); };
 
         xml.onStartTag[null] = (ElementParser xml)
         {
             auto e = new Element(xml.tag);
             e.parse(xml);
-            opCatAssign(e);
+            opOpAssign!("~")(e);
         };
 
         xml.parse();
@@ -1017,7 +1022,7 @@ class Tag
             s = k;
             try { checkName(s,t); }
             catch (Err e)
-                { assert(false,"Invalid atrribute name:" ~ e.toString()); }
+                { assert(false,"Invalid attribute name:" ~ e.toString()); }
         }
     }
 
@@ -1161,7 +1166,7 @@ class Tag
          */
         override size_t toHash()
         {
-            return typeid(name).getHash(&name);
+            return .hashOf(name);
         }
 
         /**
@@ -2201,8 +2206,10 @@ private
         mixin Check!("Chars");
 
         dchar c;
-        int n = -1;
-        foreach (int i,dchar d; s)
+        ptrdiff_t n = -1;
+        // 'i' must not be smaller than size_t because size_t is used internally in
+        // aApply.d and it will be cast e.g to (int *) which fails on BigEndian targets.
+        foreach (size_t i, dchar d; s)
         {
             if (!isChar(d))
             {
@@ -2238,8 +2245,10 @@ private
         mixin Check!("Name");
 
         if (s.length == 0) fail();
-        int n;
-        foreach (int i,dchar c;s)
+        ptrdiff_t n;
+        // 'i' must not be smaller than size_t because size_t is used internally in
+        // aApply.d and it will be cast e.g to (int *) which fails on BigEndian targets.
+        foreach (size_t i, dchar c; s)
         {
             if (c == '_' || c == ':' || isLetter(c)) continue;
             if (i == 0) fail();
@@ -2989,10 +2998,7 @@ private
         return ch;
     }
 
-    size_t hash(string s,size_t h=0) @trusted nothrow
-    {
-        return typeid(s).getHash(&s) + h;
-    }
+    alias hash = .hashOf;
 
     // Definitions from the XML specification
     immutable CharTable=[0x9,0x9,0xA,0xA,0xD,0xD,0x20,0xD7FF,0xE000,0xFFFD,

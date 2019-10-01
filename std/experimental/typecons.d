@@ -58,14 +58,14 @@ if (is(T == class) || is(T == interface))
 
 @system unittest
 {
-    class C { @disable opCast(T)() {} }
+    class C { @disable void opCast(T)(); }
     auto c = new C;
     static assert(!__traits(compiles, cast(Object) c));
     auto o = dynamicCast!Object(c);
     assert(c is o);
 
-    interface I { @disable opCast(T)() {} Object instance(); }
-    interface J { @disable opCast(T)() {} Object instance(); }
+    interface I { @disable void opCast(T)(); Object instance(); }
+    interface J { @disable void opCast(T)(); Object instance(); }
     class D : I, J { Object instance() { return this; } }
     I i = new D();
     static assert(!__traits(compiles, cast(J) i));
@@ -111,8 +111,12 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
             else
             {
                 enum foundFunc = findCovariantFunction!(TargetMembers[i], Source, SourceMembers);
-                static if (foundFunc == -1)
-                    pragma(msg, "Could not locate matching function for: " ~ TargetMembers[i].stringof);
+                debug
+                {
+                    static if (foundFunc == -1)
+                        pragma(msg, "Could not locate matching function for: ",
+                               TargetMembers[i].stringof);
+                }
                 enum hasRequiredMethods =
                     foundFunc != -1 &&
                     hasRequiredMethods!(i + 1);
@@ -184,7 +188,7 @@ if (Targets.length >= 1 && allSatisfy!(isInterface, Targets))
 {
     import std.meta : ApplyLeft, staticMap;
 
-    version(StdDdoc)
+    version (StdDdoc)
     {
         /**
          * Wrap src in an anonymous class implementing $(D_PARAM Targets).
@@ -406,7 +410,7 @@ private string unwrapExceptionText(Source, Target)()
     return Target.stringof~ " not wrapped into "~ Source.stringof;
 }
 
-version(StdDdoc)
+version (StdDdoc)
 {
     /**
      * Extract object previously wrapped by $(LREF wrap).
@@ -973,9 +977,6 @@ pure nothrow @safe unittest
 
     Final!A a = new A;
     static assert(!__traits(compiles, a = new A));
-
-    static void foo(ref A a) pure nothrow @safe @nogc {}
-    static assert(!__traits(compiles, foo(a)));
 
     assert(a.i == 0);
     a.i = 42;

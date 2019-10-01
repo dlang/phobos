@@ -13,8 +13,8 @@ languages, and comfortable exploratory programming.
 A $(LREF Variant) object can hold a value of any type, with very few
 restrictions (such as `shared` types and noncopyable types). Setting the value
 is as immediate as assigning to the `Variant` object. To read back the value of
-the appropriate type `T`, use the $(LREF get!T) call. To query whether a
-`Variant` currently holds a value of type `T`, use $(LREF peek!T). To fetch the
+the appropriate type `T`, use the $(LREF get) method. To query whether a
+`Variant` currently holds a value of type `T`, use $(LREF peek). To fetch the
 exact type currently held, call $(LREF type), which returns the `TypeInfo` of
 the current value.
 
@@ -100,7 +100,21 @@ template maxSize(T...)
 
 struct This;
 
-private alias This2Variant(V, T...) = AliasSeq!(ReplaceType!(This, V, T));
+private alias This2Variant(V, T...) = AliasSeq!(ReplaceTypeUnless!(isAlgebraic, This, V, T));
+
+// We can't just use maxAlignment because no types might be specified
+// to VariantN, so handle that here and then pass along the rest.
+private template maxVariantAlignment(U...)
+if (isTypeTuple!U)
+{
+    static if (U.length == 0)
+    {
+        import std.algorithm.comparison : max;
+        enum maxVariantAlignment = max(real.alignof, size_t.alignof);
+    }
+    else
+        enum maxVariantAlignment = maxAlignment!(U);
+}
 
 /**
  * Back-end type seldom used directly by user
@@ -165,15 +179,15 @@ private:
             apply, postblit, destruct }
 
     // state
-    ptrdiff_t function(OpID selector, ubyte[size]* store, void* data) fptr
-        = &handler!(void);
     union
     {
-        ubyte[size] store;
+        align(maxVariantAlignment!(AllowedTypes)) ubyte[size] store;
         // conservatively mark the region as pointers
         static if (size >= (void*).sizeof)
             void*[size / (void*).sizeof] p;
     }
+    ptrdiff_t function(OpID selector, ubyte[size]* store, void* data) fptr
+        = &handler!(void);
 
     // internals
     // Handler for an uninitialized value
@@ -271,7 +285,14 @@ private:
         static bool tryPutting(A* src, TypeInfo targetType, void* target)
         {
             alias UA = Unqual!A;
-            alias MutaTypes = AliasSeq!(UA, ImplicitConversionTargets!UA);
+            static if (isStaticArray!A && is(typeof(UA.init[0])))
+            {
+                alias MutaTypes = AliasSeq!(UA, typeof(UA.init[0])[], ImplicitConversionTargets!UA);
+            }
+            else
+            {
+                alias MutaTypes = AliasSeq!(UA, ImplicitConversionTargets!UA);
+            }
             alias ConstTypes = staticMap!(ConstOf, MutaTypes);
             alias SharedTypes = staticMap!(SharedOf, MutaTypes);
             alias SharedConstTypes = staticMap!(SharedConstOf, MutaTypes);
@@ -320,7 +341,15 @@ private:
                         static if (T.sizeof > 0)
                             assert(target, "target must be non-null");
 
-                        emplaceRef(*cast(Unqual!T*) zat, *cast(UA*) src);
+                        static if (isStaticArray!A && isDynamicArray!T)
+                        {
+                            auto this_ = (*src)[];
+                            emplaceRef(*cast(Unqual!T*) zat, cast(Unqual!T) this_);
+                        }
+                        else
+                        {
+                            emplaceRef(*cast(Unqual!T*) zat, *cast(UA*) src);
+                        }
                     }
                 }
                 else
@@ -610,7 +639,6 @@ public:
 
     VariantN opAssign(T)(T rhs)
     {
-        //writeln(typeid(rhs));
         static assert(allowed!(T), "Cannot store a " ~ T.stringof
             ~ " in a " ~ VariantN.stringof ~ ". Valid types are "
                 ~ AllowedTypes.stringof);
@@ -662,12 +690,14 @@ public:
                 }
                 else static if (is(T == U[n], U, size_t n))
                 {
-                    auto p = cast(T*)(new U[n]).ptr;
-                    *p = rhs;
+                    alias UT = Unqual!T;
+                    auto p = cast(UT*)(new U[n]).ptr;
+                    *p = cast(UT) rhs;
                 }
                 else
                 {
-                    auto p = new T;
+                    alias UT = Unqual!T;
+                    auto p = new UT;
                     *p = rhs;
                 }
                 memcpy(&store, &p, p.sizeof);
@@ -712,7 +742,7 @@ public:
     }
 
     ///
-    version(unittest)
+    version (StdDdoc)
     @system unittest
     {
         Variant a;
@@ -745,7 +775,7 @@ public:
     }
 
     ///
-    version(unittest)
+    version (StdDdoc)
     @system unittest
     {
         Variant a = 5;
@@ -1021,73 +1051,36 @@ public:
      * involved. The conversion rules mimic D's built-in rules for
      * arithmetic conversions.
      */
-
-    // Adapted from http://www.prowiki.org/wiki4d/wiki.cgi?DanielKeep/Variant
-    // arithmetic
-    VariantN opAdd(T)(T rhs) { return opArithmetic!(T, "+")(rhs); }
+    VariantN opBinary(string op, T)(T rhs)
+    if ((op == "+" || op == "-" || op == "*" || op == "/" || op == "^^" || op == "%") &&
+        is(typeof(opArithmetic!(T, op)(rhs))))
+    { return opArithmetic!(T, op)(rhs); }
     ///ditto
-    VariantN opSub(T)(T rhs) { return opArithmetic!(T, "-")(rhs); }
-
-    // Commenteed all _r versions for now because of ambiguities
-    // arising when two Variants are used
-
-    // ///ditto
-    // VariantN opSub_r(T)(T lhs)
-    // {
-    //     return VariantN(lhs).opArithmetic!(VariantN, "-")(this);
-    // }
+    VariantN opBinary(string op, T)(T rhs)
+    if ((op == "&" || op == "|" || op == "^" || op == ">>" || op == "<<" || op == ">>>") &&
+        is(typeof(opLogic!(T, op)(rhs))))
+    { return opLogic!(T, op)(rhs); }
     ///ditto
-    VariantN opMul(T)(T rhs) { return opArithmetic!(T, "*")(rhs); }
+    VariantN opBinaryRight(string op, T)(T lhs)
+    if ((op == "+" || op == "*") &&
+        is(typeof(opArithmetic!(T, op)(lhs))))
+    { return opArithmetic!(T, op)(lhs); }
     ///ditto
-    VariantN opDiv(T)(T rhs) { return opArithmetic!(T, "/")(rhs); }
-    // ///ditto
-    // VariantN opDiv_r(T)(T lhs)
-    // {
-    //     return VariantN(lhs).opArithmetic!(VariantN, "/")(this);
-    // }
+    VariantN opBinaryRight(string op, T)(T lhs)
+    if ((op == "&" || op == "|" || op == "^") &&
+        is(typeof(opLogic!(T, op)(lhs))))
+    { return opLogic!(T, op)(lhs); }
     ///ditto
-    VariantN opMod(T)(T rhs) { return opArithmetic!(T, "%")(rhs); }
-    // ///ditto
-    // VariantN opMod_r(T)(T lhs)
-    // {
-    //     return VariantN(lhs).opArithmetic!(VariantN, "%")(this);
-    // }
-    ///ditto
-    VariantN opAnd(T)(T rhs) { return opLogic!(T, "&")(rhs); }
-    ///ditto
-    VariantN opOr(T)(T rhs) { return opLogic!(T, "|")(rhs); }
-    ///ditto
-    VariantN opXor(T)(T rhs) { return opLogic!(T, "^")(rhs); }
-    ///ditto
-    VariantN opShl(T)(T rhs) { return opLogic!(T, "<<")(rhs); }
-    // ///ditto
-    // VariantN opShl_r(T)(T lhs)
-    // {
-    //     return VariantN(lhs).opLogic!(VariantN, "<<")(this);
-    // }
-    ///ditto
-    VariantN opShr(T)(T rhs) { return opLogic!(T, ">>")(rhs); }
-    // ///ditto
-    // VariantN opShr_r(T)(T lhs)
-    // {
-    //     return VariantN(lhs).opLogic!(VariantN, ">>")(this);
-    // }
-    ///ditto
-    VariantN opUShr(T)(T rhs) { return opLogic!(T, ">>>")(rhs); }
-    // ///ditto
-    // VariantN opUShr_r(T)(T lhs)
-    // {
-    //     return VariantN(lhs).opLogic!(VariantN, ">>>")(this);
-    // }
-    ///ditto
-    VariantN opCat(T)(T rhs)
+    VariantN opBinary(string op, T)(T rhs)
+        if (op == "~")
     {
         auto temp = this;
         temp ~= rhs;
         return temp;
     }
     // ///ditto
-    // VariantN opCat_r(T)(T rhs)
+    // VariantN opBinaryRight(string op, T)(T rhs)
+    //     if (op == "~")
     // {
     //     VariantN temp = rhs;
     //     temp ~= this;
@@ -1095,33 +1088,18 @@ public:
     // }
 
     ///ditto
-    VariantN opAddAssign(T)(T rhs)  { return this = this + rhs; }
-    ///ditto
-    VariantN opSubAssign(T)(T rhs)  { return this = this - rhs; }
-    ///ditto
-    VariantN opMulAssign(T)(T rhs)  { return this = this * rhs; }
-    ///ditto
-    VariantN opDivAssign(T)(T rhs)  { return this = this / rhs; }
-    ///ditto
-    VariantN opModAssign(T)(T rhs)  { return this = this % rhs; }
-    ///ditto
-    VariantN opAndAssign(T)(T rhs)  { return this = this & rhs; }
-    ///ditto
-    VariantN opOrAssign(T)(T rhs)   { return this = this | rhs; }
-    ///ditto
-    VariantN opXorAssign(T)(T rhs)  { return this = this ^ rhs; }
-    ///ditto
-    VariantN opShlAssign(T)(T rhs)  { return this = this << rhs; }
-    ///ditto
-    VariantN opShrAssign(T)(T rhs)  { return this = this >> rhs; }
-    ///ditto
-    VariantN opUShrAssign(T)(T rhs) { return this = this >>> rhs; }
-    ///ditto
-    VariantN opCatAssign(T)(T rhs)
+    VariantN opOpAssign(string op, T)(T rhs)
     {
-        auto toAppend = Variant(rhs);
-        fptr(OpID.catAssign, &store, &toAppend) == 0 || assert(false);
-        return this;
+        static if (op != "~")
+        {
+            mixin("return this = this" ~ op ~ "rhs;");
+        }
+        else
+        {
+            auto toAppend = Variant(rhs);
+            fptr(OpID.catAssign, &store, &toAppend) == 0 || assert(false);
+            return this;
+        }
     }
 
     /**
@@ -1137,7 +1115,7 @@ public:
     }
 
     ///
-    version(unittest)
+    version (StdDdoc)
     @system unittest
     {
         Variant a = new int[10];
@@ -1258,6 +1236,13 @@ public:
     assert(a.length == 42);
     a[5] = 7;
     assert(a[5] == 7);
+}
+
+@safe unittest
+{
+    alias V = VariantN!24;
+    const alignMask = V.alignof - 1;
+    assert(V.sizeof == ((24 + (void*).sizeof + alignMask) & ~alignMask));
 }
 
 /// Can also assign class values
@@ -1541,6 +1526,21 @@ pure nothrow @nogc
     }
 
     Algebraic!(SafeS) y;
+}
+
+// issue 19986
+@system unittest
+{
+    VariantN!32 v;
+    v = const(ubyte[33]).init;
+
+    struct S
+    {
+        ubyte[33] s;
+    }
+
+    VariantN!32 v2;
+    v2 = const(S).init;
 }
 
 /**
@@ -1978,7 +1978,7 @@ static class VariantException : Exception
     }
 }
 
-version(TestComplex)
+version (TestComplex)
 deprecated
 @system unittest
 {
@@ -3027,4 +3027,60 @@ if (isAlgebraic!VariantType && Handler.length > 0)
     v2 = S(2);
     v = v2;
     assert(v.get!S.x == 2);
+}
+
+@system unittest
+{
+    // Bugzilla 19200
+    static struct S
+    {
+        static int opBinaryRight(string op : "|", T)(T rhs)
+        {
+            return 3;
+        }
+    }
+
+    S s;
+    Variant v;
+    auto b = v | s;
+    assert(b == 3);
+}
+
+@system unittest
+{
+    // Bugzilla 11061
+    int[4] el = [0, 1, 2, 3];
+    int[3] nl = [0, 1, 2];
+    Variant v1 = el;
+    assert(v1 == el); // Compare Var(static) to static
+    assert(v1 != nl); // Compare static arrays of different length
+    assert(v1 == [0, 1, 2, 3]); // Compare Var(static) to dynamic.
+    assert(v1 != [0, 1, 2]);
+    int[] dyn = [0, 1, 2, 3];
+    v1 = dyn;
+    assert(v1 == el); // Compare Var(dynamic) to static.
+    assert(v1 == [0, 1] ~ [2, 3]); // Compare Var(dynamic) to dynamic
+}
+
+@system unittest
+{
+    // Test if we don't have scoping issues.
+    Variant createVariant(int[] input)
+    {
+        int[2] el = [input[0], input[1]];
+        Variant v = el;
+        return v;
+    }
+    Variant v = createVariant([0, 1]);
+    createVariant([2, 3]);
+    assert(v == [0,1]);
+}
+
+@safe unittest
+{
+    // Bugzilla 19994
+    alias Inner = Algebraic!(This*);
+    alias Outer = Algebraic!(Inner, This*);
+
+    static assert(is(Outer.AllowedTypes == AliasSeq!(Inner, Outer*)));
 }

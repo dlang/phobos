@@ -67,6 +67,38 @@ struct FallbackAllocator(Primary, Fallback)
         return result.length == s ? result : fallback.allocate(s);
     }
 
+    static if (hasMember!(Primary, "allocateZeroed")
+            || (hasMember!(Fallback, "allocateZeroed")))
+    package(std) void[] allocateZeroed()(size_t s)
+    {
+        // Try to allocate with primary.
+        static if (hasMember!(Primary, "allocateZeroed"))
+        {
+            void[] result = primary.allocateZeroed(s);
+            if (result.length == s) return result;
+        }
+        else
+        {
+            void[] result = primary.allocate(s);
+            if (result.length == s)
+            {
+                (() @trusted => (cast(ubyte[]) result)[] = 0)();
+                return result;
+            }
+        }
+        // Allocate with fallback.
+        static if (hasMember!(Fallback, "allocateZeroed"))
+        {
+            return fallback.allocateZeroed(s);
+        }
+        else
+        {
+            result = fallback.allocate(s);
+            (() @trusted => (cast(ubyte[]) result)[] = 0)(); // OK even if result is null.
+            return result;
+        }
+    }
+
     /**
     `FallbackAllocator` offers `alignedAllocate` iff at least one of the
     allocators also offers it. It attempts to allocate using either or both.

@@ -34,7 +34,7 @@ Reference_semantics:
 All containers have reference semantics, which means that after
 assignment both variables refer to the same underlying data.
 
-To make a copy of a container, use the `c._dup` container primitive.
+To make a copy of a container, use the `c.dup` container primitive.
 ---
 import std.container, std.range;
 Array!int originalArray = make!(Array!int)(1, 2, 3);
@@ -491,11 +491,6 @@ $(TR
     $(TDNW $(D log n$(SUBSCRIPT c)))
     $(TD Removes an element from `c` by using its key `k`.
          The key's type is defined by the container.)
-)
-$(TR
-    $(TDNW ``)
-    $(TDNW ``)
-    $(TD )
 )
 )
 

@@ -111,7 +111,7 @@ struct GCAllocator
         return ((n + 4095) / 4096) * 4096;
     }
 
-    package pure nothrow @trusted void[] allocateZeroed(size_t bytes) shared const
+    package pure nothrow @trusted void[] allocateZeroed()(size_t bytes) shared const
     {
         if (!bytes) return null;
         auto p = GC.calloc(bytes);
@@ -170,10 +170,14 @@ pure @system unittest
 
         assert(GC.sizeOf(buffer.ptr) == s);
 
-        auto buffer2 = GCAllocator.instance.allocate(s - (s / 2) + 1);
-        scope(exit) () nothrow @nogc { GCAllocator.instance.deallocate(buffer2); }();
+        // the GC should provide power of 2 as "good" sizes, but other sizes are allowed, too
+        version (none)
+        {
+            auto buffer2 = GCAllocator.instance.allocate(s - (s / 2) + 1);
+            scope(exit) () nothrow @nogc { GCAllocator.instance.deallocate(buffer2); }();
 
-        assert(GC.sizeOf(buffer2.ptr) == s);
+            assert(GC.sizeOf(buffer2.ptr) == s);
+        }
     }
 
     // anything above a page is simply rounded up to next page

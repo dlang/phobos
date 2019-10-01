@@ -164,19 +164,9 @@ import std.encoding : EncodingScheme;
 import std.traits : isSomeChar;
 import std.typecons : Flag, Yes, No, Tuple;
 
-// Curl tests for FreeBSD 32-bit are temporarily disabled.
-// https://github.com/braddr/d-tester/issues/70
-// https://issues.dlang.org/show_bug.cgi?id=18519
-version(unittest)
-version(FreeBSD)
-version(X86)
-    version = DisableCurlTests;
-
-version(DisableCurlTests) {} else:
-
-version(unittest)
+version (unittest)
 {
-    import std.socket : Socket;
+    import std.socket : Socket, SocketShutdown;
 
     private struct TestServer
     {
@@ -213,9 +203,7 @@ version(unittest)
             }
             catch (Throwable e)
             {
-                import core.stdc.stdlib : exit, EXIT_FAILURE;
-                stderr.writeln(e);
-                exit(EXIT_FAILURE); // Bugzilla 7018
+                stderr.writeln(e);  // Bugzilla 7018
             }
         }
     }
@@ -248,7 +236,10 @@ version(unittest)
         // terminate server from a thread local dtor of the thread that started it,
         //  because thread_joinall is called before shared module dtors
         if (tlsInit && server.sock)
+        {
+            server.sock.shutdown(SocketShutdown.RECEIVE);
             server.sock.close();
+        }
     }
 
     private struct Request(T)
@@ -332,7 +323,7 @@ version(unittest)
 
     private enum httpContinue = "HTTP/1.1 100 Continue\r\n\r\n";
 }
-version(StdDdoc) import std.stdio;
+version (StdDdoc) import std.stdio;
 
 // Default data timeout for Protocols
 private enum _defaultDataTimeout = dur!"minutes"(2);
@@ -451,7 +442,11 @@ if (isCurlConn!Conn)
             s.send(httpOK("Hello world"));
         });
         auto fn = std.file.deleteme;
-        scope (exit) std.file.remove(fn);
+        scope (exit)
+        {
+            if (std.file.exists(fn))
+                std.file.remove(fn);
+        }
         download(host, fn);
         assert(std.file.readText(fn) == "Hello world");
     }
@@ -513,7 +508,11 @@ if (isCurlConn!Conn)
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         auto fn = std.file.deleteme;
-        scope (exit) std.file.remove(fn);
+        scope (exit)
+        {
+            if (std.file.exists(fn))
+                std.file.remove(fn);
+        }
         std.file.write(fn, "upload data\n");
         testServer.handle((s) {
             auto req = s.recvReq;
@@ -669,19 +668,27 @@ if (is(T == char) || is(T == ubyte))
 {
     import std.uri : urlEncode;
 
-    return post(url, urlEncode(postDict), conn);
+    return post!T(url, urlEncode(postDict), conn);
 }
 
 @system unittest
 {
+    import std.algorithm.searching : canFind;
+    import std.meta : AliasSeq;
+
+    static immutable expected = ["name1=value1&name2=value2", "name2=value2&name1=value1"];
+
     foreach (host; [testServer.addr, "http://" ~ testServer.addr])
     {
-        testServer.handle((s) {
-            auto req = s.recvReq!char;
-            s.send(httpOK(req.bdy));
-        });
-        auto res = post(host ~ "/path", ["name1" : "value1", "name2" : "value2"]);
-        assert(res == "name1=value1&name2=value2");
+        foreach (T; AliasSeq!(char, ubyte))
+        {
+            testServer.handle((s) {
+                auto req = s.recvReq!char;
+                s.send(httpOK(req.bdy));
+            });
+            auto res = post!T(host ~ "/path", ["name1" : "value1", "name2" : "value2"]);
+            assert(canFind(expected, res));
+        }
     }
 }
 
@@ -2298,17 +2305,28 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
   * HTTP client functionality.
   *
   * Example:
+  *
+  * Get with custom data receivers:
+  *
   * ---
   * import std.net.curl, std.stdio;
   *
-  * // Get with custom data receivers
-  * auto http = HTTP("dlang.org");
+  * auto http = HTTP("https://dlang.org");
   * http.onReceiveHeader =
   *     (in char[] key, in char[] value) { writeln(key ~ ": " ~ value); };
   * http.onReceive = (ubyte[] data) { /+ drop +/ return data.length; };
   * http.perform();
+  * ---
   *
-  * // Put with data senders
+  */
+
+/**
+  * Put with data senders:
+  *
+  * ---
+  * import std.net.curl, std.stdio;
+  *
+  * auto http = HTTP("https://dlang.org");
   * auto msg = "Hello world";
   * http.contentLength = msg.length;
   * http.onSend = (void[] data)
@@ -2321,10 +2339,19 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
   *     return len;
   * };
   * http.perform();
+  * ---
   *
-  * // Track progress
+  */
+
+/**
+  * Tracking progress:
+  *
+  * ---
+  * import std.net.curl, std.stdio;
+  *
+  * auto http = HTTP();
   * http.method = HTTP.Method.get;
-  * http.url = "http://upload.wikimedia.org/wikipedia/commons/"
+  * http.url = "http://upload.wikimedia.org/wikipedia/commons/" ~
   *            "5/53/Wikipedia-logo-en-big.png";
   * http.onReceive = (ubyte[] data) { return data.length; };
   * http.onProgress = (size_t dltotal, size_t dlnow,
@@ -2377,7 +2404,6 @@ struct HTTP
                                                      in char[] value) callback)
         {
             import std.algorithm.searching : startsWith;
-            import std.conv : to;
             import std.regex : regex, match;
             import std.uni : toLower;
 
@@ -2397,18 +2423,8 @@ struct HTTP
                     if (header.startsWith("HTTP/"))
                     {
                         headersIn.clear();
-
-                        const m = match(header, regex(r"^HTTP/(\d+)\.(\d+) (\d+) (.*)$"));
-                        if (m.empty)
+                        if (parseStatusLine(header, status))
                         {
-                            // Invalid status line
-                        }
-                        else
-                        {
-                            status.majorVersion = to!ushort(m.captures[1]);
-                            status.minorVersion = to!ushort(m.captures[2]);
-                            status.code = to!ushort(m.captures[3]);
-                            status.reason = m.captures[4].idup;
                             if (onReceiveStatusLine != null)
                                 onReceiveStatusLine(status);
                         }
@@ -2443,6 +2459,37 @@ struct HTTP
 
     private RefCounted!Impl p;
     import etc.c.curl : CurlTimeCond;
+
+    /// Parse status line, as received from / generated by cURL.
+    private static bool parseStatusLine(in char[] header, out StatusLine status) @safe
+    {
+        import std.conv : to;
+        import std.regex : regex, match;
+
+        const m = match(header, regex(r"^HTTP/(\d+)(?:\.(\d+))? (\d+)(?: (.*))?$"));
+        if (m.empty)
+            return false; // Invalid status line
+        else
+        {
+            status.majorVersion = to!ushort(m.captures[1]);
+            status.minorVersion = m.captures[2].length ? to!ushort(m.captures[2]) : 0;
+            status.code = to!ushort(m.captures[3]);
+            status.reason = m.captures[4].idup;
+            return true;
+        }
+    }
+
+    @safe unittest
+    {
+        StatusLine status;
+        assert(parseStatusLine("HTTP/1.1 200 OK", status)
+            && status == StatusLine(1, 1, 200, "OK"));
+        assert(parseStatusLine("HTTP/1.0 304 Not Modified", status)
+            && status == StatusLine(1, 0, 304, "Not Modified"));
+        // The HTTP2 protocol is binary; cURL generates this fake text header.
+        assert(parseStatusLine("HTTP/2 200", status)
+            && status == StatusLine(2, 0, 200, null));
+    }
 
     /** Time condition enumeration as an alias of $(REF CurlTimeCond, etc,c,curl)
 
@@ -4126,7 +4173,7 @@ private struct CurlAPI
         }
         else version (Windows)
         {
-            import core.sys.windows.windows : GetProcAddress, GetModuleHandleA,
+            import core.sys.windows.winbase : GetProcAddress, GetModuleHandleA,
                 LoadLibraryA;
             alias loadSym = GetProcAddress;
         }
@@ -4147,7 +4194,12 @@ private struct CurlAPI
             version (Posix)
                 dlclose(handle);
 
-            version (OSX)
+            version (LibcurlPath)
+            {
+                import std.string : strip;
+                static immutable names = [strip(import("LibcurlPathFile"))];
+            }
+            else version (OSX)
                 static immutable names = ["libcurl.4.dylib"];
             else version (Posix)
             {
@@ -4191,7 +4243,7 @@ private struct CurlAPI
             }
             else version (Windows)
             {
-                import core.sys.windows.windows : FreeLibrary;
+                import core.sys.windows.winbase : FreeLibrary;
                 FreeLibrary(_handle);
             }
             else

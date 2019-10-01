@@ -18,7 +18,7 @@ module std.internal.cstring;
 ///
 @safe unittest
 {
-    version(Posix)
+    version (Posix)
     {
         import core.stdc.stdlib : free;
         import core.sys.posix.stdlib : setenv;
@@ -28,9 +28,9 @@ module std.internal.cstring;
         { enforce(setenv(name.tempCString(), value.tempCString(), 1) != -1); }
     }
 
-    version(Windows)
+    version (Windows)
     {
-        import core.sys.windows.windows : SetEnvironmentVariableW;
+        import core.sys.windows.winbase : SetEnvironmentVariableW;
         import std.exception : enforce;
 
         void setEnvironment(scope const(char)[] name, scope const(char)[] value)
@@ -84,41 +84,76 @@ if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
 
     // Note: res._ptr can't point to res._buff as structs are movable.
 
-    To[] p = res._buff;
-    size_t i;
-
-    size_t strLength;
-    static if (hasLength!From)
+    static if (isSomeString!From) // Bugzilla 1498
     {
-        strLength = str.length;
-    }
-    import std.utf : byUTF;
-    static if (isSomeString!From)
-    {
-        auto r = cast(const(CF)[])str;  // because inout(CF) causes problems with byUTF
-        if (r is null)  // Bugzilla 14980
+        if (str is null)
         {
             res._length = 0;
             res._ptr = null;
             return res;
         }
     }
-    else
-        alias r = str;
-    To[] heapBuffer;
-    foreach (const c; byUTF!(Unqual!To)(r))
+
+    // Use slice assignment if available.
+    static if (To.sizeof == CF.sizeof && is(typeof(res._buff[0 .. str.length] = str[])))
     {
-        if (i + 1 == p.length)
+        if (str.length < res._buff.length)
         {
-            heapBuffer = trustedRealloc(p, strLength, heapBuffer is null);
-            p = heapBuffer;
+            res._buff[0 .. str.length] = str[];
+            res._buff[str.length] = 0;
+            res._ptr = res.useStack;
         }
-        p[i++] = c;
+        else
+        {
+            import std.internal.memory : enforceMalloc;
+            if (false)
+            {
+                // This code is removed by the compiler but causes `@safe`ty
+                // to be inferred correctly.
+                CF[0] x;
+                x[] = str[0 .. 0];
+            }
+            res._ptr = () @trusted {
+                auto p = cast(CF*) enforceMalloc((str.length + 1) * CF.sizeof);
+                p[0 .. str.length] = str[];
+                p[str.length] = 0;
+                return cast(To*) p;
+            }();
+        }
+        res._length = str.length;
+        return res;
     }
-    p[i] = 0;
-    res._length = i;
-    res._ptr = (heapBuffer is null ? res.useStack : &heapBuffer[0]);
-    return res;
+    else
+    {
+        static assert(!(isSomeString!From && CF.sizeof == To.sizeof), "Should be using slice assignment.");
+        To[] p = res._buff;
+        size_t i;
+
+        size_t strLength;
+        static if (hasLength!From)
+        {
+            strLength = str.length;
+        }
+        import std.utf : byUTF;
+        static if (isSomeString!From)
+            auto r = cast(const(CF)[])str;  // because inout(CF) causes problems with byUTF
+        else
+            alias r = str;
+        To[] heapBuffer;
+        foreach (const c; byUTF!(Unqual!To)(r))
+        {
+            if (i + 1 == p.length)
+            {
+                heapBuffer = trustedRealloc(p, strLength, heapBuffer is null);
+                p = heapBuffer;
+            }
+            p[i++] = c;
+        }
+        p[i] = 0;
+        res._length = i;
+        res._ptr = (heapBuffer is null ? res.useStack : &heapBuffer[0]);
+        return res;
+    }
 }
 
 ///
@@ -174,8 +209,11 @@ pure nothrow @nogc @safe unittest
     assert(ptr is null);
 }
 
-version(Windows)
-    alias tempCStringW = tempCString!(wchar, const(char)[]);
+version (Windows)
+{
+    import core.sys.windows.winnt : WCHAR;
+    alias tempCStringW = tempCString!(WCHAR, const(char)[]);
+}
 
 private struct TempCStringBuffer(To = char)
 {
@@ -214,7 +252,7 @@ private:
 
     To* _ptr;
     size_t _length;        // length of the string
-    version(unittest)
+    version (unittest)
     // the 'small string optimization'
     {
         // smaller size to trigger reallocations. Padding is to account for
@@ -235,8 +273,7 @@ private To[] trustedRealloc(To)(scope To[] buf, size_t strLength, bool bufIsOnSt
 {
     pragma(inline, false);  // because it's rarely called
 
-    import core.exception : onOutOfMemoryError;
-    import core.memory : pureMalloc, pureRealloc;
+    import std.internal.memory : enforceMalloc, enforceRealloc;
 
     size_t newlen = buf.length * 3 / 2;
 
@@ -244,19 +281,25 @@ private To[] trustedRealloc(To)(scope To[] buf, size_t strLength, bool bufIsOnSt
     {
         if (newlen <= strLength)
             newlen = strLength + 1; // +1 for terminating 0
-        auto ptr = cast(To*) pureMalloc(newlen * To.sizeof);
-        if (!ptr)
-            onOutOfMemoryError();
+        auto ptr = cast(To*) enforceMalloc(newlen * To.sizeof);
         ptr[0 .. buf.length] = buf[];
         return ptr[0 .. newlen];
     }
     else
     {
         if (buf.length >= size_t.max / (2 * To.sizeof))
-            onOutOfMemoryError();
-        auto ptr = cast(To*) pureRealloc(buf.ptr, newlen * To.sizeof);
-        if (!ptr)
-            onOutOfMemoryError();
+        {
+            version (D_Exceptions)
+            {
+                import core.exception : onOutOfMemoryError;
+                onOutOfMemoryError();
+            }
+            else
+            {
+                assert(0, "Memory allocation failed");
+            }
+        }
+        auto ptr = cast(To*) enforceRealloc(buf.ptr, newlen * To.sizeof);
         return ptr[0 .. newlen];
     }
 }

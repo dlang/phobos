@@ -2,12 +2,13 @@
 
 set -uexo pipefail
 
-HOST_DMD_VER=2.078.1
+HOST_DMD_VER=2.079.1
 CURL_USER_AGENT="CirleCI $(curl --version | head -n 1)"
 DUB=${DUB:-dub}
 N=2
 CIRCLE_NODE_INDEX=${CIRCLE_NODE_INDEX:-0}
 BUILD="debug"
+PIC=1
 
 case $CIRCLE_NODE_INDEX in
     0) MODEL=64 ;;
@@ -15,10 +16,12 @@ case $CIRCLE_NODE_INDEX in
 esac
 
 install_deps() {
+    sudo apt-get update
     if [ $MODEL -eq 32 ]; then
-        sudo apt-get update
         sudo apt-get install g++-multilib
     fi
+    # required for: "core.time.TimeException@std/datetime/timezone.d(2073): Directory /usr/share/zoneinfo/ does not exist."
+    sudo apt-get install --reinstall tzdata gdb
 
     for i in {0..4}; do
         if curl -fsS -A "$CURL_USER_AGENT" --max-time 5 https://dlang.org/install.sh -O ||
@@ -73,7 +76,7 @@ setup_repos()
         git checkout -f FETCH_HEAD
     fi
 
-    for proj in dmd druntime ; do
+    for proj in dmd druntime tools ; do
         if [ $base_branch != master ] && [ $base_branch != stable ] &&
             ! git ls-remote --exit-code --heads https://github.com/dlang/$proj.git $base_branch > /dev/null; then
             # use master as fallback for other repos to test feature branches
@@ -87,17 +90,8 @@ setup_repos()
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"
 
     # build dmd and druntime
-    make -j$N -C ../dmd/src -f posix.mak MODEL=$MODEL HOST_DMD=$DMD BUILD=$BUILD all
+    pushd ../dmd && ./src/build.d MODEL=$MODEL HOST_DMD=$DMD BUILD=$BUILD PIC="$PIC" all && popd
     make -j$N -C ../druntime -f posix.mak MODEL=$MODEL HOST_DMD=$DMD BUILD=$BUILD
-}
-
-# verify style guide
-style_lint()
-{
-    # dscanner needs a more up-to-date DMD version
-    source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"
-
-    make -f posix.mak style_lint DUB=$DUB BUILD=$BUILD
 }
 
 # run unittest with coverage
@@ -125,13 +119,20 @@ publictests()
 {
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"
 
-    # checkout a specific version of https://github.com/dlang/tools
-    if [ ! -d ../tools ] ; then
-        clone https://github.com/dlang/tools.git ../tools master
-    fi
-    git -C ../tools checkout 6ad91215253b52e6ecfc39fe1854815867c66f23
-
     make -f posix.mak -j$N publictests DUB=$DUB BUILD=$BUILD
+
+    # run -betterC tests
+    make -f posix.mak test_extractor # build in single-threaded mode
+    make -f posix.mak -j$N betterc
+}
+
+# test stdx dub package
+dub_package()
+{
+    pushd test
+    dub -v --single dub_stdx_checkedint.d
+    dub -v --single dub_stdx_allocator.d
+    popd
 }
 
 case $1 in
@@ -139,7 +140,7 @@ case $1 in
     setup-repos) setup_repos ;;
     coverage) coverage ;;
     publictests) publictests ;;
-    style_lint) style_lint ;;
+    style_lint) echo "style_lint is now run at Buildkite";;
     # has_public_example has been removed and is kept for compatibility with older PRs
     has_public_example) echo "OK" ;;
     *) echo "Unknown command"; exit 1;;

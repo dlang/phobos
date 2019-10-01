@@ -190,6 +190,33 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         return null;
     }
 
+    static if (hasMember!(Allocator, "allocateZeroed"))
+    package(std) void[] allocateZeroed()(size_t s)
+    {
+        for (auto p = &root, n = *p; n; p = &n.next, n = *p)
+        {
+            auto result = n.allocateZeroed(s);
+            if (result.length != s) continue;
+            // Bring to front if not already
+            if (root != n)
+            {
+                *p = n.next;
+                n.next = root;
+                root = n;
+            }
+            return result;
+        }
+
+        // Add a new allocator
+        if (auto a = addAllocator(s))
+        {
+            auto result = a.allocateZeroed(s);
+            assert(owns(result) == Ternary.yes || !result.ptr);
+            return result;
+        }
+        return null;
+    }
+
     /**
     Allocate a block of size `s` with alignment `a`. First tries to allocate
     from the existing list of already-created allocators. If neither can
@@ -589,7 +616,7 @@ template AllocatorList(alias factoryFunction,
 }
 
 ///
-version(Posix) @system unittest
+version (Posix) @system unittest
 {
     import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.free_list : ContiguousFreeList;

@@ -88,12 +88,12 @@ $(BOOKTABLE ,
         $(TD Checked integral types.)
     )
     $(TR
-        $(TDNW $(MREF std,digest,crc))
-        $(TD Cyclic Redundancy Check (32-bit) implementation.)
+        $(TDNW $(MREF std,digest))
+        $(TD Compute digests such as md5, sha1 and crc32.)
     )
     $(TR
-        $(TDNW $(MREF std,digest,digest))
-        $(TD Compute digests such as md5, sha1 and crc32.)
+        $(TDNW $(MREF std,digest,crc))
+        $(TD Cyclic Redundancy Check (32-bit) implementation.)
     )
     $(TR
         $(TDNW $(MREF std,digest,hmac))

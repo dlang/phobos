@@ -22,10 +22,6 @@
 #
 # make std/somemodule.test => only builds and unittests std.somemodule
 #
-# make TZ_DATABASE_DIR=path to the TZDatabase directory => This is useful to
-# overwrite the hardcoded path to the TZDatabase directory needed
-# for std/datetime/timezone.d
-
 ################################################################################
 # Configurable stuff, usually from the command line
 #
@@ -82,7 +78,7 @@ ROOT_OF_THEM_ALL = generated
 ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
 DUB=dub
 TOOLS_DIR=../tools
-DSCANNER_HASH=39496ede1a2c00674c4e04b6513be7cc9aee6cef
+DSCANNER_HASH=b51ee472fe29c05cc33359ab8de52297899131fe
 DSCANNER_DIR=$(ROOT_OF_THEM_ALL)/dscanner-$(DSCANNER_HASH)
 
 # Set DRUNTIME name and full path
@@ -112,16 +108,38 @@ else
 endif
 
 # Set CFLAGS
-CFLAGS=$(MODEL_FLAG) -fPIC -DHAVE_UNISTD_H
-ifeq ($(BUILD),debug)
-	CFLAGS += -g
+OUTFILEFLAG = -o
+NODEFAULTLIB=-defaultlib= -debuglib=
+ifeq (,$(findstring win,$(OS)))
+	CFLAGS=$(MODEL_FLAG) -fPIC -DHAVE_UNISTD_H
+	NODEFAULTLIB += -L-lpthread -L-lm
+	ifeq ($(BUILD),debug)
+		CFLAGS += -g
+	else
+		CFLAGS += -O3
+	endif
 else
-	CFLAGS += -O3
+	ifeq ($(OS),win32)
+		CFLAGS=-DNO_snprintf
+		ifeq ($(BUILD),debug)
+			CFLAGS += -g
+		else
+			CFLAGS += -O
+		endif
+	else # win64/win32coff
+		OUTFILEFLAG = /Fo
+		NODEFAULTLIB=-L/NOD:phobos$(MODEL).lib -L/OPT:NOICF
+		ifeq ($(BUILD),debug)
+			CFLAGS += /Z7
+		else
+			CFLAGS += /Ox
+		endif
+	endif
 endif
 
 # Set DFLAGS
 DFLAGS=
-override DFLAGS+=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -dip25 $(MODEL_FLAG) $(PIC) -transition=complex
+override DFLAGS+=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -preview=dip1000 $(MODEL_FLAG) $(PIC) -transition=complex
 ifeq ($(BUILD),debug)
 override DFLAGS += -g -debug
 else
@@ -130,10 +148,6 @@ endif
 
 ifdef ENABLE_COVERAGE
 override DFLAGS  += -cov
-endif
-ifneq (,$(TZ_DATABASE_DIR))
-$(file > /tmp/TZDatabaseDirFile, ${TZ_DATABASE_DIR})
-override DFLAGS += -version=TZDatabaseDir -J/tmp/
 endif
 
 UDFLAGS=-unittest
@@ -186,17 +200,17 @@ STD_PACKAGES = std $(addprefix std/,\
   algorithm container datetime digest experimental/allocator \
   experimental/allocator/building_blocks experimental/logger \
   net \
-  experimental range regex)
+  experimental range regex windows)
 
 # Modules broken down per package
 
 PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
   conv csv demangle encoding exception file format \
   functional getopt json math mathspecial meta mmfile numeric \
-  outbuffer parallelism path process random signals socket stdint \
+  outbuffer package parallelism path process random signals socket stdint \
   stdio string system traits typecons uni \
   uri utf uuid variant xml zip zlib
-PACKAGE_std_experimental = all checkedint typecons
+PACKAGE_std_experimental = checkedint typecons
 PACKAGE_std_algorithm = comparison iteration mutation package searching setops \
   sorting
 PACKAGE_std_container = array binaryheap dlist package rbtree slist util
@@ -215,6 +229,7 @@ PACKAGE_std_net = curl isemail
 PACKAGE_std_range = interfaces package primitives
 PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
   backtracking tests tests2 thompson kickstart)
+PACKAGE_std_windows = charset registry syserror
 
 # Modules in std (including those in packages)
 STD_MODULES=$(call P2MODULES,$(STD_PACKAGES))
@@ -234,6 +249,7 @@ EXTRA_MODULES_INTERNAL := $(addprefix std/, \
 						   errorfunction gammafunction ) \
 		scopebuffer test/dummyrange test/range \
 		$(addprefix unicode_, comp decomp grapheme norm tables) \
+		windows/advapi32 \
 	) \
 	typetuple \
 )
@@ -248,9 +264,7 @@ D_FILES = $(addsuffix .d,$(D_MODULES))
 # Aggregate all D modules over all OSs (this is for the zip file)
 ALL_D_FILES = $(addsuffix .d, $(STD_MODULES) $(EXTRA_MODULES_COMMON) \
   $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_OSX) $(EXTRA_MODULES_FREEBSD) \
-  $(EXTRA_MODULES_WIN32) $(EXTRA_MODULES_INTERNAL)) \
-  std/internal/windows/advapi32.d \
-  std/windows/registry.d
+  $(EXTRA_MODULES_WIN32) $(EXTRA_MODULES_INTERNAL))
 
 # C files to be part of the build
 C_MODULES = $(addprefix etc/c/zlib/, adler32 compress crc32 deflate	\
@@ -265,6 +279,7 @@ SHARED=$(if $(findstring $(OS),linux freebsd),1,)
 
 TESTS_EXTRACTOR=$(ROOT)/tests_extractor
 PUBLICTESTS_DIR=$(ROOT)/publictests
+BETTERCTESTS_DIR=$(ROOT)/betterctests
 
 ################################################################################
 # Rules begin here
@@ -300,7 +315,7 @@ dll: $(ROOT)/libphobos2.so
 
 $(ROOT)/%$(DOTOBJ): %.c
 	@[ -d $(dir $@) ] || mkdir -p $(dir $@) || [ -d $(dir $@) ]
-	$(CC) -c $(CFLAGS) $< -o$@
+	$(CC) -c $(CFLAGS) $< $(OUTFILEFLAG)$@
 
 $(LIB): $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
@@ -313,7 +328,7 @@ $(ROOT)/$(SONAME): $(LIBSO)
 
 $(LIBSO): override PIC:=-fPIC
 $(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIMESO)
-	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(LINKDL) $(D_FILES) $(OBJS)
+	$(DMD) $(DFLAGS) -shared $(NODEFAULTLIB) -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(LINKDL) $(D_FILES) $(OBJS)
 
 ifeq (osx,$(OS))
 # Build fat library that combines the 32 bit and the 64 bit libraries
@@ -330,15 +345,23 @@ endif
 # Unittests
 ################################################################################
 
-$(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
+DISABLED_TESTS =
+ifeq ($(OS),freebsd)
+    ifeq ($(MODEL),32)
+    # Curl tests for FreeBSD 32-bit are temporarily disabled.
+    # https://github.com/braddr/d-tester/issues/70
+    # https://issues.dlang.org/show_bug.cgi?id=18519
+    DISABLED_TESTS += std/net/curl
+    endif
+endif
+
+$(addsuffix .run,$(addprefix unittest/,$(DISABLED_TESTS))) :
 	@echo Testing $@ - disabled
 
-include dip1000.mak
-
-UT_D_OBJS:=$(addprefix $(ROOT)/unittest/,$(addsuffix .o,$(D_MODULES)))
+UT_D_OBJS:=$(addprefix $(ROOT)/unittest/,$(addsuffix $(DOTOBJ),$(D_MODULES)))
 # need to recompile all unittest objects whenever sth. changes
 $(UT_D_OBJS): $(ALL_D_FILES)
-$(UT_D_OBJS): $(ROOT)/unittest/%.o: %.d
+$(UT_D_OBJS): $(ROOT)/unittest/%$(DOTOBJ): %.d
 	@mkdir -p $(dir $@)
 	$(DMD) $(DFLAGS) $(UDFLAGS) -c -of$@ $<
 
@@ -347,7 +370,7 @@ ifneq (1,$(SHARED))
 $(UT_D_OBJS): $(DRUNTIME)
 
 $(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME)
-	$(DMD) $(DFLAGS) $(UDFLAGS) -of$@ $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME) $(LINKDL) -defaultlib= -debuglib=
+	$(DMD) $(DFLAGS) $(UDFLAGS) -of$@ $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME) $(LINKDL) $(NODEFAULTLIB)
 
 else
 
@@ -357,10 +380,10 @@ $(UT_D_OBJS): $(DRUNTIMESO)
 
 $(UT_LIBSO): override PIC:=-fPIC
 $(UT_LIBSO): $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO)
-	$(DMD) $(DFLAGS) -shared $(UDFLAGS) -of$@ $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) $(LINKDL) -defaultlib= -debuglib=
+	$(DMD) $(DFLAGS) -shared $(UDFLAGS) -of$@ $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) $(LINKDL) $(NODEFAULTLIB)
 
 $(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_LIBSO)
-	$(DMD) $(DFLAGS) -of$@ $< -L$(UT_LIBSO) -defaultlib= -debuglib=
+	$(DMD) $(DFLAGS) -of$@ $< -L$(UT_LIBSO) $(NODEFAULTLIB)
 
 endif
 
@@ -377,7 +400,7 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 %.test : %.d $(LIB)
 	T=`mktemp -d /tmp/.dmd-run-test.XXXXXX` &&                                                              \
 	  (                                                                                                     \
-	    $(DMD) -od$$T $(DFLAGS) $(aa[$(subst /,.,$(basename $<))]) -main $(UDFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL) -cov -run $< ;     \
+	    $(DMD) -od$$T $(DFLAGS) -main $(UDFLAGS) $(LIB) $(NODEFAULTLIB) $(LINKDL) -cov -run $< ;     \
 	    RET=$$? ; rm -rf $$T ; exit $$RET                                                                   \
 	  )
 
@@ -393,7 +416,7 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 # This forces all of phobos to have debug symbols, which we need as we don't
 # know where debugging is leading us.
 %.debug_with_debugger : %.d $(LIB)
-	$(DMD) $(DFLAGS) -main $(UDFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL) $<
+	$(DMD) $(DFLAGS) -main $(UDFLAGS) $(LIB) $(NODEFAULTLIB) $(LINKDL) $<
 	$(DEBUGGER) ./$(basename $(notdir $<))
 
 # Target for quickly debugging a single module
@@ -429,7 +452,8 @@ install2 : all
 	cp $(LIB) $(INSTALL_DIR)/$(OS)/$(lib_dir)/
 ifeq (1,$(SHARED))
 	cp -P $(LIBSO) $(INSTALL_DIR)/$(OS)/$(lib_dir)/
-	ln -sf $(notdir $(LIBSO)) $(INSTALL_DIR)/$(OS)/$(lib_dir)/libphobos2.so
+	cp -P $(ROOT)/$(SONAME) $(INSTALL_DIR)/$(OS)/$(lib_dir)/
+	cp -P $(ROOT)/libphobos2.so $(INSTALL_DIR)/$(OS)/$(lib_dir)/
 endif
 	mkdir -p $(INSTALL_DIR)/src/phobos/etc
 	mkdir -p $(INSTALL_DIR)/src/phobos/std
@@ -466,7 +490,7 @@ $(JSON) : $(ALL_D_FILES)
 ###########################################################
 SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(EXTRA_DOCUMENTABLES))
 # Set DDOC, the documentation generator
-DDOC=$(DMD) -conf= $(MODEL_FLAG) -w -c -o- -version=StdDdoc \
+DDOC=$(DMD) -conf= $(MODEL_FLAG) -w -c -o- -preview=markdown -version=StdDdoc \
 	-I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 
 # D file to html, e.g. std/conv.d -> std_conv.html
@@ -506,7 +530,7 @@ CWS_TOCHECK = posix.mak win32.mak win64.mak
 CWS_TOCHECK += $(ALL_D_FILES) index.d
 
 checkwhitespace: $(LIB) $(TOOLS_DIR)/checkwhitespace.d
-	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -run $(TOOLS_DIR)/checkwhitespace.d $(CWS_TOCHECK)
+	$(DMD) $(DFLAGS) $(NODEFAULTLIB) $(LIB) -run $(TOOLS_DIR)/checkwhitespace.d $(CWS_TOCHECK)
 
 #############################
 # Submission to Phobos are required to conform to the DStyle
@@ -533,14 +557,17 @@ dscanner:
 	@# However, we still need to ensure that the DScanner binary is built once
 	@[ -f $(DSCANNER_DIR)/dsc ] || ${MAKE} -f posix.mak $(DSCANNER_DIR)/dsc
 	@echo "Running DScanner"
-	$(DEBUGGER) -return-child-result -q -ex run -ex bt -batch --args $(DSCANNER_DIR)/dsc --config .dscanner.ini --styleCheck etc std -I.
+	$(DSCANNER_DIR)/dsc --config .dscanner.ini --styleCheck etc std -I.
 
 style_lint: dscanner $(LIB)
 	@echo "Check for trailing whitespace"
 	grep -nr '[[:blank:]]$$' etc std ; test $$? -eq 1
 
 	@echo "Enforce whitespace before opening parenthesis"
-	grep -nrE "(for|foreach|foreach_reverse|if|while|switch|catch)\(" $$(find etc std -name '*.d') ; test $$? -eq 1
+	grep -nrE "\<(for|foreach|foreach_reverse|if|while|switch|catch|version)\(" $$(find etc std -name '*.d') ; test $$? -eq 1
+
+	@echo "Enforce no whitespace after opening parenthesis"
+	grep -nrE "\<(version) \( " $$(find etc std -name '*.d') ; test $$? -eq 1
 
 	@echo "Enforce whitespace between colon(:) for import statements (doesn't catch everything)"
 	grep -nr 'import [^/,=]*:.*;' $$(find etc std -name '*.d') | grep -vE "import ([^ ]+) :\s"; test $$? -eq 1
@@ -577,30 +604,71 @@ style_lint: dscanner $(LIB)
 	done
 
 	@echo "Check that Ddoc runs without errors"
-	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -w -D -Df/dev/null -main -c -o- $$(find etc std -type f -name '*.d') 2>&1
+	$(DMD) $(DFLAGS) $(NODEFAULTLIB) $(LIB) -w -D -Df/dev/null -main -c -o- $$(find etc std -type f -name '*.d') 2>&1
 
 ################################################################################
-# Check for missing imports in public unittest examples.
+# Build the test extractor.
+# - extracts and runs public unittest examples to checks for missing imports
+# - extracts and runs @betterC unittests
 ################################################################################
-publictests: $(addsuffix .publictests,$(D_MODULES))
 
 $(TESTS_EXTRACTOR): $(TOOLS_DIR)/tests_extractor.d | $(LIB)
-	DFLAGS="$(DFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL)" $(DUB) build --force --compiler=$${PWD}/$(DMD) --single $<
+	DFLAGS="$(DFLAGS) $(LIB) $(NODEFAULTLIB) $(LINKDL)" $(DUB) build --force --compiler=$${PWD}/$(DMD) --single $<
 	mv $(TOOLS_DIR)/tests_extractor $@
+
+test_extractor: $(TESTS_EXTRACTOR)
 
 ################################################################################
 # Extract public tests of a module and test them in an separate file (i.e. without its module)
 # This is done to check for potentially missing imports in the examples, e.g.
 # make -f posix.mak std/format.publictests
 ################################################################################
+
+publictests: $(addsuffix .publictests,$(D_MODULES))
+
 %.publictests: %.d $(LIB) $(TESTS_EXTRACTOR) | $(PUBLICTESTS_DIR)/.directory
 	@$(TESTS_EXTRACTOR) --inputdir  $< --outputdir $(PUBLICTESTS_DIR)
-	@$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -main $(UDFLAGS) -run $(PUBLICTESTS_DIR)/$(subst /,_,$<)
+	@$(DMD) $(DFLAGS) $(NODEFAULTLIB) $(LIB) -main $(UDFLAGS) -run $(PUBLICTESTS_DIR)/$(subst /,_,$<)
+
+################################################################################
+# Check and run @betterC tests
+# ----------------------------
+#
+# Extract @betterC tests of a module and run them in -betterC
+#
+#   make -f posix.mak std/format.betterc
+################################################################################
+
+betterc-phobos-tests: $(addsuffix .betterc,$(D_MODULES))
+betterc: betterc-phobos-tests
+
+%.betterc: %.d | $(BETTERCTESTS_DIR)/.directory
+	@# Due to the FORCE rule on druntime, make will always try to rebuild Phobos (even as an order-only dependency)
+	@# However, we still need to ensure that the test_extractor is built once
+	@[ -f "$(TESTS_EXTRACTOR)" ] || ${MAKE} -f posix.mak "$(TESTS_EXTRACTOR)"
+	@$(TESTS_EXTRACTOR) --betterC --attributes betterC \
+		--inputdir  $< --outputdir $(BETTERCTESTS_DIR)
+	@$(DMD) $(DFLAGS) $(NODEFAULTLIB) -betterC $(UDFLAGS) -run $(BETTERCTESTS_DIR)/$(subst /,_,$<)
+
+################################################################################
 
 .PHONY : auto-tester-build
+ifneq (,$(findstring Darwin_64_32, $(PWD)))
+auto-tester-build:
+	echo "Darwin_64_32_disabled"
+else
 auto-tester-build: all checkwhitespace
+endif
 
 .PHONY : auto-tester-test
+ifneq (,$(findstring Darwin_64_32, $(PWD)))
+auto-tester-test:
+	echo "Darwin_64_32_disabled"
+else
 auto-tester-test: unittest
+endif
+
+.PHONY: buildkite-test
+buildkite-test: unittest betterc
 
 .DELETE_ON_ERROR: # GNU Make directive (delete output files on error)

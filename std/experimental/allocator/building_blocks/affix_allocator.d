@@ -147,10 +147,9 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
                 [0 .. actualAllocationSize(b.length)];
         }
 
-        void[] allocate(size_t bytes)
-        {
-            if (!bytes) return null;
-            auto result = parent.allocate(actualAllocationSize(bytes));
+        // Common code shared between allocate and allocateZeroed.
+        private enum _processAndReturnAllocateResult =
+        q{
             if (result is null) return null;
             static if (stateSize!Prefix)
             {
@@ -164,6 +163,21 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
                 emplace!Suffix(cast(Suffix*)(suffixP));
             }
             return result[stateSize!Prefix .. stateSize!Prefix + bytes];
+        };
+
+        void[] allocate(size_t bytes)
+        {
+            if (!bytes) return null;
+            auto result = parent.allocate(actualAllocationSize(bytes));
+            mixin(_processAndReturnAllocateResult);
+        }
+
+        static if (hasMember!(Allocator, "allocateZeroed"))
+        package(std) void[] allocateZeroed()(size_t bytes)
+        {
+            if (!bytes) return null;
+            auto result = parent.allocateZeroed(actualAllocationSize(bytes));
+            mixin(_processAndReturnAllocateResult);
         }
 
         static if (hasMember!(Allocator, "allocateAll"))

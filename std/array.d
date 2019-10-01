@@ -61,6 +61,9 @@ $(TR $(TH Function Name) $(TH Description)
     $(TR $(TD $(LREF split))
         $(TD Eagerly split a range or string into an array.
     ))
+    $(TR $(TD $(LREF staticArray))
+        $(TD Creates a new static array from given data.
+    ))
     $(TR $(TD $(LREF uninitializedArray))
         $(TD Returns a new array of type `T` without initializing its elements.
     ))
@@ -219,6 +222,34 @@ if (isPointer!Range && isIterable!(PointerTarget!Range) && !isNarrowString!Range
     assert(a.length == 5);
 }
 
+version (unittest)
+    private extern(C) void _d_delarray_t(void[] *p, TypeInfo_Struct ti);
+
+@system unittest
+{
+    // Issue 18995
+    int nAlive = 0;
+    struct S
+    {
+        bool alive;
+        this(int) { alive = true; ++nAlive; }
+        this(this) { nAlive += alive; }
+        ~this() { nAlive -= alive; alive = false; }
+    }
+
+    import std.algorithm.iteration : map;
+    import std.range : iota;
+
+    auto arr = iota(3).map!(a => S(a)).array;
+    assert(nAlive == 3);
+
+    // No good way to ensure the GC frees this, just call the lifetime function
+    // directly. If delete wasn't deprecated, this is what delete would do.
+    _d_delarray_t(cast(void[]*)&arr, typeid(S));
+
+    assert(nAlive == 0);
+}
+
 /**
 Convert a narrow string to an array type that fully supports random access.
 This is handled as a special case and always returns an array of `dchar`
@@ -229,7 +260,7 @@ Returns:
     a `dchar[]`, `const(dchar)[]`, or `immutable(dchar)[]` depending on the constness of
     the input.
 */
-ElementType!String[] array(String)(scope String str)
+CopyTypeQualifiers!(ElementType!String,dchar)[] array(String)(scope String str)
 if (isNarrowString!String)
 {
     import std.utf : toUTF32;
@@ -237,7 +268,7 @@ if (isNarrowString!String)
     /* Unsafe cast. Allowed because toUTF32 makes a new array
        and copies all the elements.
      */
-    return () @trusted { return cast(ElementType!String[]) temp; } ();
+    return () @trusted { return cast(CopyTypeQualifiers!(ElementType!String, dchar)[]) temp; } ();
 }
 
 ///
@@ -246,7 +277,6 @@ if (isNarrowString!String)
     import std.range.primitives : isRandomAccessRange;
 
     assert("Hello D".array == "Hello D"d);
-    static assert(isRandomAccessRange!string == false);
 
     assert("Hello D"w.array == "Hello D"d);
     static assert(isRandomAccessRange!dstring == true);
@@ -382,16 +412,25 @@ if (isNarrowString!String)
 }
 
 /**
-Returns a newly allocated associative array from a range of key/value tuples.
+Returns a newly allocated associative array from a range of key/value tuples
+or from a range of keys and a range of values.
 
 Params:
     r = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
     of tuples of keys and values.
-Returns: A newly allocated associative array out of elements of the input
-range, which must be a range of tuples (Key, Value). Returns a null associative
-array reference when given an empty range.
-Duplicates: Associative arrays have unique keys. If r contains duplicate keys,
-then the result will contain the value of the last pair for that key in r.
+    keys = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of keys
+    values = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of values
+
+Returns:
+
+    A newly allocated associative array out of elements of the input
+    range, which must be a range of tuples (Key, Value) or
+    a range of keys and a range of values. If given two ranges of unequal
+    lengths after the elements of the shorter are exhausted the remaining
+    elements of the longer will not be considered.
+    Returns a null associative array reference when given an empty range.
+    Duplicates: Associative arrays have unique keys. If r contains duplicate keys,
+    then the result will contain the value of the last pair for that key in r.
 
 See_Also: $(REF Tuple, std,typecons), $(REF zip, std,range)
  */
@@ -402,7 +441,8 @@ if (isInputRange!Range)
     import std.typecons : isTuple;
 
     alias E = ElementType!Range;
-    static assert(isTuple!E, "assocArray: argument must be a range of tuples");
+    static assert(isTuple!E, "assocArray: argument must be a range of tuples,"
+        ~" but was a range of "~E.stringof);
     static assert(E.length == 2, "assocArray: tuple dimension must be 2");
     alias KeyType = E.Types[0];
     alias ValueType = E.Types[1];
@@ -414,24 +454,110 @@ if (isInputRange!Range)
     return aa;
 }
 
+/// ditto
+auto assocArray(Keys, Values)(Keys keys, Values values)
+if (isInputRange!Values && isInputRange!Keys)
+{
+    static if (isDynamicArray!Keys && isDynamicArray!Values
+        && !isNarrowString!Keys && !isNarrowString!Values)
+    {
+        void* aa;
+        {
+            // aaLiteral is nothrow when the destructors don't throw
+            static if (is(typeof(() nothrow
+            {
+                import std.range : ElementType;
+                import std.traits : hasElaborateDestructor;
+                alias KeyElement = ElementType!Keys;
+                static if (hasElaborateDestructor!KeyElement)
+                    KeyElement.init.__xdtor();
+
+                alias ValueElement = ElementType!Values;
+                static if (hasElaborateDestructor!ValueElement)
+                    ValueElement.init.__xdtor();
+            })))
+            {
+                scope(failure) assert(false, "aaLiteral must not throw");
+            }
+            if (values.length > keys.length)
+                values = values[0 .. keys.length];
+            else if (keys.length > values.length)
+                keys = keys[0 .. values.length];
+            aa = aaLiteral(keys, values);
+        }
+        alias Key = typeof(keys[0]);
+        alias Value = typeof(values[0]);
+        return (() @trusted => cast(Value[Key]) aa)();
+    }
+    else
+    {
+        // zip is not always able to infer nothrow
+        alias Key = ElementType!Keys;
+        alias Value = ElementType!Values;
+        static assert(isMutable!Value, "assocArray: value type must be mutable");
+        Value[Key] aa;
+        foreach (key; keys)
+        {
+            if (values.empty) break;
+
+            // aa[key] is incorrectly not @safe if the destructor throws
+            // https://issues.dlang.org/show_bug.cgi?id=18592
+            static if (is(typeof(() @safe
+            {
+                import std.range : ElementType;
+                import std.traits : hasElaborateDestructor;
+                alias KeyElement = ElementType!Keys;
+                static if (hasElaborateDestructor!KeyElement)
+                    KeyElement.init.__xdtor();
+
+                alias ValueElement = ElementType!Values;
+                static if (hasElaborateDestructor!ValueElement)
+                    ValueElement.init.__xdtor();
+            })))
+            {
+                () @trusted {
+                    aa[key] = values.front;
+                }();
+            }
+            else
+            {
+                aa[key] = values.front;
+            }
+            values.popFront();
+        }
+        return aa;
+    }
+}
+
 ///
 @safe pure /*nothrow*/ unittest
 {
-    import std.range;
-    import std.typecons;
+    import std.range : repeat, zip;
+    import std.typecons : tuple;
+    import std.range.primitives : autodecodeStrings;
     auto a = assocArray(zip([0, 1, 2], ["a", "b", "c"])); // aka zipMap
-    assert(is(typeof(a) == string[int]));
+    static assert(is(typeof(a) == string[int]));
     assert(a == [0:"a", 1:"b", 2:"c"]);
 
     auto b = assocArray([ tuple("foo", "bar"), tuple("baz", "quux") ]);
-    assert(is(typeof(b) == string[string]));
+    static assert(is(typeof(b) == string[string]));
     assert(b == ["foo":"bar", "baz":"quux"]);
+
+    static if (autodecodeStrings)
+        alias achar = dchar;
+    else
+        alias achar = immutable(char);
+    auto c = assocArray("ABCD", true.repeat);
+    static assert(is(typeof(c) == bool[achar]));
+    bool[achar] expected = ['D':true, 'A':true, 'B':true, 'C':true];
+    assert(c == expected);
 }
 
-// @@@11053@@@ - Cannot be version(unittest) - recursive instantiation error
+// @@@11053@@@ - Cannot be version (unittest) - recursive instantiation error
 @safe unittest
 {
     import std.typecons;
+    static assert(!__traits(compiles, [ 1, 2, 3 ].assocArray()));
     static assert(!__traits(compiles, [ tuple("foo", "bar", "baz") ].assocArray()));
     static assert(!__traits(compiles, [ tuple("foo") ].assocArray()));
     assert([ tuple("foo", "bar") ].assocArray() == ["foo": "bar"]);
@@ -446,6 +572,84 @@ if (isInputRange!Range)
     assert(a == b);
     assert(assocArray(a) == [cast(const(string)) "foo": "bar"]);
     static assert(!__traits(compiles, assocArray(b)));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=5502
+@safe unittest
+{
+    auto a = assocArray([0, 1, 2], ["a", "b", "c"]);
+    static assert(is(typeof(a) == string[int]));
+    assert(a == [0:"a", 1:"b", 2:"c"]);
+
+    auto b = assocArray([0, 1, 2], [3L, 4, 5]);
+    static assert(is(typeof(b) == long[int]));
+    assert(b == [0: 3L, 1: 4, 2: 5]);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=5502
+@safe unittest
+{
+    import std.algorithm.iteration : filter, map;
+    import std.range : enumerate;
+    import std.range.primitives : autodecodeStrings;
+
+    auto r = "abcde".enumerate.filter!(a => a.index == 2);
+    auto a = assocArray(r.map!(a => a.value), r.map!(a => a.index));
+    assert(is(typeof(a) == size_t[dchar]));
+    static if (autodecodeStrings)
+        alias achar = dchar;
+    else
+        alias achar = immutable(char);
+    assert(a == [achar('c'): size_t(2)]);
+}
+
+@safe nothrow pure unittest
+{
+    import std.range : iota;
+    auto b = assocArray(3.iota, 3.iota(6));
+    static assert(is(typeof(b) == int[int]));
+    assert(b == [0: 3, 1: 4, 2: 5]);
+
+    b = assocArray([0, 1, 2], [3, 4, 5]);
+    assert(b == [0: 3, 1: 4, 2: 5]);
+}
+
+@safe unittest
+{
+    struct ThrowingElement
+    {
+        int i;
+        static bool b;
+        ~this(){
+            if (b)
+                throw new Exception("");
+        }
+    }
+    static assert(!__traits(compiles, () nothrow { assocArray([ThrowingElement()], [0]);}));
+    assert(assocArray([ThrowingElement()], [0]) == [ThrowingElement(): 0]);
+
+    static assert(!__traits(compiles, () nothrow { assocArray([0], [ThrowingElement()]);}));
+    assert(assocArray([0], [ThrowingElement()]) == [0: ThrowingElement()]);
+
+    import std.range : iota;
+    static assert(!__traits(compiles, () nothrow { assocArray(1.iota, [ThrowingElement()]);}));
+    assert(assocArray(1.iota, [ThrowingElement()]) == [0: ThrowingElement()]);
+}
+
+@system unittest
+{
+    import std.range : iota;
+    struct UnsafeElement
+    {
+        int i;
+        static bool b;
+        ~this(){
+            int[] arr;
+            void* p = arr.ptr + 1; // unsafe
+        }
+    }
+    static assert(!__traits(compiles, () @safe { assocArray(1.iota, [UnsafeElement()]);}));
+    assert(assocArray(1.iota, [UnsafeElement()]) == [0: UnsafeElement()]);
 }
 
 /**
@@ -680,8 +884,12 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I))
 
     auto arr = minimallyInitializedArray!(int[])(42);
     assert(arr.length == 42);
-    // Elements aren't necessarily initialized to 0
-    assert(!arr.equal(0.repeat(42)));
+
+    // Elements aren't necessarily initialized to 0, so don't do this:
+    // assert(arr.equal(0.repeat(42)));
+    // If that is needed, initialize the array normally instead:
+    auto arr2 = new int[42];
+    assert(arr2.equal(0.repeat(42)));
 }
 
 @safe pure nothrow unittest
@@ -698,6 +906,9 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I))
     }
 }
 
+// from rt/lifetime.d
+private extern(C) void[] _d_newarrayU(const TypeInfo ti, size_t length) pure nothrow;
+
 private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
 {
     static assert(I.length <= nDimensions!T,
@@ -709,7 +920,8 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
 
     static if (I.length != 0)
     {
-        static assert(is(I[0] == size_t));
+        static assert(is(I[0] == size_t), "I[0] must be of type size_t not "
+                ~ I[0].stringof);
         alias size = sizes[0];
     }
 
@@ -729,7 +941,7 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
                         ret ~= E.init;
                 }
                 catch (Exception e)
-                    throw new Error(e.msg);
+                    assert(0, e.msg);
             }
             else
                 assert(0, "No postblit nor default init on " ~ E.stringof ~
@@ -737,18 +949,24 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
         }
         else
         {
-            import core.memory : GC;
             import core.stdc.string : memset;
 
-            import core.checkedint : mulu;
-            bool overflow;
-            const nbytes = mulu(size, E.sizeof, overflow);
-            if (overflow) assert(0);
+            /+
+              NOTES:
+              _d_newarrayU is part of druntime, and creates an uninitialized
+              block, just like GC.malloc. However, it also sets the appropriate
+              bits, and sets up the block as an appendable array of type E[],
+              which will inform the GC how to destroy the items in the block
+              when it gets collected.
 
-            auto ptr = cast(E*) GC.malloc(nbytes, blockAttribute!E);
+              _d_newarrayU returns a void[], but with the length set according
+              to E.sizeof.
+            +/
+            *(cast(void[]*)&ret) = _d_newarrayU(typeid(E[]), size);
             static if (minimallyInitialized && hasIndirections!E)
-                memset(ptr, 0, nbytes);
-            ret = ptr[0 .. size];
+                // _d_newarrayU would have asserted if the multiplication below
+                // had overflowed, so we don't have to check it again.
+                memset(ret.ptr, 0, E.sizeof * ret.length);
         }
     }
     else static if (I.length > 1)
@@ -796,7 +1014,15 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
         }
         ~this()
         {
-            assert(p != null);
+            // note, this assert is invalid -- a struct should always be able
+            // to run its dtor on the .init value, I'm leaving it here
+            // commented out because the original test case had it. I'm not
+            // sure what it's trying to prove.
+            //
+            // What happens now that minimallyInitializedArray adds the
+            // destructor run to the GC, is that this assert would fire in the
+            // GC, which triggers an invalid memory operation.
+            //assert(p != null);
         }
     }
     auto a = minimallyInitializedArray!(S[])(1);
@@ -936,8 +1162,10 @@ if (is(typeof(a.ptr < b.ptr) == bool))
 private void copyBackwards(T)(T[] src, T[] dest)
 {
     import core.stdc.string : memmove;
+    import std.format : format;
 
-    assert(src.length == dest.length);
+    assert(src.length == dest.length, format!
+            "src.length %s must equal dest.length %s"(src.length, dest.length));
 
     if (!__ctfe || hasElaborateCopyConstructor!T)
     {
@@ -1076,7 +1304,8 @@ if (isSomeString!(T[]) && allSatisfy!(isCharOrStringOrDcharRange, U))
 
         @trusted static void moveToRight(T[] arr, size_t gap)
         {
-            static assert(!hasElaborateCopyConstructor!T);
+            static assert(!hasElaborateCopyConstructor!T,
+                    "T must not have an elaborate copy constructor");
             import core.stdc.string : memmove;
             if (__ctfe)
             {
@@ -1804,6 +2033,7 @@ if (isInputRange!RoR &&
         else
         {
             import std.conv : emplaceRef;
+            import std.format : format;
             size_t length;
             size_t rorLength;
             foreach (r; ror.save)
@@ -1827,7 +2057,8 @@ if (isInputRange!RoR &&
                 foreach (e; r)
                     emplaceRef(result[len++], e);
             }
-            assert(len == result.length);
+            assert(len == result.length, format!
+                    "len %s must equal result.lenght %s"(len, result.length));
             return (() @trusted => cast(RetType) result)();
         }
     }
@@ -1872,7 +2103,15 @@ if (isInputRange!RoR &&
     isInputRange!(Unqual!(ElementType!RoR)))
 {
     alias RetType = typeof(return);
-    alias RetTypeElement = Unqual!(ElementEncodingType!RetType);
+    alias ConstRetTypeElement = ElementEncodingType!RetType;
+    static if (isAssignable!(Unqual!ConstRetTypeElement, ConstRetTypeElement))
+    {
+        alias RetTypeElement = Unqual!ConstRetTypeElement;
+    }
+    else
+    {
+        alias RetTypeElement = ConstRetTypeElement;
+    }
     alias RoRElem = ElementType!RoR;
 
     if (ror.empty)
@@ -1889,8 +2128,9 @@ if (isInputRange!RoR &&
         size_t len;
         foreach (r; ror)
             foreach (e; r)
-                emplaceRef(result[len++], e);
-        assert(len == result.length);
+                emplaceRef!RetTypeElement(result[len++], e);
+        assert(len == result.length,
+                "emplaced an unexpected number of elements");
         return (() @trusted => cast(RetType) result)();
     }
     else
@@ -1919,18 +2159,28 @@ if (isInputRange!RoR &&
 @safe pure unittest
 {
     import std.conv : to;
+    import std.range.primitives : autodecodeStrings;
 
     static foreach (T; AliasSeq!(string,wstring,dstring))
     {{
         auto arr2 = "Здравствуй Мир Unicode".to!(T);
         auto arr = ["Здравствуй", "Мир", "Unicode"].to!(T[]);
         assert(join(arr) == "ЗдравствуйМирUnicode");
-        static foreach (S; AliasSeq!(char,wchar,dchar))
-        {{
-            auto jarr = arr.join(to!S(' '));
-            static assert(is(typeof(jarr) == T));
-            assert(jarr == arr2);
-        }}
+        static if (autodecodeStrings)
+        {
+            static foreach (S; AliasSeq!(char,wchar,dchar))
+            {{
+                auto jarr = arr.join(to!S(' '));
+                static assert(is(typeof(jarr) == T));
+                assert(jarr == arr2);
+            }}
+        }
+        else
+        {
+            // Turning off autodecode means the join() won't
+            // just convert arr[] to dchar, so mixing char
+            // types fails to compile.
+        }
         static foreach (S; AliasSeq!(string,wstring,dstring))
         {{
             auto jarr = arr.join(to!S(" "));
@@ -1953,6 +2203,16 @@ if (isInputRange!RoR &&
 
     const string[] arr = ["apple", "banana"];
     assert(arr.join(',') == "apple,banana");
+}
+
+@safe unittest
+{
+    class A { }
+
+    const A[][] array;
+    auto result = array.join; // can't remove constness, so don't try
+
+    static assert(is(typeof(result) == const(A)[]));
 }
 
 @safe unittest
@@ -2107,21 +2367,29 @@ if (isInputRange!RoR &&
         $(REF substitute, std,algorithm,iteration) for a lazy replace.
  +/
 E[] replace(E, R1, R2)(E[] subject, R1 from, R2 to)
-if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
-        && (hasLength!R2 || isSomeString!R2))
+if ((isForwardRange!R1 && isForwardRange!R2 && (hasLength!R2 || isSomeString!R2)) ||
+    is(Unqual!E : Unqual!R1))
 {
     import std.algorithm.searching : find;
     import std.range : dropOne;
 
-    if (from.empty) return subject;
+    static if (isInputRange!R1)
+    {
+        if (from.empty) return subject;
+        alias rSave = a => a.save;
+    }
+    else
+    {
+        alias rSave = a => a;
+    }
 
-    auto balance = find(subject, from.save);
+    auto balance = find(subject, rSave(from));
     if (balance.empty)
         return subject;
 
     auto app = appender!(E[])();
     app.put(subject[0 .. subject.length - balance.length]);
-    app.put(to.save);
+    app.put(rSave(to));
     // replacing an element in an array is different to a range replacement
     static if (is(Unqual!E : Unqual!R1))
         replaceInto(app, balance.dropOne, from, to);
@@ -2167,6 +2435,20 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
             .replace([[0], [1, 2]], [[4]]) == [[4], [0], [3], [1, 2], [4]]);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=10930
+@safe unittest
+{
+    assert([0, 1, 2].replace(1, 4) == [0, 4, 2]);
+    assert("äbö".replace('ä', 'a') == "abö");
+}
+
+// empty array
+@safe unittest
+{
+    int[] arr;
+    assert(replace(arr, 1, 2) == []);
+}
+
 /++
     Replace occurrences of `from` with `to` in `subject` and output the result into
     `sink`.
@@ -2181,28 +2463,36 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
         $(REF substitute, std,algorithm,iteration) for a lazy replace.
  +/
 void replaceInto(E, Sink, R1, R2)(Sink sink, E[] subject, R1 from, R2 to)
-if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
-    && isForwardRange!R1 && isForwardRange!R2
-    && (hasLength!R2 || isSomeString!R2))
+if (isOutputRange!(Sink, E) &&
+    ((isForwardRange!R1 && isForwardRange!R2 && (hasLength!R2 || isSomeString!R2)) ||
+    is(Unqual!E : Unqual!R1)))
 {
     import std.algorithm.searching : find;
     import std.range : dropOne;
 
-    if (from.empty)
+    static if (isInputRange!R1)
     {
-        sink.put(subject);
-        return;
+        if (from.empty)
+        {
+            sink.put(subject);
+            return;
+        }
+        alias rSave = a => a.save;
+    }
+    else
+    {
+        alias rSave = a => a;
     }
     for (;;)
     {
-        auto balance = find(subject, from.save);
+        auto balance = find(subject, rSave(from));
         if (balance.empty)
         {
             sink.put(subject);
             break;
         }
         sink.put(subject[0 .. subject.length - balance.length]);
-        sink.put(to.save);
+        sink.put(rSave(to));
         // replacing an element in an array is different to a range replacement
         static if (is(Unqual!E : Unqual!R1))
             subject = balance.dropOne;
@@ -2222,6 +2512,15 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
     replaceInto(sink, arr, from, to);
 
     assert(sink.data == [1, 4, 6, 4, 5]);
+}
+
+// empty array
+@safe unittest
+{
+    auto sink = appender!(int[])();
+    int[] arr;
+    replaceInto(sink, arr, 1, 2);
+    assert(sink.data == []);
 }
 
 @safe unittest
@@ -2277,6 +2576,18 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
     }}
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=10930
+@safe unittest
+{
+    auto sink = appender!(int[])();
+    replaceInto(sink, [0, 1, 2], 1, 5);
+    assert(sink.data == [0, 5, 2]);
+
+    auto sink2 = appender!(dchar[])();
+    replaceInto(sink2, "äbö", 'ä', 'a');
+    assert(sink2.data == "abö");
+}
+
 /++
     Replaces elements from `array` with indices ranging from `from`
     (inclusive) to `to` (exclusive) with the range `stuff`.
@@ -2301,7 +2612,7 @@ if (isInputRange!Range &&
     static if (hasLength!Range && is(ElementEncodingType!Range : T))
     {
         import std.algorithm.mutation : copy;
-        assert(from <= to);
+        assert(from <= to, "from must be before or equal to to");
         immutable sliceLen = to - from;
         auto retval = new Unqual!(T)[](subject.length - sliceLen + stuff.length);
         retval[0 .. from] = subject[0 .. from];
@@ -2852,7 +3163,7 @@ inout(T)[] replaceSlice(T)(inout(T)[] s, in T[] slice, in T[] replacement)
 in
 {
     // Verify that slice[] really is a slice of s[]
-    assert(overlap(s, slice) is slice);
+    assert(overlap(s, slice) is slice, "slice[] is not a subslice of s[]");
 }
 do
 {
@@ -2905,7 +3216,6 @@ struct Appender(A)
 if (isDynamicArray!A)
 {
     import core.memory : GC;
-    import std.format : FormatSpec;
 
     private alias T = ElementEncodingType!A;
 
@@ -2955,7 +3265,7 @@ if (isDynamicArray!A)
      * Params:
      *     newCapacity = the capacity the `Appender` should have
      */
-    void reserve(size_t newCapacity) @safe pure nothrow
+    void reserve(size_t newCapacity)
     {
         if (_data)
         {
@@ -2979,9 +3289,18 @@ if (isDynamicArray!A)
     }
 
     /**
+     * Use opSlice() from now on.
      * Returns: The managed array.
      */
     @property inout(ElementEncodingType!A)[] data() inout @trusted pure nothrow
+    {
+        return this[];
+    }
+
+    /**
+     * Returns: The managed array.
+     */
+    @property inout(ElementEncodingType!A)[] opSlice() inout @trusted pure nothrow
     {
         /* @trusted operation:
          * casting Unqual!T[] to inout(T)[]
@@ -2990,7 +3309,7 @@ if (isDynamicArray!A)
     }
 
     // ensure we can add nelems elements, resizing as necessary
-    private void ensureAddable(size_t nelems) @trusted pure nothrow
+    private void ensureAddable(size_t nelems)
     {
         if (!_data)
             _data = new Data;
@@ -3026,7 +3345,7 @@ if (isDynamicArray!A)
             // first, try extending the current block
             if (_data.canExtend)
             {
-                immutable u = GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof);
+                immutable u = (() @trusted => GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof))();
                 if (u)
                 {
                     // extend worked, update the capacity
@@ -3040,14 +3359,15 @@ if (isDynamicArray!A)
             import core.checkedint : mulu;
             bool overflow;
             const nbytes = mulu(newlen, T.sizeof, overflow);
-            if (overflow) assert(0);
+            if (overflow) assert(false, "the reallocation would exceed the "
+                    ~ "available pointer range");
 
-            auto bi = GC.qalloc(nbytes, blockAttribute!T);
+            auto bi = (() @trusted => GC.qalloc(nbytes, blockAttribute!T))();
             _data.capacity = bi.size / T.sizeof;
             import core.stdc.string : memcpy;
             if (len)
-                memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
-            _data.arr = (cast(Unqual!T*) bi.base)[0 .. len];
+                () @trusted { memcpy(bi.base, _data.arr.ptr, len * T.sizeof); }();
+            _data.arr = (() @trusted => (cast(Unqual!T*) bi.base)[0 .. len])();
             _data.canExtend = true;
             // leave the old data, for safety reasons
         }
@@ -3056,7 +3376,7 @@ if (isDynamicArray!A)
     private template canPutItem(U)
     {
         enum bool canPutItem =
-            isImplicitlyConvertible!(U, T) ||
+            isImplicitlyConvertible!(Unqual!U, Unqual!T) ||
             isSomeChar!T && isSomeChar!U;
     }
     private template canPutConstRange(Range)
@@ -3101,7 +3421,7 @@ if (isDynamicArray!A)
             immutable len = _data.arr.length;
 
             auto bigData = (() @trusted => _data.arr.ptr[0 .. len + 1])();
-            emplaceRef!(Unqual!T)(bigData[len], cast(Unqual!T) item);
+            emplaceRef!(Unqual!T)(bigData[len], cast() item);
             //We do this at the end, in case of exceptions
             _data.arr = bigData;
         }
@@ -3142,10 +3462,10 @@ if (isDynamicArray!A)
             }
 
             // make sure we have enough space, then add the items
-            @trusted auto bigDataFun(size_t extra)
+            auto bigDataFun(size_t extra)
             {
                 ensureAddable(extra);
-                return _data.arr.ptr[0 .. _data.arr.length + extra];
+                return (() @trusted => _data.arr.ptr[0 .. _data.arr.length + extra])();
             }
             auto bigData = bigDataFun(items.length);
 
@@ -3184,16 +3504,11 @@ if (isDynamicArray!A)
     }
 
     /**
-     * Appends `rhs` to the managed array.
-     * Params:
-     *     op = the assignment operator `~`
-     *     rhs = Element or range.
+     * Appends to the managed array.
+     *
+     * See_Also: $(LREF Appender.put)
      */
-    void opOpAssign(string op : "~", U)(U rhs)
-    if (__traits(compiles, put(rhs)))
-    {
-        put(rhs);
-    }
+    alias opOpAssign(string op : "~") = put;
 
     // only allow overwriting data on non-immutable and non-const data
     static if (isMutable!T)
@@ -3243,7 +3558,7 @@ if (isDynamicArray!A)
      * Returns:
      *     A `string` if `writer` is not set; `void` otherwise.
      */
-    string toString() const
+    string toString()() const
     {
         import std.format : singleSpec;
 
@@ -3266,15 +3581,20 @@ if (isDynamicArray!A)
     }
 
     /// ditto
-    void toString(Writer)(ref Writer w, const ref FormatSpec!char fmt) const
+    template toString(Writer)
     if (isOutputRange!(Writer, char))
     {
-        import std.format : formatValue;
-        import std.range.primitives : put;
-        put(w, Unqual!(typeof(this)).stringof);
-        put(w, '(');
-        formatValue(w, data, fmt);
-        put(w, ')');
+        import std.format : FormatSpec;
+
+        void toString(ref Writer w, scope const ref std.format.FormatSpec!char fmt) const
+        {
+            import std.format : formatValue;
+            import std.range.primitives : put;
+            put(w, Unqual!(typeof(this)).stringof);
+            put(w, '(');
+            formatValue(w, data, fmt);
+            put(w, ')');
+        }
     }
 
     // @@@DEPRECATED_2.089@@@
@@ -3294,13 +3614,13 @@ if (isDynamicArray!A)
     string b = "abcdefg";
     foreach (char c; b)
         app.put(c);
-    assert(app.data == "abcdefg");
+    assert(app[] == "abcdefg");
 
     int[] a = [ 1, 2 ];
     auto app2 = appender(a);
     app2.put(3);
     app2.put([ 4, 5, 6 ]);
-    assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
+    assert(app2[] == [ 1, 2, 3, 4, 5, 6 ]);
 }
 
 @safe pure unittest
@@ -3316,12 +3636,12 @@ if (isDynamicArray!A)
     auto app2 = appender!string();
     auto spec = singleSpec("%s");
     app.toString(app2, spec);
-    assert(app2.data == "Appender!(int[])([1, 2, 3])");
+    assert(app2[] == "Appender!(int[])([1, 2, 3])");
 
     auto app3 = appender!string();
     spec = singleSpec("%(%04d, %)");
     app.toString(app3, spec);
-    assert(app3.data == "Appender!(int[])(0001, 0002, 0003)");
+    assert(app3[] == "Appender!(int[])(0001, 0002, 0003)");
 }
 
 @safe unittest // issue 17251
@@ -3337,6 +3657,61 @@ if (isDynamicArray!A)
     const(R)[1] r;
     app.put(r[0]);
     app.put(r[]);
+}
+
+@safe unittest // issue 13300
+{
+    static test(bool isPurePostblit)()
+    {
+        static if (!isPurePostblit)
+            static int i;
+
+        struct Simple
+        {
+            @disable this(); // Without this, it works.
+            static if (!isPurePostblit)
+                this(this) { i++; }
+            else
+                pure this(this) { }
+
+            private:
+            this(int tmp) { }
+        }
+
+        struct Range
+        {
+            @property Simple front() { return Simple(0); }
+            void popFront() { count++; }
+            @property empty() { return count < 3; }
+            size_t count;
+        }
+
+        Range r;
+        auto a = r.array();
+    }
+
+    static assert(__traits(compiles, () pure { test!true(); }));
+    static assert(!__traits(compiles, () pure { test!false(); }));
+}
+
+@system unittest // issue 19572
+{
+    static struct Struct
+    {
+        int value;
+
+        int fun() const { return 23; }
+
+        alias fun this;
+    }
+
+    Appender!(Struct[]) appender;
+
+    appender.put(const(Struct)(42));
+
+    auto result = appender[][0];
+
+    assert(result.value != 23);
 }
 
 //Calculates an efficient growth scheme based on the old capacity
@@ -3405,7 +3780,7 @@ if (isDynamicArray!A)
     if (__traits(compiles, (Appender!A a) => mixin("a." ~ fn ~ "(args)")))
     {
         // we do it this way because we can't cache a void return
-        scope(exit) *this.arr = impl.data;
+        scope(exit) *this.arr = impl[];
         mixin("return impl." ~ fn ~ "(args);");
     }
 
@@ -3417,7 +3792,7 @@ if (isDynamicArray!A)
     void opOpAssign(string op : "~", U)(U rhs)
     if (__traits(compiles, (Appender!A a){ a.put(rhs); }))
     {
-        scope(exit) *this.arr = impl.data;
+        scope(exit) *this.arr = impl[];
         impl.put(rhs);
     }
 
@@ -3431,12 +3806,20 @@ if (isDynamicArray!A)
         return impl.capacity;
     }
 
-    /**
-     * Returns the managed array.
+    /* Use opSlice() instead.
+     * Returns: the managed array.
      */
     @property inout(ElementEncodingType!A)[] data() inout
     {
-        return impl.data;
+        return impl[];
+    }
+
+    /**
+     * Returns: the managed array.
+     */
+    @property inout(ElementEncodingType!A)[] opSlice() inout
+    {
+        return impl[];
     }
 }
 
@@ -3446,11 +3829,11 @@ unittest
 {
     int[] a = [1, 2];
     auto app2 = appender(&a);
-    assert(app2.data == [1, 2]);
+    assert(app2[] == [1, 2]);
     assert(a == [1, 2]);
     app2 ~= 3;
     app2 ~= [4, 5, 6];
-    assert(app2.data == [1, 2, 3, 4, 5, 6]);
+    assert(app2[] == [1, 2, 3, 4, 5, 6]);
     assert(a == [1, 2, 3, 4, 5, 6]);
 
     app2.reserve(5);
@@ -3482,33 +3865,33 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
         auto app = appender!(char[])();
         string b = "abcdefg";
         foreach (char c; b) app.put(c);
-        assert(app.data == "abcdefg");
+        assert(app[] == "abcdefg");
     }
     {
         auto app = appender!(char[])();
         string b = "abcdefg";
         foreach (char c; b) app ~= c;
-        assert(app.data == "abcdefg");
+        assert(app[] == "abcdefg");
     }
     {
         int[] a = [ 1, 2 ];
         auto app2 = appender(a);
-        assert(app2.data == [ 1, 2 ]);
+        assert(app2[] == [ 1, 2 ]);
         app2.put(3);
         app2.put([ 4, 5, 6 ][]);
-        assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
+        assert(app2[] == [ 1, 2, 3, 4, 5, 6 ]);
         app2.put([ 7 ]);
-        assert(app2.data == [ 1, 2, 3, 4, 5, 6, 7 ]);
+        assert(app2[] == [ 1, 2, 3, 4, 5, 6, 7 ]);
     }
 
     int[] a = [ 1, 2 ];
     auto app2 = appender(a);
-    assert(app2.data == [ 1, 2 ]);
+    assert(app2[] == [ 1, 2 ]);
     app2 ~= 3;
     app2 ~= [ 4, 5, 6 ][];
-    assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
+    assert(app2[] == [ 1, 2, 3, 4, 5, 6 ]);
     app2 ~= [ 7 ];
-    assert(app2.data == [ 1, 2, 3, 4, 5, 6, 7 ]);
+    assert(app2[] == [ 1, 2, 3, 4, 5, 6, 7 ]);
 
     app2.reserve(5);
     assert(app2.capacity >= 5);
@@ -3518,12 +3901,12 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
         app2.shrinkTo(3);
     }
     catch (Exception) assert(0);
-    assert(app2.data == [ 1, 2, 3 ]);
+    assert(app2[] == [ 1, 2, 3 ]);
     assertThrown(app2.shrinkTo(5));
 
     const app3 = app2;
     assert(app3.capacity >= 3);
-    assert(app3.data == [1, 2, 3]);
+    assert(app3[] == [1, 2, 3]);
 
     auto app4 = appender([]);
     try // shrinkTo may throw
@@ -3538,29 +3921,29 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
         {
             Appender!S app5663i;
             assertNotThrown(app5663i.put("\xE3"));
-            assert(app5663i.data == "\xE3");
+            assert(app5663i[] == "\xE3");
 
             Appender!S app5663c;
             assertNotThrown(app5663c.put(cast(const(char)[])"\xE3"));
-            assert(app5663c.data == "\xE3");
+            assert(app5663c[] == "\xE3");
 
             Appender!S app5663m;
             assertNotThrown(app5663m.put("\xE3".dup));
-            assert(app5663m.data == "\xE3");
+            assert(app5663m[] == "\xE3");
         }
         // ditto for ~=
         {
             Appender!S app5663i;
             assertNotThrown(app5663i ~= "\xE3");
-            assert(app5663i.data == "\xE3");
+            assert(app5663i[] == "\xE3");
 
             Appender!S app5663c;
             assertNotThrown(app5663c ~= cast(const(char)[])"\xE3");
-            assert(app5663c.data == "\xE3");
+            assert(app5663c[] == "\xE3");
 
             Appender!S app5663m;
             assertNotThrown(app5663m ~= "\xE3".dup);
-            assert(app5663m.data == "\xE3");
+            assert(app5663m[] == "\xE3");
         }
     }
 
@@ -3575,7 +3958,7 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
     {
         auto w = appender!(S10122[])();
         w.put(S10122(1));
-        assert(w.data.length == 1 && w.data[0].val == 1);
+        assert(w[].length == 1 && w[][0].val == 1);
     });
 }
 
@@ -3595,7 +3978,7 @@ unittest
     w ~= 'd';
     w ~= "ef";
 
-    assert(w.data == "abcdef");
+    assert(w[] == "abcdef");
 }
 
 @safe pure nothrow unittest
@@ -3604,7 +3987,7 @@ unittest
         auto w = appender!string();
         w.reserve(4);
         cast(void) w.capacity;
-        cast(void) w.data;
+        cast(void) w[];
         try
         {
             wchar wc = 'a';
@@ -3618,7 +4001,7 @@ unittest
         auto w = appender!(int[])();
         w.reserve(4);
         cast(void) w.capacity;
-        cast(void) w.data;
+        cast(void) w[];
         w.put(10);
         w.put([10]);
         w.clear();
@@ -3728,7 +4111,7 @@ unittest
             auto app = appender!(const(E)[])();
             foreach (i, e; src)
                     app.put(e);
-            return app.data;
+            return app[];
     }
 
     class C {}
@@ -3768,26 +4151,26 @@ unittest
 
     auto app1 = Appender!mutARR(mut);                //Always worked. Should work. Should not create a warning.
     app1.put(7);
-    assert(equal(app1.data, [7]));
+    assert(equal(app1[], [7]));
     static assert(!is(typeof(Appender!mutARR(con)))); //Never worked.  Should not work.
     static assert(!is(typeof(Appender!mutARR(imm)))); //Never worked.  Should not work.
 
     auto app2 = Appender!conARR(mut); //Always worked. Should work. Should not create a warning.
     app2.put(7);
-    assert(equal(app2.data, [7]));
+    assert(equal(app2[], [7]));
     auto app3 = Appender!conARR(con); //Didn't work.   Now works.   Should not create a warning.
     app3.put(7);
-    assert(equal(app3.data, [7]));
+    assert(equal(app3[], [7]));
     auto app4 = Appender!conARR(imm); //Didn't work.   Now works.   Should not create a warning.
     app4.put(7);
-    assert(equal(app4.data, [7]));
+    assert(equal(app4[], [7]));
 
     //{auto app = Appender!immARR(mut);}                //Worked. Will cease to work. Creates warning.
     //static assert(!is(typeof(Appender!immARR(mut)))); //Worked. Will cease to work. Uncomment me after full deprecation.
     static assert(!is(typeof(Appender!immARR(con))));   //Never worked. Should not work.
     auto app5 = Appender!immARR(imm);                  //Didn't work.  Now works. Should not create a warning.
     app5.put(7);
-    assert(equal(app5.data, [7]));
+    assert(equal(app5[], [7]));
 
     //Deprecated. Please uncomment and make sure this doesn't work:
     //char[] cc;
@@ -3795,11 +4178,11 @@ unittest
 
     //This should always work:
     auto app6 = appender!string(null);
-    assert(app6.data == null);
+    assert(app6[] == null);
     auto app7 = appender!(const(char)[])(null);
-    assert(app7.data == null);
+    assert(app7[] == null);
     auto app8 = appender!(char[])(null);
-    assert(app8.data == null);
+    assert(app8[] == null);
 }
 
 @safe unittest //Test large allocations (for GC.extend)
@@ -3810,7 +4193,7 @@ unittest
     app.reserve(1); //cover reserve on non-initialized
     foreach (_; 0 .. 100_000)
         app.put('a');
-    assert(equal(app.data, 'a'.repeat(100_000)));
+    assert(equal(app[], 'a'.repeat(100_000)));
 }
 
 @safe unittest
@@ -3828,7 +4211,7 @@ unittest
     Appender!string app;
     app.put("foo");
     static assert(!__traits(compiles, app.clear()));
-    assert(app.data == "foo");
+    assert(app[] == "foo");
 }
 
 @safe unittest
@@ -3895,11 +4278,11 @@ unittest
 {
     int[] a = [1, 2];
     auto app2 = appender(&a);
-    assert(app2.data == [1, 2]);
+    assert(app2[] == [1, 2]);
     assert(a == [1, 2]);
     app2 ~= 3;
     app2 ~= [4, 5, 6];
-    assert(app2.data == [1, 2, 3, 4, 5, 6]);
+    assert(app2[] == [1, 2, 3, 4, 5, 6]);
     assert(a == [1, 2, 3, 4, 5, 6]);
 
     app2.reserve(5);
@@ -3914,7 +4297,7 @@ unittest
         auto app = appender(&arr);
         string b = "abcdefg";
         foreach (char c; b) app.put(c);
-        assert(app.data == "abcdefg");
+        assert(app[] == "abcdefg");
         assert(arr == "abcdefg");
     }
     {
@@ -3922,27 +4305,27 @@ unittest
         auto app = appender(&arr);
         string b = "abcdefg";
         foreach (char c; b) app ~= c;
-        assert(app.data == "abcdefg");
+        assert(app[] == "abcdefg");
         assert(arr == "abcdefg");
     }
     {
         int[] a = [ 1, 2 ];
         auto app2 = appender(&a);
-        assert(app2.data == [ 1, 2 ]);
+        assert(app2[] == [ 1, 2 ]);
         assert(a == [ 1, 2 ]);
         app2.put(3);
         app2.put([ 4, 5, 6 ][]);
-        assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
+        assert(app2[] == [ 1, 2, 3, 4, 5, 6 ]);
         assert(a == [ 1, 2, 3, 4, 5, 6 ]);
     }
 
     int[] a = [ 1, 2 ];
     auto app2 = appender(&a);
-    assert(app2.data == [ 1, 2 ]);
+    assert(app2[] == [ 1, 2 ]);
     assert(a == [ 1, 2 ]);
     app2 ~= 3;
     app2 ~= [ 4, 5, 6 ][];
-    assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
+    assert(app2[] == [ 1, 2, 3, 4, 5, 6 ]);
     assert(a == [ 1, 2, 3, 4, 5, 6 ]);
 
     app2.reserve(5);
@@ -3953,12 +4336,12 @@ unittest
         app2.shrinkTo(3);
     }
     catch (Exception) assert(0);
-    assert(app2.data == [ 1, 2, 3 ]);
+    assert(app2[] == [ 1, 2, 3 ]);
     assertThrown(app2.shrinkTo(5));
 
     const app3 = app2;
     assert(app3.capacity >= 3);
-    assert(app3.data == [1, 2, 3]);
+    assert(app3[] == [1, 2, 3]);
 }
 
 @safe unittest // issue 14605
@@ -3972,7 +4355,7 @@ unittest
     Appender!(int[]) app;
     short[] range = [1, 2, 3];
     app.put(range);
-    assert(app.data == [1, 2, 3]);
+    assert(app[] == [1, 2, 3]);
 }
 
 @safe unittest
@@ -3985,6 +4368,273 @@ unittest
     put(appA, 'w');
     s ~= 'a'; //Clobbers here?
     a ~= 'a'; //Clobbers here?
-    assert(appS.data == "hellow");
-    assert(appA.data == "hellow");
+    assert(appS[] == "hellow");
+    assert(appA[] == "hellow");
+}
+
+/++
+Constructs a static array from `a`.
+The type of elements can be specified implicitly so that $(D [1, 2].staticArray) results in `int[2]`,
+or explicitly, e.g. $(D [1, 2].staticArray!float) returns `float[2]`.
+When `a` is a range whose length is not known at compile time, the number of elements must be
+given as template argument (e.g. `myrange.staticArray!2`).
+Size and type can be combined, if the source range elements are implicitly
+convertible to the requested element type (eg: `2.iota.staticArray!(long[2])`).
+When the range `a` is known at compile time, it can also be specified as a
+template argument to avoid having to specify the number of elements
+(e.g.: `staticArray!(2.iota)` or `staticArray!(double, 2.iota)`).
+
+Note: `staticArray` returns by value, so expressions involving large arrays may be inefficient.
+
+Params:
+    a = The input elements. If there are less elements than the specified length of the static array,
+    the rest of it is default-initialized. If there are more than specified, the first elements
+    up to the specified length are used.
+    rangeLength = outputs the number of elements used from `a` to it. Optional.
+
+Returns: A static array constructed from `a`.
++/
+pragma(inline, true) T[n] staticArray(T, size_t n)(auto ref T[n] a)
+{
+    return a;
+}
+
+/// static array from array literal
+nothrow pure @safe unittest
+{
+    auto a = [0, 1].staticArray;
+    static assert(is(typeof(a) == int[2]));
+    assert(a == [0, 1]);
+}
+
+pragma(inline, true) U[n] staticArray(U, T, size_t n)(auto ref T[n] a)
+if (!is(T == U) && is(T : U))
+{
+    return a[].staticArray!(U[n]);
+}
+
+/// static array from array with implicit casting of elements
+nothrow pure @safe unittest
+{
+    auto b = [0, 1].staticArray!long;
+    static assert(is(typeof(b) == long[2]));
+    assert(b == [0, 1]);
+}
+
+nothrow pure @safe unittest
+{
+    int val = 3;
+    static immutable gold = [1, 2, 3];
+    [1, 2, val].staticArray.checkStaticArray!int([1, 2, 3]);
+
+    @nogc void checkNogc()
+    {
+        [1, 2, val].staticArray.checkStaticArray!int(gold);
+    }
+
+    checkNogc();
+
+    [1, 2, val].staticArray!double.checkStaticArray!double(gold);
+    [1, 2, 3].staticArray!int.checkStaticArray!int(gold);
+
+    [1, 2, 3].staticArray!(const(int)).checkStaticArray!(const(int))(gold);
+    [1, 2, 3].staticArray!(const(double)).checkStaticArray!(const(double))(gold);
+    {
+        const(int)[3] a2 = [1, 2, 3].staticArray;
+    }
+
+    [cast(byte) 1, cast(byte) 129].staticArray.checkStaticArray!byte([1, -127]);
+}
+
+/// ditto
+auto staticArray(size_t n, T)(scope T a)
+if (isInputRange!T)
+{
+    alias U = ElementType!T;
+    return staticArray!(U[n], U, n)(a);
+}
+
+/// ditto
+auto staticArray(size_t n, T)(scope T a, out size_t rangeLength)
+if (isInputRange!T)
+{
+    alias U = ElementType!T;
+    return staticArray!(U[n], U, n)(a, rangeLength);
+}
+
+/// ditto
+auto staticArray(Un : U[n], U, size_t n, T)(scope T a)
+if (isInputRange!T && is(ElementType!T : U))
+{
+    size_t extraStackSpace;
+    return staticArray!(Un, U, n)(a, extraStackSpace);
+}
+
+/// ditto
+auto staticArray(Un : U[n], U, size_t n, T)(scope T a, out size_t rangeLength)
+if (isInputRange!T && is(ElementType!T : U))
+{
+    import std.algorithm.mutation : uninitializedFill;
+    import std.range : take;
+    import std.conv : emplaceRef;
+
+    if (__ctfe)
+    {
+        size_t i;
+        // Compile-time version to avoid unchecked memory access.
+        Unqual!U[n] ret;
+        for (auto iter = a.take(n); !iter.empty; iter.popFront())
+        {
+            ret[i] = iter.front;
+            i++;
+        }
+
+        rangeLength = i;
+        return (() @trusted => cast(U[n]) ret)();
+    }
+
+    auto ret = (() @trusted
+    {
+        Unqual!U[n] theArray = void;
+        return theArray;
+    }());
+
+    size_t i;
+    if (true)
+    {
+        // ret was void-initialized so let's initialize the unfilled part manually.
+        // also prevents destructors to be called on uninitialized memory if
+        // an exception is thrown
+        scope (exit) ret[i .. $].uninitializedFill(U.init);
+
+        for (auto iter = a.take(n); !iter.empty; iter.popFront())
+        {
+            emplaceRef!U(ret[i++], iter.front);
+        }
+    }
+
+    rangeLength = i;
+    return (() @trusted => cast(U[n]) ret)();
+}
+
+/// static array from range + size
+nothrow pure @safe unittest
+{
+    import std.range : iota;
+
+    auto input = 3.iota;
+    auto a = input.staticArray!2;
+    static assert(is(typeof(a) == int[2]));
+    assert(a == [0, 1]);
+    auto b = input.staticArray!(long[4]);
+    static assert(is(typeof(b) == long[4]));
+    assert(b == [0, 1, 2, 0]);
+}
+
+// Tests that code compiles when there is an elaborate destructor and exceptions
+// are thrown. Unfortunately can't test that memory is initialized
+// before having a destructor called on it.
+// @system required because of issue 18872.
+@system nothrow unittest
+{
+    // exists only to allow doing something in the destructor. Not tested
+    // at the end because value appears to depend on implementation of the.
+    // function.
+    static int preventersDestroyed = 0;
+
+    static struct CopyPreventer
+    {
+        bool on = false;
+        this(this)
+        {
+            if (on) throw new Exception("Thou shalt not copy past me!");
+        }
+
+        ~this()
+        {
+            preventersDestroyed++;
+        }
+    }
+    auto normalArray =
+    [
+        CopyPreventer(false),
+        CopyPreventer(false),
+        CopyPreventer(true),
+        CopyPreventer(false),
+        CopyPreventer(true),
+    ];
+
+    try
+    {
+        auto staticArray = normalArray.staticArray!5;
+        assert(false);
+    }
+    catch (Exception e){}
+}
+
+
+nothrow pure @safe unittest
+{
+    auto a = [1, 2].staticArray;
+    assert(is(typeof(a) == int[2]) && a == [1, 2]);
+
+    import std.range : iota;
+
+    2.iota.staticArray!2.checkStaticArray!int([0, 1]);
+    2.iota.staticArray!(double[2]).checkStaticArray!double([0, 1]);
+    2.iota.staticArray!(long[2]).checkStaticArray!long([0, 1]);
+}
+
+nothrow pure @system unittest
+{
+    import std.range : iota;
+    size_t copiedAmount;
+    2.iota.staticArray!1(copiedAmount);
+    assert(copiedAmount == 1);
+    2.iota.staticArray!3(copiedAmount);
+    assert(copiedAmount == 2);
+}
+
+/// ditto
+auto staticArray(alias a)()
+if (isInputRange!(typeof(a)))
+{
+    return .staticArray!(size_t(a.length))(a);
+}
+
+/// ditto
+auto staticArray(U, alias a)()
+if (isInputRange!(typeof(a)))
+{
+    return .staticArray!(U[size_t(a.length)])(a);
+}
+
+/// static array from CT range
+nothrow pure @safe unittest
+{
+    import std.range : iota;
+
+    enum a = staticArray!(2.iota);
+    static assert(is(typeof(a) == int[2]));
+    assert(a == [0, 1]);
+
+    enum b = staticArray!(long, 2.iota);
+    static assert(is(typeof(b) == long[2]));
+    assert(b == [0, 1]);
+}
+
+nothrow pure @safe unittest
+{
+    import std.range : iota;
+
+    enum a = staticArray!(2.iota);
+    staticArray!(2.iota).checkStaticArray!int([0, 1]);
+    staticArray!(double, 2.iota).checkStaticArray!double([0, 1]);
+    staticArray!(long, 2.iota).checkStaticArray!long([0, 1]);
+}
+
+version (unittest) private void checkStaticArray(T, T1, T2)(T1 a, T2 b) nothrow @safe pure @nogc
+{
+    static assert(is(T1 == T[T1.length]));
+    assert(a == b, "a must be equal to b");
 }
