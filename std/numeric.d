@@ -1815,10 +1815,10 @@ if (N <= 16)
 
     // Make sure the unrolled loop codepath gets tested.
     static const x =
-        [1.0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+        [1.0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
     static const y =
-        [2.0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
-    assertCTFEable!({ assert(dotProduct(x, y) == 2280); });
+        [2.0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
+    assertCTFEable!({ assert(dotProduct(x, y) == 4048); });
 }
 
 /**
