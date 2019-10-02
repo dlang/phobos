@@ -1691,6 +1691,7 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
         T[] a = [ 1.0, 2.0, ];
         T[] b = [ 4.0, 6.0, ];
         assert(euclideanDistance(a, b) == 5);
+        assert(euclideanDistance(a, b, 6) == 5);
         assert(euclideanDistance(a, b, 5) == 5);
         assert(euclideanDistance(a, b, 4) == 5);
         assert(euclideanDistance(a, b, 2) == 3);
