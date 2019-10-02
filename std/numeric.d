@@ -172,7 +172,7 @@ struct CustomFloat(uint             precision,  // fraction bits (23 for float)
                    CustomFloatFlags flags,
                    uint             bias)
 if (((flags & flags.signed)  + precision + exponentWidth) % 8 == 0 &&
-    precision + exponentWidth > 0)
+    precision > 0 && exponentWidth > 0)
 {
     import std.bitmanip : bitfields;
     import std.meta : staticIndexOf;
