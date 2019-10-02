@@ -1954,7 +1954,7 @@ if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
 
     // This should get smaller with time. On occasion it may go larger, but only
     // if there's thorough justification.
-    debug enum uint watermark = 1676280;
+    debug enum uint watermark = 1676220;
     else enum uint watermark = 1676220;
 
     import std.conv;
