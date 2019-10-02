@@ -666,6 +666,50 @@ public:
     assert(y.to!string == "0.125");
 }
 
+@safe unittest
+{
+    alias cf = CustomFloat!(5, 2);
+
+    auto a = cf.infinity;
+    assert(a.sign == 0);
+    assert(a.exponent == 3);
+    assert(a.significand == 0);
+
+    auto b = cf.nan;
+    assert(b.exponent == 3);
+    assert(b.significand != 0);
+
+    assert(cf.dig == 1);
+
+    auto c = cf.epsilon;
+    /* doesn't work yet due to bug 20261
+    assert(c.sign == 0);
+    assert(c.exponent == 0);
+    assert(c.significand == 1);
+     */
+
+    assert(cf.mant_dig == 6);
+
+    assert(cf.max_10_exp == 0);
+    assert(cf.max_exp == 2);
+    assert(cf.min_10_exp == 0);
+    // doesn't work yet due to bug 20263
+    //assert(cf.min_exp == 1);
+
+    auto d = cf.max;
+    assert(d.sign == 0);
+    assert(d.exponent == 2);
+    assert(d.significand == 31);
+
+    auto e = cf.min_normal;
+    assert(e.sign == 0);
+    assert(e.exponent == 1);
+    assert(e.significand == 0);
+
+    assert(e.re == e);
+    assert(e.im == cf(0.0));
+}
+
 /**
 Defines the fastest type to use when storing temporaries of a
 calculation intended to ultimately yield a result of type `F`
