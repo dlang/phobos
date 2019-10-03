@@ -6031,6 +6031,10 @@ Params:
 
 Returns:
     a `string`, a `wstring` or a `dstring`, according to the type of hexData.
+
+References:
+    Prefer using $(LREF hexData) instead, especially if the `hexData` string is long
+    because it does not use templates.
  */
 template hexString(string hexData)
 if (hexData.isHexLiteral)
@@ -6134,6 +6138,88 @@ private auto hexStrLiteral(String)(scope String hexData)
     assert(hexString!"46 47 48 49 4A 4B" == "FGHIJK");
     assert(hexString!"30\r\n\t\f\v31 32 33 32 31 30" == "0123210");
     assert(hexString!"ab cd" == hexString!"ABCD");
+}
+
+/************************************************
+ * Convert string of `[0-9A-Fa-f]` characters to an array of ubytes.
+ *
+ * Other characters in the string are considered separators.
+ * Adjacent pairs of characters form the nibbles of the ubyte.
+ * Non-pairing characters form the low nibble of the ubyte.
+ * The returned array does not have a terminating zero appended.
+ * The GC is used because `hexData()` is intended to be used
+ * at compile time to, for example, initialize manifest constants
+ * and statically initialize global variables.
+ * Params:
+ *      s = string of data to convert
+ * Returns:
+ *      unique array of ubytes allocated on the GC heap
+ * References:
+ *      $(LREF hexString)
+ */
+ubyte[] hexData(const(char)[] s) pure nothrow @safe
+{
+    ubyte[] result;
+    result.length = (s.length + 1) / 2;
+    size_t i;
+
+    void append(ubyte u)
+    {
+        result[i++] = u;
+    }
+
+    ubyte u;
+    uint digits;
+    foreach (char c; s)
+    {
+        if ('0' <= c && c <= '9')
+            c -= '0';
+        else if ('a' <= c && c <= 'f')
+            c -= 'a' - 10;
+        else if ('A' <= c && c <= 'F')
+            c -= 'A' - 10;
+        else
+        {
+            if (digits)
+                append(u);
+            u = 0;
+            digits = 0;
+            continue;
+        }
+
+
+        if (++digits == 2)
+        {
+            append(cast(ubyte)((u << 4) + c));
+            digits = 0;
+        }
+        else
+            u = c;
+    }
+    if (digits)
+        append(u);
+
+    return result[0 .. i];
+}
+
+///
+@safe nothrow unittest
+{
+    static g1 = hexData("af,fa");
+    assert(g1 == [0xAF, 0xFA]);
+
+    enum a1 = hexData("AAbb");
+    assert(a1 == [0xAA, 0xBB]);
+    enum a2 = hexData("");
+    assert(a2 == []);
+    enum a3 = hexData(" \t\r\n");
+    assert(a3 == []);
+    enum a4 = hexData("f");
+    assert(a4 == [0xF]);
+    enum a5 = hexData(" f,");
+    assert(a5 == [0xF]);
+    enum a6 = hexData("0BF ");
+    assert(a6 == [0x0B, 0x0F]);
 }
 
 
