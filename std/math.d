@@ -131,7 +131,7 @@ static import core.math;
 static import core.stdc.math;
 static import core.stdc.fenv;
 import std.traits :  CommonType, isFloatingPoint, isIntegral, isNumeric,
-    isSigned, isUnsigned, Largest, Unqual, Unsigned;
+    isSigned, isUnsigned, Largest, Unqual;
 
 version (LDC)
 {
@@ -590,23 +590,21 @@ template isDeprecatedComplex(T)
  *     the return type will be the same as the input;
  */
 auto abs(Num)(Num x)
-// first line is needed until transition due to issue 16997 ended
 if ((is(Unqual!Num == short) || is(Unqual!Num == byte)) ||
     (is(typeof(Num.init >= 0)) && is(typeof(-Num.init))))
 {
-    static if (isFloatingPoint!Num)
+    static if (isFloatingPoint!(Num))
         return fabs(x);
-    else static if (isIntegral!Num)
-    {
-        // (0 - x) is a workaround until transition due to issue 16997 ended
-        static if (isSigned!Num) if (x < 0) return cast(Unsigned!Num)(0 - x);
-        return x;
-    }
     else
-        return x >= 0 ? x : -x;
+    {
+        static if (is(Unqual!Num == short) || is(Unqual!Num == byte))
+            return x >= 0 ? x : cast(Num) -int(x);
+        else
+            return x >= 0 ? x : -x;
+    }
 }
 
-///
+/// ditto
 @safe pure nothrow @nogc unittest
 {
     assert(isIdentical(abs(-0.0L), 0.0L));
@@ -614,18 +612,6 @@ if ((is(Unqual!Num == short) || is(Unqual!Num == byte)) ||
     assert(abs(-real.infinity) == real.infinity);
     assert(abs(-56) == 56);
     assert(abs(2321312L)  == 2321312L);
-}
-
-@safe pure nothrow @nogc unittest
-{
-    assert(abs(byte.min)==128U);
-    assert(abs(short.min)==32768U);
-    assert(abs(int.min)==2147483648U);
-    assert(abs(long.min)==9223372036854775808UL);
-    assert(abs(byte.max)==127U);
-    assert(abs(short.max)==32767U);
-    assert(abs(int.max)==2147483647U);
-    assert(abs(long.max)==9223372036854775807UL);
 }
 
 version (TestComplex)
