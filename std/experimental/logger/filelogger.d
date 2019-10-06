@@ -19,7 +19,7 @@ is already present new log messages will be append at its end.
 */
 class FileLogger : Logger
 {
-    import std.concurrency : Tid;
+    import core.thread : ThreadID;
     import std.datetime.systime : SysTime;
     import std.format : formattedWrite;
 
@@ -122,7 +122,7 @@ class FileLogger : Logger
     */
     override protected void beginLogMsg(string file, int line, string funcName,
         string prettyFuncName, string moduleName, LogLevel logLevel,
-        Tid threadId, SysTime timestamp, Logger logger)
+        ThreadID threadId, SysTime timestamp, Logger logger)
         @safe
     {
         import std.string : lastIndexOf;
@@ -132,7 +132,7 @@ class FileLogger : Logger
         auto lt = this.file_.lockingTextWriter();
         systimeToISOString(lt, timestamp);
         import std.conv : to;
-        formattedWrite(lt, " [%s] %s:%u:%s ", logLevel.to!string,
+        formattedWrite(lt, " %s %s %s:%u:%s ", threadId, logLevel.to!string,
                 file[fnIdx .. $], line, funcName[funIdx .. $]);
     }
 
