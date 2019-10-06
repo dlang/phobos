@@ -579,17 +579,20 @@ template isDeprecatedComplex(T)
 }
 
 /***********************************
- * Calculates the absolute value of a number
+ * Calculates the absolute value of a number.
  *
  * Params:
  *     Num = (template parameter) type of number
  *       x = real number value
  *
  * Returns:
- *     The absolute value of the number.  If floating-point or integral,
- *     the return type will be the same as the input;
+ *     The absolute value of the number. If floating-point or integral,
+ *     the return type will be the same as the input.
+ *
+ * Limitations:
+ *     Does not work correctly for signed intergal types and value `Num`.min.
  */
-auto abs(Num)(Num x)
+auto abs(Num)(Num x) @nogc pure nothrow
 if ((is(Unqual!Num == short) || is(Unqual!Num == byte)) ||
     (is(typeof(Num.init >= 0)) && is(typeof(-Num.init))))
 {
