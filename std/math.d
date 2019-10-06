@@ -644,6 +644,12 @@ deprecated
     }}
 }
 
+// see issue #20205, to avoid falling into the trap again
+@safe pure nothrow @nogc unittest
+{
+    assert(50 - abs(-100) == -50);
+}
+
 version (TestComplex)
 deprecated
 @safe pure nothrow @nogc unittest
