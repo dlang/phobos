@@ -1979,7 +1979,7 @@ private template ReverseTupleSpecs(T...)
 
 @safe unittest
 {
-    class C {}
+    class C { override size_t toHash() const nothrow @safe { return 0; } }
     Tuple!(Rebindable!(const C)) a;
     Tuple!(const C) b;
     a = b;
