@@ -1790,7 +1790,7 @@ if (isInputRange!R)
     assert(equal(g3, [ tuple(1, 2u), tuple(2, 2u) ]));
 
     interface I {}
-    class C : I {}
+    class C : I { override size_t toHash() const nothrow @safe { return 0; } }
     const C[] a4 = [new const C()];
     auto g4 = a4.group!"a is b";
     assert(g4.front[1] == 1);
