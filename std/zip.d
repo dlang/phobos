@@ -610,8 +610,7 @@ public:
         findEndOfCentralDirRecord();
         uint i = endrecOffset;
 
-        int endcommentlength = getUshort(i + 20);
-        comment = cast(string)(_data[i + 22 .. i + 22 + endcommentlength]);
+        extractArchiveComment();
 
         uint k = i - zip64EndOfCentralDirLocatorLength;
         if (k < i && _data[k .. k + 4] == cast(ubyte[])"PK\x06\x07")
@@ -778,6 +777,12 @@ public:
 
         if (endrecOffset == to!uint(data.length))
             throw new ZipException("found no valid 'end of central dir record'");
+    }
+
+    private void extractArchiveComment()
+    {
+        comment = cast(string)(_data[endrecOffset + endOfCentralDirLength ..
+                                     endrecOffset + endOfCentralDirLength + getUshort(endrecOffset + 20)]);
     }
 
     /*****
