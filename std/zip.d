@@ -597,18 +597,21 @@ public:
      * Params:
      *  buffer = the entire contents of the archive.
      */
-
     this(void[] buffer)
+    {
+        saveBuffer(buffer);
+        findEndOfCentralDirRecord();
+        extractArchiveComment();
+        extractEndOfCentralDirRecord();
+        extractCentralDirRecords();
+    }
+
+    private void saveBuffer(void[] buffer)
     {
         this._data = cast(ubyte[]) buffer;
 
         if (data.length > uint.max - 2)
             throw new ZipException("zip files bigger than 4 GB are unsupported");
-
-        findEndOfCentralDirRecord();
-        extractArchiveComment();
-        extractEndOfCentralDirRecord();
-        extractCentralDirRecords();
     }
 
     private void findEndOfCentralDirRecord()
