@@ -608,63 +608,7 @@ public:
         findEndOfCentralDirRecord();
         extractArchiveComment();
         extractEndOfCentralDirRecord();
-
-        uint i = directoryOffset;
-        for (int n = 0; n < numEntries; n++)
-        {
-            /* The format of an entry is:
-             *  'PK' 1, 2
-             *  directory info
-             *  path
-             *  extra data
-             *  comment
-             */
-
-            uint namelen;
-            uint extralen;
-            uint commentlen;
-
-            if (_data[i .. i + 4] != centralFileHeaderSignature)
-                throw new ZipException("invalid directory entry 1");
-            ArchiveMember de = new ArchiveMember();
-            de._index = n;
-            de._madeVersion = getUshort(i + 4);
-            de._extractVersion = getUshort(i + 6);
-            de.flags = getUshort(i + 8);
-            de._compressionMethod = cast(CompressionMethod) getUshort(i + 10);
-            de.time = cast(DosFileTime) getUint(i + 12);
-            de._crc32 = getUint(i + 16);
-            de._compressedSize = getUint(i + 20);
-            de._expandedSize = getUint(i + 24);
-            namelen = getUshort(i + 28);
-            extralen = getUshort(i + 30);
-            commentlen = getUshort(i + 32);
-            de._diskNumber = getUshort(i + 34);
-            de.internalAttributes = getUshort(i + 36);
-            de._externalAttributes = getUint(i + 38);
-            de.offset = getUint(i + 42);
-            i += centralFileHeaderLength;
-
-            if (i + namelen + extralen + commentlen > directoryOffset + directorySize)
-                throw new ZipException("invalid directory entry 2");
-
-            de.name = cast(string)(_data[i .. i + namelen]);
-            i += namelen;
-            de.extra = _data[i .. i + extralen];
-            i += extralen;
-            de.comment = cast(string)(_data[i .. i + commentlen]);
-            i += commentlen;
-
-            immutable uint dataOffset = de.offset + localFileHeaderLength + namelen + extralen;
-            if (dataOffset + de.compressedSize > endrecOffset)
-                throw new ZipException("Invalid directory entry offset or size.");
-            de._compressedData = _data[dataOffset .. dataOffset + de.compressedSize];
-
-            _directory[de.name] = de;
-
-        }
-        if (i != directoryOffset + directorySize)
-            throw new ZipException("invalid directory entry 3");
+        extractCentralDirRecords();
     }
 
     private void findEndOfCentralDirRecord()
@@ -785,6 +729,66 @@ public:
             if (directoryOffset + directorySize > i)
                 throw new ZipException("corrupted directory");
         }
+    }
+
+    private void extractCentralDirRecords()
+    {
+        uint i = directoryOffset;
+        for (int n = 0; n < numEntries; n++)
+        {
+            /* The format of an entry is:
+             *  'PK' 1, 2
+             *  directory info
+             *  path
+             *  extra data
+             *  comment
+             */
+
+            uint namelen;
+            uint extralen;
+            uint commentlen;
+
+            if (_data[i .. i + 4] != centralFileHeaderSignature)
+                throw new ZipException("invalid directory entry 1");
+            ArchiveMember de = new ArchiveMember();
+            de._index = n;
+            de._madeVersion = getUshort(i + 4);
+            de._extractVersion = getUshort(i + 6);
+            de.flags = getUshort(i + 8);
+            de._compressionMethod = cast(CompressionMethod) getUshort(i + 10);
+            de.time = cast(DosFileTime) getUint(i + 12);
+            de._crc32 = getUint(i + 16);
+            de._compressedSize = getUint(i + 20);
+            de._expandedSize = getUint(i + 24);
+            namelen = getUshort(i + 28);
+            extralen = getUshort(i + 30);
+            commentlen = getUshort(i + 32);
+            de._diskNumber = getUshort(i + 34);
+            de.internalAttributes = getUshort(i + 36);
+            de._externalAttributes = getUint(i + 38);
+            de.offset = getUint(i + 42);
+            i += centralFileHeaderLength;
+
+            if (i + namelen + extralen + commentlen > directoryOffset + directorySize)
+                throw new ZipException("invalid directory entry 2");
+
+            de.name = cast(string)(_data[i .. i + namelen]);
+            i += namelen;
+            de.extra = _data[i .. i + extralen];
+            i += extralen;
+            de.comment = cast(string)(_data[i .. i + commentlen]);
+            i += commentlen;
+
+            immutable uint dataOffset = de.offset + localFileHeaderLength + namelen + extralen;
+            if (dataOffset + de.compressedSize > endrecOffset)
+                throw new ZipException("Invalid directory entry offset or size.");
+            de._compressedData = _data[dataOffset .. dataOffset + de.compressedSize];
+
+            _directory[de.name] = de;
+
+        }
+        if (i != directoryOffset + directorySize)
+            throw new ZipException("invalid directory entry 3");
     }
 
     /*****
