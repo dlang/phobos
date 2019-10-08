@@ -316,6 +316,8 @@ public:
 
     private ubyte[] _data;
     private uint endrecOffset;
+    private uint directorySize;
+    private uint directoryOffset;
 
     private uint _diskNumber;
     private uint _diskStartDir;
@@ -444,19 +446,18 @@ public:
         import std.string : representation;
 
         uint i;
-        uint directoryOffset;
 
         if (comment.length > 0xFFFF)
             throw new ZipException("archive comment longer than 65535");
 
         // Compress each member; compute size
         uint archiveSize = 0;
-        uint directorySize = 0;
+        uint directorySize_ = 0;
         auto directory = _directory.byValue.array.sort!((x, y) => x.index < y.index).release;
         foreach (ArchiveMember de; directory)
         {
             if (to!ulong(archiveSize) + localFileHeaderLength + de.name.length + de.extra.length + de.compressedSize
-                    + directorySize + centralFileHeaderLength + de.name.length + de.extra.length + de.comment.length
+                    + directorySize_ + centralFileHeaderLength + de.name.length + de.extra.length + de.comment.length
                     + endOfCentralDirLength + comment.length + zip64EndOfCentralDirLocatorLength
                     + zip64EndOfCentralDirLength > uint.max)
                 throw new ZipException("zip files bigger than 4 GB are unsupported");
@@ -464,14 +465,14 @@ public:
             archiveSize += localFileHeaderLength + de.name.length +
                                 de.extra.length +
                                 de.compressedSize;
-            directorySize += centralFileHeaderLength + de.name.length +
+            directorySize_ += centralFileHeaderLength + de.name.length +
                                 de.extra.length +
                                 de.comment.length;
         }
 
         if (!isZip64 && _directory.length > ushort.max)
             _isZip64 = true;
-        uint dataSize = archiveSize + directorySize + endOfCentralDirLength + cast(uint) comment.length;
+        uint dataSize = archiveSize + directorySize_ + endOfCentralDirLength + cast(uint) comment.length;
         if (isZip64)
             dataSize += zip64EndOfCentralDirLocatorLength + zip64EndOfCentralDirLength;
 
@@ -505,7 +506,7 @@ public:
         }
 
         // Write directory
-        directoryOffset = i;
+        uint directoryOffset_ = i;
         _numEntries = 0;
         foreach (ArchiveMember de; directory)
         {
@@ -549,8 +550,8 @@ public:
             putUint  (i + 20, diskStartDir);
             putUlong (i + 24, numEntries);
             putUlong (i + 32, totalEntries);
-            putUlong (i + 40, directorySize);
-            putUlong (i + 48, directoryOffset);
+            putUlong (i + 40, directorySize_);
+            putUlong (i + 48, directoryOffset_);
             i += zip64EndOfCentralDirLength;
 
             // Write zip64 end of central directory record locator
@@ -568,8 +569,8 @@ public:
         putUshort(i + 6,  cast(ushort) diskStartDir);
         putUshort(i + 8,  (numEntries > ushort.max ? ushort.max : cast(ushort) numEntries));
         putUshort(i + 10, (totalEntries > ushort.max ? ushort.max : cast(ushort) totalEntries));
-        putUint  (i + 12, directorySize);
-        putUint  (i + 16, directoryOffset);
+        putUint  (i + 12, directorySize_);
+        putUint  (i + 16, directoryOffset_);
         putUshort(i + 20, cast(ushort) comment.length);
         i += endOfCentralDirLength;
 
@@ -599,84 +600,16 @@ public:
 
     this(void[] buffer)
     {
-        uint directorySize;
-        uint directoryOffset;
-
         this._data = cast(ubyte[]) buffer;
 
         if (data.length > uint.max - 2)
             throw new ZipException("zip files bigger than 4 GB are unsupported");
 
         findEndOfCentralDirRecord();
-        uint i = endrecOffset;
-
         extractArchiveComment();
+        extractEndOfCentralDirRecord();
 
-        uint k = i - zip64EndOfCentralDirLocatorLength;
-        if (k < i && _data[k .. k + 4] == cast(ubyte[])"PK\x06\x07")
-        {
-            _isZip64 = true;
-            i = k;
-        }
-
-        if (isZip64)
-        {
-            // Read Zip64 record data
-            ulong eocdOffset = getUlong(i + 8);
-            if (eocdOffset + zip64EndOfCentralDirLength > _data.length)
-                throw new ZipException("corrupted directory");
-
-            i = to!uint(eocdOffset);
-            if (_data[i .. i + 4] != zip64EndOfCentralDirSignature)
-                throw new ZipException("invalid Zip EOCD64 signature");
-
-            ulong eocd64Size = getUlong(i + 4);
-            if (eocd64Size + i - 12 > data.length)
-                throw new ZipException("invalid Zip EOCD64 size");
-
-            _diskNumber = getUint(i + 16);
-            _diskStartDir = getUint(i + 20);
-
-            ulong numEntriesUlong = getUlong(i + 24);
-            ulong totalEntriesUlong = getUlong(i + 32);
-            ulong directorySizeUlong = getUlong(i + 40);
-            ulong directoryOffsetUlong = getUlong(i + 48);
-
-            if (numEntriesUlong > uint.max)
-                throw new ZipException("supposedly more than 4294967296 files in archive");
-
-            if (numEntriesUlong != totalEntriesUlong)
-                throw new ZipException("multiple disk zips not supported");
-
-            if (directorySizeUlong > i || directoryOffsetUlong > i
-                    || directorySizeUlong + directoryOffsetUlong > i)
-                throw new ZipException("corrupted directory");
-
-            _numEntries = to!uint(numEntriesUlong);
-            _totalEntries = to!uint(totalEntriesUlong);
-            directorySize = to!uint(directorySizeUlong);
-            directoryOffset = to!uint(directoryOffsetUlong);
-        }
-        else
-        {
-            // Read end record data
-            _diskNumber = getUshort(i + 4);
-            _diskStartDir = getUshort(i + 6);
-
-            _numEntries = getUshort(i + 8);
-            _totalEntries = getUshort(i + 10);
-
-            if (numEntries != totalEntries)
-                throw new ZipException("multiple disk zips not supported");
-
-            directorySize = getUint(i + 12);
-            directoryOffset = getUint(i + 16);
-
-            if (directoryOffset + directorySize > i)
-                throw new ZipException("corrupted directory");
-        }
-
-        i = directoryOffset;
+        uint i = directoryOffset;
         for (int n = 0; n < numEntries; n++)
         {
             /* The format of an entry is:
@@ -783,6 +716,75 @@ public:
     {
         comment = cast(string)(_data[endrecOffset + endOfCentralDirLength ..
                                      endrecOffset + endOfCentralDirLength + getUshort(endrecOffset + 20)]);
+    }
+
+    private void extractEndOfCentralDirRecord()
+    {
+        uint i = endrecOffset;
+
+        uint k = i - zip64EndOfCentralDirLocatorLength;
+        if (k < i && _data[k .. k + 4] == cast(ubyte[])"PK\x06\x07")
+        {
+            _isZip64 = true;
+            i = k;
+        }
+
+        if (isZip64)
+        {
+            // Read Zip64 record data
+            ulong eocdOffset = getUlong(i + 8);
+            if (eocdOffset + zip64EndOfCentralDirLength > _data.length)
+                throw new ZipException("corrupted directory");
+
+            i = to!uint(eocdOffset);
+            if (_data[i .. i + 4] != zip64EndOfCentralDirSignature)
+                throw new ZipException("invalid Zip EOCD64 signature");
+
+            ulong eocd64Size = getUlong(i + 4);
+            if (eocd64Size + i - 12 > data.length)
+                throw new ZipException("invalid Zip EOCD64 size");
+
+            _diskNumber = getUint(i + 16);
+            _diskStartDir = getUint(i + 20);
+
+            ulong numEntriesUlong = getUlong(i + 24);
+            ulong totalEntriesUlong = getUlong(i + 32);
+            ulong directorySizeUlong = getUlong(i + 40);
+            ulong directoryOffsetUlong = getUlong(i + 48);
+
+            if (numEntriesUlong > uint.max)
+                throw new ZipException("supposedly more than 4294967296 files in archive");
+
+            if (numEntriesUlong != totalEntriesUlong)
+                throw new ZipException("multiple disk zips not supported");
+
+            if (directorySizeUlong > i || directoryOffsetUlong > i
+                    || directorySizeUlong + directoryOffsetUlong > i)
+                throw new ZipException("corrupted directory");
+
+            _numEntries = to!uint(numEntriesUlong);
+            _totalEntries = to!uint(totalEntriesUlong);
+            directorySize = to!uint(directorySizeUlong);
+            directoryOffset = to!uint(directoryOffsetUlong);
+        }
+        else
+        {
+            // Read end record data
+            _diskNumber = getUshort(i + 4);
+            _diskStartDir = getUshort(i + 6);
+
+            _numEntries = getUshort(i + 8);
+            _totalEntries = getUshort(i + 10);
+
+            if (numEntries != totalEntries)
+                throw new ZipException("multiple disk zips not supported");
+
+            directorySize = getUint(i + 12);
+            directoryOffset = getUint(i + 16);
+
+            if (directoryOffset + directorySize > i)
+                throw new ZipException("corrupted directory");
+        }
     }
 
     /*****
