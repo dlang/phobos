@@ -480,6 +480,11 @@ if (isSomeChar!Char)
     assert(uriLength("issue 14924") < 0);
 }
 
+@safe pure nothrow @nogc unittest
+{
+    assert(uriLength("") == -1);
+    assert(uriLength("https://www") == -1);
+}
 
 /***************************
  * Does string s[] start with an email address?
