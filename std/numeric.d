@@ -171,8 +171,7 @@ struct CustomFloat(uint             precision,  // fraction bits (23 for float)
                    uint             exponentWidth,  // exponent bits (8 for float)  Exponent width
                    CustomFloatFlags flags,
                    uint             bias)
-if (((flags & flags.signed)  + precision + exponentWidth) % 8 == 0 &&
-    precision + exponentWidth > 0)
+if (isCorrectCustomFloat(precision, exponentWidth, flags))
 {
     import std.bitmanip : bitfields;
     import std.meta : staticIndexOf;
@@ -871,6 +870,43 @@ public:
     static assert(CustomFloat!(1,6).min_normal.significand == 0);
     //static assert(CustomFloat!(3,5, CustomFloatFlags.none).min_normal.exponent == 0); // doesn't work due to bug 20286
     static assert(CustomFloat!(3,5, CustomFloatFlags.none).min_normal.significand == 4);
+}
+
+private bool isCorrectCustomFloat(uint precision, uint exponentWidth, CustomFloatFlags flags) @safe pure nothrow @nogc
+{
+    // Restrictions from bitfield
+    // due to CustomFloat!80 support hack precision with 64 bits is handled specially
+    auto length = (flags & flags.signed) + exponentWidth + ((precision == 64) ? 0 : precision);
+    if (length != 8 && length != 16 && length != 32 && length != 64) return false;
+
+    // mantissa needs to fit into real mantissa
+    if (precision > real.mant_dig - 1 && precision != 64) return false;
+
+    // exponent needs to fit into real exponent
+    if (1L << exponentWidth - 1 > real.max_exp) return false;
+
+    // mantissa should have at least one bit
+    if (precision == 0) return false;
+
+    // exponent should have at least one bit, in some cases two
+    if (exponentWidth <= ((flags & (flags.allowDenorm | flags.infinity | flags.nan)) != 0)) return false;
+
+    return true;
+}
+
+@safe pure nothrow @nogc unittest
+{
+    assert(isCorrectCustomFloat(3,4,CustomFloatFlags.ieee));
+    assert(isCorrectCustomFloat(3,5,CustomFloatFlags.none));
+    assert(!isCorrectCustomFloat(3,3,CustomFloatFlags.ieee));
+    assert(isCorrectCustomFloat(64,7,CustomFloatFlags.ieee));
+    assert(!isCorrectCustomFloat(64,4,CustomFloatFlags.ieee));
+    assert(!isCorrectCustomFloat(508,3,CustomFloatFlags.ieee));
+    assert(!isCorrectCustomFloat(3,100,CustomFloatFlags.ieee));
+    assert(!isCorrectCustomFloat(0,7,CustomFloatFlags.ieee));
+    assert(!isCorrectCustomFloat(6,1,CustomFloatFlags.ieee));
+    assert(isCorrectCustomFloat(7,1,CustomFloatFlags.none));
+    assert(!isCorrectCustomFloat(8,0,CustomFloatFlags.none));
 }
 
 /**
