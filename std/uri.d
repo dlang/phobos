@@ -278,6 +278,22 @@ if (isSomeChar!Char)
     return R[0 .. Rlen].idup;
 }
 
+@safe pure unittest
+{
+    import std.exception : assertThrown;
+
+    assert(URI_Decode("", 0) == "");
+    assertThrown!URIException(URI_Decode("%", 0));
+    assertThrown!URIException(URI_Decode("%xx", 0));
+    assertThrown!URIException(URI_Decode("%FF", 0));
+    assertThrown!URIException(URI_Decode("%C0", 0));
+    assertThrown!URIException(URI_Decode("%C0000000", 0));
+    assertThrown!URIException(URI_Decode("%C0%xx0000", 0));
+    assertThrown!URIException(URI_Decode("%C0%C00000", 0));
+    assertThrown!URIException(URI_Decode("%F7%BF%BF%BF", 0));
+    assert(URI_Decode("%23", URI_Hash) == "%23");
+}
+
 /*************************************
  * Decodes the URI string encodedURI into a UTF-8 string and returns it.
  * Escape sequences that resolve to reserved URI characters are not replaced.
