@@ -496,6 +496,9 @@ if (isSomeChar!Char)
 
     ptrdiff_t i;
 
+    if (s.length == 0)
+        return -1;
+
     if (!isAlpha(s[0]))
         return -1;
 
@@ -593,4 +596,14 @@ if (isSomeChar!Char)
         assert(decoded2 == source);
         assert(encoded2 == encode(decoded2).to!StringType);
     }}
+}
+
+@safe pure nothrow @nogc unittest
+{
+    assert(emailLength("") == -1);
+    assert(emailLength("@") == -1);
+    assert(emailLength("abcd") == -1);
+    assert(emailLength("blah@blub") == -1);
+    assert(emailLength("blah@blub.") == -1);
+    assert(emailLength("blah@blub.domain") == -1);
 }
