@@ -172,6 +172,18 @@ private string URI_Encode(dstring str, uint unescapedSet) @safe pure
     return R[0 .. Rlen].idup;
 }
 
+@safe pure unittest
+{
+    import std.exception : assertThrown;
+
+    assert(URI_Encode("", 0) == "");
+    assert(URI_Encode(URI_Decode("%F0%BF%BF%BF", 0), 0) == "%F0%BF%BF%BF");
+    dstring a;
+    a ~= cast(dchar) 0xFFFFFFFF;
+    assertThrown(URI_Encode(a, 0));
+    assert(URI_Encode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 0).length == 3 * 60);
+}
+
 private uint ascii2hex(dchar c) @nogc @safe pure nothrow
 {
     return (c <= '9') ? c - '0' :
