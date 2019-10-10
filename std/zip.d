@@ -599,26 +599,34 @@ public:
 
     this(void[] buffer)
     {
-        uint directorySize;
-        uint directoryOffset;
-
         this._data = cast(ubyte[]) buffer;
 
         if (data.length > uint.max - 2)
             throw new ZipException("zip files bigger than 4 GB are unsupported");
 
+        _segs = [Segment(0, cast(uint) data.length)];
+
         findEndOfCentralDirRecord();
         uint i = endrecOffset;
 
-        int endcommentlength = getUshort(i + 20);
-        comment = cast(string)(_data[i + 22 .. i + 22 + endcommentlength]);
+        int endCommentLength = getUshort(i + 20);
+        comment = cast(string)(_data[i + 22 .. i + 22 + endCommentLength]);
+
+        // end of central dir record
+        removeSegment(endrecOffset, endrecOffset + endOfCentralDirLength + endCommentLength);
 
         uint k = i - zip64EndOfCentralDirLocatorLength;
         if (k < i && _data[k .. k + 4] == cast(ubyte[])"PK\x06\x07")
         {
             _isZip64 = true;
             i = k;
+
+            // zip64 end of central dir record locator
+            removeSegment(k, k + zip64EndOfCentralDirLocatorLength);
         }
+
+        uint directorySize;
+        uint directoryOffset;
 
         if (isZip64)
         {
@@ -634,6 +642,9 @@ public:
             ulong eocd64Size = getUlong(i + 4);
             if (eocd64Size + i - 12 > data.length)
                 throw new ZipException("invalid Zip EOCD64 size");
+
+            // zip64 end of central dir record
+            removeSegment(i, cast(uint) (i + 12 + eocd64Size));
 
             _diskNumber = getUint(i + 16);
             _diskStartDir = getUint(i + 20);
@@ -711,6 +722,10 @@ public:
             de.internalAttributes = getUshort(i + 36);
             de._externalAttributes = getUint(i + 38);
             de.offset = getUint(i + 42);
+
+            // central directory header
+            removeSegment(i, i + centralFileHeaderLength + namelen + extralen + commentlen);
+
             i += centralFileHeaderLength;
 
             if (i + namelen + extralen + commentlen > directoryOffset + directorySize)
@@ -725,6 +740,10 @@ public:
 
             auto localFileHeaderNamelen = getUshort(de.offset + 26);
             auto localFileHeaderExtralen = getUshort(de.offset + 28);
+
+            // file data
+            removeSegment(de.offset, de.offset + localFileHeaderLength + localFileHeaderNamelen
+                                     + localFileHeaderExtralen + de._compressedSize);
 
             immutable uint dataOffset = de.offset + localFileHeaderLength
                                         + localFileHeaderNamelen + localFileHeaderExtralen;
@@ -1172,6 +1191,44 @@ the quick brown fox jumps over the lazy dog\r
 
     auto za = new ZipArchive(cast(void[]) file);
     assert(za.directory["file"].compressedData == [104, 101, 108, 108, 111]);
+}
+
+// issue #20027
+@system unittest
+{
+    // central file header overlaps end of central directory
+    auto file =
+        // lfh
+        "\x50\x4b\x03\x04\x0a\x00\x00\x00\x00\x00\x8f\x72\x4a\x4f\x86\xa6"~
+        "\x10\x36\x05\x00\x00\x00\x05\x00\x00\x00\x04\x00\x1c\x00\x66\x69"~
+        "\x6c\x65\x55\x54\x09\x00\x03\x0d\x22\x9f\x5d\x12\x22\x9f\x5d\x75"~
+        "\x78\x0b\x00\x01\x04\xf0\x03\x00\x00\x04\xf0\x03\x00\x00\x68\x65"~
+        "\x6c\x6c\x6f\x50\x4b\x01\x02\x1e\x03\x0a\x00\x00\x00\x00\x00\x8f"~
+        "\x72\x4a\x4f\x86\xa6\x10\x36\x05\x00\x00\x00\x05\x00\x00\x00\x04"~
+        "\x00\x18\x00\x04\x00\x00\x00\x01\x00\x00\x00\xb0\x81\x00\x00\x00"~
+        "\x00\x66\x69\x6c\x65\x55\x54\x05\x00\x03\x0d\x22\x9f\x5d\x75\x78"~
+        "\x0b\x00\x01\x04\xf0\x03\x00\x00\x04\xf0\x03\x00\x00\x50\x4b\x05"~
+        "\x06\x00\x00\x00\x00\x01\x00\x01\x00\x4a\x00\x00\x00\x43\x00\x00"~
+        "\x00\x00\x00";
+
+    import std.exception : assertThrown;
+    assertThrown!ZipException(new ZipArchive(cast(void[]) file));
+
+    // local file header and file data overlap second local file header and file data
+    file =
+        "\x50\x4b\x03\x04\x0a\x00\x00\x00\x00\x00\x8f\x72\x4a\x4f\x86\xa6"~
+        "\x10\x36\x05\x00\x00\x00\x05\x00\x00\x00\x04\x00\x1e\x00\x66\x69"~
+        "\x6c\x65\x55\x54\x09\x00\x03\x0d\x22\x9f\x5d\x12\x22\x9f\x5d\x75"~
+        "\x78\x0b\x00\x01\x04\xf0\x03\x00\x00\x04\xf0\x03\x00\x00\x68\x65"~
+        "\x6c\x6c\x6f\x50\x4b\x01\x02\x1e\x03\x0a\x00\x00\x00\x00\x00\x8f"~
+        "\x72\x4a\x4f\x86\xa6\x10\x36\x05\x00\x00\x00\x05\x00\x00\x00\x04"~
+        "\x00\x18\x00\x04\x00\x00\x00\x01\x00\x00\x00\xb0\x81\x00\x00\x00"~
+        "\x00\x66\x69\x6c\x65\x55\x54\x05\x00\x03\x0d\x22\x9f\x5d\x75\x78"~
+        "\x0b\x00\x01\x04\xf0\x03\x00\x00\x04\xf0\x03\x00\x00\x50\x4b\x05"~
+        "\x06\x00\x00\x00\x00\x01\x00\x01\x00\x4a\x00\x00\x00\x43\x00\x00"~
+        "\x00\x00\x00";
+
+    assertThrown!ZipException(new ZipArchive(cast(void[]) file));
 }
 
 // Non-Android Posix-only, because we can't rely on the unzip command being
