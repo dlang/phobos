@@ -616,7 +616,7 @@ public:
         removeSegment(endrecOffset, endrecOffset + endOfCentralDirLength + endCommentLength);
 
         uint k = i - zip64EndOfCentralDirLocatorLength;
-        if (k < i && _data[k .. k + 4] == cast(ubyte[])"PK\x06\x07")
+        if (k < i && _data[k .. k + 4] == zip64EndOfCentralDirLocatorSignature)
         {
             _isZip64 = true;
             i = k;
@@ -769,7 +769,7 @@ public:
             if (endOfCentralDirLength + i > data.length) break;
             uint start = to!uint(data.length) - endOfCentralDirLength - i;
 
-            if (data[start .. start + 4] != cast(ubyte[])"PK\x05\x06") continue;
+            if (data[start .. start + 4] != endOfCentralDirSignature) continue;
 
             auto numberOfThisDisc = getUshort(start + 4);
             if (numberOfThisDisc != 0) continue; // no support for multiple volumes yet
@@ -779,16 +779,22 @@ public:
 
             if (numberOfThisDisc < numberOfStartOfCentralDirectory) continue;
 
+            uint k = start - zip64EndOfCentralDirLocatorLength;
+            auto maybeZip64 = k < start && _data[k .. k + 4] == zip64EndOfCentralDirLocatorSignature;
+
             auto totalNumberOfEntriesOnThisDisk = getUshort(start + 8);
             auto totalNumberOfEntriesInCentralDir = getUshort(start + 10);
 
-            if (totalNumberOfEntriesOnThisDisk > totalNumberOfEntriesInCentralDir) continue;
+            if (totalNumberOfEntriesOnThisDisk > totalNumberOfEntriesInCentralDir &&
+               (!maybeZip64 || totalNumberOfEntriesOnThisDisk < 0xffff)) continue;
 
             auto sizeOfCentralDirectory = getUint(start + 12);
-            if (sizeOfCentralDirectory > start) continue;
+            if (sizeOfCentralDirectory > start &&
+               (!maybeZip64 || sizeOfCentralDirectory < 0xffff)) continue;
 
             auto offsetOfCentralDirectory = getUint(start + 16);
-            if (offsetOfCentralDirectory > start - sizeOfCentralDirectory) continue;
+            if (offsetOfCentralDirectory > start - sizeOfCentralDirectory &&
+               (!maybeZip64 || offsetOfCentralDirectory < 0xffff)) continue;
 
             auto zipfileCommentLength = getUshort(start + 20);
             if (start + zipfileCommentLength + endOfCentralDirLength != data.length) continue;
@@ -1229,6 +1235,23 @@ the quick brown fox jumps over the lazy dog\r
         "\x00\x00\x00";
 
     assertThrown!ZipException(new ZipArchive(cast(void[]) file));
+}
+
+@system unittest
+{
+    // issue #20295: zip64 with 0xff bytes in end of central dir record do not work
+    // minimum (empty zip64) archive should pass
+    auto file =
+        "\x50\x4b\x06\x06\x2c\x00\x00\x00\x00\x00\x00\x00\x1e\x03\x2d\x00"~
+        "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"~
+        "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"~
+        "\x00\x00\x00\x00\x00\x00\x00\x00\x50\x4b\x06\x07\x00\x00\x00\x00"~
+        "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x50\x4B\x05\x06"~
+        "\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"~
+        "\x00\x00";
+
+    auto za = new ZipArchive(cast(void[]) file);
+    assert(za.directory.length == 0);
 }
 
 // Non-Android Posix-only, because we can't rely on the unzip command being
