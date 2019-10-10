@@ -1857,9 +1857,12 @@ private void testFloatingToIntegral(Floating, Integral)()
         foreach (T; AllNumerics)
         {
             T a = 42;
-            assert(to!string(a) == "42");
-            assert(to!wstring(a) == "42"w);
-            assert(to!dstring(a) == "42"d);
+            string s = to!string(a);
+            assert(s == "42", s);
+            wstring ws = to!wstring(a);
+            assert(ws == "42"w, to!string(ws));
+            dstring ds = to!dstring(a);
+            assert(ds == "42"d, to!string(ds));
             // array test
             T[] b = new T[2];
             b[0] = 42;
@@ -3065,7 +3068,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 @safe unittest
 {
     import std.exception;
-    import std.math : isNaN, fabs;
+    import std.math : isNaN, fabs, isInfinity;
 
     // Compare reals with given precision
     bool feq(in real rx, in real ry, in real precision = 0.000001L)
@@ -3123,6 +3126,16 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     d = to!double("1.79769e+308");
     assert(to!string(d) == to!string(1.79769e+308));
     assert(to!string(d) == to!string(double.max));
+
+    auto z = real.max / 2L;
+    static assert(is(typeof(z) == real));
+    assert(!isNaN(z));
+    assert(!isInfinity(z));
+    string a = to!string(z);
+    real b = to!real(a);
+    string c = to!string(b);
+
+    assert(c == a, "\n" ~ c ~ "\n" ~ a);
 
     assert(to!string(to!real(to!string(real.max / 2L))) == to!string(real.max / 2L));
 

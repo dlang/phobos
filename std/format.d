@@ -2571,9 +2571,25 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     import std.algorithm.comparison : min;
     import std.algorithm.searching : find;
     import std.string : indexOf, indexOfAny, indexOfNeither;
+    import std.math : isInfinity, isNaN, signbit;
+    import std.ascii : isUpper;
+
+    string nanInfStr(scope const ref FormatSpec!Char f, const bool nan,
+            const bool inf, const int sb, const bool up) @safe pure nothrow
+    {
+        return nan
+            ? up
+                ? sb ? "-NAN" : f.flPlus ? "+NAN" : "NAN"
+                : sb ? "-nan" : f.flPlus ? "+nan" : "nan"
+            : inf
+                ? up
+                    ? sb ? "-INF" : f.flPlus ? "+INF" : "INF"
+                    : sb ? "-inf" : f.flPlus ? "+inf" : "inf"
+                : "";
+    }
 
     FloatingPointTypeOf!T val = obj;
-    const spec = f.spec;
+    const char spec = f.spec;
 
     if (spec == 'r')
     {
@@ -2599,43 +2615,32 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 
     version (CRuntime_Microsoft)
     {
-        import std.math : isNaN, isInfinity;
-        immutable double tval = val; // convert early to get "inf" in case of overflow
-        string s;
-        if (isNaN(tval))
-            s = "nan"; // snprintf writes 1.#QNAN
-        else if (isInfinity(tval))
-            s = val >= 0 ? "inf" : "-inf"; // snprintf writes 1.#INF
-
-        if (s.length > 0)
-        {
-          version (none)
-          {
-            return formatValueImpl(w, s, f);
-          }
-          else  // FIXME:workaround
-          {
-            s = s[0 .. f.precision < $ ? f.precision : $];
-            if (!f.flDash)
-            {
-                // right align
-                if (f.width > s.length)
-                    foreach (j ; 0 .. f.width - s.length) put(w, ' ');
-                put(w, s);
-            }
-            else
-            {
-                // left align
-                put(w, s);
-                if (f.width > s.length)
-                    foreach (j ; 0 .. f.width - s.length) put(w, ' ');
-            }
-            return;
-          }
-        }
+        // convert early to get "inf" in case of overflow
+        // windows handels inf and nan strange
+        // https://devblogs.microsoft.com/oldnewthing/20130228-01/?p=5103
+        immutable double tval = val;
     }
     else
+    {
         alias tval = val;
+    }
+
+    const nan = isNaN(tval);
+    const inf = isInfinity(tval);
+
+    if (nan || inf)
+    {
+        const sb = signbit(tval);
+        const up = isUpper(spec);
+        string ns = nanInfStr(f, nan, inf, sb, up);
+        FormatSpec!Char co;
+        co.spec = 's';
+        co.width = f.width;
+        co.flDash = f.flDash;
+        formatValue(w, ns, co);
+        return;
+    }
+
     FormatSpec!Char fs = f; // fs is copy for change its values.
     const spec2 = spec == 's' ? 'g' : spec;
     char[1 /*%*/ + 5 /*flags*/ + 3 /*width.prec*/ + 2 /*format*/
@@ -2654,6 +2659,8 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     sprintfSpec[i] = 0;
     //printf("format: '%s'; geeba: %g\n", sprintfSpec.ptr, val);
     char[512] buf = void;
+
+    //writefln("'%s'", sprintfSpec[0 .. i]);
 
     immutable n = ()@trusted{
         import core.stdc.stdio : snprintf;
@@ -6871,4 +6878,59 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
     cmp = "0,100,000";
     tmp  = format("%08,d", 100_000);
     assert(tmp == cmp, tmp);
+}
+
+// Issue 20288
+@safe unittest
+{
+    string s = format("%,.2f", double.nan);
+    assert(s == "nan", s);
+
+    s = format("%,.2F", double.nan);
+    assert(s == "NAN", s);
+
+    s = format("%,.2f", -double.nan);
+    assert(s == "-nan", s);
+
+    s = format("%,.2F", -double.nan);
+    assert(s == "-NAN", s);
+
+    string g = format("^%13s$", "nan");
+    string h = "^          nan$";
+    assert(g == h, "\ngot:" ~ g ~ "\nexp:" ~ h);
+    string a = format("^%13,3.2f$", double.nan);
+    string b = format("^%13,3.2F$", double.nan);
+    string c = format("^%13,3.2f$", -double.nan);
+    string d = format("^%13,3.2F$", -double.nan);
+    assert(a == "^          nan$", "\ngot:'"~ a ~ "'\nexp:'^          nan$'");
+    assert(b == "^          NAN$", "\ngot:'"~ b ~ "'\nexp:'^          NAN$'");
+    assert(c == "^         -nan$", "\ngot:'"~ c ~ "'\nexp:'^         -nan$'");
+    assert(d == "^         -NAN$", "\ngot:'"~ d ~ "'\nexp:'^         -NAN$'");
+
+    a = format("^%-13,3.2f$", double.nan);
+    b = format("^%-13,3.2F$", double.nan);
+    c = format("^%-13,3.2f$", -double.nan);
+    d = format("^%-13,3.2F$", -double.nan);
+    assert(a == "^nan          $", "\ngot:'"~ a ~ "'\nexp:'^nan          $'");
+    assert(b == "^NAN          $", "\ngot:'"~ b ~ "'\nexp:'^NAN          $'");
+    assert(c == "^-nan         $", "\ngot:'"~ c ~ "'\nexp:'^-nan         $'");
+    assert(d == "^-NAN         $", "\ngot:'"~ d ~ "'\nexp:'^-NAN         $'");
+
+    a = format("^%+13,3.2f$", double.nan);
+    b = format("^%+13,3.2F$", double.nan);
+    c = format("^%+13,3.2f$", -double.nan);
+    d = format("^%+13,3.2F$", -double.nan);
+    assert(a == "^         +nan$", "\ngot:'"~ a ~ "'\nexp:'^         +nan$'");
+    assert(b == "^         +NAN$", "\ngot:'"~ b ~ "'\nexp:'^         +NAN$'");
+    assert(c == "^         -nan$", "\ngot:'"~ c ~ "'\nexp:'^         -nan$'");
+    assert(d == "^         -NAN$", "\ngot:'"~ d ~ "'\nexp:'^         -NAN$'");
+
+    a = format("^%-+13,3.2f$", double.nan);
+    b = format("^%-+13,3.2F$", double.nan);
+    c = format("^%-+13,3.2f$", -double.nan);
+    d = format("^%-+13,3.2F$", -double.nan);
+    assert(a == "^+nan         $", "\ngot:'"~ a ~ "'\nexp:'^+nan         $'");
+    assert(b == "^+NAN         $", "\ngot:'"~ b ~ "'\nexp:'^+NAN         $'");
+    assert(c == "^-nan         $", "\ngot:'"~ c ~ "'\nexp:'^-nan         $'");
+    assert(d == "^-NAN         $", "\ngot:'"~ d ~ "'\nexp:'^-NAN         $'");
 }
