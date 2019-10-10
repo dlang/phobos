@@ -723,7 +723,11 @@ public:
             de.comment = cast(string)(_data[i .. i + commentlen]);
             i += commentlen;
 
-            immutable uint dataOffset = de.offset + localFileHeaderLength + namelen + extralen;
+            auto localFileHeaderNamelen = getUshort(de.offset + 26);
+            auto localFileHeaderExtralen = getUshort(de.offset + 28);
+
+            immutable uint dataOffset = de.offset + localFileHeaderLength
+                                        + localFileHeaderNamelen + localFileHeaderExtralen;
             if (dataOffset + de.compressedSize > endrecOffset)
                 throw new ZipException("Invalid directory entry offset or size.");
             de._compressedData = _data[dataOffset .. dataOffset + de.compressedSize];
@@ -1148,6 +1152,26 @@ the quick brown fox jumps over the lazy dog\r
 
     import std.exception : assertThrown;
     assertThrown!ZipException(new ZipArchive(cast(void[]) file));
+}
+
+@system unittest
+{
+    // issue #20287: check for correct compressed data
+    auto file =
+        "\x50\x4b\x03\x04\x0a\x00\x00\x00\x00\x00\x8f\x72\x4a\x4f\x86\xa6"~
+        "\x10\x36\x05\x00\x00\x00\x05\x00\x00\x00\x04\x00\x1c\x00\x66\x69"~
+        "\x6c\x65\x55\x54\x09\x00\x03\x0d\x22\x9f\x5d\x12\x22\x9f\x5d\x75"~
+        "\x78\x0b\x00\x01\x04\xf0\x03\x00\x00\x04\xf0\x03\x00\x00\x68\x65"~
+        "\x6c\x6c\x6f\x50\x4b\x01\x02\x1e\x03\x0a\x00\x00\x00\x00\x00\x8f"~
+        "\x72\x4a\x4f\x86\xa6\x10\x36\x05\x00\x00\x00\x05\x00\x00\x00\x04"~
+        "\x00\x18\x00\x00\x00\x00\x00\x01\x00\x00\x00\xb0\x81\x00\x00\x00"~
+        "\x00\x66\x69\x6c\x65\x55\x54\x05\x00\x03\x0d\x22\x9f\x5d\x75\x78"~
+        "\x0b\x00\x01\x04\xf0\x03\x00\x00\x04\xf0\x03\x00\x00\x50\x4b\x05"~
+        "\x06\x00\x00\x00\x00\x01\x00\x01\x00\x4a\x00\x00\x00\x43\x00\x00"~
+        "\x00\x00\x00";
+
+    auto za = new ZipArchive(cast(void[]) file);
+    assert(za.directory["file"].compressedData == [104, 101, 108, 108, 111]);
 }
 
 // Non-Android Posix-only, because we can't rely on the unzip command being
