@@ -110,7 +110,7 @@ enum JSONType : byte
     /* deprecated("Use .false_")   */ FALSE = false_,
 }
 
-deprecated("Use JSONType") alias JSON_TYPE = JSONType;
+deprecated("Use JSONType and the new enum member names") alias JSON_TYPE = JSONType;
 
 /**
 JSON value node
