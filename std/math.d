@@ -4600,6 +4600,13 @@ real modf(real x, ref real i) @trusted nothrow @nogc
 real scalbn(real x, int n) @safe pure nothrow @nogc
 {
     pragma(inline, true);
+
+    if (__ctfe)
+    {
+        // Handle special cases.
+        if (x == 0.0 || isInfinity(x))
+            return x;
+    }
     return core.math.ldexp(x, n);
 }
 
