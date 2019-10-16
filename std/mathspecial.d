@@ -327,7 +327,7 @@ real erfc(real x)
 }
 
 
-/** Normal distribution function.
+/** Standard normal distribution function.
  *
  * The normal (or Gaussian, or bell-shaped) distribution is
  * defined as:
@@ -349,7 +349,7 @@ real normalDistribution(real x)
     return std.internal.math.errorfunction.normalDistributionImpl(x);
 }
 
-/** Inverse of Normal distribution function
+/** Inverse of Standard normal distribution function
  *
  * Returns the argument, x, for which the area under the
  * Normal probability density function (integrated from
