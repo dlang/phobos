@@ -453,12 +453,14 @@ Duration[fun.length] benchmark(fun...)(uint n)
         if (getpid == 1) // never happens, but prevents optimization
             printf("%p", &b);
     }
+
+    auto sw = StopWatch(AutoStart.yes);
     auto r = benchmark!(f0, f1)(1000);
+    auto total = sw.peek();
     assert(r[0] >= Duration.zero);
-    assert(r[1] > Duration.zero);
-    assert(r[1] > r[0]);
-    assert(r[0] < seconds(1));
-    assert(r[1] < seconds(1));
+    assert(r[1] >= Duration.zero);
+    assert(r[0] <= total);
+    assert(r[1] <= total);
 }
 
 @safe nothrow @nogc unittest

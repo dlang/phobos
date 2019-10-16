@@ -3288,6 +3288,9 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
 private void formatRange(Writer, T, Char)(ref Writer w, ref T val, scope const ref FormatSpec!Char f)
 if (isInputRange!T)
 {
+    // in this mode, we just want to do a representative print to discover if the format spec is valid
+    enum formatTestMode = is(Writer == NoOpSink);
+
     import std.conv : text;
 
     // Formatting character ranges like string
@@ -3390,7 +3393,10 @@ if (isInputRange!T)
                         {
                             printed = 0;
                             for (; !val.empty; val.popFront(), ++printed)
+                            {
                                 put(w, val.front);
+                                static if (formatTestMode) break; // one is enough to test
+                            }
                         }
                     }
                     else
@@ -3417,6 +3423,7 @@ if (isInputRange!T)
                 {
                     put(w, f.seqSeparator);
                     formatElement(w, val.front, f);
+                    static if (formatTestMode) break; // one is enough to test
                 }
             }
             static if (!isInfinite!T) put(w, f.seqAfter);
@@ -3431,6 +3438,7 @@ if (isInputRange!T)
             foreach (e ; a)
             {
                 formatValue(w, e, f);
+                static if (formatTestMode) break; // one is enough to test
             }
         }
         else
@@ -3438,6 +3446,7 @@ if (isInputRange!T)
             for (size_t i; !val.empty; val.popFront(), ++i)
             {
                 formatValue(w, val.front, f);
+                static if (formatTestMode) break; // one is enough to test
             }
         }
     }
@@ -3467,20 +3476,27 @@ if (isInputRange!T)
                         continue w;
                 break w;
             }
-            if (f.sep !is null)
+            static if (formatTestMode)
             {
-                put(w, fmt.trailing);
-                val.popFront();
-                if (val.empty)
-                    break;
-                put(w, f.sep);
+                break; // one is enough to test
             }
             else
             {
-                val.popFront();
-                if (val.empty)
-                    break;
-                put(w, fmt.trailing);
+                if (f.sep !is null)
+                {
+                    put(w, fmt.trailing);
+                    val.popFront();
+                    if (val.empty)
+                        break;
+                    put(w, f.sep);
+                }
+                else
+                {
+                    val.popFront();
+                    if (val.empty)
+                        break;
+                    put(w, fmt.trailing);
+                }
             }
         }
     }
@@ -3541,7 +3557,7 @@ void formatElement(Writer, T, Char)(auto ref Writer w, T val, scope const ref Fo
 if (is(StringTypeOf!T) && !is(T == enum))
 {
     import std.array : appender;
-    import std.utf : UTFException;
+    import std.utf : decode, UTFException;
 
     StringTypeOf!T str = val;   // bug 8015
 
@@ -3550,21 +3566,21 @@ if (is(StringTypeOf!T) && !is(T == enum))
         try
         {
             // ignore other specifications and quote
-            auto app = appender!(typeof(val[0])[])();
-            put(app, '\"');
             for (size_t i = 0; i < str.length; )
             {
-                import std.utf : decode;
-
                 auto c = decode(str, i);
                 // \uFFFE and \uFFFF are considered valid by isValidDchar,
                 // so need checking for interchange.
                 if (c == 0xFFFE || c == 0xFFFF)
                     goto LinvalidSeq;
-                formatChar(app, c, '"');
             }
-            put(app, '\"');
-            put(w, app.data);
+            put(w, '\"');
+            for (size_t i = 0; i < str.length; )
+            {
+                auto c = decode(str, i);
+                formatChar(w, c, '"');
+            }
+            put(w, '\"');
             return;
         }
         catch (UTFException)
@@ -4190,6 +4206,20 @@ version (unittest)
     S s = S(1);
 
     format!"%s"(s);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=20218
+@safe pure unittest
+{
+    void notCalled()
+    {
+        import std.range : repeat;
+
+        auto value = 1.repeat;
+
+        // test that range is not evaluated to completion at compiletime
+        format!"%s"(value);
+    }
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=7879
@@ -5878,7 +5908,8 @@ do
             }
             else static if (isDynamicArray!T)
             {
-                result ~= unformatElement!(ElementType!T)(input, fmt);
+                import std.conv : WideElementType;
+                result ~= unformatElement!(WideElementType!T)(input, fmt);
             }
             else static if (isAssociativeArray!T)
             {
@@ -6587,10 +6618,10 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
     import core.exception : RangeError;
     import std.utf : encode;
 
-    size_t i;
-
-    struct Sink
+    static struct Sink
     {
+        char[] buf;
+        size_t i;
         void put(dchar c)
         {
             char[4] enc;
@@ -6621,7 +6652,8 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
                 put(s.front);
         }
     }
-    auto n = formattedWrite(Sink(), fmt, args);
+    auto sink = Sink(buf);
+    auto n = formattedWrite(sink, fmt, args);
     version (all)
     {
         // In the future, this check will be removed to increase consistency
@@ -6632,7 +6664,7 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
             text("Orphan format arguments: args[", n, " .. ", args.length, "]")
         );
     }
-    return buf[0 .. i];
+    return buf[0 .. sink.i];
 }
 
 /// The format string can be checked at compile-time (see $(LREF format) for details):
@@ -6668,6 +6700,17 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
 
     assert(sformat(buf[], "%s %s %s", "c"c, "w"w, "d"d) == "c w d");
     });
+}
+
+@system unittest // ensure that sformat avoids the GC
+{
+    import core.memory : GC;
+    const a = ["foo", "bar"];
+    const u = GC.stats().usedSize;
+    char[20] buf;
+    sformat(buf, "%d", 123);
+    sformat(buf, "%s", a);
+    assert(u == GC.stats().usedSize);
 }
 
 /*****************************

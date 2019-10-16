@@ -1979,7 +1979,7 @@ private template ReverseTupleSpecs(T...)
 
 @safe unittest
 {
-    class C {}
+    class C { override size_t toHash() const nothrow @safe { return 0; } }
     Tuple!(Rebindable!(const C)) a;
     Tuple!(const C) b;
     a = b;
@@ -2521,10 +2521,10 @@ Rebindable!T rebindable(T)(Rebindable!T obj)
 template UnqualRef(T)
 if (is(T == class) || is(T == interface))
 {
-    static if (is(T == const U, U)
-        || is(T == immutable U, U)
-        || is(T == shared U, U)
-        || is(T == const shared U, U))
+    static if (is(T == immutable U, U)
+        || is(T == const shared U, U)
+        || is(T == const U, U)
+        || is(T == shared U, U))
     {
         struct UnqualRef
         {
@@ -6694,7 +6694,7 @@ mixin template Proxy(alias a)
 
         static if (accessibleFrom!(const typeof(this)))
         {
-            override hash_t toHash() const nothrow @safe
+            override size_t toHash() const nothrow @safe
             {
                 static if (__traits(compiles, .hashOf(a)))
                     return .hashOf(a);
@@ -6738,7 +6738,7 @@ mixin template Proxy(alias a)
 
         static if (accessibleFrom!(const typeof(this)))
         {
-            hash_t toHash() const nothrow @safe
+            size_t toHash() const nothrow @safe
             {
                 static if (__traits(compiles, .hashOf(a)))
                     return .hashOf(a);

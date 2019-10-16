@@ -28,6 +28,7 @@ alias TypeTuple = AliasSeq;
     {
         return td[0] + cast(int) td[1];
     }
+    assert(foo(1, 2.5) == 3);
 }
 
 ///

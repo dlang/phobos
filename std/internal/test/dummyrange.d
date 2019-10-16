@@ -354,7 +354,7 @@ if (is(T == double))
         arr = iota().array;
     }
 
-    alias cmp = approxEqual!(double,double);
+    alias cmp = approxEqual!(double,double,double);
 
     enum dummyValue = 1337.0;
     enum dummyValueRslt = 1337.0 * 2.0;

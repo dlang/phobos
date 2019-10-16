@@ -666,6 +666,50 @@ public:
     assert(y.to!string == "0.125");
 }
 
+@safe unittest
+{
+    alias cf = CustomFloat!(5, 2);
+
+    auto a = cf.infinity;
+    assert(a.sign == 0);
+    assert(a.exponent == 3);
+    assert(a.significand == 0);
+
+    auto b = cf.nan;
+    assert(b.exponent == 3);
+    assert(b.significand != 0);
+
+    assert(cf.dig == 1);
+
+    auto c = cf.epsilon;
+    /* doesn't work yet due to bug 20261
+    assert(c.sign == 0);
+    assert(c.exponent == 0);
+    assert(c.significand == 1);
+     */
+
+    assert(cf.mant_dig == 6);
+
+    assert(cf.max_10_exp == 0);
+    assert(cf.max_exp == 2);
+    assert(cf.min_10_exp == 0);
+    // doesn't work yet due to bug 20263
+    //assert(cf.min_exp == 1);
+
+    auto d = cf.max;
+    assert(d.sign == 0);
+    assert(d.exponent == 2);
+    assert(d.significand == 31);
+
+    auto e = cf.min_normal;
+    assert(e.sign == 0);
+    assert(e.exponent == 1);
+    assert(e.significand == 0);
+
+    assert(e.re == e);
+    assert(e.im == cf(0.0));
+}
+
 /**
 Defines the fastest type to use when storing temporaries of a
 calculation intended to ultimately yield a result of type `F`
@@ -1691,6 +1735,7 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
         T[] a = [ 1.0, 2.0, ];
         T[] b = [ 4.0, 6.0, ];
         assert(euclideanDistance(a, b) == 5);
+        assert(euclideanDistance(a, b, 6) == 5);
         assert(euclideanDistance(a, b, 5) == 5);
         assert(euclideanDistance(a, b, 4) == 5);
         assert(euclideanDistance(a, b, 2) == 3);
@@ -1814,10 +1859,10 @@ if (N <= 16)
 
     // Make sure the unrolled loop codepath gets tested.
     static const x =
-        [1.0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+        [1.0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
     static const y =
-        [2.0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
-    assertCTFEable!({ assert(dotProduct(x, y) == 2280); });
+        [2.0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
+    assertCTFEable!({ assert(dotProduct(x, y) == 4048); });
 }
 
 /**
@@ -2734,6 +2779,8 @@ if (!isIntegral!T &&
             shift++;
         }
 
+        if ((a & 1) == 0) swap(a, b);
+
         do
         {
             assert((a & 1) != 0);
@@ -2787,6 +2834,13 @@ if (!isIntegral!T &&
         int opCmp(int i) { return (impl < i) ? -1 : (impl > i) ? 1 : 0; }
     }
     assert(gcd(CrippledInt(2310), CrippledInt(1309)) == CrippledInt(77));
+}
+
+// Issue 19514
+@system pure unittest
+{
+    import std.bigint : BigInt;
+    assert(gcd(BigInt(2), BigInt(1)) == BigInt(1));
 }
 
 // This is to make tweaking the speed/size vs. accuracy tradeoff easy,

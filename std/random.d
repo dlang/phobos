@@ -730,7 +730,7 @@ if (isUnsigned!UIntType)
     static assert(0 <= r && 0 <= u && 0 <= s && 0 <= t && 0 <= l);
     static assert(r <= w && u <= w && s <= w && t <= w && l <= w);
     static assert(0 <= a && 0 <= b && 0 <= c);
-    static assert(n <= sizediff_t.max);
+    static assert(n <= ptrdiff_t.max);
 
     ///Mark this as a Rng
     enum bool isUniformRandom = true;
@@ -902,7 +902,7 @@ Parameters for the generator.
         size_t j;
         for (j = 0; j < n && !range.empty; ++j, range.popFront())
         {
-            sizediff_t idx = n - j - 1;
+            ptrdiff_t idx = n - j - 1;
             mtState.data[idx] = range.front;
         }
 
@@ -951,12 +951,12 @@ Parameters for the generator.
            them separately in sequence, the variables
            are kept 'hot' in CPU registers, allowing
            for significantly faster performance. */
-        sizediff_t index = mtState.index;
-        sizediff_t next = index - 1;
+        ptrdiff_t index = mtState.index;
+        ptrdiff_t next = index - 1;
         if (next < 0)
             next = n - 1;
         auto z = mtState.z;
-        sizediff_t conj = index - m;
+        ptrdiff_t conj = index - m;
         if (conj < 0)
             conj = index - m + n;
 

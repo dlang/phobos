@@ -260,7 +260,7 @@ Returns:
     a `dchar[]`, `const(dchar)[]`, or `immutable(dchar)[]` depending on the constness of
     the input.
 */
-ElementType!String[] array(String)(scope String str)
+CopyTypeQualifiers!(ElementType!String,dchar)[] array(String)(scope String str)
 if (isNarrowString!String)
 {
     import std.utf : toUTF32;
@@ -268,7 +268,7 @@ if (isNarrowString!String)
     /* Unsafe cast. Allowed because toUTF32 makes a new array
        and copies all the elements.
      */
-    return () @trusted { return cast(ElementType!String[]) temp; } ();
+    return () @trusted { return cast(CopyTypeQualifiers!(ElementType!String, dchar)[]) temp; } ();
 }
 
 ///
@@ -277,7 +277,6 @@ if (isNarrowString!String)
     import std.range.primitives : isRandomAccessRange;
 
     assert("Hello D".array == "Hello D"d);
-    static assert(isRandomAccessRange!string == false);
 
     assert("Hello D"w.array == "Hello D"d);
     static assert(isRandomAccessRange!dstring == true);
@@ -535,6 +534,7 @@ if (isInputRange!Values && isInputRange!Keys)
 {
     import std.range : repeat, zip;
     import std.typecons : tuple;
+    import std.range.primitives : autodecodeStrings;
     auto a = assocArray(zip([0, 1, 2], ["a", "b", "c"])); // aka zipMap
     static assert(is(typeof(a) == string[int]));
     assert(a == [0:"a", 1:"b", 2:"c"]);
@@ -543,9 +543,13 @@ if (isInputRange!Values && isInputRange!Keys)
     static assert(is(typeof(b) == string[string]));
     assert(b == ["foo":"bar", "baz":"quux"]);
 
+    static if (autodecodeStrings)
+        alias achar = dchar;
+    else
+        alias achar = immutable(char);
     auto c = assocArray("ABCD", true.repeat);
-    static assert(is(typeof(c) == bool[dchar]));
-    bool[dchar] expected = ['D':true, 'A':true, 'B':true, 'C':true];
+    static assert(is(typeof(c) == bool[achar]));
+    bool[achar] expected = ['D':true, 'A':true, 'B':true, 'C':true];
     assert(c == expected);
 }
 
@@ -587,11 +591,16 @@ if (isInputRange!Values && isInputRange!Keys)
 {
     import std.algorithm.iteration : filter, map;
     import std.range : enumerate;
+    import std.range.primitives : autodecodeStrings;
 
     auto r = "abcde".enumerate.filter!(a => a.index == 2);
     auto a = assocArray(r.map!(a => a.value), r.map!(a => a.index));
     assert(is(typeof(a) == size_t[dchar]));
-    assert(a == [dchar('c'): size_t(2)]);
+    static if (autodecodeStrings)
+        alias achar = dchar;
+    else
+        alias achar = immutable(char);
+    assert(a == [achar('c'): size_t(2)]);
 }
 
 @safe nothrow pure unittest
@@ -932,7 +941,7 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
                         ret ~= E.init;
                 }
                 catch (Exception e)
-                    throw new Error(e.msg);
+                    assert(0, e.msg);
             }
             else
                 assert(0, "No postblit nor default init on " ~ E.stringof ~
@@ -2150,18 +2159,28 @@ if (isInputRange!RoR &&
 @safe pure unittest
 {
     import std.conv : to;
+    import std.range.primitives : autodecodeStrings;
 
     static foreach (T; AliasSeq!(string,wstring,dstring))
     {{
         auto arr2 = "Здравствуй Мир Unicode".to!(T);
         auto arr = ["Здравствуй", "Мир", "Unicode"].to!(T[]);
         assert(join(arr) == "ЗдравствуйМирUnicode");
-        static foreach (S; AliasSeq!(char,wchar,dchar))
-        {{
-            auto jarr = arr.join(to!S(' '));
-            static assert(is(typeof(jarr) == T));
-            assert(jarr == arr2);
-        }}
+        static if (autodecodeStrings)
+        {
+            static foreach (S; AliasSeq!(char,wchar,dchar))
+            {{
+                auto jarr = arr.join(to!S(' '));
+                static assert(is(typeof(jarr) == T));
+                assert(jarr == arr2);
+            }}
+        }
+        else
+        {
+            // Turning off autodecode means the join() won't
+            // just convert arr[] to dchar, so mixing char
+            // types fails to compile.
+        }
         static foreach (S; AliasSeq!(string,wstring,dstring))
         {{
             auto jarr = arr.join(to!S(" "));
@@ -3197,7 +3216,6 @@ struct Appender(A)
 if (isDynamicArray!A)
 {
     import core.memory : GC;
-    import std.format : FormatSpec;
 
     private alias T = ElementEncodingType!A;
 
@@ -3540,7 +3558,7 @@ if (isDynamicArray!A)
      * Returns:
      *     A `string` if `writer` is not set; `void` otherwise.
      */
-    string toString() const
+    string toString()() const
     {
         import std.format : singleSpec;
 
@@ -3563,15 +3581,20 @@ if (isDynamicArray!A)
     }
 
     /// ditto
-    void toString(Writer)(ref Writer w, scope const ref FormatSpec!char fmt) const
+    template toString(Writer)
     if (isOutputRange!(Writer, char))
     {
-        import std.format : formatValue;
-        import std.range.primitives : put;
-        put(w, Unqual!(typeof(this)).stringof);
-        put(w, '(');
-        formatValue(w, data, fmt);
-        put(w, ')');
+        import std.format : FormatSpec;
+
+        void toString(ref Writer w, scope const ref std.format.FormatSpec!char fmt) const
+        {
+            import std.format : formatValue;
+            import std.range.primitives : put;
+            put(w, Unqual!(typeof(this)).stringof);
+            put(w, '(');
+            formatValue(w, data, fmt);
+            put(w, ')');
+        }
     }
 
     // @@@DEPRECATED_2.089@@@

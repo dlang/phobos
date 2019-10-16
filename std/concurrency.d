@@ -184,9 +184,12 @@ private
 
     void checkops(T...)(T ops)
     {
+        import std.format : format;
+
         foreach (i, t1; T)
         {
-            static assert(isFunctionPointer!t1 || isDelegate!t1);
+            static assert(isFunctionPointer!t1 || isDelegate!t1,
+                    format!"T %d is not a function pointer or delegates"(i));
             alias a1 = Parameters!(t1);
             alias r1 = ReturnType!(t1);
 
@@ -198,7 +201,6 @@ private
 
                 foreach (t2; T[i + 1 .. $])
                 {
-                    static assert(isFunctionPointer!t2 || isDelegate!t2);
                     alias a2 = Parameters!(t2);
 
                     static assert(!is(a1 == a2),
@@ -1361,7 +1363,30 @@ class FiberScheduler : Scheduler
         return new FiberCondition(m);
     }
 
-private:
+protected:
+    /**
+     * Creates a new Fiber which calls the given delegate.
+     *
+     * Params:
+     *   op = The delegate the fiber should call
+     */
+    void create(void delegate() op) nothrow
+    {
+        void wrap()
+        {
+            scope (exit)
+            {
+                thisInfo.cleanup();
+            }
+            op();
+        }
+
+        m_fibers ~= new InfoFiber(&wrap);
+    }
+
+    /**
+     * Fiber which embeds a ThreadInfo
+     */
     static class InfoFiber : Fiber
     {
         ThreadInfo info;
@@ -1370,8 +1395,14 @@ private:
         {
             super(op);
         }
+
+        this(void delegate() op, size_t sz) nothrow
+        {
+            super(op, sz);
+        }
     }
 
+private:
     class FiberCondition : Condition
     {
         this(Mutex m) nothrow
@@ -1450,20 +1481,6 @@ private:
                 m_pos = 0;
             }
         }
-    }
-
-    void create(void delegate() op) nothrow
-    {
-        void wrap()
-        {
-            scope (exit)
-            {
-                thisInfo.cleanup();
-            }
-            op();
-        }
-
-        m_fibers ~= new InfoFiber(&wrap);
     }
 
 private:
@@ -1987,7 +2004,7 @@ private
         {
             import std.meta : AliasSeq;
 
-            static assert(T.length);
+            static assert(T.length, "T must not be empty");
 
             static if (isImplicitlyConvertible!(T[0], Duration))
             {
@@ -2028,7 +2045,8 @@ private
 
             bool onLinkDeadMsg(ref Message msg)
             {
-                assert(msg.convertsTo!(Tid));
+                assert(msg.convertsTo!(Tid),
+                        "Message could be converted to Tid");
                 auto tid = msg.get!(Tid);
 
                 if (bool* pDepends = tid in thisInfo.links)
@@ -2205,7 +2223,8 @@ private
         {
             static void onLinkDeadMsg(ref Message msg)
             {
-                assert(msg.convertsTo!(Tid));
+                assert(msg.convertsTo!(Tid),
+                        "Message could be converted to Tid");
                 auto tid = msg.get!(Tid);
 
                 thisInfo.links.remove(tid);
@@ -2350,7 +2369,7 @@ private
         {
             import std.exception : enforce;
 
-            assert(m_count);
+            assert(m_count, "Can not remove from empty Range");
             Node* n = r.m_prev;
             enforce(n && n.next, "attempting to remove invalid list node");
 

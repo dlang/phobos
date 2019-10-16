@@ -1790,7 +1790,7 @@ if (isInputRange!R)
     assert(equal(g3, [ tuple(1, 2u), tuple(2, 2u) ]));
 
     interface I {}
-    class C : I {}
+    class C : I { override size_t toHash() const nothrow @safe { return 0; } }
     const C[] a4 = [new const C()];
     auto g4 = a4.group!"a is b";
     assert(g4.front[1] == 1);
@@ -1831,7 +1831,8 @@ pure @safe unittest // issue 18657
 {
     import std.algorithm.comparison : equal;
     import std.range : refRange;
-    auto r = refRange(&["foo"][0]).group;
+    string s = "foo";
+    auto r = refRange(&s).group;
     assert(equal(r.save, "foo".group));
     assert(equal(r, "foo".group));
 }
@@ -5376,7 +5377,8 @@ pure @safe unittest // issue 18657
 {
     import std.algorithm.comparison : equal;
     import std.range : refRange;
-    auto r = refRange(&["foobar"][0]).splitter!(c => c == 'b');
+    string s = "foobar";
+    auto r = refRange(&s).splitter!(c => c == 'b');
     assert(equal!equal(r.save, ["foo", "ar"]));
     assert(equal!equal(r.save, ["foo", "ar"]));
 }

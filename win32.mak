@@ -41,13 +41,13 @@ DRUNTIMELIB=$(DRUNTIME)/lib/druntime.lib
 
 ## Flags for dmd D compiler
 
-DFLAGS=-conf= -O -release -w -de -dip25 -I$(DRUNTIME)\import
+DFLAGS=-conf= -O -release -w -de -preview=dip1000 -transition=complex -I$(DRUNTIME)\import
 #DFLAGS=-unittest -g
 #DFLAGS=-unittest -cov -g
 
 ## Flags for compiling unittests
 
-UDFLAGS=-unittest -conf= -O -w -dip25 -I$(DRUNTIME)\import
+UDFLAGS=-unittest -conf= -O -w -preview=dip1000 -transition=complex -I$(DRUNTIME)\import
 
 ## C compiler
 

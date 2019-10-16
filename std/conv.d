@@ -389,7 +389,7 @@ template to(T)
  *   $(LI Converts array (other than strings) _to string.
  *        Each element is converted by calling `to!T`.)
  *   $(LI Associative array _to string conversion.
- *        Each element is printed by calling `to!T`.)
+ *        Each element is converted by calling `to!T`.)
  *   $(LI Object _to string conversion calls `toString` against the object or
  *        returns `"null"` if the object is null.)
  *   $(LI Struct _to string conversion calls `toString` against the struct if
@@ -397,7 +397,7 @@ template to(T)
  *   $(LI For structs that do not define `toString`, the conversion _to string
  *        produces the list of fields.)
  *   $(LI Enumerated types are converted _to strings as their symbolic names.)
- *   $(LI Boolean values are printed as `"true"` or `"false"`.)
+ *   $(LI Boolean values are converted to `"true"` or `"false"`.)
  *   $(LI `char`, `wchar`, `dchar` _to a string type.)
  *   $(LI Unsigned or signed integers _to strings.
  *        $(DL $(DT [special case])
@@ -407,9 +407,10 @@ template to(T)
  *             The characters A through Z are used to represent values 10 through 36
  *             and their case is determined by the $(D_PARAM letterCase) parameter.)))
  *   $(LI All floating point types _to all string types.)
- *   $(LI Pointer to string conversions prints the pointer as a `size_t` value.
+ *   $(LI Pointer to string conversions convert the pointer to a `size_t` value.
  *        If pointer is `char*`, treat it as C-style strings.
  *        In that case, this function is `@system`.))
+ * See $(REF formatValue, std,format) on how toString should be defined.
  */
 @system pure unittest // @system due to cast and ptr
 {
@@ -3547,7 +3548,7 @@ if (isSomeString!Source && !is(Source == enum) &&
     {
         if (!s.empty && s.front == rbracket)
             break;
-        result ~= parseElement!(ElementType!Target)(s);
+        result ~= parseElement!(WideElementType!Target)(s);
         skipWS(s);
         if (s.empty)
             throw convError!(Source, Target)(s);
@@ -3971,9 +3972,9 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 // ditto
 Target parseElement(Target, Source)(ref Source s)
 if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
-    isSomeChar!Target && !is(Target == enum))
+    is(CharTypeOf!Target == dchar) && !is(Target == enum))
 {
-    Target c;
+    Unqual!Target c;
 
     parseCheck!s('\'');
     if (s.empty)
@@ -3996,6 +3997,17 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
     !isSomeString!Target && !isSomeChar!Target)
 {
     return parse!Target(s);
+}
+
+// Use this when parsing a type that will ultimately be appended to a
+// string.
+package template WideElementType(T)
+{
+    alias E = ElementType!T;
+    static if (isSomeChar!E)
+        alias WideElementType = dchar;
+    else
+        alias WideElementType = E;
 }
 
 

@@ -61,6 +61,7 @@ $(TR $(TD Miscellaneous) $(TD
 module std.utf;
 
 import std.exception : basicExceptionCtors;
+import core.exception : UnicodeException;
 import std.meta : AliasSeq;
 import std.range.primitives;
 import std.traits : isAutodecodableString, isPointer, isSomeChar,
@@ -71,7 +72,7 @@ import std.typecons : Flag, Yes, No;
 /++
     Exception thrown on errors in std.utf functions.
   +/
-class UTFException : Exception
+class UTFException : UnicodeException
 {
     import core.internal.string : unsignedToTempString, UnsignedStringBuf;
 
@@ -97,7 +98,7 @@ class UTFException : Exception
     this(string msg, string file = __FILE__, size_t line = __LINE__,
          Throwable next = null) @nogc @safe pure nothrow
     {
-        super(msg, file, line, next);
+        super(msg, 0, file, line, next);
     }
     /// ditto
     this(string msg, size_t index, string file = __FILE__,
@@ -105,7 +106,7 @@ class UTFException : Exception
     {
         UnsignedStringBuf buf = void;
         msg ~= " (at index " ~ unsignedToTempString(index, buf, 10) ~ ")";
-        super(msg, file, line, next);
+        super(msg, index, file, line, next);
     }
 
     /**
@@ -4176,15 +4177,24 @@ private int impureVariable;
  * Iterate an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
  * of characters by char type `C` by encoding the elements of the range.
  *
- * UTF sequences that cannot be converted to the specified encoding are
+ * UTF sequences that cannot be converted to the specified encoding are either
  * replaced by U+FFFD per "5.22 Best Practice for U+FFFD Substitution"
- * of the Unicode Standard 6.2. Hence byUTF is not symmetric.
+ * of the Unicode Standard 6.2 or result in a thrown UTFException.
+ *  Hence byUTF is not symmetric.
  * This algorithm is lazy, and does not allocate memory.
  * `@nogc`, `pure`-ity, `nothrow`, and `@safe`-ty are inferred from the
  * `r` parameter.
  *
  * Params:
  *      C = `char`, `wchar`, or `dchar`
+ *      useReplacementDchar = UseReplacementDchar.yes means replace invalid UTF with `replacementDchar`,
+ *                            UseReplacementDchar.no means throw `UTFException` for invalid UTF
+ *
+ * Throws:
+ *      `UTFException` if invalid UTF sequence and `useReplacementDchar` is set to `UseReplacementDchar.yes`
+ *
+ * GC:
+ *      Does not use GC if `useReplacementDchar` is set to `UseReplacementDchar.no`
  *
  * Returns:
  *      A forward range if `R` is a range and not auto-decodable, as defined by
@@ -4197,7 +4207,7 @@ private int impureVariable;
  *
  *      Otherwise, an input range of characters.
  */
-template byUTF(C)
+template byUTF(C, UseReplacementDchar useReplacementDchar = Yes.useReplacementDchar)
 if (isSomeChar!C)
 {
     static if (!is(Unqual!C == C))
@@ -4259,7 +4269,7 @@ if (isSomeChar!C)
                         }
                         else
                         {
-                            buff = () @trusted { return decodeFront!(Yes.useReplacementDchar)(r); }();
+                            buff = () @trusted { return decodeFront!(useReplacementDchar)(r); }();
                         }
                     }
                     return cast(dchar) buff;
@@ -4335,8 +4345,8 @@ if (isSomeChar!C)
                                 dchar dc = c;
                             }
                             else
-                                dchar dc = () @trusted { return decodeFront!(Yes.useReplacementDchar)(r); }();
-                            fill = cast(ushort) encode!(Yes.useReplacementDchar)(buf, dc);
+                                dchar dc = () @trusted { return decodeFront!(useReplacementDchar)(r); }();
+                            fill = cast(ushort) encode!(useReplacementDchar)(buf, dc);
                         }
                     }
                     return buf[pos];
@@ -4384,4 +4394,14 @@ if (isSomeChar!C)
     "𐐷".byUTF!char().equal([0xF0, 0x90, 0x90, 0xB7]);
     "𐐷".byUTF!wchar().equal([0xD801, 0xDC37]);
     "𐐷".byUTF!dchar().equal([0x00010437]);
+}
+
+///
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.exception : assertThrown;
+
+    assert("hello\xF0betty".byChar.byUTF!(dchar, UseReplacementDchar.yes).equal("hello\uFFFDetty"));
+    assertThrown!UTFException("hello\xF0betty".byChar.byUTF!(dchar, UseReplacementDchar.no).equal("hello betty"));
 }

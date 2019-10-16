@@ -375,7 +375,7 @@ public:
                 if (npos == 0) return haystack[hpos .. $];
                 --npos;
             }
-            hpos += max(skip[npos], cast(sizediff_t) npos - occurrence(haystack[npos+hpos]));
+            hpos += max(skip[npos], cast(ptrdiff_t) npos - occurrence(haystack[npos+hpos]));
         }
         return haystack[$ .. $];
     }
@@ -3919,13 +3919,13 @@ Returns:
 See_Also:
     $(LREF maxIndex), $(REF min, std,algorithm,comparison), $(LREF minCount), $(LREF minElement), $(LREF minPos)
  */
-sizediff_t minIndex(alias pred = "a < b", Range)(Range range)
+ptrdiff_t minIndex(alias pred = "a < b", Range)(Range range)
 if (isInputRange!Range && !isInfinite!Range &&
     is(typeof(binaryFun!pred(range.front, range.front))))
 {
     if (range.empty) return -1;
 
-    sizediff_t minPos = 0;
+    ptrdiff_t minPos = 0;
 
     static if (isRandomAccessRange!Range && hasLength!Range)
     {
@@ -3939,7 +3939,7 @@ if (isInputRange!Range && !isInfinite!Range &&
     }
     else
     {
-        sizediff_t curPos = 0;
+        ptrdiff_t curPos = 0;
         Unqual!(typeof(range.front)) min = range.front;
         for (range.popFront(); !range.empty; range.popFront())
         {
@@ -4071,7 +4071,7 @@ Returns:
 See_Also:
     $(LREF minIndex), $(REF max, std,algorithm,comparison), $(LREF maxCount), $(LREF maxElement), $(LREF maxPos)
  */
-sizediff_t maxIndex(alias pred = "a < b", Range)(Range range)
+ptrdiff_t maxIndex(alias pred = "a < b", Range)(Range range)
 if (isInputRange!Range && !isInfinite!Range &&
     is(typeof(binaryFun!pred(range.front, range.front))))
 {
@@ -5099,12 +5099,14 @@ pure @safe unittest // issue 18657
     import std.algorithm.comparison : equal;
     import std.range : refRange;
     {
-        auto r = refRange(&["foobar"][0]).until("bar");
+        string s = "foobar";
+        auto r = refRange(&s).until("bar");
         assert(equal(r.save, "foo"));
         assert(equal(r.save, "foo"));
     }
     {
-        auto r = refRange(&["foobar"][0]).until!(e => e == 'b');
+        string s = "foobar";
+        auto r = refRange(&s).until!(e => e == 'b');
         assert(equal(r.save, "foo"));
         assert(equal(r.save, "foo"));
     }

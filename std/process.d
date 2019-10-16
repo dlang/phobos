@@ -342,6 +342,7 @@ version (Posix) private enum InternalError : ubyte
     chdir,
     getrlimit,
     doubleFork,
+    malloc,
 }
 
 /*
@@ -510,9 +511,9 @@ private Pid spawnProcessImpl(scope const(char[])[] args,
             if (!(config & Config.inheritFDs))
             {
                 // NOTE: malloc() and getrlimit() are not on the POSIX async
-                // signal safe functions list, but practically this should not
-                // be a problem. Tha Java VM and CPython also use malloc() in
-                // its own implementation.
+                // signal safe functions list, but practically this should
+                // not be a problem. Java VM and CPython also use malloc()
+                // in its own implementation via opendir().
                 import core.stdc.stdlib : malloc;
                 import core.sys.posix.poll : pollfd, poll, POLLNVAL;
                 import core.sys.posix.sys.resource : rlimit, getrlimit, RLIMIT_NOFILE;
@@ -530,6 +531,10 @@ private Pid spawnProcessImpl(scope const(char[])[] args,
 
                 // Call poll() to see which ones are actually open:
                 auto pfds = cast(pollfd*) malloc(pollfd.sizeof * maxToClose);
+                if (pfds is null)
+                {
+                    abortOnError(forkPipeOut, InternalError.malloc, .errno);
+                }
                 foreach (i; 0 .. maxToClose)
                 {
                     pfds[i].fd = i + 3;
@@ -645,6 +650,9 @@ private Pid spawnProcessImpl(scope const(char[])[] args,
                     // Can happen only when starting detached process
                     assert(config & Config.detached);
                     errorMsg = "Failed to fork twice";
+                    break;
+                case InternalError.malloc:
+                    errorMsg = "Failed to allocate memory";
                     break;
                 case InternalError.noerror:
                     assert(false);
@@ -3913,7 +3921,10 @@ extern(C)
 
 private int execv_(in string pathname, in string[] argv)
 {
+    import core.exception : OutOfMemoryError;
+    import std.exception : enforce;
     auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
+    enforce!OutOfMemoryError(argv_ !is null, "Out of memory in std.process.");
     scope(exit) core.stdc.stdlib.free(argv_);
 
     toAStringz(argv, argv_);
@@ -3923,9 +3934,13 @@ private int execv_(in string pathname, in string[] argv)
 
 private int execve_(in string pathname, in string[] argv, in string[] envp)
 {
+    import core.exception : OutOfMemoryError;
+    import std.exception : enforce;
     auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
+    enforce!OutOfMemoryError(argv_ !is null, "Out of memory in std.process.");
     scope(exit) core.stdc.stdlib.free(argv_);
     auto envp_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + envp.length));
+    enforce!OutOfMemoryError(envp_ !is null, "Out of memory in std.process.");
     scope(exit) core.stdc.stdlib.free(envp_);
 
     toAStringz(argv, argv_);
@@ -3936,7 +3951,10 @@ private int execve_(in string pathname, in string[] argv, in string[] envp)
 
 private int execvp_(in string pathname, in string[] argv)
 {
+    import core.exception : OutOfMemoryError;
+    import std.exception : enforce;
     auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
+    enforce!OutOfMemoryError(argv_ !is null, "Out of memory in std.process.");
     scope(exit) core.stdc.stdlib.free(argv_);
 
     toAStringz(argv, argv_);
@@ -3983,9 +4001,13 @@ version (Posix)
 }
 else version (Windows)
 {
+    import core.exception : OutOfMemoryError;
+    import std.exception : enforce;
     auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
+    enforce!OutOfMemoryError(argv_ !is null, "Out of memory in std.process.");
     scope(exit) core.stdc.stdlib.free(argv_);
     auto envp_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + envp.length));
+    enforce!OutOfMemoryError(envp_ !is null, "Out of memory in std.process.");
     scope(exit) core.stdc.stdlib.free(envp_);
 
     toAStringz(argv, argv_);

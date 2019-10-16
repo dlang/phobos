@@ -222,12 +222,12 @@ struct DList(T)
     }
     ref inout(BaseNode*) _first() @property @safe nothrow pure inout
     {
-        assert(_root);
+        assert(_root, "Root pointer must not be null");
         return _root._next;
     }
     ref inout(BaseNode*) _last() @property @safe nothrow pure inout
     {
-        assert(_root);
+        assert(_root, "Root pointer must not be null");
         return _root._prev;
     }
   } //end private

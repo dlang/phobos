@@ -478,7 +478,7 @@ public:
     auto opBinary(string op, T)(T y) pure nothrow const
         if (op == "%" && isIntegral!T)
     {
-        assert(y != 0);
+        assert(y != 0, "% 0 not allowed");
 
         // BigInt % uint => long
         // BigInt % long => long
@@ -643,7 +643,7 @@ public:
 
     /**
         Implements `BigInt` equality test with other `BigInt`'s and built-in
-        integer types.
+        numeric types.
      */
     bool opEquals()(auto ref const BigInt y) const pure @nogc
     {
@@ -651,14 +651,31 @@ public:
     }
 
     /// ditto
-    bool opEquals(T)(T y) const pure nothrow @nogc if (isIntegral!T)
+    bool opEquals(T)(const T y) const pure nothrow @nogc if (isIntegral!T)
     {
         if (sign != (y<0))
             return 0;
         return data.opEquals(cast(ulong) absUnsign(y));
     }
 
+    /// ditto
+    bool opEquals(T)(const T y) const nothrow @nogc if (isFloatingPoint!T)
+    {
+        // This is a separate function from the isIntegral!T case
+        // due to the impurity of std.math.scalbn which is used
+        // for 80 bit floats.
+        return 0 == opCmp(y);
+    }
+
     ///
+    @safe unittest
+    {
+        // Note that when comparing a BigInt to a float or double the
+        // full precision of the BigInt is always considered, unlike
+        // when comparing an int to a float or a long to a double.
+        assert(BigInt(123456789) != cast(float) 123456789);
+    }
+
     @system unittest
     {
         auto x = BigInt("12345");
@@ -671,6 +688,39 @@ public:
         assert(x == y + 5);
         assert(x == z);
         assert(x != w);
+    }
+
+    @system unittest
+    {
+        import std.math : nextDown, nextUp;
+
+        const x = BigInt("0x1abc_de80_0000_0000_0000_0000_0000_0000");
+        BigInt x1 = x + 1;
+        BigInt x2 = x - 1;
+
+        const d = 0x1.abcde8p124;
+        assert(x == d);
+        assert(x1 != d);
+        assert(x2 != d);
+        assert(x != nextUp(d));
+        assert(x != nextDown(d));
+        assert(x != double.nan);
+
+        const dL = 0x1.abcde8p124L;
+        assert(x == dL);
+        assert(x1 != dL);
+        assert(x2 != dL);
+        assert(x != nextUp(dL));
+        assert(x != nextDown(dL));
+        assert(x != real.nan);
+
+        assert(BigInt(0) == 0.0f);
+        assert(BigInt(0) == 0.0);
+        assert(BigInt(0) == 0.0L);
+        assert(BigInt(0) == -0.0f);
+        assert(BigInt(0) == -0.0);
+        assert(BigInt(0) == -0.0L);
+        assert(BigInt("999_999_999_999_999_999_999_999_999_999_999_999_999") != float.infinity);
     }
 
     /**
@@ -776,6 +826,84 @@ public:
         assertThrown!ConvOverflowException(BigInt("9223372036854775808").to!long);
     }
 
+    // Cast to float, discarding any portion of the value
+    // beyond the precision of the floating point type.
+    private T toFloatTruncating(T)() @safe nothrow @nogc const
+    if (__traits(isFloating, T))
+    {
+        import core.bitop : bsr;
+        enum int totalNeededBits = T.mant_dig;
+        static if (totalNeededBits <= 64)
+        {
+            // We need to examine the top two 64-bit words, not just the top one,
+            // since the top word could have just a single significant bit.
+            const ulongLength = data.ulongLength;
+            const ulong w1 = data.peekUlong(ulongLength - 1);
+            if (w1 == 0)
+                return T(0); // Special: exponent should be all zero bits, plus bsr(w1) is undefined.
+            const ulong w2 = ulongLength < 2 ? 0 : data.peekUlong(ulongLength - 2);
+            const uint w1BitCount = bsr(w1) + 1;
+            ulong sansExponent = (w1 << (64 - w1BitCount)) | (w2 >>> (w1BitCount));
+            size_t exponent = (ulongLength - 1) * 64 + w1BitCount + 1;
+            static if (T.mant_dig == float.mant_dig)
+            {
+                if (exponent >= T.max_exp)
+                    return isNegative ? -T.infinity : T.infinity;
+                uint resultBits = (uint(isNegative) << 31) | // sign bit
+                    ((0xFF & (exponent - float.min_exp)) << 23) | // exponent
+                    cast(uint) ((sansExponent << 1) >>> (64 - 23)); // mantissa.
+                return *cast(float*) &resultBits;
+            }
+            else static if (T.mant_dig == double.mant_dig)
+            {
+                if (exponent >= T.max_exp)
+                    return isNegative ? -T.infinity : T.infinity;
+                ulong resultBits = (ulong(isNegative) << 63) | // sign bit
+                    ((0x7FFUL & (exponent - double.min_exp)) << 52) | // exponent
+                    ((sansExponent << 1) >>> (64 - 52)); // mantissa.
+                return *cast(double*) &resultBits;
+            }
+            else
+            {
+                import std.math : scalbn;
+                return scalbn(isNegative ? -cast(real) sansExponent : cast(real) sansExponent,
+                    cast(int) exponent - 65);
+            }
+        }
+        else
+        {
+            import std.math : scalbn;
+            const ulongLength = data.ulongLength;
+            if ((ulongLength - 1) * 64L > int.max)
+                return isNegative ? -T.infinity : T.infinity;
+            int scale = cast(int) ((ulongLength - 1) * 64);
+            const ulong w1 = data.peekUlong(ulongLength - 1);
+            if (w1 == 0)
+                return T(0); // Special: bsr(w1) is undefined.
+            int bitsStillNeeded = totalNeededBits - bsr(w1) - 1;
+            T acc = scalbn(w1, scale);
+            for (ptrdiff_t i = ulongLength - 2; i >= 0 && bitsStillNeeded > 0; i--)
+            {
+                ulong w = data.peekUlong(i);
+                // To round towards zero we must make sure not to use too many bits.
+                if (bitsStillNeeded >= 64)
+                {
+                    acc += scalbn(w, scale -= 64);
+                    bitsStillNeeded -= 64;
+                }
+                else
+                {
+                    w = (w >>> (64 - bitsStillNeeded)) << (64 - bitsStillNeeded);
+                    acc += scalbn(w, scale -= 64);
+                    break;
+                }
+            }
+            if (isNegative)
+                acc = -acc;
+            return cast(T) acc;
+        }
+    }
+
     /**
         Implements casting to/from qualified `BigInt`'s.
 
@@ -801,7 +929,7 @@ public:
     // DMD won't find it.
     /**
         Implements 3-way comparisons of `BigInt` with `BigInt` or `BigInt` with
-        built-in integers.
+        built-in numeric types.
      */
     int opCmp(ref const BigInt y) pure nothrow @nogc const
     {
@@ -810,12 +938,42 @@ public:
     }
 
     /// ditto
-    int opCmp(T)(T y) pure nothrow @nogc const if (isIntegral!T)
+    int opCmp(T)(const T y) pure nothrow @nogc const if (isIntegral!T)
     {
         if (sign != (y<0) )
             return sign ? -1 : 1;
         int cmp = data.opCmp(cast(ulong) absUnsign(y));
         return sign? -cmp: cmp;
+    }
+    /// ditto
+    int opCmp(T)(const T y) nothrow @nogc const if (isFloatingPoint!T)
+    {
+        import core.bitop : bsr;
+        import std.math : cmp, isFinite;
+
+        const asFloat = toFloatTruncating!(T);
+        if (asFloat != y)
+            return cmp(asFloat, y); // handles +/- NaN.
+        if (!isFinite(y))
+            return isNegative ? 1 : -1;
+        const ulongLength = data.ulongLength;
+        const w1 = data.peekUlong(ulongLength - 1);
+        if (w1 == 0)
+            return 0; // Special: bsr(w1) is undefined.
+        const numSignificantBits = (ulongLength - 1) * 64 + bsr(w1) + 1;
+        for (ptrdiff_t bitsRemainingToCheck = numSignificantBits - T.mant_dig, i = 0;
+            bitsRemainingToCheck > 0; i++, bitsRemainingToCheck -= 64)
+        {
+            auto word = data.peekUlong(i);
+            if (word == 0)
+                continue;
+            // Make sure we're only checking digits that are beyond
+            // the precision of `y`.
+            if (bitsRemainingToCheck < 64 && (word << (64 - bitsRemainingToCheck)) == 0)
+                break; // This can only happen on the last loop iteration.
+            return isNegative ? -1 : 1;
+        }
+        return 0;
     }
     /// ditto
     int opCmp(T:BigInt)(const T y) pure nothrow @nogc const
@@ -838,6 +996,57 @@ public:
         assert(x > z);
         assert(z > y);
         assert(x < w);
+    }
+
+    ///
+    @system unittest
+    {
+        auto x = BigInt("0x1abc_de80_0000_0000_0000_0000_0000_0000");
+        BigInt y = x - 1;
+        BigInt z = x + 1;
+
+        double d = 0x1.abcde8p124;
+        assert(y < d);
+        assert(z > d);
+        assert(x >= d && x <= d);
+
+        // Note that when comparing a BigInt to a float or double the
+        // full precision of the BigInt is always considered, unlike
+        // when comparing an int to a float or a long to a double.
+        assert(BigInt(123456789) < cast(float) 123456789);
+    }
+
+    @system unittest
+    {
+        assert(BigInt("999_999_999_999_999_999_999_999_999_999_999_999_999") < float.infinity);
+
+        // Test `real` works.
+        auto x = BigInt("0x1abc_de80_0000_0000_0000_0000_0000_0000");
+        BigInt y = x - 1;
+        BigInt z = x + 1;
+
+        real d = 0x1.abcde8p124;
+        assert(y < d);
+        assert(z > d);
+        assert(x >= d && x <= d);
+
+        // Test comparison for numbers of 64 bits or fewer.
+        auto w1 = BigInt(0x1abc_de80_0000_0000);
+        auto w2 = w1 - 1;
+        auto w3 = w1 + 1;
+        assert(w1.ulongLength == 1);
+        assert(w2.ulongLength == 1);
+        assert(w3.ulongLength == 1);
+
+        double e = 0x1.abcde8p+60;
+        assert(w1 >= e && w1 <= e);
+        assert(w2 < e);
+        assert(w3 > e);
+
+        real eL = 0x1.abcde8p+60;
+        assert(w1 >= eL && w1 <= eL);
+        assert(w2 < eL);
+        assert(w3 > eL);
     }
 
     /**
@@ -947,7 +1156,7 @@ public:
         {
             buff = data.toDecimalString(0);
         }
-        assert(buff.length > 0);
+        assert(buff.length > 0, "Invalid buffer length");
 
         char signChar = isNegative() ? '-' : 0;
         auto minw = buff.length + (signChar ? 1 : 0);
@@ -1093,8 +1302,7 @@ private:
     // Generate a runtime error if division by zero occurs
     void checkDivByZero() pure const nothrow @safe
     {
-        if (isZero())
-            throw new Error("BigInt division by zero");
+        assert(!isZero(), "BigInt division by zero");
     }
 }
 

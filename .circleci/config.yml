@@ -14,9 +14,6 @@ jobs:
           command: ./.circleci/run.sh setup-repos
           name: Clone DMD & DRuntime
       - run:
-          command: sudo apt-get update && sudo apt-get install -y gdb
-          name: Install gdb
-      - run:
           command: ./.circleci/run.sh publictests
           name: Run all public unittests
       - run:
