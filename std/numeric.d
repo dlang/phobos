@@ -438,7 +438,7 @@ public:
     static @property int max_10_exp(){ return cast(int) log10( +max ); }
 
     /// maximum int value such that 2<sup>max_exp-1</sup> is representable
-    enum max_exp = exponent_max-bias+((~flags&(Flags.infinity|flags.nan))!=0);
+    enum max_exp = exponent_max - bias - ((flags & (Flags.infinity | Flags.nan)) != 0) + 1;
 
     /// Returns: minimum int value such that 10<sup>min_10_exp</sup> is representable
     static @property int min_10_exp(){ return cast(int) log10( +min_normal ); }
@@ -766,9 +766,8 @@ public:
     static assert(CustomFloat!(2, 6, CustomFloatFlags.none).max_exp == 2^^5);
     static assert(CustomFloat!(5, 10).max_exp == 2^^9);
     static assert(CustomFloat!(6, 10, CustomFloatFlags.none).max_exp == 2^^9);
-    // doesn't work yet due to bug 20283
-//    static assert(CustomFloat!(2, 6, CustomFloatFlags.nan).max_exp == 2^^5);
-//    static assert(CustomFloat!(6, 10, CustomFloatFlags.nan).max_exp == 2^^9);
+    static assert(CustomFloat!(2, 6, CustomFloatFlags.nan).max_exp == 2^^5);
+    static assert(CustomFloat!(6, 10, CustomFloatFlags.nan).max_exp == 2^^9);
 }
 
 // testing .min_exp
