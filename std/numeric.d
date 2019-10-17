@@ -382,7 +382,7 @@ public:
         {
             CustomFloat value;
             static if (flags & Flags.signed)
-            value.sign          = 0;
+                value.sign          = 0;
             value.significand   = 0;
             value.exponent      = exponent_max;
             return value;
@@ -394,7 +394,7 @@ public:
         {
             CustomFloat value;
             static if (flags & Flags.signed)
-            value.sign          = 0;
+                value.sign          = 0;
             value.significand   = cast(typeof(significand_max)) 1L << (precision-1);
             value.exponent      = exponent_max;
             return value;
@@ -413,7 +413,7 @@ public:
     {
         CustomFloat value;
         static if (flags & Flags.signed)
-        value.sign       = 0;
+            value.sign       = 0;
         T_signed_exp exp = -precision;
         T_sig        sig = 0;
 
@@ -451,17 +451,18 @@ public:
     {
         CustomFloat value;
         static if (flags & Flags.signed)
-        value.sign        = 0;
+            value.sign        = 0;
         value.exponent    = exponent_max - ((flags&(flags.infinity|flags.nan)) != 0);
         value.significand = significand_max;
         return value;
     }
 
     /// Returns: smallest representable normalized value that's not 0
-    static @property CustomFloat min_normal() {
+    static @property CustomFloat min_normal()
+    {
         CustomFloat value;
         static if (flags & Flags.signed)
-        value.sign        = 0;
+            value.sign        = 0;
         value.exponent    = 1;
         static if (flags&Flags.storeNormalized)
             value.significand = 0;
@@ -486,7 +487,7 @@ public:
     void opAssign(F:CustomFloat)(F input)
     {
         static if (flags & Flags.signed)
-        sign        = input.sign;
+            sign        = input.sign;
         exponent    = input.exponent;
         significand = input.significand;
     }
@@ -708,6 +709,172 @@ public:
 
     assert(e.re == e);
     assert(e.im == cf(0.0));
+}
+
+// check whether CustomFloats identical to float/double behave like float/double
+@safe unittest
+{
+    import std.conv : to;
+
+    alias myFloat = CustomFloat!(23, 8);
+
+    static assert(myFloat.dig == float.dig);
+    static assert(myFloat.mant_dig == float.mant_dig);
+    assert(myFloat.max_10_exp == float.max_10_exp);
+    static assert(myFloat.max_exp == float.max_exp);
+    assert(myFloat.min_10_exp == float.min_10_exp);
+//    static assert(myFloat.min_exp == float.min_exp); // doesn't work yet due to bug 20263
+//    static assert(to!float(myFloat.epsilon) == float.epsilon); // doesn't work yet due to bug 20261
+    assert(to!float(myFloat.max) == float.max);
+    assert(to!float(myFloat.min_normal) == float.min_normal);
+
+    alias myDouble = CustomFloat!(52, 11);
+
+    static assert(myDouble.dig == double.dig);
+    static assert(myDouble.mant_dig == double.mant_dig);
+    assert(myDouble.max_10_exp == double.max_10_exp);
+    static assert(myDouble.max_exp == double.max_exp);
+    assert(myDouble.min_10_exp == double.min_10_exp);
+//    static assert(myDouble.min_exp == double.min_exp); // doesn't work yet due to bug 20263
+//    static assert(to!double(myDouble.epsilon) == double.epsilon); // doesn't work yet due to bug 20261
+    assert(to!double(myDouble.max) == double.max);
+    assert(to!double(myDouble.min_normal) == double.min_normal);
+}
+
+// testing .dig
+@safe unittest
+{
+    static assert(CustomFloat!(1, 6).dig == 0);
+    static assert(CustomFloat!(9, 6).dig == 2);
+//    static assert(CustomFloat!(10, 5).dig == 3); // doesn't work yet due to bug 20282
+//    static assert(CustomFloat!(10, 6, CustomFloatFlags.none).dig == 2); // doesn't work yet due to bug 20282
+    static assert(CustomFloat!(11, 5, CustomFloatFlags.none).dig == 3);
+//    static assert(CustomFloat!(64, 7).dig == 19); // doesn't work yet due to bug 20282
+}
+
+// testing .mant_dig
+@safe unittest
+{
+    static assert(CustomFloat!(10, 5).mant_dig == 11);
+    static assert(CustomFloat!(10, 6, CustomFloatFlags.none).mant_dig == 10);
+}
+
+// testing .max_exp
+@safe unittest
+{
+    static assert(CustomFloat!(1, 6).max_exp == 2^^5);
+    static assert(CustomFloat!(2, 6, CustomFloatFlags.none).max_exp == 2^^5);
+    static assert(CustomFloat!(5, 10).max_exp == 2^^9);
+    static assert(CustomFloat!(6, 10, CustomFloatFlags.none).max_exp == 2^^9);
+    // doesn't work yet due to bug 20283
+//    static assert(CustomFloat!(2, 6, CustomFloatFlags.nan).max_exp == 2^^5);
+//    static assert(CustomFloat!(6, 10, CustomFloatFlags.nan).max_exp == 2^^9);
+}
+
+// testing .min_exp
+@safe unittest
+{
+    // tests dont work yet due to bug 20263
+//    static assert(CustomFloat!(1, 6).min_exp == -2^^5+3);
+//    static assert(CustomFloat!(5, 10).min_exp == -2^^9+3);
+//    static assert(CustomFloat!(2, 6, CustomFloatFlags.none).min_exp == -2^^5+1);
+//    static assert(CustomFloat!(6, 10, CustomFloatFlags.none).min_exp == -2^^9+1);
+//    static assert(CustomFloat!(2, 6, CustomFloatFlags.nan).min_exp == -2^^5+2);
+//    static assert(CustomFloat!(6, 10, CustomFloatFlags.nan).min_exp == -2^^9+2);
+//    static assert(CustomFloat!(2, 6, CustomFloatFlags.allowDenorm).min_exp == -2^^5+2);
+//    static assert(CustomFloat!(6, 10, CustomFloatFlags.allowDenorm).min_exp == -2^^9+2);
+}
+
+// testing .max_10_exp
+@safe unittest
+{
+    assert(CustomFloat!(1, 6).max_10_exp == 9);
+    assert(CustomFloat!(5, 10).max_10_exp == 154);
+    assert(CustomFloat!(2, 6, CustomFloatFlags.none).max_10_exp == 9);
+    assert(CustomFloat!(6, 10, CustomFloatFlags.none).max_10_exp == 154);
+    assert(CustomFloat!(2, 6, CustomFloatFlags.nan).max_10_exp == 9);
+    assert(CustomFloat!(6, 10, CustomFloatFlags.nan).max_10_exp == 154);
+}
+
+// testing .min_10_exp
+@safe unittest
+{
+    assert(CustomFloat!(1, 6).min_10_exp == -9);
+    assert(CustomFloat!(5, 10).min_10_exp == -153);
+    assert(CustomFloat!(2, 6, CustomFloatFlags.none).min_10_exp == -9);
+    assert(CustomFloat!(6, 10, CustomFloatFlags.none).min_10_exp == -153);
+    assert(CustomFloat!(2, 6, CustomFloatFlags.nan).min_10_exp == -9);
+    assert(CustomFloat!(6, 10, CustomFloatFlags.nan).min_10_exp == -153);
+    assert(CustomFloat!(2, 6, CustomFloatFlags.allowDenorm).min_10_exp == -9);
+    assert(CustomFloat!(6, 10, CustomFloatFlags.allowDenorm).min_10_exp == -153);
+}
+
+// testing .epsilon
+@safe unittest
+{
+    // Tests don't work due to bug 20261.
+    /*
+    static assert(CustomFloat!(1,6).epsilon.sign == 0);
+    static assert(CustomFloat!(1,6).epsilon.exponent == 30);
+    static assert(CustomFloat!(1,6).epsilon.significand == 0);
+    static assert(CustomFloat!(2,5).epsilon.sign == 0);
+    static assert(CustomFloat!(2,5).epsilon.exponent == 13);
+    static assert(CustomFloat!(2,5).epsilon.significand == 0);
+    static assert(CustomFloat!(3,4).epsilon.sign == 0);
+    static assert(CustomFloat!(3,4).epsilon.exponent == 4);
+    static assert(CustomFloat!(3,4).epsilon.significand == 0);
+    // the following epsilons are only available, when denormalized numbers are allowed:
+    static assert(CustomFloat!(4,3).epsilon.sign == 0);
+    static assert(CustomFloat!(4,3).epsilon.exponent == 0);
+    static assert(CustomFloat!(4,3).epsilon.significand == 4);
+    static assert(CustomFloat!(5,2).epsilon.sign == 0);
+    static assert(CustomFloat!(5,2).epsilon.exponent == 0);
+    static assert(CustomFloat!(5,2).epsilon.significand == 1);
+     */
+}
+
+// testing .max
+@safe unittest
+{
+    static assert(CustomFloat!(5,2).max.sign == 0);
+    static assert(CustomFloat!(5,2).max.exponent == 2);
+    static assert(CustomFloat!(5,2).max.significand == 31);
+    static assert(CustomFloat!(4,3).max.sign == 0);
+    static assert(CustomFloat!(4,3).max.exponent == 6);
+    static assert(CustomFloat!(4,3).max.significand == 15);
+    static assert(CustomFloat!(3,4).max.sign == 0);
+    static assert(CustomFloat!(3,4).max.exponent == 14);
+    static assert(CustomFloat!(3,4).max.significand == 7);
+    static assert(CustomFloat!(2,5).max.sign == 0);
+    static assert(CustomFloat!(2,5).max.exponent == 30);
+    static assert(CustomFloat!(2,5).max.significand == 3);
+    static assert(CustomFloat!(1,6).max.sign == 0);
+    static assert(CustomFloat!(1,6).max.exponent == 62);
+    static assert(CustomFloat!(1,6).max.significand == 1);
+    static assert(CustomFloat!(3,5, CustomFloatFlags.none).max.exponent == 31);
+    static assert(CustomFloat!(3,5, CustomFloatFlags.none).max.significand == 7);
+}
+
+// testing .min_normal
+@safe unittest
+{
+    static assert(CustomFloat!(5,2).min_normal.sign == 0);
+    static assert(CustomFloat!(5,2).min_normal.exponent == 1);
+    static assert(CustomFloat!(5,2).min_normal.significand == 0);
+    static assert(CustomFloat!(4,3).min_normal.sign == 0);
+    static assert(CustomFloat!(4,3).min_normal.exponent == 1);
+    static assert(CustomFloat!(4,3).min_normal.significand == 0);
+    static assert(CustomFloat!(3,4).min_normal.sign == 0);
+    static assert(CustomFloat!(3,4).min_normal.exponent == 1);
+    static assert(CustomFloat!(3,4).min_normal.significand == 0);
+    static assert(CustomFloat!(2,5).min_normal.sign == 0);
+    static assert(CustomFloat!(2,5).min_normal.exponent == 1);
+    static assert(CustomFloat!(2,5).min_normal.significand == 0);
+    static assert(CustomFloat!(1,6).min_normal.sign == 0);
+    static assert(CustomFloat!(1,6).min_normal.exponent == 1);
+    static assert(CustomFloat!(1,6).min_normal.significand == 0);
+    //static assert(CustomFloat!(3,5, CustomFloatFlags.none).min_normal.exponent == 0); // doesn't work due to bug 20286
+    static assert(CustomFloat!(3,5, CustomFloatFlags.none).min_normal.significand == 4);
 }
 
 /**
