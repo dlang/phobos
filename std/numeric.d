@@ -410,24 +410,11 @@ public:
     /// Returns: smallest increment to the value 1
     static @property CustomFloat epsilon()
     {
-        CustomFloat value;
-        static if (flags & Flags.signed)
-            value.sign       = 0;
-        T_signed_exp exp = -precision;
-        T_sig        sig = 0;
+        CustomFloat one = CustomFloat(1);
+        CustomFloat onePlusEpsilon = one;
+        onePlusEpsilon.significand = onePlusEpsilon.significand | 1; // |= does not work here
 
-        value.fromNormalized(sig,exp);
-        if (exp == 0 && sig == 0) // underflowed to zero
-        {
-            static if ((flags&Flags.allowDenorm) ||
-                       (~flags&Flags.storeNormalized))
-                sig = 1;
-            else
-                sig = cast(T) 1uL << (precision - 1);
-        }
-        value.exponent     = cast(value.T_exp) exp;
-        value.significand  = cast(value.T_sig) sig;
-        return value;
+        return CustomFloat(onePlusEpsilon - one);
     }
 
     /// the number of bits in mantissa
@@ -682,11 +669,9 @@ public:
     assert(cf.dig == 1);
 
     auto c = cf.epsilon;
-    /* doesn't work yet due to bug 20261
     assert(c.sign == 0);
     assert(c.exponent == 0);
     assert(c.significand == 1);
-     */
 
     assert(cf.mant_dig == 6);
 
@@ -722,7 +707,7 @@ public:
     static assert(myFloat.max_exp == float.max_exp);
     assert(myFloat.min_10_exp == float.min_10_exp);
     static assert(myFloat.min_exp == float.min_exp);
-//    static assert(to!float(myFloat.epsilon) == float.epsilon); // doesn't work yet due to bug 20261
+    assert(to!float(myFloat.epsilon) == float.epsilon);
     assert(to!float(myFloat.max) == float.max);
     assert(to!float(myFloat.min_normal) == float.min_normal);
 
@@ -734,7 +719,7 @@ public:
     static assert(myDouble.max_exp == double.max_exp);
     assert(myDouble.min_10_exp == double.min_10_exp);
     static assert(myDouble.min_exp == double.min_exp);
-//    static assert(to!double(myDouble.epsilon) == double.epsilon); // doesn't work yet due to bug 20261
+    assert(to!double(myDouble.epsilon) == double.epsilon);
     assert(to!double(myDouble.max) == double.max);
     assert(to!double(myDouble.min_normal) == double.min_normal);
 }
@@ -808,25 +793,22 @@ public:
 // testing .epsilon
 @safe unittest
 {
-    // Tests don't work due to bug 20261.
-    /*
-    static assert(CustomFloat!(1,6).epsilon.sign == 0);
-    static assert(CustomFloat!(1,6).epsilon.exponent == 30);
-    static assert(CustomFloat!(1,6).epsilon.significand == 0);
-    static assert(CustomFloat!(2,5).epsilon.sign == 0);
-    static assert(CustomFloat!(2,5).epsilon.exponent == 13);
-    static assert(CustomFloat!(2,5).epsilon.significand == 0);
-    static assert(CustomFloat!(3,4).epsilon.sign == 0);
-    static assert(CustomFloat!(3,4).epsilon.exponent == 4);
-    static assert(CustomFloat!(3,4).epsilon.significand == 0);
+    assert(CustomFloat!(1,6).epsilon.sign == 0);
+    assert(CustomFloat!(1,6).epsilon.exponent == 30);
+    assert(CustomFloat!(1,6).epsilon.significand == 0);
+    assert(CustomFloat!(2,5).epsilon.sign == 0);
+    assert(CustomFloat!(2,5).epsilon.exponent == 13);
+    assert(CustomFloat!(2,5).epsilon.significand == 0);
+    assert(CustomFloat!(3,4).epsilon.sign == 0);
+    assert(CustomFloat!(3,4).epsilon.exponent == 4);
+    assert(CustomFloat!(3,4).epsilon.significand == 0);
     // the following epsilons are only available, when denormalized numbers are allowed:
-    static assert(CustomFloat!(4,3).epsilon.sign == 0);
-    static assert(CustomFloat!(4,3).epsilon.exponent == 0);
-    static assert(CustomFloat!(4,3).epsilon.significand == 4);
-    static assert(CustomFloat!(5,2).epsilon.sign == 0);
-    static assert(CustomFloat!(5,2).epsilon.exponent == 0);
-    static assert(CustomFloat!(5,2).epsilon.significand == 1);
-     */
+    assert(CustomFloat!(4,3).epsilon.sign == 0);
+    assert(CustomFloat!(4,3).epsilon.exponent == 0);
+    assert(CustomFloat!(4,3).epsilon.significand == 4);
+    assert(CustomFloat!(5,2).epsilon.sign == 0);
+    assert(CustomFloat!(5,2).epsilon.exponent == 0);
+    assert(CustomFloat!(5,2).epsilon.significand == 1);
 }
 
 // testing .max
