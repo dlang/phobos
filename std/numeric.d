@@ -462,9 +462,9 @@ public:
     {
         CustomFloat value;
         static if (flags & Flags.signed)
-            value.sign        = 0;
-        value.exponent    = 1;
-        static if (flags&Flags.storeNormalized)
+            value.sign = 0;
+        value.exponent = (flags & Flags.allowDenorm) != 0;
+        static if (flags & Flags.storeNormalized)
             value.significand = 0;
         else
             value.significand = cast(T_sig) 1uL << (precision - 1);
@@ -802,7 +802,7 @@ public:
     assert(CustomFloat!(1, 6).min_10_exp == -9);
     assert(CustomFloat!(5, 10).min_10_exp == -153);
     assert(CustomFloat!(2, 6, CustomFloatFlags.none).min_10_exp == -9);
-    assert(CustomFloat!(6, 10, CustomFloatFlags.none).min_10_exp == -153);
+    assert(CustomFloat!(6, 10, CustomFloatFlags.none).min_10_exp == -154);
     assert(CustomFloat!(2, 6, CustomFloatFlags.nan).min_10_exp == -9);
     assert(CustomFloat!(6, 10, CustomFloatFlags.nan).min_10_exp == -153);
     assert(CustomFloat!(2, 6, CustomFloatFlags.allowDenorm).min_10_exp == -9);
@@ -873,7 +873,7 @@ public:
     static assert(CustomFloat!(1,6).min_normal.sign == 0);
     static assert(CustomFloat!(1,6).min_normal.exponent == 1);
     static assert(CustomFloat!(1,6).min_normal.significand == 0);
-    //static assert(CustomFloat!(3,5, CustomFloatFlags.none).min_normal.exponent == 0); // doesn't work due to bug 20286
+    static assert(CustomFloat!(3,5, CustomFloatFlags.none).min_normal.exponent == 0);
     static assert(CustomFloat!(3,5, CustomFloatFlags.none).min_normal.significand == 4);
 }
 
