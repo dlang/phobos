@@ -1204,9 +1204,10 @@ template memoize(alias fun, uint maxSize)
  * To _memoize a recursive function, simply insert the memoized call in lieu of the plain recursive call.
  * For example, to transform the exponential-time Fibonacci implementation into a linear-time computation:
  */
-@safe unittest
+@safe nothrow
+unittest
 {
-    ulong fib(ulong n) @safe
+    ulong fib(ulong n) @safe nothrow
     {
         return n < 2 ? n : memoize!fib(n - 2) + memoize!fib(n - 1);
     }
