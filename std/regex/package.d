@@ -356,13 +356,13 @@ public alias StaticRegex = Regex;
 
     Throws: `RegexException` if there were any errors during compilation.
 +/
-@trusted public auto regex(S)(S[] patterns, const(char)[] flags="")
+@trusted public auto regex(S : C[], C)(const S[] patterns, const(char)[] flags="")
 if (isSomeString!(S))
 {
     import std.array : appender;
     import std.functional : memoize;
     enum cacheSize = 8; //TODO: invent nice interface to control regex caching
-    S pat;
+    const(C)[] pat;
     if (patterns.length > 1)
     {
         auto app = appender!S();
@@ -402,15 +402,26 @@ if (isSomeString!(S))
 ///
 @system unittest
 {
-    // multi-pattern regex example
-    auto multi = regex([`([a-z]+):(\d+)`, `(\d+),\d+`]); // multi regex
-    auto m = "abc:43 12,34".matchAll(multi);
-    assert(m.front.whichPattern == 1);
-    assert(m.front[1] == "abc");
-    assert(m.front[2] == "43");
-    m.popFront();
-    assert(m.front.whichPattern == 2);
-    assert(m.front[1] == "12");
+    void test(S)()
+    {
+        // multi-pattern regex example
+        S[] arr = [`([a-z]+):(\d+)`, `(\d+),\d+`];
+        auto multi = regex(arr); // multi regex
+        S str = "abc:43 12,34";
+        auto m = str.matchAll(multi);
+        assert(m.front.whichPattern == 1);
+        assert(m.front[1] == "abc");
+        assert(m.front[2] == "43");
+        m.popFront();
+        assert(m.front.whichPattern == 2);
+        assert(m.front[1] == "12");
+    }
+
+    import std.meta : AliasSeq;
+    static foreach (C; AliasSeq!(string, wstring, dstring))
+        // Test with const array of patterns - see https://issues.dlang.org/show_bug.cgi?id=20301
+        static foreach (S; AliasSeq!(C, const C, immutable C))
+            test!S();
 }
 
 @system unittest
@@ -425,8 +436,8 @@ if (isSomeString!(S))
     assert(indexOf(regexString, 'U') >= 0, "String representation should include flags.");
 }
 
-public auto regexImpl(S)(S pattern, const(char)[] flags="")
-if (isSomeString!(S))
+public auto regexImpl(S)(const S pattern, const(char)[] flags="")
+if (isSomeString!(typeof(pattern)))
 {
     import std.regex.internal.parser : Parser, CodeGen;
     auto parser = Parser!(Unqual!(typeof(pattern)), CodeGen)(pattern, flags);
