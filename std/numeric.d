@@ -403,9 +403,8 @@ public:
     /// Returns: number of decimal digits of precision
     static @property size_t dig()
     {
-        auto shiftcnt =  precision - ((flags&Flags.storeNormalized) != 0);
-        immutable x = (shiftcnt == 64) ? 0 : 1uL << shiftcnt;
-        return cast(size_t) log10(x);
+        auto shiftcnt = precision - ((flags&Flags.storeNormalized) == 0);
+        return shiftcnt == 64 ? 19 : cast(size_t) log10(1uL << shiftcnt);
     }
 
     /// Returns: smallest increment to the value 1
@@ -745,10 +744,10 @@ public:
 {
     static assert(CustomFloat!(1, 6).dig == 0);
     static assert(CustomFloat!(9, 6).dig == 2);
-//    static assert(CustomFloat!(10, 5).dig == 3); // doesn't work yet due to bug 20282
-//    static assert(CustomFloat!(10, 6, CustomFloatFlags.none).dig == 2); // doesn't work yet due to bug 20282
+    static assert(CustomFloat!(10, 5).dig == 3);
+    static assert(CustomFloat!(10, 6, CustomFloatFlags.none).dig == 2);
     static assert(CustomFloat!(11, 5, CustomFloatFlags.none).dig == 3);
-//    static assert(CustomFloat!(64, 7).dig == 19); // doesn't work yet due to bug 20282
+    static assert(CustomFloat!(64, 7).dig == 19);
 }
 
 // testing .mant_dig
