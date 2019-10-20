@@ -444,7 +444,7 @@ public:
     static @property int min_10_exp(){ return cast(int) log10( +min_normal ); }
 
     /// minimum int value such that 2<sup>min_exp-1</sup> is representable as a normalized value
-    enum min_exp = cast(T_signed_exp)-bias +1+ ((flags&Flags.allowDenorm)!=0);
+    enum min_exp = cast(T_signed_exp) -(cast(long) bias) + 1 + ((flags & Flags.allowDenorm) != 0);
 
     /// Returns: largest representable value that's not infinity
     static @property CustomFloat max()
@@ -694,8 +694,7 @@ public:
     assert(cf.max_10_exp == 0);
     assert(cf.max_exp == 2);
     assert(cf.min_10_exp == 0);
-    // doesn't work yet due to bug 20263
-    //assert(cf.min_exp == 1);
+    assert(cf.min_exp == 1);
 
     auto d = cf.max;
     assert(d.sign == 0);
@@ -723,7 +722,7 @@ public:
     assert(myFloat.max_10_exp == float.max_10_exp);
     static assert(myFloat.max_exp == float.max_exp);
     assert(myFloat.min_10_exp == float.min_10_exp);
-//    static assert(myFloat.min_exp == float.min_exp); // doesn't work yet due to bug 20263
+    static assert(myFloat.min_exp == float.min_exp);
 //    static assert(to!float(myFloat.epsilon) == float.epsilon); // doesn't work yet due to bug 20261
     assert(to!float(myFloat.max) == float.max);
     assert(to!float(myFloat.min_normal) == float.min_normal);
@@ -735,7 +734,7 @@ public:
     assert(myDouble.max_10_exp == double.max_10_exp);
     static assert(myDouble.max_exp == double.max_exp);
     assert(myDouble.min_10_exp == double.min_10_exp);
-//    static assert(myDouble.min_exp == double.min_exp); // doesn't work yet due to bug 20263
+    static assert(myDouble.min_exp == double.min_exp);
 //    static assert(to!double(myDouble.epsilon) == double.epsilon); // doesn't work yet due to bug 20261
     assert(to!double(myDouble.max) == double.max);
     assert(to!double(myDouble.min_normal) == double.min_normal);
@@ -774,15 +773,14 @@ public:
 // testing .min_exp
 @safe unittest
 {
-    // tests dont work yet due to bug 20263
-//    static assert(CustomFloat!(1, 6).min_exp == -2^^5+3);
-//    static assert(CustomFloat!(5, 10).min_exp == -2^^9+3);
-//    static assert(CustomFloat!(2, 6, CustomFloatFlags.none).min_exp == -2^^5+1);
-//    static assert(CustomFloat!(6, 10, CustomFloatFlags.none).min_exp == -2^^9+1);
-//    static assert(CustomFloat!(2, 6, CustomFloatFlags.nan).min_exp == -2^^5+2);
-//    static assert(CustomFloat!(6, 10, CustomFloatFlags.nan).min_exp == -2^^9+2);
-//    static assert(CustomFloat!(2, 6, CustomFloatFlags.allowDenorm).min_exp == -2^^5+2);
-//    static assert(CustomFloat!(6, 10, CustomFloatFlags.allowDenorm).min_exp == -2^^9+2);
+    static assert(CustomFloat!(1, 6).min_exp == -2^^5+3);
+    static assert(CustomFloat!(5, 10).min_exp == -2^^9+3);
+    static assert(CustomFloat!(2, 6, CustomFloatFlags.none).min_exp == -2^^5+1);
+    static assert(CustomFloat!(6, 10, CustomFloatFlags.none).min_exp == -2^^9+1);
+    static assert(CustomFloat!(2, 6, CustomFloatFlags.nan).min_exp == -2^^5+2);
+    static assert(CustomFloat!(6, 10, CustomFloatFlags.nan).min_exp == -2^^9+2);
+    static assert(CustomFloat!(2, 6, CustomFloatFlags.allowDenorm).min_exp == -2^^5+2);
+    static assert(CustomFloat!(6, 10, CustomFloatFlags.allowDenorm).min_exp == -2^^9+2);
 }
 
 // testing .max_10_exp
