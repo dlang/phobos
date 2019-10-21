@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
-A one-stop shop for converting values from one type to another.
+   A one-stop shop for converting values from one type to another.
 
 $(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE,
@@ -52,6 +52,7 @@ public import std.ascii : LetterCase;
 import std.meta;
 import std.range.primitives;
 import std.traits;
+import std.typecons : Nullable;
 
 // Same as std.string.format, but "self-importing".
 // Helps reduce code and imports, particularly in static asserts.
@@ -2678,21 +2679,7 @@ do
     assert(parse!uint(str) == 0);
 }
 
-/**
- * Takes a string representing an `enum` type and returns that type.
- *
- * Params:
- *     Target = the `enum` type to convert to
- *     s = the lvalue of the range to _parse
- *
- * Returns:
- *     An `enum` of type `Target`
- *
- * Throws:
- *     A $(LREF ConvException) if type `Target` does not have a member
- *     represented by `s`.
- */
-Target parse(Target, Source)(ref Source s)
+Nullable!(Target) tryParse(Target, Source)(ref Source s)
 if (isSomeString!Source && !is(Source == enum) &&
     is(Target == enum))
 {
@@ -2713,16 +2700,61 @@ if (isSomeString!Source && !is(Source == enum) &&
     if (longest_match > 0)
     {
         s = s[longest_match .. $];
-        return result ;
+        return typeof(return)(result);
     }
 
-    throw new ConvException(
-        Target.stringof ~ " does not have a member named '"
-        ~ to!string(s) ~ "'");
+    return typeof(return).init;
 }
 
 ///
-@safe unittest
+@safe pure nothrow @nogc unittest
+{
+    enum EnumType : bool { a = true, b = false, c = a }
+
+    auto a_str = "a";
+    auto a_result = tryParse!EnumType(a_str);
+    assert(a_str == "");        // should be consumed
+    assert(!a_result.isNull &&
+           a_result.get == EnumType.a);
+
+    auto z_str = "z";
+    const z_result = tryParse!EnumType(z_str);
+    assert(z_str == "z");       // sholdn't be consumed
+    assert(z_result.isNull);
+}
+
+/**
+ * Takes a string representing an `enum` type and returns that type.
+ *
+ * Params:
+ *     Target = the `enum` type to convert to
+ *     s = the lvalue of the range to _parse
+ *
+ * Returns:
+ *     An `enum` of type `Target`
+ *
+ * Throws:
+ *     A $(LREF ConvException) if type `Target` does not have a member
+ *     represented by `s`.
+ */
+Target parse(Target, Source)(ref Source s)
+if (isSomeString!Source && !is(Source == enum) &&
+    is(Target == enum))
+{
+    auto result = tryParse!(Target, Source)(s);
+    if (!result.isNull)
+    {
+        return result.get;    // safe to call when !result.isNull
+    }
+    else
+    {
+        throw new ConvException(Target.stringof ~ " does not have a member named '"
+                                ~ to!string(s) ~ "'");
+    }
+}
+
+///
+@safe pure unittest
 {
     enum EnumType : bool { a = true, b = false, c = a }
 
