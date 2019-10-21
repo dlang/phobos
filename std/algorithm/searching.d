@@ -3539,6 +3539,24 @@ Params:
 
 Returns: The minimal element of the passed-in range.
 
+Note:
+    If at least one of the arguments is NaN, the result is an unspecified value.
+
+    If you want to ignore NaNs, you can use $(REF filter, std,algorithm,iteration)
+    and $(REF isNaN, std,math) to remove them, before applying minElement.
+    Add a suitable seed, to avoid error messages if all elements are NaNs:
+
+    ---
+    <range>.filter!(a=>!a.isNaN).minElement(<seed>);
+    ---
+
+    If you want to get NaN as a result if a NaN is present in the range,
+    you can use $(REF fold, std.algorithm,iteration) and $(REF isNaN, std,math):
+
+    ---
+    <range>.fold!((a,b)=>a.isNaN || b.isNaN ? real.nan : a < b ? a : b);
+    ---
+
 See_Also:
 
     $(LREF maxElement), $(REF min, std,algorithm,comparison), $(LREF minCount),
@@ -3662,16 +3680,20 @@ Iterates the passed range and returns the maximal element.
 A custom mapping function can be passed to `map`.
 In other languages this is sometimes called `argmax`.
 
-Complexity:
+Complexity: O(n)
     Exactly `n - 1` comparisons are needed.
 
 Params:
     map = custom accessor for the comparison key
-    r = range from which the maximum will be selected
+    r = range from which the maximum element will be selected
     seed = custom seed to use as initial element
 
 Returns: The maximal element of the passed-in range.
 
+Note:
+    If at least one of the arguments is NaN, the result is an unspecified value.
+    See $(REF minElement, std,algorithm,searching) for examples on how to cope
+    with NaNs.
 
 See_Also:
 
