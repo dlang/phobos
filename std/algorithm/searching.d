@@ -3319,7 +3319,7 @@ These functions may be used for computing arbitrary extrema by choosing `pred`
 appropriately. For corrrect functioning, `pred` must be a strict partial order,
 i.e. transitive (if `pred(a, b) && pred(b, c)` then `pred(a, c)`) and
 irreflexive (`pred(a, a)` is `false`). The $(LUCKY trichotomy property of
-inequality) is not required: these algoritms consider elements `a` and `b` equal
+inequality) is not required: these algorithms consider elements `a` and `b` equal
 (for the purpose of counting) if `pred` puts them in the same equivalence class,
 i.e. `!pred(a, b) && !pred(b, a)`.
 
@@ -3330,6 +3330,10 @@ Params:
 
 Returns: The minimum, respectively maximum element of a range together with the
 number it occurs in the range.
+
+Limitations: If at least one of the arguments is NaN, the result is
+an unspecified value. See $(REF maxElement, std,algorithm,searching)
+for examples on how to cope with NaNs.
 
 Throws: `Exception` if `range.empty`.
 
@@ -3828,6 +3832,10 @@ Returns: The position of the minimum (respectively maximum) element of forward
 range `range`, i.e. a subrange of `range` starting at the position of  its
 smallest (respectively largest) element and with the same ending as `range`.
 
+Limitations: If at least one of the arguments is NaN, the result is
+an unspecified value. See $(REF maxElement, std,algorithm,searching)
+for examples on how to cope with NaNs.
+
 See_Also:
     $(REF max, std,algorithm,comparison), $(LREF minCount), $(LREF minIndex), $(LREF minElement)
 */
@@ -3937,6 +3945,11 @@ Complexity: $(BIGOH range.length)
 Returns:
     The index of the first encounter of the minimum element in `range`. If the
     `range` is empty, -1 is returned.
+
+Limitations:
+    If at least one of the arguments is NaN, the result is
+    an unspecified value. See $(REF maxElement, std,algorithm,searching)
+    for examples on how to cope with NaNs.
 
 See_Also:
     $(LREF maxIndex), $(REF min, std,algorithm,comparison), $(LREF minCount), $(LREF minElement), $(LREF minPos)
@@ -4089,6 +4102,11 @@ Params:
 Returns:
     The index of the first encounter of the maximum in `range`. If the
     `range` is empty, -1 is returned.
+
+Limitations:
+    If at least one of the arguments is NaN, the result is
+    an unspecified value. See $(REF maxElement, std,algorithm,searching)
+    for examples on how to cope with NaNs.
 
 See_Also:
     $(LREF minIndex), $(REF max, std,algorithm,comparison), $(LREF maxCount), $(LREF maxElement), $(LREF maxPos)
