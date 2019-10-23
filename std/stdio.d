@@ -2808,6 +2808,44 @@ is empty, throws an `Exception`. In case of an I/O error throws
         assert(i == witness.length);
     }
 
+    auto toUbytesRange(size_t bufferSize = 4096)
+    {
+        assert(bufferSize > 0);
+
+        import std.algorithm.iteration;
+        return byChunk(bufferSize).joiner;
+    }
+
+    auto toCharsRange(size_t bufferSize = 4096)
+    {
+        import std.algorithm;
+        return map!(b => cast(char) b)(toUbytesRange(bufferSize)); // TODO: efficient?
+    }
+
+    @system unittest
+    {
+        static import std.file;
+        import std.algorithm.comparison;
+
+        scope(failure) printf("Failed test at line %d\n", __LINE__);
+
+        auto deleteme = testFilename();
+        string testString = "asdpq";
+        std.file.write(deleteme, testString);
+
+        auto f = File(deleteme);
+        scope(exit)
+        {
+            f.close();
+            assert(!f.isOpen);
+            std.file.remove(deleteme);
+        }
+
+        assert(equal(f.toCharsRange(), testString));
+        f.seek(0);
+        assert(equal(f.toCharsRange(2), testString));
+    }
+
     // Note: This was documented until 2013/08
 /*
 `Range` that locks the file and allows fast writing to it.
