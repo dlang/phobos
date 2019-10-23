@@ -1362,7 +1362,7 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
             toStringImpl!char(str);
     }
 
-    void toValue(ref in JSONValue value, ulong indentLevel) @safe
+    void toValue(ref const JSONValue value, ulong indentLevel) @safe
     {
         void putTabs(ulong additionalIndent = 0)
         {
