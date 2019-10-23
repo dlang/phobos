@@ -2808,6 +2808,9 @@ is empty, throws an `Exception`. In case of an I/O error throws
         assert(i == witness.length);
     }
 
+/**
+Like `asCharRange` but returns a range o `ubyte`s, not `char`s.
+*/
     auto asUbytesRange(size_t bufferSize = 4096)
     {
         assert(bufferSize > 0);
@@ -2816,6 +2819,49 @@ is empty, throws an `Exception`. In case of an I/O error throws
         return byChunk(bufferSize).joiner;
     }
 
+/**
+Returns an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+set up to read from the file handle a character at a time.
+
+The element type for the range will be `char`. Range primitives
+may throw `StdioException` on I/O error.
+
+Example:
+---------
+void main()
+{
+    // Read standard input
+    foreach (ubyte buffer; stdin.asCharsRange)
+    {
+        ... use buffer ...
+    }
+}
+---------
+
+The parameter may be a number (as shown in the example above) recommending the
+size of the buffer.
+
+Example:
+---------
+void main()
+{
+    // Read standard input
+    foreach (char buffer; stdin.asCharsRange(4096))
+    {
+        ... use buffer ...
+    }
+}
+---------
+
+With the mentioned limitations, `asCharsRange` works with any algorithm
+compatible with input ranges.
+
+Returns: A call to `asCharsRange` returns a range initialized with the `File`
+object.
+
+Asserts: Buffer size is non-zero. In case of an I/O error throws
+`StdioException`.
+ */
     auto asCharsRange(size_t bufferSize = 4096)
     {
         import std.algorithm;
