@@ -2808,7 +2808,7 @@ is empty, throws an `Exception`. In case of an I/O error throws
         assert(i == witness.length);
     }
 
-    auto toUbytesRange(size_t bufferSize = 4096)
+    auto asUbytesRange(size_t bufferSize = 4096)
     {
         assert(bufferSize > 0);
 
@@ -2816,10 +2816,10 @@ is empty, throws an `Exception`. In case of an I/O error throws
         return byChunk(bufferSize).joiner;
     }
 
-    auto toCharsRange(size_t bufferSize = 4096)
+    auto asCharsRange(size_t bufferSize = 4096)
     {
         import std.algorithm;
-        return map!(b => cast(char) b)(toUbytesRange(bufferSize)); // TODO: efficient?
+        return map!(b => cast(char) b)(asUbytesRange(bufferSize)); // TODO: efficient?
     }
 
     @system unittest
@@ -2841,9 +2841,9 @@ is empty, throws an `Exception`. In case of an I/O error throws
             std.file.remove(deleteme);
         }
 
-        assert(equal(f.toCharsRange(), testString));
+        assert(equal(f.asCharsRange(), testString));
         f.seek(0);
-        assert(equal(f.toCharsRange(2), testString));
+        assert(equal(f.asCharsRange(2), testString));
     }
 
     // Note: This was documented until 2013/08
