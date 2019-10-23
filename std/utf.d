@@ -4354,6 +4354,9 @@ if (isSomeChar!C)
     // hellö as a range of `ubyte`s, which are UTF-8
     assert((cast(ubyte[]) [0x68, 0x65, 0x6c, 0x6c, 0xC3, 0xB6]).byUTF!char().equal(['h', 'e', 'l', 'l', 0xC3, 0xB6]));
 
+    assertThrown((cast(ubyte[]) [0xC3, 0x28]).byUTF!char());
+    assertThrown((cast(ubyte[]) [0xC3, 0x28]).byUTF!dchar());
+
     // Conversion to ubyte is not supported.
     static assert(!__traits(compiles, (cast(ubyte[]) []).byUTF!ubyte()));
 }
