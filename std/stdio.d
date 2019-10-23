@@ -2809,21 +2809,10 @@ is empty, throws an `Exception`. In case of an I/O error throws
     }
 
 /**
-Like `asCharsRange` but returns a range o `ubyte`s, not `char`s.
-*/
-    auto asUbytesRange(size_t bufferSize = 4096)
-    {
-        assert(bufferSize > 0);
-
-        import std.algorithm.iteration;
-        return byChunk(bufferSize).joiner;
-    }
-
-/**
 Returns an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
 set up to read from the file handle.
 
-The element type for the range will be `char`. Range primitives
+The element type for the range will be `ubyte`. Range primitives
 may throw `StdioException` on I/O error.
 
 Example:
@@ -2831,7 +2820,7 @@ Example:
 void main()
 {
     // Read standard input
-    foreach (char c; stdin.asCharsRange)
+    foreach (ubyte c; stdin.asUbytesRange)
     {
         ... use c ...
     }
@@ -2846,14 +2835,14 @@ Example:
 void main()
 {
     // Read standard input
-    foreach (char c; stdin.asCharsRange(4096))
+    foreach (ubyte c; stdin.asUbytesRange(4096))
     {
         ... use c ...
     }
 }
 ---------
 
-With the mentioned limitations, `asCharsRange` works with any algorithm
+With the mentioned limitations, `asUbytesRange` works with any algorithm
 compatible with input ranges.
 
 Returns: A range initialized with the `File` object.
@@ -2861,10 +2850,12 @@ Returns: A range initialized with the `File` object.
 Asserts: Buffer size is non-zero. In case of an I/O error throws
 `StdioException`.
  */
-    auto asCharsRange(size_t bufferSize = 4096)
+    auto asUbytesRange(size_t bufferSize = 4096)
     {
-        import std.algorithm;
-        return map!(b => cast(char) b)(asUbytesRange(bufferSize)); // TODO: efficient?
+        assert(bufferSize > 0);
+
+        import std.algorithm.iteration;
+        return byChunk(bufferSize).joiner;
     }
 
     @system unittest
@@ -2875,8 +2866,8 @@ Asserts: Buffer size is non-zero. In case of an I/O error throws
         scope(failure) printf("Failed test at line %d\n", __LINE__);
 
         auto deleteme = testFilename();
-        string testString = "asdpq";
-        std.file.write(deleteme, testString);
+        ubyte[] testBytes = [23, 44, 55, 15, 98];
+        std.file.write(deleteme, testBytes);
 
         auto f = File(deleteme);
         scope(exit)
@@ -2886,9 +2877,9 @@ Asserts: Buffer size is non-zero. In case of an I/O error throws
             std.file.remove(deleteme);
         }
 
-        assert(equal(f.asCharsRange(), testString));
+        assert(equal(f.asUbytesRange(), testBytes));
         f.seek(0);
-        assert(equal(f.asCharsRange(2), testString));
+        assert(equal(f.asUbytesRange(2), testBytes));
     }
 
     // Note: This was documented until 2013/08
