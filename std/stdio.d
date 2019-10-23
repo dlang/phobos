@@ -2831,9 +2831,9 @@ Example:
 void main()
 {
     // Read standard input
-    foreach (char buffer; stdin.asCharsRange)
+    foreach (char c; stdin.asCharsRange)
     {
-        ... use buffer ...
+        ... use c ...
     }
 }
 ---------
@@ -2846,9 +2846,9 @@ Example:
 void main()
 {
     // Read standard input
-    foreach (char buffer; stdin.asCharsRange(4096))
+    foreach (char c; stdin.asCharsRange(4096))
     {
-        ... use buffer ...
+        ... use c ...
     }
 }
 ---------
