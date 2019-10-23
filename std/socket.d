@@ -273,6 +273,16 @@ bool wouldHaveBlocked() nothrow @nogc
         static assert(0, "No socket support for this platform yet.");
 }
 
+@safe unittest
+{
+    auto sockets = socketPair();
+    auto s = sockets[0];
+    s.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"msecs"(10));
+    ubyte[] buffer = new ubyte[](16);
+    auto rec = s.receive(buffer);
+    assert(rec == -1 && wouldHaveBlocked());
+}
+
 
 private immutable
 {
