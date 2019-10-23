@@ -60,7 +60,7 @@ $(TR $(TD Miscellaneous) $(TD
    +/
 module std.utf;
 
-import std.exception;  // basicExceptionCtors
+import std.exception;  // basicExceptionCtors, assertThrown
 import std.meta;       // AliasSeq
 import std.range.primitives;
 import std.traits;     // isSomeChar, isSomeString
