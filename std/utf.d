@@ -60,7 +60,7 @@ $(TR $(TD Miscellaneous) $(TD
    +/
 module std.utf;
 
-import std.exception;  // basicExceptionCtors, assertThrown
+import std.exception;  // basicExceptionCtors
 import std.meta;       // AliasSeq
 import std.range.primitives;
 import std.traits;     // isSomeChar, isSomeString
@@ -4338,6 +4338,7 @@ if (isSomeChar!C)
 ///
 @safe pure nothrow unittest
 {
+    import std.exception : assertThrown;
     import std.algorithm.comparison : equal;
 
     // hellö as a range of `char`s, which are UTF-8
