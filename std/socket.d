@@ -259,12 +259,14 @@ class SocketFeatureException: SocketException
 /**
  * Returns:
  * `true` if the last socket operation failed because the socket
- * was in non-blocking mode and the operation would have blocked.
+ * was in non-blocking mode and the operation would have blocked,
+ * or if the socket is in blocking mode and set a SNDTIMEO or RCVTIMEO,
+ * and the operation timed out.
  */
 bool wouldHaveBlocked() nothrow @nogc
 {
     version (Windows)
-        return _lasterr() == WSAEWOULDBLOCK;
+        return _lasterr() == WSAEWOULDBLOCK || _lasterr() == WSAETIMEDOUT;
     else version (Posix)
         return _lasterr() == EAGAIN;
     else
