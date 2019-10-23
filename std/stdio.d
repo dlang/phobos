@@ -2856,8 +2856,7 @@ void main()
 With the mentioned limitations, `asCharsRange` works with any algorithm
 compatible with input ranges.
 
-Returns: A call to `asCharsRange` returns a range initialized with the `File`
-object.
+Returns: A range initialized with the `File` object.
 
 Asserts: Buffer size is non-zero. In case of an I/O error throws
 `StdioException`.
