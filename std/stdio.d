@@ -2809,7 +2809,7 @@ is empty, throws an `Exception`. In case of an I/O error throws
     }
 
 /**
-Like `asCharRange` but returns a range o `ubyte`s, not `char`s.
+Like `asCharsRange` but returns a range o `ubyte`s, not `char`s.
 */
     auto asUbytesRange(size_t bufferSize = 4096)
     {
@@ -2831,7 +2831,7 @@ Example:
 void main()
 {
     // Read standard input
-    foreach (ubyte buffer; stdin.asCharsRange)
+    foreach (char buffer; stdin.asCharsRange)
     {
         ... use buffer ...
     }
