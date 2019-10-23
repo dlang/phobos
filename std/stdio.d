@@ -2821,7 +2821,7 @@ Like `asCharsRange` but returns a range o `ubyte`s, not `char`s.
 
 /**
 Returns an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
-set up to read from the file handle a character at a time.
+set up to read from the file handle.
 
 The element type for the range will be `char`. Range primitives
 may throw `StdioException` on I/O error.
