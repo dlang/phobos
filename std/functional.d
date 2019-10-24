@@ -1129,8 +1129,9 @@ template memoize(alias fun)
     {
         alias Args = Parameters!fun;
         import std.typecons : Tuple;
+        import std.traits : Unqual;
 
-        static ReturnType!fun[Tuple!Args] memo;
+        static Unqual!(ReturnType!fun)[Tuple!Args] memo;
         auto t = Tuple!Args(args);
         if (auto p = t in memo)
             return *p;
@@ -1145,9 +1146,10 @@ template memoize(alias fun, uint maxSize)
     // alias Args = Parameters!fun; // Bugzilla 13580
     ReturnType!fun memoize(Parameters!fun args)
     {
-        import std.traits : hasIndirections;
+        import std.meta : staticMap;
+        import std.traits : hasIndirections, Unqual;
         import std.typecons : tuple;
-        static struct Value { Parameters!fun args; ReturnType!fun res; }
+        static struct Value { staticMap!(Unqual, Parameters!fun) args; Unqual!(ReturnType!fun) res; }
         static Value[] memo;
         static size_t[] initialized;
 
@@ -1202,9 +1204,10 @@ template memoize(alias fun, uint maxSize)
  * To _memoize a recursive function, simply insert the memoized call in lieu of the plain recursive call.
  * For example, to transform the exponential-time Fibonacci implementation into a linear-time computation:
  */
-@safe unittest
+@safe nothrow
+unittest
 {
-    ulong fib(ulong n) @safe
+    ulong fib(ulong n) @safe nothrow
     {
         return n < 2 ? n : memoize!fib(n - 2) + memoize!fib(n - 1);
     }
@@ -1374,6 +1377,33 @@ template memoize(alias fun, uint maxSize)
     assert(firstClass(new Bar(3)).k == 3);
     assert(firstClass(new Bar(3)).k == 3);
     assert(executed == 1);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=20302
+@system unittest
+{
+    version (none) // TODO change `none` to `all` and fix remaining limitations
+        struct S { const int len; }
+    else
+        struct S { int len; }
+
+    static       string  fun000(      string str,       S s) { return str[0 .. s.len] ~ "123"; }
+    static       string  fun001(      string str, const S s) { return str[0 .. s.len] ~ "123"; }
+    static       string  fun010(const string str,       S s) { return str[0 .. s.len] ~ "123"; }
+    static       string  fun011(const string str, const S s) { return str[0 .. s.len] ~ "123"; }
+    static const(string) fun100(      string str,       S s) { return str[0 .. s.len] ~ "123"; }
+    static const(string) fun101(      string str, const S s) { return str[0 .. s.len] ~ "123"; }
+    static const(string) fun110(const string str,       S s) { return str[0 .. s.len] ~ "123"; }
+    static const(string) fun111(const string str, const S s) { return str[0 .. s.len] ~ "123"; }
+
+    static foreach (fun; AliasSeq!(fun000, fun001, fun010, fun011, fun100, fun101, fun110, fun111))
+    {{
+        alias mfun = memoize!fun;
+        assert(mfun("abcdefgh", S(3)) == "abc123");
+
+        alias mfun2 = memoize!(fun, 42);
+        assert(mfun2("asd", S(3)) == "asd123");
+    }}
 }
 
 private struct DelegateFaker(F)
