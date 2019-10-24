@@ -9883,7 +9883,7 @@ Returns:
 
 See_Also: $(LREF chain) to chain ranges
  */
-auto only(Values...)(return scope auto ref Values values)
+auto only(Values...)(return scope Values values)
 if (!is(CommonType!Values == void) || Values.length == 0)
 {
     return OnlyResult!(CommonType!Values, Values.length)(values);
@@ -9919,6 +9919,16 @@ if (!is(CommonType!Values == void) || Values.length == 0)
 
     static assert(is(typeof(only((const(char)[]).init, string.init)) ==
         typeof(only((const(char)[]).init, (const(char)[]).init))));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=20314
+@safe unittest
+{
+    import std.algorithm.iteration : joiner;
+
+    const string s = "foo", t = "bar";
+
+    assert([only(s, t), only(t, s)].joiner(only(", ")).join == "foobar, barfoo");
 }
 
 // Tests the zero-element result
