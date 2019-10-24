@@ -4385,15 +4385,15 @@ if (isSomeChar!C)
     import std.algorithm.comparison : equal;
 
     // hellö as a range of `char`s, which are UTF-8
-    "hell\u00F6".byUTF!char().equal(['h', 'e', 'l', 'l', 0xC3, 0xB6]);
+    assert("hell\u00F6".byUTF!char().equal(['h', 'e', 'l', 'l', 0xC3, 0xB6]));
 
     // `wchar`s are able to hold the ö in a single element (UTF-16 code unit)
-    "hell\u00F6".byUTF!wchar().equal(['h', 'e', 'l', 'l', 'ö']);
+    assert("hell\u00F6".byUTF!wchar().equal(['h', 'e', 'l', 'l', 'ö']));
 
     // 𐐷 is four code units in UTF-8, two in UTF-16, and one in UTF-32
-    "𐐷".byUTF!char().equal([0xF0, 0x90, 0x90, 0xB7]);
-    "𐐷".byUTF!wchar().equal([0xD801, 0xDC37]);
-    "𐐷".byUTF!dchar().equal([0x00010437]);
+    assert("𐐷".byUTF!char().equal([0xF0, 0x90, 0x90, 0xB7]));
+    assert("𐐷".byUTF!wchar().equal([0xD801, 0xDC37]));
+    assert("𐐷".byUTF!dchar().equal([0x00010437]));
 }
 
 ///
