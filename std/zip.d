@@ -610,13 +610,13 @@ public:
         uint i = endrecOffset;
 
         int endCommentLength = getUshort(i + 20);
-        comment = cast(string)(_data[i + 22 .. i + 22 + endCommentLength]);
+        comment = cast(string)(_data[i + endOfCentralDirLength .. i + endOfCentralDirLength + endCommentLength]);
 
         // end of central dir record
         removeSegment(endrecOffset, endrecOffset + endOfCentralDirLength + endCommentLength);
 
         uint k = i - zip64EndOfCentralDirLocatorLength;
-        if (k < i && _data[k .. k + 4] == cast(ubyte[])"PK\x06\x07")
+        if (k < i && _data[k .. k + 4] == zip64EndOfCentralDirLocatorSignature)
         {
             _isZip64 = true;
             i = k;
@@ -769,7 +769,7 @@ public:
             if (endOfCentralDirLength + i > data.length) break;
             uint start = to!uint(data.length) - endOfCentralDirLength - i;
 
-            if (data[start .. start + 4] != cast(ubyte[])"PK\x05\x06") continue;
+            if (data[start .. start + 4] != endOfCentralDirSignature) continue;
 
             auto numberOfThisDisc = getUshort(start + 4);
             if (numberOfThisDisc != 0) continue; // no support for multiple volumes yet
@@ -780,7 +780,7 @@ public:
             if (numberOfThisDisc < numberOfStartOfCentralDirectory) continue;
 
             uint k = start - zip64EndOfCentralDirLocatorLength;
-            auto maybeZip64 = k < start && _data[k .. k + 4] == cast(ubyte[])"PK\x06\x07";
+            auto maybeZip64 = k < start && _data[k .. k + 4] == zip64EndOfCentralDirLocatorSignature;
 
             auto totalNumberOfEntriesOnThisDisk = getUshort(start + 8);
             auto totalNumberOfEntriesInCentralDir = getUshort(start + 10);
