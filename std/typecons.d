@@ -2886,8 +2886,9 @@ Returns:
     assert(app.data == "1");
 }
 
-// Issue 19799
-@safe unittest
+// Issue 19799, disabled because of issue 20328. Formatting a null Nullable triggers a deprecation
+// but the deprecation can be fixed by using .get either
+version(none) @safe unittest
 {
     import std.format : format;
 
