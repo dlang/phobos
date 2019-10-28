@@ -190,7 +190,7 @@ $(I FormatChar):
     $(BOOKTABLE Flags affect formatting depending on the specifier as
     follows., $(TR $(TH Flag) $(TH Types&nbsp;affected) $(TH Semantics))
 
-    $(TR $(TD $(B '-')) $(TD numeric) $(TD Left justify the result in
+    $(TR $(TD $(B '-')) $(TD numeric, bool, null, char, string, enum, pointer) $(TD Left justify the result in
         the field.  It overrides any $(B 0) flag.))
 
     $(TR $(TD $(B '+')) $(TD numeric) $(TD Prefix positive numbers in
@@ -219,6 +219,7 @@ $(I FormatChar):
     $(DL
         $(DT $(I Width))
         $(DD
+        Only used for numeric, bool, null, char, string, enum and pointer types.
         Specifies the minimum field width.
         If the width is a $(B *), an additional argument of type $(B int),
         preceding the actual argument, is taken as the width.
@@ -2142,23 +2143,7 @@ if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     BooleanTypeOf!T val = obj;
 
     if (f.spec == 's')
-    {
-        string s = val ? "true" : "false";
-        if (!f.flDash)
-        {
-            // right align
-            if (f.width > s.length)
-                foreach (i ; 0 .. f.width - s.length) put(w, ' ');
-            put(w, s);
-        }
-        else
-        {
-            // left align
-            put(w, s);
-            if (f.width > s.length)
-                foreach (i ; 0 .. f.width - s.length) put(w, ' ');
-        }
-    }
+        writeAligned(w, val ? "true" : "false", f);
     else
         formatValueImpl(w, cast(int) val, f);
 }
@@ -2209,7 +2194,7 @@ if (is(Unqual!T == typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
     enforceFmt(spec == 's',
         "null literal cannot match %" ~ spec);
 
-    put(w, "null");
+    writeAligned(w, "null", f);
 }
 
 @safe pure unittest
@@ -2220,6 +2205,12 @@ if (is(Unqual!T == typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
     {
         formatTest( null, "null" );
     });
+}
+
+@safe pure unittest
+{
+    string t = format("[%6s] [%-6s]", null, null);
+    assert(t == "[  null] [null  ]");
 }
 
 /*
@@ -2560,6 +2551,15 @@ private void formatUnsigned(Writer, T, Char)
     assert(format("%017,d", -1234) == "-0,000,000,001,234");
 }
 
+@safe pure unittest
+{
+    string t1 = format("[%6s] [%-6s]", 123, 123);
+    assert(t1 == "[   123] [123   ]");
+
+    string t2 = format("[%6s] [%-6s]", -123, -123);
+    assert(t2 == "[  -123] [-123  ]");
+}
+
 private enum ctfpMessage = "Cannot format floating point types at compile-time";
 
 /*
@@ -2844,6 +2844,15 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     assert(format("%016,.2f",  1234.0) == "0,000,001,234.00");
 }
 
+@safe unittest
+{
+    string t1 = format("[%6s] [%-6s]", 12.3, 12.3);
+    assert(t1 == "[  12.3] [12.3  ]");
+
+    string t2 = format("[%6s] [%-6s]", -12.3, -12.3);
+    assert(t2 == "[ -12.3] [-12.3 ]");
+}
+
 /*
     Formatting a `creal` is deprecated but still kept around for a while.
  */
@@ -2955,9 +2964,7 @@ if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     CharTypeOf!T val = obj;
 
     if (f.spec == 's' || f.spec == 'c')
-    {
-        put(w, val);
-    }
+        writeAligned(w, [val], f);
     else
     {
         alias U = AliasSeq!(ubyte, ushort, uint)[CharTypeOf!T.sizeof/2];
@@ -3001,6 +3008,15 @@ if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     formatTest( "%+r", cast(wchar)'c', [0,       'c'] );
     formatTest( "%+r", cast(dchar)'c', [0, 0, 0, 'c'] );
     formatTest( "%+r", '本', ['\x67', '\x2c'] );
+}
+
+
+@safe pure unittest
+{
+    string t1 = format("[%6s] [%-6s]", 'A', 'A');
+    assert(t1 == "[     A] [A     ]");
+    string t2 = format("[%6s] [%-6s]", '本', '本');
+    assert(t2 == "[     本] [本     ]");
 }
 
 /*
@@ -3063,6 +3079,14 @@ if (is(StringTypeOf!T) && !is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToSt
     formatTest( "%+r", "日本語"w, ['\x65', '\xe5', '\x67', '\x2c', '\x8a', '\x9e'] );
     formatTest( "%+r", "日本語"d, ['\x00', '\x00', '\x65', '\xe5', '\x00', '\x00',
         '\x67', '\x2c', '\x00', '\x00', '\x8a', '\x9e'] );
+}
+
+@safe pure unittest
+{
+    string t1 = format("[%6s] [%-6s]", "AB", "AB");
+    assert(t1 == "[    AB] [AB    ]");
+    string t2 = format("[%6s] [%-6s]", "本Ä", "本Ä");
+    assert(t2 == "[    本Ä] [本Ä    ]");
 }
 
 /*
@@ -3308,49 +3332,7 @@ if (isInputRange!T)
         static if (!is(E == enum) && is(CharTypeOf!E))
         {
             static if (is(StringTypeOf!T))
-            {
-                scope s = val[0 .. f.precision < $ ? f.precision : $];
-
-                size_t width;
-                if (f.width > 0)
-                {
-                    // strings that are fully made of ASCII characters
-                    // can be aligned w/o graphemeStride
-                    bool onlyAscii = true;
-                    for (size_t i; i < s.length; i++)
-                    {
-                        if (s[i] > 0x7F)
-                        {
-                            onlyAscii = false;
-                            break;
-                        }
-                    }
-                    if (!onlyAscii)
-                    {
-                        //TODO: optimize this
-                        import std.uni : graphemeStride;
-                        for (size_t i; i < s.length; i += graphemeStride(s, i))
-                            width++;
-                    }
-                    else width = s.length;
-                }
-                else width = s.length;
-
-                if (!f.flDash)
-                {
-                    // right align
-                    if (f.width > width)
-                        foreach (i ; 0 .. f.width - width) put(w, ' ');
-                    put(w, s);
-                }
-                else
-                {
-                    // left align
-                    put(w, s);
-                    if (f.width > width)
-                        foreach (i ; 0 .. f.width - width) put(w, ' ');
-                }
-            }
+                writeAligned(w, val[0 .. f.precision < $ ? f.precision : $], f);
             else
             {
                 if (!f.flDash)
@@ -4501,10 +4483,19 @@ if (is(T == enum))
             }
         }
 
+        import std.array : appender;
+        auto w2 = appender!string();
+
         // val is not a member of T, output cast(T) rawValue instead.
-        put(w, "cast(" ~ T.stringof ~ ")");
+        put(w2, "cast(" ~ T.stringof ~ ")");
         static assert(!is(OriginalType!T == T), "OriginalType!" ~ T.stringof ~
                 "must not be equal to " ~ T.stringof);
+
+        FormatSpec!Char f2 = f;
+        f2.width = 0;
+        formatValueImpl(w2, cast(OriginalType!T) val, f2);
+        writeAligned(w, w2.data, f);
+        return;
     }
     formatValueImpl(w, cast(OriginalType!T) val, f);
 }
@@ -4540,6 +4531,16 @@ if (is(T == enum))
     formatTest("%b",    Foo.A, "1010");
 }
 
+@safe pure unittest
+{
+    enum A { one, two, three }
+
+    string t1 = format("[%6s] [%-6s]", A.one, A.one);
+    assert(t1 == "[   one] [one   ]");
+    string t2 = format("[%10s] [%-10s]", cast(A) 10, cast(A) 10);
+    assert(t2 == "[ cast(A)" ~ "10] [cast(A)" ~ "10 ]"); // due to bug in style checker
+}
+
 /*
    Pointers are formatted as hex integers.
  */
@@ -4567,7 +4568,7 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
     {
         if (p is null)
         {
-            put(w, "null");
+            writeAligned(w, "null", f);
             return;
         }
         FormatSpec!Char fs = f; // fs is copy for change its values.
@@ -4580,6 +4581,14 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
            "Expected one of %s, %x or %X for pointer type.");
         formatValueImpl(w, pnum, f);
     }
+}
+
+@safe pure unittest
+{
+    int* p;
+
+    string t1 = format("[%6s] [%-6s]", p, p);
+    assert(t1 == "[  null] [null  ]");
 }
 
 /*
@@ -6408,6 +6417,70 @@ package static const checkFormatException(alias fmt, Args...) =
         return (e.msg == ctfpMessage) ? null : e;
     return null;
 }();
+
+private void writeAligned(Writer, T, Char)(auto ref Writer w, T s, scope const ref FormatSpec!Char f)
+if (isSomeString!T)
+{
+    size_t width;
+    if (f.width > 0)
+    {
+        // check for non-ascii character
+        import std.algorithm.searching : any;
+        if (s.any!(a => a > 0x7F))
+        {
+            //TODO: optimize this
+            import std.uni : graphemeStride;
+            for (size_t i; i < s.length; i += graphemeStride(s, i))
+                ++width;
+        }
+        else
+            width = s.length;
+    }
+    else
+        width = s.length;
+
+    if (!f.flDash)
+    {
+        // right align
+        if (f.width > width)
+            foreach (i ; 0 .. f.width - width) put(w, ' ');
+        put(w, s);
+    }
+    else
+    {
+        // left align
+        put(w, s);
+        if (f.width > width)
+            foreach (i ; 0 .. f.width - width) put(w, ' ');
+    }
+}
+
+@safe pure unittest
+{
+    import std.array : appender;
+    auto w = appender!string();
+    auto spec = singleSpec("%s");
+    writeAligned(w, "a本Ä", spec);
+    assert(w.data == "a本Ä", w.data);
+}
+
+@safe pure unittest
+{
+    import std.array : appender;
+    auto w = appender!string();
+    auto spec = singleSpec("%10s");
+    writeAligned(w, "a本Ä", spec);
+    assert(w.data == "       a本Ä", "|" ~ w.data ~ "|");
+}
+
+@safe pure unittest
+{
+    import std.array : appender;
+    auto w = appender!string();
+    auto spec = singleSpec("%-10s");
+    writeAligned(w, "a本Ä", spec);
+    assert(w.data == "a本Ä       ", w.data);
+}
 
 /**
  * Format arguments into a string.
