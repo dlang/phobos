@@ -3974,9 +3974,10 @@ if (hasToString!(T, Char))
 void enforceValidFormatSpec(T, Char)(scope const ref FormatSpec!Char f)
 {
     enum overload = hasToString!(T, Char);
-    static if (!isInputRange!T &&
+    static if (
             overload != HasToStringResult.constCharSinkFormatSpec &&
-            overload != HasToStringResult.customPutWriterFormatSpec)
+            overload != HasToStringResult.customPutWriterFormatSpec &&
+            !isInputRange!T)
     {
         enforceFmt(f.spec == 's',
             "Expected '%s' format specifier for type '" ~ T.stringof ~ "'");
