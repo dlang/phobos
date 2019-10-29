@@ -761,6 +761,12 @@ struct JSONValue
         return toJSON(this, false, options);
     }
 
+    ///
+    void toString(Out)(Out sink, in JSONOptions options = JSONOptions.none) const
+    {
+        toJSON(sink, this, false, options);
+    }
+
     /***
      * Implicitly calls `toJSON` on this JSONValue, like `toString`, but
      * also passes $(I true) as $(I pretty) argument.
@@ -770,6 +776,12 @@ struct JSONValue
     string toPrettyString(in JSONOptions options = JSONOptions.none) const @safe
     {
         return toJSON(this, true, options);
+    }
+
+    ///
+    void toPrettyString(Out)(Out sink, in JSONOptions options = JSONOptions.none) const
+    {
+        toJSON(sink, this, true, options);
     }
 }
 
@@ -1290,7 +1302,18 @@ Set the $(LREF JSONOptions.specialFloatLiterals) flag is set in `options` to enc
 string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions options = JSONOptions.none) @safe
 {
     auto json = appender!string();
+    toJSON(json, root, pretty, options);
+    return json.data;
+}
 
+///
+void toJSON(Out)(
+    auto ref Out json,
+    const ref JSONValue root,
+    in bool pretty = false,
+    in JSONOptions options = JSONOptions.none) @safe
+if (isOutputRange!(Out,char))
+{
     void toStringImpl(Char)(string str) @safe
     {
         json.put('"');
@@ -1519,7 +1542,6 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
     }
 
     toValue(root, 0);
-    return json.data;
 }
 
 @safe unittest // bugzilla 12897
@@ -2100,4 +2122,40 @@ pure nothrow @safe unittest // issue 15884
     assert(t.empty);
 
     assertThrown(parseJSON(s, -1, JSONOptions.strictParsing));
+}
+
+// Issue20330
+@safe unittest
+{
+    import std.array : appender;
+
+    string s = `{"a":[1,2,3]}`;
+    JSONValue j = parseJSON(s);
+
+    auto app = appender!string();
+    j.toString(app);
+
+    assert(app.data == s, app.data);
+}
+
+// Issue20330
+@safe unittest
+{
+    import std.array : appender;
+    import std.format : formattedWrite;
+
+    string s =
+`{
+    "a": [
+        1,
+        2,
+        3
+    ]
+}`;
+    JSONValue j = parseJSON(s);
+
+    auto app = appender!string();
+    j.toPrettyString(app);
+
+    assert(app.data == s, app.data);
 }
