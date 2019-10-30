@@ -135,6 +135,11 @@ dub_package()
     popd
 }
 
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <cmd> (where cmd is one of install-deps, setup-repos, coverage, publictests, style-line)" >&2
+    exit 1
+fi
+
 case $1 in
     install-deps) install_deps ;;
     setup-repos) setup_repos ;;
