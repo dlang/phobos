@@ -801,7 +801,7 @@ ref T[N] asArray(size_t N, T)(ref T[] source, string errorMsg = "")
  * Fill in a preallocated buffer with the ASCII hex representation from a byte buffer
  */
 private void toHexStringImpl(Order order, LetterCase letterCase, BB, HB)
-(const ref BB byteBuffer, ref HB hexBuffer){
+(scope const ref BB byteBuffer, ref HB hexBuffer){
     static if (letterCase == LetterCase.upper)
     {
         import std.ascii : hexDigits = hexDigits;
