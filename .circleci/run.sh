@@ -5,7 +5,7 @@ set -uexo pipefail
 HOST_DMD_VER=2.079.1
 CURL_USER_AGENT="CirleCI $(curl --version | head -n 1)"
 DUB=${DUB:-dub}
-N=${N:-$(nproc)}
+N=${N:-2}
 CIRCLE_NODE_INDEX=${CIRCLE_NODE_INDEX:-0}
 BUILD="debug"
 PIC=1
