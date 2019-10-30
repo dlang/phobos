@@ -142,7 +142,7 @@ efficient search, but one that only supports matching on equality:
 @safe @nogc unittest
 {
     import std.meta : AliasSeq;
-    import std.array: staticArray;
+    import std.array : staticArray;
 
     if (auto pos = 3.among(1, 2, 3))
         assert(pos == 3);
@@ -843,7 +843,7 @@ pure @safe unittest
 
 nothrow pure @safe @nogc unittest
 {
-    import std.array: staticArray;
+    import std.array : staticArray;
     // Test cmp when opCmp returns float.
     struct F
     {
@@ -973,7 +973,7 @@ template equal(alias pred = "a == b")
 {
     import std.algorithm.comparison : equal;
     import std.math : approxEqual;
-    import std.array: staticArray;
+    import std.array : staticArray;
 
     auto a = [ 1, 2, 4, 3 ].staticArray;
     assert(!equal(a[], a[1..$]));
@@ -1750,7 +1750,7 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
 ///
 @safe @nogc unittest
 {
-    import std.array: staticArray;
+    import std.array : staticArray;
     auto x = [ 1,   5, 2, 7,   4, 3 ].staticArray;
     auto y = [ 1.0, 5, 2, 7.3, 4, 8 ].staticArray;
     auto m = mismatch(x[], y[]);
@@ -1760,8 +1760,8 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
 
 @safe @nogc unittest
 {
-    import std.array: staticArray;
-    import std.range: only;
+    import std.array : staticArray;
+    import std.range : only;
 
     auto a = [ 1, 2, 3 ].staticArray;
     auto b = [ 1, 2, 4, 5 ].staticArray;
@@ -2010,7 +2010,7 @@ if (isInputRange!Range1 &&
 
 @safe @nogc pure unittest
 {
-    import std.range: only;
+    import std.range : only;
     assert(isSameLength(only(1, 2, 3), only(4, 5, 6)));
     assert(isSameLength(only(0.3, 90.4, 23.7, 119.2), only(42.6, 23.6, 95.5, 6.3)));
     assert(!isSameLength(only(1, 3, 3), only(4, 5)));
