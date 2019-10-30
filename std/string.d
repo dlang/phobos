@@ -5425,7 +5425,7 @@ if (isSomeChar!C1 && isSomeString!S && isSomeChar!C2 && isOutputRange!(Buffer, S
 }
 
 private void translateImpl(C1, T, C2, Buffer)(const(C1)[] str,
-                                      T transTable,
+                                      scope T transTable,
                                       const(C2)[] toRemove,
                                       Buffer buffer)
 {
