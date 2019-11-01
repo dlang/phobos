@@ -158,7 +158,7 @@ ifdef NO_AUTODECODE
 override DFLAGS += -version=NoAutodecodeStrings
 endif
 
-UDFLAGS=-unittest -version=StdUnittest
+UDFLAGS=-unittest -version=StdUnittest -checkaction=context
 
 # Set DOTOBJ and DOTEXE
 ifeq (,$(findstring win,$(OS)))
@@ -421,7 +421,7 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 %.test : %.d $(LIB)
 	T=`mktemp -d /tmp/.dmd-run-test.XXXXXX` &&                                                              \
 	  (                                                                                                     \
-	    $(DMD) -od$$T $(DFLAGS) -main $(UDFLAGS) $(LIB) $(NODEFAULTLIB) $(LINKDL) -cov=ctfe -run $< ;     \
+	    $(DMD) -od$$T $(DFLAGS) -main $(UDFLAGS) $(LIB) $(NODEFAULTLIB) $(LINKDL) -cov=ctfe -checkaction=D -run $< ;     \
 	    RET=$$? ; rm -rf $$T ; exit $$RET                                                                   \
 	  )
 
@@ -650,7 +650,7 @@ publictests: $(addsuffix .publictests,$(D_MODULES))
 
 %.publictests: %.d $(LIB) $(TESTS_EXTRACTOR) | $(PUBLICTESTS_DIR)/.directory
 	@$(TESTS_EXTRACTOR) --inputdir  $< --outputdir $(PUBLICTESTS_DIR)
-	@$(DMD) $(DFLAGS) $(NODEFAULTLIB) $(LIB) -main $(UDFLAGS) -run $(PUBLICTESTS_DIR)/$(subst /,_,$<)
+	@$(DMD) $(DFLAGS) $(NODEFAULTLIB) $(LIB) -main $(UDFLAGS) -checkaction=D -run $(PUBLICTESTS_DIR)/$(subst /,_,$<)
 
 ################################################################################
 # Check and run @betterC tests
