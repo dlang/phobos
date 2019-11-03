@@ -163,7 +163,7 @@ private struct RangeT(A)
             assert(_a + i < _b,
                 "Attempting to moveAt using an out of bounds index on an Array");
             assert(_a + i < _outer.length,
-                "Can not move past the end of the array");
+                "Cannot move past the end of the array");
             return move(_outer._data._payload[_a + i]);
         }
     }
@@ -682,7 +682,7 @@ if (!is(Unqual!T == bool))
     @property ref inout(T) front() inout
     {
         assert(_data.refCountedStore.isInitialized,
-            "Can not get front of empty range");
+            "Cannot get front of empty range");
         return _data._payload[0];
     }
 
@@ -696,7 +696,7 @@ if (!is(Unqual!T == bool))
     @property ref inout(T) back() inout
     {
         assert(_data.refCountedStore.isInitialized,
-            "Can not get back of empty range");
+            "Cannot get back of empty range");
         return _data._payload[$ - 1];
     }
 
@@ -710,7 +710,7 @@ if (!is(Unqual!T == bool))
     ref inout(T) opIndex(size_t i) inout
     {
         assert(_data.refCountedStore.isInitialized,
-            "Can not index empty range");
+            "Cannot index empty range");
         return _data._payload[i];
     }
 
@@ -1611,7 +1611,7 @@ if (is(Unqual!T == bool))
     private @property ref size_t[] data()
     {
         assert(_store.refCountedStore.isInitialized,
-            "Can not get data of uninitialized Array");
+            "Cannot get data of uninitialized Array");
         return _store._backend._payload;
     }
 
