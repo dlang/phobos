@@ -2579,12 +2579,12 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     {
         return nan
             ? up
-                ? sb ? "-NAN" : f.flPlus ? "+NAN" : "NAN"
-                : sb ? "-nan" : f.flPlus ? "+nan" : "nan"
+                ? sb ? "-NAN" : f.flPlus ? "+NAN" : (f.flSpace ? " NAN" : "NAN")
+                : sb ? "-nan" : f.flPlus ? "+nan" : (f.flSpace ? " nan" : "nan")
             : inf
                 ? up
-                    ? sb ? "-INF" : f.flPlus ? "+INF" : "INF"
-                    : sb ? "-inf" : f.flPlus ? "+inf" : "inf"
+                    ? sb ? "-INF" : f.flPlus ? "+INF" : (f.flSpace ? " INF" : "INF")
+                    : sb ? "-inf" : f.flPlus ? "+inf" : (f.flSpace ? " inf" : "inf")
                 : "";
     }
 
@@ -7005,6 +7005,15 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
     d = format("^%-+13,3.2F$", -double.nan);
     assert(a == "^+nan         $", "\ngot:'"~ a ~ "'\nexp:'^+nan         $'");
     assert(b == "^+NAN         $", "\ngot:'"~ b ~ "'\nexp:'^+NAN         $'");
+    assert(c == "^-nan         $", "\ngot:'"~ c ~ "'\nexp:'^-nan         $'");
+    assert(d == "^-NAN         $", "\ngot:'"~ d ~ "'\nexp:'^-NAN         $'");
+
+    a = format("^%- 13,3.2f$", double.nan);
+    b = format("^%- 13,3.2F$", double.nan);
+    c = format("^%- 13,3.2f$", -double.nan);
+    d = format("^%- 13,3.2F$", -double.nan);
+    assert(a == "^ nan         $", "\ngot:'"~ a ~ "'\nexp:'^ nan         $'");
+    assert(b == "^ NAN         $", "\ngot:'"~ b ~ "'\nexp:'^ NAN         $'");
     assert(c == "^-nan         $", "\ngot:'"~ c ~ "'\nexp:'^-nan         $'");
     assert(d == "^-NAN         $", "\ngot:'"~ d ~ "'\nexp:'^-NAN         $'");
 }
