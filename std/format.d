@@ -2977,6 +2977,13 @@ useSnprintf:
     assert(format!"%a"(nextUp(0.0)) == "0x0.0000000000001p-1022");
 }
 
+// issue 20371
+@safe unittest
+{
+    assert(format!"%.1000a"(1.0).length == 1007);
+    assert(format!"%.600f"(0.1).length == 602);
+}
+
 /*
     Formatting a `creal` is deprecated but still kept around for a while.
  */
