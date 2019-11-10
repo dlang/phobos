@@ -199,7 +199,12 @@ private:
     // Perform IEEE rounding with round to nearest detection
     void roundedShift(T,U)(ref T sig, U shift)
     {
-        if (sig << (T.sizeof*8 - shift) == cast(T) 1uL << (T.sizeof*8 - 1))
+        if (shift >= T.sizeof*8)
+        {
+            // avoid illegal shift
+            sig = 0;
+        }
+        else if (sig << (T.sizeof*8 - shift) == cast(T) 1uL << (T.sizeof*8 - 1))
         {
             // round to even
             sig >>= shift;
@@ -852,6 +857,61 @@ public:
     static assert(CustomFloat!(1,6).min_normal.significand == 0);
     static assert(CustomFloat!(3,5, CustomFloatFlags.none).min_normal.exponent == 0);
     static assert(CustomFloat!(3,5, CustomFloatFlags.none).min_normal.significand == 4);
+}
+
+@safe unittest
+{
+    import std.math : isNaN;
+
+    alias cf = CustomFloat!(5, 2);
+
+    auto f = cf.nan.get!float();
+    assert(isNaN(f));
+
+    cf a;
+    a = real.max;
+    assert(a == cf.infinity);
+
+    a = 0.015625;
+    assert(a.exponent == 0);
+    assert(a.significand == 0);
+
+    a = 0.984375;
+    assert(a.exponent == 1);
+    assert(a.significand == 0);
+}
+
+@system unittest
+{
+    import std.exception : assertThrown;
+    import core.exception : AssertError;
+
+    alias cf = CustomFloat!(3, 5, CustomFloatFlags.none);
+
+    cf a;
+    assertThrown!AssertError(a = real.max);
+}
+
+@system unittest
+{
+    import std.exception : assertThrown;
+    import core.exception : AssertError;
+
+    alias cf = CustomFloat!(3, 5, CustomFloatFlags.nan);
+
+    cf a;
+    assertThrown!AssertError(a = real.max);
+}
+
+@system unittest
+{
+    import std.exception : assertThrown;
+    import core.exception : AssertError;
+
+    alias cf = CustomFloat!(24, 8, CustomFloatFlags.none);
+
+    cf a;
+    assertThrown!AssertError(a = float.infinity);
 }
 
 private bool isCorrectCustomFloat(uint precision, uint exponentWidth, CustomFloatFlags flags) @safe pure nothrow @nogc
