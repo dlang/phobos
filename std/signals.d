@@ -37,11 +37,11 @@
  *      $(LINK2 http://www.digitalmars.com/d/archives/16368.html, signals and slots)$(BR)
  *
  * Bugs:
- *      Slots can only be delegates formed from class objects or
+ *      $(RED Slots can only be delegates formed from class objects or
  *      interfaces to class objects. If a delegate to something else
  *      is passed to connect(), such as a struct member function,
- *      a nested function or a COM interface, undefined behavior
- *      will result.
+ *      a nested function, a COM interface or a closure, undefined behavior
+ *      will result.)
  *
  *      Not safe for multiple threads operating on the same signals
  *      or slots.
