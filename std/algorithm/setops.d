@@ -485,7 +485,7 @@ if (!allSatisfy!(isForwardRange, R1, R2, RR) ||
     assert(is(ElementType!(typeof(N3)) == Tuple!(size_t,size_t,size_t)));
 
     assert(canFind(N3, tuple(0, 27, 7)));
-    assert(canFind(N3, tuple(50, 23, 71)));
+    assert(canFind(N3, tuple(50, 23, 11)));
     assert(canFind(N3, tuple(9, 3, 0)));
 }
 
@@ -503,7 +503,7 @@ if (!allSatisfy!(isForwardRange, R1, R2, RR) ||
 
     assert(canFind(N4, tuple(1, 2, 3, 4)));
     assert(canFind(N4, tuple(4, 3, 2, 1)));
-    assert(canFind(N4, tuple(10, 3, 7, 2)));
+    assert(canFind(N4, tuple(10, 3, 1, 2)));
 }
 
 // Issue 9878

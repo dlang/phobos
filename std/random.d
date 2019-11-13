@@ -3995,7 +3995,7 @@ if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
          */
         {
             size_t count0, count1, count99;
-            foreach (_; 0 .. 100_000)
+            foreach (_; 0 .. 50_000)
             {
                 auto sample = randomSample(iota(100), 5, &rng);
                 sample.popFront();
@@ -4030,9 +4030,9 @@ if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
              * the variance can be quite high.
              */
             assert(count0 == 0);
-            assert(count1 < 300, text("1: ", count1, " > 300."));
-            assert(4_700 < count99, text("99: ", count99, " < 4700."));
-            assert(count99 < 5_300, text("99: ", count99, " > 5300."));
+            assert(count1 < 150, text("1: ", count1, " > 150."));
+            assert(2_200 < count99, text("99: ", count99, " < 2200."));
+            assert(count99 < 2_800, text("99: ", count99, " > 2800."));
         }
 
         /* Odd corner-cases: RandomSample has 2 constructors that are not called
