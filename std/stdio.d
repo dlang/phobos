@@ -2318,6 +2318,7 @@ the contents may well have changed).
         static import std.file;
         auto deleteme = testFilename();
         std.file.write(deleteme, "Line 1\nLine 2\nLine 3\n");
+        scope(success) std.file.remove(deleteme);
 
         auto f = File(deleteme);
         f.byLine();
