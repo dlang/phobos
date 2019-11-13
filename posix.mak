@@ -646,9 +646,9 @@ betterc: betterc-phobos-tests
 	@# Due to the FORCE rule on druntime, make will always try to rebuild Phobos (even as an order-only dependency)
 	@# However, we still need to ensure that the test_extractor is built once
 	@[ -f "$(TESTS_EXTRACTOR)" ] || ${MAKE} -f posix.mak "$(TESTS_EXTRACTOR)"
-	@$(TESTS_EXTRACTOR) --betterC --attributes betterC \
+	$(TESTS_EXTRACTOR) --betterC --attributes betterC \
 		--inputdir  $< --outputdir $(BETTERCTESTS_DIR)
-	@$(DMD) $(DFLAGS) $(NODEFAULTLIB) -betterC $(UDFLAGS) -run $(BETTERCTESTS_DIR)/$(subst /,_,$<)
+	$(DMD) $(DFLAGS) $(NODEFAULTLIB) -betterC -run $(BETTERCTESTS_DIR)/$(subst /,_,$<)
 
 ################################################################################
 
