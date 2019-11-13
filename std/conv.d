@@ -3539,6 +3539,11 @@ package void skipWS(R)(ref R r)
  *
  * Returns:
  *     An array of type `Target`
+ *
+ * Note: If the elements of the array are strings, the
+ *       $(DDSUBLINK spec/lex.html, escape_sequences, escape sequences)
+ *       for string literals can be used with the exception of octal
+ *       numbers and named character entities.
  */
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
 if (isSomeString!Source && !is(Source == enum) &&
@@ -3756,6 +3761,11 @@ Lfewerr:
  *
  * Returns:
  *     An associative array of type `Target`
+ *
+ * Note: If the elements of the array are strings, the
+ *       $(DDSUBLINK spec/lex.html, escape_sequences, escape sequences)
+ *       for string literals can be used with the exception of octal
+ *       numbers and named character entities.
  */
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[',
                              dchar rbracket = ']', dchar keyval = ':', dchar comma = ',')
@@ -3897,18 +3907,14 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source))
 {
     string[] s1 = [
         `\"`, `\'`, `\?`, `\\`, `\a`, `\b`, `\f`, `\n`, `\r`, `\t`, `\v`, //Normal escapes
-        //`\141`, //@@@9621@@@ Octal escapes.
         `\x61`,
         `\u65E5`, `\U00012456`
-        //`\&amp;`, `\&quot;`, //@@@9621@@@ Named Character Entities.
     ];
 
     const(dchar)[] s2 = [
         '\"', '\'', '\?', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v', //Normal escapes
-        //'\141', //@@@9621@@@ Octal escapes.
         '\x61',
         '\u65E5', '\U00012456'
-        //'\&amp;', '\&quot;', //@@@9621@@@ Named Character Entities.
     ];
 
     foreach (i ; 0 .. s1.length)
@@ -3931,9 +3937,10 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source))
         `\x0`,     //Premature hex end
         `\XB9`,    //Not legal hex syntax
         `\u!!`,    //Not a unicode hex
-        `\777`,    //Octal is larger than a byte //Note: Throws, but simply because octals are unsupported
+        `\177`,    //Octal not supported
         `\u123`,   //Premature hex end
-        `\U123123` //Premature hex end
+        `\U123123`,//Premature hex end
+        `\&amp;`   //Named character entities not supported
     ];
     foreach (s ; ss)
         assertThrown!ConvException(parseEscape(s));
