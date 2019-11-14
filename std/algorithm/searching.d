@@ -1556,7 +1556,8 @@ See_ALso: $(LREF findAdjacent), $(LREF findAmong), $(LREF findSkip), $(LREF find
 */
 InputRange find(alias pred = "a == b", InputRange, Element)(InputRange haystack, scope Element needle)
 if (isInputRange!InputRange &&
-    is (typeof(binaryFun!pred(haystack.front, needle)) : bool))
+    is (typeof(binaryFun!pred(haystack.front, needle)) : bool) &&
+   !is (typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
 {
     alias R = InputRange;
     alias E = Element;
@@ -2180,6 +2181,12 @@ if (isForwardRange!R1 && isForwardRange!R2
 
     assert(find(haystack, takeExactly(filter!"true"(needle), 3)).empty);
     assert(find(haystack, filter!"true"(needle)).empty);
+}
+
+// issue 11013
+@safe unittest
+{
+    assert(find!"a == a"("abc","abc") == "abc");
 }
 
 // Internally used by some find() overloads above
@@ -3304,6 +3311,15 @@ if (isForwardRange!R1 && isForwardRange!R2)
     split = split[0].findSplitAfter(",");
     assert(split[0] == "sep,");
     assert(split[1] == "one");
+}
+
+// issue 11013
+@safe pure unittest
+{
+    auto var = "abc";
+    auto split = var.findSplitBefore!q{a == a}(var);
+    assert(split[0] == "");
+    assert(split[1] == "abc");
 }
 
 // minCount
