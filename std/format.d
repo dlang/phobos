@@ -5501,12 +5501,48 @@ private void skipData(Range, Char)(ref Range input, scope const ref FormatSpec!C
             if (input.front == '+' || input.front == '-') input.popFront();
             goto case 'u';
         case 'u':
+            if (input.empty || !isDigit(input.front))
+                throw new FormatException("No number found.");
             while (!input.empty && isDigit(input.front)) input.popFront();
             break;
         default:
-            assert(false,
-                    text("Format specifier not understood: %", spec.spec));
+            throw new FormatException(text("Format specifier not understood: %*", spec.spec,
+                                           ". Only %*c, %*d and %*u available."));
     }
+}
+
+// issue 11007
+@system unittest
+{
+    import std.exception : assertThrown;
+
+    string str = "foo bar buzz";
+    string a, b;
+    assertThrown!FormatException(formattedRead(str, "%s %*s %s", &a, &b));
+}
+
+// issue 11007
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    auto spec = FormatSpec!dchar("");
+    spec.spec = 's';
+    string s = "xxx";
+
+    assertThrown!FormatException(skipData(s, spec));
+}
+
+// issue 11007
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    auto spec = FormatSpec!dchar("");
+    spec.spec = 'd';
+    string s = "a";
+
+    assertThrown!FormatException(skipData(s, spec));
 }
 
 private template acceptedSpecs(T)
