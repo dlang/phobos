@@ -1066,6 +1066,12 @@ Occasionally it is useful to explicitly instantiate a `TaskPool`:
 2.  When the threads in the global task pool are waiting on a synchronization
     primitive (for example a mutex), and you want to parallelize the code that
     needs to run before these threads can be resumed.
+
+Note: The worker threads in this pool will not stop until
+      `stop` or `finish` is called, even if the main thread
+      has finished already. This may lead to programs that
+      never end. If you do not want this behaviour, you can set `isDaemon`
+      to true.
  */
 final class TaskPool
 {
