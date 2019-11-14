@@ -2574,6 +2574,13 @@ Lerr:
     assert(parse!int(input) == 777);
 }
 
+// issue 9621
+@safe pure unittest
+{
+    string s1 = "[ \"\\141\", \"\\0\", \"\\41\", \"\\418\" ]";
+    assert(parse!(string[])(s1) == ["a", "\0", "!", "!8"]);
+}
+
 /// ditto
 Target parse(Target, Source)(ref Source source, uint radix)
 if (isSomeChar!(ElementType!Source) &&
@@ -3846,13 +3853,31 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source))
         return isAlpha(c) ? ((c & ~0x20) - ('A' - 10)) : c - '0';
     }
 
+    // We need to do octals separate, because they need a lookahead to find out,
+    // where the escape sequence ends.
+    auto first = s.front;
+    if (first >= '0' && first <= '7')
+    {
+        dchar c1 = s.front;
+        s.popFront();
+        if (s.empty) return c1 - '0';
+        dchar c2 = s.front;
+        if (c2 < '0' || c2 > '7') return c1 - '0';
+        s.popFront();
+        dchar c3 = s.front;
+        if (c3 < '0' || c3 > '7') return 8 * (c1 - '0') + (c2 - '0');
+        s.popFront();
+        if (c1 > '3')
+            throw parseError("Octal sequence is larger than \\377");
+        return 64 * (c1 - '0') + 8 * (c2 - '0') + (c3 - '0');
+    }
+
     dchar result;
 
-    switch (s.front)
+    switch (first)
     {
         case '"':   result = '\"';  break;
         case '\'':  result = '\'';  break;
-        case '0':   result = '\0';  break;
         case '?':   result = '\?';  break;
         case '\\':  result = '\\';  break;
         case 'a':   result = '\a';  break;
@@ -3897,7 +3922,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source))
 {
     string[] s1 = [
         `\"`, `\'`, `\?`, `\\`, `\a`, `\b`, `\f`, `\n`, `\r`, `\t`, `\v`, //Normal escapes
-        //`\141`, //@@@9621@@@ Octal escapes.
+        `\141`,
         `\x61`,
         `\u65E5`, `\U00012456`
         //`\&amp;`, `\&quot;`, //@@@9621@@@ Named Character Entities.
@@ -3905,7 +3930,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source))
 
     const(dchar)[] s2 = [
         '\"', '\'', '\?', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v', //Normal escapes
-        //'\141', //@@@9621@@@ Octal escapes.
+        '\141',
         '\x61',
         '\u65E5', '\U00012456'
         //'\&amp;', '\&quot;', //@@@9621@@@ Named Character Entities.
@@ -3931,7 +3956,8 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source))
         `\x0`,     //Premature hex end
         `\XB9`,    //Not legal hex syntax
         `\u!!`,    //Not a unicode hex
-        `\777`,    //Octal is larger than a byte //Note: Throws, but simply because octals are unsupported
+        `\777`,    //Octal is larger than a byte
+        `\80`,     //Wrong digit at beginning of octal
         `\u123`,   //Premature hex end
         `\U123123` //Premature hex end
     ];
