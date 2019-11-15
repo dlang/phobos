@@ -116,7 +116,6 @@ final class ArchiveMember
     private CompressionMethod _compressionMethod;
     private ushort _madeVersion = 20;
     private ushort _extractVersion = 20;
-    private ushort _diskNumber;
     private uint _externalAttributes;
     private DosFileTime _time;
     // by default, no explicit order goes after explicit order
@@ -136,7 +135,8 @@ final class ArchiveMember
     /// Read Only: size of data of member in expanded form.
     @property @safe pure nothrow @nogc uint expandedSize() const { return _expandedSize; }
     /// Read Only: should be 0.
-    @property @safe pure nothrow @nogc ushort diskNumber() const { return _diskNumber; }
+    deprecated("Multidisk not supported; will be removed in 2.099.0")
+    @property @safe pure nothrow @nogc ushort diskNumber() const { return 0; }
 
     /// Read Only: data of member in compressed form.
     @property @safe pure nothrow @nogc ubyte[] compressedData() { return _compressedData; }
@@ -317,8 +317,6 @@ public:
     private ubyte[] _data;
     private uint endrecOffset;
 
-    private uint _diskNumber;
-    private uint _diskStartDir;
     private uint _numEntries;
     private uint _totalEntries;
     private bool _isZip64;
@@ -337,10 +335,12 @@ public:
     @property @safe @nogc pure nothrow ubyte[] data() { return _data; }
 
     /// Read Only: 0 since multi-disk zip archives are not supported.
-    @property @safe @nogc pure nothrow uint diskNumber() const { return _diskNumber; }
+    deprecated("Multidisk not supported; will be removed in 2.099.0")
+    @property @safe @nogc pure nothrow uint diskNumber() const { return 0; }
 
     /// Read Only: 0 since multi-disk zip archives are not supported
-    @property @safe @nogc pure nothrow uint diskStartDir() const { return _diskStartDir; }
+    deprecated("Multidisk not supported; will be removed in 2.099.0")
+    @property @safe @nogc pure nothrow uint diskStartDir() const { return 0; }
 
     /// Read Only: number of ArchiveMembers in the directory.
     @property @safe @nogc pure nothrow uint numEntries() const { return _numEntries; }
@@ -430,7 +430,7 @@ public:
     /**
      * Construct an archive out of the current members of the archive.
      *
-     * Fills in the properties data[], diskNumber, diskStartDir, numEntries,
+     * Fills in the properties data[], numEntries,
      * totalEntries, and directory[].
      * For each ArchiveMember, fills in properties crc32, compressedSize,
      * compressedData[].
@@ -521,7 +521,7 @@ public:
             putUshort(i + 28, cast(ushort) de.name.length);
             putUshort(i + 30, cast(ushort) de.extra.length);
             putUshort(i + 32, cast(ushort) de.comment.length);
-            putUshort(i + 34, de.diskNumber);
+            putUshort(i + 34, cast(ushort) 0);
             putUshort(i + 36, de.internalAttributes);
             putUint  (i + 38, de._externalAttributes);
             putUint  (i + 42, de.offset);
@@ -545,8 +545,8 @@ public:
             putUlong (i + 4,  zip64EndOfCentralDirLength - 12);
             putUshort(i + 12, zip64ExtractVersion);
             putUshort(i + 14, zip64ExtractVersion);
-            putUint  (i + 16, diskNumber);
-            putUint  (i + 20, diskStartDir);
+            putUint  (i + 16, cast(ushort) 0);
+            putUint  (i + 20, cast(ushort) 0);
             putUlong (i + 24, numEntries);
             putUlong (i + 32, totalEntries);
             putUlong (i + 40, directorySize);
@@ -555,7 +555,7 @@ public:
 
             // Write zip64 end of central directory record locator
             _data[i .. i + 4] = zip64EndOfCentralDirLocatorSignature;
-            putUint  (i + 4,  diskNumber);
+            putUint  (i + 4,  cast(ushort) 0);
             putUlong (i + 8,  eocd64Offset);
             putUint  (i + 16, 1);
             i += zip64EndOfCentralDirLocatorLength;
@@ -564,8 +564,8 @@ public:
         // Write end record
         endrecOffset = i;
         _data[i .. i + 4] = endOfCentralDirSignature;
-        putUshort(i + 4,  cast(ushort) diskNumber);
-        putUshort(i + 6,  cast(ushort) diskStartDir);
+        putUshort(i + 4,  cast(ushort) 0);
+        putUshort(i + 6,  cast(ushort) 0);
         putUshort(i + 8,  (numEntries > ushort.max ? ushort.max : cast(ushort) numEntries));
         putUshort(i + 10, (totalEntries > ushort.max ? ushort.max : cast(ushort) totalEntries));
         putUint  (i + 12, directorySize);
@@ -585,11 +585,11 @@ public:
     /**
      * Constructor to use when reading an existing archive.
      *
-     * Fills in the properties data[], diskNumber, diskStartDir, numEntries,
+     * Fills in the properties data[], numEntries,
      * totalEntries, comment[], and directory[].
      * For each ArchiveMember, fills in
      * properties madeVersion, extractVersion, flags, compressionMethod, time,
-     * crc32, compressedSize, expandedSize, compressedData[], diskNumber,
+     * crc32, compressedSize, expandedSize, compressedData[],
      * internalAttributes, externalAttributes, name[], extra[], comment[].
      * Use expand() to get the expanded data for each ArchiveMember.
      *
@@ -646,9 +646,6 @@ public:
             // zip64 end of central dir record
             removeSegment(i, cast(uint) (i + 12 + eocd64Size));
 
-            _diskNumber = getUint(i + 16);
-            _diskStartDir = getUint(i + 20);
-
             ulong numEntriesUlong = getUlong(i + 24);
             ulong totalEntriesUlong = getUlong(i + 32);
             ulong directorySizeUlong = getUlong(i + 40);
@@ -672,9 +669,6 @@ public:
         else
         {
             // Read end record data
-            _diskNumber = getUshort(i + 4);
-            _diskStartDir = getUshort(i + 6);
-
             _numEntries = getUshort(i + 8);
             _totalEntries = getUshort(i + 10);
 
@@ -718,7 +712,6 @@ public:
             namelen = getUshort(i + 28);
             extralen = getUshort(i + 30);
             commentlen = getUshort(i + 32);
-            de._diskNumber = getUshort(i + 34);
             de.internalAttributes = getUshort(i + 36);
             de._externalAttributes = getUint(i + 38);
             de.offset = getUint(i + 42);
