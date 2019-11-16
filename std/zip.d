@@ -441,8 +441,6 @@ public:
     private ubyte[] _data;
     private uint endrecOffset;
 
-    private uint _numEntries;
-    private uint _totalEntries;
     private bool _isZip64;
     static const ushort zip64ExtractVersion = 45;
 
@@ -483,8 +481,9 @@ public:
      *
      * Returns: The number of files in this archive.
      */
-    @property @safe @nogc pure nothrow uint numEntries() const { return _numEntries; }
-    @property @safe @nogc pure nothrow uint totalEntries() const { return _totalEntries; }    /// ditto
+    deprecated("Use totalEntries instead; will be removed in 2.099.0")
+    @property @safe @nogc pure nothrow uint numEntries() const { return cast(uint) _directory.length; }
+    @property @safe @nogc pure nothrow uint totalEntries() const { return cast(uint) _directory.length; }    /// ditto
 
     /**
      * True when the archive is in Zip64 format. Set this to true to force building a Zip64 archive.
@@ -607,8 +606,7 @@ public:
     /**
      * Construct the entire contents of the current members of the archive.
      *
-     * Fills in the properties data[], numEntries,
-     * totalEntries, and directory[].
+     * Fills in the properties data[], totalEntries, and directory[].
      * For each ArchiveMember, fills in properties crc32, compressedSize,
      * compressedData[].
      *
@@ -685,7 +683,6 @@ public:
 
         // Write directory
         directoryOffset = i;
-        _numEntries = 0;
         foreach (ArchiveMember de; directory)
         {
             _data[i .. i + 4] = centralFileHeaderSignature;
@@ -712,9 +709,7 @@ public:
             i += de.extra.length;
             _data[i .. i + de.comment.length] = (de.comment.representation)[];
             i += de.comment.length;
-            _numEntries++;
         }
-        _totalEntries = numEntries;
 
         if (isZip64)
         {
@@ -726,8 +721,8 @@ public:
             putUshort(i + 14, zip64ExtractVersion);
             putUint  (i + 16, cast(ushort) 0);
             putUint  (i + 20, cast(ushort) 0);
-            putUlong (i + 24, numEntries);
-            putUlong (i + 32, totalEntries);
+            putUlong (i + 24, directory.length);
+            putUlong (i + 32, directory.length);
             putUlong (i + 40, directorySize);
             putUlong (i + 48, directoryOffset);
             i += zip64EndOfCentralDirLength;
@@ -745,7 +740,7 @@ public:
         _data[i .. i + 4] = endOfCentralDirSignature;
         putUshort(i + 4,  cast(ushort) 0);
         putUshort(i + 6,  cast(ushort) 0);
-        putUshort(i + 8,  (numEntries > ushort.max ? ushort.max : cast(ushort) numEntries));
+        putUshort(i + 8,  (totalEntries > ushort.max ? ushort.max : cast(ushort) totalEntries));
         putUshort(i + 10, (totalEntries > ushort.max ? ushort.max : cast(ushort) totalEntries));
         putUint  (i + 12, directorySize);
         putUint  (i + 16, directoryOffset);
@@ -783,8 +778,7 @@ public:
     /**
      * Constructor to use when reading an existing archive.
      *
-     * Fills in the properties data[], numEntries,
-     * totalEntries, comment[], and directory[].
+     * Fills in the properties data[], totalEntries, comment[], and directory[].
      * For each ArchiveMember, fills in
      * properties madeVersion, extractVersion, flags, compressionMethod, time,
      * crc32, compressedSize, expandedSize, compressedData[],
@@ -825,6 +819,7 @@ public:
 
         uint directorySize;
         uint directoryOffset;
+        uint directoryCount;
 
         if (isZip64)
         {
@@ -859,23 +854,20 @@ public:
                                  && directorySizeUlong + directoryOffsetUlong <= i,
                                  "corrupted directory");
 
-            _numEntries = to!uint(numEntriesUlong);
-            _totalEntries = to!uint(totalEntriesUlong);
+            directoryCount = to!uint(totalEntriesUlong);
             directorySize = to!uint(directorySizeUlong);
             directoryOffset = to!uint(directoryOffsetUlong);
         }
         else
         {
             // Read end record data
-            _numEntries = getUshort(i + 8);
-            _totalEntries = getUshort(i + 10);
-
+            directoryCount = getUshort(i + 10);
             directorySize = getUint(i + 12);
             directoryOffset = getUint(i + 16);
         }
 
         i = directoryOffset;
-        for (int n = 0; n < numEntries; n++)
+        for (int n = 0; n < directoryCount; n++)
         {
             /* The format of an entry is:
              *  'PK' 1, 2
