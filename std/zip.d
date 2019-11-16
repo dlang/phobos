@@ -602,6 +602,24 @@ public:
         _directory.remove(de.name);
     }
 
+    // issue 20398
+    @safe unittest
+    {
+        import std.string : representation;
+
+        ArchiveMember file1 = new ArchiveMember();
+        file1.name = "test1.txt";
+        file1.expandedData("Test data.\n".dup.representation);
+
+        ZipArchive zip = new ZipArchive();
+
+        zip.addMember(file1);
+        assert(zip.totalEntries == 1);
+
+        zip.deleteMember(file1);
+        assert(zip.totalEntries == 0);
+    }
+
     /**
      * Construct the entire contents of the current members of the archive.
      *
