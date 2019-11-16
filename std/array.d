@@ -3596,15 +3596,6 @@ if (isDynamicArray!A)
             put(w, ')');
         }
     }
-
-    // @@@DEPRECATED_2.089@@@
-    deprecated("To be removed after 2.089. Please use the output range overload.")
-    void toString(Writer)(scope Writer w)
-    if (isCallable!Writer)
-    {
-        import std.format : formattedWrite;
-        w.formattedWrite(typeof(this).stringof ~ "(%s)", data);
-    }
 }
 
 ///
