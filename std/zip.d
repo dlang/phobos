@@ -439,7 +439,6 @@ public:
     string comment; /// The archive comment. Must be less than 65536 bytes in length.
 
     private ubyte[] _data;
-    private uint endrecOffset;
 
     private bool _isZip64;
     static const ushort zip64ExtractVersion = 45;
@@ -736,7 +735,6 @@ public:
         }
 
         // Write end record
-        endrecOffset = i;
         _data[i .. i + 4] = endOfCentralDirSignature;
         putUshort(i + 4,  cast(ushort) 0);
         putUshort(i + 6,  cast(ushort) 0);
@@ -798,14 +796,13 @@ public:
 
         _segs = [Segment(0, cast(uint) data.length)];
 
-        findEndOfCentralDirRecord();
-        uint i = endrecOffset;
+        uint i = findEndOfCentralDirRecord();
 
         int endCommentLength = getUshort(i + 20);
         comment = cast(string)(_data[i + endOfCentralDirLength .. i + endOfCentralDirLength + endCommentLength]);
 
         // end of central dir record
-        removeSegment(endrecOffset, endrecOffset + endOfCentralDirLength + endCommentLength);
+        removeSegment(i, i + endOfCentralDirLength + endCommentLength);
 
         uint k = i - zip64EndOfCentralDirLocatorLength;
         if (k < i && _data[k .. k + 4] == zip64EndOfCentralDirLocatorSignature)
@@ -1122,12 +1119,12 @@ public:
         assertThrown!ZipException(new ZipArchive(cast(void[]) file));
     }
 
-    private void findEndOfCentralDirRecord()
+    private uint findEndOfCentralDirRecord()
     {
         // end of central dir record can be followed by a comment of up to 2^^16-1 bytes
         // therefore we have to scan 2^^16 positions
 
-        endrecOffset = to!uint(data.length);
+        uint endrecOffset = to!uint(data.length);
         foreach (i; 0 .. 2 ^^ 16)
         {
             if (endOfCentralDirLength + i > data.length) break;
@@ -1171,6 +1168,8 @@ public:
 
         enforce!ZipException(endrecOffset != to!uint(data.length),
                              "found no valid 'end of central dir record'");
+
+        return endrecOffset;
     }
 
     /**
@@ -1216,11 +1215,6 @@ public:
         }
 
         enforce!ZipException((de.flags & 1) == 0, "encryption not supported");
-
-        uint i = de.offset + localFileHeaderLength + namelen + extralen;
-
-        de._compressedData = _data[i .. i + de.compressedSize];
-        debug(print) arrayPrint(de.compressedData);
 
         switch (de.compressionMethod)
         {
