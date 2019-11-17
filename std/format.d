@@ -2873,6 +2873,15 @@ useSnprintf:
     assert(t2 == "[ -12.3] [-12.3 ]");
 }
 
+// issue 20396
+@safe unittest
+{
+    import std.math : nextUp;
+
+    assert(format!"%a"(nextUp(0.0f)) == "0x0.000002p-126");
+    assert(format!"%a"(nextUp(0.0)) == "0x0.0000000000001p-1022");
+}
+
 /*
     Formatting a `creal` is deprecated but still kept around for a while.
  */
