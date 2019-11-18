@@ -410,7 +410,6 @@ private:
     TickDuration _timeMeasured;
 }
 
-///
 deprecated @safe unittest
 {
     void writeln(S...)(S args){}
@@ -490,7 +489,6 @@ TickDuration[fun.length] benchmark(fun...)(uint n)
     return result;
 }
 
-///
 deprecated @safe unittest
 {
     import std.conv : to;
@@ -579,7 +577,7 @@ private:
 
 
 // @@@DEPRECATED_2018-10@@@
-/// ditto
+// ditto
 deprecated("To be removed after 2.094. Use std.datetime.stopwatch.benchmark instead.")
 ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
                                             alias targetFunc,
@@ -589,7 +587,7 @@ ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
     return ComparingBenchmarkResult(t[0], t[1]);
 }
 
-///
+//
 deprecated @safe unittest
 {
     void f1x() {}
@@ -655,7 +653,7 @@ if (isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
     return Result(Yes.autoStart);
 }
 
-/// Ditto
+// Ditto
 deprecated("To be removed after 2.094. Use std.datetime.stopwatch.StopWatch instead.")
 auto measureTime(alias func)()
 if (!isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
@@ -675,7 +673,7 @@ if (!isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
     return Result(Yes.autoStart);
 }
 
-///
+//
 deprecated @safe unittest
 {
     {
