@@ -561,7 +561,7 @@ dscanner:
 
 style_lint: dscanner $(LIB)
 	@echo "Check for trailing whitespace"
-	grep -nr '[[:blank:]]$$' etc std ; test $$? -eq 1
+	grep -nr '[[:blank:]]$$' $$(find etc std -name '*.d'); test $$? -eq 1
 
 	@echo "Enforce whitespace before opening parenthesis"
 	grep -nrE "\<(for|foreach|foreach_reverse|if|while|switch|catch|version)\(" $$(find etc std -name '*.d') ; test $$? -eq 1
