@@ -69,6 +69,8 @@ void main()
  */
 module std.zip;
 
+import std.exception : enforce;
+
 //debug=print;
 
 /** Thrown on error.
@@ -247,8 +249,7 @@ final class ArchiveMember
     {
         if (cm == _compressionMethod) return;
 
-        if (_compressedSize > 0)
-            throw new ZipException("Can't change compression method for a compressed element");
+        enforce!ZipException(_compressedSize == 0, "Can't change compression method for a compressed element");
 
         _compressionMethod = cm;
     }
@@ -278,6 +279,21 @@ final class ArchiveMember
         printf("\tindex = x%08x\n", index);
     }
     }
+}
+
+@safe pure unittest
+{
+    import std.exception : assertThrown, assertNotThrown;
+
+    auto am = new ArchiveMember();
+
+    assertNotThrown(am.compressionMethod(CompressionMethod.deflate));
+    assertNotThrown(am.compressionMethod(CompressionMethod.none));
+
+    am._compressedData = [0x65]; // not strictly necessary, but for consistency
+    am._compressedSize = 1;
+
+    assertThrown!ZipException(am.compressionMethod(CompressionMethod.deflate));
 }
 
 /**
@@ -420,6 +436,18 @@ public:
         assert(de._compressedData.length == de._compressedSize, "Archive member compressed failed.");
     }
 
+    @safe unittest
+    {
+        import std.exception : assertThrown;
+
+        ArchiveMember am = new ArchiveMember();
+        am.compressionMethod = cast(CompressionMethod) 3;
+
+        ZipArchive zip = new ZipArchive();
+
+        assertThrown!ZipException(zip.addMember(am));
+    }
+
     /** Delete de from the archive.
      */
     @safe void deleteMember(ArchiveMember de)
@@ -446,8 +474,7 @@ public:
         uint i;
         uint directoryOffset;
 
-        if (comment.length > 0xFFFF)
-            throw new ZipException("archive comment longer than 65535");
+        enforce!ZipException(comment.length <= 0xFFFF, "archive comment longer than 65535");
 
         // Compress each member; compute size
         uint archiveSize = 0;
@@ -455,11 +482,12 @@ public:
         auto directory = _directory.byValue.array.sort!((x, y) => x.index < y.index).release;
         foreach (ArchiveMember de; directory)
         {
-            if (to!ulong(archiveSize) + localFileHeaderLength + de.name.length + de.extra.length + de.compressedSize
-                    + directorySize + centralFileHeaderLength + de.name.length + de.extra.length + de.comment.length
-                    + endOfCentralDirLength + comment.length + zip64EndOfCentralDirLocatorLength
-                    + zip64EndOfCentralDirLength > uint.max)
-                throw new ZipException("zip files bigger than 4 GB are unsupported");
+            enforce!ZipException(to!ulong(archiveSize) + localFileHeaderLength + de.name.length
+                                 + de.extra.length + de.compressedSize + directorySize
+                                 + centralFileHeaderLength + de.name.length + de.extra.length
+                                 + de.comment.length + endOfCentralDirLength + comment.length
+                                 + zip64EndOfCentralDirLocatorLength + zip64EndOfCentralDirLength <= uint.max,
+                                 "zip files bigger than 4 GB are unsupported");
 
             archiveSize += localFileHeaderLength + de.name.length +
                                 de.extra.length +
@@ -580,6 +608,25 @@ public:
         return cast(void[]) data;
     }
 
+    @safe pure unittest
+    {
+        import std.exception : assertNotThrown;
+
+        ZipArchive zip = new ZipArchive();
+        zip.comment = "A";
+        assertNotThrown(zip.build());
+    }
+
+    @safe pure unittest
+    {
+        import std.range : repeat, array;
+        import std.exception : assertThrown;
+
+        ZipArchive zip = new ZipArchive();
+        zip.comment = 'A'.repeat(70_000).array;
+        assertThrown!ZipException(zip.build());
+    }
+
     /* ============ Reading an existing archive =================== */
 
     /**
@@ -601,8 +648,7 @@ public:
     {
         this._data = cast(ubyte[]) buffer;
 
-        if (data.length > uint.max - 2)
-            throw new ZipException("zip files bigger than 4 GB are unsupported");
+        enforce!ZipException(data.length <= uint.max - 2, "zip files bigger than 4 GB are unsupported");
 
         _segs = [Segment(0, cast(uint) data.length)];
 
@@ -632,16 +678,16 @@ public:
         {
             // Read Zip64 record data
             ulong eocdOffset = getUlong(i + 8);
-            if (eocdOffset + zip64EndOfCentralDirLength > _data.length)
-                throw new ZipException("corrupted directory");
+            enforce!ZipException(eocdOffset + zip64EndOfCentralDirLength <= _data.length,
+                                 "corrupted directory");
 
             i = to!uint(eocdOffset);
-            if (_data[i .. i + 4] != zip64EndOfCentralDirSignature)
-                throw new ZipException("invalid Zip EOCD64 signature");
+            enforce!ZipException(_data[i .. i + 4] == zip64EndOfCentralDirSignature,
+                                 "invalid Zip EOCD64 signature");
 
             ulong eocd64Size = getUlong(i + 4);
-            if (eocd64Size + i - 12 > data.length)
-                throw new ZipException("invalid Zip EOCD64 size");
+            enforce!ZipException(eocd64Size + i - 12 <= data.length,
+                                 "invalid Zip EOCD64 size");
 
             // zip64 end of central dir record
             removeSegment(i, cast(uint) (i + 12 + eocd64Size));
@@ -651,15 +697,15 @@ public:
             ulong directorySizeUlong = getUlong(i + 40);
             ulong directoryOffsetUlong = getUlong(i + 48);
 
-            if (numEntriesUlong > uint.max)
-                throw new ZipException("supposedly more than 4294967296 files in archive");
+            enforce!ZipException(numEntriesUlong <= uint.max,
+                                 "supposedly more than 4294967296 files in archive");
 
-            if (numEntriesUlong != totalEntriesUlong)
-                throw new ZipException("multiple disk zips not supported");
+            enforce!ZipException(numEntriesUlong == totalEntriesUlong,
+                                 "multiple disk zips not supported");
 
-            if (directorySizeUlong > i || directoryOffsetUlong > i
-                    || directorySizeUlong + directoryOffsetUlong > i)
-                throw new ZipException("corrupted directory");
+            enforce!ZipException(directorySizeUlong <= i && directoryOffsetUlong <= i
+                                 && directorySizeUlong + directoryOffsetUlong <= i,
+                                 "corrupted directory");
 
             _numEntries = to!uint(numEntriesUlong);
             _totalEntries = to!uint(totalEntriesUlong);
@@ -672,14 +718,8 @@ public:
             _numEntries = getUshort(i + 8);
             _totalEntries = getUshort(i + 10);
 
-            if (numEntries != totalEntries)
-                throw new ZipException("multiple disk zips not supported");
-
             directorySize = getUint(i + 12);
             directoryOffset = getUint(i + 16);
-
-            if (directoryOffset + directorySize > i)
-                throw new ZipException("corrupted directory");
         }
 
         i = directoryOffset;
@@ -697,8 +737,8 @@ public:
             uint extralen;
             uint commentlen;
 
-            if (_data[i .. i + 4] != centralFileHeaderSignature)
-                throw new ZipException("invalid directory entry 1");
+            enforce!ZipException(_data[i .. i + 4] == centralFileHeaderSignature,
+                                 "wrong central file header signature found");
             ArchiveMember de = new ArchiveMember();
             de._index = n;
             de._madeVersion = getUshort(i + 4);
@@ -716,13 +756,13 @@ public:
             de._externalAttributes = getUint(i + 38);
             de.offset = getUint(i + 42);
 
-            // central directory header
+            // central file header
             removeSegment(i, i + centralFileHeaderLength + namelen + extralen + commentlen);
 
             i += centralFileHeaderLength;
 
-            if (i + namelen + extralen + commentlen > directoryOffset + directorySize)
-                throw new ZipException("invalid directory entry 2");
+            enforce!ZipException(i + namelen + extralen + commentlen <= directoryOffset + directorySize,
+                                 "invalid field lengths in file header found");
 
             de.name = cast(string)(_data[i .. i + namelen]);
             i += namelen;
@@ -740,15 +780,202 @@ public:
 
             immutable uint dataOffset = de.offset + localFileHeaderLength
                                         + localFileHeaderNamelen + localFileHeaderExtralen;
-            if (dataOffset + de.compressedSize > endrecOffset)
-                throw new ZipException("Invalid directory entry offset or size.");
             de._compressedData = _data[dataOffset .. dataOffset + de.compressedSize];
 
             _directory[de.name] = de;
-
         }
-        if (i != directoryOffset + directorySize)
-            throw new ZipException("invalid directory entry 3");
+
+        enforce!ZipException(i == directoryOffset + directorySize, "invalid directory entry 3");
+    }
+
+    @system unittest
+    {
+        import std.exception : assertThrown;
+
+        // contains wrong directorySize (extra byte 0xff)
+        auto file =
+            "\x50\x4b\x03\x04\x0a\x00\x00\x00\x00\x00\x8f\x72\x4a\x4f\x86\xa6"~
+            "\x10\x36\x05\x00\x00\x00\x05\x00\x00\x00\x04\x00\x1c\x00\x66\x69"~
+            "\x6c\x65\x55\x54\x09\x00\x03\x0d\x22\x9f\x5d\x12\x22\x9f\x5d\x75"~
+            "\x78\x0b\x00\x01\x04\xf0\x03\x00\x00\x04\xf0\x03\x00\x00\x68\x65"~
+            "\x6c\x6c\x6f\x50\x4b\x01\x02\x1e\x03\x0a\x00\x00\x00\x00\x00\x8f"~
+            "\x72\x4a\x4f\x86\xa6\x10\x36\x05\x00\x00\x00\x05\x00\x00\x00\x04"~
+            "\x00\x18\x00\x00\x00\x00\x00\x01\x00\x00\x00\xb0\x81\x00\x00\x00"~
+            "\x00\x66\x69\x6c\x65\x55\x54\x05\x00\x03\x0d\x22\x9f\x5d\x75\x78"~
+            "\x0b\x00\x01\x04\xf0\x03\x00\x00\x04\xf0\x03\x00\x00\xff\x50\x4b\x05"~
+            "\x06\x00\x00\x00\x00\x01\x00\x01\x00\x4b\x00\x00\x00\x43\x00\x00"~
+            "\x00\x00\x00";
+
+        assertThrown!ZipException(new ZipArchive(cast(void[]) file));
+    }
+
+    @system unittest
+    {
+        import std.exception : assertThrown;
+
+        // wrong eocdOffset
+        auto file =
+            "\x50\x4b\x06\x06\x2c\x00\x00\x00\x00\x00\x00\x00\x1e\x03\x2d\x00"~
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"~
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"~
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x50\x4b\x06\x07\x00\x00\x00\x00"~
+            "\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x50\x4B\x05\x06"~
+            "\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"~
+            "\x00\x00";
+
+        assertThrown!ZipException(new ZipArchive(cast(void[]) file));
+    }
+
+    @system unittest
+    {
+        import std.exception : assertThrown;
+
+        // wrong signature of zip64 end of central directory
+        auto file =
+            "\x50\x4b\x06\x07\x2c\x00\x00\x00\x00\x00\x00\x00\x1e\x03\x2d\x00"~
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"~
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"~
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x50\x4b\x06\x07\x00\x00\x00\x00"~
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x50\x4B\x05\x06"~
+            "\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"~
+            "\x00\x00";
+
+        assertThrown!ZipException(new ZipArchive(cast(void[]) file));
+    }
+
+    @system unittest
+    {
+        import std.exception : assertThrown;
+
+        // wrong size of zip64 end of central directory
+        auto file =
+            "\x50\x4b\x06\x06\xff\x00\x00\x00\x00\x00\x00\x00\x1e\x03\x2d\x00"~
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"~
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"~
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x50\x4b\x06\x07\x00\x00\x00\x00"~
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x50\x4B\x05\x06"~
+            "\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"~
+            "\x00\x00";
+
+        assertThrown!ZipException(new ZipArchive(cast(void[]) file));
+    }
+
+    @system unittest
+    {
+        import std.exception : assertThrown;
+
+        // too many entries in zip64 end of central directory
+        auto file =
+            "\x50\x4b\x06\x06\x2c\x00\x00\x00\x00\x00\x00\x00\x1e\x03\x2d\x00"~
+            "\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\x00\x00\x00"~
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"~
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x50\x4b\x06\x07\x00\x00\x00\x00"~
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x50\x4B\x05\x06"~
+            "\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"~
+            "\x00\x00";
+
+        assertThrown!ZipException(new ZipArchive(cast(void[]) file));
+    }
+
+    @system unittest
+    {
+        import std.exception : assertThrown;
+
+        // zip64: numEntries and totalEntries differ
+        auto file =
+            "\x50\x4b\x06\x06\x2c\x00\x00\x00\x00\x00\x00\x00\x1e\x03\x2d\x00"~
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00"~
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"~
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x50\x4b\x06\x07\x00\x00\x00\x00"~
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x50\x4B\x05\x06"~
+            "\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"~
+            "\x00\x00";
+
+        assertThrown!ZipException(new ZipArchive(cast(void[]) file));
+    }
+
+    @system unittest
+    {
+        import std.exception : assertThrown;
+
+        // zip64: directorySize too large
+        auto file =
+            "\x50\x4b\x06\x06\x2c\x00\x00\x00\x00\x00\x00\x00\x1e\x03\x2d\x00"~
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"~
+            "\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\x00\x00\x00\x00\x00\x00"~
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x50\x4b\x06\x07\x00\x00\x00\x00"~
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x50\x4B\x05\x06"~
+            "\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"~
+            "\x00\x00";
+
+        assertThrown!ZipException(new ZipArchive(cast(void[]) file));
+
+        // zip64: directoryOffset too large
+        file =
+            "\x50\x4b\x06\x06\x2c\x00\x00\x00\x00\x00\x00\x00\x1e\x03\x2d\x00"~
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"~
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"~
+            "\xff\xff\x00\x00\x00\x00\x00\x00\x50\x4b\x06\x07\x00\x00\x00\x00"~
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x50\x4B\x05\x06"~
+            "\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"~
+            "\x00\x00";
+
+        assertThrown!ZipException(new ZipArchive(cast(void[]) file));
+
+        // zip64: directorySize + directoryOffset too large
+        // we need to add a useless byte at the beginning to avoid that one of the other two checks allready fires
+        file =
+            "\x00\x50\x4b\x06\x06\x2c\x00\x00\x00\x00\x00\x00\x00\x1e\x03\x2d\x00"~
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"~
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00"~
+            "\x01\x00\x00\x00\x00\x00\x00\x00\x50\x4b\x06\x07\x00\x00\x00\x00"~
+            "\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x50\x4B\x05\x06"~
+            "\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"~
+            "\x00\x00";
+
+        assertThrown!ZipException(new ZipArchive(cast(void[]) file));
+    }
+
+    @system unittest
+    {
+        import std.exception : assertThrown;
+
+        // wrong central file header signature
+        auto file =
+            "\x50\x4b\x03\x04\x0a\x00\x00\x00\x00\x00\x8f\x72\x4a\x4f\x86\xa6"~
+            "\x10\x36\x05\x00\x00\x00\x05\x00\x00\x00\x04\x00\x1c\x00\x66\x69"~
+            "\x6c\x65\x55\x54\x09\x00\x03\x0d\x22\x9f\x5d\x12\x22\x9f\x5d\x75"~
+            "\x78\x0b\x00\x01\x04\xf0\x03\x00\x00\x04\xf0\x03\x00\x00\x68\x65"~
+            "\x6c\x6c\x6f\x50\x4b\x01\x03\x1e\x03\x0a\x00\x00\x00\x00\x00\x8f"~
+            "\x72\x4a\x4f\x86\xa6\x10\x36\x05\x00\x00\x00\x05\x00\x00\x00\x04"~
+            "\x00\x18\x00\x00\x00\x00\x00\x01\x00\x00\x00\xb0\x81\x00\x00\x00"~
+            "\x00\x66\x69\x6c\x65\x55\x54\x05\x00\x03\x0d\x22\x9f\x5d\x75\x78"~
+            "\x0b\x00\x01\x04\xf0\x03\x00\x00\x04\xf0\x03\x00\x00\x50\x4b\x05"~
+            "\x06\x00\x00\x00\x00\x01\x00\x01\x00\x4a\x00\x00\x00\x43\x00\x00"~
+            "\x00\x00\x00";
+
+        assertThrown!ZipException(new ZipArchive(cast(void[]) file));
+    }
+
+    @system unittest
+    {
+        import std.exception : assertThrown;
+
+        // invalid field lengths in file header
+        auto file =
+            "\x50\x4b\x03\x04\x0a\x00\x00\x00\x00\x00\x8f\x72\x4a\x4f\x86\xa6"~
+            "\x10\x36\x05\x00\x00\x00\x05\x00\x00\x00\x04\x00\x1c\x00\x66\x69"~
+            "\x6c\x65\x55\x54\x09\x00\x03\x0d\x22\x9f\x5d\x12\x22\x9f\x5d\x75"~
+            "\x78\x0b\x00\x01\x04\xf0\x03\x00\x00\x04\xf0\x03\x00\x00\x68\x65"~
+            "\x6c\x6c\x6f\x50\x4b\x01\x02\x1e\x03\x0a\x00\x00\x00\x00\x00\x8f"~
+            "\x72\x4a\x4f\x86\xa6\x10\x36\x05\x00\x00\x00\x05\x00\x00\x00\x04"~
+            "\x00\x18\x00\x01\x00\x00\x00\x01\x00\x00\x00\xb0\x81\x00\x00\x00"~
+            "\x00\x66\x69\x6c\x65\x55\x54\x05\x00\x03\x0d\x22\x9f\x5d\x75\x78"~
+            "\x0b\x00\x01\x04\xf0\x03\x00\x00\x04\xf0\x03\x00\x00\xff\x50\x4b\x05"~
+            "\x06\x00\x00\x00\x00\x01\x00\x01\x00\x4a\x00\x00\x00\x43\x00\x00"~
+            "\x00\x00\x00";
+
+        assertThrown!ZipException(new ZipArchive(cast(void[]) file));
     }
 
     private void findEndOfCentralDirRecord()
@@ -792,14 +1019,14 @@ public:
             auto zipfileCommentLength = getUshort(start + 20);
             if (start + zipfileCommentLength + endOfCentralDirLength != data.length) continue;
 
-            if (endrecOffset != to!uint(data.length))
-                throw new ZipException("found more than one valid 'end of central dir record'");
+            enforce!ZipException(endrecOffset == to!uint(data.length),
+                                 "found more than one valid 'end of central dir record'");
 
             endrecOffset = start;
         }
 
-        if (endrecOffset == to!uint(data.length))
-            throw new ZipException("found no valid 'end of central dir record'");
+        enforce!ZipException(endrecOffset != to!uint(data.length),
+                             "found no valid 'end of central dir record'");
     }
 
     /*****
@@ -816,8 +1043,8 @@ public:
         uint namelen;
         uint extralen;
 
-        if (_data[de.offset .. de.offset + 4] != localFileHeaderSignature)
-            throw new ZipException("invalid directory entry 4");
+        enforce!ZipException(_data[de.offset .. de.offset + 4] == localFileHeaderSignature,
+                             "wrong local file header signature found");
 
         // These values should match what is in the main zip archive directory
         de._extractVersion = getUshort(de.offset + 4);
@@ -838,13 +1065,9 @@ public:
             printf("\t\textralen = %d\n", extralen);
         }
 
-        if (de.flags & 1)
-            throw new ZipException("encryption not supported");
+        enforce!ZipException((de.flags & 1) == 0, "encryption not supported");
 
-        uint i;
-        i = de.offset + localFileHeaderLength + namelen + extralen;
-        if (i + de.compressedSize > endrecOffset)
-            throw new ZipException("invalid directory entry 5");
+        uint i = de.offset + localFileHeaderLength + namelen + extralen;
 
         de._compressedData = _data[i .. i + de.compressedSize];
         debug(print) arrayPrint(de.compressedData);
@@ -866,6 +1089,75 @@ public:
             default:
                 throw new ZipException("unsupported compression method");
         }
+    }
+
+    @system unittest
+    {
+        import std.exception : assertThrown;
+
+        // check for correct local file header signature
+        auto file =
+            "\x50\x4b\x04\x04\x0a\x00\x00\x00\x00\x00\x8f\x72\x4a\x4f\x86\xa6"~
+            "\x10\x36\x05\x00\x00\x00\x05\x00\x00\x00\x04\x00\x1c\x00\x66\x69"~
+            "\x6c\x65\x55\x54\x09\x00\x03\x0d\x22\x9f\x5d\x12\x22\x9f\x5d\x75"~
+            "\x78\x0b\x00\x01\x04\xf0\x03\x00\x00\x04\xf0\x03\x00\x00\x68\x65"~
+            "\x6c\x6c\x6f\x50\x4b\x01\x02\x1e\x03\x0a\x00\x00\x00\x00\x00\x8f"~
+            "\x72\x4a\x4f\x86\xa6\x10\x36\x05\x00\x00\x00\x05\x00\x00\x00\x04"~
+            "\x00\x18\x00\x00\x00\x00\x00\x01\x00\x00\x00\xb0\x81\x00\x00\x00"~
+            "\x00\x66\x69\x6c\x65\x55\x54\x05\x00\x03\x0d\x22\x9f\x5d\x75\x78"~
+            "\x0b\x00\x01\x04\xf0\x03\x00\x00\x04\xf0\x03\x00\x00\x50\x4b\x05"~
+            "\x06\x00\x00\x00\x00\x01\x00\x01\x00\x4a\x00\x00\x00\x43\x00\x00"~
+            "\x00\x00\x00";
+
+        auto za = new ZipArchive(cast(void[]) file);
+
+        assertThrown!ZipException(za.expand(za._directory["file"]));
+    }
+
+    @system unittest
+    {
+        import std.exception : assertThrown;
+
+        // check for encryption flag
+        auto file =
+            "\x50\x4b\x03\x04\x0a\x00\x01\x00\x00\x00\x8f\x72\x4a\x4f\x86\xa6"~
+            "\x10\x36\x05\x00\x00\x00\x05\x00\x00\x00\x04\x00\x1c\x00\x66\x69"~
+            "\x6c\x65\x55\x54\x09\x00\x03\x0d\x22\x9f\x5d\x12\x22\x9f\x5d\x75"~
+            "\x78\x0b\x00\x01\x04\xf0\x03\x00\x00\x04\xf0\x03\x00\x00\x68\x65"~
+            "\x6c\x6c\x6f\x50\x4b\x01\x02\x1e\x03\x0a\x00\x00\x00\x00\x00\x8f"~
+            "\x72\x4a\x4f\x86\xa6\x10\x36\x05\x00\x00\x00\x05\x00\x00\x00\x04"~
+            "\x00\x18\x00\x00\x00\x00\x00\x01\x00\x00\x00\xb0\x81\x00\x00\x00"~
+            "\x00\x66\x69\x6c\x65\x55\x54\x05\x00\x03\x0d\x22\x9f\x5d\x75\x78"~
+            "\x0b\x00\x01\x04\xf0\x03\x00\x00\x04\xf0\x03\x00\x00\x50\x4b\x05"~
+            "\x06\x00\x00\x00\x00\x01\x00\x01\x00\x4a\x00\x00\x00\x43\x00\x00"~
+            "\x00\x00\x00";
+
+        auto za = new ZipArchive(cast(void[]) file);
+
+        assertThrown!ZipException(za.expand(za._directory["file"]));
+    }
+
+    @system unittest
+    {
+        import std.exception : assertThrown;
+
+        // check for invalid compression method
+        auto file =
+            "\x50\x4b\x03\x04\x0a\x00\x00\x00\x03\x00\x8f\x72\x4a\x4f\x86\xa6"~
+            "\x10\x36\x05\x00\x00\x00\x05\x00\x00\x00\x04\x00\x1c\x00\x66\x69"~
+            "\x6c\x65\x55\x54\x09\x00\x03\x0d\x22\x9f\x5d\x12\x22\x9f\x5d\x75"~
+            "\x78\x0b\x00\x01\x04\xf0\x03\x00\x00\x04\xf0\x03\x00\x00\x68\x65"~
+            "\x6c\x6c\x6f\x50\x4b\x01\x02\x1e\x03\x0a\x00\x00\x00\x00\x00\x8f"~
+            "\x72\x4a\x4f\x86\xa6\x10\x36\x05\x00\x00\x00\x05\x00\x00\x00\x04"~
+            "\x00\x18\x00\x00\x00\x00\x00\x01\x00\x00\x00\xb0\x81\x00\x00\x00"~
+            "\x00\x66\x69\x6c\x65\x55\x54\x05\x00\x03\x0d\x22\x9f\x5d\x75\x78"~
+            "\x0b\x00\x01\x04\xf0\x03\x00\x00\x04\xf0\x03\x00\x00\x50\x4b\x05"~
+            "\x06\x00\x00\x00\x00\x01\x00\x01\x00\x4a\x00\x00\x00\x43\x00\x00"~
+            "\x00\x00\x00";
+
+        auto za = new ZipArchive(cast(void[]) file);
+
+        assertThrown!ZipException(za.expand(za._directory["file"]));
     }
 
     /* ============ Utility =================== */
@@ -929,8 +1221,7 @@ private:
                 pos = i;
             }
 
-        if (!found)
-            throw new ZipException("overlapping data detected");
+        enforce!ZipException(found, "overlapping data detected");
 
         if (start>_segs[pos].start)
             _segs ~= Segment(_segs[pos].start, start);
