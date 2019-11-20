@@ -2506,22 +2506,6 @@ public:
         }
     }
 
-    // @@@DEPRECATED_2.089@@@
-    deprecated("To be removed by 2.089. Please use the writer overload instead.")
-    void toString(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char fmt) const
-    {
-        const spec = fmt.spec;
-        switch (spec)
-        {
-            case 'b':
-                return formatBitString(sink);
-            case 's':
-                return formatBitArray(sink);
-            default:
-                throw new Exception("Unknown format specifier: %" ~ spec);
-        }
-    }
-
     ///
     @system pure unittest
     {

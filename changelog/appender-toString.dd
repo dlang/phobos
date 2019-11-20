@@ -1,0 +1,5 @@
+Deprecated `std.array.Appender.toString` was removed
+
+The overload accepting a callable was deprecated since 2.079
+and has now been removed. Use the overload accepting an output
+range instead.
