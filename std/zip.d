@@ -1,61 +1,104 @@
 // Written in the D programming language.
 
 /**
- * Read/write data in the $(LINK2 https://en.wikipedia.org/wiki/Zip_%28file_format%29, zip archive) format.
- * Makes use of the etc.c.zlib compression library.
- *
- * Limitations:
- *      $(UL
- *      $(LI Multi-disk zips not supported.)
- *      $(LI Only Zip version 20 formats are supported.)
- *      $(LI Only supports compression modes 0 (no compression) and 8 (deflate).)
- *      $(LI Does not support encryption.)
- *      )
- *
- * Example:
- * ---
-// Read existing zip file.
-import std.digest.crc, std.file, std.stdio, std.zip;
+Read and write data in the
+$(LINK2 https://en.wikipedia.org/wiki/Zip_%28file_format%29, zip archive)
+format.
+
+Standards:
+
+The current implementation mostly conforms to
+$(LINK2 https://www.iso.org/standard/60101.html, ISO/IEC 21320-1:2015),
+which means,
+$(UL
+$(LI that files can only be stored uncompressed or using the deflate mechanism,)
+$(LI that encryption features are not used,)
+$(LI that digital signature features are not used,)
+$(LI that patched data features are not used, and)
+$(LI that archives may not span multiple volumes.)
+)
+
+Additionally, archives are checked for malware attacks and rejected if detected.
+This includes
+$(UL
+$(LI $(LINK2 https://news.ycombinator.com/item?id=20352439, zip bombs) which
+     generate gigantic amounts of unpacked data)
+$(LI zip archives that contain overlapping records)
+$(LI chameleon zip archives which generate different unpacked data, depending
+     on the implementation of the unpack algorithm)
+)
+
+The current implementation makes use of the zlib compression library.
+
+Usage:
+
+There are two main ways of usage: Extracting files from a zip archive
+and storing files into a zip archive. These can be mixed though (e.g.
+read an archive, remove some files, add others and write the new
+archive).
+
+Examples:
+
+Example for reading an existing zip archive:
+---
+import std.stdio : writeln, writefln;
+import std.file : read;
+import std.zip;
 
 void main(string[] args)
 {
     // read a zip file into memory
     auto zip = new ZipArchive(read(args[1]));
-    writeln("Archive: ", args[1]);
-    writefln("%-10s  %-8s  Name", "Length", "CRC-32");
+
     // iterate over all zip members
+    writefln("%-10s  %-8s  Name", "Length", "CRC-32");
     foreach (name, am; zip.directory)
     {
         // print some data about each member
         writefln("%10s  %08x  %s", am.expandedSize, am.crc32, name);
         assert(am.expandedData.length == 0);
+
         // decompress the archive member
         zip.expand(am);
         assert(am.expandedData.length == am.expandedSize);
     }
 }
+---
 
-// Create and write new zip file.
+Example for writing files into a zip archive:
+---
 import std.file : write;
 import std.string : representation;
+import std.zip;
 
 void main()
 {
-    char[] data = "Test data.\n".dup;
-    // Create an ArchiveMember for the test file.
-    ArchiveMember am = new ArchiveMember();
-    am.name = "test.txt";
-    am.expandedData(data.representation);
+    // Create an ArchiveMembers for each file.
+    ArchiveMember file1 = new ArchiveMember();
+    file1.name = "test1.txt";
+    file1.expandedData("Test data.\n".dup.representation);
+    file1.compressionMethod = CompressionMethod.none; // don't compress
+
+    ArchiveMember file2 = new ArchiveMember();
+    file2.name = "test2.txt";
+    file2.expandedData("More test data.\n".dup.representation);
+    file2.compressionMethod = CompressionMethod.deflate; // compress
+
     // Create an archive and add the member.
     ZipArchive zip = new ZipArchive();
-    zip.addMember(am);
+
+    // add ArchiveMembers
+    zip.addMember(file1);
+    zip.addMember(file2);
+
     // Build the archive
     void[] compressed_data = zip.build();
+
     // Write to a file
     write("test.zip", compressed_data);
 }
- * ---
- *
+---
+
  * Copyright: Copyright The D Language Foundation 2000 - 2009.
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(HTTP digitalmars.com, Walter Bright)
@@ -73,8 +116,7 @@ import std.exception : enforce;
 
 //debug=print;
 
-/** Thrown on error.
- */
+/// Thrown on error.
 class ZipException : Exception
 {
     import std.exception : basicExceptionCtors;
@@ -82,32 +124,37 @@ class ZipException : Exception
     mixin basicExceptionCtors;
 }
 
-/**
- * Compression method used by ArchiveMember
- */
+/// Compression method used by `ArchiveMember`.
 enum CompressionMethod : ushort
 {
-    none = 0,   /// No compression, just archiving
-    deflate = 8 /// Deflate algorithm. Use zlib library to compress
+    none = 0,   /// No compression, just archiving.
+    deflate = 8 /// Deflate algorithm. Use zlib library to compress.
 }
 
-/**
- * A member of the ZipArchive.
- */
+/// A single file or directory inside the archive.
 final class ArchiveMember
 {
     import std.conv : to, octal;
     import std.datetime.systime : DosFileTime, SysTime, SysTimeToDosFileTime;
 
     /**
-     * Read/Write: Usually the file name of the archive member; it is used to
-     * index the archive directory for the member. Each member must have a unique
-     * name[]. Do not change without removing member from the directory first.
+     * The name of the archive member; it is used to index the
+     * archive directory for the member. Each member must have a
+     * unique name. Do not change without removing member from the
+     * directory first.
      */
     string name;
 
-    ubyte[] extra;              /// Read/Write: extra data for this member.
-    string comment;             /// Read/Write: comment associated with this member.
+    /**
+     * The content of the extra data field for this member. See
+     * $(LINK2 https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT,
+     *         original documentation)
+     * for a description of the general format of this data. May contain
+     * undocumented 3rd-party data.
+     */
+    ubyte[] extra;
+
+    string comment; /// Comment associated with this member.
 
     private ubyte[] _compressedData;
     private ubyte[] _expandedData;
@@ -123,30 +170,75 @@ final class ArchiveMember
     // by default, no explicit order goes after explicit order
     private uint _index = uint.max;
 
-    ushort flags;                  /// Read/Write: normally set to 0
-    ushort internalAttributes;     /// Read/Write
+    /**
+     * Contains some information on how to extract this archive. See
+     * $(LINK2 https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT,
+     *         original documentation)
+     * for details.
+     */
+    ushort flags;
 
-    /// Read Only
+    /**
+     * Internal attributes. Bit 1 is set, if the member is apparently in binary format
+     * and bit 2 is set, if each record is preceded by the length of the record.
+     */
+    ushort internalAttributes;
+
+    /**
+     * The zip file format version needed to extract this member.
+     *
+     * Returns: Format version needed to extract this member.
+     */
     @property @safe pure nothrow @nogc ushort extractVersion() const { return _extractVersion; }
-    /// Read Only: cyclic redundancy check (CRC) value
+
+    /**
+     * Cyclic redundancy check (CRC) value.
+     *
+     * Returns: CRC32 value.
+     */
     @property @safe pure nothrow @nogc uint crc32() const { return _crc32; }
 
-    /// Read Only: size of data of member in compressed form.
+    /**
+     * Size of data of member in compressed form.
+     *
+     * Returns: Size of the compressed archive.
+     */
     @property @safe pure nothrow @nogc uint compressedSize() const { return _compressedSize; }
 
-    /// Read Only: size of data of member in expanded form.
+    /**
+     * Size of data of member in uncompressed form.
+     *
+     * Returns: Size of uncompressed archive.
+     */
     @property @safe pure nothrow @nogc uint expandedSize() const { return _expandedSize; }
-    /// Read Only: should be 0.
+
+    /**
+     * Should be 0.
+     *
+     * Returns: The number of the disk where this member can be found.
+     */
     deprecated("Multidisk not supported; will be removed in 2.099.0")
     @property @safe pure nothrow @nogc ushort diskNumber() const { return 0; }
 
-    /// Read Only: data of member in compressed form.
+    /**
+     * Data of member in compressed form.
+     *
+     * Returns: The file data in compressed form.
+     */
     @property @safe pure nothrow @nogc ubyte[] compressedData() { return _compressedData; }
 
-    /// Read data of member in uncompressed form.
+    /**
+     * Get or set data of member in uncompressed form. When an existing archive is
+     * read `ZipArchive.expand` needs to be called before this can be accessed.
+     *
+     * Params:
+     *     ed = Expanded Data.
+     *
+     * Returns: The file data.
+     */
     @property @safe pure nothrow @nogc ubyte[] expandedData() { return _expandedData; }
 
-    /// Write data of member in uncompressed form.
+    /// ditto
     @property @safe void expandedData(ubyte[] ed)
     {
         _expandedData = ed;
@@ -158,8 +250,14 @@ final class ArchiveMember
     }
 
     /**
-     * Set the OS specific file attributes, as obtained by
-     * $(REF getAttributes, std,file) or $(REF DirEntry.attributes, std,file), for this archive member.
+     * Get or set the OS specific file attributes for this archive member.
+     *
+     * Params:
+     *     attr = Attributes as obtained by $(REF getAttributes, std,file) or
+     *            $(REF DirEntry.attributes, std,file).
+     *
+     * Returns: The file attributes or 0 if the file attributes were
+     * encoded for an incompatible OS (Windows vs. POSIX).
      */
     @property @safe void fileAttributes(uint attr)
     {
@@ -188,13 +286,7 @@ final class ArchiveMember
         assert((am._madeVersion & 0xFF00) == 0x0300);
     }
 
-    /**
-     * Get the OS specific file attributes for the archive member.
-     *
-     * Returns: The file attributes or 0 if the file attributes were
-     * encoded for an incompatible OS (Windows vs. Posix).
-     *
-     */
+    /// ditto
     @property @nogc nothrow uint fileAttributes() const
     {
         version (Posix)
@@ -215,7 +307,21 @@ final class ArchiveMember
         }
     }
 
-    /// Set the last modification time for this member.
+    /**
+     * Get or set the last modification time for this member.
+     *
+     * Params:
+     *     time = Time to set (will be saved as DosFileTime, which is less accurate).
+     *
+     * Returns:
+     *     The last modification time in DosFileFormat.
+     */
+    @property DosFileTime time() const @safe pure nothrow @nogc
+    {
+        return _time;
+    }
+
+    /// ditto
     @property void time(SysTime time)
     {
         _time = SysTimeToDosFileTime(time);
@@ -227,24 +333,20 @@ final class ArchiveMember
         _time = time;
     }
 
-    /// Get the last modification time for this member.
-    @property DosFileTime time() const @safe pure nothrow @nogc
-    {
-        return _time;
-    }
-
     /**
-     * Read compression method used for this member
+     * Get or set compression method used for this member.
+     *
+     * Params:
+     *     cm = Compression method.
+     *
+     * Returns: Compression method.
+     *
      * See_Also:
-     *     CompressionMethod
+     *     $(LREF CompressionMethod)
      **/
     @property @safe @nogc pure nothrow CompressionMethod compressionMethod() const { return _compressionMethod; }
 
-    /**
-     * Write compression method used for this member
-     * See_Also:
-     *     CompressionMethod
-     **/
+    /// ditto
     @property @safe pure void compressionMethod(CompressionMethod cm)
     {
         if (cm == _compressionMethod) return;
@@ -255,10 +357,16 @@ final class ArchiveMember
     }
 
     /**
-      * The index of this archive member within the archive.
-      */
-    @property uint index() const @safe pure nothrow @nogc { return _index; }
+     * The index of this archive member within the archive. Set this to a
+     * different value for reordering the members of an archive.
+     *
+     * Params:
+     *     value = Index value to set.
+     *
+     * Returns: The index.
+     */
     @property uint index(uint value) @safe pure nothrow @nogc { return _index = value; }
+    @property uint index() const @safe pure nothrow @nogc { return _index; } /// ditto
 
     debug(print)
     {
@@ -328,7 +436,7 @@ private:
     enum dataDescriptorLength = 12;
 
 public:
-    string comment;     /// Read/Write: the archive comment. Must be less than 65536 bytes in length.
+    string comment; /// The archive comment. Must be less than 65536 bytes in length.
 
     private ubyte[] _data;
     private uint endrecOffset;
@@ -347,29 +455,55 @@ public:
 
     private Segment[] _segs;
 
-    /// Read Only: array representing the entire contents of the archive.
+    /**
+     * Array representing the entire contents of the archive.
+     *
+     * Returns: Data of the entire contents of the archive.
+     */
     @property @safe @nogc pure nothrow ubyte[] data() { return _data; }
 
-    /// Read Only: 0 since multi-disk zip archives are not supported.
+    /**
+     * 0 since multi-disk zip archives are not supported.
+     *
+     * Returns: Number of this disk.
+     */
     deprecated("Multidisk not supported; will be removed in 2.099.0")
     @property @safe @nogc pure nothrow uint diskNumber() const { return 0; }
 
-    /// Read Only: 0 since multi-disk zip archives are not supported
+    /**
+     * 0 since multi-disk zip archives are not supported.
+     *
+     * Returns: Number of the disk, where the central directory starts.
+     */
     deprecated("Multidisk not supported; will be removed in 2.099.0")
     @property @safe @nogc pure nothrow uint diskStartDir() const { return 0; }
 
-    /// Read Only: number of ArchiveMembers in the directory.
+    /**
+     * Number of ArchiveMembers in the directory.
+     *
+     * Returns: The number of files in this archive.
+     */
     @property @safe @nogc pure nothrow uint numEntries() const { return _numEntries; }
     @property @safe @nogc pure nothrow uint totalEntries() const { return _totalEntries; }    /// ditto
 
-    /// True when the archive is in Zip64 format.
+    /**
+     * True when the archive is in Zip64 format. Set this to true to force building a Zip64 archive.
+     *
+     * Params:
+     *     value = True, when the archive is forced to be build in Zip64 format.
+     *
+     * Returns: True, when the archive is in Zip64 format.
+     */
     @property @safe @nogc pure nothrow bool isZip64() const { return _isZip64; }
 
-    /// Set this to true to force building a Zip64 archive.
+    /// ditto
     @property @safe @nogc pure nothrow void isZip64(bool value) { _isZip64 = value; }
+
     /**
-     * Read Only: array indexed by the name of each member of the archive.
-     *  All the members of the archive can be accessed with a foreach loop:
+     * Associative array indexed by the name of each member of the archive.
+     *
+     * All the members of the archive can be accessed with a foreach loop:
+     *
      * Example:
      * --------------------
      * ZipArchive archive = new ZipArchive(data);
@@ -378,6 +512,8 @@ public:
      *     writefln("member name is '%s'", am.name);
      * }
      * --------------------
+     *
+     * Returns: Associative array with all archive members.
      */
     @property @safe @nogc pure nothrow ArchiveMember[string] directory() { return _directory; }
 
@@ -397,13 +533,21 @@ public:
 
     /* ============ Creating a new archive =================== */
 
-    /** Constructor to use when creating a new archive.
+    /**
+     * Constructor to use when creating a new archive.
      */
     this() @safe @nogc pure nothrow
     {
     }
 
-    /** Add de to the archive. The file is compressed on the fly.
+    /**
+     * Add a member to the archive. The file is compressed on the fly.
+     *
+     * Params:
+     *     de = Member to be added.
+     *
+     * Throws: ZipException when an unsupported compression method is used or when
+     *         compression failed.
      */
     @safe void addMember(ArchiveMember de)
     {
@@ -448,7 +592,12 @@ public:
         assertThrown!ZipException(zip.addMember(am));
     }
 
-    /** Delete de from the archive.
+    /**
+     * Delete member `de` from the archive. Uses the name of the member
+     * to detect which element to delete.
+     *
+     * Params:
+     *     de = Member to be deleted.
      */
     @safe void deleteMember(ArchiveMember de)
     {
@@ -456,14 +605,16 @@ public:
     }
 
     /**
-     * Construct an archive out of the current members of the archive.
+     * Construct the entire contents of the current members of the archive.
      *
      * Fills in the properties data[], numEntries,
      * totalEntries, and directory[].
      * For each ArchiveMember, fills in properties crc32, compressedSize,
      * compressedData[].
      *
-     * Returns: array representing the entire archive.
+     * Returns: Array representing the entire archive.
+     *
+     * Throws: ZipException when the archive could not be build.
      */
     void[] build() @safe pure
     {
@@ -641,9 +792,10 @@ public:
      * Use expand() to get the expanded data for each ArchiveMember.
      *
      * Params:
-     *  buffer = the entire contents of the archive.
+     *     buffer = The entire contents of the archive.
+     *
+     * Throws: ZipException when the archive was invalid or when malware was detected.
      */
-
     this(void[] buffer)
     {
         this._data = cast(ubyte[]) buffer;
@@ -1029,12 +1181,18 @@ public:
                              "found no valid 'end of central dir record'");
     }
 
-    /*****
-     * Decompress the contents of archive member de and return the expanded
-     * data.
+    /**
+     * Decompress the contents of a member.
      *
      * Fills in properties extractVersion, flags, compressionMethod, time,
      * crc32, compressedSize, expandedSize, expandedData[], name[], extra[].
+     *
+     * Params:
+     *     de = Member to be decompressed.
+     *
+     * Returns: The expanded data.
+     *
+     * Throws: ZipException when the entry is invalid or the compression method is not supported.
      */
     ubyte[] expand(ArchiveMember de)
     {
@@ -1538,7 +1696,7 @@ the quick brown fox jumps over the lazy dog\r
     assert(za.directory.length == 0);
 }
 
-// Non-Android Posix-only, because we can't rely on the unzip command being
+// Non-Android POSIX-only, because we can't rely on the unzip command being
 // available on Android or Windows
 version (Android) {} else
 version (Posix) @system unittest
