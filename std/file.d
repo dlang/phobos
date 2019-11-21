@@ -886,11 +886,20 @@ version (Windows) private void writeImpl(scope const(char)[] name, scope const(F
 }
 
 /***************************************************
- * Rename file `from` _to `to`.
+ * Rename file `from` _to `to`, moving it between directories if required.
  * If the target file exists, it is overwritten.
+ *
+ * It is not possible to rename a file across different mount points
+ * or drives. On POSIX, the operation is atomic. That means, if `to`
+ * already exists there will be no time period during the operation
+ * where `to` is missing. See
+ * $(HTTP man7.org/linux/man-pages/man2/rename.2.html, manpage for rename)
+ * for more details.
+ *
  * Params:
  *    from = string or range of characters representing the existing file name
  *    to = string or range of characters representing the target file name
+ *
  * Throws: $(LREF FileException) on error.
  */
 void rename(RF, RT)(RF from, RT to)
