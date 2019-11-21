@@ -135,7 +135,13 @@ enum CompressionMethod : ushort
 final class ArchiveMember
 {
     import std.conv : to, octal;
-    import std.datetime.systime : DosFileTime, SysTime, SysTimeToDosFileTime;
+    import std.datetime.systime : DosFileTime, SysTime, SysTimeToDosFileTime, Clock;
+
+    /// Create a new ArchiveMember
+    this() @safe
+    {
+        _time = SysTimeToDosFileTime(Clock.currTime());
+    }
 
     /**
      * The name of the archive member; it is used to index the
@@ -389,7 +395,7 @@ final class ArchiveMember
     }
 }
 
-@safe pure unittest
+@safe unittest
 {
     import std.exception : assertThrown, assertNotThrown;
 
@@ -1532,6 +1538,9 @@ debug(print)
         assert(member.index == i, "member " ~ name ~ " had index " ~
                 member.index.to!string ~ " but we expected index " ~ i.to!string ~
                 ". The input array was " ~ names.to!string);
+
+        // issue 20411
+        assert(cast(uint) member._time != 0);
     }
 }
 
