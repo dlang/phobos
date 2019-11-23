@@ -1498,12 +1498,12 @@ final class Pid
     */
     // Note: Since HANDLE is a reference, this function cannot be const.
     version (Windows)
-    @property HANDLE osHandle() @safe pure nothrow
+    @property HANDLE osHandle() @nogc @safe pure nothrow
     {
         return _handle;
     }
     else version (Posix)
-    @property pid_t osHandle() @safe pure nothrow
+    @property pid_t osHandle() @nogc @safe pure nothrow
     {
         return _processID;
     }
