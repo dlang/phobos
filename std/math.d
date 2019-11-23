@@ -7753,12 +7753,20 @@ real fma(real x, real y, real z) @safe pure nothrow @nogc { return (x * y) + z; 
 Unqual!F pow(F, G)(F x, G n) @nogc @trusted pure nothrow
 if (isFloatingPoint!(F) && isIntegral!(G))
 {
-    import std.traits : Unsigned;
+    import std.traits : Unsigned, isSigned;
     real p = 1.0, v = void;
     Unsigned!(Unqual!G) m = n;
+
+    static if (G.sizeof < 4 && !isSigned!G)
+    {
+        import std.conv : to;
+        const int n2 = n.to!int;
+    }
+    else alias n2 = n;
+
     if (n < 0)
     {
-        switch (n)
+        switch (n2)
         {
         case -1:
             return 1 / x;
