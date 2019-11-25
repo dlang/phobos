@@ -522,7 +522,7 @@ L_last:
     }
 }
 
-@system unittest
+@safe unittest
 {
 
     uint [] aa = [0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
