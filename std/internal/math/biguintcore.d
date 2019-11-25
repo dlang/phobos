@@ -724,7 +724,7 @@ public:
 
 
     //  return x*y.
-    static BigUint mulInt(T = ulong)(BigUint x, T y) pure nothrow
+    static BigUint mulInt(T = ulong)(BigUint x, T y) pure nothrow @safe
     {
         if (y == 0 || x == 0) return BigUint(ZERO);
         static if (T.sizeof * 8 <= 32)
@@ -765,7 +765,7 @@ public:
     }
 
     // return x / y
-    static BigUint divInt(T)(BigUint x, T y_) pure nothrow
+    static BigUint divInt(T)(BigUint x, T y_) pure nothrow @safe
     if ( is(Unqual!T == uint) )
     {
         uint y = y_;
@@ -791,7 +791,7 @@ public:
         return BigUint(removeLeadingZeros(trustedAssumeUnique(result)));
     }
 
-    static BigUint divInt(T)(BigUint x, T y) pure nothrow
+    static BigUint divInt(T)(BigUint x, T y) pure nothrow @safe
     if ( is(Unqual!T == ulong) )
     {
         if (y <= uint.max)
@@ -2431,7 +2431,7 @@ void schoolbookDivMod(BigDigit [] quotient, BigDigit [] u, in BigDigit [] v)
             {
                 // Note: On DMD, this is only ~10% faster than the non-asm code.
                 uint *p = &u[j + v.length - 1];
-                asm pure nothrow
+                asm pure nothrow @trusted
                 {
                     mov EAX, p;
                     mov EDX, [EAX+4];
