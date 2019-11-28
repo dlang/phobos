@@ -439,10 +439,7 @@ public:
     string comment; /// The archive comment. Must be less than 65536 bytes in length.
 
     private ubyte[] _data;
-    private uint endrecOffset;
 
-    private uint _numEntries;
-    private uint _totalEntries;
     private bool _isZip64;
     static const ushort zip64ExtractVersion = 45;
 
@@ -483,8 +480,9 @@ public:
      *
      * Returns: The number of files in this archive.
      */
-    @property @safe @nogc pure nothrow uint numEntries() const { return _numEntries; }
-    @property @safe @nogc pure nothrow uint totalEntries() const { return _totalEntries; }    /// ditto
+    deprecated("Use totalEntries instead; will be removed in 2.099.0")
+    @property @safe @nogc pure nothrow uint numEntries() const { return cast(uint) _directory.length; }
+    @property @safe @nogc pure nothrow uint totalEntries() const { return cast(uint) _directory.length; }    /// ditto
 
     /**
      * True when the archive is in Zip64 format. Set this to true to force building a Zip64 archive.
@@ -604,11 +602,28 @@ public:
         _directory.remove(de.name);
     }
 
+    // issue 20398
+    @safe unittest
+    {
+        import std.string : representation;
+
+        ArchiveMember file1 = new ArchiveMember();
+        file1.name = "test1.txt";
+        file1.expandedData("Test data.\n".dup.representation);
+
+        ZipArchive zip = new ZipArchive();
+
+        zip.addMember(file1);
+        assert(zip.totalEntries == 1);
+
+        zip.deleteMember(file1);
+        assert(zip.totalEntries == 0);
+    }
+
     /**
      * Construct the entire contents of the current members of the archive.
      *
-     * Fills in the properties data[], numEntries,
-     * totalEntries, and directory[].
+     * Fills in the properties data[], totalEntries, and directory[].
      * For each ArchiveMember, fills in properties crc32, compressedSize,
      * compressedData[].
      *
@@ -685,7 +700,6 @@ public:
 
         // Write directory
         directoryOffset = i;
-        _numEntries = 0;
         foreach (ArchiveMember de; directory)
         {
             _data[i .. i + 4] = centralFileHeaderSignature;
@@ -712,9 +726,7 @@ public:
             i += de.extra.length;
             _data[i .. i + de.comment.length] = (de.comment.representation)[];
             i += de.comment.length;
-            _numEntries++;
         }
-        _totalEntries = numEntries;
 
         if (isZip64)
         {
@@ -726,8 +738,8 @@ public:
             putUshort(i + 14, zip64ExtractVersion);
             putUint  (i + 16, cast(ushort) 0);
             putUint  (i + 20, cast(ushort) 0);
-            putUlong (i + 24, numEntries);
-            putUlong (i + 32, totalEntries);
+            putUlong (i + 24, directory.length);
+            putUlong (i + 32, directory.length);
             putUlong (i + 40, directorySize);
             putUlong (i + 48, directoryOffset);
             i += zip64EndOfCentralDirLength;
@@ -741,11 +753,10 @@ public:
         }
 
         // Write end record
-        endrecOffset = i;
         _data[i .. i + 4] = endOfCentralDirSignature;
         putUshort(i + 4,  cast(ushort) 0);
         putUshort(i + 6,  cast(ushort) 0);
-        putUshort(i + 8,  (numEntries > ushort.max ? ushort.max : cast(ushort) numEntries));
+        putUshort(i + 8,  (totalEntries > ushort.max ? ushort.max : cast(ushort) totalEntries));
         putUshort(i + 10, (totalEntries > ushort.max ? ushort.max : cast(ushort) totalEntries));
         putUint  (i + 12, directorySize);
         putUint  (i + 16, directoryOffset);
@@ -783,8 +794,7 @@ public:
     /**
      * Constructor to use when reading an existing archive.
      *
-     * Fills in the properties data[], numEntries,
-     * totalEntries, comment[], and directory[].
+     * Fills in the properties data[], totalEntries, comment[], and directory[].
      * For each ArchiveMember, fills in
      * properties madeVersion, extractVersion, flags, compressionMethod, time,
      * crc32, compressedSize, expandedSize, compressedData[],
@@ -804,14 +814,13 @@ public:
 
         _segs = [Segment(0, cast(uint) data.length)];
 
-        findEndOfCentralDirRecord();
-        uint i = endrecOffset;
+        uint i = findEndOfCentralDirRecord();
 
         int endCommentLength = getUshort(i + 20);
         comment = cast(string)(_data[i + endOfCentralDirLength .. i + endOfCentralDirLength + endCommentLength]);
 
         // end of central dir record
-        removeSegment(endrecOffset, endrecOffset + endOfCentralDirLength + endCommentLength);
+        removeSegment(i, i + endOfCentralDirLength + endCommentLength);
 
         uint k = i - zip64EndOfCentralDirLocatorLength;
         if (k < i && _data[k .. k + 4] == zip64EndOfCentralDirLocatorSignature)
@@ -825,6 +834,7 @@ public:
 
         uint directorySize;
         uint directoryOffset;
+        uint directoryCount;
 
         if (isZip64)
         {
@@ -859,23 +869,20 @@ public:
                                  && directorySizeUlong + directoryOffsetUlong <= i,
                                  "corrupted directory");
 
-            _numEntries = to!uint(numEntriesUlong);
-            _totalEntries = to!uint(totalEntriesUlong);
+            directoryCount = to!uint(totalEntriesUlong);
             directorySize = to!uint(directorySizeUlong);
             directoryOffset = to!uint(directoryOffsetUlong);
         }
         else
         {
             // Read end record data
-            _numEntries = getUshort(i + 8);
-            _totalEntries = getUshort(i + 10);
-
+            directoryCount = getUshort(i + 10);
             directorySize = getUint(i + 12);
             directoryOffset = getUint(i + 16);
         }
 
         i = directoryOffset;
-        for (int n = 0; n < numEntries; n++)
+        for (int n = 0; n < directoryCount; n++)
         {
             /* The format of an entry is:
              *  'PK' 1, 2
@@ -1130,12 +1137,12 @@ public:
         assertThrown!ZipException(new ZipArchive(cast(void[]) file));
     }
 
-    private void findEndOfCentralDirRecord()
+    private uint findEndOfCentralDirRecord()
     {
         // end of central dir record can be followed by a comment of up to 2^^16-1 bytes
         // therefore we have to scan 2^^16 positions
 
-        endrecOffset = to!uint(data.length);
+        uint endrecOffset = to!uint(data.length);
         foreach (i; 0 .. 2 ^^ 16)
         {
             if (endOfCentralDirLength + i > data.length) break;
@@ -1179,6 +1186,8 @@ public:
 
         enforce!ZipException(endrecOffset != to!uint(data.length),
                              "found no valid 'end of central dir record'");
+
+        return endrecOffset;
     }
 
     /**
@@ -1224,11 +1233,6 @@ public:
         }
 
         enforce!ZipException((de.flags & 1) == 0, "encryption not supported");
-
-        uint i = de.offset + localFileHeaderLength + namelen + extralen;
-
-        de._compressedData = _data[i .. i + de.compressedSize];
-        debug(print) arrayPrint(de.compressedData);
 
         switch (de.compressionMethod)
         {
