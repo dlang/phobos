@@ -7823,6 +7823,8 @@ if (isFloatingPoint!(F) && isIntegral!(G))
             return 1 / x;
         case -2:
             return 1 / (x * x);
+        case -3:
+            return 1 / (x * x * x);
         default:
         }
 
@@ -7839,6 +7841,8 @@ if (isFloatingPoint!(F) && isIntegral!(G))
             return x;
         case 2:
             return x * x;
+        case 3:
+            return x * x * x;
         default:
         }
 
