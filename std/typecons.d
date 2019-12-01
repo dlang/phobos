@@ -6696,7 +6696,6 @@ mixin template Proxy(alias a)
         }
 
         auto ref opCmp(this X, B)(auto ref B b)
-          if (!is(typeof(a.opCmp(b))) || !is(typeof(b.opCmp(a))))
         {
             static if (is(typeof(a.opCmp(b))))
                 return a.opCmp(b);
@@ -7727,6 +7726,24 @@ template TypedefType(T)
             assert(t.to!string() == itd.to!string());
         }
     }}
+}
+
+@safe @nogc unittest // typedef'ed type with custom operators
+{
+    static struct MyInt
+    {
+        int value;
+        int opCmp(MyInt other)
+        {
+            if (value < other.value)
+                return -1;
+            return !(value == other.value);
+        }
+    }
+
+    auto m1 = Typedef!MyInt(MyInt(1));
+    auto m2 = Typedef!MyInt(MyInt(2));
+    assert(m1 < m2);
 }
 
 /**
