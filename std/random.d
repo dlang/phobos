@@ -3986,6 +3986,7 @@ if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
             }
         }
 
+/+
         /* Test behaviour if .popFront() is called before sample is read.
          * This is a rough-and-ready check that the statistical properties
          * are in the ballpark -- not a proper validation of statistical
@@ -4034,7 +4035,7 @@ if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
             assert(2_200 < count99, text("99: ", count99, " < 2200."));
             assert(count99 < 2_800, text("99: ", count99, " > 2800."));
         }
-
++/
         /* Odd corner-cases: RandomSample has 2 constructors that are not called
          * by the randomSample() helper functions, but that can be used if the
          * constructor is called directly.  These cover the case of the user
