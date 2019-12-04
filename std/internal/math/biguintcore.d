@@ -724,12 +724,14 @@ public:
 
 
     //  return x*y.
-    //  y must not be zero.
     static BigUint mulInt(T = ulong)(BigUint x, T y) pure nothrow
     {
         if (y == 0 || x == 0) return BigUint(ZERO);
-        uint hi = cast(uint)(y >>> 32);
-        uint lo = cast(uint)(y & 0xFFFF_FFFF);
+        static if (T.sizeof * 8 <= 32)
+            uint hi = 0;
+        else
+            uint hi = cast(uint) (y >>> 32);
+        uint lo = cast(uint) (y & 0xFFFF_FFFF);
         uint [] result = new BigDigit[x.data.length+1+(hi != 0)];
         result[x.data.length] = multibyteMul(result[0 .. x.data.length], x.data, lo, 0);
         if (hi != 0)
@@ -1129,6 +1131,14 @@ public:
     assert(z == 0UL);
     assert(!(z > 0UL));
     assert(!(z < 0UL));
+}
+
+// issue 16223
+@system pure nothrow unittest
+{
+    BigUint a = [3];
+    int b = 5;
+    assert(BigUint.mulInt(a,b) == 15);
 }
 
 // Remove leading zeros from x, to restore the BigUint invariant
