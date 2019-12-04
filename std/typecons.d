@@ -796,21 +796,41 @@ if (distinctFieldNames!(Specs))
          *           for comparison between `Tuple`s.
          *
          * Returns:
-         * For any values `v1` on the right-hand side and `v2` on the
-         * left-hand side:
+         * For values `v1` on the left-hand side and `v2` on the right-hand side:
+         *
+         * 0 if the expression `v1 == v2` is true for all members, or else for
+         * the first member, where this is not true:
          *
          * $(UL
-         *   $(LI A negative integer if the expression `v1 < v2` is true.)
-         *   $(LI A positive integer if the expression `v1 > v2` is true.)
-         *   $(LI 0 if the expression `v1 == v2` is true.))
+         *   $(LI NaN, in case one of the operands is a NaN.)
+         *   $(LI A negative number if the expression `v1 < v2` is true.)
+         *   $(LI A positive number if the expression `v1 > v2` is true.))
          */
-        int opCmp(R)(R rhs)
+        auto opCmp(R)(R rhs)
         if (areCompatibleTuples!(typeof(this), R, "<"))
         {
             static foreach (i; 0 .. Types.length)
             {
                 if (field[i] != rhs.field[i])
                 {
+                    import std.math : isNaN;
+                    static if (isFloatingPoint!(Types[i]))
+                    {
+                        if (isNaN(field[i]))
+                            return float.nan;
+                    }
+                    static if (isFloatingPoint!(typeof(rhs.field[i])))
+                    {
+                        if (isNaN(rhs.field[i]))
+                            return float.nan;
+                    }
+                    static if (is(typeof(field[i].opCmp(rhs.field[i]))) &&
+                               isFloatingPoint!(typeof(field[i].opCmp(rhs.field[i]))))
+                    {
+                        if (isNaN(field[i].opCmp(rhs.field[i])))
+                            return float.nan;
+                    }
+
                     return field[i] < rhs.field[i] ? -1 : 1;
                 }
             }
@@ -818,13 +838,31 @@ if (distinctFieldNames!(Specs))
         }
 
         /// ditto
-        int opCmp(R)(R rhs) const
+        auto opCmp(R)(R rhs) const
         if (areCompatibleTuples!(typeof(this), R, "<"))
         {
             static foreach (i; 0 .. Types.length)
             {
                 if (field[i] != rhs.field[i])
                 {
+                    import std.math : isNaN;
+                    static if (isFloatingPoint!(Types[i]))
+                    {
+                        if (isNaN(field[i]))
+                            return float.nan;
+                    }
+                    static if (isFloatingPoint!(typeof(rhs.field[i])))
+                    {
+                        if (isNaN(rhs.field[i]))
+                            return float.nan;
+                    }
+                    static if (is(typeof(field[i].opCmp(rhs.field[i]))) &&
+                               isFloatingPoint!(typeof(field[i].opCmp(rhs.field[i]))))
+                    {
+                        if (isNaN(field[i].opCmp(rhs.field[i])))
+                            return float.nan;
+                    }
+
                     return field[i] < rhs.field[i] ? -1 : 1;
                 }
             }
@@ -1529,6 +1567,29 @@ if (distinctFieldNames!(Specs))
     auto t = tuple(1, 2);
     assert(t == tuple(1, 2));
     auto t3 = tuple(1, 'd');
+}
+
+// issue 13663
+@safe unittest
+{
+    auto t = tuple(real.nan);
+    assert(!(t > t));
+    assert(!(t < t));
+    assert(!(t == t));
+}
+
+@safe unittest
+{
+    struct S
+    {
+        float opCmp(S s) { return float.nan; }
+        bool opEquals(S s) { return false; }
+    }
+
+    auto t = tuple(S());
+    assert(!(t > t));
+    assert(!(t < t));
+    assert(!(t == t));
 }
 
 /**
