@@ -3300,14 +3300,8 @@ if (isInputRange!R)
     range.popFrontN(n);
     return range;
 }
-/// ditto
-R dropBack(R)(R range, size_t n)
-if (isBidirectionalRange!R)
-{
-    range.popBackN(n);
-    return range;
-}
 
+///
 @safe unittest
 {
     import std.algorithm.comparison : equal;
@@ -3316,6 +3310,14 @@ if (isBidirectionalRange!R)
     assert("hello world".drop(6) == "world");
     assert("hello world".drop(50).empty);
     assert("hello world".take(6).drop(3).equal("lo "));
+}
+
+/// ditto
+R dropBack(R)(R range, size_t n)
+if (isBidirectionalRange!R)
+{
+    range.popBackN(n);
+    return range;
 }
 
 ///
