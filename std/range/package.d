@@ -3313,16 +3313,6 @@ if (isBidirectionalRange!R)
 {
     import std.algorithm.comparison : equal;
 
-    assert([0, 2, 1, 5, 0, 3].drop(3) == [5, 0, 3]);
-    assert("hello world".drop(6) == "world");
-    assert("hello world".drop(50).empty);
-    assert("hello world".take(6).drop(3).equal("lo "));
-}
-
-@safe unittest
-{
-    import std.algorithm.comparison : equal;
-
     assert([0, 2, 1, 5, 0, 3].dropBack(3) == [0, 2, 1]);
     assert("hello world".dropBack(6) == "hello");
     assert("hello world".dropBack(50).empty);
