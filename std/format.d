@@ -4548,15 +4548,6 @@ if (is(T == enum))
 private void formatValueImpl(Writer, T, Char)(auto ref Writer w, scope T val, scope const ref FormatSpec!Char f)
 if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
 {
-    static if (isInputRange!T)
-    {
-        if (val !is null)
-        {
-            formatRange(w, *val, f);
-            return;
-        }
-    }
-
     static if (is(typeof({ shared const void* p = val; })))
         alias SharedOf(T) = shared(T);
     else
@@ -4624,17 +4615,23 @@ if (isSIMDVector!V)
 
 @safe pure unittest
 {
-    // pointer
-    import std.range;
-    auto r = retro([1,2,3,4]);
-    auto p = ()@trusted{ auto p = &r; return p; }();
-    formatTest( p, "[4, 3, 2, 1]" );
-    assert(p.empty);
-    p = null;
+    int* p = null;
     formatTest( p, "null" );
 
     auto q = ()@trusted{ return cast(void*) 0xFFEECCAA; }();
     formatTest( q, "FFEECCAA" );
+}
+
+// issue 11782
+@safe pure unittest
+{
+    import std.range : iota;
+
+    auto a = iota(0, 10);
+    auto b = iota(0, 10);
+    auto p = ()@trusted{ auto p = &a; return p; }();
+
+    assert(format("%s",p) != format("%s",b));
 }
 
 @system pure unittest
