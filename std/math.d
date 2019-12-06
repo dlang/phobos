@@ -23,7 +23,7 @@ $(TR $(TDNW Classics) $(TD
 $(TR $(TDNW Trigonometry) $(TD
     $(MYREF sin) $(MYREF cos) $(MYREF tan) $(MYREF asin) $(MYREF acos)
     $(MYREF atan) $(MYREF atan2) $(MYREF sinh) $(MYREF cosh) $(MYREF tanh)
-    $(MYREF asinh) $(MYREF acosh) $(MYREF atanh) $(MYREF expi)
+    $(MYREF asinh) $(MYREF acosh) $(MYREF atanh)
 ))
 $(TR $(TDNW Rounding) $(TD
     $(MYREF ceil) $(MYREF floor) $(MYREF round) $(MYREF lround)
