@@ -2941,6 +2941,14 @@ useSnprintf:
     double b1 = 0.016;
     assert(format("%.1f", a1) == "0.2");
     assert(format("%.2f", b1) == "0.02");
+
+    // issue 9889
+    assert(format("%.1f", 0.09) == "0.1");
+    assert(format("%.1f", -0.09) == "-0.1");
+    assert(format("%.1f", 0.095) == "0.1");
+    assert(format("%.1f", -0.095) == "-0.1");
+    assert(format("%.1f", 0.094) == "0.1");
+    assert(format("%.1f", -0.094) == "-0.1");
 }
 
 @safe unittest
