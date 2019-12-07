@@ -4391,23 +4391,22 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
         put(w, left);
         foreach (i, e; val.tupleof)
         {
-            static if (0 < i && val.tupleof[i-1].offsetof == val.tupleof[i].offsetof)
+            static if (__traits(identifier, val.tupleof[i]) == "this")
+                continue;
+            else static if (0 < i && val.tupleof[i-1].offsetof == val.tupleof[i].offsetof)
             {
                 static if (i == val.tupleof.length - 1 || val.tupleof[i].offsetof != val.tupleof[i+1].offsetof)
                     put(w, separator~val.tupleof[i].stringof[4..$]~"}");
                 else
                     put(w, separator~val.tupleof[i].stringof[4..$]);
             }
+            else static if (i+1 < val.tupleof.length && val.tupleof[i].offsetof == val.tupleof[i+1].offsetof)
+                put(w, (i > 0 ? separator : "")~"#{overlap "~val.tupleof[i].stringof[4..$]);
             else
             {
-                static if (i+1 < val.tupleof.length && val.tupleof[i].offsetof == val.tupleof[i+1].offsetof)
-                    put(w, (i > 0 ? separator : "")~"#{overlap "~val.tupleof[i].stringof[4..$]);
-                else
-                {
-                    static if (i > 0)
-                        put(w, separator);
-                    formatElement(w, e, f);
-                }
+                static if (i > 0)
+                    put(w, separator);
+                formatElement(w, e, f);
             }
         }
         put(w, right);
@@ -4416,6 +4415,13 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
     {
         put(w, T.stringof);
     }
+}
+
+// issue 9588
+@safe pure unittest
+{
+    struct S { int x; bool empty() { return false; } }
+    formatTest( S(), "S(0)" );
 }
 
 @safe unittest
