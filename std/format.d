@@ -7541,3 +7541,43 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     assert(printFloat(0x1.19f81p0, f, FloatingPointControl.roundToNearest) == "0X1.1A0P+0");
     assert(printFloat(0x1.19f01p0, f, FloatingPointControl.roundToNearest) == "0X1.19FP+0");
 }
+
+auto test(T)(T val, FloatingPointControl.RoundingMode rm)
+{
+    union FloatBits
+    {
+        T floatValue;
+        ulong ulongValue;
+    }
+
+    FloatBits fb;
+    fb.floatValue = val;
+    ulong ival = fb.ulongValue;
+
+    static if (!is(T == float))
+    {
+        version (DigitalMars)
+        {
+            // hack to work around issue 20363
+            ival ^= rm;
+            ival ^= rm;
+        }
+    }
+
+    import std.math : log2;
+    enum log2_max_exp = cast(int) log2(T.max_exp);
+
+    int exp = (ival >> (T.mant_dig - 1)) & ((1L << (log2_max_exp + 1)) - 1);
+
+    enum int bias = T.max_exp - 1;
+
+    exp -= bias;
+
+    return exp;
+}
+
+unittest
+{
+    assert(test(3.0f, FloatingPointControl.roundToZero) == 1);
+    assert(test(3.0, FloatingPointControl.roundToZero) == 1);
+}
