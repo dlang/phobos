@@ -1093,7 +1093,9 @@ template memoize(alias fun)
         auto t = Tuple!Args(args);
         if (auto p = t in memo)
             return *p;
-        return memo[t] = fun(args);
+        auto r = fun(args);
+        memo[t] = r;
+        return r;
     }
 }
 
@@ -1301,6 +1303,17 @@ unittest
     assert(first(Foo(3)) == A);
     assert(first(Foo(3)) == A);
     assert(executed == 1);
+}
+
+// 20439 memoize should work with void opAssign
+@safe unittest
+{
+    static struct S
+    {
+        void opAssign(S) {}
+    }
+
+    assert(memoize!(() => S()) == S());
 }
 
 // 16079: memoize should work with classes
