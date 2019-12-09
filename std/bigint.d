@@ -176,7 +176,7 @@ public:
     }
 
     /// Assignment from built-in integer types.
-    BigInt opAssign(T)(T x) pure nothrow if (isIntegral!T)
+    ref BigInt opAssign(T)(T x) pure nothrow return if (isIntegral!T)
     {
         data = cast(ulong) absUnsign(x);
         sign = (x < 0);
@@ -192,7 +192,7 @@ public:
     }
 
     /// Assignment from another BigInt.
-    BigInt opAssign(T:BigInt)(T x) pure @nogc
+    ref BigInt opAssign(T:BigInt)(T x) pure @nogc return
     {
         data = x.data;
         sign = x.sign;
@@ -2134,6 +2134,13 @@ void divMod(const BigInt dividend, const BigInt divisor, out BigInt quotient, ou
 @system unittest
 {
     auto n = BigInt("1234"d);
+}
+
+// Issue 20440
+@system unittest
+{
+    BigInt[int] a;
+    a.require(0, BigInt.init);
 }
 
 /**
