@@ -4999,7 +4999,7 @@ template ImplicitConversionTargets(T)
             AliasSeq!(int, uint, long, ulong, CentTypeList, float, double, real);
     else static if (is(T : typeof(null)))
         alias ImplicitConversionTargets = AliasSeq!(typeof(null));
-    else static if (is(T : Object))
+    else static if (is(T == class))
         alias ImplicitConversionTargets = TransitiveBaseTypeTuple!(T);
     else static if (isDynamicArray!T && !is(typeof(T.init[0]) == const))
     {
