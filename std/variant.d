@@ -3064,6 +3064,19 @@ if (isAlgebraic!VariantType && Handler.length > 0)
 
 @system unittest
 {
+    // Bugzilla 15940
+    class C { }
+    struct S
+    {
+        C a;
+        alias a this;
+    }
+    S s = S(new C());
+    auto v = Variant(s); // compile error
+}
+
+@system unittest
+{
     // Test if we don't have scoping issues.
     Variant createVariant(int[] input)
     {
