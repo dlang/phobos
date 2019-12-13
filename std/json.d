@@ -359,6 +359,90 @@ struct JSONValue
         return type == JSONType.null_;
     }
 
+    /***
+     * Generic type value getter
+     * A convenience getter that returns this `JSONValue` as the specified D type.
+     * Note: only numeric, `bool`, `string`, `JSONValue[string]` and `JSONValue[]` types are accepted
+     * Throws: `JSONException` if `T` cannot hold the contents of this `JSONValue`
+     */
+    @property inout(T) get(T)() inout const pure @safe
+    {
+        static if (is(Unqual!T == string))
+        {
+            return str;
+        }
+        else static if (is(Unqual!T == bool))
+        {
+            return boolean;
+        }
+        else static if (isFloatingPoint!T)
+        {
+            switch (type)
+            {
+            case JSONType.float_:
+                return cast(T) floating;
+            case JSONType.uinteger:
+                return cast(T) uinteger;
+            case JSONType.integer:
+                return cast(T) integer;
+            default:
+                throw new JSONException("JSONValue is not a number type");
+            }
+        }
+        else static if (__traits(isUnsigned, T))
+        {
+            return cast(T) uinteger;
+        }
+        else static if (isSigned!T)
+        {
+            return cast(T) integer;
+        }
+        else
+        {
+            static assert(false, "Unsupported type");
+        }
+    }
+    // This specialization is needed because arrayNoRef requires inout
+    @property inout(T) get(T : JSONValue[])() inout pure @trusted /// ditto
+    {
+        return arrayNoRef;
+    }
+    /// ditto
+    @property inout(T) get(T : JSONValue[string])() inout pure @trusted
+    {
+        return object;
+    }
+    ///
+    @safe unittest
+    {
+        import std.exception;
+        string s =
+        `{
+            "a": 123,
+            "b": 3.1415,
+            "c": "text",
+            "d": true,
+            "e": [1, 2, 3],
+            "f": { "a": 1 }
+         }`;
+
+        struct a { }
+
+        immutable json = parseJSON(s);
+        assert(json["a"].get!double == 123.0);
+        assert(json["a"].get!int == 123);
+        assert(json["b"].get!double == 3.1415);
+        assertThrown(json["b"].get!int);
+        assert(json["c"].get!string == "text");
+        assert(json["d"].get!bool == true);
+        assertNotThrown(json["e"].get!(JSONValue[]));
+        assertNotThrown(json["f"].get!(JSONValue[string]));
+        static assert(!__traits(compiles, json["a"].get!a));
+        assertThrown(json["e"].get!float);
+        assertThrown(json["d"].get!(JSONValue[string]));
+        assertThrown(json["f"].get!(JSONValue[]));
+    }
+
     private void assign(T)(T arg) @safe
     {
         static if (is(T : typeof(null)))

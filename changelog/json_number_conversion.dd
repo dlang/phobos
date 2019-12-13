@@ -1,0 +1,12 @@
+Added get!(T) getter to std.json
+
+This getter will try to return underlying json type as T if possible.
+It is convenient for automatic integer conversion like this:
+-------
+import std.json;
+string s = `{ "a": 123 }`;
+auto json = parseJSON(s);
+
+// This will throw with json["a"].floating
+assert(json["a"].get!double == 123.0);
+-------
