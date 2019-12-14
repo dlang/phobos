@@ -1131,6 +1131,7 @@ public:
     /// ditto
     void toString(Writer)(scope Writer sink, scope const ref FormatSpec!char f) const
     {
+        import std.range.primitives : put;
         const spec = f.spec;
         immutable hex = (spec == 'x' || spec == 'X');
         if (!(spec == 's' || spec == 'd' || spec =='o' || hex))
@@ -1177,23 +1178,23 @@ public:
 
         if (!f.flDash && !f.flZero)
             foreach (i; 0 .. difw)
-                sink(" ");
+                put(sink, " ");
 
         if (signChar)
         {
             scope char[1] buf = signChar;
-            sink(buf[]);
+            put(sink, buf[]);
         }
 
         if (!f.flDash && f.flZero)
             foreach (i; 0 .. difw)
-                sink("0");
+                put(sink, "0");
 
-        sink(buff);
+        put(sink, buff);
 
         if (f.flDash)
             foreach (i; 0 .. difw)
-                sink(" ");
+                put(sink, " ");
     }
 
     /**
