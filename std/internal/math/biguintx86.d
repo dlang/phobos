@@ -722,7 +722,15 @@ string asmMulAdd_enter_odd(string OP, string M_ADDRESS) pure @safe
 ";
 }
 
-
+version (D_PIC) {} else
+{
+    // This cannot be declared inside the relevant functions because __gshared is
+    // not allowed in @safe functions. It cannot be regular shared either since
+    // that gives an access violation on Win32 for some reason.
+    private __gshared int storagenopTriangleAccumulate;
+    private __gshared int storagenopMulAdd;
+    private __gshared int storagenopMultiplyAccumulate;
+}
 
 /**
  * dest[#] += src[#] * multiplier OP carry(0 .. FFFF_FFFF).
@@ -756,7 +764,7 @@ uint multibyteMulAdd(char op)(uint [] dest, const uint [] src, uint
         // when initializing registers to zero.
         static immutable int zero = 0;
         // use p3/p4 units
-        //shared int storagenop; // write-only
+        alias storagenop = storagenopMulAdd; // write-only
     }
 
     enum { LASTPARAM = 5*4 } // 4* pushes + return address.
@@ -840,7 +848,7 @@ void multibyteMultiplyAccumulate(uint [] dest, const uint[] left,
         // when initializing registers to zero.
         static immutable int zero = 0;
         // use p3/p4 units
-        //shared int storagenop; // write-only
+        alias storagenop = storagenopMultiplyAccumulate; // write-only
     }
 
     enum { LASTPARAM = 6*4 } // 4* pushes + local + return address.
@@ -1100,14 +1108,6 @@ length2:
         dest[$-2] = cast(uint) c;
 }
 
-version (D_PIC) {} else
-{
-    // this cannot be declared inside the relevant functions because that is
-    // not allowed in @safe functions. It cannot be regular shared either since
-    // that gives an access violation on Win32 for some reason.
-    private __gshared int storagenop;
-}
-
 //dest += src[0]*src[1...$] + src[1]*src[2..$] + ... + src[$-3]*src[$-2..$]+ src[$-2]*src[$-1]
 // assert(dest.length = src.length*2);
 // assert(src.length >= 3);
@@ -1132,7 +1132,7 @@ void multibyteTriangleAccumulateAsm(uint[] dest, const uint[] src) pure @safe
         // when initializing registers to zero.
         static immutable int zero = 0;
         // use p3/p4 units
-        //shared int storagenop; // write-only
+        alias storagenop = storagenopTriangleAccumulate; // write-only
     }
 
     enum { LASTPARAM = 6*4 } // 4* pushes + local + return address.

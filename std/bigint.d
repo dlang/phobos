@@ -1121,15 +1121,15 @@ public:
      * $(TR $(TD null) $(TD Default formatting (same as "d") ))
      * )
      */
-    void toString(Writer)(scope Writer sink, string formatString) const
+    void toString(Writer)(scope ref Writer sink, string formatString) const
     {
         auto f = FormatSpec!char(formatString);
         f.writeUpToNextSpec(sink);
-        toString(sink, f);
+        toString!Writer(sink, f);
     }
 
     /// ditto
-    void toString(Writer)(scope Writer sink, scope const ref FormatSpec!char f) const
+    void toString(Writer)(scope ref Writer sink, scope const ref FormatSpec!char f) const
     {
         import std.range.primitives : put;
         const spec = f.spec;
@@ -1212,6 +1212,35 @@ public:
         assert(format("%x", x) == "2_dfd1c040");
         assert(format("%X", x) == "2_DFD1C040");
         assert(format("%o", x) == "133764340100");
+    }
+
+    // for backwards compatibility, see unittest below
+    /// ditto
+    void toString(scope void delegate(const(char)[]) sink, string formatString) const
+    {
+        toString!(void delegate(const(char)[]))(sink, formatString);
+    }
+
+    // for backwards compatibility, see unittest below
+    /// ditto
+    void toString(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char f) const
+    {
+        toString!(void delegate(const(char)[]))(sink, f);
+    }
+
+    // Backwards compatibility test
+    // BigInt.toString used to only accept a delegate sink function, but this does not work
+    // well with attributes such as @safe. A template function toString was added that
+    // works on OutputRanges, but when a delegate was passed in the form of an untyped
+    // lambda such as `str => dst.put(str)` the parameter type was inferred as `void` and
+    // the function failed to instantiate.
+    @system unittest
+    {
+        BigInt num = 503;
+        import std.array: appender;
+        auto dst = appender!string();
+        num.toString(str => dst.put(str), null);
+        assert(dst[] == "503");
     }
 
     // Implement toHash so that BigInt works properly as an AA key.
@@ -1377,10 +1406,10 @@ Returns:
 */
 string toHex(const(BigInt) x) @safe
 {
-    string outbuff="";
-    void sink(const(char)[] s) { outbuff ~= s; }
-    x.toString(&sink, "%X");
-    return outbuff;
+    import std.array : appender;
+    auto outbuff = appender!string();
+    x.toString(outbuff, "%X");
+    return outbuff[];
 }
 
 ///
