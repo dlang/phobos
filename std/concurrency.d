@@ -621,6 +621,7 @@ if (isSpawnable!(F, T))
  * $(REF spawn, std,concurrency), `T` must not have unshared aliasing.
  */
 void send(T...)(Tid tid, T vals)
+in (tid.mbox !is null)
 {
     static assert(!hasLocalAliasing!(T), "Aliases to mutable thread-local data not allowed.");
     _send(tid, vals);
@@ -634,6 +635,7 @@ void send(T...)(Tid tid, T vals)
  * out-of-band communication, to signal exceptional conditions, etc.
  */
 void prioritySend(T...)(Tid tid, T vals)
+in (tid.mbox !is null)
 {
     static assert(!hasLocalAliasing!(T), "Aliases to mutable thread-local data not allowed.");
     _send(MsgType.priority, tid, vals);
@@ -643,6 +645,7 @@ void prioritySend(T...)(Tid tid, T vals)
  * ditto
  */
 private void _send(T...)(Tid tid, T vals)
+in (tid.mbox !is null)
 {
     _send(MsgType.standard, tid, vals);
 }
@@ -652,6 +655,7 @@ private void _send(T...)(Tid tid, T vals)
  * both Tid.send() and .send().
  */
 private void _send(T...)(MsgType type, Tid tid, T vals)
+in (tid.mbox !is null)
 {
     auto msg = Message(type, vals);
     tid.mbox.put(msg);
@@ -951,6 +955,7 @@ private
  *             mailbox.
  */
 void setMaxMailboxSize(Tid tid, size_t messages, OnCrowding doThis) @safe pure
+in (tid.mbox !is null)
 {
     final switch (doThis)
     {
@@ -977,6 +982,7 @@ void setMaxMailboxSize(Tid tid, size_t messages, OnCrowding doThis) @safe pure
  *                     mailbox.
  */
 void setMaxMailboxSize(Tid tid, size_t messages, bool function(Tid) onCrowdingDoThis)
+in (tid.mbox !is null)
 {
     tid.mbox.setMaxMsgs(messages, onCrowdingDoThis);
 }
@@ -1026,6 +1032,7 @@ private void unregisterMe(ref ThreadInfo me)
  *  defunct thread.
  */
 bool register(string name, Tid tid)
+in (tid.mbox !is null)
 {
     synchronized (registryLock)
     {
