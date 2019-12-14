@@ -1236,11 +1236,16 @@ public:
     // the function failed to instantiate.
     @system unittest
     {
+        import std.format : FormatSpec;
+        import std.array : appender;
         BigInt num = 503;
-        import std.array: appender;
         auto dst = appender!string();
         num.toString(str => dst.put(str), null);
         assert(dst[] == "503");
+        num = 504;
+        auto f = FormatSpec!char("");
+        num.toString(str => dst.put(str), f);
+        assert(dst[] == "503504");
     }
 
     // Implement toHash so that BigInt works properly as an AA key.
