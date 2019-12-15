@@ -659,6 +659,7 @@ public:
         {   // perform a subtraction
             if (x.data.length > 2)
             {
+                // subInt returns GC allocated array, can be safely cast to immutable
                 r.data = (() @trusted => cast(immutable) subInt(x.data, y))();
             }
             else
@@ -694,6 +695,7 @@ public:
         }
         else
         {
+            // addInt returns GC allocated array, can be safely cast to immutable
             r.data = (() @trusted => cast(immutable) addInt(x.data, y))();
         }
         return r;
@@ -708,6 +710,7 @@ public:
         if (wantSub)
         {   // perform a subtraction
             bool negative;
+            // sub returns GC allocated array, can be safely cast to immutable
             r.data = (() @trusted => cast(immutable) sub(x.data, y.data, &negative))();
             *sign ^= negative;
             if (r.isZero())
@@ -717,6 +720,7 @@ public:
         }
         else
         {
+            // add returns GC allocated array, can be safely cast to immutable
             r.data = (() @trusted => cast(immutable) add(x.data, y.data))();
         }
         return r;

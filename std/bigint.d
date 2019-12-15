@@ -907,7 +907,7 @@ public:
         Warning: Casting to/from `const` or `immutable` may break type
         system guarantees. Use with care.
      */
-    T opCast(T)() pure nothrow @nogc @safe const
+    T opCast(T)() pure nothrow @nogc const
     if (is(Unqual!T == BigInt))
     {
         return this;
