@@ -7903,19 +7903,43 @@ if (isFloatingPoint!(F) && isIntegral!(G))
     assert(equalsDigit(pow(2.0L, 10.0L), 1024, 19));
 }
 
-/** Compute the value of an integer x, raised to the power of a positive
- * integer n.
+/**
+ * Compute the power of two integral numbers.
  *
- *  If both x and n are 0, the result is 1.
- *  If n is negative, an integer divide error will occur at runtime,
- * regardless of the value of x.
+ * Params:
+ *     x = base
+ *     n = exponent
+ *
+ * Returns:
+ *     x raised to the power of n. If n is negative the result is 1 / pow(x, -n),
+ *     which is calculated as integer division with remainder. This may result in
+ *     a division by zero error.
+ *
+ *     If both x and n are 0, the result is 1.
+ *
+ * Throws:
+ *     If x is 0 and n is negative, the result is the same as the result of a
+ *     division by zero.
  */
 typeof(Unqual!(F).init * Unqual!(G).init) pow(F, G)(F x, G n) @nogc @trusted pure nothrow
 if (isIntegral!(F) && isIntegral!(G))
 {
-    if (n<0) return x/0; // Only support positive powers
     typeof(return) p, v = void;
     Unqual!G m = n;
+
+    static if (isSigned!(F))
+    {
+        if (x == -1) return cast(typeof(return)) (m & 1 ? -1 : 1);
+    }
+    static if (isSigned!(G))
+    {
+        if (x == 0 && m <= -1) return x / 0;
+    }
+    if (x == 1) return 1;
+    static if (isSigned!(G))
+    {
+        if (m < 0) return 0;
+    }
 
     switch (m)
     {
@@ -7951,6 +7975,27 @@ if (isIntegral!(F) && isIntegral!(G))
 ///
 @safe pure nothrow @nogc unittest
 {
+    assert(pow(2, 3) == 8);
+    assert(pow(3, 2) == 9);
+
+    assert(pow(2, 10) == 1_024);
+    assert(pow(2, 20) == 1_048_576);
+    assert(pow(2, 30) == 1_073_741_824);
+
+    assert(pow(0, 0) == 1);
+
+    assert(pow(1, -5) == 1);
+    assert(pow(1, -6) == 1);
+    assert(pow(-1, -5) == -1);
+    assert(pow(-1, -6) == 1);
+
+    assert(pow(-2, 5) == -32);
+    assert(pow(-2, -5) == 0);
+    assert(pow(cast(double) -2, -5) == -0.03125);
+}
+
+@safe pure nothrow @nogc unittest
+{
     immutable int one = 1;
     immutable byte two = 2;
     immutable ubyte three = 3;
@@ -7963,7 +8008,20 @@ if (isIntegral!(F) && isIntegral!(G))
     assert(pow(ten, four) == 10_000);
     assert(pow(four, 10) == 1_048_576);
     assert(pow(three, four) == 81);
+}
 
+// issue 7006
+@safe pure nothrow @nogc unittest
+{
+    assert(pow(5, -1) == 0);
+    assert(pow(-5, -1) == 0);
+    assert(pow(5, -2) == 0);
+    assert(pow(-5, -2) == 0);
+    assert(pow(-1, int.min) == 1);
+    assert(pow(-2, int.min) == 0);
+
+    assert(pow(4294967290UL,2) == 18446744022169944100UL);
+    assert(pow(0,uint.max) == 0);
 }
 
 /**Computes integer to floating point powers.*/
