@@ -20,9 +20,9 @@ import std.math : floatTraits, RealFormat, PI, PI_4,
 
 /////////////////////////////////////////////////////////////////////////////
 
-T tan(T)(T x) @safe pure nothrow @nogc
+// Coefficients for tan(x) and PI/4 split into three parts.
+private template tanCoefficents(T)
 {
-    // Coefficients for tan(x) and PI/4 split into three parts.
     enum realFormat = floatTraits!T.realFormat;
     static if (realFormat == RealFormat.ieeeQuadruple)
     {
@@ -88,12 +88,17 @@ T tan(T)(T x) @safe pure nothrow @nogc
     }
     else
         static assert(0, "no coefficients for tan()");
+}
 
+T tan(T)(T x) @safe pure nothrow @nogc
+{
     // Special cases.
     if (x == cast(T) 0.0 || isNaN(x))
         return x;
     if (isInfinity(x))
         return T.nan;
+
+    mixin tanCoefficents!T;
 
     // Make argument positive but save the sign.
     bool sign = false;
