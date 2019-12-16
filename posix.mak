@@ -245,8 +245,9 @@ EXTRA_MODULES_INTERNAL := $(addprefix std/, \
 	digest/digest \
 	$(addprefix internal/, \
 		cstring digest/sha_SSSE3 \
-		$(addprefix math/, biguintcore biguintnoasm biguintx86	\
-						   errorfunction gammafunction ) \
+		$(addprefix math/, biguintcore biguintnoasm biguintx86 \
+				   errorfunction gammafunction \
+				   mathcore mathnoasm mathx86) \
 		scopebuffer test/dummyrange test/range \
 		$(addprefix unicode_, comp decomp grapheme norm tables) \
 		windows/advapi32 \
