@@ -18,12 +18,19 @@ static import core.math;
 import std.math : floatTraits, RealFormat, PI, PI_4,
        isNaN, isInfinity, signbit, floor, poly;
 
+// Define a handy shorthand variable for accessing floatTraits.
+private template RealFormatVar(T)
+{
+    enum realFormat = floatTraits!T.realFormat;
+}
+
 /////////////////////////////////////////////////////////////////////////////
 
 // Coefficients for tan(x) and PI/4 split into three parts.
 private template tanCoefficents(T)
 {
-    enum realFormat = floatTraits!T.realFormat;
+    mixin RealFormatVar!T;
+
     static if (realFormat == RealFormat.ieeeQuadruple)
     {
         static immutable T[6] P = [
