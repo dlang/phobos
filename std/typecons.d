@@ -2703,7 +2703,7 @@ Params:
 
     /// Ditto
     bool opEquals(U)(auto ref const(U) rhs) const
-    if (is(typeof(this.get == rhs)))
+    if (!is(U : typeof(this)) && is(typeof(this.get == rhs)))
     {
         return _isNull ? false : rhs == _value.payload;
     }
