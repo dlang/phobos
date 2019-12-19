@@ -1192,6 +1192,22 @@ if (is(Unqual!Char == Char))
         trailing = fmt;
     }
 
+    /**
+       Write the format string to an output range until the next format
+       specifier is found and parse that format specifier.
+
+       See $(LREF FormatSpec) for an example, how to use `writeUpToNextSpec`.
+
+       Params:
+           writer = the $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+
+       Returns:
+           True, when a format specifier is found.
+
+       Throws:
+           A $(LREF FormatException) when the found format specifier
+           could not be parsed.
+     */
     bool writeUpToNextSpec(OutputRange)(ref OutputRange writer) scope
     {
         if (trailing.empty)
@@ -1676,22 +1692,25 @@ if (is(Unqual!Char == Char))
 {
     import std.array;
     auto a = appender!(string)();
-    auto fmt = "Number: %2.4e\nString: %s";
+    auto fmt = "Number: %6.4e\nString: %s";
     auto f = FormatSpec!char(fmt);
 
-    f.writeUpToNextSpec(a);
+    assert(f.writeUpToNextSpec(a) == true);
 
     assert(a.data == "Number: ");
     assert(f.trailing == "\nString: %s");
     assert(f.spec == 'e');
-    assert(f.width == 2);
+    assert(f.width == 6);
     assert(f.precision == 4);
 
-    f.writeUpToNextSpec(a);
+    assert(f.writeUpToNextSpec(a) == true);
 
     assert(a.data == "Number: \nString: ");
     assert(f.trailing == "");
     assert(f.spec == 's');
+
+    assert(f.writeUpToNextSpec(a) == false);
+    assert(a.data == "Number: \nString: ");
 }
 
 // Issue 14059
