@@ -95,18 +95,22 @@ enum JSONType : byte
     object,   /// ditto
     true_,    /// ditto
     false_,   /// ditto
-    deprecated("Use .null_")    NULL = null_,
-    deprecated("Use .string")   STRING = string,
-    deprecated("Use .integer")  INTEGER = integer,
-    deprecated("Use .uinteger") UINTEGER = uinteger,
-    deprecated("Use .float_")   FLOAT = float_,
-    deprecated("Use .array")    ARRAY = array,
-    deprecated("Use .object")   OBJECT = object,
-    deprecated("Use .true_")    TRUE = true_,
-    deprecated("Use .false_")   FALSE = false_,
+    // FIXME: Find some way to deprecate the enum members below, which does NOT
+    // create lots of spam-like deprecation warnings, which can't be fixed
+    // by the user. See discussion on this issue at
+    // https://forum.dlang.org/post/feudrhtxkaxxscwhhhff@forum.dlang.org
+    /* deprecated("Use .null_")    */ NULL = null_,
+    /* deprecated("Use .string")   */ STRING = string,
+    /* deprecated("Use .integer")  */ INTEGER = integer,
+    /* deprecated("Use .uinteger") */ UINTEGER = uinteger,
+    /* deprecated("Use .float_")   */ FLOAT = float_,
+    /* deprecated("Use .array")    */ ARRAY = array,
+    /* deprecated("Use .object")   */ OBJECT = object,
+    /* deprecated("Use .true_")    */ TRUE = true_,
+    /* deprecated("Use .false_")   */ FALSE = false_,
 }
 
-deprecated("Use JSONType") alias JSON_TYPE = JSONType;
+deprecated("Use JSONType and the new enum member names") alias JSON_TYPE = JSONType;
 
 /**
 JSON value node
