@@ -23,7 +23,7 @@ $(TR $(TDNW Classics) $(TD
 $(TR $(TDNW Trigonometry) $(TD
     $(MYREF sin) $(MYREF cos) $(MYREF tan) $(MYREF asin) $(MYREF acos)
     $(MYREF atan) $(MYREF atan2) $(MYREF sinh) $(MYREF cosh) $(MYREF tanh)
-    $(MYREF asinh) $(MYREF acosh) $(MYREF atanh) $(MYREF expi)
+    $(MYREF asinh) $(MYREF acosh) $(MYREF atanh)
 ))
 $(TR $(TDNW Rounding) $(TD
     $(MYREF ceil) $(MYREF floor) $(MYREF round) $(MYREF lround)
@@ -4600,6 +4600,13 @@ real modf(real x, ref real i) @trusted nothrow @nogc
 real scalbn(real x, int n) @safe pure nothrow @nogc
 {
     pragma(inline, true);
+
+    if (__ctfe)
+    {
+        // Handle special cases.
+        if (x == 0.0 || isInfinity(x))
+            return x;
+    }
     return core.math.ldexp(x, n);
 }
 
@@ -7448,58 +7455,58 @@ real nextUp(real x) @trusted pure nothrow @nogc
 /** ditto */
 double nextUp(double x) @trusted pure nothrow @nogc
 {
-    ulong *ps = cast(ulong *)&x;
+    ulong s = *cast(ulong *)&x;
 
-    if ((*ps & 0x7FF0_0000_0000_0000) == 0x7FF0_0000_0000_0000)
+    if ((s & 0x7FF0_0000_0000_0000) == 0x7FF0_0000_0000_0000)
     {
         // First, deal with NANs and infinity
         if (x == -x.infinity) return -x.max;
         return x; // +INF and NAN are unchanged.
     }
-    if (*ps & 0x8000_0000_0000_0000)    // Negative number
+    if (s & 0x8000_0000_0000_0000)    // Negative number
     {
-        if (*ps == 0x8000_0000_0000_0000) // it was negative zero
+        if (s == 0x8000_0000_0000_0000) // it was negative zero
         {
-            *ps = 0x0000_0000_0000_0001; // change to smallest subnormal
-            return x;
+            s = 0x0000_0000_0000_0001; // change to smallest subnormal
+            return *cast(double*) &s;
         }
-        --*ps;
+        --s;
     }
     else
     {   // Positive number
-        ++*ps;
+        ++s;
     }
-    return x;
+    return *cast(double*) &s;
 }
 
 /** ditto */
 float nextUp(float x) @trusted pure nothrow @nogc
 {
-    uint *ps = cast(uint *)&x;
+    uint s = *cast(uint *)&x;
 
-    if ((*ps & 0x7F80_0000) == 0x7F80_0000)
+    if ((s & 0x7F80_0000) == 0x7F80_0000)
     {
         // First, deal with NANs and infinity
         if (x == -x.infinity) return -x.max;
 
         return x; // +INF and NAN are unchanged.
     }
-    if (*ps & 0x8000_0000)   // Negative number
+    if (s & 0x8000_0000)   // Negative number
     {
-        if (*ps == 0x8000_0000) // it was negative zero
+        if (s == 0x8000_0000) // it was negative zero
         {
-            *ps = 0x0000_0001; // change to smallest subnormal
-            return x;
+            s = 0x0000_0001; // change to smallest subnormal
+            return *cast(float*) &s;
         }
 
-        --*ps;
+        --s;
     }
     else
     {
         // Positive number
-        ++*ps;
+        ++s;
     }
-    return x;
+    return *cast(float*) &s;
 }
 
 ///
@@ -7610,6 +7617,41 @@ float nextDown(float x) @safe pure nothrow @nogc
     f = 1.0f+float.epsilon;
     assert(nextDown(f)==1.0);
     assert(nextafter(1.0+real.epsilon, -real.infinity)==1.0);
+
+    // CTFE
+
+    //enum double n = NaN(0xABC); // FIXME: Cannot set NaN payload in CTFE.
+    //static assert(isIdentical(nextUp(n), n)); // FIXME: https://issues.dlang.org/show_bug.cgi?id=20197
+    static assert(nextUp(double.nan) is double.nan);
+    // negative numbers
+    static assert( nextUp(-double.infinity) == -double.max );
+    static assert( nextUp(-1-double.epsilon) == -1.0 );
+    static assert( nextUp(-2.0) == -2.0 + double.epsilon);
+    // subnormals and zero
+
+    static assert( nextUp(-double.min_normal) == -double.min_normal*(1-double.epsilon) );
+    static assert( nextUp(-double.min_normal*(1-double.epsilon)) == -double.min_normal*(1-2*double.epsilon) );
+    static assert( -0.0 is nextUp(-double.min_normal*double.epsilon) );
+    static assert( nextUp(0.0) == double.min_normal*double.epsilon );
+    static assert( nextUp(-0.0) == double.min_normal*double.epsilon );
+    static assert( nextUp(double.min_normal*(1-double.epsilon)) == double.min_normal );
+    static assert( nextUp(double.min_normal) == double.min_normal*(1+double.epsilon) );
+    // positive numbers
+    static assert( nextUp(1.0) == 1.0 + double.epsilon );
+    static assert( nextUp(2.0-double.epsilon) == 2.0 );
+    static assert( nextUp(double.max) == double.infinity );
+
+    //enum float fn = NaN(0xABC); // FIXME: Cannot set NaN payload in CTFE.
+    //static assert(isIdentical(nextUp(fn), fn)); // FIXME: https://issues.dlang.org/show_bug.cgi?id=20197
+    static assert(nextUp(float.nan) is float.nan);
+    static assert(nextUp(-float.min_normal) == -float.min_normal*(1-float.epsilon));
+    static assert(nextUp(1.0f) == 1.0f+float.epsilon);
+    static assert(nextUp(-0.0f) == float.min_normal*float.epsilon);
+    static assert(nextUp(float.infinity)==float.infinity);
+    //static assert(nextDown(1.0L+real.epsilon)==1.0);
+    static assert(nextDown(1.0+double.epsilon)==1.0);
+    static assert(nextDown(1.0f+float.epsilon)==1.0);
+    //static assert(nextafter(1.0+real.epsilon, -real.infinity)==1.0);
 }
 
 
@@ -7650,6 +7692,22 @@ T nextafter(T)(const T x, const T y) @safe pure nothrow @nogc
     real c = 3;
     assert(is(typeof(nextafter(c, c)) == real));
     assert(nextafter(c, c.infinity) > c);
+}
+
+@safe pure nothrow @nogc unittest
+{
+    // CTFE
+    enum float a = 1;
+    static assert(is(typeof(nextafter(a, a)) == float));
+    static assert(nextafter(a, a.infinity) > a);
+
+    enum double b = 2;
+    static assert(is(typeof(nextafter(b, b)) == double));
+    static assert(nextafter(b, b.infinity) > b);
+
+    //enum real c = 3;
+    //static assert(is(typeof(nextafter(c, c)) == real));
+    //static assert(nextafter(c, c.infinity) > c);
 }
 
 //real nexttoward(real x, real y) { return core.stdc.math.nexttowardl(x, y); }
@@ -7746,12 +7804,20 @@ real fma(real x, real y, real z) @safe pure nothrow @nogc { return (x * y) + z; 
 Unqual!F pow(F, G)(F x, G n) @nogc @trusted pure nothrow
 if (isFloatingPoint!(F) && isIntegral!(G))
 {
-    import std.traits : Unsigned;
+    import std.traits : Unsigned, isSigned;
     real p = 1.0, v = void;
     Unsigned!(Unqual!G) m = n;
+
+    static if (G.sizeof < 4 && !isSigned!G)
+    {
+        import std.conv : to;
+        const int n2 = n.to!int;
+    }
+    else alias n2 = n;
+
     if (n < 0)
     {
-        switch (n)
+        switch (n2)
         {
         case -1:
             return 1 / x;

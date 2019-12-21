@@ -62,6 +62,7 @@ import std.exception;
 import std.meta;
 import std.range.primitives;
 import std.traits;
+import std.math : FloatingPointControl;
 
 
 /**
@@ -190,7 +191,7 @@ $(I FormatChar):
     $(BOOKTABLE Flags affect formatting depending on the specifier as
     follows., $(TR $(TH Flag) $(TH Types&nbsp;affected) $(TH Semantics))
 
-    $(TR $(TD $(B '-')) $(TD numeric) $(TD Left justify the result in
+    $(TR $(TD $(B '-')) $(TD numeric, bool, null, char, string, enum, pointer) $(TD Left justify the result in
         the field.  It overrides any $(B 0) flag.))
 
     $(TR $(TD $(B '+')) $(TD numeric) $(TD Prefix positive numbers in
@@ -219,6 +220,7 @@ $(I FormatChar):
     $(DL
         $(DT $(I Width))
         $(DD
+        Only used for numeric, bool, null, char, string, enum and pointer types.
         Specifies the minimum field width.
         If the width is a $(B *), an additional argument of type $(B int),
         preceding the actual argument, is taken as the width.
@@ -1190,6 +1192,22 @@ if (is(Unqual!Char == Char))
         trailing = fmt;
     }
 
+    /**
+       Write the format string to an output range until the next format
+       specifier is found and parse that format specifier.
+
+       See $(LREF FormatSpec) for an example, how to use `writeUpToNextSpec`.
+
+       Params:
+           writer = the $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+
+       Returns:
+           True, when a format specifier is found.
+
+       Throws:
+           A $(LREF FormatException) when the found format specifier
+           could not be parsed.
+     */
     bool writeUpToNextSpec(OutputRange)(ref OutputRange writer) scope
     {
         if (trailing.empty)
@@ -1674,22 +1692,25 @@ if (is(Unqual!Char == Char))
 {
     import std.array;
     auto a = appender!(string)();
-    auto fmt = "Number: %2.4e\nString: %s";
+    auto fmt = "Number: %6.4e\nString: %s";
     auto f = FormatSpec!char(fmt);
 
-    f.writeUpToNextSpec(a);
+    assert(f.writeUpToNextSpec(a) == true);
 
     assert(a.data == "Number: ");
     assert(f.trailing == "\nString: %s");
     assert(f.spec == 'e');
-    assert(f.width == 2);
+    assert(f.width == 6);
     assert(f.precision == 4);
 
-    f.writeUpToNextSpec(a);
+    assert(f.writeUpToNextSpec(a) == true);
 
     assert(a.data == "Number: \nString: ");
     assert(f.trailing == "");
     assert(f.spec == 's');
+
+    assert(f.writeUpToNextSpec(a) == false);
+    assert(a.data == "Number: \nString: ");
 }
 
 // Issue 14059
@@ -2142,23 +2163,7 @@ if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     BooleanTypeOf!T val = obj;
 
     if (f.spec == 's')
-    {
-        string s = val ? "true" : "false";
-        if (!f.flDash)
-        {
-            // right align
-            if (f.width > s.length)
-                foreach (i ; 0 .. f.width - s.length) put(w, ' ');
-            put(w, s);
-        }
-        else
-        {
-            // left align
-            put(w, s);
-            if (f.width > s.length)
-                foreach (i ; 0 .. f.width - s.length) put(w, ' ');
-        }
-    }
+        writeAligned(w, val ? "true" : "false", f);
     else
         formatValueImpl(w, cast(int) val, f);
 }
@@ -2209,7 +2214,7 @@ if (is(Unqual!T == typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
     enforceFmt(spec == 's',
         "null literal cannot match %" ~ spec);
 
-    put(w, "null");
+    writeAligned(w, "null", f);
 }
 
 @safe pure unittest
@@ -2220,6 +2225,12 @@ if (is(Unqual!T == typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
     {
         formatTest( null, "null" );
     });
+}
+
+@safe pure unittest
+{
+    string t = format("[%6s] [%-6s]", null, null);
+    assert(t == "[  null] [null  ]");
 }
 
 /*
@@ -2560,6 +2571,15 @@ private void formatUnsigned(Writer, T, Char)
     assert(format("%017,d", -1234) == "-0,000,000,001,234");
 }
 
+@safe pure unittest
+{
+    string t1 = format("[%6s] [%-6s]", 123, 123);
+    assert(t1 == "[   123] [123   ]");
+
+    string t2 = format("[%6s] [%-6s]", -123, -123);
+    assert(t2 == "[  -123] [-123  ]");
+}
+
 private enum ctfpMessage = "Cannot format floating point types at compile-time";
 
 /*
@@ -2571,9 +2591,25 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     import std.algorithm.comparison : min;
     import std.algorithm.searching : find;
     import std.string : indexOf, indexOfAny, indexOfNeither;
+    import std.math : isInfinity, isNaN, signbit;
+    import std.ascii : isUpper;
+
+    string nanInfStr(scope const ref FormatSpec!Char f, const bool nan,
+            const bool inf, const int sb, const bool up) @safe pure nothrow
+    {
+        return nan
+            ? up
+                ? sb ? "-NAN" : f.flPlus ? "+NAN" : (f.flSpace ? " NAN" : "NAN")
+                : sb ? "-nan" : f.flPlus ? "+nan" : (f.flSpace ? " nan" : "nan")
+            : inf
+                ? up
+                    ? sb ? "-INF" : f.flPlus ? "+INF" : (f.flSpace ? " INF" : "INF")
+                    : sb ? "-inf" : f.flPlus ? "+inf" : (f.flSpace ? " inf" : "inf")
+                : "";
+    }
 
     FloatingPointTypeOf!T val = obj;
-    const spec = f.spec;
+    const char spec = f.spec;
 
     if (spec == 'r')
     {
@@ -2597,79 +2633,89 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         "incompatible format character for floating point argument: %" ~ spec);
     enforceFmt(!__ctfe, ctfpMessage);
 
-    version (CRuntime_Microsoft)
-    {
-        import std.math : isNaN, isInfinity;
-        immutable double tval = val; // convert early to get "inf" in case of overflow
-        string s;
-        if (isNaN(tval))
-            s = "nan"; // snprintf writes 1.#QNAN
-        else if (isInfinity(tval))
-            s = val >= 0 ? "inf" : "-inf"; // snprintf writes 1.#INF
-
-        if (s.length > 0)
-        {
-          version (none)
-          {
-            return formatValueImpl(w, s, f);
-          }
-          else  // FIXME:workaround
-          {
-            s = s[0 .. f.precision < $ ? f.precision : $];
-            if (!f.flDash)
-            {
-                // right align
-                if (f.width > s.length)
-                    foreach (j ; 0 .. f.width - s.length) put(w, ' ');
-                put(w, s);
-            }
-            else
-            {
-                // left align
-                put(w, s);
-                if (f.width > s.length)
-                    foreach (j ; 0 .. f.width - s.length) put(w, ' ');
-            }
-            return;
-          }
-        }
-    }
-    else
-        alias tval = val;
     FormatSpec!Char fs = f; // fs is copy for change its values.
     const spec2 = spec == 's' ? 'g' : spec;
-    char[1 /*%*/ + 5 /*flags*/ + 3 /*width.prec*/ + 2 /*format*/
-                     + 1 /*\0*/] sprintfSpec = void;
-    sprintfSpec[0] = '%';
-    uint i = 1;
-    if (fs.flDash) sprintfSpec[i++] = '-';
-    if (fs.flPlus) sprintfSpec[i++] = '+';
-    if (fs.flZero) sprintfSpec[i++] = '0';
-    if (fs.flSpace) sprintfSpec[i++] = ' ';
-    if (fs.flHash) sprintfSpec[i++] = '#';
-    sprintfSpec[i .. i + 3] = "*.*";
-    i += 3;
-    if (is(Unqual!(typeof(val)) == real)) sprintfSpec[i++] = 'L';
-    sprintfSpec[i++] = spec2;
-    sprintfSpec[i] = 0;
-    //printf("format: '%s'; geeba: %g\n", sprintfSpec.ptr, val);
-    char[512] buf = void;
 
-    immutable n = ()@trusted{
-        import core.stdc.stdio : snprintf;
-        return snprintf(buf.ptr, buf.length,
-                        sprintfSpec.ptr,
-                        fs.width,
-                        // negative precision is same as no precision specified
-                        fs.precision == fs.UNSPECIFIED ? -1 : fs.precision,
-                        tval);
-    }();
+    version (CRuntime_Microsoft)
+    {
+        // convert early to get "inf" in case of overflow
+        // windows handels inf and nan strange
+        // https://devblogs.microsoft.com/oldnewthing/20130228-01/?p=5103
+        immutable double tval = val;
+    }
+    else
+    {
+        alias tval = val;
+    }
 
-    enforceFmt(n >= 0,
-        "floating point formatting failure");
+    const nan = isNaN(tval);
+    const inf = isInfinity(tval);
 
-    size_t len = min(n, buf.length-1);
-    if (fs.flSeparator)
+    size_t len;
+    char[] buf;
+    if (fs.spec=='a' || fs.spec=='A')
+    {
+        static if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.mant_dig))
+        {
+            buf = printFloat(val, fs, FloatingPointControl.rounding).dup;
+            len = buf.length;
+        }
+        else
+            goto useSnprintf;
+    }
+    else
+    {
+useSnprintf:
+        if (nan || inf)
+        {
+            const sb = signbit(tval);
+            const up = isUpper(spec);
+            string ns = nanInfStr(f, nan, inf, sb, up);
+            FormatSpec!Char co;
+            co.spec = 's';
+            co.width = f.width;
+            co.flDash = f.flDash;
+            formatValue(w, ns, co);
+            return;
+        }
+
+        char[1 /*%*/ + 5 /*flags*/ + 3 /*width.prec*/ + 2 /*format*/
+             + 1 /*\0*/] sprintfSpec = void;
+        sprintfSpec[0] = '%';
+        uint i = 1;
+        if (fs.flDash) sprintfSpec[i++] = '-';
+        if (fs.flPlus) sprintfSpec[i++] = '+';
+        if (fs.flZero) sprintfSpec[i++] = '0';
+        if (fs.flSpace) sprintfSpec[i++] = ' ';
+        if (fs.flHash) sprintfSpec[i++] = '#';
+        sprintfSpec[i .. i + 3] = "*.*";
+        i += 3;
+        if (is(Unqual!(typeof(val)) == real)) sprintfSpec[i++] = 'L';
+        sprintfSpec[i++] = spec2;
+        sprintfSpec[i] = 0;
+        //printf("format: '%s'; geeba: %g\n", sprintfSpec.ptr, val);
+        char[512] buf2 = void;
+
+        //writefln("'%s'", sprintfSpec[0 .. i]);
+
+        immutable n = ()@trusted{
+            import core.stdc.stdio : snprintf;
+            return snprintf(buf2.ptr, buf2.length,
+                            sprintfSpec.ptr,
+                            fs.width,
+                            // negative precision is same as no precision specified
+                            fs.precision == fs.UNSPECIFIED ? -1 : fs.precision,
+                            tval);
+        }();
+
+        enforceFmt(n >= 0,
+                   "floating point formatting failure");
+
+        len = min(n, buf2.length-1);
+        buf = buf2.dup;
+    }
+
+    if (fs.flSeparator && !inf && !nan)
     {
         ptrdiff_t indexOfRemovable()
         {
@@ -2837,6 +2883,43 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     assert(format("%016,.2f",  1234.0) == "0,000,001,234.00");
 }
 
+@safe unittest
+{
+    string t1 = format("[%6s] [%-6s]", 12.3, 12.3);
+    assert(t1 == "[  12.3] [12.3  ]");
+
+    string t2 = format("[%6s] [%-6s]", -12.3, -12.3);
+    assert(t2 == "[ -12.3] [-12.3 ]");
+}
+
+// issue 20396
+@safe unittest
+{
+    import std.math : nextUp;
+
+    assert(format!"%a"(nextUp(0.0f)) == "0x0.000002p-126");
+    assert(format!"%a"(nextUp(0.0)) == "0x0.0000000000001p-1022");
+}
+
+// issue 20371
+@safe unittest
+{
+    assert(format!"%.1000a"(1.0) ==
+           "0x1.000000000000000000000000000000000000000000000000000000000000000000000000000"
+           ~"000000000000000000000000000000000000000000000000000000000000000000000000000000"
+           ~"000000000000000000000000000000000000000000000000000000000000000000000000000000"
+           ~"000000000000000000000000000000000000000000000000000000000000000000000000000000"
+           ~"000000000000000000000000000000000000000000000000000000000000000000000000000000"
+           ~"000000000000000000000000000000000000000000000000000000000000000000000000000000"
+           ~"000000000000000000000000000000000000000000000000000000000000000000000000000000"
+           ~"000000000000000000000000000000000000000000000000000000000000000000000000000000"
+           ~"000000000000000000000000000000000000000000000000000000000000000000000000000000"
+           ~"000000000000000000000000000000000000000000000000000000000000000000000000000000"
+           ~"000000000000000000000000000000000000000000000000000000000000000000000000000000"
+           ~"000000000000000000000000000000000000000000000000000000000000000000000000000000"
+           ~"0000000000000000000000000000000000000000000000000000000000000000000p+0");
+}
+
 /*
     Formatting a `creal` is deprecated but still kept around for a while.
  */
@@ -2948,9 +3031,7 @@ if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     CharTypeOf!T val = obj;
 
     if (f.spec == 's' || f.spec == 'c')
-    {
-        put(w, val);
-    }
+        writeAligned(w, [val], f);
     else
     {
         alias U = AliasSeq!(ubyte, ushort, uint)[CharTypeOf!T.sizeof/2];
@@ -2994,6 +3075,15 @@ if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     formatTest( "%+r", cast(wchar)'c', [0,       'c'] );
     formatTest( "%+r", cast(dchar)'c', [0, 0, 0, 'c'] );
     formatTest( "%+r", '本', ['\x67', '\x2c'] );
+}
+
+
+@safe pure unittest
+{
+    string t1 = format("[%6s] [%-6s]", 'A', 'A');
+    assert(t1 == "[     A] [A     ]");
+    string t2 = format("[%6s] [%-6s]", '本', '本');
+    assert(t2 == "[     本] [本     ]");
 }
 
 /*
@@ -3056,6 +3146,14 @@ if (is(StringTypeOf!T) && !is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToSt
     formatTest( "%+r", "日本語"w, ['\x65', '\xe5', '\x67', '\x2c', '\x8a', '\x9e'] );
     formatTest( "%+r", "日本語"d, ['\x00', '\x00', '\x65', '\xe5', '\x00', '\x00',
         '\x67', '\x2c', '\x00', '\x00', '\x8a', '\x9e'] );
+}
+
+@safe pure unittest
+{
+    string t1 = format("[%6s] [%-6s]", "AB", "AB");
+    assert(t1 == "[    AB] [AB    ]");
+    string t2 = format("[%6s] [%-6s]", "本Ä", "本Ä");
+    assert(t2 == "[    本Ä] [本Ä    ]");
 }
 
 /*
@@ -3301,49 +3399,7 @@ if (isInputRange!T)
         static if (!is(E == enum) && is(CharTypeOf!E))
         {
             static if (is(StringTypeOf!T))
-            {
-                scope s = val[0 .. f.precision < $ ? f.precision : $];
-
-                size_t width;
-                if (f.width > 0)
-                {
-                    // strings that are fully made of ASCII characters
-                    // can be aligned w/o graphemeStride
-                    bool onlyAscii = true;
-                    for (size_t i; i < s.length; i++)
-                    {
-                        if (s[i] > 0x7F)
-                        {
-                            onlyAscii = false;
-                            break;
-                        }
-                    }
-                    if (!onlyAscii)
-                    {
-                        //TODO: optimize this
-                        import std.uni : graphemeStride;
-                        for (size_t i; i < s.length; i += graphemeStride(s, i))
-                            width++;
-                    }
-                    else width = s.length;
-                }
-                else width = s.length;
-
-                if (!f.flDash)
-                {
-                    // right align
-                    if (f.width > width)
-                        foreach (i ; 0 .. f.width - width) put(w, ' ');
-                    put(w, s);
-                }
-                else
-                {
-                    // left align
-                    put(w, s);
-                    if (f.width > width)
-                        foreach (i ; 0 .. f.width - width) put(w, ' ');
-                }
-            }
+                writeAligned(w, val[0 .. f.precision < $ ? f.precision : $], f);
             else
             {
                 if (!f.flDash)
@@ -4354,23 +4410,22 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
         put(w, left);
         foreach (i, e; val.tupleof)
         {
-            static if (0 < i && val.tupleof[i-1].offsetof == val.tupleof[i].offsetof)
+            static if (__traits(identifier, val.tupleof[i]) == "this")
+                continue;
+            else static if (0 < i && val.tupleof[i-1].offsetof == val.tupleof[i].offsetof)
             {
                 static if (i == val.tupleof.length - 1 || val.tupleof[i].offsetof != val.tupleof[i+1].offsetof)
                     put(w, separator~val.tupleof[i].stringof[4..$]~"}");
                 else
                     put(w, separator~val.tupleof[i].stringof[4..$]);
             }
+            else static if (i+1 < val.tupleof.length && val.tupleof[i].offsetof == val.tupleof[i+1].offsetof)
+                put(w, (i > 0 ? separator : "")~"#{overlap "~val.tupleof[i].stringof[4..$]);
             else
             {
-                static if (i+1 < val.tupleof.length && val.tupleof[i].offsetof == val.tupleof[i+1].offsetof)
-                    put(w, (i > 0 ? separator : "")~"#{overlap "~val.tupleof[i].stringof[4..$]);
-                else
-                {
-                    static if (i > 0)
-                        put(w, separator);
-                    formatElement(w, e, f);
-                }
+                static if (i > 0)
+                    put(w, separator);
+                formatElement(w, e, f);
             }
         }
         put(w, right);
@@ -4379,6 +4434,13 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
     {
         put(w, T.stringof);
     }
+}
+
+// issue 9588
+@safe pure unittest
+{
+    struct S { int x; bool empty() { return false; } }
+    formatTest( S(), "S(0)" );
 }
 
 @safe unittest
@@ -4495,10 +4557,19 @@ if (is(T == enum))
             }
         }
 
+        import std.array : appender;
+        auto w2 = appender!string();
+
         // val is not a member of T, output cast(T) rawValue instead.
-        put(w, "cast(" ~ T.stringof ~ ")");
+        put(w2, "cast(" ~ T.stringof ~ ")");
         static assert(!is(OriginalType!T == T), "OriginalType!" ~ T.stringof ~
                 "must not be equal to " ~ T.stringof);
+
+        FormatSpec!Char f2 = f;
+        f2.width = 0;
+        formatValueImpl(w2, cast(OriginalType!T) val, f2);
+        writeAligned(w, w2.data, f);
+        return;
     }
     formatValueImpl(w, cast(OriginalType!T) val, f);
 }
@@ -4534,21 +4605,22 @@ if (is(T == enum))
     formatTest("%b",    Foo.A, "1010");
 }
 
+@safe pure unittest
+{
+    enum A { one, two, three }
+
+    string t1 = format("[%6s] [%-6s]", A.one, A.one);
+    assert(t1 == "[   one] [one   ]");
+    string t2 = format("[%10s] [%-10s]", cast(A) 10, cast(A) 10);
+    assert(t2 == "[ cast(A)" ~ "10] [cast(A)" ~ "10 ]"); // due to bug in style checker
+}
+
 /*
    Pointers are formatted as hex integers.
  */
 private void formatValueImpl(Writer, T, Char)(auto ref Writer w, scope T val, scope const ref FormatSpec!Char f)
 if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
 {
-    static if (isInputRange!T)
-    {
-        if (val !is null)
-        {
-            formatRange(w, *val, f);
-            return;
-        }
-    }
-
     static if (is(typeof({ shared const void* p = val; })))
         alias SharedOf(T) = shared(T);
     else
@@ -4561,7 +4633,7 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
     {
         if (p is null)
         {
-            put(w, "null");
+            writeAligned(w, "null", f);
             return;
         }
         FormatSpec!Char fs = f; // fs is copy for change its values.
@@ -4574,6 +4646,14 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
            "Expected one of %s, %x or %X for pointer type.");
         formatValueImpl(w, pnum, f);
     }
+}
+
+@safe pure unittest
+{
+    int* p;
+
+    string t1 = format("[%6s] [%-6s]", p, p);
+    assert(t1 == "[  null] [null  ]");
 }
 
 /*
@@ -4608,17 +4688,23 @@ if (isSIMDVector!V)
 
 @safe pure unittest
 {
-    // pointer
-    import std.range;
-    auto r = retro([1,2,3,4]);
-    auto p = ()@trusted{ auto p = &r; return p; }();
-    formatTest( p, "[4, 3, 2, 1]" );
-    assert(p.empty);
-    p = null;
+    int* p = null;
     formatTest( p, "null" );
 
     auto q = ()@trusted{ return cast(void*) 0xFFEECCAA; }();
     formatTest( q, "FFEECCAA" );
+}
+
+// issue 11782
+@safe pure unittest
+{
+    import std.range : iota;
+
+    auto a = iota(0, 10);
+    auto b = iota(0, 10);
+    auto p = ()@trusted{ auto p = &a; return p; }();
+
+    assert(format("%s",p) != format("%s",b));
 }
 
 @system pure unittest
@@ -4908,38 +4994,8 @@ private void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __L
 
     stream.clear();
     formattedWrite(stream, "%g %A %s", 1.67, -1.28, float.nan);
-    // core.stdc.stdio.fwrite(stream.data.ptr, stream.data.length, 1, stderr);
-
-    /* The host C library is used to format floats.  C99 doesn't
-    * specify what the hex digit before the decimal point is for
-    * %A.  */
-
-    version (CRuntime_Glibc)
-    {
-        assert(stream.data == "1.67 -0X1.47AE147AE147BP+0 nan",
-                stream.data);
-    }
-    else version (OSX)
-    {
-        assert(stream.data == "1.67 -0X1.47AE147AE147BP+0 nan",
-                stream.data);
-    }
-    else version (MinGW)
-    {
-        assert(stream.data == "1.67 -0XA.3D70A3D70A3D8P-3 nan",
-                stream.data);
-    }
-    else version (CRuntime_Microsoft)
-    {
-        assert(stream.data == "1.67 -0X1.47AE14P+0 nan"
-            || stream.data == "1.67 -0X1.47AE147AE147BP+0 nan", // MSVCRT 14+ (VS 2015)
-                stream.data);
-    }
-    else
-    {
-        assert(stream.data == "1.67 -0X1.47AE147AE147BP+0 nan",
-                stream.data);
-    }
+    assert(stream.data == "1.67 -0X1.47AE147AE147BP+0 nan",
+           stream.data);
     stream.clear();
 
     formattedWrite(stream, "%x %X", 0x1234AF, 0xAFAFAFAF);
@@ -4960,11 +5016,7 @@ private void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __L
 
     formattedWrite(stream, "%a %A", 1.32, 6.78f);
     //formattedWrite(stream, "%x %X", 1.32);
-    version (CRuntime_Microsoft)
-        assert(stream.data == "0x1.51eb85p+0 0X1.B1EB86P+2"
-            || stream.data == "0x1.51eb851eb851fp+0 0X1.B1EB860000000P+2"); // MSVCRT 14+ (VS 2015)
-    else
-        assert(stream.data == "0x1.51eb851eb851fp+0 0X1.B1EB86P+2");
+    assert(stream.data == "0x1.51eb851eb851fp+0 0X1.B1EB86P+2");
     stream.clear();
 
     formattedWrite(stream, "%#06.*f",2,12.345);
@@ -6055,22 +6107,7 @@ private bool needToSwapEndianess(Char)(scope const ref FormatSpec!Char f)
     assert(s == "hello world! true 57 1000000000x foo");
 
     s = format("%s %A %s", 1.67, -1.28, float.nan);
-    /* The host C library is used to format floats.
-     * C99 doesn't specify what the hex digit before the decimal point
-     * is for %A.
-     */
-    //version (linux)
-    //    assert(s == "1.67 -0XA.3D70A3D70A3D8P-3 nan");
-    //else version (OSX)
-    //    assert(s == "1.67 -0XA.3D70A3D70A3D8P-3 nan", s);
-    //else
-    version (MinGW)
-        assert(s == "1.67 -0XA.3D70A3D70A3D8P-3 nan", s);
-    else version (CRuntime_Microsoft)
-        assert(s == "1.67 -0X1.47AE14P+0 nan"
-            || s == "1.67 -0X1.47AE147AE147BP+0 nan", s); // MSVCRT 14+ (VS 2015)
-    else
-        assert(s == "1.67 -0X1.47AE147AE147BP+0 nan", s);
+    assert(s == "1.67 -0X1.47AE147AE147BP+0 nan", s);
 
     s = format("%x %X", 0x1234AF, 0xAFAFAFAF);
     assert(s == "1234af AFAFAFAF");
@@ -6402,6 +6439,70 @@ package static const checkFormatException(alias fmt, Args...) =
         return (e.msg == ctfpMessage) ? null : e;
     return null;
 }();
+
+private void writeAligned(Writer, T, Char)(auto ref Writer w, T s, scope const ref FormatSpec!Char f)
+if (isSomeString!T)
+{
+    size_t width;
+    if (f.width > 0)
+    {
+        // check for non-ascii character
+        import std.algorithm.searching : any;
+        if (s.any!(a => a > 0x7F))
+        {
+            //TODO: optimize this
+            import std.uni : graphemeStride;
+            for (size_t i; i < s.length; i += graphemeStride(s, i))
+                ++width;
+        }
+        else
+            width = s.length;
+    }
+    else
+        width = s.length;
+
+    if (!f.flDash)
+    {
+        // right align
+        if (f.width > width)
+            foreach (i ; 0 .. f.width - width) put(w, ' ');
+        put(w, s);
+    }
+    else
+    {
+        // left align
+        put(w, s);
+        if (f.width > width)
+            foreach (i ; 0 .. f.width - width) put(w, ' ');
+    }
+}
+
+@safe pure unittest
+{
+    import std.array : appender;
+    auto w = appender!string();
+    auto spec = singleSpec("%s");
+    writeAligned(w, "a本Ä", spec);
+    assert(w.data == "a本Ä", w.data);
+}
+
+@safe pure unittest
+{
+    import std.array : appender;
+    auto w = appender!string();
+    auto spec = singleSpec("%10s");
+    writeAligned(w, "a本Ä", spec);
+    assert(w.data == "       a本Ä", "|" ~ w.data ~ "|");
+}
+
+@safe pure unittest
+{
+    import std.array : appender;
+    auto w = appender!string();
+    auto spec = singleSpec("%-10s");
+    writeAligned(w, "a本Ä", spec);
+    assert(w.data == "a本Ä       ", w.data);
+}
 
 /**
  * Format arguments into a string.
@@ -6872,4 +6973,587 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
     cmp = "0,100,000";
     tmp  = format("%08,d", 100_000);
     assert(tmp == cmp, tmp);
+}
+
+// Issue 20288
+@safe unittest
+{
+    string s = format("%,.2f", double.nan);
+    assert(s == "nan", s);
+
+    s = format("%,.2F", double.nan);
+    assert(s == "NAN", s);
+
+    s = format("%,.2f", -double.nan);
+    assert(s == "-nan", s);
+
+    s = format("%,.2F", -double.nan);
+    assert(s == "-NAN", s);
+
+    string g = format("^%13s$", "nan");
+    string h = "^          nan$";
+    assert(g == h, "\ngot:" ~ g ~ "\nexp:" ~ h);
+    string a = format("^%13,3.2f$", double.nan);
+    string b = format("^%13,3.2F$", double.nan);
+    string c = format("^%13,3.2f$", -double.nan);
+    string d = format("^%13,3.2F$", -double.nan);
+    assert(a == "^          nan$", "\ngot:'"~ a ~ "'\nexp:'^          nan$'");
+    assert(b == "^          NAN$", "\ngot:'"~ b ~ "'\nexp:'^          NAN$'");
+    assert(c == "^         -nan$", "\ngot:'"~ c ~ "'\nexp:'^         -nan$'");
+    assert(d == "^         -NAN$", "\ngot:'"~ d ~ "'\nexp:'^         -NAN$'");
+
+    a = format("^%-13,3.2f$", double.nan);
+    b = format("^%-13,3.2F$", double.nan);
+    c = format("^%-13,3.2f$", -double.nan);
+    d = format("^%-13,3.2F$", -double.nan);
+    assert(a == "^nan          $", "\ngot:'"~ a ~ "'\nexp:'^nan          $'");
+    assert(b == "^NAN          $", "\ngot:'"~ b ~ "'\nexp:'^NAN          $'");
+    assert(c == "^-nan         $", "\ngot:'"~ c ~ "'\nexp:'^-nan         $'");
+    assert(d == "^-NAN         $", "\ngot:'"~ d ~ "'\nexp:'^-NAN         $'");
+
+    a = format("^%+13,3.2f$", double.nan);
+    b = format("^%+13,3.2F$", double.nan);
+    c = format("^%+13,3.2f$", -double.nan);
+    d = format("^%+13,3.2F$", -double.nan);
+    assert(a == "^         +nan$", "\ngot:'"~ a ~ "'\nexp:'^         +nan$'");
+    assert(b == "^         +NAN$", "\ngot:'"~ b ~ "'\nexp:'^         +NAN$'");
+    assert(c == "^         -nan$", "\ngot:'"~ c ~ "'\nexp:'^         -nan$'");
+    assert(d == "^         -NAN$", "\ngot:'"~ d ~ "'\nexp:'^         -NAN$'");
+
+    a = format("^%-+13,3.2f$", double.nan);
+    b = format("^%-+13,3.2F$", double.nan);
+    c = format("^%-+13,3.2f$", -double.nan);
+    d = format("^%-+13,3.2F$", -double.nan);
+    assert(a == "^+nan         $", "\ngot:'"~ a ~ "'\nexp:'^+nan         $'");
+    assert(b == "^+NAN         $", "\ngot:'"~ b ~ "'\nexp:'^+NAN         $'");
+    assert(c == "^-nan         $", "\ngot:'"~ c ~ "'\nexp:'^-nan         $'");
+    assert(d == "^-NAN         $", "\ngot:'"~ d ~ "'\nexp:'^-NAN         $'");
+
+    a = format("^%- 13,3.2f$", double.nan);
+    b = format("^%- 13,3.2F$", double.nan);
+    c = format("^%- 13,3.2f$", -double.nan);
+    d = format("^%- 13,3.2F$", -double.nan);
+    assert(a == "^ nan         $", "\ngot:'"~ a ~ "'\nexp:'^ nan         $'");
+    assert(b == "^ NAN         $", "\ngot:'"~ b ~ "'\nexp:'^ NAN         $'");
+    assert(c == "^-nan         $", "\ngot:'"~ c ~ "'\nexp:'^-nan         $'");
+    assert(d == "^-NAN         $", "\ngot:'"~ d ~ "'\nexp:'^-NAN         $'");
+}
+
+private auto printFloat(T, Char)(T val, FormatSpec!Char f, FloatingPointControl.RoundingMode rm) pure @safe
+if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.mant_dig))
+{
+    import std.conv : to;
+    import std.algorithm.comparison : max;
+
+    enum byte[16] alpha = ['0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'];
+    enum byte[16] Alpha = ['0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'];
+
+    union FloatBits
+    {
+        T floatValue;
+        ulong ulongValue;
+    }
+
+    FloatBits fb;
+    fb.floatValue = val;
+    ulong ival = fb.ulongValue;
+
+    static if (!is(T == float))
+    {
+        version (DigitalMars)
+        {
+            // hack to work around issue 20363
+            ival ^= rm;
+            ival ^= rm;
+        }
+    }
+
+    import std.math : log2;
+    enum log2_max_exp = cast(int) log2(T.max_exp);
+
+    ulong mnt = ival & ((1L << (T.mant_dig - 1)) - 1);
+    int exp = (ival >> (T.mant_dig - 1)) & ((1L << (log2_max_exp + 1)) - 1);
+    int maxexp = 2 * T.max_exp - 1;
+    string sgn = (ival >> (T.mant_dig + log2_max_exp)) & 1 ? "-" : "";
+    enum long bias = T.max_exp - 1;
+
+    if (sgn == "" && f.flPlus) sgn = "+";
+    if (sgn == "" && f.flSpace) sgn = " ";
+
+    assert(f.spec == 'a' || f.spec == 'A');
+    bool is_upper = f.spec == 'A';
+
+    // special treatment for nan and inf
+    if (exp == maxexp)
+    {
+        char[] result;
+        result.length = max(f.width, sgn.length + 3);
+        result[] = ' ';
+
+        auto offset = f.flDash ? 0 : (result.length - 3);
+
+        if (sgn != "")
+        {
+            if (f.flDash) ++offset;
+            result[offset-1] = sgn[0];
+        }
+
+        result[offset .. offset + 3] = (mnt == 0) ? ( is_upper ? "INF" : "inf" ) : ( is_upper ? "NAN" : "nan" );
+
+        return result.idup;
+    }
+
+    static if (is(T == float))
+    {
+        mnt <<= 1; // make mnt dividable by 4
+        enum mant_len = T.mant_dig;
+    }
+    else
+        enum mant_len = T.mant_dig - 1;
+    static assert(mant_len % 4 == 0);
+
+    // print full mantissa
+    byte[(mant_len - 1) / 4 + 1] hex_mant;
+    size_t hex_mant_pos = 0;
+    size_t pos = mant_len;
+
+    while (pos >= 4 && (mnt & ((1L << pos) - 1)) != 0)
+    {
+        pos -= 4;
+        size_t tmp = (mnt >> pos) & 15;
+        hex_mant[hex_mant_pos++] = is_upper ? Alpha[tmp] : alpha[tmp];
+    }
+
+    // save integer part
+    auto first = exp == 0 ? '0' : '1';
+
+    // print exponent
+    if (exp == 0 && mnt == 0)
+        exp = 0; // special treatment for 0.0
+    else if (exp == 0)
+        exp = 1 - bias; // denormalized number
+    else
+        exp -= bias;
+
+    auto exp_sgn = exp >= 0 ? '+' : '-';
+    if (exp < 0) exp = -exp;
+
+    static if (is(T == float))
+        enum max_exp_digits = 4;
+    else
+        enum max_exp_digits = 5;
+
+    byte[max_exp_digits] exp_str;
+    size_t exp_pos = max_exp_digits;
+
+    do
+    {
+        exp_str[--exp_pos] = '0' + exp%10;
+        exp /= 10;
+    } while (exp>0);
+
+    exp_str[--exp_pos] = exp_sgn;
+
+    // calculate needed buffer width
+    auto precision = f.precision == f.UNSPECIFIED ? hex_mant_pos : f.precision;
+    bool dot = precision > 0 || f.flHash;
+
+    size_t width = sgn.length + 3 + (dot ? 1 : 0) + precision + 1 + (max_exp_digits - exp_pos);
+
+    byte[] buffer = new byte[max(width,f.width)];
+    size_t b_pos = 0;
+
+    size_t delta = f.width - width; // only used, when f.width > width
+
+    // fill buffer
+    if (!f.flDash && !f.flZero && f.width > width)
+    {
+        buffer[b_pos .. b_pos + delta] = ' ';
+        b_pos += delta;
+    }
+
+    if (sgn != "") buffer[b_pos++] = sgn[0];
+    buffer[b_pos++] = '0';
+    buffer[b_pos++] = is_upper ? 'X' : 'x';
+
+    if (!f.flDash && f.flZero && f.width > width)
+    {
+        buffer[b_pos .. b_pos + delta] = '0';
+        b_pos += delta;
+    }
+
+    buffer[b_pos++] = first;
+    if (dot) buffer[b_pos++] = '.';
+    if (precision < hex_mant_pos)
+    {
+        buffer[b_pos .. b_pos + precision] = hex_mant[0 .. precision];
+        b_pos += precision;
+
+        enum roundType { ZERO, LOWER, FIVE, UPPER }
+        roundType next;
+
+        if (hex_mant[precision] == '0')
+            next = roundType.ZERO;
+        else if (hex_mant[precision] < '8')
+            next = roundType.LOWER;
+        else if (hex_mant[precision] > '8')
+            next = roundType.UPPER;
+        else
+            next = roundType.FIVE;
+
+        if (next == roundType.ZERO || next == roundType.FIVE)
+        {
+            foreach (i;precision + 1 .. hex_mant_pos)
+            {
+                if (hex_mant[i] > '0')
+                {
+                    next = next == roundType.ZERO ? roundType.LOWER : roundType.UPPER;
+                    break;
+                }
+            }
+        }
+
+        bool roundUp = false;
+
+        if (rm == FloatingPointControl.roundUp)
+            roundUp = next != roundType.ZERO && sgn != "-";
+        else if (rm == FloatingPointControl.roundDown)
+            roundUp = next != roundType.ZERO && sgn == "-";
+        else if (rm == FloatingPointControl.roundToZero)
+            roundUp = false;
+        else
+        {
+            assert(rm == FloatingPointControl.roundToNearest);
+            roundUp = next == roundType.UPPER;
+
+            if (next == roundType.FIVE)
+            {
+                // IEEE754 allows for two different ways of implementing roundToNearest:
+                //
+                // Round to nearest, ties away from zero
+                //roundUp = true;
+
+                // Round to nearest, ties to even
+                auto last = buffer[b_pos-1];
+                if (last == '.') last = buffer[b_pos-2];
+                roundUp = (last <= '9' && last % 2 != 0) || (last >= '9' && last % 2 == 0);
+            }
+        }
+
+        if (roundUp)
+        {
+            foreach_reverse (i;b_pos - precision - 2 .. b_pos)
+            {
+                if (buffer[i] == '.') continue;
+                if (buffer[i] == 'f' || buffer[i] == 'F')
+                    buffer[i] = '0';
+                else
+                {
+                    if (buffer[i] == '9')
+                        buffer[i] = is_upper ? 'A' : 'a';
+                    else
+                        buffer[i]++;
+                    break;
+                }
+            }
+        }
+    }
+    else
+    {
+        buffer[b_pos .. b_pos + hex_mant_pos] = hex_mant[0 .. hex_mant_pos];
+        buffer[b_pos + hex_mant_pos .. b_pos + precision] = '0';
+        b_pos += precision;
+    }
+
+    buffer[b_pos++] = is_upper ? 'P' : 'p';
+    buffer[b_pos .. b_pos + (max_exp_digits - exp_pos)] = exp_str[exp_pos .. $];
+    b_pos += max_exp_digits - exp_pos;
+
+    if (f.flDash && f.width > width)
+    {
+        buffer[b_pos .. b_pos + delta] = ' ';
+        b_pos += delta;
+    }
+
+    return () @trusted { return cast(string)(buffer[0 .. b_pos]); }();
+}
+
+@safe unittest
+{
+    auto f = FormatSpec!dchar("");
+    f.spec = 'a';
+    assert(printFloat(float.nan, f, FloatingPointControl.roundToNearest) == "nan");
+    assert(printFloat(-float.nan, f, FloatingPointControl.roundToNearest) == "-nan");
+    assert(printFloat(float.infinity, f, FloatingPointControl.roundToNearest) == "inf");
+    assert(printFloat(-float.infinity, f, FloatingPointControl.roundToNearest) == "-inf");
+    assert(printFloat(0.0f, f, FloatingPointControl.roundToNearest) == "0x0p+0");
+    assert(printFloat(-0.0f, f, FloatingPointControl.roundToNearest) == "-0x0p+0");
+
+    assert(printFloat(double.nan, f, FloatingPointControl.roundToNearest) == "nan");
+    assert(printFloat(-double.nan, f, FloatingPointControl.roundToNearest) == "-nan");
+    assert(printFloat(double.infinity, f, FloatingPointControl.roundToNearest) == "inf");
+    assert(printFloat(-double.infinity, f, FloatingPointControl.roundToNearest) == "-inf");
+    assert(printFloat(0.0, f, FloatingPointControl.roundToNearest) == "0x0p+0");
+    assert(printFloat(-0.0, f, FloatingPointControl.roundToNearest) == "-0x0p+0");
+
+    import std.math : nextUp;
+
+    assert(printFloat(nextUp(0.0f), f, FloatingPointControl.roundToNearest) == "0x0.000002p-126");
+    assert(printFloat(float.epsilon, f, FloatingPointControl.roundToNearest) == "0x1p-23");
+    assert(printFloat(float.min_normal, f, FloatingPointControl.roundToNearest) == "0x1p-126");
+    assert(printFloat(float.max, f, FloatingPointControl.roundToNearest) == "0x1.fffffep+127");
+
+    assert(printFloat(nextUp(0.0), f, FloatingPointControl.roundToNearest) == "0x0.0000000000001p-1022");
+    assert(printFloat(double.epsilon, f, FloatingPointControl.roundToNearest) == "0x1p-52");
+    assert(printFloat(double.min_normal, f, FloatingPointControl.roundToNearest) == "0x1p-1022");
+    assert(printFloat(double.max, f, FloatingPointControl.roundToNearest) == "0x1.fffffffffffffp+1023");
+
+    import std.math : E, PI, PI_2, PI_4, M_1_PI, M_2_PI, M_2_SQRTPI,
+                      LN10, LN2, LOG2, LOG2E, LOG2T, LOG10E, SQRT2, SQRT1_2;
+
+    assert(printFloat(cast(float) E, f, FloatingPointControl.roundToNearest) == "0x1.5bf0a8p+1");
+    assert(printFloat(cast(float) PI, f, FloatingPointControl.roundToNearest) == "0x1.921fb6p+1");
+    assert(printFloat(cast(float) PI_2, f, FloatingPointControl.roundToNearest) == "0x1.921fb6p+0");
+    assert(printFloat(cast(float) PI_4, f, FloatingPointControl.roundToNearest) == "0x1.921fb6p-1");
+    assert(printFloat(cast(float) M_1_PI, f, FloatingPointControl.roundToNearest) == "0x1.45f306p-2");
+    assert(printFloat(cast(float) M_2_PI, f, FloatingPointControl.roundToNearest) == "0x1.45f306p-1");
+    assert(printFloat(cast(float) M_2_SQRTPI, f, FloatingPointControl.roundToNearest) == "0x1.20dd76p+0");
+    assert(printFloat(cast(float) LN10, f, FloatingPointControl.roundToNearest) == "0x1.26bb1cp+1");
+    assert(printFloat(cast(float) LN2, f, FloatingPointControl.roundToNearest) == "0x1.62e43p-1");
+    assert(printFloat(cast(float) LOG2, f, FloatingPointControl.roundToNearest) == "0x1.344136p-2");
+    assert(printFloat(cast(float) LOG2E, f, FloatingPointControl.roundToNearest) == "0x1.715476p+0");
+    assert(printFloat(cast(float) LOG2T, f, FloatingPointControl.roundToNearest) == "0x1.a934fp+1");
+    assert(printFloat(cast(float) LOG10E, f, FloatingPointControl.roundToNearest) == "0x1.bcb7b2p-2");
+    assert(printFloat(cast(float) SQRT2, f, FloatingPointControl.roundToNearest) == "0x1.6a09e6p+0");
+    assert(printFloat(cast(float) SQRT1_2, f, FloatingPointControl.roundToNearest) == "0x1.6a09e6p-1");
+
+    assert(printFloat(cast(double) E, f, FloatingPointControl.roundToNearest) == "0x1.5bf0a8b145769p+1");
+    assert(printFloat(cast(double) PI, f, FloatingPointControl.roundToNearest) == "0x1.921fb54442d18p+1");
+    assert(printFloat(cast(double) PI_2, f, FloatingPointControl.roundToNearest) == "0x1.921fb54442d18p+0");
+    assert(printFloat(cast(double) PI_4, f, FloatingPointControl.roundToNearest) == "0x1.921fb54442d18p-1");
+    assert(printFloat(cast(double) M_1_PI, f, FloatingPointControl.roundToNearest) == "0x1.45f306dc9c883p-2");
+    assert(printFloat(cast(double) M_2_PI, f, FloatingPointControl.roundToNearest) == "0x1.45f306dc9c883p-1");
+    assert(printFloat(cast(double) M_2_SQRTPI, f, FloatingPointControl.roundToNearest) == "0x1.20dd750429b6dp+0");
+    assert(printFloat(cast(double) LN10, f, FloatingPointControl.roundToNearest) == "0x1.26bb1bbb55516p+1");
+    assert(printFloat(cast(double) LN2, f, FloatingPointControl.roundToNearest) == "0x1.62e42fefa39efp-1");
+    assert(printFloat(cast(double) LOG2, f, FloatingPointControl.roundToNearest) == "0x1.34413509f79ffp-2");
+    assert(printFloat(cast(double) LOG2E, f, FloatingPointControl.roundToNearest) == "0x1.71547652b82fep+0");
+    assert(printFloat(cast(double) LOG2T, f, FloatingPointControl.roundToNearest) == "0x1.a934f0979a371p+1");
+    assert(printFloat(cast(double) LOG10E, f, FloatingPointControl.roundToNearest) == "0x1.bcb7b1526e50ep-2");
+    assert(printFloat(cast(double) SQRT2, f, FloatingPointControl.roundToNearest) == "0x1.6a09e667f3bcdp+0");
+    assert(printFloat(cast(double) SQRT1_2, f, FloatingPointControl.roundToNearest) == "0x1.6a09e667f3bcdp-1");
+
+}
+
+@safe unittest
+{
+    auto f = FormatSpec!dchar("");
+    f.spec = 'a';
+    f.precision = 3;
+
+    assert(printFloat(1.0f, f, FloatingPointControl.roundToNearest) == "0x1.000p+0");
+    assert(printFloat(3.3f, f, FloatingPointControl.roundToNearest) == "0x1.a66p+1");
+    assert(printFloat(2.9f, f, FloatingPointControl.roundToNearest) == "0x1.733p+1");
+
+    assert(printFloat(1.0, f, FloatingPointControl.roundToNearest) == "0x1.000p+0");
+    assert(printFloat(3.3, f, FloatingPointControl.roundToNearest) == "0x1.a66p+1");
+    assert(printFloat(2.9, f, FloatingPointControl.roundToNearest) == "0x1.733p+1");
+}
+
+@safe unittest
+{
+    auto f = FormatSpec!dchar("");
+    f.spec = 'a';
+    f.precision = 0;
+
+    assert(printFloat(1.0f, f, FloatingPointControl.roundToNearest) == "0x1p+0");
+    assert(printFloat(3.3f, f, FloatingPointControl.roundToNearest) == "0x2p+1");
+    assert(printFloat(2.9f, f, FloatingPointControl.roundToNearest) == "0x1p+1");
+
+    assert(printFloat(1.0, f, FloatingPointControl.roundToNearest) == "0x1p+0");
+    assert(printFloat(3.3, f, FloatingPointControl.roundToNearest) == "0x2p+1");
+    assert(printFloat(2.9, f, FloatingPointControl.roundToNearest) == "0x1p+1");
+}
+
+@safe unittest
+{
+    auto f = FormatSpec!dchar("");
+    f.spec = 'a';
+    f.precision = 0;
+    f.flHash = true;
+
+    assert(printFloat(1.0f, f, FloatingPointControl.roundToNearest) == "0x1.p+0");
+    assert(printFloat(3.3f, f, FloatingPointControl.roundToNearest) == "0x2.p+1");
+    assert(printFloat(2.9f, f, FloatingPointControl.roundToNearest) == "0x1.p+1");
+
+    assert(printFloat(1.0, f, FloatingPointControl.roundToNearest) == "0x1.p+0");
+    assert(printFloat(3.3, f, FloatingPointControl.roundToNearest) == "0x2.p+1");
+    assert(printFloat(2.9, f, FloatingPointControl.roundToNearest) == "0x1.p+1");
+}
+
+@safe unittest
+{
+    auto f = FormatSpec!dchar("");
+    f.spec = 'a';
+    f.width = 22;
+
+    assert(printFloat(1.0f, f, FloatingPointControl.roundToNearest) == "                0x1p+0");
+    assert(printFloat(3.3f, f, FloatingPointControl.roundToNearest) == "         0x1.a66666p+1");
+    assert(printFloat(2.9f, f, FloatingPointControl.roundToNearest) == "         0x1.733334p+1");
+
+    assert(printFloat(1.0, f, FloatingPointControl.roundToNearest) == "                0x1p+0");
+    assert(printFloat(3.3, f, FloatingPointControl.roundToNearest) == "  0x1.a666666666666p+1");
+    assert(printFloat(2.9, f, FloatingPointControl.roundToNearest) == "  0x1.7333333333333p+1");
+}
+
+@safe unittest
+{
+    auto f = FormatSpec!dchar("");
+    f.spec = 'a';
+    f.width = 22;
+    f.flDash = true;
+
+    assert(printFloat(1.0f, f, FloatingPointControl.roundToNearest) == "0x1p+0                ");
+    assert(printFloat(3.3f, f, FloatingPointControl.roundToNearest) == "0x1.a66666p+1         ");
+    assert(printFloat(2.9f, f, FloatingPointControl.roundToNearest) == "0x1.733334p+1         ");
+
+    assert(printFloat(1.0, f, FloatingPointControl.roundToNearest) == "0x1p+0                ");
+    assert(printFloat(3.3, f, FloatingPointControl.roundToNearest) == "0x1.a666666666666p+1  ");
+    assert(printFloat(2.9, f, FloatingPointControl.roundToNearest) == "0x1.7333333333333p+1  ");
+}
+
+@safe unittest
+{
+    auto f = FormatSpec!dchar("");
+    f.spec = 'a';
+    f.width = 22;
+    f.flZero = true;
+
+    assert(printFloat(1.0f, f, FloatingPointControl.roundToNearest) == "0x00000000000000001p+0");
+    assert(printFloat(3.3f, f, FloatingPointControl.roundToNearest) == "0x0000000001.a66666p+1");
+    assert(printFloat(2.9f, f, FloatingPointControl.roundToNearest) == "0x0000000001.733334p+1");
+
+    assert(printFloat(1.0, f, FloatingPointControl.roundToNearest) == "0x00000000000000001p+0");
+    assert(printFloat(3.3, f, FloatingPointControl.roundToNearest) == "0x001.a666666666666p+1");
+    assert(printFloat(2.9, f, FloatingPointControl.roundToNearest) == "0x001.7333333333333p+1");
+}
+
+@safe unittest
+{
+    auto f = FormatSpec!dchar("");
+    f.spec = 'a';
+    f.width = 22;
+    f.flPlus = true;
+
+    assert(printFloat(1.0f, f, FloatingPointControl.roundToNearest) == "               +0x1p+0");
+    assert(printFloat(3.3f, f, FloatingPointControl.roundToNearest) == "        +0x1.a66666p+1");
+    assert(printFloat(2.9f, f, FloatingPointControl.roundToNearest) == "        +0x1.733334p+1");
+
+    assert(printFloat(1.0, f, FloatingPointControl.roundToNearest) == "               +0x1p+0");
+    assert(printFloat(3.3, f, FloatingPointControl.roundToNearest) == " +0x1.a666666666666p+1");
+    assert(printFloat(2.9, f, FloatingPointControl.roundToNearest) == " +0x1.7333333333333p+1");
+}
+
+@safe unittest
+{
+    auto f = FormatSpec!dchar("");
+    f.spec = 'a';
+    f.width = 22;
+    f.flDash = true;
+    f.flSpace = true;
+
+    assert(printFloat(1.0f, f, FloatingPointControl.roundToNearest) == " 0x1p+0               ");
+    assert(printFloat(3.3f, f, FloatingPointControl.roundToNearest) == " 0x1.a66666p+1        ");
+    assert(printFloat(2.9f, f, FloatingPointControl.roundToNearest) == " 0x1.733334p+1        ");
+
+    assert(printFloat(1.0, f, FloatingPointControl.roundToNearest) == " 0x1p+0               ");
+    assert(printFloat(3.3, f, FloatingPointControl.roundToNearest) == " 0x1.a666666666666p+1 ");
+    assert(printFloat(2.9, f, FloatingPointControl.roundToNearest) == " 0x1.7333333333333p+1 ");
+}
+
+@safe unittest
+{
+    auto f = FormatSpec!dchar("");
+    f.spec = 'a';
+    f.precision = 1;
+
+    // ties away from zero
+    /*
+    assert(printFloat(0x1.18p0, f, FloatingPointControl.roundToNearest) == "0x1.2p+0");
+    assert(printFloat(0x1.28p0, f, FloatingPointControl.roundToNearest) == "0x1.3p+0");
+    assert(printFloat(0x1.1ap0, f, FloatingPointControl.roundToNearest) == "0x1.2p+0");
+    assert(printFloat(0x1.16p0, f, FloatingPointControl.roundToNearest) == "0x1.1p+0");
+    assert(printFloat(0x1.10p0, f, FloatingPointControl.roundToNearest) == "0x1.1p+0");
+    assert(printFloat(-0x1.18p0, f, FloatingPointControl.roundToNearest) == "-0x1.2p+0");
+    assert(printFloat(-0x1.28p0, f, FloatingPointControl.roundToNearest) == "-0x1.3p+0");
+    assert(printFloat(-0x1.1ap0, f, FloatingPointControl.roundToNearest) == "-0x1.2p+0");
+    assert(printFloat(-0x1.16p0, f, FloatingPointControl.roundToNearest) == "-0x1.1p+0");
+    assert(printFloat(-0x1.10p0, f, FloatingPointControl.roundToNearest) == "-0x1.1p+0");
+     */
+
+    // ties to even
+    assert(printFloat(0x1.18p0, f, FloatingPointControl.roundToNearest) == "0x1.2p+0");
+    assert(printFloat(0x1.28p0, f, FloatingPointControl.roundToNearest) == "0x1.2p+0");
+    assert(printFloat(0x1.1ap0, f, FloatingPointControl.roundToNearest) == "0x1.2p+0");
+    assert(printFloat(0x1.16p0, f, FloatingPointControl.roundToNearest) == "0x1.1p+0");
+    assert(printFloat(0x1.10p0, f, FloatingPointControl.roundToNearest) == "0x1.1p+0");
+    assert(printFloat(-0x1.18p0, f, FloatingPointControl.roundToNearest) == "-0x1.2p+0");
+    assert(printFloat(-0x1.28p0, f, FloatingPointControl.roundToNearest) == "-0x1.2p+0");
+    assert(printFloat(-0x1.1ap0, f, FloatingPointControl.roundToNearest) == "-0x1.2p+0");
+    assert(printFloat(-0x1.16p0, f, FloatingPointControl.roundToNearest) == "-0x1.1p+0");
+    assert(printFloat(-0x1.10p0, f, FloatingPointControl.roundToNearest) == "-0x1.1p+0");
+
+    assert(printFloat(0x1.18p0, f, FloatingPointControl.roundToZero) == "0x1.1p+0");
+    assert(printFloat(0x1.28p0, f, FloatingPointControl.roundToZero) == "0x1.2p+0");
+    assert(printFloat(0x1.1ap0, f, FloatingPointControl.roundToZero) == "0x1.1p+0");
+    assert(printFloat(0x1.16p0, f, FloatingPointControl.roundToZero) == "0x1.1p+0");
+    assert(printFloat(0x1.10p0, f, FloatingPointControl.roundToZero) == "0x1.1p+0");
+    assert(printFloat(-0x1.18p0, f, FloatingPointControl.roundToZero) == "-0x1.1p+0");
+    assert(printFloat(-0x1.28p0, f, FloatingPointControl.roundToZero) == "-0x1.2p+0");
+    assert(printFloat(-0x1.1ap0, f, FloatingPointControl.roundToZero) == "-0x1.1p+0");
+    assert(printFloat(-0x1.16p0, f, FloatingPointControl.roundToZero) == "-0x1.1p+0");
+    assert(printFloat(-0x1.10p0, f, FloatingPointControl.roundToZero) == "-0x1.1p+0");
+
+    assert(printFloat(0x1.18p0, f, FloatingPointControl.roundUp) == "0x1.2p+0");
+    assert(printFloat(0x1.28p0, f, FloatingPointControl.roundUp) == "0x1.3p+0");
+    assert(printFloat(0x1.1ap0, f, FloatingPointControl.roundUp) == "0x1.2p+0");
+    assert(printFloat(0x1.16p0, f, FloatingPointControl.roundUp) == "0x1.2p+0");
+    assert(printFloat(0x1.10p0, f, FloatingPointControl.roundUp) == "0x1.1p+0");
+    assert(printFloat(-0x1.18p0, f, FloatingPointControl.roundUp) == "-0x1.1p+0");
+    assert(printFloat(-0x1.28p0, f, FloatingPointControl.roundUp) == "-0x1.2p+0");
+    assert(printFloat(-0x1.1ap0, f, FloatingPointControl.roundUp) == "-0x1.1p+0");
+    assert(printFloat(-0x1.16p0, f, FloatingPointControl.roundUp) == "-0x1.1p+0");
+    assert(printFloat(-0x1.10p0, f, FloatingPointControl.roundUp) == "-0x1.1p+0");
+
+    assert(printFloat(0x1.18p0, f, FloatingPointControl.roundDown) == "0x1.1p+0");
+    assert(printFloat(0x1.28p0, f, FloatingPointControl.roundDown) == "0x1.2p+0");
+    assert(printFloat(0x1.1ap0, f, FloatingPointControl.roundDown) == "0x1.1p+0");
+    assert(printFloat(0x1.16p0, f, FloatingPointControl.roundDown) == "0x1.1p+0");
+    assert(printFloat(0x1.10p0, f, FloatingPointControl.roundDown) == "0x1.1p+0");
+    assert(printFloat(-0x1.18p0, f, FloatingPointControl.roundDown) == "-0x1.2p+0");
+    assert(printFloat(-0x1.28p0, f, FloatingPointControl.roundDown) == "-0x1.3p+0");
+    assert(printFloat(-0x1.1ap0, f, FloatingPointControl.roundDown) == "-0x1.2p+0");
+    assert(printFloat(-0x1.16p0, f, FloatingPointControl.roundDown) == "-0x1.2p+0");
+    assert(printFloat(-0x1.10p0, f, FloatingPointControl.roundDown) == "-0x1.1p+0");
+}
+
+// for 100% coverage
+@safe unittest
+{
+    auto f = FormatSpec!dchar("");
+    f.spec = 'a';
+    f.precision = 3;
+
+    assert(printFloat(0x1.19f81p0, f, FloatingPointControl.roundToNearest) == "0x1.1a0p+0");
+    assert(printFloat(0x1.19f01p0, f, FloatingPointControl.roundToNearest) == "0x1.19fp+0");
+}
+
+@safe unittest
+{
+    auto f = FormatSpec!dchar("");
+    f.spec = 'A';
+    f.precision = 3;
+
+    assert(printFloat(0x1.19f81p0, f, FloatingPointControl.roundToNearest) == "0X1.1A0P+0");
+    assert(printFloat(0x1.19f01p0, f, FloatingPointControl.roundToNearest) == "0X1.19FP+0");
 }

@@ -171,8 +171,7 @@ struct CustomFloat(uint             precision,  // fraction bits (23 for float)
                    uint             exponentWidth,  // exponent bits (8 for float)  Exponent width
                    CustomFloatFlags flags,
                    uint             bias)
-if (((flags & flags.signed)  + precision + exponentWidth) % 8 == 0 &&
-    precision + exponentWidth > 0)
+if (isCorrectCustomFloat(precision, exponentWidth, flags))
 {
     import std.bitmanip : bitfields;
     import std.meta : staticIndexOf;
@@ -200,7 +199,12 @@ private:
     // Perform IEEE rounding with round to nearest detection
     void roundedShift(T,U)(ref T sig, U shift)
     {
-        if (sig << (T.sizeof*8 - shift) == cast(T) 1uL << (T.sizeof*8 - 1))
+        if (shift >= T.sizeof*8)
+        {
+            // avoid illegal shift
+            sig = 0;
+        }
+        else if (sig << (T.sizeof*8 - shift) == cast(T) 1uL << (T.sizeof*8 - 1))
         {
             // round to even
             sig >>= shift;
@@ -382,7 +386,7 @@ public:
         {
             CustomFloat value;
             static if (flags & Flags.signed)
-            value.sign          = 0;
+                value.sign          = 0;
             value.significand   = 0;
             value.exponent      = exponent_max;
             return value;
@@ -394,7 +398,7 @@ public:
         {
             CustomFloat value;
             static if (flags & Flags.signed)
-            value.sign          = 0;
+                value.sign          = 0;
             value.significand   = cast(typeof(significand_max)) 1L << (precision-1);
             value.exponent      = exponent_max;
             return value;
@@ -403,32 +407,18 @@ public:
     /// Returns: number of decimal digits of precision
     static @property size_t dig()
     {
-        auto shiftcnt =  precision - ((flags&Flags.storeNormalized) != 0);
-        immutable x = (shiftcnt == 64) ? 0 : 1uL << shiftcnt;
-        return cast(size_t) log10(x);
+        auto shiftcnt = precision - ((flags&Flags.storeNormalized) == 0);
+        return shiftcnt == 64 ? 19 : cast(size_t) log10(1uL << shiftcnt);
     }
 
     /// Returns: smallest increment to the value 1
     static @property CustomFloat epsilon()
     {
-        CustomFloat value;
-        static if (flags & Flags.signed)
-        value.sign       = 0;
-        T_signed_exp exp = -precision;
-        T_sig        sig = 0;
+        CustomFloat one = CustomFloat(1);
+        CustomFloat onePlusEpsilon = one;
+        onePlusEpsilon.significand = onePlusEpsilon.significand | 1; // |= does not work here
 
-        value.fromNormalized(sig,exp);
-        if (exp == 0 && sig == 0) // underflowed to zero
-        {
-            static if ((flags&Flags.allowDenorm) ||
-                       (~flags&Flags.storeNormalized))
-                sig = 1;
-            else
-                sig = cast(T) 1uL << (precision - 1);
-        }
-        value.exponent     = cast(value.T_exp) exp;
-        value.significand  = cast(value.T_sig) sig;
-        return value;
+        return CustomFloat(onePlusEpsilon - one);
     }
 
     /// the number of bits in mantissa
@@ -438,32 +428,33 @@ public:
     static @property int max_10_exp(){ return cast(int) log10( +max ); }
 
     /// maximum int value such that 2<sup>max_exp-1</sup> is representable
-    enum max_exp = exponent_max-bias+((~flags&(Flags.infinity|flags.nan))!=0);
+    enum max_exp = exponent_max - bias - ((flags & (Flags.infinity | Flags.nan)) != 0) + 1;
 
     /// Returns: minimum int value such that 10<sup>min_10_exp</sup> is representable
     static @property int min_10_exp(){ return cast(int) log10( +min_normal ); }
 
     /// minimum int value such that 2<sup>min_exp-1</sup> is representable as a normalized value
-    enum min_exp = cast(T_signed_exp)-bias +1+ ((flags&Flags.allowDenorm)!=0);
+    enum min_exp = cast(T_signed_exp) -(cast(long) bias) + 1 + ((flags & Flags.allowDenorm) != 0);
 
     /// Returns: largest representable value that's not infinity
     static @property CustomFloat max()
     {
         CustomFloat value;
         static if (flags & Flags.signed)
-        value.sign        = 0;
+            value.sign        = 0;
         value.exponent    = exponent_max - ((flags&(flags.infinity|flags.nan)) != 0);
         value.significand = significand_max;
         return value;
     }
 
     /// Returns: smallest representable normalized value that's not 0
-    static @property CustomFloat min_normal() {
+    static @property CustomFloat min_normal()
+    {
         CustomFloat value;
         static if (flags & Flags.signed)
-        value.sign        = 0;
-        value.exponent    = 1;
-        static if (flags&Flags.storeNormalized)
+            value.sign = 0;
+        value.exponent = (flags & Flags.allowDenorm) != 0;
+        static if (flags & Flags.storeNormalized)
             value.significand = 0;
         else
             value.significand = cast(T_sig) 1uL << (precision - 1);
@@ -486,7 +477,7 @@ public:
     void opAssign(F:CustomFloat)(F input)
     {
         static if (flags & Flags.signed)
-        sign        = input.sign;
+            sign        = input.sign;
         exponent    = input.exponent;
         significand = input.significand;
     }
@@ -682,19 +673,16 @@ public:
     assert(cf.dig == 1);
 
     auto c = cf.epsilon;
-    /* doesn't work yet due to bug 20261
     assert(c.sign == 0);
     assert(c.exponent == 0);
     assert(c.significand == 1);
-     */
 
     assert(cf.mant_dig == 6);
 
     assert(cf.max_10_exp == 0);
     assert(cf.max_exp == 2);
     assert(cf.min_10_exp == 0);
-    // doesn't work yet due to bug 20263
-    //assert(cf.min_exp == 1);
+    assert(cf.min_exp == 1);
 
     auto d = cf.max;
     assert(d.sign == 0);
@@ -708,6 +696,259 @@ public:
 
     assert(e.re == e);
     assert(e.im == cf(0.0));
+}
+
+// check whether CustomFloats identical to float/double behave like float/double
+@safe unittest
+{
+    import std.conv : to;
+
+    alias myFloat = CustomFloat!(23, 8);
+
+    static assert(myFloat.dig == float.dig);
+    static assert(myFloat.mant_dig == float.mant_dig);
+    assert(myFloat.max_10_exp == float.max_10_exp);
+    static assert(myFloat.max_exp == float.max_exp);
+    assert(myFloat.min_10_exp == float.min_10_exp);
+    static assert(myFloat.min_exp == float.min_exp);
+    assert(to!float(myFloat.epsilon) == float.epsilon);
+    assert(to!float(myFloat.max) == float.max);
+    assert(to!float(myFloat.min_normal) == float.min_normal);
+
+    alias myDouble = CustomFloat!(52, 11);
+
+    static assert(myDouble.dig == double.dig);
+    static assert(myDouble.mant_dig == double.mant_dig);
+    assert(myDouble.max_10_exp == double.max_10_exp);
+    static assert(myDouble.max_exp == double.max_exp);
+    assert(myDouble.min_10_exp == double.min_10_exp);
+    static assert(myDouble.min_exp == double.min_exp);
+    assert(to!double(myDouble.epsilon) == double.epsilon);
+    assert(to!double(myDouble.max) == double.max);
+    assert(to!double(myDouble.min_normal) == double.min_normal);
+}
+
+// testing .dig
+@safe unittest
+{
+    static assert(CustomFloat!(1, 6).dig == 0);
+    static assert(CustomFloat!(9, 6).dig == 2);
+    static assert(CustomFloat!(10, 5).dig == 3);
+    static assert(CustomFloat!(10, 6, CustomFloatFlags.none).dig == 2);
+    static assert(CustomFloat!(11, 5, CustomFloatFlags.none).dig == 3);
+    static assert(CustomFloat!(64, 7).dig == 19);
+}
+
+// testing .mant_dig
+@safe unittest
+{
+    static assert(CustomFloat!(10, 5).mant_dig == 11);
+    static assert(CustomFloat!(10, 6, CustomFloatFlags.none).mant_dig == 10);
+}
+
+// testing .max_exp
+@safe unittest
+{
+    static assert(CustomFloat!(1, 6).max_exp == 2^^5);
+    static assert(CustomFloat!(2, 6, CustomFloatFlags.none).max_exp == 2^^5);
+    static assert(CustomFloat!(5, 10).max_exp == 2^^9);
+    static assert(CustomFloat!(6, 10, CustomFloatFlags.none).max_exp == 2^^9);
+    static assert(CustomFloat!(2, 6, CustomFloatFlags.nan).max_exp == 2^^5);
+    static assert(CustomFloat!(6, 10, CustomFloatFlags.nan).max_exp == 2^^9);
+}
+
+// testing .min_exp
+@safe unittest
+{
+    static assert(CustomFloat!(1, 6).min_exp == -2^^5+3);
+    static assert(CustomFloat!(5, 10).min_exp == -2^^9+3);
+    static assert(CustomFloat!(2, 6, CustomFloatFlags.none).min_exp == -2^^5+1);
+    static assert(CustomFloat!(6, 10, CustomFloatFlags.none).min_exp == -2^^9+1);
+    static assert(CustomFloat!(2, 6, CustomFloatFlags.nan).min_exp == -2^^5+2);
+    static assert(CustomFloat!(6, 10, CustomFloatFlags.nan).min_exp == -2^^9+2);
+    static assert(CustomFloat!(2, 6, CustomFloatFlags.allowDenorm).min_exp == -2^^5+2);
+    static assert(CustomFloat!(6, 10, CustomFloatFlags.allowDenorm).min_exp == -2^^9+2);
+}
+
+// testing .max_10_exp
+@safe unittest
+{
+    assert(CustomFloat!(1, 6).max_10_exp == 9);
+    assert(CustomFloat!(5, 10).max_10_exp == 154);
+    assert(CustomFloat!(2, 6, CustomFloatFlags.none).max_10_exp == 9);
+    assert(CustomFloat!(6, 10, CustomFloatFlags.none).max_10_exp == 154);
+    assert(CustomFloat!(2, 6, CustomFloatFlags.nan).max_10_exp == 9);
+    assert(CustomFloat!(6, 10, CustomFloatFlags.nan).max_10_exp == 154);
+}
+
+// testing .min_10_exp
+@safe unittest
+{
+    assert(CustomFloat!(1, 6).min_10_exp == -9);
+    assert(CustomFloat!(5, 10).min_10_exp == -153);
+    assert(CustomFloat!(2, 6, CustomFloatFlags.none).min_10_exp == -9);
+    assert(CustomFloat!(6, 10, CustomFloatFlags.none).min_10_exp == -154);
+    assert(CustomFloat!(2, 6, CustomFloatFlags.nan).min_10_exp == -9);
+    assert(CustomFloat!(6, 10, CustomFloatFlags.nan).min_10_exp == -153);
+    assert(CustomFloat!(2, 6, CustomFloatFlags.allowDenorm).min_10_exp == -9);
+    assert(CustomFloat!(6, 10, CustomFloatFlags.allowDenorm).min_10_exp == -153);
+}
+
+// testing .epsilon
+@safe unittest
+{
+    assert(CustomFloat!(1,6).epsilon.sign == 0);
+    assert(CustomFloat!(1,6).epsilon.exponent == 30);
+    assert(CustomFloat!(1,6).epsilon.significand == 0);
+    assert(CustomFloat!(2,5).epsilon.sign == 0);
+    assert(CustomFloat!(2,5).epsilon.exponent == 13);
+    assert(CustomFloat!(2,5).epsilon.significand == 0);
+    assert(CustomFloat!(3,4).epsilon.sign == 0);
+    assert(CustomFloat!(3,4).epsilon.exponent == 4);
+    assert(CustomFloat!(3,4).epsilon.significand == 0);
+    // the following epsilons are only available, when denormalized numbers are allowed:
+    assert(CustomFloat!(4,3).epsilon.sign == 0);
+    assert(CustomFloat!(4,3).epsilon.exponent == 0);
+    assert(CustomFloat!(4,3).epsilon.significand == 4);
+    assert(CustomFloat!(5,2).epsilon.sign == 0);
+    assert(CustomFloat!(5,2).epsilon.exponent == 0);
+    assert(CustomFloat!(5,2).epsilon.significand == 1);
+}
+
+// testing .max
+@safe unittest
+{
+    static assert(CustomFloat!(5,2).max.sign == 0);
+    static assert(CustomFloat!(5,2).max.exponent == 2);
+    static assert(CustomFloat!(5,2).max.significand == 31);
+    static assert(CustomFloat!(4,3).max.sign == 0);
+    static assert(CustomFloat!(4,3).max.exponent == 6);
+    static assert(CustomFloat!(4,3).max.significand == 15);
+    static assert(CustomFloat!(3,4).max.sign == 0);
+    static assert(CustomFloat!(3,4).max.exponent == 14);
+    static assert(CustomFloat!(3,4).max.significand == 7);
+    static assert(CustomFloat!(2,5).max.sign == 0);
+    static assert(CustomFloat!(2,5).max.exponent == 30);
+    static assert(CustomFloat!(2,5).max.significand == 3);
+    static assert(CustomFloat!(1,6).max.sign == 0);
+    static assert(CustomFloat!(1,6).max.exponent == 62);
+    static assert(CustomFloat!(1,6).max.significand == 1);
+    static assert(CustomFloat!(3,5, CustomFloatFlags.none).max.exponent == 31);
+    static assert(CustomFloat!(3,5, CustomFloatFlags.none).max.significand == 7);
+}
+
+// testing .min_normal
+@safe unittest
+{
+    static assert(CustomFloat!(5,2).min_normal.sign == 0);
+    static assert(CustomFloat!(5,2).min_normal.exponent == 1);
+    static assert(CustomFloat!(5,2).min_normal.significand == 0);
+    static assert(CustomFloat!(4,3).min_normal.sign == 0);
+    static assert(CustomFloat!(4,3).min_normal.exponent == 1);
+    static assert(CustomFloat!(4,3).min_normal.significand == 0);
+    static assert(CustomFloat!(3,4).min_normal.sign == 0);
+    static assert(CustomFloat!(3,4).min_normal.exponent == 1);
+    static assert(CustomFloat!(3,4).min_normal.significand == 0);
+    static assert(CustomFloat!(2,5).min_normal.sign == 0);
+    static assert(CustomFloat!(2,5).min_normal.exponent == 1);
+    static assert(CustomFloat!(2,5).min_normal.significand == 0);
+    static assert(CustomFloat!(1,6).min_normal.sign == 0);
+    static assert(CustomFloat!(1,6).min_normal.exponent == 1);
+    static assert(CustomFloat!(1,6).min_normal.significand == 0);
+    static assert(CustomFloat!(3,5, CustomFloatFlags.none).min_normal.exponent == 0);
+    static assert(CustomFloat!(3,5, CustomFloatFlags.none).min_normal.significand == 4);
+}
+
+@safe unittest
+{
+    import std.math : isNaN;
+
+    alias cf = CustomFloat!(5, 2);
+
+    auto f = cf.nan.get!float();
+    assert(isNaN(f));
+
+    cf a;
+    a = real.max;
+    assert(a == cf.infinity);
+
+    a = 0.015625;
+    assert(a.exponent == 0);
+    assert(a.significand == 0);
+
+    a = 0.984375;
+    assert(a.exponent == 1);
+    assert(a.significand == 0);
+}
+
+@system unittest
+{
+    import std.exception : assertThrown;
+    import core.exception : AssertError;
+
+    alias cf = CustomFloat!(3, 5, CustomFloatFlags.none);
+
+    cf a;
+    assertThrown!AssertError(a = real.max);
+}
+
+@system unittest
+{
+    import std.exception : assertThrown;
+    import core.exception : AssertError;
+
+    alias cf = CustomFloat!(3, 5, CustomFloatFlags.nan);
+
+    cf a;
+    assertThrown!AssertError(a = real.max);
+}
+
+@system unittest
+{
+    import std.exception : assertThrown;
+    import core.exception : AssertError;
+
+    alias cf = CustomFloat!(24, 8, CustomFloatFlags.none);
+
+    cf a;
+    assertThrown!AssertError(a = float.infinity);
+}
+
+private bool isCorrectCustomFloat(uint precision, uint exponentWidth, CustomFloatFlags flags) @safe pure nothrow @nogc
+{
+    // Restrictions from bitfield
+    // due to CustomFloat!80 support hack precision with 64 bits is handled specially
+    auto length = (flags & flags.signed) + exponentWidth + ((precision == 64) ? 0 : precision);
+    if (length != 8 && length != 16 && length != 32 && length != 64) return false;
+
+    // mantissa needs to fit into real mantissa
+    if (precision > real.mant_dig - 1 && precision != 64) return false;
+
+    // exponent needs to fit into real exponent
+    if (1L << exponentWidth - 1 > real.max_exp) return false;
+
+    // mantissa should have at least one bit
+    if (precision == 0) return false;
+
+    // exponent should have at least one bit, in some cases two
+    if (exponentWidth <= ((flags & (flags.allowDenorm | flags.infinity | flags.nan)) != 0)) return false;
+
+    return true;
+}
+
+@safe pure nothrow @nogc unittest
+{
+    assert(isCorrectCustomFloat(3,4,CustomFloatFlags.ieee));
+    assert(isCorrectCustomFloat(3,5,CustomFloatFlags.none));
+    assert(!isCorrectCustomFloat(3,3,CustomFloatFlags.ieee));
+    assert(isCorrectCustomFloat(64,7,CustomFloatFlags.ieee));
+    assert(!isCorrectCustomFloat(64,4,CustomFloatFlags.ieee));
+    assert(!isCorrectCustomFloat(508,3,CustomFloatFlags.ieee));
+    assert(!isCorrectCustomFloat(3,100,CustomFloatFlags.ieee));
+    assert(!isCorrectCustomFloat(0,7,CustomFloatFlags.ieee));
+    assert(!isCorrectCustomFloat(6,1,CustomFloatFlags.ieee));
+    assert(isCorrectCustomFloat(7,1,CustomFloatFlags.none));
+    assert(!isCorrectCustomFloat(8,0,CustomFloatFlags.none));
 }
 
 /**
@@ -1239,7 +1480,7 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
         //numCalls=0;
         //++numProblems;
         assert(!x1.isNaN() && !x2.isNaN());
-        assert(signbit(x1) != signbit(x2));
+        assert(signbit(f(x1)) != signbit(f(x2)));
         auto result = findRoot(f, x1, x2, f(x1), f(x2),
           (real lo, real hi) { return false; });
 
@@ -1264,9 +1505,9 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
     }
     // Test a function with more than one root.
     real multisine(real x) { ++numCalls; return sin(x); }
-    //testFindRoot( &multisine, 6, 90);
-    //testFindRoot(&cubicfn, -100, 100);
-    //testFindRoot( &cubicfn, -double.max, real.max);
+    testFindRoot( &multisine, 6, 90);
+    testFindRoot(&cubicfn, -100, 100);
+    testFindRoot( &cubicfn, -double.max, real.max);
 
 
 /* Tests from the paper:
@@ -1299,7 +1540,7 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
     foreach (k; power_nvals)
     {
         n = k;
-        //testFindRoot(&power, -1, 10);
+        testFindRoot(&power, -1, 10);
     }
 
     int powerProblems = numProblems;
@@ -1360,17 +1601,17 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
     }
 
     numProblems=0;
-    //testFindRoot(&alefeld0, PI_2, PI);
+    testFindRoot(&alefeld0, PI_2, PI);
     for (n=1; n <= 10; ++n)
     {
-        //testFindRoot(&alefeld0, n*n+1e-9L, (n+1)*(n+1)-1e-9L);
+        testFindRoot(&alefeld0, n*n+1e-9L, (n+1)*(n+1)-1e-9L);
     }
     ale_a = -40; ale_b = -1;
-    //testFindRoot(&alefeld1, -9, 31);
+    testFindRoot(&alefeld1, -9, 31);
     ale_a = -100; ale_b = -2;
-    //testFindRoot(&alefeld1, -9, 31);
+    testFindRoot(&alefeld1, -9, 31);
     ale_a = -200; ale_b = -3;
-    //testFindRoot(&alefeld1, -9, 31);
+    testFindRoot(&alefeld1, -9, 31);
     int [] nvals_3 = [1, 2, 5, 10, 15, 20];
     int [] nvals_5 = [1, 2, 4, 5, 8, 15, 20];
     int [] nvals_6 = [1, 5, 10, 15, 20];
@@ -1378,48 +1619,48 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
 
     for (int i=4; i<12; i+=2)
     {
-       n = i;
-       ale_a = 0.2;
-       //testFindRoot(&alefeld2, 0, 5);
-       ale_a=1;
-       //testFindRoot(&alefeld2, 0.95, 4.05);
-       //testFindRoot(&alefeld2, 0, 1.5);
+        n = i;
+        ale_a = 0.2;
+        testFindRoot(&alefeld2, 0, 5);
+        ale_a=1;
+        testFindRoot(&alefeld2, 0.95, 4.05);
+        testFindRoot(&alefeld2, 0, 1.5);
     }
     foreach (i; nvals_3)
     {
         n=i;
-        //testFindRoot(&alefeld3, 0, 1);
+        testFindRoot(&alefeld3, 0, 1);
     }
     foreach (i; nvals_3)
     {
         n=i;
-        //testFindRoot(&alefeld4, 0, 1);
+        testFindRoot(&alefeld4, 0, 1);
     }
     foreach (i; nvals_5)
     {
         n=i;
-        //testFindRoot(&alefeld5, 0, 1);
+        testFindRoot(&alefeld5, 0, 1);
     }
     foreach (i; nvals_6)
     {
         n=i;
-        //testFindRoot(&alefeld6, 0, 1);
+        testFindRoot(&alefeld6, 0, 1);
     }
     foreach (i; nvals_7)
     {
         n=i;
-        //testFindRoot(&alefeld7, 0.01L, 1);
+        testFindRoot(&alefeld7, 0.01L, 1);
     }
     real worstcase(real x)
     {
         ++numCalls;
         return x<0.3*real.max? -0.999e-3 : 1.0;
     }
-    //testFindRoot(&worstcase, -real.max, real.max);
+    testFindRoot(&worstcase, -real.max, real.max);
 
     // just check that the double + float cases compile
-    //findRoot((double x){ return 0.0; }, -double.max, double.max);
-    //findRoot((float x){ return 0.0f; }, -float.max, float.max);
+    findRoot((double x){ return 0.0; }, -double.max, double.max);
+    findRoot((float x){ return 0.0f; }, -float.max, float.max);
 
 /*
    int grandtotal=0;

@@ -189,7 +189,7 @@ class FileException : Exception
 
     /++
         Constructor which takes the error number ($(LUCKY GetLastError)
-        in Windows, $(D_PARAM errno) in Posix).
+        in Windows, $(D_PARAM errno) in POSIX).
 
         Params:
             name  = Name of file for which the error occurred.
@@ -812,7 +812,7 @@ if (isConvertibleToString!R)
     static assert(__traits(compiles, append(TestAliasedString("foo"), [0, 1, 2, 3])));
 }
 
-// Posix implementation helper for write and append
+// POSIX implementation helper for write and append
 
 version (Posix) private void writeImpl(scope const(char)[] name, scope const(FSChar)* namez,
         scope const(void)[] buffer, bool append) @trusted
@@ -886,11 +886,20 @@ version (Windows) private void writeImpl(scope const(char)[] name, scope const(F
 }
 
 /***************************************************
- * Rename file `from` _to `to`.
+ * Rename file `from` _to `to`, moving it between directories if required.
  * If the target file exists, it is overwritten.
+ *
+ * It is not possible to rename a file across different mount points
+ * or drives. On POSIX, the operation is atomic. That means, if `to`
+ * already exists there will be no time period during the operation
+ * where `to` is missing. See
+ * $(HTTP man7.org/linux/man-pages/man2/rename.2.html, manpage for rename)
+ * for more details.
+ *
  * Params:
  *    from = string or range of characters representing the existing file name
  *    to = string or range of characters representing the target file name
+ *
  * Throws: $(LREF FileException) on error.
  */
 void rename(RF, RT)(RF from, RT to)
@@ -1347,7 +1356,7 @@ version (StdDdoc)
      Get creation/access/modified times of file `name`.
 
      This is the same as `getTimes` except that it also gives you the file
-     creation time - which isn't possible on Posix systems.
+     creation time - which isn't possible on POSIX systems.
 
      Params:
      name                 = File _name to get times for.
@@ -1787,7 +1796,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R))
 version (StdDdoc)
 {
     /++
-     $(BLUE This function is Posix-Only.)
+     $(BLUE This function is POSIX-Only.)
 
      Returns the time that the given file was last modified.
      Params:
@@ -1795,7 +1804,7 @@ version (StdDdoc)
      +/
     SysTime timeLastModified()(auto ref stat_t statbuf) pure nothrow {assert(false);}
     /++
-     $(BLUE This function is Posix-Only.)
+     $(BLUE This function is POSIX-Only.)
 
      Returns the time that the given file was last accessed.
      Params:
@@ -1803,7 +1812,7 @@ version (StdDdoc)
      +/
     SysTime timeLastAccessed()(auto ref stat_t statbuf) pure nothrow {assert(false);}
     /++
-     $(BLUE This function is Posix-Only.)
+     $(BLUE This function is POSIX-Only.)
 
      Returns the time that the given file was last changed.
      Params:
@@ -1975,15 +1984,15 @@ private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
 /++
  Returns the attributes of the given file.
 
- Note that the file attributes on Windows and Posix systems are
+ Note that the file attributes on Windows and POSIX systems are
  completely different. On Windows, they're what is returned by
  $(HTTP msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx,
- GetFileAttributes), whereas on Posix systems, they're the
+ GetFileAttributes), whereas on POSIX systems, they're the
  `st_mode` value which is part of the $(D stat struct) gotten by
  calling the $(HTTP en.wikipedia.org/wiki/Stat_%28Unix%29, `stat`)
  function.
 
- On Posix systems, if the given file is a symbolic link, then
+ On POSIX systems, if the given file is a symbolic link, then
  attributes are the attributes of the file pointed to by the symbolic
  link.
 
@@ -2474,8 +2483,8 @@ bool attrIsDir(uint attributes) @safe pure nothrow @nogc
     On Windows, if a file is not a directory, then it's a file. So,
     either `isFile` or `isDir` will return true for any given file.
 
-    On Posix systems, if `isFile` is `true`, that indicates that the file
-    is a regular file (e.g. not a block not device). So, on Posix systems, it's
+    On POSIX systems, if `isFile` is `true`, that indicates that the file
+    is a regular file (e.g. not a block not device). So, on POSIX systems, it's
     possible for both `isFile` and `isDir` to be `false` for a
     particular file (in which case, it's a special file). You can use
     `getAttributes` to get the attributes to figure out what type of special
@@ -2567,8 +2576,8 @@ if (isConvertibleToString!R)
     `attrIsFile` or `attrIsDir` will return `true` for the
     _attributes of any given file.
 
-    On Posix systems, if `attrIsFile` is `true`, that indicates that the
-    file is a regular file (e.g. not a block not device). So, on Posix systems,
+    On POSIX systems, if `attrIsFile` is `true`, that indicates that the
+    file is a regular file (e.g. not a block not device). So, on POSIX systems,
     it's possible for both `attrIsFile` and `attrIsDir` to be `false`
     for a particular file (in which case, it's a special file). If a file is a
     special file, you can use the _attributes to check what type of special file
@@ -2841,7 +2850,7 @@ bool attrIsSymlink(uint attributes) @safe pure nothrow @nogc
 
 /**
 Change directory to `pathname`. Equivalent to `cd` on
-Windows and Posix.
+Windows and POSIX.
 
 Params:
     pathname = the directory to step into
@@ -2914,7 +2923,7 @@ Params:
     pathname = the path of the directory to make
 
 Throws:
-    $(LREF FileException) on Posix or $(LREF WindowsException) on Windows
+    $(LREF FileException) on POSIX or $(LREF WindowsException) on Windows
     if an error occured.
  */
 void mkdir(R)(R pathname)
@@ -3173,7 +3182,7 @@ if (isConvertibleToString!R)
 }
 
 /++
-    $(BLUE This function is Posix-Only.)
+    $(BLUE This function is POSIX-Only.)
 
     Creates a symbolic _link (_symlink).
 
@@ -3267,7 +3276,7 @@ version (Posix) @safe unittest
 
 
 /++
-    $(BLUE This function is Posix-Only.)
+    $(BLUE This function is POSIX-Only.)
 
     Returns the path to the file pointed to by a symlink. Note that the
     path could be either relative or absolute depending on the symlink.
@@ -3554,7 +3563,7 @@ else version (NetBSD)
 version (StdDdoc)
 {
     /++
-        Info on a file, similar to what you'd get from stat on a Posix system.
+        Info on a file, similar to what you'd get from stat on a POSIX system.
       +/
     struct DirEntry
     {
@@ -3616,9 +3625,9 @@ assert(de2.isDir);
             On Windows, if a file is not a directory, then it's a file. So,
             either `isFile` or `isDir` will return `true`.
 
-            On Posix systems, if `isFile` is `true`, that indicates that
+            On POSIX systems, if `isFile` is `true`, that indicates that
             the file is a regular file (e.g. not a block not device). So, on
-            Posix systems, it's possible for both `isFile` and `isDir` to
+            POSIX systems, it's possible for both `isFile` and `isDir` to
             be `false` for a particular file (in which case, it's a special
             file). You can use `attributes` or `statBuf` to get more
             information about a special file (see the stat man page for more
@@ -3676,7 +3685,7 @@ assert(!de2.isFile);
         @property SysTime timeLastModified();
 
         /++
-            $(BLUE This function is Posix-Only.)
+            $(BLUE This function is POSIX-Only.)
 
             Returns the time that the file represented by this `DirEntry` was
             last changed (not only in contents, but also in permissions or ownership).
@@ -3686,21 +3695,21 @@ assert(!de2.isFile);
         /++
             Returns the _attributes of the file represented by this `DirEntry`.
 
-            Note that the file _attributes on Windows and Posix systems are
+            Note that the file _attributes on Windows and POSIX systems are
             completely different. On, Windows, they're what is returned by
             `GetFileAttributes`
             $(HTTP msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx, GetFileAttributes)
-            Whereas, an Posix systems, they're the `st_mode` value which is
+            Whereas, an POSIX systems, they're the `st_mode` value which is
             part of the `stat` struct gotten by calling `stat`.
 
-            On Posix systems, if the file represented by this `DirEntry` is a
+            On POSIX systems, if the file represented by this `DirEntry` is a
             symbolic link, then _attributes are the _attributes of the file
             pointed to by the symbolic link.
           +/
         @property uint attributes();
 
         /++
-            On Posix systems, if the file represented by this `DirEntry` is a
+            On POSIX systems, if the file represented by this `DirEntry` is a
             symbolic link, then `linkAttributes` are the attributes of the
             symbolic link itself. Otherwise, `linkAttributes` is identical to
             `attributes`.
@@ -3715,7 +3724,7 @@ assert(!de2.isFile);
             alias stat_t = void*;
 
         /++
-            $(BLUE This function is Posix-Only.)
+            $(BLUE This function is POSIX-Only.)
 
             The `stat` struct gotten from calling `stat`.
           +/
@@ -5258,10 +5267,10 @@ string tempDir() @trusted
 
 /**
 Returns the available disk space based on a given path.
-On Windows, `path` must be a directory; on Posix systems, it can be a file or directory.
+On Windows, `path` must be a directory; on POSIX systems, it can be a file or directory.
 
 Params:
-    path = on Windows, it must be a directory; on Posix it can be a file or directory
+    path = on Windows, it must be a directory; on POSIX it can be a file or directory
 Returns:
     Available space in bytes
 

@@ -1857,9 +1857,12 @@ private void testFloatingToIntegral(Floating, Integral)()
         foreach (T; AllNumerics)
         {
             T a = 42;
-            assert(to!string(a) == "42");
-            assert(to!wstring(a) == "42"w);
-            assert(to!dstring(a) == "42"d);
+            string s = to!string(a);
+            assert(s == "42", s);
+            wstring ws = to!wstring(a);
+            assert(ws == "42"w, to!string(ws));
+            dstring ds = to!dstring(a);
+            assert(ds == "42"d, to!string(ds));
             // array test
             T[] b = new T[2];
             b[0] = 42;
@@ -2571,6 +2574,13 @@ Lerr:
     assert(parse!int(input) == 777);
 }
 
+// issue 9621
+@safe pure unittest
+{
+    string s1 = "[ \"\\141\", \"\\0\", \"\\41\", \"\\418\" ]";
+    assert(parse!(string[])(s1) == ["a", "\0", "!", "!8"]);
+}
+
 /// ditto
 Target parse(Target, Source)(ref Source source, uint radix)
 if (isSomeChar!(ElementType!Source) &&
@@ -2602,6 +2612,7 @@ do
         alias s = source;
     }
 
+    auto found = false;
     do
     {
         uint c = s.front;
@@ -2628,7 +2639,16 @@ do
         enforce!ConvOverflowException(!overflow && nextv <= Target.max, "Overflow in integral conversion");
         v = cast(Target) nextv;
         s.popFront();
+        found = true;
     } while (!s.empty);
+
+    if (!found)
+    {
+        static if (isNarrowString!Source)
+            throw convError!(Source, Target)(cast(Source) source);
+        else
+            throw convError!(Source, Target)(source);
+    }
 
     static if (isNarrowString!Source)
         source = cast(Source) s;
@@ -2676,6 +2696,14 @@ do
 {
     auto str = "0=\x00\x02\x55\x40&\xff\xf0\n\x00\x04\x55\x40\xff\xf0~4+10\n";
     assert(parse!uint(str) == 0);
+}
+
+@safe pure unittest // bugzilla 18248
+{
+    import std.exception : assertThrown;
+
+    auto str = ";";
+    assertThrown(str.parse!uint(16));
 }
 
 /**
@@ -3065,7 +3093,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 @safe unittest
 {
     import std.exception;
-    import std.math : isNaN, fabs;
+    import std.math : isNaN, fabs, isInfinity;
 
     // Compare reals with given precision
     bool feq(in real rx, in real ry, in real precision = 0.000001L)
@@ -3123,6 +3151,16 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     d = to!double("1.79769e+308");
     assert(to!string(d) == to!string(1.79769e+308));
     assert(to!string(d) == to!string(double.max));
+
+    auto z = real.max / 2L;
+    static assert(is(typeof(z) == real));
+    assert(!isNaN(z));
+    assert(!isInfinity(z));
+    string a = to!string(z);
+    real b = to!real(a);
+    string c = to!string(b);
+
+    assert(c == a, "\n" ~ c ~ "\n" ~ a);
 
     assert(to!string(to!real(to!string(real.max / 2L))) == to!string(real.max / 2L));
 
@@ -3833,13 +3871,31 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source))
         return isAlpha(c) ? ((c & ~0x20) - ('A' - 10)) : c - '0';
     }
 
+    // We need to do octals separate, because they need a lookahead to find out,
+    // where the escape sequence ends.
+    auto first = s.front;
+    if (first >= '0' && first <= '7')
+    {
+        dchar c1 = s.front;
+        s.popFront();
+        if (s.empty) return c1 - '0';
+        dchar c2 = s.front;
+        if (c2 < '0' || c2 > '7') return c1 - '0';
+        s.popFront();
+        dchar c3 = s.front;
+        if (c3 < '0' || c3 > '7') return 8 * (c1 - '0') + (c2 - '0');
+        s.popFront();
+        if (c1 > '3')
+            throw parseError("Octal sequence is larger than \\377");
+        return 64 * (c1 - '0') + 8 * (c2 - '0') + (c3 - '0');
+    }
+
     dchar result;
 
-    switch (s.front)
+    switch (first)
     {
         case '"':   result = '\"';  break;
         case '\'':  result = '\'';  break;
-        case '0':   result = '\0';  break;
         case '?':   result = '\?';  break;
         case '\\':  result = '\\';  break;
         case 'a':   result = '\a';  break;
@@ -3884,7 +3940,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source))
 {
     string[] s1 = [
         `\"`, `\'`, `\?`, `\\`, `\a`, `\b`, `\f`, `\n`, `\r`, `\t`, `\v`, //Normal escapes
-        //`\141`, //@@@9621@@@ Octal escapes.
+        `\141`,
         `\x61`,
         `\u65E5`, `\U00012456`
         //`\&amp;`, `\&quot;`, //@@@9621@@@ Named Character Entities.
@@ -3892,7 +3948,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source))
 
     const(dchar)[] s2 = [
         '\"', '\'', '\?', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v', //Normal escapes
-        //'\141', //@@@9621@@@ Octal escapes.
+        '\141',
         '\x61',
         '\u65E5', '\U00012456'
         //'\&amp;', '\&quot;', //@@@9621@@@ Named Character Entities.
@@ -3918,7 +3974,8 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source))
         `\x0`,     //Premature hex end
         `\XB9`,    //Not legal hex syntax
         `\u!!`,    //Not a unicode hex
-        `\777`,    //Octal is larger than a byte //Note: Throws, but simply because octals are unsupported
+        `\777`,    //Octal is larger than a byte
+        `\80`,     //Wrong digit at beginning of octal
         `\u123`,   //Premature hex end
         `\U123123` //Premature hex end
     ];

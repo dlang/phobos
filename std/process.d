@@ -1137,7 +1137,7 @@ version (Posix) @system unittest
             wait(pid);
         else
             // We need to wait a little to ensure that the process has finished and data was written to files
-            Thread.sleep(2.seconds);
+            Thread.sleep(500.msecs);
         assert(readText(patho).chomp() == "INPUT output bar");
         assert(readText(pathe).chomp().stripRight() == "INPUT error baz");
         remove(pathi);
@@ -1498,12 +1498,12 @@ final class Pid
     */
     // Note: Since HANDLE is a reference, this function cannot be const.
     version (Windows)
-    @property HANDLE osHandle() @safe pure nothrow
+    @property HANDLE osHandle() @nogc @safe pure nothrow
     {
         return _handle;
     }
     else version (Posix)
-    @property pid_t osHandle() @safe pure nothrow
+    @property pid_t osHandle() @nogc @safe pure nothrow
     {
         return _processID;
     }
@@ -1861,13 +1861,13 @@ void kill(Pid pid, int codeOrSignal)
     version (Android)
         Thread.sleep(dur!"msecs"(5));
     else
-        Thread.sleep(dur!"seconds"(1));
+        Thread.sleep(dur!"msecs"(500));
     kill(pid);
     version (Windows)    assert(wait(pid) == 1);
     else version (Posix) assert(wait(pid) == -SIGTERM);
 
     pid = spawnProcess(prog.path);
-    Thread.sleep(dur!"seconds"(1));
+    Thread.sleep(dur!"msecs"(500));
     auto s = tryWait(pid);
     assert(!s.terminated && s.status == 0);
     assertThrown!ProcessException(kill(pid, -123)); // Negative code not allowed.
@@ -1891,7 +1891,7 @@ void kill(Pid pid, int codeOrSignal)
     This leads to the annoying message like "/bin/sh: 0: Can't open /tmp/std.process temporary file" to appear when running tests.
     It does not happen in unittests with non-detached processes because we always wait() for them to finish.
     */
-    Thread.sleep(1.seconds);
+    Thread.sleep(500.msecs);
     assert(!pid.owned);
     version (Windows) assert(pid.osHandle == INVALID_HANDLE_VALUE);
     assertThrown!ProcessException(wait(pid));

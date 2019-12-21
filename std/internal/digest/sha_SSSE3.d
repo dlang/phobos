@@ -733,7 +733,7 @@ version (USE_SSSE3)
      */
     public void transformSSSE3(uint[5]* state, const(ubyte[64])* buffer, ExtraArgs) pure nothrow @nogc
     {
-        mixin(wrap(["naked;"] ~ prologue()));
+        mixin(wrap(["naked"] ~ prologue()));
         // Precalc first 4*16=64 bytes
         mixin(wrap(xsetup(0)));
         mixin(wrap(weave(precalc(0)~precalc(1)~precalc(2)~precalc(3),

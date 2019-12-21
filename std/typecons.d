@@ -2703,7 +2703,7 @@ Params:
 
     /// Ditto
     bool opEquals(U)(auto ref const(U) rhs) const
-    if (is(typeof(this.get == rhs)))
+    if (!is(U : typeof(this)) && is(typeof(this.get == rhs)))
     {
         return _isNull ? false : rhs == _value.payload;
     }
@@ -2822,35 +2822,6 @@ Params:
             put(writer, "Nullable.null");
         else
             formatValue(writer, _value.payload, fmt);
-    }
-
-    //@@@DEPRECATED_2.086@@@
-    deprecated("To be removed after 2.086. Please use the output range overload instead.")
-    void toString()(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char fmt)
-    {
-        if (isNull)
-        {
-            sink.formatValue("Nullable.null", fmt);
-        }
-        else
-        {
-            sink.formatValue(_value.payload, fmt);
-        }
-    }
-
-    // Issue 14940
-    //@@@DEPRECATED_2.086@@@
-    deprecated("To be removed after 2.086. Please use the output range overload instead.")
-    void toString()(scope void delegate(const(char)[]) @safe sink, scope const ref FormatSpec!char fmt)
-    {
-        if (isNull)
-        {
-            sink.formatValue("Nullable.null", fmt);
-        }
-        else
-        {
-            sink.formatValue(_value.payload, fmt);
-        }
     }
 
 /**
@@ -5083,6 +5054,7 @@ private static:
     // Internal stuffs
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
     import std.format;
+    alias format = std.format.format;
 
     enum CONSTRUCTOR_NAME = "__ctor";
 
@@ -6724,7 +6696,6 @@ mixin template Proxy(alias a)
         }
 
         auto ref opCmp(this X, B)(auto ref B b)
-          if (!is(typeof(a.opCmp(b))) || !is(typeof(b.opCmp(a))))
         {
             static if (is(typeof(a.opCmp(b))))
                 return a.opCmp(b);
@@ -7755,6 +7726,24 @@ template TypedefType(T)
             assert(t.to!string() == itd.to!string());
         }
     }}
+}
+
+@safe @nogc unittest // typedef'ed type with custom operators
+{
+    static struct MyInt
+    {
+        int value;
+        int opCmp(MyInt other)
+        {
+            if (value < other.value)
+                return -1;
+            return !(value == other.value);
+        }
+    }
+
+    auto m1 = Typedef!MyInt(MyInt(1));
+    auto m2 = Typedef!MyInt(MyInt(2));
+    assert(m1 < m2);
 }
 
 /**

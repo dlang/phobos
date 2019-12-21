@@ -994,18 +994,17 @@ private @property Mutex registryLock()
     return impl;
 }
 
-private void unregisterMe()
+private void unregisterMe(ref ThreadInfo me)
 {
-    auto me = thisInfo.ident;
-    if (thisInfo.ident != Tid.init)
+    if (me.ident != Tid.init)
     {
         synchronized (registryLock)
         {
-            if (auto allNames = me in namesByTid)
+            if (auto allNames = me.ident in namesByTid)
             {
                 foreach (name; *allNames)
                     tidByName.remove(name);
-                namesByTid.remove(me);
+                namesByTid.remove(me.ident);
             }
         }
     }
@@ -1128,7 +1127,18 @@ struct ThreadInfo
             _send(MsgType.linkDead, tid, ident);
         if (owner != Tid.init)
             _send(MsgType.linkDead, owner, ident);
-        unregisterMe(); // clean up registry entries
+        unregisterMe(this); // clean up registry entries
+    }
+
+    // issue 20160
+    @system unittest
+    {
+        register("main_thread", thisTid());
+
+        ThreadInfo t;
+        t.cleanup();
+
+        assert(locate("main_thread") == thisTid());
     }
 }
 

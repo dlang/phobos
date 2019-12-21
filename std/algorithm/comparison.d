@@ -1513,17 +1513,21 @@ if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
     assert(levenshteinDistanceAndPath(S("cat"), "rat")[0] == 1);
 }
 
+
 // max
 /**
-Iterates the passed arguments and return the maximum value.
+Iterates the passed arguments and returns the maximum value.
 
 Params:
     args = The values to select the maximum from. At least two arguments must
-    be passed.
+    be passed, and they must be comparable with `>`.
 
 Returns:
-    The maximum of the passed-in args. The type of the returned value is
+    The maximum of the passed-in values. The type of the returned value is
     the type among the passed arguments that is able to store the largest value.
+    If at least one of the arguments is NaN, the result is an unspecified value.
+    See $(REF maxElement, std,algorithm,searching) for examples on how to cope
+    with NaNs.
 
 See_Also:
     $(REF maxElement, std,algorithm,searching)
@@ -1634,9 +1638,17 @@ if (T.length >= 1)
 /**
 Iterates the passed arguments and returns the minimum value.
 
-Params: args = The values to select the minimum from. At least two arguments
-    must be passed, and they must be comparable with `<`.
-Returns: The minimum of the passed-in values.
+Params:
+    args = The values to select the minimum from. At least two arguments must
+    be passed, and they must be comparable with `<`.
+
+Returns:
+    The minimum of the passed-in values. The type of the returned value is
+    the type among the passed arguments that is able to store the smallest value.
+    If at least one of the arguments is NaN, the result is an unspecified value.
+    See $(REF minElement, std,algorithm,searching) for examples on how to cope
+    with NaNs.
+
 See_Also:
     $(REF minElement, std,algorithm,searching)
 */

@@ -165,7 +165,7 @@ import std.typecons : Flag, Yes, No;
 }
 
 // @@@DEPRECATED_2018-10@@@
-/++
+/*
     $(RED The old benchmarking functionality in std.datetime (which uses
           $(REF TickDuration,core,time)) has been deprecated. Use what's in
           std.datetime.stopwatch instead. It uses $(REF MonoTime,core,time) and
@@ -182,12 +182,13 @@ import std.typecons : Flag, Yes, No;
 
     Otherwise, if set to `AutoStart.yes`, then the stopwatch is started when
     it is constructed.
-  +/
-deprecated("Use std.datetime.stopwatch.AutoStart.") alias AutoStart = Flag!"autoStart";
+  */
+deprecated("To be removed after 2.094. Use std.datetime.stopwatch.AutoStart instead.")
+alias AutoStart = Flag!"autoStart";
 
 
 // @@@DEPRECATED_2018-10@@@
-/++
+/*
     $(RED The old benchmarking functionality in std.datetime (which uses
           $(REF TickDuration,core,time)) has been deprecated. Use what's in
           std.datetime.stopwatch instead. It uses $(REF MonoTime,core,time) and
@@ -207,15 +208,15 @@ deprecated("Use std.datetime.stopwatch.AutoStart.") alias AutoStart = Flag!"auto
     of the system clock varies from system to system, and other system-dependent
     and situation-dependent stuff (such as the overhead of a context switch
     between threads) can also affect `StopWatch`'s accuracy.
-  +/
-deprecated("Use std.datetime.stopwatch.StopWatch.")
+  */
+deprecated("To be removed after 2.094. Use std.datetime.stopwatch.StopWatch instead.")
 @safe struct StopWatch
 {
 public:
 
-    /++
+    /*
        Auto start with constructor.
-      +/
+      */
     this(AutoStart autostart) @nogc
     {
         if (autostart)
@@ -243,9 +244,9 @@ public:
     }
 
 
-    /++
+    /*
        Resets the stop watch.
-      +/
+      */
     void reset() @nogc
     {
         if (_flagStarted)
@@ -272,9 +273,9 @@ public:
     }
 
 
-    /++
+    /*
        Starts the stop watch.
-      +/
+      */
     void start() @nogc
     {
         assert(!_flagStarted);
@@ -298,9 +299,9 @@ public:
     }
 
 
-    /++
+    /*
        Stops the stop watch.
-      +/
+      */
     void stop() @nogc
     {
         assert(_flagStarted);
@@ -324,10 +325,10 @@ public:
     }
 
 
-    /++
+    /*
        Peek at the amount of time which has passed since the stop watch was
        started.
-      +/
+      */
     TickDuration peek() const @nogc
     {
         if (_flagStarted)
@@ -349,10 +350,10 @@ public:
     }
 
 
-    /++
+    /*
        Set the amount of time which has been measured since the stop watch was
        started.
-      +/
+      */
     void setMeasured(TickDuration d) @nogc
     {
         reset();
@@ -370,9 +371,9 @@ public:
     }
 
 
-    /++
+    /*
        Confirm whether this stopwatch is measuring time.
-      +/
+      */
     bool running() @property const pure nothrow @nogc
     {
         return _flagStarted;
@@ -409,7 +410,6 @@ private:
     TickDuration _timeMeasured;
 }
 
-///
 deprecated @safe unittest
 {
     void writeln(S...)(S args){}
@@ -442,7 +442,7 @@ deprecated @safe unittest
 
 
 // @@@DEPRECATED_2018-10@@@
-/++
+/*
     $(RED The old benchmarking functionality in std.datetime (which uses
           $(REF TickDuration,core,time)) has been deprecated. Use what's in
           std.datetime.stopwatch instead. It uses $(REF MonoTime,core,time) and
@@ -470,8 +470,8 @@ deprecated @safe unittest
 
     See_Also:
         $(LREF measureTime)
-  +/
-deprecated("Use std.datetime.stopwatch.benchmark.")
+  */
+deprecated("To be removed after 2.094. Use std.datetime.stopwatch.benchmark instead.")
 TickDuration[fun.length] benchmark(fun...)(uint n)
 {
     TickDuration[fun.length] result;
@@ -489,7 +489,6 @@ TickDuration[fun.length] benchmark(fun...)(uint n)
     return result;
 }
 
-///
 deprecated @safe unittest
 {
     import std.conv : to;
@@ -514,7 +513,7 @@ deprecated @safe unittest
 
 
 // @@@DEPRECATED_2018-10@@@
-/++
+/*
     $(RED The old benchmarking functionality in std.datetime (which uses
           $(REF TickDuration,core,time)) has been deprecated. Use what's in
           std.datetime.stopwatch instead. It uses $(REF MonoTime,core,time) and
@@ -530,34 +529,35 @@ deprecated @safe unittest
         baseFunc   = The function to become the base of the speed.
         targetFunc = The function that wants to measure speed.
         times      = The number of times each function is to be executed.
-  +/
-deprecated("Use std.datetime.stopwatch.benchmark.") @safe struct ComparingBenchmarkResult
+  */
+deprecated("To be removed after 2.094. Use std.datetime.stopwatch.benchmark instead.")
+@safe struct ComparingBenchmarkResult
 {
-    /++
+    /*
        Evaluation value
 
        This returns the evaluation value of performance as the ratio of
        baseFunc's time over targetFunc's time. If performance is high, this
        returns a high value.
-      +/
+      */
     @property real point() const pure nothrow
     {
         return _baseTime.length / cast(const real)_targetTime.length;
     }
 
 
-    /++
+    /*
        The time required of the base function
-      +/
+      */
     @property public TickDuration baseTime() const pure nothrow
     {
         return _baseTime;
     }
 
 
-    /++
+    /*
        The time required of the target function
-      +/
+      */
     @property public TickDuration targetTime() const pure nothrow
     {
         return _targetTime;
@@ -577,8 +577,8 @@ private:
 
 
 // @@@DEPRECATED_2018-10@@@
-/// ditto
-deprecated("Use std.datetime.stopwatch.benchmark.")
+// ditto
+deprecated("To be removed after 2.094. Use std.datetime.stopwatch.benchmark instead.")
 ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
                                             alias targetFunc,
                                             int times = 0xfff)()
@@ -587,7 +587,7 @@ ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
     return ComparingBenchmarkResult(t[0], t[1]);
 }
 
-///
+//
 deprecated @safe unittest
 {
     void f1x() {}
@@ -614,7 +614,7 @@ deprecated @system unittest
 
 
 // @@@DEPRECATED_2018-10@@@
-/++
+/*
     $(RED The old benchmarking functionality in std.datetime (which uses
           $(REF TickDuration,core,time)) has been deprecated. Use what's in
           std.datetime.stopwatch instead. It uses $(REF MonoTime,core,time) and
@@ -633,8 +633,9 @@ deprecated @system unittest
 
     See_Also:
         $(LREF benchmark)
-+/
-deprecated("Use std.datetime.stopwatch.StopWatch.") @safe auto measureTime(alias func)()
+*/
+deprecated("To be removed after 2.094. Use std.datetime.stopwatch.StopWatch instead.")
+@safe auto measureTime(alias func)()
 if (isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
 {
     struct Result
@@ -652,8 +653,9 @@ if (isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
     return Result(Yes.autoStart);
 }
 
-/// Ditto
-deprecated("Use std.datetime.stopwatch.StopWatch.") auto measureTime(alias func)()
+// Ditto
+deprecated("To be removed after 2.094. Use std.datetime.stopwatch.StopWatch instead.")
+auto measureTime(alias func)()
 if (!isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
 {
     struct Result
@@ -671,7 +673,7 @@ if (!isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
     return Result(Yes.autoStart);
 }
 
-///
+//
 deprecated @safe unittest
 {
     {

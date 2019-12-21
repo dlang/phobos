@@ -1098,6 +1098,14 @@ Throws: `Exception` if the file is not opened.
         import std.conv : to, text;
         import std.exception : enforce, errnoEnforce;
 
+        // Some libc sanitize the whence input (e.g. glibc), but some don't,
+        // e.g. Microsoft runtime crashes on an invalid origin,
+        // and Musl additionally accept SEEK_DATA & SEEK_HOLE (Linux extension).
+        // To provide a consistent behavior cross platform, we use the glibc check
+        // See also https://issues.dlang.org/show_bug.cgi?id=19797
+        enforce(origin == SEEK_SET || origin == SEEK_CUR ||  origin == SEEK_END,
+                "Invalid `origin` argument passed to `seek`, must be one of: SEEK_SET, SEEK_CUR, SEEK_END");
+
         enforce(isOpen, "Attempting to seek() in an unopened file");
         version (Windows)
         {
@@ -1105,9 +1113,6 @@ Throws: `Exception` if the file is not opened.
             {
                 alias fseekFun = _fseeki64;
                 alias off_t = long;
-                // Issue 19797
-                enforce(origin >= SEEK_SET && origin <= SEEK_END,
-                        "Could not seek in file `"~_name~"' (Invalid argument)");
             }
             else
             {
@@ -1151,7 +1156,8 @@ Throws: `Exception` if the file is not opened.
         // f.rawWrite("abcdefghijklmnopqrstuvwxyz");
         // f.seek(-3, SEEK_END);
         // assert(f.readln() == "xyz");
-        assertThrown(f.seek(0, 3));
+
+        assertThrown(f.seek(0, ushort.max));
     }
 
 /**
@@ -2312,6 +2318,7 @@ the contents may well have changed).
         static import std.file;
         auto deleteme = testFilename();
         std.file.write(deleteme, "Line 1\nLine 2\nLine 3\n");
+        scope(success) std.file.remove(deleteme);
 
         auto f = File(deleteme);
         f.byLine();

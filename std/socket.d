@@ -259,16 +259,28 @@ class SocketFeatureException: SocketException
 /**
  * Returns:
  * `true` if the last socket operation failed because the socket
- * was in non-blocking mode and the operation would have blocked.
+ * was in non-blocking mode and the operation would have blocked,
+ * or if the socket is in blocking mode and set a SNDTIMEO or RCVTIMEO,
+ * and the operation timed out.
  */
 bool wouldHaveBlocked() nothrow @nogc
 {
     version (Windows)
-        return _lasterr() == WSAEWOULDBLOCK;
+        return _lasterr() == WSAEWOULDBLOCK || _lasterr() == WSAETIMEDOUT;
     else version (Posix)
         return _lasterr() == EAGAIN;
     else
         static assert(0, "No socket support for this platform yet.");
+}
+
+@safe unittest
+{
+    auto sockets = socketPair();
+    auto s = sockets[0];
+    s.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"msecs"(10));
+    ubyte[] buffer = new ubyte[](16);
+    auto rec = s.receive(buffer);
+    assert(rec == -1 && wouldHaveBlocked());
 }
 
 

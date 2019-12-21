@@ -277,6 +277,7 @@ of the bitfields storage.
     assert(obj.x == 2);
     assert(obj.y == 0);
     assert(obj.z == 2);
+    assert(obj.flag == false);
 }
 
 /**
@@ -294,6 +295,12 @@ one bitfield with an empty name.
             uint, "",         6));
     }
 
+    A a;
+    assert(a.flag1 == 0);
+    a.flag1 = 1;
+    assert(a.flag1 == 1);
+    a.flag1 = 0;
+    assert(a.flag1 == 0);
 }
 
 /// enums can be used too
@@ -307,51 +314,6 @@ one bitfield with an empty name.
                   bool, "y", 1,
                   ubyte, "z", 5));
     }
-}
-
-/**
-Creates a bitfield pack of eight bits, which fit in
-one `ubyte`. The bitfields are allocated starting from the
-least significant bit, i.e. x occupies the two least significant bits
-of the bitfields storage.
-*/
-@safe unittest
-{
-    struct A
-    {
-        int a;
-        mixin(bitfields!(
-            uint, "x",    2,
-            int,  "y",    3,
-            uint, "z",    2,
-            bool, "flag", 1));
-    }
-    A obj;
-    obj.x = 2;
-    obj.z = obj.x;
-
-    assert(obj.x == 2);
-    assert(obj.y == 0);
-    assert(obj.z == 2);
-    assert(obj.flag == false);
-}
-
-/// Add empty fields for padding to have a total bit length of 8, 16, 32, or 64
-@safe unittest
-{
-    struct A
-    {
-        mixin(bitfields!(
-            bool, "flag1",    1,
-            bool, "flag2",    1,
-            uint, "",         6));
-    }
-    A a;
-    assert(a.flag1 == 0);
-    a.flag1 = 1;
-    assert(a.flag1 == 1);
-    a.flag1 = 0;
-    assert(a.flag1 == 0);
 }
 
 /**
@@ -2531,22 +2493,6 @@ public:
      */
     void toString(W)(ref W sink, scope const ref FormatSpec!char fmt) const
     if (isOutputRange!(W, char))
-    {
-        const spec = fmt.spec;
-        switch (spec)
-        {
-            case 'b':
-                return formatBitString(sink);
-            case 's':
-                return formatBitArray(sink);
-            default:
-                throw new Exception("Unknown format specifier: %" ~ spec);
-        }
-    }
-
-    // @@@DEPRECATED_2.089@@@
-    deprecated("To be removed by 2.089. Please use the writer overload instead.")
-    void toString(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char fmt) const
     {
         const spec = fmt.spec;
         switch (spec)

@@ -144,26 +144,34 @@ private struct RangeT(A)
 
         E moveFront()
         {
-            assert(!empty && _a < _outer.length);
+            assert(!empty, "Attempting to moveFront an empty Array");
+            assert(_a < _outer.length,
+                "Attempting to moveFront using an out of bounds low index on an Array");
             return move(_outer._data._payload[_a]);
         }
 
         E moveBack()
         {
-            assert(!empty && _b  <= _outer.length);
+            assert(!empty, "Attempting to moveBack an empty Array");
+            assert(_a <= _outer.length,
+                "Attempting to moveBack using an out of bounds high index on an Array");
             return move(_outer._data._payload[_b - 1]);
         }
 
         E moveAt(size_t i)
         {
-            assert(_a + i < _b && _a + i < _outer.length);
+            assert(_a + i < _b,
+                "Attempting to moveAt using an out of bounds index on an Array");
+            assert(_a + i < _outer.length,
+                "Cannot move past the end of the array");
             return move(_outer._data._payload[_a + i]);
         }
     }
 
     ref inout(E) opIndex(size_t i) inout
     {
-        assert(_a + i < _b);
+        assert(_a + i < _b,
+            "Attempting to fetch using an out of bounds index on an Array");
         return _outer[_a + i];
     }
 
@@ -174,7 +182,8 @@ private struct RangeT(A)
 
     RangeT opSlice(size_t i, size_t j)
     {
-        assert(i <= j && _a + j <= _b);
+        assert(i <= j && _a + j <= _b,
+            "Attempting to slice using an out of bounds indices on an Array");
         return typeof(return)(_outer, _a + i, _a + j);
     }
 
@@ -185,7 +194,8 @@ private struct RangeT(A)
 
     RangeT!(const(A)) opSlice(size_t i, size_t j) const
     {
-        assert(i <= j && _a + j <= _b);
+        assert(i <= j && _a + j <= _b,
+            "Attempting to slice using an out of bounds indices on an Array");
         return typeof(return)(_outer, _a + i, _a + j);
     }
 
@@ -193,39 +203,45 @@ private struct RangeT(A)
     {
         void opSliceAssign(E value)
         {
-            assert(_b <= _outer.length);
+            assert(_b <= _outer.length,
+                "Attempting to assign using an out of bounds indices on an Array");
             _outer[_a .. _b] = value;
         }
 
         void opSliceAssign(E value, size_t i, size_t j)
         {
-            assert(_a + j <= _b);
+            assert(_a + j <= _b,
+                "Attempting to slice assign using an out of bounds indices on an Array");
             _outer[_a + i .. _a + j] = value;
         }
 
         void opSliceUnary(string op)()
         if (op == "++" || op == "--")
         {
-            assert(_b <= _outer.length);
+            assert(_b <= _outer.length,
+                "Attempting to slice using an out of bounds indices on an Array");
             mixin(op~"_outer[_a .. _b];");
         }
 
         void opSliceUnary(string op)(size_t i, size_t j)
         if (op == "++" || op == "--")
         {
-            assert(_a + j <= _b);
+            assert(_a + j <= _b,
+                "Attempting to slice using an out of bounds indices on an Array");
             mixin(op~"_outer[_a + i .. _a + j];");
         }
 
         void opSliceOpAssign(string op)(E value)
         {
-            assert(_b <= _outer.length);
+            assert(_b <= _outer.length,
+                "Attempting to slice using an out of bounds indices on an Array");
             mixin("_outer[_a .. _b] "~op~"= value;");
         }
 
         void opSliceOpAssign(string op)(E value, size_t i, size_t j)
         {
-            assert(_a + j <= _b);
+            assert(_a + j <= _b,
+                "Attempting to slice using an out of bounds indices on an Array");
             mixin("_outer[_a + i .. _a + j] "~op~"= value;");
         }
     }
@@ -321,7 +337,7 @@ if (!is(Unqual!T == bool))
                     bool overflow;
                     const nbytes = mulu(newLength, T.sizeof, overflow);
                     if (overflow)
-                        assert(0);
+                        assert(false, "Overflow");
                 }
 
                 static if (hasIndirections!T)
@@ -368,7 +384,7 @@ if (!is(Unqual!T == bool))
                 bool overflow;
                 const sz = mulu(elements, T.sizeof, overflow);
                 if (overflow)
-                    assert(0);
+                    assert(false, "Overflow");
             }
             static if (hasIndirections!T)
             {
@@ -412,7 +428,8 @@ if (!is(Unqual!T == bool))
             {
                 reserve(1 + capacity * 3 / 2);
             }
-            assert(capacity > length && _payload.ptr);
+            assert(capacity > length && _payload.ptr,
+                "Failed to reserve memory");
             emplace(_payload.ptr + _payload.length, elem);
             _payload = _payload.ptr[0 .. _payload.length + 1];
             return 1;
@@ -435,7 +452,8 @@ if (!is(Unqual!T == bool))
             }
             static if (hasLength!Range)
             {
-                assert(length == oldLength + r.length);
+                assert(length == oldLength + r.length,
+                    "Failed to insertBack range");
             }
             return result;
         }
@@ -460,7 +478,8 @@ if (!is(Unqual!T == bool))
             import core.checkedint : mulu;
             bool overflow;
             const nbytes = mulu(values.length, T.sizeof, overflow);
-            if (overflow) assert(0);
+            if (overflow)
+                assert(false, "Overflow");
         }
         auto p = cast(T*) enforceMalloc(nbytes);
         static if (hasIndirections!T)
@@ -589,7 +608,8 @@ if (!is(Unqual!T == bool))
                 import core.checkedint : mulu;
                 bool overflow;
                 const sz = mulu(elements, T.sizeof, overflow);
-                if (overflow) assert(0);
+                if (overflow)
+                    assert(false, "Overflow");
             }
             auto p = enforceMalloc(sz);
             static if (hasIndirections!T)
@@ -636,19 +656,19 @@ if (!is(Unqual!T == bool))
      */
     Range opSlice(size_t i, size_t j)
     {
-        assert(i <= j && j <= length);
+        assert(i <= j && j <= length, "Invalid slice bounds");
         return typeof(return)(this, i, j);
     }
 
     ConstRange opSlice(size_t i, size_t j) const
     {
-        assert(i <= j && j <= length);
+        assert(i <= j && j <= length, "Invalid slice bounds");
         return typeof(return)(this, i, j);
     }
 
     ImmutableRange opSlice(size_t i, size_t j) immutable
     {
-        assert(i <= j && j <= length);
+        assert(i <= j && j <= length, "Invalid slice bounds");
         return typeof(return)(this, i, j);
     }
 
@@ -661,7 +681,8 @@ if (!is(Unqual!T == bool))
      */
     @property ref inout(T) front() inout
     {
-        assert(_data.refCountedStore.isInitialized);
+        assert(_data.refCountedStore.isInitialized,
+            "Cannot get front of empty range");
         return _data._payload[0];
     }
 
@@ -674,7 +695,8 @@ if (!is(Unqual!T == bool))
      */
     @property ref inout(T) back() inout
     {
-        assert(_data.refCountedStore.isInitialized);
+        assert(_data.refCountedStore.isInitialized,
+            "Cannot get back of empty range");
         return _data._payload[$ - 1];
     }
 
@@ -687,7 +709,8 @@ if (!is(Unqual!T == bool))
      */
     ref inout(T) opIndex(size_t i) inout
     {
-        assert(_data.refCountedStore.isInitialized);
+        assert(_data.refCountedStore.isInitialized,
+            "Cannot index empty range");
         return _data._payload[i];
     }
 
@@ -926,7 +949,8 @@ if (!is(Unqual!T == bool))
         import std.conv : emplace;
         enforce(r._outer._data is _data && r._a <= length);
         reserve(length + 1);
-        assert(_data.refCountedStore.isInitialized);
+        assert(_data.refCountedStore.isInitialized,
+            "Failed to allocate capacity to insertBefore");
         // Move elements over by one slot
         memmove(_data._payload.ptr + r._a + 1,
                 _data._payload.ptr + r._a,
@@ -948,7 +972,8 @@ if (!is(Unqual!T == bool))
             auto extra = walkLength(stuff);
             if (!extra) return 0;
             reserve(length + extra);
-            assert(_data.refCountedStore.isInitialized);
+            assert(_data.refCountedStore.isInitialized,
+                "Failed to allocate capacity to insertBefore");
             // Move elements over by extra slots
             memmove(_data._payload.ptr + r._a + extra,
                     _data._payload.ptr + r._a,
@@ -1585,7 +1610,8 @@ if (is(Unqual!T == bool))
 
     private @property ref size_t[] data()
     {
-        assert(_store.refCountedStore.isInitialized);
+        assert(_store.refCountedStore.isInitialized,
+            "Cannot get data of uninitialized Array");
         return _store._backend._payload;
     }
 
@@ -1680,7 +1706,7 @@ if (is(Unqual!T == bool))
         /// Ditto
         @property size_t length() const
         {
-            assert(_a <= _b);
+            assert(_a <= _b, "Invalid bounds");
             return _b - _a;
         }
         alias opDollar = length;

@@ -5,7 +5,7 @@ set -uexo pipefail
 HOST_DMD_VER=2.079.1
 CURL_USER_AGENT="CirleCI $(curl --version | head -n 1)"
 DUB=${DUB:-dub}
-N=2
+N=${N:-2}
 CIRCLE_NODE_INDEX=${CIRCLE_NODE_INDEX:-0}
 BUILD="debug"
 PIC=1
@@ -134,6 +134,11 @@ dub_package()
     dub -v --single dub_stdx_allocator.d
     popd
 }
+
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <cmd> (where cmd is one of install-deps, setup-repos, coverage, publictests, style-line)" >&2
+    exit 1
+fi
 
 case $1 in
     install-deps) install_deps ;;

@@ -1066,6 +1066,12 @@ Occasionally it is useful to explicitly instantiate a `TaskPool`:
 2.  When the threads in the global task pool are waiting on a synchronization
     primitive (for example a mutex), and you want to parallelize the code that
     needs to run before these threads can be resumed.
+
+Note: The worker threads in this pool will not stop until
+      `stop` or `finish` is called, even if the main thread
+      has finished already. This may lead to programs that
+      never end. If you do not want this behaviour, you can set `isDaemon`
+      to true.
  */
 final class TaskPool
 {
@@ -4372,25 +4378,25 @@ version (unittest)
     assert(equal(nums, iota(1000)));
 
     assert(equal(
-               poolInstance.map!"a * a"(iota(30_000_001), 10_000),
-               map!"a * a"(iota(30_000_001))
+               poolInstance.map!"a * a"(iota(3_000_001), 10_000),
+               map!"a * a"(iota(3_000_001))
            ));
 
     // The filter is to kill random access and test the non-random access
     // branch.
     assert(equal(
                poolInstance.map!"a * a"(
-                   filter!"a == a"(iota(30_000_001)
+                   filter!"a == a"(iota(3_000_001)
                                   ), 10_000, 1000),
-               map!"a * a"(iota(30_000_001))
+               map!"a * a"(iota(3_000_001))
            ));
 
     assert(
         reduce!"a + b"(0UL,
-                       poolInstance.map!"a * a"(iota(3_000_001), 10_000)
+                       poolInstance.map!"a * a"(iota(300_001), 10_000)
                       ) ==
         reduce!"a + b"(0UL,
-                       map!"a * a"(iota(3_000_001))
+                       map!"a * a"(iota(300_001))
                       )
     );
 

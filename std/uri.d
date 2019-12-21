@@ -172,6 +172,18 @@ private string URI_Encode(dstring str, uint unescapedSet) @safe pure
     return R[0 .. Rlen].idup;
 }
 
+@safe pure unittest
+{
+    import std.exception : assertThrown;
+
+    assert(URI_Encode("", 0) == "");
+    assert(URI_Encode(URI_Decode("%F0%BF%BF%BF", 0), 0) == "%F0%BF%BF%BF");
+    dstring a;
+    a ~= cast(dchar) 0xFFFFFFFF;
+    assertThrown(URI_Encode(a, 0));
+    assert(URI_Encode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 0).length == 3 * 60);
+}
+
 private uint ascii2hex(dchar c) @nogc @safe pure nothrow
 {
     return (c <= '9') ? c - '0' :
@@ -276,6 +288,22 @@ if (isSomeChar!Char)
 
     // Copy array on stack to array in memory
     return R[0 .. Rlen].idup;
+}
+
+@safe pure unittest
+{
+    import std.exception : assertThrown;
+
+    assert(URI_Decode("", 0) == "");
+    assertThrown!URIException(URI_Decode("%", 0));
+    assertThrown!URIException(URI_Decode("%xx", 0));
+    assertThrown!URIException(URI_Decode("%FF", 0));
+    assertThrown!URIException(URI_Decode("%C0", 0));
+    assertThrown!URIException(URI_Decode("%C0000000", 0));
+    assertThrown!URIException(URI_Decode("%C0%xx0000", 0));
+    assertThrown!URIException(URI_Decode("%C0%C00000", 0));
+    assertThrown!URIException(URI_Decode("%F7%BF%BF%BF", 0));
+    assert(URI_Decode("%23", URI_Hash) == "%23");
 }
 
 /*************************************
@@ -480,6 +508,11 @@ if (isSomeChar!Char)
     assert(uriLength("issue 14924") < 0);
 }
 
+@safe pure nothrow @nogc unittest
+{
+    assert(uriLength("") == -1);
+    assert(uriLength("https://www") == -1);
+}
 
 /***************************
  * Does string s[] start with an email address?
@@ -495,6 +528,9 @@ if (isSomeChar!Char)
     import std.ascii : isAlpha, isAlphaNum;
 
     ptrdiff_t i;
+
+    if (s.length == 0)
+        return -1;
 
     if (!isAlpha(s[0]))
         return -1;
@@ -593,4 +629,14 @@ if (isSomeChar!Char)
         assert(decoded2 == source);
         assert(encoded2 == encode(decoded2).to!StringType);
     }}
+}
+
+@safe pure nothrow @nogc unittest
+{
+    assert(emailLength("") == -1);
+    assert(emailLength("@") == -1);
+    assert(emailLength("abcd") == -1);
+    assert(emailLength("blah@blub") == -1);
+    assert(emailLength("blah@blub.") == -1);
+    assert(emailLength("blah@blub.domain") == -1);
 }

@@ -3300,13 +3300,6 @@ if (isInputRange!R)
     range.popFrontN(n);
     return range;
 }
-/// ditto
-R dropBack(R)(R range, size_t n)
-if (isBidirectionalRange!R)
-{
-    range.popBackN(n);
-    return range;
-}
 
 ///
 @safe unittest
@@ -3319,6 +3312,15 @@ if (isBidirectionalRange!R)
     assert("hello world".take(6).drop(3).equal("lo "));
 }
 
+/// ditto
+R dropBack(R)(R range, size_t n)
+if (isBidirectionalRange!R)
+{
+    range.popBackN(n);
+    return range;
+}
+
+///
 @safe unittest
 {
     import std.algorithm.comparison : equal;
@@ -9884,7 +9886,7 @@ Returns:
 
 See_Also: $(LREF chain) to chain ranges
  */
-auto only(Values...)(return scope auto ref Values values)
+auto only(Values...)(return scope Values values)
 if (!is(CommonType!Values == void) || Values.length == 0)
 {
     return OnlyResult!(CommonType!Values, Values.length)(values);
@@ -9920,6 +9922,16 @@ if (!is(CommonType!Values == void) || Values.length == 0)
 
     static assert(is(typeof(only((const(char)[]).init, string.init)) ==
         typeof(only((const(char)[]).init, (const(char)[]).init))));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=20314
+@safe unittest
+{
+    import std.algorithm.iteration : joiner;
+
+    const string s = "foo", t = "bar";
+
+    assert([only(s, t), only(t, s)].joiner(only(", ")).join == "foobar, barfoo");
 }
 
 // Tests the zero-element result

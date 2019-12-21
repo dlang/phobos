@@ -617,48 +617,6 @@ template reverseArgs(alias pred)
     assert(b() == _b());
 }
 
-// @@@DEPRECATED_2.089@@@
-/**
-Binary predicate that reverses the order of arguments, e.g., given
-$(D pred(a, b)), returns $(D pred(b, a)).
-
-$(RED DEPRECATED: Use $(LREF reverseArgs))
-
-Params:
-    pred = A callable
-Returns:
-    A function which calls `pred` after reversing the given parameters
-*/
-deprecated("Use `reverseArgs`. `binaryReverseArgs` will be removed in 2.089.")
-template binaryReverseArgs(alias pred)
-{
-    auto binaryReverseArgs(ElementType1, ElementType2)
-            (auto ref ElementType1 a, auto ref ElementType2 b)
-    {
-        return pred(b, a);
-    }
-}
-
-///
-deprecated
-@safe unittest
-{
-    alias gt = binaryReverseArgs!(binaryFun!("a < b"));
-    assert(gt(2, 1) && !gt(1, 1));
-}
-
-///
-deprecated
-@safe unittest
-{
-    int x = 42;
-    bool xyz(int a, int b) { return a * x < b / x; }
-    auto foo = &xyz;
-    foo(4, 5);
-    alias zyx = binaryReverseArgs!(foo);
-    assert(zyx(5, 4) == foo(4, 5));
-}
-
 /**
 Negates predicate `pred`.
 
@@ -1135,7 +1093,9 @@ template memoize(alias fun)
         auto t = Tuple!Args(args);
         if (auto p = t in memo)
             return *p;
-        return memo[t] = fun(args);
+        auto r = fun(args);
+        memo[t] = r;
+        return r;
     }
 }
 
@@ -1343,6 +1303,17 @@ unittest
     assert(first(Foo(3)) == A);
     assert(first(Foo(3)) == A);
     assert(executed == 1);
+}
+
+// 20439 memoize should work with void opAssign
+@safe unittest
+{
+    static struct S
+    {
+        void opAssign(S) {}
+    }
+
+    assert(memoize!(() => S()) == S());
 }
 
 // 16079: memoize should work with classes
