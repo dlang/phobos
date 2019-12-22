@@ -21,7 +21,8 @@ $(TR $(TDNW Classics) $(TD
     $(MYREF poly) $(MYREF nextPow2) $(MYREF truncPow2)
 ))
 $(TR $(TDNW Trigonometry) $(TD
-    $(MYREF sin) $(MYREF cos) $(MYREF tan) $(MYREF asin) $(MYREF acos)
+    $(REF sin, std,math,trig)
+    $(MYREF cos) $(MYREF tan) $(MYREF asin) $(MYREF acos)
     $(MYREF atan) $(MYREF atan2) $(MYREF sinh) $(MYREF cosh) $(MYREF tanh)
     $(MYREF asinh) $(MYREF acosh) $(MYREF atanh)
 ))
@@ -126,6 +127,8 @@ version (Win64)
     version (D_InlineAsm_X86_64)
         version = Win64_DMD_InlineAsm;
 }
+
+public import std.math.trig;
 
 static import core.math;
 static import core.stdc.math;
@@ -788,84 +791,6 @@ float cos(float x) @safe pure nothrow @nogc { return cos(cast(real) x); }
 {
     real function(real) pcos = &cos;
     assert(pcos != null);
-}
-
-/***********************************
- * Returns $(HTTP en.wikipedia.org/wiki/Sine, sine) of x. x is in $(HTTP en.wikipedia.org/wiki/Radian, radians).
- *
- *      $(TABLE_SV
- *      $(TH3 x           ,  sin(x)      ,  invalid?)
- *      $(TD3 $(NAN)      ,  $(NAN)      ,  yes     )
- *      $(TD3 $(PLUSMN)0.0,  $(PLUSMN)0.0,  no      )
- *      $(TD3 $(PLUSMNINF),  $(NAN)      ,  yes     )
- *      )
- *
- * Params:
- *      x = angle in radians (not degrees)
- * Returns:
- *      sine of x
- * See_Also:
- *      $(MYREF cos), $(MYREF tan), $(MYREF asin)
- * Bugs:
- *      Results are undefined if |x| >= $(POWER 2,64).
- */
-
-real sin(real x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.sin(x); }
-//FIXME
-///ditto
-double sin(double x) @safe pure nothrow @nogc { return sin(cast(real) x); }
-//FIXME
-///ditto
-float sin(float x) @safe pure nothrow @nogc { return sin(cast(real) x); }
-
-///
-@safe unittest
-{
-    import std.math : sin, PI;
-    import std.stdio : writefln;
-
-    void someFunc()
-    {
-      real x = 30.0;
-      auto result = sin(x * (PI / 180)); // convert degrees to radians
-      writefln("The sine of %s degrees is %s", x, result);
-    }
-}
-
-@safe unittest
-{
-    real function(real) psin = &sin;
-    assert(psin != null);
-}
-
-/*
- *  Returns sine for complex and imaginary arguments.
- *
- *  sin(z) = sin(z.re)*cosh(z.im) + cos(z.re)*sinh(z.im)i
- *
- * If both sin($(THETA)) and cos($(THETA)) are required,
- * it is most efficient to use expi($(THETA)).
- */
-deprecated("Use std.complex.sin")
-auto sin(creal z) @safe pure nothrow @nogc
-{
-    const creal cs = expi(z.re);
-    const creal csh = coshisinh(z.im);
-    return cs.im * csh.re + cs.re * csh.im * 1i;
-}
-
-/* ditto */
-deprecated("Use std.complex.sin")
-auto sin(ireal y) @safe pure nothrow @nogc
-{
-    return cosh(y.im)*1i;
-}
-
-deprecated
-@safe pure nothrow @nogc unittest
-{
-  assert(sin(0.0+0.0i) == 0.0);
-  assert(sin(2.0+0.0i) == sin(2.0L) );
 }
 
 /*

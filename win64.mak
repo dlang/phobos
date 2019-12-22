@@ -225,7 +225,8 @@ SRC_STD_DIGEST= \
 	std\digest\package.d
 
 SRC_STD_MATH = \
-	std\math\package.d
+	std\math\package.d \
+	std\math\trig.d
 
 SRC_STD_NET= \
 	std\net\isemail.d \
