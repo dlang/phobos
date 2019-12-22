@@ -117,7 +117,7 @@ $(TR $(TDNW Hardware Control) $(TD
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(HTTP digitalmars.com, Walter Bright), Don Clugston,
  *            Conversion of CEPHES math library to D by Iain Buclaw and David Nadlinger
- * Source: $(PHOBOSSRC std/math.d)
+ * Source: $(PHOBOSSRC std/math/package.d)
  */
 module std.math;
 
@@ -242,7 +242,7 @@ version (unittest) private
 
 
 
-package:
+package(std):
 // The following IEEE 'real' formats are currently supported.
 version (LittleEndian)
 {
@@ -1849,7 +1849,7 @@ float tanh(float x) @safe pure nothrow @nogc { return tanh(cast(real) x); }
     assert(equalsDigit(tanh(1.0), sinh(1.0) / cosh(1.0), 15));
 }
 
-package:
+package(std):
 
 /* Returns cosh(x) + I * sinh(x)
  * Only one call to exp() is performed.
@@ -8618,7 +8618,7 @@ if (isFloatingPoint!(X))
     testFeqrel!(float)();
 }
 
-package: // Not public yet
+package(std): // Not public yet
 /* Return the value that lies halfway between x and y on the IEEE number line.
  *
  * Formally, the result is the arithmetic mean of the binary significands of x

@@ -199,14 +199,14 @@ P2MODULES=$(foreach P,$1,$(addprefix $P/,$(PACKAGE_$(subst /,_,$P))))
 STD_PACKAGES = std $(addprefix std/,\
   algorithm container datetime digest experimental/allocator \
   experimental/allocator/building_blocks experimental/logger \
-  net \
+  math net \
   experimental range regex windows)
 
 # Modules broken down per package
 
 PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
   conv csv demangle encoding exception file format \
-  functional getopt json math mathspecial meta mmfile numeric \
+  functional getopt json mathspecial meta mmfile numeric \
   outbuffer package parallelism path process random signals socket stdint \
   stdio string system traits typecons uni \
   uri utf uuid variant xml zip zlib
@@ -225,6 +225,7 @@ PACKAGE_std_experimental_allocator_building_blocks = \
   bucketizer fallback_allocator free_list free_tree bitmapped_block \
   kernighan_ritchie null_allocator package quantizer \
   region scoped_allocator segregator stats_collector
+PACKAGE_std_math = package
 PACKAGE_std_net = curl isemail
 PACKAGE_std_range = interfaces package primitives
 PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \

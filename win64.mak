@@ -120,9 +120,6 @@ SRC_STD_3= \
 	std\numeric.d \
 	std\bigint.d
 
-SRC_STD_3a= \
-	std\math.d
-
 SRC_STD_3b= \
 	std\uni.d \
 	std\base64.d \
@@ -170,7 +167,6 @@ SRC_STD= \
 	$(SRC_STD_1) \
 	$(SRC_STD_2a) \
 	$(SRC_STD_3) \
-	$(SRC_STD_3a) \
 	$(SRC_STD_3b) \
 	$(SRC_STD_3c) \
 	$(SRC_STD_3d) \
@@ -227,6 +223,9 @@ SRC_STD_DIGEST= \
 	std\digest\hmac.d \
 	std\digest\murmurhash.d \
 	std\digest\package.d
+
+SRC_STD_MATH = \
+	std\math\package.d
 
 SRC_STD_NET= \
 	std\net\isemail.d \
@@ -333,6 +332,7 @@ SRC_TO_COMPILE= \
 	$(SRC_STD_CONTAINER) \
 	$(SRC_STD_DATETIME) \
 	$(SRC_STD_DIGEST) \
+	$(SRC_STD_MATH) \
 	$(SRC_STD_NET) \
 	$(SRC_STD_RANGE) \
 	$(SRC_STD_REGEX) \
@@ -425,7 +425,7 @@ unittest : $(LIB)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest2.obj $(SRC_STD_RANGE)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest2a.obj $(SRC_STD_2a)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest3.obj $(SRC_STD_3)
-	"$(DMD)" $(UDFLAGS) -c  -ofunittest3a.obj $(SRC_STD_3a)
+	"$(DMD)" $(UDFLAGS) -c  -ofunittest3a.obj $(SRC_STD_MATH)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest3b.obj $(SRC_STD_3b)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest3c.obj $(SRC_STD_3c)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest3d.obj $(SRC_STD_3d) $(SRC_STD_DATETIME)

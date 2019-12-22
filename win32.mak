@@ -112,7 +112,6 @@ SRC_STD_2a= \
 
 SRC_STD_3= \
 	std\csv.d \
-	std\math.d \
 	std\complex.d \
 	std\numeric.d \
 	std\bigint.d \
@@ -202,6 +201,9 @@ SRC_STD_DIGEST= \
 	std\digest\hmac.d \
 	std\digest\murmurhash.d \
 	std\digest\package.d
+
+SRC_STD_MATH = \
+	std\math\package.d
 
 SRC_STD_NET= \
 	std\net\isemail.d \
@@ -308,6 +310,7 @@ SRC_TO_COMPILE= \
 	$(SRC_STD_CONTAINER) \
 	$(SRC_STD_DATETIME) \
 	$(SRC_STD_DIGEST) \
+	$(SRC_STD_MATH) \
 	$(SRC_STD_NET) \
 	$(SRC_STD_RANGE) \
 	$(SRC_STD_REGEX) \
@@ -374,6 +377,7 @@ UNITTEST_OBJS= \
 		unittest3.obj \
 		unittest3a.obj \
 		unittest3b.obj \
+		unittest3c.obj \
 		unittest4.obj \
 		unittest5.obj \
 		unittest6.obj \
@@ -394,6 +398,7 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest3.obj $(SRC_STD_3)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest3a.obj $(SRC_STD_3a)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest3b.obj $(SRC_STD_DATETIME)
+	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest3c.obj $(SRC_STD_MATH)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest4.obj $(SRC_STD_4) $(SRC_STD_DIGEST)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest5.obj $(SRC_STD_ALGO)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest6.obj $(SRC_STD_6) $(SRC_STD_CONTAINER)
