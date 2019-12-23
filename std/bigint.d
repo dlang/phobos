@@ -123,7 +123,7 @@ public:
         this(s.byCodeUnit);
     }
 
-    @system unittest
+    @safe unittest
     {
         // system because of the dummy ranges eventually call std.array!string
         import std.exception : assertThrown;
@@ -146,29 +146,28 @@ public:
     }
 
     /// Construct a `BigInt` from a built-in integral type.
-    this(T)(T x) pure nothrow if (isIntegral!T)
+    this(T)(T x) pure nothrow @safe if (isIntegral!T)
     {
         data = data.init; // @@@: Workaround for compiler bug
         opAssign(x);
     }
 
     ///
-    @system unittest
+    @safe unittest
     {
-        // @system due to failure in FreeBSD32
         ulong data = 1_000_000_000_000;
         auto bigData = BigInt(data);
         assert(bigData == BigInt("1_000_000_000_000"));
     }
 
     /// Construct a `BigInt` from another `BigInt`.
-    this(T)(T x) pure nothrow if (is(Unqual!T == BigInt))
+    this(T)(T x) pure nothrow @safe if (is(Unqual!T == BigInt))
     {
         opAssign(x);
     }
 
     ///
-    @system unittest
+    @safe unittest
     {
         const(BigInt) b1 = BigInt("1_234_567_890");
         BigInt b2 = BigInt(b1);
@@ -176,7 +175,7 @@ public:
     }
 
     /// Assignment from built-in integer types.
-    BigInt opAssign(T)(T x) pure nothrow if (isIntegral!T)
+    BigInt opAssign(T)(T x) pure nothrow @safe if (isIntegral!T)
     {
         data = cast(ulong) absUnsign(x);
         sign = (x < 0);
@@ -184,7 +183,7 @@ public:
     }
 
     ///
-    @system unittest
+    @safe unittest
     {
         auto b = BigInt("123");
         b = 456;
@@ -192,7 +191,7 @@ public:
     }
 
     /// Assignment from another BigInt.
-    BigInt opAssign(T:BigInt)(T x) pure @nogc
+    BigInt opAssign(T:BigInt)(T x) pure @nogc @safe
     {
         data = x.data;
         sign = x.sign;
@@ -200,7 +199,7 @@ public:
     }
 
     ///
-    @system unittest
+    @safe unittest
     {
         auto b1 = BigInt("123");
         auto b2 = BigInt("456");
@@ -212,7 +211,7 @@ public:
      * Implements assignment operators from built-in integers of the form
      * `BigInt op= integer`.
      */
-    BigInt opOpAssign(string op, T)(T y) pure nothrow
+    BigInt opOpAssign(string op, T)(T y) pure nothrow @safe
         if ((op=="+" || op=="-" || op=="*" || op=="/" || op=="%"
           || op==">>" || op=="<<" || op=="^^" || op=="|" || op=="&" || op=="^") && isIntegral!T)
     {
@@ -301,9 +300,8 @@ public:
     }
 
     ///
-    @system unittest
+    @safe unittest
     {
-        //@system because opOpAssign is @system
         auto b = BigInt("1_000_000_000");
 
         b += 12345;
@@ -314,7 +312,7 @@ public:
     }
 
     // Issue 16264
-    @system unittest
+    @safe unittest
     {
         auto a = BigInt(
     `335690982744637013564796917901053301979460129353374296317539383938630086938` ~
@@ -365,7 +363,7 @@ public:
     /**
      * Implements assignment operators of the form `BigInt op= BigInt`.
      */
-    BigInt opOpAssign(string op, T)(T y) pure nothrow
+    BigInt opOpAssign(string op, T)(T y) pure nothrow @safe
         if ((op=="+" || op== "-" || op=="*" || op=="|" || op=="&" || op=="^" || op=="/" || op=="%")
             && is (T: BigInt))
     {
@@ -412,9 +410,8 @@ public:
     }
 
     ///
-    @system unittest
+    @safe unittest
     {
-        // @system because opOpAssign is @system
         auto x = BigInt("123");
         auto y = BigInt("321");
         x += y;
@@ -424,7 +421,7 @@ public:
     /**
      * Implements binary operators between `BigInt`s.
      */
-    BigInt opBinary(string op, T)(T y) pure nothrow const
+    BigInt opBinary(string op, T)(T y) pure nothrow @safe const
         if ((op=="+" || op == "*" || op=="-" || op=="|" || op=="&" || op=="^" ||
             op=="/" || op=="%")
             && is (T: BigInt))
@@ -434,7 +431,7 @@ public:
     }
 
     ///
-    @system unittest
+    @safe unittest
     {
         auto x = BigInt("123");
         auto y = BigInt("456");
@@ -445,7 +442,7 @@ public:
     /**
      * Implements binary operators between `BigInt`'s and built-in integers.
      */
-    BigInt opBinary(string op, T)(T y) pure nothrow const
+    BigInt opBinary(string op, T)(T y) pure nothrow @safe const
         if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="|" || op=="&" ||
             op=="^"|| op==">>" || op=="<<" || op=="^^")
             && isIntegral!T)
@@ -455,7 +452,7 @@ public:
     }
 
     ///
-    @system unittest
+    @safe unittest
     {
         auto x = BigInt("123");
         x *= 300;
@@ -475,7 +472,7 @@ public:
         $(TR $(TD `BigInt`) $(TD $(CODE_PERCENT)) $(TD other type) $(TD $(RARR)) $(TD `int`))
         )
      */
-    auto opBinary(string op, T)(T y) pure nothrow const
+    auto opBinary(string op, T)(T y) pure nothrow @safe const
         if (op == "%" && isIntegral!T)
     {
         assert(y != 0, "% 0 not allowed");
@@ -513,7 +510,7 @@ public:
     }
 
     ///
-    @system unittest
+    @safe unittest
     {
         auto  x  = BigInt("1_000_000_500");
         long  l  = 1_000_000L;
@@ -531,14 +528,14 @@ public:
         Implements operators with built-in integers on the left-hand side and
         `BigInt` on the right-hand side.
      */
-    BigInt opBinaryRight(string op, T)(T y) pure nothrow const
+    BigInt opBinaryRight(string op, T)(T y) pure nothrow @safe const
         if ((op=="+" || op=="*" || op=="|" || op=="&" || op=="^") && isIntegral!T)
     {
         return opBinary!(op)(y);
     }
 
     ///
-    @system unittest
+    @safe unittest
     {
         auto x = BigInt("100");
         BigInt y = 123 + x;
@@ -556,7 +553,7 @@ public:
 
     //  BigInt = integer op BigInt
     /// ditto
-    BigInt opBinaryRight(string op, T)(T y) pure nothrow const
+    BigInt opBinaryRight(string op, T)(T y) pure nothrow @safe const
         if (op == "-" && isIntegral!T)
     {
         ulong u = absUnsign(y);
@@ -572,7 +569,7 @@ public:
 
     //  integer = integer op BigInt
     /// ditto
-    T opBinaryRight(string op, T)(T x) pure nothrow const
+    T opBinaryRight(string op, T)(T x) pure nothrow @safe const
         if ((op=="%" || op=="/") && isIntegral!T)
     {
         checkDivByZero();
@@ -599,7 +596,7 @@ public:
     /**
         Implements `BigInt` unary operators.
      */
-    BigInt opUnary(string op)() pure nothrow const if (op=="+" || op=="-" || op=="~")
+    BigInt opUnary(string op)() pure nothrow @safe const if (op=="+" || op=="-" || op=="~")
     {
        static if (op=="-")
        {
@@ -617,7 +614,7 @@ public:
 
     // non-const unary operations
     /// ditto
-    BigInt opUnary(string op)() pure nothrow if (op=="++" || op=="--")
+    BigInt opUnary(string op)() pure nothrow @safe if (op=="++" || op=="--")
     {
         static if (op=="++")
         {
@@ -632,7 +629,7 @@ public:
     }
 
     ///
-    @system unittest
+    @safe unittest
     {
         auto x = BigInt("1234");
         assert(-x == BigInt("-1234"));
@@ -645,13 +642,13 @@ public:
         Implements `BigInt` equality test with other `BigInt`'s and built-in
         numeric types.
      */
-    bool opEquals()(auto ref const BigInt y) const pure @nogc
+    bool opEquals()(auto ref const BigInt y) const pure @nogc @safe
     {
        return sign == y.sign && y.data == data;
     }
 
     /// ditto
-    bool opEquals(T)(const T y) const pure nothrow @nogc if (isIntegral!T)
+    bool opEquals(T)(const T y) const pure nothrow @nogc @safe if (isIntegral!T)
     {
         if (sign != (y<0))
             return 0;
@@ -676,7 +673,7 @@ public:
         assert(BigInt(123456789) != cast(float) 123456789);
     }
 
-    @system unittest
+    @safe unittest
     {
         auto x = BigInt("12345");
         auto y = BigInt("12340");
@@ -690,7 +687,7 @@ public:
         assert(x != w);
     }
 
-    @system unittest
+    @safe unittest
     {
         import std.math : nextDown, nextUp;
 
@@ -726,13 +723,13 @@ public:
     /**
         Implements casting to `bool`.
      */
-    T opCast(T:bool)() pure nothrow @nogc const
+    T opCast(T:bool)() pure nothrow @nogc @safe const
     {
         return !isZero();
     }
 
     ///
-    @system unittest
+    @safe unittest
     {
         // Non-zero values are regarded as true
         auto x = BigInt("1");
@@ -751,7 +748,7 @@ public:
         Throws: $(REF ConvOverflowException, std,conv) if the number exceeds
         the target type's range.
      */
-    T opCast(T:ulong)() pure const
+    T opCast(T:ulong)() pure @safe const
     {
         if (isUnsigned!T && sign)
             { /* throw */ }
@@ -779,7 +776,7 @@ public:
     }
 
     ///
-    @system unittest
+    @safe unittest
     {
         import std.conv : to, ConvOverflowException;
         import std.exception : assertThrown;
@@ -792,7 +789,7 @@ public:
         assertThrown!ConvOverflowException(BigInt("-1").to!ubyte);
     }
 
-    @system unittest
+    @safe unittest
     {
         import std.conv : to, ConvOverflowException;
         import std.exception : assertThrown;
@@ -917,7 +914,7 @@ public:
     }
 
     ///
-    @system unittest
+    @safe unittest
     {
         const(BigInt) x = BigInt("123");
         BigInt y = cast() x;    // cast away const
@@ -931,14 +928,14 @@ public:
         Implements 3-way comparisons of `BigInt` with `BigInt` or `BigInt` with
         built-in numeric types.
      */
-    int opCmp(ref const BigInt y) pure nothrow @nogc const
+    int opCmp(ref const BigInt y) pure nothrow @nogc @safe const
     {
         // Simply redirect to the "real" opCmp implementation.
         return this.opCmp!BigInt(y);
     }
 
     /// ditto
-    int opCmp(T)(const T y) pure nothrow @nogc const if (isIntegral!T)
+    int opCmp(T)(const T y) pure nothrow @nogc @safe const if (isIntegral!T)
     {
         if (sign != (y<0) )
             return sign ? -1 : 1;
@@ -946,7 +943,7 @@ public:
         return sign? -cmp: cmp;
     }
     /// ditto
-    int opCmp(T)(const T y) nothrow @nogc const if (isFloatingPoint!T)
+    int opCmp(T)(const T y) nothrow @nogc @safe const if (isFloatingPoint!T)
     {
         import core.bitop : bsr;
         import std.math : cmp, isFinite;
@@ -976,7 +973,7 @@ public:
         return 0;
     }
     /// ditto
-    int opCmp(T:BigInt)(const T y) pure nothrow @nogc const
+    int opCmp(T:BigInt)(const T y) pure nothrow @nogc @safe const
     {
         if (sign != y.sign)
             return sign ? -1 : 1;
@@ -985,7 +982,7 @@ public:
     }
 
     ///
-    @system unittest
+    @safe unittest
     {
         auto x = BigInt("100");
         auto y = BigInt("10");
@@ -999,7 +996,7 @@ public:
     }
 
     ///
-    @system unittest
+    @safe unittest
     {
         auto x = BigInt("0x1abc_de80_0000_0000_0000_0000_0000_0000");
         BigInt y = x - 1;
@@ -1016,7 +1013,7 @@ public:
         assert(BigInt(123456789) < cast(float) 123456789);
     }
 
-    @system unittest
+    @safe unittest
     {
         assert(BigInt("999_999_999_999_999_999_999_999_999_999_999_999_999") < float.infinity);
 
@@ -1062,7 +1059,7 @@ public:
     }
 
     ///
-    @system unittest
+    @safe unittest
     {
         auto b = BigInt("12345");
         long l = b.toLong();
@@ -1082,7 +1079,7 @@ public:
     }
 
     ///
-    @system unittest
+    @safe unittest
     {
         auto big = BigInt("5_000_000");
         auto i = big.toInt();
@@ -1111,7 +1108,7 @@ public:
     /** Convert the `BigInt` to `string`, passing it to the given sink.
      *
      * Params:
-     *  sink = A delegate for accepting possibly piecewise segments of the
+     *  sink = An OutputRange for accepting possibly piecewise segments of the
      *      formatted string.
      *  formatString = A format string specifying the output format.
      *
@@ -1124,16 +1121,17 @@ public:
      * $(TR $(TD null) $(TD Default formatting (same as "d") ))
      * )
      */
-    void toString(scope void delegate(const (char)[]) sink, string formatString) const
+    void toString(Writer)(scope ref Writer sink, string formatString) const
     {
         auto f = FormatSpec!char(formatString);
         f.writeUpToNextSpec(sink);
-        toString(sink, f);
+        toString!Writer(sink, f);
     }
 
     /// ditto
-    void toString(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char f) const
+    void toString(Writer)(scope ref Writer sink, scope const ref FormatSpec!char f) const
     {
+        import std.range.primitives : put;
         const spec = f.spec;
         immutable hex = (spec == 'x' || spec == 'X');
         if (!(spec == 's' || spec == 'd' || spec =='o' || hex))
@@ -1180,27 +1178,30 @@ public:
 
         if (!f.flDash && !f.flZero)
             foreach (i; 0 .. difw)
-                sink(" ");
+                put(sink, " ");
 
         if (signChar)
-            sink((&signChar)[0 .. 1]);
+        {
+            scope char[1] buf = signChar;
+            put(sink, buf[]);
+        }
 
         if (!f.flDash && f.flZero)
             foreach (i; 0 .. difw)
-                sink("0");
+                put(sink, "0");
 
-        sink(buff);
+        put(sink, buff);
 
         if (f.flDash)
             foreach (i; 0 .. difw)
-                sink(" ");
+                put(sink, " ");
     }
 
     /**
         `toString` is rarely directly invoked; the usual way of using it is via
         $(REF format, std, format):
      */
-    @system unittest
+    @safe unittest
     {
         import std.format : format;
 
@@ -1211,6 +1212,40 @@ public:
         assert(format("%x", x) == "2_dfd1c040");
         assert(format("%X", x) == "2_DFD1C040");
         assert(format("%o", x) == "133764340100");
+    }
+
+    // for backwards compatibility, see unittest below
+    /// ditto
+    void toString(scope void delegate(const(char)[]) sink, string formatString) const
+    {
+        toString!(void delegate(const(char)[]))(sink, formatString);
+    }
+
+    // for backwards compatibility, see unittest below
+    /// ditto
+    void toString(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char f) const
+    {
+        toString!(void delegate(const(char)[]))(sink, f);
+    }
+
+    // Backwards compatibility test
+    // BigInt.toString used to only accept a delegate sink function, but this does not work
+    // well with attributes such as @safe. A template function toString was added that
+    // works on OutputRanges, but when a delegate was passed in the form of an untyped
+    // lambda such as `str => dst.put(str)` the parameter type was inferred as `void` and
+    // the function failed to instantiate.
+    @system unittest
+    {
+        import std.format : FormatSpec;
+        import std.array : appender;
+        BigInt num = 503;
+        auto dst = appender!string();
+        num.toString(str => dst.put(str), null);
+        assert(dst[] == "503");
+        num = 504;
+        auto f = FormatSpec!char("");
+        num.toString(str => dst.put(str), f);
+        assert(dst[] == "503504");
     }
 
     // Implement toHash so that BigInt works properly as an AA key.
@@ -1264,7 +1299,7 @@ public:
     }
 
     ///
-    @system pure unittest
+    @safe pure unittest
     {
         auto a = BigInt("1000");
         assert(a.ulongLength() == 1);
@@ -1307,7 +1342,7 @@ private:
 }
 
 ///
-@system unittest
+@safe unittest
 {
     BigInt a = "9588669891916142";
     BigInt b = "7452469135154800";
@@ -1346,7 +1381,7 @@ Returns:
     A `string` that represents the `BigInt` as a decimal number.
 
 */
-string toDecimalString(const(BigInt) x) pure nothrow
+string toDecimalString(const(BigInt) x) pure nothrow @safe
 {
     auto buff = x.data.toDecimalString(x.isNegative ? 1 : 0);
     if (x.isNegative)
@@ -1355,7 +1390,7 @@ string toDecimalString(const(BigInt) x) pure nothrow
 }
 
 ///
-@system pure unittest
+@safe pure unittest
 {
     auto x = BigInt("123");
     x *= 1000;
@@ -1374,16 +1409,16 @@ Returns:
     number in upper case.
 
 */
-string toHex(const(BigInt) x)
+string toHex(const(BigInt) x) @safe
 {
-    string outbuff="";
-    void sink(const(char)[] s) { outbuff ~= s; }
-    x.toString(&sink, "%X");
-    return outbuff;
+    import std.array : appender;
+    auto outbuff = appender!string();
+    x.toString(outbuff, "%X");
+    return outbuff[];
 }
 
 ///
-@system unittest
+@safe unittest
 {
     auto x = BigInt("123");
     x *= 1000;
@@ -1422,14 +1457,14 @@ if (isIntegral!T)
 }
 
 ///
-nothrow pure @system
+nothrow pure @safe
 unittest
 {
     assert((-1).absUnsign == 1);
     assert(1.absUnsign == 1);
 }
 
-nothrow pure @system
+nothrow pure @safe
 unittest
 {
     BigInt a, b;
@@ -1439,7 +1474,7 @@ unittest
     assert(c == 3);
 }
 
-nothrow pure @system
+nothrow pure @safe
 unittest
 {
     long a;
@@ -1450,7 +1485,7 @@ unittest
     assert(d == 0);
 }
 
-nothrow pure @system
+nothrow pure @safe
 unittest
 {
     BigInt x = 1, y = 2;
@@ -1475,7 +1510,7 @@ unittest
     assert(incr == BigInt(1));
 }
 
-@system unittest
+@safe unittest
 {
     // Radix conversion
     assert( toDecimalString(BigInt("-1_234_567_890_123_456_789"))
@@ -1513,7 +1548,7 @@ unittest
         == "1234567");
 }
 
-@system unittest // Minimum signed value bug tests.
+@safe unittest // Minimum signed value bug tests.
 {
     assert(BigInt("-0x8000000000000000") == BigInt(long.min));
     assert(BigInt("-0x8000000000000000")+1 > BigInt(long.min));
@@ -1534,7 +1569,7 @@ unittest
     assert((BigInt(int.min)-1)%int.min == -1);
 }
 
-@system unittest // Recursive division, bug 5568
+@safe unittest // Recursive division, bug 5568
 {
     enum Z = 4843;
     BigInt m = (BigInt(1) << (Z*8) ) - 1;
@@ -1580,7 +1615,7 @@ unittest
     a8165[0] = a8165[1] = 1;
 }
 
-@system unittest
+@safe unittest
 {
     import std.array;
     import std.format;
@@ -1631,7 +1666,7 @@ unittest
     }
 }
 
-@system unittest
+@safe unittest
 {
     import std.array;
     import std.format;
@@ -1682,7 +1717,7 @@ unittest
     }
 }
 
-@system unittest
+@safe unittest
 {
     import std.array;
     import std.format;
@@ -1734,7 +1769,7 @@ unittest
 }
 
 // 6448
-@system unittest
+@safe unittest
 {
     import std.array;
     import std.format;
@@ -1776,7 +1811,7 @@ unittest
     assert(one && !zero);
 }
 
-@system unittest // 6850
+@safe unittest // 6850
 {
     pure long pureTest() {
         BigInt a = 1;
@@ -1788,7 +1823,7 @@ unittest
     assert(pureTest() == 1337);
 }
 
-@system unittest // 8435 & 10118
+@safe unittest // 8435 & 10118
 {
     auto i = BigInt(100);
     auto j = BigInt(100);
@@ -1812,7 +1847,7 @@ unittest
     assert(keys.empty);
 }
 
-@system unittest // 11148
+@safe unittest // 11148
 {
     void foo(BigInt) {}
     const BigInt cbi = 3;
@@ -1876,7 +1911,7 @@ unittest
     assert(l5 == b5);
 }
 
-@system unittest // 11600
+@safe unittest // 11600
 {
     import std.conv;
     import std.exception : assertThrown;
@@ -1897,7 +1932,7 @@ unittest
     assert((x > 0) == false);
 }
 
-@system unittest // 13391
+@safe unittest // 13391
 {
     BigInt x1 = "123456789";
     BigInt x2 = "123456789123456789";
@@ -1928,7 +1963,7 @@ unittest
     assert(x2 == 1);
 }
 
-@system unittest // 13963
+@safe unittest // 13963
 {
     BigInt x = 1;
     import std.meta : AliasSeq;
@@ -1979,7 +2014,7 @@ unittest
     assert(-x2 % ulong.max == -x2);
 }
 
-@system unittest // 14124
+@safe unittest // 14124
 {
     auto x = BigInt(-3);
     x %= 3;
@@ -2003,7 +2038,7 @@ unittest
 }
 
 // issue 15678
-@system unittest
+@safe unittest
 {
     import std.exception : assertThrown;
     assertThrown!ConvException(BigInt(""));
@@ -2012,7 +2047,7 @@ unittest
 }
 
 // Issue 6447
-@system unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : iota;
@@ -2028,13 +2063,13 @@ unittest
 }
 
 // Issue 17330
-@system unittest
+@safe unittest
 {
     auto b = immutable BigInt("123");
     assert(b == 123);
 }
 
-@system pure unittest // issue 14767
+@safe pure unittest // issue 14767
 {
     static immutable a = BigInt("340282366920938463463374607431768211455");
     assert(a == BigInt("340282366920938463463374607431768211455"));
@@ -2058,7 +2093,7 @@ unittest
  *     quotient = is set to the result of the division
  *     remainder = is set to the remainder of the division
  */
-void divMod(const BigInt dividend, const BigInt divisor, out BigInt quotient, out BigInt remainder) pure nothrow
+void divMod(const BigInt dividend, const BigInt divisor, out BigInt quotient, out BigInt remainder) pure nothrow @safe
 {
     BigUint q, r;
     BigUint.divMod(dividend.data, divisor.data, q, r);
@@ -2069,7 +2104,7 @@ void divMod(const BigInt dividend, const BigInt divisor, out BigInt quotient, ou
 }
 
 ///
-@system pure nothrow unittest
+@safe pure nothrow unittest
 {
     auto a = BigInt(123);
     auto b = BigInt(25);
@@ -2083,7 +2118,7 @@ void divMod(const BigInt dividend, const BigInt divisor, out BigInt quotient, ou
 }
 
 // Issue 18086
-@system pure nothrow unittest
+@safe pure nothrow unittest
 {
     BigInt q = 1;
     BigInt r = 1;
@@ -2112,7 +2147,7 @@ void divMod(const BigInt dividend, const BigInt divisor, out BigInt quotient, ou
 }
 
 // Issue 19740
-@system unittest
+@safe unittest
 {
     BigInt a = BigInt(
         "241127122100380210001001124020210001001100000200003101000062221012075223052000021042250111300200000000000" ~
@@ -2131,7 +2166,7 @@ void divMod(const BigInt dividend, const BigInt divisor, out BigInt quotient, ou
         "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000"));
 }
 
-@system unittest
+@safe unittest
 {
     auto n = BigInt("1234"d);
 }
@@ -2145,7 +2180,7 @@ Params:
 Returns:
      The power modulus value of (base ^ exponent) % modulus.
 */
-BigInt powmod(BigInt base, BigInt exponent, BigInt modulus) pure nothrow
+BigInt powmod(BigInt base, BigInt exponent, BigInt modulus) pure nothrow @safe
 {
     BigInt result = 1;
 
@@ -2164,7 +2199,7 @@ BigInt powmod(BigInt base, BigInt exponent, BigInt modulus) pure nothrow
 }
 
 /// for powmod
-@system unittest
+@safe unittest
 {
     BigInt base = BigInt("123456789012345678901234567890");
     BigInt exponent = BigInt("1234567890123456789012345678901234567");

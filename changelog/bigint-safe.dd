@@ -1,0 +1,4 @@
+`std.bigint` is now `@safe`
+
+Many `BigInt` operations used to be `@system` because of assembly routines and casts from mutable to immutable data.
+These parts are now marked `@trusted`, so that `BigInt` can now be used in `@safe` code.
