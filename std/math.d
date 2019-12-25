@@ -7892,17 +7892,8 @@ if (isFloatingPoint!(F) && isIntegral!(G))
 
     assert(pow(x, neg1) == 1 / x);
 
-    // Test disabled on most targets.
-    // See https://issues.dlang.org/show_bug.cgi?id=5628
-    version (X86_64)   enum BUG5628 = false;
-    else version (ARM) enum BUG5628 = false;
-    else               enum BUG5628 = true;
-
-    static if (BUG5628)
-    {
-        assert(pow(xd, neg2) == 1 / (x * x));
-        assert(pow(xf, neg8) == 1 / ((x * x) * (x * x) * (x * x) * (x * x)));
-    }
+    assert(approxEqual(pow(xd, neg2), cast(double) (1 / (x * x)), 1e-25, 0.0));
+    assert(approxEqual(pow(xf, neg8), cast(float) (1 / ((x * x) * (x * x) * (x * x) * (x * x))), 1e-15, 0.0));
 
     assert(feqrel(pow(x, neg3),  1 / (x * x * x)) >= real.mant_dig - 1);
 }
