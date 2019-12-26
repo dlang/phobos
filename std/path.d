@@ -533,14 +533,15 @@ if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) || isNar
     return p2[lastSeparator(p2)+1 .. p2.length];
 }
 
-/** Returns the parent directory of path. On Windows, this
-    includes the drive letter if present.
+/** Returns the parent directory of `path`. On Windows, this
+    includes the drive letter if present. If `path` is a relative path and
+    the parent directory is the current working directory, returns `"."`.
 
     Params:
         path = A path name.
 
     Returns:
-        A slice of `path` or ".".
+        A slice of `path` or `"."`.
 
     Standards:
     This function complies with
