@@ -2045,10 +2045,17 @@ template roundTo(Target)
 {
     Target roundTo(Source)(Source value)
     {
-        import std.math : trunc;
+        import std.math : abs, log2, trunc;
 
         static assert(isFloatingPoint!Source);
         static assert(isIntegral!Target);
+
+        // If value >= 2 ^^ (real.mant_dig - 1), the number is an integer
+        // and adding 0.5 won't work, but we allready know, that we do
+        // not have to round anything.
+        if (log2(abs(value)) >= real.mant_dig - 1)
+            return to!Target(value);
+
         return to!Target(trunc(value + (value < 0 ? -0.5L : 0.5L)));
     }
 }
@@ -2086,6 +2093,27 @@ template roundTo(Target)
     assertThrown!ConvException(roundTo!int(float.init));
     auto ex = collectException(roundTo!int(float.init));
     assert(ex.msg == "Input was NaN");
+}
+
+// issue 5232
+@safe pure unittest
+{
+    real r1 = ulong.max;
+    assert(roundTo!ulong(r1) == ulong.max);
+
+    real r2 = ulong.max - 1;
+    assert(roundTo!ulong(r2) == ulong.max - 1);
+
+    real r3 = ulong.max / 2;
+    assert(roundTo!ulong(r3) == ulong.max / 2);
+
+    real r4 = ulong.max / 2 + 1;
+    assert(roundTo!ulong(r4) == ulong.max / 2 + 1);
+
+    // this is only an issue on computers where real == double
+    long l = -(2L ^^ double.mant_dig) + 1;
+    double r5 = l;
+    assert(roundTo!long(r5) == l);
 }
 
 /**
