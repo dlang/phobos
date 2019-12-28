@@ -2785,7 +2785,14 @@ public:
         return !getsockopt(sock, SOL_SOCKET, SO_TYPE, cast(char*)&type, &typesize);
     }
 
-    /// Associate a local address with this socket.
+    /**
+     * Associate a local address with this socket.
+     *
+     * Params:
+     *     addr = The $(LREF Address) to associate this socket with.
+     *
+     * Throws: $(LREF SocketOSException) when unable to bind the socket.
+     */
     void bind(Address addr) @trusted
     {
         if (_SOCKET_ERROR == .bind(sock, addr.name, addr.nameLen))
