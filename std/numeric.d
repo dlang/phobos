@@ -1498,8 +1498,8 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
         //++numCalls;
         if (x>float.max)
             x = float.max;
-        if (x<-double.max)
-            x = -double.max;
+        if (x<-float.max)
+            x = -float.max;
         // This has a single real root at -59.286543284815
         return 0.386*x*x*x + 23*x*x + 15.7*x + 525.2;
     }
