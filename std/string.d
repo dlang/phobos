@@ -7394,16 +7394,27 @@ Params:
 Returns:
     arr retyped as an array of chars, wchars, or dchars
 
+Throws:
+    In debug mode `AssertError`, when the result is not a well-formed UTF string.
+
 See_Also: $(LREF representation)
 */
-auto assumeUTF(T)(T[] arr) pure
+auto assumeUTF(T)(T[] arr)
 if (staticIndexOf!(Unqual!T, ubyte, ushort, uint) != -1)
 {
     import std.traits : ModifyTypePreservingTQ;
+    import std.exception : collectException;
     import std.utf : validate;
+
     alias ToUTFType(U) = AliasSeq!(char, wchar, dchar)[U.sizeof / 2];
-    auto asUTF = cast(ModifyTypePreservingTQ!(ToUTFType, T)[])arr;
-    debug validate(asUTF);
+    auto asUTF = cast(ModifyTypePreservingTQ!(ToUTFType, T)[]) arr;
+
+    debug
+    {
+        scope ex = collectException(validate(asUTF));
+        assert(!ex, ex.msg);
+    }
+
     return asUTF;
 }
 
@@ -7414,7 +7425,7 @@ if (staticIndexOf!(Unqual!T, ubyte, ushort, uint) != -1)
     immutable(ubyte)[] b = a.representation;
     string c = b.assumeUTF;
 
-    assert(a == c);
+    assert(c == "Hölo World");
 }
 
 pure @system unittest
@@ -7451,4 +7462,17 @@ pure @system unittest
         assert(equal(jt, htc));
         assert(equal(jt, hti));
     }}
+}
+
+pure @system unittest
+{
+    import core.exception : AssertError;
+    import std.exception : assertThrown, assertNotThrown;
+
+    immutable(ubyte)[] a = [ 0xC0 ];
+
+    debug
+        assertThrown!AssertError( () nothrow @nogc @safe {cast(void) a.assumeUTF;} () );
+    else
+        assertNotThrown!AssertError( () nothrow @nogc @safe {cast(void) a.assumeUTF;} () );
 }
