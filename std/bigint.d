@@ -823,13 +823,82 @@ public:
         assertThrown!ConvOverflowException(BigInt("9223372036854775808").to!long);
     }
 
-    // Cast to float, discarding any portion of the value
-    // beyond the precision of the floating point type.
-    private T toFloatTruncating(T)() @safe nothrow @nogc const
-    if (__traits(isFloating, T))
+    /**
+        Implements casting to floating point types.
+     */
+    T opCast(T)() @safe nothrow @nogc const if (isFloatingPoint!T)
+    {
+        return toFloat!(T, "nearest");
+    }
+
+    ///
+    @system unittest
+    {
+        assert(0x1.abcd_e8p+124f        == cast(float)  BigInt("0x1abc_de80_0000_0000_0000_0000_0000_0000"));
+        assert(0x1.abcd_ef12_3456p+124  == cast(double) BigInt("0x1abc_def1_2345_6000_0000_0000_0000_0000"));
+        assert(0x1.abcd_ef12_3456p+124L == cast(real)   BigInt("0x1abc_def1_2345_6000_0000_0000_0000_0000"));
+
+        assert(-0x1.3456_78p+108f        == cast(float)  BigInt("-0x1345_6780_0000_0000_0000_0000_0000"));
+        assert(-0x1.3456_78ab_cdefp+108  == cast(double) BigInt("-0x1345_678a_bcde_f000_0000_0000_0000"));
+        assert(-0x1.3456_78ab_cdefp+108L == cast(real)   BigInt("-0x1345_678a_bcde_f000_0000_0000_0000"));
+    }
+
+    /// Rounding when casting to floating point
+    @system unittest
+    {
+        // BigInts whose values cannot be exactly represented as float/double/real
+        // are rounded when cast to float/double/real. When cast to float or
+        // double or 64-bit real the rounding is strictly defined. When cast
+        // to extended-precision real the rounding rules vary by environment.
+
+        // BigInts that fall somewhere between two non-infinite floats/doubles
+        // are rounded to the closer value when cast to float/double.
+        assert(0x1.aaa_aaep+28f == cast(float) BigInt(0x1aaa_aae7));
+        assert(0x1.aaa_ab0p+28f == cast(float) BigInt(0x1aaa_aaff));
+        assert(-0x1.aaaaaep+28f == cast(float) BigInt(-0x1aaa_aae7));
+        assert(-0x1.aaaab0p+28f == cast(float) BigInt(-0x1aaa_aaff));
+
+        assert(0x1.aaa_aaaa_aaaa_aa00p+60 == cast(double) BigInt(0x1aaa_aaaa_aaaa_aa77));
+        assert(0x1.aaa_aaaa_aaaa_ab00p+60 == cast(double) BigInt(0x1aaa_aaaa_aaaa_aaff));
+        assert(-0x1.aaa_aaaa_aaaa_aa00p+60 == cast(double) BigInt(-0x1aaa_aaaa_aaaa_aa77));
+        assert(-0x1.aaa_aaaa_aaaa_ab00p+60 == cast(double) BigInt(-0x1aaa_aaaa_aaaa_aaff));
+
+        // BigInts that fall exactly between two non-infinite floats/doubles
+        // are rounded away from zero when cast to float/double. (Note that
+        // in most environments this is NOT the same rounding rule rule used
+        // when casting int/long to float/double.)
+        assert(0x1.aaa_ab0p+28f == cast(float) BigInt(0x1aaa_aaf0));
+        assert(-0x1.aaaab0p+28f == cast(float) BigInt(-0x1aaa_aaf0));
+
+        assert(0x1.aaa_aaaa_aaaa_ab00p+60 == cast(double) BigInt(0x1aaa_aaaa_aaaa_aa80));
+        assert(-0x1.aaa_aaaa_aaaa_ab00p+60 == cast(double) BigInt(-0x1aaa_aaaa_aaaa_aa80));
+
+        // BigInts that are bounded on one side by the largest positive or
+        // most negative finite float/double and on the other side by infinity
+        // or -infinity are rounded as if in place of infinity was the value
+        // `2^^(T.max_exp)` when cast to float/double.
+        assert(float.infinity == cast(float) BigInt("999_999_999_999_999_999_999_999_999_999_999_999_999"));
+        assert(-float.infinity == cast(float) BigInt("-999_999_999_999_999_999_999_999_999_999_999_999_999"));
+
+        assert(double.infinity > cast(double) BigInt("999_999_999_999_999_999_999_999_999_999_999_999_999"));
+        assert(real.infinity > cast(real) BigInt("999_999_999_999_999_999_999_999_999_999_999_999_999"));
+    }
+
+    @safe unittest
+    {
+        // Test exponent overflow is correct.
+        assert(0x1.000000p+29f == cast(float) BigInt(0x1fffffff));
+        assert(0x1.000000p+61 == cast(double) BigInt(0x1fff_ffff_ffff_fff0));
+    }
+
+    private T toFloat(T, string roundingMode)() @safe nothrow @nogc const
+    if (__traits(isFloating, T) && (roundingMode == "nearest" || roundingMode == "truncate"))
     {
         import core.bitop : bsr;
-        enum int totalNeededBits = T.mant_dig;
+        enum performRounding = (roundingMode == "nearest");
+        enum performTruncation = (roundingMode == "truncate");
+        static assert(performRounding || performTruncation, "unrecognized rounding mode");
+        enum int totalNeededBits = T.mant_dig + int(performRounding);
         static if (totalNeededBits <= 64)
         {
             // We need to examine the top two 64-bit words, not just the top one,
@@ -842,6 +911,17 @@ public:
             const uint w1BitCount = bsr(w1) + 1;
             ulong sansExponent = (w1 << (64 - w1BitCount)) | (w2 >>> (w1BitCount));
             size_t exponent = (ulongLength - 1) * 64 + w1BitCount + 1;
+            static if (performRounding)
+            {
+                sansExponent += 1UL << (64 - totalNeededBits);
+                if (0 <= cast(long) sansExponent) // Use high bit to detect overflow.
+                {
+                    // Do not bother filling in the high bit of sansExponent
+                    // with 1. It will be discarded by float and double and 80
+                    // bit real cannot be on this path with rounding enabled.
+                    exponent += 1;
+                }
+            }
             static if (T.mant_dig == float.mant_dig)
             {
                 if (exponent >= T.max_exp)
@@ -948,7 +1028,7 @@ public:
         import core.bitop : bsr;
         import std.math : cmp, isFinite;
 
-        const asFloat = toFloatTruncating!(T);
+        const asFloat = toFloat!(T, "truncate");
         if (asFloat != y)
             return cmp(asFloat, y); // handles +/- NaN.
         if (!isFinite(y))
