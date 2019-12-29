@@ -2203,6 +2203,7 @@ if (isForwardRange!(R))
     a = [ 1.0, 3.0 ];
     assert(normalize(a));
     assert(a == [ 0.25, 0.75 ]);
+    assert(normalize!(typeof(a))(a, 50)); // a = [12.5, 37.5]
     a = [ 0.0, 0.0 ];
     assert(!normalize(a));
     assert(a == [ 0.5, 0.5 ]);
