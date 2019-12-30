@@ -6771,7 +6771,7 @@ mixin template Proxy(alias a)
 
     auto ref opOpAssign     (string op, this X, V      )(auto ref V v)
     {
-        return mixin("a "      ~op~"= v");
+        return mixin("a = a "~op~" v");
     }
     auto ref opIndexOpAssign(string op, this X, V, D...)(auto ref V v, auto ref D i)
     {
@@ -7478,6 +7478,16 @@ struct Typedef(T, T init = T.init, string cookie=null)
 
     // The two Typedefs are _not_ the same type.
     static assert(!is(MoneyEuros == MoneyDollars));
+}
+
+// issue 12461
+@safe unittest
+{
+    alias Int = Typedef!int;
+
+    Int a, b;
+    a += b;
+    assert(a == 0);
 }
 
 /**
