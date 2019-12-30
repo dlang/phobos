@@ -376,8 +376,8 @@ float cos(float x) @safe pure nothrow @nogc { return core.math.cos(x); }
 @safe unittest
 {
     assert(cos(0.0) == 1.0);
-    assert(cos(1.0).approxEqual(0.540));
-    assert(cos(3.0).approxEqual(-0.989));
+    assert(cos(1.0).isClose(0.5403023059));
+    assert(cos(3.0).isClose(-0.9899924966));
 }
 
 @safe unittest
@@ -467,8 +467,8 @@ float tan(float x) @safe pure nothrow @nogc { return __ctfe ? cast(float) tan(ca
 @safe unittest
 {
     assert(isIdentical(tan(0.0), 0.0));
-    assert(tan(PI).approxEqual(0));
-    assert(tan(PI / 3).approxEqual(sqrt(3.0)));
+    assert(tan(PI).isClose(0, 0.0, 1e-10));
+    assert(tan(PI / 3).isClose(sqrt(3.0)));
 }
 
 version (InlineAsm_X87)
@@ -718,20 +718,20 @@ private T tanImpl(T)(T x) @safe pure nothrow @nogc
         static immutable T[2][] vals =
         [
             // angle, tan
-            [   .5,  .5463024898],
-            [   1,   1.557407725],
-            [   1.5, 14.10141995],
-            [   2,  -2.185039863],
-            [   2.5,-.7470222972],
-            [   3,  -.1425465431],
-            [   3.5, .3745856402],
-            [   4,   1.157821282],
-            [   4.5, 4.637332055],
-            [   5,  -3.380515006],
-            [   5.5,-.9955840522],
-            [   6,  -.2910061914],
-            [   6.5, .2202772003],
-            [   10,  .6483608275],
+            [   .5,  .54630248984],
+            [   1,   1.5574077247],
+            [   1.5, 14.101419947],
+            [   2,  -2.1850398633],
+            [   2.5,-.74702229724],
+            [   3,  -.14254654307],
+            [   3.5, .37458564016],
+            [   4,   1.1578212823],
+            [   4.5, 4.6373320546],
+            [   5,  -3.3805150062],
+            [   5.5,-.99558405221],
+            [   6,  -.29100619138],
+            [   6.5, .22027720035],
+            [   10,  .64836082746],
 
             // special angles
             [   PI_4,   1],
@@ -751,13 +751,13 @@ private T tanImpl(T)(T x) @safe pure nothrow @nogc
             T t = tan(x);
 
             //printf("tan(%Lg) = %Lg, should be %Lg\n", cast(real) x, cast(real) t, cast(real) r);
-            assert(approxEqual(r, t));
+            assert(isClose(r, t, CommonDefaultFor!(T,T), CommonDefaultFor!(T,T)));
 
             x = -x;
             r = -r;
             t = tan(x);
             //printf("tan(%Lg) = %Lg, should be %Lg\n", cast(real) x, cast(real) t, cast(real) r);
-            assert(approxEqual(r, t));
+            assert(isClose(r, t, CommonDefaultFor!(T,T), CommonDefaultFor!(T,T)));
         }
     }
 
@@ -793,8 +793,8 @@ float acos(float x) @safe pure nothrow @nogc  { return acos(cast(real) x); }
 ///
 @safe unittest
 {
-    assert(acos(0.0).approxEqual(1.570));
-    assert(acos(0.5).approxEqual(std.math.PI / 3));
+    assert(acos(0.0).isClose(1.570796327));
+    assert(acos(0.5).isClose(std.math.PI / 3));
     assert(acos(PI).isNaN);
 }
 
@@ -829,7 +829,7 @@ float asin(float x) @safe pure nothrow @nogc  { return asin(cast(real) x); }
 @safe unittest
 {
     assert(isIdentical(asin(0.0), 0.0));
-    assert(asin(0.5).approxEqual(PI / 6));
+    assert(asin(0.5).isClose(PI / 6));
     assert(asin(PI).isNaN);
 }
 
@@ -871,7 +871,7 @@ float atan(float x) @safe pure nothrow @nogc { return __ctfe ? cast(float) atan(
 @safe unittest
 {
     assert(isIdentical(atan(0.0), 0.0));
-    assert(atan(sqrt(3.0)).approxEqual(PI / 3));
+    assert(atan(sqrt(3.0)).isClose(PI / 3));
 }
 
 private T atanImpl(T)(T x) @safe pure nothrow @nogc
@@ -1040,8 +1040,8 @@ private T atanImpl(T)(T x) @safe pure nothrow @nogc
         assert(isIdentical(atan(-zero), -zero));
         // ±∞
         const T inf = T.infinity;
-        assert(approxEqual(atan(inf), cast(T) PI_2));
-        assert(approxEqual(atan(-inf), cast(T) -PI_2));
+        assert(isClose(atan(inf), cast(T) PI_2));
+        assert(isClose(atan(-inf), cast(T) -PI_2));
         // NaN
         const T specialNaN = NaN(0x0123L);
         assert(isIdentical(atan(specialNaN), specialNaN));
@@ -1049,11 +1049,11 @@ private T atanImpl(T)(T x) @safe pure nothrow @nogc
         static immutable T[2][] vals =
         [
             // x, atan(x)
-            [ 0.25, 0.2449786631 ],
-            [ 0.5,  0.4636476090 ],
-            [ 1,    PI_4         ],
-            [ 1.5,  0.9827937232 ],
-            [ 10,   1.4711276743 ],
+            [ 0.25, 0.24497866313 ],
+            [ 0.5,  0.46364760900 ],
+            [ 1,    PI_4          ],
+            [ 1.5,  0.98279372325 ],
+            [ 10,   1.47112767430 ],
         ];
 
         foreach (ref val; vals)
@@ -1063,13 +1063,13 @@ private T atanImpl(T)(T x) @safe pure nothrow @nogc
             T a = atan(x);
 
             //printf("atan(%Lg) = %Lg, should be %Lg\n", cast(real) x, cast(real) a, cast(real) r);
-            assert(approxEqual(r, a));
+            assert(isClose(r, a, CommonDefaultFor!(T,T), CommonDefaultFor!(T,T)));
 
             x = -x;
             r = -r;
             a = atan(x);
             //printf("atan(%Lg) = %Lg, should be %Lg\n", cast(real) x, cast(real) a, cast(real) r);
-            assert(approxEqual(r, a));
+            assert(isClose(r, a, CommonDefaultFor!(T,T), CommonDefaultFor!(T,T)));
         }
     }
 
@@ -1129,7 +1129,7 @@ float atan2(float y, float x) @safe pure nothrow @nogc
 ///
 @safe unittest
 {
-    assert(atan2(1.0, sqrt(3.0)).approxEqual(PI / 6));
+    assert(atan2(1.0, sqrt(3.0)).isClose(PI / 6));
 }
 
 version (InlineAsm_X87)
@@ -1270,7 +1270,7 @@ private T atan2Impl(T)(T y, T x) @safe pure nothrow @nogc
             if (r == 0)
                 assert(isIdentical(r, a)); // check sign
             else
-                assert(approxEqual(r, a));
+                assert(isClose(r, a));
         }
     }
 
@@ -1307,7 +1307,7 @@ float cosh(float x) @safe pure nothrow @nogc  { return cosh(cast(real) x); }
 @safe unittest
 {
     assert(cosh(0.0) == 1.0);
-    assert(cosh(1.0).approxEqual((E + 1.0 / E) / 2));
+    assert(cosh(1.0).isClose((E + 1.0 / E) / 2));
 }
 
 @safe @nogc nothrow unittest
@@ -1340,7 +1340,7 @@ float sinh(float x) @safe pure nothrow @nogc { return _sinh(x); }
     static foreach (F; AliasSeq!(float, double, real))
     {
         assert(isIdentical(sinh(F(0.0)), F(0.0)));
-        assert(sinh(F(1.0)).approxEqual(F(sinh1)));
+        assert(sinh(F(1.0)).isClose(F(sinh1)));
     }
 }
 
@@ -1384,7 +1384,7 @@ float tanh(float x) @safe pure nothrow @nogc { return _tanh(x); }
 @safe unittest
 {
     assert(isIdentical(tanh(0.0), 0.0));
-    assert(tanh(1.0).approxEqual(sinh(1.0) / cosh(1.0)));
+    assert(tanh(1.0).isClose(sinh(1.0) / cosh(1.0)));
 }
 
 private F _tanh(F)(F x)
@@ -2292,7 +2292,7 @@ private T expm1Impl(T)(T x) @safe pure nothrow @nogc
             const T r = exp(x) - 1;
 
             //printf("expm1(%Lg) = %Lg, should approximately be %Lg\n", cast(real) x, cast(real) e, cast(real) r);
-            assert(approxEqual(r, e));
+            assert(isClose(r, e, CommonDefaultFor!(T,T), CommonDefaultFor!(T,T)));
         }
     }
 
@@ -2694,7 +2694,7 @@ private T exp2Impl(T)(T x) @nogc @safe pure nothrow
             const T e = exp2(x);
 
             //printf("exp2(%Lg) = %Lg, should be %Lg\n", cast(real) x, cast(real) e, cast(real) r);
-            assert(approxEqual(r, e));
+            assert(isClose(r, e));
         }
     }
 
@@ -2951,7 +2951,7 @@ if (isFloatingPoint!T)
     int exp;
     real mantissa = frexp(123.456L, exp);
 
-    assert(approxEqual(mantissa * pow(2.0L, cast(real) exp), 123.456L));
+    assert(isClose(mantissa * pow(2.0L, cast(real) exp), 123.456L));
 
     assert(frexp(-real.nan, exp) && exp == int.min);
     assert(frexp(real.nan, exp) && exp == int.min);
@@ -3899,7 +3899,7 @@ real log2(real x) @safe pure nothrow @nogc
 ///
 @safe unittest
 {
-    assert(approxEqual(log2(1024.0L), 10));
+    assert(isClose(log2(1024.0L), 10));
 }
 
 @safe @nogc nothrow unittest
@@ -7537,8 +7537,8 @@ if (isFloatingPoint!(F) && isIntegral!(G))
 
     assert(pow(x, neg1) == 1 / x);
 
-    assert(approxEqual(pow(xd, neg2), cast(double) (1 / (x * x)), 1e-25, 0.0));
-    assert(approxEqual(pow(xf, neg8), cast(float) (1 / ((x * x) * (x * x) * (x * x) * (x * x))), 1e-15, 0.0));
+    assert(isClose(pow(xd, neg2), cast(double) (1 / (x * x)), 1e-25));
+    assert(isClose(pow(xf, neg8), cast(float) (1 / ((x * x) * (x * x) * (x * x) * (x * x))), 1e-15));
 
     assert(feqrel(pow(x, neg3),  1 / (x * x * x)) >= real.mant_dig - 1);
 }
@@ -8010,12 +8010,12 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
     assert(pow(-1.0L, -maxOdd - 1.0L) == 1.0L);
 
     // Now, actual numbers.
-    assert(approxEqual(pow(two, three), 8.0));
-    assert(approxEqual(pow(two, -2.5), 0.1767767));
+    assert(isClose(pow(two, three), 8.0));
+    assert(isClose(pow(two, -2.5), 0.1767766953));
 
     // Test integer to float power.
     immutable uint twoI = 2;
-    assert(approxEqual(pow(twoI, three), 8.0));
+    assert(isClose(pow(twoI, three), 8.0));
 }
 
 /** Computes the value of a positive integer `x`, raised to the power `n`, modulo `m`.
@@ -8769,7 +8769,7 @@ bool approxEqual(T, U, V)(T value, U reference, V maxRelDiff = 1e-2, V maxAbsDif
     assert(!approxEqual([1.0,2.0,3.0],[1.0,2.0]));
     assert(!approxEqual([1.0,2.0],[1.0,2.0,3.0]));
 
-//    assert(approxEqual([],[])); //FIXME: does not work yet
+    assert(approxEqual!(real[],real[])([],[]));
     assert(approxEqual(cast(real[])[],cast(real[])[]));
 }
 

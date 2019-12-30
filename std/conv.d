@@ -3343,31 +3343,31 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 ///
 @safe unittest
 {
-    import std.math : approxEqual;
+    import std.math : isClose;
     import std.typecons : Flag, Yes, No;
     import std.math : isNaN, isInfinity;
     auto str = "123.456";
-    assert(parse!double(str).approxEqual(123.456));
+    assert(parse!double(str).isClose(123.456));
     auto str2 = "123.456";
-    assert(parse!(double, string, No.doCount)(str2).approxEqual(123.456));
+    assert(parse!(double, string, No.doCount)(str2).isClose(123.456));
     auto str3 = "123.456";
     auto r = parse!(double, string, Yes.doCount)(str3);
-    assert(r.data.approxEqual(123.456));
+    assert(r.data.isClose(123.456));
     assert(r.count == 7);
     auto str4 = "-123.456";
     r = parse!(double, string, Yes.doCount)(str4);
-    assert(r.data.approxEqual(-123.456));
+    assert(r.data.isClose(-123.456));
     assert(r.count == 8);
     auto str5 = "+123.456";
     r = parse!(double, string, Yes.doCount)(str5);
-    assert(r.data.approxEqual(123.456));
+    assert(r.data.isClose(123.456));
     assert(r.count == 8);
     auto str6 = "inf0";
     r = parse!(double, string, Yes.doCount)(str6);
     assert(isInfinity(r.data) && r.count == 3 && str6 == "0");
     auto str7 = "-0";
     auto r2 = parse!(float, string, Yes.doCount)(str7);
-    assert(r2.data.approxEqual(0.0) && r2.count == 2);
+    assert(r2.data.isClose(0.0) && r2.count == 2);
     auto str8 = "nan";
     auto r3 = parse!(real, string, Yes.doCount)(str8);
     assert(isNaN(r3.data) && r3.count == 3);
@@ -3521,7 +3521,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         //60 bit mantissa, round up
         s = "0xFFF_FFFF_FFFF_FFFFp10";
         x = parse!real(s);
-        assert(approxEqual(x, 0xFFF_FFFF_FFFF_FFFFp10));
+        assert(isClose(x, 0xFFF_FFFF_FFFF_FFFFp10));
         //1 bit is implicit
         assert(((*cast(ulong*)&x) & 0x000F_FFFF_FFFF_FFFF) == 0x0000_0000_0000_0000);
         assert(strtod("0xFFFFFFFFFFFFFFFp10", null) == x);
@@ -3529,7 +3529,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         //60 bit mantissa, round down
         s = "0xFFF_FFFF_FFFF_FF90p10";
         x = parse!real(s);
-        assert(approxEqual(x, 0xFFF_FFFF_FFFF_FF90p10));
+        assert(isClose(x, 0xFFF_FFFF_FFFF_FF90p10));
         //1 bit is implicit
         assert(((*cast(ulong*)&x) & 0x000F_FFFF_FFFF_FFFF) == 0x000F_FFFF_FFFF_FFFF);
         assert(strtod("0xFFFFFFFFFFFFF90p10", null) == x);
@@ -3537,7 +3537,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         //61 bit mantissa, round up 2
         s = "0x1F0F_FFFF_FFFF_FFFFp10";
         x = parse!real(s);
-        assert(approxEqual(x, 0x1F0F_FFFF_FFFF_FFFFp10));
+        assert(isClose(x, 0x1F0F_FFFF_FFFF_FFFFp10));
         //1 bit is implicit
         assert(((*cast(ulong*)&x) & 0x000F_FFFF_FFFF_FFFF) == 0x000F_1000_0000_0000);
         assert(strtod("0x1F0FFFFFFFFFFFFFp10", null) == x);
@@ -3545,7 +3545,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         //61 bit mantissa, round down 2
         s = "0x1F0F_FFFF_FFFF_FF10p10";
         x = parse!real(s);
-        assert(approxEqual(x, 0x1F0F_FFFF_FFFF_FF10p10));
+        assert(isClose(x, 0x1F0F_FFFF_FFFF_FF10p10));
         //1 bit is implicit
         assert(((*cast(ulong*)&x) & 0x000F_FFFF_FFFF_FFFF) == 0x000F_0FFF_FFFF_FFFF);
         assert(strtod("0x1F0FFFFFFFFFFF10p10", null) == x);

@@ -985,7 +985,7 @@ template equal(alias pred = "a == b")
 @safe @nogc unittest
 {
     import std.algorithm.comparison : equal;
-    import std.math : approxEqual;
+    import std.math : isClose;
 
     int[4] a = [ 1, 2, 4, 3 ];
     assert(!equal(a[], a[1..$]));
@@ -998,8 +998,8 @@ template equal(alias pred = "a == b")
     assert(equal(a[], b[]));
 
     // predicated: ensure that two vectors are approximately equal
-    double[4] c = [ 1.005, 2, 4, 3];
-    assert(equal!approxEqual(b[], c[]));
+    double[4] c = [ 1.0000000005, 2, 4, 3];
+    assert(equal!isClose(b[], c[]));
 }
 
 /++
@@ -1023,7 +1023,7 @@ range of range (of range...) comparisons.
     import std.algorithm.iteration : map;
     import std.internal.test.dummyrange : ReferenceForwardRange,
         ReferenceInputRange, ReferenceInfiniteForwardRange;
-    import std.math : approxEqual;
+    import std.math : isClose;
 
     // various strings
     assert(equal("æøå", "æøå")); //UTF8 vs UTF8
@@ -1057,11 +1057,11 @@ range of range (of range...) comparisons.
     int[] a = [ 1, 2, 4, 3 ];
     assert(equal([2, 4, 8, 6], map!"a*2"(a)));
     double[] b = [ 1.0, 2, 4, 3];
-    double[] c = [ 1.005, 2, 4, 3];
-    assert(equal!approxEqual(map!"a*2"(b), map!"a*2"(c)));
+    double[] c = [ 1.0000000005, 2, 4, 3];
+    assert(equal!isClose(map!"a*2"(b), map!"a*2"(c)));
     assert(!equal([2, 4, 1, 3], map!"a*2"(a)));
     assert(!equal([2, 4, 1], map!"a*2"(a)));
-    assert(!equal!approxEqual(map!"a*3"(b), map!"a*2"(c)));
+    assert(!equal!isClose(map!"a*3"(b), map!"a*2"(c)));
 
     //Tests with some fancy reference ranges.
     ReferenceInputRange!int cir = new ReferenceInputRange!int([1, 2, 4, 3]);

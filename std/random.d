@@ -2683,15 +2683,15 @@ if (isFloatingPoint!F)
 @safe unittest
 {
     import std.algorithm.iteration : reduce;
-    import std.math : approxEqual;
+    import std.math : isClose;
 
     auto a = uniformDistribution(5);
     assert(a.length == 5);
-    assert(approxEqual(reduce!"a + b"(a), 1));
+    assert(isClose(reduce!"a + b"(a), 1));
 
     a = uniformDistribution(10, a);
     assert(a.length == 10);
-    assert(approxEqual(reduce!"a + b"(a), 1));
+    assert(isClose(reduce!"a + b"(a), 1));
 }
 
 /**
