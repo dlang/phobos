@@ -1242,8 +1242,8 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
         getopt(testArgs, "tune", &tuningParms);
         assert(testArgs.length == 1);
         assert(tuningParms.length == 2);
-        assert(approxEqual(tuningParms["alpha"], 0.5));
-        assert(approxEqual(tuningParms["beta"], 0.6));
+        assert(isClose(tuningParms["alpha"], 0.5));
+        assert(isClose(tuningParms["beta"], 0.6));
         arraySep = "";
     }
 

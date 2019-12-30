@@ -736,8 +736,8 @@ uint formattedRead(R, Char, S...)(auto ref R r, const(Char)[] fmt, auto ref S ar
     double x, y, z;
     assert(formattedRead(s, " %s %s %s ", x, y, z) == 2);
     assert(s.empty);
-    assert(approxEqual(x, 1.2));
-    assert(approxEqual(y, 3.4));
+    assert(isClose(x, 1.2));
+    assert(isClose(y, 3.4));
     assert(isNaN(z));
 }
 
@@ -773,8 +773,8 @@ uint formattedRead(R, Char, S...)(auto ref R r, const(Char)[] fmt, auto ref S ar
     double x, y, z;
     assert(formattedRead(s, " %s %s %s ", &x, &y, &z) == 2);
     assert(s.empty);
-    assert(approxEqual(x, 1.2));
-    assert(approxEqual(y, 3.4));
+    assert(isClose(x, 1.2));
+    assert(isClose(y, 3.4));
     assert(isNaN(z));
 }
 
@@ -5640,11 +5640,11 @@ T unformatValue(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char
 /// Floating point numbers
 @safe pure unittest
 {
-    import std.math : approxEqual;
+    import std.math : isClose;
 
     auto str = "123.456";
     auto spec = singleSpec("%s");
-    assert(str.unformatValue!double(spec).approxEqual(123.456));
+    assert(str.unformatValue!double(spec).isClose(123.456));
 }
 
 /// Character input ranges
