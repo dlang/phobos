@@ -340,7 +340,7 @@ if (is(T == uint))
 pure struct Cmp(T)
 if (is(T == double))
 {
-    import std.math : approxEqual;
+    import std.math : isClose;
 
     static auto iota(size_t low = 1, size_t high = 11)
     {
@@ -354,7 +354,7 @@ if (is(T == double))
         arr = iota().array;
     }
 
-    alias cmp = approxEqual!(double,double,double);
+    alias cmp = isClose!(double,double,double);
 
     enum dummyValue = 1337.0;
     enum dummyValueRslt = 1337.0 * 2.0;
@@ -386,8 +386,6 @@ struct TestFoo
 pure struct Cmp(T)
 if (is(T == TestFoo))
 {
-    import std.math : approxEqual;
-
     static auto iota(size_t low = 1, size_t high = 11)
     {
         import std.algorithm.iteration : map;
