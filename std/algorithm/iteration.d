@@ -6398,6 +6398,9 @@ if (isInputRange!R && !isInfinite!R && is(typeof(r.front + r.front)))
         alias Seed = typeof(E.init  + 0.0); //biggest of double/real
     else
         alias Seed = typeof(r.front + r.front);
+    static assert(is(typeof(Unqual!Seed(0))),
+        "Could not initiate an initial value for " ~ (Unqual!Seed).stringof
+        ~ ". Please supply an initial value manually.");
     return sum(r, Unqual!Seed(0));
 }
 /// ditto
