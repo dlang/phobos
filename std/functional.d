@@ -871,7 +871,8 @@ Params:
 Returns:
     A single parameter callable object
 */
-template curry(alias F) if (isCallable!F && Parameters!F.length)
+template curry(alias F)
+if (isCallable!F && Parameters!F.length)
 {
     //inspired from the implementation from Artur Skawina here:
     //https://forum.dlang.org/post/mailman.1626.1340110492.24740.digitalmars-d@puremagic.com
@@ -927,7 +928,8 @@ pure @safe @nogc nothrow unittest
 }
 
 ///ditto
-auto curry(T)(T t) if (isCallable!T && Parameters!T.length)
+auto curry(T)(T t)
+if (isCallable!T && Parameters!T.length)
 {
     static auto fun(ref T inst, ref Parameters!T args)
     {
