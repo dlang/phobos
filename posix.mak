@@ -292,9 +292,14 @@ else
 all : lib
 endif
 
+ifneq (,$(findstring Darwin_64_32, $(PWD)))
+install:
+	echo "Darwin_64_32_disabled"
+else
 install :
 	$(MAKE) -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release INSTALL_DIR=$(INSTALL_DIR) \
 		DMD=$(DMD) install2
+endif
 
 .PHONY : unittest
 ifeq (1,$(BUILD_WAS_SPECIFIED))
