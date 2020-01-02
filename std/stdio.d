@@ -66,6 +66,21 @@ version (OSX)
     version = GENERIC_IO;
     version = HAS_GETDELIM;
 }
+else version (iOS)
+{
+    version = GENERIC_IO;
+    version = HAS_GETDELIM;
+}
+else version (TVOS)
+{
+    version = GENERIC_IO;
+    version = HAS_GETDELIM;
+}
+else version (WatchOS)
+{
+    version = GENERIC_IO;
+    version = HAS_GETDELIM;
+}
 else version (FreeBSD)
 {
     version = GENERIC_IO;
