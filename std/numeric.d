@@ -620,7 +620,7 @@ public:
         AliasSeq!(
             CustomFloat!(5, 10),
             CustomFloat!(5, 11, CustomFloatFlags.ieee ^ CustomFloatFlags.signed),
-            CustomFloat!(1, 15, CustomFloatFlags.ieee ^ CustomFloatFlags.signed),
+            CustomFloat!(1, 7, CustomFloatFlags.ieee ^ CustomFloatFlags.signed),
             CustomFloat!(4, 3, CustomFloatFlags.ieee | CustomFloatFlags.probability ^ CustomFloatFlags.signed)
         );
 
