@@ -32,6 +32,15 @@ $(TR $(TD Conversion) $(TD
 +/
 module std.datetime.systime;
 
+version (OSX)
+    version = Darwin;
+else version (iOS)
+    version = Darwin;
+else version (TVOS)
+    version = Darwin;
+else version (WatchOS)
+    version = Darwin;
+
 /// Get the current time as a $(LREF SysTime)
 @safe unittest
 {
@@ -212,7 +221,7 @@ public:
             static import core.stdc.time;
             enum hnsecsToUnixEpoch = unixTimeToStdTime(0);
 
-            version (OSX)
+            version (Darwin)
             {
                 static if (clockType == ClockType.second)
                     return unixTimeToStdTime(core.stdc.time.time(null));
