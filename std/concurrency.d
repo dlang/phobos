@@ -673,6 +673,12 @@ in (tid.mbox !is null)
  * matched by an earlier delegate.  If more than one argument is sent,
  * the `Variant` will contain a $(REF Tuple, std,typecons) of all values
  * sent.
+ *
+ * Params:
+ *     ops = Variadic list of function pointers and delegates. Entries
+ *           in this list must not occlude later entries.
+ *
+ * Throws: $(LREF OwnerTerminated) when the sending thread was terminated.
  */
 void receive(T...)( T ops )
 in
@@ -769,13 +775,17 @@ private template receiveOnlyRet(T...)
 }
 
 /**
- * Receives only messages with arguments of types `T`.
+ * Receives only messages with arguments of the specified types.
  *
- * Throws:  `MessageMismatch` if a message of types other than `T`
- *          is received.
+ * Params:
+ *     T = Variadic list of types to be received.
  *
- * Returns: The received message.  If `T.length` is greater than one,
+ * Returns: The received message.  If `T` has more than one entry,
  *          the message will be packed into a $(REF Tuple, std,typecons).
+ *
+ * Throws: $(LREF MessageMismatch) if a message of types other than `T`
+ *         is received,
+ *         $(LREF OwnerTerminated) when the sending thread was terminated.
  */
 receiveOnlyRet!(T) receiveOnly(T...)()
 in
@@ -869,13 +879,30 @@ do
 }
 
 /**
- * Tries to receive but will give up if no matches arrive within duration.
- * Won't wait at all if provided $(REF Duration, core,time) is negative.
+ * Receives a message from another thread and gives up if no match
+ * arrives within a specified duration.
  *
- * Same as `receive` except that rather than wait forever for a message,
- * it waits until either it receives a message or the given
- * $(REF Duration, core,time) has passed. It returns `true` if it received a
- * message and `false` if it timed out waiting for one.
+ * Receive a message from another thread, or block until `duration` exceeds,
+ * if no messages of the specified types are available. This function works
+ * by pattern matching a message against a set of delegates and executing
+ * the first match found.
+ *
+ * If a delegate that accepts a $(REF Variant, std,variant) is included as
+ * the last argument, it will match any message that was not
+ * matched by an earlier delegate.  If more than one argument is sent,
+ * the `Variant` will contain a $(REF Tuple, std,typecons) of all values
+ * sent.
+ *
+ * Params:
+ *     duration = Duration, how long to wait. If `duration` is negative,
+ *                won't wait at all.
+ *     ops = Variadic list of function pointers and delegates. Entries
+ *           in this list must not occlude later entries.
+ *
+ * Returns: `true` if it received a message and `false` if it timed out waiting
+ *          for one.
+ *
+ * Throws: $(LREF OwnerTerminated) when the sending thread was terminated.
  */
 bool receiveTimeout(T...)(Duration duration, T ops)
 in
