@@ -45,6 +45,7 @@
  *           $(LREF hasElaborateMove)
  *           $(LREF hasIndirections)
  *           $(LREF hasMember)
+ *           $(LREF hasNanComparison)
  *           $(LREF hasStaticMember)
  *           $(LREF hasNested)
  *           $(LREF hasUnsharedAliasing)
@@ -3895,6 +3896,58 @@ enum hasMember(T, string name) = __traits(hasMember, T, name);
         void opDispatch(string n, A)(A dummy) {}
     }
     static assert(hasMember!(S, "foo"));
+}
+
+/**
+   True if `T1` and `T2` may be incomparable, in the way that any
+   comparison involving `float.nan` will yield false.
+
+   This is true for built-in floating-point types, false for all other
+   built-in types.
+
+   User-defined types may have the same behavior by providing an
+   implementation of `opCmp` that returns float.nan when the compared
+   values are incomparable.
+ */
+template hasNanComparison(T1, T2 = T1)
+{
+    static if (isFloatingPoint!T1)
+        enum hasNanComparison = true;
+    else static if (!isAggregateType!T1)
+        enum hasNanComparison = false;
+    else static if (!is(typeof((T1 a, T2 b) => a.opCmp(b))))
+        enum hasNanComparison = false;
+    else
+        enum hasNanComparison = hasNanComparison!(ReturnType!((T1 a, T2 b) => a.opCmp(b)));
+}
+
+///
+@safe unittest
+{
+    assert( hasNanComparison!float);
+    assert( hasNanComparison!real);
+    assert(!hasNanComparison!int);
+    assert(!hasNanComparison!string);
+    assert(!hasNanComparison!(int*));
+    assert(!hasNanComparison!(int[]));
+
+    struct S
+    {
+        float opCmp(S s) const
+        {
+            return float.nan;
+        }
+    }
+    assert( hasNanComparison!S);
+
+    struct S2
+    {
+        S opCmp(S2 s) const
+        {
+            return S();
+        }
+    }
+    assert( hasNanComparison!S2);
 }
 
 /**
