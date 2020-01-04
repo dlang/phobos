@@ -56,13 +56,22 @@ import std.range.primitives;
 public import std.system : Endian;
 import std.traits;
 
-private string myToString(ulong n)
+private string myToString(ulong n) pure @safe
 {
     import core.internal.string : UnsignedStringBuf, unsignedToTempString;
     UnsignedStringBuf buf;
     auto s = unsignedToTempString(n, buf);
-    return cast(string) s ~ (n > uint.max ? "UL" : "U");
+    // pure allows implicit cast to string
+    return s ~ (n > uint.max ? "UL" : "U");
 }
+
+@safe pure unittest
+{
+    assert(myToString(5) == "5U");
+    assert(myToString(uint.max) == "4294967295U");
+    assert(myToString(uint.max + 1UL) == "4294967296UL");
+}
+
 
 private template createAccessors(
     string store, T, string name, size_t len, size_t offset)
