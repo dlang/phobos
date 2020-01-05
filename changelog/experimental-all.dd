@@ -1,3 +1,0 @@
-Deprecated module `std.experimental.all` was removed
-
-All symbols contained in Phobos can now be used with `import std`
