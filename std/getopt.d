@@ -729,13 +729,13 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
 
             static if (is(typeof(opts[1]) : string))
             {
-                auto receiver = opts[2];
+                alias receiver = opts[2];
                 optionHelp.help = opts[1];
                 immutable lowSliceIdx = 3;
             }
             else
             {
-                auto receiver = opts[1];
+                alias receiver = opts[1];
                 immutable lowSliceIdx = 2;
             }
 
@@ -1105,7 +1105,7 @@ private struct configuration
                 ubyte, "", 2));
 }
 
-private bool optMatch(string arg, string optPattern, ref string value,
+private bool optMatch(string arg, scope string optPattern, ref string value,
     configuration cfg) @safe
 {
     import std.array : split;
@@ -1602,6 +1602,17 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     getopt(args, "option", &b);
     assert(!b);
     assert(args == ["program", "--option"]);
+}
+
+// Issue 20480 - make std.getopt ready for DIP 1000
+@safe unittest
+{
+    string[] args = ["test", "--foo", "42", "--bar", "BAR"];
+    int foo;
+    string bar;
+    getopt(args, "foo", &foo, "bar", "bar help", &bar);
+    assert(foo == 42);
+    assert(bar == "BAR");
 }
 
 /** This function prints the passed `Option`s and text in an aligned manner on `stdout`.
