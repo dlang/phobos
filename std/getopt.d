@@ -657,7 +657,7 @@ private template optionValidator(A...)
     static assert(optionValidator!(C,A,P,C,A,S,F) == "");
 }
 
-@system unittest // bugzilla 15914
+@safe unittest // bugzilla 15914
 {
     import std.exception : assertThrown;
     bool opt;
@@ -982,7 +982,7 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
 }
 
 // 17574
-@system unittest
+@safe unittest
 {
     import std.algorithm.searching : startsWith;
 
@@ -1002,7 +1002,7 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
 }
 
 // 5316 - arrays with arraySep
-@system unittest
+@safe unittest
 {
     import std.conv;
 
@@ -1031,7 +1031,7 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
 }
 
 // 5316 - associative arrays with arraySep
-@system unittest
+@safe unittest
 {
     import std.conv;
 
@@ -1184,7 +1184,7 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     }
 }
 
-@system unittest
+@safe unittest
 {
     import std.conv;
     import std.math;
@@ -1376,7 +1376,7 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assert(x == 2);
 }
 
-@system unittest
+@safe unittest
 {
     // From bugzilla 2142
     bool f_linenum, f_filename;
@@ -1393,7 +1393,7 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assert(f_filename);
 }
 
-@system unittest
+@safe unittest
 {
     // From bugzilla 6887
     string[] p;
@@ -1403,7 +1403,7 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assert(p[0] == "a");
 }
 
-@system unittest
+@safe unittest
 {
     // From bugzilla 6888
     int[string] foo;
@@ -1412,7 +1412,7 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assert(foo == ["a":1]);
 }
 
-@system unittest
+@safe unittest
 {
     // From bugzilla 9583
     int opt;
@@ -1421,7 +1421,7 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assert(args == ["prog", "--a", "--b", "--c"]);
 }
 
-@system unittest
+@safe unittest
 {
     string foo, bar;
     auto args = ["prog", "-thello", "-dbar=baz"];
@@ -1456,7 +1456,7 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assert(o == "str");
 }
 
-@system unittest // 5228
+@safe unittest // 5228
 {
     import std.conv;
     import std.exception;
@@ -1469,7 +1469,7 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assertThrown!ConvException(getopt(args, "abc", &abc));
 }
 
-@system unittest // From bugzilla 7693
+@safe unittest // From bugzilla 7693
 {
     import std.exception;
 
@@ -1489,7 +1489,7 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assertNotThrown(getopt(args, "foo", &foo));
 }
 
-@system unittest // same bug as 7693 only for bool
+@safe unittest // same bug as 7693 only for bool
 {
     import std.exception;
 
@@ -1501,7 +1501,7 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assert(foo);
 }
 
-@system unittest
+@safe unittest
 {
     bool foo;
     auto args = ["prog", "--foo"];
@@ -1509,7 +1509,7 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assert(foo);
 }
 
-@system unittest
+@safe unittest
 {
     bool foo;
     bool bar;
@@ -1520,7 +1520,7 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assert(bar);
 }
 
-@system unittest
+@safe unittest
 {
     bool foo;
     bool bar;
@@ -1532,7 +1532,7 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assert(bar);
 }
 
-@system unittest
+@safe unittest
 {
     import std.exception;
 
@@ -1544,7 +1544,7 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
         config.passThrough));
 }
 
-@system unittest
+@safe unittest
 {
     import std.exception;
 
@@ -1558,7 +1558,7 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assert(!bar);
 }
 
-@system unittest
+@safe unittest
 {
     bool foo;
     auto args = ["prog", "-f"];
@@ -1575,7 +1575,7 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
 }
 
 // Issue 13316 - std.getopt: implicit help option breaks the next argument
-@system unittest
+@safe unittest
 {
     string[] args = ["program", "--help", "--", "something"];
     getopt(args);
@@ -1592,7 +1592,7 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
 }
 
 // Issue 13317 - std.getopt: endOfOptions broken when it doesn't look like an option
-@system unittest
+@safe unittest
 {
     auto endOfOptionsBackup = endOfOptions;
     scope(exit) endOfOptions = endOfOptionsBackup;
@@ -1680,7 +1680,7 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt, st
     }
 }
 
-@system unittest
+@safe unittest
 {
     import std.conv;
 
@@ -1709,7 +1709,7 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt, st
     assert(wanted == helpMsg);
 }
 
-@system unittest
+@safe unittest
 {
     import std.array ;
     import std.conv;
@@ -1738,7 +1738,7 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt, st
     assert(wanted == helpMsg, helpMsg ~ wanted);
 }
 
-@system unittest // Issue 14724
+@safe unittest // Issue 14724
 {
     bool a;
     auto args = ["prog", "--help"];
@@ -1769,7 +1769,7 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt, st
     assertNotThrown!AssertError(getopt(args, "abc", &abc, "def", &def));
 }
 
-@system unittest // Issue 17327 repeated option use
+@safe unittest // Issue 17327 repeated option use
 {
     long num = 0;
 
@@ -1856,7 +1856,7 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt, st
     assert(y == 50);
 }
 
-@system unittest // Hyphens at the start of option values; Issue 17650
+@safe unittest // Hyphens at the start of option values; Issue 17650
 {
     auto args = ["program", "-m", "-5", "-n", "-50", "-c", "-", "-f", "-"];
 
@@ -1877,7 +1877,7 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt, st
     assert(f == "-");
 }
 
-@system unittest
+@safe unittest
 {
     import std.conv;
 
