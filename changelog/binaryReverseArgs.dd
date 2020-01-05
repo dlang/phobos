@@ -1,4 +1,0 @@
-Deprecated `std.functional.binaryReverseArgs` was removed
-
-This specialisation of `reverseArgs` accepting exactly two arguments was
-deprecated since 2.079 and has now been removed. Use `reverseArgs` instead.
