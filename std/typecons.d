@@ -5971,16 +5971,14 @@ private template TypeMod(T)
     enum TypeMod = cast(TypeModifier)(mod1 | mod2);
 }
 
-version (unittest)
+@system unittest
 {
-    private template UnittestFuncInfo(alias f)
+    template UnittestFuncInfo(alias f)
     {
         enum name = __traits(identifier, f);
         alias type = FunctionTypeOf!f;
     }
-}
-@system unittest
-{
+
     class A
     {
         int draw() { return 1; }
