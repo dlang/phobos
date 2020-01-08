@@ -186,7 +186,7 @@ else version (X86)
     private alias haveSSE = core.cpuid.sse;
 }
 
-version (unittest) private
+version (StdUnittest) private
 {
     static if (real.sizeof > double.sizeof)
         enum uint useDigits = 16;

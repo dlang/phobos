@@ -470,7 +470,7 @@ template QualifierOf(T)
     alias Qual7 = QualifierOf!(   immutable int);   static assert(is(Qual7!long ==    immutable long));
 }
 
-version (unittest)
+version (StdUnittest)
 {
     alias TypeQualifierList = AliasSeq!(MutableOf, ConstOf, SharedOf, SharedConstOf, ImmutableOf);
 
@@ -653,7 +653,7 @@ if (T.length == 1)
     static assert(fullyQualifiedName!fullyQualifiedName == "std.traits.fullyQualifiedName");
 }
 
-version (unittest)
+version (StdUnittest)
 {
     // Used for both fqnType and fqnSym unittests
     private struct QualifiedNameTests
@@ -2463,7 +2463,7 @@ if (is(T == function))
     assert(g() > 0);
 }
 
-version (unittest)
+version (StdUnittest)
 {
 private:
     // Some function types to test.
@@ -8064,7 +8064,7 @@ if (sth.length == 1)
     static assert(TL == AliasSeq!("i", "xi", "yi"));
 }
 
-version (unittest) private void freeFunc(string);
+version (StdUnittest) private void freeFunc(string);
 
 @safe unittest
 {
@@ -8601,7 +8601,7 @@ template getSymbolsByUDA(alias symbol, alias attribute)
 }
 
 // Issue 20054: getSymbolsByUDA no longer works on modules
-version (unittest)
+version (StdUnittest)
 {
     @("Issue20054")
     void issue20054() {}

@@ -81,7 +81,7 @@ class Win32Exception : WindowsException
     @property int error() { return super.code; }
 }
 
-version (unittest) import std.string : startsWith, endsWith;
+version (StdUnittest) import std.string : startsWith, endsWith;
 
 @safe unittest
 {

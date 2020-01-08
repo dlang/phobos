@@ -45,7 +45,7 @@ import std.traits : isSomeString, Unqual;
 import std.typecons : Flag;
 import std.range.primitives : isOutputRange;
 
-version (unittest) import std.exception : assertThrown;
+version (StdUnittest) import std.exception : assertThrown;
 
 @safe unittest
 {
@@ -10438,7 +10438,7 @@ if (isSomeString!T)
 // NOTE: all the non-simple array literals are wrapped in functions, because
 // otherwise importing causes re-evaluation of the static initializers using
 // CTFE with unittests enabled
-version (unittest)
+version (StdUnittest)
 {
 private @safe:
     // All of these helper arrays are sorted in ascending order.

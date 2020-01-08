@@ -161,7 +161,7 @@ import std.traits;
     assert([0, 1, 2, 4, 5].randomShuffle(rnd2).equal([2, 0, 4, 5, 1]));
 }
 
-version (unittest)
+version (StdUnittest)
 {
     static import std.meta;
     package alias Xorshift64_64 = XorshiftEngine!(ulong, 64, -12, 25, -27);

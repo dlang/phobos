@@ -252,7 +252,7 @@ private:
 
     To* _ptr;
     size_t _length;        // length of the string
-    version (unittest)
+    version (StdUnittest)
     // the 'small string optimization'
     {
         // smaller size to trigger reallocations. Padding is to account for

@@ -363,7 +363,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         }
 
         // @@@BUG@@@ Workaround for DbC problem. See comment on 'out'.
-        version (unittest)
+        version (StdUnittest)
             assert(
                 bufptr - buffer.ptr == encodeLength(srcLen),
                 "The length of result is different from Base64"
@@ -541,7 +541,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         }
 
         // @@@BUG@@@ Workaround for DbC problem.
-        version (unittest)
+        version (StdUnittest)
             assert(
                 pcount == encodeLength(srcLen),
                 "The number of put is different from the length of Base64"
@@ -1136,7 +1136,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         }
 
         // @@@BUG@@@ Workaround for DbC problem.
-        version (unittest)
+        version (StdUnittest)
             assert(
                 (bufptr - buffer.ptr) >= (decodeLength(srcLen) - 2),
                 "The length of result is smaller than expected length"
@@ -1321,7 +1321,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         }
 
         // @@@BUG@@@ Workaround for DbC problem.
-        version (unittest)
+        version (StdUnittest)
             assert(
                 pcount >= (decodeLength(srcLen) - 2),
                 "The length of result is smaller than expected length"

@@ -47,7 +47,7 @@ DFLAGS=-conf= -O -release -w -de -preview=dip1000 -transition=complex -I$(DRUNTI
 
 ## Flags for compiling unittests
 
-UDFLAGS=-unittest -conf= -O -w -preview=dip1000 -transition=complex -I$(DRUNTIME)\import
+UDFLAGS=-unittest -version=StdUnittest -version=CoreUnittest -conf= -O -w -preview=dip1000 -transition=complex -I$(DRUNTIME)\import
 
 ## C compiler
 

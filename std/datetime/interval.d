@@ -41,7 +41,7 @@ import std.range.primitives : isOutputRange;
 import std.traits : isIntegral, Unqual;
 import std.typecons : Flag;
 
-version (unittest) import std.exception : assertThrown;
+version (StdUnittest) import std.exception : assertThrown;
 
 
 /++
