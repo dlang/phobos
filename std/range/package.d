@@ -1546,37 +1546,17 @@ private struct ChooseResult(R1, R2)
     }
 
     static if (isForwardRange!R1 && isForwardRange!R2)
+    @property auto save() return scope
     {
-        private auto systemSave() return scope
+        if (r1Chosen)
         {
-            return r1Chosen
-                ? ChooseResult(r1Chosen, r1.save, r2)
-                : ChooseResult(r1Chosen, r1, r2.save);
+            ref R1 getR1() @trusted { return r1; }
+            return ChooseResult(r1Chosen, getR1.save, R2.init);
         }
-        private auto trustedSave()() @trusted return scope
+        else
         {
-            /*
-            Unsafe operations in this function:
-            - copying r1/r2 (postblit or copy constructor),
-            - r1.save/r2.save,
-            - accessing the union of r1 and r2.
-            The first two cannot be trusted, because they involve calling user
-            code. So they're only called via @safe wrappers.
-            The last one can be trusted. We're not returning a reference into
-            the union.
-            */
-            R safeSave(R)(ref R r) @safe { return r.save; }
-            R safeCopy(R)(ref R r) @safe { return r; }
-            return r1Chosen
-                ? ChooseResult(r1Chosen, safeSave(r1), safeCopy(r2))
-                : ChooseResult(r1Chosen, safeCopy(r1), safeSave(r2));
-        }
-        @property auto save() return scope
-        {
-            static if (__traits(compiles, trustedSave()))
-                return trustedSave();
-            else
-                return systemSave();
+            ref R2 getR2() @trusted { return r2; }
+            return ChooseResult(r1Chosen, R1.init, getR2.save);
         }
     }
 
@@ -1743,6 +1723,29 @@ pure @safe unittest // issue 18657
     static assert(!__traits(compiles, choose(true, R(), R()).save));
     static assert(!__traits(compiles, choose(true, [0], R()).save));
     static assert(!__traits(compiles, choose(true, R(), [0]).save));
+}
+
+@safe unittest // issue 20495
+{
+    static struct KillableRange
+    {
+        int *item;
+        ref int front() { return *item; }
+        bool empty() { return *item > 10; }
+        void popFront() { ++(*item); }
+        this(this)
+        {
+            assert(item is null || cast(size_t) item > 1000);
+            item = new int(*item);
+        }
+        KillableRange save() { return this; }
+    }
+
+    auto kr = KillableRange(new int(1));
+    int[] x = [1,2,3,4,5]; // length is first
+
+    auto chosen = choose(true, x, kr);
+    auto chosen2 = chosen.save;
 }
 
 /**
