@@ -1500,13 +1500,25 @@ private struct ChooseResult(R1, R2)
         }
     }
 
-    void opAssign(return scope ChooseResult r) @trusted
+    void opAssign(ChooseResult r)
     {
+        static if (hasElaborateDestructor!R1 || hasElaborateDestructor!R2)
+            if (r1Chosen != r.r1Chosen)
+            {
+                // destroy the current item
+                actOnChosen!((ref r) => destroy(r))(this);
+            }
         r1Chosen = r.r1Chosen;
         if (r1Chosen)
-            r1 = r.r1;  // assigning to union members is @system
+        {
+            ref get1(return ref ChooseResult r) @trusted { return r.r1; }
+            get1(this) = get1(r);
+        }
         else
-            r2 = r.r2;
+        {
+            ref get2(return ref ChooseResult r) @trusted { return r.r2; }
+            get2(this) = get2(r);
+        }
     }
 
     // Carefully defined postblit to postblit the appropriate range
@@ -1744,6 +1756,29 @@ pure @safe unittest // issue 18657
     static assert(!__traits(compiles, choose(true, [0], R()).save));
     static assert(!__traits(compiles, choose(true, R(), [0]).save));
 }
+//https://issues.dlang.org/show_bug.cgi?id=19738
+@safe nothrow pure @nogc unittest
+{
+    static struct EvilRange
+    {
+        enum empty = true;
+        int front;
+        void popFront() @safe {}
+        auto opAssign(const ref EvilRange other)
+        {
+            *(cast(uint*) 0xcafebabe) = 0xdeadbeef;
+            return this;
+        }
+    }
+
+    static assert(!__traits(compiles, () @safe
+    {
+        auto c1 = choose(true, EvilRange(), EvilRange());
+        auto c2 = c1;
+        c1 = c2;
+    }));
+}
+
 
 /**
 Choose one of multiple ranges at runtime.
