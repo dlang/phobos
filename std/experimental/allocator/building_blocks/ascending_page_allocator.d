@@ -3,6 +3,9 @@
 Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/ascending_page_allocator.d)
 */
 module std.experimental.allocator.building_blocks.ascending_page_allocator;
+
+import core.memory : pageSize;
+
 import std.experimental.allocator.common;
 
 // Common implementations for shared and thread local AscendingPageAllocator
@@ -87,14 +90,14 @@ private mixin template AscendingPageAllocatorImpl(bool isShared)
             lock = SpinLock(SpinLock.Contention.brief);
         }
 
+        pageSize = .pageSize;
+        numPages = n.roundUpToMultipleOf(cast(uint) pageSize) / pageSize;
+
         version (Posix)
         {
             import core.sys.posix.sys.mman : mmap, MAP_ANON, PROT_NONE,
                 MAP_PRIVATE, MAP_FAILED;
-            import core.sys.posix.unistd : sysconf, _SC_PAGESIZE;
 
-            pageSize = cast(size_t) sysconf(_SC_PAGESIZE);
-            numPages = n.roundUpToMultipleOf(cast(uint) pageSize) / pageSize;
             data = cast(typeof(data)) mmap(null, pageSize * numPages,
                 PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0);
             if (data == MAP_FAILED)
@@ -102,13 +105,9 @@ private mixin template AscendingPageAllocatorImpl(bool isShared)
         }
         else version (Windows)
         {
-            import core.sys.windows.winbase : GetSystemInfo, SYSTEM_INFO, VirtualAlloc;
+            import core.sys.windows.winbase : VirtualAlloc;
             import core.sys.windows.winnt : MEM_RESERVE, PAGE_NOACCESS;
 
-            SYSTEM_INFO si;
-            GetSystemInfo(&si);
-            pageSize = cast(size_t) si.dwPageSize;
-            numPages = n.roundUpToMultipleOf(cast(uint) pageSize) / pageSize;
             data = cast(typeof(data)) VirtualAlloc(null, pageSize * numPages,
                 MEM_RESERVE, PAGE_NOACCESS);
             if (!data)
@@ -415,7 +414,8 @@ public:
 ///
 @system @nogc nothrow unittest
 {
-    size_t pageSize = 4096;
+    import core.memory : pageSize;
+
     size_t numPages = 100;
     void[] buf;
     void[] prevBuf = null;
@@ -641,10 +641,10 @@ public:
 ///
 @system unittest
 {
+    import core.memory : pageSize;
     import core.thread : ThreadGroup;
 
     enum numThreads = 100;
-    enum pageSize = 4096;
     shared SharedAscendingPageAllocator a = SharedAscendingPageAllocator(pageSize * numThreads);
 
     void fun()
@@ -673,34 +673,12 @@ version (StdUnittest)
         buf[b.length - 1] = 101;
         assert(buf[b.length - 1] == 101);
     }
-
-    private static size_t getPageSize() @nogc nothrow
-    {
-        size_t pageSize;
-        version (Posix)
-        {
-            import core.sys.posix.unistd : sysconf, _SC_PAGESIZE;
-
-            pageSize = cast(size_t) sysconf(_SC_PAGESIZE);
-        }
-        else version (Windows)
-        {
-            import core.sys.windows.winbase : GetSystemInfo, SYSTEM_INFO;
-
-            SYSTEM_INFO si;
-            GetSystemInfo(&si);
-            pageSize = cast(size_t) si.dwPageSize;
-        }
-        return pageSize;
-    }
 }
 
 @system @nogc nothrow unittest
 {
     static void testAlloc(Allocator)(ref Allocator a) @nogc nothrow
     {
-        size_t pageSize = getPageSize();
-
         void[] b1 = a.allocate(1);
         assert(a.getAvailableSize() == 3 * pageSize);
         testrw(b1);
@@ -726,7 +704,6 @@ version (StdUnittest)
         a.deallocate(b3);
     }
 
-    size_t pageSize = getPageSize();
     AscendingPageAllocator a = AscendingPageAllocator(4 * pageSize);
     shared SharedAscendingPageAllocator aa = SharedAscendingPageAllocator(4 * pageSize);
 
@@ -736,7 +713,6 @@ version (StdUnittest)
 
 @system @nogc nothrow unittest
 {
-    size_t pageSize = getPageSize();
     size_t numPages = 26214;
     AscendingPageAllocator a = AscendingPageAllocator(numPages * pageSize);
     foreach (i; 0 .. numPages)
@@ -753,7 +729,6 @@ version (StdUnittest)
 
 @system @nogc nothrow unittest
 {
-    size_t pageSize = getPageSize();
     size_t numPages = 26214;
     uint alignment = cast(uint) pageSize;
     AscendingPageAllocator a = AscendingPageAllocator(numPages * pageSize);
@@ -776,7 +751,6 @@ version (StdUnittest)
     {
         import std.traits : hasMember;
 
-        size_t pageSize = getPageSize();
         size_t numPages = 5;
         uint alignment = cast(uint) pageSize;
 
@@ -833,7 +807,6 @@ version (StdUnittest)
         a.deallocate(b3);
     }
 
-    size_t pageSize = getPageSize();
     size_t numPages = 5;
     uint alignment = cast(uint) pageSize;
     AscendingPageAllocator a = AscendingPageAllocator(numPages * pageSize);
@@ -845,7 +818,6 @@ version (StdUnittest)
 
 @system @nogc nothrow unittest
 {
-    size_t pageSize = getPageSize();
     size_t numPages = 21000;
     enum testNum = 100;
     enum allocPages = 10;
@@ -869,7 +841,6 @@ version (StdUnittest)
 
 @system @nogc nothrow unittest
 {
-    size_t pageSize = getPageSize();
     size_t numPages = 21000;
     enum testNum = 100;
     enum allocPages = 10;
@@ -893,7 +864,6 @@ version (StdUnittest)
 
 @system @nogc nothrow unittest
 {
-    size_t pageSize = getPageSize();
     enum numPages = 2;
     AscendingPageAllocator a = AscendingPageAllocator(numPages * pageSize);
     void[] b = a.allocate((numPages + 1) * pageSize);
@@ -907,7 +877,6 @@ version (StdUnittest)
 
 @system @nogc nothrow unittest
 {
-    size_t pageSize = getPageSize();
     enum numPages = 26;
     AscendingPageAllocator a = AscendingPageAllocator(numPages * pageSize);
     uint alignment = cast(uint) ((numPages / 2) * pageSize);
@@ -921,7 +890,6 @@ version (StdUnittest)
 
 @system @nogc nothrow unittest
 {
-    size_t pageSize = getPageSize();
     enum numPages = 10;
     AscendingPageAllocator a = AscendingPageAllocator(numPages * pageSize);
     uint alignment = cast(uint) (2 * pageSize);
@@ -964,7 +932,7 @@ version (StdUnittest)
     SpinLock lock = SpinLock(SpinLock.Contention.brief);
     ulong[numThreads] ptrVals;
     size_t count = 0;
-    shared SharedAscendingPageAllocator a = SharedAscendingPageAllocator(4096 * numThreads);
+    shared SharedAscendingPageAllocator a = SharedAscendingPageAllocator(pageSize * numThreads);
 
     void fun()
     {
@@ -990,7 +958,7 @@ version (StdUnittest)
     ptrVals[].sort();
     foreach (i; 0 .. numThreads - 1)
     {
-        assert(ptrVals[i] + 4096 == ptrVals[i + 1]);
+        assert(ptrVals[i] + pageSize == ptrVals[i + 1]);
     }
 }
 
@@ -1004,18 +972,19 @@ version (StdUnittest)
     enum numThreads = 100;
     void[][numThreads] buf;
     size_t count = 0;
-    shared SharedAscendingPageAllocator a = SharedAscendingPageAllocator(2 * 4096 * numThreads);
+    shared SharedAscendingPageAllocator a = SharedAscendingPageAllocator(2 * pageSize * numThreads);
 
     void fun()
     {
-        void[] b = a.allocate(4000);
-        assert(b.length == 4000);
+        enum expand = 96;
+        void[] b = a.allocate(pageSize - expand);
+        assert(b.length == pageSize - expand);
 
-        assert(a.expand(b, 96));
-        assert(b.length == 4096);
+        assert(a.expand(b, expand));
+        assert(b.length == pageSize);
 
-        a.expand(b, 4096);
-        assert(b.length == 4096 || b.length == 8192);
+        a.expand(b, pageSize);
+        assert(b.length == pageSize || b.length == pageSize * 2);
 
         lock.lock();
         buf[count] = b;
