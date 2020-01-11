@@ -1601,6 +1601,7 @@ void mulInternal(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
             // (1.414 ~ 1.707)/2:1 is balanced.
             BigDigit [] scratchbuff = new BigDigit[karatsubaRequiredBuffSize(y.length) + y.length];
             BigDigit [] partial = scratchbuff[$ - y.length .. $];
+            scratchbuff = scratchbuff[0 .. $ - y.length];
             mulKaratsuba(result[0 .. half + y.length], y, x[0 .. half], scratchbuff);
             partial[] = result[half .. half + y.length];
             mulKaratsuba(result[half .. $], y, x[half .. $], scratchbuff);
@@ -1638,6 +1639,7 @@ void mulInternal(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
             // We make the buffer a bit bigger so we have space for the partial sums.
             BigDigit [] scratchbuff = new BigDigit[karatsubaRequiredBuffSize(maxchunk) + y.length];
             BigDigit [] partial = scratchbuff[$ - y.length .. $];
+            scratchbuff = scratchbuff[0 .. $ - y.length];
             size_t done; // how much of X have we done so far?
             if (paddingY)
             {
@@ -1674,6 +1676,31 @@ void mulInternal(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
         mulKaratsuba(result, x, y, scratchbuff);
         () @trusted { GC.free(scratchbuff.ptr); } ();
     }
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=20493
+@safe unittest
+{
+    // the bug report has a testcase with very large numbers (~10^3800 and ~10^2300)
+    // the number itself isn't important, only the amount of digits, so we do a simpler
+    // multiplication of the same size, analogous to:
+    // 11111111 * 11111111 = 0123456787654321
+    // but instead of base 10, it's in base `BigDigit`
+
+    BigDigit[398] x = 1;
+    BigDigit[236] y = 1;
+    BigDigit[x.length + y.length] result;
+    mulInternal(result[], x[], y[]);
+
+    // create an array of the form [1, 2, ..., y.length, ..., y.length, y.length-1, ..., 1, 0]
+    BigDigit[x.length + y.length] expected = y.length;
+    foreach (BigDigit i; 0 .. y.length)
+    {
+        expected[i] = i+1;
+        expected[$-1-i] = i;
+    }
+
+    assert(result == expected);
 }
 
 /**  General unsigned squaring routine for BigInts.
@@ -2224,10 +2251,12 @@ bool inplaceSub(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
 
 /* Determine how much space is required for the temporaries
  * when performing a Karatsuba multiplication.
+ * TODO: determining a tight bound is non-trivial and depends on KARATSUBALIMIT, see:
+ * https://issues.dlang.org/show_bug.cgi?id=20493
  */
 size_t karatsubaRequiredBuffSize(size_t xlen) pure nothrow @safe
 {
-    return xlen <= KARATSUBALIMIT ? 0 : 2*xlen; // - KARATSUBALIMIT+2;
+    return xlen <= KARATSUBALIMIT ? 0 : (xlen * 9) / 4;
 }
 
 /* Sets result = x*y, using Karatsuba multiplication.
