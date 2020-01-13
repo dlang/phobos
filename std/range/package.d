@@ -1500,13 +1500,25 @@ private struct ChooseResult(R1, R2)
         }
     }
 
-    void opAssign(return scope ChooseResult r) @trusted
+    void opAssign(ChooseResult r)
     {
+        static if (hasElaborateDestructor!R1 || hasElaborateDestructor!R2)
+            if (r1Chosen != r.r1Chosen)
+            {
+                // destroy the current item
+                actOnChosen!((ref r) => destroy(r))(this);
+            }
         r1Chosen = r.r1Chosen;
         if (r1Chosen)
-            r1 = r.r1;  // assigning to union members is @system
+        {
+            ref get1(return ref ChooseResult r) @trusted { return r.r1; }
+            get1(this) = get1(r);
+        }
         else
-            r2 = r.r2;
+        {
+            ref get2(return ref ChooseResult r) @trusted { return r.r2; }
+            get2(this) = get2(r);
+        }
     }
 
     // Carefully defined postblit to postblit the appropriate range
@@ -1546,37 +1558,17 @@ private struct ChooseResult(R1, R2)
     }
 
     static if (isForwardRange!R1 && isForwardRange!R2)
+    @property auto save() return scope
     {
-        private auto systemSave() return scope
+        if (r1Chosen)
         {
-            return r1Chosen
-                ? ChooseResult(r1Chosen, r1.save, r2)
-                : ChooseResult(r1Chosen, r1, r2.save);
+            ref R1 getR1() @trusted { return r1; }
+            return ChooseResult(r1Chosen, getR1.save, R2.init);
         }
-        private auto trustedSave()() @trusted return scope
+        else
         {
-            /*
-            Unsafe operations in this function:
-            - copying r1/r2 (postblit or copy constructor),
-            - r1.save/r2.save,
-            - accessing the union of r1 and r2.
-            The first two cannot be trusted, because they involve calling user
-            code. So they're only called via @safe wrappers.
-            The last one can be trusted. We're not returning a reference into
-            the union.
-            */
-            R safeSave(R)(ref R r) @safe { return r.save; }
-            R safeCopy(R)(ref R r) @safe { return r; }
-            return r1Chosen
-                ? ChooseResult(r1Chosen, safeSave(r1), safeCopy(r2))
-                : ChooseResult(r1Chosen, safeCopy(r1), safeSave(r2));
-        }
-        @property auto save() return scope
-        {
-            static if (__traits(compiles, trustedSave()))
-                return trustedSave();
-            else
-                return systemSave();
+            ref R2 getR2() @trusted { return r2; }
+            return ChooseResult(r1Chosen, R1.init, getR2.save);
         }
     }
 
@@ -1743,6 +1735,52 @@ pure @safe unittest // issue 18657
     static assert(!__traits(compiles, choose(true, R(), R()).save));
     static assert(!__traits(compiles, choose(true, [0], R()).save));
     static assert(!__traits(compiles, choose(true, R(), [0]).save));
+}
+//https://issues.dlang.org/show_bug.cgi?id=19738
+@safe nothrow pure @nogc unittest
+{
+    static struct EvilRange
+    {
+        enum empty = true;
+        int front;
+        void popFront() @safe {}
+        auto opAssign(const ref EvilRange other)
+        {
+            *(cast(uint*) 0xcafebabe) = 0xdeadbeef;
+            return this;
+        }
+    }
+
+    static assert(!__traits(compiles, () @safe
+    {
+        auto c1 = choose(true, EvilRange(), EvilRange());
+        auto c2 = c1;
+        c1 = c2;
+    }));
+}
+
+
+@safe unittest // issue 20495
+{
+    static struct KillableRange
+    {
+        int *item;
+        ref int front() { return *item; }
+        bool empty() { return *item > 10; }
+        void popFront() { ++(*item); }
+        this(this)
+        {
+            assert(item is null || cast(size_t) item > 1000);
+            item = new int(*item);
+        }
+        KillableRange save() { return this; }
+    }
+
+    auto kr = KillableRange(new int(1));
+    int[] x = [1,2,3,4,5]; // length is first
+
+    auto chosen = choose(true, x, kr);
+    auto chosen2 = chosen.save;
 }
 
 /**

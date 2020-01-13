@@ -62,7 +62,6 @@ import std.exception;
 import std.meta;
 import std.range.primitives;
 import std.traits;
-import std.math : FloatingPointControl;
 
 
 /**
@@ -2582,6 +2581,8 @@ private void formatUnsigned(Writer, T, Char)
 
 private enum ctfpMessage = "Cannot format floating point types at compile-time";
 
+private enum RoundingMode { up, down, toZero, toNearestTiesToEven, toNearestTiesAwayFromZero }
+
 /*
     Floating-point values are formatted like $(REF printf, core, stdc, stdio)
  */
@@ -2657,7 +2658,28 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     {
         static if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.mant_dig))
         {
-            buf = printFloat(val, fs, FloatingPointControl.rounding).dup;
+            import std.math : FloatingPointControl;
+
+            auto mode = RoundingMode.toNearestTiesToEven;
+            switch (FloatingPointControl.rounding)
+            {
+            case FloatingPointControl.roundUp:
+                mode = RoundingMode.up;
+                break;
+            case FloatingPointControl.roundDown:
+                mode = RoundingMode.down;
+                break;
+            case FloatingPointControl.roundToZero:
+                mode = RoundingMode.toZero;
+                break;
+            case FloatingPointControl.roundToNearest:
+                mode = RoundingMode.toNearestTiesToEven;
+                break;
+            default: assert(false);
+            }
+
+
+            buf = printFloat(val, fs, mode).dup;
             len = buf.length;
         }
         else
@@ -7039,7 +7061,8 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
     assert(d == "^-NAN         $", "\ngot:'"~ d ~ "'\nexp:'^-NAN         $'");
 }
 
-private auto printFloat(T, Char)(T val, FormatSpec!Char f, FloatingPointControl.RoundingMode rm) pure @safe
+private auto printFloat(T, Char)(T val, FormatSpec!Char f,
+                                 RoundingMode rm = RoundingMode.toNearestTiesToEven)
 if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.mant_dig))
 {
     import std.conv : to;
@@ -7215,15 +7238,15 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
 
         bool roundUp = false;
 
-        if (rm == FloatingPointControl.roundUp)
+        if (rm == RoundingMode.up)
             roundUp = next != roundType.ZERO && sgn != "-";
-        else if (rm == FloatingPointControl.roundDown)
+        else if (rm == RoundingMode.down)
             roundUp = next != roundType.ZERO && sgn == "-";
-        else if (rm == FloatingPointControl.roundToZero)
+        else if (rm == RoundingMode.toZero)
             roundUp = false;
         else
         {
-            assert(rm == FloatingPointControl.roundToNearest);
+            assert(rm == RoundingMode.toNearestTiesToEven || rm == RoundingMode.toNearestTiesAwayFromZero);
             roundUp = next == roundType.UPPER;
 
             if (next == roundType.FIVE)
@@ -7231,12 +7254,15 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
                 // IEEE754 allows for two different ways of implementing roundToNearest:
                 //
                 // Round to nearest, ties away from zero
-                //roundUp = true;
-
-                // Round to nearest, ties to even
-                auto last = buffer[b_pos-1];
-                if (last == '.') last = buffer[b_pos-2];
-                roundUp = (last <= '9' && last % 2 != 0) || (last >= '9' && last % 2 == 0);
+                if (rm == RoundingMode.toNearestTiesAwayFromZero)
+                    roundUp = true;
+                else
+                {
+                    // Round to nearest, ties to even
+                    auto last = buffer[b_pos-1];
+                    if (last == '.') last = buffer[b_pos-2];
+                    roundUp = (last <= '9' && last % 2 != 0) || (last >= '9' && last % 2 == 0);
+                }
             }
         }
 
@@ -7282,66 +7308,66 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
 {
     auto f = FormatSpec!dchar("");
     f.spec = 'a';
-    assert(printFloat(float.nan, f, FloatingPointControl.roundToNearest) == "nan");
-    assert(printFloat(-float.nan, f, FloatingPointControl.roundToNearest) == "-nan");
-    assert(printFloat(float.infinity, f, FloatingPointControl.roundToNearest) == "inf");
-    assert(printFloat(-float.infinity, f, FloatingPointControl.roundToNearest) == "-inf");
-    assert(printFloat(0.0f, f, FloatingPointControl.roundToNearest) == "0x0p+0");
-    assert(printFloat(-0.0f, f, FloatingPointControl.roundToNearest) == "-0x0p+0");
+    assert(printFloat(float.nan, f) == "nan");
+    assert(printFloat(-float.nan, f) == "-nan");
+    assert(printFloat(float.infinity, f) == "inf");
+    assert(printFloat(-float.infinity, f) == "-inf");
+    assert(printFloat(0.0f, f) == "0x0p+0");
+    assert(printFloat(-0.0f, f) == "-0x0p+0");
 
-    assert(printFloat(double.nan, f, FloatingPointControl.roundToNearest) == "nan");
-    assert(printFloat(-double.nan, f, FloatingPointControl.roundToNearest) == "-nan");
-    assert(printFloat(double.infinity, f, FloatingPointControl.roundToNearest) == "inf");
-    assert(printFloat(-double.infinity, f, FloatingPointControl.roundToNearest) == "-inf");
-    assert(printFloat(0.0, f, FloatingPointControl.roundToNearest) == "0x0p+0");
-    assert(printFloat(-0.0, f, FloatingPointControl.roundToNearest) == "-0x0p+0");
+    assert(printFloat(double.nan, f) == "nan");
+    assert(printFloat(-double.nan, f) == "-nan");
+    assert(printFloat(double.infinity, f) == "inf");
+    assert(printFloat(-double.infinity, f) == "-inf");
+    assert(printFloat(0.0, f) == "0x0p+0");
+    assert(printFloat(-0.0, f) == "-0x0p+0");
 
     import std.math : nextUp;
 
-    assert(printFloat(nextUp(0.0f), f, FloatingPointControl.roundToNearest) == "0x0.000002p-126");
-    assert(printFloat(float.epsilon, f, FloatingPointControl.roundToNearest) == "0x1p-23");
-    assert(printFloat(float.min_normal, f, FloatingPointControl.roundToNearest) == "0x1p-126");
-    assert(printFloat(float.max, f, FloatingPointControl.roundToNearest) == "0x1.fffffep+127");
+    assert(printFloat(nextUp(0.0f), f) == "0x0.000002p-126");
+    assert(printFloat(float.epsilon, f) == "0x1p-23");
+    assert(printFloat(float.min_normal, f) == "0x1p-126");
+    assert(printFloat(float.max, f) == "0x1.fffffep+127");
 
-    assert(printFloat(nextUp(0.0), f, FloatingPointControl.roundToNearest) == "0x0.0000000000001p-1022");
-    assert(printFloat(double.epsilon, f, FloatingPointControl.roundToNearest) == "0x1p-52");
-    assert(printFloat(double.min_normal, f, FloatingPointControl.roundToNearest) == "0x1p-1022");
-    assert(printFloat(double.max, f, FloatingPointControl.roundToNearest) == "0x1.fffffffffffffp+1023");
+    assert(printFloat(nextUp(0.0), f) == "0x0.0000000000001p-1022");
+    assert(printFloat(double.epsilon, f) == "0x1p-52");
+    assert(printFloat(double.min_normal, f) == "0x1p-1022");
+    assert(printFloat(double.max, f) == "0x1.fffffffffffffp+1023");
 
     import std.math : E, PI, PI_2, PI_4, M_1_PI, M_2_PI, M_2_SQRTPI,
                       LN10, LN2, LOG2, LOG2E, LOG2T, LOG10E, SQRT2, SQRT1_2;
 
-    assert(printFloat(cast(float) E, f, FloatingPointControl.roundToNearest) == "0x1.5bf0a8p+1");
-    assert(printFloat(cast(float) PI, f, FloatingPointControl.roundToNearest) == "0x1.921fb6p+1");
-    assert(printFloat(cast(float) PI_2, f, FloatingPointControl.roundToNearest) == "0x1.921fb6p+0");
-    assert(printFloat(cast(float) PI_4, f, FloatingPointControl.roundToNearest) == "0x1.921fb6p-1");
-    assert(printFloat(cast(float) M_1_PI, f, FloatingPointControl.roundToNearest) == "0x1.45f306p-2");
-    assert(printFloat(cast(float) M_2_PI, f, FloatingPointControl.roundToNearest) == "0x1.45f306p-1");
-    assert(printFloat(cast(float) M_2_SQRTPI, f, FloatingPointControl.roundToNearest) == "0x1.20dd76p+0");
-    assert(printFloat(cast(float) LN10, f, FloatingPointControl.roundToNearest) == "0x1.26bb1cp+1");
-    assert(printFloat(cast(float) LN2, f, FloatingPointControl.roundToNearest) == "0x1.62e43p-1");
-    assert(printFloat(cast(float) LOG2, f, FloatingPointControl.roundToNearest) == "0x1.344136p-2");
-    assert(printFloat(cast(float) LOG2E, f, FloatingPointControl.roundToNearest) == "0x1.715476p+0");
-    assert(printFloat(cast(float) LOG2T, f, FloatingPointControl.roundToNearest) == "0x1.a934fp+1");
-    assert(printFloat(cast(float) LOG10E, f, FloatingPointControl.roundToNearest) == "0x1.bcb7b2p-2");
-    assert(printFloat(cast(float) SQRT2, f, FloatingPointControl.roundToNearest) == "0x1.6a09e6p+0");
-    assert(printFloat(cast(float) SQRT1_2, f, FloatingPointControl.roundToNearest) == "0x1.6a09e6p-1");
+    assert(printFloat(cast(float) E, f) == "0x1.5bf0a8p+1");
+    assert(printFloat(cast(float) PI, f) == "0x1.921fb6p+1");
+    assert(printFloat(cast(float) PI_2, f) == "0x1.921fb6p+0");
+    assert(printFloat(cast(float) PI_4, f) == "0x1.921fb6p-1");
+    assert(printFloat(cast(float) M_1_PI, f) == "0x1.45f306p-2");
+    assert(printFloat(cast(float) M_2_PI, f) == "0x1.45f306p-1");
+    assert(printFloat(cast(float) M_2_SQRTPI, f) == "0x1.20dd76p+0");
+    assert(printFloat(cast(float) LN10, f) == "0x1.26bb1cp+1");
+    assert(printFloat(cast(float) LN2, f) == "0x1.62e43p-1");
+    assert(printFloat(cast(float) LOG2, f) == "0x1.344136p-2");
+    assert(printFloat(cast(float) LOG2E, f) == "0x1.715476p+0");
+    assert(printFloat(cast(float) LOG2T, f) == "0x1.a934fp+1");
+    assert(printFloat(cast(float) LOG10E, f) == "0x1.bcb7b2p-2");
+    assert(printFloat(cast(float) SQRT2, f) == "0x1.6a09e6p+0");
+    assert(printFloat(cast(float) SQRT1_2, f) == "0x1.6a09e6p-1");
 
-    assert(printFloat(cast(double) E, f, FloatingPointControl.roundToNearest) == "0x1.5bf0a8b145769p+1");
-    assert(printFloat(cast(double) PI, f, FloatingPointControl.roundToNearest) == "0x1.921fb54442d18p+1");
-    assert(printFloat(cast(double) PI_2, f, FloatingPointControl.roundToNearest) == "0x1.921fb54442d18p+0");
-    assert(printFloat(cast(double) PI_4, f, FloatingPointControl.roundToNearest) == "0x1.921fb54442d18p-1");
-    assert(printFloat(cast(double) M_1_PI, f, FloatingPointControl.roundToNearest) == "0x1.45f306dc9c883p-2");
-    assert(printFloat(cast(double) M_2_PI, f, FloatingPointControl.roundToNearest) == "0x1.45f306dc9c883p-1");
-    assert(printFloat(cast(double) M_2_SQRTPI, f, FloatingPointControl.roundToNearest) == "0x1.20dd750429b6dp+0");
-    assert(printFloat(cast(double) LN10, f, FloatingPointControl.roundToNearest) == "0x1.26bb1bbb55516p+1");
-    assert(printFloat(cast(double) LN2, f, FloatingPointControl.roundToNearest) == "0x1.62e42fefa39efp-1");
-    assert(printFloat(cast(double) LOG2, f, FloatingPointControl.roundToNearest) == "0x1.34413509f79ffp-2");
-    assert(printFloat(cast(double) LOG2E, f, FloatingPointControl.roundToNearest) == "0x1.71547652b82fep+0");
-    assert(printFloat(cast(double) LOG2T, f, FloatingPointControl.roundToNearest) == "0x1.a934f0979a371p+1");
-    assert(printFloat(cast(double) LOG10E, f, FloatingPointControl.roundToNearest) == "0x1.bcb7b1526e50ep-2");
-    assert(printFloat(cast(double) SQRT2, f, FloatingPointControl.roundToNearest) == "0x1.6a09e667f3bcdp+0");
-    assert(printFloat(cast(double) SQRT1_2, f, FloatingPointControl.roundToNearest) == "0x1.6a09e667f3bcdp-1");
+    assert(printFloat(cast(double) E, f) == "0x1.5bf0a8b145769p+1");
+    assert(printFloat(cast(double) PI, f) == "0x1.921fb54442d18p+1");
+    assert(printFloat(cast(double) PI_2, f) == "0x1.921fb54442d18p+0");
+    assert(printFloat(cast(double) PI_4, f) == "0x1.921fb54442d18p-1");
+    assert(printFloat(cast(double) M_1_PI, f) == "0x1.45f306dc9c883p-2");
+    assert(printFloat(cast(double) M_2_PI, f) == "0x1.45f306dc9c883p-1");
+    assert(printFloat(cast(double) M_2_SQRTPI, f) == "0x1.20dd750429b6dp+0");
+    assert(printFloat(cast(double) LN10, f) == "0x1.26bb1bbb55516p+1");
+    assert(printFloat(cast(double) LN2, f) == "0x1.62e42fefa39efp-1");
+    assert(printFloat(cast(double) LOG2, f) == "0x1.34413509f79ffp-2");
+    assert(printFloat(cast(double) LOG2E, f) == "0x1.71547652b82fep+0");
+    assert(printFloat(cast(double) LOG2T, f) == "0x1.a934f0979a371p+1");
+    assert(printFloat(cast(double) LOG10E, f) == "0x1.bcb7b1526e50ep-2");
+    assert(printFloat(cast(double) SQRT2, f) == "0x1.6a09e667f3bcdp+0");
+    assert(printFloat(cast(double) SQRT1_2, f) == "0x1.6a09e667f3bcdp-1");
 
 }
 
@@ -7351,13 +7377,13 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     f.spec = 'a';
     f.precision = 3;
 
-    assert(printFloat(1.0f, f, FloatingPointControl.roundToNearest) == "0x1.000p+0");
-    assert(printFloat(3.3f, f, FloatingPointControl.roundToNearest) == "0x1.a66p+1");
-    assert(printFloat(2.9f, f, FloatingPointControl.roundToNearest) == "0x1.733p+1");
+    assert(printFloat(1.0f, f) == "0x1.000p+0");
+    assert(printFloat(3.3f, f) == "0x1.a66p+1");
+    assert(printFloat(2.9f, f) == "0x1.733p+1");
 
-    assert(printFloat(1.0, f, FloatingPointControl.roundToNearest) == "0x1.000p+0");
-    assert(printFloat(3.3, f, FloatingPointControl.roundToNearest) == "0x1.a66p+1");
-    assert(printFloat(2.9, f, FloatingPointControl.roundToNearest) == "0x1.733p+1");
+    assert(printFloat(1.0, f) == "0x1.000p+0");
+    assert(printFloat(3.3, f) == "0x1.a66p+1");
+    assert(printFloat(2.9, f) == "0x1.733p+1");
 }
 
 @safe unittest
@@ -7366,13 +7392,13 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     f.spec = 'a';
     f.precision = 0;
 
-    assert(printFloat(1.0f, f, FloatingPointControl.roundToNearest) == "0x1p+0");
-    assert(printFloat(3.3f, f, FloatingPointControl.roundToNearest) == "0x2p+1");
-    assert(printFloat(2.9f, f, FloatingPointControl.roundToNearest) == "0x1p+1");
+    assert(printFloat(1.0f, f) == "0x1p+0");
+    assert(printFloat(3.3f, f) == "0x2p+1");
+    assert(printFloat(2.9f, f) == "0x1p+1");
 
-    assert(printFloat(1.0, f, FloatingPointControl.roundToNearest) == "0x1p+0");
-    assert(printFloat(3.3, f, FloatingPointControl.roundToNearest) == "0x2p+1");
-    assert(printFloat(2.9, f, FloatingPointControl.roundToNearest) == "0x1p+1");
+    assert(printFloat(1.0, f) == "0x1p+0");
+    assert(printFloat(3.3, f) == "0x2p+1");
+    assert(printFloat(2.9, f) == "0x1p+1");
 }
 
 @safe unittest
@@ -7382,13 +7408,13 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     f.precision = 0;
     f.flHash = true;
 
-    assert(printFloat(1.0f, f, FloatingPointControl.roundToNearest) == "0x1.p+0");
-    assert(printFloat(3.3f, f, FloatingPointControl.roundToNearest) == "0x2.p+1");
-    assert(printFloat(2.9f, f, FloatingPointControl.roundToNearest) == "0x1.p+1");
+    assert(printFloat(1.0f, f) == "0x1.p+0");
+    assert(printFloat(3.3f, f) == "0x2.p+1");
+    assert(printFloat(2.9f, f) == "0x1.p+1");
 
-    assert(printFloat(1.0, f, FloatingPointControl.roundToNearest) == "0x1.p+0");
-    assert(printFloat(3.3, f, FloatingPointControl.roundToNearest) == "0x2.p+1");
-    assert(printFloat(2.9, f, FloatingPointControl.roundToNearest) == "0x1.p+1");
+    assert(printFloat(1.0, f) == "0x1.p+0");
+    assert(printFloat(3.3, f) == "0x2.p+1");
+    assert(printFloat(2.9, f) == "0x1.p+1");
 }
 
 @safe unittest
@@ -7397,13 +7423,13 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     f.spec = 'a';
     f.width = 22;
 
-    assert(printFloat(1.0f, f, FloatingPointControl.roundToNearest) == "                0x1p+0");
-    assert(printFloat(3.3f, f, FloatingPointControl.roundToNearest) == "         0x1.a66666p+1");
-    assert(printFloat(2.9f, f, FloatingPointControl.roundToNearest) == "         0x1.733334p+1");
+    assert(printFloat(1.0f, f) == "                0x1p+0");
+    assert(printFloat(3.3f, f) == "         0x1.a66666p+1");
+    assert(printFloat(2.9f, f) == "         0x1.733334p+1");
 
-    assert(printFloat(1.0, f, FloatingPointControl.roundToNearest) == "                0x1p+0");
-    assert(printFloat(3.3, f, FloatingPointControl.roundToNearest) == "  0x1.a666666666666p+1");
-    assert(printFloat(2.9, f, FloatingPointControl.roundToNearest) == "  0x1.7333333333333p+1");
+    assert(printFloat(1.0, f) == "                0x1p+0");
+    assert(printFloat(3.3, f) == "  0x1.a666666666666p+1");
+    assert(printFloat(2.9, f) == "  0x1.7333333333333p+1");
 }
 
 @safe unittest
@@ -7413,13 +7439,13 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     f.width = 22;
     f.flDash = true;
 
-    assert(printFloat(1.0f, f, FloatingPointControl.roundToNearest) == "0x1p+0                ");
-    assert(printFloat(3.3f, f, FloatingPointControl.roundToNearest) == "0x1.a66666p+1         ");
-    assert(printFloat(2.9f, f, FloatingPointControl.roundToNearest) == "0x1.733334p+1         ");
+    assert(printFloat(1.0f, f) == "0x1p+0                ");
+    assert(printFloat(3.3f, f) == "0x1.a66666p+1         ");
+    assert(printFloat(2.9f, f) == "0x1.733334p+1         ");
 
-    assert(printFloat(1.0, f, FloatingPointControl.roundToNearest) == "0x1p+0                ");
-    assert(printFloat(3.3, f, FloatingPointControl.roundToNearest) == "0x1.a666666666666p+1  ");
-    assert(printFloat(2.9, f, FloatingPointControl.roundToNearest) == "0x1.7333333333333p+1  ");
+    assert(printFloat(1.0, f) == "0x1p+0                ");
+    assert(printFloat(3.3, f) == "0x1.a666666666666p+1  ");
+    assert(printFloat(2.9, f) == "0x1.7333333333333p+1  ");
 }
 
 @safe unittest
@@ -7429,13 +7455,13 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     f.width = 22;
     f.flZero = true;
 
-    assert(printFloat(1.0f, f, FloatingPointControl.roundToNearest) == "0x00000000000000001p+0");
-    assert(printFloat(3.3f, f, FloatingPointControl.roundToNearest) == "0x0000000001.a66666p+1");
-    assert(printFloat(2.9f, f, FloatingPointControl.roundToNearest) == "0x0000000001.733334p+1");
+    assert(printFloat(1.0f, f) == "0x00000000000000001p+0");
+    assert(printFloat(3.3f, f) == "0x0000000001.a66666p+1");
+    assert(printFloat(2.9f, f) == "0x0000000001.733334p+1");
 
-    assert(printFloat(1.0, f, FloatingPointControl.roundToNearest) == "0x00000000000000001p+0");
-    assert(printFloat(3.3, f, FloatingPointControl.roundToNearest) == "0x001.a666666666666p+1");
-    assert(printFloat(2.9, f, FloatingPointControl.roundToNearest) == "0x001.7333333333333p+1");
+    assert(printFloat(1.0, f) == "0x00000000000000001p+0");
+    assert(printFloat(3.3, f) == "0x001.a666666666666p+1");
+    assert(printFloat(2.9, f) == "0x001.7333333333333p+1");
 }
 
 @safe unittest
@@ -7445,13 +7471,13 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     f.width = 22;
     f.flPlus = true;
 
-    assert(printFloat(1.0f, f, FloatingPointControl.roundToNearest) == "               +0x1p+0");
-    assert(printFloat(3.3f, f, FloatingPointControl.roundToNearest) == "        +0x1.a66666p+1");
-    assert(printFloat(2.9f, f, FloatingPointControl.roundToNearest) == "        +0x1.733334p+1");
+    assert(printFloat(1.0f, f) == "               +0x1p+0");
+    assert(printFloat(3.3f, f) == "        +0x1.a66666p+1");
+    assert(printFloat(2.9f, f) == "        +0x1.733334p+1");
 
-    assert(printFloat(1.0, f, FloatingPointControl.roundToNearest) == "               +0x1p+0");
-    assert(printFloat(3.3, f, FloatingPointControl.roundToNearest) == " +0x1.a666666666666p+1");
-    assert(printFloat(2.9, f, FloatingPointControl.roundToNearest) == " +0x1.7333333333333p+1");
+    assert(printFloat(1.0, f) == "               +0x1p+0");
+    assert(printFloat(3.3, f) == " +0x1.a666666666666p+1");
+    assert(printFloat(2.9, f) == " +0x1.7333333333333p+1");
 }
 
 @safe unittest
@@ -7462,13 +7488,13 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     f.flDash = true;
     f.flSpace = true;
 
-    assert(printFloat(1.0f, f, FloatingPointControl.roundToNearest) == " 0x1p+0               ");
-    assert(printFloat(3.3f, f, FloatingPointControl.roundToNearest) == " 0x1.a66666p+1        ");
-    assert(printFloat(2.9f, f, FloatingPointControl.roundToNearest) == " 0x1.733334p+1        ");
+    assert(printFloat(1.0f, f) == " 0x1p+0               ");
+    assert(printFloat(3.3f, f) == " 0x1.a66666p+1        ");
+    assert(printFloat(2.9f, f) == " 0x1.733334p+1        ");
 
-    assert(printFloat(1.0, f, FloatingPointControl.roundToNearest) == " 0x1p+0               ");
-    assert(printFloat(3.3, f, FloatingPointControl.roundToNearest) == " 0x1.a666666666666p+1 ");
-    assert(printFloat(2.9, f, FloatingPointControl.roundToNearest) == " 0x1.7333333333333p+1 ");
+    assert(printFloat(1.0, f) == " 0x1p+0               ");
+    assert(printFloat(3.3, f) == " 0x1.a666666666666p+1 ");
+    assert(printFloat(2.9, f) == " 0x1.7333333333333p+1 ");
 }
 
 @safe unittest
@@ -7477,64 +7503,60 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     f.spec = 'a';
     f.precision = 1;
 
-    // ties away from zero
-    /*
-    assert(printFloat(0x1.18p0, f, FloatingPointControl.roundToNearest) == "0x1.2p+0");
-    assert(printFloat(0x1.28p0, f, FloatingPointControl.roundToNearest) == "0x1.3p+0");
-    assert(printFloat(0x1.1ap0, f, FloatingPointControl.roundToNearest) == "0x1.2p+0");
-    assert(printFloat(0x1.16p0, f, FloatingPointControl.roundToNearest) == "0x1.1p+0");
-    assert(printFloat(0x1.10p0, f, FloatingPointControl.roundToNearest) == "0x1.1p+0");
-    assert(printFloat(-0x1.18p0, f, FloatingPointControl.roundToNearest) == "-0x1.2p+0");
-    assert(printFloat(-0x1.28p0, f, FloatingPointControl.roundToNearest) == "-0x1.3p+0");
-    assert(printFloat(-0x1.1ap0, f, FloatingPointControl.roundToNearest) == "-0x1.2p+0");
-    assert(printFloat(-0x1.16p0, f, FloatingPointControl.roundToNearest) == "-0x1.1p+0");
-    assert(printFloat(-0x1.10p0, f, FloatingPointControl.roundToNearest) == "-0x1.1p+0");
-     */
+    assert(printFloat(0x1.18p0, f, RoundingMode.toNearestTiesAwayFromZero) == "0x1.2p+0");
+    assert(printFloat(0x1.28p0, f, RoundingMode.toNearestTiesAwayFromZero) == "0x1.3p+0");
+    assert(printFloat(0x1.1ap0, f, RoundingMode.toNearestTiesAwayFromZero) == "0x1.2p+0");
+    assert(printFloat(0x1.16p0, f, RoundingMode.toNearestTiesAwayFromZero) == "0x1.1p+0");
+    assert(printFloat(0x1.10p0, f, RoundingMode.toNearestTiesAwayFromZero) == "0x1.1p+0");
+    assert(printFloat(-0x1.18p0, f, RoundingMode.toNearestTiesAwayFromZero) == "-0x1.2p+0");
+    assert(printFloat(-0x1.28p0, f, RoundingMode.toNearestTiesAwayFromZero) == "-0x1.3p+0");
+    assert(printFloat(-0x1.1ap0, f, RoundingMode.toNearestTiesAwayFromZero) == "-0x1.2p+0");
+    assert(printFloat(-0x1.16p0, f, RoundingMode.toNearestTiesAwayFromZero) == "-0x1.1p+0");
+    assert(printFloat(-0x1.10p0, f, RoundingMode.toNearestTiesAwayFromZero) == "-0x1.1p+0");
 
-    // ties to even
-    assert(printFloat(0x1.18p0, f, FloatingPointControl.roundToNearest) == "0x1.2p+0");
-    assert(printFloat(0x1.28p0, f, FloatingPointControl.roundToNearest) == "0x1.2p+0");
-    assert(printFloat(0x1.1ap0, f, FloatingPointControl.roundToNearest) == "0x1.2p+0");
-    assert(printFloat(0x1.16p0, f, FloatingPointControl.roundToNearest) == "0x1.1p+0");
-    assert(printFloat(0x1.10p0, f, FloatingPointControl.roundToNearest) == "0x1.1p+0");
-    assert(printFloat(-0x1.18p0, f, FloatingPointControl.roundToNearest) == "-0x1.2p+0");
-    assert(printFloat(-0x1.28p0, f, FloatingPointControl.roundToNearest) == "-0x1.2p+0");
-    assert(printFloat(-0x1.1ap0, f, FloatingPointControl.roundToNearest) == "-0x1.2p+0");
-    assert(printFloat(-0x1.16p0, f, FloatingPointControl.roundToNearest) == "-0x1.1p+0");
-    assert(printFloat(-0x1.10p0, f, FloatingPointControl.roundToNearest) == "-0x1.1p+0");
+    assert(printFloat(0x1.18p0, f) == "0x1.2p+0");
+    assert(printFloat(0x1.28p0, f) == "0x1.2p+0");
+    assert(printFloat(0x1.1ap0, f) == "0x1.2p+0");
+    assert(printFloat(0x1.16p0, f) == "0x1.1p+0");
+    assert(printFloat(0x1.10p0, f) == "0x1.1p+0");
+    assert(printFloat(-0x1.18p0, f) == "-0x1.2p+0");
+    assert(printFloat(-0x1.28p0, f) == "-0x1.2p+0");
+    assert(printFloat(-0x1.1ap0, f) == "-0x1.2p+0");
+    assert(printFloat(-0x1.16p0, f) == "-0x1.1p+0");
+    assert(printFloat(-0x1.10p0, f) == "-0x1.1p+0");
 
-    assert(printFloat(0x1.18p0, f, FloatingPointControl.roundToZero) == "0x1.1p+0");
-    assert(printFloat(0x1.28p0, f, FloatingPointControl.roundToZero) == "0x1.2p+0");
-    assert(printFloat(0x1.1ap0, f, FloatingPointControl.roundToZero) == "0x1.1p+0");
-    assert(printFloat(0x1.16p0, f, FloatingPointControl.roundToZero) == "0x1.1p+0");
-    assert(printFloat(0x1.10p0, f, FloatingPointControl.roundToZero) == "0x1.1p+0");
-    assert(printFloat(-0x1.18p0, f, FloatingPointControl.roundToZero) == "-0x1.1p+0");
-    assert(printFloat(-0x1.28p0, f, FloatingPointControl.roundToZero) == "-0x1.2p+0");
-    assert(printFloat(-0x1.1ap0, f, FloatingPointControl.roundToZero) == "-0x1.1p+0");
-    assert(printFloat(-0x1.16p0, f, FloatingPointControl.roundToZero) == "-0x1.1p+0");
-    assert(printFloat(-0x1.10p0, f, FloatingPointControl.roundToZero) == "-0x1.1p+0");
+    assert(printFloat(0x1.18p0, f, RoundingMode.toZero) == "0x1.1p+0");
+    assert(printFloat(0x1.28p0, f, RoundingMode.toZero) == "0x1.2p+0");
+    assert(printFloat(0x1.1ap0, f, RoundingMode.toZero) == "0x1.1p+0");
+    assert(printFloat(0x1.16p0, f, RoundingMode.toZero) == "0x1.1p+0");
+    assert(printFloat(0x1.10p0, f, RoundingMode.toZero) == "0x1.1p+0");
+    assert(printFloat(-0x1.18p0, f, RoundingMode.toZero) == "-0x1.1p+0");
+    assert(printFloat(-0x1.28p0, f, RoundingMode.toZero) == "-0x1.2p+0");
+    assert(printFloat(-0x1.1ap0, f, RoundingMode.toZero) == "-0x1.1p+0");
+    assert(printFloat(-0x1.16p0, f, RoundingMode.toZero) == "-0x1.1p+0");
+    assert(printFloat(-0x1.10p0, f, RoundingMode.toZero) == "-0x1.1p+0");
 
-    assert(printFloat(0x1.18p0, f, FloatingPointControl.roundUp) == "0x1.2p+0");
-    assert(printFloat(0x1.28p0, f, FloatingPointControl.roundUp) == "0x1.3p+0");
-    assert(printFloat(0x1.1ap0, f, FloatingPointControl.roundUp) == "0x1.2p+0");
-    assert(printFloat(0x1.16p0, f, FloatingPointControl.roundUp) == "0x1.2p+0");
-    assert(printFloat(0x1.10p0, f, FloatingPointControl.roundUp) == "0x1.1p+0");
-    assert(printFloat(-0x1.18p0, f, FloatingPointControl.roundUp) == "-0x1.1p+0");
-    assert(printFloat(-0x1.28p0, f, FloatingPointControl.roundUp) == "-0x1.2p+0");
-    assert(printFloat(-0x1.1ap0, f, FloatingPointControl.roundUp) == "-0x1.1p+0");
-    assert(printFloat(-0x1.16p0, f, FloatingPointControl.roundUp) == "-0x1.1p+0");
-    assert(printFloat(-0x1.10p0, f, FloatingPointControl.roundUp) == "-0x1.1p+0");
+    assert(printFloat(0x1.18p0, f, RoundingMode.up) == "0x1.2p+0");
+    assert(printFloat(0x1.28p0, f, RoundingMode.up) == "0x1.3p+0");
+    assert(printFloat(0x1.1ap0, f, RoundingMode.up) == "0x1.2p+0");
+    assert(printFloat(0x1.16p0, f, RoundingMode.up) == "0x1.2p+0");
+    assert(printFloat(0x1.10p0, f, RoundingMode.up) == "0x1.1p+0");
+    assert(printFloat(-0x1.18p0, f, RoundingMode.up) == "-0x1.1p+0");
+    assert(printFloat(-0x1.28p0, f, RoundingMode.up) == "-0x1.2p+0");
+    assert(printFloat(-0x1.1ap0, f, RoundingMode.up) == "-0x1.1p+0");
+    assert(printFloat(-0x1.16p0, f, RoundingMode.up) == "-0x1.1p+0");
+    assert(printFloat(-0x1.10p0, f, RoundingMode.up) == "-0x1.1p+0");
 
-    assert(printFloat(0x1.18p0, f, FloatingPointControl.roundDown) == "0x1.1p+0");
-    assert(printFloat(0x1.28p0, f, FloatingPointControl.roundDown) == "0x1.2p+0");
-    assert(printFloat(0x1.1ap0, f, FloatingPointControl.roundDown) == "0x1.1p+0");
-    assert(printFloat(0x1.16p0, f, FloatingPointControl.roundDown) == "0x1.1p+0");
-    assert(printFloat(0x1.10p0, f, FloatingPointControl.roundDown) == "0x1.1p+0");
-    assert(printFloat(-0x1.18p0, f, FloatingPointControl.roundDown) == "-0x1.2p+0");
-    assert(printFloat(-0x1.28p0, f, FloatingPointControl.roundDown) == "-0x1.3p+0");
-    assert(printFloat(-0x1.1ap0, f, FloatingPointControl.roundDown) == "-0x1.2p+0");
-    assert(printFloat(-0x1.16p0, f, FloatingPointControl.roundDown) == "-0x1.2p+0");
-    assert(printFloat(-0x1.10p0, f, FloatingPointControl.roundDown) == "-0x1.1p+0");
+    assert(printFloat(0x1.18p0, f, RoundingMode.down) == "0x1.1p+0");
+    assert(printFloat(0x1.28p0, f, RoundingMode.down) == "0x1.2p+0");
+    assert(printFloat(0x1.1ap0, f, RoundingMode.down) == "0x1.1p+0");
+    assert(printFloat(0x1.16p0, f, RoundingMode.down) == "0x1.1p+0");
+    assert(printFloat(0x1.10p0, f, RoundingMode.down) == "0x1.1p+0");
+    assert(printFloat(-0x1.18p0, f, RoundingMode.down) == "-0x1.2p+0");
+    assert(printFloat(-0x1.28p0, f, RoundingMode.down) == "-0x1.3p+0");
+    assert(printFloat(-0x1.1ap0, f, RoundingMode.down) == "-0x1.2p+0");
+    assert(printFloat(-0x1.16p0, f, RoundingMode.down) == "-0x1.2p+0");
+    assert(printFloat(-0x1.10p0, f, RoundingMode.down) == "-0x1.1p+0");
 }
 
 // for 100% coverage
@@ -7544,8 +7566,8 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     f.spec = 'a';
     f.precision = 3;
 
-    assert(printFloat(0x1.19f81p0, f, FloatingPointControl.roundToNearest) == "0x1.1a0p+0");
-    assert(printFloat(0x1.19f01p0, f, FloatingPointControl.roundToNearest) == "0x1.19fp+0");
+    assert(printFloat(0x1.19f81p0, f) == "0x1.1a0p+0");
+    assert(printFloat(0x1.19f01p0, f) == "0x1.19fp+0");
 }
 
 @safe unittest
@@ -7554,6 +7576,6 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     f.spec = 'A';
     f.precision = 3;
 
-    assert(printFloat(0x1.19f81p0, f, FloatingPointControl.roundToNearest) == "0X1.1A0P+0");
-    assert(printFloat(0x1.19f01p0, f, FloatingPointControl.roundToNearest) == "0X1.19FP+0");
+    assert(printFloat(0x1.19f81p0, f) == "0X1.1A0P+0");
+    assert(printFloat(0x1.19f01p0, f) == "0X1.19FP+0");
 }
