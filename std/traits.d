@@ -4585,8 +4585,11 @@ if (is(C == class) || is(C == interface))
                 alias CollectOverloads = AliasSeq!(); // no overloads in this hierarchy
         }
 
-        // duplicates in this tuple will be removed by shrink()
-        alias overloads = CollectOverloads!C;
+        static if (name == "__ctor" || name == "__dtor")
+            alias overloads = AliasSeq!(__traits(getOverloads, C, name));
+        else
+            // duplicates in this tuple will be removed by shrink()
+            alias overloads = CollectOverloads!C;
 
         // shrinkOne!args[0]    = the most derived one in the covariant siblings of target
         // shrinkOne!args[1..$] = non-covariant others
@@ -4682,6 +4685,40 @@ if (is(C == class) || is(C == interface))
     alias bfs = __traits(getOverloads, B, "f");
     assert(__traits(isSame, fs[0], bfs[0]) || __traits(isSame, fs[0], bfs[1]));
     assert(__traits(isSame, fs[1], bfs[0]) || __traits(isSame, fs[1], bfs[1]));
+}
+
+@safe unittest // Issue 8388
+{
+    class C
+    {
+        this() {}
+        this(int i) {}
+        this(int i, float j) {}
+        this(string s) {}
+
+        /*
+         Commented out, because this causes a cyclic dependency
+         between module constructors/destructors error. Might
+         be caused by issue 20529. */
+        // static this() {}
+
+        ~this() {}
+    }
+
+    class D : C
+    {
+        this() {}
+        ~this() {}
+    }
+
+    alias test_ctor = MemberFunctionsTuple!(C, "__ctor");
+    assert(test_ctor.length == 4);
+    alias test_dtor = MemberFunctionsTuple!(C, "__dtor");
+    assert(test_dtor.length == 1);
+    alias test2_ctor = MemberFunctionsTuple!(D, "__ctor");
+    assert(test2_ctor.length == 1);
+    alias test2_dtor = MemberFunctionsTuple!(D, "__dtor");
+    assert(test2_dtor.length == 1);
 }
 
 @safe unittest
