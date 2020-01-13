@@ -207,6 +207,12 @@ if (isBidirectionalRange!Range)
     assert(counter == iota(-4, 5).length);
 }
 
+// issue 15891
+@safe pure unittest
+{
+    assert([1].map!(x=>[x].map!(y=>y)).cache.front.front == 1);
+}
+
 /++
 Tip: `cache` is eager when evaluating elements. If calling front on the
 underlying range has a side effect, it will be observable before calling
@@ -343,9 +349,17 @@ private struct _Cache(R, bool bidir)
         source = range;
         if (!range.empty)
         {
-             caches[0] = source.front;
-             static if (bidir)
-                 caches[1] = source.back;
+            caches[0] = source.front;
+            static if (bidir)
+                caches[1] = source.back;
+        }
+        else
+        {
+            // needed, because the compiler cannot deduce, that 'caches' is initialized
+            // see issue 15891
+            caches[0] = UE.init;
+            static if (bidir)
+                caches[1] = UE.init;
         }
     }
 
@@ -380,7 +394,12 @@ private struct _Cache(R, bool bidir)
         if (!source.empty)
             caches[0] = source.front;
         else
-            caches = CacheTypes.init;
+        {
+            // see issue 15891
+            caches[0] = UE.init;
+            static if (bidir)
+                caches[1] = UE.init;
+        }
     }
     static if (bidir) void popBack()
     {
@@ -389,7 +408,11 @@ private struct _Cache(R, bool bidir)
         if (!source.empty)
             caches[1] = source.back;
         else
-            caches = CacheTypes.init;
+        {
+            // see issue 15891
+            caches[0] = UE.init;
+            caches[1] = UE.init;
+        }
     }
 
     static if (isForwardRange!R)
