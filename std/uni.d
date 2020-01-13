@@ -715,33 +715,6 @@ debug(std_uni) import std.stdio; // writefln, writeln
 
 private:
 
-version (unittest)
-{
-private:
-    struct TestAliasedString
-    {
-        string get() @safe @nogc pure nothrow { return _s; }
-        alias get this;
-        @disable this(this);
-        string _s;
-    }
-
-    bool testAliasedString(alias func, Args...)(string s, Args args)
-    {
-        import std.algorithm.comparison : equal;
-        auto a = func(TestAliasedString(s), args);
-        auto b = func(s, args);
-        static if (is(typeof(equal(a, b))))
-        {
-            // For ranges, compare contents instead of object identity.
-            return equal(a, b);
-        }
-        else
-        {
-            return a == b;
-        }
-    }
-}
 
 void copyBackwards(T,U)(T[] src, U[] dest)
 {
@@ -3509,14 +3482,10 @@ pure @safe unittest// Uint24 tests
     }}
 }
 
-version (unittest)
-{
-    private alias AllSets = AliasSeq!(InversionList!GcPolicy, InversionList!ReallocPolicy);
-}
-
 pure @safe unittest// core set primitives test
 {
     import std.conv : text;
+    alias AllSets = AliasSeq!(InversionList!GcPolicy, InversionList!ReallocPolicy);
     foreach (CodeList; AllSets)
     {
         CodeList a;
@@ -3638,6 +3607,7 @@ pure @safe unittest
 pure @safe unittest
 {   // full set operations
     import std.conv : text;
+    alias AllSets = AliasSeq!(InversionList!GcPolicy, InversionList!ReallocPolicy);
     foreach (CodeList; AllSets)
     {
         CodeList a, b, c, d;
@@ -9255,8 +9225,32 @@ if (isConvertibleToString!Range)
 
 @safe unittest
 {
+    static struct TestAliasedString
+    {
+        string get() @safe @nogc pure nothrow { return _s; }
+        alias get this;
+        @disable this(this);
+        string _s;
+    }
+
+    static bool testAliasedString(alias func, Args...)(string s, Args args)
+    {
+        import std.algorithm.comparison : equal;
+        auto a = func(TestAliasedString(s), args);
+        auto b = func(s, args);
+        static if (is(typeof(equal(a, b))))
+        {
+            // For ranges, compare contents instead of object identity.
+            return equal(a, b);
+        }
+        else
+        {
+            return a == b;
+        }
+    }
     assert(testAliasedString!asLowerCase("hEllo"));
     assert(testAliasedString!asUpperCase("hEllo"));
+    assert(testAliasedString!asCapitalized("hEllo"));
 }
 
 @safe unittest
@@ -9440,11 +9434,6 @@ if (isConvertibleToString!Range)
 {
     import std.traits : StringTypeOf;
     return asCapitalized!(StringTypeOf!Range)(str);
-}
-
-@safe unittest
-{
-    assert(testAliasedString!asCapitalized("hEllo"));
 }
 
 @safe pure nothrow @nogc unittest

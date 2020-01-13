@@ -1163,8 +1163,9 @@ version (Posix) @system unittest
     version (Posix)
     {
         import std.path : buildPath;
-        import std.file : remove, write, setAttributes;
+        import std.file : remove, write, setAttributes, tempDir;
         import core.sys.posix.sys.stat : S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IXGRP, S_IROTH, S_IXOTH;
+        import std.conv : to;
         string deleteme = buildPath(tempDir(), "deleteme.std.process.unittest.pid") ~ to!string(thisProcessID);
         write(deleteme, "");
         scope(exit) remove(deleteme);
@@ -1177,6 +1178,7 @@ version (Posix) @system unittest
 @system unittest // Specifying a working directory.
 {
     import std.path;
+    import std.file;
     TestScript prog = "echo foo>bar";
 
     auto directory = uniqueTempPath();
@@ -1191,6 +1193,7 @@ version (Posix) @system unittest
 @system unittest // Specifying a bad working directory.
 {
     import std.exception : assertThrown;
+    import std.file;
     TestScript prog = "echo";
 
     auto directory = uniqueTempPath();
@@ -1230,6 +1233,7 @@ version (Posix) @system unittest
 @system unittest // Reopening the standard streams (issue 13258)
 {
     import std.string;
+    import std.file;
     void fun()
     {
         spawnShell("echo foo").wait();
@@ -1360,6 +1364,7 @@ version (Windows)
 @system unittest
 {
     import std.string;
+    import std.conv : text;
     TestScript prog = "echo %0 %*";
     auto outputFn = uniqueTempPath();
     scope(exit) if (exists(outputFn)) remove(outputFn);
@@ -2771,6 +2776,7 @@ private struct TestScript
         version (Posix)
         {
             import core.sys.posix.sys.stat : chmod;
+            import std.conv : octal;
             chmod(path.tempCString(), octal!777);
         }
     }
@@ -3104,6 +3110,7 @@ private:
     {
         import std.algorithm.iteration : map;
         import std.array : array;
+        import std.conv : to;
         auto lpCommandLine = (to!(WCHAR[])(line) ~ '\0').ptr;
         int numArgs;
         auto args = CommandLineToArgvW(lpCommandLine, &numArgs);
@@ -3115,6 +3122,7 @@ private:
 
     @system unittest
     {
+        import std.conv : text;
         string[] testStrings = [
             `Hello`,
             `Hello, world`,
@@ -3778,11 +3786,6 @@ version (Posix)
 {
     import core.sys.posix.stdlib;
 }
-version (unittest)
-{
-    import std.conv, std.file, std.random;
-}
-
 
 private void toAStringz(in string[] a, const(char)**az)
 {
