@@ -6565,6 +6565,15 @@ refCountedStore.ensureInitialized). Otherwise, just issues $(D
 assert(refCountedStore.isInitialized)).
  */
     alias refCountedPayload this;
+
+    static if (is(T == struct) && !is(typeof((ref T t) => t.toString())))
+    {
+        string toString(this This)()
+        {
+            import std.conv : to;
+            return to!string(refCountedPayload);
+        }
+    }
 }
 
 ///
@@ -6692,6 +6701,24 @@ pure @system unittest
     }
     auto rc = RefCounted!(NoDefaultCtor, RefCountedAutoInitialize.no)(5);
     assert(rc.x == 5);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=20502
+@system unittest
+{
+    import std.conv : to;
+    // Check that string conversion is transparent for refcounted
+    // structs that do not have either toString or alias this.
+    struct A { Object a; }
+    auto a  = A(new Object());
+    auto r = refCounted(a);
+    assert(to!string(r) == to!string(a));
+    assert(to!string(cast(const) r) == to!string(cast(const) a));
+    // Check that string conversion is still transparent for refcounted
+    // structs that have alias this.
+    struct B { int b; alias b this; }
+    struct C { B b; alias b this; }
+    assert(to!string(refCounted(C(B(123)))) == to!string(C(B(123))));
 }
 
 /**
