@@ -2923,6 +2923,23 @@ useSnprintf:
 
 @safe unittest
 {
+    import std.math : FloatingPointControl;
+    assert(FloatingPointControl.rounding == FloatingPointControl.roundToNearest);
+
+    // issue 20320
+    real a = 0.16;
+    real b = 0.016;
+    assert(format("%.1f", a) == "0.2");
+//    assert(format("%.2f", b) == "0.02"); // Windows still fails here...
+
+    double a1 = 0.16;
+    double b1 = 0.016;
+    assert(format("%.1f", a1) == "0.2");
+    assert(format("%.2f", b1) == "0.02");
+}
+
+@safe unittest
+{
     double a = 123.456;
     double b = -123.456;
     double c = 123.0;
