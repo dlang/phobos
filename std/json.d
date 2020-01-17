@@ -1399,10 +1399,10 @@ void toJSON(Out)(
     auto ref Out json,
     const ref JSONValue root,
     in bool pretty = false,
-    in JSONOptions options = JSONOptions.none) @safe
+    in JSONOptions options = JSONOptions.none)
 if (isOutputRange!(Out,char))
 {
-    void toStringImpl(Char)(string str) @safe
+    void toStringImpl(Char)(string str)
     {
         json.put('"');
 
@@ -1463,7 +1463,7 @@ if (isOutputRange!(Out,char))
         json.put('"');
     }
 
-    void toString(string str) @safe
+    void toString(string str)
     {
         // Avoid UTF decoding when possible, as it is unnecessary when
         // processing JSON.
@@ -1473,7 +1473,19 @@ if (isOutputRange!(Out,char))
             toStringImpl!char(str);
     }
 
-    void toValue(ref const JSONValue value, ulong indentLevel) @safe
+    // recursive @safe inference is broken here
+    // workaround: if json.put is @safe, we should be too,
+    // so annotate the recursion as @safe manually
+    static if (isSafe!({ json.put(""); }))
+    {
+        void delegate(ref const JSONValue, ulong) @safe toValue;
+    }
+    else
+    {
+        void delegate(ref const JSONValue, ulong) @system toValue;
+    }
+
+    void toValueImpl(ref const JSONValue value, ulong indentLevel)
     {
         void putTabs(ulong additionalIndent = 0)
         {
@@ -1629,6 +1641,8 @@ if (isOutputRange!(Out,char))
         }
     }
 
+    toValue = &toValueImpl;
+
     toValue(root, 0);
 }
 
@@ -1644,6 +1658,15 @@ if (isOutputRange!(Out,char))
     JSONValue jv11 = JSONValue("\u00E9t\u00E9");
     assert(toJSON(jv11, false, JSONOptions.none) == `"été"`);
     assert(toJSON(jv1, false, JSONOptions.none) == `"été"`);
+}
+
+@system unittest // bugzilla 20511
+{
+    import std.format : formattedWrite;
+    import std.range : nullSink, outputRangeObject;
+
+    outputRangeObject!(const(char)[])(nullSink)
+        .formattedWrite!"%s"(JSONValue.init);
 }
 
 /**
