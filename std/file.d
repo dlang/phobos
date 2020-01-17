@@ -4940,7 +4940,7 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
                                    // called from a shared library on Android,
                                    // ie an apk
     else
-        string testdir = "deleteme.dmd.unittest.std.file" ~ to!string(thisProcessID); // needs to be relative
+        string testdir = tempDir.buildPath("deleteme.dmd.unittest.std.file" ~ to!string(thisProcessID));
     mkdirRecurse(buildPath(testdir, "somedir"));
     scope(exit) rmdirRecurse(testdir);
     write(buildPath(testdir, "somefile"), null);
