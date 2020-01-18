@@ -30,6 +30,8 @@ Windows x86 note:
 A DMD compatible libcurl static library can be downloaded from the dlang.org
 $(LINK2 http://downloads.dlang.org/other/index.html, download archive page).
 
+This module is not available for iOS, tvOS or watchOS.
+
 Compared to using libcurl directly this module allows simpler client code for
 common uses, requires no unsafe operations, and integrates better with the rest
 of the language. Futhermore it provides $(MREF_ALTTEXT range, std,range)
@@ -163,6 +165,16 @@ import std.range.primitives;
 import std.encoding : EncodingScheme;
 import std.traits : isSomeChar;
 import std.typecons : Flag, Yes, No, Tuple;
+
+version (iOS)
+    version = iOSDerived;
+else version (TVOS)
+    version = iOSDerived;
+else version (WatchOS)
+    version = iOSDerived;
+
+version (iOSDerived) {}
+else:
 
 version (StdUnittest)
 {
