@@ -52,6 +52,12 @@ import std.exception;
 
 import std.internal.cstring;
 
+version (iOS)
+    version = iOSDerived;
+else version (TVOS)
+    version = iOSDerived;
+else version (WatchOS)
+    version = iOSDerived;
 
 @safe:
 
@@ -2041,14 +2047,33 @@ static if (is(sockaddr_un))
     @safe unittest
     {
         import core.stdc.stdio : remove;
-        import std.file : deleteme;
+
+        version (iOSDerived)
+        {
+            // Slightly different version of `std.file.deleteme` to reduce the path
+            // length on iOS derived platforms. Due to the sandbox, the length
+            // of paths can quickly become too long.
+            static string deleteme()
+            {
+                import std.conv : text;
+                import std.process : thisProcessID;
+                import std.file : tempDir;
+
+                return text(tempDir, thisProcessID);
+            }
+        }
+
+        else
+            import std.file : deleteme;
 
         immutable ubyte[] data = [1, 2, 3, 4];
         Socket[2] pair;
 
-        auto names = [ deleteme ~ "-unix-socket" ];
+        const basePath = deleteme;
+        auto names = [ basePath ~ "-unix-socket" ];
         version (linux)
-            names ~= "\0" ~ deleteme ~ "-abstract\0unix\0socket";
+            names ~= "\0" ~ basePath ~ "-abstract\0unix\0socket";
+
         foreach (name; names)
         {
             auto address = new UnixAddress(name);
