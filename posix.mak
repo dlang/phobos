@@ -150,7 +150,7 @@ ifdef ENABLE_COVERAGE
 override DFLAGS  += -cov
 endif
 
-UDFLAGS=-unittest -version=StdUnittest -version=CoreUnittest
+UDFLAGS=-unittest -version=StdUnittest
 
 # Set DOTOBJ and DOTEXE
 ifeq (,$(findstring win,$(OS)))
