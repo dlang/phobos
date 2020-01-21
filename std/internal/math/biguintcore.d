@@ -1355,7 +1355,7 @@ int highestPowerBelowUlongMax(uint x) pure nothrow @safe
      return 2;
 }
 
-version (unittest)
+version (StdUnittest)
 {
 
 private int slowHighestPowerBelowUintMax(uint x) pure nothrow @safe

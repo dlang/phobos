@@ -7219,7 +7219,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 }
 
 // For testing non-forward-range input ranges
-version (unittest)
+version (StdUnittest)
 private static struct InputRangeString
 {
     private string s;

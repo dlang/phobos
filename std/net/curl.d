@@ -164,7 +164,7 @@ import std.encoding : EncodingScheme;
 import std.traits : isSomeChar;
 import std.typecons : Flag, Yes, No, Tuple;
 
-version (unittest)
+version (StdUnittest)
 {
     import std.socket : Socket, SocketShutdown;
 
@@ -222,7 +222,9 @@ version (unittest)
         return TestServer(addr, tid, sock);
     }
 
+    /** Test server */
     __gshared TestServer server;
+    /** Thread-local storage init */
     bool tlsInit;
 
     private ref TestServer testServer()

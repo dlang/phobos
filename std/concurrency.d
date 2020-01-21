@@ -747,7 +747,7 @@ do
 }
 
 // Make sure receive() works with free functions as well.
-version (unittest)
+version (StdUnittest)
 {
     private void receiveFunction(int x) {}
 }

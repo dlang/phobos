@@ -101,7 +101,7 @@ static import std.meta;
 import std.range.primitives;
 import std.traits;
 
-version (unittest)
+version (StdUnittest)
 {
 private:
     struct TestAliasedString
@@ -4031,7 +4031,7 @@ string expandTilde(string inputPath) @safe nothrow
                 assert(last_char > 1);
 
                 // Reserve C memory for the getpwnam_r() function.
-                version (unittest)
+                version (StdUnittest)
                     uint extra_memory_size = 2;
                 else
                     uint extra_memory_size = 5 * 1024;
@@ -4152,7 +4152,7 @@ string expandTilde(string inputPath) @safe nothrow
     }
 }
 
-version (unittest)
+version (StdUnittest)
 {
 private:
     /* Define a mock RandomAccessRange to use for unittesting.

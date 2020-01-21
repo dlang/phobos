@@ -120,7 +120,7 @@ else
     static assert(0, "No socket support for this platform yet.");
 }
 
-version (unittest)
+version (StdUnittest)
 {
     // Print a message on exception instead of failing the unittest.
     private void softUnittest(void delegate() @safe test, int line = __LINE__) @trusted

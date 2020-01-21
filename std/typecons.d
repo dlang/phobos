@@ -4957,7 +4957,7 @@ private static:
     alias Implementation = AutoImplement!(Issue17177, how, templateNot!isFinalFunction);
 }
 
-version (unittest)
+version (StdUnittest)
 {
     // Issue 10647
     // Add prefix "issue10647_" as a workaround for issue 1238

@@ -50,7 +50,7 @@ DFLAGS=-conf= -m$(MODEL) -O -release -w -de -preview=dip1000 -transition=complex
 
 ## Flags for compiling unittests
 
-UDFLAGS=-conf= -g -m$(MODEL) -O -w -preview=dip1000 -transition=complex -I$(DRUNTIME)\import -unittest
+UDFLAGS=-conf= -g -m$(MODEL) -O -w -preview=dip1000 -transition=complex -I$(DRUNTIME)\import -unittest -version=StdUnittest -version=CoreUnittest
 
 ## C compiler, linker, librarian
 
