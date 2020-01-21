@@ -3507,11 +3507,11 @@ static:
             if (GetEnvironmentVariableW(name.tempCStringW, null, 0) > 0)
                 return true;
             immutable err = GetLastError();
+            if (err == NO_ERROR)
+                return true; // zero-length environment variable on Wine / XP
             if (err == ERROR_ENVVAR_NOT_FOUND)
                 return false;
-            // some other windows error. Might actually be NO_ERROR, because
-            // GetEnvironmentVariable doesn't specify whether it sets on all
-            // failures
+            // Some other Windows error, throw.
             throw new WindowsException(err);
         }
         else static assert(0);
@@ -3615,12 +3615,10 @@ private:
                 immutable err = GetLastError();
                 if (err == ERROR_ENVVAR_NOT_FOUND)
                     return false;
-                // some other windows error. Might actually be NO_ERROR, because
-                // GetEnvironmentVariable doesn't specify whether it sets on all
-                // failures
-                throw new WindowsException(err);
+                if (err != NO_ERROR) // Some other Windows error, throw.
+                    throw new WindowsException(err);
             }
-            if (len == 1)
+            if (len <= 1)
             {
                 value = "";
                 return true;
