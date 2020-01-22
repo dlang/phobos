@@ -524,14 +524,13 @@ if (fun.length >= 1)
 }
 
 ///
-@safe unittest
+@safe @nogc unittest
 {
     import std.algorithm.comparison : equal;
-    import std.range : chain;
-    int[] arr1 = [ 1, 2, 3, 4 ];
-    int[] arr2 = [ 5, 6 ];
-    auto squares = map!(a => a * a)(chain(arr1, arr2));
-    assert(equal(squares, [ 1, 4, 9, 16, 25, 36 ]));
+    import std.range : chain, only;
+    auto squares =
+        chain(only(1, 2, 3, 4), only(5, 6)).map!(a => a * a);
+    assert(equal(squares, only(1, 4, 9, 16, 25, 36)));
 }
 
 /**
