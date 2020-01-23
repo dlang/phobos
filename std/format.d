@@ -1234,40 +1234,6 @@ if (is(Unqual!Char == Char))
         return false;
     }
 
-    @safe unittest
-    {
-        import std.array;
-        auto w = appender!(char[])();
-        auto f = FormatSpec("abc%sdef%sghi");
-        f.writeUpToNextSpec(w);
-        assert(w.data == "abc", w.data);
-        assert(f.trailing == "def%sghi", text(f.trailing));
-        f.writeUpToNextSpec(w);
-        assert(w.data == "abcdef", w.data);
-        assert(f.trailing == "ghi");
-        // test with embedded %%s
-        f = FormatSpec("ab%%cd%%ef%sg%%h%sij");
-        w.clear();
-        f.writeUpToNextSpec(w);
-        assert(w.data == "ab%cd%ef" && f.trailing == "g%%h%sij", w.data);
-        f.writeUpToNextSpec(w);
-        assert(w.data == "ab%cd%efg%h" && f.trailing == "ij");
-        // bug4775
-        f = FormatSpec("%%%s");
-        w.clear();
-        f.writeUpToNextSpec(w);
-        assert(w.data == "%" && f.trailing == "");
-        f = FormatSpec("%%%%%s%%");
-        w.clear();
-        while (f.writeUpToNextSpec(w)) continue;
-        assert(w.data == "%%%");
-
-        f = FormatSpec("a%%b%%c%");
-        w.clear();
-        assertThrown!FormatException(f.writeUpToNextSpec(w));
-        assert(w.data == "a%b%c" && f.trailing == "%");
-    }
-
     private void fillUp() scope
     {
         // Reset content
@@ -1590,18 +1556,6 @@ if (is(Unqual!Char == Char))
         return w.data;
     }
 
-    @safe unittest
-    {
-        // issue 5237
-        import std.array;
-        auto w = appender!string();
-        auto f = FormatSpec!char("%.16f");
-        f.writeUpToNextSpec(w); // dummy eating
-        assert(f.spec == 'f');
-        auto fmt = f.getCurFmtStr();
-        assert(fmt == "%.16f");
-    }
-
     private const(Char)[] headUpToNextSpec()
     {
         import std.array : appender;
@@ -1684,6 +1638,53 @@ if (is(Unqual!Char == Char))
         formatValue(writer, trailing, s);
         put(writer, '\n');
     }
+}
+
+@safe unittest
+{
+    import std.array;
+    import std.conv : text;
+    auto w = appender!(char[])();
+    auto f = FormatSpec!char("abc%sdef%sghi");
+    f.writeUpToNextSpec(w);
+    assert(w.data == "abc", w.data);
+    assert(f.trailing == "def%sghi", text(f.trailing));
+    f.writeUpToNextSpec(w);
+    assert(w.data == "abcdef", w.data);
+    assert(f.trailing == "ghi");
+    // test with embedded %%s
+    f = FormatSpec!char("ab%%cd%%ef%sg%%h%sij");
+    w.clear();
+    f.writeUpToNextSpec(w);
+    assert(w.data == "ab%cd%ef" && f.trailing == "g%%h%sij", w.data);
+    f.writeUpToNextSpec(w);
+    assert(w.data == "ab%cd%efg%h" && f.trailing == "ij");
+    // bug4775
+    f = FormatSpec!char("%%%s");
+    w.clear();
+    f.writeUpToNextSpec(w);
+    assert(w.data == "%" && f.trailing == "");
+    f = FormatSpec!char("%%%%%s%%");
+    w.clear();
+    while (f.writeUpToNextSpec(w)) continue;
+    assert(w.data == "%%%");
+
+    f = FormatSpec!char("a%%b%%c%");
+    w.clear();
+    assertThrown!FormatException(f.writeUpToNextSpec(w));
+    assert(w.data == "a%b%c" && f.trailing == "%");
+}
+
+@safe unittest
+{
+    // issue 5237
+    import std.array;
+    auto w = appender!string();
+    auto f = FormatSpec!char("%.16f");
+    f.writeUpToNextSpec(w); // dummy eating
+    assert(f.spec == 'f');
+    auto fmt = f.getCurFmtStr();
+    assert(fmt == "%.16f");
 }
 
 ///
