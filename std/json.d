@@ -1273,12 +1273,25 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
                 else
                 {
                     if (isNegative)
+                    {
                         value.store.integer = parse!long(data);
+                        value.type_tag = JSONType.integer;
+                    }
                     else
-                        value.store.uinteger = parse!ulong(data);
-
-                    value.type_tag = !isNegative && value.store.uinteger & (1UL << 63) ?
-                        JSONType.uinteger : JSONType.integer;
+                    {
+                        // only set the correct union member to not confuse CTFE
+                        ulong u = parse!ulong(data);
+                        if (u & (1UL << 63))
+                        {
+                            value.store.uinteger = u;
+                            value.type_tag = JSONType.uinteger;
+                        }
+                        else
+                        {
+                            value.store.integer = u;
+                            value.type_tag = JSONType.integer;
+                        }
+                    }
                 }
                 break;
 
@@ -1363,6 +1376,11 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
     auto s = Range(`{ "key1": { "key2": 1 }}`);
     auto json = parseJSON(s);
     assert(json["key1"]["key2"].integer == 1);
+}
+
+@safe unittest // issue 20527
+{
+    static assert(parseJSON(`{"a" : 2}`)["a"].integer == 2);
 }
 
 /**
