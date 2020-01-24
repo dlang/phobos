@@ -158,17 +158,17 @@ final class ArchiveMember
 
     private ubyte[] _compressedData;
     private ubyte[] _expandedData;
-    private uint offset;
+    private ulong offset;
     private uint _crc32;
-    private uint _compressedSize;
-    private uint _expandedSize;
+    private ulong _compressedSize;
+    private ulong _expandedSize;
     private CompressionMethod _compressionMethod;
     private ushort _madeVersion = 20;
     private ushort _extractVersion = 20;
     private uint _externalAttributes;
     private DosFileTime _time;
     // by default, no explicit order goes after explicit order
-    private uint _index = uint.max;
+    private ulong _index = ulong.max;
 
     /**
      * Contains some information on how to extract this archive. See
@@ -203,14 +203,14 @@ final class ArchiveMember
      *
      * Returns: Size of the compressed archive.
      */
-    @property @safe pure nothrow @nogc uint compressedSize() const { return _compressedSize; }
+    @property @safe pure nothrow @nogc ulong compressedSize() const { return _compressedSize; }
 
     /**
      * Size of data of member in uncompressed form.
      *
      * Returns: Size of uncompressed archive.
      */
-    @property @safe pure nothrow @nogc uint expandedSize() const { return _expandedSize; }
+    @property @safe pure nothrow @nogc ulong expandedSize() const { return _expandedSize; }
 
     /**
      * Should be 0.
@@ -242,7 +242,7 @@ final class ArchiveMember
     @property @safe void expandedData(ubyte[] ed)
     {
         _expandedData = ed;
-        _expandedSize  = to!uint(_expandedData.length);
+        _expandedSize  = to!ulong(_expandedData.length);
 
         // Clean old compressed data, if any
         _compressedData.length = 0;
@@ -365,8 +365,8 @@ final class ArchiveMember
      *
      * Returns: The index.
      */
-    @property uint index(uint value) @safe pure nothrow @nogc { return _index = value; }
-    @property uint index() const @safe pure nothrow @nogc { return _index; } /// ditto
+    @property ulong index(uint value) @safe pure nothrow @nogc { return _index = value; }
+    @property ulong index() const @safe pure nothrow @nogc { return _index; } /// ditto
 
     debug(print)
     {
@@ -415,6 +415,8 @@ final class ZipArchive
     import std.conv : to;
     import std.datetime.systime : DosFileTime;
 
+    alias fromLE = littleEndianToNative;
+
 private:
     // names are taken directly from the specification
     // https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT
@@ -426,14 +428,78 @@ private:
     static immutable ubyte[] zip64EndOfCentralDirSignature = [ 0x50, 0x4b, 0x06, 0x06 ];
     static immutable ubyte[] zip64EndOfCentralDirLocatorSignature = [ 0x50, 0x4b, 0x06, 0x07 ];
 
-    enum centralFileHeaderLength = 46;
-    enum localFileHeaderLength = 30;
-    enum endOfCentralDirLength = 22;
-    enum archiveExtraDataLength = 8;
-    enum digitalSignatureLength = 6;
-    enum zip64EndOfCentralDirLength = 56;
-    enum zip64EndOfCentralDirLocatorLength = 20;
-    enum dataDescriptorLength = 12;
+    struct EndOfCentralDirRecord
+    {
+        align (1): // just to make sure there are no gaps
+        ubyte[4] signature;
+        ubyte[2] numberOfThisDisk;
+        ubyte[2] numberOfCDDisk;
+        ubyte[2] entriesOnThisDisk;
+        ubyte[2] entries;
+        ubyte[4] size;
+        ubyte[4] offset;
+        ubyte[2] commentLength;
+    }
+
+    struct Zip64EndOfCentralDirLocatorRecord
+    {
+        align (1): // just to make sure there are no gaps
+        ubyte[4] signature;
+        ubyte[4] numberOfThisDisk;
+        ubyte[8] offset;
+        ubyte[4] numberOfDisks;
+    }
+
+    struct Zip64EndOfCentralDirRecord
+    {
+        align (1): // just to make sure there are no gaps
+        ubyte[4] signature;
+        ubyte[8] thisSize;
+        ubyte[2] versionMade;
+        ubyte[2] versionExtract;
+        ubyte[4] numberOfThisDisk;
+        ubyte[4] numberOfCDDisk;
+        ubyte[8] entriesOnThisDisk;
+        ubyte[8] entries;
+        ubyte[8] size;
+        ubyte[8] offset;
+    }
+
+    struct CentralFileHeader
+    {
+        align (1): // just to make sure there are no gaps
+        ubyte[4] signature;
+        ubyte[2] versionMade;
+        ubyte[2] versionExtract;
+        ubyte[2] flags;
+        ubyte[2] compressionMethod;
+        ubyte[4] time;
+        ubyte[4] crc32;
+        ubyte[4] compressedSize;
+        ubyte[4] expandedSize;
+        ubyte[2] nameLength;
+        ubyte[2] extraFieldLength;
+        ubyte[2] commentLength;
+        ubyte[2] startDisk;
+        ubyte[2] internalAttributes;
+        ubyte[4] externalAttributes;
+        ubyte[4] offset;
+    }
+
+    struct LocalFileHeader
+    {
+        align (1): // just to make sure there are no gaps
+        ubyte[4] signature;
+        ubyte[2] versionExtract;
+        ubyte[2] flags;
+        ubyte[2] compressionMethod;
+        ubyte[4] time;
+        ubyte[4] crc32;
+        ubyte[4] compressedSize;
+        ubyte[4] expandedSize;
+        ubyte[2] nameLength;
+        ubyte[2] extraFieldLength;
+    }
 
 public:
     string comment; /// The archive comment. Must be less than 65536 bytes in length.
@@ -571,7 +637,7 @@ public:
                     throw new ZipException("unsupported compression method");
             }
 
-            de._compressedSize = to!uint(de._compressedData.length);
+            de._compressedSize = to!ulong(de._compressedData.length);
             import std.zlib : crc32;
             () @trusted { de._crc32 = crc32(0, cast(void[]) de._expandedData); }();
         }
@@ -637,39 +703,48 @@ public:
         import std.algorithm.sorting : sort;
         import std.string : representation;
 
-        uint i;
-        uint directoryOffset;
+        size_t i;
+        size_t directoryOffset;
 
         enforce!ZipException(comment.length <= 0xFFFF, "archive comment longer than 65535");
 
         // Compress each member; compute size
-        uint archiveSize = 0;
-        uint directorySize = 0;
+        ulong archiveSize = 0;
+        ulong directorySize = 0;
         auto directory = _directory.byValue.array.sort!((x, y) => x.index < y.index).release;
         foreach (ArchiveMember de; directory)
         {
-            enforce!ZipException(to!ulong(archiveSize) + localFileHeaderLength + de.name.length
+            enforce!ZipException(archiveSize + LocalFileHeader.sizeof + de.name.length
                                  + de.extra.length + de.compressedSize + directorySize
-                                 + centralFileHeaderLength + de.name.length + de.extra.length
-                                 + de.comment.length + endOfCentralDirLength + comment.length
-                                 + zip64EndOfCentralDirLocatorLength + zip64EndOfCentralDirLength <= uint.max,
+                                 + CentralFileHeader.sizeof + de.name.length + de.extra.length
+                                 + de.comment.length + EndOfCentralDirRecord.sizeof + comment.length
+                                 + Zip64EndOfCentralDirLocatorRecord.sizeof
+                                 + Zip64EndOfCentralDirRecord.sizeof <= uint.max,
                                  "zip files bigger than 4 GB are unsupported");
 
-            archiveSize += localFileHeaderLength + de.name.length +
+            archiveSize += LocalFileHeader.sizeof + de.name.length +
                                 de.extra.length +
                                 de.compressedSize;
-            directorySize += centralFileHeaderLength + de.name.length +
+            directorySize += CentralFileHeader.sizeof + de.name.length +
                                 de.extra.length +
                                 de.comment.length;
         }
 
         if (!isZip64 && _directory.length > ushort.max)
             _isZip64 = true;
-        uint dataSize = archiveSize + directorySize + endOfCentralDirLength + cast(uint) comment.length;
+        ulong dataSize = archiveSize + directorySize + EndOfCentralDirRecord.sizeof + cast(uint) comment.length;
         if (isZip64)
-            dataSize += zip64EndOfCentralDirLocatorLength + zip64EndOfCentralDirLength;
+            dataSize += Zip64EndOfCentralDirLocatorRecord.sizeof + Zip64EndOfCentralDirRecord.sizeof;
 
-        _data = uninitializedArray!(ubyte[])(dataSize);
+        static if (size_t.sizeof < ulong.sizeof)
+        {
+            enforce(dataSize <= size_t.max, "cannot handle zip archives larger than 4 GB on 32bit computers");
+            _data = uninitializedArray!(ubyte[])(cast(size_t) dataSize);
+        }
+        else
+        {
+            _data = uninitializedArray!(ubyte[])(dataSize);
+        }
 
         // Populate the data[]
 
@@ -684,17 +759,28 @@ public:
             putUshort(i + 8,  de._compressionMethod);
             putUint  (i + 10, cast(uint) de.time);
             putUint  (i + 14, de.crc32);
-            putUint  (i + 18, de.compressedSize);
+            putUint  (i + 18, to!uint(de.compressedSize));
             putUint  (i + 22, to!uint(de.expandedSize));
             putUshort(i + 26, cast(ushort) de.name.length);
             putUshort(i + 28, cast(ushort) de.extra.length);
-            i += localFileHeaderLength;
+            i += LocalFileHeader.sizeof;
 
             _data[i .. i + de.name.length] = (de.name.representation)[];
             i += de.name.length;
             _data[i .. i + de.extra.length] = (cast(ubyte[]) de.extra)[];
             i += de.extra.length;
-            _data[i .. i + de.compressedSize] = de.compressedData[];
+
+            static if (size_t.sizeof < ulong.sizeof)
+            {
+                enforce(i + de.compressedSize <= size_t.max,
+                        "cannot handle zip archives larger than 4 GB on 32bit computers");
+                _data[i .. i + cast(size_t) de.compressedSize] = de.compressedData[];
+            }
+            else
+            {
+                _data[i .. i + de.compressedSize] = de.compressedData[];
+            }
+
             i += de.compressedSize;
         }
 
@@ -709,16 +795,16 @@ public:
             putUshort(i + 10, de._compressionMethod);
             putUint  (i + 12, cast(uint) de.time);
             putUint  (i + 16, de.crc32);
-            putUint  (i + 20, de.compressedSize);
-            putUint  (i + 24, de.expandedSize);
+            putUint  (i + 20, to!uint(de.compressedSize));
+            putUint  (i + 24, to!uint(de.expandedSize));
             putUshort(i + 28, cast(ushort) de.name.length);
             putUshort(i + 30, cast(ushort) de.extra.length);
             putUshort(i + 32, cast(ushort) de.comment.length);
             putUshort(i + 34, cast(ushort) 0);
             putUshort(i + 36, de.internalAttributes);
             putUint  (i + 38, de._externalAttributes);
-            putUint  (i + 42, de.offset);
-            i += centralFileHeaderLength;
+            putUint  (i + 42, to!uint(de.offset));
+            i += CentralFileHeader.sizeof;
 
             _data[i .. i + de.name.length] = (de.name.representation)[];
             i += de.name.length;
@@ -731,9 +817,9 @@ public:
         if (isZip64)
         {
             // Write zip64 end of central directory record
-            uint eocd64Offset = i;
+            ulong eocd64Offset = i;
             _data[i .. i + 4] = zip64EndOfCentralDirSignature;
-            putUlong (i + 4,  zip64EndOfCentralDirLength - 12);
+            putUlong (i + 4,  Zip64EndOfCentralDirRecord.sizeof - 12);
             putUshort(i + 12, zip64ExtractVersion);
             putUshort(i + 14, zip64ExtractVersion);
             putUint  (i + 16, cast(ushort) 0);
@@ -742,14 +828,14 @@ public:
             putUlong (i + 32, directory.length);
             putUlong (i + 40, directorySize);
             putUlong (i + 48, directoryOffset);
-            i += zip64EndOfCentralDirLength;
+            i += Zip64EndOfCentralDirRecord.sizeof;
 
             // Write zip64 end of central directory record locator
             _data[i .. i + 4] = zip64EndOfCentralDirLocatorSignature;
             putUint  (i + 4,  cast(ushort) 0);
             putUlong (i + 8,  eocd64Offset);
             putUint  (i + 16, 1);
-            i += zip64EndOfCentralDirLocatorLength;
+            i += Zip64EndOfCentralDirLocatorRecord.sizeof;
         }
 
         // Write end record
@@ -758,10 +844,10 @@ public:
         putUshort(i + 6,  cast(ushort) 0);
         putUshort(i + 8,  (totalEntries > ushort.max ? ushort.max : cast(ushort) totalEntries));
         putUshort(i + 10, (totalEntries > ushort.max ? ushort.max : cast(ushort) totalEntries));
-        putUint  (i + 12, directorySize);
-        putUint  (i + 16, directoryOffset);
+        putUint  (i + 12, to!uint(directorySize));
+        putUint  (i + 16, to!uint(directoryOffset));
         putUshort(i + 20, cast(ushort) comment.length);
-        i += endOfCentralDirLength;
+        i += EndOfCentralDirRecord.sizeof;
 
         // Write archive comment
         assert(i + comment.length == data.length, "Writing the archive comment failed.");
@@ -810,141 +896,66 @@ public:
     {
         this._data = cast(ubyte[]) buffer;
 
-        enforce!ZipException(data.length <= uint.max - 2, "zip files bigger than 4 GB are unsupported");
+        auto eocdrOffset = findEndOfCentralDirRecord();
 
-        _segs = [Segment(0, cast(uint) data.length)];
+        // init overlap checks
+        _segs = [Segment(0, data.length)];
 
-        uint i = findEndOfCentralDirRecord();
+        auto eocdr = getRecord!EndOfCentralDirRecord(eocdrOffset);
+        comment = cast(string) getSegment(eocdrOffset + EndOfCentralDirRecord.sizeof,
+                                          fromLE!ushort(eocdr.commentLength));
 
-        int endCommentLength = getUshort(i + 20);
-        comment = cast(string)(_data[i + endOfCentralDirLength .. i + endOfCentralDirLength + endCommentLength]);
+        _isZip64 = checkForZip64(eocdrOffset);
 
-        // end of central dir record
-        removeSegment(i, i + endOfCentralDirLength + endCommentLength);
-
-        uint k = i - zip64EndOfCentralDirLocatorLength;
-        if (k < i && _data[k .. k + 4] == zip64EndOfCentralDirLocatorSignature)
-        {
-            _isZip64 = true;
-            i = k;
-
-            // zip64 end of central dir record locator
-            removeSegment(k, k + zip64EndOfCentralDirLocatorLength);
-        }
-
-        uint directorySize;
-        uint directoryOffset;
-        uint directoryCount;
+        ulong count;
+        ulong end;
+        ulong next;
 
         if (isZip64)
         {
-            // Read Zip64 record data
-            ulong eocdOffset = getUlong(i + 8);
-            enforce!ZipException(eocdOffset + zip64EndOfCentralDirLength <= _data.length,
-                                 "corrupted directory");
+            auto z64eocdlr = getRecord!Zip64EndOfCentralDirLocatorRecord(eocdrOffset
+                                                                         - Zip64EndOfCentralDirLocatorRecord.sizeof);
+            auto z64eocdrOffset = fromLE!ulong(z64eocdlr.offset);
+            auto z64eocdr = getRecord!Zip64EndOfCentralDirRecord(z64eocdrOffset);
 
-            i = to!uint(eocdOffset);
-            enforce!ZipException(_data[i .. i + 4] == zip64EndOfCentralDirSignature,
+            count = fromLE!ulong(z64eocdr.entries);
+            next = fromLE!ulong(z64eocdr.offset);
+            auto size = fromLE!ulong(z64eocdr.size);
+            end = next + size;
+            auto entriesOnThisDisk = fromLE!ulong(z64eocdr.entriesOnThisDisk);
+
+            enforce!ZipException(z64eocdr.signature == zip64EndOfCentralDirSignature,
                                  "invalid Zip EOCD64 signature");
-
-            ulong eocd64Size = getUlong(i + 4);
-            enforce!ZipException(eocd64Size + i - 12 <= data.length,
-                                 "invalid Zip EOCD64 size");
-
-            // zip64 end of central dir record
-            removeSegment(i, cast(uint) (i + 12 + eocd64Size));
-
-            ulong numEntriesUlong = getUlong(i + 24);
-            ulong totalEntriesUlong = getUlong(i + 32);
-            ulong directorySizeUlong = getUlong(i + 40);
-            ulong directoryOffsetUlong = getUlong(i + 48);
-
-            enforce!ZipException(numEntriesUlong <= uint.max,
+            enforce!ZipException(entriesOnThisDisk <= uint.max,
                                  "supposedly more than 4294967296 files in archive");
-
-            enforce!ZipException(numEntriesUlong == totalEntriesUlong,
+            enforce!ZipException(entriesOnThisDisk == count,
                                  "multiple disk zips not supported");
-
-            enforce!ZipException(directorySizeUlong <= i && directoryOffsetUlong <= i
-                                 && directorySizeUlong + directoryOffsetUlong <= i,
+            enforce!ZipException(size <= z64eocdrOffset && next <= z64eocdrOffset && end <= z64eocdrOffset,
                                  "corrupted directory");
 
-            directoryCount = to!uint(totalEntriesUlong);
-            directorySize = to!uint(directorySizeUlong);
-            directoryOffset = to!uint(directoryOffsetUlong);
+            // The extensible data segment is not yet used, but we need to query it to make sure
+            // it doesn't overlap anything else. Might be provided to the user in the future.
+            //
+            // For whatever reasons, the designers of the zip format decided to reduce the size of this chunk by 12,
+            // so we need to add this 12 again to get the whole segment.
+            auto extensibleData = getSegment(fromLE!ulong(z64eocdlr.offset) + Zip64EndOfCentralDirRecord.sizeof,
+                                             fromLE!ulong(z64eocdr.thisSize) - Zip64EndOfCentralDirRecord.sizeof + 12);
+
         }
         else
         {
-            // Read end record data
-            directoryCount = getUshort(i + 10);
-            directorySize = getUint(i + 12);
-            directoryOffset = getUint(i + 16);
+            count = fromLE!ushort(eocdr.entries);
+            next = fromLE!uint(eocdr.offset);
+            end =  next + fromLE!uint(eocdr.size);
         }
 
-        i = directoryOffset;
-        for (int n = 0; n < directoryCount; n++)
+        foreach (n; 0 .. count)
         {
-            /* The format of an entry is:
-             *  'PK' 1, 2
-             *  directory info
-             *  path
-             *  extra data
-             *  comment
-             */
-
-            uint namelen;
-            uint extralen;
-            uint commentlen;
-
-            enforce!ZipException(_data[i .. i + 4] == centralFileHeaderSignature,
-                                 "wrong central file header signature found");
-            ArchiveMember de = new ArchiveMember();
-            de._index = n;
-            de._madeVersion = getUshort(i + 4);
-            de._extractVersion = getUshort(i + 6);
-            de.flags = getUshort(i + 8);
-            de._compressionMethod = cast(CompressionMethod) getUshort(i + 10);
-            de.time = cast(DosFileTime) getUint(i + 12);
-            de._crc32 = getUint(i + 16);
-            de._compressedSize = getUint(i + 20);
-            de._expandedSize = getUint(i + 24);
-            namelen = getUshort(i + 28);
-            extralen = getUshort(i + 30);
-            commentlen = getUshort(i + 32);
-            de.internalAttributes = getUshort(i + 36);
-            de._externalAttributes = getUint(i + 38);
-            de.offset = getUint(i + 42);
-
-            // central file header
-            removeSegment(i, i + centralFileHeaderLength + namelen + extralen + commentlen);
-
-            i += centralFileHeaderLength;
-
-            enforce!ZipException(i + namelen + extralen + commentlen <= directoryOffset + directorySize,
-                                 "invalid field lengths in file header found");
-
-            de.name = cast(string)(_data[i .. i + namelen]);
-            i += namelen;
-            de.extra = _data[i .. i + extralen];
-            i += extralen;
-            de.comment = cast(string)(_data[i .. i + commentlen]);
-            i += commentlen;
-
-            auto localFileHeaderNamelen = getUshort(de.offset + 26);
-            auto localFileHeaderExtralen = getUshort(de.offset + 28);
-
-            // file data
-            removeSegment(de.offset, de.offset + localFileHeaderLength + localFileHeaderNamelen
-                                     + localFileHeaderExtralen + de._compressedSize);
-
-            immutable uint dataOffset = de.offset + localFileHeaderLength
-                                        + localFileHeaderNamelen + localFileHeaderExtralen;
-            de._compressedData = _data[dataOffset .. dataOffset + de.compressedSize];
-
+            auto de = extractArchiveMember(n, next);
             _directory[de.name] = de;
         }
 
-        enforce!ZipException(i == directoryOffset + directorySize, "invalid directory entry 3");
+        enforce!ZipException(next == end, "invalid directory size");
     }
 
     @system unittest
@@ -1137,57 +1148,138 @@ public:
         assertThrown!ZipException(new ZipArchive(cast(void[]) file));
     }
 
-    private uint findEndOfCentralDirRecord()
+    private ulong findEndOfCentralDirRecord()
     {
         // end of central dir record can be followed by a comment of up to 2^^16-1 bytes
         // therefore we have to scan 2^^16 positions
 
-        uint endrecOffset = to!uint(data.length);
+        ulong endrecOffset = to!uint(data.length);
         foreach (i; 0 .. 2 ^^ 16)
         {
-            if (endOfCentralDirLength + i > data.length) break;
-            uint start = to!uint(data.length) - endOfCentralDirLength - i;
+            if (i + EndOfCentralDirRecord.sizeof > data.length) break;
+            ulong start = data.length - EndOfCentralDirRecord.sizeof - i;
 
-            if (data[start .. start + 4] != endOfCentralDirSignature) continue;
+            // resetting the segments to avoid exceptions due to intentionally overlaps
+            _segs = [Segment(0, data.length)];
+            auto eocdr = getRecord!EndOfCentralDirRecord(start);
+            if (eocdr.signature != endOfCentralDirSignature) continue;
 
-            auto numberOfThisDisc = getUshort(start + 4);
-            if (numberOfThisDisc != 0) continue; // no support for multiple volumes yet
+            if (fromLE!ushort(eocdr.numberOfThisDisk) != 0) continue; // no support for multiple volumes yet
+            if (fromLE!ushort(eocdr.numberOfCDDisk) != 0) continue; // dito
 
-            auto numberOfStartOfCentralDirectory = getUshort(start + 6);
-            if (numberOfStartOfCentralDirectory != 0) continue; // dito
+            ulong k = start - Zip64EndOfCentralDirLocatorRecord.sizeof;
+            static if (size_t.sizeof < ulong.sizeof)
+            {
+                enforce(k >= start || k + 4 <= size_t.max,
+                        "cannot handle zip archives larger than 4 GB on 32bit computers");
+                auto maybeZip64 = k < start
+                    && data[cast(size_t) k .. cast(size_t) (k + 4)] == zip64EndOfCentralDirLocatorSignature;
+            }
+            else
+            {
+                auto maybeZip64 = k < start && data[k .. k + 4] == zip64EndOfCentralDirLocatorSignature;
+            }
 
-            if (numberOfThisDisc < numberOfStartOfCentralDirectory) continue;
-
-            uint k = start - zip64EndOfCentralDirLocatorLength;
-            auto maybeZip64 = k < start && _data[k .. k + 4] == zip64EndOfCentralDirLocatorSignature;
-
-            auto totalNumberOfEntriesOnThisDisk = getUshort(start + 8);
-            auto totalNumberOfEntriesInCentralDir = getUshort(start + 10);
+            auto totalNumberOfEntriesOnThisDisk = fromLE!ushort(eocdr.entriesOnThisDisk);
+            auto totalNumberOfEntriesInCentralDir = fromLE!ushort(eocdr.entries);
 
             if (totalNumberOfEntriesOnThisDisk > totalNumberOfEntriesInCentralDir &&
                (!maybeZip64 || totalNumberOfEntriesOnThisDisk < 0xffff)) continue;
 
-            auto sizeOfCentralDirectory = getUint(start + 12);
+            auto sizeOfCentralDirectory = fromLE!uint(eocdr.size);
             if (sizeOfCentralDirectory > start &&
                (!maybeZip64 || sizeOfCentralDirectory < 0xffff)) continue;
 
-            auto offsetOfCentralDirectory = getUint(start + 16);
-            if (offsetOfCentralDirectory > start - sizeOfCentralDirectory &&
+            auto offsetOfCentralDirectory = fromLE!uint(eocdr.offset);
+            if (offsetOfCentralDirectory + sizeOfCentralDirectory > start &&
                (!maybeZip64 || offsetOfCentralDirectory < 0xffff)) continue;
 
-            auto zipfileCommentLength = getUshort(start + 20);
-            if (start + zipfileCommentLength + endOfCentralDirLength != data.length) continue;
+            if (start + EndOfCentralDirRecord.sizeof + fromLE!ushort(eocdr.commentLength) != data.length) continue;
 
-            enforce!ZipException(endrecOffset == to!uint(data.length),
-                                 "found more than one valid 'end of central dir record'");
-
+            enforce!ZipException(endrecOffset == data.length, "found more than one valid 'end of central dir record'");
             endrecOffset = start;
         }
 
-        enforce!ZipException(endrecOffset != to!uint(data.length),
+        enforce!ZipException(endrecOffset != data.length,
                              "found no valid 'end of central dir record'");
 
         return endrecOffset;
+    }
+
+    private bool checkForZip64(ulong offset)
+    {
+        // if we find a zip64locator signature at the correct place before the end of central dir
+        // record, we assume, that this archive is in zip64 format
+
+        if (offset < Zip64EndOfCentralDirLocatorRecord.sizeof) return false;
+
+        ulong z64offset = offset - Zip64EndOfCentralDirLocatorRecord.sizeof;
+
+        static if (size_t.sizeof < ulong.sizeof)
+        {
+            enforce(z64offset + 4 <= size_t.max,
+                    "cannot handle zip archives larger than 4 GB on 32bit computers");
+            return _data[cast(size_t) z64offset .. cast(size_t) (z64offset + 4)]
+                == zip64EndOfCentralDirLocatorSignature;
+        }
+        else
+        {
+            return _data[z64offset .. z64offset + 4] == zip64EndOfCentralDirLocatorSignature;
+        }
+    }
+
+    private auto extractArchiveMember(ulong n, ref ulong next)
+    {
+        auto cfh = getRecord!CentralFileHeader(next);
+        enforce!ZipException(cfh.signature == centralFileHeaderSignature, "invalid directory signature");
+
+        ArchiveMember de = new ArchiveMember();
+        de._index = n;
+        de._madeVersion = fromLE!ushort(cfh.versionMade);
+        de._extractVersion = fromLE!ushort(cfh.versionExtract);
+        de.flags = fromLE!ushort(cfh.flags);
+        de._compressionMethod = cast(CompressionMethod) fromLE!ushort(cfh.compressionMethod);
+        de.time = cast(DosFileTime) fromLE!uint(cfh.time);
+        de._crc32 = fromLE!uint(cfh.crc32);
+        de._compressedSize = fromLE!uint(cfh.compressedSize);
+        de._expandedSize = fromLE!uint(cfh.expandedSize);
+        de.internalAttributes = fromLE!ushort(cfh.internalAttributes);
+        de._externalAttributes = fromLE!uint(cfh.externalAttributes);
+        de.offset = fromLE!uint(cfh.offset);
+
+        ulong namelen = fromLE!ushort(cfh.nameLength);
+        ulong extralen = fromLE!ushort(cfh.extraFieldLength);
+        ulong commentlen = fromLE!ushort(cfh.commentLength);
+
+        next += CentralFileHeader.sizeof;
+        de.name = cast(string) getSegment(next, namelen);
+        next += namelen;
+        de.extra = getSegment(next, extralen);
+        next += extralen;
+        de.comment = cast(string) getSegment(next, commentlen);
+        next += commentlen;
+
+        extractAndVerifyArchiveMemberData(de);
+
+        return de;
+    }
+
+    private void extractAndVerifyArchiveMemberData(ref ArchiveMember de)
+    {
+        auto lfh = getRecord!LocalFileHeader(de.offset);
+        enforce!ZipException(lfh.signature == localFileHeaderSignature, "file header signature mismatch");
+        enforce!ZipException(fromLE!ushort(lfh.versionExtract) == de._extractVersion, "version mismatch");
+        enforce!ZipException(fromLE!ushort(lfh.flags) == de.flags, "flags mismatch");
+        enforce!ZipException(cast(CompressionMethod) fromLE!ushort(lfh.compressionMethod) == de._compressionMethod,
+                             "compression method mismatch");
+        enforce!ZipException(cast(DosFileTime) fromLE!uint(lfh.time) == de.time, "time mismatch");
+        enforce!ZipException(fromLE!uint(lfh.crc32) == de._crc32, "crc32 mismatch");
+        enforce!ZipException(fromLE!uint(lfh.compressedSize) == de._compressedSize, "compressed size mismatch");
+        enforce!ZipException(fromLE!uint(lfh.expandedSize) == de._expandedSize, "expanded size mismatch");
+
+        auto leaderlen = LocalFileHeader.sizeof + fromLE!ushort(lfh.nameLength) + fromLE!ushort(lfh.extraFieldLength);
+        auto leader = getSegment(de.offset + LocalFileHeader.sizeof, leaderlen - LocalFileHeader.sizeof);
+        de._compressedData = getSegment(de.offset + leaderlen, de.compressedSize);
     }
 
     /**
@@ -1210,19 +1302,22 @@ public:
         uint namelen;
         uint extralen;
 
-        enforce!ZipException(_data[de.offset .. de.offset + 4] == localFileHeaderSignature,
+        enforce(de.offset + 30 <= size_t.max,
+                "cannot handle zip archives larger than 4 GB on 32bit computers");
+
+        enforce!ZipException(_data[cast(size_t) de.offset .. cast(size_t) (de.offset + 4)] == localFileHeaderSignature,
                              "wrong local file header signature found");
 
         // These values should match what is in the main zip archive directory
-        de._extractVersion = getUshort(de.offset + 4);
-        de.flags = getUshort(de.offset + 6);
-        de._compressionMethod = cast(CompressionMethod) getUshort(de.offset + 8);
-        de.time = cast(DosFileTime) getUint(de.offset + 10);
-        de._crc32 = getUint(de.offset + 14);
-        de._compressedSize = max(getUint(de.offset + 18), de.compressedSize);
-        de._expandedSize = max(getUint(de.offset + 22), de.expandedSize);
-        namelen = getUshort(de.offset + 26);
-        extralen = getUshort(de.offset + 28);
+        de._extractVersion = getUshort(cast(size_t) (de.offset + 4));
+        de.flags = getUshort(cast(size_t) (de.offset + 6));
+        de._compressionMethod = cast(CompressionMethod) getUshort(cast(size_t) (de.offset + 8));
+        de.time = cast(DosFileTime) getUint(cast(size_t) (de.offset + 10));
+        de._crc32 = getUint(cast(size_t) (de.offset + 14));
+        de._compressedSize = max(getUint(cast(size_t) (de.offset + 18)), de.compressedSize);
+        de._expandedSize = max(getUint(cast(size_t) (de.offset + 22)), de.expandedSize);
+        namelen = getUshort(cast(size_t) (de.offset + 26));
+        extralen = getUshort(cast(size_t) (de.offset + 28));
 
         debug(print)
         {
@@ -1245,7 +1340,19 @@ public:
                 // It has the effect of not requiring the 2 byte header
                 // and 4 byte trailer.
                 import std.zlib : uncompress;
-                de._expandedData = cast(ubyte[]) uncompress(cast(void[]) de.compressedData, de.expandedSize, -15);
+
+                static if (size_t.sizeof < ulong.sizeof)
+                {
+                    enforce(de.expandedSize <= size_t.max,
+                            "cannot handle zip archives larger than 4 GB on 32bit computers");
+                    de._expandedData = cast(ubyte[]) uncompress(cast(void[]) de.compressedData,
+                                                                cast(size_t) de.expandedSize, -15);
+                }
+                else
+                {
+                    de._expandedData = cast(ubyte[]) uncompress(cast(void[]) de.compressedData, de.expandedSize, -15);
+                }
+
                 return de.expandedData;
 
             default:
@@ -1271,9 +1378,7 @@ public:
             "\x06\x00\x00\x00\x00\x01\x00\x01\x00\x4a\x00\x00\x00\x43\x00\x00"~
             "\x00\x00\x00";
 
-        auto za = new ZipArchive(cast(void[]) file);
-
-        assertThrown!ZipException(za.expand(za._directory["file"]));
+        assertThrown!ZipException(new ZipArchive(cast(void[]) file));
     }
 
     @system unittest
@@ -1294,9 +1399,7 @@ public:
             "\x06\x00\x00\x00\x00\x01\x00\x01\x00\x4a\x00\x00\x00\x43\x00\x00"~
             "\x00\x00\x00";
 
-        auto za = new ZipArchive(cast(void[]) file);
-
-        assertThrown!ZipException(za.expand(za._directory["file"]));
+        assertThrown!ZipException(new ZipArchive(cast(void[]) file));
     }
 
     @system unittest
@@ -1317,42 +1420,40 @@ public:
             "\x06\x00\x00\x00\x00\x01\x00\x01\x00\x4a\x00\x00\x00\x43\x00\x00"~
             "\x00\x00\x00";
 
-        auto za = new ZipArchive(cast(void[]) file);
-
-        assertThrown!ZipException(za.expand(za._directory["file"]));
+        assertThrown!ZipException(new ZipArchive(cast(void[]) file));
     }
 
     /* ============ Utility =================== */
 
-    @safe @nogc pure nothrow ushort getUshort(uint i)
+    @safe @nogc pure nothrow ushort getUshort(size_t i)
     {
         ubyte[2] result = data[i .. i + 2];
         return littleEndianToNative!ushort(result);
     }
 
-    @safe @nogc pure nothrow uint getUint(uint i)
+    @safe @nogc pure nothrow uint getUint(size_t i)
     {
         ubyte[4] result = data[i .. i + 4];
         return littleEndianToNative!uint(result);
     }
 
-    @safe @nogc pure nothrow ulong getUlong(uint i)
+    @safe @nogc pure nothrow ulong getUlong(size_t i)
     {
         ubyte[8] result = data[i .. i + 8];
         return littleEndianToNative!ulong(result);
     }
 
-    @safe @nogc pure nothrow void putUshort(uint i, ushort us)
+    @safe @nogc pure nothrow void putUshort(size_t i, ushort us)
     {
         data[i .. i + 2] = nativeToLittleEndian(us);
     }
 
-    @safe @nogc pure nothrow void putUint(uint i, uint ui)
+    @safe @nogc pure nothrow void putUint(size_t i, uint ui)
     {
         data[i .. i + 4] = nativeToLittleEndian(ui);
     }
 
-    @safe @nogc pure nothrow void putUlong(uint i, ulong ul)
+    @safe @nogc pure nothrow void putUlong(size_t i, ulong ul)
     {
         data[i .. i + 8] = nativeToLittleEndian(ul);
     }
@@ -1364,15 +1465,17 @@ private:
     // defines a segment of the zip file, including start, excluding end
     struct Segment
     {
-        uint start;
-        uint end;
+        ulong start;
+        ulong end;
     }
 
     // removes Segment start .. end from _segs
     // throws zipException if start .. end is not completely available in _segs;
-    void removeSegment(uint start, uint end) pure @safe
-    in (start < end, "segment invalid")
+    void removeSegment(ulong start, ulong end) pure @safe
+    in (start <= end, "segment invalid")
     {
+        if (start == end) return;
+
         auto found = false;
         size_t pos;
         foreach (i,seg;_segs)
@@ -1429,6 +1532,35 @@ private:
             removeSegment(0,100);
             assertThrown(removeSegment(0,100));
         }
+    }
+
+    auto getSegment(ulong start, ulong length) pure @safe
+    {
+        removeSegment(start, start + length);
+
+        static if (size_t.sizeof < ulong.sizeof)
+        {
+            enforce(start + length <= size_t.max,
+                    "cannot handle zip archives larger than 4 GB on 32bit computers");
+            return _data[cast(size_t) start .. cast(size_t) (start + length)];
+        }
+        else
+        {
+            return _data[start .. start + length];
+        }
+    }
+
+    auto getRecord(T)(ulong offset)
+    {
+        union U
+        {
+            ubyte[T.sizeof] data;
+            T result;
+        }
+
+        U tmp;
+        tmp.data = getSegment(offset, T.sizeof);
+        return tmp.result;
     }
 }
 
@@ -1698,6 +1830,17 @@ the quick brown fox jumps over the lazy dog\r
 
     auto za = new ZipArchive(cast(void[]) file);
     assert(za.directory.length == 0);
+}
+
+@system unittest
+{
+    import std.exception : assertThrown;
+
+    // issue #20523: Invalid data yields RangeError in ZipArchive constructor
+    auto file = "\x50\x4b\x01\x02\x50\x4b\x05\x06\x00\x00\x00\x00\xff\xff"~
+        "\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+
+    assertThrown!ZipException(new ZipArchive(cast(void[]) file));
 }
 
 // Non-Android POSIX-only, because we can't rely on the unzip command being
