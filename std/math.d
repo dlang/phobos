@@ -2461,17 +2461,28 @@ private T expImpl(T)(T x) @safe pure nothrow @nogc
         assert(exp(cast(T) 0.0) == 1.0);
 
         // NaN propagation. Doesn't set flags, bcos was already NaN.
-        version (IeeeFlagsSupport) resetIeeeFlags();
-        x = exp(T.nan);
-        version (IeeeFlagsSupport) f = ieeeFlags;
-        assert(isIdentical(abs(x), T.nan));
-        version (IeeeFlagsSupport) assert(f.flags == 0);
+        version (IeeeFlagsSupport)
+        {
+            resetIeeeFlags();
+            x = exp(T.nan);
+            f = ieeeFlags;
+            assert(isIdentical(abs(x), T.nan));
+            assert(f.flags == 0);
 
-        version (IeeeFlagsSupport) resetIeeeFlags();
-        x = exp(-T.nan);
-        version (IeeeFlagsSupport) f = ieeeFlags;
-        assert(isIdentical(abs(x), T.nan));
-        version (IeeeFlagsSupport) assert(f.flags == 0);
+            resetIeeeFlags();
+            x = exp(-T.nan);
+            f = ieeeFlags;
+            assert(isIdentical(abs(x), T.nan));
+            assert(f.flags == 0);
+        }
+        else
+        {
+            x = exp(T.nan);
+            assert(isIdentical(abs(x), T.nan));
+
+            x = exp(-T.nan);
+            assert(isIdentical(abs(x), T.nan));
+        }
 
         x = exp(NaN(0x123));
         assert(isIdentical(x, NaN(0x123)));
