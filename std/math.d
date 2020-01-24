@@ -8134,7 +8134,14 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
 
         if (isInfinity(y))
         {
-            if (fabs(x) > 1)
+            if (isInfinity(x))
+            {
+                if (!signbit(y) && !signbit(x))
+                    return F.infinity;
+                else
+                    return F.nan;
+            }
+            else if (fabs(x) > 1)
             {
                 if (signbit(y))
                     return +0.0;
@@ -8143,7 +8150,7 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
             }
             else if (fabs(x) == 1)
             {
-                return y * 0; // generate NaN.
+                return F.nan;
             }
             else // < 1
             {
@@ -8162,15 +8169,19 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
                 {
                     if (i == y && i & 1)
                         return -F.infinity;
-                    else
+                    else if (i == y)
                         return F.infinity;
+                    else
+                        return -F.nan;
                 }
                 else if (y < 0.0)
                 {
                     if (i == y && i & 1)
                         return -0.0;
-                    else
+                    else if (i == y)
                         return +0.0;
+                    else
+                        return F.nan;
                 }
             }
             else
@@ -8314,27 +8325,89 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
     return impl(x, y);
 }
 
+/*
+Of course, floating point numbers should be compared using isClose,
+but the main purpose of this test is to provide a good example,
+not to test the pow function, and this would lead to ugly examples like:
+
+writeln(isClose(pow(1.5, 10.0), 57.6650390625)); // true
+
+instead of
+
+writeln(pow(1.5, 10.0)); // 57.6650390625
+
+So I versioned this unittest out, because on some 32bit computers the tests
+would fail with ==.
+ */
+version (StdDDoc)
+{
+    ///
+    @safe pure nothrow @nogc unittest
+    {
+        assert(pow(2.0, 3.0) == 8.0);
+        assert(pow(1.5, 10.0) == 57.6650390625);
+
+        // square root of 9
+        assert(pow(9.0, 0.5) == 3.0);
+        // 10th root of 1024
+        assert(pow(1024.0, 0.1) == 2.0);
+
+        assert(pow(-4.0, 3.0) == -64.0);
+
+        // reciprocal of 4 ^^ 2
+        assert(pow(4.0, -2.0) == 0.0625);
+        // reciprocal of (-2) ^^ 3
+        assert(pow(-2.0, -3.0) == -0.125);
+
+        assert(pow(-2.5, 3.0) == -15.625);
+        // reciprocal of 2.5 ^^ 3
+        assert(pow(2.5, -3.0) == 0.064);
+        // reciprocal of (-2.5) ^^ 3
+        assert(pow(-2.5, -3.0) == -0.064);
+
+        // reciprocal of square root of 4
+        assert(pow(4.0, -0.5) == 0.5);
+
+        // per definition
+        assert(pow(0.0, 0.0) == 1.0);
+    }
+}
+
 ///
 @safe pure nothrow @nogc unittest
 {
-    assert(pow(1.0, 2.0) == 1.0);
-    assert(pow(0.0, 0.0) == 1.0);
-    assert(pow(1.5, 10.0).feqrel(57.665) > 16);
+    // the result is a complex number
+    // which cannot be represented as floating point number
+    import std.math : isNaN;
+    assert(isNaN(pow(-2.5, -1.5)) == true);
 
-    // special values
+    // use the ^^-operator of std.complex instead
+    import std.complex : complex;
+    auto c1 = complex(-2.5, 0.0);
+    auto c2 = complex(-1.5, 0.0);
+    auto result = c1 ^^ c2;
+    assert(isClose(result.re, -4.64705438e-17) == true);
+    assert(isClose(result.im, 2.52982213e-1) == true);
+}
+
+@safe pure nothrow @nogc unittest
+{
     assert(pow(1.5, real.infinity) == real.infinity);
     assert(pow(0.5, real.infinity) == 0.0);
     assert(pow(1.5, -real.infinity) == 0.0);
     assert(pow(0.5, -real.infinity) == real.infinity);
     assert(pow(real.infinity, 1.0) == real.infinity);
     assert(pow(real.infinity, -1.0) == 0.0);
+    assert(pow(real.infinity, real.infinity) == real.infinity);
     assert(pow(-real.infinity, 1.0) == -real.infinity);
     assert(pow(-real.infinity, 2.0) == real.infinity);
     assert(pow(-real.infinity, -1.0) == -0.0);
     assert(pow(-real.infinity, -2.0) == 0.0);
-    assert(pow(1.0, real.infinity) is -real.nan);
+    assert(isNaN(pow(1.0, real.infinity)));
     assert(pow(0.0, -1.0) == real.infinity);
     assert(pow(real.nan, 0.0) == 1.0);
+    assert(isNaN(pow(real.nan, 3.0)));
+    assert(isNaN(pow(3.0, real.nan)));
 }
 
 @safe pure nothrow @nogc unittest
@@ -8402,6 +8475,18 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
     // Test integer to float power.
     immutable uint twoI = 2;
     assert(approxEqual(pow(twoI, three), 8.0));
+}
+
+// issue 20508
+@safe pure nothrow @nogc unittest
+{
+    assert(isNaN(pow(-double.infinity, 0.5)));
+
+    assert(isNaN(pow(-real.infinity, real.infinity)));
+    assert(isNaN(pow(-real.infinity, -real.infinity)));
+    assert(isNaN(pow(-real.infinity, 1.234)));
+    assert(isNaN(pow(-real.infinity, -0.751)));
+    assert(pow(-real.infinity, 0.0) == 1.0);
 }
 
 /** Computes the value of a positive integer `x`, raised to the power `n`, modulo `m`.
