@@ -4375,14 +4375,14 @@ alias BlackHole(Base) = AutoImplement!(Base, generateEmptyFunction, isAbstractFu
     BlackHole!Foo o;
 }
 
-nothrow pure @safe unittest
+nothrow pure @nogc @safe unittest
 {
     static interface I
     {
-        void foo() nothrow pure @nogc @safe;
+        I foo() nothrow pure @nogc @safe return scope;
     }
 
-    auto cb = new BlackHole!I();
+    scope cb = new BlackHole!I();
     cb.foo();
 }
 
@@ -4424,12 +4424,12 @@ nothrow pure @safe unittest
 {
     static interface I
     {
-        void foo() nothrow pure @safe;
+        I foo() nothrow pure @safe return scope;
     }
 
     if (0) // Just checking attribute interference
     {
-        auto cw = new WhiteHole!I();
+        scope cw = new WhiteHole!I();
         cw.foo();
     }
 }
@@ -5211,6 +5211,8 @@ private static:
                 if (atts & FA.property) poatts ~= " @property";
                 if (atts & FA.safe    ) poatts ~= " @safe";
                 if (atts & FA.trusted ) poatts ~= " @trusted";
+                if (atts & FA.scope_ )  poatts ~= " scope";
+                if (atts & FA.return_ ) poatts ~= " return";
                 return poatts;
             }
             enum postAtts = make_postAtts();
