@@ -278,7 +278,7 @@ public:
       */
     void start() @nogc
     {
-        assert(!_flagStarted);
+        assert(!_flagStarted, "StopWatch already started");
         _flagStarted = true;
         _timeStart = TickDuration.currSystemTick;
     }
@@ -304,7 +304,7 @@ public:
       */
     void stop() @nogc
     {
-        assert(_flagStarted);
+        assert(_flagStarted, "StopWatch not running");
         _flagStarted = false;
         _timeMeasured += TickDuration.currSystemTick - _timeStart;
     }
