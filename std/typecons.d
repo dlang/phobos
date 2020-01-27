@@ -4375,6 +4375,17 @@ alias BlackHole(Base) = AutoImplement!(Base, generateEmptyFunction, isAbstractFu
     BlackHole!Foo o;
 }
 
+nothrow pure @safe unittest
+{
+    static interface I
+    {
+        void foo() nothrow pure @nogc @safe;
+    }
+
+    auto cb = new BlackHole!I();
+    cb.foo();
+}
+
 
 /**
 `WhiteHole!Base` is a subclass of `Base` which automatically implements
@@ -4408,10 +4419,25 @@ alias WhiteHole(Base) = AutoImplement!(Base, generateAssertTrap, isAbstractFunct
     assertThrown!NotImplementedError(c.notYetImplemented()); // throws an Error
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=20232
+nothrow pure @safe unittest
+{
+    static interface I
+    {
+        void foo() nothrow pure @safe;
+    }
+
+    if (0) // Just checking attribute interference
+    {
+        auto cw = new WhiteHole!I();
+        cw.foo();
+    }
+}
+
 // / ditto
 class NotImplementedError : Error
 {
-    this(string method)
+    this(string method) nothrow pure @safe
     {
         super(method ~ " is not implemented");
     }
