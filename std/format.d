@@ -6059,53 +6059,6 @@ if (isInputRange!Range)
     return unformatValue!T(input, spec);
 }
 
-
-// Legacy implementation
-// @@@DEPRECATED_2019-01@@@
-deprecated("Use std.demangle")
-enum Mangle : char
-{
-    Tvoid     = 'v',
-    Tbool     = 'b',
-    Tbyte     = 'g',
-    Tubyte    = 'h',
-    Tshort    = 's',
-    Tushort   = 't',
-    Tint      = 'i',
-    Tuint     = 'k',
-    Tlong     = 'l',
-    Tulong    = 'm',
-    Tfloat    = 'f',
-    Tdouble   = 'd',
-    Treal     = 'e',
-
-    Tifloat   = 'o',
-    Tidouble  = 'p',
-    Tireal    = 'j',
-    Tcfloat   = 'q',
-    Tcdouble  = 'r',
-    Tcreal    = 'c',
-
-    Tchar     = 'a',
-    Twchar    = 'u',
-    Tdchar    = 'w',
-
-    Tarray    = 'A',
-    Tsarray   = 'G',
-    Taarray   = 'H',
-    Tpointer  = 'P',
-    Tfunction = 'F',
-    Tident    = 'I',
-    Tclass    = 'C',
-    Tstruct   = 'S',
-    Tenum     = 'E',
-    Ttypedef  = 'T',
-    Tdelegate = 'D',
-
-    Tconst    = 'x',
-    Timmutable = 'y',
-}
-
 private bool needToSwapEndianess(Char)(scope const ref FormatSpec!Char f)
 {
     import std.system : endian, Endian;
