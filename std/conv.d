@@ -1937,7 +1937,9 @@ $(UL
 */
 private T toImpl(T, S)(S value)
 if (isInputRange!S && isSomeChar!(ElementEncodingType!S) &&
-    !isExactSomeString!T && is(typeof(parse!T(value))))
+    !isExactSomeString!T && is(typeof(parse!T(value))) &&
+    // issue 20539
+    !(is(T == enum) && is(typeof(value == OriginalType!T.init)) && !isSomeString!(OriginalType!T)))
 {
     scope(success)
     {
@@ -2078,6 +2080,48 @@ if (is(T == enum) && !is(S == enum)
     assertThrown!ConvException(to!En8143(5));   // matches none
     En8143[][] m1 = to!(En8143[][])([[10, 30], [30, 10]]);
     assert(m1 == [[En8143.A, En8143.C], [En8143.C, En8143.A]]);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=20539
+@safe pure unittest
+{
+    import std.exception : assertNotThrown;
+
+    // To test that the bug is fixed it is required that the struct is static,
+    // otherwise, the frame pointer makes the test pass even if the bug is not
+    // fixed.
+
+    static struct A
+    {
+        auto opEquals(U)(U)
+        {
+            return true;
+        }
+    }
+
+    enum ColorA
+    {
+        red = A()
+    }
+
+    assertNotThrown("xxx".to!ColorA);
+
+    // This is a guard for the future.
+
+    struct B
+    {
+        auto opEquals(U)(U)
+        {
+            return true;
+        }
+    }
+
+    enum ColorB
+    {
+        red = B()
+    }
+
+    assertNotThrown("xxx".to!ColorB);
 }
 
 /***************************************************************
