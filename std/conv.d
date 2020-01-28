@@ -1890,7 +1890,9 @@ $(UL
 */
 private T toImpl(T, S)(S value)
 if (isInputRange!S && isSomeChar!(ElementEncodingType!S) &&
-    !isExactSomeString!T && is(typeof(parse!T(value))))
+    !isExactSomeString!T && is(typeof(parse!T(value))) &&
+    // issue 20539
+    !(is(T == enum) && is(typeof(value == OriginalType!T.init)) && !isSomeString!(OriginalType!T)))
 {
     scope(success)
     {
@@ -2030,6 +2032,49 @@ if (is(T == enum) && !is(S == enum)
     assertThrown!ConvException(to!En8143(5));   // matches none
     En8143[][] m1 = to!(En8143[][])([[10, 30], [30, 10]]);
     assert(m1 == [[En8143.A, En8143.C], [En8143.C, En8143.A]]);
+}
+
+// issue 20539
+@safe pure unittest
+{
+    // needs to be static, because else a frame pointer issue makes
+    // it work unintentionally; see next unittest for the same test
+    // with the struct being not static
+    static struct A
+    {
+        auto opEquals(U)(U)
+        {
+            return true;
+        }
+    }
+
+    enum Color
+    {
+        red = A()
+    }
+
+    import std.exception : assertNotThrown;
+    assertNotThrown("xxx".to!Color);
+}
+
+// issue 20539
+@safe pure unittest
+{
+    struct A
+    {
+        auto opEquals(U)(U)
+        {
+            return true;
+        }
+    }
+
+    enum Color
+    {
+        red = A()
+    }
+
+    import std.exception : assertNotThrown;
+    assertNotThrown("xxx".to!Color);
 }
 
 /***************************************************************
