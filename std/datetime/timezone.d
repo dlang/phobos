@@ -1959,7 +1959,7 @@ public:
       +/
     override long tzToUTC(long adjTime) @safe const nothrow
     {
-        assert(!_transitions.empty);
+        assert(!_transitions.empty, "UTC offset's not available");
 
         immutable leapSecs = calculateLeapSeconds(adjTime);
         time_t unixTime = stdTimeToUnixTime(adjTime);
@@ -2991,7 +2991,8 @@ else version (Windows)
 
                 scope tziVal = tzKey.getValue("TZI");
                 auto binVal = tziVal.value_BINARY;
-                assert(binVal.length == REG_TZI_FORMAT.sizeof);
+                assert(binVal.length == REG_TZI_FORMAT.sizeof,
+                        "Unexpected size while getTimeZone with name " ~ name);
                 auto tziFmt = cast(REG_TZI_FORMAT*) binVal.ptr;
 
                 TIME_ZONE_INFORMATION tzInfo;
@@ -3102,7 +3103,7 @@ else version (Windows)
                 immutable result = SystemTimeToTzSpecificLocalTime(cast(TIME_ZONE_INFORMATION*) tzInfo,
                                                                    &utcTime,
                                                                    &otherTime);
-                assert(result);
+                assert(result, "Failed to create SystemTimeToTzSpecificLocalTime");
 
                 immutable otherDateTime = DateTime(otherTime.wYear,
                                                    otherTime.wMonth,
@@ -3116,7 +3117,7 @@ else version (Windows)
                 if (minutes == tzInfo.DaylightBias)
                     return true;
 
-                assert(minutes == tzInfo.StandardBias);
+                assert(minutes == tzInfo.StandardBias, "Unexpected difference");
 
                 return false;
             }
@@ -3196,6 +3197,7 @@ else version (Windows)
                                                                            &localTime,
                                                                            &utcTime);
                         assert(result);
+                        assert(result, "Failed to create _tzToUTC");
 
                         immutable utcDateTime = DateTime(utcTime.wYear,
                                                          utcTime.wMonth,
@@ -3210,7 +3212,7 @@ else version (Windows)
                         if (minutes == tzInfo.DaylightBias)
                             return true;
 
-                        assert(minutes == tzInfo.StandardBias);
+                        assert(minutes == tzInfo.StandardBias, "Unexpected difference");
 
                         return false;
                     }
