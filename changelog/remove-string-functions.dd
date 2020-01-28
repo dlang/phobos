@@ -1,0 +1,5 @@
+Removed deprecated functions from `std.string`
+
+The deprecated functions `inPattern`, `countchars`, `removechars`, `squeeze`
+and `munch` in `std.string` have been removed. Any code that still needs
+them can use [UndeaD](https://github.com/dlang/undeaD) instead.
