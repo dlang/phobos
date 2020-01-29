@@ -7731,8 +7731,14 @@ T nextafter(T)(const T x, const T y) @safe pure nothrow @nogc
     enum real c = 3;
     static assert(is(typeof(nextafter(c, c)) == real));
     //static assert(nextafter(c, c.infinity) > c);
-    static assert(isNaN(nextafter(c, c.nan)));
-    static assert(isNaN(nextafter(c.nan, c)));
+
+    enum real negZero = nextafter(+0.0L, -0.0L); // specially CTFEable
+    static assert(negZero == -0.0L);
+    static assert(signbit(negZero));
+
+    static assert(nextafter(c, c) == c); // ditto
+    static assert(isNaN(nextafter(c, c.nan))); // ditto
+    static assert(isNaN(nextafter(c.nan, c))); // ditto
 }
 
 //real nexttoward(real x, real y) { return core.stdc.math.nexttowardl(x, y); }
