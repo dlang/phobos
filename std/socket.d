@@ -2024,6 +2024,8 @@ static if (is(sockaddr_un))
         @property string path() @trusted const pure
         {
             auto len = _nameLen - sockaddr_un.init.sun_path.offsetof;
+            if (len == 0)
+                return null; // An empty path may be returned from getpeername
             // For pathname socket address we need to strip off the terminating '\0'
             if (sun.sun_path.ptr[0])
                 --len;
@@ -2073,6 +2075,12 @@ static if (is(sockaddr_un))
             auto buf = new ubyte[data.length];
             pair[1].receive(buf);
             assert(buf == data);
+
+            // getpeername is free to return an empty name for a unix
+            // domain socket pair or unbound socket. Let's confirm it
+            // returns successfully and doesn't throw anything.
+            // See https://issues.dlang.org/show_bug.cgi?id=20544
+            assertNotThrown(pair[1].remoteAddress().toString());
         }
     }
 }
