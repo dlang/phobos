@@ -1,0 +1,12 @@
+Replaced `approxEqual` by `isClose` in std.math.
+
+The template `approxEqual` for comparing floating point numbers has
+been replaced by the template `isClose`, which has better default
+values and is symmetric in its arguments.
+
+To (almost) keep the current behaviour of `approxEqual(a, b)` use
+`isClose(a, b, 1e-2, 1e-2)`, but we recommend to adjust the code to
+make it work with `isClose(a, b)`.
+
+In one of the next releases `approxEqual` will be deprecated and
+eventually removed.
