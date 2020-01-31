@@ -7665,6 +7665,7 @@ float nextDown(float x) @safe pure nothrow @nogc
  * If y > x, the result will be the next largest floating-point value;
  * if y < x, the result will be the next smallest value.
  * If x == y, the result is y.
+ * If x or y is a NaN, the result is a NaN.
  *
  * Remarks:
  * This function is not generally very useful; it's almost always better to use
@@ -7677,7 +7678,16 @@ float nextDown(float x) @safe pure nothrow @nogc
  */
 T nextafter(T)(const T x, const T y) @safe pure nothrow @nogc
 {
-    if (x == y) return y;
+    if (x == y || isNaN(y))
+    {
+        return y;
+    }
+
+    if (isNaN(x))
+    {
+        return x;
+    }
+
     return ((y>x) ? nextUp(x) :  nextDown(x));
 }
 
@@ -7687,14 +7697,20 @@ T nextafter(T)(const T x, const T y) @safe pure nothrow @nogc
     float a = 1;
     assert(is(typeof(nextafter(a, a)) == float));
     assert(nextafter(a, a.infinity) > a);
+    assert(isNaN(nextafter(a, a.nan)));
+    assert(isNaN(nextafter(a.nan, a)));
 
     double b = 2;
     assert(is(typeof(nextafter(b, b)) == double));
     assert(nextafter(b, b.infinity) > b);
+    assert(isNaN(nextafter(b, b.nan)));
+    assert(isNaN(nextafter(b.nan, b)));
 
     real c = 3;
     assert(is(typeof(nextafter(c, c)) == real));
     assert(nextafter(c, c.infinity) > c);
+    assert(isNaN(nextafter(c, c.nan)));
+    assert(isNaN(nextafter(c.nan, c)));
 }
 
 @safe pure nothrow @nogc unittest
@@ -7703,14 +7719,26 @@ T nextafter(T)(const T x, const T y) @safe pure nothrow @nogc
     enum float a = 1;
     static assert(is(typeof(nextafter(a, a)) == float));
     static assert(nextafter(a, a.infinity) > a);
+    static assert(isNaN(nextafter(a, a.nan)));
+    static assert(isNaN(nextafter(a.nan, a)));
 
     enum double b = 2;
     static assert(is(typeof(nextafter(b, b)) == double));
     static assert(nextafter(b, b.infinity) > b);
+    static assert(isNaN(nextafter(b, b.nan)));
+    static assert(isNaN(nextafter(b.nan, b)));
 
-    //enum real c = 3;
-    //static assert(is(typeof(nextafter(c, c)) == real));
+    enum real c = 3;
+    static assert(is(typeof(nextafter(c, c)) == real));
     //static assert(nextafter(c, c.infinity) > c);
+
+    enum real negZero = nextafter(+0.0L, -0.0L); // specially CTFEable
+    static assert(negZero == -0.0L);
+    static assert(signbit(negZero));
+
+    static assert(nextafter(c, c) == c); // ditto
+    static assert(isNaN(nextafter(c, c.nan))); // ditto
+    static assert(isNaN(nextafter(c.nan, c))); // ditto
 }
 
 //real nexttoward(real x, real y) { return core.stdc.math.nexttowardl(x, y); }
