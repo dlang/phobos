@@ -1273,12 +1273,25 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
                 else
                 {
                     if (isNegative)
+                    {
                         value.store.integer = parse!long(data);
+                        value.type_tag = JSONType.integer;
+                    }
                     else
-                        value.store.uinteger = parse!ulong(data);
-
-                    value.type_tag = !isNegative && value.store.uinteger & (1UL << 63) ?
-                        JSONType.uinteger : JSONType.integer;
+                    {
+                        // only set the correct union member to not confuse CTFE
+                        ulong u = parse!ulong(data);
+                        if (u & (1UL << 63))
+                        {
+                            value.store.uinteger = u;
+                            value.type_tag = JSONType.uinteger;
+                        }
+                        else
+                        {
+                            value.store.integer = u;
+                            value.type_tag = JSONType.integer;
+                        }
+                    }
                 }
                 break;
 
@@ -1365,6 +1378,11 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
     assert(json["key1"]["key2"].integer == 1);
 }
 
+@safe unittest // issue 20527
+{
+    static assert(parseJSON(`{"a" : 2}`)["a"].integer == 2);
+}
+
 /**
 Parses a serialized string and returns a tree of JSON values.
 Throws: $(LREF JSONException) if the depth exceeds the max depth.
@@ -1399,10 +1417,10 @@ void toJSON(Out)(
     auto ref Out json,
     const ref JSONValue root,
     in bool pretty = false,
-    in JSONOptions options = JSONOptions.none) @safe
+    in JSONOptions options = JSONOptions.none)
 if (isOutputRange!(Out,char))
 {
-    void toStringImpl(Char)(string str) @safe
+    void toStringImpl(Char)(string str)
     {
         json.put('"');
 
@@ -1463,7 +1481,7 @@ if (isOutputRange!(Out,char))
         json.put('"');
     }
 
-    void toString(string str) @safe
+    void toString(string str)
     {
         // Avoid UTF decoding when possible, as it is unnecessary when
         // processing JSON.
@@ -1473,7 +1491,19 @@ if (isOutputRange!(Out,char))
             toStringImpl!char(str);
     }
 
-    void toValue(ref const JSONValue value, ulong indentLevel) @safe
+    // recursive @safe inference is broken here
+    // workaround: if json.put is @safe, we should be too,
+    // so annotate the recursion as @safe manually
+    static if (isSafe!({ json.put(""); }))
+    {
+        void delegate(ref const JSONValue, ulong) @safe toValue;
+    }
+    else
+    {
+        void delegate(ref const JSONValue, ulong) @system toValue;
+    }
+
+    void toValueImpl(ref const JSONValue value, ulong indentLevel)
     {
         void putTabs(ulong additionalIndent = 0)
         {
@@ -1629,6 +1659,8 @@ if (isOutputRange!(Out,char))
         }
     }
 
+    toValue = &toValueImpl;
+
     toValue(root, 0);
 }
 
@@ -1644,6 +1676,15 @@ if (isOutputRange!(Out,char))
     JSONValue jv11 = JSONValue("\u00E9t\u00E9");
     assert(toJSON(jv11, false, JSONOptions.none) == `"été"`);
     assert(toJSON(jv1, false, JSONOptions.none) == `"été"`);
+}
+
+@system unittest // bugzilla 20511
+{
+    import std.format : formattedWrite;
+    import std.range : nullSink, outputRangeObject;
+
+    outputRangeObject!(const(char)[])(nullSink)
+        .formattedWrite!"%s"(JSONValue.init);
 }
 
 /**
