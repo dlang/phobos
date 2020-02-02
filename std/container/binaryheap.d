@@ -95,12 +95,14 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
     // Convenience accessors
     private @property ref Store _store()
     {
-        assert(_payload.refCountedStore.isInitialized);
+        assert(_payload.refCountedStore.isInitialized,
+                "BinaryHeap not initialized");
         return _payload._store;
     }
     private @property ref size_t _length()
     {
-        assert(_payload.refCountedStore.isInitialized);
+        assert(_payload.refCountedStore.isInitialized,
+                "BinaryHeap not initialized");
         return _payload._length;
     }
 
@@ -386,7 +388,8 @@ leaves the heap unaffected and returns `false`.
     bool conditionalSwap(ref ElementType!Store value)
     {
         _payload.refCountedStore.ensureInitialized();
-        assert(_length == _store.length);
+        assert(_length == _store.length,
+                "length and number of stored items out of sync");
         assert(!_store.empty, "Cannot swap front of an empty heap.");
 
         if (!comp(value, _store.front)) return false; // value >= largest
