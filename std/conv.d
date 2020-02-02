@@ -1372,7 +1372,7 @@ if (isIntegral!S &&
     isExactSomeString!T)
 in
 {
-    assert(radix >= 2 && radix <= 36);
+    assert(radix >= 2 && radix <= 36, "radix must be in range [2,36]");
 }
 do
 {
@@ -1469,7 +1469,8 @@ if (!isImplicitlyConvertible!(S, T) &&
         }
         else
         {
-            static assert(tSmallest < 0);
+            static assert(tSmallest < 0,
+                "minimum value of T must be smaller than 0");
             immutable good = value >= tSmallest;
         }
         if (!good)
@@ -2612,7 +2613,7 @@ if (isSomeChar!(ElementType!Source) &&
     isIntegral!Target && !is(Target == enum))
 in
 {
-    assert(radix >= 2 && radix <= 36);
+    assert(radix >= 2 && radix <= 36, "radix must be in range [2,36]");
 }
 do
 {
@@ -4048,7 +4049,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
                 break;
         }
     }
-    assert(0);
+    assert(false, "Unexpected fallthrough");
 }
 
 // ditto
@@ -4206,7 +4207,7 @@ if (isOctalLiteral(num))
     else static if ((!octalFitsInInt!(num) || literalIsLong!(num)) && literalIsUnsigned!(num))
         enum octal = octal!ulong(num);
     else
-        static assert(false);
+        static assert(false, "Unusable input " ~ num);
 }
 
 /// Ditto
@@ -4233,7 +4234,7 @@ if (is(typeof(decimalInteger)) && isIntegral!(typeof(decimalInteger)))
 */
 private T octal(T)(const string num)
 {
-    assert(isOctalLiteral(num));
+    assert(isOctalLiteral(num), num ~ " is not an octal literal");
 
     T value = 0;
 
@@ -5782,6 +5783,15 @@ if (isIntegral!T)
     immutable u3 = unsigned(s); //explicitly qualified
 }
 
+/// Ditto
+auto unsigned(T)(T x)
+if (isSomeChar!T)
+{
+    // All characters are unsigned
+    static assert(T.min == 0, T.stringof ~ ".min must be zero");
+    return cast(Unqual!T) x;
+}
+
 @safe unittest
 {
     static foreach (T; AliasSeq!(byte, ubyte))
@@ -5811,14 +5821,6 @@ if (isIntegral!T)
         static assert(is(typeof(unsigned(cast(const T) 1)) == ulong));
         static assert(is(typeof(unsigned(cast(immutable T) 1)) == ulong));
     }
-}
-
-auto unsigned(T)(T x)
-if (isSomeChar!T)
-{
-    // All characters are unsigned
-    static assert(T.min == 0);
-    return cast(Unqual!T) x;
 }
 
 @safe unittest
@@ -6328,7 +6330,7 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
         else static if (radix == 16)
             enum SHIFT = 4;
         else
-            static assert(0);
+            static assert(false, "radix must be 2, 8, 10, or 16");
         static struct Result
         {
             this(UT value)
