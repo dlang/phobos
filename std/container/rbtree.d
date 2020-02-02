@@ -183,7 +183,7 @@ struct RBNode(V)
     Node rotateR()
     in
     {
-        assert(_left !is null);
+        assert(_left !is null, "left node must not be null");
     }
     do
     {
@@ -226,7 +226,7 @@ struct RBNode(V)
     Node rotateL()
     in
     {
-        assert(_right !is null);
+        assert(_right !is null, "right node must not be null");
     }
     do
     {
@@ -255,7 +255,7 @@ struct RBNode(V)
     @property bool isLeftNode() const
     in
     {
-        assert(_parent !is null);
+        assert(_parent !is null, "parent must not be null");
     }
     do
     {
@@ -789,7 +789,8 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
 
     private void _setup()
     {
-        assert(!_end); //Make sure that _setup isn't run more than once.
+        //Make sure that _setup isn't run more than once.
+        assert(!_end, "Setup must only be run once");
         _begin = _end = allocate();
     }
 
