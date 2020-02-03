@@ -3972,7 +3972,7 @@ template hasStaticMember(T, string member)
         static void f();
         static void f2() pure nothrow @nogc @safe;
 
-        shared void g();
+        void g() shared;
 
         static void function() fp;
         __gshared void function() gfp;
@@ -4010,7 +4010,7 @@ template hasStaticMember(T, string member)
         static void f();
         static void f2() pure nothrow @nogc @safe;
 
-        shared void g() { }
+        void g() shared { }
 
         static void function() fp;
         __gshared void function() gfp;
