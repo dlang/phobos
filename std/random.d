@@ -2964,7 +2964,7 @@ private struct RandomCoverChoices
 
         if (!hasPackedBits && buffer !is null)
         {
-            const nBytesToAlloc = 8 * (_length / BITS_PER_WORD + int(_length % BITS_PER_WORD != 0));
+            const nBytesToAlloc = size_t.sizeof * (_length / BITS_PER_WORD + int(_length % BITS_PER_WORD != 0));
             void* nbuffer = enforceMalloc(nBytesToAlloc);
             buffer = cast(size_t*) memcpy(nbuffer, buffer, nBytesToAlloc);
         }
