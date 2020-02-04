@@ -3565,11 +3565,11 @@ class UdpSocket: Socket
     {
         override
         {
-            const pure nothrow @nogc @property @safe socket_t handle() { assert(0); }
-            const nothrow @nogc @property @trusted bool blocking() { assert(0); }
+            pure nothrow @nogc @property @safe socket_t handle() const { assert(0); }
+            nothrow @nogc @property @trusted bool blocking() const { assert(0); }
             @property @trusted void blocking(bool byes) { assert(0); }
             @property @safe AddressFamily addressFamily() { assert(0); }
-            const @property @trusted bool isAlive() { assert(0); }
+            @property @trusted bool isAlive() const { assert(0); }
             @trusted void bind(Address addr) { assert(0); }
             @trusted void connect(Address to) { assert(0); }
             @trusted void listen(int backlog) { assert(0); }
