@@ -2659,26 +2659,30 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     {
         static if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.mant_dig))
         {
-            import std.math : FloatingPointControl;
+            import std.math;
 
             auto mode = RoundingMode.toNearestTiesToEven;
-            switch (FloatingPointControl.rounding)
-            {
-            case FloatingPointControl.roundUp:
-                mode = RoundingMode.up;
-                break;
-            case FloatingPointControl.roundDown:
-                mode = RoundingMode.down;
-                break;
-            case FloatingPointControl.roundToZero:
-                mode = RoundingMode.toZero;
-                break;
-            case FloatingPointControl.roundToNearest:
-                mode = RoundingMode.toNearestTiesToEven;
-                break;
-            default: assert(false);
-            }
 
+            // std.math's FloatingPointControl isn't available on all target platforms
+            static if (is(FloatingPointControl))
+            {
+                switch (FloatingPointControl.rounding)
+                {
+                case FloatingPointControl.roundUp:
+                    mode = RoundingMode.up;
+                    break;
+                case FloatingPointControl.roundDown:
+                    mode = RoundingMode.down;
+                    break;
+                case FloatingPointControl.roundToZero:
+                    mode = RoundingMode.toZero;
+                    break;
+                case FloatingPointControl.roundToNearest:
+                    mode = RoundingMode.toNearestTiesToEven;
+                    break;
+                default: assert(false);
+                }
+            }
 
             buf = printFloat(val, fs, mode).dup;
             len = buf.length;
