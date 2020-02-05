@@ -2204,6 +2204,9 @@ if (isConvertibleToString!R)
 
 /++
     Set the _attributes of the given file.
+    
+    For example, a programmatic equivalent of Unix's `chmod +x name` to make a file executable is
+    `name.setAttributes(name.getAttributes | octal!700)`.
 
     Params:
         name = the file _name
