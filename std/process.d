@@ -290,7 +290,7 @@ Pid spawnProcess(scope const(char[])[] args,
                  scope const char[] workDir = null)
     @trusted // TODO: Should be @safe
 {
-    version (Windows)    auto  args2 = escapeShellArguments(args);
+    version (Windows)    auto  args2 = WindowsSpawnArgs(escapeShellArguments(args), args[0]);
     else version (Posix) alias args2 = args;
     return spawnProcessImpl(args2, stdin, stdout, stderr, env, config, workDir);
 }
@@ -682,6 +682,14 @@ private Pid spawnProcessImpl(scope const(char[])[] args,
     }
 }
 
+// enables extra arguments for the windows version of spawnProcessImpl
+version (Windows)
+private struct WindowsSpawnArgs
+{
+    const(char)[] commandLine;
+    const(char)[] arg0;
+}
+
 /*
 Implementation of spawnProcess() for Windows.
 
@@ -692,7 +700,7 @@ envz must be a pointer to a block of UTF-16 characters on the form
 "var1=value1\0var2=value2\0...varN=valueN\0\0".
 */
 version (Windows)
-private Pid spawnProcessImpl(scope const(char)[] commandLine,
+private Pid spawnProcessImpl(scope const WindowsSpawnArgs args,
                              File stdin,
                              File stdout,
                              File stderr,
@@ -703,7 +711,7 @@ private Pid spawnProcessImpl(scope const(char)[] commandLine,
 {
     import core.exception : RangeError;
 
-    if (commandLine.empty) throw new RangeError("Command line is empty");
+    if (args.commandLine.empty) throw new RangeError("Command line is empty");
 
     // Prepare environment.
     auto envz = createEnv(env, !(config & Config.newEnv));
@@ -760,10 +768,14 @@ private Pid spawnProcessImpl(scope const(char)[] commandLine,
         CREATE_UNICODE_ENVIRONMENT |
         ((config & Config.suppressConsole) ? CREATE_NO_WINDOW : 0);
     auto pworkDir = workDir.tempCStringW();     // workaround until Bugzilla 14696 is fixed
-    if (!CreateProcessW(null, commandLine.tempCStringW().buffPtr,
+    if (!CreateProcessW(null, args.commandLine.tempCStringW().buffPtr,
                         null, null, true, dwCreationFlags,
                         envz, workDir.length ? pworkDir : null, &startinfo, &pi))
+    {
+        if (args.arg0)
+            throw ProcessException.newFromLastError("Failed to spawn process '" ~ cast(string) args.arg0 ~ "'");
         throw ProcessException.newFromLastError("Failed to spawn new process");
+    }
 
     // figure out if we should close any of the streams
     if (!(config & Config.retainStdin ) && stdinFD  > STDERR_FILENO
@@ -1309,8 +1321,8 @@ Pid spawnShell(scope const(char)[] command,
         // It does not use CommandLineToArgvW.
         // Instead, it treats the first and last quote specially.
         // See CMD.EXE /? for details.
-        auto args = escapeShellFileName(shellPath)
-                    ~ ` ` ~ shellSwitch ~ ` "` ~ command ~ `"`;
+        auto args = WindowsSpawnArgs(escapeShellFileName(shellPath)
+                    ~ ` ` ~ shellSwitch ~ ` "` ~ command ~ `"`);
     }
     else version (Posix)
     {
