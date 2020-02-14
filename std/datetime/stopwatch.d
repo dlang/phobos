@@ -24,9 +24,9 @@ $(TR $(TD Flags) $(TD
           conflict with the symbols in this module. After the old symbols have
           gone through the deprecation cycle and have been fully removed, then
           this module will be publicly imported in std.datetime.package. The
-          old, deprecated symbols are currently scheduled to be removed from the
-          documentation in October 2018 and fully removed from Phobos in October
-          2019.)
+          old, deprecated symbols has been removed from the documentation in
+          December 2019 and currently scheduled to be fully removed from Phobos
+          after 2.094.)
 
     So, for now, when using std.datetime.stopwatch, if other modules from
     std.datetime are needed, then either import them individually rather than
