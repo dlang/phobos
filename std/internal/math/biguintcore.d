@@ -197,8 +197,7 @@ else alias multibyteSquare = std.internal.math.biguintnoasm.multibyteSquare;
 @nogc nothrow pure @safe size_t getCacheLimit()
 {
     import core.cpuid : dataCaches;
-    return (cast(size_t function() @nogc nothrow pure)
-        (() => dataCaches[0].size * 1024 / 2))();
+    return dataCaches[0].size * 1024 / 2;
 }
 enum size_t FASTDIVLIMIT = 100; // crossover to recursive division
 
