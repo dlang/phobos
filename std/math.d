@@ -9411,9 +9411,10 @@ bool isClose(T, U, V = CommonType!(FloatingPointBaseType!T,FloatingPointBaseType
     assert(isClose(1e-300, 1e-298, 0.0, 1e-200));
 
     // different default limits for different floating point types
-    assert(isClose(1.0f,0.999_99f));
-    assert(!isClose(1.0,0.999_99));
-    assert(!isClose(1.0L,0.999_999_999L));
+    assert(isClose(1.0f, 0.999_99f));
+    assert(!isClose(1.0, 0.999_99));
+    static if (real.sizeof > double.sizeof)
+        assert(!isClose(1.0L, 0.999_999_999L));
 }
 
 ///
@@ -9445,8 +9446,7 @@ bool isClose(T, U, V = CommonType!(FloatingPointBaseType!T,FloatingPointBaseType
     assert(isClose(1.00001,1.000019f));
     assert(!isClose(1.00001,1.000019));
 
-    import std.math : nextUp;
-    real a1 = 1e-400L;
+    real a1 = 1e-300L;
     real a2 = a1.nextUp;
     assert(isClose(a1,a2));
 }

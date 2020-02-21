@@ -2096,20 +2096,25 @@ template roundTo(Target)
 // issue 5232
 @safe pure unittest
 {
-    real r1 = ulong.max;
-    assert(roundTo!ulong(r1) == ulong.max);
+    static if (real.mant_dig >= 64)
+        ulong maxOdd = ulong.max;
+    else
+        ulong maxOdd = (1UL << real.mant_dig) - 1;
 
-    real r2 = ulong.max - 1;
-    assert(roundTo!ulong(r2) == ulong.max - 1);
+    real r1 = maxOdd;
+    assert(roundTo!ulong(r1) == maxOdd);
 
-    real r3 = ulong.max / 2;
-    assert(roundTo!ulong(r3) == ulong.max / 2);
+    real r2 = maxOdd - 1;
+    assert(roundTo!ulong(r2) == maxOdd - 1);
 
-    real r4 = ulong.max / 2 + 1;
-    assert(roundTo!ulong(r4) == ulong.max / 2 + 1);
+    real r3 = maxOdd / 2;
+    assert(roundTo!ulong(r3) == maxOdd / 2);
+
+    real r4 = maxOdd / 2 + 1;
+    assert(roundTo!ulong(r4) == maxOdd / 2 + 1);
 
     // this is only an issue on computers where real == double
-    long l = -(2L ^^ double.mant_dig) + 1;
+    long l = -((1L << double.mant_dig) - 1);
     double r5 = l;
     assert(roundTo!long(r5) == l);
 }
