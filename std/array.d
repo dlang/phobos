@@ -5,6 +5,7 @@ Functions and types that manipulate built-in arrays and associative arrays.
 This module provides all kinds of functions to create, manipulate or convert arrays:
 
 $(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)
 )
@@ -67,7 +68,7 @@ $(TR $(TH Function Name) $(TH Description)
     $(TR $(TD $(LREF uninitializedArray))
         $(TD Returns a new array of type `T` without initializing its elements.
     ))
-)
+))
 
 Copyright: Copyright Andrei Alexandrescu 2008- and Jonathan M Davis 2011-.
 

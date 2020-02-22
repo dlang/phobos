@@ -47,6 +47,7 @@ composition templates that let you construct new ranges out of existing ranges:
 
 
 $(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
 $(BOOKTABLE ,
     $(TR $(TD $(LREF chain))
         $(TD Concatenates several ranges into a single range.
@@ -206,7 +207,7 @@ $(BOOKTABLE ,
         tuple of all the first elements, a tuple of all the second elements,
         etc.
     ))
-)
+))
 
 Sortedness:
 

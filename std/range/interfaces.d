@@ -8,6 +8,7 @@ provides a number of object and `interface` definitions that can be used to
 wrap around range objects created by the $(MREF std, range) templates.
 
 $(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
 $(BOOKTABLE ,
     $(TR $(TD $(LREF InputRange))
         $(TD Wrapper for input ranges.
@@ -58,7 +59,7 @@ $(BOOKTABLE ,
     $(TR $(TD $(LREF MostDerivedInputRange))
         $(TD Returns the interface type that best matches the range.
     ))
-)
+))
 
 
 Source: $(PHOBOSSRC std/range/interfaces.d)

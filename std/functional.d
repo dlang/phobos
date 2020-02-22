@@ -8,6 +8,7 @@ functions are helpful when constructing predicates for the algorithms in
 $(MREF std, algorithm) or $(MREF std, range).
 
 $(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)
 )
@@ -50,7 +51,7 @@ $(TR $(TH Function Name) $(TH Description)
         $(TD Create a unary or binary function from a string. Most often
         used when defining algorithms on ranges.
     ))
-)
+))
 
 Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
 License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).

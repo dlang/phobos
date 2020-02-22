@@ -12,6 +12,7 @@ Encodings currently supported are UTF-8, UTF-16, UTF-32, ASCII, ISO-8859-1
 and WINDOWS-1252.
 
 $(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
 $(BOOKTABLE,
 $(TR $(TH Category) $(TH Functions))
 $(TR $(TD Decode) $(TD
@@ -75,7 +76,7 @@ $(TR $(TD Exceptions) $(TD
     $(LREF INVALID_SEQUENCE)
     $(LREF EncodingException)
 ))
-)
+))
 
 For cases where the encoding is not known at compile-time, but is
 known at run-time, the abstract class $(LREF EncodingScheme)
