@@ -4,6 +4,7 @@
 Facilities for random number generation.
 
 $(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
 $(BOOKTABLE,
 $(TR $(TH Category) $(TH Functions))
 $(TR $(TD Uniform sampling) $(TD
@@ -52,7 +53,7 @@ $(TR $(TD Traits) $(TD
     $(LREF isSeedable)
     $(LREF isUniformRNG)
 ))
-)
+))
 
 $(RED Disclaimer:) The random number generators and API provided in this
 module are not designed to be cryptographically secure, and are therefore

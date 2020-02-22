@@ -4,6 +4,7 @@
 A one-stop shop for converting values from one type to another.
 
 $(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
 $(BOOKTABLE,
 $(TR $(TH Category) $(TH Functions))
 $(TR $(TD Generic) $(TD
@@ -30,7 +31,7 @@ $(TR $(TD Exceptions) $(TD
         $(LREF ConvException)
         $(LREF ConvOverflowException)
 ))
-)
+))
 
 Copyright: Copyright The D Language Foundation 2007-.
 

@@ -3,6 +3,7 @@
 /++
 
 $(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
 $(BOOKTABLE,
 $(TR $(TH Category) $(TH Functions))
 $(TR $(TD Time zones) $(TD
@@ -19,7 +20,7 @@ $(TR $(TD Utilities) $(TD
     $(LREF setTZEnvVar)
     $(LREF TZConversions)
 ))
-)
+))
 
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   $(HTTP jmdavisprog.com, Jonathan M Davis)

@@ -3,6 +3,7 @@
 /++
 
 $(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
 $(BOOKTABLE,
 $(TR $(TH Category) $(TH Functions))
 $(TR $(TD Types) $(TD
@@ -23,7 +24,7 @@ $(TR $(TD Conversion) $(TD
     $(LREF SysTimeToSYSTEMTIME)
     $(LREF unixTimeToStdTime)
 ))
-)
+))
 
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   $(HTTP jmdavisprog.com, Jonathan M Davis)

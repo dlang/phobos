@@ -6,6 +6,7 @@
     For convenience, this module publicly imports $(MREF core,time).
 
 $(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
 $(BOOKTABLE,
 $(TR $(TH Category) $(TH Functions))
 $(TR $(TD Main functionality) $(TD
@@ -15,7 +16,7 @@ $(TR $(TD Main functionality) $(TD
 $(TR $(TD Flags) $(TD
     $(LREF AutoStart)
 ))
-)
+))
 
     $(RED Unlike the other modules in std.datetime, this module is not currently
           publicly imported in std.datetime.package, because the old

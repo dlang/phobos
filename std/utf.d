@@ -7,6 +7,7 @@
     $(D '\u0000' &lt;= character &lt;= '\U0010FFFF').
 
 $(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
 $(BOOKTABLE,
 $(TR $(TH Category) $(TH Functions))
 $(TR $(TD Decode) $(TD
@@ -47,7 +48,7 @@ $(TR $(TD Miscellaneous) $(TD
     $(LREF UseReplacementDchar)
     $(LREF UTFException)
 ))
-)
+))
     See_Also:
         $(LINK2 http://en.wikipedia.org/wiki/Unicode, Wikipedia)<br>
         $(LINK http://www.cl.cam.ac.uk/~mgk25/unicode.html#utf-8)<br>

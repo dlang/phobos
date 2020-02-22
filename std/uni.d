@@ -8,6 +8,7 @@
     for this functionality. )
 
 $(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
 $(BOOKTABLE,
 $(TR $(TH Category) $(TH Functions))
 $(TR $(TD Decode) $(TD
@@ -96,7 +97,7 @@ $(TR $(TD Building blocks) $(TD
     $(LREF combiningClass)
     $(LREF Grapheme)
 ))
-)
+))
 
     $(P All primitives listed operate on Unicode characters and
         sets of characters. For functions which operate on ASCII characters

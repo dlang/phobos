@@ -5,6 +5,7 @@ This module implements a variety of type constructors, i.e., templates
 that allow construction of new, useful general-purpose types.
 
 $(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
 $(BOOKTABLE,
 $(TR $(TH Category) $(TH Functions))
 $(TR $(TD Tuple) $(TD
@@ -55,7 +56,7 @@ $(TR $(TD Types) $(TD
     $(LREF TypedefType)
     $(LREF UnqualRef)
 ))
-)
+))
 
 Copyright: Copyright the respective authors, 2008-
 License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).

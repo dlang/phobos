@@ -4,6 +4,7 @@
 Bit-level manipulation facilities.
 
 $(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
 $(BOOKTABLE,
 $(TR $(TH Category) $(TH Functions))
 $(TR $(TD Bit constructs) $(TD
@@ -32,7 +33,7 @@ $(TR $(TD Tagging) $(TD
     $(LREF taggedClassRef)
     $(LREF taggedPointer)
 ))
-)
+))
 
 Copyright: Copyright The D Language Foundation 2007 - 2011.
 License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).

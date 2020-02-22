@@ -5,6 +5,7 @@
     handling. It also defines functions intended to aid in unit testing.
 
 $(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
 $(BOOKTABLE,
 $(TR $(TH Category) $(TH Functions))
 $(TR $(TD Assumptions) $(TD
@@ -31,7 +32,7 @@ $(TR $(TD Other) $(TD
         $(LREF ErrnoException)
         $(LREF RangePrimitive)
 ))
-)
+))
 
     Copyright: Copyright Andrei Alexandrescu 2008-, Jonathan M Davis 2011-.
     License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0)

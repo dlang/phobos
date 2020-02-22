@@ -7,6 +7,7 @@
   in text processing utilities.
 
 $(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
 $(BOOKTABLE,
 $(TR $(TH Category) $(TH Functions))
 $(TR $(TD Matching) $(TD
@@ -39,7 +40,7 @@ $(TR $(TD Objects) $(TD
         $(LREF Splitter)
         $(LREF StaticRegex)
 ))
-)
+))
 
   $(SECTION Synopsis)
   ---

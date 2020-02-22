@@ -7,6 +7,7 @@ at a time. For opening files and manipulating them via handles refer
 to module $(MREF std, stdio).
 
 $(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
 $(BOOKTABLE,
 $(TR $(TH Category) $(TH Functions))
 $(TR $(TD General) $(TD
@@ -64,7 +65,7 @@ $(TR $(TD Other) $(TD
           $(LREF SpanMode)
           $(LREF getAvailableDiskSpace)
 ))
-)
+))
 
 
 Copyright: Copyright The D Language Foundation 2007 - 2011.
