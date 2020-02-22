@@ -372,8 +372,8 @@ final class ArchiveMember
     {
     void print()
     {
-        printf("name = '%.*s'\n", name.length, name.ptr);
-        printf("\tcomment = '%.*s'\n", comment.length, comment.ptr);
+        printf("name = '%.*s'\n", cast(int) name.length, name.ptr);
+        printf("\tcomment = '%.*s'\n", cast(int) comment.length, comment.ptr);
         printf("\tmadeVersion = x%04x\n", _madeVersion);
         printf("\textractVersion = x%04x\n", extractVersion);
         printf("\tflags = x%04x\n", flags);
