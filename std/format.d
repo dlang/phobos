@@ -5966,7 +5966,7 @@ do
     }
     debug (unformatRange) printf("\t");
     debug (unformatRange) if (!input.empty) printf("input.front = %c, ", input.front);
-    debug (unformatRange) printf("cont = %.*s\n", cont);
+    debug (unformatRange) printf("cont = %.*s\n", cast(int) cont.length, cont.ptr);
 
     bool checkEnd()
     {
@@ -6014,7 +6014,7 @@ do
             auto sep = spec.sep !is null ? spec.sep
                          : fmt.trailing;
             debug (unformatRange) {
-            if (!sep.empty && !input.empty) printf("-> %c, sep = %.*s\n", input.front, sep);
+            if (!sep.empty && !input.empty) printf("-> %c, sep = %.*s\n", input.front, cast(int) sep.length, sep.ptr);
             else                            printf("\n");
             }
 
