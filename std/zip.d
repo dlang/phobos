@@ -525,7 +525,7 @@ public:
         printf("\tdiskStartDir = %u\n", diskStartDir);
         printf("\tnumEntries = %u\n", numEntries);
         printf("\ttotalEntries = %u\n", totalEntries);
-        printf("\tcomment = '%.*s'\n", comment.length, comment.ptr);
+        printf("\tcomment = '%.*s'\n", cast(int) comment.length, comment.ptr);
     }
     }
 
