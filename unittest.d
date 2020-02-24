@@ -81,9 +81,9 @@ int main(string[] args)
     std.zlib.adler32(0,null);            // D.zlib
     auto t = task!cmp("foo", "bar");  // parallelism
 
-    printf("args.length = %d\n", args.length);
+    printf("args.length = %d\n", cast(int)args.length);
     for (int i = 0; i < args.length; i++)
-        printf("args[%d] = '%.*s'\n", i, args[i].length, args[i].ptr);
+        printf("args[%d] = '%.*s'\n", i, cast(int)args[i].length, args[i].ptr);
 
     int[3] x;
     x[0] = 3;
