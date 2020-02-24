@@ -642,7 +642,7 @@ if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && hasAssig
         for (;;)
         {
             // Loop invariant
-            version (unittest)
+            version (StdUnittest)
             {
                 // this used to import std.algorithm.all, but we want to save
                 // imports when unittests are enabled if possible.
@@ -2941,8 +2941,10 @@ because the effect can be achieved by calling $(D
 isSorted!less(map!transform(r))).
 
 Params:
-    transform = The transformation to apply.
-    less = The predicate to sort by.
+    transform = The transformation to apply. Either a unary function
+                (`unaryFun!transform(element)`), or a binary function
+                (`binaryFun!transform(element, index)`).
+    less = The predicate to sort the transformed elements by.
     ss = The swapping strategy to use.
     r = The range to sort.
 
@@ -2960,7 +2962,21 @@ if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R &&
     import std.range : zip, SortedRange;
     import std.string : representation;
 
-    alias T = typeof(unaryFun!transform(r.front));
+    static if (is(typeof(unaryFun!transform(r.front))))
+    {
+        alias transformFun = unaryFun!transform;
+        alias T = typeof(transformFun(r.front));
+        enum isBinary = false;
+    }
+    else static if (is(typeof(binaryFun!transform(r.front, 0))))
+    {
+        alias transformFun = binaryFun!transform;
+        alias T = typeof(transformFun(r.front, 0));
+        enum isBinary = true;
+    }
+    else
+        static assert(false, "unsupported `transform` alias");
+
     static trustedMalloc(size_t len) @trusted
     {
         import core.checkedint : mulu;
@@ -2988,7 +3004,10 @@ if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R &&
     }
     for (; length != r.length; ++length)
     {
-        emplace(&xform1[length], unaryFun!transform(r[length]));
+        static if (isBinary)
+            emplace(&xform1[length], transformFun(r[length], length));
+        else
+            emplace(&xform1[length], transformFun(r[length]));
     }
     // Make sure we use ubyte[] and ushort[], not char[] and wchar[]
     // for the intermediate array, lest zip gets confused.
@@ -3052,6 +3071,14 @@ if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R)
     assert(arr[1] == midEnt);
     assert(arr[2] == highEnt);
     assert(isSorted!("a < b")(map!(entropy)(arr)));
+}
+
+@safe unittest
+{
+    // binary transform function
+    string[] strings = [ "one", "two", "three" ];
+    schwartzSort!((element, index) => size_t.max - index)(strings);
+    assert(strings == [ "three", "two", "one" ]);
 }
 
 @safe unittest
@@ -4082,7 +4109,7 @@ if (isRandomAccessRange!Range && hasLength!Range &&
     else static if (k == 5)
     {
         // Credit: Teppo Niinimäki
-        version (unittest) scope(success)
+        version (StdUnittest) scope(success)
         {
             assert(!lt(r[c], r[a]), "less than check failed");
             assert(!lt(r[c], r[b]), "less than check failed");

@@ -7,6 +7,7 @@ at a time. For opening files and manipulating them via handles refer
 to module $(MREF std, stdio).
 
 $(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
 $(BOOKTABLE,
 $(TR $(TH Category) $(TH Functions))
 $(TR $(TD General) $(TD
@@ -64,7 +65,7 @@ $(TR $(TD Other) $(TD
           $(LREF SpanMode)
           $(LREF getAvailableDiskSpace)
 ))
-)
+))
 
 
 Copyright: Copyright The D Language Foundation 2007 - 2011.
@@ -131,7 +132,7 @@ else
     return fileName;
 }
 
-version (unittest) private struct TestAliasedString
+version (StdUnittest) private struct TestAliasedString
 {
     string get() @safe @nogc pure nothrow { return _s; }
     alias get this;
@@ -3396,7 +3397,7 @@ version (Windows) string getcwd() @trusted
         3. the buffer (lpBuffer) is not large enough: the required size of
     the buffer, in characters, including the null-terminating character.
     */
-    version (unittest)
+    version (StdUnittest)
         enum BUF_SIZE = 10;     // trigger reallocation code
     else
         enum BUF_SIZE = 4096;   // enough for most common case

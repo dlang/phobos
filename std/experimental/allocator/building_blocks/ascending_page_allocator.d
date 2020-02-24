@@ -663,7 +663,7 @@ public:
     tg.joinAll();
 }
 
-version (unittest)
+version (StdUnittest)
 {
     private static void testrw(void[] b) @nogc nothrow
     {

@@ -40,7 +40,7 @@ $(TR $(TDNW Modulus) $(TD
 ))
 $(TR $(TDNW Floating-point operations) $(TD
     $(MYREF approxEqual) $(MYREF feqrel) $(MYREF fdim) $(MYREF fmax)
-    $(MYREF fmin) $(MYREF fma) $(MYREF nextDown) $(MYREF nextUp)
+    $(MYREF fmin) $(MYREF fma) $(MYREF isClose) $(MYREF nextDown) $(MYREF nextUp)
     $(MYREF nextafter) $(MYREF NaN) $(MYREF getNaNPayload)
     $(MYREF cmp)
 ))
@@ -133,11 +133,6 @@ static import core.stdc.fenv;
 import std.traits :  CommonType, isFloatingPoint, isIntegral, isNumeric,
     isSigned, isUnsigned, Largest, Unqual;
 
-version (LDC)
-{
-    import ldc.intrinsics;
-}
-
 version (DigitalMars)
 {
     version = INLINE_YL2X;        // x87 has opcodes for these
@@ -186,7 +181,26 @@ else version (X86)
     private alias haveSSE = core.cpuid.sse;
 }
 
-version (unittest) private
+version (D_SoftFloat)
+{
+    // Some soft float implementations may support IEEE floating flags.
+    // The implementation here supports hardware flags only and is so currently
+    // only available for supported targets.
+}
+else version (X86_Any)   version = IeeeFlagsSupport;
+else version (PPC_Any)   version = IeeeFlagsSupport;
+else version (RISCV_Any) version = IeeeFlagsSupport;
+else version (MIPS_Any)  version = IeeeFlagsSupport;
+else version (ARM_Any)   version = IeeeFlagsSupport;
+
+// Struct FloatingPointControl is only available if hardware FP units are available.
+version (D_HardFloat)
+{
+    // FloatingPointControl.clearExceptions() depends on version IeeeFlagsSupport
+    version (IeeeFlagsSupport) version = FloatingPointControlSupport;
+}
+
+version (StdUnittest) private
 {
     static if (real.sizeof > double.sizeof)
         enum uint useDigits = 16;
@@ -2340,12 +2354,15 @@ private T expImpl(T)(T x) @safe pure nothrow @nogc
     return x;
 }
 
-version (InlineAsm_X86_Any) @safe @nogc nothrow unittest
+@safe @nogc nothrow unittest
 {
-    FloatingPointControl ctrl;
-    if (FloatingPointControl.hasExceptionTraps)
-        ctrl.disableExceptions(FloatingPointControl.allExceptions);
-    ctrl.rounding = FloatingPointControl.roundToNearest;
+    version (FloatingPointControlSupport)
+    {
+        FloatingPointControl ctrl;
+        if (FloatingPointControl.hasExceptionTraps)
+            ctrl.disableExceptions(FloatingPointControl.allExceptions);
+        ctrl.rounding = FloatingPointControl.roundToNearest;
+    }
 
     static void testExp(T)()
     {
@@ -2429,10 +2446,10 @@ version (InlineAsm_X86_Any) @safe @nogc nothrow unittest
 
         const minEqualMantissaBits = T.mant_dig - 2;
         T x;
-        IeeeFlags f;
+        version (IeeeFlagsSupport) IeeeFlags f;
         foreach (ref pair; exptestpoints)
         {
-            resetIeeeFlags();
+            version (IeeeFlagsSupport) resetIeeeFlags();
             x = exp(pair[0]);
             //printf("exp(%La) = %La, should be %La\n", cast(real) pair[0], cast(real) x, cast(real) pair[1]);
             assert(feqrel(x, pair[1]) >= minEqualMantissaBits);
@@ -2444,17 +2461,28 @@ version (InlineAsm_X86_Any) @safe @nogc nothrow unittest
         assert(exp(cast(T) 0.0) == 1.0);
 
         // NaN propagation. Doesn't set flags, bcos was already NaN.
-        resetIeeeFlags();
-        x = exp(T.nan);
-        f = ieeeFlags;
-        assert(isIdentical(abs(x), T.nan));
-        assert(f.flags == 0);
+        version (IeeeFlagsSupport)
+        {
+            resetIeeeFlags();
+            x = exp(T.nan);
+            f = ieeeFlags;
+            assert(isIdentical(abs(x), T.nan));
+            assert(f.flags == 0);
 
-        resetIeeeFlags();
-        x = exp(-T.nan);
-        f = ieeeFlags;
-        assert(isIdentical(abs(x), T.nan));
-        assert(f.flags == 0);
+            resetIeeeFlags();
+            x = exp(-T.nan);
+            f = ieeeFlags;
+            assert(isIdentical(abs(x), T.nan));
+            assert(f.flags == 0);
+        }
+        else
+        {
+            x = exp(T.nan);
+            assert(isIdentical(abs(x), T.nan));
+
+            x = exp(-T.nan);
+            assert(isIdentical(abs(x), T.nan));
+        }
 
         x = exp(NaN(0x123));
         assert(isIdentical(x, NaN(0x123)));
@@ -5204,20 +5232,17 @@ float rint(float x) @safe pure nothrow @nogc { return rint(cast(real) x); }
 ///
 @safe unittest
 {
-    version (InlineAsm_X86_Any)
-    {
-        resetIeeeFlags();
-        assert(rint(0.4) == 0);
-        assert(ieeeFlags.inexact);
+    version (IeeeFlagsSupport) resetIeeeFlags();
+    assert(rint(0.4) == 0);
+    version (IeeeFlagsSupport) assert(ieeeFlags.inexact);
 
-        assert(rint(0.5) == 0);
-        assert(rint(0.6) == 1);
-        assert(rint(100.0) == 100);
+    assert(rint(0.5) == 0);
+    assert(rint(0.6) == 1);
+    assert(rint(100.0) == 100);
 
-        assert(isNaN(rint(real.nan)));
-        assert(rint(real.infinity) == real.infinity);
-        assert(rint(-real.infinity) == -real.infinity);
-    }
+    assert(isNaN(rint(real.nan)));
+    assert(rint(real.infinity) == real.infinity);
+    assert(rint(-real.infinity) == -real.infinity);
 }
 
 @safe unittest
@@ -5627,6 +5652,10 @@ real remquo(real x, real y, out int n) @trusted nothrow @nogc  /// ditto
     }
 }
 
+
+version (IeeeFlagsSupport)
+{
+
 /** IEEE exception status flags ('sticky bits')
 
  These flags indicate that an exceptional floating-point condition has occurred.
@@ -5740,76 +5769,69 @@ private:
            assert(0, "Not yet supported");
         }
     }
+
 public:
-    version (IeeeFlagsSupport)
-    {
+    /**
+     * The result cannot be represented exactly, so rounding occurred.
+     * Example: `x = sin(0.1);`
+     */
+    @property bool inexact() @safe const { return (flags & INEXACT_MASK) != 0; }
 
-     /**
-      * The result cannot be represented exactly, so rounding occurred.
-      * Example: `x = sin(0.1);`
-      */
-     @property bool inexact() @safe const { return (flags & INEXACT_MASK) != 0; }
+    /**
+     * A zero was generated by underflow
+     * Example: `x = real.min*real.epsilon/2;`
+     */
+    @property bool underflow() @safe const { return (flags & UNDERFLOW_MASK) != 0; }
 
-     /**
-      * A zero was generated by underflow
-      * Example: `x = real.min*real.epsilon/2;`
-      */
-     @property bool underflow() @safe const { return (flags & UNDERFLOW_MASK) != 0; }
+    /**
+     * An infinity was generated by overflow
+     * Example: `x = real.max*2;`
+     */
+    @property bool overflow() @safe const { return (flags & OVERFLOW_MASK) != 0; }
 
-     /**
-      * An infinity was generated by overflow
-      * Example: `x = real.max*2;`
-      */
-     @property bool overflow() @safe const { return (flags & OVERFLOW_MASK) != 0; }
+    /**
+     * An infinity was generated by division by zero
+     * Example: `x = 3/0.0;`
+     */
+    @property bool divByZero() @safe const { return (flags & DIVBYZERO_MASK) != 0; }
 
-     /**
-      * An infinity was generated by division by zero
-      * Example: `x = 3/0.0;`
-      */
-     @property bool divByZero() @safe const { return (flags & DIVBYZERO_MASK) != 0; }
-
-     /**
-      * A machine NaN was generated.
-      * Example: `x = real.infinity * 0.0;`
-      */
-     @property bool invalid() @safe const { return (flags & INVALID_MASK) != 0; }
-
-     }
+    /**
+     * A machine NaN was generated.
+     * Example: `x = real.infinity * 0.0;`
+     */
+    @property bool invalid() @safe const { return (flags & INVALID_MASK) != 0; }
 }
 
 ///
 @safe unittest
 {
-    version (InlineAsm_X86_Any)
-    {
-        static void func() {
-            int a = 10 * 10;
-        }
-        pragma(inline, false) static void blockopt(ref real x) {}
-        real a = 3.5;
-        // Set all the flags to zero
-        resetIeeeFlags();
-        assert(!ieeeFlags.divByZero);
-        blockopt(a); // avoid constant propagation by the optimizer
-        // Perform a division by zero.
-        a /= 0.0L;
-        assert(a == real.infinity);
-        assert(ieeeFlags.divByZero);
-        blockopt(a); // avoid constant propagation by the optimizer
-        // Create a NaN
-        a *= 0.0L;
-        assert(ieeeFlags.invalid);
-        assert(isNaN(a));
-
-        // Check that calling func() has no effect on the
-        // status flags.
-        IeeeFlags f = ieeeFlags;
-        func();
-        assert(ieeeFlags == f);
+    static void func() {
+        int a = 10 * 10;
     }
+    pragma(inline, false) static void blockopt(ref real x) {}
+    real a = 3.5;
+    // Set all the flags to zero
+    resetIeeeFlags();
+    assert(!ieeeFlags.divByZero);
+    blockopt(a); // avoid constant propagation by the optimizer
+    // Perform a division by zero.
+    a /= 0.0L;
+    assert(a == real.infinity);
+    assert(ieeeFlags.divByZero);
+    blockopt(a); // avoid constant propagation by the optimizer
+    // Create a NaN
+    a *= 0.0L;
+    assert(ieeeFlags.invalid);
+    assert(isNaN(a));
+
+    // Check that calling func() has no effect on the
+    // status flags.
+    IeeeFlags f = ieeeFlags;
+    func();
+    assert(ieeeFlags == f);
 }
 
-version (InlineAsm_X86_Any) @safe unittest
+@safe unittest
 {
     import std.meta : AliasSeq;
 
@@ -5855,27 +5877,6 @@ version (InlineAsm_X86_Any) @safe unittest
     }}
 }
 
-version (X86_Any)
-{
-    version = IeeeFlagsSupport;
-}
-else version (PPC_Any)
-{
-    version = IeeeFlagsSupport;
-}
-else version (RISCV_Any)
-{
-    version = IeeeFlagsSupport;
-}
-else version (MIPS_Any)
-{
-    version = IeeeFlagsSupport;
-}
-else version (ARM_Any)
-{
-    version = IeeeFlagsSupport;
-}
-
 /// Set all of the floating-point status flags to false.
 void resetIeeeFlags() @trusted nothrow @nogc
 {
@@ -5885,20 +5886,17 @@ void resetIeeeFlags() @trusted nothrow @nogc
 ///
 @safe unittest
 {
-    version (InlineAsm_X86_Any)
-    {
-        pragma(inline, false) static void blockopt(ref real x) {}
-        resetIeeeFlags();
-        real a = 3.5;
-        blockopt(a); // avoid constant propagation by the optimizer
-        a /= 0.0L;
-        blockopt(a); // avoid constant propagation by the optimizer
-        assert(a == real.infinity);
-        assert(ieeeFlags.divByZero);
+    pragma(inline, false) static void blockopt(ref real x) {}
+    resetIeeeFlags();
+    real a = 3.5;
+    blockopt(a); // avoid constant propagation by the optimizer
+    a /= 0.0L;
+    blockopt(a); // avoid constant propagation by the optimizer
+    assert(a == real.infinity);
+    assert(ieeeFlags.divByZero);
 
-        resetIeeeFlags();
-        assert(!ieeeFlags.divByZero);
-    }
+    resetIeeeFlags();
+    assert(!ieeeFlags.divByZero);
 }
 
 /// Returns: snapshot of the current state of the floating-point status flags
@@ -5910,23 +5908,26 @@ void resetIeeeFlags() @trusted nothrow @nogc
 ///
 @safe nothrow unittest
 {
-    version (InlineAsm_X86_Any)
-    {
-        pragma(inline, false) static void blockopt(ref real x) {}
-        resetIeeeFlags();
-        real a = 3.5;
-        blockopt(a); // avoid constant propagation by the optimizer
+    pragma(inline, false) static void blockopt(ref real x) {}
+    resetIeeeFlags();
+    real a = 3.5;
+    blockopt(a); // avoid constant propagation by the optimizer
 
-        a /= 0.0L;
-        assert(a == real.infinity);
-        assert(ieeeFlags.divByZero);
-        blockopt(a); // avoid constant propagation by the optimizer
+    a /= 0.0L;
+    assert(a == real.infinity);
+    assert(ieeeFlags.divByZero);
+    blockopt(a); // avoid constant propagation by the optimizer
 
-        a *= 0.0L;
-        assert(isNaN(a));
-        assert(ieeeFlags.invalid);
-    }
+    a *= 0.0L;
+    assert(isNaN(a));
+    assert(ieeeFlags.invalid);
 }
+
+} // IeeeFlagsSupport
+
+
+version (FloatingPointControlSupport)
+{
 
 /** Control the Floating point hardware
 
@@ -6319,7 +6320,10 @@ private:
     // Clear all pending exceptions
     static void clearExceptions() @safe
     {
-        resetIeeeFlags();
+        version (IeeeFlagsSupport)
+            resetIeeeFlags();
+        else
+            static assert(false, "Not implemented for this architecture");
     }
 
     // Read from the control register
@@ -6388,22 +6392,19 @@ private:
 ///
 @safe unittest
 {
-    version (InlineAsm_X86_Any)
-    {
-        FloatingPointControl fpctrl;
+    FloatingPointControl fpctrl;
 
-        fpctrl.rounding = FloatingPointControl.roundDown;
-        assert(lrint(1.5) == 1.0);
+    fpctrl.rounding = FloatingPointControl.roundDown;
+    assert(lrint(1.5) == 1.0);
 
-        fpctrl.rounding = FloatingPointControl.roundUp;
-        assert(lrint(1.4) == 2.0);
+    fpctrl.rounding = FloatingPointControl.roundUp;
+    assert(lrint(1.4) == 2.0);
 
-        fpctrl.rounding = FloatingPointControl.roundToNearest;
-        assert(lrint(1.5) == 2.0);
-    }
+    fpctrl.rounding = FloatingPointControl.roundToNearest;
+    assert(lrint(1.5) == 2.0);
 }
 
-version (InlineAsm_X86_Any) @safe unittest
+@safe unittest
 {
     void ensureDefaults()
     {
@@ -6440,7 +6441,7 @@ version (InlineAsm_X86_Any) @safe unittest
     ensureDefaults();
 }
 
-version (InlineAsm_X86_Any) @safe unittest // rounding
+@safe unittest // rounding
 {
     import std.meta : AliasSeq;
 
@@ -6494,6 +6495,8 @@ version (InlineAsm_X86_Any) @safe unittest // rounding
         }
     }}
 }
+
+} // FloatingPointControlSupport
 
 
 /*********************************
@@ -7662,6 +7665,7 @@ float nextDown(float x) @safe pure nothrow @nogc
  * If y > x, the result will be the next largest floating-point value;
  * if y < x, the result will be the next smallest value.
  * If x == y, the result is y.
+ * If x or y is a NaN, the result is a NaN.
  *
  * Remarks:
  * This function is not generally very useful; it's almost always better to use
@@ -7674,7 +7678,16 @@ float nextDown(float x) @safe pure nothrow @nogc
  */
 T nextafter(T)(const T x, const T y) @safe pure nothrow @nogc
 {
-    if (x == y) return y;
+    if (x == y || isNaN(y))
+    {
+        return y;
+    }
+
+    if (isNaN(x))
+    {
+        return x;
+    }
+
     return ((y>x) ? nextUp(x) :  nextDown(x));
 }
 
@@ -7684,14 +7697,20 @@ T nextafter(T)(const T x, const T y) @safe pure nothrow @nogc
     float a = 1;
     assert(is(typeof(nextafter(a, a)) == float));
     assert(nextafter(a, a.infinity) > a);
+    assert(isNaN(nextafter(a, a.nan)));
+    assert(isNaN(nextafter(a.nan, a)));
 
     double b = 2;
     assert(is(typeof(nextafter(b, b)) == double));
     assert(nextafter(b, b.infinity) > b);
+    assert(isNaN(nextafter(b, b.nan)));
+    assert(isNaN(nextafter(b.nan, b)));
 
     real c = 3;
     assert(is(typeof(nextafter(c, c)) == real));
     assert(nextafter(c, c.infinity) > c);
+    assert(isNaN(nextafter(c, c.nan)));
+    assert(isNaN(nextafter(c.nan, c)));
 }
 
 @safe pure nothrow @nogc unittest
@@ -7700,14 +7719,26 @@ T nextafter(T)(const T x, const T y) @safe pure nothrow @nogc
     enum float a = 1;
     static assert(is(typeof(nextafter(a, a)) == float));
     static assert(nextafter(a, a.infinity) > a);
+    static assert(isNaN(nextafter(a, a.nan)));
+    static assert(isNaN(nextafter(a.nan, a)));
 
     enum double b = 2;
     static assert(is(typeof(nextafter(b, b)) == double));
     static assert(nextafter(b, b.infinity) > b);
+    static assert(isNaN(nextafter(b, b.nan)));
+    static assert(isNaN(nextafter(b.nan, b)));
 
-    //enum real c = 3;
-    //static assert(is(typeof(nextafter(c, c)) == real));
+    enum real c = 3;
+    static assert(is(typeof(nextafter(c, c)) == real));
     //static assert(nextafter(c, c.infinity) > c);
+
+    enum real negZero = nextafter(+0.0L, -0.0L); // specially CTFEable
+    static assert(negZero == -0.0L);
+    static assert(signbit(negZero));
+
+    static assert(nextafter(c, c) == c); // ditto
+    static assert(isNaN(nextafter(c, c.nan))); // ditto
+    static assert(isNaN(nextafter(c.nan, c))); // ditto
 }
 
 //real nexttoward(real x, real y) { return core.stdc.math.nexttowardl(x, y); }
@@ -7892,17 +7923,8 @@ if (isFloatingPoint!(F) && isIntegral!(G))
 
     assert(pow(x, neg1) == 1 / x);
 
-    // Test disabled on most targets.
-    // See https://issues.dlang.org/show_bug.cgi?id=5628
-    version (X86_64)   enum BUG5628 = false;
-    else version (ARM) enum BUG5628 = false;
-    else               enum BUG5628 = true;
-
-    static if (BUG5628)
-    {
-        assert(pow(xd, neg2) == 1 / (x * x));
-        assert(pow(xf, neg8) == 1 / ((x * x) * (x * x) * (x * x) * (x * x)));
-    }
+    assert(approxEqual(pow(xd, neg2), cast(double) (1 / (x * x)), 1e-25, 0.0));
+    assert(approxEqual(pow(xf, neg8), cast(float) (1 / ((x * x) * (x * x) * (x * x) * (x * x))), 1e-15, 0.0));
 
     assert(feqrel(pow(x, neg3),  1 / (x * x * x)) >= real.mant_dig - 1);
 }
@@ -7912,19 +7934,43 @@ if (isFloatingPoint!(F) && isIntegral!(G))
     assert(equalsDigit(pow(2.0L, 10.0L), 1024, 19));
 }
 
-/** Compute the value of an integer x, raised to the power of a positive
- * integer n.
+/**
+ * Compute the power of two integral numbers.
  *
- *  If both x and n are 0, the result is 1.
- *  If n is negative, an integer divide error will occur at runtime,
- * regardless of the value of x.
+ * Params:
+ *     x = base
+ *     n = exponent
+ *
+ * Returns:
+ *     x raised to the power of n. If n is negative the result is 1 / pow(x, -n),
+ *     which is calculated as integer division with remainder. This may result in
+ *     a division by zero error.
+ *
+ *     If both x and n are 0, the result is 1.
+ *
+ * Throws:
+ *     If x is 0 and n is negative, the result is the same as the result of a
+ *     division by zero.
  */
 typeof(Unqual!(F).init * Unqual!(G).init) pow(F, G)(F x, G n) @nogc @trusted pure nothrow
 if (isIntegral!(F) && isIntegral!(G))
 {
-    if (n<0) return x/0; // Only support positive powers
     typeof(return) p, v = void;
     Unqual!G m = n;
+
+    static if (isSigned!(F))
+    {
+        if (x == -1) return cast(typeof(return)) (m & 1 ? -1 : 1);
+    }
+    static if (isSigned!(G))
+    {
+        if (x == 0 && m <= -1) return x / 0;
+    }
+    if (x == 1) return 1;
+    static if (isSigned!(G))
+    {
+        if (m < 0) return 0;
+    }
 
     switch (m)
     {
@@ -7960,6 +8006,27 @@ if (isIntegral!(F) && isIntegral!(G))
 ///
 @safe pure nothrow @nogc unittest
 {
+    assert(pow(2, 3) == 8);
+    assert(pow(3, 2) == 9);
+
+    assert(pow(2, 10) == 1_024);
+    assert(pow(2, 20) == 1_048_576);
+    assert(pow(2, 30) == 1_073_741_824);
+
+    assert(pow(0, 0) == 1);
+
+    assert(pow(1, -5) == 1);
+    assert(pow(1, -6) == 1);
+    assert(pow(-1, -5) == -1);
+    assert(pow(-1, -6) == 1);
+
+    assert(pow(-2, 5) == -32);
+    assert(pow(-2, -5) == 0);
+    assert(pow(cast(double) -2, -5) == -0.03125);
+}
+
+@safe pure nothrow @nogc unittest
+{
     immutable int one = 1;
     immutable byte two = 2;
     immutable ubyte three = 3;
@@ -7972,7 +8039,20 @@ if (isIntegral!(F) && isIntegral!(G))
     assert(pow(ten, four) == 10_000);
     assert(pow(four, 10) == 1_048_576);
     assert(pow(three, four) == 81);
+}
 
+// issue 7006
+@safe pure nothrow @nogc unittest
+{
+    assert(pow(5, -1) == 0);
+    assert(pow(-5, -1) == 0);
+    assert(pow(5, -2) == 0);
+    assert(pow(-5, -2) == 0);
+    assert(pow(-1, int.min) == 1);
+    assert(pow(-2, int.min) == 0);
+
+    assert(pow(4294967290UL,2) == 18446744022169944100UL);
+    assert(pow(0,uint.max) == 0);
 }
 
 /**Computes integer to floating point powers.*/
@@ -9216,6 +9296,259 @@ bool approxEqual(T, U, V)(T value, U reference, V maxRelDiff = 1e-2, V maxAbsDif
 
 //    assert(approxEqual([],[])); //FIXME: does not work yet
     assert(approxEqual(cast(real[])[],cast(real[])[]));
+}
+
+
+/**
+   Computes whether two values are approximately equal, admitting a maximum
+   relative difference, and a maximum absolute difference.
+
+   Params:
+        lhs = First item to compare.
+        rhs = Second item to compare.
+        maxRelDiff = Maximum allowable relative difference.
+        Setting to 0.0 disables this check. Default depends on the type of
+        `lhs` and `rhs`: It is approximately half the number of decimal digits of
+        precision of the smaller type.
+        maxAbsDiff = Maximum absolute difference. This is mainly usefull
+        for comparing values to zero. Setting to 0.0 disables this check.
+        Defaults to `0.0`.
+
+   Returns:
+       `true` if the two items are approximately equal under either criterium.
+       It is sufficient, when `value ` satisfies one of the two criteria.
+
+       If one item is a range, and the other is a single value, then
+       the result is the logical and-ing of calling `isClose` on
+       each element of the ranged item against the single item. If
+       both items are ranges, then `isClose` returns `true` if
+       and only if the ranges have the same number of elements and if
+       `isClose` evaluates to `true` for each pair of elements.
+
+    See_Also:
+        Use $(LREF feqrel) to get the number of equal bits in the mantissa.
+ */
+bool isClose(T, U, V = CommonType!(FloatingPointBaseType!T,FloatingPointBaseType!U))
+    (T lhs, U rhs, V maxRelDiff = CommonDefaultFor!(T,U), V maxAbsDiff = 0.0)
+{
+    import std.range.primitives : empty, front, isInputRange, popFront;
+    static if (isInputRange!T)
+    {
+        static if (isInputRange!U)
+        {
+            // Two ranges
+            for (;; lhs.popFront(), rhs.popFront())
+            {
+                if (lhs.empty) return rhs.empty;
+                if (rhs.empty) return lhs.empty;
+                if (!isClose(lhs.front, rhs.front, maxRelDiff, maxAbsDiff))
+                    return false;
+            }
+        }
+        else
+        {
+            // lhs is range, rhs is number
+            for (; !lhs.empty; lhs.popFront())
+            {
+                if (!isClose(lhs.front, rhs, maxRelDiff, maxAbsDiff))
+                    return false;
+            }
+            return true;
+        }
+    }
+    else
+    {
+        static if (isInputRange!U)
+        {
+            // lhs is number, rhs is range
+            for (; !rhs.empty; rhs.popFront())
+            {
+                if (!isClose(lhs, rhs.front, maxRelDiff, maxAbsDiff))
+                    return false;
+            }
+            return true;
+        }
+        else
+        {
+            // two numbers
+            if (lhs == rhs) return true;
+
+            static if (is(typeof(lhs.infinity)) && is(typeof(rhs.infinity)))
+            {
+                if (lhs == lhs.infinity || rhs == rhs.infinity ||
+                    lhs == -lhs.infinity || rhs == -rhs.infinity) return false;
+            }
+
+            auto diff = abs(lhs - rhs);
+
+            return diff <= maxRelDiff*abs(lhs)
+                || diff <= maxRelDiff*abs(rhs)
+                || diff <= maxAbsDiff;
+        }
+    }
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert(isClose(1.0,0.999_999_999));
+    assert(isClose(0.001, 0.000_999_999_999));
+    assert(isClose(1_000_000_000.0,999_999_999.0));
+
+    assert(isClose(17.123_456_789, 17.123_456_78));
+    assert(!isClose(17.123_456_789, 17.123_45));
+
+    // use explicit 3rd parameter for less (or more) accuracy
+    assert(isClose(17.123_456_789, 17.123_45, 1e-6));
+    assert(!isClose(17.123_456_789, 17.123_45, 1e-7));
+
+    // use 4th parameter when comparing close to zero
+    assert(!isClose(1e-100, 0.0));
+    assert(isClose(1e-100, 0.0, 0.0, 1e-90));
+    assert(!isClose(1e-10, -1e-10));
+    assert(isClose(1e-10, -1e-10, 0.0, 1e-9));
+    assert(!isClose(1e-300, 1e-298));
+    assert(isClose(1e-300, 1e-298, 0.0, 1e-200));
+
+    // different default limits for different floating point types
+    assert(isClose(1.0f, 0.999_99f));
+    assert(!isClose(1.0, 0.999_99));
+    static if (real.sizeof > double.sizeof)
+        assert(!isClose(1.0L, 0.999_999_999L));
+}
+
+///
+@safe pure nothrow unittest
+{
+    assert(isClose([1.0, 2.0, 3.0], [0.999_999_999, 2.000_000_001, 3.0]));
+    assert(!isClose([1.0, 2.0], [0.999_999_999, 2.000_000_001, 3.0]));
+    assert(!isClose([1.0, 2.0, 3.0], [0.999_999_999, 2.000_000_001]));
+
+    assert(isClose([2.0, 1.999_999_999, 2.000_000_001], 2.0));
+    assert(isClose(2.0, [2.0, 1.999_999_999, 2.000_000_001]));
+}
+
+@safe pure nothrow unittest
+{
+    assert(!isClose([1.0, 2.0, 3.0], [0.999_999_999, 3.0, 3.0]));
+    assert(!isClose([2.0, 1.999_999, 2.000_000_001], 2.0));
+    assert(!isClose(2.0, [2.0, 1.999_999_999, 2.000_000_999]));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    immutable a = 1.00001f;
+    const b = 1.000019;
+    assert(isClose(a,b));
+
+    assert(isClose(1.00001f,1.000019f));
+    assert(isClose(1.00001f,1.000019));
+    assert(isClose(1.00001,1.000019f));
+    assert(!isClose(1.00001,1.000019));
+
+    real a1 = 1e-300L;
+    real a2 = a1.nextUp;
+    assert(isClose(a1,a2));
+}
+
+@safe pure nothrow unittest
+{
+    float[] arr1 = [ 1.0, 2.0, 3.0 ];
+    double[] arr2 = [ 1.00001, 1.99999, 3 ];
+    assert(isClose(arr1, arr2));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    assert(!isClose(1000.0,1010.0));
+    assert(!isClose(9_090_000_000.0,9_000_000_000.0));
+    assert(isClose(0.0,1e30,1.0));
+    assert(!isClose(0.00001,1e-30));
+    assert(!isClose(-1e-30,1e-30,1e-2,0.0));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    assert(!isClose(3, 0));
+    assert(isClose(3, 3));
+    assert(isClose(3.0, 3));
+    assert(isClose(3, 3.0));
+
+    assert(isClose(0.0,0.0));
+    assert(isClose(-0.0,0.0));
+    assert(isClose(0.0f,0.0));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    real num = real.infinity;
+    assert(num == real.infinity);
+    assert(isClose(num, real.infinity));
+    num = -real.infinity;
+    assert(num == -real.infinity);
+    assert(isClose(num, -real.infinity));
+
+    assert(!isClose(1,real.nan));
+    assert(!isClose(real.nan,real.max));
+    assert(!isClose(real.nan,real.nan));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    assert(isClose!(real[],real[],real)([],[]));
+    assert(isClose(cast(real[])[],cast(real[])[]));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.conv : to;
+
+    float f = 31.79f;
+    double d = 31.79;
+    double f2d = f.to!double;
+
+    assert(isClose(f,f2d));
+    assert(!isClose(d,f2d));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.conv : to;
+
+    double d = 31.79;
+    float f = d.to!float;
+    double f2d = f.to!double;
+
+    assert(isClose(f,f2d));
+    assert(!isClose(d,f2d));
+    assert(isClose(d,f2d,1e-4));
+}
+
+private template CommonDefaultFor(T,U)
+{
+    import std.algorithm.comparison : min;
+
+    alias baseT = FloatingPointBaseType!T;
+    alias baseU = FloatingPointBaseType!U;
+
+    enum CommonType!(baseT, baseU) CommonDefaultFor = 10.0L ^^ -((min(baseT.dig, baseU.dig) + 1) / 2 + 1);
+}
+
+private template FloatingPointBaseType(T)
+{
+    import std.range.primitives : ElementType;
+    static if (isFloatingPoint!T)
+    {
+        alias FloatingPointBaseType = Unqual!T;
+    }
+    else static if (isFloatingPoint!(ElementType!(Unqual!T)))
+    {
+        alias FloatingPointBaseType = Unqual!(ElementType!(Unqual!T));
+    }
+    else
+    {
+        alias FloatingPointBaseType = real;
+    }
 }
 
 

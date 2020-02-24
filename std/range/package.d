@@ -47,6 +47,7 @@ composition templates that let you construct new ranges out of existing ranges:
 
 
 $(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
 $(BOOKTABLE ,
     $(TR $(TD $(LREF chain))
         $(TD Concatenates several ranges into a single range.
@@ -206,7 +207,7 @@ $(BOOKTABLE ,
         tuple of all the first elements, a tuple of all the second elements,
         etc.
     ))
-)
+))
 
 Sortedness:
 
@@ -12750,8 +12751,13 @@ auto ref nullSink()
   Params:
   pipeOnPop = If `Yes.pipeOnPop`, simply iterating the range without ever
   calling `front` is enough to have `tee` mirror elements to `outputRange` (or,
-  respectively, `fun`). If `No.pipeOnPop`, only elements for which `front` does
-  get called will be also sent to `outputRange`/`fun`.
+  respectively, `fun`). Note that each `popFront()` call will mirror the
+  old `front` value, not the new one. This means that the last value will
+  not be forwarded if the range isn't iterated until empty. If
+  `No.pipeOnPop`, only elements for which `front` does get called will be
+  also sent to `outputRange`/`fun`. If `front` is called twice for the same
+  element, it will still be sent only once. If this caching is undesired,
+  consider using $(REF map, std,algorithm,iteration) instead.
   inputRange = The input range being passed through.
   outputRange = This range will receive elements of `inputRange` progressively
   as iteration proceeds.

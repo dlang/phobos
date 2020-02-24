@@ -4,6 +4,7 @@
 Facilities for random number generation.
 
 $(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
 $(BOOKTABLE,
 $(TR $(TH Category) $(TH Functions))
 $(TR $(TD Uniform sampling) $(TD
@@ -52,7 +53,7 @@ $(TR $(TD Traits) $(TD
     $(LREF isSeedable)
     $(LREF isUniformRNG)
 ))
-)
+))
 
 $(RED Disclaimer:) The random number generators and API provided in this
 module are not designed to be cryptographically secure, and are therefore
@@ -161,7 +162,7 @@ import std.traits;
     assert([0, 1, 2, 4, 5].randomShuffle(rnd2).equal([2, 0, 4, 5, 1]));
 }
 
-version (unittest)
+version (StdUnittest)
 {
     static import std.meta;
     package alias Xorshift64_64 = XorshiftEngine!(ulong, 64, -12, 25, -27);
@@ -2950,9 +2951,10 @@ do
 - bigger length means non-GC heap allocation(s) and dealloc. +/
 private struct RandomCoverChoices
 {
-    private void* buffer;
+    private size_t* buffer;
     private immutable size_t _length;
     private immutable bool hasPackedBits;
+    private enum BITS_PER_WORD = typeof(buffer[0]).sizeof * 8;
 
     void opAssign(T)(T) @disable;
 
@@ -2963,8 +2965,9 @@ private struct RandomCoverChoices
 
         if (!hasPackedBits && buffer !is null)
         {
-            void* nbuffer = enforceMalloc(_length);
-            buffer = memcpy(nbuffer, buffer, _length);
+            const nBytesToAlloc = size_t.sizeof * (_length / BITS_PER_WORD + int(_length % BITS_PER_WORD != 0));
+            void* nbuffer = enforceMalloc(nBytesToAlloc);
+            buffer = cast(size_t*) memcpy(nbuffer, buffer, nBytesToAlloc);
         }
     }
 
@@ -2976,7 +2979,8 @@ private struct RandomCoverChoices
         hasPackedBits = _length <= size_t.sizeof * 8;
         if (!hasPackedBits)
         {
-            buffer = enforceCalloc(numChoices, 1);
+            const nWordsToAlloc = _length / BITS_PER_WORD + int(_length % BITS_PER_WORD != 0);
+            buffer = cast(size_t*) enforceCalloc(nWordsToAlloc, BITS_PER_WORD / 8);
         }
     }
 
@@ -2993,8 +2997,9 @@ private struct RandomCoverChoices
     bool opIndex(size_t index) const pure nothrow @nogc @trusted
     {
         assert(index < _length);
+        import core.bitop : bt;
         if (!hasPackedBits)
-            return *((cast(bool*) buffer) + index);
+            return cast(bool) bt(buffer, index);
         else
             return ((cast(size_t) buffer) >> index) & size_t(1);
     }
@@ -3004,7 +3009,11 @@ private struct RandomCoverChoices
         assert(index < _length);
         if (!hasPackedBits)
         {
-            *((cast(bool*) buffer) + index) = value;
+            import core.bitop : btr, bts;
+            if (value)
+                bts(buffer, index);
+            else
+                btr(buffer, index);
         }
         else
         {

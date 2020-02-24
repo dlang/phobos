@@ -78,7 +78,7 @@ ROOT_OF_THEM_ALL = generated
 ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
 DUB=dub
 TOOLS_DIR=../tools
-DSCANNER_HASH=b51ee472fe29c05cc33359ab8de52297899131fe
+DSCANNER_HASH=9364d6f15f4a610fda49a693dbc18608bfc701bb
 DSCANNER_DIR=$(ROOT_OF_THEM_ALL)/dscanner-$(DSCANNER_HASH)
 
 # Set DRUNTIME name and full path
@@ -150,7 +150,7 @@ ifdef ENABLE_COVERAGE
 override DFLAGS  += -cov
 endif
 
-UDFLAGS=-unittest
+UDFLAGS=-unittest -version=StdUnittest
 
 # Set DOTOBJ and DOTEXE
 ifeq (,$(findstring win,$(OS)))
@@ -292,9 +292,14 @@ else
 all : lib
 endif
 
+ifneq (,$(findstring Darwin_64_32, $(PWD)))
+install:
+	echo "Darwin_64_32_disabled"
+else
 install :
 	$(MAKE) -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release INSTALL_DIR=$(INSTALL_DIR) \
 		DMD=$(DMD) install2
+endif
 
 .PHONY : unittest
 ifeq (1,$(BUILD_WAS_SPECIFIED))

@@ -4,6 +4,7 @@
 Bit-level manipulation facilities.
 
 $(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
 $(BOOKTABLE,
 $(TR $(TH Category) $(TH Functions))
 $(TR $(TD Bit constructs) $(TD
@@ -32,7 +33,7 @@ $(TR $(TD Tagging) $(TD
     $(LREF taggedClassRef)
     $(LREF taggedPointer)
 ))
-)
+))
 
 Copyright: Copyright The D Language Foundation 2007 - 2011.
 License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
@@ -56,13 +57,22 @@ import std.range.primitives;
 public import std.system : Endian;
 import std.traits;
 
-private string myToString(ulong n)
+private string myToString(ulong n) pure @safe
 {
     import core.internal.string : UnsignedStringBuf, unsignedToTempString;
     UnsignedStringBuf buf;
     auto s = unsignedToTempString(n, buf);
-    return cast(string) s ~ (n > uint.max ? "UL" : "U");
+    // pure allows implicit cast to string
+    return s ~ (n > uint.max ? "UL" : "U");
 }
+
+@safe pure unittest
+{
+    assert(myToString(5) == "5U");
+    assert(myToString(uint.max) == "4294967295U");
+    assert(myToString(uint.max + 1UL) == "4294967296UL");
+}
+
 
 private template createAccessors(
     string store, T, string name, size_t len, size_t offset)

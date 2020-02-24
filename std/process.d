@@ -1163,8 +1163,9 @@ version (Posix) @system unittest
     version (Posix)
     {
         import std.path : buildPath;
-        import std.file : remove, write, setAttributes;
+        import std.file : remove, write, setAttributes, tempDir;
         import core.sys.posix.sys.stat : S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IXGRP, S_IROTH, S_IXOTH;
+        import std.conv : to;
         string deleteme = buildPath(tempDir(), "deleteme.std.process.unittest.pid") ~ to!string(thisProcessID);
         write(deleteme, "");
         scope(exit) remove(deleteme);
@@ -1177,6 +1178,7 @@ version (Posix) @system unittest
 @system unittest // Specifying a working directory.
 {
     import std.path;
+    import std.file;
     TestScript prog = "echo foo>bar";
 
     auto directory = uniqueTempPath();
@@ -1191,6 +1193,7 @@ version (Posix) @system unittest
 @system unittest // Specifying a bad working directory.
 {
     import std.exception : assertThrown;
+    import std.file;
     TestScript prog = "echo";
 
     auto directory = uniqueTempPath();
@@ -1230,6 +1233,7 @@ version (Posix) @system unittest
 @system unittest // Reopening the standard streams (issue 13258)
 {
     import std.string;
+    import std.file;
     void fun()
     {
         spawnShell("echo foo").wait();
@@ -1360,6 +1364,7 @@ version (Windows)
 @system unittest
 {
     import std.string;
+    import std.conv : text;
     TestScript prog = "echo %0 %*";
     auto outputFn = uniqueTempPath();
     scope(exit) if (exists(outputFn)) remove(outputFn);
@@ -2748,7 +2753,7 @@ version (Windows) private immutable string shellSwitch = "/C";
 // file. On Windows the file name gets a .cmd extension, while on
 // POSIX its executable permission bit is set.  The file is
 // automatically deleted when the object goes out of scope.
-version (unittest)
+version (StdUnittest)
 private struct TestScript
 {
     this(string code) @system
@@ -2771,6 +2776,7 @@ private struct TestScript
         version (Posix)
         {
             import core.sys.posix.sys.stat : chmod;
+            import std.conv : octal;
             chmod(path.tempCString(), octal!777);
         }
     }
@@ -2791,7 +2797,7 @@ private struct TestScript
     string path;
 }
 
-version (unittest)
+version (StdUnittest)
 private string uniqueTempPath() @safe
 {
     import std.file : tempDir;
@@ -3090,7 +3096,7 @@ if (is(typeof(allocator(size_t.init)[0] = char.init)))
     return buf;
 }
 
-version (Windows) version (unittest)
+version (Windows) version (StdUnittest)
 {
 private:
     import core.stdc.stddef;
@@ -3104,6 +3110,7 @@ private:
     {
         import std.algorithm.iteration : map;
         import std.array : array;
+        import std.conv : to;
         auto lpCommandLine = (to!(WCHAR[])(line) ~ '\0').ptr;
         int numArgs;
         auto args = CommandLineToArgvW(lpCommandLine, &numArgs);
@@ -3115,6 +3122,7 @@ private:
 
     @system unittest
     {
+        import std.conv : text;
         string[] testStrings = [
             `Hello`,
             `Hello, world`,
@@ -3499,11 +3507,11 @@ static:
             if (GetEnvironmentVariableW(name.tempCStringW, null, 0) > 0)
                 return true;
             immutable err = GetLastError();
+            if (err == NO_ERROR)
+                return true; // zero-length environment variable on Wine / XP
             if (err == ERROR_ENVVAR_NOT_FOUND)
                 return false;
-            // some other windows error. Might actually be NO_ERROR, because
-            // GetEnvironmentVariable doesn't specify whether it sets on all
-            // failures
+            // Some other Windows error, throw.
             throw new WindowsException(err);
         }
         else static assert(0);
@@ -3607,12 +3615,10 @@ private:
                 immutable err = GetLastError();
                 if (err == ERROR_ENVVAR_NOT_FOUND)
                     return false;
-                // some other windows error. Might actually be NO_ERROR, because
-                // GetEnvironmentVariable doesn't specify whether it sets on all
-                // failures
-                throw new WindowsException(err);
+                if (err != NO_ERROR) // Some other Windows error, throw.
+                    throw new WindowsException(err);
             }
-            if (len == 1)
+            if (len <= 1)
             {
                 value = "";
                 return true;
@@ -3778,11 +3784,6 @@ version (Posix)
 {
     import core.sys.posix.stdlib;
 }
-version (unittest)
-{
-    import std.conv, std.file, std.random;
-}
-
 
 private void toAStringz(in string[] a, const(char)**az)
 {

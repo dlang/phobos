@@ -1,0 +1,9 @@
+`std.algorithm.sorting.schwartzSort` supports binary transform functions too
+
+The `transform` template parameter of $(REF schwartzSort, std, algorithm, sorting)
+isn't restricted to unary functions taking an element anymore, but can
+also be a binary function taking an element and its index in the
+original range.
+
+The original index can therefore be used when computing the transformed
+value to sort by.

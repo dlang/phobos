@@ -566,7 +566,7 @@ shared struct SharedAlignedBlockList(Allocator, ParentAllocator, ulong theAlignm
     tg.joinAll();
 }
 
-version (unittest)
+version (StdUnittest)
 {
     static void testrw(void[] b)
     {

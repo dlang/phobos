@@ -143,7 +143,7 @@ Source:    $(PHOBOSSRC std/string.d)
 */
 module std.string;
 
-version (unittest)
+version (StdUnittest)
 {
 private:
     struct TestAliasedString
@@ -5676,273 +5676,6 @@ do
     assert(buffer.data == "h5 rd");
 }
 
-//@@@DEPRECATED_2.086@@@
-deprecated("This function is obsolete. It is available in https://github.com/dlang/undeaD if necessary.")
-bool inPattern(S)(dchar c, in S pattern) @safe pure @nogc
-if (isSomeString!S)
-{
-    bool result = false;
-    int range = 0;
-    dchar lastc;
-
-    foreach (size_t i, dchar p; pattern)
-    {
-        if (p == '^' && i == 0)
-        {
-            result = true;
-            if (i + 1 == pattern.length)
-                return (c == p);    // or should this be an error?
-        }
-        else if (range)
-        {
-            range = 0;
-            if (lastc <= c && c <= p || c == p)
-                return !result;
-        }
-        else if (p == '-' && i > result && i + 1 < pattern.length)
-        {
-            range = 1;
-            continue;
-        }
-        else if (c == p)
-            return !result;
-        lastc = p;
-    }
-    return result;
-}
-
-
-deprecated
-@safe pure @nogc unittest
-{
-    import std.conv : to;
-    import std.exception : assertCTFEable;
-
-    assertCTFEable!(
-    {
-    assert(inPattern('x', "x") == 1);
-    assert(inPattern('x', "y") == 0);
-    assert(inPattern('x', string.init) == 0);
-    assert(inPattern('x', "^y") == 1);
-    assert(inPattern('x', "yxxy") == 1);
-    assert(inPattern('x', "^yxxy") == 0);
-    assert(inPattern('x', "^abcd") == 1);
-    assert(inPattern('^', "^^") == 0);
-    assert(inPattern('^', "^") == 1);
-    assert(inPattern('^', "a^") == 1);
-    assert(inPattern('x', "a-z") == 1);
-    assert(inPattern('x', "A-Z") == 0);
-    assert(inPattern('x', "^a-z") == 0);
-    assert(inPattern('x', "^A-Z") == 1);
-    assert(inPattern('-', "a-") == 1);
-    assert(inPattern('-', "^A-") == 0);
-    assert(inPattern('a', "z-a") == 1);
-    assert(inPattern('z', "z-a") == 1);
-    assert(inPattern('x', "z-a") == 0);
-    });
-}
-
-//@@@DEPRECATED_2.086@@@
-deprecated("This function is obsolete. It is available in https://github.com/dlang/undeaD if necessary.")
-bool inPattern(S)(dchar c, S[] patterns) @safe pure @nogc
-if (isSomeString!S)
-{
-    foreach (string pattern; patterns)
-    {
-        if (!inPattern(c, pattern))
-        {
-            return false;
-        }
-    }
-    return true;
-}
-
-//@@@DEPRECATED_2.086@@@
-deprecated("This function is obsolete. It is available in https://github.com/dlang/undeaD if necessary.")
-size_t countchars(S, S1)(S s, in S1 pattern) @safe pure @nogc
-if (isSomeString!S && isSomeString!S1)
-{
-    size_t count;
-    foreach (dchar c; s)
-    {
-        count += inPattern(c, pattern);
-    }
-    return count;
-}
-
-deprecated
-@safe pure @nogc unittest
-{
-    import std.conv : to;
-    import std.exception : assertCTFEable;
-
-    assertCTFEable!(
-    {
-    assert(countchars("abc", "a-c") == 3);
-    assert(countchars("hello world", "or") == 3);
-    });
-}
-
-//@@@DEPRECATED_2.086@@@
-deprecated("This function is obsolete. It is available in https://github.com/dlang/undeaD if necessary.")
-S removechars(S)(S s, in S pattern) @safe pure
-if (isSomeString!S)
-{
-    import std.utf : encode;
-
-    Unqual!(typeof(s[0]))[] r;
-    bool changed = false;
-
-    foreach (size_t i, dchar c; s)
-    {
-        if (inPattern(c, pattern))
-        {
-            if (!changed)
-            {
-                changed = true;
-                r = s[0 .. i].dup;
-            }
-            continue;
-        }
-        if (changed)
-        {
-            encode(r, c);
-        }
-    }
-    if (changed)
-        return r;
-    else
-        return s;
-}
-
-deprecated
-@safe pure unittest
-{
-    import std.conv : to;
-    import std.exception : assertCTFEable;
-
-    assertCTFEable!(
-    {
-    assert(removechars("abc", "a-c").length == 0);
-    assert(removechars("hello world", "or") == "hell wld");
-    assert(removechars("hello world", "d") == "hello worl");
-    assert(removechars("hah", "h") == "a");
-    });
-}
-
-deprecated
-@safe pure unittest
-{
-    assert(removechars("abc", "x") == "abc");
-}
-
-//@@@DEPRECATED_2.086@@@
-deprecated("This function is obsolete. It is available in https://github.com/dlang/undeaD if necessary.")
-S squeeze(S)(S s, in S pattern = null)
-{
-    import std.utf : encode, stride;
-
-    Unqual!(typeof(s[0]))[] r;
-    dchar lastc;
-    size_t lasti;
-    int run;
-    bool changed;
-
-    foreach (size_t i, dchar c; s)
-    {
-        if (run && lastc == c)
-        {
-            changed = true;
-        }
-        else if (pattern is null || inPattern(c, pattern))
-        {
-            run = 1;
-            if (changed)
-            {
-                if (r is null)
-                    r = s[0 .. lasti].dup;
-                encode(r, c);
-            }
-            else
-                lasti = i + stride(s, i);
-            lastc = c;
-        }
-        else
-        {
-            run = 0;
-            if (changed)
-            {
-                if (r is null)
-                    r = s[0 .. lasti].dup;
-                encode(r, c);
-            }
-        }
-    }
-    return changed ? ((r is null) ? s[0 .. lasti] : cast(S) r) : s;
-}
-
-deprecated
-@system pure unittest
-{
-    import std.conv : to;
-    import std.exception : assertCTFEable;
-
-    assertCTFEable!(
-    {
-    string s;
-
-    assert(squeeze("hello") == "helo");
-
-    s = "abcd";
-    assert(squeeze(s) is s);
-    s = "xyzz";
-    assert(squeeze(s).ptr == s.ptr); // should just be a slice
-
-    assert(squeeze("hello goodbyee", "oe") == "hello godbye");
-    });
-}
-
-//@@@DEPRECATED_2.086@@@
-deprecated("This function is obsolete. It is available in https://github.com/dlang/undeaD if necessary.")
-S1 munch(S1, S2)(ref S1 s, S2 pattern) @safe pure @nogc
-{
-    size_t j = s.length;
-    foreach (i, dchar c; s)
-    {
-        if (!inPattern(c, pattern))
-        {
-            j = i;
-            break;
-        }
-    }
-    scope(exit) s = s[j .. $];
-    return s[0 .. j];
-}
-
-///
-deprecated
-@safe pure @nogc unittest
-{
-    string s = "123abc";
-    string t = munch(s, "0123456789");
-    assert(t == "123" && s == "abc");
-    t = munch(s, "0123456789");
-    assert(t == "" && s == "abc");
-}
-
-deprecated
-@safe pure @nogc unittest
-{
-    string s = "123€abc";
-    string t = munch(s, "0123456789");
-    assert(t == "123" && s == "€abc");
-    t = munch(s, "0123456789");
-    assert(t == "" && s == "€abc");
-    t = munch(s, "£$€¥");
-    assert(t == "€" && s == "abc");
-}
-
-
 /**********************************************
  * Return string that is the 'successor' to s[].
  * If the rightmost character is a-zA-Z0-9, it is incremented within
@@ -7394,16 +7127,27 @@ Params:
 Returns:
     arr retyped as an array of chars, wchars, or dchars
 
+Throws:
+    In debug mode `AssertError`, when the result is not a well-formed UTF string.
+
 See_Also: $(LREF representation)
 */
-auto assumeUTF(T)(T[] arr) pure
+auto assumeUTF(T)(T[] arr)
 if (staticIndexOf!(Unqual!T, ubyte, ushort, uint) != -1)
 {
     import std.traits : ModifyTypePreservingTQ;
+    import std.exception : collectException;
     import std.utf : validate;
+
     alias ToUTFType(U) = AliasSeq!(char, wchar, dchar)[U.sizeof / 2];
-    auto asUTF = cast(ModifyTypePreservingTQ!(ToUTFType, T)[])arr;
-    debug validate(asUTF);
+    auto asUTF = cast(ModifyTypePreservingTQ!(ToUTFType, T)[]) arr;
+
+    debug
+    {
+        scope ex = collectException(validate(asUTF));
+        assert(!ex, ex.msg);
+    }
+
     return asUTF;
 }
 
@@ -7414,7 +7158,7 @@ if (staticIndexOf!(Unqual!T, ubyte, ushort, uint) != -1)
     immutable(ubyte)[] b = a.representation;
     string c = b.assumeUTF;
 
-    assert(a == c);
+    assert(c == "Hölo World");
 }
 
 pure @system unittest
@@ -7451,4 +7195,17 @@ pure @system unittest
         assert(equal(jt, htc));
         assert(equal(jt, hti));
     }}
+}
+
+pure @system unittest
+{
+    import core.exception : AssertError;
+    import std.exception : assertThrown, assertNotThrown;
+
+    immutable(ubyte)[] a = [ 0xC0 ];
+
+    debug
+        assertThrown!AssertError( () nothrow @nogc @safe {cast(void) a.assumeUTF;} () );
+    else
+        assertNotThrown!AssertError( () nothrow @nogc @safe {cast(void) a.assumeUTF;} () );
 }

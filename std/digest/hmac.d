@@ -321,7 +321,7 @@ unittest
     import std.digest.sha : SHA1, SHA256;
 
     // Note, can't be UFCS because we don't want to import inside
-    // version (unittest).
+    // version (StdUnittest).
     import std.digest : toHexString, LetterCase;
     alias hex = toHexString!(LetterCase.lower);
 

@@ -2076,7 +2076,7 @@ if (isInputRange!R && !isInfinite!R)
     assert(arr2.map!`a.val`.equal(iota(32, 204, 2)));
 }
 
-version (unittest)
+version (StdUnittest)
 {
     private struct ForcedInputRange
     {

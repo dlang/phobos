@@ -1640,7 +1640,7 @@ shared struct SharedBitmappedBlock(size_t theBlockSize, uint theAlignment = plat
     }
     else
     {
-        version (unittest)
+        version (StdUnittest)
         @system unittest
         {
             import std.algorithm.comparison : max;

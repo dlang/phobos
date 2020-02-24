@@ -120,7 +120,7 @@ else
     static assert(0, "No socket support for this platform yet.");
 }
 
-version (unittest)
+version (StdUnittest)
 {
     // Print a message on exception instead of failing the unittest.
     private void softUnittest(void delegate() @safe test, int line = __LINE__) @trusted
@@ -2024,6 +2024,8 @@ static if (is(sockaddr_un))
         @property string path() @trusted const pure
         {
             auto len = _nameLen - sockaddr_un.init.sun_path.offsetof;
+            if (len == 0)
+                return null; // An empty path may be returned from getpeername
             // For pathname socket address we need to strip off the terminating '\0'
             if (sun.sun_path.ptr[0])
                 --len;
@@ -2073,6 +2075,12 @@ static if (is(sockaddr_un))
             auto buf = new ubyte[data.length];
             pair[1].receive(buf);
             assert(buf == data);
+
+            // getpeername is free to return an empty name for a unix
+            // domain socket pair or unbound socket. Let's confirm it
+            // returns successfully and doesn't throw anything.
+            // See https://issues.dlang.org/show_bug.cgi?id=20544
+            assertNotThrown(pair[1].remoteAddress().toString());
         }
     }
 }
@@ -2785,7 +2793,14 @@ public:
         return !getsockopt(sock, SOL_SOCKET, SO_TYPE, cast(char*)&type, &typesize);
     }
 
-    /// Associate a local address with this socket.
+    /**
+     * Associate a local address with this socket.
+     *
+     * Params:
+     *     addr = The $(LREF Address) to associate this socket with.
+     *
+     * Throws: $(LREF SocketOSException) when unable to bind the socket.
+     */
     void bind(Address addr) @trusted
     {
         if (_SOCKET_ERROR == .bind(sock, addr.name, addr.nameLen))
@@ -3550,11 +3565,11 @@ class UdpSocket: Socket
     {
         override
         {
-            const pure nothrow @nogc @property @safe socket_t handle() { assert(0); }
-            const nothrow @nogc @property @trusted bool blocking() { assert(0); }
+            pure nothrow @nogc @property @safe socket_t handle() const { assert(0); }
+            nothrow @nogc @property @trusted bool blocking() const { assert(0); }
             @property @trusted void blocking(bool byes) { assert(0); }
             @property @safe AddressFamily addressFamily() { assert(0); }
-            const @property @trusted bool isAlive() { assert(0); }
+            @property @trusted bool isAlive() const { assert(0); }
             @trusted void bind(Address addr) { assert(0); }
             @trusted void connect(Address to) { assert(0); }
             @trusted void listen(int backlog) { assert(0); }

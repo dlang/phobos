@@ -2,6 +2,7 @@
 
 /++
 $(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
 $(BOOKTABLE,
 $(TR $(TH Category) $(TH Functions))
 $(TR $(TD Main types) $(TD
@@ -25,7 +26,7 @@ $(TR $(TD Underlying ranges) $(TD
 $(TR $(TD Flags) $(TD
     $(LREF PopFirst)
 ))
-)
+))
 
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   $(HTTP jmdavisprog.com, Jonathan M Davis)
@@ -41,7 +42,7 @@ import std.range.primitives : isOutputRange;
 import std.traits : isIntegral, Unqual;
 import std.typecons : Flag;
 
-version (unittest) import std.exception : assertThrown;
+version (StdUnittest) import std.exception : assertThrown;
 
 
 /++

@@ -251,7 +251,7 @@ class OutBuffer
         import core.stdc.stdlib : alloca;
         import std.string : toStringz;
 
-        version (unittest)
+        version (StdUnittest)
             char[3] buffer = void;      // trigger reallocation
         else
             char[128] buffer = void;

@@ -101,7 +101,7 @@ static import std.meta;
 import std.range.primitives;
 import std.traits;
 
-version (unittest)
+version (StdUnittest)
 {
 private:
     struct TestAliasedString
@@ -533,14 +533,15 @@ if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) || isNar
     return p2[lastSeparator(p2)+1 .. p2.length];
 }
 
-/** Returns the parent directory of path. On Windows, this
-    includes the drive letter if present.
+/** Returns the parent directory of `path`. On Windows, this
+    includes the drive letter if present. If `path` is a relative path and
+    the parent directory is the current working directory, returns `"."`.
 
     Params:
         path = A path name.
 
     Returns:
-        A slice of `path` or ".".
+        A slice of `path` or `"."`.
 
     Standards:
     This function complies with
@@ -4030,7 +4031,7 @@ string expandTilde(string inputPath) @safe nothrow
                 assert(last_char > 1);
 
                 // Reserve C memory for the getpwnam_r() function.
-                version (unittest)
+                version (StdUnittest)
                     uint extra_memory_size = 2;
                 else
                     uint extra_memory_size = 5 * 1024;
@@ -4151,7 +4152,7 @@ string expandTilde(string inputPath) @safe nothrow
     }
 }
 
-version (unittest)
+version (StdUnittest)
 {
 private:
     /* Define a mock RandomAccessRange to use for unittesting.

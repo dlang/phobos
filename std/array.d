@@ -5,6 +5,7 @@ Functions and types that manipulate built-in arrays and associative arrays.
 This module provides all kinds of functions to create, manipulate or convert arrays:
 
 $(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)
 )
@@ -67,7 +68,7 @@ $(TR $(TH Function Name) $(TH Description)
     $(TR $(TD $(LREF uninitializedArray))
         $(TD Returns a new array of type `T` without initializing its elements.
     ))
-)
+))
 
 Copyright: Copyright Andrei Alexandrescu 2008- and Jonathan M Davis 2011-.
 
@@ -222,7 +223,7 @@ if (isPointer!Range && isIterable!(PointerTarget!Range) && !isNarrowString!Range
     assert(a.length == 5);
 }
 
-version (unittest)
+version (StdUnittest)
     private extern(C) void _d_delarray_t(void[] *p, TypeInfo_Struct ti);
 
 @system unittest
@@ -553,7 +554,7 @@ if (isInputRange!Values && isInputRange!Keys)
     assert(c == expected);
 }
 
-// @@@11053@@@ - Cannot be version (unittest) - recursive instantiation error
+// @@@11053@@@ - Cannot be version (StdUnittest) - recursive instantiation error
 @safe unittest
 {
     import std.typecons;
@@ -4624,7 +4625,7 @@ nothrow pure @safe unittest
     staticArray!(long, 2.iota).checkStaticArray!long([0, 1]);
 }
 
-version (unittest) private void checkStaticArray(T, T1, T2)(T1 a, T2 b) nothrow @safe pure @nogc
+version (StdUnittest) private void checkStaticArray(T, T1, T2)(T1 a, T2 b) nothrow @safe pure @nogc
 {
     static assert(is(T1 == T[T1.length]));
     assert(a == b, "a must be equal to b");

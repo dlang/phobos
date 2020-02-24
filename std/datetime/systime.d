@@ -3,6 +3,7 @@
 /++
 
 $(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
 $(BOOKTABLE,
 $(TR $(TH Category) $(TH Functions))
 $(TR $(TD Types) $(TD
@@ -23,7 +24,7 @@ $(TR $(TD Conversion) $(TD
     $(LREF SysTimeToSYSTEMTIME)
     $(LREF unixTimeToStdTime)
 ))
-)
+))
 
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   $(HTTP jmdavisprog.com, Jonathan M Davis)
@@ -91,7 +92,7 @@ else version (Posix)
     import core.sys.posix.sys.types : time_t;
 }
 
-version (unittest)
+version (StdUnittest)
 {
     import core.exception : AssertError;
     import std.exception : assertThrown;
@@ -10454,7 +10455,7 @@ afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
     assertThrown!DateTimeException(parseRFC822DateTime(badStr));
 }
 
-version (unittest) private void testParse822(alias cr)(string str, SysTime expected, size_t line = __LINE__)
+version (StdUnittest) private void testParse822(alias cr)(string str, SysTime expected, size_t line = __LINE__)
 {
     import std.format : format;
     auto value = cr(str);
@@ -10463,7 +10464,7 @@ version (unittest) private void testParse822(alias cr)(string str, SysTime expec
         throw new AssertError(format("wrong result. expected [%s], actual[%s]", expected, result), __FILE__, line);
 }
 
-version (unittest) private void testBadParse822(alias cr)(string str, size_t line = __LINE__)
+version (StdUnittest) private void testBadParse822(alias cr)(string str, size_t line = __LINE__)
 {
     try
         parseRFC822DateTime(cr(str));
@@ -11403,7 +11404,7 @@ if (isIntegral!T && isSigned!T) // The constraints on R were already covered by 
 // NOTE: all the non-simple array literals are wrapped in functions, because
 // otherwise importing causes re-evaluation of the static initializers using
 // CTFE with unittests enabled
-version (unittest)
+version (StdUnittest)
 {
 private @safe:
     // Variables to help in testing.

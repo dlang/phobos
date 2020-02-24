@@ -8,6 +8,7 @@ It provides basic range functionality by defining several templates for testing
 whether a given object is a range, and what kind of range it is:
 
 $(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
 $(BOOKTABLE ,
     $(TR $(TD $(LREF isInputRange))
         $(TD Tests if something is an $(I input range), defined to be
@@ -35,7 +36,7 @@ $(BOOKTABLE ,
         bidirectional range that also supports the array subscripting
         operation via the primitive `opIndex`.
     ))
-)
+))
 
 It also provides number of templates that test for various range capabilities:
 

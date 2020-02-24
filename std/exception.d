@@ -5,6 +5,7 @@
     handling. It also defines functions intended to aid in unit testing.
 
 $(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
 $(BOOKTABLE,
 $(TR $(TH Category) $(TH Functions))
 $(TR $(TD Assumptions) $(TD
@@ -31,7 +32,7 @@ $(TR $(TD Other) $(TD
         $(LREF ErrnoException)
         $(LREF RangePrimitive)
 ))
-)
+))
 
     Copyright: Copyright Andrei Alexandrescu 2008-, Jonathan M Davis 2011-.
     License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0)
@@ -1309,7 +1310,7 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
 }
 
 
-version (unittest)
+version (StdUnittest)
 {
     // 17084 : the bug doesn't happen if these declarations are
     // in the unittest block (static or not).
@@ -1851,7 +1852,7 @@ expression.
     static assert(!__traits(compiles, (new Object()).ifThrown(e=>1)));
 }
 
-version (unittest) package
+version (StdUnittest) package
 void assertCTFEable(alias dg)()
 {
     static assert({ cast(void) dg(); return true; }());

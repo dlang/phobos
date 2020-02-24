@@ -1,0 +1,4 @@
+Removed deprecated structs `ByLine`, `ByChunk`, `ByRecord` from `std.stdio`.
+
+The deprecated structs `ByLine`, `ByChunk`, `ByRecord` have been removed from
+`std.stdio`. Use the functions `byLine`, `byChunk`, `byRecord` instead.

@@ -2,6 +2,7 @@
 /++
 
 $(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
 $(BOOKTABLE,
 $(TR $(TH Category) $(TH Functions))
 $(TR $(TD Main date types) $(TD
@@ -32,7 +33,7 @@ $(TR $(TD Other) $(TD
     $(LREF AllowDayOverflow)
     $(LREF DateTimeException)
 ))
-)
+))
 
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   $(HTTP jmdavisprog.com, Jonathan M Davis)
@@ -45,7 +46,7 @@ import std.traits : isSomeString, Unqual;
 import std.typecons : Flag;
 import std.range.primitives : isOutputRange;
 
-version (unittest) import std.exception : assertThrown;
+version (StdUnittest) import std.exception : assertThrown;
 
 @safe unittest
 {
@@ -10438,7 +10439,7 @@ if (isSomeString!T)
 // NOTE: all the non-simple array literals are wrapped in functions, because
 // otherwise importing causes re-evaluation of the static initializers using
 // CTFE with unittests enabled
-version (unittest)
+version (StdUnittest)
 {
 private @safe:
     // All of these helper arrays are sorted in ascending order.
