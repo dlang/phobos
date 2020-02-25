@@ -1782,15 +1782,15 @@ public:
     /***************************************
      * Convert to `void[]`.
      */
-    void[] opCast(T : void[])() @nogc pure nothrow
+    inout(void)[] opCast(T : const void[])() inout @nogc pure nothrow
     {
-        return cast(void[])_ptr[0 .. dim];
+        return cast(inout void[]) _ptr[0 .. dim];
     }
 
     /***************************************
      * Convert to `size_t[]`.
      */
-    size_t[] opCast(T : size_t[])() @nogc pure nothrow
+    inout(size_t)[] opCast(T : const size_t[])() inout @nogc pure nothrow
     {
         return _ptr[0 .. dim];
     }
@@ -1806,6 +1806,34 @@ public:
         size_t[] v = cast(size_t[]) a;
         const blockSize = size_t.sizeof * 8;
         assert(v.length == (a.length + blockSize - 1) / blockSize);
+    }
+
+    // https://issues.dlang.org/show_bug.cgi?id=20606
+    @system unittest
+    {
+        import std.meta : AliasSeq;
+
+        static foreach (alias T; AliasSeq!(void, size_t))
+        {{
+            BitArray m;
+            T[] ma = cast(T[]) m;
+
+            const BitArray c;
+            const(T)[] ca = cast(const T[]) c;
+
+            immutable BitArray i;
+            immutable(T)[] ia = cast(immutable T[]) i;
+
+            // Cross-mutability
+            ca = cast(const T[]) m;
+            ca = cast(const T[]) i;
+
+            // Invalid cast don't compile
+            static assert(!is(typeof(cast(T[]) c)));
+            static assert(!is(typeof(cast(T[]) i)));
+            static assert(!is(typeof(cast(immutable T[]) m)));
+            static assert(!is(typeof(cast(immutable T[]) c)));
+        }}
     }
 
     /***************************************
