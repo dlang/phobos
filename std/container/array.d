@@ -1585,6 +1585,26 @@ if (!is(Unqual!T == bool))
     ai.insertBack(arr);
 }
 
+/**
+ * issue 20589 - typeof may give wrong result in case of classes defining `opCall` operator
+ * https://issues.dlang.org/show_bug.cgi?id=20589
+ *
+ * destructor std.container.array.Array!(MyClass).Array.~this is @system
+ * so the unittest is @system too
+ */
+@system unittest
+{
+    class MyClass
+    {
+        T opCall(T)(T p)
+        {
+            return p;
+        }
+    }
+
+    Array!MyClass arr;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Array!bool

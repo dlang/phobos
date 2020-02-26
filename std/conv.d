@@ -4462,7 +4462,7 @@ package void emplaceRef(T, UT, Args...)(ref UT chunk, auto ref Args args)
         }
         if (__ctfe)
         {
-            static if (is(typeof(chunk = T(args))))
+            static if (__traits(compiles, chunk = T(args)))
                 chunk = T(args);
             else static if (args.length == 1 && is(typeof(chunk = args[0])))
                 chunk = args[0];
