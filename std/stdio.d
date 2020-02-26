@@ -493,6 +493,20 @@ Throws: `ErrnoException` in case of error.
         resetFile(name, stdioOpenmode, false);
     }
 
+    @system unittest // bugzilla 20585
+    {
+        File f;
+        try
+            f.open("doesn't exist");
+        catch (Exception _e)
+        {
+        }
+
+        assert(!f.isOpen);
+
+        f.close();  // to check not crash here
+    }
+
     private void resetFile(string name, scope const(char)[] stdioOpenmode, bool isPopened) @trusted
     {
         import core.stdc.stdlib : malloc;
@@ -505,7 +519,6 @@ Throws: `ErrnoException` in case of error.
             detach();
         }
 
-        _p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
         FILE* handle;
         version (Posix)
         {
@@ -528,6 +541,7 @@ Throws: `ErrnoException` in case of error.
                          text("Cannot open file `", name, "' in mode `",
                               stdioOpenmode, "'"));
         }
+        _p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
         initImpl(handle, name, 1, isPopened);
         version (MICROSOFT_STDIO)
         {
