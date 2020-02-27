@@ -10924,6 +10924,7 @@ if (isInputRange!Range && !isInstanceOf!(SortedRange, Range))
     }
 
     ///
+    static if (is(Range : int[]))
     @safe unittest
     {
         import std.algorithm.comparison : equal;
@@ -10966,6 +10967,7 @@ policies are allowed, and `SearchPolicy.binarySearch` is the default.
     }
 
     ///
+    static if (is(Range : int[]))
     @safe unittest
     {
         import std.algorithm.comparison : equal;
@@ -11028,6 +11030,7 @@ policies are allowed, and `SearchPolicy.binarySearch` is the default.
     }
 
     ///
+    static if (is(Range : int[]))
     @safe unittest
     {
         import std.algorithm.comparison : equal;
@@ -11088,6 +11091,7 @@ equalRange). Completes the entire search in $(BIGOH log(n)) time.
     }
 
     ///
+    static if (is(Range : int[]))
     @safe unittest
     {
         import std.algorithm.comparison : equal;

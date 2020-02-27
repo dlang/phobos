@@ -1192,9 +1192,16 @@ if (distinctFieldNames!(Specs))
                 static if (__traits(compiles, h = .hashOf(field[i])))
                     const k = .hashOf(field[i]);
                 else
+                {
                     // Workaround for when .hashOf is not both @safe and nothrow.
-                    // BUG: Improperly casts away `shared`!
-                    const k = typeid(T).getHash((() @trusted => cast(const void*) &field[i])());
+                    static if (is(T : shared U, U) && __traits(compiles, (U* a) nothrow @safe => .hashOf(*a))
+                            && !__traits(hasMember, T, "toHash"))
+                        // BUG: Improperly casts away `shared`!
+                        const k = .hashOf(*(() @trusted => cast(U*) &field[i])());
+                    else
+                        // BUG: Improperly casts away `shared`!
+                        const k = typeid(T).getHash((() @trusted => cast(const void*) &field[i])());
+                }
                 static if (i == 0)
                     h = k;
                 else
