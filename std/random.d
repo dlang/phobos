@@ -104,6 +104,7 @@ Distributed under the Boost Software License, Version 1.0.
 module std.random;
 
 
+import std.internal.attributes : betterC;
 import std.range.primitives;
 import std.traits;
 
@@ -1656,7 +1657,7 @@ version (AnyARC4Random)
 }
 else
 {
-    private ulong bootstrapSeed() @nogc nothrow
+    private ulong bootstrapSeed()() @nogc nothrow
     {
         // Issue 19580 - previously used `ulong result = void` to start with
         // an arbitary value but using an uninitialized variable's value is
@@ -1670,12 +1671,30 @@ else
             x = (x ^ (x >>> 47)) * m;
             result = (result ^ x) * m;
         }
-        import core.thread : getpid, Thread;
-        import core.time : MonoTime;
-
-        updateResult(cast(ulong) cast(void*) Thread.getThis());
-        updateResult(cast(ulong) getpid());
-        updateResult(cast(ulong) MonoTime.currTime.ticks);
+        version (Windows)
+        {
+            import core.sys.windows.winbase : GetCurrentProcessId, GetCurrentThreadId, QueryPerformanceCounter;
+            updateResult(GetCurrentThreadId());
+            updateResult(GetCurrentProcessId());
+            long ticks = void;
+            QueryPerformanceCounter(&ticks);
+            updateResult(ticks);
+        }
+        else version (Posix)
+        {
+            import core.sys.posix.pthread : pthread_self;
+            import core.sys.posix.time : clock_gettime, CLOCK_MONOTONIC, timespec;
+            import core.sys.posix.unistd : getpid;
+            updateResult(cast(ulong) pthread_self());
+            updateResult(getpid());
+            timespec ts = void;
+            clock_gettime(CLOCK_MONOTONIC, &ts);
+            updateResult(ts.tv_sec * 1_000_000_000UL + ts.tv_nsec);
+        }
+        else
+        {
+            static assert(0, "Unsupported platform");
+        }
         result = (result ^ (result >>> 47)) * m;
         return result ^ (result >>> 47);
     }
@@ -1695,87 +1714,65 @@ Twister has `2 ^^ 19937 - 1` distinct states but after `seed(uint)` is
 called it can only be in one of `2 ^^ 32` distinct states regardless of
 how excellent the source of entropy is.
 */
-@property uint unpredictableSeed() @trusted nothrow @nogc
+@property UIntType unpredictableSeed(UIntType = uint)() @trusted nothrow @nogc
+if (isUnsigned!UIntType)
 {
     version (AnyARC4Random)
     {
-        return arc4random();
+        static if (UIntType.sizeof <= uint.sizeof)
+        {
+            return cast(UIntType) arc4random();
+        }
+        else
+        {
+            Unqual!UIntType result = void;
+            arc4random_buf(&result, UIntType.sizeof);
+            return result;
+        }
+    }
+    else static if (!is(UIntType == ulong))
+    {
+        // The work occurs in the ulong implementation.
+        return cast(UIntType) unpredictableSeed!ulong;
     }
     else
     {
-        return cast(uint) unpredictableSeed!ulong;
-    }
-}
-
-/// ditto
-template unpredictableSeed(UIntType)
-if (isUnsigned!UIntType)
-{
-    static if (is(UIntType == uint))
-        alias unpredictableSeed = .unpredictableSeed;
-    else static if (!is(Unqual!UIntType == UIntType))
-        alias unpredictableSeed = .unpredictableSeed!(Unqual!UIntType);
-    else
-        /// ditto
-        @property UIntType unpredictableSeed() @nogc nothrow @trusted
+        // Bit avalanche function from MurmurHash3.
+        static ulong fmix64(ulong k) @nogc nothrow pure @safe
         {
-            version (AnyARC4Random)
-            {
-                static if (UIntType.sizeof <= uint.sizeof)
-                {
-                    return cast(UIntType) arc4random();
-                }
-                else
-                {
-                    UIntType result = void;
-                    arc4random_buf(&result, UIntType.sizeof);
-                    return result;
-                }
-            }
-            else static if (!is(UIntType == ulong))
-            {
-                // The work occurs in the ulong implementation.
-                return cast(UIntType) unpredictableSeed!ulong;
-            }
-            else
-            {
-                // Bit avalanche function from MurmurHash3.
-                static ulong fmix64(ulong k) @nogc nothrow pure @safe
-                {
-                    k = (k ^ (k >>> 33)) * 0xff51afd7ed558ccd;
-                    k = (k ^ (k >>> 33)) * 0xc4ceb9fe1a85ec53;
-                    return k ^ (k >>> 33);
-                }
-                // Using SplitMix algorithm with constant gamma.
-                // Chosen gamma is the odd number closest to 2^^64
-                // divided by the silver ratio (1.0L + sqrt(2.0L)).
-                enum gamma = 0x6a09e667f3bcc909UL;
-                import core.atomic : has64BitCAS;
-                static if (has64BitCAS)
-                {
-                    import core.atomic : MemoryOrder, atomicLoad, atomicOp, atomicStore, cas;
-                    shared static ulong seed;
-                    shared static bool initialized;
-                    if (0 == atomicLoad!(MemoryOrder.raw)(initialized))
-                    {
-                        cas(&seed, 0UL, fmix64(bootstrapSeed()));
-                        atomicStore!(MemoryOrder.rel)(initialized, true);
-                    }
-                    return fmix64(atomicOp!"+="(seed, gamma));
-                }
-                else
-                {
-                    static ulong seed;
-                    static bool initialized;
-                    if (!initialized)
-                    {
-                        seed = fmix64(bootstrapSeed());
-                        initialized = true;
-                    }
-                    return fmix64(seed += gamma);
-                }
-            }
+            k = (k ^ (k >>> 33)) * 0xff51afd7ed558ccd;
+            k = (k ^ (k >>> 33)) * 0xc4ceb9fe1a85ec53;
+            return k ^ (k >>> 33);
         }
+        // Using SplitMix algorithm with constant gamma.
+        // Chosen gamma is the odd number closest to 2^^64
+        // divided by the silver ratio (1.0L + sqrt(2.0L)).
+        enum gamma = 0x6a09e667f3bcc909UL;
+        import core.atomic : has64BitCAS;
+        static if (has64BitCAS)
+        {
+            import core.atomic : MemoryOrder, atomicLoad, atomicOp, atomicStore, cas;
+            shared static ulong seed;
+            shared static bool initialized;
+            if (0 == atomicLoad!(MemoryOrder.raw)(initialized))
+            {
+                cas(&seed, 0UL, fmix64(bootstrapSeed()));
+                atomicStore!(MemoryOrder.rel)(initialized, true);
+            }
+            return fmix64(atomicOp!"+="(seed, gamma));
+        }
+        else
+        {
+            static ulong seed;
+            static bool initialized;
+            if (!initialized)
+            {
+                seed = fmix64(bootstrapSeed());
+                initialized = true;
+            }
+            return fmix64(seed += gamma);
+        }
+    }
 }
 
 ///
@@ -1784,6 +1781,11 @@ if (isUnsigned!UIntType)
     auto rnd = Random(unpredictableSeed);
     auto n = rnd.front;
     static assert(is(typeof(n) == uint));
+}
+
+@betterC @safe @nogc nothrow unittest
+{
+    auto seed = unpredictableSeed;
 }
 
 /**
