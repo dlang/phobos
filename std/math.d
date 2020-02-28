@@ -293,7 +293,7 @@ template floatTraits(T)
     // EXPPOS_SHORT is the index of the exponent when represented as a ushort array.
     // SIGNPOS_BYTE is the index of the sign when represented as a ubyte array.
     // RECIP_EPSILON is the value such that (smallest_subnormal) * RECIP_EPSILON == T.min_normal
-    enum T RECIP_EPSILON = (1/Unqual!T.epsilon);
+    enum Unqual!T RECIP_EPSILON = (1/T.epsilon);
     static if (T.mant_dig == 24)
     {
         // Single precision float
