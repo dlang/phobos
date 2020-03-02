@@ -410,7 +410,7 @@ private:
     To convert a `SysTime` to a $(REF Date,std,datetime,date) or
     $(REF DateTime,std,datetime,date), simply cast it. To convert a
     $(REF Date,std,datetime,date) or $(REF DateTime,std,datetime,date) to a
-    `SysTime`, use `SysTime`'s constructor, and pass in the ntended time
+    `SysTime`, use `SysTime`'s constructor, and pass in the intended time
     zone with it (or don't pass in a $(REF TimeZone,std,datetime,timezone), and
     the local time zone will be used). Be aware, however, that converting from a
     $(REF DateTime,std,datetime,date) to a `SysTime` will not necessarily
