@@ -1355,7 +1355,7 @@ public:
     /**********************************************
      * Counts all the set bits in the `BitArray`
      */
-    size_t count()
+    size_t count() const
     {
         if (_ptr)
         {
