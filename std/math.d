@@ -293,7 +293,7 @@ template floatTraits(T)
     // EXPPOS_SHORT is the index of the exponent when represented as a ushort array.
     // SIGNPOS_BYTE is the index of the sign when represented as a ubyte array.
     // RECIP_EPSILON is the value such that (smallest_subnormal) * RECIP_EPSILON == T.min_normal
-    enum T RECIP_EPSILON = (1/T.epsilon);
+    enum Unqual!T RECIP_EPSILON = (1/T.epsilon);
     static if (T.mant_dig == 24)
     {
         // Single precision float
@@ -6915,6 +6915,17 @@ if (isFloatingPoint!(X))
     assert(isInfinity(-e));
     e = (-1.0L / 0.0L);
     assert(isInfinity(e));
+}
+
+@nogc @safe pure nothrow unittest
+{
+    import std.meta : AliasSeq;
+    static bool foo(T)(inout T x) { return isInfinity(x); }
+    foreach (T; AliasSeq!(float, double, real))
+    {
+        assert(!foo(T(3.14f)));
+        assert(foo(T.infinity));
+    }
 }
 
 /*********************************
