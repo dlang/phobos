@@ -1192,7 +1192,7 @@ public:
       Sets all the values in the `BitArray` to the
       value specified by `val`.
      */
-    void opSliceAssign(bool val)
+    void opSliceAssign(bool val) @nogc pure nothrow
     {
         _ptr[0 .. fullWords] = val ? ~size_t(0) : 0;
         if (endBits)
@@ -1205,7 +1205,7 @@ public:
     }
 
     ///
-    @system unittest
+    @system pure nothrow unittest
     {
         import std.algorithm.comparison : equal;
 
@@ -1225,7 +1225,7 @@ public:
       at index `start` and ends at index ($D end - 1)
       with the values specified by `val`.
      */
-    void opSliceAssign(bool val, size_t start, size_t end) pure nothrow
+    void opSliceAssign(bool val, size_t start, size_t end) @nogc pure nothrow
     in
     {
         assert(start <= end, "start must be less or equal to end");
@@ -1271,7 +1271,7 @@ public:
     }
 
     ///
-    @system unittest
+    @system pure nothrow unittest
     {
         import std.algorithm.comparison : equal;
         import std.range : iota;
@@ -1303,7 +1303,7 @@ public:
     /**
       Flips all the bits in the `BitArray`
      */
-    void flip()
+    void flip() @nogc pure nothrow
     {
         foreach (i; 0 .. fullWords)
             _ptr[i] = ~_ptr[i];
@@ -1313,7 +1313,7 @@ public:
     }
 
     ///
-    @system unittest
+    @system pure nothrow unittest
     {
         import std.algorithm.comparison : equal;
         import std.range : iota;
@@ -1333,13 +1333,13 @@ public:
     /**
       Flips a single bit, specified by `pos`
      */
-    void flip(size_t i)
+    void flip(size_t i) @nogc pure nothrow
     {
         bt(_ptr, i) ? btr(_ptr, i) : bts(_ptr, i);
     }
 
     ///
-    @system unittest
+    @system pure nothrow unittest
     {
         auto ax = BitArray([1, 0, 0, 1]);
         ax.flip(0);
@@ -1355,7 +1355,7 @@ public:
     /**********************************************
      * Counts all the set bits in the `BitArray`
      */
-    size_t count()
+    size_t count() const @nogc pure nothrow
     {
         if (_ptr)
         {
@@ -1372,7 +1372,7 @@ public:
     }
 
     ///
-    @system unittest
+    @system pure nothrow unittest
     {
         auto a = BitArray([0, 1, 1, 0, 0, 1, 1]);
         assert(a.count == 4);
@@ -2631,6 +2631,21 @@ public:
                 put(sink, ", ");
         }
         put(sink, "]");
+    }
+
+    // https://issues.dlang.org/show_bug.cgi?id=20639
+    // Separate @nogc test because public tests use array literals
+    // (and workarounds needlessly uglify those examples)
+    @system @nogc unittest
+    {
+        size_t[2] buffer;
+        BitArray b = BitArray(buffer[], buffer.sizeof * 8);
+
+        b[] = true;
+        b[0 .. 1] = true;
+        b.flip();
+        b.flip(1);
+        cast(void) b.count();
     }
 }
 
