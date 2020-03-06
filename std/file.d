@@ -93,6 +93,15 @@ import std.range.primitives;
 import std.traits;
 import std.typecons;
 
+version (OSX)
+    version = Darwin;
+else version (iOS)
+    version = Darwin;
+else version (TVOS)
+    version = Darwin;
+else version (WatchOS)
+    version = Darwin;
+
 version (Windows)
 {
     import core.sys.windows.winbase, core.sys.windows.winnt, std.windows.syserror;
@@ -3448,7 +3457,7 @@ else version (Posix) string getcwd() @trusted
     assert(s.length);
 }
 
-version (OSX)
+version (Darwin)
     private extern (C) int _NSGetExecutablePath(char* buf, uint* bufsize);
 else version (FreeBSD)
     private extern (C) int sysctl (const int* name, uint namelen, void* oldp,
@@ -3468,7 +3477,7 @@ else version (NetBSD)
  */
 @trusted string thisExePath()
 {
-    version (OSX)
+    version (Darwin)
     {
         import core.sys.posix.stdlib : realpath;
         import std.conv : to;
@@ -4450,7 +4459,7 @@ version (Windows) @system unittest
 version (Posix) @system unittest
 {
     import std.exception : enforce, collectException;
-    import std.process : executeShell;
+
     collectException(rmdirRecurse(deleteme));
     auto d = deleteme~"/a/b/c/d/e/f/g";
     enforce(collectException(mkdir(d)));
@@ -4464,9 +4473,8 @@ version (Posix) @system unittest
 
     d = deleteme~"/a/b/c/d/e/f/g";
     mkdirRecurse(d);
-    version (Android) string link_cmd = "ln -s ";
-    else string link_cmd = "ln -sf ";
-    executeShell(link_cmd~deleteme~"/a/b/c "~deleteme~"/link");
+    const linkTarget = deleteme ~ "/link";
+    symlink(deleteme ~ "/a/b/c", linkTarget);
     rmdirRecurse(deleteme);
     enforce(!exists(deleteme));
 }
@@ -4932,7 +4940,7 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
                                    // called from a shared library on Android,
                                    // ie an apk
     else
-        string testdir = "deleteme.dmd.unittest.std.file" ~ to!string(thisProcessID); // needs to be relative
+        string testdir = tempDir.buildPath("deleteme.dmd.unittest.std.file" ~ to!string(thisProcessID));
     mkdirRecurse(buildPath(testdir, "somedir"));
     scope(exit) rmdirRecurse(testdir);
     write(buildPath(testdir, "somefile"), null);

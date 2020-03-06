@@ -3144,11 +3144,12 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
 // Issue 15517
 @system unittest
 {
-    import std.file : exists, remove;
+    import std.file : exists, remove, tempDir;
+    import std.path : buildPath;
     import std.stdio : File;
     import std.string : indexOf;
 
-    string fn = "logfile.log";
+    string fn = tempDir.buildPath("logfile.log");
     if (exists(fn))
     {
         remove(fn);

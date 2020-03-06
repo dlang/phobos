@@ -40,6 +40,15 @@ License:    $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0)
 */
 module std.parallelism;
 
+version (OSX)
+    version = Darwin;
+else version (iOS)
+    version = Darwin;
+else version (TVOS)
+    version = Darwin;
+else version (WatchOS)
+    version = Darwin;
+
 ///
 @system unittest
 {
@@ -86,7 +95,7 @@ import std.meta;
 import std.range.primitives;
 import std.traits;
 
-version (OSX)
+version (Darwin)
 {
     version = useSysctlbyname;
 }
@@ -986,9 +995,9 @@ uint totalCPUsImpl() @nogc nothrow @trusted
     }
     else version (useSysctlbyname)
     {
-        version (OSX)
+        version (Darwin)
         {
-            auto nameStr = "machdep.cpu.core_count\0".ptr;
+            enum nameStr = "hw.physicalcpu";
         }
         else version (FreeBSD)
         {

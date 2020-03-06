@@ -4116,7 +4116,10 @@ string expandTilde(string inputPath) @safe nothrow
 {
     version (Posix)
     {
-        import std.process : executeShell, environment;
+        static if (__traits(compiles, { import std.process : executeShell; }))
+            import std.process : executeShell;
+
+        import std.process : environment;
         import std.string : strip;
 
         // Retrieve the current home variable.
@@ -4141,12 +4144,15 @@ string expandTilde(string inputPath) @safe nothrow
         if (oldHome !is null) environment["HOME"] = oldHome;
         else environment.remove("HOME");
 
-        immutable tildeUser = "~" ~ environment.get("USER");
-        immutable path = executeShell("echo " ~ tildeUser).output.strip();
-        immutable expTildeUser = expandTilde(tildeUser);
-        assert(expTildeUser == path, expTildeUser);
-        immutable expTildeUserSlash = expandTilde(tildeUser ~ "/");
-        assert(expTildeUserSlash == path ~ "/", expTildeUserSlash);
+        static if (is(typeof(executeShell)))
+        {
+            immutable tildeUser = "~" ~ environment.get("USER");
+            immutable path = executeShell("echo " ~ tildeUser).output.strip();
+            immutable expTildeUser = expandTilde(tildeUser);
+            assert(expTildeUser == path, expTildeUser);
+            immutable expTildeUserSlash = expandTilde(tildeUser ~ "/");
+            assert(expTildeUserSlash == path ~ "/", expTildeUserSlash);
+        }
 
         assert(expandTilde("~Idontexist/hey") == "~Idontexist/hey");
     }

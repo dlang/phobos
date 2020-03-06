@@ -81,8 +81,15 @@ Source:
     $(PHOBOSSRC std/process.d)
 Macros:
     OBJECTREF=$(REF1 $0, object)
+
+Note:
+Most of the functionality in this module is not available on iOS, tvOS
+and watchOS. The only functions available on those platforms are:
+$(LREF environment), $(LREF thisProcessID) and $(LREF thisThreadID).
 */
 module std.process;
+
+import core.thread : ThreadID;
 
 version (Posix)
 {
@@ -102,6 +109,23 @@ import std.internal.cstring;
 import std.range.primitives;
 import std.stdio;
 
+version (OSX)
+    version = Darwin;
+else version (iOS)
+{
+    version = Darwin;
+    version = iOSDerived;
+}
+else version (TVOS)
+{
+    version = Darwin;
+    version = iOSDerived;
+}
+else version (WatchOS)
+{
+    version = Darwin;
+    version = iOSDerived;
+}
 
 // When the DMC runtime is used, we have to use some custom functions
 // to convert between Windows file handles and FILE*s.
@@ -129,7 +153,7 @@ private
     // POSIX API declarations.
     version (Posix)
     {
-        version (OSX)
+        version (Darwin)
         {
             extern(C) char*** _NSGetEnviron() nothrow;
             const(char**) getEnvironPtr() @trusted
@@ -149,16 +173,501 @@ private
 
         @system unittest
         {
+            import core.thread : Thread;
             new Thread({assert(getEnvironPtr !is null);}).start();
         }
     }
 } // private
 
+// =============================================================================
+// Environment variable manipulation.
+// =============================================================================
+
+/**
+Manipulates _environment variables using an associative-array-like
+interface.
+
+This class contains only static methods, and cannot be instantiated.
+See below for examples of use.
+*/
+abstract final class environment
+{
+    static import core.sys.posix.stdlib;
+    import core.stdc.errno : errno, EINVAL;
+
+static:
+    /**
+    Retrieves the value of the environment variable with the given `name`.
+    ---
+    auto path = environment["PATH"];
+    ---
+
+    Throws:
+    $(OBJECTREF Exception) if the environment variable does not exist,
+    or $(REF UTFException, std,utf) if the variable contains invalid UTF-16
+    characters (Windows only).
+
+    See_also:
+    $(LREF environment.get), which doesn't throw on failure.
+    */
+    string opIndex(scope const(char)[] name) @safe
+    {
+        import std.exception : enforce;
+        string value;
+        enforce(getImpl(name, value), "Environment variable not found: "~name);
+        return value;
+    }
+
+    /**
+    Retrieves the value of the environment variable with the given `name`,
+    or a default value if the variable doesn't exist.
+
+    Unlike $(LREF environment.opIndex), this function never throws on Posix.
+    ---
+    auto sh = environment.get("SHELL", "/bin/sh");
+    ---
+    This function is also useful in checking for the existence of an
+    environment variable.
+    ---
+    auto myVar = environment.get("MYVAR");
+    if (myVar is null)
+    {
+        // Environment variable doesn't exist.
+        // Note that we have to use 'is' for the comparison, since
+        // myVar == null is also true if the variable exists but is
+        // empty.
+    }
+    ---
+    Params:
+        name = name of the environment variable to retrieve
+        defaultValue = default value to return if the environment variable doesn't exist.
+
+    Returns:
+        the value of the environment variable if found, otherwise
+        `null` if the environment doesn't exist.
+
+    Throws:
+    $(REF UTFException, std,utf) if the variable contains invalid UTF-16
+    characters (Windows only).
+    */
+    string get(scope const(char)[] name, string defaultValue = null) @safe
+    {
+        string value;
+        auto found = getImpl(name, value);
+        return found ? value : defaultValue;
+    }
+
+    /**
+    Assigns the given `value` to the environment variable with the given
+    `name`.
+    If `value` is null the variable is removed from environment.
+
+    If the variable does not exist, it will be created. If it already exists,
+    it will be overwritten.
+    ---
+    environment["foo"] = "bar";
+    ---
+
+    Throws:
+    $(OBJECTREF Exception) if the environment variable could not be added
+        (e.g. if the name is invalid).
+
+    Note:
+    On some platforms, modifying environment variables may not be allowed in
+    multi-threaded programs. See e.g.
+    $(LINK2 https://www.gnu.org/software/libc/manual/html_node/Environment-Access.html#Environment-Access, glibc).
+    */
+    inout(char)[] opIndexAssign(inout char[] value, scope const(char)[] name) @trusted
+    {
+        version (Posix)
+        {
+            import std.exception : enforce, errnoEnforce;
+            if (value is null)
+            {
+                remove(name);
+                return value;
+            }
+            if (core.sys.posix.stdlib.setenv(name.tempCString(), value.tempCString(), 1) != -1)
+            {
+                return value;
+            }
+            // The default errno error message is very uninformative
+            // in the most common case, so we handle it manually.
+            enforce(errno != EINVAL,
+                "Invalid environment variable name: '"~name~"'");
+            errnoEnforce(false,
+                "Failed to add environment variable");
+            assert(0);
+        }
+        else version (Windows)
+        {
+            import std.exception : enforce;
+            enforce(
+                SetEnvironmentVariableW(name.tempCStringW(), value.tempCStringW()),
+                sysErrorString(GetLastError())
+            );
+            return value;
+        }
+        else static assert(0);
+    }
+
+    /**
+    Removes the environment variable with the given `name`.
+
+    If the variable isn't in the environment, this function returns
+    successfully without doing anything.
+
+    Note:
+    On some platforms, modifying environment variables may not be allowed in
+    multi-threaded programs. See e.g.
+    $(LINK2 https://www.gnu.org/software/libc/manual/html_node/Environment-Access.html#Environment-Access, glibc).
+    */
+    void remove(scope const(char)[] name) @trusted nothrow @nogc // TODO: @safe
+    {
+        version (Windows)    SetEnvironmentVariableW(name.tempCStringW(), null);
+        else version (Posix) core.sys.posix.stdlib.unsetenv(name.tempCString());
+        else static assert(0);
+    }
+
+    /**
+    Identify whether a variable is defined in the environment.
+
+    Because it doesn't return the value, this function is cheaper than `get`.
+    However, if you do need the value as well, you should just check the
+    return of `get` for `null` instead of using this function first.
+
+    Example:
+    -------------
+    // good usage
+    if ("MY_ENV_FLAG" in environment)
+        doSomething();
+
+    // bad usage
+    if ("MY_ENV_VAR" in environment)
+        doSomething(environment["MY_ENV_VAR"]);
+
+    // do this instead
+    if (auto var = environment.get("MY_ENV_VAR"))
+        doSomething(var);
+    -------------
+    */
+    bool opBinaryRight(string op : "in")(scope const(char)[] name) @trusted
+    {
+        version (Posix)
+            return core.sys.posix.stdlib.getenv(name.tempCString()) !is null;
+        else version (Windows)
+        {
+            SetLastError(NO_ERROR);
+            if (GetEnvironmentVariableW(name.tempCStringW, null, 0) > 0)
+                return true;
+            immutable err = GetLastError();
+            if (err == NO_ERROR)
+                return true; // zero-length environment variable on Wine / XP
+            if (err == ERROR_ENVVAR_NOT_FOUND)
+                return false;
+            // Some other Windows error, throw.
+            throw new WindowsException(err);
+        }
+        else static assert(0);
+    }
+
+    /**
+    Copies all environment variables into an associative array.
+
+    Windows_specific:
+    While Windows environment variable names are case insensitive, D's
+    built-in associative arrays are not.  This function will store all
+    variable names in uppercase (e.g. `PATH`).
+
+    Throws:
+    $(OBJECTREF Exception) if the environment variables could not
+        be retrieved (Windows only).
+    */
+    string[string] toAA() @trusted
+    {
+        import std.conv : to;
+        string[string] aa;
+        version (Posix)
+        {
+            auto environ = getEnvironPtr;
+            for (int i=0; environ[i] != null; ++i)
+            {
+                import std.string : indexOf;
+
+                immutable varDef = to!string(environ[i]);
+                immutable eq = indexOf(varDef, '=');
+                assert(eq >= 0);
+
+                immutable name = varDef[0 .. eq];
+                immutable value = varDef[eq+1 .. $];
+
+                // In POSIX, environment variables may be defined more
+                // than once.  This is a security issue, which we avoid
+                // by checking whether the key already exists in the array.
+                // For more info:
+                // http://www.dwheeler.com/secure-programs/Secure-Programs-HOWTO/environment-variables.html
+                if (name !in aa)  aa[name] = value;
+            }
+        }
+        else version (Windows)
+        {
+            import std.exception : enforce;
+            import std.uni : toUpper;
+            auto envBlock = GetEnvironmentStringsW();
+            enforce(envBlock, "Failed to retrieve environment variables.");
+            scope(exit) FreeEnvironmentStringsW(envBlock);
+
+            for (int i=0; envBlock[i] != '\0'; ++i)
+            {
+                auto start = i;
+                while (envBlock[i] != '=') ++i;
+                immutable name = toUTF8(toUpper(envBlock[start .. i]));
+
+                start = i+1;
+                while (envBlock[i] != '\0') ++i;
+
+                // Ignore variables with empty names. These are used internally
+                // by Windows to keep track of each drive's individual current
+                // directory.
+                if (!name.length)
+                    continue;
+
+                // Just like in POSIX systems, environment variables may be
+                // defined more than once in an environment block on Windows,
+                // and it is just as much of a security issue there.  Moreso,
+                // in fact, due to the case insensensitivity of variable names,
+                // which is not handled correctly by all programs.
+                auto val = toUTF8(envBlock[start .. i]);
+                if (name !in aa) aa[name] = val is null ? "" : val;
+            }
+        }
+        else static assert(0);
+        return aa;
+    }
+
+private:
+    // Retrieves the environment variable, returns false on failure.
+    bool getImpl(scope const(char)[] name, out string value) @trusted
+    {
+        version (Windows)
+        {
+            // first we ask windows how long the environment variable is,
+            // then we try to read it in to a buffer of that length. Lots
+            // of error conditions because the windows API is nasty.
+
+            import std.conv : to;
+            const namezTmp = name.tempCStringW();
+            WCHAR[] buf;
+
+            // clear error because GetEnvironmentVariable only says it sets it
+            // if the environment variable is missing, not on other errors.
+            SetLastError(NO_ERROR);
+            // len includes terminating null
+            immutable len = GetEnvironmentVariableW(namezTmp, null, 0);
+            if (len == 0)
+            {
+                immutable err = GetLastError();
+                if (err == ERROR_ENVVAR_NOT_FOUND)
+                    return false;
+                if (err != NO_ERROR) // Some other Windows error, throw.
+                    throw new WindowsException(err);
+            }
+            if (len <= 1)
+            {
+                value = "";
+                return true;
+            }
+            buf.length = len;
+
+            while (true)
+            {
+                // lenRead is either the number of bytes read w/o null - if buf was long enough - or
+                // the number of bytes necessary *including* null if buf wasn't long enough
+                immutable lenRead = GetEnvironmentVariableW(namezTmp, buf.ptr, to!DWORD(buf.length));
+                if (lenRead == 0)
+                {
+                    immutable err = GetLastError();
+                    if (err == NO_ERROR) // sucessfully read a 0-length variable
+                    {
+                        value = "";
+                        return true;
+                    }
+                    if (err == ERROR_ENVVAR_NOT_FOUND) // variable didn't exist
+                        return false;
+                    // some other windows error
+                    throw new WindowsException(err);
+                }
+                assert(lenRead != buf.length, "impossible according to msft docs");
+                if (lenRead < buf.length) // the buffer was long enough
+                {
+                    value = toUTF8(buf[0 .. lenRead]);
+                    return true;
+                }
+                // resize and go around again, because the environment variable grew
+                buf.length = lenRead;
+            }
+        }
+        else version (Posix)
+        {
+            import core.stdc.string : strlen;
+
+            const vz = core.sys.posix.stdlib.getenv(name.tempCString());
+            if (vz == null) return false;
+            auto v = vz[0 .. strlen(vz)];
+
+            // Cache the last call's result.
+            static string lastResult;
+            if (v.empty)
+            {
+                // Return non-null array for blank result to distinguish from
+                // not-present result.
+                lastResult = "";
+            }
+            else if (v != lastResult)
+            {
+                lastResult = v.idup;
+            }
+            value = lastResult;
+            return true;
+        }
+        else static assert(0);
+    }
+}
+
+@safe unittest
+{
+    import std.exception : assertThrown;
+    // New variable
+    environment["std_process"] = "foo";
+    assert(environment["std_process"] == "foo");
+    assert("std_process" in environment);
+
+    // Set variable again (also tests length 1 case)
+    environment["std_process"] = "b";
+    assert(environment["std_process"] == "b");
+    assert("std_process" in environment);
+
+    // Remove variable
+    environment.remove("std_process");
+    assert("std_process" !in environment);
+
+    // Remove again, should succeed
+    environment.remove("std_process");
+    assert("std_process" !in environment);
+
+    // Throw on not found.
+    assertThrown(environment["std_process"]);
+
+    // get() without default value
+    assert(environment.get("std_process") is null);
+
+    // get() with default value
+    assert(environment.get("std_process", "baz") == "baz");
+
+    // get() on an empty (but present) value
+    environment["std_process"] = "";
+    auto res = environment.get("std_process");
+    assert(res !is null);
+    assert(res == "");
+    assert("std_process" in environment);
+
+    // Important to do the following round-trip after the previous test
+    // because it tests toAA with an empty var
+
+    // Convert to associative array
+    auto aa = environment.toAA();
+    assert(aa.length > 0);
+    foreach (n, v; aa)
+    {
+        // Wine has some bugs related to environment variables:
+        //  - Wine allows the existence of an env. variable with the name
+        //    "\0", but GetEnvironmentVariable refuses to retrieve it.
+        //    As of 2.067 we filter these out anyway (see comment in toAA).
+
+        assert(v == environment[n]);
+    }
+
+    // ... and back again.
+    foreach (n, v; aa)
+        environment[n] = v;
+
+    // Complete the roundtrip
+    auto aa2 = environment.toAA();
+    import std.conv : text;
+    assert(aa == aa2, text(aa, " != ", aa2));
+    assert("std_process" in environment);
+
+    // Setting null must have the same effect as remove
+    environment["std_process"] = null;
+    assert("std_process" !in environment);
+}
 
 // =============================================================================
 // Functions and classes for process management.
 // =============================================================================
 
+/**
+ * Returns the process ID of the current process,
+ * which is guaranteed to be unique on the system.
+ *
+ * Example:
+ * ---
+ * writefln("Current process ID: %d", thisProcessID);
+ * ---
+ */
+@property int thisProcessID() @trusted nothrow //TODO: @safe
+{
+    version (Windows)    return GetCurrentProcessId();
+    else version (Posix) return core.sys.posix.unistd.getpid();
+}
+
+
+/**
+ * Returns the process ID of the current thread,
+ * which is guaranteed to be unique within the current process.
+ *
+ * Returns:
+ * A $(REF ThreadID, core,thread) value for the calling thread.
+ *
+ * Example:
+ * ---
+ * writefln("Current thread ID: %s", thisThreadID);
+ * ---
+ */
+@property ThreadID thisThreadID() @trusted nothrow //TODO: @safe
+{
+    version (Windows)
+        return GetCurrentThreadId();
+    else
+    version (Posix)
+    {
+        import core.sys.posix.pthread : pthread_self;
+        return pthread_self();
+    }
+}
+
+
+@system unittest
+{
+    int pidA, pidB;
+    ThreadID tidA, tidB;
+    pidA = thisProcessID;
+    tidA = thisThreadID;
+
+    import core.thread;
+    auto t = new Thread({
+        pidB = thisProcessID;
+        tidB = thisThreadID;
+    });
+    t.start();
+    t.join();
+
+    assert(pidA == pidB);
+    assert(tidA != tidB);
+}
+
+version (iOSDerived) {}
+else:
 
 /**
 Spawns a new process, optionally assigning it an arbitrary set of standard
@@ -2686,68 +3195,6 @@ This function returns `"cmd.exe"` on Windows, `"/bin/sh"` on POSIX, and
 version (Posix)   private immutable string shellSwitch = "-c";
 version (Windows) private immutable string shellSwitch = "/C";
 
-
-/**
- * Returns the process ID of the current process,
- * which is guaranteed to be unique on the system.
- *
- * Example:
- * ---
- * writefln("Current process ID: %d", thisProcessID);
- * ---
- */
-@property int thisProcessID() @trusted nothrow //TODO: @safe
-{
-    version (Windows)    return GetCurrentProcessId();
-    else version (Posix) return core.sys.posix.unistd.getpid();
-}
-
-
-/**
- * Returns the process ID of the current thread,
- * which is guaranteed to be unique within the current process.
- *
- * Returns:
- * A $(REF ThreadID, core,thread) value for the calling thread.
- *
- * Example:
- * ---
- * writefln("Current thread ID: %s", thisThreadID);
- * ---
- */
-@property ThreadID thisThreadID() @trusted nothrow //TODO: @safe
-{
-    version (Windows)
-        return GetCurrentThreadId();
-    else
-    version (Posix)
-    {
-        import core.sys.posix.pthread : pthread_self;
-        return pthread_self();
-    }
-}
-
-
-@system unittest
-{
-    int pidA, pidB;
-    ThreadID tidA, tidB;
-    pidA = thisProcessID;
-    tidA = thisThreadID;
-
-    import core.thread;
-    auto t = new Thread({
-        pidB = thisProcessID;
-        tidB = thisThreadID;
-    });
-    t.start();
-    t.join();
-
-    assert(pidA == pidB);
-    assert(tidA != tidB);
-}
-
-
 // Unittest support code:  TestScript takes a string that contains a
 // shell script for the current platform, and writes it to a temporary
 // file. On Windows the file name gets a .cmd extension, while on
@@ -3325,429 +3772,6 @@ version (unittest_burnin)
         test(args, fn);
     }
 }
-
-
-// =============================================================================
-// Environment variable manipulation.
-// =============================================================================
-
-
-/**
-Manipulates _environment variables using an associative-array-like
-interface.
-
-This class contains only static methods, and cannot be instantiated.
-See below for examples of use.
-*/
-abstract final class environment
-{
-static:
-    /**
-    Retrieves the value of the environment variable with the given `name`.
-    ---
-    auto path = environment["PATH"];
-    ---
-
-    Throws:
-    $(OBJECTREF Exception) if the environment variable does not exist,
-    or $(REF UTFException, std,utf) if the variable contains invalid UTF-16
-    characters (Windows only).
-
-    See_also:
-    $(LREF environment.get), which doesn't throw on failure.
-    */
-    string opIndex(scope const(char)[] name) @safe
-    {
-        import std.exception : enforce;
-        string value;
-        enforce(getImpl(name, value), "Environment variable not found: "~name);
-        return value;
-    }
-
-    /**
-    Retrieves the value of the environment variable with the given `name`,
-    or a default value if the variable doesn't exist.
-
-    Unlike $(LREF environment.opIndex), this function never throws on Posix.
-    ---
-    auto sh = environment.get("SHELL", "/bin/sh");
-    ---
-    This function is also useful in checking for the existence of an
-    environment variable.
-    ---
-    auto myVar = environment.get("MYVAR");
-    if (myVar is null)
-    {
-        // Environment variable doesn't exist.
-        // Note that we have to use 'is' for the comparison, since
-        // myVar == null is also true if the variable exists but is
-        // empty.
-    }
-    ---
-    Params:
-        name = name of the environment variable to retrieve
-        defaultValue = default value to return if the environment variable doesn't exist.
-
-    Returns:
-        the value of the environment variable if found, otherwise
-        `null` if the environment doesn't exist.
-
-    Throws:
-    $(REF UTFException, std,utf) if the variable contains invalid UTF-16
-    characters (Windows only).
-    */
-    string get(scope const(char)[] name, string defaultValue = null) @safe
-    {
-        string value;
-        auto found = getImpl(name, value);
-        return found ? value : defaultValue;
-    }
-
-    /**
-    Assigns the given `value` to the environment variable with the given
-    `name`.
-    If `value` is null the variable is removed from environment.
-
-    If the variable does not exist, it will be created. If it already exists,
-    it will be overwritten.
-    ---
-    environment["foo"] = "bar";
-    ---
-
-    Throws:
-    $(OBJECTREF Exception) if the environment variable could not be added
-        (e.g. if the name is invalid).
-
-    Note:
-    On some platforms, modifying environment variables may not be allowed in
-    multi-threaded programs. See e.g.
-    $(LINK2 https://www.gnu.org/software/libc/manual/html_node/Environment-Access.html#Environment-Access, glibc).
-    */
-    inout(char)[] opIndexAssign(inout char[] value, scope const(char)[] name) @trusted
-    {
-        version (Posix)
-        {
-            import std.exception : enforce, errnoEnforce;
-            if (value is null)
-            {
-                remove(name);
-                return value;
-            }
-            if (core.sys.posix.stdlib.setenv(name.tempCString(), value.tempCString(), 1) != -1)
-            {
-                return value;
-            }
-            // The default errno error message is very uninformative
-            // in the most common case, so we handle it manually.
-            enforce(errno != EINVAL,
-                "Invalid environment variable name: '"~name~"'");
-            errnoEnforce(false,
-                "Failed to add environment variable");
-            assert(0);
-        }
-        else version (Windows)
-        {
-            import std.exception : enforce;
-            enforce(
-                SetEnvironmentVariableW(name.tempCStringW(), value.tempCStringW()),
-                sysErrorString(GetLastError())
-            );
-            return value;
-        }
-        else static assert(0);
-    }
-
-    /**
-    Removes the environment variable with the given `name`.
-
-    If the variable isn't in the environment, this function returns
-    successfully without doing anything.
-
-    Note:
-    On some platforms, modifying environment variables may not be allowed in
-    multi-threaded programs. See e.g.
-    $(LINK2 https://www.gnu.org/software/libc/manual/html_node/Environment-Access.html#Environment-Access, glibc).
-    */
-    void remove(scope const(char)[] name) @trusted nothrow @nogc // TODO: @safe
-    {
-        version (Windows)    SetEnvironmentVariableW(name.tempCStringW(), null);
-        else version (Posix) core.sys.posix.stdlib.unsetenv(name.tempCString());
-        else static assert(0);
-    }
-
-    /**
-    Identify whether a variable is defined in the environment.
-
-    Because it doesn't return the value, this function is cheaper than `get`.
-    However, if you do need the value as well, you should just check the
-    return of `get` for `null` instead of using this function first.
-
-    Example:
-    -------------
-    // good usage
-    if ("MY_ENV_FLAG" in environment)
-        doSomething();
-
-    // bad usage
-    if ("MY_ENV_VAR" in environment)
-        doSomething(environment["MY_ENV_VAR"]);
-
-    // do this instead
-    if (auto var = environment.get("MY_ENV_VAR"))
-        doSomething(var);
-    -------------
-    */
-    bool opBinaryRight(string op : "in")(scope const(char)[] name) @trusted
-    {
-        version (Posix)
-            return core.sys.posix.stdlib.getenv(name.tempCString()) !is null;
-        else version (Windows)
-        {
-            SetLastError(NO_ERROR);
-            if (GetEnvironmentVariableW(name.tempCStringW, null, 0) > 0)
-                return true;
-            immutable err = GetLastError();
-            if (err == NO_ERROR)
-                return true; // zero-length environment variable on Wine / XP
-            if (err == ERROR_ENVVAR_NOT_FOUND)
-                return false;
-            // Some other Windows error, throw.
-            throw new WindowsException(err);
-        }
-        else static assert(0);
-    }
-
-    /**
-    Copies all environment variables into an associative array.
-
-    Windows_specific:
-    While Windows environment variable names are case insensitive, D's
-    built-in associative arrays are not.  This function will store all
-    variable names in uppercase (e.g. `PATH`).
-
-    Throws:
-    $(OBJECTREF Exception) if the environment variables could not
-        be retrieved (Windows only).
-    */
-    string[string] toAA() @trusted
-    {
-        import std.conv : to;
-        string[string] aa;
-        version (Posix)
-        {
-            auto environ = getEnvironPtr;
-            for (int i=0; environ[i] != null; ++i)
-            {
-                import std.string : indexOf;
-
-                immutable varDef = to!string(environ[i]);
-                immutable eq = indexOf(varDef, '=');
-                assert(eq >= 0);
-
-                immutable name = varDef[0 .. eq];
-                immutable value = varDef[eq+1 .. $];
-
-                // In POSIX, environment variables may be defined more
-                // than once.  This is a security issue, which we avoid
-                // by checking whether the key already exists in the array.
-                // For more info:
-                // http://www.dwheeler.com/secure-programs/Secure-Programs-HOWTO/environment-variables.html
-                if (name !in aa)  aa[name] = value;
-            }
-        }
-        else version (Windows)
-        {
-            import std.exception : enforce;
-            import std.uni : toUpper;
-            auto envBlock = GetEnvironmentStringsW();
-            enforce(envBlock, "Failed to retrieve environment variables.");
-            scope(exit) FreeEnvironmentStringsW(envBlock);
-
-            for (int i=0; envBlock[i] != '\0'; ++i)
-            {
-                auto start = i;
-                while (envBlock[i] != '=') ++i;
-                immutable name = toUTF8(toUpper(envBlock[start .. i]));
-
-                start = i+1;
-                while (envBlock[i] != '\0') ++i;
-
-                // Ignore variables with empty names. These are used internally
-                // by Windows to keep track of each drive's individual current
-                // directory.
-                if (!name.length)
-                    continue;
-
-                // Just like in POSIX systems, environment variables may be
-                // defined more than once in an environment block on Windows,
-                // and it is just as much of a security issue there.  Moreso,
-                // in fact, due to the case insensensitivity of variable names,
-                // which is not handled correctly by all programs.
-                auto val = toUTF8(envBlock[start .. i]);
-                if (name !in aa) aa[name] = val is null ? "" : val;
-            }
-        }
-        else static assert(0);
-        return aa;
-    }
-
-private:
-    // Retrieves the environment variable, returns false on failure.
-    bool getImpl(scope const(char)[] name, out string value) @trusted
-    {
-        version (Windows)
-        {
-            // first we ask windows how long the environment variable is,
-            // then we try to read it in to a buffer of that length. Lots
-            // of error conditions because the windows API is nasty.
-
-            import std.conv : to;
-            const namezTmp = name.tempCStringW();
-            WCHAR[] buf;
-
-            // clear error because GetEnvironmentVariable only says it sets it
-            // if the environment variable is missing, not on other errors.
-            SetLastError(NO_ERROR);
-            // len includes terminating null
-            immutable len = GetEnvironmentVariableW(namezTmp, null, 0);
-            if (len == 0)
-            {
-                immutable err = GetLastError();
-                if (err == ERROR_ENVVAR_NOT_FOUND)
-                    return false;
-                if (err != NO_ERROR) // Some other Windows error, throw.
-                    throw new WindowsException(err);
-            }
-            if (len <= 1)
-            {
-                value = "";
-                return true;
-            }
-            buf.length = len;
-
-            while (true)
-            {
-                // lenRead is either the number of bytes read w/o null - if buf was long enough - or
-                // the number of bytes necessary *including* null if buf wasn't long enough
-                immutable lenRead = GetEnvironmentVariableW(namezTmp, buf.ptr, to!DWORD(buf.length));
-                if (lenRead == 0)
-                {
-                    immutable err = GetLastError();
-                    if (err == NO_ERROR) // sucessfully read a 0-length variable
-                    {
-                        value = "";
-                        return true;
-                    }
-                    if (err == ERROR_ENVVAR_NOT_FOUND) // variable didn't exist
-                        return false;
-                    // some other windows error
-                    throw new WindowsException(err);
-                }
-                assert(lenRead != buf.length, "impossible according to msft docs");
-                if (lenRead < buf.length) // the buffer was long enough
-                {
-                    value = toUTF8(buf[0 .. lenRead]);
-                    return true;
-                }
-                // resize and go around again, because the environment variable grew
-                buf.length = lenRead;
-            }
-        }
-        else version (Posix)
-        {
-            const vz = core.sys.posix.stdlib.getenv(name.tempCString());
-            if (vz == null) return false;
-            auto v = vz[0 .. strlen(vz)];
-
-            // Cache the last call's result.
-            static string lastResult;
-            if (v.empty)
-            {
-                // Return non-null array for blank result to distinguish from
-                // not-present result.
-                lastResult = "";
-            }
-            else if (v != lastResult)
-            {
-                lastResult = v.idup;
-            }
-            value = lastResult;
-            return true;
-        }
-        else static assert(0);
-    }
-}
-
-@safe unittest
-{
-    import std.exception : assertThrown;
-    // New variable
-    environment["std_process"] = "foo";
-    assert(environment["std_process"] == "foo");
-    assert("std_process" in environment);
-
-    // Set variable again (also tests length 1 case)
-    environment["std_process"] = "b";
-    assert(environment["std_process"] == "b");
-    assert("std_process" in environment);
-
-    // Remove variable
-    environment.remove("std_process");
-    assert("std_process" !in environment);
-
-    // Remove again, should succeed
-    environment.remove("std_process");
-    assert("std_process" !in environment);
-
-    // Throw on not found.
-    assertThrown(environment["std_process"]);
-
-    // get() without default value
-    assert(environment.get("std_process") is null);
-
-    // get() with default value
-    assert(environment.get("std_process", "baz") == "baz");
-
-    // get() on an empty (but present) value
-    environment["std_process"] = "";
-    auto res = environment.get("std_process");
-    assert(res !is null);
-    assert(res == "");
-    assert("std_process" in environment);
-
-    // Important to do the following round-trip after the previous test
-    // because it tests toAA with an empty var
-
-    // Convert to associative array
-    auto aa = environment.toAA();
-    assert(aa.length > 0);
-    foreach (n, v; aa)
-    {
-        // Wine has some bugs related to environment variables:
-        //  - Wine allows the existence of an env. variable with the name
-        //    "\0", but GetEnvironmentVariable refuses to retrieve it.
-        //    As of 2.067 we filter these out anyway (see comment in toAA).
-
-        assert(v == environment[n]);
-    }
-
-    // ... and back again.
-    foreach (n, v; aa)
-        environment[n] = v;
-
-    // Complete the roundtrip
-    auto aa2 = environment.toAA();
-    import std.conv : text;
-    assert(aa == aa2, text(aa, " != ", aa2));
-    assert("std_process" in environment);
-
-    // Setting null must have the same effect as remove
-    environment["std_process"] = null;
-    assert("std_process" !in environment);
-}
-
-
-
 
 // =============================================================================
 // Everything below this line was part of the old std.process, and most of

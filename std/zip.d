@@ -114,6 +114,15 @@ module std.zip;
 
 import std.exception : enforce;
 
+// Non-Android/Apple ARM POSIX-only, because we can't rely on the unzip
+// command being available on Android, Apple ARM or Windows
+version (Android) {}
+else version (iOS) {}
+else version (TVOS) {}
+else version (WatchOS) {}
+else version (Posix)
+    version = HasUnzip;
+
 //debug=print;
 
 /// Thrown on error.
@@ -1700,10 +1709,8 @@ the quick brown fox jumps over the lazy dog\r
     assert(za.directory.length == 0);
 }
 
-// Non-Android POSIX-only, because we can't rely on the unzip command being
-// available on Android or Windows
-version (Android) {} else
-version (Posix) @system unittest
+version (HasUnzip)
+@system unittest
 {
     import std.datetime, std.file, std.format, std.path, std.process, std.stdio;
 
