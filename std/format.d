@@ -3055,14 +3055,14 @@ deprecated
 private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
 if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
-    CharTypeOf!T val = obj;
+    CharTypeOf!T[1] val = obj;
 
     if (f.spec == 's' || f.spec == 'c')
-        writeAligned(w, [val], f);
+        writeAligned(w, val[], f);
     else
     {
         alias U = AliasSeq!(ubyte, ushort, uint)[CharTypeOf!T.sizeof/2];
-        formatValueImpl(w, cast(U) val, f);
+        formatValueImpl(w, cast(U) val[0], f);
     }
 }
 
@@ -6792,6 +6792,7 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
     char[20] buf;
     sformat(buf, "%d", 123);
     sformat(buf, "%s", a);
+    sformat(buf, "%s", 'c');
     assert(u == GC.stats().usedSize);
 }
 
