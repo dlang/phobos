@@ -1,4 +1,0 @@
-Removed deprecated `std.format.Mangle`.
-
-The deprecated enum `Mangle` containing mangled names of basic types has been
-removed. Use `std.demangle.demangle` instead to parse mangled names.
