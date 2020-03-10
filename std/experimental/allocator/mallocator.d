@@ -12,7 +12,7 @@ import std.experimental.allocator.common;
  */
 struct Mallocator
 {
-    @system unittest { testAllocator!(() => Mallocator.instance); }
+    version (StdUnittest) @system unittest { testAllocator!(() => Mallocator.instance); }
 
     /**
     The alignment is a static constant equal to `platformAlignment`, which
@@ -210,7 +210,7 @@ version (Windows)
  */
 struct AlignedMallocator
 {
-    @system unittest { testAllocator!(() => typeof(this).instance); }
+    version (StdUnittest) @system unittest { testAllocator!(() => typeof(this).instance); }
 
     /**
     The default alignment is `platformAlignment`.

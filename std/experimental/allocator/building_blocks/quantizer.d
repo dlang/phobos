@@ -240,6 +240,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     assert(buf.ptr);
 }
 
+version (StdUnittest)
 @system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
@@ -294,6 +295,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     assert(c.length == 100);
 }
 
+version (StdUnittest)
 @system unittest
 {
     import std.experimental.allocator.building_blocks.region : Region;
@@ -310,6 +312,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     assert(alignedAt(&b[0], 16));
 }
 
+version (StdUnittest)
 @system unittest
 {
     import std.experimental.allocator.building_blocks.region : Region;
