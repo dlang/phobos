@@ -440,6 +440,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         && B.suffix(b) == 0xDEAD_BEEF);
 }
 
+version (StdUnittest)
 @system unittest
 {
     import std.experimental.allocator.building_blocks.bitmapped_block

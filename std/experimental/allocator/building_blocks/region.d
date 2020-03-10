@@ -465,6 +465,7 @@ struct Region(ParentAllocator = NullAllocator,
     Mallocator.instance.deallocate(tmp);
 }
 
+version (StdUnittest)
 @system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;

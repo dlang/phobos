@@ -1366,6 +1366,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     }
     else
     {
+        version (StdUnittest)
         @system unittest
         {
             import std.algorithm.comparison : max;
@@ -1759,12 +1760,14 @@ pure @safe unittest
     assert(b.length == 100);
 }
 
+version (StdUnittest)
 @system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     testAllocator!(() => BitmappedBlock!(64, 8, GCAllocator)(1024 * 64));
 }
 
+version (StdUnittest)
 @system unittest
 {
     // Test chooseAtRuntime
@@ -1774,6 +1777,7 @@ pure @safe unittest
     testAllocator!(() => BitmappedBlock!(chooseAtRuntime, 8, GCAllocator, No.multiblock)(1024 * 64, blockSize));
 }
 
+version (StdUnittest)
 @system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
@@ -1781,6 +1785,7 @@ pure @safe unittest
     testAllocator!(() => SharedBitmappedBlock!(64, 8, Mallocator, No.multiblock)(1024 * 64));
 }
 
+version (StdUnittest)
 @system unittest
 {
     // Test chooseAtRuntime
@@ -2167,6 +2172,7 @@ struct BitmappedBlockWithInternalPointers(
     import std.typecons : Ternary;
 
     static if (!stateSize!ParentAllocator)
+    version (StdUnittest)
     @system unittest
     {
         import std.experimental.allocator.mallocator : AlignedMallocator;

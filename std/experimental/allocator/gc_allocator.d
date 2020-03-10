@@ -14,7 +14,7 @@ struct GCAllocator
 {
     import core.memory : GC;
     import std.typecons : Ternary;
-    @system unittest { testAllocator!(() => GCAllocator.instance); }
+    version (StdUnittest) @system unittest { testAllocator!(() => GCAllocator.instance); }
 
     /**
     The alignment is a static constant equal to `platformAlignment`, which
