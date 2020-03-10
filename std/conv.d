@@ -488,6 +488,35 @@ template to(T)
     assertThrown!ConvException(to!AA(" [1:1]"));
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=20623
+@safe pure nothrow unittest
+{
+    // static class C
+    // {
+    //     override string toString() const
+    //     {
+    //         return "C()";
+    //     }
+    // }
+
+    static struct S
+    {
+        bool b;
+        int i;
+        float f;
+        int[] a;
+        int[int] aa;
+        S* p;
+        // C c; // TODO: Fails because of hasToString
+
+        void fun() inout
+        {
+            static foreach (const idx; 0 .. this.tupleof.length)
+                this.tupleof[idx].to!string();
+        }
+    }
+}
+
 /**
 If the source type is implicitly convertible to the target type, $(D
 to) simply performs the implicit conversion.
