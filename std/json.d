@@ -1205,8 +1205,7 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
                     break;
                 }
 
-                value.type_tag = JSONType.string;
-                () @trusted { value.store.str = str; } ();
+                value.assign(str);
                 break;
 
             case '0': .. case '9':
