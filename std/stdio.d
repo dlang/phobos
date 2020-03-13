@@ -708,10 +708,10 @@ The mode must be compatible with the mode of the file descriptor.
 
 Throws: `ErrnoException` in case of error.
 Params:
-    fd = File descriptor to open.
-    stdioOpenmode = Mode to open the file. `stdioOpenmode` has the same semantics
+    fd = File descriptor to associate with this `File`.
+    stdioOpenmode = Mode to associate with theis `File`. `stdioOpenmode` has the same semantics
         semantics as in the C standard library
-        $(HTTP .cplusplus.com/reference/cstdio/fopen/, fdopen) function.
+        $(HTTP .cplusplus.com/reference/cstdio/fopen/, fdopen) function, and must be compatible with `fd`.
  */
     void fdopen(int fd, scope const(char)[] stdioOpenmode = "rb") @safe
     {
