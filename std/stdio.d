@@ -702,9 +702,9 @@ Throws: `ErrnoException` in case of error.
     }
 
 /**
-First calls `detach` (throwing on failure), and then attempts to
-associate the given file descriptor with the `File`. The mode must
-be compatible with the mode of the file descriptor.
+First calls `detach` (throwing on failure), then attempts to
+associate the given file descriptor with the `File`, and sets the file's name to `null`.
+The mode must be compatible with the mode of the file descriptor.
 
 Throws: `ErrnoException` in case of error.
  */
