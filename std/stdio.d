@@ -707,6 +707,9 @@ associate the given file descriptor with the `File`, and sets the file's name to
 The mode must be compatible with the mode of the file descriptor.
 
 Throws: `ErrnoException` in case of error.
+Params:
+    fd = File descriptor to open.
+    stdioOpenmode = Mode to open the file ("r", "wb" ...).
  */
     void fdopen(int fd, scope const(char)[] stdioOpenmode = "rb") @safe
     {
