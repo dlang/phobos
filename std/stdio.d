@@ -818,7 +818,7 @@ Throws: `Exception` if the file is not opened.
         return .feof(cast(FILE*) _p.handle) != 0;
     }
 
-/** Returns the name of the last opened file, if any.
+/** Returns the name of the current file, if any.
 If a `File` was created with $(LREF tmpfile) and $(LREF wrapFile)
 it has no name.*/
     @property string name() const @safe pure nothrow
