@@ -818,12 +818,15 @@ Throws: `Exception` if the file is not opened.
         return .feof(cast(FILE*) _p.handle) != 0;
     }
 
-/** Returns the name of the last file opened from this instance, if any.
-If a `File` was created with $(LREF tmpfile) and $(LREF wrapFile)
-it has no name.
-
-Returns: The name of this file, if it has a name, or `null` otherwise.
-*/
+/**
+ Returns the name last used to initialize this `File`, if any.
+ 
+ Some functions that create or initialize the `File` set the name field to `null`.
+ Examples include $(LREF tmpfile), $(LREF wrapFile), and $(LREF fdopen). See the
+ documentation of those functions for details.
+ 
+ Returns: The name last used to initialize this this file, if it has a name, or `null` otherwise.
+ */
     @property string name() const @safe pure nothrow
     {
         return _name;
