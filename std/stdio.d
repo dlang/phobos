@@ -822,7 +822,7 @@ Throws: `Exception` if the file is not opened.
 If a `File` was created with $(LREF tmpfile) and $(LREF wrapFile)
 it has no name.
 
-Returns: The name of this file, if it has a name.
+Returns: The name of this file, if it has a name, or `null` otherwise.
 */
     @property string name() const @safe pure nothrow
     {
