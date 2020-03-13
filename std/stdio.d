@@ -825,11 +825,11 @@ Throws: `Exception` if the file is not opened.
 
 /**
  Returns the name last used to initialize this `File`, if any.
- 
+
  Some functions that create or initialize the `File` set the name field to `null`.
  Examples include $(LREF tmpfile), $(LREF wrapFile), and $(LREF fdopen). See the
  documentation of those functions for details.
- 
+
  Returns: The name last used to initialize this this file, if it has a name, or `null` otherwise.
  */
     @property string name() const @safe pure nothrow
