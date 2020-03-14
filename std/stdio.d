@@ -712,7 +712,7 @@ Params:
     fd = File descriptor to associate with this `File`.
     stdioOpenmode = Mode to associate with this File. The mode has the same semantics
         semantics as in the C standard library
-        $(HTTP .cplusplus.com/reference/cstdio/fopen/, fdopen) function, and must be compatible with `fd`.
+        $(HTTP cplusplus.com/reference/cstdio/fopen/, fdopen) function, and must be compatible with `fd`.
  */
     void fdopen(int fd, scope const(char)[] stdioOpenmode = "rb") @safe
     {
