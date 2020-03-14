@@ -107,6 +107,15 @@ module std.random;
 import std.range.primitives;
 import std.traits;
 
+version (OSX)
+    version = Darwin;
+else version (iOS)
+    version = Darwin;
+else version (TVOS)
+    version = Darwin;
+else version (WatchOS)
+    version = Darwin;
+
 ///
 @safe unittest
 {
@@ -1613,7 +1622,7 @@ alias Xorshift    = Xorshift128;                            /// ditto
 
 version (CRuntime_Bionic)
     version = SecureARC4Random; // ChaCha20
-version (OSX)
+version (Darwin)
     version = SecureARC4Random; // AES
 version (OpenBSD)
     version = SecureARC4Random; // ChaCha20
