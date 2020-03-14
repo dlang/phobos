@@ -704,12 +704,13 @@ Throws: `ErrnoException` in case of error.
 /**
 First calls `detach` (throwing on failure), then attempts to
 associate the given file descriptor with the `File`, and sets the file's name to `null`.
+
 The mode must be compatible with the mode of the file descriptor.
 
 Throws: `ErrnoException` in case of error.
 Params:
     fd = File descriptor to associate with this `File`.
-    stdioOpenmode = Mode to associate with theis `File`. `stdioOpenmode` has the same semantics
+    stdioOpenmode = Mode to associate with this File. The mode has the same semantics
         semantics as in the C standard library
         $(HTTP .cplusplus.com/reference/cstdio/fopen/, fdopen) function, and must be compatible with `fd`.
  */
