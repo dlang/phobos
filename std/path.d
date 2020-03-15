@@ -101,6 +101,15 @@ static import std.meta;
 import std.range.primitives;
 import std.traits;
 
+version (OSX)
+    version = Darwin;
+else version (iOS)
+    version = Darwin;
+else version (TVOS)
+    version = Darwin;
+else version (WatchOS)
+    version = Darwin;
+
 version (StdUnittest)
 {
 private:
@@ -343,7 +352,7 @@ enum CaseSensitive : bool
 
     /** The default (or most common) setting for the current platform.
         That is, `no` on Windows and Mac OS X, and `yes` on all
-        POSIX systems except OS X (Linux, *BSD, etc.).
+        POSIX systems except Darwin (Linux, *BSD, etc.).
     */
     osDefault = osDefaultCaseSensitivity
 }
@@ -360,9 +369,9 @@ enum CaseSensitive : bool
         assert(relativePath!(CaseSensitive.no)(`c:\FOO\bar`, `c:\foo\baz`) == `..\bar`);
 }
 
-version (Windows)    private enum osDefaultCaseSensitivity = false;
-else version (OSX)   private enum osDefaultCaseSensitivity = false;
-else version (Posix) private enum osDefaultCaseSensitivity = true;
+version (Windows)     private enum osDefaultCaseSensitivity = false;
+else version (Darwin) private enum osDefaultCaseSensitivity = false;
+else version (Posix)  private enum osDefaultCaseSensitivity = true;
 else static assert(0);
 
 /**
