@@ -1,0 +1,16 @@
+As a fix to issue #13595, added a variation of 'std.algorithm.iteration.chunkBy'
+called 'chunkByAny'. Unlike the original algorithm, this variation is designed
+to work with predicates that are neither reflexive, symmetric nor transitive:
+
+```
+auto source = [4, 3, 2, 11, 0, -3, -3, 5, 3, 0];
+auto result = source.chunkByAny!((a,b) => a > b);
+assert(result.equal!equal([
+	[4, 3, 2],
+	[11, 0, -3],
+	[-3],
+	[5, 3, 0]
+]));
+```
+
+However, it requires forward ranges to work.

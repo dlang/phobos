@@ -1911,11 +1911,11 @@ private template ChunkByImplIsUnary(alias pred, Range)
 private struct ChunkByImpl(alias pred, Range, bool predEquivelanceQuaranteed)
 if (isInputRange!Range && !isForwardRange!Range)
 {
-	static assert
-	(	
-		predEquivelanceQuaranteed,
-		"implementing chunkBy with non-forward ranges without predicate equivalence quarantees is impossible"
-	);
+    static assert
+    (
+        predEquivelanceQuaranteed,
+        "implementing chunkBy with non-forward ranges without predicate equivalence quarantees is impossible"
+    );
     enum bool isUnary = ChunkByImplIsUnary!(pred, Range);
 
     static if (isUnary)
@@ -1987,13 +1987,13 @@ if (isForwardRange!Range)
 {
     import std.typecons : RefCounted;
 
-    enum bool isUnary = ChunkByImplIsUnary!(pred, Range); 
+    enum bool isUnary = ChunkByImplIsUnary!(pred, Range);
 
     static if (isUnary)
         alias eq = binaryFun!((a, b) => unaryFun!pred(a) == unaryFun!pred(b));
     else
         alias eq = binaryFun!pred;
-        
+
     enum bool eqEquivalenceAssured = predEquivalenceQuaranteed || isUnary;
 
     // Outer range
@@ -2004,8 +2004,8 @@ if (isForwardRange!Range)
         Range  next;
         static if (!eqEquivalenceAssured)
         {
-			bool nextUpdated;
-		}
+            bool nextUpdated;
+        }
     }
 
     // Inner range
@@ -2013,9 +2013,9 @@ if (isForwardRange!Range)
     {
         private size_t groupNum;
         static if (eqEquivalenceAssured)
-        {	
-			private Range start;
-		}
+        {
+            private Range start;
+        }
         private Range current;
 
         private RefCounted!Impl mothership;
@@ -2023,16 +2023,16 @@ if (isForwardRange!Range)
         this(RefCounted!Impl origin)
         {
             groupNum = origin.groupNum;
-			current = origin.current.save;
+            current = origin.current.save;
             assert(!current.empty, "Passed range 'r' must not be empty");
             static if (eqEquivalenceAssured)
             {
-				start = origin.current.save;
-				
-				// Check for reflexivity
-				assert(eq(start.front, current.front),
+                start = origin.current.save;
+
+                // Check for reflexivity
+                assert(eq(start.front, current.front),
                    "predicate is not reflexive");
-			}
+            }
 
             mothership = origin;
         }
@@ -2043,23 +2043,23 @@ if (isForwardRange!Range)
         void popFront()
         {
             static if (!eqEquivalenceAssured)
-            {	
-				auto prevElement = current.front;
-			}
-			
-            current.popFront();
-            
-            static if (eqEquivalenceAssured)
-            {	
-				// This requires transitivity from the predicate.
-				immutable nowEmpty = current.empty || !eq(start.front, current.front);
-			}
-            else
-            {	
-				immutable nowEmpty = current.empty || !eq(prevElement, current.front);
-			}
+            {
+                auto prevElement = current.front;
+            }
 
-            
+            current.popFront();
+
+            static if (eqEquivalenceAssured)
+            {
+                // This requires transitivity from the predicate.
+                immutable nowEmpty = current.empty || !eq(start.front, current.front);
+            }
+            else
+            {
+                immutable nowEmpty = current.empty || !eq(prevElement, current.front);
+            }
+
+
             if (nowEmpty)
             {
                 if (groupNum == mothership.groupNum)
@@ -2069,8 +2069,8 @@ if (isForwardRange!Range)
                     mothership.next = current.save;
                     static if (!eqEquivalenceAssured)
                     {
-						mothership.nextUpdated = true;
-					}
+                        mothership.nextUpdated = true;
+                    }
                 }
 
                 groupNum = size_t.max;
@@ -2092,12 +2092,12 @@ if (isForwardRange!Range)
     {
         static if (eqEquivalenceAssured)
         {
-			impl = RefCounted!Impl(0, r, r.save);
-		}
-		else
-		{
-			impl = RefCounted!Impl(0, r, Range.init, false);
-		}
+            impl = RefCounted!Impl(0, r, r.save);
+        }
+        else
+        {
+            impl = RefCounted!Impl(0, r, Range.init, false);
+        }
     }
 
     @property bool empty() { return impl.current.empty; }
@@ -2132,22 +2132,22 @@ if (isForwardRange!Range)
     }
     else void popFront()
     {
-		if (impl.nextUpdated)
-		{	
-			impl.current = impl.next.save;
-		}
-		else while (true)
-		{	
-			auto prevElement = impl.current.front;
-			impl.current.popFront();
-			if (impl.current.empty) break;
-			if (!eq(prevElement, impl.current.front)) break;
-		}
-		
-		impl.nextUpdated = false;
-		// Indicate to any remaining Groups that we have moved on.
+        if (impl.nextUpdated)
+        {
+            impl.current = impl.next.save;
+        }
+        else while (true)
+        {
+            auto prevElement = impl.current.front;
+            impl.current.popFront();
+            if (impl.current.empty) break;
+            if (!eq(prevElement, impl.current.front)) break;
+        }
+
+        impl.nextUpdated = false;
+        // Indicate to any remaining Groups that we have moved on.
         impl.groupNum++;
-	}
+    }
 
     @property auto save()
     {
@@ -2249,6 +2249,10 @@ if (isForwardRange!Range)
  * appear in separate subranges; this function only considers adjacent
  * equivalence. Elements in the subranges will always appear in the same order
  * they appear in the original range.
+ *
+ * The range is not quaranteed to be saved on copy, even if `r` is. Explicitly
+ * calling `save` on the resulting range will still work (if `r` is a forward
+ * range).
  *
  * See_also:
  * $(LREF group), which collapses adjacent equivalent elements into a single
@@ -2699,61 +2703,62 @@ if (isForwardRange!Range)
     return ChunkByImpl!(pred, Range, false)(r);
 }
 
+//FIXME: these should be @safe
 ///
 nothrow pure @system unittest
 {
-	import std.algorithm.comparison : equal;
-	import std.range : dropExactly;
-	auto source = [4, 3, 2, 11, 0, -3, -3, 5, 3, 0];
-	auto result1 = source.chunkByAny!((a,b) => a > b);
-	assert(result1.equal!equal([
-		[4, 3, 2],
-		[11, 0, -3],
-		[-3],
-		[5, 3, 0]
-	]));
-	
-	auto result2 = result1.dropExactly(2);
-	assert(result1.equal!equal([
-		[-3],
-		[5, 3, 0]
-	]));
+    import std.algorithm.comparison : equal;
+    import std.range : dropExactly;
+    auto source = [4, 3, 2, 11, 0, -3, -3, 5, 3, 0];
+    auto result1 = source.chunkByAny!((a,b) => a > b);
+    //like chunkBy, chunkByAny does not currently quarantee save on copy.
+    assert(result1.save.equal!equal([
+        [4, 3, 2],
+        [11, 0, -3],
+        [-3],
+        [5, 3, 0]
+    ]));
+
+    auto result2 = result1.dropExactly(2);
+    assert(result1.save.equal!equal([
+        [-3],
+        [5, 3, 0]
+    ]));
 }
 
 //ensure we don't iterate the underlying range twice
-//FIXME: these should be @safe
-@system unittest
-{	
-	import std.algorithm.comparison : equal;
-	import std.math : abs;
-	
-	struct SomeRange
-	{
-		int[] elements;
-		static int popfrontsSoFar;
-		
-		auto front(){return elements[0];}
-		auto popFront()
-		{	popfrontsSoFar++;
-			elements = elements[1 .. $];
-		}
-		auto empty(){return elements.length == 0;}
-		auto save(){return this;}
-	}
-	
-	auto result = SomeRange([10, 9, 8, 5, 0, 1, 0, 8, 11, 10, 8, 12])
-		.chunkByAny!((a, b) => abs(a - b) < 3);
-	
-	assert(result.equal!equal([
-		[10, 9, 8],
-		[5],
-		[0, 1, 0],
-		[8],
-		[11, 10, 8],
-		[12]
-	]));
-	
-	assert(SomeRange.popfrontsSoFar == 12);
+nothrow @system unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.math : abs;
+
+    struct SomeRange
+    {
+        int[] elements;
+        static int popfrontsSoFar;
+
+        auto front(){return elements[0];}
+        auto popFront()
+        {   popfrontsSoFar++;
+            elements = elements[1 .. $];
+        }
+        auto empty(){return elements.length == 0;}
+        auto save(){return this;}
+    }
+
+    auto result = SomeRange([10, 9, 8, 5, 0, 1, 0, 8, 11, 10, 8, 12])
+        .chunkByAny!((a, b) => abs(a - b) < 3);
+
+    assert(result.equal!equal([
+        [10, 9, 8],
+        [5],
+        [0, 1, 0],
+        [8],
+        [11, 10, 8],
+        [12]
+    ]));
+
+    assert(SomeRange.popfrontsSoFar == 12);
 }
 
 // Issue 13595
@@ -2769,7 +2774,7 @@ nothrow pure @system unittest
     ]));
 }
 
-@system unittest
+nothrow pure @system unittest
 {
     // Grouping by maximum adjacent difference:
     import std.math : abs;
