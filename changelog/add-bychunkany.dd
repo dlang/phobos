@@ -1,3 +1,5 @@
+Added 'std.algorithm.iteration.chunkByAny'
+
 As a fix to issue #13595, added a variation of 'std.algorithm.iteration.chunkBy'
 called 'chunkByAny'. Unlike the original algorithm, this variation is designed
 to work with predicates that are neither reflexive, symmetric nor transitive:

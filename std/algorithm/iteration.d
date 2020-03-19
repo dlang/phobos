@@ -2250,9 +2250,10 @@ if (isForwardRange!Range)
  * equivalence. Elements in the subranges will always appear in the same order
  * they appear in the original range.
  *
- * The range is not quaranteed to be saved on copy, even if `r` is. Explicitly
+ * Remember that ranges are not guaranteed to call `save` on copy.
+ * This range currently does not, even if `r` does. Explicitly
  * calling `save` on the resulting range will still work (if `r` is a forward
- * range).
+ * range). This behaviour may change in the future.
  *
  * See_also:
  * $(LREF group), which collapses adjacent equivalent elements into a single
@@ -2695,6 +2696,16 @@ first to the predicate.
 When called with unary predicate, the comparisons are still assumed
 to be reflexive, symmetric and transitive. However, the source range is
 still required to be a forward range.
+
+Params:
+pred = Predicate for determining equivalence.
+r = A $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to be chunked.
+
+Returns: With a binary predicate, a range of ranges is returned in which
+all elements in a given subrange are equivalent under the given predicate.
+With a unary predicate, a range of tuples is returned, with the tuple
+consisting of the result of the unary predicate for each subrange, and the
+subrange itself.
 */
 
 auto chunkByAny(alias pred, Range)(Range r)
@@ -2711,7 +2722,7 @@ nothrow pure @system unittest
     import std.range : dropExactly;
     auto source = [4, 3, 2, 11, 0, -3, -3, 5, 3, 0];
     auto result1 = source.chunkByAny!((a,b) => a > b);
-    //like chunkBy, chunkByAny does not currently quarantee save on copy.
+    //remember: calling `save` on copy not currently guaranteed.
     assert(result1.save.equal!equal([
         [4, 3, 2],
         [11, 0, -3],
