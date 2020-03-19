@@ -139,10 +139,9 @@ efficient search, but one that only supports matching on equality:
     assert("bar".among!("foo", "bar", "baz") == 2);
 }
 
-@safe @nogc unittest
+@safe unittest
 {
     import std.meta : AliasSeq;
-    import std.array : staticArray;
 
     if (auto pos = 3.among(1, 2, 3))
         assert(pos == 3);
@@ -155,9 +154,9 @@ efficient search, but one that only supports matching on equality:
     assert(position == 1);
 
     alias values = AliasSeq!("foo", "bar", "baz");
-    auto arr = [values].staticArray;
-    assert(arr[0 .. "foo".among(values)] == ["foo"].staticArray[]);
-    assert(arr[0 .. "bar".among(values)] == ["foo", "bar"].staticArray[]);
+    auto arr = [values];
+    assert(arr[0 .. "foo".among(values)] == ["foo"]);
+    assert(arr[0 .. "bar".among(values)] == ["foo", "bar"]);
     assert(arr[0 .. "baz".among(values)] == arr);
     assert("foobar".among(values) == 0);
 
