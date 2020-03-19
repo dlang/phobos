@@ -972,20 +972,19 @@ template equal(alias pred = "a == b")
 {
     import std.algorithm.comparison : equal;
     import std.math : approxEqual;
-    import std.array : staticArray;
 
-    auto a = [ 1, 2, 4, 3 ].staticArray;
+    int[4] a = [ 1, 2, 4, 3 ];
     assert(!equal(a[], a[1..$]));
     assert(equal(a[], a[]));
     assert(equal!((a, b) => a == b)(a[], a[]));
 
     // different types
-    auto b = [ 1.0, 2, 4, 3].staticArray;
+    double[4] b = [ 1.0, 2, 4, 3];
     assert(!equal(a[], b[1..$]));
     assert(equal(a[], b[]));
 
     // predicated: ensure that two vectors are approximately equal
-    auto c = [ 1.005, 2, 4, 3].staticArray;
+    double[4] c = [ 1.005, 2, 4, 3];
     assert(equal!approxEqual(b[], c[]));
 }
 
@@ -1749,9 +1748,8 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
 ///
 @safe @nogc unittest
 {
-    import std.array : staticArray;
-    auto x = [ 1,   5, 2, 7,   4, 3 ].staticArray;
-    auto y = [ 1.0, 5, 2, 7.3, 4, 8 ].staticArray;
+    int[6] x = [ 1,   5, 2, 7,   4, 3 ];
+    double[6] y = [ 1.0, 5, 2, 7.3, 4, 8 ];
     auto m = mismatch(x[], y[]);
     assert(m[0] == x[3 .. $]);
     assert(m[1] == y[3 .. $]);
@@ -1759,11 +1757,10 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
 
 @safe @nogc unittest
 {
-    import std.array : staticArray;
     import std.range : only;
 
-    auto a = [ 1, 2, 3 ].staticArray;
-    auto b = [ 1, 2, 4, 5 ].staticArray;
+    int[3] a = [ 1, 2, 3 ];
+    int[4] b = [ 1, 2, 4, 5 ];
     auto mm = mismatch(a[], b[]);
     assert(equal(mm[0], only(3)));
     assert(equal(mm[1], only(4, 5)));
