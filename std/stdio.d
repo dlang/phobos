@@ -831,7 +831,7 @@ Throws: `Exception` if the file is not opened.
  Examples include $(LREF tmpfile), $(LREF wrapFile), and $(LREF fdopen). See the
  documentation of those functions for details.
 
- Returns: The name last used to initialize this this file, if it has a name, or `null` otherwise.
+ Returns: The name last used to initialize this this file, or `null` otherwise.
  */
     @property string name() const @safe pure nothrow
     {
