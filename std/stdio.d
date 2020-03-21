@@ -702,11 +702,17 @@ Throws: `ErrnoException` in case of error.
     }
 
 /**
-First calls `detach` (throwing on failure), and then attempts to
-associate the given file descriptor with the `File`. The mode must
-be compatible with the mode of the file descriptor.
+First calls `detach` (throwing on failure), then attempts to
+associate the given file descriptor with the `File`, and sets the file's name to `null`.
+
+The mode must be compatible with the mode of the file descriptor.
 
 Throws: `ErrnoException` in case of error.
+Params:
+    fd = File descriptor to associate with this `File`.
+    stdioOpenmode = Mode to associate with this File. The mode has the same semantics
+        semantics as in the C standard library
+        $(HTTP cplusplus.com/reference/cstdio/fopen/, fdopen) function, and must be compatible with `fd`.
  */
     void fdopen(int fd, scope const(char)[] stdioOpenmode = "rb") @safe
     {
@@ -818,9 +824,15 @@ Throws: `Exception` if the file is not opened.
         return .feof(cast(FILE*) _p.handle) != 0;
     }
 
-/** Returns the name of the last opened file, if any.
-If a `File` was created with $(LREF tmpfile) and $(LREF wrapFile)
-it has no name.*/
+/**
+ Returns the name last used to initialize this `File`, if any.
+
+ Some functions that create or initialize the `File` set the name field to `null`.
+ Examples include $(LREF tmpfile), $(LREF wrapFile), and $(LREF fdopen). See the
+ documentation of those functions for details.
+
+ Returns: The name last used to initialize this this file, or `null` otherwise.
+ */
     @property string name() const @safe pure nothrow
     {
         return _name;
