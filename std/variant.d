@@ -169,7 +169,7 @@ private:
             = is(T == VariantN)
             ||
             //T.sizeof <= size &&
-            (AllowedTypes.length == 0 
+            (AllowedTypes.length == 0
                 || staticIndexOf!(T, AllowedTypes) >= 0
                 // https://issues.dlang.org/show_bug.cgi?id=15615
                 || staticIndexOf!(Unqual!T, AllowedTypes) >= 0);
@@ -3107,7 +3107,7 @@ unittest
     alias Value = Algebraic!(long, double);
 
     const long foo = 123L;
-	long bar = foo;
-	Value baz = Value(foo);
+    long bar = foo;
+    Value baz = Value(foo);
     assert(baz == 123L);
 }
