@@ -172,7 +172,8 @@ private:
             (AllowedTypes.length == 0
                 || staticIndexOf!(T, AllowedTypes) >= 0
                 // https://issues.dlang.org/show_bug.cgi?id=15615
-                || staticIndexOf!(Unqual!T, AllowedTypes) >= 0);
+                || (staticIndexOf!(Unqual!T, AllowedTypes) >= 0
+                    && (isBasicType!T || !hasIndirections!T)));
     }
 
     // Each internal operation is encoded with an identifier. See
