@@ -3103,7 +3103,7 @@ if (isAlgebraic!VariantType && Handler.length > 0)
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=15615
-unittest
+@system unittest
 {
     alias Value = Algebraic!(long, double);
 
