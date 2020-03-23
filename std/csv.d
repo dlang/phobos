@@ -67,7 +67,7 @@
  *              record["Name"], record["Occupation"],
  *              record["Salary"]);
  * }
- * 
+ *
  * // To read the same string from the file "filename.csv":
  *
  * auto file = File("filename.csv", "r");
