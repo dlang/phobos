@@ -67,6 +67,18 @@
  *              record["Name"], record["Occupation"],
  *              record["Salary"]);
  * }
+ * 
+ * // To read the same string from the file "filename.csv":
+ *
+ * auto file = File("filename.csv", "r");
+ *
+ * foreach (record; csvReader!(string[string])
+ *         (file.byLine.joiner("\n"), null))
+ * {
+ *     writefln("%s works as a %s and earns $%s per year.",
+ *              record["Name"], record["Occupation"],
+ *              record["Salary"]);
+ * }
  * -------
  *
  * This module allows content to be iterated by record stored in a struct,
