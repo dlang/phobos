@@ -3111,4 +3111,16 @@ if (isAlgebraic!VariantType && Handler.length > 0)
     long bar = foo;
     Value baz = Value(foo);
     assert(baz == 123L);
+
+    // Should not allow for const transitive violation
+    static struct Wrapper
+    {
+        long* ptr;
+    }
+
+    alias VariantWrapper = Algebraic!(Wrapper, double);
+
+    long l = 2;
+    const cw = Wrapper(&l);
+    static assert(!__traits(compiles, VariantWrapper(cw)), "Stripping `const` from type with indirection!");
 }
