@@ -2070,7 +2070,7 @@ static if (is(sockaddr_un))
         Socket[2] pair;
 
         const basePath = deleteme;
-        auto names = [ basePath ~ "-unix-socket" ];
+        auto names = [ basePath ~ "-socket" ];
         version (linux)
             names ~= "\0" ~ basePath ~ "-abstract\0unix\0socket";
 
