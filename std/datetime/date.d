@@ -10022,7 +10022,7 @@ bool yearIsLeapYear(int year) @safe pure nothrow @nogc
        accepts $(REF Duration, core,time) and returns $(D ref Unqual!T).
 
     5. `T` must define a `opBinary` for subtraction which accepts `T`
-       and returns returns $(REF Duration, core,time).
+       and returns $(REF Duration, core,time).
   +/
 template isTimePoint(T)
 {
