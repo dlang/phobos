@@ -37,7 +37,7 @@ DMD_DIR=../dmd
 include $(DMD_DIR)/src/osmodel.mak
 
 ifeq (osx,$(OS))
-	export MACOSX_DEPLOYMENT_TARGET=10.7
+	export MACOSX_DEPLOYMENT_TARGET=10.9
 endif
 
 # Default to a release build, override with BUILD=debug
