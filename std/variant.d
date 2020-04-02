@@ -655,15 +655,16 @@ public:
         }
         else
         {
+            import core.stdc.string : memcpy;
+
             static if (!AllowedTypes.length || anySatisfy!(hasElaborateDestructor, AllowedTypes))
             {
                 // Assignment should destruct previous value
                 fptr(OpID.destruct, &store, null);
             }
 
-            static if (T.sizeof <= size)
+            void copy(void* dest, const(void)* src, size_t len)
             {
-                import core.stdc.string : memcpy;
                 // rhs has already been copied onto the stack, so even if T is
                 // shared, it's not really shared. Therefore, we can safely
                 // remove the shared qualifier when copying, as we are only
@@ -672,33 +673,39 @@ public:
                 // In addition, the storage location is not accessible outside
                 // the Variant, so even if shared data is stored there, it's
                 // not really shared, as it's copied out as well.
-                memcpy(&store, cast(const(void*)) &rhs, rhs.sizeof);
+                memcpy(dest, src, len);
                 static if (hasElaborateCopyConstructor!T)
                 {
                     // Safer than using typeid's postblit function because it
                     // type-checks the postblit function against the qualifiers
                     // of the type.
-                    (cast(T*)&store).__xpostblit();
+                    (cast(T*)dest).__xpostblit();
                 }
+            }
+
+            static if (T.sizeof <= size)
+            {
+                copy(&store, cast(const(void*)) &rhs, rhs.sizeof);
             }
             else
             {
-                import core.stdc.string : memcpy;
                 static if (__traits(compiles, {new T(T.init);}))
                 {
                     auto p = new T(rhs);
                 }
-                else static if (is(T == U[n], U, size_t n))
-                {
-                    alias UT = Unqual!T;
-                    auto p = cast(UT*)(new U[n]).ptr;
-                    *p = cast(UT) rhs;
-                }
                 else
                 {
-                    alias UT = Unqual!T;
-                    auto p = new UT;
-                    *p = rhs;
+                    static if (is(T == U[n], U, size_t n))
+                    {
+                        alias UT = Unqual!T;
+                        auto p = cast(UT*)(new U[n]).ptr;
+                    }
+                    else
+                    {
+                        alias UT = Unqual!T;
+                        auto p = new UT;
+                    }
+                    copy(cast(void*) p, cast(const(void)*) &rhs, rhs.sizeof);
                 }
                 memcpy(&store, &p, p.sizeof);
             }
@@ -1353,6 +1360,19 @@ public:
     alias MyVariant = VariantN!(maxSize!Types, Types);
 
     auto v = MyVariant(S.init);
+    assert(v == S.init);
+}
+
+@system unittest
+{
+    struct S
+    {
+        int[20] a;
+        immutable int b;
+    }
+
+    static assert(S.sizeof >= Variant.sizeof);
+    Variant v = S();
     assert(v == S.init);
 }
 
