@@ -11326,6 +11326,33 @@ that break its sorted-ness, `SortedRange` will work erratically.
 }
 
 /**
+Determines whether `T` is a $(LREF SortedRange).
+
+Params:
+    T = type to test
+
+Returns:
+`true` if `T` is a $(LREF SortedRange);
+`false` otherwise
+*/
+template isSortedRange(T) {
+    import std.range : SortedRange;
+    enum isSortedRange = is(T : SortedRange!U, U...);
+}
+
+///
+@safe unittest
+{
+    import std.algorithm.sorting : sort;
+
+    auto r = assumeSorted([0, 1, 2, 3]);
+    static assert(isSortedRange!(typeof(r)));
+
+    auto r2 = sort([0, 1, 2, 3]);
+    static assert(isSortedRange!(typeof(r2)));
+}
+
+/**
 Assumes `r` is sorted by predicate `pred` and returns the
 corresponding $(D SortedRange!(pred, R)) having `r` as support.
 To check for sorted-ness at
