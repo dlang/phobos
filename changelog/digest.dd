@@ -1,0 +1,7 @@
+The deprecated aliases in std.digest.digest were removed
+
+They were deprecated since 2.076.1 and have now been removed.
+Import `std.digest` or its submodules instead.
+
+Additionally the deprecation cycle for `std.digest` was started
+and the module will be removed in 2.101.
