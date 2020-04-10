@@ -2332,7 +2332,7 @@ private template TimSortImpl(alias pred, R)
             }
 
             // Assert that the code above established the invariant correctly
-            version (assert)
+            version (StdUnittest)
             {
                 if (stackLen == 2)
                 {
