@@ -157,7 +157,7 @@ import std.typecons : Flag, Yes, No;
 @safe unittest
 {
     import std.traits : hasUnsharedAliasing;
-    /* Issue 6642 */
+    /* https://issues.dlang.org/show_bug.cgi?id=6642 */
     static assert(!hasUnsharedAliasing!Date);
     static assert(!hasUnsharedAliasing!TimeOfDay);
     static assert(!hasUnsharedAliasing!DateTime);
@@ -598,7 +598,7 @@ deprecated @safe unittest
     //writeln(b1.point);
 }
 
-//Bug# 8450
+// Bug# https://issues.dlang.org/show_bug.cgi?id=8450
 deprecated @system unittest
 {
     @safe    void safeFunc() {}
@@ -734,7 +734,7 @@ deprecated @safe unittest
     +/
 }
 
-//Bug# 8450
+// https://issues.dlang.org/show_bug.cgi?id=8450
 deprecated @system unittest
 {
     @safe    void safeFunc() {}

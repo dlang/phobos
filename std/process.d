@@ -1268,7 +1268,8 @@ private Pid spawnProcessImpl(scope const(char)[] commandLine,
     DWORD dwCreationFlags =
         CREATE_UNICODE_ENVIRONMENT |
         ((config & Config.suppressConsole) ? CREATE_NO_WINDOW : 0);
-    auto pworkDir = workDir.tempCStringW();     // workaround until Bugzilla 14696 is fixed
+    // workaround until https://issues.dlang.org/show_bug.cgi?id=14696 is fixed
+    auto pworkDir = workDir.tempCStringW();
     if (!CreateProcessW(null, commandLine.tempCStringW().buffPtr,
                         null, null, true, dwCreationFlags,
                         envz, workDir.length ? pworkDir : null, &startinfo, &pi))
@@ -1739,7 +1740,8 @@ version (Posix) @system unittest
     spawnProcess([prog.path], null, Config.none, directory).wait();
 }
 
-@system unittest // Reopening the standard streams (issue 13258)
+// Reopening the standard streams (https://issues.dlang.org/show_bug.cgi?id=13258)
+@system unittest
 {
     import std.string;
     import std.file;
@@ -1765,8 +1767,9 @@ version (Posix) @system unittest
     assert(lines == ["foo", "bar"]);
 }
 
+// MSVCRT workaround (https://issues.dlang.org/show_bug.cgi?id=14422)
 version (Windows)
-@system unittest // MSVCRT workaround (issue 14422)
+@system unittest
 {
     auto fn = uniqueTempPath();
     std.file.write(fn, "AAAAAAAAAA");

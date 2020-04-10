@@ -1896,7 +1896,8 @@ class Base64Exception : Exception
         assert(tv["foobar"] == b.data); a.clear(); b.clear();
     }
 
-    // @@@9543@@@ These tests were disabled because they actually relied on the input range having length.
+    // https://issues.dlang.org/show_bug.cgi?id=9543
+    // These tests were disabled because they actually relied on the input range having length.
     // The implementation (currently) doesn't support encoding/decoding from a length-less source.
     version (none)
     { // with InputRange

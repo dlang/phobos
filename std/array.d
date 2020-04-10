@@ -207,9 +207,9 @@ if (isPointer!Range && isIterable!(PointerTarget!Range) && !isNarrowString!Range
     assert(equal(a, [Foo(1), Foo(2), Foo(3), Foo(4), Foo(5)]));
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=12315
 @safe unittest
 {
-    // Issue 12315
     static struct Bug12315 { immutable int i; }
     enum bug12315 = [Bug12315(123456789)].array();
     static assert(bug12315[0].i == 123456789);
@@ -226,9 +226,9 @@ if (isPointer!Range && isIterable!(PointerTarget!Range) && !isNarrowString!Range
 version (StdUnittest)
     private extern(C) void _d_delarray_t(void[] *p, TypeInfo_Struct ti);
 
+// https://issues.dlang.org/show_bug.cgi?id=18995
 @system unittest
 {
-    // Issue 18995
     int nAlive = 0;
     struct S
     {
@@ -343,7 +343,7 @@ if (isNarrowString!String)
     assert(array("ABC".dup) == "ABC"d.dup);
 }
 
-//Bug# 8233
+// https://issues.dlang.org/show_bug.cgi?id=8233
 @safe unittest
 {
     assert(array("hello world"d) == "hello world"d);
@@ -371,9 +371,9 @@ if (isNarrowString!String)
     }}
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=9824
 @safe unittest
 {
-    //9824
     static struct S
     {
         @disable void opAssign(S);
@@ -383,7 +383,7 @@ if (isNarrowString!String)
     arr.array();
 }
 
-// Bugzilla 10220
+// https://issues.dlang.org/show_bug.cgi?id=10220
 @safe unittest
 {
     import std.algorithm.comparison : equal;
@@ -554,7 +554,8 @@ if (isInputRange!Values && isInputRange!Keys)
     assert(c == expected);
 }
 
-// @@@11053@@@ - Cannot be version (StdUnittest) - recursive instantiation error
+// Cannot be version (StdUnittest) - recursive instantiation error
+// https://issues.dlang.org/show_bug.cgi?id=11053
 @safe unittest
 {
     import std.typecons;
@@ -564,7 +565,7 @@ if (isInputRange!Values && isInputRange!Keys)
     assert([ tuple("foo", "bar") ].assocArray() == ["foo": "bar"]);
 }
 
-// Issue 13909
+// https://issues.dlang.org/show_bug.cgi?id=13909
 @safe unittest
 {
     import std.typecons;
@@ -726,7 +727,7 @@ if (isAssociativeArray!AA)
     assert(savedPairs.front == tuple("a", 2));
 }
 
-// Issue 17711
+// https://issues.dlang.org/show_bug.cgi?id=17711
 @safe unittest
 {
     const(int[string]) aa = [ "abc": 123 ];
@@ -988,7 +989,8 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
     assert(s2.length == 0);
 }
 
-@safe nothrow pure unittest //@@@9803@@@
+// https://issues.dlang.org/show_bug.cgi?id=9803
+@safe nothrow pure unittest
 {
     auto a = minimallyInitializedArray!(int*[])(1);
     assert(a[0] == null);
@@ -998,7 +1000,8 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
     assert(c[0][0] == null);
 }
 
-@safe unittest //@@@10637@@@
+// https://issues.dlang.org/show_bug.cgi?id=10637
+@safe unittest
 {
     static struct S
     {
@@ -1141,7 +1144,8 @@ if (is(typeof(a.ptr < b.ptr) == bool))
     assert(overlap(c, d.idup).empty);
 }
 
-@safe pure nothrow unittest // bugzilla 9836
+ // https://issues.dlang.org/show_bug.cgi?id=9836
+@safe pure nothrow unittest
 {
     // range primitives for array should work with alias this types
     struct Wrapper
@@ -1523,7 +1527,8 @@ private template isInputRangeOrConvertible(E)
     });
 }
 
-@system unittest // bugzilla 6874
+// https://issues.dlang.org/show_bug.cgi?id=6874
+@system unittest
 {
     import core.memory;
     // allocate some space
@@ -2003,7 +2008,8 @@ if (isInputRange!RoR &&
     }
 }
 
-@safe unittest // Issue 14230
+// https://issues.dlang.org/show_bug.cgi?id=14230
+@safe unittest
 {
    string[] ary = ["","aa","bb","cc"]; // leaded by _empty_ element
    assert(ary.join(" @") == " @aa @bb @cc"); // OK in 2.067b1 and olders
@@ -2077,7 +2083,8 @@ if (isInputRange!RoR &&
     }
 }
 
-@safe unittest // Issue 10895
+// https://issues.dlang.org/show_bug.cgi?id=10895
+@safe unittest
 {
     class A
     {
@@ -2092,7 +2099,8 @@ if (isInputRange!RoR &&
     assert(temp.length == 3);
 }
 
-@safe unittest // Issue 14230
+// https://issues.dlang.org/show_bug.cgi?id=14230
+@safe unittest
 {
    string[] ary = ["","aa","bb","cc"];
    assert(ary.join('@') == "@aa@bb@cc");
@@ -2321,7 +2329,7 @@ if (isInputRange!RoR &&
     assert(join(f([f([1, 2]), f([41, 42])]), f([5, 6])) == [1, 2, 5, 6, 41, 42]);
 }
 
-// Issue 10683
+// https://issues.dlang.org/show_bug.cgi?id=10683
 @safe unittest
 {
     import std.range : join;
@@ -2330,7 +2338,7 @@ if (isInputRange!RoR &&
     assert([[tuple("x")]].join == [tuple("x")]);
 }
 
-// Issue 13877
+// https://issues.dlang.org/show_bug.cgi?id=13877
 @safe unittest
 {
     // Test that the range is iterated only once.
@@ -2723,7 +2731,7 @@ if (isInputRange!Range &&
     assert(replace(d, 5, 10, "⁴³²¹⁰"d) == "⁰¹²³⁴⁴³²¹⁰"d);
 }
 
-// Issue 18166
+// https://issues.dlang.org/show_bug.cgi?id=18166
 @safe pure unittest
 {
     auto str = replace("aaaaa"d, 1, 4, "***"d);
@@ -2793,9 +2801,9 @@ if (is(typeof(replace(array, from, to, stuff))))
     assert(a == [1, 4, 5, 5]);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=12889
 @safe unittest
 {
-    // Bug# 12889
     int[1][] arr = [[0], [1], [2], [3], [4], [5], [6]];
     int[1][] stuff = [[0], [1]];
     replaceInPlace(arr, 4, 6, stuff);
@@ -2804,7 +2812,7 @@ if (is(typeof(replace(array, from, to, stuff))))
 
 @system unittest
 {
-    // Bug# 14925
+    // https://issues.dlang.org/show_bug.cgi?id=14925
     char[] a = "mon texte 1".dup;
     char[] b = "abc".dup;
     replaceInPlace(a, 4, 9, b);
@@ -3030,7 +3038,7 @@ if (isDynamicArray!(E[]) &&
     }
 }
 
-//Bug# 8187
+// https://issues.dlang.org/show_bug.cgi?id=8187
 @safe unittest
 {
     auto res = ["a", "a"];
@@ -3636,7 +3644,8 @@ if (isDynamicArray!A)
     assert(app3[] == "Appender!(int[])(0001, 0002, 0003)");
 }
 
-@safe unittest // issue 17251
+// https://issues.dlang.org/show_bug.cgi?id=17251
+@safe unittest
 {
     static struct R
     {
@@ -3651,7 +3660,8 @@ if (isDynamicArray!A)
     app.put(r[]);
 }
 
-@safe unittest // issue 13300
+// https://issues.dlang.org/show_bug.cgi?id=13300
+@safe unittest
 {
     static test(bool isPurePostblit)()
     {
@@ -3686,7 +3696,8 @@ if (isDynamicArray!A)
     static assert(!__traits(compiles, () pure { test!false(); }));
 }
 
-@system unittest // issue 19572
+// https://issues.dlang.org/show_bug.cgi?id=19572
+@system unittest
 {
     static struct Struct
     {
@@ -3907,7 +3918,8 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
     }
     catch (Exception) assert(0);
 
-    // Issue 5663 & 9725 tests
+    // https://issues.dlang.org/show_bug.cgi?id=5663
+    // https://issues.dlang.org/show_bug.cgi?id=9725
     static foreach (S; AliasSeq!(char[], const(char)[], string))
     {
         {
@@ -4022,11 +4034,11 @@ unittest
     }
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=10690
 @safe unittest
 {
     import std.algorithm;
     import std.typecons;
-    //10690
     [tuple(1)].filter!(t => true).array; // No error
     [tuple("A")].filter!(t => true).array; // error
 }
@@ -4096,9 +4108,9 @@ unittest
     a2.put([s2]);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=9528
 @safe unittest
 {
-    //9528
     const(E)[] fastCopy(E)(E[] src) {
             auto app = appender!(const(E)[])();
             foreach (i, e; src)
@@ -4114,10 +4126,10 @@ unittest
     assert(t.length == 1);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=10753
 @safe unittest
 {
     import std.algorithm.iteration : map;
-    //10753
     struct Foo {
        immutable dchar d;
     }
@@ -4237,7 +4249,7 @@ unittest
 
 @system unittest
 {
-    // Issue 13077
+    // https://issues.dlang.org/show_bug.cgi?id=13077
     static class A {}
 
     // reduced case
@@ -4336,7 +4348,8 @@ unittest
     assert(app3[] == [1, 2, 3]);
 }
 
-@safe unittest // issue 14605
+// https://issues.dlang.org/show_bug.cgi?id=14605
+@safe unittest
 {
     static assert(isOutputRange!(Appender!(int[]), int));
     static assert(isOutputRange!(RefAppender!(int[]), int));
@@ -4526,7 +4539,7 @@ nothrow pure @safe unittest
 // Tests that code compiles when there is an elaborate destructor and exceptions
 // are thrown. Unfortunately can't test that memory is initialized
 // before having a destructor called on it.
-// @system required because of issue 18872.
+// @system required because of https://issues.dlang.org/show_bug.cgi?id=18872.
 @system nothrow unittest
 {
     // exists only to allow doing something in the destructor. Not tested

@@ -526,9 +526,9 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, scope 
     }
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=10510
 @safe unittest
 {
-    // Issue 10510
     extern(C) void cFoo() { }
     enforce(false, &cFoo);
 }
@@ -566,7 +566,7 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, scope 
     }
 }
 
-// Test for bugzilla 8637
+// Test for https://issues.dlang.org/show_bug.cgi?id=8637
 @system unittest
 {
     struct S
@@ -600,10 +600,9 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, scope 
     enforce!E2(s);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=14685
 @safe unittest
 {
-    // Issue 14685
-
     class E : Exception
     {
         this() { super("Not found"); }
@@ -1249,7 +1248,9 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
 @system unittest
 {
     int i;
-    int* p = &i; // trick the compiler when initializing slicep; https://issues.dlang.org/show_bug.cgi?id=18637
+     // trick the compiler when initializing slice
+     // https://issues.dlang.org/show_bug.cgi?id=18637
+    int* p = &i;
     int[]  slice = [0, 1, 2, 3, 4];
     int[5] arr   = [0, 1, 2, 3, 4];
     int*[]  slicep = [p];
@@ -1315,8 +1316,9 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
 
 version (StdUnittest)
 {
-    // 17084 : the bug doesn't happen if these declarations are
-    // in the unittest block (static or not).
+    // https://issues.dlang.org/show_bug.cgi?id=17084
+    // the bug doesn't happen if these declarations are in the unittest block
+    // (static or not).
     private struct Page17084
     {
         URL17084 url;
@@ -1332,7 +1334,8 @@ version (StdUnittest)
     }
 }
 
-@system unittest // Bugzilla 17084
+// https://issues.dlang.org/show_bug.cgi?id=17084
+@system unittest
 {
     import std.algorithm.sorting : sort;
     Page17084[] s;

@@ -128,7 +128,7 @@ template unaryFun(alias fun, string parmName = "a")
     }
     else static if (needOpCallAlias!fun)
     {
-        // Issue 9906
+        // https://issues.dlang.org/show_bug.cgi?id=9906
         alias unaryFun = fun.opCall;
     }
     else
@@ -159,7 +159,7 @@ template unaryFun(alias fun, string parmName = "a")
     int num = 41;
     assert(unaryFun!"a + 1"(num) == 42);
 
-    // Issue 9906
+    // https://issues.dlang.org/show_bug.cgi?id=9906
     struct Seen
     {
         static bool opCall(int n) { return true; }
@@ -222,7 +222,7 @@ template binaryFun(alias fun, string parm1Name = "a",
     }
     else static if (needOpCallAlias!fun)
     {
-        // Issue 9906
+        // https://issues.dlang.org/show_bug.cgi?id=9906
         alias binaryFun = fun.opCall;
     }
     else
@@ -252,7 +252,7 @@ template binaryFun(alias fun, string parm1Name = "a",
     //@@BUG
     //assert(binaryFun!("return a + b;")(41, 1) == 42);
 
-    // Issue 9906
+    // https://issues.dlang.org/show_bug.cgi?id=9906
     struct Seen
     {
         static bool opCall(int x, int y) { return true; }
@@ -840,7 +840,7 @@ template partial(alias fun, alias arg)
     assert(dg2() == 1);
 }
 
-// Fix issue 15732
+// Fix https://issues.dlang.org/show_bug.cgi?id=15732
 @safe unittest
 {
     // Test whether it works with functions.
@@ -1261,7 +1261,8 @@ Note:
 template memoize(alias fun)
 {
     import std.traits : ReturnType;
-    // alias Args = Parameters!fun; // Bugzilla 13580
+     // https://issues.dlang.org/show_bug.cgi?id=13580
+    // alias Args = Parameters!fun;
 
     ReturnType!fun memoize(Parameters!fun args)
     {
@@ -1283,7 +1284,8 @@ template memoize(alias fun)
 template memoize(alias fun, uint maxSize)
 {
     import std.traits : ReturnType;
-    // alias Args = Parameters!fun; // Bugzilla 13580
+     // https://issues.dlang.org/show_bug.cgi?id=13580
+    // alias Args = Parameters!fun;
     ReturnType!fun memoize(Parameters!fun args)
     {
         import std.meta : staticMap;
@@ -1318,7 +1320,9 @@ template memoize(alias fun, uint maxSize)
         if (!bt(initialized.ptr, idx1))
         {
             emplace(&memo[idx1], args, fun(args));
-            bts(initialized.ptr, idx1); // only set to initialized after setting args and value (bugzilla 14025)
+            // only set to initialized after setting args and value
+            // https://issues.dlang.org/show_bug.cgi?id=14025
+            bts(initialized.ptr, idx1);
             return memo[idx1].res;
         }
         else if (memo[idx1].args == args)
@@ -1328,7 +1332,7 @@ template memoize(alias fun, uint maxSize)
         if (!bt(initialized.ptr, idx2))
         {
             emplace(&memo[idx2], memo[idx1]);
-            bts(initialized.ptr, idx2); // only set to initialized after setting args and value (bugzilla 14025)
+            bts(initialized.ptr, idx2);
         }
         else if (memo[idx2].args == args)
             return memo[idx2].res;
@@ -1427,7 +1431,7 @@ unittest
     }
     assert(fact(10) == 3628800);
 
-    // Issue 12568
+    // https://issues.dlang.org/show_bug.cgi?id=12568
     static uint len2(const string s) { // Error
     alias mLen2 = memoize!len2;
     if (s.length == 0)
@@ -1442,7 +1446,8 @@ unittest
     assert(func(int.init) == 1);
 }
 
-// 16079: memoize should work with arrays
+// https://issues.dlang.org/show_bug.cgi?id=16079
+// memoize should work with arrays
 @system unittest // not @safe with -dip1000 due to memoize
 {
     int executed = 0;
@@ -1466,7 +1471,7 @@ unittest
     assert(executed == 1);
 }
 
-// 16079: memoize should work with structs
+// https://issues.dlang.org/show_bug.cgi?id=16079: memoize should work with structs
 @safe unittest
 {
     int executed = 0;
@@ -1485,7 +1490,7 @@ unittest
     assert(executed == 1);
 }
 
-// 20439 memoize should work with void opAssign
+// https://issues.dlang.org/show_bug.cgi?id=20439 memoize should work with void opAssign
 @safe unittest
 {
     static struct S
@@ -1496,7 +1501,7 @@ unittest
     assert(memoize!(() => S()) == S());
 }
 
-// 16079: memoize should work with classes
+// https://issues.dlang.org/show_bug.cgi?id=16079: memoize should work with classes
 @system unittest // not @safe with -dip1000 due to memoize
 {
     int executed = 0;

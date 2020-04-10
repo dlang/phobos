@@ -54,7 +54,8 @@ import std.traits;
 private:
 
 // dipatchers to the right low-level primitives. Added to allow BigInt CTFE for
-// 32 bit systems (issue 14767) although it's used by the other architectures too.
+// 32 bit systems (https://issues.dlang.org/show_bug.cgi?id=14767) although it's
+// used by the other architectures too.
 // See comments below in case it has to be refactored.
 version (X86)
 uint multibyteAddSub(char op)(uint[] dest, const(uint)[] src1, const (uint)[] src2, uint carry)
@@ -1127,16 +1128,17 @@ public:
     // ulong comparison test
     BigUint a = [1];
     assert(a == 1);
-    assert(a < 0x8000_0000_0000_0000UL); // bug 9548
+    // https://issues.dlang.org/show_bug.cgi?id=9548
+    assert(a < 0x8000_0000_0000_0000UL);
 
-    // bug 12234
+    // https://issues.dlang.org/show_bug.cgi?id=12234
     BigUint z = [0];
     assert(z == 0UL);
     assert(!(z > 0UL));
     assert(!(z < 0UL));
 }
 
-// issue 16223
+// https://issues.dlang.org/show_bug.cgi?id=16223
 @system pure nothrow unittest
 {
     BigUint a = [3];

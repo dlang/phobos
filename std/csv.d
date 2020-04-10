@@ -124,7 +124,8 @@ class CSVException : Exception
     ///
     size_t row, col;
 
-    // FIXME: Use std.exception.basicExceptionCtors here once bug #11500 is fixed
+    // FIXME: Use std.exception.basicExceptionCtors here once
+    // https://issues.dlang.org/show_bug.cgi?id=11500 is fixed
 
     this(string msg, string file = __FILE__, size_t line = __LINE__,
          Throwable next = null) @nogc @safe pure nothrow
@@ -1163,7 +1164,7 @@ public:
     }
 }
 
-// Bugzilla 15545
+// https://issues.dlang.org/show_bug.cgi?id=15545
 // @system due to the catch for Throwable
 @system pure unittest
 {
@@ -1717,7 +1718,7 @@ if (isSomeChar!Separator && isInputRange!Range
     assert(a.data == ""d);
 }
 
-// Bugzilla 8908
+// https://issues.dlang.org/show_bug.cgi?id=8908
 @safe pure unittest
 {
     string csv = `  1.0, 2.0, 3.0

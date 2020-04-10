@@ -480,7 +480,8 @@ BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
     assert(h.equal([16, 14, 10, 9, 8, 7, 4, 3, 2, 1]));
 }
 
-@system unittest // 15675
+// https://issues.dlang.org/show_bug.cgi?id=15675
+@system unittest
 {
     import std.container.array : Array;
 
@@ -489,7 +490,8 @@ BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
     assert(heap.front == 12);
 }
 
-@system unittest // 16072
+// https://issues.dlang.org/show_bug.cgi?id=16072
+@system unittest
 {
     auto q = heapify!"a > b"([2, 4, 5]);
     q.insert(1);
@@ -584,7 +586,8 @@ BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
     assert(equal(b, [10, 9, 8, 7, 6, 6, 7, 8, 9, 10]));
 }
 
-@system unittest // Issue 17314
+// https://issues.dlang.org/show_bug.cgi?id=17314
+@system unittest
 {
     import std.algorithm.comparison : equal;
     int[] a = [5];

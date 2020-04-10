@@ -605,7 +605,7 @@ public:
     template toString()
     {
         import std.format : FormatSpec, formatValue;
-        // Needs to be a template because of DMD @@BUG@@ 13737.
+        // Needs to be a template because of https://issues.dlang.org/show_bug.cgi?id=13737.
         void toString()(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char fmt)
         {
             sink.formatValue(get!real, fmt);
@@ -1675,7 +1675,7 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
    printf("POWER TOTAL = %d avg = %f ", powercalls,
         (1.0*powercalls)/powerProblems);
 */
-    //Issue 14231
+    // https://issues.dlang.org/show_bug.cgi?id=14231
     auto xp = findRoot((float x) => x, 0f, 1f);
     auto xn = findRoot((float x) => x, -1f, -0f);
 }
@@ -3048,7 +3048,7 @@ if (!isIntegral!T &&
     }
 }
 
-// Issue 7102
+// https://issues.dlang.org/show_bug.cgi?id=7102
 @system pure unittest
 {
     import std.bigint : BigInt;
@@ -3078,7 +3078,7 @@ if (!isIntegral!T &&
     assert(gcd(CrippledInt(2310), CrippledInt(1309)) == CrippledInt(77));
 }
 
-// Issue 19514
+// https://issues.dlang.org/show_bug.cgi?id=19514
 @system pure unittest
 {
     import std.bigint : BigInt;
@@ -3337,7 +3337,9 @@ private:
     //
     // Also, this is unsafe because the memSpace buffer will be cast
     // to immutable.
-    public this(lookup_t[] memSpace)  // Public b/c of bug 4636.
+    //
+    // Public b/c of https://issues.dlang.org/show_bug.cgi?id=4636.
+    public this(lookup_t[] memSpace)
     {
         immutable size = memSpace.length / 2;
 

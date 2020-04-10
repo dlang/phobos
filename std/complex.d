@@ -1013,7 +1013,8 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
     assert(approxEqual(c2s.im, 0.8836155));
 }
 
-// Issue 10881: support %f formatting of complex numbers
+// support %f formatting of complex numbers
+// https://issues.dlang.org/show_bug.cgi?id=10881
 @safe unittest
 {
     import std.format : format;

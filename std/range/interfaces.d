@@ -251,9 +251,9 @@ interface OutputRange(E) {
     void put(E);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=6973
 @safe unittest
 {
-    // 6973
     static assert(isOutputRange!(OutputRange!int, int));
 }
 
