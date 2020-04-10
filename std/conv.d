@@ -5097,8 +5097,6 @@ if (!is(T == class))
 //postblit precedence
 @system unittest
 {
-    //Works, but breaks in "-w -O" because of @@@9332@@@.
-    //Uncomment test when 9332 is fixed.
     static struct S
     {
         int i;
