@@ -502,7 +502,9 @@ if (fun.length >= 1)
             alias _funs = staticMap!(unaryFun, fun);
             alias _fun = adjoin!_funs;
 
-            // Once DMD issue #5710 is fixed, this validation loop can be moved into a template.
+            // Once https://issues.dlang.org/show_bug.cgi?id=5710 is fixed
+            // accross all compilers (as of 2020-04, it wasn't fixed in LDC and GDC),
+            // this validation loop can be moved into a template.
             foreach (f; _funs)
             {
                 static assert(!is(typeof(f(RE.init)) == void),
