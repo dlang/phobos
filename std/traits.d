@@ -3668,8 +3668,8 @@ template hasElaborateCopyConstructor(S)
    defining `opAssign(typeof(this))` or $(D opAssign(ref typeof(this)))
    for a `struct` or when there is a compiler-generated `opAssign`.
 
-   A type `S` gets compiler-generated `opAssign` in case it has
-   an elaborate copy constructor or elaborate destructor.
+   A type `S` gets compiler-generated `opAssign` if it has
+   an elaborate destructor.
 
    Classes and unions never have elaborate assignments.
 
