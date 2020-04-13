@@ -391,7 +391,7 @@ if (ranges.length >= 2 &&
             return mixin(algoFormat("tuple(%(current[%d].front%|,%))",
                                     iota(0, current.length)));
         }
-        void popFront() scope @trusted // @trusted until dmd #9220 is pulled
+        void popFront() scope @safe
         {
             foreach_reverse (i, ref r; current)
             {
