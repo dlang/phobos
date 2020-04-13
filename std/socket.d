@@ -717,7 +717,7 @@ class InternetHost
         // must synchronize across all threads
         private bool getHost(string opMixin, T)(T param) @system
         {
-            synchronized(this.classinfo)
+            synchronized(typeid(this))
                 return getHostNoSync!(opMixin, T)(param);
         }
     }
