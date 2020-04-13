@@ -2820,8 +2820,15 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
                 return;
         }
 
-        // For non-struct types, suffice to do the classic swap
-        auto tmp = lhs;
+        // For non-elaborate-assign types, suffice to do the classic swap
+        static if (__traits(hasCopyConstructor, T))
+        {
+            // don't invoke any elaborate constructors either
+            T tmp = void;
+            tmp = lhs;
+        }
+        else
+            auto tmp = lhs;
         lhs = rhs;
         rhs = tmp;
     }
@@ -3005,6 +3012,31 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
     }
     B b1, b2;
     swap(b1, b2);
+}
+
+// issue 20732
+@safe unittest
+{
+    static struct A
+    {
+        int x;
+        this(scope ref return const A other)
+        {
+            import std.stdio;
+            x = other.x;
+            // note, struct functions inside @safe functions infer ALL
+            // attributes, so the following 3 lines are meant to prevent this.
+            new int; // prevent @nogc inference
+            writeln("impure"); // prevent pure inference
+            throw new Exception(""); // prevent nothrow inference
+        }
+    }
+
+    A a1, a2;
+    swap(a1, a2);
+
+    A[1] a3, a4;
+    swap(a3, a4);
 }
 
 /// ditto
