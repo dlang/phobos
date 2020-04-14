@@ -3071,7 +3071,7 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
     stdThreadLocalLog.logLevel = LogLevel.all;
 }
 
-// Issue 14940
+// https://issues.dlang.org/show_bug.cgi?id=14940
 @safe unittest
 {
     import std.typecons : Nullable;
@@ -3101,7 +3101,7 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
     assert(tl.msg == SystemToStringMsg);
 }
 
-// Issue 17328
+// https://issues.dlang.org/show_bug.cgi?id=17328
 @safe unittest
 {
     import std.format : format;
@@ -3123,7 +3123,7 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
     assert(fs.length == 2);
 }
 
-// Issue 15954
+// https://issues.dlang.org/show_bug.cgi?id=15954
 @safe unittest
 {
     import std.conv : to;
@@ -3132,7 +3132,7 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
     assert(tl.msg == "123456789");
 }
 
-// Issue 16256
+// https://issues.dlang.org/show_bug.cgi?id=16256
 @safe unittest
 {
     import std.conv : to;
@@ -3141,7 +3141,7 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
     assert(tl.msg == "123456789");
 }
 
-// Issue 15517
+// https://issues.dlang.org/show_bug.cgi?id=15517
 @system unittest
 {
     import std.file : exists, remove, tempDir;

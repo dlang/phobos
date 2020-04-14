@@ -657,7 +657,8 @@ private template optionValidator(A...)
     static assert(optionValidator!(C,A,P,C,A,S,F) == "");
 }
 
-@safe unittest // bugzilla 15914
+// https://issues.dlang.org/show_bug.cgi?id=15914
+@safe unittest
 {
     import std.exception : assertThrown;
     bool opt;
@@ -981,7 +982,7 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
     return ret;
 }
 
-// 17574
+// https://issues.dlang.org/show_bug.cgi?id=17574
 @safe unittest
 {
     import std.algorithm.searching : startsWith;
@@ -1001,7 +1002,7 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
         assert(goe.msg.startsWith("Could not find"));
 }
 
-// 5316 - arrays with arraySep
+// https://issues.dlang.org/show_bug.cgi?id=5316 - arrays with arraySep
 @safe unittest
 {
     import std.conv;
@@ -1030,7 +1031,7 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
     assert(names == ["foo", "bar", "baz"], to!string(names));
 }
 
-// 5316 - associative arrays with arraySep
+// https://issues.dlang.org/show_bug.cgi?id=5316 - associative arrays with arraySep
 @safe unittest
 {
     import std.conv;
@@ -1376,9 +1377,9 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assert(x == 2);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=2142
 @safe unittest
 {
-    // From bugzilla 2142
     bool f_linenum, f_filename;
     string[] args = [ "", "-nl" ];
     getopt
@@ -1393,9 +1394,9 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assert(f_filename);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=6887
 @safe unittest
 {
-    // From bugzilla 6887
     string[] p;
     string[] args = ["", "-pa"];
     getopt(args, "p", &p);
@@ -1403,18 +1404,18 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assert(p[0] == "a");
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=6888
 @safe unittest
 {
-    // From bugzilla 6888
     int[string] foo;
     auto args = ["", "-t", "a=1"];
     getopt(args, "t", &foo);
     assert(foo == ["a":1]);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=9583
 @safe unittest
 {
-    // From bugzilla 9583
     int opt;
     auto args = ["prog", "--opt=123", "--", "--a", "--b", "--c"];
     getopt(args, "opt", &opt);
@@ -1429,7 +1430,7 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assert(foo == "hello");
     assert(bar == "bar=baz");
 
-    // From bugzilla 5762
+    // From https://issues.dlang.org/show_bug.cgi?id=5762
     string a;
     args = ["prog", "-a-0x12"];
     getopt(args, config.bundling, "a|addr", &a);
@@ -1438,7 +1439,7 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     getopt(args, config.bundling, "a|addr", &a);
     assert(a == "-0x12");
 
-    // From https://d.puremagic.com/issues/show_bug.cgi?id=11764
+    // From https://issues.dlang.org/show_bug.cgi?id=11764
     args = ["main", "-test"];
     bool opt;
     args.getopt(config.passThrough, "opt", &opt);
@@ -1456,7 +1457,8 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assert(o == "str");
 }
 
-@safe unittest // 5228
+// https://issues.dlang.org/show_bug.cgi?id=5228
+@safe unittest
 {
     import std.conv;
     import std.exception;
@@ -1469,7 +1471,8 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assertThrown!ConvException(getopt(args, "abc", &abc));
 }
 
-@safe unittest // From bugzilla 7693
+// https://issues.dlang.org/show_bug.cgi?id=7693
+@safe unittest
 {
     import std.exception;
 
@@ -1489,7 +1492,8 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assertNotThrown(getopt(args, "foo", &foo));
 }
 
-@safe unittest // same bug as 7693 only for bool
+// Same as https://issues.dlang.org/show_bug.cgi?id=7693 only for `bool`
+@safe unittest
 {
     import std.exception;
 
@@ -1574,7 +1578,8 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assert(r.helpWanted);
 }
 
-// Issue 13316 - std.getopt: implicit help option breaks the next argument
+// std.getopt: implicit help option breaks the next argument
+// https://issues.dlang.org/show_bug.cgi?id=13316
 @safe unittest
 {
     string[] args = ["program", "--help", "--", "something"];
@@ -1591,7 +1596,8 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assert(args == ["program", "nonoption", "--option"]);
 }
 
-// Issue 13317 - std.getopt: endOfOptions broken when it doesn't look like an option
+// std.getopt: endOfOptions broken when it doesn't look like an option
+// https://issues.dlang.org/show_bug.cgi?id=13317
 @safe unittest
 {
     auto endOfOptionsBackup = endOfOptions;
@@ -1604,7 +1610,8 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assert(args == ["program", "--option"]);
 }
 
-// Issue 20480 - make std.getopt ready for DIP 1000
+// make std.getopt ready for DIP 1000
+// https://issues.dlang.org/show_bug.cgi?id=20480
 @safe unittest
 {
     string[] args = ["test", "--foo", "42", "--bar", "BAR"];
@@ -1738,7 +1745,8 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt, st
     assert(wanted == helpMsg, helpMsg ~ wanted);
 }
 
-@safe unittest // Issue 14724
+// https://issues.dlang.org/show_bug.cgi?id=14724
+@safe unittest
 {
     bool a;
     auto args = ["prog", "--help"];
@@ -1769,7 +1777,8 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt, st
     assertNotThrown!AssertError(getopt(args, "abc", &abc, "def", &def));
 }
 
-@safe unittest // Issue 17327 repeated option use
+// https://issues.dlang.org/show_bug.cgi?id=17327 repeated option use
+@safe unittest
 {
     long num = 0;
 
@@ -1856,7 +1865,9 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt, st
     assert(y == 50);
 }
 
-@safe unittest // Hyphens at the start of option values; Issue 17650
+// Hyphens at the start of option values;
+// https://issues.dlang.org/show_bug.cgi?id=17650
+@safe unittest
 {
     auto args = ["program", "-m", "-5", "-n", "-50", "-c", "-", "-f", "-"];
 

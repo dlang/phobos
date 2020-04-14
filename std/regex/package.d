@@ -706,7 +706,8 @@ public:
         || cast(bool)(c = matchFirst(s, regex("a"))));
 }
 
-@system unittest // Issue 19979
+// https://issues.dlang.org/show_bug.cgi?id=19979
+@system unittest
 {
     auto c = matchFirst("bad", regex(`(^)(not )?bad($)`));
     assert(c[0] && c[0].length == "bad".length);

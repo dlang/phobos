@@ -1238,7 +1238,7 @@ if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
     static assert(setExtension("file"w.dup, "ext"w) == "file.ext");
     static assert(setExtension("file.old"d.dup, "new"d) == "file.new");
 
-    // Issue 10601
+    // https://issues.dlang.org/show_bug.cgi?id=10601
     assert(setExtension("file", "") == "file");
     assert(setExtension("file.ext", "") == "file");
 }

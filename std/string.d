@@ -1501,7 +1501,8 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
     });
 }
 
-@safe pure unittest // issue13529
+// https://issues.dlang.org/show_bug.cgi?id=13529
+@safe pure unittest
 {
     import std.conv : to;
     static foreach (S; AliasSeq!(string, wstring, dstring))
@@ -5234,7 +5235,8 @@ if (isSomeChar!C1 && isSomeChar!C2)
     assert(translate("hello world", transTable2) == "h5llorange worangerld");
 }
 
-@safe pure unittest // issue 13018
+// https://issues.dlang.org/show_bug.cgi?id=13018
+@safe pure unittest
 {
     immutable dchar[dchar] transTable1 = ['e' : '5', 'o' : '7', '5': 'q'];
     assert(translate("hello world", transTable1) == "h5ll7 w7rld");
@@ -5255,7 +5257,8 @@ if (isSomeChar!C1 && isSomeChar!C2)
     static foreach (S; AliasSeq!( char[], const( char)[], immutable( char)[],
                           wchar[], const(wchar)[], immutable(wchar)[],
                           dchar[], const(dchar)[], immutable(dchar)[]))
-    {(){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
+    {(){ // workaround slow optimizations for large functions
+         // https://issues.dlang.org/show_bug.cgi?id=2396
         assert(translate(to!S("hello world"), cast(dchar[dchar])['h' : 'q', 'l' : '5']) ==
                to!S("qe55o wor5d"));
         assert(translate(to!S("hello world"), cast(dchar[dchar])['o' : 'l', 'l' : '\U00010143']) ==
@@ -5269,7 +5272,8 @@ if (isSomeChar!C1 && isSomeChar!C2)
         static foreach (T; AliasSeq!( char[], const( char)[], immutable( char)[],
                               wchar[], const(wchar)[], immutable(wchar)[],
                               dchar[], const(dchar)[], immutable(dchar)[]))
-        (){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
+        (){ // workaround slow optimizations for large functions
+            // https://issues.dlang.org/show_bug.cgi?id=2396
             static foreach (R; AliasSeq!(dchar[dchar], const dchar[dchar],
                         immutable dchar[dchar]))
             {{
@@ -5313,7 +5317,8 @@ if (isSomeChar!C1 && isSomeString!S && isSomeChar!C2)
     static foreach (S; AliasSeq!( char[], const( char)[], immutable( char)[],
                           wchar[], const(wchar)[], immutable(wchar)[],
                           dchar[], const(dchar)[], immutable(dchar)[]))
-    {(){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
+    {(){ // workaround slow optimizations for large functions
+         // https://issues.dlang.org/show_bug.cgi?id=2396
         assert(translate(to!S("hello world"), ['h' : "yellow", 'l' : "42"]) ==
                to!S("yellowe4242o wor42d"));
         assert(translate(to!S("hello world"), ['o' : "owl", 'l' : "\U00010143\U00010143"]) ==
@@ -5331,8 +5336,8 @@ if (isSomeChar!C1 && isSomeString!S && isSomeChar!C2)
         static foreach (T; AliasSeq!( char[], const( char)[], immutable( char)[],
                               wchar[], const(wchar)[], immutable(wchar)[],
                               dchar[], const(dchar)[], immutable(dchar)[]))
-        (){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
-
+        (){ // workaround slow optimizations for large functions
+            // https://issues.dlang.org/show_bug.cgi?id=2396
             static foreach (R; AliasSeq!(string[dchar], const string[dchar],
                         immutable string[dchar]))
             {{
@@ -5396,7 +5401,8 @@ if (isSomeChar!C1 && isSomeChar!C2 && isOutputRange!(Buffer, C1))
     assert(buffer.data == "h5llorange worangerld");
 }
 
-@safe pure unittest // issue 13018
+// https://issues.dlang.org/show_bug.cgi?id=13018
+@safe pure unittest
 {
     import std.array : appender;
     immutable dchar[dchar] transTable1 = ['e' : '5', 'o' : '7', '5': 'q'];

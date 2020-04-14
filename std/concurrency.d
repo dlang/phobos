@@ -98,9 +98,9 @@ private
         static assert(!hasLocalAliasing!(Tid, Container, int));
     }
 
+    // https://issues.dlang.org/show_bug.cgi?id=20097
     @safe unittest
     {
-        /* Issue 20097 */
         import std.datetime.systime : SysTime;
         static struct Container { SysTime time; }
         static assert(!hasLocalAliasing!(SysTime, Container));
@@ -1164,7 +1164,7 @@ struct ThreadInfo
         unregisterMe(this); // clean up registry entries
     }
 
-    // issue 20160
+    // https://issues.dlang.org/show_bug.cgi?id=20160
     @system unittest
     {
         register("main_thread", thisTid());

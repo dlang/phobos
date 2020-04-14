@@ -450,7 +450,7 @@ public:
             bool first = true;
             auto springSwitch = SysTime(dstSwitches[i][0] + dur!"hours"(spring), UTC()) - stdOffset;
             auto fallSwitch = SysTime(dstSwitches[i][1] + dur!"hours"(fall), UTC()) - dstOffset;
-            // @@@BUG@@@ 3659 makes this necessary.
+            // https://issues.dlang.org/show_bug.cgi?id=3659 makes this necessary.
             auto fallSwitchMinus1 = fallSwitch - dur!"hours"(1);
 
             foreach (hour; -24 .. 25)
@@ -596,7 +596,7 @@ public:
             GetTimeZoneInformation(&tzInfo);
 
             // Cannot use to!string() like this should, probably due to bug
-            // http://d.puremagic.com/issues/show_bug.cgi?id=5016
+            // https://issues.dlang.org/show_bug.cgi?id=5016
             //return to!string(tzInfo.StandardName);
 
             wchar[32] str;
@@ -681,7 +681,7 @@ public:
             GetTimeZoneInformation(&tzInfo);
 
             // Cannot use to!string() like this should, probably due to bug
-            // http://d.puremagic.com/issues/show_bug.cgi?id=5016
+            // https://issues.dlang.org/show_bug.cgi?id=5016
             //return to!string(tzInfo.DaylightName);
 
             wchar[32] str;
@@ -1039,7 +1039,7 @@ public:
                 bool first = true;
                 auto springSwitch = SysTime(tzInfos[i][1] + dur!"hours"(spring), UTC()) - stdOffset;
                 auto fallSwitch = SysTime(tzInfos[i][2] + dur!"hours"(fall), UTC()) - dstOffset;
-                // @@@BUG@@@ 3659 makes this necessary.
+                // https://issues.dlang.org/show_bug.cgi?id=3659 makes this necessary.
                 auto fallSwitchMinus1 = fallSwitch - dur!"hours"(1);
 
                 foreach (hour; -24 .. 25)

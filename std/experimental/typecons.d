@@ -663,9 +663,10 @@ template unwrap(Target)
         assert(d.draw(10) == 10);
     }
 }
+
+// https://issues.dlang.org/show_bug.cgi?id=10377
 @system unittest
 {
-    // Bugzilla 10377
     import std.algorithm, std.range;
 
     interface MyInputRange(T)
@@ -680,9 +681,10 @@ template unwrap(Target)
     auto r = iota(0,10,1).inputRangeObject().wrap!(MyInputRange!int)();
     assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]));
 }
+
+// https://issues.dlang.org/show_bug.cgi?id=10536
 @system unittest
 {
-    // Bugzilla 10536
     interface Interface
     {
         int foo();
@@ -696,9 +698,10 @@ template unwrap(Target)
     Interface i = new Pluggable().wrap!Interface;
     assert(i.foo() == 1);
 }
+
+// https://issues.dlang.org/show_bug.cgi?id=10538
 @system unittest
 {
-    // Enhancement 10538
     interface Interface
     {
         int foo();
@@ -1049,7 +1052,7 @@ pure nothrow @safe unittest
     assert((arr ~ 4) == [1, 2, 3, 4]);
 }
 
-// issue 17270
+// https://issues.dlang.org/show_bug.cgi?id=17270
 pure nothrow @nogc @system unittest
 {
     int i = 1;

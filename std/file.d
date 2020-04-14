@@ -283,9 +283,9 @@ private T cenforce(T)(T condition, scope const(char)[] name, scope const(FSChar)
     throw new FileException(name, .errno, file, line);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=17102
 @safe unittest
 {
-    // issue 17102
     try
     {
         cenforce(false, null, null,
@@ -1985,7 +1985,8 @@ private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
     assert(deleteme.exists);
 }
 
-@safe unittest // Bugzilla 16573
+// https://issues.dlang.org/show_bug.cgi?id=16573
+@safe unittest
 {
     enum S : string { foo = "foo" }
     assert(__traits(compiles, S.foo.exists));
@@ -2551,7 +2552,8 @@ if (isConvertibleToString!R)
     assert(f.isFile);
 }
 
-@system unittest // bugzilla 15658
+// https://issues.dlang.org/show_bug.cgi?id=15658
+@system unittest
 {
     DirEntry e = DirEntry(".");
     static assert(is(typeof(isFile(e))));
@@ -3117,7 +3119,7 @@ void mkdirRecurse(scope const(char)[] pathname) @safe
         assertThrown!FileException(mkdirRecurse(`1:\foobar`));
     }
 
-    // bug3570
+    // https://issues.dlang.org/show_bug.cgi?id=3570
     {
         immutable basepath = deleteme ~ "_dir";
         version (Windows)
@@ -4118,7 +4120,7 @@ else version (Posix)
             core.sys.posix.unistd.symlink((deleteme ~ "_broken_symlink\0").ptr, symfile.ptr);
 
             {
-                //Issue 8298
+                // https://issues.dlang.org/show_bug.cgi?id=8298
                 DirEntry de = DirEntry(symfile);
 
                 assert(!de.isFile);
@@ -4225,7 +4227,8 @@ if (isConvertibleToString!RF || isConvertibleToString!RT)
     assert(targetNonExistent.readText == "source");
 }
 
-@safe unittest // issue 15319
+// https://issues.dlang.org/show_bug.cgi?id=15319
+@safe unittest
 {
     assert(__traits(compiles, copy("from.txt", "to.txt")));
 }
@@ -4325,9 +4328,10 @@ private void copyImpl(scope const(char)[] f, scope const(char)[] t,
     }
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=14817
 @safe unittest
 {
-    import std.algorithm, std.file; // issue 14817
+    import std.algorithm, std.file;
     auto t1 = deleteme, t2 = deleteme~"2";
     scope(exit) foreach (t; [t1, t2]) if (t.exists) t.remove();
     write(t1, "11");
@@ -4342,7 +4346,8 @@ private void copyImpl(scope const(char)[] f, scope const(char)[] t,
     assert(readText(t2.byChar) == "2");
 }
 
-@safe version (Posix) @safe unittest //issue 11434
+// https://issues.dlang.org/show_bug.cgi?id=11434
+@safe version (Posix) @safe unittest
 {
     import std.conv : octal;
     auto t1 = deleteme, t2 = deleteme~"2";
@@ -4354,7 +4359,8 @@ private void copyImpl(scope const(char)[] f, scope const(char)[] t,
     assert(getAttributes(t2) == octal!100767);
 }
 
-@safe unittest // issue 15865
+// https://issues.dlang.org/show_bug.cgi?id=15865
+@safe unittest
 {
     import std.exception : assertThrown;
     auto t = deleteme;
@@ -4364,7 +4370,7 @@ private void copyImpl(scope const(char)[] f, scope const(char)[] t,
     assert(readText(t) == "a");
 }
 
-// issue 19834
+// https://issues.dlang.org/show_bug.cgi?id=19834
 version (Windows) @safe unittest
 {
     import std.exception : collectException;
@@ -4974,7 +4980,7 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
         assert(e.isFile || e.isDir, e.name);
     }
 
-    //issue 7264
+    // https://issues.dlang.org/show_bug.cgi?id=7264
     foreach (string name; dirEntries(testdir, "*.d", SpanMode.breadth))
     {
 
@@ -4983,14 +4989,14 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
     {
         static assert(is(typeof(entry) == DirEntry));
     }
-    //issue 7138
+    // https://issues.dlang.org/show_bug.cgi?id=7138
     auto a = array(dirEntries(testdir, SpanMode.shallow));
 
-    // issue 11392
+    // https://issues.dlang.org/show_bug.cgi?id=11392
     auto dFiles = dirEntries(testdir, SpanMode.shallow);
     foreach (d; dFiles){}
 
-    // issue 15146
+    // https://issues.dlang.org/show_bug.cgi?id=15146
     dirEntries("", SpanMode.shallow).walkLength();
 }
 
@@ -5081,7 +5087,8 @@ auto dirEntries(string path, string pattern, SpanMode mode,
     }
 }
 
-// Bugzilla 17962 - Make sure that dirEntries does not butcher Unicode file names.
+// Make sure that dirEntries does not butcher Unicode file names
+// https://issues.dlang.org/show_bug.cgi?id=17962
 @system unittest
 {
     import std.algorithm.comparison : equal;

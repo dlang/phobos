@@ -17,7 +17,7 @@ module std.internal.digest.sha_SSSE3;
 
 version (D_InlineAsm_X86)
 {
-    version (D_PIC) {} // Bugzilla 9378
+    version (D_PIC) {} // https://issues.dlang.org/show_bug.cgi?id=9378
     else
     {
         private version = USE_SSSE3;
@@ -721,7 +721,8 @@ version (USE_SSSE3)
         }
     }
 
-    // constants as extra argument for PIC, see Bugzilla 9378
+    // constants as extra argument for PIC
+    // https://issues.dlang.org/show_bug.cgi?id=9378
     import std.meta : AliasSeq;
     version (_64Bit)
         alias ExtraArgs = AliasSeq!(typeof(&constants));

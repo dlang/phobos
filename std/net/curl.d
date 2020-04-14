@@ -215,7 +215,8 @@ version (StdUnittest)
             }
             catch (Throwable e)
             {
-                stderr.writeln(e);  // Bugzilla 7018
+                // https://issues.dlang.org/show_bug.cgi?id=7018
+                stderr.writeln(e);
             }
         }
     }
@@ -1114,7 +1115,8 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     assert(e.status == 404);
 }
 
-// Bugzilla 14760 - content length must be reset after post
+// Content length must be reset after post
+// https://issues.dlang.org/show_bug.cgi?id=14760
 @system unittest
 {
     import std.algorithm.searching : canFind;
@@ -2097,7 +2099,7 @@ private mixin template Protocol()
         http.setAuthentication("user", "pass");
         http.perform();
 
-        // Bugzilla 17540
+        // https://issues.dlang.org/show_bug.cgi?id=17540
         http.setNoProxy("www.example.com");
     }
 
@@ -3299,7 +3301,7 @@ struct HTTP
         http.perform();
         assert(http.p.charset == "foo");
 
-        // Bugzilla 16736
+        // https://issues.dlang.org/show_bug.cgi?id=16736
         double val;
         CurlCode code;
 
@@ -4899,7 +4901,7 @@ private struct Pool(Data)
 private struct _async()
 {
 static:
-    // @@@@BUG 15831@@@@
+    // https://issues.dlang.org/show_bug.cgi?id=15831
     // this should be inside byLineAsync
     // Range that reads one chunk at a time asynchronously.
     private struct ChunkInputRange
@@ -4928,7 +4930,7 @@ static:
         }
     }
 
-    // @@@@BUG 15831@@@@
+    // https://issues.dlang.org/show_bug.cgi?id=15831
     // this should be inside byLineAsync
     // Range that reads one line at a time asynchronously.
     private static struct LineInputRange(Char)

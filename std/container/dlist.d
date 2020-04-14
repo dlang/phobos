@@ -986,7 +986,7 @@ private:
     assert(r.back == 1);
 }
 
-// Issue 8895
+// https://issues.dlang.org/show_bug.cgi?id=8895
 @safe unittest
 {
     auto a = make!(DList!int)(1,2,3,4);
@@ -1057,7 +1057,7 @@ private:
 {
     import std.algorithm.comparison : equal;
 
-    //8905
+    // https://issues.dlang.org/show_bug.cgi?id=8905
     auto a = DList!int([1, 2, 3, 4]);
     auto r = a[];
     a.stableRemoveBack();
@@ -1065,7 +1065,8 @@ private:
     assert(a[].equal([1, 2, 3, 7]));
 }
 
-@safe unittest //12566
+// https://issues.dlang.org/show_bug.cgi?id=12566
+@safe unittest
 {
     auto dl2 = DList!int([2,7]);
     dl2.removeFront();
@@ -1074,14 +1075,16 @@ private:
     assert(dl2.empty, "not empty?!");
 }
 
-@safe unittest //13076
+// https://issues.dlang.org/show_bug.cgi?id=13076
+@safe unittest
 {
     DList!int list;
     assert(list.empty);
     list.clear();
 }
 
-@safe unittest //13425
+// https://issues.dlang.org/show_bug.cgi?id=13425
+@safe unittest
 {
     import std.range : drop, take;
     auto list = DList!int([1,2,3,4,5]);
@@ -1091,7 +1094,8 @@ private:
     assert(r.empty); // fails
 }
 
-@safe unittest //14300
+// https://issues.dlang.org/show_bug.cgi?id=14300
+@safe unittest
 {
     interface ITest {}
     static class Test : ITest {}
@@ -1099,7 +1103,8 @@ private:
     DList!ITest().insertBack(new Test());
 }
 
-@safe unittest //15263
+// https://issues.dlang.org/show_bug.cgi?id=15263
+@safe unittest
 {
     import std.range : iota;
     auto a = DList!int();

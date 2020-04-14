@@ -103,7 +103,7 @@ module std.digest.sha;
 
 version (D_InlineAsm_X86)
 {
-    version (D_PIC) {} // Bugzilla 9378
+    version (D_PIC) {} // https://issues.dlang.org/show_bug.cgi?id=9378
     else private version = USE_SSSE3;
 }
 else version (D_InlineAsm_X86_64)
@@ -209,7 +209,8 @@ struct SHA(uint hashBlockSize, uint digestSize)
                 if (ssse3)
                 {
                     version (D_InlineAsm_X86_64)
-                        // constants as extra argument for PIC, see Bugzilla 9378
+                        // constants as extra argument for PIC
+                        // see https://issues.dlang.org/show_bug.cgi?id=9378
                         transformSSSE3(state, block, &sse3_constants);
                     else
                         transformSSSE3(state, block);

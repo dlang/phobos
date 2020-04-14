@@ -804,9 +804,10 @@ pure @safe unittest
     assert(result > 0);
 }
 
+// cmp for string with custom predicate fails if distinct chars can compare equal
+// https://issues.dlang.org/show_bug.cgi?id=18286
 @nogc nothrow pure @safe unittest
 {
-    // Issue 18286: cmp for string with custom predicate fails if distinct chars can compare equal
     static bool ltCi(dchar a, dchar b)// less than, case insensitive
     {
         import std.ascii : toUpper;
@@ -819,9 +820,10 @@ pure @safe unittest
     static assert(cmp!ltCi("apple", "APPLE") == 0);
 }
 
+// for non-string ranges check that opCmp is evaluated only once per pair.
+// https://issues.dlang.org/show_bug.cgi?id=18280
 @nogc nothrow @safe unittest
 {
-    // Issue 18280: for non-string ranges check that opCmp is evaluated only once per pair.
     static int ctr = 0;
     struct S
     {

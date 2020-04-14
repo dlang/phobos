@@ -569,7 +569,7 @@ if (isNarrowString!R1 && isNarrowString!R2)
             assert(commonPrefix(to!S("hello, world"), to!T("hello, ")) == to!S("hello, "));
             assert(commonPrefix(to!S("hello, world"), to!T("hello, world")) == to!S("hello, world"));
 
-            //Bug# 8890
+            // https://issues.dlang.org/show_bug.cgi?id=8890
             assert(commonPrefix(to!S("Пиво"), to!T("Пони"))== to!S("П"));
             assert(commonPrefix(to!S("Пони"), to!T("Пиво"))== to!S("П"));
             assert(commonPrefix(to!S("Пиво"), to!T("Пиво"))== to!S("Пиво"));
@@ -735,7 +735,7 @@ if (isInputRange!R && !isInfinite!R)
     assert(count("日本語") == 3);
 }
 
-// Issue 11253
+// https://issues.dlang.org/show_bug.cgi?id=11253
 @safe nothrow unittest
 {
     assert([1, 2, 3].count([2, 3]) == 1);
@@ -847,7 +847,8 @@ if (isForwardRange!R
         }
     }
 
-    //Because of @@@8804@@@: Avoids both "unreachable code" or "no return statement"
+    // Because of https://issues.dlang.org/show_bug.cgi?id=8804
+    // Avoids both "unreachable code" or "no return statement"
     static if (isInfinite!R) assert(false, R.stringof ~ " must not be an"
             ~ " infinite range");
     else return -1;
@@ -951,7 +952,8 @@ if (isInputRange!R &&
         }
     }
 
-    //Because of @@@8804@@@: Avoids both "unreachable code" or "no return statement"
+    // Because of https://issues.dlang.org/show_bug.cgi?id=8804
+    // Avoids both "unreachable code" or "no return statement"
     static if (isInfinite!R) assert(false, R.stringof ~ " must not be an"
             ~ " inifite range");
     else return -1;
@@ -1196,7 +1198,8 @@ if (isInputRange!R &&
     import std.meta : AliasSeq;
 
     static foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
-    (){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
+    (){ // workaround slow optimizations for large functions
+        // https://issues.dlang.org/show_bug.cgi?id=2396
         assert(!endsWith(to!S("abc"), 'a'));
         assert(endsWith(to!S("abc"), 'a', 'c') == 2);
         assert(!endsWith(to!S("abc"), 'x', 'n', 'b'));
@@ -1572,7 +1575,7 @@ if (isInputRange!InputRange &&
 
     // If the haystack is a SortedRange we can use binary search to find the needle.
     // Works only for the default find predicate and any SortedRange predicate.
-    // 8829 enhancement
+    // https://issues.dlang.org/show_bug.cgi?id=8829
     import std.range : SortedRange;
     static if (is(InputRange : SortedRange!TT, TT) && isDefaultPred)
     {
@@ -1658,7 +1661,7 @@ if (isInputRange!InputRange &&
     }
     else static if (isArray!R)
     {
-        //10403 optimization
+        // https://issues.dlang.org/show_bug.cgi?id=10403 optimization
         static if (isDefaultPred && isIntegral!EType && EType.sizeof == 1 && isIntegralNeedle)
         {
             import std.algorithm.comparison : max, min;
@@ -1810,9 +1813,9 @@ if (isInputRange!InputRange &&
     assertCTFEable!dg;
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=11603
 @safe unittest
 {
-    // Bugzilla 11603
     enum Foo : ubyte { A }
     assert([Foo.A].find(Foo.A).empty == false);
 
@@ -1978,7 +1981,7 @@ if (isForwardRange!R1 && isForwardRange!R2
         // Binary search can be used to find the first occurence
         // of the first element of the needle in haystack.
         // When it is found O(walklength(needle)) steps are performed.
-        // 8829 enhancement
+        // https://issues.dlang.org/show_bug.cgi?id=8829 enhancement
         import std.algorithm.comparison : mismatch;
         import std.range : SortedRange;
         static if (is(R1 == R2)
@@ -2099,7 +2102,8 @@ if (isForwardRange!R1 && isForwardRange!R2
     assert([C(1,0), C(2,0), C(3,1), C(4,0)].find!"a.x == b"(SList!int(2, 3)[]) == [C(2,0), C(3,1), C(4,0)]);
 }
 
-@safe unittest // issue 12470
+// https://issues.dlang.org/show_bug.cgi?id=12470
+@safe unittest
 {
     import std.array : replace;
     inout(char)[] sanitize(inout(char)[] p)
@@ -2167,7 +2171,7 @@ if (isForwardRange!R1 && isForwardRange!R2
     assert(find([ 1, 2, 1, 2, 3, 3 ], SList!int(2, 3)[]) == [ 2, 3, 3 ]);
 }
 
-//Bug# 8334
+// https://issues.dlang.org/show_bug.cgi?id=8334
 @safe unittest
 {
     import std.algorithm.iteration : filter;
@@ -2183,7 +2187,7 @@ if (isForwardRange!R1 && isForwardRange!R2
     assert(find(haystack, filter!"true"(needle)).empty);
 }
 
-// issue 11013
+// https://issues.dlang.org/show_bug.cgi?id=11013
 @safe unittest
 {
     assert(find!"a == a"("abc","abc") == "abc");
@@ -2665,7 +2669,7 @@ if (isForwardRange!(Range))
     ReferenceForwardRange!int rfr = new ReferenceForwardRange!int([1, 2, 3, 2, 2, 3]);
     assert(equal(findAdjacent(rfr), [2, 2, 3]));
 
-    // Issue 9350
+    // https://issues.dlang.org/show_bug.cgi?id=9350
     assert(!repeat(1).findAdjacent().empty);
 }
 
@@ -2718,7 +2722,8 @@ if (isInputRange!InputRange && isForwardRange!ForwardRange)
     assert(findAmong!("a == b")(b, [ 4, 6, 7 ][]).empty);
 }
 
-@system unittest // issue 19765
+// https://issues.dlang.org/show_bug.cgi?id=19765
+@system unittest
 {
     import std.range.interfaces : inputRangeObject;
     auto choices = inputRangeObject("b");
@@ -2781,7 +2786,8 @@ if (isForwardRange!R1 && isForwardRange!R2
     assert(findSkip(s, "def") && s.empty);
 }
 
-@safe unittest // issue 19020
+// https://issues.dlang.org/show_bug.cgi?id=19020
+@safe unittest
 {
     static struct WrapperRange
     {
@@ -3313,7 +3319,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(split[1] == "one");
 }
 
-// issue 11013
+// https://issues.dlang.org/show_bug.cgi?id=11013
 @safe pure unittest
 {
     auto var = "abc";
@@ -4842,7 +4848,8 @@ if (isInputRange!R &&
     import std.range;
 
     static foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
-    (){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
+    (){ // workaround slow optimizations for large functions
+        // https://issues.dlang.org/show_bug.cgi?id=2396
         assert(!startsWith(to!S("abc"), 'c'));
         assert(startsWith(to!S("abc"), 'a', 'c') == 1);
         assert(!startsWith(to!S("abc"), 'x', 'n', 'b'));
@@ -5125,7 +5132,8 @@ if (isInputRange!Range)
     assert(equal(until!"a == 2"(a, No.openRight), [1, 2]));
 }
 
-@system unittest // bugzilla 13171
+// https://issues.dlang.org/show_bug.cgi?id=13171
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.range;
@@ -5134,7 +5142,8 @@ if (isInputRange!Range)
     assert(a == [4]);
 }
 
-@safe unittest // Issue 10460
+// https://issues.dlang.org/show_bug.cgi?id=10460
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     auto a = [1, 2, 3, 4];
@@ -5143,14 +5152,16 @@ if (isInputRange!Range)
     assert(equal(a, [0, 0, 3, 4]));
 }
 
-@safe unittest // Issue 13124
+// https://issues.dlang.org/show_bug.cgi?id=13124
+@safe unittest
 {
     import std.algorithm.comparison : among, equal;
     auto s = "hello how\nare you";
     assert(equal(s.until!(c => c.among!('\n', '\r')), "hello how"));
 }
 
-pure @safe unittest // issue 18657
+// https://issues.dlang.org/show_bug.cgi?id=18657
+pure @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : refRange;

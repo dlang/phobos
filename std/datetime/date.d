@@ -3225,7 +3225,7 @@ public:
         assert(DateTime.fromISOString(" 19990706T123033 ") == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import std.conv : to;
@@ -3325,7 +3325,7 @@ public:
         assert(DateTime.fromISOExtString(" 1999-07-06T12:30:33 ") == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import std.conv : to;
@@ -3429,7 +3429,7 @@ public:
                DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import std.conv : to;
@@ -7733,7 +7733,7 @@ public:
         assert(Date.fromISOString(" 19990706 ") == Date(1999, 7, 6));
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import std.conv : to;
@@ -7871,7 +7871,7 @@ public:
         assert(Date.fromISOExtString(" 1999-07-06 ") == Date(1999, 7, 6));
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import std.conv : to;
@@ -8009,7 +8009,7 @@ public:
         assert(Date.fromSimpleString(" 1999-Jul-06 ") == Date(1999, 7, 6));
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import std.conv : to;
@@ -9295,7 +9295,7 @@ public:
         assert(TimeOfDay.fromISOString(" 011217 ") == TimeOfDay(1, 12, 17));
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import std.conv : to;
@@ -9420,7 +9420,7 @@ public:
         assert(TimeOfDay.fromISOExtString(" 01:12:17 ") == TimeOfDay(1, 12, 17));
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import std.conv : to;

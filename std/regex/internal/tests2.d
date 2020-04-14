@@ -149,7 +149,7 @@ import std.uni : Escapables; // characters that need escaping
     import std.algorithm.iteration : map;
     void test_body(alias matchFn)()
     {
-        //issue 5857
+        // https://issues.dlang.org/show_bug.cgi?id=5857
         //matching goes out of control if ... in (...){x} has .*/.+
         auto c = matchFn("axxxzayyyyyzd",regex("(a.*z){2}d")).captures;
         assert(c[0] == "axxxzayyyyyzd");
@@ -157,7 +157,7 @@ import std.uni : Escapables; // characters that need escaping
         auto c2 = matchFn("axxxayyyyyd",regex("(a.*){2}d")).captures;
         assert(c2[0] == "axxxayyyyyd");
         assert(c2[1] == "ayyyyy");
-        //issue 2108
+        // https://issues.dlang.org/show_bug.cgi?id=2108
         //greedy vs non-greedy
         auto nogreed = regex("<packet.*?/packet>");
         assert(matchFn("<packet>text</packet><packet>text</packet>", nogreed).hit
@@ -165,7 +165,7 @@ import std.uni : Escapables; // characters that need escaping
         auto greed =  regex("<packet.*/packet>");
         assert(matchFn("<packet>text</packet><packet>text</packet>", greed).hit
                == "<packet>text</packet><packet>text</packet>");
-        //issue 4574
+        // https://issues.dlang.org/show_bug.cgi?id=4574
         //empty successful match still advances the input
         string[] pres, posts, hits;
         foreach (m; matchFn("abcabc", regex("","g")))
@@ -195,7 +195,7 @@ import std.uni : Escapables; // characters that need escaping
         ];
         assert(pres == array(retro(heads)));
         assert(posts == tails);
-        //issue 6076
+        // https://issues.dlang.org/show_bug.cgi?id=6076
         //regression on .*
         auto re = regex("c.*|d");
         auto m = matchFn("mm", re);
@@ -214,7 +214,7 @@ import std.uni : Escapables; // characters that need escaping
             assert(!match(to!string(ch),regex(`[^\`~ch~`]`)));
             assert(match(to!string(ch),regex(`[\`~ch~`-\`~ch~`]`)));
         }
-        //bugzilla 7718
+        // https://issues.dlang.org/show_bug.cgi?id=7718
         string strcmd = "./myApp.rb -os OSX -path \"/GIT/Ruby Apps/sec\" -conf 'notimer'";
         auto reStrCmd = regex (`(".*")|('.*')`, "g");
         assert(equal(map!"a[0]"(matchFn(strcmd, reStrCmd)),
@@ -293,24 +293,29 @@ import std.uni : Escapables; // characters that need escaping
     assert(equal(split(s1, regex(", *")), w1[]));
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=7141
 @safe unittest
-{ // bugzilla 7141
+{
     string pattern = `[a\--b]`;
     assert(match("-", pattern));
     assert(match("b", pattern));
     string pattern2 = `[&-z]`;
     assert(match("b", pattern2));
 }
+
+// https://issues.dlang.org/show_bug.cgi?id=7111
 @safe unittest
-{//bugzilla 7111
+{
     assert(match("", regex("^")));
 }
+
+// https://issues.dlang.org/show_bug.cgi?id=7300
 @safe unittest
-{//bugzilla 7300
+{
     assert(!match("a"d, "aa"d));
 }
 
-// bugzilla 7551
+// https://issues.dlang.org/show_bug.cgi?id=7551
 @safe unittest
 {
     auto r = regex("[]abc]*");
@@ -320,14 +325,17 @@ import std.uni : Escapables; // characters that need escaping
     assert("]ac".matchFirst(r2).hit == "]");
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=7674
 @safe unittest
-{//bugzilla 7674
+{
     assert("1234".replace(regex("^"), "$$") == "$1234");
     assert("hello?".replace(regex(r"\?", "g"), r"\?") == r"hello\?");
     assert("hello?".replace(regex(r"\?", "g"), r"\\?") != r"hello\?");
 }
+
+// https://issues.dlang.org/show_bug.cgi?id=7679
 @safe unittest
-{// bugzilla 7679
+{
     import std.algorithm.comparison : equal;
     static foreach (S; AliasSeq!(string, wstring, dstring))
     {{
@@ -337,8 +345,10 @@ import std.uni : Escapables; // characters that need escaping
         assert(split(str, re) == [to!S("a"), to!S("b")]);
     }}
 }
+
+// https://issues.dlang.org/show_bug.cgi?id=8203
 @safe unittest
-{//bugzilla 8203
+{
     string data = "
     NAME   = XPAW01_STA:STATION
     NAME   = XPAW01_STA
@@ -353,13 +363,15 @@ import std.uni : Escapables; // characters that need escaping
     auto r2 = regex(`([а-яА-Я\-_]+\s*)+(?<=[\s\.,\^])`);
     match("аллея Театральная", r2);
 }
+
+// https://issues.dlang.org/show_bug.cgi?id=8637 purity of enforce
 @safe unittest
-{// bugzilla 8637 purity of enforce
+{
     auto m = match("hello world", regex("world"));
     enforce(m);
 }
 
-// bugzilla 8725
+// https://issues.dlang.org/show_bug.cgi?id=8725
 @safe unittest
 {
   static italic = regex( r"\*
@@ -372,7 +384,7 @@ import std.uni : Escapables; // characters that need escaping
       "this * is* interesting, <i>very</i> interesting");
 }
 
-// bugzilla 8349
+// https://issues.dlang.org/show_bug.cgi?id=8349
 @safe unittest
 {
     enum peakRegexStr = r"\>(wgEncode.*Tfbs.*\.(?:narrow)|(?:broad)Peak.gz)</a>";
@@ -381,7 +393,7 @@ import std.uni : Escapables; // characters that need escaping
     assert(match(r"\>wgEncode-blah-Tfbs.narrow</a>", peakRegex));
 }
 
-// bugzilla 9211
+// https://issues.dlang.org/show_bug.cgi?id=9211
 @safe unittest
 {
     import std.algorithm.comparison : equal;
@@ -393,7 +405,7 @@ import std.uni : Escapables; // characters that need escaping
     assert(equal(m2.front, ["1234", "3", "4"]));
 }
 
-// bugzilla 9280
+// https://issues.dlang.org/show_bug.cgi?id=9280
 @safe unittest
 {
     string tomatch = "a!b@c";
@@ -406,7 +418,7 @@ import std.uni : Escapables; // characters that need escaping
 }
 
 
-// bugzilla 9579
+// https://issues.dlang.org/show_bug.cgi?id=9579
 @safe unittest
 {
     char[] input = ['a', 'b', 'c'];
@@ -417,14 +429,14 @@ import std.uni : Escapables; // characters that need escaping
     assert(r == "(a)bc");
 }
 
-// bugzilla 9634
+// https://issues.dlang.org/show_bug.cgi?id=9634
 @safe unittest
 {
     auto re = ctRegex!"(?:a+)";
     assert(match("aaaa", re).hit == "aaaa");
 }
 
-//bugzilla 10798
+// https://issues.dlang.org/show_bug.cgi?id=10798
 @safe unittest
 {
     auto cr = ctRegex!("[abcd--c]*");
@@ -433,7 +445,7 @@ import std.uni : Escapables; // characters that need escaping
     assert(m.hit == "ab");
 }
 
-// bugzilla 10913
+// https://issues.dlang.org/show_bug.cgi?id=10913
 @system unittest
 {
     @system static string foo(const(char)[] s)
@@ -452,7 +464,7 @@ import std.uni : Escapables; // characters that need escaping
     }();
 }
 
-// bugzilla 11262
+// https://issues.dlang.org/show_bug.cgi?id=11262
 @safe unittest
 {
     enum reg = ctRegex!(r",", "g");
@@ -461,13 +473,13 @@ import std.uni : Escapables; // characters that need escaping
     assert(str == "This-List");
 }
 
-// bugzilla 11775
+// https://issues.dlang.org/show_bug.cgi?id=11775
 @safe unittest
 {
     assert(collectException(regex("a{1,0}")));
 }
 
-// bugzilla 11839
+// https://issues.dlang.org/show_bug.cgi?id=11839
 @safe unittest
 {
     import std.algorithm.comparison : equal;
@@ -478,7 +490,7 @@ import std.uni : Escapables; // characters that need escaping
     assert(regex(`(?P<я>\w+)`).namedCaptures.equal(["я"]));
 }
 
-// bugzilla 12076
+// https://issues.dlang.org/show_bug.cgi?id=12076
 @safe unittest
 {
     auto RE = ctRegex!(r"(?<!x[a-z]+)\s([a-z]+)");
@@ -486,7 +498,7 @@ import std.uni : Escapables; // characters that need escaping
     auto m = match(s, RE);
 }
 
-// bugzilla 12105
+// https://issues.dlang.org/show_bug.cgi?id=12105
 @safe unittest
 {
     auto r = ctRegex!`.*?(?!a)`;
@@ -495,14 +507,14 @@ import std.uni : Escapables; // characters that need escaping
     assert("aaab".matchFirst(r2).hit == "aaab");
 }
 
-//bugzilla 11784
+// https://issues.dlang.org/show_bug.cgi?id=11784
 @safe unittest
 {
     assert("abcdefghijklmnopqrstuvwxyz"
         .matchFirst("[a-z&&[^aeiuo]]").hit == "b");
 }
 
-//bugzilla 12366
+// https://issues.dlang.org/show_bug.cgi?id=12366
 @safe unittest
 {
      auto re = ctRegex!(`^((?=(xx+?)\2+$)((?=\2+$)(?=(x+)(\4+$))\5){2})*x?$`);
@@ -510,27 +522,27 @@ import std.uni : Escapables; // characters that need escaping
      assert(!"xxxx".match(re).empty);
 }
 
-// bugzilla 12582
+// https://issues.dlang.org/show_bug.cgi?id=12582
 @safe unittest
 {
     auto r = regex(`(?P<a>abc)`);
     assert(collectException("abc".matchFirst(r)["b"]));
 }
 
-// bugzilla 12691
+// https://issues.dlang.org/show_bug.cgi?id=12691
 @safe unittest
 {
     assert(bmatch("e@", "^([a-z]|)*$").empty);
     assert(bmatch("e@", ctRegex!`^([a-z]|)*$`).empty);
 }
 
-//bugzilla  12713
+// https://issues.dlang.org/show_bug.cgi?id=12713
 @safe unittest
 {
     assertThrown(regex("[[a-z]([a-z]|(([[a-z])))"));
 }
 
-//bugzilla 12747
+// https://issues.dlang.org/show_bug.cgi?id=12747
 @safe unittest
 {
     assertThrown(regex(`^x(\1)`));
@@ -538,7 +550,7 @@ import std.uni : Escapables; // characters that need escaping
     assertThrown(regex(`^((x)(?=\1))`));
 }
 
-// bugzilla 13532
+// https://issues.dlang.org/show_bug.cgi?id=13532
 version (none) // TODO: revist once we have proper benchmark framework
 @safe unittest
 {
@@ -568,14 +580,14 @@ version (none) // TODO: revist once we have proper benchmark framework
         "enum regex to static regex ratio "~to!string(ratio));
 }
 
-// bugzilla 14504
+// https://issues.dlang.org/show_bug.cgi?id=14504
 @safe unittest
 {
     auto p = ctRegex!("a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?" ~
             "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
 }
 
-// bugzilla 14529
+// https://issues.dlang.org/show_bug.cgi?id=14529
 @safe unittest
 {
     auto ctPat2 = regex(r"^[CDF]$", "i");
@@ -583,7 +595,7 @@ version (none) // TODO: revist once we have proper benchmark framework
         assert(matchAll(v, ctPat2).front.hit == v);
 }
 
-// bugzilla 14615
+// https://issues.dlang.org/show_bug.cgi?id=14615
 @safe unittest
 {
     import std.array : appender;
@@ -602,14 +614,14 @@ version (none) // TODO: revist once we have proper benchmark framework
     assert(sink.data == "Hello, world!Hello, world!");
 }
 
-// bugzilla 15573
+// https://issues.dlang.org/show_bug.cgi?id=15573
 @safe unittest
 {
     auto rx = regex("[c d]", "x");
     assert("a b".matchFirst(rx));
 }
 
-// bugzilla 15864
+// https://issues.dlang.org/show_bug.cgi?id=15864
 @safe unittest
 {
     regex(`(<a (?:(?:\w+=\"[^"]*\")?\s*)*href="\.\.?)"`);
@@ -622,7 +634,7 @@ version (none) // TODO: revist once we have proper benchmark framework
     assertThrown(regex("(?#..."));
 }
 
-// bugzilla 17075
+// https://issues.dlang.org/show_bug.cgi?id=17075
 @safe unittest
 {
     enum titlePattern = `<title>(.+)</title>`;
@@ -631,14 +643,14 @@ version (none) // TODO: revist once we have proper benchmark framework
     assert(input.matchFirst(titleRegex).empty);
 }
 
-// bugzilla 17212
+// https://issues.dlang.org/show_bug.cgi?id=17212
 @safe unittest
 {
     auto r = regex(" [a] ", "x");
     assert("a".matchFirst(r));
 }
 
-// bugzilla 17157
+// https://issues.dlang.org/show_bug.cgi?id=17157
 @safe unittest
 {
     import std.algorithm.comparison : equal;
@@ -655,7 +667,7 @@ version (none) // TODO: revist once we have proper benchmark framework
     assert(equal!equal(s.bmatch(r), outcomes));
 }
 
-// bugzilla 17667
+// https://issues.dlang.org/show_bug.cgi?id=17667
 @safe unittest
 {
     import std.algorithm.searching : canFind;
@@ -671,7 +683,7 @@ version (none) // TODO: revist once we have proper benchmark framework
     willThrow([r"\", r"123"], "invalid escape sequence");
 }
 
-// bugzilla 17668
+// https://issues.dlang.org/show_bug.cgi?id=17668
 @safe unittest
 {
     import std.algorithm.searching;
@@ -679,7 +691,7 @@ version (none) // TODO: revist once we have proper benchmark framework
     assert(e.msg.canFind("no operand for '^'"), e.msg);
 }
 
-// bugzilla 17673
+// https://issues.dlang.org/show_bug.cgi?id=17673
 @safe unittest
 {
     string str = `<">`;
@@ -690,7 +702,7 @@ version (none) // TODO: revist once we have proper benchmark framework
     assert(c.whichPattern == 2);
 }
 
-// bugzilla 18692
+// https://issues.dlang.org/show_bug.cgi?id=18692
 @safe unittest
 {
     auto rx = regex("()()()");
