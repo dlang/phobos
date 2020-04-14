@@ -5495,7 +5495,7 @@ version (StdUnittest)
     }
 }
 
-// https://issues.dlang.org/show_bug.cgi?id=9959
+// https://issues.dlang.org/show_bug.cgi?id=9559
 @safe unittest
 {
     import std.algorithm.iteration : map;

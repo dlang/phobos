@@ -3956,7 +3956,7 @@ The number of seeds must be correspondingly increased.
 
 @safe unittest
 {
-    // https://issues.dlang.org/show_bug.cgi?id= 10408
+    // https://issues.dlang.org/show_bug.cgi?id=10408
     // Two-function reduce of a const array.
     import std.algorithm.comparison : max, min;
     import std.typecons : tuple, Tuple;

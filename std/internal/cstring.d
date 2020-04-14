@@ -84,7 +84,7 @@ if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
 
     // Note: res._ptr can't point to res._buff as structs are movable.
 
-    // https://issues.dlang.org/show_bug.cgi?id=1498
+    // https://issues.dlang.org/show_bug.cgi?id=14980
     static if (isSomeString!From)
     {
         if (str is null)
