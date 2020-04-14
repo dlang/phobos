@@ -2186,7 +2186,7 @@ if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init
     assert(rt1.upperBound(2).equal([3, 4, 5]));
 }
 
-// =https://issues.dlang.org/show_bug.cgi?id=issue 15941
+// https://issues.dlang.org/show_bug.cgi?id=15941
 @safe pure unittest
 {
     class C {}
