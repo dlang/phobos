@@ -2412,7 +2412,7 @@ version (none) // this example requires support for non-equivalence relations
         assert(!range.empty);    // Opposite of refInputRange test
     }
 
-    /* https://issues.dlang.org/show_bug.cgi?id=93532
+    /* https://issues.dlang.org/show_bug.cgi?id=19532
      * General behavior of non-forward input ranges.
      *
      * - If the same chunk is retrieved multiple times via front, the separate chunk
@@ -2529,7 +2529,7 @@ version (none) // this example requires support for non-equivalence relations
         }
     }
 
-    // https://issues.dlang.org/show_bug.cgi?id=93532 - Using roundRobin/chunkBy
+    // https://issues.dlang.org/show_bug.cgi?id=19532 - Using roundRobin/chunkBy
     {
         import std.algorithm.comparison : equal;
         import std.range : roundRobin;
@@ -2553,7 +2553,7 @@ version (none) // this example requires support for non-equivalence relations
         assert(r3.equal!equal(expected));
     }
 
-    // https://issues.dlang.org/show_bug.cgi?id=93532 - Using merge/chunkBy
+    // https://issues.dlang.org/show_bug.cgi?id=19532 - Using merge/chunkBy
     {
         import std.algorithm.comparison : equal;
         import std.algorithm.sorting : merge;
@@ -2576,7 +2576,7 @@ version (none) // this example requires support for non-equivalence relations
         assert(r3.equal!equal(expected));
     }
 
-    // https://issues.dlang.org/show_bug.cgi?id=93532 - Using chunkBy/map-fold
+    // https://issues.dlang.org/show_bug.cgi?id=19532 - Using chunkBy/map-fold
     {
         import std.algorithm.comparison : equal;
         import std.algorithm.iteration : fold, map;
@@ -2602,7 +2602,7 @@ version (none) // this example requires support for non-equivalence relations
 
     // https://issues.dlang.org/show_bug.cgi?id=16169
     // https://issues.dlang.org/show_bug.cgi?id=17966
-    // https://issues.dlang.org/show_bug.cgi?id=93532
+    // https://issues.dlang.org/show_bug.cgi?id=19532
     // Using multiwayMerge/chunkBy
     {
         import std.algorithm.comparison : equal;
