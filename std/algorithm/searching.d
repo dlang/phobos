@@ -141,7 +141,7 @@ evaluated to true or false in a conditional statement. This can be a
 convenient way to quickly evaluate that $(I _all) of the elements of a range
 are true.
  +/
-@safe unittest
+@safe @nogc unittest
 {
     int[3] vals = [5, 3, 18];
     assert( all(vals[]));
@@ -149,8 +149,10 @@ are true.
 
 @safe unittest
 {
+    import std.array : staticArray;
     int x = 1;
-    assert(all!(a => a > x)([2, 3]));
+    assert(all!(a => a > x)([2, 3].staticArray[]));
+    //TODO
     assert(all!"a == 0x00c9"("\xc3\x89")); // Test that `all` auto-decodes.
 }
 
@@ -188,7 +190,7 @@ evaluated to true or false in a conditional statement. `!any` can be a
 convenient way to quickly test that $(I none) of the elements of a range
 evaluate to true.
  +/
-@safe unittest
+@safe @nogc unittest
 {
     int[3] vals1 = [0, 0, 0];
     assert(!any(vals1[])); //none of vals1 evaluate to true
@@ -270,6 +272,7 @@ if (isInputRange!(Range) && is(typeof(r.front == lPar)))
     assert(!balancedParens(s, '(', ')', 0));
     s = "1 + (2 * 3 + 1) / (2 - 5)";
     assert(balancedParens(s, '(', ')', 0));
+    //TODO
     s = "f(x) = ⌈x⌉";
     assert(balancedParens(s, '⌈', '⌉'));
 }
@@ -644,20 +647,21 @@ if (isInputRange!Range && !isInfinite!Range &&
 @safe unittest
 {
     import std.uni : toLower;
-
+    import std.array : staticArray;
     // count elements in range
-    int[] a = [ 1, 2, 4, 3, 2, 5, 3, 2, 4 ];
-    assert(count(a) == 9);
-    assert(count(a, 2) == 3);
-    assert(count!("a > b")(a, 2) == 5);
+    int[9] a = [ 1, 2, 4, 3, 2, 5, 3, 2, 4 ];
+    assert(count(a[]) == 9);
+    assert(count(a[], 2) == 3);
+    assert(count!("a > b")(a[], 2) == 5);
     // count range in range
     assert(count("abcadfabf", "ab") == 2);
     assert(count("ababab", "abab") == 1);
     assert(count("ababab", "abx") == 0);
     // fuzzy count range in range
+    // TODO
     assert(count!((a, b) => toLower(a) == toLower(b))("AbcAdFaBf", "ab") == 2);
     // count predicate in range
-    assert(count!("a > 1")(a) == 8);
+    assert(count!("a > 1")(a[]) == 8);
 }
 
 @safe unittest
@@ -678,7 +682,7 @@ if (isInputRange!Range && !isInfinite!Range &&
     assert(count!("a == '語'")("日本語"d) == 1);
 }
 
-@safe unittest
+@safe @nogc unittest
 {
     string s = "This is a fofofof list";
     string sub = "fof";
@@ -728,17 +732,19 @@ if (isInputRange!R && !isInfinite!R)
     return walkLength(haystack);
 }
 
-@safe unittest
+@safe @nogc unittest
 {
-    int[] a = [ 1, 2, 4, 3, 2, 5, 3, 2, 4 ];
-    assert(count!("a == 3")(a) == 2);
+    int[9] a = [ 1, 2, 4, 3, 2, 5, 3, 2, 4 ];
+    assert(count!("a == 3")(a[]) == 2);
     assert(count("日本語") == 3);
 }
 
 // Issue 11253
-@safe nothrow unittest
+@safe nothrow @nogc unittest
 {
-    assert([1, 2, 3].count([2, 3]) == 1);
+    int[3] a = [1, 2, 3];
+    int[2] b = [2, 3];
+    assert(a[].count(b[]) == 1);
 }
 
 /++
@@ -1409,59 +1415,65 @@ if (isInputRange!Range && !isInfinite!Range &&
     return extremum!(a => a, selector)(r, seedElement);
 }
 
-@safe pure unittest
+@safe pure @nogc unittest
 {
     // allows a custom map to select the extremum
-    assert([[0, 4], [1, 2]].extremum!"a[0]" == [0, 4]);
-    assert([[0, 4], [1, 2]].extremum!"a[1]" == [1, 2]);
+    import std.array : staticArray;
+    int[2] a = [0, 4];
+    int[2] b = [1, 2];
+    auto c = [a, b].staticArray;
+    assert(c[].extremum!"a[0]" == [0, 4]);
+    assert(c[].extremum!"a[1]" == [1, 2]);
 
     // allows a custom selector for comparison
-    assert([[0, 4], [1, 2]].extremum!("a[0]", "a > b") == [1, 2]);
-    assert([[0, 4], [1, 2]].extremum!("a[1]", "a > b") == [0, 4]);
+    assert(c[].extremum!("a[0]", "a > b") == [1, 2]);
+    assert(c[].extremum!("a[1]", "a > b") == [0, 4]);
 
     // use a custom comparator
     import std.math : cmp;
-    assert([-2., 0, 5].extremum!cmp == 5.0);
-    assert([-2., 0, 2].extremum!`cmp(a, b) < 0` == -2.0);
+    assert([-2., 0, 5].staticArray[].extremum!cmp == 5.0);
+    assert([-2., 0, 2].staticArray[].extremum!`cmp(a, b) < 0` == -2.0);
 
     // combine with map
     import std.range : enumerate;
-    assert([-3., 0, 5].enumerate.extremum!(`a.value`, cmp) == tuple(2, 5.0));
-    assert([-2., 0, 2].enumerate.extremum!(`a.value`, `cmp(a, b) < 0`) == tuple(0, -2.0));
+    assert([-3., 0, 5].staticArray[].enumerate.extremum!(`a.value`, cmp) == tuple(2, 5.0));
+    assert([-2., 0, 2].staticArray[].enumerate.extremum!(`a.value`, `cmp(a, b) < 0`) == tuple(0, -2.0));
 
     // seed with a custom value
     int[] arr;
     assert(arr.extremum(1) == 1);
 }
 
-@safe pure nothrow unittest
+@safe pure nothrow @nogc unittest
 {
     // 2d seeds
-    int[][] arr2d;
-    assert(arr2d.extremum([1]) == [1]);
-
-    // allow seeds of different types (implicit casting)
-    assert(extremum([2, 3, 4], 1.5) == 1.5);
+    import std.array : staticArray;
+    import std.range : only;
+    int[0][0] arr2d;
+    auto d = [2, 3, 4].staticArray;
+    assert(arr2d[].extremum([1].staticArray[]) == [1].staticArray);
+    assert(extremum(d[], 1.5) == 1.5);
 }
 
-@safe pure unittest
+@safe pure @nogc unittest
 {
     import std.range : enumerate, iota;
+    import std.array : staticArray;
 
     // forward ranges
     assert(iota(1, 5).extremum() == 1);
     assert(iota(2, 5).enumerate.extremum!"a.value" == tuple(0, 2));
 
     // should work with const
-    const(int)[] immArr = [2, 1, 3];
-    assert(immArr.extremum == 1);
+    const(int)[3] immArr = [2, 1, 3];
+    assert(immArr[].extremum == 1);
 
     // should work with immutable
-    immutable(int)[] immArr2 = [2, 1, 3];
-    assert(immArr2.extremum == 1);
+    immutable(int)[3] immArr2 = [2, 1, 3];
+    assert(immArr2[].extremum == 1);
 
     // with strings
-    assert(["b", "a", "c"].extremum == "a");
+    assert(["b", "a", "c"].staticArray[].extremum == "a");
 
     // with all dummy ranges
     import std.internal.test.dummyrange;
@@ -1707,17 +1719,19 @@ if (isInputRange!InputRange &&
 @safe unittest
 {
     import std.range.primitives;
+    import std.array : staticArray;
 
-    auto arr = [1, 2, 4, 4, 4, 4, 5, 6, 9];
-    assert(arr.find(4) == [4, 4, 4, 4, 5, 6, 9]);
-    assert(arr.find(1) == arr);
-    assert(arr.find(9) == [9]);
-    assert(arr.find!((a, b) => a > b)(4) == [5, 6, 9]);
-    assert(arr.find!((a, b) => a < b)(4) == arr);
-    assert(arr.find(0).empty);
-    assert(arr.find(10).empty);
-    assert(arr.find(8).empty);
+    int[9] arr = [1, 2, 4, 4, 4, 4, 5, 6, 9];
+    assert(arr[].find(4) == [4, 4, 4, 4, 5, 6, 9].staticArray);
+    assert(arr[].find(1) == arr);
+    assert(arr[].find(9) == [9].staticArray);
+    assert(arr[].find!((a, b) => a > b)(4) == [5, 6, 9].staticArray);
+    assert(arr[].find!((a, b) => a < b)(4) == arr);
+    assert(arr[].find(0).empty);
+    assert(arr[].find(10).empty);
+    assert(arr[].find(8).empty);
 
+    //TODO
     assert(find("hello, world", ',') == ", world");
 }
 
@@ -1744,12 +1758,13 @@ if (isInputRange!InputRange &&
     assert(equal(find!"a > b"("hello", 'k'), "llo"));
 }
 
-@safe pure nothrow unittest
+@safe pure nothrow @nogc unittest
 {
-    assert(!find              ([1, 2, 3], 2).empty);
-    assert(!find!((a,b)=>a == b)([1, 2, 3], 2).empty);
-    assert(!find              ([1, 2, 3], 2).empty);
-    assert(!find!((a,b)=>a == b)([1, 2, 3], 2).empty);
+    int[3] a = [1, 2, 3];
+    assert(!find              (a[], 2).empty);
+    assert(!find!((a,b)=>a == b)(a[], 2).empty);
+    assert(!find              (a[], 2).empty);
+    assert(!find!((a,b)=>a == b)(a[], 2).empty);
 }
 
 @safe pure unittest
@@ -1773,7 +1788,7 @@ if (isInputRange!InputRange &&
     }
 }
 
-@safe unittest
+@safe @nogc unittest
 {
     //CTFE
     static assert(find("abc", 'b') == "bc");
@@ -1787,37 +1802,38 @@ if (isInputRange!InputRange &&
     static assert(find!((a,b)=>a == b)([1, 2, 3], 2));
 }
 
-@safe unittest
+@safe @nogc unittest
 {
     import std.exception : assertCTFEable;
     import std.meta : AliasSeq;
 
-    void dg() @safe pure nothrow
+    void dg() @safe pure nothrow @nogc
     {
-        byte[]  sarr = [1, 2, 3, 4];
-        ubyte[] uarr = [1, 2, 3, 4];
+        byte[4]  sarr = [1, 2, 3, 4];
+        ubyte[4] uarr = [1, 2, 3, 4];
         static foreach (arr; AliasSeq!(sarr, uarr))
         {
             static foreach (T; AliasSeq!(byte, ubyte, int, uint))
             {
-                assert(find(arr, cast(T) 3) == arr[2 .. $]);
-                assert(find(arr, cast(T) 9) == arr[$ .. $]);
+                assert(find(arr[], cast(T) 3) == arr[2 .. $]);
+                assert(find(arr[], cast(T) 9) == arr[$ .. $]);
             }
-            assert(find(arr, 256) == arr[$ .. $]);
+            assert(find(arr[], 256) == arr[$ .. $]);
         }
     }
     dg();
     assertCTFEable!dg;
 }
 
-@safe unittest
+@safe @nogc unittest
 {
     // Bugzilla 11603
+    import std.array : staticArray;
     enum Foo : ubyte { A }
-    assert([Foo.A].find(Foo.A).empty == false);
+    assert([Foo.A].staticArray[].find(Foo.A).empty == false);
 
     ubyte x = 0;
-    assert([x].find(x).empty == false);
+    assert([x].staticArray[].find(x).empty == false);
 }
 
 /// ditto
@@ -1853,14 +1869,15 @@ if (isInputRange!InputRange)
 }
 
 ///
-@safe unittest
+@safe @nogc unittest
 {
-    auto arr = [ 1, 2, 3, 4, 1 ];
-    assert(find!("a > 2")(arr) == [ 3, 4, 1 ]);
+    import std.array : staticArray;
+    int[5] arr = [ 1, 2, 3, 4, 1 ];
+    assert(find!("a > 2")(arr[]) == [ 3, 4, 1 ].staticArray);
 
     // with predicate alias
     bool pred(int x) { return x + 1 > 1.5; }
-    assert(find!(pred)(arr) == arr);
+    assert(find!(pred)(arr[]) == arr);
 }
 
 @safe pure unittest
@@ -2123,7 +2140,8 @@ if (isForwardRange!R1 && isForwardRange!R2
 
 @safe unittest
 {
-    import std.range : assumeSorted;
+    import std.range : assumeSorted, only;
+    import std.array : staticArray;
 
     auto r1 = assumeSorted([1, 2, 3, 3, 3, 4, 5, 6, 7, 8, 8, 8, 10]);
     auto r2 = assumeSorted([3, 3, 4, 5, 6, 7, 8, 8]);
@@ -2141,9 +2159,10 @@ if (isForwardRange!R1 && isForwardRange!R2
     assert(find(r1, r7).empty());
 }
 
-@safe unittest
+@safe @nogc unittest
 {
     import std.algorithm.comparison : equal;
+    import std.array : staticArray;
     // @@@BUG@@@ removing static below makes unittest fail
     static struct BiRange
     {
@@ -2155,8 +2174,8 @@ if (isForwardRange!R1 && isForwardRange!R2
         void popFront() { return payload.popFront(); }
         void popBack() { return payload.popBack(); }
     }
-    auto r = BiRange([1, 2, 3, 10, 11, 4]);
-    assert(equal(find(r, [10, 11]), [10, 11, 4]));
+    auto r = BiRange([1, 2, 3, 10, 11, 4].staticArray[]);
+    assert(equal(find(r, [10, 11].staticArray[]), [10, 11, 4].staticArray[]));
 }
 
 @safe unittest
@@ -2168,13 +2187,13 @@ if (isForwardRange!R1 && isForwardRange!R2
 }
 
 //Bug# 8334
-@safe unittest
+@safe @nogc unittest
 {
     import std.algorithm.iteration : filter;
     import std.range;
 
-    auto haystack = [1, 2, 3, 4, 1, 9, 12, 42];
-    auto needle = [12, 42, 27];
+    auto haystack = only(1, 2, 3, 4, 1, 9, 12, 42);
+    auto needle = only(12, 42, 27);
 
     //different overload of find, but it's the base case.
     assert(find(haystack, needle).empty);
@@ -2348,15 +2367,16 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
 }
 
 ///
-@safe unittest
+@safe @nogc unittest
 {
     import std.typecons : tuple;
-    int[] a = [ 1, 4, 2, 3 ];
-    assert(find(a, 4) == [ 4, 2, 3 ]);
-    assert(find(a, [ 1, 4 ]) == [ 1, 4, 2, 3 ]);
-    assert(find(a, [ 1, 3 ], 4) == tuple([ 4, 2, 3 ], 2));
+    import std.array : staticArray;
+    int[4] a = [ 1, 4, 2, 3 ];
+    assert(find(a[], 4) == [ 4, 2, 3 ].staticArray[]);
+    assert(find(a[], [ 1, 4 ].staticArray[]) == [ 1, 4, 2, 3 ].staticArray);
+    assert(find(a[], [ 1, 3 ].staticArray[], 4) == tuple([ 4, 2, 3 ].staticArray, 2));
     // Mixed types allowed if comparable
-    assert(find(a, 5, [ 1.2, 3.5 ], 2.0) == tuple([ 2, 3 ], 3));
+    assert(find(a[], 5, [ 1.2, 3.5 ].staticArray[], 2.0) == tuple([ 2, 3 ].staticArray, 3));
 }
 
 @safe unittest
@@ -2401,10 +2421,11 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
     import std.algorithm.internal : rndstuff;
     import std.meta : AliasSeq;
     import std.range : retro;
+    import std.array : staticArray;
 
-    int[] a = [ 1, 2, 3, 2, 6 ];
-    assert(find(retro(a), 5).empty);
-    assert(equal(find(retro(a), 2), [ 2, 3, 2, 1 ][]));
+    int[5] a = [ 1, 2, 3, 2, 6 ];
+    assert(find(retro(a[]), 5).empty);
+    assert(equal(find(retro(a[]), 2), [ 2, 3, 2, 1 ].staticArray[]));
 
     foreach (T; AliasSeq!(int, double))
     {
@@ -2417,21 +2438,22 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
     }
 }
 
-@safe unittest
+@safe @nogc unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
+    import std.array : staticArray;
 
-    int[] a = [ -1, 0, 1, 2, 3, 4, 5 ];
-    int[] b = [ 1, 2, 3 ];
-    assert(find(a, b) == [ 1, 2, 3, 4, 5 ]);
-    assert(find(b, a).empty);
+    int[7] a = [ -1, 0, 1, 2, 3, 4, 5 ];
+    int[3] b = [ 1, 2, 3 ];
+    assert(find(a[], b[]) == [ 1, 2, 3, 4, 5 ].staticArray);
+    assert(find(b[], a[]).empty);
 
     foreach (DummyType; AllDummyRanges)
     {
         DummyType d;
         auto findRes = find(d, 5);
-        assert(equal(findRes, [5,6,7,8,9,10]));
+        assert(equal(findRes, [5,6,7,8,9,10].staticArray[]));
     }
 }
 
@@ -2539,32 +2561,33 @@ template canFind(alias pred="a == b")
 }
 
 ///
-@safe unittest
+@safe @nogc unittest
 {
-    assert(canFind([0, 1, 2, 3], 2) == true);
-    assert(canFind([0, 1, 2, 3], [1, 2], [2, 3]));
-    assert(canFind([0, 1, 2, 3], [1, 2], [2, 3]) == 1);
-    assert(canFind([0, 1, 2, 3], [1, 7], [2, 3]));
-    assert(canFind([0, 1, 2, 3], [1, 7], [2, 3]) == 2);
+    import std.array : staticArray;
+    assert(canFind([0, 1, 2, 3].staticArray[], 2) == true);
+    assert(canFind([0, 1, 2, 3].staticArray[], [1, 2].staticArray[], [2, 3].staticArray[]));
+    assert(canFind([0, 1, 2, 3].staticArray[], [1, 2].staticArray[], [2, 3].staticArray[]) == 1);
+    assert(canFind([0, 1, 2, 3].staticArray[], [1, 7].staticArray[], [2, 3].staticArray[]));
+    assert(canFind([0, 1, 2, 3].staticArray[], [1, 7].staticArray[], [2, 3].staticArray[]) == 2);
 
-    assert(canFind([0, 1, 2, 3], 4) == false);
-    assert(!canFind([0, 1, 2, 3], [1, 3], [2, 4]));
-    assert(canFind([0, 1, 2, 3], [1, 3], [2, 4]) == 0);
+    assert(canFind([0, 1, 2, 3].staticArray[], 4) == false);
+    assert(!canFind([0, 1, 2, 3].staticArray[], [1, 3].staticArray[], [2, 4].staticArray[]));
+    assert(canFind([0, 1, 2, 3].staticArray[], [1, 3].staticArray[], [2, 4].staticArray[]) == 0);
 }
 
 /**
  * Example using a custom predicate.
  * Note that the needle appears as the second argument of the predicate.
  */
-@safe unittest
+@safe @nogc unittest
 {
-    auto words = [
+    string[3] words = [
         "apple",
         "beeswax",
         "cardboard"
     ];
-    assert(!canFind(words, "bees"));
-    assert( canFind!((string a, string b) => a.startsWith(b))(words, "bees"));
+    assert(!canFind(words[], "bees"));
+    assert( canFind!((string a, string b) => a.startsWith(b))(words[], "bees"));
 }
 
 /// Search for mutliple items in an array of items (search for needles in an array of hay stacks)
@@ -2590,10 +2613,12 @@ template canFind(alias pred="a == b")
     }
 }
 
-@safe unittest
+@safe @nogc unittest
 {
     import std.algorithm.comparison : equal;
-    assert(equal!(canFind!"a < b")([[1, 2, 3], [7, 8, 9]], [2, 8]));
+    import std.array : staticArray;
+    assert(equal!(canFind!"a < b")([[1, 2, 3].staticArray[], [7, 8, 9].staticArray[]].staticArray[],
+                [2, 8].staticArray[]));
 }
 
 // findAdjacent
@@ -2631,13 +2656,14 @@ if (isForwardRange!(Range))
 }
 
 ///
-@safe unittest
+@safe @nogc unittest
 {
-    int[] a = [ 11, 10, 10, 9, 8, 8, 7, 8, 9 ];
-    auto r = findAdjacent(a);
-    assert(r == [ 10, 10, 9, 8, 8, 7, 8, 9 ]);
-    auto p = findAdjacent!("a < b")(a);
-    assert(p == [ 7, 8, 9 ]);
+    import std.array : staticArray;
+    int[9] a = [ 11, 10, 10, 9, 8, 8, 7, 8, 9 ];
+    auto r = findAdjacent(a[]);
+    assert(r == [ 10, 10, 9, 8, 8, 7, 8, 9 ].staticArray);
+    auto p = findAdjacent!("a < b")(a[]);
+    assert(p == [ 7, 8, 9 ].staticArray);
 
 }
 
@@ -2701,21 +2727,22 @@ if (isInputRange!InputRange && isForwardRange!ForwardRange)
 }
 
 ///
-@safe unittest
+@safe @nogc unittest
 {
-    int[] a = [ -1, 0, 1, 2, 3, 4, 5 ];
-    int[] b = [ 3, 1, 2 ];
-    assert(findAmong(a, b) == a[2 .. $]);
+    int[7] a = [ -1, 0, 1, 2, 3, 4, 5 ];
+    int[3] b = [ 3, 1, 2 ];
+    assert(findAmong(a[], b[]) == a[2 .. $]);
 }
 
-@safe unittest
+@safe @nogc unittest
 {
-    int[] a = [ -1, 0, 2, 1, 2, 3, 4, 5 ];
-    int[] b = [ 1, 2, 3 ];
-    assert(findAmong(a, b) == [2, 1, 2, 3, 4, 5 ]);
-    assert(findAmong(b, [ 4, 6, 7 ][]).empty);
-    assert(findAmong!("a == b")(a, b).length == a.length - 2);
-    assert(findAmong!("a == b")(b, [ 4, 6, 7 ][]).empty);
+    import std.array : staticArray;
+    int[8] a = [ -1, 0, 2, 1, 2, 3, 4, 5 ];
+    int[3] b = [ 1, 2, 3 ];
+    assert(findAmong(a[], b[]) == [2, 1, 2, 3, 4, 5 ].staticArray);
+    assert(findAmong(b[], [ 4, 6, 7 ].staticArray[]).empty);
+    assert(findAmong!("a == b")(a[], b[]).length == a.length - 2);
+    assert(findAmong!("a == b")(b[], [ 4, 6, 7 ].staticArray[]).empty);
 }
 
 @system unittest // issue 19765
@@ -2764,7 +2791,7 @@ if (isForwardRange!R1 && isForwardRange!R2
 }
 
 ///
-@safe unittest
+@safe @nogc unittest
 {
     import std.range.primitives : empty;
     // Needle is found; s is replaced by the substring following the first
@@ -3106,7 +3133,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
 
 /// Returning a subtype of $(REF Tuple, std,typecons) enables
 /// the following convenient idiom:
-@safe pure nothrow unittest
+@safe pure nothrow @nogc unittest
 {
     // findSplit returns a triplet
     if (auto split = "dlang-rocks".findSplit("-"))
@@ -3128,7 +3155,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
 }
 
 ///
-@safe pure nothrow unittest
+@safe pure nothrow @nogc unittest
 {
     import std.range.primitives : empty;
 
@@ -3160,36 +3187,38 @@ if (isForwardRange!R1 && isForwardRange!R2)
 }
 
 /// Use $(REF only, std,range) to find single elements:
-@safe pure nothrow unittest
+@safe pure nothrow @nogc unittest
 {
     import std.range : only;
-    assert([1, 2, 3, 4].findSplitBefore(only(3))[0] == [1, 2]);
+    import std.array : staticArray;
+    assert([1, 2, 3, 4].staticArray[].findSplitBefore(only(3))[0] == [1, 2].staticArray);
 }
 
-@safe pure nothrow unittest
+@safe pure nothrow @nogc unittest
 {
     import std.range.primitives : empty;
+    import std.array : staticArray;
 
-    immutable a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
-    auto r = findSplit(a, [9, 1]);
+    immutable int[8] a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
+    auto r = findSplit(a[], [9, 1].staticArray[]);
     assert(!r);
     assert(r[0] == a);
     assert(r[1].empty);
     assert(r[2].empty);
-    r = findSplit(a, [3]);
+    r = findSplit(a[], [3].staticArray[]);
     assert(r);
     assert(r[0] == a[0 .. 2]);
     assert(r[1] == a[2 .. 3]);
     assert(r[2] == a[3 .. $]);
 
     {
-        const r1 = findSplitBefore(a, [9, 1]);
+        const r1 = findSplitBefore(a[], [9, 1].staticArray[]);
         assert(!r1);
         assert(r1[0] == a);
         assert(r1[1].empty);
     }
 
-    if (immutable r1 = findSplitBefore(a, [3, 4]))
+    if (immutable r1 = findSplitBefore(a[], [3, 4].staticArray[]))
     {
         assert(r1);
         assert(r1[0] == a[0 .. 2]);
@@ -3198,13 +3227,13 @@ if (isForwardRange!R1 && isForwardRange!R2)
     else assert(0);
 
     {
-        const r2 = findSplitAfter(a, [9, 1]);
+        const r2 = findSplitAfter(a[], [9, 1].staticArray[]);
         assert(!r2);
         assert(r2[0].empty);
         assert(r2[1] == a);
     }
 
-    if (immutable r3 = findSplitAfter(a, [3, 4]))
+    if (immutable r3 = findSplitAfter(a[], [3, 4].staticArray[]))
     {
         assert(r3);
         assert(r3[0] == a[0 .. 4]);
@@ -3213,38 +3242,40 @@ if (isForwardRange!R1 && isForwardRange!R2)
     else assert(0);
 }
 
-@safe pure nothrow unittest
+@safe pure nothrow @nogc unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter;
+    import std.array : staticArray;
+    import std.range : only;
 
-    auto a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
-    auto fwd = filter!"a > 0"(a);
-    auto r = findSplit(fwd, [9, 1]);
+    auto a = [ 1, 2, 3, 4, 5, 6, 7, 8 ].staticArray;
+    auto fwd = filter!"a > 0"(a[]);
+    auto r = findSplit(fwd, only(9, 1));
     assert(!r);
-    assert(equal(r[0], a));
+    assert(equal(r[0], a[]));
     assert(r[1].empty);
     assert(r[2].empty);
-    r = findSplit(fwd, [3]);
+    r = findSplit(fwd, only(3));
     assert(r);
     assert(equal(r[0],  a[0 .. 2]));
     assert(equal(r[1], a[2 .. 3]));
     assert(equal(r[2], a[3 .. $]));
-    r = findSplit(fwd, [8, 9]);
+    r = findSplit(fwd, only(8, 9));
     assert(!r);
-    assert(equal(r[0], a));
+    assert(equal(r[0], a[]));
     assert(r[1].empty);
     assert(r[2].empty);
 
     // auto variable `r2` cannot be `const` because `fwd.front` is mutable
     {
-        auto r1 = findSplitBefore(fwd, [9, 1]);
+        auto r1 = findSplitBefore(fwd, only(9, 1));
         assert(!r1);
-        assert(equal(r1[0], a));
+        assert(equal(r1[0], a[]));
         assert(r1[1].empty);
     }
 
-    if (auto r1 = findSplitBefore(fwd, [3, 4]))
+    if (auto r1 = findSplitBefore(fwd, only(3, 4)))
     {
         assert(r1);
         assert(equal(r1[0], a[0 .. 2]));
@@ -3253,20 +3284,20 @@ if (isForwardRange!R1 && isForwardRange!R2)
     else assert(0);
 
     {
-        auto r1 = findSplitBefore(fwd, [8, 9]);
+        auto r1 = findSplitBefore(fwd, only(8, 9));
         assert(!r1);
-        assert(equal(r1[0], a));
+        assert(equal(r1[0], a[]));
         assert(r1[1].empty);
     }
 
     {
-        auto r2 = findSplitAfter(fwd, [9, 1]);
+        auto r2 = findSplitAfter(fwd, only(9, 1));
         assert(!r2);
         assert(r2[0].empty);
-        assert(equal(r2[1], a));
+        assert(equal(r2[1], a[]));
     }
 
-    if (auto r2 = findSplitAfter(fwd, [3, 4]))
+    if (auto r2 = findSplitAfter(fwd, only(3, 4)))
     {
         assert(r2);
         assert(equal(r2[0], a[0 .. 4]));
@@ -3275,10 +3306,10 @@ if (isForwardRange!R1 && isForwardRange!R2)
     else assert(0);
 
     {
-        auto r2 = findSplitAfter(fwd, [8, 9]);
+        auto r2 = findSplitAfter(fwd, only(8, 9));
         assert(!r2);
         assert(r2[0].empty);
-        assert(equal(r2[1], a));
+        assert(equal(r2[1], a[]));
     }
 }
 
@@ -3598,45 +3629,47 @@ if (isInputRange!Range && !isInfinite!Range &&
 }
 
 ///
-@safe pure unittest
+@safe pure @nogc unittest
 {
     import std.range : enumerate;
     import std.typecons : tuple;
+    import std.array : staticArray;
 
-    assert([2, 7, 1, 3].minElement == 1);
+    assert([2, 7, 1, 3].staticArray[].minElement == 1);
 
     // allows to get the index of an element too
-    assert([5, 3, 7, 9].enumerate.minElement!"a.value" == tuple(1, 3));
+    assert([5, 3, 7, 9].staticArray[].enumerate.minElement!"a.value" == tuple(1, 3));
 
     // any custom accessor can be passed
-    assert([[0, 4], [1, 2]].minElement!"a[1]" == [1, 2]);
+    assert([[0, 4].staticArray, [1, 2].staticArray].staticArray[].minElement!"a[1]" == [1, 2]);
 
     // can be seeded
     int[] arr;
     assert(arr.minElement(1) == 1);
 }
 
-@safe pure unittest
+@safe pure @nogc unittest
 {
     import std.range : enumerate, iota;
+    import std.array : staticArray;
     // supports mapping
-    assert([3, 4, 5, 1, 2].enumerate.minElement!"a.value" == tuple(3, 1));
-    assert([5, 2, 4].enumerate.minElement!"a.value" == tuple(1, 2));
+    assert([3, 4, 5, 1, 2].staticArray[].enumerate.minElement!"a.value" == tuple(3, 1));
+    assert([5, 2, 4].staticArray[].enumerate.minElement!"a.value" == tuple(1, 2));
 
     // forward ranges
     assert(iota(1, 5).minElement() == 1);
     assert(iota(2, 5).enumerate.minElement!"a.value" == tuple(0, 2));
 
     // should work with const
-    const(int)[] immArr = [2, 1, 3];
-    assert(immArr.minElement == 1);
+    const(int)[3] immArr = [2, 1, 3];
+    assert(immArr[].minElement == 1);
 
     // should work with immutable
-    immutable(int)[] immArr2 = [2, 1, 3];
-    assert(immArr2.minElement == 1);
+    immutable(int)[3] immArr2 = [2, 1, 3];
+    assert(immArr2[].minElement == 1);
 
     // with strings
-    assert(["b", "a", "c"].minElement == "a");
+    assert(["b", "a", "c"].staticArray[].minElement == "a");
 
     // with all dummy ranges
     import std.internal.test.dummyrange;
@@ -3664,15 +3697,15 @@ if (isInputRange!Range && !isInfinite!Range &&
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=17982
-@safe unittest
+@safe @nogc unittest
 {
     struct A
     {
       int val;
     }
 
-    const(A)[] v = [A(0)];
-    assert(v.minElement!"a.val" == A(0));
+    const(A)[1] v = [A(0)];
+    assert(v[].minElement!"a.val" == A(0));
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=17982
@@ -3736,30 +3769,32 @@ if (isInputRange!Range && !isInfinite!Range &&
 }
 
 ///
-@safe pure unittest
+@safe pure @nogc unittest
 {
     import std.range : enumerate;
     import std.typecons : tuple;
-    assert([2, 1, 4, 3].maxElement == 4);
+    import std.array : staticArray;
+    assert([2, 1, 4, 3].staticArray[].maxElement == 4);
 
     // allows to get the index of an element too
-    assert([2, 1, 4, 3].enumerate.maxElement!"a.value" == tuple(2, 4));
+    assert([2, 1, 4, 3].staticArray[].enumerate.maxElement!"a.value" == tuple(2, 4));
 
     // any custom accessor can be passed
-    assert([[0, 4], [1, 2]].maxElement!"a[1]" == [0, 4]);
+    assert([[0, 4].staticArray, [1, 2].staticArray].staticArray[].maxElement!"a[1]" == [0, 4].staticArray);
 
     // can be seeded
     int[] arr;
     assert(arr.minElement(1) == 1);
 }
 
-@safe pure unittest
+@safe pure @nogc unittest
 {
     import std.range : enumerate, iota;
+    import std.array : staticArray;
 
     // supports mapping
-    assert([3, 4, 5, 1, 2].enumerate.maxElement!"a.value" == tuple(2, 5));
-    assert([5, 2, 4].enumerate.maxElement!"a.value" == tuple(0, 5));
+    assert([3, 4, 5, 1, 2].staticArray[].enumerate.maxElement!"a.value" == tuple(2, 5));
+    assert([5, 2, 4].staticArray[].enumerate.maxElement!"a.value" == tuple(0, 5));
 
     // forward ranges
     assert(iota(1, 5).maxElement() == 4);
@@ -3767,15 +3802,15 @@ if (isInputRange!Range && !isInfinite!Range &&
     assert(iota(4, 14).enumerate.maxElement!"a.value" == tuple(9, 13));
 
     // should work with const
-    const(int)[] immArr = [2, 3, 1];
-    assert(immArr.maxElement == 3);
+    const(int)[3] immArr = [2, 3, 1];
+    assert(immArr[].maxElement == 3);
 
     // should work with immutable
-    immutable(int)[] immArr2 = [2, 3, 1];
-    assert(immArr2.maxElement == 3);
+    immutable(int)[3] immArr2 = [2, 3, 1];
+    assert(immArr2[].maxElement == 3);
 
     // with strings
-    assert(["a", "c", "b"].maxElement == "c");
+    assert(["a", "c", "b"].staticArray[].maxElement == "c");
 
     // with all dummy ranges
     import std.internal.test.dummyrange;
@@ -3899,13 +3934,14 @@ if (isForwardRange!Range && !isInfinite!Range &&
 }
 
 ///
-@safe unittest
+@safe @nogc unittest
 {
-    int[] a = [ 2, 3, 4, 1, 2, 4, 1, 1, 2 ];
+    import std.array : staticArray;
+    int[9] a = [ 2, 3, 4, 1, 2, 4, 1, 1, 2 ];
     // Minimum is 1 and first occurs in position 3
-    assert(a.minPos == [ 1, 2, 4, 1, 1, 2 ]);
+    assert(a[].minPos == [ 1, 2, 4, 1, 1, 2 ].staticArray);
     // Maximum is 4 and first occurs in position 2
-    assert(a.maxPos == [ 4, 1, 2, 4, 1, 1, 2 ]);
+    assert(a[].maxPos == [ 4, 1, 2, 4, 1, 1, 2 ].staticArray);
 }
 
 @safe unittest
@@ -3922,16 +3958,17 @@ if (isForwardRange!Range && !isInfinite!Range &&
     assert( equal( minPos(new ReferenceForwardRange!int([1, 2, 1, 0, 2, 0])), [0, 2, 0] ) );
 }
 
-@system unittest
+@system @nogc unittest
 {
     //Rvalue range
     import std.algorithm.comparison : equal;
     import std.container : Array;
+    import std.array : staticArray;
 
     assert(Array!int(2, 3, 4, 1, 2, 4, 1, 1, 2)
                []
                .minPos()
-               .equal([ 1, 2, 4, 1, 1, 2 ]));
+               .equal([ 1, 2, 4, 1, 1, 2 ].staticArray[]));
 }
 
 @safe unittest
@@ -4006,14 +4043,14 @@ if (isInputRange!Range && !isInfinite!Range &&
 }
 
 ///
-@safe pure nothrow unittest
+@safe pure nothrow @nogc unittest
 {
-    int[] a = [2, 3, 4, 1, 2, 4, 1, 1, 2];
+    int[9] a = [2, 3, 4, 1, 2, 4, 1, 1, 2];
 
     // Minimum is 1 and first occurs in position 3
-    assert(a.minIndex == 3);
+    assert(a[].minIndex == 3);
     // Get maximum index with minIndex
-    assert(a.minIndex!"a > b" == 2);
+    assert(a[].minIndex!"a > b" == 2);
 
     // Range is empty, so return value is -1
     int[] b;
@@ -4021,8 +4058,8 @@ if (isInputRange!Range && !isInfinite!Range &&
 
     // Works with more custom types
     struct Dog { int age; }
-    Dog[] dogs = [Dog(10), Dog(5), Dog(15)];
-    assert(dogs.minIndex!"a.age < b.age" == 1);
+    Dog[3] dogs = [Dog(10), Dog(5), Dog(15)];
+    assert(dogs[].minIndex!"a.age < b.age" == 1);
 }
 
 @safe pure unittest
@@ -4071,9 +4108,10 @@ if (isInputRange!Range && !isInfinite!Range &&
     assert(arr2d.minIndex!"a[1] < b[1]" == 2);
 }
 
-@safe nothrow pure unittest
+@safe nothrow pure @nogc unittest
 {
     // InputRange test
+    import std.array : staticArray;
 
     static struct InRange
     {
@@ -4098,8 +4136,8 @@ if (isInputRange!Range && !isInfinite!Range &&
 
     static assert(isInputRange!InRange);
 
-    auto arr1 = InRange([5, 2, 3, 4, 5, 3, 6]);
-    auto arr2 = InRange([7, 3, 8, 2, 1, 4]);
+    auto arr1 = InRange([5, 2, 3, 4, 5, 3, 6].staticArray);
+    auto arr2 = InRange([7, 3, 8, 2, 1, 4].staticArray);
 
     assert(arr1.minIndex == 1);
     assert(arr2.minIndex == 4);
@@ -4135,11 +4173,11 @@ if (isInputRange!Range && !isInfinite!Range &&
 }
 
 ///
-@safe pure nothrow unittest
+@safe pure nothrow @nogc unittest
 {
     // Maximum is 4 and first occurs in position 2
-    int[] a = [2, 3, 4, 1, 2, 4, 1, 1, 2];
-    assert(a.maxIndex == 2);
+    int[9] a = [2, 3, 4, 1, 2, 4, 1, 1, 2];
+    assert(a[].maxIndex == 2);
 
     // Empty range
     int[] b;
@@ -4147,8 +4185,8 @@ if (isInputRange!Range && !isInfinite!Range &&
 
     // Works with more custom types
     struct Dog { int age; }
-    Dog[] dogs = [Dog(10), Dog(15), Dog(5)];
-    assert(dogs.maxIndex!"a.age < b.age" == 1);
+    Dog[3] dogs = [Dog(10), Dog(15), Dog(5)];
+    assert(dogs[].maxIndex!"a.age < b.age" == 1);
 }
 
 @safe pure unittest
@@ -4360,6 +4398,7 @@ template skipOver(alias pred = (a, b) => a == b)
 @safe unittest
 {
     import std.algorithm.comparison : equal;
+    import std.array : staticArray;
 
     auto s1 = "Hello world";
     assert(!skipOver(s1, "Ha"));
@@ -5102,27 +5141,29 @@ if (isInputRange!Range)
 }
 
 ///
-@safe unittest
+@safe @nogc unittest
 {
     import std.algorithm.comparison : equal;
     import std.typecons : No;
-    int[] a = [ 1, 2, 4, 7, 7, 2, 4, 7, 3, 5];
-    assert(equal(a.until(7), [1, 2, 4]));
-    assert(equal(a.until(7, No.openRight), [1, 2, 4, 7]));
+    import std.array : staticArray;
+    int[10] a = [ 1, 2, 4, 7, 7, 2, 4, 7, 3, 5];
+    assert(equal(a[].until(7), [1, 2, 4].staticArray[]));
+    assert(equal(a[].until(7, No.openRight), [1, 2, 4, 7].staticArray[]));
 }
 
-@safe unittest
+@safe @nogc unittest
 {
     import std.algorithm.comparison : equal;
-    int[] a = [ 1, 2, 4, 7, 7, 2, 4, 7, 3, 5];
+    import std.array : staticArray;
+    int[10] a = [ 1, 2, 4, 7, 7, 2, 4, 7, 3, 5];
 
-    static assert(isForwardRange!(typeof(a.until(7))));
-    static assert(isForwardRange!(typeof(until!"a == 2"(a, No.openRight))));
+    static assert(isForwardRange!(typeof(a[].until(7))));
+    static assert(isForwardRange!(typeof(until!"a == 2"(a[], No.openRight))));
 
-    assert(equal(a.until(7), [1, 2, 4]));
-    assert(equal(a.until([7, 2]), [1, 2, 4, 7]));
-    assert(equal(a.until(7, No.openRight), [1, 2, 4, 7]));
-    assert(equal(until!"a == 2"(a, No.openRight), [1, 2]));
+    assert(equal(a[].until(7), [1, 2, 4].staticArray[]));
+    assert(equal(a[].until([7, 2].staticArray[]), [1, 2, 4, 7].staticArray[]));
+    assert(equal(a[].until(7, No.openRight), [1, 2, 4, 7].staticArray[]));
+    assert(equal(until!"a == 2"(a[], No.openRight), [1, 2].staticArray[]));
 }
 
 @system unittest // bugzilla 13171
@@ -5134,13 +5175,14 @@ if (isInputRange!Range)
     assert(a == [4]);
 }
 
-@safe unittest // Issue 10460
+@safe @nogc unittest // Issue 10460
 {
     import std.algorithm.comparison : equal;
-    auto a = [1, 2, 3, 4];
-    foreach (ref e; a.until(3))
+    import std.array : staticArray;
+    auto a = [1, 2, 3, 4].staticArray;
+    foreach (ref e; a[].until(3))
         e = 0;
-    assert(equal(a, [0, 0, 3, 4]));
+    assert(equal(a[], [0, 0, 3, 4].staticArray[]));
 }
 
 @safe unittest // Issue 13124
