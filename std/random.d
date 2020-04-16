@@ -116,6 +116,9 @@ else version (TVOS)
 else version (WatchOS)
     version = Darwin;
 
+version (D_InlineAsm_X86) version = InlineAsm_X86_Any;
+version (D_InlineAsm_X86_64) version = InlineAsm_X86_Any;
+
 ///
 @safe unittest
 {
@@ -1693,6 +1696,46 @@ else
         result = (result ^ (result >>> 47)) * m;
         return result ^ (result >>> 47);
     }
+
+    // If we don't have arc4random and we don't have RDRAND fall back to this.
+    private ulong fallbackSeed() @nogc nothrow
+    {
+        // Bit avalanche function from MurmurHash3.
+        static ulong fmix64(ulong k) @nogc nothrow pure @safe
+        {
+            k = (k ^ (k >>> 33)) * 0xff51afd7ed558ccd;
+            k = (k ^ (k >>> 33)) * 0xc4ceb9fe1a85ec53;
+            return k ^ (k >>> 33);
+        }
+        // Using SplitMix algorithm with constant gamma.
+        // Chosen gamma is the odd number closest to 2^^64
+        // divided by the silver ratio (1.0L + sqrt(2.0L)).
+        enum gamma = 0x6a09e667f3bcc909UL;
+        import core.atomic : has64BitCAS;
+        static if (has64BitCAS)
+        {
+            import core.atomic : MemoryOrder, atomicLoad, atomicOp, atomicStore, cas;
+            shared static ulong seed;
+            shared static bool initialized;
+            if (0 == atomicLoad!(MemoryOrder.raw)(initialized))
+            {
+                cas(&seed, 0UL, fmix64(bootstrapSeed()));
+                atomicStore!(MemoryOrder.rel)(initialized, true);
+            }
+            return fmix64(atomicOp!"+="(seed, gamma));
+        }
+        else
+        {
+            static ulong seed;
+            static bool initialized;
+            if (!initialized)
+            {
+                seed = fmix64(bootstrapSeed());
+                initialized = true;
+            }
+            return fmix64(seed += gamma);
+        }
+    }
 }
 
 /**
@@ -1717,7 +1760,28 @@ how excellent the source of entropy is.
     }
     else
     {
-        return cast(uint) unpredictableSeed!ulong;
+        version (InlineAsm_X86_Any)
+        {
+            import core.cpuid : hasRdrand;
+            if (hasRdrand)
+            {
+                uint result;
+                asm @nogc nothrow
+                {
+                    db 0x0f, 0xc7, 0xf0; // rdrand EAX
+                    jnc LnotUsingRdrand;
+                    // Some AMD CPUs shipped with bugs where RDRAND could fail
+                    // but still set the carry flag to 1. In those cases the
+                    // output will be -1.
+                    cmp EAX, 0xffff_ffff;
+                    je LnotUsingRdrand;
+                    mov result, EAX;
+                }
+                return result;
+            }
+        LnotUsingRdrand:
+        }
+        return cast(uint) fallbackSeed();
     }
 }
 
@@ -1746,48 +1810,64 @@ if (isUnsigned!UIntType)
                     return result;
                 }
             }
-            else static if (!is(UIntType == ulong))
-            {
-                // The work occurs in the ulong implementation.
-                return cast(UIntType) unpredictableSeed!ulong;
-            }
             else
             {
-                // Bit avalanche function from MurmurHash3.
-                static ulong fmix64(ulong k) @nogc nothrow pure @safe
+                version (InlineAsm_X86_Any)
                 {
-                    k = (k ^ (k >>> 33)) * 0xff51afd7ed558ccd;
-                    k = (k ^ (k >>> 33)) * 0xc4ceb9fe1a85ec53;
-                    return k ^ (k >>> 33);
-                }
-                // Using SplitMix algorithm with constant gamma.
-                // Chosen gamma is the odd number closest to 2^^64
-                // divided by the silver ratio (1.0L + sqrt(2.0L)).
-                enum gamma = 0x6a09e667f3bcc909UL;
-                import core.atomic : has64BitCAS;
-                static if (has64BitCAS)
-                {
-                    import core.atomic : MemoryOrder, atomicLoad, atomicOp, atomicStore, cas;
-                    shared static ulong seed;
-                    shared static bool initialized;
-                    if (0 == atomicLoad!(MemoryOrder.raw)(initialized))
+                    import core.cpuid : hasRdrand;
+                    if (hasRdrand)
                     {
-                        cas(&seed, 0UL, fmix64(bootstrapSeed()));
-                        atomicStore!(MemoryOrder.rel)(initialized, true);
+                        static if (UIntType.sizeof <= uint.sizeof)
+                        {
+                            uint result;
+                            asm @nogc nothrow
+                            {
+                                db 0x0f, 0xc7, 0xf0; // rdrand EAX
+                                jnc LnotUsingRdrand;
+                                // Some AMD CPUs shipped with bugs where RDRAND could fail
+                                // but still set the carry flag to 1. In those cases the
+                                // output will be -1.
+                                cmp EAX, 0xffff_ffff;
+                                je LnotUsingRdrand;
+                                mov result, EAX;
+                            }
+                            return cast(UIntType) result;
+                        }
+                        else version (D_InlineAsm_X86_64)
+                        {
+                            ulong result;
+                            asm @nogc nothrow
+                            {
+                                db 0x48, 0x0f, 0xc7, 0xf0; // rdrand RAX
+                                jnc LnotUsingRdrand;
+                                // Some AMD CPUs shipped with bugs where RDRAND could fail
+                                // but still set the carry flag to 1. In those cases the
+                                // output will be -1.
+                                cmp RAX, 0xffff_ffff_ffff_ffff;
+                                je LnotUsingRdrand;
+                                mov result, RAX;
+                            }
+                            return result;
+                        }
+                        else
+                        {
+                            uint resultLow, resultHigh;
+                            asm @nogc nothrow
+                            {
+                                db 0x0f, 0xc7, 0xf0; // rdrand EAX
+                                jnc LnotUsingRdrand;
+                                mov resultLow, EAX;
+                                db 0x0f, 0xc7, 0xf0; // rdrand EAX
+                                jnc LnotUsingRdrand;
+                                mov resultHigh, EAX;
+                            }
+                            if (resultLow != uint.max || resultHigh != uint.max) // Protect against AMD RDRAND bug.
+                                return ((cast(ulong) resultHigh) << 32) ^ resultLow;
+                        }
                     }
-                    return fmix64(atomicOp!"+="(seed, gamma));
+                LnotUsingRdrand:
                 }
-                else
-                {
-                    static ulong seed;
-                    static bool initialized;
-                    if (!initialized)
-                    {
-                        seed = fmix64(bootstrapSeed());
-                        initialized = true;
-                    }
-                    return fmix64(seed += gamma);
-                }
+                return cast(UIntType) fallbackSeed();
             }
         }
 }
