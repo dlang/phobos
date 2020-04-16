@@ -2955,6 +2955,9 @@ Gets the value if not null. If `this` is in the null state, and the optional
 parameter `fallback` was provided, it will be returned. Without `fallback`,
 calling `get` with a null state is invalid.
 
+When the fallback type is different from the Nullable type, `get(T)` returns
+the common type.
+
 Params:
     fallback = the value to return in case the `Nullable` is null.
 
@@ -2969,7 +2972,13 @@ Returns:
     }
 
     /// ditto
-    @property get(U)(inout(U) fallback) inout @safe pure nothrow
+    @property inout(T) get()(inout(T) fallback) inout @safe pure nothrow
+    {
+        return isNull ? fallback : _value.payload;
+    }
+
+    /// ditto
+    @property auto get(U)(inout(U) fallback) inout @safe pure nothrow
     {
         return isNull ? fallback : _value.payload;
     }
@@ -4007,6 +4016,25 @@ nothrow pure @nogc @safe unittest
     result = sample.apply!greaterThree;
     assert(!sample.isNull && !result.isNull);
     assert(result.get == 4);
+}
+
+// test that Nullable.get(default) can merge types
+@safe @nogc nothrow pure
+unittest
+{
+    Nullable!ubyte sample = Nullable!ubyte();
+
+    // Test that get(U) returns the common type of the Nullable type and the parameter type.
+    assert(sample.get(1000) == 1000);
+}
+
+// Workaround for https://issues.dlang.org/show_bug.cgi?id=20670
+@safe @nogc nothrow pure
+unittest
+{
+    immutable struct S { }
+
+    S[] array = Nullable!(S[])().get(S[].init);
 }
 
 /**
