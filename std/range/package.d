@@ -11147,7 +11147,7 @@ evaluations of `pred`.
 /**
 Like `contains`, but the value is specified before the range.
 */
-    auto opBinaryRight(string op, V)(V value)
+    bool opBinaryRight(string op, V)(V value)
     if (op == "in" && isRandomAccessRange!Range)
     {
         return contains(value);
