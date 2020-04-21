@@ -5025,11 +5025,11 @@ Returns:
     An $(REF AliasSeq,std,meta) with all possible target types of an implicit
     conversion `T`.
 
-    If `T` is a class derived from `Object`, the result of
+    If `T` is a class derived from `Object`, or an interface, the result of
     $(LREF TransitiveBaseTypeTuple) is returned.
 
     If the type is not a built-in value type or a class derived from
-    `Object`, an empty $(REF AliasSeq,std,meta) is returned.
+    `Object`, or interface, an empty $(REF AliasSeq,std,meta) is returned.
 
 See_Also:
     $(LREF isImplicitlyConvertible)
@@ -5226,7 +5226,7 @@ template ImplicitConversionTargets(T)
             AliasSeq!(int, uint, long, ulong, CentTypeList, float, double, real);
     else static if (is(T : typeof(null)))
         alias ImplicitConversionTargets = AliasSeq!(typeof(null));
-    else static if (is(T == class))
+    else static if (is(T == class) || is(T == interface))
         alias ImplicitConversionTargets = staticMap!(ApplyLeft!(CopyConstness, T), TransitiveBaseTypeTuple!(T));
     else static if (isDynamicArray!T && !is(typeof(T.init[0]) == const))
     {
@@ -5274,6 +5274,14 @@ deprecated @safe unittest
     static assert(is(ImplicitConversionTargets!(immutable C) == AliasSeq!(
         immutable Object, immutable A, immutable B
     )));
+}
+
+@safe unittest
+{
+    interface A {}
+    interface B : A {}
+
+    static assert(is(ImplicitConversionTargets!(B) == AliasSeq!(A)));
 }
 
 deprecated @safe unittest
