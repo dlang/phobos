@@ -1608,7 +1608,10 @@ static:
     {
         stderr.writefln("Overflow on binary operator: %s(%s) %s %s(%s)",
             Lhs.stringof, lhs, x, Rhs.stringof, rhs);
-        return mixin("lhs" ~ x ~ "rhs");
+        static if (x == "/")               // Issue 20743: mixin below would cause SIGFPE on POSIX
+            return typeof(lhs / rhs).min;  // or EXCEPTION_INT_OVERFLOW on Windows
+        else
+            return mixin("lhs" ~ x ~ "rhs");
     }
 }
 
@@ -1620,6 +1623,23 @@ static:
     //x += long(int.max);
     auto y = checked!Warn(cast(const int) 42);
     short y1 = cast(const byte) y;
+}
+
+@system unittest
+{
+    auto a = checked!Warn(int.min);
+    auto b = checked!Warn(-1);
+    assert(a / b == a * b);
+}
+
+@system unittest
+{
+    import std.exception : assertThrown;
+    import core.exception : AssertError;
+
+    auto a = checked!Abort(int.min);
+    auto b = checked!Abort(-1);
+    assertThrown!AssertError(a / b);
 }
 
 // ProperCompare
