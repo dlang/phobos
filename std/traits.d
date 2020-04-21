@@ -4560,6 +4560,8 @@ template TransitiveBaseTypeTuple(T)
 {
     static if (is(T == Object))
         alias TransitiveBaseTypeTuple = AliasSeq!();
+    else static if (is(T == interface))
+        alias TransitiveBaseTypeTuple = InterfacesTuple!T;
     else
         alias TransitiveBaseTypeTuple =
             AliasSeq!(BaseClassesTuple!T, InterfacesTuple!T);
@@ -4582,6 +4584,14 @@ template TransitiveBaseTypeTuple(T)
     assert(is (TL[4] == J2));
 
     assert(TransitiveBaseTypeTuple!Object.length == 0);
+}
+
+@safe unittest
+{
+    interface A {}
+    interface B : A {}
+
+    static assert(is(TransitiveBaseTypeTuple!(B) == AliasSeq!(A)));
 }
 
 
