@@ -167,7 +167,7 @@
  */
 module std.traits;
 
-import std.meta : AliasSeq, allSatisfy, anySatisfy;
+import std.meta : AliasSeq, allSatisfy, anySatisfy, ApplyLeft;
 import std.functional : unaryFun;
 
 // Legacy inheritance from std.typetuple
@@ -5048,7 +5048,7 @@ template ImplicitConversionTargets(T)
     else static if (is(T : typeof(null)))
         alias ImplicitConversionTargets = AliasSeq!(typeof(null));
     else static if (is(T == class))
-        alias ImplicitConversionTargets = TransitiveBaseTypeTuple!(T);
+        alias ImplicitConversionTargets = staticMap!(ApplyLeft!(CopyConstness, T), TransitiveBaseTypeTuple!(T));
     else static if (isDynamicArray!T && !is(typeof(T.init[0]) == const))
     {
        static if (is(typeof(T.init[0]) == shared))
@@ -5092,6 +5092,10 @@ template ImplicitConversionTargets(T)
     class C : A, B {}
 
     static assert(is(ImplicitConversionTargets!(C) == AliasSeq!(Object, A, B)));
+    static assert(is(ImplicitConversionTargets!(const C) == AliasSeq!(const Object, const A, const B)));
+    static assert(is(ImplicitConversionTargets!(immutable C) == AliasSeq!(
+        immutable Object, immutable A, immutable B
+    )));
 }
 
 @safe unittest
@@ -7678,9 +7682,9 @@ template CopyTypeQualifiers(FromType, ToType)
 }
 
 /**
-Returns the type of `Target` with the "constness" of `Source`. A type's $(B constness)
-refers to whether it is `const`, `immutable`, or `inout`. If `source` has no constness, the
-returned type will be the same as `Target`.
+Returns the type of `ToType` with the "constness" of `FromType`. A type's $(B constness)
+refers to whether it is `const`, `immutable`, or `inout`. If `FromType` has no constness, the
+returned type will be the same as `ToType`.
 */
 template CopyConstness(FromType, ToType)
 {
