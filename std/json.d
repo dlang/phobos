@@ -459,7 +459,8 @@ struct JSONValue
             string t = arg;
             () @trusted { store.str = t; }();
         }
-        else static if (isSomeString!T) // issue 15884
+        // https://issues.dlang.org/show_bug.cgi?id=15884
+        else static if (isSomeString!T)
         {
             type_tag = JSONType.string;
             // FIXME: std.Array.Array(Range) is not deduced as 'pure'
@@ -1205,8 +1206,7 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
                     break;
                 }
 
-                value.type_tag = JSONType.string;
-                value.store.str = str;
+                value.assign(str);
                 break;
 
             case '0': .. case '9':
@@ -1378,7 +1378,8 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
     assert(json["key1"]["key2"].integer == 1);
 }
 
-@safe unittest // issue 20527
+// https://issues.dlang.org/show_bug.cgi?id=20527
+@safe unittest
 {
     static assert(parseJSON(`{"a" : 2}`)["a"].integer == 2);
 }
@@ -1553,7 +1554,7 @@ if (isOutputRange!(Out,char))
                     }
 
                     import std.algorithm.sorting : sort;
-                    // @@@BUG@@@ 14439
+                    // https://issues.dlang.org/show_bug.cgi?id=14439
                     // auto names = obj.keys;  // aa.keys can't be called in @safe code
                     auto names = new string[obj.length];
                     size_t i = 0;
@@ -1664,7 +1665,8 @@ if (isOutputRange!(Out,char))
     toValue(root, 0);
 }
 
-@safe unittest // bugzilla 12897
+ // https://issues.dlang.org/show_bug.cgi?id=12897
+@safe unittest
 {
     JSONValue jv0 = JSONValue("test测试");
     assert(toJSON(jv0, false, JSONOptions.escapeNonAsciiChars) == `"test\u6D4B\u8BD5"`);
@@ -1678,7 +1680,8 @@ if (isOutputRange!(Out,char))
     assert(toJSON(jv1, false, JSONOptions.none) == `"été"`);
 }
 
-@system unittest // bugzilla 20511
+// https://issues.dlang.org/show_bug.cgi?id=20511
+@system unittest
 {
     import std.format : formattedWrite;
     import std.range : nullSink, outputRangeObject;
@@ -1784,10 +1787,9 @@ class JSONException : Exception
     assert(jv3.str == "\u001C");
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=11504
 @system unittest
 {
-    // Bugzilla 11504
-
     JSONValue jv = 1;
     assert(jv.type == JSONType.integer);
 
@@ -1959,7 +1961,7 @@ class JSONException : Exception
 
 @system pure unittest
 {
-    // Bugzilla 12969
+    // https://issues.dlang.org/show_bug.cgi?id=12969
 
     JSONValue jv;
     jv["int"] = 123;
@@ -2059,7 +2061,8 @@ pure nothrow @safe @nogc unittest
     assert(testVal.isNull);
 }
 
-pure nothrow @safe unittest // issue 15884
+// https://issues.dlang.org/show_bug.cgi?id=15884
+pure nothrow @safe unittest
 {
     import std.typecons;
     void Test(C)() {
@@ -2074,7 +2077,8 @@ pure nothrow @safe unittest // issue 15884
     Test!dchar();
 }
 
-@safe unittest // issue 15885
+// https://issues.dlang.org/show_bug.cgi?id=15885
+@safe unittest
 {
     enum bool realInDoublePrecision = real.mant_dig == double.mant_dig;
 
@@ -2108,34 +2112,39 @@ pure nothrow @safe unittest // issue 15884
     assert(test(3*minSub));
 }
 
-@safe unittest // issue 17555
+// https://issues.dlang.org/show_bug.cgi?id=17555
+@safe unittest
 {
     import std.exception : assertThrown;
 
     assertThrown!JSONException(parseJSON("\"a\nb\""));
 }
 
-@safe unittest // issue 17556
+// https://issues.dlang.org/show_bug.cgi?id=17556
+@safe unittest
 {
     auto v = JSONValue("\U0001D11E");
     auto j = toJSON(v, false, JSONOptions.escapeNonAsciiChars);
     assert(j == `"\uD834\uDD1E"`);
 }
 
-@safe unittest // issue 5904
+// https://issues.dlang.org/show_bug.cgi?id=5904
+@safe unittest
 {
     string s = `"\uD834\uDD1E"`;
     auto j = parseJSON(s);
     assert(j.str == "\U0001D11E");
 }
 
-@safe unittest // issue 17557
+// https://issues.dlang.org/show_bug.cgi?id=17557
+@safe unittest
 {
     assert(parseJSON("\"\xFF\"").str == "\xFF");
     assert(parseJSON("\"\U0001D11E\"").str == "\U0001D11E");
 }
 
-@safe unittest // issue 17553
+// https://issues.dlang.org/show_bug.cgi?id=17553
+@safe unittest
 {
     auto v = JSONValue("\xFF");
     assert(toJSON(v) == "\"\xFF\"");
@@ -2148,7 +2157,8 @@ pure nothrow @safe unittest // issue 15884
     assert(parseJSON("\"\U0001D11E\"".byChar).str == "\U0001D11E");
 }
 
-@safe unittest // JSONOptions.doNotEscapeSlashes (issue 17587)
+// JSONOptions.doNotEscapeSlashes (https://issues.dlang.org/show_bug.cgi?id=17587)
+@safe unittest
 {
     assert(parseJSON(`"/"`).toString == `"\/"`);
     assert(parseJSON(`"\/"`).toString == `"\/"`);
@@ -2156,7 +2166,8 @@ pure nothrow @safe unittest // issue 15884
     assert(parseJSON(`"\/"`).toString(JSONOptions.doNotEscapeSlashes) == `"/"`);
 }
 
-@safe unittest // JSONOptions.strictParsing (issue 16639)
+// JSONOptions.strictParsing (https://issues.dlang.org/show_bug.cgi?id=16639)
+@safe unittest
 {
     import std.exception : assertThrown;
 
@@ -2253,7 +2264,7 @@ pure nothrow @safe unittest // issue 15884
     assertThrown(parseJSON(s, -1, JSONOptions.strictParsing));
 }
 
-// Issue20330
+// https://issues.dlang.org/show_bug.cgi?id=20330
 @safe unittest
 {
     import std.array : appender;
@@ -2267,7 +2278,7 @@ pure nothrow @safe unittest // issue 15884
     assert(app.data == s, app.data);
 }
 
-// Issue20330
+// https://issues.dlang.org/show_bug.cgi?id=20330
 @safe unittest
 {
     import std.array : appender;

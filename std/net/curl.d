@@ -30,6 +30,8 @@ Windows x86 note:
 A DMD compatible libcurl static library can be downloaded from the dlang.org
 $(LINK2 http://downloads.dlang.org/other/index.html, download archive page).
 
+This module is not available for iOS, tvOS or watchOS.
+
 Compared to using libcurl directly this module allows simpler client code for
 common uses, requires no unsafe operations, and integrates better with the rest
 of the language. Futhermore it provides $(MREF_ALTTEXT range, std,range)
@@ -164,6 +166,16 @@ import std.encoding : EncodingScheme;
 import std.traits : isSomeChar;
 import std.typecons : Flag, Yes, No, Tuple;
 
+version (iOS)
+    version = iOSDerived;
+else version (TVOS)
+    version = iOSDerived;
+else version (WatchOS)
+    version = iOSDerived;
+
+version (iOSDerived) {}
+else:
+
 version (StdUnittest)
 {
     import std.socket : Socket, SocketShutdown;
@@ -203,7 +215,8 @@ version (StdUnittest)
             }
             catch (Throwable e)
             {
-                stderr.writeln(e);  // Bugzilla 7018
+                // https://issues.dlang.org/show_bug.cgi?id=7018
+                stderr.writeln(e);
             }
         }
     }
@@ -1102,7 +1115,8 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     assert(e.status == 404);
 }
 
-// Bugzilla 14760 - content length must be reset after post
+// Content length must be reset after post
+// https://issues.dlang.org/show_bug.cgi?id=14760
 @system unittest
 {
     import std.algorithm.searching : canFind;
@@ -2085,7 +2099,7 @@ private mixin template Protocol()
         http.setAuthentication("user", "pass");
         http.perform();
 
-        // Bugzilla 17540
+        // https://issues.dlang.org/show_bug.cgi?id=17540
         http.setNoProxy("www.example.com");
     }
 
@@ -3287,7 +3301,7 @@ struct HTTP
         http.perform();
         assert(http.p.charset == "foo");
 
-        // Bugzilla 16736
+        // https://issues.dlang.org/show_bug.cgi?id=16736
         double val;
         CurlCode code;
 
@@ -4887,7 +4901,7 @@ private struct Pool(Data)
 private struct _async()
 {
 static:
-    // @@@@BUG 15831@@@@
+    // https://issues.dlang.org/show_bug.cgi?id=15831
     // this should be inside byLineAsync
     // Range that reads one chunk at a time asynchronously.
     private struct ChunkInputRange
@@ -4916,7 +4930,7 @@ static:
         }
     }
 
-    // @@@@BUG 15831@@@@
+    // https://issues.dlang.org/show_bug.cgi?id=15831
     // this should be inside byLineAsync
     // Range that reads one line at a time asynchronously.
     private static struct LineInputRange(Char)

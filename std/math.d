@@ -243,8 +243,8 @@ version (StdUnittest) private
             alias real_t = real;
 
         () @trusted {
-            ix = sprintf(bufx.ptr, "%.*Lg", ndigits, cast(real_t) x);
-            iy = sprintf(bufy.ptr, "%.*Lg", ndigits, cast(real_t) y);
+            ix = sprintf(bufx.ptr, is(real_t == real) ? "%.*Lg" : "%.*g", ndigits, cast(real_t) x);
+            iy = sprintf(bufy.ptr, is(real_t == real) ? "%.*Lg" : "%.*g", ndigits, cast(real_t) y);
         } ();
 
         assert(ix < bufx.length && ix > 0);
@@ -293,7 +293,7 @@ template floatTraits(T)
     // EXPPOS_SHORT is the index of the exponent when represented as a ushort array.
     // SIGNPOS_BYTE is the index of the sign when represented as a ubyte array.
     // RECIP_EPSILON is the value such that (smallest_subnormal) * RECIP_EPSILON == T.min_normal
-    enum T RECIP_EPSILON = (1/T.epsilon);
+    enum Unqual!T RECIP_EPSILON = (1/T.epsilon);
     static if (T.mant_dig == 24)
     {
         // Single precision float
@@ -661,7 +661,8 @@ deprecated
     }}
 }
 
-// see issue #20205, to avoid falling into the trap again
+// see https://issues.dlang.org/show_bug.cgi?id=20205
+// to avoid falling into the trap again
 @safe pure nothrow @nogc unittest
 {
     assert(50 - abs(-100) == -50);
@@ -727,8 +728,8 @@ auto conj(Num)(Num z) @safe pure nothrow @nogc
 if (is(Num* : const(cfloat*)) || is(Num* : const(cdouble*))
     || is(Num* : const(creal*)))
 {
-    //FIXME
-    //Issue 14206
+    // FIXME
+    // https://issues.dlang.org/show_bug.cgi?id=14206
     static if (is(Num* : const(cdouble*)))
         return cast(cdouble) conj(cast(creal) z);
     else
@@ -751,7 +752,8 @@ deprecated
     ireal z = -3.2Li;
     assert(conj(z) == -z);
 }
-//Issue 14206
+
+// https://issues.dlang.org/show_bug.cgi?id=14206
 deprecated
 @safe pure nothrow @nogc unittest
 {
@@ -760,7 +762,8 @@ deprecated
     idouble z = -3.2i;
     assert(conj(z) == -z);
 }
-//Issue 14206
+
+// https://issues.dlang.org/show_bug.cgi?id=14206
 deprecated
 @safe pure nothrow @nogc unittest
 {
@@ -3583,7 +3586,7 @@ if (isFloatingPoint!T)
              tuple(T.nan, T.nan, int.min),
              tuple(-T.nan, -T.nan, int.min),
 
-             // Phobos issue #16026:
+             // https://issues.dlang.org/show_bug.cgi?id=16026:
              tuple(3 * (T.min_normal * T.epsilon), T( .75), (T.min_exp - T.mant_dig) + 2)
              ];
 
@@ -3644,7 +3647,7 @@ if (isFloatingPoint!T)
              tuple(T.nan, T.nan, int.min),
              tuple(-T.nan, -T.nan, int.min),
 
-             // Phobos issue #16026:
+             // https://issues.dlang.org/show_bug.cgi?id=16026:
              tuple(3 * (T.min_normal * T.epsilon), T( .75), (T.min_exp - T.mant_dig) + 2)
              ];
 
@@ -4010,7 +4013,8 @@ float ldexp(float n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real)
     else static assert(false, "Floating point type real not supported");
 }
 
-/* workaround Issue 14718, float parsing depends on platform strtold
+/* workaround https://issues.dlang.org/show_bug.cgi?id=14718
+   float parsing depends on platform strtold
 @safe pure nothrow @nogc unittest
 {
     assert(ldexp(1.0, -1024) == 0x1p-1024);
@@ -5736,6 +5740,17 @@ private:
         {
             assert(false, "Not yet supported.");
         }
+        else version (RISCV_Any)
+        {
+            mixin(`
+            uint result = void;
+            asm pure nothrow @nogc
+            {
+                "frflags %0" : "=r" (result);
+            }
+            return result;
+            `);
+        }
         else
             assert(0, "Not yet supported");
     }
@@ -5757,6 +5772,16 @@ private:
                 mxcsr &= ~EXCEPTIONS_MASK;
                 asm nothrow @nogc { ldmxcsr mxcsr; }
             }
+        }
+        else version (RISCV_Any)
+        {
+            mixin(`
+            uint newValues = 0x0;
+            asm pure nothrow @nogc
+            {
+                "fsflags %0" : : "r" (newValues);
+            }
+            `);
         }
         else
         {
@@ -6098,6 +6123,21 @@ nothrow @nogc:
                                  | inexactException,
         }
     }
+    else version (RISCV_Any)
+    {
+        enum : ExceptionMask
+        {
+            inexactException      = 0x01,
+            divByZeroException    = 0x02,
+            underflowException    = 0x04,
+            overflowException     = 0x08,
+            invalidException      = 0x10,
+            severeExceptions   = overflowException | divByZeroException
+                                 | invalidException,
+            allExceptions      = severeExceptions | underflowException
+                                 | inexactException,
+        }
+    }
     else version (HPPA)
     {
         enum : ExceptionMask
@@ -6285,6 +6325,10 @@ private:
     {
         alias ControlState = uint;
     }
+    else version (RISCV_Any)
+    {
+        alias ControlState = uint;
+    }
     else version (MIPS_Any)
     {
         alias ControlState = uint;
@@ -6350,6 +6394,17 @@ private:
             }
             return cont;
         }
+        else version (RISCV_Any)
+        {
+            mixin(`
+            ControlState cont;
+            asm pure nothrow @nogc
+            {
+                "frcsr %0" : "=r" (cont);
+            }
+            return cont;
+            `);
+        }
         else
             assert(0, "Not yet supported");
     }
@@ -6383,6 +6438,15 @@ private:
 
                 asm nothrow @nogc { ldmxcsr mxcsr; }
             }
+        }
+        else version (RISCV_Any)
+        {
+            mixin(`
+            asm pure nothrow @nogc
+            {
+                "fscsr %0" : : "r" (newState);
+            }
+            `);
         }
         else
             assert(0, "Not yet supported");
@@ -6915,6 +6979,17 @@ if (isFloatingPoint!(X))
     assert(isInfinity(-e));
     e = (-1.0L / 0.0L);
     assert(isInfinity(e));
+}
+
+@nogc @safe pure nothrow unittest
+{
+    import std.meta : AliasSeq;
+    static bool foo(T)(inout T x) { return isInfinity(x); }
+    foreach (T; AliasSeq!(float, double, real))
+    {
+        assert(!foo(T(3.14f)));
+        assert(foo(T.infinity));
+    }
 }
 
 /*********************************
@@ -8041,7 +8116,7 @@ if (isIntegral!(F) && isIntegral!(G))
     assert(pow(three, four) == 81);
 }
 
-// issue 7006
+// https://issues.dlang.org/show_bug.cgi?id=7006
 @safe pure nothrow @nogc unittest
 {
     assert(pow(5, -1) == 0);
@@ -8386,7 +8461,7 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
     assert(isIdentical(pow(0.0, 6.0), 0.0));
     assert(isIdentical(pow(-0.0, 6.0), 0.0));
 
-    // Issue #14786 fixed
+    // https://issues.dlang.org/show_bug.cgi?id=14786 fixed
     immutable real maxOdd = pow(2.0L, real.mant_dig) - 1.0L;
     assert(pow(-1.0L,  maxOdd) == -1.0L);
     assert(pow(-1.0L, -maxOdd) == -1.0L);
@@ -9229,7 +9304,7 @@ bool approxEqual(T, U, V)(T value, U reference, V maxRelDiff = 1e-2, V maxAbsDif
 {
     // relative comparison depends on reference, make sure proper
     // side is used when comparing range to single value. Based on
-    // bugzilla issue 15763
+    // https://issues.dlang.org/show_bug.cgi?id=15763
     auto a = [2e-3 - 1e-5];
     auto b = 2e-3 + 1e-5;
     assert(a[0].approxEqual(b));
@@ -9621,9 +9696,10 @@ private template FloatingPointBaseType(T)
     }
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=6381
+// floor/ceil should be usable in pure function.
 @safe pure nothrow unittest
 {
-    // issue 6381: floor/ceil should be usable in pure function.
     auto x = floor(1.2);
     auto y = ceil(1.2);
 }
@@ -10021,7 +10097,8 @@ if (isFloatingPoint!T)
     }}
 }
 
-@safe @nogc pure nothrow unittest // Issue 15973
+// https://issues.dlang.org/show_bug.cgi?id=15973
+@safe @nogc pure nothrow unittest
 {
     assert(nextPow2(uint.max / 2) == uint.max / 2 + 1);
     assert(nextPow2(uint.max / 2 + 2) == 0);

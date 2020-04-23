@@ -91,7 +91,8 @@ class UTFException : UnicodeException
         return this;
     }
 
-    // FIXME: Use std.exception.basicExceptionCtors here once bug #11500 is fixed
+    // FIXME: Use std.exception.basicExceptionCtors here once
+    // https://issues.dlang.org/show_bug.cgi?id=11500 is fixed
 
     /**
     Standard exception constructors.
@@ -1215,9 +1216,11 @@ do
     }
     else
     {
-        //@@@BUG@@@ 14447 forces canIndex to be done outside of decodeImpl, which
-        //is undesirable, since not all overloads of decodeImpl need it. So, it
-        //should be moved back into decodeImpl once bug# 8521 has been fixed.
+        // https://issues.dlang.org/show_bug.cgi?id=14447 forces canIndex to be
+        // done outside of decodeImpl, which is undesirable, since not all
+        // overloads of decodeImpl need it. So, it should be moved back into
+        // decodeImpl once https://issues.dlang.org/show_bug.cgi?id=8521
+        // has been fixed.
         enum canIndex = isRandomAccessRange!S && hasSlicing!S && hasLength!S;
         immutable retval = decodeImpl!(canIndex, useReplacementDchar)(cast(TypeForDecode!S) str, numCodeUnits);
 
@@ -1472,7 +1475,8 @@ if (
     else
         alias pstr = str;
 
-    //@@@BUG@@@ 14447 forces this to be done outside of decodeImpl
+    // https://issues.dlang.org/show_bug.cgi?id=14447 forces this to be done
+    // outside of decodeImpl
     //enum canIndex = is(S : const char[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S);
 
     static if (canIndex)
@@ -1688,7 +1692,8 @@ if (is(S : const wchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S
     else
         alias pstr = str;
 
-    //@@@BUG@@@ 14447 forces this to be done outside of decodeImpl
+    // https://issues.dlang.org/show_bug.cgi?id=14447 forces this to be done
+    // outside of decodeImpl
     //enum canIndex = is(S : const wchar[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S);
 
     static if (canIndex)
@@ -2900,7 +2905,8 @@ if (isSomeString!S)
     assertThrown!UTFException(validate(a));
 }
 
-@safe unittest // bugzilla 12923
+// https://issues.dlang.org/show_bug.cgi?id=12923
+@safe unittest
 {
     import std.exception;
     assertThrown((){

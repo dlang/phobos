@@ -512,7 +512,7 @@ void put(R, E)(ref R r, E e)
 private void putChar(R, E)(ref R r, E e)
 if (isSomeChar!E)
 {
-    ////@@@9186@@@: Can't use (E[]).init
+    // https://issues.dlang.org/show_bug.cgi?id=9186: Can't use (E[]).init
     ref const( char)[] cstringInit();
     ref const(wchar)[] wstringInit();
     ref const(dchar)[] dstringInit();
@@ -802,18 +802,18 @@ pure @safe unittest
     put(c, "hello"d);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=9823
 @system unittest
 {
-    // issue 9823
     const(char)[] r;
     void delegate(const(char)[]) dg = (s) { r = s; };
     put(dg, ["ABC"]);
     assert(r == "ABC");
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=10571
 @safe unittest
 {
-    // issue 10571
     import std.format;
     string buf;
     formattedWrite((scope const(char)[] s) { buf ~= s; }, "%s", "hello");
@@ -1319,7 +1319,8 @@ template ElementType(R)
     static assert(is(ElementType!(char[0]) == dchar));
 }
 
-@safe unittest //11336
+// https://issues.dlang.org/show_bug.cgi?id=11336
+@safe unittest
 {
     static struct S
     {
@@ -1328,7 +1329,8 @@ template ElementType(R)
     static assert(is(ElementType!(S[]) == S));
 }
 
-@safe unittest // 11401
+// https://issues.dlang.org/show_bug.cgi?id=11401
+@safe unittest
 {
     // ElementType should also work for non-@propety 'front'
     struct E { ushort id; }
@@ -1577,12 +1579,12 @@ template hasLength(R)
     struct A { ulong length; }
     struct B { @property uint length() { return 0; } }
 
-    version (X86)
+    static if (is(size_t == uint))
     {
         static assert(!hasLength!(A));
         static assert(hasLength!(B));
     }
-    else version (X86_64)
+    else static if (is(size_t == ulong))
     {
         static assert(hasLength!(A));
         static assert(!hasLength!(B));
@@ -2323,7 +2325,8 @@ if (isAutodecodableString!(C[]) && !isAggregateType!(C[]))
     static assert(checkCTFEW.empty);
 }
 
-@safe unittest // issue 16090
+// https://issues.dlang.org/show_bug.cgi?id=16090
+@safe unittest
 {
     string s = "\u00E4";
     assert(s.length == 2);

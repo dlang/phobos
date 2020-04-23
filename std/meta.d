@@ -517,10 +517,10 @@ template NoDuplicates(TList...)
 {
     import std.range : iota;
 
-    // Bugzilla 14561: huge enums
+    // https://issues.dlang.org/show_bug.cgi?id=14561: huge enums
     alias LongList = Repeat!(1500, int);
     static assert(NoDuplicates!LongList.length == 1);
-    // Bugzilla 17995: huge enums, revisited
+    // https://issues.dlang.org/show_bug.cgi?id=17995: huge enums, revisited
 
     alias a = NoDuplicates!(AliasSeq!(1, Repeat!(1000, 3)));
     alias b = NoDuplicates!(AliasSeq!(1, Repeat!(10, 3)));

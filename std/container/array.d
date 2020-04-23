@@ -80,7 +80,7 @@ pure @system unittest
 
 private struct RangeT(A)
 {
-    /* Workaround for Issue 13629 at https://issues.dlang.org/show_bug.cgi?id=13629
+    /* Workaround for https://issues.dlang.org/show_bug.cgi?id=13629
        See also: http://forum.dlang.org/post/vbmwhzvawhnkoxrhbnyb@forum.dlang.org
     */
     private A[1] _outer_;
@@ -1280,7 +1280,8 @@ if (!is(Unqual!T == bool))
     assert(a.length == 7);
     assert(equal(a[1 .. 4], [1, 2, 3]));
 }
-// Test issue 5920
+
+// https://issues.dlang.org/show_bug.cgi?id=5920
 @system unittest
 {
     struct structBug5920
@@ -1319,7 +1320,9 @@ if (!is(Unqual!T == bool))
     }
     assert(dMask == 0b1111_1111);   // make sure the d'tor is called once only.
 }
-// Test issue 5792 (mainly just to check if this piece of code is compilable)
+
+// Test for https://issues.dlang.org/show_bug.cgi?id=5792
+// (mainly just to check if this piece of code is compilable)
 @system unittest
 {
     auto a = Array!(int[])([[1,2],[3,4]]);
@@ -1478,7 +1481,8 @@ if (!is(Unqual!T == bool))
     arr ~= s;
 }
 
-@safe unittest //11459
+// https://issues.dlang.org/show_bug.cgi?id=11459
+@safe unittest
 {
     static struct S
     {
@@ -1489,18 +1493,21 @@ if (!is(Unqual!T == bool))
     alias B = Array!(shared bool);
 }
 
-@system unittest //11884
+// https://issues.dlang.org/show_bug.cgi?id=11884
+@system unittest
 {
     import std.algorithm.iteration : filter;
     auto a = Array!int([1, 2, 2].filter!"true"());
 }
 
-@safe unittest //8282
+// https://issues.dlang.org/show_bug.cgi?id=8282
+@safe unittest
 {
     auto arr = new Array!int;
 }
 
-@system unittest //6998
+// https://issues.dlang.org/show_bug.cgi?id=6998
+@system unittest
 {
     static int i = 0;
     class C
@@ -1525,7 +1532,9 @@ if (!is(Unqual!T == bool))
     //Just to make sure the GC doesn't collect before the above test.
     assert(c.dummy == 1);
 }
-@system unittest //6998-2
+
+//https://issues.dlang.org/show_bug.cgi?id=6998 (2)
+@system unittest
 {
     static class C {int i;}
     auto c = new C;
@@ -1583,6 +1592,26 @@ if (!is(Unqual!T == bool))
 
     static immutable arr = [1, 2, 3];
     ai.insertBack(arr);
+}
+
+/**
+ * typeof may give wrong result in case of classes defining `opCall` operator
+ * https://issues.dlang.org/show_bug.cgi?id=20589
+ *
+ * destructor std.container.array.Array!(MyClass).Array.~this is @system
+ * so the unittest is @system too
+ */
+@system unittest
+{
+    class MyClass
+    {
+        T opCall(T)(T p)
+        {
+            return p;
+        }
+    }
+
+    Array!MyClass arr;
 }
 
 
@@ -2228,7 +2257,7 @@ if (is(Unqual!T == bool))
     slice.front = true;
     slice.back = true;
     slice[1] = true;
-    slice = slice[0 .. $]; // bug 19171
+    slice = slice[0 .. $]; // https://issues.dlang.org/show_bug.cgi?id=19171
     assert(slice.front == true);
     assert(slice.back == true);
     assert(slice[1] == true);
@@ -2237,7 +2266,8 @@ if (is(Unqual!T == bool))
     assert(slice.moveAt(1) == true);
 }
 
-// issue 16331 - uncomparable values are valid values for an array
+// uncomparable values are valid values for an array
+// https://issues.dlang.org/show_bug.cgi?id=16331
 @system unittest
 {
     double[] values = [double.nan, double.nan];
@@ -2498,7 +2528,8 @@ if (is(Unqual!T == bool))
     assert(arr[1] == [4, 5, 6]);
 }
 
-// Issue 13642 - Change of length reallocates without calling GC.
+// Change of length reallocates without calling GC.
+// https://issues.dlang.org/show_bug.cgi?id=13642
 @system unittest
 {
     import core.memory;

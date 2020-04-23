@@ -1,0 +1,14 @@
+Add `Date.isoWeekYear` and `Date.fromISOWeek` in `std.datetime.date`
+
+It is now possible to convert from the ISO 8601 week calendar into the
+Gregorian calendar which is used by Date and DateTime.
+
+Dates are constructed from the year in the ISO week calendar, the week number
+and a day of week. `Date.fromISOWeek(2020, 11, DayOfWeek.mon)` will result in
+`Date(2020, 3, 9)`.
+
+As the year in the Gregorian calendar and the year in the ISO week calendar are
+not always the same there is a new `.isoWeekYear` property to get the year of
+the `Date` object in the ISO week calendar. If you convert between them often,
+consider using `.isoWeekAndYear` to compute both week number and year in one
+step.

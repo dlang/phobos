@@ -12,7 +12,7 @@ import std.experimental.allocator.common;
  */
 struct Mallocator
 {
-    @system unittest { testAllocator!(() => Mallocator.instance); }
+    version (StdUnittest) @system unittest { testAllocator!(() => Mallocator.instance); }
 
     /**
     The alignment is a static constant equal to `platformAlignment`, which
@@ -210,7 +210,7 @@ version (Windows)
  */
 struct AlignedMallocator
 {
-    @system unittest { testAllocator!(() => typeof(this).instance); }
+    version (StdUnittest) @system unittest { testAllocator!(() => typeof(this).instance); }
 
     /**
     The default alignment is `platformAlignment`.
@@ -374,7 +374,8 @@ version (LDC_AddressSanitizer)
 version (Posix)
 @nogc @system nothrow unittest
 {
-    // 16398 : test the "pseudo" alignedReallocate for Posix
+    // https://issues.dlang.org/show_bug.cgi?id=16398
+    // test the "pseudo" alignedReallocate for Posix
     void[] s = AlignedMallocator.instance.alignedAllocate(16, 32);
     (cast(ubyte[]) s)[] = ubyte(1);
     AlignedMallocator.instance.alignedReallocate(s, 32, 32);

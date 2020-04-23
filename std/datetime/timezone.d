@@ -33,6 +33,15 @@ import std.datetime.systime : Clock, stdTimeToUnixTime, SysTime;
 import std.range.primitives : back, empty, front, isOutputRange, popFront;
 import std.traits : isIntegral, isSomeString, Unqual;
 
+version (OSX)
+    version = Darwin;
+else version (iOS)
+    version = Darwin;
+else version (TVOS)
+    version = Darwin;
+else version (WatchOS)
+    version = Darwin;
+
 version (Windows)
 {
     import core.stdc.time : time_t;
@@ -326,7 +335,7 @@ public:
             else version (NetBSD)        enum utcZone = "UTC";
             else version (DragonFlyBSD)  enum utcZone = "UTC";
             else version (linux)         enum utcZone = "UTC";
-            else version (OSX)           enum utcZone = "UTC";
+            else version (Darwin)        enum utcZone = "UTC";
             else version (Solaris)       enum utcZone = "UTC";
             else static assert(0, "The location of the UTC timezone file on this Posix platform must be set.");
 
@@ -441,7 +450,7 @@ public:
             bool first = true;
             auto springSwitch = SysTime(dstSwitches[i][0] + dur!"hours"(spring), UTC()) - stdOffset;
             auto fallSwitch = SysTime(dstSwitches[i][1] + dur!"hours"(fall), UTC()) - dstOffset;
-            // @@@BUG@@@ 3659 makes this necessary.
+            // https://issues.dlang.org/show_bug.cgi?id=3659 makes this necessary.
             auto fallSwitchMinus1 = fallSwitch - dur!"hours"(1);
 
             foreach (hour; -24 .. 25)
@@ -587,7 +596,7 @@ public:
             GetTimeZoneInformation(&tzInfo);
 
             // Cannot use to!string() like this should, probably due to bug
-            // http://d.puremagic.com/issues/show_bug.cgi?id=5016
+            // https://issues.dlang.org/show_bug.cgi?id=5016
             //return to!string(tzInfo.StandardName);
 
             wchar[32] str;
@@ -672,7 +681,7 @@ public:
             GetTimeZoneInformation(&tzInfo);
 
             // Cannot use to!string() like this should, probably due to bug
-            // http://d.puremagic.com/issues/show_bug.cgi?id=5016
+            // https://issues.dlang.org/show_bug.cgi?id=5016
             //return to!string(tzInfo.DaylightName);
 
             wchar[32] str;
@@ -1030,7 +1039,7 @@ public:
                 bool first = true;
                 auto springSwitch = SysTime(tzInfos[i][1] + dur!"hours"(spring), UTC()) - stdOffset;
                 auto fallSwitch = SysTime(tzInfos[i][2] + dur!"hours"(fall), UTC()) - dstOffset;
-                // @@@BUG@@@ 3659 makes this necessary.
+                // https://issues.dlang.org/show_bug.cgi?id=3659 makes this necessary.
                 auto fallSwitchMinus1 = fallSwitch - dur!"hours"(1);
 
                 foreach (hour; -24 .. 25)

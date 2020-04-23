@@ -8,6 +8,15 @@ import std.experimental.allocator.building_blocks.null_allocator;
 import std.experimental.allocator.common;
 import std.typecons : Flag, Yes, No;
 
+version (OSX)
+    version = Darwin;
+else version (iOS)
+    version = Darwin;
+else version (TVOS)
+    version = Darwin;
+else version (WatchOS)
+    version = Darwin;
+
 /**
 A `Region` allocator allocates memory straight from one contiguous chunk.
 There is no deallocation, and once the region is full, allocation requests
@@ -456,6 +465,7 @@ struct Region(ParentAllocator = NullAllocator,
     Mallocator.instance.deallocate(tmp);
 }
 
+version (StdUnittest)
 @system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
@@ -513,6 +523,8 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     else version (HPPA) enum growDownwards = No.growDownwards;
     else version (PPC) enum growDownwards = Yes.growDownwards;
     else version (PPC64) enum growDownwards = Yes.growDownwards;
+    else version (RISCV32) enum growDownwards = Yes.growDownwards;
+    else version (RISCV64) enum growDownwards = Yes.growDownwards;
     else version (MIPS32) enum growDownwards = Yes.growDownwards;
     else version (MIPS64) enum growDownwards = Yes.growDownwards;
     else version (RISCV32) enum growDownwards = Yes.growDownwards;
@@ -964,7 +976,7 @@ version (Posix) @system nothrow @nogc unittest
     assert((() nothrow @safe @nogc => alloc.owns(a))() == Ternary.yes);
     assert((() nothrow @safe @nogc => alloc.owns(b))() == Ternary.yes);
     // reducing the brk does not work on OSX
-    version (OSX) {} else
+    version (Darwin) {} else
     {
         assert((() nothrow @nogc => alloc.deallocate(b))());
         // Check that expand and deallocate work well

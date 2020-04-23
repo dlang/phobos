@@ -606,7 +606,7 @@ interface Digest
         @trusted nothrow ubyte[] finish();
         ///ditto
         nothrow ubyte[] finish(ubyte[] buf);
-        //@@@BUG@@@ http://d.puremagic.com/issues/show_bug.cgi?id=6549
+        // https://issues.dlang.org/show_bug.cgi?id=6549
         /*in
         {
             assert(buf.length >= this.length);

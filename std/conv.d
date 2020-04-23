@@ -137,7 +137,7 @@ private
     T toStr(T, S)(S src)
     if (isSomeString!T)
     {
-        // workaround for Bugzilla 14198
+        // workaround for https://issues.dlang.org/show_bug.cgi?id=14198
         static if (is(S == bool) && is(typeof({ T s = "string"; })))
         {
             return src ? "true" : "false";
@@ -488,6 +488,35 @@ template to(T)
     assertThrown!ConvException(to!AA(" [1:1]"));
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=20623
+@safe pure nothrow unittest
+{
+    // static class C
+    // {
+    //     override string toString() const
+    //     {
+    //         return "C()";
+    //     }
+    // }
+
+    static struct S
+    {
+        bool b;
+        int i;
+        float f;
+        int[] a;
+        int[int] aa;
+        S* p;
+        // C c; // TODO: Fails because of hasToString
+
+        void fun() inout
+        {
+            static foreach (const idx; 0 .. this.tupleof.length)
+                this.tupleof[idx].to!string();
+        }
+    }
+}
+
 /**
 If the source type is implicitly convertible to the target type, $(D
 to) simply performs the implicit conversion.
@@ -519,9 +548,10 @@ if (isImplicitlyConvertible!(S, T) &&
     return value;
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=9523: Allow identity enum conversion
 @safe pure nothrow unittest
 {
-    enum E { a }  // Issue 9523 - Allow identity enum conversion
+    enum E { a }
     auto e = to!E(E.a);
     assert(e == E.a);
 }
@@ -533,7 +563,7 @@ if (isImplicitlyConvertible!(S, T) &&
     assert(a == b);
 }
 
-// Tests for issue 6377
+// https://issues.dlang.org/show_bug.cgi?id=6377
 @safe pure unittest
 {
     import std.exception;
@@ -680,7 +710,7 @@ if (!isImplicitlyConvertible!(S, T) &&
     return T(value);
 }
 
-// Bugzilla 3961
+// https://issues.dlang.org/show_bug.cgi?id=3961
 @safe pure unittest
 {
     struct Int
@@ -709,7 +739,7 @@ if (!isImplicitlyConvertible!(S, T) &&
     Int3 i3 = to!Int3(1);
 }
 
-// Bugzilla 6808
+// https://issues.dlang.org/show_bug.cgi?id=6808
 @safe pure unittest
 {
     static struct FakeBigInt
@@ -1021,13 +1051,13 @@ if (!(isImplicitlyConvertible!(S, T) &&
     }
 }
 
-// Bugzilla 14042
+// https://issues.dlang.org/show_bug.cgi?id=14042
 @system unittest
 {
     immutable(char)* ptr = "hello".ptr;
     auto result = ptr.to!(char[]);
 }
-// Bugzilla 8384
+// https://issues.dlang.org/show_bug.cgi?id=8384
 @system unittest
 {
     void test1(T)(T lp, string cmp)
@@ -1074,7 +1104,7 @@ if (!(isImplicitlyConvertible!(S, T) &&
     return w.data;
 }
 
-// Bugzilla 16108
+// https://issues.dlang.org/show_bug.cgi?id=16108
 @system unittest
 {
     static struct A
@@ -1102,7 +1132,7 @@ if (!(isImplicitlyConvertible!(S, T) &&
     assert(to!string(b) == "B(0, false)");
 }
 
-// Bugzilla 20070
+// https://issues.dlang.org/show_bug.cgi?id=20070
 @safe unittest
 {
     void writeThem(T)(ref inout(T) them)
@@ -1275,7 +1305,7 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
     a = new A;
     assert(to!string(a) == "an A");
 
-    // Bug 7660
+    // https://issues.dlang.org/show_bug.cgi?id=7660
     class C { override string toString() const { return "C"; } }
     struct S { C c; alias c this; }
     S s; s.c = new C();
@@ -1315,7 +1345,8 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
     // Conversion representing enum value with string
     enum EB : bool { a = true }
     enum EU : uint { a = 0, b = 1, c = 2 }  // base type is unsigned
-    enum EI : int { a = -1, b = 0, c = 1 }  // base type is signed (bug 7909)
+    // base type is signed (https://issues.dlang.org/show_bug.cgi?id=7909)
+    enum EI : int { a = -1, b = 0, c = 1 }
     enum EF : real { a = 1.414, b = 1.732, c = 2.236 }
     enum EC : char { a = 'x', b = 'y' }
     enum ES : string { a = "aaa", b = "bbb" }
@@ -1608,7 +1639,7 @@ if (!isImplicitlyConvertible!(S, T) &&
     auto f = to!(float[][])(e);
     assert(f[0] == b && f[1] == b);
 
-    // Test for bug 8264
+    // Test for https://issues.dlang.org/show_bug.cgi?id=8264
     struct Wrap
     {
         string wrap;
@@ -1616,7 +1647,7 @@ if (!isImplicitlyConvertible!(S, T) &&
     }
     Wrap[] warr = to!(Wrap[])(["foo", "bar"]);  // should work
 
-    // Issue 12633
+    // https://issues.dlang.org/show_bug.cgi?id=12633
     import std.conv : to;
     const s2 = ["10", "20"];
 
@@ -1675,7 +1706,9 @@ if (!isImplicitlyConvertible!(S, T) && isAssociativeArray!S &&
     auto b = to!(double[dstring])(a);
     assert(b["0"d] == 1 && b["1"d] == 2);
 }
-@safe unittest // Bugzilla 8705, from doc
+
+// https://issues.dlang.org/show_bug.cgi?id=8705, from doc
+@safe unittest
 {
     import std.exception;
     int[string][double[int[]]] a;
@@ -1921,7 +1954,8 @@ if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S) &&
 
 @safe pure unittest
 {
-    // Issue 6668 - ensure no collaterals thrown
+    // https://issues.dlang.org/show_bug.cgi?id=6668
+    // ensure no collaterals thrown
     try { to!uint("-1"); }
     catch (ConvException e) { assert(e.next is null); }
 }
@@ -1935,12 +1969,12 @@ if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S) &&
         assert(to!double(a) == 123);
     }}
 
-    // 6255
+    // https://issues.dlang.org/show_bug.cgi?id=6255
     auto n = to!int("FF", 16);
     assert(n == 255);
 }
 
-// bugzilla 15800
+// https://issues.dlang.org/show_bug.cgi?id=15800
 @safe unittest
 {
     import std.utf : byCodeUnit, byChar, byWchar, byDchar;
@@ -2094,7 +2128,7 @@ template roundTo(Target)
     assert(ex.msg == "Input was NaN");
 }
 
-// issue 5232
+// https://issues.dlang.org/show_bug.cgi?id=5232
 @safe pure unittest
 {
     static if (real.mant_dig >= 64)
@@ -2581,7 +2615,7 @@ Lerr:
     assertCTFEable!({ string s =  "1234abc"; assert(parse!uint(s) ==  1234 && s == "abc"); });
 }
 
-// Issue 13931
+// https://issues.dlang.org/show_bug.cgi?id=13931
 @safe pure unittest
 {
     import std.exception;
@@ -2590,7 +2624,7 @@ Lerr:
     assertThrown!ConvOverflowException("-92233720368547758080".to!long());
 }
 
-// Issue 14396
+// https://issues.dlang.org/show_bug.cgi?id=14396
 @safe pure unittest
 {
     struct StrInputRange
@@ -2606,7 +2640,7 @@ Lerr:
     assert(parse!int(input) == 777);
 }
 
-// issue 9621
+// https://issues.dlang.org/show_bug.cgi?id=9621
 @safe pure unittest
 {
     string s1 = "[ \"\\141\", \"\\0\", \"\\41\", \"\\418\" ]";
@@ -2702,13 +2736,14 @@ do
     assert(parse!int(s = "765", 8) == octal!765);
     assert(parse!int(s = "fCDe", 16) == 0xfcde);
 
-    // 6609
+    // https://issues.dlang.org/show_bug.cgi?id=6609
     assert(parse!int(s = "-42", 10) == -42);
 
     assert(parse!ubyte(s = "ff", 16) == 0xFF);
 }
 
-@safe pure unittest // bugzilla 7302
+// https://issues.dlang.org/show_bug.cgi?id=7302
+@safe pure unittest
 {
     import std.range : cycle;
     auto r = cycle("2A!");
@@ -2717,20 +2752,23 @@ do
     assert(r.front == '!');
 }
 
-@safe pure unittest // bugzilla 13163
+// https://issues.dlang.org/show_bug.cgi?id=13163
+@safe pure unittest
 {
     import std.exception;
     foreach (s; ["fff", "123"])
         assertThrown!ConvOverflowException(s.parse!ubyte(16));
 }
 
-@safe pure unittest // bugzilla 17282
+// https://issues.dlang.org/show_bug.cgi?id=17282
+@safe pure unittest
 {
     auto str = "0=\x00\x02\x55\x40&\xff\xf0\n\x00\x04\x55\x40\xff\xf0~4+10\n";
     assert(parse!uint(str) == 0);
 }
 
-@safe pure unittest // bugzilla 18248
+// https://issues.dlang.org/show_bug.cgi?id=18248
+@safe pure unittest
 {
     import std.exception : assertThrown;
 
@@ -2811,7 +2849,8 @@ if (isSomeString!Source && !is(Source == enum) &&
     }
 }
 
-@safe pure unittest // bugzilla 4744
+// https://issues.dlang.org/show_bug.cgi?id=4744
+@safe pure unittest
 {
     enum A { member1, member11, member111 }
     assert(to!A("member1"  ) == A.member1  );
@@ -3371,7 +3410,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 {
     import std.exception;
 
-    // Bugzilla 4959
+    // https://issues.dlang.org/show_bug.cgi?id=4959
     {
         auto s = "0 ";
         auto x = parse!double(s);
@@ -3379,19 +3418,19 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         assert(x == 0.0);
     }
 
-    // Bugzilla 3369
+    // https://issues.dlang.org/show_bug.cgi?id=3369
     assert(to!float("inf") == float.infinity);
     assert(to!float("-inf") == -float.infinity);
 
-    // Bugzilla 6160
+    // https://issues.dlang.org/show_bug.cgi?id=6160
     assert(6_5.536e3L == to!real("6_5.536e3"));                     // 2^16
     assert(0x1000_000_000_p10 == to!real("0x1000_000_000_p10"));    // 7.03687e+13
 
-    // Bugzilla 6258
+    // https://issues.dlang.org/show_bug.cgi?id=6258
     assertThrown!ConvException(to!real("-"));
     assertThrown!ConvException(to!real("in"));
 
-    // Bugzilla 7055
+    // https://issues.dlang.org/show_bug.cgi?id=7055
     assertThrown!ConvException(to!float("INF2"));
 
     //extra stress testing
@@ -3642,7 +3681,8 @@ if (isSomeString!Source && !is(Source == enum) &&
     assert(a2 == ["aaa", "bbb", "ccc"]);
 }
 
-@safe unittest // Bugzilla 9615
+// https://issues.dlang.org/show_bug.cgi?id=9615
+@safe unittest
 {
     string s0 = "[1,2, ]";
     string s1 = "[1,2, \t\v\r\n]";
@@ -3974,16 +4014,18 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source))
         `\"`, `\'`, `\?`, `\\`, `\a`, `\b`, `\f`, `\n`, `\r`, `\t`, `\v`, //Normal escapes
         `\141`,
         `\x61`,
-        `\u65E5`, `\U00012456`
-        //`\&amp;`, `\&quot;`, //@@@9621@@@ Named Character Entities.
+        `\u65E5`, `\U00012456`,
+         // https://issues.dlang.org/show_bug.cgi?id=9621 (Named Character Entities)
+        //`\&amp;`, `\&quot;`,
     ];
 
     const(dchar)[] s2 = [
         '\"', '\'', '\?', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v', //Normal escapes
         '\141',
         '\x61',
-        '\u65E5', '\U00012456'
-        //'\&amp;', '\&quot;', //@@@9621@@@ Named Character Entities.
+        '\u65E5', '\U00012456',
+        // https://issues.dlang.org/show_bug.cgi?id=9621 (Named Character Entities)
+        //'\&amp;', '\&quot;',
     ];
 
     foreach (i ; 0 .. s1.length)
@@ -4462,7 +4504,7 @@ package void emplaceRef(T, UT, Args...)(ref UT chunk, auto ref Args args)
         }
         if (__ctfe)
         {
-            static if (is(typeof(chunk = T(args))))
+            static if (__traits(compiles, chunk = T(args)))
                 chunk = T(args);
             else static if (args.length == 1 && is(typeof(chunk = args[0])))
                 chunk = args[0];
@@ -4847,9 +4889,8 @@ if (!is(T == class))
     assert(u1.a == "hello");
 }
 
-
-
-@system unittest // bugzilla 15772
+ // https://issues.dlang.org/show_bug.cgi?id=15772
+@system unittest
 {
     abstract class Foo {}
     class Bar: Foo {}
@@ -5068,8 +5109,6 @@ if (!is(T == class))
 //postblit precedence
 @system unittest
 {
-    //Works, but breaks in "-w -O" because of @@@9332@@@.
-    //Uncomment test when 9332 is fixed.
     static struct S
     {
         int i;
@@ -5456,7 +5495,8 @@ version (StdUnittest)
     }
 }
 
-@safe unittest //@@@9559@@@
+// https://issues.dlang.org/show_bug.cgi?id=9559
+@safe unittest
 {
     import std.algorithm.iteration : map;
     import std.array : array;
@@ -5673,9 +5713,9 @@ pure nothrow @safe /* @nogc */ unittest
     static assert(!__traits(compiles, emplaceRef(uninitializedUnsafeArr, unsafeArr)));
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=15313
 @system unittest
 {
-    // Issue 15313
     static struct Node
     {
         int payload;
@@ -5691,10 +5731,6 @@ pure nothrow @safe /* @nogc */ unittest
     assert(n.payload == 42);
     assert(n.next == null);
     assert(n.refs == 10);
-}
-
-@system unittest
-{
 }
 
 @system unittest
@@ -5730,7 +5766,7 @@ pure nothrow @safe /* @nogc */ unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
-    // Check fix for http://d.puremagic.com/issues/show_bug.cgi?id=2971
+    // Check fix for https://issues.dlang.org/show_bug.cgi?id=2971
     assert(equal(map!(to!int)(["42", "34", "345"]), [42, 34, 345]));
 }
 
@@ -5899,9 +5935,9 @@ if (isIntegral!T)
     }
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=10874
 @safe unittest
 {
-    // issue 10874
     enum Test { a = 0 }
     ulong l = 0;
     auto t = l.to!Test;

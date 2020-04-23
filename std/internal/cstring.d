@@ -84,7 +84,8 @@ if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
 
     // Note: res._ptr can't point to res._buff as structs are movable.
 
-    static if (isSomeString!From) // Bugzilla 1498
+    // https://issues.dlang.org/show_bug.cgi?id=14980
+    static if (isSomeString!From)
     {
         if (str is null)
         {
@@ -200,7 +201,7 @@ nothrow @nogc @system unittest
     assert(tempCString(abc[].byChar)[] == abc);
 }
 
-// Bugzilla 14980
+// https://issues.dlang.org/show_bug.cgi?id=14980
 pure nothrow @nogc @safe unittest
 {
     const(char[]) str = null;

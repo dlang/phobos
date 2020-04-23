@@ -397,7 +397,9 @@ if (is(T == class))
 @safe pure nothrow @nogc
 unittest
 {
-    // Degenerate bitfields (#8474 / #11160) tests mixed with range tests
+    // Degenerate bitfields tests mixed with range tests
+    // https://issues.dlang.org/show_bug.cgi?id=8474
+    // https://issues.dlang.org/show_bug.cgi?id=11160
     struct Test1
     {
         mixin(bitfields!(uint, "a", 32,
@@ -525,9 +527,9 @@ unittest
     static assert(!__traits(compiles, bar(s)));
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=6686
 @safe unittest
 {
-    // Bug #6686
     union  S {
         ulong bits = ulong.max;
         mixin (bitfields!(
@@ -542,9 +544,9 @@ unittest
     assert(num.bits == 0xFFFF_FFFF_8000_0001uL);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=5942
 @safe unittest
 {
-    // Bug #5942
     struct S
     {
         mixin(bitfields!(
@@ -607,7 +609,7 @@ unittest
         assert(i.checkExpectations(true, 7, 7));
     }
 
-    //Bug# 8876
+    //https://issues.dlang.org/show_bug.cgi?id=8876
     {
         struct MoreIntegrals {
             bool checkExpectations(uint eu, ushort es, uint ei) { return u == eu && s == es && i == ei; }
@@ -660,7 +662,7 @@ unittest
     assert(f.checkExpectations(true));
 }
 
-// Issue 12477
+// https://issues.dlang.org/show_bug.cgi?id=12477
 @system unittest
 {
     import core.exception : AssertError;
@@ -868,9 +870,9 @@ struct DoubleRep
     assert(x.value == -5.0);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=15305
 @safe unittest
 {
-    // Issue #15305
     struct S {
             mixin(bitfields!(
                     bool, "alice", 1,
@@ -1126,7 +1128,7 @@ public:
         return _len;
     }
 
-    // Issue 20240
+    // https://issues.dlang.org/show_bug.cgi?id=20240
     @system unittest
     {
         BitArray ba;
@@ -1782,15 +1784,15 @@ public:
     /***************************************
      * Convert to `void[]`.
      */
-    void[] opCast(T : void[])() @nogc pure nothrow
+    inout(void)[] opCast(T : const void[])() inout @nogc pure nothrow
     {
-        return cast(void[])_ptr[0 .. dim];
+        return cast(inout void[]) _ptr[0 .. dim];
     }
 
     /***************************************
      * Convert to `size_t[]`.
      */
-    size_t[] opCast(T : size_t[])() @nogc pure nothrow
+    inout(size_t)[] opCast(T : const size_t[])() inout @nogc pure nothrow
     {
         return _ptr[0 .. dim];
     }
@@ -1806,6 +1808,34 @@ public:
         size_t[] v = cast(size_t[]) a;
         const blockSize = size_t.sizeof * 8;
         assert(v.length == (a.length + blockSize - 1) / blockSize);
+    }
+
+    // https://issues.dlang.org/show_bug.cgi?id=20606
+    @system unittest
+    {
+        import std.meta : AliasSeq;
+
+        static foreach (alias T; AliasSeq!(void, size_t))
+        {{
+            BitArray m;
+            T[] ma = cast(T[]) m;
+
+            const BitArray c;
+            const(T)[] ca = cast(const T[]) c;
+
+            immutable BitArray i;
+            immutable(T)[] ia = cast(immutable T[]) i;
+
+            // Cross-mutability
+            ca = cast(const T[]) m;
+            ca = cast(const T[]) i;
+
+            // Invalid cast don't compile
+            static assert(!is(typeof(cast(T[]) c)));
+            static assert(!is(typeof(cast(T[]) i)));
+            static assert(!is(typeof(cast(immutable T[]) m)));
+            static assert(!is(typeof(cast(immutable T[]) c)));
+        }}
     }
 
     /***************************************
@@ -2354,7 +2384,7 @@ public:
         }
     }
 
-    // Issue 17467
+    // https://issues.dlang.org/show_bug.cgi?id=17467
     @system unittest
     {
         import std.algorithm.comparison : equal;
@@ -2375,7 +2405,8 @@ public:
         assert(equal(b.bitsSet, iota(64, 128)));
     }
 
-    // Issue 18134 - shifting right when length is a multiple of 8 * size_t.sizeof.
+    // https://issues.dlang.org/show_bug.cgi?id=18134
+    // shifting right when length is a multiple of 8 * size_t.sizeof.
     @system unittest
     {
         import std.algorithm.comparison : equal;
@@ -2585,7 +2616,7 @@ public:
         assert(b.bitsSet.equal(iota(wordBits * 2)));
     }
 
-    // Issue 20241
+    // https://issues.dlang.org/show_bug.cgi?id=20241
     @system unittest
     {
         BitArray ba;
@@ -2799,7 +2830,7 @@ if (isIntegral!T || isSomeChar!T || isBoolean!T)
         static if (isSigned!T)
             assert(swapEndian(swapEndian(cast(T) 0)) == 0);
 
-        // used to trigger BUG6354
+        // used to trigger https://issues.dlang.org/show_bug.cgi?id=6354
         static if (T.sizeof > 1 && isUnsigned!T)
         {
             T left = 0xffU;
@@ -3810,7 +3841,7 @@ if (canSwapEndianness!T && isInputRange!R && is(ElementType!R : const ubyte))
     }
 }
 
-// issue 17247
+// https://issues.dlang.org/show_bug.cgi?id=17247
 @safe unittest
 {
     struct UbyteRange

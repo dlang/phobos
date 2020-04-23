@@ -167,7 +167,7 @@
  */
 module std.traits;
 
-import std.meta : AliasSeq, allSatisfy, anySatisfy;
+import std.meta : AliasSeq, allSatisfy, anySatisfy, ApplyLeft;
 import std.functional : unaryFun;
 
 // Legacy inheritance from std.typetuple
@@ -544,7 +544,8 @@ version (none) @safe unittest //Please uncomment me when changing packageName to
     static assert(packageName!moduleName == "std");
 }
 
-@safe unittest // issue 13741
+// https://issues.dlang.org/show_bug.cgi?id=13741
+@safe unittest
 {
     import std.ascii : isWhite;
     static assert(packageName!(isWhite) == "std");
@@ -607,7 +608,8 @@ template moduleName(alias T)
     static assert(moduleName!(X12287!int.i) == "std.traits");
 }
 
-@safe unittest // issue 13741
+// https://issues.dlang.org/show_bug.cgi?id=13741
+@safe unittest
 {
     import std.ascii : isWhite;
     static assert(moduleName!(isWhite) == "std.ascii");
@@ -1190,7 +1192,8 @@ if (func.length == 1 && isCallable!func &&
     static assert(!__traits(compiles, arity!variadicFoo));
 }
 
-@safe unittest // issue 11389
+// https://issues.dlang.org/show_bug.cgi?id=11389
+@safe unittest
 {
     alias TheType = size_t function( string[] );
     static assert(arity!TheType == 1);
@@ -1355,14 +1358,14 @@ template extractParameterStorageClassFlags(Attribs...)
     static assert(dglit_pstc.length == 1);
     static assert(dglit_pstc[0] == STC.ref_);
 
-    // Bugzilla 9317
+    // https://issues.dlang.org/show_bug.cgi?id=9317
     static inout(int) func(inout int param) { return param; }
     static assert(ParameterStorageClassTuple!(typeof(func))[0] == STC.none);
 }
 
 @safe unittest
 {
-    // Bugzilla 14253
+    // https://issues.dlang.org/show_bug.cgi?id=14253
     static struct Foo {
         ref Foo opAssign(ref Foo rhs) return { return this; }
     }
@@ -1422,7 +1425,7 @@ if (func.length == 1 && isCallable!func)
     static assert([ParameterIdentifierTuple!foo] == ["num", "name", ""]);
 }
 
-// Issue 19456
+// https://issues.dlang.org/show_bug.cgi?id=19456
 @safe unittest
 {
     struct SomeType {}
@@ -1498,7 +1501,6 @@ if (func.length == 1 && isCallable!func)
                     // like this.
                     auto " ~ val ~ " = " ~ args ~ "[0];
                     auto " ~ ptr ~ " = &" ~ val ~ ";
-                        // workaround Bugzilla 16582
                     return *" ~ ptr ~ ";
                 };
             ");
@@ -1539,7 +1541,8 @@ if (func.length == 1 && isCallable!func)
     static assert(   ParameterDefaults!foo[3] == 0);
 }
 
-@safe unittest // issue 17192
+// https://issues.dlang.org/show_bug.cgi?id=17192
+@safe unittest
 {
     static void func(int i, int PT, int __pd_value, int __pd_val, int __args,
         int name, int args, int val, int ptr, int args_, int val_, int ptr_)
@@ -1572,7 +1575,8 @@ alias ParameterDefaultValueTuple = ParameterDefaults;
     static assert(   PDVT!baz[2] == "hello");
     static assert(is(typeof(PDVT!baz) == typeof(AliasSeq!(void, 1, "hello"))));
 
-    // bug 10800 - property functions return empty string
+    // property functions return empty string
+    // https://issues.dlang.org/show_bug.cgi?id=10800
     @property void foo(int x = 3) { }
     static assert(PDVT!foo.length == 1);
     static assert(PDVT!foo[0] == 3);
@@ -1584,9 +1588,11 @@ alias ParameterDefaultValueTuple = ParameterDefaults;
 
         static immutable Colour white = Colour(255,255,255,255);
     }
+    // https://issues.dlang.org/show_bug.cgi?id=8106
     void bug8106(Colour c = Colour.white) {}
     //pragma(msg, PDVT!bug8106);
     static assert(PDVT!bug8106[0] == Colour.white);
+    // https://issues.dlang.org/show_bug.cgi?id=16582
     void bug16582(scope int* val = null) {}
     static assert(PDVT!bug16582[0] is null);
 }
@@ -2868,7 +2874,7 @@ template RepresentationTypeTuple(T)
     alias R1 = RepresentationTypeTuple!C;
     static assert(R1.length == 2 && is(R1[0] == int) && is(R1[1] == float));
 
-    /* Issue 6642 */
+    /* https://issues.dlang.org/show_bug.cgi?id=6642 */
     import std.typecons : Rebindable;
 
     struct S5 { int a; Rebindable!(immutable Object) b; }
@@ -2945,7 +2951,7 @@ private template hasRawAliasing(T)
     static assert(!hasRawAliasing!S2);
 }
 
-// Issue 19228
+// https://issues.dlang.org/show_bug.cgi?id=19228
 @safe unittest
 {
     static struct C
@@ -3434,7 +3440,8 @@ template hasIndirections(T)
     static assert( hasIndirections!S26);
 }
 
-@safe unittest //12000
+// https://issues.dlang.org/show_bug.cgi?id=12000
+@safe unittest
 {
     static struct S(T)
     {
@@ -3485,7 +3492,7 @@ template hasUnsharedAliasing(T...)
 
 @safe unittest
 {
-    /* Issue 6642 */
+    /* https://issues.dlang.org/show_bug.cgi?id=6642 */
     import std.typecons : Rebindable;
     struct S8 { int a; Rebindable!(immutable Object) b; }
     static assert(!hasUnsharedAliasing!S8);
@@ -3532,7 +3539,7 @@ template hasUnsharedAliasing(T...)
     static assert(!hasUnsharedAliasing!(Rebindable!(shared Object)));
     static assert( hasUnsharedAliasing!(Rebindable!Object));
 
-    /* Issue 6979 */
+    /* https://issues.dlang.org/show_bug.cgi?id=6979 */
     static assert(!hasUnsharedAliasing!(int, shared(int)*));
     static assert( hasUnsharedAliasing!(int, int*));
     static assert( hasUnsharedAliasing!(int, const(int)[]));
@@ -3668,8 +3675,8 @@ template hasElaborateCopyConstructor(S)
    defining `opAssign(typeof(this))` or $(D opAssign(ref typeof(this)))
    for a `struct` or when there is a compiler-generated `opAssign`.
 
-   A type `S` gets compiler-generated `opAssign` in case it has
-   an elaborate copy constructor or elaborate destructor.
+   A type `S` gets compiler-generated `opAssign` if it has
+   an elaborate destructor.
 
    Classes and unions never have elaborate assignments.
 
@@ -3858,7 +3865,7 @@ enum hasMember(T, string name) = __traits(hasMember, T, name);
 
 @safe unittest
 {
-    // 8321
+    // https://issues.dlang.org/show_bug.cgi?id=8321
     struct S {
         int x;
         void f(){}
@@ -4291,7 +4298,8 @@ Use EnumMembers to generate a switch statement using static foreach.
     static assert([ EnumMembers!A ] == [ A.a, A.b, A.c, A.d, A.e ]);
 }
 
-@safe unittest // Bugzilla 14561: huge enums
+// https://issues.dlang.org/show_bug.cgi?id=14561: huge enums
+@safe unittest
 {
     string genEnum()
     {
@@ -4415,7 +4423,8 @@ if (is(T == class))
     static assert(is(BaseClassesTuple!C3 == AliasSeq!(C2, C1, Object)));
 }
 
-@safe unittest // issue 17276
+// https://issues.dlang.org/show_bug.cgi?id=17276
+@safe unittest
 {
     extern (C++) static interface Ext
     {
@@ -4668,7 +4677,8 @@ if (is(C == class) || is(C == interface))
     static assert(__traits(isSame, foos[1], B.foo));
 }
 
-@safe unittest // Issue 15920
+// https://issues.dlang.org/show_bug.cgi?id=15920
+@safe unittest
 {
     import std.meta : AliasSeq;
     class A
@@ -4687,7 +4697,8 @@ if (is(C == class) || is(C == interface))
     assert(__traits(isSame, fs[1], bfs[0]) || __traits(isSame, fs[1], bfs[1]));
 }
 
-@safe unittest // Issue 8388
+// https://issues.dlang.org/show_bug.cgi?id=8388
+@safe unittest
 {
     class C
     {
@@ -4699,7 +4710,7 @@ if (is(C == class) || is(C == interface))
         /*
          Commented out, because this causes a cyclic dependency
          between module constructors/destructors error. Might
-         be caused by issue 20529. */
+         be caused by https://issues.dlang.org/show_bug.cgi?id=20529. */
         // static this() {}
 
         ~this() {}
@@ -5037,7 +5048,7 @@ template ImplicitConversionTargets(T)
     else static if (is(T : typeof(null)))
         alias ImplicitConversionTargets = AliasSeq!(typeof(null));
     else static if (is(T == class))
-        alias ImplicitConversionTargets = TransitiveBaseTypeTuple!(T);
+        alias ImplicitConversionTargets = staticMap!(ApplyLeft!(CopyConstness, T), TransitiveBaseTypeTuple!(T));
     else static if (isDynamicArray!T && !is(typeof(T.init[0]) == const))
     {
        static if (is(typeof(T.init[0]) == shared))
@@ -5081,6 +5092,10 @@ template ImplicitConversionTargets(T)
     class C : A, B {}
 
     static assert(is(ImplicitConversionTargets!(C) == AliasSeq!(Object, A, B)));
+    static assert(is(ImplicitConversionTargets!(const C) == AliasSeq!(const Object, const A, const B)));
+    static assert(is(ImplicitConversionTargets!(immutable C) == AliasSeq!(
+        immutable Object, immutable A, immutable B
+    )));
 }
 
 @safe unittest
@@ -5397,7 +5412,8 @@ if (is(F == function) && is(G == function) ||
         }
         /*
          * Check for parameters:
-         *  - require exact match for types (cf. bugzilla 3075)
+         *  - require exact match for types
+         *    (cf. https://issues.dlang.org/show_bug.cgi?id=3075)
          *  - require exact match for in, out, ref and lazy
          *  - overrider can add scope, but can't remove
          */
@@ -6117,7 +6133,8 @@ enum bool isIntegral(T) = is(IntegralTypeOf!T) && !isAggregateType!T;
     static assert(!isIntegral!float);
 
     enum EU : uint { a = 0, b = 1, c = 2 }  // base type is unsigned
-    enum EI : int { a = -1, b = 0, c = 1 }  // base type is signed (bug 7909)
+    // base type is signed (https://issues.dlang.org/show_bug.cgi?id=7909)
+    enum EI : int { a = -1, b = 0, c = 1 }
     static assert(isIntegral!EU &&  isUnsigned!EU && !isSigned!EU);
     static assert(isIntegral!EI && !isUnsigned!EI &&  isSigned!EI);
 }
@@ -6667,7 +6684,8 @@ template isConvertibleToString(T)
     assert(!isConvertibleToString!(char[]));
 }
 
-@safe unittest // Bugzilla 16573
+// https://issues.dlang.org/show_bug.cgi?id=16573
+@safe unittest
 {
     enum I : int { foo = 1 }
     enum S : string { foo = "foo" }
@@ -7457,7 +7475,7 @@ template isNestedFunction(alias f)
     static assert(!isNestedFunction!f);
 }
 
-// issue 18669
+// https://issues.dlang.org/show_bug.cgi?id=18669
 @safe unittest
 {
     static class Outer
@@ -7664,9 +7682,9 @@ template CopyTypeQualifiers(FromType, ToType)
 }
 
 /**
-Returns the type of `Target` with the "constness" of `Source`. A type's $(B constness)
-refers to whether it is `const`, `immutable`, or `inout`. If `source` has no constness, the
-returned type will be the same as `Target`.
+Returns the type of `ToType` with the "constness" of `FromType`. A type's $(B constness)
+refers to whether it is `const`, `immutable`, or `inout`. If `FromType` has no constness, the
+returned type will be the same as `ToType`.
 */
 template CopyConstness(FromType, ToType)
 {
@@ -8113,7 +8131,8 @@ version (StdUnittest) private void freeFunc(string);
     static assert(mangledName!mangledName == "3std6traits11mangledName");
     static assert(mangledName!freeFunc == "_D3std6traits8freeFuncFAyaZv");
     int x;
-  static if (is(typeof({ return x; }) : int delegate() pure))   // issue 9148
+    // https://issues.dlang.org/show_bug.cgi?id=9148
+  static if (is(typeof({ return x; }) : int delegate() pure))
     static assert(mangledName!((int a) { return a+x; }) == "DFNaNbNiNfiZi");  // pure nothrow @safe @nogc
   else
     static assert(mangledName!((int a) { return a+x; }) == "DFNbNiNfiZi");  // nothrow @safe @nnogc
@@ -8122,7 +8141,7 @@ version (StdUnittest) private void freeFunc(string);
 @system unittest
 {
     // @system due to demangle
-    // Test for bug 5718
+    // Test for https://issues.dlang.org/show_bug.cgi?id=5718
     import std.demangle : demangle;
     int foo;
     auto foo_demangled = demangle(mangledName!foo);
@@ -8560,7 +8579,7 @@ template getSymbolsByUDA(alias symbol, alias attribute)
     static assert(getSymbolsByUDA!(D, UDA).length == 0);
 }
 
-// Issue 18314
+// https://issues.dlang.org/show_bug.cgi?id=18314
 @safe unittest
 {
     enum attr1;
@@ -8570,7 +8589,7 @@ template getSymbolsByUDA(alias symbol, alias attribute)
     {
         @attr1
         int n;
-        // Removed due to Issue 16206
+        // Removed due to https://issues.dlang.org/show_bug.cgi?id=16206
         //@attr1
         //void foo()(string){}
         @attr1
@@ -8583,7 +8602,8 @@ template getSymbolsByUDA(alias symbol, alias attribute)
     static assert(getSymbolsByUDA!(A, attr2).length == 1);
 }
 
-// #15335: getSymbolsByUDA fails if type has private members
+// getSymbolsByUDA fails if type has private members
+// https://issues.dlang.org/show_bug.cgi?id=15335
 @safe unittest
 {
     // HasPrivateMembers has, well, private members, one of which has a UDA.
@@ -8597,7 +8617,8 @@ template getSymbolsByUDA(alias symbol, alias attribute)
     static assert(hasUDA!(getSymbolsByUDA!(HasPrivateMembers, Attr)[0], Attr));
 }
 
-// #16387: getSymbolsByUDA works with structs but fails with classes
+// getSymbolsByUDA works with structs but fails with classes
+// https://issues.dlang.org/show_bug.cgi?id=16387
 @safe unittest
 {
     enum Attr;
@@ -8611,7 +8632,8 @@ template getSymbolsByUDA(alias symbol, alias attribute)
     static assert(res[0].stringof == "a");
 }
 
-// #18884: getSymbolsByUDA fails on AliasSeq members
+// getSymbolsByUDA fails on AliasSeq members
+// https://issues.dlang.org/show_bug.cgi?id=18884
 @safe unittest
 {
     struct X
@@ -8622,7 +8644,8 @@ template getSymbolsByUDA(alias symbol, alias attribute)
     static assert(is(getSymbolsByUDA!(X, X) == AliasSeq!()));
 }
 
-// #18624: getSymbolsByUDA produces wrong result if one of the symbols having the UDA is a function
+// getSymbolsByUDA produces wrong result if one of the symbols having the UDA is a function
+// https://issues.dlang.org/show_bug.cgi?id=18624
 @safe unittest
 {
     enum Attr;
@@ -8637,7 +8660,8 @@ template getSymbolsByUDA(alias symbol, alias attribute)
     static assert(getSymbolsByUDA!(A, Attr).stringof == "tuple(a, a, c)");
 }
 
-// Issue 20054: getSymbolsByUDA no longer works on modules
+// getSymbolsByUDA no longer works on modules
+// https://issues.dlang.org/show_bug.cgi?id=20054
 version (StdUnittest)
 {
     @("Issue20054")

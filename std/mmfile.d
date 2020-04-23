@@ -676,7 +676,7 @@ private:
 }
 
 version (linux)
-@system unittest // Issue 14868
+@system unittest // https://issues.dlang.org/show_bug.cgi?id=14868
 {
     import std.file : deleteme;
     import std.typecons : scoped;
@@ -699,7 +699,9 @@ version (linux)
     assert(.close(fd) == -1);
 }
 
-@system unittest // Issue 14994, 14995
+// https://issues.dlang.org/show_bug.cgi?id=14994
+// https://issues.dlang.org/show_bug.cgi?id=14995
+@system unittest
 {
     import std.file : deleteme;
     import std.typecons : scoped;

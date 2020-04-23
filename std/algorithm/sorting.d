@@ -224,7 +224,7 @@ if (isForwardRange!(Range))
 {
     import std.conv : to;
 
-    // Issue 9457
+    // https://issues.dlang.org/show_bug.cgi?id=9457
     auto x = "abcd";
     assert(isSorted(x));
     auto y = "acbd";
@@ -1563,7 +1563,8 @@ private void multiSortImpl(Range, SwapStrategy ss, funs...)(Range r)
     assert(pts4.multiSort!("a > b").release.equal(iota(10).retro));
 }
 
-@safe unittest //issue 9160 (L-value only comparators)
+//https://issues.dlang.org/show_bug.cgi?id=9160 (L-value only comparators)
+@safe unittest
 {
     static struct A
     {
@@ -1587,7 +1588,9 @@ private void multiSortImpl(Range, SwapStrategy ss, funs...)(Range r)
     assert(points[1] == A(4, 1));
 }
 
-@safe unittest // issue 16179 (cannot access frame of function)
+// cannot access frame of function
+// https://issues.dlang.org/show_bug.cgi?id=16179
+@safe unittest
 {
     auto arr = [[1, 2], [2, 0], [1, 0], [1, 1]];
     int c = 3;
@@ -1599,7 +1602,8 @@ private void multiSortImpl(Range, SwapStrategy ss, funs...)(Range r)
     assert(arr == [[1, 0], [1, 1], [1, 2], [2, 0]]);
 }
 
-@safe unittest //Issue 16413 - @system comparison function
+// https://issues.dlang.org/show_bug.cgi?id=16413 - @system comparison function
+@safe unittest
 {
     bool lt(int a, int b) { return a < b; } static @system
     auto a = [2, 1];
@@ -2015,14 +2019,14 @@ if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
     assert(isSorted!("toUpper(a) < toUpper(b)")(b));
 
     {
-        // Issue 10317
+        // https://issues.dlang.org/show_bug.cgi?id=10317
         enum E_10317 { a, b }
         auto a_10317 = new E_10317[10];
         sort(a_10317);
     }
 
     {
-        // Issue 7767
+        // https://issues.dlang.org/show_bug.cgi?id=7767
         // Unstable sort should complete without an excessive number of predicate calls
         // This would suggest it's running in quadratic time
 
@@ -2137,7 +2141,7 @@ package(std) template HeapOps(alias less, Range)
 
     alias lessFun = binaryFun!less;
 
-    //template because of @@@12410@@@
+    //template because of https://issues.dlang.org/show_bug.cgi?id=12410
     void heapSort()(Range r)
     {
         // If true, there is nothing to do
@@ -2152,7 +2156,7 @@ package(std) template HeapOps(alias less, Range)
         }
     }
 
-    //template because of @@@12410@@@
+    //template because of https://issues.dlang.org/show_bug.cgi?id=12410
     void buildHeap()(Range r)
     {
         immutable n = r.length;
@@ -2177,7 +2181,7 @@ package(std) template HeapOps(alias less, Range)
 
     // Sifts down r[parent] (which is initially assumed to be messed up) so the
     // heap property is restored for r[parent .. end].
-    // template because of @@@12410@@@
+    // template because of https://issues.dlang.org/show_bug.cgi?id=12410
     void siftDown()(Range r, size_t parent, immutable size_t end)
     {
         for (;;)
@@ -2205,7 +2209,7 @@ package(std) template HeapOps(alias less, Range)
     // restored. So there are more swaps but fewer comparisons. Gains are made
     // when the final position is likely to end toward the bottom of the heap,
     // so not a lot of sifts back are performed.
-    //template because of @@@12410@@@
+    //template because of https://issues.dlang.org/show_bug.cgi?id=12410
     void percolate()(Range r, size_t parent, immutable size_t end)
     {
         immutable root = parent;
@@ -2332,7 +2336,7 @@ private template TimSortImpl(alias pred, R)
             }
 
             // Assert that the code above established the invariant correctly
-            version (assert)
+            version (StdUnittest)
             {
                 if (stackLen == 2)
                 {
@@ -2873,8 +2877,9 @@ private template TimSortImpl(alias pred, R)
     assert(result == true, "invalid result");
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=4584
 @safe unittest
-{//bugzilla 4584
+{
     assert(isSorted!"a < b"(sort!("a < b", SwapStrategy.stable)(
        [83, 42, 85, 86, 87, 22, 89, 30, 91, 46, 93, 94, 95, 6,
          97, 14, 33, 10, 101, 102, 103, 26, 105, 106, 107, 6]
@@ -2894,9 +2899,9 @@ private template TimSortImpl(alias pred, R)
     assert(y == "aebcd"d);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=14223
 @safe unittest
 {
-    // Issue 14223
     import std.array, std.range;
     auto arr = chain(iota(0, 384), iota(0, 256), iota(0, 80), iota(0, 64), iota(0, 96)).array;
     sort!("a < b", SwapStrategy.stable)(arr);
@@ -3081,33 +3086,33 @@ if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R)
     assert(strings == [ "three", "two", "one" ]);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=4909
 @safe unittest
 {
-    // issue 4909
     import std.typecons : Tuple;
     Tuple!(char)[] chars;
     schwartzSort!"a[0]"(chars);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=5924
 @safe unittest
 {
-    // issue 5924
     import std.typecons : Tuple;
     Tuple!(char)[] chars;
     schwartzSort!((Tuple!(char) c){ return c[0]; })(chars);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=13965
 @safe unittest
 {
-    // issue 13965
     import std.typecons : Tuple;
     Tuple!(char)[] chars;
     schwartzSort!("a[0]", SwapStrategy.stable)(chars);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=13965
 @safe unittest
 {
-    // issue 13965
     import std.algorithm.iteration : map;
     import std.numeric : entropy;
 
@@ -3670,7 +3675,7 @@ done:
     }
 }
 
-// bug 12987
+// https://issues.dlang.org/show_bug.cgi?id=12987
 @safe unittest
 {
     int[] a = [ 25, 7, 9, 2, 0, 5, 21 ];
@@ -3720,7 +3725,7 @@ if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
     assert(a == [0, 1, 2, 2, 3]);
 }
 
-// bug 15421
+// https://issues.dlang.org/show_bug.cgi?id=15421
 @system unittest
 {
     import std.algorithm.comparison : equal;
@@ -3764,7 +3769,7 @@ if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
     }
 }
 
-// bug 15421
+// https://issues.dlang.org/show_bug.cgi?id=15421
 @system unittest
 {
     auto a = [ 9, 8, 0, 3, 5, 25, 43, 4, 2, 0, 7 ];
@@ -3783,7 +3788,7 @@ if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
     assert(a == b);
 }
 
-// bug 12987
+// https://issues.dlang.org/show_bug.cgi?id=12987
 @system unittest
 {
     int[] a = [ 5, 7, 2, 6, 7 ];
@@ -3793,7 +3798,7 @@ if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
     assert(t == [ 0, 1, 2, 2, 3 ]);
 }
 
-// bug 15420
+// https://issues.dlang.org/show_bug.cgi?id=15420
 @system unittest
 {
     int[] a = [ 5, 7, 2, 6, 7 ];
@@ -4386,7 +4391,7 @@ if (isBidirectionalRange!BidirectionalRange &&
     assert(a == [3,2,1]);
 }
 
-// Issue 13594
+// https://issues.dlang.org/show_bug.cgi?id=13594
 @safe unittest
 {
     int[3] a = [1,2,3];
@@ -4561,9 +4566,9 @@ if (isBidirectionalRange!BidirectionalRange &&
     assert(b == [ 1, 3, 2 ]);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=13594
 @safe unittest
 {
-    // Issue 13594
     int[3] a = [1,2,3];
     assert(nextEvenPermutation(a[]));
     assert(a == [2,3,1]);

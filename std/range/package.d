@@ -473,7 +473,7 @@ pure @safe nothrow @nogc unittest
     assert(equal(r, excepted[]));
 }
 
-// Issue 12662
+// https://issues.dlang.org/show_bug.cgi?id=12662
 pure @safe nothrow @nogc unittest
 {
     int[3] src = [1,2,3];
@@ -714,7 +714,7 @@ debug pure nothrow @system unittest
     scope (success) assert(passed);
     import core.exception : AssertError;
     //std.exception.assertThrown won't do because it can't infer nothrow
-    // @@@BUG@@@ 12647
+    // https://issues.dlang.org/show_bug.cgi?id=12647
     try
     {
         auto unused = testArr[].stride(0);
@@ -765,7 +765,7 @@ pure @safe nothrow unittest
     // assert(s2[$ .. $].empty);
     assert(s2[s2.opDollar .. s2.opDollar].empty);
 
-    // Test fix for Bug 5035
+    // Test fix for https://issues.dlang.org/show_bug.cgi?id=5035
     auto m = [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4]; // 3 rows, 4 columns
     auto col = stride(m, 4);
     assert(equal(col, [1, 1, 1]));
@@ -1323,7 +1323,8 @@ pure @safe nothrow unittest
         assert(c.moveAt(5) == 1);
     }
 
-    // Make sure bug 3311 is fixed.  ChainImpl should compile even if not all
+
+    // Make sure https://issues.dlang.org/show_bug.cgi?id=3311 is fixed.
     // elements are mutable.
     assert(equal(chain(iota(0, 3), iota(0, 3)), [0, 1, 2, 0, 1, 2]));
 
@@ -1343,7 +1344,8 @@ pure @safe nothrow unittest
     // pair of DummyRange types, in either order.
 
     foreach (DummyType1; AllDummyRanges)
-    (){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
+    (){ // workaround slow optimizations for large functions
+        // https://issues.dlang.org/show_bug.cgi?id=2396
         DummyType1 dummy1;
         foreach (DummyType2; AllDummyRanges)
         {
@@ -1391,7 +1393,8 @@ pure @safe nothrow @nogc unittest
     assert(chain(a, b).empty);
 }
 
-pure @safe unittest // issue 18657
+// https://issues.dlang.org/show_bug.cgi?id=18657
+pure @safe unittest
 {
     import std.algorithm.comparison : equal;
     string s = "foo";
@@ -1657,7 +1660,8 @@ private struct ChooseResult(R1, R2)
         }
 }
 
-pure @safe unittest // issue 18657
+// https://issues.dlang.org/show_bug.cgi?id=18657
+pure @safe unittest
 {
     import std.algorithm.comparison : equal;
     string s = "foo";
@@ -1697,6 +1701,7 @@ pure @safe unittest // issue 18657
     choose(true, [0], R()).save;
     choose(true, R(), [0]).save;
 }
+
 @safe unittest // copy is @system
 {
     static struct R
@@ -1711,6 +1716,7 @@ pure @safe unittest // issue 18657
     static assert(!__traits(compiles, choose(true, [0], R()).save));
     static assert(!__traits(compiles, choose(true, R(), [0]).save));
 }
+
 @system unittest // .save is @system
 {
     static struct R
@@ -1724,6 +1730,7 @@ pure @safe unittest // issue 18657
     choose(true, [0], R()).save;
     choose(true, R(), [0]).save;
 }
+
 @safe unittest // .save is @system
 {
     static struct R
@@ -1737,6 +1744,7 @@ pure @safe unittest // issue 18657
     static assert(!__traits(compiles, choose(true, [0], R()).save));
     static assert(!__traits(compiles, choose(true, R(), [0]).save));
 }
+
 //https://issues.dlang.org/show_bug.cgi?id=19738
 @safe nothrow pure @nogc unittest
 {
@@ -1761,7 +1769,8 @@ pure @safe unittest // issue 18657
 }
 
 
-@safe unittest // issue 20495
+// https://issues.dlang.org/show_bug.cgi?id=20495
+@safe unittest
 {
     static struct KillableRange
     {
@@ -2278,7 +2287,8 @@ if (isInputRange!(Unqual!Range) &&
             assert(!empty,
                 "Attempting to assign to the front of an empty "
                 ~ Take.stringof);
-            // This has to return auto instead of void because of Bug 4706.
+            // This has to return auto instead of void because of
+            // https://issues.dlang.org/show_bug.cgi?id=4706
             source.front = v;
         }
 
@@ -2363,7 +2373,8 @@ if (isInputRange!(Unqual!Range) &&
             /// ditto
             @property void back(ElementType!R v)
             {
-                // This has to return auto instead of void because of Bug 4706.
+                // This has to return auto instead of void because of
+                // https://issues.dlang.org/show_bug.cgi?id=4706
                 assert(!empty,
                     "Attempting to assign to the back of an empty "
                     ~ Take.stringof);
@@ -2528,7 +2539,8 @@ pure @safe nothrow @nogc unittest
 {
     // Check that one can declare variables of all Take types,
     // and that they match the return type of the corresponding
-    // take().  (See issue 4464.)
+    // take().
+    // See https://issues.dlang.org/show_bug.cgi?id=4464
     int[] r1;
     Take!(int[]) t1;
     t1 = take(r1, 1);
@@ -2554,7 +2566,8 @@ pure @safe nothrow @nogc unittest
     static assert(isBidirectionalRange!TR2);
 }
 
-pure @safe nothrow @nogc unittest //12731
+// https://issues.dlang.org/show_bug.cgi?id=12731
+pure @safe nothrow @nogc unittest
 {
     auto a = repeat(1);
     auto s = a[1 .. 5];
@@ -2564,7 +2577,8 @@ pure @safe nothrow @nogc unittest //12731
     assert(s[1] == 1);
 }
 
-pure @safe nothrow @nogc unittest //13151
+// https://issues.dlang.org/show_bug.cgi?id=13151
+pure @safe nothrow @nogc unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -2987,7 +3001,7 @@ pure @safe nothrow @nogc unittest
     assertThrown!AssertError(s.popBack);
 }
 
-//guards against issue 16999
+// https://issues.dlang.org/show_bug.cgi?id=16999
 pure @safe unittest
 {
     auto myIota = new class
@@ -3046,7 +3060,7 @@ if (isInputRange!R)
     //member version if it's defined.
     static if (is(typeof(R.takeNone)))
         auto retval = range.takeNone();
-    //@@@BUG@@@ 8339
+    // https://issues.dlang.org/show_bug.cgi?id=8339
     else static if (isDynamicArray!R)/+ ||
                    (is(R == struct) && __traits(compiles, {auto r = R.init;}) && R.init.empty))+/
     {
@@ -3058,7 +3072,8 @@ if (isInputRange!R)
     else
         auto retval = takeExactly(range, 0);
 
-    //@@@BUG@@@ 7892 prevents this from being done in an out block.
+    // https://issues.dlang.org/show_bug.cgi?id=7892 prevents this from being
+    // done in an out block.
     assert(retval.empty);
     return retval;
 }
@@ -3159,8 +3174,8 @@ pure @safe nothrow unittest
                              "hello world"w,
                              "hello world"d,
                              SliceStruct([1, 2, 3]),
-                             //@@@BUG@@@ 8339 forces this to be takeExactly
-                             //`InitStruct([1, 2, 3]),
+                             // https://issues.dlang.org/show_bug.cgi?id=8339
+                             // forces this to be takeExactly `InitStruct([1, 2, 3]),
                              TakeNoneStruct([1, 2, 3])))
     {
         static assert(takeNone(range).empty, typeof(range).stringof);
@@ -3191,7 +3206,8 @@ pure @safe nothrow unittest
 
     auto filtered = filter!"true"([1, 2, 3, 4, 5]);
     assert(takeNone(filtered).empty);
-    //@@@BUG@@@ 8339 and 5941 force this to be takeExactly
+    // https://issues.dlang.org/show_bug.cgi?id=8339 and
+    // https://issues.dlang.org/show_bug.cgi?id=5941 force this to be takeExactly
     //static assert(is(typeof(filtered) == typeof(takeNone(filtered))), typeof(filtered).stringof);
 }
 
@@ -3271,7 +3287,7 @@ pure @safe nothrow unittest
         .assumeWontThrow);
 }
 
-// @nogc prevented by @@@BUG@@@ 15408
+// @nogc prevented by https://issues.dlang.org/show_bug.cgi?id=15408
 pure nothrow @safe /+@nogc+/ unittest
 {
     import std.algorithm.comparison : equal;
@@ -3624,7 +3640,8 @@ pure @safe nothrow unittest
     assert(5.repeat(4).equal([5, 5, 5, 5]));
 }
 
-pure @safe nothrow unittest //12007
+// https://issues.dlang.org/show_bug.cgi?id=12007
+pure @safe nothrow unittest
 {
     static class C{}
     Repeat!(immutable int) ri;
@@ -4288,7 +4305,8 @@ if (isStaticArray!R)
     assert(cleS.front == 0);
 }
 
-@system unittest //10845
+// https://issues.dlang.org/show_bug.cgi?id=10845
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter;
@@ -4297,12 +4315,13 @@ if (isStaticArray!R)
     assert(equal(cycle(a).take(10), [0, 1, 2, 0, 1, 2, 0, 1, 2, 0]));
 }
 
-@safe unittest // 12177
+// https://issues.dlang.org/show_bug.cgi?id=12177
+@safe unittest
 {
     static assert(__traits(compiles, recurrence!q{a[n - 1] ~ a[n - 2]}("1", "0")));
 }
 
-// Issue 13390
+// https://issues.dlang.org/show_bug.cgi?id=13390
 @system unittest
 {
     import core.exception : AssertError;
@@ -4310,7 +4329,8 @@ if (isStaticArray!R)
     assertThrown!AssertError(cycle([0, 1, 2][0 .. 0]));
 }
 
-pure @safe unittest // issue 18657
+// https://issues.dlang.org/show_bug.cgi?id=18657
+pure @safe unittest
 {
     import std.algorithm.comparison : equal;
     string s = "foo";
@@ -5242,11 +5262,12 @@ pure @system unittest
         assert(zLongest.empty);
     }
 
-    // BUG 8900
+    // https://issues.dlang.org/show_bug.cgi?id=8900
     assert(zip([1, 2], repeat('a')).array == [tuple(1, 'a'), tuple(2, 'a')]);
     assert(zip(repeat('a'), [1, 2]).array == [tuple('a', 1), tuple('a', 2)]);
 
-    // Issue 18524 - moveBack instead performs moveFront
+    // https://issues.dlang.org/show_bug.cgi?id=18524
+    // moveBack instead performs moveFront
     {
         auto r = zip([1,2,3]);
         assert(r.moveBack()[0] == 3);
@@ -5320,7 +5341,7 @@ nothrow pure @safe unittest
     assert(equal(z2, [tuple(7, 0L)]));
 }
 
-// Text for Issue 11196
+// Test for https://issues.dlang.org/show_bug.cgi?id=11196
 @safe pure unittest
 {
     import std.exception : assertThrown;
@@ -5331,7 +5352,8 @@ nothrow pure @safe unittest
     assertThrown(zip(StoppingPolicy.longest, cast(S[]) null, new int[1]).front);
 }
 
-@nogc nothrow @safe pure unittest //12007
+// https://issues.dlang.org/show_bug.cgi?id=12007
+@nogc nothrow @safe pure unittest
 {
     static struct R
     {
@@ -5643,7 +5665,8 @@ if (allSatisfy!(isInputRange, Ranges))
    }
 }
 
-@system unittest // Bugzilla 15860: foreach_reverse on lockstep
+// https://issues.dlang.org/show_bug.cgi?id=15860: foreach_reverse on lockstep
+@system unittest
 {
     auto arr1 = [0, 1, 2, 3];
     auto arr2 = [4, 5, 6, 7];
@@ -5725,8 +5748,9 @@ if (allSatisfy!(isInputRange, Ranges))
         assert(0);
     } catch (Exception) {}
 
-    // Just make sure 1-range case instantiates.  This hangs the compiler
-    // when no explicit stopping policy is specified due to Bug 4652.
+    // Just make sure 1-range case instantiates. This hangs the compiler
+    // when no explicit stopping policy is specified due to
+    // https://issues.dlang.org/show_bug.cgi?id=4652
     auto stuff = lockstep([1,2,3,4,5], StoppingPolicy.shortest);
     foreach (i, a; stuff)
     {
@@ -6130,7 +6154,7 @@ pure @safe nothrow @nogc unittest
     assert(equal(odds.take(3), only(21, 23, 25)));
 }
 
-// Issue 5036
+// https://issues.dlang.org/show_bug.cgi?id=5036
 pure @safe nothrow unittest
 {
     auto s = sequence!((a, n) => new int)(0);
@@ -6649,14 +6673,15 @@ pure @safe unittest
     assert(iota_of_longs_with_steps.length == 6);
     assert(equal(iota_of_longs_with_steps, [50L, 60L, 70L, 80L, 90L, 100L]));
 
-    // iota of unsigned zero length (issue 6222, actually trying to consume it
-    // is the only way to find something is wrong because the public
-    // properties are all correct)
+    // iota of unsigned zero length (https://issues.dlang.org/show_bug.cgi?id=6222)
+    // Actually trying to consume it is the only way to find something is wrong
+    // because the public properties are all correct.
     auto iota_zero_unsigned = iota(0, 0u, 3);
     assert(count(iota_zero_unsigned) == 0);
 
-    // unsigned reverse iota can be buggy if .length doesn't take them into
-    // account (issue 7982).
+    // https://issues.dlang.org/show_bug.cgi?id=7982
+    // unsigned reverse iota can be buggy if `.length` doesn't
+    // take them into account
     assert(iota(10u, 0u, -1).length == 10);
     assert(iota(10u, 0u, -2).length == 5);
     assert(iota(uint.max, uint.max-10, -1).length == 10);
@@ -6672,7 +6697,7 @@ pure @safe unittest
     assert(!(int.max in iota(20u, 10u, -1)));
 
 
-    // Issue 8920
+    // https://issues.dlang.org/show_bug.cgi?id=8920
     static foreach (Type; AliasSeq!(byte, ubyte, short, ushort,
         int, uint, long, ulong))
     {{
@@ -7175,7 +7200,7 @@ pure @safe nothrow unittest
     }
 }
 
-// Issue 16363
+// https://issues.dlang.org/show_bug.cgi?id=16363
 pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
@@ -7187,7 +7212,7 @@ pure @safe nothrow unittest
     static assert(isRandomAccessRange!(typeof(ft)));
 }
 
-// Bugzilla 16442
+// https://issues.dlang.org/show_bug.cgi?id=16442
 pure @safe nothrow unittest
 {
     int[][] arr = [[], []];
@@ -7601,7 +7626,7 @@ private:
     assert(transposed(ror).empty);
 }
 
-// Issue 9507
+// https://issues.dlang.org/show_bug.cgi?id=9507
 @safe unittest
 {
     import std.algorithm.comparison : equal;
@@ -7613,7 +7638,7 @@ private:
     ]));
 }
 
-// Issue 17742
+// https://issues.dlang.org/show_bug.cgi?id=17742
 @safe unittest
 {
     import std.algorithm.iteration : map;
@@ -7706,7 +7731,7 @@ if (isForwardRange!RangeOfRanges &&
     }
 }
 
-// Issue 8764
+// https://issues.dlang.org/show_bug.cgi?id=8764
 @safe unittest
 {
     import std.algorithm.comparison : equal;
@@ -9800,7 +9825,7 @@ private struct OnlyResult(T, size_t arity)
     private size_t frontIndex = 0;
     private size_t backIndex = 0;
 
-    // @@@BUG@@@ 10643
+    // https://issues.dlang.org/show_bug.cgi?id=10643
     version (none)
     {
         import std.traits : hasElaborateAssign;
@@ -10035,7 +10060,7 @@ if (!is(CommonType!Values == void) || Values.length == 0)
     assert(imm.front == 1);
     assert(imm.back == 1);
     assert(!imm.empty);
-    assert(imm.init.empty); // Issue 13441
+    assert(imm.init.empty); // https://issues.dlang.org/show_bug.cgi?id=13441
     assert(imm.length == 1);
     assert(equal(imm, imm[]));
     assert(equal(imm, imm[0 .. 1]));
@@ -10124,7 +10149,7 @@ if (!is(CommonType!Values == void) || Values.length == 0)
     alias Imm = typeof(imm);
     static assert(is(ElementType!Imm == immutable(int)));
     assert(!imm.empty);
-    assert(imm.init.empty); // Issue 13441
+    assert(imm.init.empty); // https://issues.dlang.org/show_bug.cgi?id=13441
     assert(imm.front == 42);
     imm.popFront();
     assert(imm.front == 24);
@@ -10464,7 +10489,8 @@ pure @safe unittest
     }}
 }
 
-version (none) // @@@BUG@@@ 10939
+// https://issues.dlang.org/show_bug.cgi?id=10939
+version (none)
 {
     // Re-enable (or remove) if 10939 is resolved.
     /+pure+/ @safe unittest // Impure because of std.conv.to
@@ -10924,6 +10950,7 @@ if (isInputRange!Range && !isInstanceOf!(SortedRange, Range))
     }
 
     ///
+    static if (is(Range : int[]))
     @safe unittest
     {
         import std.algorithm.comparison : equal;
@@ -10966,6 +10993,7 @@ policies are allowed, and `SearchPolicy.binarySearch` is the default.
     }
 
     ///
+    static if (is(Range : int[]))
     @safe unittest
     {
         import std.algorithm.comparison : equal;
@@ -11028,6 +11056,7 @@ policies are allowed, and `SearchPolicy.binarySearch` is the default.
     }
 
     ///
+    static if (is(Range : int[]))
     @safe unittest
     {
         import std.algorithm.comparison : equal;
@@ -11088,6 +11117,7 @@ equalRange). Completes the entire search in $(BIGOH log(n)) time.
     }
 
     ///
+    static if (is(Range : int[]))
     @safe unittest
     {
         import std.algorithm.comparison : equal;
@@ -11117,7 +11147,7 @@ evaluations of `pred`.
 /**
 Like `contains`, but the value is specified before the range.
 */
-    auto opBinaryRight(string op, V)(V value)
+    bool opBinaryRight(string op, V)(V value)
     if (op == "in" && isRandomAccessRange!Range)
     {
         return contains(value);
@@ -11140,7 +11170,7 @@ template SortedRange(Range, alias pred = "a < b",
                      SortedRangeOptions opt = SortedRangeOptions.assumeSorted)
 if (isInstanceOf!(SortedRange, Range))
 {
-    // Avoid nesting SortedRange types (see Issue 18933);
+    // Avoid nesting SortedRange types (see https://issues.dlang.org/show_bug.cgi?id=18933);
     alias SortedRange = SortedRange!(Unqual!(typeof(Range._input)), pred, opt);
 }
 
@@ -11370,7 +11400,8 @@ if (isInputRange!(Unqual!R))
     p = assumeSorted(a).upperBound(4.2);
     assert(equal(p, [ 5, 6 ]));
 
-    // Issue 18933 - don't create senselessly nested SortedRange types.
+    // https://issues.dlang.org/show_bug.cgi?id=18933
+    // don't create senselessly nested SortedRange types.
     assert(is(typeof(assumeSorted(a)) == typeof(assumeSorted(assumeSorted(a)))));
     assert(is(typeof(assumeSorted(a)) == typeof(assumeSorted(assumeSorted!"a > b"(a)))));
 }
@@ -11416,7 +11447,7 @@ if (isInputRange!(Unqual!R))
     r = assumeSorted(a);
 }
 
-// issue 15003
+// https://issues.dlang.org/show_bug.cgi?id=15003
 @nogc @safe unittest
 {
     static immutable a = [1, 2, 3, 4];
@@ -11940,8 +11971,8 @@ private:
     }
 
     {
-        // Issue 16534 - opDollar should be defined if the
-        // wrapped range defines length.
+        // https://issues.dlang.org/show_bug.cgi?id=16534
+        // opDollar should be defined if the wrapped range defines length.
         auto range = 10.iota.takeExactly(5);
         auto wrapper = refRange(&range);
         assert(wrapper.length == 5);
@@ -12129,7 +12160,8 @@ private:
     assert(cWrapper is c);
 }
 
-@system unittest // issue 14373
+// https://issues.dlang.org/show_bug.cgi?id=14373
+@system unittest
 {
     static struct R
     {
@@ -12142,7 +12174,8 @@ private:
     assert(r.empty);
 }
 
-@system unittest // issue 14575
+// https://issues.dlang.org/show_bug.cgi?id=14575
+@system unittest
 {
     struct R
     {
@@ -12182,9 +12215,8 @@ if (isInputRange!R)
         return *range;
 }
 
-/*****************************************************************************/
-
-@safe unittest    // bug 9060
+// https://issues.dlang.org/show_bug.cgi?id=9060
+@safe unittest
 {
     import std.algorithm.iteration : map, joiner, group;
     import std.algorithm.searching : until;
@@ -13028,9 +13060,9 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
     }}
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=13483
 @safe unittest
 {
-    // Issue 13483
     static void func1(T)(T x) {}
     void func2(int x) {}
 
@@ -13424,7 +13456,7 @@ pure @safe unittest
     assert(len == 6);
 }
 
-// Issue 19042
+// https://issues.dlang.org/show_bug.cgi?id=19042
 @safe pure unittest
 {
     import std.algorithm.comparison : equal;

@@ -101,6 +101,15 @@ static import std.meta;
 import std.range.primitives;
 import std.traits;
 
+version (OSX)
+    version = Darwin;
+else version (iOS)
+    version = Darwin;
+else version (TVOS)
+    version = Darwin;
+else version (WatchOS)
+    version = Darwin;
+
 version (StdUnittest)
 {
 private:
@@ -343,7 +352,7 @@ enum CaseSensitive : bool
 
     /** The default (or most common) setting for the current platform.
         That is, `no` on Windows and Mac OS X, and `yes` on all
-        POSIX systems except OS X (Linux, *BSD, etc.).
+        POSIX systems except Darwin (Linux, *BSD, etc.).
     */
     osDefault = osDefaultCaseSensitivity
 }
@@ -360,9 +369,9 @@ enum CaseSensitive : bool
         assert(relativePath!(CaseSensitive.no)(`c:\FOO\bar`, `c:\foo\baz`) == `..\bar`);
 }
 
-version (Windows)    private enum osDefaultCaseSensitivity = false;
-else version (OSX)   private enum osDefaultCaseSensitivity = false;
-else version (Posix) private enum osDefaultCaseSensitivity = true;
+version (Windows)     private enum osDefaultCaseSensitivity = false;
+else version (Darwin) private enum osDefaultCaseSensitivity = false;
+else version (Posix)  private enum osDefaultCaseSensitivity = true;
 else static assert(0);
 
 /**
@@ -1229,7 +1238,7 @@ if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
     static assert(setExtension("file"w.dup, "ext"w) == "file.ext");
     static assert(setExtension("file.old"d.dup, "new"d) == "file.new");
 
-    // Issue 10601
+    // https://issues.dlang.org/show_bug.cgi?id=10601
     assert(setExtension("file", "") == "file");
     assert(setExtension("file.ext", "") == "file");
 }
@@ -4116,7 +4125,10 @@ string expandTilde(string inputPath) @safe nothrow
 {
     version (Posix)
     {
-        import std.process : executeShell, environment;
+        static if (__traits(compiles, { import std.process : executeShell; }))
+            import std.process : executeShell;
+
+        import std.process : environment;
         import std.string : strip;
 
         // Retrieve the current home variable.
@@ -4141,12 +4153,15 @@ string expandTilde(string inputPath) @safe nothrow
         if (oldHome !is null) environment["HOME"] = oldHome;
         else environment.remove("HOME");
 
-        immutable tildeUser = "~" ~ environment.get("USER");
-        immutable path = executeShell("echo " ~ tildeUser).output.strip();
-        immutable expTildeUser = expandTilde(tildeUser);
-        assert(expTildeUser == path, expTildeUser);
-        immutable expTildeUserSlash = expandTilde(tildeUser ~ "/");
-        assert(expTildeUserSlash == path ~ "/", expTildeUserSlash);
+        static if (is(typeof(executeShell)))
+        {
+            immutable tildeUser = "~" ~ environment.get("USER");
+            immutable path = executeShell("echo " ~ tildeUser).output.strip();
+            immutable expTildeUser = expandTilde(tildeUser);
+            assert(expTildeUser == path, expTildeUser);
+            immutable expTildeUserSlash = expandTilde(tildeUser ~ "/");
+            assert(expTildeUserSlash == path ~ "/", expTildeUserSlash);
+        }
 
         assert(expandTilde("~Idontexist/hey") == "~Idontexist/hey");
     }

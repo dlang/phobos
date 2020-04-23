@@ -226,8 +226,9 @@ module std.experimental.allocator;
 public import std.experimental.allocator.common,
     std.experimental.allocator.typed;
 
-// Fix issue 17806: this should always be the first unittest in this module
-// in order to ensure that we use the `processAllocator` setter before the getter
+// Fix https://issues.dlang.org/show_bug.cgi?id=17806
+// this should always be the first unittest in this module in order to ensure
+// that we use the `processAllocator` setter before the getter
 @system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
@@ -1246,7 +1247,9 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
     assert(outer.x == inner.getX);
 }
 
-@system unittest // bugzilla 15639 & 15772
+// https://issues.dlang.org/show_bug.cgi?id=15639
+// https://issues.dlang.org/show_bug.cgi?id=15772
+@system unittest
 {
     abstract class Foo {}
     class Bar: Foo {}
@@ -1410,7 +1413,8 @@ nothrow @safe @nogc unittest
         "Don't allow zero-ctor-args `make` for structs with `@disable this();`");
 }
 
-@safe unittest // issue 18937
+// https://issues.dlang.org/show_bug.cgi?id=18937
+@safe unittest
 {
     static struct S
     {
@@ -2455,7 +2459,8 @@ void dispose(A, T)(auto ref A alloc, auto ref T[] array)
     theAllocator.dispose(arr);
 }
 
-@system unittest //bugzilla 16512
+// https://issues.dlang.org/show_bug.cgi?id=16512
+@system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
 
@@ -2476,7 +2481,8 @@ void dispose(A, T)(auto ref A alloc, auto ref T[] array)
     assert(ua is null);
 }
 
-@system unittest //bugzilla 15721
+// https://issues.dlang.org/show_bug.cgi?id=15721
+@system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
 

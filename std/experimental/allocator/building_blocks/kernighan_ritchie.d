@@ -744,6 +744,7 @@ it actually returns memory to the operating system when possible.
     }
 }
 
+version (StdUnittest)
 @system unittest
 {
     import std.algorithm.comparison : max;

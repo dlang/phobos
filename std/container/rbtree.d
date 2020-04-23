@@ -542,7 +542,8 @@ struct RBNode(V)
                 _parent.right = null;
         }
 
-        // clean references to help GC - Bugzilla 12915
+        // clean references to help GC
+        // https://issues.dlang.org/show_bug.cgi?id=12915
         _left = _right = _parent = null;
 
         return ret;
@@ -1948,7 +1949,7 @@ assert(equal(rbt[], [5]));
     test!byte();
 }
 
-// issue 19626
+// https://issues.dlang.org/show_bug.cgi?id=19626
 @safe pure unittest
 {
     enum T { a, b }
@@ -2185,14 +2186,15 @@ if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init
     assert(rt1.upperBound(2).equal([3, 4, 5]));
 }
 
-// issue 15941
+// https://issues.dlang.org/show_bug.cgi?id=15941
 @safe pure unittest
 {
     class C {}
     RedBlackTree!(C, "cast(void*)a < cast(void*) b") tree;
 }
 
-@safe pure unittest // const/immutable elements (issue 17519)
+// const/immutable elements (https://issues.dlang.org/show_bug.cgi?id=17519)
+@safe pure unittest
 {
     RedBlackTree!(immutable int) t1;
     RedBlackTree!(const int) t2;

@@ -37,7 +37,7 @@ DMD_DIR=../dmd
 include $(DMD_DIR)/src/osmodel.mak
 
 ifeq (osx,$(OS))
-	export MACOSX_DEPLOYMENT_TARGET=10.7
+	export MACOSX_DEPLOYMENT_TARGET=10.9
 endif
 
 # Default to a release build, override with BUILD=debug
@@ -653,7 +653,7 @@ betterc: betterc-phobos-tests
 	@[ -f "$(TESTS_EXTRACTOR)" ] || ${MAKE} -f posix.mak "$(TESTS_EXTRACTOR)"
 	$(TESTS_EXTRACTOR) --betterC --attributes betterC \
 		--inputdir  $< --outputdir $(BETTERCTESTS_DIR)
-	$(DMD) $(DFLAGS) $(NODEFAULTLIB) -betterC -run $(BETTERCTESTS_DIR)/$(subst /,_,$<)
+	$(DMD) $(DFLAGS) $(NODEFAULTLIB) -betterC -unittest -run $(BETTERCTESTS_DIR)/$(subst /,_,$<)
 
 ################################################################################
 

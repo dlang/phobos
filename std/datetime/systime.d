@@ -32,6 +32,15 @@ $(TR $(TD Conversion) $(TD
 +/
 module std.datetime.systime;
 
+version (OSX)
+    version = Darwin;
+else version (iOS)
+    version = Darwin;
+else version (TVOS)
+    version = Darwin;
+else version (WatchOS)
+    version = Darwin;
+
 /// Get the current time as a $(LREF SysTime)
 @safe unittest
 {
@@ -212,7 +221,7 @@ public:
             static import core.stdc.time;
             enum hnsecsToUnixEpoch = unixTimeToStdTime(0);
 
-            version (OSX)
+            version (Darwin)
             {
                 static if (clockType == ClockType.second)
                     return unixTimeToStdTime(core.stdc.time.time(null));
@@ -410,7 +419,7 @@ private:
     To convert a `SysTime` to a $(REF Date,std,datetime,date) or
     $(REF DateTime,std,datetime,date), simply cast it. To convert a
     $(REF Date,std,datetime,date) or $(REF DateTime,std,datetime,date) to a
-    `SysTime`, use `SysTime`'s constructor, and pass in the ntended time
+    `SysTime`, use `SysTime`'s constructor, and pass in the intended time
     zone with it (or don't pass in a $(REF TimeZone,std,datetime,timezone), and
     the local time zone will be used). Be aware, however, that converting from a
     $(REF DateTime,std,datetime,date) to a `SysTime` will not necessarily
@@ -8065,7 +8074,7 @@ public:
     }
 
 
-    // Temporary hack until bug http://d.puremagic.com/issues/show_bug.cgi?id=4867 is fixed.
+    // Temporary hack until bug https://issues.dlang.org/show_bug.cgi?id=4867 is fixed.
     // This allows assignment from const(SysTime) to SysTime.
     // It may be a good idea to keep it though, since casting from a type to itself
     // should be allowed, and it doesn't work without this opCast() since opCast()
@@ -8914,11 +8923,11 @@ public:
         // pops up when deprecations are moved along around July 2019. At that
         // time, we will update fromISOString so that it is conformant with ISO
         // 8601, and it will no longer accept ISO extended time zones (it does
-        // currently because of issue #15654 - toISOString used to incorrectly
-        // use the ISO extended time zone format). These tests will then start
-        // failing will need to be updated accordingly. Also, the notes about
-        // this issue in toISOString and fromISOString's documentation will need
-        // to be removed.
+        // currently because of https://issues.dlang.org/show_bug.cgi?id=15654
+        // toISOString used to incorrectly use the ISO extended time zone format).
+        // These tests will then start failing will need to be updated accordingly.
+        // Also, the notes about this issue in toISOString and fromISOString's
+        // documentation will need to be removed.
         test("20101222T172201-01:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west60));
         test("20101222T172201-01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west90));
         test("20101222T172201-08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west480));
@@ -8939,7 +8948,7 @@ public:
         }
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import std.conv : to;
@@ -9186,7 +9195,7 @@ public:
         }
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import core.time;
@@ -9437,7 +9446,7 @@ public:
         }
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import core.time;
@@ -10504,7 +10513,8 @@ version (StdUnittest) private void testBadParse822(alias cr)(string str, size_t 
                            function(string a){return cast(ubyte[]) a;},
                            function(string a){return a;},
                            function(string a){return map!(b => cast(char) b)(a.representation);}))
-    {(){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
+    {(){ // workaround slow optimizations for large functions
+         // https://issues.dlang.org/show_bug.cgi?id=2396
         scope(failure) writeln(typeof(cr).stringof);
         alias test = testParse822!cr;
         alias testBad = testBadParse822!cr;
@@ -10775,7 +10785,8 @@ version (StdUnittest) private void testBadParse822(alias cr)(string str, size_t 
                            function(string a){return cast(ubyte[]) a;},
                            function(string a){return a;},
                            function(string a){return map!(b => cast(char) b)(a.representation);}))
-    {(){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
+    {(){ // workaround slow optimizations for large functions
+         // https://issues.dlang.org/show_bug.cgi?id=2396
         scope(failure) writeln(typeof(cr).stringof);
         alias test = testParse822!cr;
         {

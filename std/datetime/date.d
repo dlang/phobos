@@ -2661,6 +2661,18 @@ public:
 
 
     /++
+        The year of the ISO 8601 week calendar that this $(LREF DateTime) is in.
+
+        See_Also:
+            $(HTTP en.wikipedia.org/wiki/ISO_week_date, ISO Week Date)
+      +/
+    @property short isoWeekYear() const @safe pure nothrow
+    {
+        return _date.isoWeekYear;
+    }
+
+
+    /++
         $(LREF DateTime) for the last day in the month that this
         $(LREF DateTime) is in. The time portion of endOfMonth is always
         23:59:59.
@@ -3213,7 +3225,7 @@ public:
         assert(DateTime.fromISOString(" 19990706T123033 ") == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import std.conv : to;
@@ -3313,7 +3325,7 @@ public:
         assert(DateTime.fromISOExtString(" 1999-07-06T12:30:33 ") == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import std.conv : to;
@@ -3417,7 +3429,7 @@ public:
                DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import std.conv : to;
@@ -6882,13 +6894,19 @@ public:
 
 
     /++
-        The ISO 8601 week of the year that this $(LREF Date) is in.
+        The ISO 8601 week and year of the year that this $(LREF Date) is in.
+
+        Returns:
+            An anonymous struct with the members $(D isoWeekYear) for the
+            resulting year and $(D isoWeek) for the resulting ISO week.
 
         See_Also:
             $(HTTP en.wikipedia.org/wiki/ISO_week_date, ISO Week Date)
       +/
-    @property ubyte isoWeek() const @safe pure nothrow
+    @property auto isoWeekAndYear() const @safe pure nothrow
     {
+        struct ISOWeekAndYear { short isoWeekYear; ubyte isoWeek; }
+
         immutable weekday = dayOfWeek;
         immutable adjustedWeekday = weekday == DayOfWeek.sun ? 7 : weekday;
         immutable week = (dayOfYear - adjustedWeekday + 10) / 7;
@@ -6903,22 +6921,33 @@ public:
                     case DayOfWeek.tue:
                     case DayOfWeek.wed:
                     case DayOfWeek.thu:
-                        return 1;
+                        return ISOWeekAndYear(cast(short) (_year + 1), 1);
                     case DayOfWeek.fri:
                     case DayOfWeek.sat:
                     case DayOfWeek.sun:
-                        return 53;
+                        return ISOWeekAndYear(_year, 53);
                     default:
                         assert(0, "Invalid ISO Week");
                 }
             }
             else if (week > 0)
-                return cast(ubyte) week;
+                return ISOWeekAndYear(_year, cast(ubyte) week);
             else
-                return Date(_year - 1, 12, 31).isoWeek;
+                return Date(_year - 1, 12, 31).isoWeekAndYear;
         }
         catch (Exception e)
             assert(0, "Date's constructor threw.");
+    }
+
+    /++
+        The ISO 8601 week of the year that this $(LREF Date) is in.
+
+        See_Also:
+            $(HTTP en.wikipedia.org/wiki/ISO_week_date, ISO Week Date)
+      +/
+    @property ubyte isoWeek() const @safe pure nothrow
+    {
+        return isoWeekAndYear().isoWeek;
     }
 
     @safe unittest
@@ -6980,6 +7009,105 @@ public:
         static assert(!__traits(compiles, cdate.isoWeek = 3));
         assert(idate.isoWeek == 27);
         static assert(!__traits(compiles, idate.isoWeek = 3));
+    }
+
+    /++
+        The year inside the ISO 8601 week calendar that this $(LREF Date) is in.
+
+        May differ from $(LREF year) between 28 December and 4 January.
+
+        See_Also:
+            $(HTTP en.wikipedia.org/wiki/ISO_week_date, ISO Week Date)
+      +/
+    @property short isoWeekYear() const @safe pure nothrow
+    {
+        return isoWeekAndYear().isoWeekYear;
+    }
+
+    @safe unittest
+    {
+        // Test A.D.
+        assert(Date(2009, 12, 28).isoWeekYear == 2009);
+        assert(Date(2009, 12, 29).isoWeekYear == 2009);
+        assert(Date(2009, 12, 30).isoWeekYear == 2009);
+        assert(Date(2009, 12, 31).isoWeekYear == 2009);
+        assert(Date(2010, 1, 1).isoWeekYear == 2009);
+        assert(Date(2010, 1, 2).isoWeekYear == 2009);
+        assert(Date(2010, 1, 3).isoWeekYear == 2009);
+        assert(Date(2010, 1, 4).isoWeekYear == 2010);
+        assert(Date(2010, 1, 5).isoWeekYear == 2010);
+        assert(Date(2010, 1, 6).isoWeekYear == 2010);
+        assert(Date(2010, 1, 7).isoWeekYear == 2010);
+        assert(Date(2010, 1, 8).isoWeekYear == 2010);
+        assert(Date(2010, 1, 9).isoWeekYear == 2010);
+        assert(Date(2010, 1, 10).isoWeekYear == 2010);
+        assert(Date(2010, 1, 11).isoWeekYear == 2010);
+        assert(Date(2010, 12, 31).isoWeekYear == 2010);
+
+        assert(Date(2004, 12, 26).isoWeekYear == 2004);
+        assert(Date(2004, 12, 27).isoWeekYear == 2004);
+        assert(Date(2004, 12, 28).isoWeekYear == 2004);
+        assert(Date(2004, 12, 29).isoWeekYear == 2004);
+        assert(Date(2004, 12, 30).isoWeekYear == 2004);
+        assert(Date(2004, 12, 31).isoWeekYear == 2004);
+        assert(Date(2005, 1, 1).isoWeekYear == 2004);
+        assert(Date(2005, 1, 2).isoWeekYear == 2004);
+        assert(Date(2005, 1, 3).isoWeekYear == 2005);
+
+        assert(Date(2005, 12, 31).isoWeekYear == 2005);
+        assert(Date(2007, 1, 1).isoWeekYear == 2007);
+
+        assert(Date(2007, 12, 30).isoWeekYear == 2007);
+        assert(Date(2007, 12, 31).isoWeekYear == 2008);
+        assert(Date(2008, 1, 1).isoWeekYear == 2008);
+
+        assert(Date(2008, 12, 28).isoWeekYear == 2008);
+        assert(Date(2008, 12, 29).isoWeekYear == 2009);
+        assert(Date(2008, 12, 30).isoWeekYear == 2009);
+        assert(Date(2008, 12, 31).isoWeekYear == 2009);
+        assert(Date(2009, 1, 1).isoWeekYear == 2009);
+        assert(Date(2009, 1, 2).isoWeekYear == 2009);
+        assert(Date(2009, 1, 3).isoWeekYear == 2009);
+        assert(Date(2009, 1, 4).isoWeekYear == 2009);
+
+        // Test B.C.
+        assert(Date(0, 12, 31).isoWeekYear == 0);
+        assert(Date(0, 1, 4).isoWeekYear == 0);
+        assert(Date(0, 1, 1).isoWeekYear == -1);
+
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        assert(cdate.isoWeekYear == 1999);
+        assert(idate.isoWeekYear == 1999);
+    }
+
+    static Date fromISOWeek(short isoWeekYear, ubyte isoWeek, DayOfWeek weekday) @safe pure nothrow @nogc
+    {
+        immutable adjustedWeekday = weekday == DayOfWeek.sun ? 7 : weekday;
+        immutable dayOffset = (isoWeek - 1) * 7 + adjustedWeekday;
+
+        Date date;
+        date._year = isoWeekYear;
+        date._month = Month.jan;
+        date._day = 3;
+        immutable startOfYear = date.dayOfWeek;
+        return date._addDays(dayOffset - startOfYear);
+    }
+
+    @safe unittest
+    {
+        // Test -30000 days to 30000 days for matching construction <-> deconstruction
+        Date date = Date(1, 1, 1);
+        date._addDays(-30_000);
+        foreach (day; 0 .. 60_000)
+        {
+            const year = date.isoWeekYear;
+            const dow = date.dayOfWeek;
+            const isoWeek = date.isoWeek;
+            const reversed = Date.fromISOWeek(year, isoWeek, dow);
+            assert(reversed == date, date.toISOExtString ~ " != " ~ reversed.toISOExtString);
+            date = date._addDays(1);
+        }
     }
 
 
@@ -7605,7 +7733,7 @@ public:
         assert(Date.fromISOString(" 19990706 ") == Date(1999, 7, 6));
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import std.conv : to;
@@ -7743,7 +7871,7 @@ public:
         assert(Date.fromISOExtString(" 1999-07-06 ") == Date(1999, 7, 6));
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import std.conv : to;
@@ -7881,7 +8009,7 @@ public:
         assert(Date.fromSimpleString(" 1999-Jul-06 ") == Date(1999, 7, 6));
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import std.conv : to;
@@ -9167,7 +9295,7 @@ public:
         assert(TimeOfDay.fromISOString(" 011217 ") == TimeOfDay(1, 12, 17));
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import std.conv : to;
@@ -9292,7 +9420,7 @@ public:
         assert(TimeOfDay.fromISOExtString(" 01:12:17 ") == TimeOfDay(1, 12, 17));
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import std.conv : to;
@@ -9894,7 +10022,7 @@ bool yearIsLeapYear(int year) @safe pure nothrow @nogc
        accepts $(REF Duration, core,time) and returns $(D ref Unqual!T).
 
     5. `T` must define a `opBinary` for subtraction which accepts `T`
-       and returns returns $(REF Duration, core,time).
+       and returns $(REF Duration, core,time).
   +/
 template isTimePoint(T)
 {

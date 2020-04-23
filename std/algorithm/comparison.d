@@ -116,7 +116,7 @@ if (isExpressionTuple!values)
 }
 
 ///
-@safe @betterC unittest
+@safe @nogc @betterC unittest
 {
     assert(3.among(1, 42, 24, 3, 2));
 
@@ -133,7 +133,7 @@ if (isExpressionTuple!values)
 Alternatively, `values` can be passed at compile-time, allowing for a more
 efficient search, but one that only supports matching on equality:
 */
-@safe @betterC unittest
+@safe @nogc @betterC unittest
 {
     assert(3.among!(2, 3, 4));
     assert("bar".among!("foo", "bar", "baz") == 2);
@@ -541,7 +541,7 @@ do
 }
 
 ///
-@safe @betterC unittest
+@safe @nogc @betterC unittest
 {
     assert(clamp(2, 1, 3) == 2);
     assert(clamp(0, 1, 3) == 1);
@@ -804,9 +804,10 @@ pure @safe unittest
     assert(result > 0);
 }
 
+// cmp for string with custom predicate fails if distinct chars can compare equal
+// https://issues.dlang.org/show_bug.cgi?id=18286
 @nogc nothrow pure @safe unittest
 {
-    // Issue 18286: cmp for string with custom predicate fails if distinct chars can compare equal
     static bool ltCi(dchar a, dchar b)// less than, case insensitive
     {
         import std.ascii : toUpper;
@@ -819,9 +820,10 @@ pure @safe unittest
     static assert(cmp!ltCi("apple", "APPLE") == 0);
 }
 
+// for non-string ranges check that opCmp is evaluated only once per pair.
+// https://issues.dlang.org/show_bug.cgi?id=18280
 @nogc nothrow @safe unittest
 {
-    // Issue 18280: for non-string ranges check that opCmp is evaluated only once per pair.
     static int ctr = 0;
     struct S
     {
@@ -840,8 +842,9 @@ pure @safe unittest
     assert(ctr == a.length, "opCmp should be called exactly once per pair of items!");
 }
 
-nothrow pure @safe unittest
+nothrow pure @safe @nogc unittest
 {
+    import std.array : staticArray;
     // Test cmp when opCmp returns float.
     struct F
     {
@@ -853,14 +856,14 @@ nothrow pure @safe unittest
         bool opEquals(T)(T o) const { return false; }
         size_t toHash() const { return 0; }
     }
-    auto result = cmp([F(1), F(2), F(3)], [F(1), F(2), F(3)]);
+    auto result = cmp([F(1), F(2), F(3)].staticArray[], [F(1), F(2), F(3)].staticArray[]);
     assert(result == 0);
     assert(is(typeof(result) == float));
-    result = cmp([F(1), F(3), F(2)], [F(1), F(2), F(3)]);
+    result = cmp([F(1), F(3), F(2)].staticArray[], [F(1), F(2), F(3)].staticArray[]);
     assert(result > 0);
-    result = cmp([F(1), F(2), F(3)], [F(1), F(2), F(3), F(4)]);
+    result = cmp([F(1), F(2), F(3)].staticArray[], [F(1), F(2), F(3), F(4)].staticArray[]);
     assert(result < 0);
-    result = cmp([F(1), F(2), F(3)], [F(1), F(2)]);
+    result = cmp([F(1), F(2), F(3)].staticArray[], [F(1), F(2)].staticArray[]);
     assert(result > 0);
 }
 
@@ -967,24 +970,24 @@ template equal(alias pred = "a == b")
 }
 
 ///
-@safe unittest
+@safe @nogc unittest
 {
     import std.algorithm.comparison : equal;
     import std.math : approxEqual;
 
-    int[] a = [ 1, 2, 4, 3 ];
-    assert(!equal(a, a[1..$]));
-    assert(equal(a, a));
-    assert(equal!((a, b) => a == b)(a, a));
+    int[4] a = [ 1, 2, 4, 3 ];
+    assert(!equal(a[], a[1..$]));
+    assert(equal(a[], a[]));
+    assert(equal!((a, b) => a == b)(a[], a[]));
 
     // different types
-    double[] b = [ 1.0, 2, 4, 3];
-    assert(!equal(a, b[1..$]));
-    assert(equal(a, b));
+    double[4] b = [ 1.0, 2, 4, 3];
+    assert(!equal(a[], b[1..$]));
+    assert(equal(a[], b[]));
 
     // predicated: ensure that two vectors are approximately equal
-    double[] c = [ 1.005, 2, 4, 3];
-    assert(equal!approxEqual(b, c));
+    double[4] c = [ 1.005, 2, 4, 3];
+    assert(equal!approxEqual(b[], c[]));
 }
 
 /++
@@ -1067,19 +1070,25 @@ range of range (of range...) comparisons.
     assert(!equal(cir, ifr));
 }
 
-@safe pure unittest
+@safe @nogc pure unittest
 {
-    import std.utf : byChar, byWchar, byDchar;
+    import std.utf : byChar, byDchar;
 
     assert(equal("æøå".byChar, "æøå"));
     assert(equal("æøå", "æøå".byChar));
-    assert(equal("æøå".byWchar, "æøå"w));
-    assert(equal("æøå"w, "æøå".byWchar));
     assert(equal("æøå".byDchar, "æøå"d));
     assert(equal("æøå"d, "æøå".byDchar));
 }
 
 @safe pure unittest
+{
+    import std.utf : byWchar;
+
+    assert(equal("æøå".byWchar, "æøå"w));
+    assert(equal("æøå"w, "æøå".byWchar));
+}
+
+@safe @nogc pure unittest
 {
     struct R(bool _empty) {
         enum empty = _empty;
@@ -1560,7 +1569,7 @@ if (T.length >= 2)
 }
 
 ///
-@safe @betterC unittest
+@safe @betterC @nogc unittest
 {
     int a = 5;
     short b = 6;
@@ -1573,7 +1582,7 @@ if (T.length >= 2)
     assert(e == 2);
 }
 
-@safe unittest
+@safe unittest  // not @nogc due to `Date`
 {
     int a = 5;
     short b = 6;
@@ -1680,7 +1689,7 @@ if (T.length >= 2)
 }
 
 ///
-@safe @betterC unittest
+@safe @nogc @betterC unittest
 {
     int a = 5;
     short b = 6;
@@ -1697,7 +1706,7 @@ if (T.length >= 2)
 With arguments of mixed signedness, the return type is the one that can
 store the lowest values.
 */
-@safe @betterC unittest
+@safe @nogc @betterC unittest
 {
     int a = -10;
     uint f = 10;
@@ -1706,7 +1715,7 @@ store the lowest values.
 }
 
 /// User-defined types that support comparison with < are supported.
-@safe unittest
+@safe unittest  // not @nogc due to `Date`
 {
     import std.datetime;
     assert(min(Date(2012, 12, 21), Date(1982, 1, 4)) == Date(1982, 1, 4));
@@ -1739,22 +1748,24 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
 }
 
 ///
-@safe unittest
+@safe @nogc unittest
 {
-    int[]    x = [ 1,  5, 2, 7,   4, 3 ];
-    double[] y = [ 1.0, 5, 2, 7.3, 4, 8 ];
-    auto m = mismatch(x, y);
+    int[6] x = [ 1,   5, 2, 7,   4, 3 ];
+    double[6] y = [ 1.0, 5, 2, 7.3, 4, 8 ];
+    auto m = mismatch(x[], y[]);
     assert(m[0] == x[3 .. $]);
     assert(m[1] == y[3 .. $]);
 }
 
-@safe unittest
+@safe @nogc unittest
 {
-    int[] a = [ 1, 2, 3 ];
-    int[] b = [ 1, 2, 4, 5 ];
-    auto mm = mismatch(a, b);
-    assert(mm[0] == [3]);
-    assert(mm[1] == [4, 5]);
+    import std.range : only;
+
+    int[3] a = [ 1, 2, 3 ];
+    int[4] b = [ 1, 2, 4, 5 ];
+    auto mm = mismatch(a[], b[]);
+    assert(equal(mm[0], only(3)));
+    assert(equal(mm[1], only(4, 5)));
 }
 
 /**
@@ -1986,13 +1997,21 @@ if (isInputRange!Range1 &&
 }
 
 // Test CTFE
-@safe pure @betterC unittest
+@safe @nogc pure @betterC unittest
 {
     enum result1 = isSameLength([1, 2, 3], [4, 5, 6]);
     static assert(result1);
 
     enum result2 = isSameLength([0.3, 90.4, 23.7], [42.6, 23.6, 95.5, 6.3]);
     static assert(!result2);
+}
+
+@safe @nogc pure unittest
+{
+    import std.range : only;
+    assert(isSameLength(only(1, 2, 3), only(4, 5, 6)));
+    assert(isSameLength(only(0.3, 90.4, 23.7, 119.2), only(42.6, 23.6, 95.5, 6.3)));
+    assert(!isSameLength(only(1, 3, 3), only(4, 5)));
 }
 
 @safe nothrow pure unittest

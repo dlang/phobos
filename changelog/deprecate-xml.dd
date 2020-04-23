@@ -1,0 +1,6 @@
+Deprecated module `std.xml`
+
+The module `std.xml` has been deprecated. Any code that still needs
+it can use [UndeaD](https://github.com/dlang/undeaD) instead.
+For parsing xml files, we recommend to use the dub package
+[dxml](https://code.dlang.org/packages/dxml).

@@ -2,8 +2,8 @@
 
 /**
 $(RED Warning: This module is considered out-dated and not up to Phobos'
-      current standards. It will remain until we have a suitable replacement,
-      but be aware that it will not remain long term.)
+      current standards. It will be removed from Phobos in 2.101.0.
+      If you still need it, go to $(LINK https://github.com/DigitalMars/undeaD))
 
 Classes and functions for creating and parsing XML
 
@@ -123,6 +123,7 @@ Distributed under the Boost Software License, Version 1.0.
    (See accompanying file LICENSE_1_0.txt or copy at
          http://www.boost.org/LICENSE_1_0.txt)
 */
+deprecated("Will be removed from Phobos in 2.101.0. If you still need it, go to https://github.com/DigitalMars/undeaD")
 module std.xml;
 
 enum cdata = "<![CDATA[";
@@ -1318,7 +1319,8 @@ class Comment : Item
     override @property @safe @nogc pure nothrow scope bool isEmptyXML() const { return false; } /// Returns false always
 }
 
-@safe unittest // issue 16241
+// https://issues.dlang.org/show_bug.cgi?id=16241
+@safe unittest
 {
     import std.exception : assertThrown;
     auto c = new Comment("==");
@@ -2096,8 +2098,8 @@ class ElementParser
                 {
                     Tag startTag = new Tag(tag_.name);
 
-                    // FIX by hed010gy, for bug 2979
-                    // http://d.puremagic.com/issues/show_bug.cgi?id=2979
+                    // FIX by hed010gy
+                    // https://issues.dlang.org/show_bug.cgi?id=2979
                     if (tag_.attr.length > 0)
                           foreach (tn,tv; tag_.attr) startTag.attr[tn]=tv;
                     // END FIX

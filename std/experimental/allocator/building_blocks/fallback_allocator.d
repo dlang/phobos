@@ -30,6 +30,7 @@ struct FallbackAllocator(Primary, Fallback)
     // Need both allocators to be stateless
     // This is to avoid using default initialized stateful allocators
     static if (!stateSize!Primary && !stateSize!Fallback)
+    version (StdUnittest)
     @system unittest
     {
         testAllocator!(() => FallbackAllocator());
@@ -354,6 +355,7 @@ struct FallbackAllocator(Primary, Fallback)
     assert(b.length == 100);
 }
 
+version (StdUnittest)
 @system unittest
 {
     import std.experimental.allocator.building_blocks.bitmapped_block : BitmappedBlockWithInternalPointers;
@@ -469,6 +471,7 @@ fallbackAllocator(Primary, Fallback)(auto ref Primary p, auto ref Fallback f)
     assert(a.primary.owns(b2) == Ternary.no);
 }
 
+version (StdUnittest)
 @system unittest
 {
     import std.experimental.allocator.building_blocks.region : Region;

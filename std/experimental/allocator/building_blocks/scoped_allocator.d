@@ -23,6 +23,7 @@ struct ScopedAllocator(ParentAllocator)
     static if (!stateSize!ParentAllocator)
     {
         // This test is available only for stateless allocators
+        version (StdUnittest)
         @system unittest
         {
             testAllocator!(() => ScopedAllocator());
@@ -223,6 +224,7 @@ struct ScopedAllocator(ParentAllocator)
     assert(alloc.empty == Ternary.no);
 }
 
+version (StdUnittest)
 @system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
