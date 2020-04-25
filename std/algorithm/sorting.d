@@ -2067,6 +2067,17 @@ if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
         r.sort();
         assert(proxySwapCalled);
     }
+
+    // https://issues.dlang.org/show_bug.cgi?id=20751
+    {
+        static bool refPred(ref int a, ref int b)
+        {
+            return a < b;
+        }
+
+        auto sortedArr = [5,4,3,2,1].sort!refPred;
+        sortedArr.equalRange(3);
+    }
 }
 
 private void quickSortImpl(alias less, Range)(Range r, size_t depth)
