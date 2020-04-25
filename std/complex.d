@@ -1047,3 +1047,104 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
     // Test ease of use (vanilla toString() should be supported)
     assert(complex(1.2, 3.4).toString() == "1.2+3.4i");
 }
+
+/**
+ * Calculates e$(SUPERSCRIPT x).
+ * Params:
+ *      x = A complex number
+ * Returns:
+ *      The complex base e exponential of `x`
+ */
+Complex!T exp(T)(Complex!T x) @trusted pure nothrow @nogc // TODO: @safe
+{
+    static import std.math;
+
+    return fromPolar!(T, T)(std.math.exp(x.re), x.im);
+}
+
+/**
+ * Calculate the natural logarithm of x.
+ * The branch cut is along the negative axis.
+ * Params:
+ *      x = A complex number
+ * Returns:
+ *      The complex natural logarithm of `x`
+ */
+Complex!T log(T)(Complex!T x) @safe pure nothrow @nogc
+{
+    static import std.math;
+
+    return Complex!T(std.math.log(abs(x)), arg(x));
+}
+
+/**
+ * Calculate the base-10 logarithm of x.
+ * Params:
+ *      x = A complex number
+ * Returns:
+ *      The complex base 10 logarithm of `x`
+ */
+Complex!T log10(T)(Complex!T x) @safe pure nothrow @nogc
+{
+    static import std.math;
+
+    return log(x) / Complex!T(std.math.log(10.0));
+}
+
+/**
+ * Calculates x$(SUPERSCRIPT n).
+ * The branch cut is on the negative axis.
+ * Params:
+ *      x = base
+ *      n = exponent
+ * Returns:
+ *      `x` raised to the power of `n`
+ */
+Complex!T pow(T, Int)(Complex!T x, const Int n) @safe pure nothrow @nogc
+if (isIntegral!Int)
+{
+    alias UInt = Unsigned!(Unqual!Int);
+
+    UInt m = (n < 0) ? -cast(UInt) n : n;
+    Complex!T y = (m % 2) ? x : Complex!T(1);
+
+    while (m >>= 1)
+    {
+        x *= x;
+        if (m % 2)
+            y *= x;
+    }
+
+    return (n < 0) ? Complex!T(1) / y : y;
+}
+
+/// ditto
+Complex!T pow(T)(Complex!T x, const T n) @trusted pure nothrow @nogc
+{
+    static import std.math;
+
+    if (x == 0.0)
+        return Complex!T(0.0);
+
+    if (x.im == 0 && x.re > 0.0)
+        return Complex!T(std.math.pow(x.re, n));
+
+    Complex!T t = log(x);
+    return fromPolar!(T, T)(std.math.exp(n * t.re), n * t.im);
+}
+
+/// ditto
+Complex!T pow(T)(Complex!T x, Complex!T y) @trusted pure nothrow @nogc
+{
+    return (x == 0) ? Complex!T(0) : exp(y * log(x));
+}
+
+/// ditto
+Complex!T pow(T)(const T x, Complex!T n) @trusted pure nothrow @nogc
+{
+    static import std.math;
+
+    return (x > 0.0)
+        ? fromPolar!(T, T)(std.math.pow(x, n.re), n.im * std.math.log(x))
+        : pow(Complex!T(x), n);
+}
