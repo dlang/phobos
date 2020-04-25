@@ -878,12 +878,7 @@ private Pid spawnProcessImpl(scope const(char[])[] args,
 
     if (args.empty) throw new RangeError();
     const(char)[] name = args[0];
-    if (any!isDirSeparator(name))
-    {
-        if (!isExecutable(name))
-            throw new ProcessException(text("Not an executable file: ", name));
-    }
-    else
+    if (!any!isDirSeparator(name))
     {
         name = searchPathFor(name);
         if (name is null)
@@ -1779,6 +1774,22 @@ version (Windows)
 
     auto data = readText(fn);
     assert(data == "AAAAAAAAAABBBBB\r\n", data);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=20765
+// Test that running processes with relative path works in conjunction
+// with indicating a workDir.
+version (Posix) @system unittest
+{
+    import std.file : mkdir, write, setAttributes;
+    import std.conv : octal;
+
+    auto dir = uniqueTempPath();
+    mkdir(dir);
+    write(dir ~ "/program", "#!/bin/sh\necho Hello");
+    setAttributes(dir ~ "/program", octal!700);
+
+    assert(execute(["./program"], null, Config.none, size_t.max, dir).output == "Hello\n");
 }
 
 /**
