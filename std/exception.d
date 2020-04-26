@@ -1111,7 +1111,7 @@ If `source` is a class, then it will be handled as a pointer.
 If `target` is a pointer, a dynamic array or a class, then these functions will only
 check if `source` points to `target`, $(I not) what `target` references.
 
-If `source` is or contains a union, then there may be either false positives or
+If `source` is or contains a union or `void[n]`, then there may be either false positives or
 false negatives:
 
 `doesPointTo` will return `true` if it is absolutely certain
@@ -1149,8 +1149,11 @@ if (__traits(isRef, source) || isDynamicArray!S ||
     }
     else static if (isStaticArray!S)
     {
-        foreach (ref s; source)
-            if (doesPointTo(s, target)) return true;
+        static if (!is(S == void[n], size_t n))
+        {
+            foreach (ref s; source)
+                if (doesPointTo(s, target)) return true;
+        }
         return false;
     }
     else static if (isDynamicArray!S)
@@ -1191,8 +1194,33 @@ if (__traits(isRef, source) || isDynamicArray!S ||
     }
     else static if (isStaticArray!S)
     {
-        foreach (size_t i; 0 .. S.length)
-            if (mayPointTo(source[i], target)) return true;
+        static if (is(S == void[n], size_t n))
+        {
+            static if (n >= (void*).sizeof)
+            {
+                // Reinterpreting cast is impossible during ctfe
+                if (__ctfe)
+                    return true;
+
+                // Only check for properly aligned pointers
+                enum al = (void*).alignof - 1;
+                const base = cast(size_t) &source;
+                const alBase = (base + al) & ~al;
+                const elems = (n - (alBase - base)) / (void*).sizeof;
+
+                foreach (const s; (cast(void**) alBase)[0 .. elems])
+                {
+                    if (mayPointTo(s, target))
+                        return true;
+                }
+            }
+        }
+        else
+        {
+            foreach (size_t i; 0 .. S.length)
+                if (mayPointTo(source[i], target)) return true;
+        }
+
         return false;
     }
     else static if (isDynamicArray!S)
@@ -1440,6 +1468,44 @@ version (StdUnittest)
     assert( doesPointTo(ss, a));  //The array contains a struct that points to a
     assert(!doesPointTo(ss, b));  //The array doesn't contains a struct that points to b
     assert(!doesPointTo(ss, ss)); //The array doesn't point itself.
+
+    // https://issues.dlang.org/show_bug.cgi?id=20426
+    align((void*).alignof) void[32] voidArr = void;
+    (cast(void*[]) voidArr[])[] = null; // Ensure no false pointers
+
+    *cast(void**) &voidArr[16] = &a; // Pointers should be found
+
+    // But it should only consider properly aligned pointers
+    // Write single bytes to avoid issues due to misaligned writes
+    void*[1] tmp = [&b];
+    (cast(ubyte[]) voidArr[3 .. 3 + (void*).sizeof])[] = cast(ubyte[]) tmp[];
+
+
+    assert( mayPointTo(voidArr, a));
+    assert(!mayPointTo(voidArr, b));
+
+    assert(!doesPointTo(voidArr, a)); // Value might be a false pointer
+    assert(!doesPointTo(voidArr, b));
+
+    auto v2 = cast(void[26]*) &voidArr[3]; // Works for weird sizes/alignments
+    assert( mayPointTo(*v2, a));
+    assert(!mayPointTo(*v2, b));
+
+    assert(!doesPointTo(*v2, a));
+    assert(!doesPointTo(*v2, b));
+
+    auto v3 = cast(void[3]*) &voidArr[16]; // Arrays smaller than pointers are ignored
+    assert(!mayPointTo(*v3, a));
+    assert(!mayPointTo(*v3, b));
+
+    assert(!doesPointTo(*v3, a));
+    assert(!doesPointTo(*v3, b));
+
+    static assert(() {
+        void[16] arr = void;
+        int var;
+        return mayPointTo(arr, var) && !doesPointTo(arr, var);
+    }());
 }
 
 
