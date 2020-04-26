@@ -1904,12 +1904,11 @@ if (isInputRange!Range && !isForwardRange!Range)
 
 private template ChunkByImplIsUnary(alias pred, Range)
 {
-    static if (is(typeof(binaryFun!pred(ElementType!Range.init,
-                                        ElementType!Range.init)) : bool))
+    alias e = lvalueOf!(ElementType!Range);
+
+    static if (is(typeof(binaryFun!pred(e, e)) : bool))
         enum ChunkByImplIsUnary = false;
-    else static if (is(typeof(
-            unaryFun!pred(ElementType!Range.init) ==
-            unaryFun!pred(ElementType!Range.init))))
+    else static if (is(typeof(unaryFun!pred(e) == unaryFun!pred(e)) : bool))
         enum ChunkByImplIsUnary = true;
     else
         static assert(0, "chunkBy expects either a binary predicate or "~
@@ -2641,6 +2640,11 @@ version (none) // this example requires support for non-equivalence relations
         }
     }
 
+    // https://issues.dlang.org/show_bug.cgi?id=20496
+    {
+        auto r = [1,1,1,2,2,2,3,3,3];
+        r.chunkBy!((ref e1, ref e2) => e1 == e2);
+    }
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=13595
