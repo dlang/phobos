@@ -4420,7 +4420,7 @@ real log1p(real x) @safe pure nothrow @nogc
 real log2(real x) @safe pure nothrow @nogc
 {
     version (INLINE_YL2X)
-        return core.math.yl2x(x, 1);
+        return core.math.yl2x(x, 1.0L);
     else
     {
         // Special cases are the same as for log.
