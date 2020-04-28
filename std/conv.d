@@ -2795,7 +2795,9 @@ if (isSomeString!Source && !is(Source == enum) &&
     is(Target == enum))
 {
     import std.algorithm.searching : startsWith;
-    Target result;
+    import std.traits : Unqual, EnumMembers;
+
+    Unqual!Target result;
     size_t longest_match = 0;
 
     foreach (i, e; EnumMembers!Target)
@@ -2844,6 +2846,10 @@ if (isSomeString!Source && !is(Source == enum) &&
         assert(to!E("a"c) == E.a);
         assert(to!E("b"w) == E.b);
         assert(to!E("c"d) == E.c);
+
+        assert(to!(const E)("a") == E.a);
+        assert(to!(immutable E)("a") == E.a);
+        assert(to!(shared E)("a") == E.a);
 
         assertThrown!ConvException(to!E("d"));
     }
