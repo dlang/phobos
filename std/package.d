@@ -25,7 +25,7 @@ module std;
 @safe unittest
 {
     import std;
-    assert(10.iota.map!(partial!(pow, 2)).sum == 1023);
+    assert(10.iota.map!(a => pow(2, a)).sum == 1023);
 }
 
 public import
