@@ -1059,7 +1059,124 @@ Complex!T exp(T)(Complex!T x) @trusted pure nothrow @nogc // TODO: @safe
 {
     static import std.math;
 
+    // Handle special cases explicitly here, as fromPolar will otherwise
+    // cause them to return Complex!T(NaN, NaN), or with the wrong sign.
+    if (std.math.isInfinity(x.re))
+    {
+        if (std.math.isNaN(x.im))
+        {
+            if (std.math.signbit(x.re))
+                return Complex!T(0, std.math.copysign(0, x.im));
+            else
+                return x;
+        }
+        if (std.math.isInfinity(x.im))
+        {
+            if (std.math.signbit(x.re))
+                return Complex!T(0, std.math.copysign(0, x.im));
+            else
+                return Complex!T(T.infinity, -T.nan);
+        }
+        if (x.im == 0.0)
+        {
+            if (std.math.signbit(x.re))
+                return Complex!T(0.0);
+            else
+                return Complex!T(T.infinity);
+        }
+    }
+    if (std.math.isNaN(x.re))
+    {
+        if (std.math.isNaN(x.im) || std.math.isInfinity(x.im))
+            return Complex!T(T.nan, T.nan);
+        if (x.im == 0.0)
+            return x;
+    }
+    if (x.re == 0.0)
+    {
+        if (std.math.isNaN(x.im) || std.math.isInfinity(x.im))
+            return Complex!T(T.nan, T.nan);
+        if (x.im == 0.0)
+            return Complex!T(1.0, 0.0);
+    }
+
     return fromPolar!(T, T)(std.math.exp(x.re), x.im);
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.math : approxEqual, PI;
+
+    assert(exp(complex(0.0, 0.0)) == complex(1.0, 0.0));
+
+    auto a = complex(2.0, 1.0);
+    assert(exp(conj(a)) == conj(exp(a)));
+
+    auto b = exp(complex(0.0L, 1.0L) * PI);
+    assert(approxEqual(b.re, -1.0));
+    assert(approxEqual(b.im, 0.0));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.math : isNaN, isInfinity;
+
+    auto a = exp(complex(0.0, double.infinity));
+    assert(a.re.isNaN && a.im.isNaN);
+    auto b = exp(complex(0.0, double.infinity));
+    assert(b.re.isNaN && b.im.isNaN);
+    auto c = exp(complex(0.0, double.nan));
+    assert(c.re.isNaN && c.im.isNaN);
+
+    auto d = exp(complex(+double.infinity, 0.0));
+    assert(d == complex(double.infinity, 0.0));
+    auto e = exp(complex(-double.infinity, 0.0));
+    assert(e == complex(0.0));
+    auto f = exp(complex(-double.infinity, 1.0));
+    assert(f == complex(0.0));
+    auto g = exp(complex(+double.infinity, 1.0));
+    assert(g == complex(double.infinity, double.infinity));
+    auto h = exp(complex(-double.infinity, +double.infinity));
+    assert(h == complex(0.0));
+    auto i = exp(complex(+double.infinity, +double.infinity));
+    assert(i.re.isInfinity && i.im.isNaN);
+    auto j = exp(complex(-double.infinity, double.nan));
+    assert(j == complex(0.0));
+    auto k = exp(complex(+double.infinity, double.nan));
+    assert(k.re.isInfinity && k.im.isNaN);
+
+    auto l = exp(complex(double.nan, 0));
+    assert(l.re.isNaN && l.im == 0.0);
+    auto m = exp(complex(double.nan, 1));
+    assert(m.re.isNaN && m.im.isNaN);
+    auto n = exp(complex(double.nan, double.nan));
+    assert(n.re.isNaN && n.im.isNaN);
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.math : PI, approxEqual;
+
+    auto a = exp(complex(0.0, -PI));
+    assert(approxEqual(a.re, -1.0));
+    assert(approxEqual(a.im, 0.0));
+
+    auto b = exp(complex(0.0, -2.0 * PI / 3.0));
+    assert(approxEqual(b.re, -0.5));
+    assert(approxEqual(b.im, -0.866025));
+
+    auto d = exp(complex(0.0, PI / 3.0));
+    assert(approxEqual(d.re, 0.5));
+    assert(approxEqual(d.im, 0.866025));
+
+    auto e = exp(complex(0.0, 2.0 * PI / 3.0));
+    assert(approxEqual(e.re, -0.5));
+    assert(approxEqual(e.im, 0.866025));
+
+    auto f = exp(complex(0.0, PI));
+    assert(approxEqual(f.re, -1.0));
+    assert(approxEqual(f.im, -0.0));
 }
 
 /**
@@ -1074,7 +1191,125 @@ Complex!T log(T)(Complex!T x) @safe pure nothrow @nogc
 {
     static import std.math;
 
+    // Handle special cases explicitly here for better accuracy.
+    // The order here is important, so that the correct path is chosen.
+    if (std.math.isNaN(x.re))
+    {
+        if (std.math.isInfinity(x.im))
+            return Complex!T(T.infinity, T.nan);
+        else
+            return Complex!T(T.nan, T.nan);
+    }
+    if (std.math.isInfinity(x.re))
+    {
+        if (std.math.isNaN(x.im))
+            return Complex!T(T.infinity, T.nan);
+        else if (std.math.isInfinity(x.im))
+        {
+            if (std.math.signbit(x.re))
+                return Complex!T(T.infinity, std.math.copysign(3.0 * std.math.PI_4, x.im));
+            else
+                return Complex!T(T.infinity, std.math.copysign(std.math.PI_4, x.im));
+        }
+        else
+        {
+            if (std.math.signbit(x.re))
+                return Complex!T(T.infinity, std.math.copysign(std.math.PI, x.im));
+            else
+                return Complex!T(T.infinity, std.math.copysign(0.0, x.im));
+        }
+    }
+    if (std.math.isNaN(x.im))
+        return Complex!T(T.nan, T.nan);
+    if (std.math.isInfinity(x.im))
+        return Complex!T(T.infinity, std.math.copysign(std.math.PI_2, x.im));
+    if (x.re == 0.0 && x.im == 0.0)
+    {
+        if (std.math.signbit(x.re))
+            return Complex!T(-T.infinity, std.math.copysign(std.math.PI, x.im));
+        else
+            return Complex!T(-T.infinity, std.math.copysign(0.0, x.im));
+    }
+
     return Complex!T(std.math.log(abs(x)), arg(x));
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.math : sqrt, PI, approxEqual;
+
+    auto a = complex(2.0, 1.0);
+    assert(log(conj(a)) == conj(log(a)));
+
+    auto b = 2.0 * log10(complex(0.0, 1.0));
+    auto c = 4.0 * log10(complex(sqrt(2.0) / 2, sqrt(2.0) / 2));
+    assert(approxEqual(b.re, c.re));
+    assert(approxEqual(b.im, c.im));
+
+    assert(log(complex(-1.0L, 0.0L)) == complex(0.0L, PI));
+    assert(log(complex(-1.0L, -0.0L)) == complex(0.0L, -PI));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.math : isNaN, isInfinity, PI, PI_2, PI_4;
+
+    auto a = log(complex(-0.0L, 0.0L));
+    assert(a == complex(-real.infinity, PI));
+    auto b = log(complex(0.0L, 0.0L));
+    assert(b == complex(-real.infinity, +0.0L));
+    auto c = log(complex(1.0L, real.infinity));
+    assert(c == complex(real.infinity, PI_2));
+    auto d = log(complex(1.0L, real.nan));
+    assert(d.re.isNaN && d.im.isNaN);
+
+    auto e = log(complex(-real.infinity, 1.0L));
+    assert(e == complex(real.infinity, PI));
+    auto f = log(complex(real.infinity, 1.0L));
+    assert(f == complex(real.infinity, 0.0L));
+    auto g = log(complex(-real.infinity, real.infinity));
+    assert(g == complex(real.infinity, 3.0 * PI_4));
+    auto h = log(complex(real.infinity, real.infinity));
+    assert(h == complex(real.infinity, PI_4));
+    auto i = log(complex(real.infinity, real.nan));
+    assert(i.re.isInfinity && i.im.isNaN);
+
+    auto j = log(complex(real.nan, 1.0L));
+    assert(j.re.isNaN && j.im.isNaN);
+    auto k = log(complex(real.nan, real.infinity));
+    assert(k.re.isInfinity && k.im.isNaN);
+    auto l = log(complex(real.nan, real.nan));
+    assert(l.re.isNaN && l.im.isNaN);
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.math : PI, approxEqual;
+
+    auto a = log(fromPolar(1.0, PI / 6.0));
+    assert(approxEqual(a.re, 0.0));
+    assert(approxEqual(a.im, 0.523599));
+
+    auto b = log(fromPolar(1.0, PI / 3.0));
+    assert(approxEqual(b.re, 0.0));
+    assert(approxEqual(b.im, 1.047198));
+
+    auto c = log(fromPolar(1.0, PI / 2.0));
+    assert(approxEqual(c.re, 0.0));
+    assert(approxEqual(c.im, 1.570796));
+
+    auto d = log(fromPolar(1.0, 2.0 * PI / 3.0));
+    assert(approxEqual(d.re, 0.0));
+    assert(approxEqual(d.im, 2.094395));
+
+    auto e = log(fromPolar(1.0, 5.0 * PI / 6.0));
+    assert(approxEqual(e.re, 0.0));
+    assert(approxEqual(e.im, 2.617994));
+
+    auto f = log(fromPolar(1.0, PI));
+    assert(approxEqual(f.re, 0.0));
+    assert(approxEqual(f.im, -3.141593));
 }
 
 /**
@@ -1089,6 +1324,52 @@ Complex!T log10(T)(Complex!T x) @safe pure nothrow @nogc
     static import std.math;
 
     return log(x) / Complex!T(std.math.log(10.0));
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.math : LN10, PI, approxEqual, sqrt;
+
+    auto a = complex(2.0, 1.0);
+    assert(log10(a) == log(a) / log(complex(10.0)));
+
+    auto b = log10(complex(0.0, 1.0)) * 2.0;
+    auto c = log10(complex(sqrt(2.0) / 2, sqrt(2.0) / 2)) * 4.0;
+    assert(approxEqual(b.re, c.re));
+    assert(approxEqual(b.im, c.im));
+
+    assert(log10(complex(-100.0L, 0.0L)) == complex(2.0L, PI / LN10));
+    assert(log10(complex(-100.0L, -0.0L)) == complex(2.0L, -PI / LN10));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.math : PI, approxEqual;
+
+    auto a = log10(fromPolar(1.0, PI / 6.0));
+    assert(approxEqual(a.re, 0.0));
+    assert(approxEqual(a.im, 0.227396));
+
+    auto b = log10(fromPolar(1.0, PI / 3.0));
+    assert(approxEqual(b.re, 0.0));
+    assert(approxEqual(b.im, 0.454792));
+
+    auto c = log10(fromPolar(1.0, PI / 2.0));
+    assert(approxEqual(c.re, 0.0));
+    assert(approxEqual(c.im, 0.682188));
+
+    auto d = log10(fromPolar(1.0, 2.0 * PI / 3.0));
+    assert(approxEqual(d.re, 0.0));
+    assert(approxEqual(d.im, 0.909584));
+
+    auto e = log10(fromPolar(1.0, 5.0 * PI / 6.0));
+    assert(approxEqual(e.re, 0.0));
+    assert(approxEqual(e.im, 1.136980));
+
+    auto f = log10(fromPolar(1.0, PI));
+    assert(approxEqual(f.re, 0.0));
+    assert(approxEqual(f.im, -1.364376));
 }
 
 /**
@@ -1118,6 +1399,27 @@ if (isIntegral!Int)
     return (n < 0) ? Complex!T(1) / y : y;
 }
 
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.math : approxEqual;
+
+    auto a = complex(1.0, 2.0);
+    assert(pow(a, 2) == a * a);
+    assert(pow(a, 3) == a * a * a);
+    assert(pow(a, -2) == 1.0 / (a * a));
+
+    auto b = pow(a, -3);
+    auto c = 1.0 / (a * a * a);
+    assert(approxEqual(b.re, c.re));
+    assert(approxEqual(b.im, c.im));
+
+    auto d = pow(complex(2.0), 3);
+    auto e = exp(3 * log(complex(2.0)));
+    assert(approxEqual(d.re, e.re));
+    assert(approxEqual(d.im, e.im));
+}
+
 /// ditto
 Complex!T pow(T)(Complex!T x, const T n) @trusted pure nothrow @nogc
 {
@@ -1133,10 +1435,39 @@ Complex!T pow(T)(Complex!T x, const T n) @trusted pure nothrow @nogc
     return fromPolar!(T, T)(std.math.exp(n * t.re), n * t.im);
 }
 
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.math : approxEqual;
+    assert(pow(complex(0.0), 2.0) == complex(0.0));
+    assert(pow(complex(5.0), 2.0) == complex(25.0));
+
+    auto a = pow(complex(-1.0, 0.0), 0.5);
+    assert(approxEqual(a.re, 0.0));
+    assert(approxEqual(a.im, +1.0));
+
+    auto b = pow(complex(-1.0, -0.0), 0.5);
+    assert(approxEqual(b.re, 0.0));
+    assert(approxEqual(b.im, -1.0));
+}
+
 /// ditto
 Complex!T pow(T)(Complex!T x, Complex!T y) @trusted pure nothrow @nogc
 {
     return (x == 0) ? Complex!T(0) : exp(y * log(x));
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.math : approxEqual, exp, PI;
+    auto a = complex(0.0);
+    auto b = complex(2.0);
+    assert(pow(a, b) == complex(0.0));
+
+    auto c = pow(complex(0.0, 1.0), complex(0.0, 1.0));
+    assert(approxEqual(c.re, exp((-PI) / 2)));
+    assert(approxEqual(c.im, 0.0));
 }
 
 /// ditto
@@ -1147,4 +1478,77 @@ Complex!T pow(T)(const T x, Complex!T n) @trusted pure nothrow @nogc
     return (x > 0.0)
         ? fromPolar!(T, T)(std.math.pow(x, n.re), n.im * std.math.log(x))
         : pow(Complex!T(x), n);
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.math : approxEqual;
+    assert(pow(2.0, complex(0.0)) == complex(1.0));
+    assert(pow(2.0, complex(5.0)) == complex(32.0));
+
+    auto a = pow(-2.0, complex(-1.0));
+    assert(approxEqual(a.re, -0.5));
+    assert(approxEqual(a.im, 0));
+
+    auto b = pow(-0.5, complex(-1.0));
+    assert(approxEqual(b.re, -2.0));
+    assert(approxEqual(b.im, 0));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.math : PI, approxEqual;
+
+    auto a = pow(complex(3.0, 4.0), 2);
+    assert(approxEqual(a.re, -7));
+    assert(approxEqual(a.im, 24));
+
+    auto b = pow(complex(3.0, 4.0), PI);
+    assert(approxEqual(b.re, -152.915122));
+    assert(approxEqual(b.im, 35.547500));
+
+    auto c = pow(complex(3.0, 4.0), complex(-2.0, 1.0));
+    assert(approxEqual(c.re, 0.015352));
+    assert(approxEqual(c.im, -0.003841));
+
+    auto d = pow(PI, complex(2.0, -1.0));
+    assert(approxEqual(d.re, 4.079030));
+    assert(approxEqual(d.im, -8.987247));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.meta : AliasSeq;
+    import std.math : RealFormat, floatTraits;
+    static foreach (T; AliasSeq!(float, double, real))
+    {{
+         static if (floatTraits!T.realFormat == RealFormat.ibmExtended)
+         {
+             /* For IBM real, epsilon is too small (since 1.0 plus any double is
+                representable) to be able to expect results within epsilon * 100.  */
+         }
+         else
+         {
+             T eps = T.epsilon * 100;
+
+             T a = -1.0;
+             T b = 0.5;
+             Complex!T ref1 = pow(complex(a), complex(b));
+             Complex!T res1 = pow(a, complex(b));
+             Complex!T res2 = pow(complex(a), b);
+             assert(abs(ref1 - res1) < eps);
+             assert(abs(ref1 - res2) < eps);
+             assert(abs(res1 - res2) < eps);
+
+             T c = -3.2;
+             T d = 1.4;
+             Complex!T ref2 = pow(complex(a), complex(b));
+             Complex!T res3 = pow(a, complex(b));
+             Complex!T res4 = pow(complex(a), b);
+             assert(abs(ref2 - res3) < eps);
+             assert(abs(ref2 - res4) < eps);
+             assert(abs(res3 - res4) < eps);
+         }
+    }}
 }
