@@ -8,6 +8,15 @@
     the built-in types `cfloat`, `cdouble`, `creal`, `ifloat`,
     `idouble`, and `ireal`.
 
+    Macros:
+        TABLE_SV = <table border="1" cellpadding="4" cellspacing="0">
+                <caption>Special Values</caption>
+                $0</table>
+        PLUSMN = &plusmn;
+        NAN = $(RED NAN)
+        INFIN = &infin;
+        PI = &pi;
+
     Authors:    Lars Tandle Kyllingstad, Don Clugston
     Copyright:  Copyright (c) 2010, Lars T. Kyllingstad.
     License:    $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0)
@@ -1054,6 +1063,23 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
  *      x = A complex number
  * Returns:
  *      The complex base e exponential of `x`
+ *
+ *      $(TABLE_SV
+ *      $(TR $(TH x)                           $(TH exp(x)))
+ *      $(TR $(TD ($(PLUSMN)0, +0))            $(TD (1, +0)))
+ *      $(TR $(TD (any, +$(INFIN)))            $(TD ($(NAN), $(NAN))))
+ *      $(TR $(TD (any, $(NAN))                $(TD ($(NAN), $(NAN)))))
+ *      $(TR $(TD (+$(INFIN), +0))             $(TD (+$(INFIN), +0)))
+ *      $(TR $(TD (-$(INFIN), any))            $(TD ($(PLUSMN)0, cis(x.im))))
+ *      $(TR $(TD (+$(INFIN), any))            $(TD ($(PLUSMN)$(INFIN), cis(x.im))))
+ *      $(TR $(TD (-$(INFIN), +$(INFIN)))      $(TD ($(PLUSMN)0, $(PLUSMN)0)))
+ *      $(TR $(TD (+$(INFIN), +$(INFIN)))      $(TD ($(PLUSMN)$(INFIN), $(NAN))))
+ *      $(TR $(TD (-$(INFIN), $(NAN)))         $(TD ($(PLUSMN)0, $(PLUSMN)0)))
+ *      $(TR $(TD (+$(INFIN), $(NAN)))         $(TD ($(PLUSMN)$(INFIN), $(NAN))))
+ *      $(TR $(TD ($(NAN), +0))                $(TD ($(NAN), +0)))
+ *      $(TR $(TD ($(NAN), any))               $(TD ($(NAN), $(NAN))))
+ *      $(TR $(TD ($(NAN), $(NAN)))            $(TD ($(NAN), $(NAN))))
+ *      )
  */
 Complex!T exp(T)(Complex!T x) @trusted pure nothrow @nogc // TODO: @safe
 {
@@ -1186,6 +1212,22 @@ Complex!T exp(T)(Complex!T x) @trusted pure nothrow @nogc // TODO: @safe
  *      x = A complex number
  * Returns:
  *      The complex natural logarithm of `x`
+ *
+ *      $(TABLE_SV
+ *      $(TR $(TH x)                           $(TH log(x)))
+ *      $(TR $(TD (-0, +0))                    $(TD (-$(INFIN), $(PI))))
+ *      $(TR $(TD (+0, +0))                    $(TD (-$(INFIN), +0)))
+ *      $(TR $(TD (any, +$(INFIN)))            $(TD (+$(INFIN), $(PI)/2)))
+ *      $(TR $(TD (any, $(NAN)))               $(TD ($(NAN), $(NAN))))
+ *      $(TR $(TD (-$(INFIN), any))            $(TD (+$(INFIN), $(PI))))
+ *      $(TR $(TD (+$(INFIN), any))            $(TD (+$(INFIN), +0)))
+ *      $(TR $(TD (-$(INFIN), +$(INFIN)))      $(TD (+$(INFIN), 3$(PI)/4)))
+ *      $(TR $(TD (+$(INFIN), +$(INFIN)))      $(TD (+$(INFIN), $(PI)/4)))
+ *      $(TR $(TD ($(PLUSMN)$(INFIN), $(NAN))) $(TD (+$(INFIN), $(NAN))))
+ *      $(TR $(TD ($(NAN), any))               $(TD ($(NAN), $(NAN))))
+ *      $(TR $(TD ($(NAN), +$(INFIN)))         $(TD (+$(INFIN), $(NAN))))
+ *      $(TR $(TD ($(NAN), $(NAN)))            $(TD ($(NAN), $(NAN))))
+ *      )
  */
 Complex!T log(T)(Complex!T x) @safe pure nothrow @nogc
 {
