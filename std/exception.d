@@ -1196,7 +1196,15 @@ if (__traits(isRef, source) || isDynamicArray!S ||
     {
         static if (is(S == void[n], size_t n))
         {
-            static if (n >= (void*).sizeof)
+            static if (n >= (void[]).sizeof)
+            {
+                // could contain a slice, which could point at anything.
+                // But a void[N] that is all 0 cannot point anywhere
+                import std.algorithm.searching : any;
+                if (__ctfe || any(cast(ubyte[]) source[]))
+                    return true;
+            }
+            else static if (n >= (void*).sizeof)
             {
                 // Reinterpreting cast is impossible during ctfe
                 if (__ctfe)
@@ -1206,13 +1214,10 @@ if (__traits(isRef, source) || isDynamicArray!S ||
                 enum al = (void*).alignof - 1;
                 const base = cast(size_t) &source;
                 const alBase = (base + al) & ~al;
-                const elems = (n - (alBase - base)) / (void*).sizeof;
 
-                foreach (const s; (cast(void**) alBase)[0 .. elems])
-                {
-                    if (mayPointTo(s, target))
-                        return true;
-                }
+                if ((n - (alBase - base)) >= (void*).sizeof &&
+                    mayPointTo(*(cast(void**) alBase), target))
+                    return true;
             }
         }
         else
@@ -1473,7 +1478,15 @@ version (StdUnittest)
     align((void*).alignof) void[32] voidArr = void;
     (cast(void*[]) voidArr[])[] = null; // Ensure no false pointers
 
+    // zeroed void ranges can't point at anything
+    assert(!mayPointTo(voidArr, a));
+    assert(!mayPointTo(voidArr, b));
+
     *cast(void**) &voidArr[16] = &a; // Pointers should be found
+
+    alias SA = void[size_t.sizeof + 3];
+    SA *smallArr1 = cast(SA*)&voidArr;
+    SA *smallArr2 = cast(SA*)&(voidArr[16]);
 
     // But it should only consider properly aligned pointers
     // Write single bytes to avoid issues due to misaligned writes
@@ -1481,18 +1494,18 @@ version (StdUnittest)
     (cast(ubyte[]) voidArr[3 .. 3 + (void*).sizeof])[] = cast(ubyte[]) tmp[];
 
 
-    assert( mayPointTo(voidArr, a));
-    assert(!mayPointTo(voidArr, b));
+    assert( mayPointTo(*smallArr2, a));
+    assert(!mayPointTo(*smallArr1, b));
 
     assert(!doesPointTo(voidArr, a)); // Value might be a false pointer
     assert(!doesPointTo(voidArr, b));
 
-    auto v2 = cast(void[26]*) &voidArr[3]; // Works for weird sizes/alignments
-    assert( mayPointTo(*v2, a));
-    assert(!mayPointTo(*v2, b));
+    SA *smallArr3 = cast(SA *) &voidArr[13]; // Works for weird sizes/alignments
+    assert( mayPointTo(*smallArr3, a));
+    assert(!mayPointTo(*smallArr3, b));
 
-    assert(!doesPointTo(*v2, a));
-    assert(!doesPointTo(*v2, b));
+    assert(!doesPointTo(*smallArr3, a));
+    assert(!doesPointTo(*smallArr3, b));
 
     auto v3 = cast(void[3]*) &voidArr[16]; // Arrays smaller than pointers are ignored
     assert(!mayPointTo(*v3, a));
@@ -1501,10 +1514,15 @@ version (StdUnittest)
     assert(!doesPointTo(*v3, a));
     assert(!doesPointTo(*v3, b));
 
+    assert(mayPointTo(voidArr, a)); // slice-contiaining void[N] might point at anything
+    assert(mayPointTo(voidArr, b));
+
     static assert(() {
-        void[16] arr = void;
+        void[16] arr1 = void;
+        void[size_t.sizeof] arr2 = void;
         int var;
-        return mayPointTo(arr, var) && !doesPointTo(arr, var);
+        return mayPointTo(arr1, var) && !doesPointTo(arr1, var) &&
+               mayPointTo(arr2, var) && !doesPointTo(arr2, var);
     }());
 }
 
