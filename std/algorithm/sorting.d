@@ -2989,7 +2989,13 @@ if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R &&
         bool overflow;
         const nbytes = mulu(len, T.sizeof, overflow);
         if (overflow) assert(false, "multiplication overflowed");
-        return (cast(T*) malloc(nbytes))[0 .. len];
+        T[] result = (cast(T*) malloc(nbytes))[0 .. len];
+        static if (hasIndirections!T)
+        {
+            import core.memory : GC;
+            GC.addRange(result.ptr, nbytes);
+        }
+        return result;
     }
     auto xform1 = trustedMalloc(r.length);
 
@@ -3003,6 +3009,11 @@ if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R &&
         static void trustedFree(T[] p) @trusted
         {
             import core.stdc.stdlib : free;
+            static if (hasIndirections!T)
+            {
+                import core.memory : GC;
+                GC.removeRange(p.ptr);
+            }
             free(p.ptr);
         }
         trustedFree(xform1);
@@ -3130,6 +3141,20 @@ if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R)
     assert(arr[1] == midEnt);
     assert(arr[2] == highEnt);
     assert(isSorted!("a < b")(map!(entropy)(arr)));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=20799
+@safe unittest
+{
+    import std.range : iota, retro;
+    import std.array : array;
+
+    auto arr = 1_000_000.iota.retro.array;
+    arr.schwartzSort!(
+        n => new int(n),
+        (a, b) => *a < *b
+    );
+    assert(arr.isSorted());
 }
 
 // partialSort
