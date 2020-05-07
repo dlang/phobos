@@ -8884,15 +8884,12 @@ else
     // hide template instances behind functions
     // https://issues.dlang.org/show_bug.cgi?id=13232
     ushort toLowerIndex(dchar c) { return toLowerIndexTrie[c]; }
-    ushort toLowerSimpleIndex(dchar c) { return toLowerSimpleIndexTrie[c]; }
     dchar toLowerTab(size_t idx) { return toLowerTable[idx]; }
 
     ushort toTitleIndex(dchar c) { return toTitleIndexTrie[c]; }
-    ushort toTitleSimpleIndex(dchar c) { return toTitleSimpleIndexTrie[c]; }
     dchar toTitleTab(size_t idx) { return toTitleTable[idx]; }
 
     ushort toUpperIndex(dchar c) { return toUpperIndexTrie[c]; }
-    ushort toUpperSimpleIndex(dchar c) { return toUpperSimpleIndexTrie[c]; }
     dchar toUpperTab(size_t idx) { return toUpperTable[idx]; }
 }
 
@@ -8989,7 +8986,7 @@ private dchar toTitlecase(dchar c)
             return c - 32;
         return c;
     }
-    size_t idx = toTitleSimpleIndex(c);
+    size_t idx = toTitleIndex(c);
     if (idx != ushort.max)
     {
         return toTitleTab(idx);
@@ -9814,7 +9811,7 @@ dchar toLower(dchar c)
             return c + 32;
         return c;
     }
-    size_t idx = toLowerSimpleIndex(c);
+    size_t idx = toLowerIndex(c);
     if (idx != ushort.max)
     {
         return toLowerTab(idx);
@@ -9989,7 +9986,7 @@ dchar toUpper(dchar c)
             return c - 32;
         return c;
     }
-    size_t idx = toUpperSimpleIndex(c);
+    size_t idx = toUpperIndex(c);
     if (idx != ushort.max)
     {
         return toUpperTab(idx);
@@ -10627,10 +10624,6 @@ private:
     auto toUpperIndexTrie() { static immutable res = asTrie(toUpperIndexTrieEntries); return res; }
     auto toLowerIndexTrie() { static immutable res = asTrie(toLowerIndexTrieEntries); return res; }
     auto toTitleIndexTrie() { static immutable res = asTrie(toTitleIndexTrieEntries); return res; }
-    //simple case conversion tables
-    auto toUpperSimpleIndexTrie() { static immutable res = asTrie(toUpperSimpleIndexTrieEntries); return res; }
-    auto toLowerSimpleIndexTrie() { static immutable res = asTrie(toLowerSimpleIndexTrieEntries); return res; }
-    auto toTitleSimpleIndexTrie() { static immutable res = asTrie(toTitleSimpleIndexTrieEntries); return res; }
 
 }
 
