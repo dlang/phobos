@@ -1353,7 +1353,7 @@ static if (size_t.sizeof == 4)
     @property
     {
         private alias _IDCA = immutable(dchar[]);
-        _IDCA decompCanonTable()
+        _IDCA decompCanonTable() @safe pure nothrow
         {
             static _IDCA t = [
                 0x0, 0x3b, 0x0, 0x3c, 0x338, 0x0, 0x3d, 0x338, 0x0, 0x3e,
@@ -1929,7 +1929,7 @@ static if (size_t.sizeof == 4)
             return t;
         }
 
-        _IDCA decompCompatTable()
+        _IDCA decompCompatTable() @safe pure nothrow
         {
             static _IDCA t = [
                 0x0, 0x20, 0x0, 0x20, 0x301, 0x0, 0x20, 0x303, 0x0, 0x20,
@@ -4035,7 +4035,7 @@ static if (size_t.sizeof == 8)
     @property
     {
         private alias _IDCA = immutable(dchar[]);
-        _IDCA decompCanonTable()
+        _IDCA decompCanonTable() @safe pure nothrow
         {
             static _IDCA t = [
                 0x0, 0x3b, 0x0, 0x3c, 0x338, 0x0, 0x3d, 0x338, 0x0, 0x3e,
@@ -4611,7 +4611,7 @@ static if (size_t.sizeof == 8)
             return t;
         }
 
-        _IDCA decompCompatTable()
+        _IDCA decompCompatTable() @safe pure nothrow
         {
             static _IDCA t = [
                 0x0, 0x20, 0x0, 0x20, 0x301, 0x0, 0x20, 0x303, 0x0, 0x20,
