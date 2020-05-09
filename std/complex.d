@@ -801,6 +801,29 @@ T arg(T)(Complex!T z) @safe pure nothrow @nogc
 
 
 /**
+ * Extracts the norm of a complex number.
+ * Params:
+ *      z = A complex number
+ * Returns:
+ *      The squared magnitude of `z`.
+ */
+T norm(T)(Complex!T z) @safe pure nothrow @nogc
+{
+    return z.re * z.re + z.im * z.im;
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.math : isClose, PI;
+    assert(norm(complex(3.0, 4.0)) == 25.0);
+    assert(norm(fromPolar(5.0, 0.0)) == 25.0);
+    assert(isClose(norm(fromPolar(5.0L, PI / 6)), 25.0L));
+    assert(isClose(norm(fromPolar(5.0L, 13 * PI / 6)), 25.0L));
+}
+
+
+/**
   Params: z = A complex number.
   Returns: The complex conjugate of `z`.
 */
@@ -827,6 +850,32 @@ Complex!T conj(T)(Complex!T z) @safe pure nothrow @nogc
          assert(conj(z) == -z);
     }}
 }
+
+/**
+ * Returns the projection of `z` onto the Riemann sphere.
+ * Params:
+ *      z = A complex number
+ * Returns:
+ *      The projection of `z` onto the Riemann sphere.
+ */
+Complex!T proj(T)(Complex!T z)
+{
+    static import std.math;
+
+    if (std.math.isInfinity(z.re) || std.math.isInfinity(z.im))
+        return Complex!T(T.infinity, std.math.copysign(0.0, z.im));
+
+    return z;
+}
+
+///
+@safe pure nothrow unittest
+{
+    assert(proj(complex(1.0)) == complex(1.0));
+    assert(proj(complex(double.infinity, 5.0)) == complex(double.infinity, 0.0));
+    assert(proj(complex(5.0, -double.infinity)) == complex(double.infinity, -0.0));
+}
+
 
 /**
   Constructs a complex number given its absolute value and argument.
