@@ -561,37 +561,6 @@ enum real SQRT2 =      0x1.6a09e667f3bcc908b2fb1366ea958p+0L; /** $(SQRT)2 = 1.4
 enum real SQRT1_2 =    SQRT2/2;                               /** $(SQRT)$(HALF) = 0.707106... */
 // Note: Make sure the magic numbers in compiler backend for x87 match these.
 
-// it's quite tricky check for a type who will trigger a deprecation when accessed
-template isDeprecatedComplex(T)
-{
-    static if (__traits(isDeprecated, T))
-    {
-        enum isDeprecatedComplex = true;
-    }
-    else
-    {
-        enum m = T.mangleof;
-        // cfloat, cdouble, creal
-        // ifloat, idouble, ireal
-        enum isDeprecatedComplex = m == "q" || m == "r" || m == "c" ||
-                                   m == "o" || m == "p" || m == "j";
-    }
-}
-
-@safe deprecated unittest
-{
-    static assert(isDeprecatedComplex!cfloat);
-    static assert(isDeprecatedComplex!cdouble);
-    static assert(isDeprecatedComplex!creal);
-    static assert(isDeprecatedComplex!ifloat);
-    static assert(isDeprecatedComplex!idouble);
-    static assert(isDeprecatedComplex!ireal);
-
-    static assert(!isDeprecatedComplex!float);
-    static assert(!isDeprecatedComplex!double);
-    static assert(!isDeprecatedComplex!real);
-}
-
 /***********************************
  * Calculates the absolute value of a number.
  *
@@ -631,15 +600,6 @@ if ((is(Unqual!Num == short) || is(Unqual!Num == byte)) ||
     assert(abs(2321312L)  == 2321312L);
 }
 
-version (TestComplex)
-deprecated
-@safe pure nothrow @nogc unittest
-{
-    assert(abs(-3.2Li) == 3.2L);
-    assert(abs(71.6Li) == 71.6L);
-    assert(abs(-1L+1i) == sqrt(2.0L));
-}
-
 @safe pure nothrow @nogc unittest
 {
     short s = -8;
@@ -668,37 +628,6 @@ deprecated
     assert(50 - abs(-100) == -50);
 }
 
-version (TestComplex)
-deprecated
-@safe pure nothrow @nogc unittest
-{
-    import std.meta : AliasSeq;
-    static foreach (T; AliasSeq!(cfloat, cdouble, creal))
-    {{
-        T f = -12+3i;
-        assert(abs(f) == hypot(f.re, f.im));
-        assert(abs(-f) == hypot(f.re, f.im));
-    }}
-}
-
-import std.meta : AliasSeq;
-deprecated("Please use std.complex")
-static foreach (Num; AliasSeq!(cfloat, cdouble, creal, ifloat, idouble, ireal))
-{
-    auto abs(Num z) @safe pure nothrow @nogc
-    {
-        enum m = Num.mangleof;
-        // cfloat, cdouble, creal
-        static if (m == "q" || m == "r" || m == "c")
-            return hypot(z.re, z.im);
-        // ifloat, idouble, ireal
-        else static if (m == "o" || m == "p" || m == "j")
-            return fabs(z.im);
-        else
-            static assert(0, "Unsupported type: " ~ Num.stringof);
-    }
-}
-
 // https://issues.dlang.org/show_bug.cgi?id=19162
 @safe unittest
 {
@@ -713,64 +642,6 @@ static foreach (Num; AliasSeq!(cfloat, cdouble, creal, ifloat, idouble, ireal))
     }
     Vector!(int, 3) v;
     assert(abs(v) == v);
-}
-
-/*
- * Complex conjugate
- *
- *  conj(x + iy) = x - iy
- *
- * Note that z * conj(z) = $(POWER z.re, 2) - $(POWER z.im, 2)
- * is always a real number
- */
-deprecated("Please use std.complex.conj")
-auto conj(Num)(Num z) @safe pure nothrow @nogc
-if (is(Num* : const(cfloat*)) || is(Num* : const(cdouble*))
-    || is(Num* : const(creal*)))
-{
-    // FIXME
-    // https://issues.dlang.org/show_bug.cgi?id=14206
-    static if (is(Num* : const(cdouble*)))
-        return cast(cdouble) conj(cast(creal) z);
-    else
-        return z.re - z.im*1fi;
-}
-
-deprecated("Please use std.complex.conj")
-auto conj(Num)(Num y) @safe pure nothrow @nogc
-if (is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
-    || is(Num* : const(ireal*)))
-{
-    return -y;
-}
-
-deprecated
-@safe pure nothrow @nogc unittest
-{
-    creal c = 7 + 3Li;
-    assert(conj(c) == 7-3Li);
-    ireal z = -3.2Li;
-    assert(conj(z) == -z);
-}
-
-// https://issues.dlang.org/show_bug.cgi?id=14206
-deprecated
-@safe pure nothrow @nogc unittest
-{
-    cdouble c = 7 + 3i;
-    assert(conj(c) == 7-3i);
-    idouble z = -3.2i;
-    assert(conj(z) == -z);
-}
-
-// https://issues.dlang.org/show_bug.cgi?id=14206
-deprecated
-@safe pure nothrow @nogc unittest
-{
-    cfloat c = 7f + 3fi;
-    assert(conj(c) == 7f-3fi);
-    ifloat z = -3.2fi;
-    assert(conj(z) == -z);
 }
 
 /***********************************
@@ -853,64 +724,6 @@ float sin(float x) @safe pure nothrow @nogc { return sin(cast(real) x); }
 {
     real function(real) psin = &sin;
     assert(psin != null);
-}
-
-/*
- *  Returns sine for complex and imaginary arguments.
- *
- *  sin(z) = sin(z.re)*cosh(z.im) + cos(z.re)*sinh(z.im)i
- *
- * If both sin($(THETA)) and cos($(THETA)) are required,
- * it is most efficient to use expi($(THETA)).
- */
-deprecated("Use std.complex.sin")
-auto sin(creal z) @safe pure nothrow @nogc
-{
-    const creal cs = expi(z.re);
-    const creal csh = coshisinh(z.im);
-    return cs.im * csh.re + cs.re * csh.im * 1i;
-}
-
-/* ditto */
-deprecated("Use std.complex.sin")
-auto sin(ireal y) @safe pure nothrow @nogc
-{
-    return cosh(y.im)*1i;
-}
-
-deprecated
-@safe pure nothrow @nogc unittest
-{
-  assert(sin(0.0+0.0i) == 0.0);
-  assert(sin(2.0+0.0i) == sin(2.0L) );
-}
-
-/*
- *  cosine, complex and imaginary
- *
- *  cos(z) = cos(z.re)*cosh(z.im) - sin(z.re)*sinh(z.im)i
- */
-deprecated("Use std.complex.cos")
-auto cos(creal z) @safe pure nothrow @nogc
-{
-    const creal cs = expi(z.re);
-    const creal csh = coshisinh(z.im);
-    return cs.re * csh.re - cs.im * csh.im * 1i;
-}
-
-/* ditto */
-deprecated("Use std.complex.cos")
-real cos(ireal y) @safe pure nothrow @nogc
-{
-    return cosh(y.im);
-}
-
-deprecated
-@safe pure nothrow @nogc unittest
-{
-    assert(cos(0.0+0.0i)==1.0);
-    assert(cos(1.3L+0.0i)==cos(1.3L));
-    assert(cos(5.2Li)== cosh(5.2L));
 }
 
 /****************************************************************************
@@ -1866,35 +1679,6 @@ float tanh(float x) @safe pure nothrow @nogc { return tanh(cast(real) x); }
     assert(equalsDigit(tanh(1.0), sinh(1.0) / cosh(1.0), 15));
 }
 
-package:
-
-/* Returns cosh(x) + I * sinh(x)
- * Only one call to exp() is performed.
- */
-deprecated("Use std.complex")
-auto coshisinh(real x) @safe pure nothrow @nogc
-{
-    // See comments for cosh, sinh.
-    if (fabs(x) > real.mant_dig * LN2)
-    {
-        const real y = exp(fabs(x));
-        return y * 0.5 + 0.5i * copysign(y, x);
-    }
-    else
-    {
-        const real y = expm1(x);
-        return (y + 1.0 + 1.0/(y + 1.0)) * 0.5 + 0.5i * y / (y+1) * (y+2);
-    }
-}
-
-deprecated
-@safe pure nothrow @nogc unittest
-{
-    creal c = coshisinh(3.0L);
-    assert(c.re == cosh(3.0L));
-    assert(c.im == sinh(3.0L));
-}
-
 public:
 
 /***********************************
@@ -2135,48 +1919,6 @@ real sqrt(real x) @nogc @safe pure nothrow { pragma(inline, true); return core.m
     enum ZX80 = sqrt(7.0f);
     enum ZX81 = sqrt(7.0);
     enum ZX82 = sqrt(7.0L);
-}
-
-deprecated("Use std.complex.sqrt")
-auto sqrt(creal z) @nogc @safe pure nothrow
-{
-    creal c;
-    real x,y,w,r;
-
-    if (z == 0)
-    {
-        c = 0 + 0i;
-    }
-    else
-    {
-        const real z_re = z.re;
-        const real z_im = z.im;
-
-        x = fabs(z_re);
-        y = fabs(z_im);
-        if (x >= y)
-        {
-            r = y / x;
-            w = sqrt(x) * sqrt(0.5 * (1 + sqrt(1 + r * r)));
-        }
-        else
-        {
-            r = x / y;
-            w = sqrt(y) * sqrt(0.5 * (r + sqrt(1 + r * r)));
-        }
-
-        if (z_re >= 0)
-        {
-            c = w + (z_im / (w + w)) * 1.0i;
-        }
-        else
-        {
-            if (z_im < 0)
-                w = -w;
-            c = z_im / (w + w) + w * 1.0i;
-        }
-    }
-    return c;
 }
 
 /**
@@ -3252,52 +2994,6 @@ private T exp2Impl(T)(T x) @nogc @safe pure nothrow
     import std.meta : AliasSeq;
     foreach (T; AliasSeq!(real, double, float))
         testExp2!T();
-}
-
-/*
- * Calculate cos(y) + i sin(y).
- *
- * On many CPUs (such as x86), this is a very efficient operation;
- * almost twice as fast as calculating sin(y) and cos(y) separately,
- * and is the preferred method when both are required.
- */
-deprecated("Use std.complex.expi")
-creal expi(real y) @trusted pure nothrow @nogc
-{
-    version (InlineAsm_X86_Any)
-    {
-        version (Win64)
-        {
-            asm pure nothrow @nogc
-            {
-                naked;
-                fld     real ptr [ECX];
-                fsincos;
-                fxch    ST(1), ST(0);
-                ret;
-            }
-        }
-        else
-        {
-            asm pure nothrow @nogc
-            {
-                fld y;
-                fsincos;
-                fxch ST(1), ST(0);
-            }
-        }
-    }
-    else
-    {
-        return cos(y) + sin(y)*1i;
-    }
-}
-
-deprecated
-@safe pure nothrow @nogc unittest
-{
-    assert(expi(1.3e5L) == cos(1.3e5L) + sin(1.3e5L) * 1i);
-    assert(expi(0.0L) == 1L + 0.0Li);
 }
 
 /*********************************************************************
