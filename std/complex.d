@@ -826,7 +826,7 @@ Complex!(CommonType!(T, U)) fromPolar(T, U)(const T modulus, const U argument)
     Trigonometric functions on complex numbers.
 
     Params: z = A complex number.
-    Returns: The sine and cosine of `z`, respectively.
+    Returns: The sine, cosine and tangent of `z`, respectively.
 */
 Complex!T sin(T)(Complex!T z)  @safe pure nothrow @nogc
 {
@@ -868,6 +868,20 @@ deprecated
     assert(feqrel(c1.re, c2.re) >= real.mant_dig - 1 &&
         feqrel(c1.im, c2.im) >= real.mant_dig - 1);
     assert(cos(complex(1.3L)) == std.math.cos(1.3L));
+}
+
+/// ditto
+Complex!T tan(T)(Complex!T z) @safe pure nothrow @nogc
+{
+    return sin(z) / cos(z);
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    static import std.math;
+    assert(tan(complex(1.0, 0.0)) == complex(std.math.tan(1.0), 0.0));
+    assert(tan(complex(0.0, 1.0)) == complex(0.0, std.math.tanh(1.0)));
 }
 
 /**
