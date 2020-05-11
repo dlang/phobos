@@ -3049,7 +3049,7 @@ public:
      * Returns: The number of bytes actually sent, or `Socket.ERROR` on
      * failure.
      */
-    ptrdiff_t sendTo(const(void)[] buf, SocketFlags flags, Address to) @trusted
+    ptrdiff_t sendTo(const(void)[] buf, SocketFlags flags, in Address to) @trusted
     {
         static if (is(typeof(MSG_NOSIGNAL)))
         {
@@ -3065,7 +3065,7 @@ public:
     }
 
     /// ditto
-    ptrdiff_t sendTo(const(void)[] buf, Address to)
+    ptrdiff_t sendTo(const(void)[] buf, in Address to)
     {
         return sendTo(buf, SocketFlags.NONE, to);
     }
@@ -3617,8 +3617,8 @@ class UdpSocket: Socket
             @property @trusted Address localAddress() { assert(0); }
             @trusted ptrdiff_t send(const(void)[] buf, SocketFlags flags) { assert(0); }
             @safe ptrdiff_t send(const(void)[] buf) { assert(0); }
-            @trusted ptrdiff_t sendTo(const(void)[] buf, SocketFlags flags, Address to) { assert(0); }
-            @safe ptrdiff_t sendTo(const(void)[] buf, Address to) { assert(0); }
+            @trusted ptrdiff_t sendTo(const(void)[] buf, SocketFlags flags, in Address to) { assert(0); }
+            @safe ptrdiff_t sendTo(const(void)[] buf, in Address to) { assert(0); }
             @trusted ptrdiff_t sendTo(const(void)[] buf, SocketFlags flags) { assert(0); }
             @safe ptrdiff_t sendTo(const(void)[] buf) { assert(0); }
             @trusted ptrdiff_t receive(void[] buf, SocketFlags flags) { assert(0); }
