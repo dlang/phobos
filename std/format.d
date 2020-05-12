@@ -6268,6 +6268,14 @@ deprecated
     dr = format("ghi"d);
     assert(dr == "ghi"d);
 
+    // Empty static character arrays work as well
+    const char[0] cempty;
+    assert(format("test%spath", cempty) == "testpath");
+    const wchar[0] wempty;
+    assert(format("test%spath", wempty) == "testpath");
+    const dchar[0] dempty;
+    assert(format("test%spath", dempty) == "testpath");
+
     void* p = cast(void*) 0xDEADBEEF;
     r = format("%s", p);
     assert(r == "DEADBEEF");
