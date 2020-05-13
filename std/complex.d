@@ -718,6 +718,26 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
     assert(abs(complex(1.0L, -2.0L)) == std.math.sqrt(5.0L));
 }
 
+@safe pure nothrow @nogc unittest
+{
+    static import std.math;
+    assert(abs(complex(0.0L, -3.2L)) == 3.2L);
+    assert(abs(complex(0.0L, 71.6L)) == 71.6L);
+    assert(abs(complex(-1.0L, 1.0L)) == std.math.sqrt(2.0L));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.meta : AliasSeq;
+    static foreach (T; AliasSeq!(float, double, real))
+    {{
+        static import std.math;
+        Complex!T a = complex(T(-12), T(3));
+        T b = std.math.hypot(a.re, a.im);
+        assert(std.math.approxEqual(abs(a), b));
+        assert(std.math.approxEqual(abs(-a), b));
+    }}
+}
 
 /++
    Params:
@@ -796,6 +816,17 @@ Complex!T conj(T)(Complex!T z) @safe pure nothrow @nogc
     assert(conj(complex(1.0, 2.0)) == complex(1.0, -2.0));
 }
 
+@safe pure nothrow @nogc unittest
+{
+    import std.meta : AliasSeq;
+    static foreach (T; AliasSeq!(float, double, real))
+    {{
+         auto c = Complex!T(7, 3L);
+         assert(conj(c) == Complex!T(7, -3L));
+         auto z = Complex!T(0, -3.2L);
+         assert(conj(z) == -z);
+    }}
+}
 
 /**
   Constructs a complex number given its absolute value and argument.
@@ -855,18 +886,19 @@ Complex!T cos(T)(Complex!T z)  @safe pure nothrow @nogc
 ///
 @safe pure nothrow unittest
 {
-    import std.complex;
+    static import std.math;
     assert(cos(complex(0.0)) == 1.0);
+    assert(cos(complex(1.3L, 0.0)) == std.math.cos(1.3L));
+    assert(cos(complex(0.0L, 5.2L)) == std.math.cosh(5.2L));
 }
 
-deprecated
 @safe pure nothrow unittest
 {
-    import std.math;
+    static import std.math;
     auto c1 = cos(complex(0, 5.2L));
-    auto c2 = cosh(5.2L);
-    assert(feqrel(c1.re, c2.re) >= real.mant_dig - 1 &&
-        feqrel(c1.im, c2.im) >= real.mant_dig - 1);
+    auto c2 = std.math.cosh(5.2L);
+    assert(std.math.feqrel(c1.re, c2) >= real.mant_dig - 1 &&
+        std.math.feqrel(c1.im, 0.0L) >= real.mant_dig - 1);
     assert(cos(complex(1.3L)) == std.math.cos(1.3L));
 }
 
@@ -905,17 +937,6 @@ Complex!real expi(real y)  @trusted pure nothrow @nogc
     assert(expi(1.3e5L) == complex(cos(1.3e5L), sin(1.3e5L)));
 }
 
-deprecated
-@safe pure nothrow unittest
-{
-    static import std.math;
-
-    assert(expi(1.3e5L) == complex(std.math.cos(1.3e5L), std.math.sin(1.3e5L)));
-    auto z1 = expi(1.234);
-    auto z2 = std.math.expi(1.234);
-    assert(z1.re == z2.re && z1.im == z2.im);
-}
-
 /**
     Params: y = A real number.
     Returns: The value of cosh(y) + i sinh(y)
@@ -942,24 +963,6 @@ Complex!real coshisinh(real y) @safe pure nothrow @nogc
 {
     import std.math : cosh, sinh;
     assert(coshisinh(3.0L) == complex(cosh(3.0L), sinh(3.0L)));
-}
-
-deprecated
-@safe pure nothrow @nogc unittest
-{
-    static import std.math;
-    assert(coshisinh(3.0L) == complex(std.math.cosh(3.0L), std.math.sinh(3.0L)));
-    auto z1 = coshisinh(1.234);
-    auto z2 = std.math.coshisinh(1.234);
-    static if (real.mant_dig == 53 || real.mant_dig == 113)
-    {
-        assert(std.math.feqrel(z1.re, z2.re) >= real.mant_dig - 1 &&
-               std.math.feqrel(z1.im, z2.im) >= real.mant_dig - 1);
-    }
-    else
-    {
-        assert(z1.re == z2.re && z1.im == z2.im);
-    }
 }
 
 /**
@@ -1069,6 +1072,14 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
 {
     // Test ease of use (vanilla toString() should be supported)
     assert(complex(1.2, 3.4).toString() == "1.2+3.4i");
+}
+
+@safe pure nothrow @nogc unittest
+{
+    auto c = complex(3.0L, 4.0L);
+    c = sqrt(c);
+    assert(c.re == 2.0L);
+    assert(c.im == 1.0L);
 }
 
 /**
