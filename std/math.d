@@ -566,7 +566,7 @@ enum real SQRT1_2 =    SQRT2/2;                               /** $(SQRT)$(HALF)
  *
  * Params:
  *     Num = (template parameter) type of number
- *       x = real number value
+ *     _param_0 = real number value
  *
  * Returns:
  *     The absolute value of the number. If floating-point or integral,
@@ -575,10 +575,11 @@ enum real SQRT1_2 =    SQRT2/2;                               /** $(SQRT)$(HALF)
  * Limitations:
  *     Does not work correctly for signed intergal types and value `Num`.min.
  */
-auto abs(Num)(Num x) @nogc pure nothrow
+auto abs(Num)(Num) @nogc pure nothrow
 if ((is(Unqual!Num == short) || is(Unqual!Num == byte)) ||
     (is(typeof(Num.init >= 0)) && is(typeof(-Num.init))))
 {
+    alias x = _param_0;
     static if (isFloatingPoint!(Num))
         return fabs(x);
     else
@@ -4664,11 +4665,12 @@ float ceil(float x) @trusted pure nothrow @nogc
 }
 
 /**************************************
- * Returns the value of x rounded downward to the next integer
+ * Returns the value rounded downward to the next integer
  * (toward negative infinity).
  */
-real floor(real x) @trusted pure nothrow @nogc
+real floor(real) @trusted pure nothrow @nogc
 {
+    alias x = _param_0;
     version (Win64_DMD_InlineAsm)
     {
         asm pure nothrow @nogc
@@ -4734,8 +4736,9 @@ real floor(real x) @trusted pure nothrow @nogc
 }
 
 /// ditto
-double floor(double x) @trusted pure nothrow @nogc
+double floor(double) @trusted pure nothrow @nogc
 {
+    alias x = _param_0;
     // Special cases.
     if (isNaN(x) || isInfinity(x) || x == 0.0)
         return x;
@@ -4760,8 +4763,9 @@ double floor(double x) @trusted pure nothrow @nogc
 }
 
 /// ditto
-float floor(float x) @trusted pure nothrow @nogc
+float floor(float) @trusted pure nothrow @nogc
 {
+    alias x = _param_0;
     // Special cases.
     if (isNaN(x) || isInfinity(x) || x == 0.0)
         return x;
