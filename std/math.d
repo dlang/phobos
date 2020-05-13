@@ -645,24 +645,24 @@ if ((is(Unqual!Num == short) || is(Unqual!Num == byte)) ||
 }
 
 /***********************************
- * Returns cosine of x. x is in radians.
+ * Returns cosine of `radians`.
  *
  *      $(TABLE_SV
- *      $(TR $(TH x)                 $(TH cos(x)) $(TH invalid?))
- *      $(TR $(TD $(NAN))            $(TD $(NAN)) $(TD yes)     )
- *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(NAN)) $(TD yes)     )
+ *      $(TR $(TH radians)           $(TH cos(radians)) $(TH invalid?))
+ *      $(TR $(TD $(NAN))            $(TD $(NAN))       $(TD yes)     )
+ *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(NAN))       $(TD yes)     )
  *      )
  * Bugs:
- *      Results are undefined if |x| >= $(POWER 2,64).
+ *      Results are undefined if |radians| >= $(POWER 2,64).
  */
 
-real cos(real x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.cos(x); }
+real cos(real radians) @safe pure nothrow @nogc { pragma(inline, true); return core.math.cos(radians); }
 //FIXME
 ///ditto
-double cos(double x) @safe pure nothrow @nogc { return cos(cast(real) x); }
+double cos(double radians) @safe pure nothrow @nogc { return cos(cast(real) radians); }
 //FIXME
 ///ditto
-float cos(float x) @safe pure nothrow @nogc { return cos(cast(real) x); }
+float cos(float radians) @safe pure nothrow @nogc { return cos(cast(real) radians); }
 
 ///
 @safe unittest
@@ -679,32 +679,32 @@ float cos(float x) @safe pure nothrow @nogc { return cos(cast(real) x); }
 }
 
 /***********************************
- * Returns $(HTTP en.wikipedia.org/wiki/Sine, sine) of x. x is in $(HTTP en.wikipedia.org/wiki/Radian, radians).
+ * Returns $(HTTP en.wikipedia.org/wiki/Sine, sine) of `radians`. See $(HTTP en.wikipedia.org/wiki/Radian, radians).
  *
  *      $(TABLE_SV
- *      $(TH3 x           ,  sin(x)      ,  invalid?)
+ *      $(TH3 radians     ,  sin(radians),  invalid?)
  *      $(TD3 $(NAN)      ,  $(NAN)      ,  yes     )
  *      $(TD3 $(PLUSMN)0.0,  $(PLUSMN)0.0,  no      )
  *      $(TD3 $(PLUSMNINF),  $(NAN)      ,  yes     )
  *      )
  *
  * Params:
- *      x = angle in radians (not degrees)
+ *      radians = angle in radians (not degrees)
  * Returns:
- *      sine of x
+ *      sine of radians
  * See_Also:
  *      $(MYREF cos), $(MYREF tan), $(MYREF asin)
  * Bugs:
- *      Results are undefined if |x| >= $(POWER 2,64).
+ *      Results are undefined if |radians| >= $(POWER 2,64).
  */
 
-real sin(real x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.sin(x); }
+real sin(real radians) @safe pure nothrow @nogc { pragma(inline, true); return core.math.sin(radians); }
 //FIXME
 ///ditto
-double sin(double x) @safe pure nothrow @nogc { return sin(cast(real) x); }
+double sin(double radians) @safe pure nothrow @nogc { return sin(cast(real) radians); }
 //FIXME
 ///ditto
-float sin(float x) @safe pure nothrow @nogc { return sin(cast(real) x); }
+float sin(float radians) @safe pure nothrow @nogc { return sin(cast(real) radians); }
 
 ///
 @safe unittest
@@ -727,30 +727,36 @@ float sin(float x) @safe pure nothrow @nogc { return sin(cast(real) x); }
 }
 
 /****************************************************************************
- * Returns tangent of x. x is in radians.
+ * Returns tangent of `radians`.
  *
  *      $(TABLE_SV
- *      $(TR $(TH x)             $(TH tan(x))       $(TH invalid?))
+ *      $(TR $(TH radians)       $(TH tan(radians)) $(TH invalid?))
  *      $(TR $(TD $(NAN))        $(TD $(NAN))       $(TD yes))
  *      $(TR $(TD $(PLUSMN)0.0)  $(TD $(PLUSMN)0.0) $(TD no))
  *      $(TR $(TD $(PLUSMNINF))  $(TD $(NAN))       $(TD yes))
  *      )
  */
-real tan(real x) @trusted pure nothrow @nogc // TODO: @safe
+real tan(real radians) @trusted pure nothrow @nogc // TODO: @safe
 {
     version (InlineAsm_X86_Any)
     {
         if (!__ctfe)
-            return tanAsm(x);
+            return tanAsm(radians);
     }
-    return tanImpl(x);
+    return tanImpl(radians);
 }
 
 /// ditto
-double tan(double x) @safe pure nothrow @nogc { return __ctfe ? cast(double) tan(cast(real) x) : tanImpl(x); }
+double tan(double radians) @safe pure nothrow @nogc
+{
+    return __ctfe ? cast(double) tan(cast(real) radians) : tanImpl(radians);
+}
 
 /// ditto
-float tan(float x) @safe pure nothrow @nogc { return __ctfe ? cast(float) tan(cast(real) x) : tanImpl(x); }
+float tan(float radians) @safe pure nothrow @nogc
+{
+    return __ctfe ? cast(float) tan(cast(real) radians) : tanImpl(radians);
+}
 
 ///
 @safe unittest
@@ -1565,26 +1571,26 @@ private T atan2Impl(T)(T y, T x) @safe pure nothrow @nogc
 }
 
 /***********************************
- * Calculates the hyperbolic cosine of x.
+ * Calculates the hyperbolic cosine of `radians`.
  *
  *      $(TABLE_SV
  *      $(TR $(TH x)                 $(TH cosh(x))      $(TH invalid?))
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)0.0) $(TD no) )
  *      )
  */
-real cosh(real x) @safe pure nothrow @nogc
+real cosh(real radians) @safe pure nothrow @nogc
 {
-    //  cosh = (exp(x)+exp(-x))/2.
+    //  cosh = (exp(radians)+exp(-radians))/2.
     // The naive implementation works correctly.
-    const real y = exp(x);
+    const real y = exp(radians);
     return (y + 1.0/y) * 0.5;
 }
 
 /// ditto
-double cosh(double x) @safe pure nothrow @nogc { return cosh(cast(real) x); }
+double cosh(double radians) @safe pure nothrow @nogc { return cosh(cast(real) radians); }
 
 /// ditto
-float cosh(float x) @safe pure nothrow @nogc  { return cosh(cast(real) x); }
+float cosh(float radians) @safe pure nothrow @nogc  { return cosh(cast(real) radians); }
 
 ///
 @safe unittest
@@ -1599,34 +1605,34 @@ float cosh(float x) @safe pure nothrow @nogc  { return cosh(cast(real) x); }
 }
 
 /***********************************
- * Calculates the hyperbolic sine of x.
+ * Calculates the hyperbolic sine of `radians`.
  *
  *      $(TABLE_SV
- *      $(TR $(TH x)                 $(TH sinh(x))           $(TH invalid?))
+ *      $(TR $(TH radians)           $(TH sinh(radians))     $(TH invalid?))
  *      $(TR $(TD $(PLUSMN)0.0)      $(TD $(PLUSMN)0.0)      $(TD no))
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)$(INFIN)) $(TD no))
  *      )
  */
-real sinh(real x) @safe pure nothrow @nogc
+real sinh(real radians) @safe pure nothrow @nogc
 {
-    //  sinh(x) =  (exp(x)-exp(-x))/2;
+    //  sinh(radians) =  (exp(radians)-exp(-radians))/2;
     // Very large arguments could cause an overflow, but
-    // the maximum value of x for which exp(x) + exp(-x)) != exp(x)
-    // is x = 0.5 * (real.mant_dig) * LN2. // = 22.1807 for real80.
-    if (fabs(x) > real.mant_dig * LN2)
+    // the maximum value of radians for which exp(radians) + exp(-radians)) != exp(radians)
+    // is radians = 0.5 * (real.mant_dig) * LN2. // = 22.1807 for real80.
+    if (fabs(radians) > real.mant_dig * LN2)
     {
-        return copysign(0.5 * exp(fabs(x)), x);
+        return copysign(0.5 * exp(fabs(radians)), radians);
     }
 
-    const real y = expm1(x);
+    const real y = expm1(radians);
     return 0.5 * y / (y+1) * (y+2);
 }
 
 /// ditto
-double sinh(double x) @safe pure nothrow @nogc { return sinh(cast(real) x); }
+double sinh(double radians) @safe pure nothrow @nogc { return sinh(cast(real) radians); }
 
 /// ditto
-float sinh(float x) @safe pure nothrow @nogc  { return sinh(cast(real) x); }
+float sinh(float radians) @safe pure nothrow @nogc  { return sinh(cast(real) radians); }
 
 ///
 @safe unittest
@@ -1641,31 +1647,31 @@ float sinh(float x) @safe pure nothrow @nogc  { return sinh(cast(real) x); }
 }
 
 /***********************************
- * Calculates the hyperbolic tangent of x.
+ * Calculates the hyperbolic tangent of radians.
  *
  *      $(TABLE_SV
- *      $(TR $(TH x)                 $(TH tanh(x))      $(TH invalid?))
+ *      $(TR $(TH radians)           $(TH tanh(radians))$(TH invalid?))
  *      $(TR $(TD $(PLUSMN)0.0)      $(TD $(PLUSMN)0.0) $(TD no) )
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)1.0) $(TD no))
  *      )
  */
-real tanh(real x) @safe pure nothrow @nogc
+real tanh(real radians) @safe pure nothrow @nogc
 {
-    //  tanh(x) = (exp(x) - exp(-x))/(exp(x)+exp(-x))
-    if (fabs(x) > real.mant_dig * LN2)
+    //  tanh(radians) = (exp(radians) - exp(-radians))/(exp(radians)+exp(-radians))
+    if (fabs(radians) > real.mant_dig * LN2)
     {
-        return copysign(1, x);
+        return copysign(1, radians);
     }
 
-    const real y = expm1(2*x);
+    const real y = expm1(2*radians);
     return y / (y + 2);
 }
 
 /// ditto
-double tanh(double x) @safe pure nothrow @nogc { return tanh(cast(real) x); }
+double tanh(double radians) @safe pure nothrow @nogc { return tanh(cast(real) radians); }
 
 /// ditto
-float tanh(float x) @safe pure nothrow @nogc { return tanh(cast(real) x); }
+float tanh(float radians) @safe pure nothrow @nogc { return tanh(cast(real) radians); }
 
 ///
 @safe unittest
