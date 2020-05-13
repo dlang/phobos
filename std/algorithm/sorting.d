@@ -1092,8 +1092,8 @@ if (Rs.length >= 2 &&
     }
 
     import std.functional : binaryFun;
+    import std.meta : anySatisfy;
     import std.traits : isCopyable;
-    import std.typetuple : anySatisfy;
 
     private alias comp = binaryFun!less;
     private alias ElementType = CommonType!(staticMap!(.ElementType, Rs));
