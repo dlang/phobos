@@ -1157,7 +1157,7 @@ Complex!T exp(T)(Complex!T x) @trusted pure nothrow @nogc // TODO: @safe
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : approxEqual, PI;
+    import std.math : isClose, PI;
 
     assert(exp(complex(0.0, 0.0)) == complex(1.0, 0.0));
 
@@ -1165,8 +1165,7 @@ Complex!T exp(T)(Complex!T x) @trusted pure nothrow @nogc // TODO: @safe
     assert(exp(conj(a)) == conj(exp(a)));
 
     auto b = exp(complex(0.0L, 1.0L) * PI);
-    assert(approxEqual(b.re, -1.0));
-    assert(approxEqual(b.im, 0.0));
+    assert(isClose(b, -1.0L, 0.0, 1e-19));
 }
 
 @safe pure nothrow @nogc unittest
@@ -1207,27 +1206,22 @@ Complex!T exp(T)(Complex!T x) @trusted pure nothrow @nogc // TODO: @safe
 
 @safe pure nothrow @nogc unittest
 {
-    import std.math : PI, approxEqual;
+    import std.math : PI, isClose;
 
     auto a = exp(complex(0.0, -PI));
-    assert(approxEqual(a.re, -1.0));
-    assert(approxEqual(a.im, 0.0));
+    assert(isClose(a, -1.0, 0.0, 1e-19));
 
     auto b = exp(complex(0.0, -2.0 * PI / 3.0));
-    assert(approxEqual(b.re, -0.5));
-    assert(approxEqual(b.im, -0.866025));
+    assert(isClose(b, complex(-0.5L, -0.866025403784438646763L)));
 
-    auto d = exp(complex(0.0, PI / 3.0));
-    assert(approxEqual(d.re, 0.5));
-    assert(approxEqual(d.im, 0.866025));
+    auto c = exp(complex(0.0, PI / 3.0));
+    assert(isClose(c, complex(0.5L, 0.866025403784438646763L)));
 
-    auto e = exp(complex(0.0, 2.0 * PI / 3.0));
-    assert(approxEqual(e.re, -0.5));
-    assert(approxEqual(e.im, 0.866025));
+    auto d = exp(complex(0.0, 2.0 * PI / 3.0));
+    assert(isClose(d, complex(-0.5L, 0.866025403784438646763L)));
 
-    auto f = exp(complex(0.0, PI));
-    assert(approxEqual(f.re, -1.0));
-    assert(approxEqual(f.im, -0.0));
+    auto e = exp(complex(0.0, PI));
+    assert(isClose(e, -1.0, 0.0, 1e-19));
 }
 
 /**
@@ -1304,15 +1298,14 @@ Complex!T log(T)(Complex!T x) @safe pure nothrow @nogc
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : sqrt, PI, approxEqual;
+    import std.math : sqrt, PI, isClose;
 
     auto a = complex(2.0, 1.0);
     assert(log(conj(a)) == conj(log(a)));
 
     auto b = 2.0 * log10(complex(0.0, 1.0));
     auto c = 4.0 * log10(complex(sqrt(2.0) / 2, sqrt(2.0) / 2));
-    assert(approxEqual(b.re, c.re));
-    assert(approxEqual(b.im, c.im));
+    assert(isClose(b, c, 0.0, 1e-15));
 
     assert(log(complex(-1.0L, 0.0L)) == complex(0.0L, PI));
     assert(log(complex(-1.0L, -0.0L)) == complex(0.0L, -PI));
@@ -1352,31 +1345,25 @@ Complex!T log(T)(Complex!T x) @safe pure nothrow @nogc
 
 @safe pure nothrow @nogc unittest
 {
-    import std.math : PI, approxEqual;
+    import std.math : PI, isClose;
 
     auto a = log(fromPolar(1.0, PI / 6.0));
-    assert(approxEqual(a.re, 0.0));
-    assert(approxEqual(a.im, 0.523599));
+    assert(isClose(a, complex(0.0L, 0.523598775598298873077L), 0.0, 1e-18));
 
     auto b = log(fromPolar(1.0, PI / 3.0));
-    assert(approxEqual(b.re, 0.0));
-    assert(approxEqual(b.im, 1.047198));
+    assert(isClose(b, complex(0.0L, 1.04719755119659774615L), 0.0, 1e-18));
 
     auto c = log(fromPolar(1.0, PI / 2.0));
-    assert(approxEqual(c.re, 0.0));
-    assert(approxEqual(c.im, 1.570796));
+    assert(isClose(c, complex(0.0L, 1.57079632679489661923L), 0.0, 1e-18));
 
     auto d = log(fromPolar(1.0, 2.0 * PI / 3.0));
-    assert(approxEqual(d.re, 0.0));
-    assert(approxEqual(d.im, 2.094395));
+    assert(isClose(d, complex(0.0L, 2.09439510239319549230L), 0.0, 1e-18));
 
     auto e = log(fromPolar(1.0, 5.0 * PI / 6.0));
-    assert(approxEqual(e.re, 0.0));
-    assert(approxEqual(e.im, 2.617994));
+    assert(isClose(e, complex(0.0L, 2.61799387799149436538L), 0.0, 1e-18));
 
     auto f = log(fromPolar(1.0, PI));
-    assert(approxEqual(f.re, 0.0));
-    assert(approxEqual(f.im, -3.141593));
+    assert(isClose(f, complex(0.0L, -3.1415926535897932384L), 0.0, 1e-18));
 }
 
 /**
@@ -1396,15 +1383,14 @@ Complex!T log10(T)(Complex!T x) @safe pure nothrow @nogc
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : LN10, PI, approxEqual, sqrt;
+    import std.math : LN10, PI, isClose, sqrt;
 
     auto a = complex(2.0, 1.0);
     assert(log10(a) == log(a) / log(complex(10.0)));
 
     auto b = log10(complex(0.0, 1.0)) * 2.0;
     auto c = log10(complex(sqrt(2.0) / 2, sqrt(2.0) / 2)) * 4.0;
-    assert(approxEqual(b.re, c.re));
-    assert(approxEqual(b.im, c.im));
+    assert(isClose(b, c, 0.0, 1e-15));
 
     assert(log10(complex(-100.0L, 0.0L)) == complex(2.0L, PI / LN10));
     assert(log10(complex(-100.0L, -0.0L)) == complex(2.0L, -PI / LN10));
@@ -1412,31 +1398,25 @@ Complex!T log10(T)(Complex!T x) @safe pure nothrow @nogc
 
 @safe pure nothrow @nogc unittest
 {
-    import std.math : PI, approxEqual;
+    import std.math : PI, isClose;
 
     auto a = log10(fromPolar(1.0, PI / 6.0));
-    assert(approxEqual(a.re, 0.0));
-    assert(approxEqual(a.im, 0.227396));
+    assert(isClose(a, complex(0.0L, 0.227396058973640224580L), 0.0, 1e-18));
 
     auto b = log10(fromPolar(1.0, PI / 3.0));
-    assert(approxEqual(b.re, 0.0));
-    assert(approxEqual(b.im, 0.454792));
+    assert(isClose(b, complex(0.0L, 0.454792117947280449161L), 0.0, 1e-18));
 
     auto c = log10(fromPolar(1.0, PI / 2.0));
-    assert(approxEqual(c.re, 0.0));
-    assert(approxEqual(c.im, 0.682188));
+    assert(isClose(c, complex(0.0L, 0.682188176920920673742L), 0.0, 1e-18));
 
     auto d = log10(fromPolar(1.0, 2.0 * PI / 3.0));
-    assert(approxEqual(d.re, 0.0));
-    assert(approxEqual(d.im, 0.909584));
+    assert(isClose(d, complex(0.0L, 0.909584235894560898323L), 0.0, 1e-18));
 
     auto e = log10(fromPolar(1.0, 5.0 * PI / 6.0));
-    assert(approxEqual(e.re, 0.0));
-    assert(approxEqual(e.im, 1.136980));
+    assert(isClose(e, complex(0.0L, 1.13698029486820112290L), 0.0, 1e-18));
 
     auto f = log10(fromPolar(1.0, PI));
-    assert(approxEqual(f.re, 0.0));
-    assert(approxEqual(f.im, -1.364376));
+    assert(isClose(f, complex(0.0L, -1.36437635384184134748L), 0.0, 1e-18));
 }
 
 /**
@@ -1469,22 +1449,16 @@ if (isIntegral!Int)
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : approxEqual;
+    import std.math : isClose;
 
     auto a = complex(1.0, 2.0);
     assert(pow(a, 2) == a * a);
     assert(pow(a, 3) == a * a * a);
     assert(pow(a, -2) == 1.0 / (a * a));
+    assert(isClose(pow(a, -3), 1.0 / (a * a * a)));
 
-    auto b = pow(a, -3);
-    auto c = 1.0 / (a * a * a);
-    assert(approxEqual(b.re, c.re));
-    assert(approxEqual(b.im, c.im));
-
-    auto d = pow(complex(2.0), 3);
-    auto e = exp(3 * log(complex(2.0)));
-    assert(approxEqual(d.re, e.re));
-    assert(approxEqual(d.im, e.im));
+    auto b = complex(2.0);
+    assert(isClose(pow(b, 3), exp(3 * log(b))));
 }
 
 /// ditto
@@ -1505,17 +1479,15 @@ Complex!T pow(T)(Complex!T x, const T n) @trusted pure nothrow @nogc
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : approxEqual;
+    import std.math : isClose;
     assert(pow(complex(0.0), 2.0) == complex(0.0));
     assert(pow(complex(5.0), 2.0) == complex(25.0));
 
     auto a = pow(complex(-1.0, 0.0), 0.5);
-    assert(approxEqual(a.re, 0.0));
-    assert(approxEqual(a.im, +1.0));
+    assert(isClose(a, complex(0.0, +1.0), 0.0, 1e-16));
 
     auto b = pow(complex(-1.0, -0.0), 0.5);
-    assert(approxEqual(b.re, 0.0));
-    assert(approxEqual(b.im, -1.0));
+    assert(isClose(b, complex(0.0, -1.0), 0.0, 1e-16));
 }
 
 /// ditto
@@ -1527,14 +1499,13 @@ Complex!T pow(T)(Complex!T x, Complex!T y) @trusted pure nothrow @nogc
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : approxEqual, exp, PI;
+    import std.math : isClose, exp, PI;
     auto a = complex(0.0);
     auto b = complex(2.0);
     assert(pow(a, b) == complex(0.0));
 
     auto c = pow(complex(0.0, 1.0), complex(0.0, 1.0));
-    assert(approxEqual(c.re, exp((-PI) / 2)));
-    assert(approxEqual(c.im, 0.0));
+    assert(isClose(c, exp((-PI) / 2)));
 }
 
 /// ditto
@@ -1550,38 +1521,32 @@ Complex!T pow(T)(const T x, Complex!T n) @trusted pure nothrow @nogc
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : approxEqual;
+    import std.math : isClose;
     assert(pow(2.0, complex(0.0)) == complex(1.0));
     assert(pow(2.0, complex(5.0)) == complex(32.0));
 
     auto a = pow(-2.0, complex(-1.0));
-    assert(approxEqual(a.re, -0.5));
-    assert(approxEqual(a.im, 0));
+    assert(isClose(a, complex(-0.5), 0.0, 1e-16));
 
     auto b = pow(-0.5, complex(-1.0));
-    assert(approxEqual(b.re, -2.0));
-    assert(approxEqual(b.im, 0));
+    assert(isClose(b, complex(-2.0), 0.0, 1e-15));
 }
 
 @safe pure nothrow @nogc unittest
 {
-    import std.math : PI, approxEqual;
+    import std.math : PI, isClose;
 
     auto a = pow(complex(3.0, 4.0), 2);
-    assert(approxEqual(a.re, -7));
-    assert(approxEqual(a.im, 24));
+    assert(isClose(a, complex(-7.0, 24.0)));
 
     auto b = pow(complex(3.0, 4.0), PI);
-    assert(approxEqual(b.re, -152.915122));
-    assert(approxEqual(b.im, 35.547500));
+    assert(isClose(b, complex(-152.91512205297134, 35.547499631917738)));
 
     auto c = pow(complex(3.0, 4.0), complex(-2.0, 1.0));
-    assert(approxEqual(c.re, 0.015352));
-    assert(approxEqual(c.im, -0.003841));
+    assert(isClose(c, complex(0.015351734187477306, -0.0038407695456661503)));
 
     auto d = pow(PI, complex(2.0, -1.0));
-    assert(approxEqual(d.re, 4.079030));
-    assert(approxEqual(d.im, -8.987247));
+    assert(isClose(d, complex(4.0790296880118296, -8.9872469554541869)));
 }
 
 @safe pure nothrow @nogc unittest
