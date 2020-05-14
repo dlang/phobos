@@ -9103,6 +9103,7 @@ bool isClose(T, U, V = CommonType!(FloatingPointBaseType!T,FloatingPointBaseType
     (T lhs, U rhs, V maxRelDiff = CommonDefaultFor!(T,U), V maxAbsDiff = 0.0)
 {
     import std.range.primitives : empty, front, isInputRange, popFront;
+    import std.complex : Complex;
     static if (isInputRange!T)
     {
         static if (isInputRange!U)
@@ -9127,35 +9128,53 @@ bool isClose(T, U, V = CommonType!(FloatingPointBaseType!T,FloatingPointBaseType
             return true;
         }
     }
-    else
+    else static if (isInputRange!U)
     {
-        static if (isInputRange!U)
+        // lhs is number, rhs is range
+        for (; !rhs.empty; rhs.popFront())
         {
-            // lhs is number, rhs is range
-            for (; !rhs.empty; rhs.popFront())
-            {
-                if (!isClose(lhs, rhs.front, maxRelDiff, maxAbsDiff))
-                    return false;
-            }
-            return true;
+            if (!isClose(lhs, rhs.front, maxRelDiff, maxAbsDiff))
+                return false;
+        }
+        return true;
+    }
+    else static if (is(T TE == Complex!TE))
+    {
+        static if (is(U UE == Complex!UE))
+        {
+            // Two complex numbers
+            return isClose(lhs.re, rhs.re, maxRelDiff, maxAbsDiff)
+                && isClose(lhs.im, rhs.im, maxRelDiff, maxAbsDiff);
         }
         else
         {
-            // two numbers
-            if (lhs == rhs) return true;
-
-            static if (is(typeof(lhs.infinity)) && is(typeof(rhs.infinity)))
-            {
-                if (lhs == lhs.infinity || rhs == rhs.infinity ||
-                    lhs == -lhs.infinity || rhs == -rhs.infinity) return false;
-            }
-
-            auto diff = abs(lhs - rhs);
-
-            return diff <= maxRelDiff*abs(lhs)
-                || diff <= maxRelDiff*abs(rhs)
-                || diff <= maxAbsDiff;
+            // lhs is complex, rhs is number
+            return isClose(lhs.re, rhs, maxRelDiff, maxAbsDiff)
+                && isClose(lhs.im, 0.0, maxRelDiff, maxAbsDiff);
         }
+    }
+    else static if (is(U UE == Complex!UE))
+    {
+        // lhs is number, rhs is complex
+        return isClose(lhs, rhs.re, maxRelDiff, maxAbsDiff)
+            && isClose(0.0, rhs.im, maxRelDiff, maxAbsDiff);
+    }
+    else
+    {
+        // two numbers
+        if (lhs == rhs) return true;
+
+        static if (is(typeof(lhs.infinity)) && is(typeof(rhs.infinity)))
+        {
+            if (lhs == lhs.infinity || rhs == rhs.infinity ||
+                lhs == -lhs.infinity || rhs == -rhs.infinity) return false;
+        }
+
+        auto diff = abs(lhs - rhs);
+
+        return diff <= maxRelDiff*abs(lhs)
+            || diff <= maxRelDiff*abs(rhs)
+            || diff <= maxAbsDiff;
     }
 }
 
