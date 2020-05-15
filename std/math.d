@@ -133,6 +133,9 @@ static import core.stdc.fenv;
 import std.traits :  CommonType, isFloatingPoint, isIntegral, isNumeric,
     isSigned, isUnsigned, Largest, Unqual;
 
+// Note: Exposed accidentally, should be deprecated / removed
+public import std.meta : AliasSeq;
+
 version (DigitalMars)
 {
     version = INLINE_YL2X;        // x87 has opcodes for these
