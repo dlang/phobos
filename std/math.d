@@ -1395,8 +1395,6 @@ float tanh(float x) @safe pure nothrow @nogc { return tanh(cast(real) x); }
     assert(equalsDigit(tanh(1.0), sinh(1.0) / cosh(1.0), 15));
 }
 
-public:
-
 /***********************************
  * Calculates the inverse hyperbolic cosine of x.
  *
