@@ -5122,7 +5122,6 @@ private:
         }
     }
 
-private:
     static uint getIeeeFlags() @trusted pure
     {
         version (InlineAsm_X86_Any)
