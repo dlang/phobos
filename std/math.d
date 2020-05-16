@@ -5657,7 +5657,6 @@ nothrow @nogc:
         }
     }
 
-public:
     /// Returns: true if the current FPU supports exception trapping
     @property static bool hasExceptionTraps() @safe pure
     {
