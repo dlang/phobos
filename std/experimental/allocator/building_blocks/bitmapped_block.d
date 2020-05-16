@@ -2456,13 +2456,9 @@ If `x` contains no zeros (i.e. is equal to `ulong.max`), returns 64.
 pure nothrow @safe @nogc
 private uint leadingOnes(ulong x)
 {
-    uint result = 0;
-    while (cast(long) x < 0)
-    {
-        ++result;
-        x <<= 1;
-    }
-    return result;
+    import core.bitop : bsr;
+    const x_ = ~x;
+    return x_ == 0 ? 64 : (63 - bsr(x_));
 }
 
 @safe unittest
