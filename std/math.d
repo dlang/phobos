@@ -258,293 +258,6 @@ version (StdUnittest) private
 }
 
 
-
-package:
-// The following IEEE 'real' formats are currently supported.
-version (LittleEndian)
-{
-    static assert(real.mant_dig == 53 || real.mant_dig == 64
-               || real.mant_dig == 113,
-      "Only 64-bit, 80-bit, and 128-bit reals"~
-      " are supported for LittleEndian CPUs");
-}
-else
-{
-    static assert(real.mant_dig == 53 || real.mant_dig == 113,
-    "Only 64-bit and 128-bit reals are supported for BigEndian CPUs.");
-}
-
-// Underlying format exposed through floatTraits
-enum RealFormat
-{
-    ieeeHalf,
-    ieeeSingle,
-    ieeeDouble,
-    ieeeExtended,   // x87 80-bit real
-    ieeeExtended53, // x87 real rounded to precision of double.
-    ibmExtended,    // IBM 128-bit extended
-    ieeeQuadruple,
-}
-
-// Constants used for extracting the components of the representation.
-// They supplement the built-in floating point properties.
-template floatTraits(T)
-{
-    // EXPMASK is a ushort mask to select the exponent portion (without sign)
-    // EXPSHIFT is the number of bits the exponent is left-shifted by in its ushort
-    // EXPBIAS is the exponent bias - 1 (exp == EXPBIAS yields ×2^-1).
-    // EXPPOS_SHORT is the index of the exponent when represented as a ushort array.
-    // SIGNPOS_BYTE is the index of the sign when represented as a ubyte array.
-    // RECIP_EPSILON is the value such that (smallest_subnormal) * RECIP_EPSILON == T.min_normal
-    enum Unqual!T RECIP_EPSILON = (1/T.epsilon);
-    static if (T.mant_dig == 24)
-    {
-        // Single precision float
-        enum ushort EXPMASK = 0x7F80;
-        enum ushort EXPSHIFT = 7;
-        enum ushort EXPBIAS = 0x3F00;
-        enum uint EXPMASK_INT = 0x7F80_0000;
-        enum uint MANTISSAMASK_INT = 0x007F_FFFF;
-        enum realFormat = RealFormat.ieeeSingle;
-        version (LittleEndian)
-        {
-            enum EXPPOS_SHORT = 1;
-            enum SIGNPOS_BYTE = 3;
-        }
-        else
-        {
-            enum EXPPOS_SHORT = 0;
-            enum SIGNPOS_BYTE = 0;
-        }
-    }
-    else static if (T.mant_dig == 53)
-    {
-        static if (T.sizeof == 8)
-        {
-            // Double precision float, or real == double
-            enum ushort EXPMASK = 0x7FF0;
-            enum ushort EXPSHIFT = 4;
-            enum ushort EXPBIAS = 0x3FE0;
-            enum uint EXPMASK_INT = 0x7FF0_0000;
-            enum uint MANTISSAMASK_INT = 0x000F_FFFF; // for the MSB only
-            enum realFormat = RealFormat.ieeeDouble;
-            version (LittleEndian)
-            {
-                enum EXPPOS_SHORT = 3;
-                enum SIGNPOS_BYTE = 7;
-            }
-            else
-            {
-                enum EXPPOS_SHORT = 0;
-                enum SIGNPOS_BYTE = 0;
-            }
-        }
-        else static if (T.sizeof == 12)
-        {
-            // Intel extended real80 rounded to double
-            enum ushort EXPMASK = 0x7FFF;
-            enum ushort EXPSHIFT = 0;
-            enum ushort EXPBIAS = 0x3FFE;
-            enum realFormat = RealFormat.ieeeExtended53;
-            version (LittleEndian)
-            {
-                enum EXPPOS_SHORT = 4;
-                enum SIGNPOS_BYTE = 9;
-            }
-            else
-            {
-                enum EXPPOS_SHORT = 0;
-                enum SIGNPOS_BYTE = 0;
-            }
-        }
-        else
-            static assert(false, "No traits support for " ~ T.stringof);
-    }
-    else static if (T.mant_dig == 64)
-    {
-        // Intel extended real80
-        enum ushort EXPMASK = 0x7FFF;
-        enum ushort EXPSHIFT = 0;
-        enum ushort EXPBIAS = 0x3FFE;
-        enum realFormat = RealFormat.ieeeExtended;
-        version (LittleEndian)
-        {
-            enum EXPPOS_SHORT = 4;
-            enum SIGNPOS_BYTE = 9;
-        }
-        else
-        {
-            enum EXPPOS_SHORT = 0;
-            enum SIGNPOS_BYTE = 0;
-        }
-    }
-    else static if (T.mant_dig == 113)
-    {
-        // Quadruple precision float
-        enum ushort EXPMASK = 0x7FFF;
-        enum ushort EXPSHIFT = 0;
-        enum ushort EXPBIAS = 0x3FFE;
-        enum realFormat = RealFormat.ieeeQuadruple;
-        version (LittleEndian)
-        {
-            enum EXPPOS_SHORT = 7;
-            enum SIGNPOS_BYTE = 15;
-        }
-        else
-        {
-            enum EXPPOS_SHORT = 0;
-            enum SIGNPOS_BYTE = 0;
-        }
-    }
-    else static if (T.mant_dig == 106)
-    {
-        // IBM Extended doubledouble
-        enum ushort EXPMASK = 0x7FF0;
-        enum ushort EXPSHIFT = 4;
-        enum realFormat = RealFormat.ibmExtended;
-
-        // For IBM doubledouble the larger magnitude double comes first.
-        // It's really a double[2] and arrays don't index differently
-        // between little and big-endian targets.
-        enum DOUBLEPAIR_MSB = 0;
-        enum DOUBLEPAIR_LSB = 1;
-
-        // The exponent/sign byte is for most significant part.
-        version (LittleEndian)
-        {
-            enum EXPPOS_SHORT = 3;
-            enum SIGNPOS_BYTE = 7;
-        }
-        else
-        {
-            enum EXPPOS_SHORT = 0;
-            enum SIGNPOS_BYTE = 0;
-        }
-    }
-    else
-        static assert(false, "No traits support for " ~ T.stringof);
-}
-
-// These apply to all floating-point types
-version (LittleEndian)
-{
-    enum MANTISSA_LSB = 0;
-    enum MANTISSA_MSB = 1;
-}
-else
-{
-    enum MANTISSA_LSB = 1;
-    enum MANTISSA_MSB = 0;
-}
-
-// Common code for math implementations.
-
-// Helper for floor/ceil
-T floorImpl(T)(const T x) @trusted pure nothrow @nogc
-{
-    alias F = floatTraits!(T);
-    // Take care not to trigger library calls from the compiler,
-    // while ensuring that we don't get defeated by some optimizers.
-    union floatBits
-    {
-        T rv;
-        ushort[T.sizeof/2] vu;
-
-        // Other kinds of extractors for real formats.
-        static if (F.realFormat == RealFormat.ieeeSingle)
-            int vi;
-    }
-    floatBits y = void;
-    y.rv = x;
-
-    // Find the exponent (power of 2)
-    // Do this by shifting the raw value so that the exponent lies in the low bits,
-    // then mask out the sign bit, and subtract the bias.
-    static if (F.realFormat == RealFormat.ieeeSingle)
-    {
-        int exp = ((y.vi >> (T.mant_dig - 1)) & 0xff) - 0x7f;
-    }
-    else static if (F.realFormat == RealFormat.ieeeDouble)
-    {
-        int exp = ((y.vu[F.EXPPOS_SHORT] >> 4) & 0x7ff) - 0x3ff;
-
-        version (LittleEndian)
-            int pos = 0;
-        else
-            int pos = 3;
-    }
-    else static if (F.realFormat == RealFormat.ieeeExtended)
-    {
-        int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
-
-        version (LittleEndian)
-            int pos = 0;
-        else
-            int pos = 4;
-    }
-    else static if (F.realFormat == RealFormat.ieeeQuadruple)
-    {
-        int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
-
-        version (LittleEndian)
-            int pos = 0;
-        else
-            int pos = 7;
-    }
-    else
-        static assert(false, "Not implemented for this architecture");
-
-    if (exp < 0)
-    {
-        if (x < 0.0)
-            return -1.0;
-        else
-            return 0.0;
-    }
-
-    static if (F.realFormat == RealFormat.ieeeSingle)
-    {
-        if (exp < (T.mant_dig - 1))
-        {
-            // Clear all bits representing the fraction part.
-            const uint fraction_mask = F.MANTISSAMASK_INT >> exp;
-
-            if ((y.vi & fraction_mask) != 0)
-            {
-                // If 'x' is negative, then first substract 1.0 from the value.
-                if (y.vi < 0)
-                    y.vi += 0x00800000 >> exp;
-                y.vi &= ~fraction_mask;
-            }
-        }
-    }
-    else
-    {
-        exp = (T.mant_dig - 1) - exp;
-
-        // Zero 16 bits at a time.
-        while (exp >= 16)
-        {
-            version (LittleEndian)
-                y.vu[pos++] = 0;
-            else
-                y.vu[pos--] = 0;
-            exp -= 16;
-        }
-
-        // Clear the remaining bits.
-        if (exp > 0)
-            y.vu[pos] &= 0xffff ^ ((1 << exp) - 1);
-
-        if ((x < 0.0) && (x != y.rv))
-            y.rv -= 1.0;
-    }
-
-    return y.rv;
-}
-
-public:
-
 // Values obtained from Wolfram Alpha. 116 bits ought to be enough for anybody.
 // Wolfram Alpha LLC. 2011. Wolfram|Alpha. http://www.wolframalpha.com/input/?i=e+in+base+16 (access July 6, 2011).
 enum real E =          0x1.5bf0a8b1457695355fb8ac404e7a8p+1L; /** e = 2.718281... */
@@ -1681,8 +1394,6 @@ float tanh(float x) @safe pure nothrow @nogc { return tanh(cast(real) x); }
 {
     assert(equalsDigit(tanh(1.0), sinh(1.0) / cosh(1.0), 15));
 }
-
-public:
 
 /***********************************
  * Calculates the inverse hyperbolic cosine of x.
@@ -5409,7 +5120,6 @@ private:
         }
     }
 
-private:
     static uint getIeeeFlags() @trusted pure
     {
         version (InlineAsm_X86_Any)
@@ -5945,7 +5655,6 @@ nothrow @nogc:
         }
     }
 
-public:
     /// Returns: true if the current FPU supports exception trapping
     @property static bool hasExceptionTraps() @safe pure
     {
@@ -8481,146 +8190,6 @@ if (isFloatingPoint!(X))
     testFeqrel!(float)();
 }
 
-package: // Not public yet
-/* Return the value that lies halfway between x and y on the IEEE number line.
- *
- * Formally, the result is the arithmetic mean of the binary significands of x
- * and y, multiplied by the geometric mean of the binary exponents of x and y.
- * x and y must have the same sign, and must not be NaN.
- * Note: this function is useful for ensuring O(log n) behaviour in algorithms
- * involving a 'binary chop'.
- *
- * Special cases:
- * If x and y are within a factor of 2, (ie, feqrel(x, y) > 0), the return value
- * is the arithmetic mean (x + y) / 2.
- * If x and y are even powers of 2, the return value is the geometric mean,
- *   ieeeMean(x, y) = sqrt(x * y).
- *
- */
-T ieeeMean(T)(const T x, const T y)  @trusted pure nothrow @nogc
-in
-{
-    // both x and y must have the same sign, and must not be NaN.
-    assert(signbit(x) == signbit(y));
-    assert(x == x && y == y);
-}
-do
-{
-    // Runtime behaviour for contract violation:
-    // If signs are opposite, or one is a NaN, return 0.
-    if (!((x >= 0 && y >= 0) || (x <= 0 && y <= 0))) return 0.0;
-
-    // The implementation is simple: cast x and y to integers,
-    // average them (avoiding overflow), and cast the result back to a floating-point number.
-
-    alias F = floatTraits!(T);
-    T u;
-    static if (F.realFormat == RealFormat.ieeeExtended)
-    {
-        // There's slight additional complexity because they are actually
-        // 79-bit reals...
-        ushort *ue = cast(ushort *)&u;
-        ulong *ul = cast(ulong *)&u;
-        ushort *xe = cast(ushort *)&x;
-        ulong *xl = cast(ulong *)&x;
-        ushort *ye = cast(ushort *)&y;
-        ulong *yl = cast(ulong *)&y;
-
-        // Ignore the useless implicit bit. (Bonus: this prevents overflows)
-        ulong m = ((*xl) & 0x7FFF_FFFF_FFFF_FFFFL) + ((*yl) & 0x7FFF_FFFF_FFFF_FFFFL);
-
-        // @@@ BUG? @@@
-        // Cast shouldn't be here
-        ushort e = cast(ushort) ((xe[F.EXPPOS_SHORT] & F.EXPMASK)
-                                 + (ye[F.EXPPOS_SHORT] & F.EXPMASK));
-        if (m & 0x8000_0000_0000_0000L)
-        {
-            ++e;
-            m &= 0x7FFF_FFFF_FFFF_FFFFL;
-        }
-        // Now do a multi-byte right shift
-        const uint c = e & 1; // carry
-        e >>= 1;
-        m >>>= 1;
-        if (c)
-            m |= 0x4000_0000_0000_0000L; // shift carry into significand
-        if (e)
-            *ul = m | 0x8000_0000_0000_0000L; // set implicit bit...
-        else
-            *ul = m; // ... unless exponent is 0 (subnormal or zero).
-
-        ue[4]= e | (xe[F.EXPPOS_SHORT]& 0x8000); // restore sign bit
-    }
-    else static if (F.realFormat == RealFormat.ieeeQuadruple)
-    {
-        // This would be trivial if 'ucent' were implemented...
-        ulong *ul = cast(ulong *)&u;
-        ulong *xl = cast(ulong *)&x;
-        ulong *yl = cast(ulong *)&y;
-
-        // Multi-byte add, then multi-byte right shift.
-        import core.checkedint : addu;
-        bool carry;
-        ulong ml = addu(xl[MANTISSA_LSB], yl[MANTISSA_LSB], carry);
-
-        ulong mh = carry + (xl[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL) +
-            (yl[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL);
-
-        ul[MANTISSA_MSB] = (mh >>> 1) | (xl[MANTISSA_MSB] & 0x8000_0000_0000_0000);
-        ul[MANTISSA_LSB] = (ml >>> 1) | (mh & 1) << 63;
-    }
-    else static if (F.realFormat == RealFormat.ieeeDouble)
-    {
-        ulong *ul = cast(ulong *)&u;
-        ulong *xl = cast(ulong *)&x;
-        ulong *yl = cast(ulong *)&y;
-        ulong m = (((*xl) & 0x7FFF_FFFF_FFFF_FFFFL)
-                   + ((*yl) & 0x7FFF_FFFF_FFFF_FFFFL)) >>> 1;
-        m |= ((*xl) & 0x8000_0000_0000_0000L);
-        *ul = m;
-    }
-    else static if (F.realFormat == RealFormat.ieeeSingle)
-    {
-        uint *ul = cast(uint *)&u;
-        uint *xl = cast(uint *)&x;
-        uint *yl = cast(uint *)&y;
-        uint m = (((*xl) & 0x7FFF_FFFF) + ((*yl) & 0x7FFF_FFFF)) >>> 1;
-        m |= ((*xl) & 0x8000_0000);
-        *ul = m;
-    }
-    else
-    {
-        assert(0, "Not implemented");
-    }
-    return u;
-}
-
-@safe pure nothrow @nogc unittest
-{
-    assert(ieeeMean(-0.0,-1e-20)<0);
-    assert(ieeeMean(0.0,1e-20)>0);
-
-    assert(ieeeMean(1.0L,4.0L)==2L);
-    assert(ieeeMean(2.0*1.013,8.0*1.013)==4*1.013);
-    assert(ieeeMean(-1.0L,-4.0L)==-2L);
-    assert(ieeeMean(-1.0,-4.0)==-2);
-    assert(ieeeMean(-1.0f,-4.0f)==-2f);
-    assert(ieeeMean(-1.0,-2.0)==-1.5);
-    assert(ieeeMean(-1*(1+8*real.epsilon),-2*(1+8*real.epsilon))
-                 ==-1.5*(1+5*real.epsilon));
-    assert(ieeeMean(0x1p60,0x1p-10)==0x1p25);
-
-    static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
-    {
-      assert(ieeeMean(1.0L,real.infinity)==0x1p8192L);
-      assert(ieeeMean(0.0L,real.infinity)==1.5);
-    }
-    assert(ieeeMean(0.5*real.min_normal*(1-4*real.epsilon),0.5*real.min_normal)
-           == 0.5*real.min_normal*(1-2*real.epsilon));
-}
-
-public:
-
 
 /***********************************
  * Evaluate polynomial A(x) = $(SUB a, 0) + $(SUB a, 1)x + $(SUB a, 2)$(POWER x,2) +
@@ -10076,4 +9645,426 @@ if (isNumeric!X)
         static foreach (x; [0, 3, 5, 13, 77, X.min, X.max])
             static assert(!isPowerOf2(cast(X) x));
     }}
+}
+
+package: // Not public yet
+/* Return the value that lies halfway between x and y on the IEEE number line.
+ *
+ * Formally, the result is the arithmetic mean of the binary significands of x
+ * and y, multiplied by the geometric mean of the binary exponents of x and y.
+ * x and y must have the same sign, and must not be NaN.
+ * Note: this function is useful for ensuring O(log n) behaviour in algorithms
+ * involving a 'binary chop'.
+ *
+ * Special cases:
+ * If x and y are within a factor of 2, (ie, feqrel(x, y) > 0), the return value
+ * is the arithmetic mean (x + y) / 2.
+ * If x and y are even powers of 2, the return value is the geometric mean,
+ *   ieeeMean(x, y) = sqrt(x * y).
+ *
+ */
+T ieeeMean(T)(const T x, const T y)  @trusted pure nothrow @nogc
+in
+{
+    // both x and y must have the same sign, and must not be NaN.
+    assert(signbit(x) == signbit(y));
+    assert(x == x && y == y);
+}
+do
+{
+    // Runtime behaviour for contract violation:
+    // If signs are opposite, or one is a NaN, return 0.
+    if (!((x >= 0 && y >= 0) || (x <= 0 && y <= 0))) return 0.0;
+
+    // The implementation is simple: cast x and y to integers,
+    // average them (avoiding overflow), and cast the result back to a floating-point number.
+
+    alias F = floatTraits!(T);
+    T u;
+    static if (F.realFormat == RealFormat.ieeeExtended)
+    {
+        // There's slight additional complexity because they are actually
+        // 79-bit reals...
+        ushort *ue = cast(ushort *)&u;
+        ulong *ul = cast(ulong *)&u;
+        ushort *xe = cast(ushort *)&x;
+        ulong *xl = cast(ulong *)&x;
+        ushort *ye = cast(ushort *)&y;
+        ulong *yl = cast(ulong *)&y;
+
+        // Ignore the useless implicit bit. (Bonus: this prevents overflows)
+        ulong m = ((*xl) & 0x7FFF_FFFF_FFFF_FFFFL) + ((*yl) & 0x7FFF_FFFF_FFFF_FFFFL);
+
+        // @@@ BUG? @@@
+        // Cast shouldn't be here
+        ushort e = cast(ushort) ((xe[F.EXPPOS_SHORT] & F.EXPMASK)
+                                 + (ye[F.EXPPOS_SHORT] & F.EXPMASK));
+        if (m & 0x8000_0000_0000_0000L)
+        {
+            ++e;
+            m &= 0x7FFF_FFFF_FFFF_FFFFL;
+        }
+        // Now do a multi-byte right shift
+        const uint c = e & 1; // carry
+        e >>= 1;
+        m >>>= 1;
+        if (c)
+            m |= 0x4000_0000_0000_0000L; // shift carry into significand
+        if (e)
+            *ul = m | 0x8000_0000_0000_0000L; // set implicit bit...
+        else
+            *ul = m; // ... unless exponent is 0 (subnormal or zero).
+
+        ue[4]= e | (xe[F.EXPPOS_SHORT]& 0x8000); // restore sign bit
+    }
+    else static if (F.realFormat == RealFormat.ieeeQuadruple)
+    {
+        // This would be trivial if 'ucent' were implemented...
+        ulong *ul = cast(ulong *)&u;
+        ulong *xl = cast(ulong *)&x;
+        ulong *yl = cast(ulong *)&y;
+
+        // Multi-byte add, then multi-byte right shift.
+        import core.checkedint : addu;
+        bool carry;
+        ulong ml = addu(xl[MANTISSA_LSB], yl[MANTISSA_LSB], carry);
+
+        ulong mh = carry + (xl[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL) +
+            (yl[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL);
+
+        ul[MANTISSA_MSB] = (mh >>> 1) | (xl[MANTISSA_MSB] & 0x8000_0000_0000_0000);
+        ul[MANTISSA_LSB] = (ml >>> 1) | (mh & 1) << 63;
+    }
+    else static if (F.realFormat == RealFormat.ieeeDouble)
+    {
+        ulong *ul = cast(ulong *)&u;
+        ulong *xl = cast(ulong *)&x;
+        ulong *yl = cast(ulong *)&y;
+        ulong m = (((*xl) & 0x7FFF_FFFF_FFFF_FFFFL)
+                   + ((*yl) & 0x7FFF_FFFF_FFFF_FFFFL)) >>> 1;
+        m |= ((*xl) & 0x8000_0000_0000_0000L);
+        *ul = m;
+    }
+    else static if (F.realFormat == RealFormat.ieeeSingle)
+    {
+        uint *ul = cast(uint *)&u;
+        uint *xl = cast(uint *)&x;
+        uint *yl = cast(uint *)&y;
+        uint m = (((*xl) & 0x7FFF_FFFF) + ((*yl) & 0x7FFF_FFFF)) >>> 1;
+        m |= ((*xl) & 0x8000_0000);
+        *ul = m;
+    }
+    else
+    {
+        assert(0, "Not implemented");
+    }
+    return u;
+}
+
+@safe pure nothrow @nogc unittest
+{
+    assert(ieeeMean(-0.0,-1e-20)<0);
+    assert(ieeeMean(0.0,1e-20)>0);
+
+    assert(ieeeMean(1.0L,4.0L)==2L);
+    assert(ieeeMean(2.0*1.013,8.0*1.013)==4*1.013);
+    assert(ieeeMean(-1.0L,-4.0L)==-2L);
+    assert(ieeeMean(-1.0,-4.0)==-2);
+    assert(ieeeMean(-1.0f,-4.0f)==-2f);
+    assert(ieeeMean(-1.0,-2.0)==-1.5);
+    assert(ieeeMean(-1*(1+8*real.epsilon),-2*(1+8*real.epsilon))
+                 ==-1.5*(1+5*real.epsilon));
+    assert(ieeeMean(0x1p60,0x1p-10)==0x1p25);
+
+    static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
+    {
+      assert(ieeeMean(1.0L,real.infinity)==0x1p8192L);
+      assert(ieeeMean(0.0L,real.infinity)==1.5);
+    }
+    assert(ieeeMean(0.5*real.min_normal*(1-4*real.epsilon),0.5*real.min_normal)
+           == 0.5*real.min_normal*(1-2*real.epsilon));
+}
+
+
+// The following IEEE 'real' formats are currently supported.
+version (LittleEndian)
+{
+    static assert(real.mant_dig == 53 || real.mant_dig == 64
+               || real.mant_dig == 113,
+      "Only 64-bit, 80-bit, and 128-bit reals"~
+      " are supported for LittleEndian CPUs");
+}
+else
+{
+    static assert(real.mant_dig == 53 || real.mant_dig == 113,
+    "Only 64-bit and 128-bit reals are supported for BigEndian CPUs.");
+}
+
+// Underlying format exposed through floatTraits
+enum RealFormat
+{
+    ieeeHalf,
+    ieeeSingle,
+    ieeeDouble,
+    ieeeExtended,   // x87 80-bit real
+    ieeeExtended53, // x87 real rounded to precision of double.
+    ibmExtended,    // IBM 128-bit extended
+    ieeeQuadruple,
+}
+
+// Constants used for extracting the components of the representation.
+// They supplement the built-in floating point properties.
+template floatTraits(T)
+{
+    // EXPMASK is a ushort mask to select the exponent portion (without sign)
+    // EXPSHIFT is the number of bits the exponent is left-shifted by in its ushort
+    // EXPBIAS is the exponent bias - 1 (exp == EXPBIAS yields ×2^-1).
+    // EXPPOS_SHORT is the index of the exponent when represented as a ushort array.
+    // SIGNPOS_BYTE is the index of the sign when represented as a ubyte array.
+    // RECIP_EPSILON is the value such that (smallest_subnormal) * RECIP_EPSILON == T.min_normal
+    enum Unqual!T RECIP_EPSILON = (1/T.epsilon);
+    static if (T.mant_dig == 24)
+    {
+        // Single precision float
+        enum ushort EXPMASK = 0x7F80;
+        enum ushort EXPSHIFT = 7;
+        enum ushort EXPBIAS = 0x3F00;
+        enum uint EXPMASK_INT = 0x7F80_0000;
+        enum uint MANTISSAMASK_INT = 0x007F_FFFF;
+        enum realFormat = RealFormat.ieeeSingle;
+        version (LittleEndian)
+        {
+            enum EXPPOS_SHORT = 1;
+            enum SIGNPOS_BYTE = 3;
+        }
+        else
+        {
+            enum EXPPOS_SHORT = 0;
+            enum SIGNPOS_BYTE = 0;
+        }
+    }
+    else static if (T.mant_dig == 53)
+    {
+        static if (T.sizeof == 8)
+        {
+            // Double precision float, or real == double
+            enum ushort EXPMASK = 0x7FF0;
+            enum ushort EXPSHIFT = 4;
+            enum ushort EXPBIAS = 0x3FE0;
+            enum uint EXPMASK_INT = 0x7FF0_0000;
+            enum uint MANTISSAMASK_INT = 0x000F_FFFF; // for the MSB only
+            enum realFormat = RealFormat.ieeeDouble;
+            version (LittleEndian)
+            {
+                enum EXPPOS_SHORT = 3;
+                enum SIGNPOS_BYTE = 7;
+            }
+            else
+            {
+                enum EXPPOS_SHORT = 0;
+                enum SIGNPOS_BYTE = 0;
+            }
+        }
+        else static if (T.sizeof == 12)
+        {
+            // Intel extended real80 rounded to double
+            enum ushort EXPMASK = 0x7FFF;
+            enum ushort EXPSHIFT = 0;
+            enum ushort EXPBIAS = 0x3FFE;
+            enum realFormat = RealFormat.ieeeExtended53;
+            version (LittleEndian)
+            {
+                enum EXPPOS_SHORT = 4;
+                enum SIGNPOS_BYTE = 9;
+            }
+            else
+            {
+                enum EXPPOS_SHORT = 0;
+                enum SIGNPOS_BYTE = 0;
+            }
+        }
+        else
+            static assert(false, "No traits support for " ~ T.stringof);
+    }
+    else static if (T.mant_dig == 64)
+    {
+        // Intel extended real80
+        enum ushort EXPMASK = 0x7FFF;
+        enum ushort EXPSHIFT = 0;
+        enum ushort EXPBIAS = 0x3FFE;
+        enum realFormat = RealFormat.ieeeExtended;
+        version (LittleEndian)
+        {
+            enum EXPPOS_SHORT = 4;
+            enum SIGNPOS_BYTE = 9;
+        }
+        else
+        {
+            enum EXPPOS_SHORT = 0;
+            enum SIGNPOS_BYTE = 0;
+        }
+    }
+    else static if (T.mant_dig == 113)
+    {
+        // Quadruple precision float
+        enum ushort EXPMASK = 0x7FFF;
+        enum ushort EXPSHIFT = 0;
+        enum ushort EXPBIAS = 0x3FFE;
+        enum realFormat = RealFormat.ieeeQuadruple;
+        version (LittleEndian)
+        {
+            enum EXPPOS_SHORT = 7;
+            enum SIGNPOS_BYTE = 15;
+        }
+        else
+        {
+            enum EXPPOS_SHORT = 0;
+            enum SIGNPOS_BYTE = 0;
+        }
+    }
+    else static if (T.mant_dig == 106)
+    {
+        // IBM Extended doubledouble
+        enum ushort EXPMASK = 0x7FF0;
+        enum ushort EXPSHIFT = 4;
+        enum realFormat = RealFormat.ibmExtended;
+
+        // For IBM doubledouble the larger magnitude double comes first.
+        // It's really a double[2] and arrays don't index differently
+        // between little and big-endian targets.
+        enum DOUBLEPAIR_MSB = 0;
+        enum DOUBLEPAIR_LSB = 1;
+
+        // The exponent/sign byte is for most significant part.
+        version (LittleEndian)
+        {
+            enum EXPPOS_SHORT = 3;
+            enum SIGNPOS_BYTE = 7;
+        }
+        else
+        {
+            enum EXPPOS_SHORT = 0;
+            enum SIGNPOS_BYTE = 0;
+        }
+    }
+    else
+        static assert(false, "No traits support for " ~ T.stringof);
+}
+
+// These apply to all floating-point types
+version (LittleEndian)
+{
+    enum MANTISSA_LSB = 0;
+    enum MANTISSA_MSB = 1;
+}
+else
+{
+    enum MANTISSA_LSB = 1;
+    enum MANTISSA_MSB = 0;
+}
+
+// Common code for math implementations.
+
+// Helper for floor/ceil
+T floorImpl(T)(const T x) @trusted pure nothrow @nogc
+{
+    alias F = floatTraits!(T);
+    // Take care not to trigger library calls from the compiler,
+    // while ensuring that we don't get defeated by some optimizers.
+    union floatBits
+    {
+        T rv;
+        ushort[T.sizeof/2] vu;
+
+        // Other kinds of extractors for real formats.
+        static if (F.realFormat == RealFormat.ieeeSingle)
+            int vi;
+    }
+    floatBits y = void;
+    y.rv = x;
+
+    // Find the exponent (power of 2)
+    // Do this by shifting the raw value so that the exponent lies in the low bits,
+    // then mask out the sign bit, and subtract the bias.
+    static if (F.realFormat == RealFormat.ieeeSingle)
+    {
+        int exp = ((y.vi >> (T.mant_dig - 1)) & 0xff) - 0x7f;
+    }
+    else static if (F.realFormat == RealFormat.ieeeDouble)
+    {
+        int exp = ((y.vu[F.EXPPOS_SHORT] >> 4) & 0x7ff) - 0x3ff;
+
+        version (LittleEndian)
+            int pos = 0;
+        else
+            int pos = 3;
+    }
+    else static if (F.realFormat == RealFormat.ieeeExtended)
+    {
+        int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+
+        version (LittleEndian)
+            int pos = 0;
+        else
+            int pos = 4;
+    }
+    else static if (F.realFormat == RealFormat.ieeeQuadruple)
+    {
+        int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+
+        version (LittleEndian)
+            int pos = 0;
+        else
+            int pos = 7;
+    }
+    else
+        static assert(false, "Not implemented for this architecture");
+
+    if (exp < 0)
+    {
+        if (x < 0.0)
+            return -1.0;
+        else
+            return 0.0;
+    }
+
+    static if (F.realFormat == RealFormat.ieeeSingle)
+    {
+        if (exp < (T.mant_dig - 1))
+        {
+            // Clear all bits representing the fraction part.
+            const uint fraction_mask = F.MANTISSAMASK_INT >> exp;
+
+            if ((y.vi & fraction_mask) != 0)
+            {
+                // If 'x' is negative, then first substract 1.0 from the value.
+                if (y.vi < 0)
+                    y.vi += 0x00800000 >> exp;
+                y.vi &= ~fraction_mask;
+            }
+        }
+    }
+    else
+    {
+        exp = (T.mant_dig - 1) - exp;
+
+        // Zero 16 bits at a time.
+        while (exp >= 16)
+        {
+            version (LittleEndian)
+                y.vu[pos++] = 0;
+            else
+                y.vu[pos--] = 0;
+            exp -= 16;
+        }
+
+        // Clear the remaining bits.
+        if (exp > 0)
+            y.vu[pos] &= 0xffff ^ ((1 << exp) - 1);
+
+        if ((x < 0.0) && (x != y.rv))
+            y.rv -= 1.0;
+    }
+
+    return y.rv;
 }
