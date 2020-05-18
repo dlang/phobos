@@ -133,7 +133,10 @@ static import core.stdc.fenv;
 import std.traits :  CommonType, isFloatingPoint, isIntegral, isNumeric,
     isSigned, isUnsigned, Largest, Unqual;
 
+// @@@DEPRECATED_2.102@@@
 // Note: Exposed accidentally, should be deprecated / removed
+deprecated("std.meta.AliasSeq was unintentionally available from std.math "
+           ~ "and will be removed after 2.102. Please import std.meta instead")
 public import std.meta : AliasSeq;
 
 version (DigitalMars)
