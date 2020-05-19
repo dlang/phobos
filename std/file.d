@@ -1483,6 +1483,20 @@ version (Windows) @system unittest
     }
 }
 
+version (Darwin)
+private
+{
+    import core.stdc.config : c_ulong;
+    enum ATTR_CMN_MODTIME  = 0x00000400, ATTR_CMN_ACCTIME  = 0x00001000;
+    alias attrgroup_t = uint;
+    static struct attrlist
+    {
+        ushort bitmapcount, reserved;
+        attrgroup_t commonattr, volattr, dirattr, fileattr, forkattr;
+    }
+    extern(C) int setattrlist(in char* path, scope ref attrlist attrs,
+        scope void* attrbuf, size_t attrBufSize, c_ulong options) nothrow @nogc @system;
+}
 
 /++
     Set access/modified times of file or folder `name`.
@@ -1572,6 +1586,25 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         }
         else
         {
+            static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+                alias names = name;
+            else
+                string names = null;
+            version (Darwin)
+            {
+                // Set modification & access times with setattrlist to avoid precision loss.
+                attrlist attrs = { bitmapcount: 5, reserved: 0,
+                        commonattr: ATTR_CMN_MODTIME | ATTR_CMN_ACCTIME,
+                        volattr: 0, dirattr: 0, fileattr: 0, forkattr: 0 };
+                timespec[2] attrbuf = [modificationTime.toTimeSpec(), accessTime.toTimeSpec()];
+                if (0 == (() @trusted => setattrlist(namez, attrs, &attrbuf, attrbuf.sizeof, 0))())
+                    return;
+                if (.errno != ENOTSUP)
+                    cenforce(false, names, namez);
+                // Not all volumes support setattrlist. In such cases
+                // fall through to the utimes implementation.
+            }
+
             static auto trustedUtimes(const(FSChar)* namez, const ref timeval[2] times) @trusted
             {
                 return utimes(namez, times);
@@ -1581,10 +1614,6 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
             t[0] = accessTime.toTimeVal();
             t[1] = modificationTime.toTimeVal();
 
-            static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
-                alias names = name;
-            else
-                string names = null;
             cenforce(trustedUtimes(namez, t) == 0, names, namez);
         }
     }
