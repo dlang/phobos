@@ -708,6 +708,36 @@ template Reverse(TList...)
     {
         alias Reverse = TList;
     }
+    /* Cases 2 to 8 are to speed up compile times
+     */
+    else static if (TList.length == 2)
+    {
+        alias Reverse = AliasSeq!(TList[1], TList[0]);
+    }
+    else static if (TList.length == 3)
+    {
+        alias Reverse = AliasSeq!(TList[2], TList[1], TList[0]);
+    }
+    else static if (TList.length == 4)
+    {
+        alias Reverse = AliasSeq!(TList[3], TList[2], TList[1], TList[0]);
+    }
+    else static if (TList.length == 5)
+    {
+        alias Reverse = AliasSeq!(TList[4], TList[3], TList[2], TList[1], TList[0]);
+    }
+    else static if (TList.length == 6)
+    {
+        alias Reverse = AliasSeq!(TList[5], TList[4], TList[3], TList[2], TList[1], TList[0]);
+    }
+    else static if (TList.length == 7)
+    {
+        alias Reverse = AliasSeq!(TList[6], TList[5], TList[4], TList[3], TList[2], TList[1], TList[0]);
+    }
+    else static if (TList.length == 8)
+    {
+        alias Reverse = AliasSeq!(TList[7], TList[6], TList[5], TList[4], TList[3], TList[2], TList[1], TList[0]);
+    }
     else
     {
         alias Reverse =
@@ -720,10 +750,10 @@ template Reverse(TList...)
 ///
 @safe unittest
 {
-    alias Types = AliasSeq!(int, long, long, int, float);
+    alias Types = AliasSeq!(int, long, long, int, float, byte, ubyte, short, ushort, uint);
 
     alias TL = Reverse!(Types);
-    static assert(is(TL == AliasSeq!(float, int, long, long, int)));
+    static assert(is(TL == AliasSeq!(uint, ushort, short, ubyte, byte, float, int, long, long, int)));
 }
 
 /**
@@ -1333,6 +1363,32 @@ template Repeat(size_t n, TList...)
     {
         alias Repeat = AliasSeq!(TList, TList);
     }
+    /* Cases 3 to 8 are to speed up compilation
+     */
+    else static if (n == 3)
+    {
+        alias Repeat = AliasSeq!(TList, TList, TList);
+    }
+    else static if (n == 4)
+    {
+        alias Repeat = AliasSeq!(TList, TList, TList, TList);
+    }
+    else static if (n == 5)
+    {
+        alias Repeat = AliasSeq!(TList, TList, TList, TList, TList);
+    }
+    else static if (n == 6)
+    {
+        alias Repeat = AliasSeq!(TList, TList, TList, TList, TList, TList);
+    }
+    else static if (n == 7)
+    {
+        alias Repeat = AliasSeq!(TList, TList, TList, TList, TList, TList, TList);
+    }
+    else static if (n == 8)
+    {
+        alias Repeat = AliasSeq!(TList, TList, TList, TList, TList, TList, TList, TList);
+    }
     else
     {
         alias R = Repeat!((n - 1) / 2, TList);
@@ -1366,6 +1422,9 @@ template Repeat(size_t n, TList...)
     alias Composite = AliasSeq!(uint, int);
     alias Composite2 = Repeat!(2, Composite);
     static assert(is(Composite2 == AliasSeq!(uint, int, uint, int)));
+
+    alias ImInt10 = Repeat!(10, int);
+    static assert(is(ImInt10 == AliasSeq!(int, int, int, int, int, int, int, int, int, int)));
 }
 
 
