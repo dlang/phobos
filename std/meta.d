@@ -793,6 +793,38 @@ template staticMap(alias F, T...)
     {
         alias staticMap = AliasSeq!(F!(T[0]));
     }
+    /* Cases 2 to 8 improve compile performance by reducing
+     * the number of recursive instantiations of staticMap
+     */
+    else static if (T.length == 2)
+    {
+        alias staticMap = AliasSeq!(F!(T[0]), F!(T[1]));
+    }
+    else static if (T.length == 3)
+    {
+        alias staticMap = AliasSeq!(F!(T[0]), F!(T[1]), F!(T[2]));
+    }
+    else static if (T.length == 4)
+    {
+        alias staticMap = AliasSeq!(F!(T[0]), F!(T[1]), F!(T[2]), F!(T[3]));
+    }
+    else static if (T.length == 5)
+    {
+        alias staticMap = AliasSeq!(F!(T[0]), F!(T[1]), F!(T[2]), F!(T[3]), F!(T[4]));
+    }
+    else static if (T.length == 6)
+    {
+        alias staticMap = AliasSeq!(F!(T[0]), F!(T[1]), F!(T[2]), F!(T[3]), F!(T[4]), F!(T[5]));
+    }
+    else static if (T.length == 7)
+    {
+        alias staticMap = AliasSeq!(F!(T[0]), F!(T[1]), F!(T[2]), F!(T[3]), F!(T[4]), F!(T[5]), F!(T[6]));
+    }
+    else static if (T.length == 8)
+    {
+        alias staticMap = AliasSeq!(F!(T[0]), F!(T[1]), F!(T[2]), F!(T[3]), F!(T[4]), F!(T[5]), F!(T[6]), F!(T[7]));
+    }
+
     else
     {
         alias staticMap =
@@ -806,8 +838,8 @@ template staticMap(alias F, T...)
 @safe unittest
 {
     import std.traits : Unqual;
-    alias TL = staticMap!(Unqual, int, const int, immutable int);
-    static assert(is(TL == AliasSeq!(int, int, int)));
+    alias TL = staticMap!(Unqual, int, const int, immutable int, uint, ubyte, byte, short, ushort);
+    static assert(is(TL == AliasSeq!(int, int, int, uint, ubyte, byte, short, ushort)));
 }
 
 @safe unittest
@@ -822,8 +854,8 @@ template staticMap(alias F, T...)
     alias Single = staticMap!(Unqual, const int);
     static assert(is(Single == AliasSeq!int));
 
-    alias T = staticMap!(Unqual, int, const int, immutable int);
-    static assert(is(T == AliasSeq!(int, int, int)));
+    alias T = staticMap!(Unqual, int, const int, immutable int, uint, ubyte, byte, short, ushort, long);
+    static assert(is(T == AliasSeq!(int, int, int, uint, ubyte, byte, short, ushort, long)));
 }
 
 /**
@@ -887,6 +919,26 @@ template Filter(alias pred, TList...)
             alias Filter = AliasSeq!(TList[0]);
         else
             alias Filter = AliasSeq!();
+    }
+    /* The next case speeds up compilation by reducing
+     * the number of Filter instantiations
+     */
+    else static if (TList.length == 2)
+    {
+        static if (pred!(TList[0]))
+        {
+            static if (pred!(TList[1]))
+                alias Filter = AliasSeq!(TList[0], TList[1]);
+            else
+                alias Filter = AliasSeq!(TList[0]);
+        }
+        else
+        {
+            static if (pred!(TList[1]))
+                alias Filter = AliasSeq!(TList[1]);
+            else
+                alias Filter = AliasSeq!();
+        }
     }
     else
     {
