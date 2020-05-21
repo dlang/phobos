@@ -4855,7 +4855,7 @@ enum StdFileHandle: string
         stdin as a $(LREF File).
 
     Note:
-        The returned $(LREF File) wraps $(REF stdin,core,stdio), and
+        The returned $(LREF File) wraps $(REF stdin,core,stdc,stdio), and
         is therefore thread global. Reassigning `stdin` to a different
         `File` must be done in a single-threaded or locked context in
         order to avoid race conditions.
@@ -4893,7 +4893,7 @@ alias stdin = makeGlobal!(StdFileHandle.stdin);
         stdout as a $(LREF File).
 
     Note:
-        The returned $(LREF File) wraps $(REF stdout,core,stdio), and
+        The returned $(LREF File) wraps $(REF stdout,core,stdc,stdio), and
         is therefore thread global. Reassigning `stdout` to a different
         `File` must be done in a single-threaded or locked context in
         order to avoid race conditions.
@@ -4956,7 +4956,7 @@ alias stdout = makeGlobal!(StdFileHandle.stdout);
         stderr as a $(LREF File).
 
     Note:
-        The returned $(LREF File) wraps $(REF stderr,core,stdio), and
+        The returned $(LREF File) wraps $(REF stderr,core,stdc,stdio), and
         is therefore thread global. Reassigning `stderr` to a different
         `File` must be done in a single-threaded or locked context in
         order to avoid race conditions.
