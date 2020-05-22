@@ -545,7 +545,7 @@ if (distinctFieldNames!(Specs))
         }
     }
 
-    enum areCompatibleTuples(Tup1, Tup2, string op) = isTuple!Tup2 && is(typeof(
+    enum areCompatibleTuples(Tup1, Tup2, string op) = isTuple!(OriginalType!Tup2) && is(typeof(
     (ref Tup1 tup1, ref Tup2 tup2)
     {
         static assert(tup1.field.length == tup2.field.length);
@@ -903,7 +903,7 @@ if (distinctFieldNames!(Specs))
         {
             import std.algorithm.mutation : swap;
 
-            static if (is(R : Tuple!Types) && !__traits(isRef, rhs))
+            static if (is(R : Tuple!Types) && !__traits(isRef, rhs) && isTuple!R)
             {
                 if (__ctfe)
                 {
@@ -1538,6 +1538,15 @@ if (distinctFieldNames!(Specs))
     auto t = tuple(1, 2);
     assert(t == tuple(1, 2));
     auto t3 = tuple(1, 'd');
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=20850
+// Assignment to enum tuple
+@safe unittest
+{
+    enum T : Tuple!(int*) { a = T(null) }
+    T t;
+    t = T.a;
 }
 
 /**
