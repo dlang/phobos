@@ -241,12 +241,13 @@ private
             'f': FunctionAttribute.safe,
             'i': FunctionAttribute.nogc,
             'j': FunctionAttribute.return_,
-            'l': FunctionAttribute.scope_
+            'l': FunctionAttribute.scope_,
+            'm': FunctionAttribute.live,
         ];
         uint atts = 0;
 
         // FuncAttrs --> FuncAttr | FuncAttr FuncAttrs
-        // FuncAttr  --> empty | Na | Nb | Nc | Nd | Ne | Nf | Ni | Nj
+        // FuncAttr  --> empty | Na | Nb | Nc | Nd | Ne | Nf | Ni | Nj | Nm
         // except 'Ng' == inout, because it is a qualifier of function type
         while (mstr.length >= 2 && mstr[0] == 'N' && mstr[1] != 'g' && mstr[1] != 'k')
         {
@@ -1624,6 +1625,7 @@ enum FunctionAttribute : uint
     shared_    = 1 << 11, /// ditto
     return_    = 1 << 12, /// ditto
     scope_     = 1 << 13, /// ditto
+    live       = 1 << 14, /// ditto
 }
 
 /// ditto
@@ -1675,6 +1677,8 @@ if (func.length == 1 && isCallable!func)
         int safeF() @safe { return 0; }
 
         int pureF() pure { return 0; }
+
+        int liveF() @live { return 0; }
     }
 
     static assert(functionAttributes!(S.noF) == FA.system);
@@ -1715,6 +1719,9 @@ if (func.length == 1 && isCallable!func)
 
     static assert(functionAttributes!(S.pureF) == (FA.pure_ | FA.system));
     static assert(functionAttributes!(typeof(S.pureF)) == (FA.pure_ | FA.system));
+
+    static assert(functionAttributes!(S.liveF) == (FA.live | FA.system));
+    static assert(functionAttributes!(typeof(S.liveF)) == (FA.live | FA.system));
 
     int pure_nothrow() nothrow pure;
     void safe_nothrow() @safe nothrow;
@@ -1783,6 +1790,7 @@ private FunctionAttribute extractAttribFlags(Attribs...)()
             case "shared":    res |= shared_; break;
             case "return":    res |= return_; break;
             case "scope":     res |= scope_; break;
+            case "@live":     res |= live; break;
             default: assert(0, attrib);
         }
     }
@@ -1856,6 +1864,8 @@ if (args.length > 0 && isCallable!(args[0])
         int safeF() @safe;
 
         int pureF() pure;
+
+        int liveF() @live;
     }
 
     // true if no args passed
@@ -1912,6 +1922,10 @@ if (args.length > 0 && isCallable!(args[0])
     static assert(hasFunctionAttributes!(S.pureF, "pure", "@system"));
     static assert(hasFunctionAttributes!(typeof(S.pureF), "pure", "@system"));
     static assert(!hasFunctionAttributes!(S.pureF, "pure", "@system", "ref"));
+
+    static assert(hasFunctionAttributes!(S.liveF, "@live", "@system"));
+    static assert(hasFunctionAttributes!(typeof(S.liveF), "@live", "@system"));
+    static assert(!hasFunctionAttributes!(S.liveF, "@live", "@system", "ref"));
 
     int pure_nothrow() nothrow pure { return 0; }
     void safe_nothrow() @safe nothrow { }
@@ -2427,6 +2441,8 @@ if (isFunctionPointer!T || isDelegate!T)
             result ~= " shared";
         static if (attrs & FunctionAttribute.return_)
             result ~= " return";
+        static if (attrs & FunctionAttribute.live)
+            result ~= " @live";
 
         result ~= " SetFunctionAttributes;";
         return result;
