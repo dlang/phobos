@@ -4596,33 +4596,23 @@ if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F)
  *
  * Unlike the rint functions, nearbyint does not raise the
  * FE_INEXACT exception.
- *
- * Note:
- *     Not implemented for Microsoft C Runtime
  */
 real nearbyint(real x) @safe pure nothrow @nogc
 {
-    version (CRuntime_Microsoft)
-        assert(0, "nearbyintl not implemented in Microsoft C library");
-    else
-        return core.stdc.math.nearbyintl(x);
+    return core.stdc.math.nearbyintl(x);
 }
 
 ///
 @safe pure unittest
 {
-    version (CRuntime_Microsoft) {}
-    else
-    {
-        assert(nearbyint(0.4) == 0);
-        assert(nearbyint(0.5) == 0);
-        assert(nearbyint(0.6) == 1);
-        assert(nearbyint(100.0) == 100);
+    assert(nearbyint(0.4) == 0);
+    assert(nearbyint(0.5) == 0);
+    assert(nearbyint(0.6) == 1);
+    assert(nearbyint(100.0) == 100);
 
-        assert(isNaN(nearbyint(real.nan)));
-        assert(nearbyint(real.infinity) == real.infinity);
-        assert(nearbyint(-real.infinity) == -real.infinity);
-    }
+    assert(isNaN(nearbyint(real.nan)));
+    assert(nearbyint(real.infinity) == real.infinity);
+    assert(nearbyint(-real.infinity) == -real.infinity);
 }
 
 /**********************************
@@ -4919,20 +4909,21 @@ version (Posix)
  * If the fractional part of x is exactly 0.5, the return value is rounded
  * away from zero.
  *
- * $(BLUE This function is Posix-Only.)
+ * $(BLUE This function is not implemented for Digital Mars C runtime.)
  */
 long lround(real x) @trusted nothrow @nogc
 {
-    version (Posix)
-        return core.stdc.math.llroundl(x);
-    else
+    version (CRuntime_DigitalMars)
         assert(0, "lround not implemented");
+    else
+        return core.stdc.math.llroundl(x);
 }
 
 ///
 @safe nothrow @nogc unittest
 {
-    version (Posix)
+    version (CRuntime_DigitalMars) {}
+    else
     {
         assert(lround(0.49) == 0);
         assert(lround(0.5) == 1);
@@ -5016,54 +5007,37 @@ real trunc(real x) @trusted nothrow @nogc pure
  *  $(TR $(TD anything)        $(TD $(PLUSMN)0.0) $(TD $(PLUSMN)$(NAN)) $(TD ?)   $(TD yes))
  *  $(TR $(TD != $(PLUSMNINF)) $(TD $(PLUSMNINF)) $(TD x)               $(TD ?)   $(TD no))
  * )
- *
- * $(BLUE `remquo` and `remainder` not supported on Windows.)
  */
 real remainder(real x, real y) @trusted nothrow @nogc
 {
-    version (CRuntime_Microsoft)
-    {
-        int n;
-        return remquo(x, y, n);
-    }
-    else
-        return core.stdc.math.remainderl(x, y);
+    return core.stdc.math.remainderl(x, y);
 }
 
 /// ditto
 real remquo(real x, real y, out int n) @trusted nothrow @nogc  /// ditto
 {
-    version (Posix)
-        return core.stdc.math.remquol(x, y, &n);
-    else
-        assert(0, "remquo not implemented");
+    return core.stdc.math.remquol(x, y, &n);
 }
 
 ///
 @safe @nogc nothrow unittest
 {
-    version (Posix)
-    {
-        assert(remainder(5.1, 3.0).feqrel(-0.9) > 16);
-        assert(remainder(-5.1, 3.0).feqrel(0.9) > 16);
-        assert(remainder(0.0, 3.0) == 0.0);
+    assert(remainder(5.1, 3.0).feqrel(-0.9) > 16);
+    assert(remainder(-5.1, 3.0).feqrel(0.9) > 16);
+    assert(remainder(0.0, 3.0) == 0.0);
 
-        assert(isNaN(remainder(1.0, 0.0)));
-        assert(isNaN(remainder(-1.0, 0.0)));
-    }
+    assert(isNaN(remainder(1.0, 0.0)));
+    assert(isNaN(remainder(-1.0, 0.0)));
 }
 
 ///
 @safe @nogc nothrow unittest
 {
-    version (Posix)
-    {
-        int n;
+    int n;
 
-        assert(remquo(5.1, 3.0, n).feqrel(-0.9) > 16 && n == 2);
-        assert(remquo(-5.1, 3.0, n).feqrel(0.9) > 16 && n == -2);
-        assert(remquo(0.0, 3.0, n) == 0.0 && n == 0);
-    }
+    assert(remquo(5.1, 3.0, n).feqrel(-0.9) > 16 && n == 2);
+    assert(remquo(-5.1, 3.0, n).feqrel(0.9) > 16 && n == -2);
+    assert(remquo(0.0, 3.0, n) == 0.0 && n == 0);
 }
 
 
