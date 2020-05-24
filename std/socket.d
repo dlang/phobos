@@ -3597,47 +3597,164 @@ class UdpSocket: Socket
 // https://issues.dlang.org/show_bug.cgi?id=16514
 @safe unittest
 {
+    void checkAttributes(string attributes)()
+    {
+        mixin(attributes ~ q{ void function() fun = {};});
+        fun();
+    }
+
     class TestSocket : Socket
     {
         override
         {
-            pure nothrow @nogc @property @safe socket_t handle() const { assert(0); }
-            nothrow @nogc @property @trusted bool blocking() const { assert(0); }
-            @property @trusted void blocking(bool byes) { assert(0); }
-            @property @safe AddressFamily addressFamily() { assert(0); }
-            @property @trusted bool isAlive() const { assert(0); }
-            @trusted void bind(Address addr) { assert(0); }
-            @trusted void connect(Address to) { assert(0); }
-            @trusted void listen(int backlog) { assert(0); }
-            protected pure nothrow @safe Socket accepting() { assert(0); }
-            @trusted Socket accept() { assert(0); }
-            nothrow @nogc @trusted void shutdown(SocketShutdown how) { assert(0); }
-            nothrow @nogc @trusted void close() { assert(0); }
-            @property @trusted Address remoteAddress() { assert(0); }
-            @property @trusted Address localAddress() { assert(0); }
-            @trusted ptrdiff_t send(const(void)[] buf, SocketFlags flags) { assert(0); }
-            @safe ptrdiff_t send(const(void)[] buf) { assert(0); }
-            @trusted ptrdiff_t sendTo(const(void)[] buf, SocketFlags flags, Address to) { assert(0); }
-            @safe ptrdiff_t sendTo(const(void)[] buf, Address to) { assert(0); }
-            @trusted ptrdiff_t sendTo(const(void)[] buf, SocketFlags flags) { assert(0); }
-            @safe ptrdiff_t sendTo(const(void)[] buf) { assert(0); }
-            @trusted ptrdiff_t receive(void[] buf, SocketFlags flags) { assert(0); }
-            @safe ptrdiff_t receive(void[] buf) { assert(0); }
-            @trusted ptrdiff_t receiveFrom(void[] buf, SocketFlags flags, ref Address from) { assert(0); }
-            @safe ptrdiff_t receiveFrom(void[] buf, ref Address from) { assert(0); }
-            @trusted ptrdiff_t receiveFrom(void[] buf, SocketFlags flags) { assert(0); }
-            @safe ptrdiff_t receiveFrom(void[] buf) { assert(0); }
-            @trusted int getOption(SocketOptionLevel level, SocketOption option, void[] result) { assert(0); }
-            @trusted int getOption(SocketOptionLevel level, SocketOption option, out int32_t result) { assert(0); }
-            @trusted int getOption(SocketOptionLevel level, SocketOption option, out Linger result) { assert(0); }
-            @trusted void getOption(SocketOptionLevel level, SocketOption option, out Duration result) { assert(0); }
-            @trusted void setOption(SocketOptionLevel level, SocketOption option, void[] value) { assert(0); }
-            @trusted void setOption(SocketOptionLevel level, SocketOption option, int32_t value) { assert(0); }
-            @trusted void setOption(SocketOptionLevel level, SocketOption option, Linger value) { assert(0); }
-            @trusted void setOption(SocketOptionLevel level, SocketOption option, Duration value) { assert(0); }
-            @safe string getErrorText() { assert(0); }
-            @trusted void setKeepAlive(int time, int interval) { assert(0); }
-            protected pure nothrow @safe Address createAddress() { assert(0); }
+            @property pure nothrow @nogc @safe socket_t handle() const
+            {
+                checkAttributes!q{pure nothrow @nogc @safe}; assert(0);
+            }
+            @property nothrow @nogc @trusted bool blocking() const
+            {
+                checkAttributes!q{nothrow @nogc @trusted}; assert(0);
+            }
+            @property @trusted void blocking(bool byes)
+            {
+                checkAttributes!q{@trusted};
+            }
+            @property @safe AddressFamily addressFamily()
+            {
+                checkAttributes!q{@safe}; assert(0);
+            }
+            @property @trusted bool isAlive() const
+            {
+                checkAttributes!q{@trusted}; assert(0);
+            }
+            @trusted void bind(Address addr)
+            {
+                checkAttributes!q{@trusted};
+            }
+            @trusted void connect(Address to)
+            {
+                checkAttributes!q{@trusted};
+            }
+            @trusted void listen(int backlog)
+            {
+                checkAttributes!q{@trusted};
+            }
+            protected pure nothrow @safe Socket accepting()
+            {
+                checkAttributes!q{pure nothrow @safe}; assert(0);
+            }
+            @trusted Socket accept()
+            {
+                checkAttributes!q{@trusted}; assert(0);
+            }
+            nothrow @nogc @trusted void shutdown(SocketShutdown how)
+            {
+                checkAttributes!q{nothrow @nogc @trusted};
+            }
+            nothrow @nogc @trusted void close()
+            {
+                checkAttributes!q{nothrow @nogc @trusted};
+            }
+            @property @trusted Address remoteAddress()
+            {
+                checkAttributes!q{@trusted}; assert(0);
+            }
+            @property @trusted Address localAddress()
+            {
+                checkAttributes!q{@trusted}; assert(0);
+            }
+            @trusted ptrdiff_t send(const(void)[] buf, SocketFlags flags)
+            {
+                checkAttributes!q{@trusted}; assert(0);
+            }
+            @safe ptrdiff_t send(const(void)[] buf)
+            {
+                checkAttributes!q{@safe}; assert(0);
+            }
+            @trusted ptrdiff_t sendTo(const(void)[] buf, SocketFlags flags, Address to)
+            {
+                checkAttributes!q{@trusted}; assert(0);
+            }
+            @safe ptrdiff_t sendTo(const(void)[] buf, Address to)
+            {
+                checkAttributes!q{@safe}; assert(0);
+            }
+            @trusted ptrdiff_t sendTo(const(void)[] buf, SocketFlags flags)
+            {
+                checkAttributes!q{@trusted}; assert(0);
+            }
+            @safe ptrdiff_t sendTo(const(void)[] buf)
+            {
+                checkAttributes!q{@safe}; assert(0);
+            }
+            @trusted ptrdiff_t receive(void[] buf, SocketFlags flags)
+            {
+                checkAttributes!q{@trusted}; assert(0);
+            }
+            @safe ptrdiff_t receive(void[] buf)
+            {
+                checkAttributes!q{@safe}; assert(0);
+            }
+            @trusted ptrdiff_t receiveFrom(void[] buf, SocketFlags flags, ref Address from)
+            {
+                checkAttributes!q{@trusted}; assert(0);
+            }
+            @safe ptrdiff_t receiveFrom(void[] buf, ref Address from)
+            {
+                checkAttributes!q{@safe}; assert(0);
+            }
+            @trusted ptrdiff_t receiveFrom(void[] buf, SocketFlags flags)
+            {
+                checkAttributes!q{@trusted}; assert(0);
+            }
+            @safe ptrdiff_t receiveFrom(void[] buf)
+            {
+                checkAttributes!q{@safe}; assert(0);
+            }
+            @trusted int getOption(SocketOptionLevel level, SocketOption option, void[] result)
+            {
+                checkAttributes!q{@trusted}; assert(0);
+            }
+            @trusted int getOption(SocketOptionLevel level, SocketOption option, out int32_t result)
+            {
+                checkAttributes!q{@trusted}; assert(0);
+            }
+            @trusted int getOption(SocketOptionLevel level, SocketOption option, out Linger result)
+            {
+                checkAttributes!q{@trusted}; assert(0);
+            }
+            @trusted void getOption(SocketOptionLevel level, SocketOption option, out Duration result)
+            {
+                checkAttributes!q{@trusted};
+            }
+            @trusted void setOption(SocketOptionLevel level, SocketOption option, void[] value)
+            {
+                checkAttributes!q{@trusted};
+            }
+            @trusted void setOption(SocketOptionLevel level, SocketOption option, int32_t value)
+            {
+                checkAttributes!q{@trusted};
+            }
+            @trusted void setOption(SocketOptionLevel level, SocketOption option, Linger value)
+            {
+                checkAttributes!q{@trusted};
+            }
+            @trusted void setOption(SocketOptionLevel level, SocketOption option, Duration value)
+            {
+                checkAttributes!q{@trusted};
+            }
+            @safe string getErrorText()
+            {
+                checkAttributes!q{@safe}; assert(0);
+            }
+            @trusted void setKeepAlive(int time, int interval)
+            {
+                checkAttributes!q{@trusted};
+            }
+            protected pure nothrow @safe Address createAddress()
+            {
+                checkAttributes!q{pure nothrow @safe}; assert(0);
+            }
         }
     }
 }
