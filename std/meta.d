@@ -543,24 +543,6 @@ template NoDuplicates(TList...)
  * Returns an `AliasSeq` created from TList with the first occurrence
  * of type T, if found, replaced with type U.
  */
-template Replace(T, U, TList...)
-{
-    alias Replace = GenericReplace!(T, U, TList).result;
-}
-
-/// Ditto
-template Replace(alias T, U, TList...)
-{
-    alias Replace = GenericReplace!(T, U, TList).result;
-}
-
-/// Ditto
-template Replace(T, alias U, TList...)
-{
-    alias Replace = GenericReplace!(T, U, TList).result;
-}
-
-/// Ditto
 template Replace(alias T, alias U, TList...)
 {
     alias Replace = GenericReplace!(T, U, TList).result;
