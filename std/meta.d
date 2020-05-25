@@ -1721,28 +1721,21 @@ private:
 private template isSame(ab...)
 if (ab.length == 2)
 {
-    static if (__traits(compiles, expectType!(ab[0]),
-                                  expectType!(ab[1])))
+    static if (is(ab[0]) && is(ab[1]))
     {
         enum isSame = is(ab[0] == ab[1]);
     }
-    else static if (!__traits(compiles, expectType!(ab[0])) &&
-                    !__traits(compiles, expectType!(ab[1])) &&
-                     __traits(compiles, expectBool!(ab[0] == ab[1])))
+    else static if (!is(ab[0]) && !is(ab[1]) &&
+                    !(is(typeof(&ab[0])) && is(typeof(&ab[1]))) &&
+                     __traits(compiles, { enum isSame = ab[0] == ab[1]; }))
     {
-        static if (!__traits(compiles, &ab[0]) ||
-                   !__traits(compiles, &ab[1]))
-            enum isSame = (ab[0] == ab[1]);
-        else
-            enum isSame = __traits(isSame, ab[0], ab[1]);
+        enum isSame = (ab[0] == ab[1]);
     }
     else
     {
         enum isSame = __traits(isSame, ab[0], ab[1]);
     }
 }
-private template expectType(T) {}
-private template expectBool(bool b) {}
 
 @safe unittest
 {
@@ -1791,28 +1784,12 @@ private template expectBool(bool b) {}
 }
 
 /*
- * [internal] Confines a tuple within a template.
+ * [internal] Confines a tuple within a template. Used only in unittests.
  */
 private template Pack(T...)
 {
     alias tuple = T;
-
-    // For convenience
-    template equals(U...)
-    {
-        static if (T.length == U.length)
-        {
-            static if (T.length == 0)
-                enum equals = true;
-            else
-                enum equals = isSame!(T[0], U[0]) &&
-                    Pack!(T[1 .. $]).equals!(U[1 .. $]);
-        }
-        else
-        {
-            enum equals = false;
-        }
-    }
+    alias equals(U...) = isSame!(Pack!T, Pack!U);
 }
 
 @safe unittest
