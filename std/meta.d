@@ -86,10 +86,7 @@ import std.range.primitives : isInfinite;
  *
  * In previous versions of Phobos, this was known as `TypeTuple`.
  */
-template AliasSeq(TList...)
-{
-    alias AliasSeq = TList;
-}
+alias AliasSeq(TList...) = TList;
 
 ///
 @safe unittest
