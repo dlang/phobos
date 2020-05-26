@@ -1529,7 +1529,7 @@ Iterates the passed arguments and returns the maximum value.
 
 Params:
     args = The values to select the maximum from. At least two arguments must
-    be passed, and they must be comparable with `>`.
+    be passed, and they must be comparable with `<`.
 
 Returns:
     The maximum of the passed-in values. The type of the returned value is
@@ -1541,7 +1541,7 @@ Returns:
 See_Also:
     $(REF maxElement, std,algorithm,searching)
 */
-MaxType!T max(T...)(T args)
+auto max(T...)(T args)
 if (T.length >= 2)
 {
     //Get "a"
@@ -1565,7 +1565,7 @@ if (T.length >= 2)
     //Do the "max" proper with a and b
     import std.functional : lessThan;
     immutable chooseB = lessThan!(T0, T1)(a, b);
-    return cast(typeof(return)) (chooseB ? b : a);
+    return chooseB ? b : a;
 }
 
 ///
@@ -1661,7 +1661,7 @@ Returns:
 See_Also:
     $(REF minElement, std,algorithm,searching)
 */
-MinType!T min(T...)(T args)
+auto min(T...)(T args)
 if (T.length >= 2)
 {
     //Get "a"
@@ -1685,7 +1685,7 @@ if (T.length >= 2)
     //Do the "min" proper with a and b
     import std.functional : lessThan;
     immutable chooseA = lessThan!(T0, T1)(a, b);
-    return cast(typeof(return)) (chooseA ? a : b);
+    return chooseA ? a : b;
 }
 
 ///
