@@ -857,6 +857,13 @@ template staticMap(alias F, T...)
 
     else
     {
+        /* While:
+         *   alias staticMap = aliasSeq!(F!T[0], staticMap!(F, T[0 .. $]));
+         * does fewer template instantiations, the compiler implements
+         * recursive template instantiations with recursion, and long
+         * sequences overflow the compiler's stack.
+         * The divide-and-conquer approach uses the square root as much stack.
+         */
         alias staticMap =
             AliasSeq!(
                 staticMap!(F, T[ 0  .. $/2]),
