@@ -111,6 +111,10 @@ else version (Posix)
 {
     private alias FSChar = char;
 }
+else version (GENERIC_IO)
+{
+    private alias FSChar = char;
+}
 else
     static assert(0);
 
