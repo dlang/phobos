@@ -68,6 +68,7 @@ module std.functional;
 
 import std.meta : AliasSeq, Reverse;
 import std.traits : isCallable, Parameters;
+import std.ascii;
 
 
 private template needOpCallAlias(alias fun)
