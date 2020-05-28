@@ -1059,11 +1059,7 @@ Params:
 */
 void move(T)(ref T source, ref T target)
 {
-    // test @safe destructible
-    static if (__traits(compiles, (T t) @safe {}))
-        trustedMoveImpl(source, target);
-    else
-        moveImpl(source, target);
+    moveImpl(source, target);
 }
 
 /// For non-struct types, `move` just performs `target = source`:
@@ -1178,11 +1174,7 @@ pure nothrow @safe @nogc unittest
 /// Ditto
 T move(T)(return scope ref T source)
 {
-    // test @safe destructible
-    static if (__traits(compiles, (T t) @safe {}))
-        return trustedMoveImpl(source);
-    else
-        return moveImpl(source);
+    return moveImpl(source);
 }
 
 /// Non-copyable structs can still be moved:
@@ -1219,9 +1211,22 @@ pure nothrow @safe @nogc unittest
     assert(s2.a == 42);
 }
 
-private void trustedMoveImpl(T)(ref T source, ref T target) @trusted
+// https://issues.dlang.org/show_bug.cgi?id=20869
+// `move` should propagate the attributes of `opPostMove`
+@system unittest
 {
-    moveImpl(source, target);
+    static struct S
+    {
+        void opPostMove(const ref S old) nothrow @system
+        {
+            __gshared int i;
+            new int(i++); // Force @gc impure @system
+        }
+    }
+
+    alias T = void function() @system nothrow;
+    static assert(is(typeof({ S s; move(s); }) == T));
+    static assert(is(typeof({ S s; move(s, s); }) == T));
 }
 
 private void moveImpl(T)(ref T source, ref T target)
@@ -1230,23 +1235,29 @@ private void moveImpl(T)(ref T source, ref T target)
 
     static if (is(T == struct))
     {
-        if (&source == &target) return;
+        //  Unsafe when compiling without -dip1000
+        if ((() @trusted => &source == &target)()) return;
+
         // Destroy target before overwriting it
         static if (hasElaborateDestructor!T) target.__xdtor();
     }
     // move and emplace source into target
-    moveEmplace(source, target);
-}
-
-private T trustedMoveImpl(T)(ref T source) @trusted
-{
-    return moveImpl(source);
+    moveEmplaceImpl(source, target);
 }
 
 private T moveImpl(T)(ref T source)
 {
+    // Properly infer safety from moveEmplaceImpl as the implementation below
+    // might void-initialize pointers in result and hence needs to be @trusted
+    if (false) moveEmplaceImpl(source, source);
+
+    return trustedMoveImpl(source);
+}
+
+private T trustedMoveImpl(T)(ref T source) @trusted
+{
     T result = void;
-    moveEmplace(source, result);
+    moveEmplaceImpl(source, result);
     return result;
 }
 
@@ -1389,16 +1400,7 @@ private T moveImpl(T)(ref T source)
     move(x, x);
 }
 
-/**
- * Similar to $(LREF move) but assumes `target` is uninitialized. This
- * is more efficient because `source` can be blitted over `target`
- * without destroying or initializing it first.
- *
- * Params:
- *   source = value to be moved into target
- *   target = uninitialized value to be filled by source
- */
-void moveEmplace(T)(ref T source, ref T target) pure @system
+private void moveEmplaceImpl(T)(ref T source, ref T target)
 {
     import core.stdc.string : memcpy, memset;
     import std.traits : hasAliasing, hasElaborateAssign,
@@ -1415,10 +1417,11 @@ void moveEmplace(T)(ref T source, ref T target) pure @system
 
     static if (is(T == struct))
     {
-        assert(&source !is &target, "source and target must not be identical");
+        //  Unsafe when compiling without -dip1000
+        assert((() @trusted => &source !is &target)(), "source and target must not be identical");
 
         static if (hasElaborateAssign!T || !isAssignable!T)
-            memcpy(&target, &source, T.sizeof);
+            () @trusted { memcpy(&target, &source, T.sizeof); }();
         else
             target = source;
 
@@ -1436,11 +1439,11 @@ void moveEmplace(T)(ref T source, ref T target) pure @system
                 enum sz = T.sizeof;
 
             static if (__traits(isZeroInit, T))
-                memset(&source, 0, sz);
+                () @trusted { memset(&source, 0, sz); }();
             else
             {
                 auto init = typeid(T).initializer();
-                memcpy(&source, init.ptr, sz);
+                () @trusted { memcpy(&source, init.ptr, sz); }();
             }
         }
     }
@@ -1455,6 +1458,20 @@ void moveEmplace(T)(ref T source, ref T target) pure @system
         // assignment works great
         target = source;
     }
+}
+
+/**
+ * Similar to $(LREF move) but assumes `target` is uninitialized. This
+ * is more efficient because `source` can be blitted over `target`
+ * without destroying or initializing it first.
+ *
+ * Params:
+ *   source = value to be moved into target
+ *   target = uninitialized value to be filled by source
+ */
+void moveEmplace(T)(ref T source, ref T target) pure @system
+{
+    moveEmplaceImpl(source, target);
 }
 
 ///
