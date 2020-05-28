@@ -447,7 +447,7 @@ struct JSONValue
         assertThrown(json["f"].get!(JSONValue[]));
     }
 
-    private void assign(T)(T arg) @safe
+    private void assign(T)(T arg)
     {
         static if (is(T : typeof(null)))
         {
@@ -643,7 +643,7 @@ struct JSONValue
      * Throws: `JSONException` if `type` is not `JSONType.object`
      * or `JSONType.null_`.
      */
-    void opIndexAssign(T)(auto ref T value, string key) pure
+    void opIndexAssign(T)(auto ref T value, string key)
     {
         enforce!JSONException(type == JSONType.object || type == JSONType.null_,
                                 "JSONValue must be object or null");
@@ -664,7 +664,7 @@ struct JSONValue
             assert( j["language"].str == "Perl" );
     }
 
-    void opIndexAssign(T)(T arg, size_t i) pure
+    void opIndexAssign(T)(T arg, size_t i)
     {
         auto a = this.arrayNoRef;
         enforce!JSONException(i < a.length,
@@ -680,7 +680,7 @@ struct JSONValue
             assert( j[1].str == "D" );
     }
 
-    JSONValue opBinary(string op : "~", T)(T arg) @safe
+    JSONValue opBinary(string op : "~", T)(T arg)
     {
         auto a = this.arrayNoRef;
         static if (isArray!T)
@@ -697,7 +697,7 @@ struct JSONValue
         }
     }
 
-    void opOpAssign(string op : "~", T)(T arg) @safe
+    void opOpAssign(string op : "~", T)(T arg)
     {
         auto a = this.arrayNoRef;
         static if (isArray!T)
@@ -871,6 +871,35 @@ struct JSONValue
     void toPrettyString(Out)(Out sink, in JSONOptions options = JSONOptions.none) const
     {
         toJSON(sink, this, true, options);
+    }
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=20874
+@system unittest
+{
+    static struct MyCustomType
+    {
+        public string toString () const @system { return null; }
+        alias toString this;
+    }
+
+    static struct B
+    {
+        public JSONValue asJSON() const @system { return JSONValue.init; }
+        alias asJSON this;
+    }
+
+    if (false) // Just checking attributes
+    {
+        JSONValue json;
+        MyCustomType ilovedlang;
+        json = ilovedlang;
+        json["foo"] = ilovedlang;
+        auto s = ilovedlang in json;
+
+        B b;
+        json ~= b;
+        json ~ b;
     }
 }
 
