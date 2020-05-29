@@ -3333,11 +3333,11 @@ import std.stdio, std.file;
 
 void main()
 {
-	auto file_handle = File(deleteme, "w");
-	file_handle.write("abc"); //create temporary file
-	scope(exit) deleteme.remove; //remove temporary file at scope exit
+    auto file_handle = File(deleteme, "w");
+    file_handle.write("abc"); //create temporary file
+    scope(exit) deleteme.remove; //remove temporary file at scope exit
 
-	assert(file_handle.size() == 3); //check if file size is 3 bytes
+    assert(file_handle.size() == 3); //check if file size is 3 bytes
 }   //temporary file gets deleted here
 ---
 */
