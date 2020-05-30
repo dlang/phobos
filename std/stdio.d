@@ -342,6 +342,8 @@ automatically closed.
 Example:
 ----
 // test.d
+import std.stdio;
+
 void main(string[] args)
 {
     auto f = File("test.txt", "w"); // open for writing
@@ -1748,6 +1750,7 @@ Example:
 // Read lines from `stdin` into a string
 // Ignore lines starting with '#'
 // Write the string to `stdout`
+import std.stdio;
 
 void main()
 {
@@ -1778,6 +1781,7 @@ largest buffer returned by `readln`:
 Example:
 ---
 // Read lines from `stdin` and count words
+import std.array, std.stdio;
 
 void main()
 {
@@ -3220,7 +3224,7 @@ Example:
 Produce a grayscale image of the $(LINK2 https://en.wikipedia.org/wiki/Mandelbrot_set, Mandelbrot set)
 in binary $(LINK2 https://en.wikipedia.org/wiki/Netpbm_format, Netpbm format) to standard output.
 ---
-import std.algorithm, std.range, std.stdio;
+import std.algorithm, std.complex, std.range, std.stdio;
 
 void main()
 {
@@ -3230,7 +3234,7 @@ void main()
     iota(-1, 3, 2.0/size).map!(y =>
         iota(-1.5, 0.5, 2.0/size).map!(x =>
             cast(ubyte)(1+
-                recurrence!((a, n) => x + y*1i + a[n-1]^^2)(0+0i)
+                recurrence!((a, n) => x + y * complex(0, 1) + a[n-1]^^2)(complex(0))
                 .take(ubyte.max)
                 .countUntil!(z => z.re^^2 + z.im^^2 > 4))
         )
