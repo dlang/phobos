@@ -107,12 +107,11 @@ version (Windows)
 {
     private alias FSChar = wchar;
 }
-else version (Posix)
+else
 {
     private alias FSChar = char;
 }
-else
-    static assert(0);
+
 
 version (Windows)
 {
