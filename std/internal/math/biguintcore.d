@@ -595,6 +595,116 @@ public:
         return true;
     }
 
+    void fromMagnitude(Range)(Range magnitude)
+        if (isInputRange!Range
+            && (isForwardRange!Range || hasLength!Range)
+            && isUnsigned!(ElementType!Range))
+    {
+        while (!magnitude.empty && magnitude.front == 0)
+            magnitude.popFront;
+        static if (hasLength!Range)
+            immutable inputLen = magnitude.length;
+        else
+            immutable inputLen = magnitude.save.walkLength;
+        if (!inputLen)
+        {
+            this.data = ZERO;
+            return;
+        }
+        // `magnitude` has its most significant element first but BigUint.data
+        // stores the most significant last.
+        BigDigit[] newDigits;
+        alias E = ElementType!Range;
+        static if (E.sizeof == BigDigit.sizeof)
+        {
+            newDigits = new BigDigit[inputLen];
+            foreach_reverse (ref digit; newDigits)
+            {
+                digit = magnitude.front;
+                magnitude.popFront();
+            }
+        }
+        else static if (E.sizeof < BigDigit.sizeof)
+        {
+            enum elementsPerDigit = BigDigit.sizeof / E.sizeof;
+            newDigits = new BigDigit[(inputLen + elementsPerDigit - 1) / elementsPerDigit];
+            immutable remainder = inputLen % elementsPerDigit;
+            // If there is a remainder specially assemble the most significant digit.
+            if (remainder)
+            {
+                BigDigit tmp = magnitude.front;
+                magnitude.popFront();
+                foreach (_; 1 .. remainder)
+                {
+                    tmp = (tmp << (E.sizeof * 8)) | magnitude.front;
+                    magnitude.popFront();
+                }
+                newDigits[$-1] = tmp;
+            }
+            // Assemble full digits from most to least significant.
+            foreach_reverse (ref digit; newDigits[0 .. $ - int(remainder != 0)])
+            {
+                BigDigit tmp;
+                static foreach (n; 0 .. elementsPerDigit)
+                {
+                    tmp |= cast(BigDigit) magnitude.front <<
+                        ((BigDigit.sizeof - (E.sizeof * (n + 1))) * 8);
+                    magnitude.popFront();
+                }
+                digit = tmp;
+            }
+        }
+        else static if (E.sizeof > BigDigit.sizeof)
+        {
+            enum digitsPerElement = E.sizeof / BigDigit.sizeof;
+            newDigits = new BigDigit[inputLen * digitsPerElement];
+            size_t i = newDigits.length - 1;
+            foreach (element; magnitude)
+            {
+                static foreach (n; 0 .. digitsPerElement)
+                    newDigits[i - n] =
+                        cast(BigDigit) (element >> ((E.sizeof - (BigDigit.sizeof * (n + 1))) * 8));
+                i -= digitsPerElement;
+            }
+            while (newDigits[$-1] == 0)
+                newDigits = newDigits[0 .. $-1];
+        }
+        else
+            static assert(0);
+        this.data = trustedAssumeUnique(newDigits);
+        return;
+    }
+
+    nothrow pure @safe unittest
+    {
+        immutable BigDigit[] referenceData = [BigDigit(0x2003_4005), 0x6007_8009, 0xABCD];
+        // Internal representation is most-significant-last but `fromMagnitude`
+        // argument is most-significant-first.
+        immutable BigDigit[] referenceMagnitude = [BigDigit(0xABCD), 0x6007_8009, 0x2003_4005];
+        BigUint b;
+        // Test with reference magnitude.
+        b.fromMagnitude(referenceMagnitude);
+        assert(b.data == referenceData);
+        // Test ubyte array.
+        import std.bitmanip : nativeToBigEndian;
+        ubyte[] ubyteMagnitude = nativeToBigEndian(referenceMagnitude[0]) ~
+            nativeToBigEndian(referenceMagnitude[1]) ~
+            nativeToBigEndian(referenceMagnitude[2]);
+        b.data = ZERO;
+        b.fromMagnitude(ubyteMagnitude);
+        assert(b.data == referenceData);
+        // Test ulong array.
+        static if (BigDigit.sizeof == uint.sizeof)
+            immutable(ulong)[] ulongMagnitude = [ulong(referenceMagnitude[0]),
+                ((cast(ulong) referenceMagnitude[1]) << 32) | referenceMagnitude[2],
+            ];
+        else static if (BigDigit.sizeof == ulong.sizeof)
+            alias ulongMagnitude = referenceMagnitude;
+        b.data = ZERO;
+        b.fromMagnitude(ulongMagnitude);
+        assert(b.data == referenceData);
+    }
+
     ////////////////////////
     //
     // All of these member functions create a new BigUint.
