@@ -3864,7 +3864,7 @@ if (!is(T[0] : File))
  * Throws:
  *      In case of an I/O error, throws an $(LREF StdioException).
  * Example:
- *        Reads `stdin` and writes it to `stdout` with a argument
+ *        Reads `stdin` and writes it to `stdout` with an argument
  *        counter.
 ---
 import std.stdio;
@@ -3882,7 +3882,6 @@ void main()
  */
 void writeln(T...)(T args)
 {
-    import std.traits : isAggregateType;
     static if (T.length == 0)
     {
         import std.exception : enforce;
@@ -3890,17 +3889,13 @@ void writeln(T...)(T args)
         enforce(fputc('\n', .trustedStdout._p.handle) != EOF, "fputc failed");
     }
     else static if (T.length == 1 &&
-                    is(typeof(args[0]) : const(char)[]) &&
-                    !is(typeof(args[0]) == enum) &&
-                    !is(Unqual!(typeof(args[0])) == typeof(null)) &&
-                    !isAggregateType!(typeof(args[0])))
+                    is(T[0] : const(char)[]) &&
+                    (is(T[0] == U[], U) || __traits(isStaticArray, T[0])))
     {
-        import std.traits : isStaticArray;
-
         // Specialization for strings - a very frequent case
         auto w = .trustedStdout.lockingTextWriter();
 
-        static if (isStaticArray!(typeof(args[0])))
+        static if (__traits(isStaticArray, T[0]))
         {
             w.put(args[0][]);
         }
@@ -3933,6 +3928,10 @@ void writeln(T...)(T args)
     {
         char[8] a;
         writeln(a);
+        immutable b = a;
+        b.writeln;
+        const c = a[];
+        c.writeln;
     }
 }
 
