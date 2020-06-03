@@ -3329,7 +3329,22 @@ void main()
         assert(dcharsOut == "foo");
     }
 
-/// Get the size of the file, ulong.max if file is not searchable, but still throws if an actual error occurs.
+/** Returns the size of the file in bytes, ulong.max if file is not searchable or throws if the operation fails.
+Example:
+---
+import std.stdio, std.file;
+
+void main()
+{
+    string deleteme = "delete.me";
+    auto file_handle = File(deleteme, "w");
+    file_handle.write("abc"); //create temporary file
+    scope(exit) deleteme.remove; //remove temporary file at scope exit
+
+    assert(file_handle.size() == 3); //check if file size is 3 bytes
+}
+---
+*/
     @property ulong size() @safe
     {
         import std.exception : collectException;
