@@ -909,21 +909,55 @@ template anySatisfy(alias F, T...)
     static assert( anySatisfy!(isIntegral, int, double));
 }
 
-private alias Nothing = AliasSeq!(); // yes, this really does speed up compilation! By 10% !! Even with DMD master!
+package alias Nothing = AliasSeq!(); // yes, this really does speed up compilation! By 10% !! Even with DMD master!
 /**
  * Filters an `AliasSeq` using a template predicate. Returns an
  * `AliasSeq` of the elements which satisfy the predicate.
  */
-template Filter(alias Pred, Args ...)
+template Filter(alias pred, TList ...)
 {
-    template MaybeNothing(Q ...)
+    static if (TList.length == 0)
     {
-        static if (Pred!(Q[0]))
-            alias MaybeNothing = AliasSeq!(Q[0]);
-        else
-            alias MaybeNothing = Nothing;
+        alias Filter = Nothing;
     }
-    alias Filter = staticMap!(MaybeNothing, Args);
+    else static if (TList.length == 1)
+    {
+        static if (pred!(TList[0]))
+            alias Filter = AliasSeq!(TList[0]);
+        else
+            alias Filter = Nothing;
+    }
+    /* The next case speeds up compilation by reducing
+     * the number of Filter instantiations
+     */
+    else static if (TList.length == 2)
+    {
+        static if (pred!(TList[0]))
+        {
+            static if (pred!(TList[1]))
+                alias Filter = AliasSeq!(TList[0], TList[1]);
+            else
+                alias Filter = AliasSeq!(TList[0]);
+        }
+        else
+        {
+            static if (pred!(TList[1]))
+                alias Filter = AliasSeq!(TList[1]);
+            else
+                alias Filter = Nothing;
+        }
+    }
+    else
+    {
+        template MaybeNothing(Q ...)
+        {
+            static if (pred!(Q[0]))
+                alias MaybeNothing = AliasSeq!(Q[0]);
+            else
+                alias MaybeNothing = Nothing;
+        }
+        alias Filter = staticMap!(MaybeNothing, TList);
+    }
 }
 
 ///
