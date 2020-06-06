@@ -6996,7 +6996,8 @@ if (isFloatingPoint!(X))
  * Is the binary representation of x identical to y?
  *
  * Same as ==, except that positive and negative zero are not identical,
- * and two $(NAN)s are identical if they have the same 'payload'.
+ * and two $(NAN)s are identical if they have the same 'payload', sign bit,
+ * and quiet bit.
  */
 bool isIdentical(real x, real y) @trusted pure nothrow @nogc
 {
