@@ -916,10 +916,10 @@ private alias Nothing = AliasSeq!(); // yes, this really does speed up compilati
  */
 template Filter(alias Pred, Args ...)
 {
-    template MaybeNothing(alias Q)
+    template MaybeNothing(Q ...)
     {
-        static if (Pred!Q)
-            alias MaybeNothing = Q;
+        static if (Pred!(Q[0]))
+            alias MaybeNothing = AliasSeq!(Q[0]);
         else
             alias MaybeNothing = Nothing;
     }
@@ -948,6 +948,12 @@ template Filter(alias Pred, Args ...)
     static assert(is(Filter!isPointer == AliasSeq!()));
 }
 
+@safe unittest
+{
+    enum Yes(T) = true;
+    static struct S {}
+    static assert(is(Filter!(Yes, const(int), const(S)) == AliasSeq!(const(int), const(S))));
+}
 
 // Used in template predicate unit tests below.
 private version (StdUnittest)
