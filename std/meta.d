@@ -909,29 +909,17 @@ template anySatisfy(alias F, T...)
     static assert( anySatisfy!(isIntegral, int, double));
 }
 
-package alias Nothing = AliasSeq!(); // yes, this really does speed up compilation! By 10% !! Even with DMD master!
-/**
- * Filters an `AliasSeq` using a template predicate. Returns an
- * `AliasSeq` of the elements which satisfy the predicate.
- */
-template Filter(alias pred, TList ...)
-{
-    static if (TList.length == 0)
-    {
+private alias FilterShortCode = AliasSeq!(
+    q{
         alias Filter = Nothing;
-    }
-    else static if (TList.length == 1)
-    {
+    },
+    q{
         static if (pred!(TList[0]))
             alias Filter = AliasSeq!(TList[0]);
         else
             alias Filter = Nothing;
-    }
-    /* The next case speeds up compilation by reducing
-     * the number of Filter instantiations
-     */
-    else static if (TList.length == 2)
-    {
+    },
+    q{
         static if (pred!(TList[0]))
         {
             static if (pred!(TList[1]))
@@ -946,6 +934,19 @@ template Filter(alias pred, TList ...)
             else
                 alias Filter = Nothing;
         }
+    }
+);
+
+package alias Nothing = AliasSeq!(); // yes, this really does speed up compilation!
+/**
+ * Filters an `AliasSeq` using a template predicate. Returns an
+ * `AliasSeq` of the elements which satisfy the predicate.
+ */
+template Filter(alias pred, TList ...)
+{
+    static if (TList.length < 3)
+    {
+        mixin(FilterShortCode[TList.length]);
     }
     else
     {
