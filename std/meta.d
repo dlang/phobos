@@ -807,65 +807,38 @@ template DerivedToFront(TList...)
     static assert(is(TL == AliasSeq!(C, B, A)));
 }
 
+private enum staticMapExpandFactor = 150;
+private string generateCases()
+{
+    string[staticMapExpandFactor] chunks;
+    chunks[0] = q{};
+    static foreach (enum i; 0 .. staticMapExpandFactor - 1)
+        chunks[i + 1] = chunks[i] ~ `F!(ArgsSubset[` ~ i.stringof ~ `]),`;
+    string ret = `AliasSeq!(`;
+    foreach (chunk; chunks)
+        ret ~= `q{AliasSeq!(` ~ chunk ~ `)},`;
+    return ret ~ `)`;
+}
+private alias staticMapBasicCases = AliasSeq!(mixin(generateCases()));
+
 /**
 Evaluates to $(D AliasSeq!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
  */
-template staticMap(alias F, T...)
+template staticMap(alias F, Args ...)
 {
-    static if (T.length == 0)
+    template staticMapImpl(ArgsSubset ...)
     {
-        alias staticMap = AliasSeq!();
+        static if (ArgsSubset.length < staticMapExpandFactor)
+            alias staticMapImpl = AliasSeq!(mixin(staticMapBasicCases[ArgsSubset.length]));
+        else
+        {
+            alias TheRest = ArgsSubset[staticMapExpandFactor - 1 .. $];
+            alias staticMapImpl = AliasSeq!(mixin(staticMapBasicCases[staticMapExpandFactor - 1]),
+                                            staticMapImpl!(TheRest[0   .. $/2]),
+                                            staticMapImpl!(TheRest[$/2 .. $]));
+        }
     }
-    else static if (T.length == 1)
-    {
-        alias staticMap = AliasSeq!(F!(T[0]));
-    }
-    /* Cases 2 to 8 improve compile performance by reducing
-     * the number of recursive instantiations of staticMap
-     */
-    else static if (T.length == 2)
-    {
-        alias staticMap = AliasSeq!(F!(T[0]), F!(T[1]));
-    }
-    else static if (T.length == 3)
-    {
-        alias staticMap = AliasSeq!(F!(T[0]), F!(T[1]), F!(T[2]));
-    }
-    else static if (T.length == 4)
-    {
-        alias staticMap = AliasSeq!(F!(T[0]), F!(T[1]), F!(T[2]), F!(T[3]));
-    }
-    else static if (T.length == 5)
-    {
-        alias staticMap = AliasSeq!(F!(T[0]), F!(T[1]), F!(T[2]), F!(T[3]), F!(T[4]));
-    }
-    else static if (T.length == 6)
-    {
-        alias staticMap = AliasSeq!(F!(T[0]), F!(T[1]), F!(T[2]), F!(T[3]), F!(T[4]), F!(T[5]));
-    }
-    else static if (T.length == 7)
-    {
-        alias staticMap = AliasSeq!(F!(T[0]), F!(T[1]), F!(T[2]), F!(T[3]), F!(T[4]), F!(T[5]), F!(T[6]));
-    }
-    else static if (T.length == 8)
-    {
-        alias staticMap = AliasSeq!(F!(T[0]), F!(T[1]), F!(T[2]), F!(T[3]), F!(T[4]), F!(T[5]), F!(T[6]), F!(T[7]));
-    }
-
-    else
-    {
-        /* While:
-         *   alias staticMap = AliasSeq!(F!T[0], staticMap!(F, T[1 .. $]));
-         * does fewer template instantiations, the compiler implements
-         * recursive template instantiations with recursion, and long
-         * sequences overflow the compiler's stack.
-         * The divide-and-conquer approach uses log_2(n) stack frames.
-         */
-        alias staticMap =
-            AliasSeq!(
-                staticMap!(F, T[ 0  .. $/2]),
-                staticMap!(F, T[$/2 ..  $ ]));
-    }
+    alias staticMap = staticMapImpl!Args;
 }
 
 ///
