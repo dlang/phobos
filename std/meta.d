@@ -813,7 +813,7 @@ private string generateCases()
     string[staticMapExpandFactor] chunks;
     chunks[0] = q{};
     static foreach (enum i; 0 .. staticMapExpandFactor - 1)
-        chunks[i + 1] = chunks[i] ~ `F!(ArgsSubset[` ~ i.stringof ~ `]),`;
+        chunks[i + 1] = chunks[i] ~ `F!(Args[` ~ i.stringof ~ `]),`;
     string ret = `AliasSeq!(`;
     foreach (chunk; chunks)
         ret ~= `q{AliasSeq!(` ~ chunk ~ `)},`;
@@ -826,19 +826,24 @@ Evaluates to $(D AliasSeq!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
  */
 template staticMap(alias F, Args ...)
 {
-    template staticMapImpl(ArgsSubset ...)
+    static if (Args.length < staticMapExpandFactor)
+        alias staticMap = AliasSeq!(mixin(staticMapBasicCases[Args.length]));
+    else
     {
-        static if (ArgsSubset.length < staticMapExpandFactor)
-            alias staticMapImpl = AliasSeq!(mixin(staticMapBasicCases[ArgsSubset.length]));
-        else
+        template staticMapImpl(Args ...)
         {
-            alias TheRest = ArgsSubset[staticMapExpandFactor - 1 .. $];
-            alias staticMapImpl = AliasSeq!(mixin(staticMapBasicCases[staticMapExpandFactor - 1]),
-                                            staticMapImpl!(TheRest[0   .. $/2]),
-                                            staticMapImpl!(TheRest[$/2 .. $]));
+            static if (Args.length >= staticMapExpandFactor)
+            {
+                alias TheRest = Args[staticMapExpandFactor - 1 .. $];
+                alias staticMapImpl = AliasSeq!(mixin(staticMapBasicCases[staticMapExpandFactor - 1]),
+                                                staticMapImpl!(TheRest[0   .. $/2]),
+                                                staticMapImpl!(TheRest[$/2 .. $]));
+            }
+            else
+                alias staticMapImpl = AliasSeq!(mixin(staticMapBasicCases[Args.length]));
         }
+        alias staticMap = staticMapImpl!Args;
     }
-    alias staticMap = staticMapImpl!Args;
 }
 
 ///
@@ -934,8 +939,122 @@ private alias FilterShortCode = AliasSeq!(
             else
                 alias Filter = Nothing;
         }
+    },
+    q{
+        static if (pred!(TList[0]))
+        {
+            static if (pred!(TList[1]))
+            {
+                static if (pred!(TList[2]))
+                    alias Filter = AliasSeq!(TList[0], TList[1], TList[2]);
+                else
+                    alias Filter = AliasSeq!(TList[0], TList[1]);
+            }
+            else
+            {
+                static if (pred!(TList[2]))
+                    alias Filter = AliasSeq!(TList[0], TList[2]);
+                else
+                    alias Filter = AliasSeq!(TList[0]);
+            }
+        }
+        else
+        {
+            static if (pred!(TList[1]))
+            {
+                static if (pred!(TList[2]))
+                    alias Filter = AliasSeq!(TList[1], TList[2]);
+                else
+                    alias Filter = AliasSeq!(TList[1]);
+            }
+            else
+            {
+                static if (pred!(TList[2]))
+                    alias Filter = AliasSeq!(TList[2]);
+                else
+                    alias Filter = Nothing;
+            }
+        }
+    },
+    q{
+        static if (pred!(TList[0]))
+        {
+            static if (pred!(TList[1]))
+            {
+                static if (pred!(TList[2]))
+                {
+                    static if (pred!(TList[3]))
+                        alias Filter = AliasSeq!(TList[0], TList[1], TList[2], TList[3]);
+                    else
+                        alias Filter = AliasSeq!(TList[0], TList[1], TList[2]);
+                }
+                else
+                {
+                    static if (pred!(TList[3]))
+                        alias Filter = AliasSeq!(TList[0], TList[1], TList[3]);
+                    else
+                        alias Filter = AliasSeq!(TList[0], TList[1]);
+                }
+            }
+            else
+            {
+                static if (pred!(TList[2]))
+                {
+                    static if (pred!(TList[3]))
+                        alias Filter = AliasSeq!(TList[0], TList[2], TList[3]);
+                    else
+                        alias Filter = AliasSeq!(TList[0], TList[2]);
+                }
+                else
+                {
+                    static if (pred!(TList[3]))
+                        alias Filter = AliasSeq!(TList[0], TList[3]);
+                    else
+                        alias Filter = AliasSeq!(TList[0]);
+                }
+            }
+        }
+        else
+        {
+            static if (pred!(TList[1]))
+            {
+                static if (pred!(TList[2]))
+                {
+                    static if (pred!(TList[3]))
+                        alias Filter = AliasSeq!(TList[1], TList[2], TList[3]);
+                    else
+                        alias Filter = AliasSeq!(TList[1], TList[2]);
+                }
+                else
+                {
+                    static if (pred!(TList[3]))
+                        alias Filter = AliasSeq!(TList[1], TList[3]);
+                    else
+                        alias Filter = AliasSeq!(TList[1]);
+                }
+            }
+            else
+            {
+                static if (pred!(TList[2]))
+                {
+                    static if (pred!(TList[3]))
+                        alias Filter = AliasSeq!(TList[2], TList[3]);
+                    else
+                        alias Filter = AliasSeq!(TList[2]);
+                }
+                else
+                {
+                    static if (pred!(TList[3]))
+                        alias Filter = AliasSeq!(TList[3]);
+                    else
+                        alias Filter = Nothing;
+                }
+            }
+        }
     }
 );
+
+private enum filterExpandFactor = FilterShortCode.length;
 
 package alias Nothing = AliasSeq!(); // yes, this really does speed up compilation!
 /**
@@ -944,7 +1063,7 @@ package alias Nothing = AliasSeq!(); // yes, this really does speed up compilati
  */
 template Filter(alias pred, TList ...)
 {
-    static if (TList.length < 3)
+    static if (TList.length < filterExpandFactor)
     {
         mixin(FilterShortCode[TList.length]);
     }
