@@ -267,12 +267,23 @@ if (!isAggregateType!T || is(Unqual!T == T))
 
 /**
  * Returns the index of the first occurrence of type T in the
- * sequence of zero or more types TList.
+ * sequence of zero or more types Seq.
  * If not found, -1 is returned.
  */
-template staticIndexOf(alias T, TList...)
+template staticIndexOf(alias T, Seq...)
 {
-    enum staticIndexOf = genericIndexOf!(T, TList);
+    static foreach (idx, arg; Seq)
+    {
+        static if (is(typeof(staticIndexOf) == void) && // not yet defined
+                   isSame!(T, arg))
+        {
+            enum staticIndexOf = idx;
+        }
+    }
+    static if (is(typeof(staticIndexOf) == void)) // no hit
+    {
+        enum staticIndexOf = -1;
+    }
 }
 
 ///
@@ -285,24 +296,6 @@ template staticIndexOf(alias T, TList...)
         writefln("The index of long is %s",
                  staticIndexOf!(long, AliasSeq!(int, long, double)));
         // prints: The index of long is 1
-    }
-}
-
-// [internal]
-private template genericIndexOf(args...)
-if (args.length >= 1)
-{
-    static foreach (idx, arg; args[1 .. $])
-    {
-        static if (is(typeof(genericIndexOf) == void) && // not yet defined
-                   isSame!(args[0], arg))
-        {
-            enum genericIndexOf = idx;
-        }
-    }
-    static if (is(typeof(genericIndexOf) == void)) // no hit
-    {
-        enum genericIndexOf = -1;
     }
 }
 
