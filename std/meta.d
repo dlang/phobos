@@ -110,46 +110,24 @@ alias AliasSeq(TList...) = TList;
 }
 
 
-/**
-  Returns an `AliasSeq` expression of `Func` being
-  applied to every variadic template argument.
- */
-
 ///
 @safe unittest
 {
-    auto ref ArgCall(alias Func, alias arg)()
+    // Creates a compile-time sequence of function call expressions
+    // that each call `func` with the next variadic template argument
+    template Map(alias func, args...)
     {
-        return Func(arg);
-    }
+        alias lazyItem = function auto ref() => func(args[0]);
 
-    template Map(alias Func, args...)
-    {
-        static if (args.length > 1)
+        static if (args.length == 1)
         {
-            alias Map = AliasSeq!(ArgCall!(Func, args[0]), Map!(Func, args[1 .. $]));
+            alias Map = lazyItem;
         }
         else
         {
-            alias Map = ArgCall!(Func, args[0]);
+            // recurse
+            alias Map = AliasSeq!(lazyItem, Map!(func, args[1 .. $]));
         }
-    }
-
-    static int square(int arg)
-    {
-        return arg * arg;
-    }
-
-    static int refSquare(ref int arg)
-    {
-        arg *= arg;
-        return arg;
-    }
-
-    static ref int refRetSquare(ref int arg)
-    {
-        arg *= arg;
-        return arg;
     }
 
     static void test(int a, int b)
@@ -158,22 +136,24 @@ alias AliasSeq(TList...) = TList;
         assert(b == 16);
     }
 
+    static int a = 2;
+    static int b = 4;
+
+    test(Map!(i => i ^^ 2, a, b));
+    assert(a == 2);
+    assert(b == 4);
+
+    test(Map!((ref i) => i *= i, a, b));
+    assert(a == 4);
+    assert(b == 16);
+
     static void testRef(ref int a, ref int b)
     {
         assert(a++ == 16);
         assert(b++ == 256);
     }
 
-    static int a = 2;
-    static int b = 4;
-
-    test(Map!(square, a, b));
-
-    test(Map!(refSquare, a, b));
-    assert(a == 4);
-    assert(b == 16);
-
-    testRef(Map!(refRetSquare, a, b));
+    testRef(Map!(function ref(ref i) => i *= i, a, b));
     assert(a == 17);
     assert(b == 257);
 }
