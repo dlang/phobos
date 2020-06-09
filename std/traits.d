@@ -8904,9 +8904,7 @@ if (X.length == 1)
  + Returns:
  +  `true` if `S` can be copied. `false` otherwise.
  + ++/
-enum isCopyable(S) = is(typeof(
-    { S foo = S.init; S copy = foo; }
-));
+enum isCopyable(S) = __traits(isCopyable, S);
 
 ///
 @safe unittest
