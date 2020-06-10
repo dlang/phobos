@@ -1557,7 +1557,7 @@ Returns:
 
 See_ALso: $(LREF findAdjacent), $(LREF findAmong), $(LREF findSkip), $(LREF findSplit), $(LREF startsWith)
 */
-InputRange find(alias pred = "a == b", InputRange, Element)(InputRange haystack, scope Element needle)
+InputRange find(alias pred = "a == b", InputRange, Element)(return InputRange haystack, scope Element needle)
 if (isInputRange!InputRange &&
     is (typeof(binaryFun!pred(haystack.front, needle)) : bool) &&
    !is (typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
@@ -1602,7 +1602,7 @@ if (isInputRange!InputRange &&
             {
                 if (!__ctfe && canSearchInCodeUnits!char(needle))
                 {
-                    static R trustedMemchr(ref R haystack, ref E needle) @trusted nothrow pure
+                    static R trustedMemchr(return ref R haystack, ref E needle) @trusted nothrow pure
                     {
                         import core.stdc.string : memchr;
                         auto ptr = memchr(haystack.ptr, needle, haystack.length);

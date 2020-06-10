@@ -1515,7 +1515,7 @@ public:
     /**********************************************
      * Reverses the bits of the `BitArray`.
      */
-    @property BitArray reverse() @nogc pure nothrow
+    @property BitArray reverse() return @nogc pure nothrow
     out (result)
     {
         assert(result == this, "the result must be equal to this");
@@ -1555,7 +1555,7 @@ public:
     /**********************************************
      * Sorts the `BitArray`'s elements.
      */
-    @property BitArray sort() @nogc pure nothrow
+    @property BitArray sort() return @nogc pure nothrow
     out (result)
     {
         assert(result == this, "the result must be equal to this");

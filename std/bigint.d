@@ -211,7 +211,7 @@ public:
      * Implements assignment operators from built-in integers of the form
      * `BigInt op= integer`.
      */
-    BigInt opOpAssign(string op, T)(T y) pure nothrow @safe
+    BigInt opOpAssign(string op, T)(T y) return pure nothrow @safe
         if ((op=="+" || op=="-" || op=="*" || op=="/" || op=="%"
           || op==">>" || op=="<<" || op=="^^" || op=="|" || op=="&" || op=="^") && isIntegral!T)
     {
@@ -363,7 +363,7 @@ public:
     /**
      * Implements assignment operators of the form `BigInt op= BigInt`.
      */
-    BigInt opOpAssign(string op, T)(T y) pure nothrow @safe
+    BigInt opOpAssign(string op, T)(T y) return pure nothrow @safe
         if ((op=="+" || op== "-" || op=="*" || op=="|" || op=="&" || op=="^" || op=="/" || op=="%")
             && is (T: BigInt))
     {
