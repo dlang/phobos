@@ -1698,17 +1698,30 @@ private void shortSort(alias less, Range)(Range r)
                 auto t = r[0]; if (pred(t, r[0])) r[0] = r[0];
             }))) // Can we afford to temporarily invalidate the array?
         {
+            import core.lifetime : move;
+
             size_t j = i + 1;
-            auto temp = r[i];
+            static if (hasLvalueElements!Range)
+                auto temp = move(r[i]);
+            else
+                auto temp = r[i];
+
             if (pred(r[j], temp))
             {
                 do
                 {
-                    r[j - 1] = r[j];
+                    static if (hasLvalueElements!Range)
+                        trustedMoveEmplace(r[j], r[j - 1]);
+                    else
+                        r[j - 1] = r[j];
                     ++j;
                 }
                 while (j < r.length && pred(r[j], temp));
-                r[j - 1] = temp;
+
+                static if (hasLvalueElements!Range)
+                    trustedMoveEmplace(temp, r[j - 1]);
+                else
+                    r[j - 1] = move(temp);
             }
         }
         else
@@ -1723,6 +1736,13 @@ private void shortSort(alias less, Range)(Range r)
         }
         if (i == 0) break;
     }
+}
+
+/// @trusted wrapper for moveEmplace
+private void trustedMoveEmplace(T)(ref T source, ref T target) @trusted
+{
+    import core.lifetime : moveEmplace;
+    moveEmplace(source, target);
 }
 
 @safe unittest
@@ -2274,9 +2294,9 @@ private template TimSortImpl(alias pred, R)
     alias T = ElementType!R;
 
     alias less = binaryFun!pred;
-    alias greater = (a, b) => less(b, a);
-    alias greaterEqual = (a, b) => !less(a, b);
-    alias lessEqual = (a, b) => !less(b, a);
+    bool greater()(auto ref T a, auto ref T b) { return less(b, a); }
+    bool greaterEqual()(auto ref T a, auto ref T b) { return !less(a, b); }
+    bool lessEqual()(auto ref T a, auto ref T b) { return !less(b, a); }
 
     enum minimalMerge = 128;
     enum minimalGallop = 7;
@@ -2448,8 +2468,17 @@ private template TimSortImpl(alias pred, R)
             //moveAll(retro(range[lower .. sortedLen]),
             //            retro(range[lower+1 .. sortedLen+1]));
             for (upper=sortedLen; upper > lower; upper--)
-                range[upper] = range.moveAt(upper - 1);
-            range[lower] = move(item);
+            {
+                static if (hasLvalueElements!R)
+                    move(range[upper -1], range[upper]);
+                else
+                    range[upper] = range.moveAt(upper - 1);
+            }
+
+            static if (hasLvalueElements!R)
+                move(item, range[lower]);
+            else
+                range[lower] = move(item);
         }
     }
 
@@ -2555,7 +2584,7 @@ private template TimSortImpl(alias pred, R)
         copy(range[0 .. mid], temp);
 
         // Move first element into place
-        range[0] = range[mid];
+        moveEntry(range, mid, range, 0);
 
         size_t i = 1, lef = 0, rig = mid + 1;
         size_t count_lef, count_rig;
@@ -2572,14 +2601,14 @@ private template TimSortImpl(alias pred, R)
             {
                 if (lessEqual(temp[lef], range[rig]))
                 {
-                    range[i++] = temp[lef++];
+                    moveEntry(temp, lef++, range, i++);
                     if (lef >= lef_end) break outer;
                     ++count_lef;
                     count_rig = 0;
                 }
                 else
                 {
-                    range[i++] = range[rig++];
+                    moveEntry(range, rig++, range, i++);
                     if (rig >= range.length) break outer;
                     count_lef = 0;
                     ++count_rig;
@@ -2590,14 +2619,14 @@ private template TimSortImpl(alias pred, R)
             do
             {
                 count_lef = gallopForwardUpper(temp[lef .. $], range[rig]);
-                foreach (j; 0 .. count_lef) range[i++] = temp[lef++];
+                foreach (j; 0 .. count_lef) moveEntry(temp, lef++, range, i++);
                 if (lef >= temp.length) break outer;
 
                 count_rig = gallopForwardLower(range[rig .. range.length], temp[lef]);
-                foreach (j; 0 .. count_rig) range[i++] = range[rig++];
+                foreach (j; 0 .. count_rig) moveEntry(range, rig++, range, i++);
                 if (rig >= range.length) while (true)
                 {
-                    range[i++] = temp[lef++];
+                    moveEntry(temp, lef++, range, i++);
                     if (lef >= temp.length) break outer;
                 }
 
@@ -2610,11 +2639,11 @@ private template TimSortImpl(alias pred, R)
 
         // Move remaining elements from right
         while (rig < range.length)
-            range[i++] = range[rig++];
+            moveEntry(range, rig++, range, i++);
 
         // Move remaining elements from left
         while (lef < temp.length)
-            range[i++] = temp[lef++];
+            moveEntry(temp, lef++, range, i++);
 
         return minGallop > 0 ? minGallop : 1;
     }
@@ -2641,7 +2670,7 @@ private template TimSortImpl(alias pred, R)
         copy(range[mid .. range.length], temp);
 
         // Move first element into place
-        range[range.length - 1] = range[mid - 1];
+        moveEntry(range, mid - 1, range, range.length - 1);
 
         size_t i = range.length - 2, lef = mid - 2, rig = temp.length - 1;
         size_t count_lef, count_rig;
@@ -2657,19 +2686,19 @@ private template TimSortImpl(alias pred, R)
             {
                 if (greaterEqual(temp[rig], range[lef]))
                 {
-                    range[i--] = temp[rig];
+                    moveEntry(temp, rig, range, i--);
                     if (rig == 1)
                     {
                         // Move remaining elements from left
                         while (true)
                         {
-                            range[i--] = range[lef];
+                            moveEntry(range, lef, range, i--);
                             if (lef == 0) break;
                             --lef;
                         }
 
                         // Move last element into place
-                        range[i] = temp[0];
+                        moveEntry(temp, 0, range, i);
 
                         break outer;
                     }
@@ -2679,10 +2708,10 @@ private template TimSortImpl(alias pred, R)
                 }
                 else
                 {
-                    range[i--] = range[lef];
+                    moveEntry(range, lef, range, i--);
                     if (lef == 0) while (true)
                     {
-                        range[i--] = temp[rig];
+                        moveEntry(temp, rig, range, i--);
                         if (rig == 0) break outer;
                         --rig;
                     }
@@ -2698,7 +2727,7 @@ private template TimSortImpl(alias pred, R)
                 count_rig = rig - gallopReverseLower(temp[0 .. rig], range[lef]);
                 foreach (j; 0 .. count_rig)
                 {
-                    range[i--] = temp[rig];
+                    moveEntry(temp, rig, range, i--);
                     if (rig == 0) break outer;
                     --rig;
                 }
@@ -2706,10 +2735,10 @@ private template TimSortImpl(alias pred, R)
                 count_lef = lef - gallopReverseUpper(range[0 .. lef], temp[rig]);
                 foreach (j; 0 .. count_lef)
                 {
-                    range[i--] = range[lef];
+                    moveEntry(range, lef, range, i--);
                     if (lef == 0) while (true)
                     {
-                        range[i--] = temp[rig];
+                        moveEntry(temp, rig, range, i--);
                         if (rig == 0) break outer;
                         --rig;
                     }
@@ -2806,6 +2835,21 @@ private template TimSortImpl(alias pred, R)
     alias gallopForwardUpper = gallopSearch!(false,  true);
     alias gallopReverseLower = gallopSearch!( true, false);
     alias gallopReverseUpper = gallopSearch!( true,  true);
+
+    /// Helper method that moves from[fIdx] into to[tIdx] if both are lvalues and
+    /// uses a plain assignment if not (necessary for backwards compatibility)
+    void moveEntry(X, Y)(ref X from, const size_t fIdx, ref Y to, const size_t tIdx)
+    {
+        // This template is instantiated with different combinations of range (R) and temp (T[]).
+        // T[] obviously has lvalue-elements, so checking R should be enough here
+        static if (hasLvalueElements!R)
+        {
+            import core.lifetime : move;
+            move(from[fIdx], to[tIdx]);
+        }
+        else
+            to[tIdx] = from[fIdx];
+    }
 }
 
 @safe unittest
@@ -2916,6 +2960,40 @@ private template TimSortImpl(alias pred, R)
     import std.array, std.range;
     auto arr = chain(iota(0, 384), iota(0, 256), iota(0, 80), iota(0, 64), iota(0, 96)).array;
     sort!("a < b", SwapStrategy.stable)(arr);
+}
+
+@safe unittest
+{
+    static struct NoCopy
+    {
+        pure nothrow @nogc @safe:
+
+        int key;
+        this(scope const ref NoCopy)
+        {
+            assert(false, "Tried to copy struct!");
+        }
+        ref opAssign()(scope const auto ref NoCopy other)
+        {
+            assert(false, "Tried to copy struct!");
+        }
+        this(this) {}
+    }
+
+    static NoCopy[] makeArray(const size_t size)
+    {
+        NoCopy[] array = new NoCopy[](size);
+        foreach (const i, ref t; array[0..$/2]) t.key = cast(int) (size - i);
+        foreach (const i, ref t; array[$/2..$]) t.key = cast(int) i;
+        return array;
+    }
+
+    alias cmp = (ref NoCopy a, ref NoCopy b) => a.key < b.key;
+    enum minMerge = TimSortImpl!(cmp, NoCopy[]).minimalMerge;
+
+    sort!(cmp, SwapStrategy.unstable)(makeArray(20));
+    sort!(cmp, SwapStrategy.stable)(makeArray(minMerge - 5));
+    sort!(cmp, SwapStrategy.stable)(makeArray(minMerge + 5));
 }
 
 // schwartzSort
