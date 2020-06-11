@@ -2312,12 +2312,13 @@ BigInt powmod(BigInt base, BigInt exponent, BigInt modulus) pure nothrow @safe
 
     while (exponent)
     {
-        if (exponent & 1)
+        if (exponent.data.peekUint(0) & 1)
         {
             result = (result * base) % modulus;
         }
 
-        base = ((base % modulus) * (base % modulus)) % modulus;
+        auto tmp = base % modulus;
+        base = (tmp * tmp) % modulus;
         exponent >>= 1;
     }
 
