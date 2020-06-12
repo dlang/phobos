@@ -3972,17 +3972,27 @@ string expandTilde(string inputPath) @safe nothrow
             // Search end of C string
             size_t end = strlen(c_path);
 
-            // Remove trailing path separator, if any
-            if (end && isDirSeparator(c_path[end - 1]))
-                end--;
+            const cPathEndsWithDirSep = end && isDirSeparator(c_path[end - 1]);
 
             string cp;
             if (char_pos < path.length)
+            {
+                // Remove trailing path separator, if any (with special care for root /)
+                if (cPathEndsWithDirSep && (end > 1 || isDirSeparator(path[char_pos])))
+                    end--;
+
                 // Append something from path
                 cp = assumeUnique(c_path[0 .. end] ~ path[char_pos .. $]);
+            }
             else
+            {
+                // Remove trailing path separator, if any (except for root /)
+                if (cPathEndsWithDirSep && end > 1)
+                    end--;
+
                 // Create our own copy, as lifetime of c_path is undocumented
                 cp = c_path[0 .. end].idup;
+            }
 
             return cp;
         }
@@ -4149,6 +4159,11 @@ string expandTilde(string inputPath) @safe nothrow
         assert(expandTilde("~/") == "dmd/test/");
         assert(expandTilde("~") == "dmd/test");
 
+        // The same, but with a variable set to root.
+        environment["HOME"] = "/";
+        assert(expandTilde("~/") == "/");
+        assert(expandTilde("~") == "/");
+
         // Recover original HOME variable before continuing.
         if (oldHome !is null) environment["HOME"] = oldHome;
         else environment.remove("HOME");
@@ -4160,7 +4175,8 @@ string expandTilde(string inputPath) @safe nothrow
             immutable expTildeUser = expandTilde(tildeUser);
             assert(expTildeUser == path, expTildeUser);
             immutable expTildeUserSlash = expandTilde(tildeUser ~ "/");
-            assert(expTildeUserSlash == path ~ "/", expTildeUserSlash);
+            immutable pathSlash = path[$-1] == '/' ? path : path ~ "/";
+            assert(expTildeUserSlash == pathSlash, expTildeUserSlash);
         }
 
         assert(expandTilde("~Idontexist/hey") == "~Idontexist/hey");
