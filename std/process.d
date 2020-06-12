@@ -2254,7 +2254,7 @@ private:
     }
     else version (Windows)
     {
-        int performWait(bool block) @trusted
+        int performWait(const bool block, const DWORD timeout = INFINITE) @trusted
         {
             import std.exception : enforce;
             enforce!ProcessException(owned, "Can't wait on a detached process");
@@ -2262,9 +2262,15 @@ private:
             assert(_handle != INVALID_HANDLE_VALUE);
             if (block)
             {
-                auto result = WaitForSingleObject(_handle, INFINITE);
+                auto result = WaitForSingleObject(_handle, timeout);
                 if (result != WAIT_OBJECT_0)
+                {
+                    // Wait time exceeded `timeout` milliseconds?
+                    if (result == WAIT_TIMEOUT && timeout != INFINITE)
+                        return 0;
+
                     throw ProcessException.newFromLastError("Wait failed.");
+                }
             }
             if (!GetExitCodeProcess(_handle, cast(LPDWORD)&_exitCode))
                 throw ProcessException.newFromLastError();
@@ -2273,6 +2279,20 @@ private:
             _handle = INVALID_HANDLE_VALUE;
             _processID = terminated;
             return _exitCode;
+        }
+
+        int performWait(Duration timeout) @safe
+        {
+            import std.exception : enforce;
+            const msecs = timeout.total!"msecs";
+
+            // Limit this implementation the maximum wait time offered by
+            // WaitForSingleObject. One could theoretically break up larger
+            // durations into multiple waits but (DWORD.max - 1).msecs
+            // (> 7 weeks, 17 hours) should be enough for the usual case.
+            // DWORD.max is reserved for INFINITE
+            enforce!ProcessException(msecs < DWORD.max, "Timeout exceeds maximum wait time!");
+            return performWait(true, cast(DWORD) msecs);
         }
 
         ~this()
@@ -2384,6 +2404,67 @@ int wait(Pid pid) @safe
     else version (Posix) assert(pid.osHandle < 0);
 }
 
+private import std.typecons : Tuple;
+
+/**
+Waits until either the process associated with `pid` terminates or the
+elapsed time exceeds the given timeout.
+
+If the process terminates within the given duration it behaves exactly like
+`wait`, except that it returns a tuple `(true, exit code)`.
+
+If the process does not terminate within the given duration it will stop
+waiting and return `(false, 0).`
+
+The timeout may not exceed `(uint.max - 1).msecs` (~ 7 weeks, 17 hours).
+
+$(BLUE This function is Windows-Only.)
+
+Returns:
+An $(D std.typecons.Tuple!(bool, "terminated", int, "status")).
+
+Throws:
+$(LREF ProcessException) on failure or on attempt to wait for detached process.
+
+Example:
+See the $(LREF spawnProcess) documentation.
+
+See_also:
+$(LREF wait), for a blocking function without timeout.
+$(LREF tryWait), for a non-blocking function without timeout.
+*/
+version (StdDdoc)
+Tuple!(bool, "terminated", int, "status") waitTimeout(Pid pid, Duration timeout) @safe;
+
+else version (Windows)
+Tuple!(bool, "terminated", int, "status") waitTimeout(Pid pid, Duration timeout) @safe
+{
+    assert(pid !is null, "Called wait on a null Pid.");
+    auto code = pid.performWait(timeout);
+    return typeof(return)(pid._processID == Pid.terminated, code);
+}
+
+version (Windows)
+@system unittest // Pid and waitTimeout()
+{
+    import std.exception : collectException;
+    import std.typecons : tuple;
+
+    TestScript prog = ":Loop\ngoto Loop;";
+    auto pid = spawnProcess(prog.path);
+
+    // Doesn't block longer than one second
+    assert(waitTimeout(pid, 1.seconds) == tuple(false, 0));
+
+    kill(pid);
+    assert(waitTimeout(pid, 1.seconds) == tuple(true, 1)); // exit 1 because the process is killed
+
+    // Rejects timeouts exceeding the Windows API capabilities
+    const dur = DWORD.max.msecs;
+    const ex = collectException!ProcessException(waitTimeout(pid, dur));
+    assert(ex);
+    assert(ex.msg == "Timeout exceeds maximum wait time!");
+}
 
 /**
 A non-blocking version of $(LREF wait).
