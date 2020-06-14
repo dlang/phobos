@@ -331,10 +331,13 @@ version(Windows) private
     auto our_freeaddrinfo(A...)(A a) @system
     {
         initialize;
+        if (freeaddrinfoPointer)
+            // May be null if WSAStartup() failed, just do nothing
+            return;
         return freeaddrinfoPointer(a);
     }
 
-    void initialize() @trusted
+    void initialize() @trusted nothrow
     {
         static shared bool processInitialized;
         if (atomicLoad(processInitialized)) return;
@@ -346,16 +349,16 @@ version(Windows) private
             // Winsock will still load if an older version is present.
             // The version is just a request.
             WSADATA wd;
-            const val = WSAStartup(0x2020, &wd);
-            if (val)         // Request Winsock 2.2 for IPv6.
-                throw new SocketOSException("Unable to initialize socket library", val);
+            if (!WSAStartup(0x2020, &wd)) // Request Winsock 2.2 for IPv6.
+                // No harm done, pointers to functions will be null (no supported functionality)
+                return true;
+
             static extern(C) void cleanup() { WSACleanup(); }
             atexit(&cleanup);
 
             // These functions may not be present on older Windows versions.
-            // See the comment in InternetAddress.toHostNameString() for details.
-            auto ws2Lib = GetModuleHandleA("ws2_32.dll");
-            if (ws2Lib)
+            // See the comment in InternetAddress.toHostNameString() for details.+            ;
+            if (auto ws2Lib = GetModuleHandleA("ws2_32.dll"))
             {
                 getnameinfoPointer = cast(typeof(getnameinfoPointer))
                             GetProcAddress(ws2Lib, "getnameinfo");
