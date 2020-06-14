@@ -79,6 +79,13 @@ version (Windows)
     {
         return WSAGetLastError();
     }
+
+    immutable
+    {
+        typeof(&getnameinfo) getnameinfoPointer;
+        typeof(&getaddrinfo) getaddrinfoPointer;
+        typeof(&freeaddrinfo) freeaddrinfoPointer;
+    }
 }
 else version (Posix)
 {
@@ -120,6 +127,10 @@ else version (Posix)
     {
         return errno;
     }
+
+    enum getnameinfoPointer = &getnameinfo;
+    enum getaddrinfoPointer = &getaddrinfo;
+    enum freeaddrinfoPointer = &freeaddrinfo;
 }
 else
 {
@@ -289,20 +300,6 @@ bool wouldHaveBlocked() nothrow @nogc
     assert(rec == -1 && wouldHaveBlocked());
 }
 
-
-version (Windows)
-{
-    private: immutable:
-    typeof(&getnameinfo) getnameinfoPointer;
-    typeof(&getaddrinfo) getaddrinfoPointer;
-    typeof(&freeaddrinfo) freeaddrinfoPointer;
-}
-else version (Posix)
-{
-    enum getnameinfoPointer = &getnameinfo;
-    enum getaddrinfoPointer = &getaddrinfo;
-    enum freeaddrinfoPointer = &freeaddrinfo;
-}
 
 version (Windows)
 {
