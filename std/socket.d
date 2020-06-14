@@ -290,30 +290,34 @@ bool wouldHaveBlocked() nothrow @nogc
 }
 
 
-private immutable
+version (Windows)
 {
+    private: immutable:
     typeof(&getnameinfo) getnameinfoPointer;
     typeof(&getaddrinfo) getaddrinfoPointer;
     typeof(&freeaddrinfo) freeaddrinfoPointer;
 }
-
-shared static this() @system
+else version (Posix)
 {
-    version (Windows)
+    enum getnameinfoPointer = &getnameinfo;
+    enum getaddrinfoPointer = &getaddrinfo;
+    enum freeaddrinfoPointer = &freeaddrinfo;
+}
+
+version (Windows)
+{
+    shared static this() @system
     {
         WSADATA wd;
 
         // Winsock will still load if an older version is present.
         // The version is just a request.
-        int val;
-        val = WSAStartup(0x2020, &wd);
-        if (val)         // Request Winsock 2.2 for IPv6.
+        if (auto val = WSAStartup(0x2020, &wd))         // Request Winsock 2.2 for IPv6.
             throw new SocketOSException("Unable to initialize socket library", val);
 
         // These functions may not be present on older Windows versions.
         // See the comment in InternetAddress.toHostNameString() for details.
-        auto ws2Lib = GetModuleHandleA("ws2_32.dll");
-        if (ws2Lib)
+        if (auto ws2Lib = GetModuleHandleA("ws2_32.dll"))
         {
             getnameinfoPointer = cast(typeof(getnameinfoPointer))
                                  GetProcAddress(ws2Lib, "getnameinfo");
@@ -323,18 +327,8 @@ shared static this() @system
                                  GetProcAddress(ws2Lib, "freeaddrinfo");
         }
     }
-    else version (Posix)
-    {
-        getnameinfoPointer = &getnameinfo;
-        getaddrinfoPointer = &getaddrinfo;
-        freeaddrinfoPointer = &freeaddrinfo;
-    }
-}
 
-
-shared static ~this() @system nothrow @nogc
-{
-    version (Windows)
+    shared static ~this() @system nothrow @nogc
     {
         WSACleanup();
     }
@@ -961,7 +955,7 @@ AddressInfo[] getAddressInfo(T...)(scope const(char)[] node, scope T options)
 
 private AddressInfo[] getAddressInfoImpl(scope const(char)[] node, scope const(char)[] service, addrinfo* hints) @system
 {
-        import std.array : appender;
+    import std.array : appender;
 
     if (getaddrinfoPointer && freeaddrinfoPointer)
     {
@@ -989,8 +983,9 @@ private AddressInfo[] getAddressInfoImpl(scope const(char)[] node, scope const(c
         return result.data;
     }
 
-    throw new SocketFeatureException("Address info lookup is not available " ~
-        "on this system.");
+    version (Windows)
+        throw new SocketFeatureException("Address info lookup is not available " ~
+            "on this system.");
 }
 
 
@@ -1115,7 +1110,7 @@ Address[] getAddress(scope const(char)[] hostname, ushort port)
         auto addresses = getAddress("63.105.9.61");
         assert(addresses.length && addresses[0].toAddrString() == "63.105.9.61");
 
-        if (getaddrinfoPointer)
+        version (Windows) if (getaddrinfoPointer)
         {
             // test via gethostbyname
             auto getaddrinfoPointerBackup = getaddrinfoPointer;
@@ -1195,7 +1190,7 @@ Address parseAddress(scope const(char)[] hostaddr, ushort port)
         auto address = parseAddress("63.105.9.61");
         assert(address.toAddrString() == "63.105.9.61");
 
-        if (getaddrinfoPointer)
+        version (Windows) if (getaddrinfoPointer)
         {
             // test via inet_addr
             auto getaddrinfoPointerBackup = getaddrinfoPointer;
@@ -1309,8 +1304,9 @@ abstract class Address
             return assumeUnique(buf[0 .. strlen(buf.ptr)]);
         }
 
-        throw new SocketFeatureException((numeric ? "Host address" : "Host name") ~
-            " lookup for this address family is not available on this system.");
+        version (Windows)
+            throw new SocketFeatureException((numeric ? "Host address" : "Host name") ~
+                " lookup for this address family is not available on this system.");
     }
 
     // Common code for toPortString and toServiceNameString
@@ -1330,8 +1326,9 @@ abstract class Address
             return assumeUnique(buf[0 .. strlen(buf.ptr)]);
         }
 
-        throw new SocketFeatureException((numeric ? "Port number" : "Service name") ~
-            " lookup for this address family is not available on this system.");
+        version (Windows)
+            throw new SocketFeatureException((numeric ? "Port number" : "Service name") ~
+                " lookup for this address family is not available on this system.");
     }
 
     /**
@@ -1697,7 +1694,7 @@ public:
             const ia = new InternetAddress(ih.addrList[0], 80);
             assert(ia.toHostNameString() == "digitalmars.com");
 
-            if (getnameinfoPointer)
+            version (Windows) if (getnameinfoPointer)
             {
                 // test reverse lookup, via gethostbyaddr
                 auto getnameinfoPointerBackup = getnameinfoPointer;
