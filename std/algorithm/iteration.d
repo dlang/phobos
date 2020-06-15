@@ -630,7 +630,7 @@ private struct MapResult(alias fun, Range)
 
     static if (isRandomAccessRange!R)
     {
-        static if (is(typeof(_input[ulong.max])))
+        static if (is(typeof(Range.init[ulong.max])))
             private alias opIndex_t = ulong;
         else
             private alias opIndex_t = uint;
@@ -868,6 +868,23 @@ private struct MapResult(alias fun, Range)
     struct S {int* p;}
     auto m = immutable(S).init.repeat().map!"a".save;
     assert(m.front == immutable(S)(null));
+}
+
+// Issue 20928
+@safe unittest
+{
+    struct Always3
+    {
+        enum empty = false;
+        auto save() { return this; }
+        long front() { return 3; }
+        void popFront() {}
+        long opIndex(ulong i) { return 3; }
+        long opIndex(ulong i) immutable { return 3; }
+    }
+
+    import std.algorithm.iteration : map;
+    Always3.init.map!(e => e)[ulong.max];
 }
 
 // each
