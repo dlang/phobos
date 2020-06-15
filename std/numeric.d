@@ -2987,64 +2987,70 @@ if (isIntegral!T)
 // This overload is for non-builtin numerical types like BigInt or
 // user-defined types.
 /// ditto
-T gcd(T)(T a, T b)
+auto gcd(T)(T a, T b)
 if (!isIntegral!T &&
         is(typeof(T.init % T.init)) &&
         is(typeof(T.init == 0 || T.init > 0)))
 {
-    import std.algorithm.mutation : swap;
-
-    enum canUseBinaryGcd = is(typeof(() {
-        T t, u;
-        t <<= 1;
-        t >>= 1;
-        t -= u;
-        bool b = (t & 1) == 0;
-        swap(t, u);
-    }));
-
-    assert(a >= 0 && b >= 0);
-
-    // Special cases.
-    if (a == 0)
-        return b;
-    if (b == 0)
-        return a;
-
-    static if (canUseBinaryGcd)
+    static if (!is(T == Unqual!T))
     {
-        uint shift = 0;
-        while ((a & 1) == 0 && (b & 1) == 0)
-        {
-            a >>= 1;
-            b >>= 1;
-            shift++;
-        }
-
-        if ((a & 1) == 0) swap(a, b);
-
-        do
-        {
-            assert((a & 1) != 0);
-            while ((b & 1) == 0)
-                b >>= 1;
-            if (a > b)
-                swap(a, b);
-            b -= a;
-        } while (b);
-
-        return a << shift;
+        return gcd!(Unqual!T)(a, b);
     }
     else
     {
-        // The only thing we have is %; fallback to Euclidean algorithm.
-        while (b != 0)
+        import std.algorithm.mutation : swap;
+        enum canUseBinaryGcd = is(typeof(() {
+            T t, u;
+            t <<= 1;
+            t >>= 1;
+            t -= u;
+            bool b = (t & 1) == 0;
+            swap(t, u);
+        }));
+
+        assert(a >= 0 && b >= 0);
+
+        // Special cases.
+        if (a == 0)
+            return b;
+        if (b == 0)
+            return a;
+
+        static if (canUseBinaryGcd)
         {
-            auto t = b;
-            b = a % b;
-            a = t;
+            uint shift = 0;
+            while ((a & 1) == 0 && (b & 1) == 0)
+            {
+                a >>= 1;
+                b >>= 1;
+                shift++;
+            }
+
+            if ((a & 1) == 0) swap(a, b);
+
+            do
+            {
+                assert((a & 1) != 0);
+                while ((b & 1) == 0)
+                    b >>= 1;
+                if (a > b)
+                    swap(a, b);
+                b -= a;
+            } while (b);
+
+            return a << shift;
         }
-        return a;
+        else
+        {
+            // The only thing we have is %; fallback to Euclidean algorithm.
+            while (b != 0)
+            {
+                auto t = b;
+                b = a % b;
+                a = t;
+            }
+            return a;
+        }
     }
 }
 
@@ -3083,6 +3089,15 @@ if (!isIntegral!T &&
 {
     import std.bigint : BigInt;
     assert(gcd(BigInt(2), BigInt(1)) == BigInt(1));
+}
+
+// Issue 20924
+@safe unittest
+{
+    import std.bigint : BigInt;
+    const a = BigInt("123143238472389492934020");
+    const b = BigInt("902380489324729338420924");
+    assert(__traits(compiles, gcd(a, b)));
 }
 
 // This is to make tweaking the speed/size vs. accuracy tradeoff easy,
