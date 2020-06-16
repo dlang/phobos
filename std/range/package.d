@@ -10540,21 +10540,19 @@ version (none)
   Returns true if `fn` accepts variables of type T1 and T2 in any order.
   The following code should compile:
   ---
-  T1 foo();
-  T2 bar();
-
-  fn(foo(), bar());
-  fn(bar(), foo());
+  (ref T1 a, ref T2 b)
+  {
+    fn(a, b);
+    fn(b, a);
+  }
   ---
 */
 template isTwoWayCompatible(alias fn, T1, T2)
 {
-    enum isTwoWayCompatible = is(typeof( (){
-            T1 foo();
-            T2 bar();
-
-            cast(void) fn(foo(), bar());
-            cast(void) fn(bar(), foo());
+    enum isTwoWayCompatible = is(typeof((ref T1 a, ref T2 b)
+        {
+            cast(void) fn(a, b);
+            cast(void) fn(b, a);
         }
     ));
 }
@@ -10568,6 +10566,10 @@ template isTwoWayCompatible(alias fn, T1, T2)
     static assert(isTwoWayCompatible!(func1, int, int));
     static assert(isTwoWayCompatible!(func1, short, int));
     static assert(!isTwoWayCompatible!(func2, int, float));
+
+    void func3(ref int a, ref int b);
+    static assert( isTwoWayCompatible!(func3, int, int));
+    static assert(!isTwoWayCompatible!(func3, short, int));
 }
 
 

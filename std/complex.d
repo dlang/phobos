@@ -8,6 +8,15 @@
     the built-in types `cfloat`, `cdouble`, `creal`, `ifloat`,
     `idouble`, and `ireal`.
 
+    Macros:
+        TABLE_SV = <table border="1" cellpadding="4" cellspacing="0">
+                <caption>Special Values</caption>
+                $0</table>
+        PLUSMN = &plusmn;
+        NAN = $(RED NAN)
+        INFIN = &infin;
+        PI = &pi;
+
     Authors:    Lars Tandle Kyllingstad, Don Clugston
     Copyright:  Copyright (c) 2010, Lars T. Kyllingstad.
     License:    $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0)
@@ -709,6 +718,26 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
     assert(abs(complex(1.0L, -2.0L)) == std.math.sqrt(5.0L));
 }
 
+@safe pure nothrow @nogc unittest
+{
+    static import std.math;
+    assert(abs(complex(0.0L, -3.2L)) == 3.2L);
+    assert(abs(complex(0.0L, 71.6L)) == 71.6L);
+    assert(abs(complex(-1.0L, 1.0L)) == std.math.sqrt(2.0L));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.meta : AliasSeq;
+    static foreach (T; AliasSeq!(float, double, real))
+    {{
+        static import std.math;
+        Complex!T a = complex(T(-12), T(3));
+        T b = std.math.hypot(a.re, a.im);
+        assert(std.math.approxEqual(abs(a), b));
+        assert(std.math.approxEqual(abs(-a), b));
+    }}
+}
 
 /++
    Params:
@@ -772,6 +801,29 @@ T arg(T)(Complex!T z) @safe pure nothrow @nogc
 
 
 /**
+ * Extracts the norm of a complex number.
+ * Params:
+ *      z = A complex number
+ * Returns:
+ *      The squared magnitude of `z`.
+ */
+T norm(T)(Complex!T z) @safe pure nothrow @nogc
+{
+    return z.re * z.re + z.im * z.im;
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.math : isClose, PI;
+    assert(norm(complex(3.0, 4.0)) == 25.0);
+    assert(norm(fromPolar(5.0, 0.0)) == 25.0);
+    assert(isClose(norm(fromPolar(5.0L, PI / 6)), 25.0L));
+    assert(isClose(norm(fromPolar(5.0L, 13 * PI / 6)), 25.0L));
+}
+
+
+/**
   Params: z = A complex number.
   Returns: The complex conjugate of `z`.
 */
@@ -785,6 +837,43 @@ Complex!T conj(T)(Complex!T z) @safe pure nothrow @nogc
 {
     assert(conj(complex(1.0)) == complex(1.0));
     assert(conj(complex(1.0, 2.0)) == complex(1.0, -2.0));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.meta : AliasSeq;
+    static foreach (T; AliasSeq!(float, double, real))
+    {{
+         auto c = Complex!T(7, 3L);
+         assert(conj(c) == Complex!T(7, -3L));
+         auto z = Complex!T(0, -3.2L);
+         assert(conj(z) == -z);
+    }}
+}
+
+/**
+ * Returns the projection of `z` onto the Riemann sphere.
+ * Params:
+ *      z = A complex number
+ * Returns:
+ *      The projection of `z` onto the Riemann sphere.
+ */
+Complex!T proj(T)(Complex!T z)
+{
+    static import std.math;
+
+    if (std.math.isInfinity(z.re) || std.math.isInfinity(z.im))
+        return Complex!T(T.infinity, std.math.copysign(0.0, z.im));
+
+    return z;
+}
+
+///
+@safe pure nothrow unittest
+{
+    assert(proj(complex(1.0)) == complex(1.0));
+    assert(proj(complex(double.infinity, 5.0)) == complex(double.infinity, 0.0));
+    assert(proj(complex(5.0, -double.infinity)) == complex(double.infinity, -0.0));
 }
 
 
@@ -817,7 +906,7 @@ Complex!(CommonType!(T, U)) fromPolar(T, U)(const T modulus, const U argument)
     Trigonometric functions on complex numbers.
 
     Params: z = A complex number.
-    Returns: The sine and cosine of `z`, respectively.
+    Returns: The sine, cosine and tangent of `z`, respectively.
 */
 Complex!T sin(T)(Complex!T z)  @safe pure nothrow @nogc
 {
@@ -846,19 +935,34 @@ Complex!T cos(T)(Complex!T z)  @safe pure nothrow @nogc
 ///
 @safe pure nothrow unittest
 {
-    import std.complex;
+    static import std.math;
     assert(cos(complex(0.0)) == 1.0);
+    assert(cos(complex(1.3L, 0.0)) == std.math.cos(1.3L));
+    assert(cos(complex(0.0L, 5.2L)) == std.math.cosh(5.2L));
 }
 
-deprecated
 @safe pure nothrow unittest
 {
-    import std.math;
+    static import std.math;
     auto c1 = cos(complex(0, 5.2L));
-    auto c2 = cosh(5.2L);
-    assert(feqrel(c1.re, c2.re) >= real.mant_dig - 1 &&
-        feqrel(c1.im, c2.im) >= real.mant_dig - 1);
+    auto c2 = std.math.cosh(5.2L);
+    assert(std.math.feqrel(c1.re, c2) >= real.mant_dig - 1 &&
+        std.math.feqrel(c1.im, 0.0L) >= real.mant_dig - 1);
     assert(cos(complex(1.3L)) == std.math.cos(1.3L));
+}
+
+/// ditto
+Complex!T tan(T)(Complex!T z) @safe pure nothrow @nogc
+{
+    return sin(z) / cos(z);
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    static import std.math;
+    assert(tan(complex(1.0, 0.0)) == complex(std.math.tan(1.0), 0.0));
+    assert(tan(complex(0.0, 1.0)) == complex(0.0, std.math.tanh(1.0)));
 }
 
 /**
@@ -880,17 +984,6 @@ Complex!real expi(real y)  @trusted pure nothrow @nogc
     import std.math : cos, sin;
     assert(expi(0.0L) == 1.0L);
     assert(expi(1.3e5L) == complex(cos(1.3e5L), sin(1.3e5L)));
-}
-
-deprecated
-@safe pure nothrow unittest
-{
-    static import std.math;
-
-    assert(expi(1.3e5L) == complex(std.math.cos(1.3e5L), std.math.sin(1.3e5L)));
-    auto z1 = expi(1.234);
-    auto z2 = std.math.expi(1.234);
-    assert(z1.re == z2.re && z1.im == z2.im);
 }
 
 /**
@@ -919,24 +1012,6 @@ Complex!real coshisinh(real y) @safe pure nothrow @nogc
 {
     import std.math : cosh, sinh;
     assert(coshisinh(3.0L) == complex(cosh(3.0L), sinh(3.0L)));
-}
-
-deprecated
-@safe pure nothrow @nogc unittest
-{
-    static import std.math;
-    assert(coshisinh(3.0L) == complex(std.math.cosh(3.0L), std.math.sinh(3.0L)));
-    auto z1 = coshisinh(1.234);
-    auto z2 = std.math.coshisinh(1.234);
-    static if (real.mant_dig == 53 || real.mant_dig == 113)
-    {
-        assert(std.math.feqrel(z1.re, z2.re) >= real.mant_dig - 1 &&
-               std.math.feqrel(z1.im, z2.im) >= real.mant_dig - 1);
-    }
-    else
-    {
-        assert(z1.re == z2.re && z1.im == z2.im);
-    }
 }
 
 /**
@@ -1046,4 +1121,515 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
 {
     // Test ease of use (vanilla toString() should be supported)
     assert(complex(1.2, 3.4).toString() == "1.2+3.4i");
+}
+
+@safe pure nothrow @nogc unittest
+{
+    auto c = complex(3.0L, 4.0L);
+    c = sqrt(c);
+    assert(c.re == 2.0L);
+    assert(c.im == 1.0L);
+}
+
+/**
+ * Calculates e$(SUPERSCRIPT x).
+ * Params:
+ *      x = A complex number
+ * Returns:
+ *      The complex base e exponential of `x`
+ *
+ *      $(TABLE_SV
+ *      $(TR $(TH x)                           $(TH exp(x)))
+ *      $(TR $(TD ($(PLUSMN)0, +0))            $(TD (1, +0)))
+ *      $(TR $(TD (any, +$(INFIN)))            $(TD ($(NAN), $(NAN))))
+ *      $(TR $(TD (any, $(NAN))                $(TD ($(NAN), $(NAN)))))
+ *      $(TR $(TD (+$(INFIN), +0))             $(TD (+$(INFIN), +0)))
+ *      $(TR $(TD (-$(INFIN), any))            $(TD ($(PLUSMN)0, cis(x.im))))
+ *      $(TR $(TD (+$(INFIN), any))            $(TD ($(PLUSMN)$(INFIN), cis(x.im))))
+ *      $(TR $(TD (-$(INFIN), +$(INFIN)))      $(TD ($(PLUSMN)0, $(PLUSMN)0)))
+ *      $(TR $(TD (+$(INFIN), +$(INFIN)))      $(TD ($(PLUSMN)$(INFIN), $(NAN))))
+ *      $(TR $(TD (-$(INFIN), $(NAN)))         $(TD ($(PLUSMN)0, $(PLUSMN)0)))
+ *      $(TR $(TD (+$(INFIN), $(NAN)))         $(TD ($(PLUSMN)$(INFIN), $(NAN))))
+ *      $(TR $(TD ($(NAN), +0))                $(TD ($(NAN), +0)))
+ *      $(TR $(TD ($(NAN), any))               $(TD ($(NAN), $(NAN))))
+ *      $(TR $(TD ($(NAN), $(NAN)))            $(TD ($(NAN), $(NAN))))
+ *      )
+ */
+Complex!T exp(T)(Complex!T x) @trusted pure nothrow @nogc // TODO: @safe
+{
+    static import std.math;
+
+    // Handle special cases explicitly here, as fromPolar will otherwise
+    // cause them to return Complex!T(NaN, NaN), or with the wrong sign.
+    if (std.math.isInfinity(x.re))
+    {
+        if (std.math.isNaN(x.im))
+        {
+            if (std.math.signbit(x.re))
+                return Complex!T(0, std.math.copysign(0, x.im));
+            else
+                return x;
+        }
+        if (std.math.isInfinity(x.im))
+        {
+            if (std.math.signbit(x.re))
+                return Complex!T(0, std.math.copysign(0, x.im));
+            else
+                return Complex!T(T.infinity, -T.nan);
+        }
+        if (x.im == 0.0)
+        {
+            if (std.math.signbit(x.re))
+                return Complex!T(0.0);
+            else
+                return Complex!T(T.infinity);
+        }
+    }
+    if (std.math.isNaN(x.re))
+    {
+        if (std.math.isNaN(x.im) || std.math.isInfinity(x.im))
+            return Complex!T(T.nan, T.nan);
+        if (x.im == 0.0)
+            return x;
+    }
+    if (x.re == 0.0)
+    {
+        if (std.math.isNaN(x.im) || std.math.isInfinity(x.im))
+            return Complex!T(T.nan, T.nan);
+        if (x.im == 0.0)
+            return Complex!T(1.0, 0.0);
+    }
+
+    return fromPolar!(T, T)(std.math.exp(x.re), x.im);
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.math : isClose, PI;
+
+    assert(exp(complex(0.0, 0.0)) == complex(1.0, 0.0));
+
+    auto a = complex(2.0, 1.0);
+    assert(exp(conj(a)) == conj(exp(a)));
+
+    auto b = exp(complex(0.0L, 1.0L) * PI);
+    assert(isClose(b, -1.0L, 0.0, 1e-19));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.math : isNaN, isInfinity;
+
+    auto a = exp(complex(0.0, double.infinity));
+    assert(a.re.isNaN && a.im.isNaN);
+    auto b = exp(complex(0.0, double.infinity));
+    assert(b.re.isNaN && b.im.isNaN);
+    auto c = exp(complex(0.0, double.nan));
+    assert(c.re.isNaN && c.im.isNaN);
+
+    auto d = exp(complex(+double.infinity, 0.0));
+    assert(d == complex(double.infinity, 0.0));
+    auto e = exp(complex(-double.infinity, 0.0));
+    assert(e == complex(0.0));
+    auto f = exp(complex(-double.infinity, 1.0));
+    assert(f == complex(0.0));
+    auto g = exp(complex(+double.infinity, 1.0));
+    assert(g == complex(double.infinity, double.infinity));
+    auto h = exp(complex(-double.infinity, +double.infinity));
+    assert(h == complex(0.0));
+    auto i = exp(complex(+double.infinity, +double.infinity));
+    assert(i.re.isInfinity && i.im.isNaN);
+    auto j = exp(complex(-double.infinity, double.nan));
+    assert(j == complex(0.0));
+    auto k = exp(complex(+double.infinity, double.nan));
+    assert(k.re.isInfinity && k.im.isNaN);
+
+    auto l = exp(complex(double.nan, 0));
+    assert(l.re.isNaN && l.im == 0.0);
+    auto m = exp(complex(double.nan, 1));
+    assert(m.re.isNaN && m.im.isNaN);
+    auto n = exp(complex(double.nan, double.nan));
+    assert(n.re.isNaN && n.im.isNaN);
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.math : PI, isClose;
+
+    auto a = exp(complex(0.0, -PI));
+    assert(isClose(a, -1.0, 0.0, 1e-19));
+
+    auto b = exp(complex(0.0, -2.0 * PI / 3.0));
+    assert(isClose(b, complex(-0.5L, -0.866025403784438646763L)));
+
+    auto c = exp(complex(0.0, PI / 3.0));
+    assert(isClose(c, complex(0.5L, 0.866025403784438646763L)));
+
+    auto d = exp(complex(0.0, 2.0 * PI / 3.0));
+    assert(isClose(d, complex(-0.5L, 0.866025403784438646763L)));
+
+    auto e = exp(complex(0.0, PI));
+    assert(isClose(e, -1.0, 0.0, 1e-19));
+}
+
+/**
+ * Calculate the natural logarithm of x.
+ * The branch cut is along the negative axis.
+ * Params:
+ *      x = A complex number
+ * Returns:
+ *      The complex natural logarithm of `x`
+ *
+ *      $(TABLE_SV
+ *      $(TR $(TH x)                           $(TH log(x)))
+ *      $(TR $(TD (-0, +0))                    $(TD (-$(INFIN), $(PI))))
+ *      $(TR $(TD (+0, +0))                    $(TD (-$(INFIN), +0)))
+ *      $(TR $(TD (any, +$(INFIN)))            $(TD (+$(INFIN), $(PI)/2)))
+ *      $(TR $(TD (any, $(NAN)))               $(TD ($(NAN), $(NAN))))
+ *      $(TR $(TD (-$(INFIN), any))            $(TD (+$(INFIN), $(PI))))
+ *      $(TR $(TD (+$(INFIN), any))            $(TD (+$(INFIN), +0)))
+ *      $(TR $(TD (-$(INFIN), +$(INFIN)))      $(TD (+$(INFIN), 3$(PI)/4)))
+ *      $(TR $(TD (+$(INFIN), +$(INFIN)))      $(TD (+$(INFIN), $(PI)/4)))
+ *      $(TR $(TD ($(PLUSMN)$(INFIN), $(NAN))) $(TD (+$(INFIN), $(NAN))))
+ *      $(TR $(TD ($(NAN), any))               $(TD ($(NAN), $(NAN))))
+ *      $(TR $(TD ($(NAN), +$(INFIN)))         $(TD (+$(INFIN), $(NAN))))
+ *      $(TR $(TD ($(NAN), $(NAN)))            $(TD ($(NAN), $(NAN))))
+ *      )
+ */
+Complex!T log(T)(Complex!T x) @safe pure nothrow @nogc
+{
+    static import std.math;
+
+    // Handle special cases explicitly here for better accuracy.
+    // The order here is important, so that the correct path is chosen.
+    if (std.math.isNaN(x.re))
+    {
+        if (std.math.isInfinity(x.im))
+            return Complex!T(T.infinity, T.nan);
+        else
+            return Complex!T(T.nan, T.nan);
+    }
+    if (std.math.isInfinity(x.re))
+    {
+        if (std.math.isNaN(x.im))
+            return Complex!T(T.infinity, T.nan);
+        else if (std.math.isInfinity(x.im))
+        {
+            if (std.math.signbit(x.re))
+                return Complex!T(T.infinity, std.math.copysign(3.0 * std.math.PI_4, x.im));
+            else
+                return Complex!T(T.infinity, std.math.copysign(std.math.PI_4, x.im));
+        }
+        else
+        {
+            if (std.math.signbit(x.re))
+                return Complex!T(T.infinity, std.math.copysign(std.math.PI, x.im));
+            else
+                return Complex!T(T.infinity, std.math.copysign(0.0, x.im));
+        }
+    }
+    if (std.math.isNaN(x.im))
+        return Complex!T(T.nan, T.nan);
+    if (std.math.isInfinity(x.im))
+        return Complex!T(T.infinity, std.math.copysign(std.math.PI_2, x.im));
+    if (x.re == 0.0 && x.im == 0.0)
+    {
+        if (std.math.signbit(x.re))
+            return Complex!T(-T.infinity, std.math.copysign(std.math.PI, x.im));
+        else
+            return Complex!T(-T.infinity, std.math.copysign(0.0, x.im));
+    }
+
+    return Complex!T(std.math.log(abs(x)), arg(x));
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.math : sqrt, PI, isClose;
+
+    auto a = complex(2.0, 1.0);
+    assert(log(conj(a)) == conj(log(a)));
+
+    auto b = 2.0 * log10(complex(0.0, 1.0));
+    auto c = 4.0 * log10(complex(sqrt(2.0) / 2, sqrt(2.0) / 2));
+    assert(isClose(b, c, 0.0, 1e-15));
+
+    assert(log(complex(-1.0L, 0.0L)) == complex(0.0L, PI));
+    assert(log(complex(-1.0L, -0.0L)) == complex(0.0L, -PI));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.math : isNaN, isInfinity, PI, PI_2, PI_4;
+
+    auto a = log(complex(-0.0L, 0.0L));
+    assert(a == complex(-real.infinity, PI));
+    auto b = log(complex(0.0L, 0.0L));
+    assert(b == complex(-real.infinity, +0.0L));
+    auto c = log(complex(1.0L, real.infinity));
+    assert(c == complex(real.infinity, PI_2));
+    auto d = log(complex(1.0L, real.nan));
+    assert(d.re.isNaN && d.im.isNaN);
+
+    auto e = log(complex(-real.infinity, 1.0L));
+    assert(e == complex(real.infinity, PI));
+    auto f = log(complex(real.infinity, 1.0L));
+    assert(f == complex(real.infinity, 0.0L));
+    auto g = log(complex(-real.infinity, real.infinity));
+    assert(g == complex(real.infinity, 3.0 * PI_4));
+    auto h = log(complex(real.infinity, real.infinity));
+    assert(h == complex(real.infinity, PI_4));
+    auto i = log(complex(real.infinity, real.nan));
+    assert(i.re.isInfinity && i.im.isNaN);
+
+    auto j = log(complex(real.nan, 1.0L));
+    assert(j.re.isNaN && j.im.isNaN);
+    auto k = log(complex(real.nan, real.infinity));
+    assert(k.re.isInfinity && k.im.isNaN);
+    auto l = log(complex(real.nan, real.nan));
+    assert(l.re.isNaN && l.im.isNaN);
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.math : PI, isClose;
+
+    auto a = log(fromPolar(1.0, PI / 6.0));
+    assert(isClose(a, complex(0.0L, 0.523598775598298873077L), 0.0, 1e-18));
+
+    auto b = log(fromPolar(1.0, PI / 3.0));
+    assert(isClose(b, complex(0.0L, 1.04719755119659774615L), 0.0, 1e-18));
+
+    auto c = log(fromPolar(1.0, PI / 2.0));
+    assert(isClose(c, complex(0.0L, 1.57079632679489661923L), 0.0, 1e-18));
+
+    auto d = log(fromPolar(1.0, 2.0 * PI / 3.0));
+    assert(isClose(d, complex(0.0L, 2.09439510239319549230L), 0.0, 1e-18));
+
+    auto e = log(fromPolar(1.0, 5.0 * PI / 6.0));
+    assert(isClose(e, complex(0.0L, 2.61799387799149436538L), 0.0, 1e-18));
+
+    auto f = log(fromPolar(1.0, PI));
+    assert(isClose(f, complex(0.0L, -3.1415926535897932384L), 0.0, 1e-18));
+}
+
+/**
+ * Calculate the base-10 logarithm of x.
+ * Params:
+ *      x = A complex number
+ * Returns:
+ *      The complex base 10 logarithm of `x`
+ */
+Complex!T log10(T)(Complex!T x) @safe pure nothrow @nogc
+{
+    static import std.math;
+
+    return log(x) / Complex!T(std.math.log(10.0));
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.math : LN10, PI, isClose, sqrt;
+
+    auto a = complex(2.0, 1.0);
+    assert(log10(a) == log(a) / log(complex(10.0)));
+
+    auto b = log10(complex(0.0, 1.0)) * 2.0;
+    auto c = log10(complex(sqrt(2.0) / 2, sqrt(2.0) / 2)) * 4.0;
+    assert(isClose(b, c, 0.0, 1e-15));
+
+    assert(log10(complex(-100.0L, 0.0L)) == complex(2.0L, PI / LN10));
+    assert(log10(complex(-100.0L, -0.0L)) == complex(2.0L, -PI / LN10));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.math : PI, isClose;
+
+    auto a = log10(fromPolar(1.0, PI / 6.0));
+    assert(isClose(a, complex(0.0L, 0.227396058973640224580L), 0.0, 1e-18));
+
+    auto b = log10(fromPolar(1.0, PI / 3.0));
+    assert(isClose(b, complex(0.0L, 0.454792117947280449161L), 0.0, 1e-18));
+
+    auto c = log10(fromPolar(1.0, PI / 2.0));
+    assert(isClose(c, complex(0.0L, 0.682188176920920673742L), 0.0, 1e-18));
+
+    auto d = log10(fromPolar(1.0, 2.0 * PI / 3.0));
+    assert(isClose(d, complex(0.0L, 0.909584235894560898323L), 0.0, 1e-18));
+
+    auto e = log10(fromPolar(1.0, 5.0 * PI / 6.0));
+    assert(isClose(e, complex(0.0L, 1.13698029486820112290L), 0.0, 1e-18));
+
+    auto f = log10(fromPolar(1.0, PI));
+    assert(isClose(f, complex(0.0L, -1.36437635384184134748L), 0.0, 1e-18));
+}
+
+/**
+ * Calculates x$(SUPERSCRIPT n).
+ * The branch cut is on the negative axis.
+ * Params:
+ *      x = base
+ *      n = exponent
+ * Returns:
+ *      `x` raised to the power of `n`
+ */
+Complex!T pow(T, Int)(Complex!T x, const Int n) @safe pure nothrow @nogc
+if (isIntegral!Int)
+{
+    alias UInt = Unsigned!(Unqual!Int);
+
+    UInt m = (n < 0) ? -cast(UInt) n : n;
+    Complex!T y = (m % 2) ? x : Complex!T(1);
+
+    while (m >>= 1)
+    {
+        x *= x;
+        if (m % 2)
+            y *= x;
+    }
+
+    return (n < 0) ? Complex!T(1) / y : y;
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.math : isClose;
+
+    auto a = complex(1.0, 2.0);
+    assert(pow(a, 2) == a * a);
+    assert(pow(a, 3) == a * a * a);
+    assert(pow(a, -2) == 1.0 / (a * a));
+    assert(isClose(pow(a, -3), 1.0 / (a * a * a)));
+
+    auto b = complex(2.0);
+    assert(isClose(pow(b, 3), exp(3 * log(b))));
+}
+
+/// ditto
+Complex!T pow(T)(Complex!T x, const T n) @trusted pure nothrow @nogc
+{
+    static import std.math;
+
+    if (x == 0.0)
+        return Complex!T(0.0);
+
+    if (x.im == 0 && x.re > 0.0)
+        return Complex!T(std.math.pow(x.re, n));
+
+    Complex!T t = log(x);
+    return fromPolar!(T, T)(std.math.exp(n * t.re), n * t.im);
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.math : isClose;
+    assert(pow(complex(0.0), 2.0) == complex(0.0));
+    assert(pow(complex(5.0), 2.0) == complex(25.0));
+
+    auto a = pow(complex(-1.0, 0.0), 0.5);
+    assert(isClose(a, complex(0.0, +1.0), 0.0, 1e-16));
+
+    auto b = pow(complex(-1.0, -0.0), 0.5);
+    assert(isClose(b, complex(0.0, -1.0), 0.0, 1e-16));
+}
+
+/// ditto
+Complex!T pow(T)(Complex!T x, Complex!T y) @trusted pure nothrow @nogc
+{
+    return (x == 0) ? Complex!T(0) : exp(y * log(x));
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.math : isClose, exp, PI;
+    auto a = complex(0.0);
+    auto b = complex(2.0);
+    assert(pow(a, b) == complex(0.0));
+
+    auto c = pow(complex(0.0, 1.0), complex(0.0, 1.0));
+    assert(isClose(c, exp((-PI) / 2)));
+}
+
+/// ditto
+Complex!T pow(T)(const T x, Complex!T n) @trusted pure nothrow @nogc
+{
+    static import std.math;
+
+    return (x > 0.0)
+        ? fromPolar!(T, T)(std.math.pow(x, n.re), n.im * std.math.log(x))
+        : pow(Complex!T(x), n);
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.math : isClose;
+    assert(pow(2.0, complex(0.0)) == complex(1.0));
+    assert(pow(2.0, complex(5.0)) == complex(32.0));
+
+    auto a = pow(-2.0, complex(-1.0));
+    assert(isClose(a, complex(-0.5), 0.0, 1e-16));
+
+    auto b = pow(-0.5, complex(-1.0));
+    assert(isClose(b, complex(-2.0), 0.0, 1e-15));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.math : PI, isClose;
+
+    auto a = pow(complex(3.0, 4.0), 2);
+    assert(isClose(a, complex(-7.0, 24.0)));
+
+    auto b = pow(complex(3.0, 4.0), PI);
+    assert(isClose(b, complex(-152.91512205297134, 35.547499631917738)));
+
+    auto c = pow(complex(3.0, 4.0), complex(-2.0, 1.0));
+    assert(isClose(c, complex(0.015351734187477306, -0.0038407695456661503)));
+
+    auto d = pow(PI, complex(2.0, -1.0));
+    assert(isClose(d, complex(4.0790296880118296, -8.9872469554541869)));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.meta : AliasSeq;
+    import std.math : RealFormat, floatTraits;
+    static foreach (T; AliasSeq!(float, double, real))
+    {{
+         static if (floatTraits!T.realFormat == RealFormat.ibmExtended)
+         {
+             /* For IBM real, epsilon is too small (since 1.0 plus any double is
+                representable) to be able to expect results within epsilon * 100.  */
+         }
+         else
+         {
+             T eps = T.epsilon * 100;
+
+             T a = -1.0;
+             T b = 0.5;
+             Complex!T ref1 = pow(complex(a), complex(b));
+             Complex!T res1 = pow(a, complex(b));
+             Complex!T res2 = pow(complex(a), b);
+             assert(abs(ref1 - res1) < eps);
+             assert(abs(ref1 - res2) < eps);
+             assert(abs(res1 - res2) < eps);
+
+             T c = -3.2;
+             T d = 1.4;
+             Complex!T ref2 = pow(complex(a), complex(b));
+             Complex!T res3 = pow(a, complex(b));
+             Complex!T res4 = pow(complex(a), b);
+             assert(abs(ref2 - res3) < eps);
+             assert(abs(ref2 - res4) < eps);
+             assert(abs(res3 - res4) < eps);
+         }
+    }}
 }

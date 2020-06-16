@@ -630,7 +630,7 @@ private struct MapResult(alias fun, Range)
 
     static if (isRandomAccessRange!R)
     {
-        static if (is(typeof(_input[ulong.max])))
+        static if (is(typeof(Range.init[ulong.max])))
             private alias opIndex_t = ulong;
         else
             private alias opIndex_t = uint;
@@ -868,6 +868,23 @@ private struct MapResult(alias fun, Range)
     struct S {int* p;}
     auto m = immutable(S).init.repeat().map!"a".save;
     assert(m.front == immutable(S)(null));
+}
+
+// Issue 20928
+@safe unittest
+{
+    struct Always3
+    {
+        enum empty = false;
+        auto save() { return this; }
+        long front() { return 3; }
+        void popFront() {}
+        long opIndex(ulong i) { return 3; }
+        long opIndex(ulong i) immutable { return 3; }
+    }
+
+    import std.algorithm.iteration : map;
+    Always3.init.map!(e => e)[ulong.max];
 }
 
 // each
@@ -1904,12 +1921,11 @@ if (isInputRange!Range && !isForwardRange!Range)
 
 private template ChunkByImplIsUnary(alias pred, Range)
 {
-    static if (is(typeof(binaryFun!pred(ElementType!Range.init,
-                                        ElementType!Range.init)) : bool))
+    alias e = lvalueOf!(ElementType!Range);
+
+    static if (is(typeof(binaryFun!pred(e, e)) : bool))
         enum ChunkByImplIsUnary = false;
-    else static if (is(typeof(
-            unaryFun!pred(ElementType!Range.init) ==
-            unaryFun!pred(ElementType!Range.init))))
+    else static if (is(typeof(unaryFun!pred(e) == unaryFun!pred(e)) : bool))
         enum ChunkByImplIsUnary = true;
     else
         static assert(0, "chunkBy expects either a binary predicate or "~
@@ -2641,6 +2657,11 @@ version (none) // this example requires support for non-equivalence relations
         }
     }
 
+    // https://issues.dlang.org/show_bug.cgi?id=20496
+    {
+        auto r = [1,1,1,2,2,2,3,3,3];
+        r.chunkBy!((ref e1, ref e2) => e1 == e2);
+    }
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=13595
@@ -6423,7 +6444,9 @@ $(DDSUBLINK spec/type,integer-promotions, integral promotion)).
 
 A seed may be passed to `sum`. Not only will this seed be used as an initial
 value, but its type will override all the above, and determine the algorithm
-and precision used for summation.
+and precision used for summation. If a seed is not passed, one is created with
+the value of `typeof(r.front + r.front)(0)`, or `typeof(r.front + r.front).zero`
+if no constructor exists that takes an int.
 
 Note that these specialized summing algorithms execute more primitive operations
 than vanilla summation. Therefore, if in certain cases maximum speed is required
@@ -6445,10 +6468,15 @@ if (isInputRange!R && !isInfinite!R && is(typeof(r.front + r.front)))
         alias Seed = typeof(E.init  + 0.0); //biggest of double/real
     else
         alias Seed = typeof(r.front + r.front);
-    static assert(is(typeof(Unqual!Seed(0))),
-        "Could not initiate an initial value for " ~ (Unqual!Seed).stringof
-        ~ ". Please supply an initial value manually.");
-    return sum(r, Unqual!Seed(0));
+    static if (is(typeof(Unqual!Seed(0))))
+        enum seedValue = Unqual!Seed(0);
+    else static if (is(typeof({ Unqual!Seed tmp = Seed.zero; })))
+        enum Unqual!Seed seedValue = Seed.zero;
+    else
+        static assert(false,
+            "Could not initiate an initial value for " ~ (Unqual!Seed).stringof
+            ~ ". Please supply an initial value manually.");
+    return sum(r, seedValue);
 }
 /// ditto
 auto sum(R, E)(R r, E seed)
@@ -6687,6 +6715,13 @@ private auto sumKahan(Result, R)(Result result, R r)
     import std.range;
     foreach (n; iota(50))
         assert(repeat(1.0, n).sum == n);
+}
+
+// Issue 19525
+@safe unittest
+{
+    import std.datetime : Duration, minutes;
+    assert([1.minutes].sum() == 1.minutes);
 }
 
 /**

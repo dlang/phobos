@@ -86,10 +86,7 @@ import std.range.primitives : isInfinite;
  *
  * In previous versions of Phobos, this was known as `TypeTuple`.
  */
-template AliasSeq(TList...)
-{
-    alias AliasSeq = TList;
-}
+alias AliasSeq(TList...) = TList;
 
 ///
 @safe unittest
@@ -708,6 +705,36 @@ template Reverse(TList...)
     {
         alias Reverse = TList;
     }
+    /* Cases 2 to 8 are to speed up compile times
+     */
+    else static if (TList.length == 2)
+    {
+        alias Reverse = AliasSeq!(TList[1], TList[0]);
+    }
+    else static if (TList.length == 3)
+    {
+        alias Reverse = AliasSeq!(TList[2], TList[1], TList[0]);
+    }
+    else static if (TList.length == 4)
+    {
+        alias Reverse = AliasSeq!(TList[3], TList[2], TList[1], TList[0]);
+    }
+    else static if (TList.length == 5)
+    {
+        alias Reverse = AliasSeq!(TList[4], TList[3], TList[2], TList[1], TList[0]);
+    }
+    else static if (TList.length == 6)
+    {
+        alias Reverse = AliasSeq!(TList[5], TList[4], TList[3], TList[2], TList[1], TList[0]);
+    }
+    else static if (TList.length == 7)
+    {
+        alias Reverse = AliasSeq!(TList[6], TList[5], TList[4], TList[3], TList[2], TList[1], TList[0]);
+    }
+    else static if (TList.length == 8)
+    {
+        alias Reverse = AliasSeq!(TList[7], TList[6], TList[5], TList[4], TList[3], TList[2], TList[1], TList[0]);
+    }
     else
     {
         alias Reverse =
@@ -720,10 +747,10 @@ template Reverse(TList...)
 ///
 @safe unittest
 {
-    alias Types = AliasSeq!(int, long, long, int, float);
+    alias Types = AliasSeq!(int, long, long, int, float, byte, ubyte, short, ushort, uint);
 
     alias TL = Reverse!(Types);
-    static assert(is(TL == AliasSeq!(float, int, long, long, int)));
+    static assert(is(TL == AliasSeq!(uint, ushort, short, ubyte, byte, float, int, long, long, int)));
 }
 
 /**
@@ -793,8 +820,47 @@ template staticMap(alias F, T...)
     {
         alias staticMap = AliasSeq!(F!(T[0]));
     }
+    /* Cases 2 to 8 improve compile performance by reducing
+     * the number of recursive instantiations of staticMap
+     */
+    else static if (T.length == 2)
+    {
+        alias staticMap = AliasSeq!(F!(T[0]), F!(T[1]));
+    }
+    else static if (T.length == 3)
+    {
+        alias staticMap = AliasSeq!(F!(T[0]), F!(T[1]), F!(T[2]));
+    }
+    else static if (T.length == 4)
+    {
+        alias staticMap = AliasSeq!(F!(T[0]), F!(T[1]), F!(T[2]), F!(T[3]));
+    }
+    else static if (T.length == 5)
+    {
+        alias staticMap = AliasSeq!(F!(T[0]), F!(T[1]), F!(T[2]), F!(T[3]), F!(T[4]));
+    }
+    else static if (T.length == 6)
+    {
+        alias staticMap = AliasSeq!(F!(T[0]), F!(T[1]), F!(T[2]), F!(T[3]), F!(T[4]), F!(T[5]));
+    }
+    else static if (T.length == 7)
+    {
+        alias staticMap = AliasSeq!(F!(T[0]), F!(T[1]), F!(T[2]), F!(T[3]), F!(T[4]), F!(T[5]), F!(T[6]));
+    }
+    else static if (T.length == 8)
+    {
+        alias staticMap = AliasSeq!(F!(T[0]), F!(T[1]), F!(T[2]), F!(T[3]), F!(T[4]), F!(T[5]), F!(T[6]), F!(T[7]));
+    }
+
     else
     {
+        /* While:
+         *   alias staticMap = AliasSeq!(F!T[0], staticMap!(F, T[1 .. $]));
+         * does fewer template instantiations, the compiler implements
+         * recursive template instantiations with recursion, and long
+         * sequences overflow the compiler's stack.
+         * The divide-and-conquer approach uses log_2(n) stack frames.
+         */
         alias staticMap =
             AliasSeq!(
                 staticMap!(F, T[ 0  .. $/2]),
@@ -806,8 +872,8 @@ template staticMap(alias F, T...)
 @safe unittest
 {
     import std.traits : Unqual;
-    alias TL = staticMap!(Unqual, int, const int, immutable int);
-    static assert(is(TL == AliasSeq!(int, int, int)));
+    alias TL = staticMap!(Unqual, int, const int, immutable int, uint, ubyte, byte, short, ushort);
+    static assert(is(TL == AliasSeq!(int, int, int, uint, ubyte, byte, short, ushort)));
 }
 
 @safe unittest
@@ -822,8 +888,8 @@ template staticMap(alias F, T...)
     alias Single = staticMap!(Unqual, const int);
     static assert(is(Single == AliasSeq!int));
 
-    alias T = staticMap!(Unqual, int, const int, immutable int);
-    static assert(is(T == AliasSeq!(int, int, int)));
+    alias T = staticMap!(Unqual, int, const int, immutable int, uint, ubyte, byte, short, ushort, long);
+    static assert(is(T == AliasSeq!(int, int, int, uint, ubyte, byte, short, ushort, long)));
 }
 
 /**
@@ -887,6 +953,26 @@ template Filter(alias pred, TList...)
             alias Filter = AliasSeq!(TList[0]);
         else
             alias Filter = AliasSeq!();
+    }
+    /* The next case speeds up compilation by reducing
+     * the number of Filter instantiations
+     */
+    else static if (TList.length == 2)
+    {
+        static if (pred!(TList[0]))
+        {
+            static if (pred!(TList[1]))
+                alias Filter = AliasSeq!(TList[0], TList[1]);
+            else
+                alias Filter = AliasSeq!(TList[0]);
+        }
+        else
+        {
+            static if (pred!(TList[1]))
+                alias Filter = AliasSeq!(TList[1]);
+            else
+                alias Filter = AliasSeq!();
+        }
     }
     else
     {
@@ -1333,6 +1419,32 @@ template Repeat(size_t n, TList...)
     {
         alias Repeat = AliasSeq!(TList, TList);
     }
+    /* Cases 3 to 8 are to speed up compilation
+     */
+    else static if (n == 3)
+    {
+        alias Repeat = AliasSeq!(TList, TList, TList);
+    }
+    else static if (n == 4)
+    {
+        alias Repeat = AliasSeq!(TList, TList, TList, TList);
+    }
+    else static if (n == 5)
+    {
+        alias Repeat = AliasSeq!(TList, TList, TList, TList, TList);
+    }
+    else static if (n == 6)
+    {
+        alias Repeat = AliasSeq!(TList, TList, TList, TList, TList, TList);
+    }
+    else static if (n == 7)
+    {
+        alias Repeat = AliasSeq!(TList, TList, TList, TList, TList, TList, TList);
+    }
+    else static if (n == 8)
+    {
+        alias Repeat = AliasSeq!(TList, TList, TList, TList, TList, TList, TList, TList);
+    }
     else
     {
         alias R = Repeat!((n - 1) / 2, TList);
@@ -1366,6 +1478,9 @@ template Repeat(size_t n, TList...)
     alias Composite = AliasSeq!(uint, int);
     alias Composite2 = Repeat!(2, Composite);
     static assert(is(Composite2 == AliasSeq!(uint, int, uint, int)));
+
+    alias ImInt10 = Repeat!(10, int);
+    static assert(is(ImInt10 == AliasSeq!(int, int, int, int, int, int, int, int, int, int)));
 }
 
 
@@ -1613,28 +1728,21 @@ private:
 private template isSame(ab...)
 if (ab.length == 2)
 {
-    static if (__traits(compiles, expectType!(ab[0]),
-                                  expectType!(ab[1])))
+    static if (is(ab[0]) && is(ab[1]))
     {
         enum isSame = is(ab[0] == ab[1]);
     }
-    else static if (!__traits(compiles, expectType!(ab[0])) &&
-                    !__traits(compiles, expectType!(ab[1])) &&
-                     __traits(compiles, expectBool!(ab[0] == ab[1])))
+    else static if (!is(ab[0]) && !is(ab[1]) &&
+                    !(is(typeof(&ab[0])) && is(typeof(&ab[1]))) &&
+                     __traits(compiles, { enum isSame = ab[0] == ab[1]; }))
     {
-        static if (!__traits(compiles, &ab[0]) ||
-                   !__traits(compiles, &ab[1]))
-            enum isSame = (ab[0] == ab[1]);
-        else
-            enum isSame = __traits(isSame, ab[0], ab[1]);
+        enum isSame = (ab[0] == ab[1]);
     }
     else
     {
         enum isSame = __traits(isSame, ab[0], ab[1]);
     }
 }
-private template expectType(T) {}
-private template expectBool(bool b) {}
 
 @safe unittest
 {
@@ -1683,28 +1791,12 @@ private template expectBool(bool b) {}
 }
 
 /*
- * [internal] Confines a tuple within a template.
+ * [internal] Confines a tuple within a template. Used only in unittests.
  */
 private template Pack(T...)
 {
     alias tuple = T;
-
-    // For convenience
-    template equals(U...)
-    {
-        static if (T.length == U.length)
-        {
-            static if (T.length == 0)
-                enum equals = true;
-            else
-                enum equals = isSame!(T[0], U[0]) &&
-                    Pack!(T[1 .. $]).equals!(U[1 .. $]);
-        }
-        else
-        {
-            enum equals = false;
-        }
-    }
+    alias equals(U...) = isSame!(Pack!T, Pack!U);
 }
 
 @safe unittest

@@ -118,7 +118,6 @@ SRC_STD_3= \
 	std\bigint.d \
 	std\bitmanip.d \
 	std\typecons.d \
-	std\uni.d \
 	std\base64.d \
 	std\ascii.d \
 	std\demangle.d \
@@ -255,6 +254,8 @@ SRC_STD_INTERNAL_WINDOWS= \
 SRC_STD_EXP= \
 	std\experimental\checkedint.d std\experimental\typecons.d
 
+SRC_STD_UNI = std\uni\package.d \
+
 SRC_STD_EXP_ALLOC_BB= \
 	std\experimental\allocator\building_blocks\affix_allocator.d \
 	std\experimental\allocator\building_blocks\aligned_block_list.d \
@@ -319,6 +320,7 @@ SRC_TO_COMPILE= \
 	$(SRC_STD_INTERNAL_MATH) \
 	$(SRC_STD_INTERNAL_WINDOWS) \
 	$(SRC_STD_EXP) \
+	$(SRC_STD_UNI) \
 	$(SRC_STD_EXP_ALLOC) \
 	$(SRC_STD_EXP_LOGGER) \
 	$(SRC_ETC) \
@@ -438,7 +440,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -conf= -cov=94 $(UDFLAGS) -main -run std\bigint.d
 	$(DMD) -conf= -cov=95 $(UDFLAGS) -main -run std\bitmanip.d
 	$(DMD) -conf= -cov=82 $(UDFLAGS) -main -run std\typecons.d
-	$(DMD) -conf= -cov=44 $(UDFLAGS) -main -run std\uni.d
+	$(DMD) -conf= -cov=44 $(UDFLAGS) -main -run std\uni\package.d
 	$(DMD) -conf= -cov=91 $(UDFLAGS) -main -run std\base64.d
 	$(DMD) -conf= -cov=100 $(UDFLAGS) -main -run std\ascii.d
 	$(DMD) -conf= -cov=0  $(UDFLAGS) -main -run std\demangle.d

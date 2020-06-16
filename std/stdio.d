@@ -107,12 +107,11 @@ version (Windows)
 {
     private alias FSChar = wchar;
 }
-else version (Posix)
+else
 {
     private alias FSChar = char;
 }
-else
-    static assert(0);
+
 
 version (Windows)
 {
@@ -342,6 +341,8 @@ automatically closed.
 Example:
 ----
 // test.d
+import std.stdio;
+
 void main(string[] args)
 {
     auto f = File("test.txt", "w"); // open for writing
@@ -1748,6 +1749,7 @@ Example:
 // Read lines from `stdin` into a string
 // Ignore lines starting with '#'
 // Write the string to `stdout`
+import std.stdio;
 
 void main()
 {
@@ -1778,6 +1780,7 @@ largest buffer returned by `readln`:
 Example:
 ---
 // Read lines from `stdin` and count words
+import std.array, std.stdio;
 
 void main()
 {
@@ -3220,7 +3223,7 @@ Example:
 Produce a grayscale image of the $(LINK2 https://en.wikipedia.org/wiki/Mandelbrot_set, Mandelbrot set)
 in binary $(LINK2 https://en.wikipedia.org/wiki/Netpbm_format, Netpbm format) to standard output.
 ---
-import std.algorithm, std.range, std.stdio;
+import std.algorithm, std.complex, std.range, std.stdio;
 
 void main()
 {
@@ -3230,7 +3233,7 @@ void main()
     iota(-1, 3, 2.0/size).map!(y =>
         iota(-1.5, 0.5, 2.0/size).map!(x =>
             cast(ubyte)(1+
-                recurrence!((a, n) => x + y*1i + a[n-1]^^2)(0+0i)
+                recurrence!((a, n) => x + y * complex(0, 1) + a[n-1]^^2)(complex(0))
                 .take(ubyte.max)
                 .countUntil!(z => z.re^^2 + z.im^^2 > 4))
         )
@@ -3326,7 +3329,22 @@ void main()
         assert(dcharsOut == "foo");
     }
 
-/// Get the size of the file, ulong.max if file is not searchable, but still throws if an actual error occurs.
+/** Returns the size of the file in bytes, ulong.max if file is not searchable or throws if the operation fails.
+Example:
+---
+import std.stdio, std.file;
+
+void main()
+{
+    string deleteme = "delete.me";
+    auto file_handle = File(deleteme, "w");
+    file_handle.write("abc"); //create temporary file
+    scope(exit) deleteme.remove; //remove temporary file at scope exit
+
+    assert(file_handle.size() == 3); //check if file size is 3 bytes
+}
+---
+*/
     @property ulong size() @safe
     {
         import std.exception : collectException;
@@ -3846,7 +3864,7 @@ if (!is(T[0] : File))
  * Throws:
  *      In case of an I/O error, throws an $(LREF StdioException).
  * Example:
- *        Reads `stdin` and writes it to `stdout` with a argument
+ *        Reads `stdin` and writes it to `stdout` with an argument
  *        counter.
 ---
 import std.stdio;
@@ -3864,7 +3882,6 @@ void main()
  */
 void writeln(T...)(T args)
 {
-    import std.traits : isAggregateType;
     static if (T.length == 0)
     {
         import std.exception : enforce;
@@ -3872,17 +3889,13 @@ void writeln(T...)(T args)
         enforce(fputc('\n', .trustedStdout._p.handle) != EOF, "fputc failed");
     }
     else static if (T.length == 1 &&
-                    is(typeof(args[0]) : const(char)[]) &&
-                    !is(typeof(args[0]) == enum) &&
-                    !is(Unqual!(typeof(args[0])) == typeof(null)) &&
-                    !isAggregateType!(typeof(args[0])))
+                    is(T[0] : const(char)[]) &&
+                    (is(T[0] == U[], U) || __traits(isStaticArray, T[0])))
     {
-        import std.traits : isStaticArray;
-
         // Specialization for strings - a very frequent case
         auto w = .trustedStdout.lockingTextWriter();
 
-        static if (isStaticArray!(typeof(args[0])))
+        static if (__traits(isStaticArray, T[0]))
         {
             w.put(args[0][]);
         }
@@ -3915,6 +3928,10 @@ void writeln(T...)(T args)
     {
         char[8] a;
         writeln(a);
+        immutable b = a;
+        b.writeln;
+        const c = a[];
+        c.writeln;
     }
 }
 
@@ -4855,7 +4872,7 @@ enum StdFileHandle: string
         stdin as a $(LREF File).
 
     Note:
-        The returned $(LREF File) wraps $(REF stdin,core,stdio), and
+        The returned $(LREF File) wraps $(REF stdin,core,stdc,stdio), and
         is therefore thread global. Reassigning `stdin` to a different
         `File` must be done in a single-threaded or locked context in
         order to avoid race conditions.
@@ -4893,7 +4910,7 @@ alias stdin = makeGlobal!(StdFileHandle.stdin);
         stdout as a $(LREF File).
 
     Note:
-        The returned $(LREF File) wraps $(REF stdout,core,stdio), and
+        The returned $(LREF File) wraps $(REF stdout,core,stdc,stdio), and
         is therefore thread global. Reassigning `stdout` to a different
         `File` must be done in a single-threaded or locked context in
         order to avoid race conditions.
@@ -4956,7 +4973,7 @@ alias stdout = makeGlobal!(StdFileHandle.stdout);
         stderr as a $(LREF File).
 
     Note:
-        The returned $(LREF File) wraps $(REF stderr,core,stdio), and
+        The returned $(LREF File) wraps $(REF stderr,core,stdc,stdio), and
         is therefore thread global. Reassigning `stderr` to a different
         `File` must be done in a single-threaded or locked context in
         order to avoid race conditions.

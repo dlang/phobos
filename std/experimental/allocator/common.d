@@ -255,12 +255,8 @@ Returns the number of trailing zeros of `x`.
 @safe @nogc nothrow pure
 package uint trailingZeros(ulong x)
 {
-    uint result;
-    while (result < 64 && !(x & (1UL << result)))
-    {
-        ++result;
-    }
-    return result;
+    import core.bitop : bsf;
+    return x == 0 ? 64 : bsf(x);
 }
 
 @safe @nogc nothrow pure

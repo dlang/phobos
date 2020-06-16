@@ -1333,7 +1333,7 @@ public:
         Returns: A unique hash of the `BigInt`'s value suitable for use in a hash
         table.
      */
-    size_t toHash() const @safe nothrow
+    size_t toHash() const @safe pure nothrow @nogc
     {
         return data.toHash() + sign;
     }
@@ -1342,7 +1342,7 @@ public:
         `toHash` is rarely directly invoked; it is implicitly used when
         BigInt is used as the key of an associative array.
      */
-    @safe unittest
+    @safe pure unittest
     {
         string[BigInt] aa;
         aa[BigInt(123)] = "abc";

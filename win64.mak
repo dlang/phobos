@@ -124,7 +124,6 @@ SRC_STD_3a= \
 	std\math.d
 
 SRC_STD_3b= \
-	std\uni.d \
 	std\base64.d \
 	std\ascii.d \
 	std\demangle.d \
@@ -280,6 +279,8 @@ SRC_STD_INTERNAL_WINDOWS= \
 SRC_STD_EXP= \
 	std\experimental\checkedint.d std\experimental\typecons.d
 
+SRC_STD_UNI = std\uni\package.d
+
 SRC_STD_EXP_ALLOC_BB= \
 	std\experimental\allocator\building_blocks\affix_allocator.d \
 	std\experimental\allocator\building_blocks\aligned_block_list.d \
@@ -343,6 +344,7 @@ SRC_TO_COMPILE= \
 	$(SRC_STD_INTERNAL_DIGEST) \
 	$(SRC_STD_INTERNAL_MATH) \
 	$(SRC_STD_INTERNAL_WINDOWS) \
+	$(SRC_STD_UNI) \
 	$(SRC_STD_EXP) \
 	$(SRC_STD_EXP_ALLOC) \
 	$(SRC_STD_EXP_LOGGER) \

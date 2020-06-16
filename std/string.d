@@ -1339,12 +1339,8 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
                 {
                     if (__ctfe)
                     {
-                        foreach (j; 1 .. sub.length)
-                        {
-                            if (s[i + j] != sub[j])
-                                continue;
-                        }
-                        return i;
+                        if (s[i + 1 .. i + sub.length] == sub[1 .. $])
+                            return i;
                     }
                     else
                     {
@@ -1566,6 +1562,19 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
             assert(lastIndexOf("\U00010143\u0100\U00010143hello"d, to!S("\u0100"), 3, cs) == 1, csString);
         }
     }
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=20783
+@safe pure @nogc unittest
+{
+    enum lastIndex = "aa".lastIndexOf("ab");
+    assert(lastIndex == -1);
+}
+
+@safe pure @nogc unittest
+{
+    enum lastIndex = "hello hello hell h".lastIndexOf("hello");
+    assert(lastIndex == 6);
 }
 
 private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(

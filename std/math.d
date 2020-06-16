@@ -133,6 +133,9 @@ static import core.stdc.fenv;
 import std.traits :  CommonType, isFloatingPoint, isIntegral, isNumeric,
     isSigned, isUnsigned, Largest, Unqual;
 
+// Note: Exposed accidentally, should be deprecated / removed
+public import std.meta : AliasSeq;
+
 version (DigitalMars)
 {
     version = INLINE_YL2X;        // x87 has opcodes for these
@@ -255,293 +258,6 @@ version (StdUnittest) private
 }
 
 
-
-package:
-// The following IEEE 'real' formats are currently supported.
-version (LittleEndian)
-{
-    static assert(real.mant_dig == 53 || real.mant_dig == 64
-               || real.mant_dig == 113,
-      "Only 64-bit, 80-bit, and 128-bit reals"~
-      " are supported for LittleEndian CPUs");
-}
-else
-{
-    static assert(real.mant_dig == 53 || real.mant_dig == 113,
-    "Only 64-bit and 128-bit reals are supported for BigEndian CPUs.");
-}
-
-// Underlying format exposed through floatTraits
-enum RealFormat
-{
-    ieeeHalf,
-    ieeeSingle,
-    ieeeDouble,
-    ieeeExtended,   // x87 80-bit real
-    ieeeExtended53, // x87 real rounded to precision of double.
-    ibmExtended,    // IBM 128-bit extended
-    ieeeQuadruple,
-}
-
-// Constants used for extracting the components of the representation.
-// They supplement the built-in floating point properties.
-template floatTraits(T)
-{
-    // EXPMASK is a ushort mask to select the exponent portion (without sign)
-    // EXPSHIFT is the number of bits the exponent is left-shifted by in its ushort
-    // EXPBIAS is the exponent bias - 1 (exp == EXPBIAS yields ×2^-1).
-    // EXPPOS_SHORT is the index of the exponent when represented as a ushort array.
-    // SIGNPOS_BYTE is the index of the sign when represented as a ubyte array.
-    // RECIP_EPSILON is the value such that (smallest_subnormal) * RECIP_EPSILON == T.min_normal
-    enum Unqual!T RECIP_EPSILON = (1/T.epsilon);
-    static if (T.mant_dig == 24)
-    {
-        // Single precision float
-        enum ushort EXPMASK = 0x7F80;
-        enum ushort EXPSHIFT = 7;
-        enum ushort EXPBIAS = 0x3F00;
-        enum uint EXPMASK_INT = 0x7F80_0000;
-        enum uint MANTISSAMASK_INT = 0x007F_FFFF;
-        enum realFormat = RealFormat.ieeeSingle;
-        version (LittleEndian)
-        {
-            enum EXPPOS_SHORT = 1;
-            enum SIGNPOS_BYTE = 3;
-        }
-        else
-        {
-            enum EXPPOS_SHORT = 0;
-            enum SIGNPOS_BYTE = 0;
-        }
-    }
-    else static if (T.mant_dig == 53)
-    {
-        static if (T.sizeof == 8)
-        {
-            // Double precision float, or real == double
-            enum ushort EXPMASK = 0x7FF0;
-            enum ushort EXPSHIFT = 4;
-            enum ushort EXPBIAS = 0x3FE0;
-            enum uint EXPMASK_INT = 0x7FF0_0000;
-            enum uint MANTISSAMASK_INT = 0x000F_FFFF; // for the MSB only
-            enum realFormat = RealFormat.ieeeDouble;
-            version (LittleEndian)
-            {
-                enum EXPPOS_SHORT = 3;
-                enum SIGNPOS_BYTE = 7;
-            }
-            else
-            {
-                enum EXPPOS_SHORT = 0;
-                enum SIGNPOS_BYTE = 0;
-            }
-        }
-        else static if (T.sizeof == 12)
-        {
-            // Intel extended real80 rounded to double
-            enum ushort EXPMASK = 0x7FFF;
-            enum ushort EXPSHIFT = 0;
-            enum ushort EXPBIAS = 0x3FFE;
-            enum realFormat = RealFormat.ieeeExtended53;
-            version (LittleEndian)
-            {
-                enum EXPPOS_SHORT = 4;
-                enum SIGNPOS_BYTE = 9;
-            }
-            else
-            {
-                enum EXPPOS_SHORT = 0;
-                enum SIGNPOS_BYTE = 0;
-            }
-        }
-        else
-            static assert(false, "No traits support for " ~ T.stringof);
-    }
-    else static if (T.mant_dig == 64)
-    {
-        // Intel extended real80
-        enum ushort EXPMASK = 0x7FFF;
-        enum ushort EXPSHIFT = 0;
-        enum ushort EXPBIAS = 0x3FFE;
-        enum realFormat = RealFormat.ieeeExtended;
-        version (LittleEndian)
-        {
-            enum EXPPOS_SHORT = 4;
-            enum SIGNPOS_BYTE = 9;
-        }
-        else
-        {
-            enum EXPPOS_SHORT = 0;
-            enum SIGNPOS_BYTE = 0;
-        }
-    }
-    else static if (T.mant_dig == 113)
-    {
-        // Quadruple precision float
-        enum ushort EXPMASK = 0x7FFF;
-        enum ushort EXPSHIFT = 0;
-        enum ushort EXPBIAS = 0x3FFE;
-        enum realFormat = RealFormat.ieeeQuadruple;
-        version (LittleEndian)
-        {
-            enum EXPPOS_SHORT = 7;
-            enum SIGNPOS_BYTE = 15;
-        }
-        else
-        {
-            enum EXPPOS_SHORT = 0;
-            enum SIGNPOS_BYTE = 0;
-        }
-    }
-    else static if (T.mant_dig == 106)
-    {
-        // IBM Extended doubledouble
-        enum ushort EXPMASK = 0x7FF0;
-        enum ushort EXPSHIFT = 4;
-        enum realFormat = RealFormat.ibmExtended;
-
-        // For IBM doubledouble the larger magnitude double comes first.
-        // It's really a double[2] and arrays don't index differently
-        // between little and big-endian targets.
-        enum DOUBLEPAIR_MSB = 0;
-        enum DOUBLEPAIR_LSB = 1;
-
-        // The exponent/sign byte is for most significant part.
-        version (LittleEndian)
-        {
-            enum EXPPOS_SHORT = 3;
-            enum SIGNPOS_BYTE = 7;
-        }
-        else
-        {
-            enum EXPPOS_SHORT = 0;
-            enum SIGNPOS_BYTE = 0;
-        }
-    }
-    else
-        static assert(false, "No traits support for " ~ T.stringof);
-}
-
-// These apply to all floating-point types
-version (LittleEndian)
-{
-    enum MANTISSA_LSB = 0;
-    enum MANTISSA_MSB = 1;
-}
-else
-{
-    enum MANTISSA_LSB = 1;
-    enum MANTISSA_MSB = 0;
-}
-
-// Common code for math implementations.
-
-// Helper for floor/ceil
-T floorImpl(T)(const T x) @trusted pure nothrow @nogc
-{
-    alias F = floatTraits!(T);
-    // Take care not to trigger library calls from the compiler,
-    // while ensuring that we don't get defeated by some optimizers.
-    union floatBits
-    {
-        T rv;
-        ushort[T.sizeof/2] vu;
-
-        // Other kinds of extractors for real formats.
-        static if (F.realFormat == RealFormat.ieeeSingle)
-            int vi;
-    }
-    floatBits y = void;
-    y.rv = x;
-
-    // Find the exponent (power of 2)
-    // Do this by shifting the raw value so that the exponent lies in the low bits,
-    // then mask out the sign bit, and subtract the bias.
-    static if (F.realFormat == RealFormat.ieeeSingle)
-    {
-        int exp = ((y.vi >> (T.mant_dig - 1)) & 0xff) - 0x7f;
-    }
-    else static if (F.realFormat == RealFormat.ieeeDouble)
-    {
-        int exp = ((y.vu[F.EXPPOS_SHORT] >> 4) & 0x7ff) - 0x3ff;
-
-        version (LittleEndian)
-            int pos = 0;
-        else
-            int pos = 3;
-    }
-    else static if (F.realFormat == RealFormat.ieeeExtended)
-    {
-        int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
-
-        version (LittleEndian)
-            int pos = 0;
-        else
-            int pos = 4;
-    }
-    else static if (F.realFormat == RealFormat.ieeeQuadruple)
-    {
-        int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
-
-        version (LittleEndian)
-            int pos = 0;
-        else
-            int pos = 7;
-    }
-    else
-        static assert(false, "Not implemented for this architecture");
-
-    if (exp < 0)
-    {
-        if (x < 0.0)
-            return -1.0;
-        else
-            return 0.0;
-    }
-
-    static if (F.realFormat == RealFormat.ieeeSingle)
-    {
-        if (exp < (T.mant_dig - 1))
-        {
-            // Clear all bits representing the fraction part.
-            const uint fraction_mask = F.MANTISSAMASK_INT >> exp;
-
-            if ((y.vi & fraction_mask) != 0)
-            {
-                // If 'x' is negative, then first substract 1.0 from the value.
-                if (y.vi < 0)
-                    y.vi += 0x00800000 >> exp;
-                y.vi &= ~fraction_mask;
-            }
-        }
-    }
-    else
-    {
-        exp = (T.mant_dig - 1) - exp;
-
-        // Zero 16 bits at a time.
-        while (exp >= 16)
-        {
-            version (LittleEndian)
-                y.vu[pos++] = 0;
-            else
-                y.vu[pos--] = 0;
-            exp -= 16;
-        }
-
-        // Clear the remaining bits.
-        if (exp > 0)
-            y.vu[pos] &= 0xffff ^ ((1 << exp) - 1);
-
-        if ((x < 0.0) && (x != y.rv))
-            y.rv -= 1.0;
-    }
-
-    return y.rv;
-}
-
-public:
-
 // Values obtained from Wolfram Alpha. 116 bits ought to be enough for anybody.
 // Wolfram Alpha LLC. 2011. Wolfram|Alpha. http://www.wolframalpha.com/input/?i=e+in+base+16 (access July 6, 2011).
 enum real E =          0x1.5bf0a8b1457695355fb8ac404e7a8p+1L; /** e = 2.718281... */
@@ -560,37 +276,6 @@ enum real M_2_SQRTPI = 0x1.20dd750429b6d11ae3a914fed7fd8p+0L; /** 2 / $(SQRT)$(P
 enum real SQRT2 =      0x1.6a09e667f3bcc908b2fb1366ea958p+0L; /** $(SQRT)2 = 1.414213... */
 enum real SQRT1_2 =    SQRT2/2;                               /** $(SQRT)$(HALF) = 0.707106... */
 // Note: Make sure the magic numbers in compiler backend for x87 match these.
-
-// it's quite tricky check for a type who will trigger a deprecation when accessed
-template isDeprecatedComplex(T)
-{
-    static if (__traits(isDeprecated, T))
-    {
-        enum isDeprecatedComplex = true;
-    }
-    else
-    {
-        enum m = T.mangleof;
-        // cfloat, cdouble, creal
-        // ifloat, idouble, ireal
-        enum isDeprecatedComplex = m == "q" || m == "r" || m == "c" ||
-                                   m == "o" || m == "p" || m == "j";
-    }
-}
-
-@safe deprecated unittest
-{
-    static assert(isDeprecatedComplex!cfloat);
-    static assert(isDeprecatedComplex!cdouble);
-    static assert(isDeprecatedComplex!creal);
-    static assert(isDeprecatedComplex!ifloat);
-    static assert(isDeprecatedComplex!idouble);
-    static assert(isDeprecatedComplex!ireal);
-
-    static assert(!isDeprecatedComplex!float);
-    static assert(!isDeprecatedComplex!double);
-    static assert(!isDeprecatedComplex!real);
-}
 
 /***********************************
  * Calculates the absolute value of a number.
@@ -631,15 +316,6 @@ if ((is(Unqual!Num == short) || is(Unqual!Num == byte)) ||
     assert(abs(2321312L)  == 2321312L);
 }
 
-version (TestComplex)
-deprecated
-@safe pure nothrow @nogc unittest
-{
-    assert(abs(-3.2Li) == 3.2L);
-    assert(abs(71.6Li) == 71.6L);
-    assert(abs(-1L+1i) == sqrt(2.0L));
-}
-
 @safe pure nothrow @nogc unittest
 {
     short s = -8;
@@ -668,37 +344,6 @@ deprecated
     assert(50 - abs(-100) == -50);
 }
 
-version (TestComplex)
-deprecated
-@safe pure nothrow @nogc unittest
-{
-    import std.meta : AliasSeq;
-    static foreach (T; AliasSeq!(cfloat, cdouble, creal))
-    {{
-        T f = -12+3i;
-        assert(abs(f) == hypot(f.re, f.im));
-        assert(abs(-f) == hypot(f.re, f.im));
-    }}
-}
-
-import std.meta : AliasSeq;
-deprecated("Please use std.complex")
-static foreach (Num; AliasSeq!(cfloat, cdouble, creal, ifloat, idouble, ireal))
-{
-    auto abs(Num z) @safe pure nothrow @nogc
-    {
-        enum m = Num.mangleof;
-        // cfloat, cdouble, creal
-        static if (m == "q" || m == "r" || m == "c")
-            return hypot(z.re, z.im);
-        // ifloat, idouble, ireal
-        else static if (m == "o" || m == "p" || m == "j")
-            return fabs(z.im);
-        else
-            static assert(0, "Unsupported type: " ~ Num.stringof);
-    }
-}
-
 // https://issues.dlang.org/show_bug.cgi?id=19162
 @safe unittest
 {
@@ -713,64 +358,6 @@ static foreach (Num; AliasSeq!(cfloat, cdouble, creal, ifloat, idouble, ireal))
     }
     Vector!(int, 3) v;
     assert(abs(v) == v);
-}
-
-/*
- * Complex conjugate
- *
- *  conj(x + iy) = x - iy
- *
- * Note that z * conj(z) = $(POWER z.re, 2) - $(POWER z.im, 2)
- * is always a real number
- */
-deprecated("Please use std.complex.conj")
-auto conj(Num)(Num z) @safe pure nothrow @nogc
-if (is(Num* : const(cfloat*)) || is(Num* : const(cdouble*))
-    || is(Num* : const(creal*)))
-{
-    // FIXME
-    // https://issues.dlang.org/show_bug.cgi?id=14206
-    static if (is(Num* : const(cdouble*)))
-        return cast(cdouble) conj(cast(creal) z);
-    else
-        return z.re - z.im*1fi;
-}
-
-deprecated("Please use std.complex.conj")
-auto conj(Num)(Num y) @safe pure nothrow @nogc
-if (is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
-    || is(Num* : const(ireal*)))
-{
-    return -y;
-}
-
-deprecated
-@safe pure nothrow @nogc unittest
-{
-    creal c = 7 + 3Li;
-    assert(conj(c) == 7-3Li);
-    ireal z = -3.2Li;
-    assert(conj(z) == -z);
-}
-
-// https://issues.dlang.org/show_bug.cgi?id=14206
-deprecated
-@safe pure nothrow @nogc unittest
-{
-    cdouble c = 7 + 3i;
-    assert(conj(c) == 7-3i);
-    idouble z = -3.2i;
-    assert(conj(z) == -z);
-}
-
-// https://issues.dlang.org/show_bug.cgi?id=14206
-deprecated
-@safe pure nothrow @nogc unittest
-{
-    cfloat c = 7f + 3fi;
-    assert(conj(c) == 7f-3fi);
-    ifloat z = -3.2fi;
-    assert(conj(z) == -z);
 }
 
 /***********************************
@@ -853,64 +440,6 @@ float sin(float x) @safe pure nothrow @nogc { return sin(cast(real) x); }
 {
     real function(real) psin = &sin;
     assert(psin != null);
-}
-
-/*
- *  Returns sine for complex and imaginary arguments.
- *
- *  sin(z) = sin(z.re)*cosh(z.im) + cos(z.re)*sinh(z.im)i
- *
- * If both sin($(THETA)) and cos($(THETA)) are required,
- * it is most efficient to use expi($(THETA)).
- */
-deprecated("Use std.complex.sin")
-auto sin(creal z) @safe pure nothrow @nogc
-{
-    const creal cs = expi(z.re);
-    const creal csh = coshisinh(z.im);
-    return cs.im * csh.re + cs.re * csh.im * 1i;
-}
-
-/* ditto */
-deprecated("Use std.complex.sin")
-auto sin(ireal y) @safe pure nothrow @nogc
-{
-    return cosh(y.im)*1i;
-}
-
-deprecated
-@safe pure nothrow @nogc unittest
-{
-  assert(sin(0.0+0.0i) == 0.0);
-  assert(sin(2.0+0.0i) == sin(2.0L) );
-}
-
-/*
- *  cosine, complex and imaginary
- *
- *  cos(z) = cos(z.re)*cosh(z.im) - sin(z.re)*sinh(z.im)i
- */
-deprecated("Use std.complex.cos")
-auto cos(creal z) @safe pure nothrow @nogc
-{
-    const creal cs = expi(z.re);
-    const creal csh = coshisinh(z.im);
-    return cs.re * csh.re - cs.im * csh.im * 1i;
-}
-
-/* ditto */
-deprecated("Use std.complex.cos")
-real cos(ireal y) @safe pure nothrow @nogc
-{
-    return cosh(y.im);
-}
-
-deprecated
-@safe pure nothrow @nogc unittest
-{
-    assert(cos(0.0+0.0i)==1.0);
-    assert(cos(1.3L+0.0i)==cos(1.3L));
-    assert(cos(5.2Li)== cosh(5.2L));
 }
 
 /****************************************************************************
@@ -1866,37 +1395,6 @@ float tanh(float x) @safe pure nothrow @nogc { return tanh(cast(real) x); }
     assert(equalsDigit(tanh(1.0), sinh(1.0) / cosh(1.0), 15));
 }
 
-package:
-
-/* Returns cosh(x) + I * sinh(x)
- * Only one call to exp() is performed.
- */
-deprecated("Use std.complex")
-auto coshisinh(real x) @safe pure nothrow @nogc
-{
-    // See comments for cosh, sinh.
-    if (fabs(x) > real.mant_dig * LN2)
-    {
-        const real y = exp(fabs(x));
-        return y * 0.5 + 0.5i * copysign(y, x);
-    }
-    else
-    {
-        const real y = expm1(x);
-        return (y + 1.0 + 1.0/(y + 1.0)) * 0.5 + 0.5i * y / (y+1) * (y+2);
-    }
-}
-
-deprecated
-@safe pure nothrow @nogc unittest
-{
-    creal c = coshisinh(3.0L);
-    assert(c.re == cosh(3.0L));
-    assert(c.im == sinh(3.0L));
-}
-
-public:
-
 /***********************************
  * Calculates the inverse hyperbolic cosine of x.
  *
@@ -2135,48 +1633,6 @@ real sqrt(real x) @nogc @safe pure nothrow { pragma(inline, true); return core.m
     enum ZX80 = sqrt(7.0f);
     enum ZX81 = sqrt(7.0);
     enum ZX82 = sqrt(7.0L);
-}
-
-deprecated("Use std.complex.sqrt")
-auto sqrt(creal z) @nogc @safe pure nothrow
-{
-    creal c;
-    real x,y,w,r;
-
-    if (z == 0)
-    {
-        c = 0 + 0i;
-    }
-    else
-    {
-        const real z_re = z.re;
-        const real z_im = z.im;
-
-        x = fabs(z_re);
-        y = fabs(z_im);
-        if (x >= y)
-        {
-            r = y / x;
-            w = sqrt(x) * sqrt(0.5 * (1 + sqrt(1 + r * r)));
-        }
-        else
-        {
-            r = x / y;
-            w = sqrt(y) * sqrt(0.5 * (r + sqrt(1 + r * r)));
-        }
-
-        if (z_re >= 0)
-        {
-            c = w + (z_im / (w + w)) * 1.0i;
-        }
-        else
-        {
-            if (z_im < 0)
-                w = -w;
-            c = z_im / (w + w) + w * 1.0i;
-        }
-    }
-    return c;
 }
 
 /**
@@ -3252,52 +2708,6 @@ private T exp2Impl(T)(T x) @nogc @safe pure nothrow
     import std.meta : AliasSeq;
     foreach (T; AliasSeq!(real, double, float))
         testExp2!T();
-}
-
-/*
- * Calculate cos(y) + i sin(y).
- *
- * On many CPUs (such as x86), this is a very efficient operation;
- * almost twice as fast as calculating sin(y) and cos(y) separately,
- * and is the preferred method when both are required.
- */
-deprecated("Use std.complex.expi")
-creal expi(real y) @trusted pure nothrow @nogc
-{
-    version (InlineAsm_X86_Any)
-    {
-        version (Win64)
-        {
-            asm pure nothrow @nogc
-            {
-                naked;
-                fld     real ptr [ECX];
-                fsincos;
-                fxch    ST(1), ST(0);
-                ret;
-            }
-        }
-        else
-        {
-            asm pure nothrow @nogc
-            {
-                fld y;
-                fsincos;
-                fxch ST(1), ST(0);
-            }
-        }
-    }
-    else
-    {
-        return cos(y) + sin(y)*1i;
-    }
-}
-
-deprecated
-@safe pure nothrow @nogc unittest
-{
-    assert(expi(1.3e5L) == cos(1.3e5L) + sin(1.3e5L) * 1i);
-    assert(expi(0.0L) == 1L + 0.0Li);
 }
 
 /*********************************************************************
@@ -4420,7 +3830,7 @@ real log1p(real x) @safe pure nothrow @nogc
 real log2(real x) @safe pure nothrow @nogc
 {
     version (INLINE_YL2X)
-        return core.math.yl2x(x, 1);
+        return core.math.yl2x(x, 1.0L);
     else
     {
         // Special cases are the same as for log.
@@ -4631,8 +4041,6 @@ real modf(real x, ref real i) @trusted nothrow @nogc
  */
 real scalbn(real x, int n) @safe pure nothrow @nogc
 {
-    pragma(inline, true);
-
     if (__ctfe)
     {
         // Handle special cases.
@@ -5186,33 +4594,23 @@ if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F)
  *
  * Unlike the rint functions, nearbyint does not raise the
  * FE_INEXACT exception.
- *
- * Note:
- *     Not implemented for Microsoft C Runtime
  */
 real nearbyint(real x) @safe pure nothrow @nogc
 {
-    version (CRuntime_Microsoft)
-        assert(0, "nearbyintl not implemented in Microsoft C library");
-    else
-        return core.stdc.math.nearbyintl(x);
+    return core.stdc.math.nearbyintl(x);
 }
 
 ///
 @safe pure unittest
 {
-    version (CRuntime_Microsoft) {}
-    else
-    {
-        assert(nearbyint(0.4) == 0);
-        assert(nearbyint(0.5) == 0);
-        assert(nearbyint(0.6) == 1);
-        assert(nearbyint(100.0) == 100);
+    assert(nearbyint(0.4) == 0);
+    assert(nearbyint(0.5) == 0);
+    assert(nearbyint(0.6) == 1);
+    assert(nearbyint(100.0) == 100);
 
-        assert(isNaN(nearbyint(real.nan)));
-        assert(nearbyint(real.infinity) == real.infinity);
-        assert(nearbyint(-real.infinity) == -real.infinity);
-    }
+    assert(isNaN(nearbyint(real.nan)));
+    assert(nearbyint(real.infinity) == real.infinity);
+    assert(nearbyint(-real.infinity) == -real.infinity);
 }
 
 /**********************************
@@ -5509,20 +4907,21 @@ version (Posix)
  * If the fractional part of x is exactly 0.5, the return value is rounded
  * away from zero.
  *
- * $(BLUE This function is Posix-Only.)
+ * $(BLUE This function is not implemented for Digital Mars C runtime.)
  */
 long lround(real x) @trusted nothrow @nogc
 {
-    version (Posix)
-        return core.stdc.math.llroundl(x);
-    else
+    version (CRuntime_DigitalMars)
         assert(0, "lround not implemented");
+    else
+        return core.stdc.math.llroundl(x);
 }
 
 ///
 @safe nothrow @nogc unittest
 {
-    version (Posix)
+    version (CRuntime_DigitalMars) {}
+    else
     {
         assert(lround(0.49) == 0);
         assert(lround(0.5) == 1);
@@ -5606,54 +5005,37 @@ real trunc(real x) @trusted nothrow @nogc pure
  *  $(TR $(TD anything)        $(TD $(PLUSMN)0.0) $(TD $(PLUSMN)$(NAN)) $(TD ?)   $(TD yes))
  *  $(TR $(TD != $(PLUSMNINF)) $(TD $(PLUSMNINF)) $(TD x)               $(TD ?)   $(TD no))
  * )
- *
- * $(BLUE `remquo` and `remainder` not supported on Windows.)
  */
 real remainder(real x, real y) @trusted nothrow @nogc
 {
-    version (CRuntime_Microsoft)
-    {
-        int n;
-        return remquo(x, y, n);
-    }
-    else
-        return core.stdc.math.remainderl(x, y);
+    return core.stdc.math.remainderl(x, y);
 }
 
 /// ditto
 real remquo(real x, real y, out int n) @trusted nothrow @nogc  /// ditto
 {
-    version (Posix)
-        return core.stdc.math.remquol(x, y, &n);
-    else
-        assert(0, "remquo not implemented");
+    return core.stdc.math.remquol(x, y, &n);
 }
 
 ///
 @safe @nogc nothrow unittest
 {
-    version (Posix)
-    {
-        assert(remainder(5.1, 3.0).feqrel(-0.9) > 16);
-        assert(remainder(-5.1, 3.0).feqrel(0.9) > 16);
-        assert(remainder(0.0, 3.0) == 0.0);
+    assert(remainder(5.1, 3.0).feqrel(-0.9) > 16);
+    assert(remainder(-5.1, 3.0).feqrel(0.9) > 16);
+    assert(remainder(0.0, 3.0) == 0.0);
 
-        assert(isNaN(remainder(1.0, 0.0)));
-        assert(isNaN(remainder(-1.0, 0.0)));
-    }
+    assert(isNaN(remainder(1.0, 0.0)));
+    assert(isNaN(remainder(-1.0, 0.0)));
 }
 
 ///
 @safe @nogc nothrow unittest
 {
-    version (Posix)
-    {
-        int n;
+    int n;
 
-        assert(remquo(5.1, 3.0, n).feqrel(-0.9) > 16 && n == 2);
-        assert(remquo(-5.1, 3.0, n).feqrel(0.9) > 16 && n == -2);
-        assert(remquo(0.0, 3.0, n) == 0.0 && n == 0);
-    }
+    assert(remquo(5.1, 3.0, n).feqrel(-0.9) > 16 && n == 2);
+    assert(remquo(-5.1, 3.0, n).feqrel(0.9) > 16 && n == -2);
+    assert(remquo(0.0, 3.0, n) == 0.0 && n == 0);
 }
 
 
@@ -5710,7 +5092,6 @@ private:
         }
     }
 
-private:
     static uint getIeeeFlags() @trusted pure
     {
         version (InlineAsm_X86_Any)
@@ -6246,7 +5627,6 @@ nothrow @nogc:
         }
     }
 
-public:
     /// Returns: true if the current FPU supports exception trapping
     @property static bool hasExceptionTraps() @safe pure
     {
@@ -8779,146 +8159,6 @@ if (isFloatingPoint!(X))
     testFeqrel!(float)();
 }
 
-package: // Not public yet
-/* Return the value that lies halfway between x and y on the IEEE number line.
- *
- * Formally, the result is the arithmetic mean of the binary significands of x
- * and y, multiplied by the geometric mean of the binary exponents of x and y.
- * x and y must have the same sign, and must not be NaN.
- * Note: this function is useful for ensuring O(log n) behaviour in algorithms
- * involving a 'binary chop'.
- *
- * Special cases:
- * If x and y are within a factor of 2, (ie, feqrel(x, y) > 0), the return value
- * is the arithmetic mean (x + y) / 2.
- * If x and y are even powers of 2, the return value is the geometric mean,
- *   ieeeMean(x, y) = sqrt(x * y).
- *
- */
-T ieeeMean(T)(const T x, const T y)  @trusted pure nothrow @nogc
-in
-{
-    // both x and y must have the same sign, and must not be NaN.
-    assert(signbit(x) == signbit(y));
-    assert(x == x && y == y);
-}
-do
-{
-    // Runtime behaviour for contract violation:
-    // If signs are opposite, or one is a NaN, return 0.
-    if (!((x >= 0 && y >= 0) || (x <= 0 && y <= 0))) return 0.0;
-
-    // The implementation is simple: cast x and y to integers,
-    // average them (avoiding overflow), and cast the result back to a floating-point number.
-
-    alias F = floatTraits!(T);
-    T u;
-    static if (F.realFormat == RealFormat.ieeeExtended)
-    {
-        // There's slight additional complexity because they are actually
-        // 79-bit reals...
-        ushort *ue = cast(ushort *)&u;
-        ulong *ul = cast(ulong *)&u;
-        ushort *xe = cast(ushort *)&x;
-        ulong *xl = cast(ulong *)&x;
-        ushort *ye = cast(ushort *)&y;
-        ulong *yl = cast(ulong *)&y;
-
-        // Ignore the useless implicit bit. (Bonus: this prevents overflows)
-        ulong m = ((*xl) & 0x7FFF_FFFF_FFFF_FFFFL) + ((*yl) & 0x7FFF_FFFF_FFFF_FFFFL);
-
-        // @@@ BUG? @@@
-        // Cast shouldn't be here
-        ushort e = cast(ushort) ((xe[F.EXPPOS_SHORT] & F.EXPMASK)
-                                 + (ye[F.EXPPOS_SHORT] & F.EXPMASK));
-        if (m & 0x8000_0000_0000_0000L)
-        {
-            ++e;
-            m &= 0x7FFF_FFFF_FFFF_FFFFL;
-        }
-        // Now do a multi-byte right shift
-        const uint c = e & 1; // carry
-        e >>= 1;
-        m >>>= 1;
-        if (c)
-            m |= 0x4000_0000_0000_0000L; // shift carry into significand
-        if (e)
-            *ul = m | 0x8000_0000_0000_0000L; // set implicit bit...
-        else
-            *ul = m; // ... unless exponent is 0 (subnormal or zero).
-
-        ue[4]= e | (xe[F.EXPPOS_SHORT]& 0x8000); // restore sign bit
-    }
-    else static if (F.realFormat == RealFormat.ieeeQuadruple)
-    {
-        // This would be trivial if 'ucent' were implemented...
-        ulong *ul = cast(ulong *)&u;
-        ulong *xl = cast(ulong *)&x;
-        ulong *yl = cast(ulong *)&y;
-
-        // Multi-byte add, then multi-byte right shift.
-        import core.checkedint : addu;
-        bool carry;
-        ulong ml = addu(xl[MANTISSA_LSB], yl[MANTISSA_LSB], carry);
-
-        ulong mh = carry + (xl[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL) +
-            (yl[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL);
-
-        ul[MANTISSA_MSB] = (mh >>> 1) | (xl[MANTISSA_MSB] & 0x8000_0000_0000_0000);
-        ul[MANTISSA_LSB] = (ml >>> 1) | (mh & 1) << 63;
-    }
-    else static if (F.realFormat == RealFormat.ieeeDouble)
-    {
-        ulong *ul = cast(ulong *)&u;
-        ulong *xl = cast(ulong *)&x;
-        ulong *yl = cast(ulong *)&y;
-        ulong m = (((*xl) & 0x7FFF_FFFF_FFFF_FFFFL)
-                   + ((*yl) & 0x7FFF_FFFF_FFFF_FFFFL)) >>> 1;
-        m |= ((*xl) & 0x8000_0000_0000_0000L);
-        *ul = m;
-    }
-    else static if (F.realFormat == RealFormat.ieeeSingle)
-    {
-        uint *ul = cast(uint *)&u;
-        uint *xl = cast(uint *)&x;
-        uint *yl = cast(uint *)&y;
-        uint m = (((*xl) & 0x7FFF_FFFF) + ((*yl) & 0x7FFF_FFFF)) >>> 1;
-        m |= ((*xl) & 0x8000_0000);
-        *ul = m;
-    }
-    else
-    {
-        assert(0, "Not implemented");
-    }
-    return u;
-}
-
-@safe pure nothrow @nogc unittest
-{
-    assert(ieeeMean(-0.0,-1e-20)<0);
-    assert(ieeeMean(0.0,1e-20)>0);
-
-    assert(ieeeMean(1.0L,4.0L)==2L);
-    assert(ieeeMean(2.0*1.013,8.0*1.013)==4*1.013);
-    assert(ieeeMean(-1.0L,-4.0L)==-2L);
-    assert(ieeeMean(-1.0,-4.0)==-2);
-    assert(ieeeMean(-1.0f,-4.0f)==-2f);
-    assert(ieeeMean(-1.0,-2.0)==-1.5);
-    assert(ieeeMean(-1*(1+8*real.epsilon),-2*(1+8*real.epsilon))
-                 ==-1.5*(1+5*real.epsilon));
-    assert(ieeeMean(0x1p60,0x1p-10)==0x1p25);
-
-    static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
-    {
-      assert(ieeeMean(1.0L,real.infinity)==0x1p8192L);
-      assert(ieeeMean(0.0L,real.infinity)==1.5);
-    }
-    assert(ieeeMean(0.5*real.min_normal*(1-4*real.epsilon),0.5*real.min_normal)
-           == 0.5*real.min_normal*(1-2*real.epsilon));
-}
-
-public:
-
 
 /***********************************
  * Evaluate polynomial A(x) = $(SUB a, 0) + $(SUB a, 1)x + $(SUB a, 2)$(POWER x,2) +
@@ -9404,6 +8644,7 @@ bool isClose(T, U, V = CommonType!(FloatingPointBaseType!T,FloatingPointBaseType
     (T lhs, U rhs, V maxRelDiff = CommonDefaultFor!(T,U), V maxAbsDiff = 0.0)
 {
     import std.range.primitives : empty, front, isInputRange, popFront;
+    import std.complex : Complex;
     static if (isInputRange!T)
     {
         static if (isInputRange!U)
@@ -9428,35 +8669,53 @@ bool isClose(T, U, V = CommonType!(FloatingPointBaseType!T,FloatingPointBaseType
             return true;
         }
     }
-    else
+    else static if (isInputRange!U)
     {
-        static if (isInputRange!U)
+        // lhs is number, rhs is range
+        for (; !rhs.empty; rhs.popFront())
         {
-            // lhs is number, rhs is range
-            for (; !rhs.empty; rhs.popFront())
-            {
-                if (!isClose(lhs, rhs.front, maxRelDiff, maxAbsDiff))
-                    return false;
-            }
-            return true;
+            if (!isClose(lhs, rhs.front, maxRelDiff, maxAbsDiff))
+                return false;
+        }
+        return true;
+    }
+    else static if (is(T TE == Complex!TE))
+    {
+        static if (is(U UE == Complex!UE))
+        {
+            // Two complex numbers
+            return isClose(lhs.re, rhs.re, maxRelDiff, maxAbsDiff)
+                && isClose(lhs.im, rhs.im, maxRelDiff, maxAbsDiff);
         }
         else
         {
-            // two numbers
-            if (lhs == rhs) return true;
-
-            static if (is(typeof(lhs.infinity)) && is(typeof(rhs.infinity)))
-            {
-                if (lhs == lhs.infinity || rhs == rhs.infinity ||
-                    lhs == -lhs.infinity || rhs == -rhs.infinity) return false;
-            }
-
-            auto diff = abs(lhs - rhs);
-
-            return diff <= maxRelDiff*abs(lhs)
-                || diff <= maxRelDiff*abs(rhs)
-                || diff <= maxAbsDiff;
+            // lhs is complex, rhs is number
+            return isClose(lhs.re, rhs, maxRelDiff, maxAbsDiff)
+                && isClose(lhs.im, 0.0, maxRelDiff, maxAbsDiff);
         }
+    }
+    else static if (is(U UE == Complex!UE))
+    {
+        // lhs is number, rhs is complex
+        return isClose(lhs, rhs.re, maxRelDiff, maxAbsDiff)
+            && isClose(0.0, rhs.im, maxRelDiff, maxAbsDiff);
+    }
+    else
+    {
+        // two numbers
+        if (lhs == rhs) return true;
+
+        static if (is(typeof(lhs.infinity)) && is(typeof(rhs.infinity)))
+        {
+            if (lhs == lhs.infinity || rhs == rhs.infinity ||
+                lhs == -lhs.infinity || rhs == -rhs.infinity) return false;
+        }
+
+        auto diff = abs(lhs - rhs);
+
+        return diff <= maxRelDiff*abs(lhs)
+            || diff <= maxRelDiff*abs(rhs)
+            || diff <= maxAbsDiff;
     }
 }
 
@@ -10355,4 +9614,426 @@ if (isNumeric!X)
         static foreach (x; [0, 3, 5, 13, 77, X.min, X.max])
             static assert(!isPowerOf2(cast(X) x));
     }}
+}
+
+package: // Not public yet
+/* Return the value that lies halfway between x and y on the IEEE number line.
+ *
+ * Formally, the result is the arithmetic mean of the binary significands of x
+ * and y, multiplied by the geometric mean of the binary exponents of x and y.
+ * x and y must have the same sign, and must not be NaN.
+ * Note: this function is useful for ensuring O(log n) behaviour in algorithms
+ * involving a 'binary chop'.
+ *
+ * Special cases:
+ * If x and y are within a factor of 2, (ie, feqrel(x, y) > 0), the return value
+ * is the arithmetic mean (x + y) / 2.
+ * If x and y are even powers of 2, the return value is the geometric mean,
+ *   ieeeMean(x, y) = sqrt(x * y).
+ *
+ */
+T ieeeMean(T)(const T x, const T y)  @trusted pure nothrow @nogc
+in
+{
+    // both x and y must have the same sign, and must not be NaN.
+    assert(signbit(x) == signbit(y));
+    assert(x == x && y == y);
+}
+do
+{
+    // Runtime behaviour for contract violation:
+    // If signs are opposite, or one is a NaN, return 0.
+    if (!((x >= 0 && y >= 0) || (x <= 0 && y <= 0))) return 0.0;
+
+    // The implementation is simple: cast x and y to integers,
+    // average them (avoiding overflow), and cast the result back to a floating-point number.
+
+    alias F = floatTraits!(T);
+    T u;
+    static if (F.realFormat == RealFormat.ieeeExtended)
+    {
+        // There's slight additional complexity because they are actually
+        // 79-bit reals...
+        ushort *ue = cast(ushort *)&u;
+        ulong *ul = cast(ulong *)&u;
+        ushort *xe = cast(ushort *)&x;
+        ulong *xl = cast(ulong *)&x;
+        ushort *ye = cast(ushort *)&y;
+        ulong *yl = cast(ulong *)&y;
+
+        // Ignore the useless implicit bit. (Bonus: this prevents overflows)
+        ulong m = ((*xl) & 0x7FFF_FFFF_FFFF_FFFFL) + ((*yl) & 0x7FFF_FFFF_FFFF_FFFFL);
+
+        // @@@ BUG? @@@
+        // Cast shouldn't be here
+        ushort e = cast(ushort) ((xe[F.EXPPOS_SHORT] & F.EXPMASK)
+                                 + (ye[F.EXPPOS_SHORT] & F.EXPMASK));
+        if (m & 0x8000_0000_0000_0000L)
+        {
+            ++e;
+            m &= 0x7FFF_FFFF_FFFF_FFFFL;
+        }
+        // Now do a multi-byte right shift
+        const uint c = e & 1; // carry
+        e >>= 1;
+        m >>>= 1;
+        if (c)
+            m |= 0x4000_0000_0000_0000L; // shift carry into significand
+        if (e)
+            *ul = m | 0x8000_0000_0000_0000L; // set implicit bit...
+        else
+            *ul = m; // ... unless exponent is 0 (subnormal or zero).
+
+        ue[4]= e | (xe[F.EXPPOS_SHORT]& 0x8000); // restore sign bit
+    }
+    else static if (F.realFormat == RealFormat.ieeeQuadruple)
+    {
+        // This would be trivial if 'ucent' were implemented...
+        ulong *ul = cast(ulong *)&u;
+        ulong *xl = cast(ulong *)&x;
+        ulong *yl = cast(ulong *)&y;
+
+        // Multi-byte add, then multi-byte right shift.
+        import core.checkedint : addu;
+        bool carry;
+        ulong ml = addu(xl[MANTISSA_LSB], yl[MANTISSA_LSB], carry);
+
+        ulong mh = carry + (xl[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL) +
+            (yl[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL);
+
+        ul[MANTISSA_MSB] = (mh >>> 1) | (xl[MANTISSA_MSB] & 0x8000_0000_0000_0000);
+        ul[MANTISSA_LSB] = (ml >>> 1) | (mh & 1) << 63;
+    }
+    else static if (F.realFormat == RealFormat.ieeeDouble)
+    {
+        ulong *ul = cast(ulong *)&u;
+        ulong *xl = cast(ulong *)&x;
+        ulong *yl = cast(ulong *)&y;
+        ulong m = (((*xl) & 0x7FFF_FFFF_FFFF_FFFFL)
+                   + ((*yl) & 0x7FFF_FFFF_FFFF_FFFFL)) >>> 1;
+        m |= ((*xl) & 0x8000_0000_0000_0000L);
+        *ul = m;
+    }
+    else static if (F.realFormat == RealFormat.ieeeSingle)
+    {
+        uint *ul = cast(uint *)&u;
+        uint *xl = cast(uint *)&x;
+        uint *yl = cast(uint *)&y;
+        uint m = (((*xl) & 0x7FFF_FFFF) + ((*yl) & 0x7FFF_FFFF)) >>> 1;
+        m |= ((*xl) & 0x8000_0000);
+        *ul = m;
+    }
+    else
+    {
+        assert(0, "Not implemented");
+    }
+    return u;
+}
+
+@safe pure nothrow @nogc unittest
+{
+    assert(ieeeMean(-0.0,-1e-20)<0);
+    assert(ieeeMean(0.0,1e-20)>0);
+
+    assert(ieeeMean(1.0L,4.0L)==2L);
+    assert(ieeeMean(2.0*1.013,8.0*1.013)==4*1.013);
+    assert(ieeeMean(-1.0L,-4.0L)==-2L);
+    assert(ieeeMean(-1.0,-4.0)==-2);
+    assert(ieeeMean(-1.0f,-4.0f)==-2f);
+    assert(ieeeMean(-1.0,-2.0)==-1.5);
+    assert(ieeeMean(-1*(1+8*real.epsilon),-2*(1+8*real.epsilon))
+                 ==-1.5*(1+5*real.epsilon));
+    assert(ieeeMean(0x1p60,0x1p-10)==0x1p25);
+
+    static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
+    {
+      assert(ieeeMean(1.0L,real.infinity)==0x1p8192L);
+      assert(ieeeMean(0.0L,real.infinity)==1.5);
+    }
+    assert(ieeeMean(0.5*real.min_normal*(1-4*real.epsilon),0.5*real.min_normal)
+           == 0.5*real.min_normal*(1-2*real.epsilon));
+}
+
+
+// The following IEEE 'real' formats are currently supported.
+version (LittleEndian)
+{
+    static assert(real.mant_dig == 53 || real.mant_dig == 64
+               || real.mant_dig == 113,
+      "Only 64-bit, 80-bit, and 128-bit reals"~
+      " are supported for LittleEndian CPUs");
+}
+else
+{
+    static assert(real.mant_dig == 53 || real.mant_dig == 113,
+    "Only 64-bit and 128-bit reals are supported for BigEndian CPUs.");
+}
+
+// Underlying format exposed through floatTraits
+enum RealFormat
+{
+    ieeeHalf,
+    ieeeSingle,
+    ieeeDouble,
+    ieeeExtended,   // x87 80-bit real
+    ieeeExtended53, // x87 real rounded to precision of double.
+    ibmExtended,    // IBM 128-bit extended
+    ieeeQuadruple,
+}
+
+// Constants used for extracting the components of the representation.
+// They supplement the built-in floating point properties.
+template floatTraits(T)
+{
+    // EXPMASK is a ushort mask to select the exponent portion (without sign)
+    // EXPSHIFT is the number of bits the exponent is left-shifted by in its ushort
+    // EXPBIAS is the exponent bias - 1 (exp == EXPBIAS yields ×2^-1).
+    // EXPPOS_SHORT is the index of the exponent when represented as a ushort array.
+    // SIGNPOS_BYTE is the index of the sign when represented as a ubyte array.
+    // RECIP_EPSILON is the value such that (smallest_subnormal) * RECIP_EPSILON == T.min_normal
+    enum Unqual!T RECIP_EPSILON = (1/T.epsilon);
+    static if (T.mant_dig == 24)
+    {
+        // Single precision float
+        enum ushort EXPMASK = 0x7F80;
+        enum ushort EXPSHIFT = 7;
+        enum ushort EXPBIAS = 0x3F00;
+        enum uint EXPMASK_INT = 0x7F80_0000;
+        enum uint MANTISSAMASK_INT = 0x007F_FFFF;
+        enum realFormat = RealFormat.ieeeSingle;
+        version (LittleEndian)
+        {
+            enum EXPPOS_SHORT = 1;
+            enum SIGNPOS_BYTE = 3;
+        }
+        else
+        {
+            enum EXPPOS_SHORT = 0;
+            enum SIGNPOS_BYTE = 0;
+        }
+    }
+    else static if (T.mant_dig == 53)
+    {
+        static if (T.sizeof == 8)
+        {
+            // Double precision float, or real == double
+            enum ushort EXPMASK = 0x7FF0;
+            enum ushort EXPSHIFT = 4;
+            enum ushort EXPBIAS = 0x3FE0;
+            enum uint EXPMASK_INT = 0x7FF0_0000;
+            enum uint MANTISSAMASK_INT = 0x000F_FFFF; // for the MSB only
+            enum realFormat = RealFormat.ieeeDouble;
+            version (LittleEndian)
+            {
+                enum EXPPOS_SHORT = 3;
+                enum SIGNPOS_BYTE = 7;
+            }
+            else
+            {
+                enum EXPPOS_SHORT = 0;
+                enum SIGNPOS_BYTE = 0;
+            }
+        }
+        else static if (T.sizeof == 12)
+        {
+            // Intel extended real80 rounded to double
+            enum ushort EXPMASK = 0x7FFF;
+            enum ushort EXPSHIFT = 0;
+            enum ushort EXPBIAS = 0x3FFE;
+            enum realFormat = RealFormat.ieeeExtended53;
+            version (LittleEndian)
+            {
+                enum EXPPOS_SHORT = 4;
+                enum SIGNPOS_BYTE = 9;
+            }
+            else
+            {
+                enum EXPPOS_SHORT = 0;
+                enum SIGNPOS_BYTE = 0;
+            }
+        }
+        else
+            static assert(false, "No traits support for " ~ T.stringof);
+    }
+    else static if (T.mant_dig == 64)
+    {
+        // Intel extended real80
+        enum ushort EXPMASK = 0x7FFF;
+        enum ushort EXPSHIFT = 0;
+        enum ushort EXPBIAS = 0x3FFE;
+        enum realFormat = RealFormat.ieeeExtended;
+        version (LittleEndian)
+        {
+            enum EXPPOS_SHORT = 4;
+            enum SIGNPOS_BYTE = 9;
+        }
+        else
+        {
+            enum EXPPOS_SHORT = 0;
+            enum SIGNPOS_BYTE = 0;
+        }
+    }
+    else static if (T.mant_dig == 113)
+    {
+        // Quadruple precision float
+        enum ushort EXPMASK = 0x7FFF;
+        enum ushort EXPSHIFT = 0;
+        enum ushort EXPBIAS = 0x3FFE;
+        enum realFormat = RealFormat.ieeeQuadruple;
+        version (LittleEndian)
+        {
+            enum EXPPOS_SHORT = 7;
+            enum SIGNPOS_BYTE = 15;
+        }
+        else
+        {
+            enum EXPPOS_SHORT = 0;
+            enum SIGNPOS_BYTE = 0;
+        }
+    }
+    else static if (T.mant_dig == 106)
+    {
+        // IBM Extended doubledouble
+        enum ushort EXPMASK = 0x7FF0;
+        enum ushort EXPSHIFT = 4;
+        enum realFormat = RealFormat.ibmExtended;
+
+        // For IBM doubledouble the larger magnitude double comes first.
+        // It's really a double[2] and arrays don't index differently
+        // between little and big-endian targets.
+        enum DOUBLEPAIR_MSB = 0;
+        enum DOUBLEPAIR_LSB = 1;
+
+        // The exponent/sign byte is for most significant part.
+        version (LittleEndian)
+        {
+            enum EXPPOS_SHORT = 3;
+            enum SIGNPOS_BYTE = 7;
+        }
+        else
+        {
+            enum EXPPOS_SHORT = 0;
+            enum SIGNPOS_BYTE = 0;
+        }
+    }
+    else
+        static assert(false, "No traits support for " ~ T.stringof);
+}
+
+// These apply to all floating-point types
+version (LittleEndian)
+{
+    enum MANTISSA_LSB = 0;
+    enum MANTISSA_MSB = 1;
+}
+else
+{
+    enum MANTISSA_LSB = 1;
+    enum MANTISSA_MSB = 0;
+}
+
+// Common code for math implementations.
+
+// Helper for floor/ceil
+T floorImpl(T)(const T x) @trusted pure nothrow @nogc
+{
+    alias F = floatTraits!(T);
+    // Take care not to trigger library calls from the compiler,
+    // while ensuring that we don't get defeated by some optimizers.
+    union floatBits
+    {
+        T rv;
+        ushort[T.sizeof/2] vu;
+
+        // Other kinds of extractors for real formats.
+        static if (F.realFormat == RealFormat.ieeeSingle)
+            int vi;
+    }
+    floatBits y = void;
+    y.rv = x;
+
+    // Find the exponent (power of 2)
+    // Do this by shifting the raw value so that the exponent lies in the low bits,
+    // then mask out the sign bit, and subtract the bias.
+    static if (F.realFormat == RealFormat.ieeeSingle)
+    {
+        int exp = ((y.vi >> (T.mant_dig - 1)) & 0xff) - 0x7f;
+    }
+    else static if (F.realFormat == RealFormat.ieeeDouble)
+    {
+        int exp = ((y.vu[F.EXPPOS_SHORT] >> 4) & 0x7ff) - 0x3ff;
+
+        version (LittleEndian)
+            int pos = 0;
+        else
+            int pos = 3;
+    }
+    else static if (F.realFormat == RealFormat.ieeeExtended)
+    {
+        int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+
+        version (LittleEndian)
+            int pos = 0;
+        else
+            int pos = 4;
+    }
+    else static if (F.realFormat == RealFormat.ieeeQuadruple)
+    {
+        int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+
+        version (LittleEndian)
+            int pos = 0;
+        else
+            int pos = 7;
+    }
+    else
+        static assert(false, "Not implemented for this architecture");
+
+    if (exp < 0)
+    {
+        if (x < 0.0)
+            return -1.0;
+        else
+            return 0.0;
+    }
+
+    static if (F.realFormat == RealFormat.ieeeSingle)
+    {
+        if (exp < (T.mant_dig - 1))
+        {
+            // Clear all bits representing the fraction part.
+            const uint fraction_mask = F.MANTISSAMASK_INT >> exp;
+
+            if ((y.vi & fraction_mask) != 0)
+            {
+                // If 'x' is negative, then first substract 1.0 from the value.
+                if (y.vi < 0)
+                    y.vi += 0x00800000 >> exp;
+                y.vi &= ~fraction_mask;
+            }
+        }
+    }
+    else
+    {
+        exp = (T.mant_dig - 1) - exp;
+
+        // Zero 16 bits at a time.
+        while (exp >= 16)
+        {
+            version (LittleEndian)
+                y.vu[pos++] = 0;
+            else
+                y.vu[pos--] = 0;
+            exp -= 16;
+        }
+
+        // Clear the remaining bits.
+        if (exp > 0)
+            y.vu[pos] &= 0xffff ^ ((1 << exp) - 1);
+
+        if ((x < 0.0) && (x != y.rv))
+            y.rv -= 1.0;
+    }
+
+    return y.rv;
 }

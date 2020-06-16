@@ -545,7 +545,7 @@ if (distinctFieldNames!(Specs))
         }
     }
 
-    enum areCompatibleTuples(Tup1, Tup2, string op) = isTuple!Tup2 && is(typeof(
+    enum areCompatibleTuples(Tup1, Tup2, string op) = isTuple!(OriginalType!Tup2) && is(typeof(
     (ref Tup1 tup1, ref Tup2 tup2)
     {
         static assert(tup1.field.length == tup2.field.length);
@@ -903,7 +903,7 @@ if (distinctFieldNames!(Specs))
         {
             import std.algorithm.mutation : swap;
 
-            static if (is(R : Tuple!Types) && !__traits(isRef, rhs))
+            static if (is(R : Tuple!Types) && !__traits(isRef, rhs) && isTuple!R)
             {
                 if (__ctfe)
                 {
@@ -1538,6 +1538,15 @@ if (distinctFieldNames!(Specs))
     auto t = tuple(1, 2);
     assert(t == tuple(1, 2));
     auto t3 = tuple(1, 'd');
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=20850
+// Assignment to enum tuple
+@safe unittest
+{
+    enum T : Tuple!(int*) { a = T(null) }
+    T t;
+    t = T.a;
 }
 
 /**
@@ -2678,12 +2687,12 @@ struct Nullable(T)
 
     private bool _isNull = true;
 
-/**
-Constructor initializing `this` with `value`.
-
-Params:
-    value = The value to initialize this `Nullable` with.
- */
+    /**
+     * Constructor initializing `this` with `value`.
+     *
+     * Params:
+     *     value = The value to initialize this `Nullable` with.
+     */
     this(inout T value) inout
     {
         _value.payload = value;
@@ -2702,10 +2711,10 @@ Params:
     }
 
     /**
-      If they are both null, then they are equal. If one is null and the other
-      is not, then they are not equal. If they are both non-null, then they are
-      equal if their values are equal.
-      */
+     * If they are both null, then they are equal. If one is null and the other
+     * is not, then they are not equal. If they are both non-null, then they are
+     * equal if their values are equal.
+     */
     bool opEquals()(auto ref const(typeof(this)) rhs) const
     {
         if (_isNull)
@@ -2838,52 +2847,52 @@ Params:
             formatValue(writer, _value.payload, fmt);
     }
 
-/**
-Check if `this` is in the null state.
-
-Returns:
-    true $(B iff) `this` is in the null state, otherwise false.
- */
+    /**
+     * Check if `this` is in the null state.
+     *
+     * Returns:
+     *     true $(B iff) `this` is in the null state, otherwise false.
+     */
     @property bool isNull() const @safe pure nothrow
     {
         return _isNull;
     }
 
-///
-@safe unittest
-{
-    Nullable!int ni;
-    assert(ni.isNull);
+    ///
+    @safe unittest
+    {
+        Nullable!int ni;
+        assert(ni.isNull);
 
-    ni = 0;
-    assert(!ni.isNull);
-}
+        ni = 0;
+        assert(!ni.isNull);
+    }
 
-// https://issues.dlang.org/show_bug.cgi?id=14940
-@safe unittest
-{
-    import std.array : appender;
-    import std.format : formattedWrite;
+    // https://issues.dlang.org/show_bug.cgi?id=14940
+    @safe unittest
+    {
+        import std.array : appender;
+        import std.format : formattedWrite;
 
-    auto app = appender!string();
-    Nullable!int a = 1;
-    formattedWrite(app, "%s", a);
-    assert(app.data == "1");
-}
+        auto app = appender!string();
+        Nullable!int a = 1;
+        formattedWrite(app, "%s", a);
+        assert(app.data == "1");
+    }
 
-// https://issues.dlang.org/show_bug.cgi?id=19799
-@safe unittest
-{
-    import std.format : format;
+    // https://issues.dlang.org/show_bug.cgi?id=19799
+    @safe unittest
+    {
+        import std.format : format;
 
-    const Nullable!string a = const(Nullable!string)();
+        const Nullable!string a = const(Nullable!string)();
 
-    format!"%s"(a);
-}
+        format!"%s"(a);
+    }
 
-/**
-Forces `this` to the null state.
- */
+    /**
+     * Forces `this` to the null state.
+     */
     void nullify()()
     {
         static if (is(T == class) || is(T == interface))
@@ -2893,23 +2902,23 @@ Forces `this` to the null state.
         _isNull = true;
     }
 
-///
-@safe unittest
-{
-    Nullable!int ni = 0;
-    assert(!ni.isNull);
+    ///
+    @safe unittest
+    {
+        Nullable!int ni = 0;
+        assert(!ni.isNull);
 
-    ni.nullify();
-    assert(ni.isNull);
-}
+        ni.nullify();
+        assert(ni.isNull);
+    }
 
-/**
-Assigns `value` to the internally-held state. If the assignment
-succeeds, `this` becomes non-null.
-
-Params:
-    value = A value of type `T` to assign to this `Nullable`.
- */
+    /**
+     * Assigns `value` to the internally-held state. If the assignment
+     * succeeds, `this` becomes non-null.
+     *
+     * Params:
+     *     value = A value of type `T` to assign to this `Nullable`.
+     */
     void opAssign()(T value)
     {
         import std.algorithm.mutation : moveEmplace, move;
@@ -2930,40 +2939,40 @@ Params:
         _isNull = false;
     }
 
-/**
-    If this `Nullable` wraps a type that already has a null value
-    (such as a pointer), then assigning the null value to this
-    `Nullable` is no different than assigning any other value of
-    type `T`, and the resulting code will look very strange. It
-    is strongly recommended that this be avoided by instead using
-    the version of `Nullable` that takes an additional `nullValue`
-    template argument.
- */
-@safe unittest
-{
-    //Passes
-    Nullable!(int*) npi;
-    assert(npi.isNull);
+    /**
+     * If this `Nullable` wraps a type that already has a null value
+     * (such as a pointer), then assigning the null value to this
+     * `Nullable` is no different than assigning any other value of
+     * type `T`, and the resulting code will look very strange. It
+     * is strongly recommended that this be avoided by instead using
+     * the version of `Nullable` that takes an additional `nullValue`
+     * template argument.
+     */
+    @safe unittest
+    {
+        //Passes
+        Nullable!(int*) npi;
+        assert(npi.isNull);
 
-    //Passes?!
-    npi = null;
-    assert(!npi.isNull);
-}
+        //Passes?!
+        npi = null;
+        assert(!npi.isNull);
+    }
 
-/**
-Gets the value if not null. If `this` is in the null state, and the optional
-parameter `fallback` was provided, it will be returned. Without `fallback`,
-calling `get` with a null state is invalid.
-
-When the fallback type is different from the Nullable type, `get(T)` returns
-the common type.
-
-Params:
-    fallback = the value to return in case the `Nullable` is null.
-
-Returns:
-    The value held internally by this `Nullable`.
- */
+    /**
+     * Gets the value if not null. If `this` is in the null state, and the optional
+     * parameter `fallback` was provided, it will be returned. Without `fallback`,
+     * calling `get` with a null state is invalid.
+     *
+     * When the fallback type is different from the Nullable type, `get(T)` returns
+     * the common type.
+     *
+     * Params:
+     *     fallback = the value to return in case the `Nullable` is null.
+     *
+     * Returns:
+     *     The value held internally by this `Nullable`.
+     */
     @property ref inout(T) get() inout @safe pure nothrow
     {
         enum message = "Called `get' on null Nullable!" ~ T.stringof ~ ".";
@@ -2983,25 +2992,25 @@ Returns:
         return isNull ? fallback : _value.payload;
     }
 
-//@@@DEPRECATED_2.096@@@
-deprecated(
-    "Implicit conversion with `alias Nullable.get this` will be removed after 2.096. Please use `.get` explicitly.")
-@system unittest
-{
-    import core.exception : AssertError;
-    import std.exception : assertThrown, assertNotThrown;
+    //@@@DEPRECATED_2.096@@@
+    deprecated(
+        "Implicit conversion with `alias Nullable.get this` will be removed after 2.096. Please use `.get` explicitly.")
+    @system unittest
+    {
+        import core.exception : AssertError;
+        import std.exception : assertThrown, assertNotThrown;
 
-    Nullable!int ni;
-    int i = 42;
-    //`get` is implicitly called. Will throw
-    //an AssertError in non-release mode
-    assertThrown!AssertError(i = ni);
-    assert(i == 42);
+        Nullable!int ni;
+        int i = 42;
+        //`get` is implicitly called. Will throw
+        //an AssertError in non-release mode
+        assertThrown!AssertError(i = ni);
+        assert(i == 42);
 
-    ni = 5;
-    assertNotThrown!AssertError(i = ni);
-    assert(i == 5);
-}
+        ni = 5;
+        assertNotThrown!AssertError(i = ni);
+        assert(i == 5);
+    }
 
     //@@@DEPRECATED_2.096@@@
     deprecated(
@@ -3011,24 +3020,24 @@ deprecated(
         return get;
     }
 
-///
-@safe pure nothrow unittest
-{
-    int i = 42;
-    Nullable!int ni;
-    int x = ni.get(i);
-    assert(x == i);
+    ///
+    @safe pure nothrow unittest
+    {
+        int i = 42;
+        Nullable!int ni;
+        int x = ni.get(i);
+        assert(x == i);
 
-    ni = 7;
-    x = ni.get(i);
-    assert(x == 7);
-}
+        ni = 7;
+        x = ni.get(i);
+        assert(x == 7);
+    }
 
-/**
-Implicitly converts to `T`.
-`this` must not be in the null state.
-This feature is deprecated and will be removed after 2.096.
- */
+    /**
+     * Implicitly converts to `T`.
+     * `this` must not be in the null state.
+     * This feature is deprecated and will be removed after 2.096.
+     */
     alias get_ this;
 }
 

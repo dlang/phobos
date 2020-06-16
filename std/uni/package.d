@@ -2173,7 +2173,7 @@ public struct InversionList(SP=GcPolicy)
         assert(set.byInterval.equal([tuple('A','E'), tuple('a','e')]));
     }
 
-    package @property const(CodepointInterval)[] intervals() const
+    package(std) @property const(CodepointInterval)[] intervals() const
     {
         import std.array : array;
         return Intervals!(typeof(data[]))(data[]).array;
@@ -2204,7 +2204,7 @@ public struct InversionList(SP=GcPolicy)
     // TODO:
     // used internally in std.regex
     // should be properly exposed in a public API ?
-    package auto scanFor()(dchar ch) const
+    package(std) auto scanFor()(dchar ch) const
     {
         immutable len = data.length;
         for (size_t i = 0; i < len; i++)
@@ -2613,7 +2613,7 @@ public:
         assert((set & set.inverted).empty);
     }
 
-    package static string toSourceCode(const(CodepointInterval)[] range, string funcName)
+    package(std) static string toSourceCode(const(CodepointInterval)[] range, string funcName)
     {
         import std.algorithm.searching : countUntil;
         import std.format : format;
@@ -2802,9 +2802,9 @@ private:
         }
 
         //may break sorted property - but we need std.sort to access it
-        //hence package protection attribute
+        //hence package(std) protection attribute
         static if (hasAssignableElements!Range)
-        package @property void front(CodepointInterval val)
+        package(std) @property void front(CodepointInterval val)
         {
             slice[start] = val.a;
             slice[start+1] = val.b;
@@ -2819,7 +2819,7 @@ private:
 
         //ditto about package
         static if (hasAssignableElements!Range)
-        package @property void back(CodepointInterval val)
+        package(std) @property void back(CodepointInterval val)
         {
             slice[end-2] = val.a;
             slice[end-1] = val.b;
@@ -2844,7 +2844,7 @@ private:
 
         //ditto about package
         static if (hasAssignableElements!Range)
-        package void opIndexAssign(CodepointInterval val, size_t idx)
+        package(std) void opIndexAssign(CodepointInterval val, size_t idx)
         {
             slice[start+idx*2] = val.a;
             slice[start+idx*2+1] = val.b;
@@ -4401,7 +4401,7 @@ if (sumOfIntegerTuple!sizes == 21)
     alias CodepointTrie = typeof(TrieBuilder!(T, dchar, lastDchar+1, Prefix)(T.init).build());
 }
 
-package template cmpK0(alias Pred)
+package(std) template cmpK0(alias Pred)
 {
     import std.typecons : Tuple;
     static bool cmpK0(Value, Key)
@@ -4913,7 +4913,7 @@ template Utf8Matcher()
         //static disptach helper UTF size ==> table
         alias tab(int i) = tables[i - 1];
 
-        package @property CherryPick!(Impl, SizesToPick) subMatcher(SizesToPick...)()
+        package(std) @property CherryPick!(Impl, SizesToPick) subMatcher(SizesToPick...)()
         {
             return CherryPick!(Impl, SizesToPick)(&this);
         }
@@ -5153,7 +5153,7 @@ template Utf16Matcher()
         }
         mixin DefMatcher;
 
-        package @property CherryPick!(Impl, SizesToPick) subMatcher(SizesToPick...)()
+        package(std) @property CherryPick!(Impl, SizesToPick) subMatcher(SizesToPick...)()
         {
             return CherryPick!(Impl, SizesToPick)(&this);
         }
@@ -5276,7 +5276,7 @@ if (isCodepointSet!Set)
 
 
 //a range of code units, packed with index to speed up forward iteration
-package auto decoder(C)(C[] s, size_t offset=0)
+package(std) auto decoder(C)(C[] s, size_t offset=0)
 if (is(C : wchar) || is(C : char))
 {
     static struct Decoder
@@ -5826,7 +5826,7 @@ if (is(Char1 : dchar) && is(Char2 : dchar))
 }
 
 
-package ubyte[] compressIntervals(Range)(Range intervals)
+package(std) ubyte[] compressIntervals(Range)(Range intervals)
 if (isInputRange!Range && isIntegralPair!(ElementType!Range))
 {
     ubyte[] storage;
@@ -5869,7 +5869,7 @@ if (isInputRange!Range && isIntegralPair!(ElementType!Range))
 }
 
 // Creates a range of `CodepointInterval` that lazily decodes compressed data.
-@safe package auto decompressIntervals(const(ubyte)[] data) pure
+@safe package(std) auto decompressIntervals(const(ubyte)[] data) pure
 {
     return DecompressedIntervals(data);
 }
@@ -6106,10 +6106,10 @@ template SetSearcher(alias table, string kind)
 }
 
 // Characters that need escaping in string posed as regular expressions
-package alias Escapables = AliasSeq!('[', ']', '\\', '^', '$', '.', '|', '?', ',', '-',
+package(std) alias Escapables = AliasSeq!('[', ']', '\\', '^', '$', '.', '|', '?', ',', '-',
     ';', ':', '#', '&', '%', '/', '<', '>', '`',  '*', '+', '(', ')', '{', '}',  '~');
 
-package CodepointSet memoizeExpr(string expr)()
+package(std) CodepointSet memoizeExpr(string expr)()
 {
     if (__ctfe)
         return mixin(expr);
@@ -6125,14 +6125,14 @@ package CodepointSet memoizeExpr(string expr)()
 }
 
 //property for \w character class
-package @property CodepointSet wordCharacter() @safe
+package(std) @property CodepointSet wordCharacter() @safe
 {
     return memoizeExpr!("unicode.Alphabetic | unicode.Mn | unicode.Mc
         | unicode.Me | unicode.Nd | unicode.Pc")();
 }
 
 //basic stack, just in case it gets used anywhere else then Parser
-package struct Stack(T)
+package(std) struct Stack(T)
 {
 @safe:
     T[] data;
@@ -6161,7 +6161,7 @@ package struct Stack(T)
 
 //test if a given string starts with hex number of maxDigit that's a valid codepoint
 //returns it's value and skips these maxDigit chars on success, throws on failure
-package dchar parseUniHex(Range)(ref Range str, size_t maxDigit)
+package(std) dchar parseUniHex(Range)(ref Range str, size_t maxDigit)
 {
     import std.exception : enforce;
     //std.conv.parse is both @system and bogus
@@ -6824,7 +6824,7 @@ struct UnicodeSetParser(Range)
     }
 
     //parse control code of form \cXXX, c assumed to be the current symbol
-    static package dchar parseControlCode(Parser)(ref Parser p)
+    static package(std) dchar parseControlCode(Parser)(ref Parser p)
     {
         with(p)
         {
@@ -6839,7 +6839,7 @@ struct UnicodeSetParser(Range)
 
     //parse and return a CodepointSet for \p{...Property...} and \P{...Property..},
     //\ - assumed to be processed, p - is current
-    static package CodepointSet parsePropertySpec(Range)(ref Range p,
+    static package(std) CodepointSet parsePropertySpec(Range)(ref Range p,
         bool negated, bool casefold)
     {
         static import std.ascii;
@@ -8113,13 +8113,13 @@ if (isForwardRange!S1 && isSomeChar!(ElementEncodingType!S1)
     auto a = [["foo", "bar"], ["baz"]].map!(line => line.joiner(" ")).array.sort!((a, b) => icmp(a, b) < 0);
 }
 
-// This is package for the moment to be used as a support tool for std.regex
+// This is package(std) for the moment to be used as a support tool for std.regex
 // It needs a better API
 /*
     Return a range of all $(CODEPOINTS) that casefold to
     and from this `ch`.
 */
-package auto simpleCaseFoldings(dchar ch) @safe
+package(std) auto simpleCaseFoldings(dchar ch) @safe
 {
     import std.internal.unicode_tables : simpleCaseTable; // generated file
     alias sTable = simpleCaseTable;
