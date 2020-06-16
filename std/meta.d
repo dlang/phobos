@@ -117,7 +117,7 @@ alias AliasSeq(TList...) = TList;
     // that each call `func` with the next variadic template argument
     template Map(alias func, args...)
     {
-        alias lazyItem = function auto ref() => func(args[0]);
+        auto ref lazyItem() {return func(args[0]);}
 
         static if (args.length == 1)
         {
