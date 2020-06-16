@@ -183,8 +183,8 @@ alias Alias(T) = T;
 {
     // Without Alias this would fail if Args[0] was e.g. a value and
     // some logic would be needed to detect when to use enum instead
-    alias Head(Args ...) = Alias!(Args[0]);
-    alias Tail(Args ...) = Args[1 .. $];
+    alias Head(Args...) = Alias!(Args[0]);
+    alias Tail(Args...) = Args[1 .. $];
 
     alias Blah = AliasSeq!(3, int, "hello");
     static assert(Head!Blah == 3);
@@ -249,8 +249,8 @@ if (!isAggregateType!T || is(Unqual!T == T))
 }
 
 /**
- * Returns the index of the first occurrence of type T in the
- * sequence of zero or more types TList.
+ * Returns the index of the first occurrence of T in the
+ * sequence TList.
  * If not found, -1 is returned.
  */
 template staticIndexOf(T, TList...)
@@ -518,7 +518,7 @@ template NoDuplicates(TList...)
 
 /**
  * Returns an `AliasSeq` created from TList with the first occurrence
- * of type T, if found, replaced with type U.
+ * of T, if found, replaced with U.
  */
 template Replace(T, U, TList...)
 {
@@ -598,7 +598,7 @@ if (args.length >= 2)
 
 /**
  * Returns an `AliasSeq` created from TList with all occurrences
- * of type T, if found, replaced with type U.
+ * of T, if found, replaced with U.
  */
 template ReplaceAll(T, U, TList...)
 {
@@ -1359,7 +1359,7 @@ private template SmartAlias(T...)
     }
     else
     {
-        alias SmartAlias = AliasSeq!T;
+        alias SmartAlias = T;
     }
 }
 
@@ -1771,12 +1771,12 @@ if (ab.length == 2)
 }
 
 /*
- * [internal] Confines a tuple within a template. Used only in unittests.
+ * [internal] Wraps a sequence in a template. Used only in unittests.
  */
 private template Pack(T...)
 {
-    alias tuple = T;
-    alias equals(U...) = isSame!(Pack!T, Pack!U);
+    alias Expand = T;
+    enum equals(U...) = isSame!(Pack!T, Pack!U);
 }
 
 @safe unittest
