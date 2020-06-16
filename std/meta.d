@@ -1461,10 +1461,9 @@ private template staticMerge(alias cmp, int half, Seq...)
     }
 }
 
-private template isLessEq(alias cmp, Seq...)
-if (Seq.length == 2)
+private template isLessEq(alias cmp, alias A, alias B)
 {
-    private enum Result = cmp!(Seq[1], Seq[0]);
+    private enum Result = cmp!(B, A);
     static if (is(typeof(Result) == bool))
         enum isLessEq = !Result;
     else static if (is(typeof(Result) : int))
@@ -1619,22 +1618,21 @@ private:
  * __traits(isSame, a, b) - other cases (variables, functions,
  *                          templates, etc.)
  */
-private template isSame(ab...)
-if (ab.length == 2)
+private template isSame(alias A, alias B)
 {
-    static if (is(ab[0]) && is(ab[1]))
+    static if (is(A) && is(B))
     {
-        enum isSame = is(ab[0] == ab[1]);
+        enum isSame = is(A == B);
     }
-    else static if (!is(ab[0]) && !is(ab[1]) &&
-                    !(is(typeof(&ab[0])) && is(typeof(&ab[1]))) &&
-                     __traits(compiles, { enum isSame = ab[0] == ab[1]; }))
+    else static if (!is(A) && !is(B) &&
+                    !(is(typeof(&A)) && is(typeof(&B))) &&
+                     __traits(compiles, { enum isSame = A == B; }))
     {
-        enum isSame = (ab[0] == ab[1]);
+        enum isSame = (A == B);
     }
     else
     {
-        enum isSame = __traits(isSame, ab[0], ab[1]);
+        enum isSame = __traits(isSame, A, B);
     }
 }
 
