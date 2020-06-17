@@ -115,45 +115,16 @@ version (LittleEndian) import core.bitop : bswap;
 
 public import std.digest;
 
-/*
- * Helper methods for encoding the buffer.
- * Can be removed if the optimizer can inline the methods from std.bitmanip.
- */
-private ubyte[8] nativeToBigEndian(ulong val) @trusted pure nothrow @nogc
+version (LittleEndian)
 {
-    version (LittleEndian)
-        immutable ulong res = (cast(ulong)  bswap(cast(uint) val)) << 32 | bswap(cast(uint) (val >> 32));
-    else
-        immutable ulong res = val;
-    return *cast(ubyte[8]*) &res;
+    private alias bigEndianToNative = bswap;
+    private alias nativeToBigEndian = bswap;
 }
-
-private ubyte[4] nativeToBigEndian(uint val) @trusted pure nothrow @nogc
+else
 {
-    version (LittleEndian)
-        immutable uint res = bswap(val);
-    else
-        immutable uint res = val;
-    return *cast(ubyte[4]*) &res;
-}
-
-private ulong bigEndianToNative(ubyte[8] val) @trusted pure nothrow @nogc
-{
-    version (LittleEndian)
-    {
-        import std.bitmanip : bigEndianToNative;
-        return bigEndianToNative!ulong(val);
-    }
-    else
-        return *cast(ulong*) &val;
-}
-
-private uint bigEndianToNative(ubyte[4] val) @trusted pure nothrow @nogc
-{
-    version (LittleEndian)
-        return bswap(*cast(uint*) &val);
-    else
-        return *cast(uint*) &val;
+    private uint bigEndianToNative(uint val) @safe pure nothrow @nogc { return val; }
+    private ulong bigEndianToNative(ulong val) @safe pure nothrow @nogc { return val; }
+    private alias nativeToBigEndian = bigEndianToNative;
 }
 
 //rotateLeft rotates x left n bits
@@ -354,26 +325,77 @@ struct SHA(uint hashBlockSize, uint digestSize)
         /*
          * Basic SHA1/SHA2 functions.
          */
-        static @safe pure nothrow @nogc
+        static @safe pure nothrow
         {
             /* All SHA1/SHA2 */
-            T Ch(T)(T x, T y, T z) { return z ^ (x & (y ^ z)); }
-            T Maj(T)(T x, T y, T z) { return (x & y) | (z & (x ^ y)); }
+            string Ch(char x, char y, char z)
+            {
+                if (!__ctfe) assert(0);
+                return "("~z~" ^ ("~x~" & ("~y~" ^ "~z~")))";
+            }
+            string Maj(char x, char y, char z)
+            {
+                if (!__ctfe) assert(0);
+                return "(("~x~" & "~y~") | ("~z~" & ("~x~" ^ "~y~")))";
+            }
 
             /* SHA-1 */
             uint Parity(uint x, uint y, uint z) { return x ^ y ^ z; }
 
-            /* SHA-224, SHA-256 */
-            uint BigSigma0(uint x) { return rotateRight(x, 2) ^ rotateRight(x, 13) ^ rotateRight(x, 22); }
-            uint BigSigma1(uint x) { return rotateRight(x, 6) ^ rotateRight(x, 11) ^ rotateRight(x, 25); }
-            uint SmSigma0(uint x) { return rotateRight(x, 7) ^ rotateRight(x, 18) ^ x >> 3; }
-            uint SmSigma1(uint x) { return rotateRight(x, 17) ^ rotateRight(x, 19) ^ x >> 10; }
+            /* All SHA2 */
+            string BigSigma0(char x) {
+                if (!__ctfe) assert(0);
+                alias Word = typeof(state[0]);
+                static if (Word.sizeof == 4)
+                    return "((("~x~" >>> 2) | ("~x~" << (32 - 2))) ^ " ~
+                        "(("~x~" >>> 13) | ("~x~" << (32 - 13))) ^ " ~
+                        "(("~x~" >>> 22) | ("~x~" << (32 - 22))))";
+                else static if (Word.sizeof == 8)
+                    return "((("~x~" >>> 28) | ("~x~" << (64 - 28))) ^ " ~
+                        "(("~x~" >>> 34) | ("~x~" << (64 - 34))) ^ " ~
+                        "(("~x~" >>> 39) | ("~x~" << (64 - 39))))";
+                else static assert(0);
+            }
+            string BigSigma1(char x) {
+                if (!__ctfe) assert(0);
+                alias Word = typeof(state[0]);
+                static if (Word.sizeof == 4)
+                    return "((("~x~" >>> 6) | ("~x~" << (32 - 6))) ^ " ~
+                        "(("~x~" >>> 11) | ("~x~" << (32 - 11))) ^ " ~
+                        "(("~x~" >> 25) | ("~x~" << (32 - 25))))";
+                else static if (Word.sizeof == 8)
+                    return "((("~x~" >>> 14) | ("~x~" << (64 - 14))) ^ " ~
+                        "(("~x~" >>> 18) | ("~x~" << (64 - 18))) ^ " ~
+                        "(("~x~" >>> 41) | ("~x~" << (64 - 41))))";
+                else static assert(0);
+            }
 
-            /* SHA-384, SHA-512, SHA-512/224, SHA-512/256 */
-            ulong BigSigma0(ulong x) { return rotateRight(x, 28) ^ rotateRight(x, 34) ^ rotateRight(x, 39); }
-            ulong BigSigma1(ulong x) { return rotateRight(x, 14) ^ rotateRight(x, 18) ^ rotateRight(x, 41); }
-            ulong SmSigma0(ulong x) { return rotateRight(x, 1) ^ rotateRight(x, 8) ^ x >> 7; }
-            ulong SmSigma1(ulong x) { return rotateRight(x, 19) ^ rotateRight(x, 61) ^ x >> 6; }
+            string SmSigma0(char x) {
+                if (!__ctfe) assert(0);
+                alias Word = typeof(state[0]);
+                static if (Word.sizeof == 4)
+                    return "((("~x~" >>> 7) | ("~x~" << (32 - 7))) ^ " ~
+                        "(("~x~" >>> 18) | ("~x~" << (32 - 18))) ^ " ~
+                        ""~x~" >>> 3)";
+                else static if (Word.sizeof == 8)
+                    return "((("~x~" >>> 1) | ("~x~" << (64 - 1))) ^ " ~
+                        "(("~x~" >>> 8) | ("~x~" << (64 - 8))) ^ " ~
+                        ""~x~" >>> 7)";
+                else static assert(0);
+            }
+            string SmSigma1(char x) {
+                if (!__ctfe) assert(0);
+                alias Word = typeof(state[0]);
+                static if (Word.sizeof == 4)
+                    return "((("~x~" >>> 17) | ("~x~" << (32 - 17))) ^ " ~
+                        "(("~x~" >>> 19) | ("~x~" << (32 - 19))) ^ " ~
+                        ""~x~" >>> 10)";
+                else static if (Word.sizeof == 8)
+                    return "((("~x~" >>> 19) | ("~x~" << (64 - 19))) ^ " ~
+                        "(("~x~" >>> 61) | ("~x~" << (64 - 61))) ^ " ~
+                        ""~x~" >>> 6)";
+                else static assert(0);
+            }
         }
 
         /*
@@ -382,8 +404,8 @@ struct SHA(uint hashBlockSize, uint digestSize)
         static void T_0_15(int i, const(ubyte[64])* input, ref uint[16] W, uint A, ref uint B, uint C, uint D,
             uint E, ref uint T) pure nothrow @nogc
         {
-            uint Wi = W[i] = bigEndianToNative(*cast(ubyte[4]*)&((*input)[i*4]));
-            T = Ch(B, C, D) + E + rotateLeft(A, 5) + Wi + 0x5a827999;
+            uint Wi = W[i] = bigEndianToNative(*cast(uint*) &((*input)[i*4]));
+            T = mixin(Ch('B', 'C', 'D')) + E + rotateLeft(A, 5) + Wi + 0x5a827999;
             B = rotateLeft(B, 30);
         }
 
@@ -391,7 +413,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
             pure nothrow @nogc
         {
             W[i&15] = rotateLeft(W[(i-3)&15] ^ W[(i-8)&15] ^ W[(i-14)&15] ^ W[(i-16)&15], 1);
-            T = Ch(B, C, D) + E + rotateLeft(A, 5) + W[i&15] + 0x5a827999;
+            T = mixin(Ch('B', 'C', 'D')) + E + rotateLeft(A, 5) + W[i&15] + 0x5a827999;
             B = rotateLeft(B, 30);
         }
 
@@ -407,7 +429,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
             ref uint T) pure nothrow @nogc
         {
             W[i&15] = rotateLeft(W[(i-3)&15] ^ W[(i-8)&15] ^ W[(i-14)&15] ^ W[(i-16)&15], 1);
-            T = Maj(B, C, D) + E + rotateLeft(A, 5) + W[i&15] + 0x8f1bbcdc;
+            T = mixin(Maj('B', 'C', 'D')) + E + rotateLeft(A, 5) + W[i&15] + 0x8f1bbcdc;
             B = rotateLeft(B, 30);
         }
 
@@ -524,26 +546,34 @@ struct SHA(uint hashBlockSize, uint digestSize)
         /*
          * SHA2 basic transformation. Transforms state based on block.
          */
-        static void T_SHA2_0_15(Word)(int i, const(ubyte[blockSize/8])* input, ref Word[16] W,
-            Word A, Word B, Word C, ref Word D, Word E, Word F, Word G, ref Word H, Word K)
-            pure nothrow @nogc
+        private static string T_SHA2_0_15(string i, string input, char W, char A,
+            char B, char C, char D, char E, char F, char G, char H, string K)
+            pure nothrow @safe
         {
-            Word Wi = W[i] = bigEndianToNative(*cast(ubyte[Word.sizeof]*)&((*input)[i*Word.sizeof]));
-            Word T1 = H + BigSigma1(E) + Ch(E, F, G) + K + Wi;
-            Word T2 = BigSigma0(A) + Maj(A, B, C);
-            D += T1;
-            H = T1 + T2;
+            if (!__ctfe) assert(0);
+            return "{\n" ~
+            "Word Wi = W["~i~"] = bigEndianToNative(*cast(Word*) &((*"~input~")["~i~"*Word.sizeof]));\n" ~
+            "Word T1 = "~H~" + "~BigSigma1(E)~" + "~Ch(E, F, G)~" + "~K~" + Wi;\n" ~
+            "Word T2 = "~BigSigma0(A)~" + "~Maj(A, B, C)~";\n" ~
+            ""~D~" += T1;\n" ~
+            ""~H~" = T1 + T2;\n" ~
+            "}";
         }
 
-        static void T_SHA2_16_79(Word)(int i, ref Word[16] W,
-            Word A, Word B, Word C, ref Word D, Word E, Word F, Word G, ref Word H, Word K)
-            pure nothrow @nogc
+        private static string T_SHA2_16_79(string i, char W,
+            char A, char B, char C, char D, char E, char F, char G, char H, string K)
+            pure nothrow @safe
         {
-            W[i&15] = SmSigma1(W[(i-2)&15]) + W[(i-7)&15] + SmSigma0(W[(i-15)&15]) + W[i&15];
-            Word T1 = H + BigSigma1(E) + Ch(E, F, G) + K + W[i&15];
-            Word T2 = BigSigma0(A) + Maj(A, B, C);
-            D += T1;
-            H = T1 + T2;
+            if (!__ctfe) assert(0);
+            return "{\n" ~
+            "const q = "~W~"[("~i~"-2)&15];\n" ~
+            "const r = "~W~"[("~i~"-15)&15];\n" ~
+            ""~W~"["~i~"&15] = "~SmSigma1('q')~" + "~W~"[("~i~"-7)&15] + "~SmSigma0('r')~" + "~W~"["~i~"&15]\n;" ~
+            "Word T1 = "~H~" + "~BigSigma1(E)~" + "~Ch(E, F, G)~" + "~K~" + "~W~"["~i~"&15];\n" ~
+            "Word T2 = "~BigSigma0(A)~" + "~Maj(A, B, C)~";\n" ~
+            ""~D~" += T1;\n" ~
+            ""~H~" = T1 + T2;\n" ~
+            "}";
         }
 
         private static void transformSHA2(Word)(Word[8]* state, const(ubyte[blockSize/8])* block)
@@ -561,89 +591,89 @@ struct SHA(uint hashBlockSize, uint digestSize)
             G = (*state)[6];
             H = (*state)[7];
 
-            T_SHA2_0_15!Word ( 0, block, W, A, B, C, D, E, F, G, H, constants[ 0]);
-            T_SHA2_0_15!Word ( 1, block, W, H, A, B, C, D, E, F, G, constants[ 1]);
-            T_SHA2_0_15!Word ( 2, block, W, G, H, A, B, C, D, E, F, constants[ 2]);
-            T_SHA2_0_15!Word ( 3, block, W, F, G, H, A, B, C, D, E, constants[ 3]);
-            T_SHA2_0_15!Word ( 4, block, W, E, F, G, H, A, B, C, D, constants[ 4]);
-            T_SHA2_0_15!Word ( 5, block, W, D, E, F, G, H, A, B, C, constants[ 5]);
-            T_SHA2_0_15!Word ( 6, block, W, C, D, E, F, G, H, A, B, constants[ 6]);
-            T_SHA2_0_15!Word ( 7, block, W, B, C, D, E, F, G, H, A, constants[ 7]);
-            T_SHA2_0_15!Word ( 8, block, W, A, B, C, D, E, F, G, H, constants[ 8]);
-            T_SHA2_0_15!Word ( 9, block, W, H, A, B, C, D, E, F, G, constants[ 9]);
-            T_SHA2_0_15!Word (10, block, W, G, H, A, B, C, D, E, F, constants[10]);
-            T_SHA2_0_15!Word (11, block, W, F, G, H, A, B, C, D, E, constants[11]);
-            T_SHA2_0_15!Word (12, block, W, E, F, G, H, A, B, C, D, constants[12]);
-            T_SHA2_0_15!Word (13, block, W, D, E, F, G, H, A, B, C, constants[13]);
-            T_SHA2_0_15!Word (14, block, W, C, D, E, F, G, H, A, B, constants[14]);
-            T_SHA2_0_15!Word (15, block, W, B, C, D, E, F, G, H, A, constants[15]);
-            T_SHA2_16_79!Word(16, W, A, B, C, D, E, F, G, H, constants[16]);
-            T_SHA2_16_79!Word(17, W, H, A, B, C, D, E, F, G, constants[17]);
-            T_SHA2_16_79!Word(18, W, G, H, A, B, C, D, E, F, constants[18]);
-            T_SHA2_16_79!Word(19, W, F, G, H, A, B, C, D, E, constants[19]);
-            T_SHA2_16_79!Word(20, W, E, F, G, H, A, B, C, D, constants[20]);
-            T_SHA2_16_79!Word(21, W, D, E, F, G, H, A, B, C, constants[21]);
-            T_SHA2_16_79!Word(22, W, C, D, E, F, G, H, A, B, constants[22]);
-            T_SHA2_16_79!Word(23, W, B, C, D, E, F, G, H, A, constants[23]);
-            T_SHA2_16_79!Word(24, W, A, B, C, D, E, F, G, H, constants[24]);
-            T_SHA2_16_79!Word(25, W, H, A, B, C, D, E, F, G, constants[25]);
-            T_SHA2_16_79!Word(26, W, G, H, A, B, C, D, E, F, constants[26]);
-            T_SHA2_16_79!Word(27, W, F, G, H, A, B, C, D, E, constants[27]);
-            T_SHA2_16_79!Word(28, W, E, F, G, H, A, B, C, D, constants[28]);
-            T_SHA2_16_79!Word(29, W, D, E, F, G, H, A, B, C, constants[29]);
-            T_SHA2_16_79!Word(30, W, C, D, E, F, G, H, A, B, constants[30]);
-            T_SHA2_16_79!Word(31, W, B, C, D, E, F, G, H, A, constants[31]);
-            T_SHA2_16_79!Word(32, W, A, B, C, D, E, F, G, H, constants[32]);
-            T_SHA2_16_79!Word(33, W, H, A, B, C, D, E, F, G, constants[33]);
-            T_SHA2_16_79!Word(34, W, G, H, A, B, C, D, E, F, constants[34]);
-            T_SHA2_16_79!Word(35, W, F, G, H, A, B, C, D, E, constants[35]);
-            T_SHA2_16_79!Word(36, W, E, F, G, H, A, B, C, D, constants[36]);
-            T_SHA2_16_79!Word(37, W, D, E, F, G, H, A, B, C, constants[37]);
-            T_SHA2_16_79!Word(38, W, C, D, E, F, G, H, A, B, constants[38]);
-            T_SHA2_16_79!Word(39, W, B, C, D, E, F, G, H, A, constants[39]);
-            T_SHA2_16_79!Word(40, W, A, B, C, D, E, F, G, H, constants[40]);
-            T_SHA2_16_79!Word(41, W, H, A, B, C, D, E, F, G, constants[41]);
-            T_SHA2_16_79!Word(42, W, G, H, A, B, C, D, E, F, constants[42]);
-            T_SHA2_16_79!Word(43, W, F, G, H, A, B, C, D, E, constants[43]);
-            T_SHA2_16_79!Word(44, W, E, F, G, H, A, B, C, D, constants[44]);
-            T_SHA2_16_79!Word(45, W, D, E, F, G, H, A, B, C, constants[45]);
-            T_SHA2_16_79!Word(46, W, C, D, E, F, G, H, A, B, constants[46]);
-            T_SHA2_16_79!Word(47, W, B, C, D, E, F, G, H, A, constants[47]);
-            T_SHA2_16_79!Word(48, W, A, B, C, D, E, F, G, H, constants[48]);
-            T_SHA2_16_79!Word(49, W, H, A, B, C, D, E, F, G, constants[49]);
-            T_SHA2_16_79!Word(50, W, G, H, A, B, C, D, E, F, constants[50]);
-            T_SHA2_16_79!Word(51, W, F, G, H, A, B, C, D, E, constants[51]);
-            T_SHA2_16_79!Word(52, W, E, F, G, H, A, B, C, D, constants[52]);
-            T_SHA2_16_79!Word(53, W, D, E, F, G, H, A, B, C, constants[53]);
-            T_SHA2_16_79!Word(54, W, C, D, E, F, G, H, A, B, constants[54]);
-            T_SHA2_16_79!Word(55, W, B, C, D, E, F, G, H, A, constants[55]);
-            T_SHA2_16_79!Word(56, W, A, B, C, D, E, F, G, H, constants[56]);
-            T_SHA2_16_79!Word(57, W, H, A, B, C, D, E, F, G, constants[57]);
-            T_SHA2_16_79!Word(58, W, G, H, A, B, C, D, E, F, constants[58]);
-            T_SHA2_16_79!Word(59, W, F, G, H, A, B, C, D, E, constants[59]);
-            T_SHA2_16_79!Word(60, W, E, F, G, H, A, B, C, D, constants[60]);
-            T_SHA2_16_79!Word(61, W, D, E, F, G, H, A, B, C, constants[61]);
-            T_SHA2_16_79!Word(62, W, C, D, E, F, G, H, A, B, constants[62]);
-            T_SHA2_16_79!Word(63, W, B, C, D, E, F, G, H, A, constants[63]);
+            mixin(T_SHA2_0_15(" 0", "block", 'W', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', "constants[ 0]"));
+            mixin(T_SHA2_0_15(" 1", "block", 'W', 'H', 'A', 'B', 'C', 'D', 'E', 'F', 'G', "constants[ 1]"));
+            mixin(T_SHA2_0_15(" 2", "block", 'W', 'G', 'H', 'A', 'B', 'C', 'D', 'E', 'F', "constants[ 2]"));
+            mixin(T_SHA2_0_15(" 3", "block", 'W', 'F', 'G', 'H', 'A', 'B', 'C', 'D', 'E', "constants[ 3]"));
+            mixin(T_SHA2_0_15(" 4", "block", 'W', 'E', 'F', 'G', 'H', 'A', 'B', 'C', 'D', "constants[ 4]"));
+            mixin(T_SHA2_0_15(" 5", "block", 'W', 'D', 'E', 'F', 'G', 'H', 'A', 'B', 'C', "constants[ 5]"));
+            mixin(T_SHA2_0_15(" 6", "block", 'W', 'C', 'D', 'E', 'F', 'G', 'H', 'A', 'B', "constants[ 6]"));
+            mixin(T_SHA2_0_15(" 7", "block", 'W', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'A', "constants[ 7]"));
+            mixin(T_SHA2_0_15(" 8", "block", 'W', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', "constants[ 8]"));
+            mixin(T_SHA2_0_15(" 9", "block", 'W', 'H', 'A', 'B', 'C', 'D', 'E', 'F', 'G', "constants[ 9]"));
+            mixin(T_SHA2_0_15("10", "block", 'W', 'G', 'H', 'A', 'B', 'C', 'D', 'E', 'F', "constants[10]"));
+            mixin(T_SHA2_0_15("11", "block", 'W', 'F', 'G', 'H', 'A', 'B', 'C', 'D', 'E', "constants[11]"));
+            mixin(T_SHA2_0_15("12", "block", 'W', 'E', 'F', 'G', 'H', 'A', 'B', 'C', 'D', "constants[12]"));
+            mixin(T_SHA2_0_15("13", "block", 'W', 'D', 'E', 'F', 'G', 'H', 'A', 'B', 'C', "constants[13]"));
+            mixin(T_SHA2_0_15("14", "block", 'W', 'C', 'D', 'E', 'F', 'G', 'H', 'A', 'B', "constants[14]"));
+            mixin(T_SHA2_0_15("15", "block", 'W', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'A', "constants[15]"));
+            mixin(T_SHA2_16_79("16", 'W', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', "constants[16]"));
+            mixin(T_SHA2_16_79("17", 'W', 'H', 'A', 'B', 'C', 'D', 'E', 'F', 'G', "constants[17]"));
+            mixin(T_SHA2_16_79("18", 'W', 'G', 'H', 'A', 'B', 'C', 'D', 'E', 'F', "constants[18]"));
+            mixin(T_SHA2_16_79("19", 'W', 'F', 'G', 'H', 'A', 'B', 'C', 'D', 'E', "constants[19]"));
+            mixin(T_SHA2_16_79("20", 'W', 'E', 'F', 'G', 'H', 'A', 'B', 'C', 'D', "constants[20]"));
+            mixin(T_SHA2_16_79("21", 'W', 'D', 'E', 'F', 'G', 'H', 'A', 'B', 'C', "constants[21]"));
+            mixin(T_SHA2_16_79("22", 'W', 'C', 'D', 'E', 'F', 'G', 'H', 'A', 'B', "constants[22]"));
+            mixin(T_SHA2_16_79("23", 'W', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'A', "constants[23]"));
+            mixin(T_SHA2_16_79("24", 'W', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', "constants[24]"));
+            mixin(T_SHA2_16_79("25", 'W', 'H', 'A', 'B', 'C', 'D', 'E', 'F', 'G', "constants[25]"));
+            mixin(T_SHA2_16_79("26", 'W', 'G', 'H', 'A', 'B', 'C', 'D', 'E', 'F', "constants[26]"));
+            mixin(T_SHA2_16_79("27", 'W', 'F', 'G', 'H', 'A', 'B', 'C', 'D', 'E', "constants[27]"));
+            mixin(T_SHA2_16_79("28", 'W', 'E', 'F', 'G', 'H', 'A', 'B', 'C', 'D', "constants[28]"));
+            mixin(T_SHA2_16_79("29", 'W', 'D', 'E', 'F', 'G', 'H', 'A', 'B', 'C', "constants[29]"));
+            mixin(T_SHA2_16_79("30", 'W', 'C', 'D', 'E', 'F', 'G', 'H', 'A', 'B', "constants[30]"));
+            mixin(T_SHA2_16_79("31", 'W', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'A', "constants[31]"));
+            mixin(T_SHA2_16_79("32", 'W', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', "constants[32]"));
+            mixin(T_SHA2_16_79("33", 'W', 'H', 'A', 'B', 'C', 'D', 'E', 'F', 'G', "constants[33]"));
+            mixin(T_SHA2_16_79("34", 'W', 'G', 'H', 'A', 'B', 'C', 'D', 'E', 'F', "constants[34]"));
+            mixin(T_SHA2_16_79("35", 'W', 'F', 'G', 'H', 'A', 'B', 'C', 'D', 'E', "constants[35]"));
+            mixin(T_SHA2_16_79("36", 'W', 'E', 'F', 'G', 'H', 'A', 'B', 'C', 'D', "constants[36]"));
+            mixin(T_SHA2_16_79("37", 'W', 'D', 'E', 'F', 'G', 'H', 'A', 'B', 'C', "constants[37]"));
+            mixin(T_SHA2_16_79("38", 'W', 'C', 'D', 'E', 'F', 'G', 'H', 'A', 'B', "constants[38]"));
+            mixin(T_SHA2_16_79("39", 'W', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'A', "constants[39]"));
+            mixin(T_SHA2_16_79("40", 'W', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', "constants[40]"));
+            mixin(T_SHA2_16_79("41", 'W', 'H', 'A', 'B', 'C', 'D', 'E', 'F', 'G', "constants[41]"));
+            mixin(T_SHA2_16_79("42", 'W', 'G', 'H', 'A', 'B', 'C', 'D', 'E', 'F', "constants[42]"));
+            mixin(T_SHA2_16_79("43", 'W', 'F', 'G', 'H', 'A', 'B', 'C', 'D', 'E', "constants[43]"));
+            mixin(T_SHA2_16_79("44", 'W', 'E', 'F', 'G', 'H', 'A', 'B', 'C', 'D', "constants[44]"));
+            mixin(T_SHA2_16_79("45", 'W', 'D', 'E', 'F', 'G', 'H', 'A', 'B', 'C', "constants[45]"));
+            mixin(T_SHA2_16_79("46", 'W', 'C', 'D', 'E', 'F', 'G', 'H', 'A', 'B', "constants[46]"));
+            mixin(T_SHA2_16_79("47", 'W', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'A', "constants[47]"));
+            mixin(T_SHA2_16_79("48", 'W', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', "constants[48]"));
+            mixin(T_SHA2_16_79("49", 'W', 'H', 'A', 'B', 'C', 'D', 'E', 'F', 'G', "constants[49]"));
+            mixin(T_SHA2_16_79("50", 'W', 'G', 'H', 'A', 'B', 'C', 'D', 'E', 'F', "constants[50]"));
+            mixin(T_SHA2_16_79("51", 'W', 'F', 'G', 'H', 'A', 'B', 'C', 'D', 'E', "constants[51]"));
+            mixin(T_SHA2_16_79("52", 'W', 'E', 'F', 'G', 'H', 'A', 'B', 'C', 'D', "constants[52]"));
+            mixin(T_SHA2_16_79("53", 'W', 'D', 'E', 'F', 'G', 'H', 'A', 'B', 'C', "constants[53]"));
+            mixin(T_SHA2_16_79("54", 'W', 'C', 'D', 'E', 'F', 'G', 'H', 'A', 'B', "constants[54]"));
+            mixin(T_SHA2_16_79("55", 'W', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'A', "constants[55]"));
+            mixin(T_SHA2_16_79("56", 'W', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', "constants[56]"));
+            mixin(T_SHA2_16_79("57", 'W', 'H', 'A', 'B', 'C', 'D', 'E', 'F', 'G', "constants[57]"));
+            mixin(T_SHA2_16_79("58", 'W', 'G', 'H', 'A', 'B', 'C', 'D', 'E', 'F', "constants[58]"));
+            mixin(T_SHA2_16_79("59", 'W', 'F', 'G', 'H', 'A', 'B', 'C', 'D', 'E', "constants[59]"));
+            mixin(T_SHA2_16_79("60", 'W', 'E', 'F', 'G', 'H', 'A', 'B', 'C', 'D', "constants[60]"));
+            mixin(T_SHA2_16_79("61", 'W', 'D', 'E', 'F', 'G', 'H', 'A', 'B', 'C', "constants[61]"));
+            mixin(T_SHA2_16_79("62", 'W', 'C', 'D', 'E', 'F', 'G', 'H', 'A', 'B', "constants[62]"));
+            mixin(T_SHA2_16_79("63", 'W', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'A', "constants[63]"));
 
             static if (is(Word == ulong))
             {
-                T_SHA2_16_79!Word(64, W, A, B, C, D, E, F, G, H, constants[64]);
-                T_SHA2_16_79!Word(65, W, H, A, B, C, D, E, F, G, constants[65]);
-                T_SHA2_16_79!Word(66, W, G, H, A, B, C, D, E, F, constants[66]);
-                T_SHA2_16_79!Word(67, W, F, G, H, A, B, C, D, E, constants[67]);
-                T_SHA2_16_79!Word(68, W, E, F, G, H, A, B, C, D, constants[68]);
-                T_SHA2_16_79!Word(69, W, D, E, F, G, H, A, B, C, constants[69]);
-                T_SHA2_16_79!Word(70, W, C, D, E, F, G, H, A, B, constants[70]);
-                T_SHA2_16_79!Word(71, W, B, C, D, E, F, G, H, A, constants[71]);
-                T_SHA2_16_79!Word(72, W, A, B, C, D, E, F, G, H, constants[72]);
-                T_SHA2_16_79!Word(73, W, H, A, B, C, D, E, F, G, constants[73]);
-                T_SHA2_16_79!Word(74, W, G, H, A, B, C, D, E, F, constants[74]);
-                T_SHA2_16_79!Word(75, W, F, G, H, A, B, C, D, E, constants[75]);
-                T_SHA2_16_79!Word(76, W, E, F, G, H, A, B, C, D, constants[76]);
-                T_SHA2_16_79!Word(77, W, D, E, F, G, H, A, B, C, constants[77]);
-                T_SHA2_16_79!Word(78, W, C, D, E, F, G, H, A, B, constants[78]);
-                T_SHA2_16_79!Word(79, W, B, C, D, E, F, G, H, A, constants[79]);
+                mixin(T_SHA2_16_79("64", 'W', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', "constants[64]"));
+                mixin(T_SHA2_16_79("65", 'W', 'H', 'A', 'B', 'C', 'D', 'E', 'F', 'G', "constants[65]"));
+                mixin(T_SHA2_16_79("66", 'W', 'G', 'H', 'A', 'B', 'C', 'D', 'E', 'F', "constants[66]"));
+                mixin(T_SHA2_16_79("67", 'W', 'F', 'G', 'H', 'A', 'B', 'C', 'D', 'E', "constants[67]"));
+                mixin(T_SHA2_16_79("68", 'W', 'E', 'F', 'G', 'H', 'A', 'B', 'C', 'D', "constants[68]"));
+                mixin(T_SHA2_16_79("69", 'W', 'D', 'E', 'F', 'G', 'H', 'A', 'B', 'C', "constants[69]"));
+                mixin(T_SHA2_16_79("70", 'W', 'C', 'D', 'E', 'F', 'G', 'H', 'A', 'B', "constants[70]"));
+                mixin(T_SHA2_16_79("71", 'W', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'A', "constants[71]"));
+                mixin(T_SHA2_16_79("72", 'W', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', "constants[72]"));
+                mixin(T_SHA2_16_79("73", 'W', 'H', 'A', 'B', 'C', 'D', 'E', 'F', 'G', "constants[73]"));
+                mixin(T_SHA2_16_79("74", 'W', 'G', 'H', 'A', 'B', 'C', 'D', 'E', 'F', "constants[74]"));
+                mixin(T_SHA2_16_79("75", 'W', 'F', 'G', 'H', 'A', 'B', 'C', 'D', 'E', "constants[75]"));
+                mixin(T_SHA2_16_79("76", 'W', 'E', 'F', 'G', 'H', 'A', 'B', 'C', 'D', "constants[76]"));
+                mixin(T_SHA2_16_79("77", 'W', 'D', 'E', 'F', 'G', 'H', 'A', 'B', 'C', "constants[77]"));
+                mixin(T_SHA2_16_79("78", 'W', 'C', 'D', 'E', 'F', 'G', 'H', 'A', 'B', "constants[78]"));
+                mixin(T_SHA2_16_79("79", 'W', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'A', "constants[79]"));
             }
 
             (*state)[0] += A;
@@ -703,8 +733,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
                 /* ugly hack to work around lack of ucent */
                 auto oldCount0 = count[0];
                 count[0] += inputLen * 8;
-                if (count[0] < oldCount0)
-                    count[1]++;
+                count[1] += uint(count[0] < oldCount0);
             }
             else
                 static assert(0);
@@ -748,11 +777,11 @@ struct SHA(uint hashBlockSize, uint digestSize)
         {
             static if (blockSize == 512)
             {
-                ubyte[32] data = void;
+                uint[8] data = void;
                 uint index, padLen;
 
                 /* Save number of bits */
-                ubyte[8] bits = nativeToBigEndian(count[0]);
+                ulong bits = nativeToBigEndian(count[0]);
 
                 /* Pad out to 56 mod 64. */
                 index = (cast(uint) count[0] >> 3) & (64 - 1);
@@ -760,25 +789,25 @@ struct SHA(uint hashBlockSize, uint digestSize)
                 put(padding[0 .. padLen]);
 
                 /* Append length (before padding) */
-                put(bits);
+                put((cast(ubyte*) &bits)[0 .. bits.sizeof]);
 
                 /* Store state in digest */
-                for (auto i = 0; i < ((digestSize == 160)? 5 : 8); i++)
-                    data[i*4..(i+1)*4] = nativeToBigEndian(state[i])[];
+                static foreach (i; 0 .. (digestSize == 160) ? 5 : 8)
+                    data[i] = nativeToBigEndian(state[i]);
 
                 /* Zeroize sensitive information. */
                 start();
-                return data[0 .. digestSize/8];
+                return (cast(ubyte[]) data)[0 .. digestSize/8];
             }
             else static if (blockSize == 1024)
             {
-                ubyte[64] data = void;
+                ulong[8] data = void;
                 uint index, padLen;
 
                 /* Save number of bits */
-                ubyte[16] bits;
-                bits[ 0 .. 8] = nativeToBigEndian(count[1]);
-                bits[8 .. 16] = nativeToBigEndian(count[0]);
+                ulong[2] bits;
+                bits[0] = nativeToBigEndian(count[1]);
+                bits[1] = nativeToBigEndian(count[0]);
 
                 /* Pad out to 112 mod 128. */
                 index = (cast(uint) count[0] >> 3) & (128 - 1);
@@ -786,15 +815,15 @@ struct SHA(uint hashBlockSize, uint digestSize)
                 put(padding[0 .. padLen]);
 
                 /* Append length (before padding) */
-                put(bits);
+                put((cast(ubyte*) &bits)[0 .. bits.sizeof]);
 
                 /* Store state in digest */
-                for (auto i = 0; i < 8; i++)
-                    data[i*8..(i+1)*8] = nativeToBigEndian(state[i])[];
+                static foreach (i; 0 .. 8)
+                    data[i] = nativeToBigEndian(state[i]);
 
                 /* Zeroize sensitive information. */
                 start();
-                return data[0 .. digestSize/8];
+                return (cast(ubyte[]) data)[0 .. digestSize/8];
             }
             else
                 static assert(0);
