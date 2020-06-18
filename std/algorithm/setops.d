@@ -554,7 +554,7 @@ pure @safe nothrow @nogc unittest
     foreach (pair; cartesianProduct(seq, seq)) {}
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.typecons : tuple;
@@ -563,12 +563,12 @@ unittest
     {
         int[] data;
 
-        int front() @system @property
+        int front() @system @property inout
         {
             return data[0];
         }
 
-        bool empty() @system @property
+        bool empty() @system @property inout
         {
             return data.length == 0;
         }
