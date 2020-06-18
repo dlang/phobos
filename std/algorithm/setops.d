@@ -391,7 +391,7 @@ if (ranges.length >= 2 &&
             return mixin(algoFormat("tuple(%(current[%d].front%|,%))",
                                     iota(0, current.length)));
         }
-        void popFront() scope @safe
+        void popFront() scope
         {
             foreach_reverse (i, ref r; current)
             {
@@ -552,6 +552,40 @@ pure @safe nothrow @nogc unittest
     import std.algorithm.iteration : map;
     auto seq = [1, 2].map!(x => x);
     foreach (pair; cartesianProduct(seq, seq)) {}
+}
+
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.typecons : tuple;
+
+    static struct SystemRange
+    {
+        int[] data;
+
+        int front() @system @property inout
+        {
+            return data[0];
+        }
+
+        bool empty() @system @property inout
+        {
+            return data.length == 0;
+        }
+
+        void popFront() @system
+        {
+            data = data[1 .. $];
+        }
+
+        SystemRange save() @system
+        {
+            return this;
+        }
+    }
+
+    assert(SystemRange([1, 2]).cartesianProduct(SystemRange([3, 4]))
+        .equal([tuple(1, 3), tuple(1, 4), tuple(2, 3), tuple(2, 4)]));
 }
 
 // largestPartialIntersection
