@@ -2271,15 +2271,8 @@ if (isAutodecodableString!(C[]) && !isAggregateType!(C[]))
         ];
 
         immutable c = str[0];
-        if (c < 192)
-        {
-            str = str.ptr[1 .. str.length];
-        }
-        else
-        {
-            str = str.ptr[min(str.length, charWidthTab.ptr[c - 192]) .. str.length];
-        }
-
+        immutable charWidth = c < 192 ? 1 : charWidthTab.ptr[c - 192];
+        str = str.ptr[min(str.length, charWidth) .. str.length];
     }
     else static if (is(Unqual!C == wchar))
     {
