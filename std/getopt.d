@@ -422,7 +422,7 @@ parses foo but leaves "--bar" in `args`. The double-dash itself is
 removed from the argument array unless the `std.getopt.config.keepEndOfOptions`
 directive is given.
 */
-GetoptResult getopt(T...)(ref string[] args, T opts)
+GetoptResult getopt(T...)(ref string[] args, auto ref T opts)
 {
     import std.exception : enforce;
     enforce(args.length,
@@ -561,9 +561,8 @@ follow this pattern:
 private template optionValidator(A...)
 {
     import std.format : format;
-
     enum fmt = "getopt validator: %s (at position %d)";
-    enum isReceiver(T) = isPointer!T || (is(T == function)) || (is(T == delegate));
+    enum isReceiver(alias T) =  __traits(isRef, T) || isPointer!T || (is(T == function)) || (is(T == delegate));
     enum isOptionStr(T) = isSomeString!T || isSomeChar!T;
 
     auto validator()
@@ -583,8 +582,7 @@ private template optionValidator(A...)
             {
                 static foreach (i; 1 .. A.length)
                 {
-                    static if (!isReceiver!(A[i]) && !isOptionStr!(A[i]) &&
-                        !(is(A[i] == config)))
+                    static if (!isReceiver!(A[i]) && !isOptionStr!(A[i]) && !(is(A[i] == config)))
                     {
                         msg = format(fmt, "invalid argument type: " ~ A[i].stringof, i);
                         goto end;
@@ -604,8 +602,7 @@ private template optionValidator(A...)
             }
             static if (!isReceiver!(A[$-1]) && !is(A[$-1] == config))
             {
-                msg = format(fmt, "last argument must be a receiver or a config",
-                    A.length -1);
+                msg = format(fmt, "last argument must be a receiver or a config", A.length -1);
             }
         }
     end:
@@ -617,6 +614,7 @@ private template optionValidator(A...)
 
 @safe pure unittest
 {
+    import std.functional : forward;
     alias P = void*;
     alias S = string;
     alias A = char;
@@ -627,6 +625,13 @@ private template optionValidator(A...)
     static assert(optionValidator!(S,F) == "");
     static assert(optionValidator!(A,P) == "");
     static assert(optionValidator!(A,F) == "");
+
+    void dummy(T...)(auto ref T t){
+        static assert(__traits(isRef, t));
+        static assert(optionValidator!(A,forward!t) == "");
+    }
+    int x;
+    dummy(x);
 
     static assert(optionValidator!(C,S,P) == "");
     static assert(optionValidator!(C,S,F) == "");
@@ -683,7 +688,7 @@ private template optionValidator(A...)
 
 private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
     ref GetoptResult rslt, ref GetOptException excep,
-    void[][string] visitedLongOpts, void[][string] visitedShortOpts, T opts)
+    void[][string] visitedLongOpts, void[][string] visitedShortOpts, auto ref T opts)
 {
     enum validationMessage = optionValidator!T;
     static assert(validationMessage == "", validationMessage);
