@@ -124,6 +124,21 @@ publictests()
     # run -betterC tests
     make -f posix.mak test_extractor # build in single-threaded mode
     make -f posix.mak -j$N betterc
+
+    # independent tests
+    test_other
+}
+
+# FIXME: tests should run in parallel
+test_other()
+{
+    pushd test
+    TEST_FILES=compilable/*.d
+    for F in $TEST_FILES; do
+        echo Building $F
+        $DMD $F || exit 1
+    done
+    popd
 }
 
 # test stdx dub package
