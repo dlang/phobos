@@ -329,7 +329,7 @@ template Erase(alias E, Seq...)
 {
     static if (Seq.length)
     {
-        alias head = Alias!(Seq[0]);
+        alias head = Seq[0 .. 1];
         alias tail = Seq[1 .. $];
 
         static if (isSame!(E, head))
@@ -371,7 +371,7 @@ template EraseAll(alias E, Seq...)
 {
     static if (Seq.length)
     {
-        alias head = Alias!(Seq[0]);
+        alias head = Seq[0 .. 1];
         alias tail = Seq[1 .. $];
         alias next = AliasSeq!(
             EraseAll!(E, tail[0..$/2]),
@@ -496,7 +496,7 @@ template Replace(alias T, alias U, Seq...)
 {
     static if (Seq.length)
     {
-        alias head = Alias!(Seq[0]);
+        alias head = Seq[0 .. 1];
         alias tail = Seq[1 .. $];
 
         static if (isSame!(T, head))
@@ -547,7 +547,7 @@ template ReplaceAll(alias T, alias U, Seq...)
 {
     static if (Seq.length)
     {
-        alias head = Alias!(Seq[0]);
+        alias head = Seq[0 .. 1];
         alias tail = Seq[1 .. $];
         alias next = ReplaceAll!(T, U, tail);
 
@@ -1273,7 +1273,7 @@ private template SmartAlias(T...)
     }
     else
     {
-        alias SmartAlias = AliasSeq!T;
+        alias SmartAlias = T;
     }
 }
 
