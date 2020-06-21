@@ -1,0 +1,13 @@
+Allow std.getopt to accept out pameters by reference
+
+Previously get opt takes the "receivers" for options as pointers,
+which will be assigned with `*receiver = parsedValue`.  This change allows
+the caller to pass those parameters by reference instead.  Basically, this
+allows code to delete the `&` before variable names when calling getopt
+-------
+bool opt;
+string[] args = ["program", "-a"];
+//previously required passing &opt
+getopt(args, config.passThrough, 'a', opt);
+assert(opt);
+------

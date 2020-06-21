@@ -66,9 +66,9 @@ void main(string[] args)
 {
   auto helpInformation = getopt(
     args,
-    "length",  &length,    // numeric
-    "file",    &data,      // string
-    "verbose", &verbose,   // flag
+    "length",  &length,    // numeric as pointer
+    "file",    data,      // string as reference
+    "verbose", verbose,   // flag as reference
     "color", "Information about this color", &color);    // enum
   ...
 
@@ -82,10 +82,11 @@ void main(string[] args)
 
  The `getopt` function takes a reference to the command line
  (as received by `main`) as its first argument, and an
- unbounded number of pairs of strings and pointers. Each string is an
- option meant to "fill" the value referenced by the pointer to its
+ unbounded number of pairs of strings and "receivers". Each string is an
+ option meant to "fill" the "receiver"
  right (the "bound" pointer). The option string in the call to
- `getopt` should not start with a dash.
+ `getopt` should not start with a dash.  A receiver can be a pointer,
+a variable (passed by reference), or a function/delegate.
 
  In all cases, the command-line options that were parsed and used by
  `getopt` are removed from `args`. Whatever in the
@@ -100,7 +101,7 @@ void main(string[] args)
  and an unrecognized command-line argument is found, a `GetOptException`
  is thrown.
 
- Depending on the type of the pointer being bound, `getopt`
+ Depending on the type of the receiver being bound, `getopt`
  recognizes the following kinds of options:
 
  $(OL
@@ -110,7 +111,8 @@ void main(string[] args)
 
 ---------
   bool verbose = false, debugging = true;
-  getopt(args, "verbose", &verbose, "debug", &debugging);
+  //receivers can be passed as a pointer or as an out parameter
+  getopt(args, "verbose", &verbose, "debug", debugging);
 ---------
 
     To set `verbose` to `true`, invoke the program with either
@@ -425,6 +427,7 @@ directive is given.
 GetoptResult getopt(T...)(ref string[] args, auto ref T opts)
 {
     import std.exception : enforce;
+    import std.functional : forward;
     enforce(args.length,
             "Invalid arguments string passed: program name missing");
     configuration cfg;
@@ -432,7 +435,7 @@ GetoptResult getopt(T...)(ref string[] args, auto ref T opts)
 
     GetOptException excep;
     void[][string] visitedLongOpts, visitedShortOpts;
-    getoptImpl(args, cfg, rslt, excep, visitedLongOpts, visitedShortOpts, opts);
+    getoptImpl(args, cfg, rslt, excep, visitedLongOpts, visitedShortOpts, forward!opts);
 
     if (!rslt.helpWanted && excep !is null)
     {
@@ -457,6 +460,13 @@ GetoptResult getopt(T...)(ref string[] args, auto ref T opts)
         defaultGetoptPrinter("Some information about the program.",
             rslt.options);
     }
+
+    //it should work the same way if we use references instead of pointers
+    args = ["prog", "--foo", "-b"];
+    auto rslt2 = getopt(args, "foo|f", "Some information about foo.", foo, "bar|b",
+        "Some help message about bar.", bar);
+    assert(rslt == rslt2);
+
 }
 
 /**
@@ -562,27 +572,30 @@ private template optionValidator(A...)
 {
     import std.format : format;
     enum fmt = "getopt validator: %s (at position %d)";
-    enum isReceiver(alias T) =  __traits(isRef, T) || isPointer!T || (is(T == function)) || (is(T == delegate));
-    enum isOptionStr(T) = isSomeString!T || isSomeChar!T;
 
+    enum isOptionStr(alias T) = (__traits(isRef, T) && (isSomeString!(typeof(T)) || isSomeChar!(typeof(T)))) ||
+        (!__traits(isRef, T) && (isSomeString!T || isSomeChar!T));
+
+    enum isReceiver(alias T) = !isOptionStr!T && !isConfig!T &&
+        (__traits(isRef, T) || isPointer!(T) || (is(T == function)) || (is(T == delegate)));
+
+    enum isConfig(alias T) = (__traits(isRef, T) && is(typeof(T) == config)) ||
+        (!__traits(isRef, T) && is(T == config));
     auto validator()
     {
         string msg;
         static if (A.length > 0)
         {
-            static if (isReceiver!(A[0]))
+            static if (!isOptionStr!(A[0]) && !isConfig!(A[0]))
             {
-                msg = format(fmt, "first argument must be a string or a config", 0);
-            }
-            else static if (!isOptionStr!(A[0]) && !is(A[0] == config))
-            {
-                msg = format(fmt, "invalid argument type: " ~ A[0].stringof, 0);
+                msg = format(fmt, "invalid argument type, first argument must be a string, char or config: "
+                             ~ A[0].stringof, 0);
             }
             else
             {
                 static foreach (i; 1 .. A.length)
                 {
-                    static if (!isReceiver!(A[i]) && !isOptionStr!(A[i]) && !(is(A[i] == config)))
+                    static if (!isReceiver!(A[i]) && !isOptionStr!(A[i]) && !isConfig!(A[i]))
                     {
                         msg = format(fmt, "invalid argument type: " ~ A[i].stringof, i);
                         goto end;
@@ -593,14 +606,15 @@ private template optionValidator(A...)
                         goto end;
                     }
                     else static if (i > 1 && isOptionStr!(A[i]) && isOptionStr!(A[i-1])
-                        && isSomeString!(A[i-2]))
+                        && ((__traits(isRef, A[i-2]) && isSomeString!(typeof(A[i-2])))
+                            || (!__traits(isRef, A[i-2]) && isSomeString!(A[i-2]))))
                     {
                         msg = format(fmt, "a string can not be preceeded by two strings", i);
                         goto end;
                     }
                 }
             }
-            static if (!isReceiver!(A[$-1]) && !is(A[$-1] == config))
+            static if (!isReceiver!(A[$-1]) && !isConfig!(A[$-1]))
             {
                 msg = format(fmt, "last argument must be a receiver or a config", A.length -1);
             }
@@ -626,6 +640,7 @@ private template optionValidator(A...)
     static assert(optionValidator!(A,P) == "");
     static assert(optionValidator!(A,F) == "");
 
+    //test with ref parameter
     void dummy(T...)(auto ref T t){
         static assert(__traits(isRef, t));
         static assert(optionValidator!(A,forward!t) == "");
@@ -686,11 +701,47 @@ private template optionValidator(A...)
     assertThrown(getopt(args, "", "forgot to put a string", &opt));
 }
 
+//same as above, but using references instead of references
+@safe unittest
+{
+    import std.exception : assertThrown;
+    bool opt;
+    string[] args = ["program", "-a"];
+    getopt(args, config.passThrough, 'a', opt);
+    assert(opt);
+    opt = false;
+    args = ["program", "-a"];
+    getopt(args, 'a', opt);
+    assert(opt);
+    opt = false;
+    args = ["program", "-a"];
+    getopt(args, 'a', "help string", opt);
+    assert(opt);
+    opt = false;
+    args = ["program", "-a"];
+    getopt(args, config.caseSensitive, 'a', "help string", opt);
+    assert(opt);
+
+    assertThrown(getopt(args, "", "forgot to put a string", opt));
+}
+
+
 private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
     ref GetoptResult rslt, ref GetOptException excep,
     void[][string] visitedLongOpts, void[][string] visitedShortOpts, auto ref T opts)
 {
-    enum validationMessage = optionValidator!T;
+    import std.functional : forward;
+    import std.meta : staticMap;
+
+    template forwardIfReference(alias U)
+    {
+        static if (__traits(isRef, U))
+            alias forwardIfReference = U;
+        else
+            alias forwardIfReference = typeof(U);
+    }
+
+    enum validationMessage = optionValidator!(staticMap!(forwardIfReference, forward!opts));
     static assert(validationMessage == "", validationMessage);
 
     import std.algorithm.mutation : remove;
@@ -702,7 +753,7 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
             // it's a configuration flag, act on it
             setConfig(cfg, opts[0]);
             return getoptImpl(args, cfg, rslt, excep, visitedLongOpts,
-                visitedShortOpts, opts[1 .. $]);
+                visitedShortOpts, forward!(opts[1 .. $]));
         }
         else
         {
@@ -735,13 +786,13 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
 
             static if (is(typeof(opts[1]) : string))
             {
-                alias receiver = opts[2];
+                alias receiver = forward!(opts[2]);
                 optionHelp.help = opts[1];
                 immutable lowSliceIdx = 3;
             }
             else
             {
-                alias receiver = opts[1];
+                alias receiver = forward!(opts[1]);
                 immutable lowSliceIdx = 2;
             }
 
@@ -755,7 +806,7 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
                 incremental = true;
             }
 
-            bool optWasHandled = handleOption(option, receiver, args, cfg, incremental);
+            bool optWasHandled = handleOption(option, forward!receiver, args, cfg, incremental);
 
             if (cfg.required && !optWasHandled)
             {
@@ -765,7 +816,7 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
             cfg.required = false;
 
             getoptImpl(args, cfg, rslt, excep, visitedLongOpts,
-                visitedShortOpts, opts[lowSliceIdx .. $]);
+                visitedShortOpts, forward!(opts[lowSliceIdx .. $]));
         }
     }
     else
@@ -809,12 +860,13 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
     }
 }
 
-private bool handleOption(R)(string option, R receiver, ref string[] args,
+private bool handleOption(R)(string option, auto ref R receiver, ref string[] args,
     ref configuration cfg, bool incremental)
 {
     import std.algorithm.iteration : map, splitter;
     import std.ascii : isAlpha;
     import std.conv : text, to;
+    import std.functional : forward;
     // Scan arguments looking for a match for this option
     bool ret = false;
     for (size_t i = 1; i < args.length; )
@@ -862,17 +914,45 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
         // (and potentially args[i + 1] too, but that comes later)
         args = args[0 .. i] ~ args[i + 1 .. $];
 
-        static if (is(typeof(*receiver) == bool))
+        template ReceiverType(alias A)
+        {
+            static if (__traits(isRef, A))
+            {
+                static if (isPointer!(typeof(A)))
+                    //pointers passed by reference are still treated as pointers
+                    alias ReceiverType = typeof(*A);
+                else
+                    alias ReceiverType = typeof(A);
+            }
+            else
+                alias ReceiverType = typeof(*A);
+        }
+
+        //assign receiver through a reference or a pointer
+        static void assign(R, V)(auto ref R rec, const auto ref V val)
+        {
+            static if (__traits(isRef, rec))
+            {
+                static if (isPointer!(typeof(rec)))
+                    *rec = val;
+                else
+                    rec = val;
+            }
+            else
+                *rec = val;
+        }
+
+        static if (is(ReceiverType!receiver == bool))
         {
             if (val.length)
             {
                 // parse '--b=true/false'
-                *receiver = to!(typeof(*receiver))(val);
+                assign(forward!receiver, to!(ReceiverType!receiver)(val));
             }
             else
             {
                 // no argument means set it to true
-                *receiver = true;
+                assign(forward!receiver, true);
             }
         }
         else
@@ -892,20 +972,30 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
                 val = args[i];
                 args = args[0 .. i] ~ args[i + 1 .. $];
             }
-            static if (is(typeof(*receiver) == enum))
+            static if (is(ReceiverType!receiver == enum))
             {
-                *receiver = to!(typeof(*receiver))(val);
+                assign(forward!receiver, to!(ReceiverType!receiver)(val));
             }
-            else static if (is(typeof(*receiver) : real))
+            else static if (is(ReceiverType!receiver : real))
             {
                 // numeric receiver
-                if (incremental) ++*receiver;
-                else *receiver = to!(typeof(*receiver))(val);
+                if (incremental)
+                {
+                    static if (__traits(isRef, receiver))
+                        static if (isPointer!(typeof(receiver)))
+                            (*receiver)++;
+                        else
+                            receiver++;
+                    else
+                        (*receiver)++;
+                }
+                else
+                    assign(forward!receiver, to!(ReceiverType!receiver)(val));
             }
-            else static if (is(typeof(*receiver) == string))
+            else static if (is(ReceiverType!receiver == string))
             {
                 // string receiver
-                *receiver = to!(typeof(*receiver))(val);
+                assign(forward!receiver,to!(ReceiverType!receiver)(val));
             }
             else static if (is(typeof(receiver) == delegate) ||
                             is(typeof(*receiver) == function))
@@ -932,23 +1022,34 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
                     receiver();
                 }
             }
-            else static if (isArray!(typeof(*receiver)))
+            else static if (isArray!(ReceiverType!receiver))
             {
                 // array receiver
                 import std.range : ElementEncodingType;
-                alias E = ElementEncodingType!(typeof(*receiver));
+                alias E = ElementEncodingType!(ReceiverType!receiver);
+
+                void append(R, V)(auto ref R rec, auto ref V val)
+                {
+                    static if (__traits(isRef, rec))
+                        static if (isPointer!(typeof(rec)))
+                            *rec ~= val;
+                        else
+                            rec ~= val;
+                    else
+                        *rec ~= val;
+                }
 
                 if (arraySep == "")
                 {
-                    *receiver ~= to!E(val);
+                    append(forward!receiver, to!E(val));
                 }
                 else
                 {
                     foreach (elem; val.splitter(arraySep).map!(a => to!E(a))())
-                        *receiver ~= elem;
+                        append(forward!receiver, elem);
                 }
             }
-            else static if (isAssociativeArray!(typeof(*receiver)))
+            else static if (isAssociativeArray!(ReceiverType!receiver))
             {
                 // hash receiver
                 alias K = typeof(receiver.keys[0]);
@@ -968,19 +1069,27 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
                     return tuple(to!K(key), to!V(value));
                 }
 
-                static void setHash(Range)(R receiver, Range range)
+                static void setHash(Range)(auto ref R receiver, Range range)
                 {
                     foreach (k, v; range.map!getter)
-                        (*receiver)[k] = v;
+                    {
+                        static if (__traits(isRef, receiver))
+                            static if (isPointer!(typeof(receiver)))
+                                (*receiver)[k] = v;
+                            else
+                                receiver[k] = v;
+                        else
+                            (*receiver)[k] = v;
+                    }
                 }
 
                 if (arraySep == "")
-                    setHash(receiver, val.only);
+                    setHash(forward!receiver, val.only);
                 else
-                    setHash(receiver, val.splitter(arraySep));
+                    setHash(forward!receiver, val.splitter(arraySep));
             }
             else
-                static assert(false, "getopt does not know how to handle the type " ~ typeof(receiver).stringof);
+                static assert(false, "getopt does not know how to handle the type " ~ RecieverType!receiver.stringof);
         }
     }
 
@@ -1034,6 +1143,13 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
     args = ["program.name", "--name", "foo,bar,baz"];
     getopt(args, "name|n", &names);
     assert(names == ["foo", "bar", "baz"], to!string(names));
+
+    //same as above, but pass names as a reference, not by pointer
+    names = names.init;
+    args = ["program.name", "--name", "foo,bar,baz"];
+    getopt(args, "name|n", names);
+    assert(names == ["foo", "bar", "baz"], to!string(names));
+
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=5316 - associative arrays with arraySep
@@ -1064,6 +1180,13 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
     args = ["program.name", "--values", "foo=0,bar=1,baz=2"];
     getopt(args, "values|v", &values);
     assert(values == ["foo":0, "bar":1, "baz":2], to!string(values));
+
+    //same, but use reference to values
+    values = values.init;
+    args = ["program.name", "--values", "foo=0,bar=1,baz=2"];
+    getopt(args, "values|v", values);
+    assert(values == ["foo":0, "bar":1, "baz":2], to!string(values));
+
 }
 
 /**
@@ -1200,6 +1323,12 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     getopt(args, "paranoid+", &paranoid);
     assert(paranoid == 5, to!(string)(paranoid));
 
+    //repeat with references
+    paranoid = 2;
+    args = ["program.name", "--paranoid", "--paranoid", "--paranoid"];
+    getopt(args, "paranoid+", paranoid);
+    assert(paranoid == 5, to!string(paranoid));
+
     enum Color { no, yes }
     Color color;
     args = ["program.name", "--color=yes",];
@@ -1209,6 +1338,17 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     color = Color.no;
     args = ["program.name", "--color", "yes",];
     getopt(args, "color", &color);
+    assert(color, to!(string)(color));
+
+    //use references
+    color = Color.no;
+    args = ["program.name", "--color=yes",];
+    getopt(args, "color", color);
+    assert(color, to!(string)(color));
+
+    color = Color.no;
+    args = ["program.name", "--color", "yes",];
+    getopt(args, "color", color);
     assert(color, to!(string)(color));
 
     string data = "file.dat";
@@ -1248,6 +1388,22 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
         arraySep = ",";
         double[string] tuningParms;
         getopt(testArgs, "tune", &tuningParms);
+        assert(testArgs.length == 1);
+        assert(tuningParms.length == 2);
+        assert(approxEqual(tuningParms["alpha"], 0.5));
+        assert(approxEqual(tuningParms["beta"], 0.6));
+        arraySep = "";
+    }
+
+    //repeat with references
+    foreach (testArgs;
+        [["program.name", "--tune=alpha=0.5", "--tune", "beta=0.6"],
+         ["program.name", "--tune=alpha=0.5,beta=0.6"],
+         ["program.name", "--tune", "alpha=0.5,beta=0.6"]])
+    {
+        arraySep = ",";
+        double[string] tuningParms;
+        getopt(testArgs, "tune", tuningParms);
         assert(testArgs.length == 1);
         assert(tuningParms.length == 2);
         assert(approxEqual(tuningParms["alpha"], 0.5));
@@ -1301,6 +1457,15 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
         std.getopt.config.passThrough,
         "foo", &foo,
         "bar", &bar);
+    assert(args[1] == "--bAr");
+
+    //repeat with references
+    args = ["program.name", "--foo", "--bAr"];
+    getopt(args,
+        std.getopt.config.caseSensitive,
+        std.getopt.config.passThrough,
+        "foo", foo,
+        "bar", bar);
     assert(args[1] == "--bAr");
 
     // test stopOnFirstNonOption
@@ -1920,4 +2085,30 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt, st
     string wanted = "Some Text\n\t\t-f  --foo \nHelp\n\t\t-h --help \nThis help "
         ~ "information.\n";
     assert(wanted == helpMsg);
+}
+
+@safe unittest{
+    //test when an option string is passed by reference
+    bool help;
+    string stringOption;
+    string[] args = ["program name"];
+    //dub commmandline wrapper call
+    //args.getopt("h|help", &help, ["Display general or command specific help"]);
+    auto boolDescription = "h|help";
+    auto stringDescription = "s|stringOption";
+    //strings cannot be receivers cannot be references because we can't tell them apart from
+    //descriptions
+    getopt(args, config.passThrough, boolDescription, help, stringDescription, &stringOption);
+    static assert(!__traits(compiles, getopt(args, config.passThrough,
+                                             boolDescription, help, stringDescription, stringOption)));
+
+    char charDesc;
+    char charOpt;
+    auto configRef = config.passThrough;
+
+    int[string] hashmap;
+    getopt(args, configRef, charDesc, &charOpt);
+    getopt(args, config.caseSensitive, configRef, charDesc, &charOpt);
+    getopt(args, configRef, config.caseSensitive, charDesc, &charOpt, 'x', &configRef);
+    static assert(!__traits(compiles, getopt(args, configRef, charDesc, charOpt)));
 }
