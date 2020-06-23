@@ -2729,6 +2729,8 @@ template hasNested(T)
  * table pointer or a context pointer for nested types.
  * If `T` isn't a struct, class, or union returns a tuple
  * with one element `T`.
+ * NOTE: std.traits.Fields and $(LREF FieldNameTuple) are always in-sync,
+ * i.e. these two tuples are always in the same order and of the same length.
  */
 template Fields(T)
 {
@@ -2787,6 +2789,8 @@ private enum NameOf(alias T) = T.stringof;
  * Inherited fields (for classes) are not included.
  * If `T` isn't a struct, class, or union, an
  * expression tuple with an empty string is returned.
+ * NOTE: std.traits.FieldNameTuple and $(LREF Fields) are always in-sync,
+ * i.e. these two tuples are always in the same order and of the same length.
  */
 template FieldNameTuple(T)
 {
