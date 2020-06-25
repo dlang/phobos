@@ -1482,14 +1482,14 @@ Removes the lock over the specified file segment.
         // the same process. fork() is used to create a second process.
         static void runForked(void delegate() code)
         {
-            import core.stdc.stdlib : exit;
+            import core.stdc.stdlib : _Exit;
             import core.sys.posix.sys.wait : waitpid;
             import core.sys.posix.unistd : fork;
             int child, status;
             if ((child = fork()) == 0)
             {
                 code();
-                exit(0);
+                _Exit(0);
             }
             else
             {
