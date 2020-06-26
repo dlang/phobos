@@ -29,6 +29,7 @@ import std.conv : ConvException;
 
 import std.format : FormatSpec, FormatException;
 import std.internal.math.biguintcore;
+import std.internal.math.biguintnoasm : BigDigit;
 import std.range.primitives;
 import std.traits;
 
@@ -323,7 +324,23 @@ public:
             sign = (y & 1) ? sign : false;
             data = BigUint.pow(data, u);
         }
-        else static if (op=="|" || op=="&" || op=="^")
+        else static if (op=="&")
+        {
+            if (y >= 0 && (y <= 1 || !sign)) // In these cases we can avoid some allocation.
+            {
+                static if (T.sizeof <= uint.sizeof && BigDigit.sizeof <= uint.sizeof)
+                    data = cast(ulong) data.peekUint(0) & y;
+                else
+                    data = data.peekUlong(0) & y;
+                sign = false;
+            }
+            else
+            {
+                BigInt b = y;
+                opOpAssign!op(b);
+            }
+        }
+        else static if (op=="|" || op=="^")
         {
             BigInt b = y;
             opOpAssign!op(b);
