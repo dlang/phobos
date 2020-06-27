@@ -5579,21 +5579,6 @@ nothrow @nogc:
                                  | inexactException,
         }
     }
-    else version (RISCV_Any)
-    {
-        enum : ExceptionMask
-        {
-            inexactException      = 0x01,
-            divByZeroException    = 0x02,
-            underflowException    = 0x04,
-            overflowException     = 0x08,
-            invalidException      = 0x10,
-            severeExceptions   = overflowException | divByZeroException
-                                 | invalidException,
-            allExceptions      = severeExceptions | underflowException
-                                 | inexactException,
-        }
-    }
     else version (X86_Any)
     {
         enum : ExceptionMask
@@ -5718,10 +5703,6 @@ private:
         alias ControlState = ulong;
     }
     else version (IBMZ_Any)
-    {
-        alias ControlState = uint;
-    }
-    else version (RISCV_Any)
     {
         alias ControlState = uint;
     }
