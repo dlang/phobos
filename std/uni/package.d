@@ -3373,7 +3373,7 @@ private:
         }
         else
             SP.destroy(data);
-        assert(!data.ptr);
+        assert(!&data[0]);
     }
 
     void dupThisReference(uint count)
