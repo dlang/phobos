@@ -591,6 +591,7 @@ if (distinctFieldNames!(Specs))
         ///
         static if (Specs.length == 0) @safe unittest
         {
+            import std.meta : AliasSeq;
             alias Fields = Tuple!(int, "id", string, float);
             static assert(is(Fields.Types == AliasSeq!(int, string, float)));
         }
@@ -603,6 +604,7 @@ if (distinctFieldNames!(Specs))
         ///
         static if (Specs.length == 0) @safe unittest
         {
+            import std.meta : AliasSeq;
             alias Fields = Tuple!(int, "id", string, float);
             static assert(Fields.fieldNames == AliasSeq!("id", "", ""));
         }
@@ -992,7 +994,7 @@ if (distinctFieldNames!(Specs))
             t2 = tuple(3,4,5);
             auto t2Named = t2.rename!("", "b");
             // "a" no longer has a name
-            static assert(!hasMember!(typeof(t2Named), "a"));
+            static assert(!__traits(hasMember, typeof(t2Named), "a"));
             assert(t2Named[0] == 3);
             assert(t2Named.b == 4);
             assert(t2Named.c == 5);

@@ -480,6 +480,8 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     ///
     static if (is(T == int) && is(Hook == void)) @safe unittest
     {
+        import std.traits : isUnsigned;
+
         static struct MyHook
         {
             static bool thereWereErrors;
@@ -616,6 +618,8 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     ///
     static if (is(T == int) && is(Hook == void)) @safe unittest
     {
+        import std.traits : isUnsigned;
+
         static struct MyHook
         {
             static bool thereWereErrors;
