@@ -110,46 +110,24 @@ alias AliasSeq(TList...) = TList;
 }
 
 
-/**
-  Returns an `AliasSeq` expression of `Func` being
-  applied to every variadic template argument.
- */
-
 ///
 @safe unittest
 {
-    auto ref ArgCall(alias Func, alias arg)()
+    // Creates a compile-time sequence of function call expressions
+    // that each call `func` with the next variadic template argument
+    template Map(alias func, args...)
     {
-        return Func(arg);
-    }
+        auto ref lazyItem() {return func(args[0]);}
 
-    template Map(alias Func, args...)
-    {
-        static if (args.length > 1)
+        static if (args.length == 1)
         {
-            alias Map = AliasSeq!(ArgCall!(Func, args[0]), Map!(Func, args[1 .. $]));
+            alias Map = lazyItem;
         }
         else
         {
-            alias Map = ArgCall!(Func, args[0]);
+            // recurse
+            alias Map = AliasSeq!(lazyItem, Map!(func, args[1 .. $]));
         }
-    }
-
-    static int square(int arg)
-    {
-        return arg * arg;
-    }
-
-    static int refSquare(ref int arg)
-    {
-        arg *= arg;
-        return arg;
-    }
-
-    static ref int refRetSquare(ref int arg)
-    {
-        arg *= arg;
-        return arg;
     }
 
     static void test(int a, int b)
@@ -158,22 +136,24 @@ alias AliasSeq(TList...) = TList;
         assert(b == 16);
     }
 
+    static int a = 2;
+    static int b = 4;
+
+    test(Map!(i => i ^^ 2, a, b));
+    assert(a == 2);
+    assert(b == 4);
+
+    test(Map!((ref i) => i *= i, a, b));
+    assert(a == 4);
+    assert(b == 16);
+
     static void testRef(ref int a, ref int b)
     {
         assert(a++ == 16);
         assert(b++ == 256);
     }
 
-    static int a = 2;
-    static int b = 4;
-
-    test(Map!(square, a, b));
-
-    test(Map!(refSquare, a, b));
-    assert(a == 4);
-    assert(b == 16);
-
-    testRef(Map!(refRetSquare, a, b));
+    testRef(Map!(function ref(ref i) => i *= i, a, b));
     assert(a == 17);
     assert(b == 257);
 }
@@ -203,8 +183,8 @@ alias Alias(T) = T;
 {
     // Without Alias this would fail if Args[0] was e.g. a value and
     // some logic would be needed to detect when to use enum instead
-    alias Head(Args ...) = Alias!(Args[0]);
-    alias Tail(Args ...) = Args[1 .. $];
+    alias Head(Args...) = Alias!(Args[0]);
+    alias Tail(Args...) = Args[1 .. $];
 
     alias Blah = AliasSeq!(3, int, "hello");
     static assert(Head!Blah == 3);
@@ -269,8 +249,8 @@ if (!isAggregateType!T || is(Unqual!T == T))
 }
 
 /**
- * Returns the index of the first occurrence of type T in the
- * sequence of zero or more types TList.
+ * Returns the index of the first occurrence of T in the
+ * sequence TList.
  * If not found, -1 is returned.
  */
 template staticIndexOf(T, TList...)
@@ -538,7 +518,7 @@ template NoDuplicates(TList...)
 
 /**
  * Returns an `AliasSeq` created from TList with the first occurrence
- * of type T, if found, replaced with type U.
+ * of T, if found, replaced with U.
  */
 template Replace(T, U, TList...)
 {
@@ -618,7 +598,7 @@ if (args.length >= 2)
 
 /**
  * Returns an `AliasSeq` created from TList with all occurrences
- * of type T, if found, replaced with type U.
+ * of T, if found, replaced with U.
  */
 template ReplaceAll(T, U, TList...)
 {
@@ -1379,7 +1359,7 @@ private template SmartAlias(T...)
     }
     else
     {
-        alias SmartAlias = AliasSeq!T;
+        alias SmartAlias = T;
     }
 }
 
@@ -1791,12 +1771,12 @@ if (ab.length == 2)
 }
 
 /*
- * [internal] Confines a tuple within a template. Used only in unittests.
+ * [internal] Wraps a sequence in a template. Used only in unittests.
  */
 private template Pack(T...)
 {
-    alias tuple = T;
-    alias equals(U...) = isSame!(Pack!T, Pack!U);
+    alias Expand = T;
+    enum equals(U...) = isSame!(Pack!T, Pack!U);
 }
 
 @safe unittest
