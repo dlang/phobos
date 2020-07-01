@@ -7881,7 +7881,12 @@ if (is(T == class))
     // _d_newclass now use default GC alignment (looks like (void*).sizeof * 2 for
     // small objects). We will just use the maximum of filed alignments.
     alias alignment = classInstanceAlignment!T;
-    alias aligned = _alignUp!alignment;
+
+    static size_t aligned(size_t n)
+    {
+        enum badEnd = alignment - 1; // 0b11, 0b111, ...
+        return (n + badEnd) & ~badEnd;
+    }
 
     static struct Scoped
     {
@@ -8011,13 +8016,6 @@ if (is(T == class))
     auto b2 = new B(6);
     assert(b2.a.x == 6);
     destroy(*b2); // calls A's destructor for b2.a
-}
-
-private size_t _alignUp(size_t alignment)(size_t n)
-if (alignment > 0 && !((alignment - 1) & alignment))
-{
-    enum badEnd = alignment - 1; // 0b11, 0b111, ...
-    return (n + badEnd) & ~badEnd;
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=6580 testcase
