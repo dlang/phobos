@@ -914,16 +914,8 @@ if (Ranges.length > 0 &&
             }
 
             enum bool allSameType = allSatisfy!(sameET, R);
+            alias ElementType = RvalueElementType;
 
-            // This doesn't work yet
-            static if (allSameType)
-            {
-                alias ElementType = ref RvalueElementType;
-            }
-            else
-            {
-                alias ElementType = RvalueElementType;
-            }
             static if (allSameType && allSatisfy!(hasLvalueElements, R))
             {
                 static ref RvalueElementType fixRef(ref RvalueElementType val)
