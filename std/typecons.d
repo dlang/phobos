@@ -2123,11 +2123,7 @@ template tuple(Names...)
     Returns:
         true if `T` is a `Tuple` type, false otherwise.
  */
-enum isTuple(T) = __traits(compiles,
-                           {
-                               void f(Specs...)(Tuple!Specs tup) {}
-                               f(T.init);
-                           } );
+enum isTuple(T) = is(T == Tuple!Args, Args...);
 
 ///
 @safe unittest
