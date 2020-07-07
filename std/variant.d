@@ -684,7 +684,8 @@ public:
             else
             {
                 import core.stdc.string : memcpy;
-                static if (__traits(compiles, {new T(T.init);}))
+                import std.traits : hasMember;
+                static if (hasMember!(T, "__ctor") && __traits(compiles, {new T(T.init);}))
                 {
                     auto p = new T(rhs);
                 }
@@ -1541,6 +1542,24 @@ pure nothrow @nogc
 
     VariantN!32 v2;
     v2 = const(S).init;
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21021
+@system unittest
+{
+    static struct S
+    {
+        int h;
+        int[5] array;
+        alias h this;
+    }
+
+    S msg;
+    msg.array[] = 3;
+    Variant a = msg;
+    auto other = a.get!S;
+    assert(msg.array[0] == 3);
+    assert(other.array[0] == 3);
 }
 
 /**
