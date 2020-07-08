@@ -241,7 +241,7 @@ if (!isAggregateType!T || is(Unqual!T == T))
 @safe unittest
 {
     static struct Foo {}
-    static assert(is(OldAlias!(const(Foo)) == Foo));
+    //static assert(is(OldAlias!(const(Foo)) == const Foo));
     static assert(is(OldAlias!(const(int)) == const(int)));
     static assert(OldAlias!123 == 123);
     enum abc = 123;
