@@ -3213,7 +3213,7 @@ if (is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
 if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
-    static if (is(const(ArrayTypeOf!T) == const(void[])))
+    static if (is(immutable(ArrayTypeOf!T) == immutable(void[])))
     {
         formatValueImpl(w, cast(const ubyte[]) obj, f);
     }
@@ -3228,6 +3228,17 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
     {
         formatRange(w, obj, f);
     }
+}
+
+// bug 20848
+@safe unittest
+{
+    class C
+    {
+        immutable(void)[] data;
+    }
+    import std.typecons : Nullable;
+    Nullable!C c;
 }
 
 // alias this, input range I/F, and toString()
