@@ -344,18 +344,11 @@ Traditionally, programs accepted single-letter options preceded by
 only one dash (e.g. `-t`). `getopt` accepts such parameters
 seamlessly. When used with a double-dash (e.g. `--t`), a
 single-letter option behaves the same as a multi-letter option. When
-used with a single dash, a single-letter option is accepted. If the
-option has a parameter, that must be "stuck" to the option without
-any intervening space or "=":
-
----------
-uint timeout;
-getopt(args, "timeout|t", &timeout);
----------
+used with a single dash, a single-letter option is accepted.
 
 To set `timeout` to `5`, use either of the following: `--timeout=5`,
-$(D --timeout 5), `--t=5`, $(D --t 5), or `-t5`. Forms such as $(D -t 5)
-and `-timeout=5` will be not accepted.
+`--timeout 5`, `--t=5`, `--t 5`, `-t5`, or `-t 5`. Forms such as
+`-timeout=5` will be not accepted.
 
 For more details about short options, refer also to the next section.
 
