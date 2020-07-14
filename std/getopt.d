@@ -190,11 +190,12 @@ getopt(args, "output", &outputFiles);
     "--output myfile.txt --output yourfile.txt" will set `outputFiles` to
     $(D [ "myfile.txt", "yourfile.txt" ]).
 
-    Alternatively you can set $(LREF arraySep) as the element separator:
+    Alternatively you can set $(LREF arraySep) to allow multiple elements in
+    one parameter.
 
 ---------
 string[] outputFiles;
-arraySep = ",";  // defaults to "", separation by whitespace
+arraySep = ",";  // defaults to "", meaning one element per parameter
 getopt(args, "output", &outputFiles);
 ---------
 
@@ -217,7 +218,7 @@ getopt(args, "tune", &tuningParms);
 
 ---------
 double[string] tuningParms;
-arraySep = ",";  // defaults to "", separation by whitespace
+arraySep = ",";  // defaults to "", meaning one element per parameter
 getopt(args, "tune", &tuningParms);
 ---------
 
@@ -1077,8 +1078,11 @@ string endOfOptions = "--";
 dchar assignChar = '=';
 
 /**
-   The string used to separate the elements of an array or associative array
-   (default is "" which means the elements are separated by whitespace).
+   When set to "", parameters to array and associative array receivers are
+   treated as an individual argument. That is, only one argument is appended or
+   inserted per appearance of the option switch. If `arraySep` is set to
+   something else, then each parameter is first split by the separator, and the
+   individual pieces are treated as arguments to the same option.
 
    Defaults to "" but can be assigned to prior to calling `getopt`.
  */
