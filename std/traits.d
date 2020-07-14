@@ -8904,15 +8904,7 @@ if (X.length == 1)
  + Returns:
  +  `true` if `S` can be copied. `false` otherwise.
  + ++/
-template isCopyable(S)
-{
-    enum isCopyable_old = is(typeof({ S foo = S.init; S copy = foo; }));
-    enum isCopyable = __traits(isCopyable, S);
-    static if (isCopyable_old !is isCopyable)
-    {
-        pragma(msg, "New builtin trait isCopyable differs from old for type " ~ S.stringof);
-    }
-}
+enum isCopyable(S) = __traits(isCopyable, S);
 
 ///
 @safe unittest
