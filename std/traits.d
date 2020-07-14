@@ -8908,7 +8908,10 @@ template isCopyable(S)
 {
     enum isCopyable_old = is(typeof({ S foo = S.init; S copy = foo; }));
     enum isCopyable = __traits(isCopyable, S);
-    static assert(isCopyable_old is isCopyable, "New builtin trait isCopyable differs from old for type " ~ S.stringof);
+    static if (isCopyable_old !is isCopyable)
+    {
+        pragma(msg, "New builtin trait isCopyable differs from old for type " ~ S.stringof);
+    }
 }
 
 ///
