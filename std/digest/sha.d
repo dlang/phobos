@@ -159,19 +159,20 @@ private uint bigEndianToNative(ubyte[4] val) @trusted pure nothrow @nogc
 //rotateLeft rotates x left n bits
 private uint rotateLeft(uint x, uint n) @safe pure nothrow @nogc
 {
-    // With recently added optimization to DMD (commit 32ea0206 at 07/28/11), this is translated to rol.
-    // No assembler required.
-    return (x << n) | (x >> (32-n));
+    import core.bitop : rol;
+    return rol(x, n);
 }
 
 //rotateRight rotates x right n bits
 private uint rotateRight(uint x, uint n) @safe pure nothrow @nogc
 {
-    return (x >> n) | (x << (32-n));
+    import core.bitop : ror;
+    return ror(x, n);
 }
 private ulong rotateRight(ulong x, uint n) @safe pure nothrow @nogc
 {
-    return (x >> n) | (x << (64-n));
+    import core.bitop : ror;
+    return ror(x, n);
 }
 
 /**
