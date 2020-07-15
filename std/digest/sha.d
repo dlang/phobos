@@ -122,7 +122,7 @@ public import std.digest;
 private ubyte[8] nativeToBigEndian(ulong val) @trusted pure nothrow @nogc
 {
     version (LittleEndian)
-        immutable ulong res = (cast(ulong)  bswap(cast(uint) val)) << 32 | bswap(cast(uint) (val >> 32));
+        immutable ulong res = bswap(val);
     else
         immutable ulong res = val;
     return *cast(ubyte[8]*) &res;
