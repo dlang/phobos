@@ -512,7 +512,11 @@ template to(T)
         void fun() inout
         {
             static foreach (const idx; 0 .. this.tupleof.length)
-                this.tupleof[idx].to!string();
+            {
+                {
+                    const _ = this.tupleof[idx].to!string();
+                }
+            }
         }
     }
 }
