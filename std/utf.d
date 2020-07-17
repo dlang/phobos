@@ -307,6 +307,8 @@ pure nothrow @safe @nogc unittest
 }
 
 
+private enum bool isCharOrUbyte(R) = isSomeChar!R || is(R == ubyte);
+
 /++
     Calculate the length of the UTF sequence starting at `index`
     in `str`.
@@ -989,7 +991,7 @@ if (isBidirectionalRange!S && is(Unqual!(ElementEncodingType!S) == dchar))
     the string that that code point is.
   +/
 size_t toUCSindex(C)(const(C)[] str, size_t index) @safe pure
-if (isSomeChar!C)
+if (isCharOrUbyte!C)
 {
     static if (is(Unqual!C == dchar))
         return index;
@@ -1036,7 +1038,7 @@ if (isSomeChar!C)
     the array index of the code unit is returned.
   +/
 size_t toUTFindex(C)(const(C)[] str, size_t n) @safe pure
-if (isSomeChar!C)
+if (isCharOrUbyte!C)
 {
     static if (is(Unqual!C == dchar))
     {
@@ -1109,7 +1111,7 @@ private template TypeForDecode(T)
   +/
 dchar decode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(auto ref S str, ref size_t index)
 if (!isSomeString!S &&
-    isRandomAccessRange!S && hasSlicing!S && hasLength!S && isSomeChar!(ElementType!S))
+    isRandomAccessRange!S && hasSlicing!S && hasLength!S && isCharOrUbyte!(ElementType!S))
 in
 {
     assert(index < str.length, "Attempted to decode past the end of a string");
@@ -1195,7 +1197,7 @@ do
   +/
 dchar decodeFront(UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(
 ref S str, out size_t numCodeUnits)
-if (!isSomeString!S && isInputRange!S && isSomeChar!(ElementType!S))
+if (!isSomeString!S && isInputRange!S && isCharOrUbyte!(ElementType!S))
 in
 {
     assert(!str.empty);
@@ -1263,7 +1265,7 @@ do
 
 /++ Ditto +/
 dchar decodeFront(UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(ref S str)
-if (isInputRange!S && isSomeChar!(ElementType!S))
+if (isInputRange!S && isCharOrUbyte!(ElementType!S))
 {
     size_t numCodeUnits;
     return decodeFront!useReplacementDchar(str, numCodeUnits);
@@ -1338,7 +1340,7 @@ do
 /++ Ditto +/
 dchar decodeBack(UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(
     ref S str, out size_t numCodeUnits)
-if (!isSomeString!S && isSomeChar!(ElementType!S) && isBidirectionalRange!S
+if (!isSomeString!S && isCharOrUbyte!(ElementType!S) && isBidirectionalRange!S
     && ((isRandomAccessRange!S && hasLength!S) || !isRandomAccessRange!S))
 in
 {
@@ -1390,8 +1392,8 @@ do
 /++ Ditto +/
 dchar decodeBack(UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(ref S str)
 if (isSomeString!S
-    || (isRandomAccessRange!S && hasLength!S && isSomeChar!(ElementType!S))
-    || (!isRandomAccessRange!S && isBidirectionalRange!S && isSomeChar!(ElementType!S)))
+    || (isRandomAccessRange!S && hasLength!S && isCharOrUbyte!(ElementType!S))
+    || (!isRandomAccessRange!S && isBidirectionalRange!S && isCharOrUbyte!(ElementType!S)))
 in
 {
     assert(!str.empty);
@@ -1422,14 +1424,16 @@ do
 
 // Gives the maximum value that a code unit for the given range type can hold.
 package template codeUnitLimit(S)
-if (isSomeChar!(ElementEncodingType!S))
+if (isCharOrUbyte!(ElementEncodingType!S))
 {
     static if (is(Unqual!(ElementEncodingType!S) == char))
         enum char codeUnitLimit = 0x80;
     else static if (is(Unqual!(ElementEncodingType!S) == wchar))
         enum wchar codeUnitLimit = 0xD800;
-    else
+    else static if (is(Unqual!(ElementEncodingType!S) == dchar))
         enum dchar codeUnitLimit = 0xD800;
+    else
+        enum ubyte codeUnitLimit = 0x80;
 }
 
 /*
@@ -1452,7 +1456,9 @@ if (isSomeChar!(ElementEncodingType!S))
 private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(
     auto ref S str, ref size_t index)
 if (
-    is(S : const char[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == char)))
+    is(S : const char[]) || is(S : const ubyte[]) ||
+    (isInputRange!S && (is(Unqual!(ElementEncodingType!S) == char) ||
+                        is(Unqual!(ElementEncodingType!S) == ubyte))))
 {
     /* The following encodings are valid, except for the 5 and 6 byte
      * combinations:
@@ -2726,7 +2732,7 @@ void encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     `c` when `C` is the character type used to encode it.
   +/
 ubyte codeLength(C)(dchar c) @safe pure nothrow @nogc
-if (isSomeChar!C)
+if (isCharOrUbyte!C)
 {
     static if (C.sizeof == 1)
     {
@@ -2849,7 +2855,7 @@ This is a runtime check that is used an optimization in various functions,
 particularly, in `std.string`.
   +/
 package bool canSearchInCodeUnits(C)(dchar c)
-if (isSomeChar!C)
+if (isCharOrUbyte!C)
 {
     static if (C.sizeof == 1)
          return c <= 0x7F;
@@ -2927,7 +2933,7 @@ if (isSomeString!S)
  *     For a lazy, non-allocating version of these functions, see $(LREF byUTF).
  */
 string toUTF8(S)(S s)
-if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
+if (isInputRange!S && !isInfinite!S && isCharOrUbyte!(ElementEncodingType!S))
 {
     return toUTFImpl!string(s);
 }
@@ -2968,7 +2974,7 @@ if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
  *     For a lazy, non-allocating version of these functions, see $(LREF byUTF).
  */
 wstring toUTF16(S)(S s)
-if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
+if (isInputRange!S && !isInfinite!S && isCharOrUbyte!(ElementEncodingType!S))
 {
     return toUTFImpl!wstring(s);
 }
@@ -3011,7 +3017,7 @@ if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
  *     For a lazy, non-allocating version of these functions, see $(LREF byUTF).
  */
 dstring toUTF32(S)(S s)
-if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
+if (isInputRange!S && !isInfinite!S && isCharOrUbyte!(ElementEncodingType!S))
 {
     return toUTFImpl!dstring(s);
 }
@@ -3304,7 +3310,7 @@ if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
     that take an `LPCWSTR` argument.
   +/
 const(wchar)* toUTF16z(C)(const(C)[] str) @safe pure
-if (isSomeChar!C)
+if (isCharOrUbyte!C)
 {
     return toUTFz!(const(wchar)*)(str);
 }
@@ -3370,7 +3376,7 @@ if (isSomeChar!C)
         `UTFException` if `str` is not well-formed.
   +/
 size_t count(C)(const(C)[] str) @trusted pure nothrow @nogc
-if (isSomeChar!C)
+if (isCharOrUbyte!C)
 {
     return walkLength(str);
 }
@@ -3554,7 +3560,7 @@ enum dchar replacementDchar = '\uFFFD';
  */
 auto byCodeUnit(R)(R r)
 if (isAutodecodableString!R ||
-    isInputRange!R && isSomeChar!(ElementEncodingType!R) ||
+    isInputRange!R && isCharOrUbyte!(ElementEncodingType!R) ||
     (is(R : const dchar[]) && !isStaticArray!R))
 {
     import std.traits : isNarrowString, StringTypeOf;
@@ -4182,7 +4188,8 @@ private int impureVariable;
 
 /****************************
  * Iterate an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
- * of characters by char type `C` by encoding the elements of the range.
+ * of characters by type `C` (`C` is either a char type or `ubyte`)
+ * by encoding the elements of the range.
  *
  * UTF sequences that cannot be converted to the specified encoding are either
  * replaced by U+FFFD per "5.22 Best Practice for U+FFFD Substitution"
@@ -4228,7 +4235,7 @@ if (isSomeChar!C)
     }
 
     auto ref byUTF(R)(R r)
-        if (!isAutodecodableString!R && isInputRange!R && isSomeChar!(ElementEncodingType!R))
+        if (!isAutodecodableString!R && isInputRange!R && isCharOrUbyte!(ElementEncodingType!R))
     {
         alias RC = Unqual!(ElementEncodingType!R);
 
@@ -4389,6 +4396,7 @@ if (isSomeChar!C)
 ///
 @safe pure nothrow unittest
 {
+    import std.exception : assertThrown;
     import std.algorithm.comparison : equal;
 
     // hellö as a range of `char`s, which are UTF-8
@@ -4401,6 +4409,15 @@ if (isSomeChar!C)
     assert("𐐷".byUTF!char().equal([0xF0, 0x90, 0x90, 0xB7]));
     assert("𐐷".byUTF!wchar().equal([0xD801, 0xDC37]));
     assert("𐐷".byUTF!dchar().equal([0x00010437]));
+
+    // hellö as a range of `ubyte`s, which are UTF-8
+    assert((cast(ubyte[]) [0x68, 0x65, 0x6c, 0x6c, 0xC3, 0xB6]).byUTF!char().equal(['h', 'e', 'l', 'l', 0xC3, 0xB6]));
+
+    assertThrown((cast(ubyte[]) [0xC3, 0x28]).byUTF!char());
+    assertThrown((cast(ubyte[]) [0xC3, 0x28]).byUTF!dchar());
+
+    // Conversion to ubyte is not supported.
+    static assert(!__traits(compiles, (cast(ubyte[]) []).byUTF!ubyte()));
 }
 
 ///
