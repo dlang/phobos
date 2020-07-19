@@ -2883,6 +2883,80 @@ is empty, throws an `Exception`. In case of an I/O error throws
         assert(i == witness.length);
     }
 
+/**
+Returns an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+set up to read from the file handle.
+
+The element type for the range will be `ubyte`. Range primitives
+may throw `StdioException` on I/O error.
+
+Example:
+---------
+void main()
+{
+    // Read standard input
+    foreach (ubyte c; stdin.asUbytesRange)
+    {
+        ... use c ...
+    }
+}
+---------
+
+The parameter may be a number (as shown in the example above) recommending the
+size of the buffer.
+
+Example:
+---------
+void main()
+{
+    // Read standard input
+    foreach (ubyte c; stdin.asUbytesRange(4096))
+    {
+        ... use c ...
+    }
+}
+---------
+
+With the mentioned limitations, `asUbytesRange` works with any algorithm
+compatible with input ranges.
+
+Returns: A range initialized with the `File` object.
+
+Asserts: Buffer size is non-zero. In case of an I/O error throws
+`StdioException`.
+ */
+    auto asUbytesRange(size_t bufferSize = 4096)
+    {
+        assert(bufferSize > 0);
+
+        import std.algorithm.iteration;
+        return byChunk(bufferSize).joiner;
+    }
+
+    @system unittest
+    {
+        static import std.file;
+        import std.algorithm.comparison;
+
+        scope(failure) printf("Failed test at line %d\n", __LINE__);
+
+        auto deleteme = testFilename();
+        ubyte[] testBytes = [23, 44, 55, 15, 98];
+        std.file.write(deleteme, testBytes);
+
+        auto f = File(deleteme);
+        scope(exit)
+        {
+            f.close();
+            assert(!f.isOpen);
+            std.file.remove(deleteme);
+        }
+
+        assert(equal(f.asUbytesRange(), testBytes));
+        f.seek(0);
+        assert(equal(f.asUbytesRange(2), testBytes));
+    }
+
     // Note: This was documented until 2013/08
 /*
 `Range` that locks the file and allows fast writing to it.
