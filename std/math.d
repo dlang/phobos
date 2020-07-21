@@ -4115,19 +4115,38 @@ real cbrt(real x) @trusted nothrow @nogc
  *      )
  */
 real fabs(real x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.fabs(x); }
-//FIXME
+
 ///ditto
-double fabs(double x) @safe pure nothrow @nogc { return fabs(cast(real) x); }
-//FIXME
+pragma(inline, true)
+double fabs(double d) @trusted pure nothrow @nogc
+{
+    ulong tmp = *cast(ulong*)&d & 0x7FFF_FFFF_FFFF_FFFF;
+    return *cast(double*)&tmp;
+}
+
 ///ditto
-float fabs(float x) @safe pure nothrow @nogc { return fabs(cast(real) x); }
+pragma(inline, true)
+float fabs(float f) @trusted pure nothrow @nogc
+{
+    uint tmp = *cast(uint*)&f & 0x7FFF_FFFF;
+    return *cast(float*)&tmp;
+}
 
 ///
 @safe unittest
 {
+
+    assert(isIdentical(fabs(0.0f), 0.0f));
+    assert(isIdentical(fabs(-0.0f), 0.0f));
+    assert(fabs(-10.0f) == 10.0f);
+
     assert(isIdentical(fabs(0.0), 0.0));
     assert(isIdentical(fabs(-0.0), 0.0));
     assert(fabs(-10.0) == 10.0);
+
+    assert(isIdentical(fabs(0.0L), 0.0L));
+    assert(isIdentical(fabs(-0.0L), 0.0L));
+    assert(fabs(-10.0L) == 10.0L);
 }
 
 @safe unittest
