@@ -121,6 +121,7 @@ public import std.digest;
  * Helper methods for encoding the buffer.
  * Can be removed if the optimizer can inline the methods from std.bitmanip.
  */
+pragma(inline, true)
 private ubyte[8] nativeToBigEndian(ulong val) @trusted pure nothrow @nogc
 {
     version (LittleEndian)
@@ -130,6 +131,7 @@ private ubyte[8] nativeToBigEndian(ulong val) @trusted pure nothrow @nogc
     return *cast(ubyte[8]*) &res;
 }
 
+pragma(inline, true)
 private ubyte[4] nativeToBigEndian(uint val) @trusted pure nothrow @nogc
 {
     version (LittleEndian)
@@ -139,6 +141,7 @@ private ubyte[4] nativeToBigEndian(uint val) @trusted pure nothrow @nogc
     return *cast(ubyte[4]*) &res;
 }
 
+pragma(inline, true)
 private ulong bigEndianToNative(ubyte[8] val) @trusted pure nothrow @nogc
 {
     version (LittleEndian)
@@ -150,6 +153,7 @@ private ulong bigEndianToNative(ubyte[8] val) @trusted pure nothrow @nogc
         return *cast(ulong*) &val;
 }
 
+pragma(inline, true)
 private uint bigEndianToNative(ubyte[4] val) @trusted pure nothrow @nogc
 {
     version (LittleEndian)
@@ -338,6 +342,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
         /*
          * Basic SHA1/SHA2 functions.
          */
+        pragma(inline, true)
         static @safe pure nothrow @nogc
         {
             /* All SHA1/SHA2 */
@@ -508,6 +513,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
         /*
          * SHA2 basic transformation. Transforms state based on block.
          */
+        pragma(inline, true)
         static void T_SHA2_0_15(Word)(int i, const(ubyte[blockSize/8])* input, ref Word[16] W,
             Word A, Word B, Word C, ref Word D, Word E, Word F, Word G, ref Word H, Word K)
             pure nothrow @nogc
@@ -519,6 +525,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
             H = T1 + T2;
         }
 
+        pragma(inline, true)
         static void T_SHA2_16_79(Word)(int i, ref Word[16] W,
             Word A, Word B, Word C, ref Word D, Word E, Word F, Word G, ref Word H, Word K)
             pure nothrow @nogc
