@@ -113,6 +113,8 @@ else version (D_InlineAsm_X86_64)
 
 version (LittleEndian) import core.bitop : bswap;
 
+import core.bitop;
+
 public import std.digest;
 
 /*
@@ -154,25 +156,6 @@ private uint bigEndianToNative(ubyte[4] val) @trusted pure nothrow @nogc
         return bswap(*cast(uint*) &val);
     else
         return *cast(uint*) &val;
-}
-
-//rotateLeft rotates x left n bits
-private uint rotateLeft(uint x, uint n) @safe pure nothrow @nogc
-{
-    import core.bitop : rol;
-    return rol(x, n);
-}
-
-//rotateRight rotates x right n bits
-private uint rotateRight(uint x, uint n) @safe pure nothrow @nogc
-{
-    import core.bitop : ror;
-    return ror(x, n);
-}
-private ulong rotateRight(ulong x, uint n) @safe pure nothrow @nogc
-{
-    import core.bitop : ror;
-    return ror(x, n);
 }
 
 /**
@@ -365,16 +348,16 @@ struct SHA(uint hashBlockSize, uint digestSize)
             uint Parity(uint x, uint y, uint z) { return x ^ y ^ z; }
 
             /* SHA-224, SHA-256 */
-            uint BigSigma0(uint x) { return rotateRight(x, 2) ^ rotateRight(x, 13) ^ rotateRight(x, 22); }
-            uint BigSigma1(uint x) { return rotateRight(x, 6) ^ rotateRight(x, 11) ^ rotateRight(x, 25); }
-            uint SmSigma0(uint x) { return rotateRight(x, 7) ^ rotateRight(x, 18) ^ x >> 3; }
-            uint SmSigma1(uint x) { return rotateRight(x, 17) ^ rotateRight(x, 19) ^ x >> 10; }
+            uint BigSigma0(uint x) { return core.bitop.ror(x, 2) ^ core.bitop.ror(x, 13) ^ core.bitop.ror(x, 22); }
+            uint BigSigma1(uint x) { return core.bitop.ror(x, 6) ^ core.bitop.ror(x, 11) ^ core.bitop.ror(x, 25); }
+            uint SmSigma0(uint x) { return core.bitop.ror(x, 7) ^ core.bitop.ror(x, 18) ^ x >> 3; }
+            uint SmSigma1(uint x) { return core.bitop.ror(x, 17) ^ core.bitop.ror(x, 19) ^ x >> 10; }
 
             /* SHA-384, SHA-512, SHA-512/224, SHA-512/256 */
-            ulong BigSigma0(ulong x) { return rotateRight(x, 28) ^ rotateRight(x, 34) ^ rotateRight(x, 39); }
-            ulong BigSigma1(ulong x) { return rotateRight(x, 14) ^ rotateRight(x, 18) ^ rotateRight(x, 41); }
-            ulong SmSigma0(ulong x) { return rotateRight(x, 1) ^ rotateRight(x, 8) ^ x >> 7; }
-            ulong SmSigma1(ulong x) { return rotateRight(x, 19) ^ rotateRight(x, 61) ^ x >> 6; }
+            ulong BigSigma0(ulong x) { return core.bitop.ror(x, 28) ^ core.bitop.ror(x, 34) ^ core.bitop.ror(x, 39); }
+            ulong BigSigma1(ulong x) { return core.bitop.ror(x, 14) ^ core.bitop.ror(x, 18) ^ core.bitop.ror(x, 41); }
+            ulong SmSigma0(ulong x) { return core.bitop.ror(x, 1) ^ core.bitop.ror(x, 8) ^ x >> 7; }
+            ulong SmSigma1(ulong x) { return core.bitop.ror(x, 19) ^ core.bitop.ror(x, 61) ^ x >> 6; }
         }
 
         /*
@@ -384,40 +367,40 @@ struct SHA(uint hashBlockSize, uint digestSize)
             uint E, ref uint T) pure nothrow @nogc
         {
             uint Wi = W[i] = bigEndianToNative(*cast(ubyte[4]*)&((*input)[i*4]));
-            T = Ch(B, C, D) + E + rotateLeft(A, 5) + Wi + 0x5a827999;
-            B = rotateLeft(B, 30);
+            T = Ch(B, C, D) + E + core.bitop.rol(A, 5) + Wi + 0x5a827999;
+            B = core.bitop.rol(B, 30);
         }
 
         static void T_16_19(int i, ref uint[16] W, uint A, ref uint B, uint C, uint D, uint E, ref uint T)
             pure nothrow @nogc
         {
-            W[i&15] = rotateLeft(W[(i-3)&15] ^ W[(i-8)&15] ^ W[(i-14)&15] ^ W[(i-16)&15], 1);
-            T = Ch(B, C, D) + E + rotateLeft(A, 5) + W[i&15] + 0x5a827999;
-            B = rotateLeft(B, 30);
+            W[i&15] = core.bitop.rol(W[(i-3)&15] ^ W[(i-8)&15] ^ W[(i-14)&15] ^ W[(i-16)&15], 1);
+            T = Ch(B, C, D) + E + core.bitop.rol(A, 5) + W[i&15] + 0x5a827999;
+            B = core.bitop.rol(B, 30);
         }
 
         static void T_20_39(int i, ref uint[16] W, uint A, ref uint B, uint C, uint D, uint E,
             ref uint T) pure nothrow @nogc
         {
-            W[i&15] = rotateLeft(W[(i-3)&15] ^ W[(i-8)&15] ^ W[(i-14)&15] ^ W[(i-16)&15], 1);
-            T = Parity(B, C, D) + E + rotateLeft(A, 5) + W[i&15] + 0x6ed9eba1;
-            B = rotateLeft(B, 30);
+            W[i&15] = core.bitop.rol(W[(i-3)&15] ^ W[(i-8)&15] ^ W[(i-14)&15] ^ W[(i-16)&15], 1);
+            T = Parity(B, C, D) + E + core.bitop.rol(A, 5) + W[i&15] + 0x6ed9eba1;
+            B = core.bitop.rol(B, 30);
         }
 
         static void T_40_59(int i, ref uint[16] W, uint A, ref uint B, uint C, uint D, uint E,
             ref uint T) pure nothrow @nogc
         {
-            W[i&15] = rotateLeft(W[(i-3)&15] ^ W[(i-8)&15] ^ W[(i-14)&15] ^ W[(i-16)&15], 1);
-            T = Maj(B, C, D) + E + rotateLeft(A, 5) + W[i&15] + 0x8f1bbcdc;
-            B = rotateLeft(B, 30);
+            W[i&15] = core.bitop.rol(W[(i-3)&15] ^ W[(i-8)&15] ^ W[(i-14)&15] ^ W[(i-16)&15], 1);
+            T = Maj(B, C, D) + E + core.bitop.rol(A, 5) + W[i&15] + 0x8f1bbcdc;
+            B = core.bitop.rol(B, 30);
         }
 
         static void T_60_79(int i, ref uint[16] W, uint A, ref uint B, uint C, uint D, uint E,
             ref uint T) pure nothrow @nogc
         {
-            W[i&15] = rotateLeft(W[(i-3)&15] ^ W[(i-8)&15] ^ W[(i-14)&15] ^ W[(i-16)&15], 1);
-            T = Parity(B, C, D) + E + rotateLeft(A, 5) + W[i&15] + 0xca62c1d6;
-            B = rotateLeft(B, 30);
+            W[i&15] = core.bitop.rol(W[(i-3)&15] ^ W[(i-8)&15] ^ W[(i-14)&15] ^ W[(i-16)&15], 1);
+            T = Parity(B, C, D) + E + core.bitop.rol(A, 5) + W[i&15] + 0xca62c1d6;
+            B = core.bitop.rol(B, 30);
         }
 
         private static void transformX86(uint[5]* state, const(ubyte[64])* block) pure nothrow @nogc
