@@ -111,8 +111,6 @@ else version (D_InlineAsm_X86_64)
     private version = USE_SSSE3;
 }
 
-version (LittleEndian) import core.bitop : bswap;
-
 import core.bitop;
 
 public import std.digest;
@@ -121,45 +119,16 @@ public import std.digest;
  * Helper methods for encoding the buffer.
  * Can be removed if the optimizer can inline the methods from std.bitmanip.
  */
-pragma(inline, true)
-private ubyte[8] nativeToBigEndian(ulong val) @trusted pure nothrow @nogc
+version (LittleEndian)
 {
-    version (LittleEndian)
-        immutable ulong res = bswap(val);
-    else
-        immutable ulong res = val;
-    return *cast(ubyte[8]*) &res;
+    private alias nativeToBigEndian = bswap;
+    private alias bigEndianToNative = bswap;
 }
-
-pragma(inline, true)
-private ubyte[4] nativeToBigEndian(uint val) @trusted pure nothrow @nogc
+else pragma(inline, true) private pure @nogc nothrow @safe
 {
-    version (LittleEndian)
-        immutable uint res = bswap(val);
-    else
-        immutable uint res = val;
-    return *cast(ubyte[4]*) &res;
-}
-
-pragma(inline, true)
-private ulong bigEndianToNative(ubyte[8] val) @trusted pure nothrow @nogc
-{
-    version (LittleEndian)
-    {
-        import std.bitmanip : bigEndianToNative;
-        return bigEndianToNative!ulong(val);
-    }
-    else
-        return *cast(ulong*) &val;
-}
-
-pragma(inline, true)
-private uint bigEndianToNative(ubyte[4] val) @trusted pure nothrow @nogc
-{
-    version (LittleEndian)
-        return bswap(*cast(uint*) &val);
-    else
-        return *cast(uint*) &val;
+    uint nativeToBigEndian(uint val) { return val; }
+    ulong nativeToBigEndian(ulong val) { return val; }
+    alias bigEndianToNative = nativeToBigEndian;
 }
 
 /**
@@ -371,7 +340,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
         static void T_0_15(int i, const(ubyte[64])* input, ref uint[16] W, uint A, ref uint B, uint C, uint D,
             uint E, ref uint T) pure nothrow @nogc
         {
-            uint Wi = W[i] = bigEndianToNative(*cast(ubyte[4]*)&((*input)[i*4]));
+            uint Wi = W[i] = bigEndianToNative(*cast(uint*) &((*input)[i*4]));
             T = Ch(B, C, D) + E + core.bitop.rol(A, 5) + Wi + 0x5a827999;
             B = core.bitop.rol(B, 30);
         }
@@ -518,7 +487,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
             Word A, Word B, Word C, ref Word D, Word E, Word F, Word G, ref Word H, Word K)
             pure nothrow @nogc
         {
-            Word Wi = W[i] = bigEndianToNative(*cast(ubyte[Word.sizeof]*)&((*input)[i*Word.sizeof]));
+            Word Wi = W[i] = bigEndianToNative(*cast(Word*) &((*input)[i*Word.sizeof]));
             Word T1 = H + BigSigma1(E) + Ch(E, F, G) + K + Wi;
             Word T2 = BigSigma0(A) + Maj(A, B, C);
             D += T1;
@@ -739,11 +708,11 @@ struct SHA(uint hashBlockSize, uint digestSize)
         {
             static if (blockSize == 512)
             {
-                ubyte[32] data = void;
+                uint[8] data = void;
                 uint index, padLen;
 
                 /* Save number of bits */
-                ubyte[8] bits = nativeToBigEndian(count[0]);
+                ulong bits = nativeToBigEndian(count[0]);
 
                 /* Pad out to 56 mod 64. */
                 index = (cast(uint) count[0] >> 3) & (64 - 1);
@@ -751,25 +720,23 @@ struct SHA(uint hashBlockSize, uint digestSize)
                 put(padding[0 .. padLen]);
 
                 /* Append length (before padding) */
-                put(bits);
+                put((cast(ubyte*) &bits)[0 .. bits.sizeof]);
 
                 /* Store state in digest */
-                for (auto i = 0; i < ((digestSize == 160)? 5 : 8); i++)
-                    data[i*4..(i+1)*4] = nativeToBigEndian(state[i])[];
+                static foreach (i; 0 .. (digestSize == 160) ? 5 : 8)
+                    data[i] = nativeToBigEndian(state[i]);
 
                 /* Zeroize sensitive information. */
                 start();
-                return data[0 .. digestSize/8];
+                return (cast(ubyte*) data.ptr)[0 .. digestSize/8];
             }
             else static if (blockSize == 1024)
             {
-                ubyte[64] data = void;
+                ulong[8] data = void;
                 uint index, padLen;
 
                 /* Save number of bits */
-                ubyte[16] bits;
-                bits[ 0 .. 8] = nativeToBigEndian(count[1]);
-                bits[8 .. 16] = nativeToBigEndian(count[0]);
+                ulong[2] bits = [nativeToBigEndian(count[1]), nativeToBigEndian(count[0])];
 
                 /* Pad out to 112 mod 128. */
                 index = (cast(uint) count[0] >> 3) & (128 - 1);
@@ -777,15 +744,15 @@ struct SHA(uint hashBlockSize, uint digestSize)
                 put(padding[0 .. padLen]);
 
                 /* Append length (before padding) */
-                put(bits);
+                put((cast(ubyte*) &bits)[0 .. bits.sizeof]);
 
                 /* Store state in digest */
-                for (auto i = 0; i < 8; i++)
-                    data[i*8..(i+1)*8] = nativeToBigEndian(state[i])[];
+                static foreach (i; 0 .. 8)
+                    data[i] = nativeToBigEndian(state[i]);
 
                 /* Zeroize sensitive information. */
                 start();
-                return data[0 .. digestSize/8];
+                return (cast(ubyte*) data.ptr)[0 .. digestSize/8];
             }
             else
                 static assert(0);
