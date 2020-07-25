@@ -4106,30 +4106,23 @@ real cbrt(real x) @trusted nothrow @nogc
 }
 
 /*******************************
- * Returns |x|
- *
+ * Compute the absolute value.
  *      $(TABLE_SV
  *      $(TR $(TH x)                 $(TH fabs(x)))
  *      $(TR $(TD $(PLUSMN)0.0)      $(TD +0.0) )
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD +$(INFIN)) )
  *      )
+ * It is implemented as a compiler intrinsic.
+ * Params:
+ *      x = floating point value
+ * Returns: |x|
+ * References: equivalent to `core.math.fabs`
  */
-real fabs(real x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.fabs(x); }
-
-///ditto
-pragma(inline, true)
-double fabs(double d) @trusted pure nothrow @nogc
+@safe pure nothrow @nogc
 {
-    ulong tmp = *cast(ulong*)&d & 0x7FFF_FFFF_FFFF_FFFF;
-    return *cast(double*)&tmp;
-}
-
-///ditto
-pragma(inline, true)
-float fabs(float f) @trusted pure nothrow @nogc
-{
-    uint tmp = *cast(uint*)&f & 0x7FFF_FFFF;
-    return *cast(float*)&tmp;
+    float  fabs(float  x);
+    double fabs(double x); /// ditto
+    real   fabs(real   x); /// ditto
 }
 
 ///
