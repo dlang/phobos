@@ -107,7 +107,7 @@ class UTFException : UnicodeException
          size_t line = __LINE__, Throwable next = null) @safe pure nothrow
     {
         UnsignedStringBuf buf = void;
-        msg ~= " (at index " ~ unsignedToTempString(index, buf, 10) ~ ")";
+        msg ~= " (at index " ~ unsignedToTempString(index, buf) ~ ")";
         super(msg, index, file, line, next);
     }
 
@@ -133,7 +133,7 @@ class UTFException : UnicodeException
         {
             UnsignedStringBuf buf = void;
             result ~= ' ';
-            auto h = unsignedToTempString(i, buf, 16);
+            auto h = unsignedToTempString!16(i, buf);
             if (h.length == 1)
                 result ~= '0';
             result ~= h;
