@@ -929,7 +929,7 @@ Parameters for the generator.
 
             UnsignedStringBuf buf = void;
             string s = "MersenneTwisterEngine.seed: Input range didn't provide enough elements: Need ";
-            s ~= unsignedToTempString(n, buf, 10) ~ " elements.";
+            s ~= unsignedToTempString(n, buf) ~ " elements.";
             throw new Exception(s);
         }
 
