@@ -1508,7 +1508,10 @@ private:
     T* arr;
 }
 
-static assert(isRandomAccessRange!(SliceOverIndexed!(int[])));
+@safe pure nothrow @nogc unittest
+{
+    static assert(isRandomAccessRange!(SliceOverIndexed!(int[])));
+}
 
 SliceOverIndexed!(const(T)) sliceOverIndexed(T)(size_t a, size_t b, const(T)* x)
 if (is(Unqual!T == T))
@@ -5603,9 +5606,12 @@ struct sliceBits(size_t from, size_t to)
 alias lo8 = assumeSize!(low_8, 8);
 alias mlo8 = assumeSize!(midlow_8, 8);
 
-static assert(bitSizeOf!lo8 == 8);
-static assert(bitSizeOf!(sliceBits!(4, 7)) == 3);
-static assert(bitSizeOf!(BitPacked!(uint, 2)) == 2);
+@safe pure nothrow @nogc unittest
+{
+    static assert(bitSizeOf!lo8 == 8);
+    static assert(bitSizeOf!(sliceBits!(4, 7)) == 3);
+    static assert(bitSizeOf!(BitPacked!(uint, 2)) == 2);
+}
 
 template Sequence(size_t start, size_t end)
 {
@@ -5919,8 +5925,12 @@ pure:
     @property DecompressedIntervals save() { return this; }
 }
 
-static assert(isInputRange!DecompressedIntervals);
-static assert(isForwardRange!DecompressedIntervals);
+@safe pure nothrow @nogc unittest
+{
+    static assert(isInputRange!DecompressedIntervals);
+    static assert(isForwardRange!DecompressedIntervals);
+}
+
 //============================================================================
 
 version (std_uni_bootstrap){}
