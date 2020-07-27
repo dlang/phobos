@@ -1508,7 +1508,7 @@ private:
     T* arr;
 }
 
-@safe pure unittest
+@safe pure nothrow @nogc unittest
 {
     static assert(isRandomAccessRange!(SliceOverIndexed!(int[])));
 }
@@ -5606,7 +5606,7 @@ struct sliceBits(size_t from, size_t to)
 alias lo8 = assumeSize!(low_8, 8);
 alias mlo8 = assumeSize!(midlow_8, 8);
 
-@safe pure unittest
+@safe pure nothrow @nogc unittest
 {
     static assert(bitSizeOf!lo8 == 8);
     static assert(bitSizeOf!(sliceBits!(4, 7)) == 3);
@@ -5925,7 +5925,7 @@ pure:
     @property DecompressedIntervals save() { return this; }
 }
 
-@safe pure unittest
+@safe pure nothrow @nogc unittest
 {
     static assert(isInputRange!DecompressedIntervals);
     static assert(isForwardRange!DecompressedIntervals);
