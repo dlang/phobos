@@ -796,7 +796,7 @@ private string generateCases()
         chunks[i + 1] = chunks[i] ~ `F!(Args[` ~ i.stringof ~ `]),`;
     string ret = `AliasSeq!(`;
     foreach (chunk; chunks)
-        ret ~= `q{AliasSeq!(` ~ chunk ~ `)},`;
+        ret ~= `q{alias staticMap = AliasSeq!(` ~ chunk ~ `);},`;
     return ret ~ `)`;
 }
 private alias staticMapBasicCases = AliasSeq!(mixin(generateCases()));
@@ -807,23 +807,9 @@ Evaluates to $(D AliasSeq!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
 template staticMap(alias F, Args ...)
 {
     static if (Args.length < staticMapExpandFactor)
-        alias staticMap = AliasSeq!(mixin(staticMapBasicCases[Args.length]));
+        mixin(staticMapBasicCases[Args.length]);
     else
-    {
-        template staticMapImpl(Args ...)
-        {
-            static if (Args.length >= staticMapExpandFactor)
-            {
-                alias TheRest = Args[staticMapExpandFactor - 1 .. $];
-                alias staticMapImpl = AliasSeq!(mixin(staticMapBasicCases[staticMapExpandFactor - 1]),
-                                                staticMapImpl!(TheRest[0   .. $/2]),
-                                                staticMapImpl!(TheRest[$/2 .. $]));
-            }
-            else
-                alias staticMapImpl = AliasSeq!(mixin(staticMapBasicCases[Args.length]));
-        }
-        alias staticMap = staticMapImpl!Args;
-    }
+        alias staticMap = AliasSeq!(staticMap!(F, Args[0 .. $/2]), staticMap!(F, Args[$/2 .. $]));
 }
 
 ///
@@ -848,6 +834,15 @@ template staticMap(alias F, Args ...)
 
     alias T = staticMap!(Unqual, int, const int, immutable int, uint, ubyte, byte, short, ushort, long);
     static assert(is(T == AliasSeq!(int, int, int, uint, ubyte, byte, short, ushort, long)));
+}
+
+// regression test for https://issues.dlang.org/show_bug.cgi?id=21088
+@system unittest // typeid opEquals is @system
+{
+    enum getTypeId(T) = typeid(T);
+    alias A = staticMap!(getTypeId, int);
+
+    assert(A == typeid(int));
 }
 
 /**
