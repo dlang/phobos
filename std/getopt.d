@@ -13,8 +13,8 @@ enabled by default.
 Copyright: Copyright Andrei Alexandrescu 2008 - 2015.
 License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(HTTP erdani.org, Andrei Alexandrescu)
-Credits:   This module and its documentation are inspired by Perl's $(HTTP
-           perldoc.perl.org/Getopt/Long.html, Getopt::Long) module. The syntax of
+Credits:   This module and its documentation are inspired by Perl's
+           $(HTTPS perldoc.perl.org/Getopt/Long.html, Getopt::Long) module. The syntax of
            D's `getopt` is simpler than its Perl counterpart because $(D
            getopt) infers the expected parameter types from the static types of
            the passed-in pointers.
