@@ -795,14 +795,17 @@ private template fqnType(T,
 
     string storageClassesString(uint psc)() @property
     {
+        import std.conv : text;
+
         alias PSC = ParameterStorageClass;
 
-        return format("%s%s%s%s%s",
+        return text(
             psc & PSC.scope_ ? "scope " : "",
             psc & PSC.return_ ? "return " : "",
+            psc & PSC.in_ ? "in " : "",
             psc & PSC.out_ ? "out " : "",
             psc & PSC.ref_ ? "ref " : "",
-            psc & PSC.lazy_ ? "lazy " : ""
+            psc & PSC.lazy_ ? "lazy " : "",
         );
     }
 
@@ -1213,12 +1216,13 @@ enum ParameterStorageClass : uint
      * These flags can be bitwise OR-ed together to represent complex storage
      * class.
      */
-    none    = 0,
-    scope_  = 1,    /// ditto
-    out_    = 2,    /// ditto
-    ref_    = 4,    /// ditto
-    lazy_   = 8,    /// ditto
-    return_ = 0x10, /// ditto
+    none    = 0x00,
+    in_     = 0x01, /// ditto
+    ref_    = 0x02, /// ditto
+    out_    = 0x04, /// ditto
+    lazy_   = 0x08, /// ditto
+    scope_  = 0x10, /// ditto
+    return_ = 0x20, /// ditto
 }
 
 /// ditto
@@ -1254,14 +1258,22 @@ if (func.length == 1 && isCallable!func)
 {
     alias STC = ParameterStorageClass; // shorten the enum name
 
-    void func(ref int ctx, out real result, real param)
+    void func(ref int ctx, out real result, in real param, void* ptr)
     {
     }
     alias pstc = ParameterStorageClassTuple!func;
-    static assert(pstc.length == 3); // three parameters
+    static assert(pstc.length == 4); // number of parameters
     static assert(pstc[0] == STC.ref_);
     static assert(pstc[1] == STC.out_);
-    static assert(pstc[2] == STC.none);
+    version (none)
+    {
+        // TODO: When the DMD PR (dlang/dmd#11474) gets merged,
+        // remove the versioning and the second test
+        static assert(pstc[2] == STC.in_);
+        // This is the current behavior, before `in` is fixed to not be an alias
+        static assert(pstc[2] == STC.scope_);
+    }
+    static assert(pstc[3] == STC.none);
 }
 
 /**
@@ -1285,6 +1297,7 @@ template extractParameterStorageClassFlags(Attribs...)
                 final switch (attrib) with (ParameterStorageClass)
                 {
                     case "scope":  result |= scope_;  break;
+                    case "in":     result |= in_;    break;
                     case "out":    result |= out_;    break;
                     case "ref":    result |= ref_;    break;
                     case "lazy":   result |= lazy_;   break;
