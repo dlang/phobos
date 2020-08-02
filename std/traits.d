@@ -6849,7 +6849,19 @@ enum bool isStaticArray(T) = __traits(isStaticArray, T);
 /**
  * Detect whether type `T` is a dynamic array.
  */
-enum bool isDynamicArray(T) = is(DynamicArrayTypeOf!T) && !isAggregateType!T;
+template isDynamicArray(T)
+{
+    static if (is(T == U[], U))
+        enum bool isDynamicArray = true;
+    else static if (is(T U == enum))
+        // BUG: isDynamicArray / isStaticArray considers enums
+        // with appropriate base types as dynamic/static arrays
+        // Retain old behaviour for now, see
+        // https://github.com/dlang/phobos/pull/7574
+        enum bool isDynamicArray = isDynamicArray!U;
+    else
+        enum bool isDynamicArray = false;
+}
 
 ///
 @safe unittest
@@ -6873,6 +6885,24 @@ enum bool isDynamicArray(T) = is(DynamicArrayTypeOf!T) && !isAggregateType!T;
             static assert(!isDynamicArray!( SubTypeOf!(Q!T) ));
         }
     }
+
+    static assert(!isDynamicArray!(int[5]));
+
+    static struct AliasThis
+    {
+        int[] values;
+        alias values this;
+    }
+
+    static assert(!isDynamicArray!AliasThis);
+
+    // https://github.com/dlang/phobos/pull/7574/files#r464115492
+    enum E : string
+    {
+        a = "a",
+        b = "b",
+    }
+    static assert( isDynamicArray!E);
 }
 
 /**
