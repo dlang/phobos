@@ -2261,7 +2261,7 @@ if (isAutodecodableString!(C[]) && !isAggregateType!(C[]))
 
     assert(str.length, "Attempting to popFront() past the end of an array of " ~ C.stringof);
 
-    static if (is(Unqual!C == char))
+    static if (is(immutable C == immutable char))
     {
         static immutable ubyte[] charWidthTab = [
             2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
@@ -2274,7 +2274,7 @@ if (isAutodecodableString!(C[]) && !isAggregateType!(C[]))
         immutable charWidth = c < 192 ? 1 : charWidthTab.ptr[c - 192];
         str = str.ptr[min(str.length, charWidth) .. str.length];
     }
-    else static if (is(Unqual!C == wchar))
+    else static if (is(immutable C == immutable wchar))
     {
         immutable u = str[0];
         immutable seqLen = 1 + (u >= 0xD800 && u <= 0xDBFF);

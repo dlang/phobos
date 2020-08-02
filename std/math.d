@@ -295,14 +295,14 @@ enum real SQRT1_2 =    SQRT2/2;                               /** $(SQRT)$(HALF)
  *     Does not work correctly for signed intergal types and value `Num`.min.
  */
 auto abs(Num)(Num x) @nogc pure nothrow
-if ((is(Unqual!Num == short) || is(Unqual!Num == byte)) ||
+if ((is(immutable Num == immutable short) || is(immutable Num == immutable byte)) ||
     (is(typeof(Num.init >= 0)) && is(typeof(-Num.init))))
 {
     static if (isFloatingPoint!(Num))
         return fabs(x);
     else
     {
-        static if (is(Unqual!Num == short) || is(Unqual!Num == byte))
+        static if (is(immutable Num == immutable short) || is(immutable Num == immutable byte))
             return x >= 0 ? x : cast(Num) -int(x);
         else
             return x >= 0 ? x : -x;
@@ -2780,7 +2780,7 @@ if (isFloatingPoint!T)
 
     Unqual!T vf = value;
     ushort* vu = cast(ushort*)&vf;
-    static if (is(Unqual!T == float))
+    static if (is(immutable T == immutable float))
         int* vi = cast(int*)&vf;
     else
         long* vl = cast(long*)&vf;
@@ -8181,7 +8181,7 @@ in
 }
 do
 {
-    static if (is(Unqual!T2 == real))
+    static if (is(immutable T2 == immutable real))
     {
         return polyImpl(x, A);
     }

@@ -623,7 +623,8 @@ if (isInputRange!R1 && isInputRange!R2)
     static if (isDynamicArray!R1 && isDynamicArray!R2
         && __traits(isUnsigned, E1) && __traits(isUnsigned, E2)
         && E1.sizeof == 1 && E2.sizeof == 1
-        && (is(Unqual!E1 == char) == is(Unqual!E2 == char))) // Both or neither must auto-decode.
+        // Both or neither must auto-decode.
+        && (is(immutable E1 == immutable char) == is(immutable E2 == immutable char)))
     {
         // dstrcmp algorithm is correct for both ubyte[] and for char[].
         import core.internal.string : dstrcmp;

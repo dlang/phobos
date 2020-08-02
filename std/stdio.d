@@ -2477,7 +2477,7 @@ $(REF readText, std,file)
 /// ditto
     auto byLineCopy(Terminator, Char = immutable char)
             (KeepTerminator keepTerminator, Terminator terminator)
-    if (is(Unqual!(ElementEncodingType!Terminator) == Unqual!Char))
+    if (is(immutable ElementEncodingType!Terminator == immutable Char))
     {
         return ByLineCopy!(Char, Terminator)(this, keepTerminator, terminator);
     }

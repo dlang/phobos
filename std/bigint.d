@@ -194,7 +194,7 @@ public:
     }
 
     /// Construct a `BigInt` from another `BigInt`.
-    this(T)(T x) pure nothrow @safe if (is(Unqual!T == BigInt))
+    this(T)(T x) pure nothrow @safe if (is(immutable T == immutable BigInt))
     {
         opAssign(x);
     }
@@ -514,11 +514,11 @@ public:
         // BigInt % long => long
         // BigInt % ulong => BigInt
         // BigInt % other_type => int
-        static if (is(Unqual!T == long) || is(Unqual!T == ulong))
+        static if (is(immutable T == immutable long) || is(immutable T == immutable ulong))
         {
             auto r = this % BigInt(y);
 
-            static if (is(Unqual!T == long))
+            static if (is(immutable T == immutable long))
             {
                 return r.toLong();
             }
@@ -531,7 +531,7 @@ public:
         else
         {
             immutable uint u = absUnsign(y);
-            static if (is(Unqual!T == uint))
+            static if (is(immutable T == immutable uint))
                alias R = long;
             else
                alias R = int;
@@ -1021,7 +1021,7 @@ public:
         system guarantees. Use with care.
      */
     T opCast(T)() pure nothrow @nogc const
-    if (is(Unqual!T == BigInt))
+    if (is(immutable T == immutable BigInt))
     {
         return this;
     }

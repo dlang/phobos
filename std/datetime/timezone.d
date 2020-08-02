@@ -31,7 +31,7 @@ module std.datetime.timezone;
 import core.time : abs, convert, dur, Duration, hours, minutes;
 import std.datetime.systime : Clock, stdTimeToUnixTime, SysTime;
 import std.range.primitives : back, empty, front, isOutputRange, popFront;
-import std.traits : isIntegral, isSomeString, Unqual;
+import std.traits : isIntegral, isSomeString;
 
 version (OSX)
     version = Darwin;
@@ -2633,7 +2633,7 @@ private:
         Reads an int from a TZ file.
       +/
     static T readVal(T)(ref File tzFile) @trusted
-        if ((isIntegral!T || isSomeChar!T) || is(Unqual!T == bool))
+        if ((isIntegral!T || isSomeChar!T) || is(immutable T == immutable bool))
     {
         import std.bitmanip : bigEndianToNative;
         T[1] buff;

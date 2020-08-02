@@ -488,7 +488,7 @@ public:
     {
         import std.conv : text;
 
-        static if (staticIndexOf!(Unqual!F, float, double, real) >= 0)
+        static if (staticIndexOf!(immutable F, immutable float, immutable double, immutable real) >= 0)
             auto value = ToBinary!(Unqual!F)(input);
         else
             auto value = ToBinary!(real    )(input);
@@ -518,7 +518,7 @@ public:
 
     /// Fetches the stored value either as a `float`, `double` or `real`.
     @property F get(F)()
-        if (staticIndexOf!(Unqual!F, float, double, real) >= 0)
+        if (staticIndexOf!(immutable F, immutable float, immutable double, immutable real) >= 0)
     {
         import std.conv : text;
 

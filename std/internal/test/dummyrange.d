@@ -421,7 +421,6 @@ if (is(T == TestFoo))
 {
     import std.algorithm.comparison : equal;
     import std.range : iota, retro, repeat;
-    import std.traits : Unqual;
 
     static void testInputRange(T,Cmp)()
     {
@@ -431,7 +430,7 @@ if (is(T == TestFoo))
         {
             if (numRuns == 1)
             {
-                static if (is(Unqual!(ElementType!(T)) == uint))
+                static if (is(immutable ElementType!(T) == immutable uint))
                 {
                     it.reinit();
                 }
