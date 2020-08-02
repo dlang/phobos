@@ -1942,7 +1942,7 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, scope R sep)
 if (isInputRange!RoR &&
     isInputRange!(Unqual!(ElementType!RoR)) &&
     isInputRange!R &&
-    is(Unqual!(ElementType!(ElementType!RoR)) == Unqual!(ElementType!R)))
+    is(immutable ElementType!(ElementType!RoR) == immutable ElementType!R))
 {
     alias RetType = typeof(return);
     alias RetTypeElement = Unqual!(ElementEncodingType!RetType);

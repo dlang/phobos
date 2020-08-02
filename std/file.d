@@ -316,7 +316,7 @@ void[] read(R)(R name, size_t upTo = size_t.max)
 if (isInputRange!R && isSomeChar!(ElementEncodingType!R) && !isInfinite!R &&
     !isConvertibleToString!R)
 {
-    static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+    static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
         return readImpl(name, name.tempCString!FSChar(), upTo);
     else
         return readImpl(null, name.tempCString!FSChar(), upTo);
@@ -521,7 +521,7 @@ if (isSomeString!S && (isInputRange!R && !isInfinite!R && isSomeChar!(ElementTyp
     immutable bomSeq = getBOM(data);
     immutable bom = bomSeq.schema;
 
-    static if (is(Unqual!(ElementEncodingType!S) == char))
+    static if (is(immutable ElementEncodingType!S == immutable char))
     {
         with(BOM) switch (bom)
         {
@@ -532,7 +532,7 @@ if (isSomeString!S && (isInputRange!R && !isInfinite!R && isSomeChar!(ElementTyp
             default: break;
         }
     }
-    else static if (is(Unqual!(ElementEncodingType!S) == wchar))
+    else static if (is(immutable ElementEncodingType!S == immutable wchar))
     {
         with(BOM) switch (bom)
         {
@@ -741,7 +741,7 @@ void write(R)(R name, const void[] buffer)
 if ((isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
     !isConvertibleToString!R)
 {
-    static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+    static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
         writeImpl(name, name.tempCString!FSChar(), buffer, false);
     else
         writeImpl(null, name.tempCString!FSChar(), buffer, false);
@@ -788,7 +788,7 @@ void append(R)(R name, const void[] buffer)
 if ((isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
     !isConvertibleToString!R)
 {
-    static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+    static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
         writeImpl(name, name.tempCString!FSChar(), buffer, true);
     else
         writeImpl(null, name.tempCString!FSChar(), buffer, true);
@@ -922,12 +922,12 @@ if ((isInputRange!RF && !isInfinite!RF && isSomeChar!(ElementEncodingType!RF) ||
     auto fromz = from.tempCString!FSChar();
     auto toz = to.tempCString!FSChar();
 
-    static if (isNarrowString!RF && is(Unqual!(ElementEncodingType!RF) == char))
+    static if (isNarrowString!RF && is(immutable ElementEncodingType!RF == immutable char))
         alias f = from;
     else
         enum string f = null;
 
-    static if (isNarrowString!RT && is(Unqual!(ElementEncodingType!RT) == char))
+    static if (isNarrowString!RT && is(immutable ElementEncodingType!RT == immutable char))
         alias t = to;
     else
         enum string t = null;
@@ -1028,7 +1028,7 @@ void remove(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     !isConvertibleToString!R)
 {
-    static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+    static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
         removeImpl(name, name.tempCString!FSChar());
     else
         removeImpl(null, name.tempCString!FSChar());
@@ -1086,7 +1086,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R))
 
     WIN32_FILE_ATTRIBUTE_DATA fad = void;
 
-    static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+    static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
     {
         static void getFA(scope const(char)[] name, scope const(FSChar)* namez,
                           out WIN32_FILE_ATTRIBUTE_DATA fad) @trusted
@@ -1148,7 +1148,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         {
             return stat(namez, &buf);
         }
-        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+        static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
             alias names = name;
         else
             string names = null;
@@ -1255,7 +1255,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         }
         stat_t statbuf = void;
 
-        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+        static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
             alias names = name;
         else
             string names = null;
@@ -1553,7 +1553,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
                       HANDLE.init);
         auto h = trustedCreateFileW(namez, defaults);
 
-        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+        static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
             alias names = name;
         else
             string names = null;
@@ -1578,7 +1578,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
             t[0] = accessTime.toTimeSpec();
             t[1] = modificationTime.toTimeSpec();
 
-            static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
                 alias names = name;
             else
                 string names = null;
@@ -1586,7 +1586,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         }
         else
         {
-            static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
                 alias names = name;
             else
                 string names = null;
@@ -1718,7 +1718,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         }
         stat_t statbuf = void;
 
-        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+        static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
             alias names = name;
         else
             string names = null;
@@ -2055,7 +2055,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         }
         immutable result = trustedGetFileAttributesW(namez);
 
-        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+        static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
             alias names = name;
         else
             string names = null;
@@ -2072,7 +2072,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         }
         stat_t statbuf = void;
 
-        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+        static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
             alias names = name;
         else
             string names = null;
@@ -2163,7 +2163,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
             return lstat(namez, &buf);
         }
         stat_t lstatbuf = void;
-        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+        static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
             alias names = name;
         else
             string names = null;
@@ -2267,7 +2267,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         {
             return SetFileAttributesW(namez, dwFileAttributes);
         }
-        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+        static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
             alias names = name;
         else
             string names = null;
@@ -2281,7 +2281,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
             return chmod(namez, mode);
         }
         assert(attributes <= mode_t.max);
-        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+        static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
             alias names = name;
         else
             string names = null;
@@ -2923,7 +2923,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
             return core.sys.posix.unistd.chdir(pathz) == 0;
         }
     }
-    static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+    static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
         alias pathStr = pathname;
     else
         string pathStr = null;
@@ -2984,7 +2984,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         {
             return CreateDirectoryW(pathz, null);
         }
-        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+        static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
             alias pathStr = pathname;
         else
             string pathStr = null;
@@ -2998,7 +2998,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         {
             return core.sys.posix.sys.stat.mkdir(pathz, mode);
         }
-        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+        static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
             alias pathStr = pathname;
         else
             string pathStr = null;
@@ -3196,7 +3196,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
             return core.sys.posix.unistd.rmdir(pathz) == 0;
         }
     }
-    static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+    static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
         alias pathStr = pathname;
     else
         string pathStr = null;
@@ -4213,12 +4213,12 @@ if (isInputRange!RF && !isInfinite!RF && isSomeChar!(ElementEncodingType!RF) && 
     auto fromz = from.tempCString!FSChar();
     auto toz = to.tempCString!FSChar();
 
-    static if (isNarrowString!RF && is(Unqual!(ElementEncodingType!RF) == char))
+    static if (isNarrowString!RF && is(immutable ElementEncodingType!RF == immutable char))
         alias f = from;
     else
         enum string f = null;
 
-    static if (isNarrowString!RT && is(Unqual!(ElementEncodingType!RT) == char))
+    static if (isNarrowString!RT && is(immutable ElementEncodingType!RT == immutable char))
         alias t = to;
     else
         enum string t = null;
@@ -4765,7 +4765,7 @@ private struct DirIteratorImpl
         _mode = mode;
         _followSymlink = followSymlink;
 
-        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+        static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
             alias pathnameStr = pathname;
         else
         {

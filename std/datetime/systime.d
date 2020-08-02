@@ -86,7 +86,7 @@ import std.datetime.timezone;// : LocalTime, SimpleTimeZone, TimeZone, UTC;
 import std.exception : enforce;
 import std.format : format;
 import std.range.primitives;
-import std.traits : isIntegral, isSigned, isSomeString, Unqual, isNarrowString;
+import std.traits : isIntegral, isSigned, isSomeString, isNarrowString;
 
 version (Windows)
 {
@@ -7916,7 +7916,7 @@ public:
         Returns a $(REF Date,std,datetime,date) equivalent to this $(LREF SysTime).
       +/
     Date opCast(T)() @safe const nothrow scope
-        if (is(Unqual!T == Date))
+        if (is(immutable T == immutable Date))
     {
         return Date(dayOfGregorianCal);
     }
@@ -7957,7 +7957,7 @@ public:
         $(LREF SysTime).
       +/
     DateTime opCast(T)() @safe const nothrow scope
-        if (is(Unqual!T == DateTime))
+        if (is(immutable T == immutable DateTime))
     {
         try
         {
@@ -8023,7 +8023,7 @@ public:
         $(LREF SysTime).
       +/
     TimeOfDay opCast(T)() @safe const nothrow scope
-        if (is(Unqual!T == TimeOfDay))
+        if (is(immutable T == immutable TimeOfDay))
     {
         try
         {
@@ -8080,7 +8080,7 @@ public:
     // should be allowed, and it doesn't work without this opCast() since opCast()
     // has already been defined for other types.
     SysTime opCast(T)() @safe const pure nothrow scope
-        if (is(Unqual!T == SysTime))
+        if (is(immutable T == immutable SysTime))
     {
         return SysTime(_stdTime, _timezone);
     }
@@ -10244,7 +10244,7 @@ SysTime parseRFC822DateTime()(scope const char[] value) @safe
 /++ Ditto +/
 SysTime parseRFC822DateTime(R)(scope R value)
 if (isRandomAccessRange!R && hasSlicing!R && hasLength!R &&
-    (is(Unqual!(ElementType!R) == char) || is(Unqual!(ElementType!R) == ubyte)))
+    (is(immutable ElementType!R == immutable char) || is(immutable ElementType!R == immutable ubyte)))
 {
     import std.algorithm.searching : find, all;
     import std.ascii : isDigit, isAlpha, isPrintable;
@@ -11215,7 +11215,7 @@ if (validTimeUnits(units) &&
   +/
 R _stripCFWS(R)(R range)
 if (isRandomAccessRange!R && hasSlicing!R && hasLength!R &&
-    (is(Unqual!(ElementType!R) == char) || is(Unqual!(ElementType!R) == ubyte)))
+    (is(immutable ElementType!R == immutable char) || is(immutable ElementType!R == immutable ubyte)))
 {
     immutable e = range.length;
     outer: for (size_t i = 0; i < e; )

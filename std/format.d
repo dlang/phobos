@@ -2208,7 +2208,7 @@ if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     `null` literal is formatted as `"null"`
 */
 private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
-if (is(Unqual!T == typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
+if (is(immutable T == immutable typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
 {
     const spec = f.spec;
     enforceFmt(spec == 's',
@@ -5712,7 +5712,7 @@ T unformatValue(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char
 }
 
 private T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
-if (isInputRange!Range && is(Unqual!T == bool))
+if (isInputRange!Range && is(immutable T == immutable bool))
 {
     import std.algorithm.searching : find;
     import std.conv : parse, text;
@@ -5745,9 +5745,9 @@ if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementT
 
     if (spec.spec == 'r')
     {
-        static if (is(Unqual!(ElementEncodingType!Range) == char)
-                || is(Unqual!(ElementEncodingType!Range) == byte)
-                || is(Unqual!(ElementEncodingType!Range) == ubyte))
+        static if (is(immutable ElementEncodingType!Range == immutable char)
+                || is(immutable ElementEncodingType!Range == immutable byte)
+                || is(immutable ElementEncodingType!Range == immutable ubyte))
             return rawRead!T(input);
         else
             throw new FormatException(
@@ -5781,9 +5781,9 @@ if (isFloatingPoint!T && !is(T == enum) && isInputRange!Range
 
     if (spec.spec == 'r')
     {
-        static if (is(Unqual!(ElementEncodingType!Range) == char)
-                || is(Unqual!(ElementEncodingType!Range) == byte)
-                || is(Unqual!(ElementEncodingType!Range) == ubyte))
+        static if (is(immutable ElementEncodingType!Range == immutable char)
+                || is(immutable ElementEncodingType!Range == immutable byte)
+                || is(immutable ElementEncodingType!Range == immutable ubyte))
             return rawRead!T(input);
         else
             throw new FormatException(
@@ -5914,9 +5914,9 @@ if (isInputRange!Range && isAssociativeArray!T && !is(T == enum))
  * for integral and float types.
  */
 private T rawRead(T, Range)(ref Range input)
-if (is(Unqual!(ElementEncodingType!Range) == char)
-    || is(Unqual!(ElementEncodingType!Range) == byte)
-    || is(Unqual!(ElementEncodingType!Range) == ubyte))
+if (is(immutable ElementEncodingType!Range == immutable char)
+    || is(immutable ElementEncodingType!Range == immutable byte)
+    || is(immutable ElementEncodingType!Range == immutable ubyte))
 {
     union X
     {

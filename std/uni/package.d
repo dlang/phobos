@@ -7144,7 +7144,7 @@ if (is(C : dchar))
     must be an L-value.
 +/
 Grapheme decodeGrapheme(Input)(ref Input inp)
-if (isInputRange!Input && is(Unqual!(ElementType!Input) == dchar))
+if (isInputRange!Input && is(immutable ElementType!Input == immutable dchar))
 {
     return genericDecodeGrapheme!true(inp);
 }
@@ -7177,7 +7177,7 @@ if (isInputRange!Input && is(Unqual!(ElementType!Input) == dchar))
         $(LREF byCodePoint)
 +/
 auto byGrapheme(Range)(Range range)
-if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
+if (isInputRange!Range && is(immutable ElementType!Range == immutable dchar))
 {
     // TODO: Bidirectional access
     static struct Result(R)
@@ -7280,7 +7280,7 @@ private static struct InputRangeString
     $(P If passed in a range of code points, returns a range with equivalent capabilities.)
 +/
 auto byCodePoint(Range)(Range range)
-if (isInputRange!Range && is(Unqual!(ElementType!Range) == Grapheme))
+if (isInputRange!Range && is(immutable ElementType!Range == immutable Grapheme))
 {
     // TODO: Propagate bidirectional access
     static struct Result
@@ -7323,7 +7323,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == Grapheme))
 
 /// Ditto
 auto byCodePoint(Range)(Range range)
-if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
+if (isInputRange!Range && is(immutable ElementType!Range == immutable dchar))
 {
     import std.range.primitives : isBidirectionalRange, popBack;
     import std.traits : isNarrowString;

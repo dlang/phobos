@@ -2657,7 +2657,7 @@ template hasNested(T)
     else static if (is(T == class) || is(T == struct) || is(T == union))
     {
         // prevent infinite recursion for class with member of same type
-        enum notSame(U) = !is(Unqual!T == Unqual!U);
+        enum notSame(U) = !is(immutable T == immutable U);
         enum hasNested = isNested!T ||
             anySatisfy!(.hasNested, Filter!(notSame, Fields!T));
     }
@@ -5659,7 +5659,7 @@ template BooleanTypeOf(T)
     else
         alias X = OriginalType!T;
 
-    static if (is(Unqual!X == bool))
+    static if (is(immutable X == immutable bool))
     {
         alias BooleanTypeOf = X;
     }
@@ -6171,12 +6171,7 @@ enum bool isIntegral(T) = is(IntegralTypeOf!T) && !isAggregateType!T;
 /**
  * Detect whether `T` is a built-in floating point type.
  */
-enum bool isFloatingPoint(T) = __traits(isFloating, T) && !(is(Unqual!T == cfloat) ||
-                                                            is(Unqual!T == cdouble) ||
-                                                            is(Unqual!T == creal) ||
-                                                            is(Unqual!T == ifloat) ||
-                                                            is(Unqual!T == idouble) ||
-                                                            is(Unqual!T == ireal));
+enum bool isFloatingPoint(T) = __traits(isFloating, T) && !is(T : ireal) && !is(T : creal);
 
 ///
 @safe unittest
@@ -6244,10 +6239,10 @@ enum bool isFloatingPoint(T) = __traits(isFloating, T) && !(is(Unqual!T == cfloa
  * Detect whether `T` is a built-in numeric type (integral or floating
  * point).
  */
-enum bool isNumeric(T) = __traits(isArithmetic, T) && !(is(Unqual!T == bool) ||
-                                                        is(Unqual!T == char) ||
-                                                        is(Unqual!T == wchar) ||
-                                                        is(Unqual!T == dchar));
+enum bool isNumeric(T) = __traits(isArithmetic, T) && !(is(immutable T == immutable bool) ||
+                                                        is(immutable T == immutable char) ||
+                                                        is(immutable T == immutable wchar) ||
+                                                        is(immutable T == immutable dchar));
 
 ///
 @safe unittest
@@ -6337,7 +6332,7 @@ enum bool isScalarType(T) = is(T : real) && !isAggregateType!T;
 /**
  * Detect whether `T` is a basic type (scalar type or void).
  */
-enum bool isBasicType(T) = isScalarType!T || is(Unqual!T == void);
+enum bool isBasicType(T) = isScalarType!T || is(immutable T == immutable void);
 
 ///
 @safe unittest
@@ -6360,10 +6355,10 @@ enum bool isBasicType(T) = isScalarType!T || is(Unqual!T == void);
 /**
  * Detect whether `T` is a built-in unsigned numeric type.
  */
-enum bool isUnsigned(T) = __traits(isUnsigned, T) && !(is(Unqual!T == char) ||
-                                                       is(Unqual!T == wchar) ||
-                                                       is(Unqual!T == dchar) ||
-                                                       is(Unqual!T == bool));
+enum bool isUnsigned(T) = __traits(isUnsigned, T) && !(is(immutable T == immutable char) ||
+                                                       is(immutable T == immutable wchar) ||
+                                                       is(immutable T == immutable dchar) ||
+                                                       is(immutable T == immutable bool));
 
 ///
 @safe unittest

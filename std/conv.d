@@ -167,7 +167,7 @@ private
     template isNullToStr(S, T)
     {
         enum isNullToStr = isImplicitlyConvertible!(S, T) &&
-                           (is(Unqual!S == typeof(null))) && isExactSomeString!T;
+                           (is(immutable S == immutable typeof(null))) && isExactSomeString!T;
     }
 }
 
@@ -2187,7 +2187,7 @@ Note:
 Target parse(Target, Source)(ref Source source)
 if (isInputRange!Source &&
     isSomeChar!(ElementType!Source) &&
-    is(Unqual!Target == bool))
+    is(immutable Target == immutable bool))
 {
     import std.ascii : toLower;
 
@@ -3470,11 +3470,11 @@ Throws:
  */
 Target parse(Target, Source)(ref Source s)
 if (isSomeString!Source && !is(Source == enum) &&
-    staticIndexOf!(Unqual!Target, dchar, Unqual!(ElementEncodingType!Source)) >= 0)
+    staticIndexOf!(immutable Target, immutable dchar, immutable ElementEncodingType!Source) >= 0)
 {
     if (s.empty)
         throw convError!(Source, Target)(s);
-    static if (is(Unqual!Target == dchar))
+    static if (is(immutable Target == immutable dchar))
     {
         Target result = s.front;
         s.popFront();
@@ -3495,7 +3495,7 @@ if (isSomeString!Source && !is(Source == enum) &&
     {
         static foreach (Char; AliasSeq!(char, wchar, dchar))
         {{
-            static if (is(Unqual!Char == dchar) ||
+            static if (is(immutable Char == immutable dchar) ||
                        Char.sizeof == ElementEncodingType!Str.sizeof)
             {
                 Str s = "aaa";
@@ -3573,7 +3573,7 @@ Throws:
 Target parse(Target, Source)(ref Source s)
 if (isInputRange!Source &&
     isSomeChar!(ElementType!Source) &&
-    is(Unqual!Target == typeof(null)))
+    is(immutable Target == immutable typeof(null)))
 {
     import std.ascii : toLower;
     foreach (c; "null")
@@ -4224,8 +4224,8 @@ private S textImpl(S, U...)(U args)
                 app.put(arg);
             else static if (
 
-                is(Unqual!(typeof(arg)) == uint) || is(Unqual!(typeof(arg)) == ulong) ||
-                is(Unqual!(typeof(arg)) == int) || is(Unqual!(typeof(arg)) == long)
+                is(immutable typeof(arg) == immutable uint) || is(immutable typeof(arg) == immutable ulong) ||
+                is(immutable typeof(arg) == immutable int) || is(immutable typeof(arg) == immutable long)
             )
                 // https://issues.dlang.org/show_bug.cgi?id=17712#c15
                 app.put(textImpl!(S)(arg));
@@ -6291,8 +6291,8 @@ private auto hexStrLiteral(String)(scope String hexData)
 auto toChars(ubyte radix = 10, Char = char, LetterCase letterCase = LetterCase.lower, T)(T value)
     pure nothrow @nogc @safe
 if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
-    (is(Unqual!T == uint) || is(Unqual!T == ulong) ||
-    radix == 10 && (is(Unqual!T == int) || is(Unqual!T == long))))
+    (is(immutable T == immutable uint) || is(immutable T == immutable ulong) ||
+    radix == 10 && (is(immutable T == immutable int) || is(immutable T == immutable long))))
 {
     alias UT = Unqual!T;
 

@@ -5486,8 +5486,8 @@ if (isSomeString!Range ||
             import std.uni : isWhite;
             import std.traits : Unqual;
 
-            static if (is(Unqual!(ElementEncodingType!Range) == wchar) &&
-                       is(Unqual!(ElementType!Range) == dchar))
+            static if (is(immutable ElementEncodingType!Range == immutable wchar) &&
+                       is(immutable ElementType!Range == immutable dchar))
             {
                 // all unicode whitespace characters fit into a wchar. However,
                 // this range is a wchar array, so we will treat it like a
@@ -5500,8 +5500,8 @@ if (isSomeString!Range ||
                         break;
                     }
             }
-            else static if (is(Unqual!(ElementType!Range) == dchar) ||
-                            is(Unqual!(ElementType!Range) == wchar))
+            else static if (is(immutable ElementType!Range == immutable dchar) ||
+                            is(immutable ElementType!Range == immutable wchar))
             {
                 // dchar or wchar range, we can just use find.
                 auto r = find!(isWhite)(_s.save);

@@ -233,7 +233,7 @@ if (isInputRange!(Range) && is(typeof(r.front == lPar)))
 {
     size_t count;
 
-    static if (is(Unqual!(ElementEncodingType!Range) == Unqual!E) && isNarrowString!Range)
+    static if (is(immutable ElementEncodingType!Range == immutable E) && isNarrowString!Range)
     {
         import std.utf : byCodeUnit;
         auto rn = r.byCodeUnit;
@@ -1106,7 +1106,7 @@ if (isBidirectionalRange!R1 &&
         enum isDefaultPred = false;
 
     static if (isDefaultPred && isArray!R1 && isArray!R2 &&
-               is(Unqual!(ElementEncodingType!R1) == Unqual!(ElementEncodingType!R2)))
+               is(immutable ElementEncodingType!R1 == immutable ElementEncodingType!R2))
     {
         if (haystack.length < needle.length) return false;
 
@@ -4614,7 +4614,7 @@ if (isInputRange!Range && Needles.length > 1 &&
 
     template checkType(T)
     {
-        enum checkType = is(Unqual!(ElementEncodingType!Range) == Unqual!T);
+        enum checkType = is(immutable ElementEncodingType!Range == immutable T);
     }
 
     // auto-decoding special case
@@ -4719,7 +4719,7 @@ if (isInputRange!R1 &&
     }
 
     static if (isDefaultPred && isArray!R1 && isArray!R2 &&
-               is(Unqual!(ElementEncodingType!R1) == Unqual!(ElementEncodingType!R2)))
+               is(immutable ElementEncodingType!R1 == immutable ElementEncodingType!R2))
     {
         //Array slice comparison mode
         return haystack[0 .. needle.length] == needle;

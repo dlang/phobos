@@ -1180,8 +1180,8 @@ private auto _stripExtension(R)(R path)
     See_Also:
         $(LREF withExtension) which does not allocate and returns a lazy range.
 */
-immutable(Unqual!C1)[] setExtension(C1, C2)(in C1[] path, in C2[] ext)
-if (isSomeChar!C1 && !is(C1 == immutable) && is(Unqual!C1 == Unqual!C2))
+immutable(C1)[] setExtension(C1, C2)(in C1[] path, in C2[] ext)
+if (isSomeChar!C1 && !is(C1 == immutable) && is(immutable C1 == immutable C2))
 {
     try
     {
@@ -1196,7 +1196,7 @@ if (isSomeChar!C1 && !is(C1 == immutable) && is(Unqual!C1 == Unqual!C2))
 
 ///ditto
 immutable(C1)[] setExtension(C1, C2)(immutable(C1)[] path, const(C2)[] ext)
-if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
+if (isSomeChar!C1 && is(immutable C1 == immutable C2))
 {
     if (ext.length == 0)
         return stripExtension(path);
@@ -1320,8 +1320,8 @@ private auto _withExtension(R, C)(R path, C[] ext)
     This function always allocates a new string, except in the case when
     path is immutable and already has an extension.
 */
-immutable(Unqual!C1)[] defaultExtension(C1, C2)(in C1[] path, in C2[] ext)
-if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
+immutable(C1)[] defaultExtension(C1, C2)(in C1[] path, in C2[] ext)
+if (isSomeChar!C1 && is(immutable C1 == immutable C2))
 {
     import std.conv : to;
     return withDefaultExtension(path, ext).to!(typeof(return));
@@ -3344,7 +3344,7 @@ bool globMatch(CaseSensitive cs = CaseSensitive.osDefault, C, Range)
     @safe pure nothrow
 if (isForwardRange!Range && !isInfinite!Range &&
     isSomeChar!(ElementEncodingType!Range) && !isConvertibleToString!Range &&
-    isSomeChar!C && is(Unqual!C == Unqual!(ElementEncodingType!Range)))
+    isSomeChar!C && is(immutable C == immutable ElementEncodingType!Range))
 in
 {
     // Verify that pattern[] is valid
