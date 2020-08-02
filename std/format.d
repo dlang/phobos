@@ -3877,7 +3877,7 @@ private enum HasToStringResult
 
 private template hasToString(T, Char)
 {
-    static if (isPointer!T && !isAggregateType!T)
+    static if (isPointer!T)
     {
         // X* does not have toString, even if X is aggregate type has toString.
         enum hasToString = HasToStringResult.none;
