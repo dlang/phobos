@@ -5638,7 +5638,6 @@ Note: Trying to use returned value will result in a
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
 private template AliasThisTypeOf(T)
-if (isAggregateType!T)
 {
     alias members = __traits(getAliasThis, T);
 
@@ -6093,7 +6092,7 @@ template BuiltinTypeOf(T)
 /**
  * Detect whether `T` is a built-in boolean type.
  */
-enum bool isBoolean(T) = is(BooleanTypeOf!T) && !isAggregateType!T;
+enum bool isBoolean(T) = __traits(isUnsigned, T) && is(BooleanTypeOf!T);
 
 ///
 @safe unittest
@@ -6118,7 +6117,7 @@ enum bool isBoolean(T) = is(BooleanTypeOf!T) && !isAggregateType!T;
  * Detect whether `T` is a built-in integral type. Types `bool`,
  * `char`, `wchar`, and `dchar` are not considered integral.
  */
-enum bool isIntegral(T) = is(IntegralTypeOf!T) && !isAggregateType!T;
+enum bool isIntegral(T) = __traits(isIntegral, T) && is(IntegralTypeOf!T);
 
 ///
 @safe unittest
@@ -6300,7 +6299,7 @@ enum bool isNumeric(T) = __traits(isArithmetic, T) && !(is(immutable T == immuta
  * Detect whether `T` is a scalar type (a built-in numeric, character or
  * boolean type).
  */
-enum bool isScalarType(T) = is(T : real) && !isAggregateType!T;
+enum bool isScalarType(T) = __traits(isScalar, T) && is(T : real);
 
 ///
 @safe unittest
@@ -6454,7 +6453,7 @@ enum bool isSigned(T) = __traits(isArithmetic, T) && !__traits(isUnsigned, T);
  * The built-in char types are any of `char`, `wchar` or `dchar`, with
  * or without qualifiers.
  */
-enum bool isSomeChar(T) = is(CharTypeOf!T) && !isAggregateType!T;
+enum bool isSomeChar(T) = __traits(isUnsigned, T) && is(CharTypeOf!T);
 
 ///
 @safe unittest
@@ -6967,7 +6966,7 @@ enum bool isSIMDVector(T) = is(T : __vector(V[N]), V, size_t N);
 /**
  * Detect whether type `T` is a pointer.
  */
-enum bool isPointer(T) = is(T == U*, U) && !isAggregateType!T;
+enum bool isPointer(T) = is(T == U*, U) && __traits(isScalar, T);
 
 @safe unittest
 {
