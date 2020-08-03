@@ -2241,7 +2241,7 @@ Allows to directly use range operations on lines of a file.
                     else static if (isArray!Terminator)
                     {
                         static assert(
-                            is(Unqual!(ElementEncodingType!Terminator) == Char));
+                            is(immutable ElementEncodingType!Terminator == immutable Char));
                         const tlen = terminator.length;
                     }
                     else
@@ -2324,7 +2324,7 @@ the contents may well have changed).
 /// ditto
     auto byLine(Terminator, Char = char)
             (KeepTerminator keepTerminator, Terminator terminator)
-    if (is(Unqual!(ElementEncodingType!Terminator) == Char))
+    if (is(immutable ElementEncodingType!Terminator == immutable Char))
     {
         return ByLineImpl!(Char, Terminator)(this, keepTerminator, terminator);
     }

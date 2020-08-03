@@ -1955,7 +1955,7 @@ if (isInputRange!RoR &&
     // This converts sep to an array (forward range) if it isn't one,
     // and makes sure it has the same string encoding for string types.
     static if (isSomeString!RetType &&
-               !is(RetTypeElement == Unqual!(ElementEncodingType!R)))
+               !is(immutable ElementEncodingType!RetType == immutable ElementEncodingType!R))
     {
         import std.conv : to;
         auto sepArr = to!RetType(sep);

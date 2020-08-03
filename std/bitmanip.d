@@ -3251,7 +3251,7 @@ if (isFloatOrDouble!T && n == T.sizeof)
 private template isFloatOrDouble(T)
 {
     enum isFloatOrDouble = isFloatingPoint!T &&
-                           !is(Unqual!(FloatingPointTypeOf!T) == real);
+                           !is(immutable FloatingPointTypeOf!T == immutable real);
 }
 
 @safe unittest
