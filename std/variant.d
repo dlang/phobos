@@ -497,7 +497,8 @@ private:
             }
 
         case OpID.catAssign:
-            static if (!is(immutable typeof((*zis)[0]) == immutable void) && is(typeof((*zis)[0])) && is(typeof((*zis) ~= *zis)))
+            static if (!is(immutable typeof((*zis)[0]) == immutable void) &&
+                    is(typeof((*zis)[0])) && is(typeof(*zis ~= *zis)))
             {
                 // array type; parm is the element to append
                 auto arg = cast(Variant*) parm;
