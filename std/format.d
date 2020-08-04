@@ -2719,7 +2719,7 @@ useSnprintf:
         if (fs.flHash) sprintfSpec[i++] = '#';
         sprintfSpec[i .. i + 3] = "*.*";
         i += 3;
-        if (is(Unqual!(typeof(val)) == real)) sprintfSpec[i++] = 'L';
+        if (is(immutable typeof(val) == immutable real)) sprintfSpec[i++] = 'L';
         sprintfSpec[i++] = spec2;
         sprintfSpec[i] = 0;
         //printf("format: '%s'; geeba: %g\n", sprintfSpec.ptr, val);
@@ -2953,7 +2953,7 @@ useSnprintf:
  */
 deprecated("Use of complex types is deprecated. Use std.complex")
 private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
-if (is(Unqual!T : creal) && !is(T == enum) && !hasToString!(T, Char))
+if (is(immutable T : immutable creal) && !is(T == enum) && !hasToString!(T, Char))
 {
     immutable creal val = obj;
 
@@ -3009,7 +3009,7 @@ deprecated
  */
 deprecated("Use of imaginary types is deprecated. Use std.complex")
 private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
-if (is(Unqual!T : ireal) && !is(T == enum) && !hasToString!(T, Char))
+if (is(immutable T : immutable ireal) && !is(T == enum) && !hasToString!(T, Char))
 {
     immutable ireal val = obj;
 
