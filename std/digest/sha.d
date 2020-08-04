@@ -494,7 +494,8 @@ struct SHA(uint hashBlockSize, uint digestSize)
             H = T1 + T2;
         }
 
-        pragma(inline, true)
+        // Temporarily disable inlining because it increases build speed by 10x.
+        // pragma(inline, true)
         static void T_SHA2_16_79(Word)(int i, ref Word[16] W,
             Word A, Word B, Word C, ref Word D, Word E, Word F, Word G, ref Word H, Word K)
             pure nothrow @nogc
