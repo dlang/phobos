@@ -131,13 +131,15 @@ version (StdUnittest)
     // Print a message on exception instead of failing the unittest.
     private void softUnittest(void delegate() @safe test, int line = __LINE__) @trusted
     {
-        import std.stdio : writefln;
-        try
+        debug (std_socket)
             test();
-        catch (Throwable e)
+        else
         {
-            writefln(" --- std.socket(%d) test fails depending on environment ---", line);
-            writefln(" (%s)", e);
+            import std.stdio : writefln;
+            try
+                test();
+            catch (Throwable e)
+                writefln("Ignoring std.socket(%d) test failure (likely caused by flaky environment): %s", line, e.msg);
         }
     }
 }
