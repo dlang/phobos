@@ -1711,7 +1711,7 @@ public:
         }
     });
 
-    version (SlowTests)
+    debug (std_socket)
     softUnittest({
         // test failing reverse lookup
         const InternetAddress ia = new InternetAddress("127.114.111.120", 80);
@@ -2658,7 +2658,7 @@ private:
 
     @safe unittest
     {
-        version (SlowTests)
+        debug (std_socket)
         softUnittest({
             import std.datetime.stopwatch;
             import std.typecons;
