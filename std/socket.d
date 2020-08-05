@@ -1,5 +1,9 @@
 // Written in the D programming language
 
+// NOTE: When working on this module, be sure to run tests with -debug=std_socket
+// E.g.: dmd -version=StdUnittest -debug=std_socket -unittest -main -run socket
+// This will enable some tests which are too slow or flaky to run as part of CI.
+
 /*
         Copyright (C) 2004-2011 Christopher E. Miller
 
