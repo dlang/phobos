@@ -1701,8 +1701,8 @@ public:
         {
             // test failing reverse lookup, via gethostbyaddr
             auto getnameinfoPointerBackup = getnameinfoPointer;
-            cast()getnameinfoPointer = null;
-            scope(exit) cast()getnameinfoPointer = getnameinfoPointerBackup;
+            cast() getnameinfoPointer = null;
+            scope(exit) cast() getnameinfoPointer = getnameinfoPointerBackup;
 
             assert(ia.toHostNameString() is null);
         }
