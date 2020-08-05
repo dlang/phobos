@@ -1714,15 +1714,15 @@ public:
     debug (std_socket)
     softUnittest({
         // test failing reverse lookup
-        const InternetAddress ia = new InternetAddress("127.114.111.120", 80);
+        const InternetAddress ia = new InternetAddress("255.255.255.255", 80);
         assert(ia.toHostNameString() is null);
 
         if (getnameinfoPointer)
         {
             // test failing reverse lookup, via gethostbyaddr
             auto getnameinfoPointerBackup = getnameinfoPointer;
-            getnameinfoPointer = null;
-            scope(exit) getnameinfoPointer = getnameinfoPointerBackup;
+            cast()getnameinfoPointer = null;
+            scope(exit) cast()getnameinfoPointer = getnameinfoPointerBackup;
 
             assert(ia.toHostNameString() is null);
         }
