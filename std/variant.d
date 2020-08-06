@@ -77,28 +77,53 @@ import std.meta, std.traits, std.typecons;
 
 /++
     Gives the `sizeof` the largest type given.
+
+    See_Also: https://forum.dlang.org/thread/wbpnncxepehgcswhuazl@forum.dlang.org?page=1
   +/
-template maxSize(T...)
+template maxSize(Ts...)
 {
-    static if (T.length == 1)
+    align(1) union Impl
     {
-        enum size_t maxSize = T[0].sizeof;
+        static foreach (i, T; Ts)
+        {
+            static if (!is(T == void))
+                mixin("T _field_", i, ";");
+        }
     }
-    else
-    {
-        import std.algorithm.comparison : max;
-        enum size_t maxSize = max(T[0].sizeof, maxSize!(T[1 .. $]));
-    }
+    enum maxSize = Impl.sizeof;
 }
 
 ///
 @safe unittest
 {
+    struct Cat { int a, b, c; }
+
+    align(1) struct S
+    {
+        long l;
+        ubyte b;
+    }
+
+    align(1) struct T
+    {
+        ubyte b;
+        long l;
+    }
+
     static assert(maxSize!(int, long) == 8);
     static assert(maxSize!(bool, byte) == 1);
-
-    struct Cat { int a, b, c; }
     static assert(maxSize!(bool, Cat) == 12);
+    static assert(maxSize!(char) == 1);
+    static assert(maxSize!(char, short, ubyte) == 2);
+    static assert(maxSize!(char, long, ubyte) == 8);
+    import std.algorithm.comparison : max;
+    static assert(maxSize!(long, S) == max(long.sizeof, S.sizeof));
+    static assert(maxSize!(S, T) == max(S.sizeof, T.sizeof));
+    static assert(maxSize!(int, ubyte[7]) == 7);
+    static assert(maxSize!(int, ubyte[3]) == 4);
+    static assert(maxSize!(int, int, ubyte[3]) == 4);
+    static assert(maxSize!(void, int, ubyte[3]) == 4);
+    static assert(maxSize!(void) == 1);
 }
 
 struct This;
