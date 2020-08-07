@@ -9744,11 +9744,14 @@ public:
     assert([1].map!(x => x).slide(2).equal!equal([[1]]));
 }
 
-private struct OnlyResult(T, size_t arity)
+private struct OnlyResult(Values...)
+if (Values.length > 1)
 {
-    private this(Values...)(return scope auto ref Values values)
+    private enum arity = Values.length;
+
+    private this(return scope ref Values values)
     {
-        this.data = [values];
+        this.values = values;
         this.backIndex = arity;
     }
 
@@ -9757,10 +9760,10 @@ private struct OnlyResult(T, size_t arity)
         return frontIndex >= backIndex;
     }
 
-    T front() @property
+    CommonType!Values front() @property
     {
         assert(!empty, "Attempting to fetch the front of an empty Only range");
-        return data[frontIndex];
+        return this[0];
     }
 
     void popFront()
@@ -9769,10 +9772,10 @@ private struct OnlyResult(T, size_t arity)
         ++frontIndex;
     }
 
-    T back() @property
+    CommonType!Values back() @property
     {
         assert(!empty, "Attempting to fetch the back of an empty Only range");
-        return data[backIndex - 1];
+        return this[$ - 1];
     }
 
     void popBack()
@@ -9793,12 +9796,15 @@ private struct OnlyResult(T, size_t arity)
 
     alias opDollar = length;
 
-    T opIndex(size_t idx)
+    CommonType!Values opIndex(size_t idx)
     {
         // when i + idx points to elements popped
         // with popBack
         assert(idx < length, "Attempting to fetch an out of bounds index from an Only range");
-        return data[frontIndex + idx];
+        final switch (frontIndex + idx)
+            static foreach (i, T; Values)
+            case i:
+                return values[i];
     }
 
     OnlyResult opSlice()
@@ -9830,16 +9836,16 @@ private struct OnlyResult(T, size_t arity)
     {
         import std.traits : hasElaborateAssign;
         static if (hasElaborateAssign!T)
-            private T[arity] data;
+            private Values values;
         else
-            private T[arity] data = void;
+            private Values values = void;
     }
     else
-        private T[arity] data;
+        private Values values;
 }
 
 // Specialize for single-element results
-private struct OnlyResult(T, size_t arity : 1)
+private struct OnlyResult(T)
 {
     @property T front()
     {
@@ -9903,7 +9909,7 @@ private struct OnlyResult(T, size_t arity : 1)
 }
 
 // Specialize for the empty range
-private struct OnlyResult(T, size_t arity : 0)
+private struct OnlyResult()
 {
     private static struct EmptyElementType {}
 
@@ -9953,7 +9959,7 @@ See_Also: $(LREF chain) to chain ranges
 auto only(Values...)(return scope Values values)
 if (!is(CommonType!Values == void) || Values.length == 0)
 {
-    return OnlyResult!(CommonType!Values, Values.length)(values);
+    return OnlyResult!Values(values);
 }
 
 ///
@@ -9975,17 +9981,6 @@ if (!is(CommonType!Values == void) || Values.length == 0)
         .map!only       // make each letter its own range
         .joiner(".")    // join the ranges together lazily
         .equal("T.D.P.L"));
-}
-
-@safe unittest
-{
-    // Verify that the same common type and same arity
-    // results in the same template instantiation
-    static assert(is(typeof(only(byte.init, int.init)) ==
-        typeof(only(int.init, byte.init))));
-
-    static assert(is(typeof(only((const(char)[]).init, string.init)) ==
-        typeof(only((const(char)[]).init, (const(char)[]).init))));
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=20314
@@ -10159,6 +10154,43 @@ if (!is(CommonType!Values == void) || Values.length == 0)
     static struct Test { int* a; }
     immutable(Test) test;
     cast(void) only(test, test); // Works with mutable indirection
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21129
+@safe unittest
+{
+    auto range = () @safe {
+        const(char)[5] staticStr = "Hello";
+
+        // `only` must store a char[5] - not a char[]!
+        return only(staticStr, " World");
+    } ();
+
+    assert(range.join == "Hello World");
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21129
+@safe unittest
+{
+    struct AliasedString
+    {
+        const(char)[5] staticStr = "Hello";
+
+        @property const(char)[] slice() const
+        {
+            return staticStr[];
+        }
+        alias slice this;
+    }
+
+    auto range = () @safe {
+        auto hello = AliasedString();
+
+        // a copy of AliasedString is stored in the range.
+        return only(hello, " World");
+    } ();
+
+    assert(range.join == "Hello World");
 }
 
 /**
