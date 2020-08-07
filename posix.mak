@@ -555,17 +555,17 @@ $(DSCANNER_DIR)/dsc: | $(DSCANNER_DIR) $(DMD) $(LIB)
 	mv $(DSCANNER_DIR)/dscanner_makefile_tmp $(DSCANNER_DIR)/makefile
 	DC=$(abspath $(DMD)) DFLAGS="$(DFLAGS) -defaultlib=$(LIB)" $(MAKE) -C $(DSCANNER_DIR) githash debug
 
-style: publictests style_lint
+style: style_lint publictests
 
 # runs static code analysis with Dscanner
-dscanner:
+dscanner: $(LIB)
 	@# The dscanner target is without dependencies to avoid constant rebuilds of Phobos (`make` always rebuilds order-only dependencies)
 	@# However, we still need to ensure that the DScanner binary is built once
 	@[ -f $(DSCANNER_DIR)/dsc ] || ${MAKE} -f posix.mak $(DSCANNER_DIR)/dsc
 	@echo "Running DScanner"
 	$(DSCANNER_DIR)/dsc --config .dscanner.ini --styleCheck etc std -I.
 
-style_lint: dscanner $(LIB)
+style_lint_shellcmds:
 	@echo "Check for trailing whitespace"
 	grep -nr '[[:blank:]]$$' $$(find etc std -name '*.d'); test $$? -eq 1
 
@@ -609,6 +609,7 @@ style_lint: dscanner $(LIB)
 		{ echo "$$file: The title is supposed to be followed by a long description" && exit 1; } ;\
 	done
 
+style_lint: style_lint_shellcmds dscanner
 	@echo "Check that Ddoc runs without errors"
 	$(DMD) $(DFLAGS) $(NODEFAULTLIB) $(LIB) -w -D -Df/dev/null -main -c -o- $$(find etc std -type f -name '*.d') 2>&1
 
