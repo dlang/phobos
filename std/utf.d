@@ -1221,7 +1221,7 @@ do
         // overloads of decodeImpl need it. So, it should be moved back into
         // decodeImpl once https://issues.dlang.org/show_bug.cgi?id=8521
         // has been fixed.
-        enum canIndex = isRandomAccessRange!S && hasSlicing!S && hasLength!S;
+        enum canIndex = is(S : const char[]) || isRandomAccessRange!S && hasSlicing!S && hasLength!S;
         immutable retval = decodeImpl!(canIndex, useReplacementDchar)(cast(TypeForDecode!S) str, numCodeUnits);
 
         // The other range types were already popped by decodeImpl.
