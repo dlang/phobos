@@ -3501,6 +3501,17 @@ if (isDynamicArray!A)
             //We do this at the end, in case of exceptions
             _data.arr = bigData;
         }
+        else static if (isSomeChar!T && isSomeChar!(ElementType!Range) &&
+                        !is(immutable T == immutable ElementType!Range))
+        {
+            // need to decode and encode
+            import std.utf : decodeFront;
+            while (!items.empty)
+            {
+                auto c = items.decodeFront;
+                put(c);
+            }
+        }
         else
         {
             //pragma(msg, Range.stringof);
@@ -3715,6 +3726,16 @@ if (isDynamicArray!A)
     auto result = appender[][0];
 
     assert(result.value != 23);
+}
+
+@safe unittest
+{
+    import std.conv : to;
+    import std.utf : byCodeUnit;
+    auto str = "ウェブサイト";
+    auto wstr = appender!wstring();
+    put(wstr, str.byCodeUnit);
+    assert(wstr.data == str.to!wstring);
 }
 
 //Calculates an efficient growth scheme based on the old capacity
