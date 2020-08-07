@@ -2406,10 +2406,19 @@ if (isAutodecodableString!(T[]) && !isAggregateType!(T[]))
 }
 
 /**
-Autodecoding is enabled if this is set to true.
+EXPERIMENTAL: to try out removing autodecoding, set the version
+`NoAutodecodeStrings`. Most things are expected to fail with this version
+currently.
 */
-
-enum autodecodeStrings = true;
+version (NoAutodecodeStrings)
+{
+    enum autodecodeStrings = false;
+}
+else
+{
+    ///
+    enum autodecodeStrings = true;
+}
 
 /**
 Implements the range interface primitive `front` for built-in

@@ -887,11 +887,22 @@ template equal(alias pred = "a == b")
 
     enum hasFixedLength(T) = hasLength!T || isNarrowString!T;
 
+    // use code points when comparing two ranges of UTF code units that aren't
+    // the same type. This is for backwards compatibility with autodecode
+    // strings.
+    enum useCodePoint(R1, R2) =
+        isSomeChar!(ElementEncodingType!R1) && isSomeChar!(ElementEncodingType!R2) &&
+        (ElementEncodingType!R1).sizeof != (ElementEncodingType!R2).sizeof;
+
     /++
     Compares two ranges for equality. The ranges may have
     different element types, as long as `pred(r1.front, r2.front)`
     evaluates to `bool`.
     Performs $(BIGOH min(r1.length, r2.length)) evaluations of `pred`.
+
+    If the two ranges are different kinds of UTF code unit (`char`, `wchar`, or
+    `dchar`), then the arrays are compared using UTF decoding to avoid
+    accidentally integer-promoting units.
 
     Params:
         r1 = The first range to be compared.
@@ -902,7 +913,8 @@ template equal(alias pred = "a == b")
         for element, according to binary predicate `pred`.
     +/
     bool equal(Range1, Range2)(Range1 r1, Range2 r2)
-    if (isInputRange!Range1 && isInputRange!Range2 &&
+    if (!useCodePoint!(Range1, Range2) &&
+        isInputRange!Range1 && isInputRange!Range2 &&
         is(typeof(binaryFun!pred(r1.front, r2.front))))
     {
         static assert(!(isInfinite!Range1 && isInfinite!Range2),
@@ -928,7 +940,7 @@ template equal(alias pred = "a == b")
         // can be avoided if they have the same ElementEncodingType
         else static if (is(typeof(pred) == string) && pred == "a == b" &&
             isAutodecodableString!Range1 != isAutodecodableString!Range2 &&
-            is(ElementEncodingType!Range1 == ElementEncodingType!Range2))
+            is(immutable ElementEncodingType!Range1 == immutable ElementEncodingType!Range2))
         {
             import std.utf : byCodeUnit;
 
@@ -967,6 +979,14 @@ template equal(alias pred = "a == b")
             static if (!isInfinite!Range1)
                 return r2.empty;
         }
+    }
+
+    /// ditto
+    bool equal(Range1, Range2)(Range1 r1, Range2 r2)
+    if (useCodePoint!(Range1, Range2))
+    {
+        import std.utf : byDchar;
+        return equal(r1.byDchar, r2.byDchar);
     }
 }
 
@@ -1073,20 +1093,28 @@ range of range (of range...) comparisons.
 
 @safe @nogc pure unittest
 {
-    import std.utf : byChar, byDchar;
+    import std.utf : byChar, byDchar, byWchar;
 
     assert(equal("æøå".byChar, "æøå"));
+    assert(equal("æøå".byChar, "æøå"w));
+    assert(equal("æøå".byChar, "æøå"d));
     assert(equal("æøå", "æøå".byChar));
-    assert(equal("æøå".byDchar, "æøå"d));
-    assert(equal("æøå"d, "æøå".byDchar));
-}
+    assert(equal("æøå"w, "æøå".byChar));
+    assert(equal("æøå"d, "æøå".byChar));
 
-@safe pure unittest
-{
-    import std.utf : byWchar;
-
+    assert(equal("æøå".byWchar, "æøå"));
     assert(equal("æøå".byWchar, "æøå"w));
+    assert(equal("æøå".byWchar, "æøå"d));
+    assert(equal("æøå", "æøå".byWchar));
     assert(equal("æøå"w, "æøå".byWchar));
+    assert(equal("æøå"d, "æøå".byWchar));
+
+    assert(equal("æøå".byDchar, "æøå"));
+    assert(equal("æøå".byDchar, "æøå"w));
+    assert(equal("æøå".byDchar, "æøå"d));
+    assert(equal("æøå", "æøå".byDchar));
+    assert(equal("æøå"w, "æøå".byDchar));
+    assert(equal("æøå"d, "æøå".byDchar));
 }
 
 @safe @nogc pure unittest

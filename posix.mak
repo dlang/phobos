@@ -241,7 +241,7 @@ STD_MODULES=$(call P2MODULES,$(STD_PACKAGES))
 
 # NoAutodecode test modules.
 # List all modules whose unittests are known to work without autodecode enabled.
-NO_AUTODECODE_MODULES=
+NO_AUTODECODE_MODULES= std/utf
 
 # Other D modules that aren't under std/
 EXTRA_MODULES_COMMON := $(addprefix etc/c/,curl odbc/sql odbc/sqlext \
