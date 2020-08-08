@@ -150,6 +150,10 @@ ifdef ENABLE_COVERAGE
 override DFLAGS  += -cov
 endif
 
+ifdef NO_AUTODECODE
+override DFLAGS += -version=NoAutodecodeStrings
+endif
+
 UDFLAGS=-unittest -version=StdUnittest
 
 # Set DOTOBJ and DOTEXE
@@ -234,6 +238,10 @@ PACKAGE_std_windows = charset registry syserror
 
 # Modules in std (including those in packages)
 STD_MODULES=$(call P2MODULES,$(STD_PACKAGES))
+
+# NoAutodecode test modules.
+# List all modules whose unittests are known to work without autodecode enabled.
+NO_AUTODECODE_MODULES=
 
 # Other D modules that aren't under std/
 EXTRA_MODULES_COMMON := $(addprefix etc/c/,curl odbc/sql odbc/sqlext \
@@ -676,5 +684,8 @@ endif
 
 .PHONY: buildkite-test
 buildkite-test: unittest betterc
+
+.PHONY: autodecode-test
+autodecode-test: $(addsuffix .test,$(NO_AUTODECODE_MODULES))
 
 .DELETE_ON_ERROR: # GNU Make directive (delete output files on error)
