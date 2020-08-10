@@ -2611,7 +2611,7 @@ do
     auto u2 = rnd.uniform01!float;
     assert(u2 >= 0 && u2 < 1);
     
-    // Confirm that their values are 0.000328707 and 0.524587
+    // Confirm that the random values with the initial seed 42 are 0.000328707 and 0.524587
     assert(u1.feqrel(0.000328707) > 20);
     assert(u2.feqrel(0.524587) > 20);
 }
