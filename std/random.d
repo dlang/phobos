@@ -2606,8 +2606,9 @@ do
     
     // Generate random numbers in the range in the range [0, 1)
     auto u1 = uniform01(rnd);
-    auto u2 = rnd.uniform01!float;
     assert(u1 >= 0 && u1 < 1);
+
+    auto u2 = rnd.uniform01!float;
     assert(u2 >= 0 && u2 < 1);
     
     // Confirm that their values are 0.000328707 and 0.524587
