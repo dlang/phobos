@@ -1928,7 +1928,7 @@ version (OSX) {} else
         remove(deleteme);
         assert(time != lastTime);
         lastTime = time;
-        Thread.sleep(10.msecs);
+        Thread.sleep(20.msecs);
     }
 }
 
