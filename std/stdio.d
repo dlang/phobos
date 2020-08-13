@@ -417,8 +417,8 @@ struct File
     }
 
     /**
-        Parses an open mode string where each mode is stored as a flag in
-        _p.openModeFlags.
+        Parses an open mode string where each specified mode is stored as a
+        flag in _p.openModeFlags.
 
         This function doesn't check if the string is invalid (e.g. nonsensical
         combinations); it merely returns if an unknown character is found.
