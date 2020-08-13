@@ -375,10 +375,24 @@ struct File
 
     private struct Impl
     {
+        import std.typecons : BitFlags;
+
         FILE * handle = null; // Is null iff this Impl is closed by another File
         shared uint refs = uint.max / 2;
         bool isPopened; // true iff the stream has been created by popen()
-        Orientation orientation;
+        Orientation orientation; 
+
+        enum OpenMode
+        {
+            r = 1 << 0,
+            w = 1 << 1,
+            a = 1 << 2,
+            b = 1 << 3,
+            // +
+            p = 1 << 4
+        }
+
+        BitFlags!OpenMode openModeFlags;
     }
     private Impl* _p;
     private string _name;
@@ -386,11 +400,10 @@ struct File
     package this(FILE* handle, string name, uint refs = 1, bool isPopened = false) @trusted
     {
         import core.stdc.stdlib : malloc;
-        import std.exception : enforce;
-
+        import std.exception : enforce; 
         assert(!_p);
         _p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
-        initImpl(handle, name, refs, isPopened);
+        initImpl(handle, name, refs, isPopened); 
     }
 
     private void initImpl(FILE* handle, string name, uint refs = 1, bool isPopened = false)
@@ -402,6 +415,45 @@ struct File
         _p.orientation = Orientation.unknown;
         _name = name;
     }
+
+    /**
+        Parses an open mode string where each mode is stored as a flag in
+        _p.openModeFlags.
+
+        This function doesn't check if the string is invalid (e.g. nonsensical
+        combinations); it merely returns if an unknown character is found.
+        Thus, this function should be called after checking errno.
+
+        Params:
+            modeStr = The open mode string.
+    */
+    private void parseOpenModeString(scope const(char)[] modeStr) pure nothrow
+        @safe @nogc
+    { 
+        foreach (ch; modeStr)
+        {
+            switch (ch) with (Impl.OpenMode)
+            {
+                case 'r':
+                    _p.openModeFlags |= r;
+                    break;
+                case 'w': 
+                    _p.openModeFlags |= w;
+                    break;
+                case 'a':
+                    _p.openModeFlags |= a;
+                    break;
+                case 'b':
+                    _p.openModeFlags |= b;
+                    break;
+                case '+':
+                    _p.openModeFlags |= p;
+                    break;
+                default: 
+                    return; 
+            }
+        }
+    } 
 
 /**
 Constructor taking the name of the file to open and the open mode.
@@ -424,18 +476,20 @@ Throws: `ErrnoException` if the file could not be opened.
     this(string name, scope const(char)[] stdioOpenmode = "rb") @safe
     {
         import std.conv : text;
-        import std.exception : errnoEnforce;
+        import std.exception : errnoEnforce; 
 
         this(errnoEnforce(_fopen(name, stdioOpenmode),
                         text("Cannot open file `", name, "' in mode `",
                                 stdioOpenmode, "'")),
-                name);
+                name); 
 
         // MSVCRT workaround (issue 14422)
         version (MICROSOFT_STDIO)
         {
             setAppendWin(stdioOpenmode);
         }
+
+        parseOpenModeString(stdioOpenmode);
     }
 
     /// ditto
@@ -466,7 +520,7 @@ Throws: `ErrnoException` if the file could not be opened.
     }
 
     ~this() @safe
-    {
+    { 
         detach();
     }
 
@@ -507,7 +561,7 @@ Throws: `ErrnoException` in case of error.
  */
     void open(string name, scope const(char)[] stdioOpenmode = "rb") @trusted
     {
-        resetFile(name, stdioOpenmode, false);
+        resetFile(name, stdioOpenmode, false); 
     }
 
     // https://issues.dlang.org/show_bug.cgi?id=20585
@@ -565,6 +619,8 @@ Throws: `ErrnoException` in case of error.
         {
             setAppendWin(stdioOpenmode);
         }
+
+        parseOpenModeString(stdioOpenmode);
     }
 
     private void closeHandles() @trusted
@@ -648,6 +704,8 @@ Throws: `ErrnoException` in case of error.
 
         if (name !is null)
             _name = name;
+
+        parseOpenModeString(stdioOpenmode);
     }
 
     @system unittest // Test changing filename
@@ -702,6 +760,7 @@ Throws: `ErrnoException` in case of error.
     version (Posix) void popen(string command, scope const(char)[] stdioOpenmode = "r") @safe
     {
         resetFile(command, stdioOpenmode ,true);
+        parseOpenModeString(stdioOpenmode);
     }
 
 /**
@@ -719,7 +778,7 @@ Params:
  */
     void fdopen(int fd, scope const(char)[] stdioOpenmode = "rb") @safe
     {
-        fdopen(fd, stdioOpenmode, null);
+        fdopen(fd, stdioOpenmode, null); 
     }
 
     package void fdopen(int fd, scope const(char)[] stdioOpenmode, string name) @trusted
@@ -757,6 +816,7 @@ Params:
             errnoEnforce(fp);
         }
         this = File(fp, name);
+        parseOpenModeString(stdioOpenmode);
     }
 
     // Declare a dummy HANDLE to allow generating documentation
@@ -1074,21 +1134,25 @@ Throws: `ErrnoException` if the file is not opened or if the call to `fwrite` fa
         import std.exception : errnoEnforce;
 
         version (Windows)
-        {
-            flush(); // before changing translation mode
-            immutable fd = ._fileno(_p.handle);
-            immutable mode = ._setmode(fd, _O_BINARY);
-            scope(exit) ._setmode(fd, mode);
-            version (DIGITAL_MARS_STDIO)
-            {
-                import core.atomic : atomicOp;
+        { 
+            // Change mode iff current mode isn't binary
+            if (!(_p.openModeFlags & _p.OpenMode.b))
+            { 
+                flush(); // before changing translation mode
+                immutable fd = ._fileno(_p.handle);
+                immutable mode = ._setmode(fd, _O_BINARY);
+                scope(exit) ._setmode(fd, mode);
+                version (DIGITAL_MARS_STDIO)
+                {
+                    import core.atomic : atomicOp;
 
-                // https://issues.dlang.org/show_bug.cgi?id=4243
-                immutable info = __fhnd_info[fd];
-                atomicOp!"&="(__fhnd_info[fd], ~FHND_TEXT);
-                scope(exit) __fhnd_info[fd] = info;
+                    // https://issues.dlang.org/show_bug.cgi?id=4243
+                    immutable info = __fhnd_info[fd];
+                    atomicOp!"&="(__fhnd_info[fd], ~FHND_TEXT);
+                    scope(exit) __fhnd_info[fd] = info;
+                }
+                scope(exit) flush(); // before restoring translation mode
             }
-            scope(exit) flush(); // before restoring translation mode
         }
         auto result = trustedFwrite(_p.handle, buffer);
         if (result == result.max) result = 0;
