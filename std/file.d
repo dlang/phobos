@@ -1915,7 +1915,7 @@ else version (Posix)
 // can be tracked with precision of 4 msecs, this test waits 20 msecs
 // to prevent possible problems relative to the CI services the dlang uses, 
 // as they may have the HZ setting that controls the software clock set to 100 
-// (instead of the more more common 250).
+// (instead of the more common 250).
 // see https://man7.org/linux/man-pages/man7/time.7.html
 //     https://stackoverflow.com/a/14393315,
 //     https://issues.dlang.org/show_bug.cgi?id=21148
