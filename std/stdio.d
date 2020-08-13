@@ -1077,6 +1077,12 @@ Throws: `ErrnoException` if the file is not opened or if the call to `fwrite` fa
         {
             immutable fd = ._fileno(_p.handle);
             immutable oldMode = ._setmode(fd, _O_BINARY);
+
+            version (DIGITAL_MARS_STDIO)
+            {
+                immutable info = __fhnd_info[fd];
+            }
+
             
             if (oldMode != _O_BINARY)
             {
@@ -1089,8 +1095,7 @@ Throws: `ErrnoException` if the file is not opened or if the call to `fwrite` fa
                 {
                     import core.atomic : atomicOp;
 
-                    // https://issues.dlang.org/show_bug.cgi?id=4243
-                    immutable info = __fhnd_info[fd];
+                    // https://issues.dlang.org/show_bug.cgi?id=4243 
                     atomicOp!"&="(__fhnd_info[fd], ~FHND_TEXT); 
                 }
             } 
