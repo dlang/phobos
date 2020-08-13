@@ -1077,12 +1077,6 @@ Throws: `ErrnoException` if the file is not opened or if the call to `fwrite` fa
         {
             immutable fd = ._fileno(_p.handle);
             immutable oldMode = ._setmode(fd, _O_BINARY);
-
-            version (DIGITAL_MARS_STDIO)
-            {
-                immutable info = __fhnd_info[fd];
-            }
-
             
             if (oldMode != _O_BINARY)
             {
@@ -1090,15 +1084,26 @@ Throws: `ErrnoException` if the file is not opened or if the call to `fwrite` fa
                 ._setmode(fd, oldMode);
                 flush(); // before changing translation mode ._setmode(fd, _O_BINARY);
                 .setmode(fd, _O_BINARY);
+            }
 
-                version (DIGITAL_MARS_STDIO)
+            version (DIGITAL_MARS_STDIO)
+            {
+                import core.atomic : atomicOp;
+
+                immutable info = __fhnd_info[fd];
+                // https://issues.dlang.org/show_bug.cgi?id=4243
+                atomicOp!"&="(__fhnd_info[fd], ~FHND_TEXT);
+                scope (exit) __fhnd_info[fd] = info;
+            }
+
+            scope (exit)
+            {
+                if (oldMode != _O_BINARY)
                 {
-                    import core.atomic : atomicOp;
-
-                    // https://issues.dlang.org/show_bug.cgi?id=4243 
-                    atomicOp!"&="(__fhnd_info[fd], ~FHND_TEXT); 
+                    flush();
+                    ._setmode(fd, oldMode);
                 }
-            } 
+            }
         }
 
         auto result = trustedFwrite(_p.handle, buffer);
@@ -1107,21 +1112,6 @@ Throws: `ErrnoException` if the file is not opened or if the call to `fwrite` fa
                 text("Wrote ", result, " instead of ", buffer.length,
                         " objects of type ", T.stringof, " to file `",
                         _name, "'"));
-
-        version (Windows)
-        {
-            if (oldMode != _O_BINARY)
-            {
-                flush();
-
-                version (DIGITAL_MARS_STDIO)
-                {
-                    __fhnd_info[fd] = info;
-                }
-
-                ._setmode(fd, oldMode);
-            }
-        }
     }
 
     ///
