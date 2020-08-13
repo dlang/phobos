@@ -1077,7 +1077,7 @@ Throws: `ErrnoException` if the file is not opened or if the call to `fwrite` fa
         {
             immutable fd = ._fileno(_p.handle);
             immutable oldMode = ._setmode(fd, _O_BINARY);
-            
+
             if (oldMode != _O_BINARY)
             {
                 // need to flush the data that was written with the original mode
@@ -1090,8 +1090,8 @@ Throws: `ErrnoException` if the file is not opened or if the call to `fwrite` fa
             {
                 import core.atomic : atomicOp;
 
-                immutable info = __fhnd_info[fd];
                 // https://issues.dlang.org/show_bug.cgi?id=4243
+                immutable info = __fhnd_info[fd];
                 atomicOp!"&="(__fhnd_info[fd], ~FHND_TEXT);
                 scope (exit) __fhnd_info[fd] = info;
             }
