@@ -1910,6 +1910,15 @@ else version (Posix)
 //   vfs.timestamp_precision sysctl to a value greater than zero.
 // - OS X, where the native filesystem (HFS+) stores filesystem
 //   timestamps with 1-second precision.
+//
+// Note: on linux systems, although in theory a change to a file date
+// can be tracked with precision of 4 msecs, this test waits 20 msecs
+// to prevent possible problems relative to the CI services the dlang uses, 
+// as they may have the HZ setting that controls the software clock set to 100 
+// (instead of the more more common 250).
+// see https://man7.org/linux/man-pages/man7/time.7.html
+//     https://stackoverflow.com/a/14393315,
+//     https://issues.dlang.org/show_bug.cgi?id=21148
 version (FreeBSD) {} else
 version (DragonFlyBSD) {} else
 version (OSX) {} else
