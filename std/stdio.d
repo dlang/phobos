@@ -400,10 +400,10 @@ struct File
     package this(FILE* handle, string name, uint refs = 1, bool isPopened = false) @trusted
     {
         import core.stdc.stdlib : malloc;
-        import std.exception : enforce; 
+        import std.exception : enforce;
         assert(!_p);
         _p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
-        initImpl(handle, name, refs, isPopened); 
+        initImpl(handle, name, refs, isPopened);
     }
 
     private void initImpl(FILE* handle, string name, uint refs = 1, bool isPopened = false)
@@ -476,12 +476,12 @@ Throws: `ErrnoException` if the file could not be opened.
     this(string name, scope const(char)[] stdioOpenmode = "rb") @safe
     {
         import std.conv : text;
-        import std.exception : errnoEnforce; 
+        import std.exception : errnoEnforce;
 
         this(errnoEnforce(_fopen(name, stdioOpenmode),
                         text("Cannot open file `", name, "' in mode `",
                                 stdioOpenmode, "'")),
-                name); 
+                name);
 
         // MSVCRT workaround (issue 14422)
         version (MICROSOFT_STDIO)
@@ -520,7 +520,7 @@ Throws: `ErrnoException` if the file could not be opened.
     }
 
     ~this() @safe
-    { 
+    {
         detach();
     }
 
@@ -561,7 +561,7 @@ Throws: `ErrnoException` in case of error.
  */
     void open(string name, scope const(char)[] stdioOpenmode = "rb") @trusted
     {
-        resetFile(name, stdioOpenmode, false); 
+        resetFile(name, stdioOpenmode, false);
     }
 
     // https://issues.dlang.org/show_bug.cgi?id=20585
@@ -778,7 +778,7 @@ Params:
  */
     void fdopen(int fd, scope const(char)[] stdioOpenmode = "rb") @safe
     {
-        fdopen(fd, stdioOpenmode, null); 
+        fdopen(fd, stdioOpenmode, null);
     }
 
     package void fdopen(int fd, scope const(char)[] stdioOpenmode, string name) @trusted
