@@ -5275,7 +5275,7 @@ public:
             calculations if x were local to the function literals. */
         auto tests = [
             Test(
-                () { x = 1; x += 0.1; },
+                () { x = 1; x += 0.1L; },
                 () => ieeeFlags.inexact
             ),
             Test(
@@ -5908,7 +5908,7 @@ private:
                 fpctrl.rounding = rm;
                 T x = 1;
                 blockopt(x); // avoid constant propagation by the optimizer
-                x += 0.1;
+                x += 0.1L;
                 return x;
             }
 
@@ -5929,7 +5929,7 @@ private:
                 fpctrl.rounding = rm;
                 T x = -1;
                 blockopt(x); // avoid constant propagation by the optimizer
-                x -= 0.1;
+                x -= 0.1L;
                 return x;
             }
 
@@ -8208,8 +8208,8 @@ if (isFloatingPoint!T1 && isFloatingPoint!T2 && N > 0 && N <= 10)
 ///
 @safe nothrow @nogc unittest
 {
-    real x = 3.1;
-    static real[] pp = [56.1, 32.7, 6];
+    real x = 3.1L;
+    static real[] pp = [56.1L, 32.7L, 6];
 
     assert(poly(x, pp) == (56.1L + (32.7L + 6.0L * x) * x));
 }
