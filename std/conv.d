@@ -3204,7 +3204,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         assert(to!Float("-123") == Literal!Float(-123));
         assert(to!Float("123e2") == Literal!Float(123e2));
         assert(to!Float("123e+2") == Literal!Float(123e+2));
-        assert(to!Float("123e-2") == Literal!Float(123e-2));
+        assert(to!Float("123e-2") == Literal!Float(123e-2L));
         assert(to!Float("123.") == Literal!Float(123.0));
         assert(to!Float(".375") == Literal!Float(.375));
 
@@ -3265,11 +3265,11 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     r = to!real(to!string(real.max));
     assert(to!string(r) == to!string(real.max));
 
-    real pi = 3.1415926535897932384626433832795028841971693993751;
+    real pi = 3.1415926535897932384626433832795028841971693993751L;
     string fullPrecision = "3.1415926535897932384626433832795028841971693993751";
     assert(feq(parse!real(fullPrecision), pi, 2*real.epsilon));
 
-    real x = 0x1.FAFAFAFAFAFAFAFAFAFAFAFAFAFAFAFAAFAAFAFAFAFAFAFAFAP-252;
+    real x = 0x1.FAFAFAFAFAFAFAFAFAFAFAFAFAFAFAFAAFAAFAFAFAFAFAFAFAP-252L;
     string full = "0x1.FAFAFAFAFAFAFAFAFAFAFAFAFAFAFAFAAFAAFAFAFAFAFAFAFAP-252";
     assert(parse!real(full) == x);
 }
