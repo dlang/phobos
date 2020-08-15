@@ -3644,9 +3644,9 @@ real log(real x) @safe pure nothrow @nogc
 
         // Logarithm using log(1 + x) = x - .5x^^2 + x^^3 P(x) / Q(x)
         if (x < SQRT1_2)
-        {   // 2x - 1
+        {
             exp -= 1;
-            x = ldexp(x, 1) - 1.0;
+            x = 2.0 * x - 1.0;
         }
         else
         {
@@ -3655,7 +3655,7 @@ real log(real x) @safe pure nothrow @nogc
         z = x * x;
         y = x * (z * poly(x, logCoeffsP) / poly(x, logCoeffsQ));
         y += exp * C2;
-        z = y - ldexp(z, -1);
+        z = y - 0.5 * z;
 
         // Note, the sum of above terms does not exceed x/4,
         // so it contributes at most about 1/4 lsb to the error.
@@ -3737,16 +3737,16 @@ real log10(real x) @safe pure nothrow @nogc
 
         // Logarithm using log(1 + x) = x - .5x^^2 + x^^3 P(x) / Q(x)
         if (x < SQRT1_2)
-        {   // 2x - 1
+        {
             exp -= 1;
-            x = ldexp(x, 1) - 1.0;
+            x = 2.0 * x - 1.0;
         }
         else
             x = x - 1.0;
 
         z = x * x;
         y = x * (z * poly(x, logCoeffsP) / poly(x, logCoeffsQ));
-        y = y - ldexp(z, -1);
+        y = y - 0.5 * z;
 
         // Multiply log of fraction by log10(e) and base 2 exponent by log10(2).
         // This sequence of operations is critical and it may be horribly
@@ -3878,16 +3878,16 @@ real log2(real x) @safe pure nothrow @nogc
 
         // Logarithm using log(1 + x) = x - .5x^^2 + x^^3 P(x) / Q(x)
         if (x < SQRT1_2)
-        {   // 2x - 1
+        {
             exp -= 1;
-            x = ldexp(x, 1) - 1.0;
+            x = 2.0 * x - 1.0;
         }
         else
             x = x - 1.0;
 
         z = x * x;
         y = x * (z * poly(x, logCoeffsP) / poly(x, logCoeffsQ));
-        y = y - ldexp(z, -1);
+        y = y - 0.5 * z;
 
         // Multiply log of fraction by log10(e) and base 2 exponent by log10(2).
         // This sequence of operations is critical and it may be horribly
@@ -7727,7 +7727,7 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
                 if (floor(y) != y)
                     return sqrt(x); // Complex result -- create a NaN
 
-                const hy = ldexp(y, -1);
+                const hy = 0.5 * y;
                 if (floor(hy) != hy)
                     sign = -1.0;
             }
