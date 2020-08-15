@@ -1075,10 +1075,17 @@ Throws: `ErrnoException` if the file is not opened or if the call to `fwrite` fa
 
         version (Windows)
         {
-            flush(); // before changing translation mode
             immutable fd = ._fileno(_p.handle);
-            immutable mode = ._setmode(fd, _O_BINARY);
-            scope(exit) ._setmode(fd, mode);
+            immutable oldMode = ._setmode(fd, _O_BINARY);
+
+            if (oldMode != _O_BINARY)
+            {
+                // need to flush the data that was written with the original mode
+                ._setmode(fd, oldMode);
+                flush(); // before changing translation mode ._setmode(fd, _O_BINARY);
+                .setmode(fd, _O_BINARY);
+            }
+
             version (DIGITAL_MARS_STDIO)
             {
                 import core.atomic : atomicOp;
@@ -1086,10 +1093,19 @@ Throws: `ErrnoException` if the file is not opened or if the call to `fwrite` fa
                 // https://issues.dlang.org/show_bug.cgi?id=4243
                 immutable info = __fhnd_info[fd];
                 atomicOp!"&="(__fhnd_info[fd], ~FHND_TEXT);
-                scope(exit) __fhnd_info[fd] = info;
+                scope (exit) __fhnd_info[fd] = info;
             }
-            scope(exit) flush(); // before restoring translation mode
+
+            scope (exit)
+            {
+                if (oldMode != _O_BINARY)
+                {
+                    flush();
+                    ._setmode(fd, oldMode);
+                }
+            }
         }
+
         auto result = trustedFwrite(_p.handle, buffer);
         if (result == result.max) result = 0;
         errnoEnforce(result == buffer.length,
