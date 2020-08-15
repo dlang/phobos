@@ -249,12 +249,12 @@ public struct UUID
          * Construct a UUID struct from the 16 byte representation
          * of a UUID.
          */
-        @safe pure nothrow @nogc this(ref in ubyte[16] uuidData)
+        @safe pure nothrow @nogc this(ref const scope ubyte[16] uuidData)
         {
             data = uuidData;
         }
         /// ditto
-        @safe pure nothrow @nogc this(in ubyte[16] uuidData)
+        @safe pure nothrow @nogc this(const ubyte[16] uuidData)
         {
             data = uuidData;
         }
@@ -664,7 +664,7 @@ public struct UUID
          * All of the standard numeric operators are defined for
          * the UUID struct.
          */
-        @safe pure nothrow @nogc bool opEquals(in UUID s) const
+        @safe pure nothrow @nogc bool opEquals(const UUID s) const
         {
             return ulongs[0] == s.ulongs[0] && ulongs[1] == s.ulongs[1];
         }
@@ -693,7 +693,7 @@ public struct UUID
         /**
          * ditto
          */
-        @safe pure nothrow @nogc bool opEquals(ref in UUID s) const
+        @safe pure nothrow @nogc bool opEquals(ref const scope UUID s) const
         {
             return ulongs[0] == s.ulongs[0] && ulongs[1] == s.ulongs[1];
         }
@@ -701,7 +701,7 @@ public struct UUID
         /**
          * ditto
          */
-        @safe pure nothrow @nogc int opCmp(in UUID s) const
+        @safe pure nothrow @nogc int opCmp(const UUID s) const
         {
             import std.algorithm.comparison : cmp;
             return cmp(this.data[], s.data[]);
@@ -710,7 +710,7 @@ public struct UUID
         /**
          * ditto
          */
-        @safe pure nothrow @nogc int opCmp(ref in UUID s) const
+        @safe pure nothrow @nogc int opCmp(ref const scope UUID s) const
         {
             import std.algorithm.comparison : cmp;
             return cmp(this.data[], s.data[]);
@@ -719,7 +719,7 @@ public struct UUID
         /**
          * ditto
          */
-       @safe pure nothrow @nogc UUID opAssign(in UUID s)
+       @safe pure nothrow @nogc UUID opAssign(const UUID s)
         {
             ulongs[0] = s.ulongs[0];
             ulongs[1] = s.ulongs[1];
@@ -729,7 +729,7 @@ public struct UUID
         /**
          * ditto
          */
-        @safe pure nothrow @nogc UUID opAssign(ref in UUID s)
+        @safe pure nothrow @nogc UUID opAssign(ref const scope UUID s)
         {
             ulongs[0] = s.ulongs[0];
             ulongs[1] = s.ulongs[1];
