@@ -2723,7 +2723,7 @@ public:
      * Create a blocking socket using the parameters from the specified
      * `AddressInfo` structure.
      */
-    this(in AddressInfo info)
+    this(const scope AddressInfo info)
     {
         this(info.family, info.type, info.protocol);
     }
