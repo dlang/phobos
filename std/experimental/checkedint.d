@@ -351,12 +351,14 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     /**
     Assignment operator. Has the same constraints as the constructor.
     */
-    void opAssign(U)(U rhs) if (is(typeof(Checked!(T, Hook)(rhs))))
+    ref Checked opAssign(U)(U rhs) return
+    if (is(typeof(Checked!(T, Hook)(rhs))))
     {
         static if (isIntegral!U)
             payload = rhs;
         else
             payload = rhs.payload;
+        return this;
     }
     ///
     @system unittest
@@ -366,6 +368,14 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         assert(a == 42);
         a = 4242;
         assert(a == 4242);
+    }
+
+    ///
+    @system unittest
+    {
+        Checked!long a, b;
+        a = b = 3;
+        assert(a == 3 && b == 3);
     }
 
     // opCast
