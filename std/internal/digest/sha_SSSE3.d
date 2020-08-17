@@ -122,18 +122,18 @@ version (USE_SSSE3)
     }
 
     /* The control words for the byte shuffle instruction and the round constants. */
-    align(16) public immutable uint[20] constants =
+    align(16) public immutable uint[4][5] constants =
     [
         // The control words for the byte shuffle instruction.
-        0x0001_0203, 0x0405_0607, 0x0809_0a0b, 0x0c0d_0e0f,
+        [ 0x0001_0203, 0x0405_0607, 0x0809_0a0b, 0x0c0d_0e0f ],
         // Constants for round 0-19
-        0x5a827999, 0x5a827999, 0x5a827999, 0x5a827999,
+        [ 0x5a827999, 0x5a827999, 0x5a827999, 0x5a827999 ],
         // Constants for round 20-39
-        0x6ed9eba1, 0x6ed9eba1, 0x6ed9eba1, 0x6ed9eba1,
+        [ 0x6ed9eba1, 0x6ed9eba1, 0x6ed9eba1, 0x6ed9eba1 ],
         // Constants for round 40-59
-        0x8f1bbcdc, 0x8f1bbcdc, 0x8f1bbcdc, 0x8f1bbcdc,
+        [ 0x8f1bbcdc, 0x8f1bbcdc, 0x8f1bbcdc, 0x8f1bbcdc ],
         // Constants for round 60-79
-        0xca62c1d6, 0xca62c1d6, 0xca62c1d6, 0xca62c1d6
+        [ 0xca62c1d6, 0xca62c1d6, 0xca62c1d6, 0xca62c1d6 ]
     ];
 
     /** Simple version to produce numbers < 100 as string. */
