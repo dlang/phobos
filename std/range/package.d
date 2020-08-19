@@ -8579,6 +8579,302 @@ if (isForwardRange!Source && hasLength!Source)
 }
 
 /**
+This range splits the source range into chunks of the sizes specified into the
+chunkSizes range. Both the source range and the sizes range must be input ranges.
+
+If the source range is shorter than the sum of the sizes, only the sizes that
+cover the range will be used. In case the last available elements of the source
+range don't reach the specified size, the chunk will only contain those elements.
+
+Params:
+    source = range from which the chunks will be selected
+    chunkSizes = range specifying the size of each chunk
+*/
+struct VarChunks(Source, Sizes)
+if (isInputRange!Source && isInputRange!Sizes && isIntegral!(ElementType!Sizes))
+{
+    static if (isForwardRange!Source && isForwardRange!Sizes)
+    {
+        this(Source source, Sizes chunkSizes)
+        {
+            _source = source;
+            _chunkSizes = chunkSizes;
+        }
+
+        // Input range primitives
+        static if (!isInfinite!(Source))
+            @property bool empty()
+            {
+                static if (!isInfinite!(Sizes))
+                    return _source.empty || _chunkSizes.empty;
+                else
+                    return _source.empty;
+            }
+            else
+                enum empty = false;
+
+        @property auto front()
+        {
+            assert(!_source.empty, "Attempting to fetch the front of an empty VarChunks");
+            assert(!_chunkSizes.empty, "Not enough chunkSizes to create more VarChunks");
+
+            return _source.save.take(_chunkSizes.front());
+        }
+
+        void popFront()
+        {
+            assert(!empty, "Attempting to popFront an empty VarChunks");
+
+            _source.popFrontN(_chunkSizes.front());
+            _chunkSizes.popFront();
+        }
+
+        // Forward range primitives
+        @property typeof(this) save()
+        {
+            return typeof(this)(_source, _chunkSizes);
+        }
+
+        static if (hasLength!Source)
+            @property size_t length()
+            {
+                Sizes sizesCopy = _chunkSizes.save();
+                size_t length = 0;
+                size_t sourceLength = _source.length;
+
+                while (!sizesCopy.empty && sourceLength > 0)
+                {
+                    import std.algorithm.comparison : min;
+                    sourceLength -= min(sourceLength, sizesCopy.front());
+                    sizesCopy.popFront();
+                    length++;
+                }
+
+                return length;
+            }
+
+        static if (hasSlicing!Source && hasSlicing!Sizes)
+        {
+
+            auto opIndex(size_t index)
+            {
+                size_t start = 0;
+                size_t size;
+                Sizes sizesCopy = _chunkSizes.save();
+                while (index)
+                {
+                    start += sizesCopy.front();
+                    sizesCopy.popFront();
+                    index--;
+                }
+                size = sizesCopy.front();
+
+                static if (isInfinite!Source)
+                    return _source[start..(start+size)];
+                else
+                {
+                    size_t len = _source.length;
+                    assert(start<len, "varChunks index out of bounds");
+
+                    import std.algorithm.comparison : min;
+                    return _source[start .. min(start+size,len)];
+                }
+            }
+
+            typeof(this) opSlice(size_t lower, size_t upper)
+            {
+                size_t start = 0;
+                size_t end;
+                Sizes sizesCopy = _chunkSizes.save();
+                ElementType!Sizes[] newSizes = [];
+
+                upper -= lower;
+                while (lower)
+                {
+                    start += sizesCopy.front();
+                    sizesCopy.popFront();
+                    lower--;
+                }
+
+                end = start;
+                while (upper)
+                {
+                    end += sizesCopy.front();
+                    newSizes ~= [sizesCopy.front()];
+                    sizesCopy.popFront();
+                    upper--;
+                }
+
+                import std.algorithm.comparison : min;
+                return varChunks(_source[start .. min(end,_source.length)], newSizes);
+            }
+        }
+
+        // Bidirectional range primitives
+        static if (hasSlicing!Source && hasLength!Source && isForwardRange!Sizes)
+        {
+            @property auto back()
+            {
+                assert(!empty, "back called on empty varChunks");
+
+                size_t start = 0;
+                size_t lastSize = 0;
+                size_t len = _source.length;
+                Sizes sizesCopy = _chunkSizes.save();
+
+                while (!sizesCopy.empty && start < len)
+                {
+                    lastSize = sizesCopy.front();
+                    start += lastSize;
+                    sizesCopy.popFront();
+                }
+
+                assert(start>=len, "Not enough chunkSizes to get the back varChunks");
+
+                return _source[start-lastSize .. len];
+            }
+
+            void popBack()
+            {
+                size_t start = 0;
+                size_t lastSize = 0;
+                size_t len = _source.length;
+                Sizes sizesCopy = _chunkSizes.save();
+
+                while (!sizesCopy.empty && start < len)
+                {
+                    lastSize = sizesCopy.front();
+                    start += lastSize;
+                    sizesCopy.popFront();
+                }
+                assert(start>=len, "Not enough chunkSizes to get the back varChunks length");
+
+                _source = _source[0..(start-lastSize)];
+            }
+        }
+
+    private:
+        Source _source;
+        Sizes _chunkSizes;
+    }
+    else static if (isIntegral!(ElementType!Sizes))
+    {
+
+        import std.typecons : RefCounted;
+
+        static struct Chunk
+        {
+            private RefCounted!Impl impl;
+
+            @property bool empty() { return impl.curSizeLeft == 0 || impl.r.empty || impl.s.empty; }
+            @property auto front() { return impl.r.front; }
+            void popFront()
+            {
+                assert(impl.curSizeLeft > 0 && !impl.r.empty);
+                impl.curSizeLeft--;
+                impl.r.popFront();
+            }
+        }
+
+        static struct Impl
+        {
+            private Source r;
+            private Sizes s;
+            private size_t curSizeLeft;
+        }
+
+        private RefCounted!Impl impl;
+
+        private this(Source r, Sizes s)
+        {
+            impl = RefCounted!Impl(r, s, r.empty ? 0 : (s.empty ? 0 : s.front));
+        }
+
+        @property bool empty() { return impl.r.empty || impl.s.empty; }
+        @property Chunk front() return { return Chunk(impl); }
+
+        void popFront()
+        {
+            impl.curSizeLeft -= impl.r.popFrontN(impl.curSizeLeft);
+            if (!impl.r.empty && !impl.s.empty)
+            {
+                impl.s.popFront();
+                impl.curSizeLeft = impl.s.front;
+            }
+            else
+                impl.curSizeLeft = 0;
+        }
+
+        static assert(isInputRange!(typeof(this)));
+    }
+}
+
+VarChunks!(Source, Sizes) varChunks(Source, Sizes)(Source source, Sizes chunkSizes)
+if (isInputRange!Source && isInputRange!Sizes && isIntegral!(ElementType!Sizes))
+{
+    return typeof(return)(source, chunkSizes);
+}
+
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    auto source = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    auto sizes = [1, 2, 3, 4];
+    auto chunks = varChunks(source, sizes);
+    assert(chunks[0] == [1]);
+    assert(chunks[1] == [2, 3]);
+    assert(chunks[2] == [4, 5, 6]);
+    assert(chunks[3] == [7, 8, 9]);
+    assert(chunks.back == chunks[3]);
+    assert(chunks.front == chunks[0]);
+    assert(chunks.length == 4);
+    assert(chunks.empty == false);
+    assert(array(chunks[1 .. 3]) == [[2, 3], [4, 5, 6]]);
+    assert(equal(retro(array(chunks)), array(retro(chunks))));
+    static assert(isRandomAccessRange!(typeof(chunks)));
+}
+
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    auto source = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    auto sizes = [1, 2, 3, 4];
+    auto chunks = varChunks(source, sizes);
+    chunks.popFront();
+    assert(chunks.length == 3);
+    assert(chunks.front == [2, 3]);
+    assert(chunks[0] == [2, 3]);
+    chunks.popBack();
+    assert(chunks.length == 2);
+    assert(chunks.back == [4, 5, 6]);
+    assert(chunks[1] == [4, 5, 6]);
+}
+
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+
+    int i, j;
+
+    auto inputRangeSource = generate!(() => ++i).take(11);
+    auto inputRangeSizes = generate!(() => ++j).take(5);
+
+    auto chunked = inputRangeSource.varChunks(inputRangeSizes);
+
+    assert(chunked.front.equal([1]));
+    assert(chunked.front.empty);
+    chunked.popFront;
+    assert(chunked.front.equal([2, 3]));
+    chunked.popFront;
+    assert(chunked.front.equal([4, 5, 6]));
+    chunked.popFront;
+    assert(chunked.front.equal([7, 8, 9, 10]));
+    chunked.popFront;
+    assert(chunked.front.equal([11]));
+    static assert(isInputRange!(typeof(chunked)));
+}
+
+/**
 A fixed-sized sliding window iteration
 of size `windowSize` over a `source` range by a custom `stepSize`.
 
