@@ -147,7 +147,7 @@ override DFLAGS += -O -release
 endif
 
 ifdef ENABLE_COVERAGE
-override DFLAGS  += -cov
+override DFLAGS  += -cov=ctfe
 endif
 
 ifdef NO_AUTODECODE
@@ -414,7 +414,7 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 %.test : %.d $(LIB)
 	T=`mktemp -d /tmp/.dmd-run-test.XXXXXX` &&                                                              \
 	  (                                                                                                     \
-	    $(DMD) -od$$T $(DFLAGS) -main $(UDFLAGS) $(LIB) $(NODEFAULTLIB) $(LINKDL) -cov -run $< ;     \
+	    $(DMD) -od$$T $(DFLAGS) -main $(UDFLAGS) $(LIB) $(NODEFAULTLIB) $(LINKDL) -cov=ctfe -run $< ;     \
 	    RET=$$? ; rm -rf $$T ; exit $$RET                                                                   \
 	  )
 
