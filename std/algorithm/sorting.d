@@ -2981,17 +2981,24 @@ if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R &&
     static if (is(typeof(unaryFun!transform(r.front))))
     {
         alias transformFun = unaryFun!transform;
-        alias T = typeof(transformFun(r.front));
+        alias TB = typeof(transformFun(r.front));
         enum isBinary = false;
     }
     else static if (is(typeof(binaryFun!transform(r.front, 0))))
     {
         alias transformFun = binaryFun!transform;
-        alias T = typeof(transformFun(r.front, 0));
+        alias TB = typeof(transformFun(r.front, 0));
         enum isBinary = true;
     }
     else
         static assert(false, "unsupported `transform` alias");
+
+    // The `transform` function might return a qualified type, e.g. const(int).
+    // Strip qualifiers if possible s.t. the temporary array is sortable.
+    static if (is(TB : Unqual!TB))
+        alias T = Unqual!TB;
+    else
+        static assert(false, "`transform` returns an unsortable qualified type: " ~ TB.stringof);
 
     static trustedMalloc(size_t len) @trusted
     {
@@ -3166,6 +3173,35 @@ if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R)
         (a, b) => *a < *b
     );
     assert(arr.isSorted());
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21183
+@safe unittest
+{
+    static T get(T)(int) { return T.init; }
+
+    // There's no need to actually sort, just checking type interference
+    if (false)
+    {
+        int[] arr;
+
+        // Fine because there are no indirections
+        arr.schwartzSort!(get!(const int));
+
+        // Fine because it decays to immutable(int)*
+        arr.schwartzSort!(get!(immutable int*));
+
+        // Disallowed because it would require a non-const reference
+        static assert(!__traits(compiles, arr.schwartzSort!(get!(const Object))));
+
+        static struct Wrapper
+        {
+            int* ptr;
+        }
+
+        // Disallowed because Wrapper.ptr would become mutable
+        static assert(!__traits(compiles, arr.schwartzSort!(get!(const Wrapper))));
+    }
 }
 
 // partialSort
