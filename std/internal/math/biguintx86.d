@@ -1169,7 +1169,7 @@ outer_loop:
         mov EBX, [ESP + LASTPARAM + 4*0]; // src.length
         mov EBP, 0;
         mov ECX, 0; // ECX = input carry.
-        dec [ESP + LASTPARAM + 4*0]; // Next time, the length will be shorter by 1.
+        dec int ptr [ESP + LASTPARAM + 4*0]; // Next time, the length will be shorter by 1.
         neg EBX;                // count UP to zero.
 
         mov EAX, [ESI + 4*EBX - 4*1]; // get new M
