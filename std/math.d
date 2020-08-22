@@ -7228,43 +7228,63 @@ real fdim(real x, real y) @safe pure nothrow @nogc
 }
 
 /**
- * Returns the larger of x and y.
+ * Returns the larger of `x` and `y`.
  *
- * If one of the arguments is a NaN, the other is returned.
+ * If one of the arguments is a `NaN`, the other is returned.
+ *
+ * See_Also: $(REF max, std,algorithm,comparison) is faster because it does not perform the `isNaN` test.
  */
-real fmax(real x, real y) @safe pure nothrow @nogc
+F fmax(F)(const F x, const F y) @safe pure nothrow @nogc
+if (isFloatingPoint!F)
 {
-    return (y > x || isNaN(x)) ? y : x;
+    // Do the more predictable test first. Generates 0 branches with ldc and 1 branch with gdc.
+    // See https://godbolt.org/z/erxrW9
+    if (isNaN(y)) return x;
+    return x >= y ? x : y;
 }
 
 ///
 @safe pure nothrow @nogc unittest
 {
-    assert(fmax(0.0, 2.0) == 2.0);
-    assert(fmax(-2.0, 0.0) == 0.0);
-    assert(fmax(real.infinity, 2.0) == real.infinity);
-    assert(fmax(real.nan, 2.0) == 2.0);
-    assert(fmax(2.0, real.nan) == 2.0);
+    import std.meta : AliasSeq;
+    static foreach (F; AliasSeq!(float, double, real))
+    {
+        assert(fmax(F(0.0), F(2.0)) == 2.0);
+        assert(fmax(F(-2.0), 0.0) == F(0.0));
+        assert(fmax(F.infinity, F(2.0)) == F.infinity);
+        assert(fmax(F.nan, F(2.0)) == F(2.0));
+        assert(fmax(F(2.0), F.nan) == F(2.0));
+    }
 }
 
 /**
- * Returns the smaller of x and y.
+ * Returns the smaller of `x` and `y`.
  *
- * If one of the arguments is a NaN, the other is returned.
+ * If one of the arguments is a `NaN`, the other is returned.
+ *
+ * See_Also: $(REF min, std,algorithm,comparison) is faster because it does not perform the `isNaN` test.
  */
-real fmin(real x, real y) @safe pure nothrow @nogc
+F fmin(F)(const F x, const F y) @safe pure nothrow @nogc
+if (isFloatingPoint!F)
 {
-    return (y < x || isNaN(x)) ? y : x;
+    // Do the more predictable test first. Generates 0 branches with ldc and 1 branch with gdc.
+    // See https://godbolt.org/z/erxrW9
+    if (isNaN(y)) return x;
+    return x <= y ? x : y;
 }
 
 ///
 @safe pure nothrow @nogc unittest
 {
-    assert(fmin(0.0, 2.0) == 0.0);
-    assert(fmin(-2.0, 0.0) == -2.0);
-    assert(fmin(real.infinity, 2.0) == 2.0);
-    assert(fmin(real.nan, 2.0) == 2.0);
-    assert(fmin(2.0, real.nan) == 2.0);
+    import std.meta : AliasSeq;
+    static foreach (F; AliasSeq!(float, double, real))
+    {
+        assert(fmin(F(0.0), F(2.0)) == 0.0);
+        assert(fmin(F(-2.0), F(0.0)) == -2.0);
+        assert(fmin(F.infinity, F(2.0)) == 2.0);
+        assert(fmin(F.nan, F(2.0)) == 2.0);
+        assert(fmin(F(2.0), F.nan) == 2.0);
+    }
 }
 
 /**************************************
