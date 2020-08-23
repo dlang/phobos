@@ -1713,8 +1713,8 @@ if (T.length >= 2)
 
     //Do the "min" proper with a and b
     import std.functional : lessThan;
-    immutable chooseA = lessThan!(T0, T1)(a, b);
-    return cast(typeof(return)) (chooseA ? a : b);
+    immutable chooseB = lessThan!(T1, T0)(b, a);
+    return cast(typeof(return)) (chooseB ? b : a);
 }
 
 ///
@@ -1755,6 +1755,19 @@ store the lowest values.
     assert(min(Date.max, Date(1982, 1, 4)) == Date(1982, 1, 4));
     assert(min(Date.min, Date.max) == Date.min);
     assert(min(Date.max, Date.min) == Date.min);
+}
+
+// min must be stable: when in doubt, return the first argument.
+@safe unittest
+{
+    assert(min(1.0, double.nan) == 1.0);
+    assert(min(double.nan, 1.0) is double.nan);
+    static struct A {
+        int x;
+        string y;
+        int opCmp(const A a) const { return int(x > a.x) - int(x < a.x); }
+    }
+    assert(min(A(1, "first"), A(1, "second")) == A(1, "first"));
 }
 
 // mismatch
