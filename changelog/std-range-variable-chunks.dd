@@ -1,0 +1,34 @@
+Split range into variable chunk sizes
+
+Now a range can be split into differently sized chunks.
+
+Forward ranges:
+```
+import std.algorithm.comparison : equal;
+auto source = [1, 2, 3, 4, 5, 6, 7];
+auto sizes = [1, 2, 3];
+// source has more elements than the sum of lengths
+assert(array(chunks(source, sizes)) == [[1], [2, 3], [4, 5, 6], [7]]);
+
+source = [1, 2, 3, 4];
+sizes = [1, 2, 3, 4, 5];
+// source has fewer elements than the sum of lengths
+assert(array(chunks(source, sizes)) == [[1], [2, 3], [4]]);
+```
+
+Input ranges:
+```
+import std.algorithm.comparison : equal;
+
+int i, j;
+
+auto inputRangeSource = generate!(() => ++i).take(11);
+auto inputRangeSizes = generate!(() => ++j).take(5);
+auto chunked = inputRangeSource.chunks(inputRangeSizes);
+
+assert(chunked.front.equal([1]));
+assert(chunked.front.empty);
+chunked.popFront;
+assert(chunked.front.equal([2, 3]));
+```
+
