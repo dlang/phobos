@@ -7234,13 +7234,18 @@ real fdim(real x, real y) @safe pure nothrow @nogc
  *
  * See_Also: $(REF max, std,algorithm,comparison) is faster because it does not perform the `isNaN` test.
  */
-F fmax(F)(const F x, const F y) @safe pure nothrow @nogc
-if (isFloatingPoint!F)
+auto fmax(N1, N2)(const N1 x, const N2 y) @safe pure nothrow @nogc
+if ((__traits(isFloating, N1) || __traits(isFloating, N2)) && is(typeof(x < y)))
 {
+    import std.algorithm.comparison : max;
+    alias R = typeof(max(x, y));
     // Do the more predictable test first. Generates 0 branches with ldc and 1 branch with gdc.
     // See https://godbolt.org/z/erxrW9
-    if (isNaN(y)) return x;
-    return x >= y ? x : y;
+    static if (__traits(isFloating, N1))
+    {
+        if (isNaN(x)) return R(y);
+    }
+    return max(x, y);
 }
 
 ///
@@ -7264,13 +7269,18 @@ if (isFloatingPoint!F)
  *
  * See_Also: $(REF min, std,algorithm,comparison) is faster because it does not perform the `isNaN` test.
  */
-F fmin(F)(const F x, const F y) @safe pure nothrow @nogc
-if (isFloatingPoint!F)
+auto fmin(N1, N2)(const N1 x, const N2 y) @safe pure nothrow @nogc
+if ((__traits(isFloating, N1) || __traits(isFloating, N2)) && is(typeof(x < y)))
 {
+    import std.algorithm.comparison : min;
+    alias R = typeof(min(x, y));
     // Do the more predictable test first. Generates 0 branches with ldc and 1 branch with gdc.
     // See https://godbolt.org/z/erxrW9
-    if (isNaN(y)) return x;
-    return x <= y ? x : y;
+    static if (__traits(isFloating, N1))
+    {
+        if (isNaN(x)) return R(y);
+    }
+    return min(x, y);
 }
 
 ///
