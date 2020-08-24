@@ -8600,10 +8600,9 @@ Params:
 Returns: Range of chunks of the specified lengths
 */
 auto chunks(Source, Sizes)(Source source, Sizes chunkSizes)
-if (isInputRange!Source && isInputRange!Sizes && isIntegral!(ElementType!Sizes))
+if (isInputRange!Source && isInputRange!Sizes && is(ElementType!Sizes : size_t))
 {
     struct Chunks(Source, Sizes)
-    if (isInputRange!Source && isInputRange!Sizes && is(ElementType!Sizes : size_t))
     {
         static if (isForwardRange!Source && isForwardRange!Sizes)
         {
@@ -8688,7 +8687,7 @@ if (isInputRange!Source && isInputRange!Sizes && isIntegral!(ElementType!Sizes))
             static if (isInfinite!Source && hasLength!Sizes)
                 @property size_t length()
                 {
-                    return (_chunkSizes.length + 1);
+                    return _chunkSizes.length + 1;
                 }
 
             static if (hasSlicing!Source && (isInfinite!Source || hasLength!(Source)))
@@ -8713,10 +8712,9 @@ if (isInputRange!Source && isInputRange!Sizes && isIntegral!(ElementType!Sizes))
                     assert(index <= 1, "Chunks index out of bounds");
 
                     size_t size;
-                    if (!sizesCopy.empty)
-                        size = sizesCopy.front();
-                    else
+                    if (sizesCopy.empty)
                         return _source[start .. $];
+                    size = sizesCopy.front();
 
                     static if (isInfinite!Source)
                         return _source[start .. (start + size)];
@@ -8827,53 +8825,65 @@ if (isInputRange!Source && isInputRange!Sizes && isIntegral!(ElementType!Sizes))
         }
         else
         {
-
             import std.typecons : RefCounted;
 
             private static struct Chunk
             {
                 private RefCounted!Impl impl;
 
-                @property bool empty() { return impl.curSizeLeft == 0 || impl.r.empty || impl.s.empty; }
-                @property auto front() { return impl.r.front; }
+                @property bool empty() { return impl.curSizeLeft == 0 || impl.source.empty; }
+                @property auto front() { return impl.source.front; }
                 void popFront()
                 {
-                    assert(impl.curSizeLeft > 0 && !impl.r.empty);
                     impl.curSizeLeft--;
-                    impl.r.popFront();
+                    impl.source.popFront();
                 }
             }
 
             private static struct Impl
             {
-                private Source r;
-                private Sizes s;
+                private Source source;
+                private Sizes chunkSizes;
                 private size_t curSizeLeft;
             }
 
             private RefCounted!Impl impl;
+            // for when there are extra elements in the source range
+            private bool tookLastChunk;
 
-            private this(Source r, Sizes s)
+            private this(Source source, Sizes chunkSizes)
             {
-                impl = RefCounted!Impl(r, s, r.empty ? 0 : (s.empty ? 0 : s.front));
+                tookLastChunk = false;
+                impl = RefCounted!Impl(source, chunkSizes,
+                    source.empty ? 0 : (chunkSizes.empty ? 0 : chunkSizes.front));
             }
 
-            @property bool empty() { return impl.r.empty || impl.s.empty; }
-            @property Chunk front() return { return Chunk(impl); }
+            @property bool empty() { return impl.source.empty || tookLastChunk; }
+            @property Chunk front()
+            {
+                return Chunk(impl);
+            }
 
             void popFront()
             {
-                impl.curSizeLeft -= impl.r.popFrontN(impl.curSizeLeft);
-                if (!impl.r.empty && !impl.s.empty)
+                if (impl.chunkSizes.empty)
                 {
-                    impl.s.popFront();
-                    impl.curSizeLeft = impl.s.front;
+                    tookLastChunk = true;
+                    return;
+                }
+
+                impl.curSizeLeft -= impl.source.popFrontN(impl.curSizeLeft);
+                if (!impl.source.empty && !impl.chunkSizes.empty)
+                {
+                    impl.chunkSizes.popFront();
+                    if (impl.chunkSizes.empty)
+                        impl.curSizeLeft = -1;
+                    else
+                        impl.curSizeLeft = impl.chunkSizes.front;
                 }
                 else
                     impl.curSizeLeft = 0;
             }
-
-            static assert(isInputRange!(typeof(this)));
         }
     }
 
@@ -8952,6 +8962,20 @@ if (isInputRange!Source && isInputRange!Sizes && isIntegral!(ElementType!Sizes))
     assert(chunks[1] == [4, 5, 6]);
 }
 
+// More forward range tests
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    int[] source = [];
+    size_t[] sizes = [];
+    assert(chunks(source, sizes).empty);
+
+    auto chunks = chunks([1, 2, 3, 4], sizes);
+    assert(!chunks.empty);
+    assert(chunks.front == [1, 2, 3, 4]);
+    assert(array(chunks.save) == [[1, 2, 3, 4]]);
+}
+
 /// Non-forward input ranges are also supported, but with limited semantics.
 @system unittest
 {
@@ -8974,6 +8998,28 @@ if (isInputRange!Source && isInputRange!Sizes && isIntegral!(ElementType!Sizes))
     assert(chunked.front.equal([7, 8, 9, 10]));
     chunked.popFront;
     assert(chunked.front.equal([11]));
+}
+
+// More input range tests
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+
+    int i, j;
+
+    auto inputRangeSource = generate!(() => ++i).take(6);
+    auto inputRangeSizes = generate!(() => ++j).take(2);
+
+    auto chunked = inputRangeSource.chunks(inputRangeSizes);
+
+    assert(chunked.front.equal([1]));
+    assert(chunked.front.empty);
+    chunked.popFront;
+    assert(chunked.front.equal([2, 3]));
+    assert(!chunked.empty);
+    chunked.popFront;
+    assert(chunked.front.equal([4, 5, 6]));
+    assert(chunked.empty);
 }
 
 
