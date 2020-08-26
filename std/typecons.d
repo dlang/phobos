@@ -3973,11 +3973,11 @@ template apply(alias fun)
         {
             static if (MustWrapReturn)
             {
-                return fun(t.get).nullable;
+                return unaryFun!fun(t.get).nullable;
             }
             else
             {
-                return fun(t.get);
+                return unaryFun!fun(t.get);
             }
         }
         else
@@ -4046,6 +4046,14 @@ unittest
     immutable struct S { }
 
     S[] array = Nullable!(S[])().get(S[].init);
+}
+
+// regression test for https://issues.dlang.org/show_bug.cgi?id=21199
+@safe @nogc nothrow pure
+unittest
+{
+    struct S { int i; }
+    assert(S(5).nullable.apply!"a.i" == 5);
 }
 
 /**
