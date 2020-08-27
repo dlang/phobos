@@ -1332,8 +1332,7 @@ if (isSomeString!T)
 
 ///ditto
 UUID parseUUID(Range)(ref Range uuidRange)
-if (isInputRange!Range
-    && is(immutable ElementType!Range == immutable dchar))
+if (isInputRange!Range && isSomeChar!(ElementType!Range))
 {
     import std.ascii : isHexDigit;
     import std.conv : ConvException, parse;
@@ -1630,6 +1629,13 @@ if (isInputRange!Range
         assert(parseHelper!S("///8ab3060e2cba4f23b74cb52db3bdfb46||")
             == parseUUID("8ab3060e-2cba-4f23-b74c-b52db3bdfb46"));
     }}
+
+    // Test input range with non-dchar element type.
+    {
+        import std.utf : byCodeUnit;
+        auto range = "8AB3060E-2CBA-4F23-b74c-B52Db3BDFB46".byCodeUnit;
+        assert(parseUUID(range).data == [138, 179, 6, 14, 44, 186, 79, 35, 183, 76, 181, 45, 179, 189, 251, 70]);
+    }
 }
 
 /**
