@@ -5180,10 +5180,10 @@ enum isAssignable(Lhs, Rhs = Lhs) = isRvalueAssignable!(Lhs, Rhs) && isLvalueAss
 }
 
 // ditto
-private enum isRvalueAssignable(Lhs, Rhs = Lhs) = __traits(compiles, lvalueOf!Lhs = rvalueOf!Rhs);
+private enum isRvalueAssignable(Lhs, Rhs = Lhs) = __traits(compiles, { lvalueOf!Lhs = rvalueOf!Rhs; });
 
 // ditto
-private enum isLvalueAssignable(Lhs, Rhs = Lhs) = __traits(compiles, lvalueOf!Lhs = lvalueOf!Rhs);
+private enum isLvalueAssignable(Lhs, Rhs = Lhs) = __traits(compiles, { lvalueOf!Lhs = lvalueOf!Rhs; });
 
 @safe unittest
 {
@@ -5224,6 +5224,9 @@ private enum isLvalueAssignable(Lhs, Rhs = Lhs) = __traits(compiles, lvalueOf!Lh
     static assert(!isRvalueAssignable!(S6, S5));
     static assert( isLvalueAssignable!(S6, S5));
     static assert( isLvalueAssignable!(S6, immutable S5));
+
+    // https://issues.dlang.org/show_bug.cgi?id=21210
+    static assert(!isAssignable!S5);
 }
 
 
