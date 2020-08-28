@@ -5363,6 +5363,7 @@ private static:
 
             // Parameter storage classes.
             if (stc & STC.scope_) params ~= "scope ";
+            if (stc & STC.in_)    params ~= "in ";
             if (stc & STC.out_  ) params ~= "out ";
             if (stc & STC.ref_  ) params ~= "ref ";
             if (stc & STC.lazy_ ) params ~= "lazy ";
