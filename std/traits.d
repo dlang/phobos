@@ -5219,11 +5219,26 @@ private enum isLvalueAssignable(Lhs, Rhs = Lhs) = __traits(compiles, { lvalueOf!
     static assert( isAssignable!(S4, immutable int));
 
     struct S5 { @disable this(); @disable this(this); }
-    struct S6 { void opAssign(in ref S5); }
-    static assert(!isAssignable!(S6, S5));
-    static assert(!isRvalueAssignable!(S6, S5));
-    static assert( isLvalueAssignable!(S6, S5));
-    static assert( isLvalueAssignable!(S6, immutable S5));
+
+    // `-preview=in` is enabled
+    static if (!is(typeof(mixin(q{(in ref int a) => a}))))
+    {
+        struct S6 { void opAssign(in S5); }
+
+        static assert(isRvalueAssignable!(S6, S5));
+        static assert(isLvalueAssignable!(S6, S5));
+        static assert(isAssignable!(S6, S5));
+        static assert(isAssignable!(S6, immutable S5));
+    }
+    else
+    {
+        mixin(q{ struct S6 { void opAssign(in ref S5); } });
+
+        static assert(!isRvalueAssignable!(S6, S5));
+        static assert( isLvalueAssignable!(S6, S5));
+        static assert(!isAssignable!(S6, S5));
+        static assert( isLvalueAssignable!(S6, immutable S5));
+    }
 }
 
 
