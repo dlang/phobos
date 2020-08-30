@@ -7240,8 +7240,7 @@ if (__traits(isFloating, F))
     // Do the more predictable test first. Generates 0 branches with ldc and 1 branch with gdc.
     // See https://godbolt.org/z/erxrW9
     if (isNaN(x)) return y;
-    import std.algorithm.comparison : max;
-    return max(x, y);
+    return y > x ? y : x;
 }
 
 ///
@@ -7271,8 +7270,7 @@ if (__traits(isFloating, F))
     // Do the more predictable test first. Generates 0 branches with ldc and 1 branch with gdc.
     // See https://godbolt.org/z/erxrW9
     if (isNaN(x)) return y;
-    import std.algorithm.comparison : min;
-    return min(x, y);
+    return y < x ? y : x;
 }
 
 ///
