@@ -1,18 +1,19 @@
 Split range into variable chunk sizes
 
-Now a range can be split into differently sized chunks.
+Now a range can be split into differently sized chunks by providing a source
+range and a range of indexes specifying where this range should be split.
 
 Forward ranges:
 ```
 import std.algorithm.comparison : equal;
 auto source = [1, 2, 3, 4, 5, 6, 7];
-auto sizes = [1, 2, 3];
-// source has more elements than the sum of lengths
+auto sizes = [1, 3, 6];
+// source has more elements than the highest index
 assert(array(chunks(source, sizes)) == [[1], [2, 3], [4, 5, 6], [7]]);
 
 source = [1, 2, 3, 4];
-sizes = [1, 2, 3, 4, 5];
-// source has fewer elements than the sum of lengths
+sizes = [1, 3, 6, 10];
+// source has fewer elements than the highest index
 assert(array(chunks(source, sizes)) == [[1], [2, 3], [4]]);
 ```
 
