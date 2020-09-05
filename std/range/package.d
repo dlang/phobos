@@ -8766,7 +8766,7 @@ if (isInputRange!Source && isInputRange!Indexes && is(ElementType!Indexes : size
             bool _isEmpty;
         }
         else
-        {/*
+        {
             import std.typecons : RefCounted;
 
             private static struct Chunk
@@ -8792,10 +8792,12 @@ if (isInputRange!Source && isInputRange!Indexes && is(ElementType!Indexes : size
             private RefCounted!Impl impl;
             // for when there are extra elements in the source range
             private bool tookLastChunk;
+            private size_t offset;
 
             private this(Source source, Indexes endIndexes)
             {
                 tookLastChunk = false;
+                offset = 0;
                 impl = RefCounted!Impl(source, endIndexes,
                     source.empty ? 0 : (endIndexes.empty ? 0 : endIndexes.front));
             }
@@ -8814,19 +8816,18 @@ if (isInputRange!Source && isInputRange!Indexes && is(ElementType!Indexes : size
                     return;
                 }
 
-                impl.curSizeLeft -= impl.source.popFrontN(impl.curSizeLeft);
+                impl.curSizeLeft -= impl.source.popFrontN(impl.curSizeLeft) - offset;
                 if (!impl.source.empty && !impl.endIndexes.empty)
                 {
+                    offset = impl.endIndexes.front;
                     impl.endIndexes.popFront();
                     if (impl.endIndexes.empty)
                         impl.curSizeLeft = -1;
                     else
-                        impl.curSizeLeft = impl.endIndexes.front;
+                        impl.curSizeLeft = impl.endIndexes.front - offset;
                 }
-                else
-                    impl.curSizeLeft = 0;
             }
-        */}
+        }
     }
 
     return Chunks!(Source, Indexes)(source, endIndexes);
@@ -8905,7 +8906,7 @@ if (isInputRange!Source && isInputRange!Indexes && is(ElementType!Indexes : size
     assert(chunks.front == [1, 2, 3, 4]);
     assert(array(chunks.save) == [[1, 2, 3, 4]]);
 }
-/*
+
 /// Non-forward input ranges are also supported, but with limited semantics.
 @system unittest
 {
@@ -8914,7 +8915,8 @@ if (isInputRange!Source && isInputRange!Indexes && is(ElementType!Indexes : size
     int i, j;
 
     auto inputRangeSource = generate!(() => ++i).take(11);
-    auto inputRangeIndexes = generate!(() => ++j).take(5);
+    import std.algorithm.iteration : cumulativeFold;
+    auto inputRangeIndexes = generate!(() => ++j).take(5).cumulativeFold!("a + b");
 
     auto chunked = inputRangeSource.chunks(inputRangeIndexes);
 
@@ -8938,7 +8940,8 @@ if (isInputRange!Source && isInputRange!Indexes && is(ElementType!Indexes : size
     int i, j;
 
     auto inputRangeSource = generate!(() => ++i).take(6);
-    auto inputRangeIndexes = generate!(() => ++j).take(2);
+    import std.algorithm.iteration : cumulativeFold;
+    auto inputRangeIndexes = generate!(() => ++j).take(2).cumulativeFold!("a + b");
 
     auto chunked = inputRangeSource.chunks(inputRangeIndexes);
 
@@ -8948,10 +8951,11 @@ if (isInputRange!Source && isInputRange!Indexes && is(ElementType!Indexes : size
     assert(chunked.front.equal([2, 3]));
     assert(!chunked.empty);
     chunked.popFront;
+    assert(!chunked.empty);
     assert(chunked.front.equal([4, 5, 6]));
+    chunked.popFront;
     assert(chunked.empty);
 }
-*/
 
 /**
 A fixed-sized sliding window iteration

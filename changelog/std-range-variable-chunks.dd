@@ -24,7 +24,8 @@ import std.algorithm.comparison : equal;
 int i, j;
 
 auto inputRangeSource = generate!(() => ++i).take(11);
-auto inputRangeSizes = generate!(() => ++j).take(5);
+import std.algorithm.iteration : cumulativeFold;
+auto inputRangeIndexes = generate!(() => ++j).take(5).cumulativeFold!("a + b");
 auto chunked = inputRangeSource.chunks(inputRangeSizes);
 
 assert(chunked.front.equal([1]));
