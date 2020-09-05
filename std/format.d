@@ -4423,6 +4423,24 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
     static if (__traits(hasMember, T, "toString") && isSomeFunction!(val.toString))
         static assert(!__traits(isDisabled, T.toString), T.stringof ~
             " cannot be formatted because its `toString` is marked with `@disable`");
+    static if (__traits(hasMember, T, "toString") && !hasToString!(T, Char))
+    {
+        pragma(msg, T.stringof ~
+            " cannot be formatted because its `toString` cannot be instantiated.");
+        pragma(msg, T.stringof ~ ".toString is defined here:");
+        static foreach (ol; __traits(getOverloads, T, "toString", true))
+        {
+            static if (__traits(compiles, __traits(getLocation, ol)))
+            {
+                pragma(msg, __traits(getLocation, ol)[0], "(", __traits(getLocation, ol)[1], "): ",
+                    AliasSeq!(ol).stringof[6..$-1]);
+            }
+            else
+            {
+                pragma(msg, "(unknown location): ", AliasSeq!(ol).stringof[6..$-1]);
+            }
+        }
+    }
 
     enforceValidFormatSpec!(T, Char)(f);
     static if (hasToString!(T, Char))
