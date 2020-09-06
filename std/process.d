@@ -1597,6 +1597,9 @@ version (Posix) @system unittest
     assert(wait(spawnProcess(envProg.path, env, Config.newEnv)) == 6);
 }
 
+version (unittest)
+    import std.uuid;
+
 @system unittest // Stream redirection in spawnProcess().
 {
     import std.path : buildPath;
@@ -1615,11 +1618,11 @@ version (Posix) @system unittest
     // Pipes
     void testPipes(Config config)
     {
-        import std.file, std.uuid, core.thread, std.exception;
+        import std.file, core.thread, std.exception;
         auto pipei = pipe();
         auto pipeo = pipe();
         auto pipee = pipe();
-        auto done = buildPath(tempDir(), randomUUID().toString());
+        auto done = buildPath(tempDir(), rndGen.randomUUID().toString());
         auto pid = spawnProcess([prog.path, "foo", "bar", done],
                                     pipei.readEnd, pipeo.writeEnd, pipee.writeEnd, null, config);
         pipei.writeEnd.writeln("input");
@@ -1636,15 +1639,15 @@ version (Posix) @system unittest
     // Files
     void testFiles(Config config)
     {
-        import std.ascii, std.file, std.uuid, core.thread, std.exception;
-        auto pathi = buildPath(tempDir(), randomUUID().toString());
-        auto patho = buildPath(tempDir(), randomUUID().toString());
-        auto pathe = buildPath(tempDir(), randomUUID().toString());
+        import std.ascii, std.file, core.thread, std.exception;
+        auto pathi = buildPath(tempDir(), rndGen.randomUUID().toString());
+        auto patho = buildPath(tempDir(), rndGen.randomUUID().toString());
+        auto pathe = buildPath(tempDir(), rndGen.randomUUID().toString());
         std.file.write(pathi, "INPUT"~std.ascii.newline);
         auto filei = File(pathi, "r");
         auto fileo = File(patho, "w");
         auto filee = File(pathe, "w");
-        auto done = buildPath(tempDir(), randomUUID().toString());
+        auto done = buildPath(tempDir(), rndGen.randomUUID().toString());
         auto pid = spawnProcess([prog.path, "bar", "baz", done], filei, fileo, filee, null, config);
         if (config & Config.detached)
             while (!done.exists) Thread.sleep(10.msecs);
@@ -3271,10 +3274,9 @@ private string uniqueTempPath() @safe
 {
     import std.file : tempDir;
     import std.path : buildPath;
-    import std.uuid : randomUUID;
     // Path should contain spaces to test escaping whitespace
     return buildPath(tempDir(), "std.process temporary file " ~
-        randomUUID().toString());
+        rndGen.randomUUID().toString());
 }
 
 
