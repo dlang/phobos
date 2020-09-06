@@ -1,0 +1,10 @@
+OS secure random number generator interface added
+
+An interface to use the operating system's secure random number generator
+has been added to `std.random`. The OS RNG is accessed using the
+`osRNDGen` global instance and adheres to the `std.random` RNG interface.
+
+----------------------------
+import std.random;
+auto secureValue = osRNDGen.dice(70, 20, 10);
+----------------------------
