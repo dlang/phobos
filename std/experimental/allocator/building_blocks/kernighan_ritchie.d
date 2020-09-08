@@ -824,7 +824,6 @@ version (StdUnittest)
 
 @system unittest
 {
-    import std.experimental.allocator.building_blocks;
     import std.random;
     import std.typecons : Ternary;
 
@@ -866,7 +865,6 @@ version (StdUnittest)
 
 @system unittest
 {
-    import std.experimental.allocator.building_blocks;
     import std.random;
     import std.typecons : Ternary;
 
