@@ -3,7 +3,8 @@
 Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/kernighan_ritchie.d)
 */
 module std.experimental.allocator.building_blocks.kernighan_ritchie;
-import std.experimental.allocator.building_blocks.null_allocator;
+import std.experimental.allocator.building_blocks.null_allocator :
+    NullAllocator;
 
 //debug = KRRegion;
 debug(KRRegion) import std.stdio;
@@ -668,7 +669,6 @@ it actually returns memory to the operating system when possible.
     import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.allocator_list
         : AllocatorList;
-    import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.mmap_allocator : MmapAllocator;
     AllocatorList!(n => KRRegion!MmapAllocator(max(n * 16, 1024 * 1024))) alloc;
 }
@@ -678,7 +678,6 @@ it actually returns memory to the operating system when possible.
     import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.allocator_list
         : AllocatorList;
-    import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.mallocator : Mallocator;
     import std.typecons : Ternary;
     /*
@@ -711,7 +710,6 @@ it actually returns memory to the operating system when possible.
     import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.allocator_list
         : AllocatorList;
-    import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.mmap_allocator : MmapAllocator;
     import std.typecons : Ternary;
     /*
@@ -783,7 +781,6 @@ version (StdUnittest)
     const store = alloc.allocate(KRRegion!().sizeof);
     auto p = cast(KRRegion!()* ) store.ptr;
     import core.stdc.string : memcpy;
-    import std.algorithm.mutation : move;
     import std.conv : text, emplace;
 
     memcpy(p, &alloc, alloc.sizeof);
@@ -824,8 +821,7 @@ version (StdUnittest)
 
 @system unittest
 {
-    import std.experimental.allocator.building_blocks;
-    import std.random;
+    import std.random : randomCover;
     import std.typecons : Ternary;
 
     // Both sequences must work on either system
@@ -866,8 +862,6 @@ version (StdUnittest)
 
 @system unittest
 {
-    import std.experimental.allocator.building_blocks;
-    import std.random;
     import std.typecons : Ternary;
 
     // For 64 bits, we allocate in multiples of 8, but the minimum alloc size is 16.
