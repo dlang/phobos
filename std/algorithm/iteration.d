@@ -2002,128 +2002,130 @@ if (isInputRange!Range && !isForwardRange!Range)
     }
 }
 
+
+// Outer range
+private struct ChunkByOuter(Range)
+{
+ size_t groupNum;
+ Range  current;
+ Range  next;
+}
+// Inner range
+private struct ChunkByGroup(alias eq, Range)
+{
+ import std.typecons : RefCounted;
+ private size_t groupNum;
+ private Range  start;
+ private Range  current;
+
+ private RefCounted!(ChunkByOuter!Range) mothership;
+
+ this(RefCounted!(ChunkByOuter!Range) origin)
+ {
+  groupNum = origin.groupNum;
+
+  start = origin.current.save;
+  current = origin.current.save;
+  assert(!start.empty, "Passed range 'r' must not be empty");
+
+  mothership = origin;
+
+  // Note: this requires reflexivity.
+  assert(eq(start.front, current.front),
+    "predicate is not reflexive");
+ }
+
+ @property bool empty() { return groupNum == size_t.max; }
+ @property auto ref front() { return current.front; }
+
+ void popFront()
+ {
+  current.popFront();
+
+  // Note: this requires transitivity.
+  if (current.empty || !eq(start.front, current.front))
+  {
+   if (groupNum == mothership.groupNum)
+   {
+    // If parent range hasn't moved on yet, help it along by
+    // saving location of start of next Group.
+    mothership.next = current.save;
+   }
+
+   groupNum = size_t.max;
+  }
+ }
+
+ @property auto save()
+ {
+  auto copy = this;
+  copy.current = current.save;
+  return copy;
+ }
+}
+
 // Single-pass implementation of chunkBy for forward ranges.
 private struct ChunkByImpl(alias pred, Range)
 if (isForwardRange!Range)
 {
-    import std.typecons : RefCounted;
+ import std.typecons : RefCounted;
 
-    enum bool isUnary = ChunkByImplIsUnary!(pred, Range);
+ enum bool isUnary = ChunkByImplIsUnary!(pred, Range);
 
-    static if (isUnary)
-        alias eq = binaryFun!((a, b) => unaryFun!pred(a) == unaryFun!pred(b));
-    else
-        alias eq = binaryFun!pred;
+ static if (isUnary)
+  alias eq = binaryFun!((a, b) => unaryFun!pred(a) == unaryFun!pred(b));
+ else
+  alias eq = binaryFun!pred;
 
-    // Outer range
-    static struct Impl
-    {
-        size_t groupNum;
-        Range  current;
-        Range  next;
-    }
+ static assert(isForwardRange!(ChunkByGroup!(eq,Range)));
 
-    // Inner range
-    static struct Group
-    {
-        private size_t groupNum;
-        private Range  start;
-        private Range  current;
+ private RefCounted!(ChunkByOuter!Range) impl;
 
-        private RefCounted!Impl mothership;
+ this(Range r)
+ {
+  impl = RefCounted!(ChunkByOuter!Range)(0, r, r.save);
+ }
 
-        this(RefCounted!Impl origin)
-        {
-            groupNum = origin.groupNum;
+ @property bool empty() { return impl.current.empty; }
 
-            start = origin.current.save;
-            current = origin.current.save;
-            assert(!start.empty, "Passed range 'r' must not be empty");
+ @property auto front()
+ {
+  static if (isUnary)
+  {
+   import std.typecons : tuple;
+   return tuple(unaryFun!pred(impl.current.front), ChunkByGroup(impl));
+  }
+  else
+  {
+   return ChunkByGroup!(eq,Range)(impl);
+  }
+ }
 
-            mothership = origin;
+ void popFront()
+ {
+  // Scan for next group. If we're lucky, one of our Groups would have
+  // already set .next to the start of the next group, in which case the
+  // loop is skipped.
+  while (!impl.next.empty && eq(impl.current.front, impl.next.front))
+  {
+   impl.next.popFront();
+  }
 
-            // Note: this requires reflexivity.
-            assert(eq(start.front, current.front),
-                   "predicate is not reflexive");
-        }
+  impl.current = impl.next.save;
 
-        @property bool empty() { return groupNum == size_t.max; }
-        @property auto ref front() { return current.front; }
+  // Indicate to any remaining Groups that we have moved on.
+  impl.groupNum++;
+ }
 
-        void popFront()
-        {
-            current.popFront();
+ @property auto save()
+ {
+  // Note: the new copy of the range will be detached from any existing
+  // satellite Groups, and will not benefit from the .next acceleration.
+  return typeof(this)(impl.current.save);
+ }
 
-            // Note: this requires transitivity.
-            if (current.empty || !eq(start.front, current.front))
-            {
-                if (groupNum == mothership.groupNum)
-                {
-                    // If parent range hasn't moved on yet, help it along by
-                    // saving location of start of next Group.
-                    mothership.next = current.save;
-                }
-
-                groupNum = size_t.max;
-            }
-        }
-
-        @property auto save()
-        {
-            auto copy = this;
-            copy.current = current.save;
-            return copy;
-        }
-    }
-    static assert(isForwardRange!Group);
-
-    private RefCounted!Impl impl;
-
-    this(Range r)
-    {
-        impl = RefCounted!Impl(0, r, r.save);
-    }
-
-    @property bool empty() { return impl.current.empty; }
-
-    @property auto front()
-    {
-        static if (isUnary)
-        {
-            import std.typecons : tuple;
-            return tuple(unaryFun!pred(impl.current.front), Group(impl));
-        }
-        else
-        {
-            return Group(impl);
-        }
-    }
-
-    void popFront()
-    {
-        // Scan for next group. If we're lucky, one of our Groups would have
-        // already set .next to the start of the next group, in which case the
-        // loop is skipped.
-        while (!impl.next.empty && eq(impl.current.front, impl.next.front))
-        {
-            impl.next.popFront();
-        }
-
-        impl.current = impl.next.save;
-
-        // Indicate to any remaining Groups that we have moved on.
-        impl.groupNum++;
-    }
-
-    @property auto save()
-    {
-        // Note: the new copy of the range will be detached from any existing
-        // satellite Groups, and will not benefit from the .next acceleration.
-        return typeof(this)(impl.current.save);
-    }
-
-    static assert(isForwardRange!(typeof(this)), typeof(this).stringof
-            ~ " must be a forward range");
+ static assert(isForwardRange!(typeof(this)), typeof(this).stringof
+   ~ " must be a forward range");
 }
 
 @system unittest
