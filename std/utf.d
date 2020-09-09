@@ -66,7 +66,7 @@ import core.exception : UnicodeException;
 import std.meta : AliasSeq;
 import std.range.primitives;
 import std.traits : isAutodecodableString, isPointer, isSomeChar,
-    isSomeString, isStaticArray, Unqual;
+    isSomeString, isStaticArray, Unqual, isConvertibleToString;
 import std.typecons : Flag, Yes, No;
 
 
@@ -107,7 +107,7 @@ class UTFException : UnicodeException
          size_t line = __LINE__, Throwable next = null) @safe pure nothrow
     {
         UnsignedStringBuf buf = void;
-        msg ~= " (at index " ~ unsignedToTempString(index, buf, 10) ~ ")";
+        msg ~= " (at index " ~ unsignedToTempString(index, buf) ~ ")";
         super(msg, index, file, line, next);
     }
 
@@ -133,7 +133,7 @@ class UTFException : UnicodeException
         {
             UnsignedStringBuf buf = void;
             result ~= ' ';
-            auto h = unsignedToTempString(i, buf, 16);
+            auto h = unsignedToTempString!16(i, buf);
             if (h.length == 1)
                 result ~= '0';
             result ~= h;
@@ -333,7 +333,7 @@ pure nothrow @safe @nogc unittest
   +/
 uint stride(S)(auto ref S str, size_t index)
 if (is(S : const char[]) ||
-    (isRandomAccessRange!S && is(Unqual!(ElementType!S) == char)))
+    (isRandomAccessRange!S && is(immutable ElementType!S == immutable char)))
 {
     static if (is(typeof(str.length) : ulong))
         assert(index < str.length, "Past the end of the UTF-8 sequence");
@@ -348,7 +348,7 @@ if (is(S : const char[]) ||
 /// Ditto
 uint stride(S)(auto ref S str)
 if (is(S : const char[]) ||
-    (isInputRange!S && is(Unqual!(ElementType!S) == char)))
+    (isInputRange!S && is(immutable ElementType!S == immutable char)))
 {
     static if (is(S : const char[]))
         immutable c = str[0];
@@ -446,7 +446,7 @@ if (is(S : const char[]) ||
 /// Ditto
 uint stride(S)(auto ref S str, size_t index)
 if (is(S : const wchar[]) ||
-    (isRandomAccessRange!S && is(Unqual!(ElementType!S) == wchar)))
+    (isRandomAccessRange!S && is(immutable ElementType!S == immutable wchar)))
 {
     static if (is(typeof(str.length) : ulong))
         assert(index < str.length, "Past the end of the UTF-16 sequence");
@@ -463,7 +463,8 @@ if (is(S : const wchar[]))
 
 /// Ditto
 uint stride(S)(auto ref S str)
-if (isInputRange!S && is(Unqual!(ElementType!S) == wchar))
+if (isInputRange!S && is(immutable ElementType!S == immutable wchar) &&
+    !is(S : const wchar[]))
 {
     assert(!str.empty, "UTF-16 sequence is empty");
     immutable uint u = str.front;
@@ -541,7 +542,7 @@ if (isInputRange!S && is(Unqual!(ElementType!S) == wchar))
 /// Ditto
 uint stride(S)(auto ref S str, size_t index = 0)
 if (is(S : const dchar[]) ||
-    (isInputRange!S && is(Unqual!(ElementEncodingType!S) == dchar)))
+    (isInputRange!S && is(immutable ElementEncodingType!S == immutable dchar)))
 {
     static if (is(typeof(str.length) : ulong))
         assert(index < str.length, "Past the end of the UTF-32 sequence");
@@ -665,7 +666,7 @@ do
   +/
 uint strideBack(S)(auto ref S str, size_t index)
 if (is(S : const char[]) ||
-    (isRandomAccessRange!S && is(Unqual!(ElementType!S) == char)))
+    (isRandomAccessRange!S && is(immutable ElementType!S == immutable char)))
 {
     static if (is(typeof(str.length) : ulong))
         assert(index <= str.length, "Past the end of the UTF-8 sequence");
@@ -696,14 +697,14 @@ if (is(S : const char[]) ||
 /// Ditto
 uint strideBack(S)(auto ref S str)
 if (is(S : const char[]) ||
-    (isRandomAccessRange!S && hasLength!S && is(Unqual!(ElementType!S) == char)))
+    (isRandomAccessRange!S && hasLength!S && is(immutable ElementType!S == immutable char)))
 {
     return strideBack(str, str.length);
 }
 
 /// Ditto
 uint strideBack(S)(auto ref S str)
-if (isBidirectionalRange!S && is(Unqual!(ElementType!S) == char) && !isRandomAccessRange!S)
+if (isBidirectionalRange!S && is(immutable ElementType!S == immutable char) && !isRandomAccessRange!S)
 {
     assert(!str.empty, "Past the end of the UTF-8 sequence");
     auto temp = str.save;
@@ -791,7 +792,7 @@ if (isBidirectionalRange!S && is(Unqual!(ElementType!S) == char) && !isRandomAcc
 /// Ditto
 uint strideBack(S)(auto ref S str, size_t index)
 if (is(S : const wchar[]) ||
-    (isRandomAccessRange!S && is(Unqual!(ElementType!S) == wchar)))
+    (isRandomAccessRange!S && is(immutable ElementType!S == immutable wchar)))
 {
     static if (is(typeof(str.length) : ulong))
         assert(index <= str.length, "Past the end of the UTF-16 sequence");
@@ -804,7 +805,7 @@ if (is(S : const wchar[]) ||
 /// Ditto
 uint strideBack(S)(auto ref S str)
 if (is(S : const wchar[]) ||
-    (isBidirectionalRange!S && is(Unqual!(ElementType!S) == wchar)))
+    (isBidirectionalRange!S && is(immutable ElementType!S == immutable wchar)))
 {
     assert(!str.empty, "UTF-16 sequence is empty");
 
@@ -886,7 +887,7 @@ if (is(S : const wchar[]) ||
 
 /// Ditto
 uint strideBack(S)(auto ref S str, size_t index)
-if (isRandomAccessRange!S && is(Unqual!(ElementEncodingType!S) == dchar))
+if (isRandomAccessRange!S && is(immutable ElementEncodingType!S == immutable dchar))
 {
     static if (is(typeof(str.length) : ulong))
         assert(index <= str.length, "Past the end of the UTF-32 sequence");
@@ -896,7 +897,7 @@ if (isRandomAccessRange!S && is(Unqual!(ElementEncodingType!S) == dchar))
 
 /// Ditto
 uint strideBack(S)(auto ref S str)
-if (isBidirectionalRange!S && is(Unqual!(ElementEncodingType!S) == dchar))
+if (isBidirectionalRange!S && is(immutable ElementEncodingType!S == immutable dchar))
 {
     assert(!str.empty, "Empty UTF-32 sequence");
     return 1;
@@ -991,7 +992,7 @@ if (isBidirectionalRange!S && is(Unqual!(ElementEncodingType!S) == dchar))
 size_t toUCSindex(C)(const(C)[] str, size_t index) @safe pure
 if (isSomeChar!C)
 {
-    static if (is(Unqual!C == dchar))
+    static if (is(immutable C == immutable dchar))
         return index;
     else
     {
@@ -1003,7 +1004,7 @@ if (isSomeChar!C)
 
         if (j > index)
         {
-            static if (is(Unqual!C == char))
+            static if (is(immutable C == immutable char))
                 throw new UTFException("Invalid UTF-8 sequence", index);
             else
                 throw new UTFException("Invalid UTF-16 sequence", index);
@@ -1038,7 +1039,7 @@ if (isSomeChar!C)
 size_t toUTFindex(C)(const(C)[] str, size_t n) @safe pure
 if (isSomeChar!C)
 {
-    static if (is(Unqual!C == dchar))
+    static if (is(immutable C == immutable dchar))
     {
         return n;
     }
@@ -1221,7 +1222,7 @@ do
         // overloads of decodeImpl need it. So, it should be moved back into
         // decodeImpl once https://issues.dlang.org/show_bug.cgi?id=8521
         // has been fixed.
-        enum canIndex = isRandomAccessRange!S && hasSlicing!S && hasLength!S;
+        enum canIndex = is(S : const char[]) || isRandomAccessRange!S && hasSlicing!S && hasLength!S;
         immutable retval = decodeImpl!(canIndex, useReplacementDchar)(cast(TypeForDecode!S) str, numCodeUnits);
 
         // The other range types were already popped by decodeImpl.
@@ -1424,9 +1425,9 @@ do
 package template codeUnitLimit(S)
 if (isSomeChar!(ElementEncodingType!S))
 {
-    static if (is(Unqual!(ElementEncodingType!S) == char))
+    static if (is(immutable ElementEncodingType!S == immutable char))
         enum char codeUnitLimit = 0x80;
-    else static if (is(Unqual!(ElementEncodingType!S) == wchar))
+    else static if (is(immutable ElementEncodingType!S == immutable wchar))
         enum wchar codeUnitLimit = 0xD800;
     else
         enum dchar codeUnitLimit = 0xD800;
@@ -1452,7 +1453,7 @@ if (isSomeChar!(ElementEncodingType!S))
 private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(
     auto ref S str, ref size_t index)
 if (
-    is(S : const char[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == char)))
+    is(S : const char[]) || (isInputRange!S && is(immutable ElementEncodingType!S == immutable char)))
 {
     /* The following encodings are valid, except for the 5 and 6 byte
      * combinations:
@@ -1683,7 +1684,7 @@ unittest
 
 private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)
 (auto ref S str, ref size_t index)
-if (is(S : const wchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == wchar)))
+if (is(S : const wchar[]) || (isInputRange!S && is(immutable ElementEncodingType!S == immutable wchar)))
 {
     static if (is(S : const wchar[]))
         auto pstr = str.ptr + index;
@@ -1801,7 +1802,7 @@ unittest
 
 private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(
     auto ref S str, ref size_t index)
-if (is(S : const dchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == dchar)))
+if (is(S : const dchar[]) || (isInputRange!S && is(immutable ElementEncodingType!S == immutable dchar)))
 {
     static if (is(S : const dchar[]))
         auto pstr = str.ptr;
@@ -1873,11 +1874,12 @@ version (StdUnittest) private void testDecode(R)(R range,
     import core.exception : AssertError;
     import std.exception : enforce;
     import std.string : format;
+    import std.traits : isNarrowString;
 
     static if (hasLength!R)
         immutable lenBefore = range.length;
 
-    static if (isRandomAccessRange!R)
+    static if (isRandomAccessRange!R && !isNarrowString!R)
     {
         {
             immutable result = decode(range, index);
@@ -2105,11 +2107,10 @@ version (StdUnittest) private void testBadDecodeBack(R)(R range, size_t line = _
 
 @system unittest
 {
-    import std.conv : to;
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; AliasSeq!(to!wstring, InputCU!wchar, RandomCU!wchar,
+    foreach (S; AliasSeq!((wstring s) => s, InputCU!wchar, RandomCU!wchar,
                           (wstring s) => new RefBidirCU!wchar(s),
                           (wstring s) => new RefRandomCU!wchar(s)))
     {
@@ -2144,7 +2145,7 @@ version (StdUnittest) private void testBadDecodeBack(R)(R range, size_t line = _
         }
     }
 
-    foreach (S; AliasSeq!(to!wstring, RandomCU!wchar, (wstring s) => new RefRandomCU!wchar(s)))
+    foreach (S; AliasSeq!((wchar[] s) => s.idup, RandomCU!wchar, (wstring s) => new RefRandomCU!wchar(s)))
     {
         auto str = S([cast(wchar) 0xD800, cast(wchar) 0xDC00,
                       cast(wchar) 0x1400,
@@ -2161,11 +2162,10 @@ version (StdUnittest) private void testBadDecodeBack(R)(R range, size_t line = _
 
 @system unittest
 {
-    import std.conv : to;
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; AliasSeq!(to!dstring, RandomCU!dchar, InputCU!dchar,
+    foreach (S; AliasSeq!((dstring s) => s, RandomCU!dchar, InputCU!dchar,
                           (dstring s) => new RefBidirCU!dchar(s),
                           (dstring s) => new RefRandomCU!dchar(s)))
     {
@@ -2202,7 +2202,7 @@ version (StdUnittest) private void testBadDecodeBack(R)(R range, size_t line = _
         }
     }
 
-    foreach (S; AliasSeq!(to!dstring, RandomCU!dchar, (dstring s) => new RefRandomCU!dchar(s)))
+    foreach (S; AliasSeq!((dchar[] s) => s.idup, RandomCU!dchar, (dstring s) => new RefRandomCU!dchar(s)))
     {
         auto str = S([cast(dchar) 0x10000, cast(dchar) 0x1400, cast(dchar) 0xB9DDE]);
         testDecode(str, 0, 0x10000, 1);
@@ -2398,7 +2398,8 @@ size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     assertThrown!UTFException(encode(buf, cast(dchar) 0x110000));
 
     assert(encode!(Yes.useReplacementDchar)(buf, cast(dchar) 0x110000) == buf.stride);
-    assert(buf.front == replacementDchar);
+    enum replacementDcharString = "\uFFFD";
+    assert(buf[0 .. replacementDcharString.length] == replacementDcharString);
     });
 }
 
@@ -2616,9 +2617,11 @@ void encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     assertThrown!UTFException(encode(buf, cast(dchar) 0xDFFF));
     assertThrown!UTFException(encode(buf, cast(dchar) 0x110000));
 
-    assert(buf.back != replacementDchar);
+    enum replacementDcharString = "\uFFFD";
+    enum rdcslen = replacementDcharString.length;
+    assert(buf[$ - rdcslen .. $] != replacementDcharString);
     encode!(Yes.useReplacementDchar)(buf, cast(dchar) 0x110000);
-    assert(buf.back == replacementDchar);
+    assert(buf[$ - rdcslen .. $] == replacementDcharString);
     });
 }
 
@@ -2774,7 +2777,7 @@ if (isSomeChar!C)
         The number of code units in `input` when encoded to `C`
   +/
 size_t codeLength(C, InputRange)(InputRange input)
-if (isInputRange!InputRange && !isInfinite!InputRange && is(ElementType!InputRange : dchar))
+if (isInputRange!InputRange && !isInfinite!InputRange && isSomeChar!(ElementType!InputRange))
 {
     alias EncType = Unqual!(ElementEncodingType!InputRange);
     static if (isSomeString!InputRange && is(EncType == C) && is(typeof(input.length)))
@@ -2783,7 +2786,7 @@ if (isInputRange!InputRange && !isInfinite!InputRange && is(ElementType!InputRan
     {
         size_t total = 0;
 
-        foreach (dchar c; input)
+        foreach (c; input.byDchar)
             total += codeLength!C(c);
 
         return total;
@@ -2793,20 +2796,19 @@ if (isInputRange!InputRange && !isInfinite!InputRange && is(ElementType!InputRan
 ///
 @safe unittest
 {
-    import std.conv : to;
     assert(codeLength!char("hello world") ==
-           to!string("hello world").length);
+           "hello world".length);
     assert(codeLength!wchar("hello world") ==
-           to!wstring("hello world").length);
+           "hello world"w.length);
     assert(codeLength!dchar("hello world") ==
-           to!dstring("hello world").length);
+           "hello world"d.length);
 
     assert(codeLength!char(`プログラミング`) ==
-           to!string(`プログラミング`).length);
+           `プログラミング`.length);
     assert(codeLength!wchar(`プログラミング`) ==
-           to!wstring(`プログラミング`).length);
+           `プログラミング`w.length);
     assert(codeLength!dchar(`プログラミング`) ==
-           to!dstring(`プログラミング`).length);
+           `プログラミング`d.length);
 
     string haystack = `Être sans la verité, ça, ce ne serait pas bien.`;
     wstring needle = `Être sans la verité`;
@@ -2949,8 +2951,9 @@ if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : ReferenceInputRange;
 
-    auto r1 = new ReferenceInputRange!dchar("Hellø");
-    auto r2 = new ReferenceInputRange!dchar("𐐷");
+    alias RT = ReferenceInputRange!(ElementType!(string));
+    auto r1 = new RT("Hellø");
+    auto r2 = new RT("𐐷");
 
     assert(r1.toUTF8.equal(['H', 'e', 'l', 'l', 0xC3, 0xB8]));
     assert(r2.toUTF8.equal([0xF0, 0x90, 0x90, 0xB7]));
@@ -2991,8 +2994,9 @@ if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : ReferenceInputRange;
 
-    auto r1 = new ReferenceInputRange!dchar("𤭢");
-    auto r2 = new ReferenceInputRange!dchar("𐐷");
+    alias RT = ReferenceInputRange!(ElementType!(string));
+    auto r1 = new RT("𤭢");
+    auto r2 = new RT("𐐷");
 
     assert(r1.toUTF16.equal([0xD852, 0xDF62]));
     assert(r2.toUTF16.equal([0xD801, 0xDC37]));
@@ -3110,8 +3114,8 @@ template toUTFz(P)
 
 private P toUTFzImpl(P, S)(S str) @safe pure
 if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
-    is(Unqual!(typeof(*P.init)) == Unqual!(ElementEncodingType!S)) &&
-    is(immutable(Unqual!(ElementEncodingType!S)) == ElementEncodingType!S))
+    is(immutable typeof(*P.init) == immutable ElementEncodingType!S) &&
+    is(immutable ElementEncodingType!S == ElementEncodingType!S))
 //immutable(C)[] -> C*, const(C)*, or immutable(C)*
 {
     if (str.empty)
@@ -3155,8 +3159,8 @@ if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
 
 private P toUTFzImpl(P, S)(S str) @safe pure
 if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
-    is(Unqual!(typeof(*P.init)) == Unqual!(ElementEncodingType!S)) &&
-    !is(immutable(Unqual!(ElementEncodingType!S)) == ElementEncodingType!S))
+    is(immutable typeof(*P.init) == immutable ElementEncodingType!S) &&
+    !is(immutable ElementEncodingType!S == ElementEncodingType!S))
 //C[] or const(C)[] -> C*, const(C)*, or immutable(C)*
 {
     alias InChar  = ElementEncodingType!S;
@@ -3195,7 +3199,7 @@ if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
 
 private P toUTFzImpl(P, S)(S str) @safe pure
 if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
-    !is(Unqual!(typeof(*P.init)) == Unqual!(ElementEncodingType!S)))
+    !is(immutable typeof(*P.init) == immutable ElementEncodingType!S))
 //C1[], const(C1)[], or immutable(C1)[] -> C2*, const(C2)*, or immutable(C2)*
 {
     import std.array : appender;
@@ -3369,10 +3373,10 @@ if (isSomeChar!C)
     Throws:
         `UTFException` if `str` is not well-formed.
   +/
-size_t count(C)(const(C)[] str) @trusted pure nothrow @nogc
+size_t count(C)(const(C)[] str) @safe pure nothrow @nogc
 if (isSomeChar!C)
 {
-    return walkLength(str);
+    return walkLength(str.byDchar);
 }
 
 ///
@@ -3553,13 +3557,11 @@ enum dchar replacementDchar = '\uFFFD';
  *      $(REF byGrapheme, std,uni).
  */
 auto byCodeUnit(R)(R r)
-if (isAutodecodableString!R ||
-    isInputRange!R && isSomeChar!(ElementEncodingType!R) ||
-    (is(R : const dchar[]) && !isStaticArray!R))
+if ((isConvertibleToString!R && !isStaticArray!R) ||
+    (isInputRange!R && isSomeChar!(ElementEncodingType!R)))
 {
-    import std.traits : isNarrowString, StringTypeOf;
-    static if (isNarrowString!R ||
-               // This would be cleaner if we had a way to check whether a type
+    import std.traits : StringTypeOf;
+    static if (// This would be cleaner if we had a way to check whether a type
                // was a range without any implicit conversions.
                (isAutodecodableString!R && !__traits(hasMember, R, "empty") &&
                 !__traits(hasMember, R, "front") && !__traits(hasMember, R, "popFront")))
@@ -3590,8 +3592,9 @@ if (isAutodecodableString!R ||
 
         return ByCodeUnitImpl(r);
     }
-    else static if (is(R : const dchar[]) && !__traits(hasMember, R, "empty") &&
-                    !__traits(hasMember, R, "front") && !__traits(hasMember, R, "popFront"))
+    else static if (!isInputRange!R ||
+                    (is(R : const dchar[]) && !__traits(hasMember, R, "empty") &&
+                    !__traits(hasMember, R, "front") && !__traits(hasMember, R, "popFront")))
     {
         return cast(StringTypeOf!R) r;
     }
@@ -3606,6 +3609,7 @@ if (isAutodecodableString!R ||
 @safe unittest
 {
     import std.range.primitives;
+    import std.traits : isAutodecodableString;
 
     auto r = "Hello, World!".byCodeUnit();
     static assert(hasLength!(typeof(r)));
@@ -3613,14 +3617,27 @@ if (isAutodecodableString!R ||
     static assert(isRandomAccessRange!(typeof(r)));
     static assert(is(ElementType!(typeof(r)) == immutable char));
 
-    // contrast with the range capabilities of standard strings
+    // contrast with the range capabilities of standard strings (with or
+    // without autodecoding enabled).
     auto s = "Hello, World!";
     static assert(isBidirectionalRange!(typeof(r)));
-    static assert(is(ElementType!(typeof(s)) == dchar));
-
-    static assert(!isRandomAccessRange!(typeof(s)));
-    static assert(!hasSlicing!(typeof(s)));
-    static assert(!hasLength!(typeof(s)));
+    static if (isAutodecodableString!(typeof(s)))
+    {
+        // with autodecoding enabled, strings are non-random-access ranges of
+        // dchar.
+        static assert(is(ElementType!(typeof(s)) == dchar));
+        static assert(!isRandomAccessRange!(typeof(s)));
+        static assert(!hasSlicing!(typeof(s)));
+        static assert(!hasLength!(typeof(s)));
+    }
+    else
+    {
+        // without autodecoding, strings are normal arrays.
+        static assert(is(ElementType!(typeof(s)) == immutable char));
+        static assert(isRandomAccessRange!(typeof(s)));
+        static assert(hasSlicing!(typeof(s)));
+        static assert(hasLength!(typeof(s)));
+    }
 }
 
 /// `byCodeUnit` does no Unicode decoding
@@ -3641,12 +3658,16 @@ if (isAutodecodableString!R ||
 {
     import std.algorithm.comparison : equal;
     import std.range : popFrontN;
+    import std.traits : isAutodecodableString;
     {
         auto range = byCodeUnit("hello world");
         range.popFrontN(3);
         assert(equal(range.save, "lo world"));
-        string str = range.source;
-        assert(str == "lo world");
+        static if (isAutodecodableString!string) // only enabled with autodecoding
+        {
+            string str = range.source;
+            assert(str == "lo world");
+        }
     }
     // source only exists if the range was wrapped
     {
@@ -3705,7 +3726,7 @@ if (isAutodecodableString!R ||
     {
         auto bcu = "hello".byCodeUnit().byCodeUnit();
         static assert(isForwardRange!(typeof(bcu)));
-        static assert(is(typeof(bcu) == struct));
+        static assert(is(typeof(bcu) == struct) == isAutodecodableString!string);
         auto s = bcu.save;
         bcu.popFront();
         assert(s.front == 'h');
@@ -3714,7 +3735,7 @@ if (isAutodecodableString!R ||
         auto bcu = "hello".byCodeUnit();
         static assert(hasSlicing!(typeof(bcu)));
         static assert(isBidirectionalRange!(typeof(bcu)));
-        static assert(is(typeof(bcu) == struct));
+        static assert(is(typeof(bcu) == struct) == isAutodecodableString!string);
         static assert(is(typeof(bcu) == typeof(bcu.byCodeUnit())));
         auto ret = bcu.retro;
         assert(ret.front == 'o');
@@ -3725,7 +3746,7 @@ if (isAutodecodableString!R ||
         auto bcu = "κόσμε"w.byCodeUnit();
         static assert(hasSlicing!(typeof(bcu)));
         static assert(isBidirectionalRange!(typeof(bcu)));
-        static assert(is(typeof(bcu) == struct));
+        static assert(is(typeof(bcu) == struct) == isAutodecodableString!wstring);
         static assert(is(typeof(bcu) == typeof(bcu.byCodeUnit())));
         auto ret = bcu.retro;
         assert(ret.front == 'ε');
@@ -3742,7 +3763,7 @@ if (isAutodecodableString!R ||
         auto orig = Stringish("\U0010fff8 𐁊 foo 𐂓");
         auto bcu = orig.byCodeUnit();
         static assert(is(typeof(bcu) == struct));
-        static assert(!is(typeof(bcu) == Stringish));
+        static assert(!is(typeof(bcu) == Stringish) == isAutodecodableString!Stringish);
         static assert(is(typeof(bcu) == typeof(bcu.byCodeUnit())));
         static assert(is(ElementType!(typeof(bcu)) == immutable char));
         assert(bcu.front == cast(char) 244);
@@ -3757,7 +3778,7 @@ if (isAutodecodableString!R ||
         auto orig = WStringish("\U0010fff8 𐁊 foo 𐂓"w);
         auto bcu = orig.byCodeUnit();
         static assert(is(typeof(bcu) == struct));
-        static assert(!is(typeof(bcu) == WStringish));
+        static assert(!is(typeof(bcu) == WStringish) == isAutodecodableString!WStringish);
         static assert(is(typeof(bcu) == typeof(bcu.byCodeUnit())));
         static assert(is(ElementType!(typeof(bcu)) == immutable wchar));
         assert(bcu.front == cast(wchar) 56319);
@@ -3786,7 +3807,10 @@ if (isAutodecodableString!R ||
 
         auto orig = FuncStringish("\U0010fff8 𐁊 foo 𐂓");
         auto bcu = orig.byCodeUnit();
-        static assert(is(typeof(bcu) == struct));
+        static if (isAutodecodableString!FuncStringish)
+            static assert(is(typeof(bcu) == struct));
+        else
+            static assert(is(typeof(bcu) == string));
         static assert(!is(typeof(bcu) == FuncStringish));
         static assert(is(typeof(bcu) == typeof(bcu.byCodeUnit())));
         static assert(is(ElementType!(typeof(bcu)) == immutable char));
@@ -3903,7 +3927,10 @@ if (isAutodecodableString!R ||
         auto orig = Enum.a;
         auto bcu = orig.byCodeUnit();
         static assert(!is(typeof(bcu) == Enum));
-        static assert(is(typeof(bcu) == struct));
+        static if (isAutodecodableString!Enum)
+            static assert(is(typeof(bcu) == struct));
+        else
+            static assert(is(typeof(bcu) == string));
         static assert(is(ElementType!(typeof(bcu)) == immutable char));
         assert(bcu.front == 't');
     }
@@ -3913,7 +3940,10 @@ if (isAutodecodableString!R ||
         auto orig = WEnum.a;
         auto bcu = orig.byCodeUnit();
         static assert(!is(typeof(bcu) == WEnum));
-        static assert(is(typeof(bcu) == struct));
+        static if (isAutodecodableString!WEnum)
+            static assert(is(typeof(bcu) == struct));
+        else
+            static assert(is(typeof(bcu) == wstring));
         static assert(is(ElementType!(typeof(bcu)) == immutable wchar));
         assert(bcu.front == 't');
     }
@@ -3927,8 +3957,16 @@ if (isAutodecodableString!R ||
         assert(bcu.front == 't');
     }
 
-    static assert(!is(typeof(byCodeUnit("hello")) == string));
-    static assert(!is(typeof(byCodeUnit("hello"w)) == wstring));
+    static if (autodecodeStrings)
+    {
+        static assert(!is(typeof(byCodeUnit("hello")) == string));
+        static assert(!is(typeof(byCodeUnit("hello"w)) == wstring));
+    }
+    else
+    {
+        static assert(is(typeof(byCodeUnit("hello")) == string));
+        static assert(is(typeof(byCodeUnit("hello"w)) == wstring));
+    }
     static assert(is(typeof(byCodeUnit("hello"d)) == dstring));
 
     static assert(!__traits(compiles, byCodeUnit((char[5]).init)));

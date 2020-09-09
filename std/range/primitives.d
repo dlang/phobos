@@ -381,7 +381,7 @@ void put(R, E)(ref R r, E e)
     }
     //Optional optimization block for straight up array to array copy.
     else static if (isDynamicArray!R &&
-                    !(isAutodecodableString!R && !isAggregateType!R) &&
+                    !isAutodecodableString!R &&
                     isDynamicArray!E &&
                     is(typeof(r[] = e[])))
     {
@@ -2232,7 +2232,7 @@ equivalent to `popFront(array)`. For $(GLOSSARY narrow strings),
 point).
 */
 void popFront(T)(scope ref inout(T)[] a) @safe pure nothrow @nogc
-if (!(isAutodecodableString!(T[]) && !isAggregateType!(T[])) && !is(T[] == void[]))
+if (!isAutodecodableString!(T[]) && !is(T[] == void[]))
 {
     assert(a.length, "Attempting to popFront() past the end of an array of " ~ T.stringof);
     a = a[1 .. $];
@@ -2255,13 +2255,13 @@ if (!(isAutodecodableString!(T[]) && !isAggregateType!(T[])) && !is(T[] == void[
 
 /// ditto
 void popFront(C)(scope ref inout(C)[] str) @trusted pure nothrow
-if (isAutodecodableString!(C[]) && !isAggregateType!(C[]))
+if (isAutodecodableString!(C[]))
 {
     import std.algorithm.comparison : min;
 
     assert(str.length, "Attempting to popFront() past the end of an array of " ~ C.stringof);
 
-    static if (is(Unqual!C == char))
+    static if (is(immutable C == immutable char))
     {
         static immutable ubyte[] charWidthTab = [
             2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
@@ -2271,17 +2271,10 @@ if (isAutodecodableString!(C[]) && !isAggregateType!(C[]))
         ];
 
         immutable c = str[0];
-        if (c < 192)
-        {
-            str = str.ptr[1 .. str.length];
-        }
-        else
-        {
-            str = str.ptr[min(str.length, charWidthTab.ptr[c - 192]) .. str.length];
-        }
-
+        immutable charWidth = c < 192 ? 1 : charWidthTab.ptr[c - 192];
+        str = str.ptr[min(str.length, charWidth) .. str.length];
     }
-    else static if (is(Unqual!C == wchar))
+    else static if (is(immutable C == immutable wchar))
     {
         immutable u = str[0];
         immutable seqLen = 1 + (u >= 0xD800 && u <= 0xDBFF);
@@ -2354,7 +2347,7 @@ equivalent to `popBack(array)`. For $(GLOSSARY narrow strings), $(D
 popFront) automatically eliminates the last $(GLOSSARY code point).
 */
 void popBack(T)(scope ref inout(T)[] a) @safe pure nothrow @nogc
-if (!(isAutodecodableString!(T[]) && !isAggregateType!(T[])) && !is(T[] == void[]))
+if (!isAutodecodableString!(T[]) && !is(T[] == void[]))
 {
     assert(a.length);
     a = a[0 .. $ - 1];
@@ -2377,7 +2370,7 @@ if (!(isAutodecodableString!(T[]) && !isAggregateType!(T[])) && !is(T[] == void[
 
 /// ditto
 void popBack(T)(scope ref inout(T)[] a) @safe pure
-if (isAutodecodableString!(T[]) && !isAggregateType!(T[]))
+if (isAutodecodableString!(T[]))
 {
     import std.utf : strideBack;
     assert(a.length, "Attempting to popBack() past the front of an array of " ~ T.stringof);
@@ -2413,10 +2406,19 @@ if (isAutodecodableString!(T[]) && !isAggregateType!(T[]))
 }
 
 /**
-Autodecoding is enabled if this is set to true.
+EXPERIMENTAL: to try out removing autodecoding, set the version
+`NoAutodecodeStrings`. Most things are expected to fail with this version
+currently.
 */
-
-enum autodecodeStrings = true;
+version (NoAutodecodeStrings)
+{
+    enum autodecodeStrings = false;
+}
+else
+{
+    ///
+    enum autodecodeStrings = true;
+}
 
 /**
 Implements the range interface primitive `front` for built-in
@@ -2427,7 +2429,7 @@ front) automatically returns the first $(GLOSSARY code point) as _a $(D
 dchar).
 */
 @property ref inout(T) front(T)(return scope inout(T)[] a) @safe pure nothrow @nogc
-if (!(isAutodecodableString!(T[]) && !isAggregateType!(T[])) && !is(T[] == void[]))
+if (!isAutodecodableString!(T[]) && !is(T[] == void[]))
 {
     assert(a.length, "Attempting to fetch the front of an empty array of " ~ T.stringof);
     return a[0];
@@ -2456,7 +2458,7 @@ if (!(isAutodecodableString!(T[]) && !isAggregateType!(T[])) && !is(T[] == void[
 
 /// ditto
 @property dchar front(T)(scope const(T)[] a) @safe pure
-if (isAutodecodableString!(T[]) && !isAggregateType!(T[]))
+if (isAutodecodableString!(T[]))
 {
     import std.utf : decode;
     assert(a.length, "Attempting to fetch the front of an empty array of " ~ T.stringof);
@@ -2473,7 +2475,7 @@ back) automatically returns the last $(GLOSSARY code point) as _a $(D
 dchar).
 */
 @property ref inout(T) back(T)(return scope inout(T)[] a) @safe pure nothrow @nogc
-if (!(isAutodecodableString!(T[]) && !isAggregateType!(T[])) && !is(T[] == void[]))
+if (!isAutodecodableString!(T[]) && !is(T[] == void[]))
 {
     assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);
     return a[$ - 1];
@@ -2500,7 +2502,7 @@ if (!(isAutodecodableString!(T[]) && !isAggregateType!(T[])) && !is(T[] == void[
 /// ditto
 // Specialization for strings
 @property dchar back(T)(scope const(T)[] a) @safe pure
-if (isAutodecodableString!(T[]) && !isAggregateType!(T[]))
+if (isAutodecodableString!(T[]))
 {
     import std.utf : decode, strideBack;
     assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);

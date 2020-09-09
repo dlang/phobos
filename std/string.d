@@ -224,9 +224,9 @@ if (isSomeChar!Char)
 {
     import core.stdc.stddef : wchar_t;
 
-    static if (is(Unqual!Char == char))
+    static if (is(immutable Char == immutable char))
         import core.stdc.string : cstrlen = strlen;
-    else static if (is(Unqual!Char == wchar_t))
+    else static if (is(immutable Char == immutable wchar_t))
         import core.stdc.wchar_ : cstrlen = wcslen;
     else
         static size_t cstrlen(scope const Char* s)
@@ -1327,7 +1327,7 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
 
     if (cs == Yes.caseSensitive)
     {
-        static if (is(Unqual!Char1 == Unqual!Char2))
+        static if (is(immutable Char1 == immutable Char2))
         {
             import core.stdc.string : memcmp;
 
@@ -3013,8 +3013,8 @@ if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
     static import std.ascii;
     static import std.uni;
 
-    static if (is(Unqual!(ElementEncodingType!Range) == dchar)
-        || is(Unqual!(ElementEncodingType!Range) == wchar))
+    static if (is(immutable ElementEncodingType!Range == immutable dchar)
+        || is(immutable ElementEncodingType!Range == immutable wchar))
     {
         // Decoding is never needed for dchar. It happens not to be needed
         // here for wchar because no whitepace is outside the basic
@@ -3715,7 +3715,7 @@ if ((isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range) ||
 
     alias C1 = ElementEncodingType!Range;
 
-    static if (is(Unqual!C1 == Unqual!C2) && (isSomeString!Range || (hasSlicing!Range && C2.sizeof == 4)))
+    static if (is(immutable C1 == immutable C2) && (isSomeString!Range || (hasSlicing!Range && C2.sizeof == 4)))
     {
         import std.algorithm.searching : endsWith;
         if (str.endsWith(delimiter))
@@ -3866,7 +3866,7 @@ if ((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) ||
 {
     alias C1 = ElementEncodingType!Range;
 
-    static if (is(Unqual!C1 == Unqual!C2) && (isSomeString!Range || (hasSlicing!Range && C2.sizeof == 4)))
+    static if (is(immutable C1 == immutable C2) && (isSomeString!Range || (hasSlicing!Range && C2.sizeof == 4)))
     {
         import std.algorithm.searching : startsWith;
         if (str.startsWith(delimiter))
@@ -5499,7 +5499,7 @@ private void translateImpl(C1, T, C2, Buffer)(const(C1)[] str,
   +/
 C[] translate(C = immutable char)(scope const(char)[] str, scope const(char)[] transTable,
               scope const(char)[] toRemove = null) @trusted pure nothrow
-if (is(Unqual!C == char))
+if (is(immutable C == immutable char))
 in
 {
     import std.conv : to;
@@ -5657,7 +5657,7 @@ do
   +/
 void translate(C = immutable char, Buffer)(scope const(char)[] str, scope const(char)[] transTable,
         scope const(char)[] toRemove, Buffer buffer) @trusted pure
-if (is(Unqual!C == char) && isOutputRange!(Buffer, char))
+if (is(immutable C == immutable char) && isOutputRange!(Buffer, char))
 in
 {
     assert(transTable.length == 256, format!
@@ -6662,7 +6662,7 @@ if ((isInputRange!Range && isSomeChar!(Unqual!(ElementEncodingType!Range)) ||
     isNarrowString!Range) &&
     !isConvertibleToString!Range)
 {
-    static if (is(Unqual!(ElementEncodingType!Range) == char))
+    static if (is(immutable ElementEncodingType!Range == immutable char))
     {
         // decoding needed for chars
         import std.utf : byDchar;
@@ -7148,7 +7148,7 @@ Throws:
 See_Also: $(LREF representation)
 */
 auto assumeUTF(T)(T[] arr)
-if (staticIndexOf!(Unqual!T, ubyte, ushort, uint) != -1)
+if (staticIndexOf!(immutable T, immutable ubyte, immutable ushort, immutable uint) != -1)
 {
     import std.traits : ModifyTypePreservingTQ;
     import std.exception : collectException;

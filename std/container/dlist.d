@@ -642,6 +642,9 @@ Complexity: $(BIGOH 1)
         return remove(r);
     }
 
+    /// ditto
+    alias stableRemove = remove;
+
 /**
 Removes first element of `r`, wich must be a range obtained originally
 from this container, from both DList instance and range `r`.
@@ -697,8 +700,6 @@ Complexity: $(BIGOH r.walkLength)
         return remove(Range(first, last));
     }
 
-    /// ditto
-    alias stableRemove = remove;
     /// ditto
     alias stableLinearRemove = linearRemove;
 

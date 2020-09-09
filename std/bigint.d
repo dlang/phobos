@@ -145,6 +145,39 @@ public:
         assertThrown!ConvException(BigInt(r4));
     }
 
+    /**
+     * Construct a `BigInt` from a sign and a magnitude.
+     *
+     * The magnitude is an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+     * of unsigned integers that satisfies either $(REF hasLength, std,range,primitives)
+     * or $(REF isForwardRange, std,range,primitives). The first (leftmost)
+     * element of the magnitude is considered the most significant.
+     *
+     * Params:
+     *     isNegative = true for negative, false for non-negative
+     *          (ignored when magnitude is zero)
+     *     magnitude = a finite range of unsigned integers
+     */
+    this(Range)(bool isNegative, Range magnitude) if (
+        isInputRange!Range &&
+        isUnsigned!(ElementType!Range) &&
+        (hasLength!Range || isForwardRange!Range) &&
+        !isInfinite!Range)
+    {
+        data.fromMagnitude(magnitude);
+        sign = isNegative && !data.isZero;
+    }
+
+    ///
+    pure @safe unittest
+    {
+        ubyte[] magnitude = [1, 2, 3, 4, 5, 6];
+        auto b1 = BigInt(false, magnitude);
+        assert(cast(long) b1 == 0x01_02_03_04_05_06L);
+        auto b2 = BigInt(true, magnitude);
+        assert(cast(long) b2 == -0x01_02_03_04_05_06L);
+    }
+
     /// Construct a `BigInt` from a built-in integral type.
     this(T)(T x) pure nothrow @safe if (isIntegral!T)
     {
@@ -161,7 +194,7 @@ public:
     }
 
     /// Construct a `BigInt` from another `BigInt`.
-    this(T)(T x) pure nothrow @safe if (is(Unqual!T == BigInt))
+    this(T)(T x) pure nothrow @safe if (is(immutable T == immutable BigInt))
     {
         opAssign(x);
     }
@@ -481,11 +514,11 @@ public:
         // BigInt % long => long
         // BigInt % ulong => BigInt
         // BigInt % other_type => int
-        static if (is(Unqual!T == long) || is(Unqual!T == ulong))
+        static if (is(immutable T == immutable long) || is(immutable T == immutable ulong))
         {
             auto r = this % BigInt(y);
 
-            static if (is(Unqual!T == long))
+            static if (is(immutable T == immutable long))
             {
                 return r.toLong();
             }
@@ -498,7 +531,7 @@ public:
         else
         {
             immutable uint u = absUnsign(y);
-            static if (is(Unqual!T == uint))
+            static if (is(immutable T == immutable uint))
                alias R = long;
             else
                alias R = int;
@@ -988,7 +1021,7 @@ public:
         system guarantees. Use with care.
      */
     T opCast(T)() pure nothrow @nogc const
-    if (is(Unqual!T == BigInt))
+    if (is(immutable T == immutable BigInt))
     {
         return this;
     }
@@ -2279,12 +2312,13 @@ BigInt powmod(BigInt base, BigInt exponent, BigInt modulus) pure nothrow @safe
 
     while (exponent)
     {
-        if (exponent & 1)
+        if (exponent.data.peekUint(0) & 1)
         {
             result = (result * base) % modulus;
         }
 
-        base = ((base % modulus) * (base % modulus)) % modulus;
+        auto tmp = base % modulus;
+        base = (tmp * tmp) % modulus;
         exponent >>= 1;
     }
 

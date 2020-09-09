@@ -1783,7 +1783,7 @@ enum AsciiToken
  * )
  */
 int compareFirstN(alias pred = "a < b", S1, S2) (S1 s1, S2 s2, size_t length)
-if (is(Unqual!(ElementType!(S1)) == dchar) && is(Unqual!(ElementType!(S2)) == dchar))
+if (is(immutable ElementType!(S1) == immutable dchar) && is(immutable ElementType!(S2) == immutable dchar))
 {
     import std.uni : icmp;
     auto s1End = length <= s1.length ? length : s1.length;

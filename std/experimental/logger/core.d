@@ -1368,7 +1368,7 @@ abstract class Logger
         string moduleName = __MODULE__, A...)(lazy A args)
         if ((args.length > 1
                 && !is(Unqual!(A[0]) : bool)
-                && !is(Unqual!(A[0]) == LogLevel))
+                && !is(immutable A[0] == immutable LogLevel))
             || args.length == 0)
     {
         static if (isLoggingActive) synchronized (mutex)

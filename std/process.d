@@ -878,12 +878,7 @@ private Pid spawnProcessImpl(scope const(char[])[] args,
 
     if (args.empty) throw new RangeError();
     const(char)[] name = args[0];
-    if (any!isDirSeparator(name))
-    {
-        if (!isExecutable(name))
-            throw new ProcessException(text("Not an executable file: ", name));
-    }
-    else
+    if (!any!isDirSeparator(name))
     {
         name = searchPathFor(name);
         if (name is null)
@@ -1609,32 +1604,39 @@ version (Posix) @system unittest
     version (Windows) TestScript prog =
        "set /p INPUT=
         echo %INPUT% output %~1
-        echo %INPUT% error %~2 1>&2";
+        echo %INPUT% error %~2 1>&2
+        echo done > %3";
     else version (Posix) TestScript prog =
        "read INPUT
         echo $INPUT output $1
-        echo $INPUT error $2 >&2";
+        echo $INPUT error $2 >&2
+        echo done > \"$3\"";
 
     // Pipes
     void testPipes(Config config)
     {
+        import std.file, std.uuid, core.thread, std.exception;
         auto pipei = pipe();
         auto pipeo = pipe();
         auto pipee = pipe();
-        auto pid = spawnProcess([prog.path, "foo", "bar"],
+        auto done = buildPath(tempDir(), randomUUID().toString());
+        auto pid = spawnProcess([prog.path, "foo", "bar", done],
                                     pipei.readEnd, pipeo.writeEnd, pipee.writeEnd, null, config);
         pipei.writeEnd.writeln("input");
         pipei.writeEnd.flush();
         assert(pipeo.readEnd.readln().chomp() == "input output foo");
         assert(pipee.readEnd.readln().chomp().stripRight() == "input error bar");
-        if (!(config & Config.detached))
+        if (config & Config.detached)
+            while (!done.exists) Thread.sleep(10.msecs);
+        else
             wait(pid);
+        while (remove(done).collectException) Thread.sleep(10.msecs);
     }
 
     // Files
     void testFiles(Config config)
     {
-        import std.ascii, std.file, std.uuid, core.thread;
+        import std.ascii, std.file, std.uuid, core.thread, std.exception;
         auto pathi = buildPath(tempDir(), randomUUID().toString());
         auto patho = buildPath(tempDir(), randomUUID().toString());
         auto pathe = buildPath(tempDir(), randomUUID().toString());
@@ -1642,17 +1644,18 @@ version (Posix) @system unittest
         auto filei = File(pathi, "r");
         auto fileo = File(patho, "w");
         auto filee = File(pathe, "w");
-        auto pid = spawnProcess([prog.path, "bar", "baz" ], filei, fileo, filee, null, config);
-        if (!(config & Config.detached))
-            wait(pid);
+        auto done = buildPath(tempDir(), randomUUID().toString());
+        auto pid = spawnProcess([prog.path, "bar", "baz", done], filei, fileo, filee, null, config);
+        if (config & Config.detached)
+            while (!done.exists) Thread.sleep(10.msecs);
         else
-            // We need to wait a little to ensure that the process has finished and data was written to files
-            Thread.sleep(500.msecs);
+            wait(pid);
         assert(readText(patho).chomp() == "INPUT output bar");
         assert(readText(pathe).chomp().stripRight() == "INPUT error baz");
-        remove(pathi);
-        remove(patho);
-        remove(pathe);
+        while (remove(pathi).collectException) Thread.sleep(10.msecs);
+        while (remove(patho).collectException) Thread.sleep(10.msecs);
+        while (remove(pathe).collectException) Thread.sleep(10.msecs);
+        while (remove(done).collectException) Thread.sleep(10.msecs);
     }
 
     testPipes(Config.none);
@@ -1779,6 +1782,22 @@ version (Windows)
 
     auto data = readText(fn);
     assert(data == "AAAAAAAAAABBBBB\r\n", data);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=20765
+// Test that running processes with relative path works in conjunction
+// with indicating a workDir.
+version (Posix) @system unittest
+{
+    import std.file : mkdir, write, setAttributes;
+    import std.conv : octal;
+
+    auto dir = uniqueTempPath();
+    mkdir(dir);
+    write(dir ~ "/program", "#!/bin/sh\necho Hello");
+    setAttributes(dir ~ "/program", octal!700);
+
+    assert(execute(["./program"], null, Config.none, size_t.max, dir).output == "Hello\n");
 }
 
 /**

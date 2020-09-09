@@ -1508,7 +1508,10 @@ private:
     T* arr;
 }
 
-static assert(isRandomAccessRange!(SliceOverIndexed!(int[])));
+@safe pure nothrow @nogc unittest
+{
+    static assert(isRandomAccessRange!(SliceOverIndexed!(int[])));
+}
 
 SliceOverIndexed!(const(T)) sliceOverIndexed(T)(size_t a, size_t b, const(T)* x)
 if (is(Unqual!T == T))
@@ -5603,9 +5606,12 @@ struct sliceBits(size_t from, size_t to)
 alias lo8 = assumeSize!(low_8, 8);
 alias mlo8 = assumeSize!(midlow_8, 8);
 
-static assert(bitSizeOf!lo8 == 8);
-static assert(bitSizeOf!(sliceBits!(4, 7)) == 3);
-static assert(bitSizeOf!(BitPacked!(uint, 2)) == 2);
+@safe pure nothrow @nogc unittest
+{
+    static assert(bitSizeOf!lo8 == 8);
+    static assert(bitSizeOf!(sliceBits!(4, 7)) == 3);
+    static assert(bitSizeOf!(BitPacked!(uint, 2)) == 2);
+}
 
 template Sequence(size_t start, size_t end)
 {
@@ -5919,8 +5925,12 @@ pure:
     @property DecompressedIntervals save() { return this; }
 }
 
-static assert(isInputRange!DecompressedIntervals);
-static assert(isForwardRange!DecompressedIntervals);
+@safe pure nothrow @nogc unittest
+{
+    static assert(isInputRange!DecompressedIntervals);
+    static assert(isForwardRange!DecompressedIntervals);
+}
+
 //============================================================================
 
 version (std_uni_bootstrap){}
@@ -7134,7 +7144,7 @@ if (is(C : dchar))
     must be an L-value.
 +/
 Grapheme decodeGrapheme(Input)(ref Input inp)
-if (isInputRange!Input && is(Unqual!(ElementType!Input) == dchar))
+if (isInputRange!Input && is(immutable ElementType!Input == immutable dchar))
 {
     return genericDecodeGrapheme!true(inp);
 }
@@ -7167,7 +7177,7 @@ if (isInputRange!Input && is(Unqual!(ElementType!Input) == dchar))
         $(LREF byCodePoint)
 +/
 auto byGrapheme(Range)(Range range)
-if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
+if (isInputRange!Range && is(immutable ElementType!Range == immutable dchar))
 {
     // TODO: Bidirectional access
     static struct Result(R)
@@ -7270,7 +7280,7 @@ private static struct InputRangeString
     $(P If passed in a range of code points, returns a range with equivalent capabilities.)
 +/
 auto byCodePoint(Range)(Range range)
-if (isInputRange!Range && is(Unqual!(ElementType!Range) == Grapheme))
+if (isInputRange!Range && is(immutable ElementType!Range == immutable Grapheme))
 {
     // TODO: Propagate bidirectional access
     static struct Result
@@ -7313,7 +7323,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == Grapheme))
 
 /// Ditto
 auto byCodePoint(Range)(Range range)
-if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
+if (isInputRange!Range && is(immutable ElementType!Range == immutable dchar))
 {
     import std.range.primitives : isBidirectionalRange, popBack;
     import std.traits : isNarrowString;

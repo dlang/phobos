@@ -623,7 +623,8 @@ if (isInputRange!R1 && isInputRange!R2)
     static if (isDynamicArray!R1 && isDynamicArray!R2
         && __traits(isUnsigned, E1) && __traits(isUnsigned, E2)
         && E1.sizeof == 1 && E2.sizeof == 1
-        && (is(Unqual!E1 == char) == is(Unqual!E2 == char))) // Both or neither must auto-decode.
+        // Both or neither must auto-decode.
+        && (is(immutable E1 == immutable char) == is(immutable E2 == immutable char)))
     {
         // dstrcmp algorithm is correct for both ubyte[] and for char[].
         import core.internal.string : dstrcmp;
@@ -886,11 +887,22 @@ template equal(alias pred = "a == b")
 
     enum hasFixedLength(T) = hasLength!T || isNarrowString!T;
 
+    // use code points when comparing two ranges of UTF code units that aren't
+    // the same type. This is for backwards compatibility with autodecode
+    // strings.
+    enum useCodePoint(R1, R2) =
+        isSomeChar!(ElementEncodingType!R1) && isSomeChar!(ElementEncodingType!R2) &&
+        (ElementEncodingType!R1).sizeof != (ElementEncodingType!R2).sizeof;
+
     /++
     Compares two ranges for equality. The ranges may have
     different element types, as long as `pred(r1.front, r2.front)`
     evaluates to `bool`.
     Performs $(BIGOH min(r1.length, r2.length)) evaluations of `pred`.
+
+    If the two ranges are different kinds of UTF code unit (`char`, `wchar`, or
+    `dchar`), then the arrays are compared using UTF decoding to avoid
+    accidentally integer-promoting units.
 
     Params:
         r1 = The first range to be compared.
@@ -901,7 +913,8 @@ template equal(alias pred = "a == b")
         for element, according to binary predicate `pred`.
     +/
     bool equal(Range1, Range2)(Range1 r1, Range2 r2)
-    if (isInputRange!Range1 && isInputRange!Range2 &&
+    if (!useCodePoint!(Range1, Range2) &&
+        isInputRange!Range1 && isInputRange!Range2 &&
         is(typeof(binaryFun!pred(r1.front, r2.front))))
     {
         static assert(!(isInfinite!Range1 && isInfinite!Range2),
@@ -927,7 +940,7 @@ template equal(alias pred = "a == b")
         // can be avoided if they have the same ElementEncodingType
         else static if (is(typeof(pred) == string) && pred == "a == b" &&
             isAutodecodableString!Range1 != isAutodecodableString!Range2 &&
-            is(ElementEncodingType!Range1 == ElementEncodingType!Range2))
+            is(immutable ElementEncodingType!Range1 == immutable ElementEncodingType!Range2))
         {
             import std.utf : byCodeUnit;
 
@@ -966,6 +979,14 @@ template equal(alias pred = "a == b")
             static if (!isInfinite!Range1)
                 return r2.empty;
         }
+    }
+
+    /// ditto
+    bool equal(Range1, Range2)(Range1 r1, Range2 r2)
+    if (useCodePoint!(Range1, Range2))
+    {
+        import std.utf : byDchar;
+        return equal(r1.byDchar, r2.byDchar);
     }
 }
 
@@ -1072,20 +1093,28 @@ range of range (of range...) comparisons.
 
 @safe @nogc pure unittest
 {
-    import std.utf : byChar, byDchar;
+    import std.utf : byChar, byDchar, byWchar;
 
     assert(equal("æøå".byChar, "æøå"));
+    assert(equal("æøå".byChar, "æøå"w));
+    assert(equal("æøå".byChar, "æøå"d));
     assert(equal("æøå", "æøå".byChar));
-    assert(equal("æøå".byDchar, "æøå"d));
-    assert(equal("æøå"d, "æøå".byDchar));
-}
+    assert(equal("æøå"w, "æøå".byChar));
+    assert(equal("æøå"d, "æøå".byChar));
 
-@safe pure unittest
-{
-    import std.utf : byWchar;
-
+    assert(equal("æøå".byWchar, "æøå"));
     assert(equal("æøå".byWchar, "æøå"w));
+    assert(equal("æøå".byWchar, "æøå"d));
+    assert(equal("æøå", "æøå".byWchar));
     assert(equal("æøå"w, "æøå".byWchar));
+    assert(equal("æøå"d, "æøå".byWchar));
+
+    assert(equal("æøå".byDchar, "æøå"));
+    assert(equal("æøå".byDchar, "æøå"w));
+    assert(equal("æøå".byDchar, "æøå"d));
+    assert(equal("æøå", "æøå".byDchar));
+    assert(equal("æøå"w, "æøå".byDchar));
+    assert(equal("æøå"d, "æøå".byDchar));
 }
 
 @safe @nogc pure unittest
@@ -1684,8 +1713,8 @@ if (T.length >= 2)
 
     //Do the "min" proper with a and b
     import std.functional : lessThan;
-    immutable chooseA = lessThan!(T0, T1)(a, b);
-    return cast(typeof(return)) (chooseA ? a : b);
+    immutable chooseB = lessThan!(T1, T0)(b, a);
+    return cast(typeof(return)) (chooseB ? b : a);
 }
 
 ///
@@ -1726,6 +1755,19 @@ store the lowest values.
     assert(min(Date.max, Date(1982, 1, 4)) == Date(1982, 1, 4));
     assert(min(Date.min, Date.max) == Date.min);
     assert(min(Date.max, Date.min) == Date.min);
+}
+
+// min must be stable: when in doubt, return the first argument.
+@safe unittest
+{
+    assert(min(1.0, double.nan) == 1.0);
+    assert(min(double.nan, 1.0) is double.nan);
+    static struct A {
+        int x;
+        string y;
+        int opCmp(const A a) const { return int(x > a.x) - int(x < a.x); }
+    }
+    assert(min(A(1, "first"), A(1, "second")) == A(1, "first"));
 }
 
 // mismatch

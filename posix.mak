@@ -139,7 +139,7 @@ endif
 
 # Set DFLAGS
 DFLAGS=
-override DFLAGS+=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -preview=dip1000 $(MODEL_FLAG) $(PIC) -transition=complex
+override DFLAGS+=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -preview=dip1000 -preview=dtorfields $(MODEL_FLAG) $(PIC) -transition=complex
 ifeq ($(BUILD),debug)
 override DFLAGS += -g -debug
 else
@@ -147,7 +147,11 @@ override DFLAGS += -O -release
 endif
 
 ifdef ENABLE_COVERAGE
-override DFLAGS  += -cov
+override DFLAGS  += -cov=ctfe
+endif
+
+ifdef NO_AUTODECODE
+override DFLAGS += -version=NoAutodecodeStrings
 endif
 
 ifdef NO_AUTODECODE
@@ -241,7 +245,7 @@ STD_MODULES=$(call P2MODULES,$(STD_PACKAGES))
 
 # NoAutodecode test modules.
 # List all modules whose unittests are known to work without autodecode enabled.
-NO_AUTODECODE_MODULES=
+NO_AUTODECODE_MODULES= std/utf
 
 # Other D modules that aren't under std/
 EXTRA_MODULES_COMMON := $(addprefix etc/c/,curl odbc/sql odbc/sqlext \
@@ -414,7 +418,7 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 %.test : %.d $(LIB)
 	T=`mktemp -d /tmp/.dmd-run-test.XXXXXX` &&                                                              \
 	  (                                                                                                     \
-	    $(DMD) -od$$T $(DFLAGS) -main $(UDFLAGS) $(LIB) $(NODEFAULTLIB) $(LINKDL) -cov -run $< ;     \
+	    $(DMD) -od$$T $(DFLAGS) -main $(UDFLAGS) $(LIB) $(NODEFAULTLIB) $(LINKDL) -cov=ctfe -run $< ;     \
 	    RET=$$? ; rm -rf $$T ; exit $$RET                                                                   \
 	  )
 
@@ -504,7 +508,7 @@ $(JSON) : $(ALL_D_FILES)
 ###########################################################
 SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(EXTRA_DOCUMENTABLES))
 # Set DDOC, the documentation generator
-DDOC=$(DMD) -conf= $(MODEL_FLAG) -w -c -o- -preview=markdown -version=StdDdoc \
+DDOC=$(DMD) -conf= $(MODEL_FLAG) -w -c -o- -version=StdDdoc \
 	-I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 
 # D file to html, e.g. std/conv.d -> std_conv.html
@@ -563,17 +567,17 @@ $(DSCANNER_DIR)/dsc: | $(DSCANNER_DIR) $(DMD) $(LIB)
 	mv $(DSCANNER_DIR)/dscanner_makefile_tmp $(DSCANNER_DIR)/makefile
 	DC=$(abspath $(DMD)) DFLAGS="$(DFLAGS) -defaultlib=$(LIB)" $(MAKE) -C $(DSCANNER_DIR) githash debug
 
-style: publictests style_lint
+style: style_lint publictests
 
 # runs static code analysis with Dscanner
-dscanner:
+dscanner: $(LIB)
 	@# The dscanner target is without dependencies to avoid constant rebuilds of Phobos (`make` always rebuilds order-only dependencies)
 	@# However, we still need to ensure that the DScanner binary is built once
 	@[ -f $(DSCANNER_DIR)/dsc ] || ${MAKE} -f posix.mak $(DSCANNER_DIR)/dsc
 	@echo "Running DScanner"
 	$(DSCANNER_DIR)/dsc --config .dscanner.ini --styleCheck etc std -I.
 
-style_lint: dscanner $(LIB)
+style_lint_shellcmds:
 	@echo "Check for trailing whitespace"
 	grep -nr '[[:blank:]]$$' $$(find etc std -name '*.d'); test $$? -eq 1
 
@@ -617,6 +621,7 @@ style_lint: dscanner $(LIB)
 		{ echo "$$file: The title is supposed to be followed by a long description" && exit 1; } ;\
 	done
 
+style_lint: style_lint_shellcmds dscanner
 	@echo "Check that Ddoc runs without errors"
 	$(DMD) $(DFLAGS) $(NODEFAULTLIB) $(LIB) -w -D -Df/dev/null -main -c -o- $$(find etc std -type f -name '*.d') 2>&1
 

@@ -133,7 +133,10 @@ static import core.stdc.fenv;
 import std.traits :  CommonType, isFloatingPoint, isIntegral, isNumeric,
     isSigned, isUnsigned, Largest, Unqual;
 
+// @@@DEPRECATED_2.102@@@
 // Note: Exposed accidentally, should be deprecated / removed
+deprecated("std.meta.AliasSeq was unintentionally available from std.math "
+           ~ "and will be removed after 2.102. Please import std.meta instead")
 public import std.meta : AliasSeq;
 
 version (DigitalMars)
@@ -292,14 +295,14 @@ enum real SQRT1_2 =    SQRT2/2;                               /** $(SQRT)$(HALF)
  *     Does not work correctly for signed intergal types and value `Num`.min.
  */
 auto abs(Num)(Num x) @nogc pure nothrow
-if ((is(Unqual!Num == short) || is(Unqual!Num == byte)) ||
+if ((is(immutable Num == immutable short) || is(immutable Num == immutable byte)) ||
     (is(typeof(Num.init >= 0)) && is(typeof(-Num.init))))
 {
     static if (isFloatingPoint!(Num))
         return fabs(x);
     else
     {
-        static if (is(Unqual!Num == short) || is(Unqual!Num == byte))
+        static if (is(immutable Num == immutable short) || is(immutable Num == immutable byte))
             return x >= 0 ? x : cast(Num) -int(x);
         else
             return x >= 0 ? x : -x;
@@ -2777,7 +2780,7 @@ if (isFloatingPoint!T)
 
     Unqual!T vf = value;
     ushort* vu = cast(ushort*)&vf;
-    static if (is(Unqual!T == float))
+    static if (is(immutable T == immutable float))
         int* vi = cast(int*)&vf;
     else
         long* vl = cast(long*)&vf;
@@ -3368,13 +3371,14 @@ alias FP_ILOGBNAN = core.stdc.math.FP_ILOGBNAN;
  * References: frexp
  */
 
-real ldexp(real n, int exp) @nogc @safe pure nothrow { pragma(inline, true); return core.math.ldexp(n, exp); }
-//FIXME
+pragma(inline, true)
+real ldexp(real n, int exp)     @safe pure nothrow @nogc { return core.math.ldexp(n, exp); }
 ///ditto
-double ldexp(double n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real) n, exp); }
-//FIXME
+pragma(inline, true)
+double ldexp(double n, int exp) @safe pure nothrow @nogc { return core.math.ldexp(n, exp); }
 ///ditto
-float ldexp(float n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real) n, exp); }
+pragma(inline, true)
+float ldexp(float n, int exp)   @safe pure nothrow @nogc { return core.math.ldexp(n, exp); }
 
 ///
 @nogc @safe pure nothrow unittest
@@ -3640,9 +3644,9 @@ real log(real x) @safe pure nothrow @nogc
 
         // Logarithm using log(1 + x) = x - .5x^^2 + x^^3 P(x) / Q(x)
         if (x < SQRT1_2)
-        {   // 2x - 1
+        {
             exp -= 1;
-            x = ldexp(x, 1) - 1.0;
+            x = 2.0 * x - 1.0;
         }
         else
         {
@@ -3651,7 +3655,7 @@ real log(real x) @safe pure nothrow @nogc
         z = x * x;
         y = x * (z * poly(x, logCoeffsP) / poly(x, logCoeffsQ));
         y += exp * C2;
-        z = y - ldexp(z, -1);
+        z = y - 0.5 * z;
 
         // Note, the sum of above terms does not exceed x/4,
         // so it contributes at most about 1/4 lsb to the error.
@@ -3733,16 +3737,16 @@ real log10(real x) @safe pure nothrow @nogc
 
         // Logarithm using log(1 + x) = x - .5x^^2 + x^^3 P(x) / Q(x)
         if (x < SQRT1_2)
-        {   // 2x - 1
+        {
             exp -= 1;
-            x = ldexp(x, 1) - 1.0;
+            x = 2.0 * x - 1.0;
         }
         else
             x = x - 1.0;
 
         z = x * x;
         y = x * (z * poly(x, logCoeffsP) / poly(x, logCoeffsQ));
-        y = y - ldexp(z, -1);
+        y = y - 0.5 * z;
 
         // Multiply log of fraction by log10(e) and base 2 exponent by log10(2).
         // This sequence of operations is critical and it may be horribly
@@ -3874,16 +3878,16 @@ real log2(real x) @safe pure nothrow @nogc
 
         // Logarithm using log(1 + x) = x - .5x^^2 + x^^3 P(x) / Q(x)
         if (x < SQRT1_2)
-        {   // 2x - 1
+        {
             exp -= 1;
-            x = ldexp(x, 1) - 1.0;
+            x = 2.0 * x - 1.0;
         }
         else
             x = x - 1.0;
 
         z = x * x;
         y = x * (z * poly(x, logCoeffsP) / poly(x, logCoeffsQ));
-        y = y - ldexp(z, -1);
+        y = y - 0.5 * z;
 
         // Multiply log of fraction by log10(e) and base 2 exponent by log10(2).
         // This sequence of operations is critical and it may be horribly
@@ -4112,19 +4116,38 @@ real cbrt(real x) @trusted nothrow @nogc
  *      )
  */
 real fabs(real x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.fabs(x); }
-//FIXME
+
 ///ditto
-double fabs(double x) @safe pure nothrow @nogc { return fabs(cast(real) x); }
-//FIXME
+pragma(inline, true)
+double fabs(double d) @trusted pure nothrow @nogc
+{
+    ulong tmp = *cast(ulong*)&d & 0x7FFF_FFFF_FFFF_FFFF;
+    return *cast(double*)&tmp;
+}
+
 ///ditto
-float fabs(float x) @safe pure nothrow @nogc { return fabs(cast(real) x); }
+pragma(inline, true)
+float fabs(float f) @trusted pure nothrow @nogc
+{
+    uint tmp = *cast(uint*)&f & 0x7FFF_FFFF;
+    return *cast(float*)&tmp;
+}
 
 ///
 @safe unittest
 {
+
+    assert(isIdentical(fabs(0.0f), 0.0f));
+    assert(isIdentical(fabs(-0.0f), 0.0f));
+    assert(fabs(-10.0f) == 10.0f);
+
     assert(isIdentical(fabs(0.0), 0.0));
     assert(isIdentical(fabs(-0.0), 0.0));
     assert(fabs(-10.0) == 10.0);
+
+    assert(isIdentical(fabs(0.0L), 0.0L));
+    assert(isIdentical(fabs(-0.0L), 0.0L));
+    assert(fabs(-10.0L) == 10.0L);
 }
 
 @safe unittest
@@ -5253,7 +5276,7 @@ public:
             calculations if x were local to the function literals. */
         auto tests = [
             Test(
-                () { x = 1; x += 0.1; },
+                () { x = 1; x += 0.1L; },
                 () => ieeeFlags.inexact
             ),
             Test(
@@ -5579,21 +5602,6 @@ nothrow @nogc:
                                  | inexactException,
         }
     }
-    else version (RISCV_Any)
-    {
-        enum : ExceptionMask
-        {
-            inexactException      = 0x01,
-            divByZeroException    = 0x02,
-            underflowException    = 0x04,
-            overflowException     = 0x08,
-            invalidException      = 0x10,
-            severeExceptions   = overflowException | divByZeroException
-                                 | invalidException,
-            allExceptions      = severeExceptions | underflowException
-                                 | inexactException,
-        }
-    }
     else version (X86_Any)
     {
         enum : ExceptionMask
@@ -5718,10 +5726,6 @@ private:
         alias ControlState = ulong;
     }
     else version (IBMZ_Any)
-    {
-        alias ControlState = uint;
-    }
-    else version (RISCV_Any)
     {
         alias ControlState = uint;
     }
@@ -5905,7 +5909,7 @@ private:
                 fpctrl.rounding = rm;
                 T x = 1;
                 blockopt(x); // avoid constant propagation by the optimizer
-                x += 0.1;
+                x += 0.1L;
                 return x;
             }
 
@@ -5926,7 +5930,7 @@ private:
                 fpctrl.rounding = rm;
                 T x = -1;
                 blockopt(x); // avoid constant propagation by the optimizer
-                x -= 0.1;
+                x -= 0.1L;
                 return x;
             }
 
@@ -7224,43 +7228,63 @@ real fdim(real x, real y) @safe pure nothrow @nogc
 }
 
 /**
- * Returns the larger of x and y.
+ * Returns the larger of `x` and `y`.
  *
- * If one of the arguments is a NaN, the other is returned.
+ * If one of the arguments is a `NaN`, the other is returned.
+ *
+ * See_Also: $(REF max, std,algorithm,comparison) is faster because it does not perform the `isNaN` test.
  */
-real fmax(real x, real y) @safe pure nothrow @nogc
+F fmax(F)(const F x, const F y) @safe pure nothrow @nogc
+if (__traits(isFloating, F))
 {
-    return (y > x || isNaN(x)) ? y : x;
+    // Do the more predictable test first. Generates 0 branches with ldc and 1 branch with gdc.
+    // See https://godbolt.org/z/erxrW9
+    if (isNaN(x)) return y;
+    return y > x ? y : x;
 }
 
 ///
 @safe pure nothrow @nogc unittest
 {
-    assert(fmax(0.0, 2.0) == 2.0);
-    assert(fmax(-2.0, 0.0) == 0.0);
-    assert(fmax(real.infinity, 2.0) == real.infinity);
-    assert(fmax(real.nan, 2.0) == 2.0);
-    assert(fmax(2.0, real.nan) == 2.0);
+    import std.meta : AliasSeq;
+    static foreach (F; AliasSeq!(float, double, real))
+    {
+        assert(fmax(F(0.0), F(2.0)) == 2.0);
+        assert(fmax(F(-2.0), 0.0) == F(0.0));
+        assert(fmax(F.infinity, F(2.0)) == F.infinity);
+        assert(fmax(F.nan, F(2.0)) == F(2.0));
+        assert(fmax(F(2.0), F.nan) == F(2.0));
+    }
 }
 
 /**
- * Returns the smaller of x and y.
+ * Returns the smaller of `x` and `y`.
  *
- * If one of the arguments is a NaN, the other is returned.
+ * If one of the arguments is a `NaN`, the other is returned.
+ *
+ * See_Also: $(REF min, std,algorithm,comparison) is faster because it does not perform the `isNaN` test.
  */
-real fmin(real x, real y) @safe pure nothrow @nogc
+F fmin(F)(const F x, const F y) @safe pure nothrow @nogc
+if (__traits(isFloating, F))
 {
-    return (y < x || isNaN(x)) ? y : x;
+    // Do the more predictable test first. Generates 0 branches with ldc and 1 branch with gdc.
+    // See https://godbolt.org/z/erxrW9
+    if (isNaN(x)) return y;
+    return y < x ? y : x;
 }
 
 ///
 @safe pure nothrow @nogc unittest
 {
-    assert(fmin(0.0, 2.0) == 0.0);
-    assert(fmin(-2.0, 0.0) == -2.0);
-    assert(fmin(real.infinity, 2.0) == 2.0);
-    assert(fmin(real.nan, 2.0) == 2.0);
-    assert(fmin(2.0, real.nan) == 2.0);
+    import std.meta : AliasSeq;
+    static foreach (F; AliasSeq!(float, double, real))
+    {
+        assert(fmin(F(0.0), F(2.0)) == 0.0);
+        assert(fmin(F(-2.0), F(0.0)) == -2.0);
+        assert(fmin(F.infinity, F(2.0)) == 2.0);
+        assert(fmin(F.nan, F(2.0)) == 2.0);
+        assert(fmin(F(2.0), F.nan) == 2.0);
+    }
 }
 
 /**************************************
@@ -7723,7 +7747,7 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
                 if (floor(y) != y)
                     return sqrt(x); // Complex result -- create a NaN
 
-                const hy = ldexp(y, -1);
+                const hy = 0.5 * y;
                 if (floor(hy) != hy)
                     sign = -1.0;
             }
@@ -8178,7 +8202,7 @@ in
 }
 do
 {
-    static if (is(Unqual!T2 == real))
+    static if (is(immutable T2 == immutable real))
     {
         return polyImpl(x, A);
     }
@@ -8205,8 +8229,8 @@ if (isFloatingPoint!T1 && isFloatingPoint!T2 && N > 0 && N <= 10)
 ///
 @safe nothrow @nogc unittest
 {
-    real x = 3.1;
-    static real[] pp = [56.1, 32.7, 6];
+    real x = 3.1L;
+    static real[] pp = [56.1L, 32.7L, 6];
 
     assert(poly(x, pp) == (56.1L + (32.7L + 6.0L * x) * x));
 }

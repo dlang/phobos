@@ -2767,11 +2767,11 @@ public:
 T swapEndian(T)(const T val) @safe pure nothrow @nogc
 if (isIntegral!T || isSomeChar!T || isBoolean!T)
 {
-    import core.bitop : bswap;
+    import core.bitop : bswap, byteswap;
     static if (val.sizeof == 1)
         return val;
     else static if (T.sizeof == 2)
-        return cast(T) (((val & 0xff00U) >> 8) | ((val & 0x00ffU) << 8));
+        return cast(T) byteswap(cast(ushort) val);
     else static if (T.sizeof == 4)
         return cast(T) bswap(cast(uint) val);
     else static if (T.sizeof == 8)
@@ -3251,7 +3251,7 @@ if (isFloatOrDouble!T && n == T.sizeof)
 private template isFloatOrDouble(T)
 {
     enum isFloatOrDouble = isFloatingPoint!T &&
-                           !is(Unqual!(FloatingPointTypeOf!T) == real);
+                           !is(immutable FloatingPointTypeOf!T == immutable real);
 }
 
 @safe unittest

@@ -2175,7 +2175,7 @@ output range `R`. Returns the number of `E`s written.
 size_t encode(E, R)(dchar c, auto ref R range)
 if (isNativeOutputRange!(R, E))
 {
-    static if (is(Unqual!E == char))
+    static if (is(immutable E == immutable char))
     {
         if (c <= 0x7F)
         {
@@ -2208,7 +2208,7 @@ if (isNativeOutputRange!(R, E))
             assert(0);
         }
     }
-    else static if (is(Unqual!E == wchar))
+    else static if (is(immutable E == immutable wchar))
     {
         if (c <= 0xFFFF)
         {
@@ -2219,7 +2219,7 @@ if (isNativeOutputRange!(R, E))
         range.put(cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00));
         return 2;
     }
-    else static if (is(Unqual!E == dchar))
+    else static if (is(immutable E == immutable dchar))
     {
         range.put(c);
         return 1;
@@ -2420,17 +2420,17 @@ do
     {
         r = s;
     }
-    else static if (is(Unqual!Src == AsciiChar))
+    else static if (is(immutable Src == immutable AsciiChar))
     {
         transcode(cast(const(char)[])s, r);
     }
     else
     {
-        static if (is(Unqual!Dst == wchar))
+        static if (is(immutable Dst == immutable wchar))
         {
             immutable minReservePlace = 2;
         }
-        else static if (is(Unqual!Dst == dchar))
+        else static if (is(immutable Dst == immutable dchar))
         {
             immutable minReservePlace = 1;
         }
@@ -3745,7 +3745,7 @@ Returns:
     the found `BOMSeq` corresponding to the passed `input`.
 */
 immutable(BOMSeq) getBOM(Range)(Range input)
-if (isForwardRange!Range && is(Unqual!(ElementType!Range) == ubyte))
+if (isForwardRange!Range && is(immutable ElementType!Range == immutable ubyte))
 {
     import std.algorithm.searching : startsWith;
     foreach (it; bomTable[1 .. $])
