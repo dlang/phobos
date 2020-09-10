@@ -154,6 +154,10 @@ ifdef NO_AUTODECODE
 override DFLAGS += -version=NoAutodecodeStrings
 endif
 
+ifdef NO_AUTODECODE
+override DFLAGS += -version=NoAutodecodeStrings
+endif
+
 UDFLAGS=-unittest -version=StdUnittest
 
 # Set DOTOBJ and DOTEXE
