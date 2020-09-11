@@ -1076,16 +1076,6 @@ if (isSomeChar!C)
 /// Whether or not to replace invalid UTF with $(LREF replacementDchar)
 alias UseReplacementDchar = Flag!"useReplacementDchar";
 
-// Reduce distinct instantiations of decodeImpl.
-private template TypeForDecode(T)
-{
-    import std.traits : isDynamicArray;
-    static if (isDynamicArray!T && is(T : E[], E) && __traits(isArithmetic, E) && !is(E == shared))
-        alias TypeForDecode = const(Unqual!E)[];
-    else
-        alias TypeForDecode = T;
-}
-
 /++
     Decodes and returns the code point starting at `str[index]`. `index`
     is advanced to one past the decoded code point. If the code point is not
@@ -1124,7 +1114,7 @@ do
     if (str[index] < codeUnitLimit!S)
         return str[index++];
     else
-        return decodeImpl!(true, useReplacementDchar)(cast(TypeForDecode!S) str, index);
+        return decodeImpl!(true, useReplacementDchar)(str, index);
 }
 
 /// ditto
@@ -1143,8 +1133,8 @@ do
 {
     if (str[index] < codeUnitLimit!S)
         return str[index++];
-    else
-        return decodeImpl!(true, useReplacementDchar)(cast(TypeForDecode!S) str, index);
+    else static if (is(immutable S == immutable C[], C))
+        return decodeImpl!(true, useReplacementDchar)(cast(const(C)[]) str, index);
 }
 
 ///
@@ -1223,7 +1213,7 @@ do
         // decodeImpl once https://issues.dlang.org/show_bug.cgi?id=8521
         // has been fixed.
         enum canIndex = is(S : const char[]) || isRandomAccessRange!S && hasSlicing!S && hasLength!S;
-        immutable retval = decodeImpl!(canIndex, useReplacementDchar)(cast(TypeForDecode!S) str, numCodeUnits);
+        immutable retval = decodeImpl!(canIndex, useReplacementDchar)(str, numCodeUnits);
 
         // The other range types were already popped by decodeImpl.
         static if (isRandomAccessRange!S && hasSlicing!S && hasLength!S)
@@ -1254,9 +1244,9 @@ do
         str = str[1 .. $];
         return retval;
     }
-    else
+    else static if (is(immutable S == immutable C[], C))
     {
-        immutable retval = decodeImpl!(true, useReplacementDchar)(cast(TypeForDecode!S) str, numCodeUnits);
+        immutable retval = decodeImpl!(true, useReplacementDchar)(cast(const(C)[]) str, numCodeUnits);
         str = str[numCodeUnits .. $];
         return retval;
     }
@@ -1325,12 +1315,12 @@ do
         str = str[0 .. $ - 1];
         return retval;
     }
-    else
+    else static if (is(immutable S == immutable C[], C))
     {
         numCodeUnits = strideBack(str);
         immutable newLength = str.length - numCodeUnits;
         size_t index = newLength;
-        immutable retval = decodeImpl!(true, useReplacementDchar)(cast(TypeForDecode!S) str, index);
+        immutable retval = decodeImpl!(true, useReplacementDchar)(cast(const(C)[]) str, index);
         str = str[0 .. newLength];
         return retval;
     }
@@ -1364,7 +1354,7 @@ do
         static if (isRandomAccessRange!S)
         {
             size_t index = str.length - numCodeUnits;
-            immutable retval = decodeImpl!(true, useReplacementDchar)(cast(TypeForDecode!S) str, index);
+            immutable retval = decodeImpl!(true, useReplacementDchar)(str, index);
             str.popBackExactly(numCodeUnits);
             return retval;
         }
@@ -1380,8 +1370,7 @@ do
             }
             const Char[] codePoint = codeUnits[0 .. numCodeUnits];
             size_t index = 0;
-            immutable retval = decodeImpl!(true, useReplacementDchar)(
-                cast(TypeForDecode!(typeof(codePoint))) codePoint, index);
+            immutable retval = decodeImpl!(true, useReplacementDchar)(codePoint, index);
             str = tmp;
             return retval;
         }
@@ -3044,7 +3033,7 @@ private T toUTFImpl(T, S)(S s)
         import std.array : appender;
         auto app = appender!T();
 
-        static if (hasLength!S || isSomeString!S)
+        static if (is(S == C[], C) || hasLength!S)
             app.reserve(s.length);
 
         foreach (c; s.byUTF!(Unqual!(ElementEncodingType!T)))
@@ -3094,8 +3083,10 @@ private T toUTFImpl(T, S)(S s)
     collection cycle and cause a nasty bug when the C code tries to use it.
   +/
 template toUTFz(P)
+if (isPointer!P && isSomeChar!(typeof(*P.init)))
 {
     P toUTFz(S)(S str) @safe pure
+    if (isSomeString!S)
     {
         return toUTFzImpl!(P, S)(str);
     }
@@ -3113,9 +3104,7 @@ template toUTFz(P)
 }
 
 private P toUTFzImpl(P, S)(S str) @safe pure
-if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
-    is(immutable typeof(*P.init) == immutable ElementEncodingType!S) &&
-    is(immutable ElementEncodingType!S == ElementEncodingType!S))
+if (is(immutable typeof(*P.init) == typeof(str[0])))
 //immutable(C)[] -> C*, const(C)*, or immutable(C)*
 {
     if (str.empty)
@@ -3158,12 +3147,10 @@ if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
 }
 
 private P toUTFzImpl(P, S)(S str) @safe pure
-if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
-    is(immutable typeof(*P.init) == immutable ElementEncodingType!S) &&
-    !is(immutable ElementEncodingType!S == ElementEncodingType!S))
+if (is(typeof(str[0]) C) && is(immutable typeof(*P.init) == immutable C) && !is(C == immutable))
 //C[] or const(C)[] -> C*, const(C)*, or immutable(C)*
 {
-    alias InChar  = ElementEncodingType!S;
+    alias InChar  = typeof(str[0]);
     alias OutChar = typeof(*P.init);
 
     //const(C)[] -> const(C)* or
@@ -3198,8 +3185,7 @@ if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
 }
 
 private P toUTFzImpl(P, S)(S str) @safe pure
-if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
-    !is(immutable typeof(*P.init) == immutable ElementEncodingType!S))
+if (!is(immutable typeof(*P.init) == immutable typeof(str[0])))
 //C1[], const(C1)[], or immutable(C1)[] -> C2*, const(C2)*, or immutable(C2)*
 {
     import std.array : appender;
@@ -4255,8 +4241,8 @@ private int impureVariable;
 template byUTF(C, UseReplacementDchar useReplacementDchar = Yes.useReplacementDchar)
 if (isSomeChar!C)
 {
-    static if (!is(Unqual!C == C))
-        alias byUTF = byUTF!(Unqual!C);
+    static if (is(immutable C == immutable UC, UC) && !is(C == UC))
+        alias byUTF = byUTF!UC;
     else:
 
     auto ref byUTF(R)(R r)
@@ -4268,9 +4254,7 @@ if (isSomeChar!C)
     auto ref byUTF(R)(R r)
         if (!isAutodecodableString!R && isInputRange!R && isSomeChar!(ElementEncodingType!R))
     {
-        alias RC = Unqual!(ElementEncodingType!R);
-
-        static if (is(RC == C))
+        static if (is(immutable ElementEncodingType!R == immutable RC, RC) && is(RC == C))
         {
             return r.byCodeUnit();
         }
