@@ -5179,11 +5179,17 @@ enum isAssignable(Lhs, Rhs = Lhs) = isRvalueAssignable!(Lhs, Rhs) && isLvalueAss
     static assert(!isAssignable!(immutable int));
 }
 
-// ditto
-private enum isRvalueAssignable(Lhs, Rhs = Lhs) = __traits(compiles, { lvalueOf!Lhs = rvalueOf!Rhs; });
+/**
+Returns `true` iff an rvalue of type `Rhs` can be assigned to a variable of
+type `Lhs`
+*/
+enum isRvalueAssignable(Lhs, Rhs = Lhs) = __traits(compiles, { lvalueOf!Lhs = rvalueOf!Rhs; });
 
-// ditto
-private enum isLvalueAssignable(Lhs, Rhs = Lhs) = __traits(compiles, { lvalueOf!Lhs = lvalueOf!Rhs; });
+/**
+Returns `true` iff an lvalue of type `Rhs` can be assigned to a variable of
+type `Lhs`
+*/
+enum isLvalueAssignable(Lhs, Rhs = Lhs) = __traits(compiles, { lvalueOf!Lhs = lvalueOf!Rhs; });
 
 @safe unittest
 {
