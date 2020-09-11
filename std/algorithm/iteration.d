@@ -2153,7 +2153,7 @@ if (isForwardRange!Range)
     import std.algorithm.comparison : equal;
     auto v = [2,4,8,3,6,9,1,5,7];
     auto i = 2;
-    assert(v.chunkBy!((a,b)=>a%i==b%i).equal!equal([[2,4,8],[3],[6],[9,1,5,7]]));
+    assert(v.chunkBy!((a,b) => a % i == b % i).equal!equal([[2,4,8],[3],[6],[9,1,5,7]]));
 }
 
 
@@ -2262,7 +2262,7 @@ if (isInputRange!Range)
         alias eq = binaryFun!((a, b) => unaryFun!pred(a) == unaryFun!pred(b));
     else
         alias eq = binaryFun!pred;
-    static if(isForwardRange!Range)
+    static if (isForwardRange!Range)
         return ChunkByImpl!(pred, eq, isUnary, Range)(r);
     else
         return  ChunkByImpl!(pred, Range)(r);
