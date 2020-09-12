@@ -2523,7 +2523,7 @@ public:
 
     version (StdDdoc)
     {
-        private struct timespec {}
+        version (Windows) private struct timespec {}
         /++
             Returns a `timespec` which represents this $(LREF SysTime).
 
