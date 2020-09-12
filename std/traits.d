@@ -5659,17 +5659,7 @@ Note: Trying to use returned value will result in a
 // SomethingTypeOf
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
-private template AliasThisTypeOf(T)
-{
-    alias members = __traits(getAliasThis, T);
-
-    static if (members.length == 1)
-    {
-        alias AliasThisTypeOf = typeof(__traits(getMember, T.init, members[0]));
-    }
-    else
-        static assert(0, T.stringof~" does not have alias this type");
-}
+private alias AliasThisTypeOf(T) = typeof(__traits(getMember, T.init, __traits(getAliasThis, T)[0]));
 
 /*
  */
