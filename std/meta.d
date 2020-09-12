@@ -403,27 +403,23 @@ template EraseAll(alias T, TList...)
 private template GenericEraseAll(args...)
 if (args.length >= 1)
 {
-    alias e     = OldAlias!(args[0]);
-    alias tuple = args[1 .. $];
+    mixin(() {
+        import core.internal.string : unsignedToTempString;
 
-    static if (tuple.length)
-    {
-        alias head = OldAlias!(tuple[0]);
-        alias tail = tuple[1 .. $];
-        alias next = AliasSeq!(
-            GenericEraseAll!(e, tail[0..$/2]).result,
-            GenericEraseAll!(e, tail[$/2..$]).result
-            );
-
-        static if (isSame!(e, head))
-            alias result = next;
-        else
-            alias result = AliasSeq!(head, next);
-    }
-    else
-    {
-        alias result = AliasSeq!();
-    }
+        alias e = OldAlias!(args[0]);
+        string result = "alias result = AliasSeq!(";
+        char[20] intBuffer = void;
+        foreach (size_t i, arg; args[1 .. $])
+        {
+            if (!isSame!(e, OldAlias!arg))
+            {
+                result ~= "args[";
+                result ~= unsignedToTempString(i + 1, intBuffer);
+                result ~= "],";
+            }
+        }
+        return result ~= ");";
+    }());
 }
 
 @safe unittest
