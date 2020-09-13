@@ -1936,6 +1936,17 @@ A singleton instance of the default random number generator
 
 // OS RND code is based on mir.random, https://github.com/libmir/mir-random/blob/master/source/mir/random/engine/package.d
 
+version (Windows)
+    version = WindowsOSRandom;
+else version (SecureARC4Random)
+    version = ARC4OSRandom;
+else version (FreeBSD)
+    version = FileOSRandom;
+else version (linux)
+    version = FileOSRandom;
+else
+    static assert(false, "Platform not supported");
+
 struct OSRandomRef(T)
 {
 private:
@@ -1961,23 +1972,34 @@ public:
     }
 }
 
-version (FreeBSD)
-    version = UseFileRandom;
-version (linux)
-    version = UseFileRandom;
-
-version (Windows)
+import core.stdc.stdlib : malloc, free;
+version (WindowsOSRandom)
 {
     import core.sys.windows.winbase, core.sys.windows.wincrypt,
         core.sys.windows.windows, core.sys.windows.winerror,
         std.windows.syserror;
+}
+else version (FileOSRandom)
+{
+    import core.stdc.stdio : fclose, feof, ferror, fopen, fread;
+    alias IOType = typeof(fopen("a", "b"));
+}
 
-    struct WindowsRandom
-    {
-    private:
+struct OSRandomImpl
+{
+private:
+    version (WindowsOSRandom)
         ULONG_PTR _hProvider;
+    else version (FileOSRandom)
+        IOType _file;
 
-        void initialize() @trusted @nogc
+    ulong[] _buf;
+    size_t _bufSize;
+
+    void initialize(size_t bufSize = ulong.sizeof) @trusted @nogc
+        in (bufSize % ulong.sizeof == 0)
+    {
+        version (WindowsOSRandom)
         {
             static immutable acquireException = new Exception("Could not acquire crypt context");
 
@@ -2002,111 +2024,85 @@ version (Windows)
                     throw acquireException;
                 }
             }
-
-            popFront();
         }
-
-    public:
-        enum bool isUniformRandom = true;
-        enum empty = false;
-
-        // Avoid copies, as this duplicates some RNG state (front)
-        @disable this(this);
-        @disable this(ref return scope WindowsRandom rhs);
-
-        ulong front;
-
-        void popFront() @trusted nothrow @nogc
-        {
-            if (!CryptGenRandom(_hProvider, front.sizeof, cast(PBYTE) &front))
-                assert(0, "CryptGenRandom failed");
-        }
-
-        ~this()
-        {
-            CryptReleaseContext(_hProvider, 0);
-        }
-    }
-}
-
-version (SecureARC4Random)
-{
-    struct ARC4Random
-    {
-    private:
-        void initialize() @nogc @trusted nothrow
-        {
-            popFront();
-        }
-
-    public:
-        enum bool isUniformRandom = true;
-        enum empty = false;
-
-        // Avoid copies, as this duplicates some RNG state (front)
-        @disable this(this);
-        @disable this(ref return scope ARC4Random rhs);
-
-        ulong front;
-
-        void popFront() @trusted nothrow @nogc
-        {
-            arc4random_buf(&front, front.sizeof);
-        }
-    }
-}
-
-version (UseFileRandom)
-{
-    import core.stdc.stdio : fclose, feof, ferror, fopen, fread;
-    alias IOType = typeof(fopen("a", "b"));
-
-    struct FileRandom
-    {
-    private:
-        IOType _file;
-
-        void initialize() @trusted @nogc
+        else version (FileOSRandom)
         {
             static immutable openException = new Exception("Could not open /dev/urandom");
             _file = fopen("/dev/urandom", "r");
             if (!_file)
                 throw openException;
-            popFront();
         }
 
-    public:
-        enum bool isUniformRandom = true;
-        enum empty = false;
 
-        // Avoid copies, as this duplicates some RNG state (front)
-        @disable this(this);
-        @disable this(ref return scope FileRandom rhs);
+        static immutable memException = new Exception("Could not allocate buffer memory");
+        auto ptr = malloc(bufSize);
+        if (!ptr)
+            throw memException;
 
-        ulong front;
+        // Initialize to 1 element so popFront only has to check for ==1 and not ==0 case
+        _buf = (cast(ulong*)ptr)[0 .. 1];
+        _bufSize = bufSize;
+        popFront();
+    }
 
-        void popFront() @trusted nothrow @nogc
+public:
+    enum bool isUniformRandom = true;
+    enum empty = false;
+
+    // Avoid copies, as this duplicates some RNG state (front)
+    @disable this(this);
+    @disable this(ref return scope OSRandomImpl rhs);
+
+    @property ulong front() @trusted nothrow @nogc
+        in (_buf.length != 0)
+    {
+        return _buf[$ - 1];
+    }
+
+    void popFront() @trusted nothrow @nogc
+        in (_buf.length != 0)
+    {
+        if (_buf.length == 1)
         {
-            const res = fread(&front, 1, front.sizeof, _file);
-            if (res != front.sizeof)
-                assert(0, "Could not read from /dev/urandom");
+            version (WindowsOSRandom)
+            {
+                if (!CryptGenRandom(_hProvider, cast(DWORD)_bufSize, cast(PBYTE)_buf.ptr))
+                    assert(0, "CryptGenRandom failed");
+            }
+            else version (ARC4OSRandom)
+            {
+                arc4random_buf(_buf.ptr, _bufSize);
+            }
+            else version (FileOSRandom)
+            {
+                const res = fread(_buf.ptr, 1, _bufSize, _file);
+                if (res != _bufSize)
+                    assert(0, "Could not read from /dev/urandom");
+            }
+            _buf = _buf.ptr[0 .. _bufSize / 8];
         }
-
-        ~this()
+        else
         {
-            fclose(_file);
+            _buf = _buf.ptr[0 .. _buf.length - 1];
+        }
+    }
+
+    ~this()
+    {
+        if (_buf.ptr)
+        {
+            version (WindowsOSRandom)
+                CryptReleaseContext(_hProvider, 0);
+            else version (FileOSRandom)
+                fclose(_file);
+
+            free(_buf.ptr);
+            _buf = null;
         }
     }
 }
 
-version (Windows)
-    alias OSRandomImpl = WindowsRandom;
-else version (SecureARC4Random)
-    alias OSRandomImpl = ARC4Random;
-else version (UseFileRandom)
-    alias OSRandomImpl = FileRandom;
-else
-    static assert(false, "Platform not supported");
+
 
 alias OSRandom = OSRandomRef!OSRandomImpl;
 
@@ -2246,7 +2242,7 @@ unittest
  * Explicitly initialize the OS random number generator
  * for this thread.
  * This function will assert if the OS RNG is already initialized.
- * If necessary, use `osRandomInitialized` if you need to check that condition. 
+ * If necessary, use `osRandomInitialized` if you need to check that condition.
  */
 void initializeOSRandom(size_t bufSize) @safe @nogc
 {
@@ -2333,6 +2329,37 @@ static ~this()
     finalizeOSRandom();
 }
 */
+
+// Buffer Size benchmarks
+unittest
+{
+    import std.datetime.stopwatch : benchmark;
+    import std.stdio : writefln;
+
+    void benchmarkOSRandom(size_t n)
+    {
+        finalizeOSRandom();
+        initializeOSRandom(n);
+
+        static auto genValue()
+        {
+            getOSRandom().popFront();
+            return getOSRandom().front;
+        }
+
+        const time = benchmark!(genValue)(10_000)[0];
+        writefln("\t%s: %s", n, time.total!"hnsecs");
+    }
+
+    writefln("std.random getOSRandom benchmarks:");
+    writefln("==================================================");
+    benchmarkOSRandom(8);
+    benchmarkOSRandom(16);
+    benchmarkOSRandom(32);
+    benchmarkOSRandom(64);
+    benchmarkOSRandom(128);
+    benchmarkOSRandom(256);
+    writefln("==================================================");
 }
 
 /+
