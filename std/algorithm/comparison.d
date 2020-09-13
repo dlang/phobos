@@ -1569,10 +1569,13 @@ if (T.length >= 2 && !is(CommonType!T == void))
         " and " ~ T1.stringof ~ " for ordering.");
 
     // Compute the returned type.
-    static if (!is(typeof(T0.min)))
-        alias Result = CommonType!(T0, T1);
-    else
+    static if (is(typeof(mostNegative!T0 < mostNegative!T1)))
+        // Both are numeric (or character or Boolean), so we choose the one with the highest maximum.
+        // (We use mostNegative for num/bool/char testing purposes even if it's not used otherwise.)
         alias Result = Select!(T1.max > T0.max, T1, T0);
+    else
+        // At least one is non-numeric, so just go with the common type.
+        alias Result = CommonType!(T0, T1);
 
     // Perform the computation.
     import std.functional : lessThan;
@@ -1663,13 +1666,12 @@ if (T.length >= 2 && !is(CommonType!T == void))
         " and " ~ T1.stringof ~ " for ordering.");
 
     // Compute the returned type.
-    static if (!is(typeof(T0.min)))
-        alias Result = CommonType!(T0, T1);
+    static if (is(typeof(mostNegative!T0 < mostNegative!T1)))
+        // Both are numeric (or character or Boolean), so we choose the one with the lowest minimum.
+        alias Result = Select!(mostNegative!T1 < mostNegative!T0, T1, T0);
     else
-        static if (is(typeof(mostNegative!T0)) && is(typeof(mostNegative!T1)))
-            alias Result = Select!(mostNegative!T1 < mostNegative!T0, T1, T0);
-        else
-            alias Result = Select!(T1.max < T0.max, T1, T0);
+        // At least one is non-numeric, so just go with the common type.
+        alias Result = CommonType!(T0, T1);
 
     // Engage!
     import std.functional : lessThan;
