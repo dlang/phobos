@@ -1668,7 +1668,11 @@ if (T.length >= 2 && !is(CommonType!T == void))
     // Compute the returned type.
     static if (is(typeof(mostNegative!T0 < mostNegative!T1)))
         // Both are numeric (or character or Boolean), so we choose the one with the lowest minimum.
-        alias Result = Select!(mostNegative!T1 < mostNegative!T0, T1, T0);
+        // If they have the same minimum, choose the one with the smallest size.
+        // If both mostNegative and sizeof are equal, go for stability: pick the type of the first one.
+        alias Result = Select!(mostNegative!T1 < mostNegative!T0 ||
+                mostNegative!T1 == mostNegative!T0 && T1.sizeof < T0.sizeof,
+            T1, T0);
     else
         // At least one is non-numeric, so just go with the common type.
         alias Result = CommonType!(T0, T1);
@@ -1691,6 +1695,14 @@ if (T.length >= 2 && !is(CommonType!T == void))
     auto e = min(a, b, c);
     static assert(is(typeof(e) == double));
     assert(e == 2);
+    ulong f = 0xffff_ffff_ffff;
+    const uint g = min(f, 0xffff_0000);
+    assert(g == 0xffff_0000);
+    dchar h = 100;
+    uint i = 101;
+    static assert(is(typeof(min(h, i)) == dchar));
+    static assert(is(typeof(min(i, h)) == uint));
+    assert(min(h, i) == 100);
 }
 
 /**
