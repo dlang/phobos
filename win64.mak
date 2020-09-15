@@ -449,7 +449,7 @@ unittest : $(LIB)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest8e.obj $(SRC_ETC) $(SRC_ETC_C)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest8f.obj $(SRC_STD_EXP)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest9.obj $(SRC_STD_EXP_ALLOC)
-	"$(DMD)" $(UDFLAGS) -L/OPT:NOICF  unittest.d $(UNITTEST_OBJS) \
+	"$(DMD)" $(UDFLAGS) unittest.d $(UNITTEST_OBJS) \
 	    $(ZLIB) $(DRUNTIMELIB)
 	.\unittest.exe
 
