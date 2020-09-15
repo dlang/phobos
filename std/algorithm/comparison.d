@@ -891,9 +891,6 @@ Compares two ranges for equality, as defined by predicate `pred`
 */
 template equal(alias pred = "a == b")
 {
-    enum isEmptyRange(R) =
-        isInputRange!R && __traits(compiles, {static assert(R.empty, "");});
-
     enum hasFixedLength(T) = hasLength!T || isNarrowString!T;
 
     // use code points when comparing two ranges of UTF code units that aren't
@@ -931,11 +928,7 @@ template equal(alias pred = "a == b")
         static if (!useCodePoint!(Range1, Range2))
         {
             // No pred calls necessary.
-            static if (isEmptyRange!Range1 || isEmptyRange!Range2)
-            {
-                return r1.empty && r2.empty;
-            }
-            else static if (isInfinite!Range1 || isInfinite!Range2)
+            static if (isInfinite!Range1 || isInfinite!Range2)
             {
                 // No finite range can be ever equal to an infinite range.
                 return false;
@@ -983,8 +976,7 @@ template equal(alias pred = "a == b")
                 //Generic case, we have to walk both ranges making sure neither is empty
                 for (; !r1.empty; r1.popFront(), r2.popFront())
                 {
-                    if (r2.empty) return false;
-                    if (!binaryFun!(pred)(r1.front, r2.front)) return false;
+                    if (r2.empty || !binaryFun!(pred)(r1.front, r2.front)) return false;
                 }
                 return r2.empty;
             }
