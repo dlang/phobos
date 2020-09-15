@@ -530,6 +530,7 @@ Returns:
 
 */
 auto clamp(T1, T2, T3)(T1 val, T2 lower, T3 upper)
+if (is(typeof(max(min(val, upper), lower))))
 in
 {
     import std.functional : greaterThan;
@@ -537,7 +538,7 @@ in
 }
 do
 {
-    return max(lower, min(upper, val));
+    return max(min(val, upper), lower);
 }
 
 ///
@@ -576,6 +577,14 @@ do
     // UFCS style
     assert(Date(1982, 1, 4).clamp(Date.min, Date.max) == Date(1982, 1, 4));
 
+    // Stability
+    struct A {
+        int x, y;
+        int opCmp(ref const A rhs) const { return (x > rhs.x) - (x < rhs.x); }
+    }
+    A x, lo, hi;
+    x.y = 42;
+    assert(x.clamp(lo, hi).y == 42);
 }
 
 // cmp
