@@ -909,6 +909,8 @@ template equal(alias pred = "a == b")
     evaluates to `bool`.
     Performs $(BIGOH min(r1.length, r2.length)) evaluations of `pred`.
 
+    At least one of the ranges must be finite. If one range involved is infinite, the result is `false`.
+
     If the two ranges are different kinds of UTF code unit (`char`, `wchar`, or
     `dchar`), then the arrays are compared using UTF decoding to avoid
     accidentally integer-promoting units.
@@ -922,80 +924,76 @@ template equal(alias pred = "a == b")
         for element, according to binary predicate `pred`.
     +/
     bool equal(Range1, Range2)(Range1 r1, Range2 r2)
-    if (!useCodePoint!(Range1, Range2) &&
-        isInputRange!Range1 && isInputRange!Range2 &&
+    if (isInputRange!Range1 && isInputRange!Range2 &&
+        !(isInfinite!Range1 && isInfinite!Range2) &&
         is(typeof(binaryFun!pred(r1.front, r2.front))))
     {
-        static assert(!(isInfinite!Range1 && isInfinite!Range2),
-            "Both ranges are known to be infinite");
-
-        //No pred calls necessary
-        static if (isEmptyRange!Range1 || isEmptyRange!Range2)
+        static if (!useCodePoint!(Range1, Range2))
         {
-            return r1.empty && r2.empty;
-        }
-        else static if ((isInfinite!Range1 && hasFixedLength!Range2) ||
-            (hasFixedLength!Range1 && isInfinite!Range2))
-        {
-            return false;
-        }
-        //Detect default pred and compatible dynamic array
-        else static if (is(typeof(pred) == string) && pred == "a == b" &&
-            isArray!Range1 && isArray!Range2 && is(typeof(r1 == r2)))
-        {
-            return r1 == r2;
-        }
-        // if one of the arguments is a string and the other isn't, then auto-decoding
-        // can be avoided if they have the same ElementEncodingType
-        else static if (is(typeof(pred) == string) && pred == "a == b" &&
-            isAutodecodableString!Range1 != isAutodecodableString!Range2 &&
-            is(immutable ElementEncodingType!Range1 == immutable ElementEncodingType!Range2))
-        {
-            import std.utf : byCodeUnit;
-
-            static if (isAutodecodableString!Range1)
+            // No pred calls necessary.
+            static if (isEmptyRange!Range1 || isEmptyRange!Range2)
             {
-                return equal(r1.byCodeUnit, r2);
+                return r1.empty && r2.empty;
+            }
+            else static if (isInfinite!Range1 || isInfinite!Range2)
+            {
+                // No finite range can be ever equal to an infinite range.
+                return false;
+            }
+            //Detect default pred and compatible dynamic array
+            else static if (is(typeof(pred) == string) && pred == "a == b" &&
+                isArray!Range1 && isArray!Range2 && is(typeof(r1 == r2)))
+            {
+                return r1 == r2;
+            }
+            // if one of the arguments is a string and the other isn't, then auto-decoding
+            // can be avoided if they have the same ElementEncodingType
+            else static if (is(typeof(pred) == string) && pred == "a == b" &&
+                isAutodecodableString!Range1 != isAutodecodableString!Range2 &&
+                is(immutable ElementEncodingType!Range1 == immutable ElementEncodingType!Range2))
+            {
+                import std.utf : byCodeUnit;
+
+                static if (isAutodecodableString!Range1)
+                {
+                    return equal(r1.byCodeUnit, r2);
+                }
+                else
+                {
+                    return equal(r2.byCodeUnit, r1);
+                }
+            }
+            //Try a fast implementation when the ranges have comparable lengths
+            else static if (hasLength!Range1 && hasLength!Range2 && is(typeof(r1.length == r2.length)))
+            {
+                immutable len1 = r1.length;
+                immutable len2 = r2.length;
+                if (len1 != len2) return false; //Short circuit return
+
+                //Lengths are the same, so we need to do an actual comparison
+                //Good news is we can squeeze out a bit of performance by not checking if r2 is empty
+                for (; !r1.empty; r1.popFront(), r2.popFront())
+                {
+                    if (!binaryFun!(pred)(r1.front, r2.front)) return false;
+                }
+                return true;
             }
             else
             {
-                return equal(r2.byCodeUnit, r1);
+                //Generic case, we have to walk both ranges making sure neither is empty
+                for (; !r1.empty; r1.popFront(), r2.popFront())
+                {
+                    if (r2.empty) return false;
+                    if (!binaryFun!(pred)(r1.front, r2.front)) return false;
+                }
+                return r2.empty;
             }
-        }
-        //Try a fast implementation when the ranges have comparable lengths
-        else static if (hasLength!Range1 && hasLength!Range2 && is(typeof(r1.length == r2.length)))
-        {
-            immutable len1 = r1.length;
-            immutable len2 = r2.length;
-            if (len1 != len2) return false; //Short circuit return
-
-            //Lengths are the same, so we need to do an actual comparison
-            //Good news is we can squeeze out a bit of performance by not checking if r2 is empty
-            for (; !r1.empty; r1.popFront(), r2.popFront())
-            {
-                if (!binaryFun!(pred)(r1.front, r2.front)) return false;
-            }
-            return true;
         }
         else
         {
-            //Generic case, we have to walk both ranges making sure neither is empty
-            for (; !r1.empty; r1.popFront(), r2.popFront())
-            {
-                if (r2.empty) return false;
-                if (!binaryFun!(pred)(r1.front, r2.front)) return false;
-            }
-            static if (!isInfinite!Range1)
-                return r2.empty;
+            import std.utf : byDchar;
+            return equal(r1.byDchar, r2.byDchar);
         }
-    }
-
-    /// ditto
-    bool equal(Range1, Range2)(Range1 r1, Range2 r2)
-    if (useCodePoint!(Range1, Range2))
-    {
-        import std.utf : byDchar;
-        return equal(r1.byDchar, r2.byDchar);
     }
 }
 
@@ -1965,6 +1963,9 @@ if it exists.
 If both ranges have a length member, this function is $(BIGOH 1). Otherwise,
 this function is $(BIGOH min(r1.length, r2.length)).
 
+Infinite ranges are considered of the same length. An infinite range has never the same length as a
+finite range.
+
 Params:
     r1 = a finite $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
     r2 = a finite $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
@@ -1973,60 +1974,31 @@ Returns:
     `true` if both ranges have the same length, `false` otherwise.
 */
 bool isSameLength(Range1, Range2)(Range1 r1, Range2 r2)
-if (isInputRange!Range1 &&
-    isInputRange!Range2 &&
-    !isInfinite!Range1 &&
-    !isInfinite!Range2)
+if (isInputRange!Range1 && isInputRange!Range2)
 {
-    static if (hasLength!(Range1) && hasLength!(Range2))
+    static if (isInfinite!Range1 || isInfinite!Range2)
+    {
+        return isInfinite!Range1 && isInfinite!Range2;
+    }
+    else static if (hasLength!(Range1) && hasLength!(Range2))
     {
         return r1.length == r2.length;
     }
     else static if (hasLength!(Range1) && !hasLength!(Range2))
     {
-        size_t length;
-
-        while (!r2.empty)
-        {
-            r2.popFront;
-
-            if (++length > r1.length)
-            {
-                return false;
-            }
-        }
-
-        return !(length < r1.length);
+        return r2.walkLength(r1.length + 1) == r1.length;
     }
     else static if (!hasLength!(Range1) && hasLength!(Range2))
     {
-        size_t length;
-
-        while (!r1.empty)
-        {
-            r1.popFront;
-
-            if (++length > r2.length)
-            {
-                return false;
-            }
-        }
-
-        return !(length < r2.length);
+        return r1.walkLength(r2.length + 1) == r2.length;
     }
     else
     {
-        while (!r1.empty)
+        for (; !r1.empty; r1.popFront, r2.popFront)
         {
            if (r2.empty)
-           {
               return false;
-           }
-
-           r1.popFront;
-           r2.popFront;
         }
-
         return r2.empty;
     }
 }
@@ -2094,7 +2066,7 @@ if (isInputRange!Range1 &&
     assert(!isSameLength(r11, r12));
 }
 
-/// For convenience
+// Still functional but not documented anymore.
 alias AllocateGC = Flag!"allocateGC";
 
 /**
@@ -2114,7 +2086,7 @@ Allocating forward range option: amortized $(BIGOH r1.length) + $(BIGOH r2.lengt
 
 Params:
     pred = an optional parameter to change how equality is defined
-    allocate_gc = `Yes.allocateGC`/`No.allocateGC`
+    allocateGC = `Yes.allocateGC`/`No.allocateGC`
     r1 = A finite $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
     r2 = A finite $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
 
@@ -2123,9 +2095,9 @@ Returns:
     Otherwise, returns `false`.
 */
 
-bool isPermutation(AllocateGC allocate_gc, Range1, Range2)
+bool isPermutation(Flag!"allocateGC" allocateGC, Range1, Range2)
 (Range1 r1, Range2 r2)
-if (allocate_gc == Yes.allocateGC &&
+if (allocateGC == Yes.allocateGC &&
     isForwardRange!Range1 &&
     isForwardRange!Range2 &&
     !isInfinite!Range1 &&
