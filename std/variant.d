@@ -2430,11 +2430,11 @@ if (Handlers.length > 0)
 
     Algebraic!(int, string) maybenumber = 2;
     // ok, x ~ "a" valid for string, x + 1 valid for int, only 1 generic
-    static assert( __traits(compiles, number.visit!((string x) => x ~ "a", x => x + 1)));
+    static assert( __traits(compiles, maybenumber.visit!((string x) => x ~ "a", x => "foobar"[0 .. x + 1])));
     // bad, x ~ "a" valid for string but not int
-    static assert(!__traits(compiles, number.visit!(x => x ~ "a")));
+    static assert(!__traits(compiles, maybenumber.visit!(x => x ~ "a")));
     // bad, two generics, each only applies in one case
-    static assert(!__traits(compiles, number.visit!(x => x + 1, x => x ~ "a")));
+    static assert(!__traits(compiles, maybenumber.visit!(x => x + 1, x => x ~ "a")));
 }
 
 /**
@@ -2543,6 +2543,24 @@ if (isAlgebraic!VariantType && Handler.length > 0)
 
         Result result;
 
+        enum int nonmatch = ()
+        {
+            foreach (int dgidx, dg; Handler)
+            {
+                bool found = false;
+                foreach (T; AllowedTypes)
+                {
+                    found |= __traits(compiles, { static assert(isSomeFunction!(dg!T)); });
+                    found |= __traits(compiles, (T t) { dg(t); });
+                    found |= __traits(compiles, dg());
+                }
+                if (!found) return dgidx;
+            }
+            return -1;
+        }();
+        static assert(nonmatch == -1, "No match for visit handler #"~
+            nonmatch.stringof~" ("~Handler[nonmatch].stringof~")");
+
         foreach (tidx, T; AllowedTypes)
         {
             bool added = false;
@@ -2574,7 +2592,7 @@ if (isAlgebraic!VariantType && Handler.length > 0)
                         result.indices[tidx] = dgidx;
                     }
                 }
-                else static if (isSomeFunction!(dg!T))
+                else static if (__traits(compiles, { static assert(isSomeFunction!(dg!T)); }))
                 {
                     assert(result.generalFuncIdx == -1 ||
                            result.generalFuncIdx == dgidx,
@@ -2582,10 +2600,6 @@ if (isAlgebraic!VariantType && Handler.length > 0)
                     result.generalFuncIdx = dgidx;
                 }
                 // Handle composite visitors with opCall overloads
-                else
-                {
-                    static assert(false, dg.stringof ~ " is not a function or delegate");
-                }
             }
 
             if (!added)
@@ -2637,6 +2651,19 @@ if (isAlgebraic!VariantType && Handler.length > 0)
     }
 
     assert(false);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21253
+@system unittest
+{
+    static struct A { int n; }
+    static struct B {        }
+
+    auto a = Algebraic!(A, B)(B());
+    assert(a.visit!(
+        (B _) => 42,
+        (a  ) => a.n
+    ) == 42);
 }
 
 @system unittest
