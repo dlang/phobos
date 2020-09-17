@@ -254,7 +254,6 @@ auto castSwitch(choices...)(Object switchObject)
 
     if (switchObject !is null)
     {
-
         // Checking for exact matches:
         const classInfo = typeid(switchObject);
         foreach (index, choice; choices)
@@ -517,7 +516,7 @@ auto castSwitch(choices...)(Object switchObject)
 
 /** Clamps a value into the given bounds.
 
-This functions is equivalent to `max(lower, min(upper,val))`.
+This function is equivalent to `max(lower, min(upper, val))`.
 
 Params:
     val = The value to _clamp.
@@ -657,8 +656,7 @@ if (isInputRange!R1 && isInputRange!R2)
             else
             {
                 auto a = r1.front, b = r2.front;
-                if (a < b) return -1;
-                if (b < a) return 1;
+                if (auto result = (b < a) - (a < b)) return result;
             }
         }
     }
@@ -891,8 +889,6 @@ Compares two ranges for equality, as defined by predicate `pred`
 */
 template equal(alias pred = "a == b")
 {
-    enum hasFixedLength(T) = hasLength!T || isNarrowString!T;
-
     // use code points when comparing two ranges of UTF code units that aren't
     // the same type. This is for backwards compatibility with autodecode
     // strings.
@@ -921,11 +917,17 @@ template equal(alias pred = "a == b")
         for element, according to binary predicate `pred`.
     +/
     bool equal(Range1, Range2)(Range1 r1, Range2 r2)
-    if (isInputRange!Range1 && isInputRange!Range2 &&
+    if (useCodePoint!(Range1, Range2) ||
+        isInputRange!Range1 && isInputRange!Range2 &&
         !(isInfinite!Range1 && isInfinite!Range2) &&
         is(typeof(binaryFun!pred(r1.front, r2.front))))
     {
-        static if (!useCodePoint!(Range1, Range2))
+        static if (useCodePoint!(Range1, Range2))
+        {
+            import std.utf : byDchar;
+            return equal(r1.byDchar, r2.byDchar);
+        }
+        else
         {
             // No pred calls necessary.
             static if (isInfinite!Range1 || isInfinite!Range2)
@@ -980,11 +982,6 @@ template equal(alias pred = "a == b")
                 }
                 return r2.empty;
             }
-        }
-        else
-        {
-            import std.utf : byDchar;
-            return equal(r1.byDchar, r2.byDchar);
         }
     }
 }
