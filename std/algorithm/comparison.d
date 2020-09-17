@@ -889,20 +889,14 @@ Compares two ranges for equality, as defined by predicate `pred`
 */
 template equal(alias pred = "a == b")
 {
-    // use code points when comparing two ranges of UTF code units that aren't
-    // the same type. This is for backwards compatibility with autodecode
-    // strings.
-    enum useCodePoint(R1, R2) =
-        isSomeChar!(ElementEncodingType!R1) && isSomeChar!(ElementEncodingType!R2) &&
-        (ElementEncodingType!R1).sizeof != (ElementEncodingType!R2).sizeof;
-
     /++
     Compares two ranges for equality. The ranges may have
     different element types, as long as `pred(r1.front, r2.front)`
     evaluates to `bool`.
     Performs $(BIGOH min(r1.length, r2.length)) evaluations of `pred`.
 
-    At least one of the ranges must be finite. If one range involved is infinite, the result is `false`.
+    At least one of the ranges must be finite. If one range involved is infinite, the result is
+    (statically known to be) `false`.
 
     If the two ranges are different kinds of UTF code unit (`char`, `wchar`, or
     `dchar`), then the arrays are compared using UTF decoding to avoid
@@ -917,32 +911,37 @@ template equal(alias pred = "a == b")
         for element, according to binary predicate `pred`.
     +/
     bool equal(Range1, Range2)(Range1 r1, Range2 r2)
-    if (useCodePoint!(Range1, Range2) ||
-        isInputRange!Range1 && isInputRange!Range2 &&
+    if (isInputRange!Range1 && isInputRange!Range2 &&
         !(isInfinite!Range1 && isInfinite!Range2) &&
         is(typeof(binaryFun!pred(r1.front, r2.front))))
     {
-        static if (useCodePoint!(Range1, Range2))
+        // Use code points when comparing two ranges of UTF code units that aren't
+        // the same type. This is for backwards compatibility with autodecode
+        // strings.
+        enum useCodePoint =
+            isSomeChar!(ElementEncodingType!Range1) && isSomeChar!(ElementEncodingType!Range2) &&
+            ElementEncodingType!Range1.sizeof != ElementEncodingType!Range2.sizeof;
+
+        static if (useCodePoint)
         {
             import std.utf : byDchar;
             return equal(r1.byDchar, r2.byDchar);
         }
         else
         {
-            // No pred calls necessary.
             static if (isInfinite!Range1 || isInfinite!Range2)
             {
                 // No finite range can be ever equal to an infinite range.
                 return false;
             }
-            //Detect default pred and compatible dynamic array
+            // Detect default pred and compatible dynamic arrays.
             else static if (is(typeof(pred) == string) && pred == "a == b" &&
                 isArray!Range1 && isArray!Range2 && is(typeof(r1 == r2)))
             {
                 return r1 == r2;
             }
-            // if one of the arguments is a string and the other isn't, then auto-decoding
-            // can be avoided if they have the same ElementEncodingType
+            // If one of the arguments is a string and the other isn't, then auto-decoding
+            // can be avoided if they have the same ElementEncodingType.
             else static if (is(typeof(pred) == string) && pred == "a == b" &&
                 isAutodecodableString!Range1 != isAutodecodableString!Range2 &&
                 is(immutable ElementEncodingType!Range1 == immutable ElementEncodingType!Range2))
@@ -950,23 +949,19 @@ template equal(alias pred = "a == b")
                 import std.utf : byCodeUnit;
 
                 static if (isAutodecodableString!Range1)
-                {
                     return equal(r1.byCodeUnit, r2);
-                }
                 else
-                {
                     return equal(r2.byCodeUnit, r1);
-                }
             }
-            //Try a fast implementation when the ranges have comparable lengths
+            // Try a fast implementation when the ranges have comparable lengths.
             else static if (hasLength!Range1 && hasLength!Range2 && is(typeof(r1.length == r2.length)))
             {
                 immutable len1 = r1.length;
                 immutable len2 = r2.length;
                 if (len1 != len2) return false; //Short circuit return
 
-                //Lengths are the same, so we need to do an actual comparison
-                //Good news is we can squeeze out a bit of performance by not checking if r2 is empty
+                // Lengths are the same, so we need to do an actual comparison.
+                // Good news is we can squeeze out a bit of performance by not checking if r2 is empty.
                 for (; !r1.empty; r1.popFront(), r2.popFront())
                 {
                     if (!binaryFun!(pred)(r1.front, r2.front)) return false;
