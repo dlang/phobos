@@ -355,8 +355,8 @@ private struct _Cache(R, bool bidir)
         }
         else
         {
-            // needed, because the compiler cannot deduce, that 'caches' is initialized
-            // see https://issues.dlang.org/show_bug.cgi?id=15891
+            // Needed because the compiler cannot deduce that 'caches' is initialized.
+            // See https://issues.dlang.org/show_bug.cgi?id=15891
             caches[0] = UE.init;
             static if (bidir)
                 caches[1] = UE.init;
@@ -390,13 +390,6 @@ private struct _Cache(R, bool bidir)
         source.popFront();
         if (!source.empty)
             caches[0] = source.front;
-        else
-        {
-            // see https://issues.dlang.org/show_bug.cgi?id=15891
-            caches[0] = UE.init;
-            static if (bidir)
-                caches[1] = UE.init;
-        }
     }
     static if (bidir) void popBack()
     {
@@ -404,12 +397,6 @@ private struct _Cache(R, bool bidir)
         source.popBack();
         if (!source.empty)
             caches[1] = source.back;
-        else
-        {
-            // see https://issues.dlang.org/show_bug.cgi?id=15891
-            caches[0] = UE.init;
-            caches[1] = UE.init;
-        }
     }
 
     static if (isForwardRange!R)
@@ -479,6 +466,122 @@ See_Also:
 template map(fun...)
 if (fun.length >= 1)
 {
+    import std.meta : AliasSeq, staticMap;
+    static if (fun.length > 1)
+    {
+        import std.functional : adjoin;
+        import std.meta : staticIndexOf;
+        alias _funs = staticMap!(unaryFun, fun);
+        alias _fun = adjoin!_funs;
+    }
+    else
+    {
+        alias _fun = unaryFun!fun;
+        alias _funs = AliasSeq!(_fun);
+    }
+
+    struct Result(Range)
+    {
+        alias R = Unqual!Range;
+        R _input;
+
+        static if (isBidirectionalRange!R)
+        {
+            @property auto ref back()()
+            {
+                assert(!empty, "Attempting to fetch the back of an empty map.");
+                return _fun(_input.back);
+            }
+
+            void popBack()()
+            {
+                assert(!empty, "Attempting to popBack an empty map.");
+                _input.popBack();
+            }
+        }
+
+        this(R input)
+        {
+            _input = input;
+        }
+
+        mixin ImplementEmpty!_input;
+
+        void popFront()
+        {
+            assert(!empty, "Attempting to popFront an empty map.");
+            _input.popFront();
+        }
+
+        @property auto ref front()
+        {
+            assert(!empty, "Attempting to fetch the front of an empty map.");
+            return _fun(_input.front);
+        }
+
+        static if (isRandomAccessRange!R)
+        {
+            static if (is(typeof(Range.init[ulong.max])))
+                private alias opIndex_t = ulong;
+            else
+                private alias opIndex_t = uint;
+
+            auto ref opIndex(opIndex_t index)
+            {
+                return _fun(_input[index]);
+            }
+        }
+
+        static if (hasLength!R)
+        {
+            @property auto length()
+            {
+                return _input.length;
+            }
+
+            alias opDollar = length;
+        }
+
+        static if (hasSlicing!R)
+        {
+            static if (is(typeof(_input[ulong.max .. ulong.max])))
+                private alias opSlice_t = ulong;
+            else
+                private alias opSlice_t = uint;
+
+            static if (hasLength!R)
+            {
+                auto opSlice(opSlice_t low, opSlice_t high)
+                {
+                    return typeof(this)(_input[low .. high]);
+                }
+            }
+            else static if (is(typeof(_input[opSlice_t.max .. $])))
+            {
+                struct DollarToken{}
+                enum opDollar = DollarToken.init;
+                auto opSlice(opSlice_t low, DollarToken)
+                {
+                    return typeof(this)(_input[low .. $]);
+                }
+
+                auto opSlice(opSlice_t low, opSlice_t high)
+                {
+                    import std.range : takeExactly;
+                    return this[low .. $].takeExactly(high - low);
+                }
+            }
+        }
+
+        static if (isForwardRange!R)
+        {
+            @property auto save()
+            {
+                return typeof(this)(_input.save);
+            }
+        }
+    }
+
     /**
     Params:
         r = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
@@ -488,38 +591,13 @@ if (fun.length >= 1)
      */
     auto map(Range)(Range r) if (isInputRange!(Unqual!Range))
     {
-        import std.meta : AliasSeq, staticMap;
-
         alias RE = ElementType!(Range);
-        static if (fun.length > 1)
+        foreach (f; _funs)
         {
-            import std.functional : adjoin;
-            import std.meta : staticIndexOf;
-
-            alias _funs = staticMap!(unaryFun, fun);
-            alias _fun = adjoin!_funs;
-
-            // Once https://issues.dlang.org/show_bug.cgi?id=5710 is fixed
-            // accross all compilers (as of 2020-04, it wasn't fixed in LDC and GDC),
-            // this validation loop can be moved into a template.
-            foreach (f; _funs)
-            {
-                static assert(!is(typeof(f(RE.init)) == void),
-                    "Mapping function(s) must not return void: " ~ _funs.stringof);
-            }
-        }
-        else
-        {
-            alias _fun = unaryFun!fun;
-            alias _funs = AliasSeq!(_fun);
-
-            // Do the validation separately for single parameters due to
-            // https://issues.dlang.org/show_bug.cgi?id=15777.
-            static assert(!is(typeof(_fun(RE.init)) == void),
+            static assert(!is(typeof(f(RE.init)) == void),
                 "Mapping function(s) must not return void: " ~ _funs.stringof);
         }
-
-        return MapResult!(_fun, Range)(r);
+        return Result!Range(r);
     }
 }
 
@@ -572,111 +650,6 @@ it separately:
     auto foo(string[] args)
     {
         return args.map!strip;
-    }
-}
-
-private struct MapResult(alias fun, Range)
-{
-    alias R = Unqual!Range;
-    R _input;
-
-    static if (isBidirectionalRange!R)
-    {
-        @property auto ref back()()
-        {
-            assert(!empty, "Attempting to fetch the back of an empty map.");
-            return fun(_input.back);
-        }
-
-        void popBack()()
-        {
-            assert(!empty, "Attempting to popBack an empty map.");
-            _input.popBack();
-        }
-    }
-
-    this(R input)
-    {
-        _input = input;
-    }
-
-    static if (isInfinite!R)
-    {
-        // Propagate infinite-ness.
-        enum bool empty = false;
-    }
-    else
-    {
-        @property bool empty()
-        {
-            return _input.empty;
-        }
-    }
-
-    void popFront()
-    {
-        assert(!empty, "Attempting to popFront an empty map.");
-        _input.popFront();
-    }
-
-    @property auto ref front()
-    {
-        assert(!empty, "Attempting to fetch the front of an empty map.");
-        return fun(_input.front);
-    }
-
-    static if (isRandomAccessRange!R)
-    {
-        static if (is(typeof(Range.init[ulong.max])))
-            private alias opIndex_t = ulong;
-        else
-            private alias opIndex_t = uint;
-
-        auto ref opIndex(opIndex_t index)
-        {
-            return fun(_input[index]);
-        }
-    }
-
-    mixin ImplementLength!_input;
-
-    static if (hasSlicing!R)
-    {
-        static if (is(typeof(_input[ulong.max .. ulong.max])))
-            private alias opSlice_t = ulong;
-        else
-            private alias opSlice_t = uint;
-
-        static if (hasLength!R)
-        {
-            auto opSlice(opSlice_t low, opSlice_t high)
-            {
-                return typeof(this)(_input[low .. high]);
-            }
-        }
-        else static if (is(typeof(_input[opSlice_t.max .. $])))
-        {
-            struct DollarToken{}
-            enum opDollar = DollarToken.init;
-            auto opSlice(opSlice_t low, DollarToken)
-            {
-                return typeof(this)(_input[low .. $]);
-            }
-
-            auto opSlice(opSlice_t low, opSlice_t high)
-            {
-                import std.range : takeExactly;
-                return this[low .. $].takeExactly(high - low);
-            }
-        }
-    }
-
-    static if (isForwardRange!R)
-    {
-        @property auto save()
-        {
-            return typeof(this)(_input.save);
-        }
     }
 }
 
@@ -944,11 +917,19 @@ private:
          isForeachUnaryWithIndexIterable!R);
 
 public:
+    Flag!"each" each(Range)(auto ref Range r)
+    if (isForeachIterable!Range ||
+            (isRangeIterable!Range || __traits(compiles, typeof(r.front).length)) ||
+            __traits(compiles, Parameters!(Parameters!(r.opApply))))
+    {
+        return each2(r);
+    }
+
     /**
     Params:
         r = range or iterable over which each iterates
      */
-    Flag!"each" each(Range)(Range r)
+    Flag!"each" each2(Range)(Range r)
     if (!isForeachIterable!Range && (
         isRangeIterable!Range ||
         __traits(compiles, typeof(r.front).length)))
@@ -1009,7 +990,7 @@ public:
     }
 
     /// ditto
-    Flag!"each" each(Iterable)(auto ref Iterable r)
+    Flag!"each" each2(Iterable)(auto ref Iterable r)
     if (isForeachIterable!Iterable ||
         __traits(compiles, Parameters!(Parameters!(r.opApply))))
     {
@@ -1322,7 +1303,71 @@ if (is(typeof(unaryFun!predicate)))
      */
     auto filter(Range)(Range range) if (isInputRange!(Unqual!Range))
     {
-        return FilterResult!(unaryFun!predicate, Range)(range);
+        return Result!Range(range);
+    }
+
+    private struct Result(Range)
+    {
+        alias pred = unaryFun!predicate;
+        alias R = Unqual!Range;
+        R _input;
+        private bool _primed;
+
+        private void prime()
+        {
+            if (_primed) return;
+            while (!_input.empty && !pred(_input.front))
+            {
+                _input.popFront();
+            }
+            _primed = true;
+        }
+
+        this(R r)
+        {
+            _input = r;
+        }
+
+        private this(R r, bool primed)
+        {
+            _input = r;
+            _primed = primed;
+        }
+
+        auto opSlice() { return this; }
+
+        static if (isInfinite!Range)
+        {
+            enum bool empty = false;
+        }
+        else
+        {
+            @property bool empty() { prime; return _input.empty; }
+        }
+
+        void popFront()
+        {
+            prime;
+            do
+            {
+                _input.popFront();
+            } while (!_input.empty && !pred(_input.front));
+        }
+
+        @property auto ref front()
+        {
+            prime;
+            assert(!empty, "Attempting to fetch the front of an empty filter.");
+            return _input.front;
+        }
+
+        static if (isForwardRange!R)
+        {
+            @property auto save()
+            {
+                return typeof(this)(_input.save, _primed);
+            }
+        }
     }
 }
 
@@ -1353,69 +1398,6 @@ if (is(typeof(unaryFun!predicate)))
     double[] c = [ 2.5, 3.0 ];
     auto r1 = chain(c, a, b).filter!(a => cast(int) a != a);
     assert(approxEqual(r1, [ 2.5 ]));
-}
-
-private struct FilterResult(alias pred, Range)
-{
-    alias R = Unqual!Range;
-    R _input;
-    private bool _primed;
-
-    private void prime()
-    {
-        if (_primed) return;
-        while (!_input.empty && !pred(_input.front))
-        {
-            _input.popFront();
-        }
-        _primed = true;
-    }
-
-    this(R r)
-    {
-        _input = r;
-    }
-
-    private this(R r, bool primed)
-    {
-        _input = r;
-        _primed = primed;
-    }
-
-    auto opSlice() { return this; }
-
-    static if (isInfinite!Range)
-    {
-        enum bool empty = false;
-    }
-    else
-    {
-        @property bool empty() { prime; return _input.empty; }
-    }
-
-    void popFront()
-    {
-        prime;
-        do
-        {
-            _input.popFront();
-        } while (!_input.empty && !pred(_input.front));
-    }
-
-    @property auto ref front()
-    {
-        prime;
-        assert(!empty, "Attempting to fetch the front of an empty filter.");
-        return _input.front;
-    }
-
-    static if (isForwardRange!R)
-    {
-        @property auto save()
-        {
-            return typeof(this)(_input.save, _primed);
-        }
-    }
 }
 
 @safe unittest
@@ -1549,7 +1531,8 @@ private struct FilterResult(alias pred, Range)
  * Params:
  *     pred = Function to apply to each element of range
  */
-template filterBidirectional(alias pred)
+template filterBidirectional(alias predicate)
+if (is(typeof(unaryFun!predicate)))
 {
     /**
     Params:
@@ -1559,7 +1542,56 @@ template filterBidirectional(alias pred)
      */
     auto filterBidirectional(Range)(Range r) if (isBidirectionalRange!(Unqual!Range))
     {
-        return FilterBidiResult!(unaryFun!pred, Range)(r);
+        return Result!Range(r);
+    }
+
+    private struct Result(Range)
+    {
+        alias pred = unaryFun!predicate;
+        alias R = Unqual!Range;
+        R _input;
+
+        this(R r)
+        {
+            _input = r;
+            while (!_input.empty && !pred(_input.front)) _input.popFront();
+            while (!_input.empty && !pred(_input.back)) _input.popBack();
+        }
+
+        @property bool empty() { return _input.empty; }
+
+        void popFront()
+        {
+            do
+            {
+                _input.popFront();
+            } while (!_input.empty && !pred(_input.front));
+        }
+
+        @property auto ref front()
+        {
+            assert(!empty, "Attempting to fetch the front of an empty filterBidirectional.");
+            return _input.front;
+        }
+
+        void popBack()
+        {
+            do
+            {
+                _input.popBack();
+            } while (!_input.empty && !pred(_input.back));
+        }
+
+        @property auto ref back()
+        {
+            assert(!empty, "Attempting to fetch the back of an empty filterBidirectional.");
+            return _input.back;
+        }
+
+        @property auto save()
+        {
+            return typeof(this)(_input.save);
+        }
     }
 }
 
@@ -1580,54 +1612,6 @@ template filterBidirectional(alias pred)
     int[] b = [ 100, -101, 102 ];
     auto r = filterBidirectional!("a > 0")(chain(a, b));
     assert(r.back == 102);
-}
-
-private struct FilterBidiResult(alias pred, Range)
-{
-    alias R = Unqual!Range;
-    R _input;
-
-    this(R r)
-    {
-        _input = r;
-        while (!_input.empty && !pred(_input.front)) _input.popFront();
-        while (!_input.empty && !pred(_input.back)) _input.popBack();
-    }
-
-    @property bool empty() { return _input.empty; }
-
-    void popFront()
-    {
-        do
-        {
-            _input.popFront();
-        } while (!_input.empty && !pred(_input.front));
-    }
-
-    @property auto ref front()
-    {
-        assert(!empty, "Attempting to fetch the front of an empty filterBidirectional.");
-        return _input.front;
-    }
-
-    void popBack()
-    {
-        do
-        {
-            _input.popBack();
-        } while (!_input.empty && !pred(_input.back));
-    }
-
-    @property auto ref back()
-    {
-        assert(!empty, "Attempting to fetch the back of an empty filterBidirectional.");
-        return _input.back;
-    }
-
-    @property auto save()
-    {
-        return typeof(this)(_input.save);
-    }
 }
 
 /**
@@ -1875,64 +1859,10 @@ pure @safe unittest
     assert(equal(r, "foo".group));
 }
 
-// Used by implementation of chunkBy for non-forward input ranges.
-private struct ChunkByChunkImpl(alias pred, Range)
-if (isInputRange!Range && !isForwardRange!Range)
-{
-    alias fun = binaryFun!pred;
-
-    private Range *r;
-    private ElementType!Range prev;
-
-    this(ref Range range, ElementType!Range _prev)
-    {
-        r = &range;
-        prev = _prev;
-    }
-
-    @property bool empty()
-    {
-        return r.empty || !fun(prev, r.front);
-    }
-
-    @property ElementType!Range front()
-    {
-        assert(!empty, "Attempting to fetch the front of an empty chunkBy chunk.");
-        return r.front;
-    }
-
-    void popFront()
-    {
-        assert(!empty, "Attempting to popFront an empty chunkBy chunk.");
-        r.popFront();
-    }
-}
-
-private template ChunkByImplIsUnary(alias pred, Range)
-{
-    alias e = lvalueOf!(ElementType!Range);
-
-    static if (is(typeof(binaryFun!pred(e, e)) : bool))
-        enum ChunkByImplIsUnary = false;
-    else static if (is(typeof(unaryFun!pred(e) == unaryFun!pred(e)) : bool))
-        enum ChunkByImplIsUnary = true;
-    else
-        static assert(0, "chunkBy expects either a binary predicate or "~
-                         "a unary predicate on range elements of type: "~
-                         ElementType!Range.stringof);
-}
-
 // Implementation of chunkBy for non-forward input ranges.
-private struct ChunkByImpl(alias pred, Range)
+private struct ChunkByImpl(alias pred, alias eq, bool isUnary, Range)
 if (isInputRange!Range && !isForwardRange!Range)
 {
-    enum bool isUnary = ChunkByImplIsUnary!(pred, Range);
-
-    static if (isUnary)
-        alias eq = binaryFun!((a, b) => unaryFun!pred(a) == unaryFun!pred(b));
-    else
-        alias eq = binaryFun!pred;
-
     private Range r;
     private ElementType!Range _prev;
     private bool openChunk = false;
@@ -1944,8 +1874,7 @@ if (isInputRange!Range && !isForwardRange!Range)
         {
             // Check reflexivity if predicate is claimed to be an equivalence
             // relation.
-            assert(eq(r.front, r.front),
-                   "predicate is not reflexive");
+            assert(eq(r.front, r.front), "predicate is not reflexive");
 
             // _prev's type may be a nested struct, so must be initialized
             // directly in the constructor (cannot call savePred()).
@@ -1962,16 +1891,45 @@ if (isInputRange!Range && !isForwardRange!Range)
     @property auto front()
     {
         assert(!empty, "Attempting to fetch the front of an empty chunkBy.");
+
+        static struct Result
+        {
+            private Range *r;
+            private ElementType!Range prev;
+
+            this(ref Range range, ElementType!Range _prev)
+            {
+                r = &range;
+                prev = _prev;
+            }
+
+            @property bool empty()
+            {
+                return r.empty || !eq(prev, r.front);
+            }
+
+            @property ElementType!Range front()
+            {
+                assert(!empty, "Attempting to fetch the front of an empty chunkBy chunk.");
+                return r.front;
+            }
+
+            void popFront()
+            {
+                assert(!empty, "Attempting to popFront an empty chunkBy chunk.");
+                r.popFront();
+            }
+        }
+
         openChunk = true;
         static if (isUnary)
         {
             import std.typecons : tuple;
-            return tuple(unaryFun!pred(_prev),
-                         ChunkByChunkImpl!(eq, Range)(r, _prev));
+            return tuple(unaryFun!pred(_prev), Result(r, _prev));
         }
         else
         {
-            return ChunkByChunkImpl!(eq, Range)(r, _prev);
+            return Result(r, _prev);
         }
     }
 
@@ -1979,14 +1937,13 @@ if (isInputRange!Range && !isForwardRange!Range)
     {
         assert(!empty, "Attempting to popFront an empty chunkBy.");
         openChunk = false;
-        while (!r.empty)
+        for (; !r.empty; r.popFront)
         {
             if (!eq(_prev, r.front))
             {
                 _prev = r.front;
                 break;
             }
-            r.popFront();
         }
     }
 }
@@ -2088,15 +2045,18 @@ if (isForwardRange!Range)
         // Scan for next group. If we're lucky, one of our Groups would have
         // already set .next to the start of the next group, in which case the
         // loop is skipped.
-        while (!impl.next.empty && eq(impl.current.front, impl.next.front))
+        with (impl)
         {
-            impl.next.popFront();
+            while (!next.empty && eq(current.front, next.front))
+            {
+                next.popFront();
+            }
+
+            current = next.save;
+
+            // Indicate to any remaining Groups that we have moved on.
+            groupNum++;
         }
-
-        impl.current = impl.next.save;
-
-        // Indicate to any remaining Groups that we have moved on.
-        impl.groupNum++;
     }
 
     @property auto save()
@@ -2244,17 +2204,23 @@ if (isForwardRange!Range)
 auto chunkBy(alias pred, Range)(Range r)
 if (isInputRange!Range)
 {
+    alias e = lvalueOf!(ElementType!Range);
 
-    enum bool isUnary = ChunkByImplIsUnary!(pred, Range);
+    static if (is(typeof(binaryFun!pred(e, e)) : bool))
+        enum bool isUnary = false;
+    else static if (is(typeof(unaryFun!pred(e) == unaryFun!pred(e)) : bool))
+        enum bool isUnary = true;
+    else
+        static assert(0, "chunkBy expects either a binary predicate or "~
+                        "a unary predicate on range elements of type: "~
+                        ElementType!Range.stringof);
 
     static if (isUnary)
         alias eq = binaryFun!((a, b) => unaryFun!pred(a) == unaryFun!pred(b));
     else
         alias eq = binaryFun!pred;
-    static if (isForwardRange!Range)
-        return ChunkByImpl!(pred, eq, isUnary, Range)(r);
-    else
-        return  ChunkByImpl!(pred, Range)(r);
+
+    return ChunkByImpl!(pred, eq, isUnary, Range)(r);
 }
 
 /// Showing usage with binary predicate:
@@ -3094,17 +3060,8 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
             static if (isBidirectional)
                 mixin(popBackEmptyElements);
         }
-        static if (isInfinite!RoR)
-        {
-            enum bool empty = false;
-        }
-        else
-        {
-            @property auto empty()
-            {
-                return _items.empty;
-            }
-        }
+        mixin ImplementEmpty!_items;
+
         @property auto ref front()
         {
             assert(!empty, "Attempting to fetch the front of an empty joiner.");
@@ -6977,14 +6934,7 @@ private struct UniqResult(alias pred, Range)
         }
     }
 
-    static if (isInfinite!Range)
-    {
-        enum bool empty = false;  // Propagate infiniteness.
-    }
-    else
-    {
-        @property bool empty() { return _input.empty; }
-    }
+    mixin ImplementEmpty!_input;
 
     static if (isForwardRange!Range)
     {
@@ -7126,4 +7076,19 @@ if (isRandomAccessRange!Range && hasLength!Range)
          [0, 2, 1],
          [1, 2, 0],
          [2, 1, 0]]));
+}
+
+/*
+Implements `empty` for a range by forwarding it to `member`. TODO: make this available
+and used throughout Phobos.
+*/
+private mixin template ImplementEmpty(alias member)
+{
+    static if (isInfinite!(typeof(member)))
+        enum bool empty = false;        // Propagate infinite-ness.
+    else
+        @property bool empty()
+        {
+            return member.empty;
+        }
 }
