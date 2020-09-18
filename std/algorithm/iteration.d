@@ -917,7 +917,119 @@ private:
          isForeachUnaryWithIndexIterable!R);
 
 public:
-    Flag!"each" each(Range)(auto ref Range r)
+    Flag!"each" each(Range)(auto ref Range range)
+    if (isInputRange!Range
+    || isStaticArray!Range
+    || hasMember!(Range, "opApply"))
+    {
+        // Special case static arrays
+        static if (isStaticArray!Range)
+        {
+            return .each!fun(range[]);
+        }
+        else
+        {
+            // May need to create a copy of the range
+            static if (__traits(isRef, range))
+                auto r = range;
+            else
+                alias r = range;
+        }
+
+        auto f1()()
+        {
+            for (; !r.empty; r.popFront)
+                static if (is(typeof(unaryFun!fun(r.front)) == Flag!"each"))
+                {
+                    if (unaryFun!fun(r.front) == No.each) return No.each;
+                }
+                else
+                    cast(void) unaryFun!fun(r.front);
+            return Yes.each;
+        }
+
+        auto f21()()
+        {
+            for (; !r.empty; r.popFront)
+                if (fun(r.front.expand) == No.each) return No.each;
+            return Yes.each;
+        }
+
+        auto f22()()
+        {
+            for (; !r.empty; r.popFront)
+                fun(r.front.expand);
+            return Yes.each;
+        }
+
+        auto f3()()
+        {
+            size_t i = 0;
+            for (; !r.empty; r.popFront, ++i)
+                if (binaryFun!BinaryArgs(i, r.front) == No.each) return No.each;
+            return Yes.each;
+        }
+
+        auto f4()()
+        {
+            size_t i = 0;
+            for (; !r.empty; r.popFront, ++i)
+                binaryFun!BinaryArgs(i, r.front);
+            return Yes.each;
+        }
+
+        auto f5()()
+        {
+            static assert(hasMember!(Range, "opApply"));
+            foreach (ref e; r)
+                unaryFun!fun(e);
+            return Yes.each;
+        }
+
+        auto f6()()
+        {
+            static assert(hasMember!(Range, "opApply"));
+            foreach (i, ref e; r)
+                binaryFun!BinaryArgs(i, e);
+            return Yes.each;
+        }
+
+        auto f7()()
+        {
+            static assert(hasMember!(Range, "opApply"));
+            // opApply with >2 parameters. count the delegate args.
+            // only works if it is not templated (otherwise we cannot count the args)
+            auto result = Yes.each;
+            auto dg(Parameters!(Parameters!(r.opApply)) params)
+            {
+                static if (!is(typeof(binaryFun!BinaryArgs(i, e)) == Flag!"each"))
+                {
+                    fun(params);
+                    return 0; // tells opApply to continue iteration
+                }
+                else
+                {
+                    result = fun(params);
+                    return result == Yes.each ? 0 : -1;
+                }
+            }
+            r.opApply(&dg);
+            return result;
+        }
+
+        static if (is(typeof(f1!()))) return f1();
+        //else static if (is(typeof(f2!()))) return f2();
+        else static if (is(typeof(f21!()))) return f21();
+        else static if (is(typeof(f22!()))) return f22();
+        else static if (is(typeof(f3!()))) return f3();
+        else static if (is(typeof(f4!()))) return f4();
+        else static if (is(typeof(f5!()))) return f5();
+        else static if (is(typeof(f6!()))) return f6();
+        else static if (is(typeof(f7!()))) return f7();
+        else static assert(isStaticArray!Range, Range.stringof);
+    }
+
+    Flag!"each" zzeach(Range)(auto ref Range r)
     if (isForeachIterable!Range ||
             (isRangeIterable!Range || __traits(compiles, typeof(r.front).length)) ||
             __traits(compiles, Parameters!(Parameters!(r.opApply))))
@@ -1103,6 +1215,7 @@ public:
     // Indexes are also available for in-place mutations
     arr[] = 0;
     arr.each!"a=i"();
+    import std.stdio; writeln(arr);
     assert(arr == [0, 1, 2, 3, 4, 5]);
 
     // opApply iterators work as well
