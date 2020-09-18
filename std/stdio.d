@@ -3667,29 +3667,22 @@ void main()
     }
     assert(std.file.readText!string(deleteme).stripLeft("\uFEFF") == "foobar");
 }
-@safe unittest // char -> wchar_t
+@safe unittest // char/wchar -> wchar_t
 {
     static import std.file;
+
     auto deleteme = testFilename();
     scope(exit) std.file.remove(deleteme);
     {
         auto writer = File(deleteme, "w,ccs=UTF-16LE").lockingTextWriter();
-        writer.put("ö");
-        writer.put("\U0001F608");
-    }
-    assert(std.file.readText!wstring(deleteme) == "ö\U0001F608"w);
-}
-@safe unittest // wchar -> wchar_t
-{
-    static import std.file;
-    auto deleteme = testFilename();
-    scope(exit) std.file.remove(deleteme);
-    {
-        auto writer = File(deleteme, "w,ccs=UTF-16LE").lockingTextWriter();
+        // char -> wchar_t
+        writer.put("ä");
+        writer.put("\U0001F607");
+        // wchar -> wchar_t
         writer.put("ö"w);
         writer.put("\U0001F608"w);
     }
-    assert(std.file.readText!wstring(deleteme) == "ö\U0001F608"w);
+    assert(std.file.readText!wstring(deleteme) == "ä\U0001F607ö\U0001F608"w);
 }
 
 @safe unittest
