@@ -1515,108 +1515,12 @@ void setTimes(R)(R name,
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     !isConvertibleToString!R)
 {
-    version (Windows)
-    {
-        import std.datetime.systime : SysTimeToFILETIME;
-
-        auto namez = name.tempCString!FSChar();
-        static auto trustedCreateFileW(const(FSChar)* namez, DWORD dwDesiredAccess, DWORD dwShareMode,
-                                       SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
-                                       DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) @trusted
-        {
-            return CreateFileW(namez, dwDesiredAccess, dwShareMode,
-                               lpSecurityAttributes, dwCreationDisposition,
-                               dwFlagsAndAttributes, hTemplateFile);
-
-        }
-        static auto trustedCloseHandle(HANDLE hObject) @trusted
-        {
-            return CloseHandle(hObject);
-        }
-        static auto trustedSetFileTime(HANDLE hFile, const scope FILETIME *lpCreationTime,
-                                       const scope ref FILETIME lpLastAccessTime,
-                                       const scope ref FILETIME lpLastWriteTime) @trusted
-        {
-            return SetFileTime(hFile, lpCreationTime, &lpLastAccessTime, &lpLastWriteTime);
-        }
-
-        const ta = SysTimeToFILETIME(accessTime);
-        const tm = SysTimeToFILETIME(modificationTime);
-        alias defaults =
-            AliasSeq!(GENERIC_WRITE,
-                      0,
-                      null,
-                      OPEN_EXISTING,
-                      FILE_ATTRIBUTE_NORMAL |
-                      FILE_ATTRIBUTE_DIRECTORY |
-                      FILE_FLAG_BACKUP_SEMANTICS,
-                      HANDLE.init);
-        auto h = trustedCreateFileW(namez, defaults);
-
-        static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
-            alias names = name;
-        else
-            string names = null;
-        cenforce(h != INVALID_HANDLE_VALUE, names, namez);
-
-        scope(exit)
-            cenforce(trustedCloseHandle(h), names, namez);
-
-        cenforce(trustedSetFileTime(h, null, ta, tm), names, namez);
-    }
-    else version (Posix)
-    {
-        auto namez = name.tempCString!FSChar();
-        static if (is(typeof(&utimensat)))
-        {
-            static auto trustedUtimensat(int fd, const(FSChar)* namez, const ref timespec[2] times, int flags) @trusted
-            {
-                return utimensat(fd, namez, times, flags);
-            }
-            timespec[2] t = void;
-
-            t[0] = accessTime.toTimeSpec();
-            t[1] = modificationTime.toTimeSpec();
-
-            static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
-                alias names = name;
-            else
-                string names = null;
-            cenforce(trustedUtimensat(AT_FDCWD, namez, t, 0) == 0, names, namez);
-        }
-        else
-        {
-            static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
-                alias names = name;
-            else
-                string names = null;
-            version (Darwin)
-            {
-                // Set modification & access times with setattrlist to avoid precision loss.
-                attrlist attrs = { bitmapcount: 5, reserved: 0,
-                        commonattr: ATTR_CMN_MODTIME | ATTR_CMN_ACCTIME,
-                        volattr: 0, dirattr: 0, fileattr: 0, forkattr: 0 };
-                timespec[2] attrbuf = [modificationTime.toTimeSpec(), accessTime.toTimeSpec()];
-                if (0 == (() @trusted => setattrlist(namez, attrs, &attrbuf, attrbuf.sizeof, 0))())
-                    return;
-                if (.errno != ENOTSUP)
-                    cenforce(false, names, namez);
-                // Not all volumes support setattrlist. In such cases
-                // fall through to the utimes implementation.
-            }
-
-            static auto trustedUtimes(const(FSChar)* namez, const ref timeval[2] times) @trusted
-            {
-                return utimes(namez, times);
-            }
-            timeval[2] t = void;
-
-            t[0] = accessTime.toTimeVal();
-            t[1] = modificationTime.toTimeVal();
-
-            cenforce(trustedUtimes(namez, t) == 0, names, namez);
-        }
-    }
+    auto namez = name.tempCString!FSChar();
+    static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
+        alias names = name;
+    else
+        string names = null;
+    setTimesImpl(names, namez, accessTime, modificationTime);
 }
 
 ///
@@ -1645,6 +1549,65 @@ void setTimes(R)(auto ref R name,
 if (isConvertibleToString!R)
 {
     setTimes!(StringTypeOf!R)(name, accessTime, modificationTime);
+}
+
+private void setTimesImpl(scope const(char)[] names, scope const(FSChar)* namez,
+    SysTime accessTime, SysTime modificationTime) @trusted
+{
+    version (Windows)
+    {
+        import std.datetime.systime : SysTimeToFILETIME;
+        const ta = SysTimeToFILETIME(accessTime);
+        const tm = SysTimeToFILETIME(modificationTime);
+        alias defaults =
+            AliasSeq!(GENERIC_WRITE,
+                      0,
+                      null,
+                      OPEN_EXISTING,
+                      FILE_ATTRIBUTE_NORMAL |
+                      FILE_ATTRIBUTE_DIRECTORY |
+                      FILE_FLAG_BACKUP_SEMANTICS,
+                      HANDLE.init);
+        auto h = CreateFileW(namez, defaults);
+
+        cenforce(h != INVALID_HANDLE_VALUE, names, namez);
+
+        scope(exit)
+            cenforce(CloseHandle(h), names, namez);
+
+        cenforce(SetFileTime(h, null, &ta, &tm), names, namez);
+    }
+    else
+    {
+        static if (is(typeof(&utimensat)))
+        {
+            timespec[2] t = void;
+            t[0] = accessTime.toTimeSpec();
+            t[1] = modificationTime.toTimeSpec();
+            cenforce(utimensat(AT_FDCWD, namez, t, 0) == 0, names, namez);
+        }
+        else
+        {
+            version (Darwin)
+            {
+                // Set modification & access times with setattrlist to avoid precision loss.
+                attrlist attrs = { bitmapcount: 5, reserved: 0,
+                        commonattr: ATTR_CMN_MODTIME | ATTR_CMN_ACCTIME,
+                        volattr: 0, dirattr: 0, fileattr: 0, forkattr: 0 };
+                timespec[2] attrbuf = [modificationTime.toTimeSpec(), accessTime.toTimeSpec()];
+                if (0 == setattrlist(namez, attrs, &attrbuf, attrbuf.sizeof, 0))
+                    return;
+                if (.errno != ENOTSUP)
+                    cenforce(false, names, namez);
+                // Not all volumes support setattrlist. In such cases
+                // fall through to the utimes implementation.
+            }
+            timeval[2] t = void;
+            t[0] = accessTime.toTimeVal();
+            t[1] = modificationTime.toTimeVal();
+            cenforce(utimes(namez, t) == 0, names, namez);
+        }
+    }
 }
 
 @safe unittest
@@ -4394,11 +4357,7 @@ private void copyImpl(scope const(char)[] f, scope const(char)[] t,
 
         cenforce(core.sys.posix.unistd.close(fdw) != -1, f, fromz);
 
-        utimbuf utim = void;
-        utim.actime = cast(time_t) statbufr.st_atime;
-        utim.modtime = cast(time_t) statbufr.st_mtime;
-
-        cenforce(utime(toz, &utim) != -1, f, fromz);
+        setTimesImpl(t, toz, statbufr.statTimeToStdTime!'a', statbufr.statTimeToStdTime!'m');
     }
 }
 
@@ -4418,6 +4377,14 @@ private void copyImpl(scope const(char)[] f, scope const(char)[] t,
     import std.utf : byChar;
     copy(t1.byChar, t2.byChar);
     assert(readText(t2.byChar) == "2");
+
+// https://issues.dlang.org/show_bug.cgi?id=20370
+    version (Windows)
+        assert(t1.timeLastModified == t2.timeLastModified);
+    else static if (is(typeof(&utimensat)) || is(typeof(&setattrlist)))
+        assert(t1.timeLastModified == t2.timeLastModified);
+    else
+        assert(abs(t1.timeLastModified - t2.timeLastModified) < dur!"usecs"(1));
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=11434
