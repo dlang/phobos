@@ -1129,29 +1129,6 @@ range of range (of range...) comparisons.
     assert(!"bar".equal(E()));
 }
 
-// MaxType
-private template MaxType(T...)
-if (T.length >= 1)
-{
-    static if (T.length == 1)
-    {
-        alias MaxType = T[0];
-    }
-    else static if (T.length == 2)
-    {
-        static if (!is(typeof(T[0].min)))
-            alias MaxType = CommonType!T;
-        else static if (T[1].max > T[0].max)
-            alias MaxType = T[1];
-        else
-            alias MaxType = T[0];
-    }
-    else
-    {
-        alias MaxType = MaxType!(MaxType!(T[0 .. ($+1)/2]), MaxType!(T[($+1)/2 .. $]));
-    }
-}
-
 // levenshteinDistance
 /**
 Encodes $(HTTP realityinteractive.com/rgrzywinski/archives/000249.html,
@@ -1561,31 +1538,40 @@ Returns:
 See_Also:
     $(REF maxElement, std,algorithm,searching)
 */
-MaxType!T max(T...)(T args)
-if (T.length >= 2)
+auto max(T...)(T args)
+if (T.length >= 2 && !is(CommonType!T == void))
 {
-    //Get "a"
-    static if (T.length <= 2)
+    // Get left-hand side of the comparison.
+    static if (T.length == 2)
         alias a = args[0];
     else
-        auto a = max(args[0 .. ($+1)/2]);
+        auto a = max(args[0 .. ($ + 1) / 2]);
     alias T0 = typeof(a);
 
-    //Get "b"
+    // Get right-hand side.
     static if (T.length <= 3)
-        alias b = args[$-1];
+        alias b = args[$ - 1];
     else
-        auto b = max(args[($+1)/2 .. $]);
+        auto b = max(args[($ + 1) / 2 .. $]);
     alias T1 = typeof(b);
 
     static assert(is(typeof(a < b)),
         "Invalid arguments: Cannot compare types " ~ T0.stringof ~
-        " and " ~ T1.stringof ~ ".");
+        " and " ~ T1.stringof ~ " for ordering.");
 
-    //Do the "max" proper with a and b
+    // Compute the returned type.
+    static if (is(typeof(mostNegative!T0 < mostNegative!T1)))
+        // Both are numeric (or character or Boolean), so we choose the one with the highest maximum.
+        // (We use mostNegative for num/bool/char testing purposes even if it's not used otherwise.)
+        alias Result = Select!(T1.max > T0.max, T1, T0);
+    else
+        // At least one is non-numeric, so just go with the common type.
+        alias Result = CommonType!(T0, T1);
+
+    // Perform the computation.
     import std.functional : lessThan;
     immutable chooseB = lessThan!(T0, T1)(a, b);
-    return cast(typeof(return)) (chooseB ? b : a);
+    return cast(Result) (chooseB ? b : a);
 }
 
 ///
@@ -1631,38 +1617,6 @@ if (T.length >= 2)
     assert(max(Date.max, Date.min) == Date.max);
 }
 
-// MinType
-private template MinType(T...)
-if (T.length >= 1)
-{
-    static if (T.length == 1)
-    {
-        alias MinType = T[0];
-    }
-    else static if (T.length == 2)
-    {
-        static if (!is(typeof(T[0].min)))
-            alias MinType = CommonType!T;
-        else
-        {
-            enum hasMostNegative = is(typeof(mostNegative!(T[0]))) &&
-                                   is(typeof(mostNegative!(T[1])));
-            static if (hasMostNegative && mostNegative!(T[1]) < mostNegative!(T[0]))
-                alias MinType = T[1];
-            else static if (hasMostNegative && mostNegative!(T[1]) > mostNegative!(T[0]))
-                alias MinType = T[0];
-            else static if (T[1].max < T[0].max)
-                alias MinType = T[1];
-            else
-                alias MinType = T[0];
-        }
-    }
-    else
-    {
-        alias MinType = MinType!(MinType!(T[0 .. ($+1)/2]), MinType!(T[($+1)/2 .. $]));
-    }
-}
-
 // min
 /**
 Iterates the passed arguments and returns the minimum value.
@@ -1681,31 +1635,43 @@ Returns:
 See_Also:
     $(REF minElement, std,algorithm,searching)
 */
-MinType!T min(T...)(T args)
-if (T.length >= 2)
+auto min(T...)(T args)
+if (T.length >= 2 && !is(CommonType!T == void))
 {
-    //Get "a"
+    // Get the left-hand side of the comparison.
     static if (T.length <= 2)
         alias a = args[0];
     else
-        auto a = min(args[0 .. ($+1)/2]);
+        auto a = min(args[0 .. ($ + 1) / 2]);
     alias T0 = typeof(a);
 
-    //Get "b"
+    // Get the right-hand side.
     static if (T.length <= 3)
-        alias b = args[$-1];
+        alias b = args[$ - 1];
     else
-        auto b = min(args[($+1)/2 .. $]);
+        auto b = min(args[($ + 1) / 2 .. $]);
     alias T1 = typeof(b);
 
     static assert(is(typeof(a < b)),
         "Invalid arguments: Cannot compare types " ~ T0.stringof ~
-        " and " ~ T1.stringof ~ ".");
+        " and " ~ T1.stringof ~ " for ordering.");
 
-    //Do the "min" proper with a and b
+    // Compute the returned type.
+    static if (is(typeof(mostNegative!T0 < mostNegative!T1)))
+        // Both are numeric (or character or Boolean), so we choose the one with the lowest minimum.
+        // If they have the same minimum, choose the one with the smallest size.
+        // If both mostNegative and sizeof are equal, go for stability: pick the type of the first one.
+        alias Result = Select!(mostNegative!T1 < mostNegative!T0 ||
+                mostNegative!T1 == mostNegative!T0 && T1.sizeof < T0.sizeof,
+            T1, T0);
+    else
+        // At least one is non-numeric, so just go with the common type.
+        alias Result = CommonType!(T0, T1);
+
+    // Engage!
     import std.functional : lessThan;
     immutable chooseB = lessThan!(T1, T0)(b, a);
-    return cast(typeof(return)) (chooseB ? b : a);
+    return cast(Result) (chooseB ? b : a);
 }
 
 ///
@@ -1720,6 +1686,14 @@ if (T.length >= 2)
     auto e = min(a, b, c);
     static assert(is(typeof(e) == double));
     assert(e == 2);
+    ulong f = 0xffff_ffff_ffff;
+    const uint g = min(f, 0xffff_0000);
+    assert(g == 0xffff_0000);
+    dchar h = 100;
+    uint i = 101;
+    static assert(is(typeof(min(h, i)) == dchar));
+    static assert(is(typeof(min(i, h)) == uint));
+    assert(min(h, i) == 100);
 }
 
 /**
