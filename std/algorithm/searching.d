@@ -955,7 +955,7 @@ if (isInputRange!R &&
     // Because of https://issues.dlang.org/show_bug.cgi?id=8804
     // Avoids both "unreachable code" or "no return statement"
     static if (isInfinite!R) assert(false, R.stringof ~ " must not be an"
-            ~ " inifite range");
+            ~ " infinite range");
     else return -1;
 }
 

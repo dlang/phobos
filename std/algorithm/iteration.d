@@ -363,16 +363,6 @@ private struct _Cache(R, bool bidir)
         }
     }
 
-    static if (isInfinite!R)
-        enum empty = false;
-    else
-        bool empty() @property
-        {
-            return source.empty;
-        }
-
-    mixin ImplementLength!source;
-
     E front() @property
     {
         version (assert) if (empty) throw new RangeError();
@@ -412,42 +402,9 @@ private struct _Cache(R, bool bidir)
         }
     }
 
-    static if (hasSlicing!R)
-    {
-        enum hasEndSlicing = is(typeof(source[size_t.max .. $]));
-
-        static if (hasEndSlicing)
-        {
-            private static struct DollarToken{}
-            enum opDollar = DollarToken.init;
-
-            auto opSlice(size_t low, DollarToken)
-            {
-                return typeof(this)(source[low .. $]);
-            }
-        }
-
-        static if (!isInfinite!R)
-        {
-            typeof(this) opSlice(size_t low, size_t high)
-            {
-                return typeof(this)(source[low .. high]);
-            }
-        }
-        else static if (hasEndSlicing)
-        {
-            auto opSlice(size_t low, size_t high)
-            in
-            {
-                assert(low <= high, "Bounds error when slicing cache.");
-            }
-            do
-            {
-                import std.range : takeExactly;
-                return this[low .. $].takeExactly(high - low);
-            }
-        }
-    }
+    mixin ImplementEmpty!source;
+    mixin ImplementLength!source;
+    mixin ImplementSlicing!source;
 }
 
 /**
@@ -542,37 +499,6 @@ if (fun.length >= 1)
             alias opDollar = length;
         }
 
-        static if (hasSlicing!R)
-        {
-            static if (is(typeof(_input[ulong.max .. ulong.max])))
-                private alias opSlice_t = ulong;
-            else
-                private alias opSlice_t = uint;
-
-            static if (hasLength!R)
-            {
-                auto opSlice(opSlice_t low, opSlice_t high)
-                {
-                    return typeof(this)(_input[low .. high]);
-                }
-            }
-            else static if (is(typeof(_input[opSlice_t.max .. $])))
-            {
-                struct DollarToken{}
-                enum opDollar = DollarToken.init;
-                auto opSlice(opSlice_t low, DollarToken)
-                {
-                    return typeof(this)(_input[low .. $]);
-                }
-
-                auto opSlice(opSlice_t low, opSlice_t high)
-                {
-                    import std.range : takeExactly;
-                    return this[low .. $].takeExactly(high - low);
-                }
-            }
-        }
-
         static if (isForwardRange!R)
         {
             @property auto save()
@@ -580,6 +506,8 @@ if (fun.length >= 1)
                 return typeof(this)(_input.save);
             }
         }
+
+        mixin ImplementSlicing!_input;
     }
 
     /**
@@ -875,7 +803,7 @@ stopping.
 See_Also: $(REF tee, std,range)
  */
 Flag!"each" each(alias fun = "a", Range)(auto ref Range range)
-if (isInputRange!Range || isStaticArray!Range || hasMember!(Range, "opApply"))
+if (isInputRange!Range || isArray!Range || hasMember!(Range, "opApply"))
 {
     import std.meta : AliasSeq;
     import std.traits : Parameters;
@@ -890,9 +818,16 @@ if (isInputRange!Range || isStaticArray!Range || hasMember!(Range, "opApply"))
     }
     else
     {
-        // If a ref input range, create a copy of it so we don't eat it all.
-        static if (__traits(isRef, range) && isInputRange!Range)
-            auto r = range;
+        // If needed, create a copy of it so the iteration doesn't consume the range.
+        static if (__traits(isRef, range))
+            static if (isInputRange!Range)
+                auto r = range;
+            else static if (isDynamicArray!Range)
+                // This is a rare but legit case: an array that's not a range because it's
+                // qualified. Use `Unqual` to convert e.g. ref const(string[]) to const(string)[].
+                Unqual!Range r = range;
+            else
+                alias r = range;
         else
             alias r = range;
 
@@ -1025,6 +960,10 @@ if (isInputRange!Range || isStaticArray!Range || hasMember!(Range, "opApply"))
     auto s = new S;
     s.each!"a++";
     assert(s.x == 1);
+
+    // Try an immutable array of strings. Should be converted to array of immutable strings.
+    immutable(string[]) y = [ "hello", "world" ];
+    cast(void) y.each!();
 }
 
 // binary foreach with two ref args
@@ -1293,6 +1232,7 @@ if (is(typeof(unaryFun!predicate)))
     // Filter below 3
     auto small = filter!(a => a < 3)(arr);
     assert(equal(small, [ 1, 2 ]));
+    assert(equal(small[], [ 1, 2 ]));
 
     // Filter again, but with Uniform Function Call Syntax (UFCS)
     auto sum = arr.filter!(a => a < 3);
@@ -6986,4 +6926,46 @@ private mixin template ImplementEmpty(alias member)
         {
             return member.empty;
         }
+}
+
+/*
+Implements slicing for a range by forwarding it to `member`. TODO: make this available
+and used throughout Phobos.
+*/
+private mixin template ImplementSlicing(alias member)
+{
+    static if (hasSlicing!(typeof(member)))
+    {
+        private enum hasEndSlicing = is(typeof(member[size_t.max .. $]));
+
+        static if (hasEndSlicing)
+        {
+            static if (!hasLength!(typeof(member)))
+            {
+                private static struct DollarToken {}
+                enum opDollar = DollarToken.init;
+                auto opSlice(size_t low, DollarToken)
+                {
+                    return typeof(this)(member[low .. $]);
+                }
+            }
+        }
+
+        static if (!isInfinite!(typeof(member)))
+        {
+            auto opSlice(size_t low, size_t high)
+            {
+                return typeof(this)(member[low .. high]);
+            }
+        }
+        else static if (hasEndSlicing)
+        {
+            auto opSlice(size_t low, size_t high)
+            in(low <= high, "Bounds error when slicing cache.")
+            {
+                import std.range : takeExactly;
+                return this[low .. $].takeExactly(high - low);
+            }
+        }
+    }
 }
