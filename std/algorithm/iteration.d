@@ -371,10 +371,7 @@ private struct _Cache(R, bool bidir)
             return source.empty;
         }
 
-    static if (hasLength!R) auto length() @property
-    {
-        return source.length;
-    }
+    mixin ImplementLength!source;
 
     E front() @property
     {
@@ -641,15 +638,7 @@ private struct MapResult(alias fun, Range)
         }
     }
 
-    static if (hasLength!R)
-    {
-        @property auto length()
-        {
-            return _input.length;
-        }
-
-        alias opDollar = length;
-    }
+    mixin ImplementLength!_input;
 
     static if (hasSlicing!R)
     {
@@ -4373,13 +4362,7 @@ if (fun.length >= 1)
                 }
             }
 
-            static if (hasLength!R)
-            {
-                @property size_t length()
-                {
-                    return source.length;
-                }
-            }
+            mixin ImplementLength!source;
         }
 
         return Result(range, args);

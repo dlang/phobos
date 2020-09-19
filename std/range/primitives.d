@@ -2509,3 +2509,18 @@ if (isAutodecodableString!(T[]))
     size_t i = a.length - strideBack(a, a.length);
     return decode(a, i);
 }
+
+/*
+Implements `length` for a range by forwarding it to `member`.
+*/
+package(std) mixin template ImplementLength(alias member)
+{
+    static if (hasLength!(typeof(member)))
+    {
+        @property auto length()
+        {
+            return member.length;
+        }
+        alias opDollar = length;
+    }
+}
