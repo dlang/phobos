@@ -851,7 +851,7 @@ it separately:
 
 // each
 /**
-Eagerly iterates over `r` and calls `fun` over _each element.
+Eagerly iterates over `range` and calls `fun` over _each element.
 
 If no function to call is specified, `each` defaults to doing nothing but
 consuming the entire range. `r.front` will be evaluated, but that can be avoided
@@ -867,134 +867,89 @@ iteration).
 
 Params:
     fun = function to apply to _each element of the range
-    r = range or iterable over which `each` iterates
+    range = range or iterable over which `each` iterates
 
 Returns: `Yes.each` if the entire range was iterated, `No.each` in case of early
 stopping.
 
 See_Also: $(REF tee, std,range)
  */
-template each(alias fun = "a")
+Flag!"each" each(alias fun = "a", Range)(auto ref Range range)
+if (isInputRange!Range || isStaticArray!Range || hasMember!(Range, "opApply"))
 {
     import std.meta : AliasSeq;
     import std.traits : Parameters;
-    import std.typecons : Flag, Yes, No;
+    import std.typecons : Yes, No;
 
-private:
     alias BinaryArgs = AliasSeq!(fun, "i", "a");
 
-    enum isRangeUnaryIterable(R) =
-        is(typeof(unaryFun!fun(R.init.front)));
-
-    enum isRangeBinaryIterable(R) =
-        is(typeof(binaryFun!BinaryArgs(0, R.init.front)));
-
-    enum isRangeIterable(R) =
-        isInputRange!R &&
-        (isRangeUnaryIterable!R || isRangeBinaryIterable!R);
-
-    enum isForeachUnaryIterable(R) =
-        is(typeof((R r) {
-            foreach (ref a; r)
-                cast(void) unaryFun!fun(a);
-        }));
-
-    enum isForeachUnaryWithIndexIterable(R) =
-        is(typeof((R r) {
-            foreach (i, ref a; r)
-                cast(void) binaryFun!BinaryArgs(i, a);
-        }));
-
-    enum isForeachBinaryIterable(R) =
-        is(typeof((R r) {
-            foreach (ref a, ref b; r)
-                cast(void) binaryFun!fun(a, b);
-        }));
-
-    enum isForeachIterable(R) =
-        (!isForwardRange!R || isDynamicArray!R) &&
-        (isForeachUnaryIterable!R || isForeachBinaryIterable!R ||
-         isForeachUnaryWithIndexIterable!R);
-
-public:
-    Flag!"each" each(Range)(auto ref Range range)
-    if (isInputRange!Range
-    || isStaticArray!Range
-    || hasMember!(Range, "opApply"))
+    static if (isStaticArray!Range)
     {
-        // Special case static arrays
-        static if (isStaticArray!Range)
-        {
-            return .each!fun(range[]);
-        }
+        // Just "recurse" to the range version.
+        return .each!fun(range[]);
+    }
+    else
+    {
+        // If a ref input range, create a copy of it so we don't eat it all.
+        static if (__traits(isRef, range) && isInputRange!Range)
+            auto r = range;
         else
-        {
-            // May need to create a copy of the range
-            static if (__traits(isRef, range))
-                auto r = range;
-            else
-                alias r = range;
-        }
+            alias r = range;
 
-        auto f1()()
+        // Strategy: try all iteration patterns, pick the first that fits.
+
+        auto f1()() // input range iteration with one argument
         {
             for (; !r.empty; r.popFront)
-                static if (is(typeof(unaryFun!fun(r.front)) == Flag!"each"))
-                {
-                    if (unaryFun!fun(r.front) == No.each) return No.each;
-                }
-                else
+                static if (!is(typeof(unaryFun!fun(r.front)) == Flag!"each"))
                     cast(void) unaryFun!fun(r.front);
+                else
+                    if (unaryFun!fun(r.front) == No.each) return No.each;
             return Yes.each;
         }
 
-        auto f21()()
+        auto f2()() // input range, function takes a tuple
         {
             for (; !r.empty; r.popFront)
-                if (fun(r.front.expand) == No.each) return No.each;
+                static if (!is(typeof(fun(r.front.expand)) == Flag!"each"))
+                    cast(void) fun(r.front.expand);
+                else
+                    if (fun(r.front.expand) == No.each) return No.each;
             return Yes.each;
         }
 
-        auto f22()()
+        auto f3()() // input range, function takes an index and an element
         {
-            for (; !r.empty; r.popFront)
-                fun(r.front.expand);
+            for (size_t i = 0; !r.empty; r.popFront, ++i)
+                static if (!is(typeof(binaryFun!BinaryArgs(i, r.front)) == Flag!"each"))
+                    cast(void) binaryFun!BinaryArgs(i, r.front);
+                else
+                    if (binaryFun!BinaryArgs(i, r.front) == No.each) return No.each;
             return Yes.each;
         }
 
-        auto f3()()
-        {
-            size_t i = 0;
-            for (; !r.empty; r.popFront, ++i)
-                if (binaryFun!BinaryArgs(i, r.front) == No.each) return No.each;
-            return Yes.each;
-        }
-
-        auto f4()()
-        {
-            size_t i = 0;
-            for (; !r.empty; r.popFront, ++i)
-                binaryFun!BinaryArgs(i, r.front);
-            return Yes.each;
-        }
-
-        auto f5()()
+        auto f4()() // opApply with one argument
         {
             static assert(hasMember!(Range, "opApply"));
-            foreach (ref e; r)
-                unaryFun!fun(e);
+            foreach (ref e; r) unaryFun!fun(e);
             return Yes.each;
         }
 
-        auto f6()()
+        auto f5()() // opApply with two arguments
         {
             static assert(hasMember!(Range, "opApply"));
-            foreach (i, ref e; r)
-                binaryFun!BinaryArgs(i, e);
+            foreach (ref i, ref e; r) binaryFun!BinaryArgs(i, e);
             return Yes.each;
         }
 
-        auto f7()()
+        auto f6()() // opApply with two arguments, first by value
+        {
+            static assert(hasMember!(Range, "opApply"));
+            foreach (i, ref e; r) binaryFun!BinaryArgs(i, e);
+            return Yes.each;
+        }
+
+        auto f7()() // opApply with arbitrary args
         {
             static assert(hasMember!(Range, "opApply"));
             // opApply with >2 parameters. count the delegate args.
@@ -1010,7 +965,7 @@ public:
                 else
                 {
                     result = fun(params);
-                    return result == Yes.each ? 0 : -1;
+                    return int(result == Yes.each) - 1;
                 }
             }
             r.opApply(&dg);
@@ -1018,170 +973,13 @@ public:
         }
 
         static if (is(typeof(f1!()))) return f1();
-        //else static if (is(typeof(f2!()))) return f2();
-        else static if (is(typeof(f21!()))) return f21();
-        else static if (is(typeof(f22!()))) return f22();
+        else static if (is(typeof(f2!()))) return f2();
         else static if (is(typeof(f3!()))) return f3();
         else static if (is(typeof(f4!()))) return f4();
         else static if (is(typeof(f5!()))) return f5();
         else static if (is(typeof(f6!()))) return f6();
         else static if (is(typeof(f7!()))) return f7();
-        else static assert(isStaticArray!Range, Range.stringof);
-    }
-
-    Flag!"each" zzeach(Range)(auto ref Range r)
-    if (isForeachIterable!Range ||
-            (isRangeIterable!Range || __traits(compiles, typeof(r.front).length)) ||
-            __traits(compiles, Parameters!(Parameters!(r.opApply))))
-    {
-        return each2(r);
-    }
-
-    /**
-    Params:
-        r = range or iterable over which each iterates
-     */
-    Flag!"each" each2(Range)(Range r)
-    if (!isForeachIterable!Range && (
-        isRangeIterable!Range ||
-        __traits(compiles, typeof(r.front).length)))
-    {
-        static if (isRangeIterable!Range)
-        {
-            debug(each) pragma(msg, "Using while for ", Range.stringof);
-            static if (isRangeUnaryIterable!Range)
-            {
-                while (!r.empty)
-                {
-                    static if (!is(typeof(unaryFun!fun(r.front)) == Flag!"each"))
-                    {
-                        cast(void) unaryFun!fun(r.front);
-                    }
-                    else
-                    {
-                        if (unaryFun!fun(r.front) == No.each) return No.each;
-                    }
-
-                    r.popFront();
-                }
-            }
-            else // if (isRangeBinaryIterable!Range)
-            {
-                size_t i = 0;
-                while (!r.empty)
-                {
-                    static if (!is(typeof(binaryFun!BinaryArgs(i, r.front)) == Flag!"each"))
-                    {
-                        cast(void) binaryFun!BinaryArgs(i, r.front);
-                    }
-                    else
-                    {
-                        if (binaryFun!BinaryArgs(i, r.front) == No.each) return No.each;
-                    }
-                    r.popFront();
-                    i++;
-                }
-            }
-        }
-        else
-        {
-            // range interface with >2 parameters.
-            for (auto range = r; !range.empty; range.popFront())
-            {
-                static if (!is(typeof(fun(r.front.expand)) == Flag!"each"))
-                {
-                    cast(void) fun(range.front.expand);
-                }
-                else
-                {
-                    if (fun(range.front.expand)) return No.each;
-                }
-            }
-        }
-        return Yes.each;
-    }
-
-    /// ditto
-    Flag!"each" each2(Iterable)(auto ref Iterable r)
-    if (isForeachIterable!Iterable ||
-        __traits(compiles, Parameters!(Parameters!(r.opApply))))
-    {
-        static if (isForeachIterable!Iterable)
-        {
-            static if (isForeachUnaryIterable!Iterable)
-            {
-                debug(each) pragma(msg, "Using foreach UNARY for ", Iterable.stringof);
-                {
-                    foreach (ref e; r)
-                    {
-                        static if (!is(typeof(unaryFun!fun(e)) == Flag!"each"))
-                        {
-                            cast(void) unaryFun!fun(e);
-                        }
-                        else
-                        {
-                            if (unaryFun!fun(e) == No.each) return No.each;
-                        }
-                    }
-                }
-            }
-            else static if (isForeachBinaryIterable!Iterable)
-            {
-                debug(each) pragma(msg, "Using foreach BINARY for ", Iterable.stringof);
-                foreach (ref a, ref b; r)
-                {
-                    static if (!is(typeof(binaryFun!fun(a, b)) == Flag!"each"))
-                    {
-                        cast(void) binaryFun!fun(a, b);
-                    }
-                    else
-                    {
-                        if (binaryFun!fun(a, b) == No.each) return No.each;
-                    }
-                }
-            }
-            else static if (isForeachUnaryWithIndexIterable!Iterable)
-            {
-                debug(each) pragma(msg, "Using foreach INDEX for ", Iterable.stringof);
-                foreach (i, ref e; r)
-                {
-                    static if (!is(typeof(binaryFun!BinaryArgs(i, e)) == Flag!"each"))
-                    {
-                        cast(void) binaryFun!BinaryArgs(i, e);
-                    }
-                    else
-                    {
-                        if (binaryFun!BinaryArgs(i, e) == No.each) return No.each;
-                    }
-                }
-            }
-            else
-            {
-                static assert(0, "Invalid foreach iteratable type " ~ Iterable.stringof ~ " met.");
-            }
-            return Yes.each;
-        }
-        else
-        {
-            // opApply with >2 parameters. count the delegate args.
-            // only works if it is not templated (otherwise we cannot count the args)
-            auto result = Yes.each;
-            auto dg(Parameters!(Parameters!(r.opApply)) params)
-            {
-                static if (!is(typeof(binaryFun!BinaryArgs(i, e)) == Flag!"each"))
-                {
-                    fun(params);
-                    return 0; // tells opApply to continue iteration
-                }
-                else
-                {
-                    result = fun(params);
-                    return result == Yes.each ? 0 : -1;
-                }
-            }
-            r.opApply(&dg);
-            return result;
-        }
+        else static assert(0, "Cannot iterate " ~ Range.stringof ~ " with each().");
     }
 }
 
@@ -1215,7 +1013,6 @@ public:
     // Indexes are also available for in-place mutations
     arr[] = 0;
     arr.each!"a=i"();
-    import std.stdio; writeln(arr);
     assert(arr == [0, 1, 2, 3, 4, 5]);
 
     // opApply iterators work as well
