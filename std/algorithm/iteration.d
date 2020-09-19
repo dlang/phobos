@@ -1551,13 +1551,14 @@ See_Also: $(LREF chunkBy), which chunks an input range into subranges
     of equivalent adjacent elements.
 */
 Group!(pred, Range) group(alias pred = "a == b", Range)(Range r)
+if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front))))
 {
     return typeof(return)(r);
 }
 
 /// ditto
 struct Group(alias pred, R)
-if (isInputRange!R)
+if (isInputRange!R && is(typeof(binaryFun!pred(R.init.front, R.init.front))))
 {
     import std.typecons : Rebindable, tuple, Tuple;
 
@@ -3537,11 +3538,11 @@ Implements the homonym function (also known as `accumulate`, $(D
 compress), `inject`, or `foldl`) present in various programming
 languages of functional flavor. There is also $(LREF fold) which does
 the same thing but with the opposite parameter order.
-The call `reduce!(fun)(seed, range)` first assigns `seed` to
+The call `reduce!fun(seed, range)` first assigns `seed` to
 an internal variable `result`, also called the accumulator.
 Then, for each element `x` in `range`, `result = fun(result, x)`
 gets evaluated. Finally, `result` is returned.
-The one-argument version `reduce!(fun)(range)`
+The one-argument version `reduce!fun(range)`
 works similarly, but it uses the first element of the range as the
 seed (the range must be non-empty).
 
@@ -3598,21 +3599,15 @@ if (fun.length >= 1)
 
         static if (isInputRange!R)
         {
-            // no need to throw if range is statically known to be non-empty
-            static if (!__traits(compiles,
-            {
-                static assert(r.length > 0);
-            }))
-                enforce(!r.empty, "Cannot reduce an empty input range w/o an explicit seed value.");
-
+            enforce(!r.empty, "Cannot reduce an empty input range w/o an explicit seed value.");
             Args result = r.front;
             r.popFront();
-            return reduceImpl!false(r, result);
+            return impl!false(r, result);
         }
         else
         {
             auto result = Args.init;
-            return reduceImpl!true(r, result);
+            return impl!true(r, result);
         }
     }
 
@@ -3638,31 +3633,24 @@ if (fun.length >= 1)
     if (isIterable!R)
     {
         static if (fun.length == 1)
-            return reducePreImpl(r, seed);
+            alias spawn = seed;
         else
-        {
-            import std.algorithm.internal : algoFormat;
-            static assert(isTuple!S, algoFormat("Seed %s should be a Tuple", S.stringof));
-            return reducePreImpl(r, seed.expand);
-        }
+            auto spawn = seed.expand;
+        alias Result = staticMap!(Unqual, typeof(spawn));
+        static if (is(Result == typeof(spawn)))
+            alias result = spawn;
+        else
+            Result result = spawn;
+        return impl!false(r, result);
     }
 
-    private auto reducePreImpl(R, Args...)(R r, ref Args args)
-    {
-        alias Result = staticMap!(Unqual, Args);
-        static if (is(Result == Args))
-            alias result = args;
-        else
-            Result result = args;
-        return reduceImpl!false(r, result);
-    }
-
-    private auto reduceImpl(bool mustInitialize, R, Args...)(R r, ref Args args)
+    private auto impl(bool mustInitialize, R, Args...)(R r, ref Args args)
     if (isIterable!R)
     {
         import std.algorithm.internal : algoFormat;
         static assert(Args.length == fun.length,
-            algoFormat("Seed %s does not have the correct amount of fields (should be %s)", Args.stringof, fun.length));
+            algoFormat("Seed %s does not have the correct amount of fields (should be %s)",
+            Args.stringof, fun.length));
         alias E = Select!(isInputRange!R, ElementType!R, ForeachType!R);
 
         static if (mustInitialize) bool initialized = false;
@@ -3693,15 +3681,12 @@ if (fun.length >= 1)
                 args[i] = f(args[i], e);
         }
         static if (mustInitialize)
-        // no need to throw if range is statically known to be non-empty
-        static if (!__traits(compiles,
-        {
-            static assert(r.length > 0);
-        }))
-        {
-            if (!initialized)
-                throw new Exception("Cannot reduce an empty iterable w/o an explicit seed value.");
-        }
+            // no need to throw if range is statically known to be non-empty
+            static if (!__traits(compiles, { static assert(r.length > 0); }))
+            {
+                import std.exception : enforce;
+                enforce(initialized, "Cannot reduce an empty iterable w/o an explicit seed value.");
+            }
 
         static if (Args.length == 1)
             return args[0];
@@ -4161,7 +4146,7 @@ if (fun.length >= 1)
     auto cumulativeFold(R)(R range)
     if (isInputRange!(Unqual!R))
     {
-        return cumulativeFoldImpl(range);
+        return impl(range);
     }
 
     /++
@@ -4182,12 +4167,12 @@ if (fun.length >= 1)
     if (isInputRange!(Unqual!R))
     {
         static if (fun.length == 1)
-            return cumulativeFoldImpl(range, seed);
+            return impl(range, seed);
         else
-            return cumulativeFoldImpl(range, seed.expand);
+            return impl(range, seed.expand);
     }
 
-    private auto cumulativeFoldImpl(R, Args...)(R range, ref Args args)
+    private auto impl(R, Args...)(R range, ref Args args)
     {
         import std.algorithm.internal : algoFormat;
 
