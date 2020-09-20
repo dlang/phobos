@@ -2569,7 +2569,20 @@ private auto executeImpl(alias pipeFunc, Cmd, ExtraPipeFuncArgs...)(
     auto r3 = executeShell("exit 123");
     assert(r3.status == 123);
     assert(r3.output.empty);
-    auto r4 = executeShell("echo -n '\r' 1>&2",
+}
+
+unittest
+{
+    // Temporarily disable output to stderr so as to not spam the build log.
+    import std.stdio : stderr;
+    auto t = stderr;
+    version (Posix)
+        stderr.open("/dev/null", "w");
+    else
+        stderr.open("nul", "w");
+    scope(exit) stderr = t;
+
+    auto r4 = executeShell("echo This line should not be visible. 1>&2",
         null, Config.stderrPassThrough);
     assert(r4.status == 0);
     assert(r4.output.empty);
