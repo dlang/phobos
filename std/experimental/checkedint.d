@@ -1641,6 +1641,11 @@ static:
 
 @system unittest
 {
+    // Temporarily disable output to stderr so as to not spam the build log.
+    import std.stdio;
+    auto t = stderr;
+    stderr.open("/dev/null", "w");
+    scope(exit) stderr = t;
     auto a = checked!Warn(int.min);
     auto b = checked!Warn(-1);
     assert(a / b == a * b);
@@ -1648,6 +1653,12 @@ static:
 
 @system unittest
 {
+    // Temporarily disable output to stderr so as to not spam the build log.
+    import std.stdio;
+    auto t = stderr;
+    stderr.open("/dev/null", "w");
+    scope(exit) stderr = t;
+
     import std.exception : assertThrown;
     import core.exception : AssertError;
 

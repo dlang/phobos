@@ -3122,7 +3122,7 @@ private auto executeImpl(alias pipeFunc, Cmd, ExtraPipeFuncArgs...)(
     auto r3 = executeShell("exit 123");
     assert(r3.status == 123);
     assert(r3.output.empty);
-    auto r4 = executeShell("echo stderr test, please ignore 1>&2",
+    auto r4 = executeShell("echo -n '\r' 1>&2",
         null, Config.stderrPassThrough);
     assert(r4.status == 0);
     assert(r4.output.empty);
