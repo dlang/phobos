@@ -1642,29 +1642,23 @@ static:
 @system unittest
 {
     // Temporarily disable output to stderr so as to not spam the build log.
-    import std.stdio;
+    import std.stdio : stderr;
     auto t = stderr;
-    stderr.open("/dev/null", "w");
+    version (Posix)
+        stderr.open("/dev/null", "w");
+    else
+        stderr.open("nul", "w");
     scope(exit) stderr = t;
+
     auto a = checked!Warn(int.min);
     auto b = checked!Warn(-1);
     assert(a / b == a * b);
-}
-
-@system unittest
-{
-    // Temporarily disable output to stderr so as to not spam the build log.
-    import std.stdio;
-    auto t = stderr;
-    stderr.open("/dev/null", "w");
-    scope(exit) stderr = t;
 
     import std.exception : assertThrown;
     import core.exception : AssertError;
-
-    auto a = checked!Abort(int.min);
-    auto b = checked!Abort(-1);
-    assertThrown!AssertError(a / b);
+    auto x = checked!Abort(int.min);
+    auto y = checked!Abort(-1);
+    assertThrown!AssertError(x / y);
 }
 
 // ProperCompare
