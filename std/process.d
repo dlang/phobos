@@ -2589,10 +2589,8 @@ unittest
     assert(r.status == 0);
     assert(r.output.empty);
     auto witness = readText(tmpname);
-    version (Posix)
-        assert(witness == "D rox.\n", "'" ~ witness ~ "'");
-    else
-        assert(witness == "D rox.\r\n", "'" ~ witness ~ "'");
+    import std.ascii : newline;
+    assert(witness == "D rox." ~ newline, "'" ~ witness ~ "'");
 }
 
 @safe unittest
