@@ -3669,20 +3669,46 @@ void main()
 }
 @safe unittest // char/wchar -> wchar_t
 {
+    import core.stdc.locale : LC_CTYPE, setlocale;
+    import core.stdc.wchar_ : fwide;
+    import std.algorithm.searching : any, endsWith;
+    import std.conv : text;
+    import std.meta : AliasSeq;
+    import std.string : fromStringz, stripLeft;
     static import std.file;
-
     auto deleteme = testFilename();
     scope(exit) std.file.remove(deleteme);
+    const char* oldCt = () @trusted {
+        return setlocale(LC_CTYPE, null);
+    }();
+    const utf8 = ["en_US.UTF-8", "C.UTF-8", ".65001"].any!((loc) @trusted {
+        return setlocale(LC_CTYPE, loc.ptr).fromStringz.endsWith(loc);
+    });
+    scope(exit) () @trusted { setlocale(LC_CTYPE, oldCt); } ();
+    version (DIGITAL_MARS_STDIO) // DM can't handle Unicode above U+07FF.
     {
-        auto writer = File(deleteme, "w,ccs=UTF-16LE").lockingTextWriter();
-        // char -> wchar_t
-        writer.put("ä");
-        writer.put("\U0001F607");
-        // wchar -> wchar_t
-        writer.put("ö"w);
-        writer.put("\U0001F608"w);
+        alias strs = AliasSeq!("xä\u07FE", "yö\u07FF"w);
     }
-    assert(std.file.readText!wstring(deleteme) == "ä\U0001F607ö\U0001F608"w);
+    else
+    {
+        alias strs = AliasSeq!("xä\U0001F607", "yö\U0001F608"w);
+    }
+    {
+        auto f = File(deleteme, "w");
+        version (MICROSOFT_STDIO)
+        {
+            () @trusted { setmode(fileno(f.getFP()), _O_U8TEXT); } ();
+        }
+        else
+        {
+            assert(fwide(f.getFP(), 1) == 1);
+        }
+        auto writer = f.lockingTextWriter();
+        assert(writer.orientation_ == 1);
+        static foreach (s; strs) writer.put(s);
+    }
+    assert(std.file.readText!string(deleteme).stripLeft("\uFEFF") ==
+        text(strs));
 }
 
 @safe unittest
