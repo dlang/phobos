@@ -3124,13 +3124,15 @@ private auto executeImpl(alias pipeFunc, Cmd, ExtraPipeFuncArgs...)(
     assert(r3.output.empty);
 }
 
-unittest
+@system unittest
 {
     // Temporarily disable output to stderr so as to not spam the build log.
     import std.stdio : stderr;
     import std.typecons : Tuple;
     import std.file : readText;
-    Tuple!(int, "status", string, "output") r;
+    import std.traits : ReturnType;
+
+    ReturnType!executeShell r;
     auto tmpname = uniqueTempPath;
     auto t = stderr;
     // Open a new scope to minimize code ran with stderr redirected.
