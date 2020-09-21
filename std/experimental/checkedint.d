@@ -1641,24 +1641,34 @@ static:
 
 @system unittest
 {
-    // Temporarily disable output to stderr so as to not spam the build log.
-    import std.stdio : stderr;
-    auto t = stderr;
-    version (Posix)
-        stderr.open("/dev/null", "w");
-    else
-        stderr.open("nul", "w");
-    scope(exit) stderr = t;
-
     auto a = checked!Warn(int.min);
     auto b = checked!Warn(-1);
-    assert(a / b == a * b);
-
-    import std.exception : assertThrown;
-    import core.exception : AssertError;
     auto x = checked!Abort(int.min);
     auto y = checked!Abort(-1);
-    assertThrown!AssertError(x / y);
+
+    // Temporarily redirect output to stderr to make sure we get the right output.
+    import std.process : uniqueTempPath;
+    import std.stdio : stderr;
+    auto tmpname = uniqueTempPath;
+    auto t = stderr;
+    stderr.open(tmpname, "w");
+    // Open a new scope to minimize code ran with stderr redirected.
+    {
+        scope(exit) stderr = t;
+        assert(a / b == a * b);
+        import std.exception : assertThrown;
+        import core.exception : AssertError;
+        assertThrown!AssertError(x / y);
+    }
+    import std.file : readText;
+    auto witness = readText(tmpname);
+    auto expected =
+"Overflow on binary operator: int(-2147483648) / const(int)(-1)\r\n" ~
+"Overflow on binary operator: int(-2147483648) * const(int)(-1)\r\n" ~
+"Overflow on binary operator: int(-2147483648) / const(int)(-1)\r\n";
+    import std.string : replace;
+    version(Posix) expected = expected.replace("\n\r", "\n");
+    assert(witness == expected, "'" ~ witness ~ "'");
 }
 
 // ProperCompare
