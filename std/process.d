@@ -2575,17 +2575,24 @@ unittest
 {
     // Temporarily disable output to stderr so as to not spam the build log.
     import std.stdio : stderr;
+    import std.typecons : Tuple;
+    import std.file : readText;
+    Tuple!(int, "status", string, "output") r;
+    auto tmpname = uniqueTempPath;
     auto t = stderr;
+    // Open a new scope to minimize code ran with stderr redirected.
+    {
+        stderr.open(tmpname, "w");
+        scope(exit) stderr = t;
+        r = executeShell("echo D rox. 1>&2", null, Config.stderrPassThrough);
+    }
+    assert(r.status == 0);
+    assert(r.output.empty);
+    auto witness = readText(tmpname);
     version (Posix)
-        stderr.open("/dev/null", "w");
+        assert(witness == "D rox.\n", "'" ~ witness ~ "'");
     else
-        stderr.open("nul", "w");
-    scope(exit) stderr = t;
-
-    auto r4 = executeShell("echo This line should not be visible. 1>&2",
-        null, Config.stderrPassThrough);
-    assert(r4.status == 0);
-    assert(r4.output.empty);
+        assert(witness == "D rox.\r\n", "'" ~ witness ~ "'");
 }
 
 @safe unittest
@@ -2787,8 +2794,7 @@ private struct TestScript
     string path;
 }
 
-version (unittest)
-private string uniqueTempPath() @safe
+package(std) string uniqueTempPath() @safe
 {
     import std.file : tempDir;
     import std.path : buildPath;
