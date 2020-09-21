@@ -2584,13 +2584,13 @@ unittest
     {
         stderr.open(tmpname, "w");
         scope(exit) stderr = t;
-        r = executeShell("echo D rox. 1>&2", null, Config.stderrPassThrough);
+        r = executeShell("echo D rox>&2", null, Config.stderrPassThrough);
     }
     assert(r.status == 0);
     assert(r.output.empty);
     auto witness = readText(tmpname);
     import std.ascii : newline;
-    assert(witness == "D rox." ~ newline, "'" ~ witness ~ "'");
+    assert(witness == "D rox" ~ newline, "'" ~ witness ~ "'");
 }
 
 @safe unittest
