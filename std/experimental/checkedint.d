@@ -1661,13 +1661,12 @@ static:
         assertThrown!AssertError(x / y);
     }
     import std.file : readText;
+    import std.ascii : newline;
     auto witness = readText(tmpname);
     auto expected =
-"Overflow on binary operator: int(-2147483648) / const(int)(-1)\r\n" ~
-"Overflow on binary operator: int(-2147483648) * const(int)(-1)\r\n" ~
-"Overflow on binary operator: int(-2147483648) / const(int)(-1)\r\n";
-    import std.string : replace;
-    version(Posix) expected = expected.replace("\n\r", "\n");
+"Overflow on binary operator: int(-2147483648) / const(int)(-1)" ~ newline ~
+"Overflow on binary operator: int(-2147483648) * const(int)(-1)" ~ newline ~
+"Overflow on binary operator: int(-2147483648) / const(int)(-1)" ~ newline;
     assert(witness == expected, "'" ~ witness ~ "'");
 }
 
