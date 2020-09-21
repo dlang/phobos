@@ -3710,6 +3710,26 @@ void main()
     assert(std.file.readText!string(deleteme).stripLeft("\uFEFF") ==
         text(strs));
 }
+@safe unittest // https://issues.dlang.org/show_bug.cgi?id=18789
+{
+    static import std.file;
+    auto deleteme = testFilename();
+    scope(exit) std.file.remove(deleteme);
+    // converting to char
+    {
+        auto f = File(deleteme, "w");
+        f.writeln("\U0001F608"w); // UTFException
+    }
+    // converting to wchar_t
+    {
+        auto f = File(deleteme, "w,ccs=UTF-16LE");
+        // from char
+        f.writeln("ö"); // writes garbage
+        f.writeln("\U0001F608"); // ditto
+        // from wchar
+        f.writeln("\U0001F608"w); // leads to ErrnoException
+    }
+}
 
 @safe unittest
 {
