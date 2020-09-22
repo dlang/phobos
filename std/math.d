@@ -8886,7 +8886,16 @@ private template CommonDefaultFor(T,U)
     alias baseT = FloatingPointBaseType!T;
     alias baseU = FloatingPointBaseType!U;
 
-    enum CommonType!(baseT, baseU) CommonDefaultFor = 10.0L ^^ -((min(baseT.dig, baseU.dig) + 1) / 2 + 1);
+    version (D_BetterC)
+    {
+        import core.internal.string : unsignedToTempString;
+        enum CommonType!(baseT, baseU) CommonDefaultFor = mixin("10.0e-" ~
+            unsignedToTempString((min(baseT.dig, baseU.dig) + 1) / 2 + 1) ~ "L");
+    }
+    else
+    {
+        enum CommonType!(baseT, baseU) CommonDefaultFor = 10.0L ^^ -((min(baseT.dig, baseU.dig) + 1) / 2 + 1);
+    }
 }
 
 private template FloatingPointBaseType(T)

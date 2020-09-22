@@ -25,6 +25,7 @@
 module std.complex;
 
 import std.traits;
+import std.internal.attributes : betterC;
 
 /** Helper function that returns a complex number with the specified
     real and imaginary parts.
@@ -63,7 +64,7 @@ if (is(R : double) && is(I : double))
 }
 
 ///
-@safe pure nothrow unittest
+@betterC @safe pure nothrow unittest
 {
     auto a = complex(1.0);
     static assert(is(typeof(a) == Complex!double));
@@ -101,9 +102,42 @@ if (is(R : double) && is(I : double))
     assert(g.im == 4.0L);
 }
 
+version (D_BetterC)
+private string cmathFloatImports(int mantDig, string[] funcNames, char leadingUnderscoreOrBlank = ' ')
+{
+    if (!__ctfe)
+    {
+        assert(0, "CTFE only");
+    }
+    else
+    {
+        immutable suffix = (mantDig > double.mant_dig ? 'l'
+            : mantDig <= float.mant_dig ? 'f' : ' ');
+        string result = "import core.stdc.math : ";
+        foreach (i, s; funcNames)
+        {
+            if (i != 0) result ~= ',';
+            result ~= leadingUnderscoreOrBlank;
+            result ~= s;
+            result ~= '=';
+            result ~= s;
+            result ~= suffix;
+        }
+        result ~= ';';
+        return result;
+    }
+}
+
 
 /** A complex number parametrised by a type `T`, which must be either
     `float`, `double` or `real`.
+
+   Note:
+       If $(LINK2 https://dlang.org/spec/betterc.html, compiled with `-betterC`)
+       (i.e. if using math functions from the C standard library instead of
+       `std.math`) some operations on this type may be impure and on some
+       platforms may be calculated in `double` precision even when `T` is
+       an extended-precision `real`.
 */
 struct Complex(T)
 if (isFloatingPoint!T)
@@ -125,7 +159,12 @@ if (isFloatingPoint!T)
 
     See the $(MREF std, format) and $(REF format, std,string)
     documentation for more information.
+
+    Note: When $(LINK2 https://dlang.org/spec/betterc.html, compiled with
+    `-betterC`) (i.e. when not linking against the D runtime) this function
+    will be unavailable.
     */
+    version (D_BetterC) {} else
     string toString() const @safe /* TODO: pure nothrow */
     {
         import std.exception : assumeUnique;
@@ -137,6 +176,7 @@ if (isFloatingPoint!T)
         return trustedAssumeUnique(buf);
     }
 
+    version (D_BetterC) {} else
     static if (is(T == double))
     ///
     @safe unittest
@@ -168,7 +208,7 @@ if (isFloatingPoint!T)
         put(w, "i");
     }
 
-@safe pure nothrow @nogc:
+@safe nothrow @nogc: // Only pure if using std.math instead of core.stdc.math.
 
     /** Construct a complex number with the specified real and
     imaginary parts. In the case where a single argument is passed
@@ -306,21 +346,37 @@ if (isFloatingPoint!T)
     Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(const R lhs) const
         if (op == "^^" && isNumeric!R)
     {
-        import std.math : cos, exp, log, sin, PI;
         Unqual!(CommonType!(T, R)) ab = void, ar = void;
+        import core.math : cos, sin;
+        version (D_BetterC)
+        {
+            import std.math : PI;
+            import core.stdc.math : log = logl; // std.math.log is always real precision.
+            mixin(cmathFloatImports(ab.mant_dig, ["exp", "pow"]));
+        }
+        else
+        {
+            import std.math : exp, log, PI;
+        }
 
         if (lhs >= 0)
         {
             // r = lhs
             // theta = 0
-            ab = lhs ^^ this.re;
+            version (D_BetterC)
+                ab = pow(lhs, this.re);
+            else
+                ab = lhs ^^ this.re;
             ar = log(lhs) * this.im;
         }
         else
         {
             // r = -lhs
             // theta = PI
-            ab = (-lhs) ^^ this.re * exp(-PI * this.im);
+            version (D_BetterC)
+                ab = pow(-lhs, this.re) * exp(-PI * this.im);
+            else
+                ab = (-lhs) ^^ this.re * exp(-PI * this.im);
             ar = PI * this.re + log(-lhs) * this.im;
         }
 
@@ -378,10 +434,23 @@ if (isFloatingPoint!T)
     ref Complex opOpAssign(string op, C)(const C z)
         if (op == "^^" && is(C R == Complex!R))
     {
-        import std.math : exp, log, cos, sin;
+        import core.math : cos, sin;
+        version (D_BetterC)
+        {
+            import std.math : PI;
+            import core.stdc.math : log = logl; // std.math.log is always real precision.
+            mixin(cmathFloatImports(CommonType!(T, typeof(C.re)).mant_dig, ["exp", "pow"]));
+        }
+        else
+        {
+            import std.math : exp, log, PI;
+        }
         immutable r = abs(this);
         immutable t = arg(this);
-        immutable ab = r^^z.re * exp(-t*z.im);
+        version (D_BetterC)
+            immutable ab = pow(r, z.re) * exp(-t*z.im);
+        else
+            immutable ab = r^^z.re * exp(-t*z.im);
         immutable ar = t*z.re + log(r)*z.im;
 
         re = ab*cos(ar);
@@ -410,8 +479,16 @@ if (isFloatingPoint!T)
     ref Complex opOpAssign(string op, R)(const R r)
         if (op == "^^" && isFloatingPoint!R)
     {
-        import std.math : cos, sin;
-        immutable ab = abs(this)^^r;
+        import core.math : cos, sin;
+        version (D_BetterC)
+        {
+            mixin(cmathFloatImports(CommonType!(T, R).mant_dig, ["pow"]));
+            immutable ab = pow(abs(this), r);
+        }
+        else
+        {
+            immutable ab = abs(this) ^^ r;
+        }
         immutable ar = arg(this)*r;
         re = ab*cos(ar);
         im = ab*sin(ar);
@@ -446,10 +523,24 @@ if (isFloatingPoint!T)
     }
 }
 
-@safe pure nothrow unittest
+@betterC @safe nothrow unittest
 {
     import std.complex;
-    import std.math;
+    version (D_BetterC)
+    {
+        import core.math : cos;
+        import core.stdc.math : exp = expl, pow = powl;
+        import std.math : approxEqual, feqrel, PI, PI_2;
+        @trusted bool isIdentical(T)(scope const ref T a, scope const ref T b)
+        {
+            import core.stdc.string : memcmp;
+            return 0 == memcmp(&a, &b, T.sizeof);
+        }
+    }
+    else
+    {
+        import std.math : approxEqual, cos, exp, feqrel, PI, PI_2, isIdentical;
+    }
 
     enum EPS = double.epsilon;
     auto c1 = complex(1.0, 1.0);
@@ -504,7 +595,10 @@ if (isFloatingPoint!T)
     assert(approxEqual(arg(cdr), arg(c1), EPS));
 
     auto cer = c1^^3.0;
-    assert(approxEqual(abs(cer), abs(c1)^^3, EPS));
+    version (D_BetterC)
+        assert(approxEqual(abs(cer), abs(c1).pow(3), EPS));
+    else
+        assert(approxEqual(abs(cer), abs(c1)^^3, EPS));
     assert(approxEqual(arg(cer), arg(c1)*3, EPS));
 
     auto rpc = a + c1;
@@ -534,7 +628,7 @@ if (isFloatingPoint!T)
     assert(rec2a.im == 0.0);
 
     auto rec1b = (-1.0) ^^ c1;
-    assert(approxEqual(abs(rec1b), std.math.exp(-PI * c1.im), EPS));
+    assert(approxEqual(abs(rec1b), exp(-PI * c1.im), EPS));
     auto arg1b = arg(rec1b);
     /* The argument _should_ be PI, but floating-point rounding error
      * means that in fact the imaginary part is very slightly negative.
@@ -542,7 +636,7 @@ if (isFloatingPoint!T)
     assert(approxEqual(arg1b, PI, EPS) || approxEqual(arg1b, -PI, EPS));
 
     auto rec2b = (-1.0) ^^ c2;
-    assert(approxEqual(abs(rec2b), std.math.exp(-2 * PI), EPS));
+    assert(approxEqual(abs(rec2b), exp(-2 * PI), EPS));
     assert(approxEqual(arg(rec2b), PI_2, EPS));
 
     auto rec3a = 0.79 ^^ complex(6.8, 5.7);
@@ -556,26 +650,38 @@ if (isFloatingPoint!T)
     assert(approxEqual(rec4a.im, rec4b.im, EPS));
 
     auto rer = a ^^ complex(2.0, 0.0);
-    auto rcheck = a ^^ 2.0;
+    version (D_BetterC)
+        auto rcheck = cast(double) (a.pow(2.0));
+    else
+        auto rcheck = a ^^ 2.0;
     static assert(is(typeof(rcheck) == double));
     assert(feqrel(rer.re, rcheck) == double.mant_dig);
     assert(isIdentical(rer.re, rcheck));
     assert(rer.im == 0.0);
 
     auto rer2 = (-a) ^^ complex(2.0, 0.0);
-    rcheck = (-a) ^^ 2.0;
+    version (D_BetterC)
+        rcheck = (-a).pow(2.0);
+    else
+        rcheck = (-a) ^^ 2.0;
     assert(feqrel(rer2.re, rcheck) == double.mant_dig);
     assert(isIdentical(rer2.re, rcheck));
     assert(approxEqual(rer2.im, 0.0, EPS));
 
     auto rer3 = (-a) ^^ complex(-2.0, 0.0);
-    rcheck = (-a) ^^ (-2.0);
+    version (D_BetterC)
+        rcheck = (-a).pow(-2.0);
+    else
+        rcheck = (-a) ^^ (-2.0);
     assert(feqrel(rer3.re, rcheck) == double.mant_dig);
     assert(isIdentical(rer3.re, rcheck));
     assert(approxEqual(rer3.im, 0.0, EPS));
 
     auto rer4 = a ^^ complex(-2.0, 0.0);
-    rcheck = a ^^ (-2.0);
+    version (D_BetterC)
+        rcheck = a.pow(-2.0);
+    else
+        rcheck = a ^^ (-2.0);
     assert(feqrel(rer4.re, rcheck) == double.mant_dig);
     assert(isIdentical(rer4.re, rcheck));
     assert(rer4.im == 0.0);
@@ -584,10 +690,13 @@ if (isFloatingPoint!T)
     foreach (i; 0 .. 6)
     {
         auto cei = c1^^i;
-        assert(approxEqual(abs(cei), abs(c1)^^i, EPS));
+        version (D_BetterC)
+            assert(approxEqual(abs(cei), abs(c1).pow(i), EPS));
+        else
+            assert(approxEqual(abs(cei), abs(c1)^^i, EPS));
         // Use cos() here to deal with arguments that go outside
         // the (-pi,pi] interval (only an issue for i>3).
-        assert(approxEqual(std.math.cos(arg(cei)), std.math.cos(arg(c1)*i), EPS));
+        assert(approxEqual(cos(arg(cei)), cos(arg(c1)*i), EPS));
     }
 
     // Check operations between different complex types.
@@ -622,7 +731,7 @@ if (isFloatingPoint!T)
     assert(approxEqual(c2c.im, 0.0, EPS));
 }
 
-@safe pure nothrow unittest
+@betterC @safe pure nothrow unittest
 {
     // Initialization
     Complex!double a = 1;
@@ -633,7 +742,7 @@ if (isFloatingPoint!T)
     assert(c.re == 1.0 && c.im == 2);
 }
 
-@safe pure nothrow unittest
+@betterC @safe pure nothrow unittest
 {
     // Assignments and comparisons
     Complex!double z;
@@ -681,7 +790,7 @@ if (is(T R == Complex!R))
     alias Complex = T;
 }
 
-@safe pure nothrow unittest
+@betterC @safe pure nothrow unittest
 {
     static assert(is(Complex!(Complex!real) == Complex!real));
 
@@ -702,15 +811,24 @@ if (is(T R == Complex!R))
 /**
    Params: z = A complex number.
    Returns: The absolute value (or modulus) of `z`.
+   Note:
+       If $(LINK2 https://dlang.org/spec/betterc.html,
+       compiled with `-betterC`) (i.e. if using math functions from
+       the C standard library instead of `std.math`) this function
+       may be impure and on some platforms may be calculated in `double`
+       precision even when `T` is an extended-precision `real`.
 */
-T abs(T)(Complex!T z) @safe pure nothrow @nogc
+T abs(T)(Complex!T z) @safe nothrow @nogc
 {
-    import std.math : hypot;
+    version (D_BetterC)
+        import core.stdc.math : hypot = hypotl; // std.math.hypot is always real precision.
+    else
+        import std.math : hypot;
     return hypot(z.re, z.im);
 }
 
 ///
-@safe pure nothrow unittest
+@betterC @safe nothrow unittest
 {
     static import std.math;
     assert(abs(complex(1.0)) == 1.0);
@@ -718,7 +836,7 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
     assert(abs(complex(1.0L, -2.0L)) == std.math.sqrt(5.0L));
 }
 
-@safe pure nothrow @nogc unittest
+@betterC @safe nothrow @nogc unittest
 {
     static import std.math;
     assert(abs(complex(0.0L, -3.2L)) == 3.2L);
@@ -726,14 +844,18 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
     assert(abs(complex(-1.0L, 1.0L)) == std.math.sqrt(2.0L));
 }
 
-@safe pure nothrow @nogc unittest
+@betterC @safe nothrow @nogc unittest
 {
     import std.meta : AliasSeq;
     static foreach (T; AliasSeq!(float, double, real))
     {{
         static import std.math;
+        version (D_BetterC)
+            import core.stdc.math : hypot = hypotl;
+        else
+            import std.math : hypot;
         Complex!T a = complex(T(-12), T(3));
-        T b = std.math.hypot(a.re, a.im);
+        T b = hypot(a.re, a.im);
         assert(std.math.approxEqual(abs(a), b));
         assert(std.math.approxEqual(abs(-a), b));
     }}
@@ -752,7 +874,7 @@ T sqAbs(T)(Complex!T z) @safe pure nothrow @nogc
 }
 
 ///
-@safe pure nothrow unittest
+@betterC @safe pure nothrow unittest
 {
     import std.math;
     assert(sqAbs(complex(0.0)) == 0.0);
@@ -770,7 +892,7 @@ if (isFloatingPoint!T)
     return x*x;
 }
 
-@safe pure nothrow unittest
+@betterC @safe pure nothrow unittest
 {
     import std.math;
     assert(sqAbs(0.0) == 0.0);
@@ -783,22 +905,30 @@ if (isFloatingPoint!T)
 /**
  Params: z = A complex number.
  Returns: The argument (or phase) of `z`.
+ Note:
+     If $(LINK2 https://dlang.org/spec/betterc.html,
+     compiled with `-betterC`) (i.e. if using math functions from
+     the C standard library instead of `std.math`) this function
+     may be impure and on some platforms may be calculated in `double`
+     precision even when `T` is an extended-precision `real`.
  */
-T arg(T)(Complex!T z) @safe pure nothrow @nogc
+T arg(T)(Complex!T z) @safe nothrow @nogc
 {
-    import std.math : atan2;
+    version (D_BetterC)
+        import core.stdc.math : atan2 = atan2l; // std.math.atan2 is always real precision.
+    else
+        import std.math : atan2;
     return atan2(z.im, z.re);
 }
 
 ///
-@safe pure nothrow unittest
+@betterC @safe nothrow unittest
 {
     import std.math;
     assert(arg(complex(1.0)) == 0.0);
     assert(arg(complex(0.0L, 1.0L)) == PI_2);
     assert(arg(complex(1.0L, 1.0L)) == PI_4);
 }
-
 
 /**
  * Extracts the norm of a complex number.
@@ -813,7 +943,7 @@ T norm(T)(Complex!T z) @safe pure nothrow @nogc
 }
 
 ///
-@safe pure nothrow @nogc unittest
+@betterC @safe pure nothrow @nogc unittest
 {
     import std.math : isClose, PI;
     assert(norm(complex(3.0, 4.0)) == 25.0);
@@ -821,7 +951,6 @@ T norm(T)(Complex!T z) @safe pure nothrow @nogc
     assert(isClose(norm(fromPolar(5.0L, PI / 6)), 25.0L));
     assert(isClose(norm(fromPolar(5.0L, 13 * PI / 6)), 25.0L));
 }
-
 
 /**
   Params: z = A complex number.
@@ -833,13 +962,13 @@ Complex!T conj(T)(Complex!T z) @safe pure nothrow @nogc
 }
 
 ///
-@safe pure nothrow unittest
+@betterC @safe pure nothrow unittest
 {
     assert(conj(complex(1.0)) == complex(1.0));
     assert(conj(complex(1.0, 2.0)) == complex(1.0, -2.0));
 }
 
-@safe pure nothrow @nogc unittest
+@betterC @safe pure nothrow @nogc unittest
 {
     import std.meta : AliasSeq;
     static foreach (T; AliasSeq!(float, double, real))
@@ -869,7 +998,7 @@ Complex!T proj(T)(Complex!T z)
 }
 
 ///
-@safe pure nothrow unittest
+@betterC @safe pure nothrow unittest
 {
     assert(proj(complex(1.0)) == complex(1.0));
     assert(proj(complex(double.infinity, 5.0)) == complex(double.infinity, 0.0));
@@ -887,13 +1016,13 @@ Complex!T proj(T)(Complex!T z)
 Complex!(CommonType!(T, U)) fromPolar(T, U)(const T modulus, const U argument)
     @safe pure nothrow @nogc
 {
-    import std.math : sin, cos;
+    import core.math : sin, cos;
     return Complex!(CommonType!(T,U))
         (modulus*cos(argument), modulus*sin(argument));
 }
 
 ///
-@safe pure nothrow unittest
+@betterC @safe pure nothrow unittest
 {
     import std.math;
     auto z = fromPolar(std.math.sqrt(2.0), PI_4);
@@ -907,8 +1036,14 @@ Complex!(CommonType!(T, U)) fromPolar(T, U)(const T modulus, const U argument)
 
     Params: z = A complex number.
     Returns: The sine, cosine and tangent of `z`, respectively.
+    Note:
+        If $(LINK2 https://dlang.org/spec/betterc.html, compiled with
+        `-betterC`) (i.e. if using math functions from the C standard library
+        instead of `std.math`) this function may be impure and on some
+        platforms may be calculated in `double` precision even when `T` is an
+        extended-precision `real`.
 */
-Complex!T sin(T)(Complex!T z)  @safe pure nothrow @nogc
+Complex!T sin(T)(Complex!T z)  @safe nothrow @nogc
 {
     auto cs = expi(z.re);
     auto csh = coshisinh(z.im);
@@ -916,16 +1051,15 @@ Complex!T sin(T)(Complex!T z)  @safe pure nothrow @nogc
 }
 
 ///
-@safe pure nothrow unittest
+@betterC @safe nothrow unittest
 {
     static import std.math;
     assert(sin(complex(0.0)) == 0.0);
     assert(sin(complex(2.0L, 0)) == std.math.sin(2.0L));
 }
 
-
 /// ditto
-Complex!T cos(T)(Complex!T z)  @safe pure nothrow @nogc
+Complex!T cos(T)(Complex!T z)  @safe nothrow @nogc
 {
     auto cs = expi(z.re);
     auto csh = coshisinh(z.im);
@@ -941,6 +1075,15 @@ Complex!T cos(T)(Complex!T z)  @safe pure nothrow @nogc
     assert(cos(complex(0.0L, 5.2L)) == std.math.cosh(5.2L));
 }
 
+version (D_BetterC) @betterC @safe nothrow unittest
+{
+    static import core.math;
+    static import core.stdc.math;
+    assert(cos(complex(0.0)) == 1.0);
+    assert(cos(complex(1.3L, 0.0)) == core.math.cos(1.3L));
+    assert(cos(complex(0.0L, 5.2L)) == core.stdc.math.coshl(5.2L));
+}
+
 version (StdUnittest)
 {
     int ceqrel(T)(const Complex!T x, const Complex!T y) @safe pure nothrow @nogc
@@ -952,15 +1095,18 @@ version (StdUnittest)
     }
 }
 
-@safe pure nothrow unittest
+@betterC @safe nothrow unittest
 {
-    static import std.math;
-    assert(ceqrel(cos(complex(0, 5.2L)), complex(std.math.cosh(5.2L), 0.0L)) >= real.mant_dig - 1);
-    assert(cos(complex(1.3L)) == std.math.cos(1.3L));
+    version (D_BetterC)
+        import core.stdc.math : _cos = cosl, _cosh = coshl;
+    else
+        import std.math : _cos = cos, _cosh = cosh;
+    assert(ceqrel(cos(complex(0, 5.2L)), complex(_cosh(5.2L), 0.0L)) >= real.mant_dig - 1);
+    assert(cos(complex(1.3L)) == _cos(1.3L));
 }
 
 /// ditto
-Complex!T tan(T)(Complex!T z) @safe pure nothrow @nogc
+Complex!T tan(T)(Complex!T z) @safe nothrow @nogc
 {
     return sin(z) / cos(z);
 }
@@ -973,6 +1119,15 @@ Complex!T tan(T)(Complex!T z) @safe pure nothrow @nogc
     assert(ceqrel(tan(complex(0.0, 1.0)), complex(0.0, std.math.tanh(1.0))) >= double.mant_dig - 2);
 }
 
+version (D_BetterC) @betterC @safe nothrow @nogc unittest
+{
+    import core.math : sin, cos;
+    import core.stdc.math : tanh;
+
+    assert(ceqrel(tan(complex(1.0, 0.0)), complex(sin(1.0) / cos(1.0), 0.0)) >= double.mant_dig - 2);
+    assert(ceqrel(tan(complex(0.0, 1.0)), complex(0.0, tanh(1.0))) >= double.mant_dig - 2);
+}
+
 /**
     Params: y = A real number.
     Returns: The value of cos(y) + i sin(y).
@@ -980,26 +1135,50 @@ Complex!T tan(T)(Complex!T z) @safe pure nothrow @nogc
     Note:
     `expi` is included here for convenience and for easy migration of code.
 */
+pragma(inline, true) // Inline so this works without Phobos.
 Complex!real expi(real y)  @trusted pure nothrow @nogc
 {
-    import std.math : cos, sin;
+    import core.math : cos, sin;
     return Complex!real(cos(y), sin(y));
 }
 
 ///
-@safe pure nothrow unittest
+@betterC @safe pure nothrow unittest
 {
     import std.math : cos, sin;
     assert(expi(0.0L) == 1.0L);
     assert(expi(1.3e5L) == complex(cos(1.3e5L), sin(1.3e5L)));
 }
 
+version (D_BetterC) // In BetterC make this a template so it works without Phobos.
+Complex!real coshisinh()(real y) @safe nothrow @nogc
+{
+    import std.math : fabs;
+    static if (real.mant_dig > double.mant_dig)
+        import core.stdc.math : cosh = coshl, exp = expl, sinh = sinhl;
+    else
+        import core.stdc.math : cosh, exp, sinh;
+    if (fabs(y) <= 0.5)
+        return Complex!real(cosh(y), sinh(y));
+    else
+    {
+        auto z = exp(y);
+        auto zi = 0.5 / z;
+        z = 0.5 * z;
+        return Complex!real(z + zi, z - zi);
+    }
+}
+else
 /**
     Params: y = A real number.
     Returns: The value of cosh(y) + i sinh(y)
 
     Note:
     `coshisinh` is included here for convenience and for easy migration of code.
+    If $(LINK2 https://dlang.org/spec/betterc.html, compiled with `-betterC`)
+    (i.e. if using math functions from the C standard library instead of
+    `std.math`) this function may be impure and on some platforms may be
+    calculated in `double` precision even when `real` is extended precision.
 */
 Complex!real coshisinh(real y) @safe pure nothrow @nogc
 {
@@ -1019,6 +1198,12 @@ Complex!real coshisinh(real y) @safe pure nothrow @nogc
 @safe pure nothrow @nogc unittest
 {
     import std.math : cosh, sinh;
+    assert(coshisinh(3.0L) == complex(cosh(3.0L), sinh(3.0L)));
+}
+
+version (D_BetterC) @betterC @safe nothrow @nogc unittest
+{
+    import core.stdc.math : cosh = coshl, sinh = sinhl;
     assert(coshisinh(3.0L) == complex(cosh(3.0L), sinh(3.0L)));
 }
 
@@ -1071,7 +1256,7 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
 }
 
 ///
-@safe pure nothrow unittest
+@betterC @safe pure nothrow unittest
 {
     static import std.math;
     assert(sqrt(complex(0.0)) == 0.0);
@@ -1080,7 +1265,7 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
     assert(sqrt(complex(-8.0, -6.0)) == complex(1.0, -3.0));
 }
 
-@safe pure nothrow unittest
+@betterC @safe pure nothrow unittest
 {
     import std.math : approxEqual;
 
@@ -1131,7 +1316,7 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
     assert(complex(1.2, 3.4).toString() == "1.2+3.4i");
 }
 
-@safe pure nothrow @nogc unittest
+@betterC @safe pure nothrow @nogc unittest
 {
     auto c = complex(3.0L, 4.0L);
     c = sqrt(c);
@@ -1162,10 +1347,20 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
  *      $(TR $(TD ($(NAN), any))               $(TD ($(NAN), $(NAN))))
  *      $(TR $(TD ($(NAN), $(NAN)))            $(TD ($(NAN), $(NAN))))
  *      )
+ * Note:
+ *      If $(LINK2 https://dlang.org/spec/betterc.html, compiled with
+ *      `-betterC`) (i.e. if using math functions from the C standard library
+ *      instead of `std.math`) this function may be impure and on some
+ *      platforms may be calculated in `double` precision even when `T` is an
+ *      extended-precision `real`.
  */
-Complex!T exp(T)(Complex!T x) @trusted pure nothrow @nogc // TODO: @safe
+Complex!T exp(T)(Complex!T x) @trusted nothrow @nogc // TODO: @safe
 {
     static import std.math;
+    version (D_BetterC)
+        mixin(cmathFloatImports(T.mant_dig, ["exp"], '_'));
+    else
+        import std.math : _exp = exp;
 
     // Handle special cases explicitly here, as fromPolar will otherwise
     // cause them to return Complex!T(NaN, NaN), or with the wrong sign.
@@ -1208,11 +1403,11 @@ Complex!T exp(T)(Complex!T x) @trusted pure nothrow @nogc // TODO: @safe
             return Complex!T(1.0, 0.0);
     }
 
-    return fromPolar!(T, T)(std.math.exp(x.re), x.im);
+    return fromPolar!(T, T)(_exp(x.re), x.im);
 }
 
 ///
-@safe pure nothrow @nogc unittest
+@betterC @safe nothrow @nogc unittest
 {
     import std.math : isClose, PI;
 
@@ -1225,7 +1420,7 @@ Complex!T exp(T)(Complex!T x) @trusted pure nothrow @nogc // TODO: @safe
     assert(isClose(b, -1.0L, 0.0, 1e-15));
 }
 
-@safe pure nothrow @nogc unittest
+@betterC @safe nothrow @nogc unittest
 {
     import std.math : isNaN, isInfinity;
 
@@ -1261,7 +1456,7 @@ Complex!T exp(T)(Complex!T x) @trusted pure nothrow @nogc // TODO: @safe
     assert(n.re.isNaN && n.im.isNaN);
 }
 
-@safe pure nothrow @nogc unittest
+@betterC @safe nothrow @nogc unittest
 {
     import std.math : PI, isClose;
 
@@ -1304,10 +1499,20 @@ Complex!T exp(T)(Complex!T x) @trusted pure nothrow @nogc // TODO: @safe
  *      $(TR $(TD ($(NAN), +$(INFIN)))         $(TD (+$(INFIN), $(NAN))))
  *      $(TR $(TD ($(NAN), $(NAN)))            $(TD ($(NAN), $(NAN))))
  *      )
+ * Note:
+ *      If $(LINK2 https://dlang.org/spec/betterc.html, compiled with
+ *      `-betterC`) (i.e. if using math functions from the C standard library
+ *      instead of `std.math`) this function may be impure and on some
+ *      platforms may be calculated in `double` precision even when `T` is an
+ *      extended-precision `real`.
  */
-Complex!T log(T)(Complex!T x) @safe pure nothrow @nogc
+Complex!T log(T)(Complex!T x) @safe nothrow @nogc
 {
     static import std.math;
+    version (D_BetterC)
+        import core.stdc.math : _log = logl; // std.math.log is always real precision.
+    else
+        import std.math : _log = log;
 
     // Handle special cases explicitly here for better accuracy.
     // The order here is important, so that the correct path is chosen.
@@ -1349,11 +1554,11 @@ Complex!T log(T)(Complex!T x) @safe pure nothrow @nogc
             return Complex!T(-T.infinity, std.math.copysign(0.0, x.im));
     }
 
-    return Complex!T(std.math.log(abs(x)), arg(x));
+    return Complex!T(_log(abs(x)), arg(x));
 }
 
 ///
-@safe pure nothrow @nogc unittest
+@betterC @safe nothrow @nogc unittest
 {
     import std.math : sqrt, PI, isClose;
 
@@ -1368,7 +1573,7 @@ Complex!T log(T)(Complex!T x) @safe pure nothrow @nogc
     assert(log(complex(-1.0L, -0.0L)) == complex(0.0L, -PI));
 }
 
-@safe pure nothrow @nogc unittest
+@betterC @safe nothrow @nogc unittest
 {
     import std.math : isNaN, isInfinity, PI, PI_2, PI_4;
 
@@ -1400,7 +1605,7 @@ Complex!T log(T)(Complex!T x) @safe pure nothrow @nogc
     assert(l.re.isNaN && l.im.isNaN);
 }
 
-@safe pure nothrow @nogc unittest
+@betterC @safe nothrow @nogc unittest
 {
     import std.math : PI, isClose;
 
@@ -1429,16 +1634,25 @@ Complex!T log(T)(Complex!T x) @safe pure nothrow @nogc
  *      x = A complex number
  * Returns:
  *      The complex base 10 logarithm of `x`
+ * Note:
+ *      If $(LINK2 https://dlang.org/spec/betterc.html, compiled with
+ *      `-betterC`) (i.e. if using math functions from the C standard library
+ *      instead of `std.math`) this function may be impure and on some
+ *      platforms may be calculated in `double` precision even when `T` is an
+ *      extended-precision `real`.
  */
-Complex!T log10(T)(Complex!T x) @safe pure nothrow @nogc
+Complex!T log10(T)(Complex!T x) @safe nothrow @nogc
 {
-    static import std.math;
+    version (D_BetterC)
+        import core.stdc.math : _log = logl; // std.math.log is always real precision.
+    else
+        import std.math : _log = log;
 
-    return log(x) / Complex!T(std.math.log(10.0));
+    return log(x) / Complex!T(_log(10.0));
 }
 
 ///
-@safe pure nothrow @nogc unittest
+@betterC @safe nothrow @nogc unittest
 {
     import std.math : LN10, PI, isClose, sqrt;
 
@@ -1453,7 +1667,7 @@ Complex!T log10(T)(Complex!T x) @safe pure nothrow @nogc
     assert(ceqrel(log10(complex(-100.0L, -0.0L)), complex(2.0L, -PI / LN10)) >= real.mant_dig - 1);
 }
 
-@safe pure nothrow @nogc unittest
+@betterC @safe nothrow @nogc unittest
 {
     import std.math : PI, isClose;
 
@@ -1484,6 +1698,12 @@ Complex!T log10(T)(Complex!T x) @safe pure nothrow @nogc
  *      n = exponent
  * Returns:
  *      `x` raised to the power of `n`
+ * Note:
+ *      If $(LINK2 https://dlang.org/spec/betterc.html, compiled with
+ *      `-betterC`) (i.e. if using math functions from the C standard library
+ *      instead of `std.math`) this function may be impure and on some
+ *      platforms may be calculated in `double` precision even when `T` is an
+ *      extended-precision `real`.
  */
 Complex!T pow(T, Int)(Complex!T x, const Int n) @safe pure nothrow @nogc
 if (isIntegral!Int)
@@ -1504,7 +1724,7 @@ if (isIntegral!Int)
 }
 
 ///
-@safe pure nothrow @nogc unittest
+@betterC @safe nothrow @nogc unittest
 {
     import std.math : isClose;
 
@@ -1519,22 +1739,25 @@ if (isIntegral!Int)
 }
 
 /// ditto
-Complex!T pow(T)(Complex!T x, const T n) @trusted pure nothrow @nogc
+Complex!T pow(T)(Complex!T x, const T n) @trusted nothrow @nogc
 {
-    static import std.math;
+    version (D_BetterC)
+        mixin(cmathFloatImports(T.mant_dig, ["exp", "pow"], '_'));
+    else
+        import std.math : _exp = exp, _pow = pow;
 
     if (x == 0.0)
         return Complex!T(0.0);
 
     if (x.im == 0 && x.re > 0.0)
-        return Complex!T(std.math.pow(x.re, n));
+        return Complex!T(_pow(x.re, n));
 
     Complex!T t = log(x);
-    return fromPolar!(T, T)(std.math.exp(n * t.re), n * t.im);
+    return fromPolar!(T, T)(_exp(n * t.re), n * t.im);
 }
 
 ///
-@safe pure nothrow @nogc unittest
+@betterC @safe nothrow @nogc unittest
 {
     import std.math : isClose;
     assert(pow(complex(0.0), 2.0) == complex(0.0));
@@ -1548,7 +1771,7 @@ Complex!T pow(T)(Complex!T x, const T n) @trusted pure nothrow @nogc
 }
 
 /// ditto
-Complex!T pow(T)(Complex!T x, Complex!T y) @trusted pure nothrow @nogc
+Complex!T pow(T)(Complex!T x, Complex!T y) @trusted nothrow @nogc
 {
     return (x == 0) ? Complex!T(0) : exp(y * log(x));
 }
@@ -1566,17 +1789,23 @@ Complex!T pow(T)(Complex!T x, Complex!T y) @trusted pure nothrow @nogc
 }
 
 /// ditto
-Complex!T pow(T)(const T x, Complex!T n) @trusted pure nothrow @nogc
+Complex!T pow(T)(const T x, Complex!T n) @trusted nothrow @nogc
 {
-    static import std.math;
+    version (D_BetterC)
+    {
+        import core.stdc.math : _log = logl; // std.math.log is always real precision.
+        mixin(cmathFloatImports(T.mant_dig, ["pow"], '_'));
+    }
+    else
+        import std.math : _pow = pow, _log = log;
 
     return (x > 0.0)
-        ? fromPolar!(T, T)(std.math.pow(x, n.re), n.im * std.math.log(x))
+        ? fromPolar!(T, T)(_pow(x, n.re), n.im * _log(x))
         : pow(Complex!T(x), n);
 }
 
 ///
-@safe pure nothrow @nogc unittest
+@betterC @safe nothrow @nogc unittest
 {
     import std.math : isClose;
     assert(pow(2.0, complex(0.0)) == complex(1.0));
@@ -1589,7 +1818,7 @@ Complex!T pow(T)(const T x, Complex!T n) @trusted pure nothrow @nogc
     assert(isClose(b, complex(-2.0), 0.0, 1e-15));
 }
 
-@safe pure nothrow @nogc unittest
+@betterC @safe nothrow @nogc unittest
 {
     import std.math : PI, isClose;
 

@@ -667,7 +667,7 @@ betterc: betterc-phobos-tests
 	@[ -f "$(TESTS_EXTRACTOR)" ] || ${MAKE} -f posix.mak "$(TESTS_EXTRACTOR)"
 	$(TESTS_EXTRACTOR) --betterC --attributes betterC \
 		--inputdir  $< --outputdir $(BETTERCTESTS_DIR)
-	$(DMD) $(DFLAGS) $(NODEFAULTLIB) -betterC -unittest -run $(BETTERCTESTS_DIR)/$(subst /,_,$<)
+	$(DMD) $(DFLAGS) $(NODEFAULTLIB) -betterC -unittest -version=StdUnittest -run $(BETTERCTESTS_DIR)/$(subst /,_,$<)
 
 ################################################################################
 
