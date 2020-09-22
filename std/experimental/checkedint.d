@@ -1643,17 +1643,31 @@ static:
 {
     auto a = checked!Warn(int.min);
     auto b = checked!Warn(-1);
-    assert(a / b == a * b);
-}
+    auto x = checked!Abort(int.min);
+    auto y = checked!Abort(-1);
 
-@system unittest
-{
-    import std.exception : assertThrown;
-    import core.exception : AssertError;
-
-    auto a = checked!Abort(int.min);
-    auto b = checked!Abort(-1);
-    assertThrown!AssertError(a / b);
+    // Temporarily redirect output to stderr to make sure we get the right output.
+    import std.process : uniqueTempPath;
+    import std.stdio : stderr;
+    auto tmpname = uniqueTempPath;
+    auto t = stderr;
+    stderr.open(tmpname, "w");
+    // Open a new scope to minimize code ran with stderr redirected.
+    {
+        scope(exit) stderr = t;
+        assert(a / b == a * b);
+        import std.exception : assertThrown;
+        import core.exception : AssertError;
+        assertThrown!AssertError(x / y);
+    }
+    import std.file : readText;
+    import std.ascii : newline;
+    auto witness = readText(tmpname);
+    auto expected =
+"Overflow on binary operator: int(-2147483648) / const(int)(-1)" ~ newline ~
+"Overflow on binary operator: int(-2147483648) * const(int)(-1)" ~ newline ~
+"Overflow on binary operator: int(-2147483648) / const(int)(-1)" ~ newline;
+    assert(witness == expected, "'" ~ witness ~ "'");
 }
 
 // ProperCompare
