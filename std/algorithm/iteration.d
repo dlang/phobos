@@ -803,7 +803,7 @@ stopping.
 See_Also: $(REF tee, std,range)
  */
 Flag!"each" each(alias fun = "a", Range)(auto ref Range range)
-if (isInputRange!Range || isArray!Range || hasMember!(Range, "opApply"))
+if (is(typeof({ foreach (ref e; range) {} })) || isInputRange!Range || hasMember!(Range, "opApply"))
 {
     import std.meta : AliasSeq;
     import std.traits : Parameters;
@@ -818,17 +818,20 @@ if (isInputRange!Range || isArray!Range || hasMember!(Range, "opApply"))
     }
     else
     {
-        // If needed, create a copy of it so the iteration doesn't consume the range.
-        static if (__traits(isRef, range))
-            static if (isInputRange!Range)
-                auto r = range;
-            else static if (isDynamicArray!Range)
-                // This is a rare but legit case: an array that's not a range because it's
-                // qualified. Use `Unqual` to convert e.g. ref const(string[]) to const(string)[].
-                Unqual!Range r = range;
-            else
-                alias r = range;
+        // Under certain conditions we need to "preprocess" the range.
+        static if (is(typeof(range[])))
+            /*
+            This test captures two distinct legit cases: (1) an array that's not a range because
+            it's qualified, such as `const(string[])`. Using the slicing operator on it will convert
+            it to `const(string)[]`; (2) a object such as `DList!T` that defines a range-returning
+            `opSlice()`. These objects are detected by `foreach`.
+            */
+            auto r = range[];
+        else static if (__traits(isRef, range) && isInputRange!Range)
+            // An input range by ref. Need to make a copy of the range so iteration doesn't "eat" it.
+            auto r = range;
         else
+            // All other cases use the range (lvalue or rvalue) as is.
             alias r = range;
 
         // Strategy: try all iteration patterns, pick the first that fits.
@@ -837,9 +840,13 @@ if (isInputRange!Range || isArray!Range || hasMember!(Range, "opApply"))
         {
             for (; !r.empty; r.popFront)
                 static if (!is(typeof(unaryFun!fun(r.front)) == Flag!"each"))
+                {
                     cast(void) unaryFun!fun(r.front);
+                }
                 else
+                {
                     if (unaryFun!fun(r.front) == No.each) return No.each;
+                }
             return Yes.each;
         }
 
@@ -847,9 +854,13 @@ if (isInputRange!Range || isArray!Range || hasMember!(Range, "opApply"))
         {
             for (; !r.empty; r.popFront)
                 static if (!is(typeof(fun(r.front.expand)) == Flag!"each"))
+                {
                     cast(void) fun(r.front.expand);
+                }
                 else
+                {
                     if (fun(r.front.expand) == No.each) return No.each;
+                }
             return Yes.each;
         }
 
@@ -857,9 +868,13 @@ if (isInputRange!Range || isArray!Range || hasMember!(Range, "opApply"))
         {
             for (size_t i = 0; !r.empty; r.popFront, ++i)
                 static if (!is(typeof(binaryFun!BinaryArgs(i, r.front)) == Flag!"each"))
+                {
                     cast(void) binaryFun!BinaryArgs(i, r.front);
+                }
                 else
+                {
                     if (binaryFun!BinaryArgs(i, r.front) == No.each) return No.each;
+                }
             return Yes.each;
         }
 
@@ -921,6 +936,7 @@ if (isInputRange!Range || isArray!Range || hasMember!(Range, "opApply"))
 ///
 @system unittest
 {
+    import std.container : DList;
     import std.range : iota;
     import std.typecons : Flag, Yes, No;
 
@@ -964,6 +980,9 @@ if (isInputRange!Range || isArray!Range || hasMember!(Range, "opApply"))
     // Try an immutable array of strings. Should be converted to array of immutable strings.
     immutable(string[]) y = [ "hello", "world" ];
     cast(void) y.each!();
+
+    DList!int lst;
+    lst.each!();
 }
 
 // binary foreach with two ref args
@@ -1379,7 +1398,7 @@ if (is(typeof(unaryFun!predicate)))
  * accept a string, or any callable that can be executed via `pred(element)`.
  *
  * Params:
- *     pred = Function to apply to each element of range
+ *     predicate = Function to apply to each element of range
  */
 template filterBidirectional(alias predicate)
 if (is(typeof(unaryFun!predicate)))
