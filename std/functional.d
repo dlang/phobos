@@ -1158,7 +1158,7 @@ template compose(fun...)
         alias fun1 = unaryFun!(fun[1]);
 
         // protein: the core composition operation
-        typeof({ E a; return fun0(fun1(a)); }()) compose(E)(E a)
+        auto compose(E)(E a)
         {
             return fun0(fun1(a));
         }
