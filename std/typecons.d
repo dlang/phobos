@@ -591,6 +591,7 @@ if (distinctFieldNames!(Specs))
         ///
         static if (Specs.length == 0) @safe unittest
         {
+            import std.meta : AliasSeq;
             alias Fields = Tuple!(int, "id", string, float);
             static assert(is(Fields.Types == AliasSeq!(int, string, float)));
         }
@@ -603,6 +604,7 @@ if (distinctFieldNames!(Specs))
         ///
         static if (Specs.length == 0) @safe unittest
         {
+            import std.meta : AliasSeq;
             alias Fields = Tuple!(int, "id", string, float);
             static assert(Fields.fieldNames == AliasSeq!("id", "", ""));
         }
@@ -992,7 +994,7 @@ if (distinctFieldNames!(Specs))
             t2 = tuple(3,4,5);
             auto t2Named = t2.rename!("", "b");
             // "a" no longer has a name
-            static assert(!hasMember!(typeof(t2Named), "a"));
+            static assert(!__traits(hasMember, typeof(t2Named), "a"));
             assert(t2Named[0] == 3);
             assert(t2Named.b == 4);
             assert(t2Named.c == 5);
@@ -3971,11 +3973,11 @@ template apply(alias fun)
         {
             static if (MustWrapReturn)
             {
-                return fun(t.get).nullable;
+                return unaryFun!fun(t.get).nullable;
             }
             else
             {
-                return fun(t.get);
+                return unaryFun!fun(t.get);
             }
         }
         else
@@ -4044,6 +4046,14 @@ unittest
     immutable struct S { }
 
     S[] array = Nullable!(S[])().get(S[].init);
+}
+
+// regression test for https://issues.dlang.org/show_bug.cgi?id=21199
+@safe @nogc nothrow pure
+unittest
+{
+    struct S { int i; }
+    assert(S(5).nullable.apply!"a.i" == 5);
 }
 
 /**
@@ -5353,6 +5363,7 @@ private static:
 
             // Parameter storage classes.
             if (stc & STC.scope_) params ~= "scope ";
+            if (stc & STC.in_)    params ~= "in ";
             if (stc & STC.out_  ) params ~= "out ";
             if (stc & STC.ref_  ) params ~= "ref ";
             if (stc & STC.lazy_ ) params ~= "lazy ";

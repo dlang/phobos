@@ -941,13 +941,21 @@ Complex!T cos(T)(Complex!T z)  @safe pure nothrow @nogc
     assert(cos(complex(0.0L, 5.2L)) == std.math.cosh(5.2L));
 }
 
+version (StdUnittest)
+{
+    int ceqrel(T)(const Complex!T x, const Complex!T y) @safe pure nothrow @nogc
+    {
+        import std.math : feqrel;
+        const r = feqrel(x.re, y.re);
+        const i = feqrel(x.im, y.im);
+        return r < i ? r : i;
+    }
+}
+
 @safe pure nothrow unittest
 {
     static import std.math;
-    auto c1 = cos(complex(0, 5.2L));
-    auto c2 = std.math.cosh(5.2L);
-    assert(std.math.feqrel(c1.re, c2) >= real.mant_dig - 1 &&
-        std.math.feqrel(c1.im, 0.0L) >= real.mant_dig - 1);
+    assert(ceqrel(cos(complex(0, 5.2L)), complex(std.math.cosh(5.2L), 0.0L)) >= real.mant_dig - 1);
     assert(cos(complex(1.3L)) == std.math.cos(1.3L));
 }
 
@@ -961,8 +969,8 @@ Complex!T tan(T)(Complex!T z) @safe pure nothrow @nogc
 @safe pure nothrow @nogc unittest
 {
     static import std.math;
-    assert(tan(complex(1.0, 0.0)) == complex(std.math.tan(1.0), 0.0));
-    assert(tan(complex(0.0, 1.0)) == complex(0.0, std.math.tanh(1.0)));
+    assert(ceqrel(tan(complex(1.0, 0.0)), complex(std.math.tan(1.0), 0.0)) >= double.mant_dig - 2);
+    assert(ceqrel(tan(complex(0.0, 1.0)), complex(0.0, std.math.tanh(1.0))) >= double.mant_dig - 2);
 }
 
 /**
@@ -1214,7 +1222,7 @@ Complex!T exp(T)(Complex!T x) @trusted pure nothrow @nogc // TODO: @safe
     assert(exp(conj(a)) == conj(exp(a)));
 
     auto b = exp(complex(0.0L, 1.0L) * PI);
-    assert(isClose(b, -1.0L, 0.0, 1e-19));
+    assert(isClose(b, -1.0L, 0.0, 1e-15));
 }
 
 @safe pure nothrow @nogc unittest
@@ -1258,7 +1266,7 @@ Complex!T exp(T)(Complex!T x) @trusted pure nothrow @nogc // TODO: @safe
     import std.math : PI, isClose;
 
     auto a = exp(complex(0.0, -PI));
-    assert(isClose(a, -1.0, 0.0, 1e-19));
+    assert(isClose(a, -1.0, 0.0, 1e-15));
 
     auto b = exp(complex(0.0, -2.0 * PI / 3.0));
     assert(isClose(b, complex(-0.5L, -0.866025403784438646763L)));
@@ -1270,7 +1278,7 @@ Complex!T exp(T)(Complex!T x) @trusted pure nothrow @nogc // TODO: @safe
     assert(isClose(d, complex(-0.5L, 0.866025403784438646763L)));
 
     auto e = exp(complex(0.0, PI));
-    assert(isClose(e, -1.0, 0.0, 1e-19));
+    assert(isClose(e, -1.0, 0.0, 1e-15));
 }
 
 /**
@@ -1397,22 +1405,22 @@ Complex!T log(T)(Complex!T x) @safe pure nothrow @nogc
     import std.math : PI, isClose;
 
     auto a = log(fromPolar(1.0, PI / 6.0));
-    assert(isClose(a, complex(0.0L, 0.523598775598298873077L), 0.0, 1e-18));
+    assert(isClose(a, complex(0.0L, 0.523598775598298873077L), 0.0, 1e-15));
 
     auto b = log(fromPolar(1.0, PI / 3.0));
-    assert(isClose(b, complex(0.0L, 1.04719755119659774615L), 0.0, 1e-18));
+    assert(isClose(b, complex(0.0L, 1.04719755119659774615L), 0.0, 1e-15));
 
     auto c = log(fromPolar(1.0, PI / 2.0));
-    assert(isClose(c, complex(0.0L, 1.57079632679489661923L), 0.0, 1e-18));
+    assert(isClose(c, complex(0.0L, 1.57079632679489661923L), 0.0, 1e-15));
 
     auto d = log(fromPolar(1.0, 2.0 * PI / 3.0));
-    assert(isClose(d, complex(0.0L, 2.09439510239319549230L), 0.0, 1e-18));
+    assert(isClose(d, complex(0.0L, 2.09439510239319549230L), 0.0, 1e-15));
 
     auto e = log(fromPolar(1.0, 5.0 * PI / 6.0));
-    assert(isClose(e, complex(0.0L, 2.61799387799149436538L), 0.0, 1e-18));
+    assert(isClose(e, complex(0.0L, 2.61799387799149436538L), 0.0, 1e-15));
 
-    auto f = log(fromPolar(1.0, PI));
-    assert(isClose(f, complex(0.0L, -3.1415926535897932384L), 0.0, 1e-18));
+    auto f = log(complex(-1.0L, 0.0L));
+    assert(isClose(f, complex(0.0L, PI), 0.0, 1e-15));
 }
 
 /**
@@ -1441,8 +1449,8 @@ Complex!T log10(T)(Complex!T x) @safe pure nothrow @nogc
     auto c = log10(complex(sqrt(2.0) / 2, sqrt(2.0) / 2)) * 4.0;
     assert(isClose(b, c, 0.0, 1e-15));
 
-    assert(log10(complex(-100.0L, 0.0L)) == complex(2.0L, PI / LN10));
-    assert(log10(complex(-100.0L, -0.0L)) == complex(2.0L, -PI / LN10));
+    assert(ceqrel(log10(complex(-100.0L, 0.0L)), complex(2.0L, PI / LN10)) >= real.mant_dig - 1);
+    assert(ceqrel(log10(complex(-100.0L, -0.0L)), complex(2.0L, -PI / LN10)) >= real.mant_dig - 1);
 }
 
 @safe pure nothrow @nogc unittest
@@ -1450,22 +1458,22 @@ Complex!T log10(T)(Complex!T x) @safe pure nothrow @nogc
     import std.math : PI, isClose;
 
     auto a = log10(fromPolar(1.0, PI / 6.0));
-    assert(isClose(a, complex(0.0L, 0.227396058973640224580L), 0.0, 1e-18));
+    assert(isClose(a, complex(0.0L, 0.227396058973640224580L), 0.0, 1e-15));
 
     auto b = log10(fromPolar(1.0, PI / 3.0));
-    assert(isClose(b, complex(0.0L, 0.454792117947280449161L), 0.0, 1e-18));
+    assert(isClose(b, complex(0.0L, 0.454792117947280449161L), 0.0, 1e-15));
 
     auto c = log10(fromPolar(1.0, PI / 2.0));
-    assert(isClose(c, complex(0.0L, 0.682188176920920673742L), 0.0, 1e-18));
+    assert(isClose(c, complex(0.0L, 0.682188176920920673742L), 0.0, 1e-15));
 
     auto d = log10(fromPolar(1.0, 2.0 * PI / 3.0));
-    assert(isClose(d, complex(0.0L, 0.909584235894560898323L), 0.0, 1e-18));
+    assert(isClose(d, complex(0.0L, 0.909584235894560898323L), 0.0, 1e-15));
 
     auto e = log10(fromPolar(1.0, 5.0 * PI / 6.0));
-    assert(isClose(e, complex(0.0L, 1.13698029486820112290L), 0.0, 1e-18));
+    assert(isClose(e, complex(0.0L, 1.13698029486820112290L), 0.0, 1e-15));
 
-    auto f = log10(fromPolar(1.0, PI));
-    assert(isClose(f, complex(0.0L, -1.36437635384184134748L), 0.0, 1e-18));
+    auto f = log10(complex(-1.0L, 0.0L));
+    assert(isClose(f, complex(0.0L, 1.36437635384184134748L), 0.0, 1e-15));
 }
 
 /**

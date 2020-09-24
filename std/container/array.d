@@ -265,7 +265,7 @@ private struct RangeT(A)
  * instead of `array.map!`). The container itself is not a range.
  */
 struct Array(T)
-if (!is(Unqual!T == bool))
+if (!is(immutable T == immutable bool))
 {
     import core.memory : free = pureFree;
     import std.internal.memory : enforceMalloc, enforceRealloc;
@@ -482,15 +482,15 @@ if (!is(Unqual!T == bool))
                 assert(false, "Overflow");
         }
         auto p = cast(T*) enforceMalloc(nbytes);
+        // Before it is added to the gc, initialize the newly allocated memory
+        foreach (i, e; values)
+        {
+            emplace(p + i, e);
+        }
         static if (hasIndirections!T)
         {
             if (p)
                 GC.addRange(p, T.sizeof * values.length);
-        }
-
-        foreach (i, e; values)
-        {
-            emplace(p + i, e);
         }
         _data = Data(p[0 .. values.length]);
     }
@@ -614,6 +614,8 @@ if (!is(Unqual!T == bool))
             auto p = enforceMalloc(sz);
             static if (hasIndirections!T)
             {
+                // Zero out unused capacity to prevent gc from seeing false pointers
+                memset(p, 0, sz);
                 GC.addRange(p, sz);
             }
             _data = Data(cast(T[]) p[0 .. 0]);
@@ -1624,7 +1626,7 @@ if (!is(Unqual!T == bool))
  * allocating one bit per element.
  */
 struct Array(T)
-if (is(Unqual!T == bool))
+if (is(immutable T == immutable bool))
 {
     import std.exception : enforce;
     import std.typecons : RefCounted, RefCountedAutoInitialize;

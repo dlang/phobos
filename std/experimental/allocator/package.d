@@ -1493,7 +1493,7 @@ private T[] uninitializedFillDefault(T)(T[] array) nothrow
             memset(array.ptr, 0, T.sizeof * array.length);
         return array;
     }
-    else static if (is(Unqual!T == char) || is(Unqual!T == wchar))
+    else static if (is(immutable T == immutable char) || is(immutable T == immutable wchar))
     {
         import core.stdc.string : memset;
         if (array !is null)

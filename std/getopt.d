@@ -13,8 +13,8 @@ enabled by default.
 Copyright: Copyright Andrei Alexandrescu 2008 - 2015.
 License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(HTTP erdani.org, Andrei Alexandrescu)
-Credits:   This module and its documentation are inspired by Perl's $(HTTP
-           perldoc.perl.org/Getopt/Long.html, Getopt::Long) module. The syntax of
+Credits:   This module and its documentation are inspired by Perl's
+           $(HTTPS perldoc.perl.org/Getopt/Long.html, Getopt::Long) module. The syntax of
            D's `getopt` is simpler than its Perl counterpart because $(D
            getopt) infers the expected parameter types from the static types of
            the passed-in pointers.
@@ -190,11 +190,12 @@ getopt(args, "output", &outputFiles);
     "--output myfile.txt --output yourfile.txt" will set `outputFiles` to
     $(D [ "myfile.txt", "yourfile.txt" ]).
 
-    Alternatively you can set $(LREF arraySep) as the element separator:
+    Alternatively you can set $(LREF arraySep) to allow multiple elements in
+    one parameter.
 
 ---------
 string[] outputFiles;
-arraySep = ",";  // defaults to "", separation by whitespace
+arraySep = ",";  // defaults to "", meaning one element per parameter
 getopt(args, "output", &outputFiles);
 ---------
 
@@ -217,7 +218,7 @@ getopt(args, "tune", &tuningParms);
 
 ---------
 double[string] tuningParms;
-arraySep = ",";  // defaults to "", separation by whitespace
+arraySep = ",";  // defaults to "", meaning one element per parameter
 getopt(args, "tune", &tuningParms);
 ---------
 
@@ -344,18 +345,11 @@ Traditionally, programs accepted single-letter options preceded by
 only one dash (e.g. `-t`). `getopt` accepts such parameters
 seamlessly. When used with a double-dash (e.g. `--t`), a
 single-letter option behaves the same as a multi-letter option. When
-used with a single dash, a single-letter option is accepted. If the
-option has a parameter, that must be "stuck" to the option without
-any intervening space or "=":
-
----------
-uint timeout;
-getopt(args, "timeout|t", &timeout);
----------
+used with a single dash, a single-letter option is accepted.
 
 To set `timeout` to `5`, use either of the following: `--timeout=5`,
-$(D --timeout 5), `--t=5`, $(D --t 5), or `-t5`. Forms such as $(D -t 5)
-and `-timeout=5` will be not accepted.
+`--timeout 5`, `--t=5`, `--t 5`, `-t5`, or `-t 5`. Forms such as
+`-timeout=5` will be not accepted.
 
 For more details about short options, refer also to the next section.
 
@@ -1084,8 +1078,11 @@ string endOfOptions = "--";
 dchar assignChar = '=';
 
 /**
-   The string used to separate the elements of an array or associative array
-   (default is "" which means the elements are separated by whitespace).
+   When set to "", parameters to array and associative array receivers are
+   treated as an individual argument. That is, only one argument is appended or
+   inserted per appearance of the option switch. If `arraySep` is set to
+   something else, then each parameter is first split by the separator, and the
+   individual pieces are treated as arguments to the same option.
 
    Defaults to "" but can be assigned to prior to calling `getopt`.
  */

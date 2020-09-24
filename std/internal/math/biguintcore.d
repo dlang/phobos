@@ -880,7 +880,7 @@ public:
 
     // return x / y
     static BigUint divInt(T)(BigUint x, T y_) pure nothrow @safe
-    if ( is(Unqual!T == uint) )
+    if ( is(immutable T == immutable uint) )
     {
         uint y = y_;
         if (y == 1)
@@ -906,7 +906,7 @@ public:
     }
 
     static BigUint divInt(T)(BigUint x, T y) pure nothrow @safe
-    if ( is(Unqual!T == ulong) )
+    if ( is(immutable T == immutable ulong) )
     {
         if (y <= uint.max)
             return divInt!uint(x, cast(uint) y);
@@ -921,7 +921,7 @@ public:
     }
 
     // return x % y
-    static uint modInt(T)(BigUint x, T y_) pure if ( is(Unqual!T == uint) )
+    static uint modInt(T)(BigUint x, T y_) pure if ( is(immutable T == immutable uint) )
     {
         import core.memory : GC;
         uint y = y_;

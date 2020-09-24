@@ -457,7 +457,7 @@ private:
 
         case OpID.index:
             auto result = cast(Variant*) parm;
-            static if (isArray!(A) && !is(Unqual!(typeof(A.init[0])) == void))
+            static if (isArray!(A) && !is(immutable typeof(A.init[0]) == immutable void))
             {
                 // array type; input and output are the same VariantN
                 size_t index = result.convertsTo!(int)
@@ -497,7 +497,8 @@ private:
             }
 
         case OpID.catAssign:
-            static if (!is(Unqual!(typeof((*zis)[0])) == void) && is(typeof((*zis)[0])) && is(typeof((*zis) ~= *zis)))
+            static if (!is(immutable typeof((*zis)[0]) == immutable void) &&
+                    is(typeof((*zis)[0])) && is(typeof(*zis ~= *zis)))
             {
                 // array type; parm is the element to append
                 auto arg = cast(Variant*) parm;
@@ -684,7 +685,8 @@ public:
             else
             {
                 import core.stdc.string : memcpy;
-                static if (__traits(compiles, {new T(T.init);}))
+                import std.traits : hasMember;
+                static if (hasMember!(T, "__ctor") && __traits(compiles, {new T(T.init);}))
                 {
                     auto p = new T(rhs);
                 }
@@ -922,9 +924,9 @@ public:
 
     // returns 1 if the two are equal
     bool opEquals(T)(auto ref T rhs) const
-    if (allowed!T || is(Unqual!T == VariantN))
+    if (allowed!T || is(immutable T == immutable VariantN))
     {
-        static if (is(Unqual!T == VariantN))
+        static if (is(immutable T == immutable VariantN))
             alias temp = rhs;
         else
             auto temp = VariantN(rhs);
@@ -1541,6 +1543,24 @@ pure nothrow @nogc
 
     VariantN!32 v2;
     v2 = const(S).init;
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21021
+@system unittest
+{
+    static struct S
+    {
+        int h;
+        int[5] array;
+        alias h this;
+    }
+
+    S msg;
+    msg.array[] = 3;
+    Variant a = msg;
+    auto other = a.get!S;
+    assert(msg.array[0] == 3);
+    assert(other.array[0] == 3);
 }
 
 /**

@@ -902,7 +902,7 @@ Parameters for the generator.
    `Exception` if the InputRange didn't provide enough elements to seed the generator.
    The number of elements required is the 'n' template parameter of the MersenneTwisterEngine struct.
  */
-    void seed(T)(T range) if (isInputRange!T && is(Unqual!(ElementType!T) == UIntType))
+    void seed(T)(T range) if (isInputRange!T && is(immutable ElementType!T == immutable UIntType))
     {
         this.seedImpl(range, this.state);
     }
@@ -912,7 +912,7 @@ Parameters for the generator.
        which can be used with an arbitrary `State` instance
     */
     private static void seedImpl(T)(T range, ref State mtState)
-        if (isInputRange!T && is(Unqual!(ElementType!T) == UIntType))
+        if (isInputRange!T && is(immutable ElementType!T == immutable UIntType))
     {
         size_t j;
         for (j = 0; j < n && !range.empty; ++j, range.popFront())
@@ -929,7 +929,7 @@ Parameters for the generator.
 
             UnsignedStringBuf buf = void;
             string s = "MersenneTwisterEngine.seed: Input range didn't provide enough elements: Need ";
-            s ~= unsignedToTempString(n, buf, 10) ~ " elements.";
+            s ~= unsignedToTempString(n, buf) ~ " elements.";
             throw new Exception(s);
         }
 
@@ -2604,8 +2604,16 @@ do
 
     auto rnd = MinstdRand0(42);
 
-    assert(rnd.uniform01.feqrel(0.000328707) > 20);
-    assert(rnd.uniform01!float.feqrel(0.524587) > 20);
+    // Generate random numbers in the range in the range [0, 1)
+    auto u1 = uniform01(rnd);
+    assert(u1 >= 0 && u1 < 1);
+
+    auto u2 = rnd.uniform01!float;
+    assert(u2 >= 0 && u2 < 1);
+
+    // Confirm that the random values with the initial seed 42 are 0.000328707 and 0.524587
+    assert(u1.feqrel(0.000328707) > 20);
+    assert(u2.feqrel(0.524587) > 20);
 }
 
 @safe @nogc unittest

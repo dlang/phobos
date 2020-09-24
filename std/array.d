@@ -92,7 +92,9 @@ public import std.range.primitives : save, empty, popFront, popBack, front, back
  * Allocates an array and initializes it with copies of the elements
  * of range `r`.
  *
- * Narrow strings are handled as a special case in an overload.
+ * Narrow strings are handled as follows:
+ * - If autodecoding is turned on (default), then they are handled as a separate overload.
+ * - If autodecoding is turned off, then this is equivalent to duplicating the array.
  *
  * Params:
  *      r = range (or aggregate with `opApply` function) whose elements are copied into the allocated array
@@ -100,7 +102,7 @@ public import std.range.primitives : save, empty, popFront, popBack, front, back
  *      allocated and initialized array
  */
 ForeachType!Range[] array(Range)(Range r)
-if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
+if (isIterable!Range && !isAutodecodableString!Range && !isInfinite!Range)
 {
     if (__ctfe)
     {
@@ -145,7 +147,7 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
 
 /// ditto
 ForeachType!(PointerTarget!Range)[] array(Range)(Range r)
-if (isPointer!Range && isIterable!(PointerTarget!Range) && !isNarrowString!Range && !isInfinite!Range)
+if (isPointer!Range && isIterable!(PointerTarget!Range) && !isAutodecodableString!Range && !isInfinite!Range)
 {
     return array(*r);
 }
@@ -252,8 +254,11 @@ version (StdUnittest)
 }
 
 /**
-Convert a narrow string to an array type that fully supports random access.
-This is handled as a special case and always returns an array of `dchar`
+Convert a narrow autodecoding string to an array type that fully supports
+random access.  This is handled as a special case and always returns an array
+of `dchar`
+
+NOTE: This function is never used when autodecoding is turned off.
 
 Params:
     str = `isNarrowString` to be converted to an array of `dchar`
@@ -262,7 +267,7 @@ Returns:
     the input.
 */
 CopyTypeQualifiers!(ElementType!String,dchar)[] array(String)(scope String str)
-if (isNarrowString!String)
+if (isAutodecodableString!String)
 {
     import std.utf : toUTF32;
     auto temp = str.toUTF32;
@@ -276,10 +281,19 @@ if (isNarrowString!String)
 @safe unittest
 {
     import std.range.primitives : isRandomAccessRange;
+    import std.traits : isAutodecodableString;
 
-    assert("Hello D".array == "Hello D"d);
+    // note that if autodecoding is turned off, `array` will not transcode these.
+    static if (isAutodecodableString!string)
+        assert("Hello D".array == "Hello D"d);
+    else
+        assert("Hello D".array == "Hello D");
 
-    assert("Hello D"w.array == "Hello D"d);
+    static if (isAutodecodableString!wstring)
+        assert("Hello D"w.array == "Hello D"d);
+    else
+        assert("Hello D"w.array == "Hello D"w);
+
     static assert(isRandomAccessRange!dstring == true);
 }
 
@@ -339,8 +353,11 @@ if (isNarrowString!String)
     assert(e == f);
 
     assert(array(OpApply.init) == [0,1,2,3,4,5,6,7,8,9]);
-    assert(array("ABC") == "ABC"d);
-    assert(array("ABC".dup) == "ABC"d.dup);
+    static if (isAutodecodableString!string)
+    {
+        assert(array("ABC") == "ABC"d);
+        assert(array("ABC".dup) == "ABC"d.dup);
+    }
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=8233
@@ -597,11 +614,11 @@ if (isInputRange!Values && isInputRange!Keys)
 
     auto r = "abcde".enumerate.filter!(a => a.index == 2);
     auto a = assocArray(r.map!(a => a.value), r.map!(a => a.index));
-    assert(is(typeof(a) == size_t[dchar]));
     static if (autodecodeStrings)
         alias achar = dchar;
     else
         alias achar = immutable(char);
+    static assert(is(typeof(a) == size_t[achar]));
     assert(a == [achar('c'): size_t(2)]);
 }
 
@@ -1265,7 +1282,7 @@ if (isSomeString!(T[]) && allSatisfy!(isCharOrStringOrDcharRange, U))
     static if (is(Unqual!T == T)
         && allSatisfy!(isInputRangeWithLengthOrConvertible!dchar, U))
     {
-        import std.utf : codeLength;
+        import std.utf : codeLength, byDchar;
         // mutable, can do in place
         //helper function: re-encode dchar to Ts and store at *ptr
         static T* putDChar(T* ptr, dchar ch)
@@ -1330,7 +1347,7 @@ if (isSomeString!(T[]) && allSatisfy!(isCharOrStringOrDcharRange, U))
             }
             else
             {
-                foreach (dchar ch; stuff[i])
+                foreach (ch; stuff[i].byDchar)
                     ptr = putDChar(ptr, ch);
             }
         }
@@ -1942,7 +1959,9 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, scope R sep)
 if (isInputRange!RoR &&
     isInputRange!(Unqual!(ElementType!RoR)) &&
     isInputRange!R &&
-    is(Unqual!(ElementType!(ElementType!RoR)) == Unqual!(ElementType!R)))
+    (is(immutable ElementType!(ElementType!RoR) == immutable ElementType!R) ||
+     (isSomeChar!(ElementType!(ElementType!RoR)) && isSomeChar!(ElementType!R))
+    ))
 {
     alias RetType = typeof(return);
     alias RetTypeElement = Unqual!(ElementEncodingType!RetType);
@@ -1955,7 +1974,7 @@ if (isInputRange!RoR &&
     // This converts sep to an array (forward range) if it isn't one,
     // and makes sure it has the same string encoding for string types.
     static if (isSomeString!RetType &&
-               !is(RetTypeElement == Unqual!(ElementEncodingType!R)))
+               !is(immutable ElementEncodingType!RetType == immutable ElementEncodingType!R))
     {
         import std.conv : to;
         auto sepArr = to!RetType(sep);
@@ -2019,7 +2038,9 @@ if (isInputRange!RoR &&
 ElementEncodingType!(ElementType!RoR)[] join(RoR, E)(RoR ror, scope E sep)
 if (isInputRange!RoR &&
     isInputRange!(Unqual!(ElementType!RoR)) &&
-    is(E : ElementType!(ElementType!RoR)))
+    ((is(E : ElementType!(ElementType!RoR))) ||
+     (!autodecodeStrings && isSomeChar!(ElementType!(ElementType!RoR)) &&
+      isSomeChar!E)))
 {
     alias RetType = typeof(return);
     alias RetTypeElement = Unqual!(ElementEncodingType!RetType);
@@ -2175,21 +2196,12 @@ if (isInputRange!RoR &&
         auto arr2 = "Здравствуй Мир Unicode".to!(T);
         auto arr = ["Здравствуй", "Мир", "Unicode"].to!(T[]);
         assert(join(arr) == "ЗдравствуйМирUnicode");
-        static if (autodecodeStrings)
-        {
-            static foreach (S; AliasSeq!(char,wchar,dchar))
-            {{
-                auto jarr = arr.join(to!S(' '));
-                static assert(is(typeof(jarr) == T));
-                assert(jarr == arr2);
-            }}
-        }
-        else
-        {
-            // Turning off autodecode means the join() won't
-            // just convert arr[] to dchar, so mixing char
-            // types fails to compile.
-        }
+        static foreach (S; AliasSeq!(char,wchar,dchar))
+        {{
+            auto jarr = arr.join(to!S(' '));
+            static assert(is(typeof(jarr) == T));
+            assert(jarr == arr2);
+        }}
         static foreach (S; AliasSeq!(string,wstring,dstring))
         {{
             auto jarr = arr.join(to!S(" "));
@@ -3501,6 +3513,17 @@ if (isDynamicArray!A)
             //We do this at the end, in case of exceptions
             _data.arr = bigData;
         }
+        else static if (isSomeChar!T && isSomeChar!(ElementType!Range) &&
+                        !is(immutable T == immutable ElementType!Range))
+        {
+            // need to decode and encode
+            import std.utf : decodeFront;
+            while (!items.empty)
+            {
+                auto c = items.decodeFront;
+                put(c);
+            }
+        }
         else
         {
             //pragma(msg, Range.stringof);
@@ -3715,6 +3738,16 @@ if (isDynamicArray!A)
     auto result = appender[][0];
 
     assert(result.value != 23);
+}
+
+@safe unittest
+{
+    import std.conv : to;
+    import std.utf : byCodeUnit;
+    auto str = "ウェブサイト";
+    auto wstr = appender!wstring();
+    put(wstr, str.byCodeUnit);
+    assert(wstr.data == str.to!wstring);
 }
 
 //Calculates an efficient growth scheme based on the old capacity

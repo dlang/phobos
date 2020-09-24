@@ -507,8 +507,9 @@ template ctRegexImpl(alias pattern, string flags=[])
 +/
 public enum ctRegex(alias pattern, alias flags=[]) = ctRegexImpl!(pattern, flags).wrapper;
 
-enum isRegexFor(RegEx, R) = is(Unqual!RegEx == Regex!(BasicElementOf!R)) || is(RegEx : const(Regex!(BasicElementOf!R)))
-     || is(Unqual!RegEx == StaticRegex!(BasicElementOf!R));
+enum isRegexFor(RegEx, R) = is(immutable RegEx == immutable Regex!(BasicElementOf!R))
+     || is(RegEx : const(Regex!(BasicElementOf!R)))
+     || is(immutable RegEx == immutable StaticRegex!(BasicElementOf!R));
 
 
 /++

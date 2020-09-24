@@ -188,6 +188,12 @@ else version (MICROSOFT_STDIO)
 
     alias setmode = _setmode;
     alias fileno = _fileno;
+    enum
+    {
+        _O_WTEXT = 0x10000,
+        _O_U16TEXT = 0x20000,
+        _O_U8TEXT = 0x40000,
+    }
 }
 else version (GCC_IO)
 {
@@ -1075,10 +1081,17 @@ Throws: `ErrnoException` if the file is not opened or if the call to `fwrite` fa
 
         version (Windows)
         {
-            flush(); // before changing translation mode
             immutable fd = ._fileno(_p.handle);
-            immutable mode = ._setmode(fd, _O_BINARY);
-            scope(exit) ._setmode(fd, mode);
+            immutable oldMode = ._setmode(fd, _O_BINARY);
+
+            if (oldMode != _O_BINARY)
+            {
+                // need to flush the data that was written with the original mode
+                ._setmode(fd, oldMode);
+                flush(); // before changing translation mode ._setmode(fd, _O_BINARY);
+                .setmode(fd, _O_BINARY);
+            }
+
             version (DIGITAL_MARS_STDIO)
             {
                 import core.atomic : atomicOp;
@@ -1086,10 +1099,19 @@ Throws: `ErrnoException` if the file is not opened or if the call to `fwrite` fa
                 // https://issues.dlang.org/show_bug.cgi?id=4243
                 immutable info = __fhnd_info[fd];
                 atomicOp!"&="(__fhnd_info[fd], ~FHND_TEXT);
-                scope(exit) __fhnd_info[fd] = info;
+                scope (exit) __fhnd_info[fd] = info;
             }
-            scope(exit) flush(); // before restoring translation mode
+
+            scope (exit)
+            {
+                if (oldMode != _O_BINARY)
+                {
+                    flush();
+                    ._setmode(fd, oldMode);
+                }
+            }
         }
+
         auto result = trustedFwrite(_p.handle, buffer);
         if (result == result.max) result = 0;
         errnoEnforce(result == buffer.length,
@@ -2241,7 +2263,7 @@ Allows to directly use range operations on lines of a file.
                     else static if (isArray!Terminator)
                     {
                         static assert(
-                            is(Unqual!(ElementEncodingType!Terminator) == Char));
+                            is(immutable ElementEncodingType!Terminator == immutable Char));
                         const tlen = terminator.length;
                     }
                     else
@@ -2324,7 +2346,7 @@ the contents may well have changed).
 /// ditto
     auto byLine(Terminator, Char = char)
             (KeepTerminator keepTerminator, Terminator terminator)
-    if (is(Unqual!(ElementEncodingType!Terminator) == Char))
+    if (is(immutable ElementEncodingType!Terminator == immutable Char))
     {
         return ByLineImpl!(Char, Terminator)(this, keepTerminator, terminator);
     }
@@ -2477,7 +2499,7 @@ $(REF readText, std,file)
 /// ditto
     auto byLineCopy(Terminator, Char = immutable char)
             (KeepTerminator keepTerminator, Terminator terminator)
-    if (is(Unqual!(ElementEncodingType!Terminator) == Unqual!Char))
+    if (is(immutable ElementEncodingType!Terminator == immutable Char))
     {
         return ByLineCopy!(Char, Terminator)(this, keepTerminator, terminator);
     }
@@ -2913,13 +2935,32 @@ is empty, throws an `Exception`. In case of an I/O error throws
 
         this(ref File f) @trusted
         {
-            import core.stdc.wchar_ : fwide;
             import std.exception : enforce;
 
             enforce(f._p && f._p.handle, "Attempting to write to closed File");
             file_ = f;
             FILE* fps = f._p.handle;
-            orientation_ = fwide(fps, 0);
+
+            version (MICROSOFT_STDIO)
+            {
+                // Microsoft doesn't implement fwide. Instead, there's the
+                // concept of ANSI/UNICODE mode. fputc doesn't work in UNICODE
+                // mode; fputwc has to be used. So that essentially means
+                // "wide-oriented" for us.
+                immutable int mode = _setmode(f.fileno, _O_TEXT);
+                    // Set some arbitrary mode to obtain the previous one.
+                _setmode(f.fileno, mode); // Restore previous mode.
+                if (mode & (_O_WTEXT | _O_U16TEXT | _O_U8TEXT))
+                {
+                    orientation_ = 1; // wide
+                }
+            }
+            else
+            {
+                import core.stdc.wchar_ : fwide;
+                orientation_ = fwide(fps, 0);
+            }
+
             FLOCK(fps);
         }
 
@@ -3577,6 +3618,27 @@ void main()
         assertThrown!UTFException(writer.put(surr));
     }
     assert(std.file.readText!string(deleteme) == "y");
+}
+
+@safe unittest // issue 18801
+{
+    static import std.file;
+    import std.string : stripLeft;
+
+    auto deleteme = testFilename();
+    scope(exit) std.file.remove(deleteme);
+
+    {
+        auto writer = File(deleteme, "w,ccs=UTF-8").lockingTextWriter();
+        writer.put("foo");
+    }
+    assert(std.file.readText!string(deleteme).stripLeft("\uFEFF") == "foo");
+
+    {
+        auto writer = File(deleteme, "a,ccs=UTF-8").lockingTextWriter();
+        writer.put("bar");
+    }
+    assert(std.file.readText!string(deleteme).stripLeft("\uFEFF") == "foobar");
 }
 
 @safe unittest

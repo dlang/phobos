@@ -371,11 +371,11 @@ struct JSONValue
      */
     @property inout(T) get(T)() inout const pure @safe
     {
-        static if (is(Unqual!T == string))
+        static if (is(immutable T == immutable string))
         {
             return str;
         }
-        else static if (is(Unqual!T == bool))
+        else static if (is(immutable T == immutable bool))
         {
             return boolean;
         }
