@@ -1083,6 +1083,25 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         x += 1;
         assert(MyHook.thereWereErrors);
     }
+
+    string toString() @safe const nothrow scope
+    {
+        import std.array : appender;
+        auto app = appender!string();
+        auto chars = payload.toChars;
+        put(app, chars);
+        return app.data;
+    }
+}
+
+// toString
+@safe unittest
+{
+    Checked!(int, void) x;
+    x = 42;
+    assert(x.toString == "42");
+    x = -42;
+    assert(x.toString == "-42");
 }
 
 /**
