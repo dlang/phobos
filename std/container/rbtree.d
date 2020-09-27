@@ -1030,7 +1030,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
      *
      * Complexity: $(BIGOH 1)
      */
-    Elem front()
+    inout(Elem) front() inout
     {
         return _begin.value;
     }
@@ -1040,7 +1040,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
      *
      * Complexity: $(BIGOH log(n))
      */
-    Elem back()
+    inout(Elem) back() inout
     {
         return _end.prev.value;
     }
