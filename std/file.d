@@ -4855,7 +4855,7 @@ struct DirIterator
 {
 @safe:
 private:
-    RefCounted!(DirIteratorImpl, RefCountedAutoInitialize.no) impl = void;
+    RefCounted!(DirIteratorImpl, RefCountedAutoInitialize.no) impl;
     this(string pathname, SpanMode mode, bool followSymlink) @trusted
     {
         impl = typeof(impl)(pathname, mode, followSymlink);
