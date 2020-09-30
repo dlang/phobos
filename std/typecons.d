@@ -6344,7 +6344,7 @@ if (!is(T == class) && !(is(T == interface)))
             import std.conv : emplace;
 
             allocateStore();
-            scope(failure) deallocateStore();
+            version (D_Exceptions) scope(failure) deallocateStore();
             emplace(&_store._payload, args);
             _store._count = 1;
         }
