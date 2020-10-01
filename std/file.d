@@ -437,7 +437,10 @@ version (Windows) private void[] readImpl(scope const(char)[] name, scope const(
             const uint chunkSize = min(nNumberOfBytesToRead - totalNumRead, 0xffff_0000);
             DWORD numRead = void;
             const result = ReadFile(hFile, lpBuffer + totalNumRead, chunkSize, &numRead, null);
-            if (result == 0 || numRead != chunkSize)
+            if (result == 0)
+                return false;
+            numRead <= chunkSize || assert(0);
+            if (numRead != chunkSize)
                 return false;
             totalNumRead += chunkSize;
         }
@@ -888,6 +891,12 @@ version (Windows) private void writeImpl(scope const(char)[] name, scope const(F
     {
         cnt = (size - sum < 2^^30) ? (size - sum) : 2^^30;
         WriteFile(h, buffer.ptr + sum, cast(uint) cnt, &numwritten, null);
+
+        // https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-writefile
+        // "WriteFile sets this value [numWritten] to zero before doing any work or error checking.",
+        // therefore we no longer have to start by checking the BOOL returned by WriteFile.
+        numWritten <= cnt || assert(0);
+
         if (numwritten != cnt)
             break;
         sum += numwritten;
@@ -3534,6 +3543,7 @@ else version (DragonFlyBSD)
         while (true)
         {
             auto len = GetModuleFileNameW(null, buffer.ptr, cast(DWORD) buffer.length);
+            len <= buffer.length || assert(0);
             enforce(len, sysErrorString(GetLastError()));
             if (len != buffer.length)
                 return to!(string)(buffer[0 .. len]);
@@ -4286,7 +4296,7 @@ private void copyImpl(scope const(char)[] f, scope const(char)[] t,
 
             /++
             Reference resources: https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-copyfilew
-            Because OS copyfilew handles both source and destination paths,
+            Because OS CopyFileW handles both source and destination paths,
             the GetLastError does not accurately locate whether the error is for the source or destination.
             +/
             if (!f)
@@ -5248,6 +5258,9 @@ subsequent runs will return the same string, regardless of whether
 environment variables and directory structures have changed in the
 meantime.
 
+The cache is in thread-local storage.
+Each thread will perform the procedures once and cache its own result.
+
 The POSIX `tempDir` algorithm is inspired by Python's
 $(LINK2 http://docs.python.org/library/tempfile.html#tempfile.tempdir, `tempfile.tempdir`).
 
@@ -5277,9 +5290,22 @@ string tempDir() @trusted
         version (Windows)
         {
             import std.conv : to;
-            // http://msdn.microsoft.com/en-us/library/windows/desktop/aa364992(v=vs.85).aspx
+
+            // https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-gettemppathw
+            // Around 2005, a new phrase was added to the documentation:
+            // "The maximum possible return value is MAX_PATH+1 (261).".
+            // If not for this, we might have needed to call GetTempPathW a second time.
+            // (This comment should prevent new developers from rushing to implement that.)
             wchar[MAX_PATH + 2] buf;
+
             DWORD len = GetTempPathW(buf.length, buf.ptr);
+
+            // The doc is unclear regarding the "len == buf.length" case.
+            // We can deduce from other phrases that it signals the need for one more character.
+            // But the length of buf is already greater than the maximum possible return value.
+            // Therefore, we use "<" instead of "<=" in the following comparison.
+            len < buf.length || assert(0);
+
             if (len) cache = buf[0 .. len].to!string;
         }
         else version (Posix)
@@ -5290,7 +5316,7 @@ string tempDir() @trusted
             static string findExistingDir(T...)(lazy T alternatives)
             {
                 foreach (dir; alternatives)
-                    if (!dir.empty && exists(dir)) return dir;
+                    if (!dir.empty && isDir(dir)) return dir;
                 return null;
             }
 
