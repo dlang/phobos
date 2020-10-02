@@ -4855,7 +4855,7 @@ struct DirIterator
 {
 @safe:
 private:
-    RefCounted!(DirIteratorImpl, RefCountedAutoInitialize.no) impl = void;
+    RefCounted!(DirIteratorImpl, RefCountedAutoInitialize.no) impl;
     this(string pathname, SpanMode mode, bool followSymlink) @trusted
     {
         impl = typeof(impl)(pathname, mode, followSymlink);
@@ -5156,6 +5156,12 @@ auto dirEntries(string path, string pattern, SpanMode mode,
     assert(equal(files, result));
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=21250
+@system unittest
+{
+    import std.exception : assertThrown;
+    assertThrown!Exception(dirEntries("237f5babd6de21f40915826699582e36", "*.bin", SpanMode.depth));
+}
 
 /**
  * Reads a file line by line and parses the line into a single value or a

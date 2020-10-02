@@ -6344,6 +6344,7 @@ if (!is(T == class) && !(is(T == interface)))
             import std.conv : emplace;
 
             allocateStore();
+            version (D_Exceptions) scope(failure) deallocateStore();
             emplace(&_store._payload, args);
             _store._count = 1;
         }
@@ -6371,6 +6372,16 @@ if (!is(T == class) && !(is(T == interface)))
                 import std.internal.memory : enforceMalloc;
                 _store = cast(Impl*) enforceMalloc(Impl.sizeof);
             }
+        }
+
+        private void deallocateStore() nothrow pure
+        {
+            static if (enableGCScan)
+            {
+                pureGcRemoveRange(&this._store._payload);
+            }
+            pureFree(_store);
+            _store = null;
         }
 
         /**
@@ -6418,6 +6429,11 @@ Constructor that initializes the payload.
 Postcondition: `refCountedStore.isInitialized`
  */
     this(A...)(auto ref A args) if (A.length > 0)
+    out
+    {
+        assert(refCountedStore.isInitialized);
+    }
+    do
     {
         _refCounted.initialize(args);
     }
@@ -6450,15 +6466,9 @@ to deallocate the corresponding resource.
         assert(_refCounted._store._count > 0);
         if (--_refCounted._store._count)
             return;
-        // Done, deallocate
+        // Done, destroy and deallocate
         .destroy(_refCounted._store._payload);
-        static if (enableGCScan)
-        {
-            pureGcRemoveRange(&_refCounted._store._payload);
-        }
-
-        pureFree(_refCounted._store);
-        _refCounted._store = null;
+        _refCounted.deallocateStore();
     }
 
 /**
