@@ -169,7 +169,11 @@ private:
             = is(T == VariantN)
             ||
             //T.sizeof <= size &&
-            (AllowedTypes.length == 0 || staticIndexOf!(T, AllowedTypes) >= 0);
+            (AllowedTypes.length == 0
+                || staticIndexOf!(T, AllowedTypes) >= 0
+                // https://issues.dlang.org/show_bug.cgi?id=15615
+                || (staticIndexOf!(Unqual!T, AllowedTypes) >= 0
+                    && (isBasicType!T || !hasIndirections!T)));
     }
 
     // Each internal operation is encoded with an identifier. See
@@ -3122,4 +3126,27 @@ if (isAlgebraic!VariantType && Handler.length > 0)
     alias Outer = Algebraic!(Inner, This*);
 
     static assert(is(Outer.AllowedTypes == AliasSeq!(Inner, Outer*)));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=15615
+@system unittest
+{
+    alias Value = Algebraic!(long, double);
+
+    const long foo = 123L;
+    long bar = foo;
+    Value baz = Value(foo);
+    assert(baz == 123L);
+
+    // Should not allow for const transitive violation
+    static struct Wrapper
+    {
+        long* ptr;
+    }
+
+    alias VariantWrapper = Algebraic!(Wrapper, double);
+
+    long l = 2;
+    const cw = Wrapper(&l);
+    static assert(!__traits(compiles, VariantWrapper(cw)), "Stripping `const` from type with indirection!");
 }
