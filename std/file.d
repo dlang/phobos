@@ -390,6 +390,7 @@ version (Posix) private void[] readImpl(scope const(char)[] name, scope const(FS
         if (actual == 0) break;
         size += actual;
         if (size >= upTo) break;
+        assert(size <= result.length);
         if (size < result.length) continue;
         immutable newAlloc = size + sizeIncrement;
         result = GC.realloc(result.ptr, newAlloc.get, GC.BlkAttr.NO_SCAN)[0 .. newAlloc.get];
