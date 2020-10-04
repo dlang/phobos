@@ -18,13 +18,15 @@ Suffixes are slower to get at because of alignment rounding, so prefixes should
 be preferred. However, small prefixes blunt the alignment so if a large
 alignment with a small affix is needed, suffixes should be chosen.
 
-The following methods are defined if `Allocator` defines them, and forward to it: `deallocateAll`, `empty`, `owns`.
+The following methods are defined if `Allocator` defines them,
+and forwarded to it: `deallocateAll`, `empty`, `owns`.
  */
 struct AffixAllocator(Allocator, Prefix, Suffix = void)
 {
     import std.algorithm.comparison : min;
     import std.conv : emplace;
-    import std.experimental.allocator : RCIAllocator, theAllocator;
+    import std.experimental.allocator : RCIAllocator, RCISharedAllocator,
+           theAllocator, processAllocator;
     import std.experimental.allocator.common : stateSize, forwardToMember,
         roundUpToMultipleOf, alignedAt, alignDownTo, roundUpToMultipleOf,
         hasStaticallyKnownAlignment;
@@ -43,7 +45,8 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         "This restriction could be relaxed in the future.");
 
     /**
-    If `Prefix` is `void`, the alignment is that of the parent. Otherwise, the alignment is the same as the `Prefix`'s alignment.
+    If `Prefix` is `void`, the alignment is that of the parent.
+    Otherwise, the alignment is the same as the `Prefix`'s alignment.
     */
     static if (hasStaticallyKnownAlignment!Allocator)
     {
@@ -60,61 +63,103 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         enum uint alignment = Prefix.alignof;
     }
 
-    /**
-    If the parent allocator `Allocator` is stateful, an instance of it is
-    stored as a member. Otherwise, `AffixAllocator` uses
-    `Allocator.instance`. In either case, the name `_parent` is uniformly
-    used for accessing the parent allocator.
-    */
-    static if (stateSize!Allocator)
+    private template Impl()
     {
-        Allocator _parent;
-        static if (is(Allocator == RCIAllocator))
+        static if (stateSize!Allocator)
         {
-            @nogc nothrow pure @safe
-            Allocator parent()
+            Allocator _parent;
+
+            static if (is(Allocator == RCIAllocator) || is(Allocator == RCISharedAllocator))
             {
-                static @nogc nothrow
-                RCIAllocator wrapAllocatorObject()
+                static if (is(Allocator == RCISharedAllocator))
                 {
-                    import std.experimental.allocator.gc_allocator : GCAllocator;
-                    import std.experimental.allocator : allocatorObject;
+                    // synchronization variable
+                    // can't use Mutex or SpinLock because they aren't pure
+                    private shared bool _lockVar = true;
 
-                    return allocatorObject(GCAllocator.instance);
+                    @nogc nothrow pure @trusted
+                    private static void parentLock(ref shared bool _lockVar)
+                    {
+                        import core.atomic : cas;
+                        while (!cas(&_lockVar, true, false))
+                        {
+                            // Busy-wait for the parent to be set
+                        }
+                    }
+
+                    @nogc nothrow pure @trusted
+                    private static void parentUnlock(ref shared bool _lockVar)
+                    {
+                        import core.atomic : atomicStore;
+                        atomicStore(_lockVar, true);
+                    }
                 }
 
-                if (_parent.isNull)
+                @nogc nothrow pure @safe
+                Allocator parent()
                 {
-                    // If the `_parent` allocator is `null` we will assign
-                    // an object that references the GC as the `parent`.
-                    auto fn = (() @trusted =>
-                            cast(RCIAllocator function() @nogc nothrow pure @safe)(&wrapAllocatorObject))();
-                    _parent = fn();
-                }
+                    static @nogc nothrow
+                    RCIAllocator wrapAllocatorObject()
+                    {
+                        import std.experimental.allocator.gc_allocator : GCAllocator;
+                        import std.experimental.allocator : allocatorObject;
 
-                // `RCIAllocator.alignment` currently doesn't have any attributes
-                // so we must cast; throughout the allocators module, `alignment`
-                // is defined as an `enum` for the existing allocators.
-                // `alignment` should always be `@nogc nothrow pure @safe`; once
-                // this is enforced by the interface we can remove the cast
-                auto pureAlign = (() @trusted =>
-                        cast(uint delegate() @nogc nothrow pure @safe)(&_parent.alignment))();
-                assert(alignment <= pureAlign());
-                return _parent;
+                        return allocatorObject(GCAllocator.instance);
+                    }
+
+                    static @nogc nothrow
+                    RCISharedAllocator wrapProcAllocatorObject()
+                    {
+                        import std.experimental.allocator.gc_allocator : GCAllocator;
+                        import std.experimental.allocator : sharedAllocatorObject;
+
+                        return sharedAllocatorObject(GCAllocator.instance);
+                    }
+
+                    static if (is(Allocator == RCIAllocator))
+                    {
+                        if (_parent.isNull)
+                        {
+                            // If the `_parent` allocator is `null` we will assign
+                            // an object that references the GC as the `parent`.
+                            auto fn = (() @trusted =>
+                                    cast(RCIAllocator function() @nogc nothrow pure @safe)(&wrapAllocatorObject))();
+                            _parent = fn();
+                        }
+                    }
+                    else
+                    {
+                        parentLock(_lockVar);
+                        if (_parent.isNull)
+                        {
+                            auto fn = (() @trusted =>
+                                    cast(RCISharedAllocator function() @nogc nothrow pure @safe)
+                                    (&wrapProcAllocatorObject))();
+                            _parent = fn();
+                        }
+                        parentUnlock(_lockVar);
+                    }
+
+                    // `RCIAllocator.alignment` currently doesn't have any attributes
+                    // so we must cast; throughout the allocators module, `alignment`
+                    // is defined as an `enum` for the existing allocators.
+                    // `alignment` should always be `@nogc nothrow pure @safe`; once
+                    // this is enforced by the interface we can remove the cast
+                    auto pureAlign = (() @trusted =>
+                            cast(uint delegate() @nogc nothrow pure @safe)(&_parent.alignment))();
+                    assert(alignment <= pureAlign());
+                    return _parent;
+                }
+            }
+            else
+            {
+                alias parent = _parent;
             }
         }
         else
         {
-            alias parent = _parent;
+            alias parent = Allocator.instance;
         }
-    }
-    else
-    {
-        alias parent = Allocator.instance;
-    }
-
-    private template Impl()
-    {
 
         size_t goodAllocSize(size_t s)
         {
@@ -338,6 +383,19 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         static AffixAllocator instance;
 
         /**
+        If the parent allocator `Allocator` is stateful, an instance of it is
+        stored as a member. If the parent allocator is null instance of
+        $(REF RCIAllocator, std,experimental,allocator) or
+        $(REF RCISharedAllocator, std,experimental,allocator) then `AffixAllocator`
+        will use $(REF GCAllocator, std,experimental,allocator,gc_allocator).
+        If the parent allocator `Allocator` is stateless, `AffixAllocator` uses
+        `Allocator.instance`.
+        In either case, the name `_parent` is uniformly used for accessing the
+        parent allocator.
+        */
+        Allocator parent();
+
+        /**
         Affix access functions offering references to the affixes of a
         block `b` previously allocated with this allocator. `b` may not be null.
         They are defined if and only if the corresponding affix is not `void`.
@@ -559,4 +617,46 @@ version (StdUnittest)
     auto buf = a.allocate(10);
     static assert(is(typeof(a.allocate) == shared));
     assert(buf.length == 10);
+}
+
+@system unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.experimental.allocator.building_blocks.stats_collector;
+
+    alias SCAlloc = StatsCollector!(Mallocator, Options.bytesUsed);
+    alias AffixAl = AffixAllocator!(SCAlloc, uint);
+
+    AffixAl a;
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    assert(a.parent.bytesUsed == 42 + uint.sizeof);
+    assert((() nothrow @nogc => a.reallocate(b, 100))());
+    assert(b.length == 100);
+    assert(a.parent.bytesUsed == 100 + uint.sizeof);
+    assert((() nothrow @nogc => a.deallocate(b))());
+}
+
+@system unittest
+{
+    import std.experimental.allocator : RCISharedAllocator;
+    import core.thread : ThreadGroup;
+
+    shared AffixAllocator!(RCISharedAllocator, size_t) a;
+
+    void fun()
+    {
+        enum allocSize = 42;
+        void[] b = a.allocate(allocSize);
+        assert(b.length == allocSize);
+        a.deallocate(b);
+    }
+
+    enum numThreads = 100;
+    auto tg = new ThreadGroup;
+    foreach (i; 0 .. numThreads)
+    {
+        tg.create(&fun);
+    }
+    tg.joinAll();
 }
