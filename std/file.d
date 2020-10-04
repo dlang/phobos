@@ -401,11 +401,18 @@ version (Posix) private void[] readImpl(scope const(char)[] name, scope const(FS
 }
 
 
+// Hack to support unittesting "read" for file handles which do not support GetFileSize:
+version (Windows) private bool readImplTest = false;
+
 version (Windows) private void[] readImpl(scope const(char)[] name, scope const(FSChar)* namez,
-                                          size_t upTo = size_t.max) @safe
+                                          size_t upTo = size_t.max) @trusted
 {
     import core.memory : GC;
     import std.algorithm.comparison : min;
+    import std.conv : to;
+    import std.experimental.checkedint : checked;
+    //import std.stdio;
+
     static trustedCreateFileW(scope const(wchar)* namez, DWORD dwDesiredAccess, DWORD dwShareMode,
                               SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
                               DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) @trusted
@@ -421,25 +428,27 @@ version (Windows) private void[] readImpl(scope const(char)[] name, scope const(
     }
     static trustedGetFileSize(HANDLE hFile, out ulong fileSize) @trusted
     {
+        //import std.stdio;
         DWORD sizeHigh;
         DWORD sizeLow = GetFileSize(hFile, &sizeHigh);
-        const bool result = sizeLow != INVALID_FILE_SIZE;
+        const bool result = readImplTest ? false : sizeLow != INVALID_FILE_SIZE || ! GetLastError();
+        //writef ("trustedGetFileSize: hFile %Xh, sizeHigh %Xh, sizeLow %Xh, result %u.\n", hFile, sizeHigh, sizeLow, result);
         if (result)
             fileSize = makeUlong(sizeLow, sizeHigh);
         return result;
     }
-    static trustedReadFile(HANDLE hFile, void *lpBuffer, ulong nNumberOfBytesToRead) @trusted
+    static trustedReadFile(HANDLE hFile, void *lpBuffer, ulong nNumberOfBytesToRead, out ulong totalNumRead) @trusted
     {
         // Read by chunks of size < 4GB (Windows API limit)
-        ulong totalNumRead = 0;
         while (totalNumRead != nNumberOfBytesToRead)
         {
+            assert(totalNumRead < nNumberOfBytesToRead);
             const uint chunkSize = min(nNumberOfBytesToRead - totalNumRead, 0xffff_0000);
             DWORD numRead = void;
             const result = ReadFile(hFile, lpBuffer + totalNumRead, chunkSize, &numRead, null);
-            if (result == 0 || numRead != chunkSize)
-                return false;
-            totalNumRead += chunkSize;
+            if (result == 0 || numRead == 0)
+                return result != 0;
+            totalNumRead += numRead;
         }
         return true;
     }
@@ -450,22 +459,112 @@ version (Windows) private void[] readImpl(scope const(char)[] name, scope const(
             OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
             HANDLE.init);
     auto h = trustedCreateFileW(namez, defaults);
-
     cenforce(h != INVALID_HANDLE_VALUE, name, namez);
     scope(exit) cenforce(trustedCloseHandle(h), name, namez);
-    ulong fileSize = void;
-    cenforce(trustedGetFileSize(h, fileSize), name, namez);
-    size_t size = min(upTo, fileSize);
-    auto buf = () @trusted { return GC.malloc(size, GC.BlkAttr.NO_SCAN)[0 .. size]; } ();
+
+              ulong  fileSize     = void;
+    immutable bool   fileSizeOkay = trustedGetFileSize(h, fileSize);
+    immutable size_t maxSize      = fileSizeOkay ? min(fileSize, upTo) : upTo;
+
+    //writef("readFile %s: fileSize %u.\n", name, fileSize);
+
+    // Shamelessly reproducing the rest of the function from Posix version, with adaptations kept to a minimum:
+
+    enum size_t
+        minInitialAlloc       = 0x1000,
+        maxInitialAlloc       = size_t.max / 2,
+        sizeIncrement         = 0x1000,
+        maxSlackMemoryAllowed = 0x1000,
+        unknownPurposeSize    = 0; // Changed from 1 in Posix version, to support callers requesting 4 KB etc.
+
+    immutable size_t initialAlloc = min
+    (
+        upTo,
+        to!size_t
+        (
+            fileSizeOkay ? min(fileSize + unknownPurposeSize, maxInitialAlloc) : minInitialAlloc
+        )
+    );
+
+    enum attr = GC.BlkAttr.NO_SCAN;
+    auto buf = () @trusted { return GC.malloc(initialAlloc, attr)[0 .. initialAlloc]; } ();
+    //writef ("buf %16Xh + %8Xh = %16Xh.\n", buf.ptr, buf.length, buf.ptr + buf.length);
 
     scope(failure)
     {
         () @trusted { GC.free(buf.ptr); } ();
     }
 
-    if (size)
-        cenforce(trustedReadFile(h, &buf[0], size), name, namez);
-    return buf[0 .. size];
+    auto size = checked(size_t(0));
+    for (;;)
+    {
+        immutable size_t wanted     = (min(buf.length, maxSize) - size).get;
+                  ulong  actual     = void;
+        immutable bool   actualOkay = trustedReadFile(h, buf.ptr + size.get, wanted, actual);
+        cenforce(actualOkay, name, namez);
+
+        if (! actual)
+            break;
+
+        size += actual;
+
+        assert(size <= maxSize);
+        if (size >= maxSize)
+            break;
+
+        assert(size <= buf.length);
+        if (size == buf.length)
+        {
+            immutable newAlloc = size + sizeIncrement;
+            buf = GC.realloc(buf.ptr, newAlloc.get, attr)[0 .. newAlloc.get];
+            //writef ("buf %16Xh + %8Xh = %16Xh.\n", buf.ptr, buf.length, buf.ptr + buf.length);
+        }
+    }
+
+    if (buf.length - size >= maxSlackMemoryAllowed)
+    {
+        buf = GC.realloc(buf.ptr, size.get, attr)[0 .. size.get];
+        //writef ("buf %16Xh + %8Xh = %16Xh.\n", buf.ptr, buf.length, buf.ptr + buf.length);
+    }
+
+    return buf[0 .. size.get];
+}
+
+@safe unittest
+{
+    import std.stdio;
+
+    enum size_t numIdenticalChars = 3989; // Dummy uncomfortable value (not a multiple of any beautiful number).
+    enum size_t numDifferentChars = 'z' - 'a' + 1;
+    char[numDifferentChars * numIdenticalChars] contents;
+    {
+        for (size_t i = 0; i < numDifferentChars; ++i)
+            contents[i * numIdenticalChars .. (i + 1) * numIdenticalChars] = cast(char)('a' + i);
+    }
+
+    //writef("%s\n", contents);
+
+    //immutable string deleteme = "example";
+    scope(exit) if (exists(deleteme)) remove(deleteme);
+    auto f = File(deleteme, "w");
+    {
+        f.write(contents);
+        f.flush();
+    }
+
+    {
+        // We run the test under normal conditions:
+        assert(read(deleteme) == contents);
+    }
+
+    version (Windows)
+    {
+        // We re-run the test pretending that GetFileSize is not supported:
+                     readImplTest = true;
+        scope (exit) readImplTest = false;
+
+        assert(read(deleteme) == contents);
+    }
 }
 
 version (linux) @safe unittest
