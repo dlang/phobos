@@ -1348,8 +1348,14 @@ private F _sinh(F)(F x)
 ///
 @safe unittest
 {
-    assert(isIdentical(sinh(0.0), 0.0));
-    assert(sinh(1.0).approxEqual((E - 1.0 / E) / 2));
+    enum sinh1 = (E - 1.0 / E) / 2;
+    import std.meta : AliasSeq;
+    static foreach(F; AliasSeq!(float, double, real))
+    {
+        assert(isIdentical(sinh(F(0.0)), F(0.0)));
+        assert(sinh(F(1.0)).approxEqual(F(sinh1)));
+    }
+    
 }
 
 @safe @nogc nothrow unittest
