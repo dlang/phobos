@@ -376,12 +376,10 @@ if ((is(immutable Num == immutable short) || is(immutable Num == immutable byte)
  */
 
 real cos(real x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.cos(x); }
-//FIXME
 ///ditto
-double cos(double x) @safe pure nothrow @nogc { return cos(cast(real) x); }
-//FIXME
+double cos(double x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.cos(x); }
 ///ditto
-float cos(float x) @safe pure nothrow @nogc { return cos(cast(real) x); }
+float cos(float x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.cos(x); }
 
 ///
 @safe unittest
@@ -418,12 +416,10 @@ float cos(float x) @safe pure nothrow @nogc { return cos(cast(real) x); }
  */
 
 real sin(real x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.sin(x); }
-//FIXME
 ///ditto
-double sin(double x) @safe pure nothrow @nogc { return sin(cast(real) x); }
-//FIXME
+double sin(double x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.sin(x); }
 ///ditto
-float sin(float x) @safe pure nothrow @nogc { return sin(cast(real) x); }
+float sin(float x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.sin(x); }
 
 ///
 @safe unittest
@@ -1563,35 +1559,6 @@ long rndtol(float x) @safe pure nothrow @nogc { return rndtol(cast(real) x); }
 {
     long function(real) prndtol = &rndtol;
     assert(prndtol != null);
-}
-
-/**
-$(RED Deprecated. Please use $(LREF round) instead.)
-
-Returns `x` rounded to a `long` value using the `FE_TONEAREST` rounding mode.
-If the integer value of `x` is greater than `long.max`, the result is
-indeterminate.
-
-Only works with the Digital Mars C Runtime.
-
-Params:
-    x = the number to round
-Returns:
-    `x` rounded to an integer value
- */
-deprecated("rndtonl is to be removed by 2.089. Please use round instead")
-extern (C) real rndtonl(real x);
-
-///
-deprecated @system unittest
-{
-    version (CRuntime_DigitalMars)
-    {
-        assert(rndtonl(1.0) is -real.nan);
-        assert(rndtonl(1.2) is -real.nan);
-        assert(rndtonl(1.7) is -real.nan);
-        assert(rndtonl(1.0001) is -real.nan);
-    }
 }
 
 /***************************************
@@ -4646,13 +4613,20 @@ real nearbyint(real x) @safe pure nothrow @nogc
  * $(LREF nearbyint) performs the same operation, but does
  * not set the FE_INEXACT exception.
  */
-real rint(real x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.rint(x); }
-//FIXME
+real rint(real x) @safe pure nothrow @nogc
+{
+    pragma(inline, true); return core.math.rint(x);
+}
 ///ditto
-double rint(double x) @safe pure nothrow @nogc { return rint(cast(real) x); }
-//FIXME
+double rint(double x) @safe pure nothrow @nogc
+{
+    pragma(inline, true); return core.math.rint(x);
+}
 ///ditto
-float rint(float x) @safe pure nothrow @nogc { return rint(cast(real) x); }
+float rint(float x) @safe pure nothrow @nogc
+{
+    pragma(inline, true); return core.math.rint(x);
+}
 
 ///
 @safe unittest
