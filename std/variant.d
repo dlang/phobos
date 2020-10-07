@@ -485,7 +485,7 @@ private:
                 (*zis)[index] = args[0].get!(typeof((*zis)[0]));
                 break;
             }
-            else static if (isAssociativeArray!(A))
+            else static if (isAssociativeArray!(A) && is(typeof((*zis)[A.init.keys[0]] = A.init.values[0])))
             {
                 (*zis)[args[1].get!(typeof(A.init.keys[0]))]
                     = args[0].get!(typeof(A.init.values[0]));
@@ -3122,4 +3122,11 @@ if (isAlgebraic!VariantType && Handler.length > 0)
     alias Outer = Algebraic!(Inner, This*);
 
     static assert(is(Outer.AllowedTypes == AliasSeq!(Inner, Outer*)));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21296
+@system unittest
+{
+    immutable aa = ["0": 0];
+    auto v = Variant(aa); // compile error
 }
