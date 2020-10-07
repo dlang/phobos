@@ -991,20 +991,20 @@ public:
             if (w1 == 0)
                 return T(0); // Special: bsr(w1) is undefined.
             int bitsStillNeeded = totalNeededBits - bsr(w1) - 1;
-            T acc = scalbn(w1, scale);
+            T acc = scalbn(cast(T) w1, scale);
             for (ptrdiff_t i = ulongLength - 2; i >= 0 && bitsStillNeeded > 0; i--)
             {
                 ulong w = data.peekUlong(i);
                 // To round towards zero we must make sure not to use too many bits.
                 if (bitsStillNeeded >= 64)
                 {
-                    acc += scalbn(w, scale -= 64);
+                    acc += scalbn(cast(T) w, scale -= 64);
                     bitsStillNeeded -= 64;
                 }
                 else
                 {
                     w = (w >>> (64 - bitsStillNeeded)) << (64 - bitsStillNeeded);
-                    acc += scalbn(w, scale -= 64);
+                    acc += scalbn(cast(T) w, scale -= 64);
                     break;
                 }
             }
