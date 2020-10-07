@@ -1355,14 +1355,12 @@ private F _sinh(F)(F x)
         assert(isIdentical(sinh(F(0.0)), F(0.0)));
         assert(sinh(F(1.0)).approxEqual(F(sinh1)));
     }
-    
 }
 
 @safe @nogc nothrow unittest
 {
-    assert(equalsDigit(sinh(1.0), (E - 1.0 / E) / 2, useDigits));
+    assert(equalsDigit(sinh(1.0L), real((E - 1.0 / E) / 2), useDigits));
 }
-
 /***********************************
  * Calculates the hyperbolic tangent of x.
  *
