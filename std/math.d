@@ -1322,26 +1322,28 @@ float cosh(float x) @safe pure nothrow @nogc  { return cosh(cast(real) x); }
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)$(INFIN)) $(TD no))
  *      )
  */
-real sinh(real x) @safe pure nothrow @nogc
+real sinh(real x) @safe pure nothrow @nogc { return _sinh(x); }
+
+/// ditto
+double sinh(double x) @safe pure nothrow @nogc { return _sinh(x); }
+
+/// ditto
+float sinh(float x) @safe pure nothrow @nogc { return _sinh(x); }
+
+private F _sinh(F)(F x)
 {
     //  sinh(x) =  (exp(x)-exp(-x))/2;
     // Very large arguments could cause an overflow, but
     // the maximum value of x for which exp(x) + exp(-x)) != exp(x)
     // is x = 0.5 * (real.mant_dig) * LN2. // = 22.1807 for real80.
-    if (fabs(x) > real.mant_dig * LN2)
+    if (fabs(x) > F.mant_dig * F(LN2))
     {
-        return copysign(0.5 * exp(fabs(x)), x);
+        return copysign(F(0.5) * exp(fabs(x)), x);
     }
 
-    const real y = expm1(x);
-    return 0.5 * y / (y+1) * (y+2);
+    const y = expm1(x);
+    return F(0.5) * y / (y+1) * (y+2);
 }
-
-/// ditto
-double sinh(double x) @safe pure nothrow @nogc { return sinh(cast(real) x); }
-
-/// ditto
-float sinh(float x) @safe pure nothrow @nogc  { return sinh(cast(real) x); }
 
 ///
 @safe unittest
