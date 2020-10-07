@@ -1330,6 +1330,18 @@ double sinh(double x) @safe pure nothrow @nogc { return _sinh(x); }
 /// ditto
 float sinh(float x) @safe pure nothrow @nogc { return _sinh(x); }
 
+///
+@safe unittest
+{
+    enum sinh1 = (E - 1.0 / E) / 2;
+    import std.meta : AliasSeq;
+    static foreach (F; AliasSeq!(float, double, real))
+    {
+        assert(isIdentical(sinh(F(0.0)), F(0.0)));
+        assert(sinh(F(1.0)).approxEqual(F(sinh1)));
+    }
+}
+
 private F _sinh(F)(F x)
 {
     //  sinh(x) =  (exp(x)-exp(-x))/2;
@@ -1343,18 +1355,6 @@ private F _sinh(F)(F x)
 
     const y = expm1(x);
     return F(0.5) * y / (y+1) * (y+2);
-}
-
-///
-@safe unittest
-{
-    enum sinh1 = (E - 1.0 / E) / 2;
-    import std.meta : AliasSeq;
-    static foreach (F; AliasSeq!(float, double, real))
-    {
-        assert(isIdentical(sinh(F(0.0)), F(0.0)));
-        assert(sinh(F(1.0)).approxEqual(F(sinh1)));
-    }
 }
 
 @safe @nogc nothrow unittest
