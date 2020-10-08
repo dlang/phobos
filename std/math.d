@@ -4032,6 +4032,8 @@ float scalbn(float x, int n) @safe pure nothrow @nogc { return _scalbn(x,n); }
 
 ///
 @safe pure nothrow @nogc unittest
+{
+    assert(scalbn(0x1.2345678abcdefp0L, 999) == 0x1.2345678abcdefp999L);
     assert(scalbn(-real.infinity, 5) == -real.infinity);
 }
 
