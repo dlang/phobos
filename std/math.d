@@ -1370,23 +1370,13 @@ private F _sinh(F)(F x)
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)1.0) $(TD no))
  *      )
  */
-real tanh(real x) @safe pure nothrow @nogc
-{
-    //  tanh(x) = (exp(x) - exp(-x))/(exp(x)+exp(-x))
-    if (fabs(x) > real.mant_dig * LN2)
-    {
-        return copysign(1, x);
-    }
-
-    const real y = expm1(2*x);
-    return y / (y + 2);
-}
+real tanh(real x) @safe pure nothrow @nogc { return _tanh(x); }
 
 /// ditto
-double tanh(double x) @safe pure nothrow @nogc { return tanh(cast(real) x); }
+double tanh(double x) @safe pure nothrow @nogc { return _tanh(x); }
 
 /// ditto
-float tanh(float x) @safe pure nothrow @nogc { return tanh(cast(real) x); }
+float tanh(float x) @safe pure nothrow @nogc { return _tanh(x); }
 
 ///
 @safe unittest
@@ -1395,9 +1385,21 @@ float tanh(float x) @safe pure nothrow @nogc { return tanh(cast(real) x); }
     assert(tanh(1.0).approxEqual(sinh(1.0) / cosh(1.0)));
 }
 
+private F _tanh(F)(F x)
+{
+    //  tanh(x) = (exp(x) - exp(-x))/(exp(x)+exp(-x))
+    if (fabs(x) > F.mant_dig * F(LN2))
+    {
+        return copysign(1, x);
+    }
+
+    const y = expm1(2*x);
+    return y / (y + 2);
+}
+
 @safe @nogc nothrow unittest
 {
-    assert(equalsDigit(tanh(1.0), sinh(1.0) / cosh(1.0), 15));
+    assert(equalsDigit(tanh(1.0L), sinh(1.0L) / cosh(1.0L), 15));
 }
 
 /***********************************
