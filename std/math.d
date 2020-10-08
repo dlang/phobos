@@ -1322,39 +1322,45 @@ float cosh(float x) @safe pure nothrow @nogc  { return cosh(cast(real) x); }
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)$(INFIN)) $(TD no))
  *      )
  */
-real sinh(real x) @safe pure nothrow @nogc
+real sinh(real x) @safe pure nothrow @nogc { return _sinh(x); }
+
+/// ditto
+double sinh(double x) @safe pure nothrow @nogc { return _sinh(x); }
+
+/// ditto
+float sinh(float x) @safe pure nothrow @nogc { return _sinh(x); }
+
+///
+@safe unittest
+{
+    enum sinh1 = (E - 1.0 / E) / 2;
+    import std.meta : AliasSeq;
+    static foreach (F; AliasSeq!(float, double, real))
+    {
+        assert(isIdentical(sinh(F(0.0)), F(0.0)));
+        assert(sinh(F(1.0)).approxEqual(F(sinh1)));
+    }
+}
+
+private F _sinh(F)(F x)
 {
     //  sinh(x) =  (exp(x)-exp(-x))/2;
     // Very large arguments could cause an overflow, but
     // the maximum value of x for which exp(x) + exp(-x)) != exp(x)
     // is x = 0.5 * (real.mant_dig) * LN2. // = 22.1807 for real80.
-    if (fabs(x) > real.mant_dig * LN2)
+    if (fabs(x) > F.mant_dig * F(LN2))
     {
-        return copysign(0.5 * exp(fabs(x)), x);
+        return copysign(F(0.5) * exp(fabs(x)), x);
     }
 
-    const real y = expm1(x);
-    return 0.5 * y / (y+1) * (y+2);
-}
-
-/// ditto
-double sinh(double x) @safe pure nothrow @nogc { return sinh(cast(real) x); }
-
-/// ditto
-float sinh(float x) @safe pure nothrow @nogc  { return sinh(cast(real) x); }
-
-///
-@safe unittest
-{
-    assert(isIdentical(sinh(0.0), 0.0));
-    assert(sinh(1.0).approxEqual((E - 1.0 / E) / 2));
+    const y = expm1(x);
+    return F(0.5) * y / (y+1) * (y+2);
 }
 
 @safe @nogc nothrow unittest
 {
-    assert(equalsDigit(sinh(1.0), (E - 1.0 / E) / 2, useDigits));
+    assert(equalsDigit(sinh(1.0L), real((E - 1.0 / E) / 2), useDigits));
 }
-
 /***********************************
  * Calculates the hyperbolic tangent of x.
  *
@@ -1364,23 +1370,13 @@ float sinh(float x) @safe pure nothrow @nogc  { return sinh(cast(real) x); }
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)1.0) $(TD no))
  *      )
  */
-real tanh(real x) @safe pure nothrow @nogc
-{
-    //  tanh(x) = (exp(x) - exp(-x))/(exp(x)+exp(-x))
-    if (fabs(x) > real.mant_dig * LN2)
-    {
-        return copysign(1, x);
-    }
-
-    const real y = expm1(2*x);
-    return y / (y + 2);
-}
+real tanh(real x) @safe pure nothrow @nogc { return _tanh(x); }
 
 /// ditto
-double tanh(double x) @safe pure nothrow @nogc { return tanh(cast(real) x); }
+double tanh(double x) @safe pure nothrow @nogc { return _tanh(x); }
 
 /// ditto
-float tanh(float x) @safe pure nothrow @nogc { return tanh(cast(real) x); }
+float tanh(float x) @safe pure nothrow @nogc { return _tanh(x); }
 
 ///
 @safe unittest
@@ -1389,9 +1385,21 @@ float tanh(float x) @safe pure nothrow @nogc { return tanh(cast(real) x); }
     assert(tanh(1.0).approxEqual(sinh(1.0) / cosh(1.0)));
 }
 
+private F _tanh(F)(F x)
+{
+    //  tanh(x) = (exp(x) - exp(-x))/(exp(x)+exp(-x))
+    if (fabs(x) > F.mant_dig * F(LN2))
+    {
+        return copysign(1, x);
+    }
+
+    const y = expm1(2*x);
+    return y / (y + 2);
+}
+
 @safe @nogc nothrow unittest
 {
-    assert(equalsDigit(tanh(1.0), sinh(1.0) / cosh(1.0), 15));
+    assert(equalsDigit(tanh(1.0L), sinh(1.0L) / cosh(1.0L), 15));
 }
 
 /***********************************
@@ -1412,19 +1420,13 @@ float tanh(float x) @safe pure nothrow @nogc { return tanh(cast(real) x); }
  *    $(SV  +$(INFIN),+$(INFIN))
  *  )
  */
-real acosh(real x) @safe pure nothrow @nogc
-{
-    if (x > 1/real.epsilon)
-        return LN2 + log(x);
-    else
-        return log(x + sqrt(x*x - 1));
-}
+real acosh(real x) @safe pure nothrow @nogc { return _acosh(x); }
 
 /// ditto
-double acosh(double x) @safe pure nothrow @nogc { return acosh(cast(real) x); }
+double acosh(double x) @safe pure nothrow @nogc { return _acosh(x); }
 
 /// ditto
-float acosh(float x) @safe pure nothrow @nogc  { return acosh(cast(real) x); }
+float acosh(float x) @safe pure nothrow @nogc { return _acosh(x); }
 
 ///
 @safe @nogc nothrow unittest
@@ -1436,9 +1438,17 @@ float acosh(float x) @safe pure nothrow @nogc  { return acosh(cast(real) x); }
     assert(isNaN(acosh(0.5)));
 }
 
+private F _acosh(F)(F x) @safe pure nothrow @nogc
+{
+    if (x > 1/F.epsilon)
+        return F(LN2) + log(x);
+    else
+        return log(x + sqrt(x*x - 1));
+}
+
 @safe @nogc nothrow unittest
 {
-    assert(equalsDigit(acosh(cosh(3.0)), 3, useDigits));
+    assert(equalsDigit(acosh(cosh(3.0L)), 3.0L, useDigits));
 }
 
 /***********************************
@@ -1457,20 +1467,13 @@ float acosh(float x) @safe pure nothrow @nogc  { return acosh(cast(real) x); }
  *    $(SV  $(PLUSMN)$(INFIN),$(PLUSMN)$(INFIN))
  *    )
  */
-real asinh(real x) @safe pure nothrow @nogc
-{
-    return (fabs(x) > 1 / real.epsilon)
-       // beyond this point, x*x + 1 == x*x
-       ?  copysign(LN2 + log(fabs(x)), x)
-       // sqrt(x*x + 1) ==  1 + x * x / ( 1 + sqrt(x*x + 1) )
-       : copysign(log1p(fabs(x) + x*x / (1 + sqrt(x*x + 1)) ), x);
-}
+real asinh(real x) @safe pure nothrow @nogc { return _asinh(x); }
 
 /// ditto
-double asinh(double x) @safe pure nothrow @nogc { return asinh(cast(real) x); }
+double asinh(double x) @safe pure nothrow @nogc { return _asinh(x); }
 
 /// ditto
-float asinh(float x) @safe pure nothrow @nogc { return asinh(cast(real) x); }
+float asinh(float x) @safe pure nothrow @nogc { return _asinh(x); }
 
 ///
 @safe @nogc nothrow unittest
@@ -1482,9 +1485,18 @@ float asinh(float x) @safe pure nothrow @nogc { return asinh(cast(real) x); }
     assert(isNaN(asinh(real.nan)));
 }
 
+private F _asinh(F)(F x)
+{
+    return (fabs(x) > 1 / F.epsilon)
+        // beyond this point, x*x + 1 == x*x
+        ? copysign(F(LN2) + log(fabs(x)), x)
+        // sqrt(x*x + 1) ==  1 + x * x / ( 1 + sqrt(x*x + 1) )
+        : copysign(log1p(fabs(x) + x*x / (1 + sqrt(x*x + 1)) ), x);
+}
+
 @safe unittest
 {
-    assert(equalsDigit(asinh(sinh(3.0)), 3, useDigits));
+    assert(equalsDigit(asinh(sinh(3.0L)), 3.0L, useDigits));
 }
 
 /***********************************
@@ -4010,35 +4022,47 @@ real modf(real x, ref real i) @trusted nothrow @nogc
  *      $(TR $(TD $(PLUSMN)0.0)      $(TD $(PLUSMN)0.0) )
  *      )
  */
-real scalbn(real x, int n) @safe pure nothrow @nogc
+real scalbn(real x, int n) @safe pure nothrow @nogc { return _scalbn(x,n); }
+
+/// ditto
+double scalbn(double x, int n) @safe pure nothrow @nogc { return _scalbn(x,n); }
+
+/// ditto
+float scalbn(float x, int n) @safe pure nothrow @nogc { return _scalbn(x,n); }
+
+///
+@safe pure nothrow @nogc unittest
 {
+    assert(scalbn(0x1.2345678abcdefp0L, 999) == 0x1.2345678abcdefp999L);
+    assert(scalbn(-real.infinity, 5) == -real.infinity);
+    assert(scalbn(2.0,10) == 2048.0);
+    assert(scalbn(2048.0f,-10) == 2.0f);
+}
+
+private F _scalbn(F)(F x, int n)
+{
+    pragma(inline, true);
+
     if (__ctfe)
     {
         // Handle special cases.
-        if (x == 0.0 || isInfinity(x))
+        if (x == F(0.0) || isInfinity(x))
             return x;
     }
     return core.math.ldexp(x, n);
 }
 
-///
-@safe pure nothrow @nogc unittest
-{
-    assert(scalbn(0x1.2345678abcdefp0, 999) == 0x1.2345678abcdefp999);
-    assert(scalbn(-real.infinity, 5) == -real.infinity);
-}
-
 @safe pure nothrow @nogc unittest
 {
     // CTFE-able test
-    static assert(scalbn(0x1.2345678abcdefp0, 999) == 0x1.2345678abcdefp999);
+    static assert(scalbn(0x1.2345678abcdefp0L, 999) == 0x1.2345678abcdefp999L);
     static assert(scalbn(-real.infinity, 5) == -real.infinity);
     // Test with large exponent delta n where the result is in bounds but 2.0L ^^ n is not.
     enum initialExponent = real.min_exp + 2, resultExponent = real.max_exp - 2;
     enum int n = resultExponent - initialExponent;
-    enum real x = 0x1.2345678abcdefp0 * (2.0L ^^ initialExponent);
+    enum real x = 0x1.2345678abcdefp0L * (2.0L ^^ initialExponent);
     enum staticResult = scalbn(x, n);
-    static assert(staticResult == 0x1.2345678abcdefp0 * (2.0L ^^ resultExponent));
+    static assert(staticResult == 0x1.2345678abcdefp0L * (2.0L ^^ resultExponent));
     assert(scalbn(x, n) == staticResult);
 }
 
