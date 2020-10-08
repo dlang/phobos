@@ -4035,6 +4035,8 @@ float scalbn(float x, int n) @safe pure nothrow @nogc { return _scalbn(x,n); }
 {
     assert(scalbn(0x1.2345678abcdefp0L, 999) == 0x1.2345678abcdefp999L);
     assert(scalbn(-real.infinity, 5) == -real.infinity);
+    assert(scalbn(2.0,10) == 2048.0);
+    assert(scalbn(2048.0f,-10) == 2.0f);
 }
 
 private F _scalbn(F)(F x, int n)
