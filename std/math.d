@@ -4024,10 +4024,10 @@ real modf(real x, ref real i) @trusted nothrow @nogc
  */
 real scalbn(real x, int n) @safe pure nothrow @nogc { return _scalbn(x,n); }
 
-///
+/// ditto
 double scalbn(double x, int n) @safe pure nothrow @nogc { return _scalbn(x,n); }
 
-///
+/// ditto
 float scalbn(float x, int n) @safe pure nothrow @nogc { return _scalbn(x,n); }
 
 ///
