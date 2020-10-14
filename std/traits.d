@@ -4975,6 +4975,10 @@ template CommonType(T...)
             alias CommonType = T[0];
         }
     }
+    else static if (T.length == 2 && is(typeof(true ? T[0].init : T[1].init) U))
+    {
+        alias CommonType = U;
+    }
     else static if (is(typeof(true ? T[0].init : T[1].init) U))
     {
         alias CommonType = CommonType!(U, T[2 .. $]);
