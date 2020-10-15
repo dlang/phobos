@@ -700,7 +700,15 @@ public:
                 {
                     alias UT = Unqual!T;
                     auto p = new UT;
-                    *p = rhs;
+                    static if (isAssignable!UT)
+                    {
+                        *p = rhs;
+                    }
+                    else
+                    {
+                        import core.lifetime : emplace;
+                        emplace(p, rhs);
+                    }
                 }
                 memcpy(&store, &p, p.sizeof);
             }
