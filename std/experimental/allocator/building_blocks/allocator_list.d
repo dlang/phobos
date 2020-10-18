@@ -4,7 +4,7 @@ Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/allocator_list.d)
 */
 module std.experimental.allocator.building_blocks.allocator_list;
 
-import core.memory : minimumPageSize;
+import core.memory : pageSize;
 
 import std.experimental.allocator.building_blocks.null_allocator;
 import std.experimental.allocator.common;
@@ -825,8 +825,6 @@ version (Posix) @system unittest
     import std.algorithm.comparison : max;
     import std.typecons : Ternary;
 
-    enum pageSize = minimumPageSize;
-
     static void testrw(void[] b)
     {
         ubyte* buf = cast(ubyte*) b.ptr;
@@ -885,8 +883,6 @@ version (Posix) @system unittest
     import std.algorithm.comparison : max;
     import std.typecons : Ternary;
 
-    enum pageSize = minimumPageSize;
-
     static void testrw(void[] b)
     {
         ubyte* buf = cast(ubyte*) b.ptr;
@@ -934,9 +930,10 @@ version (Posix) @system unittest
     assert(a.deallocate(b1));
     assert(a.deallocate(b2));
 
-    b3 = a.alignedAllocate(70 * pageSize, 70 * pageSize);
+    const alignment = cast(uint) (70 * pageSize);
+    b3 = a.alignedAllocate(70 * pageSize, alignment);
     assert(b3.length == 70 * pageSize);
-    assert(b3.ptr.alignedAt(70 * pageSize));
+    assert(b3.ptr.alignedAt(alignment));
     testrw(b3);
     assert(a.allocators.length == 4);
     assert(a.deallocate(b3));
@@ -952,8 +949,6 @@ version (Posix) @system unittest
     import std.algorithm.comparison : max;
     import std.typecons : Ternary;
 
-    enum pageSize = minimumPageSize;
-
     static void testrw(void[] b)
     {
         ubyte* buf = cast(ubyte*) b.ptr;
@@ -966,10 +961,11 @@ version (Posix) @system unittest
 
     enum numPages = 5;
     AllocatorList!((n) => AscendingPageAllocator(max(n, numPages * pageSize)), NullAllocator) a;
-    auto b = a.alignedAllocate(1, pageSize * 2);
+    const alignment = cast(uint) (2 * pageSize);
+    auto b = a.alignedAllocate(1, alignment);
     assert(b.length == 1);
     assert(a.expand(b, pageSize - 1));
-    assert(b.ptr.alignedAt(2 * pageSize));
+    assert(b.ptr.alignedAt(alignment));
     assert(b.length == pageSize);
 
     b = a.allocate(pageSize);
@@ -988,14 +984,14 @@ version (Posix) @system unittest
     import std.algorithm.comparison : max;
 
     enum maxIter = 100;
-    enum pageSize = 4096;
     enum numPages = 10;
+    const chunkSize = pageSize / 8;
 
     AllocatorList!((n) => AscendingPageAllocator(max(n, numPages * pageSize)), NullAllocator) a;
     foreach (i; 0 .. maxIter)
     {
-        auto b1 = a.allocate(512);
-        assert(b1.length == 512);
+        auto b1 = a.allocate(chunkSize);
+        assert(b1.length == chunkSize);
 
         assert(a.deallocate(b1));
     }
