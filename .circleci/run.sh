@@ -99,7 +99,7 @@ coverage()
 {
     make -f posix.mak clean
     # remove all existing coverage files (just in case)
-    rm -rf $(find -name '*.lst')
+    find . -name "*.lst" -type f -delete
 
     # Coverage information of the test runner can be missing for some template instatiations.
     # https://issues.dlang.org/show_bug.cgi?id=16397
