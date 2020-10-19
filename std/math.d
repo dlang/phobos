@@ -374,12 +374,14 @@ if ((is(immutable Num == immutable short) || is(immutable Num == immutable byte)
  * Bugs:
  *      Results are undefined if |x| >= $(POWER 2,64).
  */
-
-real cos(real x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.cos(x); }
+pragma(inline, true)
+real cos(real x) @safe pure nothrow @nogc { return core.math.cos(x); }
 ///ditto
-double cos(double x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.cos(x); }
+pragma(inline, true)
+double cos(double x) @safe pure nothrow @nogc { return core.math.cos(x); }
 ///ditto
-float cos(float x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.cos(x); }
+pragma(inline, true)
+float cos(float x) @safe pure nothrow @nogc { return core.math.cos(x); }
 
 ///
 @safe unittest
@@ -414,12 +416,14 @@ float cos(float x) @safe pure nothrow @nogc { pragma(inline, true); return core.
  * Bugs:
  *      Results are undefined if |x| >= $(POWER 2,64).
  */
-
-real sin(real x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.sin(x); }
+pragma(inline, true)
+real sin(real x) @safe pure nothrow @nogc { return core.math.sin(x); }
 ///ditto
-double sin(double x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.sin(x); }
+pragma(inline, true)
+double sin(double x) @safe pure nothrow @nogc { return core.math.sin(x); }
 ///ditto
-float sin(float x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.sin(x); }
+pragma(inline, true)
+float sin(float x) @safe pure nothrow @nogc { return core.math.sin(x); }
 
 ///
 @safe unittest
@@ -1550,12 +1554,15 @@ float atanh(float x) @safe pure nothrow @nogc { return atanh(cast(real) x); }
  * greater than long.max, the result is
  * indeterminate.
  */
-long rndtol(real x) @nogc @safe pure nothrow { pragma(inline, true); return core.math.rndtol(x); }
+pragma(inline, true)
+long rndtol(real x) @nogc @safe pure nothrow { return core.math.rndtol(x); }
 //FIXME
 ///ditto
+pragma(inline, true)
 long rndtol(double x) @safe pure nothrow @nogc { return rndtol(cast(real) x); }
 //FIXME
 ///ditto
+pragma(inline, true)
 long rndtol(float x) @safe pure nothrow @nogc { return rndtol(cast(real) x); }
 
 ///
@@ -1583,13 +1590,16 @@ long rndtol(float x) @safe pure nothrow @nogc { return rndtol(cast(real) x); }
  *      $(TR $(TD +$(INFIN)) $(TD +$(INFIN)) $(TD no))
  *      )
  */
-float sqrt(float x) @nogc @safe pure nothrow { pragma(inline, true); return core.math.sqrt(x); }
+pragma(inline, true)
+float sqrt(float x) @nogc @safe pure nothrow { return core.math.sqrt(x); }
 
 /// ditto
-double sqrt(double x) @nogc @safe pure nothrow { pragma(inline, true); return core.math.sqrt(x); }
+pragma(inline, true)
+double sqrt(double x) @nogc @safe pure nothrow { return core.math.sqrt(x); }
 
 /// ditto
-real sqrt(real x) @nogc @safe pure nothrow { pragma(inline, true); return core.math.sqrt(x); }
+pragma(inline, true)
+real sqrt(real x) @nogc @safe pure nothrow { return core.math.sqrt(x); }
 
 ///
 @safe pure nothrow @nogc unittest
@@ -4039,10 +4049,9 @@ float scalbn(float x, int n) @safe pure nothrow @nogc { return _scalbn(x,n); }
     assert(scalbn(2048.0f,-10) == 2.0f);
 }
 
+pragma(inline, true)
 private F _scalbn(F)(F x, int n)
 {
-    pragma(inline, true);
-
     if (__ctfe)
     {
         // Handle special cases.
@@ -4106,7 +4115,8 @@ real cbrt(real x) @trusted nothrow @nogc
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD +$(INFIN)) )
  *      )
  */
-real fabs(real x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.fabs(x); }
+pragma(inline, true)
+real fabs(real x) @safe pure nothrow @nogc { return core.math.fabs(x); }
 
 ///ditto
 pragma(inline, true)
@@ -4637,19 +4647,22 @@ real nearbyint(real x) @safe pure nothrow @nogc
  * $(LREF nearbyint) performs the same operation, but does
  * not set the FE_INEXACT exception.
  */
+pragma(inline, true)
 real rint(real x) @safe pure nothrow @nogc
 {
-    pragma(inline, true); return core.math.rint(x);
+    return core.math.rint(x);
 }
 ///ditto
+pragma(inline, true)
 double rint(double x) @safe pure nothrow @nogc
 {
-    pragma(inline, true); return core.math.rint(x);
+    return core.math.rint(x);
 }
 ///ditto
+pragma(inline, true)
 float rint(float x) @safe pure nothrow @nogc
 {
-    pragma(inline, true); return core.math.rint(x);
+    return core.math.rint(x);
 }
 
 ///
