@@ -566,7 +566,7 @@ real logGamma(real x)
             assert( feqrel(log(fabs(gamma(testpoints[i]))), testpoints[i+1]) > real.mant_dig-5);
         }
     }
-    assert(logGamma(-50.2L) == log(fabs(gamma(-50.2L))));
+    assert(feqrel(logGamma(-50.2L),log(fabs(gamma(-50.2L)))) > real.mant_dig-2);
     assert(logGamma(-0.008L) == log(fabs(gamma(-0.008L))));
     assert(feqrel(logGamma(-38.8L),log(fabs(gamma(-38.8L)))) > real.mant_dig-4);
     static if (real.mant_dig >= 64) // incl. 80-bit reals
