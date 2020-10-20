@@ -1016,6 +1016,196 @@ Complex!T tan(T)(Complex!T z) @safe pure nothrow @nogc
 }
 
 /**
+    Inverse trigonometric functions on complex numbers.
+
+    Params: z = A complex number.
+    Returns: The arcsine, arccosine and arctangent of `z`, respectively.
+*/
+Complex!T asin(T)(Complex!T z)  @safe pure nothrow @nogc
+{
+    auto ash = asinh(Complex!T(-z.im, z.re));
+    return Complex!T(ash.im, -ash.re);
+}
+
+///
+@safe pure nothrow unittest
+{
+    import std.math : isClose, PI;
+    assert(asin(complex(0.0)) == 0.0);
+    assert(isClose(asin(complex(0.5L)), PI / 6));
+}
+
+@safe pure nothrow unittest
+{
+    version (DigitalMars) {} else // Disabled because of issue 21376
+    assert(isClose(asin(complex(0.5f)), float(PI) / 6));
+}
+
+/// ditto
+Complex!T acos(T)(Complex!T z)  @safe pure nothrow @nogc
+{
+    static import std.math;
+    auto as = asin(z);
+    return Complex!T(T(std.math.PI_2) - as.re, as.im);
+}
+
+///
+@safe pure nothrow unittest
+{
+    import std.math : isClose, PI, std_math_acos = acos;
+    assert(acos(complex(0.0)) == std_math_acos(0.0));
+    assert(isClose(acos(complex(0.5L)), PI / 3));
+}
+
+@safe pure nothrow unittest
+{
+    version (DigitalMars) {} else // Disabled because of issue 21376
+    assert(isClose(acos(complex(0.5f)), float(PI) / 3));
+}
+
+/// ditto
+Complex!T atan(T)(Complex!T z) @safe pure nothrow @nogc
+{
+    static import std.math;
+    const T re2 = z.re * z.re;
+    const T x = 1 - re2 - z.im * z.im;
+
+    T num = z.im + 1;
+    T den = z.im - 1;
+
+    num = re2 + num * num;
+    den = re2 + den * den;
+
+    return Complex!T(T(0.5) * std.math.atan2(2 * z.re, x),
+                     T(0.25) * std.math.log(num / den));
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.math : isClose, PI;
+    assert(atan(complex(0.0)) == 0.0);
+    assert(isClose(atan(sqrt(complex(3.0L))), PI / 3));
+    assert(isClose(atan(sqrt(complex(3.0f))), float(PI) / 3));
+}
+
+/**
+    Hyperbolic trigonometric functions on complex numbers.
+
+    Params: z = A complex number.
+    Returns: The hyperbolic sine, cosine and tangent of `z`, respectively.
+*/
+Complex!T sinh(T)(Complex!T z)  @safe pure nothrow @nogc
+{
+    static import std.math;
+    return Complex!T(std.math.sinh(z.re) * std.math.cos(z.im),
+                     std.math.cosh(z.re) * std.math.sin(z.im));
+}
+
+///
+@safe pure nothrow unittest
+{
+    static import std.math;
+    assert(sinh(complex(0.0)) == 0.0);
+    assert(sinh(complex(1.0L)) == std.math.sinh(1.0L));
+    assert(sinh(complex(1.0f)) == std.math.sinh(1.0f));
+}
+
+/// ditto
+Complex!T cosh(T)(Complex!T z)  @safe pure nothrow @nogc
+{
+    static import std.math;
+    return Complex!T(std.math.cosh(z.re) * std.math.cos(z.im),
+                     std.math.sinh(z.re) * std.math.sin(z.im));
+}
+
+///
+@safe pure nothrow unittest
+{
+    static import std.math;
+    assert(cosh(complex(0.0)) == 1.0);
+    assert(cosh(complex(1.0L)) == std.math.cosh(1.0L));
+    assert(cosh(complex(1.0f)) == std.math.cosh(1.0f));
+}
+
+/// ditto
+Complex!T tanh(T)(Complex!T z) @safe pure nothrow @nogc
+{
+    return sinh(z) / cosh(z);
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.math : isClose, std_math_tanh = tanh;
+    assert(tanh(complex(0.0)) == 0.0);
+    assert(isClose(tanh(complex(1.0L)), std_math_tanh(1.0L)));
+    assert(isClose(tanh(complex(1.0f)), std_math_tanh(1.0f)));
+}
+
+/**
+    Inverse hyperbolic trigonometric functions on complex numbers.
+
+    Params: z = A complex number.
+    Returns: The hyperbolic arcsine, arccosine and arctangent of `z`, respectively.
+*/
+Complex!T asinh(T)(Complex!T z)  @safe pure nothrow @nogc
+{
+    auto t = Complex!T((z.re - z.im) * (z.re + z.im) + 1, 2 * z.re * z.im);
+    return log(sqrt(t) + z);
+}
+
+///
+@safe pure nothrow unittest
+{
+    import std.math : isClose, std_math_asinh = asinh;
+    assert(asinh(complex(0.0)) == 0.0);
+    assert(isClose(asinh(complex(1.0L)), std_math_asinh(1.0L)));
+    assert(isClose(asinh(complex(1.0f)), std_math_asinh(1.0f)));
+}
+
+/// ditto
+Complex!T acosh(T)(Complex!T z)  @safe pure nothrow @nogc
+{
+    return 2 * log(sqrt(T(0.5) * (z + 1)) + sqrt(T(0.5) * (z - 1)));
+}
+
+///
+@safe pure nothrow unittest
+{
+    import std.math : isClose, std_math_acosh = acosh;
+    assert(acosh(complex(1.0)) == 0.0);
+    assert(isClose(acosh(complex(3.0L)), std_math_acosh(3.0L)));
+    assert(isClose(acosh(complex(3.0f)), std_math_acosh(3.0f)));
+}
+
+/// ditto
+Complex!T atanh(T)(Complex!T z) @safe pure nothrow @nogc
+{
+    static import std.math;
+    const T im2 = z.im * z.im;
+    const T x = 1 - im2 - z.re * z.re;
+
+    T num = 1 + z.re;
+    T den = 1 - z.re;
+
+    num = im2 + num * num;
+    den = im2 + den * den;
+
+    return Complex!T(T(0.25) * (std.math.log(num) - std.math.log(den)),
+                     T(0.5) * std.math.atan2(2 * z.im, x));
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.math : isClose, std_math_atanh = atanh;
+    assert(atanh(complex(0.0)) == 0.0);
+    assert(isClose(atanh(complex(0.5L)), std_math_atanh(0.5L)));
+    assert(isClose(atanh(complex(0.5f)), std_math_atanh(0.5f)));
+}
+
+/**
     Params: y = A real number.
     Returns: The value of cos(y) + i sin(y).
 
