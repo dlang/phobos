@@ -1400,7 +1400,7 @@ private T trustedMoveImpl(T)(ref T source) @trusted
     move(x, x);
 }
 
-private void moveEmplaceImpl(T)(ref T source, ref T target)
+private void moveEmplaceImpl(T)(ref T source, ref T target) pure
 {
     import core.stdc.string : memcpy, memset;
     import std.traits : hasAliasing, hasElaborateAssign,
@@ -1515,6 +1515,26 @@ pure nothrow @nogc @system unittest
 
     static assert(!__traits(compiles, f(ncarray)));
     f(move(ncarray));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21202
+unittest
+{
+    static struct Strukt2
+    {
+        this(int* _block) { }
+    }
+
+    static struct Strukt
+    {
+        int* block;
+        Strukt2 foo() { return Strukt2(null); }
+        alias foo this;
+    }
+
+    Strukt a;
+    Strukt b;
+    moveEmplace(a, b);    
 }
 
 // moveAll
