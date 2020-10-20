@@ -1534,7 +1534,7 @@ unittest
 
     Strukt a;
     Strukt b;
-    moveEmplace(a, b);    
+    moveEmplace(a, b);
 }
 
 // moveAll
