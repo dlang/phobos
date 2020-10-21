@@ -1515,7 +1515,7 @@ if (isIntegral!Int)
     assert(isClose(pow(a, -3), 1.0 / (a * a * a)));
 
     auto b = complex(2.0);
-    assert(isClose(pow(b, 3), exp(3 * log(b))));
+    assert(ceqrel(pow(b, 3), exp(3 * log(b))) >= double.mant_dig - 1);
 }
 
 /// ditto
@@ -1561,8 +1561,8 @@ Complex!T pow(T)(Complex!T x, Complex!T y) @trusted pure nothrow @nogc
     auto b = complex(2.0);
     assert(pow(a, b) == complex(0.0));
 
-    auto c = pow(complex(0.0, 1.0), complex(0.0, 1.0));
-    assert(isClose(c, exp((-PI) / 2)));
+    auto c = complex(0.0L, 1.0L);
+    assert(isClose(pow(c, c), exp((-PI) / 2)));
 }
 
 /// ditto
@@ -1597,13 +1597,13 @@ Complex!T pow(T)(const T x, Complex!T n) @trusted pure nothrow @nogc
     assert(isClose(a, complex(-7.0, 24.0)));
 
     auto b = pow(complex(3.0, 4.0), PI);
-    assert(isClose(b, complex(-152.91512205297134, 35.547499631917738)));
+    assert(ceqrel(b, complex(-152.91512205297134, 35.547499631917738)) >= double.mant_dig - 3);
 
     auto c = pow(complex(3.0, 4.0), complex(-2.0, 1.0));
-    assert(isClose(c, complex(0.015351734187477306, -0.0038407695456661503)));
+    assert(ceqrel(c, complex(0.015351734187477306, -0.0038407695456661503)) >= double.mant_dig - 3);
 
     auto d = pow(PI, complex(2.0, -1.0));
-    assert(isClose(d, complex(4.0790296880118296, -8.9872469554541869)));
+    assert(ceqrel(d, complex(4.0790296880118296, -8.9872469554541869)) >= double.mant_dig - 1);
 }
 
 @safe pure nothrow @nogc unittest
