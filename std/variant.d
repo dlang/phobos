@@ -666,6 +666,8 @@ public:
         }
         else
         {
+            import core.lifetime : copyEmplace;
+
             static if (!AllowedTypes.length || anySatisfy!(hasElaborateDestructor, AllowedTypes))
             {
                 // Assignment should destruct previous value
@@ -673,55 +675,17 @@ public:
             }
 
             static if (T.sizeof <= size)
-            {
-                import core.stdc.string : memcpy;
-                // rhs has already been copied onto the stack, so even if T is
-                // shared, it's not really shared. Therefore, we can safely
-                // remove the shared qualifier when copying, as we are only
-                // copying from the unshared stack.
-                //
-                // In addition, the storage location is not accessible outside
-                // the Variant, so even if shared data is stored there, it's
-                // not really shared, as it's copied out as well.
-                memcpy(&store, cast(const(void*)) &rhs, rhs.sizeof);
-                static if (hasElaborateCopyConstructor!T)
-                {
-                    // Safer than using typeid's postblit function because it
-                    // type-checks the postblit function against the qualifiers
-                    // of the type.
-                    (cast(T*)&store).__xpostblit();
-                }
-            }
+                copyEmplace(rhs, *cast(T*) &store);
             else
             {
-                import core.stdc.string : memcpy;
-                import std.traits : hasMember;
-                static if (hasMember!(T, "__ctor") && __traits(compiles, {new T(T.init);}))
-                {
-                    auto p = new T(rhs);
-                }
-                else static if (is(T == U[n], U, size_t n))
-                {
-                    alias UT = Unqual!T;
-                    auto p = cast(UT*)(new U[n]).ptr;
-                    *p = cast(UT) rhs;
-                }
+                static if (is(T == U[n], U, size_t n))
+                    auto p = cast(T*) (new U[n]).ptr;
                 else
-                {
-                    alias UT = Unqual!T;
-                    auto p = new UT;
-                    static if (isAssignable!UT)
-                    {
-                        *p = rhs;
-                    }
-                    else
-                    {
-                        import core.lifetime : emplace;
-                        emplace(p, rhs);
-                    }
-                }
-                memcpy(&store, &p, p.sizeof);
+                    auto p = new T;
+                copyEmplace(rhs, *p);
+                *(cast(T**) &store) = p;
             }
+
             fptr = &handler!(T);
         }
         return this;
