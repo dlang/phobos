@@ -2,7 +2,7 @@
 
 /**
 This module implements a
-$(HTTP erdani.org/publications/cuj-04-2002.html,discriminated union)
+$(HTTP erdani.org/publications/cuj-04-2002.php.html,discriminated union)
 type (a.k.a.
 $(HTTP en.wikipedia.org/wiki/Tagged_union,tagged union),
 $(HTTP en.wikipedia.org/wiki/Algebraic_data_type,algebraic type)).
