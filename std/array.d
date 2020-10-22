@@ -2020,7 +2020,7 @@ if (isInputRange!RoR &&
         ror.popFront();
         for (; !ror.empty; ror.popFront())
         {
-            put(result, sep);
+            put(result, sepArr);
             put(result, ror.front);
         }
         return result.data;
@@ -2032,6 +2032,29 @@ if (isInputRange!RoR &&
 {
    string[] ary = ["","aa","bb","cc"]; // leaded by _empty_ element
    assert(ary.join(" @") == " @aa @bb @cc"); // OK in 2.067b1 and olders
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21337
+@system unittest
+{
+    import std.algorithm.iteration : map;
+
+    static class Once
+    {
+        bool empty;
+
+        void popFront()
+        {
+            empty = true;
+        }
+
+        int front()
+        {
+            return 0;
+        }
+    }
+
+    assert([1, 2].map!"[a]".join(new Once) == [1, 0, 2]);
 }
 
 /// Ditto
