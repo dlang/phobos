@@ -395,11 +395,31 @@ struct JSONValue
         }
         else static if (__traits(isUnsigned, T))
         {
-            return cast(T) uinteger;
+            switch (type)
+            {
+            case JSONType.uinteger:
+                return cast(T) uinteger;
+            case JSONType.integer:
+                auto v = integer;
+                enforce!JSONException(v >= 0, "JSONValue is a negative number");
+                return cast(T) v;
+            default:
+                throw new JSONException("JSONValue is not a number type");
+            }
         }
         else static if (isSigned!T)
         {
-            return cast(T) integer;
+            switch (type)
+            {
+            case JSONType.uinteger:
+                auto v = integer;
+                enforce!JSONException(v > long.max, "JSONValue positive overflow");
+                return cast(T) v;
+            case JSONType.integer:
+                return cast(T) integer;
+            default:
+                throw new JSONException("JSONValue is not a number type");
+            }
         }
         else
         {
@@ -427,7 +447,9 @@ struct JSONValue
             "c": "text",
             "d": true,
             "e": [1, 2, 3],
-            "f": { "a": 1 }
+            "f": { "a": 1 },
+            "g": -45,
+            "h": ` ~ ulong.max.to!string ~ `,
          }`;
 
         struct a { }
@@ -435,6 +457,7 @@ struct JSONValue
         immutable json = parseJSON(s);
         assert(json["a"].get!double == 123.0);
         assert(json["a"].get!int == 123);
+        assert(json["a"].get!uint == 123);
         assert(json["b"].get!double == 3.1415);
         assertThrown(json["b"].get!int);
         assert(json["c"].get!string == "text");
@@ -445,6 +468,10 @@ struct JSONValue
         assertThrown(json["e"].get!float);
         assertThrown(json["d"].get!(JSONValue[string]));
         assertThrown(json["f"].get!(JSONValue[]));
+        assert(json["g"].get!int == -45);
+        assertThrown(json["g"].get!uint);
+        assert(json["h"].get!uint == uint.max);
+        assertThrown(json["h"].get!int);
     }
 
     private void assign(T)(T arg)
