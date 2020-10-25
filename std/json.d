@@ -368,11 +368,10 @@ struct JSONValue
      * A convenience getter that returns this `JSONValue` as the specified D type.
      * Note: only numeric, `bool`, `string`, `JSONValue[string]` and `JSONValue[]` types are accepted
      * Throws: `JSONException` if `T` cannot hold the contents of this `JSONValue`
-     *         `ConvException` if there is a type overflow issue
+     *         `ConvException` in case of integer overflow when converting to `T`
      */
     @property inout(T) get(T)() inout const pure @safe
     {
-        import std.conv : to;
         static if (is(immutable T == immutable string))
         {
             return str;
@@ -404,7 +403,7 @@ struct JSONValue
             case JSONType.integer:
                 return integer.to!T;
             default:
-                throw new JSONException("JSONValue is not a number type");
+                throw new JSONException("JSONValue is not a an integral type");
             }
         }
         else
