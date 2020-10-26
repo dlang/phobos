@@ -717,9 +717,9 @@ if (is(Char : dchar))
 {
     alias DataIndex = Stream.DataIndex;
     alias Stream = StreamType;
-    alias OpFunc = bool function(ThompsonMatcher, State*);
+    alias OpFunc = bool function(ThompsonMatcher, State*) pure;
     alias BackMatcher = ThompsonMatcher!(Char, BackLooper!(Stream));
-    alias OpBackFunc = bool function(BackMatcher, BackMatcher.State*);
+    alias OpBackFunc = bool function(BackMatcher, BackMatcher.State*) pure;
     Thread!DataIndex* freelist;
     ThreadList!DataIndex clist, nlist;
     DataIndex[] merge;
@@ -740,6 +740,7 @@ if (is(Char : dchar))
     bool exhausted;
 
 final:
+    pure
     static struct State
     {
         Thread!DataIndex* t;

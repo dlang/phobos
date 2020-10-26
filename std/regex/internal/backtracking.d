@@ -29,7 +29,7 @@ if (is(Char : dchar))
     enum initialStack = 1 << 11; // items in a block of segmented stack
     alias String = const(Char)[];
     alias RegEx = Regex!Char;
-    alias MatchFn = bool function (BacktrackingMatcher);
+    alias MatchFn = bool function(BacktrackingMatcher) pure;
     const RegEx re;         // regex program
     MatchFn nativeFn; // native code for that program
     // Stream state
@@ -318,7 +318,7 @@ final:
         match subexpression against input,
         results are stored in matches
     +/
-    int matchImpl()
+    int matchImpl() pure
     {
         if (nativeFn)
         {
