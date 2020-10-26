@@ -2417,7 +2417,7 @@ public:
         Throws:
             `FileException` if it fails to read from disk.
       +/
-    static string[] getInstalledTZNames(string subName = "", string tzDatabaseDir = defaultTZDatabaseDir) @trusted
+    static string[] getInstalledTZNames(string subName = "", string tzDatabaseDir = defaultTZDatabaseDir) @safe
     {
         import std.algorithm.sorting : sort;
         import std.array : appender;
@@ -2448,23 +2448,28 @@ public:
         else
         {
             import std.path : baseName;
-            foreach (DirEntry de; dirEntries(tzDatabaseDir, SpanMode.depth))
-            {
-                if (de.isFile)
+            // dirEntries is @system because it uses a DirIterator with a
+            // RefCounted variable, but here, no references to the payload is
+            // escaped to the outside, so this should be @trusted
+            () @trusted {
+                foreach (DirEntry de; dirEntries(tzDatabaseDir, SpanMode.depth))
                 {
-                    auto tzName = de.name[tzDatabaseDir.length .. $];
-
-                    if (!tzName.extension().empty ||
-                        !tzName.startsWith(subName) ||
-                        baseName(tzName) == "leapseconds" ||
-                        tzName == "+VERSION")
+                    if (de.isFile)
                     {
-                        continue;
-                    }
+                        auto tzName = de.name[tzDatabaseDir.length .. $];
 
-                    timezones.put(tzName);
+                        if (!tzName.extension().empty ||
+                            !tzName.startsWith(subName) ||
+                            baseName(tzName) == "leapseconds" ||
+                            tzName == "+VERSION")
+                        {
+                            continue;
+                        }
+
+                        timezones.put(tzName);
+                    }
                 }
-            }
+            }();
         }
 
         sort(timezones.data);
