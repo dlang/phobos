@@ -4038,10 +4038,10 @@ else version (Posix)
             if (_didStat)
                 return;
 
+            scope(exit) _didStat = true;
+
             enforce(stat(_name.tempCString(), &_statBuf) == 0,
                     "Failed to stat file `" ~ _name ~ "'");
-
-            _didStat = true;
         }
 
         /++
@@ -4080,6 +4080,8 @@ else version (Posix)
             if (_didLStat)
                 return;
 
+            scope(exit) _didLStat = true;
+
             stat_t statbuf = void;
             enforce(lstat(_name.tempCString(), &statbuf) == 0,
                 "Failed to stat file `" ~ _name ~ "'");
@@ -4087,7 +4089,6 @@ else version (Posix)
             _lstatMode = statbuf.st_mode;
 
             _dTypeSet = true;
-            _didLStat = true;
         }
 
         string _name; /// The file or directory represented by this DirEntry.
