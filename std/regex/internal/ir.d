@@ -468,7 +468,8 @@ interface MatcherFactory(Char)
 // Only memory management, no compile-time vs run-time specialities
 abstract class GenericFactory(alias EngineType, Char) : MatcherFactory!Char
 {
-    import core.stdc.stdlib : malloc, free;
+    import core.memory : pureFree;
+    import std.internal.memory : enforceMalloc;
     import core.memory : GC;
     // round up to next multiple of size_t for alignment purposes
     enum classSize = (__traits(classInstanceSize, EngineType!Char) + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
@@ -478,8 +479,8 @@ abstract class GenericFactory(alias EngineType, Char) : MatcherFactory!Char
     override EngineType!Char create(const ref Regex!Char re, in Char[] input) const @trusted
     {
         immutable size = EngineType!Char.initialMemory(re) + classSize;
-        auto memory = enforce(malloc(size), "malloc failed")[0 .. size];
-        scope(failure) free(memory.ptr);
+        auto memory = enforceMalloc(size)[0 .. size];
+        scope(failure) pureFree(memory.ptr);
         GC.addRange(memory.ptr, classSize);
         auto engine = construct(re, input, memory);
         assert(engine.refCount == 1);
@@ -490,8 +491,8 @@ abstract class GenericFactory(alias EngineType, Char) : MatcherFactory!Char
     override EngineType!Char dup(Matcher!Char engine, in Char[] input) const @trusted
     {
         immutable size = EngineType!Char.initialMemory(engine.pattern) + classSize;
-        auto memory = enforce(malloc(size), "malloc failed")[0 .. size];
-        scope(failure) free(memory.ptr);
+        auto memory = enforceMalloc(size)[0 .. size];
+        scope(failure) pureFree(memory.ptr);
         auto copy = construct(engine.pattern, input, memory);
         GC.addRange(memory.ptr, classSize);
         engine.dupTo(copy, memory[classSize .. size]);
@@ -512,7 +513,7 @@ abstract class GenericFactory(alias EngineType, Char) : MatcherFactory!Char
         {
             void* ptr = cast(void*) m;
             GC.removeRange(ptr);
-            free(ptr);
+            pureFree(ptr);
         }
         return cnt;
     }
@@ -850,10 +851,10 @@ template BackLooper(E)
 
 //both helpers below are internal, on its own are quite "explosive"
 //unsafe, no initialization of elements
-@system T[] mallocArray(T)(size_t len)
+@system pure T[] mallocArray(T)(size_t len)
 {
-    import core.stdc.stdlib : malloc;
-    return (cast(T*) malloc(len * T.sizeof))[0 .. len];
+    import core.memory : pureMalloc;
+    return (cast(T*) pureMalloc(len * T.sizeof))[0 .. len];
 }
 
 //very unsafe, no initialization
@@ -951,7 +952,8 @@ struct CharMatcher {
 struct SmallFixedArray(T, uint SMALL=3)
 if (!hasElaborateDestructor!T)
 {
-    import core.stdc.stdlib : malloc, free;
+    import std.internal.memory : enforceMalloc;
+    import core.memory : pureFree;
     static struct Payload
     {
         size_t refcount;
@@ -980,7 +982,7 @@ if (!hasElaborateDestructor!T)
         }
         else
         {
-            big = cast(Payload*) enforce(malloc(Payload.sizeof + T.sizeof*size), "Failed to malloc storage");
+            big = cast(Payload*) enforceMalloc(Payload.sizeof + T.sizeof*size);
             big.refcount = 1;
             _sizeMask = size | BIG_MASK;
         }
@@ -1054,12 +1056,12 @@ if (!hasElaborateDestructor!T)
         return this;
     }
 
-    void mutate(scope void delegate(T[]) filler)
+    void mutate(scope void delegate(T[]) pure filler)
     {
         if (isBig && big.refcount != 1) // copy on write
         {
             auto oldSizeMask = _sizeMask;
-            auto newbig = cast(Payload*) enforce(malloc(Payload.sizeof + T.sizeof*length), "Failed to malloc storage");
+            auto newbig = cast(Payload*) enforceMalloc(Payload.sizeof + T.sizeof*length);
             newbig.refcount = 1;
             abandonRef();
             big = newbig;
@@ -1081,7 +1083,7 @@ if (!hasElaborateDestructor!T)
         assert(isBig);
         if (--big.refcount == 0)
         {
-            free(big);
+            pureFree(big);
             _sizeMask = 0;
             assert(!isBig);
         }

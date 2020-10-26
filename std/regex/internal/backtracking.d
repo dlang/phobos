@@ -9,6 +9,8 @@ package(std.regex):
 import core.stdc.stdlib, std.range.primitives, std.traits, std.typecons;
 import std.regex.internal.ir;
 
+import core.memory : pureMalloc, pureFree;
+
 /+
     BacktrackingMatcher implements backtracking scheme of matching
     regular expressions.
@@ -134,10 +136,10 @@ final:
         }
         else
         {
-            import core.stdc.stdlib : free;
+            import core.memory : pureFree;
             // memory used in previous block
             size_t size = memory.ptr[-1];
-            free(memory.ptr-2);
+            pureFree(memory.ptr-2);
             memory = prev[0 .. size];
             lastState = size;
             return true;
@@ -604,8 +606,8 @@ final:
                     immutable len = re.ir[pc].data;
                     auto save = index;
                     immutable ms = re.ir[pc+1].raw, me = re.ir[pc+2].raw;
-                    auto mem = malloc(initialMemory(re))[0 .. initialMemory(re)];
-                    scope(exit) free(mem.ptr);
+                    auto mem = pureMalloc(initialMemory(re))[0 .. initialMemory(re)];
+                    scope(exit) pureFree(mem.ptr);
                     auto slicedRe = re.withCode(re.ir[
                         pc+IRL!(IR.LookaheadStart) .. pc+IRL!(IR.LookaheadStart)+len+IRL!(IR.LookaheadEnd)
                     ]);
@@ -633,8 +635,8 @@ final:
                 case IR.NeglookbehindStart:
                     immutable len = re.ir[pc].data;
                     immutable ms = re.ir[pc+1].raw, me = re.ir[pc+2].raw;
-                    auto mem = malloc(initialMemory(re))[0 .. initialMemory(re)];
-                    scope(exit) free(mem.ptr);
+                    auto mem = pureMalloc(initialMemory(re))[0 .. initialMemory(re)];
+                    scope(exit) pureFree(mem.ptr);
                     auto slicedRe = re.withCode(re.ir[
                         pc + IRL!(IR.LookbehindStart) .. pc + IRL!(IR.LookbehindStart) + len + IRL!(IR.LookbehindEnd)
                     ]);
@@ -975,8 +977,8 @@ struct CtContext
                         //(neg)lookaround piece ends
                     }
                     auto save = index;
-                    auto mem = malloc(initialMemory(re))[0 .. initialMemory(re)];
-                    scope(exit) free(mem.ptr);
+                    auto mem = pureMalloc(initialMemory(re))[0 .. initialMemory(re)];
+                    scope(exit) pureFree(mem.ptr);
                     static if (typeof(matcher.s).isLoopback)
                         auto lookaround = $$;
                     else
@@ -1465,7 +1467,7 @@ struct CtContext
     {
         auto bdy = ctGenBlock(ir, 0);
         auto r = `
-            import core.stdc.stdlib;
+            import core.memory : pureMalloc, pureFree;
             with(matcher)
             {
             pc = 0;
