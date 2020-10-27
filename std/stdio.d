@@ -1846,14 +1846,19 @@ is recommended if you want to process a complete file.
         }
         else
         {
-            // TODO: optimize this
             string s = readln(terminator);
-            buf.length = 0;
-            if (!s.length) return 0;
-            foreach (C c; s)
+            if (!s.length)
             {
-                buf ~= c;
+                buf = buf[0 .. 0];
+                return 0;
             }
+
+            import std.utf : codeLength;
+            buf.length = codeLength!C(s);
+            size_t idx;
+            foreach (C c; s)
+                buf[idx++] = c;
+
             return buf.length;
         }
     }
