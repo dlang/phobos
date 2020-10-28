@@ -6099,7 +6099,7 @@ template BuiltinTypeOf(T)
 /**
  * Detect whether `T` is a built-in boolean type.
  */
-enum bool isBoolean(T) = __traits(isUnsigned, T) && is(BooleanTypeOf!T);
+enum bool isBoolean(T) = __traits(isUnsigned, T) && is(T : bool);
 
 ///
 @safe unittest
