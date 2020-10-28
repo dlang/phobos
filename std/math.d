@@ -455,7 +455,7 @@ float sin(float x) @safe pure nothrow @nogc { return core.math.sin(x); }
  *      $(TR $(TD $(PLUSMNINF))  $(TD $(NAN))       $(TD yes))
  *      )
  */
-real tan(real x) @trusted pure nothrow @nogc // TODO: @safe
+real tan(real x) @safe pure nothrow @nogc
 {
     version (InlineAsm_X86_Any)
     {
