@@ -51,7 +51,7 @@ CharMatcher[CodepointSet] matcherCache;
 
 @property ref wordMatcher()()
 {
-    static CharMatcher matcher = CharMatcher(wordCharacter);
+    static immutable CharMatcher matcher = CharMatcher(wordCharacter);
     return matcher;
 }
 
@@ -164,7 +164,8 @@ template IRL(IR code)
 static assert(IRL!(IR.LookaheadStart) == 3);
 
 //how many parameters follow the IR, should be optimized fixing some IR bits
-int immediateParamsIR(IR i){
+int immediateParamsIR(IR i) @safe pure nothrow @nogc
+{
     switch (i)
     {
     case IR.OrEnd,IR.InfiniteEnd,IR.InfiniteQEnd:
@@ -181,49 +182,50 @@ int immediateParamsIR(IR i){
 }
 
 //full length of IR instruction inlcuding all parameters that might follow it
-int lengthOfIR(IR i)
+int lengthOfIR(IR i) @safe pure nothrow @nogc
 {
     return 1 + immediateParamsIR(i);
 }
 
 //full length of the paired IR instruction inlcuding all parameters that might follow it
-int lengthOfPairedIR(IR i)
+int lengthOfPairedIR(IR i) @safe pure nothrow @nogc
 {
     return 1 + immediateParamsIR(pairedIR(i));
 }
 
 //if the operation has a merge point (this relies on the order of the ops)
-bool hasMerge(IR i)
+bool hasMerge(IR i) @safe pure nothrow @nogc
 {
     return (i&0b11)==0b10 && i <= IR.RepeatQEnd;
 }
 
 //is an IR that opens a "group"
-bool isStartIR(IR i)
+bool isStartIR(IR i) @safe pure nothrow @nogc
 {
     return (i&0b11)==0b01;
 }
 
 //is an IR that ends a "group"
-bool isEndIR(IR i)
+bool isEndIR(IR i) @safe pure nothrow @nogc
 {
     return (i&0b11)==0b10;
 }
 
 //is a standalone IR
-bool isAtomIR(IR i)
+bool isAtomIR(IR i) @safe pure nothrow @nogc
 {
     return (i&0b11)==0b00;
 }
 
 //makes respective pair out of IR i, swapping start/end bits of instruction
-IR pairedIR(IR i)
+IR pairedIR(IR i) @safe pure nothrow @nogc
 {
     assert(isStartIR(i) || isEndIR(i));
     return cast(IR) (i ^ 0b11);
 }
 
 //encoded IR instruction
+@safe pure
 struct Bytecode
 {
     uint raw;
@@ -232,6 +234,7 @@ struct Bytecode
     enum maxData = 1 << 22;
     enum maxRaw = 1 << 31;
 
+@safe pure:
     this(IR code, uint data)
     {
         assert(data < (1 << 22) && code < 256);
@@ -468,7 +471,8 @@ interface MatcherFactory(Char)
 // Only memory management, no compile-time vs run-time specialities
 abstract class GenericFactory(alias EngineType, Char) : MatcherFactory!Char
 {
-    import core.stdc.stdlib : malloc, free;
+    import core.memory : pureFree;
+    import std.internal.memory : enforceMalloc;
     import core.memory : GC;
     // round up to next multiple of size_t for alignment purposes
     enum classSize = (__traits(classInstanceSize, EngineType!Char) + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
@@ -478,8 +482,8 @@ abstract class GenericFactory(alias EngineType, Char) : MatcherFactory!Char
     override EngineType!Char create(const ref Regex!Char re, in Char[] input) const @trusted
     {
         immutable size = EngineType!Char.initialMemory(re) + classSize;
-        auto memory = enforce(malloc(size), "malloc failed")[0 .. size];
-        scope(failure) free(memory.ptr);
+        auto memory = enforceMalloc(size)[0 .. size];
+        scope(failure) pureFree(memory.ptr);
         GC.addRange(memory.ptr, classSize);
         auto engine = construct(re, input, memory);
         assert(engine.refCount == 1);
@@ -490,8 +494,8 @@ abstract class GenericFactory(alias EngineType, Char) : MatcherFactory!Char
     override EngineType!Char dup(Matcher!Char engine, in Char[] input) const @trusted
     {
         immutable size = EngineType!Char.initialMemory(engine.pattern) + classSize;
-        auto memory = enforce(malloc(size), "malloc failed")[0 .. size];
-        scope(failure) free(memory.ptr);
+        auto memory = enforceMalloc(size)[0 .. size];
+        scope(failure) pureFree(memory.ptr);
         auto copy = construct(engine.pattern, input, memory);
         GC.addRange(memory.ptr, classSize);
         engine.dupTo(copy, memory[classSize .. size]);
@@ -512,7 +516,7 @@ abstract class GenericFactory(alias EngineType, Char) : MatcherFactory!Char
         {
             void* ptr = cast(void*) m;
             GC.removeRange(ptr);
-            free(ptr);
+            pureFree(ptr);
         }
         return cnt;
     }
@@ -543,25 +547,34 @@ class CtfeFactory(alias EngineType, Char, alias func) : GenericFactory!(EngineTy
 // A workaround for R-T enum re = regex(...)
 template defaultFactory(Char)
 {
-    @property MatcherFactory!Char defaultFactory(const ref Regex!Char re) @safe
+    @property MatcherFactory!Char defaultFactory(const ref Regex!Char re) @safe pure
     {
-        import std.regex.internal.backtracking : BacktrackingMatcher;
-        import std.regex.internal.thompson : ThompsonMatcher;
-        import std.algorithm.searching : canFind;
-        static MatcherFactory!Char backtrackingFactory;
-        static MatcherFactory!Char thompsonFactory;
-        if (re.backrefed.canFind!"a != 0")
-        {
-            if (backtrackingFactory is null)
-                backtrackingFactory = new RuntimeFactory!(BacktrackingMatcher, Char);
-            return backtrackingFactory;
-        }
-        else
-        {
-            if (thompsonFactory is null)
-                thompsonFactory = new RuntimeFactory!(ThompsonMatcher, Char);
-            return thompsonFactory;
-        }
+        auto defaultFactoryImpl = () {
+            import std.regex.internal.backtracking : BacktrackingMatcher;
+            import std.regex.internal.thompson : ThompsonMatcher;
+            import std.algorithm.searching : canFind;
+            static MatcherFactory!Char backtrackingFactory;
+            static MatcherFactory!Char thompsonFactory;
+            if (re.backrefed.canFind!"a != 0")
+            {
+                if (backtrackingFactory is null)
+                    backtrackingFactory = new RuntimeFactory!(BacktrackingMatcher, Char);
+                return backtrackingFactory;
+            }
+            else
+            {
+                if (thompsonFactory is null)
+                    thompsonFactory = new RuntimeFactory!(ThompsonMatcher, Char);
+                return thompsonFactory;
+            }
+        };
+
+        // this should be faked as pure because the static mutable variables are
+        // used to cache the created instance, like memoize
+        alias T = typeof(defaultFactoryImpl);
+        enum attrs = functionAttributes!T | FunctionAttribute.pure_;
+        return (() @trusted =>
+            (cast(SetFunctionAttributes!(T, functionLinkage!T, attrs)) defaultFactoryImpl))()();
     }
 }
 
@@ -571,7 +584,7 @@ abstract class Matcher(Char)
 {
 abstract:
     // Get a (next) match
-    int match(Group!size_t[] matches);
+    int match(Group!size_t[] matches) pure;
     // This only maintains internal ref-count,
     // deallocation happens inside MatcherFactory
     @property ref size_t refCount() @safe;
@@ -850,10 +863,10 @@ template BackLooper(E)
 
 //both helpers below are internal, on its own are quite "explosive"
 //unsafe, no initialization of elements
-@system T[] mallocArray(T)(size_t len)
+@system pure T[] mallocArray(T)(size_t len)
 {
-    import core.stdc.stdlib : malloc;
-    return (cast(T*) malloc(len * T.sizeof))[0 .. len];
+    import core.memory : pureMalloc;
+    return (cast(T*) pureMalloc(len * T.sizeof))[0 .. len];
 }
 
 //very unsafe, no initialization
@@ -951,7 +964,8 @@ struct CharMatcher {
 struct SmallFixedArray(T, uint SMALL=3)
 if (!hasElaborateDestructor!T)
 {
-    import core.stdc.stdlib : malloc, free;
+    import std.internal.memory : enforceMalloc;
+    import core.memory : pureFree;
     static struct Payload
     {
         size_t refcount;
@@ -980,7 +994,7 @@ if (!hasElaborateDestructor!T)
         }
         else
         {
-            big = cast(Payload*) enforce(malloc(Payload.sizeof + T.sizeof*size), "Failed to malloc storage");
+            big = cast(Payload*) enforceMalloc(Payload.sizeof + T.sizeof*size);
             big.refcount = 1;
             _sizeMask = size | BIG_MASK;
         }
@@ -1054,12 +1068,12 @@ if (!hasElaborateDestructor!T)
         return this;
     }
 
-    void mutate(scope void delegate(T[]) filler)
+    void mutate(scope void delegate(T[]) pure filler)
     {
         if (isBig && big.refcount != 1) // copy on write
         {
             auto oldSizeMask = _sizeMask;
-            auto newbig = cast(Payload*) enforce(malloc(Payload.sizeof + T.sizeof*length), "Failed to malloc storage");
+            auto newbig = cast(Payload*) enforceMalloc(Payload.sizeof + T.sizeof*length);
             newbig.refcount = 1;
             abandonRef();
             big = newbig;
@@ -1081,7 +1095,7 @@ if (!hasElaborateDestructor!T)
         assert(isBig);
         if (--big.refcount == 0)
         {
-            free(big);
+            pureFree(big);
             _sizeMask = 0;
             assert(!isBig);
         }

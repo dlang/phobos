@@ -463,7 +463,7 @@ template ctRegexImpl(alias pattern, string flags=[])
     static immutable r = cast(immutable) regex(pattern, flags);
     alias Char = BasicElementOf!(typeof(pattern));
     enum source = ctGenRegExCode(r);
-    @trusted bool func(BacktrackingMatcher!Char matcher)
+    @trusted pure bool func(BacktrackingMatcher!Char matcher)
     {
         debug(std_regex_ctr) pragma(msg, source);
         cast(void) matcher;
@@ -474,7 +474,7 @@ template ctRegexImpl(alias pattern, string flags=[])
     enum wrapper = CTRegexWrapper!Char(&staticRe);
 }
 
-@safe unittest
+@safe pure unittest
 {
     // test compat for logical const workaround
     static void test(StaticRegex!char)
@@ -484,7 +484,7 @@ template ctRegexImpl(alias pattern, string flags=[])
     test(re);
 }
 
-@safe unittest
+@safe pure unittest
 {
     auto re = ctRegex!`foo`;
     assert(matchFirst("foo", re));
@@ -743,7 +743,7 @@ private:
         _engine = _factory.create(prog, input);
         assert(_engine.refCount == 1);
         _captures = Captures!R(this);
-        _captures.matches.mutate((slice) { _captures._nMatch = _engine.match(slice); });
+        _captures.matches.mutate((slice) pure { _captures._nMatch = _engine.match(slice); });
     }
 
 public:
@@ -820,34 +820,43 @@ public:
     @property inout(Captures!R) captures() inout { return _captures; }
 }
 
-private @trusted auto matchOnce(RegEx, R)(R input, const auto ref RegEx prog)
+private @safe auto matchOnce(RegEx, R)(R input, const auto ref RegEx prog) pure
 {
-    alias Char = BasicElementOf!R;
-    static struct Key
-    {
-        immutable(Char)[] pattern;
-        uint flags;
-    }
-    static Key cacheKey = Key("", -1);
-    static Matcher!Char cache;
-    auto factory = prog.factory is null ? defaultFactory!Char(prog) : prog.factory;
-    auto key = Key(prog.pattern, prog.flags);
-    Matcher!Char engine;
-    if (cacheKey == key)
-    {
-        engine = cache;
-        engine.rearm(input);
-    }
-    else
-    {
-        engine = factory.create(prog, input);
-        if (cache) factory.decRef(cache); // destroy cached engine *after* building a new one
-        cache = engine;
-        cacheKey = key;
-    }
-    auto captures = Captures!R(input, prog.ngroup, prog.dict);
-    captures.matches.mutate((slice){ captures._nMatch = engine.match(slice); });
-    return captures;
+    auto matchOnceImp = () @trusted {
+        alias Char = BasicElementOf!R;
+        static struct Key
+        {
+            immutable(Char)[] pattern;
+            uint flags;
+        }
+        static Key cacheKey = Key("", -1);
+        static Matcher!Char cache;
+        auto factory = prog.factory is null ? defaultFactory!Char(prog) : prog.factory;
+        auto key = Key(prog.pattern, prog.flags);
+        Matcher!Char engine;
+        if (cacheKey == key)
+        {
+            engine = cache;
+            engine.rearm(input);
+        }
+        else
+        {
+            engine = factory.create(prog, input);
+            if (cache) factory.decRef(cache); // destroy cached engine *after* building a new one
+            cache = engine;
+            cacheKey = key;
+        }
+        auto captures = Captures!R(input, prog.ngroup, prog.dict);
+        captures.matches.mutate((slice) pure { captures._nMatch = engine.match(slice); });
+        return captures;
+    };
+
+    // this should be faked as pure because the static mutable variables are
+    // used to cache the key and the character matcher
+    alias T = typeof(matchOnceImp);
+        enum attrs = functionAttributes!T | FunctionAttribute.pure_;
+        return (() @trusted =>
+            (cast(SetFunctionAttributes!(T, functionLinkage!T, attrs)) matchOnceImp))()();
 }
 
 private auto matchMany(RegEx, R)(R input, auto ref RegEx re) @safe
