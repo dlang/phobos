@@ -1146,27 +1146,21 @@ if (F.length > 1)
    See_Also: $(LREF pipe)
 */
 template compose(fun...)
+if (fun.length > 0)
 {
     static if (fun.length == 1)
     {
         alias compose = unaryFun!(fun[0]);
     }
-    else static if (fun.length == 2)
-    {
-        // starch
-        alias fun0 = unaryFun!(fun[0]);
-        alias fun1 = unaryFun!(fun[1]);
-
-        // protein: the core composition operation
-        auto compose(E)(E a)
-        {
-            return fun0(fun1(a));
-        }
-    }
     else
     {
-        // protein: assembling operations
-        alias compose = compose!(fun[0], compose!(fun[1 .. $]));
+        alias fun0 = unaryFun!(fun[0]);
+        alias rest = compose!(fun[1 .. $]);
+
+        auto compose(E)(E a)
+        {
+            return fun0(rest(a));
+        }
     }
 }
 
