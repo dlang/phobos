@@ -69,6 +69,7 @@ module std.functional;
 import std.meta : AliasSeq, Reverse;
 import std.traits : isCallable, Parameters;
 
+import std.internal.attributes : betterC;
 
 private template needOpCallAlias(alias fun)
 {
@@ -1037,6 +1038,14 @@ pure @safe @nogc nothrow unittest
     static assert(!__traits(compiles, curry(NoArgs.init)));
 }
 
+private template Iota(size_t n)
+{
+    static if (n == 0)
+        alias Iota = AliasSeq!();
+    else
+        alias Iota = AliasSeq!(Iota!(n - 1), n - 1);
+}
+
 /**
 Takes multiple functions and adjoins them together.
 
@@ -1062,20 +1071,14 @@ if (F.length > 1)
     auto adjoin(V...)(auto ref V a)
     {
         import std.typecons : tuple;
-        static if (F.length == 2)
+        import std.meta : staticMap;
+
+        auto resultElement(size_t i)()
         {
-            return tuple(F[0](a), F[1](a));
+            return F[i](a);
         }
-        else static if (F.length == 3)
-        {
-            return tuple(F[0](a), F[1](a), F[2](a));
-        }
-        else
-        {
-            import std.format : format;
-            import std.range : iota;
-            return mixin (q{tuple(%(F[%s](a)%|, %))}.format(iota(0, F.length)));
-        }
+
+        return tuple(staticMap!(resultElement, Iota!(F.length)));
     }
 }
 
@@ -1133,6 +1136,22 @@ if (F.length > 1)
     alias IS = immutable(S);
     IS bar(){return typeof(return).init;}
     enum Tuple!(IS, IS, IS, IS) ret2 = adjoin!(bar, bar, bar, bar)();
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21347
+@safe @betterC unittest
+{
+    alias f = (int n) => n + 1;
+    alias g = (int n) => n + 2;
+    alias h = (int n) => n + 3;
+    alias i = (int n) => n + 4;
+
+    auto result = adjoin!(f, g, h, i)(0);
+
+    assert(result[0] == 1);
+    assert(result[1] == 2);
+    assert(result[2] == 3);
+    assert(result[3] == 4);
 }
 
 /**
