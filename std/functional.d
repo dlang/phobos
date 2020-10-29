@@ -1157,9 +1157,9 @@ if (fun.length > 0)
         alias fun0 = unaryFun!(fun[0]);
         alias rest = compose!(fun[1 .. $]);
 
-        auto compose(E)(E a)
+        auto compose(Args...)(Args args)
         {
-            return fun0(rest(a));
+            return fun0(rest(args));
         }
     }
 }
@@ -1175,6 +1175,17 @@ if (fun.length > 0)
     // First split a string in whitespace-separated tokens and then
     // convert each token into an integer
     assert(compose!(map!(to!(int)), split)("1 2 3").equal([1, 2, 3]));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=6484
+@safe unittest
+{
+    int f(int a) { return a; }
+    int g(int a) { return a; }
+    int h(int a,int b,int c) { return a * b * c; }
+
+    alias F = compose!(f,g,h);
+    assert(F(1,2,3) == f(g(h(1,2,3))));
 }
 
 /**
