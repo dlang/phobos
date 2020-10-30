@@ -2,7 +2,7 @@
 
 /**
 This module implements a
-$(HTTP erdani.org/publications/cuj-04-2002.html,discriminated union)
+$(HTTP erdani.org/publications/cuj-04-2002.php.html,discriminated union)
 type (a.k.a.
 $(HTTP en.wikipedia.org/wiki/Tagged_union,tagged union),
 $(HTTP en.wikipedia.org/wiki/Algebraic_data_type,algebraic type)).
@@ -249,25 +249,35 @@ private:
         {
             static if (is(typeof(*rhsPA == *zis)))
             {
-                if (*rhsPA == *zis)
+                enum isEmptyStructWithoutOpEquals = is(A == struct) && A.tupleof.length == 0 &&
+                                                    !__traits(hasMember, A, "opEquals");
+                static if (isEmptyStructWithoutOpEquals)
                 {
+                    // The check above will always succeed if A is an empty struct.
+                    // Don't generate unreachable code as seen in
+                    // https://issues.dlang.org/show_bug.cgi?id=21231
                     return 0;
-                }
-                static if (is(typeof(*zis < *rhsPA)))
-                {
-                    // Many types (such as any using the default Object opCmp)
-                    // will throw on an invalid opCmp, so do it only
-                    // if the caller requests it.
-                    if (selector == OpID.compare)
-                        return *zis < *rhsPA ? -1 : 1;
-                    else
-                        return ptrdiff_t.min;
                 }
                 else
                 {
-                    // Not equal, and type does not support ordering
-                    // comparisons.
-                    return ptrdiff_t.min;
+                    if (*rhsPA == *zis)
+                        return 0;
+                    static if (is(typeof(*zis < *rhsPA)))
+                    {
+                        // Many types (such as any using the default Object opCmp)
+                        // will throw on an invalid opCmp, so do it only
+                        // if the caller requests it.
+                        if (selector == OpID.compare)
+                            return *zis < *rhsPA ? -1 : 1;
+                        else
+                            return ptrdiff_t.min;
+                    }
+                    else
+                    {
+                        // Not equal, and type does not support ordering
+                        // comparisons.
+                        return ptrdiff_t.min;
+                    }
                 }
             }
             else
@@ -700,7 +710,15 @@ public:
                 {
                     alias UT = Unqual!T;
                     auto p = new UT;
-                    *p = rhs;
+                    static if (isAssignable!UT)
+                    {
+                        *p = rhs;
+                    }
+                    else
+                    {
+                        import core.lifetime : emplace;
+                        emplace(p, rhs);
+                    }
                 }
                 memcpy(&store, &p, p.sizeof);
             }
@@ -1561,6 +1579,41 @@ pure nothrow @nogc
     auto other = a.get!S;
     assert(msg.array[0] == 3);
     assert(other.array[0] == 3);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21231
+// Compatibility with -preview=fieldwise
+@system unittest
+{
+    static struct Empty
+    {
+        bool opCmp(const scope ref Empty) const
+        { return false; }
+    }
+
+    Empty a, b;
+    assert(a == b);
+    assert(!(a < b));
+
+    VariantN!(4, Empty) v = a;
+    assert(v == b);
+    assert(!(v < b));
+}
+
+// Compatibility with -preview=fieldwise
+@system unittest
+{
+    static struct Empty
+    {
+        bool opEquals(const scope ref Empty) const
+        { return false; }
+    }
+
+    Empty a, b;
+    assert(a != b);
+
+    VariantN!(4, Empty) v = a;
+    assert(v != b);
 }
 
 /**

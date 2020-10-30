@@ -4436,15 +4436,15 @@ version (Windows) @safe unittest
         $(LREF FileException) if there is an error (including if the given
         file is not a directory).
  +/
-void rmdirRecurse(scope const(char)[] pathname)
+void rmdirRecurse(scope const(char)[] pathname) @safe
 {
     //No references to pathname will be kept after rmdirRecurse,
     //so the cast is safe
-    rmdirRecurse(DirEntry(cast(string) pathname));
+    rmdirRecurse(DirEntry((() @trusted => cast(string) pathname)()));
 }
 
 /// ditto
-void rmdirRecurse(ref DirEntry de)
+void rmdirRecurse(ref DirEntry de) @safe
 {
     if (!de.isDir)
         throw new FileException(de.name, "Not a directory");
@@ -4458,11 +4458,16 @@ void rmdirRecurse(ref DirEntry de)
     }
     else
     {
-        // all children, recursively depth-first
-        foreach (DirEntry e; dirEntries(de.name, SpanMode.depth, false))
-        {
-            attrIsDir(e.linkAttributes) ? rmdir(e.name) : remove(e.name);
-        }
+        // dirEntries is @system because it uses a DirIterator with a
+        // RefCounted variable, but here, no references to the payload is
+        // escaped to the outside, so this should be @trusted
+        () @trusted {
+            // all children, recursively depth-first
+            foreach (DirEntry e; dirEntries(de.name, SpanMode.depth, false))
+            {
+                attrIsDir(e.linkAttributes) ? rmdir(e.name) : remove(e.name);
+            }
+        }();
 
         // the dir itself
         rmdir(de.name);
@@ -4474,7 +4479,7 @@ void rmdirRecurse(ref DirEntry de)
 //"rmdirRecurse(in char[] pathname)" implementation. That is needlessly
 //expensive.
 //A DirEntry is a bit big (72B), so keeping the "by ref" signature is desirable.
-void rmdirRecurse(DirEntry de)
+void rmdirRecurse(DirEntry de) @safe
 {
     rmdirRecurse(de);
 }
@@ -4855,7 +4860,7 @@ struct DirIterator
 {
 @safe:
 private:
-    RefCounted!(DirIteratorImpl, RefCountedAutoInitialize.no) impl = void;
+    RefCounted!(DirIteratorImpl, RefCountedAutoInitialize.no) impl;
     this(string pathname, SpanMode mode, bool followSymlink) @trusted
     {
         impl = typeof(impl)(pathname, mode, followSymlink);
@@ -5156,6 +5161,12 @@ auto dirEntries(string path, string pattern, SpanMode mode,
     assert(equal(files, result));
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=21250
+@system unittest
+{
+    import std.exception : assertThrown;
+    assertThrown!Exception(dirEntries("237f5babd6de21f40915826699582e36", "*.bin", SpanMode.depth));
+}
 
 /**
  * Reads a file line by line and parses the line into a single value or a

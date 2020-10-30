@@ -1493,8 +1493,9 @@ Removes the lock over the specified file segment.
     }
 
     version (Posix)
-    static if (__traits(compiles, { import std.process : spawnProcess; }))
     @system unittest
+    {
+    static if (__traits(compiles, { import std.process : spawnProcess; }))
     {
         static import std.file;
         auto deleteme = testFilename();
@@ -1548,7 +1549,8 @@ Removes the lock over the specified file segment.
             g.unlock();
         });
         f.unlock();
-    }
+    } // static if
+    } // unittest
 
 
 /**
@@ -1844,14 +1846,19 @@ is recommended if you want to process a complete file.
         }
         else
         {
-            // TODO: optimize this
             string s = readln(terminator);
-            buf.length = 0;
-            if (!s.length) return 0;
-            foreach (C c; s)
+            if (!s.length)
             {
-                buf ~= c;
+                buf = buf[0 .. 0];
+                return 0;
             }
+
+            import std.utf : codeLength;
+            buf.length = codeLength!C(s);
+            size_t idx;
+            foreach (C c; s)
+                buf[idx++] = c;
+
             return buf.length;
         }
     }
@@ -3671,6 +3678,7 @@ void main()
 {
     import core.stdc.locale : LC_CTYPE, setlocale;
     import core.stdc.wchar_ : fwide;
+    import core.stdc.string : strlen;
     import std.algorithm.searching : any, endsWith;
     import std.conv : text;
     import std.meta : AliasSeq;
@@ -3679,7 +3687,11 @@ void main()
     auto deleteme = testFilename();
     scope(exit) std.file.remove(deleteme);
     const char* oldCt = () @trusted {
-        return setlocale(LC_CTYPE, null);
+        const(char)* p = setlocale(LC_CTYPE, null);
+        // Subsequent calls to `setlocale` might invalidate this return value,
+        // so duplicate it.
+        // See: https://github.com/dlang/phobos/pull/7660
+        return p ? p[0 .. strlen(p) + 1].idup.ptr : null;
     }();
     const utf8 = ["en_US.UTF-8", "C.UTF-8", ".65001"].any!((loc) @trusted {
         return setlocale(LC_CTYPE, loc.ptr).fromStringz.endsWith(loc);

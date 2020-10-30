@@ -2871,18 +2871,21 @@ pure nothrow @safe
 
 @system unittest
 {
-    import core.stdc.stdio;
-
-    void printBiguint(const uint [] data)
+    version (none)
     {
-        char [] buff = biguintToHex(new char[data.length*9], data, '_');
-        printf("%.*s\n", cast(int) buff.length, buff.ptr);
-    }
+        import core.stdc.stdio;
 
-    void printDecimalBigUint(BigUint data)
-    {
-        auto str = data.toDecimalString(0);
-        printf("%.*s\n", cast(int) str.length, str.ptr);
+        void printBiguint(const uint [] data)
+        {
+            char [] buff = biguintToHex(new char[data.length*9], data, '_');
+            printf("%.*s\n", cast(int) buff.length, buff.ptr);
+        }
+
+        void printDecimalBigUint(BigUint data)
+        {
+            auto str = data.toDecimalString(0);
+            printf("%.*s\n", cast(int) str.length, str.ptr);
+        }
     }
 
     uint [] a, b;

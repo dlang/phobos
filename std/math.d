@@ -455,7 +455,7 @@ float sin(float x) @safe pure nothrow @nogc { return core.math.sin(x); }
  *      $(TR $(TD $(PLUSMNINF))  $(TD $(NAN))       $(TD yes))
  *      )
  */
-real tan(real x) @trusted pure nothrow @nogc // TODO: @safe
+real tan(real x) @safe pure nothrow @nogc
 {
     version (InlineAsm_X86_Any)
     {
@@ -3511,15 +3511,15 @@ private
             // Coefficients for log(x) = z + z^3 P(z^2)/Q(z^2)
             // where z = 2(x-1)/(x+1)
             static immutable real[6] logCoeffsR = [
-                -8.828896441624934385266096344596648080902E-1L,
-                8.057002716646055371965756206836056074715E1L,
-                -2.024301798136027039250415126250455056397E3L,
-                2.048819892795278657810231591630928516206E4L,
+                1.418134209872192732479751274970992665513E5L,
                 -8.977257995689735303686582344659576526998E4L,
-                1.418134209872192732479751274970992665513E5L
+                2.048819892795278657810231591630928516206E4L,
+                -2.024301798136027039250415126250455056397E3L,
+                8.057002716646055371965756206836056074715E1L,
+                -8.828896441624934385266096344596648080902E-1L
             ];
-            static immutable real[6] logCoeffsS = [
-                1.701761051846631278975701529965589676574E6L
+            static immutable real[7] logCoeffsS = [
+                1.701761051846631278975701529965589676574E6L,
                 -1.332535117259762928288745111081235577029E6L,
                 4.001557694070773974936904547424676279307E5L,
                 -5.748542087379434595104154610899551484314E4L,
@@ -4048,6 +4048,7 @@ float scalbn(float x, int n) @safe pure nothrow @nogc { return _scalbn(x,n); }
     assert(scalbn(2.0,10) == 2048.0);
     assert(scalbn(2048.0f,-10) == 2.0f);
 }
+
 pragma(inline, true)
 private F _scalbn(F)(F x, int n)
 {
