@@ -766,7 +766,7 @@ enum Order : bool
  * the return value, effectively avoiding dynamic allocation.
  */
 char[num*2] toHexString(Order order = Order.increasing, size_t num, LetterCase letterCase = LetterCase.upper)
-(in ubyte[num] digest)
+(const ubyte[num] digest)
 {
 
     char[num*2] result;
