@@ -1093,7 +1093,7 @@ public:
  * www.netlib.org,www.netlib.org) as algorithm TOMS478.
  *
  */
-T findRoot(T, DF, DT)(scope DF f, in T a, in T b,
+T findRoot(T, DF, DT)(scope DF f, const T a, const T b,
     scope DT tolerance) //= (T a, T b) => false)
 if (
     isFloatingPoint!T &&
@@ -1113,7 +1113,7 @@ if (
 }
 
 ///ditto
-T findRoot(T, DF)(scope DF f, in T a, in T b)
+T findRoot(T, DF)(scope DF f, const T a, const T b)
 {
     return findRoot(f, a, b, (T a, T b) => false);
 }
@@ -1151,7 +1151,8 @@ T findRoot(T, DF)(scope DF f, in T a, in T b)
  * root was found, both of the first two elements will contain the
  * root, and the second pair of elements will be 0.
  */
-Tuple!(T, T, R, R) findRoot(T, R, DF, DT)(scope DF f, in T ax, in T bx, in R fax, in R fbx,
+Tuple!(T, T, R, R) findRoot(T, R, DF, DT)(scope DF f,
+    const T ax, const T bx, const R fax, const R fbx,
     scope DT tolerance) // = (T a, T b) => false)
 if (
     isFloatingPoint!T &&
@@ -1458,13 +1459,14 @@ whileloop:
 }
 
 ///ditto
-Tuple!(T, T, R, R) findRoot(T, R, DF)(scope DF f, in T ax, in T bx, in R fax, in R fbx)
+Tuple!(T, T, R, R) findRoot(T, R, DF)(scope DF f,
+    const T ax, const T bx, const R fax, const R fbx)
 {
     return findRoot(f, ax, bx, fax, fbx, (T a, T b) => false);
 }
 
 ///ditto
-T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
+T findRoot(T, R)(scope R delegate(T) f, const T a, const T b,
     scope bool delegate(T lo, T hi) tolerance = (T a, T b) => false)
 {
     return findRoot!(T, R delegate(T), bool delegate(T lo, T hi))(f, a, b, tolerance);
@@ -1725,10 +1727,10 @@ See_Also: $(LREF findRoot), $(REF isNormal, std,math)
 Tuple!(T, "x", Unqual!(ReturnType!DF), "y", T, "error")
 findLocalMin(T, DF)(
         scope DF f,
-        in T ax,
-        in T bx,
-        in T relTolerance = sqrt(T.epsilon),
-        in T absTolerance = sqrt(T.epsilon),
+        const T ax,
+        const T bx,
+        const T relTolerance = sqrt(T.epsilon),
+        const T absTolerance = sqrt(T.epsilon),
         )
 if (isFloatingPoint!T
     && __traits(compiles, {T _ = DF.init(T.init);}))
