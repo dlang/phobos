@@ -936,7 +936,8 @@ Complex!T sin(T)(Complex!T z)  @safe pure nothrow @nogc
 
 @safe pure nothrow unittest
 {
-    assert(ceqrel(sin(complex(2.0L, 0)), std.math.sin(2.0L)) >= real.mant_dig - 1);
+    static import std.math;
+    assert(ceqrel(sin(complex(2.0L, 0)), complex(std.math.sin(2.0L))) >= real.mant_dig - 1);
 }
 
 /// ditto
