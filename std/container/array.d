@@ -1785,10 +1785,7 @@ if (is(immutable T == immutable bool))
     {
         return _store.refCountedStore.isInitialized ? _store._length : 0;
     }
-    size_t opDollar() const
-    {
-        return length;
-    }
+    alias opDollar = length;
 
     /**
      * Returns: The maximum number of elements the array can store without

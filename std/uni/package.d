@@ -1473,7 +1473,7 @@ private struct SliceOverIndexed(T)
 
     @property size_t length()const { return to-from;}
 
-    auto opDollar()const { return length; }
+    alias opDollar = length;
 
     @property bool empty()const { return from == to; }
 

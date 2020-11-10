@@ -4198,7 +4198,7 @@ private:
         @property bool empty() { return array.length == 0; }
         @property C front() { return array[0]; }
         @property C back()  { return array[$ - 1]; }
-        @property size_t opDollar() { return length; }
+        alias opDollar = length;
         C opIndex(size_t i) { return array[i]; }
       }
         void popFront() { array = array[1 .. $]; }
