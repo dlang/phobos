@@ -3619,17 +3619,18 @@ if (isDynamicArray!A)
 
         auto app = appender!string();
         auto spec = singleSpec("%s");
+        immutable len = _data ? _data.arr.length : 0;
         // different reserve lengths because each element in a
         // non-string-like array uses two extra characters for `, `.
         static if (isSomeString!A)
         {
-            app.reserve(_data.arr.length + 25);
+            app.reserve(len + 25);
         }
         else
         {
             // Multiplying by three is a very conservative estimate of
             // length, as it assumes each element is only one char
-            app.reserve((_data.arr.length * 3) + 25);
+            app.reserve((len * 3) + 25);
         }
         toString(app, spec);
         return app.data;
@@ -3771,6 +3772,16 @@ if (isDynamicArray!A)
     auto wstr = appender!wstring();
     put(wstr, str.byCodeUnit);
     assert(wstr.data == str.to!wstring);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21256
+@safe unittest
+{
+    Appender!string app1;
+    app1.toString();
+
+    Appender!(int[]) app2;
+    app2.toString();
 }
 
 //Calculates an efficient growth scheme based on the old capacity
