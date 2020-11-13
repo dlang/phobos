@@ -1715,7 +1715,8 @@ private T expImpl(T)(T x) @safe pure nothrow @nogc
         enum T OF =  7.09782712893383996732E2;  // ln((1-2^-53) * 2^1024)
         enum T UF = -7.451332191019412076235E2; // ln(2^-1075)
     }
-    else static if (F.realFormat == RealFormat.ieeeExtended)
+    else static if (F.realFormat == RealFormat.ieeeExtended ||
+                    F.realFormat == RealFormat.ieeeExtended53)
     {
         // Coefficients for exp(x)
         static immutable T[3] P = [
@@ -1837,7 +1838,8 @@ private T expImpl(T)(T x) @safe pure nothrow @nogc
                 [-0x1p+30L,       0                                        ], // far underflow
             ];
         }
-        else static if (realFormat == RealFormat.ieeeExtended)
+        else static if (realFormat == RealFormat.ieeeExtended ||
+                        realFormat == RealFormat.ieeeExtended53)
         {
             static immutable T[2][] exptestpoints =
             [ //  x               exp(x)
@@ -2777,7 +2779,8 @@ if (isFloatingPoint!T)
     alias F = floatTraits!T;
 
     ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
-    static if (F.realFormat == RealFormat.ieeeExtended)
+    static if (F.realFormat == RealFormat.ieeeExtended ||
+               F.realFormat == RealFormat.ieeeExtended53)
     {
         if (ex)
         {   // If exponent is non-zero
@@ -3120,7 +3123,8 @@ if (isFloatingPoint!T)
     y.rv = x;
 
     int ex = y.vu[F.EXPPOS_SHORT] & F.EXPMASK;
-    static if (F.realFormat == RealFormat.ieeeExtended)
+    static if (F.realFormat == RealFormat.ieeeExtended ||
+               F.realFormat == RealFormat.ieeeExtended53)
     {
         if (ex)
         {
@@ -3393,6 +3397,7 @@ float ldexp(float n, int exp)   @safe pure nothrow @nogc { return core.math.ldex
 @safe pure nothrow @nogc unittest
 {
     static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended ||
+               floatTraits!(real).realFormat == RealFormat.ieeeExtended53 ||
                floatTraits!(real).realFormat == RealFormat.ieeeQuadruple)
     {
         assert(ldexp(1.0L, -16384) == 0x1p-16384L);
@@ -4776,12 +4781,16 @@ long lrint(real x) @trusted pure nothrow @nogc
 
             return sign ? -result : result;
         }
-        else static if (F.realFormat == RealFormat.ieeeExtended)
+        else static if (F.realFormat == RealFormat.ieeeExtended ||
+                        F.realFormat == RealFormat.ieeeExtended53)
         {
             long result;
 
             // Rounding limit when casting from real(80-bit) to ulong.
-            enum real OF = 9.22337203685477580800E18L;
+            static if (F.realFormat == RealFormat.ieeeExtended)
+                enum real OF = 9.22337203685477580800E18L;
+            else
+                enum real OF = 4.50359962737049600000E15L;
 
             ushort* vu = cast(ushort*)(&x);
             uint* vi = cast(uint*)(&x);
@@ -5998,7 +6007,8 @@ if (isFloatingPoint!(X))
             // At least one bit among the least significant 52 bits should be set.
             return (p & 0x7FFF_FFFF_FFFF_FFFF) > 0x7FF0_0000_0000_0000;
         }
-        else static if (F.realFormat == RealFormat.ieeeExtended)
+        else static if (F.realFormat == RealFormat.ieeeExtended ||
+                        F.realFormat == RealFormat.ieeeExtended53)
         {
             const ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
             const ulong ps = *cast(ulong *)&x;
@@ -6222,7 +6232,8 @@ bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
         return (e == 0 &&
           ((ps[MANTISSA_LSB]|(ps[MANTISSA_MSB]& 0x0000_FFFF_FFFF_FFFF)) != 0));
     }
-    else static if (F.realFormat == RealFormat.ieeeExtended)
+    else static if (F.realFormat == RealFormat.ieeeExtended ||
+                    F.realFormat == RealFormat.ieeeExtended53)
     {
         ushort* pe = cast(ushort *)&x;
         long*   ps = cast(long *)&x;
@@ -6283,7 +6294,8 @@ if (isFloatingPoint!(X))
         return ((*cast(ulong *)&x) & 0x7FFF_FFFF_FFFF_FFFF)
             == 0x7FF0_0000_0000_0000;
     }
-    else static if (F.realFormat == RealFormat.ieeeExtended)
+    else static if (F.realFormat == RealFormat.ieeeExtended ||
+                    F.realFormat == RealFormat.ieeeExtended53)
     {
         const ushort e = cast(ushort)(F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT]);
         const ulong ps = *cast(ulong *)&x;
@@ -6644,7 +6656,8 @@ if (isFloatingPoint!F || isIntegral!F)
 real NaN(ulong payload) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(real);
-    static if (F.realFormat == RealFormat.ieeeExtended)
+    static if (F.realFormat == RealFormat.ieeeExtended ||
+               F.realFormat == RealFormat.ieeeExtended53)
     {
         // real80 (in x86 real format, the implied bit is actually
         // not implied but a real bit which is stored in the real)
@@ -6866,11 +6879,14 @@ real nextUp(real x) @trusted pure nothrow @nogc
         }
         return x;
     }
-    else static if (F.realFormat == RealFormat.ieeeExtended)
+    else static if (F.realFormat == RealFormat.ieeeExtended ||
+                    F.realFormat == RealFormat.ieeeExtended53)
     {
         // For 80-bit reals, the "implied bit" is a nuisance...
         ushort *pe = cast(ushort *)&x;
         ulong  *ps = cast(ulong  *)&x;
+        // EPSILON is 1 for 64-bit, and 2048 for 53-bit precision reals.
+        enum ulong EPSILON = 2UL ^^ (64 - real.mant_dig);
 
         if ((pe[F.EXPPOS_SHORT] & F.EXPMASK) == F.EXPMASK)
         {
@@ -6881,7 +6897,7 @@ real nextUp(real x) @trusted pure nothrow @nogc
         if (pe[F.EXPPOS_SHORT] & 0x8000)
         {
             // Negative number -- need to decrease the significand
-            --*ps;
+            *ps -= EPSILON;
             // Need to mask with 0x7FFF... so subnormals are treated correctly.
             if ((*ps & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FFF_FFFF_FFFF_FFFF)
             {
@@ -6906,7 +6922,7 @@ real nextUp(real x) @trusted pure nothrow @nogc
         {
             // Positive number -- need to increase the significand.
             // Works automatically for positive zero.
-            ++*ps;
+            *ps += EPSILON;
             if ((*ps & 0x7FFF_FFFF_FFFF_FFFF) == 0)
             {
                 // change in exponent
@@ -8069,6 +8085,7 @@ if (isFloatingPoint!(X))
     static if (F.realFormat == RealFormat.ieeeSingle
             || F.realFormat == RealFormat.ieeeDouble
             || F.realFormat == RealFormat.ieeeExtended
+            || F.realFormat == RealFormat.ieeeExtended53
             || F.realFormat == RealFormat.ieeeQuadruple)
     {
         if (x == y)
@@ -9685,7 +9702,8 @@ do
 
     alias F = floatTraits!(T);
     T u;
-    static if (F.realFormat == RealFormat.ieeeExtended)
+    static if (F.realFormat == RealFormat.ieeeExtended ||
+               F.realFormat == RealFormat.ieeeExtended53)
     {
         // There's slight additional complexity because they are actually
         // 79-bit reals...
@@ -10003,7 +10021,8 @@ T floorImpl(T)(const T x) @trusted pure nothrow @nogc
         else
             int pos = 3;
     }
-    else static if (F.realFormat == RealFormat.ieeeExtended)
+    else static if (F.realFormat == RealFormat.ieeeExtended ||
+                    F.realFormat == RealFormat.ieeeExtended53)
     {
         int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
 
@@ -10050,7 +10069,10 @@ T floorImpl(T)(const T x) @trusted pure nothrow @nogc
     }
     else
     {
-        exp = (T.mant_dig - 1) - exp;
+        static if (F.realFormat == RealFormat.ieeeExtended53)
+            exp = (T.mant_dig + 11 - 1) - exp; // mant_dig is really 64
+        else
+            exp = (T.mant_dig - 1) - exp;
 
         // Zero 16 bits at a time.
         while (exp >= 16)

@@ -901,6 +901,17 @@ Complex!(CommonType!(T, U)) fromPolar(T, U)(const T modulus, const U argument)
     assert(approxEqual(z.im, 1.0L, real.epsilon));
 }
 
+version (StdUnittest)
+{
+    // Helper function for comparing two Complex numbers.
+    int ceqrel(T)(const Complex!T x, const Complex!T y) @safe pure nothrow @nogc
+    {
+        import std.math : feqrel;
+        const r = feqrel(x.re, y.re);
+        const i = feqrel(x.im, y.im);
+        return r < i ? r : i;
+    }
+}
 
 /**
     Trigonometric functions on complex numbers.
@@ -920,9 +931,14 @@ Complex!T sin(T)(Complex!T z)  @safe pure nothrow @nogc
 {
     static import std.math;
     assert(sin(complex(0.0)) == 0.0);
-    assert(sin(complex(2.0L, 0)) == std.math.sin(2.0L));
+    assert(sin(complex(2.0, 0)) == std.math.sin(2.0));
 }
 
+@safe pure nothrow unittest
+{
+    static import std.math;
+    assert(ceqrel(sin(complex(2.0L, 0)), complex(std.math.sin(2.0L))) >= real.mant_dig - 1);
+}
 
 /// ditto
 Complex!T cos(T)(Complex!T z)  @safe pure nothrow @nogc
@@ -937,26 +953,15 @@ Complex!T cos(T)(Complex!T z)  @safe pure nothrow @nogc
 {
     static import std.math;
     assert(cos(complex(0.0)) == 1.0);
-    assert(cos(complex(1.3L, 0.0)) == std.math.cos(1.3L));
-    assert(cos(complex(0.0L, 5.2L)) == std.math.cosh(5.2L));
-}
-
-version (StdUnittest)
-{
-    int ceqrel(T)(const Complex!T x, const Complex!T y) @safe pure nothrow @nogc
-    {
-        import std.math : feqrel;
-        const r = feqrel(x.re, y.re);
-        const i = feqrel(x.im, y.im);
-        return r < i ? r : i;
-    }
+    assert(cos(complex(1.3, 0.0)) == std.math.cos(1.3));
+    assert(cos(complex(0.0, 5.2)) == std.math.cosh(5.2));
 }
 
 @safe pure nothrow unittest
 {
     static import std.math;
     assert(ceqrel(cos(complex(0, 5.2L)), complex(std.math.cosh(5.2L), 0.0L)) >= real.mant_dig - 1);
-    assert(cos(complex(1.3L)) == std.math.cos(1.3L));
+    assert(ceqrel(cos(complex(1.3L)), complex(std.math.cos(1.3L))) >= real.mant_dig - 1);
 }
 
 /// ditto
