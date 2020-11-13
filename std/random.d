@@ -2427,7 +2427,7 @@ if (!is(T == enum) && (isIntegral!T || isSomeChar!T) && isUniformRNG!UniformRand
     /* dchar does not use its full bit range, so we must
      * revert to the uniform with specified bounds
      */
-    static if (is(T == dchar))
+    static if (is(immutable T == immutable dchar))
     {
         return uniform!"[]"(T.min, T.max, urng);
     }
@@ -2475,6 +2475,8 @@ if (!is(T == enum) && (isIntegral!T || isSomeChar!T))
     auto rng1 = Xorshift32(123456789);
     auto rng2 = rng1.save;
     assert(rng1.uniform!dchar == rng2.uniform!dchar);
+    // https://issues.dlang.org/show_bug.cgi?id=21384
+    assert(rng1.uniform!(const shared dchar) <= dchar.max);
 }
 
 @safe unittest
