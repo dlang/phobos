@@ -2429,7 +2429,7 @@ if (!is(T == enum) && (isIntegral!T || isSomeChar!T) && isUniformRNG!UniformRand
      */
     static if (is(T == dchar))
     {
-        return uniform!"[]"(T.min, T.max);
+        return uniform!"[]"(T.min, T.max, urng);
     }
     else
     {
@@ -2467,6 +2467,14 @@ if (!is(T == enum) && (isIntegral!T || isSomeChar!T))
     enum Fruit { apple, mango, pear }
     version (X86_64) // https://issues.dlang.org/show_bug.cgi?id=15147
     assert(rnd.uniform!Fruit == Fruit.mango);
+}
+
+@safe unittest
+{
+    // https://issues.dlang.org/show_bug.cgi?id=21383
+    auto rng1 = Xorshift32(123456789);
+    auto rng2 = rng1.save;
+    assert(rng1.uniform!dchar == rng2.uniform!dchar);
 }
 
 @safe unittest
