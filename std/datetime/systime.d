@@ -2074,7 +2074,7 @@ public:
         The total hnsecs from midnight, January 1st, 1 A.D. UTC. This is the
         internal representation of $(LREF SysTime).
      +/
-    @property long stdTime() @safe const pure nothrow scope
+    @property long stdTime() @safe const pure nothrow scope @nogc
     {
         return _stdTime;
     }
