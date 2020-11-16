@@ -1,0 +1,15 @@
+Return the number of characters consumed by `std.conv.parse`
+
+By setting the flag `doCount` to `Yes.doCount`, the function returns a named tuple.
+The tuple contains the fields `data` and `count`.
+The field `data` is of type `Target` and it contains the result of the original function.
+The field `count` is of type `size_t` and it contains the number of characters consumed.
+The function is keeping its original behaviour otherwise.
+Example:
+-------
+import std.typecons : Flag, Yes, No;
+
+string s1 = "123";
+auto a1 = parse!(int, string, Yes.doCount)(s1);
+assert(a1.data == 123 && a1.count == 3);
+-------
