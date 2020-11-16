@@ -3,22 +3,20 @@
 design-by-introspection to generate safe and efficient code. Its features
 include:
 
-$(LIST
-    * [match|Pattern matching.]
-    * Support for self-referential types.
-    * Full attribute correctness (`pure`, `@safe`, `@nogc`, and `nothrow` are
-      inferred whenever possible).
-    * A type-safe and memory-safe API compatible with DIP 1000 (`scope`).
-    * No dependency on runtime type information (`TypeInfo`).
-    * Compatibility with BetterC.
-)
+* [Pattern matching.][match]
+* Support for self-referential types.
+* Full attribute correctness (`pure`, `@safe`, `@nogc`, and `nothrow` are
+    inferred whenever possible).
+* A type-safe and memory-safe API compatible with DIP 1000 (`scope`).
+* No dependency on runtime type information (`TypeInfo`).
+* Compatibility with BetterC.
 
 License: Boost License 1.0
 Authors: Paul Backus
 +/
 module std.sumtype;
 
-/// $(H3 Basic usage)
+/// $(DIVID basic-usage,$(H3 Basic usage))
 version (D_BetterC) {} else
 @safe unittest
 {
@@ -81,7 +79,7 @@ version (D_BetterC) {} else
     assert(!isFahrenheit(t3));
 }
 
-/** $(H3 Introspection-based matching)
+/** $(DIVID introspection-based-matching, $(H3 Introspection-based matching))
  *
  * In the `length` and `horiz` functions below, the handlers for `match` do not
  * specify the types of their arguments. Instead, matching is done based on how
@@ -125,11 +123,11 @@ version (D_BetterC) {} else
     assert(horiz(v).isClose(sqrt(0.5)));
 }
 
-/** $(H3 Arithmetic expression evaluator)
+/** $(DIVID arithmetic-expression-evaluator, $(H3 Arithmetic expression evaluator))
  *
  * This example makes use of the special placeholder type `This` to define a
- * [https://en.wikipedia.org/wiki/Recursive_data_type|recursive data type]: an
- * [https://en.wikipedia.org/wiki/Abstract_syntax_tree|abstract syntax tree] for
+ * [recursive data type](https://en.wikipedia.org/wiki/Recursive_data_type): an
+ * [abstract syntax tree](https://en.wikipedia.org/wiki/Abstract_syntax_tree) for
  * representing simple arithmetic expressions.
  */
 version (D_BetterC) {} else
@@ -271,21 +269,21 @@ private enum isHashable(T) = __traits(compiles,
  * A tagged union that can hold a single value from any of a specified set of
  * types.
  *
- * The value in a `SumType` can be operated on using [match|pattern matching].
+ * The value in a `SumType` can be operated on using [pattern matching][match].
  *
  * To avoid ambiguity, duplicate types are not allowed (but see the
- * [sumtype#basic-usage|"basic usage" example] for a workaround).
+ * ["basic usage" example](#basic-usage) for a workaround).
  *
  * The special type `This` can be used as a placeholder to create
  * self-referential types, just like with `Algebraic`. See the
- * [sumtype#arithmetic-expression-evaluator|"Arithmetic expression evaluator" example] for
+ * ["Arithmetic expression evaluator" example](#arithmetic-expression-evaluator) for
  * usage.
  *
  * A `SumType` is initialized by default to hold the `.init` value of its
  * first member type, just like a regular union. The version identifier
  * `SumTypeNoDefaultCtor` can be used to disable this behavior.
  *
- * See_Also: `std.variant.Algebraic`
+ * See_Also: $(REF Algebraic, std,variant)
  */
 struct SumType(Types...)
 if (is(NoDuplicates!Types == Types) && Types.length > 0)
@@ -320,8 +318,7 @@ private:
     Storage storage;
     Tag tag;
 
-    /**
-     * Accesses the value stored in a SumType.
+    /* Accesses the value stored in a SumType.
      *
      * This method is memory-safe, provided that:
      *
@@ -346,6 +343,22 @@ private:
     }
 
 public:
+
+    // Workaround for dlang issue 21399
+    version (StdDdoc)
+    {
+        // Dummy type to stand in for loop variable
+        private struct T;
+
+        /// Constructs a `SumType` holding a specific value.
+        this()(auto ref T value);
+
+        /// ditto
+        this()(auto ref const(T) value) const;
+
+        /// ditto
+        this()(auto ref immutable(T) value) immutable;
+    }
 
     static foreach (tid, T; Types)
     {
@@ -524,6 +537,28 @@ public:
         @disable this();
     }
 
+    // Workaround for dlang issue 21399
+    version (StdDdoc)
+    {
+        // Dummy type to stand in for loop variable
+        private struct T;
+
+        /**
+         * Assigns a value to a `SumType`.
+         *
+         * Assigning to a `SumType` is `@system` if any of the
+         * `SumType`'s members contain pointers or references, since
+         * those members may be reachable through external references,
+         * and overwriting them could therefore lead to memory
+         * corruption.
+         *
+         * An individual assignment can be `@trusted` if the caller can
+         * guarantee that there are no outstanding references to $(I any)
+         * of the `SumType`'s members when the assignment occurs.
+         */
+        ref SumType opAssign()(auto ref T rhs);
+    }
+
     static foreach (tid, T; Types)
     {
         static if (isAssignableTo!T)
@@ -682,6 +717,30 @@ public:
         });
     }
 
+    // Workaround for dlang issue 21400
+    version (StdDdoc)
+    {
+        /**
+         * Returns a string representation of the `SumType`'s current value.
+         *
+         * Not available when compiled with `-betterC`.
+         */
+        string toString(this T)();
+
+        /**
+         * Handles formatted writing of the `SumType`'s current value.
+         *
+         * Not available when compiled with `-betterC`.
+         *
+         * Params:
+         *   sink = Output range to write to.
+         *   fmt = Format specifier to use.
+         *
+         * See_Also: $(REF formatValue, std,format)
+         */
+        void toString(this This, Sink, Char)(ref Sink sink, const ref FormatSpec!Char fmt);
+    }
+
     version (D_BetterC) {} else
     /**
      * Returns a string representation of the `SumType`'s current value.
@@ -705,7 +764,7 @@ public:
      *   sink = Output range to write to.
      *   fmt = Format specifier to use.
      *
-     * See_Also: `std.format.formatValue`
+     * See_Also: $(REF formatValue, std,format)
      */
     void toString(this This, Sink, Char)(ref Sink sink, const ref FormatSpec!Char fmt)
     {
@@ -718,6 +777,17 @@ public:
 
     static if (allSatisfy!(isHashable, Map!(ConstOf, Types)))
     {
+        // Workaround for dlang issue 21400
+        version (StdDdoc)
+        {
+            /**
+             * Returns the hash of the `SumType`'s current value.
+             *
+             * Not available when compiled with `-betterC`.
+             */
+            size_t toHash() const;
+        }
+
         // Workaround for dlang issue 20095
         version (D_BetterC) {} else
         /**
@@ -1453,7 +1523,7 @@ enum bool isSumType(T) = is(T : SumType!Args, Args...);
  * checked, in order, to see whether they accept a single argument of that type.
  * The first one that does is chosen as the match for that type. (Note that the
  * first match may not always be the most exact match.
- * See [#avoiding-unintentional-matches|"Avoiding unintentional matches"] for
+ * See ["Avoiding unintentional matches"](#avoiding-unintentional-matches) for
  * one common pitfall.)
  *
  * Every type must have a matching handler, and every handler must match at
@@ -1465,18 +1535,18 @@ enum bool isSumType(T) = is(T : SumType!Args, Args...);
  *
  * Templated handlers are also accepted, and will match any type for which they
  * can be [implicitly instantiated](https://dlang.org/glossary.html#ifti). See
- * [sumtype#introspection-based-matching|"Introspection-based matching"] for an
+ * ["Introspection-based matching"](#introspection-based-matching) for an
  * example of templated handler usage.
  *
  * If multiple [SumType]s are passed to match, their values are passed to the
  * handlers as separate arguments, and matching is done for each possible
- * combination of value types. See [#multiple-dispatch|"Multiple dispatch"] for
+ * combination of value types. See ["Multiple dispatch"](#multiple-dispatch) for
  * an example.
  *
  * Returns:
  *   The value returned from the handler that matches the currently-held type.
  *
- * See_Also: `std.variant.visit`
+ * See_Also: $(REF visit, std,variant)
  */
 template match(handlers...)
 {
@@ -1495,7 +1565,7 @@ template match(handlers...)
     }
 }
 
-/** $(H3 Avoiding unintentional matches)
+/** $(DIVID avoiding-unintentional-matches, $(H3 Avoiding unintentional matches))
  *
  * Sometimes, implicit conversions may cause a handler to match more types than
  * intended. The example below shows two solutions to this problem.
@@ -1542,7 +1612,7 @@ template match(handlers...)
     ));
 }
 
-/** $(H3 Multiple dispatch)
+/** $(DIVID multiple-dispatch, $(H3 Multiple dispatch))
  *
  * Pattern matching can be performed on multiple `SumType`s at once by passing
  * handlers with multiple arguments. This usually leads to more concise code
@@ -1618,6 +1688,7 @@ template match(handlers...)
  *   [MatchException], if the currently-held type has no matching handler.
  *
  * See_Also: `std.variant.tryVisit`
+ * See_Also: $(REF tryVisit, std,variant)
  */
 version (D_Exceptions)
 template tryMatch(handlers...)
