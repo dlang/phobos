@@ -670,6 +670,28 @@ betterc: betterc-phobos-tests
 		--inputdir  $< --outputdir $(BETTERCTESTS_DIR)
 	$(DMD) $(DFLAGS) $(NODEFAULTLIB) -betterC -unittest -run $(BETTERCTESTS_DIR)/$(subst /,_,$<)
 
+
+################################################################################
+# Full-module BetterC tests
+# -------------------------
+#
+# Test full modules with -betterC.
+#
+#   make -f posix.mak std/format.test_betterc
+################################################################################
+
+BETTERC_MODULES=std/sumtype
+
+betterc-module-tests: $(addsuffix .test_betterc,$(BETTERC_MODULES))
+betterc: betterc-module-tests
+
+%.test_betterc: %.d $(LIB)
+	T=`mktemp -d /tmp/.dmd-run-test.XXXXXX` &&                                                                 \
+	  (                                                                                                        \
+	    $(DMD) -od$$T $(DFLAGS) -main $(UDFLAGS) -betterC $(LIB) $(NODEFAULTLIB) $(LINKDL) -cov=ctfe -run $< ; \
+	    RET=$$? ; rm -rf $$T ; exit $$RET                                                                      \
+	  )
+
 ################################################################################
 
 .PHONY : auto-tester-build
