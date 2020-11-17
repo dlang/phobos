@@ -179,9 +179,41 @@ version (StdUnittest)
     static import std.meta;
     package alias Xorshift64_64 = XorshiftEngine!(ulong, 64, -12, 25, -27);
     package alias Xorshift128_64 = XorshiftEngine!(ulong, 128, 23, -18, -5);
+    package struct Double01PRNG
+    {
+        // This PRNG is defined solely to test algorithms in this module work
+        // properly with a PRNG that produces floating point numbers.
+        enum bool empty = false;
+        enum bool isUniformRandom = true;
+        enum double max = xform(ulong.max);
+        enum double min = 0.0;
+    @nogc nothrow pure @safe:
+        private ulong state;
+
+        this(ulong x) { seed(x); }
+
+        void seed(ulong x) { state = x; popFront(); }
+
+        @property double front() const { return xform(state); }
+
+        void popFront() { state = 2862933555777941757 * state + 1; }
+
+        @property typeof(this) save() const { return this; }
+
+        private static double xform(ulong state)
+        {
+            import std.math : nextDown;
+            enum double nextDownFrom1 = nextDown(1.0);
+            auto result = state * 0x1p-64;
+            if (result == 1) // Might occur due to rounding.
+                result = nextDownFrom1;
+            return result;
+        }
+    }
+    static assert(Double01PRNG.max < 1);
     package alias PseudoRngTypes = std.meta.AliasSeq!(MinstdRand0, MinstdRand, Mt19937, Xorshift32, Xorshift64,
                                                       Xorshift96, Xorshift128, Xorshift160, Xorshift192,
-                                                      Xorshift64_64, Xorshift128_64);
+                                                      Xorshift64_64, Xorshift128_64, Double01PRNG);
 }
 
 // Segments of the code in this file Copyright (c) 1997 by Rick Booth
@@ -2214,14 +2246,27 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
     alias UpperType = typeof(upperDist);
     static assert(UpperType.min == 0);
 
-    UpperType offset, rnum, bucketFront;
-    do
+    static if (__traits(isFloating, ElementType!RandomGen))
     {
-        rnum = uniform!UpperType(rng);
-        offset = rnum % upperDist;
-        bucketFront = rnum - offset;
-    } // while we're in an unfair bucket...
-    while (bucketFront > (UpperType.max - (upperDist - 1)));
+        auto r = rng.front;
+        rng.popFront();
+        enum typeof(r) factor = cast(typeof(r)) (1.0L / (rng.max - rng.min));
+        r = (r - rng.min) * factor;
+        auto offset = cast(UpperType) (upperDist * r);
+        if (offset == upperDist)
+            offset = upperDist - 1;
+    }
+    else
+    {
+        UpperType offset, rnum, bucketFront;
+        do
+        {
+            rnum = uniform!UpperType(rng);
+            offset = rnum % upperDist;
+            bucketFront = rnum - offset;
+        } // while we're in an unfair bucket...
+        while (bucketFront > (UpperType.max - (upperDist - 1)));
+    }
 
     return cast(ResultType)(lower + offset);
 }
@@ -2382,14 +2427,27 @@ if (isUnsigned!UInt && isUniformRNG!UniformRNG)
     assert(upperDist != 0);
 
     // For backwards compatibility use same algorithm as uniform(0, k, rng).
-    UpperType offset, rnum, bucketFront;
-    do
+    static if (__traits(isFloating, ElementType!UniformRNG))
     {
-        rnum = uniform!UpperType(rng);
-        offset = rnum % upperDist;
-        bucketFront = rnum - offset;
-    } // while we're in an unfair bucket...
-    while (bucketFront > (UpperType.max - (upperDist - 1)));
+        auto r = rng.front;
+        rng.popFront();
+        enum typeof(r) factor = cast(typeof(r)) (1.0L / (rng.max - rng.min));
+        r = (r - rng.min) * factor;
+        auto offset = cast(UpperType) (upperDist * r);
+        if (offset == upperDist)
+            offset = upperDist - 1;
+    }
+    else
+    {
+        UpperType offset, rnum, bucketFront;
+        do
+        {
+            rnum = uniform!UpperType(rng);
+            offset = rnum % upperDist;
+            bucketFront = rnum - offset;
+        } // while we're in an unfair bucket...
+        while (bucketFront > (UpperType.max - (upperDist - 1)));
+    }
 
     return cast(ResultType) offset;
 }
@@ -2435,7 +2493,12 @@ if (!is(T == enum) && (isIntegral!T || isSomeChar!T) && isUniformRNG!UniformRand
     {
         auto r = urng.front;
         urng.popFront();
-        static if (T.sizeof <= r.sizeof)
+        static if (__traits(isFloating, r))
+        {
+            enum typeof(r) factor = cast(typeof(r)) ((2.0L ^^ (T.sizeof * 8) - 1) / (urng.max - urng.min));
+            return cast(T) ((r - urng.min) * factor);
+        }
+        else static if (T.sizeof <= r.sizeof)
         {
             return cast(T) r;
         }
@@ -2487,6 +2550,9 @@ if (!is(T == enum) && (isIntegral!T || isSomeChar!T))
             assert(u <= T.max, "Upper bound violation for uniform!" ~ T.stringof);
         }
     }}
+    // https://issues.dlang.org/show_bug.cgi?id=21382
+    auto double01PRNG = Double01PRNG(123456789);
+    assert(double01PRNG.uniform!ulong != double01PRNG.uniform!ulong);
 }
 
 /// ditto
