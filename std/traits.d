@@ -3379,13 +3379,14 @@ private template hasAliasingImpl(T)
 /**
 Returns `true` if and only if `T`'s representation includes at
 least one of the following: $(OL $(LI a raw pointer `U*`;) $(LI an
-array `U[]`;) $(LI a reference to a class type `C`.)
-$(LI an associative array.) $(LI a delegate.))
+array `U[]`;) $(LI a reference to a class type `C`;)
+$(LI an associative array;) $(LI a delegate;)
+$(LI a [context pointer][isNested].))
  */
 template hasIndirections(T)
 {
     static if (is(T == struct) || is(T == union))
-        enum hasIndirections = anySatisfy!(.hasIndirections, FieldTypeTuple!T);
+        enum hasIndirections = anySatisfy!(.hasIndirections, typeof(T.tupleof));
     else static if (isStaticArray!T && is(T : E[N], E, size_t N))
         enum hasIndirections = is(E == void) ? true : hasIndirections!E;
     else static if (isFunctionPointer!T)
@@ -3466,6 +3467,9 @@ template hasIndirections(T)
     static assert( hasIndirections!S24);
     static assert( hasIndirections!S25);
     static assert( hasIndirections!S26);
+    int local;
+    struct HasContextPointer { int opCall() { return ++local; } }
+    static assert(hasIndirections!HasContextPointer);
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=12000
