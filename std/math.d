@@ -6667,6 +6667,13 @@ real NaN(ulong payload) @trusted pure nothrow @nogc
     {
         ulong v = 1; // no implied bit. quiet bit = 1
     }
+    if (__ctfe)
+    {
+        v = 1; // We use a double in CTFE.
+        assert(payload >>> 51 == 0,
+            "Cannot set more than 51 bits of NaN payload in CTFE.");
+    }
+
 
     ulong a = payload;
 
@@ -6685,7 +6692,12 @@ real NaN(ulong payload) @trusted pure nothrow @nogc
     a -= w;
     a >>=29;
 
-    static if (F.realFormat == RealFormat.ieeeDouble)
+    if (__ctfe)
+    {
+        v |= 0x7FF0_0000_0000_0000;
+        return *cast(double*) &v;
+    }
+    else static if (F.realFormat == RealFormat.ieeeDouble)
     {
         v |= 0x7FF0_0000_0000_0000;
         real x;
@@ -6754,9 +6766,19 @@ ulong getNaNPayload(real x) @trusted pure nothrow @nogc
 {
     //  assert(isNaN(x));
     alias F = floatTraits!(real);
-    static if (F.realFormat == RealFormat.ieeeDouble)
+    ulong m = void;
+    if (__ctfe)
     {
-        ulong m = *cast(ulong *)(&x);
+        double y = x;
+        m = *cast(ulong*) &y;
+        // Make it look like an 80-bit significand.
+        // Skip exponent, and quiet bit
+        m &= 0x0007_FFFF_FFFF_FFFF;
+        m <<= 11;
+    }
+    else static if (F.realFormat == RealFormat.ieeeDouble)
+    {
+        m = *cast(ulong*)(&x);
         // Make it look like an 80-bit significand.
         // Skip exponent, and quiet bit
         m &= 0x0007_FFFF_FFFF_FFFF;
@@ -6766,18 +6788,18 @@ ulong getNaNPayload(real x) @trusted pure nothrow @nogc
     {
         version (LittleEndian)
         {
-            ulong m = *cast(ulong*)(6+cast(ubyte*)(&x));
+            m = *cast(ulong*)(6+cast(ubyte*)(&x));
         }
         else
         {
-            ulong m = *cast(ulong*)(2+cast(ubyte*)(&x));
+            m = *cast(ulong*)(2+cast(ubyte*)(&x));
         }
 
         m >>= 1; // there's no implicit bit
     }
     else
     {
-        ulong m = *cast(ulong *)(&x);
+        m = *cast(ulong*)(&x);
     }
 
     // ignore implicit bit and quiet bit
@@ -6796,6 +6818,24 @@ ulong getNaNPayload(real x) @trusted pure nothrow @nogc
     real a = NaN(1_000_000);
     assert(isNaN(a));
     assert(getNaNPayload(a) == 1_000_000);
+}
+
+@safe @nogc pure nothrow unittest
+{
+    enum real a = NaN(1_000_000);
+    static assert(isNaN(a));
+    static assert(getNaNPayload(a) == 1_000_000);
+    real b = NaN(1_000_000);
+    assert(isIdentical(b, a));
+    // The CTFE version of getNaNPayload relies on it being impossible
+    // for a CTFE-constructed NaN to have more than 51 bits of payload.
+    enum nanNaN = NaN(getNaNPayload(real.nan));
+    assert(isIdentical(real.nan, nanNaN));
+    static if (real.init != real.init)
+    {
+        enum initNaN = NaN(getNaNPayload(real.init));
+        assert(isIdentical(real.init, initNaN));
+    }
 }
 
 debug(UnitTest)
@@ -7106,8 +7146,8 @@ float nextDown(float x) @safe pure nothrow @nogc
 
     // CTFE
 
-    //enum double n = NaN(0xABC); // FIXME: Cannot set NaN payload in CTFE.
-    //static assert(isIdentical(nextUp(n), n)); // FIXME: https://issues.dlang.org/show_bug.cgi?id=20197
+    enum double ctfe_n = NaN(0xABC);
+    //static assert(isIdentical(nextUp(ctfe_n), ctfe_n)); // FIXME: https://issues.dlang.org/show_bug.cgi?id=20197
     static assert(nextUp(double.nan) is double.nan);
     // negative numbers
     static assert( nextUp(-double.infinity) == -double.max );
@@ -7127,8 +7167,8 @@ float nextDown(float x) @safe pure nothrow @nogc
     static assert( nextUp(2.0-double.epsilon) == 2.0 );
     static assert( nextUp(double.max) == double.infinity );
 
-    //enum float fn = NaN(0xABC); // FIXME: Cannot set NaN payload in CTFE.
-    //static assert(isIdentical(nextUp(fn), fn)); // FIXME: https://issues.dlang.org/show_bug.cgi?id=20197
+    enum float ctfe_fn = NaN(0xABC);
+    //static assert(isIdentical(nextUp(ctfe_fn), ctfe_fn)); // FIXME: https://issues.dlang.org/show_bug.cgi?id=20197
     static assert(nextUp(float.nan) is float.nan);
     static assert(nextUp(-float.min_normal) == -float.min_normal*(1-float.epsilon));
     static assert(nextUp(1.0f) == 1.0f+float.epsilon);
