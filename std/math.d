@@ -6883,6 +6883,43 @@ debug(UnitTest)
 real nextUp(real x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(real);
+    static if (F.realFormat != RealFormat.ieeeDouble)
+    {
+        if (__ctfe)
+        {
+            if (x == -real.infinity)
+                return -real.max;
+            if (!(x < real.infinity)) // Infinity or NaN.
+                return x;
+            real delta;
+            // Start with a decent estimate of delta.
+            if (x <= 0x1.ffffffffffffep+1023 && x >= -double.max)
+            {
+                const double d = cast(double) x;
+                delta = (cast(real) nextUp(d) - cast(real) d) * 0x1p-11L;
+                while (x + (delta * 0x1p-100L) > x)
+                    delta *= 0x1p-100L;
+            }
+            else
+            {
+                delta = 0x1p960L;
+                while (!(x + delta > x) && delta < real.max * 0x1p-100L)
+                    delta *= 0x1p100L;
+            }
+            if (x + delta > x)
+            {
+                while (x + (delta / 2) > x)
+                    delta /= 2;
+            }
+            else
+            {
+                do { delta += delta; } while (!(x + delta > x));
+            }
+            if (x < 0 && x + delta == 0)
+                return -0.0L;
+            return x + delta;
+        }
+    }
     static if (F.realFormat == RealFormat.ieeeDouble)
     {
         return nextUp(cast(double) x);
@@ -7082,15 +7119,21 @@ float nextDown(float x) @safe pure nothrow @nogc
 
 @safe pure nothrow @nogc unittest
 {
-    static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
+    static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended ||
+               floatTraits!(real).realFormat == RealFormat.ieeeDouble ||
+               floatTraits!(real).realFormat == RealFormat.ieeeExtended53 ||
+               floatTraits!(real).realFormat == RealFormat.ieeeQuadruple)
     {
-
-        // Tests for 80-bit reals
+        // Tests for reals
         assert(isIdentical(nextUp(NaN(0xABC)), NaN(0xABC)));
+        //static assert(isIdentical(nextUp(NaN(0xABC)), NaN(0xABC)));
         // negative numbers
         assert( nextUp(-real.infinity) == -real.max );
         assert( nextUp(-1.0L-real.epsilon) == -1.0 );
         assert( nextUp(-2.0L) == -2.0 + real.epsilon);
+        static assert( nextUp(-real.infinity) == -real.max );
+        static assert( nextUp(-1.0L-real.epsilon) == -1.0 );
+        static assert( nextUp(-2.0L) == -2.0 + real.epsilon);
         // subnormals and zero
         assert( nextUp(-real.min_normal) == -real.min_normal*(1-real.epsilon) );
         assert( nextUp(-real.min_normal*(1-real.epsilon)) == -real.min_normal*(1-2*real.epsilon) );
@@ -7099,11 +7142,24 @@ float nextDown(float x) @safe pure nothrow @nogc
         assert( nextUp(0.0L) == real.min_normal*real.epsilon );
         assert( nextUp(real.min_normal*(1-real.epsilon)) == real.min_normal );
         assert( nextUp(real.min_normal) == real.min_normal*(1+real.epsilon) );
+        static assert( nextUp(-real.min_normal) == -real.min_normal*(1-real.epsilon) );
+        static assert( nextUp(-real.min_normal*(1-real.epsilon)) == -real.min_normal*(1-2*real.epsilon) );
+        static assert( -0.0L is nextUp(-real.min_normal*real.epsilon) );
+        static assert( nextUp(-0.0L) == real.min_normal*real.epsilon );
+        static assert( nextUp(0.0L) == real.min_normal*real.epsilon );
+        static assert( nextUp(real.min_normal*(1-real.epsilon)) == real.min_normal );
+        static assert( nextUp(real.min_normal) == real.min_normal*(1+real.epsilon) );
         // positive numbers
         assert( nextUp(1.0L) == 1.0 + real.epsilon );
         assert( nextUp(2.0L-real.epsilon) == 2.0 );
         assert( nextUp(real.max) == real.infinity );
         assert( nextUp(real.infinity)==real.infinity );
+        static assert( nextUp(1.0L) == 1.0 + real.epsilon );
+        static assert( nextUp(2.0L-real.epsilon) == 2.0 );
+        static assert( nextUp(real.max) == real.infinity );
+        static assert( nextUp(real.infinity)==real.infinity );
+        // ctfe near double.max boundary
+        static assert(nextUp(nextDown(cast(real) double.max)) == cast(real) double.max);
     }
 
     double n = NaN(0xABC);
@@ -7174,10 +7230,10 @@ float nextDown(float x) @safe pure nothrow @nogc
     static assert(nextUp(1.0f) == 1.0f+float.epsilon);
     static assert(nextUp(-0.0f) == float.min_normal*float.epsilon);
     static assert(nextUp(float.infinity)==float.infinity);
-    //static assert(nextDown(1.0L+real.epsilon)==1.0);
+    static assert(nextDown(1.0L+real.epsilon)==1.0);
     static assert(nextDown(1.0+double.epsilon)==1.0);
     static assert(nextDown(1.0f+float.epsilon)==1.0);
-    //static assert(nextafter(1.0+real.epsilon, -real.infinity)==1.0);
+    static assert(nextafter(1.0+real.epsilon, -real.infinity)==1.0);
 }
 
 
@@ -7253,15 +7309,15 @@ T nextafter(T)(const T x, const T y) @safe pure nothrow @nogc
 
     enum real c = 3;
     static assert(is(typeof(nextafter(c, c)) == real));
-    //static assert(nextafter(c, c.infinity) > c);
+    static assert(nextafter(c, c.infinity) > c);
+    static assert(isNaN(nextafter(c, c.nan)));
+    static assert(isNaN(nextafter(c.nan, c)));
 
-    enum real negZero = nextafter(+0.0L, -0.0L); // specially CTFEable
+    enum real negZero = nextafter(+0.0L, -0.0L);
     static assert(negZero == -0.0L);
     static assert(signbit(negZero));
 
-    static assert(nextafter(c, c) == c); // ditto
-    static assert(isNaN(nextafter(c, c.nan))); // ditto
-    static assert(isNaN(nextafter(c.nan, c))); // ditto
+    static assert(nextafter(c, c) == c);
 }
 
 //real nexttoward(real x, real y) { return core.stdc.math.nexttowardl(x, y); }
