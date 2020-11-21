@@ -1158,7 +1158,7 @@ if (is(typeof(a.ptr < b.ptr) == bool))
     test(a, b);
     assert(overlap(a, b.dup).empty);
     test(c, d);
-    assert(overlap(c, d.idup).empty);
+    assert(overlap(c, d.dup.idup).empty);
 }
 
  // https://issues.dlang.org/show_bug.cgi?id=9836
