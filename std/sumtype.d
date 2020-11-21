@@ -335,10 +335,10 @@ private:
     if (IndexOf!(T, Types) >= 0)
     {
         enum tid = IndexOf!(T, Types);
-    	assert(tag == tid,
-    		"This `" ~ SumType.stringof ~
-    		"` does not contain a(n) `" ~ T.stringof ~ "`"
-    	);
+        assert(tag == tid,
+            "This `" ~ SumType.stringof ~
+            "` does not contain a(n) `" ~ T.stringof ~ "`"
+        );
         return __traits(getMember, storage, Storage.memberName!T);
     }
 
