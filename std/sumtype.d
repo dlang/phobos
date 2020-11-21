@@ -725,7 +725,7 @@ public:
          *
          * Not available when compiled with `-betterC`.
          */
-        string toString(this T)();
+        string toString(this This)();
 
         /**
          * Handles formatted writing of the `SumType`'s current value.
@@ -747,7 +747,7 @@ public:
      *
      * Not available when compiled with `-betterC`.
      */
-    string toString(this T)()
+    string toString(this This)()
     {
         import std.conv : to;
 
