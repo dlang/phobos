@@ -482,15 +482,15 @@ if (!is(immutable T == immutable bool))
                 assert(false, "Overflow");
         }
         auto p = cast(T*) enforceMalloc(nbytes);
+        // Before it is added to the gc, initialize the newly allocated memory
+        foreach (i, e; values)
+        {
+            emplace(p + i, e);
+        }
         static if (hasIndirections!T)
         {
             if (p)
                 GC.addRange(p, T.sizeof * values.length);
-        }
-
-        foreach (i, e; values)
-        {
-            emplace(p + i, e);
         }
         _data = Data(p[0 .. values.length]);
     }
@@ -614,6 +614,8 @@ if (!is(immutable T == immutable bool))
             auto p = enforceMalloc(sz);
             static if (hasIndirections!T)
             {
+                // Zero out unused capacity to prevent gc from seeing false pointers
+                memset(p, 0, sz);
                 GC.addRange(p, sz);
             }
             _data = Data(cast(T[]) p[0 .. 0]);
@@ -1783,10 +1785,7 @@ if (is(immutable T == immutable bool))
     {
         return _store.refCountedStore.isInitialized ? _store._length : 0;
     }
-    size_t opDollar() const
-    {
-        return length;
-    }
+    alias opDollar = length;
 
     /**
      * Returns: The maximum number of elements the array can store without

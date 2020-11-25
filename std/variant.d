@@ -2,7 +2,7 @@
 
 /**
 This module implements a
-$(HTTP erdani.org/publications/cuj-04-2002.html,discriminated union)
+$(HTTP erdani.org/publications/cuj-04-2002.php.html,discriminated union)
 type (a.k.a.
 $(HTTP en.wikipedia.org/wiki/Tagged_union,tagged union),
 $(HTTP en.wikipedia.org/wiki/Algebraic_data_type,algebraic type)).
@@ -249,25 +249,35 @@ private:
         {
             static if (is(typeof(*rhsPA == *zis)))
             {
-                if (*rhsPA == *zis)
+                enum isEmptyStructWithoutOpEquals = is(A == struct) && A.tupleof.length == 0 &&
+                                                    !__traits(hasMember, A, "opEquals");
+                static if (isEmptyStructWithoutOpEquals)
                 {
+                    // The check above will always succeed if A is an empty struct.
+                    // Don't generate unreachable code as seen in
+                    // https://issues.dlang.org/show_bug.cgi?id=21231
                     return 0;
-                }
-                static if (is(typeof(*zis < *rhsPA)))
-                {
-                    // Many types (such as any using the default Object opCmp)
-                    // will throw on an invalid opCmp, so do it only
-                    // if the caller requests it.
-                    if (selector == OpID.compare)
-                        return *zis < *rhsPA ? -1 : 1;
-                    else
-                        return ptrdiff_t.min;
                 }
                 else
                 {
-                    // Not equal, and type does not support ordering
-                    // comparisons.
-                    return ptrdiff_t.min;
+                    if (*rhsPA == *zis)
+                        return 0;
+                    static if (is(typeof(*zis < *rhsPA)))
+                    {
+                        // Many types (such as any using the default Object opCmp)
+                        // will throw on an invalid opCmp, so do it only
+                        // if the caller requests it.
+                        if (selector == OpID.compare)
+                            return *zis < *rhsPA ? -1 : 1;
+                        else
+                            return ptrdiff_t.min;
+                    }
+                    else
+                    {
+                        // Not equal, and type does not support ordering
+                        // comparisons.
+                        return ptrdiff_t.min;
+                    }
                 }
             }
             else
@@ -485,7 +495,7 @@ private:
                 (*zis)[index] = args[0].get!(typeof((*zis)[0]));
                 break;
             }
-            else static if (isAssociativeArray!(A))
+            else static if (isAssociativeArray!(A) && is(typeof((*zis)[A.init.keys[0]] = A.init.values[0])))
             {
                 (*zis)[args[1].get!(typeof(A.init.keys[0]))]
                     = args[0].get!(typeof(A.init.values[0]));
@@ -656,6 +666,8 @@ public:
         }
         else
         {
+            import core.lifetime : copyEmplace;
+
             static if (!AllowedTypes.length || anySatisfy!(hasElaborateDestructor, AllowedTypes))
             {
                 // Assignment should destruct previous value
@@ -663,47 +675,17 @@ public:
             }
 
             static if (T.sizeof <= size)
-            {
-                import core.stdc.string : memcpy;
-                // rhs has already been copied onto the stack, so even if T is
-                // shared, it's not really shared. Therefore, we can safely
-                // remove the shared qualifier when copying, as we are only
-                // copying from the unshared stack.
-                //
-                // In addition, the storage location is not accessible outside
-                // the Variant, so even if shared data is stored there, it's
-                // not really shared, as it's copied out as well.
-                memcpy(&store, cast(const(void*)) &rhs, rhs.sizeof);
-                static if (hasElaborateCopyConstructor!T)
-                {
-                    // Safer than using typeid's postblit function because it
-                    // type-checks the postblit function against the qualifiers
-                    // of the type.
-                    (cast(T*)&store).__xpostblit();
-                }
-            }
+                copyEmplace(rhs, *cast(T*) &store);
             else
             {
-                import core.stdc.string : memcpy;
-                import std.traits : hasMember;
-                static if (hasMember!(T, "__ctor") && __traits(compiles, {new T(T.init);}))
-                {
-                    auto p = new T(rhs);
-                }
-                else static if (is(T == U[n], U, size_t n))
-                {
-                    alias UT = Unqual!T;
-                    auto p = cast(UT*)(new U[n]).ptr;
-                    *p = cast(UT) rhs;
-                }
+                static if (is(T == U[n], U, size_t n))
+                    auto p = cast(T*) (new U[n]).ptr;
                 else
-                {
-                    alias UT = Unqual!T;
-                    auto p = new UT;
-                    *p = rhs;
-                }
-                memcpy(&store, &p, p.sizeof);
+                    auto p = new T;
+                copyEmplace(rhs, *p);
+                *(cast(T**) &store) = p;
             }
+
             fptr = &handler!(T);
         }
         return this;
@@ -1561,6 +1543,41 @@ pure nothrow @nogc
     auto other = a.get!S;
     assert(msg.array[0] == 3);
     assert(other.array[0] == 3);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21231
+// Compatibility with -preview=fieldwise
+@system unittest
+{
+    static struct Empty
+    {
+        bool opCmp(const scope ref Empty) const
+        { return false; }
+    }
+
+    Empty a, b;
+    assert(a == b);
+    assert(!(a < b));
+
+    VariantN!(4, Empty) v = a;
+    assert(v == b);
+    assert(!(v < b));
+}
+
+// Compatibility with -preview=fieldwise
+@system unittest
+{
+    static struct Empty
+    {
+        bool opEquals(const scope ref Empty) const
+        { return false; }
+    }
+
+    Empty a, b;
+    assert(a != b);
+
+    VariantN!(4, Empty) v = a;
+    assert(v != b);
 }
 
 /**
@@ -2430,11 +2447,11 @@ if (Handlers.length > 0)
 
     Algebraic!(int, string) maybenumber = 2;
     // ok, x ~ "a" valid for string, x + 1 valid for int, only 1 generic
-    static assert( __traits(compiles, number.visit!((string x) => x ~ "a", x => x + 1)));
+    static assert( __traits(compiles, maybenumber.visit!((string x) => x ~ "a", x => "foobar"[0 .. x + 1])));
     // bad, x ~ "a" valid for string but not int
-    static assert(!__traits(compiles, number.visit!(x => x ~ "a")));
+    static assert(!__traits(compiles, maybenumber.visit!(x => x ~ "a")));
     // bad, two generics, each only applies in one case
-    static assert(!__traits(compiles, number.visit!(x => x + 1, x => x ~ "a")));
+    static assert(!__traits(compiles, maybenumber.visit!(x => x + 1, x => x ~ "a")));
 }
 
 /**
@@ -2543,6 +2560,24 @@ if (isAlgebraic!VariantType && Handler.length > 0)
 
         Result result;
 
+        enum int nonmatch = ()
+        {
+            foreach (int dgidx, dg; Handler)
+            {
+                bool found = false;
+                foreach (T; AllowedTypes)
+                {
+                    found |= __traits(compiles, { static assert(isSomeFunction!(dg!T)); });
+                    found |= __traits(compiles, (T t) { dg(t); });
+                    found |= __traits(compiles, dg());
+                }
+                if (!found) return dgidx;
+            }
+            return -1;
+        }();
+        static assert(nonmatch == -1, "No match for visit handler #"~
+            nonmatch.stringof~" ("~Handler[nonmatch].stringof~")");
+
         foreach (tidx, T; AllowedTypes)
         {
             bool added = false;
@@ -2574,7 +2609,7 @@ if (isAlgebraic!VariantType && Handler.length > 0)
                         result.indices[tidx] = dgidx;
                     }
                 }
-                else static if (isSomeFunction!(dg!T))
+                else static if (__traits(compiles, { static assert(isSomeFunction!(dg!T)); }))
                 {
                     assert(result.generalFuncIdx == -1 ||
                            result.generalFuncIdx == dgidx,
@@ -2582,10 +2617,6 @@ if (isAlgebraic!VariantType && Handler.length > 0)
                     result.generalFuncIdx = dgidx;
                 }
                 // Handle composite visitors with opCall overloads
-                else
-                {
-                    static assert(false, dg.stringof ~ " is not a function or delegate");
-                }
             }
 
             if (!added)
@@ -2637,6 +2668,19 @@ if (isAlgebraic!VariantType && Handler.length > 0)
     }
 
     assert(false);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21253
+@system unittest
+{
+    static struct A { int n; }
+    static struct B {        }
+
+    auto a = Algebraic!(A, B)(B());
+    assert(a.visit!(
+        (B _) => 42,
+        (a  ) => a.n
+    ) == 42);
 }
 
 @system unittest
@@ -3122,4 +3166,11 @@ if (isAlgebraic!VariantType && Handler.length > 0)
     alias Outer = Algebraic!(Inner, This*);
 
     static assert(is(Outer.AllowedTypes == AliasSeq!(Inner, Outer*)));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21296
+@system unittest
+{
+    immutable aa = ["0": 0];
+    auto v = Variant(aa); // compile error
 }

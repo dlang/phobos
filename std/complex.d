@@ -901,6 +901,17 @@ Complex!(CommonType!(T, U)) fromPolar(T, U)(const T modulus, const U argument)
     assert(approxEqual(z.im, 1.0L, real.epsilon));
 }
 
+version (StdUnittest)
+{
+    // Helper function for comparing two Complex numbers.
+    int ceqrel(T)(const Complex!T x, const Complex!T y) @safe pure nothrow @nogc
+    {
+        import std.math : feqrel;
+        const r = feqrel(x.re, y.re);
+        const i = feqrel(x.im, y.im);
+        return r < i ? r : i;
+    }
+}
 
 /**
     Trigonometric functions on complex numbers.
@@ -920,9 +931,14 @@ Complex!T sin(T)(Complex!T z)  @safe pure nothrow @nogc
 {
     static import std.math;
     assert(sin(complex(0.0)) == 0.0);
-    assert(sin(complex(2.0L, 0)) == std.math.sin(2.0L));
+    assert(sin(complex(2.0, 0)) == std.math.sin(2.0));
 }
 
+@safe pure nothrow unittest
+{
+    static import std.math;
+    assert(ceqrel(sin(complex(2.0L, 0)), complex(std.math.sin(2.0L))) >= real.mant_dig - 1);
+}
 
 /// ditto
 Complex!T cos(T)(Complex!T z)  @safe pure nothrow @nogc
@@ -937,26 +953,15 @@ Complex!T cos(T)(Complex!T z)  @safe pure nothrow @nogc
 {
     static import std.math;
     assert(cos(complex(0.0)) == 1.0);
-    assert(cos(complex(1.3L, 0.0)) == std.math.cos(1.3L));
-    assert(cos(complex(0.0L, 5.2L)) == std.math.cosh(5.2L));
-}
-
-version (StdUnittest)
-{
-    int ceqrel(T)(const Complex!T x, const Complex!T y) @safe pure nothrow @nogc
-    {
-        import std.math : feqrel;
-        const r = feqrel(x.re, y.re);
-        const i = feqrel(x.im, y.im);
-        return r < i ? r : i;
-    }
+    assert(cos(complex(1.3, 0.0)) == std.math.cos(1.3));
+    assert(cos(complex(0.0, 5.2)) == std.math.cosh(5.2));
 }
 
 @safe pure nothrow unittest
 {
     static import std.math;
     assert(ceqrel(cos(complex(0, 5.2L)), complex(std.math.cosh(5.2L), 0.0L)) >= real.mant_dig - 1);
-    assert(cos(complex(1.3L)) == std.math.cos(1.3L));
+    assert(ceqrel(cos(complex(1.3L)), complex(std.math.cos(1.3L))) >= real.mant_dig - 1);
 }
 
 /// ditto
@@ -1515,7 +1520,7 @@ if (isIntegral!Int)
     assert(isClose(pow(a, -3), 1.0 / (a * a * a)));
 
     auto b = complex(2.0);
-    assert(isClose(pow(b, 3), exp(3 * log(b))));
+    assert(ceqrel(pow(b, 3), exp(3 * log(b))) >= double.mant_dig - 1);
 }
 
 /// ditto
@@ -1561,8 +1566,8 @@ Complex!T pow(T)(Complex!T x, Complex!T y) @trusted pure nothrow @nogc
     auto b = complex(2.0);
     assert(pow(a, b) == complex(0.0));
 
-    auto c = pow(complex(0.0, 1.0), complex(0.0, 1.0));
-    assert(isClose(c, exp((-PI) / 2)));
+    auto c = complex(0.0L, 1.0L);
+    assert(isClose(pow(c, c), exp((-PI) / 2)));
 }
 
 /// ditto
@@ -1597,13 +1602,13 @@ Complex!T pow(T)(const T x, Complex!T n) @trusted pure nothrow @nogc
     assert(isClose(a, complex(-7.0, 24.0)));
 
     auto b = pow(complex(3.0, 4.0), PI);
-    assert(isClose(b, complex(-152.91512205297134, 35.547499631917738)));
+    assert(ceqrel(b, complex(-152.91512205297134, 35.547499631917738)) >= double.mant_dig - 3);
 
     auto c = pow(complex(3.0, 4.0), complex(-2.0, 1.0));
-    assert(isClose(c, complex(0.015351734187477306, -0.0038407695456661503)));
+    assert(ceqrel(c, complex(0.015351734187477306, -0.0038407695456661503)) >= double.mant_dig - 3);
 
     auto d = pow(PI, complex(2.0, -1.0));
-    assert(isClose(d, complex(4.0790296880118296, -8.9872469554541869)));
+    assert(ceqrel(d, complex(4.0790296880118296, -8.9872469554541869)) >= double.mant_dig - 1);
 }
 
 @safe pure nothrow @nogc unittest

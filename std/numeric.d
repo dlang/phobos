@@ -1093,7 +1093,7 @@ public:
  * www.netlib.org,www.netlib.org) as algorithm TOMS478.
  *
  */
-T findRoot(T, DF, DT)(scope DF f, in T a, in T b,
+T findRoot(T, DF, DT)(scope DF f, const T a, const T b,
     scope DT tolerance) //= (T a, T b) => false)
 if (
     isFloatingPoint!T &&
@@ -1113,7 +1113,7 @@ if (
 }
 
 ///ditto
-T findRoot(T, DF)(scope DF f, in T a, in T b)
+T findRoot(T, DF)(scope DF f, const T a, const T b)
 {
     return findRoot(f, a, b, (T a, T b) => false);
 }
@@ -1151,7 +1151,8 @@ T findRoot(T, DF)(scope DF f, in T a, in T b)
  * root was found, both of the first two elements will contain the
  * root, and the second pair of elements will be 0.
  */
-Tuple!(T, T, R, R) findRoot(T, R, DF, DT)(scope DF f, in T ax, in T bx, in R fax, in R fbx,
+Tuple!(T, T, R, R) findRoot(T, R, DF, DT)(scope DF f,
+    const T ax, const T bx, const R fax, const R fbx,
     scope DT tolerance) // = (T a, T b) => false)
 if (
     isFloatingPoint!T &&
@@ -1458,13 +1459,14 @@ whileloop:
 }
 
 ///ditto
-Tuple!(T, T, R, R) findRoot(T, R, DF)(scope DF f, in T ax, in T bx, in R fax, in R fbx)
+Tuple!(T, T, R, R) findRoot(T, R, DF)(scope DF f,
+    const T ax, const T bx, const R fax, const R fbx)
 {
     return findRoot(f, ax, bx, fax, fbx, (T a, T b) => false);
 }
 
 ///ditto
-T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
+T findRoot(T, R)(scope R delegate(T) f, const T a, const T b,
     scope bool delegate(T lo, T hi) tolerance = (T a, T b) => false)
 {
     return findRoot!(T, R delegate(T), bool delegate(T lo, T hi))(f, a, b, tolerance);
@@ -1725,10 +1727,10 @@ See_Also: $(LREF findRoot), $(REF isNormal, std,math)
 Tuple!(T, "x", Unqual!(ReturnType!DF), "y", T, "error")
 findLocalMin(T, DF)(
         scope DF f,
-        in T ax,
-        in T bx,
-        in T relTolerance = sqrt(T.epsilon),
-        in T absTolerance = sqrt(T.epsilon),
+        const T ax,
+        const T bx,
+        const T relTolerance = sqrt(T.epsilon),
+        const T absTolerance = sqrt(T.epsilon),
         )
 if (isFloatingPoint!T
     && __traits(compiles, {T _ = DF.init(T.init);}))
@@ -2987,64 +2989,70 @@ if (isIntegral!T)
 // This overload is for non-builtin numerical types like BigInt or
 // user-defined types.
 /// ditto
-T gcd(T)(T a, T b)
+auto gcd(T)(T a, T b)
 if (!isIntegral!T &&
         is(typeof(T.init % T.init)) &&
         is(typeof(T.init == 0 || T.init > 0)))
 {
-    import std.algorithm.mutation : swap;
-
-    enum canUseBinaryGcd = is(typeof(() {
-        T t, u;
-        t <<= 1;
-        t >>= 1;
-        t -= u;
-        bool b = (t & 1) == 0;
-        swap(t, u);
-    }));
-
-    assert(a >= 0 && b >= 0);
-
-    // Special cases.
-    if (a == 0)
-        return b;
-    if (b == 0)
-        return a;
-
-    static if (canUseBinaryGcd)
+    static if (!is(T == Unqual!T))
     {
-        uint shift = 0;
-        while ((a & 1) == 0 && (b & 1) == 0)
-        {
-            a >>= 1;
-            b >>= 1;
-            shift++;
-        }
-
-        if ((a & 1) == 0) swap(a, b);
-
-        do
-        {
-            assert((a & 1) != 0);
-            while ((b & 1) == 0)
-                b >>= 1;
-            if (a > b)
-                swap(a, b);
-            b -= a;
-        } while (b);
-
-        return a << shift;
+        return gcd!(Unqual!T)(a, b);
     }
     else
     {
-        // The only thing we have is %; fallback to Euclidean algorithm.
-        while (b != 0)
+        import std.algorithm.mutation : swap;
+        enum canUseBinaryGcd = is(typeof(() {
+            T t, u;
+            t <<= 1;
+            t >>= 1;
+            t -= u;
+            bool b = (t & 1) == 0;
+            swap(t, u);
+        }));
+
+        assert(a >= 0 && b >= 0);
+
+        // Special cases.
+        if (a == 0)
+            return b;
+        if (b == 0)
+            return a;
+
+        static if (canUseBinaryGcd)
         {
-            auto t = b;
-            b = a % b;
-            a = t;
+            uint shift = 0;
+            while ((a & 1) == 0 && (b & 1) == 0)
+            {
+                a >>= 1;
+                b >>= 1;
+                shift++;
+            }
+
+            if ((a & 1) == 0) swap(a, b);
+
+            do
+            {
+                assert((a & 1) != 0);
+                while ((b & 1) == 0)
+                    b >>= 1;
+                if (a > b)
+                    swap(a, b);
+                b -= a;
+            } while (b);
+
+            return a << shift;
         }
-        return a;
+        else
+        {
+            // The only thing we have is %; fallback to Euclidean algorithm.
+            while (b != 0)
+            {
+                auto t = b;
+                b = a % b;
+                a = t;
+            }
+            return a;
+        }
     }
 }
 
@@ -3083,6 +3091,15 @@ if (!isIntegral!T &&
 {
     import std.bigint : BigInt;
     assert(gcd(BigInt(2), BigInt(1)) == BigInt(1));
+}
+
+// Issue 20924
+@safe unittest
+{
+    import std.bigint : BigInt;
+    const a = BigInt("123143238472389492934020");
+    const b = BigInt("902380489324729338420924");
+    assert(__traits(compiles, gcd(a, b)));
 }
 
 // This is to make tweaking the speed/size vs. accuracy tradeoff easy,

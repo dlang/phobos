@@ -69,6 +69,7 @@ module std.functional;
 import std.meta : AliasSeq, Reverse;
 import std.traits : isCallable, Parameters;
 
+import std.internal.attributes : betterC;
 
 private template needOpCallAlias(alias fun)
 {
@@ -1037,6 +1038,14 @@ pure @safe @nogc nothrow unittest
     static assert(!__traits(compiles, curry(NoArgs.init)));
 }
 
+private template Iota(size_t n)
+{
+    static if (n == 0)
+        alias Iota = AliasSeq!();
+    else
+        alias Iota = AliasSeq!(Iota!(n - 1), n - 1);
+}
+
 /**
 Takes multiple functions and adjoins them together.
 
@@ -1062,20 +1071,14 @@ if (F.length > 1)
     auto adjoin(V...)(auto ref V a)
     {
         import std.typecons : tuple;
-        static if (F.length == 2)
+        import std.meta : staticMap;
+
+        auto resultElement(size_t i)()
         {
-            return tuple(F[0](a), F[1](a));
+            return F[i](a);
         }
-        else static if (F.length == 3)
-        {
-            return tuple(F[0](a), F[1](a), F[2](a));
-        }
-        else
-        {
-            import std.format : format;
-            import std.range : iota;
-            return mixin (q{tuple(%(F[%s](a)%|, %))}.format(iota(0, F.length)));
-        }
+
+        return tuple(staticMap!(resultElement, Iota!(F.length)));
     }
 }
 
@@ -1135,6 +1138,22 @@ if (F.length > 1)
     enum Tuple!(IS, IS, IS, IS) ret2 = adjoin!(bar, bar, bar, bar)();
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=21347
+@safe @betterC unittest
+{
+    alias f = (int n) => n + 1;
+    alias g = (int n) => n + 2;
+    alias h = (int n) => n + 3;
+    alias i = (int n) => n + 4;
+
+    auto result = adjoin!(f, g, h, i)(0);
+
+    assert(result[0] == 1);
+    assert(result[1] == 2);
+    assert(result[2] == 3);
+    assert(result[3] == 4);
+}
+
 /**
    Composes passed-in functions $(D fun[0], fun[1], ...).
 
@@ -1146,27 +1165,21 @@ if (F.length > 1)
    See_Also: $(LREF pipe)
 */
 template compose(fun...)
+if (fun.length > 0)
 {
     static if (fun.length == 1)
     {
         alias compose = unaryFun!(fun[0]);
     }
-    else static if (fun.length == 2)
-    {
-        // starch
-        alias fun0 = unaryFun!(fun[0]);
-        alias fun1 = unaryFun!(fun[1]);
-
-        // protein: the core composition operation
-        typeof({ E a; return fun0(fun1(a)); }()) compose(E)(E a)
-        {
-            return fun0(fun1(a));
-        }
-    }
     else
     {
-        // protein: assembling operations
-        alias compose = compose!(fun[0], compose!(fun[1 .. $]));
+        alias fun0 = unaryFun!(fun[0]);
+        alias rest = compose!(fun[1 .. $]);
+
+        auto compose(Args...)(Args args)
+        {
+            return fun0(rest(args));
+        }
     }
 }
 
@@ -1181,6 +1194,17 @@ template compose(fun...)
     // First split a string in whitespace-separated tokens and then
     // convert each token into an integer
     assert(compose!(map!(to!(int)), split)("1 2 3").equal([1, 2, 3]));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=6484
+@safe unittest
+{
+    int f(int a) { return a; }
+    int g(int a) { return a; }
+    int h(int a,int b,int c) { return a * b * c; }
+
+    alias F = compose!(f,g,h);
+    assert(F(1,2,3) == f(g(h(1,2,3))));
 }
 
 /**

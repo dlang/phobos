@@ -688,7 +688,7 @@ $(TR $(TD Building blocks) $(TD
     Copyright: Copyright 2013 -
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Dmitry Olshansky
-    Source:    $(PHOBOSSRC std/uni.d)
+    Source:    $(PHOBOSSRC std/uni/package.d)
     Standards: $(HTTP www.unicode.org/versions/Unicode6.2.0/, Unicode v6.2)
 
 Macros:
@@ -1473,7 +1473,7 @@ private struct SliceOverIndexed(T)
 
     @property size_t length()const { return to-from;}
 
-    auto opDollar()const { return length; }
+    alias opDollar = length;
 
     @property bool empty()const { return from == to; }
 

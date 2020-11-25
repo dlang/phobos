@@ -254,7 +254,6 @@ auto castSwitch(choices...)(Object switchObject)
 
     if (switchObject !is null)
     {
-
         // Checking for exact matches:
         const classInfo = typeid(switchObject);
         foreach (index, choice; choices)
@@ -517,7 +516,7 @@ auto castSwitch(choices...)(Object switchObject)
 
 /** Clamps a value into the given bounds.
 
-This functions is equivalent to `max(lower, min(upper,val))`.
+This function is equivalent to `max(lower, min(upper, val))`.
 
 Params:
     val = The value to _clamp.
@@ -530,6 +529,7 @@ Returns:
 
 */
 auto clamp(T1, T2, T3)(T1 val, T2 lower, T3 upper)
+if (is(typeof(max(min(val, upper), lower))))
 in
 {
     import std.functional : greaterThan;
@@ -537,7 +537,7 @@ in
 }
 do
 {
-    return max(lower, min(upper, val));
+    return max(min(val, upper), lower);
 }
 
 ///
@@ -576,6 +576,14 @@ do
     // UFCS style
     assert(Date(1982, 1, 4).clamp(Date.min, Date.max) == Date(1982, 1, 4));
 
+    // Stability
+    struct A {
+        int x, y;
+        int opCmp(ref const A rhs) const { return (x > rhs.x) - (x < rhs.x); }
+    }
+    A x, lo, hi;
+    x.y = 42;
+    assert(x.clamp(lo, hi).y == 42);
 }
 
 // cmp
@@ -648,8 +656,7 @@ if (isInputRange!R1 && isInputRange!R2)
             else
             {
                 auto a = r1.front, b = r2.front;
-                if (a < b) return -1;
-                if (b < a) return 1;
+                if (auto result = (b < a) - (a < b)) return result;
             }
         }
     }
@@ -882,23 +889,14 @@ Compares two ranges for equality, as defined by predicate `pred`
 */
 template equal(alias pred = "a == b")
 {
-    enum isEmptyRange(R) =
-        isInputRange!R && __traits(compiles, {static assert(R.empty, "");});
-
-    enum hasFixedLength(T) = hasLength!T || isNarrowString!T;
-
-    // use code points when comparing two ranges of UTF code units that aren't
-    // the same type. This is for backwards compatibility with autodecode
-    // strings.
-    enum useCodePoint(R1, R2) =
-        isSomeChar!(ElementEncodingType!R1) && isSomeChar!(ElementEncodingType!R2) &&
-        (ElementEncodingType!R1).sizeof != (ElementEncodingType!R2).sizeof;
-
     /++
     Compares two ranges for equality. The ranges may have
     different element types, as long as `pred(r1.front, r2.front)`
     evaluates to `bool`.
     Performs $(BIGOH min(r1.length, r2.length)) evaluations of `pred`.
+
+    At least one of the ranges must be finite. If one range involved is infinite, the result is
+    (statically known to be) `false`.
 
     If the two ranges are different kinds of UTF code unit (`char`, `wchar`, or
     `dchar`), then the arrays are compared using UTF decoding to avoid
@@ -913,80 +911,73 @@ template equal(alias pred = "a == b")
         for element, according to binary predicate `pred`.
     +/
     bool equal(Range1, Range2)(Range1 r1, Range2 r2)
-    if (!useCodePoint!(Range1, Range2) &&
-        isInputRange!Range1 && isInputRange!Range2 &&
+    if (isInputRange!Range1 && isInputRange!Range2 &&
+        !(isInfinite!Range1 && isInfinite!Range2) &&
         is(typeof(binaryFun!pred(r1.front, r2.front))))
     {
-        static assert(!(isInfinite!Range1 && isInfinite!Range2),
-            "Both ranges are known to be infinite");
+        // Use code points when comparing two ranges of UTF code units that aren't
+        // the same type. This is for backwards compatibility with autodecode
+        // strings.
+        enum useCodePoint =
+            isSomeChar!(ElementEncodingType!Range1) && isSomeChar!(ElementEncodingType!Range2) &&
+            ElementEncodingType!Range1.sizeof != ElementEncodingType!Range2.sizeof;
 
-        //No pred calls necessary
-        static if (isEmptyRange!Range1 || isEmptyRange!Range2)
+        static if (useCodePoint)
         {
-            return r1.empty && r2.empty;
-        }
-        else static if ((isInfinite!Range1 && hasFixedLength!Range2) ||
-            (hasFixedLength!Range1 && isInfinite!Range2))
-        {
-            return false;
-        }
-        //Detect default pred and compatible dynamic array
-        else static if (is(typeof(pred) == string) && pred == "a == b" &&
-            isArray!Range1 && isArray!Range2 && is(typeof(r1 == r2)))
-        {
-            return r1 == r2;
-        }
-        // if one of the arguments is a string and the other isn't, then auto-decoding
-        // can be avoided if they have the same ElementEncodingType
-        else static if (is(typeof(pred) == string) && pred == "a == b" &&
-            isAutodecodableString!Range1 != isAutodecodableString!Range2 &&
-            is(immutable ElementEncodingType!Range1 == immutable ElementEncodingType!Range2))
-        {
-            import std.utf : byCodeUnit;
-
-            static if (isAutodecodableString!Range1)
-            {
-                return equal(r1.byCodeUnit, r2);
-            }
-            else
-            {
-                return equal(r2.byCodeUnit, r1);
-            }
-        }
-        //Try a fast implementation when the ranges have comparable lengths
-        else static if (hasLength!Range1 && hasLength!Range2 && is(typeof(r1.length == r2.length)))
-        {
-            immutable len1 = r1.length;
-            immutable len2 = r2.length;
-            if (len1 != len2) return false; //Short circuit return
-
-            //Lengths are the same, so we need to do an actual comparison
-            //Good news is we can squeeze out a bit of performance by not checking if r2 is empty
-            for (; !r1.empty; r1.popFront(), r2.popFront())
-            {
-                if (!binaryFun!(pred)(r1.front, r2.front)) return false;
-            }
-            return true;
+            import std.utf : byDchar;
+            return equal(r1.byDchar, r2.byDchar);
         }
         else
         {
-            //Generic case, we have to walk both ranges making sure neither is empty
-            for (; !r1.empty; r1.popFront(), r2.popFront())
+            static if (isInfinite!Range1 || isInfinite!Range2)
             {
-                if (r2.empty) return false;
-                if (!binaryFun!(pred)(r1.front, r2.front)) return false;
+                // No finite range can be ever equal to an infinite range.
+                return false;
             }
-            static if (!isInfinite!Range1)
-                return r2.empty;
-        }
-    }
+            // Detect default pred and compatible dynamic arrays.
+            else static if (is(typeof(pred) == string) && pred == "a == b" &&
+                isArray!Range1 && isArray!Range2 && is(typeof(r1 == r2)))
+            {
+                return r1 == r2;
+            }
+            // If one of the arguments is a string and the other isn't, then auto-decoding
+            // can be avoided if they have the same ElementEncodingType.
+            else static if (is(typeof(pred) == string) && pred == "a == b" &&
+                isAutodecodableString!Range1 != isAutodecodableString!Range2 &&
+                is(immutable ElementEncodingType!Range1 == immutable ElementEncodingType!Range2))
+            {
+                import std.utf : byCodeUnit;
 
-    /// ditto
-    bool equal(Range1, Range2)(Range1 r1, Range2 r2)
-    if (useCodePoint!(Range1, Range2))
-    {
-        import std.utf : byDchar;
-        return equal(r1.byDchar, r2.byDchar);
+                static if (isAutodecodableString!Range1)
+                    return equal(r1.byCodeUnit, r2);
+                else
+                    return equal(r2.byCodeUnit, r1);
+            }
+            // Try a fast implementation when the ranges have comparable lengths.
+            else static if (hasLength!Range1 && hasLength!Range2 && is(typeof(r1.length == r2.length)))
+            {
+                immutable len1 = r1.length;
+                immutable len2 = r2.length;
+                if (len1 != len2) return false; //Short circuit return
+
+                // Lengths are the same, so we need to do an actual comparison.
+                // Good news is we can squeeze out a bit of performance by not checking if r2 is empty.
+                for (; !r1.empty; r1.popFront(), r2.popFront())
+                {
+                    if (!binaryFun!(pred)(r1.front, r2.front)) return false;
+                }
+                return true;
+            }
+            else
+            {
+                //Generic case, we have to walk both ranges making sure neither is empty
+                for (; !r1.empty; r1.popFront(), r2.popFront())
+                {
+                    if (r2.empty || !binaryFun!(pred)(r1.front, r2.front)) return false;
+                }
+                return r2.empty;
+            }
+        }
     }
 }
 
@@ -1136,29 +1127,6 @@ range of range (of range...) comparisons.
     assert("".equal(E()));
     assert(!E().equal("foo"));
     assert(!"bar".equal(E()));
-}
-
-// MaxType
-private template MaxType(T...)
-if (T.length >= 1)
-{
-    static if (T.length == 1)
-    {
-        alias MaxType = T[0];
-    }
-    else static if (T.length == 2)
-    {
-        static if (!is(typeof(T[0].min)))
-            alias MaxType = CommonType!T;
-        else static if (T[1].max > T[0].max)
-            alias MaxType = T[1];
-        else
-            alias MaxType = T[0];
-    }
-    else
-    {
-        alias MaxType = MaxType!(MaxType!(T[0 .. ($+1)/2]), MaxType!(T[($+1)/2 .. $]));
-    }
 }
 
 // levenshteinDistance
@@ -1570,31 +1538,40 @@ Returns:
 See_Also:
     $(REF maxElement, std,algorithm,searching)
 */
-MaxType!T max(T...)(T args)
-if (T.length >= 2)
+auto max(T...)(T args)
+if (T.length >= 2 && !is(CommonType!T == void))
 {
-    //Get "a"
-    static if (T.length <= 2)
+    // Get left-hand side of the comparison.
+    static if (T.length == 2)
         alias a = args[0];
     else
-        auto a = max(args[0 .. ($+1)/2]);
+        auto a = max(args[0 .. ($ + 1) / 2]);
     alias T0 = typeof(a);
 
-    //Get "b"
+    // Get right-hand side.
     static if (T.length <= 3)
-        alias b = args[$-1];
+        alias b = args[$ - 1];
     else
-        auto b = max(args[($+1)/2 .. $]);
+        auto b = max(args[($ + 1) / 2 .. $]);
     alias T1 = typeof(b);
 
     static assert(is(typeof(a < b)),
         "Invalid arguments: Cannot compare types " ~ T0.stringof ~
-        " and " ~ T1.stringof ~ ".");
+        " and " ~ T1.stringof ~ " for ordering.");
 
-    //Do the "max" proper with a and b
+    // Compute the returned type.
+    static if (is(typeof(mostNegative!T0 < mostNegative!T1)))
+        // Both are numeric (or character or Boolean), so we choose the one with the highest maximum.
+        // (We use mostNegative for num/bool/char testing purposes even if it's not used otherwise.)
+        alias Result = Select!(T1.max > T0.max, T1, T0);
+    else
+        // At least one is non-numeric, so just go with the common type.
+        alias Result = CommonType!(T0, T1);
+
+    // Perform the computation.
     import std.functional : lessThan;
     immutable chooseB = lessThan!(T0, T1)(a, b);
-    return cast(typeof(return)) (chooseB ? b : a);
+    return cast(Result) (chooseB ? b : a);
 }
 
 ///
@@ -1640,38 +1617,6 @@ if (T.length >= 2)
     assert(max(Date.max, Date.min) == Date.max);
 }
 
-// MinType
-private template MinType(T...)
-if (T.length >= 1)
-{
-    static if (T.length == 1)
-    {
-        alias MinType = T[0];
-    }
-    else static if (T.length == 2)
-    {
-        static if (!is(typeof(T[0].min)))
-            alias MinType = CommonType!T;
-        else
-        {
-            enum hasMostNegative = is(typeof(mostNegative!(T[0]))) &&
-                                   is(typeof(mostNegative!(T[1])));
-            static if (hasMostNegative && mostNegative!(T[1]) < mostNegative!(T[0]))
-                alias MinType = T[1];
-            else static if (hasMostNegative && mostNegative!(T[1]) > mostNegative!(T[0]))
-                alias MinType = T[0];
-            else static if (T[1].max < T[0].max)
-                alias MinType = T[1];
-            else
-                alias MinType = T[0];
-        }
-    }
-    else
-    {
-        alias MinType = MinType!(MinType!(T[0 .. ($+1)/2]), MinType!(T[($+1)/2 .. $]));
-    }
-}
-
 // min
 /**
 Iterates the passed arguments and returns the minimum value.
@@ -1690,31 +1635,43 @@ Returns:
 See_Also:
     $(REF minElement, std,algorithm,searching)
 */
-MinType!T min(T...)(T args)
-if (T.length >= 2)
+auto min(T...)(T args)
+if (T.length >= 2 && !is(CommonType!T == void))
 {
-    //Get "a"
+    // Get the left-hand side of the comparison.
     static if (T.length <= 2)
         alias a = args[0];
     else
-        auto a = min(args[0 .. ($+1)/2]);
+        auto a = min(args[0 .. ($ + 1) / 2]);
     alias T0 = typeof(a);
 
-    //Get "b"
+    // Get the right-hand side.
     static if (T.length <= 3)
-        alias b = args[$-1];
+        alias b = args[$ - 1];
     else
-        auto b = min(args[($+1)/2 .. $]);
+        auto b = min(args[($ + 1) / 2 .. $]);
     alias T1 = typeof(b);
 
     static assert(is(typeof(a < b)),
         "Invalid arguments: Cannot compare types " ~ T0.stringof ~
-        " and " ~ T1.stringof ~ ".");
+        " and " ~ T1.stringof ~ " for ordering.");
 
-    //Do the "min" proper with a and b
+    // Compute the returned type.
+    static if (is(typeof(mostNegative!T0 < mostNegative!T1)))
+        // Both are numeric (or character or Boolean), so we choose the one with the lowest minimum.
+        // If they have the same minimum, choose the one with the smallest size.
+        // If both mostNegative and sizeof are equal, go for stability: pick the type of the first one.
+        alias Result = Select!(mostNegative!T1 < mostNegative!T0 ||
+                mostNegative!T1 == mostNegative!T0 && T1.sizeof < T0.sizeof,
+            T1, T0);
+    else
+        // At least one is non-numeric, so just go with the common type.
+        alias Result = CommonType!(T0, T1);
+
+    // Engage!
     import std.functional : lessThan;
     immutable chooseB = lessThan!(T1, T0)(b, a);
-    return cast(typeof(return)) (chooseB ? b : a);
+    return cast(Result) (chooseB ? b : a);
 }
 
 ///
@@ -1729,6 +1686,14 @@ if (T.length >= 2)
     auto e = min(a, b, c);
     static assert(is(typeof(e) == double));
     assert(e == 2);
+    ulong f = 0xffff_ffff_ffff;
+    const uint g = min(f, 0xffff_0000);
+    assert(g == 0xffff_0000);
+    dchar h = 100;
+    uint i = 101;
+    static assert(is(typeof(min(h, i)) == dchar));
+    static assert(is(typeof(min(i, h)) == uint));
+    assert(min(h, i) == 100);
 }
 
 /**
@@ -1956,6 +1921,9 @@ if it exists.
 If both ranges have a length member, this function is $(BIGOH 1). Otherwise,
 this function is $(BIGOH min(r1.length, r2.length)).
 
+Infinite ranges are considered of the same length. An infinite range has never the same length as a
+finite range.
+
 Params:
     r1 = a finite $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
     r2 = a finite $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
@@ -1964,60 +1932,31 @@ Returns:
     `true` if both ranges have the same length, `false` otherwise.
 */
 bool isSameLength(Range1, Range2)(Range1 r1, Range2 r2)
-if (isInputRange!Range1 &&
-    isInputRange!Range2 &&
-    !isInfinite!Range1 &&
-    !isInfinite!Range2)
+if (isInputRange!Range1 && isInputRange!Range2)
 {
-    static if (hasLength!(Range1) && hasLength!(Range2))
+    static if (isInfinite!Range1 || isInfinite!Range2)
+    {
+        return isInfinite!Range1 && isInfinite!Range2;
+    }
+    else static if (hasLength!(Range1) && hasLength!(Range2))
     {
         return r1.length == r2.length;
     }
     else static if (hasLength!(Range1) && !hasLength!(Range2))
     {
-        size_t length;
-
-        while (!r2.empty)
-        {
-            r2.popFront;
-
-            if (++length > r1.length)
-            {
-                return false;
-            }
-        }
-
-        return !(length < r1.length);
+        return r2.walkLength(r1.length + 1) == r1.length;
     }
     else static if (!hasLength!(Range1) && hasLength!(Range2))
     {
-        size_t length;
-
-        while (!r1.empty)
-        {
-            r1.popFront;
-
-            if (++length > r2.length)
-            {
-                return false;
-            }
-        }
-
-        return !(length < r2.length);
+        return r1.walkLength(r2.length + 1) == r2.length;
     }
     else
     {
-        while (!r1.empty)
+        for (; !r1.empty; r1.popFront, r2.popFront)
         {
            if (r2.empty)
-           {
               return false;
-           }
-
-           r1.popFront;
-           r2.popFront;
         }
-
         return r2.empty;
     }
 }
@@ -2085,7 +2024,7 @@ if (isInputRange!Range1 &&
     assert(!isSameLength(r11, r12));
 }
 
-/// For convenience
+// Still functional but not documented anymore.
 alias AllocateGC = Flag!"allocateGC";
 
 /**
@@ -2105,7 +2044,7 @@ Allocating forward range option: amortized $(BIGOH r1.length) + $(BIGOH r2.lengt
 
 Params:
     pred = an optional parameter to change how equality is defined
-    allocate_gc = `Yes.allocateGC`/`No.allocateGC`
+    allocateGC = `Yes.allocateGC`/`No.allocateGC`
     r1 = A finite $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
     r2 = A finite $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
 
@@ -2114,9 +2053,9 @@ Returns:
     Otherwise, returns `false`.
 */
 
-bool isPermutation(AllocateGC allocate_gc, Range1, Range2)
+bool isPermutation(Flag!"allocateGC" allocateGC, Range1, Range2)
 (Range1 r1, Range2 r2)
-if (allocate_gc == Yes.allocateGC &&
+if (allocateGC == Yes.allocateGC &&
     isForwardRange!Range1 &&
     isForwardRange!Range2 &&
     !isInfinite!Range1 &&

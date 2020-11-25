@@ -188,6 +188,12 @@ else version (MICROSOFT_STDIO)
 
     alias setmode = _setmode;
     alias fileno = _fileno;
+    enum
+    {
+        _O_WTEXT = 0x10000,
+        _O_U16TEXT = 0x20000,
+        _O_U8TEXT = 0x40000,
+    }
 }
 else version (GCC_IO)
 {
@@ -1487,8 +1493,9 @@ Removes the lock over the specified file segment.
     }
 
     version (Posix)
-    static if (__traits(compiles, { import std.process : spawnProcess; }))
     @system unittest
+    {
+    static if (__traits(compiles, { import std.process : spawnProcess; }))
     {
         static import std.file;
         auto deleteme = testFilename();
@@ -1542,7 +1549,8 @@ Removes the lock over the specified file segment.
             g.unlock();
         });
         f.unlock();
-    }
+    } // static if
+    } // unittest
 
 
 /**
@@ -1838,14 +1846,19 @@ is recommended if you want to process a complete file.
         }
         else
         {
-            // TODO: optimize this
             string s = readln(terminator);
-            buf.length = 0;
-            if (!s.length) return 0;
-            foreach (C c; s)
+            if (!s.length)
             {
-                buf ~= c;
+                buf = buf[0 .. 0];
+                return 0;
             }
+
+            import std.utf : codeLength;
+            buf.length = codeLength!C(s);
+            size_t idx;
+            foreach (C c; s)
+                buf[idx++] = c;
+
             return buf.length;
         }
     }
@@ -2917,7 +2930,7 @@ is empty, throws an `Exception`. In case of an I/O error throws
         // the file's orientation (byte- or wide-oriented)
         int orientation_;
 
-        // A buffer for when we need to transcode.
+        // Buffers for when we need to transcode.
         wchar highSurrogate = '\0'; // '\0' indicates empty
         void highSurrogateShouldBeEmpty() @safe
         {
@@ -2925,17 +2938,38 @@ is empty, throws an `Exception`. In case of an I/O error throws
             if (highSurrogate != '\0')
                 throw new UTFException("unpaired surrogate UTF-16 value");
         }
+        char[4] rbuf8;
+        size_t rbuf8Filled = 0;
     public:
 
         this(ref File f) @trusted
         {
-            import core.stdc.wchar_ : fwide;
             import std.exception : enforce;
 
             enforce(f._p && f._p.handle, "Attempting to write to closed File");
             file_ = f;
             FILE* fps = f._p.handle;
-            orientation_ = fwide(fps, 0);
+
+            version (MICROSOFT_STDIO)
+            {
+                // Microsoft doesn't implement fwide. Instead, there's the
+                // concept of ANSI/UNICODE mode. fputc doesn't work in UNICODE
+                // mode; fputwc has to be used. So that essentially means
+                // "wide-oriented" for us.
+                immutable int mode = _setmode(f.fileno, _O_TEXT);
+                    // Set some arbitrary mode to obtain the previous one.
+                _setmode(f.fileno, mode); // Restore previous mode.
+                if (mode & (_O_WTEXT | _O_U16TEXT | _O_U8TEXT))
+                {
+                    orientation_ = 1; // wide
+                }
+            }
+            else
+            {
+                import core.stdc.wchar_ : fwide;
+                orientation_ = fwide(fps, 0);
+            }
+
             FLOCK(fps);
         }
 
@@ -2993,6 +3027,7 @@ is empty, throws an `Exception`. In case of an I/O error throws
         void put(C)(scope C c) @safe if (isSomeChar!C || is(C : const(ubyte)))
         {
             import std.traits : Parameters;
+            import std.utf : decodeFront, encode, stride;
             static auto trustedFPUTC(int ch, _iobuf* h) @trusted
             {
                 return FPUTC(ch, h);
@@ -3004,46 +3039,70 @@ is empty, throws an `Exception`. In case of an I/O error throws
 
             static if (c.sizeof == 1)
             {
-                // simple char
                 highSurrogateShouldBeEmpty();
                 if (orientation_ <= 0) trustedFPUTC(c, handle_);
-                else trustedFPUTWC(c, handle_);
+                else if (c <= 0x7F) trustedFPUTWC(c, handle_);
+                else if (c >= 0b1100_0000) // start byte of multibyte sequence
+                {
+                    rbuf8[0] = c;
+                    rbuf8Filled = 1;
+                }
+                else // continuation byte of multibyte sequence
+                {
+                    rbuf8[rbuf8Filled] = c;
+                    ++rbuf8Filled;
+                    if (stride(rbuf8[]) == rbuf8Filled) // sequence is complete
+                    {
+                        char[] str = rbuf8[0 .. rbuf8Filled];
+                        immutable dchar d = decodeFront(str);
+                        wchar_t[4 / wchar_t.sizeof] wbuf;
+                        immutable size = encode(wbuf, d);
+                        foreach (i; 0 .. size)
+                            trustedFPUTWC(wbuf[i], handle_);
+                        rbuf8Filled = 0;
+                    }
+                }
             }
             else static if (c.sizeof == 2)
             {
-                import std.utf : encode, decode;
+                import std.utf : decode;
 
-                if (orientation_ <= 0)
+                if (c <= 0x7F)
                 {
-                    if (c <= 0x7F)
+                    highSurrogateShouldBeEmpty();
+                    if (orientation_ <= 0) trustedFPUTC(c, handle_);
+                    else trustedFPUTWC(c, handle_);
+                }
+                else if (0xD800 <= c && c <= 0xDBFF) // high surrogate
+                {
+                    highSurrogateShouldBeEmpty();
+                    highSurrogate = c;
+                }
+                else // standalone or low surrogate
+                {
+                    dchar d = c;
+                    if (highSurrogate != '\0')
                     {
-                        highSurrogateShouldBeEmpty();
-                        trustedFPUTC(c, handle_);
+                        immutable wchar[2] rbuf = [highSurrogate, c];
+                        size_t index = 0;
+                        d = decode(rbuf[], index);
+                        highSurrogate = 0;
                     }
-                    else if (0xD800 <= c && c <= 0xDBFF) // high surrogate
+                    if (orientation_ <= 0)
                     {
-                        highSurrogateShouldBeEmpty();
-                        highSurrogate = c;
-                    }
-                    else // standalone or low surrogate
-                    {
-                        dchar d = c;
-                        if (highSurrogate != '\0')
-                        {
-                            immutable wchar[2] rbuf = [highSurrogate, c];
-                            size_t index = 0;
-                            d = decode(rbuf[], index);
-                            highSurrogate = 0;
-                        }
                         char[4] wbuf;
                         immutable size = encode(wbuf, d);
                         foreach (i; 0 .. size)
                             trustedFPUTC(wbuf[i], handle_);
                     }
-                }
-                else
-                {
-                    trustedFPUTWC(c, handle_);
+                    else
+                    {
+                        wchar_t[4 / wchar_t.sizeof] wbuf;
+                        immutable size = encode(wbuf, d);
+                        foreach (i; 0 .. size)
+                            trustedFPUTWC(wbuf[i], handle_);
+                    }
+                    rbuf8Filled = 0;
                 }
             }
             else // 32-bit characters
@@ -3593,6 +3652,95 @@ void main()
         assertThrown!UTFException(writer.put(surr));
     }
     assert(std.file.readText!string(deleteme) == "y");
+}
+
+@safe unittest // issue 18801
+{
+    static import std.file;
+    import std.string : stripLeft;
+
+    auto deleteme = testFilename();
+    scope(exit) std.file.remove(deleteme);
+
+    {
+        auto writer = File(deleteme, "w,ccs=UTF-8").lockingTextWriter();
+        writer.put("foo");
+    }
+    assert(std.file.readText!string(deleteme).stripLeft("\uFEFF") == "foo");
+
+    {
+        auto writer = File(deleteme, "a,ccs=UTF-8").lockingTextWriter();
+        writer.put("bar");
+    }
+    assert(std.file.readText!string(deleteme).stripLeft("\uFEFF") == "foobar");
+}
+@safe unittest // char/wchar -> wchar_t
+{
+    import core.stdc.locale : LC_CTYPE, setlocale;
+    import core.stdc.wchar_ : fwide;
+    import core.stdc.string : strlen;
+    import std.algorithm.searching : any, endsWith;
+    import std.conv : text;
+    import std.meta : AliasSeq;
+    import std.string : fromStringz, stripLeft;
+    static import std.file;
+    auto deleteme = testFilename();
+    scope(exit) std.file.remove(deleteme);
+    const char* oldCt = () @trusted {
+        const(char)* p = setlocale(LC_CTYPE, null);
+        // Subsequent calls to `setlocale` might invalidate this return value,
+        // so duplicate it.
+        // See: https://github.com/dlang/phobos/pull/7660
+        return p ? p[0 .. strlen(p) + 1].idup.ptr : null;
+    }();
+    const utf8 = ["en_US.UTF-8", "C.UTF-8", ".65001"].any!((loc) @trusted {
+        return setlocale(LC_CTYPE, loc.ptr).fromStringz.endsWith(loc);
+    });
+    scope(exit) () @trusted { setlocale(LC_CTYPE, oldCt); } ();
+    version (DIGITAL_MARS_STDIO) // DM can't handle Unicode above U+07FF.
+    {
+        alias strs = AliasSeq!("xä\u07FE", "yö\u07FF"w);
+    }
+    else
+    {
+        alias strs = AliasSeq!("xä\U0001F607", "yö\U0001F608"w);
+    }
+    {
+        auto f = File(deleteme, "w");
+        version (MICROSOFT_STDIO)
+        {
+            () @trusted { setmode(fileno(f.getFP()), _O_U8TEXT); } ();
+        }
+        else
+        {
+            assert(fwide(f.getFP(), 1) == 1);
+        }
+        auto writer = f.lockingTextWriter();
+        assert(writer.orientation_ == 1);
+        static foreach (s; strs) writer.put(s);
+    }
+    assert(std.file.readText!string(deleteme).stripLeft("\uFEFF") ==
+        text(strs));
+}
+@safe unittest // https://issues.dlang.org/show_bug.cgi?id=18789
+{
+    static import std.file;
+    auto deleteme = testFilename();
+    scope(exit) std.file.remove(deleteme);
+    // converting to char
+    {
+        auto f = File(deleteme, "w");
+        f.writeln("\U0001F608"w); // UTFException
+    }
+    // converting to wchar_t
+    {
+        auto f = File(deleteme, "w,ccs=UTF-16LE");
+        // from char
+        f.writeln("ö"); // writes garbage
+        f.writeln("\U0001F608"); // ditto
+        // from wchar
+        f.writeln("\U0001F608"w); // leads to ErrnoException
+    }
 }
 
 @safe unittest

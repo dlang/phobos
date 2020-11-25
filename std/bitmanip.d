@@ -3858,7 +3858,7 @@ if (canSwapEndianness!T && isInputRange!R && is(ElementType!R : const ubyte))
             return UbyteRange(impl[start .. end]);
         }
         @property size_t length() { return impl.length; }
-        size_t opDollar() { return impl.length; }
+        alias opDollar = length;
     }
     static assert(hasSlicing!UbyteRange);
 

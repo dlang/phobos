@@ -371,10 +371,7 @@ private struct _Cache(R, bool bidir)
             return source.empty;
         }
 
-    static if (hasLength!R) auto length() @property
-    {
-        return source.length;
-    }
+    mixin ImplementLength!source;
 
     E front() @property
     {
@@ -641,15 +638,7 @@ private struct MapResult(alias fun, Range)
         }
     }
 
-    static if (hasLength!R)
-    {
-        @property auto length()
-        {
-            return _input.length;
-        }
-
-        alias opDollar = length;
-    }
+    mixin ImplementLength!_input;
 
     static if (hasSlicing!R)
     {
@@ -2001,87 +1990,82 @@ if (isInputRange!Range && !isForwardRange!Range)
         }
     }
 }
+// Outer range for forward range version of chunkBy
+private struct ChunkByOuter(Range)
+{
+    size_t groupNum;
+    Range  current;
+    Range  next;
+}
+
+// Inner range for forward range version of chunkBy
+private struct ChunkByGroup(alias eq, Range)
+{
+    import std.typecons : RefCounted;
+
+    private size_t groupNum;
+    private Range  start;
+    private Range  current;
+
+    private RefCounted!(ChunkByOuter!Range) mothership;
+
+    this(RefCounted!(ChunkByOuter!Range) origin)
+    {
+        groupNum = origin.groupNum;
+
+        start = origin.current.save;
+        current = origin.current.save;
+        assert(!start.empty, "Passed range 'r' must not be empty");
+
+        mothership = origin;
+
+        // Note: this requires reflexivity.
+        assert(eq(start.front, current.front),
+               "predicate is not reflexive");
+    }
+
+    @property bool empty() { return groupNum == size_t.max; }
+    @property auto ref front() { return current.front; }
+
+    void popFront()
+    {
+        current.popFront();
+
+        // Note: this requires transitivity.
+        if (current.empty || !eq(start.front, current.front))
+        {
+            if (groupNum == mothership.groupNum)
+            {
+                // If parent range hasn't moved on yet, help it along by
+                // saving location of start of next Group.
+                mothership.next = current.save;
+            }
+
+            groupNum = size_t.max;
+        }
+    }
+
+    @property auto save()
+    {
+        auto copy = this;
+        copy.current = current.save;
+        return copy;
+    }
+}
 
 // Single-pass implementation of chunkBy for forward ranges.
-private struct ChunkByImpl(alias pred, Range)
+private struct ChunkByImpl(alias pred, alias eq, bool isUnary, Range)
 if (isForwardRange!Range)
 {
     import std.typecons : RefCounted;
 
-    enum bool isUnary = ChunkByImplIsUnary!(pred, Range);
+    static assert(isForwardRange!(ChunkByGroup!(eq,Range)));
 
-    static if (isUnary)
-        alias eq = binaryFun!((a, b) => unaryFun!pred(a) == unaryFun!pred(b));
-    else
-        alias eq = binaryFun!pred;
-
-    // Outer range
-    static struct Impl
-    {
-        size_t groupNum;
-        Range  current;
-        Range  next;
-    }
-
-    // Inner range
-    static struct Group
-    {
-        private size_t groupNum;
-        private Range  start;
-        private Range  current;
-
-        private RefCounted!Impl mothership;
-
-        this(RefCounted!Impl origin)
-        {
-            groupNum = origin.groupNum;
-
-            start = origin.current.save;
-            current = origin.current.save;
-            assert(!start.empty, "Passed range 'r' must not be empty");
-
-            mothership = origin;
-
-            // Note: this requires reflexivity.
-            assert(eq(start.front, current.front),
-                   "predicate is not reflexive");
-        }
-
-        @property bool empty() { return groupNum == size_t.max; }
-        @property auto ref front() { return current.front; }
-
-        void popFront()
-        {
-            current.popFront();
-
-            // Note: this requires transitivity.
-            if (current.empty || !eq(start.front, current.front))
-            {
-                if (groupNum == mothership.groupNum)
-                {
-                    // If parent range hasn't moved on yet, help it along by
-                    // saving location of start of next Group.
-                    mothership.next = current.save;
-                }
-
-                groupNum = size_t.max;
-            }
-        }
-
-        @property auto save()
-        {
-            auto copy = this;
-            copy.current = current.save;
-            return copy;
-        }
-    }
-    static assert(isForwardRange!Group);
-
-    private RefCounted!Impl impl;
+    private RefCounted!(ChunkByOuter!Range) impl;
 
     this(Range r)
     {
-        impl = RefCounted!Impl(0, r, r.save);
+        impl = RefCounted!(ChunkByOuter!Range)(0, r, r.save);
     }
 
     @property bool empty() { return impl.current.empty; }
@@ -2091,11 +2075,11 @@ if (isForwardRange!Range)
         static if (isUnary)
         {
             import std.typecons : tuple;
-            return tuple(unaryFun!pred(impl.current.front), Group(impl));
+            return tuple(unaryFun!pred(impl.current.front), ChunkByGroup!(eq,Range)(impl));
         }
         else
         {
-            return Group(impl);
+            return ChunkByGroup!(eq,Range)(impl);
         }
     }
 
@@ -2125,6 +2109,43 @@ if (isForwardRange!Range)
     static assert(isForwardRange!(typeof(this)), typeof(this).stringof
             ~ " must be a forward range");
 }
+
+//Test for https://issues.dlang.org/show_bug.cgi?id=14909
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.typecons : tuple;
+    import std.stdio;
+    auto n = 3;
+    auto s = [1,2,3].chunkBy!(a => a+n);
+    auto t = s.save.map!(x=>x[0]);
+    auto u = s.map!(x=>x[1]);
+    assert(t.equal([4,5,6]));
+    assert(u.equal!equal([[1],[2],[3]]));
+}
+
+//Test for https://issues.dlang.org/show_bug.cgi?id=18751
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+
+    string[] data = [ "abc", "abc", "def" ];
+    int[] indices = [ 0, 1, 2 ];
+
+    auto chunks = indices.chunkBy!((i, j) => data[i] == data[j]);
+    assert(chunks.equal!equal([ [ 0, 1 ], [ 2 ] ]));
+}
+
+//Additional test for fix for issues 14909 and 18751
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+    auto v = [2,4,8,3,6,9,1,5,7];
+    auto i = 2;
+    assert(v.chunkBy!((a,b) => a % i == b % i).equal!equal([[2,4,8],[3],[6],[9,1,5,7]]));
+}
+
+
 
 @system unittest
 {
@@ -2223,7 +2244,17 @@ if (isForwardRange!Range)
 auto chunkBy(alias pred, Range)(Range r)
 if (isInputRange!Range)
 {
-    return ChunkByImpl!(pred, Range)(r);
+
+    enum bool isUnary = ChunkByImplIsUnary!(pred, Range);
+
+    static if (isUnary)
+        alias eq = binaryFun!((a, b) => unaryFun!pred(a) == unaryFun!pred(b));
+    else
+        alias eq = binaryFun!pred;
+    static if (isForwardRange!Range)
+        return ChunkByImpl!(pred, eq, isUnary, Range)(r);
+    else
+        return  ChunkByImpl!(pred, Range)(r);
 }
 
 /// Showing usage with binary predicate:
@@ -4373,13 +4404,7 @@ if (fun.length >= 1)
                 }
             }
 
-            static if (hasLength!R)
-            {
-                @property size_t length()
-                {
-                    return source.length;
-                }
-            }
+            mixin ImplementLength!source;
         }
 
         return Result(range, args);

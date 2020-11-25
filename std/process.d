@@ -3122,10 +3122,30 @@ private auto executeImpl(alias pipeFunc, Cmd, ExtraPipeFuncArgs...)(
     auto r3 = executeShell("exit 123");
     assert(r3.status == 123);
     assert(r3.output.empty);
-    auto r4 = executeShell("echo stderr test, please ignore 1>&2",
-        null, Config.stderrPassThrough);
-    assert(r4.status == 0);
-    assert(r4.output.empty);
+}
+
+@system unittest
+{
+    // Temporarily disable output to stderr so as to not spam the build log.
+    import std.stdio : stderr;
+    import std.typecons : Tuple;
+    import std.file : readText;
+    import std.traits : ReturnType;
+
+    ReturnType!executeShell r;
+    auto tmpname = uniqueTempPath;
+    auto t = stderr;
+    // Open a new scope to minimize code ran with stderr redirected.
+    {
+        stderr.open(tmpname, "w");
+        scope(exit) stderr = t;
+        r = executeShell("echo D rox>&2", null, Config.stderrPassThrough);
+    }
+    assert(r.status == 0);
+    assert(r.output.empty);
+    auto witness = readText(tmpname);
+    import std.ascii : newline;
+    assert(witness == "D rox" ~ newline, "'" ~ witness ~ "'");
 }
 
 @safe unittest
@@ -3266,8 +3286,7 @@ private struct TestScript
     string path;
 }
 
-version (StdUnittest)
-private string uniqueTempPath() @safe
+package(std) string uniqueTempPath() @safe
 {
     import std.file : tempDir;
     import std.path : buildPath;

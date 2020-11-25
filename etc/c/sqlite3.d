@@ -40,11 +40,11 @@ extern (C) __gshared nothrow:
 /**
 * CAPI3REF: Compile-Time Library Version Numbers
 */
-enum SQLITE_VERSION = "3.30.1";
+enum SQLITE_VERSION = "3.33.0";
 /// Ditto
-enum SQLITE_VERSION_NUMBER = 3030001;
+enum SQLITE_VERSION_NUMBER = 3033000;
 /// Ditto
-enum SQLITE_SOURCE_ID = "2019-10-10 20:19:45 18db032d058f1436ce3dea84081f4ee5a0f2259ad97301d43c426bc7f3df1b0b";
+enum SQLITE_SOURCE_ID = "2020-08-14 13:23:32 fca8dc8b578f215a969cd899336378966156154710873e68b3d9ac5881b0ff3f";
 
 /**
 * CAPI3REF: Run-Time Library Version Numbers
@@ -184,17 +184,21 @@ enum
     SQLITE_IOERR_BEGIN_ATOMIC      = (SQLITE_IOERR | (29 << 8)),
     SQLITE_IOERR_COMMIT_ATOMIC     = (SQLITE_IOERR | (30 << 8)),
     SQLITE_IOERR_ROLLBACK_ATOMIC   = (SQLITE_IOERR | (31 << 8)),
+    SQLITE_IOERR_DATA              = (SQLITE_IOERR | (32 << 8)),
     SQLITE_LOCKED_SHAREDCACHE      = (SQLITE_LOCKED |  (1 << 8)),
     SQLITE_LOCKED_VTAB             = (SQLITE_LOCKED |  (2 << 8)),
     SQLITE_BUSY_RECOVERY           = (SQLITE_BUSY   |  (1 << 8)),
     SQLITE_BUSY_SNAPSHOT           = (SQLITE_BUSY   |  (2 << 8)),
+    SQLITE_BUSY_TIMEOUT            = (SQLITE_BUSY   |  (3 << 8)),
     SQLITE_CANTOPEN_NOTEMPDIR      = (SQLITE_CANTOPEN | (1 << 8)),
     SQLITE_CANTOPEN_ISDIR          = (SQLITE_CANTOPEN | (2 << 8)),
     SQLITE_CANTOPEN_FULLPATH       = (SQLITE_CANTOPEN | (3 << 8)),
     SQLITE_CANTOPEN_CONVPATH       = (SQLITE_CANTOPEN | (4 << 8)),
     SQLITE_CANTOPEN_DIRTYWAL       = (SQLITE_CANTOPEN | (5 << 8)), /* Not Used */
+    SQLITE_CANTOPEN_SYMLINK        = (SQLITE_CANTOPEN | (6 << 8)),
     SQLITE_CORRUPT_VTAB            = (SQLITE_CORRUPT | (1 << 8)),
     SQLITE_CORRUPT_SEQUENCE        = (SQLITE_CORRUPT | (2 << 8)),
+    SQLITE_CORRUPT_INDEX           = (SQLITE_CORRUPT | (3 << 8)),
     SQLITE_READONLY_RECOVERY       = (SQLITE_READONLY | (1 << 8)),
     SQLITE_READONLY_CANTLOCK       = (SQLITE_READONLY | (2 << 8)),
     SQLITE_READONLY_ROLLBACK       = (SQLITE_READONLY | (3 << 8)),
@@ -212,11 +216,13 @@ enum
     SQLITE_CONSTRAINT_UNIQUE       = (SQLITE_CONSTRAINT | (8 << 8)),
     SQLITE_CONSTRAINT_VTAB         = (SQLITE_CONSTRAINT | (9 << 8)),
     SQLITE_CONSTRAINT_ROWID        = (SQLITE_CONSTRAINT |(10 << 8)),
+    QLITE_CONSTRAINT_PINNED        = (SQLITE_CONSTRAINT |(11 << 8)),
     SQLITE_NOTICE_RECOVER_WAL      = (SQLITE_NOTICE | (1 << 8)),
     SQLITE_NOTICE_RECOVER_ROLLBACK = (SQLITE_NOTICE | (2 << 8)),
     SQLITE_WARNING_AUTOINDEX       = (SQLITE_WARNING | (1 << 8)),
     SQLITE_AUTH_USER               = (SQLITE_AUTH | (1 << 8)),
-    SQLITE_OK_LOAD_PERMANENTLY     = (SQLITE_OK | (1 << 8))
+    SQLITE_OK_LOAD_PERMANENTLY     = (SQLITE_OK | (1 << 8)),
+    SQLITE_OK_SYMLINK              = (SQLITE_OK | (2 << 8))
 }
 
 /**
@@ -238,12 +244,18 @@ enum
     SQLITE_OPEN_MAIN_JOURNAL     = 0x00000800,  /** VFS only */
     SQLITE_OPEN_TEMP_JOURNAL     = 0x00001000,  /** VFS only */
     SQLITE_OPEN_SUBJOURNAL       = 0x00002000,  /** VFS only */
-    SQLITE_OPEN_MASTER_JOURNAL   = 0x00004000,  /** VFS only */
+    SQLITE_OPEN_SUPER_JOURNAL    = 0x00004000,  /** VFS only */
     SQLITE_OPEN_NOMUTEX          = 0x00008000,  /** Ok for sqlite3_open_v2() */
     SQLITE_OPEN_FULLMUTEX        = 0x00010000,  /** Ok for sqlite3_open_v2() */
     SQLITE_OPEN_SHAREDCACHE      = 0x00020000,  /** Ok for sqlite3_open_v2() */
     SQLITE_OPEN_PRIVATECACHE     = 0x00040000,  /** Ok for sqlite3_open_v2() */
-    SQLITE_OPEN_WAL              = 0x00080000  /** VFS only */
+    SQLITE_OPEN_WAL              = 0x00080000,  /** VFS only */
+    SQLITE_OPEN_NOFOLLOW         = 0x01000000   /** Ok for sqlite3_open_v2() */
+}
+
+deprecated ("Legacy compatibility")
+{
+    alias SQLITE_OPEN_MASTER_JOURNAL = SQLITE_OPEN_SUPER_JOURNAL;       /** VFS only */
 }
 
 /**
@@ -367,7 +379,10 @@ enum
     SQLITE_FCNTL_ROLLBACK_ATOMIC_WRITE   = 33,
     SQLITE_FCNTL_LOCK_TIMEOUT            = 34,
     SQLITE_FCNTL_DATA_VERSION            = 35,
-    SQLITE_FCNTL_SIZE_LIMIT              = 36
+    SQLITE_FCNTL_SIZE_LIMIT              = 36,
+    SQLITE_FCNTL_CKPT_DONE               = 37,
+    SQLITE_FCNTL_RESERVE_BYTES           = 38,
+    SQLITE_FCNTL_CKPT_START              = 39
 }
 
 deprecated ("deprecated names")
@@ -556,7 +571,9 @@ enum
     SQLITE_DBCONFIG_DQS_DML                = 1013,  /** int int* */
     SQLITE_DBCONFIG_DQS_DDL                = 1014,  /** int int* */
     SQLITE_DBCONFIG_ENABLE_VIEW            = 1015,  /** int int* */
-    SQLITE_DBCONFIG_MAX                    = 1015   /** Largest DBCONFIG */
+    SQLITE_DBCONFIG_LEGACY_FILE_FORMAT     = 1016,  /** int int* */
+    SQLITE_DBCONFIG_TRUSTED_SCHEMA         = 1017,  /** int int* */
+    SQLITE_DBCONFIG_MAX                    = 1017   /** Largest DBCONFIG */
 }
 
 
@@ -776,6 +793,35 @@ const(char)* sqlite3_uri_parameter(const(char)* zFilename, const(char)* zParam);
 int sqlite3_uri_boolean(const(char)* zFile, const(char)* zParam, int bDefault);
 /// Ditto
 sqlite3_int64 sqlite3_uri_int64(const char*, const char*, sqlite3_int64);
+/// Ditto
+const(char)* sqlite3_uri_key(const(char)* zFilename, int N);
+
+/*
+* CAPI3REF: Translate filenames
+*/
+const(char)* sqlite3_filename_database(const(char)*);
+/// Ditto
+const(char)* sqlite3_filename_journal(const(char)*);
+/// Ditto
+const(char)* sqlite3_filename_wal(const(char)*);
+
+/*
+* CAPI3REF: Database File Corresponding To A Journal
+*/
+sqlite3_file* sqlite3_database_file_object(const(char)*);
+
+/*
+* CAPI3REF: Create and Destroy VFS Filenames
+*/
+char* sqlite3_create_filename(
+    const(char)* zDatabase,
+    const(char)* zJournal,
+    const(char)* zWal,
+    int nParam,
+    const(char*)* azParam
+);
+/// Ditto
+void sqlite3_free_filename(char*);
 
 /**
 * CAPI3REF: Error Codes And Messages
@@ -1124,6 +1170,7 @@ enum
 enum SQLITE_DETERMINISTIC = 0x000000800;
 enum SQLITE_DIRECTONLY    = 0x000080000;
 enum SQLITE_SUBTYPE       = 0x000100000;
+enum SQLITE_INNOCUOUS     = 0x000200000;
 
 /**
 * CAPI3REF: Deprecated Functions
@@ -1300,44 +1347,6 @@ int sqlite3_collation_needed16(
     void function (void*,sqlite3*,int eTextRep,const void*)
 );
 
-///
-int sqlite3_key(
-    sqlite3 *db,                   /** Database to be rekeyed */
-    const(void)*pKey, int nKey     /** The key */
-);
-/// Ditto
-int sqlite3_key_v2(
-    sqlite3 *db,                   /* Database to be rekeyed */
-    const(char)* zDbName,           /* Name of the database */
-    const(void)* pKey, int nKey     /* The key */
-);
-
-/**
-* Change the key on an open database.  If the current database is not
-* encrypted, this routine will encrypt it.  If pNew == 0 or nNew == 0, the
-* database is decrypted.
-*
-* The code to implement this API is not available in the public release
-* of SQLite.
-*/
-int sqlite3_rekey(
-    sqlite3 *db,                   /** Database to be rekeyed */
-    const(void)*pKey, int nKey     /** The new key */
-);
-int sqlite3_rekey_v2(
-    sqlite3 *db,                   /* Database to be rekeyed */
-    const(char)* zDbName,           /* Name of the database */
-    const(void)* pKey, int nKey     /* The new key */
-);
-
-/**
-* Specify the activation key for a SEE database.  Unless
-* activated, none of the SEE routines will work.
-*/
-void sqlite3_activate_see(
-    const(char)*zPassPhrase        /** Activation phrase */
-);
-
 /**
 * Specify the activation key for a CEROD database.  Unless
 * activated, none of the CEROD routines will work.
@@ -1448,6 +1457,7 @@ int sqlite3_db_release_memory(sqlite3*);
 * CAPI3REF: Impose A Limit On Heap Size
 */
 sqlite3_int64 sqlite3_soft_heap_limit64(sqlite3_int64 N);
+sqlite3_int64 sqlite3_hard_heap_limit64(sqlite3_int64 N);
 
 /**
 * CAPI3REF: Deprecated Soft Heap Limit Interface
@@ -1783,7 +1793,7 @@ enum
 {
     SQLITE_MUTEX_FAST             = 0,
     SQLITE_MUTEX_RECURSIVE        = 1,
-    SQLITE_MUTEX_STATIC_MASTER    = 2,
+    SQLITE_MUTEX_STATIC_MAIN      = 2,
     SQLITE_MUTEX_STATIC_MEM       = 3,  /** sqlite3_malloc() */
     SQLITE_MUTEX_STATIC_MEM2      = 4,  /** NOT USED */
     SQLITE_MUTEX_STATIC_OPEN      = 4,  /** sqlite3BtreeOpen() */
@@ -1797,6 +1807,11 @@ enum
     SQLITE_MUTEX_STATIC_VFS1      = 11, /** For use by built-in VFS */
     SQLITE_MUTEX_STATIC_VFS2      = 12, /** For use by extension VFS */
     SQLITE_MUTEX_STATIC_VFS3      = 13, /** For use by application VFS */
+}
+
+deprecated ("Legacy compatibility")
+{
+    alias SQLITE_MUTEX_STATIC_MASTER = SQLITE_MUTEX_STATIC_MAIN;
 }
 
 /**
@@ -1829,7 +1844,7 @@ enum
     SQLITE_TESTCTRL_PENDING_BYTE            = 11,
     SQLITE_TESTCTRL_ASSERT                  = 12,
     SQLITE_TESTCTRL_ALWAYS                  = 13,
-    SQLITE_TESTCTRL_RESERVE                 = 14,
+    SQLITE_TESTCTRL_RESERVE                 = 14,  /** NOT USED */
     SQLITE_TESTCTRL_OPTIMIZATIONS           = 15,
     SQLITE_TESTCTRL_ISKEYWORD               = 16,  /** NOT USED */
     SQLITE_TESTCTRL_SCRATCHMALLOC           = 17,  /** NOT USED */
@@ -2119,6 +2134,8 @@ int sqlite3_vtab_config(sqlite3*, int op, ...);
 * CAPI3REF: Virtual Table Configuration Options
 */
 enum SQLITE_VTAB_CONSTRAINT_SUPPORT = 1;
+enum SQLITE_VTAB_INNOCUOUS          = 2;
+enum SQLITE_VTAB_DIRECTONLY         = 3;
 
 /*
 * 2010 August 30
