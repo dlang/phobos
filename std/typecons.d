@@ -2870,6 +2870,27 @@ struct Nullable(T)
         assert(!ni.isNull);
     }
 
+    /**
+     * Check if `this` is not in the null state.
+     *
+     * Returns:
+     *     true $(B iff) `this` is not in the null state, otherwise false.
+     */
+    @property bool isNotNull() const @safe pure nothrow
+    {
+        return !_isNull;
+    }
+
+    ///
+    @safe unittest
+    {
+        Nullable!int ni;
+        assert(!ni.isNotNull);
+
+        ni = 0;
+        assert(ni.isNotNull);
+    }
+
     // https://issues.dlang.org/show_bug.cgi?id=14940
     @safe unittest
     {
