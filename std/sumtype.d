@@ -34,7 +34,6 @@ version (D_BetterC) {} else
     Temperature t3 = Kelvin(273);
 
     // Use pattern matching to access the value.
-    pure @safe @nogc nothrow
     Fahrenheit toFahrenheit(Temperature t)
     {
         return Fahrenheit(
@@ -51,7 +50,6 @@ version (D_BetterC) {} else
     assert(toFahrenheit(t3).degrees.isClose(32));
 
     // Use ref to modify the value in place.
-    pure @safe @nogc nothrow
     void freeze(ref Temperature t)
     {
         t.match!(
@@ -65,7 +63,6 @@ version (D_BetterC) {} else
     assert(toFahrenheit(t1).degrees.isClose(32));
 
     // Use a catch-all handler to give a default result.
-    pure @safe @nogc nothrow
     bool isFahrenheit(Temperature t)
     {
         return t.match!(
@@ -96,7 +93,6 @@ version (D_BetterC) {} else
     struct Polar { double r, theta; }
     alias Vector = SumType!(Rectangular, Polar);
 
-    pure @safe @nogc nothrow
     double length(Vector v)
     {
         return v.match!(
@@ -105,7 +101,6 @@ version (D_BetterC) {} else
         );
     }
 
-    pure @safe @nogc nothrow
     double horiz(Vector v)
     {
         return v.match!(
@@ -131,7 +126,7 @@ version (D_BetterC) {} else
  * representing simple arithmetic expressions.
  */
 version (D_BetterC) {} else
-@safe unittest
+@system unittest
 {
     import std.functional : partial;
     import std.traits : EnumMembers;
@@ -160,21 +155,18 @@ version (D_BetterC) {} else
     alias BinOp = Expr.Types[2];
 
     // Factory function for number expressions
-    pure @safe
     Expr* num(double value)
     {
         return new Expr(value);
     }
 
     // Factory function for variable expressions
-    pure @safe
     Expr* var(string name)
     {
         return new Expr(name);
     }
 
     // Factory function for binary operation expressions
-    pure @safe
     Expr* binOp(Op op, Expr* lhs, Expr* rhs)
     {
         return new Expr(BinOp(op, lhs, rhs));
@@ -187,7 +179,6 @@ version (D_BetterC) {} else
     alias quot = partial!(binOp, Op.Div);
 
     // Evaluate expr, looking up variables in env
-    pure @safe nothrow
     double eval(Expr expr, double[string] env)
     {
         return expr.match!(
@@ -210,7 +201,6 @@ version (D_BetterC) {} else
     }
 
     // Return a "pretty-printed" representation of expr
-    @safe
     string pprint(Expr expr)
     {
         import std.format;
