@@ -4537,7 +4537,7 @@ private struct BitsSet(T)
         _index = startIndex + trailingZerosCount;
     }
 
-    @property size_t front()
+    @property size_t front() const
     {
         return _index;
     }
@@ -4562,12 +4562,12 @@ private struct BitsSet(T)
         _index += trailingZerosCount + 1;
     }
 
-    @property auto save()
+    @property BitsSet save() const
     {
         return this;
     }
 
-    @property size_t length()
+    @property size_t length() const
     {
         return countBitsSet(_value);
     }
