@@ -2443,7 +2443,9 @@ public:
         {
             import std.algorithm.iteration : filter;
             import std.algorithm.mutation : copy;
-            tzdataIndex(tzDatabaseDir).byKey.filter!(a => a.startsWith(subName)).copy(timezones);
+
+            const index = () @trusted { return tzdataIndex(tzDatabaseDir); }();
+            index.byKey.filter!(a => a.startsWith(subName)).copy(timezones);
         }
         else
         {
