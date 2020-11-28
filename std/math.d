@@ -121,12 +121,6 @@ $(TR $(TDNW Hardware Control) $(TD
  */
 module std.math;
 
-version (Win64)
-{
-    version (D_InlineAsm_X86_64)
-        version = Win64_DMD_InlineAsm;
-}
-
 static import core.math;
 static import core.stdc.math;
 static import core.stdc.fenv;
@@ -159,19 +153,14 @@ version (SystemZ)   version = IBMZ_Any;
 version (RISCV32)   version = RISCV_Any;
 version (RISCV64)   version = RISCV_Any;
 
-version (D_InlineAsm_X86)
-{
-    version = InlineAsm_X86_Any;
-}
-else version (D_InlineAsm_X86_64)
-{
-    version = InlineAsm_X86_Any;
-}
+version (D_InlineAsm_X86)    version = InlineAsm_X86_Any;
+version (D_InlineAsm_X86_64) version = InlineAsm_X86_Any;
 
-version (CRuntime_Microsoft)
+version (InlineAsm_X86_Any) version = InlineAsm_X87;
+version (InlineAsm_X87)
 {
-    version (InlineAsm_X86_Any)
-        version = MSVC_InlineAsm;
+    static assert(real.mant_dig == 64);
+    version (CRuntime_Microsoft) version = InlineAsm_X87_MSVC;
 }
 
 version (X86_64) version = StaticallyHaveSSE;
@@ -455,9 +444,10 @@ float sin(float x) @safe pure nothrow @nogc { return core.math.sin(x); }
  *      $(TR $(TD $(PLUSMNINF))  $(TD $(NAN))       $(TD yes))
  *      )
  */
+pragma(inline, true)
 real tan(real x) @safe pure nothrow @nogc
 {
-    version (InlineAsm_X86_Any)
+    version (InlineAsm_X87)
     {
         if (!__ctfe)
             return tanAsm(x);
@@ -466,9 +456,11 @@ real tan(real x) @safe pure nothrow @nogc
 }
 
 /// ditto
+pragma(inline, true)
 double tan(double x) @safe pure nothrow @nogc { return __ctfe ? cast(double) tan(cast(real) x) : tanImpl(x); }
 
 /// ditto
+pragma(inline, true)
 float tan(float x) @safe pure nothrow @nogc { return __ctfe ? cast(float) tan(cast(real) x) : tanImpl(x); }
 
 ///
@@ -479,10 +471,10 @@ float tan(float x) @safe pure nothrow @nogc { return __ctfe ? cast(float) tan(ca
     assert(tan(PI / 3).approxEqual(sqrt(3.0)));
 }
 
-version (InlineAsm_X86_Any)
+version (InlineAsm_X87)
 private real tanAsm(real x) @trusted pure nothrow @nogc
 {
-    version (D_InlineAsm_X86)
+    version (X86)
     {
     asm pure nothrow @nogc
     {
@@ -519,7 +511,7 @@ Clear1: asm pure nothrow @nogc{
 
 Lret: {}
     }
-    else version (D_InlineAsm_X86_64)
+    else version (X86_64)
     {
         version (Win64)
         {
@@ -856,9 +848,10 @@ float asin(float x) @safe pure nothrow @nogc  { return asin(cast(real) x); }
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(NAN))       $(TD yes))
  *  )
  */
+pragma(inline, true)
 real atan(real x) @safe pure nothrow @nogc
 {
-    version (InlineAsm_X86_Any)
+    version (InlineAsm_X87)
     {
         if (!__ctfe)
             return atan2Asm(x, 1.0L);
@@ -867,9 +860,11 @@ real atan(real x) @safe pure nothrow @nogc
 }
 
 /// ditto
+pragma(inline, true)
 double atan(double x) @safe pure nothrow @nogc { return __ctfe ? cast(double) atan(cast(real) x) : atanImpl(x); }
 
 /// ditto
+pragma(inline, true)
 float atan(float x) @safe pure nothrow @nogc { return __ctfe ? cast(float) atan(cast(real) x) : atanImpl(x); }
 
 ///
@@ -1106,9 +1101,10 @@ private T atanImpl(T)(T x) @safe pure nothrow @nogc
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD -$(INFIN))    $(TD $(PLUSMN)3$(PI)/4))
  *      )
  */
+pragma(inline, true)
 real atan2(real y, real x) @trusted pure nothrow @nogc // TODO: @safe
 {
-    version (InlineAsm_X86_Any)
+    version (InlineAsm_X87)
     {
         if (!__ctfe)
             return atan2Asm(y, x);
@@ -1117,12 +1113,14 @@ real atan2(real y, real x) @trusted pure nothrow @nogc // TODO: @safe
 }
 
 /// ditto
+pragma(inline, true)
 double atan2(double y, double x) @safe pure nothrow @nogc
 {
     return __ctfe ? cast(double) atan2(cast(real) y, cast(real) x) : atan2Impl(y, x);
 }
 
 /// ditto
+pragma(inline, true)
 float atan2(float y, float x) @safe pure nothrow @nogc
 {
     return __ctfe ? cast(float) atan2(cast(real) y, cast(real) x) : atan2Impl(y, x);
@@ -1134,7 +1132,7 @@ float atan2(float y, float x) @safe pure nothrow @nogc
     assert(atan2(1.0, sqrt(3.0)).approxEqual(PI / 6));
 }
 
-version (InlineAsm_X86_Any)
+version (InlineAsm_X87)
 private real atan2Asm(real y, real x) @trusted pure nothrow @nogc
 {
     version (Win64)
@@ -1637,17 +1635,10 @@ real sqrt(real x) @nogc @safe pure nothrow { return core.math.sqrt(x); }
  *    $(TR $(TD $(NAN))        $(TD $(NAN))    )
  *  )
  */
+pragma(inline, true)
 real exp(real x) @trusted pure nothrow @nogc // TODO: @safe
 {
-    version (D_InlineAsm_X86)
-    {
-        //  e^^x = 2^^(LOG2E*x)
-        // (This is valid because the overflow & underflow limits for exp
-        // and exp2 are so similar).
-        if (!__ctfe)
-            return exp2Asm(LOG2E*x);
-    }
-    else version (D_InlineAsm_X86_64)
+    version (InlineAsm_X87)
     {
         //  e^^x = 2^^(LOG2E*x)
         // (This is valid because the overflow & underflow limits for exp
@@ -1659,9 +1650,11 @@ real exp(real x) @trusted pure nothrow @nogc // TODO: @safe
 }
 
 /// ditto
+pragma(inline, true)
 double exp(double x) @safe pure nothrow @nogc { return __ctfe ? cast(double) exp(cast(real) x) : expImpl(x); }
 
 /// ditto
+pragma(inline, true)
 float exp(float x) @safe pure nothrow @nogc { return __ctfe ? cast(float) exp(cast(real) x) : expImpl(x); }
 
 ///
@@ -1966,9 +1959,10 @@ private T expImpl(T)(T x) @safe pure nothrow @nogc
  *    $(TR $(TD $(NAN))        $(TD $(NAN))       )
  *  )
  */
+pragma(inline, true)
 real expm1(real x) @trusted pure nothrow @nogc // TODO: @safe
 {
-    version (InlineAsm_X86_Any)
+    version (InlineAsm_X87)
     {
         if (!__ctfe)
             return expm1Asm(x);
@@ -1977,12 +1971,14 @@ real expm1(real x) @trusted pure nothrow @nogc // TODO: @safe
 }
 
 /// ditto
+pragma(inline, true)
 double expm1(double x) @safe pure nothrow @nogc
 {
     return __ctfe ? cast(double) expm1(cast(real) x) : expm1Impl(x);
 }
 
 /// ditto
+pragma(inline, true)
 float expm1(float x) @safe pure nothrow @nogc
 {
     // no single-precision version in Cephes => use double precision
@@ -1997,10 +1993,10 @@ float expm1(float x) @safe pure nothrow @nogc
     assert(expm1(2.0).feqrel(6.3890) > 16);
 }
 
-version (InlineAsm_X86_Any)
+version (InlineAsm_X87)
 private real expm1Asm(real x) @trusted pure nothrow @nogc
 {
-    version (D_InlineAsm_X86)
+    version (X86)
     {
         enum PARAMSIZE = (real.sizeof+3)&(0xFFFF_FFFC); // always a multiple of 4
         asm pure nothrow @nogc
@@ -2072,7 +2068,7 @@ L_largenegative:
             ret PARAMSIZE;
         }
     }
-    else version (D_InlineAsm_X86_64)
+    else version (X86_64)
     {
         asm pure nothrow @nogc
         {
@@ -2315,9 +2311,10 @@ private T expm1Impl(T)(T x) @safe pure nothrow @nogc
  *    $(TR $(TD $(NAN))        $(TD $(NAN))    )
  *  )
  */
+pragma(inline, true)
 real exp2(real x) @nogc @trusted pure nothrow // TODO: @safe
 {
-    version (InlineAsm_X86_Any)
+    version (InlineAsm_X87)
     {
         if (!__ctfe)
             return exp2Asm(x);
@@ -2326,9 +2323,11 @@ real exp2(real x) @nogc @trusted pure nothrow // TODO: @safe
 }
 
 /// ditto
+pragma(inline, true)
 double exp2(double x) @nogc @safe pure nothrow { return __ctfe ? cast(double) exp2(cast(real) x) : exp2Impl(x); }
 
 /// ditto
+pragma(inline, true)
 float exp2(float x) @nogc @safe pure nothrow { return __ctfe ? cast(float) exp2(cast(real) x) : exp2Impl(x); }
 
 ///
@@ -2349,10 +2348,10 @@ float exp2(float x) @nogc @safe pure nothrow { return __ctfe ? cast(float) exp2(
     }
 }
 
-version (InlineAsm_X86_Any)
+version (InlineAsm_X87)
 private real exp2Asm(real x) @nogc @trusted pure nothrow
 {
-    version (D_InlineAsm_X86)
+    version (X86)
     {
         enum PARAMSIZE = (real.sizeof+3)&(0xFFFF_FFFC); // always a multiple of 4
 
@@ -2438,7 +2437,7 @@ L_was_nan:
             ret PARAMSIZE;
         }
     }
-    else version (D_InlineAsm_X86_64)
+    else version (X86_64)
     {
         asm pure nothrow @nogc
         {
@@ -3925,24 +3924,27 @@ real log2(real x) @safe pure nothrow @nogc
  */
 real logb(real x) @trusted nothrow @nogc
 {
-    version (Win64_DMD_InlineAsm)
+    version (InlineAsm_X87_MSVC)
     {
-        asm pure nothrow @nogc
+        version (X86_64)
         {
-            naked                       ;
-            fld     real ptr [RCX]      ;
-            fxtract                     ;
-            fstp    ST(0)               ;
-            ret                         ;
+            asm pure nothrow @nogc
+            {
+                naked                       ;
+                fld     real ptr [RCX]      ;
+                fxtract                     ;
+                fstp    ST(0)               ;
+                ret                         ;
+            }
         }
-    }
-    else version (MSVC_InlineAsm)
-    {
-        asm pure nothrow @nogc
+        else
         {
-            fld     x                   ;
-            fxtract                     ;
-            fstp    ST(0)               ;
+            asm pure nothrow @nogc
+            {
+                fld     x                   ;
+                fxtract                     ;
+                fstp    ST(0)               ;
+            }
         }
     }
     else
@@ -4037,12 +4039,15 @@ real modf(real x, ref real i) @trusted nothrow @nogc
  *      $(TR $(TD $(PLUSMN)0.0)      $(TD $(PLUSMN)0.0) )
  *      )
  */
+pragma(inline, true)
 real scalbn(real x, int n) @safe pure nothrow @nogc { return _scalbn(x,n); }
 
 /// ditto
+pragma(inline, true)
 double scalbn(double x, int n) @safe pure nothrow @nogc { return _scalbn(x,n); }
 
 /// ditto
+pragma(inline, true)
 float scalbn(float x, int n) @safe pure nothrow @nogc { return _scalbn(x,n); }
 
 ///
@@ -4282,41 +4287,44 @@ real hypot(real x, real y) @safe pure nothrow @nogc
  */
 real ceil(real x) @trusted pure nothrow @nogc
 {
-    version (Win64_DMD_InlineAsm)
+    version (InlineAsm_X87_MSVC)
     {
-        asm pure nothrow @nogc
+        version (X86_64)
         {
-            naked                       ;
-            fld     real ptr [RCX]      ;
-            fstcw   8[RSP]              ;
-            mov     AL,9[RSP]           ;
-            mov     DL,AL               ;
-            and     AL,0xC3             ;
-            or      AL,0x08             ; // round to +infinity
-            mov     9[RSP],AL           ;
-            fldcw   8[RSP]              ;
-            frndint                     ;
-            mov     9[RSP],DL           ;
-            fldcw   8[RSP]              ;
-            ret                         ;
+            asm pure nothrow @nogc
+            {
+                naked                       ;
+                fld     real ptr [RCX]      ;
+                fstcw   8[RSP]              ;
+                mov     AL,9[RSP]           ;
+                mov     DL,AL               ;
+                and     AL,0xC3             ;
+                or      AL,0x08             ; // round to +infinity
+                mov     9[RSP],AL           ;
+                fldcw   8[RSP]              ;
+                frndint                     ;
+                mov     9[RSP],DL           ;
+                fldcw   8[RSP]              ;
+                ret                         ;
+            }
         }
-    }
-    else version (MSVC_InlineAsm)
-    {
-        short cw;
-        asm pure nothrow @nogc
+        else
         {
-            fld     x                   ;
-            fstcw   cw                  ;
-            mov     AL,byte ptr cw+1    ;
-            mov     DL,AL               ;
-            and     AL,0xC3             ;
-            or      AL,0x08             ; // round to +infinity
-            mov     byte ptr cw+1,AL    ;
-            fldcw   cw                  ;
-            frndint                     ;
-            mov     byte ptr cw+1,DL    ;
-            fldcw   cw                  ;
+            short cw;
+            asm pure nothrow @nogc
+            {
+                fld     x                   ;
+                fstcw   cw                  ;
+                mov     AL,byte ptr cw+1    ;
+                mov     DL,AL               ;
+                and     AL,0xC3             ;
+                or      AL,0x08             ; // round to +infinity
+                mov     byte ptr cw+1,AL    ;
+                fldcw   cw                  ;
+                frndint                     ;
+                mov     byte ptr cw+1,DL    ;
+                fldcw   cw                  ;
+            }
         }
     }
     else
@@ -4410,41 +4418,44 @@ float ceil(float x) @trusted pure nothrow @nogc
  */
 real floor(real x) @trusted pure nothrow @nogc
 {
-    version (Win64_DMD_InlineAsm)
+    version (InlineAsm_X87_MSVC)
     {
-        asm pure nothrow @nogc
+        version (X86_64)
         {
-            naked                       ;
-            fld     real ptr [RCX]      ;
-            fstcw   8[RSP]              ;
-            mov     AL,9[RSP]           ;
-            mov     DL,AL               ;
-            and     AL,0xC3             ;
-            or      AL,0x04             ; // round to -infinity
-            mov     9[RSP],AL           ;
-            fldcw   8[RSP]              ;
-            frndint                     ;
-            mov     9[RSP],DL           ;
-            fldcw   8[RSP]              ;
-            ret                         ;
+            asm pure nothrow @nogc
+            {
+                naked                       ;
+                fld     real ptr [RCX]      ;
+                fstcw   8[RSP]              ;
+                mov     AL,9[RSP]           ;
+                mov     DL,AL               ;
+                and     AL,0xC3             ;
+                or      AL,0x04             ; // round to -infinity
+                mov     9[RSP],AL           ;
+                fldcw   8[RSP]              ;
+                frndint                     ;
+                mov     9[RSP],DL           ;
+                fldcw   8[RSP]              ;
+                ret                         ;
+            }
         }
-    }
-    else version (MSVC_InlineAsm)
-    {
-        short cw;
-        asm pure nothrow @nogc
+        else
         {
-            fld     x                   ;
-            fstcw   cw                  ;
-            mov     AL,byte ptr cw+1    ;
-            mov     DL,AL               ;
-            and     AL,0xC3             ;
-            or      AL,0x04             ; // round to -infinity
-            mov     byte ptr cw+1,AL    ;
-            fldcw   cw                  ;
-            frndint                     ;
-            mov     byte ptr cw+1,DL    ;
-            fldcw   cw                  ;
+            short cw;
+            asm pure nothrow @nogc
+            {
+                fld     x                   ;
+                fstcw   cw                  ;
+                mov     AL,byte ptr cw+1    ;
+                mov     DL,AL               ;
+                and     AL,0xC3             ;
+                or      AL,0x04             ; // round to -infinity
+                mov     byte ptr cw+1,AL    ;
+                fldcw   cw                  ;
+                frndint                     ;
+                mov     byte ptr cw+1,DL    ;
+                fldcw   cw                  ;
+            }
         }
     }
     else
@@ -4624,6 +4635,7 @@ if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F)
  * Unlike the rint functions, nearbyint does not raise the
  * FE_INEXACT exception.
  */
+pragma(inline, true)
 real nearbyint(real x) @safe pure nothrow @nogc
 {
     return core.stdc.math.nearbyintl(x);
@@ -4704,7 +4716,7 @@ float rint(float x) @safe pure nothrow @nogc
  */
 long lrint(real x) @trusted pure nothrow @nogc
 {
-    version (InlineAsm_X86_Any)
+    version (InlineAsm_X87)
     {
         version (Win64)
         {
@@ -4979,41 +4991,44 @@ long lround(real x) @trusted nothrow @nogc
  */
 real trunc(real x) @trusted nothrow @nogc pure
 {
-    version (Win64_DMD_InlineAsm)
+    version (InlineAsm_X87_MSVC)
     {
-        asm pure nothrow @nogc
+        version (X86_64)
         {
-            naked                       ;
-            fld     real ptr [RCX]      ;
-            fstcw   8[RSP]              ;
-            mov     AL,9[RSP]           ;
-            mov     DL,AL               ;
-            and     AL,0xC3             ;
-            or      AL,0x0C             ; // round to 0
-            mov     9[RSP],AL           ;
-            fldcw   8[RSP]              ;
-            frndint                     ;
-            mov     9[RSP],DL           ;
-            fldcw   8[RSP]              ;
-            ret                         ;
+            asm pure nothrow @nogc
+            {
+                naked                       ;
+                fld     real ptr [RCX]      ;
+                fstcw   8[RSP]              ;
+                mov     AL,9[RSP]           ;
+                mov     DL,AL               ;
+                and     AL,0xC3             ;
+                or      AL,0x0C             ; // round to 0
+                mov     9[RSP],AL           ;
+                fldcw   8[RSP]              ;
+                frndint                     ;
+                mov     9[RSP],DL           ;
+                fldcw   8[RSP]              ;
+                ret                         ;
+            }
         }
-    }
-    else version (MSVC_InlineAsm)
-    {
-        short cw;
-        asm pure nothrow @nogc
+        else
         {
-            fld     x                   ;
-            fstcw   cw                  ;
-            mov     AL,byte ptr cw+1    ;
-            mov     DL,AL               ;
-            and     AL,0xC3             ;
-            or      AL,0x0C             ; // round to 0
-            mov     byte ptr cw+1,AL    ;
-            fldcw   cw                  ;
-            frndint                     ;
-            mov     byte ptr cw+1,DL    ;
-            fldcw   cw                  ;
+            short cw;
+            asm pure nothrow @nogc
+            {
+                fld     x                   ;
+                fstcw   cw                  ;
+                mov     AL,byte ptr cw+1    ;
+                mov     DL,AL               ;
+                and     AL,0xC3             ;
+                or      AL,0x0C             ; // round to 0
+                mov     byte ptr cw+1,AL    ;
+                fldcw   cw                  ;
+                frndint                     ;
+                mov     byte ptr cw+1,DL    ;
+                fldcw   cw                  ;
+            }
         }
     }
     else
@@ -5137,7 +5152,7 @@ private:
 
     static uint getIeeeFlags() @trusted pure
     {
-        version (InlineAsm_X86_Any)
+        version (InlineAsm_X87)
         {
             ushort sw;
             asm pure nothrow @nogc { fstsw sw; }
@@ -5181,7 +5196,7 @@ private:
 
     static void resetIeeeFlags() @trusted
     {
-        version (InlineAsm_X86_Any)
+        version (InlineAsm_X87)
         {
             asm nothrow @nogc
             {
@@ -5787,8 +5802,7 @@ private:
             }
             return cont;
         }
-        else
-        version (D_InlineAsm_X86_64)
+        else version (D_InlineAsm_X86_64)
         {
             short cont;
             asm pure nothrow @nogc
@@ -7360,6 +7374,7 @@ if (__traits(isFloating, F))
  *
  * BUGS: Not currently implemented - rounds twice.
  */
+pragma(inline, true)
 real fma(real x, real y, real z) @safe pure nothrow @nogc { return (x * y) + z; }
 
 ///
