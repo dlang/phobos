@@ -3577,7 +3577,7 @@ Note:
     ---
 
     If you want to get NaN as a result if a NaN is present in the range,
-    you can use $(REF fold, std.algorithm,iteration) and $(REF isNaN, std,math):
+    you can use $(REF fold, std,algorithm,iteration) and $(REF isNaN, std,math):
 
     ---
     <range>.fold!((a,b)=>a.isNaN || b.isNaN ? real.nan : a < b ? a : b);
