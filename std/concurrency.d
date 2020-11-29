@@ -387,17 +387,17 @@ public:
      * that a Tid executed in the future will have the same toString() output
      * as another Tid that has already terminated.
      */
-    void toString(scope void delegate(const(char)[]) sink) const
+    void toString(W)(ref W w) const
     {
-        import std.format.write : formattedWrite;
-        formattedWrite(sink, "Tid(%x)", cast(void*) mbox);
+        import std.format : formattedWrite;
+        auto p = () @trusted { return cast(void*) mbox; }();
+        formattedWrite(w, "Tid(%x)", p);
     }
 
 }
 
-@system unittest
+@safe unittest
 {
-    // text!Tid is @system
     import std.conv : text;
     Tid tid;
     assert(text(tid) == "Tid(0)");
