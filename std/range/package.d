@@ -4718,7 +4718,7 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
             static foreach (i, Range; Ranges)
                 static if (hasLength!Range)
                 {
-                    static if (!anySatisfy!(hasLength, Ranges[0 .. i]))
+                    static if (!is(typeof(minLen) == size_t))
                         size_t minLen = ranges[i].length;
                     else
                     {{
@@ -5077,29 +5077,20 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
     {
         @property size_t length()
         {
-            static if (allKnownSameLength)
-            {
-                static foreach (i, Range; Ranges)
+           static foreach (i, Range; Ranges)
+           {
+                static if (hasLength!Range)
                 {
-                    static if (hasLength!Range && !anySatisfy!(hasLength, Ranges[0 .. i]))
-                        return ranges[i].length;
+                    static if (!is(typeof(minLen) == size_t))
+                        size_t minLen = ranges[i].length;
+                    else static if (!allKnownSameLength)
+                    {{
+                        const x = ranges[i].length;
+                        if (x < minLen) minLen = x;
+                    }}
                 }
             }
-            else
-            {
-                static foreach (i, Range; Ranges)
-                    static if (hasLength!Range)
-                    {
-                        static if (!anySatisfy!(hasLength, Ranges[0 .. i]))
-                            size_t minLen = ranges[i].length;
-                        else
-                        {{
-                            const x = ranges[i].length;
-                            if (x < minLen) minLen = x;
-                        }}
-                    }
-                return minLen;
-            }
+            return minLen;
         }
 
         alias opDollar = length;
