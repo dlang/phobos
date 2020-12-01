@@ -256,6 +256,8 @@ static if (__traits(compiles, core.sys.posix.stdio.getdelim))
 {
     extern(C) nothrow @nogc
     {
+        // @@@DEPRECATED_2.104@@@
+        deprecated("To be removed after 2.104. Use core.sys.posix.stdio.getline instead.")
         ptrdiff_t getdelim(char**, size_t*, int, FILE*);
 
         // @@@DEPRECATED_2.104@@@
@@ -5497,7 +5499,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
             }
         }
 
-        auto s = getdelim(&lineptr, &n, terminator, fps);
+        auto s = core.sys.posix.stdio.getdelim(&lineptr, &n, terminator, fps);
         if (s < 0)
         {
             if (ferror(fps))

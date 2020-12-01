@@ -1,5 +1,5 @@
-Deprecate `std.stdio.getline`
+Deprecate `std.stdio.getdelim` and `std.stdio.getline`
 
-The publicly available `extern(C)` binding for `getline` in `std.stdio` has
-been deprecated. Any code that still needs it can import the symbol from
-`core.sys.posix.stdio` in druntime instead.
+The publicly available `extern(C)` bindings for `getdelim` and `getline` in
+`std.stdio` have been deprecated. Any code that still needs it can import the
+symbol from `core.sys.posix.stdio` in druntime instead.
