@@ -128,7 +128,7 @@ private:
     {
         
         for (size_t i; i < 25; ++i)
-            st64[i] = sit.bitop.bswap(st64[i]);
+            st64[i] = core.bitop.bswap(st64[i]);
     }
 
     void transform()
