@@ -264,7 +264,10 @@ else
 version (HAS_GETDELIM) extern(C) nothrow @nogc
 {
     ptrdiff_t getdelim(char**, size_t*, int, FILE*);
+
+    // @@@DEPRECATED_2.104@@@
     // getline() always comes together with getdelim()
+    deprecated("To be removed after 2.104. Use core.sys.posix.stdio.getline instead.")
     ptrdiff_t getline(char**, size_t*, FILE*);
 }
 
