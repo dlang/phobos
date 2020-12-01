@@ -37,69 +37,55 @@ else version (CRuntime_DigitalMars)
     // Specific to the way Digital Mars C does stdio
     version = DIGITAL_MARS_STDIO;
 }
-
-version (CRuntime_Glibc)
+else version (CRuntime_Glibc)
 {
     // Specific to the way Gnu C does stdio
     version = GCC_IO;
-    version = HAS_GETDELIM;
 }
 else version (CRuntime_Bionic)
 {
     version = GENERIC_IO;
-    version = HAS_GETDELIM;
 }
 else version (CRuntime_Musl)
 {
     version = GENERIC_IO;
-    version = HAS_GETDELIM;
 }
 else version (CRuntime_UClibc)
 {
     // uClibc supports GCC IO
     version = GCC_IO;
-    version = HAS_GETDELIM;
 }
-
-version (OSX)
+else version (OSX)
 {
     version = GENERIC_IO;
-    version = HAS_GETDELIM;
 }
 else version (iOS)
 {
     version = GENERIC_IO;
-    version = HAS_GETDELIM;
 }
 else version (TVOS)
 {
     version = GENERIC_IO;
-    version = HAS_GETDELIM;
 }
 else version (WatchOS)
 {
     version = GENERIC_IO;
-    version = HAS_GETDELIM;
 }
 else version (FreeBSD)
 {
     version = GENERIC_IO;
-    version = HAS_GETDELIM;
 }
 else version (NetBSD)
 {
     version = GENERIC_IO;
-    version = HAS_GETDELIM;
 }
 else version (DragonFlyBSD)
 {
     version = GENERIC_IO;
-    version = HAS_GETDELIM;
 }
 else version (Solaris)
 {
     version = GENERIC_IO;
-    version = NO_GETDELIM;
 }
 
 // Character type used for operating system filesystem APIs
@@ -123,6 +109,11 @@ version (Windows)
     extern (C) nothrow @nogc FILE* _wfreopen(in wchar* filename, in wchar* mode, FILE* fp);
 
     import core.sys.windows.basetsd : HANDLE;
+}
+
+version (Posix)
+{
+    static import core.sys.posix.stdio; // getdelim
 }
 
 version (DIGITAL_MARS_STDIO)
@@ -261,14 +252,17 @@ else
     static assert(0, "unsupported C I/O system");
 }
 
-version (HAS_GETDELIM) extern(C) nothrow @nogc
+static if (__traits(compiles, core.sys.posix.stdio.getdelim))
 {
-    ptrdiff_t getdelim(char**, size_t*, int, FILE*);
+    extern(C) nothrow @nogc
+    {
+        ptrdiff_t getdelim(char**, size_t*, int, FILE*);
 
-    // @@@DEPRECATED_2.104@@@
-    // getline() always comes together with getdelim()
-    deprecated("To be removed after 2.104. Use core.sys.posix.stdio.getline instead.")
-    ptrdiff_t getline(char**, size_t*, FILE*);
+        // @@@DEPRECATED_2.104@@@
+        // getline() always comes together with getdelim()
+        deprecated("To be removed after 2.104. Use core.sys.posix.stdio.getline instead.")
+        ptrdiff_t getline(char**, size_t*, FILE*);
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -5423,7 +5417,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
         buf = app.data;
         return buf.length;
     }
-    else version (HAS_GETDELIM)
+    else static if (__traits(compiles, core.sys.posix.stdio.getdelim))
     {
         import core.stdc.stdlib : free;
         import core.stdc.wchar_ : fwide;
