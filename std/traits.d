@@ -7402,34 +7402,72 @@ if (T.length == 1)
 Detect whether `T` is a callable object, which can be called with the
 function call operator `$(LPAREN)...$(RPAREN)`.
  */
-template isCallable(T...)
-if (T.length == 1)
+template isCallable(alias callable)
 {
-    static if (is(typeof(& T[0].opCall) == delegate))
+    static if (is(typeof(&callable.opCall) == delegate))
         // T is a object which has a member function opCall().
         enum bool isCallable = true;
-    else static if (is(typeof(& T[0].opCall) V : V*) && is(V == function))
+    else static if (is(typeof(&callable.opCall) V : V*) && is(V == function))
         // T is a type which has a static member function opCall().
         enum bool isCallable = true;
+    else static if (is(typeof(&callable!())))
+    {
+        alias TemplateInstanceType = typeof(&callable!());
+        enum bool isCallable = isCallable!TemplateInstanceType;
+    }
     else
-        enum bool isCallable = isSomeFunction!T;
+    {
+        enum bool isCallable = isSomeFunction!callable;
+    }
 }
 
-///
+/// Functions, lambdas, and aggregate types with (static) opCall.
 @safe unittest
 {
-    interface I { real value() @property; }
-    struct S { static int opCall(int) { return 0; } }
+    void f() { }
+    int g(int x) { return x; }
+
+    static assert( isCallable!f);
+    static assert( isCallable!g);
+
     class C { int opCall(int) { return 0; } }
     auto c = new C;
+    struct S { static int opCall(int) { return 0; } }
+    interface I { real value() @property; }
 
     static assert( isCallable!c);
-    static assert( isCallable!S);
     static assert( isCallable!(c.opCall));
+    static assert( isCallable!S);
     static assert( isCallable!(I.value));
     static assert( isCallable!((int a) { return a; }));
 
     static assert(!isCallable!I);
+}
+
+/// Templates
+@safe unittest
+{
+    void f()() { }
+    T g(T = int)(T x) { return x; }
+
+    static assert( isCallable!f);
+    static assert( isCallable!g);
+}
+
+/// Overloaded functions and function templates.
+@safe unittest
+{
+    static struct Wrapper
+    {
+        void f() { }
+        int f(int x) { return x; }
+
+        void g()() { }
+        T g(T = int)(T x) { return x; }
+    }
+
+    static assert(isCallable!(Wrapper.f));
+    static assert(isCallable!(Wrapper.g));
 }
 
 
