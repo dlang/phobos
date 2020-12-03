@@ -666,6 +666,18 @@ private:
     assert(tidA != tidB);
 }
 
+
+package(std) string uniqueTempPath() @safe
+{
+    import std.file : tempDir;
+    import std.path : buildPath;
+    import std.uuid : randomUUID;
+    // Path should contain spaces to test escaping whitespace
+    return buildPath(tempDir(), "std.process temporary file " ~
+        randomUUID().toString());
+}
+
+
 version (iOSDerived) {}
 else:
 
@@ -3284,16 +3296,6 @@ private struct TestScript
     }
 
     string path;
-}
-
-package(std) string uniqueTempPath() @safe
-{
-    import std.file : tempDir;
-    import std.path : buildPath;
-    import std.uuid : randomUUID;
-    // Path should contain spaces to test escaping whitespace
-    return buildPath(tempDir(), "std.process temporary file " ~
-        randomUUID().toString());
 }
 
 
