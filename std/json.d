@@ -368,6 +368,7 @@ struct JSONValue
      * A convenience getter that returns this `JSONValue` as the specified D type.
      * Note: only numeric, `bool`, `string`, `JSONValue[string]` and `JSONValue[]` types are accepted
      * Throws: `JSONException` if `T` cannot hold the contents of this `JSONValue`
+     *         `ConvException` in case of integer overflow when converting to `T`
      */
     @property inout(T) get(T)() inout const pure @safe
     {
@@ -393,13 +394,17 @@ struct JSONValue
                 throw new JSONException("JSONValue is not a number type");
             }
         }
-        else static if (__traits(isUnsigned, T))
+        else static if (isIntegral!T)
         {
-            return cast(T) uinteger;
-        }
-        else static if (isSigned!T)
-        {
-            return cast(T) integer;
+            switch (type)
+            {
+            case JSONType.uinteger:
+                return uinteger.to!T;
+            case JSONType.integer:
+                return integer.to!T;
+            default:
+                throw new JSONException("JSONValue is not a an integral type");
+            }
         }
         else
         {
@@ -420,6 +425,7 @@ struct JSONValue
     @safe unittest
     {
         import std.exception;
+        import std.conv;
         string s =
         `{
             "a": 123,
@@ -427,7 +433,9 @@ struct JSONValue
             "c": "text",
             "d": true,
             "e": [1, 2, 3],
-            "f": { "a": 1 }
+            "f": { "a": 1 },
+            "g": -45,
+            "h": ` ~ ulong.max.to!string ~ `,
          }`;
 
         struct a { }
@@ -435,16 +443,22 @@ struct JSONValue
         immutable json = parseJSON(s);
         assert(json["a"].get!double == 123.0);
         assert(json["a"].get!int == 123);
+        assert(json["a"].get!uint == 123);
         assert(json["b"].get!double == 3.1415);
-        assertThrown(json["b"].get!int);
+        assertThrown!JSONException(json["b"].get!int);
         assert(json["c"].get!string == "text");
         assert(json["d"].get!bool == true);
         assertNotThrown(json["e"].get!(JSONValue[]));
         assertNotThrown(json["f"].get!(JSONValue[string]));
         static assert(!__traits(compiles, json["a"].get!a));
-        assertThrown(json["e"].get!float);
-        assertThrown(json["d"].get!(JSONValue[string]));
-        assertThrown(json["f"].get!(JSONValue[]));
+        assertThrown!JSONException(json["e"].get!float);
+        assertThrown!JSONException(json["d"].get!(JSONValue[string]));
+        assertThrown!JSONException(json["f"].get!(JSONValue[]));
+        assert(json["g"].get!int == -45);
+        assertThrown!ConvException(json["g"].get!uint);
+        assert(json["h"].get!ulong == ulong.max);
+        assertThrown!ConvException(json["h"].get!uint);
+        assertNotThrown(json["h"].get!float);
     }
 
     private void assign(T)(T arg)
