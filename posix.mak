@@ -675,22 +675,21 @@ betterc: betterc-phobos-tests
 # Full-module BetterC tests
 # -------------------------
 #
-# Test full modules with -betterC.
+# Test full modules with -betterC. Edit BETTERC_MODULES and
+# test/betterc_module_tests.d to add new modules to the list.
 #
-#   make -f posix.mak std/format.test_betterc
+#   make -f posix.mak betterc-module-tests
 ################################################################################
 
 BETTERC_MODULES=std/sumtype
 
-betterc-module-tests: $(addsuffix .test_betterc,$(BETTERC_MODULES))
 betterc: betterc-module-tests
 
-%.test_betterc: %.d $(LIB)
-	T=`mktemp -d /tmp/.dmd-run-test.XXXXXX` &&                                                                 \
-	  (                                                                                                        \
-	    $(DMD) -od$$T $(DFLAGS) -main $(UDFLAGS) -betterC $(LIB) $(NODEFAULTLIB) $(LINKDL) -cov=ctfe -run $< ; \
-	    RET=$$? ; rm -rf $$T ; exit $$RET                                                                      \
-	  )
+betterc-module-tests: $(ROOT)/betterctests/betterc_module_tests
+	$(ROOT)/betterctests/betterc_module_tests
+
+$(ROOT)/betterctests/betterc_module_tests: test/betterc_module_tests.d $(addsuffix .d,$(BETTERC_MODULES))
+	$(DMD) $(DFLAGS) $(NODEFAULTLIB) -of=$(ROOT)/betterctests/betterc_module_tests -betterC -unittest test/betterc_module_tests.d $(addsuffix .d,$(BETTERC_MODULES))
 
 ################################################################################
 
