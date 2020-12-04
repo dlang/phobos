@@ -255,6 +255,8 @@ private enum isHashable(T) = __traits(compiles,
     () nothrow @safe { hashOf(T.init); }
 );
 
+private enum hasPostblit(T) = __traits(hasPostblit, T);
+
 /**
  * A [tagged union](https://en.wikipedia.org/wiki/Tagged_union) that can hold a
  * single value from any of a specified set of types.
@@ -419,8 +421,6 @@ public:
 
     static if (anySatisfy!(hasElaborateCopyConstructor, Types))
     {
-        private enum hasPostblit(T) = __traits(hasPostblit, T);
-
         static if
         (
             allSatisfy!(isCopyable, Map!(InoutOf, Types))
@@ -580,12 +580,7 @@ public:
                     cast(void) () @system {}();
                 }
 
-                this.match!((ref value) {
-                    static if (hasElaborateDestructor!(typeof(value)))
-                    {
-                        destroy(value);
-                    }
-                });
+                this.match!destroyIfOwner;
 
                 mixin("Storage newStorage = { ",
                     Storage.memberName!T, ": forward!rhs",
@@ -681,12 +676,7 @@ public:
         /// Calls the destructor of the `SumType`'s current value.
         ~this()
         {
-            this.match!((ref value) {
-                static if (hasElaborateDestructor!(typeof(value)))
-                {
-                    destroy(value);
-                }
-            });
+            this.match!destroyIfOwner;
         }
     }
 
@@ -1768,37 +1758,40 @@ private template Iota(size_t n)
     assert(Iota!3 == AliasSeq!(0, 1, 2));
 }
 
+/* The number that the dim-th argument's tag is multiplied by when
+ * converting TagTuples to and from case indices ("caseIds").
+ *
+ * Named by analogy to the stride that the dim-th index into a
+ * multidimensional static array is multiplied by to calculate the
+ * offset of a specific element.
+ */
+private size_t stride(size_t dim, lengths...)()
+{
+    import core.checkedint : mulu;
+
+    size_t result = 1;
+    bool overflow = false;
+
+    static foreach (i; 0 .. dim)
+    {
+        result = mulu(result, lengths[i], overflow);
+    }
+
+    /* The largest number matchImpl uses, numCases, is calculated with
+     * stride!(SumTypes.length), so as long as this overflow check
+     * passes, we don't need to check for overflow anywhere else.
+     */
+    assert(!overflow, "Integer overflow");
+    return result;
+}
+
 private template matchImpl(Flag!"exhaustive" exhaustive, handlers...)
 {
     auto ref matchImpl(SumTypes...)(auto ref SumTypes args)
     if (allSatisfy!(isSumType, SumTypes) && args.length > 0)
     {
-        /* The number that the dim-th argument's tag is multiplied by when
-         * converting TagTuples to and from case indices ("caseIds").
-         *
-         * Named by analogy to the stride that the dim-th index into a
-         * multidimensional static array is multiplied by to calculate the
-         * offset of a specific element.
-         */
-        static size_t stride(size_t dim)()
-        {
-            import core.checkedint : mulu;
-
-            size_t result = 1;
-            bool overflow = false;
-
-            static foreach (S; SumTypes[0 .. dim])
-            {
-                result = mulu(result, S.Types.length, overflow);
-            }
-
-            /* The largest number matchImpl uses, numCases, is calculated with
-             * stride!(SumTypes.length), so as long as this overflow check
-             * passes, we don't need to check for overflow anywhere else.
-             */
-            assert(!overflow);
-            return result;
-        }
+        enum typeCount(SumType) = SumType.Types.length;
+        alias stride(size_t i) = .stride!(i, Map!(typeCount, SumTypes));
 
         /* A TagTuple represents a single possible set of tags that `args`
          * could have at runtime.
@@ -1806,18 +1799,11 @@ private template matchImpl(Flag!"exhaustive" exhaustive, handlers...)
          * Because D does not allow a struct to be the controlling expression
          * of a switch statement, we cannot dispatch on the TagTuple directly.
          * Instead, we must map each TagTuple to a unique integer and generate
-         * a case label for each of those integers. This mapping is implemented
-         * in `fromCaseId` and `toCaseId`.
+         * a case label for each of those integers.
          *
-         * The mapping is done by pretending we are indexing into an
-         * `args.length`-dimensional static array of type
-         *
-         *   ubyte[SumTypes[0].Types.length]...[SumTypes[$-1].Types.length]
-         *
-         * ...where each element corresponds to the TagTuple whose tags can be
-         * used (in reverse order) as indices to retrieve it. The caseId for
-         * that TagTuple is the (hypothetical) offset, in bytes, of its
-         * corresponding element.
+         * This mapping is implemented in `fromCaseId` and `toCaseId`. It uses
+         * the same technique that's used to map index tuples to memory offsets
+         * in a multidimensional static array.
          *
          * For example, when `args` consists of two SumTypes with two member
          * types each, the TagTuples corresponding to each case label are:
@@ -1826,6 +1812,9 @@ private template matchImpl(Flag!"exhaustive" exhaustive, handlers...)
          *   case 1:  TagTuple([1, 0])
          *   case 2:  TagTuple([0, 1])
          *   case 3:  TagTuple([1, 1])
+         *
+         * When there is only one argument, the caseId is equal to that
+         * argument's tag.
          */
         static struct TagTuple
         {
@@ -1875,37 +1864,25 @@ private template matchImpl(Flag!"exhaustive" exhaustive, handlers...)
             }
         }
 
-        /* An AliasSeq of zero-argument functions that return, by ref, the
-         * member values of `args` needed for the case labeled with `caseId`.
-         *
-         * When used in an expression context (like, say, a function call), it
-         * will instead be interpreted as a sequence of zero-argument function
-         * *calls*, with optional parentheses omitted.
+        /*
+         * A list of arguments to be passed to a handler needed for the case
+         * labeled with `caseId`.
          */
-        template values(size_t caseId)
+        template handlerArgs(size_t caseId)
         {
             enum tags = TagTuple.fromCaseId(caseId);
-
-            // Workaround for dlang issue 21348
-            ref getValue(size_t i)(ref SumTypes[i] arg = args[i])
-            {
-                enum tid = tags[i];
-                alias T = SumTypes[i].Types[tid];
-                return arg.get!T;
-            }
-
-            alias values = Map!(getValue, Iota!(tags.length));
+            enum argsFrom(size_t i : tags.length) = "";
+            enum argsFrom(size_t i) = "args[" ~ toCtString!i ~ "].get!(SumTypes[" ~ toCtString!i ~ "]" ~
+                ".Types[" ~ toCtString!(tags[i]) ~ "])(), " ~ argsFrom!(i + 1);
+            enum handlerArgs = argsFrom!0;
         }
 
-        /* An AliasSeq of the types of the member values returned by the
-         * functions in `values!caseId`.
+        /* An AliasSeq of the types of the member values in the argument list
+         * returned by `handlerArgs!caseId`.
          *
          * Note that these are the actual (that is, qualified) types of the
          * member values, which may not be the same as the types listed in
          * the arguments' `.Types` properties.
-         *
-         * typeof(values!caseId) won't work because it gives the types
-         * of the functions, not the return values (even with @property).
          */
         template valueTypes(size_t caseId)
         {
@@ -1999,7 +1976,7 @@ private template matchImpl(Flag!"exhaustive" exhaustive, handlers...)
                 case caseId:
                     static if (matches[caseId] != noMatch)
                     {
-                        return mixin(handlerName!(matches[caseId]))(values!caseId);
+                        return mixin(handlerName!(matches[caseId]), "(", handlerArgs!caseId, ")");
                     }
                     else
                     {
@@ -2270,8 +2247,6 @@ version (D_Exceptions)
 // Handlers with ref parameters
 @safe unittest
 {
-    import std.meta : staticIndexOf;
-
     alias Value = SumType!(long, double);
 
     auto value = Value(3.14);
@@ -2495,4 +2470,12 @@ else private
     struct __InoutWorkaroundStruct{}
     @property T rvalueOf(T)(inout __InoutWorkaroundStruct = __InoutWorkaroundStruct.init);
     @property ref T lvalueOf(T)(inout __InoutWorkaroundStruct = __InoutWorkaroundStruct.init);
+}
+
+private void destroyIfOwner(T)(ref T value)
+{
+    static if (hasElaborateDestructor!T)
+    {
+        destroy(value);
+    }
 }
