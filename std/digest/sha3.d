@@ -2,7 +2,7 @@
  * Computes SHA-3 hashes of arbitary data.
  *
  * References: NIST FIPS PUB 202
- * 
+ *
  * Source: $(PHOBOSSRC std/digest/sha3.d)
  */
 module std.digest.sha3;
@@ -29,7 +29,7 @@ private immutable int[24] K_PI = [
 /**
  * Template API SHA-3/SHAKE implementation using the Keccak[1600] function.
  * Supports SHA-3-224, SHA-3-256, SHA-3-384, SHA-3-512, SHAKE-128, and SHAKE-256.
- * 
+ *
  * The digestSize parameter is in bits. However, it's easier to use the SHA3_224,
  * SHA3_256, SHA3_384, SHA3_512, SHAKE128, and SHAKE256 aliases.
  */
@@ -126,7 +126,6 @@ private:
     pragma(inline, true)
     void swap()
     {
-        
         for (size_t i; i < 25; ++i)
             st64[i] = core.bitop.bswap(st64[i]);
     }
@@ -174,7 +173,7 @@ private:
                 bc[2] = st64[j + 2];
                 bc[3] = st64[j + 3];
                 bc[4] = st64[j + 4];
-                
+
                 /*for (i = 0; i < 5; ++i)
                     st64[j + i] ^= (~bc[(i + 1) % 5]) & bc[(i + 2) % 5];*/
                 st64[j] ^= (~bc[1]) & bc[2];
@@ -243,7 +242,7 @@ auto shake256Of(T...)(T data)
 @system unittest
 {
     import std.conv : hexString;
-    
+
     ubyte[] r_sha3_224 = cast(ubyte[])hexString!"6b4e03423667dbb73b6e15454f0eb1abd4597f9a1b078e3f5b5a6bc7";
     ubyte[] r_sha3_256 = cast(ubyte[])hexString!"a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a";
     ubyte[] r_sha3_384 = cast(ubyte[])hexString!("0c63a75b845e4f7d01107d852e4c2485c51a50aaaa94fc61995e71bbee983a2a"
