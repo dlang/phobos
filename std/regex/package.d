@@ -209,7 +209,8 @@ $(TR $(TD Objects) $(TD
   $(REG_START Character classes )
   $(REG_TABLE
     $(REG_TITLE Pattern element, Semantics )
-    $(REG_ROW Any atom, Has the same meaning as outside of a character class.)
+    $(REG_ROW Any atom, Has the same meaning as outside of a character class. 
+      Except for ] which has to be written as \[)
     $(REG_ROW a-z, Includes characters a, b, c, ..., z. )
     $(REG_ROW [a||b]$(COMMA) [a--b]$(COMMA) [a~~b]$(COMMA) [a$(AMP)$(AMP)b],
      Where a, b are arbitrary classes, means union, set difference,
