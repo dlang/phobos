@@ -11198,6 +11198,30 @@ that break its sorted-ness, `SortedRange` will work erratically.
     assert(!r.contains(42));  // passes although it shouldn't
 }
 
+/**
+`SortedRange` can be searched with predicates that do not take
+two elements of the underlying range as arguments.
+
+This is useful, if a range of structs is sorted by a member and you
+want to search in that range by only providing a value for that member.
+
+*/
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    static struct S { int i; }
+    static bool byI(A, B)(A a, B b)
+    {
+        static if (is(A == S))
+            return a.i < b;
+        else
+            return a < b.i;
+    }
+    auto r = assumeSorted!byI([S(1), S(2), S(3)]);
+    auto lessThanTwo = r.lowerBound(2);
+    assert(equal(lessThanTwo, [S(1)]));
+}
+
 @safe unittest
 {
     import std.exception : assertThrown, assertNotThrown;
