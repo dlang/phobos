@@ -811,9 +811,18 @@ Pid spawnProcess(scope const(char[])[] args,
                  scope const char[] workDir = null)
     @trusted // TODO: Should be @safe
 {
-    version (Windows)    auto  args2 = escapeShellArguments(args);
-    else version (Posix) alias args2 = args;
-    return spawnProcessImpl(args2, stdin, stdout, stderr, env, config, workDir);
+    version (Windows)
+    {
+        const commandLine = escapeShellArguments(args);
+        const program = args.length ? args[0] : null;
+        return spawnProcessImpl(commandLine, program, stdin, stdout, stderr, env, config, workDir);
+    }
+    else version (Posix)
+    {
+        return spawnProcessImpl(args, stdin, stdout, stderr, env, config, workDir);
+    }
+    else
+        static assert(0);
 }
 
 /// ditto
@@ -1160,7 +1169,7 @@ private Pid spawnProcessImpl(scope const(char[])[] args,
                     errorMsg = "getrlimit failed";
                     break;
                 case InternalError.exec:
-                    errorMsg = "Failed to execute program";
+                    errorMsg = "Failed to execute '" ~ cast(string) name ~ "'";
                     break;
                 case InternalError.doubleFork:
                     // Can happen only when starting detached process
@@ -1209,6 +1218,7 @@ envz must be a pointer to a block of UTF-16 characters on the form
 */
 version (Windows)
 private Pid spawnProcessImpl(scope const(char)[] commandLine,
+                             scope const(char)[] program,
                              File stdin,
                              File stdout,
                              File stderr,
@@ -1218,6 +1228,7 @@ private Pid spawnProcessImpl(scope const(char)[] commandLine,
     @trusted
 {
     import core.exception : RangeError;
+    import std.conv : text;
 
     if (commandLine.empty) throw new RangeError("Command line is empty");
 
@@ -1280,7 +1291,12 @@ private Pid spawnProcessImpl(scope const(char)[] commandLine,
     if (!CreateProcessW(null, commandLine.tempCStringW().buffPtr,
                         null, null, true, dwCreationFlags,
                         envz, workDir.length ? pworkDir : null, &startinfo, &pi))
-        throw ProcessException.newFromLastError("Failed to spawn new process");
+    {
+        if (GetLastError() == ERROR_FILE_NOT_FOUND)
+            throw new ProcessException(text("Executable file not found: ", program));
+        else
+            throw ProcessException.newFromLastError("Failed to spawn new process");
+    }
 
     // figure out if we should close any of the streams
     if (!(config & Config.retainStdin ) && stdinFD  > STDERR_FILENO
@@ -1678,11 +1694,16 @@ version (Posix) @system unittest
 
 @system unittest // Error handling in spawnProcess()
 {
-    import std.exception : assertThrown;
-    assertThrown!ProcessException(spawnProcess("ewrgiuhrifuheiohnmnvqweoijwf"));
-    assertThrown!ProcessException(spawnProcess("./rgiuhrifuheiohnmnvqweoijwf"));
-    assertThrown!ProcessException(spawnProcess("ewrgiuhrifuheiohnmnvqweoijwf", null, Config.detached));
-    assertThrown!ProcessException(spawnProcess("./rgiuhrifuheiohnmnvqweoijwf", null, Config.detached));
+    import std.algorithm.searching : canFind;
+    import std.exception : assertThrown, collectExceptionMsg;
+
+    static void testNotFoundException(string program)
+    {
+        assert(collectExceptionMsg!ProcessException(spawnProcess(program)).canFind(program));
+        assert(collectExceptionMsg!ProcessException(spawnProcess(program, null, Config.detached)).canFind(program));
+    }
+    testNotFoundException("ewrgiuhrifuheiohnmnvqweoijwf");
+    testNotFoundException("./rgiuhrifuheiohnmnvqweoijwf");
 
     // can't execute malformed file with executable permissions
     version (Posix)
@@ -1852,8 +1873,9 @@ Pid spawnShell(scope const(char)[] command,
         // It does not use CommandLineToArgvW.
         // Instead, it treats the first and last quote specially.
         // See CMD.EXE /? for details.
-        auto args = escapeShellFileName(shellPath)
-                    ~ ` ` ~ shellSwitch ~ ` "` ~ command ~ `"`;
+        const commandLine = escapeShellFileName(shellPath)
+                            ~ ` ` ~ shellSwitch ~ ` "` ~ command ~ `"`;
+        return spawnProcessImpl(commandLine, shellPath, stdin, stdout, stderr, env, config, workDir);
     }
     else version (Posix)
     {
@@ -1861,8 +1883,10 @@ Pid spawnShell(scope const(char)[] command,
         args[0] = shellPath;
         args[1] = shellSwitch;
         args[2] = command;
+        return spawnProcessImpl(args, stdin, stdout, stderr, env, config, workDir);
     }
-    return spawnProcessImpl(args, stdin, stdout, stderr, env, config, workDir);
+    else
+        static assert(0);
 }
 
 /// ditto
