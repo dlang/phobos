@@ -1434,22 +1434,32 @@ version (Windows) @system unittest
 // (checking that it is in fact executable).
 version (Posix)
 private string searchPathFor(scope const(char)[] executable)
-    @trusted //TODO: @safe nothrow
+    @safe
 {
     import std.algorithm.iteration : splitter;
-    import std.conv : to;
-    import std.path : buildPath;
+    import std.conv : text;
+    import std.path : chainPath;
 
-    auto pathz = core.stdc.stdlib.getenv("PATH");
-    if (pathz == null)  return null;
+    string result;
 
-    foreach (dir; splitter(to!string(pathz), ':'))
-    {
-        auto execPath = buildPath(dir, executable);
-        if (isExecutable(execPath))  return execPath;
-    }
+    environment.getImpl("PATH",
+        (scope const(char)[] path)
+        {
+            if (!path)
+                return;
 
-    return null;
+            foreach (dir; splitter(path, ":"))
+            {
+                auto execPath = chainPath(dir, executable);
+                if (isExecutable(execPath))
+                {
+                    result = text(execPath);
+                    return;
+                }
+            }
+        });
+
+    return result;
 }
 
 // Checks whether the file exists and can be executed by the
