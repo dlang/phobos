@@ -809,7 +809,7 @@ Pid spawnProcess(scope const(char[])[] args,
                  const string[string] env = null,
                  Config config = Config.none,
                  scope const char[] workDir = null)
-    @trusted // TODO: Should be @safe
+    @safe
 {
     version (Windows)
     {
@@ -1222,7 +1222,7 @@ private Pid spawnProcessWin(scope const(char)[] commandLine,
                             File stdin,
                             File stdout,
                             File stderr,
-                            const string[string] env,
+                            scope const string[string] env,
                             Config config,
                             scope const(char)[] workDir)
     @trusted
@@ -1865,7 +1865,7 @@ Pid spawnShell(scope const(char)[] command,
                Config config = Config.none,
                scope const(char)[] workDir = null,
                scope string shellPath = nativeShell)
-    @trusted // TODO: Should be @safe
+    @safe
 {
     version (Windows)
     {
@@ -3046,7 +3046,7 @@ auto execute(scope const(char[])[] args,
              Config config = Config.none,
              size_t maxOutput = size_t.max,
              scope const(char)[] workDir = null)
-    @trusted //TODO: @safe
+    @safe
 {
     return executeImpl!pipeProcess(args, env, config, maxOutput, workDir);
 }
@@ -3057,7 +3057,7 @@ auto execute(scope const(char)[] program,
              Config config = Config.none,
              size_t maxOutput = size_t.max,
              scope const(char)[] workDir = null)
-    @trusted //TODO: @safe
+    @safe
 {
     return executeImpl!pipeProcess(program, env, config, maxOutput, workDir);
 }
@@ -3069,7 +3069,7 @@ auto executeShell(scope const(char)[] command,
                   size_t maxOutput = size_t.max,
                   scope const(char)[] workDir = null,
                   string shellPath = nativeShell)
-    @trusted //TODO: @safe
+    @safe
 {
     return executeImpl!pipeShell(command,
                                  env,
@@ -3087,6 +3087,7 @@ private auto executeImpl(alias pipeFunc, Cmd, ExtraPipeFuncArgs...)(
     size_t maxOutput = size_t.max,
     scope const(char)[] workDir = null,
     ExtraPipeFuncArgs extraArgs = ExtraPipeFuncArgs.init)
+    @trusted //TODO: @safe
 {
     import std.algorithm.comparison : min;
     import std.array : appender;
