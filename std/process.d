@@ -108,6 +108,7 @@ version (Windows)
 import std.internal.cstring;
 import std.range.primitives;
 import std.stdio;
+import std.traits : isSomeChar;
 
 version (OSX)
     version = Darwin;
@@ -1454,7 +1455,8 @@ private string searchPathFor(scope const(char)[] executable)
 // Checks whether the file exists and can be executed by the
 // current user.
 version (Posix)
-private bool isExecutable(scope const(char)[] path) @trusted nothrow @nogc //TODO: @safe
+private bool isExecutable(R)(R path) @trusted nothrow @nogc
+if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     return (access(path.tempCString(), X_OK) == 0);
 }
