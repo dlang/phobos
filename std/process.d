@@ -322,7 +322,7 @@ static:
     multi-threaded programs. See e.g.
     $(LINK2 https://www.gnu.org/software/libc/manual/html_node/Environment-Access.html#Environment-Access, glibc).
     */
-    void remove(scope const(char)[] name) @trusted nothrow @nogc // TODO: @safe
+    void remove(scope const(char)[] name) @trusted nothrow @nogc
     {
         version (Windows)    SetEnvironmentVariableW(name.tempCStringW(), null);
         else version (Posix) core.sys.posix.stdlib.unsetenv(name.tempCString());
