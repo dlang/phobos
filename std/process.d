@@ -815,11 +815,11 @@ Pid spawnProcess(scope const(char[])[] args,
     {
         const commandLine = escapeShellArguments(args);
         const program = args.length ? args[0] : null;
-        return spawnProcessImpl(commandLine, program, stdin, stdout, stderr, env, config, workDir);
+        return spawnProcessWin(commandLine, program, stdin, stdout, stderr, env, config, workDir);
     }
     else version (Posix)
     {
-        return spawnProcessImpl(args, stdin, stdout, stderr, env, config, workDir);
+        return spawnProcessPosix(args, stdin, stdout, stderr, env, config, workDir);
     }
     else
         static assert(0);
@@ -882,13 +882,13 @@ envz should be a zero-terminated array of zero-terminated strings
 on the form "var=value".
 */
 version (Posix)
-private Pid spawnProcessImpl(scope const(char[])[] args,
-                             File stdin,
-                             File stdout,
-                             File stderr,
-                             scope const string[string] env,
-                             Config config,
-                             scope const(char)[] workDir)
+private Pid spawnProcessPosix(scope const(char[])[] args,
+                              File stdin,
+                              File stdout,
+                              File stderr,
+                              scope const string[string] env,
+                              Config config,
+                              scope const(char)[] workDir)
     @trusted // TODO: Should be @safe
 {
     import core.exception : RangeError;
@@ -1217,14 +1217,14 @@ envz must be a pointer to a block of UTF-16 characters on the form
 "var1=value1\0var2=value2\0...varN=valueN\0\0".
 */
 version (Windows)
-private Pid spawnProcessImpl(scope const(char)[] commandLine,
-                             scope const(char)[] program,
-                             File stdin,
-                             File stdout,
-                             File stderr,
-                             const string[string] env,
-                             Config config,
-                             scope const(char)[] workDir)
+private Pid spawnProcessWin(scope const(char)[] commandLine,
+                            scope const(char)[] program,
+                            File stdin,
+                            File stdout,
+                            File stderr,
+                            const string[string] env,
+                            Config config,
+                            scope const(char)[] workDir)
     @trusted
 {
     import core.exception : RangeError;
@@ -1875,7 +1875,7 @@ Pid spawnShell(scope const(char)[] command,
         // See CMD.EXE /? for details.
         const commandLine = escapeShellFileName(shellPath)
                             ~ ` ` ~ shellSwitch ~ ` "` ~ command ~ `"`;
-        return spawnProcessImpl(commandLine, shellPath, stdin, stdout, stderr, env, config, workDir);
+        return spawnProcessWin(commandLine, shellPath, stdin, stdout, stderr, env, config, workDir);
     }
     else version (Posix)
     {
@@ -1883,7 +1883,7 @@ Pid spawnShell(scope const(char)[] command,
         args[0] = shellPath;
         args[1] = shellSwitch;
         args[2] = command;
-        return spawnProcessImpl(args, stdin, stdout, stderr, env, config, workDir);
+        return spawnProcessPosix(args, stdin, stdout, stderr, env, config, workDir);
     }
     else
         static assert(0);
