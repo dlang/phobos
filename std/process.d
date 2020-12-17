@@ -213,9 +213,7 @@ static:
     string opIndex(scope const(char)[] name) @safe
     {
         import std.exception : enforce;
-        string value;
-        enforce(getImpl(name, value), "Environment variable not found: "~name);
-        return value;
+        return get(name, null).enforce("Environment variable not found: "~name);
     }
 
     /**
@@ -253,8 +251,8 @@ static:
     string get(scope const(char)[] name, string defaultValue = null) @safe
     {
         string value;
-        auto found = getImpl(name, value);
-        return found ? value : defaultValue;
+        getImpl(name, (result) { value = result ? cachedToString(result) : defaultValue; });
+        return value;
     }
 
     /**
@@ -446,8 +444,13 @@ static:
     }
 
 private:
-    // Retrieves the environment variable, returns false on failure.
-    bool getImpl(scope const(char)[] name, out string value) @trusted
+    version (Windows) alias OSChar = WCHAR;
+    else version (Posix) alias OSChar = char;
+
+    // Retrieves the environment variable. Calls `sink` with a
+    // temporary buffer of OS characters, or `null` if the variable
+    // doesn't exist.
+    void getImpl(scope const(char)[] name, scope void delegate(const(OSChar)[]) @safe sink) @trusted
     {
         version (Windows)
         {
@@ -468,15 +471,12 @@ private:
             {
                 immutable err = GetLastError();
                 if (err == ERROR_ENVVAR_NOT_FOUND)
-                    return false;
+                    return sink(null);
                 if (err != NO_ERROR) // Some other Windows error, throw.
                     throw new WindowsException(err);
             }
             if (len <= 1)
-            {
-                value = "";
-                return true;
-            }
+                return sink("");
             buf.length = len;
 
             while (true)
@@ -488,21 +488,15 @@ private:
                 {
                     immutable err = GetLastError();
                     if (err == NO_ERROR) // sucessfully read a 0-length variable
-                    {
-                        value = "";
-                        return true;
-                    }
+                        return sink("");
                     if (err == ERROR_ENVVAR_NOT_FOUND) // variable didn't exist
-                        return false;
+                        return sink(null);
                     // some other windows error
                     throw new WindowsException(err);
                 }
                 assert(lenRead != buf.length, "impossible according to msft docs");
                 if (lenRead < buf.length) // the buffer was long enough
-                {
-                    value = toUTF8(buf[0 .. lenRead]);
-                    return true;
-                }
+                    return sink(buf[0 .. lenRead]);
                 // resize and go around again, because the environment variable grew
                 buf.length = lenRead;
             }
@@ -512,25 +506,30 @@ private:
             import core.stdc.string : strlen;
 
             const vz = core.sys.posix.stdlib.getenv(name.tempCString());
-            if (vz == null) return false;
-            auto v = vz[0 .. strlen(vz)];
-
-            // Cache the last call's result.
-            static string lastResult;
-            if (v.empty)
-            {
-                // Return non-null array for blank result to distinguish from
-                // not-present result.
-                lastResult = "";
-            }
-            else if (v != lastResult)
-            {
-                lastResult = v.idup;
-            }
-            value = lastResult;
-            return true;
-        }
+            if (vz == null) return sink(null);
+            return sink(vz[0 .. strlen(vz)]);
+       }
         else static assert(0);
+    }
+
+    string cachedToString(C)(scope const(C)[] v) @safe
+    {
+        import std.algorithm.comparison : equal;
+
+        // Cache the last call's result.
+        static string lastResult;
+        if (v.empty)
+        {
+            // Return non-null array for blank result to distinguish from
+            // not-present result.
+            lastResult = "";
+        }
+        else if (!v.equal(lastResult))
+        {
+            import std.conv : to;
+            lastResult = v.to!string;
+        }
+        return lastResult;
     }
 }
 
