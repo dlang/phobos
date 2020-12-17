@@ -1291,12 +1291,7 @@ private Pid spawnProcessWin(scope const(char)[] commandLine,
     if (!CreateProcessW(null, commandLine.tempCStringW().buffPtr,
                         null, null, true, dwCreationFlags,
                         envz, workDir.length ? pworkDir : null, &startinfo, &pi))
-    {
-        if (GetLastError() == ERROR_FILE_NOT_FOUND)
-            throw new ProcessException(text("Executable file not found: ", program));
-        else
-            throw ProcessException.newFromLastError("Failed to spawn new process");
-    }
+        throw ProcessException.newFromLastError("Failed to spawn process \"" ~ cast(string) program ~ '"');
 
     // figure out if we should close any of the streams
     if (!(config & Config.retainStdin ) && stdinFD  > STDERR_FILENO
