@@ -202,13 +202,14 @@ real logmdigammaInverse(real x)
 
 /** Incomplete beta integral
  *
- * Returns incomplete beta integral of the arguments, evaluated
+ * Returns regularized incomplete beta integral of the arguments, evaluated
  * from zero to x. The regularized incomplete beta function is defined as
  *
  * betaIncomplete(a, b, x) = $(GAMMA)(a + b) / ( $(GAMMA)(a) $(GAMMA)(b) ) *
  * $(INTEGRATE 0, x) $(POWER t, a-1)$(POWER (1-t), b-1) dt
  *
- * and is the same as the the cumulative distribution function.
+ * and is the same as the the cumulative distribution function of the Beta
+ * distribution.
  *
  * The domain of definition is 0 <= x <= 1.  In this
  * implementation a and b are restricted to positive values.
