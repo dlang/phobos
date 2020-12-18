@@ -1286,7 +1286,7 @@ public:
         }
         assert(buff.length > 0, "Invalid buffer length");
 
-        char signChar = isNegative() ? '-' : 0;
+        char signChar = isNegative ? '-' : 0;
         auto minw = buff.length + (signChar ? 1 : 0);
 
         if (!hex && !signChar && (f.width == 0 || minw < f.width))
@@ -1459,10 +1459,7 @@ private:
     {
         return data.isZero();
     }
-    bool isNegative() pure const nothrow @nogc @safe
-    {
-        return sign;
-    }
+    alias isNegative = sign;
 
     // Generate a runtime error if division by zero occurs
     void checkDivByZero() pure const nothrow @safe
@@ -2160,23 +2157,23 @@ unittest
 {
     auto x = BigInt(-3);
     x %= 3;
-    assert(!x.isNegative());
-    assert(x.isZero());
+    assert(!x.isNegative);
+    assert(x.isZero);
 
     x = BigInt(-3);
     x %= cast(ushort) 3;
-    assert(!x.isNegative());
-    assert(x.isZero());
+    assert(!x.isNegative);
+    assert(x.isZero);
 
     x = BigInt(-3);
     x %= 3L;
-    assert(!x.isNegative());
-    assert(x.isZero());
+    assert(!x.isNegative);
+    assert(x.isZero);
 
     x = BigInt(3);
     x %= -3;
-    assert(!x.isNegative());
-    assert(x.isZero());
+    assert(!x.isNegative);
+    assert(x.isZero);
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=15678

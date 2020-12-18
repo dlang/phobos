@@ -928,14 +928,6 @@ if (Ranges.length > 0 &&
             // TODO: use a vtable (or more) instead of linear iteration
 
         public:
-            this(R input)
-            {
-                foreach (i, v; input)
-                {
-                    source[i] = v;
-                }
-            }
-
             import std.meta : anySatisfy;
 
             static if (anySatisfy!(isInfinite, R))
@@ -4718,7 +4710,7 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
             static foreach (i, Range; Ranges)
                 static if (hasLength!Range)
                 {
-                    static if (!anySatisfy!(hasLength, Ranges[0 .. i]))
+                    static if (!is(typeof(minLen) == size_t))
                         size_t minLen = ranges[i].length;
                     else
                     {{
@@ -4890,15 +4882,6 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
     alias R = Ranges; // Unused here but defined in case library users rely on it.
     private Ranges ranges;
     alias ElementType = Tuple!(staticMap!(.ElementType, Ranges));
-
-    /+
-       Builds an object. Usually this is invoked indirectly by using the
-       $(LREF zip) function.
-    +/
-    this(Ranges rs)
-    {
-        ranges[] = rs[];
-    }
 
     /+
        Returns `true` if the range is at end.
@@ -5077,29 +5060,20 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
     {
         @property size_t length()
         {
-            static if (allKnownSameLength)
-            {
-                static foreach (i, Range; Ranges)
+           static foreach (i, Range; Ranges)
+           {
+                static if (hasLength!Range)
                 {
-                    static if (hasLength!Range && !anySatisfy!(hasLength, Ranges[0 .. i]))
-                        return ranges[i].length;
+                    static if (!is(typeof(minLen) == size_t))
+                        size_t minLen = ranges[i].length;
+                    else static if (!allKnownSameLength)
+                    {{
+                        const x = ranges[i].length;
+                        if (x < minLen) minLen = x;
+                    }}
                 }
             }
-            else
-            {
-                static foreach (i, Range; Ranges)
-                    static if (hasLength!Range)
-                    {
-                        static if (!anySatisfy!(hasLength, Ranges[0 .. i]))
-                            size_t minLen = ranges[i].length;
-                        else
-                        {{
-                            const x = ranges[i].length;
-                            if (x < minLen) minLen = x;
-                        }}
-                    }
-                return minLen;
-            }
+            return minLen;
         }
 
         alias opDollar = length;
@@ -7725,12 +7699,6 @@ struct Indexed(Source, Indices)
 if (isRandomAccessRange!Source && isInputRange!Indices &&
     is(typeof(Source.init[ElementType!(Indices).init])))
 {
-    this(Source source, Indices indices)
-    {
-        this._source = source;
-        this._indices = indices;
-    }
-
     /// Range primitives
     @property auto ref front()
     {
