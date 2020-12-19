@@ -1833,20 +1833,20 @@ FormatSpec!Char singleSpec(Char)(Char[] fmt)
  * `toString` should have one of the following signatures:
  *
  * ---
- * void toString(W)(ref W w, scope const ref FormatSpec fmt)
- * void toString(W)(ref W w)
+ * void toString(Writer, Char)(ref Writer w, scope const ref FormatSpec!Char fmt)
+ * void toString(Writer)(ref Writer w)
  * string toString();
  * ---
  *
- * Where `W` is an $(REF_ALTTEXT output range, isOutputRange, std,range,primitives)
- * which accepts characters. The template type does not have to be called `W`.
+ * Where `Writer` is an $(REF_ALTTEXT output range, isOutputRange, std,range,primitives)
+ * which accepts characters. The template type does not have to be called `Writer`.
  *
  * The following overloads are also accepted for legacy reasons or for use in virtual
  * functions. It's recommended that any new code forgo these overloads if possible for
  * speed and attribute acceptance reasons.
  *
  * ---
- * void toString(scope void delegate(const(char)[]) sink, const ref FormatSpec fmt);
+ * void toString(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt);
  * void toString(scope void delegate(const(char)[]) sink, string fmt);
  * void toString(scope void delegate(const(char)[]) sink);
  * ---

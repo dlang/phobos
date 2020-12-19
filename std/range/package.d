@@ -928,6 +928,14 @@ if (Ranges.length > 0 &&
             // TODO: use a vtable (or more) instead of linear iteration
 
         public:
+            this(R input)
+            {
+                foreach (i, v; input)
+                {
+                    source[i] = v;
+                }
+            }
+
             import std.meta : anySatisfy;
 
             static if (anySatisfy!(isInfinite, R))
@@ -4884,6 +4892,15 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
     alias ElementType = Tuple!(staticMap!(.ElementType, Ranges));
 
     /+
+       Builds an object. Usually this is invoked indirectly by using the
+       $(LREF zip) function.
+    +/
+    this(Ranges rs)
+    {
+        ranges[] = rs[];
+    }
+
+    /+
        Returns `true` if the range is at end.
     +/
     static if (allKnownSameLength ? anySatisfy!(isInfinite, Ranges)
@@ -7699,6 +7716,12 @@ struct Indexed(Source, Indices)
 if (isRandomAccessRange!Source && isInputRange!Indices &&
     is(typeof(Source.init[ElementType!(Indices).init])))
 {
+    this(Source source, Indices indices)
+    {
+        this._source = source;
+        this._indices = indices;
+    }
+
     /// Range primitives
     @property auto ref front()
     {
