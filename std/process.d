@@ -1438,14 +1438,15 @@ private string searchPathFor(scope const(char)[] executable)
     string result;
 
     environment.getImpl("PATH",
-        (scope const(char)[] path)
+        (scope const(char)[] path) @safe
         {
             if (!path)
                 return;
 
-            foreach (dir; splitter(path, ":"))
+            // use explicit for loop to workaround scope inference bug
+            for (auto rng = splitter(path, ":"); !rng.empty; rng.popFront)
             {
-                auto execPath = chainPath(dir, executable);
+                auto execPath = chainPath(rng.front, executable);
                 if (isExecutable(execPath))
                 {
                     result = text(execPath);
