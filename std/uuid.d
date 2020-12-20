@@ -103,7 +103,10 @@ module std.uuid;
     import std.uuid;
 
     UUID[] ids;
-    ids ~= randomUUID();
+
+    // Note: this output is not cryptographically secure, the UUID can be predicted!
+    ids ~= rndGen.randomUUID();
+
     ids ~= md5UUID("test.name.123");
     ids ~= sha1UUID("test.name.123");
 
@@ -969,7 +972,8 @@ public struct UUID
     UUID id;
     assert(id.empty);
 
-    id = randomUUID;
+    // Not cryptographically secure, output is predictable
+    id = rndGen.randomUUID();
     assert(!id.empty);
 
     id = UUID(cast(ubyte[16]) [138, 179, 6, 14, 44, 186, 79,
@@ -1203,10 +1207,29 @@ public struct UUID
  *
  * This function is not supported at compile time.
  *
- * Params:
- *      randomGen = uniform RNG
+ * Warning:
+ * This function should not be used when UUIDs need to be cryptographically secure,
+ * as the output of this function can be predicted.
+ *
+ * Deprecated:
+ * The `randomUUID()` overload not taking any arguments has been deprecated.
+ * It is dangerous, as it causes predictable, non-secure UUIDs and has not been
+ * documented as doing that previously. Silently changing this function to use a secure
+ * system RNG is not possible, as these RNGs may block at early boot when they are
+ * not yet seeded, causing `randomUUID` to block as well.
+ * See $(LINK2 https://forum.dlang.org/thread/zjmyxudvscfwrkrdabmt@forum.dlang.org, this forum thread)
+ * for a detailed discussion of the problem.
+ *
+ * Depending on whether the desired output needs to be cryptographically secure and
+ * considering the potential blocking problem, users should use `rndGen` (insecure)
+ * from std.random or a secure alternative like this:
+ * ----------------------------
+ * auto insecureUUID = rndGen.randomUUID();
+ * ----------------------------
+ *
  * See_Also: $(REF isUniformRNG, std,random)
  */
+deprecated("randomUUID()` is cryptographically insecure, use `rndGen.randomUUID()` if this was intended")
 @safe UUID randomUUID()
 {
     import std.random : rndGen;
@@ -1231,7 +1254,25 @@ public struct UUID
     }
 }
 
-/// ditto
+/// Provide a convenience import for the insecure default RNG from std.random
+public import std.random : rndGen;
+
+/**
+ * This function generates a random number based UUID from a random
+ * number generator.
+ *
+ * This function is not supported at compile time.
+ *
+ * Warning:
+ * When UUIDs are used in a context, which requires them to be
+ * cryptographically secure, the phobos prngs from std.random,
+ * including rndGen, should not be used. The output of these
+ * rngs can be predicted, leading to predictable UUIDs.
+ *
+ * Params:
+ *      randomGen = uniform RNG
+ * See_Also: $(REF isUniformRNG, std,random)
+ */
 UUID randomUUID(RNG)(ref RNG randomGen)
 if (isInputRange!RNG && isIntegral!(ElementType!RNG))
 {
@@ -1268,29 +1309,33 @@ if (isInputRange!RNG && isIntegral!(ElementType!RNG))
 {
     import std.random : Xorshift192, unpredictableSeed;
 
-    //simple call
-    auto uuid = randomUUID();
+    // Using phobos std.random.rndGen (not cryptographically secure!)
+    auto uuid = rndGen.randomUUID();
 
-    //provide a custom RNG. Must be seeded manually.
+    // provide a custom RNG, which must be seeded manually.
+    // Xorshift192 is not cryptographically secure either.
     Xorshift192 gen;
 
     gen.seed(unpredictableSeed);
-    auto uuid3 = randomUUID(gen);
+    auto uuid3 = gen.randomUUID();
 }
 
 @safe unittest
 {
     import std.random : Xorshift192, unpredictableSeed;
-    //simple call
-    auto uuid = randomUUID();
 
-    //provide a custom RNG. Must be seeded manually.
+    // Using phobos std.random.rndGen (not cryptographically secure!)
+    auto uuid = rndGen.randomUUID();
+
+    // provide a custom RNG, which must be seeded manually.
+    // Xorshift192 is not cryptographically secure either.
     Xorshift192 gen;
-    gen.seed(unpredictableSeed);
-    auto uuid3 = randomUUID(gen);
 
-    auto u1 = randomUUID();
-    auto u2 = randomUUID();
+    gen.seed(unpredictableSeed);
+    auto uuid3 = gen.randomUUID();
+
+    auto u1 = rndGen.randomUUID();
+    auto u2 = rndGen.randomUUID();
     assert(u1 != u2);
     assert(u1.variant == UUID.Variant.rfc4122);
     assert(u1.uuidVersion == UUID.Version.randomNumberBased);

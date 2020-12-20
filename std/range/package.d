@@ -11290,6 +11290,9 @@ that break its sorted-ness, `SortedRange` will work erratically.
     assert(s.groupBy.equal!equal([[100, 101, 102], [200, 201], [300]]));
 }
 
+version (unittest)
+    import std.uuid;
+
 // Test on an input range
 @system unittest
 {
@@ -11297,9 +11300,8 @@ that break its sorted-ness, `SortedRange` will work erratically.
     import std.file : exists, remove, tempDir;
     import std.path : buildPath;
     import std.stdio : File;
-    import std.uuid : randomUUID;
     auto name = buildPath(tempDir(), "test.std.range.line-" ~ text(__LINE__) ~
-                          "." ~ randomUUID().toString());
+                          "." ~ rndGen.randomUUID().toString());
     auto f = File(name, "w");
     scope(exit) if (exists(name)) remove(name);
     // write a sorted range of lines to the file

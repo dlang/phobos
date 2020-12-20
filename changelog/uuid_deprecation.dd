@@ -1,0 +1,16 @@
+std.uuid.randomUUID() is insecure and has been deprecated
+
+The `randomUUID()` overload not taking any arguments has been deprecated.
+It is dangerous, as it causes predictable, non-secure UUIDs and has not been
+documented as doing that previously. Silently changing this function to use a secure
+system RNG is not possible, as these RNGs may block at early boot when they are
+not yet seeded, causing `randomUUID` to block as well.
+See $(LINK2 https://forum.dlang.org/thread/zjmyxudvscfwrkrdabmt@forum.dlang.org, this forum thread)
+for a detailed discussion of the problem.
+
+Depending on whether the desired output needs to be cryptographically secure and
+considering the potential blocking problem, users should use `rndGen` (insecure)
+from std.random or a secure alternative like this:
+----------------------------
+auto insecureUUID = rndGen.randomUUID();
+----------------------------
