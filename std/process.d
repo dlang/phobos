@@ -108,6 +108,7 @@ version (Windows)
 import std.internal.cstring;
 import std.range.primitives;
 import std.stdio;
+import std.traits : isSomeChar;
 
 version (OSX)
     version = Darwin;
@@ -213,9 +214,7 @@ static:
     string opIndex(scope const(char)[] name) @safe
     {
         import std.exception : enforce;
-        string value;
-        enforce(getImpl(name, value), "Environment variable not found: "~name);
-        return value;
+        return get(name, null).enforce("Environment variable not found: "~name);
     }
 
     /**
@@ -253,8 +252,8 @@ static:
     string get(scope const(char)[] name, string defaultValue = null) @safe
     {
         string value;
-        auto found = getImpl(name, value);
-        return found ? value : defaultValue;
+        getImpl(name, (result) { value = result ? cachedToString(result) : defaultValue; });
+        return value;
     }
 
     /**
@@ -322,7 +321,7 @@ static:
     multi-threaded programs. See e.g.
     $(LINK2 https://www.gnu.org/software/libc/manual/html_node/Environment-Access.html#Environment-Access, glibc).
     */
-    void remove(scope const(char)[] name) @trusted nothrow @nogc // TODO: @safe
+    void remove(scope const(char)[] name) @trusted nothrow @nogc
     {
         version (Windows)    SetEnvironmentVariableW(name.tempCStringW(), null);
         else version (Posix) core.sys.posix.stdlib.unsetenv(name.tempCString());
@@ -446,8 +445,13 @@ static:
     }
 
 private:
-    // Retrieves the environment variable, returns false on failure.
-    bool getImpl(scope const(char)[] name, out string value) @trusted
+    version (Windows) alias OSChar = WCHAR;
+    else version (Posix) alias OSChar = char;
+
+    // Retrieves the environment variable. Calls `sink` with a
+    // temporary buffer of OS characters, or `null` if the variable
+    // doesn't exist.
+    void getImpl(scope const(char)[] name, scope void delegate(const(OSChar)[]) @safe sink) @trusted
     {
         version (Windows)
         {
@@ -468,15 +472,12 @@ private:
             {
                 immutable err = GetLastError();
                 if (err == ERROR_ENVVAR_NOT_FOUND)
-                    return false;
+                    return sink(null);
                 if (err != NO_ERROR) // Some other Windows error, throw.
                     throw new WindowsException(err);
             }
             if (len <= 1)
-            {
-                value = "";
-                return true;
-            }
+                return sink("");
             buf.length = len;
 
             while (true)
@@ -488,21 +489,15 @@ private:
                 {
                     immutable err = GetLastError();
                     if (err == NO_ERROR) // sucessfully read a 0-length variable
-                    {
-                        value = "";
-                        return true;
-                    }
+                        return sink("");
                     if (err == ERROR_ENVVAR_NOT_FOUND) // variable didn't exist
-                        return false;
+                        return sink(null);
                     // some other windows error
                     throw new WindowsException(err);
                 }
                 assert(lenRead != buf.length, "impossible according to msft docs");
                 if (lenRead < buf.length) // the buffer was long enough
-                {
-                    value = toUTF8(buf[0 .. lenRead]);
-                    return true;
-                }
+                    return sink(buf[0 .. lenRead]);
                 // resize and go around again, because the environment variable grew
                 buf.length = lenRead;
             }
@@ -512,25 +507,30 @@ private:
             import core.stdc.string : strlen;
 
             const vz = core.sys.posix.stdlib.getenv(name.tempCString());
-            if (vz == null) return false;
-            auto v = vz[0 .. strlen(vz)];
-
-            // Cache the last call's result.
-            static string lastResult;
-            if (v.empty)
-            {
-                // Return non-null array for blank result to distinguish from
-                // not-present result.
-                lastResult = "";
-            }
-            else if (v != lastResult)
-            {
-                lastResult = v.idup;
-            }
-            value = lastResult;
-            return true;
-        }
+            if (vz == null) return sink(null);
+            return sink(vz[0 .. strlen(vz)]);
+       }
         else static assert(0);
+    }
+
+    string cachedToString(C)(scope const(C)[] v) @safe
+    {
+        import std.algorithm.comparison : equal;
+
+        // Cache the last call's result.
+        static string lastResult;
+        if (v.empty)
+        {
+            // Return non-null array for blank result to distinguish from
+            // not-present result.
+            lastResult = "";
+        }
+        else if (!v.equal(lastResult))
+        {
+            import std.conv : to;
+            lastResult = v.to!string;
+        }
+        return lastResult;
     }
 }
 
@@ -666,6 +666,18 @@ private:
     assert(tidA != tidB);
 }
 
+
+package(std) string uniqueTempPath() @safe
+{
+    import std.file : tempDir;
+    import std.path : buildPath;
+    import std.uuid : randomUUID;
+    // Path should contain spaces to test escaping whitespace
+    return buildPath(tempDir(), "std.process temporary file " ~
+        randomUUID().toString());
+}
+
+
 version (iOSDerived) {}
 else:
 
@@ -797,11 +809,20 @@ Pid spawnProcess(scope const(char[])[] args,
                  const string[string] env = null,
                  Config config = Config.none,
                  scope const char[] workDir = null)
-    @trusted // TODO: Should be @safe
+    @safe
 {
-    version (Windows)    auto  args2 = escapeShellArguments(args);
-    else version (Posix) alias args2 = args;
-    return spawnProcessImpl(args2, stdin, stdout, stderr, env, config, workDir);
+    version (Windows)
+    {
+        const commandLine = escapeShellArguments(args);
+        const program = args.length ? args[0] : null;
+        return spawnProcessWin(commandLine, program, stdin, stdout, stderr, env, config, workDir);
+    }
+    else version (Posix)
+    {
+        return spawnProcessPosix(args, stdin, stdout, stderr, env, config, workDir);
+    }
+    else
+        static assert(0);
 }
 
 /// ditto
@@ -861,13 +882,13 @@ envz should be a zero-terminated array of zero-terminated strings
 on the form "var=value".
 */
 version (Posix)
-private Pid spawnProcessImpl(scope const(char[])[] args,
-                             File stdin,
-                             File stdout,
-                             File stderr,
-                             scope const string[string] env,
-                             Config config,
-                             scope const(char)[] workDir)
+private Pid spawnProcessPosix(scope const(char[])[] args,
+                              File stdin,
+                              File stdout,
+                              File stderr,
+                              scope const string[string] env,
+                              Config config,
+                              scope const(char)[] workDir)
     @trusted // TODO: Should be @safe
 {
     import core.exception : RangeError;
@@ -1148,7 +1169,7 @@ private Pid spawnProcessImpl(scope const(char[])[] args,
                     errorMsg = "getrlimit failed";
                     break;
                 case InternalError.exec:
-                    errorMsg = "Failed to execute program";
+                    errorMsg = "Failed to execute '" ~ cast(string) name ~ "'";
                     break;
                 case InternalError.doubleFork:
                     // Can happen only when starting detached process
@@ -1196,16 +1217,18 @@ envz must be a pointer to a block of UTF-16 characters on the form
 "var1=value1\0var2=value2\0...varN=valueN\0\0".
 */
 version (Windows)
-private Pid spawnProcessImpl(scope const(char)[] commandLine,
-                             File stdin,
-                             File stdout,
-                             File stderr,
-                             const string[string] env,
-                             Config config,
-                             scope const(char)[] workDir)
+private Pid spawnProcessWin(scope const(char)[] commandLine,
+                            scope const(char)[] program,
+                            File stdin,
+                            File stdout,
+                            File stderr,
+                            scope const string[string] env,
+                            Config config,
+                            scope const(char)[] workDir)
     @trusted
 {
     import core.exception : RangeError;
+    import std.conv : text;
 
     if (commandLine.empty) throw new RangeError("Command line is empty");
 
@@ -1268,7 +1291,7 @@ private Pid spawnProcessImpl(scope const(char)[] commandLine,
     if (!CreateProcessW(null, commandLine.tempCStringW().buffPtr,
                         null, null, true, dwCreationFlags,
                         envz, workDir.length ? pworkDir : null, &startinfo, &pi))
-        throw ProcessException.newFromLastError("Failed to spawn new process");
+        throw ProcessException.newFromLastError("Failed to spawn process \"" ~ cast(string) program ~ '"');
 
     // figure out if we should close any of the streams
     if (!(config & Config.retainStdin ) && stdinFD  > STDERR_FILENO
@@ -1406,28 +1429,39 @@ version (Windows) @system unittest
 // (checking that it is in fact executable).
 version (Posix)
 private string searchPathFor(scope const(char)[] executable)
-    @trusted //TODO: @safe nothrow
+    @safe
 {
     import std.algorithm.iteration : splitter;
-    import std.conv : to;
-    import std.path : buildPath;
+    import std.conv : text;
+    import std.path : chainPath;
 
-    auto pathz = core.stdc.stdlib.getenv("PATH");
-    if (pathz == null)  return null;
+    string result;
 
-    foreach (dir; splitter(to!string(pathz), ':'))
-    {
-        auto execPath = buildPath(dir, executable);
-        if (isExecutable(execPath))  return execPath;
-    }
+    environment.getImpl("PATH",
+        (scope const(char)[] path)
+        {
+            if (!path)
+                return;
 
-    return null;
+            foreach (dir; splitter(path, ":"))
+            {
+                auto execPath = chainPath(dir, executable);
+                if (isExecutable(execPath))
+                {
+                    result = text(execPath);
+                    return;
+                }
+            }
+        });
+
+    return result;
 }
 
 // Checks whether the file exists and can be executed by the
 // current user.
 version (Posix)
-private bool isExecutable(scope const(char)[] path) @trusted nothrow @nogc //TODO: @safe
+private bool isExecutable(R)(R path) @trusted nothrow @nogc
+if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     return (access(path.tempCString(), X_OK) == 0);
 }
@@ -1666,11 +1700,16 @@ version (Posix) @system unittest
 
 @system unittest // Error handling in spawnProcess()
 {
-    import std.exception : assertThrown;
-    assertThrown!ProcessException(spawnProcess("ewrgiuhrifuheiohnmnvqweoijwf"));
-    assertThrown!ProcessException(spawnProcess("./rgiuhrifuheiohnmnvqweoijwf"));
-    assertThrown!ProcessException(spawnProcess("ewrgiuhrifuheiohnmnvqweoijwf", null, Config.detached));
-    assertThrown!ProcessException(spawnProcess("./rgiuhrifuheiohnmnvqweoijwf", null, Config.detached));
+    import std.algorithm.searching : canFind;
+    import std.exception : assertThrown, collectExceptionMsg;
+
+    static void testNotFoundException(string program)
+    {
+        assert(collectExceptionMsg!ProcessException(spawnProcess(program)).canFind(program));
+        assert(collectExceptionMsg!ProcessException(spawnProcess(program, null, Config.detached)).canFind(program));
+    }
+    testNotFoundException("ewrgiuhrifuheiohnmnvqweoijwf");
+    testNotFoundException("./rgiuhrifuheiohnmnvqweoijwf");
 
     // can't execute malformed file with executable permissions
     version (Posix)
@@ -1832,7 +1871,7 @@ Pid spawnShell(scope const(char)[] command,
                Config config = Config.none,
                scope const(char)[] workDir = null,
                scope string shellPath = nativeShell)
-    @trusted // TODO: Should be @safe
+    @safe
 {
     version (Windows)
     {
@@ -1840,8 +1879,9 @@ Pid spawnShell(scope const(char)[] command,
         // It does not use CommandLineToArgvW.
         // Instead, it treats the first and last quote specially.
         // See CMD.EXE /? for details.
-        auto args = escapeShellFileName(shellPath)
-                    ~ ` ` ~ shellSwitch ~ ` "` ~ command ~ `"`;
+        const commandLine = escapeShellFileName(shellPath)
+                            ~ ` ` ~ shellSwitch ~ ` "` ~ command ~ `"`;
+        return spawnProcessWin(commandLine, shellPath, stdin, stdout, stderr, env, config, workDir);
     }
     else version (Posix)
     {
@@ -1849,8 +1889,10 @@ Pid spawnShell(scope const(char)[] command,
         args[0] = shellPath;
         args[1] = shellSwitch;
         args[2] = command;
+        return spawnProcessPosix(args, stdin, stdout, stderr, env, config, workDir);
     }
-    return spawnProcessImpl(args, stdin, stdout, stderr, env, config, workDir);
+    else
+        static assert(0);
 }
 
 /// ditto
@@ -3010,7 +3052,7 @@ auto execute(scope const(char[])[] args,
              Config config = Config.none,
              size_t maxOutput = size_t.max,
              scope const(char)[] workDir = null)
-    @trusted //TODO: @safe
+    @safe
 {
     return executeImpl!pipeProcess(args, env, config, maxOutput, workDir);
 }
@@ -3021,7 +3063,7 @@ auto execute(scope const(char)[] program,
              Config config = Config.none,
              size_t maxOutput = size_t.max,
              scope const(char)[] workDir = null)
-    @trusted //TODO: @safe
+    @safe
 {
     return executeImpl!pipeProcess(program, env, config, maxOutput, workDir);
 }
@@ -3033,7 +3075,7 @@ auto executeShell(scope const(char)[] command,
                   size_t maxOutput = size_t.max,
                   scope const(char)[] workDir = null,
                   string shellPath = nativeShell)
-    @trusted //TODO: @safe
+    @safe
 {
     return executeImpl!pipeShell(command,
                                  env,
@@ -3051,6 +3093,7 @@ private auto executeImpl(alias pipeFunc, Cmd, ExtraPipeFuncArgs...)(
     size_t maxOutput = size_t.max,
     scope const(char)[] workDir = null,
     ExtraPipeFuncArgs extraArgs = ExtraPipeFuncArgs.init)
+    @trusted //TODO: @safe
 {
     import std.algorithm.comparison : min;
     import std.array : appender;
@@ -3284,16 +3327,6 @@ private struct TestScript
     }
 
     string path;
-}
-
-package(std) string uniqueTempPath() @safe
-{
-    import std.file : tempDir;
-    import std.path : buildPath;
-    import std.uuid : randomUUID;
-    // Path should contain spaces to test escaping whitespace
-    return buildPath(tempDir(), "std.process temporary file " ~
-        randomUUID().toString());
 }
 
 
