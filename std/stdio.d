@@ -1961,7 +1961,7 @@ is recommended if you want to process a complete file.
     /**
      * Reads formatted _data from the file using $(REF formattedRead, std,_format).
      * Params:
-     * format = The $(REF_ALTTEXT format string, formattedWrite, std _format).
+     * format = The $(REF_ALTTEXT format string, formattedWrite, std, _format).
      * When passed as a compile-time argument, the string will be statically checked
      * against the argument types passed.
      * data = Items to be read.
