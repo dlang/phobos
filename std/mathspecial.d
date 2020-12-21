@@ -208,7 +208,7 @@ real logmdigammaInverse(real x)
  * betaIncomplete(a, b, x) = $(GAMMA)(a + b) / ( $(GAMMA)(a) $(GAMMA)(b) ) *
  * $(INTEGRATE 0, x) $(POWER t, a-1)$(POWER (1-t), b-1) dt
  *
- * and is the same as the the cumulative distribution function of the Beta
+ * and is the same as the cumulative distribution function of the Beta
  * distribution.
  *
  * The domain of definition is 0 <= x <= 1.  In this
