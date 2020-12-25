@@ -224,17 +224,17 @@ private struct TempCStringBuffer(To = char)
     @disable this(this);
     alias ptr this; /// implicitly covert to raw pointer
 
-    @property inout(To)* buffPtr() inout
+    @property inout(To)* buffPtr() inout return scope
     {
         return _ptr == useStack ? _buff.ptr : _ptr;
     }
 
-    @property const(To)* ptr() const
+    @property const(To)* ptr() const return scope
     {
         return buffPtr;
     }
 
-    const(To)[] opIndex() const pure
+    const(To)[] opIndex() const return scope
     {
         return buffPtr[0 .. _length];
     }

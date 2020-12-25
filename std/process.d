@@ -1438,32 +1438,23 @@ private string searchPathFor(scope const(char)[] executable)
     string result;
 
     environment.getImpl("PATH",
-        (scope const(char)[] path)
+        (scope const(char)[] path) @safe
         {
             if (!path)
                 return;
 
             foreach (dir; splitter(path, ":"))
             {
-                auto execPath = chainPath(dir, executable);
-                if (isExecutable(execPath))
+                scope execPath = chainPath(dir, executable).tempCString();
+                if ((() @trusted => access(execPath, X_OK))() == 0)
                 {
-                    result = text(execPath);
+                    result = execPath[].idup;
                     return;
                 }
             }
         });
 
     return result;
-}
-
-// Checks whether the file exists and can be executed by the
-// current user.
-version (Posix)
-private bool isExecutable(R)(R path) @trusted nothrow @nogc
-if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
-{
-    return (access(path.tempCString(), X_OK) == 0);
 }
 
 version (Posix) @safe unittest
