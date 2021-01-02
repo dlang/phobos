@@ -47,23 +47,23 @@ public struct KECCAK(uint digestSize, bool shake = false)
 
     @safe @nogc pure nothrow:
 
-    enum
+    enum blockSize = 1600 - digestSize * 2; /// sponge rate in bits
+    private enum
     {
-        blockSize = digestSize, /// digest size in bits
-        dgst_sz_bytes = blockSize >> 3, /// digest size in bytes
-        delim = shake ? 0x1f : 0x06, /// delimiter when finishing
-        rate = 200 - (blockSize >> 2), /// sponge rate
+        digestSizeBytes = digestSize / 8, // digest size in bytes
+        delim = shake ? 0x1f : 0x06, // delimiter when finishing
+        rate = blockSize / 8 // sponge rate in bytes
     }
 
     union
     {
-        private ubyte[200] st;  /// state (8bit)
-        private ulong[25] st64; /// state (64bit)
+        private ubyte[200] st;  // state (8bit)
+        private ulong[25] st64; // state (64bit)
     }
 
     static assert(st64.sizeof == st.sizeof);
 
-    private size_t pt; /// left-over pointer
+    private size_t pt; // left-over pointer
 
     /**
      * Initiates the structure. Begins the SHA-3/SHAKE operation.
@@ -106,14 +106,14 @@ public struct KECCAK(uint digestSize, bool shake = false)
      * Returns the finished hash. This also clears part of the state,
      * leaving just the final digest.
      */
-    ubyte[dgst_sz_bytes] finish()
+    ubyte[digestSizeBytes] finish()
     {
         st[pt] ^= delim;
         st[rate - 1] ^= 0x80;
         transform;
 
-        st[dgst_sz_bytes .. $] = 0; // Zero possible sensitive data
-        return st[0 .. dgst_sz_bytes];
+        st[digestSizeBytes .. $] = 0; // Zero possible sensitive data
+        return st[0 .. digestSizeBytes];
     }
 
 private:
