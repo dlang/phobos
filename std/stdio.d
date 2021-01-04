@@ -1331,7 +1331,7 @@ Throws: `Exception` if the file is not opened.
                 liLength.HighPart, &overlapped);
         }
 
-        private static T wenforce(T)(T cond, string str)
+        private static T wenforce(T)(T cond, lazy string str)
         {
             import core.sys.windows.winbase : GetLastError;
             import std.windows.syserror : sysErrorString;
