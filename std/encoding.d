@@ -8,7 +8,7 @@ for arbitrary encoding and decoding of characters, arbitrary transcoding
 between strings of different type, as well as validation and sanitization.
 
 Encodings currently supported are UTF-8, UTF-16, UTF-32, ASCII, ISO-8859-1
-(also known as LATIN-1), ISO-8859-2 (LATIN-2), WINDOWS-1250, WINDOWS-1251
+(also known as LATIN-1), ISO-8859-2 (LATIN-2), CP866, WINDOWS-1250, WINDOWS-1251
 and WINDOWS-1252.
 
 $(SCRIPT inhibitQuickIndex = 1;)
@@ -51,6 +51,8 @@ $(TR $(TD Encoding schemes) $(TD
     $(LREF EncodingSchemeASCII)
     $(LREF EncodingSchemeLatin1)
     $(LREF EncodingSchemeLatin2)
+    $(LREF EncodingSchemeLatin2)
+    $(LREF EncodingSchemeCp866)
     $(LREF EncodingSchemeUtf16Native)
     $(LREF EncodingSchemeUtf32Native)
     $(LREF EncodingSchemeUtf8)
@@ -65,6 +67,7 @@ $(TR $(TD Representation) $(TD
     $(LREF Latin1String)
     $(LREF Latin2Char)
     $(LREF Latin2String)
+    $(LREF Cp866Char)
     $(LREF Windows1250Char)
     $(LREF Windows1250String)
     $(LREF Windows1251Char)
@@ -88,7 +91,7 @@ auto e = EncodingScheme.create("utf-8");
 ----------------------------------------------------
 
 This library supplies $(LREF EncodingScheme) subclasses for ASCII,
-ISO-8859-1 (also known as LATIN-1), ISO-8859-2 (LATIN-2), WINDOWS-1250,
+ISO-8859-1 (also known as LATIN-1), ISO-8859-2 (LATIN-2), CP866, WINDOWS-1250,
 WINDOWS-1251, WINDOWS-1252, UTF-8, and (on little-endian architectures)
 UTF-16LE and UTF-32LE; or (on big-endian architectures) UTF-16BE and UTF-32BE.
 
@@ -446,6 +449,10 @@ import std.typecons;
         Latin2String x;
         transcode(s,x);
         assert(x == cast(Latin2Char[])[0xae, 'l', 'u', 0xbb, 'o', 'u', 0xe8, 'k', 0xfd, ' ', 'k', 0xf9, 0xf2]);
+        auto s2 = "\u0410lu\u0411ou\u0430k\u0431 k\u2116\u25A0";
+        Cp866String x2;
+        transcode(s2,x2);
+        assert(x2 == cast(Cp866Char[])[0x80, 'l', 'u', 0x81, 'o', 'u', 0xa0, 'k', 0xa1, ' ', 'k', 0xfc, 0xfe]);
         Windows1250String y;
         transcode(s,y);
         assert(y == cast(Windows1250Char[])[0x8e, 'l', 'u', 0x9d, 'o', 'u', 0xe8, 'k', 0xfd, ' ', 'k', 0xf9, 0xf2]);
@@ -1080,6 +1087,101 @@ private template EncoderInstance(CharType : Latin2Char)
 }
 
 //=============================================================================
+//          Code page 866 RU
+//=============================================================================
+
+/// Defines a Cp866-encoded character.
+enum Cp866Char : ubyte { init }
+
+/**
+ * Defines an Cp866-encoded string (as an array of $(D
+ * immutable(Cp866Char))).
+ */
+alias Cp866String = immutable(Cp866Char)[];
+
+private template EncoderInstance(CharType : Cp866Char)
+{
+    import std.typecons : Tuple, tuple;
+
+    alias E = Cp866Char;
+    alias EString = Cp866String;
+
+    @property string encodingName() @safe pure nothrow @nogc
+    {
+        return "cp866";
+    }
+
+    private static immutable dchar m_charMapStart = 0x80;
+    private static immutable dchar m_charMapEnd = 0xff;
+
+    private immutable wstring charMap =
+        "\u0410\u0411\u0412\u0413\u0414\u0415\u0416\u0417"~
+        "\u0418\u0419\u041A\u041B\u041C\u041D\u041E\u041F"~
+        "\u0420\u0421\u0422\u0423\u0424\u0425\u0426\u0427"~
+        "\u0428\u0429\u042A\u042B\u042C\u042D\u042E\u042F"~
+        "\u0430\u0431\u0432\u0433\u0434\u0435\u0436\u0437"~
+        "\u0438\u0439\u043A\u043B\u043C\u043D\u043E\u043F"~
+        "\u2591\u2592\u2593\u2502\u2524\u2561\u2562\u2556"~
+        "\u2555\u2563\u2551\u2557\u255D\u255C\u255B\u2510"~
+        "\u2514\u2534\u252C\u251C\u2500\u253C\u255E\u255F"~
+        "\u255A\u2554\u2569\u2566\u2560\u2550\u256C\u2567"~
+        "\u2568\u2564\u2565\u2559\u2558\u2552\u2553\u256B"~
+        "\u256A\u2518\u250C\u2588\u2584\u258C\u2590\u2580"~
+        "\u0440\u0441\u0442\u0443\u0444\u0445\u0446\u0447"~
+        "\u0448\u0449\u044A\u044B\u044C\u044D\u044E\u044F"~
+        "\u0401\u0451\u0404\u0454\u0407\u0457\u040E\u045E"~
+        "\u00B0\u2219\u00B7\u221A\u2116\u00A4\u25A0\u00A0";
+
+    private immutable Tuple!(wchar, char)[] bstMap = [
+        tuple('\u0448','\xE8'),tuple('\u0428','\x98'),tuple('\u2556','\xB7'),
+        tuple('\u0418','\x88'),tuple('\u0438','\xA8'),tuple('\u2502','\xB3'),
+        tuple('\u2566','\xCB'),tuple('\u0410','\x80'),tuple('\u0420','\x90'),
+        tuple('\u0430','\xA0'),tuple('\u0440','\xE0'),tuple('\u0451','\xF1'),
+        tuple('\u2534','\xC1'),tuple('\u255E','\xC6'),tuple('\u2584','\xDC'),
+        tuple('\u0401','\xF0'),tuple('\u0414','\x84'),tuple('\u041C','\x8C'),
+        tuple('\u0424','\x94'),tuple('\u042C','\x9C'),tuple('\u0434','\xA4'),
+        tuple('\u043C','\xAC'),tuple('\u0444','\xE4'),tuple('\u044C','\xEC'),
+        tuple('\u2116','\xFC'),tuple('\u2518','\xD9'),tuple('\u2552','\xD5'),
+        tuple('\u255A','\xC8'),tuple('\u2562','\xB6'),tuple('\u256A','\xD8'),
+        tuple('\u2591','\xB0'),tuple('\u00B0','\xF8'),tuple('\u0407','\xF4'),
+        tuple('\u0412','\x82'),tuple('\u0416','\x86'),tuple('\u041A','\x8A'),
+        tuple('\u041E','\x8E'),tuple('\u0422','\x92'),tuple('\u0426','\x96'),
+        tuple('\u042A','\x9A'),tuple('\u042E','\x9E'),tuple('\u0432','\xA2'),
+        tuple('\u0436','\xA6'),tuple('\u043A','\xAA'),tuple('\u043E','\xAE'),
+        tuple('\u0442','\xE2'),tuple('\u0446','\xE6'),tuple('\u044A','\xEA'),
+        tuple('\u044E','\xEE'),tuple('\u0457','\xF5'),tuple('\u221A','\xFB'),
+        tuple('\u2510','\xBF'),tuple('\u2524','\xB4'),tuple('\u2550','\xCD'),
+        tuple('\u2554','\xC9'),tuple('\u2558','\xD4'),tuple('\u255C','\xBD'),
+        tuple('\u2560','\xCC'),tuple('\u2564','\xD1'),tuple('\u2568','\xD0'),
+        tuple('\u256C','\xCE'),tuple('\u258C','\xDD'),tuple('\u2593','\xB2'),
+        tuple('\u00A4','\xFD'),tuple('\u00B7','\xFA'),tuple('\u0404','\xF2'),
+        tuple('\u040E','\xF6'),tuple('\u0411','\x81'),tuple('\u0413','\x83'),
+        tuple('\u0415','\x85'),tuple('\u0417','\x87'),tuple('\u0419','\x89'),
+        tuple('\u041B','\x8B'),tuple('\u041D','\x8D'),tuple('\u041F','\x8F'),
+        tuple('\u0421','\x91'),tuple('\u0423','\x93'),tuple('\u0425','\x95'),
+        tuple('\u0427','\x97'),tuple('\u0429','\x99'),tuple('\u042B','\x9B'),
+        tuple('\u042D','\x9D'),tuple('\u042F','\x9F'),tuple('\u0431','\xA1'),
+        tuple('\u0433','\xA3'),tuple('\u0435','\xA5'),tuple('\u0437','\xA7'),
+        tuple('\u0439','\xA9'),tuple('\u043B','\xAB'),tuple('\u043D','\xAD'),
+        tuple('\u043F','\xAF'),tuple('\u0441','\xE1'),tuple('\u0443','\xE3'),
+        tuple('\u0445','\xE5'),tuple('\u0447','\xE7'),tuple('\u0449','\xE9'),
+        tuple('\u044B','\xEB'),tuple('\u044D','\xED'),tuple('\u044F','\xEF'),
+        tuple('\u0454','\xF3'),tuple('\u045E','\xF7'),tuple('\u2219','\xF9'),
+        tuple('\u2500','\xC4'),tuple('\u250C','\xDA'),tuple('\u2514','\xC0'),
+        tuple('\u251C','\xC3'),tuple('\u252C','\xC2'),tuple('\u253C','\xC5'),
+        tuple('\u2551','\xBA'),tuple('\u2553','\xD6'),tuple('\u2555','\xB8'),
+        tuple('\u2557','\xBB'),tuple('\u2559','\xD3'),tuple('\u255B','\xBE'),
+        tuple('\u255D','\xBC'),tuple('\u255F','\xC7'),tuple('\u2561','\xB5'),
+        tuple('\u2563','\xB9'),tuple('\u2565','\xD2'),tuple('\u2567','\xCF'),
+        tuple('\u2569','\xCA'),tuple('\u256B','\xD7'),tuple('\u2580','\xDF'),
+        tuple('\u2588','\xDB'),tuple('\u2590','\xDE'),tuple('\u2592','\xB1'),
+        tuple('\u25A0','\xFE')
+    ];
+
+    mixin GenericEncoder!();
+}
+
+//=============================================================================
 //          WINDOWS-1250
 //=============================================================================
 
@@ -1660,7 +1762,7 @@ Returns true if c is a valid code point
  Supersedes:
  This function supersedes `std.utf.startsValidDchar()`.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, CP866, WINDOWS-1250,
  WINDOWS-1251, WINDOWS-1252
 
  Params:
@@ -1677,7 +1779,7 @@ bool isValidCodePoint(dchar c) @safe pure nothrow @nogc
  The type of encoding cannot be deduced. Therefore, it is necessary to
  explicitly specify the encoding type.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, CP866, WINDOWS-1250,
  WINDOWS-1251, WINDOWS-1252
  */
 @property string encodingName(T)()
@@ -1694,6 +1796,7 @@ bool isValidCodePoint(dchar c) @safe pure nothrow @nogc
     assert(encodingName!(AsciiChar) == "ASCII");
     assert(encodingName!(Latin1Char) == "ISO-8859-1");
     assert(encodingName!(Latin2Char) == "ISO-8859-2");
+    assert(encodingName!(Cp866Char) == "cp866");
     assert(encodingName!(Windows1250Char) == "windows-1250");
     assert(encodingName!(Windows1251Char) == "windows-1251");
     assert(encodingName!(Windows1252Char) == "windows-1252");
@@ -1706,7 +1809,7 @@ bool isValidCodePoint(dchar c) @safe pure nothrow @nogc
  The type of encoding cannot be deduced. Therefore, it is necessary to
  explicitly specify the encoding type.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, CP866, WINDOWS-1250,
  WINDOWS-1251, WINDOWS-1252
  */
 bool canEncode(E)(dchar c)
@@ -1722,6 +1825,9 @@ bool canEncode(E)(dchar c)
     assert(!canEncode!(AsciiChar)('\u00A0'));
     assert( canEncode!(Latin1Char)('\u00A0'));
     assert( canEncode!(Latin2Char)('\u00A0'));
+    assert( canEncode!(Cp866Char)('\u0410'));
+    assert(!canEncode!(Cp866Char)('\u20AD'));
+    assert(!canEncode!(Cp866Char)('\uFFFD'));
     assert( canEncode!(Windows1250Char)('\u20AC'));
     assert(!canEncode!(Windows1250Char)('\u20AD'));
     assert(!canEncode!(Windows1250Char)('\uFFFD'));
@@ -1751,7 +1857,7 @@ bool canEncode(E)(dchar c)
  not be legal in ASCII, because ASCII code units must always be in the range
  0x00 to 0x7F.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, CP866, WINDOWS-1250,
  WINDOWS-1251, WINDOWS-1252
 
  Params:
@@ -1770,6 +1876,8 @@ bool isValidCodeUnit(E)(E c)
     assert( isValidCodeUnit(cast(wchar) 0xD800));
     assert(!isValidCodeUnit(cast(dchar) 0xD800));
     assert(!isValidCodeUnit(cast(AsciiChar) 0xA0));
+    assert( isValidCodeUnit(cast(Cp866Char) 0x80));
+    assert( isValidCodeUnit(cast(Cp866Char) 0xFF));
     assert( isValidCodeUnit(cast(Windows1250Char) 0x80));
     assert(!isValidCodeUnit(cast(Windows1250Char) 0x81));
     assert( isValidCodeUnit(cast(Windows1251Char) 0x80));
@@ -1786,7 +1894,7 @@ bool isValidCodeUnit(E)(E c)
  function returns a bool indicating whether the input was valid or not,
  whereas the older function would throw an exception.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, CP866, WINDOWS-1250,
  WINDOWS-1251, WINDOWS-1252
 
  Params:
@@ -1808,7 +1916,7 @@ bool isValid(E)(const(E)[] s)
  Returns the length of the longest possible substring, starting from
  the first code unit, which is validly encoded.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, CP866, WINDOWS-1250,
  WINDOWS-1251, WINDOWS-1252
 
  Params:
@@ -1837,7 +1945,7 @@ size_t validLength(E)(const(E)[] s)
  character repertoire contains it, otherwise invalid sequences will be
  replaced with '?'.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, CP866, WINDOWS-1250,
  WINDOWS-1251, WINDOWS-1252
 
  Params:
@@ -1894,7 +2002,7 @@ immutable(E)[] sanitize(E)(immutable(E)[] s)
  The input to this function MUST be validly encoded.
  This is enforced by the function's in-contract.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, CP866, WINDOWS-1250,
  WINDOWS-1251, WINDOWS-1252
 
  Params:
@@ -1927,7 +2035,7 @@ do
  The input to this function MUST be validly encoded.
  This is enforced by the function's in-contract.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, CP866, WINDOWS-1250,
  WINDOWS-1251, WINDOWS-1252
 
  Params:
@@ -1962,7 +2070,7 @@ do
  Supersedes:
  This function supersedes std.utf.toUTFindex().
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, CP866, WINDOWS-1250,
  WINDOWS-1251, WINDOWS-1252
 
  Params:
@@ -2002,7 +2110,7 @@ do
  This function supersedes std.utf.decode(), however, note that the
  function codePoints() supersedes it more conveniently.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, CP866, WINDOWS-1250,
  WINDOWS-1251, WINDOWS-1252
 
  Params:
@@ -2029,7 +2137,7 @@ do
  The input to this function MUST be validly encoded.
  This is enforced by the function's in-contract.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, CP866, WINDOWS-1250,
  WINDOWS-1251, WINDOWS-1252
 
  Params:
@@ -2056,7 +2164,7 @@ do
  If an invalid sequence is found at the start of the string, this
  function will remove it, and return the value INVALID_SEQUENCE.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, CP866, WINDOWS-1250,
  WINDOWS-1251, WINDOWS-1252
 
  Params:
@@ -2081,7 +2189,7 @@ do
  The type of the output cannot be deduced. Therefore, it is necessary to
  explicitly specify the encoding as a template parameter.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, CP866, WINDOWS-1250,
  WINDOWS-1251, WINDOWS-1252
 
  Params:
@@ -2113,7 +2221,7 @@ do
  This function supersedes std.utf.encode(), however, note that the
  function codeUnits() supersedes it more conveniently.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, CP866, WINDOWS-1250,
  WINDOWS-1251, WINDOWS-1252
 
  Params:
@@ -2146,7 +2254,7 @@ do
  This function supersedes std.utf.encode(), however, note that the
  function codeUnits() supersedes it more conveniently.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, CP866, WINDOWS-1250,
  WINDOWS-1251, WINDOWS-1252
 
  Params:
@@ -2255,7 +2363,7 @@ if (isNativeOutputRange!(R, E))
  This function supersedes std.utf.encode(), however, note that the
  function codeUnits() supersedes it more conveniently.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, CP866, WINDOWS-1250,
  WINDOWS-1251, WINDOWS-1252
 
  Params:
@@ -2307,7 +2415,7 @@ size_t encode(Tgt, Src, R)(in Src[] s, R range)
  Supersedes:
  This function supersedes std.utf.decode().
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, CP866, WINDOWS-1250,
  WINDOWS-1251, WINDOWS-1252
 
  Params:
@@ -2360,7 +2468,7 @@ do
  Supersedes:
  This function supersedes std.utf.encode().
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, CP866, WINDOWS-1250,
  WINDOWS-1251, WINDOWS-1252
 
  Params:
@@ -2398,7 +2506,7 @@ do
  std.utf.toUTF32()
  (but note that to!() supersedes it more conveniently).
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, CP866, WINDOWS-1250,
  WINDOWS-1251, WINDOWS-1252
 
  Params:
@@ -2481,7 +2589,8 @@ do
         string asciiCharString = to!string(iota(0, 128, 1));
 
         alias Types = AliasSeq!(string, Latin1String, Latin2String, AsciiString,
-            Windows1250String, Windows1251String, Windows1252String, dstring, wstring);
+            Cp866String, Windows1250String, Windows1251String, Windows1252String, 
+            dstring, wstring);
         foreach (S; Types)
             foreach (D; Types)
             {
@@ -2624,6 +2733,7 @@ abstract class EncodingScheme
             EncodingScheme.register!EncodingSchemeASCII;
             EncodingScheme.register!EncodingSchemeLatin1;
             EncodingScheme.register!EncodingSchemeLatin2;
+            EncodingScheme.register!EncodingSchemeCp866;
             EncodingScheme.register!EncodingSchemeWindows1250;
             EncodingScheme.register!EncodingSchemeWindows1251;
             EncodingScheme.register!EncodingSchemeWindows1252;
@@ -3148,6 +3258,74 @@ class EncodingSchemeLatin2 : EncodingScheme
 }
 
 /**
+ EncodingScheme to handle Cp866
+ This scheme recognises the following names:
+                 "cp866"
+ */
+class EncodingSchemeCp866 : EncodingScheme
+{
+    /*
+    shared static this()
+    {
+        EncodingScheme.register!EncodingSchemeCp866;
+    }
+    */
+
+    const
+    {
+        override string[] names() @safe pure nothrow
+        {
+            return
+            [
+                "cp866"
+            ];
+        }
+
+        override string toString() @safe pure nothrow @nogc
+        {
+            return "cp866";
+        }
+
+        override bool canEncode(dchar c) @safe pure nothrow @nogc
+        {
+            return std.encoding.canEncode!(Cp866Char)(c);
+        }
+
+        override size_t encodedLength(dchar c) @safe pure nothrow @nogc
+        {
+            return std.encoding.encodedLength!(Cp866Char)(c);
+        }
+
+        override size_t encode(dchar c, ubyte[] buffer) @safe pure nothrow @nogc
+        {
+            auto r = cast(Cp866Char[]) buffer;
+            return std.encoding.encode(c,r);
+        }
+
+        override dchar decode(ref const(ubyte)[] s) @safe pure nothrow @nogc
+        {
+            auto t = cast(const(Cp866Char)[]) s;
+            dchar c = std.encoding.decode(t);
+            s = s[$-t.length..$];
+            return c;
+        }
+
+        override dchar safeDecode(ref const(ubyte)[] s) @safe pure nothrow @nogc
+        {
+            auto t = cast(const(Cp866Char)[]) s;
+            dchar c = std.encoding.safeDecode(t);
+            s = s[$-t.length..$];
+            return c;
+        }
+
+        override @property immutable(ubyte)[] replacementSequence() @safe pure nothrow @nogc
+        {
+            return cast(immutable(ubyte)[])"?";
+        }
+    }
+}
+
+/**
  EncodingScheme to handle Windows-1250
 
  This scheme recognises the following names:
@@ -3358,6 +3536,7 @@ class EncodingSchemeWindows1252 : EncodingScheme
         "ASCII",
         "ISO-8859-1",
         "ISO-8859-2",
+        "cp866",
         "windows-1250",
         "windows-1251",
         "windows-1252"
@@ -3379,6 +3558,8 @@ class EncodingSchemeWindows1252 : EncodingScheme
         ['\u0001','\u0020','\u0070','\u00DA','\u00FF'],
         //Valid 8859-2
         ['\u0020','\u00D7','\u00DF','\u010F','\u02D9'],
+        //Valid cp866
+        ['\u0410','\u0439','\u2552','\u0444','\u25A0'],
         //Valid 1250
         ['\u0020','\u20AC','\u201E','\u2021','\u2039'],
         //Valid 1251
@@ -3387,7 +3568,7 @@ class EncodingSchemeWindows1252 : EncodingScheme
         ['\u20AC','\u0160','\u2019','\u2122','\u0178'],
     ];
 
-    static const(ubyte)[] invalid = [0xA0,0xFF,0xFF,0x81,0x98,0x81];
+    static const(ubyte)[] invalid = [0xA0,0xFF,0xFF,0xFF,0x81,0x98,0x81];
 
     foreach (i,scheme;schemes)
     {
@@ -3407,7 +3588,7 @@ class EncodingSchemeWindows1252 : EncodingScheme
         assert(scheme.isValid(encodeStr),"Not correctly encoded UTF => " ~ schemeNames[i]);
         assert(valid[i] == decStr,"Error encode/decode UTF8 <=> " ~ schemeNames[i]);
 
-        if (schemeNames[i] == "ISO-8859-1" || schemeNames[i] == "ISO-8859-2")
+        if (schemeNames[i] == "ISO-8859-1" || schemeNames[i] == "ISO-8859-2" || schemeNames[i] == "cp866")
         {
             assert(scheme.safeDecode(invalid) != INVALID_SEQUENCE);
         }
