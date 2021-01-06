@@ -2589,7 +2589,7 @@ do
         string asciiCharString = to!string(iota(0, 128, 1));
 
         alias Types = AliasSeq!(string, Latin1String, Latin2String, AsciiString,
-            Cp866String, Windows1250String, Windows1251String, Windows1252String, 
+            Cp866String, Windows1250String, Windows1251String, Windows1252String,
             dstring, wstring);
         foreach (S; Types)
             foreach (D; Types)
