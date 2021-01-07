@@ -59,9 +59,11 @@ public struct KECCAK(uint digestSize, bool shake = false)
     {
         private ubyte[200] st;  // state (8bit)
         private ulong[25] st64; // state (64bit)
+        private size_t[200 / size_t.sizeof] stz;
     }
 
     static assert(st64.sizeof == st.sizeof);
+    static assert(stz.sizeof == st.sizeof);
 
     private size_t pt; // left-over pointer
 
@@ -84,21 +86,35 @@ public struct KECCAK(uint digestSize, bool shake = false)
      *
      * Params: input = Data input
      */
-    void put(scope const(ubyte)[] input...)
+    void put(scope const(ubyte)[] input...) @trusted
     {
         size_t j = pt;
-        const size_t len = input.length;
-
-        for (size_t i; i < len; ++i)
+        // Process wordwise if properly aligned.
+        if ((j | cast(size_t) input.ptr) % size_t.alignof == 0)
         {
-            st[j++] ^= input[i];
+            static assert(rate % size_t.sizeof == 0);
+            foreach (const word; (cast(size_t*) input.ptr)[0 .. input.length / size_t.sizeof])
+            {
+                stz.ptr[j / size_t.sizeof] ^= word;
+                j += size_t.sizeof;
+                if (j >= rate)
+                {
+                    transform;
+                    j = 0;
+                }
+            }
+            input = input.ptr[input.length - (input.length % size_t.sizeof) .. input.length];
+        }
+        // Process remainder bytewise.
+        foreach (const b; input)
+        {
+            st.ptr[j++] ^= b;
             if (j >= rate)
             {
                 transform;
                 j = 0;
             }
         }
-
         pt = j;
     }
 
