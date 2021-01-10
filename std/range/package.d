@@ -10195,13 +10195,18 @@ in
             auto result = adds(start, range.length, overflow);
         else static if (isSigned!Enumerator)
         {
-            Largest!(Enumerator, Signed!LengthType) signedLength;
+            alias signed_t = Largest!(Enumerator, Signed!LengthType);
+            signed_t signedLength;
+            //Can length fit in the signed type
+            overflow = range.length > signed_t.max;
+            /*
+            //This isn't nogc(but should be...)
             try signedLength = to!(typeof(signedLength))(range.length);
             catch (ConvException)
                 overflow = true;
             catch (Exception)
                 assert(false);
-
+            */
             auto result = adds(start, signedLength, overflow);
         }
         else
@@ -10463,7 +10468,10 @@ pure @safe unittest
         }
     }}
 }
-
+@nogc @safe unittest
+{
+	const val = iota(1, 100).enumerate(1);
+}
 // https://issues.dlang.org/show_bug.cgi?id=10939
 version (none)
 {
