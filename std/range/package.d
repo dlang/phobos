@@ -10470,7 +10470,7 @@ pure @safe unittest
 }
 @nogc @safe unittest
 {
-	const val = iota(1, 100).enumerate(1);
+   const val = iota(1, 100).enumerate(1);
 }
 // https://issues.dlang.org/show_bug.cgi?id=10939
 version (none)
