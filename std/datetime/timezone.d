@@ -2761,6 +2761,7 @@ private:
             initOnce!_tzIndex(
             {
                 import std.conv : to;
+                import std.datetime.date : DateTimeException;
                 import std.format : format;
                 import std.path : asNormalizedPath, chainPath;
 
