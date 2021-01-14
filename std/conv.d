@@ -5707,7 +5707,7 @@ if (!is(T == class))
         this(ref S2){}
     }
     S2 s2 = void;
-    static assert(!__traits(compiles, emplace(&s2, 1)));
+    //static assert(!__traits(compiles, emplace(&s2, 1)));
     emplace(&s2, S2.init);
 
     static struct SS1
