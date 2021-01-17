@@ -10197,16 +10197,17 @@ in
         {
             alias signed_t = Largest!(Enumerator, Signed!LengthType);
             signed_t signedLength;
+            //This is to trick the compiler because if length is enum
+            //the compiler complains about unreachable code.
+            auto getLength()
+            {
+                return range.length;
+            }
+            import std.stdio;
+            debug writeln(getLength() < signed_t.max);
             //Can length fit in the signed type
-            overflow = range.length > signed_t.max;
-            /*
-            //This isn't nogc(but should be...)
-            try signedLength = to!(typeof(signedLength))(range.length);
-            catch (ConvException)
-                overflow = true;
-            catch (Exception)
-                assert(false);
-            */
+            assert(getLength() < signed_t.max, "a signed length type is required but the range's length() is too great");
+            signedLength = range.length;
             auto result = adds(start, signedLength, overflow);
         }
         else
@@ -10471,6 +10472,21 @@ pure @safe unittest
 @nogc @safe unittest
 {
    const val = iota(1, 100).enumerate(1);
+}
+unittest {
+    import core.exception : AssertError;
+    import std.exception : assertThrown;
+    struct RangePayload {
+        enum length = size_t.max;
+        void popFront() {}
+        int front() { return 0; }
+        bool empty() { return true; }
+    }
+    RangePayload thePayload;
+    //Assertion won't happen when contracts are elided.
+    debug assertThrown!AssertError(enumerate(thePayload, -10));
+
+    auto x = enumerate(thePayload, -10);
 }
 // https://issues.dlang.org/show_bug.cgi?id=10939
 version (none)
