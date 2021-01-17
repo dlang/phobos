@@ -2019,7 +2019,7 @@ if (isInputRange!R && !isInfinite!R)
             j++;
         }
     }
-    assertThrown(makeArray!NoCopy(Mallocator.instance, NoCopyRange()));
+    makeArray!NoCopy(Mallocator.instance, NoCopyRange()); // rvalue elements are forwarded/moved
 }
 
 // test failure with an impure, failing struct
@@ -2049,9 +2049,8 @@ if (isInputRange!R && !isInfinite!R)
     auto arr = [NoCopy(1), NoCopy(2)];
     assertThrown(makeArray!NoCopy(Mallocator.instance, arr));
 
-    // allow more copies and thus force reallocation
     i = 0;
-    maxElements = 30;
+    maxElements = 0; // disallow any postblit
     static j = 0;
 
     struct NoCopyRange
@@ -2071,15 +2070,9 @@ if (isInputRange!R && !isInfinite!R)
             j++;
         }
     }
-    assertThrown(makeArray!NoCopy(Mallocator.instance, NoCopyRange()));
 
-    maxElements = 300;
     auto arr2 = makeArray!NoCopy(Mallocator.instance, NoCopyRange());
-
-    import std.algorithm.comparison : equal;
-    import std.algorithm.iteration : map;
-    import std.range : iota;
-    assert(arr2.map!`a.val`.equal(iota(32, 204, 2)));
+    assert(i == j && i == 101); // all 101 rvalue elements forwarded/moved
 }
 
 version (StdUnittest)
