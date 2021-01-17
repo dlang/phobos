@@ -780,8 +780,9 @@ version (StdUnittest)
                     cast(ubyte[])(GCAllocator.instance.allocate(1024 * 1024)));
     const store = alloc.allocate(KRRegion!().sizeof);
     auto p = cast(KRRegion!()* ) store.ptr;
+    import core.lifetime : emplace;
     import core.stdc.string : memcpy;
-    import std.conv : text, emplace;
+    import std.conv : text;
 
     memcpy(p, &alloc, alloc.sizeof);
     emplace(&alloc);

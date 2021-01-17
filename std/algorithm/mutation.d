@@ -3262,7 +3262,7 @@ if (isInputRange!Range && hasLvalueElements!Range && is(typeof(range.front = val
     alias T = ElementType!Range;
     static if (hasElaborateAssign!T)
     {
-        import std.conv : emplaceRef;
+        import core.internal.lifetime : emplaceRef;
 
         // Must construct stuff by the book
         for (; !range.empty; range.popFront())

@@ -992,7 +992,7 @@ private ref RCIAllocator setupThreadAllocator()
     }
 
     assert(_threadAllocator.isNull);
-    import std.conv : emplace;
+    import core.lifetime : emplace;
     static ulong[stateSize!(ThreadAllocator).divideRoundUp(ulong.sizeof)] _threadAllocatorState;
     () @trusted {
         _threadAllocator = RCIAllocator(emplace!(ThreadAllocator)(_threadAllocatorState[], processAllocator()));
@@ -1164,7 +1164,9 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
     }
     else
     {
-        import std.conv : emplace, emplaceRef;
+        import core.internal.lifetime : emplaceRef;
+        import core.lifetime : emplace;
+
         auto m = alloc.allocate(max(stateSize!T, 1));
         if (!m.ptr) return null;
 
@@ -1688,7 +1690,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length, T init)
                 }
             }
         }
-        import std.conv : emplace;
+        import core.lifetime : emplace;
         for (; i < length; ++i)
         {
             emplace!T(&result[i], init);
@@ -1836,7 +1838,7 @@ if (isInputRange!R && !isInfinite!R)
                 alloc.deallocate(m);
         }
 
-        import std.conv : emplaceRef;
+        import core.internal.lifetime : emplaceRef;
         static if (isNarrowString!R || isRandomAccessRange!R)
         {
             foreach (j; 0 .. range.length)
@@ -1893,7 +1895,7 @@ if (isInputRange!R && !isInfinite!R)
                 }
                 result = () @trusted { return cast(T[]) m; } ();
             }
-            import std.conv : emplaceRef;
+            import core.internal.lifetime : emplaceRef;
             emplaceRef(result[initialized], range.front);
         }
 
@@ -2224,7 +2226,7 @@ if (isInputRange!R)
         for (; !range.empty; range.popFront, toFill = toFill[1 .. $])
         {
             assert(toFill.length > 0);
-            import std.conv : emplace;
+            import core.lifetime : emplace;
             emplace!T(&toFill[0], range.front);
         }
         assert(toFill.length == 0);
@@ -2244,7 +2246,7 @@ if (isInputRange!R)
                 array = cast(T[]) buf;
                 return false;
             }
-            import std.conv : emplace;
+            import core.lifetime : emplace;
             emplace!T(buf[$ - T.sizeof .. $], range.front);
         }
 
@@ -2672,7 +2674,7 @@ own statically-typed allocator.)
 RCIAllocator allocatorObject(A)(auto ref A a)
 if (!isPointer!A)
 {
-    import std.conv : emplace;
+    import core.lifetime : emplace;
     static if (stateSize!A == 0)
     {
         enum s = stateSize!(CAllocatorImpl!A).divideRoundUp(ulong.sizeof);
@@ -2705,7 +2707,7 @@ if (!isPointer!A)
 RCIAllocator allocatorObject(A)(A* pa)
 {
     assert(pa);
-    import std.conv : emplace;
+    import core.lifetime : emplace;
     auto state = pa.allocate(stateSize!(CAllocatorImpl!(A, Yes.indirect)));
     import std.traits : hasMember;
     static if (hasMember!(A, "deallocate"))
@@ -2783,7 +2785,7 @@ nothrow
 RCISharedAllocator sharedAllocatorObject(A)(auto ref A a)
 if (!isPointer!A)
 {
-    import std.conv : emplace;
+    import core.lifetime : emplace;
     static if (stateSize!A == 0)
     {
         enum s = stateSize!(CSharedAllocatorImpl!A).divideRoundUp(ulong.sizeof);
@@ -2823,7 +2825,7 @@ if (!isPointer!A)
 RCISharedAllocator sharedAllocatorObject(A)(A* pa)
 {
     assert(pa);
-    import std.conv : emplace;
+    import core.lifetime : emplace;
     auto state = pa.allocate(stateSize!(CSharedAllocatorImpl!(A, Yes.indirect)));
     import std.traits : hasMember;
     static if (hasMember!(A, "deallocate"))

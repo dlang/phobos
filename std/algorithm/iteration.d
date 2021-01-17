@@ -3815,7 +3815,7 @@ if (fun.length >= 1)
 
             static if (mustInitialize) if (initialized == false)
             {
-                import std.conv : emplaceRef;
+                import core.internal.lifetime : emplaceRef;
                 foreach (i, f; binfuns)
                     emplaceRef!(Args[i])(args[i], e);
                 initialized = true;

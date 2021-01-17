@@ -527,7 +527,7 @@ class RuntimeFactory(alias EngineType, Char) : GenericFactory!(EngineType, Char)
 {
     override EngineType!Char construct(const ref Regex!Char re, in Char[] input, void[] memory) const
     {
-        import std.conv : emplace;
+        import core.lifetime : emplace;
         return emplace!(EngineType!Char)(memory[0 .. classSize],
             re, Input!Char(input), memory[classSize .. $]);
     }
@@ -538,7 +538,7 @@ class CtfeFactory(alias EngineType, Char, alias func) : GenericFactory!(EngineTy
 {
     override EngineType!Char construct(const ref Regex!Char re, in Char[] input, void[] memory) const
     {
-        import std.conv : emplace;
+        import core.lifetime : emplace;
         return emplace!(EngineType!Char)(memory[0 .. classSize],
             re, &func, Input!Char(input), memory[classSize .. $]);
     }

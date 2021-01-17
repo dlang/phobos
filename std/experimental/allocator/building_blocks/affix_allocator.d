@@ -23,7 +23,7 @@ The following methods are defined if `Allocator` defines them, and forward to it
 struct AffixAllocator(Allocator, Prefix, Suffix = void)
 {
     import std.algorithm.comparison : min;
-    import std.conv : emplace;
+    import core.lifetime : emplace;
     import std.experimental.allocator : RCIAllocator, theAllocator;
     import std.experimental.allocator.common : stateSize, forwardToMember,
         roundUpToMultipleOf, alignedAt, alignDownTo, roundUpToMultipleOf,

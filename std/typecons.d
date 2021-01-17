@@ -6341,7 +6341,7 @@ if (!is(T == class) && !(is(T == interface)))
 
         private void initialize(A...)(auto ref A args)
         {
-            import std.conv : emplace;
+            import core.lifetime : emplace;
 
             allocateStore();
             version (D_Exceptions) scope(failure) deallocateStore();
@@ -7939,7 +7939,7 @@ if (is(T == class))
     */
     @system auto scoped(Args...)(auto ref Args args)
     {
-        import std.conv : emplace;
+        import core.lifetime : emplace;
 
         Scoped result = void;
         void* alignedStore = cast(void*) aligned(cast(size_t) result.Scoped_store.ptr);
