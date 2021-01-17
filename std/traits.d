@@ -1413,7 +1413,7 @@ if (func.length == 1 && isCallable!func)
     }
     else
     {
-        static assert(0, func[0].stringof ~ "is not a function");
+        static assert(0, func[0].stringof ~ " is not a function");
 
         // Define dummy entities to avoid pointless errors
         template Get(size_t i) { enum Get = ""; }
@@ -1526,7 +1526,7 @@ if (func.length == 1 && isCallable!func)
     }
     else
     {
-        static assert(0, func[0].stringof ~ "is not a function");
+        static assert(0, func[0].stringof ~ " is not a function");
 
         // Define dummy entities to avoid pointless errors
         template Get(size_t i) { enum Get = ""; }
