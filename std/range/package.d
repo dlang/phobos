@@ -10204,7 +10204,8 @@ in
                 return range.length;
             }
             //Can length fit in the signed type
-            assert(getLength() < signed_t.max, "a signed length type is required but the range's length() is too great");
+            assert(getLength() < signed_t.max,
+                "a signed length type is required but the range's length() is too great");
             signedLength = range.length;
             auto result = adds(start, signedLength, overflow);
         }
