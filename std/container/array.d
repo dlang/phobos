@@ -427,9 +427,9 @@ if (!is(immutable T == immutable bool))
             if (_capacity == length)
             {
                 reserve(1 + capacity * 3 / 2);
+                assert(capacity > length && _payload.ptr,
+                    "Failed to reserve memory");
             }
-            assert(capacity > length && _payload.ptr,
-                "Failed to reserve memory");
             emplace(_payload.ptr + _payload.length, elem);
             _payload = _payload.ptr[0 .. _payload.length + 1];
             return 1;
