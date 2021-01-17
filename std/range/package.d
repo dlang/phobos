@@ -10203,8 +10203,6 @@ in
             {
                 return range.length;
             }
-            import std.stdio;
-            debug writeln(getLength() < signed_t.max);
             //Can length fit in the signed type
             assert(getLength() < signed_t.max, "a signed length type is required but the range's length() is too great");
             signedLength = range.length;
@@ -10483,10 +10481,8 @@ unittest {
         bool empty() { return true; }
     }
     RangePayload thePayload;
-    //Assertion won't happen when contracts are elided.
+    //Assertion won't happen when contracts are disabled for -release.
     debug assertThrown!AssertError(enumerate(thePayload, -10));
-
-    auto x = enumerate(thePayload, -10);
 }
 // https://issues.dlang.org/show_bug.cgi?id=10939
 version (none)
