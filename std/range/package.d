@@ -10471,7 +10471,8 @@ pure @safe unittest
 {
    const val = iota(1, 100).enumerate(1);
 }
-unittest {
+@nogc @safe unittest
+{
     import core.exception : AssertError;
     import std.exception : assertThrown;
     struct RangePayload {
