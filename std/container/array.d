@@ -1616,6 +1616,19 @@ if (!is(immutable T == immutable bool))
     Array!MyClass arr;
 }
 
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+    auto a = Array!int([1,2,3,4,5]);
+    assert(a.length == 5);
+
+    assert(a.insertAfter(a[0 .. 5], [7, 8]) == 2);
+    assert(equal(a[], [1,2,3,4,5,7,8]));
+
+    assert(a.insertAfter(a[0 .. 5], 6) == 1);
+    assert(equal(a[], [1,2,3,4,5,6,7,8]));
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Array!bool
@@ -2501,6 +2514,30 @@ if (is(immutable T == immutable bool))
     a.insertBefore(a[1 .. $], true);
     import std.algorithm.comparison : equal;
     assert(a[].equal([false, true, true]));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21555
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+    Array!bool arr;
+    size_t len = arr.insertBack([false, true]);
+    assert(len == 2);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21556
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+    Array!bool a;
+    a.insertBack([true, true, false, false, true]);
+    assert(a.length == 5);
+
+    assert(a.insertAfter(a[0 .. 5], [false, false]) == 2);
+    assert(equal(a[], [true, true, false, false, true, false, false]));
+
+    assert(a.insertAfter(a[0 .. 5], true) == 1);
+    assert(equal(a[], [true, true, false, false, true, true, false, false]));
 }
 
 @system unittest
