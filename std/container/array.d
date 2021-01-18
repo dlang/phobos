@@ -1008,6 +1008,8 @@ if (!is(immutable T == immutable bool))
 
     /// ditto
     size_t insertAfter(Stuff)(Range r, Stuff stuff)
+    if (isImplicitlyConvertible!(Stuff, T) ||
+            isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
         import std.algorithm.mutation : bringToFront;
         enforce(r._outer._data is _data);
@@ -2199,6 +2201,8 @@ if (is(immutable T == immutable bool))
 
     /// ditto
     size_t insertAfter(Stuff)(Range r, Stuff stuff)
+    if (isImplicitlyConvertible!(Stuff, T) ||
+            isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
         import std.algorithm.mutation : bringToFront;
         // TODO: make this faster, it moves one bit at a time
