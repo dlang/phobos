@@ -3199,8 +3199,10 @@ is empty, throws an `Exception`. In case of an I/O error throws
                 ubyte oldInfo;
         }
 
-    package:
-        this(ref File f)
+    public:
+        // Don't use this, but `File.lockingBinaryWriter()` instead.
+        // Must be public for RefCounted and emplace() in druntime.
+        this(scope ref File f)
         {
             import std.exception : enforce;
             file_ = f;
@@ -3226,7 +3228,6 @@ is empty, throws an `Exception`. In case of an I/O error throws
             }
         }
 
-    public:
         ~this()
         {
             if (!file_._p || !file_._p.handle)
