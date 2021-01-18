@@ -2071,14 +2071,17 @@ if (is(immutable T == immutable bool))
     size_t insertBack(Stuff)(Stuff stuff)
     if (isInputRange!Stuff && is(ElementType!Stuff : bool))
     {
-        static if (!hasLength!Stuff) size_t result;
+        size_t result;
+        static if (hasLength!Stuff)
+            result = stuff.length;
+
         for (; !stuff.empty; stuff.popFront())
         {
             insertBack(stuff.front);
             static if (!hasLength!Stuff) ++result;
         }
-        static if (!hasLength!Stuff) return result;
-        else return stuff.length;
+
+        return result;
     }
 
     /// ditto
