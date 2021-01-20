@@ -787,29 +787,68 @@ template DerivedToFront(TList...)
     static assert(is(TL == AliasSeq!(C, B, A)));
 }
 
-private enum staticMapExpandFactor = 150;
-private string generateCases()
+version = UseAliasAssign; // use new alias assign feature to speed up recursive templates
+
+version (UseAliasAssign)
 {
-    string[staticMapExpandFactor] chunks;
-    chunks[0] = q{};
-    static foreach (enum i; 0 .. staticMapExpandFactor - 1)
-        chunks[i + 1] = chunks[i] ~ `F!(Args[` ~ i.stringof ~ `]),`;
-    string ret = `AliasSeq!(`;
-    foreach (chunk; chunks)
-        ret ~= `q{alias staticMap = AliasSeq!(` ~ chunk ~ `);},`;
-    return ret ~ `)`;
 }
-private alias staticMapBasicCases = AliasSeq!(mixin(generateCases()));
+else
+{
+    private enum staticMapExpandFactor = 150;
+    private string generateCases()
+    {
+        string[staticMapExpandFactor] chunks;
+        chunks[0] = q{};
+        static foreach (enum i; 0 .. staticMapExpandFactor - 1)
+            chunks[i + 1] = chunks[i] ~ `F!(Args[` ~ i.stringof ~ `]),`;
+        string ret = `AliasSeq!(`;
+        foreach (chunk; chunks)
+            ret ~= `q{alias staticMap = AliasSeq!(` ~ chunk ~ `);},`;
+        return ret ~ `)`;
+    }
+    private alias staticMapBasicCases = AliasSeq!(mixin(generateCases()));
+}
 
 /**
 Evaluates to $(D AliasSeq!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
  */
 template staticMap(alias F, Args ...)
 {
-    static if (Args.length < staticMapExpandFactor)
-        mixin(staticMapBasicCases[Args.length]);
+    version (UseAliasAssign)
+    {
+        alias A = AliasSeq!();
+
+        static foreach (size_t i; 0 .. Args.length / 8)
+        {
+            A = AliasSeq!(A, F!(Args[i * 8    ]), F!(Args[i * 8 + 1]), F!(Args[i * 8 + 2]), F!(Args[i * 8 + 3]),
+                             F!(Args[i * 8 + 4]), F!(Args[i * 8 + 5]), F!(Args[i * 8 + 6]), F!(Args[i * 8 + 7]));
+        }
+
+        enum n = Args.length & 7;
+        static if (n == 1)
+            A = AliasSeq!(A, F!(Args[$ - 1]));
+        else static if (n == 2)
+            A = AliasSeq!(A, F!(Args[$ - 2]), F!(Args[$ - 1]));
+        else static if (n == 3)
+            A = AliasSeq!(A, F!(Args[$ - 3]), F!(Args[$ - 2]), F!(Args[$ - 1]));
+        else static if (n == 4)
+            A = AliasSeq!(A, F!(Args[$ - 4]), F!(Args[$ - 3]), F!(Args[$ - 2]), F!(Args[$ - 1]));
+        else static if (n == 5)
+            A = AliasSeq!(A, F!(Args[$ - 5]), F!(Args[$ - 4]), F!(Args[$ - 3]), F!(Args[$ - 2]), F!(Args[$ - 1]));
+        else static if (n == 6)
+            A = AliasSeq!(A, F!(Args[$ - 6]), F!(Args[$ - 5]), F!(Args[$ - 4]), F!(Args[$ - 3]), F!(Args[$ - 2]), F!(Args[$ - 1]));
+        else static if (n == 7)
+            A = AliasSeq!(A, F!(Args[$ - 7]), F!(Args[$ - 6]), F!(Args[$ - 5]), F!(Args[$ - 4]), F!(Args[$ - 3]), F!(Args[$ - 2]), F!(Args[$ - 1]));
+
+        alias staticMap = A;
+    }
     else
-        alias staticMap = AliasSeq!(staticMap!(F, Args[0 .. $/2]), staticMap!(F, Args[$/2 .. $]));
+    {
+        static if (Args.length < staticMapExpandFactor)
+            mixin(staticMapBasicCases[Args.length]);
+        else
+            alias staticMap = AliasSeq!(staticMap!(F, Args[0 .. $/2]), staticMap!(F, Args[$/2 .. $]));
+    }
 }
 
 ///
