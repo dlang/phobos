@@ -7133,16 +7133,6 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
         ulong ival = () @trusted { return *cast(ulong*)&val; }();
     }
 
-    static if (!is(T == float))
-    {
-        version (DigitalMars)
-        {
-            // hack to work around https://issues.dlang.org/show_bug.cgi?id=20363
-            ival ^= rm;
-            ival ^= rm;
-        }
-    }
-
     import std.math : log2;
     enum log2_max_exp = cast(int) log2(T.max_exp);
 
@@ -8171,7 +8161,6 @@ printFloat_done:
     if (need_sgn)
         buffer[left] = sgn[0];
 
-    // without this cast it's getting too slow
     return buffer[left .. right];
 }
 
@@ -8219,7 +8208,7 @@ printFloat_done:
     assert(printFloat(buf[], -float.infinity, f) == "                -inf");
     assert(printFloat(buf[], 0.0f, f) == "    0.0000000000e+00");
     assert(printFloat(buf[], -0.0f, f) == "   -0.0000000000e+00");
-    // cast needed due to bug 20361
+    // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
     assert(printFloat(buf[], cast(float) 1e-40, f) == "    9.9999461011e-41");
     assert(printFloat(buf[], cast(float) -1e-40, f) == "   -9.9999461011e-41");
     assert(printFloat(buf[], 1e-30f, f) == "    1.0000000032e-30");
@@ -8253,7 +8242,7 @@ printFloat_done:
     assert(printFloat(buf[], -float.infinity, f) == "-inf                ");
     assert(printFloat(buf[], 0.0f, f) == "0.0000000000e+00    ");
     assert(printFloat(buf[], -0.0f, f) == "-0.0000000000e+00   ");
-    // cast needed due to bug 20361
+    // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
     assert(printFloat(buf[], cast(float) 1e-40, f) == "9.9999461011e-41    ");
     assert(printFloat(buf[], cast(float) -1e-40, f) == "-9.9999461011e-41   ");
     assert(printFloat(buf[], 1e-30f, f) == "1.0000000032e-30    ");
@@ -8287,7 +8276,7 @@ printFloat_done:
     assert(printFloat(buf[], -float.infinity, f) == "                -inf");
     assert(printFloat(buf[], 0.0f, f) == "00000.0000000000e+00");
     assert(printFloat(buf[], -0.0f, f) == "-0000.0000000000e+00");
-    // cast needed due to bug 20361
+    // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
     assert(printFloat(buf[], cast(float) 1e-40, f) == "00009.9999461011e-41");
     assert(printFloat(buf[], cast(float) -1e-40, f) == "-0009.9999461011e-41");
     assert(printFloat(buf[], 1e-30f, f) == "00001.0000000032e-30");
@@ -8380,7 +8369,7 @@ printFloat_done:
     assert(printFloat(buf[], -double.infinity, f) == "-inf");
     assert(printFloat(buf[], 0.0, f) == "0.000000e+00");
     assert(printFloat(buf[], -0.0, f) == "-0.000000e+00");
-    // / 1000 needed due to bug 20361
+    // / 1000 needed due to https://issues.dlang.org/show_bug.cgi?id=20361
     assert(printFloat(buf[], 1e-307 / 1000, f) == "1.000000e-310");
     assert(printFloat(buf[], -1e-307 / 1000, f) == "-1.000000e-310");
     assert(printFloat(buf[], 1e-30, f) == "1.000000e-30");
@@ -8599,7 +8588,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
         //
         // As this number does not fit in a ulong, we use an array of ulongs. We only use 60 of the 64 bits,
         // because this makes it much more easy to implement the division by 10.
-        int count = exp/60 + 1;
+        int count = exp / 60 + 1;
 
         // saved in big endian format
         ulong[] mybig = bigbuf[0 .. count];
@@ -8609,10 +8598,10 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
         if (lower < T.mant_dig)
         {
             mybig[0] = mnt >> lower;
-            mybig[1] = (mnt & ((1L << lower) - 1)) << 60-lower;
+            mybig[1] = (mnt & ((1L << lower) - 1)) << 60 - lower;
         }
         else
-            mybig[0] = (mnt & ((1L << lower) - 1)) << 60-lower;
+            mybig[0] = (mnt & ((1L << lower) - 1)) << 60 - lower;
 
         // Generation of digits by consecutive division with reminder by 10.
         int msu = 0; // Most significant ulong; when it get's zero, we can ignore it furtheron
@@ -8824,7 +8813,6 @@ printFloat_done:
     if (need_sgn)
         buffer[left] = sgn[0];
 
-    // without this cast it's getting too slow
     return buffer[left .. right];
 }
 
@@ -8839,7 +8827,7 @@ printFloat_done:
     assert(printFloat(buf[], -float.infinity, f) == "-inf");
     assert(printFloat(buf[], 0.0f, f) == "0.000000");
     assert(printFloat(buf[], -0.0f, f) == "-0.000000");
-    // cast needed due to bug 20361
+    // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
     assert(printFloat(buf[], cast(float) 1e-40, f) == "0.000000");
     assert(printFloat(buf[], cast(float) -1e-40, f) == "-0.000000");
     assert(printFloat(buf[], 1e-30f, f) == "0.000000");
@@ -8872,7 +8860,7 @@ printFloat_done:
     assert(printFloat(buf[], -float.infinity, f) == "                -inf");
     assert(printFloat(buf[], 0.0f, f) == "        0.0000000000");
     assert(printFloat(buf[], -0.0f, f) == "       -0.0000000000");
-    // cast needed due to bug 20361
+    // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
     assert(printFloat(buf[], cast(float) 1e-40, f) == "        0.0000000000");
     assert(printFloat(buf[], cast(float) -1e-40, f) == "       -0.0000000000");
     assert(printFloat(buf[], 1e-30f, f) == "        0.0000000000");
@@ -8906,7 +8894,7 @@ printFloat_done:
     assert(printFloat(buf[], -float.infinity, f) == "-inf                ");
     assert(printFloat(buf[], 0.0f, f) == "0.0000000000        ");
     assert(printFloat(buf[], -0.0f, f) == "-0.0000000000       ");
-    // cast needed due to bug 20361
+    // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
     assert(printFloat(buf[], cast(float) 1e-40, f) == "0.0000000000        ");
     assert(printFloat(buf[], cast(float) -1e-40, f) == "-0.0000000000       ");
     assert(printFloat(buf[], 1e-30f, f) == "0.0000000000        ");
@@ -8940,7 +8928,7 @@ printFloat_done:
     assert(printFloat(buf[], -float.infinity, f) == "                -inf");
     assert(printFloat(buf[], 0.0f, f) == "000000000.0000000000");
     assert(printFloat(buf[], -0.0f, f) == "-00000000.0000000000");
-    // cast needed due to bug 20361
+    // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
     assert(printFloat(buf[], cast(float) 1e-40, f) == "000000000.0000000000");
     assert(printFloat(buf[], cast(float) -1e-40, f) == "-00000000.0000000000");
     assert(printFloat(buf[], 1e-30f, f) == "000000000.0000000000");
@@ -9035,7 +9023,7 @@ printFloat_done:
     assert(printFloat(buf[], -double.infinity, f) == "-inf");
     assert(printFloat(buf[], 0.0, f) == "0.000000");
     assert(printFloat(buf[], -0.0, f) == "-0.000000");
-    // / 1000 needed due to bug 20361
+    // / 1000 needed due to https://issues.dlang.org/show_bug.cgi?id=20361
     assert(printFloat(buf[], 1e-307 / 1000, f) == "0.000000");
     assert(printFloat(buf[], -1e-307 / 1000, f) == "-0.000000");
     assert(printFloat(buf[], 1e-30, f) == "0.000000");
