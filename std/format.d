@@ -9249,3 +9249,276 @@ private auto printFloat0(Char)(return char[] buf, FormatSpec!Char f, string sgn,
 
     assert(GC.stats.usedSize == stats.usedSize);
 }
+
+//////////////////////////////////////////////////////////////////
+
+// version = printFloatTest;
+
+version (printFloatTest)
+{
+    // Known bugs in snprintf:
+    //
+    // * 20396: Subnormal floats (but not doubles) are printed wrong with %a and %A
+    //          Affected versions: CRuntime_Glibc, OSX, MinGW, CRuntime_Microsoft
+    //          This difference is expected in 0.13% of all cases of the first test.
+    //          Bit pattern of subnormals: x 00000000 xxxxxxxxxxxxxxxxxxxxxxx
+    //
+    // * 20288: Sometimes strange behaviour with NaNs and Infs; the test may even crash
+    //          Affected versions: CRuntime_Microsoft
+    //
+    // * 20320 and 9889: Rounding problems with -m64 on win32 and %f and %F qualifier
+    //                   Affected versions: CRuntime_Microsoft
+
+    // Change this, if you want to run the test for a different amount of time.
+    // The duration is used for both tests, so the total duration is twice this duration.
+    static duration = 15; // minutes
+
+    @safe unittest
+    {
+        import std.math : FloatingPointControl;
+        import std.random : uniform, Random;
+        import std.stdio : writefln, stderr;
+        import std.datetime : MonoTime;
+        import core.stdc.stdio : snprintf;
+        import std.conv : to;
+
+        FloatingPointControl fpctrl;
+
+        auto math_rounding = [FloatingPointControl.roundDown, FloatingPointControl.roundUp,
+                              FloatingPointControl.roundToZero, FloatingPointControl.roundToNearest];
+        auto format_rounding = [RoundingMode.down, RoundingMode.up,
+                                RoundingMode.toZero, RoundingMode.toNearestTiesToEven];
+        auto string_rounding = ["down","up","toZero","toNearest"];
+
+        writefln("testing printFloat with float values for %s minutes", duration);
+
+        union A
+        {
+            float f;
+            uint u;
+        }
+
+        uint seed = uniform(0,uint.max);
+        writefln("using seed %s",seed);
+        auto rnd = Random(seed);
+
+        ulong checks = 0;
+        ulong wrong = 0;
+        long last_delta = -1;
+
+        auto start = MonoTime.currTime;
+        while (true)
+        {
+            auto delta = (MonoTime.currTime-start).total!"minutes";
+            if (delta >= duration) break;
+            if (delta > last_delta)
+            {
+                last_delta = delta;
+                stderr.writef("%s / %s\r", delta, duration);
+            }
+
+            ++checks;
+
+            A a;
+            a.u = uniform!"[]"(0,uint.max,rnd);
+
+            auto f = FormatSpec!dchar("");
+            f.flDash = uniform(0,2,rnd)==0;
+            f.flPlus = uniform(0,2,rnd)==0;
+            f.flZero = uniform(0,2,rnd)==0;
+            f.flSpace = uniform(0,2,rnd)==0;
+            f.flHash = uniform(0,2,rnd)==0;
+            f.width = uniform(0,200,rnd);
+            f.precision = uniform(0,201,rnd);
+            if (f.precision == 200) f.precision = f.UNSPECIFIED;
+            f.spec = "aAeEfF"[uniform(0,6,rnd)];
+
+            auto rounding = uniform(0,4,rnd);
+
+            // old
+
+            fpctrl.rounding = math_rounding[rounding];
+
+            char[1 /*%*/ + 5 /*flags*/ + 3 /*width.prec*/ + 2 /*format*/
+                 + 1 /*\0*/] sprintfSpec = void;
+            sprintfSpec[0] = '%';
+            uint i = 1;
+            if (f.flDash) sprintfSpec[i++] = '-';
+            if (f.flPlus) sprintfSpec[i++] = '+';
+            if (f.flZero) sprintfSpec[i++] = '0';
+            if (f.flSpace) sprintfSpec[i++] = ' ';
+            if (f.flHash) sprintfSpec[i++] = '#';
+            sprintfSpec[i .. i + 3] = "*.*";
+            i += 3;
+            sprintfSpec[i++] = f.spec;
+            sprintfSpec[i] = 0;
+
+            char[512] buf2 = void;
+            immutable n = snprintf(buf2.ptr, buf2.length,
+                                   sprintfSpec.ptr,
+                                   f.width,
+                                   // negative precision is same as no precision specified
+                                   f.precision == f.UNSPECIFIED ? -1 : f.precision,
+                                   a.f);
+
+            auto old_value = buf2[0 .. n];
+
+            // new
+
+            char[512] buf = void;
+            auto new_value = printFloat(buf[], a.f, f, format_rounding[rounding]);
+
+            // compare
+
+            if (new_value != old_value)
+            {
+                if (wrong == 0) // only report first miss
+                {
+                    auto tmp = format("%032b", a.u);
+                    writefln("bitpattern: %s %s %s", tmp[0 .. 1], tmp[1 .. 9], tmp [9 .. $]);
+                    writefln("spec: '%%%s%s%s%s%s%s%s%s'",
+                             f.flDash ? "-" : "",
+                             f.flPlus ? "+" : "",
+                             f.flZero ? "0" : "",
+                             f.flSpace ? " " : "",
+                             f.flHash ? "#" : "",
+                             f.width > 0 ? to!string(f.width) : "",
+                             f.precision != f.UNSPECIFIED ? "."~to!string(f.precision) : "",
+                             f.spec
+                            );
+                    writefln("rounding mode: %s",string_rounding[rounding]);
+                    writefln("new: >%s<", new_value);
+                    writefln("old: >%s<", old_value);
+                }
+                ++wrong;
+            }
+        }
+
+        writefln("%s checks run, %s (%.2f%%) checks produced different results", checks, wrong, 100.0*wrong/checks);
+    }
+
+    @safe unittest
+    {
+        import std.math : FloatingPointControl;
+        import std.random : uniform, Random;
+        import std.stdio : writefln, stderr;
+        import std.datetime : MonoTime;
+        import core.stdc.stdio : snprintf;
+        import std.conv : to;
+
+        FloatingPointControl fpctrl;
+
+        auto math_rounding = [FloatingPointControl.roundDown, FloatingPointControl.roundUp,
+                              FloatingPointControl.roundToZero, FloatingPointControl.roundToNearest];
+        auto format_rounding = [RoundingMode.down, RoundingMode.up,
+                                RoundingMode.toZero, RoundingMode.toNearestTiesToEven];
+        auto string_rounding = ["down","up","toZero","toNearest"];
+
+        writefln("testing printFloat with double values for %s minutes", duration);
+
+        union A
+        {
+            double f;
+            uint[2] u;
+        }
+
+        uint seed = uniform(0,uint.max);
+        writefln("using seed %s",seed);
+        auto rnd = Random(seed);
+
+        ulong checks = 0;
+        ulong wrong = 0;
+        long last_delta = -1;
+
+        auto start = MonoTime.currTime;
+        while (true)
+        {
+            auto delta = (MonoTime.currTime-start).total!"minutes";
+            if (delta >= duration) break;
+            if (delta > last_delta)
+            {
+                last_delta = delta;
+                stderr.writef("%s / %s\r", delta, duration);
+            }
+
+            ++checks;
+
+            A a;
+            a.u[0] = uniform!"[]"(0,uint.max,rnd);
+            a.u[1] = uniform!"[]"(0,uint.max,rnd);
+
+            auto f = FormatSpec!dchar("");
+            f.flDash = uniform(0,2,rnd) == 0;
+            f.flPlus = uniform(0,2,rnd) == 0;
+            f.flZero = uniform(0,2,rnd) == 0;
+            f.flSpace = uniform(0,2,rnd) == 0;
+            f.flHash = uniform(0,2,rnd) == 0;
+            f.width = uniform(0,200,rnd);
+            f.precision = uniform(0,201,rnd);
+            if (f.precision == 200) f.precision = f.UNSPECIFIED;
+            f.spec = "aAeEfF"[uniform(0,6,rnd)];
+
+            auto rounding = uniform(0,4,rnd);
+
+            // old
+
+            fpctrl.rounding = math_rounding[rounding];
+
+            char[1 /*%*/ + 5 /*flags*/ + 3 /*width.prec*/ + 2 /*format*/
+                 + 1 /*\0*/] sprintfSpec = void;
+            sprintfSpec[0] = '%';
+            uint i = 1;
+            if (f.flDash) sprintfSpec[i++] = '-';
+            if (f.flPlus) sprintfSpec[i++] = '+';
+            if (f.flZero) sprintfSpec[i++] = '0';
+            if (f.flSpace) sprintfSpec[i++] = ' ';
+            if (f.flHash) sprintfSpec[i++] = '#';
+            sprintfSpec[i .. i + 3] = "*.*";
+            i += 3;
+            sprintfSpec[i++] = f.spec;
+            sprintfSpec[i] = 0;
+
+            char[512] buf2 = void;
+            immutable n = snprintf(buf2.ptr, buf2.length,
+                                   sprintfSpec.ptr,
+                                   f.width,
+                                   // negative precision is same as no precision specified
+                                   f.precision == f.UNSPECIFIED ? -1 : f.precision,
+                                   a.f);
+
+            auto old_value = buf2[0 .. n];
+
+            // new
+
+            char[512] buf = void;
+            auto new_value = printFloat(buf[], a.f, f, format_rounding[rounding]);
+
+            // compare
+
+            if (new_value != old_value)
+            {
+                if (wrong == 0) // only report first miss
+                {
+                    auto tmp = format("%064b", a.u);
+                    writefln("bitpattern: %s %s %s", tmp[0 .. 1], tmp[1 .. 11], tmp [11 .. $]);
+                    writefln("spec: '%%%s%s%s%s%s%s%s%s'",
+                             f.flDash ? "-" : "",
+                             f.flPlus ? "+" : "",
+                             f.flZero ? "0" : "",
+                             f.flSpace ? " " : "",
+                             f.flHash ? "#" : "",
+                             f.width > 0 ? to!string(f.width) : "",
+                             f.precision != f.UNSPECIFIED ? "."~to!string(f.precision) : "",
+                             f.spec
+                            );
+                    writefln("rounding mode: %s",string_rounding[rounding]);
+                    writefln("new: >%s<", new_value);
+                    writefln("old: >%s<", old_value);
+                }
+                ++wrong;
+            }
+        }
+
+        writefln("%s checks run, %s (%.2f%%) checks produced different results", checks, wrong, 100.0*wrong/checks);
+    }
+}
