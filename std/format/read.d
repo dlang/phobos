@@ -2,12 +2,9 @@
 
 module std.format.read;
 
-import std.format;
-import std.exception;
+import std.format.tools;
 import std.range.primitives;
 import std.traits;
-
-//debug=format;                // uncomment to turn on debugging printf's
 
 /**
 Reads characters from $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
@@ -100,60 +97,64 @@ uint formattedRead(R, Char, S...)(auto ref R r, const(Char)[] fmt, auto ref S ar
 /// The format string can be checked at compile-time (see $(LREF format) for details):
 @safe pure unittest
 {
+    import std.math : isClose;
+
     string s = "hello!124:34.5";
     string a;
     int b;
     double c;
     s.formattedRead!"%s!%s:%s"(a, b, c);
-    assert(a == "hello" && b == 124 && c == 34.5);
+    assert(a == "hello" && b == 124 && isClose(c, 34.5));
 }
 
 @safe unittest
 {
-    import std.math;
+    import std.math : isClose, isNaN;
     string s = " 1.2 3.4 ";
     double x, y, z;
     assert(formattedRead(s, " %s %s %s ", x, y, z) == 2);
     assert(s.empty);
-    assert(approxEqual(x, 1.2));
-    assert(approxEqual(y, 3.4));
+    assert(isClose(x, 1.2));
+    assert(isClose(y, 3.4));
     assert(isNaN(z));
 }
 
 // for backwards compatibility
 @system pure unittest
 {
+    import std.math : isClose;
+
     string s = "hello!124:34.5";
     string a;
     int b;
     double c;
     formattedRead(s, "%s!%s:%s", &a, &b, &c);
-    assert(a == "hello" && b == 124 && c == 34.5);
+    assert(a == "hello" && b == 124 && isClose(c, 34.5));
 
     // mix pointers and auto-ref
     s = "world!200:42.25";
     formattedRead(s, "%s!%s:%s", a, &b, &c);
-    assert(a == "world" && b == 200 && c == 42.25);
+    assert(a == "world" && b == 200 && isClose(c, 42.25));
 
     s = "world1!201:42.5";
     formattedRead(s, "%s!%s:%s", &a, &b, c);
-    assert(a == "world1" && b == 201 && c == 42.5);
+    assert(a == "world1" && b == 201 && isClose(c, 42.5));
 
     s = "world2!202:42.75";
     formattedRead(s, "%s!%s:%s", a, b, &c);
-    assert(a == "world2" && b == 202 && c == 42.75);
+    assert(a == "world2" && b == 202 && isClose(c, 42.75));
 }
 
 // for backwards compatibility
 @system pure unittest
 {
-    import std.math;
+    import std.math : isClose, isNaN;
     string s = " 1.2 3.4 ";
     double x, y, z;
     assert(formattedRead(s, " %s %s %s ", &x, &y, &z) == 2);
     assert(s.empty);
-    assert(approxEqual(x, 1.2));
-    assert(approxEqual(y, 3.4));
+    assert(isClose(x, 1.2));
+    assert(isClose(y, 3.4));
     assert(isNaN(z));
 }
 
@@ -213,6 +214,8 @@ uint formattedRead(R, Char, S...)(auto ref R r, const(Char)[] fmt, auto ref S ar
 
 @system pure unittest
 {
+    import std.math : isClose;
+
     union A
     {
         char[float.sizeof] untyped;
@@ -223,12 +226,13 @@ uint formattedRead(R, Char, S...)(auto ref R r, const(Char)[] fmt, auto ref S ar
     char[] input = a.untyped[];
     float witness;
     formattedRead(input, "%r", &witness);
-    assert(witness == a.typed);
+    assert(isClose(witness, a.typed));
 }
 
 @system pure unittest
 {
-    import std.typecons;
+    import std.typecons : Tuple;
+    import std.math : isClose;
     char[] line = "1 2".dup;
     int a, b;
     formattedRead(line, "%s %s", &a, &b);
@@ -242,11 +246,11 @@ uint formattedRead(R, Char, S...)(auto ref R r, const(Char)[] fmt, auto ref S ar
     Tuple!(int, float) t;
     line = "1 2.125".dup;
     formattedRead(line, "%d %g", &t);
-    assert(t[0] == 1 && t[1] == 2.125);
+    assert(t[0] == 1 && isClose(t[1], 2.125));
 
     line = "1 7643 2.125".dup;
     formattedRead(line, "%s %*u %s", &t);
-    assert(t[0] == 1 && t[1] == 2.125);
+    assert(t[0] == 1 && isClose(t[1], 2.125));
 }
 
 @system pure unittest
@@ -298,6 +302,8 @@ uint formattedRead(R, Char, S...)(auto ref R r, const(Char)[] fmt, auto ref S ar
 
 @system pure unittest
 {
+    import std.exception : assertThrown;
+
     string line;
 
     int[4] sa1;
@@ -316,6 +322,8 @@ uint formattedRead(R, Char, S...)(auto ref R r, const(Char)[] fmt, auto ref S ar
 
 @system pure unittest
 {
+    import std.exception : assertThrown;
+
     string input;
 
     int[4] sa1;
@@ -386,7 +394,7 @@ uint formattedRead(R, Char, S...)(auto ref R r, const(Char)[] fmt, auto ref S ar
     assert(aa2 == ["hello":1, "world":2]);
 }
 
-package void skipData(Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
+private void skipData(Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 {
     import std.ascii : isDigit;
     import std.conv : text;
@@ -480,11 +488,11 @@ T unformatValue(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char
 @safe pure unittest
 {
     import std.format;
-    import std.math : approxEqual;
+    import std.math : isClose;
 
     auto str = "123.456";
     auto spec = singleSpec("%s");
-    assert(str.unformatValue!double(spec).approxEqual(123.456));
+    assert(str.unformatValue!double(spec).isClose(123.456));
 }
 
 /// Character input ranges
@@ -578,7 +586,6 @@ if (isInputRange!Range && is(T == typeof(null)))
     return parse!T(input);
 }
 
-/// ditto
 private T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementType!Range))
 {
@@ -614,7 +621,6 @@ if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementT
 
 }
 
-/// ditto
 private T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 if (isFloatingPoint!T && !is(T == enum) && isInputRange!Range
     && isSomeChar!(ElementType!Range)&& !is(Range == enum))
@@ -640,7 +646,6 @@ if (isFloatingPoint!T && !is(T == enum) && isInputRange!Range
     return parse!T(input);
 }
 
-/// ditto
 private T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 if (isInputRange!Range && isSomeChar!T && !is(T == enum) && isSomeChar!(ElementType!Range))
 {
@@ -666,7 +671,6 @@ if (isInputRange!Range && isSomeChar!T && !is(T == enum) && isSomeChar!(ElementT
                 to!string(T.sizeof));
 }
 
-/// ditto
 private T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char fmt)
 if (isInputRange!Range && is(StringTypeOf!T) && !isAggregateType!T && !is(T == enum))
 {
@@ -720,7 +724,6 @@ if (isInputRange!Range && is(StringTypeOf!T) && !isAggregateType!T && !is(T == e
         return app.data;
 }
 
-/// ditto
 private T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char fmt)
 if (isInputRange!Range && isArray!T && !is(StringTypeOf!T) && !isAggregateType!T && !is(T == enum))
 {
@@ -736,7 +739,6 @@ if (isInputRange!Range && isArray!T && !is(StringTypeOf!T) && !isAggregateType!T
     return parse!T(input);
 }
 
-/// ditto
 private T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char fmt)
 if (isInputRange!Range && isAssociativeArray!T && !is(T == enum))
 {
