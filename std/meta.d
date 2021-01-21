@@ -1713,23 +1713,27 @@ Returns: An `AliasSeq` filtered by the selected stride.
 template Stride(int stepSize, Args...)
 if (stepSize != 0)
 {
-    static if (Args.length == 0)
-    {
-        alias Stride = AliasSeq!();
-    }
+    static if (stepSize == 1)
+        alias Stride = Args;
     else static if (stepSize > 0)
     {
-        static if (stepSize >= Args.length)
-            alias Stride = AliasSeq!(Args[0]);
-        else
-            alias Stride = AliasSeq!(Args[0], Stride!(stepSize, Args[stepSize .. $]));
+        alias A = Nothing;
+        static foreach (i; 0 .. (Args.length + stepSize - 1) / stepSize)
+        {
+            A = AliasSeq!(A, Args[i * stepSize]);
+        }
+        alias Stride = A;
     }
+    else static if (stepSize == -1)
+        alias Stride = Reverse!Args;
     else
     {
-        static if (-stepSize >= Args.length)
-            alias Stride = AliasSeq!(Args[$ - 1]);
-        else
-            alias Stride = AliasSeq!(Args[$ - 1], Stride!(stepSize, Args[0 .. $ + stepSize]));
+        alias A = Nothing;
+        static foreach (i; 0 .. (Args.length + -stepSize - 1) / -stepSize)
+        {
+            A = AliasSeq!(A, Args[$ - 1 + i * stepSize]);
+        }
+        alias Stride = A;
     }
 }
 
