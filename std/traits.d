@@ -6770,7 +6770,7 @@ template isAutodecodableString(T)
     import std.range.primitives : autodecodeStrings;
 
     enum isAutodecodableString = autodecodeStrings &&
-        (is(T : const char[]) || is(T : const wchar[])) && !isStaticArray!T;
+        (is(T : const char[]) || is(T : const wchar[])) && !is(T : U[n], U, size_t n);
 }
 
 ///
