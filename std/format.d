@@ -2586,7 +2586,8 @@ private void formatUnsigned(Writer, T, Char)
     assert(t2 == "[  -123] [-123  ]");
 }
 
-private enum ctfpMessage = "Cannot format floating point types at compile-time";
+private enum ctfpMessage = "Cannot format all floating point types at compile-time "
+    ~ "(float and double with %a/%A and %e/%E do work)";
 
 private enum RoundingMode { up, down, toZero, toNearestTiesToEven, toNearestTiesAwayFromZero }
 
@@ -2639,7 +2640,6 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     }
     enforceFmt(find("fgFGaAeEs", spec).length,
         "incompatible format character for floating point argument: %" ~ spec);
-    enforceFmt(!__ctfe, ctfpMessage);
 
     FormatSpec!Char fs = f; // fs is copy for change its values.
     const spec2 = spec == 's' ? 'g' : spec;
@@ -2670,24 +2670,27 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 
             auto mode = RoundingMode.toNearestTiesToEven;
 
-            // std.math's FloatingPointControl isn't available on all target platforms
-            static if (is(FloatingPointControl))
+            if (!__ctfe)
             {
-                switch (FloatingPointControl.rounding)
+                // std.math's FloatingPointControl isn't available on all target platforms
+                static if (is(FloatingPointControl))
                 {
-                case FloatingPointControl.roundUp:
-                    mode = RoundingMode.up;
-                    break;
-                case FloatingPointControl.roundDown:
-                    mode = RoundingMode.down;
-                    break;
-                case FloatingPointControl.roundToZero:
-                    mode = RoundingMode.toZero;
-                    break;
-                case FloatingPointControl.roundToNearest:
-                    mode = RoundingMode.toNearestTiesToEven;
-                    break;
-                default: assert(false);
+                    switch (FloatingPointControl.rounding)
+                    {
+                    case FloatingPointControl.roundUp:
+                        mode = RoundingMode.up;
+                        break;
+                    case FloatingPointControl.roundDown:
+                        mode = RoundingMode.down;
+                        break;
+                    case FloatingPointControl.roundToZero:
+                        mode = RoundingMode.toZero;
+                        break;
+                    case FloatingPointControl.roundToNearest:
+                        mode = RoundingMode.toNearestTiesToEven;
+                        break;
+                    default: assert(false);
+                    }
                 }
             }
 
@@ -2700,6 +2703,8 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     else
     {
 useSnprintf:
+        enforceFmt(!__ctfe, ctfpMessage);
+
         if (nan || inf)
         {
             const sb = signbit(tval);
@@ -2986,6 +2991,18 @@ useSnprintf:
         assert(format!"%.0e"(-3.5) == "-4e+00");
         assert(format!"%.0e"(-4.5) == "-4e+00");
     }
+}
+
+@safe pure unittest
+{
+    static assert(format("%e",1.0) == "1.000000e+00");
+    static assert(format("%e",-1.234e156) == "-1.234000e+156");
+    static assert(format("%a",1.0) == "0x1p+0");
+    static assert(format("%a",-1.234e156) == "-0x1.7024c96ca3ce4p+518");
+    static assert(format("%e",1.0f) == "1.000000e+00");
+    static assert(format("%e",-1.234e23f) == "-1.234000e+23");
+    static assert(format("%a",1.0f) == "0x1p+0");
+    static assert(format("%a",-1.234e23f) == "-0x1.a2187p+76");
 }
 
 /*
@@ -7009,15 +7026,14 @@ private auto printFloat(T, Char)(return char[] buf, T val, FormatSpec!Char f,
                                  RoundingMode rm = RoundingMode.toNearestTiesToEven)
 if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.mant_dig))
 {
-    union FloatBits
+    static if (is(T == float))
     {
-        T floatValue;
-        ulong ulongValue;
+        ulong ival = () @trusted { return *cast(uint*)&val; }();
     }
-
-    FloatBits fb;
-    fb.floatValue = val;
-    ulong ival = fb.ulongValue;
+    else
+    {
+        ulong ival = () @trusted { return *cast(ulong*)&val; }();
+    }
 
     static if (!is(T == float))
     {
@@ -7080,9 +7096,6 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
 {
     import std.algorithm.comparison : max;
 
-    enum char[16] alpha = ['0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'];
-    enum char[16] Alpha = ['0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'];
-
     enum int bias = T.max_exp - 1;
 
     static if (is(T == float))
@@ -7103,7 +7116,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     {
         pos -= 4;
         size_t tmp = (mnt >> pos) & 15;
-        hex_mant[hex_mant_pos++] = is_upper ? Alpha[tmp] : alpha[tmp];
+        hex_mant[hex_mant_pos++] = cast(char) (tmp < 10 ? ('0' + tmp) : ((is_upper?'A':'a') + tmp - 10));
     }
 
     // save integer part
