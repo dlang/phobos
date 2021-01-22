@@ -73,8 +73,7 @@ pure @system unittest
 /// `Array!bool` packs together values efficiently by allocating one bit per element
 pure @system unittest
 {
-    Array!bool arr;
-    arr.insert([true, true, false, true, false]);
+    auto arr = Array!bool([true, true, false, true, false]);
     assert(arr.length == 5);
 }
 
@@ -2324,8 +2323,7 @@ if (is(immutable T == immutable bool))
 
 @system unittest
 {
-    Array!bool arr;
-    arr.insert([false, false, false, false]);
+    auto arr = Array!bool([false, false, false, false]);
     assert(arr.front == false);
     assert(arr.back == false);
     assert(arr[1] == false);
@@ -2431,22 +2429,19 @@ if (is(immutable T == immutable bool))
 
 @system unittest
 {
-    Array!bool a;
-    a.insertBack([true, false, true, true]);
+    auto a = Array!bool([true, false, true, true]);
     assert(a[0 .. 2].length == 2);
 }
 
 @system unittest
 {
-    Array!bool a;
-    a.insertBack([true, false, true, true]);
+    auto a = Array!bool([true, false, true, true]);
     assert(a[].length == 4);
 }
 
 @system unittest
 {
-    Array!bool a;
-    a.insertBack([true, false, true, true]);
+    auto a = Array!bool([true, false, true, true]);
     assert(a.front);
     a.front = false;
     assert(!a.front);
@@ -2454,15 +2449,13 @@ if (is(immutable T == immutable bool))
 
 @system unittest
 {
-    Array!bool a;
-    a.insertBack([true, false, true, true]);
+    auto a = Array!bool([true, false, true, true]);
     assert(a[].length == 4);
 }
 
 @system unittest
 {
-    Array!bool a;
-    a.insertBack([true, false, true, true]);
+    auto a = Array!bool([true, false, true, true]);
     assert(a.back);
     a.back = false;
     assert(!a.back);
@@ -2470,8 +2463,7 @@ if (is(immutable T == immutable bool))
 
 @system unittest
 {
-    Array!bool a;
-    a.insertBack([true, false, true, true]);
+    auto a = Array!bool([true, false, true, true]);
     assert(a[0] && !a[1]);
     a[0] &= a[1];
     assert(!a[0]);
@@ -2480,10 +2472,8 @@ if (is(immutable T == immutable bool))
 @system unittest
 {
     import std.algorithm.comparison : equal;
-    Array!bool a;
-    a.insertBack([true, false, true, true]);
-    Array!bool b;
-    b.insertBack([true, true, false, true]);
+    auto a = Array!bool([true, false, true, true]);
+    auto b = Array!bool([true, true, false, true]);
     assert(equal((a ~ b)[],
                     [true, false, true, true, true, true, false, true]));
     assert((a ~ [true, false])[].equal([true, false, true, true, true, false]));
@@ -2494,10 +2484,8 @@ if (is(immutable T == immutable bool))
 @system unittest
 {
     import std.algorithm.comparison : equal;
-    Array!bool a;
-    a.insertBack([true, false, true, true]);
-    Array!bool b;
-    a.insertBack([false, true, false, true, true]);
+    auto a = Array!bool([true, false, true, true]);
+    auto b = Array!bool([false, true, false, true, true]);
     a ~= b;
     assert(equal(
                 a[],
@@ -2506,8 +2494,7 @@ if (is(immutable T == immutable bool))
 
 @system unittest
 {
-    Array!bool a;
-    a.insertBack([true, false, true, true]);
+    auto a = Array!bool([true, false, true, true]);
     a.clear();
     assert(a.capacity == 0);
 }
