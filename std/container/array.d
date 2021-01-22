@@ -1769,6 +1769,46 @@ if (is(immutable T == immutable bool))
     }
 
     /**
+     * Constructor taking a number of items.
+     */
+    this(U)(U[] values...)
+    if (isImplicitlyConvertible!(U, T))
+    {
+        reserve(values.length);
+        foreach (i, v; values)
+        {
+            auto rem = i % bitsPerWord;
+            if (rem)
+            {
+                // Fits within the current array
+                if (v)
+                {
+                    data[$ - 1] |= (cast(size_t) 1 << rem);
+                }
+                else
+                {
+                    data[$ - 1] &= ~(cast(size_t) 1 << rem);
+                }
+            }
+            else
+            {
+                // Need to add more data
+                _store._backend.insertBack(v);
+            }
+        }
+        _store._length = values.length;
+    }
+
+    /**
+     * Constructor taking an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+     */
+    this(Range)(Range r)
+    if (isInputRange!Range && isImplicitlyConvertible!(ElementType!Range, T) && !is(Range == T[]))
+    {
+        insertBack(r);
+    }
+
+    /**
      * Property returning `true` if and only if the array has
      * no elements.
      *
@@ -2255,6 +2295,25 @@ if (is(immutable T == immutable bool))
         length = length - r.length;
         return this[r._a .. length];
     }
+}
+
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+
+    auto a = Array!bool([true, true, false, false, true, false]);
+    assert(equal(a[], [true, true, false, false, true, false]));
+}
+
+// using Ranges
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : retro;
+    bool[] arr = [true, true, false, false, true, false];
+
+    auto a = Array!bool(retro(arr));
+    assert(equal(a[], retro(arr)));
 }
 
 @system unittest
